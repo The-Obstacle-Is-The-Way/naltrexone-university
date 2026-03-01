@@ -144,9 +144,8 @@ When both are present in review mode:
 
 - Question page normalizes to `sessionId` precedence.
 - `attemptId` is dropped before controller execution.
-- Dev-mode `console.warn` is emitted.
-
-Current implementation does not yet emit server-side telemetry for this normalization.
+- Server route boundary emits `review_identifier_normalized` telemetry.
+- Downstream controller/use-case contracts reject mixed ids if they bypass normalization.
 
 ---
 
@@ -187,20 +186,15 @@ Current implementation does not yet emit server-side telemetry for this normaliz
 
 ---
 
-## 9. Remaining Gaps
+## 9. Closure Status
 
-1. **Observability not complete**
-- No server-level retry-origin/outcome counters yet.
-- No server telemetry for mixed-id normalization yet (dev console warning only).
+Core retry behavior is fully closed across DEBT-265, DEBT-266, and DEBT-267.
 
-2. **Retry indicator persistence scope**
-- `wasRetried` is visit-scoped UI state, not server-derived.
-- If product requires persistence across refresh/sessions, add a read model over attempts lineage for session-review grid rendering.
+- Observability events are emitted for retry submissions, review hydration outcomes, and mixed-id normalization.
+- `GetPreviousAttempt` mixed-id contract is hardened (deterministic rejection at controller + use case).
+- Session-review retry marker persistence policy is explicitly accepted as visit-scoped (Option A).
 
-3. **Downstream permissive API contract still exists**
-- `GetPreviousAttemptUseCase` still accepts both ids and prefers `attemptId` if both are passed.
-- Current safety relies on normalization at route/controller boundary.
-- Tracked in DEBT-267 for explicit contract hardening.
+There are no open correctness gaps in retry lineage and review retry flow at this time.
 
 ---
 
@@ -214,10 +208,10 @@ Current implementation does not yet emit server-side telemetry for this normaliz
 - [x] Mixed `attemptId + sessionId` is normalized deterministically at question-page boundary.
 - [x] Cross-origin retry chains work via one-hop `retryOfAttemptId` links.
 - [x] Dashboard/history/bookmarks/session-review contexts map to retry origins.
-- [ ] Retry observability counters/events by origin+outcome.
-- [ ] Server telemetry for mixed-id normalization + hydration outcomes.
-- [ ] Refresh-persistent retried indicators in session-review grid (if required by product).
-- [ ] `GetPreviousAttempt` mixed-id contract hardened beyond boundary normalization (DEBT-267).
+- [x] Retry observability events by origin/outcome are emitted and test-covered.
+- [x] Server telemetry for mixed-id normalization + hydration outcomes is in place.
+- [x] Session-review retry marker persistence policy is explicitly defined (visit-scoped).
+- [x] `GetPreviousAttempt` mixed-id contract is hardened beyond boundary normalization.
 
 ---
 

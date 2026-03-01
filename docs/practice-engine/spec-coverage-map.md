@@ -35,7 +35,7 @@
 | Status Filter Segmented Control + Review Navigator | SPEC-028 | Implemented | Segmented control for status/difficulty filters; color-coded question navigator grid in review mode |
 | Dev Environment Resilience | SPEC-029 | Implemented | Client-side timeouts, observable failure states, `ErrorCard` recovery actions |
 | Question View UX Unification | SPEC-030 | Implemented | Tutor state persistence fix, Previous button in practice, review nav relocation to bottom bar |
-| Retry Lineage + Session Review Inline Retry | [Retry Logic SSOT](./retry-logic.md) + DEBT-265 | Implemented | Provenance fields + validation + inline retry in ended-session review are implemented; follow-up observability and cross-visit retry-marker persistence are tracked in DEBT-266 |
+| Retry Lineage + Session Review Inline Retry | [Retry Logic SSOT](./retry-logic.md) + DEBT-265 | Implemented | Provenance fields + validation + inline retry in ended-session review are implemented; observability + mixed-id hardening follow-ups were completed in DEBT-266/267 |
 
 ---
 
@@ -43,6 +43,6 @@
 
 As of **2026-03-01**, previously identified practice-engine drift items have been paid down across core specs and implementation docs. SPEC-021 through SPEC-030 are implemented and reflected. Retry provenance and inline session-review retry are now captured in the practice-engine SSOT (`retry-logic.md`) and DEBT-265 execution contract.
 
-Remaining drift risk is concentrated in follow-up observability/persistence and identifier-contract hardening debt, not core retry behavior.
+Remaining drift risk is concentrated in unrelated future feature work, not retry lineage/review flow contracts.
 
 When behavior changes introduce new public contracts (ports/use case IO/controller outputs), update the corresponding spec and add a changelog entry.

@@ -150,6 +150,19 @@ export class SubmitAnswerUseCase {
       retrySessionId,
     });
 
+    if (retryOrigin !== null) {
+      this.logger.info(
+        {
+          event: 'retry_submitted',
+          retryOrigin,
+          isCorrect: grade.isCorrect,
+          hasParent: retryOfAttemptId !== null,
+          hasRetrySessionId: retrySessionId !== null,
+        },
+        'Retry submitted',
+      );
+    }
+
     if (session) {
       try {
         await this.sessions.recordQuestionAnswer({

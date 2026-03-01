@@ -102,6 +102,8 @@ describe('app/(app)/app/questions/[slug]', () => {
   });
 
   it('normalizes mixed review attemptId/sessionId by preferring sessionId', async () => {
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+
     const element = await QuestionPage({
       params: Promise.resolve({ slug: 'q-1' }),
       searchParams: Promise.resolve({
@@ -119,6 +121,18 @@ describe('app/(app)/app/questions/[slug]', () => {
         attemptId: undefined,
       },
     });
+
+    expect(infoSpy).toHaveBeenCalledWith(
+      '[Telemetry]',
+      expect.objectContaining({
+        event: 'review_identifier_normalized',
+        normalizedTo: 'sessionId',
+        hadAttemptId: true,
+        hadSessionId: true,
+        mode: 'review',
+      }),
+    );
+    infoSpy.mockRestore();
   });
 
   it('passes historyHref searchParams into the client page', async () => {

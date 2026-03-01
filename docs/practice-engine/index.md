@@ -129,6 +129,7 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 
 | Date | Change |
 |------|--------|
+| 2026-03-01 | Closed DEBT-266 and DEBT-267 after implementation: added retry/hydration/normalization telemetry, accepted visit-scoped retry-marker policy, and hardened mixed `attemptId + sessionId` previous-attempt contract. |
 | 2026-03-01 | Closed DEBT-265 core scope in debt tracking, moved observability/retry-marker persistence slices into DEBT-266, and added DEBT-267 for downstream mixed-identifier contract hardening. |
 | 2026-02-08 | Initial version — created from full vertical audit of domain → application → adapters → frontend layers. Cross-referenced against SPEC-001 through SPEC-020. |
 | 2026-02-09 | Synced with SPEC-019 updates: Phase 2 now "Ready for Implementation"; routes table adds `/app/practice/quick` (pending); practice mode table updated; Section 9.4 added for product decisions (review = missed-only, session runner route stays, nav label stays "Review"). |

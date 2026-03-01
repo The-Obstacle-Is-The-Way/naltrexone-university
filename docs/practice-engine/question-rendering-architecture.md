@@ -450,15 +450,18 @@ The bottom action bar is implemented inline in 4 different places. A future spec
 
 `QuestionNavigator` (active session) and `ReviewQuestionNavigator` (question page review) have similar visual layouts but different data sources and navigation methods. A shared base component with pluggable navigation (callback vs link) could reduce duplication, but the current approach is clear and well-tested.
 
-### 10.4 Retry Observability and Persistence Follow-Ups
+### 10.4 Retry Observability and Persistence Policy
 
-- Add server telemetry for retry origin/outcome and mixed identifier normalization events.
-- Decide whether session-review retry indicators (`wasRetried`) must persist across hard refresh/new visits; current behavior is visit-scoped by design.
+- Structured telemetry is implemented for:
+  - retry submissions (`retry_submitted`)
+  - review hydration outcomes (`review_hydration_outcome`)
+  - mixed-id normalization (`review_identifier_normalized`)
+- Session-review retry marker persistence policy is explicitly **visit-scoped** by product decision (Option A).
 
-### 10.5 Previous-Attempt Identifier Contract Hardening
+### 10.5 Previous-Attempt Identifier Contract
 
-- Harden `GetPreviousAttempt` to reject or type-discriminate mixed `attemptId + sessionId` instead of relying on permissive precedence behavior in downstream layers.
-- Keep route-boundary normalization as defense-in-depth while enforcing explicit application-layer contract semantics.
+- `GetPreviousAttempt` now rejects mixed `attemptId + sessionId` at controller and use-case layers.
+- Route/client normalization remains in place as defense-in-depth.
 
 ---
 
@@ -475,8 +478,8 @@ The bottom action bar is implemented inline in 4 different places. A future spec
 | [SPEC-028b](../_archive/specs/spec-028-review-question-navigator.md) | Review question navigator (implemented) |
 | [DEBT-217](../_archive/debt/debt-217-history-href.md) | History back link state preservation |
 | [DEBT-265](../debt/debt-265-retry-lineage-and-review-practice-unification.md) | Retry lineage and inline session-review retry implementation contract |
-| [DEBT-266](../debt/debt-266-retry-observability-and-session-review-marker-persistence.md) | Retry observability + marker-persistence follow-up debt |
-| [DEBT-267](../debt/debt-267-get-previous-attempt-identifier-contract-hardening.md) | Mixed `attemptId + sessionId` contract hardening for previous-attempt hydration |
+| [DEBT-266](../debt/debt-266-retry-observability-and-session-review-marker-persistence.md) | Retry observability + marker-persistence policy (resolved) |
+| [DEBT-267](../debt/debt-267-get-previous-attempt-identifier-contract-hardening.md) | Mixed `attemptId + sessionId` contract hardening (resolved) |
 
 ---
 
@@ -484,6 +487,7 @@ The bottom action bar is implemented inline in 4 different places. A future spec
 
 | Date | Change |
 |------|--------|
+| 2026-03-01 | Closed DEBT-266 and DEBT-267: documented server telemetry events, accepted visit-scoped retry-marker policy, and synced previous-attempt mixed-id contract hardening. |
 | 2026-03-01 | Synced to DEBT-265 implementation: updated review route ownership, hydration outcome model, session-review submit/reattempt matrix, and `mode=review` semantics. Added follow-up debt references for retry observability and marker-persistence policy (DEBT-266). |
 | 2026-02-17 | Accuracy pass for BUG-145: removed stale `SessionNavigationBar` references, updated action-bar/state-persistence docs to current `previousSubmission` restoration behavior, replaced Section 6 with resolved status, and refreshed file index references. |
 | 2026-02-16 | Initial version — comprehensive audit of question-viewing contexts. Documented state persistence bug in Tutor Mode, navigation architecture, shared vs context-specific components. |

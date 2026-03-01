@@ -4,6 +4,7 @@ import type { QuestionRepository } from '@/src/application/ports/repositories';
 import { buildShuffledChoiceViews } from '@/src/application/shared/shuffled-choice-views';
 import {
   FakeAuthGateway,
+  FakeLogger,
   FakeQuestionRepository,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -80,6 +81,7 @@ function createDeps(overrides?: {
   user?: User | null;
   isEntitled?: boolean;
   question?: ReturnType<typeof createQuestion> | null;
+  logger?: FakeLogger;
   questionRepository?: QuestionRepository;
   getPreviousAttemptUseCase?: {
     execute: (input: {
@@ -121,6 +123,7 @@ function createDeps(overrides?: {
   const questionRepository =
     overrides?.questionRepository ??
     new FakeQuestionRepository(overrides?.question ? [overrides.question] : []);
+  const logger = overrides?.logger ?? new FakeLogger();
 
   const getPreviousAttemptUseCase =
     overrides?.getPreviousAttemptUseCase ??
@@ -140,6 +143,7 @@ function createDeps(overrides?: {
   return {
     authGateway,
     checkEntitlementUseCase,
+    logger,
     questionRepository,
     getPreviousAttemptUseCase,
   };
@@ -312,6 +316,24 @@ describe('question-view-controller', () => {
       });
     });
 
+    it('returns VALIDATION_ERROR when both attemptId and sessionId are provided', async () => {
+      const deps = createDeps();
+
+      const result = await getPreviousAttempt(
+        {
+          questionId: 'q1',
+          attemptId: '00000000-0000-4000-8000-000000000001',
+          sessionId: '00000000-0000-4000-8000-000000000002',
+        },
+        deps as never,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'VALIDATION_ERROR' },
+      });
+    });
+
     it('returns UNAUTHENTICATED when unauthenticated', async () => {
       const deps = createDeps({ user: null });
 
@@ -404,6 +426,7 @@ describe('question-view-controller', () => {
     it('returns the previous attempt when found', async () => {
       const userId = 'user_1';
       const questionId = 'q1';
+      const logger = new FakeLogger();
 
       let receivedInput: {
         userId: string;
@@ -411,10 +434,12 @@ describe('question-view-controller', () => {
         attemptId?: string;
       } | null = null;
       const deps = createDeps({
+        logger,
         getPreviousAttemptUseCase: {
           execute: async (input) => {
             receivedInput = input;
             return {
+              kind: 'attempt',
               attemptId: 'attempt_1',
               selectedChoiceId: 'choice_1',
               isCorrect: true,
@@ -434,6 +459,7 @@ describe('question-view-controller', () => {
       expect(result).toEqual({
         ok: true,
         data: {
+          kind: 'attempt',
           attemptId: 'attempt_1',
           selectedChoiceId: 'choice_1',
           isCorrect: true,
@@ -442,6 +468,18 @@ describe('question-view-controller', () => {
           choiceExplanations: [],
           answeredAt: '2026-02-01T00:00:00.000Z',
         },
+      });
+      expect(logger.infoCalls).toContainEqual({
+        context: {
+          event: 'review_hydration_outcome',
+          mode: 'review',
+          outcome: 'attempt',
+          hasAttemptId: false,
+          hasSessionId: false,
+          questionId: 'q1',
+          userId: 'user_1',
+        },
+        msg: 'Review hydration outcome',
       });
     });
 
@@ -468,8 +506,54 @@ describe('question-view-controller', () => {
       });
     });
 
-    it('returns null when there is no previous attempt', async () => {
+    it('emits session_unanswered hydration telemetry when unanswered session reveal is returned', async () => {
+      const logger = new FakeLogger();
       const deps = createDeps({
+        logger,
+        getPreviousAttemptUseCase: {
+          execute: async () => ({
+            kind: 'session_unanswered',
+            correctChoiceId: 'choice_2',
+            explanationMd: 'Explanation',
+            referenceMd: null,
+            choiceExplanations: [],
+          }),
+        },
+      });
+
+      const result = await getPreviousAttempt(
+        { questionId: 'q1', sessionId: '00000000-0000-4000-8000-000000000001' },
+        deps as never,
+      );
+
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          kind: 'session_unanswered',
+          correctChoiceId: 'choice_2',
+          explanationMd: 'Explanation',
+          referenceMd: null,
+          choiceExplanations: [],
+        },
+      });
+      expect(logger.infoCalls).toContainEqual({
+        context: {
+          event: 'review_hydration_outcome',
+          mode: 'review',
+          outcome: 'session_unanswered',
+          hasAttemptId: false,
+          hasSessionId: true,
+          questionId: 'q1',
+          userId: 'user_1',
+        },
+        msg: 'Review hydration outcome',
+      });
+    });
+
+    it('returns null when there is no previous attempt', async () => {
+      const logger = new FakeLogger();
+      const deps = createDeps({
+        logger,
         getPreviousAttemptUseCase: {
           execute: async () => null,
         },
@@ -481,6 +565,53 @@ describe('question-view-controller', () => {
       );
 
       expect(result).toEqual({ ok: true, data: null });
+      expect(logger.infoCalls).toContainEqual({
+        context: {
+          event: 'review_hydration_outcome',
+          mode: 'review',
+          outcome: 'no_prior_attempt',
+          hasAttemptId: false,
+          hasSessionId: false,
+          questionId: 'q1',
+          userId: 'user_1',
+        },
+        msg: 'Review hydration outcome',
+      });
+    });
+
+    it('emits hydration_error telemetry when getPreviousAttempt use case throws', async () => {
+      const logger = new FakeLogger();
+      const deps = createDeps({
+        logger,
+        getPreviousAttemptUseCase: {
+          execute: async () => {
+            throw new ApplicationError('INTERNAL_ERROR', 'Boom');
+          },
+        },
+      });
+
+      const result = await getPreviousAttempt(
+        { questionId: 'q1' },
+        deps as never,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'INTERNAL_ERROR' },
+      });
+      expect(logger.warnCalls).toContainEqual({
+        context: {
+          event: 'review_hydration_outcome',
+          mode: 'review',
+          outcome: 'hydration_error',
+          hasAttemptId: false,
+          hasSessionId: false,
+          questionId: 'q1',
+          userId: 'user_1',
+          errorCode: 'INTERNAL_ERROR',
+        },
+        msg: 'Review hydration outcome',
+      });
     });
   });
 });

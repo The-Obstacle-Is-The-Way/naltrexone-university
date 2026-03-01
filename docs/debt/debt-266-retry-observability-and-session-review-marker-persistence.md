@@ -1,6 +1,6 @@
 # DEBT-266: Retry Observability and Session-Review Marker Persistence
 
-**Status:** Active
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-03-01
 **Owner:** Practice Engine
@@ -10,54 +10,42 @@
 
 ## Problem Statement
 
-DEBT-265 implemented retry provenance and inline session-review retry end-to-end, but two follow-up slices remain:
+DEBT-265 implemented retry provenance and inline session-review retry end-to-end, but left two follow-up slices:
 
-1. **Observability gap**
-- Retry behavior is persisted correctly, but there is no explicit telemetry contract for:
-  - retry origin + outcome (`correct` / `incorrect`)
-  - review hydration outcome (`attempt`, `session_unanswered`, `no_prior_attempt`, `hydration_error`)
-  - mixed identifier normalization (`attemptId + sessionId`)
+1. retry/hydration/normalization observability contract
+2. session-review retry-marker persistence policy
 
-2. **Session-review retried indicator persistence decision**
-- `wasRetried` is currently visit-scoped UI state in question-page controller.
-- It survives in-flow navigation, but resets on hard refresh/new visit.
-- Product decision is not yet codified for whether this indicator must persist cross-visit.
+Both slices are now implemented and documented.
 
 ---
 
-## Why This Is Debt
+## Resolution Summary
 
-Core functionality is correct and user-facing flow works, but without explicit telemetry and persistence policy:
+Implemented telemetry events:
 
-- regressions can go undetected,
-- dashboard/analytics cannot reliably segment retry behavior by origin,
-- teams may make inconsistent assumptions about whether retry markers should persist across sessions.
-
----
-
-## Scope
-
-### 1) Retry Observability Contract
-
-Add structured events/counters for:
-
-- `retry_submitted`
+- `retry_submitted` (server, `SubmitAnswerUseCase`)
   - fields: `retryOrigin`, `isCorrect`, `hasParent`, `hasRetrySessionId`
-- `review_hydration_outcome`
-  - fields: `origin`, `mode`, `outcome` (`attempt` | `session_unanswered` | `no_prior_attempt` | `hydration_error`)
-- `review_identifier_normalized`
-  - fields: `from`, `hadAttemptId`, `hadSessionId`, `normalizedTo`
+- `review_hydration_outcome` (server, `question-view-controller`)
+  - outcomes: `attempt`, `session_unanswered`, `no_prior_attempt`, `hydration_error`
+- `review_identifier_normalized` (server route boundary, question page)
+  - fields: `mode`, `normalizedTo`, `hadAttemptId`, `hadSessionId`, `slug`, `from`
 
-Events should be emitted in server-side execution paths where possible; client-only warnings are insufficient as the long-term source of truth.
+Product policy decision:
 
-### 2) Session-Review Retry Marker Policy
+- **Option A accepted:** session-review `wasRetried` marker is visit-scoped by design.
+- No server-persistent overlay is required for current product contract.
 
-Decide and document one of two contracts:
+---
 
-- **Option A (current behavior, explicitly accepted):** marker is visit-scoped only.
-- **Option B (persistent behavior):** marker is server-derived from attempt lineage and survives refresh/new visits.
+## Implemented Surface
 
-If Option B is chosen, implement a server read model for session-review rows that overlays retry lineage without mutating session snapshot state.
+- `src/application/use-cases/submit-answer.ts`
+- `src/adapters/controllers/question-view-controller.ts`
+- `app/(app)/app/questions/[slug]/page.tsx`
+- `src/application/use-cases/submit-answer.test.ts`
+- `src/adapters/controllers/question-view-controller.test.ts`
+- `app/(app)/app/questions/[slug]/page.test.tsx`
+- `docs/practice-engine/retry-logic.md`
 
 ---
 
@@ -71,11 +59,11 @@ If Option B is chosen, implement a server read model for session-review rows tha
 
 ## Acceptance Criteria
 
-- [ ] Telemetry events for retry origin/outcome are emitted and test-covered.
-- [ ] Hydration outcome telemetry exists for all 4 review states.
-- [ ] Mixed-id normalization emits structured telemetry (not just `console.warn`).
-- [ ] Product decision on retry marker persistence is documented in SSOT.
-- [ ] If persistent markers are required, session-review UI reflects lineage-derived retry markers after page refresh.
+- [x] Telemetry events for retry origin/outcome are emitted and test-covered.
+- [x] Hydration outcome telemetry exists for all 4 review states.
+- [x] Mixed-id normalization emits structured telemetry (not just `console.warn`).
+- [x] Product decision on retry marker persistence is documented in SSOT.
+- [x] Persistent marker overlay is intentionally not required (Option A accepted).
 
 ---
 

@@ -61,6 +61,18 @@ export default async function QuestionPage({
   const normalizedAttemptId =
     mode === 'review' && sessionId && attemptId ? undefined : attemptId;
 
+  if (mode === 'review' && sessionId && attemptId) {
+    console.info('[Telemetry]', {
+      event: 'review_identifier_normalized',
+      mode,
+      normalizedTo: 'sessionId',
+      hadAttemptId: true,
+      hadSessionId: true,
+      slug,
+      from,
+    });
+  }
+
   return (
     <QuestionPageClient
       slug={slug}

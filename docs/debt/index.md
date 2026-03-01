@@ -17,8 +17,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | GitHub Issue |
 |----|-------|----------|--------------|
-| [DEBT-267](./debt-267-get-previous-attempt-identifier-contract-hardening.md) | GetPreviousAttempt Identifier Contract Hardening | P3 | — |
-| [DEBT-266](./debt-266-retry-observability-and-session-review-marker-persistence.md) | Retry Observability and Session-Review Marker Persistence | P3 | — |
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 
 **Next Debt ID:** DEBT-268
@@ -29,6 +27,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-267](./debt-267-get-previous-attempt-identifier-contract-hardening.md) | GetPreviousAttempt Identifier Contract Hardening | P3 | 2026-03-01 | — |
+| [DEBT-266](./debt-266-retry-observability-and-session-review-marker-persistence.md) | Retry Observability and Session-Review Marker Persistence | P3 | 2026-03-01 | — |
 | [DEBT-265](../_archive/debt/debt-265-history-breakdown-ux-redesign.md) | History Breakdown UX Redesign — flat surface, list structure, disclosure a11y, interaction semantics (BS-036) | P2 | 2026-03-01 | — |
 | [DEBT-265](./debt-265-retry-lineage-and-review-practice-unification.md) | Retry Lineage and Review/Practice Unification | P2 | 2026-03-01 | — |
 | [DEBT-264](../_archive/debt/debt-264-documentation-sync.md) | Documentation Sync (Finalize frontend docs after DEBT-251–263) | P2 | 2026-03-01 | — |

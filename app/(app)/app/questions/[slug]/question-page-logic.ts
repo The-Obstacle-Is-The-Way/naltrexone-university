@@ -320,12 +320,22 @@ export async function loadPreviousAttempt(input: {
   setSessionUnansweredReveal(null);
 
   let res: ActionResult<GetPreviousAttemptOutput | null>;
+  const normalizedReviewIds = normalizeReviewIdentifiers({
+    mode: 'review',
+    sessionId: input.sessionId,
+    attemptId: input.attemptId,
+  });
+
   try {
     res = await withTimeout(
       input.getPreviousAttemptFn({
         questionId: input.questionId,
-        ...(input.attemptId ? { attemptId: input.attemptId } : {}),
-        ...(input.sessionId ? { sessionId: input.sessionId } : {}),
+        ...(normalizedReviewIds.attemptId
+          ? { attemptId: normalizedReviewIds.attemptId }
+          : {}),
+        ...(normalizedReviewIds.sessionId
+          ? { sessionId: normalizedReviewIds.sessionId }
+          : {}),
       }),
       PREVIOUS_ATTEMPT_TIMEOUT_MS,
     );

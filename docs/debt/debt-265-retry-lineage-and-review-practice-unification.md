@@ -1,6 +1,6 @@
 # DEBT-265: Retry Lineage and Review/Practice Unification
 
-**Status:** Resolved (core scope complete; non-core follow-up moved to DEBT-266)
+**Status:** Resolved (core scope complete; follow-up completed in DEBT-266/267)
 **Priority:** P2
 **Date:** 2026-03-01
 **Owner:** Practice Engine
@@ -18,7 +18,7 @@ Original debt had five gaps:
 4. Mixed `attemptId + sessionId` contract was ambiguous.
 5. Coverage/docs were underspecified across route slices.
 
-As of 2026-03-01, gaps 1-5 for DEBT-265 core scope are implemented in code and synchronized in practice-engine docs. Non-core follow-up slices are tracked separately in DEBT-266.
+As of 2026-03-01, gaps 1-5 for DEBT-265 core scope are implemented in code and synchronized in practice-engine docs. Follow-up slices were completed in DEBT-266/267.
 
 ---
 
@@ -143,8 +143,8 @@ This closes the prior doc gap that missed DTO/mapper/fake/repo parity.
 | Controller | Zod schema + cross-field validation + passthrough | Complete |
 | Question-page UI/controller | Inline retry, hydration states, fallback UI, provenance origin resolution | Complete |
 | Route boundary | Mixed-id normalization (`sessionId` precedence) | Complete |
-| Observability | Retry/hydration/normalization telemetry | Moved to DEBT-266 |
-| Refresh-persistent retried grid indicators | Server-derived indicator model | Moved to DEBT-266 (if required) |
+| Observability | Retry/hydration/normalization telemetry | Completed in DEBT-266 |
+| Refresh-persistent retried grid indicators | Server-derived indicator model | Closed with explicit visit-scoped policy in DEBT-266 |
 
 ---
 
@@ -183,13 +183,13 @@ Gate run completed in this branch context:
 - [x] Cross-origin lineage chain is reconstructable via `retryOfAttemptId`.
 - [x] Full doc sync completed in `question-rendering-architecture.md` and `spec-coverage-map.md`.
 
-Follow-up observability and retry-marker persistence policy work is intentionally tracked in [DEBT-266](./debt-266-retry-observability-and-session-review-marker-persistence.md).
+Follow-up observability and retry-marker persistence policy work has been completed in [DEBT-266](./debt-266-retry-observability-and-session-review-marker-persistence.md).
 
 ---
 
 ## 8. Remaining Work (Ordered)
 
-1. Execute DEBT-266 (observability contract and retry-marker persistence policy).
+None.
 
 ---
 

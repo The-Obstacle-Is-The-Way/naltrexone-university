@@ -33,6 +33,58 @@ class FailingRollbackAttemptRepository extends FakeAttemptRepository {
 
 describe('SubmitAnswerUseCase', () => {
   describe('retry provenance', () => {
+    it('emits retry_submitted telemetry for retry attempts', async () => {
+      const userId = 'user-1';
+      const questionId = 'q1';
+      const parentAttemptId = 'attempt-parent';
+      const logger = new FakeLogger();
+
+      const question = createQuestion({
+        id: questionId,
+        status: 'published',
+        choices: [
+          createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+          createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+        ],
+      });
+
+      const attempts = new FakeAttemptRepository([
+        createAttempt({
+          id: parentAttemptId,
+          userId,
+          questionId,
+          selectedChoiceId: 'c1',
+          isCorrect: false,
+        }),
+      ]);
+
+      const useCase = new SubmitAnswerUseCase(
+        new FakeQuestionRepository([question]),
+        attempts,
+        new FakePracticeSessionRepository(),
+        logger,
+      );
+
+      await useCase.execute({
+        userId,
+        questionId,
+        choiceId: 'c2',
+        retryOfAttemptId: parentAttemptId,
+        retryOrigin: 'history',
+      });
+
+      expect(logger.infoCalls).toContainEqual({
+        context: {
+          event: 'retry_submitted',
+          retryOrigin: 'history',
+          isCorrect: true,
+          hasParent: true,
+          hasRetrySessionId: false,
+        },
+        msg: 'Retry submitted',
+      });
+    });
+
     it('stores retry provenance on standalone retry attempts', async () => {
       const userId = 'user-1';
       const questionId = 'q1';

@@ -216,7 +216,7 @@ describe('GetPreviousAttemptUseCase', () => {
     ).resolves.toBeNull();
   });
 
-  it('returns null when explicit attemptId is not found even if sessionId is present', async () => {
+  it('throws VALIDATION_ERROR when both attemptId and sessionId are provided', async () => {
     const question = createQuestion({
       id: 'q1',
       status: 'published',
@@ -257,7 +257,12 @@ describe('GetPreviousAttemptUseCase', () => {
         attemptId: 'attempt-missing',
         sessionId: 'session-1',
       }),
-    ).resolves.toBeNull();
+    ).rejects.toEqual(
+      new ApplicationError(
+        'VALIDATION_ERROR',
+        'Provide either attemptId or sessionId, not both',
+      ),
+    );
   });
 
   it('returns null when sessionId is provided but session is not found', async () => {
@@ -612,7 +617,7 @@ describe('GetPreviousAttemptUseCase', () => {
     });
   });
 
-  it('uses attemptId over sessionId when both are provided', async () => {
+  it('rejects mixed attemptId and sessionId even when both references exist', async () => {
     const question = createQuestion({
       id: 'q1',
       status: 'published',
@@ -667,11 +672,12 @@ describe('GetPreviousAttemptUseCase', () => {
         attemptId: 'attempt-session-2',
         sessionId: 'session-1',
       }),
-    ).resolves.toMatchObject({
-      attemptId: 'attempt-session-2',
-      selectedChoiceId: 'c2',
-      isCorrect: true,
-    });
+    ).rejects.toEqual(
+      new ApplicationError(
+        'VALIDATION_ERROR',
+        'Provide either attemptId or sessionId, not both',
+      ),
+    );
   });
 
   it('returns previous attempt data with correct choice, explanation, and choice explanations', async () => {

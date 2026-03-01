@@ -336,7 +336,7 @@ describe('question-page-logic', () => {
   });
 
   describe('loadPreviousAttempt', () => {
-    it('passes attemptId and sessionId to getPreviousAttemptFn when provided', async () => {
+    it('normalizes mixed attemptId/sessionId by preferring sessionId before hydration fetch', async () => {
       const getPreviousAttemptFn = vi.fn(async () => ok(null));
 
       await loadPreviousAttempt({
@@ -350,7 +350,6 @@ describe('question-page-logic', () => {
 
       expect(getPreviousAttemptFn).toHaveBeenCalledWith({
         questionId: 'q_1',
-        attemptId: '00000000-0000-4000-8000-000000000001',
         sessionId: '00000000-0000-4000-8000-000000000002',
       });
     });
