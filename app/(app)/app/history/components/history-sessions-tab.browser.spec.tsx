@@ -203,10 +203,9 @@ describe('HistorySessionsTab (browser)', () => {
     await expect
       .element(screen.getByRole('link', { name: /Stem for q1/ }))
       .toBeVisible();
-    const hasReviewSessionLink = Array.from(
-      document.querySelectorAll('a'),
-    ).some((link) => link.textContent?.trim() === 'Review session');
-    expect(hasReviewSessionLink).toBe(false);
+    await expect
+      .element(screen.getByRole('link', { name: 'Review session' }))
+      .not.toBeInTheDocument();
   });
 
   it('wires disclosure accessibility attributes and region semantics on expand', async () => {
