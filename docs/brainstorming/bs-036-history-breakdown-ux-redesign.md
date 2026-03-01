@@ -214,14 +214,15 @@ Replace the breakdown area with a proper card-like treatment. Remove "Review ses
 
 ## Recommendation
 
-**Option B (Subtle Inset)** strikes the best balance:
+**Option A (Flat Expansion)** — the simplest approach:
 
-1. It fixes the layering issue without over-engineering
-2. Per-row hover on breakdown items communicates clickability (addressing the "Review session" removal — users will naturally discover they can click questions)
-3. It's the smallest change that addresses all four problems
-4. Works with the shared `SessionBreakdownList` component through a lightweight `className` prop addition
+The inner container's distinct background (`bg-background/60`) creates a second shade of black inside the card that looks wrong. The fix is to eliminate it entirely so the breakdown content lives at the **same shade** as the rest of the card. One card, one shade, no visual dichotomy.
 
-Option A could work but risks the breakdown feeling uncontained. Option C is the most polished but may be over-engineering for the current need — it could be a future iteration.
+This is the smallest change and the most intuitive — the breakdown is just content that appears when you expand, not a separate visual container. Combined with removing the redundant "Review session" button, the expanded state becomes clean and straightforward.
+
+Per-row hover on breakdown items (from Option B) could be added as a follow-up if click discoverability is a concern, but it's not required for the core fix.
+
+Option C (Card-in-Card) is over-engineering for what is fundamentally a "remove the extra background" problem.
 
 ---
 
@@ -246,3 +247,4 @@ Option A could work but risks the breakdown feeling uncontained. Option C is the
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-03-01 | Created BS-036 | History breakdown UX needs focused attention beyond the broad BS-035 audit |
+| 2026-03-01 | Leaning Option A | User preference: one shade per card, no inner container background — simplest fix, eliminates the visual dichotomy |
