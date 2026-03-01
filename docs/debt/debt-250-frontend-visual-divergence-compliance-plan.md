@@ -47,9 +47,9 @@ DEBT-250 is decomposed into 14 child specs (DEBT-251–264). Each child spec map
 | [DEBT-256](../_archive/debt/debt-256-expanded-breakdown-hierarchy.md) | STRUCT-1 | ~~Decision 4 + DEBT-252 merged~~ Resolved | `history-sessions-tab.tsx` | Resolved (2026-02-28) | — |
 | [DEBT-257](../_archive/debt/debt-257-choice-selected-state.md) | AFFORD-1 | ~~Decision 5 + DEBT-251 merged~~ Resolved | `choice-button.tsx` | Resolved (2026-02-28) | — |
 | [DEBT-258](../_archive/debt/debt-258-marketing-alignment.md) | D-8, D-9, D-10, D-14, D-15 | ~~Decision 1 (+ opt. 2)~~ ~~Decision 2~~ Resolved | `marketing-home.tsx` + layouts | Resolved (2026-02-28) | — |
-| [DEBT-259](debt-259-shared-constants-extraction.md) | D-13, D-11 | ~~DEBT-252/253 merged~~ Done | 8 files (refactor) | Ready | — |
-| [DEBT-260](debt-260-ux-seams.md) | UX-1, UX-2, UX-3, UX-4 | ~~Decisions 3, 6, 7, 8~~ Resolved | 1–3 files + docs | Ready | — |
-| [DEBT-261](debt-261-touch-targets.md) | TOUCH-1, TOUCH-2 | ~~Decision 11~~ Resolved (Option C) | `mobile-nav.tsx`, `theme-toggle.tsx`, `auth-nav.tsx` | Ready | — |
+| [DEBT-259](../_archive/debt/debt-259-shared-constants-extraction.md) | D-13, D-11 | ~~DEBT-252/253 merged~~ Done | 8 files (refactor) | Resolved in PR #152 | [#152](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/152) |
+| [DEBT-260](../_archive/debt/debt-260-ux-seams.md) | UX-1, UX-2, UX-3, UX-4 | ~~Decisions 3, 6, 7, 8~~ Resolved | 1–3 files + docs | Resolved in PR #152 | [#152](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/152) |
+| [DEBT-261](../_archive/debt/debt-261-touch-targets.md) | TOUCH-1, TOUCH-2 | ~~Decision 11~~ Resolved (Option C) | `mobile-nav.tsx`, `theme-toggle.tsx`, `auth-nav.tsx` | Resolved in PR #152 | [#152](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/152) |
 | [DEBT-262](debt-262-light-mode-opacity.md) | LIGHT-1 | Decision 12 | `globals.css` or docs-only | Blocked | — |
 | [DEBT-263](debt-263-text-contrast.md) | LIGHT-2 | Decision 13 + DEBT-251 merged | `globals.css` | Blocked | — |
 
@@ -65,16 +65,10 @@ DEBT-250 is decomposed into 14 child specs (DEBT-251–264). Each child spec map
 RESOLVED:
   DEBT-251, DEBT-252, DEBT-253 → PR #150
   DEBT-254, DEBT-255           → PR #149
+  DEBT-256, DEBT-257, DEBT-258 → PR #151
+  DEBT-259, DEBT-260, DEBT-261 → PR #152
 
-READY NOW (parallel):
-  DEBT-259 ──┐  DEBT-252/253 merged in PR #150
-  DEBT-260 ──┤  Decisions 3, 6, 7, 8 resolved
-  DEBT-261 ──┘  Decision 11 resolved (Option C)
-
-AFTER remaining decisions resolve:
-  Decision 4  → DEBT-256 [after DEBT-252]
-  Decision 5  → DEBT-257 [after DEBT-251]
-  Decision 1  → DEBT-258
+BLOCKED ON DECISIONS:
   Decision 12 → DEBT-262
   Decision 13 → DEBT-263 [after DEBT-251]
 
