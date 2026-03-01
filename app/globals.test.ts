@@ -52,7 +52,8 @@ function parseHslToken(value: string): HslColor {
 
 function hslToRgb({ h, s, l }: HslColor): [number, number, number] {
   const c = (1 - Math.abs(2 * l - 1)) * s;
-  const hue = h / 60;
+  const normalizedHue = ((h % 360) + 360) % 360;
+  const hue = normalizedHue / 60;
   const x = c * (1 - Math.abs((hue % 2) - 1));
 
   let r1 = 0;
@@ -103,6 +104,14 @@ function contrastRatio(a: HslColor, b: HslColor): number {
   const darker = Math.min(l1, l2);
   return (lighter + 0.05) / (darker + 0.05);
 }
+
+describe('hslToRgb hue normalization', () => {
+  it('returns equivalent rgb values when hue wraps past 360 degrees', () => {
+    expect(hslToRgb({ h: 10, s: 0.72, l: 0.29 })).toEqual(
+      hslToRgb({ h: 370, s: 0.72, l: 0.29 }),
+    );
+  });
+});
 
 function getRequiredTokenValue(block: string, tokenName: string): string {
   const value = extractToken(block, tokenName);
