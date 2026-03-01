@@ -302,6 +302,18 @@ describe('question-view-controller', () => {
   });
 
   describe('getPreviousAttempt', () => {
+    class ThrowingInfoLogger extends FakeLogger {
+      override info(_context: Record<string, unknown>, _msg: string): void {
+        throw new Error('logger info failed');
+      }
+    }
+
+    class ThrowingWarnLogger extends FakeLogger {
+      override warn(_context: Record<string, unknown>, _msg: string): void {
+        throw new Error('logger warn failed');
+      }
+    }
+
     it('returns VALIDATION_ERROR when input is invalid', async () => {
       const deps = createDeps();
 
@@ -483,6 +495,45 @@ describe('question-view-controller', () => {
       });
     });
 
+    it('returns the previous attempt when hydration telemetry info logging throws', async () => {
+      const userId = 'user_1';
+      const questionId = 'q1';
+      const logger = new ThrowingInfoLogger();
+
+      const deps = createDeps({
+        logger,
+        getPreviousAttemptUseCase: {
+          execute: async () => ({
+            kind: 'attempt',
+            attemptId: 'attempt_1',
+            selectedChoiceId: 'choice_1',
+            isCorrect: true,
+            correctChoiceId: 'choice_1',
+            explanationMd: 'Explanation',
+            choiceExplanations: [],
+            answeredAt: '2026-02-01T00:00:00.000Z',
+          }),
+        },
+        user: createUser({ id: userId }),
+      });
+
+      const result = await getPreviousAttempt({ questionId }, deps as never);
+
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          kind: 'attempt',
+          attemptId: 'attempt_1',
+          selectedChoiceId: 'choice_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Explanation',
+          choiceExplanations: [],
+          answeredAt: '2026-02-01T00:00:00.000Z',
+        },
+      });
+    });
+
     it('returns NOT_FOUND when attemptId does not match questionId', async () => {
       const deps = createDeps({
         getPreviousAttemptUseCase: {
@@ -611,6 +662,28 @@ describe('question-view-controller', () => {
           errorCode: 'INTERNAL_ERROR',
         },
         msg: 'Review hydration outcome',
+      });
+    });
+
+    it('preserves the original use-case error when hydration telemetry warn logging throws', async () => {
+      const logger = new ThrowingWarnLogger();
+      const deps = createDeps({
+        logger,
+        getPreviousAttemptUseCase: {
+          execute: async () => {
+            throw new ApplicationError('NOT_FOUND', 'Previous attempt missing');
+          },
+        },
+      });
+
+      const result = await getPreviousAttempt(
+        { questionId: 'q1' },
+        deps as never,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'NOT_FOUND' },
       });
     });
   });

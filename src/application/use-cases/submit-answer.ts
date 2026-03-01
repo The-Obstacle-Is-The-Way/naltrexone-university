@@ -60,6 +60,18 @@ export class SubmitAnswerUseCase {
     }));
   }
 
+  private safeLog(
+    level: 'info' | 'warn' | 'error',
+    context: Record<string, unknown>,
+    msg: string,
+  ): void {
+    try {
+      this.logger[level](context, msg);
+    } catch {
+      // Logging is best-effort and must not change submit behavior.
+    }
+  }
+
   async execute(input: SubmitAnswerInput): Promise<SubmitAnswerOutput> {
     const question = await this.questions.findPublishedById(input.questionId);
     if (!question) {
@@ -151,7 +163,8 @@ export class SubmitAnswerUseCase {
     });
 
     if (retryOrigin !== null) {
-      this.logger.info(
+      this.safeLog(
+        'info',
         {
           event: 'retry_submitted',
           retryOrigin,
@@ -186,7 +199,8 @@ export class SubmitAnswerUseCase {
             );
           }
         } catch (rollbackError) {
-          this.logger.error(
+          this.safeLog(
+            'error',
             {
               attemptId: attempt.id,
               sessionError: error,

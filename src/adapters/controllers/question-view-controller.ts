@@ -60,6 +60,19 @@ const getDeps = createDepsResolver<
   loadAppContainer,
 );
 
+function safeLog(
+  logger: Logger,
+  level: 'info' | 'warn',
+  context: Record<string, unknown>,
+  msg: string,
+): void {
+  try {
+    logger[level](context, msg);
+  } catch {
+    // Telemetry must not change request outcomes.
+  }
+}
+
 export const getQuestionBySlug = createAction({
   schema: GetQuestionBySlugInputSchema,
   getDeps,
@@ -116,7 +129,9 @@ export const getPreviousAttempt = createAction({
       });
       const outcome = output ? output.kind : 'no_prior_attempt';
 
-      d.logger.info(
+      safeLog(
+        d.logger,
+        'info',
         {
           event: 'review_hydration_outcome',
           mode: 'review',
@@ -131,7 +146,9 @@ export const getPreviousAttempt = createAction({
 
       return output;
     } catch (error) {
-      d.logger.warn(
+      safeLog(
+        d.logger,
+        'warn',
         {
           event: 'review_hydration_outcome',
           mode: 'review',
