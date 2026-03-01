@@ -115,7 +115,7 @@ function getRequiredTokenValue(block: string, tokenName: string): string {
 describe('globals.css light-mode tokens (DEBT-263)', () => {
   const rootBlock = extractBlock(css, ':root');
 
-  it('pins the --success token pair and enforces AA contrast', () => {
+  it('returns pinned success token pair and enforces AA contrast when theme is light', () => {
     const success = getRequiredTokenValue(rootBlock, 'success');
     const successForeground = getRequiredTokenValue(
       rootBlock,
@@ -129,7 +129,7 @@ describe('globals.css light-mode tokens (DEBT-263)', () => {
     ).toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT_CONTRAST);
   });
 
-  it('pins the --destructive token pair and enforces AA contrast', () => {
+  it('returns pinned destructive token pair and enforces AA contrast when theme is light', () => {
     const destructive = getRequiredTokenValue(rootBlock, 'destructive');
     const destructiveForeground = getRequiredTokenValue(
       rootBlock,
@@ -150,12 +150,12 @@ describe('globals.css light-mode tokens (DEBT-263)', () => {
 describe('globals.css dark-mode tokens are unchanged', () => {
   const darkBlock = extractBlock(css, '.dark');
 
-  it('preserves --success dark-mode value', () => {
+  it('returns dark-mode success token when theme is dark', () => {
     const value = extractToken(darkBlock, 'success');
     expect(value).toBe('142 70% 42%');
   });
 
-  it('preserves --destructive dark-mode value', () => {
+  it('returns dark-mode destructive token when theme is dark', () => {
     const value = extractToken(darkBlock, 'destructive');
     expect(value).toBe('0 72% 51%');
   });
