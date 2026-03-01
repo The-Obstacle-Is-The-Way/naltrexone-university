@@ -174,13 +174,13 @@ export function HistorySessionsTab({
           const isRowInteractive = sessionReviewHref !== null;
 
           return (
+            /* biome-ignore lint/a11y/useKeyWithClickEvents: Row click is a pointer-only convenience; keyboard users navigate explicit Link and Button controls. */
             <li
               key={row.sessionId}
-              tabIndex={isRowInteractive ? 0 : undefined}
               className={cn(
                 'rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors',
                 isRowInteractive
-                  ? 'cursor-pointer hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]'
+                  ? 'cursor-pointer hover:bg-muted/40'
                   : undefined,
               )}
               onClick={(event) => {
@@ -195,27 +195,12 @@ export function HistorySessionsTab({
                 }
                 router.push(sessionReviewHref);
               }}
-              onKeyDown={(event) => {
-                if (!sessionReviewHref) return;
-                if (event.key !== 'Enter') return;
-                const target = event.target;
-                if (!(target instanceof Element)) return;
-                const interactive = target.closest(
-                  'a,button,input,select,textarea,[role="button"],[role="link"]',
-                );
-                if (interactive && interactive !== event.currentTarget) {
-                  return;
-                }
-                event.preventDefault();
-                router.push(sessionReviewHref);
-              }}
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 {sessionReviewHref ? (
                   <Link
                     href={sessionReviewHref}
-                    tabIndex={-1}
-                    className="rounded-md text-sm text-foreground transition-colors focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                    className="rounded-md text-sm text-foreground transition-colors hover:underline focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                   >
                     <SessionSummaryContent
                       mode={row.mode}
@@ -241,6 +226,8 @@ export function HistorySessionsTab({
                   variant="outline"
                   className="rounded-full"
                   aria-label={`${isSelected ? 'Hide' : 'View'} breakdown for ${sessionSummary}`}
+                  aria-expanded={isSelected}
+                  aria-controls={`breakdown-${row.sessionId}`}
                   onClick={() => {
                     void historySessions.onOpenSession(row.sessionId);
                   }}
@@ -250,12 +237,13 @@ export function HistorySessionsTab({
               </div>
 
               {isSelected ? (
-                <div className="mt-3 -mx-1 space-y-2 rounded-lg border border-border/30 bg-background/60 p-3">
-                  {sessionReviewHref ? (
-                    <Button asChild variant="default" className="rounded-full">
-                      <Link href={sessionReviewHref}>Review session</Link>
-                    </Button>
-                  ) : null}
+                /* biome-ignore lint/a11y/useSemanticElements: Spec requires explicit role wiring for disclosure region. */
+                <div
+                  id={`breakdown-${row.sessionId}`}
+                  role="region"
+                  aria-label="Question breakdown"
+                  className="mt-3 border-t border-border/30 pt-3"
+                >
                   {historySessions.reviewLoadState.status === 'loading' ? (
                     <output
                       className="text-sm text-muted-foreground"

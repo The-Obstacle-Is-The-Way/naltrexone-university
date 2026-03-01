@@ -3,7 +3,7 @@
 **Date:** 2026-03-01
 **Triggered by:** Visual review of the history page breakdown expansion — janky inner-card layering, redundant "Review session" button, and overall lack of visual elegance
 **Scope:** Redesign the expanded breakdown area in history session cards to eliminate visual layering issues, remove redundant navigation, and establish a clean information hierarchy
-**Related:** [BS-035](../_archive/brainstorming/bs-035-card-hover-and-gray-consistency-audit.md) — Card Hover and Gray Consistency Audit (identified the nested background and dark-mode contrast issues); [SPEC-038](../_archive/specs/spec-038-history-ux-remediation.md) — History UX Remediation (added "Review session" as FR-5)
+**Related:** [BS-035](./bs-035-card-hover-and-gray-consistency-audit.md) — Card Hover and Gray Consistency Audit (identified the nested background and dark-mode contrast issues); [SPEC-038](../specs/spec-038-history-ux-remediation.md) — History UX Remediation (added "Review session" as FR-5)
 
 ---
 

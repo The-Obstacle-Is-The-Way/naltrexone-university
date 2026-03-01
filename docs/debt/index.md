@@ -18,7 +18,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | GitHub Issue |
 |----|-------|----------|--------------|
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
-| [DEBT-265](./debt-265-history-breakdown-ux-redesign.md) | History Breakdown UX Redesign — flat surface, list structure, disclosure a11y, interaction semantics (BS-036) | P2 | — |
 
 **Next Debt ID:** DEBT-266
 
@@ -28,6 +27,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-265](../_archive/debt/debt-265-history-breakdown-ux-redesign.md) | History Breakdown UX Redesign — flat surface, list structure, disclosure a11y, interaction semantics (BS-036) | P2 | 2026-03-01 | — |
 | [DEBT-264](../_archive/debt/debt-264-documentation-sync.md) | Documentation Sync (Finalize frontend docs after DEBT-251–263) | P2 | 2026-03-01 | — |
 | [DEBT-250](../_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md) | Frontend Visual Divergence Compliance Plan (BS-035 + all 31 items + 13 decisions) | P2 | 2026-03-01 | — |
 | [DEBT-263](../_archive/debt/debt-263-text-contrast.md) | Text Contrast (LIGHT-2) | P2 | 2026-03-01 | — |
