@@ -99,7 +99,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 
 | ID | Summary | File(s) |
 |----|---------|---------|
-| [FE-055](../_archive/debt/fe-055-exam-navigator-missing-nav-landmark.md) (follow-up) | Exam review navigator still lacks `aria-controls` wiring between navigator buttons and controlled content | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` |
+| [FE-055](./fe-055-aria-controls-wiring.md) (follow-up) | QuestionNavigator buttons lack `aria-controls` wiring to question content panel | `exam-review-view.tsx`, `practice-view.tsx`, `practice-session-page-view.tsx` |
 
 **Next Frontend ID:** FE-056
 
