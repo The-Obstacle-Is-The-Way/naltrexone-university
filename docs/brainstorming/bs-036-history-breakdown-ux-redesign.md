@@ -3,7 +3,7 @@
 **Date:** 2026-03-01
 **Triggered by:** Visual review of the history page breakdown expansion — janky inner-card layering, redundant "Review session" button, and overall lack of visual elegance
 **Scope:** Redesign the expanded breakdown area in history session cards to eliminate visual layering issues, remove redundant navigation, and establish a clean information hierarchy
-**Related:** [BS-035](./bs-035-card-hover-and-gray-consistency-audit.md) — Card Hover and Gray Consistency Audit (identified the nested background and dark-mode contrast issues); [SPEC-038](../_archive/specs/spec-038-history-ux-remediation.md) — History UX Remediation (added "Review session" as FR-5)
+**Related:** [BS-035](../_archive/brainstorming/bs-035-card-hover-and-gray-consistency-audit.md) — Card Hover and Gray Consistency Audit (identified the nested background and dark-mode contrast issues); [SPEC-038](../_archive/specs/spec-038-history-ux-remediation.md) — History UX Remediation (added "Review session" as FR-5)
 
 ---
 
@@ -136,7 +136,9 @@ How world-class products handle disclosed content inside a parent container:
 | Stripe payment details | Expand row → show details | No — same depth | Subtle `border-t` |
 | Notion toggle blocks | Content appears at parent level | No — same depth | Spacing only |
 
-**Universal pattern:** Disclosed content lives at the parent's visual level. One surface, one shade. Separation comes from a divider or spacing, never a second background color.
+**Common pattern for this use case:** Disclosed content often lives at the parent's visual level (one surface + divider/spacing). This is the right default for simple inline disclosure like history breakdown rows.
+
+**Caveat:** This is not universal. A subtle inner surface can be valid when expanded content switches to a materially different mode (for example: code diffs, dense tabular data, complex forms, logs), where explicit sub-context boundaries improve comprehension.
 
 ---
 
@@ -173,7 +175,7 @@ Remove the inner container's distinct background and border. Let the breakdown c
 
 Replace the darker inner container with a slightly *lighter* one (`bg-muted/10`), creating proper visual hierarchy. Remove "Review session" button.
 
-**Assessment:** Maintains visual containment without the inverted depth. But introduces a second shade — every reference product says don't do this. The outer card border already provides containment.
+**Assessment:** Maintains visual containment without the inverted depth, but adds a second surface that feels unnecessary for this simple disclosure. The outer card border already provides containment.
 
 ---
 
@@ -207,6 +209,8 @@ No inner background, no inner border, no inner border-radius. The card's outer b
 
 Delete entirely. The breakdown exists for question-level navigation. Question 1 at the top of the list implicitly serves as "start from beginning." The card header row serves as the session-level navigation target.
 
+Discoverability caveat: removing the button is still correct, but only if the session summary target remains clearly interactive (obvious hover/focus affordance and link semantics), so first-time users can still find the "start from question 1" path quickly.
+
 ### 3. Improve List Row Structure
 
 In `SessionBreakdownList`, move from bare text rows to structured rows:
@@ -229,14 +233,25 @@ On the expanded panel:
 - Add `role="region"`
 - Add `aria-label="Question breakdown"`
 
-### 5. Add Empty State
+### 5. Interaction Semantics Guardrail
+
+Avoid mixed "interactive parent + interactive children" keyboard semantics on the same row container.
+
+- Prefer a single explicit summary `<Link>` as the primary session-level navigation target
+- Keep "View/Hide breakdown" as a separate disclosure control
+- Keep question rows as explicit links
+- Do not rely on `tabIndex` + `onKeyDown` on `<li>` when nested links/buttons already exist
+
+This avoids ambiguous focus/navigation behavior while preserving large clickable affordances for pointer users.
+
+### 6. Add Empty State
 
 If the review loads with zero rows, show: "No questions available for this session."
 
 ### What We Are NOT Doing
 
-- **No inner scroll (`max-h` + `overflow-y-auto`)** — Inner scroll containers create scroll traps on mobile. Let the card be as tall as it needs to be. "Hide breakdown" collapses it.
-- **No second shade (`bg-muted/10` inner shell)** — Contradicts the universal disclosure pattern. One surface per card.
+- **No default inner scroll (`max-h` + `overflow-y-auto`)** — Inner scroll containers create scroll traps on mobile. Let the card be as tall as it needs to be by default. If telemetry later shows extreme desktop overflow pain, revisit with a desktop-only containment strategy.
+- **No second shade for this history disclosure** — For this UI, one surface per card is cleaner. A subtle second surface is only justified when expanded content is materially different in kind (not this case).
 - **No de-emphasized "Review session" link** — Still redundant regardless of visual weight. Question 1 is right there.
 
 ---
@@ -261,4 +276,5 @@ If the review loads with zero rows, show: "No questions available for this sessi
 | 2026-03-01 | Created BS-036 | History breakdown UX needs focused attention beyond the broad BS-035 audit |
 | 2026-03-01 | Considered Options A, B, C | Three distinct approaches from minimal to structured |
 | 2026-03-01 | External first-principles audit | Parallel agent reviewed from first principles; identified valid gaps (a11y, list scanability, mobile) but over-engineered with Option D (inner shade, inner scroll, de-emphasized CTA) |
-| 2026-03-01 | Recommend Option A + list improvements + a11y | Design precedent (GitHub, Linear, Stripe, Notion) unanimously supports flat disclosure. List structure and a11y address the real gaps without introducing new visual surfaces or scroll traps |
+| 2026-03-01 | Recommend Option A + list improvements + a11y | For this simple disclosure, precedent (GitHub, Linear, Stripe, Notion) favors flat expansion. List structure and a11y address the real gaps without introducing avoidable visual surfaces or scroll traps |
+| 2026-03-01 | Add caveats for implementation discipline | Clarified that "flat disclosure" is a strong default, not universal law; added interaction semantics guardrail and discoverability condition for removing the redundant CTA |
