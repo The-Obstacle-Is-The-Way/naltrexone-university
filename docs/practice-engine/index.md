@@ -1,7 +1,7 @@
 # Practice Engine
 
 > **Type:** Canonical Reference Document (Living)
-> **Last Verified:** 2026-02-16 (synced to SPEC-028)
+> **Last Verified:** 2026-03-01 (retry/reattempt audit sync)
 > **Scope:** Everything related to practicing questions — the core product feature
 
 ---
@@ -89,6 +89,7 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 | [File Index](./file-index.md) | Directory listings for all practice-engine source files |
 | [Content Pipeline](./content-pipeline.md) | Full end-to-end trace: MDX authoring → seeding → database → shuffling → rendering. Includes resolved BS-011 root cause analysis (SPEC-025, SPEC-026) and developer operations (import, seed, troubleshoot). |
 | [Question Rendering Architecture](./question-rendering-architecture.md) | How questions are rendered, navigated, and state-managed across all 6 viewing contexts. Shared vs context-specific components, state persistence bug, navigation patterns. |
+| [Retry Logic](./retry-logic.md) | Canonical retry/reattempt behavior across tutor, exam, quick practice, history, dashboard, and bookmarks; includes current-state matrix, target contract, and P0-P4 findings. |
 
 ---
 
@@ -137,3 +138,4 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 | 2026-02-12 | Updated architecture diagram and related-links to reflect SPEC-022 and SPEC-023 implementations (History Questions = attempted-question log; question detail supports `?mode=review`). |
 | 2026-02-16 | Added Question Rendering Architecture document — cross-context component map, state persistence analysis, navigation architecture. Synced last-verified to SPEC-028. |
 | 2026-02-16 | Accuracy audit: added `CountAvailableQuestions` to architecture diagram; fixed 9 broken spec links (`../specs/` → `../_archive/specs/`); added SPEC-024 through SPEC-030 to related docs; updated Content Pipeline scope (Bug B resolved). Sub-docs: file-index missing files added, practice-modes mode count corrected, frontend-layer hook line count updated. |
+| 2026-03-01 | Added Retry Logic document as source of truth for reattempt semantics, including cross-mode behavior matrix, P0-P4 audit findings, and implementation contract. Linked DEBT-265 for follow-up remediation. |
