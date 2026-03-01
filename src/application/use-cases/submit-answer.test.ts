@@ -85,6 +85,40 @@ describe('SubmitAnswerUseCase', () => {
       });
     });
 
+    it('does not emit retry_submitted telemetry for non-retry submissions', async () => {
+      const userId = 'user-1';
+      const questionId = 'q1';
+      const logger = new FakeLogger();
+
+      const question = createQuestion({
+        id: questionId,
+        status: 'published',
+        choices: [
+          createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+          createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+        ],
+      });
+
+      const useCase = new SubmitAnswerUseCase(
+        new FakeQuestionRepository([question]),
+        new FakeAttemptRepository(),
+        new FakePracticeSessionRepository(),
+        logger,
+      );
+
+      await useCase.execute({
+        userId,
+        questionId,
+        choiceId: 'c2',
+      });
+
+      expect(
+        logger.infoCalls.some(
+          ({ context }) => context.event === 'retry_submitted',
+        ),
+      ).toBe(false);
+    });
+
     it('stores retry provenance on standalone retry attempts', async () => {
       const userId = 'user-1';
       const questionId = 'q1';
