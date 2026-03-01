@@ -50,8 +50,8 @@ DEBT-250 is decomposed into 14 child specs (DEBT-251–264). Each child spec map
 | [DEBT-259](../_archive/debt/debt-259-shared-constants-extraction.md) | D-13, D-11 | ~~DEBT-252/253 merged~~ Done | 8 files (refactor) | Resolved in PR #152 | [#152](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/152) |
 | [DEBT-260](../_archive/debt/debt-260-ux-seams.md) | UX-1, UX-2, UX-3, UX-4 | ~~Decisions 3, 6, 7, 8~~ Resolved | 1–3 files + docs | Resolved in PR #152 | [#152](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/152) |
 | [DEBT-261](../_archive/debt/debt-261-touch-targets.md) | TOUCH-1, TOUCH-2 | ~~Decision 11~~ Resolved (Option C) | `mobile-nav.tsx`, `theme-toggle.tsx`, `auth-nav.tsx` | Resolved in PR #152 | [#152](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/152) |
-| [DEBT-262](debt-262-light-mode-opacity.md) | LIGHT-1 | Decision 12 | `globals.css` or docs-only | Blocked | — |
-| [DEBT-263](debt-263-text-contrast.md) | LIGHT-2 | Decision 13 + DEBT-251 merged | `globals.css` | Blocked | — |
+| [DEBT-262](../_archive/debt/debt-262-light-mode-opacity.md) | LIGHT-1 | Decision 12 ✅ | Docs-only (folds into DEBT-264) | Resolved (2026-03-01) | — |
+| [DEBT-263](../_archive/debt/debt-263-text-contrast.md) | LIGHT-2 | Decision 13 ✅ + DEBT-251 ✅ | `globals.css` | Resolved (2026-03-01) | — |
 
 ### Final
 
@@ -236,10 +236,11 @@ The selected-but-not-submitted choice state uses `border-ring` only — no backg
 
 **Key context preserved:** WCAG AA requires 24px minimum (we pass). Desktop nav uses text-only hover (L-1), mobile nav uses background + text hover (L-6). This responsive split is intentional by design.
 
-### Decision 12: Light-Mode Opacity Strategy
+### Decision 12: Light-Mode Opacity Strategy — RESOLVED ✅
 
 **Blocks:** LIGHT-1
 **Source:** Chrome Agent Light Mode audit (2026-02-28)
+**Resolution:** Option C — Accept asymmetry (documentation-only, folds into DEBT-264)
 
 The Pattern Registry opacity scale (Part 1.2) was designed for dark mode where `--muted` at 11% lightness produces visible contrast at all opacity levels. In light mode, `--muted` is 96.1% lightness — only 3.9% away from pure white. This means:
 
@@ -251,37 +252,36 @@ The Pattern Registry opacity scale (Part 1.2) was designed for dark mode where `
 | `/80` | `rgb(244,247,250)` | 1.073:1 | Barely |
 | `/100` | `rgb(241,245,249)` | 1.091:1 | Barely |
 
-This affects hover states (L-3: `hover:bg-muted/40`, `hover:bg-accent/40`), resting fills (L-2: `bg-muted/20`), active states (L-5: `bg-muted`), and choice hovers (L-4: `hover:bg-muted/80`).
+This affects hover states (L-3: `hover:bg-muted/40`, `hover:bg-accent/40`), resting fills (L-2: `bg-muted/20`), active states (L-5: `bg-muted`), and choice hovers (L-4: `hover:bg-muted/60`).
 
-**Option A:** Darken `--muted` in light mode from `210 40% 96.1%` to `210 20% 88%`. This produces usable contrast at `/40`+ (~1.15:1 at `/40`, ~1.25:1 at `/60`) but changes the overall feel of the light theme and requires extensive regression.
+**Option A:** ~~Darken `--muted` in light mode.~~ **Rejected.** Even at L=88%, `bg-muted/40` produces ~1.12:1 contrast — still invisible. L≈73% needed for visible hover, which fundamentally changes the light theme. Also actively degrades Decision 13 contrast fixes (D12-A + D13-C can fail AA on muted fills: `text-success` by `bg-muted/60`, `text-destructive` by `bg-muted/40`).
 
-**Option B:** Introduce a separate `--muted-hover` custom property for light mode that's darker than `--muted`. Use it only for hover/active states. Keeps resting `--muted` unchanged.
+**Option B:** ~~Introduce `--muted-hover` custom property.~~ **Rejected.** Disproportionate complexity for a 4-component problem. Breaks "one token, multiple opacities" pattern.
 
-**Option C (recommended):** Accept that light-mode hover feedback is primarily communicated through border changes (already present on most interactive elements via `hover:border-muted-foreground/30`), not background fills. Document this in Pattern Registry Part 1.2 as an intentional asymmetry. Optionally darken `/20` resting fills to `/30` or `/40` for slightly more visible card substructure.
+**Option C (chosen):** Accept that light-mode hover feedback is primarily communicated through border changes (already present on most interactive elements via `hover:border-muted-foreground/30`), not background fills. Document this in Pattern Registry Part 1.2 as an intentional asymmetry. The 4 row components lacking non-fill hover cues (dashboard rows, history rows) are addressed by DEBT-260 (UX-1) with targeted `hover:border-border` additions.
 
 **Key context:** Many production apps (shadcn/ui, Vercel Dashboard, Linear light mode) rely on border/shadow changes rather than background tints for light-mode hover. The dark-mode opacity scale is effective; light mode uses a different visual language.
 
-### Decision 13: Success/Destructive Text Contrast Strategy
+### Decision 13: Success/Destructive Text Contrast Strategy — RESOLVED ✅
 
 **Blocks:** LIGHT-2
 **Source:** Chrome Agent Light Mode audit (2026-02-28)
+**Resolution:** Modified Option C — `--success: 142 72% 29%` (5.081:1), `--destructive: 0 84.2% 48%` (4.879:1)
 
-The `--success` (`142 72% 35%`) and `--destructive` (`0 84.2% 60.2%`) color tokens produce contrast ratios below WCAG AA for normal-sized text:
+The `--success` and `--destructive` color tokens produced contrast ratios below WCAG AA for normal-sized text:
 
-| Token | Computed color | Contrast on white | WCAG AA (4.5:1) | WCAG AA Large (3:1) |
-|-------|---------------|-------------------|------------------|---------------------|
-| `text-success` | `rgb(25,154,72)` | ~3.65:1 | FAIL | PASS |
-| `text-destructive` | `rgb(239,68,68)` | ~3.86:1 | FAIL | PASS |
+| Token | Before | After | Contrast on white | WCAG AA (4.5:1) |
+|-------|--------|-------|-------------------|------------------|
+| `text-success` | `142 72% 35%` (3.65:1) | `142 72% 29%` (5.081:1) | **5.081:1** | PASS ✅ |
+| `text-destructive` | `0 84.2% 60.2%` (3.76:1) | `0 84.2% 48%` (4.879:1) | **4.879:1** | PASS ✅ |
 
-Both pass WCAG AA for large text (18px+ or 14px+ bold) but fail for normal text. They're used at `text-xs` (12px) for correct/incorrect labels on the dashboard.
+**Option A:** ~~Darken aggressively.~~ Success L=28% vs our L=29% is negligible (+0.271 contrast for 1 point more darkening). Destructive L=48% is identical to our choice.
 
-**Option A:** Darken both colors in light mode: `--success` to `142 72% 28%` (~4.8:1), `--destructive` to `0 84.2% 48%` (~5.0:1). Changes the look of all success/error UI globally.
+**Option B:** ~~Use text-foreground for small text.~~ **Rejected.** 12 files, 22 changes, and critically cannot work on choice-button/feedback badges where semantic color IS the UX signal.
 
-**Option B:** Use `text-foreground` for small-text instances and reserve `text-success`/`text-destructive` for large text, badges with tinted backgrounds, or icons. This separates "semantic color for emphasis" from "readable text color."
+**Option C (modified, chosen):** Success L=29% (modest 6-point lightness shift, 12.9% above AA threshold). Destructive L=48% instead of spec's L=45% (L=45% is a 15-point drop that transforms coral-red into blood red — visual overshoot; L=48% retains warmth with 8.4% buffer above AA). Dark mode values completely untouched (separate CSS declarations).
 
-**Option C (recommended):** Increase to accessible levels — `--success: 142 72% 29%` (~4.6:1), `--destructive: 0 84.2% 45%` (~4.9:1). The darkening is subtle (6-15% lightness reduction) and keeps the colors recognizably green/red while meeting AA for all text sizes.
-
-**Key context:** The current values are shadcn/ui defaults. Many shadcn-based apps use these colors for badges and icons (where large text or non-text UI rules apply) rather than for body-sized text labels.
+**Known follow-up:** `text-success` on `bg-success/15` tinted backgrounds still doesn't reach AA. Tracked separately — not blocking this token fix.
 
 ---
 
@@ -715,7 +715,7 @@ rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-dest
 ### LIGHT-1: Light-Mode Opacity Scale Produces Imperceptible Contrast
 
 **Severity:** Medium-High (affects all hover/fill states in light mode)
-**Requires:** Decision 12
+**Decision 12:** Resolved — Option C (accept asymmetry)
 **Source:** Chrome Agent Light Mode audit (2026-02-28)
 
 **Problem:** The Pattern Registry opacity scale (Part 1.2) produces perceptible contrast only in dark mode. In light mode, `--muted` / `--accent` at 96.1% lightness are so close to white (100%) that any opacity reduction blends into the page background. This affects hover feedback, resting fills, and active states across the entire app.
@@ -727,7 +727,7 @@ rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-dest
 | Row-in-card resting fill | `bg-muted/20` | Dashboard sessions, history items | 1.018:1 — invisible |
 | Row-in-card hover | `hover:bg-muted/40` | Dashboard sessions, history items | 1.037:1 — invisible |
 | Standalone row hover | `hover:bg-muted/50` | Filter chips, standalone items | 1.046:1 — invisible |
-| Choice button hover | `hover:bg-muted/80` | Practice choices (pre-submit) | 1.073:1 — barely |
+| Choice button hover | `hover:bg-muted/60` | Practice choices (pre-submit) | 1.055:1 — invisible |
 | Active nav indicator | `bg-muted` (100%) | Mobile nav active link, answered buttons | 1.091:1 — barely |
 
 **Root cause:** `--muted` in light mode is `hsl(210, 40%, 96.1%)` = only 3.9% lightness away from white. The opacity scale was designed for dark mode where `--muted` at 11% lightness has ~89% headroom.
@@ -738,7 +738,7 @@ rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-dest
 - Active nav links use `font-medium` for weight-based distinction
 - History/dashboard rows have `border-border/60` for structural boundary
 
-**Target** depends on Decision 12 outcome.
+**Target (resolved):** Keep tokens unchanged; treat this as a documentation-level asymmetry. Light-mode perceptibility for row hover is handled by non-fill cues (border/text/shadow), with dashboard/history row fixes tracked in DEBT-260 (UX-1).
 
 **Verify:** In light mode, hover any dashboard recent session item — observe whether the background changes perceptibly.
 
@@ -747,10 +747,10 @@ rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-dest
 ### LIGHT-2: Success/Destructive Text Colors Fail WCAG AA at Normal Text Sizes
 
 **Severity:** Medium-High (WCAG AA failure for accessibility)
-**Requires:** Decision 13
+**Decision 13:** Resolved — Modified Option C (`--success` 29%, `--destructive` 48%)
 **Source:** Chrome Agent Light Mode audit (2026-02-28)
 
-**Problem:** The `text-success` and `text-destructive` color tokens produce insufficient contrast for WCAG AA normal-text compliance when used on white or near-white backgrounds:
+**Baseline (pre-fix problem):** The old `text-success` and `text-destructive` token values produced insufficient contrast for WCAG AA normal-text compliance on white/near-white backgrounds:
 
 | Token | CSS variable | Computed color | Contrast on white | AA normal (4.5:1) | AA large (3:1) |
 |-------|-------------|---------------|-------------------|-------------------|----------------|
@@ -768,7 +768,7 @@ rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-dest
 - Feedback pills use `text-sm font-semibold` on tinted backgrounds — different contrast calculation
 - Button variants (`bg-success text-success-foreground`) use white-on-green — high contrast
 
-**Target** depends on Decision 13 outcome.
+**Current implementation (this branch):** `--success: 142 72% 29%` and `--destructive: 0 84.2% 48%` in `app/globals.css` `:root`. This resolves LIGHT-2 for white-background text contrast. Tinted-background contrast remains a separate follow-up.
 
 **Verify:** In Chrome DevTools, inspect a `text-success` element at `text-xs` and run the Accessibility color contrast audit.
 
@@ -1236,11 +1236,11 @@ Phase 5.5 (needs Decision 11)
 ├── TOUCH-1: Systemic button touch targets (h-9 = 36px vs 44px AAA)
 └── TOUCH-2: Clerk UserButton sizing (external, ~28-33px)
 
-Phase 5.7 (needs Decision 12)
-└── LIGHT-1: Light-mode opacity scale systemic fix
+Phase 5.7 (Decision 12 resolved)
+└── LIGHT-1: Light-mode opacity strategy documented (no token change)
 
-Phase 5.8 (needs Decision 13)
-└── LIGHT-2: Success/destructive text contrast fix
+Phase 5.8 (Decision 13 resolved)
+└── LIGHT-2: Success/destructive token contrast fix (`globals.css` + `globals.test.ts`)
 
 Phase 6 (after all code changes)
 └── Documentation sync
@@ -1269,7 +1269,7 @@ Phase 6 (after all code changes)
 - [ ] Monthly pricing CTA is clearly visible in dark mode (>10% lightness contrast from card surface)
 - [ ] All auth/error page H1s include `font-heading tracking-tight`
 - [ ] ErrorCard default is `p-6`; no call sites pass `className="p-6"`
-- [ ] Interactive history session `<li>` rows have `role="link"` when clickable
+- [ ] Delegated clickable history session `<li>` rows with nested `<a>` links DO NOT add `role="link"` (avoid invalid nested link-role semantics)
 
 ### Documentation
 

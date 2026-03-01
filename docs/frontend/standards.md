@@ -235,7 +235,7 @@ Every interactive element MUST have a visible focus indicator. Text links, icon 
 | App page h1 | `text-2xl font-bold font-heading tracking-tight text-foreground` |
 | Marketing hero h1 | `font-display text-5xl font-bold tracking-tight md:text-7xl` |
 | Marketing section h2 | `font-heading text-3xl font-bold tracking-tight md:text-4xl` |
-| Error/utility page heading | `text-xl font-semibold font-heading tracking-tight text-foreground` (route errors use `<h2>` unless `includeMainLandmark`; `global-error.tsx` uses `text-2xl font-bold font-heading text-foreground`). **D-17 note:** most error/utility pages currently lack `font-heading tracking-tight`; `global-error.tsx` has `font-heading` but is missing `tracking-tight`. |
+| Error/utility page heading | `text-xl font-semibold font-heading tracking-tight text-foreground` (route errors use `<h2>` unless `includeMainLandmark`; `global-error.tsx` uses `text-2xl font-bold font-heading tracking-tight text-foreground`). |
 
 ### Heading hierarchy
 
@@ -648,7 +648,7 @@ Three hooks exceed the 200-line "god hook" threshold (§12):
 | ID | Summary | File(s) |
 |----|---------|---------|
 | [FE-055](../_archive/debt/fe-055-exam-navigator-missing-nav-landmark.md) | Exam review navigator still lacks `aria-controls` wiring between navigator buttons and controlled content | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` |
-| — | Active visual divergences are tracked in Pattern Registry Part 11 (`D-1` through `D-17`) and DEBT-250 implementation plan (includes `COMP-1` + `A11Y-1`) | `docs/frontend/pattern-registry.md`, `docs/debt/debt-250-frontend-visual-divergence-compliance-plan.md` |
+| — | Active visual divergences are tracked in Pattern Registry Part 11 (`D-11`, `D-13`, plus approved exception `D-15`) and DEBT-250 implementation plan (active non-D items: `UX-1`–`UX-4`, `TOUCH-1`, `TOUCH-2`) | `docs/frontend/pattern-registry.md`, `docs/debt/debt-250-frontend-visual-divergence-compliance-plan.md` |
 | — | `Markdown.tsx` uses PascalCase filename (violates §13 kebab-case convention) | `components/markdown/Markdown.tsx` |
 
 ---
