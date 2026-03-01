@@ -1,189 +1,256 @@
 # BS-036: History Page Breakdown UX Redesign
 
 **Date:** 2026-03-01
-**Triggered by:** Visual review of history session expansion behavior and breakdown readability
-**Scope:** Re-audit and redesign recommendation for expanded history session breakdown UI
-**Related:** [BS-035](./bs-035-card-hover-and-gray-consistency-audit.md), [SPEC-038](../_archive/specs/spec-038-history-ux-remediation.md)
+**Triggered by:** Visual review of the history page breakdown expansion — janky inner-card layering, redundant "Review session" button, and overall lack of visual elegance
+**Scope:** Redesign the expanded breakdown area in history session cards to eliminate visual layering issues, remove redundant navigation, and establish a clean information hierarchy
+**Related:** [BS-035](./bs-035-card-hover-and-gray-consistency-audit.md) — Card Hover and Gray Consistency Audit (identified the nested background and dark-mode contrast issues); [SPEC-038](../_archive/specs/spec-038-history-ux-remediation.md) — History UX Remediation (added "Review session" as FR-5)
 
 ---
 
-## Executive Verdict
+## The Problem
 
-The original BS-036 identified real issues, but its final recommendation (Option A flat expansion + remove "Review session") is not the strongest end state.
+The history page session cards, when expanded to show the question breakdown, look visually awkward and have redundant navigation elements:
 
-From first principles, the best direction is **Option D (Hybrid Disclosure)**:
-- fix the dark-mode layering bug,
-- materially improve list scan-ability,
-- preserve explicit "start from question 1" discoverability,
-- and add accessibility + mobile behavior hardening.
+### 1. Janky Inner-Card Layering (Dark Mode)
 
----
+When a user clicks "View breakdown", the expanded content sits inside a nested container with a **darker background** than the outer card. This creates an uncomfortable visual depth:
 
-## Current State (Code-Verified)
+```
+Outer row:  bg-muted/20  → dark mode: ~4.9% effective lightness
+Inner area: bg-background/60 → dark mode: ~2.1% effective lightness (darker than outer)
+```
 
-- Expanded container in history sessions currently uses:
-  - `rounded-lg border border-border/30 bg-background/60 p-3`
-  - Source: `app/(app)/app/history/components/history-sessions-tab.tsx`
-- Expanded panel currently renders a primary `Review session` CTA linking to question 1.
-- `SessionBreakdownList` currently renders a plain `space-y-2` list of text rows with inline result labels.
-  - Source: `app/(app)/app/shared/components/session-breakdown-list.tsx`
+The inner area renders as a deeper black rectangle inside a lighter dark-gray card. This inverted hierarchy — darker inside lighter — violates the expected visual stacking order where nested content should be equal to or slightly lighter than its parent.
 
----
+**Code:** `history-sessions-tab.tsx:253`
+```tsx
+<div className="mt-3 -mx-1 space-y-2 rounded-lg border border-border/30 bg-background/60 p-3">
+```
 
-## First-Principles Audit of the Four Original Problems
+### 2. Hover State Disconnect
 
-### 1) Inner-card layering (dark mode)
-**Verdict:** Valid and high-impact.
+The outer row has `hover:bg-muted/40`, but the inner breakdown area has no hover response. When hovering the card, the outer background lightens while the inner breakdown stays static, creating a visual disconnect — the breakdown panel looks like it's "floating" at a different depth.
 
-`bg-background/60` inside a `bg-muted/20` row creates an inverted depth signal in dark mode. It reads as a darker cutout inside a lighter card-like row.
+**Code:** `history-sessions-tab.tsx:180-184`
+```tsx
+className={cn(
+  'rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors',
+  isRowInteractive
+    ? 'cursor-pointer hover:bg-muted/40 ...'
+    : undefined,
+)}
+```
 
-### 2) Hover-state disconnect
-**Verdict:** Real, but overstated in priority.
+### 3. "Review Session" Button is Redundant
 
-This is polish-level inconsistency, not the primary usability failure. The larger usability issue is list readability and dense scanning under expansion.
+Three navigation paths all lead to the same destination (first question in review mode):
 
-### 3) "Review session" redundancy
-**Verdict:** Partially true; "remove entirely" is too aggressive.
+| Path | Destination | UX Impact |
+|------|-------------|-----------|
+| Click session summary text | First question in review mode | Primary — intended main action |
+| Click anywhere on the row (outside interactive elements) | First question in review mode | Secondary — large target area |
+| Click "Review session" button inside breakdown | First question in review mode | **Redundant** — identical destination |
 
-Yes, there are multiple paths to question 1. But fully removing the explicit CTA increases discoverability risk because row-click navigation is implicit and breakdown intent is often "inspect + decide where to resume".
+The "Review session" button was added by SPEC-038 (FR-5) as a clear CTA, but in practice it creates the wrong hierarchy: the breakdown exists for **question-level** navigation (jump to a specific question), but the loudest visual element within it is a **session-level** action. If you want to start from question 1, you'd click the card header — you wouldn't expand the breakdown first.
 
-### 4) Breakdown list feels like a text dump
-**Verdict:** Valid and under-prioritized in the original doc.
+**What should replace it:** Nothing. The breakdown already has individual question links — question 1 at the top of the list implicitly serves as "start from the beginning." The card header row serves as the "go to question 1" action for users who don't want to expand.
 
-For up to 20 rows, this is the most meaningful UX problem: weak visual grouping, weak status hierarchy, and poor mobile scan behavior.
+**Code:** `history-sessions-tab.tsx:254-258`
+```tsx
+{sessionReviewHref ? (
+  <Button asChild variant="default" className="rounded-full">
+    <Link href={sessionReviewHref}>Review session</Link>
+  </Button>
+) : null}
+```
 
----
+### 4. Breakdown List Feels Like a Text Dump
 
-## Correct Priority Order
+The `SessionBreakdownList` renders as bare text — numbered question stems with Correct/Incorrect/Unanswered labels. No visual separation between rows, no padding, no hover affordance on clickable items. With 20 questions, it reads as an overwhelming wall of text.
 
-1. **Breakdown information density and scan-ability** (desktop + mobile)
-2. **Navigation clarity/discoverability** (question 1 entry vs deep links)
-3. **Surface hierarchy fix** (remove inverted dark layering)
-4. **Hover continuity polish**
+**Code:** `session-breakdown-list.tsx:20-58`
 
----
+### 5. Missing Disclosure Accessibility (Gap)
 
-## Option Review
+The "View breakdown" / "Hide breakdown" button toggles a content region but has no `aria-expanded` or `aria-controls` attributes. Screen readers cannot communicate the toggle state or the relationship between the button and the expanded panel.
 
-### Option A: Flat Expansion
-**Assessment:** Good quick fix, weak final design.
+**Code:** `history-sessions-tab.tsx:239-249`
+```tsx
+<Button
+  type="button"
+  variant="outline"
+  className="rounded-full"
+  aria-label={`${isSelected ? 'Hide' : 'View'} breakdown for ${sessionSummary}`}
+  onClick={() => {
+    void historySessions.onOpenSession(row.sessionId);
+  }}
+>
+  {isSelected ? 'Hide breakdown' : 'View breakdown'}
+</Button>
+```
 
-Pros:
-- Lowest implementation cost
-- Fixes the obvious dark layering bug
-
-Cons:
-- Does not solve list readability at 20 items
-- Removes too much visual containment
-- Increases risk that expanded state feels "spilled" rather than structured
-
-### Option B: Subtle Inset
-**Assessment:** Better than A; still incomplete alone.
-
-Pros:
-- Keeps clean hierarchy
-- Allows structured content shell
-
-Cons:
-- Needs explicit list-row structure to avoid text-dump feeling
-
-### Option C: Card-in-Card
-**Assessment:** Strong structure, but likely too heavy for this context.
-
-Pros:
-- Strong affordance
-- Very clear row separation
-
-Cons:
-- Can over-weight nested surfaces
-- Higher complexity for a shared list component
+Missing: `aria-expanded={isSelected}` and `aria-controls="breakdown-{sessionId}"` on the button, with corresponding `id` and `role="region"` on the expanded panel.
 
 ---
 
-## Recommended Option D (Hybrid Disclosure)
+## Root Cause Analysis
 
-Option D combines the best parts of B and C without the visual heaviness.
+### Why the layering looks wrong
 
-### D-1. Surface hierarchy (fix layering, keep containment)
-- Replace dark inset treatment with a neutral disclosure stack:
-  - outer separation: `mt-3 border-t border-border/40 pt-3`
-  - inner shell: `rounded-lg border border-border/40 bg-muted/10`
+The outer card uses `bg-muted/20` (11% gray at 20% opacity → ~4.9% effective on dark page background). The inner breakdown uses `bg-background/60` (3.5% background at 60% opacity → ~2.1% effective). In dark mode, `background` is **darker** than `muted`, so `bg-background/60` creates a visually deeper black than the parent — the opposite of what you'd expect from a nested container.
 
-### D-2. Keep explicit "start at question 1" affordance, but de-emphasize
-- Do **not** keep a primary filled button here.
-- Replace with a low-visual-weight content action link (for example `Start from question 1`) using content-link treatment.
-- Rationale: preserve discoverability without competing with per-question links.
+### Why "Review session" exists
 
-### D-3. Restructure breakdown rows for scan-ability
-Inside `SessionBreakdownList`, move from bare flex text rows to a structured row pattern:
-- list shell: `divide-y divide-border/30`
-- row: `grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 px-3 py-2`
-- link text: `min-w-0 truncate sm:whitespace-normal sm:line-clamp-2`
-- status badges:
-  - Correct: `inline-flex rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-xs font-medium text-success`
-  - Incorrect: `inline-flex rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive`
-  - Unanswered: `inline-flex rounded-full border border-border/50 bg-muted/30 px-2 py-0.5 text-xs font-medium text-muted-foreground`
+SPEC-038 added it as FR-5 ("Review session" CTA in breakdown). At the time, the row-level click-to-navigate hadn't been implemented yet, so the button was the only way to enter review from the breakdown view. With the row-level click handler now in place (added in the same spec), the button became redundant but was never revisited.
 
-### D-4. Mobile + long-list behavior
-For 20-item sessions, avoid runaway card height:
-- container viewport: `max-h-[min(55vh,28rem)] overflow-y-auto overscroll-contain`
-- enforce `min-w-0` on text columns to avoid flex overflow/truncation bugs
+### Why the breakdown list is unstyled
 
-### D-5. Accessibility hardening
-- Add `aria-expanded` and `aria-controls` to "View breakdown" button
-- Add corresponding `id` + `role="region"` on expanded panel
-- Keep existing focus-ring treatment on links/buttons
+`SessionBreakdownList` is a shared component also used in the session summary view (`session-summary-view.tsx`) where it sits inside a `Card` with appropriate padding and visual context. On the history page, it's placed inside the custom breakdown container, which provides its own (inadequate) styling context.
 
-### D-6. Loading, error, and empty-ready states
-- Keep existing loading and error rendering.
-- Add explicit empty-ready message when expanded review has zero rows.
+### Why accessibility wiring is missing
+
+The `aria-label` on the button was added for descriptive context, but the disclosure pattern (`aria-expanded` + `aria-controls`) was not wired. The `isSelected` state exists but is only used for conditional rendering, not communicated to assistive technology.
 
 ---
 
-## Missing Analysis from Original BS-036 (Now Covered)
+## Severity Assessment
 
-- Light mode behavior (problem is less severe than dark mode but still benefits from clearer structure)
-- Mobile viewport density and truncation strategy
-- Screen reader wiring for disclosure semantics (`aria-expanded` + `aria-controls`)
-- Long-list scroll behavior for 20 questions
-- Empty-ready state when review fetch succeeds with zero rows
-- Discoverability tradeoff of removing the explicit question-1 entrypoint
-
----
-
-## "Review session" Decision
-
-**Decision:** Do not remove the question-1 action completely. Replace current primary button with a lower-prominence content action.
-
-This balances:
-- explicitness for first-time and returning users,
-- lower CTA noise in expanded detail mode,
-- and clearer hierarchy between "resume from start" vs "jump to specific question".
+| Issue | Severity | Frequency | User Impact |
+|-------|----------|-----------|-------------|
+| Inner-card layering | **High** | Every breakdown expansion | Feels visually broken — "deeper black" inside lighter gray reads as a rendering bug |
+| Redundant "Review session" button | **Medium** | Every breakdown expansion | Wrong hierarchy — session-level action dominates a question-level context; wastes vertical space above the list |
+| Unstyled breakdown list | **Medium** | Every breakdown expansion | 20+ questions as a text wall is hard to scan; no visual rhythm, no hover affordance on links |
+| Missing disclosure a11y | **Medium** | Every breakdown expansion | Screen readers cannot communicate toggle state or panel relationship |
+| Hover disconnect | **Low** | Every hover while expanded | Resolves automatically when inner container is removed |
 
 ---
 
-## Implementation Sketch (Scope)
+## Design Precedent Analysis
 
-1. `history-sessions-tab.tsx`
-- Replace expansion container surface classes per D-1.
-- Replace primary `Review session` button with subtle link-style action.
-- Add disclosure ARIA wiring per D-5.
-- Add empty-ready state text.
+How world-class products handle disclosed content inside a parent container:
 
-2. `session-breakdown-list.tsx`
-- Add row shell structure and status badge treatment per D-3.
-- Add robust truncation/wrapping classes and `min-w-0` per D-4.
+| Product | Pattern | Inner Background? | Separator |
+|---------|---------|-------------------|-----------|
+| GitHub PR file list | Expand file → show diff inline | No — same depth | `border-t` divider between file header and diff |
+| Linear issue detail | Expand subtasks inline | No — same depth | Spacing + left indent |
+| Stripe payment details | Expand row → show details | No — same depth | Subtle `border-t` |
+| Notion toggle blocks | Content appears at parent level | No — same depth | Spacing only |
 
-3. Tests
-- Update session tab/browser tests for disclosure ARIA and revised question-1 action.
-- Update list render tests for structured row/status badge classes and empty-ready behavior.
+**Universal pattern:** Disclosed content lives at the parent's visual level. One surface, one shade. Separation comes from a divider or spacing, never a second background color.
+
+---
+
+## Proposed Options
+
+### Option A: "Flat Expansion" — Minimal, Clean
+
+Remove the inner container's distinct background and border. Let the breakdown content flow naturally within the card, separated only by a top border. Remove "Review session" button.
+
+**Visual structure:**
+```
+┌─────────────────────────────────────────────────────┐
+│ Tutor  •  3/20 correct (15%)  •  >120m  •  Feb 28  │  [Hide breakdown]
+│ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─│
+│  1. The Global Burden of Disease 2021...   Correct   │
+│  2. According to McCabe et al. (2023)...   Incorrect │
+│  3. A 28-year-old woman with a 3-year...   Correct   │
+│  ...                                                 │
+└─────────────────────────────────────────────────────┘
+```
+
+**Changes:**
+- Remove `bg-background/60`, `border border-border/30`, `rounded-lg` from inner container
+- Replace with `mt-3 pt-3 border-t border-border/30` — subtle separator only
+- Remove "Review session" button entirely
+- Clicking session header row → navigates to question 1 (already works)
+- Clicking individual question → navigates to that question (already works)
+
+**Assessment:** Fixes the core layering problem. Simple. But leaves the list as a text dump.
+
+---
+
+### Option B: "Subtle Inset" — Light Background Differentiation
+
+Replace the darker inner container with a slightly *lighter* one (`bg-muted/10`), creating proper visual hierarchy. Remove "Review session" button.
+
+**Assessment:** Maintains visual containment without the inverted depth. But introduces a second shade — every reference product says don't do this. The outer card border already provides containment.
+
+---
+
+### Option C: "Card-in-Card" — Structured Disclosure
+
+Replace the breakdown area with a proper card-like surface. Make each breakdown row a distinct, tappable element.
+
+**Assessment:** Strongest visual structure, but over-engineered. Card-in-card adds visual weight. The card's outer border already provides containment.
+
+---
+
+## Recommendation: Option A + List Improvements + Accessibility
+
+The best approach is Option A's simplicity **combined with** list structure improvements and accessibility wiring. This gives us the correct visual hierarchy without over-engineering.
+
+### 1. Surface: One Shade, Divider Only
+
+Replace the inner container:
+
+```tsx
+// Before (inverted depth)
+<div className="mt-3 -mx-1 space-y-2 rounded-lg border border-border/30 bg-background/60 p-3">
+
+// After (flat, divider only)
+<div className="mt-3 pt-3 border-t border-border/30">
+```
+
+No inner background, no inner border, no inner border-radius. The card's outer border provides containment. The `border-t` provides separation between summary and breakdown.
+
+### 2. Remove "Review Session" Button
+
+Delete entirely. The breakdown exists for question-level navigation. Question 1 at the top of the list implicitly serves as "start from beginning." The card header row serves as the session-level navigation target.
+
+### 3. Improve List Row Structure
+
+In `SessionBreakdownList`, move from bare text rows to structured rows:
+
+- Add `divide-y divide-border/20` to the `<ul>` for visual rhythm between rows
+- Add `py-2` padding to each `<li>` for breathing room
+- Add `hover:bg-muted/20 -mx-2 px-2 rounded-md transition-colors` on clickable rows for interactive affordance
+- Right-align status labels with consistent placement
+
+These changes benefit both the history context and the session summary context (where the component is also used).
+
+### 4. Add Disclosure Accessibility
+
+On the "View breakdown" / "Hide breakdown" button:
+- Add `aria-expanded={isSelected}`
+- Add `aria-controls={`breakdown-${row.sessionId}`}`
+
+On the expanded panel:
+- Add `id={`breakdown-${row.sessionId}`}`
+- Add `role="region"`
+- Add `aria-label="Question breakdown"`
+
+### 5. Add Empty State
+
+If the review loads with zero rows, show: "No questions available for this session."
+
+### What We Are NOT Doing
+
+- **No inner scroll (`max-h` + `overflow-y-auto`)** — Inner scroll containers create scroll traps on mobile. Let the card be as tall as it needs to be. "Hide breakdown" collapses it.
+- **No second shade (`bg-muted/10` inner shell)** — Contradicts the universal disclosure pattern. One surface per card.
+- **No de-emphasized "Review session" link** — Still redundant regardless of visual weight. Question 1 is right there.
 
 ---
 
 ## Open Questions
 
-1. Should unanswered rows be grouped/collapsible after a threshold (for example 10+ unanswered)?
-2. Should the question-1 action text be `Start from question 1` or `Review from question 1`?
+1. **Should "View breakdown" button become a chevron icon?**
+   The button uses `variant="outline"` and takes significant horizontal space. A `ChevronDown`/`ChevronUp` icon button could be more compact. However, the text label provides clearer affordance for first-time users.
+
+2. **Should unanswered questions be visually de-emphasized?**
+   Currently, unanswered questions show `text-muted-foreground/60` which dims them. With 14 unanswered out of 20 (as in the screenshot), the breakdown is dominated by dimmed rows. Consider: (a) keep as-is (clear that the session was abandoned), (b) collapse unanswered into "14 unanswered" summary, or (c) separate answered/unanswered into two groups.
+
+3. **Should the session card header change when expanded?**
+   Currently the header looks the same whether collapsed or expanded. A subtle change could signal the expanded state more clearly. However, the "Hide breakdown" button text already communicates state.
 
 ---
 
@@ -191,6 +258,7 @@ This balances:
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-03-01 | Created BS-036 | History breakdown UX needed focused follow-up from BS-035 |
-| 2026-03-01 | Re-audited from first principles | Original problem set mostly valid, but priority and final recommendation required correction |
-| 2026-03-01 | Recommend Option D (Hybrid Disclosure) | Best balance of hierarchy, readability, discoverability, and implementation complexity |
+| 2026-03-01 | Created BS-036 | History breakdown UX needs focused attention beyond the broad BS-035 audit |
+| 2026-03-01 | Considered Options A, B, C | Three distinct approaches from minimal to structured |
+| 2026-03-01 | External first-principles audit | Parallel agent reviewed from first principles; identified valid gaps (a11y, list scanability, mobile) but over-engineered with Option D (inner shade, inner scroll, de-emphasized CTA) |
+| 2026-03-01 | Recommend Option A + list improvements + a11y | Design precedent (GitHub, Linear, Stripe, Notion) unanimously supports flat disclosure. List structure and a11y address the real gaps without introducing new visual surfaces or scroll traps |
