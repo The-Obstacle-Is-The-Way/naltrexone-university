@@ -1,9 +1,9 @@
 # DEBT-264: Documentation Sync
 
-**Status:** Blocked
+**Status:** In Progress
 **Parent:** [DEBT-250](debt-250-frontend-visual-divergence-compliance-plan.md)
 **Items:** Phase 6 documentation sync
-**Blocked by:** All code specs (DEBT-251–263) merged
+**Blocked by:** Final completion of DEBT-259, DEBT-260, and DEBT-261 (DEBT-262 and DEBT-263 completed)
 **Files:** `docs/frontend/pattern-registry.md`, `docs/frontend/standards.md`, `docs/frontend/design-principles.md`, `docs/brainstorming/bs-035-card-hover-and-gray-consistency-audit.md`, `docs/debt/debt-250-frontend-visual-divergence-compliance-plan.md`, `docs/debt/index.md`
 
 ---
@@ -11,6 +11,13 @@
 ## Scope
 
 After all code changes are complete, update docs in lockstep:
+
+### Current Progress (2026-02-28)
+
+- Decision 12 and Decision 13 outcomes are now synced into DEBT-250 and child debt docs (`DEBT-262`, `DEBT-263`)
+- Pattern Registry Part 1.2 caveat has been refined to resolved wording (two-channel hover strategy; DEBT-260 cross-reference)
+- Light-mode token updates (`--success`, `--destructive`) are implemented and covered by `app/globals.test.ts`
+- Remaining DEBT-264 work is the final cross-doc sweep after DEBT-259/260/261 merge
 
 ### 1. Pattern Registry Part 11
 
@@ -40,9 +47,15 @@ Update "Needs Extraction" table to reflect completed extractions. Move completed
 
 If Decision 7 adds a bookmark to standalone review, update the action bar composition table.
 
-### 8. Pattern Registry Part 1.2
+### 8. Pattern Registry Part 1.2 (includes DEBT-262 fold-in)
 
-If Decision 12 accepts light-mode asymmetry, ensure the Part 1.2 caveat text reflects the final wording (the caveat already exists and may only need refinement).
+**Decision 12 resolved: Option C (accept asymmetry).** DEBT-262 is documentation-only and folds into this task.
+
+Refine the Part 1.2 light-mode caveat to:
+- Explicitly state the two-channel hover strategy: fills for dark mode, borders for light mode
+- Note that any new interactive row component must include at least one non-fill hover cue (border, shadow, or text color)
+- Remove the "See DEBT-250 LIGHT-1 / Decision 12 for resolution strategy" reference and replace with the resolved wording
+- Cross-reference DEBT-260 (UX-1) for the targeted hover border fixes on dashboard/history rows
 
 ### 9. Third-Party Exceptions
 

@@ -68,14 +68,14 @@ When to use each opacity on `bg-muted` (or equivalent layer-2 token):
 | `/40` | Subtle hover | Row hover inside cards (where card bg already elevates) | ~8.6% inside card |
 | `/50` | Standard hover | Row hover on page background; tab-switch inactive hover | ~7.3% on page, ~9% inside card |
 | `/60` | Emphasized hover | Choice buttons and direct-action interactive targets | ~9.4% inside card |
-| `/80` | **RESERVED — do not use** | Currently on choice-button; being standardized to `/60` | — |
+| `/80` | **RESERVED — do not use** | Legacy hover intensity slot (no current approved usage) | — |
 | `/100` | **RESERVED — do not use for hover** | Only for solid fills (e.g., tab-switch container `bg-muted`) | 11% |
 
 **Key insight:** The same opacity produces different perceived contrast depending on the parent surface. `/40` inside a card (7% base) looks similar to `/50` on page background (3.5% base). The scale above accounts for this.
 
 **Decision:** Hover opacity is context-dependent. Use `/40` inside cards, `/50` on page background, `/60` for direct-action targets (choices, chips).
 
-**Light-mode caveat:** This scale was designed for dark mode where `--muted` at 11% lightness provides ample contrast headroom. In light mode, `--muted` at 96.1% lightness is only 3.9% from white — all opacities below `/100` produce contrast ratios under 1.1:1 (imperceptible). Light-mode hover feedback relies on border changes (`hover:border-muted-foreground/30`) and shadow, not background fills. See DEBT-250 LIGHT-1 / Decision 12 for resolution strategy.
+**Light-mode caveat (Decision 12 resolved):** This scale was designed for dark mode where `--muted` at 11% lightness provides ample contrast headroom. In light mode, `--muted` at 96.1% lightness is only 3.9% from white — opacities below `/100` produce imperceptible fill contrast. The system intentionally uses two hover channels: background-fill deltas in dark mode, and non-fill cues (border/text/shadow) in light mode. Any new interactive row component MUST include at least one non-fill hover cue. Dashboard/history row cue hardening remains tracked in DEBT-260 (UX-1).
 
 ### 1.3 Border Opacity Scale
 
@@ -219,7 +219,7 @@ focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 
 **Must be a `<Link>` element** (entire row is the click target).
 
-**Known divergence:** `history-sessions-tab.tsx` uses delegated row click on `<li>` + nested `<Link>` (tracked in D-1).
+**Known structural exception:** `history-sessions-tab.tsx` uses delegated row click on `<li>` + nested `<Link>` to avoid nested link-role conflicts with inner links (`A11Y-1` resolution). Hover-token divergence from the original D-1 entry is resolved.
 
 ### I-2: Hoverable Card Row (standalone)
 
@@ -507,7 +507,7 @@ metallic-border animated gradient (grays #3f3f46 → #a1a1aa, 6s cycle)
 
 **Source:** `components/ui/metallic-cta-button.tsx` + `components/ui/metallic-border.tsx` + CSS in `globals.css:193-208`
 
-**Status:** Documented exception (D-15). Not a standard `Button` variant. Only used in one place — the bottom CTA of the landing page. If landing-page buttons are rationalized (see D-14), this may be replaced with a standard variant.
+**Status:** Documented exception (D-15). Not a standard `Button` variant. Only used in one place — the bottom CTA of the landing page. Keep scoped to this single marketing slot.
 
 ---
 
@@ -775,27 +775,15 @@ Patterns that are currently copy-pasted and should be extracted to shared consta
 
 ## Part 11: Known Divergences from This Registry
 
-Current codebase violations tracked in [BS-035](../brainstorming/bs-035-card-hover-and-gray-consistency-audit.md). Key items:
+Current unresolved codebase divergences tracked in [BS-035](../brainstorming/bs-035-card-hover-and-gray-consistency-audit.md) and [DEBT-250](../debt/debt-250-frontend-visual-divergence-compliance-plan.md):
 
 | ID | Divergence | Canonical Pattern | Files |
 |----|-----------|-------------------|-------|
-| D-1 | History sessions row uses delegated `<li>` click + nested `<Link>` and `hover:bg-accent/40` + `dark:hover:bg-foreground/10` | I-1: direct `<Link>` row, `hover:bg-muted/40`, no `dark:` | `history-sessions-tab.tsx` |
-| D-2 | History questions row uses `hover:bg-accent/40`, `rounded-2xl`, `border-border` | I-2: `hover:bg-muted/50` | `history-questions-tab.tsx` |
-| D-3 | Choice button uses `hover:bg-muted/80` | I-3: `hover:bg-muted/60` | `choice-button.tsx` |
-| D-4 | Filter chip uses `hover:bg-accent` (100%) | I-4: `hover:bg-muted/50` | `filter-chip.tsx` |
-| D-5 | "View breakdown" button has 3 `dark:` overrides | Remove — let outline variant handle dark mode | `history-sessions-tab.tsx` |
-| D-6 | Choice wrong-unselected uses `opacity-60` | X-1: `opacity-50` | `choice-button.tsx` |
-| D-7 | Review navigator uses `ring-2 ring-ring` | X-2: `ring-[3px] ring-ring/50` | `review-question-navigator.tsx` |
-| D-8 | Brand links do not match L-4 class set (missing hover/transition; app shell also missing rounded/focus classes) | L-4 canonical brand-link classes | `components/marketing/marketing-layout.tsx`, `app/(app)/app/layout.tsx` |
-| D-9 | Marketing pricing pills use `hover:bg-muted` (100%) | Should use button variant or `/50` | `marketing-home.tsx` |
-| D-10 | Annual pricing button bypasses variant system | Needs decision on variant | `marketing-home.tsx` |
 | D-11 | Pricing page uses raw divs instead of `<Card>` | S-1: Use `<Card>` component | `pricing-view.tsx` |
-| D-12 | Pricing dismiss uses `hover:opacity-70` | Should use text color or bg hover pattern | `pricing-view.tsx` |
 | D-13 | `headerLinkButtonClasses` copy-pasted in 6 files | Extract to `lib/shared-styles.ts` | See Part 10 |
-| D-14 | Monthly pricing CTA uses `variant="secondary"` — 4% lightness difference from card surface (`hsl(0 0% 11%)` on `hsl(0 0% 7%)`), near-invisible in dark mode | Use `default` variant, `outline` variant, or custom inverted (like Annual CTA) | `marketing-home.tsx` |
-| D-15 | `MetallicCtaButton` is a documented marketing-only exception but still outside standard Button variants | Keep as explicit marketing-only exception or replace with a standard variant | `metallic-cta-button.tsx`, `marketing-home.tsx` |
-| D-16 | Mobile nav inactive links use `hover:bg-muted` (100%) | L-6: `hover:bg-muted/50` | `components/mobile-nav.tsx` |
-| D-17 | Auth/error page H1s missing `font-heading tracking-tight` | Part 12 heading conventions | `sign-in-page-client.tsx`, `sign-up-page-client.tsx`, `checkout-success-sync.tsx`, `global-error.tsx`, `error-boundary-page.tsx` |
+| D-15 | `MetallicCtaButton` remains outside standard Button variants by explicit policy | Approved marketing-only exception (`@debt-exception D-15`) | `metallic-cta-button.tsx`, `marketing-home.tsx` |
+
+**Recently resolved:** `D-1` through `D-10`, `D-12`, `D-14`, `D-16`, `D-17` via DEBT-251 through DEBT-258.
 
 ### DEBT-250 Non-D Items (Also Active)
 
@@ -803,11 +791,10 @@ These are tracked in [DEBT-250](../debt/debt-250-frontend-visual-divergence-comp
 
 | ID | Category | Canonical Pattern / Target |
 |----|----------|----------------------------|
-| `COMP-1` | Component default inconsistency | F-3 ErrorCard default padding = `p-6` (dense override = `p-4`) |
-| `A11Y-1` | Accessibility gap | Delegated clickable `<li>` must have `role="link"` (or be refactored to a `<Link>`) |
-| `STRUCT-1` | Structural hierarchy | Expanded breakdown area must be visually inset (see DEBT-250 Decision 4 target classes) |
-| `AFFORD-1` | Affordance concern | I-3 selected-but-not-submitted state may add `bg-muted/20` (without changing border logic) |
 | `UX-1`–`UX-4` | UX seams | Non-visual/product decisions (documented in DEBT-250 Decisions 3, 6, 7, 8) |
+| `TOUCH-1`, `TOUCH-2` | Touch target strategy | Pending Decision 11 implementation in DEBT-261 |
+
+**Recently resolved non-D items:** `COMP-1`, `A11Y-1`, `STRUCT-1`, `AFFORD-1`, `LIGHT-1`, `LIGHT-2`, and `LIGHT-3`.
 
 Clerk auth-surface radius/interaction differences are an accepted third-party seam and not a local styling target.
 
