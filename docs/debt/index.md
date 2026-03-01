@@ -17,8 +17,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | GitHub Issue |
 |----|-------|----------|--------------|
-| [DEBT-264](./debt-264-documentation-sync.md) | Documentation Sync (Finalize frontend docs after DEBT-251–263) | P2 | — |
-| [DEBT-250](./debt-250-frontend-visual-divergence-compliance-plan.md) | Frontend Visual Divergence Compliance Plan (BS-035 + Pattern Registry D-1..D-17 + non-D items) | P2 | — |
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 
 **Next Debt ID:** DEBT-265
@@ -29,6 +27,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-264](../_archive/debt/debt-264-documentation-sync.md) | Documentation Sync (Finalize frontend docs after DEBT-251–263) | P2 | 2026-03-01 | — |
+| [DEBT-250](../_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md) | Frontend Visual Divergence Compliance Plan (BS-035 + all 31 items + 13 decisions) | P2 | 2026-03-01 | — |
 | [DEBT-263](../_archive/debt/debt-263-text-contrast.md) | Text Contrast (LIGHT-2) | P2 | 2026-03-01 | — |
 | [DEBT-262](../_archive/debt/debt-262-light-mode-opacity.md) | Light-Mode Opacity Scale (LIGHT-1) | P2 | 2026-03-01 | — |
 | [DEBT-261](../_archive/debt/debt-261-touch-targets.md) | Touch Targets (TOUCH-1, TOUCH-2) | P2 | 2026-03-01 | [#152](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/152) |
