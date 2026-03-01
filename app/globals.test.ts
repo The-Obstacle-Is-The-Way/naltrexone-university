@@ -151,12 +151,12 @@ describe('globals.css dark-mode tokens are unchanged', () => {
   const darkBlock = extractBlock(css, '.dark');
 
   it('returns dark-mode success token when theme is dark', () => {
-    const value = extractToken(darkBlock, 'success');
+    const value = getRequiredTokenValue(darkBlock, 'success');
     expect(value).toBe('142 70% 42%');
   });
 
   it('returns dark-mode destructive token when theme is dark', () => {
-    const value = extractToken(darkBlock, 'destructive');
+    const value = getRequiredTokenValue(darkBlock, 'destructive');
     expect(value).toBe('0 72% 51%');
   });
 });
