@@ -54,12 +54,16 @@ describe('QuestionNavigator', () => {
 
   async function renderNavigator(input?: {
     currentQuestionId?: string | null;
+    controlledPanelId?: string;
   }) {
     const { QuestionNavigator } = await import('./exam-review-view');
+    const controlledPanelId =
+      input?.controlledPanelId ?? 'practice-question-panel';
     const html = renderToStaticMarkup(
       <QuestionNavigator
         review={review}
         currentQuestionId={input?.currentQuestionId ?? 'q2'}
+        controlledPanelId={controlledPanelId}
         onNavigateQuestion={() => undefined}
       />,
     );
@@ -87,5 +91,19 @@ describe('QuestionNavigator', () => {
     const el = findByAriaLabel(doc, 'Question 1: Answered');
 
     expect(el?.getAttribute('aria-current')).toBeNull();
+  });
+
+  it('wires each navigator button to the controlled question panel with aria-controls', async () => {
+    const { doc } = await renderNavigator();
+    const buttons = Array.from(
+      doc.querySelectorAll('button[aria-label^="Question "]'),
+    );
+
+    expect(buttons.length).toBeGreaterThan(0);
+    buttons.forEach((button) => {
+      expect(button.getAttribute('aria-controls')).toBe(
+        'practice-question-panel',
+      );
+    });
   });
 });

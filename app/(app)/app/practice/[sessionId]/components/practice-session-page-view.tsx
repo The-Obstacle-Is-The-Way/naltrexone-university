@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useId, useMemo } from 'react';
 import { PracticeView } from '@/app/(app)/app/practice/components/practice-view';
 import {
   fireAndForget,
@@ -61,6 +61,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
   const navigator = props.navigator ?? null;
   const navigatorLoadState = props.navigatorLoadState ?? { status: 'idle' };
   const currentQuestionId = props.question?.questionId ?? null;
+  const questionPanelId = useId();
   const onNavigateQuestion = props.onNavigateQuestion;
 
   const previousQuestionId = useMemo(() => {
@@ -183,11 +184,13 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
     <PracticeView
       title={title}
       description={description}
+      questionPanelId={questionPanelId}
       topContent={
         navigator && props.onNavigateQuestion ? (
           <QuestionNavigator
             review={navigator}
             currentQuestionId={props.question?.questionId ?? null}
+            controlledPanelId={questionPanelId}
             onNavigateQuestion={props.onNavigateQuestion}
           />
         ) : navigatorLoadState.status === 'error' ? (
