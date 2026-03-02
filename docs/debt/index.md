@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-01
+**Last Updated:** 2026-03-02
 
 ---
 
@@ -18,8 +18,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | GitHub Issue |
 |----|-------|----------|--------------|
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
+| [DEBT-268](./debt-268-quick-practice-ordering-policy-alignment.md) | Quick Practice Ordering Policy Alignment — shuffle candidates in `executeForFilters` with daily seed (BS-038) | P2 | — |
 
-**Next Debt ID:** DEBT-268
+**Next Debt ID:** DEBT-269
 
 ---
 

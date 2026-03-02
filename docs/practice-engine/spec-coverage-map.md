@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Maps each part of the Practice Engine to the spec that defines it
-> **Last Verified:** 2026-03-01
+> **Last Verified:** 2026-03-02
 
 ---
 
@@ -28,7 +28,7 @@
 | History page restructure (tabbed Sessions + Questions, filters, replaces old review page) | SPEC-021 | Implemented | `/app/review` → `/app/history`; `GetAttemptedQuestions` with result/source filters |
 | Question Log (attempted questions) | SPEC-022 | Implemented | History "Questions" tab = filterable attempted-question log (Result/Source server-side; Difficulty/Tag client-side in v1) |
 | Question Review Mode | SPEC-023 | Implemented | `?mode=review` pre-populates previous answer + shows explanation on load |
-| Question Status Filter | SPEC-024 | Implemented | Status filter (unanswered/incorrect/marked) on Practice session creation + Quick Practice; extends `listPublishedCandidateIds` |
+| Question Status Filter | SPEC-024 | Implemented | Status filter (unanswered/incorrect/bookmarked) on Practice session creation + Quick Practice; extends `listPublishedCandidateIds` |
 | Choice Label Desync Fix | SPEC-025 | Implemented | Shuffled choice views ensure consistent labels across QuestionCard and Feedback |
 | History Tab — Review-Only Links | SPEC-026 | Implemented | History Questions tab routes all rows through `mode=review` consistently |
 | Session Review Navigation | SPEC-027 | Implemented | Sequential prev/next nav + "Question X of Y" in review; attempt identity via `sessionId`/`attemptId` URL params |
@@ -41,7 +41,7 @@
 
 ## 2. Spec/Doc Drift Summary
 
-As of **2026-03-01**, previously identified practice-engine drift items have been paid down across core specs and implementation docs. SPEC-021 through SPEC-030 are implemented and reflected. Retry provenance and inline session-review retry are now captured in the practice-engine SSOT (`retry-logic.md`) and DEBT-265 execution contract.
+As of **2026-03-02**, previously identified practice-engine drift items have been paid down across core specs and implementation docs. SPEC-021 through SPEC-030 are implemented and reflected. Retry provenance and inline session-review retry are now captured in the practice-engine SSOT (`retry-logic.md`) and DEBT-265 execution contract.
 
 Remaining drift risk is concentrated in unrelated future feature work, not retry lineage/review flow contracts.
 
