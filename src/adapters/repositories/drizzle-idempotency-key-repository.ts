@@ -171,34 +171,36 @@ export class DrizzleIdempotencyKeyRepository
       return 0;
     }
 
-    const rows = await this.db
-      .select({
-        userId: idempotencyKeys.userId,
-        action: idempotencyKeys.action,
-        key: idempotencyKeys.key,
-        expiresAt: idempotencyKeys.expiresAt,
-      })
-      .from(idempotencyKeys)
-      .where(lt(idempotencyKeys.expiresAt, cutoff))
-      .orderBy(asc(idempotencyKeys.expiresAt))
-      .limit(limit);
+    return this.db.transaction(async (tx) => {
+      const rows = await tx
+        .select({
+          userId: idempotencyKeys.userId,
+          action: idempotencyKeys.action,
+          key: idempotencyKeys.key,
+          expiresAt: idempotencyKeys.expiresAt,
+        })
+        .from(idempotencyKeys)
+        .where(lt(idempotencyKeys.expiresAt, cutoff))
+        .orderBy(asc(idempotencyKeys.expiresAt))
+        .limit(limit);
 
-    if (rows.length === 0) return 0;
+      if (rows.length === 0) return 0;
 
-    const conditions = rows.map((row) =>
-      and(
-        eq(idempotencyKeys.userId, row.userId),
-        eq(idempotencyKeys.action, row.action),
-        eq(idempotencyKeys.key, row.key),
-        lt(idempotencyKeys.expiresAt, cutoff),
-      ),
-    );
+      const conditions = rows.map((row) =>
+        and(
+          eq(idempotencyKeys.userId, row.userId),
+          eq(idempotencyKeys.action, row.action),
+          eq(idempotencyKeys.key, row.key),
+          lt(idempotencyKeys.expiresAt, cutoff),
+        ),
+      );
 
-    const deleted = await this.db
-      .delete(idempotencyKeys)
-      .where(or(...conditions))
-      .returning({ key: idempotencyKeys.key });
+      const deleted = await tx
+        .delete(idempotencyKeys)
+        .where(or(...conditions))
+        .returning({ key: idempotencyKeys.key });
 
-    return deleted.length;
+      return deleted.length;
+    });
   }
 }

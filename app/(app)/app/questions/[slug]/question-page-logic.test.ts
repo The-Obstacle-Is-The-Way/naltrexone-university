@@ -483,6 +483,30 @@ describe('question-page-logic', () => {
       expect(setReviewHydrationState).toHaveBeenCalledWith('hydration_error');
     });
 
+    it('does not set hydration_error when unmounted after previous-attempt request starts and then throws', async () => {
+      const setSelectedChoiceId = vi.fn();
+      const setSubmitResult = vi.fn();
+      const setReviewHydrationState = vi.fn();
+      const deferred = createDeferred<ActionResult<GetPreviousAttemptOutput>>();
+      let mounted = true;
+
+      const promise = loadPreviousAttempt({
+        questionId: 'q_1',
+        getPreviousAttemptFn: async () => deferred.promise,
+        setSelectedChoiceId,
+        setSubmitResult,
+        setReviewHydrationState,
+        isMounted: () => mounted,
+      });
+      mounted = false;
+      deferred.reject(new Error('Boom'));
+      await promise;
+
+      expect(setSelectedChoiceId).not.toHaveBeenCalled();
+      expect(setSubmitResult).not.toHaveBeenCalled();
+      expect(setReviewHydrationState).not.toHaveBeenCalled();
+    });
+
     it('marks hydration_error when previous-attempt request times out', async () => {
       vi.useFakeTimers();
       try {

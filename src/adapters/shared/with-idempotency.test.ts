@@ -328,6 +328,47 @@ describe('withIdempotency', () => {
     expect(execute).not.toHaveBeenCalled();
   });
 
+  it('throws INTERNAL_ERROR when key disappears during polling', async () => {
+    class DisappearingFindRepo extends FakeIdempotencyKeyRepository {
+      override async find(): Promise<null> {
+        return null;
+      }
+    }
+
+    const now = () => new Date('2026-02-07T00:00:00.000Z');
+    const repo = new DisappearingFindRepo(now);
+    const logger = new FakeLogger();
+    const key = '44444444-4444-4444-4444-444444444445';
+
+    await repo.claim({
+      userId: 'user_1',
+      action: 'billing:createCheckoutSession',
+      key,
+      expiresAt: new Date('2026-02-08T00:00:00.000Z'),
+    });
+
+    const execute = vi.fn(async () => ({ ok: true }));
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: 'user_1',
+        action: 'billing:createCheckoutSession',
+        key,
+        now,
+        logger,
+        maxWaitMs: 100,
+        pollIntervalMs: 1,
+        execute,
+      }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'Idempotency key disappeared during poll',
+    });
+
+    expect(execute).not.toHaveBeenCalled();
+  });
+
   it('prunes expired idempotency keys before processing requests', async () => {
     const nowDate = new Date('2026-02-07T12:00:00.000Z');
     const now = () => nowDate;
@@ -483,5 +524,83 @@ describe('withIdempotency', () => {
       message: 'unexpected failure',
     });
     expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('rethrows the original execute error when storeError persistence fails', async () => {
+    class StoreErrorFailingRepo extends FakeIdempotencyKeyRepository {
+      override async storeError(): Promise<void> {
+        throw new Error('store failed');
+      }
+    }
+
+    const now = () => new Date('2026-02-08T00:00:00.000Z');
+    const repo = new StoreErrorFailingRepo(now);
+    const logger = new FakeLogger();
+    const originalError = new ApplicationError(
+      'INTERNAL_ERROR',
+      'execute failed',
+    );
+    const execute = vi.fn(async () => {
+      throw originalError;
+    });
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: 'user_1',
+        action: 'billing:createCheckoutSession',
+        key: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+        now,
+        logger,
+        execute,
+      }),
+    ).rejects.toBe(originalError);
+
+    expect(logger.errorCalls).toHaveLength(1);
+    expect(logger.errorCalls[0]).toMatchObject({
+      msg: 'Failed to persist idempotency error record',
+      context: {
+        userId: 'user_1',
+        action: 'billing:createCheckoutSession',
+        key: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+      },
+    });
+  });
+
+  it('rethrows the original execute error when logger.error throws during storeError failure', async () => {
+    class StoreErrorFailingRepo extends FakeIdempotencyKeyRepository {
+      override async storeError(): Promise<void> {
+        throw new Error('store failed');
+      }
+    }
+
+    class ThrowingErrorLogger extends FakeLogger {
+      override error(): void {
+        throw new Error('logger failed');
+      }
+    }
+
+    const now = () => new Date('2026-02-08T00:00:00.000Z');
+    const repo = new StoreErrorFailingRepo(now);
+    const logger = new ThrowingErrorLogger();
+    const originalError = new ApplicationError(
+      'INTERNAL_ERROR',
+      'execute failed',
+    );
+    const execute = vi.fn(async () => {
+      throw originalError;
+    });
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: 'user_1',
+        action: 'billing:createCheckoutSession',
+        key: 'ffffffff-1111-2222-3333-444444444444',
+        now,
+        logger,
+        execute,
+      }),
+    ).rejects.toBe(originalError);
   });
 });

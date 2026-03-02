@@ -85,30 +85,36 @@ export class DrizzleStripeEventRepository implements StripeEventRepository {
       return 0;
     }
 
-    const idsToDelete = await this.db
-      .select({ id: stripeEvents.id, processedAt: stripeEvents.processedAt })
-      .from(stripeEvents)
-      .where(
-        and(
-          isNotNull(stripeEvents.processedAt),
-          lt(stripeEvents.processedAt, cutoff),
-        ),
-      )
-      .orderBy(asc(stripeEvents.processedAt))
-      .limit(limit);
+    return this.db.transaction(async (tx) => {
+      const idsToDelete = await tx
+        .select({ id: stripeEvents.id, processedAt: stripeEvents.processedAt })
+        .from(stripeEvents)
+        .where(
+          and(
+            isNotNull(stripeEvents.processedAt),
+            lt(stripeEvents.processedAt, cutoff),
+          ),
+        )
+        .orderBy(asc(stripeEvents.processedAt))
+        .limit(limit);
 
-    if (idsToDelete.length === 0) return 0;
+      if (idsToDelete.length === 0) return 0;
 
-    const deleted = await this.db
-      .delete(stripeEvents)
-      .where(
-        inArray(
-          stripeEvents.id,
-          idsToDelete.map((row) => row.id),
-        ),
-      )
-      .returning({ id: stripeEvents.id });
+      const deleted = await tx
+        .delete(stripeEvents)
+        .where(
+          and(
+            inArray(
+              stripeEvents.id,
+              idsToDelete.map((row) => row.id),
+            ),
+            isNotNull(stripeEvents.processedAt),
+            lt(stripeEvents.processedAt, cutoff),
+          ),
+        )
+        .returning({ id: stripeEvents.id });
 
-    return deleted.length;
+      return deleted.length;
+    });
   }
 }

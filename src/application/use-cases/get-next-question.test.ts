@@ -187,6 +187,49 @@ describe('GetNextQuestionUseCase', () => {
     });
   });
 
+  it('returns the current question when fromIndex points at the only unanswered state', async () => {
+    const q1 = createSingleChoiceQuestion('q1', 'c1');
+    const q2 = createSingleChoiceQuestion('q2', 'c2');
+    const q3 = createSingleChoiceQuestion('q3', 'c3');
+
+    const session = createPracticeSession({
+      mode: 'tutor',
+      questionIds: ['q1', 'q2', 'q3'],
+      questionStates: [
+        createQuestionState('q1', {
+          latestSelectedChoiceId: 'c1',
+          latestIsCorrect: true,
+          latestAnsweredAt: ANSWERED_AT,
+        }),
+        createQuestionState('q2'),
+        createQuestionState('q3', {
+          latestSelectedChoiceId: 'c3',
+          latestIsCorrect: false,
+          latestAnsweredAt: ANSWERED_AT,
+        }),
+      ],
+    });
+
+    const { getNextQuestion } = createTestDeps({
+      questions: [q1, q2, q3],
+      sessions: [session],
+    });
+
+    const result = await getNextQuestion.execute({
+      userId: USER_ID,
+      sessionId: SESSION_ID,
+      fromIndex: 1,
+    });
+
+    expect(result?.questionId).toBe('q2');
+    expect(result?.session).toMatchObject({
+      sessionId: SESSION_ID,
+      mode: 'tutor',
+      index: 1,
+      total: 3,
+    });
+  });
+
   it('uses persisted session question state (not attempts) to choose next question', async () => {
     const q1 = createSingleChoiceQuestion('q1', 'c1');
     const q2 = createSingleChoiceQuestion('q2', 'c2');

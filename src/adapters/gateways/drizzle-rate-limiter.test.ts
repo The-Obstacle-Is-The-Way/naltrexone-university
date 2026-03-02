@@ -138,6 +138,42 @@ describe('DrizzleRateLimiter', () => {
     });
   });
 
+  it('throws INTERNAL_ERROR when rate-limit upsert returns no row', async () => {
+    const returning = vi.fn(async () => []);
+    const onConflictDoUpdate = vi.fn(() => ({ returning }));
+    const values = vi.fn(() => ({ onConflictDoUpdate }));
+    const insert = vi.fn(() => ({ values }));
+
+    const db = {
+      insert,
+    } as const;
+
+    const rateLimiter = new DrizzleRateLimiter(
+      db as unknown as RateLimiterDb,
+      () => new Date('2026-02-07T12:00:00.000Z'),
+    );
+
+    await expect(
+      rateLimiter.limit({ key: 'rate:test', limit: 5, windowMs: 60_000 }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+    });
+  });
+
+  it('throws INTERNAL_ERROR when rate-limit upsert returns a non-positive count', async () => {
+    const db = createDbMock(0);
+    const rateLimiter = new DrizzleRateLimiter(
+      db as unknown as RateLimiterDb,
+      () => new Date('2026-02-07T12:00:00.000Z'),
+    );
+
+    await expect(
+      rateLimiter.limit({ key: 'rate:test', limit: 5, windowMs: 60_000 }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+    });
+  });
+
   it('clamps remaining count to zero when usage exceeds limit', async () => {
     const db = createDbMock(7);
     const rateLimiter = new DrizzleRateLimiter(
@@ -153,6 +189,57 @@ describe('DrizzleRateLimiter', () => {
       remaining: 0,
       retryAfterSeconds: expect.any(Number),
     });
+  });
+
+  it('prunes expired windows inside a transaction and returns deleted count', async () => {
+    const selectLimit = vi.fn(async () => [
+      { key: 'rate:test', windowStart: new Date('2026-02-06T00:00:00.000Z') },
+    ]);
+    const selectOrderBy = vi.fn(() => ({ limit: selectLimit }));
+    const selectWhere = vi.fn(() => ({ orderBy: selectOrderBy }));
+    const selectFrom = vi.fn(() => ({ where: selectWhere }));
+    const select = vi.fn(() => ({ from: selectFrom }));
+
+    const deleteReturning = vi.fn(async () => [{ key: 'rate:test' }]);
+    const deleteWhere = vi.fn(() => ({ returning: deleteReturning }));
+    const deleteFn = vi.fn(() => ({ where: deleteWhere }));
+
+    const tx = {
+      select,
+      delete: deleteFn,
+      insert: vi.fn(() => {
+        throw new Error('unexpected insert');
+      }),
+    } as const;
+    const transaction = vi.fn(
+      async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
+    );
+    const db = {
+      transaction,
+      select: vi.fn(() => {
+        throw new Error('unexpected root select');
+      }),
+      delete: vi.fn(() => {
+        throw new Error('unexpected root delete');
+      }),
+      insert: vi.fn(() => {
+        throw new Error('unexpected root insert');
+      }),
+      update: vi.fn(() => {
+        throw new Error('unexpected root update');
+      }),
+    } as unknown as RateLimiterDb;
+
+    const rateLimiter = new DrizzleRateLimiter(
+      db,
+      () => new Date('2026-02-07T12:00:00.000Z'),
+    );
+
+    await expect(
+      rateLimiter.pruneExpiredWindows(new Date('2026-02-07T12:00:00.000Z'), 1),
+    ).resolves.toBe(1);
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(deleteFn).toHaveBeenCalledTimes(1);
   });
 
   it('returns zero when prune limit is zero', async () => {

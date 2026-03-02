@@ -42,6 +42,7 @@ function createDeps(overrides: {
     deps: {
       paymentGateway: overrides.paymentGateway,
       logger,
+      now: () => new Date(),
       transaction: async (fn) =>
         fn({ stripeEvents, subscriptions, stripeCustomers }),
     },
@@ -179,6 +180,32 @@ describe('processStripeWebhook', () => {
       );
     } finally {
       vi.useRealTimers();
+    }
+  });
+
+  it('does not call Date.now when computing stripe prune cutoff', async () => {
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_test',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_prune_clock_injection',
+        type: 'checkout.session.completed',
+      },
+    });
+
+    const { deps } = createDeps({ paymentGateway });
+    const dateNowSpy = vi.spyOn(Date, 'now').mockImplementation(() => {
+      throw new Error('Date.now should not be used in processStripeWebhook');
+    });
+
+    try {
+      await expect(
+        processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
+      ).resolves.toBeUndefined();
+      expect(dateNowSpy).not.toHaveBeenCalled();
+    } finally {
+      dateNowSpy.mockRestore();
     }
   });
 

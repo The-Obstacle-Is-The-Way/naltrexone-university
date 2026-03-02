@@ -449,6 +449,16 @@ describe('DrizzleAttemptRepository', () => {
           answeredAt,
         },
       ]);
+      expect(db._mocks.queryFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          limit: 500,
+        }),
+      );
+      const [findBySessionArgs] = db._mocks.queryFindMany.mock.calls[0] as [
+        { orderBy?: unknown },
+      ];
+      expect(Array.isArray(findBySessionArgs.orderBy)).toBe(true);
+      expect(findBySessionArgs.orderBy).toHaveLength(2);
     });
   });
 

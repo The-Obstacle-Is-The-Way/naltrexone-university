@@ -167,11 +167,19 @@ export class GetNextQuestionUseCase {
       if (nextUnanswered) return nextUnanswered;
       if (startIndex === -1) return null;
 
-      return (
+      const wrappedUnanswered =
         orderedStates
           .slice(0, startIndex)
-          .find((state) => !state.latestSelectedChoiceId)?.questionId ?? null
-      );
+          .find((state) => !state.latestSelectedChoiceId)?.questionId ?? null;
+
+      if (wrappedUnanswered) return wrappedUnanswered;
+
+      const currentState = orderedStates[startIndex];
+      if (currentState && !currentState.latestSelectedChoiceId) {
+        return currentState.questionId;
+      }
+
+      return null;
     })();
 
     if (!targetQuestionId) return null;

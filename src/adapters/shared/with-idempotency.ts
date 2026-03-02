@@ -86,17 +86,39 @@ export async function withIdempotency<T>(input: {
       });
       return result;
     } catch (error) {
-      await input.repo.storeError({
-        userId: input.userId,
-        action: input.action,
-        key: input.key,
-        error: toErrorRecord(error),
-      });
+      try {
+        await input.repo.storeError({
+          userId: input.userId,
+          action: input.action,
+          key: input.key,
+          error: toErrorRecord(error),
+        });
+      } catch (storeError) {
+        try {
+          input.logger.error(
+            {
+              userId: input.userId,
+              action: input.action,
+              key: input.key,
+              storeError:
+                storeError instanceof Error
+                  ? storeError.message
+                  : String(storeError),
+              originalError:
+                error instanceof Error ? error.message : String(error),
+            },
+            'Failed to persist idempotency error record',
+          );
+        } catch {
+          // Preserve original execute error even if logger.error throws.
+        }
+      }
       throw error;
     }
   }
 
   const startMs = input.now().getTime();
+  let keyDisappearedDuringPoll = false;
   while (input.now().getTime() - startMs <= maxWaitMs) {
     const existing = await input.repo.find(
       input.userId,
@@ -104,6 +126,7 @@ export async function withIdempotency<T>(input: {
       input.key,
     );
     if (!existing) {
+      keyDisappearedDuringPoll = true;
       break;
     }
 
@@ -129,6 +152,13 @@ export async function withIdempotency<T>(input: {
     }
 
     await delay(pollIntervalMs);
+  }
+
+  if (keyDisappearedDuringPoll) {
+    throw new ApplicationError(
+      'INTERNAL_ERROR',
+      'Idempotency key disappeared during poll',
+    );
   }
 
   throw new ApplicationError(

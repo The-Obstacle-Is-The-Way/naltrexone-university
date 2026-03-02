@@ -1,5 +1,6 @@
 import { and, asc, eq, lt, or, sql } from 'drizzle-orm';
 import { rateLimits } from '@/db/schema';
+import { ApplicationError } from '@/src/application/errors';
 import type {
   RateLimiter,
   RateLimitInput,
@@ -63,7 +64,14 @@ export class DrizzleRateLimiter implements RateLimiter {
       })
       .returning({ count: rateLimits.count });
 
-    const count = row?.count ?? 1;
+    if (!row || !isPositiveInteger(row.count)) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Failed to update rate-limit counter',
+      );
+    }
+
+    const count = row.count;
     const remaining = Math.max(0, input.limit - count);
 
     if (count === 1) {
@@ -96,30 +104,32 @@ export class DrizzleRateLimiter implements RateLimiter {
   async pruneExpiredWindows(before: Date, limit: number): Promise<number> {
     if (!Number.isInteger(limit) || limit <= 0) return 0;
 
-    const rows = await this.db
-      .select({
-        key: rateLimits.key,
-        windowStart: rateLimits.windowStart,
-      })
-      .from(rateLimits)
-      .where(lt(rateLimits.windowStart, before))
-      .orderBy(asc(rateLimits.windowStart))
-      .limit(limit);
+    return this.db.transaction(async (tx) => {
+      const rows = await tx
+        .select({
+          key: rateLimits.key,
+          windowStart: rateLimits.windowStart,
+        })
+        .from(rateLimits)
+        .where(lt(rateLimits.windowStart, before))
+        .orderBy(asc(rateLimits.windowStart))
+        .limit(limit);
 
-    if (rows.length === 0) return 0;
+      if (rows.length === 0) return 0;
 
-    const conditions = rows.map((row) =>
-      and(
-        eq(rateLimits.key, row.key),
-        eq(rateLimits.windowStart, row.windowStart),
-      ),
-    );
+      const conditions = rows.map((row) =>
+        and(
+          eq(rateLimits.key, row.key),
+          eq(rateLimits.windowStart, row.windowStart),
+        ),
+      );
 
-    const deleted = await this.db
-      .delete(rateLimits)
-      .where(or(...conditions))
-      .returning({ key: rateLimits.key });
+      const deleted = await tx
+        .delete(rateLimits)
+        .where(or(...conditions))
+        .returning({ key: rateLimits.key });
 
-    return deleted.length;
+      return deleted.length;
+    });
   }
 }

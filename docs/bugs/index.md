@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-01
+**Last Updated:** 2026-03-02
 
 ---
 
@@ -13,37 +13,14 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-## Bug Index (Active)
+**Next Bug ID:** BUG-180
 
-| Bug | Severity | Summary |
-|-----|----------|---------|
-| BUG-167 | P2 | `loadPreviousAttempt` catch missing `isMounted()` guard |
-| BUG-168 | P2 | `GetNextQuestionUseCase` skips current question in both scans |
-| BUG-169 | P2 | Idempotency poll `break` falls into misleading CONFLICT error |
-| BUG-170 | P2 | Non-atomic COUNT+SELECT in `findCompletedByUserId` pagination |
-| BUG-171 | P2 | Stripe checkout `retrieve` failure silently skips session expiry |
-| BUG-172 | P3 | `storeError` failure masks original execute error |
-| BUG-173 | P3 | `get-session-history` adjusts total by skippedCount incorrectly |
-| BUG-174 | P3 | `checkout-success-sync` guards `logger.warn` as optional |
-| BUG-175 | P3 | `DrizzleRateLimiter` defaults count to 1 on missing row |
-| BUG-176 | P3 | `findBySessionId` has no LIMIT clause |
-| BUG-177 | P4 | `getStemPreview` raw truncation when `maxLength <= 3` |
-| BUG-178 | P4 | Redundant TOCTOU pre-check in `start-practice-session` |
+**Latest archival (2026-03-02):**
+- Audit #8: all 12 bugs (BUG-167..179, excluding false-positive BUG-174) verified fixed, archived to `docs/_archive/audits/audit-008-deep-codebase-sweep.md`.
 
-See full details: [`audit-8-deep-sweep.md`](./audit-8-deep-sweep.md)
-
-**Next Bug ID:** BUG-179
-
-**Latest archival (2026-02-27):**
+**Previous archival (2026-02-27):**
 - BUG-165 and BUG-166 verified fixed (PRs #146, #147), archived to `docs/_archive/bugs/`.
 - BUG-160 through BUG-164 verified fixed, merged (PR #144), and archived to `docs/_archive/bugs/`.
-
-**Earlier resolutions (2026-02-26):**
-- BUG-160 fixed: dashboard session cards now deep-link to per-session review when `firstQuestionSlug` is available.
-- BUG-161 fixed: `paymentFailed` now routes to `subscription_required` in entitlement and checkout-success paths.
-- BUG-162 fixed: review controller now enforces `offset <= MAX_PAGINATION_OFFSET` with boundary tests.
-- BUG-163 fixed: dashboard tutor session fraction now uses `correct/questionCount`.
-- BUG-164 fixed: tutor summary accuracy denominator now matches history/dashboard semantics (`questionCount`).
 
 ## Audit #7 — Deep Sweep for First-Principles, Silent-Drop, and Relative Bugs (2026-02-27)
 
