@@ -1,164 +1,192 @@
 # BS-037: Navigation Button UX Audit — Arrows, Visibility, and Contextual Hiding
 
 **Date:** 2026-03-01
+**Code-truth validation:** 2026-03-02
 **Triggered by:** Visual review of Quick Practice and Tutor Session screens
-**Scope:** Arrow symbols on navigation buttons feel unnecessary; disabled Previous button on first question wastes space; Back to Practice link styling
-**Related:** BS-018 (Question View UX Unification), BS-019 (Action Bar Label and Ordering Consistency), SPEC-030, SPEC-032
+**Scope:** Arrow symbols on navigation controls, boundary-state navigation buttons, and Quick Practice back-link copy
+**Related:** BS-018, BS-019, SPEC-030, SPEC-032
 
 ---
 
-## The Problems
+## Verification Outcome
 
-Three navigation UX concerns identified from manual review of Quick Practice and Tutor Session modes.
+This audit is now validated against production source and targeted tests.
 
-### Problem 1: Arrow symbols on navigation buttons add visual noise
+- Confirmed: `← Previous` / `Next →` are still rendered in both in-session practice and session-review action bars.
+- Confirmed: first/last question boundaries currently render disabled nav buttons (not hidden).
+- Confirmed: Quick Practice header uses `← Back to Practice`.
+- Correction to prior draft: session-review back labels (`Back to Session`, `Back to History`, `Back to Bookmarks`, `Back to Practice`) are already arrow-free.
+- Additional arrow-bearing string discovered outside the original scope: `Go to Practice →` in History Questions empty state (`app/(app)/app/history/components/history-questions-tab.tsx:388`).
 
-**What the user sees:**
-- `← Previous` and `Next →` on the bottom action bar
-- `← Back to Practice` on the top-right of Quick Practice
+---
 
-The arrow characters (`←` / `→`) don't add information — the words "Previous" and "Next" already communicate direction. The arrows add visual clutter, especially on mobile where button space is at a premium.
+## Vertical Tracer Bullets
 
-**Where arrows appear today:**
+### Tracer 1: Quick Practice
+
+1. Entry point: `app/(app)/app/practice/quick/quick-practice-client.tsx:73-77`
+2. Header back link injected as `← Back to Practice` (`.../quick-practice-client.tsx:76`)
+3. Shared action bar from `app/(app)/app/practice/components/practice-view.tsx`
+4. Next button label is `Next →` (`.../practice-view.tsx:297-309`)
+
+### Tracer 2: Tutor/Exam Session (In-Session)
+
+1. Entry point: `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:184-240`
+2. Passes `hasPreviousQuestion` and `hasNextQuestion` into `PracticeView`
+3. `PracticeView` always renders Previous when `onPreviousQuestion` exists, but disables when `!hasPreviousQuestion` (`.../practice-view.tsx:270-283`)
+4. `PracticeView` always renders Next, but disables when `hasNextQuestion === false` (`.../practice-view.tsx:297-309`)
+
+### Tracer 3: Session Review
+
+1. Entry point: `app/(app)/app/questions/[slug]/question-page-client.tsx`
+2. Computes `navPrev`/`navNext` from `sessionNavigation` (`.../question-page-client.tsx:175-188`)
+3. Renders `← Previous` link when `navPrev` exists, disabled button when null (`.../question-page-client.tsx:347-368`)
+4. Renders `Next →` link when `navNext` exists, disabled button when null (`.../question-page-client.tsx:399-420`)
+5. Back-link labels are already plain text via `getOriginUi` (`.../question-page-client.tsx:97-131`)
+
+---
+
+## Horizontal Tracer Bullets
+
+| Surface | Prev/Next Labels | Boundary Behavior | Back Label Arrow |
+|---|---|---|---|
+| In-session Practice (`PracticeView`) | `← Previous`, `Next →` | Disabled | Quick uses arrow (`← Back to Practice`); default fallback has arrow (`← Back to Dashboard`) |
+| Session Review (`QuestionView`) | `← Previous`, `Next →` | Disabled | No arrow (already plain text) |
+| History pagination (Sessions/Questions tabs) | `Previous`, `Next` | Hidden (with spacer for Previous) | N/A |
+| Error pages (`practice/quick`, `practice/[sessionId]`) | N/A | N/A | `Back to Practice` (plain text) |
+
+Consistency gap: practice/review action bars use arrows + disabled boundaries, while history pagination already uses plain labels + hide-at-boundary behavior.
+
+---
+
+## Problems
+
+### Problem 1: Arrow symbols add noise and create cross-surface inconsistency
+
+**Confirmed arrow-bearing navigation copy in production code:**
 
 | Location | Text | File |
-|----------|------|------|
-| In-session action bar (Tutor/Exam) | `← Previous` | `practice-view.tsx:271` |
-| In-session action bar (all modes) | `Next →` | `practice-view.tsx:298` |
-| Session review action bar | `← Previous` | `question-page-client.tsx:347-362` |
-| Session review action bar | `Next →` | `question-page-client.tsx:399-414` |
-| Quick Practice top-right | `← Back to Practice` | `quick-practice-client.tsx:76` |
+|---|---|---|
+| In-session action bar | `← Previous` | `app/(app)/app/practice/components/practice-view.tsx:282` |
+| In-session action bar | `Next →` | `app/(app)/app/practice/components/practice-view.tsx:308` |
+| Session-review action bar | `← Previous` | `app/(app)/app/questions/[slug]/question-page-client.tsx:361,366` |
+| Session-review action bar | `Next →` | `app/(app)/app/questions/[slug]/question-page-client.tsx:413,418` |
+| Quick Practice top-right | `← Back to Practice` | `app/(app)/app/practice/quick/quick-practice-client.tsx:76` |
+| PracticeView fallback header link | `← Back to Dashboard` | `app/(app)/app/practice/components/practice-view.tsx:92` |
 
-**Where arrows are already absent:**
+**Already arrow-free references:**
+- History pagination: `Previous` / `Next`
+  - `app/(app)/app/history/components/history-sessions-tab.tsx:285,301`
+  - `app/(app)/app/history/components/history-questions-tab.tsx:509,529`
+- Practice error pages: `Back to Practice`
+  - `app/(app)/app/practice/quick/error.tsx:19`
+  - `app/(app)/app/practice/[sessionId]/error.tsx:19`
+- Review origin back labels (`Back to Session` / `Back to History` / `Back to Bookmarks` / `Back to Practice`) are already arrow-free at source:
+  - `app/(app)/app/questions/[slug]/question-page-client.tsx:104,112,122,129`
 
-| Location | Text | File |
-|----------|------|------|
-| History pagination | `Previous` / `Next` | `history-sessions-tab.tsx:285-301` |
-| History pagination | `Previous` / `Next` | `history-questions-tab.tsx:509-529` |
-| Error page links | `Back to Practice` | `quick/error.tsx:19`, `[sessionId]/error.tsx:19` |
-
-The inconsistency is notable — History pagination already uses plain text without arrows.
-
-### Problem 2: Disabled Previous button on first question is dead UI
-
-**What the user sees (Tutor Session, Question 1 of 20):**
-
-```
-[← Previous (disabled/grayed)]  [Submit]  [Next →]  [Bookmark]
-```
-
-When viewing the first question, the Previous button is shown but disabled. This is dead UI — it takes up space, draws the eye, and communicates nothing useful. The user already knows they're on Question 1 from the navigator and subtitle ("Question 1 of 20").
-
-**Current behavior by context:**
+### Problem 2: First/last question nav shows disabled controls instead of hiding
 
 | Context | First Question | Last Question |
-|---------|---------------|---------------|
-| In-session (Tutor/Exam) | Previous shown, disabled | Next shown, disabled |
-| Session review | Previous rendered as disabled `<button>` | Next rendered as disabled `<button>` |
-| Quick Practice | No Previous (no session navigation) | N/A (infinite stream) |
+|---|---|---|
+| In-session (Tutor/Exam) | Previous rendered disabled | Next rendered disabled |
+| Session review | Previous rendered disabled `<button>` | Next rendered disabled `<button>` |
+| History pagination baseline | Previous hidden when `offset === 0` (spacer) | Next hidden when no next page |
 
-**Proposed:** Hide (don't render) the Previous button on the first question. Similarly, hide Next on the last question. This is cleaner than showing grayed-out buttons.
+### Problem 3: Quick Practice back-link arrow is unnecessary
 
-**Parallel from this codebase:** History pagination already does this — the Previous link is **not rendered** when `offset === 0` (replaced by an empty span for layout). The Next link is not rendered when `!hasNextPage`.
-
-### Problem 3: "Back to Practice" link position and arrow on Quick Practice
-
-**What the user sees:**
-
-The `← Back to Practice` link sits in the top-right corner of the Quick Practice page. Two concerns:
-
-1. The `←` arrow is unnecessary — "Back to Practice" already implies direction
-2. The top-right position may be fine for desktop but could be worth evaluating for mobile
-
-**Note:** The Back link label is already contextual and well-implemented — it changes based on origin ("Back to Session", "Back to Practice", "Back to History", "Back to Bookmarks"). The concern is only about the arrow prefix.
+Quick Practice header currently sets `← Back to Practice` directly in its composition layer (`quick-practice-client.tsx:76`). The directional semantics are already in the word "Back".
 
 ---
 
 ## Severity Assessment
 
-- **Arrow symbols:** Low severity, cosmetic. But affects every question-answering screen.
-- **Disabled Previous on first question:** Low-medium. Dead UI is a design smell but not a functional problem.
-- **Back link arrow:** Low severity, cosmetic.
+- Arrow-copy inconsistency: Low (polish)
+- Disabled boundary buttons: Low-Medium (interaction cleanliness)
+- Quick Practice back-link arrow: Low (polish)
 
-None are bugs. All are polish items.
-
----
-
-## Affected Entry Points
-
-| Screen | Elements Affected | File |
-|--------|-------------------|------|
-| Quick Practice | `← Back to Practice`, `Next →` | `quick-practice-client.tsx`, `practice-view.tsx` |
-| Tutor Session (in-session) | `← Previous`, `Next →` | `practice-view.tsx`, `practice-session-page-view.tsx` |
-| Exam Session (in-session) | `← Previous`, `Next →` | `practice-view.tsx`, `practice-session-page-view.tsx` |
-| Session Review | `← Previous`, `Next →`, Back link | `question-page-client.tsx` |
-| Error pages | Already clean (no arrows) | `quick/error.tsx`, `[sessionId]/error.tsx` |
-| History pagination | Already clean (no arrows) | `history-sessions-tab.tsx`, `history-questions-tab.tsx` |
+Classification: UX polish, not functional correctness defects.
 
 ---
 
-## Proposed Fix (Sketch)
+## Proposed Fix (Implementation Contract)
 
-### Fix 1: Remove arrow symbols from all navigation buttons
-
-Change all button labels to plain text:
+### Fix 1: Remove arrows from in-scope navigation copy
 
 | Before | After |
-|--------|-------|
+|---|---|
 | `← Previous` | `Previous` |
 | `Next →` | `Next` |
 | `← Back to Practice` | `Back to Practice` |
-| `← Back to Session` | `Back to Session` |
-| `← Back to History` | `Back to History` |
-| `← Back to Bookmarks` | `Back to Bookmarks` |
+| `← Back to Dashboard` | `Back to Dashboard` |
 
-This aligns with History pagination (already arrow-free) and error pages (already arrow-free).
+Note: Do not include `Back to Session` / `Back to History` / `Back to Bookmarks` in this rename set; they are already arrow-free.
 
-### Fix 2: Hide Previous/Next at boundaries instead of disabling
+### Fix 2: Hide boundary nav controls instead of rendering disabled
 
-**In-session practice (`practice-view.tsx`):**
-- Don't render `← Previous` when `!hasPreviousQuestion` (instead of rendering disabled)
-- Don't render `Next →` when `!hasNextQuestion` (instead of rendering disabled)
+- In `PracticeView`:
+  - Hide Previous when `!hasPreviousQuestion`
+  - Hide Next when `hasNextQuestion === false`
+- In `QuestionView`:
+  - Keep current `navPrev`/`navNext` branching, but remove disabled-button fallback branches
 
-**Session review (`question-page-client.tsx`):**
-- Don't render Previous when `navPrev === null` (first question)
-- Don't render Next when `navNext === null` (last question)
+### Fix 3: Keep layout stability explicit
 
-**Layout consideration:** Use the same empty-span pattern from History pagination to preserve button bar alignment, or let the remaining buttons naturally fill the space.
+If button disappearance causes undesirable shift, use a spacer strategy consistent with history pagination (`<span />` placeholder) or apply min-width constraints on the action bar.
 
-### Fix 3: Remove arrow from Back links
+### Optional Scope Decision
 
-Strip `← ` prefix from all Back link labels. The text alone is sufficient.
+Decide whether `Go to Practice →` (`history-questions-tab.tsx:388`) is included in this bug's "remove arrows everywhere" interpretation. Current BS-037 scope does not require it, but this is the only remaining runtime right-arrow navigation copy after Fix 1.
+
+---
+
+## Test Impact (Confirmed)
+
+| Test File | Expected Update |
+|---|---|
+| `app/(app)/app/practice/components/practice-view.test.tsx` | Arrow label assertions; disabled-vs-hidden boundary assertions |
+| `app/(app)/app/practice/components/practice-view.browser.spec.tsx` | Role queries for `Next →` / `← Previous` |
+| `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.browser.spec.tsx` | Role queries and boundary disabled assertions |
+| `app/(app)/app/practice/quick/quick-practice-client.test.tsx` | Back-link text assertion |
+| `app/(app)/app/practice/quick/page.test.tsx` | Back-link text assertion |
+| `app/(app)/app/questions/[slug]/question-page-client.test.tsx` | Arrow text assertions and disabled boundary expectations |
+| `tests/e2e/helpers/bookmark.ts` | `Next →` button-name selectors |
+| `tests/e2e/session-review-navigation.spec.ts` | `Next →`/`← Previous` text and "disabled on last question" expectations |
+
+---
+
+## Validation Evidence
+
+Validated on 2026-03-02 using focused suites:
+
+```bash
+pnpm test --run 'app/(app)/app/practice/components/practice-view.test.tsx' \
+  'app/(app)/app/practice/quick/quick-practice-client.test.tsx' \
+  'app/(app)/app/practice/quick/page.test.tsx' \
+  'app/(app)/app/questions/[slug]/question-page-client.test.tsx'
+```
+
+Result: 4 files passed, 69 tests passed.
+
+```bash
+pnpm test:browser 'app/(app)/app/practice/components/practice-view.browser.spec.tsx' \
+  'app/(app)/app/practice/[sessionId]/components/practice-session-page-view.browser.spec.tsx'
+```
+
+Result: 2 files passed, 21 tests passed.
 
 ---
 
 ## Open Questions
 
-1. **Hide vs disable — is there a layout shift concern?** When Previous disappears on question 1, does the Submit button jump left? May need a spacer or min-width on the action bar.
-2. **Should we keep arrows only on mobile for touch affordance?** Some mobile UIs use arrows to make tap targets more discoverable. Desktop might not need them.
-3. **Does the question navigator make Previous/Next redundant in session modes?** Tutor and Exam modes have a full grid navigator at the top — the bottom buttons are a secondary nav path. Could we rely solely on the navigator for random access and keep only Submit + Bookmark at the bottom? (Aggressive option — probably not, since linear navigation is the primary flow.)
-4. **Should we apply the same hide-at-boundary pattern to the question navigator grid?** Currently the grid doesn't have this issue (all buttons are always shown), but worth considering for consistency.
-
----
-
-## Test Impact
-
-Existing tests assert on button text including arrows (e.g., `'← Previous'`, `'Next →'`). Changes would require updating:
-
-| Test File | What Changes |
-|-----------|-------------|
-| `practice-view.test.tsx` | Button text assertions |
-| `question-page-client.test.tsx` | Button text + first/last question disabled → hidden |
-| `practice-session-page-view.browser.spec.tsx` | Button name in role queries |
-| `quick-practice-client.test.tsx` | Back link text |
-| `page.test.tsx` (quick practice) | Back link text |
-| `history-sessions-tab.test.tsx` | Already arrow-free (no change) |
-| `session-review-navigation.spec.ts` (E2E) | Button names |
+1. Should hidden boundary buttons reserve layout space (`<span />`) or allow compaction?
+2. Should `Go to Practice →` be folded into BS-037 scope for full arrow consistency?
+3. For mobile, do we want icons via SVG (e.g., `ChevronLeft`) instead of text arrows if direction affordance is still desired later?
 
 ---
 
 ## Decision Log
 
 | Date | Decision | Rationale |
-|------|----------|-----------|
-| 2026-03-01 | Created BS-037 | Visual review of Quick Practice + Tutor Session screens |
+|---|---|---|
+| 2026-03-01 | Created BS-037 | Visual audit captured navigation-label and boundary-control concerns |
+| 2026-03-02 | Applied code-truth correction pass | Fixed inaccurate assumptions (session-review back labels already arrow-free), added full vertical/horizontal traces, and expanded test-impact coverage |
