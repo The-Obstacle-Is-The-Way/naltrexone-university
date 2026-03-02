@@ -978,13 +978,22 @@ describe('GetNextQuestionUseCase', () => {
 
     const questionRepo = new FakeQuestionRepository([
       ...candidatePools.unanswered.map((id, index) =>
-        createQuickPracticeQuestion(id, `2026-01-${index + 1}T00:00:00.000Z`),
+        createQuickPracticeQuestion(
+          id,
+          `2026-01-${String(index + 1).padStart(2, '0')}T00:00:00.000Z`,
+        ),
       ),
       ...candidatePools.incorrect.map((id, index) =>
-        createQuickPracticeQuestion(id, `2026-02-${index + 1}T00:00:00.000Z`),
+        createQuickPracticeQuestion(
+          id,
+          `2026-02-${String(index + 1).padStart(2, '0')}T00:00:00.000Z`,
+        ),
       ),
       ...candidatePools.bookmarked.map((id, index) =>
-        createQuickPracticeQuestion(id, `2026-03-${index + 1}T00:00:00.000Z`),
+        createQuickPracticeQuestion(
+          id,
+          `2026-03-${String(index + 1).padStart(2, '0')}T00:00:00.000Z`,
+        ),
       ),
     ]);
     const listCandidatesSpy = vi
