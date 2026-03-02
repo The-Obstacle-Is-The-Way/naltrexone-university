@@ -13,50 +13,14 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-## Bug Index — Audit #8 (Resolved)
-
-| Bug | Severity | Status | Summary |
-|-----|----------|--------|---------|
-| BUG-167 | P2 | Fixed (2026-03-02) | `loadPreviousAttempt` catch missing `isMounted()` guard |
-| BUG-168 | P2 | Fixed (2026-03-02) | `GetNextQuestionUseCase` skips current question in both scans |
-| BUG-169 | P3 | Fixed (2026-03-02) | Idempotency poll `break` falls into misleading CONFLICT error |
-| BUG-170 | P3 | Fixed (2026-03-02) | Non-atomic COUNT+SELECT in `findCompletedByUserId` pagination |
-| BUG-171 | P3 | Fixed (2026-03-02) | Stripe checkout `retrieve` failure silently skips session expiry |
-| BUG-172 | P3 | Fixed (2026-03-02) | `storeError` failure masks original execute error |
-| BUG-173 | P3 | Fixed (2026-03-02) | `get-session-history` adjusts total by skippedCount incorrectly |
-| BUG-175 | P3 | Fixed (2026-03-02) | Subscription repo calls `this.now()` twice in single upsert |
-| BUG-176 | P3 | Fixed (2026-03-02) | Stripe webhook controller hardcodes `Date.now()` (no `now` injection) |
-| BUG-177 | P3 | Fixed (2026-03-02) | Non-atomic SELECT+DELETE in all 3 pruning paths |
-| BUG-178 | P4 | Fixed (2026-03-02) | `DrizzleRateLimiter` defaults count to 1 on missing row |
-| BUG-179 | P4 | Fixed (2026-03-02) | `findBySessionId` has no LIMIT clause |
-
-See full details: [`audit-8-deep-sweep.md`](./audit-8-deep-sweep.md)
-
 **Next Bug ID:** BUG-180
 
-**Resolution notes (2026-03-02):**
-- Audit #8 active count is now **0**; all 12 verified bugs were fixed.
-- Fixes were implemented in recommended order with TDD (Red → Green).
-- Re-verification removed BUG-174 as a false positive (`CheckoutSuccessLogger.warn` is intentionally optional).
-- BUG-176 wording corrected: hardcoded `Date.now()` is still testable via fake timers, but inconsistent with explicit clock injection patterns.
-- BUG-177 risk analysis refined: two-step prune is non-atomic in all three paths, with stronger mitigation in idempotency pruning.
+**Latest archival (2026-03-02):**
+- Audit #8: all 12 bugs (BUG-167..179, excluding false-positive BUG-174) verified fixed, archived to `docs/_archive/audits/audit-008-deep-codebase-sweep.md`.
 
-**Historical notes (2026-03-01):**
-- 2 false positives removed from initial draft (stem preview edge case, start-session pre-check)
-- 3 new bugs found via horizontal tracer bullets (BUG-175, BUG-176, BUG-177)
-- BUG-169/170/171 downgraded from P2→P3 after tracing practical reachability
-- Old BUG-175/176 renumbered; old BUG-177/178 removed
-
-**Latest archival (2026-02-27):**
+**Previous archival (2026-02-27):**
 - BUG-165 and BUG-166 verified fixed (PRs #146, #147), archived to `docs/_archive/bugs/`.
 - BUG-160 through BUG-164 verified fixed, merged (PR #144), and archived to `docs/_archive/bugs/`.
-
-**Earlier resolutions (2026-02-26):**
-- BUG-160 fixed: dashboard session cards now deep-link to per-session review when `firstQuestionSlug` is available.
-- BUG-161 fixed: `paymentFailed` now routes to `subscription_required` in entitlement and checkout-success paths.
-- BUG-162 fixed: review controller now enforces `offset <= MAX_PAGINATION_OFFSET` with boundary tests.
-- BUG-163 fixed: dashboard tutor session fraction now uses `correct/questionCount`.
-- BUG-164 fixed: tutor summary accuracy denominator now matches history/dashboard semantics (`questionCount`).
 
 ## Audit #7 — Deep Sweep for First-Principles, Silent-Drop, and Relative Bugs (2026-02-27)
 
