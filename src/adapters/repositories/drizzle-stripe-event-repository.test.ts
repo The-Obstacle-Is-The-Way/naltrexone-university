@@ -1,3 +1,5 @@
+import type { SQL } from 'drizzle-orm';
+import { PgDialect } from 'drizzle-orm/pg-core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import { DrizzleStripeEventRepository } from './drizzle-stripe-event-repository';
@@ -310,8 +312,13 @@ describe('DrizzleStripeEventRepository', () => {
         async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
       );
       const db = {
-        ...tx,
         transaction,
+        select: () => {
+          throw new Error('root DB access forbidden in transaction test');
+        },
+        delete: () => {
+          throw new Error('root DB access forbidden in transaction test');
+        },
       } as const;
 
       const repo = new DrizzleStripeEventRepository(db as unknown as RepoDb);
@@ -344,8 +351,13 @@ describe('DrizzleStripeEventRepository', () => {
         async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
       );
       const db = {
-        ...tx,
         transaction,
+        select: () => {
+          throw new Error('root DB access forbidden in transaction test');
+        },
+        delete: () => {
+          throw new Error('root DB access forbidden in transaction test');
+        },
       } as const;
 
       const repo = new DrizzleStripeEventRepository(db as unknown as RepoDb);
@@ -355,6 +367,47 @@ describe('DrizzleStripeEventRepository', () => {
       ).resolves.toBe(2);
       expect(deleteFn).toHaveBeenCalledTimes(1);
       expect(deleteWhere).toHaveBeenCalledTimes(1);
+      expect(transaction).toHaveBeenCalledTimes(1);
+    });
+
+    it('includes processedAt cutoff predicate in delete conditions', async () => {
+      const cutoff = new Date('2026-02-01T00:00:00Z');
+      const selectLimit = vi.fn(async () => [{ id: 'evt_1' }]);
+      const selectOrderBy = vi.fn(() => ({ limit: selectLimit }));
+      const selectWhere = vi.fn(() => ({ orderBy: selectOrderBy }));
+      const selectFrom = vi.fn(() => ({ where: selectWhere }));
+
+      const deleteReturning = vi.fn(async () => [{ id: 'evt_1' }]);
+      const deleteWhere = vi.fn(() => ({ returning: deleteReturning }));
+      const deleteFn = vi.fn(() => ({ where: deleteWhere }));
+
+      const tx = {
+        select: () => ({ from: selectFrom }),
+        delete: deleteFn,
+      } as const;
+      const transaction = vi.fn(
+        async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
+      );
+      const db = {
+        transaction,
+        select: () => {
+          throw new Error('root DB access forbidden in transaction test');
+        },
+        delete: () => {
+          throw new Error('root DB access forbidden in transaction test');
+        },
+      } as const;
+
+      const repo = new DrizzleStripeEventRepository(db as unknown as RepoDb);
+      await repo.pruneProcessedBefore(cutoff, 100);
+
+      const firstCall = deleteWhere.mock.calls[0] as unknown[];
+      const whereArg = firstCall?.[0];
+      expect(whereArg).toBeDefined();
+
+      const whereSql = new PgDialect().sqlToQuery(whereArg as SQL).sql;
+      expect(whereSql).toContain('"stripe_events"."processed_at"');
+      expect(whereSql).toContain('<');
       expect(transaction).toHaveBeenCalledTimes(1);
     });
   });

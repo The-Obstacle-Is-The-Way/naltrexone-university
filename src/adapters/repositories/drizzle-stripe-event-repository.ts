@@ -103,9 +103,13 @@ export class DrizzleStripeEventRepository implements StripeEventRepository {
       const deleted = await tx
         .delete(stripeEvents)
         .where(
-          inArray(
-            stripeEvents.id,
-            idsToDelete.map((row) => row.id),
+          and(
+            inArray(
+              stripeEvents.id,
+              idsToDelete.map((row) => row.id),
+            ),
+            isNotNull(stripeEvents.processedAt),
+            lt(stripeEvents.processedAt, cutoff),
           ),
         )
         .returning({ id: stripeEvents.id });

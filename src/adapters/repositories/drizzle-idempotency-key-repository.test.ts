@@ -453,8 +453,13 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
       );
       const db = {
-        ...tx,
         transaction,
+        select: () => {
+          throw new Error('unexpected root select');
+        },
+        delete: () => {
+          throw new Error('unexpected root delete');
+        },
       } as unknown as RepoDb;
 
       const repo = new DrizzleIdempotencyKeyRepository(db);
@@ -502,8 +507,13 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
       );
       const db = {
-        ...tx,
         transaction,
+        select: () => {
+          throw new Error('unexpected root select');
+        },
+        delete: () => {
+          throw new Error('unexpected root delete');
+        },
       } as unknown as RepoDb;
 
       const repo = new DrizzleIdempotencyKeyRepository(db);
@@ -544,8 +554,13 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
       );
       const db = {
-        ...tx,
         transaction,
+        select: () => {
+          throw new Error('unexpected root select');
+        },
+        delete: () => {
+          throw new Error('unexpected root delete');
+        },
       } as unknown as RepoDb;
 
       const repo = new DrizzleIdempotencyKeyRepository(db);
