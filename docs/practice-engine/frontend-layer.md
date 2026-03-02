@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Routes, hooks, data flow, shared UI components, error handling
-> **Last Verified:** 2026-02-16
+> **Last Verified:** 2026-03-02
 
 ---
 
@@ -11,7 +11,7 @@
 | Route | Type | Purpose | Status |
 |-------|------|---------|--------|
 | `/app/practice` | Server → Client | Landing page — decision point (session starter, incomplete session card). No question loads on mount. History lives at `/app/history`. | Implemented (SPEC-019 Phase 2) |
-| `/app/practice/quick` | Server → Client | Quick Practice — ad-hoc question flow, random question, immediate feedback, no session tracking. | Implemented (SPEC-019 Phase 2) |
+| `/app/practice/quick` | Server → Client | Quick Practice — ad-hoc, filter-driven question flow (`selectNextQuestionId`), immediate feedback, no session tracking. Daily-seeded candidate shuffle policy is tracked in DEBT-268. | Implemented (SPEC-019 Phase 2) |
 | `/app/practice/[sessionId]` | Server → Client | Session runner — progress, question flow, exam review stage, summary | Implemented |
 | `/app/dashboard` | Server Component | Stats cards + recent activity (consumer of `getUserStats`) | Implemented |
 | `/app/history` | Server → Client | History page — tabbed view of Sessions and Questions (consumer of `getSessionHistory` + `getAttemptedQuestions`) | Implemented (SPEC-021) |

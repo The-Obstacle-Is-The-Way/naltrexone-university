@@ -25,7 +25,7 @@ This violates the ordering policy defined in [ordering-policy.md](../practice-en
 ## Why this is debt (not a one-line fix)
 
 - Requires adding `now: () => Date` constructor injection to `GetNextQuestionUseCase` (mirroring `StartPracticeSessionUseCase`).
-- All composition roots that instantiate `GetNextQuestionUseCase` must be updated.
+- Composition root and integration harness instantiations of `GetNextQuestionUseCase` must be reviewed/updated for explicit clock injection where deterministic behavior is required.
 - Unit tests must cover deterministic ordering, day-boundary rotation, and all three filter modes.
 - Practice engine docs must be aligned after implementation.
 
@@ -51,11 +51,14 @@ const orderedCandidateIds = shuffleWithSeed(candidateIds, seed);
 const selectedId = selectNextQuestionId(orderedCandidateIds, byQuestionId);
 ```
 
-### 3. Update composition roots
+### 3. Update instantiation sites
 
-**Files:** All Server Action controllers that instantiate `GetNextQuestionUseCase`.
+**Files (current known instantiation points):**
+- `lib/container/use-cases.ts`
+- `tests/integration/controllers.integration.test.ts`
+- `src/application/use-cases/get-next-question.test.ts` (as needed for deterministic date-boundary tests)
 
-Pass `() => new Date()` (or omit for default) to the new constructor parameter.
+Update call sites to pass clock functions where testability or determinism requires it. Production composition root may rely on default `() => new Date()` when explicit injection adds no value.
 
 ### 4. Add/update unit tests
 
@@ -89,7 +92,7 @@ New test cases:
 
 | Risk | Mitigation |
 |------|-----------|
-| Composition root missed — some code path still creates `GetNextQuestionUseCase` without `now` | Default parameter `= () => new Date()` makes this safe; missed roots get production behavior. TypeScript will not break. |
+| Instantiation site missed — some path still creates `GetNextQuestionUseCase` without explicit `now` | Keep default parameter `= () => new Date()` for safe runtime behavior; use targeted test coverage for deterministic day-boundary behavior. |
 | Daily seed feels too stable (same first question all day) | Daily granularity is a starting point. Can move to shorter windows later if user feedback warrants it. |
 | Shuffle changes which question users see next (existing study patterns disrupted) | This is the intended fix. Users currently see clustered patterns, which is worse. |
 

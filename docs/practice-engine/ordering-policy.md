@@ -16,7 +16,7 @@ All ordering behavior in the practice engine must satisfy these five properties:
 | 2 | **Short-window stability** | Refreshing the page or re-entering the same flow should not feel chaotic; the same user in the same study window should see consistent ordering. |
 | 3 | **Explicit rules per path** | Every question-serving path must have a documented ordering contract. No path should rely on accidental DB order. |
 | 4 | **Immutable historical order** | Completed session review must preserve the exact question sequence the user experienced. |
-| 5 | **No DB-order coupling** | Learning behavior must never depend on repository sort order (`createdAt`, `id`), content batch structure, or seed-file naming. |
+| 5 | **No DB-order coupling** | Learning behavior must never depend on repository sort order (`createdAt`, `id`) or content ingestion batch structure. |
 
 ---
 
@@ -27,7 +27,7 @@ The practice engine has two independent ordering concerns:
 1. **Question ordering** — which question to show next (or in what sequence).
 2. **Choice ordering** — how answer choices (A/B/C/D/E) are labeled and displayed for a given question.
 
-These are solved by different domain services with different seed strategies.
+These are solved by different mechanisms with different seed strategies (question ordering via use-case orchestration + domain services; choice ordering via `buildShuffledChoiceViews` + domain services).
 
 ---
 
@@ -128,11 +128,11 @@ buildShuffledChoiceViews(question, userId)
 | Service | Function | Inputs | Deterministic? | Purpose |
 |---------|----------|--------|----------------|---------|
 | `shuffle.ts` | `shuffleWithSeed<T>(items, seed)` | Array + numeric seed | Yes (Fisher-Yates + Mulberry32) | Permute any array deterministically |
-| `shuffle.ts` | `createSeed(userId, timestamp)` | String + number | Yes (djb2-style hash) | Generate seed from user identity + time |
-| `shuffle.ts` | `createQuestionSeed(userId, questionId)` | String + string | Yes (djb2-style hash) | Generate seed from user + question identity |
+| `shuffle.ts` | `createSeed(userId, timestamp)` | String + number | Yes (non-cryptographic int32 hash) | Generate seed from user identity + time |
+| `shuffle.ts` | `createQuestionSeed(userId, questionId)` | String + string | Yes (non-cryptographic int32 hash) | Generate seed from user + question identity |
 | `question-selection.ts` | `selectNextQuestionId(candidateIds, attemptHistory)` | Ordered IDs + timestamp map | Yes (order-dependent) | Pick next question from candidate list |
 
-**Key invariant:** `selectNextQuestionId` is order-dependent by design. Its output is fully determined by the order of `candidateIds`. This is correct and intentional — the caller is responsible for providing candidates in the desired order (shuffled or otherwise).
+**Key invariant:** `selectNextQuestionId` is order-dependent by design. Its output is fully determined by the order of `candidateIds` plus `attemptHistory`. This is correct and intentional — the caller is responsible for providing candidates in the desired order (shuffled or otherwise).
 
 ---
 
@@ -142,7 +142,7 @@ buildShuffledChoiceViews(question, userId)
 |-------------|---------------|---------------|
 | DB insertion order (`createdAt`) | Content batches share timestamps, causing topic clustering | Questions from the same source paper appear consecutively |
 | Repository sort clause (`ORDER BY`) | Leaks infrastructure ordering into learning behavior | Changing the repo sort changes what users study first |
-| Content file naming | Alphabetical MDX file order could influence seed order | Renaming content files changes question selection |
+| Content ingestion batch order | Batch inserts can preserve source/topic adjacency | Questions from one source appear back-to-back in quick practice |
 | Candidate array as returned from repository | Repository contract is "return matching IDs" not "return in study order" | Quick practice shows questions grouped by topic/source |
 
 The fix for all of these is the same: **shuffle before selecting**. Repositories return candidates; the application layer applies ordering policy.

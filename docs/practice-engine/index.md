@@ -1,7 +1,7 @@
 # Practice Engine
 
 > **Type:** Canonical Reference Document (Living)
-> **Last Verified:** 2026-03-01 (retry/reattempt audit sync)
+> **Last Verified:** 2026-03-02 (ordering policy + DEBT-268 sync)
 > **Scope:** Everything related to practicing questions — the core product feature
 
 ---

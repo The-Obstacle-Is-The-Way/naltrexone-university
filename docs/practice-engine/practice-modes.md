@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Ad-hoc, Tutor, and Exam modes — lifecycle, grading, concurrency
-> **Last Verified:** 2026-02-16
+> **Last Verified:** 2026-03-02
 
 ---
 
@@ -53,6 +53,8 @@ For sessions, questions are selected at creation time:
 3. Take first `count` questions → persist as `questionIds` in `paramsJson`
 
 For ad-hoc mode, `selectNextQuestionId()` prefers the **first unattempted** candidate (in candidate order). If all candidates have been attempted, it selects the question with the **oldest** last-attempt timestamp.
+
+Current implementation note: candidate order is repository order for this path. Policy-alignment work to apply daily-seeded candidate shuffle before selection is tracked in DEBT-268 and documented in `ordering-policy.md`.
 
 ---
 
