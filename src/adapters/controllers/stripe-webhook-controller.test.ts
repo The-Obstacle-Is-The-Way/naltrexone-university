@@ -10,6 +10,7 @@ import {
   FakeStripeEventRepository,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
+import type { Subscription } from '@/src/domain/entities';
 
 class FailingStripeEventRepository extends FakeStripeEventRepository {
   async pruneProcessedBefore(_cutoff: Date, _limit: number): Promise<number> {
@@ -50,6 +51,155 @@ function createDeps(overrides: {
     subscriptions,
     stripeCustomers,
     logger,
+  };
+}
+
+type StoredStripeEvent = {
+  type: string;
+  processedAt: Date | null;
+  error: string | null;
+};
+
+type StripeEventRepositoryInternals = {
+  events: Map<string, StoredStripeEvent>;
+};
+
+type SubscriptionRepositoryInternals = {
+  byUserId: Map<string, Subscription>;
+  externalSubscriptionIdByUserId: Map<string, string>;
+  userIdByExternalSubscriptionId: Map<string, string>;
+};
+
+type StripeCustomerRepositoryInternals = {
+  userIdToCustomerId: Map<string, string>;
+  customerIdToUserId: Map<string, string>;
+};
+
+function copyStripeEvents(
+  target: FakeStripeEventRepository,
+  source: FakeStripeEventRepository,
+): void {
+  const targetEvents = (target as unknown as StripeEventRepositoryInternals)
+    .events;
+  const sourceEvents = (source as unknown as StripeEventRepositoryInternals)
+    .events;
+
+  targetEvents.clear();
+  for (const [eventId, event] of sourceEvents.entries()) {
+    targetEvents.set(eventId, {
+      type: event.type,
+      processedAt: event.processedAt ? new Date(event.processedAt) : null,
+      error: event.error,
+    });
+  }
+}
+
+function copySubscriptions(
+  target: FakeSubscriptionRepository,
+  source: FakeSubscriptionRepository,
+): void {
+  const targetRepo = target as unknown as SubscriptionRepositoryInternals;
+  const sourceRepo = source as unknown as SubscriptionRepositoryInternals;
+
+  targetRepo.byUserId.clear();
+  for (const [userId, subscription] of sourceRepo.byUserId.entries()) {
+    targetRepo.byUserId.set(userId, {
+      ...subscription,
+      currentPeriodEnd: new Date(subscription.currentPeriodEnd),
+      createdAt: new Date(subscription.createdAt),
+      updatedAt: new Date(subscription.updatedAt),
+    });
+  }
+
+  targetRepo.externalSubscriptionIdByUserId.clear();
+  for (const [
+    userId,
+    externalSubscriptionId,
+  ] of sourceRepo.externalSubscriptionIdByUserId.entries()) {
+    targetRepo.externalSubscriptionIdByUserId.set(
+      userId,
+      externalSubscriptionId,
+    );
+  }
+
+  targetRepo.userIdByExternalSubscriptionId.clear();
+  for (const [
+    externalSubscriptionId,
+    userId,
+  ] of sourceRepo.userIdByExternalSubscriptionId.entries()) {
+    targetRepo.userIdByExternalSubscriptionId.set(
+      externalSubscriptionId,
+      userId,
+    );
+  }
+}
+
+function copyStripeCustomers(
+  target: FakeStripeCustomerRepository,
+  source: FakeStripeCustomerRepository,
+): void {
+  const targetRepo = target as unknown as StripeCustomerRepositoryInternals;
+  const sourceRepo = source as unknown as StripeCustomerRepositoryInternals;
+
+  targetRepo.userIdToCustomerId.clear();
+  for (const [userId, customerId] of sourceRepo.userIdToCustomerId.entries()) {
+    targetRepo.userIdToCustomerId.set(userId, customerId);
+  }
+
+  targetRepo.customerIdToUserId.clear();
+  for (const [customerId, userId] of sourceRepo.customerIdToUserId.entries()) {
+    targetRepo.customerIdToUserId.set(customerId, userId);
+  }
+}
+
+function createRollbackAwareDeps(overrides: {
+  paymentGateway: FakePaymentGateway;
+  stripeEvents?: FakeStripeEventRepository;
+  subscriptions?: FakeSubscriptionRepository;
+  stripeCustomers?: FakeStripeCustomerRepository;
+  logger?: FakeLogger;
+}): {
+  deps: StripeWebhookDeps;
+  stripeEvents: FakeStripeEventRepository;
+  subscriptions: FakeSubscriptionRepository;
+  stripeCustomers: FakeStripeCustomerRepository;
+  logger: FakeLogger;
+} {
+  const base = createDeps(overrides);
+
+  return {
+    ...base,
+    deps: {
+      ...base.deps,
+      transaction: async (fn) => {
+        const StripeEventsCtor = base.stripeEvents
+          .constructor as new () => FakeStripeEventRepository;
+        const SubscriptionsCtor = base.subscriptions
+          .constructor as new () => FakeSubscriptionRepository;
+        const StripeCustomersCtor = base.stripeCustomers
+          .constructor as new () => FakeStripeCustomerRepository;
+
+        const stagingEvents = new StripeEventsCtor();
+        const stagingSubscriptions = new SubscriptionsCtor();
+        const stagingStripeCustomers = new StripeCustomersCtor();
+
+        copyStripeEvents(stagingEvents, base.stripeEvents);
+        copySubscriptions(stagingSubscriptions, base.subscriptions);
+        copyStripeCustomers(stagingStripeCustomers, base.stripeCustomers);
+
+        const result = await fn({
+          stripeEvents: stagingEvents,
+          subscriptions: stagingSubscriptions,
+          stripeCustomers: stagingStripeCustomers,
+        });
+
+        copyStripeEvents(base.stripeEvents, stagingEvents);
+        copySubscriptions(base.subscriptions, stagingSubscriptions);
+        copyStripeCustomers(base.stripeCustomers, stagingStripeCustomers);
+
+        return result;
+      },
+    },
   };
 }
 
@@ -331,6 +481,50 @@ describe('processStripeWebhook', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('persists failure state even when the transaction would rollback on throw', async () => {
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_test',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_rollback_failure_state',
+        type: 'customer.subscription.updated',
+        subscriptionUpdate: {
+          userId: 'user_1',
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_123',
+          plan: 'monthly',
+          status: 'active',
+          currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
+          cancelAtPeriodEnd: false,
+        },
+      },
+    });
+
+    class FailingSubscriptionRepository extends FakeSubscriptionRepository {
+      async upsert(): Promise<void> {
+        throw new Error('boom');
+      }
+    }
+
+    const subscriptions = new FailingSubscriptionRepository();
+    const { deps, stripeEvents } = createRollbackAwareDeps({
+      paymentGateway,
+      subscriptions,
+    });
+
+    await expect(
+      processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
+    ).rejects.toMatchObject({ message: 'boom' });
+
+    await expect(
+      stripeEvents.lock('evt_rollback_failure_state'),
+    ).resolves.toMatchObject({
+      processedAt: null,
+      error: expect.any(String),
+    });
   });
 
   it('marks the event failed when processing throws', async () => {

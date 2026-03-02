@@ -313,6 +313,35 @@ describe('GetAttemptedQuestionsUseCase', () => {
     });
   });
 
+  it('preserves page rows even when count returns 0 (snapshot divergence)', async () => {
+    const attempts = new FakeAttemptRepository([
+      createAttempt({
+        userId: 'user-1',
+        questionId: 'q1',
+        isCorrect: true,
+        answeredAt: new Date('2026-02-01T12:00:00Z'),
+      }),
+    ]);
+    attempts.countAttemptedQuestionsByUserId = async () => 0;
+
+    const useCase = new GetAttemptedQuestionsUseCase(
+      attempts,
+      new FakeQuestionRepository([
+        createQuestion({ id: 'q1', slug: 'q-1', stemMd: 'Stem for q1' }),
+      ]),
+      new FakeLogger(),
+    );
+
+    const result = await useCase.execute({
+      userId: 'user-1',
+      limit: 10,
+      offset: 0,
+    });
+
+    expect(result.rows).toHaveLength(1);
+    expect(result.totalCount).toBe(0);
+  });
+
   it('propagates repository failures', async () => {
     const attempts = new FakeAttemptRepository([]);
     attempts.countAttemptedQuestionsByUserId = async () => {

@@ -68,6 +68,12 @@ describe('app/(app)/app/history/history-search-params', () => {
       expect(parseDifficultyFilter('medium')).toBe('medium');
       expect(parseDifficultyFilter('hard')).toBe('hard');
     });
+
+    it('returns first value when difficulty param is an array', () => {
+      expect(parseDifficultyFilter(['hard', 'easy'] as unknown as string)).toBe(
+        'hard',
+      );
+    });
   });
 
   describe('parseTagSlugFilter', () => {
@@ -79,6 +85,16 @@ describe('app/(app)/app/history/history-search-params', () => {
 
     it('trims whitespace', () => {
       expect(parseTagSlugFilter(' opioids ')).toBe('opioids');
+    });
+
+    it('returns first value when tag param is an array (repeated query param)', () => {
+      expect(
+        parseTagSlugFilter(['opioids', 'alcohol'] as unknown as string),
+      ).toBe('opioids');
+    });
+
+    it('returns null when tag param is an empty array', () => {
+      expect(parseTagSlugFilter([] as unknown as string)).toBeNull();
     });
   });
 
