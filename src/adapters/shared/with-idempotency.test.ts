@@ -328,6 +328,47 @@ describe('withIdempotency', () => {
     expect(execute).not.toHaveBeenCalled();
   });
 
+  it('throws INTERNAL_ERROR when key disappears during polling', async () => {
+    class DisappearingFindRepo extends FakeIdempotencyKeyRepository {
+      override async find(): Promise<null> {
+        return null;
+      }
+    }
+
+    const now = () => new Date('2026-02-07T00:00:00.000Z');
+    const repo = new DisappearingFindRepo(now);
+    const logger = new FakeLogger();
+    const key = '44444444-4444-4444-4444-444444444445';
+
+    await repo.claim({
+      userId: 'user_1',
+      action: 'billing:createCheckoutSession',
+      key,
+      expiresAt: new Date('2026-02-08T00:00:00.000Z'),
+    });
+
+    const execute = vi.fn(async () => ({ ok: true }));
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: 'user_1',
+        action: 'billing:createCheckoutSession',
+        key,
+        now,
+        logger,
+        maxWaitMs: 100,
+        pollIntervalMs: 1,
+        execute,
+      }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'Idempotency key disappeared during poll',
+    });
+
+    expect(execute).not.toHaveBeenCalled();
+  });
+
   it('prunes expired idempotency keys before processing requests', async () => {
     const nowDate = new Date('2026-02-07T12:00:00.000Z');
     const now = () => nowDate;

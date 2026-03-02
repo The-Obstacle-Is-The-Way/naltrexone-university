@@ -114,6 +114,7 @@ export async function withIdempotency<T>(input: {
   }
 
   const startMs = input.now().getTime();
+  let keyDisappearedDuringPoll = false;
   while (input.now().getTime() - startMs <= maxWaitMs) {
     const existing = await input.repo.find(
       input.userId,
@@ -121,6 +122,7 @@ export async function withIdempotency<T>(input: {
       input.key,
     );
     if (!existing) {
+      keyDisappearedDuringPoll = true;
       break;
     }
 
@@ -146,6 +148,13 @@ export async function withIdempotency<T>(input: {
     }
 
     await delay(pollIntervalMs);
+  }
+
+  if (keyDisappearedDuringPoll) {
+    throw new ApplicationError(
+      'INTERNAL_ERROR',
+      'Idempotency key disappeared during poll',
+    );
   }
 
   throw new ApplicationError(
