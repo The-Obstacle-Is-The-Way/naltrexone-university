@@ -42,22 +42,50 @@ Tracer-bullet path:
 
 ---
 
-## Fix
+## Fix (TDD)
 
 Not fixed yet.
 
-Proposed fix direction:
-1. When `sessionId` is provided and an attempt is found, load session and require `endedAt !== null` before returning `correctChoiceId` / explanations.
-2. If session is active, return `null` (or a gated payload with no correctness/explanations).
-3. Add regression tests for active exam + answered attempt + `sessionId` review hydration.
+### Red — write the failing test first
+
+In `get-previous-attempt.test.ts`, add a test:
+
+```typescript
+it('returns null for answered attempt when session is active exam', async () => {
+  // Arrange: active exam session (endedAt: null) + attempt that answered q1 in that session
+  // Act: execute({ userId, questionId: 'q1', sessionId: activeExamSession.id })
+  // Assert: result is null (no answer key leaked)
+});
+```
+
+This test must FAIL before the fix — confirming the leak exists.
+
+### Green — minimum code to pass
+
+In `GetPreviousAttemptUseCase.execute()`, after the attempt is found and before returning the answer key (between current lines 133 and 134), add:
+
+```typescript
+if (input.sessionId) {
+  const session = await this.sessions.findByIdAndUserId(
+    input.sessionId,
+    input.userId,
+  );
+  if (session && session.endedAt === null) {
+    return null;
+  }
+}
+```
+
+This gates the answered-attempt branch the same way the unanswered branch is gated at line 104.
+
+### Refactor
+
+Consider extracting a shared `isSessionReviewAllowed(session)` guard if BUG-181's fix introduces the same pattern in `SubmitAnswerUseCase`.
 
 ---
 
 ## Verification
 
-How was the fix verified?
-
-- [ ] Unit test added
-- [ ] Integration test added
-- [x] Manual verification
+- [ ] Unit test added (Red phase test above)
+- [ ] Manual verification post-fix
 

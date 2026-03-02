@@ -45,22 +45,47 @@ Tracer-bullet path:
 
 ---
 
-## Fix
+## Fix (TDD)
 
 Not fixed yet.
 
-Proposed fix direction:
-1. Add `retrySession.endedAt !== null` requirement for `retryOrigin === 'session_review'`.
-2. Reject active-session provenance with `CONFLICT` or `VALIDATION_ERROR`.
-3. Add regression tests for active exam `retrySessionId` to guarantee no answer-key reveal.
+### Red — write the failing test first
+
+In `submit-answer.test.ts`, add a test:
+
+```typescript
+it('rejects session_review retry when retrySessionId points to an active exam', async () => {
+  // Arrange: active exam session (endedAt: null, mode: 'exam') with question q1
+  // Act: execute({ questionId: q1, choiceId: c1, retryOrigin: 'session_review', retrySessionId: activeExam.id })
+  // Assert: throws ApplicationError with code 'CONFLICT'
+});
+```
+
+This test must FAIL before the fix — confirming the leak exists.
+
+### Green — minimum code to pass
+
+In `SubmitAnswerUseCase.execute()`, inside the existing `retryOrigin === 'session_review'` block (line 112-126), after the membership check, add:
+
+```typescript
+if (retrySession.endedAt === null) {
+  throw new ApplicationError(
+    'CONFLICT',
+    'Cannot retry from an active session',
+  );
+}
+```
+
+This ensures session_review retries only work against ended sessions, closing the explanation leak.
+
+### Refactor
+
+Consider extracting a shared `assertSessionEnded(session)` guard if BUG-180's fix introduces the same pattern in `GetPreviousAttemptUseCase`.
 
 ---
 
 ## Verification
 
-How was the fix verified?
-
-- [ ] Unit test added
-- [ ] Integration test added
-- [x] Manual verification
+- [ ] Unit test added (Red phase test above)
+- [ ] Manual verification post-fix
 

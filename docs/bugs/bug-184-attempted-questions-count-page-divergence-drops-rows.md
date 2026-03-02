@@ -35,26 +35,56 @@ Executable verification performed on 2026-03-02:
 Tracer-bullet path:
 1. Use case runs count/list in parallel at [get-attempted-questions.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-attempted-questions.ts:76).
 2. Short-circuit condition at [get-attempted-questions.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-attempted-questions.ts:86) returns empty rows when `totalCount === 0`, regardless of `page`.
-3. Repository count/list are separate SQL statements at [drizzle-attempt-repository.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-attempt-repository.ts:381) and [drizzle-attempt-repository.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-attempt-repository.ts:437), so snapshot divergence is possible.
+3. Repository list ([drizzle-attempt-repository.ts:381](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-attempt-repository.ts:381)) and count ([drizzle-attempt-repository.ts:437](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-attempt-repository.ts:437)) are separate SQL statements, so snapshot divergence is possible under concurrent writes.
+
+**Practical likelihood:** Both queries execute near-simultaneously via `Promise.all`. Under Postgres READ COMMITTED isolation, divergence requires a write to commit in the microsecond window between the two queries starting — vanishingly unlikely in normal operation.
 
 ---
 
-## Fix
+## Fix (TDD)
 
 Not fixed yet.
 
-Proposed fix direction:
-1. Change short-circuit to only return empty when `page.length === 0`.
-2. Keep `totalCount` as reported (or recompute in a single-query/window-function strategy).
-3. Add regression test covering `count=0` with non-empty page.
+### Red — write the failing test first
+
+In `get-attempted-questions.test.ts`:
+
+```typescript
+it('returns page rows even when count returns 0 (snapshot divergence)', async () => {
+  // Arrange: inject a fake that returns count=0 but list=[one row]
+  //   (simulating a concurrent write between the two queries)
+  // Act: execute({ userId, limit: 20, offset: 0 })
+  // Assert: rows.length === 1, totalCount === 0
+  //   (page data is preserved; count is stale but not destructive)
+});
+```
+
+This test must FAIL before the fix — confirming the row-drop path.
+
+### Green — minimum code to pass
+
+In `GetAttemptedQuestionsUseCase.execute()`, change line 86 from:
+
+```typescript
+if (totalCount === 0 || page.length === 0) {
+```
+
+to:
+
+```typescript
+if (page.length === 0) {
+```
+
+The `totalCount` is still returned as-is for pagination UI — only the short-circuit condition changes. When `page.length === 0`, there is genuinely nothing to enrich, so the early return is still correct.
+
+### Refactor
+
+None needed — the change is a single condition simplification.
 
 ---
 
 ## Verification
 
-How was the fix verified?
-
-- [ ] Unit test added
-- [ ] Integration test added
-- [x] Manual verification
+- [ ] Unit test added (Red phase test above)
+- [ ] Manual verification post-fix
 

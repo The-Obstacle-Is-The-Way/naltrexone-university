@@ -34,27 +34,60 @@ Executable verification performed on 2026-03-02:
 
 Tracer-bullet path:
 1. Main webhook work runs inside transaction at [stripe-webhook-controller.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/controllers/stripe-webhook-controller.ts:65).
-2. On error, code does `await stripeEvents.markFailed(...)` then `throw error` at [stripe-webhook-controller.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/controllers/stripe-webhook-controller.ts:104).
-3. Controller wiring uses real DB transaction in [lib/container/controllers.ts](/Users/ray/Desktop/github/naltrexone-university-1/lib/container/controllers.ts:24), so rethrow rolls back transaction.
+2. On error, catch block calls `markFailed` at [stripe-webhook-controller.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/controllers/stripe-webhook-controller.ts:105) then rethrows at [:106](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/controllers/stripe-webhook-controller.ts:106).
+3. The rethrown error causes the transaction callback to reject. Controller wiring at [lib/container/controllers.ts](/Users/ray/Desktop/github/naltrexone-university-1/lib/container/controllers.ts:24) uses `primitives.db.transaction(...)` (Drizzle), which rolls back the entire transaction on rejection — undoing both `claim` and `markFailed`.
 4. Spec explicitly requires persisted failure state (`error` set, `processed_at` null) at [master_spec.md](/Users/ray/Desktop/github/naltrexone-university-1/docs/specs/master_spec.md:734), but rollback prevents that durability.
 
 ---
 
-## Fix
+## Fix (TDD)
 
 Not fixed yet.
 
-Proposed fix direction:
-1. Keep claim/lock/work in transaction, but persist `markFailed` in a separate post-rollback transaction boundary.
-2. Add a regression test that uses rollback semantics (not a non-transactional fake wrapper) to verify failed state durability.
+### Red — write the failing test first
+
+The existing unit tests use `FakeStripeEventRepository` which is non-transactional (writes persist regardless of throw). The failing test must use rollback-capable semantics:
+
+```typescript
+it('persists failure state even when processing throws', async () => {
+  // Arrange: a transaction wrapper that actually rolls back on rejection
+  //   (e.g., track writes in a staging area, discard on throw)
+  // Inject subscriptions.upsert that throws after claim succeeds
+  // Act: await processStripeWebhook(deps, input)  — expect rejection
+  // Assert: stripeEvents still has the event with error set and processed_at null
+});
+```
+
+This test must FAIL before the fix — confirming that markFailed is rolled back.
+
+### Green — minimum code to pass
+
+Restructure `processStripeWebhook` to persist failure state **outside** the rolling-back transaction. The key change: catch the transaction rejection, then call `markFailed` in a separate transaction boundary:
+
+```typescript
+try {
+  await deps.transaction(async ({ stripeEvents, subscriptions, stripeCustomers }) => {
+    // claim, lock, process, markProcessed (unchanged)
+  });
+} catch (error) {
+  // markFailed runs in its own transaction — survives the main tx rollback
+  await deps.transaction(async ({ stripeEvents }) => {
+    await stripeEvents.markFailed(event.eventId, toErrorData(error));
+  });
+  throw error;
+}
+```
+
+This requires `deps.transaction` to accept a second call, which it already supports (the prune at line 117 already does this).
+
+### Refactor
+
+Remove the now-dead inner `catch` block (lines 104-107). The outer catch handles both failure persistence and rethrow in one clean location.
 
 ---
 
 ## Verification
 
-How was the fix verified?
-
-- [ ] Unit test added
-- [ ] Integration test added
-- [x] Manual verification
+- [ ] Unit test added (Red phase test above — requires rollback-capable test harness)
+- [ ] Manual verification post-fix
 

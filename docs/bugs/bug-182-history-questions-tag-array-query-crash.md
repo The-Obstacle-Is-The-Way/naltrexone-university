@@ -36,26 +36,51 @@ Tracer-bullet path:
 1. History page reads `params.tag` at [page.tsx](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/history/page.tsx:77).
 2. It passes directly to `parseTagSlugFilter(...)`.
 3. Parser calls `value?.trim()` at [history-search-params.ts](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/history/history-search-params.ts:56).
-4. When `value` is `string[]`, `.trim` is undefined and throws.
+4. When `value` is `string[]`, `.trim` is undefined on arrays — throws `TypeError`.
+
+TypeScript does not catch this because `HistorySearchParams` (page.tsx:31-40) types `tag` as `string`, but Next.js App Router's actual `searchParams` type is `{ [key: string]: string | string[] | undefined }`. The page's type narrows away the `string[]` case, hiding the runtime risk.
 
 ---
 
-## Fix
+## Fix (TDD)
 
 Not fixed yet.
 
-Proposed fix direction:
-1. Widen search-param type to `string | string[] | undefined`.
-2. Normalize arrays before parsing (for example, first value wins).
-3. Add regression tests for repeated `tag` query params.
+### Red — write the failing test first
+
+In `history-search-params.test.ts` (create if needed, colocated):
+
+```typescript
+it('returns first value when given an array (repeated query param)', () => {
+  // Arrange: simulate repeated ?tag=a&tag=b
+  const arrayValue = ['opioids', 'alcohol'] as unknown as string;
+  // Act + Assert: should not throw, should return first value
+  expect(parseTagSlugFilter(arrayValue)).toBe('opioids');
+});
+```
+
+This test must FAIL (TypeError) before the fix.
+
+### Green — minimum code to pass
+
+In `parseTagSlugFilter`, normalize the input before trimming:
+
+```typescript
+export function parseTagSlugFilter(value: string | string[] | undefined): string | null {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const trimmed = raw?.trim();
+  return trimmed ? trimmed : null;
+}
+```
+
+### Refactor
+
+Apply the same `Array.isArray` normalization to all parse functions in `history-search-params.ts` that receive search param values (`parseDifficultyFilter`, `parseResultFilter`, `parseSourceFilter`, `parseSessionModeFilter`, `parseQuestionsSort`) — they all have the same latent risk. Consider extracting a shared `normalizeParam(value)` helper.
 
 ---
 
 ## Verification
 
-How was the fix verified?
-
-- [ ] Unit test added
-- [ ] Integration test added
-- [x] Manual verification
+- [ ] Unit test added (Red phase test above)
+- [ ] Manual verification post-fix
 
