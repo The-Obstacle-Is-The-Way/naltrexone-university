@@ -381,9 +381,10 @@ describe('SubmitAnswerUseCase', () => {
         }),
       ]);
 
+      const attempts = new FakeAttemptRepository();
       const useCase = new SubmitAnswerUseCase(
         new FakeQuestionRepository([question]),
-        new FakeAttemptRepository(),
+        attempts,
         sessions,
         new FakeLogger(),
       );
@@ -399,6 +400,7 @@ describe('SubmitAnswerUseCase', () => {
       ).rejects.toEqual(
         new ApplicationError('CONFLICT', 'Cannot retry from an active session'),
       );
+      expect(attempts.getAll()).toHaveLength(0);
     });
 
     it('throws CONFLICT when session_review retrySessionId points to an active tutor session', async () => {
@@ -425,9 +427,10 @@ describe('SubmitAnswerUseCase', () => {
         }),
       ]);
 
+      const attempts = new FakeAttemptRepository();
       const useCase = new SubmitAnswerUseCase(
         new FakeQuestionRepository([question]),
-        new FakeAttemptRepository(),
+        attempts,
         sessions,
         new FakeLogger(),
       );
@@ -443,6 +446,7 @@ describe('SubmitAnswerUseCase', () => {
       ).rejects.toEqual(
         new ApplicationError('CONFLICT', 'Cannot retry from an active session'),
       );
+      expect(attempts.getAll()).toHaveLength(0);
     });
 
     it('throws NOT_FOUND when session_review retrySessionId does not belong to the submitting user', async () => {
