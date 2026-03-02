@@ -721,6 +721,7 @@ describe('stripe webhook controller (integration)', () => {
       {
         paymentGateway,
         logger: new FakeLogger(),
+        now: () => new Date(),
         transaction: async (fn) =>
           db.transaction(async (tx) =>
             fn({

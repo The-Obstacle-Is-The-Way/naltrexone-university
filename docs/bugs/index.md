@@ -13,30 +13,31 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-## Bug Index (Active) — Audit #8 (Verified)
+## Bug Index — Audit #8 (Resolved)
 
-| Bug | Severity | Summary |
-|-----|----------|---------|
-| BUG-167 | P2 | `loadPreviousAttempt` catch missing `isMounted()` guard |
-| BUG-168 | P2 | `GetNextQuestionUseCase` skips current question in both scans |
-| BUG-169 | P3 | Idempotency poll `break` falls into misleading CONFLICT error |
-| BUG-170 | P3 | Non-atomic COUNT+SELECT in `findCompletedByUserId` pagination |
-| BUG-171 | P3 | Stripe checkout `retrieve` failure silently skips session expiry |
-| BUG-172 | P3 | `storeError` failure masks original execute error |
-| BUG-173 | P3 | `get-session-history` adjusts total by skippedCount incorrectly |
-| BUG-175 | P3 | Subscription repo calls `this.now()` twice in single upsert |
-| BUG-176 | P3 | Stripe webhook controller hardcodes `Date.now()` (no `now` injection) |
-| BUG-177 | P3 | Non-atomic SELECT+DELETE in all 3 pruning paths |
-| BUG-178 | P4 | `DrizzleRateLimiter` defaults count to 1 on missing row |
-| BUG-179 | P4 | `findBySessionId` has no LIMIT clause |
+| Bug | Severity | Status | Summary |
+|-----|----------|--------|---------|
+| BUG-167 | P2 | Fixed (2026-03-02) | `loadPreviousAttempt` catch missing `isMounted()` guard |
+| BUG-168 | P2 | Fixed (2026-03-02) | `GetNextQuestionUseCase` skips current question in both scans |
+| BUG-169 | P3 | Fixed (2026-03-02) | Idempotency poll `break` falls into misleading CONFLICT error |
+| BUG-170 | P3 | Fixed (2026-03-02) | Non-atomic COUNT+SELECT in `findCompletedByUserId` pagination |
+| BUG-171 | P3 | Fixed (2026-03-02) | Stripe checkout `retrieve` failure silently skips session expiry |
+| BUG-172 | P3 | Fixed (2026-03-02) | `storeError` failure masks original execute error |
+| BUG-173 | P3 | Fixed (2026-03-02) | `get-session-history` adjusts total by skippedCount incorrectly |
+| BUG-175 | P3 | Fixed (2026-03-02) | Subscription repo calls `this.now()` twice in single upsert |
+| BUG-176 | P3 | Fixed (2026-03-02) | Stripe webhook controller hardcodes `Date.now()` (no `now` injection) |
+| BUG-177 | P3 | Fixed (2026-03-02) | Non-atomic SELECT+DELETE in all 3 pruning paths |
+| BUG-178 | P4 | Fixed (2026-03-02) | `DrizzleRateLimiter` defaults count to 1 on missing row |
+| BUG-179 | P4 | Fixed (2026-03-02) | `findBySessionId` has no LIMIT clause |
 
 See full details: [`audit-8-deep-sweep.md`](./audit-8-deep-sweep.md)
 
 **Next Bug ID:** BUG-180
 
-**Verification notes (2026-03-02):**
+**Resolution notes (2026-03-02):**
+- Audit #8 active count is now **0**; all 12 verified bugs were fixed.
+- Fixes were implemented in recommended order with TDD (Red → Green).
 - Re-verification removed BUG-174 as a false positive (`CheckoutSuccessLogger.warn` is intentionally optional).
-- Active count is now **12 verified bugs**: 2 P2, 8 P3, 2 P4.
 - BUG-176 wording corrected: hardcoded `Date.now()` is still testable via fake timers, but inconsistent with explicit clock injection patterns.
 - BUG-177 risk analysis refined: two-step prune is non-atomic in all three paths, with stronger mitigation in idempotency pruning.
 
