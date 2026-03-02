@@ -302,9 +302,16 @@ describe('DrizzleStripeEventRepository', () => {
         }),
       }));
 
-      const db = {
+      const tx = {
         select: () => ({ from: selectFrom }),
         delete: deleteFn,
+      } as const;
+      const transaction = vi.fn(
+        async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
+      );
+      const db = {
+        ...tx,
+        transaction,
       } as const;
 
       const repo = new DrizzleStripeEventRepository(db as unknown as RepoDb);
@@ -313,6 +320,7 @@ describe('DrizzleStripeEventRepository', () => {
         repo.pruneProcessedBefore(new Date('2026-02-01T00:00:00Z'), 100),
       ).resolves.toBe(0);
       expect(deleteFn).not.toHaveBeenCalled();
+      expect(transaction).toHaveBeenCalledTimes(1);
     });
 
     it('deletes and returns the number of pruned rows', async () => {
@@ -328,9 +336,16 @@ describe('DrizzleStripeEventRepository', () => {
       const deleteWhere = vi.fn(() => ({ returning: deleteReturning }));
       const deleteFn = vi.fn(() => ({ where: deleteWhere }));
 
-      const db = {
+      const tx = {
         select: () => ({ from: selectFrom }),
         delete: deleteFn,
+      } as const;
+      const transaction = vi.fn(
+        async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
+      );
+      const db = {
+        ...tx,
+        transaction,
       } as const;
 
       const repo = new DrizzleStripeEventRepository(db as unknown as RepoDb);
@@ -340,6 +355,7 @@ describe('DrizzleStripeEventRepository', () => {
       ).resolves.toBe(2);
       expect(deleteFn).toHaveBeenCalledTimes(1);
       expect(deleteWhere).toHaveBeenCalledTimes(1);
+      expect(transaction).toHaveBeenCalledTimes(1);
     });
   });
 });

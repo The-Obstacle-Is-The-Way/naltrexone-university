@@ -155,6 +155,46 @@ describe('DrizzleRateLimiter', () => {
     });
   });
 
+  it('prunes expired windows inside a transaction and returns deleted count', async () => {
+    const selectLimit = vi.fn(async () => [
+      { key: 'rate:test', windowStart: new Date('2026-02-06T00:00:00.000Z') },
+    ]);
+    const selectOrderBy = vi.fn(() => ({ limit: selectLimit }));
+    const selectWhere = vi.fn(() => ({ orderBy: selectOrderBy }));
+    const selectFrom = vi.fn(() => ({ where: selectWhere }));
+    const select = vi.fn(() => ({ from: selectFrom }));
+
+    const deleteReturning = vi.fn(async () => [{ key: 'rate:test' }]);
+    const deleteWhere = vi.fn(() => ({ returning: deleteReturning }));
+    const deleteFn = vi.fn(() => ({ where: deleteWhere }));
+
+    const tx = {
+      select,
+      delete: deleteFn,
+      insert: vi.fn(() => {
+        throw new Error('unexpected insert');
+      }),
+    } as const;
+    const transaction = vi.fn(
+      async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
+    );
+    const db = {
+      ...tx,
+      transaction,
+    } as unknown as RateLimiterDb;
+
+    const rateLimiter = new DrizzleRateLimiter(
+      db,
+      () => new Date('2026-02-07T12:00:00.000Z'),
+    );
+
+    await expect(
+      rateLimiter.pruneExpiredWindows(new Date('2026-02-07T12:00:00.000Z'), 1),
+    ).resolves.toBe(1);
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(deleteFn).toHaveBeenCalledTimes(1);
+  });
+
   it('returns zero when prune limit is zero', async () => {
     const db = createDbMock(1);
     const rateLimiter = new DrizzleRateLimiter(

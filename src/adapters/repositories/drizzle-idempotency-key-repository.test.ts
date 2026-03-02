@@ -445,9 +445,16 @@ describe('DrizzleIdempotencyKeyRepository', () => {
 
       const deleteFn = vi.fn();
 
-      const db = {
+      const tx = {
         select,
         delete: deleteFn,
+      } as const;
+      const transaction = vi.fn(
+        async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
+      );
+      const db = {
+        ...tx,
+        transaction,
       } as unknown as RepoDb;
 
       const repo = new DrizzleIdempotencyKeyRepository(db);
@@ -457,6 +464,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       ).resolves.toBe(0);
 
       expect(deleteFn).not.toHaveBeenCalled();
+      expect(transaction).toHaveBeenCalledTimes(1);
     });
 
     it('deletes up to limit expired rows and returns the count', async () => {
@@ -486,9 +494,16 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       const deleteWhere = vi.fn(() => ({ returning: deleteReturning }));
       const deleteFn = vi.fn(() => ({ where: deleteWhere }));
 
-      const db = {
+      const tx = {
         select,
         delete: deleteFn,
+      } as const;
+      const transaction = vi.fn(
+        async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
+      );
+      const db = {
+        ...tx,
+        transaction,
       } as unknown as RepoDb;
 
       const repo = new DrizzleIdempotencyKeyRepository(db);
@@ -499,6 +514,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
 
       expect(deleteFn).toHaveBeenCalledTimes(1);
       expect(deleteWhere).toHaveBeenCalledTimes(1);
+      expect(transaction).toHaveBeenCalledTimes(1);
     });
 
     it('includes expiration filter in delete conditions to prevent race with newly inserted keys', async () => {
@@ -520,13 +536,21 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       const deleteWhere = vi.fn(() => ({ returning: deleteReturning }));
       const deleteFn = vi.fn(() => ({ where: deleteWhere }));
 
-      const db = {
+      const tx = {
         select,
         delete: deleteFn,
+      } as const;
+      const transaction = vi.fn(
+        async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
+      );
+      const db = {
+        ...tx,
+        transaction,
       } as unknown as RepoDb;
 
       const repo = new DrizzleIdempotencyKeyRepository(db);
       await repo.pruneExpiredBefore(cutoff, 10);
+      expect(transaction).toHaveBeenCalledTimes(1);
 
       // The WHERE clause passed to delete must include the expiresAt < cutoff
       // filter alongside (userId, action, key) to prevent a race condition
