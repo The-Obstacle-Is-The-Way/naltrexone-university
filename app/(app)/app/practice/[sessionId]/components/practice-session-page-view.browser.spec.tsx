@@ -395,7 +395,7 @@ test('renders Previous button in the session answering branch', async () => {
   );
 
   await expect
-    .element(screen.getByRole('button', { name: '← Previous' }))
+    .element(screen.getByRole('button', { name: 'Previous' }))
     .toBeVisible();
 });
 
@@ -469,8 +469,8 @@ test('hasPreviousQuestion is false when current question is first in navigator',
   );
 
   await expect
-    .element(screen.getByRole('button', { name: '← Previous' }))
-    .toBeDisabled();
+    .element(screen.getByRole('button', { name: 'Previous' }))
+    .not.toBeInTheDocument();
 });
 
 test('hasPreviousQuestion is false when navigator is missing or current question is not found', async () => {
@@ -513,8 +513,8 @@ test('hasPreviousQuestion is false when navigator is missing or current question
   );
 
   await expect
-    .element(screen.getByRole('button', { name: '← Previous' }))
-    .toBeDisabled();
+    .element(screen.getByRole('button', { name: 'Previous' }))
+    .not.toBeInTheDocument();
 });
 
 test('hasPreviousQuestion is true when current question is not first', async () => {
@@ -587,7 +587,7 @@ test('hasPreviousQuestion is true when current question is not first', async () 
   );
 
   await expect
-    .element(screen.getByRole('button', { name: '← Previous' }))
+    .element(screen.getByRole('button', { name: 'Previous' }))
     .not.toBeDisabled();
 });
 
@@ -661,8 +661,8 @@ test('hasNextQuestion is false when current question is last available', async (
   );
 
   await expect
-    .element(screen.getByRole('button', { name: 'Next →' }))
-    .toBeDisabled();
+    .element(screen.getByRole('button', { name: 'Next' }))
+    .not.toBeInTheDocument();
 });
 
 test("clicking Previous calls onNavigateQuestion with the previous question's ID", async () => {
@@ -736,7 +736,7 @@ test("clicking Previous calls onNavigateQuestion with the previous question's ID
     />,
   );
 
-  await screen.getByRole('button', { name: '← Previous' }).click();
+  await screen.getByRole('button', { name: 'Previous' }).click();
   expect(onNavigateQuestion).toHaveBeenCalledWith('q1');
 });
 

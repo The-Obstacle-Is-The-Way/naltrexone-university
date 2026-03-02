@@ -385,7 +385,7 @@ export function HistoryQuestionsTab({
               </div>
               <div className="mt-4">
                 <Button asChild variant="outline" className="rounded-full">
-                  <Link href={ROUTES.APP_PRACTICE}>Go to Practice →</Link>
+                  <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
                 </Button>
               </div>
             </Card>

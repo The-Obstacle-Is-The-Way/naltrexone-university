@@ -31,7 +31,7 @@ test.describe('session review navigation (SPEC-027)', () => {
       timeout: 10_000,
     });
     const activeSessionNextButton = page.getByRole('button', {
-      name: 'Next →',
+      name: 'Next',
     });
     await expect(activeSessionNextButton).toBeEnabled({ timeout: 10_000 });
     await activeSessionNextButton.click();
@@ -117,8 +117,8 @@ test.describe('session review navigation (SPEC-027)', () => {
       new RegExp(`/app/practice/${escapedSessionId}`),
     );
 
-    // Verify "Next →" link is present (we're on question 1)
-    const nextLink = page.getByText('Next →');
+    // Verify "Next" link is present (we're on question 1)
+    const nextLink = page.getByRole('link', { name: 'Next' });
     await expect(nextLink).toBeVisible({ timeout: 15_000 });
 
     // Verify position indicator "Question 1 of 2"
@@ -126,7 +126,7 @@ test.describe('session review navigation (SPEC-027)', () => {
       timeout: 15_000,
     });
 
-    // Click "Next →"
+    // Click "Next"
     const urlBeforeNext = page.url();
     await nextLink.click();
 
@@ -144,8 +144,8 @@ test.describe('session review navigation (SPEC-027)', () => {
       timeout: 15_000,
     });
 
-    // Verify "← Previous" link is present on question 2
-    await expect(page.getByText('← Previous')).toBeVisible({
+    // Verify "Previous" link is present on question 2
+    await expect(page.getByRole('link', { name: 'Previous' })).toBeVisible({
       timeout: 15_000,
     });
 
@@ -154,10 +154,13 @@ test.describe('session review navigation (SPEC-027)', () => {
       timeout: 15_000,
     });
 
-    // Current contract keeps "Next →" visible but disabled on the last question.
-    const nextButtonOnLast = page.getByRole('button', { name: 'Next →' });
-    await expect(nextButtonOnLast).toBeVisible({ timeout: 15_000 });
-    await expect(nextButtonOnLast).toBeDisabled({ timeout: 15_000 });
+    // Boundary controls are hidden at the end of the review sequence.
+    await expect(page.getByRole('button', { name: 'Next' })).toHaveCount(0, {
+      timeout: 15_000,
+    });
+    await expect(page.getByRole('link', { name: 'Next' })).toHaveCount(0, {
+      timeout: 15_000,
+    });
 
     // SPEC-028: jump navigation via ReviewQuestionNavigator
     const navigatorCurrentTextOnSecondQuestion = await navigatorCard

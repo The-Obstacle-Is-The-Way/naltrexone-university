@@ -40,7 +40,7 @@ describe('PracticeView', () => {
       />,
     );
 
-    expect(html).toContain('← Back to Dashboard');
+    expect(html).toContain('Back to Dashboard');
     expect(html).toContain(`href="${ROUTES.APP_DASHBOARD}"`);
   });
 
@@ -277,10 +277,10 @@ describe('PracticeView', () => {
       />,
     );
 
-    expect(html).toContain('← Previous');
+    expect(html).toContain('Previous');
   });
 
-  it('disables Previous when hasPreviousQuestion is false', () => {
+  it('hides Previous when hasPreviousQuestion is false', () => {
     const question = createNextQuestion();
 
     const html = renderToStaticMarkup(
@@ -308,11 +308,10 @@ describe('PracticeView', () => {
     const previousButton = Array.from(doc.querySelectorAll('button')).find(
       (button) => button.textContent?.includes('Previous'),
     );
-    expect(previousButton).not.toBeUndefined();
-    expect(previousButton?.hasAttribute('disabled')).toBe(true);
+    expect(previousButton).toBeUndefined();
   });
 
-  it('renders "Next →" (not "Next Question")', () => {
+  it('renders "Next" (not "Next Question")', () => {
     const question = createNextQuestion();
 
     const props: Parameters<typeof PracticeView>[0] = {
@@ -336,11 +335,11 @@ describe('PracticeView', () => {
 
     const html = renderToStaticMarkup(<PracticeView {...props} />);
 
-    expect(html).toContain('Next →');
+    expect(html).toContain('Next');
     expect(html).not.toContain('Next Question');
   });
 
-  it('disables Next when hasNextQuestion is false', () => {
+  it('hides Next when hasNextQuestion is false', () => {
     const question = createNextQuestion();
 
     const props: Parameters<typeof PracticeView>[0] = {
@@ -366,11 +365,10 @@ describe('PracticeView', () => {
     const html = renderToStaticMarkup(<PracticeView {...props} />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const nextButton = Array.from(doc.querySelectorAll('button')).find(
-      (button) => button.textContent?.includes('Next →'),
+      (button) => button.textContent?.includes('Next'),
     );
 
-    expect(nextButton).not.toBeUndefined();
-    expect(nextButton?.hasAttribute('disabled')).toBe(true);
+    expect(nextButton).toBeUndefined();
   });
 
   it('orders session buttons as Previous, Submit, Next, Bookmark', () => {
@@ -405,7 +403,7 @@ describe('PracticeView', () => {
       (button) => (button.textContent ?? '').trim(),
     );
 
-    expect(labels).toEqual(['← Previous', 'Submit', 'Next →', 'Bookmark']);
+    expect(labels).toEqual(['Previous', 'Submit', 'Next', 'Bookmark']);
   });
 
   it('keeps Submit visible and Next outlined before submission', () => {
@@ -434,7 +432,7 @@ describe('PracticeView', () => {
       (button) => button.textContent?.trim() === 'Submit',
     );
     const nextButton = Array.from(doc.querySelectorAll('button')).find(
-      (button) => button.textContent?.trim() === 'Next →',
+      (button) => button.textContent?.trim() === 'Next',
     );
 
     expect(submitButton).not.toBeUndefined();
@@ -479,7 +477,7 @@ describe('PracticeView', () => {
       (button) => button.textContent?.trim() === 'Submit',
     );
     const nextButton = Array.from(doc.querySelectorAll('button')).find(
-      (button) => button.textContent?.trim() === 'Next →',
+      (button) => button.textContent?.trim() === 'Next',
     );
 
     expect(submitButton).toBeUndefined();
