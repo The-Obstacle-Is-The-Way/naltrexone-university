@@ -3,7 +3,7 @@
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Canonical policy for when correctness/explanations may be exposed
 > **Last Verified:** 2026-03-02
-> **Status:** Active (open drift tracked in BUG-180, BUG-181, BUG-185)
+> **Status:** Active (no known open drift; BUG-180/BUG-181/BUG-185 resolved)
 
 ---
 
@@ -22,11 +22,11 @@ The product contract is explicit: exam mode hides correctness/explanations until
 - Master spec: [master_spec.md](/Users/ray/Desktop/github/naltrexone-university-1/docs/specs/master_spec.md:2383)
 - Active answering must remain neutral: [master_spec.md](/Users/ray/Desktop/github/naltrexone-university-1/docs/specs/master_spec.md:2384)
 
-Recent bugs show this invariant can drift when enforcement is duplicated across routes/use-cases/projections:
+Recent bugs showed this invariant can drift when enforcement is duplicated across routes/use-cases/projections:
 
-- [BUG-180](../bugs/bug-180-active-exam-answer-leak-via-review-hydration.md)
-- [BUG-181](../bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md)
-- [BUG-185](../bugs/bug-185-dashboard-recent-activity-reveals-active-exam-correctness.md)
+- [BUG-180](../_archive/bugs/bug-180-active-exam-answer-leak-via-review-hydration.md) (resolved)
+- [BUG-181](../_archive/bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md) (resolved)
+- [BUG-185](../_archive/bugs/bug-185-dashboard-recent-activity-reveals-active-exam-correctness.md) (resolved)
 
 ---
 
@@ -108,4 +108,3 @@ When behavior changes, update this file first, then update dependent docs:
 - `docs/practice-engine/spec-coverage-map.md`
 - Frontend guardrails (`docs/frontend/design-principles.md`, `docs/frontend/standards.md`)
 - Validation checklists (`docs/dev/stabilization-checklist.md`)
-

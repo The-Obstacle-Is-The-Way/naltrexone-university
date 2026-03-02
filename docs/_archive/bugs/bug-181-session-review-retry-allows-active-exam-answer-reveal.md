@@ -1,8 +1,9 @@
 # BUG-181: Session-Review Retry Allows Active Exam Answer Reveal
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-03-02
+**Resolved:** 2026-03-02 (PR #162, commit `f04e0a9`)
 
 ---
 
@@ -47,11 +48,11 @@ Tracer-bullet path:
 
 ## Fix (TDD)
 
-Not fixed yet.
+Fixed.
 
-### Red — write the failing test first
+### Red — failing tests added first
 
-In `submit-answer.test.ts`, add a test:
+Added regression tests in [submit-answer.test.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/submit-answer.test.ts:360) and [submit-answer.test.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/submit-answer.test.ts:404):
 
 ```typescript
 it('rejects session_review retry when retrySessionId points to an active exam', async () => {
@@ -61,11 +62,11 @@ it('rejects session_review retry when retrySessionId points to an active exam', 
 });
 ```
 
-This test must FAIL before the fix — confirming the leak exists.
+The exam regression failed before the guard existed and now passes. The companion tutor regression locks the ended-session boundary for `session_review` provenance.
 
-### Green — minimum code to pass
+### Green — minimum code change
 
-In `SubmitAnswerUseCase.execute()`, inside the existing `retryOrigin === 'session_review'` block (line 112-126), after the membership check, add:
+Added active-session rejection guard in [submit-answer.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/submit-answer.ts:126):
 
 ```typescript
 if (retrySession.endedAt === null) {
@@ -80,12 +81,12 @@ This ensures session_review retries only work against ended sessions, closing th
 
 ### Refactor
 
-Consider extracting a shared `assertSessionEnded(session)` guard if BUG-180's fix introduces the same pattern in `GetPreviousAttemptUseCase`.
+No abstraction extracted; guard remains local and explicit.
 
 ---
 
 ## Verification
 
-- [ ] Unit test added (Red phase test above)
-- [ ] Manual verification post-fix
-
+- [x] Unit tests added and passing (active exam + active tutor session_review provenance).
+- [x] Manual verification post-fix confirmed active-session retries are rejected before grading.
+- [x] Gate run: `pnpm typecheck && pnpm lint && pnpm test --run`.

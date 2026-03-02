@@ -1,8 +1,9 @@
 # BUG-185: Dashboard Recent Activity Reveals Active Exam Correctness
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-03-02
+**Resolved:** 2026-03-02 (PR #162, commit `f04e0a9`)
 
 ---
 
@@ -45,11 +46,11 @@ Tracer-bullet path:
 
 ## Fix (TDD)
 
-Not fixed yet.
+Fixed.
 
-### Red — write the failing test first
+### Red — failing test added first
 
-In `drizzle-attempt-repository.test.ts`, add a test:
+Added regression test in [drizzle-attempt-repository.test.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-attempt-repository.test.ts:588):
 
 ```typescript
 it('excludes attempts from active exam sessions in listRecentByUserId', async () => {
@@ -63,11 +64,11 @@ it('excludes attempts from active exam sessions in listRecentByUserId', async ()
 });
 ```
 
-This test must FAIL before the fix.
+The test now verifies the query includes the secrecy filter columns and passes with the repository fix.
 
-### Green — minimum code to pass
+### Green — minimum code change
 
-In `DrizzleAttemptRepository.listRecentByUserId`, exclude active exam session rows at query time:
+Added active-exam exclusion predicate in [drizzle-attempt-repository.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-attempt-repository.ts:364):
 
 ```typescript
 .where(
@@ -86,11 +87,12 @@ This preserves recent activity for ad-hoc, tutor, and ended exam attempts while 
 
 ### Refactor
 
-Extract the predicate into a small helper (e.g., `isDashboardSafeAttemptRow(...)`) if reused in `count*` stats queries to harden aggregate accuracy leakage paths as well.
+No helper extracted; predicate kept in place for clarity.
 
 ---
 
 ## Verification
 
-- [ ] Repository test added (Red phase test above)
-- [ ] Manual verification: active exam attempt no longer shows correctness on dashboard
+- [x] Repository regression test added and passing.
+- [x] Manual verification: active exam attempts are excluded from dashboard recent activity projection.
+- [x] Gate run: `pnpm typecheck && pnpm lint && pnpm test --run`.

@@ -16,6 +16,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 **Next Bug ID:** BUG-186
 
 **Latest archival (2026-03-02):**
+- BUG-180, BUG-181, and BUG-185 verified fixed (PR #162), archived to `docs/_archive/bugs/`.
 - Audit #8: all 12 bugs (BUG-167..179, excluding false-positive BUG-174) verified fixed, archived to `docs/_archive/audits/audit-008-deep-codebase-sweep.md`.
 
 **Previous archival (2026-02-27):**
@@ -26,9 +27,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| [BUG-185](./bug-185-dashboard-recent-activity-reveals-active-exam-correctness.md) | Dashboard Recent Activity Reveals Active Exam Correctness | P1 | Open |
-| [BUG-181](./bug-181-session-review-retry-allows-active-exam-answer-reveal.md) | Session-Review Retry Allows Active Exam Answer Reveal | P1 | Open |
-| [BUG-180](./bug-180-active-exam-answer-leak-via-review-hydration.md) | Active Exam Answer Leak via Review Hydration | P1 | Open |
 | [BUG-184](./bug-184-attempted-questions-count-page-divergence-drops-rows.md) | Attempted Questions Count/Page Divergence Can Drop Real Rows | P2 | Open |
 | [BUG-183](./bug-183-stripe-webhook-failure-state-rolled-back.md) | Stripe Webhook Failure State Is Rolled Back | P2 | Open |
 | [BUG-182](./bug-182-history-questions-tag-array-query-crash.md) | History Questions Crashes on Repeated `tag` Query Param | P2 | Open |
@@ -279,12 +277,12 @@ Audit #3 produced BUG-136 and BUG-139. BUG-137 was reclassified as SSOT-consiste
 
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
-| [BUG-185](./bug-185-dashboard-recent-activity-reveals-active-exam-correctness.md) | Dashboard Recent Activity Reveals Active Exam Correctness | Open | — |
+| [BUG-185](../_archive/bugs/bug-185-dashboard-recent-activity-reveals-active-exam-correctness.md) | Dashboard Recent Activity Reveals Active Exam Correctness | Resolved | Added active-exam exclusion predicate in `listRecentByUserId` and repository regression coverage |
 | [BUG-184](./bug-184-attempted-questions-count-page-divergence-drops-rows.md) | Attempted Questions Count/Page Divergence Can Drop Real Rows | Open | — |
 | [BUG-183](./bug-183-stripe-webhook-failure-state-rolled-back.md) | Stripe Webhook Failure State Is Rolled Back | Open | — |
 | [BUG-182](./bug-182-history-questions-tag-array-query-crash.md) | History Questions Crashes on Repeated `tag` Query Param | Open | — |
-| [BUG-181](./bug-181-session-review-retry-allows-active-exam-answer-reveal.md) | Session-Review Retry Allows Active Exam Answer Reveal | Open | — |
-| [BUG-180](./bug-180-active-exam-answer-leak-via-review-hydration.md) | Active Exam Answer Leak via Review Hydration | Open | — |
+| [BUG-181](../_archive/bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md) | Session-Review Retry Allows Active Exam Answer Reveal | Resolved | Added active-session `session_review` guard before grading plus regression coverage |
+| [BUG-180](../_archive/bugs/bug-180-active-exam-answer-leak-via-review-hydration.md) | Active Exam Answer Leak via Review Hydration | Resolved | Added active-exam attempt guard in answered-attempt branch and identifier-path regression tests |
 | [BUG-151](../_archive/bugs/bug-151-card-row-affordance-inconsistency.md) | Card/Row Affordance Inconsistency — Misleading Hover, Missing Focus Rings, Pattern Asymmetry | Resolved | Removed misleading hover from non-interactive cards, added missing focus-visible rings to interactive inner links, converted history question cards to Pattern A (Link-as-Card), and updated regression/test coverage |
 | [BUG-150](../_archive/bugs/bug-150-proxy-function-named-middleware.md) | Proxy Default Export Named `middleware` — Recurring False-Positive Audit Noise | Resolved | Renamed `proxy.ts` default export from `middleware` to `proxy`, renamed inner `clerkMiddleware` local to `clerkMw`, and added `proxy.test.ts` regression coverage to prevent naming drift |
 | [BUG-149](../_archive/bugs/bug-149-idempotency-null-result-indistinguishable-from-pending.md) | Idempotency Null Result Is Indistinguishable from Pending State | Resolved | Added explicit `completed_at` completion marker to `idempotency_keys`, updated idempotency repository contracts/implementations, switched `withIdempotency` to completion-marker semantics with legacy non-null payload fallback, and added unit + integration regression coverage for null-result replay |

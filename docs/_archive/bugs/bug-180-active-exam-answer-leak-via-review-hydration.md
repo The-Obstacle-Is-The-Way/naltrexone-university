@@ -1,8 +1,9 @@
 # BUG-180: Active Exam Answer Leak via Review Hydration
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-03-02
+**Resolved:** 2026-03-02 (PR #162, commit `f04e0a9`)
 
 ---
 
@@ -50,11 +51,11 @@ Tracer-bullet path:
 
 ## Fix (TDD)
 
-Not fixed yet.
+Fixed.
 
-### Red — write the failing test first
+### Red — failing tests added first
 
-In `get-previous-attempt.test.ts`, add tests:
+Added regression tests in [get-previous-attempt.test.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-previous-attempt.test.ts:176) and [get-previous-attempt.test.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-previous-attempt.test.ts:235):
 
 ```typescript
 it('returns null when attemptId belongs to an active exam session', async () => {
@@ -70,11 +71,11 @@ it('returns null when latest attempt belongs to an active exam session', async (
 });
 ```
 
-This test must FAIL before the fix — confirming the leak exists.
+These tests failed before the guard existed and now pass.
 
-### Green — minimum code to pass
+### Green — minimum code change
 
-In `GetPreviousAttemptUseCase.execute()`, after the attempt question-ownership check and before returning answer-key data, gate by the attempt's session:
+Added active-exam guard in [get-previous-attempt.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-previous-attempt.ts:149):
 
 ```typescript
 if (attempt.practiceSessionId) {
@@ -92,11 +93,12 @@ This closes all three leak paths (`sessionId`, `attemptId`, latest) because all 
 
 ### Refactor
 
-Extract a shared helper such as `isActiveExamSession(session)` and reuse it in BUG-181's retry-session guard to keep policy consistent.
+No abstraction extracted; change kept local to this ingress guard.
 
 ---
 
 ## Verification
 
-- [ ] Unit test added (Red phase test above)
-- [ ] Manual verification post-fix
+- [x] Unit tests added and passing.
+- [x] Manual verification post-fix confirmed active-exam attempts now hydrate as `null`.
+- [x] Gate run: `pnpm typecheck && pnpm lint && pnpm test --run`.
