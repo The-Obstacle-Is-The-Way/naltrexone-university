@@ -138,6 +138,28 @@ describe('DrizzleRateLimiter', () => {
     });
   });
 
+  it('throws INTERNAL_ERROR when rate-limit upsert returns no row', async () => {
+    const returning = vi.fn(async () => []);
+    const onConflictDoUpdate = vi.fn(() => ({ returning }));
+    const values = vi.fn(() => ({ onConflictDoUpdate }));
+    const insert = vi.fn(() => ({ values }));
+
+    const db = {
+      insert,
+    } as const;
+
+    const rateLimiter = new DrizzleRateLimiter(
+      db as unknown as RateLimiterDb,
+      () => new Date('2026-02-07T12:00:00.000Z'),
+    );
+
+    await expect(
+      rateLimiter.limit({ key: 'rate:test', limit: 5, windowMs: 60_000 }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+    });
+  });
+
   it('clamps remaining count to zero when usage exceeds limit', async () => {
     const db = createDbMock(7);
     const rateLimiter = new DrizzleRateLimiter(

@@ -1,5 +1,6 @@
 import { and, asc, eq, lt, or, sql } from 'drizzle-orm';
 import { rateLimits } from '@/db/schema';
+import { ApplicationError } from '@/src/application/errors';
 import type {
   RateLimiter,
   RateLimitInput,
@@ -63,7 +64,14 @@ export class DrizzleRateLimiter implements RateLimiter {
       })
       .returning({ count: rateLimits.count });
 
-    const count = row?.count ?? 1;
+    if (!row || !Number.isInteger(row.count)) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Failed to update rate-limit counter',
+      );
+    }
+
+    const count = row.count;
     const remaining = Math.max(0, input.limit - count);
 
     if (count === 1) {
