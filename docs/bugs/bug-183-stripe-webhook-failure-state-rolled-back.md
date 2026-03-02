@@ -34,7 +34,7 @@ Executable verification performed on 2026-03-02:
 
 Tracer-bullet path:
 1. Main webhook work runs inside transaction at [stripe-webhook-controller.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/controllers/stripe-webhook-controller.ts:65).
-2. On error, catch block calls `markFailed` at [stripe-webhook-controller.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/controllers/stripe-webhook-controller.ts:105) then rethrows at [:106](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/controllers/stripe-webhook-controller.ts:106).
+2. On error, catch block calls `markFailed` at [stripe-webhook-controller.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/controllers/stripe-webhook-controller.ts:105) then rethrows at [stripe-webhook-controller.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/controllers/stripe-webhook-controller.ts:106).
 3. The rethrown error causes the transaction callback to reject. Controller wiring at [lib/container/controllers.ts](/Users/ray/Desktop/github/naltrexone-university-1/lib/container/controllers.ts:24) uses `primitives.db.transaction(...)` (Drizzle), which rolls back the entire transaction on rejection — undoing both `claim` and `markFailed`.
 4. Spec explicitly requires persisted failure state (`error` set, `processed_at` null) at [master_spec.md](/Users/ray/Desktop/github/naltrexone-university-1/docs/specs/master_spec.md:734), but rollback prevents that durability.
 
@@ -62,27 +62,51 @@ This test must FAIL before the fix — confirming that markFailed is rolled back
 
 ### Green — minimum code to pass
 
-Restructure `processStripeWebhook` to persist failure state **outside** the rolling-back transaction. The key change: catch the transaction rejection, then call `markFailed` in a separate transaction boundary:
+Restructure `processStripeWebhook` so failure is persisted **inside a committed transaction**, then rethrow **after** commit:
 
 ```typescript
-try {
-  await deps.transaction(async ({ stripeEvents, subscriptions, stripeCustomers }) => {
-    // claim, lock, process, markProcessed (unchanged)
-  });
-} catch (error) {
-  // markFailed runs in its own transaction — survives the main tx rollback
-  await deps.transaction(async ({ stripeEvents }) => {
-    await stripeEvents.markFailed(event.eventId, toErrorData(error));
-  });
-  throw error;
+const txResult = await deps.transaction(
+  async ({ stripeEvents, subscriptions, stripeCustomers }) => {
+    // claim, lock, process
+    try {
+      // existing processing logic
+      await stripeEvents.markProcessed(event.eventId);
+      return { ok: true as const };
+    } catch (error) {
+      await stripeEvents.markFailed(event.eventId, toErrorData(error));
+      return { ok: false as const, error };
+    }
+  },
+);
+
+if (!txResult.ok) {
+  throw txResult.error;
 }
 ```
 
-This requires `deps.transaction` to accept a second call, which it already supports (the prune at line 117 already does this).
+Why this shape is required:
+
+- If you move `markFailed` to an outer catch while leaving `claim` inside the failed transaction, the rollback can remove the claimed row first; the outer `markFailed` then hits `NOT_FOUND`.
+- Returning `{ ok: false, error }` from inside the transaction callback avoids rollback, so both `claim` and `markFailed` persist durably.
+- Throwing after the transaction preserves the route's 500 behavior.
+
+Alternative valid approach (more invasive): claim outside the processing transaction, then mark failed in a second transaction on error.
 
 ### Refactor
 
-Remove the now-dead inner `catch` block (lines 104-107). The outer catch handles both failure persistence and rethrow in one clean location.
+Extract a small internal result type/helper for transaction outcome:
+
+```typescript
+type StripeWebhookTxResult =
+  | { ok: true }
+  | { ok: false; error: unknown };
+
+function rethrowIfFailed(result: StripeWebhookTxResult): void {
+  if (!result.ok) throw result.error;
+}
+```
+
+This removes nested control flow while keeping rollback behavior explicit.
 
 ---
 
@@ -90,4 +114,3 @@ Remove the now-dead inner `catch` block (lines 104-107). The outer catch handles
 
 - [ ] Unit test added (Red phase test above — requires rollback-capable test harness)
 - [ ] Manual verification post-fix
-
