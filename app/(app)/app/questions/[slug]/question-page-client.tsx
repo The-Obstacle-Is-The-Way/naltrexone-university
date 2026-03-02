@@ -358,13 +358,11 @@ export function QuestionView(props: QuestionViewProps) {
                       : undefined,
                   })}
                 >
-                  ← Previous
+                  Previous
                 </Link>
               </Button>
             ) : (
-              <Button variant="outline" className="rounded-full" disabled>
-                ← Previous
-              </Button>
+              <span />
             )
           ) : null}
 
@@ -410,13 +408,11 @@ export function QuestionView(props: QuestionViewProps) {
                       : undefined,
                   })}
                 >
-                  Next →
+                  Next
                 </Link>
               </Button>
             ) : (
-              <Button variant="outline" className="rounded-full" disabled>
-                Next →
-              </Button>
+              <span />
             )
           ) : null}
 

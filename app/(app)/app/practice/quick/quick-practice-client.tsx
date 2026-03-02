@@ -73,7 +73,7 @@ export default function QuickPracticeClient() {
     <PracticeView
       title="Quick Practice"
       description="Answer one question at a time."
-      backLink={{ href: ROUTES.APP_PRACTICE, label: '← Back to Practice' }}
+      backLink={{ href: ROUTES.APP_PRACTICE, label: 'Back to Practice' }}
       belowHeadingContent={
         <div className="mt-4">
           <SegmentedControl

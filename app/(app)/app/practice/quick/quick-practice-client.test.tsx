@@ -125,7 +125,7 @@ describe('QuickPracticeClient', () => {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const heading = doc.querySelector('h1');
     expect(heading?.textContent).toBe('Quick Practice');
-    expect(html).toContain('← Back to Practice');
+    expect(html).toContain('Back to Practice');
 
     const statusControl = Array.from(doc.querySelectorAll('fieldset')).find(
       (fieldset) => fieldset.querySelector('legend')?.textContent === 'Status',

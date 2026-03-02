@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-27
+**Last Updated:** 2026-03-01
 
 ---
 
@@ -15,9 +15,24 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Bug Index (Active)
 
-_No active bugs._
+| Bug | Severity | Summary |
+|-----|----------|---------|
+| BUG-167 | P2 | `loadPreviousAttempt` catch missing `isMounted()` guard |
+| BUG-168 | P2 | `GetNextQuestionUseCase` skips current question in both scans |
+| BUG-169 | P2 | Idempotency poll `break` falls into misleading CONFLICT error |
+| BUG-170 | P2 | Non-atomic COUNT+SELECT in `findCompletedByUserId` pagination |
+| BUG-171 | P2 | Stripe checkout `retrieve` failure silently skips session expiry |
+| BUG-172 | P3 | `storeError` failure masks original execute error |
+| BUG-173 | P3 | `get-session-history` adjusts total by skippedCount incorrectly |
+| BUG-174 | P3 | `checkout-success-sync` guards `logger.warn` as optional |
+| BUG-175 | P3 | `DrizzleRateLimiter` defaults count to 1 on missing row |
+| BUG-176 | P3 | `findBySessionId` has no LIMIT clause |
+| BUG-177 | P4 | `getStemPreview` raw truncation when `maxLength <= 3` |
+| BUG-178 | P4 | Redundant TOCTOU pre-check in `start-practice-session` |
 
-**Next Bug ID:** BUG-167
+See full details: [`audit-8-deep-sweep.md`](./audit-8-deep-sweep.md)
+
+**Next Bug ID:** BUG-179
 
 **Latest archival (2026-02-27):**
 - BUG-165 and BUG-166 verified fixed (PRs #146, #147), archived to `docs/_archive/bugs/`.

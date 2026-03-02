@@ -26,7 +26,7 @@ async function isButtonVisible(
 
 async function hasQuickPracticeQuestion(page: Page): Promise<boolean> {
   const nextQuestionButton = page.getByRole('button', {
-    name: 'Next →',
+    name: 'Next',
   });
   const noMoreQuestionsText = page.getByText('No more questions found.', {
     exact: true,
@@ -65,9 +65,9 @@ export async function ensureBookmarkedQuestion(page: Page): Promise<void> {
     }
   }
 
-  await expect(
-    page.getByRole('button', { name: 'Next →' }).first(),
-  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('button', { name: 'Next' }).first()).toBeVisible({
+    timeout: 15_000,
+  });
 
   for (let attempt = 0; attempt < 8; attempt += 1) {
     if (await isButtonVisible(page, 'Remove bookmark', 500)) {
@@ -85,7 +85,7 @@ export async function ensureBookmarkedQuestion(page: Page): Promise<void> {
       return;
     }
 
-    await page.getByRole('button', { name: 'Next →' }).first().click();
+    await page.getByRole('button', { name: 'Next' }).first().click();
     await Promise.race([
       page
         .getByRole('button', { name: bookmarkButtonName })

@@ -91,7 +91,7 @@ test('supports exam controls and question interactions', async () => {
   await screen.getByRole('button', { name: 'Submit' }).click();
   expect(onSubmit).toHaveBeenCalledTimes(1);
 
-  await screen.getByRole('button', { name: 'Next →' }).click();
+  await screen.getByRole('button', { name: 'Next' }).click();
   expect(onNextQuestion).toHaveBeenCalledTimes(1);
 });
 
@@ -329,6 +329,6 @@ test('calls onPreviousQuestion when clicked', async () => {
     />,
   );
 
-  await screen.getByRole('button', { name: '← Previous' }).click();
+  await screen.getByRole('button', { name: 'Previous' }).click();
   expect(onPreviousQuestion).toHaveBeenCalledTimes(1);
 });
