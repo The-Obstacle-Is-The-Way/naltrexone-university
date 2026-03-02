@@ -123,6 +123,12 @@ export class SubmitAnswerUseCase {
           'Retry session does not include the requested question',
         );
       }
+      if (retrySession.endedAt === null) {
+        throw new ApplicationError(
+          'CONFLICT',
+          'Cannot retry from an active session',
+        );
+      }
     }
 
     if (retryOfAttemptId !== null) {

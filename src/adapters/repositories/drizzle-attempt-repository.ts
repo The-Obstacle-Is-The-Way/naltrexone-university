@@ -5,8 +5,11 @@ import {
   eq,
   gte,
   inArray,
+  isNotNull,
   isNull,
   max,
+  ne,
+  or,
   type SQL,
   sql,
 } from 'drizzle-orm';
@@ -358,7 +361,16 @@ export class DrizzleAttemptRepository implements AttemptRepository {
         practiceSessions,
         eq(attempts.practiceSessionId, practiceSessions.id),
       )
-      .where(eq(attempts.userId, userId))
+      .where(
+        and(
+          eq(attempts.userId, userId),
+          or(
+            isNull(practiceSessions.id),
+            ne(practiceSessions.mode, 'exam'),
+            isNotNull(practiceSessions.endedAt),
+          ),
+        ),
+      )
       .orderBy(desc(attempts.answeredAt), desc(attempts.id))
       .limit(limit);
 
