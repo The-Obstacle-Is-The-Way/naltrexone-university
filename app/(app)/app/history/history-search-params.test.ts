@@ -44,6 +44,14 @@ describe('app/(app)/app/history/history-search-params', () => {
       expect(parseNonNegativeInt('0', 5)).toBe(0);
       expect(parseNonNegativeInt('10', 5)).toBe(10);
     });
+
+    it('returns first value when offset param is an array', () => {
+      expect(parseNonNegativeInt(['10', '20'], 5)).toBe(10);
+    });
+
+    it('returns fallback when offset param is an empty array', () => {
+      expect(parseNonNegativeInt([], 5)).toBe(5);
+    });
   });
 
   describe('parseLimit', () => {
@@ -58,6 +66,14 @@ describe('app/(app)/app/history/history-search-params', () => {
       expect(parseLimit('1')).toBe(1);
       expect(parseLimit('100')).toBe(100);
       expect(parseLimit('101')).toBe(100);
+    });
+
+    it('returns first value when limit param is an array', () => {
+      expect(parseLimit(['30', '40'])).toBe(30);
+    });
+
+    it('defaults to 20 when limit param is an empty array', () => {
+      expect(parseLimit([])).toBe(20);
     });
   });
 

@@ -37,18 +37,19 @@ export function parseHistoryTab(
 }
 
 export function parseNonNegativeInt(
-  value: string | undefined,
+  value: string | string[] | undefined,
   fallback: number,
 ): number {
-  if (value === undefined || value === '') return fallback;
-  const n = Number(value);
+  const normalized = normalizeSearchParam(value);
+  if (normalized === undefined || normalized === '') return fallback;
+  const n = Number(normalized);
   if (!Number.isFinite(n)) return fallback;
   if (!Number.isInteger(n)) return fallback;
   if (n < 0) return fallback;
   return n;
 }
 
-export function parseLimit(value: string | undefined): number {
+export function parseLimit(value: string | string[] | undefined): number {
   const limit = parseNonNegativeInt(value, 20);
   return Math.min(Math.max(limit, 1), 100);
 }

@@ -339,6 +339,10 @@ describe('GetAttemptedQuestionsUseCase', () => {
     });
 
     expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]).toMatchObject({
+      questionId: 'q1',
+      isAvailable: true,
+    });
     expect(result.totalCount).toBe(0);
   });
 
