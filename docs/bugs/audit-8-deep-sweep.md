@@ -1,9 +1,10 @@
 # Bug Audit #8 — Deep Codebase Sweep (Verified)
 
 **Date:** 2026-03-01
+**Re-verified:** 2026-03-02
 **Scope:** Full codebase (`src/`, `app/`, `components/`) — 516 TypeScript/TSX files
 **Method:** Automated pattern search + manual code review + vertical/horizontal tracer bullets
-**Verification:** Every bug confirmed with line-by-line code tracing. 2 false positives removed from initial draft.
+**Verification:** Every active bug confirmed with line-by-line code tracing. 3 false positives removed from initial/re-verification drafts.
 
 ---
 
@@ -14,10 +15,18 @@
 | **P0** | 0 | No data-loss or critical security bugs found |
 | **P1** | 0 | No major functionality broken |
 | **P2** | 2 | Significant bugs — real user-facing impact |
-| **P3** | 9 | Minor — edge cases, low probability, or cosmetic |
+| **P3** | 8 | Minor — edge cases, low probability, or cosmetic |
 | **P4** | 2 | Trivial — code smells, defensive coding gaps |
 
 **Overall:** The codebase is well-engineered. No SQL injection, no missing auth checks, no unvalidated env vars, no `as any` in production code, no empty catch blocks. The issues found are race conditions, edge-case logic errors, and defensive-code gaps.
+
+---
+
+## Re-Verification Tracer Bullets (2026-03-02)
+
+- **Vertical trace (BUG-168 confirmed):** `practice-view.tsx` "Next" button (always available before submit in tutor mode) → `use-practice-session-question-flow.ts` `onNextQuestion()` computes `fromIndex` from current session index → `practice-session-page-logic.ts` forwards `{ fromIndex }` → `question-controller.ts` forwards `{ fromIndex }` to use case → `get-next-question.ts` excludes current index in both forward and wrap scans.
+- **Horizontal trace (BUG-174 disproven):** `checkout-success-sync.tsx` guards `logger.warn` → `checkout-success-types.ts` defines `warn?` as optional by design → `checkout-success/page.test.ts` has explicit no-`warn` scenario (`logger: { info, error }`) validating the fallback `logger.error` path.
+- **Horizontal trace (BUG-177 risk refined):** all three prune paths are two-step SELECT+DELETE; `drizzle-idempotency-key-repository` includes `expiresAt < cutoff` in DELETE conditions (race mitigation validated by repository test), while stripe-events prune deletes by ID only (highest race exposure of the three).
 
 ---
 
@@ -173,15 +182,6 @@ throw new ApplicationError(
 
 ---
 
-### BUG-174: `checkout-success-sync` guards `logger.warn` as if it's optional
-
-**File:** `app/(marketing)/checkout/success/checkout-success-sync.tsx:54-59`
-**Verified:** `Logger` interface requires `warn` — it's not optional. The `if` always passes. Dead `logger.error` fallback.
-
-**Fix:** Remove the `if (logger.warn)` guard. Call `logger.warn` directly.
-
----
-
 ### BUG-175: Subscription repository calls `this.now()` twice in single upsert
 
 **File:** `src/adapters/repositories/drizzle-subscription-repository.ts:86,96`
@@ -207,13 +207,13 @@ throw new ApplicationError(
 ### BUG-176: Stripe webhook controller hardcodes `Date.now()` for prune cutoff
 
 **File:** `src/adapters/controllers/stripe-webhook-controller.ts:113`
-**Verified:** `StripeWebhookDeps` type has no `now` injection point, unlike every other adapter that needs wall-clock time (`DrizzleRateLimiter`, `DrizzleStripeEventRepository`, etc.).
+**Verified:** `StripeWebhookDeps` type has no `now` injection point.
 
 ```ts
 const cutoff = new Date(Date.now() - STRIPE_EVENTS_RETENTION_MS);
 ```
 
-**Problem:** Pruning cutoff is untestable — tests for `processStripeWebhook` cannot control time. Inconsistent with the rest of the codebase's `now()` injection pattern.
+**Problem:** The cutoff clock is not dependency-injected, so tests rely on global fake timers (`vi.setSystemTime`) instead of explicit clock injection via deps. This is a consistency/ergonomics issue, not a hard testability blocker.
 
 **Fix:** Add `now: () => Date` to `StripeWebhookDeps` and use `deps.now()` instead of `Date.now()`.
 
@@ -226,9 +226,12 @@ const cutoff = new Date(Date.now() - STRIPE_EVENTS_RETENTION_MS);
 - `src/adapters/repositories/drizzle-idempotency-key-repository.ts:174-200`
 - `src/adapters/gateways/drizzle-rate-limiter.ts:99-121`
 
-**Verified:** All three pruning methods follow the same pattern: SELECT IDs to delete → separate DELETE by those IDs. No transaction wrapping. Between the two queries, a row could be re-inserted or its state could change.
+**Verified:** All three pruning methods use a two-step pattern (SELECT rows/keys → separate DELETE). That is structurally non-atomic.
 
-**Problem:** Phantom deletes in garbage collection. Very low impact — the data being pruned is expired and the worst case is deleting a freshly re-processed event (recoverable via Stripe webhook retry).
+**Problem:** Race risk exists but differs by implementation:
+- Stripe events path deletes by ID only (highest race risk among the three).
+- Idempotency path includes `expiresAt < cutoff` in DELETE conditions (race mitigated; covered by repository tests).
+- Rate-limit path uses immutable `(key, windowStart)` rows with a 90-day cutoff, so practical race impact is very low.
 
 **Fix:** Use `DELETE ... WHERE id IN (SELECT id ... LIMIT N)` as a single atomic query, or wrap in a transaction.
 
@@ -262,6 +265,7 @@ These were in the initial draft but verified as NOT bugs:
 |----|---------------|---------|
 | ~~BUG-177~~ (old) | `getStemPreview` returns raw truncation when `maxLength <= 3` | **Not a bug.** When `maxLength ≤ 3`, there's no room for "..." plus content. Returning raw characters is the correct behavior. |
 | ~~BUG-178~~ (old) | TOCTOU pre-check in `start-practice-session` is redundant | **Not a bug.** The pre-check is a deliberate fast-path that avoids expensive question-shuffling work when a session already exists. The DB constraint is the safety net. Good architecture. |
+| ~~BUG-174~~ | `checkout-success-sync` guards `logger.warn` as optional | **Not a bug.** `CheckoutSuccessLogger.warn` is explicitly optional in `checkout-success-types.ts`, and tests cover the no-`warn` path (`page.test.ts` "logs retry entries via error when warn is undefined"). |
 
 ---
 
@@ -291,13 +295,12 @@ These were in the initial draft but verified as NOT bugs:
 | 1 | BUG-168 | Small | `GetNextQuestionUseCase` skips current question — highest user impact |
 | 2 | BUG-167 | Trivial | Missing `isMounted()` guard — one-line fix |
 | 3 | BUG-175 | Trivial | Subscription repo double `this.now()` — capture once |
-| 4 | BUG-174 | Trivial | Dead `logger.warn` guard — one-line deletion |
-| 5 | BUG-172 | Small | `storeError` masking — simple try/catch wrapper |
-| 6 | BUG-176 | Small | Stripe webhook hardcoded `Date.now()` — add `now` to deps |
-| 7 | BUG-169 | Small | Idempotency poll error classification — add post-break logic |
-| 8 | BUG-173 | Trivial | Session history dead code — remove skippedCount adjustment |
-| 9 | BUG-170 | Medium | Non-atomic pagination — window function or transaction |
-| 10 | BUG-171 | Medium | Stripe checkout stale sessions — careful Stripe API flow |
-| 11 | BUG-177 | Medium | Non-atomic pruning (3 files) — single-query DELETE |
-| 12 | BUG-178 | Trivial | Rate limiter fallback — change `?? 1` to throw |
-| 13 | BUG-179 | Trivial | `findBySessionId` — add safety cap or comment |
+| 4 | BUG-172 | Small | `storeError` masking — simple try/catch wrapper |
+| 5 | BUG-176 | Small | Stripe webhook hardcoded `Date.now()` — add `now` to deps |
+| 6 | BUG-169 | Small | Idempotency poll error classification — add post-break logic |
+| 7 | BUG-173 | Trivial | Session history dead code — remove skippedCount adjustment |
+| 8 | BUG-170 | Medium | Non-atomic pagination — window function or transaction |
+| 9 | BUG-171 | Medium | Stripe checkout stale sessions — careful Stripe API flow |
+| 10 | BUG-177 | Medium | Non-atomic pruning (3 files) — single-query DELETE |
+| 11 | BUG-178 | Trivial | Rate limiter fallback — change `?? 1` to throw |
+| 12 | BUG-179 | Trivial | `findBySessionId` — add safety cap or comment |

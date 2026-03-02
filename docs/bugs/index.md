@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-01
+**Last Updated:** 2026-03-02
 
 ---
 
@@ -24,7 +24,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 | BUG-171 | P3 | Stripe checkout `retrieve` failure silently skips session expiry |
 | BUG-172 | P3 | `storeError` failure masks original execute error |
 | BUG-173 | P3 | `get-session-history` adjusts total by skippedCount incorrectly |
-| BUG-174 | P3 | `checkout-success-sync` guards `logger.warn` as optional |
 | BUG-175 | P3 | Subscription repo calls `this.now()` twice in single upsert |
 | BUG-176 | P3 | Stripe webhook controller hardcodes `Date.now()` (no `now` injection) |
 | BUG-177 | P3 | Non-atomic SELECT+DELETE in all 3 pruning paths |
@@ -35,7 +34,13 @@ See full details: [`audit-8-deep-sweep.md`](./audit-8-deep-sweep.md)
 
 **Next Bug ID:** BUG-180
 
-**Verification notes (2026-03-01):**
+**Verification notes (2026-03-02):**
+- Re-verification removed BUG-174 as a false positive (`CheckoutSuccessLogger.warn` is intentionally optional).
+- Active count is now **12 verified bugs**: 2 P2, 8 P3, 2 P4.
+- BUG-176 wording corrected: hardcoded `Date.now()` is still testable via fake timers, but inconsistent with explicit clock injection patterns.
+- BUG-177 risk analysis refined: two-step prune is non-atomic in all three paths, with stronger mitigation in idempotency pruning.
+
+**Historical notes (2026-03-01):**
 - 2 false positives removed from initial draft (stem preview edge case, start-session pre-check)
 - 3 new bugs found via horizontal tracer bullets (BUG-175, BUG-176, BUG-177)
 - BUG-169/170/171 downgraded from P2→P3 after tracing practical reachability
