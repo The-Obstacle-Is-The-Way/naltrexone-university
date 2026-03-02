@@ -56,10 +56,11 @@ For ad-hoc mode, `selectNextQuestionId()` prefers the **first unattempted** cand
 
 For ad-hoc mode, candidate order is daily-seeded and user-specific before selection:
 1. `listPublishedCandidateIds(filters)`
-2. `shuffleWithSeed(candidates, createSeed(userId, Date.UTC(year, month, date)))`
-3. `selectNextQuestionId(shuffledCandidates, attemptHistory)`
+2. `canonicalize(candidates)` (stable ID sort, so repository order cannot leak into selection)
+3. `shuffleWithSeed(canonicalCandidates, createSeed(userId, Date.UTC(year, month, date)))`
+4. `selectNextQuestionId(shuffledCandidates, attemptHistory)`
 
-This keeps same-day behavior stable for the same user while rotating order at UTC day boundaries.
+This keeps same-day behavior stable for the same user while changing the daily seed at UTC day boundaries (so order is expected to rotate over time).
 
 ---
 

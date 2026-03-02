@@ -247,7 +247,8 @@ export class GetNextQuestionUseCase {
       now.getUTCDate(),
     );
     const seed = createSeed(userId, utcDayStartMs);
-    const orderedCandidateIds = shuffleWithSeed(candidateIds, seed);
+    const canonicalCandidateIds = candidateIds.slice().sort();
+    const orderedCandidateIds = shuffleWithSeed(canonicalCandidateIds, seed);
 
     const mostRecent =
       await this.attempts.findMostRecentAnsweredAtByQuestionIds(

@@ -62,7 +62,8 @@ if (candidateIds.length === 0) return null;
 const now = this.now();
 const utcDayStartMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
 const seed = createSeed(userId, utcDayStartMs);
-const orderedCandidateIds = shuffleWithSeed(candidateIds, seed);
+const canonicalCandidateIds = candidateIds.slice().sort();
+const orderedCandidateIds = shuffleWithSeed(canonicalCandidateIds, seed);
 
 const selectedId = selectNextQuestionId(orderedCandidateIds, byQuestionId);
 ```
@@ -76,10 +77,10 @@ Same seed across filters is acceptable and expected: `unanswered`, `incorrect`, 
 **File:** `src/application/use-cases/get-next-question.ts`
 Constructor param: `now: () => Date = () => new Date()`.
 
-### 2. Shuffled Quick Practice candidates before selection
+### 2. Canonicalized and shuffled Quick Practice candidates before selection
 
 **File:** `src/application/use-cases/get-next-question.ts` (`executeForFilters`)
-Daily UTC seed + `shuffleWithSeed` applied before `selectNextQuestionId`.
+Daily UTC seed + canonical ID sort + `shuffleWithSeed` applied before `selectNextQuestionId`.
 
 ### 3. Updated constructor call sites
 
@@ -92,13 +93,14 @@ Daily UTC seed + `shuffleWithSeed` applied before `selectNextQuestionId`.
 
 **File:** `src/application/use-cases/get-next-question.test.ts`
 
-Six new tests:
+Seven new tests:
 - Daily-seeded shuffle is applied before selection in filter mode.
 - Same user + same UTC day => same selected question (unchanged history).
-- UTC day boundary => new permutation and potentially new selected question.
+- UTC day boundary => new daily seed and deterministic re-evaluation of candidate order (with potential question rotation).
 - Oldest-attempt fallback remains unchanged when oldest is unique.
 - Equal-timestamp all-attempted ties resolve deterministically from shuffled order.
 - Status-specific filter pools (`unanswered`/`incorrect`/`bookmarked`) each follow shuffled-candidate contract.
+- Repository-order invariance: same candidate set, same user/day, same selected question even if repository returns different permutations.
 
 ### 5. Aligned docs after implementation
 
@@ -114,6 +116,7 @@ Six new tests:
 
 - [x] `GetNextQuestionUseCase` accepts injected `now`.
 - [x] `executeForFilters` shuffles candidates with `createSeed(userId, utcDayStartMs)` before `selectNextQuestionId`.
+- [x] `executeForFilters` canonicalizes candidate IDs before shuffling, so repository permutation does not change selection.
 - [x] Quick Practice `unanswered` no longer follows repository order.
 - [x] Quick Practice `incorrect` and `bookmarked` follow same shuffled-candidate contract.
 - [x] All-attempted unique-oldest fallback is unchanged.

@@ -70,16 +70,18 @@ listPublishedCandidateIds(filters)
 
 ```text
 listPublishedCandidateIds(filters)
-  → shuffleWithSeed(candidates, createSeed(userId, dailySeedTimestamp))
+  → canonicalize(candidates) // stable ID sort
+  → shuffleWithSeed(canonicalCandidates, createSeed(userId, dailySeedTimestamp))
   → selectNextQuestionId(shuffledCandidates, attemptHistory)
 ```
 
 - Shuffle candidates **before** passing to `selectNextQuestionId`.
+- Canonicalization happens before shuffle so the same candidate set yields the same shuffled order regardless of repository return order.
 - Seed is daily-granularity: `createSeed(userId, Date.UTC(year, month, date))`.
 - Daily seed ensures:
   - **Interleaving**: candidates are not in DB insertion order.
   - **Short-window stability**: same user on the same day sees the same candidate permutation.
-  - **Day-boundary freshness**: ordering changes each UTC day, preventing stale patterns.
+  - **Day-boundary freshness**: the seed changes each UTC day, so ordering is expected to rotate over time and avoid stale patterns.
 
 **Selection rule** (unchanged from `selectNextQuestionId`):
 1. First unattempted candidate in shuffled order.

@@ -95,7 +95,50 @@ function shuffleQuickPracticeCandidates(
   now: Date,
 ): string[] {
   const seed = createSeed(userId, getUtcDayStartMs(now));
+  return shuffleWithSeed(candidateIds.slice().sort(), seed);
+}
+
+function shuffleQuickPracticeCandidatesWithoutCanonicalization(
+  candidateIds: readonly string[],
+  userId: string,
+  now: Date,
+): string[] {
+  const seed = createSeed(userId, getUtcDayStartMs(now));
   return shuffleWithSeed(candidateIds, seed);
+}
+
+function findUserForRepositoryOrderVariance(
+  firstOrder: readonly string[],
+  secondOrder: readonly string[],
+  now: Date,
+): string {
+  const userId =
+    Array.from(
+      { length: 5_000 },
+      (_, i) => `order-variance-user-${i + 1}`,
+    ).find((candidate) => {
+      const first =
+        shuffleQuickPracticeCandidatesWithoutCanonicalization(
+          firstOrder,
+          candidate,
+          now,
+        )[0] ?? null;
+      const second =
+        shuffleQuickPracticeCandidatesWithoutCanonicalization(
+          secondOrder,
+          candidate,
+          now,
+        )[0] ?? null;
+      return first !== second;
+    }) ?? null;
+
+  if (!userId) {
+    throw new Error(
+      'Test setup failure: expected to find a userId whose first candidate changes when repository order changes',
+    );
+  }
+
+  return userId;
 }
 
 function createQuickPracticeQuestion(questionId: string, createdAtIso: string) {
@@ -1011,6 +1054,66 @@ describe('GetNextQuestionUseCase', () => {
         statuses: ['bookmarked'],
       }),
     );
+  });
+
+  it('returns the same next question for equivalent candidate sets regardless of repository ordering', async () => {
+    const now = new Date('2026-03-02T08:15:00.000Z');
+    const repositoryOrderA = ['q5', 'q4', 'q3', 'q2', 'q1'];
+    const repositoryOrderB = ['q2', 'q3', 'q4', 'q5', 'q1'];
+    const userId = findUserForRepositoryOrderVariance(
+      repositoryOrderA,
+      repositoryOrderB,
+      now,
+    );
+
+    const questions = [
+      createQuickPracticeQuestion('q1', '2026-01-01T00:00:00.000Z'),
+      createQuickPracticeQuestion('q2', '2026-01-02T00:00:00.000Z'),
+      createQuickPracticeQuestion('q3', '2026-01-03T00:00:00.000Z'),
+      createQuickPracticeQuestion('q4', '2026-01-04T00:00:00.000Z'),
+      createQuickPracticeQuestion('q5', '2026-01-05T00:00:00.000Z'),
+    ];
+
+    const firstQuestionRepo = new FakeQuestionRepository(questions);
+    const secondQuestionRepo = new FakeQuestionRepository(questions);
+    const firstListCandidatesSpy = vi
+      .spyOn(firstQuestionRepo, 'listPublishedCandidateIds')
+      .mockResolvedValue(repositoryOrderA);
+    const secondListCandidatesSpy = vi
+      .spyOn(secondQuestionRepo, 'listPublishedCandidateIds')
+      .mockResolvedValue(repositoryOrderB);
+
+    const firstUseCase = new GetNextQuestionUseCase(
+      firstQuestionRepo,
+      new FakeAttemptRepository([]),
+      new FakePracticeSessionRepository([]),
+      () => now,
+    );
+    const secondUseCase = new GetNextQuestionUseCase(
+      secondQuestionRepo,
+      new FakeAttemptRepository([]),
+      new FakePracticeSessionRepository([]),
+      () => now,
+    );
+
+    const firstResult = await firstUseCase.execute({
+      userId,
+      filters: EMPTY_FILTERS,
+    });
+    const secondResult = await secondUseCase.execute({
+      userId,
+      filters: EMPTY_FILTERS,
+    });
+
+    expect(firstResult?.questionId).toBe(secondResult?.questionId);
+    expect(firstListCandidatesSpy).toHaveBeenCalledWith({
+      ...EMPTY_FILTERS,
+      userId,
+    });
+    expect(secondListCandidatesSpy).toHaveBeenCalledWith({
+      ...EMPTY_FILTERS,
+      userId,
+    });
   });
 
   it('shuffles choices based on userId and questionId', async () => {
