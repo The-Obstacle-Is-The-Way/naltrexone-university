@@ -131,7 +131,7 @@ describe('DrizzlePracticeSessionRepository', () => {
       }),
     }));
 
-    const db = {
+    const tx = {
       query: {
         practiceSessions: {
           findFirst: async () => null,
@@ -139,6 +139,13 @@ describe('DrizzlePracticeSessionRepository', () => {
         },
       },
       select,
+    } as const;
+    const transaction = vi.fn(
+      async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
+    );
+    const db = {
+      ...tx,
+      transaction,
       insert: () => {
         throw new Error('unexpected insert');
       },
@@ -186,6 +193,7 @@ describe('DrizzlePracticeSessionRepository', () => {
     expect(findMany).toHaveBeenCalledWith(
       expect.objectContaining({ limit: 10, offset: 0 }),
     );
+    expect(transaction).toHaveBeenCalledTimes(1);
   });
 
   it('returns empty rows when limit is non-positive while preserving total', async () => {
@@ -197,7 +205,7 @@ describe('DrizzlePracticeSessionRepository', () => {
       }),
     }));
 
-    const db = {
+    const tx = {
       query: {
         practiceSessions: {
           findFirst: async () => null,
@@ -205,6 +213,13 @@ describe('DrizzlePracticeSessionRepository', () => {
         },
       },
       select,
+    } as const;
+    const transaction = vi.fn(
+      async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
+    );
+    const db = {
+      ...tx,
+      transaction,
       insert: () => {
         throw new Error('unexpected insert');
       },
@@ -223,6 +238,7 @@ describe('DrizzlePracticeSessionRepository', () => {
       total: 3,
     });
     expect(findMany).not.toHaveBeenCalled();
+    expect(transaction).toHaveBeenCalledTimes(1);
   });
 
   it('returns null when no incomplete session exists for user', async () => {
