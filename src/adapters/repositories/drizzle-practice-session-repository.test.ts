@@ -144,8 +144,20 @@ describe('DrizzlePracticeSessionRepository', () => {
       async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
     );
     const db = {
-      ...tx,
       transaction,
+      query: {
+        practiceSessions: {
+          findFirst: () => {
+            throw new Error('unexpected root findFirst');
+          },
+          findMany: () => {
+            throw new Error('unexpected root findMany');
+          },
+        },
+      },
+      select: () => {
+        throw new Error('unexpected root select');
+      },
       insert: () => {
         throw new Error('unexpected insert');
       },
@@ -221,8 +233,20 @@ describe('DrizzlePracticeSessionRepository', () => {
       async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
     );
     const db = {
-      ...tx,
       transaction,
+      query: {
+        practiceSessions: {
+          findFirst: () => {
+            throw new Error('unexpected root findFirst');
+          },
+          findMany: () => {
+            throw new Error('unexpected root findMany');
+          },
+        },
+      },
+      select: () => {
+        throw new Error('unexpected root select');
+      },
       insert: () => {
         throw new Error('unexpected insert');
       },
