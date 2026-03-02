@@ -25,6 +25,10 @@ describe('app/(app)/app/history/history-search-params', () => {
       expect(parseHistoryTab('sessions')).toBe('sessions');
       expect(parseHistoryTab('questions')).toBe('questions');
     });
+
+    it('returns first value when tab param is an array', () => {
+      expect(parseHistoryTab(['questions', 'sessions'])).toBe('questions');
+    });
   });
 
   describe('parseNonNegativeInt', () => {
@@ -39,6 +43,14 @@ describe('app/(app)/app/history/history-search-params', () => {
     it('returns the parsed number for valid non-negative integers', () => {
       expect(parseNonNegativeInt('0', 5)).toBe(0);
       expect(parseNonNegativeInt('10', 5)).toBe(10);
+    });
+
+    it('returns first value when offset param is an array', () => {
+      expect(parseNonNegativeInt(['10', '20'], 5)).toBe(10);
+    });
+
+    it('returns fallback when offset param is an empty array', () => {
+      expect(parseNonNegativeInt([], 5)).toBe(5);
     });
   });
 
@@ -55,6 +67,14 @@ describe('app/(app)/app/history/history-search-params', () => {
       expect(parseLimit('100')).toBe(100);
       expect(parseLimit('101')).toBe(100);
     });
+
+    it('returns first value when limit param is an array', () => {
+      expect(parseLimit(['30', '40'])).toBe(30);
+    });
+
+    it('defaults to 20 when limit param is an empty array', () => {
+      expect(parseLimit([])).toBe(20);
+    });
   });
 
   describe('parseDifficultyFilter', () => {
@@ -68,6 +88,10 @@ describe('app/(app)/app/history/history-search-params', () => {
       expect(parseDifficultyFilter('medium')).toBe('medium');
       expect(parseDifficultyFilter('hard')).toBe('hard');
     });
+
+    it('returns first value when difficulty param is an array', () => {
+      expect(parseDifficultyFilter(['hard', 'easy'])).toBe('hard');
+    });
   });
 
   describe('parseTagSlugFilter', () => {
@@ -80,6 +104,14 @@ describe('app/(app)/app/history/history-search-params', () => {
     it('trims whitespace', () => {
       expect(parseTagSlugFilter(' opioids ')).toBe('opioids');
     });
+
+    it('returns first value when tag param is an array (repeated query param)', () => {
+      expect(parseTagSlugFilter(['opioids', 'alcohol'])).toBe('opioids');
+    });
+
+    it('returns null when tag param is an empty array', () => {
+      expect(parseTagSlugFilter([])).toBeNull();
+    });
   });
 
   describe('parseResultFilter', () => {
@@ -91,6 +123,10 @@ describe('app/(app)/app/history/history-search-params', () => {
     it('returns parsed result values', () => {
       expect(parseResultFilter('correct')).toBe('correct');
       expect(parseResultFilter('incorrect')).toBe('incorrect');
+    });
+
+    it('returns first value when result param is an array', () => {
+      expect(parseResultFilter(['correct', 'incorrect'])).toBe('correct');
     });
   });
 
@@ -105,6 +141,10 @@ describe('app/(app)/app/history/history-search-params', () => {
       expect(parseSourceFilter('exam')).toBe('exam');
       expect(parseSourceFilter('adhoc')).toBe('adhoc');
     });
+
+    it('returns first value when source param is an array', () => {
+      expect(parseSourceFilter(['exam', 'tutor'])).toBe('exam');
+    });
   });
 
   describe('parseSessionModeFilter', () => {
@@ -116,6 +156,10 @@ describe('app/(app)/app/history/history-search-params', () => {
     it('parses tutor and exam values', () => {
       expect(parseSessionModeFilter('tutor')).toBe('tutor');
       expect(parseSessionModeFilter('exam')).toBe('exam');
+    });
+
+    it('returns first value when mode param is an array', () => {
+      expect(parseSessionModeFilter(['exam', 'tutor'])).toBe('exam');
     });
   });
 
@@ -130,6 +174,10 @@ describe('app/(app)/app/history/history-search-params', () => {
       expect(parseQuestionsSort('incorrect-first')).toBe('incorrect-first');
       expect(parseQuestionsSort('correct-first')).toBe('correct-first');
       expect(parseQuestionsSort('difficulty')).toBe('difficulty');
+    });
+
+    it('returns first value when sort param is an array', () => {
+      expect(parseQuestionsSort(['difficulty', 'recent'])).toBe('difficulty');
     });
   });
 

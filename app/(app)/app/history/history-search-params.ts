@@ -21,71 +21,92 @@ export type QuestionsFilters = {
   sort?: QuestionsSort | null;
 };
 
-export function parseHistoryTab(value: string | undefined): HistoryTab {
-  if (value === 'questions') return 'questions';
+function normalizeSearchParam(
+  value: string | string[] | undefined,
+): string | undefined {
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
+
+export function parseHistoryTab(
+  value: string | string[] | undefined,
+): HistoryTab {
+  const normalized = normalizeSearchParam(value);
+  if (normalized === 'questions') return 'questions';
   return 'sessions';
 }
 
 export function parseNonNegativeInt(
-  value: string | undefined,
+  value: string | string[] | undefined,
   fallback: number,
 ): number {
-  if (value === undefined || value === '') return fallback;
-  const n = Number(value);
+  const normalized = normalizeSearchParam(value);
+  if (normalized === undefined || normalized === '') return fallback;
+  const n = Number(normalized);
   if (!Number.isFinite(n)) return fallback;
   if (!Number.isInteger(n)) return fallback;
   if (n < 0) return fallback;
   return n;
 }
 
-export function parseLimit(value: string | undefined): number {
+export function parseLimit(value: string | string[] | undefined): number {
   const limit = parseNonNegativeInt(value, 20);
   return Math.min(Math.max(limit, 1), 100);
 }
 
 export function parseDifficultyFilter(
-  value: string | undefined,
+  value: string | string[] | undefined,
 ): DifficultyFilter | null {
-  if (value === 'easy') return value;
-  if (value === 'medium') return value;
-  if (value === 'hard') return value;
+  const normalized = normalizeSearchParam(value);
+  if (normalized === 'easy') return normalized;
+  if (normalized === 'medium') return normalized;
+  if (normalized === 'hard') return normalized;
   return null;
 }
 
-export function parseTagSlugFilter(value: string | undefined): string | null {
-  const trimmed = value?.trim();
+export function parseTagSlugFilter(
+  value: string | string[] | undefined,
+): string | null {
+  const normalized = normalizeSearchParam(value);
+  const trimmed = normalized?.trim();
   return trimmed ? trimmed : null;
 }
 
 export function parseResultFilter(
-  value: string | undefined,
+  value: string | string[] | undefined,
 ): ResultFilter | null {
-  if (value === 'correct') return value;
-  if (value === 'incorrect') return value;
+  const normalized = normalizeSearchParam(value);
+  if (normalized === 'correct') return normalized;
+  if (normalized === 'incorrect') return normalized;
   return null;
 }
 
 export function parseSourceFilter(
-  value: string | undefined,
+  value: string | string[] | undefined,
 ): SourceFilter | null {
-  if (value === 'tutor') return value;
-  if (value === 'exam') return value;
-  if (value === 'adhoc') return value;
+  const normalized = normalizeSearchParam(value);
+  if (normalized === 'tutor') return normalized;
+  if (normalized === 'exam') return normalized;
+  if (normalized === 'adhoc') return normalized;
   return null;
 }
 
 export function parseSessionModeFilter(
-  value: string | undefined,
+  value: string | string[] | undefined,
 ): SessionModeFilter {
-  if (value === 'tutor') return value;
-  if (value === 'exam') return value;
+  const normalized = normalizeSearchParam(value);
+  if (normalized === 'tutor') return normalized;
+  if (normalized === 'exam') return normalized;
   return 'all';
 }
 
-export function parseQuestionsSort(value: string | undefined): QuestionsSort {
-  if (value === 'incorrect-first') return value;
-  if (value === 'correct-first') return value;
-  if (value === 'difficulty') return value;
+export function parseQuestionsSort(
+  value: string | string[] | undefined,
+): QuestionsSort {
+  const normalized = normalizeSearchParam(value);
+  if (normalized === 'incorrect-first') return normalized;
+  if (normalized === 'correct-first') return normalized;
+  if (normalized === 'difficulty') return normalized;
   return 'recent';
 }
 

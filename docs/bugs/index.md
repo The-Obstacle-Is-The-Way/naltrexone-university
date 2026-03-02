@@ -16,6 +16,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 **Next Bug ID:** BUG-186
 
 **Latest archival (2026-03-02):**
+- BUG-182, BUG-183, and BUG-184 verified fixed (PR #163), archived to `docs/_archive/bugs/`.
 - BUG-180, BUG-181, and BUG-185 verified fixed (PR #162), archived to `docs/_archive/bugs/`.
 - Audit #8: all 12 bugs (BUG-167..179, excluding false-positive BUG-174) verified fixed, archived to `docs/_archive/audits/audit-008-deep-codebase-sweep.md`.
 
@@ -27,9 +28,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| [BUG-184](./bug-184-attempted-questions-count-page-divergence-drops-rows.md) | Attempted Questions Count/Page Divergence Can Drop Real Rows | P2 | Open |
-| [BUG-183](./bug-183-stripe-webhook-failure-state-rolled-back.md) | Stripe Webhook Failure State Is Rolled Back | P2 | Open |
-| [BUG-182](./bug-182-history-questions-tag-array-query-crash.md) | History Questions Crashes on Repeated `tag` Query Param | P2 | Open |
+| — | None | — | — |
 
 ## Audit #10 — Exam Secrecy and Cross-Layer Invariant Sweep (2026-03-02)
 
@@ -278,9 +277,9 @@ Audit #3 produced BUG-136 and BUG-139. BUG-137 was reclassified as SSOT-consiste
 | ID | Title | Status | Resolution |
 |----|-------|--------|------------|
 | [BUG-185](../_archive/bugs/bug-185-dashboard-recent-activity-reveals-active-exam-correctness.md) | Dashboard Recent Activity Reveals Active Exam Correctness | Resolved | Added active-exam exclusion predicate in `listRecentByUserId` and repository regression coverage |
-| [BUG-184](./bug-184-attempted-questions-count-page-divergence-drops-rows.md) | Attempted Questions Count/Page Divergence Can Drop Real Rows | Open | — |
-| [BUG-183](./bug-183-stripe-webhook-failure-state-rolled-back.md) | Stripe Webhook Failure State Is Rolled Back | Open | — |
-| [BUG-182](./bug-182-history-questions-tag-array-query-crash.md) | History Questions Crashes on Repeated `tag` Query Param | Open | — |
+| [BUG-184](../_archive/bugs/bug-184-attempted-questions-count-page-divergence-drops-rows.md) | Attempted Questions Count/Page Divergence Can Drop Real Rows | Resolved | Removed `totalCount === 0` short-circuit, preserving non-empty page rows under count/list divergence; added regression assertion for row identity |
+| [BUG-183](../_archive/bugs/bug-183-stripe-webhook-failure-state-rolled-back.md) | Stripe Webhook Failure State Is Rolled Back | Resolved | Transaction callback now returns `{ ok: false, error }` after `markFailed`, allowing commit before outer rethrow; rollback-aware regression test added |
+| [BUG-182](../_archive/bugs/bug-182-history-questions-tag-array-query-crash.md) | History Questions Crashes on Repeated `tag` Query Param | Resolved | Added shared search-param normalization across all history parsers, including numeric `limit`/`offset` parsing for repeated params |
 | [BUG-181](../_archive/bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md) | Session-Review Retry Allows Active Exam Answer Reveal | Resolved | Added active-session `session_review` guard before grading plus regression coverage |
 | [BUG-180](../_archive/bugs/bug-180-active-exam-answer-leak-via-review-hydration.md) | Active Exam Answer Leak via Review Hydration | Resolved | Added active-exam attempt guard in answered-attempt branch and identifier-path regression tests |
 | [BUG-151](../_archive/bugs/bug-151-card-row-affordance-inconsistency.md) | Card/Row Affordance Inconsistency — Misleading Hover, Missing Focus Rings, Pattern Asymmetry | Resolved | Removed misleading hover from non-interactive cards, added missing focus-visible rings to interactive inner links, converted history question cards to Pattern A (Link-as-Card), and updated regression/test coverage |

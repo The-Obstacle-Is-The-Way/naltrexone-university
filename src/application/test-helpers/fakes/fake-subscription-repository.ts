@@ -5,6 +5,21 @@ import type {
 } from '@/src/application/ports/repositories';
 import type { Subscription } from '@/src/domain/entities';
 
+type SubscriptionSnapshot = {
+  byUserId: ReadonlyArray<readonly [string, Subscription]>;
+  externalSubscriptionIdByUserId: ReadonlyArray<readonly [string, string]>;
+  userIdByExternalSubscriptionId: ReadonlyArray<readonly [string, string]>;
+};
+
+function cloneSubscription(subscription: Subscription): Subscription {
+  return {
+    ...subscription,
+    currentPeriodEnd: new Date(subscription.currentPeriodEnd),
+    createdAt: new Date(subscription.createdAt),
+    updatedAt: new Date(subscription.updatedAt),
+  };
+}
+
 export class FakeSubscriptionRepository implements SubscriptionRepository {
   private readonly byUserId = new Map<string, Subscription>();
   private readonly externalSubscriptionIdByUserId = new Map<string, string>();
@@ -75,5 +90,43 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
       input.externalSubscriptionId,
       input.userId,
     );
+  }
+
+  snapshot(): SubscriptionSnapshot {
+    return {
+      byUserId: [...this.byUserId.entries()].map(([userId, subscription]) => [
+        userId,
+        cloneSubscription(subscription),
+      ]),
+      externalSubscriptionIdByUserId: [
+        ...this.externalSubscriptionIdByUserId.entries(),
+      ],
+      userIdByExternalSubscriptionId: [
+        ...this.userIdByExternalSubscriptionId.entries(),
+      ],
+    };
+  }
+
+  restore(snapshot: SubscriptionSnapshot): void {
+    this.byUserId.clear();
+    for (const [userId, subscription] of snapshot.byUserId) {
+      this.byUserId.set(userId, cloneSubscription(subscription));
+    }
+
+    this.externalSubscriptionIdByUserId.clear();
+    for (const [
+      userId,
+      externalSubscriptionId,
+    ] of snapshot.externalSubscriptionIdByUserId) {
+      this.externalSubscriptionIdByUserId.set(userId, externalSubscriptionId);
+    }
+
+    this.userIdByExternalSubscriptionId.clear();
+    for (const [
+      externalSubscriptionId,
+      userId,
+    ] of snapshot.userIdByExternalSubscriptionId) {
+      this.userIdByExternalSubscriptionId.set(externalSubscriptionId, userId);
+    }
   }
 }

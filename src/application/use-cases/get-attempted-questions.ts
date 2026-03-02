@@ -83,7 +83,7 @@ export class GetAttemptedQuestionsUseCase {
       ),
     ]);
 
-    if (totalCount === 0 || page.length === 0) {
+    if (page.length === 0) {
       return {
         rows: [],
         limit: input.limit,

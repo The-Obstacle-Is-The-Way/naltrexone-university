@@ -178,6 +178,43 @@ describe('FakeSubscriptionRepository', () => {
       ),
     );
   });
+
+  it('restores repository state from a snapshot', async () => {
+    const repo = new FakeSubscriptionRepository();
+
+    await repo.upsert({
+      userId: 'user_1',
+      externalSubscriptionId: 'sub_123',
+      plan: 'monthly',
+      status: 'active',
+      currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
+      cancelAtPeriodEnd: false,
+    });
+
+    const snapshot = repo.snapshot();
+
+    await repo.upsert({
+      userId: 'user_1',
+      externalSubscriptionId: 'sub_456',
+      plan: 'annual',
+      status: 'canceled',
+      currentPeriodEnd: new Date('2027-01-31T00:00:00.000Z'),
+      cancelAtPeriodEnd: true,
+    });
+
+    repo.restore(snapshot);
+
+    await expect(
+      repo.findByExternalSubscriptionId('sub_123'),
+    ).resolves.toMatchObject({
+      userId: 'user_1',
+      plan: 'monthly',
+      status: 'active',
+    });
+    await expect(
+      repo.findByExternalSubscriptionId('sub_456'),
+    ).resolves.toBeNull();
+  });
 });
 
 describe('FakeAuthGateway', () => {
@@ -537,6 +574,24 @@ describe('FakeStripeCustomerRepository', () => {
       });
     });
   });
+
+  describe('snapshot/restore', () => {
+    it('restores repository state from a snapshot', async () => {
+      const repo = new FakeStripeCustomerRepository();
+      await repo.insert('user-1', 'cus_123');
+
+      const snapshot = repo.snapshot();
+
+      await repo.insert('user-2', 'cus_456');
+
+      repo.restore(snapshot);
+
+      await expect(repo.findByUserId('user-1')).resolves.toEqual({
+        stripeCustomerId: 'cus_123',
+      });
+      await expect(repo.findByUserId('user-2')).resolves.toBeNull();
+    });
+  });
 });
 
 describe('FakeStripeEventRepository', () => {
@@ -619,6 +674,29 @@ describe('FakeStripeEventRepository', () => {
       ).rejects.toEqual(
         new ApplicationError('NOT_FOUND', 'Stripe event not found'),
       );
+    });
+  });
+
+  describe('snapshot/restore', () => {
+    it('restores event states from a snapshot', async () => {
+      const repo = new FakeStripeEventRepository();
+      await repo.claim('evt_1', 'checkout.session.completed');
+      await repo.markFailed('evt_1', 'First failure');
+
+      const snapshot = repo.snapshot();
+
+      await repo.markProcessed('evt_1');
+      await repo.claim('evt_2', 'checkout.session.completed');
+
+      repo.restore(snapshot);
+
+      await expect(repo.lock('evt_1')).resolves.toEqual({
+        processedAt: null,
+        error: 'First failure',
+      });
+      await expect(repo.lock('evt_2')).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+      });
     });
   });
 

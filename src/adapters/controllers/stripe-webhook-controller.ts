@@ -27,6 +27,8 @@ export type StripeWebhookDeps = {
   now: () => Date;
 };
 
+type StripeWebhookTxResult = { ok: true } | { ok: false; error: unknown };
+
 const STACK_TRACE_LIMIT = 1000;
 const STRIPE_EVENTS_RETENTION_MS = 90 * 86_400_000;
 const STRIPE_EVENTS_PRUNE_LIMIT = 100;
@@ -62,8 +64,12 @@ export async function processStripeWebhook(
     input.signature,
   );
 
-  await deps.transaction(
-    async ({ stripeEvents, subscriptions, stripeCustomers }) => {
+  const txResult = await deps.transaction(
+    async ({
+      stripeEvents,
+      subscriptions,
+      stripeCustomers,
+    }): Promise<StripeWebhookTxResult> => {
       const claimed = await stripeEvents.claim(event.eventId, event.type);
       if (!claimed) {
         const snapshot = await stripeEvents.peek(event.eventId);
@@ -72,13 +78,13 @@ export async function processStripeWebhook(
           snapshot.processedAt !== null &&
           snapshot.error === null
         ) {
-          return;
+          return { ok: true };
         }
       }
 
       const current = await stripeEvents.lock(event.eventId);
       if (current.processedAt !== null && current.error === null) {
-        return;
+        return { ok: true };
       }
 
       try {
@@ -101,12 +107,17 @@ export async function processStripeWebhook(
         }
 
         await stripeEvents.markProcessed(event.eventId);
+        return { ok: true };
       } catch (error) {
         await stripeEvents.markFailed(event.eventId, toErrorData(error));
-        throw error;
+        return { ok: false, error };
       }
     },
   );
+
+  if (!txResult.ok) {
+    throw txResult.error;
+  }
 
   // Best-effort cleanup: prune old stripe events.
   // Idempotency keys and rate limits are pruned in their own hot paths

@@ -17,6 +17,12 @@ class FailingStripeEventRepository extends FakeStripeEventRepository {
   }
 }
 
+class FailingSubscriptionRepository extends FakeSubscriptionRepository {
+  async upsert(): Promise<void> {
+    throw new Error('boom');
+  }
+}
+
 function createDeps(overrides: {
   paymentGateway: FakePaymentGateway;
   stripeEvents?: FakeStripeEventRepository;
@@ -50,6 +56,57 @@ function createDeps(overrides: {
     subscriptions,
     stripeCustomers,
     logger,
+  };
+}
+
+function createRollbackAwareDeps(overrides: {
+  paymentGateway: FakePaymentGateway;
+  stripeEvents?: FakeStripeEventRepository;
+  subscriptions?: FakeSubscriptionRepository;
+  stripeCustomers?: FakeStripeCustomerRepository;
+  logger?: FakeLogger;
+}): {
+  deps: StripeWebhookDeps;
+  stripeEvents: FakeStripeEventRepository;
+  subscriptions: FakeSubscriptionRepository;
+  stripeCustomers: FakeStripeCustomerRepository;
+  logger: FakeLogger;
+} {
+  const base = createDeps(overrides);
+
+  return {
+    ...base,
+    deps: {
+      ...base.deps,
+      transaction: async (fn) => {
+        const StripeEventsCtor = base.stripeEvents
+          .constructor as new () => FakeStripeEventRepository;
+        const SubscriptionsCtor = base.subscriptions
+          .constructor as new () => FakeSubscriptionRepository;
+        const StripeCustomersCtor = base.stripeCustomers
+          .constructor as new () => FakeStripeCustomerRepository;
+
+        const stagingEvents = new StripeEventsCtor();
+        const stagingSubscriptions = new SubscriptionsCtor();
+        const stagingStripeCustomers = new StripeCustomersCtor();
+
+        stagingEvents.restore(base.stripeEvents.snapshot());
+        stagingSubscriptions.restore(base.subscriptions.snapshot());
+        stagingStripeCustomers.restore(base.stripeCustomers.snapshot());
+
+        const result = await fn({
+          stripeEvents: stagingEvents,
+          subscriptions: stagingSubscriptions,
+          stripeCustomers: stagingStripeCustomers,
+        });
+
+        base.stripeEvents.restore(stagingEvents.snapshot());
+        base.subscriptions.restore(stagingSubscriptions.snapshot());
+        base.stripeCustomers.restore(stagingStripeCustomers.snapshot());
+
+        return result;
+      },
+    },
   };
 }
 
@@ -333,6 +390,44 @@ describe('processStripeWebhook', () => {
     }
   });
 
+  it('persists failure state even when the transaction would rollback on throw', async () => {
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_test',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_rollback_failure_state',
+        type: 'customer.subscription.updated',
+        subscriptionUpdate: {
+          userId: 'user_1',
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_123',
+          plan: 'monthly',
+          status: 'active',
+          currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
+          cancelAtPeriodEnd: false,
+        },
+      },
+    });
+
+    const subscriptions = new FailingSubscriptionRepository();
+    const { deps, stripeEvents } = createRollbackAwareDeps({
+      paymentGateway,
+      subscriptions,
+    });
+
+    await expect(
+      processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
+    ).rejects.toMatchObject({ message: 'boom' });
+
+    await expect(
+      stripeEvents.lock('evt_rollback_failure_state'),
+    ).resolves.toMatchObject({
+      processedAt: null,
+      error: expect.any(String),
+    });
+  });
+
   it('marks the event failed when processing throws', async () => {
     const paymentGateway = new FakePaymentGateway({
       externalCustomerId: 'cus_test',
@@ -352,12 +447,6 @@ describe('processStripeWebhook', () => {
         },
       },
     });
-
-    class FailingSubscriptionRepository extends FakeSubscriptionRepository {
-      async upsert(): Promise<void> {
-        throw new Error('boom');
-      }
-    }
 
     const subscriptions = new FailingSubscriptionRepository();
     const { deps, stripeEvents } = createDeps({
