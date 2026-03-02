@@ -1,340 +1,196 @@
-# BS-038: Practice Engine Randomization Audit — Quick Practice Not Shuffled
+# BS-038: Practice Engine Question Ordering Audit and Simplification Plan
 
-**Date:** 2026-03-02
-**Triggered by:** User observation — Quick Practice serves consecutive same-topic questions (e.g., Zopiclone → Zopiclone → Zopiclone)
-**Scope:** Full-stack audit of question randomization across every practice engine entry point
-**Related:** Issue #54 (Randomize question order — resolved for sessions only), `shuffleWithSeed()`, `selectNextQuestionId()`
-
----
-
-## First Principles: What Randomization Should Accomplish
-
-A medical education platform must satisfy these randomization properties:
-
-1. **Topic interleaving** — Questions from different source papers and topics should be interleaved, never clustered. Spaced interleaving is a well-established learning science principle that improves long-term retention.
-2. **Unpredictability** — The learner should not be able to predict the next question's topic. This prevents pattern shortcuts and forces genuine recall.
-3. **Determinism within a study session** — If the user refreshes the page mid-session, the order should not change. Consistency avoids confusion.
-4. **Freshness across study sessions** — Each new session/day should feel different. The user should not encounter the same first-5-questions pattern every time.
-5. **Choice order shuffling** — Answer options (A/B/C/D) must be shuffled per user per question so "the answer is always B" is impossible.
-6. **Review fidelity** — When reviewing a completed session, the original question order must be preserved for coherent reflection.
+**Date:** 2026-03-02  
+**Triggered by:** Quick Practice feels clustered and "not random"  
+**Scope:** End-to-end ordering behavior across session, quick-practice, and review flows  
+**Related:** Issue #54, SPEC-013, SPEC-024, `selectNextQuestionId`, `shuffleWithSeed`
 
 ---
 
-## How the Content Creates Clustering Risk
+## 1. Context in the Practice Engine
 
-Questions are authored and seeded from content files organized **by source paper**:
+This brainstorming doc is intentionally aligned with the Practice Engine SSOT docs:
+- `docs/practice-engine/practice-modes.md`
+- `docs/practice-engine/architecture-layers.md`
+- `docs/practice-engine/retry-logic.md`
+- `docs/specs/master_spec.md` (Case B for `GetNextQuestion`)
 
-```
-content/questions/imported/
-  article-based-pathway/ahmed-2020/
-    ahmed-2020-001.mdx    ← 12 questions from one paper
-    ahmed-2020-002.mdx
-    ...
-    ahmed-2020-012.mdx
-  prescribers-guide/stahls-7e-zopiclone/
-    stahls-7e-zopiclone-001.mdx  ← 4 questions per medication
-    ...
-    stahls-7e-zopiclone-004.mdx
-```
+The core architectural shape is correct:
+- Session modes (`tutor`/`exam`) are snapshot-based (`questionIds` persisted at session start).
+- Quick Practice is stateless and filter-driven (`executeForFilters`).
+- Review paths are either session-sequenced (session review) or single-question (history/bookmarks/dashboard review).
 
-**960 questions** across 7 topic areas, organized as ~80 batches of 4–12 questions each.
-
-The seeding script inserts these in batch order. Questions from the same source get:
-- **Similar `createdAt` timestamps** (same batch insert)
-- **Sequential database IDs** (auto-increment)
-
-The repository query `ORDER BY createdAt DESC, id ASC` preserves this batch order. **Without shuffling, questions march through batch-by-batch.**
+The issue is not broad architecture failure. It is policy ambiguity in the filter path plus one concrete ordering bug.
 
 ---
 
-## Full Audit: Every Question-Serving Path
+## 2. First-Principles Policy (What Should Be True)
 
-### Randomization Mechanisms Available
+For question ordering, the system should optimize for:
 
-| Mechanism | Location | Purpose |
-|-----------|----------|---------|
-| `shuffleWithSeed(items, seed)` | `src/domain/services/shuffle.ts` | Fisher-Yates shuffle with Mulberry32 PRNG — deterministic |
-| `createSeed(userId, timestamp)` | `src/domain/services/shuffle.ts` | Seed for question ordering (per session) |
-| `createQuestionSeed(userId, questionId)` | `src/domain/services/shuffle.ts` | Seed for choice ordering (per question) |
-| `selectNextQuestionId(candidates, history)` | `src/domain/services/question-selection.ts` | Stateless selector: first unanswered or oldest-answered |
-| `buildShuffledChoiceViews(question, userId)` | `src/application/shared/shuffled-choice-views.ts` | Shuffles A/B/C/D order per user per question |
-
-### Path-by-Path Audit
-
-#### 1. Session Creation — Tutor Mode ✅ SHUFFLED
-
-```
-Frontend:  practice-page-client.tsx → startSession()
-Action:    practice-controller.ts → startPracticeSession
-Use case:  StartPracticeSessionUseCase.execute()
-  → listPublishedCandidateIds(filters)         // DB order
-  → createSeed(userId, Date.now())              // Unique seed
-  → shuffleWithSeed(candidateIds, seed)         // Fisher-Yates
-  → .slice(0, count)                            // Take N
-  → Store in session.paramsJson.questionIds     // Canonical order
-```
-
-**Verdict:** Correctly randomized. Different seed every session. Stored order is immutable.
-
-#### 2. Session Creation — Exam Mode ✅ SHUFFLED
-
-Identical code path to Tutor. Only difference is `mode: 'exam'` (explanations hidden until session end).
-
-**Verdict:** Correctly randomized.
-
-#### 3. Session Creation — Tag-Filtered ✅ SHUFFLED
-
-When user selects specific tags in the Practice Starter, the tag filters narrow `listPublishedCandidateIds()` but the same `shuffleWithSeed()` applies.
-
-**Verdict:** Correctly randomized within the filtered subset.
-
-#### 4. Quick Practice — Unanswered ❌ NOT SHUFFLED
-
-```
-Frontend:  quick-practice-client.tsx → usePracticeQuestionFlow({ filters })
-Action:    question-controller.ts → getNextQuestion
-Use case:  GetNextQuestionUseCase.executeForFilters()
-  → listPublishedCandidateIds(filters)         // DB order
-  → selectNextQuestionId(candidateIds, history) // First unanswered in DB order
-  → Return single question                      // No shuffle anywhere
-```
-
-**Verdict:** No shuffling. Questions served in batch-insertion order. **This is the primary bug.**
-
-#### 5. Quick Practice — Incorrect ❌ NOT SHUFFLED
-
-Same code path as #4 with `statuses: ['incorrect']`. The filter narrows the pool to questions the user got wrong, but the candidate order is still database insertion order.
-
-**Verdict:** No shuffling. Incorrect questions from the same batch appear consecutively. Pool is smaller (only wrong answers) so clustering is somewhat less noticeable, but still present if user got multiple questions wrong from the same paper.
-
-#### 6. Quick Practice — Bookmarked ❌ NOT SHUFFLED
-
-Same code path as #4 with `statuses: ['bookmarked']`. Pool is only user-bookmarked questions.
-
-**Verdict:** No shuffling. Same ordering issue, though user-curated pools may be naturally more diverse since bookmarking is intentional.
-
-#### 7. Session In-Progress Navigation ✅ CORRECT (preserves shuffled order)
-
-```
-Frontend:  practice-session-page-client.tsx → onNextQuestion()
-Use case:  GetNextQuestionUseCase.executeForSession()
-  → session.questionIds[index]                  // Pre-shuffled array
-  → Find next unanswered from current index     // Walks shuffled order
-```
-
-**Verdict:** Correctly follows the session's pre-shuffled `questionIds` array. No re-shuffling needed.
-
-#### 8. Session Review (Active or Completed) ✅ CORRECT (preserves shuffled order)
-
-```
-Frontend:  practice-session-page-client.tsx (review stage)
-Use case:  GetPracticeSessionReviewUseCase.execute()
-  → session.questionIds.forEach((id, i) => order = i + 1)
-  → Preserves original shuffled sequence
-```
-
-**Verdict:** Correctly preserves original session order for coherent review.
-
-#### 9. History → Review Past Session ✅ CORRECT (preserves shuffled order)
-
-Same as #8. Navigates to `/practice/[sessionId]` with review mode. Loads original session data.
-
-**Verdict:** Correct.
-
-#### 10. Bookmark List → Reattempt ⚪ N/A (single question, user-selected)
-
-User picks an individual question from their bookmark list. No ordering applies — it's a single-question view.
-
-**Verdict:** Not applicable. If user clicks "Next" after reattempt, it enters Quick Practice filter path (#6), which is unshuffled.
-
-#### 11. History Questions Tab ⚪ N/A (viewing history, not practicing)
-
-Paginated list of all attempted questions. Ordered by attempt timestamp. This is a history view, not a practice flow.
-
-**Verdict:** Not applicable to practice randomization.
-
-### Summary Matrix
-
-| # | Path | Question Shuffle | Choice Shuffle | Correct? |
-|---|------|-----------------|----------------|----------|
-| 1 | Tutor Session | ✅ `shuffleWithSeed` | ✅ `buildShuffledChoiceViews` | ✅ |
-| 2 | Exam Session | ✅ `shuffleWithSeed` | ✅ `buildShuffledChoiceViews` | ✅ |
-| 3 | Tag-Filtered Session | ✅ `shuffleWithSeed` | ✅ `buildShuffledChoiceViews` | ✅ |
-| 4 | Quick Practice — Unanswered | ❌ DB order | ✅ `buildShuffledChoiceViews` | ❌ |
-| 5 | Quick Practice — Incorrect | ❌ DB order | ✅ `buildShuffledChoiceViews` | ❌ |
-| 6 | Quick Practice — Bookmarked | ❌ DB order | ✅ `buildShuffledChoiceViews` | ❌ |
-| 7 | Session Navigation | ✅ Preserved | ✅ `buildShuffledChoiceViews` | ✅ |
-| 8 | Session Review | ✅ Preserved | ✅ `buildShuffledChoiceViews` | ✅ |
-| 9 | History Review | ✅ Preserved | ✅ `buildShuffledChoiceViews` | ✅ |
-| 10 | Bookmark Reattempt | ⚪ N/A (single) | ✅ `buildShuffledChoiceViews` | ✅ |
-| 11 | History Questions | ⚪ N/A (history) | ✅ `buildShuffledChoiceViews` | ✅ |
-
-**Choice shuffling works correctly everywhere.** The gap is exclusively in **question ordering** for Quick Practice paths (4, 5, 6).
+1. Interleaving for broad study pools (especially unanswered/full-pool work).
+2. Stable behavior within a short study window (refresh should not feel chaotic).
+3. Explicit, understandable rules per mode/filter (not accidental behavior from DB order).
+4. Immutable historical review order for completed sessions.
+5. No hidden coupling between repository ordering and learning behavior.
 
 ---
 
-## Root Cause
+## 3. Code Truth (Current Behavior)
 
-### The two code paths
+### 3.1 Session flows are correct
 
-`GetNextQuestionUseCase` has two execution branches:
+`StartPracticeSessionUseCase` does:
+1. `listPublishedCandidateIds(...)`
+2. `shuffleWithSeed(...)`
+3. `slice(0, count)`
 
-**`executeForSession()`** (paths 1–3, 7–9): Reads `session.questionIds` — a pre-shuffled array created at session start. Order is locked.
+That is the correct order (shuffle-then-slice), and applies equally to tutor/exam and filtered/unfiltered sessions.
 
-**`executeForFilters()`** (paths 4–6): Fetches candidates from DB, calls `selectNextQuestionId()` to pick one. **No shuffle step exists in this branch.**
+### 3.2 Quick Practice flow has a real gap
 
-```typescript
-// get-next-question.ts — executeForFilters (lines 222-261)
-const candidateIds = await this.questions.listPublishedCandidateIds({...});
-// ← candidateIds are in DB order (DESC createdAt, ASC id)
-// ← No shuffleWithSeed() call here
-const selectedId = selectNextQuestionId(candidateIds, byQuestionId);
-// ← selectNextQuestionId walks array sequentially → batch clustering
-```
+`GetNextQuestionUseCase.executeForFilters()` currently:
+1. Loads candidate IDs in repository order (`createdAt desc`, `id asc`).
+2. Loads most recent attempt timestamps for those IDs.
+3. Calls `selectNextQuestionId(candidateIds, attemptHistory)` with **unshuffled** candidates.
 
-### Why Issue #54 didn't catch this
+`selectNextQuestionId` rule is:
+1. first unattempted in candidate order,
+2. else oldest answered timestamp.
 
-Issue #54 added `shuffleWithSeed()` to `StartPracticeSessionUseCase`. This correctly solved session-based practice. But Quick Practice follows a fundamentally different code path that was not covered:
+This means repository order leaks directly into selection.
 
-- Sessions create a shuffled snapshot at start → immutable order
-- Quick Practice is stateless → picks one question per request, no snapshot
+### 3.3 Status-filter semantics are not all equivalent
 
-The `selectNextQuestionId` domain service is correctly designed — its contract is "first unanswered in candidate order." The problem is that its input (`candidateIds`) is in batch-insertion order, not shuffled order.
+This is where earlier drafts were too coarse:
 
----
+- `unanswered`: all candidates are unattempted by definition, so "first unattempted" means first row in candidate order. This is the strongest clustering bug.
+- `incorrect`: all candidates are previously attempted by definition (latest attempt incorrect), so selection usually uses oldest-timestamp fallback; candidate order only matters on equal-timestamp ties.
+- `bookmarked`: mixed; if unattempted bookmarks exist, candidate order matters strongly. If all bookmarked are attempted, behavior is mostly oldest-timestamp with tie sensitivity.
 
-## Severity Assessment
+### 3.4 Review/reattempt ordering paths
 
-**Severity: Medium-High (UX / Learning Effectiveness)**
-
-- **Who:** Every Quick Practice user — the most accessible, lowest-friction practice mode
-- **How often:** Every single Quick Practice interaction
-- **Impact:** Topic clustering undermines the spaced-interleaving learning benefit. Users see Zopiclone → Zopiclone → Zopiclone instead of a varied mix
-- **Perception:** "The randomization is broken" — erodes trust in the platform
-- **Data integrity:** Not affected. No data loss or corruption. Sessions still shuffle correctly.
-- **Incorrect/Bookmarked pools:** Lower severity since these are smaller, user-curated pools, but still affected
+- Session review preserves original session order (correct).
+- History Questions tab and bookmark/dashboard question links are single-question review routes; sequence ordering is N/A there.
+- Choice-order shuffling is consistently handled via `buildShuffledChoiceViews` on relevant output paths.
 
 ---
 
-## Proposed Fix
+## 4. Scenario Checklist (Pass/Fail)
 
-### Recommendation: Shuffle candidates in `executeForFilters()` with a daily seed
-
-Add a shuffle step before `selectNextQuestionId()` — the minimal, architecturally clean fix:
-
-```typescript
-// In GetNextQuestionUseCase.executeForFilters()
-import { shuffleWithSeed, createSeed } from '@/src/domain/services';
-
-private async executeForFilters(userId: string, filters: QuestionFilters) {
-  const candidateIds = await this.questions.listPublishedCandidateIds({...});
-  if (candidateIds.length === 0) return null;
-
-  // NEW: Shuffle candidates to break batch clustering
-  const dayKey = this.now().toISOString().slice(0, 10); // "2026-03-02"
-  const seed = createSeed(userId, hashString(dayKey));
-  const shuffledIds = shuffleWithSeed(candidateIds, seed);
-
-  const mostRecent = await this.attempts.findMostRecentAnsweredAtByQuestionIds(userId, candidateIds);
-  const byQuestionId = new Map(mostRecent.map((r) => [r.questionId, r.answeredAt]));
-
-  const selectedId = selectNextQuestionId(shuffledIds, byQuestionId);
-  // ... rest unchanged
-}
-```
-
-### Why daily seed
-
-| Seed Strategy | Within-Session Stability | Cross-Session Freshness | Implementation |
-|---------------|-------------------------|------------------------|----------------|
-| Per-request (`Math.random()`) | ❌ Different on refresh | ✅ Always different | Simplest |
-| Per-user (static) | ✅ Always same | ❌ Never changes | Simple |
-| **Per-user-per-day** | **✅ Stable within a day** | **✅ Fresh each day** | **3-4 lines** |
-| Per-user-per-week | ✅ Stable within a week | ⚠️ Slow refresh | 3-4 lines |
-
-**Daily seed is ideal for medical education:** Same study session maintains a consistent order (no confusion on refresh), but each new day brings a fresh shuffle. Maps naturally to how learners study — daily review sessions.
-
-### Why not the alternatives
-
-**Option B (DB-level randomization):** Mixes shuffle concerns into the repository layer. Violates Clean Architecture — the query layer shouldn't know about randomization strategy.
-
-**Option C (Hidden Quick Practice session):** Over-engineered. Changes the stateless nature of Quick Practice. Adds database writes for a mode designed to be lightweight. Session cleanup complexity.
-
-### Architecture compliance
-
-- `shuffleWithSeed` and `createSeed` already live in the domain layer (`src/domain/services/shuffle.ts`)
-- `executeForFilters` is in the application layer — importing domain services is the correct dependency direction
-- `selectNextQuestionId` contract is unchanged — it still picks "first unanswered in given order"
-- No repository interface changes needed
-- No frontend changes needed
-- `now()` is already injected into the use case (testable)
-
-### What stays the same
-
-- Choice shuffling (already correct everywhere)
-- Session-based practice (already correct)
-- Session review ordering (already correct)
-- `selectNextQuestionId` logic (unchanged — just receives shuffled input)
-- The "all answered → oldest answered" fallback (picks by timestamp, order-independent)
+| # | Scenario | Status | Notes |
+|---|---|---|---|
+| 1 | Session with ALL questions (no tag filter) | PASS | Shuffle full pool then slice in session creation. |
+| 2 | Session with SUBSET (tag-filtered) | PASS | Filter first, then shuffle within subset. |
+| 3 | Tutor session (N questions) shuffle-then-slice | PASS | Correct pipeline already implemented. |
+| 4 | Exam session (N questions) parity | PASS | Same ordering pipeline as tutor. |
+| 5 | Quick Practice - Unanswered | FAIL | DB order leaks directly into "first unattempted". |
+| 6 | Quick Practice - Incorrect | FAIL (policy precision) | Same code path, but usually oldest-timestamp fallback; DB order mostly tie-break only. |
+| 7 | Quick Practice - Bookmarked | FAIL (mixed) | Order-sensitive when unattempted exists; otherwise mostly fallback/tie behavior. |
+| 8 | Single-question review (bookmarks/history click) | PASS | Ordering N/A; choice shuffling still applies. |
+| 9 | Session review/history session review | PASS | Preserves persisted `questionIds` order; no reshuffle. |
+| 10 | All-answered fallback behavior | PASS with caveat | Timestamp-driven, but equal timestamps use candidate order as tie-break. |
 
 ---
 
-## Verification Plan
+## 5. What Was Incorrect or Sloppy in Prior Drafts
 
-After implementing the fix, verify each path still works correctly:
-
-| Path | Expected Behavior | How to Verify |
-|------|-------------------|---------------|
-| Quick Practice — Unanswered | Questions interleaved across topics | Manual: start quick practice, verify first 5 questions span different sources |
-| Quick Practice — Incorrect | Incorrect questions from different batches interleaved | Manual: answer several wrong, re-enter with incorrect filter |
-| Quick Practice — Bookmarked | Bookmarked questions not batch-clustered | Manual: bookmark from different topics, re-enter with bookmarked filter |
-| Tutor Session | Still shuffled (no regression) | Existing tests pass |
-| Exam Session | Still shuffled (no regression) | Existing tests pass |
-| Session Review | Still in original session order | Existing tests pass |
-| Page refresh in Quick Practice | Same question shown (daily seed stability) | Manual: refresh page, confirm same question |
-| Next day | Different question ordering | Unit test: different dayKey → different shuffle |
-
-### Unit test additions
-
-```typescript
-// In get-next-question.test.ts
-it('shuffles candidate order for filter-based questions', () => {
-  // Given candidates in batch order: [batch1-q1, batch1-q2, batch1-q3, batch2-q1, ...]
-  // When executeForFilters is called
-  // Then first selected question should not always be batch1-q1
-});
-
-it('produces same shuffle for same user on same day', () => {
-  // Given same userId and same day
-  // When executeForFilters is called twice
-  // Then same question is selected both times
-});
-
-it('produces different shuffle on different days', () => {
-  // Given same userId but different days
-  // When executeForFilters is called
-  // Then different question ordering (statistically)
-});
-```
+1. Treating paths 5/6/7 as identical in practical effect was imprecise.
+2. Saying fallback is fully order-independent was too strong (ties are order-sensitive).
+3. Claiming bookmark reattempt has a "next -> quick practice" transition is not accurate in current wiring.
+4. Code sketch used `hashString` directly even though it is private to `shuffle.ts`.
 
 ---
 
-## Open Questions
+## 6. Recommended Direction (Robust, Minimal-Slop)
 
-1. **Should the daily seed use calendar date or "study day" concept?** Calendar date (`YYYY-MM-DD`) is simplest and sufficient. No need for timezone complexity — UTC is fine since the seed just needs to be stable-ish, not exact.
+### 6.1 Keep architecture, make policy explicit
 
-2. **Should the `incorrect` and `bookmarked` filters use the same daily seed or a different one?** Same seed is fine — the candidate pools are already different (different filter queries), so the shuffle output will naturally differ even with the same seed.
+Do not move randomization into repositories and do not create hidden Quick Practice sessions.
 
-3. **Is pure interleaving (guaranteed no same-topic adjacency) needed?** With 960 questions across 80+ batches, a Fisher-Yates shuffle statistically produces excellent interleaving. Explicit anti-adjacency constraints add complexity for marginal benefit. Recommend: shuffle is sufficient, revisit only if users report clustering after fix.
+Keep boundaries:
+- Repository: fetch candidates
+- Application use case: orchestrate
+- Domain service: deterministic ordering/selection policy
 
-4. **Does `hashString` need to be exported?** It's currently internal to `shuffle.ts`. The daily-seed approach would need either: (a) export `hashString`, (b) use a new `createDailySeed(userId, dayKey)` helper, or (c) encode the day into a numeric timestamp (e.g., `Date.parse(dayKey)`). Option (c) avoids any new exports.
+### 6.2 Define explicit filter-mode selection policy
+
+Proposed policy contract for quick practice:
+
+- `unanswered`: apply deterministic candidate permutation first, then select first unattempted.
+- `incorrect`: keep "oldest last-attempt wins" as primary rule (SPEC-consistent), add deterministic tie-break to avoid DB-order artifacts.
+- `bookmarked`: same rule set as generic filter mode; deterministic permutation still helps when unattempted bookmarks exist.
+
+This removes implicit behavior and keeps spec semantics intact.
+
+### 6.3 Minimal implementation sketch
+
+In `GetNextQuestionUseCase.executeForFilters()`:
+1. compute a stable daily seed without exposing private hash helpers:
+   - `const now = this.now();`
+   - `const utcDayStartMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());`
+   - `const seed = createSeed(userId, utcDayStartMs);`
+2. `const orderedCandidateIds = shuffleWithSeed(candidateIds, seed);`
+3. pass `orderedCandidateIds` to `selectNextQuestionId`.
+
+This is compile-safe with current public APIs.
+
+### 6.4 Why this is cleaner
+
+- No repository contract change.
+- No extra persistence model.
+- No controller/frontend changes.
+- Deterministic and testable (`now()` injection needed in `GetNextQuestionUseCase`, mirroring `StartPracticeSessionUseCase`).
+- Preserves existing domain service contracts while making candidate ordering intentional.
 
 ---
 
-## Decision Log
+## 7. Complexity Reduction Option (If We Want a Cleaner Core)
+
+If we want to reduce policy slop long-term, add a domain-level policy function and remove hidden assumptions from the use case:
+
+`selectNextQuestionIdByPolicy({ candidateIds, attemptHistory, mode, seed })`
+
+Where `mode` is a filter selection policy enum (not UI mode).  
+This makes behavior explicit and centrally testable, but it is a refactor, not required for immediate fix.
+
+---
+
+## 8. Verification Plan
+
+### 8.1 Unit tests (required)
+
+Add/adjust `get-next-question.test.ts` cases:
+- `unanswered` picks from shuffled candidate order, not raw repository order.
+- same user + same UTC day => same selected question for unchanged history.
+- day boundary changes candidate permutation.
+- all-attempted fallback still chooses oldest timestamp.
+- equal-timestamp fallback uses deterministic tie-break (documented expectation).
+
+### 8.2 Manual checks
+
+1. Quick Practice `unanswered`: first 5-10 questions should be more interleaved across sources.
+2. Quick Practice `incorrect`: verify oldest-answered behavior still feels stable; no regressions in retry cadence.
+3. Quick Practice `bookmarked`: verify no obvious insertion-order clustering when unattempted bookmarks exist.
+4. Tutor/exam/session review: verify no behavior changes.
+
+---
+
+## 9. Practice-Engine Doc Alignment Follow-ups
+
+After code changes, align wording in docs:
+- `docs/practice-engine/frontend-layer.md` currently says "random question" for quick practice.
+- `docs/practice-engine/practice-modes.md` currently documents first-unattempted/oldest fallback.
+
+Both can remain true, but should be made precise:
+- deterministic seeded ordering + selection policy, not ad hoc randomness.
+
+---
+
+## 10. Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-03-02 | Document as BS-038 | Confirmed root cause: Quick Practice `executeForFilters` path has no shuffle step |
-| 2026-03-02 | Expanded to full practice engine audit | Traced all 11 entry points; confirmed gap is exclusively in Quick Practice (paths 4-6) |
-| 2026-03-02 | Recommend Option A (daily seed shuffle in `executeForFilters`) | Minimal change (~4 lines), architecturally clean, preserves stateless Quick Practice design |
+| 2026-03-02 | Reframed BS-038 from "one bug" to policy-and-ordering audit | Needed alignment with overall practice-engine architecture and specs |
+| 2026-03-02 | Keep current architecture; fix filter ordering in use case | Clean Architecture boundaries remain correct |
+| 2026-03-02 | Prefer explicit per-filter policy language | Prevents future drift and "slop by accident" behavior |
