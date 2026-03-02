@@ -17,6 +17,12 @@ class FailingStripeEventRepository extends FakeStripeEventRepository {
   }
 }
 
+class FailingSubscriptionRepository extends FakeSubscriptionRepository {
+  async upsert(): Promise<void> {
+    throw new Error('boom');
+  }
+}
+
 function createDeps(overrides: {
   paymentGateway: FakePaymentGateway;
   stripeEvents?: FakeStripeEventRepository;
@@ -404,12 +410,6 @@ describe('processStripeWebhook', () => {
       },
     });
 
-    class FailingSubscriptionRepository extends FakeSubscriptionRepository {
-      async upsert(): Promise<void> {
-        throw new Error('boom');
-      }
-    }
-
     const subscriptions = new FailingSubscriptionRepository();
     const { deps, stripeEvents } = createRollbackAwareDeps({
       paymentGateway,
@@ -447,12 +447,6 @@ describe('processStripeWebhook', () => {
         },
       },
     });
-
-    class FailingSubscriptionRepository extends FakeSubscriptionRepository {
-      async upsert(): Promise<void> {
-        throw new Error('boom');
-      }
-    }
 
     const subscriptions = new FailingSubscriptionRepository();
     const { deps, stripeEvents } = createDeps({

@@ -573,7 +573,9 @@ describe('FakeStripeCustomerRepository', () => {
         code: 'CONFLICT',
       });
     });
+  });
 
+  describe('snapshot/restore', () => {
     it('restores repository state from a snapshot', async () => {
       const repo = new FakeStripeCustomerRepository();
       await repo.insert('user-1', 'cus_123');
