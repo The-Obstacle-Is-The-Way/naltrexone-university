@@ -29,8 +29,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
 | [BS-033](./bs-033-question-display-formatting-and-feedback-ux.md) | Question Display Formatting and Feedback UX — 22 Problems (component fixes complete, content/design items remain) | Active | — |
+| [BS-038](./bs-038-quick-practice-question-ordering-not-randomized.md) | Practice Engine Randomization Audit — Quick Practice not shuffled; full 11-path audit confirms gap is exclusively in `executeForFilters` (paths 4–6) | Active | — |
 
-**Next Brainstorming ID:** BS-038
+**Next Brainstorming ID:** BS-039
 
 ---
 
