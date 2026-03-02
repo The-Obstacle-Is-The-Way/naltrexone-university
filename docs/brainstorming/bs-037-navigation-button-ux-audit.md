@@ -22,40 +22,127 @@ This audit is now validated against production source and targeted tests.
 
 ## Vertical Tracer Bullets
 
-### Tracer 1: Quick Practice
+### Tracer 1: Quick Practice (In-Session)
 
 1. Entry point: `app/(app)/app/practice/quick/quick-practice-client.tsx:73-77`
-2. Header back link injected as `← Back to Practice` (`.../quick-practice-client.tsx:76`)
+2. Header back link injected as `← Back to Practice` (`.../quick-practice-client.tsx:76`) — **has arrow**
 3. Shared action bar from `app/(app)/app/practice/components/practice-view.tsx`
-4. Next button label is `Next →` (`.../practice-view.tsx:297-309`)
+4. **No Previous button** — `onPreviousQuestion` is not passed, so the conditional at `.../practice-view.tsx:270` is falsy
+5. Next button always renders as `Next →` (`.../practice-view.tsx:297-309`) — **has arrow**
+6. `hasNextQuestion` is not passed (`undefined`), so disabled check `hasNextQuestion === false` never triggers — Next always enabled
+7. No question navigator grid — Quick Practice pulls from random pool, not a fixed sequence
 
-### Tracer 2: Tutor/Exam Session (In-Session)
+### Tracer 2: Tutor Session (In-Session)
 
 1. Entry point: `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:184-240`
-2. Passes `hasPreviousQuestion` and `hasNextQuestion` into `PracticeView`
-3. `PracticeView` always renders Previous when `onPreviousQuestion` exists, but disables when `!hasPreviousQuestion` (`.../practice-view.tsx:270-283`)
-4. `PracticeView` always renders Next, but disables when `hasNextQuestion === false` (`.../practice-view.tsx:297-309`)
+2. Header shows `End session` button (`.../practice-view.tsx:145-152`)
+3. Computes `previousQuestionId`/`nextQuestionId` from `navigator.rows` (`.../practice-session-page-view.tsx:67-99`)
+4. Passes `onPreviousQuestion`, `hasPreviousQuestion`, `hasNextQuestion` into `PracticeView`
+5. Previous renders as `← Previous`, disabled when `!hasPreviousQuestion` (`.../practice-view.tsx:270-283`) — **has arrow, disabled-at-boundary**
+6. Next renders as `Next →`, disabled when `hasNextQuestion === false` (`.../practice-view.tsx:297-309`) — **has arrow, disabled-at-boundary**
+7. Question navigator grid rendered above question area (`.../practice-session-page-view.tsx:189-195`)
+8. Default back link fallback `← Back to Dashboard` (`.../practice-view.tsx:92`) is not rendered when `onEndSession` exists
 
-### Tracer 3: Session Review
+### Tracer 3: Exam Session (In-Session)
+
+1. Same `PracticeView` component as Tutor — identical Previous/Next arrow + disabled-at-boundary behavior
+2. Header shows `Review answers` instead of `End session` (`.../practice-session-page-view.tsx:226`)
+3. Additional `Mark for review` / `Unmark review` toggle button (`.../practice-view.tsx:322-332`) — no arrows
+4. Explanation feedback hidden during exam (shown only after submission) via `isExamMode` guard (`.../practice-view.tsx:253`)
+
+### Tracer 4: Exam Pre-Submit Review Stage
+
+1. Entry point: `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:93-241`
+2. Shows question grid with answered/unanswered/marked stats and per-question cards
+3. Navigation is via `Open question` buttons (`.../exam-review-view.tsx:180`) — no arrows
+4. Action buttons: `Submit exam` (`.../exam-review-view.tsx:192-193`), `Keep reviewing` (`:211-212`), `Confirm submit` (`:232-233`) — **all arrow-free**
+5. **No Previous/Next navigation** — this stage uses random-access via "Open question" only
+
+### Tracer 5: Session Summary (Post-Session)
+
+1. Entry point: `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx:13-109`
+2. Displayed after both Tutor and Exam sessions end
+3. Action buttons: `Back to Dashboard` (`:98`), `View in History` (`:101`), `Start another session` (`:104`) — **all arrow-free**
+4. **No Previous/Next navigation** — this is a results page, not a question view
+
+### Tracer 6: Session Review (Tutor Review / Exam Review)
 
 1. Entry point: `app/(app)/app/questions/[slug]/question-page-client.tsx`
-2. Computes `navPrev`/`navNext` from `sessionNavigation` (`.../question-page-client.tsx:175-188`)
-3. Renders `← Previous` link when `navPrev` exists, disabled button when null (`.../question-page-client.tsx:347-368`)
-4. Renders `Next →` link when `navNext` exists, disabled button when null (`.../question-page-client.tsx:399-420`)
-5. Back-link labels are already plain text via `getOriginUi` (`.../question-page-client.tsx:97-131`)
+2. Reached via: session summary breakdown → question link, or history sessions tab → review
+3. `sessionNavigation` is populated from session question sequence
+4. Computes `navPrev`/`navNext` from `sessionNavigation` (`.../question-page-client.tsx:175-188`)
+5. Renders `← Previous` link when `navPrev` exists, disabled button when null (`.../question-page-client.tsx:347-368`) — **has arrow, disabled-at-boundary**
+6. Renders `Next →` link when `navNext` exists, disabled button when null (`.../question-page-client.tsx:399-420`) — **has arrow, disabled-at-boundary**
+7. Back-link labels are already plain text via `getOriginUi` (`.../question-page-client.tsx:85-131`):
+   - `from=practice` + `sessionId` → `Back to Session`
+   - `from=practice` (no session) → `Back to Practice`
+8. Review question navigator grid rendered when `sessionNavigation` exists (`.../question-page-client.tsx:213-224`)
+
+### Tracer 7: Standalone Bookmark Review
+
+1. Entry: Bookmarks page → "Review" button → `/questions/[slug]?from=bookmarks&mode=review`
+2. Uses `QuestionView` but with **no `sessionNavigation`** — no session context
+3. **No Previous/Next buttons rendered** — the `props.sessionNavigation` conditional at `.../question-page-client.tsx:346` and `:398` is falsy
+4. Back-link: `Back to Bookmarks` (`.../question-page-client.tsx:112`) — **arrow-free**
+5. Top back link shown (`.../question-page-client.tsx:203-210`) — arrow-free
+6. Bottom back link shown when `submitResult` exists (`.../question-page-client.tsx:423-429`) — arrow-free
+7. **No question navigator grid** — standalone question, not a sequence
+
+### Tracer 8: History-Sequence Review
+
+1. Entry: History questions tab → question link with `historySeq` parameter
+2. Uses `QuestionView` with `sessionNavigation` built from history sequence slugs
+3. Same `← Previous` / `Next →` arrows and disabled-at-boundary behavior as Tracer 6
+4. Back-link: `Back to History` (`.../question-page-client.tsx:104`) — **arrow-free**
+5. Top back link hidden for `origin === 'history'` (`.../question-page-client.tsx:173`)
+
+### Tracer 9: Individual Question Review (Dashboard / Direct Link)
+
+1. Entry: Dashboard recent activity → question link → `/questions/[slug]?from=dashboard`
+2. Uses `QuestionView` with **no `sessionNavigation`** — standalone question
+3. **No Previous/Next buttons** — same as Tracer 7 (standalone context)
+4. Back-link: `Back to Dashboard` (`.../question-page-client.tsx:129`) — **arrow-free**
+5. Top back link shown — arrow-free
+
+### Tracer 10: Bookmarks Page (List View)
+
+1. Entry point: `app/(app)/app/bookmarks/page.tsx`
+2. Header link: `Go to Practice` (`:55`) — **arrow-free**
+3. Empty state: `Start practicing` button (`:67`) — **arrow-free**
+4. Per-card actions: `Review` (`:144`), `Remove` (`:164`) — **arrow-free**
+5. **No Previous/Next pagination** — all bookmarks displayed in a flat list
+
+### Tracer 11: History Pagination (Sessions & Questions Tabs)
+
+1. Sessions tab: `Previous` / `Next` (`.../history-sessions-tab.tsx:285,301`) — **arrow-free**
+2. Questions tab: `Previous` / `Next` (`.../history-questions-tab.tsx:509,529`) — **arrow-free**
+3. Boundary: **hidden-at-boundary** — Previous uses `<span />` spacer when `offset === 0`, Next fully removed when no next page
+4. One outlier: `Go to Practice →` in Questions tab empty state (`.../history-questions-tab.tsx:388`) — **has arrow**
 
 ---
 
 ## Horizontal Tracer Bullets
 
-| Surface | Prev/Next Labels | Boundary Behavior | Back Label Arrow |
-|---|---|---|---|
-| In-session Practice (`PracticeView`) | `← Previous`, `Next →` | Disabled | Quick uses arrow (`← Back to Practice`); default fallback has arrow (`← Back to Dashboard`) |
-| Session Review (`QuestionView`) | `← Previous`, `Next →` | Disabled | No arrow (already plain text) |
-| History pagination (Sessions/Questions tabs) | `Previous`, `Next` | Hidden (with spacer for Previous) | N/A |
-| Error pages (`practice/quick`, `practice/[sessionId]`) | N/A | N/A | `Back to Practice` (plain text) |
+| Surface | Prev/Next Labels | Boundary Behavior | Back/Action Labels | Arrow Status |
+|---|---|---|---|---|
+| Quick Practice (in-session) | `Next →` only (no Previous) | N/A (Next always enabled) | `← Back to Practice` | **2 arrows** |
+| Tutor Session (in-session) | `← Previous`, `Next →` | Disabled | `← Back to Dashboard` (fallback, not rendered when End session shows) | **2 arrows** (+ fallback) |
+| Exam Session (in-session) | `← Previous`, `Next →` | Disabled | Same fallback as Tutor | **2 arrows** (+ fallback) |
+| Exam Pre-Submit Review | None | N/A | `Open question`, `Submit exam`, `Keep reviewing` | **Clean** |
+| Session Summary (post-session) | None | N/A | `Back to Dashboard`, `View in History`, `Start another session` | **Clean** |
+| Session Review — from practice (`QuestionView`) | `← Previous`, `Next →` | Disabled | `Back to Session` / `Back to Practice` | **2 arrows** |
+| Session Review — from history (`QuestionView`) | `← Previous`, `Next →` | Disabled | `Back to History` | **2 arrows** |
+| Standalone Bookmark Review (`QuestionView`) | None | N/A | `Back to Bookmarks` | **Clean** |
+| Individual Question Review (`QuestionView`) | None | N/A | `Back to Dashboard` | **Clean** |
+| History pagination (Sessions/Questions tabs) | `Previous`, `Next` | Hidden (spacer for Previous) | N/A | **Clean** (except `Go to Practice →` empty state) |
+| Bookmarks page (list view) | None | N/A | `Go to Practice`, `Start practicing`, `Review`, `Remove` | **Clean** |
+| Dashboard | None | N/A | `Go to Practice`, `View all` | **Clean** |
+| Pricing page | None | N/A | `Back to Home`, `Manage Billing`, `Go to Dashboard` | **Clean** |
+| Error pages (`practice/quick`, `practice/[sessionId]`) | None | N/A | `Back to Practice` | **Clean** |
 
-Consistency gap: practice/review action bars use arrows + disabled boundaries, while history pagination already uses plain labels + hide-at-boundary behavior.
+**Consistency gap:** In-session practice and session-review action bars use arrows + disabled-at-boundary. History pagination already uses plain labels + hide-at-boundary. All other surfaces (bookmarks, dashboard, pricing, summaries, exam review, standalone question review) are already arrow-free and don't use disabled-at-boundary.
+
+**Arrow concentration:** All 7 arrow-bearing labels are confined to 3 files: `practice-view.tsx` (3), `question-page-client.tsx` (4), `quick-practice-client.tsx` (1). The `Go to Practice →` in `history-questions-tab.tsx` is the sole outlier outside these files.
 
 ---
 
@@ -190,3 +277,4 @@ Result: 2 files passed, 21 tests passed.
 |---|---|---|
 | 2026-03-01 | Created BS-037 | Visual audit captured navigation-label and boundary-control concerns |
 | 2026-03-02 | Applied code-truth correction pass | Fixed inaccurate assumptions (session-review back labels already arrow-free), added full vertical/horizontal traces, and expanded test-impact coverage |
+| 2026-03-02 | Deep tracer expansion — all modes | Expanded from 3 vertical tracers to 11, covering every user-facing mode: Quick Practice, Tutor in-session, Exam in-session, Exam pre-submit review, Session summary, Session review (practice + history origins), Standalone bookmark review, History-sequence review, Individual question review, Bookmarks list, History pagination. Horizontal table expanded from 4 rows to 15. Confirmed arrow concentration in 3 files + 1 outlier. |
