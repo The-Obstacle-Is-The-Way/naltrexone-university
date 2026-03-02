@@ -72,6 +72,7 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
     const stripeStatus = subscriptionStatusToStripeSubscriptionStatus(
       input.status,
     );
+    const updatedAt = this.now();
 
     try {
       await this.db
@@ -83,7 +84,7 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
           priceId,
           currentPeriodEnd: input.currentPeriodEnd,
           cancelAtPeriodEnd: input.cancelAtPeriodEnd,
-          updatedAt: this.now(),
+          updatedAt,
         })
         .onConflictDoUpdate({
           target: stripeSubscriptions.userId,
@@ -93,7 +94,7 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
             priceId,
             currentPeriodEnd: input.currentPeriodEnd,
             cancelAtPeriodEnd: input.cancelAtPeriodEnd,
-            updatedAt: this.now(),
+            updatedAt,
           },
         });
     } catch (error) {

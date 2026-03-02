@@ -115,7 +115,7 @@ describe('DrizzleSubscriptionRepository', () => {
     });
   });
 
-  it('upserts subscriptions by userId and maps plan → priceId', async () => {
+  it('upserts subscriptions by userId and reuses one captured timestamp', async () => {
     const now = new Date('2026-02-01T02:03:04.000Z');
     const nowFn = vi.fn(() => now);
     const onConflictDoUpdate = async () => {};
@@ -163,7 +163,7 @@ describe('DrizzleSubscriptionRepository', () => {
         cancelAtPeriodEnd: false,
       }),
     ).resolves.toBeUndefined();
-    expect(nowFn).toHaveBeenCalledTimes(2);
+    expect(nowFn).toHaveBeenCalledTimes(1);
   });
 
   it('throws CONFLICT when the DB reports a unique-constraint violation during upsert', async () => {
