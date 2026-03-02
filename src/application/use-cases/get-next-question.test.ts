@@ -150,6 +150,16 @@ function createQuickPracticeQuestion(questionId: string, createdAtIso: string) {
   });
 }
 
+function createFiveQuickPracticeQuestions() {
+  return [
+    createQuickPracticeQuestion('q1', '2026-01-01T00:00:00.000Z'),
+    createQuickPracticeQuestion('q2', '2026-01-02T00:00:00.000Z'),
+    createQuickPracticeQuestion('q3', '2026-01-03T00:00:00.000Z'),
+    createQuickPracticeQuestion('q4', '2026-01-04T00:00:00.000Z'),
+    createQuickPracticeQuestion('q5', '2026-01-05T00:00:00.000Z'),
+  ];
+}
+
 function findUserForShuffledFirst(
   candidateIds: readonly string[],
   now: Date,
@@ -700,13 +710,7 @@ describe('GetNextQuestionUseCase', () => {
 
     const { getNextQuestion } = createTestDeps({
       now: () => now,
-      questions: [
-        createQuickPracticeQuestion('q1', '2026-01-01T00:00:00.000Z'),
-        createQuickPracticeQuestion('q2', '2026-01-02T00:00:00.000Z'),
-        createQuickPracticeQuestion('q3', '2026-01-03T00:00:00.000Z'),
-        createQuickPracticeQuestion('q4', '2026-01-04T00:00:00.000Z'),
-        createQuickPracticeQuestion('q5', '2026-01-05T00:00:00.000Z'),
-      ],
+      questions: createFiveQuickPracticeQuestions(),
     });
 
     const expectedOrder = shuffleQuickPracticeCandidates(
@@ -729,13 +733,7 @@ describe('GetNextQuestionUseCase', () => {
     const candidateIds = ['q5', 'q4', 'q3', 'q2', 'q1'];
     const userId = findUserForShuffledFirst(candidateIds, nowMorning);
 
-    const questions = [
-      createQuickPracticeQuestion('q1', '2026-01-01T00:00:00.000Z'),
-      createQuickPracticeQuestion('q2', '2026-01-02T00:00:00.000Z'),
-      createQuickPracticeQuestion('q3', '2026-01-03T00:00:00.000Z'),
-      createQuickPracticeQuestion('q4', '2026-01-04T00:00:00.000Z'),
-      createQuickPracticeQuestion('q5', '2026-01-05T00:00:00.000Z'),
-    ];
+    const questions = createFiveQuickPracticeQuestions();
 
     const expectedMorning = shuffleQuickPracticeCandidates(
       candidateIds,
@@ -804,13 +802,7 @@ describe('GetNextQuestionUseCase', () => {
       );
     }
 
-    const questions = [
-      createQuickPracticeQuestion('q1', '2026-01-01T00:00:00.000Z'),
-      createQuickPracticeQuestion('q2', '2026-01-02T00:00:00.000Z'),
-      createQuickPracticeQuestion('q3', '2026-01-03T00:00:00.000Z'),
-      createQuickPracticeQuestion('q4', '2026-01-04T00:00:00.000Z'),
-      createQuickPracticeQuestion('q5', '2026-01-05T00:00:00.000Z'),
-    ];
+    const questions = createFiveQuickPracticeQuestions();
 
     const { getNextQuestion: getDayOneQuestion } = createTestDeps({
       questions,
@@ -838,11 +830,7 @@ describe('GetNextQuestionUseCase', () => {
   it('keeps unique-oldest attempted fallback unchanged after candidate shuffling', async () => {
     const dayOne = new Date('2026-03-02T10:00:00.000Z');
     const dayTwo = new Date('2026-03-03T10:00:00.000Z');
-    const questions = [
-      createQuickPracticeQuestion('q1', '2026-01-01T00:00:00.000Z'),
-      createQuickPracticeQuestion('q2', '2026-01-02T00:00:00.000Z'),
-      createQuickPracticeQuestion('q3', '2026-01-03T00:00:00.000Z'),
-    ];
+    const questions = createFiveQuickPracticeQuestions().slice(0, 3);
 
     const attempts = [
       createAttempt({
@@ -892,12 +880,7 @@ describe('GetNextQuestionUseCase', () => {
     const userId = findUserForShuffledFirst(candidateIds, now);
     const tieTimestamp = new Date('2026-02-20T12:00:00.000Z');
 
-    const questions = [
-      createQuickPracticeQuestion('q1', '2026-01-01T00:00:00.000Z'),
-      createQuickPracticeQuestion('q2', '2026-01-02T00:00:00.000Z'),
-      createQuickPracticeQuestion('q3', '2026-01-03T00:00:00.000Z'),
-      createQuickPracticeQuestion('q4', '2026-01-04T00:00:00.000Z'),
-    ];
+    const questions = createFiveQuickPracticeQuestions().slice(0, 4);
 
     const attempts = [
       createAttempt({
@@ -1075,13 +1058,7 @@ describe('GetNextQuestionUseCase', () => {
       now,
     );
 
-    const questions = [
-      createQuickPracticeQuestion('q1', '2026-01-01T00:00:00.000Z'),
-      createQuickPracticeQuestion('q2', '2026-01-02T00:00:00.000Z'),
-      createQuickPracticeQuestion('q3', '2026-01-03T00:00:00.000Z'),
-      createQuickPracticeQuestion('q4', '2026-01-04T00:00:00.000Z'),
-      createQuickPracticeQuestion('q5', '2026-01-05T00:00:00.000Z'),
-    ];
+    const questions = createFiveQuickPracticeQuestions();
 
     const firstQuestionRepo = new FakeQuestionRepository(questions);
     const secondQuestionRepo = new FakeQuestionRepository(questions);
