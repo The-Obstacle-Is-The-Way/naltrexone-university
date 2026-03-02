@@ -33,7 +33,6 @@
 ## 2. Open Debt (Practice-Specific)
 
 - **BS-014:** Practice Starter — Silent truncation when fewer questions match than requested count (no spec yet)
-- **DEBT-268:** Quick Practice ordering-policy alignment — apply daily-seeded candidate shuffle before `selectNextQuestionId` in filter mode
 
 ---
 

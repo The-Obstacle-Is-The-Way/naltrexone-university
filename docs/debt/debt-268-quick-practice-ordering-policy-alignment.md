@@ -1,6 +1,6 @@
 # DEBT-268: Quick Practice Ordering Policy Alignment
 
-**Status:** Active
+**Status:** Resolved (2026-03-02)
 **Priority:** P2
 **Date:** 2026-03-02
 **Owner:** Practice Engine
@@ -10,12 +10,16 @@
 
 ## Executive summary
 
-`GetNextQuestionUseCase.executeForFilters()` currently passes repository-returned candidates directly into `selectNextQuestionId()` without shuffling.  
-`selectNextQuestionId()` is intentionally order-dependent (`first unattempted`, then `oldest answeredAt`), so ordering policy is currently inherited from repository order.
+`GetNextQuestionUseCase.executeForFilters()` passed repository-returned candidates directly into `selectNextQuestionId()` without shuffling.
+`selectNextQuestionId()` is intentionally order-dependent (`first unattempted`, then `oldest answeredAt`), so ordering policy was inherited from repository order.
 
-Important correction: the current leak is not raw table insertion order; it is explicit repository ordering (`ORDER BY questions.createdAt DESC, questions.id ASC`) from `DrizzleQuestionRepository.listPublishedCandidateIds()`.
+Important correction: the leak was not raw table insertion order; it was explicit repository ordering (`ORDER BY questions.createdAt DESC, questions.id ASC`) from `DrizzleQuestionRepository.listPublishedCandidateIds()`.
 
-This violates [ordering-policy.md](../practice-engine/ordering-policy.md) Section 3.3, which requires a daily-seeded shuffle before Quick Practice selection.
+This violated [ordering-policy.md](../practice-engine/ordering-policy.md) Section 3.3, which requires a daily-seeded shuffle before Quick Practice selection.
+
+## Resolution
+
+Added `now: () => Date = () => new Date()` as a fourth constructor parameter to `GetNextQuestionUseCase`, and applied daily-seeded `shuffleWithSeed` in `executeForFilters` before calling `selectNextQuestionId`. All three instantiation sites updated. Six unit tests cover daily-seeded shuffle, same-day stability, day-boundary rotation, oldest-fallback regression, equal-timestamp tie-break, and all three filter pools.
 
 ## Tracer-bullet audit (vertical + horizontal, verified 2026-03-02)
 
@@ -25,9 +29,9 @@ This violates [ordering-policy.md](../practice-engine/ordering-policy.md) Sectio
 | 2 | Session with subset (tag-filtered) | **Pass** | `listPublishedCandidateIds` applies filters first; `StartPracticeSessionUseCase` shuffles returned subset | Filter-then-shuffle behavior is correct. |
 | 3 | Tutor session (N questions) | **Pass** | Same `StartPracticeSessionUseCase` path | Shuffle-then-slice is correct. |
 | 4 | Exam session (N questions) | **Pass** | Same `StartPracticeSessionUseCase` path | Tutor/exam parity confirmed. |
-| 5 | Quick Practice - unanswered | **Fail** | `QuickPracticeClient` -> `getNextQuestion` -> `GetNextQuestionUseCase.executeForFilters` -> `selectNextQuestionId(candidateIds, ...)` | No shuffle before selection. |
-| 6 | Quick Practice - incorrect | **Fail** | Same as #5 | Same unshuffled path. |
-| 7 | Quick Practice - bookmarked | **Fail** | Same as #5 | Same unshuffled path. |
+| 5 | Quick Practice - unanswered | **Pass** | `GetNextQuestionUseCase.executeForFilters` -> `shuffleWithSeed(candidates, dailySeed)` -> `selectNextQuestionId(shuffled, ...)` | Daily-seeded shuffle applied before selection. |
+| 6 | Quick Practice - incorrect | **Pass** | Same as #5 | Same shuffled path. |
+| 7 | Quick Practice - bookmarked | **Pass** | Same as #5 | Same shuffled path. |
 | 8 | Single-question paths (bookmark/history/dashboard question open) | **Pass** | `getQuestionBySlug` + `GetPreviousAttemptUseCase` | Choice order still uses `buildShuffledChoiceViews`. Question ordering N/A. |
 | 9 | Session review/history review ordering | **Pass** | `GetPracticeSessionReviewUseCase` iterates persisted `session.questionIds`; review nav uses returned row order | Preserves original session order; no reshuffle. |
 | 10 | All-attempted fallback behavior | **Pass (with tie nuance)** | `selectNextQuestionId` oldest timestamp fallback | Shuffling candidates does not change winner when oldest timestamp is unique; equal-timestamp ties are intentionally order-based. |
@@ -40,16 +44,16 @@ This violates [ordering-policy.md](../practice-engine/ordering-policy.md) Sectio
 | `incorrect` | **Low to medium** - usually timestamp-driven; ordering mostly affects equal-timestamp ties. |
 | `bookmarked` | **Mixed** - high when many are unattempted; otherwise mostly timestamp-driven. |
 
-## Why this is debt (not just a local 4-line tweak)
+## Why this was debt (not just a local 4-line tweak)
 
-- Deterministic daily behavior needs injected clock control in `GetNextQuestionUseCase` for stable tests (`now: () => Date`).
-- Every `GetNextQuestionUseCase` instantiation path must be verified for constructor parity.
-- Existing tests cover selection behavior, but not daily-seeded candidate ordering semantics in filter mode.
-- Docs and coverage map must be updated after implementation to remove "target state" language.
+- Deterministic daily behavior needed injected clock control in `GetNextQuestionUseCase` for stable tests (`now: () => Date`).
+- Every `GetNextQuestionUseCase` instantiation path had to be verified for constructor parity.
+- Existing tests covered selection behavior, but not daily-seeded candidate ordering semantics in filter mode.
+- Docs and coverage map had to be updated after implementation to remove "target state" language.
 
-## Recommended implementation (minimal robust)
+## Implementation (minimal robust)
 
-Keep the fix in the application layer (`GetNextQuestionUseCase.executeForFilters`) so repositories remain data providers and ordering policy remains use-case orchestration.
+Fix kept in the application layer (`GetNextQuestionUseCase.executeForFilters`) so repositories remain data providers and ordering policy remains use-case orchestration.
 
 ```typescript
 const candidateIds = await this.questions.listPublishedCandidateIds({ ...filters, userId });
@@ -65,32 +69,30 @@ const selectedId = selectNextQuestionId(orderedCandidateIds, byQuestionId);
 
 Same seed across filters is acceptable and expected: `unanswered`, `incorrect`, and `bookmarked` pools differ, so permutations differ.
 
-## Required change set
+## Change set (completed)
 
-### 1. Add clock injection to `GetNextQuestionUseCase`
+### 1. Added clock injection to `GetNextQuestionUseCase`
 
-**File:** `src/application/use-cases/get-next-question.ts`  
-Add constructor param: `now: () => Date = () => new Date()`.
+**File:** `src/application/use-cases/get-next-question.ts`
+Constructor param: `now: () => Date = () => new Date()`.
 
-### 2. Shuffle Quick Practice candidates before selection
+### 2. Shuffled Quick Practice candidates before selection
 
-**File:** `src/application/use-cases/get-next-question.ts` (`executeForFilters`)  
-Apply daily UTC seed + `shuffleWithSeed` before `selectNextQuestionId`.
+**File:** `src/application/use-cases/get-next-question.ts` (`executeForFilters`)
+Daily UTC seed + `shuffleWithSeed` applied before `selectNextQuestionId`.
 
-### 3. Update constructor call sites
+### 3. Updated constructor call sites
 
-**Known instantiation points:**
-- `lib/container/use-cases.ts`
-- `tests/integration/controllers.integration.test.ts`
-- `src/application/use-cases/get-next-question.test.ts`
+**Updated instantiation points:**
+- `lib/container/use-cases.ts` — `primitives.now` injected
+- `tests/integration/controllers.integration.test.ts` — `() => new Date()` injected
+- `src/application/use-cases/get-next-question.test.ts` — `overrides.now` injected via `createTestDeps`
 
-Use explicit fixed clocks in tests that assert day-boundary behavior.
+### 4. Added unit tests
 
-### 4. Expand tests (unit + integration)
+**File:** `src/application/use-cases/get-next-question.test.ts`
 
-**Primary file:** `src/application/use-cases/get-next-question.test.ts`
-
-Add tests for:
+Six new tests:
 - Daily-seeded shuffle is applied before selection in filter mode.
 - Same user + same UTC day => same selected question (unchanged history).
 - UTC day boundary => new permutation and potentially new selected question.
@@ -98,27 +100,28 @@ Add tests for:
 - Equal-timestamp all-attempted ties resolve deterministically from shuffled order.
 - Status-specific filter pools (`unanswered`/`incorrect`/`bookmarked`) each follow shuffled-candidate contract.
 
-Add/adjust integration test(s) in `tests/integration/controllers.integration.test.ts` with fixed `now` to verify full stack behavior through controller wiring.
+### 5. Aligned docs after implementation
 
-### 5. Align docs after implementation
-
-**Files:**
-- `docs/practice-engine/ordering-policy.md`
-- `docs/practice-engine/practice-modes.md`
-- `docs/practice-engine/spec-coverage-map.md`
+**Files updated:**
+- `docs/practice-engine/ordering-policy.md` — paths 4-6 changed from "Target: Yes" to "Yes"; DEBT-268 reference removed
+- `docs/practice-engine/practice-modes.md` — ad-hoc description updated to reflect implemented daily-seeded shuffle
+- `docs/practice-engine/current-state.md` — DEBT-268 removed from open debt
+- `docs/practice-engine/frontend-layer.md` — DEBT-268 tracking note removed
+- `docs/debt/index.md` — DEBT-268 moved to resolved
+- `docs/adr/adr-003-testing-strategy.md` — code example updated to 4-arg constructor
 
 ## Acceptance criteria
 
-- [ ] `GetNextQuestionUseCase` accepts injected `now`.
-- [ ] `executeForFilters` shuffles candidates with `createSeed(userId, utcDayStartMs)` before `selectNextQuestionId`.
-- [ ] Quick Practice `unanswered` no longer follows repository order.
-- [ ] Quick Practice `incorrect` and `bookmarked` follow same shuffled-candidate contract.
-- [ ] All-attempted unique-oldest fallback is unchanged.
-- [ ] Equal-timestamp tie-break is deterministic and based on shuffled candidate order.
-- [ ] Session creation and session review ordering behavior is unchanged.
-- [ ] Single-question/review choice-order behavior remains deterministic via `buildShuffledChoiceViews`.
-- [ ] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build` passes.
-- [ ] Practice engine docs updated to implemented state.
+- [x] `GetNextQuestionUseCase` accepts injected `now`.
+- [x] `executeForFilters` shuffles candidates with `createSeed(userId, utcDayStartMs)` before `selectNextQuestionId`.
+- [x] Quick Practice `unanswered` no longer follows repository order.
+- [x] Quick Practice `incorrect` and `bookmarked` follow same shuffled-candidate contract.
+- [x] All-attempted unique-oldest fallback is unchanged.
+- [x] Equal-timestamp tie-break is deterministic and based on shuffled candidate order.
+- [x] Session creation and session review ordering behavior is unchanged.
+- [x] Single-question/review choice-order behavior remains deterministic via `buildShuffledChoiceViews`.
+- [x] `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build` passes.
+- [x] Practice engine docs updated to implemented state.
 
 ## Risks and mitigations
 
@@ -138,6 +141,6 @@ Add/adjust integration test(s) in `tests/integration/controllers.integration.tes
 
 ## Implementation notes
 
-- `createSeed` and `shuffleWithSeed` already exist in `src/domain/services`.
-- Daily timestamp must use UTC day start (`Date.UTC(year, month, date)`) to avoid server locale drift.
-- Quick Practice currently sends a single status (`statuses: [filters.status]`) from client, but the fix must hold for any status array shape accepted by `QuestionFilters`.
+- `createSeed` and `shuffleWithSeed` already existed in `src/domain/services`.
+- Daily timestamp uses UTC day start (`Date.UTC(year, month, date)`) to avoid server locale drift.
+- Quick Practice currently sends a single status (`statuses: [filters.status]`) from client, but the fix holds for any status array shape accepted by `QuestionFilters`.

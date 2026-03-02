@@ -1,7 +1,9 @@
 import type { Question } from '@/src/domain/entities';
 import {
   createDefaultQuestionState,
+  createSeed,
   selectNextQuestionId,
+  shuffleWithSeed,
 } from '@/src/domain/services';
 import type {
   PracticeMode,
@@ -74,6 +76,7 @@ export class GetNextQuestionUseCase {
     private readonly questions: QuestionRepository,
     private readonly attempts: AttemptMostRecentAnsweredAtReader,
     private readonly sessions: PracticeSessionRepository,
+    private readonly now: () => Date = () => new Date(),
   ) {}
 
   async execute(input: GetNextQuestionInput): Promise<GetNextQuestionOutput> {
@@ -237,16 +240,25 @@ export class GetNextQuestionUseCase {
     });
     if (candidateIds.length === 0) return null;
 
+    const now = this.now();
+    const utcDayStartMs = Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),
+    );
+    const seed = createSeed(userId, utcDayStartMs);
+    const orderedCandidateIds = shuffleWithSeed(candidateIds, seed);
+
     const mostRecent =
       await this.attempts.findMostRecentAnsweredAtByQuestionIds(
         userId,
-        candidateIds,
+        orderedCandidateIds,
       );
     const byQuestionId = new Map(
       mostRecent.map((r) => [r.questionId, r.answeredAt]),
     );
 
-    const selectedId = selectNextQuestionId(candidateIds, byQuestionId);
+    const selectedId = selectNextQuestionId(orderedCandidateIds, byQuestionId);
     if (!selectedId) return null;
 
     const question = await this.questions.findPublishedById(selectedId);

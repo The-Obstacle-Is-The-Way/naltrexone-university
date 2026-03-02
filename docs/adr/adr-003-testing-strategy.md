@@ -357,7 +357,7 @@ const questions = new FakeQuestionRepository([q1]);
 const attempts = new FakeAttemptRepository([]);
 const sessions = new FakePracticeSessionRepository([session]);
 
-const useCase = new GetNextQuestionUseCase(questions, attempts, sessions);
+const useCase = new GetNextQuestionUseCase(questions, attempts, sessions, () => new Date());
 ```
 
 ### CI and Tooling Configuration (SSOT)

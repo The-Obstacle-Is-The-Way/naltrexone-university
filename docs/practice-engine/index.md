@@ -130,6 +130,7 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 
 | Date | Change |
 |------|--------|
+| 2026-03-02 | Resolved DEBT-268: daily-seeded shuffle implemented in `executeForFilters`, ordering-policy.md updated from target to implemented state, satellite docs aligned. |
 | 2026-03-02 | Added Ordering Policy document — canonical question/choice ordering rules across all paths. BS-038 audit promoted to DEBT-268 for Quick Practice ordering fix. |
 | 2026-03-01 | Closed DEBT-266 and DEBT-267 after implementation: added retry/hydration/normalization telemetry, accepted visit-scoped retry-marker policy, and hardened mixed `attemptId + sessionId` previous-attempt contract. |
 | 2026-03-01 | Closed DEBT-265 core scope in debt tracking, moved observability/retry-marker persistence slices into DEBT-266, and added DEBT-267 for downstream mixed-identifier contract hardening. |

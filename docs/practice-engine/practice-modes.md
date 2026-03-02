@@ -54,7 +54,12 @@ For sessions, questions are selected at creation time:
 
 For ad-hoc mode, `selectNextQuestionId()` prefers the **first unattempted** candidate (in candidate order). If all candidates have been attempted, it selects the question with the **oldest** last-attempt timestamp.
 
-Current implementation note: candidate order is repository order for this path. Policy-alignment work to apply daily-seeded candidate shuffle before selection is tracked in DEBT-268 and documented in `ordering-policy.md`.
+For ad-hoc mode, candidate order is daily-seeded and user-specific before selection:
+1. `listPublishedCandidateIds(filters)`
+2. `shuffleWithSeed(candidates, createSeed(userId, Date.UTC(year, month, date)))`
+3. `selectNextQuestionId(shuffledCandidates, attemptHistory)`
+
+This keeps same-day behavior stable for the same user while rotating order at UTC day boundaries.
 
 ---
 

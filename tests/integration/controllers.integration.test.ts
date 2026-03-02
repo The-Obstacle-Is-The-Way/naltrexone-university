@@ -272,6 +272,7 @@ describe('question controllers (integration)', () => {
         questions,
         attempts,
         sessions,
+        () => new Date(),
       ),
       submitAnswerUseCase: new SubmitAnswerUseCase(
         questions,
