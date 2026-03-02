@@ -173,6 +173,123 @@ describe('GetPreviousAttemptUseCase', () => {
     ).resolves.toBeNull();
   });
 
+  it('returns null when attemptId belongs to an active exam session', async () => {
+    const userId = 'user-1';
+    const questionId = 'q1';
+    const sessionId = 'session-active';
+
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      explanationMd: 'Because.',
+      choices: [
+        createChoice({
+          id: 'c1',
+          questionId,
+          label: 'A',
+          isCorrect: false,
+        }),
+        createChoice({
+          id: 'c2',
+          questionId,
+          label: 'B',
+          isCorrect: true,
+        }),
+      ],
+    });
+
+    const activeSession = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'exam',
+      questionIds: [questionId],
+      endedAt: null,
+    });
+
+    const attempt = createAttempt({
+      id: 'attempt-active-session',
+      userId,
+      questionId,
+      practiceSessionId: sessionId,
+      selectedChoiceId: 'c2',
+      isCorrect: true,
+      answeredAt: new Date('2026-02-01T12:00:00Z'),
+    });
+
+    const useCase = new GetPreviousAttemptUseCase(
+      new FakeAttemptRepository([attempt]),
+      new FakeQuestionRepository([question]),
+      new FakeLogger(),
+      new FakePracticeSessionRepository([activeSession]),
+    );
+
+    await expect(
+      useCase.execute({
+        userId,
+        questionId,
+        attemptId: 'attempt-active-session',
+      }),
+    ).resolves.toBeNull();
+  });
+
+  it('returns null when latest attempt belongs to an active exam session', async () => {
+    const userId = 'user-1';
+    const questionId = 'q1';
+    const sessionId = 'session-active';
+
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      explanationMd: 'Because.',
+      choices: [
+        createChoice({
+          id: 'c1',
+          questionId,
+          label: 'A',
+          isCorrect: false,
+        }),
+        createChoice({
+          id: 'c2',
+          questionId,
+          label: 'B',
+          isCorrect: true,
+        }),
+      ],
+    });
+
+    const activeSession = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'exam',
+      questionIds: [questionId],
+      endedAt: null,
+    });
+
+    const attempt = createAttempt({
+      id: 'attempt-active-latest',
+      userId,
+      questionId,
+      practiceSessionId: sessionId,
+      selectedChoiceId: 'c2',
+      isCorrect: true,
+      answeredAt: new Date('2026-02-01T12:00:00Z'),
+    });
+
+    const useCase = new GetPreviousAttemptUseCase(
+      new FakeAttemptRepository([attempt]),
+      new FakeQuestionRepository([question]),
+      new FakeLogger(),
+      new FakePracticeSessionRepository([activeSession]),
+    );
+
+    await expect(
+      useCase.execute({
+        userId,
+        questionId,
+      }),
+    ).resolves.toBeNull();
+  });
+
   it('returns null for unanswered question when question is not in session', async () => {
     const question = createQuestion({
       id: 'q1',

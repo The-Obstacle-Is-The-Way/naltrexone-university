@@ -35,14 +35,14 @@
 | Status Filter Segmented Control + Review Navigator | SPEC-028 | Implemented | Segmented control for status/difficulty filters; color-coded question navigator grid in review mode |
 | Dev Environment Resilience | SPEC-029 | Implemented | Client-side timeouts, observable failure states, `ErrorCard` recovery actions |
 | Question View UX Unification | SPEC-030 | Implemented | Tutor state persistence fix, Previous button in practice, review nav relocation to bottom bar |
-| Retry Lineage + Session Review Inline Retry | [Retry Logic SSOT](./retry-logic.md) + DEBT-265 | Implemented | Provenance fields + validation + inline retry in ended-session review are implemented; observability + mixed-id hardening follow-ups were completed in DEBT-266/267 |
+| Retry Lineage + Session Review Inline Retry | [Retry Logic SSOT](./retry-logic.md) + DEBT-265 | Implemented (with active secrecy drift) | Provenance fields + validation + inline retry in ended-session review are implemented; observability + mixed-id hardening were completed in DEBT-266/267. Active exam-answer secrecy drift is tracked in BUG-180/181/185 (see [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md)). |
 
 ---
 
 ## 2. Spec/Doc Drift Summary
 
-As of **2026-03-02**, previously identified practice-engine drift items have been paid down across core specs and implementation docs. SPEC-021 through SPEC-030 are implemented and reflected. Retry provenance and inline session-review retry are now captured in the practice-engine SSOT (`retry-logic.md`) and DEBT-265 execution contract.
+As of **2026-03-02**, SPEC-021 through SPEC-030 implementation coverage remains strong, but cross-layer exam-answer secrecy drift is active (BUG-180, BUG-181, BUG-185). The canonical policy registry is now [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md).
 
-Remaining drift risk is concentrated in unrelated future feature work, not retry lineage/review flow contracts.
+Remaining drift risk is not only future work; it currently includes correctness-exposure invariants across review hydration, retry provenance, and dashboard projections.
 
 When behavior changes introduce new public contracts (ports/use case IO/controller outputs), update the corresponding spec and add a changelog entry.

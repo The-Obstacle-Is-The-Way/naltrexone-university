@@ -146,6 +146,16 @@ export class GetPreviousAttemptUseCase {
       );
     }
 
+    if (attempt.practiceSessionId) {
+      const attemptSession = await this.sessions.findByIdAndUserId(
+        attempt.practiceSessionId,
+        input.userId,
+      );
+      if (attemptSession?.mode === 'exam' && attemptSession.endedAt === null) {
+        return null;
+      }
+    }
+
     const question = await this.questions.findPublishedById(attempt.questionId);
 
     if (!question) {

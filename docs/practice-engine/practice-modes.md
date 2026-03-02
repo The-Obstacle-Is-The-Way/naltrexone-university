@@ -41,7 +41,7 @@ EndPracticeSession → computes totals from questionStates
 
 - **Mark for review:** Users can flag questions during the session. `SetPracticeSessionQuestionMark` persists the flag. Only available in exam mode.
 - **Review stage:** Before finalizing, users see a navigator grid showing answered/unanswered/marked questions and can jump to any question.
-- **Deferred explanations:** `SubmitAnswer` returns `explanationMd: null` for active exam sessions. Explanations become visible only after `EndPracticeSession`.
+- **Deferred explanations (policy):** Correctness/explanations must remain hidden while exam session is active, then become visible after `EndPracticeSession`. Canonical source: [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md). Prior drift was resolved in [BUG-180](../_archive/bugs/bug-180-active-exam-answer-leak-via-review-hydration.md), [BUG-181](../_archive/bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md), and [BUG-185](../_archive/bugs/bug-185-dashboard-recent-activity-reveals-active-exam-correctness.md).
 
 ---
 

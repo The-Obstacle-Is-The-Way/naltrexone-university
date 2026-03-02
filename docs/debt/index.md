@@ -19,7 +19,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 
-**Next Debt ID:** DEBT-269
+**Next Debt ID:** DEBT-270
 
 ---
 
@@ -30,7 +30,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-268](./debt-268-quick-practice-ordering-policy-alignment.md) | Quick Practice Ordering Policy Alignment — daily-seeded shuffle in `executeForFilters` (BS-038) | P2 | 2026-03-02 | — |
 | [DEBT-267](../_archive/debt/debt-267-get-previous-attempt-identifier-contract-hardening.md) | GetPreviousAttempt Identifier Contract Hardening | P3 | 2026-03-01 | — |
 | [DEBT-266](../_archive/debt/debt-266-retry-observability-and-session-review-marker-persistence.md) | Retry Observability and Session-Review Marker Persistence | P3 | 2026-03-01 | — |
-| [DEBT-265](../_archive/debt/debt-265-history-breakdown-ux-redesign.md) | History Breakdown UX Redesign — flat surface, list structure, disclosure a11y, interaction semantics (BS-036) | P2 | 2026-03-01 | — |
+| [DEBT-269](../_archive/debt/debt-269-history-breakdown-ux-redesign.md) | History Breakdown UX Redesign — flat surface, list structure, disclosure a11y, interaction semantics (BS-036) | P2 | 2026-03-01 | — |
 | [DEBT-265](../_archive/debt/debt-265-retry-lineage-and-review-practice-unification.md) | Retry Lineage and Review/Practice Unification | P2 | 2026-03-01 | — |
 | [DEBT-264](../_archive/debt/debt-264-documentation-sync.md) | Documentation Sync (Finalize frontend docs after DEBT-251–263) | P2 | 2026-03-01 | — |
 | [DEBT-250](../_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md) | Frontend Visual Divergence Compliance Plan (BS-035 + all 31 items + 13 decisions) | P2 | 2026-03-01 | — |

@@ -357,6 +357,98 @@ describe('SubmitAnswerUseCase', () => {
       });
     });
 
+    it('throws CONFLICT when session_review retrySessionId points to an active exam session', async () => {
+      const userId = 'user-1';
+      const questionId = 'q1';
+      const retrySessionId = 'session-review-active';
+
+      const question = createQuestion({
+        id: questionId,
+        status: 'published',
+        choices: [
+          createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+          createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+        ],
+      });
+
+      const sessions = new FakePracticeSessionRepository([
+        createPracticeSession({
+          id: retrySessionId,
+          userId,
+          mode: 'exam',
+          questionIds: [questionId],
+          endedAt: null,
+        }),
+      ]);
+
+      const attempts = new FakeAttemptRepository();
+      const useCase = new SubmitAnswerUseCase(
+        new FakeQuestionRepository([question]),
+        attempts,
+        sessions,
+        new FakeLogger(),
+      );
+
+      await expect(
+        useCase.execute({
+          userId,
+          questionId,
+          choiceId: 'c2',
+          retryOrigin: 'session_review',
+          retrySessionId,
+        }),
+      ).rejects.toEqual(
+        new ApplicationError('CONFLICT', 'Cannot retry from an active session'),
+      );
+      expect(attempts.getAll()).toHaveLength(0);
+    });
+
+    it('throws CONFLICT when session_review retrySessionId points to an active tutor session', async () => {
+      const userId = 'user-1';
+      const questionId = 'q1';
+      const retrySessionId = 'session-review-active-tutor';
+
+      const question = createQuestion({
+        id: questionId,
+        status: 'published',
+        choices: [
+          createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+          createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+        ],
+      });
+
+      const sessions = new FakePracticeSessionRepository([
+        createPracticeSession({
+          id: retrySessionId,
+          userId,
+          mode: 'tutor',
+          questionIds: [questionId],
+          endedAt: null,
+        }),
+      ]);
+
+      const attempts = new FakeAttemptRepository();
+      const useCase = new SubmitAnswerUseCase(
+        new FakeQuestionRepository([question]),
+        attempts,
+        sessions,
+        new FakeLogger(),
+      );
+
+      await expect(
+        useCase.execute({
+          userId,
+          questionId,
+          choiceId: 'c2',
+          retryOrigin: 'session_review',
+          retrySessionId,
+        }),
+      ).rejects.toEqual(
+        new ApplicationError('CONFLICT', 'Cannot retry from an active session'),
+      );
+      expect(attempts.getAll()).toHaveLength(0);
+    });
+
     it('throws NOT_FOUND when session_review retrySessionId does not belong to the submitting user', async () => {
       const userId = 'user-1';
       const questionId = 'q1';

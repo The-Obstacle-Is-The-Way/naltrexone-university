@@ -1,4 +1,4 @@
-# DEBT-265: History Breakdown UX Redesign (BS-036 Implementation)
+# DEBT-269: History Breakdown UX Redesign (BS-036 Implementation)
 
 **Status:** Resolved (2026-03-01)
 **Priority:** P2
