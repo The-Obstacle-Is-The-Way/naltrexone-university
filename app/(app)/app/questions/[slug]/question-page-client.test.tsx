@@ -625,7 +625,7 @@ describe('QuestionView', () => {
     if (!bottomBar) throw new Error('Expected bottom action bar');
 
     const previousLink = Array.from(bottomBar.querySelectorAll('a')).find((a) =>
-      a.textContent?.includes('← Previous'),
+      a.textContent?.includes('Previous'),
     );
 
     expect(previousLink?.getAttribute('href')).toBe(
@@ -650,7 +650,7 @@ describe('QuestionView', () => {
     if (!bottomBar) throw new Error('Expected bottom action bar');
 
     const nextLink = Array.from(bottomBar.querySelectorAll('a')).find((a) =>
-      a.textContent?.includes('Next →'),
+      a.textContent?.includes('Next'),
     );
 
     expect(nextLink?.getAttribute('href')).toBe(
@@ -677,10 +677,10 @@ describe('QuestionView', () => {
     if (!bottomBar) throw new Error('Expected bottom action bar');
 
     const previousLink = Array.from(bottomBar.querySelectorAll('a')).find((a) =>
-      a.textContent?.includes('← Previous'),
+      a.textContent?.includes('Previous'),
     );
     const nextLink = Array.from(bottomBar.querySelectorAll('a')).find((a) =>
-      a.textContent?.includes('Next →'),
+      a.textContent?.includes('Next'),
     );
 
     expect(previousLink?.getAttribute('href')).toContain(
@@ -712,9 +712,9 @@ describe('QuestionView', () => {
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
     expect(getBottomActionLabels(doc)).toEqual([
-      '← Previous',
+      'Previous',
       'Try Again',
-      'Next →',
+      'Next',
       'Back to History',
     ]);
   });
@@ -775,7 +775,7 @@ describe('QuestionView', () => {
     expect(html).toContain('bg-background');
   });
 
-  it('shows disabled Previous on the first question of session review', () => {
+  it('hides Previous on the first question of session review', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
@@ -795,16 +795,14 @@ describe('QuestionView', () => {
     const bottomBar = getBottomActionBar(doc);
     if (!bottomBar) throw new Error('Expected bottom action bar');
 
-    const previousButton = Array.from(
-      bottomBar.querySelectorAll('button'),
-    ).find((button) => button.textContent?.includes('← Previous'));
+    const previousControl = Array.from(
+      bottomBar.querySelectorAll('a,button'),
+    ).find((element) => element.textContent?.includes('Previous'));
     const nextLink = Array.from(bottomBar.querySelectorAll('a')).find((a) =>
-      a.textContent?.includes('Next →'),
+      a.textContent?.includes('Next'),
     );
 
-    expect(previousButton).not.toBeUndefined();
-    expect(previousButton?.hasAttribute('disabled')).toBe(true);
-    expect(previousButton?.getAttribute('type')).toBe('button');
+    expect(previousControl).toBeUndefined();
     expect(nextLink?.getAttribute('href')).toBe(
       toQuestionRoute('q2', {
         from: 'practice',
@@ -814,7 +812,7 @@ describe('QuestionView', () => {
     );
   });
 
-  it('shows disabled Next on the last question of session review', () => {
+  it('hides Next on the last question of session review', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
@@ -835,15 +833,13 @@ describe('QuestionView', () => {
     if (!bottomBar) throw new Error('Expected bottom action bar');
 
     const previousLink = Array.from(bottomBar.querySelectorAll('a')).find((a) =>
-      a.textContent?.includes('← Previous'),
+      a.textContent?.includes('Previous'),
     );
-    const nextButton = Array.from(bottomBar.querySelectorAll('button')).find(
-      (button) => button.textContent?.includes('Next →'),
+    const nextControl = Array.from(bottomBar.querySelectorAll('a,button')).find(
+      (element) => element.textContent?.includes('Next'),
     );
 
-    expect(nextButton).not.toBeUndefined();
-    expect(nextButton?.hasAttribute('disabled')).toBe(true);
-    expect(nextButton?.getAttribute('type')).toBe('button');
+    expect(nextControl).toBeUndefined();
     expect(previousLink?.getAttribute('href')).toBe(
       toQuestionRoute('q1', {
         from: 'practice',
@@ -932,8 +928,8 @@ describe('QuestionView', () => {
     expect(html).toContain('Explanation for unanswered review');
     expect(bottomBar.textContent).not.toContain('Submit');
     expect(bottomBar.textContent).toContain('Try Again');
-    expect(bottomBar.textContent).toContain('← Previous');
-    expect(bottomBar.textContent).toContain('Next →');
+    expect(bottomBar.textContent).toContain('Previous');
+    expect(bottomBar.textContent).toContain('Next');
     expect(bottomBar.textContent).toContain('Back to History');
   });
 
@@ -958,8 +954,8 @@ describe('QuestionView', () => {
       <QuestionView {...createBaseProps()} sessionNavigation={null} />,
     );
 
-    expect(html).not.toContain('← Previous');
-    expect(html).not.toContain('Next →');
+    expect(html).not.toContain('>Previous<');
+    expect(html).not.toContain('>Next<');
     expect(html).not.toContain('Question 1 of');
 
     const doc = new DOMParser().parseFromString(html, 'text/html');

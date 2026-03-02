@@ -89,7 +89,7 @@ export function PracticeView(props: PracticeViewProps) {
   const endSessionLabel = props.endSessionLabel ?? 'End session';
   const backLink = props.backLink ?? {
     href: ROUTES.APP_DASHBOARD,
-    label: '← Back to Dashboard',
+    label: 'Back to Dashboard',
   };
   const isAnswerLocked = props.isAnswered || props.submitResult !== null;
   const correctChoiceId = isExamMode
@@ -268,19 +268,21 @@ export function PracticeView(props: PracticeViewProps) {
           data-testid="bottom-action-bar"
         >
           {props.onPreviousQuestion ? (
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-full"
-              disabled={
-                !props.hasPreviousQuestion ||
-                props.isPending ||
-                props.loadState.status === 'loading'
-              }
-              onClick={props.onPreviousQuestion}
-            >
-              ← Previous
-            </Button>
+            props.hasPreviousQuestion ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-full"
+                disabled={
+                  props.isPending || props.loadState.status === 'loading'
+                }
+                onClick={props.onPreviousQuestion}
+              >
+                Previous
+              </Button>
+            ) : (
+              <span />
+            )
           ) : null}
 
           {!props.submitResult ? (
@@ -294,19 +296,19 @@ export function PracticeView(props: PracticeViewProps) {
             </Button>
           ) : null}
 
-          <Button
-            type="button"
-            variant={props.submitResult ? 'default' : 'outline'}
-            className="rounded-full"
-            disabled={
-              props.hasNextQuestion === false ||
-              props.isPending ||
-              props.loadState.status === 'loading'
-            }
-            onClick={props.onNextQuestion}
-          >
-            Next →
-          </Button>
+          {props.hasNextQuestion === false ? (
+            <span />
+          ) : (
+            <Button
+              type="button"
+              variant={props.submitResult ? 'default' : 'outline'}
+              className="rounded-full"
+              disabled={props.isPending || props.loadState.status === 'loading'}
+              onClick={props.onNextQuestion}
+            >
+              Next
+            </Button>
+          )}
 
           <Button
             type="button"
