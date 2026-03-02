@@ -25,6 +25,10 @@ describe('app/(app)/app/history/history-search-params', () => {
       expect(parseHistoryTab('sessions')).toBe('sessions');
       expect(parseHistoryTab('questions')).toBe('questions');
     });
+
+    it('returns first value when tab param is an array', () => {
+      expect(parseHistoryTab(['questions', 'sessions'])).toBe('questions');
+    });
   });
 
   describe('parseNonNegativeInt', () => {
@@ -70,9 +74,7 @@ describe('app/(app)/app/history/history-search-params', () => {
     });
 
     it('returns first value when difficulty param is an array', () => {
-      expect(parseDifficultyFilter(['hard', 'easy'] as unknown as string)).toBe(
-        'hard',
-      );
+      expect(parseDifficultyFilter(['hard', 'easy'])).toBe('hard');
     });
   });
 
@@ -88,13 +90,11 @@ describe('app/(app)/app/history/history-search-params', () => {
     });
 
     it('returns first value when tag param is an array (repeated query param)', () => {
-      expect(
-        parseTagSlugFilter(['opioids', 'alcohol'] as unknown as string),
-      ).toBe('opioids');
+      expect(parseTagSlugFilter(['opioids', 'alcohol'])).toBe('opioids');
     });
 
     it('returns null when tag param is an empty array', () => {
-      expect(parseTagSlugFilter([] as unknown as string)).toBeNull();
+      expect(parseTagSlugFilter([])).toBeNull();
     });
   });
 
@@ -107,6 +107,10 @@ describe('app/(app)/app/history/history-search-params', () => {
     it('returns parsed result values', () => {
       expect(parseResultFilter('correct')).toBe('correct');
       expect(parseResultFilter('incorrect')).toBe('incorrect');
+    });
+
+    it('returns first value when result param is an array', () => {
+      expect(parseResultFilter(['correct', 'incorrect'])).toBe('correct');
     });
   });
 
@@ -121,6 +125,10 @@ describe('app/(app)/app/history/history-search-params', () => {
       expect(parseSourceFilter('exam')).toBe('exam');
       expect(parseSourceFilter('adhoc')).toBe('adhoc');
     });
+
+    it('returns first value when source param is an array', () => {
+      expect(parseSourceFilter(['exam', 'tutor'])).toBe('exam');
+    });
   });
 
   describe('parseSessionModeFilter', () => {
@@ -132,6 +140,10 @@ describe('app/(app)/app/history/history-search-params', () => {
     it('parses tutor and exam values', () => {
       expect(parseSessionModeFilter('tutor')).toBe('tutor');
       expect(parseSessionModeFilter('exam')).toBe('exam');
+    });
+
+    it('returns first value when mode param is an array', () => {
+      expect(parseSessionModeFilter(['exam', 'tutor'])).toBe('exam');
     });
   });
 
@@ -146,6 +158,10 @@ describe('app/(app)/app/history/history-search-params', () => {
       expect(parseQuestionsSort('incorrect-first')).toBe('incorrect-first');
       expect(parseQuestionsSort('correct-first')).toBe('correct-first');
       expect(parseQuestionsSort('difficulty')).toBe('difficulty');
+    });
+
+    it('returns first value when sort param is an array', () => {
+      expect(parseQuestionsSort(['difficulty', 'recent'])).toBe('difficulty');
     });
   });
 
