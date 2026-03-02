@@ -24,6 +24,7 @@ export type StripeWebhookDeps = {
     fn: (tx: StripeWebhookTransaction) => Promise<T>,
   ) => Promise<T>;
   logger: Logger;
+  now: () => Date;
 };
 
 const STACK_TRACE_LIMIT = 1000;
@@ -110,7 +111,7 @@ export async function processStripeWebhook(
   // Best-effort cleanup: prune old stripe events.
   // Idempotency keys and rate limits are pruned in their own hot paths
   // (withIdempotency and DrizzleRateLimiter.limit respectively).
-  const cutoff = new Date(Date.now() - STRIPE_EVENTS_RETENTION_MS);
+  const cutoff = new Date(deps.now().getTime() - STRIPE_EVENTS_RETENTION_MS);
 
   try {
     await deps.transaction(async ({ stripeEvents }) => {
