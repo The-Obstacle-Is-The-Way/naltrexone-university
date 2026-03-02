@@ -86,12 +86,29 @@ export async function withIdempotency<T>(input: {
       });
       return result;
     } catch (error) {
-      await input.repo.storeError({
-        userId: input.userId,
-        action: input.action,
-        key: input.key,
-        error: toErrorRecord(error),
-      });
+      try {
+        await input.repo.storeError({
+          userId: input.userId,
+          action: input.action,
+          key: input.key,
+          error: toErrorRecord(error),
+        });
+      } catch (storeError) {
+        input.logger.error(
+          {
+            userId: input.userId,
+            action: input.action,
+            key: input.key,
+            storeError:
+              storeError instanceof Error
+                ? storeError.message
+                : String(storeError),
+            originalError:
+              error instanceof Error ? error.message : String(error),
+          },
+          'Failed to persist idempotency error record',
+        );
+      }
       throw error;
     }
   }

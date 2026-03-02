@@ -484,4 +484,45 @@ describe('withIdempotency', () => {
     });
     expect(execute).toHaveBeenCalledTimes(1);
   });
+
+  it('rethrows the original execute error when storeError persistence fails', async () => {
+    class StoreErrorFailingRepo extends FakeIdempotencyKeyRepository {
+      override async storeError(): Promise<void> {
+        throw new Error('store failed');
+      }
+    }
+
+    const now = () => new Date('2026-02-08T00:00:00.000Z');
+    const repo = new StoreErrorFailingRepo(now);
+    const logger = new FakeLogger();
+    const originalError = new ApplicationError(
+      'INTERNAL_ERROR',
+      'execute failed',
+    );
+    const execute = vi.fn(async () => {
+      throw originalError;
+    });
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: 'user_1',
+        action: 'billing:createCheckoutSession',
+        key: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+        now,
+        logger,
+        execute,
+      }),
+    ).rejects.toBe(originalError);
+
+    expect(logger.errorCalls).toHaveLength(1);
+    expect(logger.errorCalls[0]).toMatchObject({
+      msg: 'Failed to persist idempotency error record',
+      context: {
+        userId: 'user_1',
+        action: 'billing:createCheckoutSession',
+        key: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+      },
+    });
+  });
 });
