@@ -29,7 +29,6 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
 | [BS-033](./bs-033-question-display-formatting-and-feedback-ux.md) | Question Display Formatting and Feedback UX — 22 Problems (component fixes complete, content/design items remain) | Active | — |
-| [BS-037](./bs-037-navigation-button-ux-audit.md) | Navigation Button UX Audit — Arrow symbols, disabled-vs-hidden at boundaries, Back link styling | Active | — |
 
 **Next Brainstorming ID:** BS-038
 
@@ -39,6 +38,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 | ID | Title | Outcome |
 |----|-------|---------|
+| [BS-037](../_archive/brainstorming/bs-037-navigation-button-ux-audit.md) | Navigation Button UX Audit — Arrow symbols, disabled-vs-hidden at boundaries, Back link styling | Fully resolved. All arrow glyphs removed from nav labels (4 source files), boundary controls changed from disabled to hidden with `<span />` spacers (PR #158). 11 deep tracers verified across all modes. |
 | [BS-036](../_archive/brainstorming/bs-036-history-breakdown-ux-redesign.md) | History Page Breakdown UX Redesign — flat disclosure, list structure, a11y wiring, interaction semantics cleanup | Fully resolved by DEBT-265 (2026-03-01). Implemented across history sessions + shared breakdown list with unit/browser coverage and full pre-PR gate green. |
 | [BS-035](../_archive/brainstorming/bs-035-card-hover-and-gray-consistency-audit.md) | Card Hover and Gray Consistency Audit — hover opacity chaos, expanded breakdown hierarchy, dark mode override violations | Fully resolved. Promoted to DEBT-250 (31 items, 13 decisions). All items completed across DEBT-251–264 (PRs #149–#153). FE-055 `aria-controls` wiring resolved in PR #155. |
 | [BS-034](../_archive/brainstorming/bs-034-history-questions-tab-review-navigator-mismatch.md) | History Questions Tab — Ad-Hoc Questions Incorrectly Grouped into Question Navigator | Fully resolved. Core bug fixed as BUG-152 (PR #141). Residual label fixed as BUG-153 (PR #143). Position A (ad-hoc only) decided and implemented |
