@@ -340,6 +340,7 @@ export async function loadPreviousAttempt(input: {
       PREVIOUS_ATTEMPT_TIMEOUT_MS,
     );
   } catch {
+    if (!isMounted()) return;
     setReviewHydrationState('hydration_error');
     return;
   }

@@ -483,6 +483,27 @@ describe('question-page-logic', () => {
       expect(setReviewHydrationState).toHaveBeenCalledWith('hydration_error');
     });
 
+    it('does not set hydration_error when unmounted during throw path', async () => {
+      const setSelectedChoiceId = vi.fn();
+      const setSubmitResult = vi.fn();
+      const setReviewHydrationState = vi.fn();
+
+      await loadPreviousAttempt({
+        questionId: 'q_1',
+        getPreviousAttemptFn: async () => {
+          throw new Error('Boom');
+        },
+        setSelectedChoiceId,
+        setSubmitResult,
+        setReviewHydrationState,
+        isMounted: () => false,
+      });
+
+      expect(setSelectedChoiceId).not.toHaveBeenCalled();
+      expect(setSubmitResult).not.toHaveBeenCalled();
+      expect(setReviewHydrationState).not.toHaveBeenCalled();
+    });
+
     it('marks hydration_error when previous-attempt request times out', async () => {
       vi.useFakeTimers();
       try {
