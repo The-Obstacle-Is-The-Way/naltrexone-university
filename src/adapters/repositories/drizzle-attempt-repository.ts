@@ -37,6 +37,8 @@ import {
 } from './postgres-errors';
 import { latestAttemptRankSql } from './shared/latest-attempt-rank-sql';
 
+const SESSION_ATTEMPT_READ_LIMIT = 500;
+
 // WHY: This file exceeds the 300-line soft guideline intentionally.
 // DEBT-234 enforces a warning threshold at 350 lines; DEBT-224 keeps 300 as the design guideline.
 // It is a deep module (Ousterhout) with a single responsibility: implement the full AttemptRepository query and write surface against Drizzle for attempt/history workflows.
@@ -235,6 +237,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
         eq(attempts.userId, userId),
       ),
       orderBy: desc(attempts.answeredAt),
+      limit: SESSION_ATTEMPT_READ_LIMIT,
     });
 
     return rows.map((row) => toAttemptDomain(row));

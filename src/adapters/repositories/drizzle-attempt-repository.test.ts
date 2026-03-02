@@ -449,6 +449,11 @@ describe('DrizzleAttemptRepository', () => {
           answeredAt,
         },
       ]);
+      expect(db._mocks.queryFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          limit: 500,
+        }),
+      );
     });
   });
 
