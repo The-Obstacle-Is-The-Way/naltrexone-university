@@ -62,6 +62,7 @@ export function createUseCaseFactories(input: {
         repositories.createQuestionRepository(),
         repositories.createAttemptRepository(),
         repositories.createPracticeSessionRepository(),
+        primitives.now,
       ),
     createGetPreviousAttemptUseCase: () =>
       new GetPreviousAttemptUseCase(

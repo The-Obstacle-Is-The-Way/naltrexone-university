@@ -66,20 +66,22 @@ listPublishedCandidateIds(filters)
 
 **When:** User enters Quick Practice with optional status/tag/difficulty filters.
 
-**Ordering contract (target state):**
+**Ordering contract:**
 
 ```text
 listPublishedCandidateIds(filters)
-  → shuffleWithSeed(candidates, createSeed(userId, dailySeedTimestamp))
+  → canonicalize(candidates) // stable ID sort
+  → shuffleWithSeed(canonicalCandidates, createSeed(userId, dailySeedTimestamp))
   → selectNextQuestionId(shuffledCandidates, attemptHistory)
 ```
 
 - Shuffle candidates **before** passing to `selectNextQuestionId`.
+- Canonicalization happens before shuffle so the same candidate set yields the same shuffled order regardless of repository return order.
 - Seed is daily-granularity: `createSeed(userId, Date.UTC(year, month, date))`.
 - Daily seed ensures:
   - **Interleaving**: candidates are not in DB insertion order.
   - **Short-window stability**: same user on the same day sees the same candidate permutation.
-  - **Day-boundary freshness**: ordering changes each UTC day, preventing stale patterns.
+  - **Day-boundary freshness**: the seed changes each UTC day, so ordering is expected to rotate over time and avoid stale patterns.
 
 **Selection rule** (unchanged from `selectNextQuestionId`):
 1. First unattempted candidate in shuffled order.
@@ -156,12 +158,10 @@ The fix for all of these is the same: **shuffle before selecting**. Repositories
 | 1 | Session (tutor/exam) — creation | `shuffleWithSeed` at creation | `buildShuffledChoiceViews` | Yes |
 | 2 | Session (tutor/exam) — in-progress | Walk persisted `questionIds` | `buildShuffledChoiceViews` | Yes (at creation) |
 | 3 | Session review | Preserve persisted `questionIds` | `buildShuffledChoiceViews` | Yes (at creation) |
-| 4 | Quick Practice — unanswered | `shuffleWithSeed` (daily seed) + `selectNextQuestionId` | `buildShuffledChoiceViews` | **Target: Yes** |
-| 5 | Quick Practice — incorrect | `shuffleWithSeed` (daily seed) + `selectNextQuestionId` | `buildShuffledChoiceViews` | **Target: Yes** |
-| 6 | Quick Practice — bookmarked | `shuffleWithSeed` (daily seed) + `selectNextQuestionId` | `buildShuffledChoiceViews` | **Target: Yes** |
+| 4 | Quick Practice — unanswered | `shuffleWithSeed` (daily seed) + `selectNextQuestionId` | `buildShuffledChoiceViews` | Yes |
+| 5 | Quick Practice — incorrect | `shuffleWithSeed` (daily seed) + `selectNextQuestionId` | `buildShuffledChoiceViews` | Yes |
+| 6 | Quick Practice — bookmarked | `shuffleWithSeed` (daily seed) + `selectNextQuestionId` | `buildShuffledChoiceViews` | Yes |
 | 7 | Single question (bookmark/history/dashboard click) | N/A (user-selected) | `buildShuffledChoiceViews` | N/A |
-
-Paths 4–6 marked "Target" require implementation per [DEBT-268](../debt/debt-268-quick-practice-ordering-policy-alignment.md).
 
 ---
 
@@ -173,5 +173,4 @@ Paths 4–6 marked "Target" require implementation per [DEBT-268](../debt/debt-2
 | [Architecture Layers](./architecture-layers.md) | Domain service inventory including shuffle and selection |
 | [Content Pipeline](./content-pipeline.md) | How content batch structure creates DB insertion order |
 | [Retry Logic](./retry-logic.md) | Reattempt semantics (ordering is independent of retry provenance) |
-| [DEBT-268](../debt/debt-268-quick-practice-ordering-policy-alignment.md) | Work order to implement target ordering for Quick Practice |
 | [BS-038](../_archive/brainstorming/bs-038-quick-practice-question-ordering-not-randomized.md) | Original audit that identified the ordering gap |
