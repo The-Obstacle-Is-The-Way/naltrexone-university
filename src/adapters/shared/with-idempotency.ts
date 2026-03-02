@@ -94,20 +94,24 @@ export async function withIdempotency<T>(input: {
           error: toErrorRecord(error),
         });
       } catch (storeError) {
-        input.logger.error(
-          {
-            userId: input.userId,
-            action: input.action,
-            key: input.key,
-            storeError:
-              storeError instanceof Error
-                ? storeError.message
-                : String(storeError),
-            originalError:
-              error instanceof Error ? error.message : String(error),
-          },
-          'Failed to persist idempotency error record',
-        );
+        try {
+          input.logger.error(
+            {
+              userId: input.userId,
+              action: input.action,
+              key: input.key,
+              storeError:
+                storeError instanceof Error
+                  ? storeError.message
+                  : String(storeError),
+              originalError:
+                error instanceof Error ? error.message : String(error),
+            },
+            'Failed to persist idempotency error record',
+          );
+        } catch {
+          // Preserve original execute error even if logger.error throws.
+        }
       }
       throw error;
     }

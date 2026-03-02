@@ -194,6 +194,9 @@ describe('DrizzlePracticeSessionRepository', () => {
       expect.objectContaining({ limit: 10, offset: 0 }),
     );
     expect(transaction).toHaveBeenCalledTimes(1);
+    expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: 'repeatable read',
+    });
   });
 
   it('returns empty rows when limit is non-positive while preserving total', async () => {
@@ -239,6 +242,9 @@ describe('DrizzlePracticeSessionRepository', () => {
     });
     expect(findMany).not.toHaveBeenCalled();
     expect(transaction).toHaveBeenCalledTimes(1);
+    expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: 'repeatable read',
+    });
   });
 
   it('returns null when no incomplete session exists for user', async () => {

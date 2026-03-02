@@ -64,7 +64,7 @@ export class DrizzleRateLimiter implements RateLimiter {
       })
       .returning({ count: rateLimits.count });
 
-    if (!row || !Number.isInteger(row.count)) {
+    if (!row || !isPositiveInteger(row.count)) {
       throw new ApplicationError(
         'INTERNAL_ERROR',
         'Failed to update rate-limit counter',

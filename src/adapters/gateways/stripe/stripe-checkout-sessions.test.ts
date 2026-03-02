@@ -466,6 +466,40 @@ describe('createStripeCheckoutSession', () => {
     expect(sessionsCreate).toHaveBeenCalledTimes(1);
   });
 
+  it('continues checkout creation when inspection and expire both fail', async () => {
+    const { stripe, sessionsCreate, sessionsRetrieve, sessionsExpire } =
+      createStripeMock({
+        openSessionsData: [
+          { id: 'cs_open', url: 'https://stripe/checkout/open' },
+        ],
+        shouldThrowOnRetrieve: true,
+        shouldThrowOnExpire: true,
+        createdSessionUrl: 'https://stripe/checkout/new',
+      });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger,
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
+
+    expect(sessionsRetrieve).toHaveBeenCalledTimes(1);
+    expect(sessionsExpire).toHaveBeenCalledWith('cs_open', {
+      idempotencyKey: 'expire_checkout_session:cs_open',
+    });
+    expect(sessionsCreate).toHaveBeenCalledTimes(1);
+    expect(logger.warnCalls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          msg: 'Failed to expire existing checkout session after failed inspection; continuing with checkout creation',
+        }),
+      ]),
+    );
+  });
+
   it('throws STRIPE_ERROR when created session is missing URL', async () => {
     const { stripe } = createStripeMock({
       openSessionsData: [],

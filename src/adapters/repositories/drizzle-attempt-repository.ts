@@ -236,7 +236,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
         eq(attempts.practiceSessionId, sessionId),
         eq(attempts.userId, userId),
       ),
-      orderBy: desc(attempts.answeredAt),
+      orderBy: [desc(attempts.answeredAt), desc(attempts.id)],
       limit: SESSION_ATTEMPT_READ_LIMIT,
     });
 

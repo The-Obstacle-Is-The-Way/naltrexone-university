@@ -160,6 +160,20 @@ describe('DrizzleRateLimiter', () => {
     });
   });
 
+  it('throws INTERNAL_ERROR when rate-limit upsert returns a non-positive count', async () => {
+    const db = createDbMock(0);
+    const rateLimiter = new DrizzleRateLimiter(
+      db as unknown as RateLimiterDb,
+      () => new Date('2026-02-07T12:00:00.000Z'),
+    );
+
+    await expect(
+      rateLimiter.limit({ key: 'rate:test', limit: 5, windowMs: 60_000 }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+    });
+  });
+
   it('clamps remaining count to zero when usage exceeds limit', async () => {
     const db = createDbMock(7);
     const rateLimiter = new DrizzleRateLimiter(
@@ -201,8 +215,19 @@ describe('DrizzleRateLimiter', () => {
       async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
     );
     const db = {
-      ...tx,
       transaction,
+      select: vi.fn(() => {
+        throw new Error('unexpected root select');
+      }),
+      delete: vi.fn(() => {
+        throw new Error('unexpected root delete');
+      }),
+      insert: vi.fn(() => {
+        throw new Error('unexpected root insert');
+      }),
+      update: vi.fn(() => {
+        throw new Error('unexpected root update');
+      }),
     } as unknown as RateLimiterDb;
 
     const rateLimiter = new DrizzleRateLimiter(

@@ -135,6 +135,7 @@ export async function createStripeCheckoutSession({
   if (existingSession && existingUrl) {
     let existingPriceId: string | undefined;
     let shouldExpireExistingSession = false;
+    let expireFailureIsFatal = false;
     try {
       const session = await callStripeWithRetry({
         operation: 'checkout.sessions.retrieve',
@@ -164,6 +165,7 @@ export async function createStripeCheckoutSession({
 
     if (existingPriceId) {
       shouldExpireExistingSession = true;
+      expireFailureIsFatal = true;
       // Avoid reusing a checkout session for a different plan. If the user
       // changes plans, we expire the old session and create a new one so the
       // Stripe UI matches their selection.
@@ -177,6 +179,7 @@ export async function createStripeCheckoutSession({
       );
     } else {
       shouldExpireExistingSession = true;
+      expireFailureIsFatal = false;
       logger.warn(
         {
           sessionId: existingSession.id,
@@ -198,18 +201,30 @@ export async function createStripeCheckoutSession({
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error';
-        logger.error(
+        if (expireFailureIsFatal) {
+          logger.error(
+            {
+              sessionId: existingSession.id,
+              existingPriceId,
+              requestedPriceId: priceId,
+              error: errorMessage,
+            },
+            'Failed to expire mismatched checkout session',
+          );
+          throw new ApplicationError(
+            'STRIPE_ERROR',
+            'Failed to expire existing checkout session',
+          );
+        }
+
+        logger.warn(
           {
             sessionId: existingSession.id,
             existingPriceId,
             requestedPriceId: priceId,
             error: errorMessage,
           },
-          'Failed to expire mismatched checkout session',
-        );
-        throw new ApplicationError(
-          'STRIPE_ERROR',
-          'Failed to expire existing checkout session',
+          'Failed to expire existing checkout session after failed inspection; continuing with checkout creation',
         );
       }
     }

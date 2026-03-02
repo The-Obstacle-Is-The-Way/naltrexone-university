@@ -566,4 +566,41 @@ describe('withIdempotency', () => {
       },
     });
   });
+
+  it('rethrows the original execute error when logger.error throws during storeError failure', async () => {
+    class StoreErrorFailingRepo extends FakeIdempotencyKeyRepository {
+      override async storeError(): Promise<void> {
+        throw new Error('store failed');
+      }
+    }
+
+    class ThrowingErrorLogger extends FakeLogger {
+      override error(): void {
+        throw new Error('logger failed');
+      }
+    }
+
+    const now = () => new Date('2026-02-08T00:00:00.000Z');
+    const repo = new StoreErrorFailingRepo(now);
+    const logger = new ThrowingErrorLogger();
+    const originalError = new ApplicationError(
+      'INTERNAL_ERROR',
+      'execute failed',
+    );
+    const execute = vi.fn(async () => {
+      throw originalError;
+    });
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: 'user_1',
+        action: 'billing:createCheckoutSession',
+        key: 'ffffffff-1111-2222-3333-444444444444',
+        now,
+        logger,
+        execute,
+      }),
+    ).rejects.toBe(originalError);
+  });
 });

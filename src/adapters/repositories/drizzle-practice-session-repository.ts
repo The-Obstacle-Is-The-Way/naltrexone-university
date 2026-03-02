@@ -106,38 +106,41 @@ export class DrizzlePracticeSessionRepository
     const safeLimit = Number.isInteger(limit) && limit > 0 ? limit : 0;
     const safeOffset = Number.isInteger(offset) ? Math.max(0, offset) : 0;
 
-    return this.db.transaction(async (tx) => {
-      const [countRow] = await tx
-        .select({ count: sql<number>`count(*)::int` })
-        .from(practiceSessions)
-        .where(this.completedSessionCondition(userId, mode));
-      const total = countRow?.count ?? 0;
+    return this.db.transaction(
+      async (tx) => {
+        const [countRow] = await tx
+          .select({ count: sql<number>`count(*)::int` })
+          .from(practiceSessions)
+          .where(this.completedSessionCondition(userId, mode));
+        const total = countRow?.count ?? 0;
 
-      if (safeLimit === 0 || total === 0) {
-        return { rows: [], total };
-      }
+        if (safeLimit === 0 || total === 0) {
+          return { rows: [], total };
+        }
 
-      const rows = await tx.query.practiceSessions.findMany({
-        where: this.completedSessionCondition(userId, mode),
-        orderBy: (table, { desc }) => [
-          desc(table.endedAt),
-          desc(table.startedAt),
-        ],
-        limit: safeLimit,
-        offset: safeOffset,
-      });
+        const rows = await tx.query.practiceSessions.findMany({
+          where: this.completedSessionCondition(userId, mode),
+          orderBy: (table, { desc }) => [
+            desc(table.endedAt),
+            desc(table.startedAt),
+          ],
+          limit: safeLimit,
+          offset: safeOffset,
+        });
 
-      return {
-        rows: rows.map((row) => {
-          const params = parsePracticeSessionParamsJson(
-            row.paramsJson,
-            'INTERNAL_ERROR',
-          );
-          return this.toDomain(row, params);
-        }),
-        total,
-      };
-    });
+        return {
+          rows: rows.map((row) => {
+            const params = parsePracticeSessionParamsJson(
+              row.paramsJson,
+              'INTERNAL_ERROR',
+            );
+            return this.toDomain(row, params);
+          }),
+          total,
+        };
+      },
+      { isolationLevel: 'repeatable read' },
+    );
   }
 
   async create(input: {
