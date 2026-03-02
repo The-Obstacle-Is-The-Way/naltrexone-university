@@ -453,7 +453,9 @@ describe('StripePaymentGateway', () => {
     expect(sessionsRetrieve).toHaveBeenCalledWith('cs_existing', {
       expand: ['line_items'],
     });
-    expect(sessionsExpire).not.toHaveBeenCalled();
+    expect(sessionsExpire).toHaveBeenCalledWith('cs_existing', {
+      idempotencyKey: 'expire_checkout_session:cs_existing',
+    });
     expect(sessionsCreate).toHaveBeenCalledTimes(1);
     expect(logger.warnCalls).toContainEqual({
       context: expect.objectContaining({

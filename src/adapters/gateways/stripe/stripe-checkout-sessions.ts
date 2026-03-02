@@ -134,6 +134,7 @@ export async function createStripeCheckoutSession({
   const existingUrl = existingSession?.url;
   if (existingSession && existingUrl) {
     let existingPriceId: string | undefined;
+    let shouldExpireExistingSession = false;
     try {
       const session = await callStripeWithRetry({
         operation: 'checkout.sessions.retrieve',
@@ -162,6 +163,7 @@ export async function createStripeCheckoutSession({
     }
 
     if (existingPriceId) {
+      shouldExpireExistingSession = true;
       // Avoid reusing a checkout session for a different plan. If the user
       // changes plans, we expire the old session and create a new one so the
       // Stripe UI matches their selection.
@@ -173,7 +175,17 @@ export async function createStripeCheckoutSession({
         },
         'Expiring mismatched checkout session',
       );
+    } else {
+      shouldExpireExistingSession = true;
+      logger.warn(
+        {
+          sessionId: existingSession.id,
+        },
+        'Expiring existing checkout session after failed inspection',
+      );
+    }
 
+    if (shouldExpireExistingSession) {
       try {
         await callStripeWithRetry({
           operation: 'checkout.sessions.expire',

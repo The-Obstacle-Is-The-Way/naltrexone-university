@@ -441,13 +441,14 @@ describe('createStripeCheckoutSession', () => {
   });
 
   it('creates a new checkout session when existing session inspection fails', async () => {
-    const { stripe, sessionsCreate, sessionsRetrieve } = createStripeMock({
-      openSessionsData: [
-        { id: 'cs_open', url: 'https://stripe/checkout/open' },
-      ],
-      shouldThrowOnRetrieve: true,
-      createdSessionUrl: 'https://stripe/checkout/new',
-    });
+    const { stripe, sessionsCreate, sessionsRetrieve, sessionsExpire } =
+      createStripeMock({
+        openSessionsData: [
+          { id: 'cs_open', url: 'https://stripe/checkout/open' },
+        ],
+        shouldThrowOnRetrieve: true,
+        createdSessionUrl: 'https://stripe/checkout/new',
+      });
 
     await expect(
       createStripeCheckoutSession({
@@ -459,6 +460,9 @@ describe('createStripeCheckoutSession', () => {
     ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
 
     expect(sessionsRetrieve).toHaveBeenCalledTimes(1);
+    expect(sessionsExpire).toHaveBeenCalledWith('cs_open', {
+      idempotencyKey: 'expire_checkout_session:cs_open',
+    });
     expect(sessionsCreate).toHaveBeenCalledTimes(1);
   });
 
