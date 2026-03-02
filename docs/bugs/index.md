@@ -13,26 +13,33 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-## Bug Index (Active)
+## Bug Index (Active) — Audit #8 (Verified)
 
 | Bug | Severity | Summary |
 |-----|----------|---------|
 | BUG-167 | P2 | `loadPreviousAttempt` catch missing `isMounted()` guard |
 | BUG-168 | P2 | `GetNextQuestionUseCase` skips current question in both scans |
-| BUG-169 | P2 | Idempotency poll `break` falls into misleading CONFLICT error |
-| BUG-170 | P2 | Non-atomic COUNT+SELECT in `findCompletedByUserId` pagination |
-| BUG-171 | P2 | Stripe checkout `retrieve` failure silently skips session expiry |
+| BUG-169 | P3 | Idempotency poll `break` falls into misleading CONFLICT error |
+| BUG-170 | P3 | Non-atomic COUNT+SELECT in `findCompletedByUserId` pagination |
+| BUG-171 | P3 | Stripe checkout `retrieve` failure silently skips session expiry |
 | BUG-172 | P3 | `storeError` failure masks original execute error |
 | BUG-173 | P3 | `get-session-history` adjusts total by skippedCount incorrectly |
 | BUG-174 | P3 | `checkout-success-sync` guards `logger.warn` as optional |
-| BUG-175 | P3 | `DrizzleRateLimiter` defaults count to 1 on missing row |
-| BUG-176 | P3 | `findBySessionId` has no LIMIT clause |
-| BUG-177 | P4 | `getStemPreview` raw truncation when `maxLength <= 3` |
-| BUG-178 | P4 | Redundant TOCTOU pre-check in `start-practice-session` |
+| BUG-175 | P3 | Subscription repo calls `this.now()` twice in single upsert |
+| BUG-176 | P3 | Stripe webhook controller hardcodes `Date.now()` (no `now` injection) |
+| BUG-177 | P3 | Non-atomic SELECT+DELETE in all 3 pruning paths |
+| BUG-178 | P4 | `DrizzleRateLimiter` defaults count to 1 on missing row |
+| BUG-179 | P4 | `findBySessionId` has no LIMIT clause |
 
 See full details: [`audit-8-deep-sweep.md`](./audit-8-deep-sweep.md)
 
-**Next Bug ID:** BUG-179
+**Next Bug ID:** BUG-180
+
+**Verification notes (2026-03-01):**
+- 2 false positives removed from initial draft (stem preview edge case, start-session pre-check)
+- 3 new bugs found via horizontal tracer bullets (BUG-175, BUG-176, BUG-177)
+- BUG-169/170/171 downgraded from P2→P3 after tracing practical reachability
+- Old BUG-175/176 renumbered; old BUG-177/178 removed
 
 **Latest archival (2026-02-27):**
 - BUG-165 and BUG-166 verified fixed (PRs #146, #147), archived to `docs/_archive/bugs/`.
