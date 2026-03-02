@@ -10,7 +10,6 @@ import {
   FakeStripeEventRepository,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
-import type { Subscription } from '@/src/domain/entities';
 
 class FailingStripeEventRepository extends FakeStripeEventRepository {
   async pruneProcessedBefore(_cutoff: Date, _limit: number): Promise<number> {
@@ -54,104 +53,6 @@ function createDeps(overrides: {
   };
 }
 
-type StoredStripeEvent = {
-  type: string;
-  processedAt: Date | null;
-  error: string | null;
-};
-
-type StripeEventRepositoryInternals = {
-  events: Map<string, StoredStripeEvent>;
-};
-
-type SubscriptionRepositoryInternals = {
-  byUserId: Map<string, Subscription>;
-  externalSubscriptionIdByUserId: Map<string, string>;
-  userIdByExternalSubscriptionId: Map<string, string>;
-};
-
-type StripeCustomerRepositoryInternals = {
-  userIdToCustomerId: Map<string, string>;
-  customerIdToUserId: Map<string, string>;
-};
-
-function copyStripeEvents(
-  target: FakeStripeEventRepository,
-  source: FakeStripeEventRepository,
-): void {
-  const targetEvents = (target as unknown as StripeEventRepositoryInternals)
-    .events;
-  const sourceEvents = (source as unknown as StripeEventRepositoryInternals)
-    .events;
-
-  targetEvents.clear();
-  for (const [eventId, event] of sourceEvents.entries()) {
-    targetEvents.set(eventId, {
-      type: event.type,
-      processedAt: event.processedAt ? new Date(event.processedAt) : null,
-      error: event.error,
-    });
-  }
-}
-
-function copySubscriptions(
-  target: FakeSubscriptionRepository,
-  source: FakeSubscriptionRepository,
-): void {
-  const targetRepo = target as unknown as SubscriptionRepositoryInternals;
-  const sourceRepo = source as unknown as SubscriptionRepositoryInternals;
-
-  targetRepo.byUserId.clear();
-  for (const [userId, subscription] of sourceRepo.byUserId.entries()) {
-    targetRepo.byUserId.set(userId, {
-      ...subscription,
-      currentPeriodEnd: new Date(subscription.currentPeriodEnd),
-      createdAt: new Date(subscription.createdAt),
-      updatedAt: new Date(subscription.updatedAt),
-    });
-  }
-
-  targetRepo.externalSubscriptionIdByUserId.clear();
-  for (const [
-    userId,
-    externalSubscriptionId,
-  ] of sourceRepo.externalSubscriptionIdByUserId.entries()) {
-    targetRepo.externalSubscriptionIdByUserId.set(
-      userId,
-      externalSubscriptionId,
-    );
-  }
-
-  targetRepo.userIdByExternalSubscriptionId.clear();
-  for (const [
-    externalSubscriptionId,
-    userId,
-  ] of sourceRepo.userIdByExternalSubscriptionId.entries()) {
-    targetRepo.userIdByExternalSubscriptionId.set(
-      externalSubscriptionId,
-      userId,
-    );
-  }
-}
-
-function copyStripeCustomers(
-  target: FakeStripeCustomerRepository,
-  source: FakeStripeCustomerRepository,
-): void {
-  const targetRepo = target as unknown as StripeCustomerRepositoryInternals;
-  const sourceRepo = source as unknown as StripeCustomerRepositoryInternals;
-
-  targetRepo.userIdToCustomerId.clear();
-  for (const [userId, customerId] of sourceRepo.userIdToCustomerId.entries()) {
-    targetRepo.userIdToCustomerId.set(userId, customerId);
-  }
-
-  targetRepo.customerIdToUserId.clear();
-  for (const [customerId, userId] of sourceRepo.customerIdToUserId.entries()) {
-    targetRepo.customerIdToUserId.set(customerId, userId);
-  }
-}
-
 function createRollbackAwareDeps(overrides: {
   paymentGateway: FakePaymentGateway;
   stripeEvents?: FakeStripeEventRepository;
@@ -183,9 +84,9 @@ function createRollbackAwareDeps(overrides: {
         const stagingSubscriptions = new SubscriptionsCtor();
         const stagingStripeCustomers = new StripeCustomersCtor();
 
-        copyStripeEvents(stagingEvents, base.stripeEvents);
-        copySubscriptions(stagingSubscriptions, base.subscriptions);
-        copyStripeCustomers(stagingStripeCustomers, base.stripeCustomers);
+        stagingEvents.restore(base.stripeEvents.snapshot());
+        stagingSubscriptions.restore(base.subscriptions.snapshot());
+        stagingStripeCustomers.restore(base.stripeCustomers.snapshot());
 
         const result = await fn({
           stripeEvents: stagingEvents,
@@ -193,9 +94,9 @@ function createRollbackAwareDeps(overrides: {
           stripeCustomers: stagingStripeCustomers,
         });
 
-        copyStripeEvents(base.stripeEvents, stagingEvents);
-        copySubscriptions(base.subscriptions, stagingSubscriptions);
-        copyStripeCustomers(base.stripeCustomers, stagingStripeCustomers);
+        base.stripeEvents.restore(stagingEvents.snapshot());
+        base.subscriptions.restore(stagingSubscriptions.snapshot());
+        base.stripeCustomers.restore(stagingStripeCustomers.snapshot());
 
         return result;
       },

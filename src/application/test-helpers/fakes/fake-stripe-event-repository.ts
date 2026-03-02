@@ -7,6 +7,16 @@ type StoredStripeEvent = {
   error: string | null;
 };
 
+type StripeEventSnapshot = ReadonlyArray<readonly [string, StoredStripeEvent]>;
+
+function cloneStoredStripeEvent(event: StoredStripeEvent): StoredStripeEvent {
+  return {
+    type: event.type,
+    processedAt: event.processedAt ? new Date(event.processedAt) : null,
+    error: event.error,
+  };
+}
+
 export class FakeStripeEventRepository implements StripeEventRepository {
   private readonly events = new Map<string, StoredStripeEvent>();
 
@@ -57,6 +67,20 @@ export class FakeStripeEventRepository implements StripeEventRepository {
     }
     event.processedAt = null;
     event.error = error;
+  }
+
+  snapshot(): StripeEventSnapshot {
+    return [...this.events.entries()].map(([eventId, event]) => [
+      eventId,
+      cloneStoredStripeEvent(event),
+    ]);
+  }
+
+  restore(snapshot: StripeEventSnapshot): void {
+    this.events.clear();
+    for (const [eventId, event] of snapshot) {
+      this.events.set(eventId, cloneStoredStripeEvent(event));
+    }
   }
 
   async pruneProcessedBefore(cutoff: Date, limit: number): Promise<number> {
