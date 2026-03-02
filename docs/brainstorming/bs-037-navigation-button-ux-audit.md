@@ -265,9 +265,9 @@ Result: 2 files passed, 21 tests passed.
 
 ## Open Questions
 
-1. Should hidden boundary buttons reserve layout space (`<span />`) or allow compaction?
-2. Should `Go to Practice →` be folded into BS-037 scope for full arrow consistency?
-3. For mobile, do we want icons via SVG (e.g., `ChevronLeft`) instead of text arrows if direction affordance is still desired later?
+1. ~~Should hidden boundary buttons reserve layout space (`<span />`) or allow compaction?~~ **Decided:** Use `<span />` spacer (see Decision Log 2026-03-02).
+2. ~~Should `Go to Practice →` be folded into BS-037 scope for full arrow consistency?~~ **Decided:** Yes, included (see Decision Log 2026-03-02).
+3. For mobile, do we want icons via SVG (e.g., `ChevronLeft`) instead of text arrows if direction affordance is still desired later? — **Deferred.** Out of scope for BS-037 implementation.
 
 ---
 
@@ -278,3 +278,6 @@ Result: 2 files passed, 21 tests passed.
 | 2026-03-01 | Created BS-037 | Visual audit captured navigation-label and boundary-control concerns |
 | 2026-03-02 | Applied code-truth correction pass | Fixed inaccurate assumptions (session-review back labels already arrow-free), added full vertical/horizontal traces, and expanded test-impact coverage |
 | 2026-03-02 | Deep tracer expansion — all modes | Expanded from 3 vertical tracers to 11, covering every user-facing mode: Quick Practice, Tutor in-session, Exam in-session, Exam pre-submit review, Session summary, Session review (practice + history origins), Standalone bookmark review, History-sequence review, Individual question review, Bookmarks list, History pagination. Horizontal table expanded from 4 rows to 15. Confirmed arrow concentration in 3 files + 1 outlier. |
+| 2026-03-02 | Use `<span />` spacer for hidden boundary buttons | Matches history pagination precedent (`history-sessions-tab.tsx:285`). Prevents layout shift when Previous/Next disappear at boundaries. |
+| 2026-03-02 | Include `Go to Practice →` in scope | One extra string change in `history-questions-tab.tsx:388`. Eliminates the last arrow in the entire app for full consistency. |
+| 2026-03-02 | Defer SVG icon question | Out of scope for BS-037. Can revisit if direction affordance is desired on mobile in a future pass. |
