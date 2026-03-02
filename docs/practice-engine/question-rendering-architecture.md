@@ -471,6 +471,7 @@ The bottom action bar is implemented inline in 4 different places. A future spec
 |----------|-----------|
 | [Frontend Layer](./frontend-layer.md) | Routes, hook architecture, data flow |
 | [Practice Modes](./practice-modes.md) | Tutor vs Exam behavior differences |
+| [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md) | Canonical correctness/explanation exposure timing contract |
 | [Retry Logic](./retry-logic.md) | Retry/reattempt SSOT including provenance, hydration states, and inline session-review retry contract |
 | [Frontend Standards](../frontend/standards.md) | Component inventory (Appendix) |
 | [SPEC-027](../_archive/specs/spec-027-session-review-navigation.md) | Session review navigation (implemented) |
@@ -487,6 +488,7 @@ The bottom action bar is implemented inline in 4 different places. A future spec
 
 | Date | Change |
 |------|--------|
+| 2026-03-02 | Linked canonical Exam Answer Secrecy Policy for cross-context correctness/explanation exposure rules. |
 | 2026-03-01 | Closed DEBT-266 and DEBT-267: documented server telemetry events, accepted visit-scoped retry-marker policy, and synced previous-attempt mixed-id contract hardening. |
 | 2026-03-01 | Synced to DEBT-265 implementation: updated review route ownership, hydration outcome model, session-review submit/reattempt matrix, and `mode=review` semantics. Added follow-up debt references for retry observability and marker-persistence policy (DEBT-266). |
 | 2026-02-17 | Accuracy pass for BUG-145: removed stale `SessionNavigationBar` references, updated action-bar/state-persistence docs to current `previousSubmission` restoration behavior, replaced Section 6 with resolved status, and refreshed file index references. |

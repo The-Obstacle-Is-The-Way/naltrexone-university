@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Current retry/reattempt behavior, provenance rules, and cross-mode consistency
-> **Last Verified:** 2026-03-01
+> **Last Verified:** 2026-03-02
 
 ---
 
@@ -189,13 +189,18 @@ When both are present in review mode:
 
 ## 9. Closure Status
 
-Core retry behavior is fully closed across DEBT-265, DEBT-266, and DEBT-267.
+Core retry lineage behavior remains implemented across DEBT-265, DEBT-266, and DEBT-267.
 
 - Observability events are emitted for retry submissions, review hydration outcomes, and mixed-id normalization.
 - `GetPreviousAttempt` mixed-id contract is hardened (deterministic rejection at controller + use case).
 - Session-review retry marker persistence policy is explicitly accepted as visit-scoped (Option A).
+- Active exam-answer secrecy drift remains open and impacts retry/review surfaces:
+  - [BUG-180](../bugs/bug-180-active-exam-answer-leak-via-review-hydration.md)
+  - [BUG-181](../bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md)
+  - [BUG-185](../bugs/bug-185-dashboard-recent-activity-reveals-active-exam-correctness.md)
+- Canonical policy authority is [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md).
 
-There are no open correctness gaps in retry lineage and review retry flow at this time.
+Retry lineage is structurally in place, but secrecy enforcement is not yet fully closed.
 
 ---
 
@@ -213,6 +218,7 @@ There are no open correctness gaps in retry lineage and review retry flow at thi
 - [x] Server telemetry for mixed-id normalization + hydration outcomes is in place.
 - [x] Session-review retry marker persistence policy is explicitly defined (visit-scoped).
 - [x] `GetPreviousAttempt` mixed-id contract is hardened beyond boundary normalization.
+- [ ] Active-exam secrecy gates are fully enforced across retry/review/dashboard surfaces (tracked by BUG-180, BUG-181, BUG-185).
 
 ---
 
@@ -222,5 +228,6 @@ There are no open correctness gaps in retry lineage and review retry flow at thi
 - [DEBT-266](../_archive/debt/debt-266-retry-observability-and-session-review-marker-persistence.md)
 - [DEBT-267](../_archive/debt/debt-267-get-previous-attempt-identifier-contract-hardening.md)
 - [Question Rendering Architecture](./question-rendering-architecture.md)
+- [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md)
 - [SPEC-034](../_archive/specs/spec-034-review-mode-readonly-and-try-again-scoping.md)
 - [SPEC-036](../_archive/specs/spec-036-bookmark-review-mode-alignment.md)

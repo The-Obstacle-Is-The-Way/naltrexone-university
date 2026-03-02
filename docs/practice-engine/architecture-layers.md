@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Clean Architecture layers — Domain, Application, Adapters
-> **Last Verified:** 2026-03-01
+> **Last Verified:** 2026-03-02
 
 ---
 
@@ -77,6 +77,8 @@ All use cases follow the pattern: constructor injection of port interfaces, sing
 |----------|-------|--------|-------------|
 | `GetNextQuestion` | `{ userId, sessionId, questionId?, fromIndex? }` or `{ userId, filters }` | `NextQuestion` (stem, choices without `isCorrect`, session info) or `null` | `NOT_FOUND`, `VALIDATION_ERROR` |
 | `SubmitAnswer` | `{ userId, questionId, choiceId, sessionId?, timeSpentSeconds?, retryOfAttemptId?, retryOrigin?, retrySessionId? }` | `{ attemptId, isCorrect, correctChoiceId, explanationMd?, referenceMd?, choiceExplanations[] }` | `NOT_FOUND`, `CONFLICT`, `INTERNAL_ERROR`, `VALIDATION_ERROR` |
+
+Answer-key exposure in active exam contexts is governed by the [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md).
 
 #### Practice Sessions
 

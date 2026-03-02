@@ -1,6 +1,6 @@
 # Stabilization Checklist
 
-**Date:** 2026-02-06
+**Date:** 2026-03-02
 **Purpose:** Verify core behavior and documentation accuracy before new feature work.
 
 > Principle: fix correctness risks first, then expand scope.
@@ -12,7 +12,7 @@
 - Session flow is implemented per current SSOT (`SLICE-3`): start, answer, exam review stage, finalize summary.
 - BUG-072 and BUG-073 were reclassified as debt (UX/product gaps, not SSOT violations).
 - BUG-074 was resolved and archived: [BUG-074](../_archive/bugs/bug-074-missed-questions-timestamp-tie-misclassification.md).
-- Architecture/product debt is tracked in `docs/debt/index.md` (no active `DEBT-*` items; active `FE-*` items may exist, e.g. FE-038).
+- Architecture/product debt is tracked in `docs/debt/index.md` (source of truth for active `DEBT-*` and `FE-*` items; do not assume the active set from this checklist text).
 
 ---
 
@@ -67,9 +67,10 @@
 
 ### Flow D: Review + Bookmarks + Dashboard
 
-1. [ ] `/app/review` lists missed questions
+1. [ ] `/app/history` renders Sessions + Questions tabs correctly
 2. [ ] `/app/bookmarks` lists bookmarks and remove action works
 3. [ ] `/app/dashboard` stats + recent activity render
+4. [ ] During an active exam session, dashboard/review surfaces do not reveal correctness/explanations before session end (see exam-answer secrecy policy)
 
 ---
 
@@ -78,6 +79,7 @@
 - [ ] BUG-074 regression check: tie-case logic for missed-question latest-attempt query
 - [ ] Session-state persistence integrity (`questionStates`) under concurrent updates
 - [ ] Idempotency behavior for session/question actions
+- [ ] Exam-answer secrecy invariant holds across all ingress paths (`sessionId`, `attemptId`, latest-attempt hydration, retry provenance, dashboard projection)
 
 ---
 
@@ -86,4 +88,5 @@
 - `docs/specs/master_spec.md`
 - `docs/bugs/index.md`
 - `docs/debt/index.md`
+- `docs/practice-engine/exam-answer-secrecy-policy.md`
 - [BUG-074](../_archive/bugs/bug-074-missed-questions-timestamp-tie-misclassification.md)

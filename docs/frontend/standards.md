@@ -1,6 +1,6 @@
 # Frontend Standards
 
-**Last Updated:** 2026-03-01
+**Last Updated:** 2026-03-02
 
 Canonical reference for all frontend patterns, component usage, accessibility, and styling conventions. Every UI change MUST be consistent with this document. If a pattern isn't documented here, don't invent one — add it here first.
 
@@ -562,6 +562,13 @@ ALWAYS use `ROUTES.*` constants and helper functions for links. NEVER hardcode r
 - Desktop nav: `components/app-desktop-nav.tsx`
 - Mobile nav: `components/mobile-nav.tsx`
 - Both source from the same `APP_NAV_ITEMS` constant
+
+### Exam answer secrecy routing rule
+
+Before adding or changing any question-review link (`mode=review`, `attemptId`, `sessionId`), verify the destination cannot expose active-exam correctness/explanations.
+
+- Canonical source: `docs/practice-engine/exam-answer-secrecy-policy.md`
+- Do not ship route/link changes that bypass that policy via alternate identifier paths.
 
 ### App Shell Header
 

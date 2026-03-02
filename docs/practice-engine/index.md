@@ -84,6 +84,7 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 | [Frontend Layer](./frontend-layer.md) | Routes, hook architecture, data flow, shared UI components, error handling |
 | [Practice Modes](./practice-modes.md) | Ad-hoc / Tutor / Exam modes, session lifecycle, question selection, grading, concurrency |
 | [Security Model](./security-model.md) | Authentication, authorization, rate limiting, idempotency, data isolation |
+| [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md) | Canonical cross-layer policy for correctness/explanation exposure timing in exam mode |
 | [Current State](./current-state.md) | What's working, open debt, SPEC-019 status, product decisions |
 | [Spec Coverage Map](./spec-coverage-map.md) | Maps each component to its defining spec; drift summary |
 | [File Index](./file-index.md) | Directory listings for all practice-engine source files |
@@ -91,6 +92,17 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 | [Question Rendering Architecture](./question-rendering-architecture.md) | How questions are rendered, navigated, and state-managed across all 6 viewing contexts. Shared vs context-specific components, hydration/retry state flows, navigation patterns. |
 | [Retry Logic](./retry-logic.md) | Canonical retry/reattempt behavior across tutor, exam, quick practice, history, dashboard, and bookmarks; includes runtime topology, provenance contract, tracer bullets, and acceptance status. |
 | [Ordering Policy](./ordering-policy.md) | Canonical question and choice ordering rules across all practice paths. Design principles, per-path ordering contracts, domain service roles, and anti-patterns. |
+
+---
+
+## 3.1 Canonical Policy Registry
+
+These documents define cross-layer invariants. If other docs conflict, these win until updated:
+
+| Policy | Canonical Doc | Applies To |
+|--------|----------------|------------|
+| Exam answer secrecy (active exam = no correctness/explanation exposure) | [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md) | Use cases, repositories, controllers, frontend rendering, test contracts |
+| Ordering determinism (question/choice ordering) | [Ordering Policy](./ordering-policy.md) | Session start, quick practice, review routes, rendering contracts |
 
 ---
 
@@ -131,6 +143,7 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 | Date | Change |
 |------|--------|
 | 2026-03-02 | Resolved DEBT-268: daily-seeded shuffle implemented in `executeForFilters`, ordering-policy.md updated from target to implemented state, satellite docs aligned. |
+| 2026-03-02 | Added Exam Answer Secrecy Policy as canonical registry for correctness/explanation exposure timing across use cases, repositories, controllers, and frontend. Added Canonical Policy Registry section in this index and synced security/retry/current-state/spec-coverage docs to active BUG-180/181/185 status. |
 | 2026-03-02 | Added Ordering Policy document — canonical question/choice ordering rules across all paths. BS-038 audit promoted to DEBT-268 for Quick Practice ordering fix. |
 | 2026-03-01 | Closed DEBT-266 and DEBT-267 after implementation: added retry/hydration/normalization telemetry, accepted visit-scoped retry-marker policy, and hardened mixed `attemptId + sessionId` previous-attempt contract. |
 | 2026-03-01 | Closed DEBT-265 core scope in debt tracking, moved observability/retry-marker persistence slices into DEBT-266, and added DEBT-267 for downstream mixed-identifier contract hardening. |

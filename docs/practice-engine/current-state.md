@@ -13,7 +13,7 @@
 - In-run question navigation (back/jump) in both tutor and exam modes via Question Navigator grid
 - Per-question session summary with explanations
 - Bookmark toggle on question view
-- Dashboard stats with session context (grouping by session), attempt-specific review links
+- Dashboard stats with session context (grouping by session), attempt-specific review links (secrecy hardening in progress: BUG-185)
 - History page with tabbed Sessions + Questions views (SPEC-021)
 - Session history with drill-down to per-question breakdown
 - Session review navigation with sequential Previous/Next and "Question X of Y" (SPEC-027)
@@ -30,9 +30,14 @@
 
 ---
 
-## 2. Open Debt (Practice-Specific)
+## 2. Open Debt and Active Bugs (Practice-Specific)
 
 - **BS-014:** Practice Starter — Silent truncation when fewer questions match than requested count (no spec yet)
+- **DEBT-268:** Quick Practice ordering-policy alignment — apply daily-seeded candidate shuffle before `selectNextQuestionId` in filter mode
+- **BUG-180 (P1):** Active exam answer leak via review hydration (`getPreviousAttempt`) across identifier paths
+- **BUG-181 (P1):** `session_review` retry allows active-exam answer reveal
+- **BUG-185 (P1):** Dashboard recent activity reveals active-exam correctness
+- Canonical invariant source: [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md)
 
 ---
 
