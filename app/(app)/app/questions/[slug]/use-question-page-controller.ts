@@ -103,6 +103,11 @@ export function useQuestionPageController(
     useState<RetryProvenance | null>(null);
   const [isPending, startTransition] = useTransition();
   const isMounted = useIsMounted();
+  const latestSlugRef = useRef(input.slug);
+  latestSlugRef.current = input.slug;
+  const latestLoadQuestionRequestId = useRef(0);
+  const latestPreviousAttemptRequestId = useRef(0);
+  const latestSubmitRequestId = useRef(0);
   const sessionQuestionsBySessionIdRef = useRef<
     Map<string, SessionNavigation['questions']>
   >(new Map());
@@ -119,8 +124,12 @@ export function useQuestionPageController(
   const normalizedAttemptId = normalizedReviewIds.attemptId;
 
   const loadQuestion = useMemo(
-    () =>
-      createLoadQuestionAction({
+    () => () => {
+      latestLoadQuestionRequestId.current += 1;
+      const requestId = latestLoadQuestionRequestId.current;
+      const requestSlug = input.slug;
+
+      const runLoadQuestion = createLoadQuestionAction({
         slug: input.slug,
         startTransition,
         getQuestionBySlugFn: getQuestionBySlug,
@@ -134,7 +143,13 @@ export function useQuestionPageController(
         setQuestion,
         setSessionUnansweredReveal,
         isMounted,
-      }),
+        isStale: () =>
+          latestLoadQuestionRequestId.current !== requestId ||
+          latestSlugRef.current !== requestSlug,
+      });
+
+      runLoadQuestion();
+    },
     [input.slug, isMounted],
   );
 
@@ -304,6 +319,10 @@ export function useQuestionPageController(
   }, [input.mode]);
 
   useEffect(() => {
+    latestPreviousAttemptRequestId.current += 1;
+    const requestId = latestPreviousAttemptRequestId.current;
+    const requestSlug = latestSlugRef.current;
+
     if (input.mode !== 'review') return;
     if (loadState.status !== 'ready') return;
     if (!question) {
@@ -328,10 +347,14 @@ export function useQuestionPageController(
         setSessionUnansweredReveal,
         setReviewHydrationState,
         isMounted,
+        isStale: () =>
+          latestPreviousAttemptRequestId.current !== requestId ||
+          latestSlugRef.current !== requestSlug,
       }).finally(() => {
-        if (isMounted()) {
-          setIsLoadingPreviousAttempt(false);
-        }
+        if (!isMounted()) return;
+        if (latestPreviousAttemptRequestId.current !== requestId) return;
+        if (latestSlugRef.current !== requestSlug) return;
+        setIsLoadingPreviousAttempt(false);
       });
     });
   }, [
@@ -372,8 +395,12 @@ export function useQuestionPageController(
   }, [sessionUnansweredReveal, submitResult]);
 
   const onSubmit = useMemo(
-    () =>
-      createSubmitSelectedAnswerAction({
+    () => () => {
+      latestSubmitRequestId.current += 1;
+      const requestId = latestSubmitRequestId.current;
+      const requestSlug = input.slug;
+
+      const runSubmit = createSubmitSelectedAnswerAction({
         startTransition,
         question,
         selectedChoiceId,
@@ -387,8 +414,15 @@ export function useQuestionPageController(
         setLoadState,
         setSubmitResult,
         isMounted,
-      }),
+        isStale: () =>
+          latestSubmitRequestId.current !== requestId ||
+          latestSlugRef.current !== requestSlug,
+      });
+
+      void runSubmit();
+    },
     [
+      input.slug,
       question,
       questionLoadedAt,
       selectedChoiceId,
