@@ -38,7 +38,6 @@ Tracer-bullet path:
 3. Rollback via `attempts.deleteById(...)` at [submit-answer.ts:220](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/submit-answer.ts:220) — best-effort, can itself fail.
 4. If `deleteById` returns false (line 224): throws `INTERNAL_ERROR`. Attempt is orphaned.
 5. If `deleteById` throws (line 230): logs error and re-throws. Attempt is orphaned.
-6. No idempotency protection on the attempt insert for non-session (ad-hoc) mode — the `ATTEMPTS_SESSION_QUESTION_UQ` partial unique index only covers `practiceSessionId IS NOT NULL`.
 
 ## Fix
 
