@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
+import type { GetPracticeSessionReviewOutput } from '@/src/adapters/controllers/practice-controller';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import {
@@ -17,14 +18,7 @@ vi.mock('@/src/adapters/controllers/practice-controller', () => ({
 
 type ReviewLoadResult = {
   ok: true;
-  data: {
-    sessionId: string;
-    mode: 'tutor' | 'exam';
-    totalCount: number;
-    answeredCount: number;
-    markedCount: number;
-    rows: [];
-  };
+  data: GetPracticeSessionReviewOutput;
 };
 
 function createInput(
@@ -115,6 +109,37 @@ describe('usePracticeSessionReviewStageState (browser)', () => {
       .toBe('idle');
     await expect.poll(() => harness.result.current.isInReviewStage).toBe(false);
     expect(vi.mocked(input.setSessionMode)).toHaveBeenCalledWith('tutor');
+  });
+
+  it('sets an error state when finalizeSession rejects after loading non-exam review data', async () => {
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'tutor',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+
+    const input = createInput('exam');
+    vi.mocked(input.finalizeSession).mockRejectedValue(
+      new Error('Finalize failed'),
+    );
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStageState(input),
+    );
+
+    harness.result.current.onEndSession();
+
+    await expect
+      .poll(() => harness.result.current.reviewLoadState.status)
+      .toBe('error');
+    expect(harness.result.current.reviewLoadState).toEqual({
+      status: 'error',
+      message: 'Finalize failed',
+    });
   });
 
   it('runs only one review-load operation when ending and retrying rapidly', async () => {

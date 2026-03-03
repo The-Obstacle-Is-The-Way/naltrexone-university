@@ -47,6 +47,15 @@ export function usePracticeSessionReviewStageState(
   });
   const [isInReviewStage, setIsInReviewStage] = useState(false);
   const isLoadingReviewRef = useRef(false);
+  const finalizeSessionSafely = useCallback((): void => {
+    void input.finalizeSession().catch((error) => {
+      if (!input.isMounted()) return;
+      setReviewLoadState({
+        status: 'error',
+        message: getThrownErrorMessage(error),
+      });
+    });
+  }, [input.finalizeSession, input.isMounted]);
 
   const loadReview = useCallback(async (): Promise<void> => {
     if (isLoadingReviewRef.current) return;
@@ -83,7 +92,7 @@ export function usePracticeSessionReviewStageState(
         setReviewLoadState({ status: 'idle' });
         setIsInReviewStage(false);
         input.setSessionMode(res.data.mode);
-        void input.finalizeSession();
+        finalizeSessionSafely();
         return;
       }
 
@@ -96,11 +105,11 @@ export function usePracticeSessionReviewStageState(
       isLoadingReviewRef.current = false;
     }
   }, [
-    input.finalizeSession,
     input.isMounted,
     input.resetQuestionState,
     input.sessionId,
     input.setSessionMode,
+    finalizeSessionSafely,
   ]);
 
   const onOpenReviewQuestion = useCallback(
@@ -129,8 +138,8 @@ export function usePracticeSessionReviewStageState(
       void loadReview();
       return;
     }
-    void input.finalizeSession();
-  }, [input.finalizeSession, input.sessionMode, isInReviewStage, loadReview]);
+    finalizeSessionSafely();
+  }, [input.sessionMode, isInReviewStage, loadReview, finalizeSessionSafely]);
 
   const onRetryReview = useCallback(() => {
     void loadReview();
