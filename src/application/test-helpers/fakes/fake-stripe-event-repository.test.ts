@@ -157,19 +157,42 @@ describe('FakeStripeEventRepository', () => {
     });
 
     it('returns 0 when limit is not a positive integer', async () => {
-      const repo = new FakeStripeEventRepository();
-      await repo.claim('evt_1', 'checkout.session.completed');
-      await repo.markProcessed('evt_1');
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(new Date('2026-02-01T00:00:00Z'));
+        const repo = new FakeStripeEventRepository();
+        await repo.claim('evt_1', 'checkout.session.completed');
+        await repo.claim('evt_2', 'checkout.session.completed');
+        await repo.markProcessed('evt_1');
+        await repo.markProcessed('evt_2');
+        const cutoff = new Date('2026-02-10T00:00:00Z');
 
-      await expect(
-        repo.pruneProcessedBefore(new Date('2026-02-10T00:00:00Z'), 0),
-      ).resolves.toBe(0);
-      await expect(
-        repo.pruneProcessedBefore(new Date('2026-02-10T00:00:00Z'), -1),
-      ).resolves.toBe(0);
-      await expect(
-        repo.pruneProcessedBefore(new Date('2026-02-10T00:00:00Z'), 0.5),
-      ).resolves.toBe(0);
+        await expect(repo.pruneProcessedBefore(cutoff, 0)).resolves.toBe(0);
+        await expect(repo.lock('evt_1')).resolves.toMatchObject({
+          processedAt: expect.any(Date),
+        });
+        await expect(repo.lock('evt_2')).resolves.toMatchObject({
+          processedAt: expect.any(Date),
+        });
+
+        await expect(repo.pruneProcessedBefore(cutoff, -1)).resolves.toBe(0);
+        await expect(repo.lock('evt_1')).resolves.toMatchObject({
+          processedAt: expect.any(Date),
+        });
+        await expect(repo.lock('evt_2')).resolves.toMatchObject({
+          processedAt: expect.any(Date),
+        });
+
+        await expect(repo.pruneProcessedBefore(cutoff, 0.5)).resolves.toBe(0);
+        await expect(repo.lock('evt_1')).resolves.toMatchObject({
+          processedAt: expect.any(Date),
+        });
+        await expect(repo.lock('evt_2')).resolves.toMatchObject({
+          processedAt: expect.any(Date),
+        });
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });

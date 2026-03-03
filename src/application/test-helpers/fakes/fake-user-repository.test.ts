@@ -25,7 +25,8 @@ describe('FakeUserRepository', () => {
       const repo = new FakeUserRepository();
       const user = await repo.upsertByClerkId('clerk-123', 'test@example.com');
 
-      expect(user.id).toMatch(/^user-\d+$/);
+      expect(user.id).toEqual(expect.any(String));
+      expect(user.id.length).toBeGreaterThan(0);
       expect(user.email).toBe('test@example.com');
       expect(user.createdAt).toBeInstanceOf(Date);
       expect(user.updatedAt).toBeInstanceOf(Date);

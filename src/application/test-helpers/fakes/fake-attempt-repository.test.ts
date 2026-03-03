@@ -141,6 +141,9 @@ describe('FakeAttemptRepository', () => {
       ]);
 
       await expect(
+        repo.findByUserId('user-1', { limit: 0, offset: 0 }),
+      ).resolves.toEqual([]);
+      await expect(
         repo.findByUserId('user-1', { limit: -1, offset: 0 }),
       ).resolves.toEqual([]);
     });
