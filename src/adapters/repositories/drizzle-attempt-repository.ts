@@ -57,7 +57,10 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       isNotNull(practiceSessions.endedAt),
     );
     if (!condition) {
-      throw new Error('Active exam visibility condition unexpectedly missing');
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Active exam visibility condition unexpectedly missing',
+      );
     }
     return condition;
   }
