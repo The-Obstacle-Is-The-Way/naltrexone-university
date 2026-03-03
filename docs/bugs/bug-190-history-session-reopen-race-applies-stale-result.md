@@ -1,6 +1,6 @@
 # BUG-190: History Session Reopen Race Applies Stale Result
 
-**Status:** Open
+**Status:** Fixed
 **Priority:** P3
 **Date:** 2026-03-03
 
@@ -33,11 +33,7 @@ Tracer-bullet path:
 
 ## Fix
 
-Not yet implemented.
-
-Expected fix shape:
-- Replace sessionId token with a monotonic request id (or composite token) per open action.
-- Commit only when response token matches latest request token.
+Replaced `latestReviewSessionId` ref (sessionId-based guard) with a monotonic `latestRequestId` counter. Each `onOpenSession` call increments the counter; only the latest request ID can commit state. This prevents same-session reopen races because each request gets a unique, monotonically increasing token.
 
 ## Verification Notes (Audit #11)
 
@@ -47,7 +43,7 @@ Additional severity note: The race is worse than just "stale data." A stale ERRO
 
 ## Verification
 
-- [ ] Unit test added
+- [x] Unit test added (browser spec)
 - [ ] Integration test added
 - [x] Manual verification
 - [x] Code-level tracer-bullet verified (Audit #11, 2026-03-03)
