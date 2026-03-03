@@ -1,0 +1,117 @@
+import { describe, expect, it } from 'vitest';
+import type { SubscriptionUpsertInput } from '@/src/application/ports/repositories';
+import { FakeSubscriptionRepository } from './fake-subscription-repository';
+
+function makeUpsertInput(
+  overrides: Partial<SubscriptionUpsertInput> = {},
+): SubscriptionUpsertInput {
+  return {
+    userId: 'user_1',
+    externalSubscriptionId: 'sub_123',
+    plan: 'monthly',
+    status: 'active',
+    currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
+    cancelAtPeriodEnd: false,
+    ...overrides,
+  };
+}
+
+describe('FakeSubscriptionRepository', () => {
+  describe('upsert', () => {
+    it('stores a subscription and supports lookup by userId', async () => {
+      const repo = new FakeSubscriptionRepository();
+
+      await repo.upsert(makeUpsertInput());
+
+      await expect(repo.findByUserId('user_1')).resolves.toMatchObject({
+        userId: 'user_1',
+        plan: 'monthly',
+        status: 'active',
+      });
+    });
+
+    it('stores a subscription and supports lookup by externalSubscriptionId', async () => {
+      const repo = new FakeSubscriptionRepository();
+
+      await repo.upsert(makeUpsertInput());
+
+      await expect(
+        repo.findByExternalSubscriptionId('sub_123'),
+      ).resolves.toMatchObject({
+        userId: 'user_1',
+      });
+    });
+
+    it('replaces externalSubscriptionId for the same user on re-upsert', async () => {
+      const repo = new FakeSubscriptionRepository();
+
+      await repo.upsert(makeUpsertInput());
+      await repo.upsert(
+        makeUpsertInput({
+          externalSubscriptionId: 'sub_456',
+          plan: 'annual',
+          status: 'canceled',
+          currentPeriodEnd: new Date('2027-01-31T00:00:00.000Z'),
+          cancelAtPeriodEnd: true,
+        }),
+      );
+
+      await expect(
+        repo.findByExternalSubscriptionId('sub_123'),
+      ).resolves.toBeNull();
+      await expect(
+        repo.findByExternalSubscriptionId('sub_456'),
+      ).resolves.toMatchObject({
+        userId: 'user_1',
+      });
+    });
+  });
+
+  it('throws CONFLICT when an externalSubscriptionId is reused for a different user', async () => {
+    const repo = new FakeSubscriptionRepository();
+
+    await repo.upsert(makeUpsertInput());
+
+    await expect(
+      repo.upsert(
+        makeUpsertInput({
+          userId: 'user_2',
+        }),
+      ),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'External subscription id is already mapped to a different user',
+    });
+  });
+
+  it('restores repository state from a snapshot', async () => {
+    const repo = new FakeSubscriptionRepository();
+
+    await repo.upsert(makeUpsertInput());
+
+    const snapshot = repo.snapshot();
+
+    await repo.upsert(
+      makeUpsertInput({
+        externalSubscriptionId: 'sub_456',
+        plan: 'annual',
+        status: 'canceled',
+        currentPeriodEnd: new Date('2027-01-31T00:00:00.000Z'),
+        cancelAtPeriodEnd: true,
+      }),
+    );
+
+    repo.restore(snapshot);
+
+    await expect(
+      repo.findByExternalSubscriptionId('sub_123'),
+    ).resolves.toMatchObject({
+      userId: 'user_1',
+      plan: 'monthly',
+      status: 'active',
+    });
+    await expect(
+      repo.findByExternalSubscriptionId('sub_456'),
+    ).resolves.toBeNull();
+  });
+});
