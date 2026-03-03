@@ -199,12 +199,16 @@ export function usePracticeSessionQuestionFlow(
           onSuccess: (result) => {
             captured = result;
           },
+          createRequestSequenceId,
+          isLatestRequest,
           isMounted,
         }),
     }).then(() => captured);
   }, [
+    createRequestSequenceId,
     input.sessionId,
     input.submitAnswerFn,
+    isLatestRequest,
     isMounted,
     question,
     questionLoadedAt,

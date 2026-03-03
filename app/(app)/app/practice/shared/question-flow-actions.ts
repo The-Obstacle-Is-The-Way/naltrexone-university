@@ -151,12 +151,20 @@ export async function runSubmitAnswerFlow<
     questionId?: string | null,
   ) => void;
   onSuccess?: (result: SubmitAnswerOutput) => void;
+  createRequestSequenceId?: () => number;
+  isLatestRequest?: (requestId: number) => boolean;
   isMounted?: () => boolean;
 }): Promise<void> {
   if (!input.question) return;
   if (!input.selectedChoiceId) return;
 
   const isMounted = input.isMounted ?? (() => true);
+  const requestId = input.createRequestSequenceId?.();
+  const canCommit = () => {
+    if (!isMounted()) return false;
+    if (requestId === undefined) return true;
+    return input.isLatestRequest?.(requestId) ?? true;
+  };
 
   const timeSpentSeconds = buildTimeSpentSeconds(
     input.questionLoadedAtMs,
@@ -177,7 +185,7 @@ export async function runSubmitAnswerFlow<
       SUBMIT_ANSWER_TIMEOUT_MS,
     );
   } catch (error) {
-    if (!isMounted()) return;
+    if (!canCommit()) return;
 
     input.setLoadState({
       status: 'error',
@@ -185,7 +193,7 @@ export async function runSubmitAnswerFlow<
     });
     return;
   }
-  if (!isMounted()) return;
+  if (!canCommit()) return;
 
   if (!res.ok) {
     input.setLoadState({

@@ -547,4 +547,48 @@ describe('question-flow-actions', () => {
     expect(loadState).toEqual({ status: 'ready' });
     expect(submitResult).toBeNull();
   });
+
+  it('does not commit stale submit responses when a newer request exists', async () => {
+    const deferred = createDeferred<ActionResult<SubmitAnswerOutput>>();
+    let submitResult: SubmitAnswerOutput | null = null;
+
+    const setLoadState = vi.fn();
+    const setSubmitResult = vi.fn((next: SubmitAnswerOutput | null) => {
+      submitResult = next;
+    });
+    const onSuccess = vi.fn();
+
+    const promise = runSubmitAnswerFlow({
+      question: { questionId: 'q_1' },
+      selectedChoiceId: 'choice_1',
+      questionLoadedAtMs: 1000,
+      submitIdempotencyKey: null,
+      submitAnswerFn: async () => deferred.promise,
+      buildSubmitInput: (request: unknown) => request,
+      nowMs: () => 3500,
+      setLoadState,
+      setSubmitResult,
+      onSuccess,
+      isMounted: () => true,
+      createRequestSequenceId: () => 1,
+      isLatestRequest: () => false,
+    } as Parameters<typeof runSubmitAnswerFlow>[0]);
+
+    deferred.resolve(
+      ok({
+        attemptId: 'attempt_1',
+        isCorrect: true,
+        correctChoiceId: 'choice_1',
+        explanationMd: null,
+        referenceMd: null,
+        choiceExplanations: [],
+      } satisfies SubmitAnswerOutput),
+    );
+    await promise;
+
+    expect(submitResult).toBeNull();
+    expect(setSubmitResult).not.toHaveBeenCalled();
+    expect(setLoadState).not.toHaveBeenCalled();
+    expect(onSuccess).not.toHaveBeenCalled();
+  });
 });
