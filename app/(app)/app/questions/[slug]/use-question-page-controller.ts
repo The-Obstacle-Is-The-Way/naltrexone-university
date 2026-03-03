@@ -107,6 +107,7 @@ export function useQuestionPageController(
   latestSlugRef.current = input.slug;
   const latestLoadQuestionRequestId = useRef(0);
   const latestPreviousAttemptRequestId = useRef(0);
+  const activePreviousAttemptRequestId = useRef<number | null>(null);
   const latestSubmitRequestId = useRef(0);
   const sessionQuestionsBySessionIdRef = useRef<
     Map<string, SessionNavigation['questions']>
@@ -322,10 +323,24 @@ export function useQuestionPageController(
     latestPreviousAttemptRequestId.current += 1;
     const requestId = latestPreviousAttemptRequestId.current;
     const requestSlug = latestSlugRef.current;
+    const clearPreviousAttemptLoadingIfActive = () => {
+      if (activePreviousAttemptRequestId.current === null) return;
+      activePreviousAttemptRequestId.current = null;
+      if (isMounted()) {
+        setIsLoadingPreviousAttempt(false);
+      }
+    };
 
-    if (input.mode !== 'review') return;
-    if (loadState.status !== 'ready') return;
+    if (input.mode !== 'review') {
+      clearPreviousAttemptLoadingIfActive();
+      return;
+    }
+    if (loadState.status !== 'ready') {
+      clearPreviousAttemptLoadingIfActive();
+      return;
+    }
     if (!question) {
+      clearPreviousAttemptLoadingIfActive();
       if (isMounted()) {
         setIsLoadingPreviousAttempt(false);
         setReviewHydrationState('no_prior_attempt');
@@ -333,6 +348,7 @@ export function useQuestionPageController(
       return;
     }
 
+    activePreviousAttemptRequestId.current = requestId;
     setIsLoadingPreviousAttempt(true);
     setReviewHydrationState('no_prior_attempt');
 
@@ -354,6 +370,8 @@ export function useQuestionPageController(
         if (!isMounted()) return;
         if (latestPreviousAttemptRequestId.current !== requestId) return;
         if (latestSlugRef.current !== requestSlug) return;
+        if (activePreviousAttemptRequestId.current !== requestId) return;
+        activePreviousAttemptRequestId.current = null;
         setIsLoadingPreviousAttempt(false);
       });
     });

@@ -988,6 +988,89 @@ describe('useQuestionPageController (browser)', () => {
       .toHaveTextContent('choice-1');
   });
 
+  it('clears previous-attempt loading when stale hydration is invalidated by a failed question reload', async () => {
+    getQuestionBySlugMock
+      .mockResolvedValueOnce(
+        ok({
+          questionId: 'question-q-1',
+          slug: 'q-1',
+          stemMd: 'Stem 1',
+          difficulty: 'easy',
+          choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
+        }),
+      )
+      .mockResolvedValueOnce({
+        ok: false,
+        error: { code: 'INTERNAL_ERROR', message: 'Question load failed' },
+      });
+
+    const deferredPrevious =
+      createDeferred<
+        ActionResult<{
+          kind: 'attempt';
+          attemptId: string;
+          selectedChoiceId: string;
+          isCorrect: boolean;
+          correctChoiceId: string;
+          explanationMd: string | null;
+          referenceMd: string | null;
+          choiceExplanations: [];
+          answeredAt: string;
+        }>
+      >();
+    getPreviousAttemptMock.mockReturnValueOnce(deferredPrevious.promise);
+
+    function Wrapper() {
+      const [slug, setSlug] = useState('q-1');
+
+      return (
+        <>
+          <Probe slug={slug} mode="review" />
+          <button
+            type="button"
+            data-testid="set-slug-q-2"
+            onClick={() => setSlug('q-2')}
+          >
+            Set slug q-2
+          </button>
+        </>
+      );
+    }
+
+    const screen = await render(<Wrapper />);
+
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+    await expect
+      .element(screen.getByTestId('is-loading-previous-attempt'))
+      .toHaveTextContent('true');
+
+    await screen.getByTestId('set-slug-q-2').click();
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('error');
+
+    deferredPrevious.resolve(
+      ok({
+        kind: 'attempt',
+        attemptId: 'attempt-q1-stale',
+        selectedChoiceId: 'choice-1',
+        isCorrect: true,
+        correctChoiceId: 'choice-1',
+        explanationMd: 'Because q1',
+        referenceMd: null,
+        choiceExplanations: [],
+        answeredAt: '2026-02-01T00:00:00.000Z',
+      }),
+    );
+    await deferredPrevious.promise;
+
+    await expect
+      .element(screen.getByTestId('is-loading-previous-attempt'))
+      .toHaveTextContent('false');
+  });
+
   it('discards stale submit response when slug changes mid-flight', async () => {
     getQuestionBySlugMock.mockImplementation(async (input: unknown) => {
       const slug = (input as { slug: string }).slug;
