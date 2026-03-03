@@ -377,6 +377,16 @@ describe('question controllers (integration)', () => {
         attempts,
         sessions,
         logger,
+        async (fn) =>
+          db.transaction(async (tx) =>
+            fn({
+              attempts: new DrizzleAttemptRepository(tx),
+              sessions: new DrizzlePracticeSessionRepository(
+                tx,
+                () => new Date(),
+              ),
+            }),
+          ),
       ),
     };
 
@@ -410,6 +420,81 @@ describe('question controllers (integration)', () => {
         choiceExplanations: [],
       },
     });
+  });
+
+  it('rolls back the attempt insert when recordQuestionAnswer fails inside a transaction', async () => {
+    const user = await createUser();
+    const question = await createQuestion({
+      slug: `it-txn-rollback-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const questions = new DrizzleQuestionRepository(db);
+    const attempts = new DrizzleAttemptRepository(db);
+    const sessions = new DrizzlePracticeSessionRepository(db, () => new Date());
+    const logger = new FakeLogger();
+
+    const session = await sessions.create({
+      userId: user.id,
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+
+    // Transaction where attempt insert succeeds but recordQuestionAnswer throws
+    const failingTransaction = async <T>(
+      fn: (tx: {
+        attempts: DrizzleAttemptRepository;
+        sessions: DrizzlePracticeSessionRepository;
+      }) => Promise<T>,
+    ): Promise<T> =>
+      db.transaction(async (tx) => {
+        const txSessions = new DrizzlePracticeSessionRepository(
+          tx,
+          () => new Date(),
+        );
+        return fn({
+          attempts: new DrizzleAttemptRepository(tx),
+          sessions: {
+            ...txSessions,
+            recordQuestionAnswer: async () => {
+              throw new Error('Simulated recordQuestionAnswer failure');
+            },
+          } as unknown as DrizzlePracticeSessionRepository,
+        });
+      });
+
+    const useCase = new SubmitAnswerUseCase(
+      questions,
+      attempts,
+      sessions,
+      logger,
+      failingTransaction,
+    );
+
+    await expect(
+      useCase.execute({
+        userId: user.id,
+        questionId: question.id,
+        choiceId: question.correctChoiceId,
+        sessionId: session.id,
+      }),
+    ).rejects.toThrow('Simulated recordQuestionAnswer failure');
+
+    // Gold-standard proof: no attempt row was committed despite the insert running
+    const inserted = await attempts.findByUserId(user.id, {
+      limit: 10,
+      offset: 0,
+    });
+    const attemptsForQuestion = inserted.filter(
+      (a) => a.questionId === question.id,
+    );
+    expect(attemptsForQuestion).toHaveLength(0);
   });
 });
 

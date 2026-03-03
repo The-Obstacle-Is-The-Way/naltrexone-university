@@ -42,22 +42,23 @@ Tracer-bullet path:
 ## Fix
 
 Implemented by introducing a write-transaction dependency in `SubmitAnswerUseCase`:
-- Added `SubmitAnswerWriteTransaction` and injected it into the use case constructor.
+- Added `SubmitAnswerWriteTransaction` callback-style port at the application layer.
 - When a session-backed answer is submitted, `attempts.insert` and
-  `sessions.recordQuestionAnswer` now execute inside a single transaction callback.
-- Removed compensating-delete behavior from the transactional path (no `deleteById`
-  rollback attempt needed inside the use case).
-- Wired production transaction behavior in `lib/container/use-cases.ts` via
-  `primitives.db.transaction(...)`, creating transaction-scoped attempt/session repositories.
+  `sessions.recordQuestionAnswer` execute inside a single transaction callback.
+- Removed the entire compensating-delete fallback path (~45 lines). Session-backed
+  submissions now require `writeTransaction` — omitting it throws `INTERNAL_ERROR`
+  instead of silently degrading to non-atomic writes.
+- Wired production transaction in `lib/container/use-cases.ts` via
+  `primitives.db.transaction(...)`, creating transaction-scoped repositories.
 
 ## Verification
 
-- [x] Unit test added — `submit-answer.test.ts` verifies transactional path avoids compensating delete and does not persist orphan attempts on session-state failure.
-- [ ] Integration test added
+- [x] Unit test added — `submit-answer.test.ts` verifies: (1) missing transaction throws `INTERNAL_ERROR`, (2) error propagates from transaction without compensating delete.
+- [x] Integration test added — `controllers.integration.test.ts` proves that when `recordQuestionAnswer` fails mid-transaction, no attempt row is committed to the database.
 - [ ] Manual verification
 - [x] Code-level tracer-bullet verified (Audit #12, 2026-03-03)
 
 ## Related
 
 - BUG-188 (CAS failures) can trigger Scenario A by exhausting CAS retries on `recordQuestionAnswer`.
-- The manual rollback pattern at lines 218-252 is the only place in the codebase that attempts cross-write compensation outside a transaction.
+- The manual rollback pattern previously at lines 218-252 was the only place in the codebase that attempted cross-write compensation outside a transaction. It has been fully removed.

@@ -35,14 +35,16 @@ Contrast with `listRecentByUserId` in `drizzle-attempt-repository.ts:364` which 
 ## Fix
 
 Implemented in `DrizzleQuestionRepository`:
-- `latestAttemptRowsSubquery` now `leftJoin`s `practiceSessions`.
-- The subquery now applies the active-exam exclusion predicate used elsewhere:
-  `isNull(practiceSessions.id) OR ne(mode, 'exam') OR isNotNull(endedAt)`.
-- This ensures status-filtered `incorrect` candidate counts exclude active exam attempts.
+- `latestAttemptRowsSubquery` now `leftJoin`s `practiceSessions` and applies the active-exam
+  exclusion predicate: `isNull(practiceSessions.id) OR ne(mode, 'exam') OR isNotNull(endedAt)`.
+  This ensures status-filtered `incorrect` candidate counts exclude active exam attempts.
+- The `unanswered` status subquery in `buildStatusCondition` also received the same
+  `leftJoin` + predicate treatment. Without this, a user could infer exam participation by
+  observing "unanswered" count drops during an active exam.
 
 ## Verification
 
-- [x] Unit test added — `drizzle-question-repository.test.ts` asserts the incorrect-status subquery includes `practiceSessions.mode`/`ended_at` secrecy predicates.
+- [x] Unit test added — `drizzle-question-repository.test.ts` asserts both `unanswered` and `incorrect` status subqueries include `practiceSessions.mode`/`ended_at` secrecy predicates.
 - [ ] Integration test added
 - [ ] Manual verification
 - [x] Code-level tracer-bullet verified (Audit #12, 2026-03-03)

@@ -1,5 +1,9 @@
 import type { Logger } from '@/src/application/ports/logger';
-import type { AttemptRetryOrigin, Question } from '@/src/domain/entities';
+import type {
+  Attempt,
+  AttemptRetryOrigin,
+  Question,
+} from '@/src/domain/entities';
 import { isValidAttemptProvenance } from '@/src/domain/entities';
 import {
   gradeAnswer,
@@ -198,21 +202,29 @@ export class SubmitAnswerUseCase {
       retrySessionId,
     };
 
-    const attempt =
-      session && this.writeTransaction
-        ? await this.writeTransaction(async (tx) => {
-            const txAttempt = await tx.attempts.insert(attemptInsertInput);
-            await tx.sessions.recordQuestionAnswer({
-              sessionId: session.id,
-              userId: input.userId,
-              questionId: question.id,
-              selectedChoiceId: input.choiceId,
-              isCorrect: grade.isCorrect,
-              answeredAt: txAttempt.answeredAt,
-            });
-            return txAttempt;
-          })
-        : await this.attempts.insert(attemptInsertInput);
+    let attempt: Attempt;
+    if (session) {
+      if (!this.writeTransaction) {
+        throw new ApplicationError(
+          'INTERNAL_ERROR',
+          'writeTransaction is required for session-backed submissions',
+        );
+      }
+      attempt = await this.writeTransaction(async (tx) => {
+        const txAttempt = await tx.attempts.insert(attemptInsertInput);
+        await tx.sessions.recordQuestionAnswer({
+          sessionId: session.id,
+          userId: input.userId,
+          questionId: question.id,
+          selectedChoiceId: input.choiceId,
+          isCorrect: grade.isCorrect,
+          answeredAt: txAttempt.answeredAt,
+        });
+        return txAttempt;
+      });
+    } else {
+      attempt = await this.attempts.insert(attemptInsertInput);
+    }
 
     if (retryOrigin !== null) {
       this.safeLog(
@@ -226,53 +238,6 @@ export class SubmitAnswerUseCase {
         },
         'Retry submitted',
       );
-    }
-
-    if (session && !this.writeTransaction) {
-      try {
-        await this.sessions.recordQuestionAnswer({
-          sessionId: session.id,
-          userId: input.userId,
-          questionId: question.id,
-          selectedChoiceId: input.choiceId,
-          isCorrect: grade.isCorrect,
-          answeredAt: attempt.answeredAt,
-        });
-      } catch (error) {
-        try {
-          const rolledBack = await this.attempts.deleteById(
-            attempt.id,
-            input.userId,
-          );
-          if (!rolledBack) {
-            throw new ApplicationError(
-              'INTERNAL_ERROR',
-              'Failed to roll back attempt after session state persistence error',
-            );
-          }
-        } catch (rollbackError) {
-          this.safeLog(
-            'error',
-            {
-              attemptId: attempt.id,
-              sessionError: error,
-              rollbackError,
-            },
-            'Failed to roll back orphaned attempt after session update failure',
-          );
-
-          if (rollbackError instanceof ApplicationError) {
-            throw rollbackError;
-          }
-
-          throw new ApplicationError(
-            'INTERNAL_ERROR',
-            'Failed to roll back attempt after session state persistence error',
-          );
-        }
-
-        throw error;
-      }
     }
 
     const shouldShowExplanation =

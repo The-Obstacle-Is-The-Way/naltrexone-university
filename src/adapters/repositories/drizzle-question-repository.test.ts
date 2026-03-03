@@ -307,6 +307,58 @@ describe('DrizzleQuestionRepository', () => {
       });
     });
 
+    // Structural assertion: ensures unanswered status filtering references
+    // practiceSessions columns so active exam attempts can be excluded.
+    it('applies active-exam secrecy filtering when building unanswered status counts', async () => {
+      const unansweredSubqueryWhere = vi.fn((..._args: unknown[]) => ({}));
+      const unansweredSubqueryLeftJoin = vi.fn((..._args: unknown[]) => ({
+        where: unansweredSubqueryWhere,
+      }));
+      const unansweredSubqueryFrom = vi.fn((_table: unknown) => ({
+        leftJoin: unansweredSubqueryLeftJoin,
+        where: unansweredSubqueryWhere,
+      }));
+
+      const countWhere = vi.fn(async (..._args: unknown[]) => [{ count: 5 }]);
+      const countFrom = vi.fn((_table: unknown) => ({
+        where: countWhere,
+      }));
+
+      const db = {
+        select: (fields: Record<string, unknown>) => {
+          if ('count' in fields) {
+            return { from: countFrom };
+          }
+          return { from: unansweredSubqueryFrom };
+        },
+        selectDistinct: (_fields: Record<string, unknown>) => ({
+          from: unansweredSubqueryFrom,
+        }),
+      } as const;
+
+      const repo = new DrizzleQuestionRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.countPublishedCandidateIds({
+          tagSlugs: [],
+          difficulties: [],
+          statuses: ['unanswered'],
+          userId: 'user_1',
+        }),
+      ).resolves.toBe(5);
+
+      expect(unansweredSubqueryLeftJoin).toHaveBeenCalledTimes(1);
+      const unansweredWhereClause = unansweredSubqueryWhere.mock.calls[0]?.[0];
+      expect(unansweredWhereClause).toBeDefined();
+
+      const practiceSessionColumns = collectColumnNamesForTable(
+        unansweredWhereClause,
+        practiceSessions,
+      );
+      expect(practiceSessionColumns).toContain('mode');
+      expect(practiceSessionColumns).toContain('ended_at');
+    });
+
     // Structural assertion: ensures latest-attempt status filtering references
     // practiceSessions columns so active exam attempts can be excluded.
     it('applies active-exam secrecy filtering when building incorrect status counts', async () => {

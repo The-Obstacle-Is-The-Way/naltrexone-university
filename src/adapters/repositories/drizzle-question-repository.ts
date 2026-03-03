@@ -226,7 +226,16 @@ export class DrizzleQuestionRepository implements QuestionRepository {
           this.db
             .selectDistinct({ questionId: attempts.questionId })
             .from(attempts)
-            .where(eq(attempts.userId, userId)),
+            .leftJoin(
+              practiceSessions,
+              eq(attempts.practiceSessionId, practiceSessions.id),
+            )
+            .where(
+              and(
+                eq(attempts.userId, userId),
+                this.activeExamVisibilityCondition(),
+              ),
+            ),
         );
       case 'incorrect': {
         const latestAttemptRows = this.latestAttemptRowsSubquery(userId);

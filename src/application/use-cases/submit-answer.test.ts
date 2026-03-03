@@ -14,7 +14,15 @@ import {
   FakePracticeSessionRepository,
   FakeQuestionRepository,
 } from '../test-helpers/fakes';
+import type { SubmitAnswerWriteTransaction } from './submit-answer';
 import { SubmitAnswerUseCase } from './submit-answer';
+
+function passthroughTransaction(
+  attempts: FakeAttemptRepository,
+  sessions: FakePracticeSessionRepository,
+): SubmitAnswerWriteTransaction {
+  return async (fn) => fn({ attempts, sessions });
+}
 
 class FailingRecordSessionRepository extends FakePracticeSessionRepository {
   async recordQuestionAnswer(): Promise<never> {
@@ -22,15 +30,6 @@ class FailingRecordSessionRepository extends FakePracticeSessionRepository {
       'INTERNAL_ERROR',
       'Failed to persist practice session answer state',
     );
-  }
-}
-
-class DeleteTrackingAttemptRepository extends FakeAttemptRepository {
-  deleteCallCount = 0;
-
-  override async deleteById(): Promise<boolean> {
-    this.deleteCallCount += 1;
-    throw new Error('Failed to delete attempt');
   }
 }
 
@@ -1063,11 +1062,14 @@ describe('SubmitAnswerUseCase', () => {
       questionIds: [questionId],
     });
 
+    const attempts = new FakeAttemptRepository();
+    const sessions = new FakePracticeSessionRepository([session]);
     const useCase = new SubmitAnswerUseCase(
       new FakeQuestionRepository([question]),
-      new FakeAttemptRepository(),
-      new FakePracticeSessionRepository([session]),
+      attempts,
+      sessions,
       new FakeLogger(),
+      passthroughTransaction(attempts, sessions),
     );
 
     const result = await useCase.execute({
@@ -1106,12 +1108,14 @@ describe('SubmitAnswerUseCase', () => {
       questionIds: [questionId],
     });
 
+    const sessionAttempts = new FakeAttemptRepository();
     const sessions = new FakePracticeSessionRepository([session]);
     const useCase = new SubmitAnswerUseCase(
       new FakeQuestionRepository([question]),
-      new FakeAttemptRepository(),
+      sessionAttempts,
       sessions,
       new FakeLogger(),
+      passthroughTransaction(sessionAttempts, sessions),
     );
 
     await useCase.execute({
@@ -1133,7 +1137,7 @@ describe('SubmitAnswerUseCase', () => {
     ]);
   });
 
-  it('rolls back inserted attempt when session state persistence fails', async () => {
+  it('throws INTERNAL_ERROR when session exists but writeTransaction is not provided', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';
     const questionId = 'q1';
@@ -1159,7 +1163,7 @@ describe('SubmitAnswerUseCase', () => {
     const useCase = new SubmitAnswerUseCase(
       new FakeQuestionRepository([question]),
       attempts,
-      new FailingRecordSessionRepository([session]),
+      new FakePracticeSessionRepository([session]),
       new FakeLogger(),
     );
 
@@ -1173,14 +1177,14 @@ describe('SubmitAnswerUseCase', () => {
     ).rejects.toEqual(
       new ApplicationError(
         'INTERNAL_ERROR',
-        'Failed to persist practice session answer state',
+        'writeTransaction is required for session-backed submissions',
       ),
     );
 
     expect(attempts.getAll()).toEqual([]);
   });
 
-  it('uses transaction rollback instead of compensating delete when session persistence fails', async () => {
+  it('propagates error when recordQuestionAnswer fails inside transaction', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';
     const questionId = 'q1';
@@ -1203,8 +1207,6 @@ describe('SubmitAnswerUseCase', () => {
     });
 
     const attempts = new FakeAttemptRepository();
-    const txAttempts = new DeleteTrackingAttemptRepository();
-    const logger = new FakeLogger();
     const transaction = async <T>(
       fn: (tx: {
         attempts: FakeAttemptRepository;
@@ -1212,7 +1214,7 @@ describe('SubmitAnswerUseCase', () => {
       }) => Promise<T>,
     ): Promise<T> =>
       fn({
-        attempts: txAttempts,
+        attempts: new FakeAttemptRepository(),
         sessions: new FailingRecordSessionRepository([session]),
       });
 
@@ -1220,7 +1222,7 @@ describe('SubmitAnswerUseCase', () => {
       new FakeQuestionRepository([question]),
       attempts,
       new FakePracticeSessionRepository([session]),
-      logger,
+      new FakeLogger(),
       transaction,
     );
 
@@ -1234,8 +1236,6 @@ describe('SubmitAnswerUseCase', () => {
     ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
 
     expect(attempts.getAll()).toEqual([]);
-    expect(txAttempts.deleteCallCount).toBe(0);
-    expect(logger.errorCalls).toHaveLength(0);
   });
 
   it('throws CONFLICT when submitting to an ended session', async () => {
@@ -1468,6 +1468,7 @@ describe('SubmitAnswerUseCase', () => {
       attempts,
       sessions,
       new FakeLogger(),
+      passthroughTransaction(attempts, sessions),
     );
 
     // First submission succeeds
