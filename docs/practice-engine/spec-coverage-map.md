@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Maps each part of the Practice Engine to the spec that defines it
-> **Last Verified:** 2026-03-02
+> **Last Verified:** 2026-03-03
 
 ---
 
@@ -35,13 +35,18 @@
 | Status Filter Segmented Control + Review Navigator | SPEC-028 | Implemented | Segmented control for status/difficulty filters; color-coded question navigator grid in review mode |
 | Dev Environment Resilience | SPEC-029 | Implemented | Client-side timeouts, observable failure states, `ErrorCard` recovery actions |
 | Question View UX Unification | SPEC-030 | Implemented | Tutor state persistence fix, Previous button in practice, review nav relocation to bottom bar |
-| Retry Lineage + Session Review Inline Retry | [Retry Logic SSOT](./retry-logic.md) + DEBT-265 | Implemented (with active secrecy drift) | Provenance fields + validation + inline retry in ended-session review are implemented; observability + mixed-id hardening were completed in DEBT-266/267. Active exam-answer secrecy drift is tracked in BUG-180/181/185 (see [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md)). |
+| Retry Lineage + Session Review Inline Retry | [Retry Logic SSOT](./retry-logic.md) + DEBT-265 | Implemented (with active secrecy drift) | Provenance fields + validation + inline retry in ended-session review are implemented; observability + mixed-id hardening were completed in DEBT-266/267. Initial secrecy drift family (BUG-180/181/185) is archived as fixed, and current active drift is tracked in BUG-186/187/191/192/193 (see [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md)). |
 
 ---
 
 ## 2. Spec/Doc Drift Summary
 
-As of **2026-03-02**, SPEC-021 through SPEC-030 implementation coverage remains strong, but cross-layer exam-answer secrecy drift is active (BUG-180, BUG-181, BUG-185). The canonical policy registry is now [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md).
+As of **2026-03-03**, SPEC-021 through SPEC-030 implementation coverage remains strong, but active practice-engine drift includes:
+- Cross-layer exam-answer secrecy gaps (BUG-186, BUG-187, BUG-191, BUG-192, BUG-193)
+- Session-state CAS compatibility on legacy rows (BUG-188)
+- Frontend async stale-request races (BUG-189, BUG-190, BUG-194)
+
+The canonical policy registry for secrecy remains [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md).
 
 Remaining drift risk is not only future work; it currently includes correctness-exposure invariants across review hydration, retry provenance, and dashboard projections.
 

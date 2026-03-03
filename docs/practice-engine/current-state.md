@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** What's working, open debt, SPEC-019 status, product decisions
-> **Last Verified:** 2026-03-02
+> **Last Verified:** 2026-03-03
 
 ---
 
@@ -13,7 +13,7 @@
 - In-run question navigation (back/jump) in both tutor and exam modes via Question Navigator grid
 - Per-question session summary with explanations
 - Bookmark toggle on question view
-- Dashboard stats with session context (grouping by session), attempt-specific review links (secrecy hardening in progress: BUG-185)
+- Dashboard stats with session context (grouping by session), attempt-specific review links (active secrecy hardening tracked in BUG-187)
 - History page with tabbed Sessions + Questions views (SPEC-021)
 - Session history with drill-down to per-question breakdown
 - Session review navigation with sequential Previous/Next and "Question X of Y" (SPEC-027)
@@ -34,9 +34,15 @@
 
 - **BS-014:** Practice Starter — Silent truncation when fewer questions match than requested count (no spec yet)
 - **DEBT-268:** Quick Practice ordering-policy alignment — apply daily-seeded candidate shuffle before `selectNextQuestionId` in filter mode
-- **BUG-180 (P1):** Active exam answer leak via review hydration (`getPreviousAttempt`) across identifier paths
-- **BUG-181 (P1):** `session_review` retry allows active-exam answer reveal
-- **BUG-185 (P1):** Dashboard recent activity reveals active-exam correctness
+- **BUG-186 (P1):** Active exam review projection leaks per-question correctness
+- **BUG-187 (P1):** Dashboard accuracy includes active exam attempts
+- **BUG-188 (P2):** Legacy session CAS JSON shape mismatch breaks updates
+- **BUG-189 (P2):** Question review cross-slug async state corruption
+- **BUG-190 (P3):** History session reopen race applies stale result
+- **BUG-191 (P2):** `GetNextQuestion` leaks `latestIsCorrect` for active exam sessions
+- **BUG-192 (P2):** History page attempted-questions view exposes active-exam correctness
+- **BUG-193 (P3):** `SubmitAnswer` returns `isCorrect` for active exam submits
+- **BUG-194 (P3):** Practice submit flow missing stale-request guard
 - Canonical invariant source: [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md)
 
 ---

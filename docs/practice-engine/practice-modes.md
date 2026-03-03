@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Ad-hoc, Tutor, and Exam modes — lifecycle, grading, concurrency
-> **Last Verified:** 2026-03-02
+> **Last Verified:** 2026-03-03
 
 ---
 
@@ -41,7 +41,7 @@ EndPracticeSession → computes totals from questionStates
 
 - **Mark for review:** Users can flag questions during the session. `SetPracticeSessionQuestionMark` persists the flag. Only available in exam mode.
 - **Review stage:** Before finalizing, users see a navigator grid showing answered/unanswered/marked questions and can jump to any question.
-- **Deferred explanations (policy):** Correctness/explanations must remain hidden while exam session is active, then become visible after `EndPracticeSession`. Canonical source: [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md). Prior drift was resolved in [BUG-180](../_archive/bugs/bug-180-active-exam-answer-leak-via-review-hydration.md), [BUG-181](../_archive/bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md), and [BUG-185](../_archive/bugs/bug-185-dashboard-recent-activity-reveals-active-exam-correctness.md).
+- **Deferred explanations (policy):** Correctness/explanations must remain hidden while exam session is active, then become visible after `EndPracticeSession`. Canonical source: [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md). Initial drift family ([BUG-180](../_archive/bugs/bug-180-active-exam-answer-leak-via-review-hydration.md), [BUG-181](../_archive/bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md), [BUG-185](../_archive/bugs/bug-185-dashboard-recent-activity-reveals-active-exam-correctness.md)) is fixed; additional drift remains open in [BUG-186](../bugs/bug-186-active-exam-review-projection-leaks-correctness.md), [BUG-187](../bugs/bug-187-dashboard-accuracy-includes-active-exam-attempts.md), [BUG-191](../bugs/bug-191-get-next-question-leaks-latestIsCorrect-active-exam.md), [BUG-192](../bugs/bug-192-history-page-exposes-active-exam-correctness.md), [BUG-193](../bugs/bug-193-submit-answer-returns-isCorrect-active-exam.md).
 
 ---
 

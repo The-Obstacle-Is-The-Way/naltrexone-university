@@ -2,8 +2,8 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Canonical policy for when correctness/explanations may be exposed
-> **Last Verified:** 2026-03-02
-> **Status:** Active (no known open drift; BUG-180/BUG-181/BUG-185 resolved)
+> **Last Verified:** 2026-03-03
+> **Status:** Active (known open drift in BUG-186/BUG-187/BUG-191/BUG-192/BUG-193; BUG-180/BUG-181/BUG-185 are archived as fixed)
 
 ---
 
@@ -22,11 +22,19 @@ The product contract is explicit: exam mode hides correctness/explanations until
 - Master spec: [master_spec.md](/Users/ray/Desktop/github/naltrexone-university-1/docs/specs/master_spec.md:2383)
 - Active answering must remain neutral: [master_spec.md](/Users/ray/Desktop/github/naltrexone-university-1/docs/specs/master_spec.md:2384)
 
-Recent bugs showed this invariant can drift when enforcement is duplicated across routes/use-cases/projections:
+Recent bugs showed this invariant can drift when enforcement is duplicated across routes/use-cases/projections.
 
-- [BUG-180](../_archive/bugs/bug-180-active-exam-answer-leak-via-review-hydration.md) (resolved)
-- [BUG-181](../_archive/bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md) (resolved)
-- [BUG-185](../_archive/bugs/bug-185-dashboard-recent-activity-reveals-active-exam-correctness.md) (resolved)
+Initial drift family fixed and archived:
+- [BUG-180](../_archive/bugs/bug-180-active-exam-answer-leak-via-review-hydration.md)
+- [BUG-181](../_archive/bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md)
+- [BUG-185](../_archive/bugs/bug-185-dashboard-recent-activity-reveals-active-exam-correctness.md)
+
+Current open drift set:
+- [BUG-186](../bugs/bug-186-active-exam-review-projection-leaks-correctness.md)
+- [BUG-187](../bugs/bug-187-dashboard-accuracy-includes-active-exam-attempts.md)
+- [BUG-191](../bugs/bug-191-get-next-question-leaks-latestIsCorrect-active-exam.md)
+- [BUG-192](../bugs/bug-192-history-page-exposes-active-exam-correctness.md)
+- [BUG-193](../bugs/bug-193-submit-answer-returns-isCorrect-active-exam.md)
 
 ---
 
@@ -53,11 +61,11 @@ Recent bugs showed this invariant can drift when enforcement is duplicated acros
 
 | Layer | Responsibility |
 |------|----------------|
-| **Application use cases** | Gate answer-key payloads and retry flows when source attempt/session is active exam (`GetPreviousAttempt`, `SubmitAnswer`) |
-| **Repository projections** | Exclude or redact active-exam correctness fields in user-facing aggregates (`GetUserStats`/dashboard feeds) |
+| **Application use cases** | Gate correctness payloads for active exams across `GetPreviousAttempt`, `GetPracticeSessionReview`, `GetNextQuestion`, and `SubmitAnswer` |
+| **Repository projections** | Exclude or redact active-exam correctness fields in user-facing aggregates (`GetUserStats`, attempted-question history feeds) |
 | **Controllers** | Preserve strict input contracts; do not allow alternate identifier paths to bypass application gates |
 | **Frontend rendering** | Never infer correctness from partial data; render only neutral state in active exam contexts |
-| **Tests** | Must cover all ingress paths (sessionId, attemptId, latest-attempt, retry provenance, dashboard projection) |
+| **Tests** | Must cover all ingress paths (sessionId, attemptId, latest-attempt, retry provenance, dashboard projection, history questions projection) |
 
 ---
 
@@ -87,11 +95,17 @@ Every change that touches review hydration, retry, stats projections, or exam re
 - `attemptId`
 - latest-by-question (no ids)
 
-2. `SubmitAnswer` rejects or redacts session-review retry provenance when `retrySessionId` is active exam.
+2. `GetPracticeSessionReview` must not surface per-question `isCorrect` while session is active exam.
 
-3. Dashboard/stats projection does not expose correctness for active-exam attempts.
+3. `SubmitAnswer` must not return `isCorrect` for active exam submits.
 
-4. UI-level review paths do not render correctness badges from active-exam attempts.
+4. `GetNextQuestion` must not return `latestIsCorrect` for active exam sessions.
+
+5. Dashboard/stats projection does not expose correctness for active-exam attempts.
+
+6. History attempted-questions projection does not expose correctness for active-exam attempts.
+
+7. UI-level review paths do not render correctness badges from active-exam attempts.
 
 ---
 

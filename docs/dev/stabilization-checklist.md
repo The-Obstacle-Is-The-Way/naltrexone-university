@@ -1,6 +1,6 @@
 # Stabilization Checklist
 
-**Date:** 2026-03-02
+**Date:** 2026-03-03
 **Purpose:** Verify core behavior and documentation accuracy before new feature work.
 
 > Principle: fix correctness risks first, then expand scope.
@@ -70,7 +70,7 @@
 1. [ ] `/app/history` renders Sessions + Questions tabs correctly
 2. [ ] `/app/bookmarks` lists bookmarks and remove action works
 3. [ ] `/app/dashboard` stats + recent activity render
-4. [ ] During an active exam session, dashboard/review surfaces do not reveal correctness/explanations before session end (see exam-answer secrecy policy)
+4. [ ] During an active exam session, dashboard/review/question-loop/history surfaces do not reveal correctness/explanations before session end (see exam-answer secrecy policy; open drift tracked in BUG-186, BUG-187, BUG-191, BUG-192, BUG-193)
 
 ---
 
@@ -79,7 +79,7 @@
 - [ ] BUG-074 regression check: tie-case logic for missed-question latest-attempt query
 - [ ] Session-state persistence integrity (`questionStates`) under concurrent updates
 - [ ] Idempotency behavior for session/question actions
-- [ ] Exam-answer secrecy invariant holds across all ingress paths (`sessionId`, `attemptId`, latest-attempt hydration, retry provenance, dashboard projection)
+- [ ] Exam-answer secrecy invariant holds across all ingress paths (`sessionId`, `attemptId`, latest-attempt hydration, retry provenance, `getPracticeSessionReview`, `getNextQuestion`, `submitAnswer`, attempted-questions projection, dashboard projection)
 
 ---
 
