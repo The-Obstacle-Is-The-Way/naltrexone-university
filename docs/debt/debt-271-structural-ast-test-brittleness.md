@@ -10,75 +10,80 @@
 
 ## Description
 
-Two repository test files contain structural tests that inspect Drizzle ORM's internal query AST rather than testing observable behavior. These tests verify that the *right SQL shape* is being constructed by walking internal expression trees — but they are coupled to Drizzle's undocumented internal representation and will silently become non-protective if Drizzle changes its AST structure in a version upgrade.
+One remaining repository unit test inspects Drizzle query-object structure instead of asserting observable behavior. It relies on recursive key-search over a Drizzle-generated expression object, which is brittle against internal representation changes.
 
-### Affected files
+This debt was partially reduced already:
+- `collectColumnNamesForTable` is no longer present in `drizzle-attempt-repository.test.ts`.
+- The remaining AST-coupled helper is `hasNestedOwnKey` in `drizzle-practice-session-repository.test.ts`.
 
-**1. `src/adapters/repositories/drizzle-attempt-repository.test.ts` (lines 8–38, 549+)**
+## Verified current state (2026-03-03)
 
-```typescript
-// collectColumnNamesForTable() — walks Drizzle AST to extract column names
-function collectColumnNamesForTable(obj: unknown, tableName: string): string[] {
-  // ... recursive AST traversal ...
-}
-```
+### 1) `collectColumnNamesForTable` in attempt repo tests
 
-Used in a test that asserts `countWhere` filter includes `practiceSessions` columns — proving BUG-187's fix is wired in. But it tests *how* the query is built, not *what rows it returns*.
+- File checked: `src/adapters/repositories/drizzle-attempt-repository.test.ts` (789 lines)
+- Result: helper does **not** exist.
+- Repo-wide usage search result: no occurrences outside this doc.
 
-**2. `src/adapters/repositories/drizzle-practice-session-repository.test.ts` (lines 6–31, 748+)**
+### 2) `hasNestedOwnKey` in practice-session repo tests
 
-```typescript
-// hasNestedOwnKey() — deep object traversal
-function hasNestedOwnKey(obj: unknown, targetKey: string): boolean {
-  // ... recursive key search ...
-}
-```
+- File checked: `src/adapters/repositories/drizzle-practice-session-repository.test.ts` (1123 lines)
+- Helper definition: lines **6-31**
+- Helper usage: line **772**
+- Test using helper (1 test total):
+  - line **754**: `it('uses raw legacy params_json for CAS comparison when questionStates is missing', ...)`
 
-Used to verify BUG-188's CAS update uses `rawParamsJson` (checking the key exists in the query expression). But it tests *internal query structure*, not *whether legacy rows are updatable*.
+### 3) Behavioral integration coverage for BUG-187 and BUG-188
 
-### Why these exist
+File checked: `tests/integration/repositories.integration.test.ts` (2700 lines)
 
-Both were written as unit-level guards before integration tests existed for BUG-187 and BUG-188. They provided immediate confidence that the fix was wired into the query. Now that behavioral integration tests exist (added in the BUG-186/187/188 PR), the structural tests are redundant as proof — the integration tests hit real Postgres and prove actual row inclusion/exclusion.
+- BUG-187 section exists: lines **2396-2564**
+  - line 2397: excludes active-exam attempts from `countByUserId` and `countCorrectByUserId`
+  - line 2471: excludes active-exam attempts from `listRecentByUserId`
+  - line 2529: includes tutor-session attempts in counts
+- BUG-188 section exists: lines **2569-2700**
+  - line 2570: CAS succeeds for legacy `params_json` without `questionStates` (recordQuestionAnswer)
+  - line 2621: CAS succeeds for current-format `params_json`
+  - line 2658: CAS succeeds for legacy `params_json` in `setQuestionMarkedForReview`
+
+These integration tests verify the behavioral outcomes that the structural helper test is trying to guard.
+
+### 4) Import and dependency safety for deletion
+
+- `hasNestedOwnKey` is file-local and not exported/imported.
+- `collectColumnNamesForTable` has no in-repo usage.
+- Removing `hasNestedOwnKey` and its single structural test will not break imports.
 
 ## Why this is debt
 
-1. **Drizzle upgrade risk:** A Drizzle minor/major version bump could change the internal expression tree shape, causing these tests to pass vacuously (no longer finding the columns they're looking for) or fail spuriously.
-2. **False confidence:** A passing structural test doesn't guarantee the SQL actually filters correctly — only that the AST *looks right* to the traversal function.
-3. **Maintenance burden:** Anyone modifying these queries must understand both the Drizzle API and the custom AST-walking helpers.
-
-## Current mitigation
-
-Both structural tests now have documentation comments (added 2026-03-03) pointing to the behavioral integration tests as the real proof:
-
-```typescript
-// Structural assertion: verifies the WHERE clause includes practiceSessions columns.
-// Couples to Drizzle's internal AST — if Drizzle changes expression tree shape, this
-// could silently become non-protective. The behavioral proof lives in the integration
-// tests (BUG-187 section in repositories.integration.test.ts).
-```
+1. **Drizzle upgrade risk:** Structural key-search against internal expression trees can fail or pass for the wrong reasons after Drizzle internal changes.
+2. **False confidence:** Query-shape assertions do not guarantee legacy rows are actually updatable in Postgres.
+3. **Redundant proof:** BUG-188 integration tests already validate real CAS behavior for legacy and current JSON shapes.
 
 ## Proposed resolution
 
-**Option A (Recommended): Delete structural tests, rely on integration tests.**
+**Option A (Recommended): remove the remaining structural helper test and rely on behavioral tests.**
 
-The integration tests in `repositories.integration.test.ts` (BUG-187 and BUG-188 sections) already prove the correct behavior against real Postgres. The structural tests add no additional safety. Delete them and remove the `collectColumnNamesForTable` and `hasNestedOwnKey` helpers.
+1. In `drizzle-practice-session-repository.test.ts`, delete:
+   - `hasNestedOwnKey` helper (lines 6-31)
+   - test `uses raw legacy params_json for CAS comparison when questionStates is missing` (starts line 754)
+2. Keep BUG-188 integration tests as the behavioral contract.
 
-**Option B: Keep as defense-in-depth, accept brittleness.**
+**Option B: keep as defense-in-depth and accept brittleness.**
 
-If the team prefers belt-and-suspenders, keep the structural tests but add a CI step or Drizzle upgrade checklist item to manually verify they still work after version bumps.
+If retained, document Drizzle-upgrade validation steps and treat this as intentionally brittle.
 
 ## Acceptance criteria
 
-- [ ] Structural AST helpers (`collectColumnNamesForTable`, `hasNestedOwnKey`) removed
-- [ ] Tests that use them either deleted or rewritten as behavioral assertions
-- [ ] Integration tests for BUG-187 and BUG-188 remain as the behavioral proof
-- [ ] `pnpm test --run` and `pnpm test:integration` both pass
-- [ ] No reduction in actual bug-detection capability
+- [ ] `hasNestedOwnKey` helper removed from `drizzle-practice-session-repository.test.ts`
+- [ ] Structural test using `hasNestedOwnKey` removed or rewritten as behavior-focused assertion
+- [ ] BUG-188 integration tests remain unchanged as primary proof
+- [ ] `pnpm test --run` and `pnpm test:integration` pass
+- [ ] No import/runtime breakage from helper deletion
 
 ## Effort estimate
 
-~1 hour. Pure deletion + verification.
+~30-60 minutes. Small deletion plus verification.
 
 ## Risk
 
-Low. The behavioral integration tests already cover the same bugs. Removing the structural tests only removes redundant (and brittle) coverage.
+Low. Behavioral integration coverage already exists for the affected CAS logic.

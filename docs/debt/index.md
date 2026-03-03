@@ -19,8 +19,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 | [DEBT-270](./debt-270-integration-test-god-file-split.md) | Integration Test God File Split — `repositories.integration.test.ts` (2686 lines, 13 describe blocks) | P3 | — |
-| [DEBT-271](./debt-271-structural-ast-test-brittleness.md) | Structural/AST-Coupled Test Brittleness — Drizzle query tree inspection in 2 repo tests | P2 | — |
-| [DEBT-272](./debt-272-fakes-test-god-file-split.md) | Fakes Test God File Split — `fakes.test.ts` (1383 lines, 13 fakes in one file) | P3 | — |
+| [DEBT-271](./debt-271-structural-ast-test-brittleness.md) | Structural/AST-Coupled Test Brittleness — remaining Drizzle query-tree helper in practice-session repo test | P2 | — |
+| [DEBT-272](./debt-272-fakes-test-god-file-split.md) | Fakes Test God File Split — `fakes.test.ts` (1383 lines, 12 top-level fake suites, 64 tests) | P3 | — |
 
 **Next Debt ID:** DEBT-273
 

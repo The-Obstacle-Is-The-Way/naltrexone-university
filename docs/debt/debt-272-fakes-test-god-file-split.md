@@ -10,26 +10,63 @@
 
 ## Description
 
-`src/application/test-helpers/fakes.test.ts` is 1,383 lines containing 36 `describe` blocks that test 13+ separate fake implementations. Each fake is an independent class with its own contract — there is no behavioral coupling between them. This is a multi-concern god file.
+`src/application/test-helpers/fakes.test.ts` is currently **1,383 lines** with **36 `describe` blocks** and **64 `it()` tests**. It exercises multiple unrelated fake classes in one file, creating a multi-concern test "god file".
 
-### Current contents (13 fakes, 36 describe blocks)
+### Verified current contents (2026-03-03)
 
-| Fake Class | Approximate Lines |
-|-----------|------------------|
-| `FakeLogger` | ~40 |
-| `FakePracticeSessionRepository` | ~250 |
-| `FakeQuestionRepository` | ~180 |
-| `FakeSubscriptionRepository` | ~80 |
-| `FakeAuthGateway` | ~60 |
-| `FakePaymentGateway` | ~100 |
-| `FakeUserRepository` | ~80 |
-| `FakeBookmarkRepository` | ~80 |
-| `FakeTagRepository` | ~60 |
-| `FakeStripeCustomerRepository` | ~80 |
-| `FakeStripeEventRepository` | ~80 |
-| `FakeAttemptRepository` | ~200 |
-| `FakeIdempotencyKeyRepository` | ~50 |
-| `FakeRateLimiter` | ~40 |
+- Top-level fake suites in this file: **12**
+- Total nested + top-level `describe` blocks: **36**
+- Total tests (`it(...)`): **64**
+
+| Top-level suite | Line range | `it()` count in range |
+|---|---:|---:|
+| `FakeLogger` | 24-47 | 1 |
+| `FakePracticeSessionRepository` | 48-72 | 2 |
+| `FakeQuestionRepository` | 73-108 | 2 |
+| `FakeSubscriptionRepository` | 109-219 | 3 |
+| `FakeAuthGateway` | 220-233 | 2 |
+| `FakePaymentGateway` | 234-281 | 1 |
+| `FakeUserRepository` | 282-414 | 10 |
+| `FakeBookmarkRepository` | 415-491 | 8 |
+| `FakeTagRepository` | 492-520 | 2 |
+| `FakeStripeCustomerRepository` | 521-596 | 7 |
+| `FakeStripeEventRepository` | 597-763 | 11 |
+| `FakeAttemptRepository` | 764-1383 | 15 |
+
+### `fakes/` directory inventory (`*.ts`)
+
+The following `.ts` files exist under `src/application/test-helpers/fakes/`:
+
+- `fake-attempt-repository.ts`
+- `fake-bookmark-repository.ts`
+- `fake-gateways.ts`
+- `fake-idempotency-key-repository.ts`
+- `fake-logger.ts`
+- `fake-practice-session-repository.ts`
+- `fake-question-repository.ts`
+- `fake-stripe-customer-repository.ts`
+- `fake-stripe-event-repository.ts`
+- `fake-subscription-repository.ts`
+- `fake-tag-repository.ts`
+- `fake-use-cases.ts`
+- `fake-use-cases.test.ts`
+- `fake-user-repository.ts`
+- `index.ts`
+
+Note: `FakeIdempotencyKeyRepository` and `FakeRateLimiter` are exported from `fakes/index.ts`, but they are **not** top-level suites in `fakes.test.ts`.
+
+### Split-risk verification
+
+- Shared imports in `fakes.test.ts`:
+  - `ApplicationError` (line 2)
+  - Barrel import from `@/src/application/test-helpers/fakes` (lines 3-16)
+  - `Tag` type (line 17)
+  - Domain factories `createPracticeSession`, `createQuestion`, `createTag` (lines 18-22)
+- Global/shared hooks:
+  - No `beforeEach`, `beforeAll`, `afterEach`, or `afterAll`
+  - No top-level mutable shared state
+- Cross-fake dependencies:
+  - No top-level fake suite references another fake class (each suite only instantiates its own fake class)
 
 ## Why this is debt
 
@@ -46,7 +83,9 @@
 
 ## Proposed resolution
 
-Split into per-fake test files colocated with their implementations:
+Split `fakes.test.ts` into per-fake colocated test files under `src/application/test-helpers/fakes/`.
+
+Recommended extraction plan (12 files, matching current top-level suites):
 
 ```
 src/application/test-helpers/fakes/
@@ -64,16 +103,19 @@ src/application/test-helpers/fakes/
 
 Delete `src/application/test-helpers/fakes.test.ts` after extraction.
 
+Do not move `fake-use-cases.test.ts`; it is already split and should remain separate.
+
 ## Acceptance criteria
 
-- [ ] Each fake has a colocated `.test.ts` file
+- [ ] 12 new colocated fake test files are created (matching the 12 top-level suites above)
 - [ ] Original `fakes.test.ts` deleted
-- [ ] All existing tests pass with identical assertions
-- [ ] `pnpm test --run` shows same test count (tests move, not disappear)
+- [ ] All 64 existing assertions from `fakes.test.ts` are preserved
+- [ ] `pnpm test --run` passes
+- [ ] No cross-suite behavior changes (pure file movement)
 
 ## Effort estimate
 
-~2 hours. Mechanical file splitting.
+~2-3 hours. Mechanical extraction plus import cleanup.
 
 ## Risk
 
