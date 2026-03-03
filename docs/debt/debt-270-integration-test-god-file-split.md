@@ -1,80 +1,87 @@
 # DEBT-270: Integration Test God File Split
 
-**Status:** Active
-**Priority:** P3
-**Date:** 2026-03-03
-**Owner:** Testing
+**Status:** Resolved  
+**Priority:** P3  
+**Opened:** 2026-03-03  
+**Resolved:** 2026-03-03  
+**Owner:** Testing  
 **Related:** DEBT-271, DEBT-272
 
 ---
 
-## Description
+## Summary
 
-`tests/integration/repositories.integration.test.ts` is 2,686 lines with 13 top-level `describe` blocks covering 10+ unrelated repository classes, 3 bug-regression suites, and a use-case integration test. This is a classic god file — navigating to a specific test requires scrolling past thousands of lines of unrelated code, and a failure banner like "repositories.integration.test.ts > DrizzleBookmarkRepository" gives no immediate locality signal.
+This debt item is fully completed.
 
-The project already demonstrates the correct pattern: `controllers.integration.test.ts` (818 lines), `actions.stripe.integration.test.ts` (242 lines), `tag-taxonomy-census.integration.test.ts` (106 lines) — each scoped to a single domain concern.
+Before refactor, `tests/integration/repositories.integration.test.ts` was a 3,004-line god file with 60 tests across 13 top-level `describe` suites.  
+After refactor, those suites were split into 9 domain-scoped files plus one shared helper file, and the original god file was removed.
 
-## Why this is debt (not a one-line fix)
+## Baseline (measured before cuts)
 
-The split is mechanical but requires care:
-1. Shared setup (`db`, `postgres`, cleanup helpers) must be extracted or imported consistently.
-2. Each new file needs its own `afterEach` cleanup tracking with the correct tables.
-3. Test execution order may interact with DB state if parallelism is enabled (currently sequential).
-4. Helper functions like `createUser()`, `createQuestion()`, `createTag()` defined inline in the file need to either move to `setup.ts` or be duplicated.
+- Command: `pnpm test:integration`
+- Result: **78/78 tests passing**
+- Relevant file: `tests/integration/repositories.integration.test.ts` (**60 tests**)
 
-## Current structure (13 describe blocks)
+### Pre-split top-level suites (actual)
 
-| Describe Block | Lines | Concern |
-|---------------|-------|---------|
-| `DrizzleQuestionRepository` | 210–680 | Question repo CRUD + filters |
-| `listPublishedCandidateIds with status filters` | 341–680 | (nested inside above) |
-| `countPublishedCandidateIds with status filters` | 682–796 | (nested inside above) |
-| `DrizzlePracticeSessionRepository + DrizzleAttemptRepository` | 798–1736 | Session + attempt lifecycle |
-| `DrizzleBookmarkRepository` | 1737–1763 | Bookmark CRUD |
-| `Stripe repositories` | 1764–1950 | Stripe customer/event repos |
-| `DrizzleUserRepository` | 1951–2100 | User repo CRUD |
-| `DrizzleIdempotencyKeyRepository` | 2101–2213 | Idempotency key lifecycle |
-| `DrizzleRateLimiter` | 2214–2240 | Rate limiter |
-| `DrizzleTagRepository` | 2241–2284 | Tag repo |
-| `BUG-186` | 2285–2395 | Exam secrecy regression |
-| `BUG-187` | 2396–2554 | Dashboard counts regression |
-| `BUG-188` | 2555–2686 | Legacy CAS regression |
+| Describe block | Lines (pre-split) | Tests |
+|---|---:|---:|
+| `DrizzleQuestionRepository` | 210-797 | 13 |
+| `DrizzlePracticeSessionRepository + DrizzleAttemptRepository` | 798-1736 | 19 |
+| `DrizzleBookmarkRepository` | 1737-1763 | 1 |
+| `Stripe repositories` | 1764-1950 | 5 |
+| `DrizzleUserRepository` | 1951-2100 | 6 |
+| `DrizzleIdempotencyKeyRepository` | 2101-2261 | 4 |
+| `DrizzleRateLimiter` | 2262-2288 | 1 |
+| `DrizzleTagRepository` | 2289-2332 | 1 |
+| `BUG-186: GetPracticeSessionReview active-exam secrecy` | 2333-2443 | 2 |
+| `BUG-187: Dashboard counts exclude active-exam attempts` | 2444-2616 | 3 |
+| `BUG-192: Attempted-question history excludes active-exam attempts` | 2617-2691 | 1 |
+| `BUG-195: Question candidate status filters exclude active-exam attempts` | 2692-2872 | 1 |
+| `BUG-188: CAS works with legacy JSON shapes` | 2873-3004 | 3 |
 
-## Proposed split
+## Delivered Refactor
 
-| New File | Source Blocks | ~Lines |
-|----------|-------------|--------|
-| `question-repository.integration.test.ts` | DrizzleQuestionRepository (all nested) | ~590 |
-| `session-attempt-repository.integration.test.ts` | DrizzlePracticeSessionRepository + DrizzleAttemptRepository | ~940 |
-| `bookmark-repository.integration.test.ts` | DrizzleBookmarkRepository | ~30 |
-| `stripe-repositories.integration.test.ts` | Stripe repositories | ~190 |
-| `user-repository.integration.test.ts` | DrizzleUserRepository | ~150 |
-| `idempotency-key-repository.integration.test.ts` | DrizzleIdempotencyKeyRepository | ~115 |
-| `rate-limiter.integration.test.ts` | DrizzleRateLimiter | ~30 |
-| `tag-repository.integration.test.ts` | DrizzleTagRepository | ~45 |
-| `bug-regression.integration.test.ts` | BUG-186, BUG-187, BUG-188 | ~400 |
+### Shared extraction
 
-### Shared setup extraction
+Added `tests/integration/helpers.ts` with:
+- DB bootstrap + local-host guard (`createIntegrationDb`)
+- `CleanupState` + `createCleanupState()`
+- `cleanupAfterEach(...)`
+- `closeConnection(...)`
+- parameterized fixtures:
+  - `createUser(db, cleanup)`
+  - `createQuestion(db, cleanup, input)`
+  - `createTag(db, cleanup, input)`
 
-Inline helpers that need to move to `setup.ts` (or a new `helpers.ts`):
-- `createUser(overrides?)` — inserts a user row, returns it, tracks for cleanup
-- `createQuestion(overrides?)` — inserts a question row with choices
-- `createTag(overrides?)` — inserts a tag row
-- Cleanup tracking arrays and `afterEach` teardown
+### Final split layout
 
-## Acceptance criteria
+| New file | Source suites | Tests |
+|---|---|---:|
+| `tests/integration/rate-limiter.integration.test.ts` | `DrizzleRateLimiter` | 1 |
+| `tests/integration/tag-repository.integration.test.ts` | `DrizzleTagRepository` | 1 |
+| `tests/integration/bookmark-repository.integration.test.ts` | `DrizzleBookmarkRepository` | 1 |
+| `tests/integration/idempotency-key-repository.integration.test.ts` | `DrizzleIdempotencyKeyRepository` | 4 |
+| `tests/integration/user-repository.integration.test.ts` | `DrizzleUserRepository` | 6 |
+| `tests/integration/stripe-repositories.integration.test.ts` | `Stripe repositories` | 5 |
+| `tests/integration/bug-regression.integration.test.ts` | `BUG-186`, `BUG-187`, `BUG-192`, `BUG-195`, `BUG-188` | 10 |
+| `tests/integration/question-repository.integration.test.ts` | `DrizzleQuestionRepository` | 13 |
+| `tests/integration/session-attempt-repository.integration.test.ts` | `DrizzlePracticeSessionRepository + DrizzleAttemptRepository` | 19 |
 
-- [ ] Each new file is self-contained (imports setup, runs independently)
-- [ ] Shared helpers extracted to `tests/integration/helpers.ts`
-- [ ] All 57 existing tests still pass with identical behavior
-- [ ] No test depends on execution order or state from another file
-- [ ] Original `repositories.integration.test.ts` deleted (not left as empty shell)
-- [ ] `pnpm test:integration` passes with no regressions
+Removed:
+- `tests/integration/repositories.integration.test.ts`
 
-## Effort estimate
+## Verification
 
-Mechanical refactor: ~2-3 hours.
+- Final integration gate: `pnpm test:integration` -> **78/78 passing**
+- Refactor preserved behavior (structural reorganization only)
+- No cross-file state dependency introduced (each test file initializes its own DB/cleanup hooks via shared helpers)
 
-## Risk
+## Acceptance Criteria
 
-Low. Pure file reorganization with no behavioral changes. The only risk is accidentally breaking a test that depends on setup from a different `describe` block — mitigated by running the full integration suite after each extraction.
+- [x] Each new file is self-contained (imports shared helpers, defines own hooks/state)
+- [x] Shared helpers extracted to `tests/integration/helpers.ts`
+- [x] Existing integration tests still pass with unchanged behavior
+- [x] No test depends on execution order or state from another file
+- [x] Original god file removed
+- [x] `pnpm test:integration` passes with no regressions

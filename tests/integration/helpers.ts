@@ -10,9 +10,10 @@ if (!databaseUrl) {
     'DATABASE_URL is required to run integration tests. Did you forget to set it?',
   );
 }
+const integrationDatabaseUrl = databaseUrl;
 
 const allowNonLocal = process.env.ALLOW_NON_LOCAL_DATABASE_URL === 'true';
-const host = new URL(databaseUrl).hostname;
+const host = new URL(integrationDatabaseUrl).hostname;
 const isLocalhost =
   host === 'localhost' || host === '127.0.0.1' || host === '::1';
 if (!allowNonLocal && !isLocalhost) {
@@ -22,7 +23,7 @@ if (!allowNonLocal && !isLocalhost) {
 }
 
 export function createIntegrationDb() {
-  const sql = postgres(databaseUrl, { max: 1 });
+  const sql = postgres(integrationDatabaseUrl, { max: 1 });
   const db = drizzle(sql, { schema });
   return { db, sql };
 }
