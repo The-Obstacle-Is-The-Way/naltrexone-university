@@ -28,9 +28,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
-| [DEBT-271](./debt-271-structural-ast-test-brittleness.md) | Structural/AST-Coupled Test Brittleness — removed remaining AST-coupled helper assertion from practice-session repository tests | P2 | 2026-03-03 | — |
-| [DEBT-272](./debt-272-fakes-test-god-file-split.md) | Fakes Test God File Split — extracted 12 per-fake test files and removed `fakes.test.ts` | P3 | 2026-03-03 | — |
-| [DEBT-268](./debt-268-quick-practice-ordering-policy-alignment.md) | Quick Practice Ordering Policy Alignment — daily-seeded shuffle in `executeForFilters` (BS-038) | P2 | 2026-03-02 | — |
+| [DEBT-271](../_archive/debt/debt-271-structural-ast-test-brittleness.md) | Structural/AST-Coupled Test Brittleness — removed remaining AST-coupled helper assertion from practice-session repository tests | P2 | 2026-03-03 | [#168](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/168) |
+| [DEBT-272](../_archive/debt/debt-272-fakes-test-god-file-split.md) | Fakes Test God File Split — extracted 12 per-fake test files and removed `fakes.test.ts` | P3 | 2026-03-03 | [#168](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/168) |
+| [DEBT-268](../_archive/debt/debt-268-quick-practice-ordering-policy-alignment.md) | Quick Practice Ordering Policy Alignment — daily-seeded shuffle in `executeForFilters` (BS-038) | P2 | 2026-03-02 | — |
 | [DEBT-267](../_archive/debt/debt-267-get-previous-attempt-identifier-contract-hardening.md) | GetPreviousAttempt Identifier Contract Hardening | P3 | 2026-03-01 | — |
 | [DEBT-266](../_archive/debt/debt-266-retry-observability-and-session-review-marker-persistence.md) | Retry Observability and Session-Review Marker Persistence | P3 | 2026-03-01 | — |
 | [DEBT-269](../_archive/debt/debt-269-history-breakdown-ux-redesign.md) | History Breakdown UX Redesign — flat surface, list structure, disclosure a11y, interaction semantics (BS-036) | P2 | 2026-03-01 | — |
