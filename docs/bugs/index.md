@@ -28,15 +28,20 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| BUG-186 | Active Exam Review Projection Leaks Correctness | P1 | Open |
-| BUG-187 | Dashboard Accuracy Includes Active Exam Attempts | P1 | Open |
-| BUG-188 | Legacy Session CAS JSON Shape Mismatch Breaks Updates | P2 | Open |
 | BUG-189 | Question Review Cross-Slug Async State Corruption | P2 | Open |
 | BUG-190 | History Session Reopen Race Applies Stale Result | P3 | Open |
 | BUG-191 | GetNextQuestion Returns latestIsCorrect for Active Exams | P2 | Open |
 | BUG-192 | History Page Exposes Active Exam Attempt Correctness | P2 | Open |
 | BUG-193 | SubmitAnswer Returns isCorrect for Active Exams | P3 | Open |
 | BUG-194 | Practice Submit Flow Missing Stale-Request Guard | P3 | Open |
+
+## Recently Fixed (Unarchived)
+
+| ID | Title | Priority | Status |
+|----|-------|----------|--------|
+| BUG-186 | Active Exam Review Projection Leaks Correctness | P1 | Fixed (branch: `bug-fix-186-187-188`) |
+| BUG-187 | Dashboard Accuracy Includes Active Exam Attempts | P1 | Fixed (branch: `bug-fix-186-187-188`) |
+| BUG-188 | Legacy Session CAS JSON Shape Mismatch Breaks Updates | P2 | Fixed (branch: `bug-fix-186-187-188`) |
 
 ## Audit #11 — Exam Secrecy Deep Sweep + Race Condition Audit (2026-03-03)
 

@@ -36,6 +36,7 @@ describe('GetPracticeSessionReviewUseCase', () => {
       id: sessionId,
       userId,
       mode: 'exam',
+      endedAt: new Date('2026-02-06T00:10:00Z'),
       questionIds: ['q1', 'q2'],
       questionStates: [
         {
@@ -109,6 +110,53 @@ describe('GetPracticeSessionReviewUseCase', () => {
     );
   });
 
+  it('redacts correctness for active exam sessions', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'exam',
+      endedAt: null,
+      questionIds: ['q1'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: 'choice-1',
+          latestIsCorrect: true,
+          latestAnsweredAt: new Date('2026-02-06T00:00:00Z'),
+        },
+      ],
+    });
+
+    const useCase = new GetPracticeSessionReviewUseCase(
+      new FakePracticeSessionRepository([session]),
+      new FakeQuestionRepository([
+        createQuestion({
+          id: 'q1',
+          slug: 'q-1',
+          stemMd: 'Stem for q1',
+          difficulty: 'easy',
+        }),
+      ]),
+      new FakeLogger(),
+    );
+
+    await expect(useCase.execute({ userId, sessionId })).resolves.toMatchObject(
+      {
+        rows: [
+          {
+            questionId: 'q1',
+            isAnswered: true,
+            isCorrect: null,
+          },
+        ],
+      },
+    );
+  });
+
   it('builds rows from questionIds even when questionStates is shorter', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';
@@ -131,7 +179,7 @@ describe('GetPracticeSessionReviewUseCase', () => {
     const session = createPracticeSession({
       id: sessionId,
       userId,
-      mode: 'exam',
+      mode: 'tutor',
       questionIds: ['q1', 'q2'],
       questionStates: [
         {

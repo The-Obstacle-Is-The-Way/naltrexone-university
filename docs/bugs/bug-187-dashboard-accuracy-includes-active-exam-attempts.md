@@ -1,6 +1,6 @@
 # BUG-187: Dashboard Accuracy Includes Active Exam Attempts
 
-**Status:** Open
+**Status:** Fixed
 **Priority:** P1
 **Date:** 2026-03-03
 
@@ -32,12 +32,14 @@ Tracer-bullet path:
 
 ## Fix
 
-Not yet implemented.
+Implemented in `bug-fix-186-187-188`:
+- Added a shared repository predicate (`activeExamVisibilityCondition`) for active-exam secrecy filtering.
+- Updated aggregate `count*` queries to `leftJoin(practice_sessions)` and apply the same visibility predicate already used by recent activity.
+- Reused the same helper in `listRecentByUserId` to keep the predicate centralized and eliminate drift between count and recent-activity paths.
 
-Expected fix shape:
-- Scope aggregate count methods to the same secrecy predicate used by recent activity:
-  `isNull(practiceSessions.id) OR practiceSessions.mode != 'exam' OR practiceSessions.endedAt IS NOT NULL`.
-- Centralize the predicate to avoid divergence across repository methods.
+Code changes:
+- [drizzle-attempt-repository.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-attempt-repository.ts)
+- [drizzle-attempt-repository.test.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-attempt-repository.test.ts)
 
 ## Verification Notes (Audit #11)
 
@@ -47,7 +49,7 @@ The inconsistency is undeniable: `listRecentByUserId` (line 364) has the three-w
 
 ## Verification
 
-- [ ] Unit test added
+- [x] Unit test added
 - [ ] Integration test added
 - [x] Manual verification
 - [x] Code-level tracer-bullet verified (Audit #11, 2026-03-03)

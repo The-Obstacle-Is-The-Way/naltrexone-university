@@ -60,7 +60,13 @@ export class DrizzlePracticeSessionRepository
     );
   }
 
-  async findByIdAndUserId(id: string, userId: string) {
+  private async findSnapshotByIdAndUserId(
+    id: string,
+    userId: string,
+  ): Promise<{
+    session: PracticeSession;
+    rawParamsJson: PracticeSessionRow['paramsJson'];
+  } | null> {
     const row = await this.db.query.practiceSessions.findFirst({
       where: and(
         eq(practiceSessions.id, id),
@@ -74,7 +80,15 @@ export class DrizzlePracticeSessionRepository
       row.paramsJson,
       'INTERNAL_ERROR',
     );
-    return this.toDomain(row, params);
+    return {
+      session: this.toDomain(row, params),
+      rawParamsJson: row.paramsJson,
+    };
+  }
+
+  async findByIdAndUserId(id: string, userId: string) {
+    const snapshot = await this.findSnapshotByIdAndUserId(id, userId);
+    return snapshot?.session ?? null;
   }
 
   async findLatestIncompleteByUserId(
@@ -197,7 +211,7 @@ export class DrizzlePracticeSessionRepository
   }): Promise<PracticeSessionQuestionState> {
     return updatePracticeSessionQuestionState({
       db: this.db,
-      findByIdAndUserId: this.findByIdAndUserId.bind(this),
+      findByIdAndUserId: this.findSnapshotByIdAndUserId.bind(this),
       sessionId: input.sessionId,
       userId: input.userId,
       questionId: input.questionId,
@@ -219,7 +233,7 @@ export class DrizzlePracticeSessionRepository
   }): Promise<PracticeSessionQuestionState> {
     return updatePracticeSessionQuestionState({
       db: this.db,
-      findByIdAndUserId: this.findByIdAndUserId.bind(this),
+      findByIdAndUserId: this.findSnapshotByIdAndUserId.bind(this),
       sessionId: input.sessionId,
       userId: input.userId,
       questionId: input.questionId,

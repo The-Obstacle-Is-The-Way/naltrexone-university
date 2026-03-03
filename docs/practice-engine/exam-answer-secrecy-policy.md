@@ -3,7 +3,7 @@
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Canonical policy for when correctness/explanations may be exposed
 > **Last Verified:** 2026-03-03
-> **Status:** Active (known open drift in BUG-186/BUG-187/BUG-191/BUG-192/BUG-193; BUG-180/BUG-181/BUG-185 are archived as fixed)
+> **Status:** Active (known open drift in BUG-191/BUG-192/BUG-193; BUG-180/BUG-181/BUG-185 are archived as fixed and BUG-186/BUG-187 are fixed on branch)
 
 ---
 
@@ -30,11 +30,13 @@ Initial drift family fixed and archived:
 - [BUG-185](../_archive/bugs/bug-185-dashboard-recent-activity-reveals-active-exam-correctness.md)
 
 Current open drift set:
-- [BUG-186](../bugs/bug-186-active-exam-review-projection-leaks-correctness.md)
-- [BUG-187](../bugs/bug-187-dashboard-accuracy-includes-active-exam-attempts.md)
 - [BUG-191](../bugs/bug-191-get-next-question-leaks-latestIsCorrect-active-exam.md)
 - [BUG-192](../bugs/bug-192-history-page-exposes-active-exam-correctness.md)
 - [BUG-193](../bugs/bug-193-submit-answer-returns-isCorrect-active-exam.md)
+
+Recently fixed (pending archive):
+- [BUG-186](../bugs/bug-186-active-exam-review-projection-leaks-correctness.md)
+- [BUG-187](../bugs/bug-187-dashboard-accuracy-includes-active-exam-attempts.md)
 
 ---
 

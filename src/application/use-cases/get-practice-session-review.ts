@@ -6,7 +6,10 @@ import type {
 } from '@/src/application/ports/repositories';
 import { enrichWithQuestion } from '@/src/application/shared/enrich-with-question';
 import { fetchQuestionsById } from '@/src/application/shared/fetch-questions-by-id';
-import { createDefaultQuestionState } from '@/src/domain/services';
+import {
+  createDefaultQuestionState,
+  shouldShowExplanation as sessionShouldShowExplanation,
+} from '@/src/domain/services';
 
 export type GetPracticeSessionReviewInput = {
   userId: string;
@@ -69,6 +72,7 @@ export class GetPracticeSessionReviewUseCase {
       this.questions,
       session.questionIds,
     );
+    const shouldShowCorrectness = sessionShouldShowExplanation(session);
     const stateByQuestionId = new Map(
       session.questionStates.map((state) => [state.questionId, state]),
     );
@@ -107,7 +111,7 @@ export class GetPracticeSessionReviewUseCase {
         questionId,
         order: i + 1,
         isAnswered,
-        isCorrect: state.latestIsCorrect,
+        isCorrect: shouldShowCorrectness ? state.latestIsCorrect : null,
         markedForReview: state.markedForReview,
       });
     }

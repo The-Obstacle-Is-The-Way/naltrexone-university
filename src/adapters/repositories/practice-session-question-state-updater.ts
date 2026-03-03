@@ -1,5 +1,5 @@
 import { and, eq, isNull } from 'drizzle-orm';
-import { practiceSessions } from '@/db/schema';
+import { type PracticeSessionParams, practiceSessions } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   PracticeSession,
@@ -10,12 +10,17 @@ import { toPracticeSessionParamsJson } from './practice-session-params';
 
 const UPDATE_QUESTION_STATE_MAX_RETRIES = 3;
 
+type PracticeSessionSnapshot = {
+  session: PracticeSession;
+  rawParamsJson: PracticeSessionParams;
+};
+
 export async function updatePracticeSessionQuestionState(input: {
   db: DrizzleDb;
   findByIdAndUserId: (
     id: string,
     userId: string,
-  ) => Promise<PracticeSession | null>;
+  ) => Promise<PracticeSessionSnapshot | null>;
   sessionId: string;
   userId: string;
   questionId: string;
@@ -29,13 +34,14 @@ export async function updatePracticeSessionQuestionState(input: {
     attempt < UPDATE_QUESTION_STATE_MAX_RETRIES;
     attempt += 1
   ) {
-    const existing = await input.findByIdAndUserId(
+    const existingSnapshot = await input.findByIdAndUserId(
       input.sessionId,
       input.userId,
     );
-    if (!existing) {
+    if (!existingSnapshot) {
       throw new ApplicationError('NOT_FOUND', 'Practice session not found');
     }
+    const existing = existingSnapshot.session;
     if (existing.endedAt) {
       throw new ApplicationError('CONFLICT', 'Practice session already ended');
     }
@@ -57,7 +63,7 @@ export async function updatePracticeSessionQuestionState(input: {
         state.questionId === input.questionId ? updatedState : state,
       ),
     };
-    const expectedParamsJson = toPracticeSessionParamsJson(existing);
+    const expectedParamsJson = existingSnapshot.rawParamsJson;
     const nextParamsJson = toPracticeSessionParamsJson(nextSession);
 
     const [updated] = await input.db
@@ -78,10 +84,14 @@ export async function updatePracticeSessionQuestionState(input: {
     }
   }
 
-  const current = await input.findByIdAndUserId(input.sessionId, input.userId);
-  if (!current) {
+  const currentSnapshot = await input.findByIdAndUserId(
+    input.sessionId,
+    input.userId,
+  );
+  if (!currentSnapshot) {
     throw new ApplicationError('NOT_FOUND', 'Practice session not found');
   }
+  const current = currentSnapshot.session;
   if (current.endedAt) {
     throw new ApplicationError('CONFLICT', 'Practice session already ended');
   }

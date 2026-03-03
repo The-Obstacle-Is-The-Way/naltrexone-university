@@ -545,6 +545,26 @@ describe('DrizzleAttemptRepository', () => {
         ),
       ).resolves.toBe(2);
     });
+
+    it('applies active-exam secrecy filtering to aggregate count queries', async () => {
+      const db = createDbMock();
+      db._mocks.countWhere.mockResolvedValueOnce([{ count: 10 }]);
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await expect(repo.countByUserId('user_1')).resolves.toBe(10);
+
+      expect(db._mocks.countLeftJoin).toHaveBeenCalledTimes(1);
+      const countWhereCalls = db._mocks.countWhere.mock.calls as unknown[][];
+      const whereClause = countWhereCalls[0]?.[0];
+      expect(whereClause).toBeDefined();
+
+      const practiceSessionColumns = collectColumnNamesForTable(
+        whereClause,
+        practiceSessions,
+      );
+      expect(practiceSessionColumns).toContain('mode');
+      expect(practiceSessionColumns).toContain('ended_at');
+    });
   });
 
   describe('listRecentByUserId', () => {
