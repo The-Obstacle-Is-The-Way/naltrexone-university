@@ -2209,6 +2209,54 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       expiresAt: refreshedAt,
     });
   });
+
+  it('reclaims zombie keys after the claim threshold and resets pending state', async () => {
+    const user = await createUser();
+    let currentTime = new Date('2026-02-01T00:00:00.000Z');
+    const now = () => currentTime;
+    const repo = new DrizzleIdempotencyKeyRepository(db, now);
+
+    const firstExpiry = new Date('2026-02-02T00:00:00.000Z');
+    await expect(
+      repo.claim({
+        userId: user.id,
+        action: 'it',
+        key: 'k-zombie',
+        expiresAt: firstExpiry,
+        zombieThresholdMs: 60_000,
+      }),
+    ).resolves.toBe(true);
+
+    currentTime = new Date('2026-02-01T00:00:30.000Z');
+    await expect(
+      repo.claim({
+        userId: user.id,
+        action: 'it',
+        key: 'k-zombie',
+        expiresAt: new Date('2026-02-02T00:00:30.000Z'),
+        zombieThresholdMs: 60_000,
+      }),
+    ).resolves.toBe(false);
+
+    currentTime = new Date('2026-02-01T00:01:10.000Z');
+    const refreshedExpiry = new Date('2026-02-02T00:01:10.000Z');
+    await expect(
+      repo.claim({
+        userId: user.id,
+        action: 'it',
+        key: 'k-zombie',
+        expiresAt: refreshedExpiry,
+        zombieThresholdMs: 60_000,
+      }),
+    ).resolves.toBe(true);
+
+    await expect(repo.find(user.id, 'it', 'k-zombie')).resolves.toMatchObject({
+      resultJson: null,
+      error: null,
+      completedAt: null,
+      expiresAt: refreshedExpiry,
+    });
+  });
 });
 
 describe('DrizzleRateLimiter', () => {

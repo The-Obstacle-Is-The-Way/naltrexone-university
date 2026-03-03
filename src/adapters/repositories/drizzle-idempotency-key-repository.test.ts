@@ -1,8 +1,41 @@
 import { describe, expect, it, vi } from 'vitest';
+import { idempotencyKeys } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import { DrizzleIdempotencyKeyRepository } from './drizzle-idempotency-key-repository';
 
 type RepoDb = ConstructorParameters<typeof DrizzleIdempotencyKeyRepository>[0];
+
+function collectColumnNamesForTable(
+  node: unknown,
+  table: unknown,
+): readonly string[] {
+  const names = new Set<string>();
+
+  const visit = (value: unknown): void => {
+    if (!value || typeof value !== 'object') {
+      return;
+    }
+
+    const maybeNode = value as {
+      table?: unknown;
+      name?: unknown;
+      queryChunks?: unknown[];
+    };
+
+    if (maybeNode.table === table && typeof maybeNode.name === 'string') {
+      names.add(maybeNode.name);
+    }
+
+    if (Array.isArray(maybeNode.queryChunks)) {
+      for (const chunk of maybeNode.queryChunks) {
+        visit(chunk);
+      }
+    }
+  };
+
+  visit(node);
+  return [...names];
+}
 
 describe('DrizzleIdempotencyKeyRepository', () => {
   describe('claim', () => {
@@ -81,6 +114,58 @@ describe('DrizzleIdempotencyKeyRepository', () => {
           completedAt: null,
         }),
       );
+    });
+
+    it('returns true when a zombie key is reclaimed after the threshold', async () => {
+      const insertReturning = vi.fn(async () => []);
+      const insertOnConflictDoNothing = vi.fn(() => ({
+        returning: insertReturning,
+      }));
+      const insertValues = vi.fn(() => ({
+        onConflictDoNothing: insertOnConflictDoNothing,
+      }));
+      const insert = vi.fn(() => ({ values: insertValues }));
+
+      const updateReturning = vi.fn(async () => [{ key: 'idem-1' }]);
+      const updateWhere = vi.fn(() => ({ returning: updateReturning }));
+      const updateSet = vi.fn(() => ({ where: updateWhere }));
+      const update = vi.fn(() => ({ set: updateSet }));
+
+      const db = {
+        insert,
+        update,
+      } as unknown as RepoDb;
+
+      const now = new Date('2026-02-08T00:02:00.000Z');
+      const repo = new DrizzleIdempotencyKeyRepository(db, () => now);
+
+      await expect(
+        repo.claim({
+          userId: '11111111-1111-1111-1111-111111111111',
+          action: 'question:submitAnswer',
+          key: 'idem-1',
+          expiresAt: new Date('2026-02-08T01:00:00.000Z'),
+          zombieThresholdMs: 60_000,
+        }),
+      ).resolves.toBe(true);
+
+      expect(update).toHaveBeenCalledTimes(1);
+      expect(updateSet).toHaveBeenCalledWith(
+        expect.objectContaining({
+          claimedAt: now,
+          completedAt: null,
+          errorCode: null,
+        }),
+      );
+
+      const whereClause = (updateWhere.mock.calls as unknown[][])[0]?.[0];
+      const idempotencyColumns = collectColumnNamesForTable(
+        whereClause,
+        idempotencyKeys,
+      );
+      expect(idempotencyColumns).toContain('claimed_at');
+      expect(idempotencyColumns).toContain('completed_at');
+      expect(idempotencyColumns).toContain('error_code');
     });
 
     it('returns false when existing key is still active', async () => {

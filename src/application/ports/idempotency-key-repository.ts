@@ -25,6 +25,7 @@ export interface IdempotencyKeyRepository {
     action: string;
     key: string;
     expiresAt: Date;
+    zombieThresholdMs?: number;
   }): Promise<boolean>;
 
   /**

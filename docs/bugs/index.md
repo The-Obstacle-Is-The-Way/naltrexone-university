@@ -34,10 +34,10 @@ Bug reports document issues discovered in the codebase along with their root cau
 | BUG-192 | History Page Exposes Active Exam Attempt Correctness | P2 | Fixed (branch: `bug-fix-192-193-194`) |
 | BUG-193 | SubmitAnswer Returns isCorrect for Active Exams | P3 | Fixed (branch: `bug-fix-192-193-194`) |
 | BUG-194 | Practice Submit Flow Missing Stale-Request Guard | P3 | Fixed (branch: `bug-fix-192-193-194`) |
-| BUG-195 | Question Candidate Status Filter Leaks Active Exam Correctness via Inference | P3 | Open |
-| BUG-196 | Practice Session Review Stage loadReview Double-Call Race | P3 | Open |
-| BUG-197 | SubmitAnswer Two-Phase Write Without Transaction | P2 | Open |
-| BUG-198 | Idempotency Key Zombie on Server Crash | P3 | Open |
+| BUG-195 | Question Candidate Status Filter Leaks Active Exam Correctness via Inference | P3 | Fixed (branch: `fix/bugs-195-198-audit12`) |
+| BUG-196 | Practice Session Review Stage loadReview Double-Call Race | P3 | Fixed (branch: `fix/bugs-195-198-audit12`) |
+| BUG-197 | SubmitAnswer Two-Phase Write Without Transaction | P2 | Fixed (branch: `fix/bugs-195-198-audit12`) |
+| BUG-198 | Idempotency Key Zombie on Server Crash | P3 | Fixed (branch: `fix/bugs-195-198-audit12`) |
 
 ## Recently Fixed (Unarchived)
 

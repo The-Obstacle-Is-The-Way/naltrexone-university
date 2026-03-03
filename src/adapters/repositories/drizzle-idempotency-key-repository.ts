@@ -1,4 +1,4 @@
-import { and, asc, eq, lt, or } from 'drizzle-orm';
+import { and, asc, eq, isNull, lt, or } from 'drizzle-orm';
 import { idempotencyKeys } from '@/db/schema';
 import {
   ApplicationError,
@@ -13,6 +13,8 @@ import type { DrizzleDb } from '../shared/database-types';
 export class DrizzleIdempotencyKeyRepository
   implements IdempotencyKeyRepository
 {
+  private static readonly DEFAULT_ZOMBIE_THRESHOLD_MS = 60_000;
+
   constructor(
     private readonly db: DrizzleDb,
     private readonly now: () => Date = () => new Date(),
@@ -23,7 +25,17 @@ export class DrizzleIdempotencyKeyRepository
     action: string;
     key: string;
     expiresAt: Date;
+    zombieThresholdMs?: number;
   }): Promise<boolean> {
+    const now = this.now();
+    const zombieThresholdMs =
+      typeof input.zombieThresholdMs === 'number' &&
+      Number.isFinite(input.zombieThresholdMs) &&
+      input.zombieThresholdMs >= 0
+        ? input.zombieThresholdMs
+        : DrizzleIdempotencyKeyRepository.DEFAULT_ZOMBIE_THRESHOLD_MS;
+    const zombieCutoff = new Date(now.getTime() - zombieThresholdMs);
+
     const [row] = await this.db
       .insert(idempotencyKeys)
       .values({
@@ -33,6 +45,7 @@ export class DrizzleIdempotencyKeyRepository
         resultJson: null,
         errorCode: null,
         errorMessage: null,
+        claimedAt: now,
         completedAt: null,
         expiresAt: input.expiresAt,
       })
@@ -53,6 +66,7 @@ export class DrizzleIdempotencyKeyRepository
         resultJson: null,
         errorCode: null,
         errorMessage: null,
+        claimedAt: now,
         completedAt: null,
         expiresAt: input.expiresAt,
       })
@@ -61,7 +75,14 @@ export class DrizzleIdempotencyKeyRepository
           eq(idempotencyKeys.userId, input.userId),
           eq(idempotencyKeys.action, input.action),
           eq(idempotencyKeys.key, input.key),
-          lt(idempotencyKeys.expiresAt, this.now()),
+          or(
+            lt(idempotencyKeys.expiresAt, now),
+            and(
+              isNull(idempotencyKeys.completedAt),
+              isNull(idempotencyKeys.errorCode),
+              lt(idempotencyKeys.claimedAt, zombieCutoff),
+            ),
+          ),
         ),
       )
       .returning({ key: idempotencyKeys.key });
