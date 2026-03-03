@@ -39,11 +39,18 @@ Expected fix shape:
 - Replace sessionId token with a monotonic request id (or composite token) per open action.
 - Commit only when response token matches latest request token.
 
+## Verification Notes (Audit #11)
+
+**Confirmed real.** Verified at line level 2026-03-03.
+
+Additional severity note: The race is worse than just "stale data." A stale ERROR response also passes the guard (same sessionId token), potentially overwriting a successful fresh response with an error message. Sequence: Request A fires → user closes s1 → user reopens s1 → Request B fires → B succeeds (sets data) → A's error handler fires → guard passes (token is still 's1') → error overwrites success.
+
 ## Verification
 
 - [ ] Unit test added
 - [ ] Integration test added
 - [x] Manual verification
+- [x] Code-level tracer-bullet verified (Audit #11, 2026-03-03)
 
 ## Related
 

@@ -39,13 +39,21 @@ Expected fix shape:
   `isNull(practiceSessions.id) OR practiceSessions.mode != 'exam' OR practiceSessions.endedAt IS NOT NULL`.
 - Centralize the predicate to avoid divergence across repository methods.
 
+## Verification Notes (Audit #11)
+
+**Confirmed real.** Verified at line level 2026-03-03.
+
+The inconsistency is undeniable: `listRecentByUserId` (line 364) has the three-way predicate `(isNull(practiceSessions.id) OR ne(mode, 'exam') OR isNotNull(endedAt))` while `countWhere` (line 300) has no join on practiceSessions at all. Information leakage: if user has few prior attempts, submitting one exam answer and refreshing dashboard reveals accuracy change, allowing correctness inference.
+
 ## Verification
 
 - [ ] Unit test added
 - [ ] Integration test added
 - [x] Manual verification
+- [x] Code-level tracer-bullet verified (Audit #11, 2026-03-03)
 
 ## Related
 
 - Policy: [exam-answer-secrecy-policy.md](/Users/ray/Desktop/github/naltrexone-university-1/docs/practice-engine/exam-answer-secrecy-policy.md)
 - Related prior fix: BUG-185 (recent-activity projection)
+- BUG-192 covers the same gap for the History page attempted-questions surface

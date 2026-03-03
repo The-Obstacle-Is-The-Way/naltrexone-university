@@ -43,12 +43,25 @@ Expected fix shape:
 - Gate state commits by latest slug/request id.
 - Optionally disable slug-navigation links while submit/hydration is in flight.
 
+## Verification Notes (Audit #11)
+
+**Confirmed real.** Verified at line level 2026-03-03.
+
+Three distinct unguarded async paths confirmed:
+1. **Question load** (`useEffect(loadQuestion, [loadQuestion])` at line 141): No cleanup function returned. `loadQuestion` closure captures setters but no slug-scoping token. Old request's `setQuestion(staleData)` overwrites new question.
+2. **Previous-attempt hydration** (lines 306-336): `loadPreviousAttempt` uses `isMounted()` but no slug guard. Stale hydration can prefill wrong answer for current slug.
+3. **Submit** (`createSubmitSelectedAnswerAction` at line 374): Captures `question` and `selectedChoiceId` in closure. Submit response commits via `setSubmitResult` with no slug check.
+
+Contrast with session navigation effect (line 283): `return () => { isStale = true; }` — the correct pattern exists in the same file but is not applied to the other three paths.
+
 ## Verification
 
 - [ ] Unit test added
 - [ ] Integration test added
 - [x] Manual verification
+- [x] Code-level tracer-bullet verified (Audit #11, 2026-03-03)
 
 ## Related
 
 - Existing partial protection: stale session-review fetch guard exists, but only for session-navigation fetches.
+- BUG-194 covers the same pattern gap in the practice session submit flow (`runSubmitAnswerFlow`).

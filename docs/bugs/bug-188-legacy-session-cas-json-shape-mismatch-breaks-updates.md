@@ -40,11 +40,20 @@ Expected fix shape:
 - Align CAS comparison with persisted legacy shape (e.g., compare on canonicalized DB expression or migrate legacy rows before CAS path runs).
 - Add regression coverage for legacy `params_json` missing `questionStates`.
 
+## Verification Notes (Audit #11)
+
+**Confirmed real.** Verified at line level 2026-03-03.
+
+Full CAS failure trace: Read normalizes missing `questionStates` into `[{questionId, markedForReview:false, ...}, ...]`. `toPracticeSessionParamsJson(existing)` serializes this normalized form as `expectedParamsJson`. DB column still holds original JSON without `questionStates` key. WHERE clause `eq(practiceSessions.paramsJson, expectedParamsJson)` fails because `{count,tagSlugs,difficulties,questionIds}` !== `{count,tagSlugs,difficulties,questionIds,questionStates:[...]}`. All 3 retry iterations fail identically. Row is permanently bricked.
+
+**Impact caveat:** Only affects rows where `params_json` was persisted without `questionStates`. All current session creation includes this field. Impact depends on whether legacy rows exist from before the feature was added.
+
 ## Verification
 
 - [ ] Unit test added
 - [ ] Integration test added
 - [x] Manual verification
+- [x] Code-level tracer-bullet verified (Audit #11, 2026-03-03)
 
 ## Related
 

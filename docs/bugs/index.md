@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-02
+**Last Updated:** 2026-03-03
 
 ---
 
@@ -13,7 +13,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-186
+**Next Bug ID:** BUG-195
 
 **Latest archival (2026-03-02):**
 - BUG-182, BUG-183, and BUG-184 verified fixed (PR #163), archived to `docs/_archive/bugs/`.
@@ -28,7 +28,53 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| — | None | — | — |
+| BUG-186 | Active Exam Review Projection Leaks Correctness | P1 | Open |
+| BUG-187 | Dashboard Accuracy Includes Active Exam Attempts | P1 | Open |
+| BUG-188 | Legacy Session CAS JSON Shape Mismatch Breaks Updates | P2 | Open |
+| BUG-189 | Question Review Cross-Slug Async State Corruption | P2 | Open |
+| BUG-190 | History Session Reopen Race Applies Stale Result | P3 | Open |
+| BUG-191 | GetNextQuestion Returns latestIsCorrect for Active Exams | P2 | Open |
+| BUG-192 | History Page Exposes Active Exam Attempt Correctness | P2 | Open |
+| BUG-193 | SubmitAnswer Returns isCorrect for Active Exams | P3 | Open |
+| BUG-194 | Practice Submit Flow Missing Stale-Request Guard | P3 | Open |
+
+## Audit #11 — Exam Secrecy Deep Sweep + Race Condition Audit (2026-03-03)
+
+Adversarial verification of BUG-186 through BUG-190 (filed by a prior agent), followed by a comprehensive sweep for additional exam secrecy violations and async race conditions across all layers.
+
+**Methodology:**
+- Tracer-bullet code trace for each claimed bug (verified at the line level)
+- Cross-layer exam secrecy audit: every use case returning `isCorrect` checked for active-exam gating
+- Async race condition sweep: every `useEffect` firing async operations checked for stale-request guards
+- CAS pattern audit: normalization vs DB comparison verification
+- `Promise.all` snapshot consistency audit under READ COMMITTED isolation
+
+**5 prior bugs verified (BUG-186..190):** All confirmed real with enhanced documentation.
+**4 new bugs filed (BUG-191..194):** 2 exam secrecy violations, 1 history page leakage, 1 async race condition.
+
+### Exam Secrecy Violation Summary
+
+The codebase has a systemic pattern: `shouldShowExplanation(session)` gates explanations and correctChoiceId, but `isCorrect`/`latestIsCorrect` is returned unconditionally. Affected use cases:
+
+| Use Case | Field | Gated? | Bug |
+|----------|-------|--------|-----|
+| `GetPracticeSessionReview` | `isCorrect` | No | BUG-186 |
+| `GetUserStats` (counts) | aggregate counts | No | BUG-187 |
+| `GetNextQuestion` | `latestIsCorrect` | No | BUG-191 |
+| `GetAttemptedQuestions` | `isCorrect` | No | BUG-192 |
+| `SubmitAnswer` | `isCorrect` | No | BUG-193 |
+| `GetPreviousAttempt` | `isCorrect` | Yes (BUG-180 fix) | Fixed |
+
+### Race Condition Summary
+
+| Surface | Guard Pattern | Status | Bug |
+|---------|--------------|--------|-----|
+| `runLoadQuestionFlow` | `isMounted()` + `isLatestRequest()` | Correct | — |
+| `runSubmitAnswerFlow` | `isMounted()` only | Missing guard | BUG-194 |
+| `useQuestionPageController` (load) | `isMounted()` only, no cleanup | Missing guard | BUG-189 |
+| `useQuestionPageController` (hydrate) | `isMounted()` only | Missing guard | BUG-189 |
+| `useQuestionPageController` (session nav) | `isStale` cleanup | Correct | — |
+| `useHistorySessions` | sessionId token | Reopen race | BUG-190 |
 
 ## Audit #10 — Exam Secrecy and Cross-Layer Invariant Sweep (2026-03-02)
 
