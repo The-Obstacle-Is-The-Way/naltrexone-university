@@ -449,6 +449,40 @@ describe('question-controller', () => {
       ]);
     });
 
+    it('returns ok result when use case redacts isCorrect', async () => {
+      const deps = createDeps({
+        submitAnswerOutput: {
+          attemptId: '66666666-6666-6666-6666-666666666666',
+          isCorrect: null,
+          correctChoiceId: null,
+          explanationMd: null,
+          referenceMd: null,
+          choiceExplanations: [],
+        },
+      });
+
+      const result = await submitAnswer(
+        {
+          questionId: '11111111-1111-1111-1111-111111111111',
+          choiceId: '22222222-2222-2222-2222-222222222222',
+          sessionId: '33333333-3333-3333-3333-333333333333',
+        },
+        deps,
+      );
+
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          attemptId: '66666666-6666-6666-6666-666666666666',
+          isCorrect: null,
+          correctChoiceId: null,
+          explanationMd: null,
+          referenceMd: null,
+          choiceExplanations: [],
+        },
+      });
+    });
+
     it('passes retry provenance fields to the use case when provided', async () => {
       const deps = createDeps();
 

@@ -143,7 +143,7 @@ const SubmitAnswerInputSchema = z
 const SubmitAnswerOutputSchema = z
   .object({
     attemptId: zUuid,
-    isCorrect: z.boolean(),
+    isCorrect: z.boolean().nullable(),
     correctChoiceId: zUuid.nullable(),
     explanationMd: z.string().nullable(),
     referenceMd: z.string().nullable().optional().default(null),
