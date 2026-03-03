@@ -15,37 +15,24 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 **Next Bug ID:** BUG-199
 
-**Latest archival (2026-03-02):**
+**Latest archival (2026-03-03):**
+- BUG-186, BUG-187, BUG-188 verified fixed (PR #164), archived to `docs/_archive/bugs/`.
+- BUG-189, BUG-190, BUG-191 verified fixed (PR #166), archived to `docs/_archive/bugs/`.
+- BUG-192, BUG-193, BUG-194 verified fixed (PR #165), archived to `docs/_archive/bugs/`.
+- BUG-195, BUG-196, BUG-197, BUG-198 verified fixed (PR #167), archived to `docs/_archive/bugs/`.
+
+**Previous archival (2026-03-02):**
 - BUG-182, BUG-183, and BUG-184 verified fixed (PR #163), archived to `docs/_archive/bugs/`.
 - BUG-180, BUG-181, and BUG-185 verified fixed (PR #162), archived to `docs/_archive/bugs/`.
 - Audit #8: all 12 bugs (BUG-167..179, excluding false-positive BUG-174) verified fixed, archived to `docs/_archive/audits/audit-008-deep-codebase-sweep.md`.
 
-**Previous archival (2026-02-27):**
+**Earlier archival (2026-02-27):**
 - BUG-165 and BUG-166 verified fixed (PRs #146, #147), archived to `docs/_archive/bugs/`.
 - BUG-160 through BUG-164 verified fixed, merged (PR #144), and archived to `docs/_archive/bugs/`.
 
 ## Open Bugs
 
-| ID | Title | Priority | Status |
-|----|-------|----------|--------|
-| BUG-189 | Question Review Cross-Slug Async State Corruption | P2 | Open |
-| BUG-190 | History Session Reopen Race Applies Stale Result | P3 | Open |
-| BUG-191 | GetNextQuestion Returns latestIsCorrect for Active Exams | P2 | Open |
-| BUG-192 | History Page Exposes Active Exam Attempt Correctness | P2 | Fixed (branch: `bug-fix-192-193-194`) |
-| BUG-193 | SubmitAnswer Returns isCorrect for Active Exams | P3 | Fixed (branch: `bug-fix-192-193-194`) |
-| BUG-194 | Practice Submit Flow Missing Stale-Request Guard | P3 | Fixed (branch: `bug-fix-192-193-194`) |
-| BUG-195 | Question Candidate Status Filter Leaks Active Exam Correctness via Inference | P3 | Fixed (branch: `fix/bugs-195-198-audit12`) |
-| BUG-196 | Practice Session Review Stage loadReview Double-Call Race | P3 | Fixed (branch: `fix/bugs-195-198-audit12`) |
-| BUG-197 | SubmitAnswer Two-Phase Write Without Transaction | P2 | Fixed (branch: `fix/bugs-195-198-audit12`) |
-| BUG-198 | Idempotency Key Zombie on Server Crash | P3 | Fixed (branch: `fix/bugs-195-198-audit12`) |
-
-## Recently Fixed (Unarchived)
-
-| ID | Title | Priority | Status |
-|----|-------|----------|--------|
-| BUG-186 | Active Exam Review Projection Leaks Correctness | P1 | Fixed (branch: `bug-fix-186-187-188`) |
-| BUG-187 | Dashboard Accuracy Includes Active Exam Attempts | P1 | Fixed (branch: `bug-fix-186-187-188`) |
-| BUG-188 | Legacy Session CAS JSON Shape Mismatch Breaks Updates | P2 | Fixed (branch: `bug-fix-186-187-188`) |
+_No open bugs._
 
 ## Audit #12 — Extended Sweep: Inference Leaks, Transaction Safety, Zombie Keys (2026-03-03)
 
