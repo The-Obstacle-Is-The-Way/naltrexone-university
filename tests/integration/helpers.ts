@@ -14,8 +14,12 @@ const integrationDatabaseUrl = databaseUrl;
 
 const allowNonLocal = process.env.ALLOW_NON_LOCAL_DATABASE_URL === 'true';
 const host = new URL(integrationDatabaseUrl).hostname;
+const normalizedHost =
+  host.startsWith('[') && host.endsWith(']') ? host.slice(1, -1) : host;
 const isLocalhost =
-  host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  normalizedHost === 'localhost' ||
+  normalizedHost === '127.0.0.1' ||
+  normalizedHost === '::1';
 if (!allowNonLocal && !isLocalhost) {
   throw new Error(
     `Refusing to run integration tests against non-local DATABASE_URL host "${host}". Set DATABASE_URL to a local Postgres (recommended: Docker) or export ALLOW_NON_LOCAL_DATABASE_URL=true to override.`,
@@ -149,7 +153,12 @@ export async function createQuestion(
     createdAt?: Date;
     tagIds?: readonly string[];
   },
-): Promise<{ id: string; slug: string; correctChoiceId: string }> {
+): Promise<{
+  id: string;
+  slug: string;
+  correctChoiceId: string;
+  incorrectChoiceId: string;
+}> {
   const createdAt = input.createdAt ?? new Date();
   const updatedAt = createdAt;
 
@@ -178,7 +187,7 @@ export async function createQuestion(
 
   cleanup.questionIds.push(question.id);
 
-  const [choiceA, choiceB] = await db
+  const choices = await db
     .insert(schema.choices)
     .values([
       {
@@ -196,9 +205,11 @@ export async function createQuestion(
         sortOrder: 2,
       },
     ])
-    .returning({ id: schema.choices.id });
+    .returning({ id: schema.choices.id, isCorrect: schema.choices.isCorrect });
 
-  if (!choiceA || !choiceB) {
+  const correctChoice = choices.find((choice) => choice.isCorrect);
+  const incorrectChoice = choices.find((choice) => !choice.isCorrect);
+  if (!correctChoice || !incorrectChoice) {
     throw new Error('Failed to insert choices');
   }
 
@@ -211,5 +222,10 @@ export async function createQuestion(
     );
   }
 
-  return { id: question.id, slug: input.slug, correctChoiceId: choiceB.id };
+  return {
+    id: question.id,
+    slug: input.slug,
+    correctChoiceId: correctChoice.id,
+    incorrectChoiceId: incorrectChoice.id,
+  };
 }

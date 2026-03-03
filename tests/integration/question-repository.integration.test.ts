@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { and, eq } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
 import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-question-repository';
@@ -215,50 +214,22 @@ describe('DrizzleQuestionRepository', () => {
         createdAt: new Date('2026-01-02T00:00:00.000Z'),
       });
 
-      const [qLatestIncorrectChoiceA] = await db
-        .select({ id: schema.choices.id })
-        .from(schema.choices)
-        .where(
-          and(
-            eq(schema.choices.questionId, qLatestIncorrect.id),
-            eq(schema.choices.label, 'A'),
-          ),
-        )
-        .limit(1);
-      if (!qLatestIncorrectChoiceA) {
-        throw new Error('Failed to load incorrect choice for setup');
-      }
-
       await db.insert(schema.attempts).values({
         userId: user.id,
         questionId: qLatestIncorrect.id,
         practiceSessionId: null,
-        selectedChoiceId: qLatestIncorrectChoiceA.id,
+        selectedChoiceId: qLatestIncorrect.incorrectChoiceId,
         isCorrect: false,
         timeSpentSeconds: 0,
         answeredAt: new Date('2026-02-01T00:00:00.000Z'),
       });
-
-      const [qLatestCorrectChoiceA] = await db
-        .select({ id: schema.choices.id })
-        .from(schema.choices)
-        .where(
-          and(
-            eq(schema.choices.questionId, qLatestCorrect.id),
-            eq(schema.choices.label, 'A'),
-          ),
-        )
-        .limit(1);
-      if (!qLatestCorrectChoiceA) {
-        throw new Error('Failed to load choice for latest-correct setup');
-      }
 
       await db.insert(schema.attempts).values([
         {
           userId: user.id,
           questionId: qLatestCorrect.id,
           practiceSessionId: null,
-          selectedChoiceId: qLatestCorrectChoiceA.id,
+          selectedChoiceId: qLatestCorrect.incorrectChoiceId,
           isCorrect: false,
           timeSpentSeconds: 0,
           answeredAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -346,26 +317,12 @@ describe('DrizzleQuestionRepository', () => {
         tagIds: [tag.id],
       });
 
-      const [qIncorrectChoiceA] = await db
-        .select({ id: schema.choices.id })
-        .from(schema.choices)
-        .where(
-          and(
-            eq(schema.choices.questionId, qIncorrect.id),
-            eq(schema.choices.label, 'A'),
-          ),
-        )
-        .limit(1);
-      if (!qIncorrectChoiceA) {
-        throw new Error('Failed to load incorrect choice for setup');
-      }
-
       await db.insert(schema.attempts).values([
         {
           userId: user.id,
           questionId: qIncorrect.id,
           practiceSessionId: null,
-          selectedChoiceId: qIncorrectChoiceA.id,
+          selectedChoiceId: qIncorrect.incorrectChoiceId,
           isCorrect: false,
           timeSpentSeconds: 0,
           answeredAt: new Date('2026-02-01T00:00:00.000Z'),
@@ -564,26 +521,12 @@ describe('DrizzleQuestionRepository', () => {
         tagIds: [tag.id],
       });
 
-      const [qIncorrectChoiceA] = await db
-        .select({ id: schema.choices.id })
-        .from(schema.choices)
-        .where(
-          and(
-            eq(schema.choices.questionId, qIncorrect.id),
-            eq(schema.choices.label, 'A'),
-          ),
-        )
-        .limit(1);
-      if (!qIncorrectChoiceA) {
-        throw new Error('Failed to load incorrect choice for setup');
-      }
-
       await db.insert(schema.attempts).values([
         {
           userId: user.id,
           questionId: qIncorrect.id,
           practiceSessionId: null,
-          selectedChoiceId: qIncorrectChoiceA.id,
+          selectedChoiceId: qIncorrect.incorrectChoiceId,
           isCorrect: false,
           timeSpentSeconds: 0,
           answeredAt: new Date('2026-02-01T00:00:00.000Z'),

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import type { PracticeSessionParams } from '@/db/schema';
 import * as schema from '@/db/schema';
@@ -116,7 +116,7 @@ describe('BUG-186: GetPracticeSessionReview active-exam secrecy', () => {
       sessionId: session.id,
       userId: user.id,
       questionId: question.id,
-      selectedChoiceId: question.correctChoiceId,
+      selectedChoiceId: question.incorrectChoiceId,
       isCorrect: false,
       answeredAt: new Date(),
     });
@@ -431,36 +431,6 @@ describe('BUG-195: Question candidate status filters exclude active-exam attempt
       tagIds: [tag.id],
     });
 
-    const [qExamIncorrectChoiceA] = await db
-      .select({ id: schema.choices.id })
-      .from(schema.choices)
-      .where(
-        and(
-          eq(schema.choices.questionId, qExamIncorrect.id),
-          eq(schema.choices.label, 'A'),
-        ),
-      )
-      .limit(1);
-    if (!qExamIncorrectChoiceA) {
-      throw new Error('Failed to load exam incorrect choice for BUG-195 setup');
-    }
-
-    const [qAdhocIncorrectChoiceA] = await db
-      .select({ id: schema.choices.id })
-      .from(schema.choices)
-      .where(
-        and(
-          eq(schema.choices.questionId, qAdhocIncorrect.id),
-          eq(schema.choices.label, 'A'),
-        ),
-      )
-      .limit(1);
-    if (!qAdhocIncorrectChoiceA) {
-      throw new Error(
-        'Failed to load adhoc incorrect choice for BUG-195 setup',
-      );
-    }
-
     const examSession = await sessionRepo.create({
       userId: user.id,
       mode: 'exam',
@@ -476,7 +446,7 @@ describe('BUG-195: Question candidate status filters exclude active-exam attempt
       userId: user.id,
       questionId: qExamIncorrect.id,
       practiceSessionId: examSession.id,
-      selectedChoiceId: qExamIncorrectChoiceA.id,
+      selectedChoiceId: qExamIncorrect.incorrectChoiceId,
       isCorrect: false,
       timeSpentSeconds: 0,
     });
@@ -484,7 +454,7 @@ describe('BUG-195: Question candidate status filters exclude active-exam attempt
       userId: user.id,
       questionId: qAdhocIncorrect.id,
       practiceSessionId: null,
-      selectedChoiceId: qAdhocIncorrectChoiceA.id,
+      selectedChoiceId: qAdhocIncorrect.incorrectChoiceId,
       isCorrect: false,
       timeSpentSeconds: 0,
     });
