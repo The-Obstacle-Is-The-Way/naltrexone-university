@@ -1,6 +1,6 @@
 # BUG-194: Practice Submit Flow Missing Stale-Request Guard
 
-**Status:** Open
+**Status:** Fixed
 **Priority:** P3
 **Date:** 2026-03-03
 
@@ -37,17 +37,26 @@ The `questionId` parameter in `setSubmitResult` provides a hint to the consumer,
 
 ## Fix
 
-Not yet implemented.
+Added optional `createRequestSequenceId` and `isLatestRequest` parameters to `runSubmitAnswerFlow` in `question-flow-actions.ts`. Built a `canCommit()` helper mirroring `runLoadQuestionFlow` exactly:
+```typescript
+const requestId = input.createRequestSequenceId?.();
+const canCommit = () => {
+  if (!isMounted()) return false;
+  if (requestId === undefined) return true;
+  return input.isLatestRequest?.(requestId) ?? true;
+};
+```
 
-Expected fix shape:
-- Add `createRequestSequenceId` and `isLatestRequest` parameters to `runSubmitAnswerFlow`.
-- Build a `canCommit()` helper mirroring `runLoadQuestionFlow`.
-- Gate all state commits behind `canCommit()`.
+Both the catch path (error handling) and the post-response path (success/error result) are gated behind `canCommit()`. All callers updated to thread the guards through:
+- `practice-page-logic.ts` and `practice-session-page-logic.ts` (wrappers)
+- `use-practice-question-answer-flow.ts` and `use-practice-session-question-flow.ts` (hooks)
+
+Commit: `a24c0849 Fix BUG-194: Guard practice submit commits against stale requests`
 
 ## Verification
 
-- [ ] Unit test added
-- [ ] Integration test added
+- [x] Unit test added — `question-flow-actions.test.ts`: verifies stale submit responses are dropped (no `setSubmitResult`, `setLoadState`, or `onSuccess` calls). `practice-page-logic.test.ts` and `practice-session-page-logic.test.ts`: wrapper-level stale-response tests.
+- [ ] Integration test — N/A (frontend race-condition guard; tested at unit/wrapper level)
 - [ ] Manual verification
 
 ## Related

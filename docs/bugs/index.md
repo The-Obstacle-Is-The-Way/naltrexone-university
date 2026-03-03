@@ -31,9 +31,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 | BUG-189 | Question Review Cross-Slug Async State Corruption | P2 | Open |
 | BUG-190 | History Session Reopen Race Applies Stale Result | P3 | Open |
 | BUG-191 | GetNextQuestion Returns latestIsCorrect for Active Exams | P2 | Open |
-| BUG-192 | History Page Exposes Active Exam Attempt Correctness | P2 | Open |
-| BUG-193 | SubmitAnswer Returns isCorrect for Active Exams | P3 | Open |
-| BUG-194 | Practice Submit Flow Missing Stale-Request Guard | P3 | Open |
+| BUG-192 | History Page Exposes Active Exam Attempt Correctness | P2 | Fixed (branch: `bug-fix-192-193-194`) |
+| BUG-193 | SubmitAnswer Returns isCorrect for Active Exams | P3 | Fixed (branch: `bug-fix-192-193-194`) |
+| BUG-194 | Practice Submit Flow Missing Stale-Request Guard | P3 | Fixed (branch: `bug-fix-192-193-194`) |
 | BUG-195 | Question Candidate Status Filter Leaks Active Exam Correctness via Inference | P3 | Open |
 | BUG-196 | Practice Session Review Stage loadReview Double-Call Race | P3 | Open |
 | BUG-197 | SubmitAnswer Two-Phase Write Without Transaction | P2 | Open |
@@ -96,8 +96,8 @@ The codebase has a systemic pattern: `shouldShowExplanation(session)` gates expl
 | `GetPracticeSessionReview` | `isCorrect` | No | BUG-186 |
 | `GetUserStats` (counts) | aggregate counts | No | BUG-187 |
 | `GetNextQuestion` | `latestIsCorrect` | No | BUG-191 |
-| `GetAttemptedQuestions` | `isCorrect` | No | BUG-192 |
-| `SubmitAnswer` | `isCorrect` | No | BUG-193 |
+| `GetAttemptedQuestions` | `isCorrect` | Yes (BUG-192 fix: active-exam rows excluded at repository) | Fixed |
+| `SubmitAnswer` | `isCorrect` | Yes (BUG-193 fix: gated behind `shouldShowExplanation`) | Fixed |
 | `GetPreviousAttempt` | `isCorrect` | Yes (BUG-180 fix) | Fixed |
 
 ### Race Condition Summary
@@ -105,7 +105,7 @@ The codebase has a systemic pattern: `shouldShowExplanation(session)` gates expl
 | Surface | Guard Pattern | Status | Bug |
 |---------|--------------|--------|-----|
 | `runLoadQuestionFlow` | `isMounted()` + `isLatestRequest()` | Correct | — |
-| `runSubmitAnswerFlow` | `isMounted()` only | Missing guard | BUG-194 |
+| `runSubmitAnswerFlow` | `isMounted()` + `isLatestRequest()` | Correct (BUG-194 fix) | Fixed |
 | `useQuestionPageController` (load) | `isMounted()` only, no cleanup | Missing guard | BUG-189 |
 | `useQuestionPageController` (hydrate) | `isMounted()` only | Missing guard | BUG-189 |
 | `useQuestionPageController` (session nav) | `isStale` cleanup | Correct | — |

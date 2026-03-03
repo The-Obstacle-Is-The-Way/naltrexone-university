@@ -1,6 +1,6 @@
 # BUG-192: History Page Exposes Active Exam Attempt Correctness
 
-**Status:** Open
+**Status:** Fixed
 **Priority:** P2
 **Date:** 2026-03-03
 
@@ -34,16 +34,14 @@ Tracer-bullet path:
 
 ## Fix
 
-Not yet implemented.
+Added `this.activeExamVisibilityCondition()` to the shared `buildAttemptedQuestionsConditions()` method in `drizzle-attempt-repository.ts`. This centralizes the predicate (`isNull(practiceSessions.id) OR ne(mode, 'exam') OR isNotNull(endedAt)`) so both `listAttemptedQuestionsByUserId` and `countAttemptedQuestionsByUserId` automatically exclude active exam attempts. The predicate is the same one already used by `listRecentByUserId`, preventing divergence.
 
-Expected fix shape:
-- Apply the same active-exam exclusion predicate used by `listRecentByUserId` to the attempted-questions query methods.
-- Centralize the predicate to avoid divergence (shared helper or composable SQL fragment).
+Commit: `c1aea641 Fix BUG-192: Exclude active exam attempts from history page queries`
 
 ## Verification
 
-- [ ] Unit test added
-- [ ] Integration test added
+- [x] Unit test added — `drizzle-attempt-repository.test.ts`: structural assertions verify the predicate references `mode` and `ended_at` columns for both list and count queries.
+- [x] Integration test added — `repositories.integration.test.ts`: end-to-end test creates an active exam session, verifies attempts are excluded from list/count, ends the exam, and verifies they reappear.
 - [ ] Manual verification
 
 ## Related
