@@ -4,6 +4,9 @@ import {
   desc,
   eq,
   inArray,
+  isNotNull,
+  isNull,
+  ne,
   notInArray,
   or,
   type SQL,
@@ -13,6 +16,7 @@ import type { Choice, Question, QuestionTag, Tag } from '@/db/schema';
 import {
   attempts,
   bookmarks,
+  practiceSessions,
   questions,
   questionTags,
   tags,
@@ -31,6 +35,21 @@ import { latestAttemptRankSql } from './shared/latest-attempt-rank-sql';
 
 export class DrizzleQuestionRepository implements QuestionRepository {
   constructor(private readonly db: DrizzleDb) {}
+
+  private activeExamVisibilityCondition(): SQL {
+    const condition = or(
+      isNull(practiceSessions.id),
+      ne(practiceSessions.mode, 'exam'),
+      isNotNull(practiceSessions.endedAt),
+    );
+    if (!condition) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Active exam visibility condition unexpectedly missing',
+      );
+    }
+    return condition;
+  }
 
   private buildPublishedCandidateWhere(filters: QuestionFilters): {
     hasTagFilter: boolean;
@@ -185,7 +204,13 @@ export class DrizzleQuestionRepository implements QuestionRepository {
         }).as('attempt_rank'),
       })
       .from(attempts)
-      .where(eq(attempts.userId, userId))
+      .leftJoin(
+        practiceSessions,
+        eq(attempts.practiceSessionId, practiceSessions.id),
+      )
+      .where(
+        and(eq(attempts.userId, userId), this.activeExamVisibilityCondition()),
+      )
       .as('latest_attempt_rows');
   }
 
@@ -204,7 +229,16 @@ export class DrizzleQuestionRepository implements QuestionRepository {
           this.db
             .selectDistinct({ questionId: attempts.questionId })
             .from(attempts)
-            .where(eq(attempts.userId, userId)),
+            .leftJoin(
+              practiceSessions,
+              eq(attempts.practiceSessionId, practiceSessions.id),
+            )
+            .where(
+              and(
+                eq(attempts.userId, userId),
+                this.activeExamVisibilityCondition(),
+              ),
+            ),
         );
       case 'incorrect': {
         const latestAttemptRows = this.latestAttemptRowsSubquery(userId);

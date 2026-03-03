@@ -1,7 +1,10 @@
 import { delay } from '@/src/adapters/shared/delay';
 import { ApplicationError, isApplicationError } from '@/src/application/errors';
 import type { Logger } from '@/src/application/ports/logger';
-import type { IdempotencyKeyRepository } from '@/src/application/ports/repositories';
+import {
+  DEFAULT_IDEMPOTENCY_ZOMBIE_THRESHOLD_MS,
+  type IdempotencyKeyRepository,
+} from '@/src/application/ports/repositories';
 
 const DEFAULT_TTL_MS = 86_400_000; // 24 hours
 const DEFAULT_MAX_WAIT_MS = 2_000;
@@ -44,12 +47,15 @@ export async function withIdempotency<T>(input: {
   ttlMs?: number;
   maxWaitMs?: number;
   pollIntervalMs?: number;
+  zombieThresholdMs?: number;
   parseResult?: (value: unknown) => T;
   execute: () => Promise<T>;
 }): Promise<T> {
   const ttlMs = input.ttlMs ?? DEFAULT_TTL_MS;
   const maxWaitMs = input.maxWaitMs ?? DEFAULT_MAX_WAIT_MS;
   const pollIntervalMs = input.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
+  const zombieThresholdMs =
+    input.zombieThresholdMs ?? DEFAULT_IDEMPOTENCY_ZOMBIE_THRESHOLD_MS;
 
   // Best-effort cleanup so expired idempotency rows don't accumulate forever.
   // Pruning failures must not block the caller's request.
@@ -73,6 +79,7 @@ export async function withIdempotency<T>(input: {
     action: input.action,
     key: input.key,
     expiresAt,
+    zombieThresholdMs,
   });
 
   if (claimed) {

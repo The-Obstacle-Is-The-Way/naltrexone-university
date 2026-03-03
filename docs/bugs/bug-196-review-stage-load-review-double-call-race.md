@@ -1,6 +1,6 @@
 # BUG-196: Practice Session Review Stage loadReview Double-Call Race
 
-**Status:** Open
+**Status:** Fixed
 **Priority:** P3
 **Date:** 2026-03-03
 
@@ -34,16 +34,15 @@ Tracer-bullet path:
 
 ## Fix
 
-Not yet implemented.
-
-Expected fix shape:
-- Add a ref-based semaphore (e.g., `isLoadingReviewRef.current`) checked at entry and set before the async call. Reset in `finally`.
-- Or: track a monotonic request counter and discard stale responses.
-- The `isMarkingRef` pattern in `usePracticeSessionMarkForReview` is the reference implementation.
+Implemented in `usePracticeSessionReviewStageState`:
+- Added `isLoadingReviewRef` as a load semaphore.
+- `loadReview` now exits early when a review load is already in flight.
+- The semaphore is set before async work and reset in a `finally` block.
+- This prevents duplicate concurrent `loadReview` calls and duplicate `finalizeSession()` calls from rapid user input.
 
 ## Verification
 
-- [ ] Unit test added
+- [x] Unit test added — browser spec `use-practice-session-review-stage-state.browser.spec.tsx` verifies rapid end/retry only triggers one review-load/finalize path.
 - [ ] Integration test added
 - [ ] Manual verification
 - [x] Code-level tracer-bullet verified (Audit #12, 2026-03-03)

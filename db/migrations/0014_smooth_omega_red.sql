@@ -1,0 +1,1 @@
+ALTER TABLE "idempotency_keys" ADD COLUMN "claimed_at" timestamp with time zone DEFAULT now() NOT NULL;

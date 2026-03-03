@@ -1,13 +1,15 @@
 import { ApplicationError } from '@/src/application/errors';
-import type {
-  IdempotencyKeyError,
-  IdempotencyKeyRecord,
-  IdempotencyKeyRepository,
+import {
+  DEFAULT_IDEMPOTENCY_ZOMBIE_THRESHOLD_MS,
+  type IdempotencyKeyError,
+  type IdempotencyKeyRecord,
+  type IdempotencyKeyRepository,
 } from '@/src/application/ports/repositories';
 
 type InMemoryIdempotencyRecord = {
   resultJson: unknown;
   error: IdempotencyKeyError | null;
+  claimedAt: Date;
   completedAt: Date | null;
   expiresAt: Date;
 };
@@ -26,16 +28,33 @@ export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
     action: string;
     key: string;
     expiresAt: Date;
+    zombieThresholdMs?: number;
   }): Promise<boolean> {
+    const now = this.now();
+    const zombieThresholdMs =
+      typeof input.zombieThresholdMs === 'number' &&
+      Number.isFinite(input.zombieThresholdMs) &&
+      input.zombieThresholdMs >= 0
+        ? input.zombieThresholdMs
+        : DEFAULT_IDEMPOTENCY_ZOMBIE_THRESHOLD_MS;
+    const zombieCutoff = new Date(now.getTime() - zombieThresholdMs);
     const id = this.toKey(input.userId, input.action, input.key);
     const existing = this.records.get(id);
-    if (existing && existing.expiresAt.getTime() >= this.now().getTime()) {
-      return false;
+    if (existing) {
+      const isExpired = existing.expiresAt.getTime() < now.getTime();
+      const isZombie =
+        existing.completedAt === null &&
+        existing.error === null &&
+        existing.claimedAt.getTime() < zombieCutoff.getTime();
+      if (!isExpired && !isZombie) {
+        return false;
+      }
     }
 
     this.records.set(id, {
       resultJson: null,
       error: null,
+      claimedAt: now,
       completedAt: null,
       expiresAt: input.expiresAt,
     });
@@ -55,7 +74,12 @@ export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
       return null;
     }
 
-    return existing;
+    return {
+      resultJson: existing.resultJson,
+      error: existing.error,
+      completedAt: existing.completedAt,
+      expiresAt: existing.expiresAt,
+    };
   }
 
   async storeResult(input: {

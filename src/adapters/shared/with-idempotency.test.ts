@@ -328,6 +328,61 @@ describe('withIdempotency', () => {
     expect(execute).not.toHaveBeenCalled();
   });
 
+  it('reclaims zombie keys after the claim timeout threshold', async () => {
+    let nowMs = Date.parse('2026-02-07T00:00:00.000Z');
+    const now = () => {
+      const current = new Date(nowMs);
+      nowMs += 10;
+      return current;
+    };
+
+    const repo = new FakeIdempotencyKeyRepository(now);
+    const logger = new FakeLogger();
+    const key = '44444444-4444-4444-4444-444444444446';
+
+    await repo.claim({
+      userId: 'user_1',
+      action: 'billing:createCheckoutSession',
+      key,
+      expiresAt: new Date('2026-02-08T00:00:00.000Z'),
+      zombieThresholdMs: 60_000,
+    });
+
+    const execute = vi.fn(async () => ({ ok: true }));
+
+    nowMs += 30_000;
+    await expect(
+      withIdempotency({
+        repo,
+        userId: 'user_1',
+        action: 'billing:createCheckoutSession',
+        key,
+        now,
+        logger,
+        maxWaitMs: 15,
+        pollIntervalMs: 1,
+        zombieThresholdMs: 60_000,
+        execute,
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    expect(execute).not.toHaveBeenCalled();
+
+    nowMs += 31_000;
+    await expect(
+      withIdempotency({
+        repo,
+        userId: 'user_1',
+        action: 'billing:createCheckoutSession',
+        key,
+        now,
+        logger,
+        zombieThresholdMs: 60_000,
+        execute,
+      }),
+    ).resolves.toEqual({ ok: true });
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+
   it('throws INTERNAL_ERROR when key disappears during polling', async () => {
     class DisappearingFindRepo extends FakeIdempotencyKeyRepository {
       override async find(): Promise<null> {

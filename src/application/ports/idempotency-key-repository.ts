@@ -1,5 +1,7 @@
 import type { ApplicationErrorCode } from '@/src/application/errors';
 
+export const DEFAULT_IDEMPOTENCY_ZOMBIE_THRESHOLD_MS = 60_000;
+
 export type IdempotencyKeyError = {
   code: ApplicationErrorCode;
   message: string;
@@ -25,6 +27,7 @@ export interface IdempotencyKeyRepository {
     action: string;
     key: string;
     expiresAt: Date;
+    zombieThresholdMs?: number;
   }): Promise<boolean>;
 
   /**

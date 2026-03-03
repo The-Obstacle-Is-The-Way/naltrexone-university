@@ -1,6 +1,6 @@
 # BUG-198: Idempotency Key Zombie on Server Crash
 
-**Status:** Open
+**Status:** Fixed
 **Priority:** P3
 **Date:** 2026-03-03
 
@@ -39,18 +39,17 @@ Tracer-bullet path:
 
 ## Fix
 
-Not yet implemented.
-
-Expected fix shape:
-- Add a `claimedAt` column (or reuse existing timestamps) to track when the key was claimed.
-- In the poll loop or claim path, detect zombie keys: `completedAt IS NULL AND errorCode IS NULL AND claimedAt < now() - zombieThresholdMs`.
-- Reclaim zombie keys by resetting them, allowing the retry to proceed.
-- Alternative: reduce TTL for uncompleted keys to a shorter window (e.g., 60 seconds), separate from the completed-result TTL (24 hours).
+Implemented with claim-path zombie reclaim:
+- Added `claimed_at` to `idempotency_keys` (schema + migration).
+- `claim()` now supports `zombieThresholdMs` and treats rows as reclaimable when:
+  `completedAt IS NULL AND errorCode IS NULL AND claimedAt < now() - zombieThresholdMs`.
+- Reclaim path resets pending/completion/error fields and refreshes `claimedAt` + `expiresAt`.
+- `withIdempotency` now passes a default zombie threshold (`60_000ms`) into `repo.claim(...)`, so retries can recover from crash-abandoned keys.
 
 ## Verification
 
-- [ ] Unit test added
-- [ ] Integration test added
+- [x] Unit test added — `with-idempotency.test.ts` and `drizzle-idempotency-key-repository.test.ts` cover zombie-key reclaim behavior.
+- [x] Integration test added — `repositories.integration.test.ts` verifies DB-backed zombie reclaim before/after threshold.
 - [ ] Manual verification
 - [x] Code-level tracer-bullet verified (Audit #12, 2026-03-03)
 

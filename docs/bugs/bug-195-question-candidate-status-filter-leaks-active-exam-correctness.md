@@ -1,6 +1,6 @@
 # BUG-195: Question Candidate Status Filter Leaks Active Exam Correctness via Inference
 
-**Status:** Open
+**Status:** Fixed
 **Priority:** P3
 **Date:** 2026-03-03
 
@@ -34,16 +34,18 @@ Contrast with `listRecentByUserId` in `drizzle-attempt-repository.ts:364` which 
 
 ## Fix
 
-Not yet implemented.
-
-Expected fix shape:
-- The `latestAttemptRowsSubquery` should join on `practiceSessions` and apply the centralized active-exam exclusion predicate: `isNull(practiceSessions.id) OR ne(mode, 'exam') OR isNotNull(endedAt)`.
-- Alternatively, apply the predicate at the same centralized location being created for BUG-187/BUG-192.
+Implemented in `DrizzleQuestionRepository`:
+- `latestAttemptRowsSubquery` now `leftJoin`s `practiceSessions` and applies the active-exam
+  exclusion predicate: `isNull(practiceSessions.id) OR ne(mode, 'exam') OR isNotNull(endedAt)`.
+  This ensures status-filtered `incorrect` candidate counts exclude active exam attempts.
+- The `unanswered` status subquery in `buildStatusCondition` also received the same
+  `leftJoin` + predicate treatment. Without this, a user could infer exam participation by
+  observing "unanswered" count drops during an active exam.
 
 ## Verification
 
-- [ ] Unit test added
-- [ ] Integration test added
+- [x] Unit test added — `drizzle-question-repository.test.ts` asserts both `unanswered` and `incorrect` status subqueries include `practiceSessions.mode`/`ended_at` secrecy predicates.
+- [x] Integration test added — `repositories.integration.test.ts` proves active-exam attempts stay invisible to `unanswered`/`incorrect` status filters until the exam ends.
 - [ ] Manual verification
 - [x] Code-level tracer-bullet verified (Audit #12, 2026-03-03)
 
