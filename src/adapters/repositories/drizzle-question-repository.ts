@@ -43,7 +43,10 @@ export class DrizzleQuestionRepository implements QuestionRepository {
       isNotNull(practiceSessions.endedAt),
     );
     if (!condition) {
-      throw new Error('Active exam visibility condition unexpectedly missing');
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Active exam visibility condition unexpectedly missing',
+      );
     }
     return condition;
   }

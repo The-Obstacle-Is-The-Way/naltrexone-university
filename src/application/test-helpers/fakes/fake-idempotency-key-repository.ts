@@ -1,8 +1,9 @@
 import { ApplicationError } from '@/src/application/errors';
-import type {
-  IdempotencyKeyError,
-  IdempotencyKeyRecord,
-  IdempotencyKeyRepository,
+import {
+  DEFAULT_IDEMPOTENCY_ZOMBIE_THRESHOLD_MS,
+  type IdempotencyKeyError,
+  type IdempotencyKeyRecord,
+  type IdempotencyKeyRepository,
 } from '@/src/application/ports/repositories';
 
 type InMemoryIdempotencyRecord = {
@@ -12,8 +13,6 @@ type InMemoryIdempotencyRecord = {
   completedAt: Date | null;
   expiresAt: Date;
 };
-
-const DEFAULT_ZOMBIE_THRESHOLD_MS = 60_000;
 
 export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
   private readonly records = new Map<string, InMemoryIdempotencyRecord>();
@@ -37,7 +36,7 @@ export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
       Number.isFinite(input.zombieThresholdMs) &&
       input.zombieThresholdMs >= 0
         ? input.zombieThresholdMs
-        : DEFAULT_ZOMBIE_THRESHOLD_MS;
+        : DEFAULT_IDEMPOTENCY_ZOMBIE_THRESHOLD_MS;
     const zombieCutoff = new Date(now.getTime() - zombieThresholdMs);
     const id = this.toKey(input.userId, input.action, input.key);
     const existing = this.records.get(id);

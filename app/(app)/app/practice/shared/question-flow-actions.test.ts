@@ -601,18 +601,20 @@ describe('question-flow-actions', () => {
     let submitResult: SubmitAnswerOutput | null = null;
 
     const setLoadState = vi.fn();
-    const setSubmitResult = vi.fn((next: SubmitAnswerOutput | null) => {
-      submitResult = next;
-    });
+    const setSubmitResult = vi.fn(
+      (next: SubmitAnswerOutput | null, _questionId?: string | null) => {
+        submitResult = next;
+      },
+    );
     const onSuccess = vi.fn();
 
-    const promise = runSubmitAnswerFlow({
+    const input: Parameters<typeof runSubmitAnswerFlow>[0] = {
       question: { questionId: 'q_1' },
       selectedChoiceId: 'choice_1',
       questionLoadedAtMs: 1000,
       submitIdempotencyKey: null,
       submitAnswerFn: async () => deferred.promise,
-      buildSubmitInput: (request: unknown) => request,
+      buildSubmitInput: (request) => request,
       nowMs: () => 3500,
       setLoadState,
       setSubmitResult,
@@ -620,7 +622,9 @@ describe('question-flow-actions', () => {
       isMounted: () => true,
       createRequestSequenceId: () => 1,
       isLatestRequest: () => false,
-    } as Parameters<typeof runSubmitAnswerFlow>[0]);
+    };
+
+    const promise = runSubmitAnswerFlow(input);
 
     deferred.resolve(
       ok({

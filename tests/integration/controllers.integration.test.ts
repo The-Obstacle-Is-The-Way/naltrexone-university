@@ -23,10 +23,11 @@ import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/dri
 import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzle-stripe-event-repository';
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
 import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
-import type { AuthGateway } from '@/src/application/ports/gateways';
 import {
+  FakeAuthGateway,
   FakeLogger,
   FakePaymentGateway,
+  FakeRateLimiter,
 } from '@/src/application/test-helpers/fakes';
 import { GetAttemptedQuestionsUseCase } from '@/src/application/use-cases/get-attempted-questions';
 import { GetNextQuestionUseCase } from '@/src/application/use-cases/get-next-question';
@@ -90,6 +91,15 @@ async function createUser(): Promise<{
 
   cleanup.userIds.push(row.id);
   return row;
+}
+
+function createAuthGateway(input: { id: string; email: string }) {
+  return new FakeAuthGateway({
+    id: input.id,
+    email: input.email,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
 }
 
 async function createTag(input: {
@@ -229,20 +239,7 @@ describe('question controllers (integration)', () => {
       tagIds: [tag.id],
     });
 
-    const authGateway: AuthGateway = {
-      getCurrentUser: async () => ({
-        id: user.id,
-        email: user.email,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }),
-      requireUser: async () => ({
-        id: user.id,
-        email: user.email,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }),
-    };
+    const authGateway = createAuthGateway(user);
 
     const questions = new DrizzleQuestionRepository(db);
     const attempts = new DrizzleAttemptRepository(db);
@@ -256,15 +253,7 @@ describe('question controllers (integration)', () => {
     const deps: QuestionControllerDeps = {
       authGateway,
       logger,
-      rateLimiter: {
-        limit: async () => ({
-          success: true,
-          limit: 120,
-          remaining: 119,
-          retryAfterSeconds: 0,
-        }),
-        pruneExpiredWindows: async () => 0,
-      },
+      rateLimiter: new FakeRateLimiter(),
       idempotencyKeyRepository,
       now: () => new Date(),
       checkEntitlementUseCase: { execute: async () => ({ isEntitled: true }) },
@@ -327,20 +316,7 @@ describe('question controllers (integration)', () => {
       difficulty: 'easy',
     });
 
-    const authGateway: AuthGateway = {
-      getCurrentUser: async () => ({
-        id: user.id,
-        email: user.email,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }),
-      requireUser: async () => ({
-        id: user.id,
-        email: user.email,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }),
-    };
+    const authGateway = createAuthGateway(user);
 
     const questions = new DrizzleQuestionRepository(db);
     const attempts = new DrizzleAttemptRepository(db);
@@ -354,15 +330,7 @@ describe('question controllers (integration)', () => {
     const deps: QuestionControllerDeps = {
       authGateway,
       logger,
-      rateLimiter: {
-        limit: async () => ({
-          success: true,
-          limit: 120,
-          remaining: 119,
-          retryAfterSeconds: 0,
-        }),
-        pruneExpiredWindows: async () => 0,
-      },
+      rateLimiter: new FakeRateLimiter(),
       idempotencyKeyRepository,
       now: () => new Date(),
       checkEntitlementUseCase: { execute: async () => ({ isEntitled: true }) },
@@ -546,20 +514,7 @@ describe('stats controller (integration)', () => {
       },
     ]);
 
-    const authGateway: AuthGateway = {
-      getCurrentUser: async () => ({
-        id: user.id,
-        email: user.email,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }),
-      requireUser: async () => ({
-        id: user.id,
-        email: user.email,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }),
-    };
+    const authGateway = createAuthGateway(user);
 
     const result = await getUserStats(
       {},
@@ -658,20 +613,7 @@ describe('review controller (integration)', () => {
 
     const logger = new FakeLogger();
 
-    const authGateway: AuthGateway = {
-      getCurrentUser: async () => ({
-        id: user.id,
-        email: user.email,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }),
-      requireUser: async () => ({
-        id: user.id,
-        email: user.email,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }),
-    };
+    const authGateway = createAuthGateway(user);
 
     const deps = {
       authGateway,
@@ -801,20 +743,7 @@ describe('review controller (integration)', () => {
       },
     ]);
 
-    const authGateway: AuthGateway = {
-      getCurrentUser: async () => ({
-        id: user.id,
-        email: user.email,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }),
-      requireUser: async () => ({
-        id: user.id,
-        email: user.email,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }),
-    };
+    const authGateway = createAuthGateway(user);
 
     const deps = {
       authGateway,

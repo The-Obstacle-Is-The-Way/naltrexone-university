@@ -4,17 +4,16 @@ import {
   ApplicationError,
   type ApplicationErrorCode,
 } from '@/src/application/errors';
-import type {
-  IdempotencyKeyRecord,
-  IdempotencyKeyRepository,
+import {
+  DEFAULT_IDEMPOTENCY_ZOMBIE_THRESHOLD_MS,
+  type IdempotencyKeyRecord,
+  type IdempotencyKeyRepository,
 } from '@/src/application/ports/repositories';
 import type { DrizzleDb } from '../shared/database-types';
 
 export class DrizzleIdempotencyKeyRepository
   implements IdempotencyKeyRepository
 {
-  private static readonly DEFAULT_ZOMBIE_THRESHOLD_MS = 60_000;
-
   constructor(
     private readonly db: DrizzleDb,
     private readonly now: () => Date = () => new Date(),
@@ -33,7 +32,7 @@ export class DrizzleIdempotencyKeyRepository
       Number.isFinite(input.zombieThresholdMs) &&
       input.zombieThresholdMs >= 0
         ? input.zombieThresholdMs
-        : DrizzleIdempotencyKeyRepository.DEFAULT_ZOMBIE_THRESHOLD_MS;
+        : DEFAULT_IDEMPOTENCY_ZOMBIE_THRESHOLD_MS;
     const zombieCutoff = new Date(now.getTime() - zombieThresholdMs);
 
     const [row] = await this.db
