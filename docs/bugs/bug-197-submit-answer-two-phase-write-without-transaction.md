@@ -1,6 +1,6 @@
 # BUG-197: SubmitAnswer Two-Phase Write Without Transaction
 
-**Status:** Open
+**Status:** Fixed
 **Priority:** P2
 **Date:** 2026-03-03
 
@@ -41,16 +41,18 @@ Tracer-bullet path:
 
 ## Fix
 
-Not yet implemented.
-
-Expected fix shape:
-- Wrap both writes in a database transaction. The Drizzle `db.transaction()` API supports this.
-- This requires the use case to receive a transaction-capable DB handle, or the repository port to expose a `withTransaction` method.
-- Alternative (if transaction refactor is too large): accept the best-effort rollback but add a DB-level constraint or cleanup job for orphaned attempts.
+Implemented by introducing a write-transaction dependency in `SubmitAnswerUseCase`:
+- Added `SubmitAnswerWriteTransaction` and injected it into the use case constructor.
+- When a session-backed answer is submitted, `attempts.insert` and
+  `sessions.recordQuestionAnswer` now execute inside a single transaction callback.
+- Removed compensating-delete behavior from the transactional path (no `deleteById`
+  rollback attempt needed inside the use case).
+- Wired production transaction behavior in `lib/container/use-cases.ts` via
+  `primitives.db.transaction(...)`, creating transaction-scoped attempt/session repositories.
 
 ## Verification
 
-- [ ] Unit test added
+- [x] Unit test added — `submit-answer.test.ts` verifies transactional path avoids compensating delete and does not persist orphan attempts on session-state failure.
 - [ ] Integration test added
 - [ ] Manual verification
 - [x] Code-level tracer-bullet verified (Audit #12, 2026-03-03)

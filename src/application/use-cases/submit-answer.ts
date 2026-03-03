@@ -39,12 +39,20 @@ export type SubmitAnswerOutput = {
 
 export const SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS = 86_400;
 
+export type SubmitAnswerWriteTransaction = <T>(
+  fn: (tx: {
+    attempts: AttemptWriter & AttemptSingleQuestionReader;
+    sessions: PracticeSessionRepository;
+  }) => Promise<T>,
+) => Promise<T>;
+
 export class SubmitAnswerUseCase {
   constructor(
     private readonly questions: QuestionRepository,
     private readonly attempts: AttemptWriter & AttemptSingleQuestionReader,
     private readonly sessions: PracticeSessionRepository,
     private readonly logger: Logger,
+    private readonly writeTransaction?: SubmitAnswerWriteTransaction,
   ) {}
 
   private mapChoiceExplanations(
@@ -178,8 +186,7 @@ export class SubmitAnswerUseCase {
             Math.max(0, rawTimeSpentSeconds),
           )
         : 0;
-
-    const attempt = await this.attempts.insert({
+    const attemptInsertInput = {
       userId: input.userId,
       questionId: question.id,
       practiceSessionId: session ? session.id : null,
@@ -189,7 +196,23 @@ export class SubmitAnswerUseCase {
       retryOfAttemptId,
       retryOrigin,
       retrySessionId,
-    });
+    };
+
+    const attempt =
+      session && this.writeTransaction
+        ? await this.writeTransaction(async (tx) => {
+            const txAttempt = await tx.attempts.insert(attemptInsertInput);
+            await tx.sessions.recordQuestionAnswer({
+              sessionId: session.id,
+              userId: input.userId,
+              questionId: question.id,
+              selectedChoiceId: input.choiceId,
+              isCorrect: grade.isCorrect,
+              answeredAt: txAttempt.answeredAt,
+            });
+            return txAttempt;
+          })
+        : await this.attempts.insert(attemptInsertInput);
 
     if (retryOrigin !== null) {
       this.safeLog(
@@ -205,7 +228,7 @@ export class SubmitAnswerUseCase {
       );
     }
 
-    if (session) {
+    if (session && !this.writeTransaction) {
       try {
         await this.sessions.recordQuestionAnswer({
           sessionId: session.id,

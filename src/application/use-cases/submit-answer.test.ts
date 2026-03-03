@@ -25,8 +25,11 @@ class FailingRecordSessionRepository extends FakePracticeSessionRepository {
   }
 }
 
-class FailingRollbackAttemptRepository extends FakeAttemptRepository {
-  async deleteById(): Promise<boolean> {
+class DeleteTrackingAttemptRepository extends FakeAttemptRepository {
+  deleteCallCount = 0;
+
+  override async deleteById(): Promise<boolean> {
+    this.deleteCallCount += 1;
     throw new Error('Failed to delete attempt');
   }
 }
@@ -1177,7 +1180,7 @@ describe('SubmitAnswerUseCase', () => {
     expect(attempts.getAll()).toEqual([]);
   });
 
-  it('logs rollback failures when attempt deletion throws after session persistence error', async () => {
+  it('uses transaction rollback instead of compensating delete when session persistence fails', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';
     const questionId = 'q1';
@@ -1199,13 +1202,26 @@ describe('SubmitAnswerUseCase', () => {
       questionIds: [questionId],
     });
 
-    const attempts = new FailingRollbackAttemptRepository();
+    const attempts = new FakeAttemptRepository();
+    const txAttempts = new DeleteTrackingAttemptRepository();
     const logger = new FakeLogger();
+    const transaction = async <T>(
+      fn: (tx: {
+        attempts: FakeAttemptRepository;
+        sessions: FakePracticeSessionRepository;
+      }) => Promise<T>,
+    ): Promise<T> =>
+      fn({
+        attempts: txAttempts,
+        sessions: new FailingRecordSessionRepository([session]),
+      });
+
     const useCase = new SubmitAnswerUseCase(
       new FakeQuestionRepository([question]),
       attempts,
-      new FailingRecordSessionRepository([session]),
+      new FakePracticeSessionRepository([session]),
       logger,
+      transaction,
     );
 
     await expect(
@@ -1217,18 +1233,9 @@ describe('SubmitAnswerUseCase', () => {
       }),
     ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
 
-    const inserted = attempts.getAll();
-    expect(inserted).toHaveLength(1);
-
-    expect(logger.errorCalls).toHaveLength(1);
-    expect(logger.errorCalls[0]).toMatchObject({
-      msg: 'Failed to roll back orphaned attempt after session update failure',
-      context: {
-        attemptId: inserted[0]?.id,
-        sessionError: expect.any(Error),
-        rollbackError: expect.any(Error),
-      },
-    });
+    expect(attempts.getAll()).toEqual([]);
+    expect(txAttempts.deleteCallCount).toBe(0);
+    expect(logger.errorCalls).toHaveLength(0);
   });
 
   it('throws CONFLICT when submitting to an ended session', async () => {

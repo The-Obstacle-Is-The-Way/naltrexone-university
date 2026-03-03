@@ -121,6 +121,13 @@ export function createUseCaseFactories(input: {
         repositories.createAttemptRepository(),
         repositories.createPracticeSessionRepository(),
         primitives.logger,
+        async (fn) =>
+          primitives.db.transaction(async (tx) =>
+            fn({
+              attempts: repositories.createAttemptRepository(tx),
+              sessions: repositories.createPracticeSessionRepository(tx),
+            }),
+          ),
       ),
     createToggleBookmarkUseCase: () =>
       new ToggleBookmarkUseCase(
