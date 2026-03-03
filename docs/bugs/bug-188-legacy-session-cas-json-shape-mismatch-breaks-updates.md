@@ -1,0 +1,51 @@
+# BUG-188: Legacy Session CAS JSON Shape Mismatch Breaks Updates
+
+**Status:** Open
+**Priority:** P2
+**Date:** 2026-03-03
+
+---
+
+## Description
+
+Legacy practice sessions persisted without `questionStates` can fail all CAS updates, making answer/mark writes impossible for affected sessions.
+
+Observed behavior:
+- For legacy rows whose `params_json` omits `questionStates`, session state updates can repeatedly fail and end as `INTERNAL_ERROR`.
+- In submit flow, attempt rollback is attempted after session update failure, so user submission fails.
+
+Expected behavior:
+- Legacy-compatible parsing should not make rows permanently non-updatable.
+
+## Steps to Reproduce
+
+1. Use a `practice_sessions` row where `params_json` has `questionIds` but no `questionStates` key.
+2. Open that session and submit an answer (or toggle mark-for-review).
+3. Observe repeated CAS miss and eventual `INTERNAL_ERROR`.
+
+## Root Cause
+
+Tracer-bullet path:
+1. Persisted contract allows optional `questionStates` in [schema.ts](/Users/ray/Desktop/github/naltrexone-university-1/db/schema.ts:91).
+2. Parser normalizes missing `questionStates` into a full array in [practice-session-params.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/practice-session-params.ts:94) through [practice-session-params.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/practice-session-params.ts:118).
+3. CAS update compares DB `params_json` to normalized `expectedParamsJson` in [practice-session-question-state-updater.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/practice-session-question-state-updater.ts:60) and [practice-session-question-state-updater.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/practice-session-question-state-updater.ts:71).
+4. A row without `questionStates` will not equal normalized JSON that includes it, so each CAS attempt misses and retries.
+5. After retry exhaustion, updater throws `INTERNAL_ERROR` in [practice-session-question-state-updater.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/practice-session-question-state-updater.ts:89), surfacing through submit flow after rollback path in [submit-answer.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/submit-answer.ts:208).
+
+## Fix
+
+Not yet implemented.
+
+Expected fix shape:
+- Align CAS comparison with persisted legacy shape (e.g., compare on canonicalized DB expression or migrate legacy rows before CAS path runs).
+- Add regression coverage for legacy `params_json` missing `questionStates`.
+
+## Verification
+
+- [ ] Unit test added
+- [ ] Integration test added
+- [x] Manual verification
+
+## Related
+
+- Affected write paths: answer persistence and mark-for-review persistence.

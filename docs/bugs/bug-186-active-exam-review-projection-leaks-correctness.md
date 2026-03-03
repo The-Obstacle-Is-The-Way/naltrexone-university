@@ -1,0 +1,53 @@
+# BUG-186: Active Exam Review Projection Leaks Correctness
+
+**Status:** Open
+**Priority:** P1
+**Date:** 2026-03-03
+
+---
+
+## Description
+
+Active exam review flows expose per-question correctness (`Correct` / `Incorrect`) before the session is ended.
+
+Observed behavior:
+- In exam mode, clicking `Review answers` (before final submit) renders correctness labels.
+- Opening an exam review question (`mode=review&sessionId=...`) also renders correctness in the review navigator.
+
+Expected behavior:
+- While `mode='exam'` and `endedAt === null`, review surfaces must only show neutral states (`Answered` / `Unanswered` / `Marked`).
+
+## Steps to Reproduce
+
+1. Start an exam session and answer at least one question.
+2. Click `Review answers` (do not submit the exam yet).
+3. Observe `Correct` / `Incorrect` labels in the review stage.
+4. Open a review question from that stage and observe the question navigator also uses correctness status.
+
+## Root Cause
+
+Tracer-bullet path:
+1. Review stage is loaded while the exam is still active in [use-practice-session-review-stage-state.ts](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage-state.ts:116).
+2. `GetPracticeSessionReviewUseCase` projects `state.latestIsCorrect` into output rows without an active-exam redaction gate in [get-practice-session-review.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-practice-session-review.ts:110) and [get-practice-session-review.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-practice-session-review.ts:127).
+3. Exam review UI renders `Correct` / `Incorrect` when `row.isCorrect !== null` in [exam-review-view.tsx](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:156).
+4. Question review session-navigation also consumes `row.isCorrect` in [use-question-page-controller.ts](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/questions/[slug]/use-question-page-controller.ts:252).
+5. Navigator then maps that into destructive/success variants and status labels in [review-question-navigator.tsx](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/questions/[slug]/components/review-question-navigator.tsx:48) and [review-question-navigator.tsx](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/questions/[slug]/components/review-question-navigator.tsx:49).
+
+## Fix
+
+Not yet implemented.
+
+Expected fix shape:
+- Apply the exam secrecy guard at the projection source (`GetPracticeSessionReviewUseCase`): when `session.mode === 'exam' && session.endedAt === null`, emit `isCorrect: null` for all rows.
+- Keep UI behavior unchanged; once projection is redacted, existing UI naturally shows neutral statuses only.
+
+## Verification
+
+- [ ] Unit test added
+- [ ] Integration test added
+- [x] Manual verification
+
+## Related
+
+- Policy: [exam-answer-secrecy-policy.md](/Users/ray/Desktop/github/naltrexone-university-1/docs/practice-engine/exam-answer-secrecy-policy.md)
+- Related prior fixes: BUG-180, BUG-181, BUG-185
