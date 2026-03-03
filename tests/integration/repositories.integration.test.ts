@@ -1,11 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import { and, eq, inArray } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
+import { and, eq } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import type { PracticeSessionParams } from '@/db/schema';
 import * as schema from '@/db/schema';
-import { DrizzleRateLimiter } from '@/src/adapters/gateways/drizzle-rate-limiter';
 import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-attempt-repository';
 import { DrizzleBookmarkRepository } from '@/src/adapters/repositories/drizzle-bookmark-repository';
 import { DrizzleIdempotencyKeyRepository } from '@/src/adapters/repositories/drizzle-idempotency-key-repository';
@@ -19,201 +16,34 @@ import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-
 import { ApplicationError } from '@/src/application/errors';
 import { FakeLogger } from '@/src/application/test-helpers/fakes/fake-logger';
 import { GetPracticeSessionReviewUseCase } from '@/src/application/use-cases/get-practice-session-review';
+import {
+  cleanupAfterEach,
+  closeConnection,
+  createCleanupState,
+  createIntegrationDb,
+  createQuestion,
+  createTag,
+  createUser,
+} from './helpers';
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  throw new Error(
-    'DATABASE_URL is required to run integration tests. Did you forget to set it?',
-  );
-}
-
-const allowNonLocal = process.env.ALLOW_NON_LOCAL_DATABASE_URL === 'true';
-const host = new URL(databaseUrl).hostname;
-const isLocalhost =
-  host === 'localhost' || host === '127.0.0.1' || host === '::1';
-if (!allowNonLocal && !isLocalhost) {
-  throw new Error(
-    `Refusing to run integration tests against non-local DATABASE_URL host "${host}". Set DATABASE_URL to a local Postgres (recommended: Docker) or export ALLOW_NON_LOCAL_DATABASE_URL=true to override.`,
-  );
-}
-
-const sql = postgres(databaseUrl, { max: 1 });
-const db = drizzle(sql, { schema });
-
-type CleanupState = {
-  rateLimitKeys: string[];
-  userIds: string[];
-  questionIds: string[];
-  tagIds: string[];
-  stripeEventIds: string[];
-};
-
-const cleanup: CleanupState = {
-  rateLimitKeys: [],
-  userIds: [],
-  questionIds: [],
-  tagIds: [],
-  stripeEventIds: [],
-};
-
-async function createUser(): Promise<{ id: string; email: string }> {
-  const email = `it-${randomUUID()}@example.com`;
-  const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;
-
-  const [row] = await db
-    .insert(schema.users)
-    .values({ email, clerkUserId })
-    .returning({ id: schema.users.id, email: schema.users.email });
-
-  if (!row) {
-    throw new Error('Failed to insert user');
-  }
-
-  cleanup.userIds.push(row.id);
-  return row;
-}
-
-async function createTag(input: {
-  slug: string;
-  kind: schema.TagKind;
-  name?: string;
-}): Promise<{ id: string; slug: string }> {
-  const [row] = await db
-    .insert(schema.tags)
-    .values({
-      slug: input.slug,
-      kind: input.kind,
-      name: input.name ?? input.slug,
-    })
-    .returning({ id: schema.tags.id, slug: schema.tags.slug });
-
-  if (!row) {
-    throw new Error('Failed to insert tag');
-  }
-
-  cleanup.tagIds.push(row.id);
-  return row;
-}
-
-async function createQuestion(input: {
-  id?: string;
-  slug: string;
-  status: schema.QuestionStatus;
-  difficulty: schema.QuestionDifficulty;
-  createdAt?: Date;
-  tagIds?: readonly string[];
-}): Promise<{ id: string; slug: string; correctChoiceId: string }> {
-  const createdAt = input.createdAt ?? new Date();
-  const updatedAt = createdAt;
-
-  const questionValues: typeof schema.questions.$inferInsert = {
-    slug: input.slug,
-    stemMd: '# Stem',
-    explanationMd: '# Explanation',
-    status: input.status,
-    difficulty: input.difficulty,
-    createdAt,
-    updatedAt,
-  };
-
-  if (input.id) {
-    questionValues.id = input.id;
-  }
-
-  const [question] = await db
-    .insert(schema.questions)
-    .values(questionValues)
-    .returning({ id: schema.questions.id });
-
-  if (!question) {
-    throw new Error('Failed to insert question');
-  }
-
-  cleanup.questionIds.push(question.id);
-
-  const [choiceA, choiceB] = await db
-    .insert(schema.choices)
-    .values([
-      {
-        questionId: question.id,
-        label: 'A',
-        textMd: 'Choice A',
-        isCorrect: false,
-        sortOrder: 1,
-      },
-      {
-        questionId: question.id,
-        label: 'B',
-        textMd: 'Choice B',
-        isCorrect: true,
-        sortOrder: 2,
-      },
-    ])
-    .returning({ id: schema.choices.id });
-
-  if (!choiceA || !choiceB) {
-    throw new Error('Failed to insert choices');
-  }
-
-  if (input.tagIds && input.tagIds.length > 0) {
-    await db.insert(schema.questionTags).values(
-      input.tagIds.map((tagId) => ({
-        questionId: question.id,
-        tagId,
-      })),
-    );
-  }
-
-  return { id: question.id, slug: input.slug, correctChoiceId: choiceB.id };
-}
+const { db, sql } = createIntegrationDb();
+const cleanup = createCleanupState();
 
 afterEach(async () => {
-  if (cleanup.stripeEventIds.length > 0) {
-    await db
-      .delete(schema.stripeEvents)
-      .where(inArray(schema.stripeEvents.id, cleanup.stripeEventIds));
-  }
-
-  if (cleanup.rateLimitKeys.length > 0) {
-    await db
-      .delete(schema.rateLimits)
-      .where(inArray(schema.rateLimits.key, cleanup.rateLimitKeys));
-  }
-
-  if (cleanup.userIds.length > 0) {
-    await db
-      .delete(schema.users)
-      .where(inArray(schema.users.id, cleanup.userIds));
-  }
-
-  if (cleanup.questionIds.length > 0) {
-    await db
-      .delete(schema.questions)
-      .where(inArray(schema.questions.id, cleanup.questionIds));
-  }
-
-  if (cleanup.tagIds.length > 0) {
-    await db.delete(schema.tags).where(inArray(schema.tags.id, cleanup.tagIds));
-  }
-
-  cleanup.userIds.length = 0;
-  cleanup.questionIds.length = 0;
-  cleanup.tagIds.length = 0;
-  cleanup.stripeEventIds.length = 0;
-  cleanup.rateLimitKeys.length = 0;
+  await cleanupAfterEach(db, cleanup);
 });
 
 afterAll(async () => {
-  await sql.end({ timeout: 5 });
+  await closeConnection(sql);
 });
 
 describe('DrizzleQuestionRepository', () => {
   it('returns null for non-published questions', async () => {
-    const tag = await createTag({
+    const tag = await createTag(db, cleanup, {
       slug: `it-tag-${randomUUID()}`,
       kind: 'topic',
     });
-    const { id, slug } = await createQuestion({
+    const { id, slug } = await createQuestion(db, cleanup, {
       slug: `it-q-${randomUUID()}`,
       status: 'draft',
       difficulty: 'easy',
@@ -227,19 +57,19 @@ describe('DrizzleQuestionRepository', () => {
   });
 
   it('findPublishedByIds preserves input order and excludes drafts', async () => {
-    const publishedA = await createQuestion({
+    const publishedA = await createQuestion(db, cleanup, {
       slug: `it-pub-a-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
     });
 
-    const draft = await createQuestion({
+    const draft = await createQuestion(db, cleanup, {
       slug: `it-draft-${randomUUID()}`,
       status: 'draft',
       difficulty: 'easy',
     });
 
-    const publishedB = await createQuestion({
+    const publishedB = await createQuestion(db, cleanup, {
       slug: `it-pub-b-${randomUUID()}`,
       status: 'published',
       difficulty: 'hard',
@@ -258,14 +88,14 @@ describe('DrizzleQuestionRepository', () => {
 
   it('listPublishedCandidateIds filters deterministically (difficulty + tags) and orders by createdAt desc, id asc', async () => {
     const tagSlug = `it-tag-${randomUUID()}`;
-    const tag = await createTag({ slug: tagSlug, kind: 'topic' });
+    const tag = await createTag(db, cleanup, { slug: tagSlug, kind: 'topic' });
 
     const createdAt = new Date('2026-01-01T00:00:00.000Z');
 
     const q1Id = '00000000-0000-0000-0000-000000000001';
     const q2Id = '00000000-0000-0000-0000-000000000002';
 
-    const q1 = await createQuestion({
+    const q1 = await createQuestion(db, cleanup, {
       id: q1Id,
       slug: `it-q1-${randomUUID()}`,
       status: 'published',
@@ -274,7 +104,7 @@ describe('DrizzleQuestionRepository', () => {
       tagIds: [tag.id],
     });
 
-    const q2 = await createQuestion({
+    const q2 = await createQuestion(db, cleanup, {
       id: q2Id,
       slug: `it-q2-${randomUUID()}`,
       status: 'published',
@@ -301,11 +131,11 @@ describe('DrizzleQuestionRepository', () => {
 
   it('countPublishedCandidateIds returns accurate totals for difficulty + tags', async () => {
     const tagSlug = `it-count-tag-${randomUUID()}`;
-    const tag = await createTag({ slug: tagSlug, kind: 'topic' });
+    const tag = await createTag(db, cleanup, { slug: tagSlug, kind: 'topic' });
 
     const createdAt = new Date('2026-01-01T00:00:00.000Z');
 
-    await createQuestion({
+    await createQuestion(db, cleanup, {
       slug: `it-count-q1-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -313,7 +143,7 @@ describe('DrizzleQuestionRepository', () => {
       tagIds: [tag.id],
     });
 
-    await createQuestion({
+    await createQuestion(db, cleanup, {
       slug: `it-count-q2-${randomUUID()}`,
       status: 'published',
       difficulty: 'hard',
@@ -340,20 +170,20 @@ describe('DrizzleQuestionRepository', () => {
 
   describe('listPublishedCandidateIds with status filters', () => {
     it('returns only unanswered questions when status=unanswered', async () => {
-      const user = await createUser();
-      const tag = await createTag({
+      const user = await createUser(db, cleanup);
+      const tag = await createTag(db, cleanup, {
         slug: `it-status-unanswered-${randomUUID()}`,
         kind: 'topic',
       });
 
-      const qAttempted = await createQuestion({
+      const qAttempted = await createQuestion(db, cleanup, {
         slug: `it-attempted-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
         tagIds: [tag.id],
       });
-      const qUnanswered = await createQuestion({
+      const qUnanswered = await createQuestion(db, cleanup, {
         slug: `it-unanswered-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
@@ -383,15 +213,15 @@ describe('DrizzleQuestionRepository', () => {
     });
 
     it('returns only questions with latest attempt incorrect when status=incorrect', async () => {
-      const user = await createUser();
+      const user = await createUser(db, cleanup);
 
-      const qLatestIncorrect = await createQuestion({
+      const qLatestIncorrect = await createQuestion(db, cleanup, {
         slug: `it-latest-incorrect-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
       });
-      const qLatestCorrect = await createQuestion({
+      const qLatestCorrect = await createQuestion(db, cleanup, {
         slug: `it-latest-correct-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
@@ -469,15 +299,15 @@ describe('DrizzleQuestionRepository', () => {
     });
 
     it('returns only bookmarked questions when status=bookmarked', async () => {
-      const user = await createUser();
+      const user = await createUser(db, cleanup);
 
-      const qBookmarked = await createQuestion({
+      const qBookmarked = await createQuestion(db, cleanup, {
         slug: `it-bookmarked-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
       });
-      const _qUnbookmarked = await createQuestion({
+      const _qUnbookmarked = await createQuestion(db, cleanup, {
         slug: `it-unbookmarked-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
@@ -501,27 +331,27 @@ describe('DrizzleQuestionRepository', () => {
     });
 
     it('combines unanswered and incorrect with OR logic', async () => {
-      const user = await createUser();
-      const tag = await createTag({
+      const user = await createUser(db, cleanup);
+      const tag = await createTag(db, cleanup, {
         slug: `it-status-or-${randomUUID()}`,
         kind: 'topic',
       });
 
-      const qIncorrect = await createQuestion({
+      const qIncorrect = await createQuestion(db, cleanup, {
         slug: `it-or-incorrect-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
         tagIds: [tag.id],
       });
-      const qUnanswered = await createQuestion({
+      const qUnanswered = await createQuestion(db, cleanup, {
         slug: `it-or-unanswered-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-02T00:00:00.000Z'),
         tagIds: [tag.id],
       });
-      const qCorrect = await createQuestion({
+      const qCorrect = await createQuestion(db, cleanup, {
         slug: `it-or-correct-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
@@ -577,20 +407,20 @@ describe('DrizzleQuestionRepository', () => {
     });
 
     it('returns all questions when statuses is empty', async () => {
-      const user = await createUser();
-      const tag = await createTag({
+      const user = await createUser(db, cleanup);
+      const tag = await createTag(db, cleanup, {
         slug: `it-status-empty-${randomUUID()}`,
         kind: 'topic',
       });
 
-      const q1 = await createQuestion({
+      const q1 = await createQuestion(db, cleanup, {
         slug: `it-all-1-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
         tagIds: [tag.id],
       });
-      const q2 = await createQuestion({
+      const q2 = await createQuestion(db, cleanup, {
         slug: `it-all-2-${randomUUID()}`,
         status: 'published',
         difficulty: 'hard',
@@ -610,15 +440,15 @@ describe('DrizzleQuestionRepository', () => {
     });
 
     it('combines status filter with difficulty filter (AND logic)', async () => {
-      const user = await createUser();
+      const user = await createUser(db, cleanup);
 
-      const qBookmarkedEasy = await createQuestion({
+      const qBookmarkedEasy = await createQuestion(db, cleanup, {
         slug: `it-bookmarked-easy-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
       });
-      const qBookmarkedHard = await createQuestion({
+      const qBookmarkedHard = await createQuestion(db, cleanup, {
         slug: `it-bookmarked-hard-${randomUUID()}`,
         status: 'published',
         difficulty: 'hard',
@@ -642,20 +472,20 @@ describe('DrizzleQuestionRepository', () => {
     });
 
     it('combines status filter with tag filter (AND logic)', async () => {
-      const user = await createUser();
-      const tag = await createTag({
+      const user = await createUser(db, cleanup);
+      const tag = await createTag(db, cleanup, {
         slug: `it-tag-${randomUUID()}`,
         kind: 'topic',
       });
 
-      const qTagged = await createQuestion({
+      const qTagged = await createQuestion(db, cleanup, {
         slug: `it-tagged-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
         tagIds: [tag.id],
       });
-      const qUntagged = await createQuestion({
+      const qUntagged = await createQuestion(db, cleanup, {
         slug: `it-untagged-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
@@ -681,20 +511,20 @@ describe('DrizzleQuestionRepository', () => {
 
   describe('countPublishedCandidateIds with status filters', () => {
     it('returns only bookmarked questions when status=bookmarked', async () => {
-      const user = await createUser();
-      const tag = await createTag({
+      const user = await createUser(db, cleanup);
+      const tag = await createTag(db, cleanup, {
         slug: `it-count-bookmarked-tag-${randomUUID()}`,
         kind: 'topic',
       });
 
-      const qBookmarked = await createQuestion({
+      const qBookmarked = await createQuestion(db, cleanup, {
         slug: `it-count-bookmarked-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
         tagIds: [tag.id],
       });
-      const _qUnbookmarked = await createQuestion({
+      const _qUnbookmarked = await createQuestion(db, cleanup, {
         slug: `it-count-unbookmarked-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
@@ -719,27 +549,27 @@ describe('DrizzleQuestionRepository', () => {
     });
 
     it('combines unanswered and incorrect with OR logic', async () => {
-      const user = await createUser();
-      const tag = await createTag({
+      const user = await createUser(db, cleanup);
+      const tag = await createTag(db, cleanup, {
         slug: `it-count-or-tag-${randomUUID()}`,
         kind: 'topic',
       });
 
-      const qIncorrect = await createQuestion({
+      const qIncorrect = await createQuestion(db, cleanup, {
         slug: `it-count-or-incorrect-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
         tagIds: [tag.id],
       });
-      const _qUnanswered = await createQuestion({
+      const _qUnanswered = await createQuestion(db, cleanup, {
         slug: `it-count-or-unanswered-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
         createdAt: new Date('2026-01-02T00:00:00.000Z'),
         tagIds: [tag.id],
       });
-      const qCorrect = await createQuestion({
+      const qCorrect = await createQuestion(db, cleanup, {
         slug: `it-count-or-correct-${randomUUID()}`,
         status: 'published',
         difficulty: 'easy',
@@ -797,10 +627,10 @@ describe('DrizzleQuestionRepository', () => {
 
 describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
   it('inserts attempts and enforces user scoping on findBySessionId', async () => {
-    const userA = await createUser();
-    const userB = await createUser();
+    const userA = await createUser(db, cleanup);
+    const userB = await createUser(db, cleanup);
 
-    const question = await createQuestion({
+    const question = await createQuestion(db, cleanup, {
       slug: `it-q-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -843,8 +673,8 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
   });
 
   it('returns null from findLatestByUserAndQuestion when no attempts exist', async () => {
-    const user = await createUser();
-    const question = await createQuestion({
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
       slug: `it-q-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -857,8 +687,8 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
   });
 
   it('returns the most recent attempt from findLatestByUserAndQuestion', async () => {
-    const user = await createUser();
-    const question = await createQuestion({
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
       slug: `it-q-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -918,8 +748,8 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
   });
 
   it('uses id desc as a deterministic tie-breaker for findLatestByUserAndQuestion', async () => {
-    const user = await createUser();
-    const question = await createQuestion({
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
       slug: `it-q-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -962,8 +792,8 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
   });
 
   it('returns attempt from findByIdAndUserId when id and userId match', async () => {
-    const user = await createUser();
-    const question = await createQuestion({
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
       slug: `it-q-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -991,9 +821,9 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
   });
 
   it('returns null from findByIdAndUserId when id exists but userId does not match', async () => {
-    const userA = await createUser();
-    const userB = await createUser();
-    const question = await createQuestion({
+    const userA = await createUser(db, cleanup);
+    const userB = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
       slug: `it-q-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -1015,7 +845,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
   });
 
   it('returns null from findByIdAndUserId when id does not exist', async () => {
-    const user = await createUser();
+    const user = await createUser(db, cleanup);
 
     const attemptRepo = new DrizzleAttemptRepository(db);
     await expect(
@@ -1024,8 +854,8 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
   });
 
   it('returns attempt from findBySessionIdAndQuestionId when sessionId, questionId, and userId match', async () => {
-    const user = await createUser();
-    const question = await createQuestion({
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
       slug: `it-q-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -1067,13 +897,13 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
   });
 
   it('returns null from findBySessionIdAndQuestionId when sessionId exists but questionId does not match', async () => {
-    const user = await createUser();
-    const q1 = await createQuestion({
+    const user = await createUser(db, cleanup);
+    const q1 = await createQuestion(db, cleanup, {
       slug: `it-q1-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
     });
-    const q2 = await createQuestion({
+    const q2 = await createQuestion(db, cleanup, {
       slug: `it-q2-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -1107,9 +937,9 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
   });
 
   it('returns null from findBySessionIdAndQuestionId when sessionId exists but userId does not match', async () => {
-    const userA = await createUser();
-    const userB = await createUser();
-    const question = await createQuestion({
+    const userA = await createUser(db, cleanup);
+    const userB = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
       slug: `it-q-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -1147,8 +977,8 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
   });
 
   it('returns null from findBySessionIdAndQuestionId when sessionId does not exist', async () => {
-    const user = await createUser();
-    const question = await createQuestion({
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
       slug: `it-q-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -1165,8 +995,8 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
   });
 
   it('rejects deleting a choice referenced by an attempt', async () => {
-    const user = await createUser();
-    const question = await createQuestion({
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
       slug: `it-q-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -1190,8 +1020,8 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
   });
 
   it('ends practice sessions once', async () => {
-    const user = await createUser();
-    const question = await createQuestion({
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
       slug: `it-q-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -1219,15 +1049,15 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
   });
 
   it('returns per-question most recent answeredAt', async () => {
-    const user = await createUser();
+    const user = await createUser(db, cleanup);
 
-    const q1 = await createQuestion({
+    const q1 = await createQuestion(db, cleanup, {
       slug: `it-q1-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
     });
 
-    const q2 = await createQuestion({
+    const q2 = await createQuestion(db, cleanup, {
       slug: `it-q2-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -1292,15 +1122,15 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
   });
 
   it('lists attempted questions by latest attempt per question', async () => {
-    const user = await createUser();
+    const user = await createUser(db, cleanup);
 
-    const q1 = await createQuestion({
+    const q1 = await createQuestion(db, cleanup, {
       slug: `it-attempted-q1-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
     });
 
-    const q2 = await createQuestion({
+    const q2 = await createQuestion(db, cleanup, {
       slug: `it-attempted-q2-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -1401,19 +1231,19 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
   });
 
   it('supports attempted-question difficulty filter and accurate counts', async () => {
-    const user = await createUser();
+    const user = await createUser(db, cleanup);
 
-    const qEasy = await createQuestion({
+    const qEasy = await createQuestion(db, cleanup, {
       slug: `it-attempted-difficulty-easy-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
     });
-    const qHardA = await createQuestion({
+    const qHardA = await createQuestion(db, cleanup, {
       slug: `it-attempted-difficulty-hard-a-${randomUUID()}`,
       status: 'published',
       difficulty: 'hard',
     });
-    const qHardB = await createQuestion({
+    const qHardB = await createQuestion(db, cleanup, {
       slug: `it-attempted-difficulty-hard-b-${randomUUID()}`,
       status: 'published',
       difficulty: 'hard',
@@ -1481,33 +1311,33 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
   });
 
   it('supports attempted-question tagSlug filter and accurate counts', async () => {
-    const user = await createUser();
+    const user = await createUser(db, cleanup);
 
-    const tagPharm = await createTag({
+    const tagPharm = await createTag(db, cleanup, {
       slug: `it-tag-pharmacology-${randomUUID()}`,
       kind: 'topic',
       name: 'Pharmacology',
     });
 
-    const tagOther = await createTag({
+    const tagOther = await createTag(db, cleanup, {
       slug: `it-tag-other-${randomUUID()}`,
       kind: 'topic',
       name: 'Other',
     });
 
-    const qPharmA = await createQuestion({
+    const qPharmA = await createQuestion(db, cleanup, {
       slug: `it-attempted-tag-pharm-a-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
       tagIds: [tagPharm.id],
     });
-    const qPharmB = await createQuestion({
+    const qPharmB = await createQuestion(db, cleanup, {
       slug: `it-attempted-tag-pharm-b-${randomUUID()}`,
       status: 'published',
       difficulty: 'hard',
       tagIds: [tagPharm.id],
     });
-    const qOther = await createQuestion({
+    const qOther = await createQuestion(db, cleanup, {
       slug: `it-attempted-tag-other-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -1577,19 +1407,19 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
   });
 
   it('supports combined attempted-question result + difficulty filters', async () => {
-    const user = await createUser();
+    const user = await createUser(db, cleanup);
 
-    const qHardIncorrect = await createQuestion({
+    const qHardIncorrect = await createQuestion(db, cleanup, {
       slug: `it-attempted-result-difficulty-hard-incorrect-${randomUUID()}`,
       status: 'published',
       difficulty: 'hard',
     });
-    const qHardCorrect = await createQuestion({
+    const qHardCorrect = await createQuestion(db, cleanup, {
       slug: `it-attempted-result-difficulty-hard-correct-${randomUUID()}`,
       status: 'published',
       difficulty: 'hard',
     });
-    const qEasyIncorrect = await createQuestion({
+    const qEasyIncorrect = await createQuestion(db, cleanup, {
       slug: `it-attempted-result-difficulty-easy-incorrect-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -1659,14 +1489,14 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
   });
 
   it('uses id desc as deterministic tie-breaker for latest attempted-question semantics', async () => {
-    const user = await createUser();
+    const user = await createUser(db, cleanup);
 
-    const qTie = await createQuestion({
+    const qTie = await createQuestion(db, cleanup, {
       slug: `it-attempted-tie-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
     });
-    const qIncorrect = await createQuestion({
+    const qIncorrect = await createQuestion(db, cleanup, {
       slug: `it-attempted-incorrect-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -1736,8 +1566,8 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
 
 describe('DrizzleBookmarkRepository', () => {
   it('adds/removes bookmarks idempotently', async () => {
-    const user = await createUser();
-    const question = await createQuestion({
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
       slug: `it-q-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -1790,8 +1620,8 @@ describe('Stripe repositories', () => {
   });
 
   it('upserts Stripe customers per user', async () => {
-    const user = await createUser();
-    const otherUser = await createUser();
+    const user = await createUser(db, cleanup);
+    const otherUser = await createUser(db, cleanup);
     const repo = new DrizzleStripeCustomerRepository(db);
 
     await repo.insert(user.id, 'cus_123');
@@ -1811,7 +1641,7 @@ describe('Stripe repositories', () => {
   });
 
   it('maps Stripe price ids to domain plan when loading subscriptions', async () => {
-    const user = await createUser();
+    const user = await createUser(db, cleanup);
 
     const priceIds = {
       monthly: 'price_test_monthly',
@@ -1848,7 +1678,7 @@ describe('Stripe repositories', () => {
   });
 
   it('upserts subscriptions per user and supports lookup by externalSubscriptionId', async () => {
-    const user = await createUser();
+    const user = await createUser(db, cleanup);
 
     const priceIds = {
       monthly: 'price_test_monthly',
@@ -1915,8 +1745,8 @@ describe('Stripe repositories', () => {
   });
 
   it('throws CONFLICT when externalSubscriptionId is already mapped to a different user', async () => {
-    const userA = await createUser();
-    const userB = await createUser();
+    const userA = await createUser(db, cleanup);
+    const userB = await createUser(db, cleanup);
 
     const priceIds = {
       monthly: 'price_test_monthly',
@@ -2100,7 +1930,7 @@ describe('DrizzleUserRepository', () => {
 
 describe('DrizzleIdempotencyKeyRepository', () => {
   it('claims keys and stores results + errors', async () => {
-    const user = await createUser();
+    const user = await createUser(db, cleanup);
     const completedAt = new Date('2026-02-01T00:00:00.000Z');
     const now = () => completedAt;
     const repo = new DrizzleIdempotencyKeyRepository(db, now);
@@ -2145,7 +1975,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
   });
 
   it('keeps completed null results distinguishable from pending rows', async () => {
-    const user = await createUser();
+    const user = await createUser(db, cleanup);
     const completedAt = new Date('2026-02-01T00:00:00.000Z');
     const now = () => completedAt;
     const repo = new DrizzleIdempotencyKeyRepository(db, now);
@@ -2171,7 +2001,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
   });
 
   it('reclaims expired keys and resets stored state', async () => {
-    const user = await createUser();
+    const user = await createUser(db, cleanup);
     const now = () => new Date('2026-02-01T00:00:10.000Z');
     const repo = new DrizzleIdempotencyKeyRepository(db, now);
 
@@ -2211,7 +2041,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
   });
 
   it('reclaims zombie keys after the claim threshold and resets pending state', async () => {
-    const user = await createUser();
+    const user = await createUser(db, cleanup);
     let currentTime = new Date('2026-02-01T00:00:00.000Z');
     const now = () => currentTime;
     const repo = new DrizzleIdempotencyKeyRepository(db, now);
@@ -2259,33 +2089,6 @@ describe('DrizzleIdempotencyKeyRepository', () => {
   });
 });
 
-describe('DrizzleRateLimiter', () => {
-  it('increments within a window and rejects over the limit', async () => {
-    const now = () => new Date('2026-02-01T00:00:01.500Z');
-    const limiter = new DrizzleRateLimiter(db, now);
-    const key = `it-rate:${randomUUID()}`;
-    cleanup.rateLimitKeys.push(key);
-
-    const input = { key, limit: 2, windowMs: 1000 };
-
-    await expect(limiter.limit(input)).resolves.toMatchObject({
-      success: true,
-      remaining: 1,
-      retryAfterSeconds: 1,
-    });
-    await expect(limiter.limit(input)).resolves.toMatchObject({
-      success: true,
-      remaining: 0,
-      retryAfterSeconds: 1,
-    });
-    await expect(limiter.limit(input)).resolves.toMatchObject({
-      success: false,
-      remaining: 0,
-      retryAfterSeconds: 1,
-    });
-  });
-});
-
 describe('DrizzleTagRepository', () => {
   it('lists tags ordered by kind then slug, excluding orphaned tags', async () => {
     const substanceSlug = `0-substance-${randomUUID()}`;
@@ -2293,15 +2096,21 @@ describe('DrizzleTagRepository', () => {
     const topicSlugB = `b-topic-${randomUUID()}`;
     const orphanSlug = `orphan-${randomUUID()}`;
 
-    const substance = await createTag({
+    const substance = await createTag(db, cleanup, {
       slug: substanceSlug,
       kind: 'substance',
     });
-    const topicB = await createTag({ slug: topicSlugB, kind: 'topic' });
-    const topicA = await createTag({ slug: topicSlugA, kind: 'topic' });
-    await createTag({ slug: orphanSlug, kind: 'topic' });
+    const topicB = await createTag(db, cleanup, {
+      slug: topicSlugB,
+      kind: 'topic',
+    });
+    const topicA = await createTag(db, cleanup, {
+      slug: topicSlugA,
+      kind: 'topic',
+    });
+    await createTag(db, cleanup, { slug: orphanSlug, kind: 'topic' });
 
-    await createQuestion({
+    await createQuestion(db, cleanup, {
       slug: `q-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -2332,8 +2141,8 @@ describe('DrizzleTagRepository', () => {
 // ---------------------------------------------------------------------------
 describe('BUG-186: GetPracticeSessionReview active-exam secrecy', () => {
   it('redacts isCorrect for active exam and reveals it after session ends', async () => {
-    const user = await createUser();
-    const question = await createQuestion({
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
       slug: `it-review-secrecy-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -2391,8 +2200,8 @@ describe('BUG-186: GetPracticeSessionReview active-exam secrecy', () => {
   });
 
   it('does not redact isCorrect for tutor-mode sessions', async () => {
-    const user = await createUser();
-    const question = await createQuestion({
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
       slug: `it-tutor-no-redact-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -2443,13 +2252,13 @@ describe('BUG-186: GetPracticeSessionReview active-exam secrecy', () => {
 // ---------------------------------------------------------------------------
 describe('BUG-187: Dashboard counts exclude active-exam attempts', () => {
   it('excludes active-exam attempts from countByUserId and countCorrectByUserId', async () => {
-    const user = await createUser();
-    const q1 = await createQuestion({
+    const user = await createUser(db, cleanup);
+    const q1 = await createQuestion(db, cleanup, {
       slug: `it-count-exam-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
     });
-    const q2 = await createQuestion({
+    const q2 = await createQuestion(db, cleanup, {
       slug: `it-count-adhoc-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -2517,13 +2326,13 @@ describe('BUG-187: Dashboard counts exclude active-exam attempts', () => {
   });
 
   it('excludes active-exam attempts from listRecentByUserId', async () => {
-    const user = await createUser();
-    const q1 = await createQuestion({
+    const user = await createUser(db, cleanup);
+    const q1 = await createQuestion(db, cleanup, {
       slug: `it-recent-exam-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
     });
-    const q2 = await createQuestion({
+    const q2 = await createQuestion(db, cleanup, {
       slug: `it-recent-adhoc-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -2575,8 +2384,8 @@ describe('BUG-187: Dashboard counts exclude active-exam attempts', () => {
   });
 
   it('includes tutor-session attempts in counts', async () => {
-    const user = await createUser();
-    const question = await createQuestion({
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
       slug: `it-count-tutor-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -2616,13 +2425,13 @@ describe('BUG-187: Dashboard counts exclude active-exam attempts', () => {
 // ---------------------------------------------------------------------------
 describe('BUG-192: Attempted-question history excludes active-exam attempts', () => {
   it('excludes active-exam attempts from attempted-question list and count until the exam ends', async () => {
-    const user = await createUser();
-    const qExam = await createQuestion({
+    const user = await createUser(db, cleanup);
+    const qExam = await createQuestion(db, cleanup, {
       slug: `it-attempted-exam-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
     });
-    const qAdhoc = await createQuestion({
+    const qAdhoc = await createQuestion(db, cleanup, {
       slug: `it-attempted-adhoc-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -2691,37 +2500,37 @@ describe('BUG-192: Attempted-question history excludes active-exam attempts', ()
 // BUG-195: Question candidate status filters exclude active-exam attempts
 describe('BUG-195: Question candidate status filters exclude active-exam attempts', () => {
   it('excludes active-exam attempts from unanswered/incorrect status filters until the exam ends', async () => {
-    const user = await createUser();
+    const user = await createUser(db, cleanup);
     const questionRepo = new DrizzleQuestionRepository(db);
     const sessionRepo = new DrizzlePracticeSessionRepository(db);
     const attemptRepo = new DrizzleAttemptRepository(db);
-    const tag = await createTag({
+    const tag = await createTag(db, cleanup, {
       slug: `it-bug195-tag-${randomUUID()}`,
       kind: 'topic',
     });
 
-    const qExamIncorrect = await createQuestion({
+    const qExamIncorrect = await createQuestion(db, cleanup, {
       slug: `it-bug195-exam-incorrect-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       tagIds: [tag.id],
     });
-    const qAdhocIncorrect = await createQuestion({
+    const qAdhocIncorrect = await createQuestion(db, cleanup, {
       slug: `it-bug195-adhoc-incorrect-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
       createdAt: new Date('2026-01-02T00:00:00.000Z'),
       tagIds: [tag.id],
     });
-    const qAdhocCorrect = await createQuestion({
+    const qAdhocCorrect = await createQuestion(db, cleanup, {
       slug: `it-bug195-adhoc-correct-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
       createdAt: new Date('2026-01-03T00:00:00.000Z'),
       tagIds: [tag.id],
     });
-    const qNeverAnswered = await createQuestion({
+    const qNeverAnswered = await createQuestion(db, cleanup, {
       slug: `it-bug195-never-answered-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -2872,8 +2681,8 @@ describe('BUG-195: Question candidate status filters exclude active-exam attempt
 // ---------------------------------------------------------------------------
 describe('BUG-188: CAS works with legacy JSON shapes', () => {
   it('succeeds CAS on legacy params_json without questionStates key', async () => {
-    const user = await createUser();
-    const question = await createQuestion({
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
       slug: `it-legacy-cas-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -2923,8 +2732,8 @@ describe('BUG-188: CAS works with legacy JSON shapes', () => {
   });
 
   it('succeeds CAS on current-format params_json with questionStates', async () => {
-    const user = await createUser();
-    const question = await createQuestion({
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
       slug: `it-current-cas-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -2960,8 +2769,8 @@ describe('BUG-188: CAS works with legacy JSON shapes', () => {
   });
 
   it('succeeds CAS for setQuestionMarkedForReview with legacy params_json', async () => {
-    const user = await createUser();
-    const question = await createQuestion({
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
       slug: `it-legacy-mark-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
