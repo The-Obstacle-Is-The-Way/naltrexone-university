@@ -400,6 +400,14 @@ describe('FakeAttemptRepository', () => {
       ).rejects.toMatchObject({
         code: 'INTERNAL_ERROR',
       });
+
+      await expect(
+        repo.countAttemptedQuestionsByUserId('user-1', {
+          difficulty: 'hard',
+        }),
+      ).rejects.toMatchObject({
+        code: 'INTERNAL_ERROR',
+      });
     });
   });
 });

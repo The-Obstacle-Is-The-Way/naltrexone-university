@@ -165,6 +165,12 @@ describe('FakeStripeEventRepository', () => {
       await expect(
         repo.pruneProcessedBefore(new Date('2026-02-10T00:00:00Z'), 0),
       ).resolves.toBe(0);
+      await expect(
+        repo.pruneProcessedBefore(new Date('2026-02-10T00:00:00Z'), -1),
+      ).resolves.toBe(0);
+      await expect(
+        repo.pruneProcessedBefore(new Date('2026-02-10T00:00:00Z'), 0.5),
+      ).resolves.toBe(0);
     });
   });
 });

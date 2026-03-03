@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { ApplicationError } from '@/src/application/errors';
 import { FakeUserRepository } from './fake-user-repository';
 
 describe('FakeUserRepository', () => {
@@ -100,12 +99,10 @@ describe('FakeUserRepository', () => {
 
       await expect(
         repo.upsertByClerkId('clerk-2', 'a@example.com', { observedAt: t2 }),
-      ).rejects.toEqual(
-        new ApplicationError(
-          'CONFLICT',
-          'User could not be upserted due to a uniqueness constraint',
-        ),
-      );
+      ).rejects.toMatchObject({
+        code: 'CONFLICT',
+        message: 'User could not be upserted due to a uniqueness constraint',
+      });
 
       await expect(repo.findByClerkId('clerk-1')).resolves.toMatchObject({
         id: userA.id,
