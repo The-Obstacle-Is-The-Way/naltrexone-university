@@ -18,7 +18,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | GitHub Issue |
 |----|-------|----------|--------------|
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
-| [DEBT-270](./debt-270-integration-test-god-file-split.md) | Integration Test God File Split — `repositories.integration.test.ts` (2686 lines, 13 describe blocks) | P3 | — |
 
 **Next Debt ID:** DEBT-273
 
@@ -28,6 +27,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-270](../_archive/debt/debt-270-integration-test-god-file-split.md) | Integration Test God File Split — split `repositories.integration.test.ts` (3,004 lines) into 9 domain-scoped files + shared helpers | P3 | 2026-03-03 | [#169](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/169) |
 | [DEBT-271](../_archive/debt/debt-271-structural-ast-test-brittleness.md) | Structural/AST-Coupled Test Brittleness — removed remaining AST-coupled helper assertion from practice-session repository tests | P2 | 2026-03-03 | [#168](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/168) |
 | [DEBT-272](../_archive/debt/debt-272-fakes-test-god-file-split.md) | Fakes Test God File Split — extracted 12 per-fake test files and removed `fakes.test.ts` | P3 | 2026-03-03 | [#168](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/168) |
 | [DEBT-268](../_archive/debt/debt-268-quick-practice-ordering-policy-alignment.md) | Quick Practice Ordering Policy Alignment — daily-seeded shuffle in `executeForFilters` (BS-038) | P2 | 2026-03-02 | — |

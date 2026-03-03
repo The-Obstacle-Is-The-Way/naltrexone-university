@@ -97,7 +97,7 @@ When the idempotency key is provided, adapters forward it to Stripe via `Payment
 
 - `src/adapters/shared/with-idempotency.test.ts` covers claim, replay, error replay, timeout, and concurrent scenarios.
 - `src/adapters/controllers/practice-controller.test.ts`, `src/adapters/controllers/question-controller.test.ts`, and `src/adapters/controllers/billing-controller.test.ts` verify reused idempotency keys return cached results and do not re-execute use cases.
-- `tests/integration/repositories.integration.test.ts` verifies the Postgres idempotency repository behavior end-to-end (`DrizzleIdempotencyKeyRepository`).
+- `tests/integration/idempotency-key-repository.integration.test.ts` verifies the Postgres idempotency repository behavior end-to-end (`DrizzleIdempotencyKeyRepository`).
 - Controllers that accept `idempotencyKey` are documented in `docs/specs/master_spec.md`.
 
 ---
