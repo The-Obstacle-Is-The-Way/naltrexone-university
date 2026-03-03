@@ -1,0 +1,216 @@
+import { describe, expect, it } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
+import { FakeIdempotencyKeyRepository } from './fake-idempotency-key-repository';
+
+type Clock = { now: Date };
+
+function createRepo(clock: Clock): FakeIdempotencyKeyRepository {
+  return new FakeIdempotencyKeyRepository(() => clock.now);
+}
+
+function createClaimInput(expiresAt: Date) {
+  return {
+    userId: 'user_1',
+    action: 'createCheckoutSession',
+    key: 'idem_key_1',
+    expiresAt,
+  };
+}
+
+describe('FakeIdempotencyKeyRepository', () => {
+  describe('claim/find', () => {
+    it('claims a new key, rejects duplicate claim, and returns pending record state', async () => {
+      const clock = { now: new Date('2026-03-01T00:00:00.000Z') };
+      const repo = createRepo(clock);
+      const expiresAt = new Date('2026-03-01T00:10:00.000Z');
+      const input = createClaimInput(expiresAt);
+
+      await expect(repo.claim(input)).resolves.toBe(true);
+      await expect(repo.claim(input)).resolves.toBe(false);
+
+      await expect(
+        repo.find(input.userId, input.action, input.key),
+      ).resolves.toEqual({
+        resultJson: null,
+        error: null,
+        completedAt: null,
+        expiresAt,
+      });
+    });
+
+    it('allows claim again after record expiration', async () => {
+      const clock = { now: new Date('2026-03-01T00:00:00.000Z') };
+      const repo = createRepo(clock);
+
+      await repo.claim(createClaimInput(new Date('2026-03-01T00:00:30.000Z')));
+
+      clock.now = new Date('2026-03-01T00:00:31.000Z');
+      await expect(
+        repo.find('user_1', 'createCheckoutSession', 'idem_key_1'),
+      ).resolves.toBeNull();
+
+      await expect(
+        repo.claim(createClaimInput(new Date('2026-03-01T00:05:00.000Z'))),
+      ).resolves.toBe(true);
+    });
+  });
+
+  describe('storeResult/storeError', () => {
+    it('stores result payload and completion timestamp', async () => {
+      const clock = { now: new Date('2026-03-01T00:00:00.000Z') };
+      const repo = createRepo(clock);
+      const expiresAt = new Date('2026-03-01T01:00:00.000Z');
+      const input = createClaimInput(expiresAt);
+
+      await repo.claim(input);
+
+      clock.now = new Date('2026-03-01T00:00:05.000Z');
+      await repo.storeResult({
+        userId: input.userId,
+        action: input.action,
+        key: input.key,
+        resultJson: { checkoutUrl: 'https://example.test/checkout' },
+      });
+
+      await expect(
+        repo.find(input.userId, input.action, input.key),
+      ).resolves.toEqual({
+        resultJson: { checkoutUrl: 'https://example.test/checkout' },
+        error: null,
+        completedAt: new Date('2026-03-01T00:00:05.000Z'),
+        expiresAt,
+      });
+    });
+
+    it('stores error payload, clears result payload, and sets completion timestamp', async () => {
+      const clock = { now: new Date('2026-03-01T00:00:00.000Z') };
+      const repo = createRepo(clock);
+      const expiresAt = new Date('2026-03-01T01:00:00.000Z');
+      const input = createClaimInput(expiresAt);
+
+      await repo.claim(input);
+      await repo.storeResult({
+        userId: input.userId,
+        action: input.action,
+        key: input.key,
+        resultJson: { checkoutUrl: 'https://example.test/checkout' },
+      });
+
+      clock.now = new Date('2026-03-01T00:00:06.000Z');
+      await repo.storeError({
+        userId: input.userId,
+        action: input.action,
+        key: input.key,
+        error: { code: 'INTERNAL_ERROR', message: 'boom' },
+      });
+
+      await expect(
+        repo.find(input.userId, input.action, input.key),
+      ).resolves.toEqual({
+        resultJson: null,
+        error: { code: 'INTERNAL_ERROR', message: 'boom' },
+        completedAt: new Date('2026-03-01T00:00:06.000Z'),
+        expiresAt,
+      });
+    });
+
+    it('throws NOT_FOUND when storing result/error for a missing key', async () => {
+      const clock = { now: new Date('2026-03-01T00:00:00.000Z') };
+      const repo = createRepo(clock);
+
+      await expect(
+        repo.storeResult({
+          userId: 'user_1',
+          action: 'createCheckoutSession',
+          key: 'missing',
+          resultJson: { ok: true },
+        }),
+      ).rejects.toEqual(
+        new ApplicationError('NOT_FOUND', 'Idempotency key not found'),
+      );
+
+      await expect(
+        repo.storeError({
+          userId: 'user_1',
+          action: 'createCheckoutSession',
+          key: 'missing',
+          error: { code: 'INTERNAL_ERROR', message: 'boom' },
+        }),
+      ).rejects.toEqual(
+        new ApplicationError('NOT_FOUND', 'Idempotency key not found'),
+      );
+    });
+  });
+
+  describe('pruneExpiredBefore', () => {
+    it('prunes oldest matching records first up to limit', async () => {
+      const clock = { now: new Date('2026-03-01T00:00:00.000Z') };
+      const repo = createRepo(clock);
+
+      await repo.claim({
+        userId: 'user_1',
+        action: 'action',
+        key: 'k_oldest',
+        expiresAt: new Date('2026-03-02T00:00:00.000Z'),
+      });
+      await repo.claim({
+        userId: 'user_1',
+        action: 'action',
+        key: 'k_older',
+        expiresAt: new Date('2026-03-03T00:00:00.000Z'),
+      });
+      await repo.claim({
+        userId: 'user_1',
+        action: 'action',
+        key: 'k_newer',
+        expiresAt: new Date('2026-03-04T00:00:00.000Z'),
+      });
+
+      await expect(
+        repo.pruneExpiredBefore(new Date('2026-03-05T00:00:00.000Z'), 2),
+      ).resolves.toBe(2);
+
+      await expect(
+        repo.find('user_1', 'action', 'k_oldest'),
+      ).resolves.toBeNull();
+      await expect(
+        repo.find('user_1', 'action', 'k_older'),
+      ).resolves.toBeNull();
+      await expect(repo.find('user_1', 'action', 'k_newer')).resolves.toEqual({
+        resultJson: null,
+        error: null,
+        completedAt: null,
+        expiresAt: new Date('2026-03-04T00:00:00.000Z'),
+      });
+    });
+
+    it('returns 0 for non-positive or non-integer limits and leaves records unchanged', async () => {
+      const clock = { now: new Date('2026-03-01T00:00:00.000Z') };
+      const repo = createRepo(clock);
+
+      await repo.claim({
+        userId: 'user_1',
+        action: 'action',
+        key: 'k_1',
+        expiresAt: new Date('2026-03-02T00:00:00.000Z'),
+      });
+
+      await expect(
+        repo.pruneExpiredBefore(new Date('2026-03-05T00:00:00.000Z'), 0),
+      ).resolves.toBe(0);
+      await expect(
+        repo.pruneExpiredBefore(new Date('2026-03-05T00:00:00.000Z'), -1),
+      ).resolves.toBe(0);
+      await expect(
+        repo.pruneExpiredBefore(new Date('2026-03-05T00:00:00.000Z'), 1.5),
+      ).resolves.toBe(0);
+
+      await expect(repo.find('user_1', 'action', 'k_1')).resolves.toEqual({
+        resultJson: null,
+        error: null,
+        completedAt: null,
+        expiresAt: new Date('2026-03-02T00:00:00.000Z'),
+      });
+    });
+  });
+});
