@@ -89,7 +89,10 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     >,
     filters?: AttemptedQuestionsFilters,
   ): SQL[] {
-    const conditions: SQL[] = [eq(latestAttemptRows.attemptRank, 1)];
+    const conditions: SQL[] = [
+      eq(latestAttemptRows.attemptRank, 1),
+      this.activeExamVisibilityCondition(),
+    ];
 
     const resultFilter = filters?.result ?? null;
     if (resultFilter === 'correct') {

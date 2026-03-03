@@ -148,11 +148,15 @@ export function usePracticeQuestionAnswerFlow(
           nowMs: Date.now,
           setLoadState,
           setSubmitResult,
+          createRequestSequenceId,
+          isLatestRequest,
           isMounted,
         }),
     });
   }, [
+    createRequestSequenceId,
     input.submitAnswerFn,
+    isLatestRequest,
     isMounted,
     question,
     questionLoadedAt,

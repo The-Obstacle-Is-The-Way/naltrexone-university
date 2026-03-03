@@ -2564,6 +2564,83 @@ describe('BUG-187: Dashboard counts exclude active-exam attempts', () => {
 });
 
 // ---------------------------------------------------------------------------
+// BUG-192: History attempted-questions excludes active-exam attempts
+// ---------------------------------------------------------------------------
+describe('BUG-192: Attempted-question history excludes active-exam attempts', () => {
+  it('excludes active-exam attempts from attempted-question list and count until the exam ends', async () => {
+    const user = await createUser();
+    const qExam = await createQuestion({
+      slug: `it-attempted-exam-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const qAdhoc = await createQuestion({
+      slug: `it-attempted-adhoc-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const sessionRepo = new DrizzlePracticeSessionRepository(db);
+    const attemptRepo = new DrizzleAttemptRepository(db);
+
+    const examSession = await sessionRepo.create({
+      userId: user.id,
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [qExam.id],
+      },
+    });
+
+    await attemptRepo.insert({
+      userId: user.id,
+      questionId: qExam.id,
+      practiceSessionId: examSession.id,
+      selectedChoiceId: qExam.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 5,
+    });
+
+    await attemptRepo.insert({
+      userId: user.id,
+      questionId: qAdhoc.id,
+      practiceSessionId: null,
+      selectedChoiceId: qAdhoc.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 5,
+    });
+
+    const activeAttempted = await attemptRepo.listAttemptedQuestionsByUserId(
+      user.id,
+      10,
+      0,
+    );
+    expect(activeAttempted).toHaveLength(1);
+    expect(activeAttempted[0]?.questionId).toBe(qAdhoc.id);
+    await expect(
+      attemptRepo.countAttemptedQuestionsByUserId(user.id),
+    ).resolves.toBe(1);
+
+    await sessionRepo.end(examSession.id, user.id);
+
+    const endedAttempted = await attemptRepo.listAttemptedQuestionsByUserId(
+      user.id,
+      10,
+      0,
+    );
+    expect(endedAttempted).toHaveLength(2);
+    expect(endedAttempted.map((row) => row.questionId)).toEqual(
+      expect.arrayContaining([qAdhoc.id, qExam.id]),
+    );
+    await expect(
+      attemptRepo.countAttemptedQuestionsByUserId(user.id),
+    ).resolves.toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // BUG-188: CAS comparison works with legacy params_json (no questionStates)
 // ---------------------------------------------------------------------------
 describe('BUG-188: CAS works with legacy JSON shapes', () => {

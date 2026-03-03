@@ -318,6 +318,99 @@ describe('question controllers (integration)', () => {
       isCorrect: true,
     });
   });
+
+  it('redacts isCorrect in submitAnswer responses for active exam sessions', async () => {
+    const user = await createUser();
+    const question = await createQuestion({
+      slug: `it-submit-exam-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const authGateway: AuthGateway = {
+      getCurrentUser: async () => ({
+        id: user.id,
+        email: user.email,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+      requireUser: async () => ({
+        id: user.id,
+        email: user.email,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+    };
+
+    const questions = new DrizzleQuestionRepository(db);
+    const attempts = new DrizzleAttemptRepository(db);
+    const sessions = new DrizzlePracticeSessionRepository(db, () => new Date());
+    const idempotencyKeyRepository = new DrizzleIdempotencyKeyRepository(
+      db,
+      () => new Date(),
+    );
+    const logger = new FakeLogger();
+
+    const deps: QuestionControllerDeps = {
+      authGateway,
+      logger,
+      rateLimiter: {
+        limit: async () => ({
+          success: true,
+          limit: 120,
+          remaining: 119,
+          retryAfterSeconds: 0,
+        }),
+        pruneExpiredWindows: async () => 0,
+      },
+      idempotencyKeyRepository,
+      now: () => new Date(),
+      checkEntitlementUseCase: { execute: async () => ({ isEntitled: true }) },
+      getNextQuestionUseCase: new GetNextQuestionUseCase(
+        questions,
+        attempts,
+        sessions,
+        () => new Date(),
+      ),
+      submitAnswerUseCase: new SubmitAnswerUseCase(
+        questions,
+        attempts,
+        sessions,
+        logger,
+      ),
+    };
+
+    const session = await sessions.create({
+      userId: user.id,
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+
+    const result = await submitAnswer(
+      {
+        questionId: question.id,
+        choiceId: question.correctChoiceId,
+        sessionId: session.id,
+      },
+      deps,
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      data: {
+        isCorrect: null,
+        correctChoiceId: null,
+        explanationMd: null,
+        referenceMd: null,
+        choiceExplanations: [],
+      },
+    });
+  });
 });
 
 describe('stats controller (integration)', () => {

@@ -1,6 +1,6 @@
 # BUG-193: SubmitAnswer Returns isCorrect for Active Exams
 
-**Status:** Open
+**Status:** Fixed
 **Priority:** P3
 **Date:** 2026-03-03
 
@@ -35,20 +35,26 @@ The asymmetry is clear: three fields are gated, one is not.
 
 ## Fix
 
-Not yet implemented.
+Gated `isCorrect` behind the existing `shouldShowExplanation` check in `submit-answer.ts:264`:
+```typescript
+isCorrect: shouldShowExplanation ? grade.isCorrect : null,
+```
 
-Expected fix shape:
-- Gate `isCorrect` behind the same `shouldShowExplanation` check:
-  ```typescript
-  isCorrect: shouldShowExplanation ? grade.isCorrect : null,
-  ```
-- This requires widening `SubmitAnswerOutput.isCorrect` from `boolean` to `boolean | null`.
-- Practice session UI already handles null (it doesn't display isCorrect in exam mode).
+Type widened from `boolean` to `boolean | null` in:
+- `SubmitAnswerOutput` (`submit-answer.ts`)
+- Controller Zod schema (`question-controller.ts`: `z.boolean().nullable()`)
+- UI fallback (`practice-view.tsx`: `isCorrect ?? false` inside `!isExamMode` guard)
+
+All 12 consumers of `.isCorrect` on submit results were audited — all handle nullable correctly via `?? false`, strict equality checks, or pre-existing `!isExamMode` guards.
+
+Commits:
+- `5f93a854 Fix BUG-193: Redact isCorrect in active exam submit responses`
+- `a841507f Fix BUG-193: Handle nullable submit correctness in practice feedback`
 
 ## Verification
 
-- [ ] Unit test added
-- [ ] Integration test added
+- [x] Unit test added — `submit-answer.test.ts`: asserts `result.isCorrect` is `null` for active exam submissions. `question-controller.test.ts`: validates nullable schema round-trip.
+- [x] Integration test added — `controllers.integration.test.ts`: end-to-end test submits an answer during an active exam and verifies `isCorrect: null` in the controller response.
 - [ ] Manual verification
 
 ## Related

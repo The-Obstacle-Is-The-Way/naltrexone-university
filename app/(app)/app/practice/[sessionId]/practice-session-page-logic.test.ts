@@ -543,6 +543,44 @@ describe('practice-session-page-logic', () => {
       expect(setSubmitResult).not.toHaveBeenCalled();
       expect(setLoadState).not.toHaveBeenCalledWith({ status: 'ready' });
     });
+
+    it('returns no state updates when submit response is stale', async () => {
+      const deferred = createDeferred<ActionResult<SubmitAnswerOutput>>();
+      const setLoadState = vi.fn();
+      const setSubmitResult = vi.fn();
+      const onSuccess = vi.fn();
+
+      const promise = submitAnswerForQuestion({
+        sessionId: 'session-1',
+        question: createNextQuestion(),
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 0,
+        submitIdempotencyKey: 'idem_1',
+        submitAnswerFn: async () => deferred.promise,
+        nowMs: () => 0,
+        setLoadState,
+        setSubmitResult,
+        onSuccess,
+        createRequestSequenceId: () => 1,
+        isLatestRequest: () => false,
+      });
+
+      deferred.resolve(
+        ok({
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Because...',
+          referenceMd: null,
+          choiceExplanations: [],
+        } satisfies SubmitAnswerOutput),
+      );
+      await promise;
+
+      expect(setSubmitResult).not.toHaveBeenCalled();
+      expect(setLoadState).not.toHaveBeenCalled();
+      expect(onSuccess).not.toHaveBeenCalled();
+    });
   });
 
   describe('maybeAutoAdvanceAfterSubmit', () => {

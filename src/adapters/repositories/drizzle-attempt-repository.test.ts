@@ -747,6 +747,16 @@ describe('DrizzleAttemptRepository', () => {
         }),
       ).resolves.toMatchObject([{ questionId: 'q_exam', sessionMode: 'exam' }]);
     });
+
+    it('applies active-exam secrecy filtering to attempted-question list query', async () => {
+      const db = createDbMock();
+      db._mocks.finalQueryExecute.mockResolvedValue([]);
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+      await repo.listAttemptedQuestionsByUserId('user_1', 20, 0);
+
+      expect(db._mocks.whereFinal).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('countAttemptedQuestionsByUserId', () => {
@@ -784,6 +794,18 @@ describe('DrizzleAttemptRepository', () => {
         repo.countAttemptedQuestionsByUserId('user_1', { source: 'exam' }),
       ).resolves.toBe(2);
       expect(db._mocks.countLeftJoin).toHaveBeenCalledTimes(2);
+    });
+
+    it('applies active-exam secrecy filtering to attempted-question count query', async () => {
+      const db = createDbMock();
+      db._mocks.countWhere.mockResolvedValueOnce([{ count: 3 }]);
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+      await expect(
+        repo.countAttemptedQuestionsByUserId('user_1'),
+      ).resolves.toBe(3);
+
+      expect(db._mocks.countWhere).toHaveBeenCalledTimes(1);
     });
   });
 });

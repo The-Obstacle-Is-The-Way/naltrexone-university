@@ -118,6 +118,8 @@ export async function submitAnswerForQuestion(input: {
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  createRequestSequenceId?: () => number;
+  isLatestRequest?: (requestId: number) => boolean;
   isMounted?: () => boolean;
 }): Promise<void> {
   return runSubmitAnswerFlow({
@@ -140,6 +142,8 @@ export async function submitAnswerForQuestion(input: {
     nowMs: input.nowMs,
     setLoadState: input.setLoadState,
     setSubmitResult: input.setSubmitResult,
+    createRequestSequenceId: input.createRequestSequenceId,
+    isLatestRequest: input.isLatestRequest,
     isMounted: input.isMounted,
   });
 }
