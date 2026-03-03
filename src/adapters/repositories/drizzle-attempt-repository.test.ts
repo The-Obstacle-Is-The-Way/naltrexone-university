@@ -546,6 +546,11 @@ describe('DrizzleAttemptRepository', () => {
       ).resolves.toBe(2);
     });
 
+    // Structural assertion: verifies the WHERE clause includes practiceSessions columns.
+    // Couples to Drizzle's internal AST — if Drizzle changes expression tree shape, this
+    // could silently become non-protective. The behavioral proof lives in the integration
+    // tests (BUG-187 section in repositories.integration.test.ts), which prove real rows
+    // are excluded from counts against actual Postgres.
     it('applies active-exam secrecy filtering to aggregate count queries', async () => {
       const db = createDbMock();
       db._mocks.countWhere.mockResolvedValueOnce([{ count: 10 }]);
@@ -605,6 +610,7 @@ describe('DrizzleAttemptRepository', () => {
       ]);
     });
 
+    // Structural assertion — see comment on count query test above.
     it('applies active-exam secrecy filter conditions when building the recent-attempt query', async () => {
       const db = createDbMock();
       db._mocks.recentQueryExecute.mockResolvedValue([]);

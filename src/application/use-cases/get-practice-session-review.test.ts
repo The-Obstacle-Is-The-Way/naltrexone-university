@@ -157,6 +157,53 @@ describe('GetPracticeSessionReviewUseCase', () => {
     );
   });
 
+  it('shows correctness for active tutor sessions (no secrecy gate)', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'tutor',
+      endedAt: null,
+      questionIds: ['q1'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: 'choice-1',
+          latestIsCorrect: false,
+          latestAnsweredAt: new Date('2026-02-06T00:00:00Z'),
+        },
+      ],
+    });
+
+    const useCase = new GetPracticeSessionReviewUseCase(
+      new FakePracticeSessionRepository([session]),
+      new FakeQuestionRepository([
+        createQuestion({
+          id: 'q1',
+          slug: 'q-1',
+          stemMd: 'Stem for q1',
+          difficulty: 'easy',
+        }),
+      ]),
+      new FakeLogger(),
+    );
+
+    await expect(useCase.execute({ userId, sessionId })).resolves.toMatchObject(
+      {
+        rows: [
+          {
+            questionId: 'q1',
+            isAnswered: true,
+            isCorrect: false,
+          },
+        ],
+      },
+    );
+  });
+
   it('builds rows from questionIds even when questionStates is shorter', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';

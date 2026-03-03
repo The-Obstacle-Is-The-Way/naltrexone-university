@@ -56,7 +56,7 @@ Code changes:
 ## Verification
 
 - [x] Unit test added
-- [ ] Integration test added
+- [x] Integration test added
 - [x] Manual verification
 - [x] Code-level tracer-bullet verified (Audit #11, 2026-03-03)
 

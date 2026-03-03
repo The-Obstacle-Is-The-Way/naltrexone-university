@@ -745,6 +745,12 @@ describe('DrizzlePracticeSessionRepository', () => {
     });
   });
 
+  // Structural assertion: verifies the CAS WHERE clause does NOT include 'questionStates'
+  // for legacy rows. Couples to Drizzle's internal expression tree via hasNestedOwnKey —
+  // if Drizzle changes how eq() expressions are represented, this could silently become
+  // non-protective. The behavioral proof lives in the integration tests (BUG-188 section
+  // in repositories.integration.test.ts), which prove real legacy rows are CAS-updatable
+  // against actual Postgres.
   it('uses raw legacy params_json for CAS comparison when questionStates is missing', async () => {
     const row = {
       id: 'session_1',
