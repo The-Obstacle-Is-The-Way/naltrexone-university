@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { ApplicationError } from '@/src/application/errors';
 import type { SubscriptionUpsertInput } from '@/src/application/ports/repositories';
 import { FakeSubscriptionRepository } from './fake-subscription-repository';
 
@@ -79,12 +78,10 @@ describe('FakeSubscriptionRepository', () => {
           userId: 'user_2',
         }),
       ),
-    ).rejects.toEqual(
-      new ApplicationError(
-        'CONFLICT',
-        'External subscription id is already mapped to a different user',
-      ),
-    );
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'External subscription id is already mapped to a different user',
+    });
   });
 
   it('restores repository state from a snapshot', async () => {
