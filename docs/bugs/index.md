@@ -13,7 +13,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-195
+**Next Bug ID:** BUG-199
 
 **Latest archival (2026-03-02):**
 - BUG-182, BUG-183, and BUG-184 verified fixed (PR #163), archived to `docs/_archive/bugs/`.
@@ -34,6 +34,10 @@ Bug reports document issues discovered in the codebase along with their root cau
 | BUG-192 | History Page Exposes Active Exam Attempt Correctness | P2 | Open |
 | BUG-193 | SubmitAnswer Returns isCorrect for Active Exams | P3 | Open |
 | BUG-194 | Practice Submit Flow Missing Stale-Request Guard | P3 | Open |
+| BUG-195 | Question Candidate Status Filter Leaks Active Exam Correctness via Inference | P3 | Open |
+| BUG-196 | Practice Session Review Stage loadReview Double-Call Race | P3 | Open |
+| BUG-197 | SubmitAnswer Two-Phase Write Without Transaction | P2 | Open |
+| BUG-198 | Idempotency Key Zombie on Server Crash | P3 | Open |
 
 ## Recently Fixed (Unarchived)
 
@@ -42,6 +46,32 @@ Bug reports document issues discovered in the codebase along with their root cau
 | BUG-186 | Active Exam Review Projection Leaks Correctness | P1 | Fixed (branch: `bug-fix-186-187-188`) |
 | BUG-187 | Dashboard Accuracy Includes Active Exam Attempts | P1 | Fixed (branch: `bug-fix-186-187-188`) |
 | BUG-188 | Legacy Session CAS JSON Shape Mismatch Breaks Updates | P2 | Fixed (branch: `bug-fix-186-187-188`) |
+
+## Audit #12 — Extended Sweep: Inference Leaks, Transaction Safety, Zombie Keys (2026-03-03)
+
+Follow-up sweep after Audit #11, targeting three additional families: indirect exam secrecy leaks (inference via count deltas), transaction boundary violations, and idempotency edge cases.
+
+**Methodology:**
+- 3 parallel agents: (1) exhaustive exam secrecy re-sweep across all remaining surfaces, (2) async race condition sweep across all hooks/effects, (3) data integrity audit covering CAS, transactions, idempotency, type safety, error handling, boundary violations.
+- Every finding manually verified at the line level before filing.
+
+**4 new bugs filed (BUG-195..198):**
+
+| Bug | Family | Priority | Summary |
+|-----|--------|----------|---------|
+| BUG-195 | Exam secrecy (inference) | P3 | `latestAttemptRowsSubquery` in question repo has no active-exam exclusion — count delta reveals correctness |
+| BUG-196 | Race condition | P3 | `loadReview` has no concurrency guard — double-click fires duplicate `finalizeSession` |
+| BUG-197 | Transaction safety | P2 | `SubmitAnswer` does attempt insert + session state update without a DB transaction — orphan risk on failure |
+| BUG-198 | Idempotency | P3 | Claimed-but-never-completed idempotency key becomes 24-hour zombie blocking retries |
+
+**Surfaces confirmed clean:**
+- All other use cases returning correctness data (audit exhaustive — see Audit #11 matrix)
+- All hooks with proper `mounted` + cleanup patterns (bookmarks, tags, incomplete session, available counts, navigator, summary review, mark-for-review)
+- Domain layer boundary purity (zero external imports)
+- SQL injection (all Drizzle parameterized queries, one validated string interpolation in Stripe search)
+- Error handling (no silent swallowing of business-critical errors)
+
+---
 
 ## Audit #11 — Exam Secrecy Deep Sweep + Race Condition Audit (2026-03-03)
 

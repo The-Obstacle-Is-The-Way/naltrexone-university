@@ -33,6 +33,7 @@ Current open drift set:
 - [BUG-191](../bugs/bug-191-get-next-question-leaks-latestIsCorrect-active-exam.md)
 - [BUG-192](../bugs/bug-192-history-page-exposes-active-exam-correctness.md)
 - [BUG-193](../bugs/bug-193-submit-answer-returns-isCorrect-active-exam.md)
+- [BUG-195](../bugs/bug-195-question-candidate-status-filter-leaks-active-exam-correctness.md) (inference via count delta)
 
 Recently fixed (pending archive):
 - [BUG-186](../bugs/bug-186-active-exam-review-projection-leaks-correctness.md)
