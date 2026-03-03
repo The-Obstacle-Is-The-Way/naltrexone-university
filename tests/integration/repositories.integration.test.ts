@@ -3,6 +3,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import type { PracticeSessionParams } from '@/db/schema';
 import * as schema from '@/db/schema';
 import { DrizzleRateLimiter } from '@/src/adapters/gateways/drizzle-rate-limiter';
 import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-attempt-repository';
@@ -16,6 +17,8 @@ import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizz
 import { DrizzleTagRepository } from '@/src/adapters/repositories/drizzle-tag-repository';
 import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
 import { ApplicationError } from '@/src/application/errors';
+import { FakeLogger } from '@/src/application/test-helpers/fakes/fake-logger';
+import { GetPracticeSessionReviewUseCase } from '@/src/application/use-cases/get-practice-session-review';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -2273,5 +2276,425 @@ describe('DrizzleTagRepository', () => {
     expect(topicIndexB).toBeLessThan(substanceIndex);
 
     expect(slugs).not.toContain(orphanSlug);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BUG-186: GetPracticeSessionReview redacts isCorrect for active exam sessions
+// ---------------------------------------------------------------------------
+describe('BUG-186: GetPracticeSessionReview active-exam secrecy', () => {
+  it('redacts isCorrect for active exam and reveals it after session ends', async () => {
+    const user = await createUser();
+    const question = await createQuestion({
+      slug: `it-review-secrecy-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const sessionRepo = new DrizzlePracticeSessionRepository(db);
+    const questionRepo = new DrizzleQuestionRepository(db);
+    const logger = new FakeLogger();
+
+    const session = await sessionRepo.create({
+      userId: user.id,
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+
+    await sessionRepo.recordQuestionAnswer({
+      sessionId: session.id,
+      userId: user.id,
+      questionId: question.id,
+      selectedChoiceId: question.correctChoiceId,
+      isCorrect: true,
+      answeredAt: new Date(),
+    });
+
+    const useCase = new GetPracticeSessionReviewUseCase(
+      sessionRepo,
+      questionRepo,
+      logger,
+    );
+
+    // While exam is active: isCorrect must be null
+    const activeResult = await useCase.execute({
+      userId: user.id,
+      sessionId: session.id,
+    });
+    expect(activeResult.rows).toHaveLength(1);
+    expect(activeResult.rows[0]?.isCorrect).toBeNull();
+    expect(activeResult.mode).toBe('exam');
+
+    // End the session
+    await sessionRepo.end(session.id, user.id);
+
+    // After exam ends: isCorrect must be visible
+    const endedResult = await useCase.execute({
+      userId: user.id,
+      sessionId: session.id,
+    });
+    expect(endedResult.rows).toHaveLength(1);
+    expect(endedResult.rows[0]?.isCorrect).toBe(true);
+  });
+
+  it('does not redact isCorrect for tutor-mode sessions', async () => {
+    const user = await createUser();
+    const question = await createQuestion({
+      slug: `it-tutor-no-redact-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const sessionRepo = new DrizzlePracticeSessionRepository(db);
+    const questionRepo = new DrizzleQuestionRepository(db);
+    const logger = new FakeLogger();
+
+    const session = await sessionRepo.create({
+      userId: user.id,
+      mode: 'tutor',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+
+    await sessionRepo.recordQuestionAnswer({
+      sessionId: session.id,
+      userId: user.id,
+      questionId: question.id,
+      selectedChoiceId: question.correctChoiceId,
+      isCorrect: false,
+      answeredAt: new Date(),
+    });
+
+    const useCase = new GetPracticeSessionReviewUseCase(
+      sessionRepo,
+      questionRepo,
+      logger,
+    );
+
+    // Tutor mode always shows correctness, even while active
+    const result = await useCase.execute({
+      userId: user.id,
+      sessionId: session.id,
+    });
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]?.isCorrect).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BUG-187: Dashboard count queries exclude active-exam attempts
+// ---------------------------------------------------------------------------
+describe('BUG-187: Dashboard counts exclude active-exam attempts', () => {
+  it('excludes active-exam attempts from countByUserId and countCorrectByUserId', async () => {
+    const user = await createUser();
+    const q1 = await createQuestion({
+      slug: `it-count-exam-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const q2 = await createQuestion({
+      slug: `it-count-adhoc-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const sessionRepo = new DrizzlePracticeSessionRepository(db);
+    const attemptRepo = new DrizzleAttemptRepository(db);
+
+    // Create an active exam session
+    const examSession = await sessionRepo.create({
+      userId: user.id,
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [q1.id],
+      },
+    });
+
+    // Attempt attached to active exam
+    await attemptRepo.insert({
+      userId: user.id,
+      questionId: q1.id,
+      practiceSessionId: examSession.id,
+      selectedChoiceId: q1.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 5,
+    });
+
+    // Adhoc attempt (no session)
+    await attemptRepo.insert({
+      userId: user.id,
+      questionId: q2.id,
+      practiceSessionId: null,
+      selectedChoiceId: q2.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 5,
+    });
+
+    const since = new Date('2000-01-01T00:00:00.000Z');
+
+    // While exam is active: only adhoc attempt counted
+    await expect(attemptRepo.countByUserId(user.id)).resolves.toBe(1);
+    await expect(attemptRepo.countCorrectByUserId(user.id)).resolves.toBe(1);
+    await expect(attemptRepo.countByUserIdSince(user.id, since)).resolves.toBe(
+      1,
+    );
+    await expect(
+      attemptRepo.countCorrectByUserIdSince(user.id, since),
+    ).resolves.toBe(1);
+
+    // End the exam
+    await sessionRepo.end(examSession.id, user.id);
+
+    // After exam ends: both attempts counted
+    await expect(attemptRepo.countByUserId(user.id)).resolves.toBe(2);
+    await expect(attemptRepo.countCorrectByUserId(user.id)).resolves.toBe(2);
+    await expect(attemptRepo.countByUserIdSince(user.id, since)).resolves.toBe(
+      2,
+    );
+    await expect(
+      attemptRepo.countCorrectByUserIdSince(user.id, since),
+    ).resolves.toBe(2);
+  });
+
+  it('excludes active-exam attempts from listRecentByUserId', async () => {
+    const user = await createUser();
+    const q1 = await createQuestion({
+      slug: `it-recent-exam-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const q2 = await createQuestion({
+      slug: `it-recent-adhoc-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const sessionRepo = new DrizzlePracticeSessionRepository(db);
+    const attemptRepo = new DrizzleAttemptRepository(db);
+
+    const examSession = await sessionRepo.create({
+      userId: user.id,
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [q1.id],
+      },
+    });
+
+    await attemptRepo.insert({
+      userId: user.id,
+      questionId: q1.id,
+      practiceSessionId: examSession.id,
+      selectedChoiceId: q1.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 5,
+    });
+
+    await attemptRepo.insert({
+      userId: user.id,
+      questionId: q2.id,
+      practiceSessionId: null,
+      selectedChoiceId: q2.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 5,
+    });
+
+    // While exam is active: only adhoc attempt in recent list
+    const activeRecent = await attemptRepo.listRecentByUserId(user.id, 10);
+    expect(activeRecent).toHaveLength(1);
+    expect(activeRecent[0]?.questionId).toBe(q2.id);
+
+    // End the exam
+    await sessionRepo.end(examSession.id, user.id);
+
+    // After exam ends: both in recent list
+    const endedRecent = await attemptRepo.listRecentByUserId(user.id, 10);
+    expect(endedRecent).toHaveLength(2);
+  });
+
+  it('includes tutor-session attempts in counts', async () => {
+    const user = await createUser();
+    const question = await createQuestion({
+      slug: `it-count-tutor-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const sessionRepo = new DrizzlePracticeSessionRepository(db);
+    const attemptRepo = new DrizzleAttemptRepository(db);
+
+    const tutorSession = await sessionRepo.create({
+      userId: user.id,
+      mode: 'tutor',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+
+    await attemptRepo.insert({
+      userId: user.id,
+      questionId: question.id,
+      practiceSessionId: tutorSession.id,
+      selectedChoiceId: question.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 5,
+    });
+
+    // Tutor attempts always counted, even while session is active
+    await expect(attemptRepo.countByUserId(user.id)).resolves.toBe(1);
+    await expect(attemptRepo.countCorrectByUserId(user.id)).resolves.toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BUG-188: CAS comparison works with legacy params_json (no questionStates)
+// ---------------------------------------------------------------------------
+describe('BUG-188: CAS works with legacy JSON shapes', () => {
+  it('succeeds CAS on legacy params_json without questionStates key', async () => {
+    const user = await createUser();
+    const question = await createQuestion({
+      slug: `it-legacy-cas-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    // Insert session with legacy JSON shape (no questionStates key)
+    const legacyParamsJson: PracticeSessionParams = {
+      count: 1,
+      tagSlugs: [],
+      difficulties: [],
+      questionIds: [question.id],
+    };
+
+    const [row] = await db
+      .insert(schema.practiceSessions)
+      .values({
+        userId: user.id,
+        mode: 'tutor',
+        paramsJson: legacyParamsJson,
+      })
+      .returning({ id: schema.practiceSessions.id });
+
+    if (!row) throw new Error('Failed to insert legacy session');
+
+    const sessionRepo = new DrizzlePracticeSessionRepository(db);
+
+    // CAS must succeed on first try despite legacy shape
+    await expect(
+      sessionRepo.recordQuestionAnswer({
+        sessionId: row.id,
+        userId: user.id,
+        questionId: question.id,
+        selectedChoiceId: question.correctChoiceId,
+        isCorrect: true,
+        answeredAt: new Date(),
+      }),
+    ).resolves.toMatchObject({
+      questionId: question.id,
+      latestIsCorrect: true,
+    });
+
+    // Verify the row is upgraded to include questionStates
+    const updatedRow = await db.query.practiceSessions.findFirst({
+      where: eq(schema.practiceSessions.id, row.id),
+    });
+    expect(updatedRow?.paramsJson).toHaveProperty('questionStates');
+  });
+
+  it('succeeds CAS on current-format params_json with questionStates', async () => {
+    const user = await createUser();
+    const question = await createQuestion({
+      slug: `it-current-cas-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    // Use the normal create path which produces current-format JSON
+    const sessionRepo = new DrizzlePracticeSessionRepository(db);
+    const session = await sessionRepo.create({
+      userId: user.id,
+      mode: 'tutor',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+
+    // CAS must succeed on current-format shape
+    await expect(
+      sessionRepo.recordQuestionAnswer({
+        sessionId: session.id,
+        userId: user.id,
+        questionId: question.id,
+        selectedChoiceId: question.correctChoiceId,
+        isCorrect: true,
+        answeredAt: new Date(),
+      }),
+    ).resolves.toMatchObject({
+      questionId: question.id,
+      latestIsCorrect: true,
+    });
+  });
+
+  it('succeeds CAS for setQuestionMarkedForReview with legacy params_json', async () => {
+    const user = await createUser();
+    const question = await createQuestion({
+      slug: `it-legacy-mark-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    // Insert session with legacy JSON shape
+    const legacyParamsJson: PracticeSessionParams = {
+      count: 1,
+      tagSlugs: [],
+      difficulties: [],
+      questionIds: [question.id],
+    };
+
+    const [row] = await db
+      .insert(schema.practiceSessions)
+      .values({
+        userId: user.id,
+        mode: 'exam',
+        paramsJson: legacyParamsJson,
+      })
+      .returning({ id: schema.practiceSessions.id });
+
+    if (!row) throw new Error('Failed to insert legacy session');
+
+    const sessionRepo = new DrizzlePracticeSessionRepository(db);
+
+    // setQuestionMarkedForReview should also work with legacy shape
+    await expect(
+      sessionRepo.setQuestionMarkedForReview({
+        sessionId: row.id,
+        userId: user.id,
+        questionId: question.id,
+        markedForReview: true,
+      }),
+    ).resolves.toMatchObject({
+      questionId: question.id,
+      markedForReview: true,
+    });
   });
 });

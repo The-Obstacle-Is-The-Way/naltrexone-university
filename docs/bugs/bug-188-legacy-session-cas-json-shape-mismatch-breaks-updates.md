@@ -1,6 +1,6 @@
 # BUG-188: Legacy Session CAS JSON Shape Mismatch Breaks Updates
 
-**Status:** Open
+**Status:** Fixed
 **Priority:** P2
 **Date:** 2026-03-03
 
@@ -34,11 +34,15 @@ Tracer-bullet path:
 
 ## Fix
 
-Not yet implemented.
+Implemented in `bug-fix-186-187-188`:
+- CAS updater now compares against the raw persisted `params_json` snapshot instead of a normalized re-serialization.
+- `DrizzlePracticeSessionRepository` now provides a snapshot (`session` + `rawParamsJson`) to the CAS updater so one read can drive both domain logic and legacy-compatible CAS comparison.
+- This preserves legacy-row compatibility while keeping normalized domain behavior for mutation output.
 
-Expected fix shape:
-- Align CAS comparison with persisted legacy shape (e.g., compare on canonicalized DB expression or migrate legacy rows before CAS path runs).
-- Add regression coverage for legacy `params_json` missing `questionStates`.
+Code changes:
+- [practice-session-question-state-updater.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/practice-session-question-state-updater.ts)
+- [drizzle-practice-session-repository.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-practice-session-repository.ts)
+- [drizzle-practice-session-repository.test.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-practice-session-repository.test.ts)
 
 ## Verification Notes (Audit #11)
 
@@ -50,8 +54,8 @@ Full CAS failure trace: Read normalizes missing `questionStates` into `[{questio
 
 ## Verification
 
-- [ ] Unit test added
-- [ ] Integration test added
+- [x] Unit test added
+- [x] Integration test added
 - [x] Manual verification
 - [x] Code-level tracer-bullet verified (Audit #11, 2026-03-03)
 

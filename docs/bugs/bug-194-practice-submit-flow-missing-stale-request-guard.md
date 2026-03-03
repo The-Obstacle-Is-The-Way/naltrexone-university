@@ -12,6 +12,7 @@
 
 Observed behavior:
 - Under slow network, if a submit is in-flight and the user advances to the next question, the stale submit response can set `submitResult` and `loadState` for the wrong question.
+- Even when downstream state sync later clears mismatched `submitResult`, the stale success still propagates through `onSuccess` and can drive wrong follow-up actions (for example exam auto-advance).
 
 Expected behavior:
 - Submit responses should only commit if they match the latest request context.
@@ -30,6 +31,7 @@ Tracer-bullet path:
 2. `runSubmitAnswerFlow` at [question-flow-actions.ts:133-201](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/practice/shared/question-flow-actions.ts:133) only checks `isMounted()` (lines 180, 188).
 3. `runSubmitAnswerFlow` does NOT accept `createRequestSequenceId` or `isLatestRequest` parameters.
 4. A stale submit passing `isMounted()` commits at line 198: `input.setSubmitResult(res.data, input.question.questionId)`.
+5. The same stale path also calls `input.onSuccess?.(res.data)` at line 199, and the caller in [use-practice-session-page-controller.ts:60-71](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts:60) uses that result for `maybeAutoAdvanceAfterSubmit`, so stale responses can trigger wrong navigation side effects.
 
 The `questionId` parameter in `setSubmitResult` provides a hint to the consumer, but the guard should be at the flow level, not delegated to each consumer.
 

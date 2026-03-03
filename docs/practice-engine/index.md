@@ -142,6 +142,7 @@ These documents define cross-layer invariants. If other docs conflict, these win
 
 | Date | Change |
 |------|--------|
+| 2026-03-03 | Fixed BUG-186, BUG-187, and BUG-188 on branch `bug-fix-186-187-188` (pending archive). Remaining open exam-secrecy drift: BUG-191, BUG-192, BUG-193. |
 | 2026-03-03 | Synced exam-secrecy documentation to current code reality: initial BUG-180/181/185 family remains archived as fixed, but active drift is open in BUG-186, BUG-187, BUG-191, BUG-192, and BUG-193. Aligned `exam-answer-secrecy-policy.md`, `security-model.md`, `practice-modes.md`, `retry-logic.md`, `current-state.md`, `spec-coverage-map.md`, and `frontend-layer.md`. |
 | 2026-03-02 | Resolved DEBT-268: daily-seeded shuffle implemented in `executeForFilters`, ordering-policy.md updated from target to implemented state, satellite docs aligned. |
 | 2026-03-02 | Added Exam Answer Secrecy Policy as canonical registry for correctness/explanation exposure timing across use cases, repositories, controllers, and frontend. Added Canonical Policy Registry section in this index and synced security/retry/current-state/spec-coverage docs to active BUG-180/181/185 status. |

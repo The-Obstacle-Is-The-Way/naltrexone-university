@@ -1,6 +1,6 @@
 # BUG-186: Active Exam Review Projection Leaks Correctness
 
-**Status:** Open
+**Status:** Fixed
 **Priority:** P1
 **Date:** 2026-03-03
 
@@ -43,16 +43,20 @@ The `ReviewQuestionNavigator` (separate file, lines 48-49) also maps `isCorrect`
 
 ## Fix
 
-Not yet implemented.
+Implemented in `bug-fix-186-187-188`:
+- `GetPracticeSessionReviewUseCase` now computes a single session-level correctness gate using `shouldShowExplanation(session)`.
+- For active exams (`mode='exam'` and `endedAt === null`), projected rows now emit `isCorrect: null`.
+- Ended exams and tutor sessions continue to emit real correctness.
+- UI code was left unchanged; projection-level redaction automatically forces neutral rendering.
 
-Expected fix shape:
-- Apply the exam secrecy guard at the projection source (`GetPracticeSessionReviewUseCase`): when `session.mode === 'exam' && session.endedAt === null`, emit `isCorrect: null` for all rows.
-- Keep UI behavior unchanged; once projection is redacted, existing UI naturally shows neutral statuses only.
+Code changes:
+- [get-practice-session-review.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-practice-session-review.ts)
+- [get-practice-session-review.test.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-practice-session-review.test.ts)
 
 ## Verification
 
-- [ ] Unit test added
-- [ ] Integration test added
+- [x] Unit test added
+- [x] Integration test added
 - [x] Manual verification
 - [x] Code-level tracer-bullet verified (Audit #11, 2026-03-03)
 

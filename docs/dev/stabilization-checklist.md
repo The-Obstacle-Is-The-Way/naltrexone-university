@@ -70,7 +70,7 @@
 1. [ ] `/app/history` renders Sessions + Questions tabs correctly
 2. [ ] `/app/bookmarks` lists bookmarks and remove action works
 3. [ ] `/app/dashboard` stats + recent activity render
-4. [ ] During an active exam session, dashboard/review/question-loop/history surfaces do not reveal correctness/explanations before session end (see exam-answer secrecy policy; open drift tracked in BUG-186, BUG-187, BUG-191, BUG-192, BUG-193)
+4. [ ] During an active exam session, dashboard/review/question-loop/history surfaces do not reveal correctness/explanations before session end (see exam-answer secrecy policy; open drift tracked in BUG-191, BUG-192, BUG-193)
 
 ---
 

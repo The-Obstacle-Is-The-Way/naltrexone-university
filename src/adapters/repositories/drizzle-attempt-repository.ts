@@ -50,6 +50,21 @@ const SESSION_ATTEMPT_READ_LIMIT = 500;
 export class DrizzleAttemptRepository implements AttemptRepository {
   constructor(private readonly db: DrizzleDb) {}
 
+  private activeExamVisibilityCondition(): SQL {
+    const condition = or(
+      isNull(practiceSessions.id),
+      ne(practiceSessions.mode, 'exam'),
+      isNotNull(practiceSessions.endedAt),
+    );
+    if (!condition) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Active exam visibility condition unexpectedly missing',
+      );
+    }
+    return condition;
+  }
+
   private latestAttemptRowsSubquery(userId: string) {
     return this.db
       .select({
@@ -301,14 +316,19 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     userId: string,
     ...conditions: SQL[]
   ): Promise<number> {
-    const where =
-      conditions.length === 0
-        ? eq(attempts.userId, userId)
-        : and(eq(attempts.userId, userId), ...conditions);
+    const where = and(
+      eq(attempts.userId, userId),
+      this.activeExamVisibilityCondition(),
+      ...conditions,
+    );
 
     const [row] = await this.db
       .select({ count: sql<number>`count(*)::int` })
       .from(attempts)
+      .leftJoin(
+        practiceSessions,
+        eq(attempts.practiceSessionId, practiceSessions.id),
+      )
       .where(where);
 
     return row?.count ?? 0;
@@ -362,14 +382,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
         eq(attempts.practiceSessionId, practiceSessions.id),
       )
       .where(
-        and(
-          eq(attempts.userId, userId),
-          or(
-            isNull(practiceSessions.id),
-            ne(practiceSessions.mode, 'exam'),
-            isNotNull(practiceSessions.endedAt),
-          ),
-        ),
+        and(eq(attempts.userId, userId), this.activeExamVisibilityCondition()),
       )
       .orderBy(desc(attempts.answeredAt), desc(attempts.id))
       .limit(limit);
