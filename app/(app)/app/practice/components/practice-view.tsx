@@ -79,6 +79,12 @@ export function getBookmarkNotificationTransition(input: {
   };
 }
 
+function hasBooleanCorrectness(
+  submitResult: SubmitAnswerOutput | null,
+): submitResult is SubmitAnswerOutput & { isCorrect: boolean } {
+  return submitResult !== null && typeof submitResult.isCorrect === 'boolean';
+}
+
 export function PracticeView(props: PracticeViewProps) {
   const { notify } = useNotification();
   const sessionInfo = props.sessionInfo ?? null;
@@ -100,6 +106,10 @@ export function PracticeView(props: PracticeViewProps) {
     props.loadState.status === 'ready' &&
     props.question !== null &&
     props.submitResult === null;
+  const feedbackResult =
+    !isExamMode && hasBooleanCorrectness(props.submitResult)
+      ? props.submitResult
+      : null;
   const lastNotifiedBookmarkKeyRef = useRef<string | null>(null);
   const feedbackRef = useRef<HTMLDivElement>(null);
 
@@ -123,9 +133,9 @@ export function PracticeView(props: PracticeViewProps) {
   ]);
 
   useEffect(() => {
-    if (!props.submitResult || isExamMode) return;
+    if (!feedbackResult) return;
     feedbackRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [props.submitResult, isExamMode]);
+  }, [feedbackResult]);
 
   return (
     <div className="space-y-6">
@@ -250,13 +260,13 @@ export function PracticeView(props: PracticeViewProps) {
         />
       ) : null}
 
-      {props.submitResult && !isExamMode ? (
+      {feedbackResult ? (
         <div ref={feedbackRef}>
           <Feedback
-            isCorrect={props.submitResult.isCorrect ?? false}
-            explanationMd={props.submitResult.explanationMd}
-            referenceMd={props.submitResult.referenceMd ?? null}
-            choiceExplanations={props.submitResult.choiceExplanations}
+            isCorrect={feedbackResult.isCorrect}
+            explanationMd={feedbackResult.explanationMd}
+            referenceMd={feedbackResult.referenceMd ?? null}
+            choiceExplanations={feedbackResult.choiceExplanations}
             selectedChoiceId={props.selectedChoiceId}
           />
         </div>

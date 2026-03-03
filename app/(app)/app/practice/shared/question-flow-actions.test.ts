@@ -271,6 +271,27 @@ describe('question-flow-actions', () => {
     expect(onLoaded).toHaveBeenCalledWith(null);
   });
 
+  it('throws when request sequencing hooks are partially provided for load flow', async () => {
+    await expect(
+      runLoadQuestionFlow({
+        requestInput: {},
+        getQuestionFn: async () => ({
+          ok: true,
+          data: { questionId: 'q_1' },
+        }),
+        createIdempotencyKey: () => 'idemp_new',
+        nowMs: () => 9999,
+        setLoadState: () => undefined,
+        setSelectedChoiceId: () => undefined,
+        setSubmitResult: () => undefined,
+        setSubmitIdempotencyKey: () => undefined,
+        setQuestionLoadedAt: () => undefined,
+        setQuestion: () => undefined,
+        createRequestSequenceId: () => 1,
+      }),
+    ).rejects.toThrow('Request sequencing hooks must be provided together');
+  });
+
   it('does not commit stale request results', async () => {
     let loadState: AsyncLoadStateWithIdle = { status: 'idle' };
     let selectedChoiceId: string | null = 'choice_1';
@@ -450,6 +471,33 @@ describe('question-flow-actions', () => {
     });
 
     expect(loadState).toEqual({ status: 'error', message: 'Submit failed' });
+  });
+
+  it('throws when request sequencing hooks are partially provided for submit flow', async () => {
+    await expect(
+      runSubmitAnswerFlow({
+        question: { questionId: 'q_1' },
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 1000,
+        submitIdempotencyKey: null,
+        submitAnswerFn: async () => ({
+          ok: true,
+          data: {
+            attemptId: 'attempt_1',
+            isCorrect: true,
+            correctChoiceId: 'choice_1',
+            explanationMd: null,
+            referenceMd: null,
+            choiceExplanations: [],
+          },
+        }),
+        buildSubmitInput: () => ({}),
+        nowMs: () => 3500,
+        setLoadState: () => undefined,
+        setSubmitResult: () => undefined,
+        isLatestRequest: () => true,
+      }),
+    ).rejects.toThrow('Request sequencing hooks must be provided together');
   });
 
   it('commits error state when submit response is non-ok', async () => {

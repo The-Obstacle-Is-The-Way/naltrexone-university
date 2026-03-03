@@ -10,6 +10,26 @@ import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answ
 const LOAD_QUESTION_TIMEOUT_MS = 15_000;
 const SUBMIT_ANSWER_TIMEOUT_MS = 15_000;
 
+export type RequestSequencingHooks = {
+  createRequestSequenceId: () => number;
+  isLatestRequest: (requestId: number) => boolean;
+};
+
+function assertRequestSequencingHooks(
+  input: Pick<
+    Partial<RequestSequencingHooks>,
+    'createRequestSequenceId' | 'isLatestRequest'
+  >,
+): void {
+  const hasCreateRequestSequenceId =
+    typeof input.createRequestSequenceId === 'function';
+  const hasIsLatestRequest = typeof input.isLatestRequest === 'function';
+
+  if (hasCreateRequestSequenceId === hasIsLatestRequest) return;
+
+  throw new Error('Request sequencing hooks must be provided together');
+}
+
 export function buildTimeSpentSeconds(
   questionLoadedAtMs: number | null,
   nowMs: number,
@@ -38,6 +58,7 @@ export async function runLoadQuestionFlow<TQuestion>(input: {
   isLatestRequest?: (requestId: number) => boolean;
   isMounted?: () => boolean;
 }): Promise<void> {
+  assertRequestSequencingHooks(input);
   const isMounted = input.isMounted ?? (() => true);
   const requestId = input.createRequestSequenceId?.();
   const canCommit = () => {
@@ -155,6 +176,7 @@ export async function runSubmitAnswerFlow<
   isLatestRequest?: (requestId: number) => boolean;
   isMounted?: () => boolean;
 }): Promise<void> {
+  assertRequestSequencingHooks(input);
   if (!input.question) return;
   if (!input.selectedChoiceId) return;
 

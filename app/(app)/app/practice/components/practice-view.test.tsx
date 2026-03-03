@@ -537,6 +537,43 @@ describe('PracticeView', () => {
     expect(html).toContain('Your answer');
   });
 
+  it('does not render feedback when submit correctness is unknown', () => {
+    const question = createNextQuestion();
+    const selectedChoice = question.choices[0];
+    if (!selectedChoice) {
+      throw new Error('Expected at least one choice');
+    }
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={selectedChoice.id}
+        isAnswered={true}
+        submitResult={{
+          attemptId: 'attempt-1',
+          isCorrect: null,
+          correctChoiceId: null,
+          explanationMd: 'Redacted explanation.',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    expect(html).not.toContain('Your answer');
+    expect(html).not.toContain('Redacted explanation.');
+  });
+
   it('renders a question panel id for navigator aria-controls wiring', () => {
     const html = renderToStaticMarkup(
       <PracticeView
