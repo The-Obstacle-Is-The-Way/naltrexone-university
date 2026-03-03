@@ -316,14 +316,11 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     userId: string,
     ...conditions: SQL[]
   ): Promise<number> {
-    const where =
-      conditions.length === 0
-        ? and(eq(attempts.userId, userId), this.activeExamVisibilityCondition())
-        : and(
-            eq(attempts.userId, userId),
-            this.activeExamVisibilityCondition(),
-            ...conditions,
-          );
+    const where = and(
+      eq(attempts.userId, userId),
+      this.activeExamVisibilityCondition(),
+      ...conditions,
+    );
 
     const [row] = await this.db
       .select({ count: sql<number>`count(*)::int` })
