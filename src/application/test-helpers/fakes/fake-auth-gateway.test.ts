@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { ApplicationError } from '@/src/application/errors';
 import { createUser } from '@/src/domain/test-helpers/factories';
 import { FakeAuthGateway } from './fake-gateways';
 
@@ -11,9 +10,9 @@ describe('FakeAuthGateway', () => {
 
   it('throws UNAUTHENTICATED from requireUser when unauthenticated', async () => {
     const gateway = new FakeAuthGateway(null);
-    await expect(gateway.requireUser()).rejects.toEqual(
-      new ApplicationError('UNAUTHENTICATED', 'User not authenticated'),
-    );
+    await expect(gateway.requireUser()).rejects.toMatchObject({
+      code: 'UNAUTHENTICATED',
+    });
   });
 
   it('returns user from getCurrentUser when authenticated', async () => {

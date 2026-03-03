@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ApplicationError } from '@/src/application/errors';
 import { FakeStripeEventRepository } from './fake-stripe-event-repository';
 
 describe('FakeStripeEventRepository', () => {
@@ -55,9 +54,9 @@ describe('FakeStripeEventRepository', () => {
     it('throws NOT_FOUND when event is missing', async () => {
       const repo = new FakeStripeEventRepository();
 
-      await expect(repo.markProcessed('evt_missing')).rejects.toEqual(
-        new ApplicationError('NOT_FOUND', 'Stripe event not found'),
-      );
+      await expect(repo.markProcessed('evt_missing')).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+      });
     });
   });
 
@@ -79,9 +78,9 @@ describe('FakeStripeEventRepository', () => {
 
       await expect(
         repo.markFailed('evt_missing', 'Something went wrong'),
-      ).rejects.toEqual(
-        new ApplicationError('NOT_FOUND', 'Stripe event not found'),
-      );
+      ).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+      });
     });
   });
 

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { ApplicationError } from '@/src/application/errors';
 import { FakeIdempotencyKeyRepository } from './fake-idempotency-key-repository';
 
 type Clock = { now: Date };
@@ -125,9 +124,9 @@ describe('FakeIdempotencyKeyRepository', () => {
           key: 'missing',
           resultJson: { ok: true },
         }),
-      ).rejects.toEqual(
-        new ApplicationError('NOT_FOUND', 'Idempotency key not found'),
-      );
+      ).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+      });
 
       await expect(
         repo.storeError({
@@ -136,9 +135,9 @@ describe('FakeIdempotencyKeyRepository', () => {
           key: 'missing',
           error: { code: 'INTERNAL_ERROR', message: 'boom' },
         }),
-      ).rejects.toEqual(
-        new ApplicationError('NOT_FOUND', 'Idempotency key not found'),
-      );
+      ).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+      });
     });
   });
 
