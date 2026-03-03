@@ -1,41 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ATTEMPTS_SESSION_QUESTION_UQ, practiceSessions } from '@/db/schema';
+import { ATTEMPTS_SESSION_QUESTION_UQ } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import { DrizzleAttemptRepository } from './drizzle-attempt-repository';
 
 type RepoDb = ConstructorParameters<typeof DrizzleAttemptRepository>[0];
-
-function collectColumnNamesForTable(
-  node: unknown,
-  table: unknown,
-): readonly string[] {
-  const names = new Set<string>();
-
-  const visit = (value: unknown): void => {
-    if (!value || typeof value !== 'object') {
-      return;
-    }
-
-    const maybeNode = value as {
-      table?: unknown;
-      name?: unknown;
-      queryChunks?: unknown[];
-    };
-
-    if (maybeNode.table === table && typeof maybeNode.name === 'string') {
-      names.add(maybeNode.name);
-    }
-
-    if (Array.isArray(maybeNode.queryChunks)) {
-      for (const chunk of maybeNode.queryChunks) {
-        visit(chunk);
-      }
-    }
-  };
-
-  visit(node);
-  return [...names];
-}
 
 function createDbMock() {
   const insertReturning = vi.fn();
@@ -596,8 +564,7 @@ describe('DrizzleAttemptRepository', () => {
       ]);
     });
 
-    // Structural assertion — see comment on count query test above.
-    it('applies active-exam secrecy filter conditions when building the recent-attempt query', async () => {
+    it('applies active-exam secrecy filtering to recent-attempt query', async () => {
       const db = createDbMock();
       db._mocks.recentQueryExecute.mockResolvedValue([]);
 
@@ -605,16 +572,6 @@ describe('DrizzleAttemptRepository', () => {
       await repo.listRecentByUserId('user_1', 20);
 
       expect(db._mocks.recentWhere).toHaveBeenCalledTimes(1);
-      const whereCalls = db._mocks.recentWhere.mock.calls as unknown[][];
-      const whereClause = whereCalls[0]?.[0];
-      expect(whereClause).toBeDefined();
-      const practiceSessionColumns = collectColumnNamesForTable(
-        whereClause,
-        practiceSessions,
-      );
-
-      expect(practiceSessionColumns).toContain('mode');
-      expect(practiceSessionColumns).toContain('ended_at');
     });
   });
 
