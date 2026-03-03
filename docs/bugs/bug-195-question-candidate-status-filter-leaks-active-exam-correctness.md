@@ -45,7 +45,7 @@ Implemented in `DrizzleQuestionRepository`:
 ## Verification
 
 - [x] Unit test added — `drizzle-question-repository.test.ts` asserts both `unanswered` and `incorrect` status subqueries include `practiceSessions.mode`/`ended_at` secrecy predicates.
-- [ ] Integration test added
+- [x] Integration test added — `repositories.integration.test.ts` proves active-exam attempts stay invisible to `unanswered`/`incorrect` status filters until the exam ends.
 - [ ] Manual verification
 - [x] Code-level tracer-bullet verified (Audit #12, 2026-03-03)
 

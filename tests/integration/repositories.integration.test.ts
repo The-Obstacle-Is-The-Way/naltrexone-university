@@ -2688,6 +2688,185 @@ describe('BUG-192: Attempted-question history excludes active-exam attempts', ()
   });
 });
 
+// BUG-195: Question candidate status filters exclude active-exam attempts
+describe('BUG-195: Question candidate status filters exclude active-exam attempts', () => {
+  it('excludes active-exam attempts from unanswered/incorrect status filters until the exam ends', async () => {
+    const user = await createUser();
+    const questionRepo = new DrizzleQuestionRepository(db);
+    const sessionRepo = new DrizzlePracticeSessionRepository(db);
+    const attemptRepo = new DrizzleAttemptRepository(db);
+    const tag = await createTag({
+      slug: `it-bug195-tag-${randomUUID()}`,
+      kind: 'topic',
+    });
+
+    const qExamIncorrect = await createQuestion({
+      slug: `it-bug195-exam-incorrect-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      tagIds: [tag.id],
+    });
+    const qAdhocIncorrect = await createQuestion({
+      slug: `it-bug195-adhoc-incorrect-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+      createdAt: new Date('2026-01-02T00:00:00.000Z'),
+      tagIds: [tag.id],
+    });
+    const qAdhocCorrect = await createQuestion({
+      slug: `it-bug195-adhoc-correct-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+      createdAt: new Date('2026-01-03T00:00:00.000Z'),
+      tagIds: [tag.id],
+    });
+    const qNeverAnswered = await createQuestion({
+      slug: `it-bug195-never-answered-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+      createdAt: new Date('2026-01-04T00:00:00.000Z'),
+      tagIds: [tag.id],
+    });
+
+    const [qExamIncorrectChoiceA] = await db
+      .select({ id: schema.choices.id })
+      .from(schema.choices)
+      .where(
+        and(
+          eq(schema.choices.questionId, qExamIncorrect.id),
+          eq(schema.choices.label, 'A'),
+        ),
+      )
+      .limit(1);
+    if (!qExamIncorrectChoiceA) {
+      throw new Error('Failed to load exam incorrect choice for BUG-195 setup');
+    }
+
+    const [qAdhocIncorrectChoiceA] = await db
+      .select({ id: schema.choices.id })
+      .from(schema.choices)
+      .where(
+        and(
+          eq(schema.choices.questionId, qAdhocIncorrect.id),
+          eq(schema.choices.label, 'A'),
+        ),
+      )
+      .limit(1);
+    if (!qAdhocIncorrectChoiceA) {
+      throw new Error(
+        'Failed to load adhoc incorrect choice for BUG-195 setup',
+      );
+    }
+
+    const examSession = await sessionRepo.create({
+      userId: user.id,
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [qExamIncorrect.id],
+      },
+    });
+
+    await attemptRepo.insert({
+      userId: user.id,
+      questionId: qExamIncorrect.id,
+      practiceSessionId: examSession.id,
+      selectedChoiceId: qExamIncorrectChoiceA.id,
+      isCorrect: false,
+      timeSpentSeconds: 0,
+    });
+    await attemptRepo.insert({
+      userId: user.id,
+      questionId: qAdhocIncorrect.id,
+      practiceSessionId: null,
+      selectedChoiceId: qAdhocIncorrectChoiceA.id,
+      isCorrect: false,
+      timeSpentSeconds: 0,
+    });
+    await attemptRepo.insert({
+      userId: user.id,
+      questionId: qAdhocCorrect.id,
+      practiceSessionId: null,
+      selectedChoiceId: qAdhocCorrect.correctChoiceId,
+      isCorrect: true,
+      timeSpentSeconds: 0,
+    });
+
+    const activeUnanswered = await questionRepo.listPublishedCandidateIds({
+      tagSlugs: [tag.slug],
+      difficulties: [],
+      statuses: ['unanswered'],
+      userId: user.id,
+    });
+    expect(new Set(activeUnanswered)).toEqual(
+      new Set([qNeverAnswered.id, qExamIncorrect.id]),
+    );
+    await expect(
+      questionRepo.countPublishedCandidateIds({
+        tagSlugs: [tag.slug],
+        difficulties: [],
+        statuses: ['unanswered'],
+        userId: user.id,
+      }),
+    ).resolves.toBe(2);
+
+    const activeIncorrect = await questionRepo.listPublishedCandidateIds({
+      tagSlugs: [tag.slug],
+      difficulties: [],
+      statuses: ['incorrect'],
+      userId: user.id,
+    });
+    expect(activeIncorrect).toEqual([qAdhocIncorrect.id]);
+    await expect(
+      questionRepo.countPublishedCandidateIds({
+        tagSlugs: [tag.slug],
+        difficulties: [],
+        statuses: ['incorrect'],
+        userId: user.id,
+      }),
+    ).resolves.toBe(1);
+
+    await sessionRepo.end(examSession.id, user.id);
+
+    const endedUnanswered = await questionRepo.listPublishedCandidateIds({
+      tagSlugs: [tag.slug],
+      difficulties: [],
+      statuses: ['unanswered'],
+      userId: user.id,
+    });
+    expect(endedUnanswered).toEqual([qNeverAnswered.id]);
+    await expect(
+      questionRepo.countPublishedCandidateIds({
+        tagSlugs: [tag.slug],
+        difficulties: [],
+        statuses: ['unanswered'],
+        userId: user.id,
+      }),
+    ).resolves.toBe(1);
+
+    const endedIncorrect = await questionRepo.listPublishedCandidateIds({
+      tagSlugs: [tag.slug],
+      difficulties: [],
+      statuses: ['incorrect'],
+      userId: user.id,
+    });
+    expect(new Set(endedIncorrect)).toEqual(
+      new Set([qExamIncorrect.id, qAdhocIncorrect.id]),
+    );
+    await expect(
+      questionRepo.countPublishedCandidateIds({
+        tagSlugs: [tag.slug],
+        difficulties: [],
+        statuses: ['incorrect'],
+        userId: user.id,
+      }),
+    ).resolves.toBe(2);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // BUG-188: CAS comparison works with legacy params_json (no questionStates)
 // ---------------------------------------------------------------------------
