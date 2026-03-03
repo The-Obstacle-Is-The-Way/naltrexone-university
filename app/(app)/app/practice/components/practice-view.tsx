@@ -253,7 +253,7 @@ export function PracticeView(props: PracticeViewProps) {
       {props.submitResult && !isExamMode ? (
         <div ref={feedbackRef}>
           <Feedback
-            isCorrect={props.submitResult.isCorrect}
+            isCorrect={props.submitResult.isCorrect ?? false}
             explanationMd={props.submitResult.explanationMd}
             referenceMd={props.submitResult.referenceMd ?? null}
             choiceExplanations={props.submitResult.choiceExplanations}
