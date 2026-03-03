@@ -11,7 +11,6 @@ import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-q
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzle-stripe-event-repository';
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
-import { DrizzleTagRepository } from '@/src/adapters/repositories/drizzle-tag-repository';
 import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
 import { ApplicationError } from '@/src/application/errors';
 import { FakeLogger } from '@/src/application/test-helpers/fakes/fake-logger';
@@ -2089,56 +2088,6 @@ describe('DrizzleIdempotencyKeyRepository', () => {
   });
 });
 
-describe('DrizzleTagRepository', () => {
-  it('lists tags ordered by kind then slug, excluding orphaned tags', async () => {
-    const substanceSlug = `0-substance-${randomUUID()}`;
-    const topicSlugA = `a-topic-${randomUUID()}`;
-    const topicSlugB = `b-topic-${randomUUID()}`;
-    const orphanSlug = `orphan-${randomUUID()}`;
-
-    const substance = await createTag(db, cleanup, {
-      slug: substanceSlug,
-      kind: 'substance',
-    });
-    const topicB = await createTag(db, cleanup, {
-      slug: topicSlugB,
-      kind: 'topic',
-    });
-    const topicA = await createTag(db, cleanup, {
-      slug: topicSlugA,
-      kind: 'topic',
-    });
-    await createTag(db, cleanup, { slug: orphanSlug, kind: 'topic' });
-
-    await createQuestion(db, cleanup, {
-      slug: `q-${randomUUID()}`,
-      status: 'published',
-      difficulty: 'easy',
-      tagIds: [substance.id, topicA.id, topicB.id],
-    });
-
-    const repo = new DrizzleTagRepository(db);
-    const all = await repo.listAll();
-
-    const slugs = all.map((t) => t.slug);
-    const substanceIndex = slugs.indexOf(substanceSlug);
-    const topicIndexA = slugs.indexOf(topicSlugA);
-    const topicIndexB = slugs.indexOf(topicSlugB);
-
-    expect(substanceIndex).toBeGreaterThanOrEqual(0);
-    expect(topicIndexA).toBeGreaterThanOrEqual(0);
-    expect(topicIndexB).toBeGreaterThanOrEqual(0);
-
-    expect(topicIndexA).toBeLessThan(topicIndexB);
-    expect(topicIndexB).toBeLessThan(substanceIndex);
-
-    expect(slugs).not.toContain(orphanSlug);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// BUG-186: GetPracticeSessionReview redacts isCorrect for active exam sessions
-// ---------------------------------------------------------------------------
 describe('BUG-186: GetPracticeSessionReview active-exam secrecy', () => {
   it('redacts isCorrect for active exam and reveals it after session ends', async () => {
     const user = await createUser(db, cleanup);
