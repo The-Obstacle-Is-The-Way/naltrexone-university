@@ -199,9 +199,7 @@ describe('useHistorySessions (browser)', () => {
 
     // Now resolve A with an error — should be discarded, not overwrite success
     deferredA.reject(new Error('Stale network error'));
-
-    // Flush microtasks + React render cycle so stale handler has time to run
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await expect(deferredA.promise).rejects.toThrow('Stale network error');
 
     // State should remain ready (not overwritten by stale error)
     await expect

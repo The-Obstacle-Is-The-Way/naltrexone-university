@@ -868,8 +868,6 @@ describe('useQuestionPageController (browser)', () => {
       }),
     );
     await deferredFirst.promise;
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
     await expect
       .element(screen.getByTestId('question-slug'))
       .toHaveTextContent('q-2');
@@ -982,8 +980,6 @@ describe('useQuestionPageController (browser)', () => {
       }),
     );
     await deferredFirst.promise;
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
     await expect
       .element(screen.getByTestId('attempt-id'))
       .toHaveTextContent('attempt-q2');
@@ -1063,8 +1059,6 @@ describe('useQuestionPageController (browser)', () => {
       }),
     );
     await deferredSubmit.promise;
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
     await expect
       .element(screen.getByTestId('attempt-id'))
       .toHaveTextContent(/^$/);
