@@ -194,17 +194,7 @@ Core retry lineage behavior remains implemented across DEBT-265, DEBT-266, and D
 - Observability events are emitted for retry submissions, review hydration outcomes, and mixed-id normalization.
 - `GetPreviousAttempt` mixed-id contract is hardened (deterministic rejection at controller + use case).
 - Session-review retry marker persistence policy is explicitly accepted as visit-scoped (Option A).
-- Initial exam-answer secrecy drift family across retry/review/dashboard surfaces is resolved and archived:
-  - [BUG-180](../_archive/bugs/bug-180-active-exam-answer-leak-via-review-hydration.md)
-  - [BUG-181](../_archive/bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md)
-  - [BUG-185](../_archive/bugs/bug-185-dashboard-recent-activity-reveals-active-exam-correctness.md)
-- Additional active-exam secrecy drift remains open in current code paths:
-  - [BUG-186](../bugs/bug-186-active-exam-review-projection-leaks-correctness.md)
-  - [BUG-187](../bugs/bug-187-dashboard-accuracy-includes-active-exam-attempts.md)
-  - [BUG-191](../bugs/bug-191-get-next-question-leaks-latestIsCorrect-active-exam.md)
-  - [BUG-192](../bugs/bug-192-history-page-exposes-active-exam-correctness.md)
-  - [BUG-193](../bugs/bug-193-submit-answer-returns-isCorrect-active-exam.md)
-- Canonical policy authority is [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md).
+- Exam-answer secrecy: initial drift family (BUG-180/181/185) is archived as fixed. Active drift remains — see [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md) for current status.
 
 Retry lineage is structurally in place; secrecy enforcement is still partially applied and must remain an active regression target.
 
@@ -224,7 +214,7 @@ Retry lineage is structurally in place; secrecy enforcement is still partially a
 - [x] Server telemetry for mixed-id normalization + hydration outcomes is in place.
 - [x] Session-review retry marker persistence policy is explicitly defined (visit-scoped).
 - [x] `GetPreviousAttempt` mixed-id contract is hardened beyond boundary normalization.
-- [ ] Active-exam secrecy gates are fully enforced across all retry/review/dashboard/history/question-loop surfaces (blocked by BUG-186, BUG-187, BUG-191, BUG-192, BUG-193).
+- [ ] Active-exam secrecy gates are fully enforced across all surfaces (see [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md)).
 
 ---
 
