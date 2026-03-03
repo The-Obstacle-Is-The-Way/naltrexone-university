@@ -158,6 +158,58 @@ describe('useHistorySessions (browser)', () => {
       .toHaveTextContent('Network failure');
   });
 
+  it('discards stale response when same session is closed and reopened', async () => {
+    const deferredA =
+      createDeferred<ActionResult<GetPracticeSessionReviewOutput>>();
+    const deferredB =
+      createDeferred<ActionResult<GetPracticeSessionReviewOutput>>();
+
+    getPracticeSessionReviewMock
+      .mockReturnValueOnce(deferredA.promise)
+      .mockReturnValueOnce(deferredB.promise);
+
+    const screen = await render(<Probe />);
+
+    // Open s1 (request A starts loading)
+    await screen.getByTestId('open-s1').click();
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('loading');
+
+    // Close s1 (toggle off)
+    await screen.getByTestId('open-s1').click();
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('idle');
+
+    // Reopen s1 (request B starts loading)
+    await screen.getByTestId('open-s1').click();
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('loading');
+
+    // Resolve B first with success
+    deferredB.resolve(ok(makeReviewOutput('s1')));
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+    await expect
+      .element(screen.getByTestId('review-session-id'))
+      .toHaveTextContent('s1');
+
+    // Now resolve A with an error — should be discarded, not overwrite success
+    deferredA.reject(new Error('Stale network error'));
+    await expect(deferredA.promise).rejects.toThrow('Stale network error');
+
+    // State should remain ready (not overwritten by stale error)
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+    await expect
+      .element(screen.getByTestId('review-session-id'))
+      .toHaveTextContent('s1');
+  });
+
   it('discards stale response when a different session is opened mid-flight', async () => {
     const deferred1 =
       createDeferred<ActionResult<GetPracticeSessionReviewOutput>>();

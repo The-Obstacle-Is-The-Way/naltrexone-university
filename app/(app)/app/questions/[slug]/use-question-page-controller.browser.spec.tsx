@@ -74,6 +74,7 @@ function Probe({
   return (
     <>
       <div data-testid="load-status">{output.loadState.status}</div>
+      <div data-testid="question-slug">{output.question?.slug ?? ''}</div>
       <div data-testid="selected-choice">{output.selectedChoiceId ?? ''}</div>
       <div data-testid="attempt-id">{output.submitResult?.attemptId ?? ''}</div>
       <div data-testid="unanswered-reveal-correct-choice">
@@ -791,6 +792,359 @@ describe('useQuestionPageController (browser)', () => {
     await expect
       .element(screen.getByTestId('session-nav-index'))
       .toHaveTextContent('1');
+  });
+
+  it('discards stale question load response when slug changes mid-flight', async () => {
+    const deferredFirst =
+      createDeferred<
+        ActionResult<{
+          questionId: string;
+          slug: string;
+          stemMd: string;
+          difficulty: 'easy';
+          choices: Array<{ id: string; label: string; textMd: string }>;
+        }>
+      >();
+    const deferredSecond =
+      createDeferred<
+        ActionResult<{
+          questionId: string;
+          slug: string;
+          stemMd: string;
+          difficulty: 'easy';
+          choices: Array<{ id: string; label: string; textMd: string }>;
+        }>
+      >();
+
+    getQuestionBySlugMock
+      .mockReturnValueOnce(deferredFirst.promise)
+      .mockReturnValueOnce(deferredSecond.promise);
+
+    function Wrapper() {
+      const [slug, setSlug] = useState('q-1');
+
+      return (
+        <>
+          <Probe slug={slug} />
+          <button
+            type="button"
+            data-testid="set-slug-q-2"
+            onClick={() => setSlug('q-2')}
+          >
+            Set slug q-2
+          </button>
+        </>
+      );
+    }
+
+    const screen = await render(<Wrapper />);
+
+    await expect.poll(() => getQuestionBySlugMock.mock.calls.length).toBe(1);
+
+    await screen.getByTestId('set-slug-q-2').click();
+
+    await expect.poll(() => getQuestionBySlugMock.mock.calls.length).toBe(2);
+
+    deferredSecond.resolve(
+      ok({
+        questionId: 'question-q-2',
+        slug: 'q-2',
+        stemMd: 'Stem 2',
+        difficulty: 'easy',
+        choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
+      }),
+    );
+    await expect
+      .element(screen.getByTestId('question-slug'))
+      .toHaveTextContent('q-2');
+
+    deferredFirst.resolve(
+      ok({
+        questionId: 'question-q-1',
+        slug: 'q-1',
+        stemMd: 'Stem 1',
+        difficulty: 'easy',
+        choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
+      }),
+    );
+    await deferredFirst.promise;
+    await expect
+      .element(screen.getByTestId('question-slug'))
+      .toHaveTextContent('q-2');
+  });
+
+  it('discards stale previous-attempt hydration when slug changes mid-flight', async () => {
+    getQuestionBySlugMock.mockImplementation(async (input: unknown) => {
+      const slug = (input as { slug: string }).slug;
+      return ok({
+        questionId: `question-${slug}`,
+        slug,
+        stemMd: `Stem ${slug}`,
+        difficulty: 'easy',
+        choices: [
+          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
+          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+        ],
+      });
+    });
+
+    const deferredFirst =
+      createDeferred<
+        ActionResult<{
+          kind: 'attempt';
+          attemptId: string;
+          selectedChoiceId: string;
+          isCorrect: boolean;
+          correctChoiceId: string;
+          explanationMd: string | null;
+          referenceMd: string | null;
+          choiceExplanations: [];
+          answeredAt: string;
+        }>
+      >();
+    const deferredSecond =
+      createDeferred<
+        ActionResult<{
+          kind: 'attempt';
+          attemptId: string;
+          selectedChoiceId: string;
+          isCorrect: boolean;
+          correctChoiceId: string;
+          explanationMd: string | null;
+          referenceMd: string | null;
+          choiceExplanations: [];
+          answeredAt: string;
+        }>
+      >();
+
+    getPreviousAttemptMock
+      .mockReturnValueOnce(deferredFirst.promise)
+      .mockReturnValueOnce(deferredSecond.promise);
+
+    function Wrapper() {
+      const [slug, setSlug] = useState('q-1');
+
+      return (
+        <>
+          <Probe slug={slug} mode="review" />
+          <button
+            type="button"
+            data-testid="set-slug-q-2"
+            onClick={() => setSlug('q-2')}
+          >
+            Set slug q-2
+          </button>
+        </>
+      );
+    }
+
+    const screen = await render(<Wrapper />);
+
+    await expect.poll(() => getPreviousAttemptMock.mock.calls.length).toBe(1);
+
+    await screen.getByTestId('set-slug-q-2').click();
+
+    await expect.poll(() => getPreviousAttemptMock.mock.calls.length).toBe(2);
+
+    deferredSecond.resolve(
+      ok({
+        kind: 'attempt',
+        attemptId: 'attempt-q2',
+        selectedChoiceId: 'choice-1',
+        isCorrect: true,
+        correctChoiceId: 'choice-1',
+        explanationMd: 'Because q2',
+        referenceMd: null,
+        choiceExplanations: [],
+        answeredAt: '2026-02-01T00:00:00.000Z',
+      }),
+    );
+    await expect
+      .element(screen.getByTestId('attempt-id'))
+      .toHaveTextContent('attempt-q2');
+    await expect
+      .element(screen.getByTestId('selected-choice'))
+      .toHaveTextContent('choice-1');
+
+    deferredFirst.resolve(
+      ok({
+        kind: 'attempt',
+        attemptId: 'attempt-q1-stale',
+        selectedChoiceId: 'choice-2',
+        isCorrect: false,
+        correctChoiceId: 'choice-1',
+        explanationMd: 'Because q1',
+        referenceMd: null,
+        choiceExplanations: [],
+        answeredAt: '2026-02-01T00:00:00.000Z',
+      }),
+    );
+    await deferredFirst.promise;
+    await expect
+      .element(screen.getByTestId('attempt-id'))
+      .toHaveTextContent('attempt-q2');
+    await expect
+      .element(screen.getByTestId('selected-choice'))
+      .toHaveTextContent('choice-1');
+  });
+
+  it('clears previous-attempt loading when stale hydration is invalidated by a failed question reload', async () => {
+    getQuestionBySlugMock
+      .mockResolvedValueOnce(
+        ok({
+          questionId: 'question-q-1',
+          slug: 'q-1',
+          stemMd: 'Stem 1',
+          difficulty: 'easy',
+          choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
+        }),
+      )
+      .mockResolvedValueOnce({
+        ok: false,
+        error: { code: 'INTERNAL_ERROR', message: 'Question load failed' },
+      });
+
+    const deferredPrevious =
+      createDeferred<
+        ActionResult<{
+          kind: 'attempt';
+          attemptId: string;
+          selectedChoiceId: string;
+          isCorrect: boolean;
+          correctChoiceId: string;
+          explanationMd: string | null;
+          referenceMd: string | null;
+          choiceExplanations: [];
+          answeredAt: string;
+        }>
+      >();
+    getPreviousAttemptMock.mockReturnValueOnce(deferredPrevious.promise);
+
+    function Wrapper() {
+      const [slug, setSlug] = useState('q-1');
+
+      return (
+        <>
+          <Probe slug={slug} mode="review" />
+          <button
+            type="button"
+            data-testid="set-slug-q-2"
+            onClick={() => setSlug('q-2')}
+          >
+            Set slug q-2
+          </button>
+        </>
+      );
+    }
+
+    const screen = await render(<Wrapper />);
+
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+    await expect
+      .element(screen.getByTestId('is-loading-previous-attempt'))
+      .toHaveTextContent('true');
+
+    await screen.getByTestId('set-slug-q-2').click();
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('error');
+
+    deferredPrevious.resolve(
+      ok({
+        kind: 'attempt',
+        attemptId: 'attempt-q1-stale',
+        selectedChoiceId: 'choice-1',
+        isCorrect: true,
+        correctChoiceId: 'choice-1',
+        explanationMd: 'Because q1',
+        referenceMd: null,
+        choiceExplanations: [],
+        answeredAt: '2026-02-01T00:00:00.000Z',
+      }),
+    );
+    await deferredPrevious.promise;
+
+    await expect
+      .element(screen.getByTestId('is-loading-previous-attempt'))
+      .toHaveTextContent('false');
+  });
+
+  it('discards stale submit response when slug changes mid-flight', async () => {
+    getQuestionBySlugMock.mockImplementation(async (input: unknown) => {
+      const slug = (input as { slug: string }).slug;
+      return ok({
+        questionId: `question-${slug}`,
+        slug,
+        stemMd: `Stem ${slug}`,
+        difficulty: 'easy',
+        choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
+      });
+    });
+
+    const deferredSubmit =
+      createDeferred<
+        ActionResult<{
+          attemptId: string;
+          isCorrect: boolean;
+          correctChoiceId: string | null;
+          explanationMd: string | null;
+          referenceMd: string | null;
+          choiceExplanations: [];
+        }>
+      >();
+    submitAnswerMock.mockReturnValueOnce(deferredSubmit.promise);
+
+    function Wrapper() {
+      const [slug, setSlug] = useState('q-1');
+
+      return (
+        <>
+          <Probe slug={slug} />
+          <button
+            type="button"
+            data-testid="set-slug-q-2"
+            onClick={() => setSlug('q-2')}
+          >
+            Set slug q-2
+          </button>
+        </>
+      );
+    }
+
+    const screen = await render(<Wrapper />);
+
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+
+    await screen.getByTestId('select-choice-1').click();
+    await screen.getByTestId('trigger-submit').click();
+    await expect.poll(() => submitAnswerMock.mock.calls.length).toBe(1);
+
+    await screen.getByTestId('set-slug-q-2').click();
+    await expect
+      .element(screen.getByTestId('question-slug'))
+      .toHaveTextContent('q-2');
+    await expect
+      .element(screen.getByTestId('attempt-id'))
+      .toHaveTextContent(/^$/);
+
+    deferredSubmit.resolve(
+      ok({
+        attemptId: 'attempt-q1-stale',
+        isCorrect: true,
+        correctChoiceId: 'choice-1',
+        explanationMd: 'Because q1',
+        referenceMd: null,
+        choiceExplanations: [],
+      }),
+    );
+    await deferredSubmit.promise;
+    await expect
+      .element(screen.getByTestId('attempt-id'))
+      .toHaveTextContent(/^$/);
   });
 
   it('supports inline retry in session review and submits standalone provenance payload', async () => {

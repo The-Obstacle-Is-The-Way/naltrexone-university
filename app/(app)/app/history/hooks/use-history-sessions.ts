@@ -31,14 +31,14 @@ export function useHistorySessions(): UseHistorySessionsOutput {
   const [reviewLoadState, setReviewLoadState] =
     useState<AsyncLoadStateWithIdle>({ status: 'idle' });
   const selectedSessionIdRef = useRef<string | null>(null);
-  const latestReviewSessionId = useRef<string | null>(null);
+  const latestRequestId = useRef(0);
   const isMounted = useIsMounted();
 
   const onOpenSession = useCallback(
     async (sessionId: string) => {
       if (selectedSessionIdRef.current === sessionId) {
         selectedSessionIdRef.current = null;
-        latestReviewSessionId.current = null;
+        latestRequestId.current += 1;
         setSelectedSessionId(null);
         setSelectedReview(null);
         setReviewLoadState({ status: 'idle' });
@@ -46,7 +46,8 @@ export function useHistorySessions(): UseHistorySessionsOutput {
       }
 
       selectedSessionIdRef.current = sessionId;
-      latestReviewSessionId.current = sessionId;
+      latestRequestId.current += 1;
+      const requestId = latestRequestId.current;
       setSelectedSessionId(sessionId);
       setSelectedReview(null);
       setReviewLoadState({ status: 'loading' });
@@ -59,7 +60,7 @@ export function useHistorySessions(): UseHistorySessionsOutput {
         );
       } catch (error) {
         if (!isMounted()) return;
-        if (latestReviewSessionId.current !== sessionId) return;
+        if (latestRequestId.current !== requestId) return;
         setReviewLoadState({
           status: 'error',
           message: getThrownErrorMessage(error),
@@ -67,7 +68,7 @@ export function useHistorySessions(): UseHistorySessionsOutput {
         return;
       }
       if (!isMounted()) return;
-      if (latestReviewSessionId.current !== sessionId) return;
+      if (latestRequestId.current !== requestId) return;
 
       if (!res.ok) {
         setReviewLoadState({

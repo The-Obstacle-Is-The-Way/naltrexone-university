@@ -245,6 +245,40 @@ describe('question-page-logic', () => {
       expect(setLoadState).not.toHaveBeenCalledWith({ status: 'ready' });
     });
 
+    it('ignores stale response when isStale callback returns true', async () => {
+      const deferred = createDeferred<ActionResult<GetQuestionBySlugOutput>>();
+      let stale = false;
+
+      const setLoadState = vi.fn();
+      const setQuestion = vi.fn();
+      const setQuestionLoadedAt = vi.fn();
+      const setSubmitIdempotencyKey = vi.fn();
+
+      const promise = loadQuestion({
+        slug: 'q-1',
+        getQuestionBySlugFn: async () => deferred.promise,
+        createIdempotencyKey: () => 'idem_1',
+        nowMs: () => 1234,
+        setLoadState,
+        setSelectedChoiceId: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSubmitIdempotencyKey,
+        setQuestionLoadedAt,
+        setQuestion,
+        isMounted: () => true,
+        isStale: () => stale,
+      });
+
+      stale = true;
+      deferred.resolve(ok(createQuestionOutput()));
+      await promise;
+
+      expect(setQuestion).not.toHaveBeenCalled();
+      expect(setQuestionLoadedAt).not.toHaveBeenCalledWith(1234);
+      expect(setSubmitIdempotencyKey).not.toHaveBeenCalledWith('idem_1');
+      expect(setLoadState).not.toHaveBeenCalledWith({ status: 'ready' });
+    });
+
     it('returns error state when controller throws', async () => {
       const setLoadState = vi.fn();
       const setQuestion = vi.fn();
@@ -481,6 +515,46 @@ describe('question-page-logic', () => {
       expect(setSelectedChoiceId).not.toHaveBeenCalled();
       expect(setSubmitResult).not.toHaveBeenCalled();
       expect(setReviewHydrationState).toHaveBeenCalledWith('hydration_error');
+    });
+
+    it('ignores stale response when isStale callback returns true', async () => {
+      const deferred =
+        createDeferred<ActionResult<GetPreviousAttemptOutput | null>>();
+      let stale = false;
+
+      const setSelectedChoiceId = vi.fn();
+      const setSubmitResult = vi.fn();
+      const setReviewHydrationState = vi.fn();
+
+      const promise = loadPreviousAttempt({
+        questionId: 'q_1',
+        getPreviousAttemptFn: async () => deferred.promise,
+        setSelectedChoiceId,
+        setSubmitResult,
+        setReviewHydrationState,
+        isMounted: () => true,
+        isStale: () => stale,
+      });
+
+      stale = true;
+      deferred.resolve(
+        ok({
+          kind: 'attempt',
+          attemptId: 'attempt_1',
+          selectedChoiceId: 'choice_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Explanation',
+          referenceMd: null,
+          choiceExplanations: [],
+          answeredAt: '2026-02-01T00:00:00.000Z',
+        } satisfies GetPreviousAttemptOutput),
+      );
+      await promise;
+
+      expect(setSelectedChoiceId).not.toHaveBeenCalled();
+      expect(setSubmitResult).not.toHaveBeenCalled();
+      expect(setReviewHydrationState).not.toHaveBeenCalled();
     });
 
     it('does not set hydration_error when unmounted after previous-attempt request starts and then throws', async () => {
@@ -797,6 +871,43 @@ describe('question-page-logic', () => {
         status: 'error',
         message: 'Internal error',
       });
+    });
+
+    it('ignores stale response when isStale callback returns true', async () => {
+      const deferred = createDeferred<ActionResult<SubmitAnswerOutput>>();
+      let stale = false;
+
+      const setLoadState = vi.fn();
+      const setSubmitResult = vi.fn();
+
+      const promise = submitSelectedAnswer({
+        question: createQuestionOutput(),
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 0,
+        submitIdempotencyKey: 'idem_1',
+        submitAnswerFn: async () => deferred.promise,
+        nowMs: () => 1000,
+        setLoadState,
+        setSubmitResult,
+        isMounted: () => true,
+        isStale: () => stale,
+      });
+
+      stale = true;
+      deferred.resolve(
+        ok({
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'choice_1',
+          explanationMd: 'Because...',
+          referenceMd: null,
+          choiceExplanations: [],
+        } satisfies SubmitAnswerOutput),
+      );
+      await promise;
+
+      expect(setSubmitResult).not.toHaveBeenCalled();
+      expect(setLoadState).not.toHaveBeenCalledWith({ status: 'ready' });
     });
 
     it('returns no state updates when unmounted during submitSelectedAnswer', async () => {

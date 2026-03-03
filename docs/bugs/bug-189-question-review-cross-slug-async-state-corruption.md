@@ -1,6 +1,6 @@
 # BUG-189: Question Review Cross-Slug Async State Corruption
 
-**Status:** Open
+**Status:** Fixed
 **Priority:** P2
 **Date:** 2026-03-03
 
@@ -36,12 +36,7 @@ Tracer-bullet path:
 
 ## Fix
 
-Not yet implemented.
-
-Expected fix shape:
-- Add request sequencing (same pattern used in `runLoadQuestionFlow`) for question load, previous-attempt hydration, and submit commit paths.
-- Gate state commits by latest slug/request id.
-- Optionally disable slug-navigation links while submit/hydration is in flight.
+Added optional `isStale?: () => boolean` callback parameter to `loadQuestion`, `loadPreviousAttempt`, and `submitSelectedAnswer` in `question-page-logic.ts`. Each function checks `isStale()` alongside `isMounted()` at every async commit point. Controller effects wire `isStale` via cleanup flags (`let isStale = false; return () => { isStale = true; }`), matching the existing proven pattern from the session-navigation effect.
 
 ## Verification Notes (Audit #11)
 
@@ -56,7 +51,7 @@ Contrast with session navigation effect (line 283): `return () => { isStale = tr
 
 ## Verification
 
-- [ ] Unit test added
+- [x] Unit test added
 - [ ] Integration test added
 - [x] Manual verification
 - [x] Code-level tracer-bullet verified (Audit #11, 2026-03-03)

@@ -1,6 +1,6 @@
 # BUG-191: GetNextQuestion Returns latestIsCorrect for Active Exams
 
-**Status:** Open
+**Status:** Fixed
 **Priority:** P2
 **Date:** 2026-03-03
 
@@ -39,18 +39,16 @@ const previousSubmission = isAnswered && isTutor ? ... : null;
 
 ## Fix
 
-Not yet implemented.
-
-Expected fix shape:
-- Apply `shouldShowExplanation(session)` or equivalent active-exam guard to `latestIsCorrect`:
-  ```typescript
-  latestIsCorrect: shouldShowExplanation(session) ? targetState.latestIsCorrect : null,
-  ```
-- Mirror the existing `previousSubmission` gating pattern.
+Gated `latestIsCorrect` behind `shouldShowExplanation(session)` in `executeForSession`, matching the existing `previousSubmission` pattern:
+```typescript
+const showCorrectness = shouldShowExplanation(session);
+// ...
+latestIsCorrect: showCorrectness ? targetState.latestIsCorrect : null,
+```
 
 ## Verification
 
-- [ ] Unit test added
+- [x] Unit test added
 - [ ] Integration test added
 - [ ] Manual verification
 

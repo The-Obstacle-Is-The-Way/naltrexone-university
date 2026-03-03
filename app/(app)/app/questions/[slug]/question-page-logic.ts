@@ -108,8 +108,10 @@ export async function loadQuestion(input: {
   setQuestion: (question: GetQuestionBySlugOutput | null) => void;
   setSessionUnansweredReveal?: (reveal: SessionUnansweredReveal | null) => void;
   isMounted?: () => boolean;
+  isStale?: () => boolean;
 }): Promise<void> {
   const isMounted = input.isMounted ?? (() => true);
+  const isStale = input.isStale ?? (() => false);
 
   input.setLoadState({ status: 'loading' });
   input.setSelectedChoiceId(null);
@@ -125,7 +127,7 @@ export async function loadQuestion(input: {
       QUESTION_LOAD_TIMEOUT_MS,
     );
   } catch (error) {
-    if (!isMounted()) return;
+    if (!isMounted() || isStale()) return;
 
     input.setLoadState({
       status: 'error',
@@ -134,7 +136,7 @@ export async function loadQuestion(input: {
     input.setQuestion(null);
     return;
   }
-  if (!isMounted()) return;
+  if (!isMounted() || isStale()) return;
 
   if (!res.ok) {
     input.setLoadState({
@@ -167,6 +169,7 @@ export function createLoadQuestionAction(input: {
   setQuestion: (question: GetQuestionBySlugOutput | null) => void;
   setSessionUnansweredReveal?: (reveal: SessionUnansweredReveal | null) => void;
   isMounted?: () => boolean;
+  isStale?: () => boolean;
 }): () => void {
   return () => {
     input.startTransition(() => {
@@ -188,11 +191,13 @@ export async function submitSelectedAnswer(input: {
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
   isMounted?: () => boolean;
+  isStale?: () => boolean;
 }): Promise<void> {
   if (!input.question) return;
   if (!input.selectedChoiceId) return;
 
   const isMounted = input.isMounted ?? (() => true);
+  const isStale = input.isStale ?? (() => false);
 
   input.setLoadState({ status: 'loading' });
 
@@ -236,7 +241,7 @@ export async function submitSelectedAnswer(input: {
       ANSWER_SUBMIT_TIMEOUT_MS,
     );
   } catch (error) {
-    if (!isMounted()) return;
+    if (!isMounted() || isStale()) return;
 
     input.setLoadState({
       status: 'error',
@@ -244,7 +249,7 @@ export async function submitSelectedAnswer(input: {
     });
     return;
   }
-  if (!isMounted()) return;
+  if (!isMounted() || isStale()) return;
 
   if (!res.ok) {
     input.setLoadState({
@@ -272,6 +277,7 @@ export function createSubmitSelectedAnswerAction(input: {
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
   isMounted?: () => boolean;
+  isStale?: () => boolean;
 }): () => Promise<void> {
   return () =>
     runTransitionedAsyncAction({
@@ -311,8 +317,10 @@ export async function loadPreviousAttempt(input: {
   setSessionUnansweredReveal?: (reveal: SessionUnansweredReveal | null) => void;
   setReviewHydrationState?: (state: ReviewHydrationState) => void;
   isMounted?: () => boolean;
+  isStale?: () => boolean;
 }): Promise<void> {
   const isMounted = input.isMounted ?? (() => true);
+  const isStale = input.isStale ?? (() => false);
   const setSessionUnansweredReveal =
     input.setSessionUnansweredReveal ?? (() => undefined);
   const setReviewHydrationState =
@@ -340,11 +348,11 @@ export async function loadPreviousAttempt(input: {
       PREVIOUS_ATTEMPT_TIMEOUT_MS,
     );
   } catch {
-    if (!isMounted()) return;
+    if (!isMounted() || isStale()) return;
     setReviewHydrationState('hydration_error');
     return;
   }
-  if (!isMounted()) return;
+  if (!isMounted() || isStale()) return;
 
   // Defensive guard: errors (!res.ok) and null results (!res.data, meaning
   // no previous attempt found) are differentiated for explicit fallback UX.

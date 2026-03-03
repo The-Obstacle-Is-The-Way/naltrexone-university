@@ -1257,6 +1257,101 @@ describe('GetNextQuestionUseCase', () => {
     expect(result?.questionId).toBe('q1');
   });
 
+  it('returns latestIsCorrect in tutor mode when answered', async () => {
+    const q1 = createQuestion({
+      id: 'q1',
+      choices: [
+        createChoice({ id: 'c1', questionId: 'q1', isCorrect: true }),
+        createChoice({ id: 'c2', questionId: 'q1', isCorrect: false }),
+      ],
+    });
+
+    const session = createPracticeSession({
+      mode: 'tutor',
+      questionIds: ['q1'],
+      questionStates: [
+        createQuestionState('q1', {
+          latestSelectedChoiceId: 'c2',
+          latestIsCorrect: false,
+          latestAnsweredAt: ANSWERED_AT,
+        }),
+      ],
+    });
+
+    const { getNextQuestion } = createTestDeps({
+      questions: [q1],
+      sessions: [session],
+    });
+
+    const result = await getNextQuestion.execute({
+      userId: USER_ID,
+      sessionId: SESSION_ID,
+      questionId: 'q1',
+    });
+
+    expect(result?.session?.latestIsCorrect).toBe(false);
+  });
+
+  it('redacts latestIsCorrect to null during active exam', async () => {
+    const q1 = createSingleChoiceQuestion('q1', 'c1');
+
+    const session = createPracticeSession({
+      mode: 'exam',
+      endedAt: null,
+      questionIds: ['q1'],
+      questionStates: [
+        createQuestionState('q1', {
+          latestSelectedChoiceId: 'c1',
+          latestIsCorrect: true,
+          latestAnsweredAt: ANSWERED_AT,
+        }),
+      ],
+    });
+
+    const { getNextQuestion } = createTestDeps({
+      questions: [q1],
+      sessions: [session],
+    });
+
+    const result = await getNextQuestion.execute({
+      userId: USER_ID,
+      sessionId: SESSION_ID,
+      questionId: 'q1',
+    });
+
+    expect(result?.session?.latestIsCorrect).toBeNull();
+  });
+
+  it('returns latestIsCorrect after exam ends', async () => {
+    const q1 = createSingleChoiceQuestion('q1', 'c1');
+
+    const session = createPracticeSession({
+      mode: 'exam',
+      endedAt: new Date('2026-01-31T01:00:00Z'),
+      questionIds: ['q1'],
+      questionStates: [
+        createQuestionState('q1', {
+          latestSelectedChoiceId: 'c1',
+          latestIsCorrect: true,
+          latestAnsweredAt: ANSWERED_AT,
+        }),
+      ],
+    });
+
+    const { getNextQuestion } = createTestDeps({
+      questions: [q1],
+      sessions: [session],
+    });
+
+    const result = await getNextQuestion.execute({
+      userId: USER_ID,
+      sessionId: SESSION_ID,
+      questionId: 'q1',
+    });
+
+    expect(result?.session?.latestIsCorrect).toBe(true);
+  });
+
   it('throws VALIDATION_ERROR when input is missing both sessionId and filters', async () => {
     const { getNextQuestion } = createTestDeps();
 

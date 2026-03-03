@@ -3,6 +3,7 @@ import {
   createDefaultQuestionState,
   createSeed,
   selectNextQuestionId,
+  shouldShowExplanation,
   shuffleWithSeed,
 } from '@/src/domain/services';
 import type {
@@ -206,6 +207,7 @@ export class GetNextQuestionUseCase {
     const choices = this.mapChoiceViewsForOutput(choiceViews);
     const isAnswered = typeof targetState.latestSelectedChoiceId === 'string';
     const isTutor = session.mode === 'tutor';
+    const showCorrectness = shouldShowExplanation(session);
     const previousSubmission =
       isAnswered && isTutor
         ? this.buildPreviousSubmission(question, choiceViews)
@@ -224,7 +226,7 @@ export class GetNextQuestionUseCase {
         total: session.questionIds.length,
         isMarkedForReview: targetState.markedForReview,
         latestSelectedChoiceId: targetState.latestSelectedChoiceId,
-        latestIsCorrect: targetState.latestIsCorrect,
+        latestIsCorrect: showCorrectness ? targetState.latestIsCorrect : null,
         ...(previousSubmission ? { previousSubmission } : {}),
       },
     };
