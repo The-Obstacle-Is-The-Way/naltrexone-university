@@ -2442,9 +2442,17 @@ describe('BUG-187: Dashboard counts exclude active-exam attempts', () => {
       timeSpentSeconds: 5,
     });
 
+    const since = new Date('2000-01-01T00:00:00.000Z');
+
     // While exam is active: only adhoc attempt counted
     await expect(attemptRepo.countByUserId(user.id)).resolves.toBe(1);
     await expect(attemptRepo.countCorrectByUserId(user.id)).resolves.toBe(1);
+    await expect(attemptRepo.countByUserIdSince(user.id, since)).resolves.toBe(
+      1,
+    );
+    await expect(
+      attemptRepo.countCorrectByUserIdSince(user.id, since),
+    ).resolves.toBe(1);
 
     // End the exam
     await sessionRepo.end(examSession.id, user.id);
@@ -2452,6 +2460,12 @@ describe('BUG-187: Dashboard counts exclude active-exam attempts', () => {
     // After exam ends: both attempts counted
     await expect(attemptRepo.countByUserId(user.id)).resolves.toBe(2);
     await expect(attemptRepo.countCorrectByUserId(user.id)).resolves.toBe(2);
+    await expect(attemptRepo.countByUserIdSince(user.id, since)).resolves.toBe(
+      2,
+    );
+    await expect(
+      attemptRepo.countCorrectByUserIdSince(user.id, since),
+    ).resolves.toBe(2);
   });
 
   it('excludes active-exam attempts from listRecentByUserId', async () => {
