@@ -1,6 +1,6 @@
 # BUG-195: Question Candidate Status Filter Leaks Active Exam Correctness via Inference
 
-**Status:** Open
+**Status:** Fixed
 **Priority:** P3
 **Date:** 2026-03-03
 
@@ -34,15 +34,15 @@ Contrast with `listRecentByUserId` in `drizzle-attempt-repository.ts:364` which 
 
 ## Fix
 
-Not yet implemented.
-
-Expected fix shape:
-- The `latestAttemptRowsSubquery` should join on `practiceSessions` and apply the centralized active-exam exclusion predicate: `isNull(practiceSessions.id) OR ne(mode, 'exam') OR isNotNull(endedAt)`.
-- Alternatively, apply the predicate at the same centralized location being created for BUG-187/BUG-192.
+Implemented in `DrizzleQuestionRepository`:
+- `latestAttemptRowsSubquery` now `leftJoin`s `practiceSessions`.
+- The subquery now applies the active-exam exclusion predicate used elsewhere:
+  `isNull(practiceSessions.id) OR ne(mode, 'exam') OR isNotNull(endedAt)`.
+- This ensures status-filtered `incorrect` candidate counts exclude active exam attempts.
 
 ## Verification
 
-- [ ] Unit test added
+- [x] Unit test added — `drizzle-question-repository.test.ts` asserts the incorrect-status subquery includes `practiceSessions.mode`/`ended_at` secrecy predicates.
 - [ ] Integration test added
 - [ ] Manual verification
 - [x] Code-level tracer-bullet verified (Audit #12, 2026-03-03)

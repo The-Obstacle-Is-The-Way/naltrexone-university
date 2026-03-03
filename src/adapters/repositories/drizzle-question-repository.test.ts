@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { practiceSessions } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type { QuestionProgressStatus } from '@/src/domain/value-objects';
 import { DrizzleQuestionRepository } from './drizzle-question-repository';
@@ -28,6 +29,38 @@ const baseQuestionRow: QuestionRow = {
   createdAt: new Date('2026-02-01T00:00:00Z'),
   updatedAt: new Date('2026-02-01T00:00:00Z'),
 };
+
+function collectColumnNamesForTable(
+  node: unknown,
+  table: unknown,
+): readonly string[] {
+  const names = new Set<string>();
+
+  const visit = (value: unknown): void => {
+    if (!value || typeof value !== 'object') {
+      return;
+    }
+
+    const maybeNode = value as {
+      table?: unknown;
+      name?: unknown;
+      queryChunks?: unknown[];
+    };
+
+    if (maybeNode.table === table && typeof maybeNode.name === 'string') {
+      names.add(maybeNode.name);
+    }
+
+    if (Array.isArray(maybeNode.queryChunks)) {
+      for (const chunk of maybeNode.queryChunks) {
+        visit(chunk);
+      }
+    }
+  };
+
+  visit(node);
+  return [...names];
+}
 
 function createQuestionRow(
   overrides: Partial<QuestionRow> = {},
@@ -272,6 +305,78 @@ describe('DrizzleQuestionRepository', () => {
         code: 'INTERNAL_ERROR',
         message: 'Unhandled QuestionProgressStatus: unknown',
       });
+    });
+
+    // Structural assertion: ensures latest-attempt status filtering references
+    // practiceSessions columns so active exam attempts can be excluded.
+    it('applies active-exam secrecy filtering when building incorrect status counts', async () => {
+      const latestAttemptRowsAs = () => ({
+        __isLatestAttemptRows: true,
+        questionId: Symbol.for('latest_attempt_rows.questionId'),
+        isCorrect: Symbol.for('latest_attempt_rows.isCorrect'),
+        attemptRank: Symbol.for('latest_attempt_rows.attemptRank'),
+      });
+
+      const latestAttemptRowsWhere = vi.fn((..._args: unknown[]) => ({
+        as: latestAttemptRowsAs,
+      }));
+      const latestAttemptRowsLeftJoin = vi.fn((..._args: unknown[]) => ({
+        where: latestAttemptRowsWhere,
+      }));
+      const latestAttemptRowsFrom = vi.fn((table: unknown) => {
+        if (table === practiceSessions) {
+          throw new Error('unexpected practiceSessions base table');
+        }
+        return {
+          leftJoin: latestAttemptRowsLeftJoin,
+          where: latestAttemptRowsWhere,
+        };
+      });
+
+      const statusSubqueryWhere = vi.fn((..._args: unknown[]) => ({}));
+      const statusSubqueryFrom = vi.fn((_table: unknown) => ({
+        where: statusSubqueryWhere,
+      }));
+
+      const countWhere = vi.fn(async (..._args: unknown[]) => [{ count: 1 }]);
+      const countFrom = vi.fn((_table: unknown) => ({
+        where: countWhere,
+      }));
+
+      const db = {
+        select: (fields: Record<string, unknown>) => {
+          if ('count' in fields) {
+            return { from: countFrom };
+          }
+          if ('attemptRank' in fields) {
+            return { from: latestAttemptRowsFrom };
+          }
+          return { from: statusSubqueryFrom };
+        },
+      } as const;
+
+      const repo = new DrizzleQuestionRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.countPublishedCandidateIds({
+          tagSlugs: [],
+          difficulties: [],
+          statuses: ['incorrect'],
+          userId: 'user_1',
+        }),
+      ).resolves.toBe(1);
+
+      expect(latestAttemptRowsLeftJoin).toHaveBeenCalledTimes(1);
+      const latestAttemptRowsWhereClause =
+        latestAttemptRowsWhere.mock.calls[0]?.[0];
+      expect(latestAttemptRowsWhereClause).toBeDefined();
+
+      const practiceSessionColumns = collectColumnNamesForTable(
+        latestAttemptRowsWhereClause,
+        practiceSessions,
+      );
+      expect(practiceSessionColumns).toContain('mode');
+      expect(practiceSessionColumns).toContain('ended_at');
     });
   });
 });
