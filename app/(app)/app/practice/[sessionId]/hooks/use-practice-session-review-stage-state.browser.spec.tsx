@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
+import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import {
   type UsePracticeSessionReviewStageStateInput,
@@ -13,6 +14,18 @@ const { getPracticeSessionReviewMock } = vi.hoisted(() => ({
 vi.mock('@/src/adapters/controllers/practice-controller', () => ({
   getPracticeSessionReview: getPracticeSessionReviewMock,
 }));
+
+type ReviewLoadResult = {
+  ok: true;
+  data: {
+    sessionId: string;
+    mode: 'tutor' | 'exam';
+    totalCount: number;
+    answeredCount: number;
+    markedCount: number;
+    rows: [];
+  };
+};
 
 function createInput(
   sessionMode: 'tutor' | 'exam' | null,
@@ -102,6 +115,37 @@ describe('usePracticeSessionReviewStageState (browser)', () => {
       .toBe('idle');
     await expect.poll(() => harness.result.current.isInReviewStage).toBe(false);
     expect(vi.mocked(input.setSessionMode)).toHaveBeenCalledWith('tutor');
+  });
+
+  it('runs only one review-load operation when ending and retrying rapidly', async () => {
+    getPracticeSessionReviewMock.mockClear();
+    const deferred = createDeferred<ReviewLoadResult>();
+    getPracticeSessionReviewMock.mockReturnValue(deferred.promise);
+
+    const input = createInput('exam');
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStageState(input),
+    );
+
+    harness.result.current.onEndSession();
+    harness.result.current.onRetryReview();
+
+    expect(getPracticeSessionReviewMock).toHaveBeenCalledTimes(1);
+
+    deferred.resolve(
+      ok({
+        sessionId: 'session-1',
+        mode: 'tutor',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+
+    await expect
+      .poll(() => vi.mocked(input.finalizeSession).mock.calls.length)
+      .toBe(1);
   });
 
   it('sets an error state when review loading throws', async () => {

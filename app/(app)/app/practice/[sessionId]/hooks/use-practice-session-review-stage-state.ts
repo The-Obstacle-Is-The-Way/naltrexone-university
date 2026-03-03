@@ -1,7 +1,7 @@
 'use client';
 
 import type { Dispatch, SetStateAction } from 'react';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
@@ -46,48 +46,55 @@ export function usePracticeSessionReviewStageState(
     status: 'idle',
   });
   const [isInReviewStage, setIsInReviewStage] = useState(false);
+  const isLoadingReviewRef = useRef(false);
 
   const loadReview = useCallback(async (): Promise<void> => {
+    if (isLoadingReviewRef.current) return;
+    isLoadingReviewRef.current = true;
     setReviewLoadState({ status: 'loading' });
 
-    let res: Awaited<ReturnType<typeof getPracticeSessionReview>>;
     try {
-      res = await withTimeout(
-        getPracticeSessionReview({ sessionId: input.sessionId }),
-        SESSION_REVIEW_TIMEOUT_MS,
-      );
-    } catch (error) {
+      let res: Awaited<ReturnType<typeof getPracticeSessionReview>>;
+      try {
+        res = await withTimeout(
+          getPracticeSessionReview({ sessionId: input.sessionId }),
+          SESSION_REVIEW_TIMEOUT_MS,
+        );
+      } catch (error) {
+        if (!input.isMounted()) return;
+        setReviewLoadState({
+          status: 'error',
+          message: getThrownErrorMessage(error),
+        });
+        return;
+      }
       if (!input.isMounted()) return;
-      setReviewLoadState({
-        status: 'error',
-        message: getThrownErrorMessage(error),
-      });
-      return;
-    }
-    if (!input.isMounted()) return;
 
-    if (!res.ok) {
-      setReviewLoadState({
-        status: 'error',
-        message: getActionResultErrorMessage(res),
-      });
-      return;
-    }
+      if (!res.ok) {
+        setReviewLoadState({
+          status: 'error',
+          message: getActionResultErrorMessage(res),
+        });
+        return;
+      }
 
-    if (res.data.mode !== 'exam') {
-      setReview(null);
-      setReviewLoadState({ status: 'idle' });
-      setIsInReviewStage(false);
+      if (res.data.mode !== 'exam') {
+        setReview(null);
+        setReviewLoadState({ status: 'idle' });
+        setIsInReviewStage(false);
+        input.setSessionMode(res.data.mode);
+        void input.finalizeSession();
+        return;
+      }
+
+      setReview(res.data);
+      setReviewLoadState({ status: 'ready' });
+      setIsInReviewStage(true);
       input.setSessionMode(res.data.mode);
-      void input.finalizeSession();
-      return;
+      input.resetQuestionState();
+    } finally {
+      isLoadingReviewRef.current = false;
     }
-
-    setReview(res.data);
-    setReviewLoadState({ status: 'ready' });
-    setIsInReviewStage(true);
-    input.setSessionMode(res.data.mode);
-    input.resetQuestionState();
   }, [
     input.finalizeSession,
     input.isMounted,
