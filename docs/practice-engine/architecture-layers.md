@@ -172,4 +172,4 @@ Practice-related tables in `db/schema.ts`:
 
 ### 3.4 Test Coverage
 
-All 5 practice-engine repositories have colocated unit tests (62 `it()` cases total) plus shared integration tests in `tests/integration/repositories.integration.test.ts`.
+All 5 practice-engine repositories have colocated unit tests (62 `it()` cases total) plus domain-scoped integration tests in `tests/integration/` (e.g., `question-repository.integration.test.ts`, `session-attempt-repository.integration.test.ts`).

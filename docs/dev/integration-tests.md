@@ -72,9 +72,18 @@ Integration tests are part of every PR and every push to `main`.
 | File | Tests | What It Covers |
 |------|-------|----------------|
 | `tests/integration/db.integration.test.ts` | 4 | Schema constraints (pgcrypto, NOT NULL, foreign keys) |
-| `tests/integration/repositories.integration.test.ts` | 39 | All Drizzle repository implementations |
+| `tests/integration/question-repository.integration.test.ts` | 13 | DrizzleQuestionRepository CRUD + candidate filters |
+| `tests/integration/session-attempt-repository.integration.test.ts` | 19 | DrizzlePracticeSessionRepository + DrizzleAttemptRepository lifecycle |
+| `tests/integration/bookmark-repository.integration.test.ts` | 1 | DrizzleBookmarkRepository idempotent add/remove |
+| `tests/integration/stripe-repositories.integration.test.ts` | 5 | Stripe customer, event, and subscription repos |
+| `tests/integration/user-repository.integration.test.ts` | 6 | DrizzleUserRepository upsert + clock-guard semantics |
+| `tests/integration/idempotency-key-repository.integration.test.ts` | 4 | DrizzleIdempotencyKeyRepository claim/store/reclaim |
+| `tests/integration/rate-limiter.integration.test.ts` | 1 | DrizzleRateLimiter sliding window |
+| `tests/integration/tag-repository.integration.test.ts` | 1 | DrizzleTagRepository ordered listing |
+| `tests/integration/bug-regression.integration.test.ts` | 10 | Bug regression tests (BUG-186, 187, 188, 192, 195) |
 | `tests/integration/controllers.integration.test.ts` | 5 | Controller → repository → DB round trips |
 | `tests/integration/actions.stripe.integration.test.ts` | 2 | Stripe billing controller actions |
+| `tests/integration/tag-taxonomy-census.integration.test.ts` | 7 | Tag taxonomy validation |
 
 ---
 

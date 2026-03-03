@@ -109,7 +109,7 @@ Controllers call `rateLimiter.limit()` before executing the use case. On failure
 
 ## Compliance
 
-- `tests/integration/repositories.integration.test.ts` covers `DrizzleRateLimiter` limit enforcement, window behavior, and retry-after calculation.
+- `tests/integration/rate-limiter.integration.test.ts` covers `DrizzleRateLimiter` limit enforcement, window behavior, and retry-after calculation.
 - Route tests verify 429 handling and rate-limit headers on public endpoints:
   - `app/api/stripe/webhook/route.test.ts`
   - `app/api/webhooks/clerk/route.test.ts`

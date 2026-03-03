@@ -67,7 +67,3 @@ describe('DrizzleTagRepository', () => {
     expect(slugs).not.toContain(orphanSlug);
   });
 });
-
-// ---------------------------------------------------------------------------
-// BUG-186: GetPracticeSessionReview redacts isCorrect for active exam sessions
-// ---------------------------------------------------------------------------
