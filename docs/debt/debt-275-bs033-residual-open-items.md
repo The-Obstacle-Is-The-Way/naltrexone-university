@@ -2,7 +2,7 @@
 
 **Priority:** P3
 **Created:** 2026-03-04
-**Source:** [BS-033](../brainstorming/bs-033-question-display-formatting-and-feedback-ux.md)
+**Source:** [BS-033](../_archive/brainstorming/bs-033-question-display-formatting-and-feedback-ux.md)
 **Scope:** Content-layer fixes, one unresolved design decision, and future enhancement ideas extracted from BS-033 after all 22 component-layer fixes shipped (BUG-152–159, PRs #141–#143)
 
 ---
@@ -93,11 +93,12 @@ These were identified during BS-033 analysis but never implemented. None are bug
 |----|-------------|-------|
 | F1 | Clinical pearl styled callout box | Detect `**Clinical pearl:**` pattern in `<Markdown>` and render as a visually distinct callout |
 | F2 | Clinical pearl as separate seed field | Parse clinical pearl at seed level (like `reference_md`), store as its own column/field |
-| F3 | Question counter / progress indicator | "Question 1 of 48" during practice sessions |
-| F4 | Running score tracker | "3/5 correct so far" during practice sessions |
-| F5 | Post-submit question card collapse | Collapse question card after submission to reduce scroll to feedback |
-| F6 | Difficulty / topic tag display | Show difficulty level or topic tags on the question card |
-| F7 | "Why C is correct" summary card | Structural symmetry — correct answer gets same card treatment as wrong-answer cards |
+| F3 | Reference section styling improvements | Improve label/content hierarchy and reference readability in feedback |
+| F4 | Question counter / progress indicator | "Question 1 of 48" during practice sessions |
+| F5 | Running score tracker | "3/5 correct so far" during practice sessions |
+| F6 | Post-submit question card collapse | Collapse question card after submission to reduce scroll to feedback |
+| F7 | Difficulty / topic tag display | Show difficulty level or topic tags on the question card |
+| F8 | "Why C is correct" summary card | Structural symmetry — correct answer gets same card treatment as wrong-answer cards |
 
 ---
 
@@ -118,5 +119,5 @@ Hitting `/app/questions/<slug>` directly (no query params) shows dashboard revie
 | Settled design questions | 4 | None — already shipped |
 | Open design decision | 1 | Decide on all-or-nothing rule |
 | Content-layer fixes | 4 | Content authoring pass |
-| Future enhancements | 7 | Build when prioritized |
+| Future enhancements | 8 | Build when prioritized |
 | Minor edge case | 1 | Fix if convenient |
