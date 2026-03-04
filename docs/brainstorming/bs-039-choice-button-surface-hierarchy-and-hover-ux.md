@@ -13,21 +13,25 @@ In dark mode, the Quick Practice question view has a visually awkward layering e
 
 1. **Different gradation of black** — The question stem sits on `bg-card` (7% lightness) while the four answer choices use `bg-background` (3.5% lightness). This makes choices appear as darker rectangles "punched through" the card surface, creating unintentional visual weight variation.
 
-2. **Uncanny hover effect** — When hovering a choice, `hover:bg-muted/60` raises the surface to ~6.6% lightness, which is *almost* the same as `bg-card` (7%) but not quite. Instead of feeling like "this element is highlighted," the hover feels like "this hole is being filled back in." The hover state converges with the parent surface rather than rising above it.
+2. **Jarring hover effect** — When hovering a choice, the surface jumps from `bg-background` (3.5%) to `hover:bg-muted/60` (rendered ~9.4% over bg-card). That's a ~6% lightness leap in one step — roughly 7× larger than the dashboard's gentle ~0.8% hover transition. The hover overshoots the parent card surface rather than sitting naturally within it, creating a flash effect instead of a smooth highlight.
 
 3. **Letter badge disconnect** — The A/B/C/D circle badges use `bg-muted` (11% lightness), making them the brightest surface in the stack. Combined with the dark choice rows, the badges visually "float" rather than sitting naturally within their row.
 
 ### Visual Hierarchy (current, dark mode)
 
 ```
-Layer        Token              HSL Lightness    Visual
+Layer        Token              Rendered*        Visual
 ─────────────────────────────────────────────────────────
 Page bg      --background       3.5%             ████████ darkest
 Choice row   bg-background      3.5%             ████████ same as page (!)
-Choice hover bg-muted/60        ~6.6%            ██████░░ almost card level
 Card         bg-card            7.0%             █████░░░ question stem area
-Letter badge bg-muted           11.0%            ███░░░░░ brightest
-Border       --border           15.0%            ██░░░░░░ edges
+Choice hover bg-muted/60        ~9.4%†           ███░░░░░ overshoots card
+Letter badge bg-muted           11.0%            ██░░░░░░ brightest
+Border       --border           15.0%            █░░░░░░░ edges
+
+* Alpha-blended values composited over their parent surface (bg-card).
+  See Pattern Registry §1.2 for the full opacity scale.
+† Base 3.5% → hover 9.4% = ~6% jump (vs dashboard's ~0.8% step).
 ```
 
 The choice rows and page background are identical. There is no visual surface for the choices to exist "on" — they're transparent to the page, with only a thin border differentiating them.
@@ -35,15 +39,18 @@ The choice rows and page background are identical. There is no visual surface fo
 ### Contrast with Dashboard (works correctly)
 
 ```
-Layer        Token              HSL Lightness    Visual
+Layer        Token              Rendered*        Visual
 ─────────────────────────────────────────────────────────
 Page bg      --background       3.5%             ████████
 Card         bg-card            7.0%             █████░░░ card surface
-Row base     bg-muted/20        ~5.0%            ██████░░ sits above page
-Row hover    bg-muted/40        ~7.9%            ████░░░░ rises above card
+Row base     bg-muted/20        ~8.0%            ████░░░░ sits just above card
+Row hover    bg-muted/40        ~8.6%            ███░░░░░ smooth ~0.8% step up
+
+* Composited over bg-card (7%). Pattern Registry §1.2 confirms
+  bg-muted/20 ≈ ~8% inside card, bg-muted/40 ≈ ~8.6% inside card.
 ```
 
-Dashboard rows start above the page level and hover to above the card level — a clean upward progression. Users perceive this as natural highlighting.
+Dashboard rows sit just above the card surface and hover with a gentle ~0.8% step — a smooth upward progression. Users perceive this as natural highlighting.
 
 ---
 
@@ -57,9 +64,11 @@ From the Pattern Registry (I-3), the design rationale states:
 
 This rationale was written for the *general case* but creates a conflict specifically in `QuestionCard`, where choices are rendered *inside* a `<Card>` component. The "standalone" intent is undermined by the Card wrapper — the choice appears to be a card subsection *structurally* but tries to be standalone *visually*, landing in an uncanny valley.
 
-### 2. Hover target convergence
+### 2. Hover delta is too large
 
-The choice hover (`bg-muted/60` ≈ 6.6%) nearly matches `bg-card` (7.0%). This 0.4% difference is below the perceptual threshold for most displays. The hover state doesn't create contrast — it creates near-equivalence with the parent, which reads as "the element blends in" rather than "the element is highlighted."
+The choice base (`bg-background` = 3.5%) sits far below `bg-card` (7.0%), so when hover applies `bg-muted/60` (composited ~9.4% over bg-card), the surface leaps ~6% in one step. Dashboard rows go from `bg-muted/20` (~8%) to `hover:bg-muted/40` (~8.6%) — a smooth ~0.8% step. The choice hover delta is ~7× larger, creating a jarring flash instead of a gentle highlight.
+
+**Note:** The original analysis (pre-verification) estimated `bg-muted/60` at ~6.6% by treating the alpha as a simple lightness multiplier (11% × 0.6). This ignores alpha compositing — the actual rendered value depends on the parent surface. The Pattern Registry §1.2 confirms the composited value is ~9.4% inside a card.
 
 ### 3. The Card wrapper forces a layering problem
 
@@ -94,13 +103,15 @@ BS-035 (DEBT-250 compliance) changed choice hover from `bg-muted/80` to `bg-mute
 And update hover from `hover:bg-muted/60` to `hover:bg-muted/40`:
 
 ```
-Before:  bg-background (3.5%) → hover:bg-muted/60 (~6.6%)  — converges with card
-After:   bg-muted/20   (~5.0%) → hover:bg-muted/40 (~7.9%)  — rises above card
+Before:  bg-background (3.5%) → hover:bg-muted/60 (~9.4%)  — jarring 6% jump
+After:   bg-muted/20   (~8.0%) → hover:bg-muted/40 (~8.6%) — smooth ~0.8% step
+
+Rendered lightness values composited over bg-card (7%).
 ```
 
 **Pros:**
 - Directly matches dashboard row pattern — maximum consistency
-- Clear upward hover progression (5.0% → 7.9%)
+- Clear upward hover progression (~8.0% → ~8.6%, matching dashboard)
 - Choices gain a visible "surface" that differentiates them from the page
 - `border-border/60` is already the dashboard row convention — softer than full border
 
@@ -143,8 +154,7 @@ After:   bg-muted/20   (~5.0%) → hover:bg-muted/40 (~7.9%)  — rises above ca
 
 **Cons:**
 - Choices blend into the card surface at rest — differentiation relies entirely on borders
-- Hover (`bg-muted/60` ≈ 6.6%) would be *below* the base (`bg-card` = 7.0%) — hover would actually darken!
-- Would need to also change hover to something above card level, e.g., `hover:bg-muted/80` (~10%)
+- Hover (`bg-muted/60` ≈ 9.4% composited) would work directionally (rises above 7% card base), but the 2.4% step is still larger than the dashboard's ~0.8% convention — would benefit from changing hover to `hover:bg-muted/40` (~8.6%) for consistency
 
 ### Option D: Subtle tint with accent color
 
@@ -173,11 +183,13 @@ Instead of pure gray, give choices a very faint hue (e.g., `bg-primary/5`) to cr
 
 The Pattern Registry I-3 rationale should be updated to acknowledge that choices inside a Card wrapper need the "in-card row" treatment (`bg-muted/20 → hover:bg-muted/40`) rather than the standalone treatment.
 
+**Supporting evidence from the existing code:** The *selected* state already uses `bg-muted/20` (line 34: `selected && correctness === null && 'border-ring bg-muted/20'`). This means the correct token is already known for "this row is active" — the developer chose the right value for the selected state but used the wrong value for the default state. Option A simply promotes the default base to match what the selected state already uses, making `bg-muted/20` the universal base instead of a selection-only override.
+
 ---
 
 ## Open Questions
 
-1. **Should letter badges also change?** Currently `bg-muted` (11%). If the row base moves to `bg-muted/20` (~5%), the badge-to-row contrast *increases*, which may actually look better. But worth checking visually.
+1. **Should letter badges also change?** Currently `bg-muted` (11%). If the row base moves to `bg-muted/20` (~8% inside card), the badge-to-row contrast *decreases* (from 7.5% gap to 3% gap), which should make badges feel more naturally nested in their rows. Worth visual verification.
 
 2. **Should the selected state change?** Currently `border-ring bg-muted/20` — if the base is also `bg-muted/20`, the selected state would need a higher opacity like `bg-muted/40` or a ring-based approach instead.
 
@@ -250,7 +262,7 @@ The Pattern Registry I-3 rationale should be updated to acknowledge that choices
 
 ### Additional inconsistencies found (not fully covered in original BS-039)
 
-1. **Quick Practice submit instability in local run:** after submit, UI often shows an `Internal error` banner (`quick-practice-after-submit.png`) instead of entering the normal feedback card state.
+1. **Quick Practice submit error (confirmed on deployed preview):** after submit, UI shows an `Internal error` banner instead of entering the normal feedback card state. Reproduced independently on both localhost (Playwright) and the deployed Vercel preview (Claude-in-Chrome agent on `naltrexone-university-*.vercel.app`). This is a real production-affecting bug, not a local environment issue. Needs separate investigation and bug report.
 2. **History session review route inconsistency:** one captured session-review navigation reached a `Question` header but rendered no QuestionCard content (`session-review-question.png`, style metrics `null`).
 3. **Bookmarks currently dominated by unavailable items:** `bookmarks-default.png` shows unavailable rows with `Remove` but no `Review` link, preventing Bookmarks → QuestionCard verification in this run.
 4. **History Questions tab also surfaced unavailable-only rows in this dataset (`history-questions-default.png`), limiting hover/row behavior comparison for active review links.**
@@ -277,3 +289,4 @@ Proceed with **Option A**, plus a small state-tuning follow-up:
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-03-03 | Option A remains recommended after visual verification | Live dark-mode capture confirms inverted Quick Practice hierarchy and validates dashboard/history row pattern as the stable reference |
+| 2026-03-03 | Accuracy review: corrected composited lightness values | Original ~6.6% estimate for bg-muted/60 was wrong (ignored alpha compositing over bg-card). Pattern Registry §1.2 confirms ~9.4%. Reframed hover problem from "convergence with parent" to "jarring 6% jump from too-dark base." Dashboard values updated to composited-in-card values (~8%, ~8.6%). Added Chrome agent insight: selected state already uses bg-muted/20, proving the correct token is in the codebase. |
