@@ -292,3 +292,37 @@ Proceed with **Option A**, plus a small state-tuning follow-up:
 | 2026-03-03 | Accuracy review: corrected composited lightness values | Original ~6.6% estimate for bg-muted/60 was wrong (ignored alpha compositing over bg-card). Pattern Registry §1.2 confirms ~9.4%. Reframed hover problem from "convergence with parent" to "jarring 6% jump from too-dark base." Dashboard values updated to composited-in-card values (~8%, ~8.6%). Added Chrome agent insight: selected state already uses bg-muted/20, proving the correct token is in the codebase. |
 | 2026-03-03 | "Internal error" on submit resolved — missing DB migration | Unrelated to surface hierarchy. Migration 0014 (`claimed_at` on `idempotency_keys`) was not applied to Neon `dev` branch. Fixed with `pnpm db:migrate`. Documented in deployment-environments.md Known Gotchas. |
 | 2026-03-03 | Promoted to DEBT-273 | Analysis complete. Option A selected. Single-file fix in `choice-button.tsx` covers all 6+ question views (Quick Practice, Tutor, Exam, Dashboard review, History review, Bookmarks review). |
+| 2026-03-03 | Readiness audit expanded blast radius + state interactions | Confirmed `QuestionPageClient` also covers practice-session review and direct fallback route; documented selected+hover border-interaction requirement in DEBT-273 for unambiguous implementation behavior. |
+
+---
+
+## Implementation-Readiness Validation (DEBT-273 audit)
+
+### Additional readiness findings
+
+1. **Blast-radius wording needed one more entry point:** `QuestionPageClient` also powers **Practice session review** (`from=practice`) and direct `/app/questions/[slug]` fallback routing, in addition to dashboard/history/bookmarks review flows.
+2. **Selected + hover interaction had an uncovered gotcha:** in captured metrics, clicked+hovered rows showed hover border/background winning over selected-neutral tokens.  
+   For Option A to stay unambiguous, DEBT-273 now scopes `hover:border-muted-foreground/30` to **unselected** rows only, so selected rows keep their selected treatment on hover.
+3. **Pattern Registry touchpoints were broader than I-3 alone:** §1.2 `/60` use-case row, §1.2 decision sentence, Part 9 hover decision tree, and Appendix quick-reference row all referenced old choice-button behavior and required synchronized updates.
+4. **Test impact needed explicit line-level mapping:** the breaking assertions are concentrated in `choice-button.test.tsx` (`hover:bg-muted/60`, selected `bg-muted/20`, unselected `not bg-muted/20`, correctness-case `not bg-muted/20`). DEBT-273 now lists exact lines and replacement assertions.
+
+### Open-question closure status
+
+All four BS-039 open questions now have concrete answers in DEBT-273:
+- Badge change: **No**
+- Selected neutral state: **Yes** (`bg-muted/40`)
+- Correctness-state adjustments: **No**
+- Pattern strategy: **Amend existing I-3 + linked registry sections (no new standalone variant)**
+
+### Post-Migration Smoke Reconciliation (2026-03-04)
+
+Follow-up smoke testing in Preview/Dev (Chrome agent run, 7 phases) reported a healthy app state after the 0014 migration fix:
+
+- Quick Practice/Tutor/Exam write paths all passed (no `Internal error` banners)
+- Dashboard, History, Bookmarks, Billing all loaded and were navigable
+- Bookmark review/removal and history review navigation both worked in that run
+
+Implication for this brainstorming record:
+
+- The previously captured History review blank-state and unavailable-only list constraints were **not reproduced** in the follow-up run and should be treated as transient dataset/environment artifacts, not confirmed product-level regressions.
+- Intermittent `_rsc` `503` prefetch responses were observed in Preview but were self-healing (`503` → retry `200`) with no user-visible failure; this is tracked as infrastructure behavior, not a BS-039 UI-surface issue.
