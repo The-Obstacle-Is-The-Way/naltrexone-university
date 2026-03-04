@@ -53,7 +53,7 @@ The `**Why other answers are wrong:**` heading itself is consumed by the parser 
 ### P1: Redundant Choice Text in Wrong-Answer Explanations
 
 **Layer:** MDX content (question-generation repo)
-**Severity:** High — visible on every incorrect answer
+**Severity:** High — visible in BOTH flows (incorrect flow's "Your answer" section AND both flows' wrong-answer cards)
 
 **What's happening:**
 
@@ -153,37 +153,47 @@ The actual content diverges from the spec. Without the blank line, markdown trea
 
 ---
 
-### P3: Visual Hierarchy Inconsistency Between Feedback Sections
+### P3: Visual Hierarchy Inconsistency Between Feedback Sections (BOTH Flows)
 
 **Layer:** Code (`feedback.tsx`)
 **Severity:** Medium — inconsistent visual treatment across the same feedback card
+**Applies to:** Both correct AND incorrect answer displays
 
 **What's happening:**
 
-In the incorrect answer flow, three sections have different visual treatments:
+The same inconsistency exists in **both** flows. The wrong-answer cards get borders and backgrounds, while the primary sections ("Correct answer", "Your answer") are flat unstyled text.
+
+**Correct answer flow** (`feedback.tsx:86-139`):
+
+| Section | Visual treatment | Code location |
+|---------|-----------------|---------------|
+| "Correct answer" + choice text + explanation + clinical pearl | Flat text, no border/background | `feedback.tsx:88-113` |
+| "Why other answers are wrong" (each choice) | Card with `rounded-xl border border-border/60 bg-background/50 p-3` | `feedback.tsx:120-135` |
+
+**Incorrect answer flow** (`feedback.tsx:140-213`):
 
 | Section | Visual treatment | Code location |
 |---------|-----------------|---------------|
 | "Your answer" (user's wrong choice) | Flat text, no border/background | `feedback.tsx:142-160` |
-| "Correct answer" + explanation | Flat text, no border/background | `feedback.tsx:162-187` |
+| "Correct answer" + explanation + clinical pearl | Flat text, no border/background | `feedback.tsx:162-187` |
 | "Why other answers are wrong" (each choice) | Card with `rounded-xl border border-border/60 bg-background/50 p-3` | `feedback.tsx:195-208` |
 
-The wrong-answer choices (C, D) get nested cards, but the user's answer (A) and the correct answer (B) are rendered as unstyled text. This creates an inconsistent visual hierarchy where the least important information (other wrong answers) gets the most visual prominence.
+In both flows, the least important information (other wrong answers) gets the most visual prominence via card styling, while the primary information ("Correct answer" / "Your answer") has no visual container at all.
 
-**Proposed fix (code):** Wrap "Your answer" and "Correct answer" sections in card-style containers. Three approaches:
+**Proposed fix (code):** Unify card treatment across all sections in both flows. Three approaches:
 
 **Option A — Same card style for all sections:**
-Give "Your answer" and "Correct answer" the same `rounded-xl border border-border/60 bg-background/50 p-3` treatment as the wrong-answer cards. Uniform look.
+Give "Your answer" and "Correct answer" the same `rounded-xl border border-border/60 bg-background/50 p-3` treatment as the wrong-answer cards. Uniform look across both flows.
 
 **Option B — Distinct card styles per section importance:**
-- "Your answer" → card with `border-destructive/30` accent (matches the Incorrect badge)
-- "Correct answer" → card with `border-success/30` accent (matches correct emphasis)
-- "Other wrong answers" → neutral card (current style)
+- "Your answer" (incorrect flow only) → card with `border-destructive/30` accent
+- "Correct answer" (both flows) → card with `border-success/30` accent
+- "Other wrong answers" (both flows) → neutral card (current style)
 
 **Option C — Keep flat text but add subtle visual separation:**
 Add a top border or background tint to "Your answer" and "Correct answer" sections without full card treatment. Lighter touch.
 
-**Decision needed:** Pick an approach.
+**Decision needed:** Pick an approach. Whichever is chosen applies to both flows for a unified front.
 
 ---
 
@@ -194,7 +204,7 @@ Add a top border or background tint to "Your answer" and "Correct answer" sectio
 | P1: Redundant choice text prefix | MDX files in question-generation repo | Content | C3 |
 | P2: Clinical pearl blank line | MDX files in question-generation repo | Content | C2 |
 | P2 (future): Clinical pearl callout | `Markdown.tsx` or `feedback.tsx` | Code | F1 |
-| P3: Section visual hierarchy | `feedback.tsx` | Code | — (new) |
+| P3: Section visual hierarchy (both flows) | `feedback.tsx` | Code | — (new) |
 
 ### What does NOT need to change in MDX
 
@@ -336,16 +346,16 @@ pnpm content:import:drafts -- --status published && pnpm db:seed
 
 These require design decisions before implementation. None are blocking the MDX fixes above.
 
-### Open Question 1: Section Visual Hierarchy (P3)
+### Open Question 1: Section Visual Hierarchy — Unified Across Both Flows (P3)
 
-"Your answer" and "Correct answer" render as flat text, while "Why other answers are wrong" cards get `rounded-xl border border-border/60 bg-background/50 p-3`. Should all sections have consistent card treatment?
+In **both** the correct and incorrect flows, "Correct answer" (and "Your answer" in the incorrect flow) render as flat text while wrong-answer cards get `rounded-xl border border-border/60 bg-background/50 p-3`. Should all sections have consistent card treatment?
 
 **Options:**
-- **A — Uniform cards:** Same card style for all sections
-- **B — Color-coded cards:** destructive accent for "Your answer", success accent for "Correct answer", neutral for others
+- **A — Uniform cards:** Same card style for all sections in both flows
+- **B — Color-coded cards:** destructive accent for "Your answer", success accent for "Correct answer", neutral for others — applied consistently in both flows
 - **C — Subtle separators:** Top border or background tint, not full cards
 
-**Status:** Decision needed. No code change until decided.
+**Status:** Decision needed. No code change until decided. Whichever approach is chosen must be applied to both flows.
 
 ### Open Question 2: Clinical Pearl Styled Callout (DEBT-275 F1)
 
