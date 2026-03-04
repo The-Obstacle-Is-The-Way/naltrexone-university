@@ -145,16 +145,15 @@ describe('ChoiceButton', () => {
     const input = doc.querySelector('input[type="radio"]');
     const wrapperLabel = input?.closest('label');
     const badge = wrapperLabel?.querySelector('div.h-7.w-7');
+    const wrapperClass = wrapperLabel?.getAttribute('class') ?? '';
 
     expect(wrapperLabel).not.toBeNull();
     expect(badge).not.toBeNull();
-    expect(wrapperLabel?.getAttribute('class')).toContain('hover:bg-muted/60');
-    expect(wrapperLabel?.getAttribute('class')).not.toContain(
-      'hover:bg-muted/80',
-    );
-    expect(wrapperLabel?.getAttribute('class')).toContain(
-      'hover:border-muted-foreground/30',
-    );
+    expect(wrapperClass).toContain('border-border/60');
+    expect(wrapperClass).toContain('bg-muted/20');
+    expect(wrapperClass).toContain('hover:bg-muted/40');
+    expect(wrapperClass).not.toContain('hover:bg-muted/80');
+    expect(wrapperClass).toContain('hover:border-muted-foreground/30');
     expect(badge?.getAttribute('class')).toContain('bg-muted');
     expect(badge?.getAttribute('class')).not.toContain('bg-background');
   });
@@ -216,12 +215,15 @@ describe('ChoiceButton', () => {
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const wrapperLabel = doc.querySelector('label');
+    const wrapperClassTokens = (wrapperLabel?.getAttribute('class') ?? '')
+      .split(/\s+/)
+      .filter(Boolean);
 
-    expect(wrapperLabel?.getAttribute('class')).toContain('bg-muted/20');
-    expect(wrapperLabel?.getAttribute('class')).toContain('border-ring');
+    expect(wrapperClassTokens).toContain('bg-muted/40');
+    expect(wrapperClassTokens).toContain('border-ring');
   });
 
-  it('does not apply background tint when unselected', () => {
+  it('applies base background tint when unselected', () => {
     const html = renderToStaticMarkup(
       <ChoiceButton
         name="choices"
@@ -234,8 +236,12 @@ describe('ChoiceButton', () => {
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const wrapperLabel = doc.querySelector('label');
+    const wrapperClassTokens = (wrapperLabel?.getAttribute('class') ?? '')
+      .split(/\s+/)
+      .filter(Boolean);
 
-    expect(wrapperLabel?.getAttribute('class')).not.toContain('bg-muted/20');
+    expect(wrapperClassTokens).toContain('bg-muted/20');
+    expect(wrapperClassTokens).not.toContain('bg-muted/40');
   });
 
   it('does not apply selected tint when correctness is set', () => {
@@ -254,8 +260,8 @@ describe('ChoiceButton', () => {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const wrapperLabel = doc.querySelector('label');
 
-    expect(wrapperLabel?.getAttribute('class')).not.toContain('bg-muted/20');
     expect(wrapperLabel?.getAttribute('class')).toContain('bg-success/10');
+    expect(wrapperLabel?.getAttribute('class')).not.toContain('bg-muted/40');
   });
 
   it('sets radio input value equal to label', () => {
