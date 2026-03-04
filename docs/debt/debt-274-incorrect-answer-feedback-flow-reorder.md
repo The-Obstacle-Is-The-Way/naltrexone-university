@@ -55,16 +55,31 @@ The `Feedback` component renders identical section ordering for correct and inco
 
 ---
 
-## Affected Views
+## Affected Views (Runtime)
 
 `Feedback` is rendered inside two parent components that cover every question-facing view:
 
 | Parent Component | File | Views |
 |-----------------|------|-------|
-| `PracticeView` | `app/(app)/app/practice/components/practice-view.tsx` | Quick Practice, Tutor mode, Exam mode |
+| `PracticeView` | `app/(app)/app/practice/components/practice-view.tsx` | Quick Practice and Tutor-mode feedback surfaces (Exam mode intentionally withholds immediate feedback) |
 | `QuestionPageClient` | `app/(app)/app/questions/[slug]/question-page-client.tsx` | Dashboard review, Practice session review, History session review, History question review, Bookmarks review |
 
-**One fix in `feedback.tsx` covers all views.**
+**One fix in `feedback.tsx` covers all views where feedback is rendered.**
+
+### Additional Consumers (Test-Only)
+
+| Consumer | File | Why it matters |
+|----------|------|----------------|
+| `theme-token-regression` test | `components/theme-token-regression.test.tsx` | Renders `Feedback` directly to assert semantic token classes; class-name/markup churn can break this test even though runtime behavior is unchanged |
+
+### Data-flow edge path to preserve
+
+In session review unanswered hydration (`sessionUnansweredReveal` path), `QuestionView` renders `Feedback` with:
+- `isCorrect=false` (because `submitResult` is null),
+- `selectedChoiceId=null`,
+- non-empty `choiceExplanations` from reveal data.
+
+The incorrect-flow branch must therefore degrade gracefully when `selectedChoiceId` is null (no "Your answer" section; continue with correct-answer section + existing guarded wrong-answer section behavior).
 
 ---
 
@@ -86,6 +101,8 @@ const userChoice =
   !isCorrect && selectedChoiceId
     ? choiceExplanations.find((c) => c.choiceId === selectedChoiceId) ?? null
     : null;
+// IMPORTANT: lookup uses full choiceExplanations (not visibleChoiceExplanations)
+// so user's selected choice still resolves even if explanationMd is null/blank.
 
 // Other wrong choices excluding user's pick (only relevant for incorrect flow)
 const otherWrongChoices = !isCorrect
@@ -195,13 +212,15 @@ Note: The "Your answer" badge (`choice.choiceId === selectedChoiceId`) is **remo
 - **Card wrapper** (`<Card role="status">`) — unchanged
 - **FeedbackProps type** (lines 7-21) — unchanged, no new props needed
 - **`shouldRenderChoiceExplanations` guard** — still used for correct flow
+- **`hasMissingIncorrectExplanation` semantics** — unchanged. If any incorrect choice has null/blank `explanationMd`, the entire wrong-answer section remains hidden (existing fallback behavior)
+- **Session-unanswered review behavior** — unchanged in intent: with `selectedChoiceId=null`, no "Your answer" section renders
 - **Correct flow** — entire current layout preserved as-is
 
 ---
 
 ## Test Plan (TDD)
 
-All tests in `components/question/Feedback.test.tsx`. Pattern: `renderToStaticMarkup` + DOMParser, per project conventions.
+Primary tests in `components/question/Feedback.test.tsx` (render-output contract). Pattern: `renderToStaticMarkup` + DOMParser, per project conventions.
 
 ### Existing tests that need updates
 
@@ -283,6 +302,24 @@ Then:  No "Your answer" section is rendered (userChoice is null)
        AND wrong-answer cards render normally (graceful degradation)
 ```
 
+#### T7: Session-unanswered review path preserves graceful null-selected behavior (parent integration guard)
+
+`QuestionView` test (in `app/(app)/app/questions/[slug]/question-page-client.test.tsx`):
+
+```
+Given: submitResult=null, sessionUnansweredReveal present, selectedChoiceId=null
+When:  rendered
+Then:  Feedback shows "Incorrect" + explanation content
+       AND no "Your answer" section is rendered
+       AND existing unanswered banner + action bar behavior remains unchanged
+```
+
+### Adjacent tests to run (blast-radius checks)
+
+- `app/(app)/app/practice/components/practice-view.test.tsx` — includes feedback wiring assertion (`passes selected choice context to feedback after submit`)
+- `app/(app)/app/questions/[slug]/question-page-client.test.tsx` — includes previous-attempt feedback assertions and session-unanswered review assertions
+- `components/theme-token-regression.test.tsx` — semantic token regression coverage for Feedback badges
+
 ### Test execution order (TDD)
 
 1. Write T1 (incorrect flow ordering) — RED
@@ -294,8 +331,9 @@ Then:  No "Your answer" section is rendered (userChoice is null)
 7. Write T4 (correct flow regression) — should already be GREEN
 8. Write T5 (null explanationMd edge case) — should already be GREEN given existing guard
 9. Write T6 (no selectedChoiceId fallback) — should already be GREEN given null check
-10. Update existing `marks the selected wrong choice` test
-11. Run full suite, verify all GREEN
+10. Write T7 in `QuestionView` test file (session-unanswered integration guard)
+11. Update existing `marks the selected wrong choice` test
+12. Run `Feedback` tests + adjacent blast-radius tests, verify all GREEN
 
 ---
 
@@ -311,6 +349,7 @@ After implementing, verify in the app:
 - [ ] Dashboard review (correct answer) — layout unchanged
 - [ ] History session review — both flows render correctly
 - [ ] Bookmarks review — both flows render correctly
+- [ ] Session review unanswered question (`sessionUnansweredReveal`, `selectedChoiceId=null`) — no "Your answer" section, feedback still renders correctly
 - [ ] Edge case: question with missing choice explanations — falls back to general explanation only (existing behavior)
 
 ---
@@ -332,4 +371,4 @@ After implementing, verify in the app:
 
 - [BS-040](../brainstorming/bs-040-incorrect-answer-feedback-flow-redesign.md) — Original analysis with UWorld comparison, research backing, and content structure trace
 - `components/question/feedback.tsx` — The component being modified (124 lines)
-- `components/question/Feedback.test.tsx` — Existing test file (8 tests, 237 lines)
+- `components/question/Feedback.test.tsx` — Existing test file (9 tests, 237 lines)

@@ -138,6 +138,12 @@ The component has all the data it needs to branch:
 
 The fix is **purely in the Feedback component** — rearranging what's already available based on `isCorrect`.
 
+### Scope validation (vertical + horizontal tracer)
+
+- **Runtime entry points:** `Feedback` is rendered by `PracticeView` and `QuestionView` (via `QuestionPageClient`) and these cover Quick Practice plus all review surfaces.
+- **Unanswered review path is real:** in session review unanswered hydration, `QuestionView` passes `isCorrect=false`, `selectedChoiceId=null`, and non-empty `choiceExplanations`. The incorrect-flow branch must gracefully handle a null `selectedChoiceId` (no "Your answer" section, then continue with correct answer content).
+- **Additional consumer outside views:** `components/theme-token-regression.test.tsx` renders `Feedback` directly for semantic token checks. It is test-only, but part of blast radius when refactoring markup/classes.
+
 ---
 
 ## Industry Comparison: UWorld's Prose Style vs Our Per-Choice Style
@@ -175,7 +181,7 @@ EXPLANATION (prose narrative — no choice text shown, just labels)
 └── Medical Library link
 ```
 
-**The defining characteristic of UWorld's approach is prose-style explanations.** Wrong choices are referenced by label only — "(Choice E)", "(Choices A and B)" — woven into a continuous narrative. The actual choice text (what Choice E said) is NOT repeated in the explanation. The learner must look back up at the choice list to remember what "Choice E" refers to.
+**The defining characteristic of UWorld's approach is prose-style explanations.** Wrong choices are referenced by label only — "(Choice E)", "(Choices A and B)" — woven into a continuous narrative. The actual choice text (what Choice E said) is NOT repeated in the explanation. The learner must cross-reference the choice list to remember what "Choice E" refers to (scrolling on smaller viewports, scan-shifting in split view).
 
 **Key UWorld design decisions:**
 
@@ -195,7 +201,7 @@ The explanation says:
 
 To understand this, the learner must:
 1. Stop reading the explanation
-2. Scroll or look back up to the choice list
+2. Cross-reference the choice list (scrolling in many layouts)
 3. Find Choice C: "Discontinue escitalopram and start paroxetine"
 4. Find Choice D: "Discontinue escitalopram and start trazodone"
 5. Map both back to the explanation sentence
@@ -346,12 +352,17 @@ const correctChoice = choiceExplanations.find((choice) => choice.isCorrect) ?? n
 const userChoice = !isCorrect && selectedChoiceId
   ? choiceExplanations.find((c) => c.choiceId === selectedChoiceId) ?? null
   : null;
+// Intentionally search the unfiltered array so selected choice still resolves
+// even if its explanationMd is null/blank.
 
 // NEW: other wrong choices excluding user's pick (for incorrect flow)
 const otherWrongChoices = !isCorrect
   ? visibleChoiceExplanations.filter((c) => c.choiceId !== selectedChoiceId)
   : visibleChoiceExplanations;  // correct flow uses all wrong choices as before
 ```
+
+If `selectedChoiceId` is `null` in incorrect flow (session unanswered review), `userChoice` is `null` and the layout degrades gracefully to:
+1) badge, 2) correct answer section, 3) wrong-answers section (existing guarded behavior), 4) reference.
 
 **Rendering branch:**
 
