@@ -97,6 +97,31 @@ describe('Feedback', () => {
     expect(successCardText).not.toContain('B)');
   });
 
+  it('renders explanation fallback without top margin when no correct choice exists in correct flow', () => {
+    const html = renderToStaticMarkup(
+      <Feedback isCorrect={true} explanationMd={null} />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const explanationLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Explanation',
+    );
+    const successCard = explanationLabel?.nextElementSibling;
+    const fallbackParagraph = Array.from(
+      successCard?.querySelectorAll('p') ?? [],
+    ).find(
+      (paragraph) =>
+        paragraph.textContent?.trim() === 'Explanation not available.',
+    );
+    const fallbackClassName = fallbackParagraph?.getAttribute('class') ?? '';
+
+    expect(explanationLabel).not.toBeUndefined();
+    expect(fallbackParagraph).not.toBeUndefined();
+    expect(fallbackClassName).toContain('text-sm');
+    expect(fallbackClassName).toContain('text-muted-foreground');
+    expect(fallbackClassName).not.toContain('mt-2');
+  });
+
   it('T3: wraps incorrect-flow your-answer content in a destructive card', () => {
     const html = renderToStaticMarkup(
       <Feedback
@@ -180,6 +205,52 @@ describe('Feedback', () => {
     expect(successCardText).toContain('B)');
     expect(successCardText).toContain('Second option');
     expect(successCardText).toContain('General explanation.');
+  });
+
+  it('renders explanation fallback without top margin when no correct choice exists in incorrect flow', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={false}
+        explanationMd={null}
+        selectedChoiceId="choice-a"
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: false,
+            explanationMd: 'Second option is incorrect.',
+          },
+        ]}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const explanationLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Explanation',
+    );
+    const successCard = explanationLabel?.nextElementSibling;
+    const fallbackParagraph = Array.from(
+      successCard?.querySelectorAll('p') ?? [],
+    ).find(
+      (paragraph) =>
+        paragraph.textContent?.trim() === 'Explanation not available.',
+    );
+    const fallbackClassName = fallbackParagraph?.getAttribute('class') ?? '';
+
+    expect(html).toContain('Your answer');
+    expect(explanationLabel).not.toBeUndefined();
+    expect(fallbackParagraph).not.toBeUndefined();
+    expect(fallbackClassName).toContain('text-sm');
+    expect(fallbackClassName).toContain('text-muted-foreground');
+    expect(fallbackClassName).not.toContain('mt-2');
   });
 
   it('T5: keeps wrong-answer cards on neutral styling only', () => {

@@ -35,6 +35,56 @@ export type FeedbackProps = {
   selectedChoiceId?: string | null;
 };
 
+type CorrectAnswerSectionProps = {
+  sectionClassName: string;
+  correctChoice: FeedbackChoiceExplanation | null;
+  explanationMd: string | null;
+};
+
+function getExplanationClassName(hasCorrectChoice: boolean): string {
+  return hasCorrectChoice ? 'mt-2 text-sm' : 'text-sm';
+}
+
+function getFallbackExplanationClassName(hasCorrectChoice: boolean): string {
+  return cn(getExplanationClassName(hasCorrectChoice), 'text-muted-foreground');
+}
+
+function CorrectAnswerSection({
+  sectionClassName,
+  correctChoice,
+  explanationMd,
+}: CorrectAnswerSectionProps) {
+  const hasCorrectChoice = correctChoice !== null;
+  const explanationClassName = getExplanationClassName(hasCorrectChoice);
+  const fallbackExplanationClassName =
+    getFallbackExplanationClassName(hasCorrectChoice);
+
+  return (
+    <div className={sectionClassName}>
+      <div className="text-sm font-medium text-foreground">
+        {correctChoice ? 'Correct answer' : 'Explanation'}
+      </div>
+      <div className="mt-2 rounded-xl border border-success/20 bg-success/5 p-3">
+        {correctChoice ? (
+          <div className="flex items-start gap-1 text-sm text-foreground">
+            <span className="shrink-0 font-medium">
+              {correctChoice.displayLabel})
+            </span>
+            <Markdown content={correctChoice.textMd} />
+          </div>
+        ) : null}
+        {explanationMd ? (
+          <Markdown content={explanationMd} className={explanationClassName} />
+        ) : (
+          <p className={fallbackExplanationClassName}>
+            Explanation not available.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function Feedback({
   isCorrect,
   explanationMd,
@@ -85,37 +135,11 @@ export function Feedback({
 
       {isCorrect ? (
         <>
-          <div className="mt-6">
-            <div className="text-sm font-medium text-foreground">
-              {correctChoice ? 'Correct answer' : 'Explanation'}
-            </div>
-            <div className="mt-2 rounded-xl border border-success/20 bg-success/5 p-3">
-              {correctChoice ? (
-                <div className="flex items-start gap-1 text-sm text-foreground">
-                  <span className="shrink-0 font-medium">
-                    {correctChoice.displayLabel})
-                  </span>
-                  <Markdown content={correctChoice.textMd} />
-                </div>
-              ) : null}
-              {explanationMd ? (
-                <Markdown
-                  content={explanationMd}
-                  className={correctChoice ? 'mt-2 text-sm' : 'text-sm'}
-                />
-              ) : (
-                <p
-                  className={
-                    correctChoice
-                      ? 'mt-2 text-sm text-muted-foreground'
-                      : 'text-sm text-muted-foreground'
-                  }
-                >
-                  Explanation not available.
-                </p>
-              )}
-            </div>
-          </div>
+          <CorrectAnswerSection
+            sectionClassName="mt-6"
+            correctChoice={correctChoice}
+            explanationMd={explanationMd}
+          />
 
           {shouldRenderChoiceExplanations ? (
             <div className="mt-4">
@@ -166,37 +190,11 @@ export function Feedback({
             </div>
           ) : null}
 
-          <div className={userChoice ? 'mt-4' : 'mt-6'}>
-            <div className="text-sm font-medium text-foreground">
-              {correctChoice ? 'Correct answer' : 'Explanation'}
-            </div>
-            <div className="mt-2 rounded-xl border border-success/20 bg-success/5 p-3">
-              {correctChoice ? (
-                <div className="flex items-start gap-1 text-sm text-foreground">
-                  <span className="shrink-0 font-medium">
-                    {correctChoice.displayLabel})
-                  </span>
-                  <Markdown content={correctChoice.textMd} />
-                </div>
-              ) : null}
-              {explanationMd ? (
-                <Markdown
-                  content={explanationMd}
-                  className={correctChoice ? 'mt-2 text-sm' : 'text-sm'}
-                />
-              ) : (
-                <p
-                  className={
-                    correctChoice
-                      ? 'mt-2 text-sm text-muted-foreground'
-                      : 'text-sm text-muted-foreground'
-                  }
-                >
-                  Explanation not available.
-                </p>
-              )}
-            </div>
-          </div>
+          <CorrectAnswerSection
+            sectionClassName={userChoice ? 'mt-4' : 'mt-6'}
+            correctChoice={correctChoice}
+            explanationMd={explanationMd}
+          />
 
           {shouldRenderOtherWrongChoices ? (
             <div className="mt-4">
