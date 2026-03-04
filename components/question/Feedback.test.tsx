@@ -390,12 +390,12 @@ describe('Feedback', () => {
     expect(html).toContain('Explanation not available.');
   });
 
-  it('preserves selected-choice badge rendering in correct-flow wrong-answer cards', () => {
+  it('does not render a your-answer badge in correct-flow wrong-answer cards', () => {
     const html = renderToStaticMarkup(
       <Feedback
         isCorrect={true}
         explanationMd="General explanation."
-        selectedChoiceId="choice-a"
+        selectedChoiceId="choice-b"
         choiceExplanations={[
           {
             choiceId: 'choice-a',
@@ -415,16 +415,8 @@ describe('Feedback', () => {
       />,
     );
 
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    const yourAnswerBadge = Array.from(doc.querySelectorAll('span')).find(
-      (span) => span.textContent?.trim() === 'Your answer',
-    );
-
     expect(html).toContain('Why other answers are wrong:');
-    expect(yourAnswerBadge).not.toBeUndefined();
-    expect(yourAnswerBadge?.getAttribute('class')).toContain(
-      'bg-destructive/10',
-    );
+    expect(html).not.toContain('bg-destructive/10');
   });
 
   it('renders your-answer choice details when selected wrong explanation is null', () => {

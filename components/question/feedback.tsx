@@ -126,11 +126,6 @@ export function Feedback({
                     <div className="flex items-start gap-1 text-sm text-muted-foreground">
                       <span className="shrink-0">{choice.displayLabel})</span>
                       <Markdown content={choice.textMd} />
-                      {choice.choiceId === selectedChoiceId ? (
-                        <span className="ml-1 shrink-0 rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
-                          Your answer
-                        </span>
-                      ) : null}
                     </div>
                     <Markdown
                       content={choice.explanationMd}
