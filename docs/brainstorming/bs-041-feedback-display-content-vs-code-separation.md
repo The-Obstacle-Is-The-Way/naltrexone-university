@@ -3,7 +3,7 @@
 **Date:** 2026-03-04
 **Triggered by:** Visual inspection of incorrect-answer feedback after DEBT-274 (PR #171) shipped
 **Scope:** Identify exactly what must change in MDX content files (question-generation repo) vs what must change in code (`feedback.tsx` / `Markdown.tsx`) to achieve consistent, non-redundant feedback display
-**Related:** [DEBT-274](../_archive/debt/debt-274-incorrect-answer-feedback-flow-reorder.md), [DEBT-275](../debt/debt-275-bs033-residual-open-items.md) (C2, C3, F1), [Question Format Spec](../content/question-format-spec.md)
+**Related:** [DEBT-274](../_archive/debt/debt-274-incorrect-answer-feedback-flow-reorder.md), [DEBT-275](../debt/debt-275-bs033-residual-open-items.md) (C2, C3, F1), [DEBT-276](../debt/debt-276-feedback-section-card-containment.md) (Part B), [Question Format Spec](../content/question-format-spec.md)
 
 ---
 
@@ -383,6 +383,11 @@ This applies to **both** flows:
 
 **Note:** The exact opacity values (`/20`, `/5`) may need tuning in the browser against both light and dark themes. The intent is a barely-visible tint — enough for color recognition when scanning, not bold color blocks. These are nested surfaces inside the outer `<Card>`, so lower opacities are appropriate.
 
+Token feasibility check against `app/globals.css`:
+- Light mode: `--success: 142 72% 29%`, `--destructive: 0 84.2% 48%`, `--card: 0 0% 100%`
+- Dark mode: `--success: 142 70% 42%`, `--destructive: 0 72% 51%`, `--card: 0 0% 7%`
+- Result: `bg-success/5` + `border-success/20` and `bg-destructive/5` + `border-destructive/20` are expected to remain low-emphasis but visible in both themes. Final opacity tuning should be done in-browser, but tokens are valid and theme-safe.
+
 ### Visual Mockup: Correct Flow
 
 ```
@@ -522,10 +527,20 @@ Same pattern for "Your answer" (with `border-destructive/20 bg-destructive/5`). 
 | File | Change |
 |------|--------|
 | `feedback.tsx` | Wrap "Your answer" content in destructive-accented card (lines 143-159), wrap "Correct answer" content in success-accented card (lines 88-112 for correct flow, lines 162-186 for incorrect flow) |
-| `Feedback.test.tsx` | Update existing class assertions; add tests for new card containment |
-| `theme-token-regression.test.tsx` | May need update if it asserts on feedback section structure |
+| `Feedback.test.tsx` | Add/adjust assertions for new section-card containment classes |
+| `theme-token-regression.test.tsx` | No assertion updates expected; keep as blast-radius guard for semantic token usage |
 
 **Not changing:** Wrong-answer card styling, badge styling, reference section, props/types, MDX content, any other files.
+
+### Validation Addendum (2026-03-04)
+
+Post-DEBT-274 source check against `components/question/feedback.tsx` confirms:
+- Correct-flow and incorrect-flow line references in this doc match current code structure (no stale pre-DEBT-274 references found).
+- Badge styling (`bg-success/15 text-success`, `bg-destructive/15 text-destructive`) is already correct and remains out of scope.
+- Reference section (`border-t border-border/40`, uppercase "Reference" label via utility classes) remains out of scope.
+- Text sizing (`text-sm` for feedback labels/body) remains unchanged; the card-containment change is structural, not a typography redesign.
+- Section spacing remains `mt-6` (first primary section) and `mt-4` (subsequent sections), with a new inner `mt-2` gap between each section label and its contained card.
+- Part A vs Part B boundary is clean: duplicated choice text is authored into MDX per-choice bullets and passed through parser as-is; renderer behavior is correct for spec-compliant content.
 
 ---
 

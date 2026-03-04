@@ -19,8 +19,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 8 future enhancements | P3 | — |
+| [DEBT-276](./debt-276-feedback-section-card-containment.md) | Feedback Section Card Containment — semantic section wrappers for correct/incorrect feedback hierarchy (Part B only) | P3 | — |
 
-**Next Debt ID:** DEBT-276
+**Next Debt ID:** DEBT-277
 
 ---
 
