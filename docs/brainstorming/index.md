@@ -28,7 +28,6 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | ID | Title | Status | Related Spec |
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
-| [BS-041](./bs-041-feedback-display-content-vs-code-separation.md) | Feedback Display — Content vs Code Separation (3 problems: redundant choice text, clinical pearl spacing, section visual hierarchy) | Active | [DEBT-275](../debt/debt-275-bs033-residual-open-items.md) (C2, C3, F1); [DEBT-276](../debt/debt-276-feedback-section-card-containment.md) (Part B: section card containment) |
 
 **Next Brainstorming ID:** BS-042
 
@@ -38,6 +37,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 | ID | Title | Outcome |
 |----|-------|---------|
+| [BS-041](../_archive/brainstorming/bs-041-feedback-display-content-vs-code-separation.md) | Feedback Display — Content vs Code Separation (3 problems: redundant choice text, clinical pearl spacing, section visual hierarchy) | Part B (P3 visual hierarchy) resolved by [DEBT-276](../_archive/debt/debt-276-feedback-section-card-containment.md) (PR #172). Part A (P1, P2) content-layer fixes remain tracked in [DEBT-275](../debt/debt-275-bs033-residual-open-items.md) (C2, C3). |
 | [BS-033](../_archive/brainstorming/bs-033-question-display-formatting-and-feedback-ux.md) | Question Display Formatting and Feedback UX — 22 Problems across question display and feedback rendering | All 22 component-layer fixes complete (BUG-152–159, PRs #141–#143). Residual content-layer and design items extracted to [DEBT-275](../debt/debt-275-bs033-residual-open-items.md). |
 | [BS-040](../_archive/brainstorming/bs-040-incorrect-answer-feedback-flow-redesign.md) | Incorrect Answer Feedback Flow Redesign — section ordering is identical for correct/incorrect, burying the user's mistake explanation | Promoted to [DEBT-274](../_archive/debt/debt-274-incorrect-answer-feedback-flow-reorder.md). Implemented in PR #171. |
 | [BS-039](../_archive/brainstorming/bs-039-choice-button-surface-hierarchy-and-hover-ux.md) | Choice Button Surface Hierarchy and Hover UX — inverted dark-mode layering in QuestionCard | Promoted to [DEBT-273](../_archive/debt/debt-273-choice-button-surface-hierarchy-fix.md). Implemented in PR #170. |

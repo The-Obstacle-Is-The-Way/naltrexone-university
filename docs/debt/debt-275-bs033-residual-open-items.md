@@ -3,7 +3,7 @@
 **Priority:** P3
 **Created:** 2026-03-04
 **Source:** [BS-033](../_archive/brainstorming/bs-033-question-display-formatting-and-feedback-ux.md)
-**Scope:** Content-layer fixes, one unresolved design decision, and future enhancement ideas extracted from BS-033 after all 22 component-layer fixes shipped (BUG-152–159, PRs #141–#143)
+**Scope:** Content-layer fixes, one unresolved design decision, and future enhancement ideas extracted from BS-033 after all 22 component-layer fixes shipped (BUG-152–159, PRs #141–#143). F8 resolved by DEBT-276 (PR #172).
 
 ---
 
@@ -18,7 +18,7 @@ BS-033 identified 22 problems across question display and feedback UX. All compo
 | Prose styling scope — global or contextual? | Global: `[&_p+p]:mt-3` on `<Markdown>` wrapper (`Markdown.tsx:16`) |
 | Correct answer display — show label + full text? | Yes: `correctChoice.displayLabel` + `textMd` shown in feedback (`feedback.tsx:89-100`) |
 | Text size — uniform or tiered? | Tiered: `text-base` for stem and choices, `text-sm` for feedback body/labels |
-| Feedback card color — badge-only or accent? | Badge-only: colored pill for Correct/Incorrect, neutral Card (`feedback.tsx:76-84`) |
+| Feedback card color — badge-only or accent? | Badge-only pill for verdict. Inner sections now have semantic containment cards: `border-success/20 bg-success/5` (correct answer), `border-destructive/20 bg-destructive/5` (your answer). Outer `<Card>` remains neutral. Settled by DEBT-276 (PR #172). |
 
 ---
 
@@ -98,7 +98,7 @@ These were identified during BS-033 analysis but never implemented. None are bug
 | F5 | Running score tracker | "3/5 correct so far" during practice sessions |
 | F6 | Post-submit question card collapse | Collapse question card after submission to reduce scroll to feedback |
 | F7 | Difficulty / topic tag display | Show difficulty level or topic tags on the question card |
-| F8 | "Why C is correct" summary card | Structural symmetry — correct answer gets same card treatment as wrong-answer cards |
+| ~~F8~~ | ~~"Why C is correct" summary card~~ | ~~Structural symmetry — correct answer gets same card treatment as wrong-answer cards~~ → **Resolved by DEBT-276 (PR #172).** Correct-answer section now wrapped in `border-success/20 bg-success/5` containment card in both flows. |
 
 ---
 
@@ -119,5 +119,5 @@ Hitting `/app/questions/<slug>` directly (no query params) shows dashboard revie
 | Settled design questions | 4 | None — already shipped |
 | Open design decision | 1 | Decide on all-or-nothing rule |
 | Content-layer fixes | 4 | Content authoring pass |
-| Future enhancements | 8 | Build when prioritized |
+| Future enhancements | 7 (F8 resolved by DEBT-276) | Build when prioritized |
 | Minor edge case | 1 | Fix if convenient |
