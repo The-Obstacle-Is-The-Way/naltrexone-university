@@ -185,8 +185,8 @@ describe('theme token regression', () => {
     }
   });
 
-  it('uses semantic border token for ChoiceButton selected state', async () => {
-    const html = renderToStaticMarkup(
+  it('uses semantic border tokens for ChoiceButton selected and unselected states', async () => {
+    const selectedHtml = renderToStaticMarkup(
       <ChoiceButton
         name="choices"
         label="A"
@@ -195,9 +195,39 @@ describe('theme token regression', () => {
         onClick={() => {}}
       />,
     );
+    const unselectedHtml = renderToStaticMarkup(
+      <ChoiceButton
+        name="choices"
+        label="B"
+        textMd="Answer B"
+        selected={false}
+        onClick={() => {}}
+      />,
+    );
 
-    expect(html).not.toContain('border-zinc-400');
-    expect(html).toContain('border-ring');
+    const selectedDoc = new DOMParser().parseFromString(
+      selectedHtml,
+      'text/html',
+    );
+    const selectedTokens = (
+      selectedDoc.querySelector('label')?.getAttribute('class') ?? ''
+    )
+      .split(/\s+/)
+      .filter(Boolean);
+    const unselectedDoc = new DOMParser().parseFromString(
+      unselectedHtml,
+      'text/html',
+    );
+    const unselectedTokens = (
+      unselectedDoc.querySelector('label')?.getAttribute('class') ?? ''
+    )
+      .split(/\s+/)
+      .filter(Boolean);
+
+    expect(selectedHtml).not.toContain('border-zinc-400');
+    expect(selectedTokens).toContain('border-ring');
+    expect(selectedTokens).toContain('bg-muted/40');
+    expect(unselectedTokens).toContain('border-border/60');
   });
 
   it('uses semantic success/destructive tokens in question feedback components', async () => {

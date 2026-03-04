@@ -67,13 +67,13 @@ When to use each opacity on `bg-muted` (or equivalent layer-2 token):
 | `/20` | Tint | Non-interactive row backgrounds inside cards | ~5% on page, ~8% inside card |
 | `/40` | Subtle hover | Row hover inside cards (where card bg already elevates) | ~8.6% inside card |
 | `/50` | Standard hover | Row hover on page background; tab-switch inactive hover | ~7.3% on page, ~9% inside card |
-| `/60` | Emphasized hover | Choice buttons and direct-action interactive targets | ~9.4% inside card |
+| `/60` | Emphasized hover | Exception-only emphasized hover (no current canonical consumers) | ~9.4% inside card |
 | `/80` | **RESERVED — do not use** | Legacy hover intensity slot (no current approved usage) | — |
 | `/100` | **RESERVED — do not use for hover** | Only for solid fills (e.g., tab-switch container `bg-muted`) | 11% |
 
 **Key insight:** The same opacity produces different perceived contrast depending on the parent surface. `/40` inside a card (7% base) looks similar to `/50` on page background (3.5% base). The scale above accounts for this.
 
-**Decision:** Hover opacity is context-dependent. Use `/40` inside cards, `/50` on page background, `/60` for direct-action targets (choices, chips).
+**Decision:** Hover opacity is context-dependent. Use `/40` inside cards (including I-3 choice buttons), `/50` on page background. `/60` is exception-only and requires explicit design review.
 
 **Light-mode caveat (Decision 12 resolved):** This scale was designed for dark mode where `--muted` at 11% lightness provides ample contrast headroom. In light mode, `--muted` at 96.1% lightness is only 3.9% from white — opacities below `/100` produce imperceptible fill contrast. The system intentionally uses two hover channels: background-fill deltas in dark mode, and non-fill cues (border/text/shadow) in light mode. Any new interactive row component MUST include at least one non-fill hover cue. Current I-1 rows use fill + focus-ring cues; no dedicated hover-border cue is applied.
 
@@ -238,31 +238,32 @@ focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 
 ### I-3: Choice Button
 
-Direct-action interactive target for answering questions. Needs stronger hover than navigation rows because users are making a deliberate selection.
+Direct-action interactive target for answering questions. Choices render inside `QuestionCard` (`bg-card`) and follow in-card row hierarchy.
 
 **Base state:**
 ```
-block w-full rounded-xl border border-border bg-background p-4 text-left shadow-sm transition-colors
+block w-full rounded-xl border border-border/60 bg-muted/20 p-4 text-left shadow-sm transition-colors
 focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]
 ```
 
 **Hover (enabled):**
 ```
-cursor-pointer hover:border-muted-foreground/30 hover:bg-muted/60
+cursor-pointer hover:bg-muted/40
 ```
 
-**Selected:** `border-ring`
+**Hover border (unselected only):**
+```
+hover:border-muted-foreground/30
+```
 
-> **Affordance concern:** The selected-but-not-submitted state is border-only — no background tint. Visual QA confirmed this can be hard to distinguish at a glance (the border shifts from 15% to 40% lightness, perceptible but subtle compared to post-submission states). If strengthened, add a light `bg-muted/20` without changing the border pattern.
+**Selected (neutral):** `border-ring bg-muted/40`
 
 **Correct:** `border-success bg-success/10 text-success`
 **Incorrect:** `border-destructive bg-destructive/10 text-destructive`
 **Disabled (no correctness):** `cursor-not-allowed opacity-50`
 **Disabled (wrong-unselected):** `opacity-50`
 
-**Design rationale:** `/60` provides a more definitive hover than row hover (`/40` or `/50`) because choices are direct-action targets — the user needs clear feedback that "this is what I'm about to select."
-
-**Note:** Uses `bg-background` (not `bg-card`), so it sits at layer 0. This is intentional — choice buttons are meant to feel like standalone interactive elements, not Card subsections.
+**Design rationale:** Choice buttons are rendered inside `QuestionCard` (`bg-card`) and follow in-card row hierarchy, not standalone page-surface hierarchy. `/40` hover produces the intended contrast step without overshooting the parent card layer.
 
 ### I-4: Filter Chip
 
@@ -708,7 +709,8 @@ Is the list inside a <Card> container?
 What is the parent surface?
 ├── Inside a Card (bg-card, ~7% dark) → hover:bg-muted/40
 ├── On page background (bg-background, ~3.5% dark) → hover:bg-muted/50
-├── Direct-action target (choice, chip) → hover:bg-muted/60
+├── Choice button inside card (I-3) → hover:bg-muted/40
+├── `/60` hover tier → exception-only (requires explicit design review)
 └── Tab-switch inactive → hover:bg-muted/50 (inside bg-muted container)
 
 Token (neutral surface fills): Use `muted`.
@@ -1198,7 +1200,7 @@ Compact lookup for code reviews and implementation.
 | S-4 | Modal Dialog | — | `rounded-2xl` | `border-border` |
 | I-1 | Row in Card | `hover:bg-muted/40` | `rounded-xl` | `border-border/60` |
 | I-2 | Standalone Row | `hover:bg-muted/50` | `rounded-2xl` | `border-border` |
-| I-3 | Choice Button | `hover:bg-muted/60` | `rounded-xl` | `border-border` |
+| I-3 | Choice Button | `hover:bg-muted/40` | `rounded-xl` | `border-border/60` |
 | I-4 | Filter Chip | `hover:bg-muted/50` | `rounded-full` | `border-border` |
 | I-5 | Tab Switch Item | `hover:bg-muted/50` | `rounded-md` | — |
 | I-6 | Icon Toggle | `hover:text-foreground` | — | — |

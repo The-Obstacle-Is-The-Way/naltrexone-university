@@ -87,6 +87,7 @@ Before merging to `main` (production deploy):
 - [ ] `pnpm build` passes
 - [ ] CodeRabbit review completed and feedback addressed
 - [ ] If schema changed: migration tested on local + preview DB first
+- [ ] If schema changed: `pnpm db:migrate` run against target Neon branch **immediately after deploy** (forgetting this causes silent write failures — see [Known Gotchas](./deployment-environments.md#missing-database-migration-causes-silent-write-failures))
 - [ ] If content changed: seed tested on local + preview DB first
 
 ---

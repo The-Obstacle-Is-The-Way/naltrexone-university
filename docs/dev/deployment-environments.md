@@ -1,7 +1,7 @@
 # Deployment Environments: Source of Truth
 
-**Last Verified:** 2026-02-22 (Sentry DSN added to all Vercel environments, CRON_SECRET added to Development, local .env.local DATABASE_URL fixed to dev branch)
-**Last Reviewed (docs/code):** 2026-02-22 (all env vars verified consistent across Production, Preview, Development, and localhost)
+**Last Verified:** 2026-03-04 (migration 0014 smoke test passed end-to-end on Preview/Dev; write paths confirmed healthy)
+**Last Reviewed (docs/code):** 2026-03-04 (env + migration incident docs reconciled with post-fix smoke evidence)
 
 This document is the single source of truth for how Clerk, Stripe, Neon, and Vercel are configured across all environments.
 
@@ -193,6 +193,29 @@ All of these are confirmed working:
 
 ---
 
+## Post-Migration Smoke Verification (2026-03-04)
+
+After the 0014 migration fix (`claimed_at` on `idempotency_keys`), a full 7-phase smoke run on Preview/Dev confirmed healthy behavior across core user flows.
+
+**Result:** PASS (no blocking issues)
+
+- Quick Practice submit path healthy (correct + incorrect flows, explanations, next question)
+- Tutor session lifecycle healthy (start → answer with feedback → end summary)
+- Exam session lifecycle healthy (start → answer without immediate feedback → review → end summary)
+- Bookmark add/remove healthy
+- Dashboard, History, Bookmarks, Billing loaded with correct data
+- No `Internal error` banners observed during writes
+- No console errors beyond expected Clerk dev-key warning
+
+**Write operation coverage (observed):**
+- Submit answer: 6 successful writes
+- Bookmark add/remove: 2 successful writes
+- Session start/end (Tutor + Exam): 4 successful writes
+
+This confirms that the migration issue documented below ("Missing Database Migration Causes Silent Write Failures") is resolved for the tested environment.
+
+---
+
 ## Known Gotchas (Learned the Hard Way)
 
 ### Vercel Deployment Protection Blocks Webhooks
@@ -223,6 +246,52 @@ See [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md) Issu
 **`NEXT_PUBLIC_APP_URL` for Preview** must be set to the stable branch URL (e.g., `https://naltrexone-university-git-dev-john-h-jungs-projects.vercel.app`), not `localhost:3000`. This URL is used by the billing controller to construct Stripe `success_url` and `cancel_url`.
 
 See [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md) Issue 3.
+
+### Missing Database Migration Causes Silent Write Failures
+
+When a PR adds a new column to `db/schema.ts` and the migration (`pnpm db:migrate`) is not run against the target Neon branch, **all write operations touching that table silently fail**. The app appears fully functional — auth works, pages load, questions render, filter counts display — but every INSERT/UPDATE that includes the new column crashes with a Postgres `column "X" does not exist` error.
+
+**Symptoms:**
+- UI shows generic "Internal error" banner on submit/start actions
+- Reads work perfectly (SELECT queries don't reference the new column)
+- Auth works (Clerk session is fine)
+- The app looks completely normal until you try to write
+
+**Diagnosis:**
+- Vercel Function Logs → filter for `level:50` (Pino ERROR) → expand the row
+- Error will show: `column "X" of relation "Y" does not exist`
+- Stack trace points to `handleError` → `Unhandled error in controller`
+
+**Root cause:** Vercel deploys code only. Drizzle generates the INSERT with all schema columns, but the database hasn't been altered yet. Postgres rejects the query, `handleError()` catches the non-`ApplicationError` exception, logs the real error, and returns `err('INTERNAL_ERROR', 'Internal error')` to the client.
+
+**Fix:** Run the migration against the correct Neon branch:
+```bash
+# For dev/preview:
+pnpm db:migrate
+# For production (double-check the target!):
+DATABASE_URL="$(neonctl connection-string main --project-id summer-math-94727887 --pooled)" pnpm db:migrate
+```
+
+**Prevention:** After merging any PR that touches `db/schema.ts` or adds files to `db/migrations/`, immediately run `pnpm db:migrate` against the affected Neon branch. The pre-deployment checklist in [deployment-procedure.md](./deployment-procedure.md) covers this, but it's easy to forget because the deploy itself succeeds and the app loads normally.
+
+**Incident:** 2026-03-03 — PR #169 added `claimed_at` column to `idempotency_keys`. Migration 0014 was generated but never applied to the `dev` Neon branch. All server actions using idempotency (submit answer, start session) returned "Internal error" on both dev preview and main preview deployments. Fixed by running `pnpm db:migrate`.
+
+### Intermittent `_rsc` Prefetch 503s on Vercel Preview (Usually Non-Blocking)
+
+During post-fix smoke testing (2026-03-04), intermittent `503` responses were observed on Next.js `_rsc` prefetch/navigation requests in Preview.
+
+**Observed pattern:**
+- Request fails as background prefetch (`503`)
+- Immediate retry succeeds (`200`)
+- No visible page failure or user-facing error state
+
+**Interpretation:** Typically Vercel Preview cold-start behavior for serverless functions, not an application regression.
+
+**Escalate only if one of these is true:**
+- Foreground page request (not prefetch) fails persistently
+- User-visible error banners appear
+- Same route repeatedly fails without recovery
+- Production environment shows the same behavior
 
 ### Clerk Development Mode Re-Authentication After Stripe Checkout
 
