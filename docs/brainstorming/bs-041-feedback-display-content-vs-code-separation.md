@@ -215,32 +215,143 @@ Add a top border or background tint to "Your answer" and "Correct answer" sectio
 
 ---
 
-## Impact on Question-Generation Repo
+## PART A: MDX Content Fixes (Question-Generation Repo)
 
-The MDX content fixes (P1 and P2) need to happen in the **separate question-generation repo**, not in this app repo. The changes are:
+These are **definite fixes** — no open decisions. The question-format-spec already defines the correct format; the content just needs to match it. Apply these when batch-editing the raw markdown files in `**/recall.md` and `**/vignettes.md`.
 
-1. **Update authoring guide** (`CLAUDE.md` in the question repo, or equivalent): Explicit rule that wrong-answer bullets must NOT repeat the choice text. Example:
-   ```markdown
-   # WRONG (current pattern in many questions)
-   - A) Increase the diazepam dose to achieve deeper sedation: Increasing the dose...
+### Fix 1: Remove Redundant Choice Text from Wrong-Answer Bullets (P1)
 
-   # CORRECT (spec-compliant)
-   - A) Increasing the dose of a medication that may be causing the delirium...
-   ```
+**What to look for:** Each bullet under `**Why other answers are wrong:**` that starts by repeating the choice text from `## Choices`, followed by a colon, then the actual explanation.
 
-2. **Bulk fix existing content:** Audit all `**/recall.md` and `**/vignettes.md` files and remove the redundant choice text prefix from wrong-answer bullets.
+**Pattern to find:**
+```markdown
+**Why other answers are wrong:**
+- A) [SAME TEXT AS CHOICE A]: [actual explanation starts here]
+- B) [SAME TEXT AS CHOICE B]: [actual explanation starts here]
+```
 
-3. **Add blank lines before `**Clinical pearl:**`** in all explanation sections where missing.
+**What to change:** Remove the repeated choice text and the colon. Keep only the explanation. The UI already displays the choice text from the `## Choices` section — the explanation should NOT repeat it.
 
-4. **Re-import + re-seed** after content fixes: `pnpm content:import:drafts -- --status published && pnpm db:seed`
+**Before (wrong — current pattern in many questions):**
+```markdown
+## Choices
+
+- A) Increase the diazepam dose to achieve deeper sedation for the persistent delirium
+- B) Add haloperidol as monotherapy to treat the hallucinations and agitation
+- C) Start dexmedetomidine to replace benzodiazepines for the ongoing delirium
+
+## Explanation
+
+...
+
+**Why other answers are wrong:**
+- A) Increase the diazepam dose to achieve deeper sedation for the persistent delirium: Increasing the dose of a medication that may be causing the delirium would worsen the patient's condition.
+- B) Add haloperidol as monotherapy to treat the hallucinations and agitation: The guideline (Recommendation VI.20) states that antipsychotics should not be used as monotherapy...
+- C) Start dexmedetomidine to replace benzodiazepines for the ongoing delirium: While dexmedetomidine is an option for resistant alcohol withdrawal in the ICU...
+```
+
+**After (correct — spec-compliant):**
+```markdown
+**Why other answers are wrong:**
+- A) Increasing the dose of a medication that may be causing the delirium would worsen the patient's condition.
+- B) The guideline (Recommendation VI.20) states that antipsychotics should not be used as monotherapy...
+- C) While dexmedetomidine is an option for resistant alcohol withdrawal in the ICU...
+```
+
+**Why this matters:** The UI renders `displayLabel + textMd` (from `## Choices`) **and then** `explanationMd` (from this bullet) in sequence. If the bullet starts with the choice text, it appears twice on screen.
+
+**Scope:** All questions that use the `[choice text]: [explanation]` pattern. Check every bullet under every `**Why other answers are wrong:**` section.
+
+**Tip for batch editing:** The redundant prefix always ends with a colon (`:`) at the boundary between the repeated choice text and the actual explanation. Look for the colon that separates the two, delete everything before and including it, then capitalize the first letter of the remaining explanation.
 
 ---
 
-## Open Questions
+### Fix 2: Ensure Blank Line Before Clinical Pearl (P2)
 
-1. **P3 visual approach:** Which card treatment for "Your answer" and "Correct answer" sections? (Option A, B, or C above)
-2. **P2 future enhancement:** Should the clinical pearl callout (DEBT-275 F1) be prioritized, or is the blank-line MDX fix sufficient for now?
-3. **Bulk content fix scope:** Should P1 and P2 be fixed across all ~958 questions at once, or incrementally by source/chapter?
+**What to look for:** `**Clinical pearl:**` appearing on the line immediately after the explanation paragraph, with no blank line between them.
+
+**Pattern to find (wrong):**
+```markdown
+...the guideline-directed next step is to assess for medication-related delirium and adjust dosing as indicated.
+**Clinical pearl:** The guideline (Recommendation VI.17) warns that...
+```
+
+**What to change:** Add one blank line before `**Clinical pearl:**`.
+
+**After (correct — spec-compliant):**
+```markdown
+...the guideline-directed next step is to assess for medication-related delirium and adjust dosing as indicated.
+
+**Clinical pearl:** The guideline (Recommendation VI.17) warns that...
+```
+
+**Why this matters:** Without the blank line, markdown renders the clinical pearl as part of the same paragraph. With the blank line, the `[&_p+p]:mt-3` CSS in `Markdown.tsx` adds visible spacing between paragraphs.
+
+**Note:** Some questions already have the blank line (e.g., `asam-alcohol-withdrawal-2020-012`). Only fix the ones that are missing it.
+
+---
+
+### Fix 3: Ensure Blank Line Before "Why Other Answers Are Wrong" (minor)
+
+**What to look for:** `**Why other answers are wrong:**` appearing immediately after the clinical pearl with no blank line.
+
+**Pattern to find (wrong):**
+```markdown
+**Clinical pearl:** Some pearl text here.
+**Why other answers are wrong:**
+```
+
+**What to change:** Ensure a blank line before `**Why other answers are wrong:**`.
+
+**After (correct):**
+```markdown
+**Clinical pearl:** Some pearl text here.
+
+**Why other answers are wrong:**
+```
+
+**Note:** The parser handles this regardless of blank lines, but consistent spacing keeps the raw MDX readable.
+
+---
+
+### MDX Batch-Fix Checklist (per question)
+
+Use this checklist when editing each question in `**/recall.md` and `**/vignettes.md`:
+
+- [ ] **Fix 1:** Under `**Why other answers are wrong:**`, does each bullet start by repeating the choice text followed by a colon? → Remove the prefix, keep only the explanation
+- [ ] **Fix 2:** Is there a blank line before `**Clinical pearl:**`? → Add if missing
+- [ ] **Fix 3:** Is there a blank line before `**Why other answers are wrong:**`? → Add if missing
+
+### After all MDX fixes
+
+Re-import and re-seed to push content changes to the database:
+
+```bash
+pnpm content:import:drafts -- --status published && pnpm db:seed
+```
+
+---
+
+## PART B: Code Changes (Open Questions — This App Repo)
+
+These require design decisions before implementation. None are blocking the MDX fixes above.
+
+### Open Question 1: Section Visual Hierarchy (P3)
+
+"Your answer" and "Correct answer" render as flat text, while "Why other answers are wrong" cards get `rounded-xl border border-border/60 bg-background/50 p-3`. Should all sections have consistent card treatment?
+
+**Options:**
+- **A — Uniform cards:** Same card style for all sections
+- **B — Color-coded cards:** destructive accent for "Your answer", success accent for "Correct answer", neutral for others
+- **C — Subtle separators:** Top border or background tint, not full cards
+
+**Status:** Decision needed. No code change until decided.
+
+### Open Question 2: Clinical Pearl Styled Callout (DEBT-275 F1)
+
+Even with the blank-line MDX fix, the clinical pearl is just bold text in a paragraph. Should we detect `**Clinical pearl:**` in the `<Markdown>` component and render it as a styled callout box?
+
+**Status:** Deferred. The blank-line MDX fix (Part A, Fix 2) is sufficient for now. Revisit when prioritizing DEBT-275 future enhancements.
 
 ---
 
@@ -249,3 +360,4 @@ The MDX content fixes (P1 and P2) need to happen in the **separate question-gene
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-03-04 | Created BS-041 | Source-of-truth analysis needed to separate MDX content fixes from code fixes after DEBT-274 shipped |
+| 2026-03-04 | Clinical pearl callout (F1) deferred | Blank-line MDX fix is sufficient for visual separation; styled callout is a future enhancement |
