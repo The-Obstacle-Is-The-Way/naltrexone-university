@@ -48,9 +48,8 @@ test('retains selected treatment while hovered', async () => {
   );
 
   const wrapperLabel = document.querySelector('label');
-  if (!wrapperLabel) {
-    throw new Error('Expected wrapper label to exist.');
-  }
+  expect(wrapperLabel).not.toBeNull();
+  if (!wrapperLabel) return;
 
   await screen.getByText('Choice A').hover();
 

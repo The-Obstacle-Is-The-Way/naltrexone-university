@@ -185,7 +185,7 @@ describe('theme token regression', () => {
     }
   });
 
-  it('uses semantic border token for ChoiceButton selected state', async () => {
+  it('uses semantic border tokens for ChoiceButton selected and unselected states', async () => {
     const selectedHtml = renderToStaticMarkup(
       <ChoiceButton
         name="choices"

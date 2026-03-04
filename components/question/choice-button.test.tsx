@@ -233,8 +233,12 @@ describe('ChoiceButton', () => {
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const wrapperLabel = doc.querySelector('label');
+    const wrapperClassTokens = (wrapperLabel?.getAttribute('class') ?? '')
+      .split(/\s+/)
+      .filter(Boolean);
 
-    expect(wrapperLabel?.getAttribute('class')).toContain('bg-muted/20');
+    expect(wrapperClassTokens).toContain('bg-muted/20');
+    expect(wrapperClassTokens).not.toContain('bg-muted/40');
   });
 
   it('does not apply selected tint when correctness is set', () => {
