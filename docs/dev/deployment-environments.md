@@ -224,6 +224,35 @@ See [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md) Issu
 
 See [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md) Issue 3.
 
+### Missing Database Migration Causes Silent Write Failures
+
+When a PR adds a new column to `db/schema.ts` and the migration (`pnpm db:migrate`) is not run against the target Neon branch, **all write operations touching that table silently fail**. The app appears fully functional — auth works, pages load, questions render, filter counts display — but every INSERT/UPDATE that includes the new column crashes with a Postgres `column "X" does not exist` error.
+
+**Symptoms:**
+- UI shows generic "Internal error" banner on submit/start actions
+- Reads work perfectly (SELECT queries don't reference the new column)
+- Auth works (Clerk session is fine)
+- The app looks completely normal until you try to write
+
+**Diagnosis:**
+- Vercel Function Logs → filter for `level:50` (Pino ERROR) → expand the row
+- Error will show: `column "X" of relation "Y" does not exist`
+- Stack trace points to `handleError` → `Unhandled error in controller`
+
+**Root cause:** Vercel deploys code only. Drizzle generates the INSERT with all schema columns, but the database hasn't been altered yet. Postgres rejects the query, `handleError()` catches the non-`ApplicationError` exception, logs the real error, and returns `err('INTERNAL_ERROR', 'Internal error')` to the client.
+
+**Fix:** Run the migration against the correct Neon branch:
+```bash
+# For dev/preview:
+pnpm db:migrate
+# For production (double-check the target!):
+DATABASE_URL="$(neonctl connection-string main --project-id summer-math-94727887 --pooled)" pnpm db:migrate
+```
+
+**Prevention:** After merging any PR that touches `db/schema.ts` or adds files to `db/migrations/`, immediately run `pnpm db:migrate` against the affected Neon branch. The pre-deployment checklist in [deployment-procedure.md](./deployment-procedure.md) covers this, but it's easy to forget because the deploy itself succeeds and the app loads normally.
+
+**Incident:** 2026-03-03 — PR #169 added `claimed_at` column to `idempotency_keys`. Migration 0014 was generated but never applied to the `dev` Neon branch. All server actions using idempotency (submit answer, start session) returned "Internal error" on both dev preview and main preview deployments. Fixed by running `pnpm db:migrate`.
+
 ### Clerk Development Mode Re-Authentication After Stripe Checkout
 
 In Clerk Development mode, sessions use `__clerk_db_jwt` URL parameters (not HTTP-only cookies). When Stripe redirects back to `/checkout/success`, it doesn't carry the `__clerk_db_jwt` param, so Clerk's middleware sees an unauthenticated request and redirects to sign-in.

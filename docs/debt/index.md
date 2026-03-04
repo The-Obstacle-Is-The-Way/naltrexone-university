@@ -18,8 +18,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | GitHub Issue |
 |----|-------|----------|--------------|
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
+| [DEBT-273](./debt-273-choice-button-surface-hierarchy-fix.md) | Choice Button Surface Hierarchy Fix — elevate `bg-background` → `bg-muted/20` + smooth hover in dark mode | P2 | — |
 
-**Next Debt ID:** DEBT-273
+**Next Debt ID:** DEBT-274
 
 ---
 
