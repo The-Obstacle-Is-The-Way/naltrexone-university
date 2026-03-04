@@ -3,6 +3,7 @@
 **Priority:** P2
 **Created:** 2026-03-04
 **Source:** [BS-040](../brainstorming/bs-040-incorrect-answer-feedback-flow-redesign.md)
+**Resolved:** 2026-03-04 | [PR #171](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/171)
 **Scope:** Primary code change in `components/question/feedback.tsx`, with synchronized test updates in `components/question/Feedback.test.tsx`
 
 ---

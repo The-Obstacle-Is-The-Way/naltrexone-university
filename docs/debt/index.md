@@ -18,7 +18,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | GitHub Issue |
 |----|-------|----------|--------------|
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
-| [DEBT-274](./debt-274-incorrect-answer-feedback-flow-reorder.md) | Incorrect Answer Feedback Flow Reorder — promote user's wrong answer to top of feedback, correct answer second | P2 | — |
 
 **Next Debt ID:** DEBT-275
 
@@ -28,6 +27,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-274](../_archive/debt/debt-274-incorrect-answer-feedback-flow-reorder.md) | Incorrect Answer Feedback Flow Reorder — promote user's wrong answer to top of feedback, correct answer second | P2 | 2026-03-04 | [#171](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/171) |
 | [DEBT-273](../_archive/debt/debt-273-choice-button-surface-hierarchy-fix.md) | Choice Button Surface Hierarchy Fix — elevate `bg-background` → `bg-muted/20` + smooth hover in dark mode | P2 | 2026-03-04 | [#170](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/170) |
 | [DEBT-270](../_archive/debt/debt-270-integration-test-god-file-split.md) | Integration Test God File Split — split `repositories.integration.test.ts` (3,004 lines) into 9 domain-scoped files + shared helpers | P3 | 2026-03-03 | [#169](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/169) |
 | [DEBT-271](../_archive/debt/debt-271-structural-ast-test-brittleness.md) | Structural/AST-Coupled Test Brittleness — removed remaining AST-coupled helper assertion from practice-session repository tests | P2 | 2026-03-03 | [#168](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/168) |
