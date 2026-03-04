@@ -192,3 +192,88 @@ The Pattern Registry I-3 rationale should be updated to acknowledge that choices
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-03-03 | Created BS-039 | Visual inspection revealed inverted surface hierarchy in Quick Practice choice buttons |
+
+## Visual Verification (Playwright, dark mode)
+
+**Capture timestamp:** 2026-03-04T00:54:23Z (local run)  
+**Artifacts:** `audit-screenshots/bs-039-visual-verification-2026-03-03/`
+
+### Screenshot set reviewed
+
+- `quick-practice-default.png`
+- `quick-practice-choice-hover.png`
+- `quick-practice-choice-selected.png`
+- `quick-practice-after-submit.png`
+- `dashboard-default.png`
+- `dashboard-session-row-hover.png`
+- `dashboard-activity-row-hover.png`
+- `history-sessions-default.png`
+- `history-sessions-row-hover.png`
+- `history-questions-default.png`
+- `bookmarks-default.png`
+- `dashboard-activity-review-debug.png` (Correct state)
+- `dashboard-activity-review-incorrect-debug.png` (Incorrect state)
+- Style snapshots: `style-metrics.json`, `dashboard-review-style-metrics.json`
+
+### Surface findings from rendered dark mode
+
+1. **Choice row base is visibly below its parent card surface (inverted hierarchy).**  
+   In Quick Practice default state, measured backgrounds:
+   - Question card: `rgb(18, 18, 18)`
+   - Choice row: `rgb(9, 9, 9)`
+
+   This confirms BS-039's core issue: choices read as darker cutouts inside the card.
+
+2. **Dashboard + History rows use the intended stacked progression.**  
+   Measured backgrounds:
+   - Row base (`bg-muted/20`): `oklab(... / 0.2)`
+   - Row hover (`hover:bg-muted/40`): `oklab(... / 0.4)`
+
+   This progression is consistent across Dashboard and History Sessions, and visually reads correctly.
+
+3. **Choice hover is perceptually weak/unstable in the observed Quick Practice render.**  
+   Captured hover style remained effectively identical to default in this run (`rgb(9, 9, 9)`), so the hover affordance is not reliably legible in practice compared to dashboard/history rows.
+
+4. **Letter badge contrast is high relative to the row base.**  
+   In Quick Practice default:
+   - Row base: `rgb(9, 9, 9)`
+   - Badge: `rgb(28, 28, 28)`
+
+   Badge remains the brightest local element and appears slightly detached from the row surface.
+
+5. **Correct/Incorrect states render with clear semantic contrast in review-mode QuestionCard.**  
+   From dashboard-linked review captures:
+   - Correct row: success tint `bg-success/10`, success border/text
+   - Incorrect row: destructive tint `bg-destructive/10`, destructive border/text
+
+   These post-answer semantic states are visually strong and should be preserved.
+
+### Additional inconsistencies found (not fully covered in original BS-039)
+
+1. **Quick Practice submit instability in local run:** after submit, UI often shows an `Internal error` banner (`quick-practice-after-submit.png`) instead of entering the normal feedback card state.
+2. **History session review route inconsistency:** one captured session-review navigation reached a `Question` header but rendered no QuestionCard content (`session-review-question.png`, style metrics `null`).
+3. **Bookmarks currently dominated by unavailable items:** `bookmarks-default.png` shows unavailable rows with `Remove` but no `Review` link, preventing Bookmarks → QuestionCard verification in this run.
+4. **History Questions tab also surfaced unavailable-only rows in this dataset (`history-questions-default.png`), limiting hover/row behavior comparison for active review links.**
+
+### Option evaluation (A-D) after verification
+
+- **Option A (`bg-muted/20` + `hover:bg-muted/40`) remains the strongest fix.**  
+  It matches the already-successful Dashboard/History row pattern and resolves the observed card-vs-choice inversion.
+- **Option B (remove Card wrapper) is still too broad** for a primarily surface-token issue.
+- **Option C (`bg-card`) still risks insufficient separation** at rest.
+- **Option D (accent tint) still introduces unnecessary token complexity** for this use case.
+
+### Refined recommendation
+
+Proceed with **Option A**, plus a small state-tuning follow-up:
+
+1. Change choice base to `bg-muted/20` and hover to `hover:bg-muted/40`.
+2. Align border with row convention: `border-border/60`.
+3. Revisit selected neutral state after base change (currently `bg-muted/20`), likely promoting selected to a stronger surface (e.g., `bg-muted/40`) while preserving `border-ring`.
+4. Keep success/destructive correctness states unchanged (they render clearly in dark mode).
+
+### Decision update
+
+| Date | Decision | Rationale |
+|------|----------|-----------|
+| 2026-03-03 | Option A remains recommended after visual verification | Live dark-mode capture confirms inverted Quick Practice hierarchy and validates dashboard/history row pattern as the stable reference |
