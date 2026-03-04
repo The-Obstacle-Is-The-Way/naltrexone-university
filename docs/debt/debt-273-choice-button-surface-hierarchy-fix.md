@@ -134,7 +134,7 @@ Required assertion updates:
   - `:151` change expected hover token from `hover:bg-muted/60` → `hover:bg-muted/40`
   - `:220` change selected neutral expectation from `bg-muted/20` → `bg-muted/40`
   - `:238` invert expectation: unselected should now **contain** `bg-muted/20` (base), not exclude it
-  - `:257` remove/replace `not.toContain('bg-muted/20')` in correctness case (base class now always present); assert semantic override (`bg-success/10`) and absence of selected-neutral token (`bg-muted/40`) instead
+  - `:257` replace `not.toContain('bg-muted/20')` in correctness case — `twMerge` already strips `bg-muted/20` when `bg-success/10` is present (same `bg-*` conflict group), so the existing assertion still passes, but it's fragile and tests an implementation detail. Replace with semantically meaningful assertions: assert `bg-success/10` is present and `bg-muted/40` (selected-neutral token) is absent.
   - Add explicit expectations that wrapper base includes `border-border/60` + `bg-muted/20`
 - `components/question/ChoiceButton.browser.spec.tsx`
   - Add a selected-hover regression test ensuring selected rows retain selected treatment while hovered (do not collapse to unselected-hover appearance)
