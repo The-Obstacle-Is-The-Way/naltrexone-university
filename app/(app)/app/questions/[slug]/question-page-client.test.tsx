@@ -933,6 +933,47 @@ describe('QuestionView', () => {
     expect(bottomBar.textContent).toContain('Back to History');
   });
 
+  it('does not render a your-answer section for session review unanswered hydration', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        {...createBaseProps()}
+        mode="review"
+        origin="history"
+        sessionId="session_123"
+        question={{
+          questionId: 'q2',
+          slug: 'q2',
+          stemMd: 'Question stem',
+          difficulty: 'easy',
+          choices: [
+            { id: 'c1', label: 'A', textMd: 'Choice A' },
+            { id: 'c2', label: 'B', textMd: 'Choice B' },
+          ],
+        }}
+        sessionNavigation={sharedSessionNavigation}
+        submitResult={null}
+        sessionUnansweredReveal={{
+          correctChoiceId: 'c2',
+          explanationMd: 'Explanation for unanswered review',
+          referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
+          choiceExplanations: [],
+        }}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const bottomBar = getBottomActionBar(doc);
+    if (!bottomBar) throw new Error('Expected bottom action bar');
+
+    expect(html).toContain('Incorrect');
+    expect(html).toContain('Explanation for unanswered review');
+    expect(html).not.toContain('Your answer');
+    expect(html).toContain(
+      'You did not answer this question during this session.',
+    );
+    expect(bottomBar.textContent).toContain('Try Again');
+  });
+
   it('renders explicit hydration error fallback with Answer as new action', () => {
     const html = renderToStaticMarkup(
       <QuestionView
