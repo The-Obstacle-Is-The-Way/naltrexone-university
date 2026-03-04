@@ -204,7 +204,7 @@ Add a top border or background tint to "Your answer" and "Correct answer" sectio
 | P1: Redundant choice text prefix | MDX files in question-generation repo | Content | C3 |
 | P2: Clinical pearl blank line | MDX files in question-generation repo | Content | C2 |
 | P2 (future): Clinical pearl callout | `Markdown.tsx` or `feedback.tsx` | Code | F1 |
-| P3: Section visual hierarchy (both flows) | `feedback.tsx` | Code | — (new) |
+| P3: Section visual hierarchy (both flows) | `feedback.tsx` | Code — **Option B decided** (semantic color-coded cards) | — (new) |
 
 ### What does NOT need to change in MDX
 
@@ -342,26 +342,200 @@ pnpm content:import:drafts -- --status published && pnpm db:seed
 
 ---
 
-## PART B: Code Changes (Open Questions — This App Repo)
+## PART B: Code Change — Unified Section Cards (P3)
 
-These require design decisions before implementation. None are blocking the MDX fixes above.
+### The Problem (First Principles)
 
-### Open Question 1: Section Visual Hierarchy — Unified Across Both Flows (P3)
+The feedback display has an **inverted visual hierarchy**. The wrong-answer cards — the *least* important content — get full visual containment (`rounded-xl border bg-background/50 p-3`), while the *most* important content ("Your answer" explanation, "Correct answer" + explanation + clinical pearl) floats as flat, uncontained text. The learner's eye is drawn to the contained cards rather than the primary teaching content.
 
-In **both** the correct and incorrect flows, "Correct answer" (and "Your answer" in the incorrect flow) render as flat text while wrong-answer cards get `rounded-xl border border-border/60 bg-background/50 p-3`. Should all sections have consistent card treatment?
+This applies to **both** flows:
 
-**Options:**
-- **A — Uniform cards:** Same card style for all sections in both flows
-- **B — Color-coded cards:** destructive accent for "Your answer", success accent for "Correct answer", neutral for others — applied consistently in both flows
-- **C — Subtle separators:** Top border or background tint, not full cards
+| Flow | Primary content (flat, uncontained) | Supplementary content (contained cards) |
+|------|-------------------------------------|----------------------------------------|
+| Correct | "Correct answer" + explanation + clinical pearl | Wrong-answer cards |
+| Incorrect | "Your answer" + explanation; "Correct answer" + explanation + clinical pearl | Other wrong-answer cards |
 
-**Status:** Decision needed. No code change until decided. Whichever approach is chosen must be applied to both flows.
+**Incorrect flow is worse.** Two primary sections ("Your answer" and "Correct answer") need to be quickly distinguishable, but they're separated only by a bold label and a `mt-4` gap. The user has to carefully *read* to find the boundary — there's no visual boundary to *scan*. Meanwhile, the wrong-answer cards at the bottom feel like the most structured, "finished" part of the UI.
 
-### Open Question 2: Clinical Pearl Styled Callout (DEBT-275 F1)
+**The redundant text in wrong-answer cards compounds the hierarchy problem.** Each card shows the choice label (e.g., "C) Increase the diazepam dose…") and then the explanation paragraph opens by repeating that exact string before a colon. This doubles reading burden and looks like a data-formatting bug — another signal that the wrong-answer section got more structural attention than the primary teaching content. (See Part A, Fix 1 for the MDX-side fix.)
 
-Even with the blank-line MDX fix, the clinical pearl is just bold text in a paragraph. Should we detect `**Clinical pearl:**` in the `<Markdown>` component and render it as a styled callout box?
+### Decision: Semantic Color-Coded Cards (Option B)
 
-**Status:** Deferred. The blank-line MDX fix (Part A, Fix 2) is sufficient for now. Revisit when prioritizing DEBT-275 future enhancements.
+**Why not Option A (uniform cards)?** Fixes containment but doesn't help scanning. On a long feedback card, the learner needs to quickly locate "my answer" vs "correct answer" vs "other". Small text labels are easy to miss — color on the card itself is a faster visual cue.
+
+**Why not Option C (subtle separators)?** A top border or background tint without full card treatment doesn't create the "unit of meaning" that containment provides. Half-measure that doesn't solve the root problem.
+
+**Why Option B?**
+1. Every content section gets card containment — no more floating text
+2. Semantic color provides quick-scan navigation without reading labels
+3. The badge at the top already uses `success`/`destructive` colors; the section cards echo this, creating a cohesive color language
+4. The codebase already uses these tokens at similar opacities: choice buttons (`border-success bg-success/10`), notifications (`border-success/30 bg-success/10`), error card (`border-destructive/30 bg-destructive/10`). This is an established pattern, not a new concept.
+5. Section labels ("Your answer", "Correct answer", "Why other answers are wrong:") remain as free-floating headings above their cards — the labels provide structure, the cards provide containment and color
+6. **Learning arc narrative:** In the incorrect flow, the color shift from red (Your answer) → green (Correct answer) → neutral (Other wrong answers) visually narrates the pedagogical arc: "here's your mistake → here's what's right → here's supplementary context." This is especially valuable in a medical education tool where quick error-recognition-to-correction flow is the core learning mechanism.
+
+### Card Styles
+
+| Section | Card className | When |
+|---------|---------------|------|
+| Your answer | `rounded-xl border border-destructive/20 bg-destructive/5 p-3` | Incorrect flow only |
+| Correct answer | `rounded-xl border border-success/20 bg-success/5 p-3` | Both flows |
+| Wrong-answer items | `rounded-xl border border-border/60 bg-background/50 p-3` | Both flows (unchanged) |
+
+**Note:** The exact opacity values (`/20`, `/5`) may need tuning in the browser against both light and dark themes. The intent is a barely-visible tint — enough for color recognition when scanning, not bold color blocks. These are nested surfaces inside the outer `<Card>`, so lower opacities are appropriate.
+
+### Visual Mockup: Correct Flow
+
+```
+┌─── outer Card (bg-card, rounded-2xl) ────────────────────────┐
+│                                                               │
+│  ┌ Correct ─────────────────────────────────────────────────┐ │
+│  │ (bg-success/15 text-success pill)                        │ │
+│  └──────────────────────────────────────────────────────────┘ │
+│                                                               │
+│  Correct answer                    ← free-floating label      │
+│  ┌─── border-success/20 bg-success/5 ───────────────────┐    │
+│  │ B) Exposures increased overall                        │    │
+│  │                                                       │    │
+│  │ Palamar et al. (2023) found that the number of        │    │
+│  │ reported ketamine exposures increased from 2019...     │    │
+│  │                                                       │    │
+│  │ **Clinical pearl:** Ketamine poisonings are            │    │
+│  │ increasing despite the pandemic...                     │    │
+│  └───────────────────────────────────────────────────────┘    │
+│                                                               │
+│  Why other answers are wrong:      ← free-floating label      │
+│  ┌─── border-border/60 bg-background/50 ────────────────┐    │
+│  │ A) Exposures decreased overall                        │    │
+│  │ The study reported an increase, not a decrease.        │    │
+│  └───────────────────────────────────────────────────────┘    │
+│  ┌─── border-border/60 bg-background/50 ────────────────┐    │
+│  │ C) Exposures remained stable with no overall change   │    │
+│  │ The study reported an increase, not stability.         │    │
+│  └───────────────────────────────────────────────────────┘    │
+│  ┌─── border-border/60 bg-background/50 ────────────────┐    │
+│  │ D) Exposures peaked in 2020 and then returned to...   │    │
+│  │ The study described an overall linear increase...      │    │
+│  └───────────────────────────────────────────────────────┘    │
+│                                                               │
+│  REFERENCE                                                    │
+│  Palamar JJ, et al. J Psychopharmacol. 2023;37(8):802-808.   │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
+```
+
+### Visual Mockup: Incorrect Flow
+
+```
+┌─── outer Card (bg-card, rounded-2xl) ────────────────────────┐
+│                                                               │
+│  ┌ Incorrect ───────────────────────────────────────────────┐ │
+│  │ (bg-destructive/15 text-destructive pill)                │ │
+│  └──────────────────────────────────────────────────────────┘ │
+│                                                               │
+│  Your answer                       ← free-floating label      │
+│  ┌─── border-destructive/20 bg-destructive/5 ──────────┐    │
+│  │ A) Start dexmedetomidine to replace                   │    │
+│  │    benzodiazepines for the ongoing delirium            │    │
+│  │                                                       │    │
+│  │ While dexmedetomidine is an option for resistant       │    │
+│  │ alcohol withdrawal in the ICU, replacing               │    │
+│  │ benzodiazepines entirely would be inappropriate...     │    │
+│  └───────────────────────────────────────────────────────┘    │
+│                                                               │
+│  Correct answer                    ← free-floating label      │
+│  ┌─── border-success/20 bg-success/5 ───────────────────┐    │
+│  │ B) Assess for benzodiazepine-induced delirium and     │    │
+│  │    consider adjusting the benzodiazepine dose          │    │
+│  │                                                       │    │
+│  │ The ASAM guideline (Recommendation VI.18) states       │    │
+│  │ that for patients who have been delirious longer       │    │
+│  │ than 72 hours, clinicians should assess for drug-      │    │
+│  │ induced delirium...                                    │    │
+│  │                                                       │    │
+│  │ **Clinical pearl:** The guideline warns that when      │    │
+│  │ very large doses of long-acting benzodiazepines        │    │
+│  │ are used, there is risk of accumulation...             │    │
+│  └───────────────────────────────────────────────────────┘    │
+│                                                               │
+│  Why other answers are wrong:      ← free-floating label      │
+│  ┌─── border-border/60 bg-background/50 ────────────────┐    │
+│  │ C) Increase the diazepam dose to achieve deeper       │    │
+│  │    sedation for the persistent delirium                │    │
+│  │ Increasing the dose of a medication that may be        │    │
+│  │ causing the delirium would worsen the patient's...     │    │
+│  └───────────────────────────────────────────────────────┘    │
+│  ┌─── border-border/60 bg-background/50 ────────────────┐    │
+│  │ D) Add haloperidol as monotherapy to treat the        │    │
+│  │    hallucinations and agitation                        │    │
+│  │ The guideline states antipsychotics should not be      │    │
+│  │ used as monotherapy for alcohol withdrawal delirium... │    │
+│  └───────────────────────────────────────────────────────┘    │
+│                                                               │
+│  REFERENCE                                                    │
+│  American Society of Addiction Medicine. J Addict Med...      │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
+```
+
+### Structural Change
+
+The key structural change: **labels move outside, content moves inside a card.**
+
+**Before (current — flat text):**
+```tsx
+<div className="mt-6">
+  <div className="text-sm font-medium text-foreground">Correct answer</div>
+  <div className="flex items-start gap-1 text-sm text-foreground">
+    <span className="shrink-0 font-medium">{correctChoice.displayLabel})</span>
+    <Markdown content={correctChoice.textMd} />
+  </div>
+  <Markdown content={explanationMd} className="mt-2 text-sm" />
+</div>
+```
+
+**After (contained in semantic card):**
+```tsx
+<div className="mt-6">
+  <div className="text-sm font-medium text-foreground">Correct answer</div>
+  <div className="mt-2 rounded-xl border border-success/20 bg-success/5 p-3">
+    <div className="flex items-start gap-1 text-sm text-foreground">
+      <span className="shrink-0 font-medium">{correctChoice.displayLabel})</span>
+      <Markdown content={correctChoice.textMd} />
+    </div>
+    <Markdown content={explanationMd} className="mt-2 text-sm" />
+  </div>
+</div>
+```
+
+Same pattern for "Your answer" (with `border-destructive/20 bg-destructive/5`). Wrong-answer cards are unchanged.
+
+**What goes inside each card:**
+
+| Card | Contains |
+|------|----------|
+| "Your answer" (incorrect flow) | Choice label + text + choice explanation |
+| "Correct answer" (both flows) | Choice label + text + `explanationMd` (includes clinical pearl) |
+| Wrong-answer items (both flows) | Choice label + text + choice explanation (unchanged) |
+
+### Scope of Code Change
+
+| File | Change |
+|------|--------|
+| `feedback.tsx` | Wrap "Your answer" content in destructive-accented card (lines 143-159), wrap "Correct answer" content in success-accented card (lines 88-112 for correct flow, lines 162-186 for incorrect flow) |
+| `Feedback.test.tsx` | Update existing class assertions; add tests for new card containment |
+| `theme-token-regression.test.tsx` | May need update if it asserts on feedback section structure |
+
+**Not changing:** Wrong-answer card styling, badge styling, reference section, props/types, MDX content, any other files.
+
+---
+
+### Deferred: Clinical Pearl Styled Callout (DEBT-275 F1)
+
+Even with the blank-line MDX fix, the clinical pearl is just bold text in a paragraph. Detecting `**Clinical pearl:**` in `<Markdown>` and rendering as a styled callout box would be nicer UX but is a separate enhancement.
+
+**Concrete sketch from Chrome agent audit:** A left-border accent within the correct-answer card — `border-l-2 border-success/40 pl-3` — would visually separate the factual explanation from the pearl without adding a full nested card. This keeps it lightweight while signaling "this is a callout."
+
+**Status:** Deferred. The blank-line MDX fix (Part A, Fix 2) is sufficient for visual separation. The left-border accent sketch is a viable implementation approach when prioritizing DEBT-275 F1.
 
 ---
 
@@ -371,3 +545,5 @@ Even with the blank-line MDX fix, the clinical pearl is just bold text in a para
 |------|----------|-----------|
 | 2026-03-04 | Created BS-041 | Source-of-truth analysis needed to separate MDX content fixes from code fixes after DEBT-274 shipped |
 | 2026-03-04 | Clinical pearl callout (F1) deferred | Blank-line MDX fix is sufficient for visual separation; styled callout is a future enhancement |
+| 2026-03-04 | P3: Option B — Semantic color-coded cards | Every section gets card containment; semantic colors (`success`/`destructive`) echo badge colors and enable quick-scan navigation without reading labels. Established pattern in codebase (choice buttons, notifications, error card). Applied uniformly to both correct and incorrect flows. |
+| 2026-03-04 | P3 corroborated by independent Chrome agent UX audit | Claude-in-Chrome agent reviewed live Vercel deployment with zero knowledge of BS-041. Independently identified same inverted hierarchy problem, recommended same semantic color-coded cards with near-identical class values (`border-destructive/20 bg-destructive/5`, `border-success/20 bg-success/5`). Added: (1) section boundary confusion detail for incorrect flow, (2) red→green learning arc narrative framing, (3) clinical pearl left-border accent sketch for DEBT-275 F1, (4) redundant text as hierarchy issue cross-reference to Part A Fix 1. |
