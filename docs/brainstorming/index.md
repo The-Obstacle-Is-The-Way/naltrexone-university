@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-03
+**Last Updated:** 2026-03-04
 
 ---
 
@@ -29,7 +29,6 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
 | [BS-033](./bs-033-question-display-formatting-and-feedback-ux.md) | Question Display Formatting and Feedback UX — 22 Problems (component fixes complete, content/design items remain) | Active | — |
-| [BS-039](./bs-039-choice-button-surface-hierarchy-and-hover-ux.md) | Choice Button Surface Hierarchy and Hover UX — inverted dark-mode layering in QuestionCard | Promoted | [DEBT-273](../debt/debt-273-choice-button-surface-hierarchy-fix.md) |
 
 **Next Brainstorming ID:** BS-040
 
@@ -39,6 +38,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 | ID | Title | Outcome |
 |----|-------|---------|
+| [BS-039](../_archive/brainstorming/bs-039-choice-button-surface-hierarchy-and-hover-ux.md) | Choice Button Surface Hierarchy and Hover UX — inverted dark-mode layering in QuestionCard | Promoted to [DEBT-273](../_archive/debt/debt-273-choice-button-surface-hierarchy-fix.md). Implemented in PR #170. |
 | [BS-038](../_archive/brainstorming/bs-038-quick-practice-question-ordering-not-randomized.md) | Practice Engine Question Ordering Audit — Quick Practice not shuffled; DB insertion order leaks into `executeForFilters` | Promoted to [DEBT-268](../debt/debt-268-quick-practice-ordering-policy-alignment.md). Ordering policy codified in [ordering-policy.md](../practice-engine/ordering-policy.md). |
 | [BS-037](../_archive/brainstorming/bs-037-navigation-button-ux-audit.md) | Navigation Button UX Audit — Arrow symbols, disabled-vs-hidden at boundaries, Back link styling | Fully resolved. All arrow glyphs removed from nav labels (4 source files), boundary controls changed from disabled to hidden with `<span />` spacers (PR #158). 11 deep tracers verified across all modes. |
 | [BS-036](../_archive/brainstorming/bs-036-history-breakdown-ux-redesign.md) | History Page Breakdown UX Redesign — flat disclosure, list structure, a11y wiring, interaction semantics cleanup | Fully resolved by DEBT-265 (2026-03-01). Implemented across history sessions + shared breakdown list with unit/browser coverage and full pre-PR gate green. |
