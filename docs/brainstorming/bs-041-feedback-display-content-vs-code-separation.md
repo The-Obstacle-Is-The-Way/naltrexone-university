@@ -514,6 +514,8 @@ The key structural change: **labels move outside, content moves inside a card.**
 
 Same pattern for "Your answer" (with `border-destructive/20 bg-destructive/5`). Wrong-answer cards are unchanged.
 
+**Edge case: `correctChoice === null` (no choice-level detail available).** The current code has a ternary: when `correctChoice` is truthy, it renders "Correct answer" label + choice display inside a `space-y-1` wrapper; when falsy, it renders "Explanation" as a fallback label. The explanation markdown renders unconditionally after the ternary. The containment card must handle both branches — extract the label from the ternary (always outside the card), then wrap the remaining content (choice display if exists + explanation) inside the card. When `correctChoice` is null, the card contains only the explanation text. The green tint is still semantically correct because this section always represents the correct-answer teaching content. See DEBT-276 §4 for the full before/after with both ternary branches.
+
 **What goes inside each card:**
 
 | Card | Contains |

@@ -115,34 +115,96 @@ Retain:
 className="rounded-xl border border-border/60 bg-background/50 p-3"
 ```
 
-### 4. Structural change (from BS-041)
+### 4. Structural change — "Correct answer" section (both flows)
 
-**Before (flat content):**
+The current code has a ternary: `correctChoice` truthy renders "Correct answer" label + choice display; falsy renders "Explanation" fallback label. The explanation markdown renders unconditionally after the ternary. The containment card must wrap content in **both** branches.
+
+**Before (flat content — current lines 88-113 correct flow, 162-187 incorrect flow):**
 
 ```tsx
 <div className="mt-6">
-  <div className="text-sm font-medium text-foreground">Correct answer</div>
-  <div className="flex items-start gap-1 text-sm text-foreground">
-    <span className="shrink-0 font-medium">{correctChoice.displayLabel})</span>
-    <Markdown content={correctChoice.textMd} />
-  </div>
-  <Markdown content={explanationMd} className="mt-2 text-sm" />
+  {correctChoice ? (
+    <div className="space-y-1">
+      <div className="text-sm font-medium text-foreground">Correct answer</div>
+      <div className="flex items-start gap-1 text-sm text-foreground">
+        <span className="shrink-0 font-medium">{correctChoice.displayLabel})</span>
+        <Markdown content={correctChoice.textMd} />
+      </div>
+    </div>
+  ) : (
+    <div className="text-sm font-medium text-foreground">Explanation</div>
+  )}
+  {explanationMd ? (
+    <Markdown content={explanationMd} className="mt-2 text-sm" />
+  ) : (
+    <p className="mt-2 text-sm text-muted-foreground">Explanation not available.</p>
+  )}
 </div>
 ```
 
-**After (contained section card):**
+**After (label outside, content inside semantic card):**
 
 ```tsx
 <div className="mt-6">
-  <div className="text-sm font-medium text-foreground">Correct answer</div>
+  {/* Label: always outside the card */}
+  <div className="text-sm font-medium text-foreground">
+    {correctChoice ? 'Correct answer' : 'Explanation'}
+  </div>
+  {/* Content: inside the card */}
   <div className="mt-2 rounded-xl border border-success/20 bg-success/5 p-3">
-    <div className="flex items-start gap-1 text-sm text-foreground">
-      <span className="shrink-0 font-medium">{correctChoice.displayLabel})</span>
-      <Markdown content={correctChoice.textMd} />
-    </div>
-    <Markdown content={explanationMd} className="mt-2 text-sm" />
+    {correctChoice ? (
+      <div className="flex items-start gap-1 text-sm text-foreground">
+        <span className="shrink-0 font-medium">{correctChoice.displayLabel})</span>
+        <Markdown content={correctChoice.textMd} />
+      </div>
+    ) : null}
+    {explanationMd ? (
+      <Markdown content={explanationMd} className={correctChoice ? 'mt-2 text-sm' : 'text-sm'} />
+    ) : (
+      <p className="text-sm text-muted-foreground">Explanation not available.</p>
+    )}
   </div>
 </div>
+```
+
+**Key restructuring:** The label is extracted from the `correctChoice` ternary and placed above the card. The `space-y-1` wrapper is removed. The card wraps the choice display (conditional) + explanation (always). When `correctChoice` is null, the card contains only the explanation — still green-tinted, because this section is always the correct-answer teaching content regardless of whether choice-level detail is available.
+
+### 5. Structural change — "Your answer" section (incorrect flow only)
+
+**Before (flat content — current lines 142-160):**
+
+```tsx
+{userChoice ? (
+  <div className="mt-6">
+    <div className="text-sm font-medium text-foreground">Your answer</div>
+    <div className="flex items-start gap-1 text-sm text-foreground">
+      <span className="shrink-0 font-medium">{userChoice.displayLabel})</span>
+      <Markdown content={userChoice.textMd} />
+    </div>
+    {userChoice.explanationMd ? (
+      <Markdown content={userChoice.explanationMd} className="mt-2 text-sm" />
+    ) : null}
+  </div>
+) : null}
+```
+
+**After (label outside, content inside semantic card):**
+
+```tsx
+{userChoice ? (
+  <div className="mt-6">
+    <div className="text-sm font-medium text-foreground">Your answer</div>
+    <div className="mt-2 rounded-xl border border-destructive/20 bg-destructive/5 p-3">
+      <div className="flex items-start gap-1 text-sm text-foreground">
+        <span className="shrink-0 font-medium">{userChoice.displayLabel})</span>
+        <Markdown content={userChoice.textMd} />
+      </div>
+      {userChoice.explanationMd ? (
+        <Markdown content={userChoice.explanationMd} className="mt-2 text-sm" />
+      ) : null}
+    </div>
+  </div>
+) : null}
 ```
 
 ---
@@ -158,23 +220,80 @@ No current assertions in `Feedback.test.tsx` or `theme-token-regression.test.tsx
 - `Feedback.test.tsx` is mostly content/order assertions and does not currently assert absence of inner success/destructive section cards.
 - `theme-token-regression.test.tsx` only asserts badge semantic tokens (`bg-success/15`, `bg-destructive/15`) and remains compatible.
 
-### New/updated tests needed
+### New tests
 
-1. Correct flow: "Correct answer" content is wrapped in `border-success/20 bg-success/5`.
-2. Incorrect flow: "Your answer" content is wrapped in `border-destructive/20 bg-destructive/5`.
-3. Incorrect flow: "Correct answer" content is wrapped in `border-success/20 bg-success/5`.
-4. Wrong-answer cards keep neutral styling (`border-border/60 bg-background/50`) and are unchanged.
-5. Badge and reference section class patterns remain unchanged (explicit regression guard).
+#### T1: Correct flow wraps correct-answer content in success card
+
+```
+Given: isCorrect=true, choiceExplanations with choice-b (correct)
+When:  rendered
+Then:  A div with class containing "border-success/20" and "bg-success/5"
+       exists inside [role="status"]
+       AND that div contains choice-b's displayLabel + textMd + explanationMd
+```
+
+#### T2: Correct flow wraps explanation-only fallback in success card
+
+```
+Given: isCorrect=true, choiceExplanations=[] (no correct choice detail)
+When:  rendered
+Then:  "Explanation" label appears outside the success card
+       AND a div with "border-success/20" and "bg-success/5" wraps the explanationMd
+```
+
+#### T3: Incorrect flow wraps user's wrong choice in destructive card
+
+```
+Given: isCorrect=false, selectedChoiceId="choice-a",
+       choiceExplanations with choice-a (wrong), choice-b (correct)
+When:  rendered
+Then:  A div with "border-destructive/20" and "bg-destructive/5"
+       contains choice-a's displayLabel + textMd + explanationMd
+       AND "Your answer" label appears outside that div
+```
+
+#### T4: Incorrect flow wraps correct-answer content in success card
+
+```
+Given: isCorrect=false, selectedChoiceId="choice-a",
+       choiceExplanations with choice-a (wrong), choice-b (correct)
+When:  rendered
+Then:  A div with "border-success/20" and "bg-success/5"
+       contains choice-b's displayLabel + textMd + explanationMd
+       AND "Correct answer" label appears outside that div
+```
+
+#### T5: Wrong-answer cards retain neutral styling (regression)
+
+```
+Given: isCorrect=false, selectedChoiceId="choice-a",
+       choiceExplanations with choice-a (wrong), choice-b (wrong), choice-c (correct)
+When:  rendered
+Then:  Wrong-answer cards use "border-border/60" and "bg-background/50"
+       AND wrong-answer cards do NOT contain "border-success" or "border-destructive"
+```
+
+#### T6: Outer Card does not acquire semantic color classes (regression)
+
+```
+Given: isCorrect=false (or true), with choiceExplanations
+When:  rendered
+Then:  [role="status"] element class does NOT contain "border-success", "bg-success/10",
+       "border-destructive", "bg-destructive/10"
+       (existing assertion in line 25-28 — verify still GREEN)
+```
 
 ### TDD order
 
-1. Add test for correct-flow success card containment (RED)
-2. Implement correct-flow containment (GREEN)
-3. Add test for incorrect-flow destructive/success containment (RED)
-4. Implement incorrect-flow containment (GREEN)
-5. Add regression test that wrong-answer cards remain neutral (RED)
-6. Verify badge/reference regressions remain unchanged (GREEN)
-7. Run:
+1. Write T1 (correct-flow success card) — RED
+2. Restructure correct-flow JSX: extract label from ternary, add containment card — GREEN
+3. Write T2 (explanation-only fallback in success card) — should be GREEN from step 2
+4. Write T3 (incorrect-flow destructive card) — RED
+5. Add containment card to "Your answer" section — GREEN
+6. Write T4 (incorrect-flow correct-answer success card) — RED
+7. Restructure incorrect-flow correct-answer JSX: same pattern as step 2 — GREEN
+8. Write T5 (wrong-answer cards unchanged) — should be GREEN (regression guard)
+9. Run full suite:
    - `pnpm test --run components/question/Feedback.test.tsx`
    - `pnpm test --run components/theme-token-regression.test.tsx`
 
