@@ -530,6 +530,42 @@ describe('Feedback', () => {
     expect(html).toContain('First option');
   });
 
+  it('does not render your-answer section when incorrect flow selectedChoiceId points to the correct choice', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={false}
+        explanationMd="General explanation."
+        selectedChoiceId="choice-b"
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: true,
+            explanationMd: 'Second option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const yourAnswerSectionLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Your answer',
+    );
+
+    expect(yourAnswerSectionLabel).toBeUndefined();
+    expect(html).toContain('Correct answer');
+    expect(html).toContain('Why other answers are wrong:');
+    expect(html).toContain('First option');
+  });
+
   it('renders explanation-not-available fallback in incorrect flow when explanationMd is null', () => {
     const html = renderToStaticMarkup(
       <Feedback

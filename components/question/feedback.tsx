@@ -58,12 +58,12 @@ export function Feedback({
   const userChoice =
     !isCorrect && selectedChoiceId
       ? (choiceExplanations.find(
-          (choice) => choice.choiceId === selectedChoiceId,
+          (choice) => choice.choiceId === selectedChoiceId && !choice.isCorrect,
         ) ?? null)
       : null;
   const otherWrongChoices = !isCorrect
     ? visibleChoiceExplanations.filter(
-        (choice) => choice.choiceId !== selectedChoiceId,
+        (choice) => choice.choiceId !== userChoice?.choiceId,
       )
     : visibleChoiceExplanations;
   const shouldRenderOtherWrongChoices =
