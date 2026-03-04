@@ -34,6 +34,285 @@ describe('Feedback', () => {
     expect(html).toContain('Because...');
   });
 
+  it('T1: wraps correct-flow correct-answer content in a success card', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={true}
+        explanationMd="General explanation."
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: true,
+            explanationMd: 'Second option rationale.',
+          },
+        ]}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const correctAnswerLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Correct answer',
+    );
+    const successCard = correctAnswerLabel?.nextElementSibling;
+    const successCardClassName = successCard?.getAttribute('class') ?? '';
+    const successCardText = successCard?.textContent ?? '';
+
+    expect(correctAnswerLabel).not.toBeUndefined();
+    expect(successCard).not.toBeNull();
+    expect(successCardClassName).toContain('border-success/20');
+    expect(successCardClassName).toContain('bg-success/5');
+    expect(successCardText).toContain('B)');
+    expect(successCardText).toContain('Second option');
+    expect(successCardText).toContain('General explanation.');
+  });
+
+  it('T2: wraps explanation-only fallback in a success card for correct flow', () => {
+    const html = renderToStaticMarkup(
+      <Feedback isCorrect={true} explanationMd="General explanation." />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const explanationLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Explanation',
+    );
+    const successCard = explanationLabel?.nextElementSibling;
+    const successCardClassName = successCard?.getAttribute('class') ?? '';
+    const successCardText = successCard?.textContent ?? '';
+
+    expect(explanationLabel).not.toBeUndefined();
+    expect(successCard).not.toBeNull();
+    expect(successCardClassName).toContain('border-success/20');
+    expect(successCardClassName).toContain('bg-success/5');
+    expect(successCardText).toContain('General explanation.');
+    expect(successCardText).not.toContain('A)');
+    expect(successCardText).not.toContain('B)');
+  });
+
+  it('renders explanation fallback without top margin when no correct choice exists in correct flow', () => {
+    const html = renderToStaticMarkup(
+      <Feedback isCorrect={true} explanationMd={null} />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const explanationLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Explanation',
+    );
+    const successCard = explanationLabel?.nextElementSibling;
+    const fallbackParagraph = Array.from(
+      successCard?.querySelectorAll('p') ?? [],
+    ).find(
+      (paragraph) =>
+        paragraph.textContent?.trim() === 'Explanation not available.',
+    );
+    const fallbackClassName = fallbackParagraph?.getAttribute('class') ?? '';
+
+    expect(explanationLabel).not.toBeUndefined();
+    expect(fallbackParagraph).not.toBeUndefined();
+    expect(fallbackClassName).toContain('text-sm');
+    expect(fallbackClassName).toContain('text-muted-foreground');
+    expect(fallbackClassName).not.toContain('mt-2');
+  });
+
+  it('T3: wraps incorrect-flow your-answer content in a destructive card', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={false}
+        explanationMd="General explanation."
+        selectedChoiceId="choice-a"
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: true,
+            explanationMd: 'Second option rationale.',
+          },
+        ]}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const yourAnswerLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Your answer',
+    );
+    const destructiveCard = yourAnswerLabel?.nextElementSibling;
+    const destructiveCardClassName =
+      destructiveCard?.getAttribute('class') ?? '';
+    const destructiveCardText = destructiveCard?.textContent ?? '';
+
+    expect(yourAnswerLabel).not.toBeUndefined();
+    expect(destructiveCard).not.toBeNull();
+    expect(destructiveCardClassName).toContain('border-destructive/20');
+    expect(destructiveCardClassName).toContain('bg-destructive/5');
+    expect(destructiveCardText).toContain('A)');
+    expect(destructiveCardText).toContain('First option');
+    expect(destructiveCardText).toContain('First option is incorrect.');
+  });
+
+  it('T4: wraps incorrect-flow correct-answer content in a success card', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={false}
+        explanationMd="General explanation."
+        selectedChoiceId="choice-a"
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: true,
+            explanationMd: 'Second option rationale.',
+          },
+        ]}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const correctAnswerLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Correct answer',
+    );
+    const successCard = correctAnswerLabel?.nextElementSibling;
+    const successCardClassName = successCard?.getAttribute('class') ?? '';
+    const successCardText = successCard?.textContent ?? '';
+
+    expect(correctAnswerLabel).not.toBeUndefined();
+    expect(successCard).not.toBeNull();
+    expect(successCardClassName).toContain('border-success/20');
+    expect(successCardClassName).toContain('bg-success/5');
+    expect(successCardText).toContain('B)');
+    expect(successCardText).toContain('Second option');
+    expect(successCardText).toContain('General explanation.');
+  });
+
+  it('renders explanation fallback without top margin when no correct choice exists in incorrect flow', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={false}
+        explanationMd={null}
+        selectedChoiceId="choice-a"
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: false,
+            explanationMd: 'Second option is incorrect.',
+          },
+        ]}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const explanationLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Explanation',
+    );
+    const successCard = explanationLabel?.nextElementSibling;
+    const fallbackParagraph = Array.from(
+      successCard?.querySelectorAll('p') ?? [],
+    ).find(
+      (paragraph) =>
+        paragraph.textContent?.trim() === 'Explanation not available.',
+    );
+    const fallbackClassName = fallbackParagraph?.getAttribute('class') ?? '';
+
+    expect(html).toContain('Your answer');
+    expect(explanationLabel).not.toBeUndefined();
+    expect(fallbackParagraph).not.toBeUndefined();
+    expect(fallbackClassName).toContain('text-sm');
+    expect(fallbackClassName).toContain('text-muted-foreground');
+    expect(fallbackClassName).not.toContain('mt-2');
+  });
+
+  it('T5: keeps wrong-answer cards on neutral styling only', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={false}
+        explanationMd="General explanation."
+        selectedChoiceId="choice-a"
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: false,
+            explanationMd: 'Second option is incorrect.',
+          },
+          {
+            choiceId: 'choice-c',
+            displayLabel: 'C',
+            textMd: 'Third option',
+            isCorrect: true,
+            explanationMd: 'Third option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const wrongAnswersHeading = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Why other answers are wrong:',
+    );
+    const wrongAnswersSection = wrongAnswersHeading?.parentElement;
+    const wrongAnswerCards = Array.from(
+      wrongAnswersSection?.querySelectorAll('div') ?? [],
+    ).filter((div) => {
+      const className = div.getAttribute('class') ?? '';
+      return (
+        className.includes('border-border/60') &&
+        className.includes('bg-background/50')
+      );
+    });
+
+    expect(wrongAnswersHeading).not.toBeUndefined();
+    expect(wrongAnswerCards.length).toBeGreaterThan(0);
+    for (const card of wrongAnswerCards) {
+      const className = card.getAttribute('class') ?? '';
+      expect(className).toContain('border-border/60');
+      expect(className).toContain('bg-background/50');
+      expect(className).not.toContain('border-success/20');
+      expect(className).not.toContain('bg-success/5');
+      expect(className).not.toContain('border-destructive/20');
+      expect(className).not.toContain('bg-destructive/5');
+    }
+  });
+
   it('renders correct answer details when a correct choice is present', () => {
     const html = renderToStaticMarkup(
       <Feedback

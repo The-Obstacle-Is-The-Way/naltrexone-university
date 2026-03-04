@@ -28,8 +28,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | ID | Title | Status | Related Spec |
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
+| [BS-041](./bs-041-feedback-display-content-vs-code-separation.md) | Feedback Display — Content vs Code Separation (3 problems: redundant choice text, clinical pearl spacing, section visual hierarchy) | Active | [DEBT-275](../debt/debt-275-bs033-residual-open-items.md) (C2, C3, F1); [DEBT-276](../debt/debt-276-feedback-section-card-containment.md) (Part B: section card containment) |
 
-**Next Brainstorming ID:** BS-041
+**Next Brainstorming ID:** BS-042
 
 ---
 
