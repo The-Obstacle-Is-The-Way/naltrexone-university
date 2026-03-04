@@ -12,6 +12,21 @@ export type FeedbackChoiceExplanation = {
   explanationMd: string | null;
 };
 
+type IncorrectChoiceWithExplanation = FeedbackChoiceExplanation & {
+  isCorrect: false;
+  explanationMd: string;
+};
+
+function isIncorrectChoiceWithExplanation(
+  choice: FeedbackChoiceExplanation,
+): choice is IncorrectChoiceWithExplanation {
+  return (
+    !choice.isCorrect &&
+    typeof choice.explanationMd === 'string' &&
+    choice.explanationMd.trim().length > 0
+  );
+}
+
 export type FeedbackProps = {
   isCorrect: boolean;
   explanationMd: string | null;
@@ -30,10 +45,7 @@ export function Feedback({
   const correctChoice =
     choiceExplanations.find((choice) => choice.isCorrect) ?? null;
   const visibleChoiceExplanations = choiceExplanations.filter(
-    (choice) =>
-      !choice.isCorrect &&
-      typeof choice.explanationMd === 'string' &&
-      choice.explanationMd.trim().length > 0,
+    isIncorrectChoiceWithExplanation,
   );
   const hasMissingIncorrectExplanation = choiceExplanations.some(
     (choice) =>
@@ -121,7 +133,7 @@ export function Feedback({
                       ) : null}
                     </div>
                     <Markdown
-                      content={choice.explanationMd ?? ''}
+                      content={choice.explanationMd}
                       className="mt-2 text-sm"
                     />
                   </div>
@@ -195,7 +207,7 @@ export function Feedback({
                       <Markdown content={choice.textMd} />
                     </div>
                     <Markdown
-                      content={choice.explanationMd ?? ''}
+                      content={choice.explanationMd}
                       className="mt-2 text-sm"
                     />
                   </div>

@@ -362,6 +362,71 @@ describe('Feedback', () => {
     expect(yourAnswerSectionLabel).toBeUndefined();
   });
 
+  it('renders explanation-not-available fallback in correct flow when explanationMd is null', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={true}
+        explanationMd={null}
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: true,
+            explanationMd: 'Second option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    expect(html).toContain('Correct answer');
+    expect(html).toContain('Explanation not available.');
+  });
+
+  it('preserves selected-choice badge rendering in correct-flow wrong-answer cards', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={true}
+        explanationMd="General explanation."
+        selectedChoiceId="choice-a"
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: true,
+            explanationMd: 'Second option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const yourAnswerBadge = Array.from(doc.querySelectorAll('span')).find(
+      (span) => span.textContent?.trim() === 'Your answer',
+    );
+
+    expect(html).toContain('Why other answers are wrong:');
+    expect(yourAnswerBadge).not.toBeUndefined();
+    expect(yourAnswerBadge?.getAttribute('class')).toContain(
+      'bg-destructive/10',
+    );
+  });
+
   it('renders your-answer choice details when selected wrong explanation is null', () => {
     const html = renderToStaticMarkup(
       <Feedback
@@ -435,6 +500,72 @@ describe('Feedback', () => {
     expect(html).toContain('Correct answer');
     expect(html).toContain('Why other answers are wrong:');
     expect(html).toContain('First option');
+  });
+
+  it('falls back gracefully when selectedChoiceId is unknown in incorrect flow', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={false}
+        explanationMd="General explanation."
+        selectedChoiceId="choice-missing"
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: true,
+            explanationMd: 'Second option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const yourAnswerSectionLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Your answer',
+    );
+
+    expect(yourAnswerSectionLabel).toBeUndefined();
+    expect(html).toContain('Correct answer');
+    expect(html).toContain('Why other answers are wrong:');
+    expect(html).toContain('First option');
+  });
+
+  it('renders explanation-not-available fallback in incorrect flow when explanationMd is null', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={false}
+        explanationMd={null}
+        selectedChoiceId="choice-a"
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: true,
+            explanationMd: 'Second option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    expect(html).toContain('Your answer');
+    expect(html).toContain('Correct answer');
+    expect(html).toContain('Explanation not available.');
   });
 
   it('marks the selected wrong choice as your answer', () => {
