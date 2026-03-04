@@ -199,6 +199,420 @@ describe('Feedback', () => {
     expect(mutedChoiceRow?.getAttribute('class')).not.toContain('font-medium');
   });
 
+  it('renders the your-answer section before the correct-answer section for incorrect attempts', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={false}
+        explanationMd="General explanation."
+        selectedChoiceId="choice-a"
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: true,
+            explanationMd: 'Second option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    const yourAnswerIndex = html.indexOf('Your answer');
+    const correctAnswerIndex = html.indexOf('Correct answer');
+
+    expect(yourAnswerIndex).toBeGreaterThanOrEqual(0);
+    expect(correctAnswerIndex).toBeGreaterThanOrEqual(0);
+    expect(yourAnswerIndex).toBeLessThan(correctAnswerIndex);
+    expect(html).toContain('A)');
+    expect(html).toContain('First option');
+    expect(html).toContain('First option is incorrect.');
+  });
+
+  it('excludes the user-selected wrong choice from why-other-answers cards', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={false}
+        explanationMd="General explanation."
+        selectedChoiceId="choice-a"
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: false,
+            explanationMd: 'Second option is incorrect.',
+          },
+          {
+            choiceId: 'choice-c',
+            displayLabel: 'C',
+            textMd: 'Third option',
+            isCorrect: true,
+            explanationMd: 'Third option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const wrongAnswersHeading = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Why other answers are wrong:',
+    );
+    const wrongAnswersSectionText =
+      wrongAnswersHeading?.parentElement?.textContent ?? '';
+
+    expect(wrongAnswersHeading).not.toBeUndefined();
+    expect(wrongAnswersSectionText).toContain('Second option');
+    expect(wrongAnswersSectionText).not.toContain('First option');
+    expect(html).toContain('First option');
+  });
+
+  it('does not render a your-answer badge in incorrect-flow wrong-answer cards', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={false}
+        explanationMd="General explanation."
+        selectedChoiceId="choice-a"
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: false,
+            explanationMd: 'Second option is incorrect.',
+          },
+          {
+            choiceId: 'choice-c',
+            displayLabel: 'C',
+            textMd: 'Third option',
+            isCorrect: true,
+            explanationMd: 'Third option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const wrongAnswersHeading = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Why other answers are wrong:',
+    );
+    const wrongAnswersSectionText =
+      wrongAnswersHeading?.parentElement?.textContent ?? '';
+
+    expect(html).toContain('Your answer');
+    expect(wrongAnswersHeading).not.toBeUndefined();
+    expect(wrongAnswersSectionText).not.toContain('Your answer');
+  });
+
+  it('keeps the correct-answer flow layout unchanged', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={true}
+        explanationMd="General explanation."
+        selectedChoiceId="choice-c"
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: false,
+            explanationMd: 'Second option is incorrect.',
+          },
+          {
+            choiceId: 'choice-c',
+            displayLabel: 'C',
+            textMd: 'Third option',
+            isCorrect: true,
+            explanationMd: 'Third option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const yourAnswerSectionLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Your answer',
+    );
+    const correctAnswerIndex = html.indexOf('Correct answer');
+    const wrongAnswersHeadingIndex = html.indexOf(
+      'Why other answers are wrong:',
+    );
+
+    expect(correctAnswerIndex).toBeGreaterThanOrEqual(0);
+    expect(wrongAnswersHeadingIndex).toBeGreaterThanOrEqual(0);
+    expect(correctAnswerIndex).toBeLessThan(wrongAnswersHeadingIndex);
+    expect(yourAnswerSectionLabel).toBeUndefined();
+  });
+
+  it('renders explanation-not-available fallback in correct flow when explanationMd is null', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={true}
+        explanationMd={null}
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: true,
+            explanationMd: 'Second option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    expect(html).toContain('Correct answer');
+    expect(html).toContain('Explanation not available.');
+  });
+
+  it('does not render a your-answer badge in correct-flow wrong-answer cards', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={true}
+        explanationMd="General explanation."
+        selectedChoiceId="choice-b"
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: true,
+            explanationMd: 'Second option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const wrongAnswersHeading = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Why other answers are wrong:',
+    );
+    const wrongAnswersSectionText =
+      wrongAnswersHeading?.parentElement?.textContent ?? '';
+
+    expect(wrongAnswersHeading).not.toBeUndefined();
+    expect(wrongAnswersSectionText).not.toContain('Your answer');
+    expect(html).not.toContain('Your answer');
+  });
+
+  it('renders your-answer choice details when selected wrong explanation is null', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={false}
+        explanationMd="General explanation."
+        selectedChoiceId="choice-a"
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: null,
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: false,
+            explanationMd: 'Second option is incorrect.',
+          },
+          {
+            choiceId: 'choice-c',
+            displayLabel: 'C',
+            textMd: 'Third option',
+            isCorrect: true,
+            explanationMd: 'Third option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    expect(html).toContain('Your answer');
+    expect(html).toContain('A)');
+    expect(html).toContain('First option');
+    expect(html).not.toContain('Why other answers are wrong:');
+    expect(html).toContain('General explanation.');
+  });
+
+  it('falls back gracefully when selectedChoiceId is null in incorrect flow', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={false}
+        explanationMd="General explanation."
+        selectedChoiceId={null}
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: true,
+            explanationMd: 'Second option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const yourAnswerSectionLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Your answer',
+    );
+
+    expect(yourAnswerSectionLabel).toBeUndefined();
+    expect(html).toContain('Correct answer');
+    expect(html).toContain('Why other answers are wrong:');
+    expect(html).toContain('First option');
+  });
+
+  it('falls back gracefully when selectedChoiceId is unknown in incorrect flow', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={false}
+        explanationMd="General explanation."
+        selectedChoiceId="choice-missing"
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: true,
+            explanationMd: 'Second option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const yourAnswerSectionLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Your answer',
+    );
+
+    expect(yourAnswerSectionLabel).toBeUndefined();
+    expect(html).toContain('Correct answer');
+    expect(html).toContain('Why other answers are wrong:');
+    expect(html).toContain('First option');
+  });
+
+  it('does not render your-answer section when incorrect flow selectedChoiceId points to the correct choice', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={false}
+        explanationMd="General explanation."
+        selectedChoiceId="choice-b"
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: true,
+            explanationMd: 'Second option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const yourAnswerSectionLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Your answer',
+    );
+
+    expect(yourAnswerSectionLabel).toBeUndefined();
+    expect(html).toContain('Correct answer');
+    expect(html).toContain('Why other answers are wrong:');
+    expect(html).toContain('First option');
+  });
+
+  it('renders explanation-not-available fallback in incorrect flow when explanationMd is null', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={false}
+        explanationMd={null}
+        selectedChoiceId="choice-a"
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: true,
+            explanationMd: 'Second option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    expect(html).toContain('Your answer');
+    expect(html).toContain('Correct answer');
+    expect(html).toContain('Explanation not available.');
+  });
+
   it('marks the selected wrong choice as your answer', () => {
     const html = renderToStaticMarkup(
       <Feedback
@@ -231,7 +645,13 @@ describe('Feedback', () => {
       />,
     );
 
-    const yourAnswerBadges = html.match(/Your answer/g) ?? [];
-    expect(yourAnswerBadges).toHaveLength(1);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const yourAnswerSectionLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) =>
+        div.textContent?.trim() === 'Your answer' &&
+        (div.getAttribute('class') ?? '').includes('font-medium'),
+    );
+
+    expect(yourAnswerSectionLabel).not.toBeUndefined();
   });
 });

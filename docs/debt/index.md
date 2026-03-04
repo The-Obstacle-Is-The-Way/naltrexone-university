@@ -18,7 +18,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | GitHub Issue |
 |----|-------|----------|--------------|
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
-**Next Debt ID:** DEBT-274
+| [DEBT-274](./debt-274-incorrect-answer-feedback-flow-reorder.md) | Incorrect Answer Feedback Flow Reorder — promote user's wrong answer to top of feedback, correct answer second | P2 | — |
+
+**Next Debt ID:** DEBT-275
 
 ---
 
