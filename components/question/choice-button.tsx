@@ -25,13 +25,13 @@ export function ChoiceButton({
   return (
     <label
       className={cn(
-        'block w-full rounded-xl border border-border bg-background p-4 text-left shadow-sm transition-colors focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]',
-        !disabled &&
-          'cursor-pointer hover:border-muted-foreground/30 hover:bg-muted/60',
+        'block w-full rounded-xl border border-border/60 bg-muted/20 p-4 text-left shadow-sm transition-colors focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]',
+        !disabled && 'cursor-pointer hover:bg-muted/40',
+        !disabled && !selected && 'hover:border-muted-foreground/30',
         disabled && 'cursor-not-allowed',
         disabled && !correctness && 'opacity-50',
         correctness === 'wrong-unselected' && 'opacity-50',
-        selected && correctness === null && 'border-ring bg-muted/20',
+        selected && correctness === null && 'border-ring bg-muted/40',
         correctness === 'correct' &&
           'border-success bg-success/10 text-success',
         correctness === 'incorrect' &&

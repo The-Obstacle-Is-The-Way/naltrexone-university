@@ -34,3 +34,28 @@ test('renders a disabled radio input when disabled', async () => {
 
   await expect.element(screen.getByRole('radio')).toBeDisabled();
 });
+
+test('retains selected treatment while hovered', async () => {
+  const onClick = vi.fn();
+  const screen = await render(
+    <ChoiceButton
+      name="q1"
+      label="A"
+      textMd="Choice A"
+      selected
+      onClick={onClick}
+    />,
+  );
+
+  const wrapperLabel = document.querySelector('label');
+  if (!wrapperLabel) {
+    throw new Error('Expected wrapper label to exist.');
+  }
+
+  await screen.getByText('Choice A').hover();
+
+  const className = wrapperLabel.getAttribute('class') ?? '';
+  expect(className).toContain('border-ring');
+  expect(className).toContain('bg-muted/40');
+  expect(className).not.toContain('hover:border-muted-foreground/30');
+});
