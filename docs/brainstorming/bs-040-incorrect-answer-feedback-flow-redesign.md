@@ -140,6 +140,128 @@ The fix is **purely in the Feedback component** — rearranging what's already a
 
 ---
 
+## Industry Comparison: UWorld's Prose Style vs Our Per-Choice Style
+
+### How UWorld structures incorrect answer feedback
+
+UWorld uses a **narrative prose style**:
+
+```
+QUESTION + CHOICES (above the explanation)
+├── Question stem (full text)
+└── All answer choices listed with:
+    ├── ✓ Green check on the correct answer (e.g., D)
+    ├── ✗ Red X on the user's wrong answer (e.g., E)
+    └── Percentage of users who chose each option
+
+RESULT BAR
+├── "Incorrect" (red text)
+├── "Correct answer: D"
+├── "53% Answered correctly"
+└── Time spent
+
+EXPLANATION (prose narrative — no choice text shown, just labels)
+├── One unified prose paragraph explaining the correct concept
+│   "The most appropriate step in pharmacological management is to
+│    continue the trial of escitalopram at the current dosage.
+│    Increasing the dosage is unnecessary and risks exposing the
+│    patient to additional side effects (Choice E)."
+├── Wrong choices referenced INLINE by label only:
+│   "(Choices A and B) It would be premature to add amitriptyline
+│    at bedtime or aripiprazole after only 2 weeks..."
+│   "(Choices C and D) Discontinuing antidepressant medication at
+│    the 2-week point would be premature..."
+├── Educational objective (1-2 sentence takeaway)
+└── Medical Library link
+```
+
+**The defining characteristic of UWorld's approach is prose-style explanations.** Wrong choices are referenced by label only — "(Choice E)", "(Choices A and B)" — woven into a continuous narrative. The actual choice text (what Choice E said) is NOT repeated in the explanation. The learner must look back up at the choice list to remember what "Choice E" refers to.
+
+**Key UWorld design decisions:**
+
+1. **Prose-style explanation** — one continuous narrative that explains the correct concept first, then addresses why specific wrong choices fail. Wrong choices are referenced inline with bold labels like "(Choice E)" rather than rendered as separate blocks with their choice text.
+2. **Grouped wrong answers** — similar wrong choices are combined into a single paragraph (e.g., "(Choices A and B)" together) rather than explained individually.
+3. **Label-only references** — the explanation says "(Choice E)" but does NOT re-display what Choice E actually said. The learner has to mentally map the label back to the choice text above.
+4. **No special promotion of the user's wrong answer** — the user's specific error gets no distinct treatment in the explanation. It appears wherever it falls in the prose narrative.
+
+### Why prose style inhibits learning and forces cross-referencing
+
+UWorld's prose approach has a **fundamental cognitive overhead problem**: the learner must constantly cross-reference between the explanation and the answer choices.
+
+**Concrete example from the UWorld screenshot:**
+
+The explanation says:
+> "(Choices C and D) Discontinuing antidepressant medication at the 2-week point would be premature."
+
+To understand this, the learner must:
+1. Stop reading the explanation
+2. Scroll or look back up to the choice list
+3. Find Choice C: "Discontinue escitalopram and start paroxetine"
+4. Find Choice D: "Discontinue escitalopram and start trazodone"
+5. Map both back to the explanation sentence
+6. Return to reading the explanation
+7. Repeat for every other "(Choice X)" reference
+
+This creates **split attention effect** — a well-documented source of extraneous cognitive load in educational design. The learner's working memory is spent on the mechanical task of matching labels to text instead of processing the clinical reasoning.
+
+UWorld can tolerate this because:
+- Their users are medical students accustomed to high-density, cross-referential study materials
+- The choice list is always visible (even if it requires scrolling up)
+- Their market dominance means users adapt to the format, not the other way around
+
+**But "users adapt to it" is not the same as "it's optimal for learning."**
+
+### How our content avoids this problem
+
+Our MDX content uses a **modular, per-choice** structure:
+
+```
+## Explanation
+[One paragraph explaining the correct concept]
+**Clinical pearl:** [Additional teaching point]
+
+**Why other answers are wrong:**
+- A) [Choice A summary]: [Self-contained explanation of why A is wrong]
+- B) [Choice B summary]: [Self-contained explanation of why B is wrong]
+- C) [Choice C summary]: [Self-contained explanation of why C is wrong]
+```
+
+The component renders each wrong choice as a card showing the **choice letter + full choice text + explanation** together. The learner never has to look back up — everything they need to understand why a specific choice is wrong is right there in one block.
+
+**Critical structural differences:**
+
+| Aspect | UWorld (prose) | Ours (per-choice) |
+|--------|---------------|-------------------|
+| **Explanation style** | One narrative paragraph; wrong choices woven inline by label | Separate `explanationMd` for correct concept + individual `choice.explanationMd` per wrong choice |
+| **Wrong answer format** | Label-only references: "(Choice E)" — learner must look back at choice list to recall what E said | Self-contained blocks: choice letter + full choice text + explanation shown together — no cross-referencing needed |
+| **Grouping** | Similar wrong choices combined: "(Choices A and B)" | Each wrong choice explained individually |
+| **Cognitive load** | High — split attention between explanation and choice list; constant scrolling back to map labels to text | Low — each block is self-contained; learner processes one choice at a time with all context present |
+| **Learning engagement** | Reader may skim past "(Choice E)" references without actually mapping them back to the choice text | Reader sees the exact choice they're learning about, immediately followed by why it's wrong |
+
+### Why we can't replicate UWorld's prose style and shouldn't try
+
+**1. Content format incompatibility.** Converting our per-choice modular explanations into UWorld-style prose would require rewriting every MDX file's explanation section into a single flowing narrative with inline "(Choice X)" references. That's a massive content rewrite across the entire question bank — and it would sacrifice the modularity that makes our content maintainable and our pipeline clean.
+
+**2. Prose style actively hinders the error-first approach.** In UWorld's prose format, the wrong-choice explanations are woven into a single narrative that builds on the correct concept. You can't extract "(Choice E) Discontinuing cefazolin..." from the middle of a paragraph and promote it to the top — the sentence doesn't make sense without the preceding context. Our per-choice explanations are self-contained by design: "Normal variant: Complex sleep behaviors are NOT normal..." stands perfectly on its own.
+
+**3. Our per-choice style is better for learning.** Each wrong choice is explained alongside its actual text, eliminating the cross-referencing overhead. The learner reads "B) This is a normal variant that does not require intervention" and immediately below it reads "Complex sleep behaviors are NOT normal and can result in serious injury or death." No scrolling, no label-mapping, no split attention. The clinical reasoning is paired with the choice it addresses.
+
+### Research backing for error-first in our context
+
+The research converges on four points that support our approach:
+
+1. **Response-contingent elaborated feedback is the most effective type** ([Shute 2008](https://journals.sagepub.com/doi/10.3102/0034654307313795)). Feedback that addresses the learner's *specific* error outperforms generic elaboration. Promoting the user's wrong answer to the top makes our feedback maximally response-contingent.
+
+2. **Productive failure: engaging with errors before instruction improves outcomes** ([Kapur, via PMC review](https://pmc.ncbi.nlm.nih.gov/articles/PMC11803059/)). Learners who confront their error before receiving the correct explanation score higher on posttests. The mechanism: error confrontation activates prior knowledge and creates awareness of knowledge gaps, making the subsequent correct explanation more meaningful.
+
+3. **Students ignore buried error feedback** ([ScienceDirect 2025](https://www.sciencedirect.com/science/article/pii/S0361476X25000608)). When error explanations are buried or require scrolling to find, low-performing students — the ones who need them most — skip them entirely. Surfacing the user's error prominently is not just a UX preference; it directly affects whether the learner engages with the feedback at all.
+
+4. **Simply telling learners "wrong" is useless without elaboration** ([PMC 2014](https://pmc.ncbi.nlm.nih.gov/articles/PMC4073309/)). Right/wrong feedback performed no better than no feedback. Learners need the explanation of *why* their specific choice was wrong, not just a badge.
+
+**Bottom line:** UWorld uses prose-style explanations where wrong choices are referenced by label only, forcing the learner to cross-reference back to the choice list. This works for UWorld because their users tolerate it, not because it's optimal. Our per-choice modular content already solves the cross-referencing problem — each wrong choice is explained alongside its actual text. This same modularity makes error-first reordering trivial: we just promote the user's self-contained wrong-answer block to the top. We're not deviating from best practice — we're improving on UWorld's approach by eliminating split attention and prioritizing the learner's specific error.
+
+---
+
 ## Proposed Fix: Conditional Section Ordering
 
 ### Correct answer flow (keep as-is, minor polish)
@@ -329,3 +451,4 @@ The "Why other answers are wrong" heading doesn't make sense when the user's ans
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-03-04 | Created BS-040 | Correct answer flow is fine; incorrect answer flow needs section reordering — pure component change, no MDX changes needed |
+| 2026-03-04 | Error-first approach confirmed over UWorld-style correct-first | UWorld uses prose-style explanations with label-only references ("(Choice E)") that force learners to cross-reference back to the choice list — split attention overhead. Our per-choice modular content shows choice text + explanation together, eliminating cross-referencing. This same modularity makes error-first reordering trivial. Research on productive failure, response-contingent feedback, and error salience all support error-first. Converting to UWorld's prose style would require rewriting all MDX content and would be a step backward for learning. |
