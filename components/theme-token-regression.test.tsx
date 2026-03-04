@@ -205,10 +205,29 @@ describe('theme token regression', () => {
       />,
     );
 
+    const selectedDoc = new DOMParser().parseFromString(
+      selectedHtml,
+      'text/html',
+    );
+    const selectedTokens = (
+      selectedDoc.querySelector('label')?.getAttribute('class') ?? ''
+    )
+      .split(/\s+/)
+      .filter(Boolean);
+    const unselectedDoc = new DOMParser().parseFromString(
+      unselectedHtml,
+      'text/html',
+    );
+    const unselectedTokens = (
+      unselectedDoc.querySelector('label')?.getAttribute('class') ?? ''
+    )
+      .split(/\s+/)
+      .filter(Boolean);
+
     expect(selectedHtml).not.toContain('border-zinc-400');
-    expect(selectedHtml).toContain('border-ring');
-    expect(selectedHtml).toContain('bg-muted/40');
-    expect(unselectedHtml).toContain('border-border/60');
+    expect(selectedTokens).toContain('border-ring');
+    expect(selectedTokens).toContain('bg-muted/40');
+    expect(unselectedTokens).toContain('border-border/60');
   });
 
   it('uses semantic success/destructive tokens in question feedback components', async () => {

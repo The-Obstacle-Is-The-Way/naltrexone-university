@@ -215,9 +215,12 @@ describe('ChoiceButton', () => {
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const wrapperLabel = doc.querySelector('label');
+    const wrapperClassTokens = (wrapperLabel?.getAttribute('class') ?? '')
+      .split(/\s+/)
+      .filter(Boolean);
 
-    expect(wrapperLabel?.getAttribute('class')).toContain('bg-muted/40');
-    expect(wrapperLabel?.getAttribute('class')).toContain('border-ring');
+    expect(wrapperClassTokens).toContain('bg-muted/40');
+    expect(wrapperClassTokens).toContain('border-ring');
   });
 
   it('applies base background tint when unselected', () => {
