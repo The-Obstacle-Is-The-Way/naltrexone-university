@@ -312,7 +312,16 @@ describe('Feedback', () => {
       />,
     );
 
-    expect(html).not.toContain('bg-destructive/10');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const wrongAnswersHeading = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Why other answers are wrong:',
+    );
+    const wrongAnswersSectionText =
+      wrongAnswersHeading?.parentElement?.textContent ?? '';
+
+    expect(html).toContain('Your answer');
+    expect(wrongAnswersHeading).not.toBeUndefined();
+    expect(wrongAnswersSectionText).not.toContain('Your answer');
   });
 
   it('keeps the correct-answer flow layout unchanged', () => {
@@ -415,8 +424,16 @@ describe('Feedback', () => {
       />,
     );
 
-    expect(html).toContain('Why other answers are wrong:');
-    expect(html).not.toContain('bg-destructive/10');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const wrongAnswersHeading = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Why other answers are wrong:',
+    );
+    const wrongAnswersSectionText =
+      wrongAnswersHeading?.parentElement?.textContent ?? '';
+
+    expect(wrongAnswersHeading).not.toBeUndefined();
+    expect(wrongAnswersSectionText).not.toContain('Your answer');
+    expect(html).not.toContain('Your answer');
   });
 
   it('renders your-answer choice details when selected wrong explanation is null', () => {
