@@ -271,6 +271,8 @@ All values below are recomputed from current token/class math after the DEBT-279
 | Clinical pearl accent (`border-foreground/40`) vs success card fill | **3.44:1** | >= 3.0:1 (SC 1.4.11) | PASS |
 | Session-breakdown divider (`dark:divide-foreground/40`) vs row fill | **3.42:1** | >= 3.0:1 (SC 1.4.11) | PASS |
 
+Rounding caveat: `text-muted-foreground` on `bg-muted` is mathematically just over the threshold using exact HSL token values (~4.51:1), but browser-computed integer RGB output (`rgb(131,131,131)` on `rgb(28,28,28)`) lands at ~4.49:1. Treat inactive segmented-control/tab-switch text as threshold-sensitive until it has more margin than a rounding edge case.
+
 These checkpoints validate the token-level fixes that actually landed. They do **not** prove the question-flow interaction hierarchy is healthy: the current choice-button implementation still flattens base/hover/selected states into an overly similar medium-gray treatment in dark mode.
 
 ### Violation status after this pass

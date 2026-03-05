@@ -72,6 +72,7 @@ Adjusting one class in one component will not produce consistent compliance.
   - page background (`--background`) — for nav links, page-level labels
   - hover fills (`bg-muted/50` over card) — for filter chips, mobile nav, inactive tabs
   - warning tint (`bg-warning/10` over page background) — for warning copy surfaces (for example, PastDueBanner)
+- [ ] Verify threshold-sensitive text contexts using browser-computed integer RGB output, not only idealized HSL token math. The highest-risk case is inactive segmented-control/tab-switch text on `bg-muted`, where exact token math can pass while rounded browser output sits on the threshold.
 - [ ] Recompute and document resulting text ratios in BS-042.
 
 ### 3) Required-boundary remediation (SC 1.4.11)
