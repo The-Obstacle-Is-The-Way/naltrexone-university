@@ -44,7 +44,7 @@ SC 1.4.11 is the one that governs borders, interactive element boundaries, and v
 
 All values computed from actual token values in `globals.css` using WCAG 2.1 relative luminance formula. Dark mode only (light mode has its own documented asymmetry — see Pattern Registry 1.2 caveat).
 
-Runtime spot-check note (2026-03-05): browser-computed values from an actual review-mode question page (`body` 9/9/9, `card` 18/18/18, unselected choice fill ~20/20/20, unselected choice border ~30/30/30) match the token-derived composites below. A separate dashboard page audit confirmed identical effective values: row fill `rgb(20,20,20)`, row border `rgb(30,30,30)`, card `rgb(18,18,18)`, muted text `rgb(115,115,115)` — producing 1.12:1 (border), 1.02:1 (fill), 3.89:1 (muted text), 1.32:1 (card border) — all consistent with token-derived predictions.
+Runtime spot-check note (2026-03-05): browser-computed values from an actual review-mode question page (`body` 9/9/9, `card` 18/18/18, unselected choice fill ~20/20/20, unselected choice border ~30/30/30) match the token-derived composites below. A separate dashboard page audit confirmed identical effective values: row fill `rgb(20,20,20)`, row border `rgb(30,30,30)`, card `rgb(18,18,18)`, muted text `rgb(115,115,115)` — producing 1.12:1 (border), 1.02:1 (fill), 3.89:1 (muted text), 1.32:1 (card border). A history page audit confirmed the page-level variant: row fill `rgb(13,13,13)`, row border `rgb(26,26,26)`, muted tab/filter text on `bg-muted` at 3.59:1, caption text on page bg at 4.20:1, and `text-muted-foreground/60` ("Unanswered") at ~2.19:1. All are consistent with token-derived predictions.
 
 ### Effective Dark Mode Gray Values
 
@@ -71,14 +71,17 @@ foreground:                        93.0%   ← primary text
 | border-success/20 vs card | **1.36:1** | FAIL |
 | border-destructive/20 vs card | **1.17:1** | FAIL |
 | border-border/60 vs card | **1.13:1** | FAIL |
+| History session row border (`border-border/60`) vs page bg (`history-sessions-tab.tsx:181`) | **1.14:1** | FAIL |
+| History session row fill (`bg-muted/20`) vs page bg (`history-sessions-tab.tsx:181`) | **1.02:1** | FAIL |
 | Reference divider (`border-border/40`) vs card | **1.08:1** | FAIL |
-| Session breakdown divider (`border-border/30`) vs card (`history-sessions-tab.tsx:245`) | **~1.06:1** | FAIL (likely decorative — spacing communicates grouping) |
-| List item divider (`divide-border/20`) vs card (`session-breakdown-list.tsx:28`) | **~1.04:1** | FAIL (likely decorative — `py-2` padding separates items) |
+| Session breakdown divider (`border-border/30`) vs expanded row bg (`history-sessions-tab.tsx:245`) | **~1.06:1** | FAIL (likely decorative — spacing communicates grouping) |
+| List item divider (`divide-border/20`) vs expanded row bg (`session-breakdown-list.tsx:28`) | **~1.04:1** | FAIL (likely decorative — `py-2` padding separates items) |
 | Neutral badge fill (`bg-muted`) vs neutral choice fill (`bg-muted/20`) | **1.08:1** | FAIL |
 | Neutral badge border (`border`) vs neutral choice fill (`bg-muted/20`) | **1.22:1** | FAIL |
 | Clinical pearl accent (`border-foreground/20`) vs success card fill (`bg-success/5`) | **1.78:1** | FAIL |
 | Choice hover vs choice base | **1.02:1** | FAIL |
 | Outline action button border (`border-input`) vs page background | **1.32:1** | FAIL |
+| Outline action button border (`border-input`) vs history session row fill (`history-sessions-tab.tsx:224-227`) | **1.28:1** | FAIL |
 
 **Every border/surface pair sampled in this table fails WCAG SC 1.4.11.**
 
@@ -98,14 +101,19 @@ Additional context from runtime capture: page background (3.5%) vs card fill (7%
 | text-muted-foreground on card (`Reference` heading) | **3.95:1** | FAIL (normal text) |
 | text-muted-foreground on success card (`Clinical Pearl` label) | **3.73:1** | FAIL (normal text) |
 | text-muted-foreground on wrong-answer card (`bg-background/50` over card) | **4.10:1** | FAIL (normal text) |
-| text-muted-foreground — inactive nav links on page bg | **3.89:1** | FAIL (normal text) |
+| text-muted-foreground — inactive nav links on page bg | **4.20:1** | FAIL (normal text) |
+| text-muted-foreground — inactive segmented-control items on `bg-muted` | **3.59:1** | FAIL (normal text) |
+| text-muted-foreground — history page subtitle on page bg (`history-page-client.tsx:38`) | **4.20:1** | FAIL (normal text) |
+| text-muted-foreground — history caption ("Showing X–Y…") on page bg (`history-sessions-tab.tsx:118`) | **4.20:1** | FAIL (normal text) |
+| text-muted-foreground — history tab/filter inactive items on `bg-muted` (`history-tab-bar.tsx`, `history-sessions-tab.tsx:121-147`) | **3.59:1** | FAIL (normal text) |
 | text-muted-foreground — dashboard labels/timestamps on row bg | **3.89:1** | FAIL (normal text) |
 | text-muted-foreground/60 — "Unanswered" status in session breakdown (`session-breakdown-list.tsx:68`) | **~2.2:1** | FAIL (normal text — compounds V3 base with 60% opacity) |
+| `text-warning-foreground` on `bg-warning/10` (PastDueBanner, dark mode) | **~1.03:1** | FAIL (normal text) |
 | Letter badge text on bg-muted (no parent opacity) | **14.57:1** | PASS |
 | Wrong-unselected choice text (effective `opacity-50`) on choice bg | **4.73:1** | PASS (barely) |
 | Wrong-unselected badge letter (effective `opacity-50`) on badge bg | **4.37:1** | FAIL (normal text) |
 
-**Text-foreground is fine in default states. `text-muted-foreground` fails for normal-size text** across multiple real usages in the app (3.73:1–4.10:1 vs 4.5:1 required), and the wrong-unselected `opacity-50` state in `components/question/choice-button.tsx` pushes badge letters to 4.37:1 (also below AA).
+**Text-foreground is fine in default states. `text-muted-foreground` fails for normal-size text** across multiple real usages in the app (3.59:1–4.20:1 vs 4.5:1 required), and the wrong-unselected `opacity-50` state in `components/question/choice-button.tsx` pushes badge letters to 4.37:1 (also below AA). A separate severe failure also exists in dark mode warning surfaces (`text-warning-foreground` on `bg-warning/10` at ~1.03:1).
 
 ### Verdict Badge Contrast (DEBT-278, for reference)
 
@@ -120,7 +128,7 @@ DEBT-278 proposes solving the badge specifically with `dark:bg-*/60`, following 
 
 ### Audit Coverage (Current Revision)
 
-Production grep coverage (`app/**` + `components/**`, `.tsx` only, excluding tests/specs) found **43 opacity-modifier usages across 18 files**.
+Production grep coverage (`app/**` + `components/**`, `.tsx` only, excluding tests/specs) found **44 opacity-modifier usages across 18 files**.
 
 This document includes explicit WCAG computations for the highest-impact surfaces currently driving UX concern:
 - Choice button neutral base/hover/border (`components/question/choice-button.tsx`)
@@ -129,15 +137,20 @@ This document includes explicit WCAG computations for the highest-impact surface
 - Feedback section semantic borders (`components/question/feedback.tsx`)
 - Feedback section secondary/label text (`text-muted-foreground`) (`components/question/feedback.tsx`, `components/markdown/Markdown.tsx`)
 - Dashboard + bookmarks real-world usages of `text-muted-foreground` at `text-sm`/`text-xs` (`app/(app)/app/dashboard/page.tsx`, `app/(app)/app/bookmarks/page.tsx`)
+- App navigation + header action links on page background (`components/app-desktop-nav.tsx`, `components/mobile-nav.tsx`, `components/auth-nav.tsx`, `lib/shared-styles.ts`)
 - Verdict badge options (DEBT-278 table)
 - Review-mode outline action button border (`app/(app)/app/questions/[slug]/question-page-client.tsx` using `components/ui/button.tsx` outline variant)
 - Foreground/muted-foreground text on representative dark surfaces
 - Practice tag filter containers (`app/(app)/app/practice/components/practice-session-starter.tsx` — `border-border/60 bg-muted/20`, plus `text-muted-foreground` at `text-xs`/`text-sm` on description, status labels, available count)
+- Practice segmented controls via shared tab-switch classes (`components/ui/tab-switch-styles.ts` consumed by `components/ui/segmented-control.tsx`) — inactive `text-muted-foreground` on `bg-muted`
 - Session breakdown "Unanswered" label (`app/(app)/app/shared/components/session-breakdown-list.tsx` — `text-muted-foreground/60`, compounds V3)
 - Session breakdown dividers (`divide-border/20`) and history session dividers (`border-border/30`)
+- History session rows on page background (`app/(app)/app/history/components/history-sessions-tab.tsx` — `border-border/60 bg-muted/20` resolve to ~1.14:1 border and ~1.02:1 fill against page bg)
+- History "View breakdown" outline button inside muted rows (`app/(app)/app/history/components/history-sessions-tab.tsx` — `variant=\"outline\"` resolves to `dark:border-input`, ~1.28:1 against row fill)
+- App-level warning banner in dark mode (`app/(app)/app/layout.tsx` PastDueBanner, `bg-warning/10` + `text-warning-foreground`)
 
 Additional contrast-relevant patterns exist in the codebase and should be included in a follow-up full sweep if we want true exhaustive component-by-component WCAG accounting:
-- Warning banners/cards (`app/(app)/app/layout.tsx`, `app/(app)/app/billing/page.tsx`, `app/(app)/app/questions/[slug]/question-page-client.tsx`)
+- Additional warning cards (`app/(app)/app/billing/page.tsx`, `app/(app)/app/questions/[slug]/question-page-client.tsx`)
 - Error/toast surfaces (`components/error-card.tsx`, `components/ui/notification-provider.tsx`)
 - Markdown clinical pearl border (`components/markdown/Markdown.tsx`)
 - Review-mode nav/action controls beyond the sampled outline border case (`app/(app)/app/questions/[slug]/question-page-client.tsx`)
@@ -152,7 +165,7 @@ The dashboard and choice buttons use **identical contrast tokens** (`border-bord
 1. **Dashboard rows have dense text content** — the text itself (at 15.77:1 foreground contrast) defines the visual boundary. You don't need the border to see the row.
 2. **Choice buttons are sparse** — one short sentence per button. The border and fill are the PRIMARY visual cues for button identity. When those are 1.13:1 contrast, the buttons vanish.
 3. **Feedback sections use semantic color borders** — `border-success/20` and `border-destructive/20` add a color hue difference (green/red vs gray), making them slightly more perceptible than a gray-on-gray border at the same contrast ratio, due to chromatic contrast.
-4. **Dashboard and bookmarks still have a real text-contrast violation** — they use `text-muted-foreground` at `text-sm`/`text-xs` for labels and metadata (`app/(app)/app/dashboard/page.tsx`, `app/(app)/app/bookmarks/page.tsx`), which computes to 3.73:1–4.10:1 on sampled dark surfaces (below 4.5:1 AA).
+4. **Dashboard, bookmarks, nav, and segmented controls still have real text-contrast violations** — they use `text-muted-foreground` at `text-sm`/`text-xs` for labels/metadata and inactive controls (`app/(app)/app/dashboard/page.tsx`, `app/(app)/app/bookmarks/page.tsx`, `components/app-desktop-nav.tsx`, `components/mobile-nav.tsx`, `components/ui/tab-switch-styles.ts`), which computes to 3.59:1–4.20:1 on sampled dark surfaces (below 4.5:1 AA).
 
 The pattern registry correctly identified that `border-border/60` is for "rows nested inside cards (subordinate to card border)." But choice buttons aren't subordinate rows — they're the **primary interactive elements** on the page. They need stronger visual identity than a muted data row.
 
@@ -184,12 +197,13 @@ These are the concrete problems to resolve, roughly priority-ordered:
 |----|-----------|---------|--------|
 | V1 | Choice button border barely visible | `border-border/60` = 1.13:1 | High — primary interactive element |
 | V2 | Choice button fill indistinguishable from card | `bg-muted/20` = 1.02:1 | High — buttons blend into card |
-| V3 | `text-muted-foreground` fails for `text-sm`/`text-xs` | 3.73:1–4.10:1 vs 4.5:1 required | Medium — labels, timestamps, secondary text, inactive nav links, dashboard metadata. Compounded by `text-muted-foreground/60` in `session-breakdown-list.tsx` (~2.2:1) |
+| V3 | `text-muted-foreground` fails for `text-sm`/`text-xs` | 3.59:1–4.20:1 vs 4.5:1 required | Medium — labels, timestamps, secondary text, inactive nav links, segmented controls, dashboard metadata. Compounded by `text-muted-foreground/60` in `session-breakdown-list.tsx` (~2.2:1) |
 | V4 | Card border barely visible on page | `border` = 1.32:1 | Low — cards identified by content, not border |
 | V5 | Semantic borders too faint | `border-success/20` = 1.36:1 | Low — hue provides chromatic cue |
 | V6 | Hover state imperceptible | `bg-muted/20` → `bg-muted/40` = 1.02:1 | Medium — hover feedback matters for interactivity |
 | V7 | Wrong-unselected badge letters fail due parent `opacity-50` | 4.37:1 vs 4.5:1 required | Medium — A/C/D badge glyphs are active review cues |
-| V8 | Review-mode outline button border too faint on page bg | `border-input` = 1.32:1 | Low — button still has strong text contrast but weak boundary |
+| V8 | Outline button border too faint on dark surfaces | `border-input` = 1.28:1–1.32:1 | Low — button still has strong text contrast but weak boundary |
+| V9 | Warning banner text token fails severely in dark mode | `text-warning-foreground` on `bg-warning/10` = ~1.03:1 | High — banner copy and CTA context become low-legibility |
 
 ### 3. Possible Approaches (Not Decided)
 
@@ -214,6 +228,10 @@ These are the concrete problems to resolve, roughly priority-ordered:
 **For V8 (outline action button boundary):**
 - Consider a stronger dark-mode outline border token for bottom action bars (`border-border` or a dedicated outline-on-background token)
 - Keep text contrast unchanged; this is a boundary/perimeter contrast issue, not a text-legibility issue
+
+**For V9 (warning foreground on warning tint):**
+- Use a high-luminance warning text token for dark-mode warning surfaces, or reduce tint usage and render warning content with `text-foreground`
+- Keep warning hue signaling in border/background, but do not encode primary copy in near-black text on near-black tinted surfaces
 
 **Important constraint:** DEBT-273 just shipped (March 4, one day ago). Any changes to choice button contrast must be justified by WCAG compliance, not just aesthetic preference, to avoid the oscillation of "too much contrast → not enough contrast → too much again."
 

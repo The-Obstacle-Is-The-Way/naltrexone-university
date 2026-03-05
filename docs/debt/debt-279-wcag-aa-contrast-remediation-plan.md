@@ -41,11 +41,14 @@ Adjusting one class in one component will not produce consistent compliance.
 - [ ] Raise dark-mode `--muted-foreground` from 45% to a value that passes all sampled normal-text contexts from BS-042.
 - [ ] Validate candidate token against at least these backgrounds in dark mode:
   - card (`--card`)
+  - muted surface (`bg-muted`) — segmented-control/tab-switch containers
   - row fill (`bg-muted/20` over card)
+  - row fill (`bg-muted/20` over page background) — history session rows
   - feedback wrong card (`bg-background/50` over card)
   - feedback success card (`bg-success/5` over card)
   - page background (`--background`) — for nav links, page-level labels
   - hover fills (`bg-muted/50` over card) — for filter chips, mobile nav, inactive tabs
+  - warning tint (`bg-warning/10` over page background) — for warning copy surfaces (for example, PastDueBanner)
 - [ ] Recompute and document resulting text ratios in BS-042.
 
 ### 3) Required-boundary remediation (SC 1.4.11)
@@ -65,18 +68,22 @@ Adjusting one class in one component will not produce consistent compliance.
 - [ ] Dashboard/history/bookmarks surfaces:
   - `app/(app)/app/dashboard/page.tsx`
   - `app/(app)/app/bookmarks/page.tsx`
-  - `app/(app)/app/history/components/history-sessions-tab.tsx` — also uses `border-border/30` dividers (lower than `/60`)
+  - `app/(app)/app/history/history-page-client.tsx` — history subtitle uses `text-muted-foreground` on page background
+  - `app/(app)/app/history/components/history-tab-bar.tsx` — inactive tab text uses `tabSwitchItemInactiveClasses`
+  - `app/(app)/app/history/components/history-sessions-tab.tsx` — session rows use `border-border/60 bg-muted/20` on page bg; caption/mode filter use muted text; expanded panel uses `border-border/30`; "View breakdown" uses outline button border on dark row background
   - `app/(app)/app/history/components/history-questions-tab.tsx`
   - `app/(app)/app/shared/components/session-breakdown-list.tsx` — uses `text-muted-foreground/60` (~2.2:1, worse than V3 base) and `divide-border/20` dividers
 - [ ] Navigation surfaces:
   - `components/app-desktop-nav.tsx` — inactive links use `text-muted-foreground` on page bg
   - `components/mobile-nav.tsx` — inactive links use `text-muted-foreground`, hamburger icon same; hover uses `bg-muted/50`
+  - `components/auth-nav.tsx` — authenticated primary link uses `text-muted-foreground` on page bg
 - [ ] Practice surfaces:
   - `app/(app)/app/practice/components/practice-session-starter.tsx` — `border-border/60 bg-muted/20` on tag filter containers, multiple `text-muted-foreground` at `text-xs`/`text-sm`
+  - `app/(app)/app/practice/practice-page-client.tsx` — header action link ("Back to Dashboard") consumes `text-muted-foreground` via shared styles
 - [ ] Error/notification surfaces:
   - `components/error-card.tsx` — `border-destructive/30 bg-destructive/10`
   - `components/ui/notification-provider.tsx` — toast borders at `border-success/30`, `border-destructive/40`
-  - `app/(app)/app/layout.tsx` — PastDueBanner uses `bg-warning/10` + `text-warning-foreground` (verify dark-mode contrast — `--warning-foreground` at 10% lightness on tinted near-black bg may fail severely)
+  - `app/(app)/app/layout.tsx` — PastDueBanner uses `bg-warning/10` + `text-warning-foreground` (BS-042 computes ~1.03:1 in dark mode; severe `SC 1.4.3` failure)
 - [ ] Shared UI primitives:
   - `components/ui/button.tsx` — outline variant uses `dark:bg-input/30 dark:border-input`
   - `components/ui/card.tsx`
@@ -84,11 +91,12 @@ Adjusting one class in one component will not produce consistent compliance.
   - `components/ui/segmented-control.tsx` — consumes `tab-switch-styles` constants
   - `components/ui/filter-chip.tsx` — unselected chips use `text-muted-foreground hover:bg-muted/50`
   - `components/ui/input.tsx` — `dark:bg-input/30 border-input placeholder:text-muted-foreground`
+  - `lib/shared-styles.ts` — `headerActionLinkClasses` currently sets `text-muted-foreground` for app header action links
 
 ### 5) Verification and regression safety
 
 - [ ] Extend existing contrast/token test suites:
-  - `components/theme-token-regression.test.tsx` — 309-line semantic token regression suite; extend with contrast assertions for new token values
+  - `components/theme-token-regression.test.tsx` — semantic token regression suite; extend with contrast assertions for new token values
   - `components/ui/tab-switch-styles.test.ts` — already validates tab containers avoid `bg-muted/20` and `border-border/60`; extend if tab-switch tokens change
   - `tests/e2e/marketing-contrast.spec.ts` — E2E WCAG luminance math on marketing pages; consider extending pattern to app surfaces
 - [ ] Add or update deterministic contrast checks (token-level math) for key semantic pairs in both themes.
@@ -97,7 +105,7 @@ Adjusting one class in one component will not produce consistent compliance.
   - question submit/review
   - dashboard
   - bookmarks
-  - history tabs
+  - history tabs + mode filter + session count caption ("Showing X–Y…")
   - practice setup (segmented controls, filter chips, tag filters)
   - navigation (desktop and mobile, inactive link contrast)
 
@@ -131,4 +139,3 @@ Implement in small PRs to reduce regression risk:
 | Token change causes broad visual drift | Land token updates with targeted component snapshots and visual checks in both themes |
 | SC 1.4.11 scope confusion causes churn | Use `contrast-policy.md` definitions for required boundary vs decorative separator before class changes |
 | Fixes regress recently shipped UI work | Ship in small PR slices and re-run affected tests per slice |
-
