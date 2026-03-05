@@ -181,3 +181,76 @@ Implement in small PRs to reduce regression risk:
 | Token change causes broad visual drift | Land token updates with targeted component snapshots and visual checks in both themes |
 | SC 1.4.11 scope confusion causes churn | Use `contrast-policy.md` definitions for required boundary vs decorative separator before class changes |
 | Fixes regress recently shipped UI work | Ship in small PR slices and re-run affected tests per slice |
+| **Uniform fill destroys state hierarchy (MATERIALIZED)** | **Always use stepped fill opacities per state; see "Key design principle" above** |
+
+---
+
+## PR #174 Implementation Findings
+
+PR #174 (`debt-279/wcag-aa-contrast-remediation` → `main`) implemented delivery slices 1-3 but introduced a visual regression and left gaps. Findings documented here to inform the fix commit.
+
+### Finding 1: Choice button fill hierarchy destroyed (REGRESSION)
+
+**Severity:** High (UX regression — all choice states look identical in dark mode)
+
+The agent applied `dark:bg-foreground/40` uniformly to both the base state (line 33) and the selected state (line 42) of `choice-button.tsx`. In dark mode, every choice button — unselected, hovered, and selected — renders as the same `#6a6a6a` medium gray block. The user cannot distinguish which choice is selected or being hovered.
+
+**Pre-DEBT-279 state (working):**
+| State | Background | Result |
+|-------|-----------|--------|
+| Unselected | `bg-muted/20` | Very subtle tint |
+| Hover | `hover:bg-muted/40` | Visible 2x opacity jump |
+| Selected | `bg-muted/40` + `border-ring` | Tinted + ring border |
+
+**Post-DEBT-279 state (broken):**
+| State | Dark Background | Dark Border |
+|-------|----------------|-------------|
+| Unselected | `dark:bg-foreground/40` | `dark:border-foreground/40` |
+| Hover | `dark:bg-foreground/40` (**same**) | `dark:hover:border-foreground/70` |
+| Selected | `dark:bg-foreground/40` (**same**) | `dark:border-foreground/70` |
+
+**Required fix — stepped fills:**
+| State | Dark Fill | Dark Border |
+|-------|----------|-------------|
+| Unselected | `dark:bg-foreground/8` | `dark:border-foreground/40` |
+| Hover | `dark:hover:bg-foreground/15` | `dark:hover:border-foreground/70` |
+| Selected | `dark:bg-foreground/20` | `dark:border-foreground/70` |
+
+**Root cause:** The spec said "without losing hierarchy" (Section 3) and warned "over-correcting contrast harms hierarchy" (Risks). The implementing agent ignored both constraints by applying the same fill opacity to all states.
+
+### Finding 2: Feedback answer cards have no dark-mode boundary treatment
+
+**Severity:** Medium (borders invisible in dark mode, same class as pre-fix choice buttons)
+
+`components/question/feedback.tsx` was listed in the Section 4 scope but was not touched by PR #174. The wrong-answer cards still use:
+
+```
+border-border/60 bg-background/50   ← ~1.1:1 border contrast in dark mode (invisible)
+```
+
+These need the same dark-mode border override strategy as choice buttons:
+```
+dark:border-foreground/40            ← 3.6:1 (passes SC 1.4.11)
+```
+
+The reference section separator (`border-border/40`) is even worse (~1.06:1). The wrong-answer choice text uses `text-muted-foreground` which may fail SC 1.4.3 depending on the final `--muted-foreground` token value.
+
+### Finding 3: Cascade masking on verdict states (FIXED in c0cf64d1)
+
+The unconditional `dark:border-foreground/40` on line 33 was applied regardless of verdict state. In Tailwind v4, dark variants appear later in generated CSS (~position 60000) than base utilities (~position 24000). Since `@media` doesn't add specificity, the dark override would mask `border-success` and `border-destructive` in dark mode.
+
+**Fix applied:** Gated dark overrides behind `!hasVerdict` (`const hasVerdict = correctness === 'correct' || correctness === 'incorrect'`). Covered by test.
+
+### Component reuse analysis
+
+ChoiceButton (pre-submission) and feedback answer cards (post-submission) are **entirely separate implementations** with no shared components or classes:
+
+| | ChoiceButton | Feedback cards |
+|---|---|---|
+| Element | `<label>` (interactive) | `<div>` (display-only) |
+| Padding | `p-4` | `p-3` |
+| Badge | Circular `h-7 w-7 rounded-full` | Inline text "A)" |
+| Layout gap | `gap-3` | `gap-1` |
+| Dark overrides | Yes (PR #174) | **None** |
+
+The interaction models are too different to share a component (label+radio vs static div), but the **dark-mode boundary token strategy** (`dark:border-foreground/40` for borders, stepped fills for hierarchy) should be applied consistently to both.
