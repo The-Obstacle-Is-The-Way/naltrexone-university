@@ -1,11 +1,15 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+let Input: typeof import('./input').Input;
+
+beforeAll(async () => {
+  ({ Input } = await import('./input'));
+});
 
 describe('components/ui/input', () => {
-  it('renders an input with expected slot attribute', async () => {
-    const { Input } = await import('./input');
-
+  it('renders an input with expected slot attribute', () => {
     const html = renderToStaticMarkup(
       <Input type="email" placeholder="Email" aria-invalid="true" />,
     );

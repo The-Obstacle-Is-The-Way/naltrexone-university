@@ -1,11 +1,15 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+let FilterChip: typeof import('@/components/ui/filter-chip').FilterChip;
+
+beforeAll(async () => {
+  ({ FilterChip } = await import('@/components/ui/filter-chip'));
+});
 
 describe('FilterChip', () => {
-  it('renders with the provided label', async () => {
-    const { FilterChip } = await import('@/components/ui/filter-chip');
-
+  it('renders with the provided label', () => {
     const html = renderToStaticMarkup(
       <FilterChip label="Alcohol" selected={false} onClick={() => undefined} />,
     );
@@ -13,9 +17,7 @@ describe('FilterChip', () => {
     expect(html).toContain('Alcohol');
   });
 
-  it('renders as a button element', async () => {
-    const { FilterChip } = await import('@/components/ui/filter-chip');
-
+  it('renders as a button element', () => {
     const html = renderToStaticMarkup(
       <FilterChip label="Opioids" selected={false} onClick={() => undefined} />,
     );
@@ -24,9 +26,7 @@ describe('FilterChip', () => {
     expect(html).toContain('type="button"');
   });
 
-  it('applies selected styling when selected is true', async () => {
-    const { FilterChip } = await import('@/components/ui/filter-chip');
-
+  it('applies selected styling when selected is true', () => {
     const html = renderToStaticMarkup(
       <FilterChip label="Alcohol" selected={true} onClick={() => undefined} />,
     );
@@ -35,9 +35,7 @@ describe('FilterChip', () => {
     expect(html).toContain('bg-primary');
   });
 
-  it('applies unselected styling when selected is false', async () => {
-    const { FilterChip } = await import('@/components/ui/filter-chip');
-
+  it('applies unselected styling when selected is false', () => {
     const html = renderToStaticMarkup(
       <FilterChip label="Alcohol" selected={false} onClick={() => undefined} />,
     );
@@ -49,9 +47,7 @@ describe('FilterChip', () => {
     expect(html).not.toContain('hover:bg-accent');
   });
 
-  it('is disabled when disabled prop is true', async () => {
-    const { FilterChip } = await import('@/components/ui/filter-chip');
-
+  it('is disabled when disabled prop is true', () => {
     const html = renderToStaticMarkup(
       <FilterChip
         label="Alcohol"

@@ -146,6 +146,7 @@ describe('ChoiceButton', () => {
     const wrapperLabel = input?.closest('label');
     const badge = wrapperLabel?.querySelector('div.h-7.w-7');
     const wrapperClass = wrapperLabel?.getAttribute('class') ?? '';
+    const badgeClass = badge?.getAttribute('class') ?? '';
 
     expect(wrapperLabel).not.toBeNull();
     expect(badge).not.toBeNull();
@@ -155,8 +156,10 @@ describe('ChoiceButton', () => {
     expect(wrapperClass).toContain('dark:bg-foreground/8');
     expect(wrapperClass).toContain('hover:bg-muted/40');
     expect(wrapperClass).toContain('dark:hover:border-foreground/70');
-    expect(badge?.getAttribute('class')).toContain('bg-muted');
-    expect(badge?.getAttribute('class')).not.toContain('bg-background');
+    expect(badgeClass).toContain('bg-muted');
+    expect(badgeClass).toContain('dark:border-foreground/60');
+    expect(badgeClass).toContain('dark:bg-foreground/20');
+    expect(badgeClass).not.toContain('bg-background');
   });
 
   it('adds a distinct dark-mode hover fill for unselected choices', () => {
