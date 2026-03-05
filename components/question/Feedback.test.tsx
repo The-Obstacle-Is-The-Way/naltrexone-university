@@ -12,6 +12,10 @@ function getClassTokens(className: string): Set<string> {
   return new Set(className.split(/\s+/).filter(Boolean));
 }
 
+function hasTokenMatching(tokens: Set<string>, pattern: RegExp): boolean {
+  return [...tokens].some((token) => pattern.test(token));
+}
+
 describe('Feedback', () => {
   it('renders a neutral status card with a verdict badge', () => {
     const html = renderToStaticMarkup(
@@ -317,14 +321,18 @@ describe('Feedback', () => {
       const classTokens = getClassTokens(className);
       expect(classTokens.has('border-border/60')).toBe(true);
       expect(classTokens.has('bg-background/50')).toBe(true);
-      expect(classTokens.has('border-success/60')).toBe(false);
-      expect(classTokens.has('bg-success/5')).toBe(false);
       expect(
-        [...classTokens].some((token) =>
-          token.startsWith('border-destructive'),
-        ),
+        hasTokenMatching(classTokens, /(^|:)border-success(?:\/\d+)?$/),
       ).toBe(false);
-      expect(classTokens.has('bg-destructive/5')).toBe(false);
+      expect(hasTokenMatching(classTokens, /(^|:)bg-success(?:\/\d+)?$/)).toBe(
+        false,
+      );
+      expect(
+        hasTokenMatching(classTokens, /(^|:)border-destructive(?:\/\d+)?$/),
+      ).toBe(false);
+      expect(
+        hasTokenMatching(classTokens, /(^|:)bg-destructive(?:\/\d+)?$/),
+      ).toBe(false);
     }
   });
 
@@ -367,10 +375,10 @@ describe('Feedback', () => {
     const wrongAnswerCards = Array.from(
       wrongAnswersSection?.querySelectorAll('div') ?? [],
     ).filter((div) => {
-      const className = div.getAttribute('class') ?? '';
+      const classTokens = getClassTokens(div.getAttribute('class') ?? '');
       return (
-        className.includes('border-border/60') &&
-        className.includes('bg-background/50')
+        classTokens.has('border-border/60') &&
+        classTokens.has('bg-background/50')
       );
     });
 
@@ -422,10 +430,10 @@ describe('Feedback', () => {
     const wrongAnswerCards = Array.from(
       wrongAnswersSection?.querySelectorAll('div') ?? [],
     ).filter((div) => {
-      const className = div.getAttribute('class') ?? '';
+      const classTokens = getClassTokens(div.getAttribute('class') ?? '');
       return (
-        className.includes('border-border/60') &&
-        className.includes('bg-background/50')
+        classTokens.has('border-border/60') &&
+        classTokens.has('bg-background/50')
       );
     });
 

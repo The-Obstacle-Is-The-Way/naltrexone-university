@@ -30,8 +30,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
 | [BS-042](./bs-042-contrast-consistency-and-wcag-compliance-audit.md) | Contrast Consistency and WCAG Compliance Audit | Active | [DEBT-279](../debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
 | [BS-043](./bs-043-question-flow-typography-and-feedback-visual-unification.md) | Question Flow Typography and Feedback Visual Unification — text size mismatch and badge treatment divergence between choice buttons and feedback cards | Active | — |
+| [BS-044](./bs-044-dark-mode-border-weight-tiering.md) | Dark Mode Border Weight Tiering — uniform `dark:border-foreground/40` is WCAG compliant but aesthetically heavy; explore tiered treatment by element role | Active | [DEBT-279](../debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
 
-**Next Brainstorming ID:** BS-044
+**Next Brainstorming ID:** BS-045
 
 ---
 

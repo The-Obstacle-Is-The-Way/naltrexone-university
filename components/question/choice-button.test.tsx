@@ -344,6 +344,8 @@ describe('ChoiceButton', () => {
     expect(correctLabelClass).toContain('border-success');
     expect(correctLabelClass).not.toContain('dark:border-foreground/40');
     expect(correctLabelClass).not.toContain('dark:bg-foreground/8');
+    expect(correctLabelClass).not.toContain('dark:border-foreground/70');
+    expect(correctLabelClass).not.toContain('dark:bg-foreground/20');
     expect(correctBadgeClass).toContain('border-success');
     expect(correctBadgeClass).not.toContain('dark:border-foreground/60');
     expect(correctBadgeClass).not.toContain('dark:bg-foreground/20');
@@ -352,6 +354,8 @@ describe('ChoiceButton', () => {
     expect(incorrectLabelClass).toContain('border-destructive');
     expect(incorrectLabelClass).not.toContain('dark:border-foreground/40');
     expect(incorrectLabelClass).not.toContain('dark:bg-foreground/8');
+    expect(incorrectLabelClass).not.toContain('dark:border-foreground/70');
+    expect(incorrectLabelClass).not.toContain('dark:bg-foreground/20');
     expect(incorrectBadgeClass).toContain('border-destructive');
     expect(incorrectBadgeClass).not.toContain('dark:border-foreground/60');
     expect(incorrectBadgeClass).not.toContain('dark:bg-foreground/20');
