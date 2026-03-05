@@ -19,8 +19,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 7 future enhancements (F8 resolved by DEBT-276) | P3 | — |
+| [DEBT-277](./debt-277-clinical-pearl-styled-callout.md) | Clinical Pearl Styled Callout — detect `**Clinical pearl:**` in `<Markdown>` and render as visually distinct callout with label separated from content | P3 | — |
 
-**Next Debt ID:** DEBT-277
+**Next Debt ID:** DEBT-278
 
 ---
 

@@ -91,7 +91,7 @@ These were identified during BS-033 analysis but never implemented. None are bug
 
 | ID | Enhancement | Notes |
 |----|-------------|-------|
-| F1 | Clinical pearl styled callout box | Detect `**Clinical pearl:**` pattern in `<Markdown>` and render as a visually distinct callout |
+| F1 | Clinical pearl styled callout box | Detect `**Clinical pearl:**` pattern in `<Markdown>` and render as a visually distinct callout → **Spec'd as [DEBT-277](./debt-277-clinical-pearl-styled-callout.md)** |
 | F2 | Clinical pearl as separate seed field | Parse clinical pearl at seed level (like `reference_md`), store as its own column/field |
 | F3 | Reference section styling improvements | Improve label/content hierarchy and reference readability in feedback |
 | F4 | Question counter / progress indicator | "Question 1 of 48" during practice sessions |
