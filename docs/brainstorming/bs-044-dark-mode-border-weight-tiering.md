@@ -191,6 +191,8 @@ This is a preliminary list. Each item needs individual scrutiny across all views
 
 6. **What about the selected-state gray concern?** The light-mode screenshot shows that the selected choice button (gray highlight) doesn't strongly differentiate from unselected in light mode. Is this related, or a separate issue?
 
+7. **Is `dark:bg-foreground/8` on choice buttons redundant now that borders are visible?** With `dark:border-foreground/40` clearly delineating each button, the subtle gray fill (`dark:bg-foreground/8`) may be adding visual noise rather than value. The fill was part of the stepped hierarchy (8% rest → 15% hover → 20% selected), but if borders already communicate the button boundary, the resting fill might be unnecessary — removing it would let the buttons sit flush against the card background, with the fill only appearing on hover/select as progressive disclosure. Needs visual comparison.
+
 ---
 
 ## Decision Log
