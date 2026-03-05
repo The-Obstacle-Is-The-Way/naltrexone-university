@@ -603,7 +603,12 @@ rounded-xl border border-success/60 bg-success/5 p-3
 rounded-xl border border-destructive bg-destructive/5 p-3
 ```
 
-**Other wrong answers:**
+**Other wrong answers (current code):**
+```
+rounded-xl border border-border/60 bg-background/50 p-3
+```
+
+**Target (DEBT-279, not yet implemented):**
 ```
 rounded-xl border border-border/60 bg-background/50 p-3 dark:border-foreground/40
 ```
@@ -616,6 +621,12 @@ rounded-xl border border-border/60 bg-background/50 p-3 dark:border-foreground/4
 
 Reference block appended to the bottom of a feedback card.
 
+**Current code:**
+```
+mt-4 border-t border-border/40 pt-3
+```
+
+**Target (DEBT-279, not yet implemented):**
 ```
 mt-4 border-t border-border/40 pt-3 dark:border-foreground/40
 ```

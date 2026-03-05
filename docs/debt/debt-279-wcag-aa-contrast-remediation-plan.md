@@ -247,17 +247,17 @@ The unconditional `dark:border-foreground/40` on line 33 was applied regardless 
 
 **Fix applied:** Gated dark overrides behind `!hasVerdict` (`const hasVerdict = correctness === 'correct' || correctness === 'incorrect'`). Covered by test.
 
-### Finding 4: Canonical docs drifted from the intended question-flow fix
+### Finding 4: Canonical docs drifted from the intended question-flow fix (RESOLVED)
 
 **Severity:** Medium (process regression — future agents will copy the wrong pattern)
 
-The current canonical frontend docs do not fully agree on the question-flow styling target:
+The canonical frontend docs did not agree on the question-flow styling target prior to this docs pass:
 
-- `docs/frontend/pattern-registry.md` still described the regressed choice-button dark fill as `dark:bg-foreground/40` in base and selected states.
-- `docs/frontend/standards.md` still summarized direct-action hover guidance with a stale `hover:bg-muted/60` shorthand.
-- The registry did not yet define explicit feedback answer-card/reference-section patterns, even though `Feedback` is a separate code path from `ChoiceButton`.
+- `docs/frontend/pattern-registry.md` described the regressed choice-button dark fill as `dark:bg-foreground/40` in base and selected states.
+- `docs/frontend/standards.md` summarized direct-action hover guidance with a stale `hover:bg-muted/60` shorthand.
+- The registry did not define explicit feedback answer-card/reference-section patterns, even though `Feedback` is a separate code path from `ChoiceButton`.
 
-If these docs remain stale, future remediation work will continue to oscillate between "WCAG-compliant border" and "flattened gray slab" because the shared visual contract is incomplete.
+**Fix applied:** Pattern Registry I-3 now specifies stepped fills (`8` → `15` → `20`). Standards.md hover table now references component-specific entries. New F-5/F-6/F-7 entries added for feedback patterns. F-5 and F-6 mark their dark-mode overrides as "not yet implemented" until the code fix lands.
 
 ### Component reuse analysis
 
