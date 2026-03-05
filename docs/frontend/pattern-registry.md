@@ -250,14 +250,14 @@ dark:border-foreground/40 dark:bg-foreground/8
 focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]
 ```
 
-**Hover (enabled):**
+**Hover (enabled, light mode):**
 ```
-cursor-pointer hover:bg-muted/40 dark:hover:bg-foreground/15
+cursor-pointer hover:bg-muted/40
 ```
 
-**Hover border (unselected only):**
+**Hover (unselected only — border + dark fill):**
 ```
-hover:border-muted-foreground/30 dark:hover:border-foreground/70
+hover:border-muted-foreground/30 dark:hover:border-foreground/70 dark:hover:bg-foreground/15
 ```
 
 **Selected (neutral):** `border-ring bg-muted/40 dark:border-foreground/70 dark:bg-foreground/20`
@@ -603,12 +603,7 @@ rounded-xl border border-success/60 bg-success/5 p-3
 rounded-xl border border-destructive bg-destructive/5 p-3
 ```
 
-**Other wrong answers (current code):**
-```
-rounded-xl border border-border/60 bg-background/50 p-3
-```
-
-**Target (DEBT-279, not yet implemented):**
+**Other wrong answers:**
 ```
 rounded-xl border border-border/60 bg-background/50 p-3 dark:border-foreground/40
 ```
@@ -621,12 +616,6 @@ rounded-xl border border-border/60 bg-background/50 p-3 dark:border-foreground/4
 
 Reference block appended to the bottom of a feedback card.
 
-**Current code:**
-```
-mt-4 border-t border-border/40 pt-3
-```
-
-**Target (DEBT-279, not yet implemented):**
 ```
 mt-4 border-t border-border/40 pt-3 dark:border-foreground/40
 ```
