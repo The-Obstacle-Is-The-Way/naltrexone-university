@@ -88,6 +88,48 @@ describe('Markdown', () => {
     expect(callout?.textContent).toContain('Capitalized variant.');
   });
 
+  it('renders a clinical pearl callout when label has no trailing content', () => {
+    const html = renderToStaticMarkup(
+      <Markdown content={'**Clinical pearl:**'} />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const callout = Array.from(doc.querySelectorAll('div')).find((element) => {
+      const classes = element.className;
+      return (
+        classes.includes('border-l-2') &&
+        classes.includes('border-foreground/20') &&
+        classes.includes('pl-3')
+      );
+    });
+    const contentParagraph = callout?.querySelector('p');
+
+    expect(callout).toBeDefined();
+    expect(callout?.textContent).toContain('Clinical Pearl');
+    expect(contentParagraph).toBeDefined();
+    expect(contentParagraph?.textContent).toBe('');
+  });
+
+  it('preserves inline markdown formatting inside clinical pearl content', () => {
+    const html = renderToStaticMarkup(
+      <Markdown
+        content={'**Clinical pearl:**`naltrexone` with **caution**.'}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const callout = Array.from(doc.querySelectorAll('div')).find((element) => {
+      const classes = element.className;
+      return (
+        classes.includes('border-l-2') &&
+        classes.includes('border-foreground/20') &&
+        classes.includes('pl-3')
+      );
+    });
+
+    expect(callout).toBeDefined();
+    expect(callout?.querySelector('code')?.textContent).toBe('naltrexone');
+    expect(callout?.querySelector('strong')?.textContent).toBe('caution');
+  });
+
   it('adds paragraph spacing utility class for multi-paragraph content', () => {
     const html = renderToStaticMarkup(
       <Markdown content={'Para 1\n\nPara 2'} />,
