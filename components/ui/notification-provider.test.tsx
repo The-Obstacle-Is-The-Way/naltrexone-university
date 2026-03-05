@@ -23,4 +23,11 @@ describe('NotificationProvider', () => {
     expect(getToastClasses('error')).toContain('border-destructive');
     expect(getToastClasses('error')).not.toContain('border-destructive/40');
   });
+
+  it('uses dark-mode border token for info toasts', async () => {
+    const { getToastClasses } = await import('./notification-provider');
+
+    expect(getToastClasses('info')).toContain('border-border');
+    expect(getToastClasses('info')).toContain('dark:border-foreground/40');
+  });
 });

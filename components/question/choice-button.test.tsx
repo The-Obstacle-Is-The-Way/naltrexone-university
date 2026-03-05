@@ -278,6 +278,66 @@ describe('ChoiceButton', () => {
     expect(wrapperLabel?.getAttribute('class')).not.toContain('bg-muted/40');
   });
 
+  it('excludes dark border/bg overrides when verdict is set (prevents cascade masking)', () => {
+    const correctHtml = renderToStaticMarkup(
+      <ChoiceButton
+        name="choices"
+        label="A"
+        textMd="Correct"
+        selected
+        disabled
+        correctness="correct"
+        onClick={() => {}}
+      />,
+    );
+
+    const incorrectHtml = renderToStaticMarkup(
+      <ChoiceButton
+        name="choices"
+        label="B"
+        textMd="Incorrect"
+        selected
+        disabled
+        correctness="incorrect"
+        onClick={() => {}}
+      />,
+    );
+
+    const correctDoc = new DOMParser().parseFromString(
+      correctHtml,
+      'text/html',
+    );
+    const correctLabel = correctDoc.querySelector('label');
+    const correctBadge = correctDoc.querySelector('.rounded-full');
+    const correctLabelClass = correctLabel?.getAttribute('class') ?? '';
+    const correctBadgeClass = correctBadge?.getAttribute('class') ?? '';
+
+    const incorrectDoc = new DOMParser().parseFromString(
+      incorrectHtml,
+      'text/html',
+    );
+    const incorrectLabel = incorrectDoc.querySelector('label');
+    const incorrectBadge = incorrectDoc.querySelector('.rounded-full');
+    const incorrectLabelClass = incorrectLabel?.getAttribute('class') ?? '';
+    const incorrectBadgeClass = incorrectBadge?.getAttribute('class') ?? '';
+
+    // Correct verdict: semantic success colors must not be masked by dark overrides
+    expect(correctLabelClass).toContain('border-success');
+    expect(correctLabelClass).not.toContain('dark:border-foreground/40');
+    expect(correctLabelClass).not.toContain('dark:bg-foreground/40');
+    expect(correctBadgeClass).toContain('border-success');
+    expect(correctBadgeClass).not.toContain('dark:border-foreground/60');
+    expect(correctBadgeClass).not.toContain('dark:bg-foreground/20');
+
+    // Incorrect verdict: semantic destructive colors must not be masked
+    expect(incorrectLabelClass).toContain('border-destructive');
+    expect(incorrectLabelClass).not.toContain('dark:border-foreground/40');
+    expect(incorrectLabelClass).not.toContain('dark:bg-foreground/40');
+    expect(incorrectBadgeClass).toContain('border-destructive');
+    expect(incorrectBadgeClass).not.toContain('dark:border-foreground/60');
+    expect(incorrectBadgeClass).not.toContain('dark:bg-foreground/20');
+  });
+
   it('sets radio input value equal to label', () => {
     const html = renderToStaticMarkup(
       <ChoiceButton
