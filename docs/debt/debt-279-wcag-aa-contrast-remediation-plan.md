@@ -226,9 +226,9 @@ The agent applied `dark:bg-foreground/40` uniformly to both the base state (line
 
 ### Finding 2: Feedback answer cards have no dark-mode boundary treatment
 
-**Severity:** Medium (borders invisible in dark mode, same class as pre-fix choice buttons)
+**Severity:** Medium (neutral feedback boundaries still invisible in dark mode; same low-contrast pattern family as the pre-fix question surfaces)
 
-`components/question/feedback.tsx` was listed in the Section 4 scope but was not touched by PR #174. The wrong-answer cards still use:
+`components/question/feedback.tsx` was only touched partially by PR #174. The pass strengthened the success/destructive containment cards, but it left the neutral wrong-answer cards and reference separator on the same low-contrast gray pattern family. The wrong-answer cards still use:
 
 ```
 border-border/60 bg-background/50   ← ~1.1:1 border contrast in dark mode (invisible)

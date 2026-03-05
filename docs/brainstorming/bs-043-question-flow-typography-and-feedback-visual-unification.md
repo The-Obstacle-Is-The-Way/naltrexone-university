@@ -3,7 +3,7 @@
 **Date:** 2026-03-05
 **Triggered by:** Visual review of question stem, choice buttons, and feedback cards showing inconsistent text sizing and badge treatment across the pre/post-submission states.
 **Scope:** Audit and plan for typography consistency and visual unification across the question flow — from question stem through choice buttons to feedback cards.
-**Related:** [DEBT-279](../debt/debt-279-wcag-aa-contrast-remediation-plan.md), [BS-042](./bs-042-contrast-consistency-and-wcag-compliance-audit.md), [BUG-155/157](../_archive/bugs/bug-155-feedback-card-visual-overhaul.md), [Pattern Registry](../frontend/pattern-registry.md)
+**Related:** [DEBT-279](../debt/debt-279-wcag-aa-contrast-remediation-plan.md), [BS-042](./bs-042-contrast-consistency-and-wcag-compliance-audit.md), [BUG-155](../_archive/bugs/bug-155-feedback-card-visual-overhaul.md), [BUG-157](../_archive/bugs/bug-157-question-card-choice-button-visual-polish.md), [Pattern Registry](../frontend/pattern-registry.md)
 
 ---
 
@@ -11,7 +11,7 @@
 
 ### 1. Typography size mismatch across the question flow
 
-After BUG-155/157 (commit `48b5c9a4`), the question stem and choice button text were bumped from `text-sm` to `text-base`. But the feedback cards were left at `text-sm`. This creates a jarring visual break:
+After BUG-155/157 (commit `48b5c9a4`), the question stem and choice button text were bumped from `text-sm` to `text-base`, while feedback answer/explanation typography stayed at `text-sm`. This creates a jarring visual break:
 
 | Element | Pre-submission | Post-submission (feedback) |
 |---------|---------------|---------------------------|
@@ -42,28 +42,28 @@ The `text-sm → text-base` change was made for the question stem and choice tex
 **Current state:**
 - Question stem: `text-base` (since BUG-157)
 - Choice text: `text-base` (since BUG-157)
-- Feedback answer text: `text-sm` (never changed)
+- Feedback answer text: `text-sm` (still unchanged by the BUG-155/157 typography pass)
 - Feedback explanation: `text-sm`
-- All other app body text: `text-sm`
+- Most other in-app body and metadata copy: `text-sm`
 
-The question flow is now the only place using `text-base` for body content. Every other surface (dashboard, history, bookmarks, practice) uses `text-sm` for comparable content.
+Within the in-app learning flow, question stem and choice copy are now the main body-content exception using `text-base`. Most comparable dashboard/history/bookmarks/practice copy remains `text-sm`.
 
 ---
 
 ## Root Cause Analysis
 
-BUG-155 and BUG-157 (commit `48b5c9a4`, 2026-02-26) made three simultaneous changes:
+BUG-155 and BUG-157 (commit `48b5c9a4`, 2026-02-26) changed the question flow asymmetrically:
 
 1. Question stem: `text-sm` → `text-base`
 2. Choice button text: `text-sm` → `text-base`
-3. Feedback cards: left at `text-sm` (not touched)
+3. Feedback cards: structurally overhauled, but answer/explanation typography remained `text-sm`
 
-The intent was to improve readability of the question flow. But the change was applied selectively — only to the pre-submission components — creating a split where the same content renders at different sizes before and after submission.
+The intent was to improve readability of the question flow. But the typography change was applied selectively to the pre-submission reading surfaces, while feedback got structural polish without the same type-ramp update. That created a split where the same content renders at different sizes before and after submission.
 
 **Files changed:**
 - `components/question/question-card.tsx` — stem `text-sm` → `text-base`, fieldset `mt-6` → `mt-8`
 - `components/question/choice-button.tsx` — Markdown className `text-sm` → `text-base`
-- `components/question/feedback.tsx` — NOT changed (still `text-sm` throughout)
+- `components/question/feedback.tsx` — verdict/reference/section structure changed, but answer and explanation typography remained `text-sm`
 
 ---
 
@@ -119,7 +119,7 @@ feedback.tsx:
 2. **Should feedback answer cards adopt the circular badge?**
    - Pro: Visual continuity between pre/post-submission
    - Con: Feedback cards are display-only, not interactive — different visual weight may be intentional
-   - Implementation: Minimal — just replace `<span>A)</span>` with the same badge `<div>` from ChoiceButton
+   - Implementation: Mechanically small, but not just a one-node swap — badge adoption also implies layout, spacing, and contrast alignment work in `feedback.tsx`
 
 3. **Should we extract shared badge/layout constants?**
    - The badge circle pattern (`h-7 w-7 rounded-full border bg-muted text-xs font-semibold`) could be a shared component or constant
