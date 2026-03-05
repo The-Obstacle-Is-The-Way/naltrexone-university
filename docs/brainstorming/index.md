@@ -28,8 +28,10 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | ID | Title | Status | Related Spec |
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
+| [BS-042](./bs-042-contrast-consistency-and-wcag-compliance-audit.md) | Contrast Consistency and WCAG Compliance Audit | Active | [DEBT-279](../debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
+| [BS-043](./bs-043-question-flow-typography-and-feedback-visual-unification.md) | Question Flow Typography and Feedback Visual Unification — text size mismatch and badge treatment divergence between choice buttons and feedback cards | Active | — |
 
-**Next Brainstorming ID:** BS-042
+**Next Brainstorming ID:** BS-044
 
 ---
 
