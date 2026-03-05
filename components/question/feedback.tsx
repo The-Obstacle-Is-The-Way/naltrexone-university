@@ -150,7 +150,7 @@ export function Feedback({
                 {visibleChoiceExplanations.map((choice) => (
                   <div
                     key={choice.choiceId}
-                    className="rounded-xl border border-border/60 bg-background/50 p-3"
+                    className="rounded-xl border border-border/60 bg-background/50 p-3 dark:border-foreground/40"
                   >
                     <div className="flex items-start gap-1 text-sm text-muted-foreground">
                       <span className="shrink-0">{choice.displayLabel})</span>
@@ -205,7 +205,7 @@ export function Feedback({
                 {otherWrongChoices.map((choice) => (
                   <div
                     key={choice.choiceId}
-                    className="rounded-xl border border-border/60 bg-background/50 p-3"
+                    className="rounded-xl border border-border/60 bg-background/50 p-3 dark:border-foreground/40"
                   >
                     <div className="flex items-start gap-1 text-sm text-muted-foreground">
                       <span className="shrink-0">{choice.displayLabel})</span>
@@ -224,7 +224,7 @@ export function Feedback({
       )}
 
       {referenceMd ? (
-        <div className="mt-4 border-t border-border/40 pt-3">
+        <div className="mt-4 border-t border-border/40 pt-3 dark:border-foreground/40">
           <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Reference
           </div>

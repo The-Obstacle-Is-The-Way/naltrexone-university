@@ -152,11 +152,30 @@ describe('ChoiceButton', () => {
     expect(wrapperClass).toContain('border-border/60');
     expect(wrapperClass).toContain('bg-muted/20');
     expect(wrapperClass).toContain('dark:border-foreground/40');
-    expect(wrapperClass).toContain('dark:bg-foreground/40');
+    expect(wrapperClass).toContain('dark:bg-foreground/8');
     expect(wrapperClass).toContain('hover:bg-muted/40');
     expect(wrapperClass).toContain('dark:hover:border-foreground/70');
     expect(badge?.getAttribute('class')).toContain('bg-muted');
     expect(badge?.getAttribute('class')).not.toContain('bg-background');
+  });
+
+  it('adds a distinct dark-mode hover fill for unselected choices', () => {
+    const html = renderToStaticMarkup(
+      <ChoiceButton
+        name="choices"
+        label="A"
+        textMd="Choice A"
+        selected={false}
+        onClick={() => {}}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const wrapperLabel = doc.querySelector('label');
+    const wrapperClass = wrapperLabel?.getAttribute('class') ?? '';
+
+    expect(wrapperLabel).not.toBeNull();
+    expect(wrapperClass).toContain('dark:hover:bg-foreground/15');
   });
 
   it('keeps wrong-unselected labels readable without parent opacity dimming', () => {
@@ -231,7 +250,7 @@ describe('ChoiceButton', () => {
 
     expect(wrapperClassTokens).toContain('bg-muted/40');
     expect(wrapperClassTokens).toContain('border-ring');
-    expect(wrapperClassTokens).toContain('dark:bg-foreground/40');
+    expect(wrapperClassTokens).toContain('dark:bg-foreground/20');
     expect(wrapperClassTokens).toContain('dark:border-foreground/70');
   });
 
@@ -253,7 +272,7 @@ describe('ChoiceButton', () => {
       .filter(Boolean);
 
     expect(wrapperClassTokens).toContain('bg-muted/20');
-    expect(wrapperClassTokens).toContain('dark:bg-foreground/40');
+    expect(wrapperClassTokens).toContain('dark:bg-foreground/8');
     expect(wrapperClassTokens).toContain('dark:border-foreground/40');
     expect(wrapperClassTokens).not.toContain('bg-muted/40');
   });

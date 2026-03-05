@@ -328,6 +328,115 @@ describe('Feedback', () => {
     }
   });
 
+  it('adds dark boundary overrides to correct-flow neutral wrong-answer cards', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={true}
+        explanationMd="General explanation."
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: false,
+            explanationMd: 'Second option is incorrect.',
+          },
+          {
+            choiceId: 'choice-c',
+            displayLabel: 'C',
+            textMd: 'Third option',
+            isCorrect: true,
+            explanationMd: 'Third option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const wrongAnswersHeading = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Why other answers are wrong:',
+    );
+    const wrongAnswersSection = wrongAnswersHeading?.parentElement;
+    const wrongAnswerCards = Array.from(
+      wrongAnswersSection?.querySelectorAll('div') ?? [],
+    ).filter((div) => {
+      const className = div.getAttribute('class') ?? '';
+      return (
+        className.includes('border-border/60') &&
+        className.includes('bg-background/50')
+      );
+    });
+
+    expect(wrongAnswersHeading).not.toBeUndefined();
+    expect(wrongAnswerCards.length).toBeGreaterThan(0);
+    for (const card of wrongAnswerCards) {
+      const classTokens = getClassTokens(card.getAttribute('class') ?? '');
+      expect(classTokens.has('dark:border-foreground/40')).toBe(true);
+    }
+  });
+
+  it('adds dark boundary overrides to incorrect-flow neutral wrong-answer cards', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={false}
+        explanationMd="General explanation."
+        selectedChoiceId="choice-a"
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: false,
+            explanationMd: 'Second option is incorrect.',
+          },
+          {
+            choiceId: 'choice-c',
+            displayLabel: 'C',
+            textMd: 'Third option',
+            isCorrect: true,
+            explanationMd: 'Third option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const wrongAnswersHeading = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Why other answers are wrong:',
+    );
+    const wrongAnswersSection = wrongAnswersHeading?.parentElement;
+    const wrongAnswerCards = Array.from(
+      wrongAnswersSection?.querySelectorAll('div') ?? [],
+    ).filter((div) => {
+      const className = div.getAttribute('class') ?? '';
+      return (
+        className.includes('border-border/60') &&
+        className.includes('bg-background/50')
+      );
+    });
+
+    expect(wrongAnswersHeading).not.toBeUndefined();
+    expect(wrongAnswerCards.length).toBeGreaterThan(0);
+    for (const card of wrongAnswerCards) {
+      const classTokens = getClassTokens(card.getAttribute('class') ?? '');
+      expect(classTokens.has('dark:border-foreground/40')).toBe(true);
+    }
+  });
+
   it('renders correct answer details when a correct choice is present', () => {
     const html = renderToStaticMarkup(
       <Feedback
@@ -446,6 +555,31 @@ describe('Feedback', () => {
     expect(referenceLabel?.getAttribute('class')).toContain('tracking-wide');
     expect(html).toContain('Reference');
     expect(html).toContain('Anton RF et al. JAMA. 2006;295(17):2003-2017.');
+  });
+
+  it('adds a dark boundary override to the reference separator', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={true}
+        explanationMd="Because..."
+        referenceMd="Anton RF et al. JAMA. 2006;295(17):2003-2017."
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const referenceLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Reference',
+    );
+    const referenceSection = referenceLabel?.parentElement;
+    const referenceClassTokens = getClassTokens(
+      referenceSection?.getAttribute('class') ?? '',
+    );
+
+    expect(referenceLabel).not.toBeUndefined();
+    expect(referenceSection).not.toBeNull();
+    expect(referenceClassTokens.has('border-t')).toBe(true);
+    expect(referenceClassTokens.has('border-border/40')).toBe(true);
+    expect(referenceClassTokens.has('dark:border-foreground/40')).toBe(true);
   });
 
   it('does not render reference section when referenceMd is null', () => {
