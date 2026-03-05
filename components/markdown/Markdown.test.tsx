@@ -8,6 +8,17 @@ beforeAll(async () => {
   ({ Markdown } = await import('./Markdown'));
 });
 
+function findClinicalPearlCallout(doc: Document) {
+  return Array.from(doc.querySelectorAll('div')).find((element) => {
+    const classes = element.className;
+    return (
+      classes.includes('border-l-2') &&
+      classes.includes('border-foreground/20') &&
+      classes.includes('pl-3')
+    );
+  });
+}
+
 describe('Markdown', () => {
   it('renders markdown and does not render raw HTML tags', () => {
     const html = renderToStaticMarkup(
@@ -32,6 +43,74 @@ describe('Markdown', () => {
     );
 
     expect(html.toLowerCase()).not.toContain('javascript:');
+  });
+
+  it('renders clinical pearl paragraphs as styled callouts with separated label and content', () => {
+    const html = renderToStaticMarkup(
+      <Markdown
+        content={'Explanation text.\n\n**Clinical pearl:** This is the pearl.'}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const callout = findClinicalPearlCallout(doc);
+
+    expect(callout).toBeDefined();
+    expect(callout?.textContent).toContain('Clinical Pearl');
+    expect(callout?.textContent).toContain('This is the pearl.');
+    expect(callout?.querySelector('strong')).toBeNull();
+    expect(html).not.toContain('<strong>Clinical pearl:</strong>');
+  });
+
+  it('keeps regular bold paragraphs rendered inline', () => {
+    const html = renderToStaticMarkup(
+      <Markdown content={'**Important:** This is not a pearl.'} />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const callout = findClinicalPearlCallout(doc);
+    const paragraph = doc.querySelector('p');
+
+    expect(callout).toBeUndefined();
+    expect(paragraph?.querySelector('strong')?.textContent).toBe('Important:');
+    expect(paragraph?.textContent).toContain('This is not a pearl.');
+  });
+
+  it('detects clinical pearl label case-insensitively', () => {
+    const html = renderToStaticMarkup(
+      <Markdown content={'**Clinical Pearl:** Capitalized variant.'} />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const callout = findClinicalPearlCallout(doc);
+
+    expect(callout).toBeDefined();
+    expect(callout?.textContent).toContain('Capitalized variant.');
+  });
+
+  it('renders a clinical pearl callout when label has no trailing content', () => {
+    const html = renderToStaticMarkup(
+      <Markdown content={'**Clinical pearl:**'} />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const callout = findClinicalPearlCallout(doc);
+    const contentParagraph = callout?.querySelector('p');
+
+    expect(callout).toBeDefined();
+    expect(callout?.textContent).toContain('Clinical Pearl');
+    expect(contentParagraph).toBeDefined();
+    expect(contentParagraph?.textContent).toBe('');
+  });
+
+  it('preserves inline markdown formatting inside clinical pearl content', () => {
+    const html = renderToStaticMarkup(
+      <Markdown
+        content={'**Clinical pearl:**`naltrexone` with **caution**.'}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const callout = findClinicalPearlCallout(doc);
+
+    expect(callout).toBeDefined();
+    expect(callout?.querySelector('code')?.textContent).toBe('naltrexone');
+    expect(callout?.querySelector('strong')?.textContent).toBe('caution');
   });
 
   it('adds paragraph spacing utility class for multi-paragraph content', () => {
