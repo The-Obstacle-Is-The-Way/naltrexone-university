@@ -71,7 +71,9 @@ foreground:                        93.0%   ← primary text
 | border-border/60 vs card | **1.13:1** | FAIL |
 | Choice hover vs choice base | **1.02:1** | FAIL |
 
-**Every border in the app fails WCAG SC 1.4.11.**
+**Every border/surface pair sampled in this table fails WCAG SC 1.4.11.**
+
+Important scope note: this table focuses on muted-border/tinted-surface patterns (`border-border/60`, `border-success/20`, `border-destructive/20`) used in choice rows and feedback section cards. Not every border token in the app fails 3:1. Full semantic borders (for example `border-success`, `border-destructive`, `border-warning`) can exceed 3:1 depending on the background.
 
 The gray stack's 3.5% → 7% → 11% → 15% progression creates elegant visual layering, but the gaps between layers are too small for WCAG compliance. 7% → 11.8% (choice border on card) is only 4.8 percentage points of lightness — far too little for 3:1 contrast.
 
@@ -93,7 +95,26 @@ The gray stack's 3.5% → 7% → 11% → 15% progression creates elegant visual 
 | Success + foreground | 5.07:1 PASS | 2.55:1 FAIL | 5.55:1 PASS |
 | Destructive + foreground | 4.64:1 PASS | 4.10:1 FAIL | 7.75:1 PASS |
 
-DEBT-278 solves the badge specifically with `dark:bg-*/60`, following the button.tsx pattern.
+DEBT-278 proposes solving the badge specifically with `dark:bg-*/60`, following the button.tsx pattern.
+
+---
+
+### Audit Coverage (Current Revision)
+
+Production grep coverage (`app/**` + `components/**`, `.tsx` only, excluding tests/specs) found **43 opacity-modifier usages across 18 files**.
+
+This document includes explicit WCAG computations for the highest-impact surfaces currently driving UX concern:
+- Choice button neutral base/hover/border (`choice-button.tsx`)
+- Card border vs page/card surfaces (`card.tsx` + token math)
+- Feedback section semantic borders (`feedback.tsx`)
+- Verdict badge options (DEBT-278 table)
+- Foreground/muted-foreground text on representative dark surfaces
+
+Additional contrast-relevant patterns exist in the codebase and should be included in a follow-up full sweep if we want true exhaustive component-by-component WCAG accounting:
+- Warning banners/cards (`app/(app)/app/layout.tsx`, `app/(app)/app/billing/page.tsx`, `app/(app)/app/questions/[slug]/question-page-client.tsx`)
+- Error/toast surfaces (`components/error-card.tsx`, `components/ui/notification-provider.tsx`)
+- Markdown clinical pearl border (`components/markdown/Markdown.tsx`)
+- Other opacity-based separators/hover states (`app/(app)/app/history/components/history-sessions-tab.tsx`, `app/(app)/app/shared/components/session-breakdown-list.tsx`)
 
 ---
 
@@ -149,7 +170,7 @@ These are the concrete problems to resolve, roughly priority-ordered:
 - Increase `bg-muted` opacity for more fill contrast
 
 **For V3 (muted-foreground on text-sm):**
-- Bump `--muted-foreground` lightness from 45% to ~55% to hit 4.5:1
+- Bump `--muted-foreground` lightness from 45% to ~50% to hit 4.5:1 on dark muted surfaces (threshold is ~49.2% on `bg-muted/20` over `bg-card`)
 - Or only use `text-muted-foreground` at `text-base` or larger sizes
 
 **For V4/V5 (card and semantic borders):**
