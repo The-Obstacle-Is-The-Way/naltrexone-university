@@ -7,6 +7,7 @@ Canonical reference for all frontend patterns, component usage, accessibility, a
 **See also:**
 - [Pattern Registry](./pattern-registry.md) — Single source of truth for every visual pattern: hover opacities, link strategies, surface hierarchy, token scales, decision trees
 - [Design Principles](./design-principles.md) — Layout composition patterns, navigation zones, action bar conventions, state persistence expectations
+- [Contrast Policy](./contrast-policy.md) — Canonical WCAG AA contrast targets and rules
 
 ---
 
@@ -471,6 +472,14 @@ After error recovery ("Try again"), focus SHOULD move to the result (the new con
 - Forms with multiple controls: add `aria-label` to the `<form>`
 - Single-button forms: button text provides context (acceptable)
 
+### Contrast (WCAG AA)
+
+**Canonical rules:** `docs/frontend/contrast-policy.md`
+
+All UI must meet WCAG AA contrast targets for:
+- SC 1.4.3 (text): 4.5:1 for normal text, 3.0:1 for large text
+- SC 1.4.11 (non-text): 3.0:1 for required UI boundaries and state indicators
+
 ---
 
 ## 12. Hook Architecture
@@ -649,6 +658,8 @@ Three hooks exceed the 200-line "god hook" threshold (§12):
 | `useQuestionPageController` | 370 | `app/(app)/app/questions/[slug]/use-question-page-controller.ts` |
 | `usePracticeSessionQuestionFlow` | 238 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` |
 | `useQuestionFlowCore` | 263 | `app/(app)/app/practice/shared/use-question-flow-core.ts` |
+
+Contrast compliance gaps (WCAG AA) are documented in `docs/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md` and governed by `docs/frontend/contrast-policy.md`.
 
 ### P3 — Fix as encountered
 

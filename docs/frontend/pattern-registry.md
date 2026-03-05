@@ -8,6 +8,7 @@ Single source of truth for every visual pattern in the app. If a pattern isn't h
 **Related:**
 - [Frontend Standards](./standards.md) — Component APIs, accessibility rules, hook architecture, file naming
 - [Design Principles](./design-principles.md) — Navigation zones, action bar composition, state persistence
+- [Contrast Policy](./contrast-policy.md) — WCAG AA contrast targets and required-boundary rules
 - [BS-035](../brainstorming/bs-035-card-hover-and-gray-consistency-audit.md) — Audit that identified current divergences from this registry
 - [DEBT-250](../_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md) — Implementation plan and resolution history for frontend divergences
 
@@ -19,6 +20,7 @@ Single source of truth for every visual pattern in the app. If a pattern isn't h
 2. **Pattern doesn't exist?** Add it here first with a rationale, then implement.
 3. **Divergence found?** File it against this doc and fix the code — the registry is the source of truth.
 4. **Modifying a pattern?** Update this doc first, then update all consumers.
+5. **Any new/changed pattern MUST meet contrast targets** (or explicitly document a temporary exception). See `docs/frontend/contrast-policy.md`.
 
 Every pattern has an **ID** (e.g., `I-1`, `L-2`) for easy cross-referencing in code reviews, specs, and debt tickets.
 

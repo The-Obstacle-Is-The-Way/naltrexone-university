@@ -123,6 +123,7 @@ This document includes explicit WCAG computations for the highest-impact surface
 - Card border vs page/card surfaces (`components/ui/card.tsx` + token math)
 - Feedback section semantic borders (`components/question/feedback.tsx`)
 - Feedback section secondary/label text (`text-muted-foreground`) (`components/question/feedback.tsx`, `components/markdown/Markdown.tsx`)
+- Dashboard + bookmarks real-world usages of `text-muted-foreground` at `text-sm`/`text-xs` (`app/(app)/app/dashboard/page.tsx`, `app/(app)/app/bookmarks/page.tsx`)
 - Verdict badge options (DEBT-278 table)
 - Review-mode outline action button border (`app/(app)/app/questions/[slug]/question-page-client.tsx` using `components/ui/button.tsx` outline variant)
 - Foreground/muted-foreground text on representative dark surfaces
@@ -143,6 +144,7 @@ The dashboard and choice buttons use **identical contrast tokens** (`border-bord
 1. **Dashboard rows have dense text content** — the text itself (at 15.77:1 foreground contrast) defines the visual boundary. You don't need the border to see the row.
 2. **Choice buttons are sparse** — one short sentence per button. The border and fill are the PRIMARY visual cues for button identity. When those are 1.13:1 contrast, the buttons vanish.
 3. **Feedback sections use semantic color borders** — `border-success/20` and `border-destructive/20` add a color hue difference (green/red vs gray), making them slightly more perceptible than a gray-on-gray border at the same contrast ratio, due to chromatic contrast.
+4. **Dashboard and bookmarks still have a real text-contrast violation** — they use `text-muted-foreground` at `text-sm`/`text-xs` for labels and metadata (`app/(app)/app/dashboard/page.tsx`, `app/(app)/app/bookmarks/page.tsx`), which computes to 3.73:1–4.10:1 on sampled dark surfaces (below 4.5:1 AA).
 
 The pattern registry correctly identified that `border-border/60` is for "rows nested inside cards (subordinate to card border)." But choice buttons aren't subordinate rows — they're the **primary interactive elements** on the page. They need stronger visual identity than a muted data row.
 
