@@ -8,6 +8,10 @@ beforeAll(async () => {
   ErrorCard = (await import('./error-card')).ErrorCard;
 });
 
+function getClassTokens(className: string): Set<string> {
+  return new Set(className.split(/\s+/).filter(Boolean));
+}
+
 describe('ErrorCard', () => {
   it('renders a consistent accessible error container', () => {
     const html = renderToStaticMarkup(
@@ -24,11 +28,13 @@ describe('ErrorCard', () => {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const card = doc.querySelector('[data-error-card="true"]');
     const className = card?.getAttribute('class') ?? '';
+    const classTokens = getClassTokens(className);
 
-    expect(className).toContain('p-6');
-    expect(className).toContain('border-destructive');
-    expect(className).not.toContain('border-destructive/30');
-    expect(className).not.toContain('p-4');
+    expect(classTokens.has('p-6')).toBe(true);
+    expect(classTokens.has('border-destructive')).toBe(true);
+    expect(classTokens.has('border-destructive/30')).toBe(false);
+    expect(classTokens.has('border-destructive/20')).toBe(false);
+    expect(classTokens.has('p-4')).toBe(false);
   });
 
   it('allows compact p-4 padding override for constrained layouts', () => {

@@ -8,6 +8,10 @@ beforeAll(async () => {
   ({ Feedback } = await import('@/components/question/feedback'));
 });
 
+function getClassTokens(className: string): Set<string> {
+  return new Set(className.split(/\s+/).filter(Boolean));
+}
+
 describe('Feedback', () => {
   it('renders a neutral status card with a verdict badge', () => {
     const html = renderToStaticMarkup(
@@ -64,12 +68,13 @@ describe('Feedback', () => {
     );
     const successCard = correctAnswerLabel?.nextElementSibling;
     const successCardClassName = successCard?.getAttribute('class') ?? '';
+    const successCardTokens = getClassTokens(successCardClassName);
     const successCardText = successCard?.textContent ?? '';
 
     expect(correctAnswerLabel).not.toBeUndefined();
     expect(successCard).not.toBeNull();
-    expect(successCardClassName).toContain('border-success/60');
-    expect(successCardClassName).toContain('bg-success/5');
+    expect(successCardTokens.has('border-success/60')).toBe(true);
+    expect(successCardTokens.has('bg-success/5')).toBe(true);
     expect(successCardText).toContain('B)');
     expect(successCardText).toContain('Second option');
     expect(successCardText).toContain('General explanation.');
@@ -86,12 +91,13 @@ describe('Feedback', () => {
     );
     const successCard = explanationLabel?.nextElementSibling;
     const successCardClassName = successCard?.getAttribute('class') ?? '';
+    const successCardTokens = getClassTokens(successCardClassName);
     const successCardText = successCard?.textContent ?? '';
 
     expect(explanationLabel).not.toBeUndefined();
     expect(successCard).not.toBeNull();
-    expect(successCardClassName).toContain('border-success/60');
-    expect(successCardClassName).toContain('bg-success/5');
+    expect(successCardTokens.has('border-success/60')).toBe(true);
+    expect(successCardTokens.has('bg-success/5')).toBe(true);
     expect(successCardText).toContain('General explanation.');
     expect(successCardText).not.toContain('A)');
     expect(successCardText).not.toContain('B)');
@@ -154,12 +160,15 @@ describe('Feedback', () => {
     const destructiveCard = yourAnswerLabel?.nextElementSibling;
     const destructiveCardClassName =
       destructiveCard?.getAttribute('class') ?? '';
+    const destructiveCardTokens = getClassTokens(destructiveCardClassName);
     const destructiveCardText = destructiveCard?.textContent ?? '';
 
     expect(yourAnswerLabel).not.toBeUndefined();
     expect(destructiveCard).not.toBeNull();
-    expect(destructiveCardClassName).toContain('border-destructive');
-    expect(destructiveCardClassName).toContain('bg-destructive/5');
+    expect(destructiveCardTokens.has('border-destructive')).toBe(true);
+    expect(destructiveCardTokens.has('border-destructive/20')).toBe(false);
+    expect(destructiveCardTokens.has('border-destructive/30')).toBe(false);
+    expect(destructiveCardTokens.has('bg-destructive/5')).toBe(true);
     expect(destructiveCardText).toContain('A)');
     expect(destructiveCardText).toContain('First option');
     expect(destructiveCardText).toContain('First option is incorrect.');
@@ -196,12 +205,13 @@ describe('Feedback', () => {
     );
     const successCard = correctAnswerLabel?.nextElementSibling;
     const successCardClassName = successCard?.getAttribute('class') ?? '';
+    const successCardTokens = getClassTokens(successCardClassName);
     const successCardText = successCard?.textContent ?? '';
 
     expect(correctAnswerLabel).not.toBeUndefined();
     expect(successCard).not.toBeNull();
-    expect(successCardClassName).toContain('border-success/60');
-    expect(successCardClassName).toContain('bg-success/5');
+    expect(successCardTokens.has('border-success/60')).toBe(true);
+    expect(successCardTokens.has('bg-success/5')).toBe(true);
     expect(successCardText).toContain('B)');
     expect(successCardText).toContain('Second option');
     expect(successCardText).toContain('General explanation.');
@@ -304,12 +314,17 @@ describe('Feedback', () => {
     expect(wrongAnswerCards.length).toBeGreaterThan(0);
     for (const card of wrongAnswerCards) {
       const className = card.getAttribute('class') ?? '';
-      expect(className).toContain('border-border/60');
-      expect(className).toContain('bg-background/50');
-      expect(className).not.toContain('border-success/60');
-      expect(className).not.toContain('bg-success/5');
-      expect(className).not.toContain('border-destructive');
-      expect(className).not.toContain('bg-destructive/5');
+      const classTokens = getClassTokens(className);
+      expect(classTokens.has('border-border/60')).toBe(true);
+      expect(classTokens.has('bg-background/50')).toBe(true);
+      expect(classTokens.has('border-success/60')).toBe(false);
+      expect(classTokens.has('bg-success/5')).toBe(false);
+      expect(
+        [...classTokens].some((token) =>
+          token.startsWith('border-destructive'),
+        ),
+      ).toBe(false);
+      expect(classTokens.has('bg-destructive/5')).toBe(false);
     }
   });
 
