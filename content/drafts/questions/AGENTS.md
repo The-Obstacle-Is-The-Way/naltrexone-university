@@ -34,7 +34,8 @@ Use `SCHEMA.md` and `QUESTION-FORMAT-SPEC.md` as the source of truth for formatt
 3. `qid: {source}-{number}` format (e.g., `white-2020-001`)
 4. **Test clinical concepts, NOT statistics**
 5. **Cover-the-options rule**: Can you answer without seeing the choices?
-6. **Check for technical flaws** (see META.MD Part 2 for full taxonomy)
+6. **No restated answer text**: Wrong-answer explanations must NOT repeat the full choice text — start directly with the reasoning
+7. **Check for technical flaws** (see META.MD Part 2 for full taxonomy)
 7. **No domain tags** in draft frontmatter (taxonomy is topic/substance/treatment/diagnosis)
 8. **Frontmatter is strict**: unknown YAML keys will be rejected by the import script
 

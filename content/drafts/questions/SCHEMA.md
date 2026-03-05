@@ -295,6 +295,8 @@ Before finalizing questions:
 - [ ] `answer` is in frontmatter (A, B, C, D, or E)
 - [ ] `substances` and `topics` are arrays (use brackets even for single values)
 - [ ] Explanation covers correct answer AND why others are wrong
+- [ ] Wrong-answer explanations do NOT restate the full choice text (start with reasoning)
+- [ ] Every wrong answer has an explanation (missing ones hide the section in the UI)
 - [ ] Vignettes follow logical clinical order
 - [ ] Lead-in is focused (passes cover-the-options test)
 - [ ] Distractors are plausible, not obviously wrong

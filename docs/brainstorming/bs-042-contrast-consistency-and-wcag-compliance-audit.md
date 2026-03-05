@@ -44,6 +44,8 @@ SC 1.4.11 is the one that governs borders, interactive element boundaries, and v
 
 All values computed from actual token values in `globals.css` using WCAG 2.1 relative luminance formula. Dark mode only (light mode has its own documented asymmetry — see Pattern Registry 1.2 caveat).
 
+Runtime spot-check note (2026-03-05): browser-computed values from an actual review-mode question page (`body` 9/9/9, `card` 18/18/18, unselected choice fill ~20/20/20, unselected choice border ~30/30/30) match the token-derived composites below.
+
 ### Effective Dark Mode Gray Values
 
 ```
@@ -69,13 +71,20 @@ foreground:                        93.0%   ← primary text
 | border-success/20 vs card | **1.36:1** | FAIL |
 | border-destructive/20 vs card | **1.17:1** | FAIL |
 | border-border/60 vs card | **1.13:1** | FAIL |
+| Reference divider (`border-border/40`) vs card | **1.08:1** | FAIL |
+| Neutral badge fill (`bg-muted`) vs neutral choice fill (`bg-muted/20`) | **1.08:1** | FAIL |
+| Neutral badge border (`border`) vs neutral choice fill (`bg-muted/20`) | **1.22:1** | FAIL |
+| Clinical pearl accent (`border-foreground/20`) vs success card fill (`bg-success/5`) | **1.78:1** | FAIL |
 | Choice hover vs choice base | **1.02:1** | FAIL |
+| Outline action button border (`border-input`) vs page background | **1.32:1** | FAIL |
 
 **Every border/surface pair sampled in this table fails WCAG SC 1.4.11.**
 
 Important scope note: this table focuses on muted-border/tinted-surface patterns (`border-border/60`, `border-success/20`, `border-destructive/20`) used in choice rows and feedback section cards. Not every border token in the app fails 3:1. Full semantic borders (for example `border-success`, `border-destructive`, `border-warning`) can exceed 3:1 depending on the background.
 
 The gray stack's 3.5% → 7% → 11% → 15% progression creates elegant visual layering, but the gaps between layers are too small for WCAG compliance. 7% → 11.8% (choice border on card) is only 4.8 percentage points of lightness — far too little for 3:1 contrast.
+
+Additional context from runtime capture: page background (3.5%) vs card fill (7%) computes to ~**1.06:1**. That by itself is not automatically an SC 1.4.11 failure, but it explains why users rely heavily on borders/elevation to perceive containment.
 
 ### Text Contrast (SC 1.4.3 — needs >= 4.5:1 for normal text)
 
@@ -84,9 +93,14 @@ The gray stack's 3.5% → 7% → 11% → 15% progression creates elegant visual 
 | text-foreground on choice bg | **15.77:1** | PASS |
 | text-foreground on card | **16.05:1** | PASS |
 | text-muted-foreground on choice bg | **3.87:1** | FAIL (normal text) |
-| Letter badge text on bg-muted | **14.57:1** | PASS |
+| text-muted-foreground on card (`Reference` heading) | **3.95:1** | FAIL (normal text) |
+| text-muted-foreground on success card (`Clinical Pearl` label) | **3.73:1** | FAIL (normal text) |
+| text-muted-foreground on wrong-answer card (`bg-background/50` over card) | **4.10:1** | FAIL (normal text) |
+| Letter badge text on bg-muted (no parent opacity) | **14.57:1** | PASS |
+| Wrong-unselected choice text (effective `opacity-50`) on choice bg | **4.73:1** | PASS (barely) |
+| Wrong-unselected badge letter (effective `opacity-50`) on badge bg | **4.37:1** | FAIL (normal text) |
 
-**Text-foreground is fine everywhere. `text-muted-foreground` fails for normal-size text** (3.87:1 vs 4.5:1 required). It passes for large text (>= 18pt or >= 14pt bold), so its use in `text-sm` labels is a violation.
+**Text-foreground is fine in default states. `text-muted-foreground` fails for normal-size text** across multiple real usages in the app (3.73:1–4.10:1 vs 4.5:1 required), and the wrong-unselected `opacity-50` state in `components/question/choice-button.tsx` pushes badge letters to 4.37:1 (also below AA).
 
 ### Verdict Badge Contrast (DEBT-278, for reference)
 
@@ -95,7 +109,7 @@ The gray stack's 3.5% → 7% → 11% → 15% progression creates elegant visual 
 | Success + foreground | 5.07:1 PASS | 2.55:1 FAIL | 5.55:1 PASS |
 | Destructive + foreground | 4.64:1 PASS | 4.10:1 FAIL | 7.75:1 PASS |
 
-DEBT-278 proposes solving the badge specifically with `dark:bg-*/60`, following the button.tsx pattern.
+DEBT-278 proposes solving the badge specifically with `dark:bg-*/60`, following the `components/ui/button.tsx` pattern.
 
 ---
 
@@ -104,16 +118,20 @@ DEBT-278 proposes solving the badge specifically with `dark:bg-*/60`, following 
 Production grep coverage (`app/**` + `components/**`, `.tsx` only, excluding tests/specs) found **43 opacity-modifier usages across 18 files**.
 
 This document includes explicit WCAG computations for the highest-impact surfaces currently driving UX concern:
-- Choice button neutral base/hover/border (`choice-button.tsx`)
-- Card border vs page/card surfaces (`card.tsx` + token math)
-- Feedback section semantic borders (`feedback.tsx`)
+- Choice button neutral base/hover/border (`components/question/choice-button.tsx`)
+- Choice wrong-unselected opacity state (`components/question/choice-button.tsx`) and its effect on badge letter contrast
+- Card border vs page/card surfaces (`components/ui/card.tsx` + token math)
+- Feedback section semantic borders (`components/question/feedback.tsx`)
+- Feedback section secondary/label text (`text-muted-foreground`) (`components/question/feedback.tsx`, `components/markdown/Markdown.tsx`)
 - Verdict badge options (DEBT-278 table)
+- Review-mode outline action button border (`app/(app)/app/questions/[slug]/question-page-client.tsx` using `components/ui/button.tsx` outline variant)
 - Foreground/muted-foreground text on representative dark surfaces
 
 Additional contrast-relevant patterns exist in the codebase and should be included in a follow-up full sweep if we want true exhaustive component-by-component WCAG accounting:
 - Warning banners/cards (`app/(app)/app/layout.tsx`, `app/(app)/app/billing/page.tsx`, `app/(app)/app/questions/[slug]/question-page-client.tsx`)
 - Error/toast surfaces (`components/error-card.tsx`, `components/ui/notification-provider.tsx`)
 - Markdown clinical pearl border (`components/markdown/Markdown.tsx`)
+- Review-mode nav/action controls beyond the sampled outline border case (`app/(app)/app/questions/[slug]/question-page-client.tsx`)
 - Other opacity-based separators/hover states (`app/(app)/app/history/components/history-sessions-tab.tsx`, `app/(app)/app/shared/components/session-breakdown-list.tsx`)
 
 ---
@@ -156,10 +174,12 @@ These are the concrete problems to resolve, roughly priority-ordered:
 |----|-----------|---------|--------|
 | V1 | Choice button border barely visible | `border-border/60` = 1.13:1 | High — primary interactive element |
 | V2 | Choice button fill indistinguishable from card | `bg-muted/20` = 1.02:1 | High — buttons blend into card |
-| V3 | `text-muted-foreground` fails for `text-sm` | 3.87:1 vs 4.5:1 required | Medium — labels, timestamps, secondary text |
+| V3 | `text-muted-foreground` fails for `text-sm`/`text-xs` | 3.73:1–4.10:1 vs 4.5:1 required | Medium — labels, timestamps, secondary text |
 | V4 | Card border barely visible on page | `border` = 1.32:1 | Low — cards identified by content, not border |
 | V5 | Semantic borders too faint | `border-success/20` = 1.36:1 | Low — hue provides chromatic cue |
 | V6 | Hover state imperceptible | `bg-muted/20` → `bg-muted/40` = 1.02:1 | Medium — hover feedback matters for interactivity |
+| V7 | Wrong-unselected badge letters fail due parent `opacity-50` | 4.37:1 vs 4.5:1 required | Medium — A/C/D badge glyphs are active review cues |
+| V8 | Review-mode outline button border too faint on page bg | `border-input` = 1.32:1 | Low — button still has strong text contrast but weak boundary |
 
 ### 3. Possible Approaches (Not Decided)
 
@@ -170,12 +190,20 @@ These are the concrete problems to resolve, roughly priority-ordered:
 - Increase `bg-muted` opacity for more fill contrast
 
 **For V3 (muted-foreground on text-sm):**
-- Bump `--muted-foreground` lightness from 45% to ~50% to hit 4.5:1 on dark muted surfaces (threshold is ~49.2% on `bg-muted/20` over `bg-card`)
+- Bump `--muted-foreground` lightness from 45% to ~51% to hit 4.5:1 across sampled dark surfaces (threshold is ~49.2% on `bg-muted/20` over `bg-card`, but ~50.6% on `bg-success/5` over `bg-card`)
 - Or only use `text-muted-foreground` at `text-base` or larger sizes
 
 **For V4/V5 (card and semantic borders):**
 - These may be acceptable as-is — cards are identified by content and elevation, not just borders
 - Semantic borders add chromatic contrast (color hue), which aids perception even at low luminance contrast
+
+**For V7 (wrong-unselected opacity side effect):**
+- Avoid applying `opacity-50` to the entire label when we still need the badge glyph to read as a UI cue
+- Prefer dimming text/background tokens directly instead of inherited parent opacity that degrades all descendants
+
+**For V8 (outline action button boundary):**
+- Consider a stronger dark-mode outline border token for bottom action bars (`border-border` or a dedicated outline-on-background token)
+- Keep text contrast unchanged; this is a boundary/perimeter contrast issue, not a text-legibility issue
 
 **Important constraint:** DEBT-273 just shipped (March 4, one day ago). Any changes to choice button contrast must be justified by WCAG compliance, not just aesthetic preference, to avoid the oscillation of "too much contrast → not enough contrast → too much again."
 
