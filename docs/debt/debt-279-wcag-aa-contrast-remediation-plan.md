@@ -18,6 +18,24 @@ BS-042 identifies recurring failures in:
 
 This debt item converts BS-042 findings into an implementation plan and acceptance criteria.
 
+### Key design principle: border vs fill
+
+SC 1.4.11 applies to the **border** — the required boundary indicator that separates the interactive component from its background. The border must achieve >= 3.0:1 contrast against the adjacent surface.
+
+Background **fills** are supplementary hierarchy cues, **not** WCAG compliance targets. Fills encode **state hierarchy** — they must be visually distinct across states (unselected < hover < selected) to preserve usability. Applying the same fill opacity to all states destroys hierarchy even if borders are individually compliant.
+
+**Dark mode token reference** (computed from dark theme tokens):
+
+| Token | Composited on card (`#121212`) | Contrast vs card |
+|-------|-------------------------------|-----------------|
+| `dark:border-foreground/40` | `#6a6a6a` | ~3.6:1 (passes SC 1.4.11) |
+| `dark:border-foreground/30` | `#4f4f4f` | ~2.5:1 (fails) |
+| `dark:bg-foreground/40` | `#6a6a6a` | ~3.6:1 (too heavy for fills) |
+| `dark:bg-foreground/8` | `#232323` | subtle lift (unselected) |
+| `dark:bg-foreground/15` | `#333333` | visible change (hover) |
+| `dark:bg-foreground/20` | `#3e3e3e` | clear distinction (selected) |
+| `border-border/60` | `#1e1e1e` | ~1.1:1 (invisible — fails) |
+
 ## Why this is debt (not a one-line fix)
 
 This is a cross-cutting remediation spanning:
@@ -53,8 +71,14 @@ Adjusting one class in one component will not produce consistent compliance.
 
 ### 3) Required-boundary remediation (SC 1.4.11)
 
+**Principle:** Borders carry WCAG compliance (>= 3.0:1). Fills carry state hierarchy (stepped opacity). Never apply the same fill to multiple states.
+
 - [ ] Fix required interactive boundaries that currently rely on `border-border/60 bg-muted/20` where boundaries are not perceivable enough.
 - [ ] Rework choice button base/hover/selected boundary strategy (`components/question/choice-button.tsx`) to meet policy without losing hierarchy.
+  - Border: `dark:border-foreground/40` (3.6:1) for unselected, `dark:border-foreground/70` for selected — already correct.
+  - Fill: Must use stepped values — `dark:bg-foreground/8` (unselected), `dark:hover:bg-foreground/15` (hover), `dark:bg-foreground/20` (selected).
+  - Hover must also provide a visible dark-mode background change, not just a border change.
+- [ ] Rework feedback answer card boundaries (`components/question/feedback.tsx`) — wrong-answer cards use `border-border/60 bg-background/50` which is ~1.1:1 in dark mode (invisible). Must add dark overrides.
 - [ ] Rework review/dashboard/history row boundary strategy where rows are primary navigation targets.
 - [ ] Rework low-contrast required boundaries in feedback callouts and action controls where the boundary is needed to identify state or action.
 
