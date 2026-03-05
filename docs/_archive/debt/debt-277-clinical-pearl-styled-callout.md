@@ -92,9 +92,10 @@ Replace the default `<p>` with:
 
 ```tsx
 <div className="mt-3 border-l-2 border-foreground/20 pl-3">
-  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+  {/* <div> not <p> — avoids wrapper's [&_p+p]:mt-3 cascade into the content <p> */}
+  <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
     Clinical Pearl
-  </p>
+  </div>
   <p>{remainingContent}</p>
 </div>
 ```
@@ -107,6 +108,7 @@ Where `remainingContent` is everything after the `<strong>Clinical pearl:</stron
 |----------|-------|-----|
 | Left border | `border-l-2 border-foreground/20` | Subtle callout accent, works in both light/dark themes. Neutral color because `<Markdown>` is a generic component — doesn't know if it's inside a success-themed or neutral context. |
 | Label | `text-xs font-medium uppercase tracking-wide text-muted-foreground` | Small, de-emphasized label that identifies the section without competing with the content. Uppercase + tracking echoes the "REFERENCE" label style in `feedback.tsx`. |
+| Label element | `<div>` not `<p>` | The `<Markdown>` wrapper has `[&_p+p]:mt-3` for paragraph spacing. If the label were a `<p>`, the content `<p>` below it would match `p+p` and inherit `mt-3` (12px) — overriding the intended `mb-1` (4px) tight gap via margin collapse. Using `<div>` breaks the `p+p` chain. |
 | Spacing | `mt-3` on container, `mb-1` on label | `mt-3` matches the existing `[&_p+p]:mt-3` paragraph spacing. `mb-1` gives a tight gap between label and content. |
 | No background | — | The clinical pearl lives inside the correct-answer card (`bg-success/5`). Adding another background would create nested tinting. The left border alone is sufficient visual distinction. |
 

@@ -34,6 +34,60 @@ describe('Markdown', () => {
     expect(html.toLowerCase()).not.toContain('javascript:');
   });
 
+  it('renders clinical pearl paragraphs as styled callouts with separated label and content', () => {
+    const html = renderToStaticMarkup(
+      <Markdown
+        content={'Explanation text.\n\n**Clinical pearl:** This is the pearl.'}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const callout = Array.from(doc.querySelectorAll('div')).find((element) => {
+      const classes = element.className;
+      return (
+        classes.includes('border-l-2') &&
+        classes.includes('border-foreground/20') &&
+        classes.includes('pl-3')
+      );
+    });
+
+    expect(callout).toBeDefined();
+    expect(callout?.textContent).toContain('Clinical Pearl');
+    expect(callout?.textContent).toContain('This is the pearl.');
+    expect(callout?.querySelector('strong')).toBeNull();
+    expect(html).not.toContain('<strong>Clinical pearl:</strong>');
+  });
+
+  it('keeps regular bold paragraphs rendered inline', () => {
+    const html = renderToStaticMarkup(
+      <Markdown content={'**Important:** This is not a pearl.'} />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const callout = Array.from(doc.querySelectorAll('div')).find((element) =>
+      element.className.includes('border-l-2'),
+    );
+
+    expect(callout).toBeUndefined();
+    expect(html).toContain('<strong>Important:</strong> This is not a pearl.');
+  });
+
+  it('detects clinical pearl label case-insensitively', () => {
+    const html = renderToStaticMarkup(
+      <Markdown content={'**Clinical Pearl:** Capitalized variant.'} />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const callout = Array.from(doc.querySelectorAll('div')).find((element) => {
+      const classes = element.className;
+      return (
+        classes.includes('border-l-2') &&
+        classes.includes('border-foreground/20') &&
+        classes.includes('pl-3')
+      );
+    });
+
+    expect(callout).toBeDefined();
+    expect(callout?.textContent).toContain('Capitalized variant.');
+  });
+
   it('adds paragraph spacing utility class for multi-paragraph content', () => {
     const html = renderToStaticMarkup(
       <Markdown content={'Para 1\n\nPara 2'} />,

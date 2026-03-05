@@ -18,8 +18,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | GitHub Issue |
 |----|-------|----------|--------------|
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
-| [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 7 future enhancements (F8 resolved by DEBT-276) | P3 | — |
-| [DEBT-277](./debt-277-clinical-pearl-styled-callout.md) | Clinical Pearl Styled Callout — detect `**Clinical pearl:**` in `<Markdown>` and render as visually distinct callout with label separated from content | P3 | — |
+| [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 6 future enhancements (F1/F8 resolved by DEBT-277/DEBT-276) | P3 | — |
 
 **Next Debt ID:** DEBT-278
 
@@ -29,6 +28,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-277](../_archive/debt/debt-277-clinical-pearl-styled-callout.md) | Clinical Pearl Styled Callout — detect `**Clinical pearl:**` in `<Markdown>` and render as visually distinct callout with label separated from content | P3 | 2026-03-04 | — |
 | [DEBT-276](../_archive/debt/debt-276-feedback-section-card-containment.md) | Feedback Section Card Containment — semantic section wrappers for correct/incorrect feedback hierarchy (Part B of BS-041) | P3 | 2026-03-04 | [#172](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/172) |
 | [DEBT-274](../_archive/debt/debt-274-incorrect-answer-feedback-flow-reorder.md) | Incorrect Answer Feedback Flow Reorder — promote user's wrong answer to top of feedback, correct answer second | P2 | 2026-03-04 | [#171](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/171) |
 | [DEBT-273](../_archive/debt/debt-273-choice-button-surface-hierarchy-fix.md) | Choice Button Surface Hierarchy Fix — elevate `bg-background` → `bg-muted/20` + smooth hover in dark mode | P2 | 2026-03-04 | [#170](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/170) |
