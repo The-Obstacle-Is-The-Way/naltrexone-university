@@ -57,7 +57,7 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
       </div>
 
       {rows.length === 0 ? (
-        <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
+        <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm dark:border-foreground/40">
           <div>No bookmarks yet.</div>
           <div className="mt-2">
             Bookmark questions as you practice to review them later.
@@ -79,7 +79,7 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
 
             return (
               <li key={row.questionId}>
-                <Card className="gap-0 rounded-2xl p-6 shadow-sm">
+                <Card className="gap-0 rounded-2xl p-6 shadow-sm dark:border-foreground/40">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="space-y-2">
                       {row.isAvailable ? (

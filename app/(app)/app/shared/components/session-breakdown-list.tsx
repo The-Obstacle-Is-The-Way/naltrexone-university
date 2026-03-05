@@ -25,7 +25,7 @@ export function SessionBreakdownList({
   }
 
   return (
-    <ul className="divide-y divide-border/20">
+    <ul className="divide-y divide-border/20 dark:divide-foreground/40">
       {rows.map((row) => (
         <li
           key={row.questionId}
@@ -65,7 +65,7 @@ export function SessionBreakdownList({
               </span>
             ) : null
           ) : (
-            <span className="ml-auto shrink-0 text-muted-foreground/60">
+            <span className="ml-auto shrink-0 text-muted-foreground">
               Unanswered
             </span>
           )}

@@ -64,7 +64,7 @@ function CorrectAnswerSection({
       <div className="text-sm font-medium text-foreground">
         {correctChoice ? 'Correct answer' : 'Explanation'}
       </div>
-      <div className="mt-2 rounded-xl border border-success/20 bg-success/5 p-3">
+      <div className="mt-2 rounded-xl border border-success/60 bg-success/5 p-3">
         {correctChoice ? (
           <div className="flex items-start gap-1 text-sm text-foreground">
             <span className="shrink-0 font-medium">
@@ -173,7 +173,7 @@ export function Feedback({
               <div className="text-sm font-medium text-foreground">
                 Your answer
               </div>
-              <div className="mt-2 rounded-xl border border-destructive/20 bg-destructive/5 p-3">
+              <div className="mt-2 rounded-xl border border-destructive bg-destructive/5 p-3">
                 <div className="flex items-start gap-1 text-sm text-foreground">
                   <span className="shrink-0 font-medium">
                     {userChoice.displayLabel})

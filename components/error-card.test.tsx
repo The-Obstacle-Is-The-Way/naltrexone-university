@@ -26,6 +26,8 @@ describe('ErrorCard', () => {
     const className = card?.getAttribute('class') ?? '';
 
     expect(className).toContain('p-6');
+    expect(className).toContain('border-destructive');
+    expect(className).not.toContain('border-destructive/30');
     expect(className).not.toContain('p-4');
   });
 

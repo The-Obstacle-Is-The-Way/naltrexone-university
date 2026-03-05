@@ -68,7 +68,7 @@ describe('Feedback', () => {
 
     expect(correctAnswerLabel).not.toBeUndefined();
     expect(successCard).not.toBeNull();
-    expect(successCardClassName).toContain('border-success/20');
+    expect(successCardClassName).toContain('border-success/60');
     expect(successCardClassName).toContain('bg-success/5');
     expect(successCardText).toContain('B)');
     expect(successCardText).toContain('Second option');
@@ -90,7 +90,7 @@ describe('Feedback', () => {
 
     expect(explanationLabel).not.toBeUndefined();
     expect(successCard).not.toBeNull();
-    expect(successCardClassName).toContain('border-success/20');
+    expect(successCardClassName).toContain('border-success/60');
     expect(successCardClassName).toContain('bg-success/5');
     expect(successCardText).toContain('General explanation.');
     expect(successCardText).not.toContain('A)');
@@ -158,7 +158,7 @@ describe('Feedback', () => {
 
     expect(yourAnswerLabel).not.toBeUndefined();
     expect(destructiveCard).not.toBeNull();
-    expect(destructiveCardClassName).toContain('border-destructive/20');
+    expect(destructiveCardClassName).toContain('border-destructive');
     expect(destructiveCardClassName).toContain('bg-destructive/5');
     expect(destructiveCardText).toContain('A)');
     expect(destructiveCardText).toContain('First option');
@@ -200,7 +200,7 @@ describe('Feedback', () => {
 
     expect(correctAnswerLabel).not.toBeUndefined();
     expect(successCard).not.toBeNull();
-    expect(successCardClassName).toContain('border-success/20');
+    expect(successCardClassName).toContain('border-success/60');
     expect(successCardClassName).toContain('bg-success/5');
     expect(successCardText).toContain('B)');
     expect(successCardText).toContain('Second option');
@@ -306,9 +306,9 @@ describe('Feedback', () => {
       const className = card.getAttribute('class') ?? '';
       expect(className).toContain('border-border/60');
       expect(className).toContain('bg-background/50');
-      expect(className).not.toContain('border-success/20');
+      expect(className).not.toContain('border-success/60');
       expect(className).not.toContain('bg-success/5');
-      expect(className).not.toContain('border-destructive/20');
+      expect(className).not.toContain('border-destructive');
       expect(className).not.toContain('bg-destructive/5');
     }
   });

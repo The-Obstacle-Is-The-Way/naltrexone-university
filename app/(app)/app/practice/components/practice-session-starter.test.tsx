@@ -150,6 +150,7 @@ describe('PracticeSessionStarter', () => {
         (text) => text.includes('Substance') && text.includes('1 selected'),
       ),
     ).toBe(true);
+    expect(html).toContain('dark:border-foreground/40');
   });
 
   it('renders status and difficulty segmented controls without hint text', () => {

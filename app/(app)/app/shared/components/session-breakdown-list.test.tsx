@@ -141,6 +141,9 @@ describe('SessionBreakdownList', () => {
       throw new Error('Expected Unanswered label');
     }
     expect(unansweredLabel.getAttribute('class')).toContain(
+      'text-muted-foreground',
+    );
+    expect(unansweredLabel.getAttribute('class')).not.toContain(
       'text-muted-foreground/60',
     );
   });
@@ -172,5 +175,8 @@ describe('SessionBreakdownList', () => {
     expect(list).not.toBeNull();
     expect(list?.getAttribute('class') ?? '').toContain('divide-y');
     expect(list?.getAttribute('class') ?? '').toContain('divide-border/20');
+    expect(list?.getAttribute('class') ?? '').toContain(
+      'dark:divide-foreground/40',
+    );
   });
 });

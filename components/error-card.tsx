@@ -12,7 +12,7 @@ export function ErrorCard({ children, className }: ErrorCardProps) {
       role="alert"
       data-error-card="true"
       className={cn(
-        'rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive shadow-sm',
+        'rounded-2xl border border-destructive bg-destructive/10 p-6 text-sm text-destructive shadow-sm',
         className,
       )}
     >

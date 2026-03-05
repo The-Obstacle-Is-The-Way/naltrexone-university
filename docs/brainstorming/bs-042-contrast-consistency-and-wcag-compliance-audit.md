@@ -2,6 +2,11 @@
 
 **Created:** 2026-03-05
 **Triggered by:** Visual review of choice button separation, verdict badge contrast (DEBT-278), and cross-surface inconsistency observations.
+**Post-fix update:** 2026-03-05 (DEBT-279 implementation pass 1)
+
+This document now contains both:
+- pre-remediation baseline findings (captured first on 2026-03-05), and
+- post-remediation verification measurements after the DEBT-279 implementation pass.
 
 ---
 
@@ -40,7 +45,7 @@ SC 1.4.11 is the one that governs borders, interactive element boundaries, and v
 
 ---
 
-## Computational Findings
+## Computational Findings (Pre-Remediation Baseline)
 
 All values computed from actual token values in `globals.css` using WCAG 2.1 relative luminance formula. Dark mode only (light mode has its own documented asymmetry — see Pattern Registry 1.2 caveat).
 
@@ -171,7 +176,7 @@ The pattern registry correctly identified that `border-border/60` is for "rows n
 
 ---
 
-## What Needs to Happen
+## Baseline Remediation Plan (Historical)
 
 ### 1. Add WCAG Contrast Targets to Pattern Registry
 
@@ -234,6 +239,53 @@ These are the concrete problems to resolve, roughly priority-ordered:
 - Keep warning hue signaling in border/background, but do not encode primary copy in near-black text on near-black tinted surfaces
 
 **Important constraint:** DEBT-273 just shipped (March 4, one day ago). Any changes to choice button contrast must be justified by WCAG compliance, not just aesthetic preference, to avoid the oscillation of "too much contrast → not enough contrast → too much again."
+
+---
+
+## Post-Fix Measurements (DEBT-279 Pass 1)
+
+### Implemented in code
+
+- Dark text token raised: `--muted-foreground` `45%` -> `51.5%` (`app/globals.css`)
+- Dark warning text token raised: `--warning-foreground` `25 96% 10%` -> `38 92% 40%` (`app/globals.css`)
+- Removed inherited dimming on wrong-unselected choices: `opacity-50` removed; wrong-unselected content now keeps `text-foreground` for AA legibility (`components/question/choice-button.tsx`)
+- Choice boundaries moved to explicit dark-mode boundary tokens (`dark:border-foreground/40`, `dark:hover:border-foreground/70`) (`components/question/choice-button.tsx`)
+- Feedback/callout semantic borders strengthened (`border-success/60`, `border-destructive`, `border-foreground/40`) (`components/question/feedback.tsx`, `components/markdown/Markdown.tsx`)
+- Row/divider boundary parity applied to dashboard/history/bookmarks/session breakdown (`app/(app)/app/dashboard/page.tsx`, `app/(app)/app/history/components/history-sessions-tab.tsx`, `app/(app)/app/bookmarks/page.tsx`, `app/(app)/app/shared/components/session-breakdown-list.tsx`)
+- Shared primitive boundary updates applied (`components/ui/button.tsx`, `components/ui/input.tsx`, `components/ui/filter-chip.tsx`, `components/ui/tab-switch-styles.ts`, `components/error-card.tsx`, `components/ui/notification-provider.tsx`)
+- Practice starter filter row boundaries updated (`app/(app)/app/practice/components/practice-session-starter.tsx`)
+
+### Recomputed contrast checkpoints
+
+All values below are recomputed from current token/class math after the DEBT-279 implementation pass:
+
+| Checkpoint | Post-fix ratio | WCAG target | Status |
+|------------|----------------|-------------|--------|
+| `text-muted-foreground` on darkest sampled surfaces (minimum across card/bg-muted/row/page/success/warning contexts) | **4.51:1** | >= 4.5:1 (SC 1.4.3) | PASS |
+| `text-warning-foreground` on `bg-warning/10` | **5.28:1** | >= 4.5:1 (SC 1.4.3) | PASS |
+| `text-warning-foreground` on `bg-warning/15` | **4.78:1** | >= 4.5:1 (SC 1.4.3) | PASS |
+| `dark:border-foreground/40` vs card bg | **3.45:1** | >= 3.0:1 (SC 1.4.11) | PASS |
+| `dark:border-foreground/40` vs page bg | **3.38:1** | >= 3.0:1 (SC 1.4.11) | PASS |
+| `border-success/60` vs card bg | **3.24:1** | >= 3.0:1 (SC 1.4.11) | PASS |
+| `border-destructive` vs card bg | **3.91:1** | >= 3.0:1 (SC 1.4.11) | PASS |
+| Clinical pearl accent (`border-foreground/40`) vs success card fill | **3.44:1** | >= 3.0:1 (SC 1.4.11) | PASS |
+| Session-breakdown divider (`dark:divide-foreground/40`) vs row fill | **3.42:1** | >= 3.0:1 (SC 1.4.11) | PASS |
+
+### Violation status after this pass
+
+| ID | Baseline problem | Post-fix status |
+|----|------------------|-----------------|
+| V1 | Choice border too faint | **Resolved** |
+| V2 | Choice base boundary too faint | **Resolved** (boundary strategy now border-first with compliant dark border contrast) |
+| V3 | `text-muted-foreground` below 4.5 | **Resolved** via token update to 51.5% |
+| V4 | Card border vs page too faint | **Partially unresolved** (not fully remediated in this pass) |
+| V5 | Semantic/callout borders too faint | **Resolved** |
+| V6 | Hover affordance imperceptible | **Resolved** for remediated interactive rows/buttons via strong dark hover boundary tokens |
+| V7 | Wrong-unselected badge/text degraded by parent opacity | **Resolved** |
+| V8 | Outline/button/input borders too faint | **Resolved** for remediated outline/input/filter/tab/error/toast surfaces |
+| V9 | Warning foreground token severe fail | **Resolved** |
+
+Residual note: baseline card-edge hierarchy (`border` vs page) is still intentionally conservative and remains the main unresolved low-contrast pattern from V4.
 
 ---
 

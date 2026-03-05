@@ -13,7 +13,7 @@ function findClinicalPearlCallout(doc: Document) {
     const classes = element.className;
     return (
       classes.includes('border-l-2') &&
-      classes.includes('border-foreground/20') &&
+      classes.includes('border-foreground/40') &&
       classes.includes('pl-3')
     );
   });

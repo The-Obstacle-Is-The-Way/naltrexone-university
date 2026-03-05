@@ -1,6 +1,6 @@
 # Pattern Registry
 
-**Last Updated:** 2026-03-01
+**Last Updated:** 2026-03-05
 **Status:** Canonical — all UI changes MUST conform to this registry
 
 Single source of truth for every visual pattern in the app. If a pattern isn't here, don't invent one — add it here first, get approval, then implement.
@@ -38,7 +38,7 @@ The foundation of the visual hierarchy. Every surface must sit at its correct la
 | 1 | `--card` | `0 0% 7%` | 7% | Card surfaces — one step up from page |
 | 2 | `--muted` / `--secondary` / `--accent` | `0 0% 11%` | 11% | Subdued fills, hover targets, tinted backgrounds |
 | 3 | `--border` / `--input` | `0 0% 15%` | 15% | Borders, input outlines, separators |
-| 4 | `--muted-foreground` | `0 0% 45%` | 45% | Secondary text, labels, timestamps |
+| 4 | `--muted-foreground` | `0 0% 51.5%` | 51.5% | Secondary text, labels, timestamps |
 | 5 | `--foreground` | `0 0% 93%` | 93% | Primary text, headings |
 
 **Rule:** Surfaces must step UP this stack, never skip layers or go backwards. A hover effect on a card surface (layer 1) targets layer 2 with opacity. A hover on page background (layer 0) also targets layer 2 but needs slightly higher opacity for equivalent perceived contrast.
@@ -77,15 +77,16 @@ When to use each opacity on `bg-muted` (or equivalent layer-2 token):
 
 **Decision:** Hover opacity is context-dependent. Use `/40` inside cards (including I-3 choice buttons), `/50` on page background. `/60` is exception-only and requires explicit design review.
 
-**Light-mode caveat (Decision 12 resolved):** This scale was designed for dark mode where `--muted` at 11% lightness provides ample contrast headroom. In light mode, `--muted` at 96.1% lightness is only 3.9% from white — opacities below `/100` produce imperceptible fill contrast. The system intentionally uses two hover channels: background-fill deltas in dark mode, and non-fill cues (border/text/shadow) in light mode. Any new interactive row component MUST include at least one non-fill hover cue. Current I-1 rows use fill + focus-ring cues; no dedicated hover-border cue is applied.
+**Light-mode caveat (Decision 12 resolved):** This scale was designed for dark mode where `--muted` at 11% lightness provides ample contrast headroom. In light mode, `--muted` at 96.1% lightness is only 3.9% from white — opacities below `/100` produce imperceptible fill contrast. The system intentionally uses two hover channels: background-fill deltas in dark mode, and non-fill cues (border/text/shadow) in light mode. Any new interactive row component MUST include at least one non-fill hover cue. Current I-1 rows use fill + focus-ring cues plus a dedicated dark-mode hover-border cue.
 
 ### 1.3 Border Opacity Scale
 
 | Opacity | Name | Use Case |
 |---------|------|----------|
 | `border-border` (100%) | Full | Card component edges, standalone row edges, page section dividers |
-| `border-border/60` | Subdued | Rows nested inside cards (subordinate to card border), badge pills |
+| `border-border/60` | Subdued | Base/light-mode rows nested inside cards (subordinate to card border), badge pills |
 | `border-border/40` | Separator | Internal content separators (expanded breakdowns, reference sections) |
+| `dark:border-foreground/40` | Required dark boundary override | Required interactive boundaries on dark surfaces that fail 3:1 with `border-border/60` |
 
 **Rule:** A border inside a bordered container must use a lower opacity than its parent.
 
@@ -105,9 +106,8 @@ Applies uniformly to `bg-warning/`, `bg-success/`, `bg-destructive/` backgrounds
 
 | Token | Border Opacity | Usage |
 |-------|---------------|-------|
-| `border-destructive/30` | Subtle | ErrorCard, error toasts |
-| `border-destructive/40` | Standard | Error toast (notification-provider) |
-| `border-success/30` | Subtle | Success toasts |
+| `border-destructive` | Standard | ErrorCard, error toasts |
+| `border-success/60` | Standard | Success toasts |
 | `border-warning/50` | Standard | Warning cards |
 | `border-warning` (100%) | Emphasized | Cancellation alert, blocking warnings |
 
@@ -138,7 +138,7 @@ bg-card text-card-foreground flex flex-col gap-0 rounded-2xl border p-6 shadow-s
 A tinted row inside a Card, used when the row is not itself clickable but may contain interactive elements.
 
 ```
-rounded-xl border border-border/60 bg-muted/20 p-3
+rounded-xl border border-border/60 bg-muted/20 p-3 dark:border-foreground/40
 ```
 
 **Used in:** Dashboard unavailable activity rows, practice starter tag groups
@@ -212,6 +212,7 @@ A clickable row nested within a `<Card>` container. The card provides the primar
 
 ```
 block rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-muted/40
+dark:border-foreground/40 dark:hover:border-foreground/70
 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 ```
 
@@ -245,6 +246,7 @@ Direct-action interactive target for answering questions. Choices render inside 
 **Base state:**
 ```
 block w-full rounded-xl border border-border/60 bg-muted/20 p-4 text-left shadow-sm transition-colors
+dark:border-foreground/40 dark:bg-foreground/40
 focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]
 ```
 
@@ -255,15 +257,15 @@ cursor-pointer hover:bg-muted/40
 
 **Hover border (unselected only):**
 ```
-hover:border-muted-foreground/30
+hover:border-muted-foreground/30 dark:hover:border-foreground/70
 ```
 
-**Selected (neutral):** `border-ring bg-muted/40`
+**Selected (neutral):** `border-ring bg-muted/40 dark:border-foreground/70 dark:bg-foreground/40`
 
 **Correct:** `border-success bg-success/10 text-success`
 **Incorrect:** `border-destructive bg-destructive/10 text-destructive`
 **Disabled (no correctness):** `cursor-not-allowed opacity-50`
-**Disabled (wrong-unselected):** `opacity-50`
+**Wrong-unselected dimming:** do not apply parent opacity to the whole label subtree; keep answer content text at `text-foreground` for WCAG AA legibility.
 
 **Design rationale:** Choice buttons are rendered inside `QuestionCard` (`bg-card`) and follow in-card row hierarchy, not standalone page-surface hierarchy. `/40` hover produces the intended contrast step without overshooting the parent card layer.
 
@@ -273,7 +275,7 @@ Toggle-style filter for tags, modes, difficulty levels.
 
 **Unselected:**
 ```
-border-border bg-background text-muted-foreground hover:bg-muted/50 hover:text-accent-foreground
+border-border bg-background text-muted-foreground hover:bg-muted/50 hover:text-accent-foreground dark:border-foreground/40
 ```
 
 **Selected:**
@@ -299,7 +301,7 @@ Tab-switch for mode selection, history tab bar, etc.
 
 **Container:**
 ```
-inline-flex rounded-lg border border-border bg-muted p-1
+inline-flex rounded-lg border border-border bg-muted p-1 dark:border-foreground/40
 ```
 
 **Item base:**
@@ -433,7 +435,7 @@ inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-
 default: bg-primary text-primary-foreground shadow-xs hover:bg-primary/90
 destructive: bg-destructive text-white shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60
 success: bg-success text-success-foreground shadow-xs hover:bg-success/90 focus-visible:ring-success/20 dark:focus-visible:ring-success/40 dark:bg-success/60
-outline: border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50
+outline: border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-foreground/40 dark:hover:border-foreground/70 dark:hover:bg-input/50
 secondary: bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80
 ghost: hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50
 link: text-primary underline-offset-4 hover:underline
@@ -477,7 +479,7 @@ All standalone action buttons in the app use `rounded-full`:
 
 | Variant | Dark Override | Notes |
 |---------|-------------|-------|
-| `outline` | `dark:bg-input/30 dark:border-input dark:hover:bg-input/50` | Uses `input` token (15% lightness) |
+| `outline` | `dark:bg-input/30 dark:border-foreground/40 dark:hover:border-foreground/70 dark:hover:bg-input/50` | Uses explicit dark boundary override for required outlines |
 | `ghost` | `dark:hover:bg-accent/50` | Uses `accent` token (11% lightness) |
 | `destructive` | `dark:bg-destructive/60` | Reduced saturation in dark |
 | `success` | `dark:bg-success/60` | Reduced saturation in dark |
@@ -551,17 +553,17 @@ Inline persistent error within a page.
 
 **Canonical (target):**
 ```
-rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive shadow-sm
+rounded-2xl border border-destructive bg-destructive/10 p-6 text-sm text-destructive shadow-sm
 ```
 
 **Current (COMP-1):**
 ```
-rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive shadow-sm
+rounded-2xl border border-destructive bg-destructive/10 p-4 text-sm text-destructive shadow-sm
 ```
 
-**Source:** Current implementation is `components/error-card.tsx:15` (has `role="alert"` built in). Canonical target tracked as `COMP-1` in DEBT-250.
+**Source:** Current implementation is `components/error-card.tsx` (has `role="alert"` built in).
 
-**Dense override (compact contexts only):** `p-4` (once COMP-1 lands)
+**Dense override (compact contexts only):** `p-4`
 
 **Never manually add `role="alert"`** when using ErrorCard.
 
@@ -581,9 +583,9 @@ block rounded-xl border px-4 py-3 text-sm shadow-sm
 
 | Tone | Border + Background |
 |------|-------------------|
-| `info` | `border-border bg-card text-foreground` |
-| `success` | `border-success/30 bg-success/10 text-foreground` |
-| `error` | `border-destructive/40 bg-destructive/10 text-foreground` |
+| `info` | `border-border bg-card text-foreground dark:border-foreground/40` |
+| `success` | `border-success/60 bg-success/10 text-foreground` |
+| `error` | `border-destructive bg-destructive/10 text-foreground` |
 
 **Source:** `components/ui/notification-provider.tsx`
 
@@ -596,7 +598,7 @@ block rounded-xl border px-4 py-3 text-sm shadow-sm
 Non-interactive labels for mode, difficulty, status.
 
 ```
-inline-flex items-center rounded-full border border-border/60 px-2 py-0.5 text-xs font-medium text-muted-foreground
+inline-flex items-center rounded-full border border-border/60 px-2 py-0.5 text-xs font-medium text-muted-foreground dark:border-foreground/40
 ```
 
 **Used in:** Dashboard session mode badge, dashboard activity difficulty badge
@@ -695,7 +697,8 @@ transition-all hover:bg-muted/50         ← WRONG (animates everything, causes 
 ```
 Is the list inside a <Card> container?
 ├── YES → Use I-1 (Hoverable Row inside Card)
-│         rounded-xl, border-border/60, bg-muted/20, hover:bg-muted/40
+│         rounded-xl, border-border/60 + dark:border-foreground/40,
+│         bg-muted/20, hover:bg-muted/40, dark:hover:border-foreground/70
 │         Is the row non-interactive?
 │         └── YES → Use S-2 (Muted Row, no hover classes)
 └── NO → Is each item a standalone container?
@@ -716,7 +719,7 @@ What is the parent surface?
 └── Tab-switch inactive → hover:bg-muted/50 (inside bg-muted container)
 
 Token (neutral surface fills): Use `muted`.
-Border hovers use `muted-foreground` at lower opacities (e.g., `hover:border-muted-foreground/30` on I-3). These are separate from the bg-muted fill tiers.
+Border hovers in remediated dark-mode interactive rows/buttons use `dark:hover:border-foreground/70`. Keep light-mode border hovers in muted-foreground space where needed.
 Avoid introducing new `hover:bg-accent*` outside `components/ui/` (button variants use `accent` by design). Never use `foreground` for hover fills.
 ```
 
@@ -1061,7 +1064,7 @@ border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 
 transition-[color,box-shadow] outline-none md:text-sm
 ```
 
-**Dark mode:** `dark:bg-input/30` (subtle dark background tint)
+**Dark mode:** `dark:bg-input/30 dark:border-foreground/40` (subtle dark background tint + required boundary override)
 
 **Focus:** `focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]`
 
@@ -1077,7 +1080,7 @@ transition-[color,box-shadow] outline-none md:text-sm
 
 **Exact `className` strings (current)** — `components/ui/input.tsx:11-13`:
 ```text
-file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm
+file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input dark:border-foreground/40 flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm
 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]
 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive
 ```
@@ -1090,7 +1093,7 @@ The `<Select>` component (`components/ui/select.tsx`) is the single select/menu 
 
 **Trigger base classes:**
 ```
-border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive flex h-9 w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2
+border-input dark:border-foreground/40 data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive flex h-9 w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2
 ```
 
 **Content surface:** Uses S-3 (Popover Surface) + Radix enter/exit animations (Part 15.3).
@@ -1197,14 +1200,14 @@ Compact lookup for code reviews and implementation.
 | ID | Pattern | Canonical Hover | Radius | Border |
 |----|---------|----------------|--------|--------|
 | S-1 | Card | — (non-interactive) | `rounded-2xl` | `border` |
-| S-2 | Muted Row | — (non-interactive) | `rounded-xl` | `border-border/60` |
+| S-2 | Muted Row | — (non-interactive) | `rounded-xl` | `border-border/60 dark:border-foreground/40` |
 | S-3 | Menu Popover | — | `rounded-md` | `border` |
 | S-4 | Modal Dialog | — | `rounded-2xl` | `border-border` |
-| I-1 | Row in Card | `hover:bg-muted/40` | `rounded-xl` | `border-border/60` |
+| I-1 | Row in Card | `hover:bg-muted/40` (+ `dark:hover:border-foreground/70`) | `rounded-xl` | `border-border/60 dark:border-foreground/40` |
 | I-2 | Standalone Row | `hover:bg-muted/50` | `rounded-2xl` | `border-border` |
-| I-3 | Choice Button | `hover:bg-muted/40` | `rounded-xl` | `border-border/60` |
-| I-4 | Filter Chip | `hover:bg-muted/50` | `rounded-full` | `border-border` |
-| I-5 | Tab Switch Item | `hover:bg-muted/50` | `rounded-md` | — |
+| I-3 | Choice Button | `hover:bg-muted/40` (+ `dark:hover:border-foreground/70`) | `rounded-xl` | `border-border/60 dark:border-foreground/40` |
+| I-4 | Filter Chip | `hover:bg-muted/50` | `rounded-full` | `border-border dark:border-foreground/40` |
+| I-5 | Tab Switch Item | `hover:bg-muted/50` | `rounded-md` | Container uses `dark:border-foreground/40` |
 | I-6 | Icon Toggle | `hover:text-foreground` | — | — |
 | L-1 | Nav Link | `hover:text-foreground` | `rounded-md` | — |
 | L-2 | Content Link | `hover:underline` | `rounded-sm` | — |
@@ -1212,6 +1215,6 @@ Compact lookup for code reviews and implementation.
 | L-4 | Brand Link | `hover:text-foreground/80` | `rounded-md` | — |
 | L-5 | Banner Inline Link | `hover:text-foreground` | — | — |
 | L-6 | Mobile Menu Link | `hover:bg-muted/50` | `rounded-md` | — |
-| F-3 | ErrorCard | — | `rounded-2xl` | `border-destructive/30` |
+| F-3 | ErrorCard | — | `rounded-2xl` | `border-destructive` |
 | F-4 | Toast | — | `rounded-xl` | varies by tone |
 | M-1 | Badge/Pill | — | `rounded-full` | `border-border/60` |

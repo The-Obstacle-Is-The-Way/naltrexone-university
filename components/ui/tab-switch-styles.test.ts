@@ -10,7 +10,7 @@ import {
 describe('tab-switch-styles', () => {
   it('defines the canonical container classes', () => {
     expect(tabSwitchContainerClasses).toBe(
-      'inline-flex rounded-lg border border-border bg-muted p-1',
+      'inline-flex rounded-lg border border-border bg-muted p-1 dark:border-foreground/40',
     );
     expect(tabSwitchContainerClasses).not.toContain('rounded-full');
     expect(tabSwitchContainerClasses).not.toContain('bg-muted/20');

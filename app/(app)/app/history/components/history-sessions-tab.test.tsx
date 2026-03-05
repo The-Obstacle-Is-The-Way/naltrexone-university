@@ -273,6 +273,8 @@ describe('HistorySessionsTab', () => {
 
     expect(html).toContain('cursor-pointer');
     expect(html).toContain('hover:bg-muted/40');
+    expect(html).toContain('dark:border-foreground/40');
+    expect(html).toContain('dark:hover:border-foreground/70');
     expect(html).not.toContain('hover:bg-accent/40');
     expect(html).not.toContain('dark:hover:bg-foreground/10');
     expect(html).not.toContain('tabindex="0"');
@@ -305,9 +307,14 @@ describe('HistorySessionsTab', () => {
     };
 
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const row = doc.querySelector('li');
+    const rowClass = row?.getAttribute('class') ?? '';
 
     expect(html).not.toContain('cursor-pointer');
     expect(html).not.toContain('hover:bg-muted/40');
+    expect(rowClass).toContain('dark:border-foreground/40');
+    expect(rowClass).not.toContain('dark:hover:border-foreground/70');
     expect(html).not.toContain('hover:bg-accent/40');
     expect(html).not.toContain('role="link"');
     expect(html).not.toContain('tabindex="0"');
@@ -401,6 +408,9 @@ describe('HistorySessionsTab', () => {
     expect(panel?.getAttribute('class') ?? '').toContain('pt-3');
     expect(panel?.getAttribute('class') ?? '').toContain('border-t');
     expect(panel?.getAttribute('class') ?? '').toContain('border-border/30');
+    expect(panel?.getAttribute('class') ?? '').toContain(
+      'dark:border-foreground/40',
+    );
     expect(panel?.getAttribute('class') ?? '').not.toContain('bg-background');
     expect(panel?.getAttribute('class') ?? '').not.toContain('rounded-lg');
   });

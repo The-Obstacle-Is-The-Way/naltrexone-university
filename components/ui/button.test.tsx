@@ -42,4 +42,16 @@ describe('components/ui/button', () => {
     expect(html).toContain('bg-success');
     expect(html).toContain('text-success-foreground');
   });
+
+  it('uses stronger dark-mode outline boundary tokens', async () => {
+    const { Button } = await import('@/components/ui/button');
+
+    const html = renderToStaticMarkup(
+      <Button variant="outline">Outline</Button>,
+    );
+
+    expect(html).toContain('dark:border-foreground/40');
+    expect(html).toContain('dark:hover:border-foreground/70');
+    expect(html).not.toContain('dark:border-input');
+  });
 });

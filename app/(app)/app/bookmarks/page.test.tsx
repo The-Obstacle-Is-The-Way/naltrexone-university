@@ -102,6 +102,8 @@ describe('app/(app)/app/bookmarks', () => {
         ]}
       />,
     );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const bookmarkCard = doc.querySelector('li [data-slot="card"]');
 
     expect(html).toContain('Bookmarks');
     expect(html).toContain('Stem for q1');
@@ -114,10 +116,15 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).toContain('aria-label="Remove bookmark: Stem for q1"');
     expect(html).toContain('Go to Practice');
     expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
+    expect(bookmarkCard?.getAttribute('class') ?? '').toContain(
+      'dark:border-foreground/40',
+    );
   });
 
   it('renders empty state when no bookmarks exist', () => {
     const html = renderToStaticMarkup(<BookmarksView rows={[]} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const emptyCard = doc.querySelector('[data-slot="card"]');
 
     expect(html).toContain('Bookmarks');
     expect(html).toContain('No bookmarks yet.');
@@ -126,6 +133,9 @@ describe('app/(app)/app/bookmarks', () => {
     );
     expect(html).toContain('Start practicing');
     expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
+    expect(emptyCard?.getAttribute('class') ?? '').toContain(
+      'dark:border-foreground/40',
+    );
   });
 
   it('renders unavailable bookmarks without a reattempt link', () => {

@@ -44,16 +44,16 @@ function createNotificationId(): string {
   );
 }
 
-function getToastClasses(tone: NotificationTone): string {
+export function getToastClasses(tone: NotificationTone): string {
   if (tone === 'success') {
-    return 'border-success/30 bg-success/10 text-foreground';
+    return 'border-success/60 bg-success/10 text-foreground';
   }
 
   if (tone === 'error') {
-    return 'border-destructive/40 bg-destructive/10 text-foreground';
+    return 'border-destructive bg-destructive/10 text-foreground';
   }
 
-  return 'border-border bg-card text-foreground';
+  return 'border-border bg-card text-foreground dark:border-foreground/40';
 }
 
 export function NotificationProvider({

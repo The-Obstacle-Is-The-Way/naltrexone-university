@@ -210,7 +210,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
                 return (
                   <details
                     key={kind}
-                    className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3"
+                    className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3 dark:border-foreground/40"
                   >
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-foreground outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]">
                       <span>{label}</span>

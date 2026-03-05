@@ -80,10 +80,17 @@ Adjusting one class in one component will not produce consistent compliance.
 - [ ] Practice surfaces:
   - `app/(app)/app/practice/components/practice-session-starter.tsx` — `border-border/60 bg-muted/20` on tag filter containers, multiple `text-muted-foreground` at `text-xs`/`text-sm`
   - `app/(app)/app/practice/practice-page-client.tsx` — header action link ("Back to Dashboard") consumes `text-muted-foreground` via shared styles
+  - `app/(app)/app/practice/components/practice-view.tsx` — empty/error cards render `text-sm text-muted-foreground`
+  - `app/(app)/app/practice/components/incomplete-session-card.tsx` — metadata text uses `text-sm text-muted-foreground`
+  - `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` — fallback card uses `text-sm text-muted-foreground`
+  - `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` — summary labels use `text-xs text-muted-foreground`
+  - `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` — summary metadata uses `text-sm text-muted-foreground`
 - [ ] Error/notification surfaces:
   - `components/error-card.tsx` — `border-destructive/30 bg-destructive/10`
   - `components/ui/notification-provider.tsx` — toast borders at `border-success/30`, `border-destructive/40`
   - `app/(app)/app/layout.tsx` — PastDueBanner uses `bg-warning/10` + `text-warning-foreground` (BS-042 computes ~1.03:1 in dark mode; severe `SC 1.4.3` failure)
+  - `app/(app)/app/billing/page.tsx` — warning card also uses `text-warning-foreground` on warning tint
+  - `app/global-error.tsx` and `components/error-boundary-page.tsx` — `text-sm`/`text-xs text-muted-foreground` in failure surfaces
 - [ ] Shared UI primitives:
   - `components/ui/button.tsx` — outline variant uses `dark:bg-input/30 dark:border-input`
   - `components/ui/card.tsx`
@@ -91,7 +98,18 @@ Adjusting one class in one component will not produce consistent compliance.
   - `components/ui/segmented-control.tsx` — consumes `tab-switch-styles` constants
   - `components/ui/filter-chip.tsx` — unselected chips use `text-muted-foreground hover:bg-muted/50`
   - `components/ui/input.tsx` — `dark:bg-input/30 border-input placeholder:text-muted-foreground`
+  - `components/ui/select.tsx` — `border-input` + placeholder/icon `text-muted-foreground` in `text-sm`/`text-xs` contexts
+  - `components/ui/alert-dialog.tsx` — description copy uses `text-sm text-muted-foreground`
+  - `components/ui/dropdown-menu.tsx` — label/shortcut text uses `text-muted-foreground` at `text-xs`/`text-sm`
   - `lib/shared-styles.ts` — `headerActionLinkClasses` currently sets `text-muted-foreground` for app header action links
+- [ ] Auth/system entry surfaces:
+  - `app/not-found.tsx` — secondary copy uses `text-muted-foreground`
+  - `app/sign-in/[[...sign-in]]/sign-in-page-client.tsx` and `app/sign-up/[[...sign-up]]/sign-up-page-client.tsx` — loading/subtitle copy uses `text-muted-foreground`
+- [ ] Non-app surfaces discovered by grep (track separately if intentionally deferred):
+  - `app/pricing/pricing-view.tsx`
+  - `app/(marketing)/checkout/success/checkout-success-sync.tsx`
+  - `components/marketing/marketing-layout.tsx`
+  - `components/marketing/marketing-home.tsx`
 
 ### 5) Verification and regression safety
 

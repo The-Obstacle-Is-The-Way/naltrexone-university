@@ -14,5 +14,7 @@ describe('components/ui/input', () => {
     expect(html).toContain('type="email"');
     expect(html).toContain('placeholder="Email"');
     expect(html).toContain('aria-invalid="true"');
+    expect(html).toContain('dark:border-foreground/40');
+    expect(html).not.toContain('dark:border-input');
   });
 });

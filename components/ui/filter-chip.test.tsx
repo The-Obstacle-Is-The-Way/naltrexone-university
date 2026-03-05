@@ -45,6 +45,7 @@ describe('FilterChip', () => {
     expect(html).toContain('aria-pressed="false"');
     expect(html).not.toContain('bg-primary');
     expect(html).toContain('hover:bg-muted/50');
+    expect(html).toContain('dark:border-foreground/40');
     expect(html).not.toContain('hover:bg-accent');
   });
 

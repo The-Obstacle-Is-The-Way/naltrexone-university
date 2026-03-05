@@ -130,7 +130,7 @@ describe('ChoiceButton', () => {
     expect(wrapperLabel.getAttribute('class')).toContain('cursor-not-allowed');
   });
 
-  it('uses muted hover contrast and muted badge background', () => {
+  it('uses stronger dark-mode boundary tokens for unselected choices', () => {
     const html = renderToStaticMarkup(
       <ChoiceButton
         name="choices"
@@ -151,14 +151,15 @@ describe('ChoiceButton', () => {
     expect(badge).not.toBeNull();
     expect(wrapperClass).toContain('border-border/60');
     expect(wrapperClass).toContain('bg-muted/20');
+    expect(wrapperClass).toContain('dark:border-foreground/40');
+    expect(wrapperClass).toContain('dark:bg-foreground/40');
     expect(wrapperClass).toContain('hover:bg-muted/40');
-    expect(wrapperClass).not.toContain('hover:bg-muted/80');
-    expect(wrapperClass).toContain('hover:border-muted-foreground/30');
+    expect(wrapperClass).toContain('dark:hover:border-foreground/70');
     expect(badge?.getAttribute('class')).toContain('bg-muted');
     expect(badge?.getAttribute('class')).not.toContain('bg-background');
   });
 
-  it('applies opacity-50 for wrong-unselected correctness', () => {
+  it('keeps wrong-unselected labels readable without parent opacity dimming', () => {
     const html = renderToStaticMarkup(
       <ChoiceButton
         name="choices"
@@ -174,10 +175,19 @@ describe('ChoiceButton', () => {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const input = doc.querySelector('input[type="radio"]');
     const wrapperLabel = input?.closest('label');
+    const choiceText = Array.from(doc.querySelectorAll('p')).find(
+      (paragraph) => paragraph.textContent?.trim() === 'Choice A',
+    );
 
     expect(wrapperLabel).not.toBeNull();
-    expect(wrapperLabel?.getAttribute('class')).toContain('opacity-50');
-    expect(wrapperLabel?.getAttribute('class')).not.toContain('opacity-60');
+    expect(choiceText).not.toBeUndefined();
+    expect(wrapperLabel?.getAttribute('class')).not.toContain('opacity-50');
+    expect(choiceText?.parentElement?.getAttribute('class')).toContain(
+      'text-foreground',
+    );
+    expect(choiceText?.parentElement?.getAttribute('class')).not.toContain(
+      'text-muted-foreground',
+    );
   });
 
   it('uses text-success (not text-success-foreground) for correct state', () => {
@@ -221,6 +231,8 @@ describe('ChoiceButton', () => {
 
     expect(wrapperClassTokens).toContain('bg-muted/40');
     expect(wrapperClassTokens).toContain('border-ring');
+    expect(wrapperClassTokens).toContain('dark:bg-foreground/40');
+    expect(wrapperClassTokens).toContain('dark:border-foreground/70');
   });
 
   it('applies base background tint when unselected', () => {
@@ -241,6 +253,8 @@ describe('ChoiceButton', () => {
       .filter(Boolean);
 
     expect(wrapperClassTokens).toContain('bg-muted/20');
+    expect(wrapperClassTokens).toContain('dark:bg-foreground/40');
+    expect(wrapperClassTokens).toContain('dark:border-foreground/40');
     expect(wrapperClassTokens).not.toContain('bg-muted/40');
   });
 

@@ -39,7 +39,7 @@ describe('QuestionCard', () => {
     expect(html).toContain('Answer choices');
   });
 
-  it('marks unselected wrong answers as wrong-unselected in post-submit state', () => {
+  it('styles wrong-unselected answers without dimming the entire label subtree', () => {
     const html = renderToStaticMarkup(
       <QuestionCard
         stemMd="Stem paragraph"
@@ -56,13 +56,21 @@ describe('QuestionCard', () => {
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const labels = Array.from(doc.querySelectorAll('label'));
-    const wrongUnselected = labels.filter((label) =>
-      (label.getAttribute('class') ?? '').includes('opacity-50'),
+    const wrongUnselected = labels.find((label) =>
+      label.textContent?.includes('Choice C'),
+    );
+    const wrongUnselectedText = Array.from(doc.querySelectorAll('p')).find(
+      (paragraph) => paragraph.textContent?.trim() === 'Choice C',
     );
 
-    expect(wrongUnselected).toHaveLength(1);
-    expect(wrongUnselected[0]?.getAttribute('class')).not.toContain(
-      'opacity-60',
+    expect(wrongUnselected).not.toBeUndefined();
+    expect(wrongUnselected?.getAttribute('class')).not.toContain('opacity-50');
+    expect(wrongUnselectedText).not.toBeUndefined();
+    expect(wrongUnselectedText?.parentElement?.getAttribute('class')).toContain(
+      'text-foreground',
     );
+    expect(
+      wrongUnselectedText?.parentElement?.getAttribute('class'),
+    ).not.toContain('text-muted-foreground');
   });
 });

@@ -151,10 +151,10 @@ export function DashboardView({
                   <li key={row.sessionId}>
                     <Link
                       href={sessionReviewHref}
-                      className="block rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                      className="block rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px] dark:border-foreground/40 dark:hover:border-foreground/70"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="inline-flex items-center rounded-full border border-border/60 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                        <span className="inline-flex items-center rounded-full border border-border/60 px-2 py-0.5 text-xs font-medium text-muted-foreground dark:border-foreground/40">
                           {toSentenceCase(row.mode)}
                         </span>
                         <span className="text-xs text-muted-foreground">
@@ -207,7 +207,7 @@ export function DashboardView({
                 if (!row.isAvailable) {
                   return (
                     <li key={row.attemptId}>
-                      <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+                      <div className="rounded-xl border border-border/60 bg-muted/20 p-3 dark:border-foreground/40">
                         <div className="text-sm font-medium text-foreground">
                           [Question no longer available]
                         </div>
@@ -229,13 +229,13 @@ export function DashboardView({
                         mode: 'review',
                         attemptId: row.attemptId,
                       })}
-                      className="block rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                      className="block rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px] dark:border-foreground/40 dark:hover:border-foreground/70"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <span className="min-w-0 flex-1 text-sm font-medium text-foreground">
                           {getStemPreview(row.stemMd, 110)}
                         </span>
-                        <span className="inline-flex shrink-0 items-center rounded-full border border-border/60 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                        <span className="inline-flex shrink-0 items-center rounded-full border border-border/60 px-2 py-0.5 text-xs font-medium text-muted-foreground dark:border-foreground/40">
                           {toSentenceCase(row.difficulty)}
                         </span>
                       </div>
