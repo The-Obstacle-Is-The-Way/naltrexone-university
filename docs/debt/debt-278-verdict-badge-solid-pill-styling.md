@@ -171,3 +171,4 @@ This debt doc covers ONLY the verdict badge styling. It does NOT cover:
 - Clinical pearl callout styling (already handled by DEBT-277)
 - Any structural changes to the feedback layout
 - Badge text content or semantics
+- Cross-surface WCAG AA contrast remediation (tracked by DEBT-279)

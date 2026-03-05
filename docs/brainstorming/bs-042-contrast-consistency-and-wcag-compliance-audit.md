@@ -13,7 +13,7 @@ Multiple UI surfaces use different contrast strategies with no unified WCAG comp
 2. **Verdict badge** — colored text on colored tint produces monochromatic low-contrast (DEBT-278).
 3. **Dashboard** — uses the same `border-border/60 bg-muted/20` as choice buttons but "looks fine" — because it has more internal content, not better contrast.
 4. **Feedback sections** — use semantic color borders (`border-success/20`, `border-destructive/20`) at low opacity, also failing contrast requirements.
-5. **No WCAG contrast policy exists** — the pattern registry defines opacity scales for visual hierarchy but never validates them against computed contrast ratios.
+5. **A WCAG contrast policy now exists, but implementation is non-compliant** — `docs/frontend/contrast-policy.md` is canonical, but current component patterns still fail the documented AA targets.
 
 ---
 
@@ -44,7 +44,7 @@ SC 1.4.11 is the one that governs borders, interactive element boundaries, and v
 
 All values computed from actual token values in `globals.css` using WCAG 2.1 relative luminance formula. Dark mode only (light mode has its own documented asymmetry — see Pattern Registry 1.2 caveat).
 
-Runtime spot-check note (2026-03-05): browser-computed values from an actual review-mode question page (`body` 9/9/9, `card` 18/18/18, unselected choice fill ~20/20/20, unselected choice border ~30/30/30) match the token-derived composites below.
+Runtime spot-check note (2026-03-05): browser-computed values from an actual review-mode question page (`body` 9/9/9, `card` 18/18/18, unselected choice fill ~20/20/20, unselected choice border ~30/30/30) match the token-derived composites below. A separate dashboard page audit confirmed identical effective values: row fill `rgb(20,20,20)`, row border `rgb(30,30,30)`, card `rgb(18,18,18)`, muted text `rgb(115,115,115)` — producing 1.12:1 (border), 1.02:1 (fill), 3.89:1 (muted text), 1.32:1 (card border) — all consistent with token-derived predictions.
 
 ### Effective Dark Mode Gray Values
 
@@ -96,6 +96,8 @@ Additional context from runtime capture: page background (3.5%) vs card fill (7%
 | text-muted-foreground on card (`Reference` heading) | **3.95:1** | FAIL (normal text) |
 | text-muted-foreground on success card (`Clinical Pearl` label) | **3.73:1** | FAIL (normal text) |
 | text-muted-foreground on wrong-answer card (`bg-background/50` over card) | **4.10:1** | FAIL (normal text) |
+| text-muted-foreground — inactive nav links on page bg | **3.89:1** | FAIL (normal text) |
+| text-muted-foreground — dashboard labels/timestamps on row bg | **3.89:1** | FAIL (normal text) |
 | Letter badge text on bg-muted (no parent opacity) | **14.57:1** | PASS |
 | Wrong-unselected choice text (effective `opacity-50`) on choice bg | **4.73:1** | PASS (barely) |
 | Wrong-unselected badge letter (effective `opacity-50`) on badge bg | **4.37:1** | FAIL (normal text) |
@@ -176,7 +178,7 @@ These are the concrete problems to resolve, roughly priority-ordered:
 |----|-----------|---------|--------|
 | V1 | Choice button border barely visible | `border-border/60` = 1.13:1 | High — primary interactive element |
 | V2 | Choice button fill indistinguishable from card | `bg-muted/20` = 1.02:1 | High — buttons blend into card |
-| V3 | `text-muted-foreground` fails for `text-sm`/`text-xs` | 3.73:1–4.10:1 vs 4.5:1 required | Medium — labels, timestamps, secondary text |
+| V3 | `text-muted-foreground` fails for `text-sm`/`text-xs` | 3.73:1–4.10:1 vs 4.5:1 required | Medium — labels, timestamps, secondary text, inactive nav links, dashboard metadata |
 | V4 | Card border barely visible on page | `border` = 1.32:1 | Low — cards identified by content, not border |
 | V5 | Semantic borders too faint | `border-success/20` = 1.36:1 | Low — hue provides chromatic cue |
 | V6 | Hover state imperceptible | `bg-muted/20` → `bg-muted/40` = 1.02:1 | Medium — hover feedback matters for interactivity |
@@ -227,7 +229,7 @@ The fix is to add WCAG contrast ratio targets as a first-class constraint in the
 
 ## Open Questions
 
-1. **Should we target WCAG AA or AAA?** AA (3:1 non-text, 4.5:1 text) is the industry standard. AAA (4.5:1 non-text, 7:1 text) is aspirational. Most apps target AA.
+1. ~~**Should we target WCAG AA or AAA?**~~ **Resolved:** AA. Codified in `docs/frontend/contrast-policy.md`.
 2. **Is the gray stack fundamentally too compressed?** 3.5% → 7% → 11% → 15% may not have enough headroom for 3:1 contrast between adjacent layers. If so, the fix is at the token level, not the component level.
 3. **Should choice buttons have a distinct pattern ID?** Currently they use I-3 (interactive row inside card), same as non-interactive rows. They may need their own pattern with stronger visual identity.
 4. **Is full WCAG 1.4.11 compliance realistic for a dark-mode-first app?** Many production dark-mode apps (Spotify, Discord, VS Code) don't achieve 3:1 on all borders. The question is whether we set that as a target and close the gap, or accept a pragmatic threshold.
@@ -243,3 +245,4 @@ The fix is to add WCAG contrast ratio targets as a first-class constraint in the
 | DEBT-263 (Text Contrast) | Already fixed `text-success`/`text-destructive` tokens for WCAG — same methodology applies here |
 | DEBT-262 (Light-Mode Opacity Scale) | Documents the light-mode asymmetry — related but separate |
 | Pattern Registry §1.2–1.4 | The opacity scales that need WCAG validation added |
+| Contrast Policy (`docs/frontend/contrast-policy.md`) | Canonical normative doc — canonified from this brainstorming doc's findings |
