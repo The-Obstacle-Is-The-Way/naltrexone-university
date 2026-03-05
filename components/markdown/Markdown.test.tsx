@@ -8,6 +8,17 @@ beforeAll(async () => {
   ({ Markdown } = await import('./Markdown'));
 });
 
+function findClinicalPearlCallout(doc: Document) {
+  return Array.from(doc.querySelectorAll('div')).find((element) => {
+    const classes = element.className;
+    return (
+      classes.includes('border-l-2') &&
+      classes.includes('border-foreground/20') &&
+      classes.includes('pl-3')
+    );
+  });
+}
+
 describe('Markdown', () => {
   it('renders markdown and does not render raw HTML tags', () => {
     const html = renderToStaticMarkup(
@@ -41,14 +52,7 @@ describe('Markdown', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const callout = Array.from(doc.querySelectorAll('div')).find((element) => {
-      const classes = element.className;
-      return (
-        classes.includes('border-l-2') &&
-        classes.includes('border-foreground/20') &&
-        classes.includes('pl-3')
-      );
-    });
+    const callout = findClinicalPearlCallout(doc);
 
     expect(callout).toBeDefined();
     expect(callout?.textContent).toContain('Clinical Pearl');
@@ -62,12 +66,12 @@ describe('Markdown', () => {
       <Markdown content={'**Important:** This is not a pearl.'} />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const callout = Array.from(doc.querySelectorAll('div')).find((element) =>
-      element.className.includes('border-l-2'),
-    );
+    const callout = findClinicalPearlCallout(doc);
+    const paragraph = doc.querySelector('p');
 
     expect(callout).toBeUndefined();
-    expect(html).toContain('<strong>Important:</strong> This is not a pearl.');
+    expect(paragraph?.querySelector('strong')?.textContent).toBe('Important:');
+    expect(paragraph?.textContent).toContain('This is not a pearl.');
   });
 
   it('detects clinical pearl label case-insensitively', () => {
@@ -75,14 +79,7 @@ describe('Markdown', () => {
       <Markdown content={'**Clinical Pearl:** Capitalized variant.'} />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const callout = Array.from(doc.querySelectorAll('div')).find((element) => {
-      const classes = element.className;
-      return (
-        classes.includes('border-l-2') &&
-        classes.includes('border-foreground/20') &&
-        classes.includes('pl-3')
-      );
-    });
+    const callout = findClinicalPearlCallout(doc);
 
     expect(callout).toBeDefined();
     expect(callout?.textContent).toContain('Capitalized variant.');
@@ -93,14 +90,7 @@ describe('Markdown', () => {
       <Markdown content={'**Clinical pearl:**'} />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const callout = Array.from(doc.querySelectorAll('div')).find((element) => {
-      const classes = element.className;
-      return (
-        classes.includes('border-l-2') &&
-        classes.includes('border-foreground/20') &&
-        classes.includes('pl-3')
-      );
-    });
+    const callout = findClinicalPearlCallout(doc);
     const contentParagraph = callout?.querySelector('p');
 
     expect(callout).toBeDefined();
@@ -116,14 +106,7 @@ describe('Markdown', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const callout = Array.from(doc.querySelectorAll('div')).find((element) => {
-      const classes = element.className;
-      return (
-        classes.includes('border-l-2') &&
-        classes.includes('border-foreground/20') &&
-        classes.includes('pl-3')
-      );
-    });
+    const callout = findClinicalPearlCallout(doc);
 
     expect(callout).toBeDefined();
     expect(callout?.querySelector('code')?.textContent).toBe('naltrexone');
