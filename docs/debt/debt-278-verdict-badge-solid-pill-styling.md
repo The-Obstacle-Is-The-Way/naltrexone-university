@@ -1,4 +1,4 @@
-# DEBT-278: Verdict Badge White Text
+# DEBT-278: Verdict Badge Solid Compact Pill
 
 **Priority:** P2
 **Created:** 2026-03-05
@@ -9,7 +9,7 @@
 
 ## Problem
 
-The verdict badge ("Correct" / "Incorrect") at the top of the feedback card uses colored text on a tinted background — green text on green tint, red text on red tint:
+The verdict badge ("Correct" / "Incorrect") at the top of the feedback card has two issues:
 
 ```tsx
 // feedback.tsx:126-134 (current)
@@ -28,25 +28,34 @@ The verdict badge ("Correct" / "Incorrect") at the top of the feedback card uses
 
 1. **Color-on-color readability** — Green text on a green-tinted background (and red on red) produces low contrast. The verdict is the most important piece of information on the feedback card, but the monochromatic color scheme makes the text blend into its background rather than standing out.
 
-2. **Unused design tokens** — `--success-foreground` and `--destructive-foreground` are defined in `globals.css` as white/near-white specifically for text on success/destructive backgrounds. They're unused by the verdict badge.
+2. **Accidental full-width stretch** — The badge appears full-width because `<Card>` has `flex flex-col` which stretches flex items by default. The `inline-flex` class signals compact sizing intent, but flex-col's default `align-items: stretch` overrides it. The result is a pill that stretches edge-to-edge within the card — visually heavy and disproportionate for a short label like "Correct".
 
-3. **Misleading `inline-flex`** — The badge appears full-width because `<Card>` has `flex flex-col` which stretches flex items by default. But `inline-flex` signals compact sizing intent. The full-width behavior is accidental, not intentional.
+---
+
+## Options Considered
+
+| Option | Background | Text | Width | Verdict |
+|--------|-----------|------|-------|---------|
+| **A: Soft tint + white text** | `bg-success/15` (keep) | `text-success-foreground` (white) | Full-width | **Rejected** — white text on 15% tinted background is unreadable in light mode (white on near-white). The `*-foreground` tokens are designed for solid backgrounds, not tinted ones. |
+| **B: Solid + white text + full-width** | `bg-success` (solid) | `text-success-foreground` (white) | Full-width | **Rejected** — solid color works with white text in both modes, but full-width stretch looks heavy and disproportionate for a one-word label. |
+| **C: Solid + white text + compact** | `bg-success` (solid) | `text-success-foreground` (white) | Compact (content-hugging) | **Selected** — solid background + white text gives maximum contrast and works in both light/dark modes. Compact sizing makes the pill proportional to its content. Matches Reddit flair / Material chip pattern. |
 
 ---
 
 ## Solution
 
-Keep the existing soft tinted background. Change only the text color to white via the design system's `*-foreground` tokens, and make the full-width intent explicit.
+Solid-color compact pill with white text: the badge hugs its content instead of stretching across the card.
 
 ### Before / After
 
 | Property | Before | After |
 |----------|--------|-------|
-| Correct background | `bg-success/15` | `bg-success/15` — **unchanged** |
+| Correct background | `bg-success/15` (15% tint) | `bg-success` (solid) |
 | Correct text | `text-success` (green) | `text-success-foreground` (white) |
-| Incorrect background | `bg-destructive/15` | `bg-destructive/15` — **unchanged** |
+| Incorrect background | `bg-destructive/15` (15% tint) | `bg-destructive` (solid) |
 | Incorrect text | `text-destructive` (red) | `text-destructive-foreground` (white) |
-| Display | `inline-flex` (accidental stretch) | `block` (explicit full-width) |
+| Width | Full-width (accidental stretch) | Compact via `self-start` |
+| Display | `inline-flex` | `inline-flex self-start` |
 | Shape | `rounded-full` | `rounded-full` — unchanged |
 | Padding | `px-3 py-1` | `px-3 py-1` — unchanged |
 | Font | `text-sm font-semibold` | `text-sm font-semibold` — unchanged |
@@ -57,14 +66,18 @@ Keep the existing soft tinted background. Change only the text color to white vi
 // feedback.tsx — verdict badge
 <span
   className={cn(
-    'block rounded-full px-3 py-1 text-sm font-semibold',
-    isCorrect && 'bg-success/15 text-success-foreground',
-    !isCorrect && 'bg-destructive/15 text-destructive-foreground',
+    'inline-flex self-start rounded-full px-3 py-1 text-sm font-semibold',
+    isCorrect && 'bg-success text-success-foreground',
+    !isCorrect && 'bg-destructive text-destructive-foreground',
   )}
 >
   {isCorrect ? 'Correct' : 'Incorrect'}
 </span>
 ```
+
+### Why `self-start`
+
+The `<Card>` component renders as `flex flex-col` (card.tsx:10). In a flex-col container, `align-items: stretch` is the default — all children expand to full width. Adding `self-start` on the badge overrides this for just the badge, letting it shrink to its content width while remaining left-aligned.
 
 ### Color Token Values (from `globals.css`)
 
@@ -81,9 +94,10 @@ Keep the existing soft tinted background. Change only the text color to white vi
 
 | Decision | Rationale |
 |----------|-----------|
-| Keep `bg-success/15` / `bg-destructive/15` tinted backgrounds | The soft tinted background provides a calm, non-aggressive feel that fits the educational context. The readability problem is the text color, not the background intensity. |
-| White text via `*-foreground` tokens | White text on a tinted background provides clear contrast without the color-on-color blending problem. Using `success-foreground` / `destructive-foreground` tokens (not hardcoded `text-white`) ensures light/dark mode correctness. |
-| `block` instead of `inline-flex` | The badge stretches full-width in both current and target states. Current behavior is accidental (flex-col stretch default). `block` makes the intent explicit and removes dependence on Card's flex layout. |
+| Solid background (`bg-success` / `bg-destructive`) | 15% tinted backgrounds are too faint in light mode for white text. Solid backgrounds ensure the `*-foreground` tokens (white/near-white) maintain strong contrast in both light and dark modes. The verdict is a binary signal — bold color fits its importance. |
+| White text via `*-foreground` tokens | Design system tokens `success-foreground` and `destructive-foreground` are white/near-white in both modes, built specifically for text on solid success/destructive backgrounds. Using tokens (not hardcoded `text-white`) ensures theme correctness. |
+| Compact via `self-start` | A one-word label ("Correct" / "Incorrect") stretched to full card width looks disproportionate. Compact sizing creates a tighter, more intentional pill shape. `self-start` is the minimal override — it only affects the badge without changing the Card's layout for other children. |
+| Keep `rounded-full` | Creates the capsule "pill" shape at compact width. Matches Reddit flair and Material chip patterns. |
 
 ---
 
@@ -95,13 +109,15 @@ One existing test asserts the current badge styling and must be updated:
 
 ```tsx
 // Current assertions (must change):
+expect(verdictBadge?.getAttribute('class')).toContain('bg-success/15');
 expect(verdictBadge?.getAttribute('class')).toContain('text-success');
 
-// Updated assertion:
+// Updated assertions:
+expect(verdictBadge?.getAttribute('class')).toContain('bg-success');
 expect(verdictBadge?.getAttribute('class')).toContain('text-success-foreground');
 ```
 
-The `bg-success/15` assertion at line 31 is unchanged. No other tests assert badge text color tokens.
+No other tests assert badge color tokens. All other test assertions (`rounded-full`, text content, structural ordering) are unaffected.
 
 ---
 
@@ -109,18 +125,18 @@ The `bg-success/15` assertion at line 31 is unchanged. No other tests assert bad
 
 | # | Scenario | Expected |
 |---|----------|----------|
-| T1 | Correct answer → verdict badge | Soft green tinted background, white text, "Correct", full-width capsule |
-| T2 | Incorrect answer → verdict badge | Soft red tinted background, white text, "Incorrect", full-width capsule |
-| T3 | Light mode | White text readable against tinted backgrounds in both correct/incorrect states |
-| T4 | Dark mode | Near-white text readable against tinted backgrounds in both correct/incorrect states |
-| T5 | All other feedback card elements unchanged | Section cards, choice explanations, reference section, layout ordering all preserved |
+| T1 | Correct answer → verdict badge | Solid green compact pill, white text, "Correct" |
+| T2 | Incorrect answer → verdict badge | Solid red compact pill, white text, "Incorrect" |
+| T3 | Light mode | Dark green pill (HSL 142 72% 29%) with white text — readable contrast |
+| T4 | Dark mode | Medium green pill (HSL 142 70% 42%) with near-white text — readable contrast |
+| T5 | Pill width | Badge hugs text content, does not stretch full card width |
+| T6 | All other feedback card elements unchanged | Section cards, choice explanations, reference section, layout ordering all preserved |
 
 ---
 
 ## Scope Boundary
 
-This debt doc covers ONLY the verdict badge text color. It does NOT cover:
-- Background intensity changes (kept at 15% opacity)
+This debt doc covers ONLY the verdict badge styling. It does NOT cover:
 - Section card containment colors (already handled by DEBT-276)
 - Clinical pearl callout styling (already handled by DEBT-277)
 - Any structural changes to the feedback layout
