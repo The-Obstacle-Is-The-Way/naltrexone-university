@@ -44,6 +44,8 @@ Adjusting one class in one component will not produce consistent compliance.
   - row fill (`bg-muted/20` over card)
   - feedback wrong card (`bg-background/50` over card)
   - feedback success card (`bg-success/5` over card)
+  - page background (`--background`) — for nav links, page-level labels
+  - hover fills (`bg-muted/50` over card) — for filter chips, mobile nav, inactive tabs
 - [ ] Recompute and document resulting text ratios in BS-042.
 
 ### 3) Required-boundary remediation (SC 1.4.11)
@@ -59,18 +61,36 @@ Adjusting one class in one component will not produce consistent compliance.
   - `components/question/choice-button.tsx`
   - `components/question/feedback.tsx`
   - `components/markdown/Markdown.tsx`
-  - `app/(app)/app/questions/[slug]/question-page-client.tsx`
+  - `app/(app)/app/questions/[slug]/question-page-client.tsx` — also has `border-warning/50 bg-warning/5` pattern
 - [ ] Dashboard/history/bookmarks surfaces:
   - `app/(app)/app/dashboard/page.tsx`
   - `app/(app)/app/bookmarks/page.tsx`
-  - `app/(app)/app/history/components/history-sessions-tab.tsx`
+  - `app/(app)/app/history/components/history-sessions-tab.tsx` — also uses `border-border/30` dividers (lower than `/60`)
   - `app/(app)/app/history/components/history-questions-tab.tsx`
-- [ ] Shared UI primitives where needed:
-  - `components/ui/button.tsx`
+  - `app/(app)/app/shared/components/session-breakdown-list.tsx` — uses `text-muted-foreground/60` (~2.2:1, worse than V3 base) and `divide-border/20` dividers
+- [ ] Navigation surfaces:
+  - `components/app-desktop-nav.tsx` — inactive links use `text-muted-foreground` on page bg
+  - `components/mobile-nav.tsx` — inactive links use `text-muted-foreground`, hamburger icon same; hover uses `bg-muted/50`
+- [ ] Practice surfaces:
+  - `app/(app)/app/practice/components/practice-session-starter.tsx` — `border-border/60 bg-muted/20` on tag filter containers, multiple `text-muted-foreground` at `text-xs`/`text-sm`
+- [ ] Error/notification surfaces:
+  - `components/error-card.tsx` — `border-destructive/30 bg-destructive/10`
+  - `components/ui/notification-provider.tsx` — toast borders at `border-success/30`, `border-destructive/40`
+  - `app/(app)/app/layout.tsx` — PastDueBanner uses `bg-warning/10` + `text-warning-foreground` (verify dark-mode contrast — `--warning-foreground` at 10% lightness on tinted near-black bg may fail severely)
+- [ ] Shared UI primitives:
+  - `components/ui/button.tsx` — outline variant uses `dark:bg-input/30 dark:border-input`
   - `components/ui/card.tsx`
+  - `components/ui/tab-switch-styles.ts` — inactive items use `text-muted-foreground hover:bg-muted/50`
+  - `components/ui/segmented-control.tsx` — consumes `tab-switch-styles` constants
+  - `components/ui/filter-chip.tsx` — unselected chips use `text-muted-foreground hover:bg-muted/50`
+  - `components/ui/input.tsx` — `dark:bg-input/30 border-input placeholder:text-muted-foreground`
 
 ### 5) Verification and regression safety
 
+- [ ] Extend existing contrast/token test suites:
+  - `components/theme-token-regression.test.tsx` — 309-line semantic token regression suite; extend with contrast assertions for new token values
+  - `components/ui/tab-switch-styles.test.ts` — already validates tab containers avoid `bg-muted/20` and `border-border/60`; extend if tab-switch tokens change
+  - `tests/e2e/marketing-contrast.spec.ts` — E2E WCAG luminance math on marketing pages; consider extending pattern to app surfaces
 - [ ] Add or update deterministic contrast checks (token-level math) for key semantic pairs in both themes.
 - [ ] Update affected snapshot/string assertions in existing tests when class contracts change.
 - [ ] Manually verify key journeys in dark and light themes:
@@ -78,6 +98,8 @@ Adjusting one class in one component will not produce consistent compliance.
   - dashboard
   - bookmarks
   - history tabs
+  - practice setup (segmented controls, filter chips, tag filters)
+  - navigation (desktop and mobile, inactive link contrast)
 
 ## Acceptance Criteria
 
@@ -94,11 +116,12 @@ Adjusting one class in one component will not produce consistent compliance.
 
 Implement in small PRs to reduce regression risk:
 
-1. Token + text contrast first (`--muted-foreground` and direct text violations)
+1. Token + text contrast first (`--muted-foreground` and direct text violations, including `text-muted-foreground/60` in session-breakdown-list)
 2. Choice/button boundary fixes (highest UX impact)
 3. Feedback and callout boundaries
 4. Dashboard/history/bookmarks boundary parity
-5. Final audit pass + docs sync
+5. Navigation + practice + error/toast surface parity
+6. Final audit pass + docs sync
 
 ## Risks and Mitigations
 

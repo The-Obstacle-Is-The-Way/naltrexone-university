@@ -72,6 +72,8 @@ foreground:                        93.0%   ← primary text
 | border-destructive/20 vs card | **1.17:1** | FAIL |
 | border-border/60 vs card | **1.13:1** | FAIL |
 | Reference divider (`border-border/40`) vs card | **1.08:1** | FAIL |
+| Session breakdown divider (`border-border/30`) vs card (`history-sessions-tab.tsx:245`) | **~1.06:1** | FAIL (likely decorative — spacing communicates grouping) |
+| List item divider (`divide-border/20`) vs card (`session-breakdown-list.tsx:28`) | **~1.04:1** | FAIL (likely decorative — `py-2` padding separates items) |
 | Neutral badge fill (`bg-muted`) vs neutral choice fill (`bg-muted/20`) | **1.08:1** | FAIL |
 | Neutral badge border (`border`) vs neutral choice fill (`bg-muted/20`) | **1.22:1** | FAIL |
 | Clinical pearl accent (`border-foreground/20`) vs success card fill (`bg-success/5`) | **1.78:1** | FAIL |
@@ -98,6 +100,7 @@ Additional context from runtime capture: page background (3.5%) vs card fill (7%
 | text-muted-foreground on wrong-answer card (`bg-background/50` over card) | **4.10:1** | FAIL (normal text) |
 | text-muted-foreground — inactive nav links on page bg | **3.89:1** | FAIL (normal text) |
 | text-muted-foreground — dashboard labels/timestamps on row bg | **3.89:1** | FAIL (normal text) |
+| text-muted-foreground/60 — "Unanswered" status in session breakdown (`session-breakdown-list.tsx:68`) | **~2.2:1** | FAIL (normal text — compounds V3 base with 60% opacity) |
 | Letter badge text on bg-muted (no parent opacity) | **14.57:1** | PASS |
 | Wrong-unselected choice text (effective `opacity-50`) on choice bg | **4.73:1** | PASS (barely) |
 | Wrong-unselected badge letter (effective `opacity-50`) on badge bg | **4.37:1** | FAIL (normal text) |
@@ -129,6 +132,9 @@ This document includes explicit WCAG computations for the highest-impact surface
 - Verdict badge options (DEBT-278 table)
 - Review-mode outline action button border (`app/(app)/app/questions/[slug]/question-page-client.tsx` using `components/ui/button.tsx` outline variant)
 - Foreground/muted-foreground text on representative dark surfaces
+- Practice tag filter containers (`app/(app)/app/practice/components/practice-session-starter.tsx` — `border-border/60 bg-muted/20`, plus `text-muted-foreground` at `text-xs`/`text-sm` on description, status labels, available count)
+- Session breakdown "Unanswered" label (`app/(app)/app/shared/components/session-breakdown-list.tsx` — `text-muted-foreground/60`, compounds V3)
+- Session breakdown dividers (`divide-border/20`) and history session dividers (`border-border/30`)
 
 Additional contrast-relevant patterns exist in the codebase and should be included in a follow-up full sweep if we want true exhaustive component-by-component WCAG accounting:
 - Warning banners/cards (`app/(app)/app/layout.tsx`, `app/(app)/app/billing/page.tsx`, `app/(app)/app/questions/[slug]/question-page-client.tsx`)
@@ -178,7 +184,7 @@ These are the concrete problems to resolve, roughly priority-ordered:
 |----|-----------|---------|--------|
 | V1 | Choice button border barely visible | `border-border/60` = 1.13:1 | High — primary interactive element |
 | V2 | Choice button fill indistinguishable from card | `bg-muted/20` = 1.02:1 | High — buttons blend into card |
-| V3 | `text-muted-foreground` fails for `text-sm`/`text-xs` | 3.73:1–4.10:1 vs 4.5:1 required | Medium — labels, timestamps, secondary text, inactive nav links, dashboard metadata |
+| V3 | `text-muted-foreground` fails for `text-sm`/`text-xs` | 3.73:1–4.10:1 vs 4.5:1 required | Medium — labels, timestamps, secondary text, inactive nav links, dashboard metadata. Compounded by `text-muted-foreground/60` in `session-breakdown-list.tsx` (~2.2:1) |
 | V4 | Card border barely visible on page | `border` = 1.32:1 | Low — cards identified by content, not border |
 | V5 | Semantic borders too faint | `border-success/20` = 1.36:1 | Low — hue provides chromatic cue |
 | V6 | Hover state imperceptible | `bg-muted/20` → `bg-muted/40` = 1.02:1 | Medium — hover feedback matters for interactivity |
