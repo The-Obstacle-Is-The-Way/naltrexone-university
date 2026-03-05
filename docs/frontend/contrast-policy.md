@@ -45,6 +45,8 @@ Notes:
 
 - Any required boundary MUST meet 3.0:1 against the adjacent surface.
 - A focus indicator MUST be visible and treated as a required boundary.
+- SC 1.4.11 governs the required boundary itself, not every background fill inside the component. When a border carries the required-boundary role, the fill may remain subtler.
+- State fills still matter. For interactive controls with base/hover/selected states, fills MUST remain stepped enough to preserve hierarchy and state recognition. Do not reuse the same fill token across multiple states just because the border is compliant.
 - If a component needs to remain visually subordinate, do not achieve that by dropping below 3.0:1 for a required boundary. Prefer spacing, typography, and hierarchy via layout rather than illegible edges.
 
 ### 3.3 Pattern Workflows
@@ -61,4 +63,3 @@ Notes:
   - Token values involved (`app/globals.css`)
   - The component/pattern and file path
   - Computed contrast ratios for both themes
-

@@ -1,6 +1,6 @@
 # Frontend Standards
 
-**Last Updated:** 2026-03-02
+**Last Updated:** 2026-03-05
 
 Canonical reference for all frontend patterns, component usage, accessibility, and styling conventions. Every UI change MUST be consistent with this document. If a pattern isn't documented here, don't invent one — add it here first.
 
@@ -289,7 +289,7 @@ Hover opacity is context-dependent. Use the Pattern Registry (`Part 1.2`, `I-1` 
 |---------|-------------------|
 | Inside card surface | `transition-colors hover:bg-muted/40` |
 | On page background (standalone row) | `transition-colors hover:bg-muted/50` |
-| Direct-action target (choice/chip) | `transition-colors hover:bg-muted/60` |
+| Direct-action target (choice/chip) | Use the component-specific Pattern Registry entry. Choice buttons use stepped fills (`hover:bg-muted/40` in light mode, `dark:hover:bg-foreground/15` in dark mode); filter chips use `hover:bg-muted/50`. |
 
 Rules:
 - Always use the `muted` token for neutral hover backgrounds

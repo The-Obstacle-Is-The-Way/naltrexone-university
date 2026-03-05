@@ -85,7 +85,7 @@ When to use each opacity on `bg-muted` (or equivalent layer-2 token):
 |---------|------|----------|
 | `border-border` (100%) | Full | Card component edges, standalone row edges, page section dividers |
 | `border-border/60` | Subdued | Base/light-mode rows nested inside cards (subordinate to card border), badge pills |
-| `border-border/40` | Separator | Internal content separators (expanded breakdowns, reference sections) |
+| `border-border/40` | Separator | Internal content separators. Use the question-flow-specific override patterns for feedback reference sections/callouts where dark-mode contrast needs strengthening. |
 | `dark:border-foreground/40` | Required dark boundary override | Required interactive boundaries on dark surfaces that fail 3:1 with `border-border/60` |
 
 **Rule:** A border inside a bordered container must use a lower opacity than its parent.
@@ -246,13 +246,13 @@ Direct-action interactive target for answering questions. Choices render inside 
 **Base state:**
 ```
 block w-full rounded-xl border border-border/60 bg-muted/20 p-4 text-left shadow-sm transition-colors
-dark:border-foreground/40 dark:bg-foreground/40
+dark:border-foreground/40 dark:bg-foreground/8
 focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]
 ```
 
 **Hover (enabled):**
 ```
-cursor-pointer hover:bg-muted/40
+cursor-pointer hover:bg-muted/40 dark:hover:bg-foreground/15
 ```
 
 **Hover border (unselected only):**
@@ -260,14 +260,14 @@ cursor-pointer hover:bg-muted/40
 hover:border-muted-foreground/30 dark:hover:border-foreground/70
 ```
 
-**Selected (neutral):** `border-ring bg-muted/40 dark:border-foreground/70 dark:bg-foreground/40`
+**Selected (neutral):** `border-ring bg-muted/40 dark:border-foreground/70 dark:bg-foreground/20`
 
 **Correct:** `border-success bg-success/10 text-success`
 **Incorrect:** `border-destructive bg-destructive/10 text-destructive`
 **Disabled (no correctness):** `cursor-not-allowed opacity-50`
 **Wrong-unselected dimming:** do not apply parent opacity to the whole label subtree; keep answer content text at `text-foreground` for WCAG AA legibility.
 
-**Design rationale:** Choice buttons are rendered inside `QuestionCard` (`bg-card`) and follow in-card row hierarchy, not standalone page-surface hierarchy. `/40` hover produces the intended contrast step without overshooting the parent card layer.
+**Design rationale:** Choice buttons are rendered inside `QuestionCard` (`bg-card`) and follow in-card row hierarchy, not standalone page-surface hierarchy. In dark mode, the border carries SC 1.4.11 compliance while the fill carries state hierarchy: `8` -> `15` -> `20` preserves base/hover/selected recognition without turning the whole stack into a uniform gray slab. Do not reuse `dark:bg-foreground/40` across base and selected states.
 
 ### I-4: Filter Chip
 
@@ -589,6 +589,62 @@ block rounded-xl border px-4 py-3 text-sm shadow-sm
 
 **Source:** `components/ui/notification-provider.tsx`
 
+### F-5: Feedback Answer Card
+
+Display-only answer explanation block shown after submission.
+
+**Correct answer:**
+```
+rounded-xl border border-success/60 bg-success/5 p-3
+```
+
+**Your incorrect answer:**
+```
+rounded-xl border border-destructive bg-destructive/5 p-3
+```
+
+**Other wrong answers:**
+```
+rounded-xl border border-border/60 bg-background/50 p-3 dark:border-foreground/40
+```
+
+**Source:** `components/question/feedback.tsx`
+
+**Rule:** These cards are not interactive, but they still separate mutually exclusive answer explanations inside a larger feedback card. Neutral cards therefore need the same dark-mode required-boundary override as other low-contrast in-card rows.
+
+### F-6: Feedback Reference Section
+
+Reference block appended to the bottom of a feedback card.
+
+```
+mt-4 border-t border-border/40 pt-3 dark:border-foreground/40
+```
+
+**Heading:**
+```
+text-xs font-semibold uppercase tracking-wide text-muted-foreground
+```
+
+**Source:** `components/question/feedback.tsx`
+
+### F-7: Clinical Pearl Callout
+
+Inline explanatory callout rendered from markdown paragraphs that begin with `**Clinical pearl:**`.
+
+**Container:**
+```
+mt-3 border-l-2 border-foreground/40 pl-3
+```
+
+**Label:**
+```
+mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground
+```
+
+**Content:** Standard markdown paragraph content inside the callout.
+
+**Source:** `components/markdown/Markdown.tsx`
+
 ---
 
 ## Part 7: Metadata & Decoration
@@ -613,7 +669,7 @@ Visual dividers within cards or content areas.
 |--------|---------|----------|
 | Standard | `border-t border-border` | Major section breaks |
 | Subtle | `border-t border-border/60` | Between content blocks inside cards |
-| Light | `border-t border-border/40` | Internal separators (expanded breakdowns, reference sections) |
+| Light | `border-t border-border/40` | Internal separators (expanded breakdowns; feedback reference sections use F-6 in dark mode) |
 
 ### M-3: Loading Skeleton (PageLoading)
 
@@ -635,7 +691,7 @@ The letter label (A, B, C, D) inside choice buttons.
 
 **Default:**
 ```
-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold leading-none text-foreground
+flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold leading-none text-foreground dark:border-foreground/60 dark:bg-foreground/20
 ```
 
 **Correct:** `border-success bg-success/15 text-success`
@@ -714,7 +770,7 @@ Is the list inside a <Card> container?
 What is the parent surface?
 ├── Inside a Card (bg-card, ~7% dark) → hover:bg-muted/40
 ├── On page background (bg-background, ~3.5% dark) → hover:bg-muted/50
-├── Choice button inside card (I-3) → hover:bg-muted/40
+├── Choice button inside card (I-3) → hover:bg-muted/40 in light mode, dark:hover:bg-foreground/15 in dark mode
 ├── `/60` hover tier → exception-only (requires explicit design review)
 └── Tab-switch inactive → hover:bg-muted/50 (inside bg-muted container)
 

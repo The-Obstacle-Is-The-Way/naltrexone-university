@@ -53,6 +53,11 @@ Adjusting one class in one component will not produce consistent compliance.
 - [ ] Keep `docs/frontend/contrast-policy.md` as normative source for WCAG contrast rules.
 - [ ] Keep BS-042 as evidence/audit artifact (computed values, screenshots, reasoning), not as policy.
 - [ ] Update pattern-registry pattern entries that currently encode contrast-failing defaults, or explicitly mark temporary exceptions with debt links.
+- [ ] Canonicalize the question-review-specific patterns in `docs/frontend/pattern-registry.md` so the question flow is not relying on component-local class strings as de facto policy:
+  - I-3 `Choice Button`
+  - feedback answer cards
+  - feedback reference section
+  - markdown clinical pearl callout
 
 ### 2) Token-level remediation
 
@@ -240,6 +245,18 @@ The reference section separator (`border-border/40`) is even worse (~1.06:1). Th
 The unconditional `dark:border-foreground/40` on line 33 was applied regardless of verdict state. In Tailwind v4, dark variants appear later in generated CSS (~position 60000) than base utilities (~position 24000). Since `@media` doesn't add specificity, the dark override would mask `border-success` and `border-destructive` in dark mode.
 
 **Fix applied:** Gated dark overrides behind `!hasVerdict` (`const hasVerdict = correctness === 'correct' || correctness === 'incorrect'`). Covered by test.
+
+### Finding 4: Canonical docs drifted from the intended question-flow fix
+
+**Severity:** Medium (process regression — future agents will copy the wrong pattern)
+
+The current canonical frontend docs do not fully agree on the question-flow styling target:
+
+- `docs/frontend/pattern-registry.md` still described the regressed choice-button dark fill as `dark:bg-foreground/40` in base and selected states.
+- `docs/frontend/standards.md` still summarized direct-action hover guidance with a stale `hover:bg-muted/60` shorthand.
+- The registry did not yet define explicit feedback answer-card/reference-section patterns, even though `Feedback` is a separate code path from `ChoiceButton`.
+
+If these docs remain stale, future remediation work will continue to oscillate between "WCAG-compliant border" and "flattened gray slab" because the shared visual contract is incomplete.
 
 ### Component reuse analysis
 
