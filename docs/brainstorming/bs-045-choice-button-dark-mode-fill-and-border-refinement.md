@@ -23,19 +23,24 @@ This produces the following concrete problems:
 
 ### P1: Gray fill looks unnatural
 
-`bg-foreground/8` computes to `#232323` on the card surface (`#121212`). Every choice button is visibly gray against the dark card. Before DEBT-279, buttons had no dark fill — they sat flush with the card, clean and sleek. The gray fill makes them look like concrete blocks.
+Using the actual dark token values from `app/globals.css` (`--foreground: #EDEDED`, `--card: #121212`), `bg-foreground/8` composites to `#242424` on the card surface. Every choice button is visibly gray against the dark card. Before DEBT-279, buttons had no dark fill — they sat flush with the card, clean and sleek. The gray fill makes them look like concrete blocks.
 
 ### P2: Border is too heavy relative to the card
 
-`border-foreground/40` computes to `~#6A6A6A` (~3.2:1 vs card). The question card's own border is `border-border` = `#262626` (~1.3:1). The choice borders are **2.6x brighter** than their parent container, inverting the visual hierarchy. The buttons look "caged."
+`border-foreground/40` computes to `#6A6A6A` at ~`3.46:1` against the card. The question card's own border is `border-border` = `#262626` (~`1.24:1`). The choice borders are far brighter than their parent container, inverting the visual hierarchy. The buttons look "caged."
 
-### P3: Letter badges blend into the gray fill
+### P3: Letter badge separation is weakest on hovered and selected surfaces
 
-The A/B/C/D badges use `dark:bg-foreground/20` (`#3E3E3E`) sitting on the button's `bg-foreground/8` (`#232323`). That's only ~1.3:1 contrast between badge and button surface. The badges should pop as distinct visual elements but instead merge into the gray.
+The A/B/C/D badges use `dark:bg-foreground/20` (`#3E3E3E`) with `dark:border-foreground/60` (`#959595`). The fill separation is modest even before the proposed refinement:
+
+- badge fill `#3E3E3E` vs current rest fill `#242424` = ~`1.45:1`
+- badge fill `#3E3E3E` vs proposed selected fill `#333333` = ~`1.18:1`
+
+The badge border is doing most of the work. This does **not** need to be changed in the first pass, but the implementation spec must call out that the badge fill should stay unchanged unless visual QA still shows blending after the main button refinement.
 
 ### P4: Hover is barely perceptible
 
-Fill goes from 8% → 15% — only ~6 lightness points (`#232323` → `#333333`). In the screenshot, hovering choice B is almost identical to the non-hovered choices. The border jump (40% → 70%) provides the only meaningful hover signal, but it's a blunt instrument — the entire border flashes bright.
+Fill goes from 8% → 15% (`#242424` → `#333333`). In the screenshot, hovering choice B is almost identical to the non-hovered choices. The border jump (40% → 70%) provides the only meaningful hover signal, but it's a blunt instrument — the entire border flashes bright.
 
 ### P5: Selected is indistinguishable from hover
 
@@ -52,13 +57,13 @@ The tab switcher (`tab-switch-styles.ts`) uses `dark:border-foreground/40` — t
 
 ## Root Cause Analysis
 
-DEBT-279 needed to bring dark-mode borders up to WCAG SC 1.4.11's 3:1 minimum. The fix was correct in principle: `dark:border-foreground/40` achieves ~3.2:1. But the implementation also added `dark:bg-foreground/8` as a resting fill to establish a "stepped hierarchy" for the fill progression (8 → 15 → 20).
+DEBT-279 needed to bring dark-mode borders up to WCAG SC 1.4.11's 3:1 minimum. The fix was correct in principle: `dark:border-foreground/40` achieves ~`3.46:1` on the card. But the implementation also added `dark:bg-foreground/8` as a resting fill to establish a "stepped hierarchy" for the fill progression (8 → 15 → 20).
 
 Two root causes:
 
 1. **The fill steps are too narrow.** Starting at 8% leaves only 12 percentage points of range (8 → 20). Each state transition is 5–7 points — below the perceptual threshold for most users on dark backgrounds.
 
-2. **The resting border treats the WCAG minimum as a design target.** 3:1 is the accessibility *floor*, not the goal. Applying exactly 3.2:1 to every resting choice button produces a border that's technically compliant but visually oppressive. Premium dark-mode apps (Linear, Vercel, Notion) use much quieter resting borders and reserve 3:1+ for *state communication* (selected, focus, active) — not resting containers.
+2. **The resting border treats the WCAG minimum as a design target.** 3:1 is the accessibility *floor*, not the goal. Applying a ~`3.46:1` border to every resting choice button produces a line that's technically compliant but visually oppressive. Premium dark-mode apps (Linear, Vercel, Notion) use much quieter resting borders and reserve 3:1+ for *state communication* (selected, focus, active) — not resting containers.
 
 The resting fill itself creates the primary aesthetic complaint: the "gray box" look. And the uniform `/40` border creates the secondary complaint: "caged" / "wireframe" appearance.
 
@@ -85,13 +90,13 @@ This is the same interpretation Linear, Vercel, Spotify, and Notion apply in the
 
 **Remove the resting fill. Soften the resting border. Widen the state steps. Make selected qualitatively different from hover.**
 
-### Approach A: Conservative (resting border stays at 3:1)
+### Approach A: Conservative (approved for DEBT-280)
 
 Keep `/40` at rest. Simpler WCAG argument — no need to justify decorative classification.
 
 | State | Current | Proposed | Rationale |
 |-------|---------|----------|-----------|
-| **Rest border** | `dark:border-foreground/40` | `dark:border-foreground/40` | **Keep** — 3.2:1, no WCAG risk. Without the gray fill, the line reads cleaner. |
+| **Rest border** | `dark:border-foreground/40` | `dark:border-foreground/40` | **Keep** — ~`3.46:1`, no WCAG risk. Without the gray fill, the line reads cleaner. |
 | **Rest fill** | `dark:bg-foreground/8` | _(remove)_ | **Remove** — flush with card. |
 | **Hover border** | `dark:hover:border-foreground/70` | `dark:hover:border-foreground/55` | **Soften** — clear lift from /40 without being jarring. |
 | **Hover fill** | `dark:hover:bg-foreground/15` | `dark:hover:bg-foreground/8` | Gentle acknowledgment. 0→8 is perceptible. |
@@ -107,19 +112,19 @@ Selected:  bg-foreground/15       border-foreground/70    ← clearly chosen
 **Pros:** Safe WCAG compliance. Simple argument.
 **Cons:** Resting border is still the brightest element at rest — may still feel somewhat heavy.
 
-### Approach B: Aggressive (resting border drops below 3:1, justified as decorative)
+### Approach B: Exploratory only (not approved for DEBT-280)
 
 Soften the resting border substantially. Reserve 3:1+ for state communication only.
 
 | State | Current | Proposed | Rationale |
 |-------|---------|----------|-----------|
-| **Rest border** | `dark:border-foreground/40` | `dark:border-foreground/20` | **Soften** — ~2:1. Visible but quiet. Decorative — buttons identifiable by badges + text + layout. |
+| **Rest border** | `dark:border-foreground/40` | `dark:border-foreground/20` | **Soften** — ~`1.75:1`. Quiet, but extremely faint. Requires a policy-level decorative-boundary justification and fresh visual evidence. |
 | **Rest fill** | `dark:bg-foreground/8` | _(remove)_ | **Remove** — flush with card. |
 | **Hover border** | `dark:hover:border-foreground/70` | `dark:hover:border-foreground/40` | Border "wakes up" to 3:1 on interaction — WCAG compliant for state. |
 | **Hover fill** | `dark:hover:bg-foreground/15` | `dark:hover:bg-foreground/6` | Barely-there lift. Enough to register. |
 | **Selected border** | `dark:border-foreground/70` | `dark:border-foreground/60` | Strong, clear 3:1+. Unmistakable. |
 | **Selected fill** | `dark:bg-foreground/20` | `dark:bg-foreground/12` | Noticeable fill. Combined with strong border, reads as committed. |
-| **Selected extra** | _(none)_ | `dark:ring-1 dark:ring-foreground/20` | Optional ring for double-stroke emphasis — makes selected *qualitatively* different from hover, not just "more gray." |
+| **Selected extra** | _(none)_ | `dark:ring-1 dark:ring-foreground/20` | **Do not use in DEBT-280.** This would compete with the existing focus ring channel and inherit the current dark-mode ring-contrast concerns. |
 
 ```
 Rest:      bg-transparent         border-foreground/20    ← quiet, almost invisible
@@ -127,12 +132,12 @@ Hover:     bg-foreground/6        border-foreground/40    ← border wakes up, g
 Selected:  bg-foreground/12       border-foreground/60    ← clearly chosen + optional ring
 ```
 
-**Pros:** Matches premium dark-mode aesthetics (Linear, Vercel). Resting state is calm, page breathes.
-**Cons:** Requires documenting the WCAG decorative-border justification in `contrast-policy.md`. Resting border may be too subtle — needs visual testing.
+**Pros:** Matches premium dark-mode aesthetics more closely.
+**Cons:** `foreground/20` is too faint to ship on choice buttons without a broader policy change. If a softer-border experiment is revisited later, it should be tracked separately and start from fresh screenshots and contrast math, not substituted into DEBT-280.
 
 ### Recommended Starting Point
 
-**Start with Approach A.** It's the safer change — removes the fill, keeps WCAG compliance unambiguous, and already represents a major visual improvement. If after implementation the resting border still feels heavy, we can iterate toward Approach B with visual evidence to justify the softer resting border.
+**Approach A is the correct first implementation.** It removes the gray slab effect, keeps WCAG compliance unambiguous, and avoids introducing a second ring channel that would muddy focus semantics. Approach B remains brainstorming material only; do not treat it as an equally-approved implementation path.
 
 ### Visual Hierarchy Summary (Approach A)
 
@@ -142,8 +147,13 @@ Hover:     bg-foreground/8        border-foreground/55    ← visible lift (fill
 Selected:  bg-foreground/15       border-foreground/70    ← clearly chosen (fill stronger, border brightest)
 ```
 
-**Fill steps:** 0 → 8 → 15 (gaps of 8 and 7 points — both clearly perceptible)
-**Border steps:** /40 → /55 → /70 (gaps of 15 points each — even, perceptible)
+**Exact dark-mode composites on card (`#121212`):**
+
+- `foreground/8` = `#242424` (~`1.21:1`)
+- `foreground/15` = `#333333` (~`1.48:1`)
+- `foreground/40` = `#6A6A6A` (~`3.46:1`)
+- `foreground/55` = `#8A8A8A` (~`5.43:1`)
+- `foreground/70` = `#ABABAB` (~`8.16:1`)
 
 ### Letter Badge Adjustment
 
@@ -151,16 +161,17 @@ Currently: `dark:border-foreground/60 dark:bg-foreground/20`
 
 When the button fill is transparent, the badge at `/20` will have more contrast against the card surface. The badge should remain distinguishable across all button states:
 
-- On transparent button: badge bg is `#3E3E3E` vs card `#121212` — good contrast
-- On hovered button (`bg-foreground/10` = `#2A2A2A`): badge `#3E3E3E` vs `#2A2A2A` — ~1.2:1, tight
+- On transparent button: badge bg `#3E3E3E` vs card `#121212` = ~`1.75:1`
+- On hovered button (`bg-foreground/8` = `#242424`): badge `#3E3E3E` vs `#242424` = ~`1.45:1`
+- On selected button (`bg-foreground/15` = `#333333`): badge `#3E3E3E` vs `#333333` = ~`1.18:1`
 
-Consider bumping badge to `dark:bg-foreground/25` to maintain separation on hovered/selected surfaces.
+The badge border (`dark:border-foreground/60` = `#959595`) remains the primary separator. Keep the badge tokens unchanged in the first pass. If post-implementation QA still shows blending, open a follow-up to test `dark:bg-foreground/25`.
 
 ### Segmented Control
 
-Remove `dark:border-foreground/40` from `tab-switch-styles.ts`. Let it fall back to `border-border` (`#262626`). The active pill (`bg-primary` = white) provides overwhelming visual definition for the control — the container border is decorative.
+Remove `dark:border-foreground/40` from `tab-switch-styles.ts`. Let it fall back to `border-border` (`#262626`). On `bg-muted` (`#1C1C1C`), that border is only ~`1.13:1`, so the container must be treated as decorative. This is acceptable because every current consumer has strong grouped labels plus a dominant active pill / active tab treatment.
 
-**WCAG note:** The segmented control border is not "required to identify" the component — the active pill, text labels, and grouped layout identify it. Decorative borders are exempt from SC 1.4.11.
+**Shared-consumer note:** `tabSwitchContainerClasses` is shared by `SegmentedControl`, `HistoryTabBar`, and the History Sessions mode filter. Any implementation PR must verify all of those consumers, not just Quick Practice.
 
 ---
 
@@ -216,25 +227,29 @@ Uses the primary color instead of neutral gray for the selected state. Makes sel
 
 | File | Change |
 |------|--------|
-| `components/question/choice-button.tsx` | Remove `dark:bg-foreground/8` from rest state. Adjust hover fill to `/10`, hover border to `/55`. Adjust selected fill to `/18`. Optionally bump badge to `dark:bg-foreground/25`. |
+| `components/question/choice-button.tsx` | Remove `dark:bg-foreground/8` from rest state. Adjust hover fill to `/8`, hover border to `/55`. Adjust selected fill to `/15`. Keep badge tokens unchanged in this ticket. |
 | `components/ui/tab-switch-styles.ts` | Remove `dark:border-foreground/40` from container classes. |
-| `components/question/choice-button.test.tsx` | Update any token assertions that check for `dark:bg-foreground/8`. |
+| `components/question/choice-button.test.tsx` | Update positive assertions to the new tokens and add negative assertions so stale `dark:bg-foreground/8` / `dark:hover:border-foreground/70` / `dark:bg-foreground/20` cannot leak through. |
+| `components/ui/segmented-control.test.tsx` | Add a negative assertion that the container does **not** include `dark:border-foreground/40`. The current substring assertion is too weak. |
+| `app/(app)/app/history/components/history-tab-bar.test.tsx` | Add the same negative assertion because `HistoryTabBar` consumes the shared tab-switch container. |
 | `docs/frontend/pattern-registry.md` | Update choice button pattern entry with new token values. |
-| `docs/frontend/contrast-policy.md` | No change — the proposed tokens remain WCAG compliant. |
+| `docs/frontend/pages/quick-practice.md` | Update the live token audit after implementation or clearly mark the current analysis as pre-DEBT-280. |
 
 ---
 
-## Open Questions
+## Implementation Notes
 
-1. **Should the hover fill be /10 or /12?** Need to eyeball both. /10 is a rounder number; /12 gives slightly more contrast against the transparent rest state.
+1. **Hover fill is resolved to `/8`.** DEBT-280 now chooses `0 → 8 → 15`, not `/10` or `/12`.
 
-2. **Badge fill — /20 or /25?** The badge needs to remain distinguishable on both the transparent rest surface and the hovered /10 surface. /25 might be needed to keep the badge ring visible on hover.
+2. **Badge stays unchanged in this ticket.** Keep `dark:border-foreground/60 dark:bg-foreground/20`. If it still blends after the main pass, that becomes a follow-up, not a last-minute scope creep.
 
-3. **Does this interact with verdict state?** After submitting, choice buttons get `border-success`, `border-destructive`, etc. The `!hasVerdict` guard (line 33) already prevents the dark overrides from applying in verdict state, so no interaction expected.
+3. **Do not add a selected ring.** Focus already uses `focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]`. A second ring channel would blur selection vs focus and is not part of this debt item.
 
-4. **Should the segmented control change happen in the same PR?** It's a different component but the same aesthetic concern. Bundling keeps the visual pass cohesive.
+4. **Verdict states stay exactly as they are.** `correct` / `incorrect` must continue to bypass the neutral dark overrides via `!hasVerdict`. `wrong-unselected` should remain neutral and readable.
 
-5. **Does this need a visual diff screenshot PR?** Given that this is an aesthetic refinement, including before/after screenshots in the PR would help CodeRabbit and any reviewers evaluate the change.
+5. **The segmented-control change ships in the same PR.** It is part of the same visual problem, but the QA surface must include all shared `tabSwitchContainerClasses` consumers.
+
+6. **Before/after screenshots are required.** This is an aesthetic change with subjective risk; reviewers need visual proof, not just token diffs.
 
 ---
 
