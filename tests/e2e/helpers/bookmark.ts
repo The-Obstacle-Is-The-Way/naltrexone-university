@@ -7,7 +7,6 @@ const BOOKMARKS_PAGE_STATE_TIMEOUT_MS = 10_000;
 const PAGE_NAVIGATION_TIMEOUT_MS = 60_000;
 const BOOKMARKS_PAGE_ERROR_RETRY_COUNT = 3;
 const BOOKMARKS_PAGE_ERROR_RETRY_DELAY_MS = 500;
-const NEXT_QUESTION_STATE_TIMEOUT_MS = 10_000;
 
 type QuickPracticeStatus = 'unanswered' | 'incorrect';
 export type BookmarksPageLike = Pick<Page, 'getByRole' | 'getByText'>;
@@ -84,49 +83,27 @@ export async function ensureBookmarkedQuestion(page: Page): Promise<void> {
 
   await openQuickPracticeQuestion(page);
 
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    const currentState = requireBookmarkableQuestionState(
-      await waitForBookmarkableQuestionState(
-        page,
-        bookmarkButtonName,
-        QUESTION_BUTTON_VISIBILITY_TIMEOUT_MS,
-      ),
+  const currentState = requireBookmarkableQuestionState(
+    await waitForBookmarkableQuestionState(
+      page,
+      bookmarkButtonName,
       QUESTION_BUTTON_VISIBILITY_TIMEOUT_MS,
-    );
-    if (currentState === 'remove') {
-      return;
-    }
+    ),
+    QUESTION_BUTTON_VISIBILITY_TIMEOUT_MS,
+  );
+  if (currentState === 'remove') {
+    return;
+  }
 
-    if (currentState === 'bookmark') {
-      await page
-        .getByRole('button', { name: bookmarkButtonName })
-        .first()
-        .click();
-      await expect(
-        page.getByRole('button', { name: 'Remove bookmark' }).first(),
-      ).toBeVisible({ timeout: 10_000 });
-      return;
-    }
-
-    if (currentState === 'exhausted') {
-      break;
-    }
-
-    await page.getByRole('button', { name: 'Next' }).first().click();
-    const nextState = requireBookmarkableQuestionState(
-      await waitForBookmarkableQuestionState(
-        page,
-        bookmarkButtonName,
-        NEXT_QUESTION_STATE_TIMEOUT_MS,
-      ),
-      NEXT_QUESTION_STATE_TIMEOUT_MS,
-    );
-    if (nextState === 'remove') {
-      return;
-    }
-    if (nextState === 'exhausted') {
-      break;
-    }
+  if (currentState === 'bookmark') {
+    await page
+      .getByRole('button', { name: bookmarkButtonName })
+      .first()
+      .click();
+    await expect(
+      page.getByRole('button', { name: 'Remove bookmark' }).first(),
+    ).toBeVisible({ timeout: 10_000 });
+    return;
   }
 
   throw new Error('Unable to find a bookmarkable question in practice flow');
