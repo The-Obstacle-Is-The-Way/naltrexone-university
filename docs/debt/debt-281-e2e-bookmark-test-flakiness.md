@@ -2,166 +2,179 @@
 
 **Priority:** P2
 **Created:** 2026-03-06
-**Discovered in:** [PR #175](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/175) (DEBT-280) — CI failed on unrelated E2E bookmark tests while main branch passes consistently.
+**Status:** Active, partially mitigated on the PR branch
+**Discovered during:** [PR #175](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/175) investigation
+
+---
+
+## Current Status
+
+As of **March 6, 2026**, the latest head of PR #175 is **green** in GitHub Actions. This debt item remains active because the bookmark-related E2E path had a credible intermittent failure mode, and the suite still shares one mutable authenticated user across specs.
+
+This document now reflects what was **verified from code and CI evidence**, not the earlier broader hypothesis list.
 
 ---
 
 ## Problem
 
-Two E2E tests intermittently fail in CI looking for a "Remove" button on the bookmarks page:
+Bookmark-dependent E2E flows were structurally brittle:
 
-1. `tests/e2e/core-app-pages.spec.ts:73` — `getByRole('button', { name: 'Remove' }).first()`
-2. `tests/e2e/cross-page-navigation.spec.ts:94` via `helpers/bookmark.ts:124` — same locator
+1. `tests/e2e/helpers/bookmark.ts` used a **1,000ms** probe to decide whether `/app/bookmarks` already contained at least one bookmark.
+2. The same helper used **500ms** action-bar probes while trying to create a bookmark in Quick Practice.
+3. `ensureBookmarkExistsOnBookmarksPage()` reused a locator across navigations and assumed the page should already be populated.
+4. Unrelated specs were mutating bookmark state unnecessarily:
+   - `tests/e2e/subscribe-and-practice.spec.ts` used `ensureBookmarkedQuestion()` even though the test only needed a Quick Practice question, not a bookmark.
+   - `tests/e2e/core-app-pages.spec.ts` created a random bookmark up front instead of ensuring bookmark state only at the bookmarks step.
 
-The error is `element(s) not found` (not timeout, not hidden — the DOM literally contains zero "Remove" buttons). This means the bookmarks page rendered with an **empty bookmark list** despite the global setup seeding a bookmark and `ensureBookmarkedQuestion` creating one via the UI.
-
-Main branch passes (3/3 recent runs). The failure is non-deterministic and unrelated to the PR's CSS changes.
-
----
-
-## Root Cause Analysis
-
-After deep investigation of the full E2E infrastructure (`global.setup.ts`, `helpers/bookmark.ts`, `helpers/reset-e2e-user-state.ts`, `helpers/seed-test-user.ts`, `helpers/question.ts`, `playwright.config.ts`, `ci.yml`, and the bookmarks page Server Component), **six structural weaknesses** contribute to flakiness:
-
-### F1: Dangerously tight timeouts throughout the bookmark helper
-
-| Location | Timeout | What it's waiting for |
-|----------|---------|-----------------------|
-| `bookmark.ts:115` — initial bookmark existence check | **1,000ms** | Full SSR page render + DB query + Clerk auth |
-| `bookmark.ts:73,77` — `isButtonVisible` per-question check | **500ms** | Action bar button hydration |
-| `bookmark.ts:89-101` — `Promise.race` after clicking Next | 10,000ms | Next question load |
-| `core-app-pages.spec.ts:72` — final "Remove" assertion | **5,000ms** (default) | Full SSR page render |
-
-The 1s initial check at `bookmark.ts:115` is the most dangerous. The bookmarks page is a Server Component that must:
-1. Authenticate via Clerk (`currentUser()` — network call to Clerk API)
-2. Resolve entitlement (DB query)
-3. Query bookmarks (DB query with join)
-4. SSR the full page
-
-In CI (shared GitHub Actions runner, cold Node.js process, remote Neon DB, Clerk API latency), this routinely takes 2-4 seconds. If it takes >1s, the helper falls through to the "create bookmark" path unnecessarily, wasting ~30s of test time and adding fragility.
-
-The 500ms `isButtonVisible` checks compound the problem — in CI, client-side hydration of the action bar buttons (Bookmark/Remove bookmark) can take >500ms, causing the helper to skip bookmarkable questions and burn through its 8-attempt budget.
-
-### F2: No `waitUntil` on critical navigations
-
-```typescript
-// bookmark.ts:110 — NO waitUntil
-await page.goto('/app/bookmarks');
-
-// vs. other navigations in the same test suite that DO use it:
-await page.goto('/app/history?tab=questions&result=incorrect', {
-  timeout: 60_000,
-  waitUntil: 'domcontentloaded',
-});
-```
-
-`page.goto()` without `waitUntil` defaults to `'load'`, which waits for the `load` event. But Server Components stream HTML progressively — the heading might arrive before the bookmark list. Without `waitUntil: 'networkidle'` or an explicit data-load assertion, the test can start asserting before the page has finished rendering.
-
-### F3: No data-load guard — heading visible != data loaded
-
-Both failing tests follow this pattern:
-
-```typescript
-await page.goto('/app/bookmarks');
-await expect(page.getByRole('heading', { name: 'Bookmarks' })).toBeVisible();
-// Immediately assert data-dependent element:
-await expect(page.getByRole('button', { name: 'Remove' }).first()).toBeVisible();
-```
-
-The heading `<h1>Bookmarks</h1>` renders in the page shell before the bookmark list (which requires a DB query). In streaming SSR, the heading can be visible while the bookmark data is still loading. The test should wait for a data-dependent signal (e.g., the bookmark list `<ul>` or the empty-state card) before asserting specific list content.
-
-### F4: `ensureBookmarkExistsOnBookmarksPage` reuses a locator across navigations
-
-```typescript
-// bookmark.ts:113 — locator created on first page load
-const removeButton = page.getByRole('button', { name: 'Remove' }).first();
-
-// ... navigates away to Quick Practice, creates bookmark ...
-
-// bookmark.ts:122-124 — navigates BACK to bookmarks
-await page.goto('/app/bookmarks');
-await expect(page.getByRole('heading', { name: 'Bookmarks' })).toBeVisible();
-await expect(removeButton).toBeVisible(); // ← reused locator
-```
-
-While Playwright locators are lazy (they re-query on each use), this pattern is fragile and confusing. If the page structure changes between navigations or the `first()` semantics differ, the locator could match a different element or none at all.
-
-### F5: `core-app-pages` is a monolith test with cascading failure risk
-
-`core-app-pages.spec.ts` crams **8+ assertions across 5 different pages** into a single `test()` block:
-
-1. `ensureBookmarkedQuestion` → Quick Practice (creates bookmark)
-2. `submitQuestionForOutcome` → Question page x4 (creates attempts)
-3. History page assertions
-4. Dashboard assertions
-5. Bookmarks page assertions ← **fails here**
-6. Billing page assertions
-
-Any slowness or failure in steps 1-4 consumes time from the 120s test timeout, leaving less headroom for step 5. The bookmark assertion at step 5 inherits all accumulated CI latency from the previous navigations. If Clerk auth was slow at sign-in, if `submitQuestionForOutcome` needed 3 retries (3 page navigations), the remaining timeout budget for the bookmarks page could be tight.
-
-A single monolith test also means a bookmark failure masks whether dashboard/billing/history would have passed independently.
-
-### F6: Shared mutable state with non-deterministic bookmark creation
-
-All E2E tests share a single test user (`E2E_CLERK_USER_USERNAME`). The global setup seeds a deterministic bookmark for `placeholder-01`, but `ensureBookmarkedQuestion` bookmarks whatever random question appears first in Quick Practice. This creates:
-
-1. **Non-deterministic state**: Different CI runs bookmark different questions depending on DB ordering
-2. **Cross-test pollution**: `core-app-pages` creates bookmarks and attempts that affect `cross-page-navigation`'s starting state
-3. **No cleanup**: Bookmarks created during tests persist for subsequent tests (the global setup only runs once, before all tests)
-
-The `workers: 1` config prevents parallel execution but doesn't prevent sequential state accumulation.
+When the aggressive probes missed the real page state, later assertions would fail looking for a `Remove` button on `/app/bookmarks`.
 
 ---
 
-## Severity Assessment
+## What Was Actually True
 
-**Severity:** P2 — Flaky CI tests erode trust in the test suite and waste developer time investigating false failures.
+### V1: The helper timeouts were too aggressive
 
-- **Frequency:** Intermittent. Main branch passes consistently; failure observed on PR branches (likely due to longer CI queue times / colder runners).
-- **Impact:** Blocks PR merges until re-run. Wastes 6-7 minutes per failed CI run (full `test` job).
-- **Risk of masking real failures:** A genuine bookmark regression could be dismissed as "just the flaky test."
+This part of the original analysis was correct.
+
+Relevant code before mitigation:
+
+- `tests/e2e/helpers/bookmark.ts` checked for existing bookmarks with a **1s** timeout.
+- The same helper used **500ms** button-visibility checks for `Bookmark` / `Remove bookmark`.
+
+That is a poor fit for CI, where the path includes:
+
+1. Clerk-authenticated navigation
+2. Server rendering
+3. Database-backed bookmark lookup
+4. Client hydration of the action bar
+
+The immediate mitigation is larger, explicit wait budgets around the actual state transitions we care about.
+
+### V2: The test needed state disambiguation, not a fake “data loaded” theory
+
+The earlier writeup overstated this point.
+
+`/app/bookmarks` is a Server Component page. `BookmarksPage` awaits `getBookmarks()` before rendering `BookmarksView`, so this is **not** a case where the heading shell renders and the bookmark list trickles in later. Once the page render lands, the state is already one of two valid outcomes:
+
+1. **Populated**: at least one `Remove` button is present
+2. **Empty**: `No bookmarks yet.` is present
+
+The real bug was that the helper/test path assumed only the populated state mattered. The fix is to wait for either valid rendered state, then branch intentionally.
+
+### V3: Shared mutable state is real
+
+This part was also correct, with one nuance.
+
+The Playwright suite uses:
+
+- one shared Clerk test user
+- `workers: 1`
+- a **one-time** deterministic baseline reset in `global.setup.ts`
+
+That reset seeds a deterministic bookmark for the E2E user at suite start. But it does **not** reset state before each spec, so later tests can remove or alter bookmarks created by earlier ones. The baseline exists once per suite run, not once per test.
+
+### V4: Locator reuse and unnecessary bookmark mutation were real code smells
+
+Reusing a locator across navigations was not the likeliest root cause by itself, but it was still the wrong pattern and made the helper harder to reason about.
+
+More importantly, two specs were mutating bookmark state when they did not need to:
+
+- `subscribe-and-practice.spec.ts` only needed a visible Quick Practice question.
+- `core-app-pages.spec.ts` only needed bookmark state when it reached `/app/bookmarks`.
+
+Those unnecessary mutations increased state drift across the shared-user suite.
 
 ---
 
-## Proposed Fix
+## What Was Not Verified
 
-### Phase 1: Timeout and navigation hardening (quick wins)
+### NV1: Missing `waitUntil` on `page.goto('/app/bookmarks')` was not the root cause
 
-1. **Increase `ensureBookmarkExistsOnBookmarksPage` initial check timeout** from 1s → 10s
-2. **Add explicit `waitUntil: 'domcontentloaded'`** to all `page.goto('/app/bookmarks')` calls
-3. **Add data-load guard**: After heading is visible, wait for either the bookmark list (`ul`) or the empty-state card before asserting specific content
-4. **Increase `isButtonVisible` timeout** in the bookmark loop from 500ms → 2,000ms
-5. **Add explicit timeout** to the final "Remove" button assertion in `core-app-pages.spec.ts:72`: `{ timeout: 15_000 }`
+The earlier draft treated this like a primary failure driver. That was too loose.
 
-### Phase 2: Test isolation improvements
+Playwright defaults `page.goto()` to `waitUntil: 'load'`, which is not “too early” relative to `domcontentloaded`; if anything, it is stricter. Adding `waitUntil: 'domcontentloaded'` can still be a valid consistency choice once explicit state waits exist, but **`waitUntil` alone does not solve the bookmark failure mode**.
 
-6. **Split `core-app-pages` monolith** into independent tests per page (dashboard, bookmarks, billing, history). Each test signs in and sets up its own preconditions. Trade execution time for isolation.
-7. **Use deterministic bookmarks**: Instead of `ensureBookmarkedQuestion` (which bookmarks random questions), use the seeded `placeholder-01` bookmark directly. The global setup already seeds it — just navigate to bookmarks and verify.
-8. **Fresh locator after navigation**: In `ensureBookmarkExistsOnBookmarksPage`, create the locator after the second `page.goto`, not before.
+### NV2: The `core-app-pages` monolith is a risk, but not the direct explanation for zero `Remove` buttons
 
-### Phase 3: Structural improvements (if flakiness persists)
+`tests/e2e/core-app-pages.spec.ts` is still broader than ideal. A future split could improve diagnosis and isolation. But the observed failure signature was “no `Remove` button exists in the DOM,” which points more directly to bookmark-state setup than to overall test timeout budget.
 
-9. **Add per-test state reset**: Before each test that depends on bookmark state, reset bookmarks to the deterministic baseline via a direct DB call (similar to `clearUserState` but scoped to bookmarks only).
-10. **Add CI retry budget monitoring**: Track how often E2E tests need retries. If retry rate exceeds 10%, escalate.
+That remains a secondary hardening opportunity, not the primary fix.
 
 ---
 
-## Files to Change
+## Mitigations Implemented On This Branch
+
+### 1. Added explicit bookmarks-page state detection
+
+`tests/e2e/helpers/bookmark.ts` now exposes `waitForBookmarksPageState()` and treats `/app/bookmarks` as a two-state page:
+
+- `populated`
+- `empty`
+
+`ensureBookmarkExistsOnBookmarksPage()` now:
+
+1. opens the bookmarks page
+2. waits for one of those two valid states
+3. returns immediately if already populated
+4. only falls back to bookmark creation if the page is actually empty
+
+### 2. Increased helper wait budgets where the old values were indefensible
+
+- Quick Practice button probes: **500ms → 2,000ms**
+- Bookmarks page state resolution: **1,000ms → 10,000ms**
+
+### 3. Removed locator reuse across navigations
+
+The helper now resolves fresh locators after the second navigation back to `/app/bookmarks`.
+
+### 4. Separated “open a Quick Practice question” from “create a bookmark”
+
+`tests/e2e/helpers/bookmark.ts` now has `openQuickPracticeQuestion()`.
+
+That let us stop using bookmark creation as a side effect just to land on a question screen.
+
+### 5. Reduced unnecessary bookmark mutation in unrelated specs
+
+- `tests/e2e/subscribe-and-practice.spec.ts` now uses `openQuickPracticeQuestion()` instead of `ensureBookmarkedQuestion()`
+- `tests/e2e/core-app-pages.spec.ts` now ensures bookmark existence only at the bookmarks step, via `ensureBookmarkExistsOnBookmarksPage()`
+
+### 6. Added regression coverage for the helper itself
+
+`tests/e2e/helpers/bookmark.test.ts` now covers:
+
+- populated state detection
+- empty state detection
+- descriptive failure when neither valid state appears
+
+---
+
+## Remaining Debt
+
+The branch mitigates the most plausible failure mechanics, but two structural issues remain:
+
+1. **Per-test state isolation is still absent.**
+   The suite still shares one mutable authenticated user, with reset only in global setup.
+2. **Bookmark-dependent flows still rely on UI fallback creation when the suite baseline has been mutated.**
+   That is acceptable for now, but a future direct reset or deterministic re-seed before bookmark-critical specs would be cleaner.
+
+If bookmark flakes recur after these mitigations, the next step should be:
+
+1. add a scoped per-test bookmark reset helper
+2. use that helper in bookmark-dependent specs
+3. then reassess whether `core-app-pages.spec.ts` should be split
+
+---
+
+## Files Changed In This Mitigation
 
 | File | Change |
 |------|--------|
-| `tests/e2e/helpers/bookmark.ts` | Increase timeouts (F1), add `waitUntil` (F2), add data-load guard (F3), fresh locator (F4) |
-| `tests/e2e/core-app-pages.spec.ts` | Add explicit timeout to bookmarks assertion, consider splitting monolith (F5) |
-| `tests/e2e/cross-page-navigation.spec.ts` | Inherits fixes from bookmark helper |
-
----
-
-## What This Does NOT Change
-
-- E2E test logic or assertions (the tests are correct, just fragile)
-- Global setup / seed infrastructure (already well-built)
-- Playwright config (1 worker, 2 retries in CI — correct)
-- The bookmarks page Server Component (no caching or rendering bug)
+| `tests/e2e/helpers/bookmark.ts` | Added state resolver, raised helper timeouts, removed locator reuse, added `openQuickPracticeQuestion()` |
+| `tests/e2e/helpers/bookmark.test.ts` | Added regression coverage for bookmarks page state detection |
+| `tests/e2e/core-app-pages.spec.ts` | Removed early random bookmark creation; ensure bookmark state only at the bookmarks step |
+| `tests/e2e/subscribe-and-practice.spec.ts` | Stopped mutating bookmark state just to open a question |
+| `components/question/choice-button.tsx` | Removed the neutral selected-state conflict with the rest-state dark border token |
+| `components/question/choice-button.test.tsx` | Added regression assertion for the selected-state dark border contract |
 
 ---
 
@@ -169,6 +182,6 @@ The `workers: 1` config prevents parallel execution but doesn't prevent sequenti
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-03-06 | Created DEBT-281 | CI E2E failure on PR #175 — unrelated to PR changes, flaky bookmark test |
-| 2026-03-06 | Classified as P2 | Intermittent but blocks PRs; erodes CI trust |
-| 2026-03-06 | Identified 6 root causes (F1-F6) | Deep investigation of full E2E infrastructure |
+| 2026-03-06 | Created DEBT-281 | Bookmark-related E2E failure mode needed a concrete writeup instead of hand-waving |
+| 2026-03-06 | Corrected root-cause analysis | The first draft mixed valid causes with weaker hypotheses |
+| 2026-03-06 | Implemented branch-level mitigations | Harden helper behavior before escalating to heavier per-test reset work |

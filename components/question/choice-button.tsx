@@ -30,7 +30,7 @@ export function ChoiceButton({
     <label
       className={cn(
         'block w-full rounded-xl border border-border/60 bg-muted/20 p-4 text-left shadow-sm transition-colors focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]',
-        !hasVerdict && 'dark:border-foreground/40',
+        !hasVerdict && !selected && 'dark:border-foreground/40',
         !disabled && 'cursor-pointer hover:bg-muted/40',
         !disabled &&
           !selected &&

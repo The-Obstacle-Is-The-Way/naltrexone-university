@@ -21,7 +21,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 6 future enhancements (F1/F8 resolved by DEBT-277/DEBT-276) | P3 | — |
 | [DEBT-278](./debt-278-verdict-badge-solid-pill-styling.md) | Verdict Badge Solid Pill Styling — solid background + white text for Correct/Incorrect badge | P2 | — |
 
-| [DEBT-281](./debt-281-e2e-bookmark-test-flakiness.md) | E2E Bookmark Test Flakiness — tight timeouts, missing data-load guards, monolith test, shared mutable state | P2 | — |
+| [DEBT-281](./debt-281-e2e-bookmark-test-flakiness.md) | E2E Bookmark Test Flakiness — aggressive helper probes, bookmarks-page state ambiguity, shared mutable state | P2 | — |
 
 **Next Debt ID:** DEBT-282
 

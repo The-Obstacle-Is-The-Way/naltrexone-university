@@ -287,6 +287,7 @@ describe('ChoiceButton', () => {
 
     expect(wrapperClassTokens.has('bg-muted/40')).toBe(true);
     expect(wrapperClassTokens.has('border-ring')).toBe(true);
+    expect(wrapperClassTokens.has('dark:border-foreground/40')).toBe(false);
     expect(wrapperClassTokens.has('dark:bg-foreground/15')).toBe(true);
     expect(wrapperClassTokens.has('dark:border-foreground/70')).toBe(true);
     expect(wrapperClassTokens.has('dark:bg-foreground/20')).toBe(false);

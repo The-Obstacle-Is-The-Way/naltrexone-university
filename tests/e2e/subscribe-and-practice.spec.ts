@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { ensureBookmarkedQuestion } from './helpers/bookmark';
+import { openQuickPracticeQuestion } from './helpers/bookmark';
 import {
   hasClerkCredentials,
   signInWithClerkPassword,
@@ -16,7 +16,7 @@ test.describe('subscribe and practice', () => {
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);
 
-    await ensureBookmarkedQuestion(page);
+    await openQuickPracticeQuestion(page);
 
     // Select first choice and submit
     await selectChoiceByLabel(page, 'A');
