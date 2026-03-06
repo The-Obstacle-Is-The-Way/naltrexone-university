@@ -12,6 +12,10 @@ function findStatValue(doc: Document, label: string): string | null {
   return labelEl?.nextElementSibling?.textContent ?? null;
 }
 
+function getClassTokens(className: string): Set<string> {
+  return new Set(className.split(/\s+/).filter(Boolean));
+}
+
 describe('app/(app)/app/dashboard', () => {
   it('renders user stats and recent sections', () => {
     const html = renderToStaticMarkup(
@@ -373,5 +377,115 @@ describe('app/(app)/app/dashboard', () => {
     expect(html).toContain('Unable to load stats.');
     expect(html).toContain('Internal error');
     expect(html).toContain('Go to Practice');
+  });
+
+  it('uses stronger dark-mode row boundary tokens for dashboard activity/session rows', () => {
+    const html = renderToStaticMarkup(
+      <DashboardView
+        stats={{
+          totalAnswered: 1,
+          accuracyOverall: 1,
+          answeredLast7Days: 1,
+          accuracyLast7Days: 1,
+          currentStreakDays: 1,
+          recentActivity: [
+            {
+              isAvailable: true,
+              attemptId: 'attempt_1',
+              answeredAt: '2026-02-02T00:00:00.000Z',
+              questionId: 'q_correct',
+              sessionId: null,
+              sessionMode: null,
+              slug: 'q-correct',
+              stemMd: 'Stem for correct',
+              difficulty: 'easy',
+              isCorrect: true,
+            },
+            {
+              isAvailable: false,
+              attemptId: 'attempt_2',
+              answeredAt: '2026-02-03T00:00:00.000Z',
+              questionId: 'q_unavailable',
+              sessionId: null,
+              sessionMode: null,
+              isCorrect: false,
+            },
+          ],
+        }}
+        sessionHistoryResult={{
+          ok: true,
+          data: {
+            rows: [
+              {
+                sessionId: 'session_1',
+                mode: 'exam',
+                questionCount: 20,
+                firstQuestionSlug: 'q-correct',
+                answered: 20,
+                correct: 15,
+                accuracy: 0.75,
+                durationSeconds: 1800,
+                startedAt: '2026-02-01T00:00:00.000Z',
+                endedAt: '2026-02-01T00:30:00.000Z',
+              },
+            ],
+            total: 1,
+            limit: 3,
+            offset: 0,
+          },
+        }}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const sessionRow = doc.querySelector(
+      `a[href="${toQuestionRoute('q-correct', {
+        from: 'dashboard',
+        mode: 'review',
+        sessionId: 'session_1',
+      })}"]`,
+    );
+    const availableActivityRow = doc.querySelector(
+      `a[href="${toQuestionRoute('q-correct', {
+        from: 'dashboard',
+        mode: 'review',
+        attemptId: 'attempt_1',
+      })}"]`,
+    );
+    const unavailableActivityCard = Array.from(
+      doc.querySelectorAll('li > div'),
+    ).find((element) =>
+      element.textContent?.includes('[Question no longer available]'),
+    );
+    const sessionRowTokens = getClassTokens(
+      sessionRow?.getAttribute('class') ?? '',
+    );
+    const availableActivityRowTokens = getClassTokens(
+      availableActivityRow?.getAttribute('class') ?? '',
+    );
+    const unavailableActivityCardTokens = getClassTokens(
+      unavailableActivityCard?.getAttribute('class') ?? '',
+    );
+
+    expect(sessionRow).not.toBeNull();
+    expect(availableActivityRow).not.toBeNull();
+    expect(unavailableActivityCard).not.toBeNull();
+    expect(sessionRowTokens.has('rounded-xl')).toBe(true);
+    expect(availableActivityRowTokens.has('rounded-xl')).toBe(true);
+    expect(unavailableActivityCardTokens.has('rounded-xl')).toBe(true);
+    expect(unavailableActivityCardTokens.has('border-border/60')).toBe(true);
+    expect(sessionRowTokens.has('dark:border-foreground/40')).toBe(true);
+    expect(sessionRowTokens.has('dark:hover:border-foreground/70')).toBe(true);
+    expect(availableActivityRowTokens.has('dark:border-foreground/40')).toBe(
+      true,
+    );
+    expect(
+      availableActivityRowTokens.has('dark:hover:border-foreground/70'),
+    ).toBe(true);
+    expect(unavailableActivityCardTokens.has('dark:border-foreground/40')).toBe(
+      true,
+    );
+    expect(
+      unavailableActivityCardTokens.has('dark:hover:border-foreground/70'),
+    ).toBe(false);
   });
 });

@@ -48,7 +48,7 @@ const markdownComponents: Components = {
     const pearlContent = extractPearlContent(children);
 
     return (
-      <div className="mt-3 border-l-2 border-foreground/20 pl-3">
+      <div className="mt-3 border-l-2 border-foreground/40 pl-3">
         {/* <div> not <p> — avoids wrapper's [&_p+p]:mt-3 cascade into the content <p> */}
         <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Clinical Pearl

@@ -83,6 +83,18 @@ function makeSessionHistoryRow(
   };
 }
 
+function getClassTokens(className: string): Set<string> {
+  return new Set(className.split(/\s+/).filter(Boolean));
+}
+
+function findSessionRowById(doc: Document, sessionId: string) {
+  return (
+    doc
+      .querySelector(`button[aria-controls="breakdown-${sessionId}"]`)
+      ?.closest('li') ?? undefined
+  );
+}
+
 describe('HistorySessionsTab', () => {
   it('renders SessionSummaryContent with mode, score, duration, and date', () => {
     const html = renderToStaticMarkup(
@@ -270,11 +282,17 @@ describe('HistorySessionsTab', () => {
     };
 
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const row = findSessionRowById(doc, 'session-1');
+    const rowClassTokens = getClassTokens(row?.getAttribute('class') ?? '');
 
-    expect(html).toContain('cursor-pointer');
-    expect(html).toContain('hover:bg-muted/40');
-    expect(html).not.toContain('hover:bg-accent/40');
-    expect(html).not.toContain('dark:hover:bg-foreground/10');
+    expect(row).toBeDefined();
+    expect(rowClassTokens.has('cursor-pointer')).toBe(true);
+    expect(rowClassTokens.has('hover:bg-muted/40')).toBe(true);
+    expect(rowClassTokens.has('dark:border-foreground/40')).toBe(true);
+    expect(rowClassTokens.has('dark:hover:border-foreground/70')).toBe(true);
+    expect(rowClassTokens.has('hover:bg-accent/40')).toBe(false);
+    expect(rowClassTokens.has('dark:hover:bg-foreground/10')).toBe(false);
     expect(html).not.toContain('tabindex="0"');
     expect(html).not.toContain('role="link"');
     expect(html).not.toContain('tabindex="-1"');
@@ -305,10 +323,16 @@ describe('HistorySessionsTab', () => {
     };
 
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const row = findSessionRowById(doc, 'session-1');
+    const rowClassTokens = getClassTokens(row?.getAttribute('class') ?? '');
 
-    expect(html).not.toContain('cursor-pointer');
-    expect(html).not.toContain('hover:bg-muted/40');
-    expect(html).not.toContain('hover:bg-accent/40');
+    expect(row).toBeDefined();
+    expect(rowClassTokens.has('cursor-pointer')).toBe(false);
+    expect(rowClassTokens.has('hover:bg-muted/40')).toBe(false);
+    expect(rowClassTokens.has('dark:border-foreground/40')).toBe(true);
+    expect(rowClassTokens.has('dark:hover:border-foreground/70')).toBe(false);
+    expect(rowClassTokens.has('hover:bg-accent/40')).toBe(false);
     expect(html).not.toContain('role="link"');
     expect(html).not.toContain('tabindex="0"');
   });
@@ -393,16 +417,18 @@ describe('HistorySessionsTab', () => {
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const panel = doc.getElementById('breakdown-session-1');
+    const panelClassTokens = getClassTokens(panel?.getAttribute('class') ?? '');
 
     expect(panel).not.toBeNull();
     expect(panel?.getAttribute('role')).toBe('region');
     expect(panel?.getAttribute('aria-label')).toBe('Question breakdown');
-    expect(panel?.getAttribute('class') ?? '').toContain('mt-3');
-    expect(panel?.getAttribute('class') ?? '').toContain('pt-3');
-    expect(panel?.getAttribute('class') ?? '').toContain('border-t');
-    expect(panel?.getAttribute('class') ?? '').toContain('border-border/30');
-    expect(panel?.getAttribute('class') ?? '').not.toContain('bg-background');
-    expect(panel?.getAttribute('class') ?? '').not.toContain('rounded-lg');
+    expect(panelClassTokens.has('mt-3')).toBe(true);
+    expect(panelClassTokens.has('pt-3')).toBe(true);
+    expect(panelClassTokens.has('border-t')).toBe(true);
+    expect(panelClassTokens.has('border-border/30')).toBe(true);
+    expect(panelClassTokens.has('dark:border-foreground/40')).toBe(true);
+    expect(panelClassTokens.has('bg-background')).toBe(false);
+    expect(panelClassTokens.has('rounded-lg')).toBe(false);
   });
 
   it('does not render a redundant Review session button inside breakdown content', () => {

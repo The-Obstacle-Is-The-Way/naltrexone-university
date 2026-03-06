@@ -178,9 +178,9 @@ export function HistorySessionsTab({
             <li
               key={row.sessionId}
               className={cn(
-                'rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors',
+                'rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors dark:border-foreground/40',
                 isRowInteractive
-                  ? 'cursor-pointer hover:bg-muted/40'
+                  ? 'cursor-pointer hover:bg-muted/40 dark:hover:border-foreground/70'
                   : undefined,
               )}
               onClick={(event) => {
@@ -242,7 +242,7 @@ export function HistorySessionsTab({
                   id={`breakdown-${row.sessionId}`}
                   role="region"
                   aria-label="Question breakdown"
-                  className="mt-3 border-t border-border/30 pt-3"
+                  className="mt-3 border-t border-border/30 pt-3 dark:border-foreground/40"
                 >
                   {historySessions.reviewLoadState.status === 'loading' ? (
                     <output

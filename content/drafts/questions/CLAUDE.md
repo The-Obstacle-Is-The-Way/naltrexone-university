@@ -105,6 +105,8 @@ Before saving, verify:
 - [ ] Each wrong answer explanation teaches a concept
 - [ ] Clinical pearl included
 - [ ] `treatments` tag included if a medication is mentioned
+- [ ] Per-choice explanations do NOT restate the full answer text (start with reasoning directly)
+- [ ] Every wrong answer has an explanation (missing ones hide the entire section in the UI)
 - [ ] `### Reference` at end of explanation with AMA-format citation
 - [ ] Optional: run `python3 scripts/validate_questions.py --root questions` for structural validation
 

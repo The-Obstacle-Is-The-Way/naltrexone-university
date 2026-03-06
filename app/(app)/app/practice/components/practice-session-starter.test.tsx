@@ -4,6 +4,10 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 let PracticeSessionStarter: typeof import('./practice-session-starter')['PracticeSessionStarter'];
 
+function getClassTokens(className: string): Set<string> {
+  return new Set(className.split(/\s+/).filter(Boolean));
+}
+
 describe('PracticeSessionStarter', () => {
   beforeAll(async () => {
     ({ PracticeSessionStarter } = await import('./practice-session-starter'));
@@ -150,6 +154,18 @@ describe('PracticeSessionStarter', () => {
         (text) => text.includes('Substance') && text.includes('1 selected'),
       ),
     ).toBe(true);
+    const substanceDetails = details.find((element) => {
+      const summaryText = element.querySelector('summary')?.textContent ?? '';
+      return (
+        summaryText.includes('Substance') && summaryText.includes('1 selected')
+      );
+    });
+    const substanceDetailsTokens = getClassTokens(
+      substanceDetails?.getAttribute('class') ?? '',
+    );
+
+    expect(substanceDetails).toBeDefined();
+    expect(substanceDetailsTokens.has('dark:border-foreground/40')).toBe(true);
   });
 
   it('renders status and difficulty segmented controls without hint text', () => {

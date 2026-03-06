@@ -11,6 +11,10 @@ import { ROUTES, toQuestionRoute } from '@/lib/routes';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import { getStemPreview } from '@/src/adapters/shared/stem-preview';
 
+function getClassTokens(className: string): Set<string> {
+  return new Set(className.split(/\s+/).filter(Boolean));
+}
+
 describe('app/(app)/app/bookmarks', () => {
   it('renders a truncated stem preview as the card title instead of raw slug text', () => {
     const longStem =
@@ -102,6 +106,11 @@ describe('app/(app)/app/bookmarks', () => {
         ]}
       />,
     );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const bookmarkCard = doc.querySelector('li [data-slot="card"]');
+    const bookmarkCardTokens = getClassTokens(
+      bookmarkCard?.getAttribute('class') ?? '',
+    );
 
     expect(html).toContain('Bookmarks');
     expect(html).toContain('Stem for q1');
@@ -114,10 +123,16 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).toContain('aria-label="Remove bookmark: Stem for q1"');
     expect(html).toContain('Go to Practice');
     expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
+    expect(bookmarkCardTokens.has('dark:border-foreground/40')).toBe(true);
   });
 
   it('renders empty state when no bookmarks exist', () => {
     const html = renderToStaticMarkup(<BookmarksView rows={[]} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const emptyCard = doc.querySelector('[data-slot="card"]');
+    const emptyCardTokens = getClassTokens(
+      emptyCard?.getAttribute('class') ?? '',
+    );
 
     expect(html).toContain('Bookmarks');
     expect(html).toContain('No bookmarks yet.');
@@ -126,6 +141,7 @@ describe('app/(app)/app/bookmarks', () => {
     );
     expect(html).toContain('Start practicing');
     expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
+    expect(emptyCardTokens.has('dark:border-foreground/40')).toBe(true);
   });
 
   it('renders unavailable bookmarks without a reattempt link', () => {

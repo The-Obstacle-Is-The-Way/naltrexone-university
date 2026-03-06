@@ -8,6 +8,14 @@ beforeAll(async () => {
   ({ Feedback } = await import('@/components/question/feedback'));
 });
 
+function getClassTokens(className: string): Set<string> {
+  return new Set(className.split(/\s+/).filter(Boolean));
+}
+
+function hasTokenMatching(tokens: Set<string>, pattern: RegExp): boolean {
+  return [...tokens].some((token) => pattern.test(token));
+}
+
 describe('Feedback', () => {
   it('renders a neutral status card with a verdict badge', () => {
     const html = renderToStaticMarkup(
@@ -64,12 +72,13 @@ describe('Feedback', () => {
     );
     const successCard = correctAnswerLabel?.nextElementSibling;
     const successCardClassName = successCard?.getAttribute('class') ?? '';
+    const successCardTokens = getClassTokens(successCardClassName);
     const successCardText = successCard?.textContent ?? '';
 
     expect(correctAnswerLabel).not.toBeUndefined();
     expect(successCard).not.toBeNull();
-    expect(successCardClassName).toContain('border-success/20');
-    expect(successCardClassName).toContain('bg-success/5');
+    expect(successCardTokens.has('border-success/60')).toBe(true);
+    expect(successCardTokens.has('bg-success/5')).toBe(true);
     expect(successCardText).toContain('B)');
     expect(successCardText).toContain('Second option');
     expect(successCardText).toContain('General explanation.');
@@ -86,12 +95,13 @@ describe('Feedback', () => {
     );
     const successCard = explanationLabel?.nextElementSibling;
     const successCardClassName = successCard?.getAttribute('class') ?? '';
+    const successCardTokens = getClassTokens(successCardClassName);
     const successCardText = successCard?.textContent ?? '';
 
     expect(explanationLabel).not.toBeUndefined();
     expect(successCard).not.toBeNull();
-    expect(successCardClassName).toContain('border-success/20');
-    expect(successCardClassName).toContain('bg-success/5');
+    expect(successCardTokens.has('border-success/60')).toBe(true);
+    expect(successCardTokens.has('bg-success/5')).toBe(true);
     expect(successCardText).toContain('General explanation.');
     expect(successCardText).not.toContain('A)');
     expect(successCardText).not.toContain('B)');
@@ -154,12 +164,15 @@ describe('Feedback', () => {
     const destructiveCard = yourAnswerLabel?.nextElementSibling;
     const destructiveCardClassName =
       destructiveCard?.getAttribute('class') ?? '';
+    const destructiveCardTokens = getClassTokens(destructiveCardClassName);
     const destructiveCardText = destructiveCard?.textContent ?? '';
 
     expect(yourAnswerLabel).not.toBeUndefined();
     expect(destructiveCard).not.toBeNull();
-    expect(destructiveCardClassName).toContain('border-destructive/20');
-    expect(destructiveCardClassName).toContain('bg-destructive/5');
+    expect(destructiveCardTokens.has('border-destructive')).toBe(true);
+    expect(destructiveCardTokens.has('border-destructive/20')).toBe(false);
+    expect(destructiveCardTokens.has('border-destructive/30')).toBe(false);
+    expect(destructiveCardTokens.has('bg-destructive/5')).toBe(true);
     expect(destructiveCardText).toContain('A)');
     expect(destructiveCardText).toContain('First option');
     expect(destructiveCardText).toContain('First option is incorrect.');
@@ -196,12 +209,13 @@ describe('Feedback', () => {
     );
     const successCard = correctAnswerLabel?.nextElementSibling;
     const successCardClassName = successCard?.getAttribute('class') ?? '';
+    const successCardTokens = getClassTokens(successCardClassName);
     const successCardText = successCard?.textContent ?? '';
 
     expect(correctAnswerLabel).not.toBeUndefined();
     expect(successCard).not.toBeNull();
-    expect(successCardClassName).toContain('border-success/20');
-    expect(successCardClassName).toContain('bg-success/5');
+    expect(successCardTokens.has('border-success/60')).toBe(true);
+    expect(successCardTokens.has('bg-success/5')).toBe(true);
     expect(successCardText).toContain('B)');
     expect(successCardText).toContain('Second option');
     expect(successCardText).toContain('General explanation.');
@@ -304,12 +318,130 @@ describe('Feedback', () => {
     expect(wrongAnswerCards.length).toBeGreaterThan(0);
     for (const card of wrongAnswerCards) {
       const className = card.getAttribute('class') ?? '';
-      expect(className).toContain('border-border/60');
-      expect(className).toContain('bg-background/50');
-      expect(className).not.toContain('border-success/20');
-      expect(className).not.toContain('bg-success/5');
-      expect(className).not.toContain('border-destructive/20');
-      expect(className).not.toContain('bg-destructive/5');
+      const classTokens = getClassTokens(className);
+      expect(classTokens.has('border-border/60')).toBe(true);
+      expect(classTokens.has('bg-background/50')).toBe(true);
+      expect(
+        hasTokenMatching(classTokens, /(^|:)border-success(?:\/\d+)?$/),
+      ).toBe(false);
+      expect(hasTokenMatching(classTokens, /(^|:)bg-success(?:\/\d+)?$/)).toBe(
+        false,
+      );
+      expect(
+        hasTokenMatching(classTokens, /(^|:)border-destructive(?:\/\d+)?$/),
+      ).toBe(false);
+      expect(
+        hasTokenMatching(classTokens, /(^|:)bg-destructive(?:\/\d+)?$/),
+      ).toBe(false);
+    }
+  });
+
+  it('adds dark boundary overrides to correct-flow neutral wrong-answer cards', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={true}
+        explanationMd="General explanation."
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: false,
+            explanationMd: 'Second option is incorrect.',
+          },
+          {
+            choiceId: 'choice-c',
+            displayLabel: 'C',
+            textMd: 'Third option',
+            isCorrect: true,
+            explanationMd: 'Third option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const wrongAnswersHeading = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Why other answers are wrong:',
+    );
+    const wrongAnswersSection = wrongAnswersHeading?.parentElement;
+    const wrongAnswerCards = Array.from(
+      wrongAnswersSection?.querySelectorAll('div') ?? [],
+    ).filter((div) => {
+      const classTokens = getClassTokens(div.getAttribute('class') ?? '');
+      return (
+        classTokens.has('border-border/60') &&
+        classTokens.has('bg-background/50')
+      );
+    });
+
+    expect(wrongAnswersHeading).not.toBeUndefined();
+    expect(wrongAnswerCards.length).toBeGreaterThan(0);
+    for (const card of wrongAnswerCards) {
+      const classTokens = getClassTokens(card.getAttribute('class') ?? '');
+      expect(classTokens.has('dark:border-foreground/40')).toBe(true);
+    }
+  });
+
+  it('adds dark boundary overrides to incorrect-flow neutral wrong-answer cards', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={false}
+        explanationMd="General explanation."
+        selectedChoiceId="choice-a"
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: false,
+            explanationMd: 'Second option is incorrect.',
+          },
+          {
+            choiceId: 'choice-c',
+            displayLabel: 'C',
+            textMd: 'Third option',
+            isCorrect: true,
+            explanationMd: 'Third option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const wrongAnswersHeading = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Why other answers are wrong:',
+    );
+    const wrongAnswersSection = wrongAnswersHeading?.parentElement;
+    const wrongAnswerCards = Array.from(
+      wrongAnswersSection?.querySelectorAll('div') ?? [],
+    ).filter((div) => {
+      const classTokens = getClassTokens(div.getAttribute('class') ?? '');
+      return (
+        classTokens.has('border-border/60') &&
+        classTokens.has('bg-background/50')
+      );
+    });
+
+    expect(wrongAnswersHeading).not.toBeUndefined();
+    expect(wrongAnswerCards.length).toBeGreaterThan(0);
+    for (const card of wrongAnswerCards) {
+      const classTokens = getClassTokens(card.getAttribute('class') ?? '');
+      expect(classTokens.has('dark:border-foreground/40')).toBe(true);
     }
   });
 
@@ -431,6 +563,31 @@ describe('Feedback', () => {
     expect(referenceLabel?.getAttribute('class')).toContain('tracking-wide');
     expect(html).toContain('Reference');
     expect(html).toContain('Anton RF et al. JAMA. 2006;295(17):2003-2017.');
+  });
+
+  it('adds a dark boundary override to the reference separator', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={true}
+        explanationMd="Because..."
+        referenceMd="Anton RF et al. JAMA. 2006;295(17):2003-2017."
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const referenceLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Reference',
+    );
+    const referenceSection = referenceLabel?.parentElement;
+    const referenceClassTokens = getClassTokens(
+      referenceSection?.getAttribute('class') ?? '',
+    );
+
+    expect(referenceLabel).not.toBeUndefined();
+    expect(referenceSection).not.toBeNull();
+    expect(referenceClassTokens.has('border-t')).toBe(true);
+    expect(referenceClassTokens.has('border-border/40')).toBe(true);
+    expect(referenceClassTokens.has('dark:border-foreground/40')).toBe(true);
   });
 
   it('does not render reference section when referenceMd is null', () => {

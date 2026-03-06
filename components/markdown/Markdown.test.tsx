@@ -10,11 +10,11 @@ beforeAll(async () => {
 
 function findClinicalPearlCallout(doc: Document) {
   return Array.from(doc.querySelectorAll('div')).find((element) => {
-    const classes = element.className;
+    const classTokens = new Set(element.className.split(/\s+/).filter(Boolean));
     return (
-      classes.includes('border-l-2') &&
-      classes.includes('border-foreground/20') &&
-      classes.includes('pl-3')
+      classTokens.has('border-l-2') &&
+      classTokens.has('border-foreground/40') &&
+      classTokens.has('pl-3')
     );
   });
 }

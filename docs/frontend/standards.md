@@ -1,12 +1,13 @@
 # Frontend Standards
 
-**Last Updated:** 2026-03-02
+**Last Updated:** 2026-03-05
 
 Canonical reference for all frontend patterns, component usage, accessibility, and styling conventions. Every UI change MUST be consistent with this document. If a pattern isn't documented here, don't invent one — add it here first.
 
 **See also:**
 - [Pattern Registry](./pattern-registry.md) — Single source of truth for every visual pattern: hover opacities, link strategies, surface hierarchy, token scales, decision trees
 - [Design Principles](./design-principles.md) — Layout composition patterns, navigation zones, action bar conventions, state persistence expectations
+- [Contrast Policy](./contrast-policy.md) — Canonical WCAG AA contrast targets and rules
 
 ---
 
@@ -288,7 +289,7 @@ Hover opacity is context-dependent. Use the Pattern Registry (`Part 1.2`, `I-1` 
 |---------|-------------------|
 | Inside card surface | `transition-colors hover:bg-muted/40` |
 | On page background (standalone row) | `transition-colors hover:bg-muted/50` |
-| Direct-action target (choice/chip) | `transition-colors hover:bg-muted/60` |
+| Direct-action target (choice/chip) | Use the component-specific Pattern Registry entry. Choice buttons use stepped fills (`hover:bg-muted/40` in light mode, `dark:hover:bg-foreground/15` in dark mode); filter chips use `hover:bg-muted/50`. |
 
 Rules:
 - Always use the `muted` token for neutral hover backgrounds
@@ -471,6 +472,14 @@ After error recovery ("Try again"), focus SHOULD move to the result (the new con
 - Forms with multiple controls: add `aria-label` to the `<form>`
 - Single-button forms: button text provides context (acceptable)
 
+### Contrast (WCAG AA)
+
+**Canonical rules:** `docs/frontend/contrast-policy.md`
+
+All UI must meet WCAG AA contrast targets for:
+- SC 1.4.3 (text): 4.5:1 for normal text, 3.0:1 for large text
+- SC 1.4.11 (non-text): 3.0:1 for required UI boundaries and state indicators
+
 ---
 
 ## 12. Hook Architecture
@@ -649,6 +658,8 @@ Three hooks exceed the 200-line "god hook" threshold (§12):
 | `useQuestionPageController` | 370 | `app/(app)/app/questions/[slug]/use-question-page-controller.ts` |
 | `usePracticeSessionQuestionFlow` | 238 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` |
 | `useQuestionFlowCore` | 263 | `app/(app)/app/practice/shared/use-question-flow-core.ts` |
+
+Contrast compliance gaps (WCAG AA) are documented in `docs/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md` and governed by `docs/frontend/contrast-policy.md`.
 
 ### P3 — Fix as encountered
 

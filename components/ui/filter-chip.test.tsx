@@ -1,11 +1,19 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+let FilterChip: typeof import('@/components/ui/filter-chip').FilterChip;
+
+beforeAll(async () => {
+  ({ FilterChip } = await import('@/components/ui/filter-chip'));
+});
+
+function getClassTokens(className: string): Set<string> {
+  return new Set(className.split(/\s+/).filter(Boolean));
+}
 
 describe('FilterChip', () => {
-  it('renders with the provided label', async () => {
-    const { FilterChip } = await import('@/components/ui/filter-chip');
-
+  it('renders with the provided label', () => {
     const html = renderToStaticMarkup(
       <FilterChip label="Alcohol" selected={false} onClick={() => undefined} />,
     );
@@ -13,9 +21,7 @@ describe('FilterChip', () => {
     expect(html).toContain('Alcohol');
   });
 
-  it('renders as a button element', async () => {
-    const { FilterChip } = await import('@/components/ui/filter-chip');
-
+  it('renders as a button element', () => {
     const html = renderToStaticMarkup(
       <FilterChip label="Opioids" selected={false} onClick={() => undefined} />,
     );
@@ -24,9 +30,7 @@ describe('FilterChip', () => {
     expect(html).toContain('type="button"');
   });
 
-  it('applies selected styling when selected is true', async () => {
-    const { FilterChip } = await import('@/components/ui/filter-chip');
-
+  it('applies selected styling when selected is true', () => {
     const html = renderToStaticMarkup(
       <FilterChip label="Alcohol" selected={true} onClick={() => undefined} />,
     );
@@ -35,22 +39,23 @@ describe('FilterChip', () => {
     expect(html).toContain('bg-primary');
   });
 
-  it('applies unselected styling when selected is false', async () => {
-    const { FilterChip } = await import('@/components/ui/filter-chip');
-
+  it('applies unselected styling when selected is false', () => {
     const html = renderToStaticMarkup(
       <FilterChip label="Alcohol" selected={false} onClick={() => undefined} />,
     );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const button = doc.querySelector('button');
+    const classTokens = getClassTokens(button?.getAttribute('class') ?? '');
 
     expect(html).toContain('aria-pressed="false"');
-    expect(html).not.toContain('bg-primary');
-    expect(html).toContain('hover:bg-muted/50');
-    expect(html).not.toContain('hover:bg-accent');
+    expect(button).not.toBeNull();
+    expect(classTokens.has('bg-primary')).toBe(false);
+    expect(classTokens.has('hover:bg-muted/50')).toBe(true);
+    expect(classTokens.has('dark:border-foreground/40')).toBe(true);
+    expect(classTokens.has('hover:bg-accent')).toBe(false);
   });
 
-  it('is disabled when disabled prop is true', async () => {
-    const { FilterChip } = await import('@/components/ui/filter-chip');
-
+  it('is disabled when disabled prop is true', () => {
     const html = renderToStaticMarkup(
       <FilterChip
         label="Alcohol"
