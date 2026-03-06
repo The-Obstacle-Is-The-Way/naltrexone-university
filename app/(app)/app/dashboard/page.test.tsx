@@ -12,6 +12,10 @@ function findStatValue(doc: Document, label: string): string | null {
   return labelEl?.nextElementSibling?.textContent ?? null;
 }
 
+function getClassTokens(className: string): Set<string> {
+  return new Set(className.split(/\s+/).filter(Boolean));
+}
+
 describe('app/(app)/app/dashboard', () => {
   it('renders user stats and recent sections', () => {
     const html = renderToStaticMarkup(
@@ -432,8 +436,53 @@ describe('app/(app)/app/dashboard', () => {
         }}
       />,
     );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const interactiveRows = Array.from(doc.querySelectorAll('a')).filter(
+      (element) =>
+        getClassTokens(element.getAttribute('class') ?? '').has('rounded-xl'),
+    );
+    const sessionRow = interactiveRows.find((element) =>
+      element.textContent?.includes('15/20 correct'),
+    );
+    const availableActivityRow = interactiveRows.find((element) =>
+      element.textContent?.includes('Stem for correct'),
+    );
+    const unavailableActivityCard = Array.from(
+      doc.querySelectorAll('div'),
+    ).find((element) => {
+      const classTokens = getClassTokens(element.getAttribute('class') ?? '');
+      return (
+        classTokens.has('rounded-xl') &&
+        classTokens.has('border-border/60') &&
+        element.textContent?.includes('[Question no longer available]')
+      );
+    });
+    const sessionRowTokens = getClassTokens(
+      sessionRow?.getAttribute('class') ?? '',
+    );
+    const availableActivityRowTokens = getClassTokens(
+      availableActivityRow?.getAttribute('class') ?? '',
+    );
+    const unavailableActivityCardTokens = getClassTokens(
+      unavailableActivityCard?.getAttribute('class') ?? '',
+    );
 
-    expect(html).toContain('dark:border-foreground/40');
-    expect(html).toContain('dark:hover:border-foreground/70');
+    expect(sessionRow).toBeDefined();
+    expect(availableActivityRow).toBeDefined();
+    expect(unavailableActivityCard).toBeDefined();
+    expect(sessionRowTokens.has('dark:border-foreground/40')).toBe(true);
+    expect(sessionRowTokens.has('dark:hover:border-foreground/70')).toBe(true);
+    expect(availableActivityRowTokens.has('dark:border-foreground/40')).toBe(
+      true,
+    );
+    expect(
+      availableActivityRowTokens.has('dark:hover:border-foreground/70'),
+    ).toBe(true);
+    expect(unavailableActivityCardTokens.has('dark:border-foreground/40')).toBe(
+      true,
+    );
+    expect(
+      unavailableActivityCardTokens.has('dark:hover:border-foreground/70'),
+    ).toBe(false);
   });
 });

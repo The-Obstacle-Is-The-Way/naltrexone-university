@@ -83,6 +83,16 @@ function makeSessionHistoryRow(
   };
 }
 
+function getClassTokens(className: string): Set<string> {
+  return new Set(className.split(/\s+/).filter(Boolean));
+}
+
+function findSessionRowBySummary(doc: Document, summaryText: string) {
+  return Array.from(doc.querySelectorAll('li')).find((item) =>
+    item.textContent?.includes(summaryText),
+  );
+}
+
 describe('HistorySessionsTab', () => {
   it('renders SessionSummaryContent with mode, score, duration, and date', () => {
     const html = renderToStaticMarkup(
@@ -270,13 +280,17 @@ describe('HistorySessionsTab', () => {
     };
 
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const row = findSessionRowBySummary(doc, '8/10 correct (80%)');
+    const rowClassTokens = getClassTokens(row?.getAttribute('class') ?? '');
 
-    expect(html).toContain('cursor-pointer');
-    expect(html).toContain('hover:bg-muted/40');
-    expect(html).toContain('dark:border-foreground/40');
-    expect(html).toContain('dark:hover:border-foreground/70');
-    expect(html).not.toContain('hover:bg-accent/40');
-    expect(html).not.toContain('dark:hover:bg-foreground/10');
+    expect(row).toBeDefined();
+    expect(rowClassTokens.has('cursor-pointer')).toBe(true);
+    expect(rowClassTokens.has('hover:bg-muted/40')).toBe(true);
+    expect(rowClassTokens.has('dark:border-foreground/40')).toBe(true);
+    expect(rowClassTokens.has('dark:hover:border-foreground/70')).toBe(true);
+    expect(rowClassTokens.has('hover:bg-accent/40')).toBe(false);
+    expect(rowClassTokens.has('dark:hover:bg-foreground/10')).toBe(false);
     expect(html).not.toContain('tabindex="0"');
     expect(html).not.toContain('role="link"');
     expect(html).not.toContain('tabindex="-1"');
@@ -308,14 +322,15 @@ describe('HistorySessionsTab', () => {
 
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const row = doc.querySelector('li');
-    const rowClass = row?.getAttribute('class') ?? '';
+    const row = findSessionRowBySummary(doc, '8/10 correct (80%)');
+    const rowClassTokens = getClassTokens(row?.getAttribute('class') ?? '');
 
-    expect(html).not.toContain('cursor-pointer');
-    expect(html).not.toContain('hover:bg-muted/40');
-    expect(rowClass).toContain('dark:border-foreground/40');
-    expect(rowClass).not.toContain('dark:hover:border-foreground/70');
-    expect(html).not.toContain('hover:bg-accent/40');
+    expect(row).toBeDefined();
+    expect(rowClassTokens.has('cursor-pointer')).toBe(false);
+    expect(rowClassTokens.has('hover:bg-muted/40')).toBe(false);
+    expect(rowClassTokens.has('dark:border-foreground/40')).toBe(true);
+    expect(rowClassTokens.has('dark:hover:border-foreground/70')).toBe(false);
+    expect(rowClassTokens.has('hover:bg-accent/40')).toBe(false);
     expect(html).not.toContain('role="link"');
     expect(html).not.toContain('tabindex="0"');
   });

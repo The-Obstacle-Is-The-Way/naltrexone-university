@@ -10,6 +10,10 @@ beforeAll(async () => {
   ({ Select, SelectTrigger, SelectValue } = await import('./select'));
 });
 
+function getClassTokens(className: string): Set<string> {
+  return new Set(className.split(/\s+/).filter(Boolean));
+}
+
 describe('components/ui/select', () => {
   it('uses stronger dark-mode boundary tokens on select trigger', () => {
     const html = renderToStaticMarkup(
@@ -19,9 +23,12 @@ describe('components/ui/select', () => {
         </SelectTrigger>
       </Select>,
     );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const trigger = doc.querySelector('[data-slot="select-trigger"]');
+    const classTokens = getClassTokens(trigger?.getAttribute('class') ?? '');
 
-    expect(html).toContain('data-slot="select-trigger"');
-    expect(html).toContain('dark:border-foreground/40');
-    expect(html).not.toContain('dark:border-input');
+    expect(trigger).not.toBeNull();
+    expect(classTokens.has('dark:border-foreground/40')).toBe(true);
+    expect(classTokens.has('dark:border-input')).toBe(false);
   });
 });

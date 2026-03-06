@@ -8,6 +8,10 @@ beforeAll(async () => {
   ({ ChoiceButton } = await import('./choice-button'));
 });
 
+function getClassTokens(className: string): Set<string> {
+  return new Set(className.split(/\s+/).filter(Boolean));
+}
+
 describe('ChoiceButton', () => {
   it('renders label and text with base body typography', () => {
     const html = renderToStaticMarkup(
@@ -145,21 +149,25 @@ describe('ChoiceButton', () => {
     const input = doc.querySelector('input[type="radio"]');
     const wrapperLabel = input?.closest('label');
     const badge = wrapperLabel?.querySelector('div.h-7.w-7');
-    const wrapperClass = wrapperLabel?.getAttribute('class') ?? '';
-    const badgeClass = badge?.getAttribute('class') ?? '';
+    const wrapperClassTokens = getClassTokens(
+      wrapperLabel?.getAttribute('class') ?? '',
+    );
+    const badgeClassTokens = getClassTokens(badge?.getAttribute('class') ?? '');
 
     expect(wrapperLabel).not.toBeNull();
     expect(badge).not.toBeNull();
-    expect(wrapperClass).toContain('border-border/60');
-    expect(wrapperClass).toContain('bg-muted/20');
-    expect(wrapperClass).toContain('dark:border-foreground/40');
-    expect(wrapperClass).toContain('dark:bg-foreground/8');
-    expect(wrapperClass).toContain('hover:bg-muted/40');
-    expect(wrapperClass).toContain('dark:hover:border-foreground/70');
-    expect(badgeClass).toContain('bg-muted');
-    expect(badgeClass).toContain('dark:border-foreground/60');
-    expect(badgeClass).toContain('dark:bg-foreground/20');
-    expect(badgeClass).not.toContain('bg-background');
+    expect(wrapperClassTokens.has('border-border/60')).toBe(true);
+    expect(wrapperClassTokens.has('bg-muted/20')).toBe(true);
+    expect(wrapperClassTokens.has('dark:border-foreground/40')).toBe(true);
+    expect(wrapperClassTokens.has('dark:bg-foreground/8')).toBe(true);
+    expect(wrapperClassTokens.has('hover:bg-muted/40')).toBe(true);
+    expect(wrapperClassTokens.has('dark:hover:border-foreground/70')).toBe(
+      true,
+    );
+    expect(badgeClassTokens.has('bg-muted')).toBe(true);
+    expect(badgeClassTokens.has('dark:border-foreground/60')).toBe(true);
+    expect(badgeClassTokens.has('dark:bg-foreground/20')).toBe(true);
+    expect(badgeClassTokens.has('bg-background')).toBe(false);
   });
 
   it('adds a distinct dark-mode hover fill for unselected choices', () => {
