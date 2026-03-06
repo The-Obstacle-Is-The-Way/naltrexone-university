@@ -72,7 +72,19 @@ The Playwright suite uses:
 - `workers: 1`
 - a **one-time** deterministic baseline reset in `global.setup.ts`
 
-That reset seeds a deterministic bookmark for the E2E user at suite start. But it does **not** reset state before each spec, so later tests can remove or alter bookmarks created by earlier ones. The baseline exists once per suite run, not once per test.
+That reset seeds a deterministic bookmark for the E2E user at suite start (one bookmark on `placeholder-01`, plus one correct attempt on `placeholder-01` and one incorrect attempt on `placeholder-02`). But it does **not** reset state before each spec, so later tests can remove or alter bookmarks created by earlier ones. The baseline exists once per suite run, not once per test.
+
+**Cross-spec mutation map (five specs touch bookmarks):**
+
+| Spec | Helper used | Mutates bookmarks? | Net effect |
+|------|-------------|--------------------|----|
+| `subscribe-and-practice.spec.ts` | `openQuickPracticeQuestion()` | No | Safe |
+| `core-app-pages.spec.ts` | `ensureBookmarkExistsOnBookmarksPage()` | Creates if missing | +1 if empty |
+| `bookmarks.spec.ts` | `ensureBookmarkExistsOnBookmarksPage()` | Creates if missing, **then removes one** | Can leave empty |
+| `cross-page-navigation.spec.ts` | `ensureBookmarkExistsOnBookmarksPage()` | Creates if missing | +1 if empty |
+| `review-mode-audit.spec.ts` | None (navigates directly) | No | Handles both empty and populated |
+
+The key interaction: if `bookmarks.spec.ts` runs before `cross-page-navigation.spec.ts` and removes the only bookmark, the latter must recreate one via Quick Practice. This adds 30–60 seconds of latency and exercises the full bookmark creation path under CI conditions.
 
 ### V4: Locator reuse and unnecessary bookmark mutation were real code smells
 
@@ -108,6 +120,46 @@ Playwright defaults `page.goto()` to `waitUntil: 'load'`, which is not “too ea
 `tests/e2e/core-app-pages.spec.ts` is still broader than ideal. A future split could improve diagnosis and isolation. But the observed failure signature was “no `Remove` button exists in the DOM,” which points more directly to bookmark-state setup than to overall test timeout budget.
 
 That remains a secondary hardening opportunity, not the primary fix.
+
+---
+
+## Investigated and Ruled Out (2026-03-06 Audit)
+
+A full four-axis investigation (global setup, spec consumption, server-side data flow, CI environment) confirmed the verified root causes above and ruled out several potential deeper issues:
+
+### RO1: Optimistic UI race between bookmark creation and bookmarks page verification
+
+**Ruled out.** `toggleBookmarkForQuestion()` in `practice-page-logic.ts` awaits the server response (`res = await toggleBookmarkFn(...)`) before calling `setBookmarkedQuestionIds()`. The “Remove bookmark” button text at `practice-view.tsx:331` is derived from `isBookmarked`, which only flips after the DB INSERT commits and the server action responds. When the E2E helper sees “Remove bookmark” and navigates to `/app/bookmarks`, the write is already durable.
+
+This also means the retry logic in `openBookmarksPageStateWithRetry()` does not need to retry on `empty` state after creation — an `empty` result after a confirmed toggle would require a database anomaly, not a timing race.
+
+### RO2: Next.js caching causing stale bookmarks page
+
+**Ruled out.** The bookmarks page is an async Server Component that awaits `getBookmarks()` before rendering. Each `page.goto()` triggers a full server render. The Drizzle repository has no application-level cache — every `listByUserId()` call is a fresh DB query. `revalidatePath()` is only relevant for client-side navigations (used in `removeBookmarkAction`), not for full `page.goto()` navigations.
+
+### RO3: Neon cold start latency in CI
+
+**Not applicable.** CI uses a local PostgreSQL 16 service container (configured in `.github/workflows/ci.yml`), not Neon. Neon cold start latency (400–750ms) only affects deployed Vercel previews, not CI test runs.
+
+### RO4: 2-second question state timeout too short for client hydration
+
+**Low risk.** The “Bookmark” and “Next” buttons are rendered in the same React component (`practice-view.tsx`). Once `openQuickPracticeQuestion()` confirms the Next button is visible (up to 15s budget), both buttons share the same hydration boundary. The 2-second `QUESTION_BUTTON_VISIBILITY_TIMEOUT_MS` is a safety margin after hydration, not the primary wait.
+
+### RO5: Rate limiting on bookmark mutations
+
+**Not a factor at E2E scale.** The bookmark mutation rate limit is 60 toggles per 60 seconds per user. E2E specs perform at most 1–2 toggles per test. The rate limiter would only trigger if a spec loops or the suite runs dozens of bookmark-mutating tests in rapid succession.
+
+---
+
+## CI Retry Masking
+
+Playwright is configured with `retries: 2` in CI and `retries: 0` locally. A test that fails on the first attempt but passes on retry counts as “passing” in CI. This means:
+
+- The true flake rate may be higher than CI green/red status suggests.
+- Transient failures (slow DB response, resource contention on GitHub Actions VM) are silently retried.
+- Traces are only captured on the first retry (`trace: 'on-first-retry'`), so the initial failure is observable, but the overall CI run still goes green.
+
+This is not a bug — retries are a reasonable CI strategy. But when investigating flakes, check the Playwright report artifact for retry counts, not just the final CI status.
 
 ---
 
@@ -172,15 +224,17 @@ That let us stop using bookmark creation as a side effect just to land on a ques
 The branch mitigates the most plausible failure mechanics, but two structural issues remain:
 
 1. **Per-test state isolation is still absent.**
-   The suite still shares one mutable authenticated user, with reset only in global setup.
+   The suite still shares one mutable authenticated user, with reset only in `global.setup.ts`. The baseline seeds exactly: 1 practice session, 2 attempts (1 correct on `placeholder-01`, 1 incorrect on `placeholder-02`), and 1 bookmark on `placeholder-01`. All with deterministic UUIDs and timestamps. See `tests/e2e/helpers/reset-e2e-user-state.ts` for the full seed.
 2. **Bookmark-dependent flows still rely on UI fallback creation when the suite baseline has been mutated.**
-   That is acceptable for now, but a future direct reset or deterministic re-seed before bookmark-critical specs would be cleaner.
+   Specifically, `bookmarks.spec.ts` can remove the baseline bookmark, forcing `cross-page-navigation.spec.ts` and `core-app-pages.spec.ts` to recreate one via Quick Practice if they run later. This adds 30–60 seconds of latency per affected spec and exercises the full creation path under CI conditions.
+3. **CI retries mask transient flakes.**
+   With `retries: 2` in CI, a test that fails once but passes on retry appears green. The true flake rate may be higher than CI status suggests. Check the Playwright report artifact for retry counts when investigating failures.
 
-If bookmark flakes recur after these mitigations, the next step should be:
+If bookmark flakes recur after these mitigations, the escalation path is:
 
-1. add a scoped per-test bookmark reset helper
-2. use that helper in bookmark-dependent specs
-3. then reassess whether `core-app-pages.spec.ts` should be split
+1. Add a scoped per-test bookmark reset helper (direct DB call via the same Postgres connection used in `global.setup.ts`, not UI-based).
+2. Use that helper in `beforeEach` for `bookmarks.spec.ts`, `cross-page-navigation.spec.ts`, and `core-app-pages.spec.ts`.
+3. Then reassess whether `core-app-pages.spec.ts` should be split — its broad scope makes it harder to diagnose which step caused a failure, but it is not the direct cause of bookmark flakes.
 
 ---
 
@@ -205,3 +259,4 @@ If bookmark flakes recur after these mitigations, the next step should be:
 | 2026-03-06 | Corrected root-cause analysis | The first draft mixed valid causes with weaker hypotheses |
 | 2026-03-06 | Confirmed live flake on CI run `22782151850` | The helper still missed the bookmarks error state after the first mitigation pass |
 | 2026-03-06 | Implemented branch-level mitigations | Harden helper behavior before escalating to heavier per-test reset work |
+| 2026-03-06 | Full four-axis audit (setup, specs, server-side, CI) | Confirmed all 5 verified causes hold up; ruled out optimistic-UI race, Next.js caching, Neon cold start, hydration timeout, and rate limiting; added cross-spec mutation map and CI retry masking context |
