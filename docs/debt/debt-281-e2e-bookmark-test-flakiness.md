@@ -126,13 +126,14 @@ That remains a secondary hardening opportunity, not the primary fix.
 1. opens the bookmarks page
 2. waits for one of those stable states
 3. returns immediately if already populated
-4. retries when the page renders its error state
+4. retries when the page renders its error state, with a short backoff between attempts
 5. only falls back to bookmark creation if the page is actually empty
 
 ### 2. Increased helper wait budgets where the old values were indefensible
 
 - Quick Practice button probes: **500ms → 2,000ms**
 - Bookmarks page state resolution: **1,000ms → 10,000ms**
+- When Quick Practice never reaches a stable `bookmark` / `remove` / `exhausted` state within those budgets, the helper now fails explicitly instead of blindly clicking `Next`
 
 ### 3. Removed locator reuse across navigations
 
@@ -156,7 +157,12 @@ That let us stop using bookmark creation as a side effect just to land on a ques
 - populated state detection
 - empty state detection
 - error state detection
+- bookmark state detection
+- already-bookmarked state detection
 - exhausted Quick Practice detection
+- null / timeout question-state detection
+- Quick Practice fallback from unanswered → incorrect
+- bookmarks-page retry behavior
 - descriptive failure when no stable bookmarks-page state appears
 
 ---
