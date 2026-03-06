@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-05
+**Last Updated:** 2026-03-06
 
 ---
 
@@ -28,7 +28,6 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | ID | Title | Status | Related Spec |
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
-| [BS-042](./bs-042-contrast-consistency-and-wcag-compliance-audit.md) | Contrast Consistency and WCAG Compliance Audit | Active | [DEBT-279](../debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
 | [BS-043](./bs-043-question-flow-typography-and-feedback-visual-unification.md) | Question Flow Typography and Feedback Visual Unification — text size mismatch and badge treatment divergence between choice buttons and feedback cards | Active | — |
 | [BS-044](./bs-044-dark-mode-border-weight-tiering.md) | Dark Mode Border Weight Tiering — uniform `dark:border-foreground/40` is WCAG compliant but aesthetically heavy; explore tiered treatment by element role | Active | [DEBT-279](../debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
 
@@ -40,6 +39,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 | ID | Title | Outcome |
 |----|-------|---------|
+| [BS-042](../_archive/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md) | Contrast Consistency and WCAG Compliance Audit | Resolved by [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) (PR #174). All 9 baseline violations addressed: V1-V3, V5-V9 resolved; V4 deferred (low impact). Residual aesthetic tiering tracked in [BS-044](./bs-044-dark-mode-border-weight-tiering.md). |
 | [BS-041](../_archive/brainstorming/bs-041-feedback-display-content-vs-code-separation.md) | Feedback Display — Content vs Code Separation (3 problems: redundant choice text, clinical pearl spacing, section visual hierarchy) | Part B (P3 visual hierarchy) resolved by [DEBT-276](../_archive/debt/debt-276-feedback-section-card-containment.md) (PR #172). Part A (P1, P2) content-layer fixes remain tracked in [DEBT-275](../debt/debt-275-bs033-residual-open-items.md) (C2, C3). |
 | [BS-033](../_archive/brainstorming/bs-033-question-display-formatting-and-feedback-ux.md) | Question Display Formatting and Feedback UX — 22 Problems across question display and feedback rendering | All 22 component-layer fixes complete (BUG-152–159, PRs #141–#143). Residual content-layer and design items extracted to [DEBT-275](../debt/debt-275-bs033-residual-open-items.md). |
 | [BS-040](../_archive/brainstorming/bs-040-incorrect-answer-feedback-flow-redesign.md) | Incorrect Answer Feedback Flow Redesign — section ordering is identical for correct/incorrect, burying the user's mistake explanation | Promoted to [DEBT-274](../_archive/debt/debt-274-incorrect-answer-feedback-flow-reorder.md). Implemented in PR #171. |

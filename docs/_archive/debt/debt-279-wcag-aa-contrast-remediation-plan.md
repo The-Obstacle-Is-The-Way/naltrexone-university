@@ -1,10 +1,12 @@
 # DEBT-279: WCAG AA Contrast Remediation Plan (BS-042)
 
-**Status:** Active  
-**Priority:** P1  
-**Date:** 2026-03-05  
-**Owner:** Frontend  
-**Related:** [BS-042](../brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md), [Contrast Policy](../frontend/contrast-policy.md), [Pattern Registry](../frontend/pattern-registry.md), [DEBT-278](./debt-278-verdict-badge-solid-pill-styling.md)
+**Status:** Resolved
+**Priority:** P1
+**Date:** 2026-03-05
+**Resolved:** 2026-03-06
+**PR:** [#174](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/174)
+**Owner:** Frontend
+**Related:** [BS-042](../brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md), [Contrast Policy](../../frontend/contrast-policy.md), [Pattern Registry](../../frontend/pattern-registry.md), [DEBT-278](../../debt/debt-278-verdict-badge-solid-pill-styling.md)
 
 ---
 
@@ -193,13 +195,13 @@ Implement in small PRs to reduce regression risk:
 
 ## PR #174 Implementation Findings
 
-PR #174 (`debt-279/wcag-aa-contrast-remediation` → `main`) implemented delivery slices 1-3 but introduced a visual regression and left gaps. Findings documented here to inform the fix commit.
+PR #174 (`debt-279/wcag-aa-contrast-remediation` → `main`) implemented delivery slices 1-5 plus verification. Early commits introduced a fill hierarchy regression that was caught and fixed within the same PR.
 
-### Finding 1: Choice button fill hierarchy destroyed (REGRESSION)
+### Finding 1: Choice button fill hierarchy destroyed (REGRESSION — FIXED)
 
-**Severity:** High (UX regression — all choice states look identical in dark mode)
+**Severity:** High (was UX regression — all choice states looked identical in dark mode)
 
-The agent applied `dark:bg-foreground/40` uniformly to both the base state (line 33) and the selected state (line 42) of `choice-button.tsx`. In dark mode, every choice button — unselected, hovered, and selected — renders as the same `#6a6a6a` medium gray block. The user cannot distinguish which choice is selected or being hovered.
+The initial implementation applied `dark:bg-foreground/40` uniformly to both the base state and the selected state of `choice-button.tsx`. **Fixed:** Stepped fills now implemented: `dark:bg-foreground/8` (base) → `dark:hover:bg-foreground/15` (hover) → `dark:bg-foreground/20` (selected).
 
 **Pre-DEBT-279 state (working):**
 | State | Background | Result |

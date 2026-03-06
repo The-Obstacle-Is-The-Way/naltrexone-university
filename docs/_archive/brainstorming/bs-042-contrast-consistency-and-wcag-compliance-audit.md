@@ -2,11 +2,13 @@
 
 **Created:** 2026-03-05
 **Triggered by:** Visual review of choice button separation, verdict badge contrast (DEBT-278), and cross-surface inconsistency observations.
-**Post-fix update:** 2026-03-05 (DEBT-279 implementation pass 1)
+**Post-fix update:** 2026-03-06 (DEBT-279 final)
+**Status:** Archived — resolved by [DEBT-279](../debt/debt-279-wcag-aa-contrast-remediation-plan.md) ([PR #174](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/174))
+**Residual:** Aesthetic border weight tiering tracked in [BS-044](../../brainstorming/bs-044-dark-mode-border-weight-tiering.md)
 
-This document now contains both:
+This document contains both:
 - pre-remediation baseline findings (captured first on 2026-03-05), and
-- post-remediation verification measurements after the DEBT-279 implementation pass.
+- post-remediation verification measurements after the DEBT-279 implementation.
 
 ---
 
@@ -249,8 +251,8 @@ These are the concrete problems to resolve, roughly priority-ordered:
 - Dark text token raised: `--muted-foreground` `45%` -> `51.5%` (`app/globals.css`)
 - Dark warning text token raised: `--warning-foreground` `25 96% 10%` -> `38 92% 40%` (`app/globals.css`)
 - Removed inherited dimming on wrong-unselected choices: `opacity-50` removed; wrong-unselected content now keeps `text-foreground` for AA legibility (`components/question/choice-button.tsx`)
-- Choice boundaries moved to explicit dark-mode boundary tokens (`dark:border-foreground/40`, `dark:hover:border-foreground/70`) (`components/question/choice-button.tsx`), but the current fill hierarchy is still regressed because base and selected both use `dark:bg-foreground/40` and hover has no distinct dark fill delta.
-- Feedback/callout work landed only partially: success/destructive cards and the clinical pearl accent were strengthened, but neutral wrong-answer cards and the reference separator still lack dark-mode boundary overrides (`components/question/feedback.tsx`, `components/markdown/Markdown.tsx`).
+- Choice boundaries moved to explicit dark-mode boundary tokens (`dark:border-foreground/40`, `dark:hover:border-foreground/70`) with stepped fills (`dark:bg-foreground/8` base → `dark:hover:bg-foreground/15` hover → `dark:bg-foreground/20` selected) (`components/question/choice-button.tsx`).
+- Feedback/callout borders strengthened: success (`border-success/60`), destructive (`border-destructive`), neutral cards (`dark:border-foreground/40`), clinical pearl accent (`border-foreground/40`) (`components/question/feedback.tsx`, `components/markdown/Markdown.tsx`).
 - Row/divider boundary parity applied to dashboard/history/bookmarks/session breakdown (`app/(app)/app/dashboard/page.tsx`, `app/(app)/app/history/components/history-sessions-tab.tsx`, `app/(app)/app/bookmarks/page.tsx`, `app/(app)/app/shared/components/session-breakdown-list.tsx`)
 - Shared primitive boundary updates applied (`components/ui/button.tsx`, `components/ui/input.tsx`, `components/ui/filter-chip.tsx`, `components/ui/tab-switch-styles.ts`, `components/error-card.tsx`, `components/ui/notification-provider.tsx`)
 - Practice starter filter row boundaries updated (`app/(app)/app/practice/components/practice-session-starter.tsx`)
@@ -273,23 +275,23 @@ All values below are recomputed from current token/class math after the DEBT-279
 
 Rounding caveat: `text-muted-foreground` on `bg-muted` is mathematically just over the threshold using exact HSL token values (~4.51:1), but browser-computed integer RGB output (`rgb(131,131,131)` on `rgb(28,28,28)`) lands at ~4.49:1. Treat inactive segmented-control/tab-switch text as threshold-sensitive until it has more margin than a rounding edge case.
 
-These checkpoints validate the token-level fixes that actually landed. They do **not** prove the question-flow interaction hierarchy is healthy: the current choice-button implementation still flattens base/hover/selected states into an overly similar medium-gray treatment in dark mode.
+These checkpoints validate the token-level and boundary fixes that landed in PR #174.
 
 ### Violation status after this pass
 
 | ID | Baseline problem | Post-fix status |
 |----|------------------|-----------------|
 | V1 | Choice border too faint | **Resolved** |
-| V2 | Choice base boundary too faint | **Partially resolved** — the dark border now passes 3:1, but the fill treatment is still wrong for hierarchy (`dark:bg-foreground/40` on both base and selected) |
+| V2 | Choice base boundary too faint | **Resolved** — dark border passes 3:1; stepped fills implemented (`8` base → `15` hover → `20` selected) |
 | V3 | `text-muted-foreground` below 4.5 | **Resolved** via token update to 51.5% |
-| V4 | Card border vs page too faint | **Partially unresolved** (not fully remediated in this pass) |
-| V5 | Semantic/callout borders too faint | **Partially unresolved** — success/destructive cards and clinical pearl accent improved, but neutral feedback cards/reference separator remain under-remediated |
-| V6 | Hover affordance imperceptible | **Partially unresolved** — remediated rows/buttons gained stronger dark borders, but choice buttons still lack a distinct dark hover fill |
+| V4 | Card border vs page too faint | **Deferred** — card edges identified by content/elevation; low UX impact |
+| V5 | Semantic/callout borders too faint | **Resolved** — success (`border-success/60`), destructive (`border-destructive`), neutral (`dark:border-foreground/40`), clinical pearl (`border-foreground/40`) |
+| V6 | Hover affordance imperceptible | **Resolved** — choice buttons have distinct dark hover fill (`dark:hover:bg-foreground/15`) and border (`dark:hover:border-foreground/70`) |
 | V7 | Wrong-unselected badge/text degraded by parent opacity | **Resolved** |
 | V8 | Outline/button/input borders too faint | **Resolved** for remediated outline/input/filter/tab/error/toast surfaces |
 | V9 | Warning foreground token severe fail | **Resolved** |
 
-Residual note: baseline card-edge hierarchy (`border` vs page) remains intentionally conservative, but the immediate product-level issue in the question flow is now state hierarchy drift rather than raw token contrast: choice buttons and feedback cards need a follow-up pass to align with the updated DEBT-279 findings and the Pattern Registry.
+Residual note: baseline card-edge hierarchy (`border` vs page) remains intentionally conservative (V4 deferred). All other violations are resolved. Follow-up aesthetic refinement tracked in [BS-044](../../brainstorming/bs-044-dark-mode-border-weight-tiering.md).
 
 ---
 
