@@ -8,6 +8,7 @@ import {
   selectChoiceByLabel,
   submitQuestionForOutcome,
 } from './helpers/question';
+import { resetBookmarksForE2EUser } from './helpers/reset-bookmarks-for-e2e-user';
 import { startSession } from './helpers/session';
 import { ensureSubscribed } from './helpers/subscription';
 
@@ -300,55 +301,61 @@ test.describe('review mode audit', () => {
     await expectNoChoicesChecked(page);
   });
 
-  test('bookmarks links include mode=review and open in review mode', async ({
-    page,
-  }) => {
-    await signInWithClerkPassword(page);
-    await ensureSubscribed(page);
-
-    await page.goto('/app/bookmarks', {
-      timeout: 60_000,
-      waitUntil: 'domcontentloaded',
+  test.describe('bookmark review mode', () => {
+    test.beforeEach(async () => {
+      await resetBookmarksForE2EUser();
     });
-    await expect(
-      page.getByRole('heading', { name: 'Bookmarks' }),
-    ).toBeVisible();
 
-    const reviewLinks = page.locator('a[aria-label^="Review question:"]');
-    const emptyState = page.getByText('No bookmarks yet.', { exact: true });
-    await reviewLinks.first().or(emptyState).waitFor({
-      state: 'visible',
-      timeout: 15_000,
+    test('bookmarks links include mode=review and open in review mode', async ({
+      page,
+    }) => {
+      await signInWithClerkPassword(page);
+      await ensureSubscribed(page);
+
+      await page.goto('/app/bookmarks', {
+        timeout: 60_000,
+        waitUntil: 'domcontentloaded',
+      });
+      await expect(
+        page.getByRole('heading', { name: 'Bookmarks' }),
+      ).toBeVisible();
+
+      const reviewLinks = page.locator('a[aria-label^="Review question:"]');
+      const emptyState = page.getByText('No bookmarks yet.', { exact: true });
+      await reviewLinks.first().or(emptyState).waitFor({
+        state: 'visible',
+        timeout: 15_000,
+      });
+      const hasNoBookmarks = await emptyState.isVisible().catch(() => false);
+      expect(
+        hasNoBookmarks,
+        '[E2E_BASELINE_MISSING] Expected at least one bookmark for review-mode audit.',
+      ).toBe(false);
+
+      const count = await reviewLinks.count();
+      expect(count).toBeGreaterThan(0);
+      for (let i = 0; i < count; i++) {
+        await expect(reviewLinks.nth(i)).toHaveAttribute('href', /mode=review/);
+        await expect(reviewLinks.nth(i)).toHaveAttribute(
+          'href',
+          /from=bookmarks/,
+        );
+      }
+
+      const targetReviewLink = reviewLinks.first();
+      await expect(targetReviewLink).toBeVisible({ timeout: 15_000 });
+      await targetReviewLink.click();
+
+      await expect(page).toHaveURL(/\/app\/questions\//, { timeout: 15_000 });
+      await expect(page).toHaveURL(/from=bookmarks/);
+      await expect(page).toHaveURL(/mode=review/);
+      await expect(page.getByText(/Loading question/i)).toBeHidden({
+        timeout: 15_000,
+      });
+      await expect(
+        page.getByText('Reviewing a bookmarked question.', { exact: true }),
+      ).toBeVisible();
     });
-    const hasNoBookmarks = await emptyState.isVisible().catch(() => false);
-    expect(
-      hasNoBookmarks,
-      '[E2E_BASELINE_MISSING] Expected at least one bookmark for review-mode audit.',
-    ).toBe(false);
-
-    const count = await reviewLinks.count();
-    expect(count).toBeGreaterThan(0);
-    for (let i = 0; i < count; i++) {
-      await expect(reviewLinks.nth(i)).toHaveAttribute('href', /mode=review/);
-      await expect(reviewLinks.nth(i)).toHaveAttribute(
-        'href',
-        /from=bookmarks/,
-      );
-    }
-
-    const targetReviewLink = reviewLinks.first();
-    await expect(targetReviewLink).toBeVisible({ timeout: 15_000 });
-    await targetReviewLink.click();
-
-    await expect(page).toHaveURL(/\/app\/questions\//, { timeout: 15_000 });
-    await expect(page).toHaveURL(/from=bookmarks/);
-    await expect(page).toHaveURL(/mode=review/);
-    await expect(page.getByText(/Loading question/i)).toBeHidden({
-      timeout: 15_000,
-    });
-    await expect(
-      page.getByText('Reviewing a bookmarked question.', { exact: true }),
-    ).toBeVisible();
   });
 
   test('post-submit feedback component renders correctly', async ({ page }) => {

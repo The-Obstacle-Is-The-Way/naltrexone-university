@@ -8,6 +8,7 @@ import {
   assertQuestionSlugExists,
   submitQuestionForOutcome,
 } from './helpers/question';
+import { resetBookmarksForE2EUser } from './helpers/reset-bookmarks-for-e2e-user';
 import { ensureSubscribed } from './helpers/subscription';
 
 // Seeded by content/questions/placeholder/placeholder-01-naltrexone-mechanism.mdx
@@ -17,6 +18,9 @@ test.describe('core app pages', () => {
   // Authenticated E2E flows include Clerk sign-in and seeded subscription setup; allow CI headroom.
   test.setTimeout(120_000);
   test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
+  test.beforeEach(async () => {
+    await resetBookmarksForE2EUser();
+  });
 
   test('subscribed user can navigate dashboard, billing, bookmarks, and history', async ({
     page,
