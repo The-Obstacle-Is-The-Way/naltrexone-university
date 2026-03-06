@@ -105,8 +105,12 @@ describe('ChoiceButton', () => {
       throw new Error('Expected wrapper label to exist.');
     }
 
-    expect(wrapperLabel.getAttribute('class')).toContain('cursor-not-allowed');
-    expect(wrapperLabel.getAttribute('class')).not.toContain('opacity-50');
+    const wrapperClassTokens = getClassTokens(
+      wrapperLabel.getAttribute('class') ?? '',
+    );
+
+    expect(wrapperClassTokens.has('cursor-not-allowed')).toBe(true);
+    expect(wrapperClassTokens.has('opacity-50')).toBe(false);
   });
 
   it('applies opacity-50 when disabled without correctness', () => {
@@ -130,8 +134,12 @@ describe('ChoiceButton', () => {
       throw new Error('Expected wrapper label to exist.');
     }
 
-    expect(wrapperLabel.getAttribute('class')).toContain('opacity-50');
-    expect(wrapperLabel.getAttribute('class')).toContain('cursor-not-allowed');
+    const wrapperClassTokens = getClassTokens(
+      wrapperLabel.getAttribute('class') ?? '',
+    );
+
+    expect(wrapperClassTokens.has('opacity-50')).toBe(true);
+    expect(wrapperClassTokens.has('cursor-not-allowed')).toBe(true);
   });
 
   it('uses stronger dark-mode boundary tokens for unselected choices', () => {
@@ -183,10 +191,12 @@ describe('ChoiceButton', () => {
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const wrapperLabel = doc.querySelector('label');
-    const wrapperClass = wrapperLabel?.getAttribute('class') ?? '';
+    const wrapperClassTokens = getClassTokens(
+      wrapperLabel?.getAttribute('class') ?? '',
+    );
 
     expect(wrapperLabel).not.toBeNull();
-    expect(wrapperClass).toContain('dark:hover:bg-foreground/15');
+    expect(wrapperClassTokens.has('dark:hover:bg-foreground/15')).toBe(true);
   });
 
   it('keeps wrong-unselected labels readable without parent opacity dimming', () => {
@@ -211,13 +221,16 @@ describe('ChoiceButton', () => {
 
     expect(wrapperLabel).not.toBeNull();
     expect(choiceText).not.toBeUndefined();
-    expect(wrapperLabel?.getAttribute('class')).not.toContain('opacity-50');
-    expect(choiceText?.parentElement?.getAttribute('class')).toContain(
-      'text-foreground',
+    const wrapperClassTokens = getClassTokens(
+      wrapperLabel?.getAttribute('class') ?? '',
     );
-    expect(choiceText?.parentElement?.getAttribute('class')).not.toContain(
-      'text-muted-foreground',
+    const choiceTextClassTokens = getClassTokens(
+      choiceText?.parentElement?.getAttribute('class') ?? '',
     );
+
+    expect(wrapperClassTokens.has('opacity-50')).toBe(false);
+    expect(choiceTextClassTokens.has('text-foreground')).toBe(true);
+    expect(choiceTextClassTokens.has('text-muted-foreground')).toBe(false);
   });
 
   it('uses text-success (not text-success-foreground) for correct state', () => {
@@ -236,10 +249,12 @@ describe('ChoiceButton', () => {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const input = doc.querySelector('input[type="radio"]');
     const wrapperLabel = input?.closest('label');
-    const className = wrapperLabel?.getAttribute('class') ?? '';
+    const classTokens = getClassTokens(
+      wrapperLabel?.getAttribute('class') ?? '',
+    );
 
-    expect(className).toContain('text-success');
-    expect(className).not.toContain('text-success-foreground');
+    expect(classTokens.has('text-success')).toBe(true);
+    expect(classTokens.has('text-success-foreground')).toBe(false);
   });
 
   it('applies background tint when selected pre-submission', () => {
@@ -255,14 +270,14 @@ describe('ChoiceButton', () => {
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const wrapperLabel = doc.querySelector('label');
-    const wrapperClassTokens = (wrapperLabel?.getAttribute('class') ?? '')
-      .split(/\s+/)
-      .filter(Boolean);
+    const wrapperClassTokens = getClassTokens(
+      wrapperLabel?.getAttribute('class') ?? '',
+    );
 
-    expect(wrapperClassTokens).toContain('bg-muted/40');
-    expect(wrapperClassTokens).toContain('border-ring');
-    expect(wrapperClassTokens).toContain('dark:bg-foreground/20');
-    expect(wrapperClassTokens).toContain('dark:border-foreground/70');
+    expect(wrapperClassTokens.has('bg-muted/40')).toBe(true);
+    expect(wrapperClassTokens.has('border-ring')).toBe(true);
+    expect(wrapperClassTokens.has('dark:bg-foreground/20')).toBe(true);
+    expect(wrapperClassTokens.has('dark:border-foreground/70')).toBe(true);
   });
 
   it('applies base background tint when unselected', () => {
@@ -278,14 +293,14 @@ describe('ChoiceButton', () => {
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const wrapperLabel = doc.querySelector('label');
-    const wrapperClassTokens = (wrapperLabel?.getAttribute('class') ?? '')
-      .split(/\s+/)
-      .filter(Boolean);
+    const wrapperClassTokens = getClassTokens(
+      wrapperLabel?.getAttribute('class') ?? '',
+    );
 
-    expect(wrapperClassTokens).toContain('bg-muted/20');
-    expect(wrapperClassTokens).toContain('dark:bg-foreground/8');
-    expect(wrapperClassTokens).toContain('dark:border-foreground/40');
-    expect(wrapperClassTokens).not.toContain('bg-muted/40');
+    expect(wrapperClassTokens.has('bg-muted/20')).toBe(true);
+    expect(wrapperClassTokens.has('dark:bg-foreground/8')).toBe(true);
+    expect(wrapperClassTokens.has('dark:border-foreground/40')).toBe(true);
+    expect(wrapperClassTokens.has('bg-muted/40')).toBe(false);
   });
 
   it('does not apply selected tint when correctness is set', () => {
@@ -304,8 +319,12 @@ describe('ChoiceButton', () => {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const wrapperLabel = doc.querySelector('label');
 
-    expect(wrapperLabel?.getAttribute('class')).toContain('bg-success/10');
-    expect(wrapperLabel?.getAttribute('class')).not.toContain('bg-muted/40');
+    const wrapperClassTokens = getClassTokens(
+      wrapperLabel?.getAttribute('class') ?? '',
+    );
+
+    expect(wrapperClassTokens.has('bg-success/10')).toBe(true);
+    expect(wrapperClassTokens.has('bg-muted/40')).toBe(false);
   });
 
   it('excludes dark border/bg overrides when verdict is set (prevents cascade masking)', () => {
@@ -339,8 +358,12 @@ describe('ChoiceButton', () => {
     );
     const correctLabel = correctDoc.querySelector('label');
     const correctBadge = correctDoc.querySelector('.rounded-full');
-    const correctLabelClass = correctLabel?.getAttribute('class') ?? '';
-    const correctBadgeClass = correctBadge?.getAttribute('class') ?? '';
+    const correctLabelTokens = getClassTokens(
+      correctLabel?.getAttribute('class') ?? '',
+    );
+    const correctBadgeTokens = getClassTokens(
+      correctBadge?.getAttribute('class') ?? '',
+    );
 
     const incorrectDoc = new DOMParser().parseFromString(
       incorrectHtml,
@@ -348,28 +371,32 @@ describe('ChoiceButton', () => {
     );
     const incorrectLabel = incorrectDoc.querySelector('label');
     const incorrectBadge = incorrectDoc.querySelector('.rounded-full');
-    const incorrectLabelClass = incorrectLabel?.getAttribute('class') ?? '';
-    const incorrectBadgeClass = incorrectBadge?.getAttribute('class') ?? '';
+    const incorrectLabelTokens = getClassTokens(
+      incorrectLabel?.getAttribute('class') ?? '',
+    );
+    const incorrectBadgeTokens = getClassTokens(
+      incorrectBadge?.getAttribute('class') ?? '',
+    );
 
     // Correct verdict: semantic success colors must not be masked by dark overrides
-    expect(correctLabelClass).toContain('border-success');
-    expect(correctLabelClass).not.toContain('dark:border-foreground/40');
-    expect(correctLabelClass).not.toContain('dark:bg-foreground/8');
-    expect(correctLabelClass).not.toContain('dark:border-foreground/70');
-    expect(correctLabelClass).not.toContain('dark:bg-foreground/20');
-    expect(correctBadgeClass).toContain('border-success');
-    expect(correctBadgeClass).not.toContain('dark:border-foreground/60');
-    expect(correctBadgeClass).not.toContain('dark:bg-foreground/20');
+    expect(correctLabelTokens.has('border-success')).toBe(true);
+    expect(correctLabelTokens.has('dark:border-foreground/40')).toBe(false);
+    expect(correctLabelTokens.has('dark:bg-foreground/8')).toBe(false);
+    expect(correctLabelTokens.has('dark:border-foreground/70')).toBe(false);
+    expect(correctLabelTokens.has('dark:bg-foreground/20')).toBe(false);
+    expect(correctBadgeTokens.has('border-success')).toBe(true);
+    expect(correctBadgeTokens.has('dark:border-foreground/60')).toBe(false);
+    expect(correctBadgeTokens.has('dark:bg-foreground/20')).toBe(false);
 
     // Incorrect verdict: semantic destructive colors must not be masked
-    expect(incorrectLabelClass).toContain('border-destructive');
-    expect(incorrectLabelClass).not.toContain('dark:border-foreground/40');
-    expect(incorrectLabelClass).not.toContain('dark:bg-foreground/8');
-    expect(incorrectLabelClass).not.toContain('dark:border-foreground/70');
-    expect(incorrectLabelClass).not.toContain('dark:bg-foreground/20');
-    expect(incorrectBadgeClass).toContain('border-destructive');
-    expect(incorrectBadgeClass).not.toContain('dark:border-foreground/60');
-    expect(incorrectBadgeClass).not.toContain('dark:bg-foreground/20');
+    expect(incorrectLabelTokens.has('border-destructive')).toBe(true);
+    expect(incorrectLabelTokens.has('dark:border-foreground/40')).toBe(false);
+    expect(incorrectLabelTokens.has('dark:bg-foreground/8')).toBe(false);
+    expect(incorrectLabelTokens.has('dark:border-foreground/70')).toBe(false);
+    expect(incorrectLabelTokens.has('dark:bg-foreground/20')).toBe(false);
+    expect(incorrectBadgeTokens.has('border-destructive')).toBe(true);
+    expect(incorrectBadgeTokens.has('dark:border-foreground/60')).toBe(false);
+    expect(incorrectBadgeTokens.has('dark:bg-foreground/20')).toBe(false);
   });
 
   it('sets radio input value equal to label', () => {

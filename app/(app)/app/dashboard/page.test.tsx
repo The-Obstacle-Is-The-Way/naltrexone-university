@@ -437,26 +437,24 @@ describe('app/(app)/app/dashboard', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const interactiveRows = Array.from(doc.querySelectorAll('a')).filter(
-      (element) =>
-        getClassTokens(element.getAttribute('class') ?? '').has('rounded-xl'),
+    const sessionRow = doc.querySelector(
+      `a[href="${toQuestionRoute('q-correct', {
+        from: 'dashboard',
+        mode: 'review',
+        sessionId: 'session_1',
+      })}"]`,
     );
-    const sessionRow = interactiveRows.find((element) =>
-      element.textContent?.includes('15/20 correct'),
+    const availableActivityRow = doc.querySelector(
+      `a[href="${toQuestionRoute('q-correct', {
+        from: 'dashboard',
+        mode: 'review',
+        attemptId: 'attempt_1',
+      })}"]`,
     );
-    const availableActivityRow = interactiveRows.find((element) =>
-      element.textContent?.includes('Stem for correct'),
+    const unavailableLabel = Array.from(doc.querySelectorAll('div')).find(
+      (element) => element.textContent === '[Question no longer available]',
     );
-    const unavailableActivityCard = Array.from(
-      doc.querySelectorAll('div'),
-    ).find((element) => {
-      const classTokens = getClassTokens(element.getAttribute('class') ?? '');
-      return (
-        classTokens.has('rounded-xl') &&
-        classTokens.has('border-border/60') &&
-        element.textContent?.includes('[Question no longer available]')
-      );
-    });
+    const unavailableActivityCard = unavailableLabel?.parentElement;
     const sessionRowTokens = getClassTokens(
       sessionRow?.getAttribute('class') ?? '',
     );
@@ -470,6 +468,10 @@ describe('app/(app)/app/dashboard', () => {
     expect(sessionRow).toBeDefined();
     expect(availableActivityRow).toBeDefined();
     expect(unavailableActivityCard).toBeDefined();
+    expect(sessionRowTokens.has('rounded-xl')).toBe(true);
+    expect(availableActivityRowTokens.has('rounded-xl')).toBe(true);
+    expect(unavailableActivityCardTokens.has('rounded-xl')).toBe(true);
+    expect(unavailableActivityCardTokens.has('border-border/60')).toBe(true);
     expect(sessionRowTokens.has('dark:border-foreground/40')).toBe(true);
     expect(sessionRowTokens.has('dark:hover:border-foreground/70')).toBe(true);
     expect(availableActivityRowTokens.has('dark:border-foreground/40')).toBe(

@@ -415,19 +415,18 @@ describe('HistorySessionsTab', () => {
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const panel = doc.getElementById('breakdown-session-1');
+    const panelClassTokens = getClassTokens(panel?.getAttribute('class') ?? '');
 
     expect(panel).not.toBeNull();
     expect(panel?.getAttribute('role')).toBe('region');
     expect(panel?.getAttribute('aria-label')).toBe('Question breakdown');
-    expect(panel?.getAttribute('class') ?? '').toContain('mt-3');
-    expect(panel?.getAttribute('class') ?? '').toContain('pt-3');
-    expect(panel?.getAttribute('class') ?? '').toContain('border-t');
-    expect(panel?.getAttribute('class') ?? '').toContain('border-border/30');
-    expect(panel?.getAttribute('class') ?? '').toContain(
-      'dark:border-foreground/40',
-    );
-    expect(panel?.getAttribute('class') ?? '').not.toContain('bg-background');
-    expect(panel?.getAttribute('class') ?? '').not.toContain('rounded-lg');
+    expect(panelClassTokens.has('mt-3')).toBe(true);
+    expect(panelClassTokens.has('pt-3')).toBe(true);
+    expect(panelClassTokens.has('border-t')).toBe(true);
+    expect(panelClassTokens.has('border-border/30')).toBe(true);
+    expect(panelClassTokens.has('dark:border-foreground/40')).toBe(true);
+    expect(panelClassTokens.has('bg-background')).toBe(false);
+    expect(panelClassTokens.has('rounded-lg')).toBe(false);
   });
 
   it('does not render a redundant Review session button inside breakdown content', () => {
