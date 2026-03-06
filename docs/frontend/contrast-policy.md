@@ -35,7 +35,7 @@ Notes:
 
 | Element | Justification | Decided in |
 |---------|---------------|------------|
-| Shared tab-switch container (`tabSwitchContainerClasses`) | Active pill (`bg-primary`), text labels, `bg-muted` surface elevation, and grouped layout identify the control. The container border falls back to `border-border` (~1.13:1 vs `bg-muted` in dark mode) and is not required for identification. | [DEBT-280](../debt/debt-280-choice-button-dark-mode-surface-refinement.md) |
+| Shared tab-switch container (`tabSwitchContainerClasses`) | Active pill (`bg-primary`), text labels, `bg-muted` surface elevation, and grouped layout identify the control. The container border falls back to `border-border` (~1.13:1 vs `bg-muted` in dark mode) and is not required for identification. | [DEBT-280](../_archive/debt/debt-280-choice-button-dark-mode-surface-refinement.md) |
 
 ---
 

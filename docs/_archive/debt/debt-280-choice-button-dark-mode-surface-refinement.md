@@ -2,7 +2,8 @@
 
 **Priority:** P2
 **Created:** 2026-03-06
-**Source:** [BS-045](../brainstorming/bs-045-choice-button-dark-mode-fill-and-border-refinement.md), [BS-044](../brainstorming/bs-044-dark-mode-border-weight-tiering.md)
+**Source:** [BS-045](../brainstorming/bs-045-choice-button-dark-mode-fill-and-border-refinement.md), [BS-044](../../brainstorming/bs-044-dark-mode-border-weight-tiering.md)
+**Resolved:** 2026-03-06 — [PR #175](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/175)
 **Scope:** Remove the resting gray fill from choice buttons, widen hover/selected state steps, and remove the heavy shared tab-switch dark border override — all while maintaining WCAG AA compliance.
 
 ---
