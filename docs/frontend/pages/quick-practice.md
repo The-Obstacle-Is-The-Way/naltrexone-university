@@ -216,12 +216,18 @@ Keep WCAG compliance. The selected state gets an additional ring to clearly diff
 
 ---
 
-## Open Questions
+## Open Questions (Resolved)
 
-1. **Is the choice button border a "required boundary" under SC 1.4.11?** If the letter badges (A/B/C/D), text labels, and fieldset layout are sufficient to identify the components, the border could be decorative — allowing it to drop below 3:1 for aesthetic softness.
+1. **Is the choice button border a "required boundary" under SC 1.4.11?** Yes — the border helps communicate the clickable area and is kept at `/40` (~3.46:1). Dropping below 3:1 is not justified for choice buttons. Resolved in [DEBT-280](../../debt/debt-280-choice-button-dark-mode-surface-refinement.md) Approach A.
 
-2. **Should the fill hierarchy be widened or removed at rest?** The current 8→15→20 steps are perceptually narrow. Removing the rest fill (0→12→20 or 0→15→25) would create a clearer state progression.
+2. **Should the fill hierarchy be widened or removed at rest?** Removed at rest. New progression: 0 → 8 → 15 (gaps of 8 and 7 — both perceptible). Resolved in [DEBT-280](../../debt/debt-280-choice-button-dark-mode-surface-refinement.md).
 
-3. **Should the segmented control border get its own treatment?** It's a different component with different interaction semantics — tying it to the same `foreground/40` as choice buttons may be unnecessary.
+3. **Should the segmented control border get its own treatment?** Yes — the `dark:border-foreground/40` override is removed from `tabSwitchContainerClasses`. The container border is classified as decorative (active pill provides identification). Falls back to `border-border`. Documented in [contrast-policy.md](../contrast-policy.md) §2. Resolved in [DEBT-280](../../debt/debt-280-choice-button-dark-mode-surface-refinement.md).
 
-4. **What did the page look like before DEBT-279?** The pre-remediation state had no dark fill overrides and used the default `border-border` (`#262626`). That was sleeker but failed WCAG. Is there a middle ground?
+4. **What did the page look like before DEBT-279?** No dark fill overrides, default `border-border` (`#262626`). DEBT-280 restores the transparent fill at rest while keeping the WCAG-compliant `/40` border — a middle ground between pre-DEBT-279 aesthetics and compliance.
+
+---
+
+## Scope Note
+
+This audit covers the Quick Practice question-answering page only. The Practice Starter page (`/app/practice`) has its own segmented controls and filter sections (`dark:border-foreground/40` on filter chip containers and individual chips). Those are tracked under [BS-044](../../brainstorming/bs-044-dark-mode-border-weight-tiering.md) and will be audited separately as part of the page-by-page dark mode review.
