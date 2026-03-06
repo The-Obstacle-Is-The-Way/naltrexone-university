@@ -5,6 +5,24 @@
 **Theme:** Dark mode only (light mode not audited here)
 **Source files:** `quick-practice-client.tsx`, `practice-view.tsx`, `question-card.tsx`, `choice-button.tsx`, `segmented-control.tsx`, `tab-switch-styles.ts`, `card.tsx`
 
+**Status:** Historical audit plus current-state note. The element-by-element findings below for choice buttons and the segmented control document the pre-DEBT-280 state that motivated the refinement. Current live tokens after DEBT-280 are summarized in the next section.
+
+---
+
+## Current State After DEBT-280
+
+### Choice Buttons
+
+- Rest (dark, unselected, no verdict): `dark:border-foreground/40` with no dark fill override
+- Hover (dark, unselected): `dark:hover:border-foreground/55 dark:hover:bg-foreground/8`
+- Selected (dark, neutral): `dark:border-foreground/70 dark:bg-foreground/15`
+- Letter badge remains unchanged: `dark:border-foreground/60 dark:bg-foreground/20`
+
+### Shared Tab-Switch Container
+
+- Container classes: `inline-flex rounded-lg border border-border bg-muted p-1`
+- The shared `dark:border-foreground/40` override was removed from `tabSwitchContainerClasses`
+
 ---
 
 ## Page Structure
@@ -36,7 +54,7 @@ From `app/globals.css` `.dark {}`:
 
 ---
 
-## Element-by-Element Audit
+## Element-by-Element Audit (Pre-DEBT-280 Historical Snapshot)
 
 ### 1. Question Card Container
 
@@ -53,7 +71,7 @@ From `app/globals.css` `.dark {}`:
 
 ---
 
-### 2. Choice Buttons (Rest State)
+### 2. Choice Buttons (Rest State, Pre-DEBT-280)
 
 **Source:** `components/question/choice-button.tsx:30-33`
 **Classes (dark, unselected, no verdict):** `dark:border-foreground/40 dark:bg-foreground/8`
@@ -73,7 +91,7 @@ From `app/globals.css` `.dark {}`:
 
 ---
 
-### 3. Choice Buttons (Hover State)
+### 3. Choice Buttons (Hover State, Pre-DEBT-280)
 
 **Source:** `choice-button.tsx:35-37`
 **Classes (dark, unselected, hover):** `dark:hover:border-foreground/70 dark:hover:bg-foreground/15`
@@ -91,7 +109,7 @@ From `app/globals.css` `.dark {}`:
 
 ---
 
-### 4. Choice Buttons (Selected State)
+### 4. Choice Buttons (Selected State, Pre-DEBT-280)
 
 **Source:** `choice-button.tsx:40-42`
 **Classes (dark, selected):** `dark:border-foreground/70 dark:bg-foreground/20`
@@ -109,7 +127,7 @@ From `app/globals.css` `.dark {}`:
 
 ---
 
-### 5. Segmented Control
+### 5. Segmented Control (Pre-DEBT-280)
 
 **Source:** `components/ui/tab-switch-styles.ts`
 **Container classes:** `inline-flex rounded-lg border border-border bg-muted p-1 dark:border-foreground/40`
@@ -137,7 +155,7 @@ From `app/globals.css` `.dark {}`:
 
 ---
 
-## Summary of Concerns
+## Summary of Concerns (Pre-DEBT-280)
 
 | # | Element | Issue | Severity |
 |---|---------|-------|----------|
@@ -154,7 +172,7 @@ From `app/globals.css` `.dark {}`:
 
 ---
 
-## Potential Options to Explore
+## Potential Options Explored (Historical)
 
 ### Option A: Remove fill, lighten border
 

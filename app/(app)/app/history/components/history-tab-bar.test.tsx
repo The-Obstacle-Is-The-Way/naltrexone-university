@@ -78,6 +78,7 @@ describe('HistoryTabBar', () => {
     expect(containerClass).toContain(
       'inline-flex rounded-lg border border-border bg-muted p-1',
     );
+    expect(containerClass).not.toContain('dark:border-foreground/40');
     expect(containerClass).not.toContain('rounded-full');
     expect(containerClass).not.toContain('bg-muted/20');
     expect(containerClass).not.toContain('border-border/60');

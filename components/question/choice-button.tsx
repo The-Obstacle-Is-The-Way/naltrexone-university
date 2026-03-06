@@ -30,16 +30,16 @@ export function ChoiceButton({
     <label
       className={cn(
         'block w-full rounded-xl border border-border/60 bg-muted/20 p-4 text-left shadow-sm transition-colors focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]',
-        !hasVerdict && 'dark:border-foreground/40 dark:bg-foreground/8',
+        !hasVerdict && 'dark:border-foreground/40',
         !disabled && 'cursor-pointer hover:bg-muted/40',
         !disabled &&
           !selected &&
-          'hover:border-muted-foreground/30 dark:hover:border-foreground/70 dark:hover:bg-foreground/15',
+          'hover:border-muted-foreground/30 dark:hover:border-foreground/55 dark:hover:bg-foreground/8',
         disabled && 'cursor-not-allowed',
         disabled && !correctness && 'opacity-50',
         selected &&
           correctness === null &&
-          'border-ring bg-muted/40 dark:border-foreground/70 dark:bg-foreground/20',
+          'border-ring bg-muted/40 dark:border-foreground/70 dark:bg-foreground/15',
         correctness === 'correct' &&
           'border-success bg-success/10 text-success',
         correctness === 'incorrect' &&

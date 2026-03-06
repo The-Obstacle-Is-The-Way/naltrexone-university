@@ -142,7 +142,7 @@ describe('ChoiceButton', () => {
     expect(wrapperClassTokens.has('cursor-not-allowed')).toBe(true);
   });
 
-  it('uses stronger dark-mode boundary tokens for unselected choices', () => {
+  it('uses the DEBT-280 dark-mode boundary tokens for unselected choices', () => {
     const html = renderToStaticMarkup(
       <ChoiceButton
         name="choices"
@@ -167,10 +167,14 @@ describe('ChoiceButton', () => {
     expect(wrapperClassTokens.has('border-border/60')).toBe(true);
     expect(wrapperClassTokens.has('bg-muted/20')).toBe(true);
     expect(wrapperClassTokens.has('dark:border-foreground/40')).toBe(true);
-    expect(wrapperClassTokens.has('dark:bg-foreground/8')).toBe(true);
+    expect(wrapperClassTokens.has('dark:bg-foreground/8')).toBe(false);
     expect(wrapperClassTokens.has('hover:bg-muted/40')).toBe(true);
-    expect(wrapperClassTokens.has('dark:hover:border-foreground/70')).toBe(
+    expect(wrapperClassTokens.has('dark:hover:border-foreground/55')).toBe(
       true,
+    );
+    expect(wrapperClassTokens.has('dark:hover:bg-foreground/8')).toBe(true);
+    expect(wrapperClassTokens.has('dark:hover:border-foreground/70')).toBe(
+      false,
     );
     expect(badgeClassTokens.has('bg-muted')).toBe(true);
     expect(badgeClassTokens.has('dark:border-foreground/60')).toBe(true);
@@ -196,7 +200,14 @@ describe('ChoiceButton', () => {
     );
 
     expect(wrapperLabel).not.toBeNull();
-    expect(wrapperClassTokens.has('dark:hover:bg-foreground/15')).toBe(true);
+    expect(wrapperClassTokens.has('dark:hover:bg-foreground/8')).toBe(true);
+    expect(wrapperClassTokens.has('dark:hover:border-foreground/55')).toBe(
+      true,
+    );
+    expect(wrapperClassTokens.has('dark:hover:bg-foreground/15')).toBe(false);
+    expect(wrapperClassTokens.has('dark:hover:border-foreground/70')).toBe(
+      false,
+    );
   });
 
   it('keeps wrong-unselected labels readable without parent opacity dimming', () => {
@@ -276,11 +287,16 @@ describe('ChoiceButton', () => {
 
     expect(wrapperClassTokens.has('bg-muted/40')).toBe(true);
     expect(wrapperClassTokens.has('border-ring')).toBe(true);
-    expect(wrapperClassTokens.has('dark:bg-foreground/20')).toBe(true);
+    expect(wrapperClassTokens.has('dark:bg-foreground/15')).toBe(true);
     expect(wrapperClassTokens.has('dark:border-foreground/70')).toBe(true);
+    expect(wrapperClassTokens.has('dark:bg-foreground/20')).toBe(false);
+    expect(wrapperClassTokens.has('dark:hover:bg-foreground/8')).toBe(false);
+    expect(wrapperClassTokens.has('dark:hover:border-foreground/55')).toBe(
+      false,
+    );
   });
 
-  it('applies base background tint when unselected', () => {
+  it('keeps the unselected dark-mode rest state flush with the card', () => {
     const html = renderToStaticMarkup(
       <ChoiceButton
         name="choices"
@@ -298,8 +314,8 @@ describe('ChoiceButton', () => {
     );
 
     expect(wrapperClassTokens.has('bg-muted/20')).toBe(true);
-    expect(wrapperClassTokens.has('dark:bg-foreground/8')).toBe(true);
     expect(wrapperClassTokens.has('dark:border-foreground/40')).toBe(true);
+    expect(wrapperClassTokens.has('dark:bg-foreground/8')).toBe(false);
     expect(wrapperClassTokens.has('bg-muted/40')).toBe(false);
   });
 
@@ -382,6 +398,11 @@ describe('ChoiceButton', () => {
     expect(correctLabelTokens.has('border-success')).toBe(true);
     expect(correctLabelTokens.has('dark:border-foreground/40')).toBe(false);
     expect(correctLabelTokens.has('dark:bg-foreground/8')).toBe(false);
+    expect(correctLabelTokens.has('dark:bg-foreground/15')).toBe(false);
+    expect(correctLabelTokens.has('dark:hover:bg-foreground/8')).toBe(false);
+    expect(correctLabelTokens.has('dark:hover:border-foreground/55')).toBe(
+      false,
+    );
     expect(correctLabelTokens.has('dark:border-foreground/70')).toBe(false);
     expect(correctLabelTokens.has('dark:bg-foreground/20')).toBe(false);
     expect(correctBadgeTokens.has('border-success')).toBe(true);
@@ -392,6 +413,11 @@ describe('ChoiceButton', () => {
     expect(incorrectLabelTokens.has('border-destructive')).toBe(true);
     expect(incorrectLabelTokens.has('dark:border-foreground/40')).toBe(false);
     expect(incorrectLabelTokens.has('dark:bg-foreground/8')).toBe(false);
+    expect(incorrectLabelTokens.has('dark:bg-foreground/15')).toBe(false);
+    expect(incorrectLabelTokens.has('dark:hover:bg-foreground/8')).toBe(false);
+    expect(incorrectLabelTokens.has('dark:hover:border-foreground/55')).toBe(
+      false,
+    );
     expect(incorrectLabelTokens.has('dark:border-foreground/70')).toBe(false);
     expect(incorrectLabelTokens.has('dark:bg-foreground/20')).toBe(false);
     expect(incorrectBadgeTokens.has('border-destructive')).toBe(true);

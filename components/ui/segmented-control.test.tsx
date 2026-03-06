@@ -154,6 +154,7 @@ describe('SegmentedControl', () => {
     expect(html).toContain(
       'inline-flex rounded-lg border border-border bg-muted p-1',
     );
+    expect(html).not.toContain('dark:border-foreground/40');
     expect(html).not.toContain('items-center');
     expect(html).not.toContain('gap-1');
   });

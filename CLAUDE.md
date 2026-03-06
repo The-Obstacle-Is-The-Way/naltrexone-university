@@ -65,3 +65,7 @@ pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test
 - **Never delete uncommitted work** — `git stash` and ask
 - **CodeRabbit review required** before every merge — wait for `coderabbitai[bot]`
 - **Non-interactive only** — `git --no-pager`, `git commit -m "..."`, never `-s` with pnpm
+
+### Browser Visual Verification
+
+All `/app/*` pages require Clerk auth. When using Chrome MCP tools, the user's browser is typically already authenticated — use `tabs_context_mcp` to check existing tabs. For other browser tools, see `docs/dev/agent-browser.md` for auth approaches. **Never skip visual verification because of an auth redirect — authenticate first.**

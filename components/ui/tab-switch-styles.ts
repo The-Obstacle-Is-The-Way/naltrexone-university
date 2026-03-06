@@ -8,7 +8,7 @@
 
 /** Outer container wrapping all tab items. */
 export const tabSwitchContainerClasses =
-  'inline-flex rounded-lg border border-border bg-muted p-1 dark:border-foreground/40';
+  'inline-flex rounded-lg border border-border bg-muted p-1';
 
 /** Base classes for each tab item (active or inactive). */
 export const tabSwitchItemBaseClasses =
