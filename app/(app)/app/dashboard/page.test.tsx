@@ -451,10 +451,11 @@ describe('app/(app)/app/dashboard', () => {
         attemptId: 'attempt_1',
       })}"]`,
     );
-    const unavailableLabel = Array.from(doc.querySelectorAll('div')).find(
-      (element) => element.textContent === '[Question no longer available]',
+    const unavailableActivityCard = Array.from(
+      doc.querySelectorAll('li > div'),
+    ).find((element) =>
+      element.textContent?.includes('[Question no longer available]'),
     );
-    const unavailableActivityCard = unavailableLabel?.parentElement;
     const sessionRowTokens = getClassTokens(
       sessionRow?.getAttribute('class') ?? '',
     );

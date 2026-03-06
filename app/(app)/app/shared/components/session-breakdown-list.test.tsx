@@ -43,6 +43,10 @@ beforeAll(async () => {
   ({ SessionBreakdownList } = await import('./session-breakdown-list'));
 });
 
+function getClassTokens(className: string): Set<string> {
+  return new Set(className.split(/\s+/).filter(Boolean));
+}
+
 async function renderList(
   rows: PracticeSessionReviewRow[],
   props?: { from?: QuestionOrigin; sessionId?: string; historyHref?: string },
@@ -124,7 +128,10 @@ describe('SessionBreakdownList', () => {
     if (!incorrectLabel) {
       throw new Error('Expected Incorrect label');
     }
-    expect(incorrectLabel.getAttribute('class')).toContain('text-destructive');
+    const incorrectLabelTokens = getClassTokens(
+      incorrectLabel.getAttribute('class') ?? '',
+    );
+    expect(incorrectLabelTokens.has('text-destructive')).toBe(true);
 
     const correctLabel = Array.from(doc.querySelectorAll('span')).find(
       (el) => el.textContent === 'Correct',
@@ -132,7 +139,10 @@ describe('SessionBreakdownList', () => {
     if (!correctLabel) {
       throw new Error('Expected Correct label');
     }
-    expect(correctLabel.getAttribute('class')).toContain('text-success');
+    const correctLabelTokens = getClassTokens(
+      correctLabel.getAttribute('class') ?? '',
+    );
+    expect(correctLabelTokens.has('text-success')).toBe(true);
 
     const unansweredLabel = Array.from(doc.querySelectorAll('span')).find(
       (el) => el.textContent === 'Unanswered',
@@ -140,12 +150,11 @@ describe('SessionBreakdownList', () => {
     if (!unansweredLabel) {
       throw new Error('Expected Unanswered label');
     }
-    expect(unansweredLabel.getAttribute('class')).toContain(
-      'text-muted-foreground',
+    const unansweredLabelTokens = getClassTokens(
+      unansweredLabel.getAttribute('class') ?? '',
     );
-    expect(unansweredLabel.getAttribute('class')).not.toContain(
-      'text-muted-foreground/60',
-    );
+    expect(unansweredLabelTokens.has('text-muted-foreground')).toBe(true);
+    expect(unansweredLabelTokens.has('text-muted-foreground/60')).toBe(false);
   });
 
   it('supports configurable origin query parameters for question routes', async () => {
@@ -173,10 +182,10 @@ describe('SessionBreakdownList', () => {
     const list = doc.querySelector('ul');
 
     expect(list).not.toBeNull();
-    expect(list?.getAttribute('class') ?? '').toContain('divide-y');
-    expect(list?.getAttribute('class') ?? '').toContain('divide-border/20');
-    expect(list?.getAttribute('class') ?? '').toContain(
-      'dark:divide-foreground/40',
-    );
+    const listTokens = getClassTokens(list?.getAttribute('class') ?? '');
+
+    expect(listTokens.has('divide-y')).toBe(true);
+    expect(listTokens.has('divide-border/20')).toBe(true);
+    expect(listTokens.has('dark:divide-foreground/40')).toBe(true);
   });
 });

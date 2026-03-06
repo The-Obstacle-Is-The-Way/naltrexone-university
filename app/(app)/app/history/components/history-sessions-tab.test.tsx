@@ -87,9 +87,11 @@ function getClassTokens(className: string): Set<string> {
   return new Set(className.split(/\s+/).filter(Boolean));
 }
 
-function findSessionRowBySummary(doc: Document, summaryText: string) {
-  return Array.from(doc.querySelectorAll('li')).find((item) =>
-    item.textContent?.includes(summaryText),
+function findSessionRowById(doc: Document, sessionId: string) {
+  return (
+    doc
+      .querySelector(`button[aria-controls="breakdown-${sessionId}"]`)
+      ?.closest('li') ?? undefined
   );
 }
 
@@ -281,7 +283,7 @@ describe('HistorySessionsTab', () => {
 
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const row = findSessionRowBySummary(doc, '8/10 correct (80%)');
+    const row = findSessionRowById(doc, 'session-1');
     const rowClassTokens = getClassTokens(row?.getAttribute('class') ?? '');
 
     expect(row).toBeDefined();
@@ -322,7 +324,7 @@ describe('HistorySessionsTab', () => {
 
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const row = findSessionRowBySummary(doc, '8/10 correct (80%)');
+    const row = findSessionRowById(doc, 'session-1');
     const rowClassTokens = getClassTokens(row?.getAttribute('class') ?? '');
 
     expect(row).toBeDefined();
