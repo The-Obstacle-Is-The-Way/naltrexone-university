@@ -215,7 +215,8 @@ The clinical pearl treatment (`border-l-2 border-foreground/40 pl-3` with upperc
 
 This should be the **next dark-mode UI debt** after DEBT-280 merges. The badge unification alone (item 1) would be a high-value, low-risk change that could ship independently.
 
-**Suggested DEBT ticket:** DEBT-281 — Feedback card visual unification with choice buttons
+**Suggested future DEBT ticket:** Feedback card visual unification with choice buttons.
+Assign the next available DEBT ID when this brainstorming item is promoted.
 
 ---
 
