@@ -8,6 +8,10 @@ beforeAll(async () => {
   ({ FilterChip } = await import('@/components/ui/filter-chip'));
 });
 
+function getClassTokens(className: string): Set<string> {
+  return new Set(className.split(/\s+/).filter(Boolean));
+}
+
 describe('FilterChip', () => {
   it('renders with the provided label', () => {
     const html = renderToStaticMarkup(
@@ -39,12 +43,16 @@ describe('FilterChip', () => {
     const html = renderToStaticMarkup(
       <FilterChip label="Alcohol" selected={false} onClick={() => undefined} />,
     );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const button = doc.querySelector('button');
+    const classTokens = getClassTokens(button?.getAttribute('class') ?? '');
 
     expect(html).toContain('aria-pressed="false"');
-    expect(html).not.toContain('bg-primary');
-    expect(html).toContain('hover:bg-muted/50');
-    expect(html).toContain('dark:border-foreground/40');
-    expect(html).not.toContain('hover:bg-accent');
+    expect(button).not.toBeNull();
+    expect(classTokens.has('bg-primary')).toBe(false);
+    expect(classTokens.has('hover:bg-muted/50')).toBe(true);
+    expect(classTokens.has('dark:border-foreground/40')).toBe(true);
+    expect(classTokens.has('hover:bg-accent')).toBe(false);
   });
 
   it('is disabled when disabled prop is true', () => {

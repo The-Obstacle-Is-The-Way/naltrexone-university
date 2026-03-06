@@ -11,6 +11,10 @@ beforeAll(async () => {
   ));
 });
 
+function getClassTokens(className: string): Set<string> {
+  return new Set(className.split(/\s+/).filter(Boolean));
+}
+
 describe('NotificationProvider', () => {
   it('renders a shared toast region wrapper', () => {
     const html = renderToStaticMarkup(
@@ -24,13 +28,18 @@ describe('NotificationProvider', () => {
   });
 
   it('uses stronger semantic border tokens for success and error toasts', () => {
-    expect(getToastClasses('success')).toContain('border-success/60');
-    expect(getToastClasses('error')).toContain('border-destructive');
-    expect(getToastClasses('error')).not.toContain('border-destructive/40');
+    const successTokens = getClassTokens(getToastClasses('success'));
+    const errorTokens = getClassTokens(getToastClasses('error'));
+
+    expect(successTokens.has('border-success/60')).toBe(true);
+    expect(errorTokens.has('border-destructive')).toBe(true);
+    expect(errorTokens.has('border-destructive/40')).toBe(false);
   });
 
   it('uses dark-mode border token for info toasts', () => {
-    expect(getToastClasses('info')).toContain('border-border');
-    expect(getToastClasses('info')).toContain('dark:border-foreground/40');
+    const infoTokens = getClassTokens(getToastClasses('info'));
+
+    expect(infoTokens.has('border-border')).toBe(true);
+    expect(infoTokens.has('dark:border-foreground/40')).toBe(true);
   });
 });

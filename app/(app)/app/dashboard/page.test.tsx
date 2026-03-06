@@ -466,9 +466,9 @@ describe('app/(app)/app/dashboard', () => {
       unavailableActivityCard?.getAttribute('class') ?? '',
     );
 
-    expect(sessionRow).toBeDefined();
-    expect(availableActivityRow).toBeDefined();
-    expect(unavailableActivityCard).toBeDefined();
+    expect(sessionRow).not.toBeNull();
+    expect(availableActivityRow).not.toBeNull();
+    expect(unavailableActivityCard).not.toBeNull();
     expect(sessionRowTokens.has('rounded-xl')).toBe(true);
     expect(availableActivityRowTokens.has('rounded-xl')).toBe(true);
     expect(unavailableActivityCardTokens.has('rounded-xl')).toBe(true);

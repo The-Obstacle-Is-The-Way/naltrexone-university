@@ -43,9 +43,9 @@ describe('ErrorCard', () => {
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const card = doc.querySelector('[data-error-card="true"]');
-    const className = card?.getAttribute('class') ?? '';
+    const classTokens = getClassTokens(card?.getAttribute('class') ?? '');
 
-    expect(className).toContain('p-4');
-    expect(className).not.toContain('p-6');
+    expect(classTokens.has('p-4')).toBe(true);
+    expect(classTokens.has('p-6')).toBe(false);
   });
 });
