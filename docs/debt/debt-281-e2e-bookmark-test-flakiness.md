@@ -2,16 +2,16 @@
 
 **Priority:** P2
 **Created:** 2026-03-06
-**Status:** Active, partially mitigated on the PR branch
+**Status:** Active, partially mitigated in codebase (landed via PR #175)
 **Discovered during:** [PR #175](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/175) investigation
 
 ---
 
 ## Current Status
 
-As of **March 6, 2026**, PR #175 has shown **both passing and failing CI runs**. The latest failed run (`22782151850`) confirmed the issue was real, not speculative: the first mitigation pass still missed an error-state branch on the bookmarks page.
+As of **March 6, 2026**, PR #175 has been **merged**, but this debt remains active because only a partial mitigation set landed; the root fix is still deferred. During that PR, CI showed **both passing and failing runs**. The failed run (`22782151850`) confirmed the issue was real, not speculative: an earlier mitigation pass still missed an error-state branch on the bookmarks page.
 
-This document now reflects what was **verified from code and CI evidence**, not the earlier broader hypothesis list.
+This document now reflects what was **verified from merged code and CI evidence**, not the earlier broader hypothesis list.
 
 ---
 
@@ -74,17 +74,18 @@ The Playwright suite uses:
 
 That reset seeds a deterministic bookmark for the E2E user at suite start (one bookmark on `placeholder-01`, plus one correct attempt on `placeholder-01` and one incorrect attempt on `placeholder-02`). But it does **not** reset state before each spec, so later tests can remove or alter bookmarks created by earlier ones. The baseline exists once per suite run, not once per test.
 
-**Cross-spec mutation map (five specs touch bookmarks):**
+**Cross-spec bookmark dependency map (four specs):**
 
 | Spec | Helper used | Mutates bookmarks? | Net effect |
 |------|-------------|--------------------|----|
-| `subscribe-and-practice.spec.ts` | `openQuickPracticeQuestion()` | No | Safe |
 | `core-app-pages.spec.ts` | `ensureBookmarkExistsOnBookmarksPage()` | Creates if missing | +1 if empty |
 | `bookmarks.spec.ts` | `ensureBookmarkExistsOnBookmarksPage()` | Creates if missing, **then removes one** | Can leave empty |
 | `cross-page-navigation.spec.ts` | `ensureBookmarkExistsOnBookmarksPage()` | Creates if missing | +1 if empty |
-| `review-mode-audit.spec.ts` | None (navigates directly) | No | Handles both empty and populated |
+| `review-mode-audit.spec.ts` | None (navigates directly to `/app/bookmarks`) | No | Requires at least one existing bookmark; fails with `[E2E_BASELINE_MISSING]` if empty |
 
-The key interaction: if `bookmarks.spec.ts` runs before `cross-page-navigation.spec.ts` and removes the only bookmark, the latter must recreate one via Quick Practice. This adds 30–60 seconds of latency and exercises the full bookmark creation path under CI conditions.
+Related but non-bookmark-dependent: `subscribe-and-practice.spec.ts` uses `openQuickPracticeQuestion()`, but it neither reads nor mutates bookmark state.
+
+The key interaction: if `bookmarks.spec.ts` runs before `cross-page-navigation.spec.ts` or `core-app-pages.spec.ts` and removes the only bookmark, those specs must recreate one via Quick Practice. If `review-mode-audit.spec.ts` runs after the baseline has been drained, it does not recreate a bookmark; it fails with its explicit baseline-missing expectation instead.
 
 ### V4: Locator reuse and unnecessary bookmark mutation were real code smells
 
@@ -129,7 +130,7 @@ A full four-axis investigation (global setup, spec consumption, server-side data
 
 ### RO1: Optimistic UI race between bookmark creation and bookmarks page verification
 
-**Ruled out.** `toggleBookmarkForQuestion()` in `practice-page-logic.ts` awaits the server response (`res = await toggleBookmarkFn(...)`) before calling `setBookmarkedQuestionIds()`. The “Remove bookmark” button text at `practice-view.tsx:331` is derived from `isBookmarked`, which only flips after the DB INSERT commits and the server action responds. When the E2E helper sees “Remove bookmark” and navigates to `/app/bookmarks`, the write is already durable.
+**Ruled out.** `toggleBookmarkForQuestion()` in `practice-page-logic.ts` awaits the server response (`res = await toggleBookmarkFn(...)`) before calling `setBookmarkedQuestionIds()`. The “Remove bookmark” button text in `practice-view.tsx` is derived from `isBookmarked`, which only flips after the DB INSERT commits and the server action responds. When the E2E helper sees “Remove bookmark” and navigates to `/app/bookmarks`, the write is already durable.
 
 This also means the retry logic in `openBookmarksPageStateWithRetry()` does not need to retry on `empty` state after creation — an `empty` result after a confirmed toggle would require a database anomaly, not a timing race.
 
@@ -139,7 +140,7 @@ This also means the retry logic in `openBookmarksPageStateWithRetry()` does not 
 
 ### RO3: Neon cold start latency in CI
 
-**Not applicable.** CI uses a local PostgreSQL 16 service container (configured in `.github/workflows/ci.yml`), not Neon. Neon cold start latency (400–750ms) only affects deployed Vercel previews, not CI test runs.
+**Not applicable.** CI uses a local PostgreSQL 16 service container (configured in `.github/workflows/ci.yml`), not Neon. Neon cold start latency only affects deployed Vercel previews, not CI test runs.
 
 ### RO4: 2-second question state timeout too short for client hydration
 
@@ -163,7 +164,7 @@ This is not a bug — retries are a reasonable CI strategy. But when investigati
 
 ---
 
-## Mitigations Implemented On This Branch
+## Mitigations Implemented In Codebase
 
 ### 1. Added explicit bookmarks-page state detection
 
@@ -221,24 +222,25 @@ That let us stop using bookmark creation as a side effect just to land on a ques
 
 ## Remaining Debt
 
-The branch mitigates the most plausible failure mechanics, but two structural issues remain:
+The codebase mitigates the most plausible failure mechanics, but three structural issues remain:
 
 1. **Per-test state isolation is still absent.**
    The suite still shares one mutable authenticated user, with reset only in `global.setup.ts`. The baseline seeds exactly: 1 practice session, 2 attempts (1 correct on `placeholder-01`, 1 incorrect on `placeholder-02`), and 1 bookmark on `placeholder-01`. All with deterministic UUIDs and timestamps. See `tests/e2e/helpers/reset-e2e-user-state.ts` for the full seed.
-2. **Bookmark-dependent flows still rely on UI fallback creation when the suite baseline has been mutated.**
-   Specifically, `bookmarks.spec.ts` can remove the baseline bookmark, forcing `cross-page-navigation.spec.ts` and `core-app-pages.spec.ts` to recreate one via Quick Practice if they run later. This adds 30–60 seconds of latency per affected spec and exercises the full creation path under CI conditions.
+2. **Bookmark-dependent specs still do not start from a scoped known bookmark baseline.**
+   `bookmarks.spec.ts` can remove the seeded bookmark. After that, `cross-page-navigation.spec.ts` and `core-app-pages.spec.ts` recreate one via Quick Practice if they run later, while `review-mode-audit.spec.ts` does not recreate a bookmark at all and instead fails with `[E2E_BASELINE_MISSING]`. The suite still depends on cross-spec ordering and mutation history.
 3. **CI retries mask transient flakes.**
    With `retries: 2` in CI, a test that fails once but passes on retry appears green. The true flake rate may be higher than CI status suggests. Check the Playwright report artifact for retry counts when investigating failures.
 
 If bookmark flakes recur after these mitigations, the escalation path is:
 
-1. Add a scoped per-test bookmark reset helper (direct DB call via the same Postgres connection used in `global.setup.ts`, not UI-based).
-2. Use that helper in `beforeEach` for `bookmarks.spec.ts`, `cross-page-navigation.spec.ts`, and `core-app-pages.spec.ts`.
+1. Add a scoped `resetBookmarksForE2EUser()` helper that directly deletes and reseeds bookmark rows for the shared E2E user using the same env/user/fixture resolution path as `tests/e2e/helpers/reset-e2e-user-state.ts`. Do not drive this through UI.
+2. Use that helper in `beforeEach` for `bookmarks.spec.ts`, `cross-page-navigation.spec.ts`, and `core-app-pages.spec.ts`, plus the bookmark-review test in `review-mode-audit.spec.ts` (or a shared hook if that spec keeps multiple bookmark-dependent cases).
 3. Then reassess whether `core-app-pages.spec.ts` should be split — its broad scope makes it harder to diagnose which step caused a failure, but it is not the direct cause of bookmark flakes.
+4. Keep the bookmarks-page error-state retry logic unless it proves unnecessary. It is still reasonable defense in depth even after state isolation lands.
 
 ---
 
-## Files Changed In This Mitigation
+## Bookmark-Related Files Changed In This Mitigation
 
 | File | Change |
 |------|--------|
@@ -246,8 +248,6 @@ If bookmark flakes recur after these mitigations, the escalation path is:
 | `tests/e2e/helpers/bookmark.test.ts` | Added regression coverage for bookmarks page state detection |
 | `tests/e2e/core-app-pages.spec.ts` | Removed early random bookmark creation; ensure bookmark state only at the bookmarks step |
 | `tests/e2e/subscribe-and-practice.spec.ts` | Stopped mutating bookmark state just to open a question |
-| `components/question/choice-button.tsx` | Removed the neutral selected-state conflict with the rest-state dark border token |
-| `components/question/choice-button.test.tsx` | Added regression assertion for the selected-state dark border contract |
 
 ---
 
@@ -258,5 +258,6 @@ If bookmark flakes recur after these mitigations, the escalation path is:
 | 2026-03-06 | Created DEBT-281 | Bookmark-related E2E failure mode needed a concrete writeup instead of hand-waving |
 | 2026-03-06 | Corrected root-cause analysis | The first draft mixed valid causes with weaker hypotheses |
 | 2026-03-06 | Confirmed live flake on CI run `22782151850` | The helper still missed the bookmarks error state after the first mitigation pass |
-| 2026-03-06 | Implemented branch-level mitigations | Harden helper behavior before escalating to heavier per-test reset work |
-| 2026-03-06 | Full four-axis audit (setup, specs, server-side, CI) | Confirmed all 5 verified causes hold up; ruled out optimistic-UI race, Next.js caching, Neon cold start, hydration timeout, and rate limiting; added cross-spec mutation map and CI retry masking context |
+| 2026-03-06 | Kept DEBT-281 open after PR #175 merged | The landed mitigations reduced flake surface area, but per-test bookmark state isolation is still deferred |
+| 2026-03-06 | Landed mitigation-layer hardening in codebase | Hardened helper behavior before escalating to heavier per-test reset work |
+| 2026-03-06 | Full four-axis audit (setup, specs, server-side, CI) | Confirmed all 5 verified causes hold up; ruled out optimistic-UI race, Next.js caching, Neon cold start, hydration timeout, and rate limiting; added cross-spec bookmark dependency map and CI retry masking context |
