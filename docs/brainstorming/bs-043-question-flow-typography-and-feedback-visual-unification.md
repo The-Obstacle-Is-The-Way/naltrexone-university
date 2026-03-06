@@ -155,9 +155,76 @@ feedback.tsx:
 
 ---
 
+## Dark-Mode Specific Observations (2026-03-06 Visual Review)
+
+After DEBT-279 and DEBT-280 landed, a dark-mode review of the Quick Practice page confirmed all of the above and surfaced additional dark-mode-specific inconsistencies:
+
+### 1. Badge treatment is the most jarring issue
+
+In the feedback cards, answer labels render as plain inline text (`A)`, `B)`, `C)`) while the choice buttons above use polished circular badges (`h-7 w-7 rounded-full border bg-muted`). On the dark background, the plain text labels look like placeholder/debug output next to the choice buttons' styled circles. This is the single highest-impact fix.
+
+**Code locations:**
+- Choice button badge: `choice-button.tsx:59-68` — `<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full ...">`
+- Feedback label: `feedback.tsx:71` / `feedback.tsx:156` / `feedback.tsx:179` — `<span className="shrink-0">{choice.displayLabel})</span>` (plain text)
+
+### 2. Background shading creates visual discontinuity
+
+The feedback panel sits inside a `<Card>` (`bg-card` = `#121212` in dark mode), while individual cards within it use different backgrounds:
+
+| Feedback sub-card | Classes | Composited dark-mode color |
+|-------------------|---------|---------------------------|
+| Correct answer | `bg-success/5` | Very faint green on `#121212` |
+| Your answer (wrong) | `bg-destructive/5` | Very faint red on `#121212` |
+| "Why wrong" cards | `bg-background/50` | `#000000` at 50% on `#121212` → darker than parent |
+| Choice buttons (pre-submit) | `bg-muted/20` | `#1C1C1C` at 20% on card |
+
+The "Why other answers are wrong" cards appear as a noticeably **different shade of black** from both the parent card and the choice buttons above. This makes the feedback section feel like a separate component from a different app.
+
+### 3. Text shrinks after submission
+
+The same answer text (e.g., "Clearance is reduced by approximately 75%...") renders at `text-base` (16px) in the choice button, then at `text-sm` (14px) in the feedback card. On dark mode, this size change is more noticeable because there's less visual chrome to distract from it.
+
+### 4. Clinical pearl callout works well
+
+The clinical pearl treatment (`border-l-2 border-foreground/40 pl-3` with uppercase label) actually looks good in dark mode. This should be preserved as-is during any unification work.
+
+---
+
+## Recommended Approach (Updated 2026-03-06)
+
+**Option B (Keep text-base + promote feedback to match)** is the strongest path:
+
+1. **Badge unification** (highest impact, smallest diff): Extract a shared `AnswerBadge` component or shared class constant for the circular `h-7 w-7 rounded-full` treatment. Use it in both `choice-button.tsx` and `feedback.tsx`. This alone fixes the most jarring inconsistency.
+
+2. **Typography alignment**: Bump feedback answer text from `text-sm` → `text-base` to match pre-submission. Keep explanation text at `text-sm` (it's subordinate content).
+
+3. **Layout alignment**: Change feedback card inner layout from `gap-1` → `gap-3` and `p-3` → `p-4` to match choice button spacing.
+
+4. **Background harmonization**: Consider changing "Why wrong" cards from `bg-background/50` to `bg-muted/20` (matching choice button base) so they feel like the same design system.
+
+5. **Keep clinical pearl as-is**: The `border-l-2` callout treatment is good.
+
+**What NOT to change:**
+- Verdict colors (`border-success`, `border-destructive`, their fills) — these are correct and WCAG-compliant
+- The overall Card wrapper structure
+- Reference section typography (`text-xs`) — this is intentionally subordinate
+
+---
+
+## Implementation Priority
+
+This should be the **next dark-mode UI debt** after DEBT-280 merges. The badge unification alone (item 1) would be a high-value, low-risk change that could ship independently.
+
+**Suggested future DEBT ticket:** Feedback card visual unification with choice buttons.
+Assign the next available DEBT ID when this brainstorming item is promoted.
+
+---
+
 ## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-03-05 | Created BS-043 | Visual review showed typography and badge treatment diverged after BUG-155/157 |
 | 2026-03-05 | Defer until after DEBT-279 contrast fix | Contrast compliance is P1; typography unification is P2 |
+| 2026-03-06 | Dark-mode visual review confirmed all issues | Post-DEBT-280 review; badge treatment is highest-impact fix |
+| 2026-03-06 | Recommend Option B (promote feedback to match) | Keeps `text-base` reading experience, unifies badge + layout + spacing |

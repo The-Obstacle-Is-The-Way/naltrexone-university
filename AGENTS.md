@@ -319,6 +319,19 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 - Any non-default `test.setTimeout(...)` must include a concise in-file rationale comment
 - Approved timeout bands: `120_000` (standard authenticated flows), `180_000` (multi-page audits), `300_000` (documented temporary outlier only)
 
+### Browser-Based Visual Verification (Auth Required)
+
+All app pages under `/app/*` are protected by Clerk auth. If you need to visually verify UI changes in a running browser (e.g., `pnpm dev` at `http://localhost:3000`), you **must** authenticate first. Do NOT just navigate to a protected URL and give up when it redirects to sign-in.
+
+**Full instructions:** `docs/dev/agent-browser.md` — covers 4 approaches (state save, persistent profile, Playwright storageState, direct Clerk sign-in). The recommended approach for agents:
+
+1. Extract credentials: `E2E_CLERK_USER_USERNAME` and `E2E_CLERK_USER_PASSWORD` from `.env.local`
+2. Sign in via the Clerk sign-in page or Playwright storageState script
+3. Save auth state for reuse across multiple page visits
+4. Then navigate to protected pages
+
+**If using Claude Code with Chrome MCP tools**, the user's browser is typically already authenticated — use `tabs_context_mcp` to check existing tabs before creating new ones.
+
 ### Running Integration Tests Locally
 
 Integration tests require a local Postgres database. Use Docker:
@@ -569,6 +582,12 @@ gh pr view <PR_NUMBER> --comments
 - `docs/debt/index.md` — Technical debt register (active + resolved)
 - `docs/bugs/index.md` — Bug report register
 - `docs/brainstorming/index.md` — UX audits and design explorations
+- `docs/frontend/standards.md` — Canonical frontend standards (components, tokens, accessibility, dark mode)
+- `docs/frontend/contrast-policy.md` — WCAG AA contrast targets and rules
+- `docs/frontend/pattern-registry.md` — Every visual pattern: hover, border, surface, token scales
+- `docs/frontend/design-principles.md` — Layout composition, navigation zones, action bar conventions
+- `docs/frontend/pages/` — Per-page dark mode UI audits
+- `docs/dev/agent-browser.md` — Browser automation and Clerk auth for visual verification
 
 ---
 

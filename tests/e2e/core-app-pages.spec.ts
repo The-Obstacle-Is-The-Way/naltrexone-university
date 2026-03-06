@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { ensureBookmarkedQuestion } from './helpers/bookmark';
+import { ensureBookmarkExistsOnBookmarksPage } from './helpers/bookmark';
 import {
   hasClerkCredentials,
   signInWithClerkPassword,
@@ -24,8 +24,6 @@ test.describe('core app pages', () => {
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);
     await assertQuestionSlugExists(page, QUESTION_SLUG);
-
-    await ensureBookmarkedQuestion(page);
 
     // Create a missed question attempt via a deterministic seeded slug.
     await submitQuestionForOutcome(page, QUESTION_SLUG, 'Incorrect');
@@ -64,13 +62,10 @@ test.describe('core app pages', () => {
     ).toBeVisible();
 
     // Bookmarks view shows the bookmarked list.
-    await page.goto('/app/bookmarks');
-    await expect(
-      page.getByRole('heading', { name: 'Bookmarks' }),
-    ).toBeVisible();
+    await ensureBookmarkExistsOnBookmarksPage(page);
     await expect(
       page.getByRole('button', { name: 'Remove' }).first(),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15_000 });
 
     // Billing shows the manage button for an active subscription.
     await page.goto('/app/billing');

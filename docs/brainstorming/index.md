@@ -29,9 +29,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
 | [BS-043](./bs-043-question-flow-typography-and-feedback-visual-unification.md) | Question Flow Typography and Feedback Visual Unification — text size mismatch and badge treatment divergence between choice buttons and feedback cards | Active | — |
-| [BS-044](./bs-044-dark-mode-border-weight-tiering.md) | Dark Mode Border Weight Tiering — uniform `dark:border-foreground/40` is WCAG compliant but aesthetically heavy; explore tiered treatment by element role | Active | [DEBT-279](../debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
+| [BS-044](./bs-044-dark-mode-border-weight-tiering.md) | Dark Mode Border Weight Tiering — uniform `dark:border-foreground/40` is WCAG compliant but aesthetically heavy; explore tiered treatment by element role | Active | [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
 
-**Next Brainstorming ID:** BS-045
+**Next Brainstorming ID:** BS-046
 
 ---
 
@@ -39,6 +39,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 | ID | Title | Outcome |
 |----|-------|---------|
+| [BS-045](../_archive/brainstorming/bs-045-choice-button-dark-mode-fill-and-border-refinement.md) | Choice Button Dark Mode Fill and Border Refinement — gray rest fill, heavy border, indistinguishable states | Resolved by [DEBT-280](../_archive/debt/debt-280-choice-button-dark-mode-surface-refinement.md) (PR #175). Approach A implemented: rest fill removed, hover/selected steps widened, segmented control border softened. |
 | [BS-042](../_archive/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md) | Contrast Consistency and WCAG Compliance Audit | Resolved by [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) (PR #174). All 9 baseline violations addressed: V1-V3, V5-V9 resolved; V4 deferred (low impact). Residual aesthetic tiering tracked in [BS-044](./bs-044-dark-mode-border-weight-tiering.md). |
 | [BS-041](../_archive/brainstorming/bs-041-feedback-display-content-vs-code-separation.md) | Feedback Display — Content vs Code Separation (3 problems: redundant choice text, clinical pearl spacing, section visual hierarchy) | Part B (P3 visual hierarchy) resolved by [DEBT-276](../_archive/debt/debt-276-feedback-section-card-containment.md) (PR #172). Part A (P1, P2) content-layer fixes remain tracked in [DEBT-275](../debt/debt-275-bs033-residual-open-items.md) (C2, C3). |
 | [BS-033](../_archive/brainstorming/bs-033-question-display-formatting-and-feedback-ux.md) | Question Display Formatting and Feedback UX — 22 Problems across question display and feedback rendering | All 22 component-layer fixes complete (BUG-152–159, PRs #141–#143). Residual content-layer and design items extracted to [DEBT-275](../debt/debt-275-bs033-residual-open-items.md). |

@@ -1,6 +1,6 @@
 # Contrast Policy (WCAG AA)
 
-**Last Updated:** 2026-03-05
+**Last Updated:** 2026-03-06
 **Status:** Canonical
 
 This document defines the app's contrast targets and the engineering rules that follow from them.
@@ -30,6 +30,12 @@ Notes:
 **Required boundary (SC 1.4.11):** A visual cue that a user must perceive to identify a UI component (for example: a button, choice, row link, badge) or its state (hover, selected, correct/incorrect, focus).
 
 **Decorative separator:** A cue that is not required for understanding or operation because the UI remains clear without it (for example, an extra hairline divider when spacing and layout already communicate grouping).
+
+### Classified decorative borders
+
+| Element | Justification | Decided in |
+|---------|---------------|------------|
+| Shared tab-switch container (`tabSwitchContainerClasses`) | Active pill (`bg-primary`), text labels, `bg-muted` surface elevation, and grouped layout identify the control. The container border falls back to `border-border` (~1.13:1 vs `bg-muted` in dark mode) and is not required for identification. | [DEBT-280](../_archive/debt/debt-280-choice-button-dark-mode-surface-refinement.md) |
 
 ---
 
