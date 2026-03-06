@@ -9,7 +9,7 @@
 
 ## Current Status
 
-As of **March 6, 2026**, the latest head of PR #175 is **green** in GitHub Actions. This debt item remains active because the bookmark-related E2E path had a credible intermittent failure mode, and the suite still shares one mutable authenticated user across specs.
+As of **March 6, 2026**, PR #175 has shown **both passing and failing CI runs**. The latest failed run (`22782151850`) confirmed the issue was real, not speculative: the first mitigation pass still missed an error-state branch on the bookmarks page.
 
 This document now reflects what was **verified from code and CI evidence**, not the earlier broader hypothesis list.
 
@@ -54,12 +54,13 @@ The immediate mitigation is larger, explicit wait budgets around the actual stat
 
 The earlier writeup overstated this point.
 
-`/app/bookmarks` is a Server Component page. `BookmarksPage` awaits `getBookmarks()` before rendering `BookmarksView`, so this is **not** a case where the heading shell renders and the bookmark list trickles in later. Once the page render lands, the state is already one of two valid outcomes:
+`/app/bookmarks` is a Server Component page. `BookmarksPage` awaits `getBookmarks()` before rendering `BookmarksView`, so this is **not** a case where the heading shell renders and the bookmark list trickles in later. Once the page render lands, the state is already one of three stable outcomes:
 
 1. **Populated**: at least one `Remove` button is present
 2. **Empty**: `No bookmarks yet.` is present
+3. **Error**: `Unable to load bookmarks.` is present
 
-The real bug was that the helper/test path assumed only the populated state mattered. The fix is to wait for either valid rendered state, then branch intentionally.
+The real bug was that the helper/test path assumed only the populated or empty states mattered. The CI failure on run `22782151850` proved the missing third branch. The fix is to wait for any stable rendered state, then branch intentionally.
 
 ### V3: Shared mutable state is real
 
@@ -84,6 +85,14 @@ More importantly, two specs were mutating bookmark state when they did not need 
 
 Those unnecessary mutations increased state drift across the shared-user suite.
 
+### V5: The Quick Practice bookmark helper had an exhausted-state bug
+
+This CodeRabbit finding was valid.
+
+If Quick Practice had already reached `No more questions found.`, the helper could still attempt one more `Next` click on the following loop iteration. That turns the failure into a locator problem instead of the intended terminal helper error.
+
+The fix is to model `exhausted` as an explicit question state and stop before the next click.
+
 ---
 
 ## What Was Not Verified
@@ -106,17 +115,19 @@ That remains a secondary hardening opportunity, not the primary fix.
 
 ### 1. Added explicit bookmarks-page state detection
 
-`tests/e2e/helpers/bookmark.ts` now exposes `waitForBookmarksPageState()` and treats `/app/bookmarks` as a two-state page:
+`tests/e2e/helpers/bookmark.ts` now exposes `waitForBookmarksPageState()` and treats `/app/bookmarks` as a three-state page:
 
 - `populated`
 - `empty`
+- `error`
 
 `ensureBookmarkExistsOnBookmarksPage()` now:
 
 1. opens the bookmarks page
-2. waits for one of those two valid states
+2. waits for one of those stable states
 3. returns immediately if already populated
-4. only falls back to bookmark creation if the page is actually empty
+4. retries when the page renders its error state
+5. only falls back to bookmark creation if the page is actually empty
 
 ### 2. Increased helper wait budgets where the old values were indefensible
 
@@ -144,7 +155,9 @@ That let us stop using bookmark creation as a side effect just to land on a ques
 
 - populated state detection
 - empty state detection
-- descriptive failure when neither valid state appears
+- error state detection
+- exhausted Quick Practice detection
+- descriptive failure when no stable bookmarks-page state appears
 
 ---
 
@@ -169,7 +182,7 @@ If bookmark flakes recur after these mitigations, the next step should be:
 
 | File | Change |
 |------|--------|
-| `tests/e2e/helpers/bookmark.ts` | Added state resolver, raised helper timeouts, removed locator reuse, added `openQuickPracticeQuestion()` |
+| `tests/e2e/helpers/bookmark.ts` | Added page/question state resolvers, raised helper timeouts, retried bookmarks error state, removed locator reuse, added `openQuickPracticeQuestion()` |
 | `tests/e2e/helpers/bookmark.test.ts` | Added regression coverage for bookmarks page state detection |
 | `tests/e2e/core-app-pages.spec.ts` | Removed early random bookmark creation; ensure bookmark state only at the bookmarks step |
 | `tests/e2e/subscribe-and-practice.spec.ts` | Stopped mutating bookmark state just to open a question |
@@ -184,4 +197,5 @@ If bookmark flakes recur after these mitigations, the next step should be:
 |------|----------|-----------|
 | 2026-03-06 | Created DEBT-281 | Bookmark-related E2E failure mode needed a concrete writeup instead of hand-waving |
 | 2026-03-06 | Corrected root-cause analysis | The first draft mixed valid causes with weaker hypotheses |
+| 2026-03-06 | Confirmed live flake on CI run `22782151850` | The helper still missed the bookmarks error state after the first mitigation pass |
 | 2026-03-06 | Implemented branch-level mitigations | Harden helper behavior before escalating to heavier per-test reset work |

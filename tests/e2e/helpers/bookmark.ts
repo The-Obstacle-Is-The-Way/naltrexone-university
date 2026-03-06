@@ -5,29 +5,20 @@ const BOOKMARKS_PAGE_URL = '/app/bookmarks';
 const QUESTION_BUTTON_VISIBILITY_TIMEOUT_MS = 2_000;
 const BOOKMARKS_PAGE_STATE_TIMEOUT_MS = 10_000;
 const PAGE_NAVIGATION_TIMEOUT_MS = 60_000;
+const BOOKMARKS_PAGE_ERROR_RETRY_COUNT = 3;
+const NEXT_QUESTION_STATE_TIMEOUT_MS = 10_000;
 
 type QuickPracticeStatus = 'unanswered' | 'incorrect';
-type BookmarksPageLike = Pick<Page, 'getByRole' | 'getByText'>;
-export type BookmarksPageState = 'populated' | 'empty';
+export type BookmarksPageLike = Pick<Page, 'getByRole' | 'getByText'>;
+export type BookmarksPageState = 'populated' | 'empty' | 'error';
+export type BookmarkableQuestionPageLike = Pick<
+  Page,
+  'getByRole' | 'getByText'
+>;
+export type BookmarkableQuestionState = 'bookmark' | 'remove' | 'exhausted';
 
 function toQuickPracticeHref(status: QuickPracticeStatus): string {
   return `${QUICK_PRACTICE_BASE}?status=${status}`;
-}
-
-async function isButtonVisible(
-  page: Page,
-  name: string | RegExp,
-  timeout: number,
-): Promise<boolean> {
-  try {
-    await page
-      .getByRole('button', { name })
-      .first()
-      .waitFor({ state: 'visible', timeout });
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 async function hasQuickPracticeQuestion(page: Page): Promise<boolean> {
@@ -80,23 +71,16 @@ export async function ensureBookmarkedQuestion(page: Page): Promise<void> {
   await openQuickPracticeQuestion(page);
 
   for (let attempt = 0; attempt < 8; attempt += 1) {
-    if (
-      await isButtonVisible(
-        page,
-        'Remove bookmark',
-        QUESTION_BUTTON_VISIBILITY_TIMEOUT_MS,
-      )
-    ) {
+    const currentState = await waitForBookmarkableQuestionState(
+      page,
+      bookmarkButtonName,
+      QUESTION_BUTTON_VISIBILITY_TIMEOUT_MS,
+    );
+    if (currentState === 'remove') {
       return;
     }
 
-    if (
-      await isButtonVisible(
-        page,
-        bookmarkButtonName,
-        QUESTION_BUTTON_VISIBILITY_TIMEOUT_MS,
-      )
-    ) {
+    if (currentState === 'bookmark') {
       await page
         .getByRole('button', { name: bookmarkButtonName })
         .first()
@@ -107,23 +91,52 @@ export async function ensureBookmarkedQuestion(page: Page): Promise<void> {
       return;
     }
 
+    if (currentState === 'exhausted') {
+      break;
+    }
+
     await page.getByRole('button', { name: 'Next' }).first().click();
-    await Promise.race([
-      page
-        .getByRole('button', { name: bookmarkButtonName })
-        .first()
-        .waitFor({ state: 'visible', timeout: 10_000 }),
-      page
-        .getByRole('button', { name: 'Remove bookmark' })
-        .first()
-        .waitFor({ state: 'visible', timeout: 10_000 }),
-      page
-        .getByText('No more questions found.', { exact: true })
-        .waitFor({ state: 'visible', timeout: 10_000 }),
-    ]).catch(() => undefined);
+    const nextState = await waitForBookmarkableQuestionState(
+      page,
+      bookmarkButtonName,
+      NEXT_QUESTION_STATE_TIMEOUT_MS,
+    );
+    if (nextState === 'remove') {
+      return;
+    }
+    if (nextState === 'exhausted') {
+      break;
+    }
   }
 
   throw new Error('Unable to find a bookmarkable question in practice flow');
+}
+
+export async function waitForBookmarkableQuestionState(
+  page: BookmarkableQuestionPageLike,
+  bookmarkButtonName: string | RegExp,
+  timeoutMs = QUESTION_BUTTON_VISIBILITY_TIMEOUT_MS,
+): Promise<BookmarkableQuestionState | null> {
+  try {
+    return await Promise.any([
+      page
+        .getByRole('button', { name: bookmarkButtonName })
+        .first()
+        .waitFor({ state: 'visible', timeout: timeoutMs })
+        .then(() => 'bookmark' as const),
+      page
+        .getByRole('button', { name: 'Remove bookmark' })
+        .first()
+        .waitFor({ state: 'visible', timeout: timeoutMs })
+        .then(() => 'remove' as const),
+      page
+        .getByText('No more questions found.', { exact: true })
+        .waitFor({ state: 'visible', timeout: timeoutMs })
+        .then(() => 'exhausted' as const),
+    ]);
+  } catch {
+    return null;
+  }
 }
 
 export async function waitForBookmarksPageState(
@@ -141,10 +154,14 @@ export async function waitForBookmarksPageState(
         .getByText('No bookmarks yet.', { exact: true })
         .waitFor({ state: 'visible', timeout: timeoutMs })
         .then(() => 'empty' as const),
+      page
+        .getByText('Unable to load bookmarks.', { exact: true })
+        .waitFor({ state: 'visible', timeout: timeoutMs })
+        .then(() => 'error' as const),
     ]);
   } catch (error) {
     throw new Error(
-      `Bookmarks page did not reach a populated or empty state within ${timeoutMs}ms.`,
+      `Bookmarks page did not reach a populated, empty, or error state within ${timeoutMs}ms.`,
       { cause: error },
     );
   }
@@ -161,19 +178,35 @@ async function openBookmarksPage(page: Page): Promise<BookmarksPageState> {
   return waitForBookmarksPageState(page, BOOKMARKS_PAGE_STATE_TIMEOUT_MS);
 }
 
+async function openBookmarksPageStateWithRetry(
+  page: Page,
+): Promise<Exclude<BookmarksPageState, 'error'>> {
+  for (
+    let attempt = 0;
+    attempt < BOOKMARKS_PAGE_ERROR_RETRY_COUNT;
+    attempt += 1
+  ) {
+    const state = await openBookmarksPage(page);
+    if (state !== 'error') {
+      return state;
+    }
+  }
+
+  throw new Error(
+    `Bookmarks page rendered its error state ${BOOKMARKS_PAGE_ERROR_RETRY_COUNT} times in a row.`,
+  );
+}
+
 export async function ensureBookmarkExistsOnBookmarksPage(
   page: Page,
 ): Promise<void> {
-  const initialState = await openBookmarksPage(page);
+  const initialState = await openBookmarksPageStateWithRetry(page);
   if (initialState === 'populated') {
     return;
   }
 
   await ensureBookmarkedQuestion(page);
-  await expect(openBookmarksPage(page)).resolves.toBe('populated');
-  await expect(
-    page.getByRole('button', { name: 'Remove' }).first(),
-  ).toBeVisible({
-    timeout: BOOKMARKS_PAGE_STATE_TIMEOUT_MS,
-  });
+  await expect(openBookmarksPageStateWithRetry(page)).resolves.toBe(
+    'populated',
+  );
 }
