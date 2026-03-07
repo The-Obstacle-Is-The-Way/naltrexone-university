@@ -29,7 +29,7 @@ function createSqlClient(options: {
 
   return Object.assign(sql, {
     tx,
-    begin: vi.fn(async (callback: (tx: typeof tx) => Promise<void>) => {
+    begin: vi.fn(async (callback: (tx: UnsafeTx) => Promise<void>) => {
       if (options.beginImplementation) {
         await options.beginImplementation(tx);
         return;
