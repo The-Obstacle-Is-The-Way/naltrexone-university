@@ -153,18 +153,21 @@ DEBT-283 resolved the previously audited 13-file / 19-occurrence supporting-copy
 
 ### Pipeline 2 (Content): Non-Compliant
 
-The content pipeline has significant violations. `feedback.tsx` renders content-tier Markdown without the correct className in 4 of 7 call sites:
+The content pipeline has significant violations. `feedback.tsx` renders content-tier Markdown without the correct className in 4 of 9 call sites:
 
 | Call Site | Expected Tier | Actual className | Status |
 |-----------|--------------|-----------------|--------|
 | `feedback.tsx:73` — correct answer text | Primary | *none* (inherits) | Non-compliant |
-| `feedback.tsx:77` — explanation | Secondary | `text-sm` | Compliant |
-| `feedback.tsx:157` — wrong choice text | Primary | *none* (inherits) | Non-compliant |
-| `feedback.tsx:181` — user answer text | Primary | *none* (inherits) | Non-compliant |
-| `feedback.tsx:212` — other wrong choice text | Primary | *none* (inherits) | Non-compliant |
-| `feedback.tsx:231` — reference | Tertiary | `text-xs` | Compliant |
-| `question-card.tsx:35` — stem | Primary | `text-base text-foreground` | Compliant |
-| `choice-button.tsx:72` — choice text | Primary | `text-base text-foreground` | Compliant |
+| `feedback.tsx:77` — explanation | Secondary | `explanationClassName` (`"mt-2 text-sm"` / `"text-sm"`) | Compliant |
+| `feedback.tsx:158` — wrong choice text | Primary | *none* (inherits) | Non-compliant |
+| `feedback.tsx:162` — wrong choice explanation | Secondary | `"mt-2 text-sm"` | Compliant |
+| `feedback.tsx:182` — user answer text | Primary | *none* (inherits) | Non-compliant |
+| `feedback.tsx:187` — user answer explanation | Secondary | `"mt-2 text-sm"` | Compliant |
+| `feedback.tsx:213` — other wrong choice text | Primary | *none* (inherits) | Non-compliant |
+| `feedback.tsx:217` — other wrong choice explanation | Secondary | `"mt-2 text-sm"` | Compliant |
+| `feedback.tsx:232` — reference | Tertiary | `"mt-1 text-xs"` | Compliant |
+| `question-card.tsx:35` — stem | Primary | `"text-base text-foreground"` | Compliant |
+| `choice-button.tsx:72` — choice text | Primary | `"text-base text-foreground"` | Compliant |
 
 Fixing these violations is tracked in [DEBT-282](../debt/debt-282-feedback-visual-unification.md) (promoted from [BS-043](../brainstorming/bs-043-question-flow-typography-and-feedback-visual-unification.md)).
 
