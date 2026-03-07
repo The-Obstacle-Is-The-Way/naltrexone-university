@@ -1,7 +1,7 @@
 # Audit Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-02
+**Last Updated:** 2026-03-07
 **Next ID:** AUDIT-012
 
 ---
@@ -14,7 +14,7 @@ Audit reports capture deep, cross-cutting evaluations of architecture, implement
 
 | ID | Title | Date | Scope | Status |
 |----|-------|------|-------|--------|
-| AUDIT-011 | [Error Observability & Defensive Coding Sweep](audit-011-error-observability-defensive-coding.md) | 2026-03-07 | Error handling, type safety, array access, concurrency | 3 bugs (BUG-199, 201, 202) + 1 debt (DEBT-286, reclassified from BUG-200) |
+| AUDIT-011 | [Error Observability & Defensive Coding Sweep](audit-011-error-observability-defensive-coding.md) | 2026-03-07 | Error handling, type safety, array access, concurrency | 2 bugs (BUG-201, BUG-202) + 1 debt (DEBT-286); BUG-199 invalidated after tracer-bullet verification |
 | AUDIT-010 | Exam Secrecy and Cross-Layer Invariant Sweep | 2026-03-02 | Exam-answer secrecy invariant enforcement across use cases, controllers, projections, retry/review | 6 bugs filed (BUG-180–185), fixes pending |
 
 ## Archived Audits

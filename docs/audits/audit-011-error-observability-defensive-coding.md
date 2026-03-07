@@ -1,84 +1,122 @@
 # AUDIT-011: Error Observability & Defensive Coding Sweep
 
 **Date:** 2026-03-07
-**Scope:** Full codebase (`src/`, `app/`) — error handling, type safety, array access, concurrency
-**Method:** 5 parallel automated agents + manual line-by-line verification
-**Axes:** Silent fallbacks, missing error handling, type safety, race conditions, dead code
+**Scope:** Primary production sweep (`src/`, `app/`) with targeted spot checks in adjacent runtime files — error handling, type safety, array access, concurrency
+**Method:** Initial multi-agent sweep plus post-commit tracer-bullet verification against the live codebase
+**Axes:** Silent fallbacks, missing error handling, type safety, defensive indexing, dead code
 
 ---
 
 ## Summary
 
-| Severity | Count | Description |
-|----------|-------|-------------|
-| **P0** | 0 | No data-loss or critical security bugs |
-| **P1** | 0 | No major functionality broken |
-| **P2** | 1 bug + 1 debt | BUG-199: Unsafe array access. DEBT-286: Client-side error reporting (reclassified from BUG-200 — systemic SPEC-016 gap, not individual bugs) |
-| **P3** | 1 | Webhook handler double-cast bypasses type safety |
-| **P4** | 1 | Redundant condition after `.find()` |
+| Outcome | Count | Description |
+|---------|-------|-------------|
+| **P2 debt** | 1 | DEBT-286: SPEC-016 still lacks a standard path for caught client-side errors to reach Sentry |
+| **P4 bugs** | 2 | BUG-201: unnecessary Clerk webhook output cast. BUG-202: redundant condition after `.find()` |
+| **Invalidated** | 1 | BUG-199: documented Stripe empty-array `TypeError` / HTTP 500 path is not reachable in current production code |
 
-**Overall:** The codebase remains well-engineered. `createAction` wrapper provides robust error handling for all server actions. No `as any`, no `@ts-ignore`, no `eslint-disable` in production code. No SQL injection, XSS, or hardcoded secrets. The issues found are defensive coding gaps (unsafe `[0]` array access) and a systemic client-side observability gap (SPEC-016 incomplete — `Sentry.captureException()` never called in app code).
+**Overall:** The codebase remains disciplined. The sweep surfaced one real systemic observability gap, one minor type-safety cleanup, and one minor clarity issue. The originally filed array-index bug was invalidated after deeper tracer-bullet verification.
 
 ---
 
-## False Positives Investigated & Discarded
+## Post-Commit Tracer-Bullet Verification
 
-| Claim | File | Why Discarded |
-|-------|------|---------------|
-| P0 race in `nextIndex` increment | `concurrency.ts:14-16` | JS is single-threaded. Read + increment execute synchronously before `await`. No preemption possible. |
-| Dashboard `Promise.all` crash | `dashboard/page.tsx:260` | `createAction` wraps all execution in try/catch and always returns `ActionResult`. Cannot throw. |
-| Practice session TOCTOU | `drizzle-practice-session-repository.ts:248` | Uses conditional `WHERE isNull(endedAt)` + re-fetch retry. Standard optimistic concurrency pattern. |
-| Stripe checkout inspection failure | `stripe-checkout-sessions.ts:149` | Intentional graceful degradation: logs warning, expires stale session, creates new one. |
-| Rate limiter race | `drizzle-rate-limiter.ts:54` | PostgreSQL `INSERT...ON CONFLICT DO UPDATE` is atomic. Count increment is safe. |
-| Idempotency key zombie race | `drizzle-idempotency-key-repository.ts:22` | Timestamp checks on `claimedAt` and `expiresAt` provide sufficient protection. |
-| Missing error handling (general) | All `src/` and `app/` | `ApplicationError` pattern used consistently. All async ops have try/catch. All server actions wrapped by `createAction`. |
+Further verification revised the original audit outcome in three important ways:
+
+1. **BUG-199 was overstated**
+   `stripe-subscription-normalizer.ts` does use `subscription.items.data[0]`, but every production caller validates `items.data` through `stripeSubscriptionSchema`, which requires `.min(1)`. The empty-array case yields `INVALID_WEBHOOK_PAYLOAD`, not `TypeError`.
+
+2. **BUG-201 is narrower than first described**
+   The Clerk webhook route has two `as unknown as` casts, but only the output cast is avoidable. The input cast is currently compensating for Clerk's too-narrow `RequestLike` type.
+
+3. **DEBT-286 needed wider horizontal coverage**
+   The systemic client-side observability gap is real, but the original inventory was incomplete. A repo-wide sweep found an additional caught-error flow in `use-practice-available-questions-count.ts`, plus several boundary/dev-only console or bare-catch sites that should remain visible but stay out of scope for this debt.
 
 ---
 
 ## Verified Findings
 
-### BUG-199: Unsafe `[0]` array access without bounds checking (P2)
+### ~~BUG-199~~ → INVALIDATED
 
-**1 crash-risk instance** (P2), 3 style-only instances (P4, already safe via downstream guards).
+The documented production failure mode was wrong.
 
-Tracer bullet verification found that 3 of the 4 original instances are protected by optional chaining, nullish coalescing, or `.filter()`. Only `stripe-subscription-normalizer.ts:55` has a real crash risk — it accesses `.current_period_end` and `.price.id` on the result of `data[0]` without any guard.
+- `src/adapters/gateways/stripe/stripe-subscription-normalizer.ts:55` still contains an unguarded `[0]`
+- `src/adapters/gateways/stripe/stripe-webhook-schemas.ts:12-21` already requires `items.data.min(1)`
+- `retrieveAndNormalizeStripeSubscription()` safe-parses before calling the normalizer
+- existing tests already verify `items: { data: [] }` becomes `INVALID_WEBHOOK_PAYLOAD`
+- `app/api/stripe/webhook/handler.ts` maps that path to HTTP `400`, not `500`
 
-- `stripe-subscription-normalizer.ts:55` — **CRASH RISK.** Accesses properties without optional chaining after `[0]`
-- `stripe-checkout-sessions.ts:133` — Safe. Guarded by `if (existingSession && existingUrl)` on line 135
-- `clerk-auth-gateway.ts:44` — Safe. Uses `[0]?.emailAddress ?? null`
-- `get-session-history.ts:58` — Safe. Followed by `.filter((id): id is string => ...)`
-
-**Full details:** [`docs/bugs/bug-199-unsafe-array-index-access.md`](../bugs/bug-199-unsafe-array-index-access.md)
+This remains a latent local hazard if a future caller bypasses validation, but it is not a live production bug today.
 
 ### ~~BUG-200~~ → DEBT-286: Client-side caught error reporting (P2) — RECLASSIFIED
 
-Originally filed as BUG-200 with 5 instances of `console.error`-only or swallowed errors. **Deeper analysis revealed a systemic root cause:** `Sentry.captureException()` is called zero times in the entire application code. Sentry is initialized and auto-captures unhandled exceptions, but the codebase properly `.catch()`-es everything — so Sentry never sees caught errors. The individual locations are symptoms, not bugs.
+This remains the major outcome from the sweep.
 
-**Reclassified as [DEBT-286](../debt/debt-286-client-side-error-reporting.md)** — extends SPEC-016 with a `reportClientError()` utility that wraps `Sentry.captureException()`, then systematically replaces all 6 ad-hoc `console.error` / bare-catch locations.
+- `Sentry.captureException()` calls in `app/` + `src/`: **0**
+- `Sentry.captureMessage()` calls in `app/` + `src/`: **0**
+- SPEC-016 still stops its acceptance criteria at Sentry initialization
+- verified client-side caught-error flows still fall back to console-only or silent handling
 
-**Why reclassification, not individual fixes:** Adding `Sentry.captureException()` to each location ad-hoc would create the same inconsistent pattern that the server-side `Logger` port was designed to prevent. The proper fix is a single utility with systematic rollout.
+**Reclassified as [DEBT-286](../debt/debt-286-client-side-error-reporting.md)** — extends SPEC-016 with a `reportClientError()` utility that wraps `Sentry.captureException()`, then systematically replaces all 7 ad-hoc `console.error` / bare-catch locations.
 
-### BUG-201: Clerk webhook double-cast bypasses type safety (P3)
+Priority rollout targets:
 
-Double `as unknown as` cast in webhook verification route bypasses TypeScript's type system entirely. Works today but fragile to Clerk SDK changes.
+- `app/(app)/app/practice/fire-and-forget.ts`
+- `app/(app)/app/practice/hooks/use-practice-question-bookmarks.ts`
+- `app/(app)/app/practice/hooks/use-practice-session-tags.ts`
+- `app/(app)/app/questions/[slug]/use-question-page-controller.ts`
+- `app/(app)/app/questions/[slug]/question-page-logic.ts`
+- `app/(app)/app/practice/hooks/use-quick-practice-status-counts.ts`
+- `app/(app)/app/practice/hooks/use-practice-available-questions-count.ts`
 
-**Full details:** [`docs/bugs/bug-201-clerk-webhook-double-cast.md`](../bugs/bug-201-clerk-webhook-double-cast.md)
+### BUG-201: unnecessary Clerk webhook output cast
 
-### BUG-202: Redundant condition after `.find()` (P4)
+`app/api/webhooks/clerk/route.ts:13-17` uses two `as unknown as` casts, but tracer-bullet verification showed only one is a real issue:
 
-`if (failed && !failed.result.ok)` where the second check is always true by definition of how `.find()` selected the element.
+- **input cast:** currently required because Clerk types `verifyWebhook()` against `RequestLike`, which omits Web `Request`
+- **output cast:** unnecessary because Clerk's `WebhookEvent` already satisfies our broader local `ClerkWebhookEvent` shape
 
-**Full details:** [`docs/bugs/bug-202-redundant-condition-after-find.md`](../bugs/bug-202-redundant-condition-after-find.md)
+This is a type-safety cleanup, not a demonstrated runtime bug.
+
+### BUG-202: redundant condition after `.find()`
+
+`app/(app)/app/practice/hooks/use-quick-practice-status-counts.ts:73-74` is exactly as documented:
+
+```typescript
+const failed = responses.find((entry) => !entry.result.ok);
+if (failed && !failed.result.ok) {
+```
+
+The second condition is redundant by definition of the `.find()` predicate.
 
 ---
 
-## Clean Areas (No Issues Found)
+## Additional Sweep Results
 
-- **Error handling architecture** — `ApplicationError` with typed codes used consistently across all layers
-- **Server action safety** — `createAction` wrapper catches all errors, always returns `ActionResult`
-- **External API integration** — Stripe calls wrapped in `callStripeWithRetry`, Clerk webhook verification wrapped in try/catch
-- **Type safety** — No `as any`, no `@ts-ignore`, no `eslint-disable` in production code
-- **Security** — No XSS (`dangerouslySetInnerHTML`), no SQL injection, no hardcoded secrets, no `eval()`
-- **Resource management** — Event listeners and timeouts properly cleaned up
-- **Promise handling** — `fireAndForget()` utility captures unhandled rejections
-- **Domain purity** — Zero external imports in domain layer confirmed
+Primary production-code sweep (`app/` + `src/`, tests excluded):
+
+- `console.error(...)`: **7**
+- `console.warn(...)`: **2**
+- `console.log(...)`: **0**
+- client-side bare `catch {}` blocks: **2**
+- server/application bare `catch {}` blocks: **4**
+
+Important related sites outside the core DEBT-286 rollout:
+
+- `app/global-error.tsx:16` logs an already-bubbled boundary error
+- `components/error-boundary-page.tsx:33` logs already-bubbled route-boundary errors for shared `error.tsx` pages
+- `app/(app)/app/practice/shared/question-flow-actions.ts:142` logs only in development
+- `app/(app)/app/questions/[slug]/question-page-client.tsx:56` uses a bare catch for URL normalization
+- `app/(app)/app/questions/[slug]/page.tsx:65` uses direct server-side `console.info`
+
+The array-index sweep found no additional crash-risk `[0]` sites in production code beyond the latent normalizer line that is already protected by upstream validation.
+
+---
+
+## Clean Areas
+
+- `ApplicationError` usage remains consistent across layers
+- server action boundaries still route through `createAction`
+- no `as any`, `@ts-ignore`, or `eslint-disable` markers were found in production code
+- no SQL injection, XSS, or hardcoded-secret issues were discovered during this sweep
+- domain-layer purity remains intact

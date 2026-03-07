@@ -1,7 +1,7 @@
 # ~~BUG-200~~ → RECLASSIFIED as [DEBT-286](../debt/debt-286-client-side-error-reporting.md)
 
 **Status:** Reclassified (2026-03-07)
-**Reason:** These are not independent bugs — they are symptoms of a systemic gap in SPEC-016 (Observability). `Sentry.captureException()` is called zero times in the entire application code. The 5 locations listed below are all the same root cause: no client-side caught error reporting utility exists. Fixing them individually would create ad-hoc slop. The proper fix is DEBT-286: create a `reportClientError()` utility and systematically roll it out.
+**Reason:** These are not independent bugs. They are symptoms of a systemic gap in SPEC-016 (Observability): `Sentry.captureException()` is called zero times in `app/` + `src/` application code, and there is no standard way for caught client-side failures to reach Sentry. Tracer-bullet verification after reclassification also showed that the original 5-location slice below was not exhaustive. DEBT-286 carries the corrected broader inventory and rollout plan.
 
 **See:** [DEBT-286: Client-Side Caught Error Reporting](../debt/debt-286-client-side-error-reporting.md)
 
@@ -9,7 +9,7 @@
 
 ## Original Problem (preserved for reference)
 
-Five locations in client-side code either swallow errors completely in production or route them only through `console.error`. These errors reach no structured logging system and produce zero telemetry. When users experience failures (bookmark loading, tag loading, session navigation, review hydration), there is no way to detect or diagnose the issue in production.
+The original filing captured 5 representative client-side locations that either swallowed errors completely in production or routed them only through `console.error`. That slice was directionally correct but incomplete. DEBT-286 now documents the verified broader picture: additional client-side caught-error flows, plus out-of-scope boundary/dev-only console sites that should not be conflated with this debt.
 
 ---
 

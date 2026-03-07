@@ -1,86 +1,80 @@
-# BUG-199: Unsafe `[0]` Array Access Without Bounds Checking
+# ~~BUG-199~~ → INVALIDATED: Stripe Subscription Items Are Already Validated Upstream
 
-**Priority:** P2 (1 crash-risk instance) / P4 (3 style-only instances)
 **Created:** 2026-03-07
-**Revised:** 2026-03-07 (tracer bullet verification — 3 of 4 instances reclassified as safe)
 **Source:** [AUDIT-011](../audits/audit-011-error-observability-defensive-coding.md)
-**Status:** Open
+**Status:** Invalidated (2026-03-07)
+**Reason:** The unguarded `[0]` access still exists in `src/adapters/gateways/stripe/stripe-subscription-normalizer.ts:55`, but the documented production failure mode is not reachable in the current codebase. Every production caller validates `subscription.items.data` with `stripeSubscriptionSchema`, which requires `.min(1)`, before the normalizer runs.
 
 ---
 
-## Problem
+## What Was Verified
 
-One location accesses `array[0]` on external API data and then accesses properties on the result **without optional chaining or a guard**, causing a `TypeError` crash if the array is empty.
-
-Three additional locations also use `[0]` but are **already safe** via optional chaining, nullish coalescing, or downstream filtering. These are noted as P4 style consistency items.
-
----
-
-## Instance 1: `stripe-subscription-normalizer.ts:55` — CRASH RISK (P2)
+### The unsafe line exists
 
 ```typescript
 const subscriptionItem = subscription.items.data[0];
-const currentPeriodEndSeconds = subscriptionItem.current_period_end; // crashes if undefined
-const cancelAtPeriodEnd = subscription.cancel_at_period_end;
-const priceId = subscriptionItem.price.id; // crashes if undefined
+const currentPeriodEndSeconds = subscriptionItem.current_period_end;
+const priceId = subscriptionItem.price.id;
 ```
 
-**Risk:** If Stripe returns a subscription with an empty `items.data` array (e.g., during plan migration or API inconsistency), the normalizer crashes with `TypeError: Cannot read properties of undefined`. This is called from webhook processing — a crash here means the webhook returns 500 and Stripe retries, potentially causing repeated failures.
+If a future caller bypassed validation and passed an empty `items.data` array directly into `normalizeStripeSubscriptionUpdate()`, this line could still throw.
 
-**Fix:**
+### The current production path blocks the empty-array case first
+
+`stripeSubscriptionSchema` already requires at least one item:
+
 ```typescript
-const subscriptionItem = subscription.items.data[0];
-if (!subscriptionItem) {
-  throw new ApplicationError(
-    'STRIPE_ERROR',
-    'Stripe subscription has no items',
-  );
-}
+items: z.object({
+  data: z.array(stripeSubscriptionItemSchema).min(1),
+}),
 ```
+
+Current production callers all go through that schema:
+
+1. Stripe webhook flow:
+   `app/api/stripe/webhook/handler.ts`
+   → `src/adapters/controllers/stripe-webhook-controller.ts`
+   → `src/adapters/gateways/stripe-payment-gateway.ts`
+   → `src/adapters/gateways/stripe/stripe-webhook-processor.ts`
+   → `src/adapters/gateways/stripe/stripe-subscription-normalizer.ts`
+2. Stripe reconciliation job:
+   `src/adapters/jobs/reconcile-stripe-subscriptions.ts`
+   → `retrieveAndNormalizeStripeSubscription()`
+   → `stripeSubscriptionSchema.safeParse(...)`
+
+### Runtime impact claim was wrong
+
+For the documented empty-array scenario:
+
+- the payload is rejected as `INVALID_WEBHOOK_PAYLOAD`
+- `app/api/stripe/webhook/handler.ts` maps that error to HTTP `400`
+- existing tests already encode this behavior
+
+So the prior claim:
+
+> empty `items.data` causes `TypeError` → webhook returns `500`
+
+is not accurate for the current production path.
 
 ---
 
-## Style-Only Instances (P4 — already safe, no crash possible)
+## Repository-Wide `[0]` Sweep
 
-These instances use `[0]` without `?.[0]`, but are protected by downstream guards. Listing for style consistency only.
+A full `app/` + `src/` sweep found no additional unguarded crash-risk `[0]` accesses in production code.
 
-### `stripe-checkout-sessions.ts:133` — SAFE
+Other `[0]` hits are already protected by optional chaining, prior invariants, or downstream filtering, including:
 
-```typescript
-const existingSession = existing.data[0];
-const existingUrl = existingSession?.url;
-if (existingSession && existingUrl) { ... }
-```
-
-**Why safe:** Optional chaining on `existingSession?.url` returns `undefined`. The `if (existingSession && existingUrl)` guard on line 135 prevents any further access. No crash possible.
-
-### `clerk-auth-gateway.ts:44` — SAFE
-
-```typescript
-return user.emailAddresses[0]?.emailAddress ?? null;
-```
-
-**Why safe:** `[0]` on an empty array returns `undefined`. `?.emailAddress` returns `undefined`. `?? null` returns `null`. No crash possible.
-
-### `get-session-history.ts:58` — SAFE
-
-```typescript
-.map((session) => session.questionIds[0])
-.filter((id): id is string => typeof id === 'string'),
-```
-
-**Why safe:** `[0]` on an empty array returns `undefined`. The `.filter()` on line 59 explicitly filters out non-string values (including `undefined`). The second usage at line 87 uses `?? ''` as a fallback. No crash possible.
+- `app/(marketing)/checkout/success/checkout-success-sync.tsx`
+- `src/adapters/gateways/clerk-auth-gateway.ts`
+- `src/adapters/controllers/clerk-webhook-controller.ts`
+- `src/application/use-cases/get-session-history.ts`
+- `src/adapters/gateways/stripe/stripe-checkout-sessions.ts`
+- `src/adapters/gateways/stripe/stripe-customers.ts`
+- `src/domain/services/grading.ts`
+- `src/adapters/repositories/drizzle-question-repository.ts`
 
 ---
 
-## Root Cause
+## Residual Note
 
-Instance 1 trusts the Stripe SDK's typed response without a defensive bounds check. The Stripe SDK types declare `items.data` as `Array<Stripe.SubscriptionItem>`, which TypeScript treats as always indexable, but the runtime array could be empty.
-
----
-
-## Test Plan
-
-| # | Scenario | Expected |
-|---|----------|----------|
-| T1 | Stripe subscription with empty `items.data` | `ApplicationError('STRIPE_ERROR', 'Stripe subscription has no items')` thrown, not `TypeError` |
+This file is preserved because the line itself is still a latent local hazard if a future refactor introduces a new caller that skips schema validation. Today, though, that is defensive debt at the function boundary, not a live production bug.

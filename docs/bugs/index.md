@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-03
+**Last Updated:** 2026-03-07
 
 ---
 
@@ -34,11 +34,11 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Priority | Title | Source |
 |----|----------|-------|--------|
-| [BUG-199](bug-199-unsafe-array-index-access.md) | P2 | Unsafe `[0]` array access without bounds checking | AUDIT-011 |
-| [BUG-201](bug-201-clerk-webhook-double-cast.md) | P3 | Clerk webhook double-cast bypasses type safety | AUDIT-011 |
+| [BUG-201](bug-201-clerk-webhook-double-cast.md) | P4 | Clerk webhook route uses an unnecessary output cast | AUDIT-011 |
 | [BUG-202](bug-202-redundant-condition-after-find.md) | P4 | Redundant condition after `.find()` | AUDIT-011 |
 
-**Reclassified (2026-03-07):**
+**Reclassified / Invalidated (2026-03-07):**
+- BUG-199 invalidated — `stripeSubscriptionSchema` already requires `items.data.min(1)`, so the documented empty-array `TypeError` / HTTP 500 path is not reachable in current production code. See [BUG-199](bug-199-unsafe-array-index-access.md).
 - BUG-200 (Production error observability blind spots) reclassified as [DEBT-286](../debt/debt-286-client-side-error-reporting.md) — root cause is incomplete SPEC-016 rollout, not individual bugs. See AUDIT-011 for analysis.
 
 ## Audit #12 — Extended Sweep: Inference Leaks, Transaction Safety, Zombie Keys (2026-03-03)
