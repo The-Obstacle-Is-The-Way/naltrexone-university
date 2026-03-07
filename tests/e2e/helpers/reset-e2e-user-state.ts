@@ -1,5 +1,8 @@
 import postgres from 'postgres';
-import { createSharedE2EResetSupport } from './e2e-reset-shared';
+import {
+  createSharedE2EResetSupport,
+  type SharedRequiredEnvVar,
+} from './e2e-reset-shared';
 
 const REQUIRED_QUESTION_SLUGS = {
   placeholder01: 'placeholder-01-naltrexone-mechanism',
@@ -17,14 +20,7 @@ const DETERMINISTIC_BASELINE = {
   bookmarkCreatedAt: '2026-01-01T00:05:00.000Z',
 } as const;
 
-type RequiredEnvVar = {
-  key: 'DATABASE_URL' | 'CLERK_SECRET_KEY' | 'E2E_CLERK_USER_USERNAME';
-  code: string;
-  message: string;
-  fix: string;
-};
-
-const REQUIRED_ENV_VARS: readonly RequiredEnvVar[] = [
+const REQUIRED_ENV_VARS: readonly SharedRequiredEnvVar[] = [
   {
     key: 'DATABASE_URL',
     code: 'E2E_RESET:DATABASE_URL_MISSING',
