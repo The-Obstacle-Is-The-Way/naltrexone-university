@@ -4,12 +4,16 @@ import {
   hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
+import { resetBookmarksForE2EUser } from './helpers/reset-bookmarks-for-e2e-user';
 import { ensureSubscribed } from './helpers/subscription';
 
 test.describe('bookmarks', () => {
   // Authenticated E2E flows include Clerk sign-in and seeded subscription setup; allow CI headroom.
   test.setTimeout(120_000);
   test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
+  test.beforeEach(async () => {
+    await resetBookmarksForE2EUser();
+  });
 
   test('persists bookmark state and allows removing from bookmarks page', async ({
     page,

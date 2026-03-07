@@ -1,10 +1,8 @@
 import postgres from 'postgres';
 import {
-  CLERK_API_BASE,
-  CLERK_API_TIMEOUT_MS,
-  type ClerkUserListResponse,
-  fetchWithTimeout,
-} from './credential-health-check';
+  createSharedE2EResetSupport,
+  type SharedRequiredEnvVar,
+} from './e2e-reset-shared';
 
 const REQUIRED_QUESTION_SLUGS = {
   placeholder01: 'placeholder-01-naltrexone-mechanism',
@@ -22,14 +20,7 @@ const DETERMINISTIC_BASELINE = {
   bookmarkCreatedAt: '2026-01-01T00:05:00.000Z',
 } as const;
 
-type RequiredEnvVar = {
-  key: 'DATABASE_URL' | 'CLERK_SECRET_KEY' | 'E2E_CLERK_USER_USERNAME';
-  code: string;
-  message: string;
-  fix: string;
-};
-
-const REQUIRED_ENV_VARS: readonly RequiredEnvVar[] = [
+const REQUIRED_ENV_VARS: readonly SharedRequiredEnvVar[] = [
   {
     key: 'DATABASE_URL',
     code: 'E2E_RESET:DATABASE_URL_MISSING',
@@ -115,17 +106,37 @@ type RunE2EUserStateResetInput = {
   services?: Partial<E2EUserStateResetServices>;
 };
 
-type ResolvedEnv = {
-  databaseUrl?: string;
-  clerkSecretKey?: string;
-  clerkEmail?: string;
-};
+const createUserStateResetError = (
+  code: string,
+  message: string,
+  fix: string,
+  options?: ErrorOptions,
+) => new E2EUserStateResetError(code, message, fix, options);
 
-type RequiredResolvedEnv = {
-  databaseUrl: string;
-  clerkSecretKey: string;
-  clerkEmail: string;
-};
+const sharedResetSupport = createSharedE2EResetSupport({
+  createError: createUserStateResetError,
+  requiredEnvVars: REQUIRED_ENV_VARS,
+  failureReportLabel: '[E2E_RESET] E2E user-state reset failed',
+  internalEnvMappingError: {
+    code: 'E2E_RESET:ENV_MAPPING_INCOMPLETE',
+    fix: 'Check resolveRequiredEnv() mappings for DATABASE_URL, CLERK_SECRET_KEY, and E2E_CLERK_USER_USERNAME.',
+  },
+  clerkApiUnavailableError: {
+    code: 'E2E_RESET:CLERK_API_UNAVAILABLE',
+    message: 'Clerk API request failed while resolving E2E user.',
+    fix: 'Retry after Clerk/API network recovery; do not change secrets until availability is restored.',
+  },
+  clerkSecretKeyInvalidError: {
+    code: 'E2E_RESET:CLERK_SECRET_KEY_INVALID',
+    message: 'Clerk rejected CLERK_SECRET_KEY while resolving E2E user.',
+    fix: 'Set CLERK_SECRET_KEY in .env.local or CI secrets.',
+  },
+  appUserLookupFailedError: {
+    code: 'E2E_RESET:DATABASE_QUERY_FAILED',
+    message: 'Failed to resolve E2E app user row by Clerk user id.',
+    fix: 'Verify DATABASE_URL connectivity and run pnpm db:migrate.',
+  },
+});
 
 const defaultServices: E2EUserStateResetServices = {
   ensurePlaceholderQuestionsPublished: async ({ databaseUrl }) => {
@@ -180,71 +191,9 @@ const defaultServices: E2EUserStateResetServices = {
     }
   },
 
-  resolveClerkUserIdByEmail: async ({ clerkSecretKey, email }) => {
-    const url = `${CLERK_API_BASE}/users?email_address=${encodeURIComponent(email)}&limit=1`;
-
-    let response: Response;
-    try {
-      response = await fetchWithTimeout(
-        url,
-        { headers: { Authorization: `Bearer ${clerkSecretKey}` } },
-        CLERK_API_TIMEOUT_MS,
-      );
-    } catch {
-      throw new E2EUserStateResetError(
-        'E2E_RESET:CLERK_API_UNAVAILABLE',
-        'Clerk API request failed while resolving E2E user.',
-        'Retry after Clerk/API network recovery; do not change secrets until availability is restored.',
-      );
-    }
-
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        throw new E2EUserStateResetError(
-          'E2E_RESET:CLERK_SECRET_KEY_INVALID',
-          'Clerk rejected CLERK_SECRET_KEY while resolving E2E user.',
-          'Set CLERK_SECRET_KEY in .env.local or CI secrets.',
-        );
-      }
-
-      throw new E2EUserStateResetError(
-        'E2E_RESET:CLERK_API_UNAVAILABLE',
-        `Clerk API request failed with status ${response.status}.`,
-        'Retry after Clerk/API network recovery; do not change secrets until availability is restored.',
-      );
-    }
-
-    const payload = (await response.json()) as ClerkUserListResponse;
-    const users = Array.isArray(payload) ? payload : (payload.data ?? []);
-    const firstUser = users[0];
-    if (!firstUser?.id) return null;
-    return firstUser.id;
-  },
-
-  resolveAppUserIdByClerkUserId: async ({ databaseUrl, clerkUserId }) => {
-    const sql = postgres(databaseUrl, { max: 1 });
-    try {
-      const rows = await sql<{ id: string }[]>`
-        SELECT id
-        FROM users
-        WHERE clerk_user_id = ${clerkUserId}
-        LIMIT 1
-      `;
-      return rows[0]?.id ?? null;
-    } catch {
-      throw new E2EUserStateResetError(
-        'E2E_RESET:DATABASE_QUERY_FAILED',
-        'Failed to resolve E2E app user row by Clerk user id.',
-        'Verify DATABASE_URL connectivity and run pnpm db:migrate.',
-      );
-    } finally {
-      try {
-        await sql.end({ timeout: 5 });
-      } catch {
-        // Ignore shutdown errors in reset teardown.
-      }
-    }
-  },
+  resolveClerkUserIdByEmail: sharedResetSupport.resolveClerkUserIdByEmail,
+  resolveAppUserIdByClerkUserId:
+    sharedResetSupport.resolveAppUserIdByClerkUserId,
 
   clearUserState: async ({ databaseUrl, userId }) => {
     const sql = postgres(databaseUrl, { max: 1 });
@@ -578,81 +527,6 @@ const defaultServices: E2EUserStateResetServices = {
   },
 };
 
-function resolveRequiredEnv(
-  env: NodeJS.ProcessEnv,
-  failures: E2EUserStateResetError[],
-): ResolvedEnv {
-  const resolved: ResolvedEnv = {};
-
-  for (const required of REQUIRED_ENV_VARS) {
-    const value = env[required.key];
-    if (!value || value.trim().length === 0) {
-      failures.push(
-        new E2EUserStateResetError(
-          required.code,
-          required.message,
-          required.fix,
-        ),
-      );
-      continue;
-    }
-
-    const trimmed = value.trim();
-    if (required.key === 'DATABASE_URL') resolved.databaseUrl = trimmed;
-    if (required.key === 'CLERK_SECRET_KEY') resolved.clerkSecretKey = trimmed;
-    if (required.key === 'E2E_CLERK_USER_USERNAME')
-      resolved.clerkEmail = trimmed;
-  }
-
-  return resolved;
-}
-
-function formatFailureReport(failures: E2EUserStateResetError[]): string {
-  const lines = [
-    `[E2E_RESET] E2E user-state reset failed (${failures.length}):`,
-    ...failures.flatMap((failure, index) => [
-      `${index + 1}. [${failure.code}] ${failure.message}`,
-      `   Fix: ${failure.fix}`,
-    ]),
-  ];
-  return lines.join('\n');
-}
-
-function requireResolvedEnvOrThrow(
-  resolvedEnv: ResolvedEnv,
-): RequiredResolvedEnv {
-  const { databaseUrl, clerkSecretKey, clerkEmail } = resolvedEnv;
-  const missingMappedKeys: string[] = [];
-
-  if (!databaseUrl) {
-    missingMappedKeys.push('databaseUrl <- DATABASE_URL');
-  }
-  if (!clerkSecretKey) {
-    missingMappedKeys.push('clerkSecretKey <- CLERK_SECRET_KEY');
-  }
-  if (!clerkEmail) {
-    missingMappedKeys.push('clerkEmail <- E2E_CLERK_USER_USERNAME');
-  }
-
-  if (!databaseUrl || !clerkSecretKey || !clerkEmail) {
-    throw new Error(
-      formatFailureReport([
-        new E2EUserStateResetError(
-          'E2E_RESET:ENV_MAPPING_INCOMPLETE',
-          `Internal env mapping is incomplete. Missing mapped keys: ${missingMappedKeys.join(', ')}.`,
-          'Check resolveRequiredEnv() mappings for DATABASE_URL, CLERK_SECRET_KEY, and E2E_CLERK_USER_USERNAME.',
-        ),
-      ]),
-    );
-  }
-
-  return {
-    databaseUrl,
-    clerkSecretKey,
-    clerkEmail,
-  };
-}
-
 export async function runE2EUserStateReset(
   input: RunE2EUserStateResetInput = {},
 ): Promise<void> {
@@ -663,14 +537,14 @@ export async function runE2EUserStateReset(
   };
 
   const failures: E2EUserStateResetError[] = [];
-  const resolvedEnv = resolveRequiredEnv(env, failures);
+  const resolvedEnv = sharedResetSupport.resolveRequiredEnv(env, failures);
 
   if (failures.length > 0) {
-    throw new Error(formatFailureReport(failures));
+    throw new Error(sharedResetSupport.formatFailureReport(failures));
   }
 
   const { databaseUrl, clerkSecretKey, clerkEmail } =
-    requireResolvedEnvOrThrow(resolvedEnv);
+    sharedResetSupport.requireResolvedEnvOrThrow(resolvedEnv);
 
   try {
     await services.ensurePlaceholderQuestionsPublished({ databaseUrl });
@@ -729,12 +603,14 @@ export async function runE2EUserStateReset(
     });
   } catch (error) {
     if (error instanceof E2EUserStateResetError) {
-      throw new Error(formatFailureReport([error]), { cause: error });
+      throw new Error(sharedResetSupport.formatFailureReport([error]), {
+        cause: error,
+      });
     }
 
     throw new Error(
-      formatFailureReport([
-        new E2EUserStateResetError(
+      sharedResetSupport.formatFailureReport([
+        createUserStateResetError(
           'E2E_RESET:UNEXPECTED',
           `Unexpected reset error: ${String(error)}`,
           'Inspect stack trace and fix the reset helper or external dependency.',

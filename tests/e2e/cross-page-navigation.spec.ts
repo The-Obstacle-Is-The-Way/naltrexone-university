@@ -8,6 +8,7 @@ import {
   assertQuestionSlugExists,
   submitQuestionForOutcome,
 } from './helpers/question';
+import { resetBookmarksForE2EUser } from './helpers/reset-bookmarks-for-e2e-user';
 import { ensureSubscribed } from './helpers/subscription';
 
 // Seeded by content/questions/placeholder/placeholder-01-naltrexone-mechanism.mdx
@@ -91,27 +92,35 @@ test.describe('cross-page navigation', () => {
     await expect(page).toHaveURL(/limit=20/);
   });
 
-  test('bookmarks → question detail → back to bookmarks', async ({ page }) => {
-    await signInWithClerkPassword(page);
-    await ensureSubscribed(page);
-    await ensureBookmarkExistsOnBookmarksPage(page);
-
-    const bookmarksLink = page
-      .locator('a[href^="/app/questions/"][href*="from=bookmarks"]')
-      .first();
-    await expect(bookmarksLink).toBeVisible({ timeout: 15_000 });
-    await bookmarksLink.click();
-
-    await expect(page).toHaveURL(/\/app\/questions\//, { timeout: 15_000 });
-    await expect(page).toHaveURL(/from=bookmarks/);
-    await expect(
-      page.getByRole('heading', { name: 'Question', exact: true }),
-    ).toBeVisible();
-    await expect(page.getByText(/Loading question/i)).toBeHidden({
-      timeout: 15_000,
+  test.describe('bookmark navigation', () => {
+    test.beforeEach(async () => {
+      await resetBookmarksForE2EUser();
     });
 
-    await page.getByRole('link', { name: 'Back to Bookmarks' }).click();
-    await expect(page).toHaveURL('/app/bookmarks');
+    test('bookmarks → question detail → back to bookmarks', async ({
+      page,
+    }) => {
+      await signInWithClerkPassword(page);
+      await ensureSubscribed(page);
+      await ensureBookmarkExistsOnBookmarksPage(page);
+
+      const bookmarksLink = page
+        .locator('a[href^="/app/questions/"][href*="from=bookmarks"]')
+        .first();
+      await expect(bookmarksLink).toBeVisible({ timeout: 15_000 });
+      await bookmarksLink.click();
+
+      await expect(page).toHaveURL(/\/app\/questions\//, { timeout: 15_000 });
+      await expect(page).toHaveURL(/from=bookmarks/);
+      await expect(
+        page.getByRole('heading', { name: 'Question', exact: true }),
+      ).toBeVisible();
+      await expect(page.getByText(/Loading question/i)).toBeHidden({
+        timeout: 15_000,
+      });
+
+      await page.getByRole('link', { name: 'Back to Bookmarks' }).click();
+      await expect(page).toHaveURL('/app/bookmarks');
+    });
   });
 });
