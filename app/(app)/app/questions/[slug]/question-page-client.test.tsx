@@ -421,8 +421,18 @@ describe('QuestionView', () => {
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const feedbackCard = doc.querySelector('[role="status"]');
-    const yourAnswerBadge = Array.from(
+    const yourAnswerHeading = Array.from(
       feedbackCard?.querySelectorAll('div') ?? [],
+    ).find((div) => div.textContent?.trim() === 'Your answer');
+    const correctAnswerHeading = Array.from(
+      feedbackCard?.querySelectorAll('div') ?? [],
+    ).find((div) => div.textContent?.trim() === 'Correct answer');
+
+    const yourAnswerCard = yourAnswerHeading?.nextElementSibling;
+    const correctAnswerCard = correctAnswerHeading?.nextElementSibling;
+
+    const yourAnswerBadge = Array.from(
+      yourAnswerCard?.querySelectorAll('div') ?? [],
     ).find((div) => {
       const className = div.getAttribute('class') ?? '';
       return (
@@ -430,7 +440,7 @@ describe('QuestionView', () => {
       );
     });
     const correctAnswerBadge = Array.from(
-      feedbackCard?.querySelectorAll('div') ?? [],
+      correctAnswerCard?.querySelectorAll('div') ?? [],
     ).find((div) => {
       const className = div.getAttribute('class') ?? '';
       return (
@@ -438,6 +448,8 @@ describe('QuestionView', () => {
       );
     });
 
+    expect(yourAnswerCard).not.toBeNull();
+    expect(correctAnswerCard).not.toBeNull();
     expect(yourAnswerBadge).not.toBeUndefined();
     expect(correctAnswerBadge).not.toBeUndefined();
     expect(html).toContain('Correct answer');
