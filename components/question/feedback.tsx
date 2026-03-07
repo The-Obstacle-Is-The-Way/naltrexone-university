@@ -42,7 +42,9 @@ type CorrectAnswerSectionProps = {
 };
 
 function getExplanationClassName(hasCorrectChoice: boolean): string {
-  return hasCorrectChoice ? 'mt-2 text-sm' : 'text-sm';
+  return hasCorrectChoice
+    ? 'mt-2 text-sm text-muted-foreground'
+    : 'text-sm text-muted-foreground';
 }
 
 function getFallbackExplanationClassName(hasCorrectChoice: boolean): string {
@@ -67,7 +69,7 @@ function CorrectAnswerSection({
       <div className="mt-2 rounded-xl border border-success/60 bg-success/5 p-4">
         {correctChoice ? (
           <div className="flex items-start gap-3">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold leading-none text-foreground dark:border-foreground/60 dark:bg-foreground/20">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-success bg-success/15 text-xs font-semibold leading-none text-success">
               {correctChoice.displayLabel}
             </div>
             <Markdown
@@ -184,7 +186,7 @@ export function Feedback({
               </div>
               <div className="mt-2 rounded-xl border border-destructive bg-destructive/5 p-4">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold leading-none text-foreground dark:border-foreground/60 dark:bg-foreground/20">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-destructive bg-destructive/15 text-xs font-semibold leading-none text-destructive">
                     {userChoice.displayLabel}
                   </div>
                   <Markdown
@@ -195,7 +197,7 @@ export function Feedback({
                 {userChoice.explanationMd ? (
                   <Markdown
                     content={userChoice.explanationMd}
-                    className="mt-2 text-sm"
+                    className="mt-2 text-sm text-muted-foreground"
                   />
                 ) : null}
               </div>
