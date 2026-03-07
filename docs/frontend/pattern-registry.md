@@ -527,17 +527,17 @@ Correct/incorrect indicator shown after answer submission.
 
 **Correct:**
 ```
-inline-flex rounded-full px-3 py-1 text-sm font-semibold bg-success/15 text-success
+inline-flex self-start rounded-full px-3 py-1 text-sm font-semibold bg-success text-success-foreground dark:bg-success/60
 ```
 
 **Incorrect:**
 ```
-inline-flex rounded-full px-3 py-1 text-sm font-semibold bg-destructive/15 text-destructive
+inline-flex self-start rounded-full px-3 py-1 text-sm font-semibold bg-destructive text-destructive-foreground dark:bg-destructive/60
 ```
 
 **Source:** `components/question/feedback.tsx`
 
-Uses tier 3 (`/15`) background — these are emphasized status indicators.
+Uses a solid semantic pill in light mode plus `dark:bg-*/60` in dark mode so verdict text stays readable while the badge remains compact via `self-start`.
 
 ### F-2: Warning Surface (3-tier)
 

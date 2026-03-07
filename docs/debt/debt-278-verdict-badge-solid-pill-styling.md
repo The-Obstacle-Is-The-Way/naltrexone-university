@@ -122,7 +122,7 @@ The `<Card>` component renders as `flex flex-col` (card.tsx:10). In a flex-col c
 
 Two test files assert the current badge styling and must be updated:
 
-### 1. `Feedback.test.tsx` — "renders a neutral status card with a verdict badge" (lines 30-32)
+### 1. `components/question/Feedback.test.tsx` — "renders a neutral status card with a verdict badge"
 
 ```tsx
 // Current assertions (must change):
@@ -132,9 +132,18 @@ expect(verdictBadge?.getAttribute('class')).toContain('text-success');
 // Updated assertions:
 expect(verdictBadge?.getAttribute('class')).toContain('bg-success');
 expect(verdictBadge?.getAttribute('class')).toContain('text-success-foreground');
+expect(verdictBadge?.getAttribute('class')).toContain('self-start');
 ```
 
-### 2. `theme-token-regression.test.tsx` (lines 267-268)
+Also add explicit incorrect-branch coverage so the destructive verdict badge asserts the same compact-pill contract:
+
+```tsx
+expect(verdictBadge?.getAttribute('class')).toContain('bg-destructive');
+expect(verdictBadge?.getAttribute('class')).toContain('text-destructive-foreground');
+expect(verdictBadge?.getAttribute('class')).toContain('self-start');
+```
+
+### 2. `components/theme-token-regression.test.tsx`
 
 ```tsx
 // Current assertions (must change):
@@ -158,7 +167,7 @@ Note: `toContain('bg-success')` will match the rendered class string containing 
 | T2 | Incorrect answer → verdict badge | Solid red compact pill, white text, "Incorrect" |
 | T3 | Light mode contrast | Success: 5.07:1 PASS, Destructive: 4.64:1 PASS |
 | T4 | Dark mode contrast | Success: 5.55:1 PASS, Destructive: 7.75:1 PASS |
-| T5 | Pill width | Badge hugs text content, does not stretch full card width |
+| T5 | Pill width | Badge carries `self-start` and hugs text content instead of stretching full card width |
 | T6 | All other feedback card elements unchanged | Section cards, choice explanations, reference section, layout ordering all preserved |
 | T7 | Manual: visual check both themes | Verify pill looks intentional and proportional in both light and dark modes |
 

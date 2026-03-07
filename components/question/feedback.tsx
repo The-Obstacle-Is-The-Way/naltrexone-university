@@ -125,9 +125,10 @@ export function Feedback({
     <Card role="status">
       <span
         className={cn(
-          'inline-flex rounded-full px-3 py-1 text-sm font-semibold',
-          isCorrect && 'bg-success/15 text-success',
-          !isCorrect && 'bg-destructive/15 text-destructive',
+          'inline-flex self-start rounded-full px-3 py-1 text-sm font-semibold',
+          isCorrect && 'bg-success text-success-foreground dark:bg-success/60',
+          !isCorrect &&
+            'bg-destructive text-destructive-foreground dark:bg-destructive/60',
         )}
       >
         {isCorrect ? 'Correct' : 'Incorrect'}
