@@ -1021,7 +1021,9 @@ describe('Feedback', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const card = doc.querySelector('[role="status"]');
+    const correctAnswerLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Correct answer',
+    );
     const wrongAnswersHeading = Array.from(doc.querySelectorAll('div')).find(
       (div) => div.textContent?.trim() === 'Why other answers are wrong:',
     );
@@ -1054,7 +1056,9 @@ describe('Feedback', () => {
       wrongAnswerExplanation?.getAttribute('class') ?? '',
     );
 
-    expect(card?.querySelector('div.mt-6')).not.toBeNull();
+    expect(correctAnswerLabel?.parentElement?.getAttribute('class')).toContain(
+      'mt-6',
+    );
     expect(wrongAnswerRow).not.toBeUndefined();
     expect(wrongAnswerRowTokens.has('gap-3')).toBe(true);
     expect(wrongAnswerTextTokens.has('text-muted-foreground')).toBe(false);
