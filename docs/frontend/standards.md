@@ -246,8 +246,8 @@ This section covers **app chrome** text sizing. For content text (question stems
 
 | Context | Pattern |
 |---------|---------|
-| App/utility subtitle | `text-sm text-muted-foreground` |
-| Marketing subtitle | `text-lg text-muted-foreground` |
+| Standard page/section subtitle | `text-base text-muted-foreground` |
+| Marketing hero/pricing subtitle | `text-lg text-muted-foreground` |
 
 ### Heading hierarchy
 
@@ -264,11 +264,12 @@ Use `text-3xl font-bold font-display text-foreground` for prominent statistics. 
 | Context | Pattern |
 |---------|---------|
 | Labels / secondary text | `text-sm text-muted-foreground` |
+| Page/section supporting copy | `text-base text-muted-foreground` |
 | Card headings | `text-sm font-medium text-foreground` |
 | Error details (digest) | `text-xs text-muted-foreground` |
 | Content text (Markdown) | See [Typography Policy](./typography-policy.md) — three-tier system (primary `text-base`, secondary `text-sm`, tertiary `text-xs`) |
 
-Do not rely on inherited browser `1rem` for app/utility subtitles or helper copy. Secondary hardcoded UI text should opt into an explicit text role.
+Do not rely on inherited browser `1rem` for page/section subtitles or helper copy. If the intent is 16px supporting copy, say `text-base` explicitly.
 
 ---
 

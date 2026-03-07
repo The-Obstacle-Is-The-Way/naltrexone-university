@@ -917,10 +917,10 @@ text-2xl font-bold font-heading tracking-tight text-foreground
 
 | Role | Classes | Used For |
 |------|---------|----------|
-| Page subtitle (app / utility) | `text-sm text-muted-foreground` | Authenticated app pages, auth fallbacks, checkout success helper copy |
-| Page subtitle (marketing) | `text-lg text-muted-foreground` | Pricing, marketing hero |
+| Page / section subtitle (standard UI) | `text-base text-muted-foreground` | Authenticated app pages, centered utility pages, standard marketing section ledes |
+| Page subtitle (marketing hero) | `text-lg text-muted-foreground` | Pricing page hero, marketing hero |
 | Card section heading | `text-sm font-medium text-foreground` | "Subscription", "Start a session", section titles |
-| Card body / list items | `text-sm text-muted-foreground` | All card content text |
+| Card body / dense helper copy | `text-sm text-muted-foreground` | Dense card content text, compact utility/error copy |
 | Compact stat labels | `text-xs text-muted-foreground` | Exam review stat cards (intentional compact tier) |
 | Badge / pill text | `text-xs font-medium text-muted-foreground` | Tags, counts |
 | Marketing CTA label | `text-base font-medium` | Hero / pricing primary CTAs |

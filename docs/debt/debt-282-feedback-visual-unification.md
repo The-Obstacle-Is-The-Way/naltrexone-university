@@ -202,6 +202,7 @@ Same as correct-flow wrong-answer card (see above).
 - **Verdict badge** — handled by [DEBT-278](./debt-278-verdict-badge-solid-pill-styling.md)
 - **Section card border colors** (`border-success/60`, `border-destructive`, `border-border/60`) — intentionally deferred. They are functionally acceptable for this pass, but not part of the typography/layout contract this debt resolves.
 - **Section card background fills** (`bg-success/5`, `bg-destructive/5`, `bg-background/50`) — intentionally deferred. Surface-token harmonization can be evaluated in a later visual pass if the question flow still feels split after DEBT-278 + DEBT-282.
+- **Regular React/app-chrome supporting-copy typography drift** — tracked separately in [DEBT-283](./debt-283-hardcoded-ui-typography-explicit-sizing-alignment.md)
 - **Clinical pearl callout styling** — already correct, preserved as-is
 - **Reference section** — already compliant (`text-xs`, Tertiary tier)
 - **Explanation text size** — stays at `text-sm` (Secondary tier). Wrong-answer explanation color changes to `text-muted-foreground` (Change 4 hierarchy fix)

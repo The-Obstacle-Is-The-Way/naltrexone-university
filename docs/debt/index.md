@@ -21,7 +21,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 6 future enhancements (F1/F8 resolved by DEBT-277/DEBT-276) | P3 | — |
 | [DEBT-278](./debt-278-verdict-badge-solid-pill-styling.md) | Verdict Badge Solid Pill Styling — solid background + white text for Correct/Incorrect badge | P2 | — |
 | [DEBT-282](./debt-282-feedback-visual-unification.md) | Feedback Visual Unification — circular badges, `text-base` typography, `gap-3`/`p-4` layout alignment with choice buttons | P2 | — |
-| [DEBT-283](./debt-283-app-chrome-typography-explicit-sizing-alignment.md) | App Chrome Typography Explicit Sizing Alignment — replace inherited subtitle/helper copy sizing with explicit `text-sm` roles outside the Markdown pipeline | P2 | — |
+| [DEBT-283](./debt-283-hardcoded-ui-typography-explicit-sizing-alignment.md) | Hardcoded UI Typography Explicit Sizing Alignment — replace inherited subtitle/helper copy sizing with explicit `text-base` or `text-sm` roles outside the Markdown pipeline | P3 | — |
 
 **Next Debt ID:** DEBT-284
 

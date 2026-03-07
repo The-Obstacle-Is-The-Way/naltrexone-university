@@ -25,18 +25,18 @@ Text in this application flows through two fundamentally different pipelines. Th
 
 | Subfamily | Default / Canonical Pattern | Governed by | Notes |
 |-----------|-----------------------------|-------------|-------|
-| App chrome (authenticated app surfaces) | `text-sm` | [Frontend Standards](./standards.md) + [Pattern Registry](./pattern-registry.md) | Dashboard, history, bookmarks, billing, practice scaffolding, action bars, labels |
-| Utility/auth surfaces | `text-sm` for supporting copy, utility/auth heading patterns for titles | Standards + Pattern Registry | Sign-in/up fallbacks, checkout success helper copy, error/not-found support text |
-| Marketing/editorial surfaces | Custom display scale | Standards + Pattern Registry | Pricing and marketing intentionally use larger type; they are not bound to the app-chrome default |
+| Dense app chrome | `text-sm` | [Frontend Standards](./standards.md) + [Pattern Registry](./pattern-registry.md) | Labels, metadata, dense card body text, action bars, section labels |
+| Standard supporting copy | `text-base text-muted-foreground` | Standards + Pattern Registry | App page subtitles, centered utility/auth descriptions, standard marketing section ledes |
+| Marketing/editorial surfaces | Custom display scale | Standards + Pattern Registry | Marketing hero/pricing page subtitles and display text intentionally use larger type |
 | Form controls | `Input`: `text-base md:text-sm`; `Select`: `text-sm` | Component primitives + Pattern Registry | `Input` keeps a mobile accessibility exception to avoid iOS zoom on small text fields |
 
-**Default size for app chrome and utility supporting copy:** `text-sm` (14px). This is the application's standard operational body text. It is dense, functional, and should be applied explicitly rather than inherited accidentally.
+**Important distinction:** the application's operational chrome defaults to `text-sm`, but top-level supporting copy is a separate role and should be explicit `text-base text-muted-foreground`. Neither role should be left implicit.
 
 | Context | Size | Example |
 |---------|------|---------|
 | App page h1 | `text-2xl` | "Quick Practice", "Dashboard" |
 | Utility/auth h1 | `text-xl` | "Sign In", "Checkout complete" |
-| App/utility subtitle or helper copy | `text-sm text-muted-foreground` | "Track your progress and keep your streak alive.", "Authentication unavailable in this environment." |
+| App/utility/section subtitle or helper copy | `text-base text-muted-foreground` | "Track your progress and keep your streak alive.", "Authentication unavailable in this environment." |
 | Section headers | `text-sm font-medium` | "Recent activity", "Correct answer" |
 | Labels / secondary text | `text-sm text-muted-foreground` | "Answered Mar 7, 2026", "Showing 1-20 of 65" |
 | Stat numbers | `text-3xl font-bold font-display` | "848", "72%" |
@@ -142,11 +142,12 @@ The hardcoded UI-text pipeline is no longer described as "mostly compliant." The
 | Category | Reality | Status |
 |----------|---------|--------|
 | Marketing/editorial larger typography | Intentional | Compliant — governed by Standards + Pattern Registry |
+| Standard supporting copy role (`text-base text-muted-foreground`) | Canonical | Partially implemented — several call sites still rely on inheritance |
 | Form-control sizing (`Input` `text-base md:text-sm`) | Intentional mobile accessibility exception | Compliant |
 | Exam review compact stat cards (`text-xs` labels + `text-2xl` values) | Intentional compact tier | Compliant — governed by Pattern Registry 12.4 |
-| App and utility subtitles / helper copy with no explicit `text-*` class | Real drift | Open — tracked in [DEBT-283](../debt/debt-283-app-chrome-typography-explicit-sizing-alignment.md) |
+| Arbitrary `text-[...]` / inline font styles in production UI code | None found in current audit | Compliant |
 
-**Current open Pipeline 1 drift:** the following files still rely on inherited default size for app/utility supporting copy instead of explicitly using `text-sm text-muted-foreground`:
+**Current open Pipeline 1 drift:** the following files still rely on inherited default size for standard supporting copy instead of explicitly using `text-base text-muted-foreground`:
 
 - `app/(app)/app/dashboard/page.tsx`
 - `app/(app)/app/bookmarks/page.tsx`
@@ -160,6 +161,7 @@ The hardcoded UI-text pipeline is no longer described as "mostly compliant." The
 - `app/sign-in/[[...sign-in]]/sign-in-page-client.tsx`
 - `app/sign-up/[[...sign-up]]/sign-up-page-client.tsx`
 - `app/(marketing)/checkout/success/checkout-success-sync.tsx`
+- `components/marketing/marketing-home.tsx`
 
 ### Pipeline 2 (Content): Non-Compliant
 
@@ -184,7 +186,7 @@ Fixing these violations is tracked in [DEBT-282](../debt/debt-282-feedback-visua
 
 1. **Every `<Markdown>` call MUST include a tier-appropriate className.** No exceptions. Omitting className causes the text to inherit unpredictably.
 
-2. **App chrome and utility supporting copy MUST opt into an explicit size.** Use `text-sm text-muted-foreground` for page subtitles, loading/help copy, and other secondary non-Markdown text. Do not rely on inherited browser `1rem`.
+2. **Hardcoded supporting copy MUST opt into an explicit size.** Use `text-base text-muted-foreground` for page/section subtitles, centered utility descriptions, and other top-level non-Markdown support text. Use `text-sm text-muted-foreground` for denser card body, labels, and operational metadata. Do not rely on inherited browser `1rem`.
 
 3. **Marketing/editorial surfaces are exceptions, not violations.** Pricing and landing pages may use larger display/body sizes, but those patterns must be documented in Standards/Pattern Registry rather than improvised ad hoc.
 
