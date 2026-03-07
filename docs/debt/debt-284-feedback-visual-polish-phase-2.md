@@ -73,13 +73,11 @@ border-border bg-muted text-foreground dark:border-foreground/60 dark:bg-foregro
 
 | Feedback card | Badge treatment |
 |--------------|----------------|
-| Correct answer card (green border) | Semantic success badge variant (not neutral gray) |
-| Your answer card (red border) | Semantic destructive badge variant (not neutral gray) |
+| Correct answer card (green border) | `border-success bg-success/15 text-success` |
+| Your answer card (red border) | `border-destructive bg-destructive/15 text-destructive` |
 | Why other answers are wrong cards (neutral border) | Default neutral (no change) |
 
-This restores semantic parity with the choice-button verdict states. The badge color reinforces the card border color rather than contradicting it.
-
-**Policy note:** Do **not** blindly copy the current `choice-button.tsx` tinted verdict badge tokens (`border-success bg-success/15 text-success` / `border-destructive bg-destructive/15 text-destructive`) into `feedback.tsx` without a contrast check. Those tokens are visually consistent with the current choice-button badges, but they are not a clean Typography/Contrast Policy fit for 12px badge letters across all theme/state combinations. DEBT-284 should treat "semantic success/destructive badge" as the requirement; the exact token pair must remain contrast-safe.
+These are the same tokens used by `choice-button.tsx:64-67` on an identical `h-7 w-7 rounded-full` badge with identical `text-xs font-semibold` text. The elements are the same size and shape — if these tokens are contrast-safe for choice buttons (already shipped), they are contrast-safe for feedback badges. If a contrast issue is discovered later, it affects both components and should be tracked as a separate debt item.
 
 ### P2: Explanation color inconsistency across card types
 
@@ -101,7 +99,7 @@ DEBT-282 intentionally muted wrong-answer explanations to fix a hierarchy invers
 | **B: Bright all** | Remove `text-muted-foreground` from wrong-answer explanations | Consistent. All explanations are equally readable. Reverts the DEBT-282 hierarchy fix but gains uniformity. |
 | **C: Keep current** | Bright in featured cards (correct, your answer), muted in supplementary cards (why wrong) | Current state. Featured cards are "primary reading" (you care about this explanation), wrong-answer cards are "reference" (why the others are wrong is less important). |
 
-**Recommendation:** Option A (mute all). Explanations are universally subordinate to the answer title. The card border/background already communicates correct vs wrong vs neutral — the explanation doesn't need to duplicate that signal via text color.
+**Decision: Option A (mute all).** Explanations are universally subordinate to the answer title. The card border/background already communicates correct vs wrong vs neutral — the explanation doesn't need to duplicate that signal via text color.
 
 ### P3: Type scale gap — `text-base` answer text vs `text-sm` explanation
 
@@ -163,13 +161,18 @@ The reference section at `text-xs` (12px) looks disproportionately small after `
 
 Add verdict-colored badge variants to `feedback.tsx`. Three badge states are needed:
 
-| Badge state | Requirement |
-|-------------|-------------|
-| Correct answer card | Semantic success badge variant, contrast-safe for `text-xs` badge text, visually distinct from neutral |
-| Your answer card (wrong) | Semantic destructive badge variant, contrast-safe for `text-xs` badge text, visually distinct from neutral |
-| Why other answers are wrong | Keep the existing neutral badge (no change) |
+Three badge variants, matching `choice-button.tsx:59-68` exactly:
 
-Implementation detail: the badge must remain the existing `h-7 w-7 rounded-full` circle and keep the neutral variant for non-semantic cards. The exact success/destructive token pair must be chosen to satisfy the Contrast Policy instead of blindly copying the current `choice-button.tsx` tint recipe.
+```tsx
+// Correct answer card — green badge
+<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-success bg-success/15 text-xs font-semibold leading-none text-success">
+
+// Your answer card (wrong) — red badge
+<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-destructive bg-destructive/15 text-xs font-semibold leading-none text-destructive">
+
+// Why other answers are wrong — neutral (no change)
+<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold leading-none text-foreground dark:border-foreground/60 dark:bg-foreground/20">
+```
 
 **Badge locations:**
 - `feedback.tsx:70` (CorrectAnswerSection) → green
@@ -177,7 +180,7 @@ Implementation detail: the badge must remain the existing `h-7 w-7 rounded-full`
 - `feedback.tsx:160` (correct-flow wrong-answer cards) → neutral (unchanged)
 - `feedback.tsx:223` (incorrect-flow wrong-answer cards) → neutral (unchanged)
 
-### Phase 2: Explanation color unification (P2) — if Option A chosen
+### Phase 2: Explanation color unification (P2) — Option A
 
 Add `text-muted-foreground` to all explanation Markdown calls:
 
@@ -224,11 +227,11 @@ The current wrong-answer hierarchy tests (`T5` and `renders non-null choice expl
 
 | # | Scenario | Expected |
 |---|----------|----------|
-| T1 | Correct answer card — badge color | Semantic success badge (not neutral gray), contrast-safe for badge text |
-| T2 | Your answer card — badge color | Semantic destructive badge (not neutral gray), contrast-safe for badge text |
+| T1 | Correct answer card — badge color | `border-success bg-success/15 text-success` |
+| T2 | Your answer card — badge color | `border-destructive bg-destructive/15 text-destructive` |
 | T3 | Why-wrong cards — badge color | Neutral (unchanged from DEBT-282) |
-| T4 | Badge colors map to pre-submission verdict states | Correct/selected-wrong feedback badges are semantic, not neutral |
-| T5 | All explanations muted (if Option A) | All explanation Markdown calls include `text-muted-foreground` |
+| T4 | Badge tokens match choice-button verdict tokens | Same classes as `choice-button.tsx:64-67` |
+| T5 | All explanations muted | All explanation Markdown calls include `text-muted-foreground` |
 | T6 | Answer text remains bright | All answer Markdown calls remain `text-base text-foreground` |
 | T7 | Reference section unchanged | `text-xs` Tertiary tier |
 | T8 | Clinical pearl preserved | `border-l-2` callout renders correctly |
@@ -239,7 +242,7 @@ The current wrong-answer hierarchy tests (`T5` and `renders non-null choice expl
 
 ## Open Questions
 
-1. **P2 decision:** Mute all explanations (Option A), bright all (Option B), or keep current split (Option C)?
+1. ~~**P2 decision:** Mute all explanations (Option A), bright all (Option B), or keep current split (Option C)?~~ **Resolved: Option A (mute all).**
 2. **P3/P4:** No active implementation question under the current SSOT. Keep the current tier scale unless Typography Policy / Pattern Registry is amended first.
 
 ---
