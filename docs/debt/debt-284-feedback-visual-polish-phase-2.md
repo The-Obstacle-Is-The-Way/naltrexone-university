@@ -3,7 +3,7 @@
 **Priority:** P2
 **Created:** 2026-03-07
 **Source:** Visual review after [DEBT-282](../_archive/debt/debt-282-feedback-visual-unification.md) (PR #179)
-**Governing Policy:** [Typography Policy](../frontend/typography-policy.md)
+**Governing Policy:** [Typography Policy](../frontend/typography-policy.md), [Frontend Standards](../frontend/standards.md), [Pattern Registry](../frontend/pattern-registry.md), [Contrast Policy](../frontend/contrast-policy.md)
 **Scope:** Remaining visual inconsistencies between pre-submission (choice buttons) and post-submission (feedback cards), plus explanation color consistency and type scale readability
 
 ---
@@ -25,8 +25,8 @@ Every text element in the feedback system, its source pipeline, current size, an
 | Element | File:Line | Size | Color | Notes |
 |---------|-----------|------|-------|-------|
 | Verdict pill ("Incorrect" / "Correct") | `feedback.tsx:131` | `text-sm font-semibold` | `text-destructive-foreground` / `text-success-foreground` | Solid pill background |
-| Section labels ("Your answer", "Correct answer", "Why other answers are wrong:") | `feedback.tsx:64,150,182,213` | `text-sm font-medium` | `text-foreground` | — |
-| "REFERENCE" label | `feedback.tsx:245` | `text-xs font-semibold uppercase tracking-wide` | `text-muted-foreground` | — |
+| Section labels (`"Explanation"` / `"Correct answer"`, `"Your answer"`, `"Why other answers are wrong:"`) | `feedback.tsx:64,150,182,213` | `text-sm font-medium` | `text-foreground` | `feedback.tsx:64` is conditional: `"Correct answer"` when `correctChoice` exists, otherwise `"Explanation"` |
+| Reference label (`"Reference"`, rendered uppercase via CSS) | `feedback.tsx:245` | `text-xs font-semibold uppercase tracking-wide` | `text-muted-foreground` | Literal string is `Reference`; `uppercase` transforms it visually |
 | "Explanation not available." fallback | `feedback.tsx:82` | `text-sm` | `text-muted-foreground` | Only renders when `explanationMd` is null |
 | Badge letter (A, B, C, D) | `feedback.tsx:70,160,187,223` | `text-xs font-semibold leading-none` | `text-foreground` | Inside circular badge div |
 | "Clinical Pearl" label | `Markdown.tsx:53` | `text-xs font-medium uppercase tracking-wide` | `text-muted-foreground` | Inside `border-l-2` callout |
@@ -73,11 +73,13 @@ border-border bg-muted text-foreground dark:border-foreground/60 dark:bg-foregro
 
 | Feedback card | Badge treatment |
 |--------------|----------------|
-| Correct answer card (green border) | `border-success bg-success/15 text-success` |
-| Your answer card (red border) | `border-destructive bg-destructive/15 text-destructive` |
+| Correct answer card (green border) | Semantic success badge variant (not neutral gray) |
+| Your answer card (red border) | Semantic destructive badge variant (not neutral gray) |
 | Why other answers are wrong cards (neutral border) | Default neutral (no change) |
 
-This mirrors the choice-button verdict states exactly. The badge color reinforces the card border color rather than contradicting it.
+This restores semantic parity with the choice-button verdict states. The badge color reinforces the card border color rather than contradicting it.
+
+**Policy note:** Do **not** blindly copy the current `choice-button.tsx` tinted verdict badge tokens (`border-success bg-success/15 text-success` / `border-destructive bg-destructive/15 text-destructive`) into `feedback.tsx` without a contrast check. Those tokens are visually consistent with the current choice-button badges, but they are not a clean Typography/Contrast Policy fit for 12px badge letters across all theme/state combinations. DEBT-284 should treat "semantic success/destructive badge" as the requirement; the exact token pair must remain contrast-safe.
 
 ### P2: Explanation color inconsistency across card types
 
@@ -120,12 +122,14 @@ The 16→14px step is a 12.5% reduction. In dark mode with dense clinical text, 
 
 **Recommendation:** Option A (keep current). The tier system creates intentional hierarchy and matches the Typography Policy. If P2 is fixed (all explanations muted), the color + size together will clearly differentiate answer text from explanation. The gap only feels wrong now because the brightness inconsistency in P2 makes some explanations compete with answer text.
 
+**Policy note:** Options B and C would require a Typography Policy + Pattern Registry change first. Under the current SSOT, P3 is an observation to keep monitoring after P1/P2, not an implementation-ready typography change.
+
 ### P4: Reference section readability
 
 The reference section at `text-xs` (12px) looks disproportionately small after `text-base` (16px) answer text — a 25% reduction that's especially noticeable in dark mode with citation text that includes author names, journal titles, and DOIs.
 
 **Current rendering:**
-- "REFERENCE" label: `text-xs font-semibold uppercase tracking-wide text-muted-foreground`
+- Reference label (`"Reference"`, visually uppercased): `text-xs font-semibold uppercase tracking-wide text-muted-foreground`
 - Reference content: `text-xs` (12px), inherits card foreground color
 
 **Design question:** Should reference content be larger?
@@ -137,6 +141,8 @@ The reference section at `text-xs` (12px) looks disproportionately small after `
 
 **Recommendation:** Option A (keep `text-xs`). References are citations, not learning content. They exist for attribution and further reading, not for active comprehension. The small size correctly signals "this is metadata." If readability is a concern, the future user-selectable font size feature (Typography Policy §Future) will scale all tiers up uniformly.
 
+**Policy note:** Option B would require amending the Typography Policy's Tertiary tier and Pattern Registry reference pattern first. Under the current SSOT, this is not an implementation-ready DEBT-284 change.
+
 ---
 
 ## What This Does NOT Change
@@ -144,7 +150,7 @@ The reference section at `text-xs` (12px) looks disproportionately small after `
 - **Verdict pill** ("Correct" / "Incorrect") — already correct (DEBT-278)
 - **Section card border colors** — correct/destructive/neutral borders are intentional
 - **Section card backgrounds** — `bg-success/5`, `bg-destructive/5`, `bg-background/50` are intentional
-- **Layout gap/padding** — aligned by DEBT-282, no change needed
+- **Layout gap/padding** — aligned by DEBT-282, no change needed in live code (`gap-3`, `p-4`). Pattern Registry `F-5` still lists the pre-DEBT-282 `p-3` snapshot and should be synced separately rather than treated as the current component baseline.
 - **Question stem or choice button text** — already compliant
 - **Clinical pearl callout** — already correct
 - **Section labels** — Pipeline 1 chrome, intentionally `text-sm font-medium`
@@ -193,14 +199,27 @@ Note: The "Explanation not available." fallback (`feedback.tsx:82`) already uses
 
 ### Badge coloring (P1)
 
-Tests in `Feedback.test.tsx` that assert badge markup may need updates if we add color classes. Currently badge tests check for `rounded-full` and letter text — they should still pass. New tests needed to verify:
+The most directly affected current tests in `Feedback.test.tsx` are:
+- `T1: wraps correct-flow correct-answer content in a success card`
+- `T3: wraps incorrect-flow your-answer content in a destructive card`
+- `T4: wraps incorrect-flow correct-answer content in a success card`
+- `T5: keeps wrong-answer cards on neutral styling only`
+- `renders correct answer details when a correct choice is present`
+- `renders non-null choice explanations in display-label order`
+
+They already assert `rounded-full` badge structure. Add color assertions to verify:
 - Correct answer card badge has success coloring
 - Your answer card badge has destructive coloring
 - Why-wrong card badges remain neutral
 
 ### Explanation color (P2)
 
-Tests that assert `text-muted-foreground` on explanation elements will need updates. The `uses larger verdict-to-explanation spacing` test and related hierarchy tests would be affected.
+The explanation-color assertions that would change live primarily in:
+- `T1: wraps correct-flow correct-answer content in a success card`
+- `T3: wraps incorrect-flow your-answer content in a destructive card`
+- `T4: wraps incorrect-flow correct-answer content in a success card`
+
+The current wrong-answer hierarchy tests (`T5` and `renders non-null choice explanations in display-label order`) already assert muted explanation wrappers and should remain unchanged.
 
 ---
 
@@ -208,10 +227,10 @@ Tests that assert `text-muted-foreground` on explanation elements will need upda
 
 | # | Scenario | Expected |
 |---|----------|----------|
-| T1 | Correct answer card — badge color | Green (`border-success bg-success/15 text-success`) |
-| T2 | Your answer card — badge color | Red (`border-destructive bg-destructive/15 text-destructive`) |
+| T1 | Correct answer card — badge color | Semantic success badge (not neutral gray), contrast-safe for badge text |
+| T2 | Your answer card — badge color | Semantic destructive badge (not neutral gray), contrast-safe for badge text |
 | T3 | Why-wrong cards — badge color | Neutral (unchanged from DEBT-282) |
-| T4 | Badge colors match pre-submission verdict colors | Same classes as `choice-button.tsx:64-67` |
+| T4 | Badge colors map to pre-submission verdict states | Correct/selected-wrong feedback badges are semantic, not neutral |
 | T5 | All explanations muted (if Option A) | All explanation Markdown calls include `text-muted-foreground` |
 | T6 | Answer text remains bright | All answer Markdown calls remain `text-base text-foreground` |
 | T7 | Reference section unchanged | `text-xs` Tertiary tier |
@@ -224,7 +243,7 @@ Tests that assert `text-muted-foreground` on explanation elements will need upda
 ## Open Questions
 
 1. **P2 decision:** Mute all explanations (Option A), bright all (Option B), or keep current split (Option C)?
-2. **P3/P4:** Keep the current tier scale or adjust? Recommendation is to keep, but deferring to visual judgment after P1 and P2 land — the badge coloring and explanation consistency may resolve the "feels off" perception without touching sizes.
+2. **P3/P4:** No active implementation question under the current SSOT. Keep the current tier scale unless Typography Policy / Pattern Registry is amended first.
 
 ---
 
