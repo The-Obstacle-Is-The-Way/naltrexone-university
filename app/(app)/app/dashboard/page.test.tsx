@@ -1,8 +1,16 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
-import { DashboardView, renderDashboard } from './page';
+
+let DashboardView: typeof import('./page').DashboardView;
+let renderDashboard: typeof import('./page').renderDashboard;
+
+beforeAll(async () => {
+  const pageModule = await import('./page');
+  DashboardView = pageModule.DashboardView;
+  renderDashboard = pageModule.renderDashboard;
+});
 
 function findStatValue(doc: Document, label: string): string | null {
   const labelEl =
@@ -17,6 +25,38 @@ function getClassTokens(className: string): Set<string> {
 }
 
 describe('app/(app)/app/dashboard', () => {
+  it('renders page subtitle with explicit text-base sizing', () => {
+    const html = renderToStaticMarkup(
+      <DashboardView
+        stats={{
+          totalAnswered: 0,
+          accuracyOverall: 0,
+          answeredLast7Days: 0,
+          accuracyLast7Days: 0,
+          currentStreakDays: 0,
+          recentActivity: [],
+        }}
+        sessionHistoryResult={{
+          ok: true,
+          data: { rows: [], total: 0, limit: 3, offset: 0 },
+        }}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const subtitle = Array.from(doc.querySelectorAll('p')).find((element) =>
+      element.textContent?.includes(
+        'Track your progress and keep your streak alive.',
+      ),
+    );
+    const subtitleClassTokens = getClassTokens(
+      subtitle?.getAttribute('class') ?? '',
+    );
+
+    expect(subtitle).not.toBeNull();
+    expect(subtitleClassTokens.has('text-base')).toBe(true);
+    expect(subtitleClassTokens.has('text-muted-foreground')).toBe(true);
+  });
+
   it('renders user stats and recent sections', () => {
     const html = renderToStaticMarkup(
       <DashboardView

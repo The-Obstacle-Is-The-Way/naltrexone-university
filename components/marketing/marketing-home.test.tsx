@@ -30,6 +30,10 @@ describe('components/marketing/marketing-home', () => {
     return new DOMParser().parseFromString(html, 'text/html');
   }
 
+  function getClassTokens(className: string): Set<string> {
+    return new Set(className.split(/\s+/).filter(Boolean));
+  }
+
   it('renders shared pricing values', () => {
     const html = renderToStaticMarkup(
       <MarketingHomeShell
@@ -76,6 +80,20 @@ describe('components/marketing/marketing-home', () => {
     const html = renderDoc().documentElement.innerHTML;
 
     expect(html).toContain('Ready to start studying?');
+  });
+
+  it('renders standard marketing lede with explicit text-base sizing', () => {
+    const doc = renderDoc();
+    const lede = Array.from(doc.querySelectorAll('p')).find((element) =>
+      element.textContent?.includes(
+        'Clean workflows, zero fluff. Stay in the question loop and learn from every attempt.',
+      ),
+    );
+    const ledeClassTokens = getClassTokens(lede?.getAttribute('class') ?? '');
+
+    expect(lede).not.toBeNull();
+    expect(ledeClassTokens.has('text-base')).toBe(true);
+    expect(ledeClassTokens.has('text-muted-foreground')).toBe(true);
   });
 
   it('renders exactly one main landmark through MarketingHomeShell', () => {

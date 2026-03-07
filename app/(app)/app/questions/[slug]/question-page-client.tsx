@@ -198,7 +198,9 @@ export function QuestionView(props: QuestionViewProps) {
           <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
             Question
           </h1>
-          <p className="mt-1 text-muted-foreground">{originUi.subtitle}</p>
+          <p className="mt-1 text-base text-muted-foreground">
+            {originUi.subtitle}
+          </p>
         </div>
         {shouldShowTopBackLink ? (
           <Link

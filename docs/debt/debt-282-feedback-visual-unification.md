@@ -16,7 +16,7 @@ After BUG-155/157 (commit `48b5c9a4`), the question flow has a visual split betw
 | Dimension | Pre-submission (`choice-button.tsx`) | Post-submission (`feedback.tsx`) |
 |-----------|--------------------------------------|----------------------------------|
 | Badge | Circular `h-7 w-7 rounded-full border bg-muted` | Plain text `A)` |
-| Answer text | `text-base text-foreground` (Primary tier) | `text-sm` — no className on `<Markdown>` (inherits unpredictably) |
+| Answer text | `text-base text-foreground` (Primary tier) | Inherited `text-sm` on answer rows; 4 Primary-tier `<Markdown>` calls omit an explicit className |
 | Layout gap | `gap-3` | `gap-1` |
 | Padding | `p-4` | `p-3` |
 
@@ -24,7 +24,7 @@ The same answer text visibly shrinks after submission. The plain `A)` labels loo
 
 Additionally, wrong-answer cards have a **hierarchy inversion**: the answer title uses `text-muted-foreground` (dim) while the explanation body inherits `text-foreground` (bright). The subordinate content is more prominent than the primary content — the thing users should scan first is the quietest element.
 
-**Typography Policy violations:** 4 of 7 `<Markdown>` call sites in `feedback.tsx` omit className, violating Rule 1 ("Every `<Markdown>` call MUST include a tier-appropriate className") and Rule 4 ("Same content, same tier").
+**Typography Policy violations:** 4 of 9 `<Markdown>` call sites in `feedback.tsx` omit className, violating Rule 1 ("Every `<Markdown>` call MUST include a tier-appropriate className") and Rule 6 ("Same content, same tier").
 
 ---
 
@@ -53,10 +53,10 @@ Replace plain text `{choice.displayLabel})` with the circular badge pattern from
 This is the same markup from `choice-button.tsx:59-68` in its default (no-verdict) state. We use the default state because feedback badges are display-only — they don't need selected/correct/incorrect variants.
 
 **Locations in `feedback.tsx`:**
-- Line 70-72 (correct answer card — `CorrectAnswerSection`)
-- Line 155-156 (correct-flow wrong-answer cards)
-- Line 178-179 (incorrect-flow "Your answer" card)
-- Line 210-211 (incorrect-flow wrong-answer cards)
+- Lines 70-72 (correct answer card — `CorrectAnswerSection`)
+- Line 157 (correct-flow wrong-answer cards)
+- Lines 179-181 (incorrect-flow "Your answer" card)
+- Line 212 (incorrect-flow wrong-answer cards)
 
 ### Change 2: Typography alignment (Pipeline 2 compliance)
 
@@ -65,16 +65,16 @@ Add tier-appropriate `className` to all `<Markdown>` calls per the Typography Po
 | Call Site | Content Type | Current className | Target className |
 |-----------|-------------|-------------------|-----------------|
 | Line 73 — correct answer text | Primary | *none* | `"text-base text-foreground"` |
-| Line 77 — explanation | Secondary | `"text-sm"` | `"text-sm"` (already compliant) |
-| Line 157 — wrong choice text | Primary | *none* | `"text-base text-foreground"` |
-| Line 161 — wrong choice explanation | Secondary | `"text-sm"` | `"mt-2 text-sm text-muted-foreground"` (hierarchy fix) |
-| Line 181 — user's wrong answer text | Primary | *none* | `"text-base text-foreground"` |
-| Line 185 — user's wrong answer explanation | Secondary | `"text-sm"` | `"text-sm"` (already compliant) |
-| Line 212 — other wrong choice text | Primary | *none* | `"text-base text-foreground"` |
-| Line 216 — other wrong choice explanation | Secondary | `"text-sm"` | `"mt-2 text-sm text-muted-foreground"` (hierarchy fix) |
-| Line 231 — reference | Tertiary | `"text-xs"` | `"text-xs"` (already compliant) |
+| Line 77 — explanation | Secondary | `explanationClassName` (`"mt-2 text-sm"` when a correct choice exists; otherwise `"text-sm"`) | Unchanged (already compliant) |
+| Line 158 — wrong choice text | Primary | *none* | `"text-base text-foreground"` |
+| Line 162 — wrong choice explanation | Secondary | `"mt-2 text-sm"` | `"mt-2 text-sm text-muted-foreground"` (hierarchy fix) |
+| Line 182 — user's wrong answer text | Primary | *none* | `"text-base text-foreground"` |
+| Line 187 — user's wrong answer explanation | Secondary | `"mt-2 text-sm"` | `"mt-2 text-sm"` (already compliant) |
+| Line 213 — other wrong choice text | Primary | *none* | `"text-base text-foreground"` |
+| Line 217 — other wrong choice explanation | Secondary | `"mt-2 text-sm"` | `"mt-2 text-sm text-muted-foreground"` (hierarchy fix) |
+| Line 232 — reference | Tertiary | `"mt-1 text-xs"` | `"mt-1 text-xs"` (already compliant) |
 
-**Net change:** 4 `<Markdown>` calls gain `className="text-base text-foreground"`.
+**Net change:** 4 of 9 `<Markdown>` calls gain `className="text-base text-foreground"`.
 
 ### Change 3: Layout alignment
 
@@ -85,16 +85,16 @@ Add tier-appropriate `className` to all `<Markdown>` calls per the Typography Po
 
 **Locations for gap change (4 answer rows):**
 - Line 69: `flex items-start gap-1 text-sm text-foreground` → `flex items-start gap-3`
-- Line 155: `flex items-start gap-1 text-sm text-muted-foreground` → `flex items-start gap-3`
-- Line 177: `flex items-start gap-1 text-sm text-foreground` → `flex items-start gap-3`
-- Line 210: `flex items-start gap-1 text-sm text-muted-foreground` → `flex items-start gap-3`
+- Line 156: `flex items-start gap-1 text-sm text-muted-foreground` → `flex items-start gap-3`
+- Line 178: `flex items-start gap-1 text-sm text-foreground` → `flex items-start gap-3`
+- Line 211: `flex items-start gap-1 text-sm text-muted-foreground` → `flex items-start gap-3`
 
 Note: `text-sm text-foreground` / `text-sm text-muted-foreground` on the answer row div are removed. Text sizing now comes from the `<Markdown>` className (Change 2). The `text-muted-foreground` for wrong-answer cards moves from the answer row div to the explanation Markdown (Change 4) — see hierarchy inversion fix below.
 
-**Locations for padding change (5 section cards):**
+**Locations for padding change (4 section cards):**
 - Line 67: correct answer card `p-3` → `p-4`
-- Lines 153, 207: wrong-answer cards `p-3` → `p-4`
-- Line 176: "Your answer" card `p-3` → `p-4`
+- Lines 154, 209: wrong-answer cards `p-3` → `p-4`
+- Line 177: "Your answer" card `p-3` → `p-4`
 
 ### Change 4: Wrong-answer hierarchy inversion fix
 
@@ -114,10 +114,10 @@ Updated table for wrong-answer Markdown calls:
 
 | Call Site | Content Type | Target className |
 |-----------|-------------|-----------------|
-| Line 157 — wrong choice text | Primary | `"text-base text-foreground"` |
-| Line 161 — wrong choice explanation | Secondary (muted) | `"mt-2 text-sm text-muted-foreground"` |
-| Line 212 — other wrong choice text | Primary | `"text-base text-foreground"` |
-| Line 216 — other wrong choice explanation | Secondary (muted) | `"mt-2 text-sm text-muted-foreground"` |
+| Line 158 — wrong choice text | Primary | `"text-base text-foreground"` |
+| Line 162 — wrong choice explanation | Secondary (muted) | `"mt-2 text-sm text-muted-foreground"` |
+| Line 213 — other wrong choice text | Primary | `"text-base text-foreground"` |
+| Line 217 — other wrong choice explanation | Secondary (muted) | `"mt-2 text-sm text-muted-foreground"` |
 
 ---
 
@@ -190,7 +190,7 @@ Same as correct-flow wrong-answer card (see above).
 |----------|-----------|
 | Circular badge in feedback | Visual continuity — the same answer text should look the same before and after submission. The circular badge is the app's established pattern for answer labels. |
 | Default (no-verdict) badge state | Feedback badges are display-only, not interactive. Using the default state avoids implying clickability or correctness via the badge itself — correctness is communicated by the section card border colors. |
-| `text-base` for Primary tier content | Typography Policy Rule 3: "Content primary stays at `text-base`." Same content, same tier (Rule 4). |
+| `text-base` for Primary tier content | Typography Policy Rule 5: "Content primary stays at `text-base`." Same content, same tier (Rule 6). |
 | Hierarchy inversion fix for wrong-answer cards | Current code has answer title muted + explanation bright — inverted. Fix: answer title at `text-foreground` (bright, scannable), explanation at `text-muted-foreground` (subordinate). Wrong answers are differentiated by card border/background, not by dimming the answer text. |
 | `gap-3` and `p-4` | Matches `choice-button.tsx` exactly. Ensures consistent density and breathing room. |
 | No shared component extraction | The badge markup is ~3 lines of Tailwind classes. Extracting a shared `AnswerBadge` component would be premature — the two use sites (choice-button and feedback) have different parent styling contexts. Shared class constants are an option but low value for 2 consumers. |
@@ -202,11 +202,11 @@ Same as correct-flow wrong-answer card (see above).
 - **Verdict badge** — handled by [DEBT-278](./debt-278-verdict-badge-solid-pill-styling.md)
 - **Section card border colors** (`border-success/60`, `border-destructive`, `border-border/60`) — intentionally deferred. They are functionally acceptable for this pass, but not part of the typography/layout contract this debt resolves.
 - **Section card background fills** (`bg-success/5`, `bg-destructive/5`, `bg-background/50`) — intentionally deferred. Surface-token harmonization can be evaluated in a later visual pass if the question flow still feels split after DEBT-278 + DEBT-282.
-- **Regular React/app-chrome supporting-copy typography drift** — tracked separately in [DEBT-283](./debt-283-hardcoded-ui-typography-explicit-sizing-alignment.md)
+- **Regular React/app-chrome supporting-copy typography drift** — resolved separately in [DEBT-283](../_archive/debt/debt-283-hardcoded-ui-typography-explicit-sizing-alignment.md)
 - **Clinical pearl callout styling** — already correct, preserved as-is
-- **Reference section** — already compliant (`text-xs`, Tertiary tier)
+- **Reference section** — already compliant (`Reference` label is `text-xs font-semibold uppercase tracking-wide text-muted-foreground`; citation Markdown is `mt-1 text-xs`)
 - **Explanation text size** — stays at `text-sm` (Secondary tier). Wrong-answer explanation color changes to `text-muted-foreground` (Change 4 hierarchy fix)
-- **Section labels** ("Correct answer", "Your answer", "Why other answers are wrong:") — these are Pipeline 1 app chrome, stay at `text-sm font-medium`
+- **Section labels** ("Correct answer", "Your answer", "Why other answers are wrong:") — these are Pipeline 1 app chrome, stay at `text-sm font-medium text-foreground`
 
 ---
 
@@ -226,26 +226,30 @@ Both touch `feedback.tsx` but different elements. Shipping DEBT-278 first avoids
 Tests that assert on current badge text patterns (`B)`, `A)`) will need updates because the badge changes from inline `{displayLabel})` to a `<div>` containing `{displayLabel}` (no closing paren).
 
 **Tests asserting `B)` or `A)` text content (7 tests):**
-- `T1: wraps correct-flow correct-answer content in a success card` (line 82: `expect(successCardText).toContain('B)')`)
-- `T3: wraps incorrect-flow your-answer content in a destructive card` (line 176: `expect(destructiveCardText).toContain('A)')`)
-- `T4: wraps incorrect-flow correct-answer content in a success card` (line 219: `expect(successCardText).toContain('B)')`)
-- `renders correct answer details when a correct choice is present` (line 473: `expect(html).toContain('B)')`)
-- `renders non-null choice explanations in display-label order` (lines 512-515: `expect(html).toContain('A)')`, `expect(html).not.toContain('B) Second option')`)
-- `renders the your-answer section before...` (line 669: `expect(html).toContain('A)')`)
-- `renders your-answer choice details when selected wrong explanation is null` (line 908: `expect(html).toContain('A)')`)
+- `T1: wraps correct-flow correct-answer content in a success card` (line 106: `expect(successCardText).toContain('B)')`)
+- `T3: wraps incorrect-flow your-answer content in a destructive card` (line 200: `expect(destructiveCardText).toContain('A)')`)
+- `T4: wraps incorrect-flow correct-answer content in a success card` (line 243: `expect(successCardText).toContain('B)')`)
+- `renders correct answer details when a correct choice is present` (line 497: `expect(html).toContain('B)')`)
+- `renders non-null choice explanations in display-label order` (lines 536 and 539: `expect(html).toContain('A)')`, `expect(html).not.toContain('B) Second option')`)
+- `renders the your-answer section before...` (line 693: `expect(html).toContain('A)')`)
+- `renders your-answer choice details when selected wrong explanation is null` (line 932: `expect(html).toContain('A)')`)
 
-**Update strategy:** Change `toContain('B)')` to `toContain('B')` (the label text without the paren). Verify the label is inside a `rounded-full` element if specificity is needed. The `not.toContain('B) Second option')` assertion (line 515) becomes `not.toContain('BSecond option')` or switches to a DOM query verifying the correct choice isn't in the wrong-answers section.
+**Update strategy:** Change `toContain('B)')` to `toContain('B')` (the label text without the paren). Verify the label is inside a `rounded-full` element if specificity is needed. For the `not.toContain('B) Second option')` assertion (line 539), switch to a DOM query verifying the correct choice is absent from the wrong-answers section; a raw string replacement like `BSecond option` is brittle once the badge becomes separate markup.
+
+**Adjacent badge-text assertions that should remain unchanged:**
+- `T2: wraps explanation-only fallback in a success card for correct flow` (lines 130-131) asserts the explanation-only fallback does **not** contain `A)` or `B)`. Because DEBT-282 only adds badges when a choice row exists, those negative assertions should stay as-is.
 
 **Tests asserting layout classes:**
-- `uses larger verdict-to-explanation spacing...` (line 631: finds `text-muted-foreground` div) — this test locates a `text-muted-foreground` element. After the hierarchy inversion fix, `text-muted-foreground` moves from the answer row div to the explanation Markdown wrapper. The test's DOM query may need to target the explanation div instead, or use a broader selector. Verify this test still finds the correct element.
-- `T5: keeps wrong-answer cards on neutral styling only` (lines 313-336) — asserts `border-border/60` and `bg-background/50`, both unchanged.
-- Dark boundary override tests (lines 339-446) — assert `dark:border-foreground/40`, unchanged.
+- `uses larger verdict-to-explanation spacing...` (lines 629-660; selector at lines 654-656) — this test locates a `text-muted-foreground` div. After the hierarchy inversion fix, the row no longer carries that class. Update the selector to target the explanation block rather than the pre-DEBT-282 row wrapper.
+- `T5: keeps wrong-answer cards on neutral styling only` (lines 294-360) — asserts `border-border/60` and `bg-background/50`, both unchanged.
+- Dark boundary override tests (lines 363-469) — assert `dark:border-foreground/40`, unchanged.
+- Explanation-fallback tests (lines 134-156 and 248-291) assert `text-muted-foreground` on the "Explanation not available." paragraph. Those assertions are unrelated to Change 4 and should remain unchanged.
 
 **Tests asserting `gap-1`:** None currently assert gap classes directly.
 
 ### 2. `theme-token-regression.test.tsx`
 
-Lines 380-383 assert `bg-success/15` and `bg-destructive/15` — these are for the **verdict badge**, which will already be changed by DEBT-278. No additional changes needed from DEBT-282.
+Lines 380-383 assert `bg-success` and `bg-destructive` — these are for the **verdict badge** after DEBT-278, not for any badge/layout/typography contract DEBT-282 changes. No additional changes needed from DEBT-282.
 
 ### 3. E2E tests
 

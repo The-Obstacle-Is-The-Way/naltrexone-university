@@ -146,7 +146,10 @@ export function PracticeView(props: PracticeViewProps) {
             <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
               {title}
             </h1>
-            <p className="mt-1 text-muted-foreground" aria-live="polite">
+            <p
+              className="mt-1 text-base text-muted-foreground"
+              aria-live="polite"
+            >
               {description}
             </p>
           </div>

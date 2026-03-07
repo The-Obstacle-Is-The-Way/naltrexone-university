@@ -64,13 +64,16 @@ function CorrectAnswerSection({
       <div className="text-sm font-medium text-foreground">
         {correctChoice ? 'Correct answer' : 'Explanation'}
       </div>
-      <div className="mt-2 rounded-xl border border-success/60 bg-success/5 p-3">
+      <div className="mt-2 rounded-xl border border-success/60 bg-success/5 p-4">
         {correctChoice ? (
-          <div className="flex items-start gap-1 text-sm text-foreground">
-            <span className="shrink-0 font-medium">
-              {correctChoice.displayLabel})
-            </span>
-            <Markdown content={correctChoice.textMd} />
+          <div className="flex items-start gap-3">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold leading-none text-foreground dark:border-foreground/60 dark:bg-foreground/20">
+              {correctChoice.displayLabel}
+            </div>
+            <Markdown
+              content={correctChoice.textMd}
+              className="text-base text-foreground"
+            />
           </div>
         ) : null}
         {explanationMd ? (
@@ -151,15 +154,20 @@ export function Feedback({
                 {visibleChoiceExplanations.map((choice) => (
                   <div
                     key={choice.choiceId}
-                    className="rounded-xl border border-border/60 bg-background/50 p-3 dark:border-foreground/40"
+                    className="rounded-xl border border-border/60 bg-background/50 p-4 dark:border-foreground/40"
                   >
-                    <div className="flex items-start gap-1 text-sm text-muted-foreground">
-                      <span className="shrink-0">{choice.displayLabel})</span>
-                      <Markdown content={choice.textMd} />
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold leading-none text-foreground dark:border-foreground/60 dark:bg-foreground/20">
+                        {choice.displayLabel}
+                      </div>
+                      <Markdown
+                        content={choice.textMd}
+                        className="text-base text-foreground"
+                      />
                     </div>
                     <Markdown
                       content={choice.explanationMd}
-                      className="mt-2 text-sm"
+                      className="mt-2 text-sm text-muted-foreground"
                     />
                   </div>
                 ))}
@@ -174,12 +182,15 @@ export function Feedback({
               <div className="text-sm font-medium text-foreground">
                 Your answer
               </div>
-              <div className="mt-2 rounded-xl border border-destructive bg-destructive/5 p-3">
-                <div className="flex items-start gap-1 text-sm text-foreground">
-                  <span className="shrink-0 font-medium">
-                    {userChoice.displayLabel})
-                  </span>
-                  <Markdown content={userChoice.textMd} />
+              <div className="mt-2 rounded-xl border border-destructive bg-destructive/5 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold leading-none text-foreground dark:border-foreground/60 dark:bg-foreground/20">
+                    {userChoice.displayLabel}
+                  </div>
+                  <Markdown
+                    content={userChoice.textMd}
+                    className="text-base text-foreground"
+                  />
                 </div>
                 {userChoice.explanationMd ? (
                   <Markdown
@@ -206,15 +217,20 @@ export function Feedback({
                 {otherWrongChoices.map((choice) => (
                   <div
                     key={choice.choiceId}
-                    className="rounded-xl border border-border/60 bg-background/50 p-3 dark:border-foreground/40"
+                    className="rounded-xl border border-border/60 bg-background/50 p-4 dark:border-foreground/40"
                   >
-                    <div className="flex items-start gap-1 text-sm text-muted-foreground">
-                      <span className="shrink-0">{choice.displayLabel})</span>
-                      <Markdown content={choice.textMd} />
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold leading-none text-foreground dark:border-foreground/60 dark:bg-foreground/20">
+                        {choice.displayLabel}
+                      </div>
+                      <Markdown
+                        content={choice.textMd}
+                        className="text-base text-foreground"
+                      />
                     </div>
                     <Markdown
                       content={choice.explanationMd}
-                      className="mt-2 text-sm"
+                      className="mt-2 text-sm text-muted-foreground"
                     />
                   </div>
                 ))}

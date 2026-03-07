@@ -138,7 +138,7 @@ export function MarketingHomeShell({
               <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
                 Everything you need to prep efficiently
               </h2>
-              <p className="mt-3 text-muted-foreground">
+              <p className="mt-3 text-base text-muted-foreground">
                 Clean workflows, zero fluff. Stay in the question loop and learn
                 from every attempt.
               </p>
@@ -176,7 +176,7 @@ export function MarketingHomeShell({
               <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
                 Simple pricing
               </h2>
-              <p className="mt-3 text-muted-foreground">
+              <p className="mt-3 text-base text-muted-foreground">
                 One subscription unlocks the full question bank and all study
                 modes.
               </p>
@@ -245,7 +245,7 @@ export function MarketingHomeShell({
             <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
               Ready to start studying?
             </h2>
-            <p className="mt-4 text-muted-foreground">
+            <p className="mt-4 text-base text-muted-foreground">
               Join physicians and psychiatrists preparing for addiction boards.
               Full access, cancel anytime.
             </p>
