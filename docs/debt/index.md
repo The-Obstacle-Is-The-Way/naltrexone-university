@@ -19,7 +19,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 6 future enhancements (F1/F8 resolved by DEBT-277/DEBT-276) | P3 | — |
-| [DEBT-284](./debt-284-feedback-visual-polish-phase-2.md) | Feedback Visual Polish Phase 2 — badge coloring to match pre-submission verdict colors, explanation color consistency across card types, type scale readability review | P2 | — |
+| [DEBT-284](./debt-284-feedback-visual-polish-phase-2.md) | Feedback Visual Polish Phase 2 — badge coloring and explanation muting are implemented on the current branch; remaining type-scale/reference notes stay observational under current typography policy until merge/archive | P2 | — |
 
 **Next Debt ID:** DEBT-285
 

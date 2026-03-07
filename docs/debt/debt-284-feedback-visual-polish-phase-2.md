@@ -2,9 +2,23 @@
 
 **Priority:** P2
 **Created:** 2026-03-07
+**Status:** Resolved in current branch
+**Resolved in branch:** 2026-03-07 — commit `c9275d58` (`Implement DEBT-284: Badge coloring and explanation muting`)
 **Source:** Visual review after [DEBT-282](../_archive/debt/debt-282-feedback-visual-unification.md) (PR #179)
 **Governing Policy:** [Typography Policy](../frontend/typography-policy.md), [Frontend Standards](../frontend/standards.md), [Pattern Registry](../frontend/pattern-registry.md), [Contrast Policy](../frontend/contrast-policy.md)
 **Scope:** Remaining visual inconsistencies between question-flow choice buttons and post-submission feedback cards, plus explanation color consistency and type scale readability
+
+---
+
+## Current Status
+
+As of **March 7, 2026**, the implementation work for DEBT-284 is complete on branch `debt-284-feedback-badge-coloring-and-explanation-muting`.
+
+- **P1 resolved:** feedback badges now use the same semantic verdict coloring as the question-area choice badges for the featured correct/incorrect rows.
+- **P2 resolved:** all explanation Markdown in feedback cards now uses the muted Secondary-tier treatment.
+- **P3/P4 intentionally not implemented:** the type-scale and reference-size concerns were reviewed, but under the current Typography Policy they remain observations, not active implementation work.
+
+This debt should remain in the active register only until the implementation branch merges and the doc can be archived.
 
 ---
 
@@ -12,7 +26,7 @@
 
 DEBT-282 resolved the most jarring inconsistencies: plain `A)` text badges became circular badges, answer text got proper `text-base text-foreground` Primary tier className, layout gap/padding matched choice buttons, and the wrong-answer hierarchy inversion was fixed.
 
-This debt covers the **next layer** of issues visible after DEBT-282: semantic badge coloring parity between the question area and feedback cards, explanation color divergence, and the type scale gap between answer text and supporting content.
+This debt covered the **next layer** of issues visible after DEBT-282: semantic badge coloring parity between the question area and feedback cards, explanation color divergence, and the type scale gap between answer text and supporting content.
 
 ---
 
@@ -25,10 +39,10 @@ Every text element in the feedback system, its source pipeline, current size, an
 | Element | File:Line | Size | Color | Notes |
 |---------|-----------|------|-------|-------|
 | Verdict pill ("Incorrect" / "Correct") | `feedback.tsx:131` | `text-sm font-semibold` | `text-destructive-foreground` / `text-success-foreground` | Solid pill background |
-| Section labels (`"Explanation"` / `"Correct answer"`, `"Your answer"`, `"Why other answers are wrong:"`) | `feedback.tsx:64,150,182,213` | `text-sm font-medium` | `text-foreground` | `feedback.tsx:64` is conditional: `"Correct answer"` when `correctChoice` exists, otherwise `"Explanation"` |
-| Reference label (`"Reference"`, rendered uppercase via CSS) | `feedback.tsx:245` | `text-xs font-semibold uppercase tracking-wide` | `text-muted-foreground` | Literal string is `Reference`; `uppercase` transforms it visually |
-| "Explanation not available." fallback | `feedback.tsx:82` | `text-sm` | `text-muted-foreground` | Only renders when `explanationMd` is null |
-| Badge letter (A, B, C, D) | `feedback.tsx:70,160,187,223` | `text-xs font-semibold leading-none` | `text-foreground` | Inside circular badge div |
+| Section labels (`"Explanation"` / `"Correct answer"`, `"Your answer"`, `"Why other answers are wrong:"`) | `feedback.tsx:66,152,184,215` | `text-sm font-medium` | `text-foreground` | `feedback.tsx:66` is conditional: `"Correct answer"` when `correctChoice` exists, otherwise `"Explanation"` |
+| Reference label (`"Reference"`, rendered uppercase via CSS) | `feedback.tsx:247` | `text-xs font-semibold uppercase tracking-wide` | `text-muted-foreground` | Literal string is `Reference`; `uppercase` transforms it visually |
+| "Explanation not available." fallback | `feedback.tsx:84` | `text-sm` | `text-muted-foreground` | Only renders when `explanationMd` is null |
+| Badge letter (A, B, C, D) | `feedback.tsx:72,162,189,225` | `text-xs font-semibold leading-none` | `text-success` / `text-destructive` / `text-foreground` | Success on correct-answer card, destructive on your-answer card, neutral on why-wrong cards |
 | "Clinical Pearl" label | `Markdown.tsx:53` | `text-xs font-medium uppercase tracking-wide` | `text-muted-foreground` | Inside `border-l-2` callout |
 
 ### Pipeline 2 — Content (rendered through `<Markdown>`)
@@ -37,24 +51,24 @@ Every text element in the feedback system, its source pipeline, current size, an
 |---------|-----------|------|-------|------|
 | Question stem | `question-card.tsx:35` | `text-base` (16px) | `text-foreground` | Primary |
 | Choice button answer text | `choice-button.tsx:72` | `text-base` (16px) | `text-foreground` | Primary |
-| Correct answer text (feedback) | `feedback.tsx:73` | `text-base` (16px) | `text-foreground` | Primary |
-| Your answer text (feedback) | `feedback.tsx:190` | `text-base` (16px) | `text-foreground` | Primary |
-| Wrong-answer text — correct flow (feedback) | `feedback.tsx:163` | `text-base` (16px) | `text-foreground` | Primary |
-| Wrong-answer text — incorrect flow (feedback) | `feedback.tsx:226` | `text-base` (16px) | `text-foreground` | Primary |
-| Correct answer explanation | `feedback.tsx:80` | `text-sm` (14px) | `text-foreground` (inherits) | Secondary |
-| Your answer explanation | `feedback.tsx:196` | `text-sm` (14px) | `text-foreground` (inherits) | Secondary |
-| Wrong-answer explanation — correct flow | `feedback.tsx:168` | `text-sm` (14px) | `text-muted-foreground` | Secondary |
-| Wrong-answer explanation — incorrect flow | `feedback.tsx:231` | `text-sm` (14px) | `text-muted-foreground` | Secondary |
-| Reference content | `feedback.tsx:248` | `text-xs` (12px) | inherits `text-card-foreground` | Tertiary |
+| Correct answer text (feedback) | `feedback.tsx:75` | `text-base` (16px) | `text-foreground` | Primary |
+| Your answer text (feedback) | `feedback.tsx:192` | `text-base` (16px) | `text-foreground` | Primary |
+| Wrong-answer text — correct flow (feedback) | `feedback.tsx:165` | `text-base` (16px) | `text-foreground` | Primary |
+| Wrong-answer text — incorrect flow (feedback) | `feedback.tsx:228` | `text-base` (16px) | `text-foreground` | Primary |
+| Correct answer explanation | `feedback.tsx:82` | `text-sm` (14px) | `text-muted-foreground` | Secondary |
+| Your answer explanation | `feedback.tsx:200` | `text-sm` (14px) | `text-muted-foreground` | Secondary |
+| Wrong-answer explanation — correct flow | `feedback.tsx:170` | `text-sm` (14px) | `text-muted-foreground` | Secondary |
+| Wrong-answer explanation — incorrect flow | `feedback.tsx:233` | `text-sm` (14px) | `text-muted-foreground` | Secondary |
+| Reference content | `feedback.tsx:250` | `text-xs` (12px) | inherits `text-card-foreground` | Tertiary |
 | Clinical pearl body | `Markdown.tsx:56` | inherits from parent Markdown className | inherits | Same tier as containing explanation |
 
 ---
 
-## Problems
+## Historical Findings
 
-### P1: Feedback badges are colorless — question-area badges are verdict-colored after submission
+### P1: Feedback badges were colorless — resolved in current branch
 
-**Question area after submission** (`choice-button.tsx:59-68`): Once a verdict exists, choice button badges get semantic coloring:
+**Before this change**, the question area (`choice-button.tsx:59-68`) used semantic verdict-colored badges, but `feedback.tsx` rendered all four feedback badges with the same neutral token set.
 
 | Verdict | Badge classes |
 |---------|-------------|
@@ -62,26 +76,24 @@ Every text element in the feedback system, its source pipeline, current size, an
 | Incorrect (selected wrong) | `border-destructive bg-destructive/15 text-destructive` (red border, red tint, red letter) |
 | Wrong (unselected) | default neutral (no change) |
 
-**Post-submission** (`feedback.tsx:70,160,187,223`): All feedback badges use the same neutral default:
+**Before the fix** (`feedback.tsx:70,160,187,223` in the pre-implementation snapshot), all feedback badges used the same neutral default:
 ```
 border-border bg-muted text-foreground dark:border-foreground/60 dark:bg-foreground/20
 ```
 
-**Visual effect:** The user sees green A / red B circles in the question card above, then all-gray circles in the feedback card below. The semantic coloring disappears at the moment it becomes most useful — when the user is reviewing what they got right and wrong.
+**Current implementation:** the featured feedback badges now match the choice-button verdict tokens exactly:
 
-**Proposed fix:** Add verdict-colored badge variants to feedback cards:
+| Feedback badge | Current classes |
+|---------------|-----------------|
+| Correct answer card (`feedback.tsx:72`) | `border-success bg-success/15 text-success` |
+| Your answer card (`feedback.tsx:189`) | `border-destructive bg-destructive/15 text-destructive` |
+| Why-wrong cards (`feedback.tsx:162,225`) | Neutral default unchanged |
 
-| Feedback card | Badge treatment |
-|--------------|----------------|
-| Correct answer card (green border) | `border-success bg-success/15 text-success` |
-| Your answer card (red border) | `border-destructive bg-destructive/15 text-destructive` |
-| Why other answers are wrong cards (neutral border) | Default neutral (no change) |
+This resolved the semantic-color discontinuity between the submitted question surface and the feedback surface. If a contrast issue is ever discovered later, it affects both components and should be tracked as a separate debt item.
 
-These are the same tokens used by `choice-button.tsx:64-67` on an identical `h-7 w-7 rounded-full` badge with identical `text-xs font-semibold` text. The elements are the same size and shape — if these tokens are contrast-safe for choice buttons (already shipped), they are contrast-safe for feedback badges. If a contrast issue is discovered later, it affects both components and should be tracked as a separate debt item.
+### P2: Explanation color inconsistency across card types — resolved in current branch
 
-### P2: Explanation color inconsistency across card types
-
-Three different color treatments for the same semantic role (Secondary-tier explanation text):
+**Before this change**, the same Secondary-tier explanation role had two different treatments:
 
 | Card type | Explanation className | Rendered color (dark mode) |
 |-----------|----------------------|---------------------------|
@@ -89,57 +101,33 @@ Three different color treatments for the same semantic role (Secondary-tier expl
 | Your answer (wrong) | `"mt-2 text-sm"` | Bright white (`text-foreground` inherited) |
 | Why other answers are wrong | `"mt-2 text-sm text-muted-foreground"` | Muted gray |
 
-DEBT-282 intentionally muted wrong-answer explanations to fix a hierarchy inversion (explanation was brighter than answer title). But it did not apply the same muting to correct-answer or your-answer explanations. This creates a split: explanations in some cards are white, others are gray.
+**Current implementation:** all explanation Markdown in `feedback.tsx` now uses the muted Secondary-tier treatment:
 
-**Design question:** Should all explanations be muted, or all bright?
+| Call Site | Current className |
+|-----------|-------------------|
+| `feedback.tsx:82` — correct answer explanation | `text-sm text-muted-foreground` or `mt-2 text-sm text-muted-foreground` |
+| `feedback.tsx:170` — wrong-answer explanation (correct flow) | `mt-2 text-sm text-muted-foreground` |
+| `feedback.tsx:200` — your answer explanation | `mt-2 text-sm text-muted-foreground` |
+| `feedback.tsx:233` — wrong-answer explanation (incorrect flow) | `mt-2 text-sm text-muted-foreground` |
 
-| Option | Approach | Rationale |
-|--------|----------|-----------|
-| **A: Mute all** | All explanations get `text-muted-foreground` | Consistent. Explanations are always subordinate to answer text. Card border/background conveys the semantic distinction, not text color. |
-| **B: Bright all** | Remove `text-muted-foreground` from wrong-answer explanations | Consistent. All explanations are equally readable. Reverts the DEBT-282 hierarchy fix but gains uniformity. |
-| **C: Keep current** | Bright in featured cards (correct, your answer), muted in supplementary cards (why wrong) | Current state. Featured cards are "primary reading" (you care about this explanation), wrong-answer cards are "reference" (why the others are wrong is less important). |
+This closes the split treatment that DEBT-282 intentionally left behind when it only muted the supplementary wrong-answer explanations.
 
-**Decision: Option A (mute all).** Explanations are universally subordinate to the answer title. The card border/background already communicates correct vs wrong vs neutral — the explanation doesn't need to duplicate that signal via text color.
+### P3: Type scale gap — observation only, not active work
 
-### P3: Type scale gap — `text-base` answer text vs `text-sm` explanation
-
-The Typography Policy defines three content tiers:
+The Typography Policy still defines three content tiers:
 - Primary: `text-base` (16px) — answer text
 - Secondary: `text-sm` (14px) — explanations
 - Tertiary: `text-xs` (12px) — references
 
-The 16→14px step is a 12.5% reduction. In dark mode with dense clinical text, this reads as a noticeable "shrink" — the explanation feels like it belongs to a different component.
+After P1/P2 landed, this remains a policy-governed observation rather than an active implementation item. The current SSOT still calls for `text-base` / `text-sm` / `text-xs`, so no further DEBT-284 code change is warranted unless Typography Policy and Pattern Registry are amended first.
 
-**Design question:** Is the tier gap too aggressive for the feedback context?
+### P4: Reference section readability — observation only, not active work
 
-| Option | Approach | Trade-off |
-|--------|----------|-----------|
-| **A: Keep current tiers** | `text-base` / `text-sm` / `text-xs` | Hierarchy is clear. Some perceived "shrink." Consistent with Typography Policy as written. |
-| **B: Narrow the gap** | `text-base` / `text-base` / `text-sm` | Explanation same size as answer, differentiated by color only. Reference moves to `text-sm`. More readable but less hierarchical. |
-| **C: Adjust reference only** | `text-base` / `text-sm` / `text-sm text-muted-foreground` | Reference becomes same size as explanation, differentiated by being muted. Eliminates the jump to `text-xs`. |
-
-**Recommendation:** Option A (keep current). The tier system creates intentional hierarchy and matches the Typography Policy. If P2 is fixed (all explanations muted), the color + size together will clearly differentiate answer text from explanation. The gap only feels wrong now because the brightness inconsistency in P2 makes some explanations compete with answer text.
-
-**Policy note:** Options B and C would require a Typography Policy + Pattern Registry change first. Under the current SSOT, P3 is an observation to keep monitoring after P1/P2, not an implementation-ready typography change.
-
-### P4: Reference section readability
-
-The reference section at `text-xs` (12px) looks disproportionately small after `text-base` (16px) answer text — a 25% reduction that's especially noticeable in dark mode with citation text that includes author names, journal titles, and DOIs.
-
-**Current rendering:**
+The reference section still renders as:
 - Reference label (`"Reference"`, visually uppercased): `text-xs font-semibold uppercase tracking-wide text-muted-foreground`
 - Reference content: `text-xs` (12px), inherits card foreground color
 
-**Design question:** Should reference content be larger?
-
-| Option | Approach |
-|--------|----------|
-| **A: Keep `text-xs`** | Citations are footnote-level data. Small is correct. Typography Policy Tertiary tier. |
-| **B: Bump to `text-sm text-muted-foreground`** | More readable. Differentiated from explanations by muted color rather than by size. "REFERENCE" label could stay `text-xs` (or shrink further) to maintain hierarchy within the reference block. |
-
-**Recommendation:** Option A (keep `text-xs`). References are citations, not learning content. They exist for attribution and further reading, not for active comprehension. The small size correctly signals "this is metadata." If readability is a concern, the future user-selectable font size feature (Typography Policy §Future) will scale all tiers up uniformly.
-
-**Policy note:** Option B would require amending the Typography Policy's Tertiary tier and Pattern Registry reference pattern first. Under the current SSOT, this is not an implementation-ready DEBT-284 change.
+That remains intentional under the current Typography Policy. No additional DEBT-284 implementation work is justified unless the Tertiary-tier policy changes.
 
 ---
 
@@ -155,13 +143,11 @@ The reference section at `text-xs` (12px) looks disproportionately small after `
 
 ---
 
-## Implementation Plan
+## Implemented In Current Branch
 
-### Phase 1: Badge coloring (P1) — high impact, small diff
+### Phase 1: Badge coloring (P1)
 
-Add verdict-colored badge variants to `feedback.tsx`. Three badge states are needed:
-
-Three badge variants, matching `choice-button.tsx:59-68` exactly:
+The featured feedback badges now match `choice-button.tsx:59-68` exactly:
 
 ```tsx
 // Correct answer card — green badge
@@ -174,32 +160,32 @@ Three badge variants, matching `choice-button.tsx:59-68` exactly:
 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold leading-none text-foreground dark:border-foreground/60 dark:bg-foreground/20">
 ```
 
-**Badge locations:**
-- `feedback.tsx:70` (CorrectAnswerSection) → green
-- `feedback.tsx:187` (Your answer card) → red
-- `feedback.tsx:160` (correct-flow wrong-answer cards) → neutral (unchanged)
-- `feedback.tsx:223` (incorrect-flow wrong-answer cards) → neutral (unchanged)
+**Implemented badge locations:**
+- `feedback.tsx:72` (CorrectAnswerSection) → green
+- `feedback.tsx:189` (Your answer card) → red
+- `feedback.tsx:162` (correct-flow wrong-answer cards) → neutral (unchanged)
+- `feedback.tsx:225` (incorrect-flow wrong-answer cards) → neutral (unchanged)
 
 ### Phase 2: Explanation color unification (P2) — Option A
 
-Add `text-muted-foreground` to all explanation Markdown calls:
+All explanation Markdown calls now use `text-muted-foreground`:
 
 | Call Site | Current | Target |
 |-----------|---------|--------|
-| `feedback.tsx:80` — correct answer explanation | `explanationClassName` (`"mt-2 text-sm"` / `"text-sm"`) | `"mt-2 text-sm text-muted-foreground"` / `"text-sm text-muted-foreground"` |
-| `feedback.tsx:196` — your answer explanation | `"mt-2 text-sm"` | `"mt-2 text-sm text-muted-foreground"` |
-| `feedback.tsx:168` — wrong-answer explanation (correct flow) | `"mt-2 text-sm text-muted-foreground"` | No change |
-| `feedback.tsx:231` — wrong-answer explanation (incorrect flow) | `"mt-2 text-sm text-muted-foreground"` | No change |
+| `feedback.tsx:82` — correct answer explanation | `text-sm text-muted-foreground` or `mt-2 text-sm text-muted-foreground` | Implemented |
+| `feedback.tsx:200` — your answer explanation | `mt-2 text-sm text-muted-foreground` | Implemented |
+| `feedback.tsx:170` — wrong-answer explanation (correct flow) | `mt-2 text-sm text-muted-foreground` | Already correct |
+| `feedback.tsx:233` — wrong-answer explanation (incorrect flow) | `mt-2 text-sm text-muted-foreground` | Already correct |
 
-Note: The "Explanation not available." fallback (`feedback.tsx:82`) already uses `text-muted-foreground`, so no change needed there.
+Note: The "Explanation not available." fallback (`feedback.tsx:84`) already used muted treatment and remained unchanged.
 
 ---
 
-## Affected Tests
+## Verification Coverage
 
 ### Badge coloring (P1)
 
-The most directly affected current tests in `Feedback.test.tsx` are:
+The implemented assertions now live in `Feedback.test.tsx`:
 - `T1: wraps correct-flow correct-answer content in a success card`
 - `T3: wraps incorrect-flow your-answer content in a destructive card`
 - `T4: wraps incorrect-flow correct-answer content in a success card`
@@ -207,43 +193,51 @@ The most directly affected current tests in `Feedback.test.tsx` are:
 - `renders correct answer details when a correct choice is present`
 - `renders non-null choice explanations in display-label order`
 
-They already assert `rounded-full` badge structure. Add color assertions to verify:
+They now assert:
 - Correct answer card badge has success coloring
 - Your answer card badge has destructive coloring
 - Why-wrong card badges remain neutral
 
 ### Explanation color (P2)
 
-The explanation-color assertions that would change live primarily in:
+The implemented explanation-color assertions live primarily in:
 - `T1: wraps correct-flow correct-answer content in a success card`
 - `T3: wraps incorrect-flow your-answer content in a destructive card`
 - `T4: wraps incorrect-flow correct-answer content in a success card`
 
-The current wrong-answer hierarchy tests (`T5` and `renders non-null choice explanations in display-label order`) already assert muted explanation wrappers and should remain unchanged.
+The existing wrong-answer hierarchy tests (`T5` and `renders non-null choice explanations in display-label order`) continue to assert muted explanation wrappers on the neutral cards.
 
 ---
 
-## Test Plan
+## Validation
 
 | # | Scenario | Expected |
 |---|----------|----------|
-| T1 | Correct answer card — badge color | `border-success bg-success/15 text-success` |
-| T2 | Your answer card — badge color | `border-destructive bg-destructive/15 text-destructive` |
-| T3 | Why-wrong cards — badge color | Neutral (unchanged from DEBT-282) |
-| T4 | Badge tokens match choice-button verdict tokens | Same classes as `choice-button.tsx:64-67` |
-| T5 | All explanations muted | All explanation Markdown calls include `text-muted-foreground` |
-| T6 | Answer text remains bright | All answer Markdown calls remain `text-base text-foreground` |
-| T7 | Reference section unchanged | `text-xs` Tertiary tier |
-| T8 | Clinical pearl preserved | `border-l-2` callout renders correctly |
-| T9 | Dark mode visual check | Badge colors visible against card backgrounds |
-| T10 | Light mode visual check | Same consistency |
+| T1 | Correct answer card — badge color | Covered in `Feedback.test.tsx` |
+| T2 | Your answer card — badge color | Covered in `Feedback.test.tsx` |
+| T3 | Why-wrong cards — badge color | Covered in `Feedback.test.tsx` |
+| T4 | Badge tokens match choice-button verdict tokens | Covered in `Feedback.test.tsx` |
+| T5 | All explanations muted | Covered in `Feedback.test.tsx` |
+| T6 | Answer text remains bright | Covered in `Feedback.test.tsx` |
+| T7 | Reference section unchanged | Covered in `Feedback.test.tsx` |
+| T8 | Clinical pearl preserved | Covered in `Feedback.test.tsx` |
+
+Full branch verification passed:
+
+- `pnpm typecheck`
+- `pnpm lint`
+- `pnpm test --run`
+- `pnpm test:browser`
+- `pnpm build`
 
 ---
 
 ## Open Questions
 
-1. ~~**P2 decision:** Mute all explanations (Option A), bright all (Option B), or keep current split (Option C)?~~ **Resolved: Option A (mute all).**
-2. **P3/P4:** No active implementation question under the current SSOT. Keep the current tier scale unless Typography Policy / Pattern Registry is amended first.
+None for DEBT-284 implementation.
+
+- **P2** is resolved to Option A (mute all explanations).
+- **P3/P4** remain policy-governed observations, not active implementation questions under the current SSOT.
 
 ---
 
