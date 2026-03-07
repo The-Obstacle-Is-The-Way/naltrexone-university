@@ -32,10 +32,11 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Open Bugs
 
-| ID | Priority | Title | Source |
-|----|----------|-------|--------|
-| [BUG-201](bug-201-clerk-webhook-double-cast.md) | P4 | Clerk webhook route uses an unnecessary output cast | AUDIT-011 |
-| [BUG-202](bug-202-redundant-condition-after-find.md) | P4 | Redundant condition after `.find()` | AUDIT-011 |
+None.
+
+**Recently resolved (2026-03-07):**
+- [BUG-201](bug-201-clerk-webhook-double-cast.md) resolved — removed only the unnecessary Clerk webhook output cast, kept the necessary input cast with an inline SDK-typing explanation, and added type-level regression coverage.
+- [BUG-202](bug-202-redundant-condition-after-find.md) resolved — simplified the failed-response branch to `if (failed)` and added an explicit type guard so TypeScript still narrows the failed result.
 
 **Reclassified / Invalidated (2026-03-07):**
 - BUG-199 invalidated — `stripeSubscriptionSchema` already requires `items.data.min(1)`, so the documented empty-array `TypeError` / HTTP 500 path is not reachable in current production code. See [BUG-199](bug-199-unsafe-array-index-access.md).

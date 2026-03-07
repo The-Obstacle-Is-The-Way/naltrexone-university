@@ -4,13 +4,14 @@
 **Created:** 2026-03-07
 **Revised:** 2026-03-07 (tracer bullet verification)
 **Source:** [AUDIT-011](../audits/audit-011-error-observability-defensive-coding.md)
-**Status:** Open
+**Status:** Resolved
+**Resolved:** 2026-03-07
 
 ---
 
-## Problem
+## Original Problem
 
-`app/api/webhooks/clerk/route.ts:13-17` currently uses two `as unknown as` casts:
+Before resolution, `app/api/webhooks/clerk/route.ts` used two `as unknown as` casts:
 
 ```typescript
 async function verifyClerkWebhook(req: Request): Promise<ClerkWebhookEvent> {
@@ -50,9 +51,9 @@ The unnecessary output cast is a small but real type-safety hole:
 
 ---
 
-## Proposed Fix
+## Resolution
 
-Remove only the unnecessary output cast and leave a short comment explaining the input cast:
+The fix removed only the unnecessary output cast and kept the input cast with an inline explanation of the current Clerk typing gap:
 
 ```typescript
 async function verifyClerkWebhook(req: Request): Promise<ClerkWebhookEvent> {
@@ -63,20 +64,18 @@ async function verifyClerkWebhook(req: Request): Promise<ClerkWebhookEvent> {
 }
 ```
 
-If we want even tighter alignment later, we can also replace the local alias with Clerk's `WebhookEvent` type at the route boundary and adapt from there.
+Route tests now include type-level assertions for the two key boundary facts:
 
----
+- Clerk's `verifyWebhook()` output remains assignable to the local `ClerkWebhookEvent` type
+- Clerk's current `RequestLike` typing still excludes plain Web `Request`, so the input cast remains intentional
 
-## Test Gap
+## Verification
 
-Current route tests mock `verifyWebhook()` directly, so they do not exercise this real SDK type boundary. That is acceptable for runtime behavior, but it means the compiler is the main protection here. The output cast weakens that protection.
-
----
-
-## Test Plan
-
-| # | Scenario | Expected |
-|---|----------|----------|
-| T1 | Remove only the output cast | `pnpm typecheck` passes |
-| T2 | Existing Clerk webhook route tests | Continue to pass unchanged |
-| T3 | Future local type tightening | Compiler fails at the boundary instead of being bypassed |
+- [x] Removed only the unnecessary output cast from `verifyClerkWebhook()`
+- [x] Kept the input cast and documented why it remains
+- [x] `pnpm typecheck`
+- [x] `pnpm lint`
+- [x] `pnpm test --run`
+- [x] `pnpm test:browser`
+- [x] `pnpm test:integration`
+- [x] `pnpm build`

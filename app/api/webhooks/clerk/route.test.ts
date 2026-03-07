@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 import type { ClerkWebhookRouteContainer } from '@/app/api/webhooks/clerk/handler';
 import { createWebhookHandler } from '@/app/api/webhooks/clerk/handler';
 import type {
@@ -16,6 +16,8 @@ import {
   FakeStripeCustomerRepository,
   FakeUserRepository,
 } from '@/src/application/test-helpers/fakes';
+
+type ClerkVerifyWebhook = typeof import('@clerk/nextjs/webhooks').verifyWebhook;
 
 function createTestDeps() {
   const logger = new FakeLogger();
@@ -82,6 +84,23 @@ function createTestDeps() {
 }
 
 describe('POST /api/webhooks/clerk', () => {
+  it('treats Clerk verifyWebhook output as assignable to the local event type', () => {
+    expectTypeOf<
+      Awaited<ReturnType<ClerkVerifyWebhook>>
+    >().toMatchTypeOf<ClerkWebhookEvent>();
+  });
+
+  it('still requires an input cast for a standard Web Request', () => {
+    const request = new Request('http://localhost/api/webhooks/clerk', {
+      method: 'POST',
+    });
+
+    // @ts-expect-error Clerk RequestLike currently omits the standard Web Request type.
+    const requestLike: Parameters<ClerkVerifyWebhook>[0] = request;
+
+    void requestLike;
+  });
+
   it('returns 400 when signature verification fails', async () => {
     const {
       POST,

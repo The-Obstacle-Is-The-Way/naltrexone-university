@@ -3,13 +3,14 @@
 **Priority:** P4
 **Created:** 2026-03-07
 **Source:** [AUDIT-011](../audits/audit-011-error-observability-defensive-coding.md)
-**Status:** Open
+**Status:** Resolved
+**Resolved:** 2026-03-07
 
 ---
 
-## Problem
+## Original Problem
 
-In `app/(app)/app/practice/hooks/use-quick-practice-status-counts.ts:73-74`:
+Before resolution, `app/(app)/app/practice/hooks/use-quick-practice-status-counts.ts` contained:
 
 ```typescript
 const failed = responses.find((entry) => !entry.result.ok);
@@ -20,12 +21,14 @@ The `.find()` callback selects elements where `!entry.result.ok` is `true`. Ther
 
 ---
 
-## Fix
+## Resolution
 
 ```typescript
-const failed = responses.find((entry) => !entry.result.ok);
+const failed = responses.find(isFailedQuickPracticeCountResponse);
 if (failed) {
 ```
+
+The runtime simplification remains the same: once `.find()` selects a failed response, `if (failed)` is sufficient. The final implementation adds an explicit type guard for the `.find()` callback so TypeScript still narrows `failed.result.error` after the redundant boolean check is removed.
 
 ---
 
@@ -35,9 +38,14 @@ No functional impact. The code works correctly. This is a clarity issue — the 
 
 ---
 
-## Test Plan
+## Verification
 
-| # | Scenario | Expected |
-|---|----------|----------|
-| T1 | All responses succeed | `failed` is `undefined`, block skipped |
-| T2 | One response fails | `failed` is truthy, error handling runs |
+- [x] Removed the redundant `&& !failed.result.ok` branch condition
+- [x] Preserved type safety with an explicit failure type guard for `.find()`
+- [x] Tightened hook test coverage to assert the logged failure payload
+- [x] `pnpm typecheck`
+- [x] `pnpm lint`
+- [x] `pnpm test --run`
+- [x] `pnpm test:browser`
+- [x] `pnpm test:integration`
+- [x] `pnpm build`

@@ -77,6 +77,13 @@ describe('useQuickPracticeStatusCounts helpers', () => {
       createEmptyQuickPracticeStatusCounts(),
     );
     expect(logError).toHaveBeenCalledTimes(1);
+    expect(logError).toHaveBeenCalledWith(
+      'Failed to count available quick practice questions',
+      expect.objectContaining({
+        code: 'INTERNAL_ERROR',
+        message: 'failed',
+      }),
+    );
   });
 
   it('falls back to labels-without-counts when count request throws', async () => {

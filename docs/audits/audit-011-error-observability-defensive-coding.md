@@ -12,10 +12,10 @@
 | Outcome | Count | Description |
 |---------|-------|-------------|
 | **P2 debt** | 1 | DEBT-286: SPEC-016 still lacks a standard path for caught client-side errors to reach Sentry |
-| **P4 bugs** | 2 | BUG-201: unnecessary Clerk webhook output cast. BUG-202: redundant condition after `.find()` |
+| **P4 bugs** | 2 | BUG-201 and BUG-202 were confirmed by the audit and resolved in follow-up cleanup on 2026-03-07 |
 | **Invalidated** | 1 | BUG-199: documented Stripe empty-array `TypeError` / HTTP 500 path is not reachable in current production code |
 
-**Overall:** The codebase remains disciplined. The sweep surfaced one real systemic observability gap, one minor type-safety cleanup, and one minor clarity issue. The originally filed array-index bug was invalidated after deeper tracer-bullet verification.
+**Overall:** The codebase remains disciplined. The sweep surfaced one real systemic observability gap, one minor type-safety cleanup, and one minor clarity issue. The two cleanup bugs were resolved after verification; the observability debt remains open. The originally filed array-index bug was invalidated after deeper tracer-bullet verification.
 
 ---
 
@@ -69,25 +69,25 @@ Priority rollout targets:
 - `app/(app)/app/practice/hooks/use-quick-practice-status-counts.ts`
 - `app/(app)/app/practice/hooks/use-practice-available-questions-count.ts`
 
-### BUG-201: unnecessary Clerk webhook output cast
+### BUG-201: unnecessary Clerk webhook output cast — RESOLVED 2026-03-07
 
-`app/api/webhooks/clerk/route.ts:13-17` uses two `as unknown as` casts, but tracer-bullet verification showed only one is a real issue:
+Before follow-up cleanup, `app/api/webhooks/clerk/route.ts` used two `as unknown as` casts, but tracer-bullet verification showed only one was a real issue:
 
 - **input cast:** currently required because Clerk types `verifyWebhook()` against `RequestLike`, which omits Web `Request`
 - **output cast:** unnecessary because Clerk's `WebhookEvent` already satisfies our broader local `ClerkWebhookEvent` shape
 
-This is a type-safety cleanup, not a demonstrated runtime bug.
+This was a type-safety cleanup, not a demonstrated runtime bug. Follow-up cleanup removed only the output cast and kept the documented input cast.
 
-### BUG-202: redundant condition after `.find()`
+### BUG-202: redundant condition after `.find()` — RESOLVED 2026-03-07
 
-`app/(app)/app/practice/hooks/use-quick-practice-status-counts.ts:73-74` is exactly as documented:
+Before follow-up cleanup, `app/(app)/app/practice/hooks/use-quick-practice-status-counts.ts` contained:
 
 ```typescript
 const failed = responses.find((entry) => !entry.result.ok);
 if (failed && !failed.result.ok) {
 ```
 
-The second condition is redundant by definition of the `.find()` predicate.
+The second condition was redundant by definition of the `.find()` predicate. Follow-up cleanup simplified the branch to `if (failed)` and added the explicit type guard needed for TypeScript narrowing.
 
 ---
 

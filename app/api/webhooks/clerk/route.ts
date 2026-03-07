@@ -12,9 +12,8 @@ export const maxDuration = 30;
 
 async function verifyClerkWebhook(req: Request): Promise<ClerkWebhookEvent> {
   type ClerkRequestLike = Parameters<typeof verifyWebhook>[0];
-  return (await verifyWebhook(
-    req as unknown as ClerkRequestLike,
-  )) as unknown as ClerkWebhookEvent;
+  // Clerk's runtime accepts Web Request, but RequestLike currently omits it.
+  return verifyWebhook(req as unknown as ClerkRequestLike);
 }
 
 export const POST = createWebhookHandler(

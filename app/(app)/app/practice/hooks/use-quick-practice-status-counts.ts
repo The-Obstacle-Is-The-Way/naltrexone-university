@@ -21,6 +21,15 @@ export type QuickPracticeStatusCountFilters = {
   difficulties: readonly QuestionDifficulty[];
 };
 
+type QuickPracticeCountResponse = {
+  status: QuestionProgressStatus;
+  result: ActionResult<{ count: number }>;
+};
+
+type FailedQuickPracticeCountResponse = QuickPracticeCountResponse & {
+  result: Extract<ActionResult<{ count: number }>, { ok: false }>;
+};
+
 function createCountInput(input: {
   filters: QuickPracticeStatusCountFilters;
   status: QuestionProgressStatus;
@@ -34,6 +43,12 @@ function createCountInput(input: {
     difficulties: input.filters.difficulties,
     statuses: [input.status],
   };
+}
+
+function isFailedQuickPracticeCountResponse(
+  entry: QuickPracticeCountResponse,
+): entry is FailedQuickPracticeCountResponse {
+  return !entry.result.ok;
 }
 
 export function createEmptyQuickPracticeStatusCounts(): QuickPracticeStatusCounts {
@@ -70,8 +85,8 @@ export function createQuickPracticeStatusCountsEffect(input: {
 
       if (!mounted) return;
 
-      const failed = responses.find((entry) => !entry.result.ok);
-      if (failed && !failed.result.ok) {
+      const failed = responses.find(isFailedQuickPracticeCountResponse);
+      if (failed) {
         input.logError(
           'Failed to count available quick practice questions',
           failed.result.error,
