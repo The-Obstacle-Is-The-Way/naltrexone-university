@@ -82,7 +82,7 @@ describe('resetBookmarksForE2EUser default services', () => {
       .mockReturnValueOnce(verifyClient);
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify([{ id: 'clerk_user_123' }]), {
+      new Response(JSON.stringify({ data: [{ id: 'clerk_user_123' }] }), {
         status: 200,
         headers: { 'content-type': 'application/json' },
       }),
@@ -145,7 +145,7 @@ describe('resetBookmarksForE2EUser default services', () => {
       .mockReturnValueOnce(fixtureClient);
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify([{ id: 'clerk_user_123' }]), {
+      new Response(JSON.stringify({ data: [{ id: 'clerk_user_123' }] }), {
         status: 200,
         headers: { 'content-type': 'application/json' },
       }),
@@ -189,7 +189,7 @@ describe('resetBookmarksForE2EUser default services', () => {
       .mockReturnValueOnce(resetClient);
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify([{ id: 'clerk_user_123' }]), {
+      new Response(JSON.stringify({ data: [{ id: 'clerk_user_123' }] }), {
         status: 200,
         headers: { 'content-type': 'application/json' },
       }),
@@ -231,7 +231,7 @@ describe('resetBookmarksForE2EUser default services', () => {
       .mockReturnValueOnce(verifyClient);
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify([{ id: 'clerk_user_123' }]), {
+      new Response(JSON.stringify({ data: [{ id: 'clerk_user_123' }] }), {
         status: 200,
         headers: { 'content-type': 'application/json' },
       }),

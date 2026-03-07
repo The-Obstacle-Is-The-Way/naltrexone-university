@@ -171,6 +171,27 @@ describe('createSharedE2EResetSupport', () => {
     ).resolves.toBe('clerk_user_123');
   });
 
+  it('accepts legacy bare-array Clerk list payloads', async () => {
+    const support = createSupport(createSharedE2EResetSupport);
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify([{ id: 'clerk_user_legacy' }]), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    try {
+      await expect(
+        support.resolveClerkUserIdByEmail({
+          clerkSecretKey: 'sk_test',
+          email: 'e2e@example.com',
+        }),
+      ).resolves.toBe('clerk_user_legacy');
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
   it('resolves the app user id and closes the SQL client', async () => {
     const sqlClient = createSqlClient([[{ id: 'app_user_123' }]]);
     postgresMock.mockReturnValue(sqlClient);
