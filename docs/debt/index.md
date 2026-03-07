@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-06
+**Last Updated:** 2026-03-07
 
 ---
 
@@ -20,7 +20,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 6 future enhancements (F1/F8 resolved by DEBT-277/DEBT-276) | P3 | — |
 | [DEBT-278](./debt-278-verdict-badge-solid-pill-styling.md) | Verdict Badge Solid Pill Styling — solid background + white text for Correct/Incorrect badge | P2 | — |
-| [DEBT-281](./debt-281-e2e-bookmark-test-flakiness.md) | E2E Bookmark Test Flakiness — root fix implemented in current branch; archive on merge | P2 | — |
 
 **Next Debt ID:** DEBT-282
 
@@ -30,6 +29,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-281](../_archive/debt/debt-281-e2e-bookmark-test-flakiness.md) | E2E Bookmark Test Flakiness — scoped per-test bookmark reset eliminated cross-spec state leakage; helper hardening retained as defense in depth | P2 | 2026-03-07 | [#176](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/176) |
 | [DEBT-280](../_archive/debt/debt-280-choice-button-dark-mode-surface-refinement.md) | Choice Button and Segmented Control Dark Mode Surface Refinement — remove gray rest fill, widen hover/selected state steps, soften segmented control border | P2 | 2026-03-06 | [#175](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/175) |
 | [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) | WCAG AA Contrast Remediation Plan (BS-042) — token + pattern + component-level compliance rollout | P1 | 2026-03-06 | [#174](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/174) |
 | [DEBT-277](../_archive/debt/debt-277-clinical-pearl-styled-callout.md) | Clinical Pearl Styled Callout — detect `**Clinical pearl:**` in `<Markdown>` and render as visually distinct callout with label separated from content | P3 | 2026-03-04 | [#173](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/173) |

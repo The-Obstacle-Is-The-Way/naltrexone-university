@@ -2,16 +2,17 @@
 
 **Priority:** P2
 **Created:** 2026-03-06
-**Status:** Resolved in current branch (pending merge/archive)
+**Status:** Resolved
+**Resolved:** 2026-03-07 — [PR #176](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/176)
 **Discovered during:** [PR #175](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/175) investigation
 
 ---
 
 ## Current Status
 
-As of **March 6, 2026**, PR #175 is already merged and the DEBT-281 escalation path has now been implemented in the current branch. During PR #175, CI showed **both passing and failing runs**. The failed run (`22782151850`) confirmed the issue was real, not speculative: an earlier mitigation pass still missed an error-state branch on the bookmarks page.
+As of **March 7, 2026**, PR #175 is already merged and PR #176 has landed the DEBT-281 root fix plus follow-up test hardening. During PR #175, CI showed **both passing and failing runs**. The failed run (`22782151850`) confirmed the issue was real, not speculative: an earlier mitigation pass still missed an error-state branch on the bookmarks page.
 
-This document now reflects what was **verified from merged code, CI evidence, and the follow-up root-fix implementation**, not the earlier broader hypothesis list.
+This document reflects what was **verified from merged code, CI evidence, and the final root-fix implementation that resolved the debt**, not the earlier broader hypothesis list.
 
 ---
 
@@ -298,3 +299,4 @@ With `retries: 2` in CI, a test that fails once but passes on retry appears gree
 | 2026-03-06 | Landed mitigation-layer hardening in codebase | Hardened helper behavior before escalating to heavier per-test reset work |
 | 2026-03-06 | Full four-axis audit (setup, specs, server-side, CI) | Confirmed all 5 verified causes hold up; ruled out optimistic-UI race, Next.js caching, Neon cold start, hydration timeout, and rate limiting; added cross-spec bookmark dependency map and CI retry masking context |
 | 2026-03-06 | Implemented scoped per-test bookmark reset | Added `resetBookmarksForE2EUser()` and wired it into the exact bookmark-dependent tests that previously shared mutable bookmark state |
+| 2026-03-07 | Archived DEBT-281 in the resolving branch | Root fix, follow-up coverage, and CodeRabbit-validated contract cleanup were complete; only generic CI retry masking remains as a residual observation, not active debt |
