@@ -236,6 +236,9 @@ Tests that assert on current badge text patterns (`B)`, `A)`) will need updates 
 
 **Update strategy:** Change `toContain('B)')` to `toContain('B')` (the label text without the paren). Verify the label is inside a `rounded-full` element if specificity is needed. For the `not.toContain('B) Second option')` assertion (line 539), switch to a DOM query verifying the correct choice is absent from the wrong-answers section; a raw string replacement like `BSecond option` is brittle once the badge becomes separate markup.
 
+**Adjacent badge-text assertions that should remain unchanged:**
+- `T2: wraps explanation-only fallback in a success card for correct flow` (lines 130-131) asserts the explanation-only fallback does **not** contain `A)` or `B)`. Because DEBT-282 only adds badges when a choice row exists, those negative assertions should stay as-is.
+
 **Tests asserting layout classes:**
 - `uses larger verdict-to-explanation spacing...` (lines 629-660; selector at lines 654-656) — this test locates a `text-muted-foreground` div. After the hierarchy inversion fix, the row no longer carries that class. Update the selector to target the explanation block rather than the pre-DEBT-282 row wrapper.
 - `T5: keeps wrong-answer cards on neutral styling only` (lines 294-360) — asserts `border-border/60` and `bg-background/50`, both unchanged.
