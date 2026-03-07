@@ -6,7 +6,7 @@ const SignUp = dynamic(() => import('@clerk/nextjs').then((m) => m.SignUp), {
   ssr: false,
   loading: () => (
     <div className="flex min-h-[200px] items-center justify-center">
-      <p className="text-muted-foreground">Loading sign-up…</p>
+      <p className="text-base text-muted-foreground">Loading sign-up…</p>
     </div>
   ),
 });
@@ -25,7 +25,7 @@ export default function SignUpPageClient() {
           <h1 className="text-xl font-semibold font-heading tracking-tight text-foreground">
             Sign Up
           </h1>
-          <p className="mt-2 text-muted-foreground">
+          <p className="mt-2 text-base text-muted-foreground">
             Authentication unavailable in this environment.
           </p>
         </div>

@@ -135,33 +135,21 @@ The Markdown component is a thin wrapper around `react-markdown`. It provides:
 
 ## Current Compliance Status
 
-### Pipeline 1 (Hardcoded UI Text): Partially Compliant
+### Pipeline 1 (Hardcoded UI Text): Compliant
 
 The hardcoded UI-text pipeline is no longer described as "mostly compliant." The previous version of this document overstated consistency and contradicted the Pattern Registry by treating inherited `1rem` subtitle text as acceptable. The corrected current state is:
 
 | Category | Reality | Status |
 |----------|---------|--------|
 | Marketing/editorial larger typography | Intentional | Compliant — governed by Standards + Pattern Registry |
-| Standard supporting copy role (`text-base text-muted-foreground`) | Canonical | Partially implemented — several call sites still rely on inheritance |
+| Standard supporting copy role (`text-base text-muted-foreground`) | Canonical | Compliant — DEBT-283 resolved the audited app/utility/marketing inheritance drift on 2026-03-07 |
 | Form-control sizing (`Input` `text-base md:text-sm`) | Intentional mobile accessibility exception | Compliant |
 | Exam review compact stat cards (`text-xs` labels + `text-2xl` values) | Intentional compact tier | Compliant — governed by Pattern Registry 12.4 |
 | Arbitrary `text-[...]` / inline font styles in production UI code | None found in current audit | Compliant |
 
-**Current open Pipeline 1 drift:** the following files still rely on inherited default size for standard supporting copy instead of explicitly using `text-base text-muted-foreground`:
+**Current open Pipeline 1 drift:** none in the audited `app/` and `components/` codepaths.
 
-- `app/(app)/app/dashboard/page.tsx`
-- `app/(app)/app/bookmarks/page.tsx`
-- `app/(app)/app/billing/page.tsx`
-- `app/(app)/app/history/history-page-client.tsx`
-- `app/(app)/app/questions/[slug]/question-page-client.tsx`
-- `app/(app)/app/practice/practice-page-client.tsx`
-- `app/(app)/app/practice/components/practice-view.tsx`
-- `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx`
-- `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx`
-- `app/sign-in/[[...sign-in]]/sign-in-page-client.tsx`
-- `app/sign-up/[[...sign-up]]/sign-up-page-client.tsx`
-- `app/(marketing)/checkout/success/checkout-success-sync.tsx`
-- `components/marketing/marketing-home.tsx`
+DEBT-283 resolved the previously audited 13-file / 19-occurrence supporting-copy drift and normalized those surfaces to explicit `text-base text-muted-foreground`. Remaining `text-muted-foreground` matches are intentional `text-sm`, `text-lg`, `text-xs`, `Input` (`text-base md:text-sm`), nav/icon chrome, or DEBT-282 Markdown/content-tier cases.
 
 ### Pipeline 2 (Content): Non-Compliant
 

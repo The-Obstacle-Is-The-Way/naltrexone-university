@@ -33,7 +33,9 @@ export function SessionSummaryView({
         <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
           Session Summary
         </h1>
-        <p className="mt-1 text-muted-foreground">Here&apos;s how you did.</p>
+        <p className="mt-1 text-base text-muted-foreground">
+          Here&apos;s how you did.
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
