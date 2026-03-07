@@ -36,6 +36,7 @@ Full sweep of `app/` + `src/` production code, excluding tests/specs:
 Not every console site belongs in this debt:
 
 - `app/global-error.tsx` is an error-boundary path
+- `components/error-boundary-page.tsx` is the shared route-error boundary path used by multiple `error.tsx` routes
 - `question-flow-actions.ts` and one `use-question-page-controller.ts` warning are development-only diagnostics
 - `question-page-client.tsx` uses a bare catch for URL normalization, not an unexpected operational failure
 
@@ -84,6 +85,7 @@ These are the verified user-facing client flows that should be moved onto a shar
 Tracer-bullet verification also found these observability-adjacent sites. They should stay visible in the debt discussion so we do not overstate completeness, but they are not the core DEBT-286 rollout targets:
 
 - `app/global-error.tsx:16` logs an already-bubbled boundary error
+- `components/error-boundary-page.tsx:33` logs already-bubbled route-boundary errors for shared `error.tsx` pages
 - `app/(app)/app/practice/shared/question-flow-actions.ts:142` logs only in development
 - `app/(app)/app/questions/[slug]/question-page-client.tsx:56` uses a bare catch for URL normalization
 - `app/(app)/app/questions/[slug]/page.tsx:65` uses direct server-side `console.info`
