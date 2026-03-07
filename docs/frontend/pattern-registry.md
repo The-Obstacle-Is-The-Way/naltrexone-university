@@ -1,6 +1,6 @@
 # Pattern Registry
 
-**Last Updated:** 2026-03-06
+**Last Updated:** 2026-03-07
 **Status:** Canonical — all UI changes MUST conform to this registry
 
 Single source of truth for every visual pattern in the app. If a pattern isn't here, don't invent one — add it here first, get approval, then implement.
@@ -917,12 +917,14 @@ text-2xl font-bold font-heading tracking-tight text-foreground
 
 | Role | Classes | Used For |
 |------|---------|----------|
-| Page subtitle (app) | `text-muted-foreground` (no size — inherits base/1rem) | All app page subtitles |
+| Page subtitle (app / utility) | `text-sm text-muted-foreground` | Authenticated app pages, auth fallbacks, checkout success helper copy |
 | Page subtitle (marketing) | `text-lg text-muted-foreground` | Pricing, marketing hero |
 | Card section heading | `text-sm font-medium text-foreground` | "Subscription", "Start a session", section titles |
 | Card body / list items | `text-sm text-muted-foreground` | All card content text |
-| Compact stat labels | `text-xs text-muted-foreground` | Exam review stat cards |
+| Compact stat labels | `text-xs text-muted-foreground` | Exam review stat cards (intentional compact tier) |
 | Badge / pill text | `text-xs font-medium text-muted-foreground` | Tags, counts |
+| Marketing CTA label | `text-base font-medium` | Hero / pricing primary CTAs |
+| Text input content | `text-base md:text-sm` | Shared `Input` primitive mobile zoom safeguard |
 | Question stem | `text-base text-foreground` | Question card body |
 | Error ID | `text-xs text-muted-foreground` | Error pages |
 | Reference label | `text-xs font-semibold uppercase tracking-wide text-muted-foreground` | Feedback reference section |

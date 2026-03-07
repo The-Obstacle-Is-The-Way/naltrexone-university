@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-03-07
 
-Canonical reference for how text sizing is controlled across the application. This document establishes the two-pipeline model and content tier system that all typography decisions must follow.
+Canonical reference for how text sizing is controlled across the application. This document establishes the two-pipeline model, the subfamilies inside hardcoded UI text, and the content tier system that all typography decisions must follow.
 
 **See also:**
 - [Frontend Standards](./standards.md) — Component patterns, spacing, accessibility
@@ -15,24 +15,34 @@ Canonical reference for how text sizing is controlled across the application. Th
 
 Text in this application flows through two fundamentally different pipelines. They have separate sizing strategies and must not be conflated.
 
-### Pipeline 1: App Chrome
+### Pipeline 1: Hardcoded UI Text
 
-**What:** Labels, buttons, headings, metadata, timestamps, section headers, navigation links, stat labels, empty-state copy, error messages — any text hardcoded in React components.
+**What:** Labels, buttons, headings, metadata, timestamps, section headers, navigation links, stat labels, empty-state copy, error messages, marketing copy, auth fallbacks, and utility-page descriptions — any text authored directly in React components.
 
 **How it's sized:** Direct Tailwind classes in JSX. Each component applies its own `text-*` class.
 
-**Default size:** `text-sm` (14px). This is the app's body text. It is dense, functional, and consistent with the UI chrome role.
+**Important:** Pipeline 1 is not one flat size scale. It has four subfamilies with different rules:
 
-**Governed by:** [Frontend Standards](./standards.md) section 4 (Typography).
+| Subfamily | Default / Canonical Pattern | Governed by | Notes |
+|-----------|-----------------------------|-------------|-------|
+| App chrome (authenticated app surfaces) | `text-sm` | [Frontend Standards](./standards.md) + [Pattern Registry](./pattern-registry.md) | Dashboard, history, bookmarks, billing, practice scaffolding, action bars, labels |
+| Utility/auth surfaces | `text-sm` for supporting copy, utility/auth heading patterns for titles | Standards + Pattern Registry | Sign-in/up fallbacks, checkout success helper copy, error/not-found support text |
+| Marketing/editorial surfaces | Custom display scale | Standards + Pattern Registry | Pricing and marketing intentionally use larger type; they are not bound to the app-chrome default |
+| Form controls | `Input`: `text-base md:text-sm`; `Select`: `text-sm` | Component primitives + Pattern Registry | `Input` keeps a mobile accessibility exception to avoid iOS zoom on small text fields |
+
+**Default size for app chrome and utility supporting copy:** `text-sm` (14px). This is the application's standard operational body text. It is dense, functional, and should be applied explicitly rather than inherited accidentally.
 
 | Context | Size | Example |
 |---------|------|---------|
 | App page h1 | `text-2xl` | "Quick Practice", "Dashboard" |
+| Utility/auth h1 | `text-xl` | "Sign In", "Checkout complete" |
+| App/utility subtitle or helper copy | `text-sm text-muted-foreground` | "Track your progress and keep your streak alive.", "Authentication unavailable in this environment." |
 | Section headers | `text-sm font-medium` | "Recent activity", "Correct answer" |
 | Labels / secondary text | `text-sm text-muted-foreground` | "Answered Mar 7, 2026", "Showing 1-20 of 65" |
 | Stat numbers | `text-3xl font-bold font-display` | "848", "72%" |
-| Error details | `text-xs` | Digest codes, fallback messages |
-| Buttons | `text-sm font-medium` | "Submit", "Next", "Bookmark" |
+| Error details | `text-xs text-muted-foreground` | Digest codes, fallback messages |
+| App buttons | `text-sm font-medium` | "Submit", "Next", "Bookmark" |
+| Marketing CTA buttons | `text-base font-medium` | "Get Started", "Subscribe Annual" |
 
 ### Pipeline 2: Content (Markdown)
 
@@ -125,14 +135,31 @@ The Markdown component is a thin wrapper around `react-markdown`. It provides:
 
 ## Current Compliance Status
 
-### Pipeline 1 (App Chrome): Mostly Compliant
+### Pipeline 1 (Hardcoded UI Text): Partially Compliant
 
-The app chrome pipeline is ~85% consistent. `text-sm` is the dominant size (64% of all text-sizing instances). Known violations:
+The hardcoded UI-text pipeline is no longer described as "mostly compliant." The previous version of this document overstated consistency and contradicted the Pattern Registry by treating inherited `1rem` subtitle text as acceptable. The corrected current state is:
 
-| Issue | Location | Status |
-|-------|----------|--------|
-| Exam review stat cards use `text-xs` labels + `text-2xl` values instead of `text-sm` + `text-3xl` | `exam-review-view.tsx` | Open — tracked for future alignment |
-| Some page subtitles lack explicit text sizing | `dashboard/page.tsx`, `exam-review-view.tsx` | Open — low severity |
+| Category | Reality | Status |
+|----------|---------|--------|
+| Marketing/editorial larger typography | Intentional | Compliant — governed by Standards + Pattern Registry |
+| Form-control sizing (`Input` `text-base md:text-sm`) | Intentional mobile accessibility exception | Compliant |
+| Exam review compact stat cards (`text-xs` labels + `text-2xl` values) | Intentional compact tier | Compliant — governed by Pattern Registry 12.4 |
+| App and utility subtitles / helper copy with no explicit `text-*` class | Real drift | Open — tracked in [DEBT-283](../debt/debt-283-app-chrome-typography-explicit-sizing-alignment.md) |
+
+**Current open Pipeline 1 drift:** the following files still rely on inherited default size for app/utility supporting copy instead of explicitly using `text-sm text-muted-foreground`:
+
+- `app/(app)/app/dashboard/page.tsx`
+- `app/(app)/app/bookmarks/page.tsx`
+- `app/(app)/app/billing/page.tsx`
+- `app/(app)/app/history/history-page-client.tsx`
+- `app/(app)/app/questions/[slug]/question-page-client.tsx`
+- `app/(app)/app/practice/practice-page-client.tsx`
+- `app/(app)/app/practice/components/practice-view.tsx`
+- `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx`
+- `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx`
+- `app/sign-in/[[...sign-in]]/sign-in-page-client.tsx`
+- `app/sign-up/[[...sign-up]]/sign-up-page-client.tsx`
+- `app/(marketing)/checkout/success/checkout-success-sync.tsx`
 
 ### Pipeline 2 (Content): Non-Compliant
 
@@ -157,12 +184,16 @@ Fixing these violations is tracked in [DEBT-282](../debt/debt-282-feedback-visua
 
 1. **Every `<Markdown>` call MUST include a tier-appropriate className.** No exceptions. Omitting className causes the text to inherit unpredictably.
 
-2. **App chrome stays at `text-sm`.** Do not bump app chrome text to `text-base` to "match" content. They are different pipelines with different purposes.
+2. **App chrome and utility supporting copy MUST opt into an explicit size.** Use `text-sm text-muted-foreground` for page subtitles, loading/help copy, and other secondary non-Markdown text. Do not rely on inherited browser `1rem`.
 
-3. **Content primary stays at `text-base`.** Do not revert to `text-sm` — the `text-base` decision was deliberate and correct for reading material.
+3. **Marketing/editorial surfaces are exceptions, not violations.** Pricing and landing pages may use larger display/body sizes, but those patterns must be documented in Standards/Pattern Registry rather than improvised ad hoc.
 
-4. **Same content, same tier.** If answer choice text is Primary tier in `choice-button.tsx`, it must also be Primary tier in `feedback.tsx`. The same text must not shrink or grow when it moves between components.
+4. **Form controls may use the mobile input exception.** `Input` is allowed to use `text-base md:text-sm`; this is an accessibility safeguard, not a general body-text rule for the rest of the UI.
 
-5. **The Markdown component does not set a default size.** This is intentional — it serves all three tiers. Callers are responsible for specifying the tier.
+5. **Content primary stays at `text-base`.** Do not revert to `text-sm` — the `text-base` decision was deliberate and correct for reading material.
 
-6. **Font size preferences (future) affect content only.** When the user-selectable size feature is built, it must only change Pipeline 2 sizes. Pipeline 1 remains fixed.
+6. **Same content, same tier.** If answer choice text is Primary tier in `choice-button.tsx`, it must also be Primary tier in `feedback.tsx`. The same text must not shrink or grow when it moves between components.
+
+7. **The Markdown component does not set a default size.** This is intentional — it serves all three content tiers. Callers are responsible for specifying the tier.
+
+8. **Font size preferences (future) affect content only.** When the user-selectable size feature is built, it must only change Pipeline 2 sizes. Pipeline 1 remains fixed.

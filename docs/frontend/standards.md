@@ -1,6 +1,6 @@
 # Frontend Standards
 
-**Last Updated:** 2026-03-05
+**Last Updated:** 2026-03-07
 
 Canonical reference for all frontend patterns, component usage, accessibility, and styling conventions. Every UI change MUST be consistent with this document. If a pattern isn't documented here, don't invent one — add it here first.
 
@@ -242,6 +242,13 @@ This section covers **app chrome** text sizing. For content text (question stems
 | Marketing section h2 | `font-heading text-3xl font-bold tracking-tight md:text-4xl` |
 | Error/utility page heading | `text-xl font-semibold font-heading tracking-tight text-foreground` (route errors use `<h2>` unless `includeMainLandmark`; `global-error.tsx` uses `text-2xl font-bold font-heading tracking-tight text-foreground`). |
 
+### Subtitles and supporting copy
+
+| Context | Pattern |
+|---------|---------|
+| App/utility subtitle | `text-sm text-muted-foreground` |
+| Marketing subtitle | `text-lg text-muted-foreground` |
+
 ### Heading hierarchy
 
 Headings MUST follow a strict hierarchy: `h1` > `h2` > `h3`. Never skip levels (e.g., h1 directly to h3).
@@ -260,6 +267,8 @@ Use `text-3xl font-bold font-display text-foreground` for prominent statistics. 
 | Card headings | `text-sm font-medium text-foreground` |
 | Error details (digest) | `text-xs text-muted-foreground` |
 | Content text (Markdown) | See [Typography Policy](./typography-policy.md) — three-tier system (primary `text-base`, secondary `text-sm`, tertiary `text-xs`) |
+
+Do not rely on inherited browser `1rem` for app/utility subtitles or helper copy. Secondary hardcoded UI text should opt into an explicit text role.
 
 ---
 
