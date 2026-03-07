@@ -19,7 +19,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 6 future enhancements (F1/F8 resolved by DEBT-277/DEBT-276) | P3 | — |
-| [DEBT-284](./debt-284-feedback-visual-polish-phase-2.md) | Feedback Visual Polish Phase 2 — badge coloring and explanation muting are implemented on the current branch; remaining type-scale/reference notes stay observational under current typography policy until merge/archive | P2 | — |
 
 **Next Debt ID:** DEBT-285
 
@@ -29,6 +28,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-284](../_archive/debt/debt-284-feedback-visual-polish-phase-2.md) | Feedback Visual Polish Phase 2 — verdict-colored feedback badges (success/destructive), unified explanation muting across all card types | P2 | 2026-03-07 | [#180](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/180) |
 | [DEBT-283](../_archive/debt/debt-283-hardcoded-ui-typography-explicit-sizing-alignment.md) | Hardcoded UI Typography Explicit Sizing Alignment — normalized the audited 13-file / 19-occurrence supporting-copy drift to explicit `text-base text-muted-foreground` and added regression coverage | P3 | 2026-03-07 | — |
 | [DEBT-282](../_archive/debt/debt-282-feedback-visual-unification.md) | Feedback Visual Unification — circular badges, `text-base` typography, `gap-3`/`p-4` layout alignment with choice buttons, hierarchy inversion fix | P2 | 2026-03-07 | — |
 | [DEBT-278](../_archive/debt/debt-278-verdict-badge-solid-pill-styling.md) | Verdict Badge Solid Pill Styling — solid background + white text + `self-start` compact pill for Correct/Incorrect badge, WCAG AA compliant across all theme combinations | P2 | 2026-03-07 | [#177](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/177) |
