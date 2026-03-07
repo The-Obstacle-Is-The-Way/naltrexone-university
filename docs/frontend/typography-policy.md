@@ -149,27 +149,27 @@ The hardcoded UI-text pipeline is no longer described as "mostly compliant." The
 
 **Current open Pipeline 1 drift:** none in the audited `app/` and `components/` codepaths.
 
-DEBT-283 resolved the previously audited 13-file / 19-occurrence supporting-copy drift and normalized those surfaces to explicit `text-base text-muted-foreground`. Remaining `text-muted-foreground` matches are intentional `text-sm`, `text-lg`, `text-xs`, `Input` (`text-base md:text-sm`), nav/icon chrome, or DEBT-282 Markdown/content-tier cases.
+DEBT-283 resolved the previously audited 13-file / 19-occurrence supporting-copy drift and normalized those surfaces to explicit `text-base text-muted-foreground`. Remaining `text-muted-foreground` matches are intentional `text-sm`, `text-lg`, `text-xs`, `Input` (`text-base md:text-sm`), or nav/icon chrome.
 
-### Pipeline 2 (Content): Non-Compliant
+### Pipeline 2 (Content): Compliant
 
-The content pipeline has significant violations. `feedback.tsx` renders content-tier Markdown without the correct className in 4 of 9 call sites:
+All `<Markdown>` call sites now carry tier-appropriate classNames. The 4 violations in `feedback.tsx` were resolved by [DEBT-282](../_archive/debt/debt-282-feedback-visual-unification.md) (PR #179, 2026-03-07).
 
 | Call Site | Expected Tier | Actual className | Status |
 |-----------|--------------|-----------------|--------|
-| `feedback.tsx:73` — correct answer text | Primary | *none* (inherits) | Non-compliant |
-| `feedback.tsx:77` — explanation | Secondary | `explanationClassName` (`"mt-2 text-sm"` / `"text-sm"`) | Compliant |
-| `feedback.tsx:158` — wrong choice text | Primary | *none* (inherits) | Non-compliant |
-| `feedback.tsx:162` — wrong choice explanation | Secondary | `"mt-2 text-sm"` | Compliant |
-| `feedback.tsx:182` — user answer text | Primary | *none* (inherits) | Non-compliant |
-| `feedback.tsx:187` — user answer explanation | Secondary | `"mt-2 text-sm"` | Compliant |
-| `feedback.tsx:213` — other wrong choice text | Primary | *none* (inherits) | Non-compliant |
-| `feedback.tsx:217` — other wrong choice explanation | Secondary | `"mt-2 text-sm"` | Compliant |
-| `feedback.tsx:232` — reference | Tertiary | `"mt-1 text-xs"` | Compliant |
+| `feedback.tsx:73` — correct answer text | Primary | `"text-base text-foreground"` | Compliant |
+| `feedback.tsx:80` — explanation | Secondary | `explanationClassName` (`"mt-2 text-sm"` / `"text-sm"`) | Compliant |
+| `feedback.tsx:163` — wrong choice text (correct flow) | Primary | `"text-base text-foreground"` | Compliant |
+| `feedback.tsx:168` — wrong choice explanation (correct flow) | Secondary | `"mt-2 text-sm text-muted-foreground"` | Compliant |
+| `feedback.tsx:190` — user answer text | Primary | `"text-base text-foreground"` | Compliant |
+| `feedback.tsx:196` — user answer explanation | Secondary | `"mt-2 text-sm"` | Compliant |
+| `feedback.tsx:226` — other wrong choice text | Primary | `"text-base text-foreground"` | Compliant |
+| `feedback.tsx:231` — other wrong choice explanation | Secondary | `"mt-2 text-sm text-muted-foreground"` | Compliant |
+| `feedback.tsx:248` — reference | Tertiary | `"mt-1 text-xs"` | Compliant |
 | `question-card.tsx:35` — stem | Primary | `"text-base text-foreground"` | Compliant |
 | `choice-button.tsx:72` — choice text | Primary | `"text-base text-foreground"` | Compliant |
 
-Fixing these violations is tracked in [DEBT-282](../debt/debt-282-feedback-visual-unification.md) (promoted from [BS-043](../brainstorming/bs-043-question-flow-typography-and-feedback-visual-unification.md)).
+**Current open Pipeline 2 drift:** none.
 
 ---
 
