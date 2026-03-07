@@ -16,6 +16,42 @@ function hasTokenMatching(tokens: Set<string>, pattern: RegExp): boolean {
   return [...tokens].some((token) => pattern.test(token));
 }
 
+function findRoundedBadge(
+  container: ParentNode,
+  label: string,
+): HTMLDivElement | undefined {
+  return Array.from(container.querySelectorAll('div')).find((div) => {
+    const classTokens = getClassTokens(div.getAttribute('class') ?? '');
+    return classTokens.has('rounded-full') && div.textContent?.trim() === label;
+  }) as HTMLDivElement | undefined;
+}
+
+function findMarkdownWrapper(
+  container: ParentNode,
+  text: string,
+): HTMLDivElement | undefined {
+  return Array.from(container.querySelectorAll('div')).find((div) => {
+    const classTokens = getClassTokens(div.getAttribute('class') ?? '');
+    return classTokens.has('[&_p+p]:mt-3') && div.textContent?.trim() === text;
+  }) as HTMLDivElement | undefined;
+}
+
+function findAnswerRow(
+  container: ParentNode,
+  label: string,
+  text: string,
+): HTMLDivElement | undefined {
+  return Array.from(container.querySelectorAll('div')).find((div) => {
+    const classTokens = getClassTokens(div.getAttribute('class') ?? '');
+    return (
+      classTokens.has('flex') &&
+      classTokens.has('items-start') &&
+      findRoundedBadge(div, label) !== undefined &&
+      findMarkdownWrapper(div, text) !== undefined
+    );
+  }) as HTMLDivElement | undefined;
+}
+
 describe('Feedback', () => {
   it('renders a neutral status card with a verdict badge', () => {
     const html = renderToStaticMarkup(
@@ -98,14 +134,38 @@ describe('Feedback', () => {
     const successCardClassName = successCard?.getAttribute('class') ?? '';
     const successCardTokens = getClassTokens(successCardClassName);
     const successCardText = successCard?.textContent ?? '';
+    const correctAnswerRow = successCard
+      ? findAnswerRow(successCard, 'B', 'Second option')
+      : undefined;
+    const correctAnswerRowTokens = getClassTokens(
+      correctAnswerRow?.getAttribute('class') ?? '',
+    );
+    const correctAnswerBadge = successCard
+      ? findRoundedBadge(successCard, 'B')
+      : undefined;
+    const correctAnswerText = successCard
+      ? findMarkdownWrapper(successCard, 'Second option')
+      : undefined;
+    const correctAnswerTextTokens = getClassTokens(
+      correctAnswerText?.getAttribute('class') ?? '',
+    );
 
     expect(correctAnswerLabel).not.toBeUndefined();
     expect(successCard).not.toBeNull();
     expect(successCardTokens.has('border-success/60')).toBe(true);
     expect(successCardTokens.has('bg-success/5')).toBe(true);
-    expect(successCardText).toContain('B)');
+    expect(successCardTokens.has('p-4')).toBe(true);
+    expect(correctAnswerRow).not.toBeUndefined();
+    expect(correctAnswerRowTokens.has('gap-3')).toBe(true);
+    expect(correctAnswerBadge).not.toBeUndefined();
+    expect(correctAnswerBadge?.getAttribute('class')).toContain('rounded-full');
+    expect(successCardText).toContain('B');
     expect(successCardText).toContain('Second option');
     expect(successCardText).toContain('General explanation.');
+    expect(correctAnswerText).not.toBeUndefined();
+    expect(correctAnswerTextTokens.has('text-base')).toBe(true);
+    expect(correctAnswerTextTokens.has('text-foreground')).toBe(true);
+    expect(correctAnswerTextTokens.has('text-muted-foreground')).toBe(false);
   });
 
   it('T2: wraps explanation-only fallback in a success card for correct flow', () => {
@@ -190,6 +250,21 @@ describe('Feedback', () => {
       destructiveCard?.getAttribute('class') ?? '';
     const destructiveCardTokens = getClassTokens(destructiveCardClassName);
     const destructiveCardText = destructiveCard?.textContent ?? '';
+    const yourAnswerRow = destructiveCard
+      ? findAnswerRow(destructiveCard, 'A', 'First option')
+      : undefined;
+    const yourAnswerRowTokens = getClassTokens(
+      yourAnswerRow?.getAttribute('class') ?? '',
+    );
+    const yourAnswerBadge = destructiveCard
+      ? findRoundedBadge(destructiveCard, 'A')
+      : undefined;
+    const yourAnswerText = destructiveCard
+      ? findMarkdownWrapper(destructiveCard, 'First option')
+      : undefined;
+    const yourAnswerTextTokens = getClassTokens(
+      yourAnswerText?.getAttribute('class') ?? '',
+    );
 
     expect(yourAnswerLabel).not.toBeUndefined();
     expect(destructiveCard).not.toBeNull();
@@ -197,9 +272,18 @@ describe('Feedback', () => {
     expect(destructiveCardTokens.has('border-destructive/20')).toBe(false);
     expect(destructiveCardTokens.has('border-destructive/30')).toBe(false);
     expect(destructiveCardTokens.has('bg-destructive/5')).toBe(true);
-    expect(destructiveCardText).toContain('A)');
+    expect(destructiveCardTokens.has('p-4')).toBe(true);
+    expect(yourAnswerRow).not.toBeUndefined();
+    expect(yourAnswerRowTokens.has('gap-3')).toBe(true);
+    expect(yourAnswerBadge).not.toBeUndefined();
+    expect(yourAnswerBadge?.getAttribute('class')).toContain('rounded-full');
+    expect(destructiveCardText).toContain('A');
     expect(destructiveCardText).toContain('First option');
     expect(destructiveCardText).toContain('First option is incorrect.');
+    expect(yourAnswerText).not.toBeUndefined();
+    expect(yourAnswerTextTokens.has('text-base')).toBe(true);
+    expect(yourAnswerTextTokens.has('text-foreground')).toBe(true);
+    expect(yourAnswerTextTokens.has('text-muted-foreground')).toBe(false);
   });
 
   it('T4: wraps incorrect-flow correct-answer content in a success card', () => {
@@ -235,14 +319,38 @@ describe('Feedback', () => {
     const successCardClassName = successCard?.getAttribute('class') ?? '';
     const successCardTokens = getClassTokens(successCardClassName);
     const successCardText = successCard?.textContent ?? '';
+    const correctAnswerRow = successCard
+      ? findAnswerRow(successCard, 'B', 'Second option')
+      : undefined;
+    const correctAnswerRowTokens = getClassTokens(
+      correctAnswerRow?.getAttribute('class') ?? '',
+    );
+    const correctAnswerBadge = successCard
+      ? findRoundedBadge(successCard, 'B')
+      : undefined;
+    const correctAnswerText = successCard
+      ? findMarkdownWrapper(successCard, 'Second option')
+      : undefined;
+    const correctAnswerTextTokens = getClassTokens(
+      correctAnswerText?.getAttribute('class') ?? '',
+    );
 
     expect(correctAnswerLabel).not.toBeUndefined();
     expect(successCard).not.toBeNull();
     expect(successCardTokens.has('border-success/60')).toBe(true);
     expect(successCardTokens.has('bg-success/5')).toBe(true);
-    expect(successCardText).toContain('B)');
+    expect(successCardTokens.has('p-4')).toBe(true);
+    expect(correctAnswerRow).not.toBeUndefined();
+    expect(correctAnswerRowTokens.has('gap-3')).toBe(true);
+    expect(correctAnswerBadge).not.toBeUndefined();
+    expect(correctAnswerBadge?.getAttribute('class')).toContain('rounded-full');
+    expect(successCardText).toContain('B');
     expect(successCardText).toContain('Second option');
     expect(successCardText).toContain('General explanation.');
+    expect(correctAnswerText).not.toBeUndefined();
+    expect(correctAnswerTextTokens.has('text-base')).toBe(true);
+    expect(correctAnswerTextTokens.has('text-foreground')).toBe(true);
+    expect(correctAnswerTextTokens.has('text-muted-foreground')).toBe(false);
   });
 
   it('renders explanation fallback without top margin when no correct choice exists in incorrect flow', () => {
@@ -338,13 +446,44 @@ describe('Feedback', () => {
       );
     });
 
+    const expectedWrongChoices = [
+      {
+        label: 'B',
+        answerText: 'Second option',
+        explanationText: 'Second option is incorrect.',
+      },
+    ];
+
     expect(wrongAnswersHeading).not.toBeUndefined();
-    expect(wrongAnswerCards.length).toBeGreaterThan(0);
-    for (const card of wrongAnswerCards) {
+    expect(wrongAnswerCards.length).toBe(expectedWrongChoices.length);
+    for (const [index, card] of wrongAnswerCards.entries()) {
       const className = card.getAttribute('class') ?? '';
       const classTokens = getClassTokens(className);
+      const expectedChoice = expectedWrongChoices[index];
+      const answerRow = findAnswerRow(
+        card,
+        expectedChoice.label,
+        expectedChoice.answerText,
+      );
+      const answerRowTokens = getClassTokens(
+        answerRow?.getAttribute('class') ?? '',
+      );
+      const answerBadge = findRoundedBadge(card, expectedChoice.label);
+      const answerText = findMarkdownWrapper(card, expectedChoice.answerText);
+      const answerTextTokens = getClassTokens(
+        answerText?.getAttribute('class') ?? '',
+      );
+      const explanationText = findMarkdownWrapper(
+        card,
+        expectedChoice.explanationText,
+      );
+      const explanationTextTokens = getClassTokens(
+        explanationText?.getAttribute('class') ?? '',
+      );
+
       expect(classTokens.has('border-border/60')).toBe(true);
       expect(classTokens.has('bg-background/50')).toBe(true);
+      expect(classTokens.has('p-4')).toBe(true);
       expect(
         hasTokenMatching(classTokens, /(^|:)border-success(?:\/\d+)?$/),
       ).toBe(false);
@@ -357,6 +496,18 @@ describe('Feedback', () => {
       expect(
         hasTokenMatching(classTokens, /(^|:)bg-destructive(?:\/\d+)?$/),
       ).toBe(false);
+      expect(answerRow).not.toBeUndefined();
+      expect(answerRowTokens.has('gap-3')).toBe(true);
+      expect(answerRowTokens.has('text-muted-foreground')).toBe(false);
+      expect(answerBadge).not.toBeUndefined();
+      expect(answerBadge?.getAttribute('class')).toContain('rounded-full');
+      expect(answerText).not.toBeUndefined();
+      expect(answerTextTokens.has('text-base')).toBe(true);
+      expect(answerTextTokens.has('text-foreground')).toBe(true);
+      expect(answerTextTokens.has('text-muted-foreground')).toBe(false);
+      expect(explanationText).not.toBeUndefined();
+      expect(explanationTextTokens.has('text-sm')).toBe(true);
+      expect(explanationTextTokens.has('text-muted-foreground')).toBe(true);
     }
   });
 
@@ -493,9 +644,27 @@ describe('Feedback', () => {
       />,
     );
 
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const correctAnswerLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Correct answer',
+    );
+    const successCard = correctAnswerLabel?.nextElementSibling;
+    const correctAnswerBadge = successCard
+      ? findRoundedBadge(successCard, 'B')
+      : undefined;
+    const correctAnswerText = successCard
+      ? findMarkdownWrapper(successCard, 'Second option')
+      : undefined;
+    const correctAnswerTextTokens = getClassTokens(
+      correctAnswerText?.getAttribute('class') ?? '',
+    );
+
     expect(html).toContain('Correct answer');
-    expect(html).toContain('B)');
+    expect(correctAnswerBadge).not.toBeUndefined();
+    expect(correctAnswerBadge?.getAttribute('class')).toContain('rounded-full');
     expect(html).toContain('Second option');
+    expect(correctAnswerTextTokens.has('text-base')).toBe(true);
+    expect(correctAnswerTextTokens.has('text-foreground')).toBe(true);
     expect(html).not.toContain('>Explanation<');
   });
 
@@ -532,11 +701,61 @@ describe('Feedback', () => {
       />,
     );
 
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const wrongAnswersHeading = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Why other answers are wrong:',
+    );
+    const wrongAnswersSection = wrongAnswersHeading?.parentElement;
+    const wrongAnswerCard = Array.from(
+      wrongAnswersSection?.querySelectorAll('div') ?? [],
+    ).find((div) => {
+      const classTokens = getClassTokens(div.getAttribute('class') ?? '');
+      return (
+        classTokens.has('border-border/60') &&
+        classTokens.has('bg-background/50')
+      );
+    });
+    const wrongAnswerRow = wrongAnswerCard
+      ? findAnswerRow(wrongAnswerCard, 'A', 'First option')
+      : undefined;
+    const wrongAnswerRowTokens = getClassTokens(
+      wrongAnswerRow?.getAttribute('class') ?? '',
+    );
+    const wrongAnswerBadge = wrongAnswerCard
+      ? findRoundedBadge(wrongAnswerCard, 'A')
+      : undefined;
+    const wrongAnswerText = wrongAnswerCard
+      ? findMarkdownWrapper(wrongAnswerCard, 'First option')
+      : undefined;
+    const wrongAnswerTextTokens = getClassTokens(
+      wrongAnswerText?.getAttribute('class') ?? '',
+    );
+    const wrongAnswerExplanation = wrongAnswerCard
+      ? findMarkdownWrapper(wrongAnswerCard, 'First option is incorrect.')
+      : undefined;
+    const wrongAnswerExplanationTokens = getClassTokens(
+      wrongAnswerExplanation?.getAttribute('class') ?? '',
+    );
+    const wrongAnswersSectionText = wrongAnswersSection?.textContent ?? '';
+
     expect(html).toContain('Why other answers are wrong:');
-    expect(html).toContain('A)');
-    expect(html).toContain('First option');
-    expect(html).toContain('First option is incorrect.');
-    expect(html).not.toContain('B) Second option');
+    expect(wrongAnswerCard).not.toBeUndefined();
+    expect(wrongAnswerRow).not.toBeUndefined();
+    expect(wrongAnswerRowTokens.has('gap-3')).toBe(true);
+    expect(wrongAnswerBadge).not.toBeUndefined();
+    expect(wrongAnswerBadge?.getAttribute('class')).toContain('rounded-full');
+    expect(wrongAnswerText).not.toBeUndefined();
+    expect(wrongAnswerTextTokens.has('text-base')).toBe(true);
+    expect(wrongAnswerTextTokens.has('text-foreground')).toBe(true);
+    expect(wrongAnswerTextTokens.has('text-muted-foreground')).toBe(false);
+    expect(wrongAnswerExplanation).not.toBeUndefined();
+    expect(wrongAnswerExplanationTokens.has('text-sm')).toBe(true);
+    expect(wrongAnswerExplanationTokens.has('text-muted-foreground')).toBe(
+      true,
+    );
+    expect(wrongAnswersSectionText).toContain('First option');
+    expect(wrongAnswersSectionText).toContain('First option is incorrect.');
+    expect(wrongAnswersSectionText).not.toContain('Second option');
   });
 
   it('falls back to general explanation when an incorrect choice explanation is missing', () => {
@@ -651,12 +870,46 @@ describe('Feedback', () => {
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const card = doc.querySelector('[role="status"]');
-    const mutedChoiceRow = Array.from(doc.querySelectorAll('div')).find((div) =>
-      (div.getAttribute('class') ?? '').includes('text-muted-foreground'),
+    const wrongAnswersHeading = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Why other answers are wrong:',
+    );
+    const wrongAnswersSection = wrongAnswersHeading?.parentElement;
+    const wrongAnswerCard = Array.from(
+      wrongAnswersSection?.querySelectorAll('div') ?? [],
+    ).find((div) => {
+      const classTokens = getClassTokens(div.getAttribute('class') ?? '');
+      return (
+        classTokens.has('border-border/60') &&
+        classTokens.has('bg-background/50')
+      );
+    });
+    const wrongAnswerRow = wrongAnswerCard
+      ? findAnswerRow(wrongAnswerCard, 'A', 'First option')
+      : undefined;
+    const wrongAnswerRowTokens = getClassTokens(
+      wrongAnswerRow?.getAttribute('class') ?? '',
+    );
+    const wrongAnswerText = wrongAnswerCard
+      ? findMarkdownWrapper(wrongAnswerCard, 'First option')
+      : undefined;
+    const wrongAnswerTextTokens = getClassTokens(
+      wrongAnswerText?.getAttribute('class') ?? '',
+    );
+    const wrongAnswerExplanation = wrongAnswerCard
+      ? findMarkdownWrapper(wrongAnswerCard, 'First option is incorrect.')
+      : undefined;
+    const wrongAnswerExplanationTokens = getClassTokens(
+      wrongAnswerExplanation?.getAttribute('class') ?? '',
     );
 
     expect(card?.querySelector('div.mt-6')).not.toBeNull();
-    expect(mutedChoiceRow?.getAttribute('class')).not.toContain('font-medium');
+    expect(wrongAnswerRow).not.toBeUndefined();
+    expect(wrongAnswerRowTokens.has('gap-3')).toBe(true);
+    expect(wrongAnswerTextTokens.has('text-muted-foreground')).toBe(false);
+    expect(wrongAnswerExplanation).not.toBeUndefined();
+    expect(wrongAnswerExplanationTokens.has('text-muted-foreground')).toBe(
+      true,
+    );
   });
 
   it('renders the your-answer section before the correct-answer section for incorrect attempts', () => {
@@ -684,15 +937,32 @@ describe('Feedback', () => {
       />,
     );
 
+    const doc = new DOMParser().parseFromString(html, 'text/html');
     const yourAnswerIndex = html.indexOf('Your answer');
     const correctAnswerIndex = html.indexOf('Correct answer');
+    const yourAnswerLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Your answer',
+    );
+    const destructiveCard = yourAnswerLabel?.nextElementSibling;
+    const yourAnswerBadge = destructiveCard
+      ? findRoundedBadge(destructiveCard, 'A')
+      : undefined;
+    const yourAnswerText = destructiveCard
+      ? findMarkdownWrapper(destructiveCard, 'First option')
+      : undefined;
+    const yourAnswerTextTokens = getClassTokens(
+      yourAnswerText?.getAttribute('class') ?? '',
+    );
 
     expect(yourAnswerIndex).toBeGreaterThanOrEqual(0);
     expect(correctAnswerIndex).toBeGreaterThanOrEqual(0);
     expect(yourAnswerIndex).toBeLessThan(correctAnswerIndex);
-    expect(html).toContain('A)');
+    expect(yourAnswerBadge).not.toBeUndefined();
+    expect(yourAnswerBadge?.getAttribute('class')).toContain('rounded-full');
     expect(html).toContain('First option');
     expect(html).toContain('First option is incorrect.');
+    expect(yourAnswerTextTokens.has('text-base')).toBe(true);
+    expect(yourAnswerTextTokens.has('text-foreground')).toBe(true);
   });
 
   it('excludes the user-selected wrong choice from why-other-answers cards', () => {
@@ -928,11 +1198,41 @@ describe('Feedback', () => {
       />,
     );
 
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const yourAnswerLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Your answer',
+    );
+    const destructiveCard = yourAnswerLabel?.nextElementSibling;
+    const destructiveCardTokens = getClassTokens(
+      destructiveCard?.getAttribute('class') ?? '',
+    );
+    const yourAnswerRow = destructiveCard
+      ? findAnswerRow(destructiveCard, 'A', 'First option')
+      : undefined;
+    const yourAnswerRowTokens = getClassTokens(
+      yourAnswerRow?.getAttribute('class') ?? '',
+    );
+    const yourAnswerBadge = destructiveCard
+      ? findRoundedBadge(destructiveCard, 'A')
+      : undefined;
+    const yourAnswerText = destructiveCard
+      ? findMarkdownWrapper(destructiveCard, 'First option')
+      : undefined;
+    const yourAnswerTextTokens = getClassTokens(
+      yourAnswerText?.getAttribute('class') ?? '',
+    );
+
     expect(html).toContain('Your answer');
-    expect(html).toContain('A)');
+    expect(destructiveCardTokens.has('p-4')).toBe(true);
+    expect(yourAnswerRow).not.toBeUndefined();
+    expect(yourAnswerRowTokens.has('gap-3')).toBe(true);
+    expect(yourAnswerBadge).not.toBeUndefined();
+    expect(yourAnswerBadge?.getAttribute('class')).toContain('rounded-full');
     expect(html).toContain('First option');
     expect(html).not.toContain('Why other answers are wrong:');
     expect(html).toContain('General explanation.');
+    expect(yourAnswerTextTokens.has('text-base')).toBe(true);
+    expect(yourAnswerTextTokens.has('text-foreground')).toBe(true);
   });
 
   it('falls back gracefully when selectedChoiceId is null in incorrect flow', () => {

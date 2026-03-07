@@ -419,9 +419,40 @@ describe('QuestionView', () => {
       />,
     );
 
-    expect(html).toContain('A)');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const feedbackCard = doc.querySelector('[role="status"]');
+    const yourAnswerHeading = Array.from(
+      feedbackCard?.querySelectorAll('div') ?? [],
+    ).find((div) => div.textContent?.trim() === 'Your answer');
+    const correctAnswerHeading = Array.from(
+      feedbackCard?.querySelectorAll('div') ?? [],
+    ).find((div) => div.textContent?.trim() === 'Correct answer');
+
+    const yourAnswerCard = yourAnswerHeading?.nextElementSibling;
+    const correctAnswerCard = correctAnswerHeading?.nextElementSibling;
+
+    const yourAnswerBadge = Array.from(
+      yourAnswerCard?.querySelectorAll('div') ?? [],
+    ).find((div) => {
+      const className = div.getAttribute('class') ?? '';
+      return (
+        className.includes('rounded-full') && div.textContent?.trim() === 'A'
+      );
+    });
+    const correctAnswerBadge = Array.from(
+      correctAnswerCard?.querySelectorAll('div') ?? [],
+    ).find((div) => {
+      const className = div.getAttribute('class') ?? '';
+      return (
+        className.includes('rounded-full') && div.textContent?.trim() === 'B'
+      );
+    });
+
+    expect(yourAnswerCard).not.toBeNull();
+    expect(correctAnswerCard).not.toBeNull();
+    expect(yourAnswerBadge).not.toBeUndefined();
+    expect(correctAnswerBadge).not.toBeUndefined();
     expect(html).toContain('Correct answer');
-    expect(html).toContain('B)');
     expect(html).toContain('Choice A text');
     expect(html).toContain('Choice B text');
     expect(html).toContain('A explanation');
