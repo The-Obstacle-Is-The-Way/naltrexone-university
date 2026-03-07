@@ -2,7 +2,7 @@
 
 **Priority:** P2
 **Created:** 2026-03-07
-**Status:** Open
+**Status:** Resolved in current branch (pending merge/archive)
 **Triggered by:** Visual review of feedback card in dark mode — explanation text is hard to read
 **Scope:** Promote feedback explanation text from Secondary tier to Primary tier; bump the feedback-card reference from Tertiary to Secondary; document the feedback-context typography override in policy/registry
 **Related:** [DEBT-284](../_archive/debt/debt-284-feedback-visual-polish-phase-2.md) (badge coloring, just completed), [Typography Policy](../frontend/typography-policy.md)
@@ -36,30 +36,30 @@ The tier hierarchy makes sense during the question: the stem and choices ARE the
 
 ---
 
-## Current State (feedback.tsx)
+## Current State (feedback.tsx, current branch)
 
 ### Explanation text — 4 Markdown call sites
 
 | Line | Context | Current className |
 |------|---------|-------------------|
-| 82 | Correct answer explanation | `getExplanationClassName()` → `"mt-2 text-sm text-muted-foreground"` or `"text-sm text-muted-foreground"` |
-| 172 | Why-wrong choice explanation (correct flow) | `"mt-2 text-sm text-muted-foreground"` |
-| 200 | Your answer explanation | `"mt-2 text-sm text-muted-foreground"` |
-| 235 | Why-wrong choice explanation (incorrect flow) | `"mt-2 text-sm text-muted-foreground"` |
+| 82 | Correct answer explanation | `getExplanationClassName()` → `"mt-2 text-base text-foreground"` or `"text-base text-foreground"` |
+| 172 | Why-wrong choice explanation (correct flow) | `"mt-2 text-base text-foreground"` |
+| 200 | Your answer explanation | `"mt-2 text-base text-foreground"` |
+| 235 | Why-wrong choice explanation (incorrect flow) | `"mt-2 text-base text-foreground"` |
 
-All four explanation Markdown wrappers are `text-sm text-muted-foreground` — 14px gray.
+All four explanation Markdown wrappers are now `text-base text-foreground` — 16px primary reading text.
 
 ### Fallback "Explanation not available" — 1 site
 
 | Line | Context | Current className |
 |------|---------|-------------------|
-| 84 | No explanation available | `getFallbackExplanationClassName()` → includes `text-sm text-muted-foreground` |
+| 84 | No explanation available | `getFallbackExplanationClassName()` → exact fallback string (`"mt-2 text-sm text-muted-foreground"` or `"text-sm text-muted-foreground"`) |
 
 ### Reference text — 1 Markdown call site
 
 | Line | Context | Current className |
 |------|---------|-------------------|
-| 250 | Reference section | `"mt-1 text-xs"` |
+| 250 | Reference section | `"mt-1 text-sm"` |
 
 ---
 
@@ -80,11 +80,11 @@ With all this structural hierarchy in place, the text itself doesn't need to car
 
 ---
 
-## Proposed Fix
+## Implemented Fix
 
 ### P1: Promote explanation text to `text-base text-foreground`
 
-Change all explanation `<Markdown>` classNames from `text-sm text-muted-foreground` to `text-base text-foreground`.
+All explanation `<Markdown>` classNames were promoted from `text-sm text-muted-foreground` to `text-base text-foreground`.
 
 **Affected call sites:**
 
@@ -102,7 +102,7 @@ Change all explanation `<Markdown>` classNames from `text-sm text-muted-foregrou
 
 ### P2: Promote reference text from `text-xs` to `text-sm`
 
-Change reference `<Markdown>` className from `"mt-1 text-xs"` to `"mt-1 text-sm"`.
+The feedback reference `<Markdown>` className was promoted from `"mt-1 text-xs"` to `"mt-1 text-sm"`.
 
 | Line | From | To |
 |------|------|----|
@@ -112,9 +112,9 @@ Change reference `<Markdown>` className from `"mt-1 text-xs"` to `"mt-1 text-sm"
 
 ### P3: Update Typography Policy
 
-The Typography Policy's Content Tier System needs a feedback-context amendment recognizing that explanations in the feedback card are promoted to Primary tier. This is not a general change to the tier system — it's specific to the feedback rendering context where explanations become the primary learning content.
+The Typography Policy's Content Tier System now carries a feedback-context amendment recognizing that explanations in the feedback card are promoted to Primary tier. This is not a general change to the tier system — it's specific to the feedback rendering context where explanations become the primary learning content.
 
-The Pattern Registry also needs a sync update. `F-5` / `F-6` currently govern feedback-card surfaces and the reference heading, but they do not yet document the promoted explanation/reference body text rules for this context.
+The Pattern Registry is now synced as well. `F-5` / `F-6` document the promoted explanation/reference body text rules for this context alongside the feedback-card surfaces.
 
 ---
 
@@ -130,9 +130,9 @@ The Pattern Registry also needs a sync update. `F-5` / `F-6` currently govern fe
 
 ---
 
-## Test Plan
+## Validation
 
-Update `Feedback.test.tsx` to assert the new classNames:
+`Feedback.test.tsx` was updated to assert the new classNames:
 
 1. **Explanation text carries `text-base` and `text-foreground`** — assert correct-answer explanation, your-answer explanation, and why-wrong explanations all contain these tokens
 2. **Explanation text does NOT carry `text-sm` or `text-muted-foreground`** — negative assertion to prevent regression
@@ -142,15 +142,15 @@ Update `Feedback.test.tsx` to assert the new classNames:
 
 ---
 
-## Typography Policy Update
+## Documentation Sync
 
-After implementation, update `docs/frontend/typography-policy.md`:
+`docs/frontend/typography-policy.md` was updated to:
 
 1. Add a "Feedback Context Override" subsection to the Content Tier System explaining that in the feedback card, explanations are promoted to Primary tier because they become the primary learning content post-answer
 2. Update the compliance table for feedback.tsx call sites to reflect new classNames
 3. In `feedback.tsx`, the reference section moves from Tertiary (`text-xs`) to Secondary (`text-sm`) as a feedback-context exception, not a blanket rule for every reference-like Markdown surface in the app
 
-After implementation, update `docs/frontend/pattern-registry.md`:
+`docs/frontend/pattern-registry.md` was updated to:
 
 1. Add the explanation/reference typography portion of the feedback-card pattern so F-5/F-6 describe not just surfaces, but the final text hierarchy used inside them
 2. Keep the existing section-header and reference-label UI-chrome patterns unchanged

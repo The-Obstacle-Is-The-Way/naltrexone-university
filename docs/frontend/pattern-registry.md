@@ -595,17 +595,32 @@ Display-only answer explanation block shown after submission.
 
 **Correct answer:**
 ```
-rounded-xl border border-success/60 bg-success/5 p-3
+rounded-xl border border-success/60 bg-success/5 p-4
 ```
 
 **Your incorrect answer:**
 ```
-rounded-xl border border-destructive bg-destructive/5 p-3
+rounded-xl border border-destructive bg-destructive/5 p-4
 ```
 
 **Other wrong answers:**
 ```
-rounded-xl border border-border/60 bg-background/50 p-3 dark:border-foreground/40
+rounded-xl border border-border/60 bg-background/50 p-4 dark:border-foreground/40
+```
+
+**Answer row:**
+```
+flex items-start gap-3
+```
+
+**Feedback answer text:**
+```
+text-base text-foreground
+```
+
+**Feedback explanation text:**
+```
+text-base text-foreground
 ```
 
 **Source:** `components/question/feedback.tsx`
@@ -625,7 +640,14 @@ mt-4 border-t border-border/40 pt-3 dark:border-foreground/40
 text-xs font-semibold uppercase tracking-wide text-muted-foreground
 ```
 
+**Body:**
+```
+mt-1 text-sm
+```
+
 **Source:** `components/question/feedback.tsx`
+
+**Rule:** The feedback reference body is a feedback-context readability exception. It uses `text-sm` instead of the default content-tier `text-xs` citation treatment because 12px reference text was too small on this dark card surface. The heading remains compact UI chrome.
 
 ### F-7: Clinical Pearl Callout
 
