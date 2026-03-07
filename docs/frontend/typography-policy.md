@@ -176,15 +176,15 @@ All `<Markdown>` call sites now carry tier-appropriate classNames. The 4 violati
 
 | Call Site | Expected Tier | Actual className | Status |
 |-----------|--------------|-----------------|--------|
-| `feedback.tsx:73` — correct answer text | Primary | `"text-base text-foreground"` | Compliant |
-| `feedback.tsx:80` — explanation | Primary (feedback-context override) | `explanationClassName` (`"mt-2 text-base text-foreground"` / `"text-base text-foreground"`) | Compliant |
-| `feedback.tsx:163` — wrong choice text (correct flow) | Primary | `"text-base text-foreground"` | Compliant |
-| `feedback.tsx:168` — wrong choice explanation (correct flow) | Primary (feedback-context override) | `"mt-2 text-base text-foreground"` | Compliant |
-| `feedback.tsx:190` — user answer text | Primary | `"text-base text-foreground"` | Compliant |
-| `feedback.tsx:196` — user answer explanation | Primary (feedback-context override) | `"mt-2 text-base text-foreground"` | Compliant |
-| `feedback.tsx:226` — other wrong choice text | Primary | `"text-base text-foreground"` | Compliant |
-| `feedback.tsx:231` — other wrong choice explanation | Primary (feedback-context override) | `"mt-2 text-base text-foreground"` | Compliant |
-| `feedback.tsx:248` — reference | Secondary (feedback-context override) | `"mt-1 text-sm"` | Compliant |
+| `feedback.tsx:77` — correct answer text | Primary | `"text-base text-foreground"` | Compliant |
+| `feedback.tsx:84` — explanation | Primary (feedback-context override) | `explanationClassName` (`"mt-2 text-base text-foreground"` / `"text-base text-foreground"`) | Compliant |
+| `feedback.tsx:167` — wrong choice text (correct flow) | Primary | `"text-base text-foreground"` | Compliant |
+| `feedback.tsx:172` — wrong choice explanation (correct flow) | Primary (feedback-context override) | `"mt-2 text-base text-foreground"` | Compliant |
+| `feedback.tsx:194` — user answer text | Primary | `"text-base text-foreground"` | Compliant |
+| `feedback.tsx:200` — user answer explanation | Primary (feedback-context override) | `"mt-2 text-base text-foreground"` | Compliant |
+| `feedback.tsx:230` — other wrong choice text | Primary | `"text-base text-foreground"` | Compliant |
+| `feedback.tsx:235` — other wrong choice explanation | Primary (feedback-context override) | `"mt-2 text-base text-foreground"` | Compliant |
+| `feedback.tsx:252` — reference | Secondary (feedback-context override) | `"mt-1 text-sm"` | Compliant |
 | `question-card.tsx:35` — stem | Primary | `"text-base text-foreground"` | Compliant |
 | `choice-button.tsx:72` — choice text | Primary | `"text-base text-foreground"` | Compliant |
 

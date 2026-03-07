@@ -668,24 +668,18 @@ describe('Feedback', () => {
     expect(wrongAnswerCards.length).toBeGreaterThan(0);
     for (const card of wrongAnswerCards) {
       const classTokens = getClassTokens(card.getAttribute('class') ?? '');
-      const explanationText = Array.from(card.querySelectorAll('div')).find(
-        (div) => {
-          const text = div.textContent?.trim();
-          return (
-            text === 'First option is incorrect.' ||
-            text === 'Second option is incorrect.'
-          );
-        },
-      ) as HTMLDivElement | undefined;
-      const explanationTextTokens = getClassTokens(
-        explanationText?.getAttribute('class') ?? '',
+      const explanationWrapper =
+        findMarkdownWrapper(card, 'First option is incorrect.') ??
+        findMarkdownWrapper(card, 'Second option is incorrect.');
+      const explanationWrapperTokens = getClassTokens(
+        explanationWrapper?.getAttribute('class') ?? '',
       );
       expect(classTokens.has('dark:border-foreground/40')).toBe(true);
-      expect(explanationText).not.toBeUndefined();
-      expect(explanationTextTokens.has('text-base')).toBe(true);
-      expect(explanationTextTokens.has('text-foreground')).toBe(true);
-      expect(explanationTextTokens.has('text-sm')).toBe(false);
-      expect(explanationTextTokens.has('text-muted-foreground')).toBe(false);
+      expect(explanationWrapper).not.toBeUndefined();
+      expect(explanationWrapperTokens.has('text-base')).toBe(true);
+      expect(explanationWrapperTokens.has('text-foreground')).toBe(true);
+      expect(explanationWrapperTokens.has('text-sm')).toBe(false);
+      expect(explanationWrapperTokens.has('text-muted-foreground')).toBe(false);
     }
   });
 

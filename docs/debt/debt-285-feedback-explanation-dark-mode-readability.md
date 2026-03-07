@@ -42,7 +42,7 @@ The tier hierarchy makes sense during the question: the stem and choices ARE the
 
 | Line | Context | Current className |
 |------|---------|-------------------|
-| 82 | Correct answer explanation | `getExplanationClassName()` → `"mt-2 text-base text-foreground"` or `"text-base text-foreground"` |
+| 84 | Correct answer explanation | `getExplanationClassName()` → `"mt-2 text-base text-foreground"` or `"text-base text-foreground"` |
 | 172 | Why-wrong choice explanation (correct flow) | `"mt-2 text-base text-foreground"` |
 | 200 | Your answer explanation | `"mt-2 text-base text-foreground"` |
 | 235 | Why-wrong choice explanation (incorrect flow) | `"mt-2 text-base text-foreground"` |
@@ -53,13 +53,13 @@ All four explanation Markdown wrappers are now `text-base text-foreground` — 1
 
 | Line | Context | Current className |
 |------|---------|-------------------|
-| 84 | No explanation available | `getFallbackExplanationClassName()` → exact fallback string (`"mt-2 text-sm text-muted-foreground"` or `"text-sm text-muted-foreground"`) |
+| 86 | No explanation available | `getFallbackExplanationClassName()` → exact fallback string (`"mt-2 text-sm text-muted-foreground"` or `"text-sm text-muted-foreground"`) |
 
 ### Reference text — 1 Markdown call site
 
 | Line | Context | Current className |
 |------|---------|-------------------|
-| 250 | Reference section | `"mt-1 text-sm"` |
+| 252 | Reference section | `"mt-1 text-sm"` |
 
 ---
 
@@ -91,7 +91,7 @@ All explanation `<Markdown>` classNames were promoted from `text-sm text-muted-f
 | Line | From | To |
 |------|------|----|
 | `getExplanationClassName()` (line 44-48) | `"mt-2 text-sm text-muted-foreground"` / `"text-sm text-muted-foreground"` | `"mt-2 text-base text-foreground"` / `"text-base text-foreground"` |
-| `getFallbackExplanationClassName()` (line 50-52) | inherits `text-sm text-muted-foreground` + adds `text-muted-foreground` | return an exact fallback string (`"mt-2 text-sm text-muted-foreground"` / `"text-sm text-muted-foreground"`), not a mix of promoted + muted tokens |
+| `getFallbackExplanationClassName()` (line 50-54) | inherits `text-sm text-muted-foreground` + adds `text-muted-foreground` | return an exact fallback string (`"mt-2 text-sm text-muted-foreground"` / `"text-sm text-muted-foreground"`), not a mix of promoted + muted tokens |
 | Line 172 | `"mt-2 text-sm text-muted-foreground"` | `"mt-2 text-base text-foreground"` |
 | Line 200 | `"mt-2 text-sm text-muted-foreground"` | `"mt-2 text-base text-foreground"` |
 | Line 235 | `"mt-2 text-sm text-muted-foreground"` | `"mt-2 text-base text-foreground"` |
@@ -106,7 +106,7 @@ The feedback reference `<Markdown>` className was promoted from `"mt-1 text-xs"`
 
 | Line | From | To |
 |------|------|----|
-| 250 | `"mt-1 text-xs"` | `"mt-1 text-sm"` |
+| 252 | `"mt-1 text-xs"` | `"mt-1 text-sm"` |
 
 **Rationale:** At 12px, reference text is genuinely straining in dark mode. Bumping to 14px (`text-sm`) keeps it visually subordinate to the now-`text-base` explanations while being actually readable. The reference section is already visually separated by a `border-t` divider and uppercase "REFERENCE" label — it doesn't need tiny text to signal its role.
 
