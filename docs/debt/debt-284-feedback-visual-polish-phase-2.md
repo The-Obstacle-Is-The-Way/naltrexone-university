@@ -4,7 +4,7 @@
 **Created:** 2026-03-07
 **Source:** Visual review after [DEBT-282](../_archive/debt/debt-282-feedback-visual-unification.md) (PR #179)
 **Governing Policy:** [Typography Policy](../frontend/typography-policy.md), [Frontend Standards](../frontend/standards.md), [Pattern Registry](../frontend/pattern-registry.md), [Contrast Policy](../frontend/contrast-policy.md)
-**Scope:** Remaining visual inconsistencies between pre-submission (choice buttons) and post-submission (feedback cards), plus explanation color consistency and type scale readability
+**Scope:** Remaining visual inconsistencies between question-flow choice buttons and post-submission feedback cards, plus explanation color consistency and type scale readability
 
 ---
 
@@ -12,7 +12,7 @@
 
 DEBT-282 resolved the most jarring inconsistencies: plain `A)` text badges became circular badges, answer text got proper `text-base text-foreground` Primary tier className, layout gap/padding matched choice buttons, and the wrong-answer hierarchy inversion was fixed.
 
-This debt covers the **next layer** of issues visible after DEBT-282: badge coloring, explanation color divergence, and the type scale gap between answer text and supporting content.
+This debt covers the **next layer** of issues visible after DEBT-282: semantic badge coloring parity between the question area and feedback cards, explanation color divergence, and the type scale gap between answer text and supporting content.
 
 ---
 
@@ -52,9 +52,9 @@ Every text element in the feedback system, its source pipeline, current size, an
 
 ## Problems
 
-### P1: Feedback badges are colorless — pre-submission badges are verdict-colored
+### P1: Feedback badges are colorless — question-area badges are verdict-colored after submission
 
-**Pre-submission** (`choice-button.tsx:59-68`): After the user submits, choice button badges get semantic coloring:
+**Question area after submission** (`choice-button.tsx:59-68`): Once a verdict exists, choice button badges get semantic coloring:
 
 | Verdict | Badge classes |
 |---------|-------------|
@@ -153,7 +153,7 @@ The reference section at `text-xs` (12px) looks disproportionately small after `
 - **Layout gap/padding** — aligned by DEBT-282, no change needed in live code (`gap-3`, `p-4`). Pattern Registry `F-5` still lists the pre-DEBT-282 `p-3` snapshot and should be synced separately rather than treated as the current component baseline.
 - **Question stem or choice button text** — already compliant
 - **Clinical pearl callout** — already correct
-- **Section labels** — Pipeline 1 chrome, intentionally `text-sm font-medium`
+- **Section labels** — Pipeline 1 chrome, intentionally `text-sm font-medium`. The Chrome audit's "these feel subtle" observation is real as a taste/readability reaction, but under the current Typography Policy it is not a DEBT-284 implementation item unless the section-header standard itself changes.
 
 ---
 
@@ -161,18 +161,15 @@ The reference section at `text-xs` (12px) looks disproportionately small after `
 
 ### Phase 1: Badge coloring (P1) — high impact, small diff
 
-Add verdict-colored badge variants to `feedback.tsx`. Three badge states needed:
+Add verdict-colored badge variants to `feedback.tsx`. Three badge states are needed:
 
-```tsx
-// Correct answer card — green badge
-<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-success bg-success/15 text-xs font-semibold leading-none text-success">
+| Badge state | Requirement |
+|-------------|-------------|
+| Correct answer card | Semantic success badge variant, contrast-safe for `text-xs` badge text, visually distinct from neutral |
+| Your answer card (wrong) | Semantic destructive badge variant, contrast-safe for `text-xs` badge text, visually distinct from neutral |
+| Why other answers are wrong | Keep the existing neutral badge (no change) |
 
-// Your answer card (wrong) — red badge
-<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-destructive bg-destructive/15 text-xs font-semibold leading-none text-destructive">
-
-// Why other answers are wrong — neutral (no change)
-<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold leading-none text-foreground dark:border-foreground/60 dark:bg-foreground/20">
-```
+Implementation detail: the badge must remain the existing `h-7 w-7 rounded-full` circle and keep the neutral variant for non-semantic cards. The exact success/destructive token pair must be chosen to satisfy the Contrast Policy instead of blindly copying the current `choice-button.tsx` tint recipe.
 
 **Badge locations:**
 - `feedback.tsx:70` (CorrectAnswerSection) → green
