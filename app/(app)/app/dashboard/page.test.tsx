@@ -1,8 +1,16 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
-import { DashboardView, renderDashboard } from './page';
+
+let DashboardView: typeof import('./page').DashboardView;
+let renderDashboard: typeof import('./page').renderDashboard;
+
+beforeAll(async () => {
+  const pageModule = await import('./page');
+  DashboardView = pageModule.DashboardView;
+  renderDashboard = pageModule.renderDashboard;
+});
 
 function findStatValue(doc: Document, label: string): string | null {
   const labelEl =
