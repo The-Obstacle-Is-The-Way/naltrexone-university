@@ -13,7 +13,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-199
+**Next Bug ID:** BUG-203
 
 **Latest archival (2026-03-03):**
 - BUG-186, BUG-187, BUG-188 verified fixed (PR #164), archived to `docs/_archive/bugs/`.
@@ -32,7 +32,14 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Open Bugs
 
-_No open bugs._
+| ID | Priority | Title | Source |
+|----|----------|-------|--------|
+| [BUG-199](bug-199-unsafe-array-index-access.md) | P2 | Unsafe `[0]` array access without bounds checking | AUDIT-011 |
+| [BUG-201](bug-201-clerk-webhook-double-cast.md) | P3 | Clerk webhook double-cast bypasses type safety | AUDIT-011 |
+| [BUG-202](bug-202-redundant-condition-after-find.md) | P4 | Redundant condition after `.find()` | AUDIT-011 |
+
+**Reclassified (2026-03-07):**
+- BUG-200 (Production error observability blind spots) reclassified as [DEBT-286](../debt/debt-286-client-side-error-reporting.md) — root cause is incomplete SPEC-016 rollout, not individual bugs. See AUDIT-011 for analysis.
 
 ## Audit #12 — Extended Sweep: Inference Leaks, Transaction Safety, Zombie Keys (2026-03-03)
 
