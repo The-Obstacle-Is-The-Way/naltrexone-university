@@ -377,8 +377,8 @@ describe('theme token regression', () => {
     expect(choiceHtml).not.toContain('emerald-');
     expect(choiceHtml).not.toContain('red-');
 
-    expect(feedbackHtml).toContain('bg-success/15');
-    expect(feedbackHtml).toContain('bg-destructive/15');
+    expect(feedbackHtml).toContain('bg-success');
+    expect(feedbackHtml).toContain('bg-destructive');
     expect(feedbackHtml).not.toContain('emerald-');
     expect(feedbackHtml).not.toContain('red-');
   });

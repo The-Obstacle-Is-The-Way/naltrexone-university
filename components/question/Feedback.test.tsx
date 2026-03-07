@@ -36,9 +36,33 @@ describe('Feedback', () => {
     expect(card?.getAttribute('class')).not.toContain('bg-destructive/10');
     expect(verdictBadge).not.toBeUndefined();
     expect(verdictBadge?.getAttribute('class')).toContain('rounded-full');
-    expect(verdictBadge?.getAttribute('class')).toContain('bg-success/15');
-    expect(verdictBadge?.getAttribute('class')).toContain('text-success');
+    expect(verdictBadge?.getAttribute('class')).toContain('self-start');
+    expect(verdictBadge?.getAttribute('class')).toContain('bg-success');
+    expect(verdictBadge?.getAttribute('class')).toContain(
+      'text-success-foreground',
+    );
     expect(html).toContain('Correct');
+    expect(html).toContain('Because...');
+  });
+
+  it('renders an incorrect verdict badge as a compact destructive pill', () => {
+    const html = renderToStaticMarkup(
+      <Feedback isCorrect={false} explanationMd="Because..." />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const verdictBadge = Array.from(doc.querySelectorAll('span')).find(
+      (span) => span.textContent?.trim() === 'Incorrect',
+    );
+
+    expect(verdictBadge).not.toBeUndefined();
+    expect(verdictBadge?.getAttribute('class')).toContain('rounded-full');
+    expect(verdictBadge?.getAttribute('class')).toContain('self-start');
+    expect(verdictBadge?.getAttribute('class')).toContain('bg-destructive');
+    expect(verdictBadge?.getAttribute('class')).toContain(
+      'text-destructive-foreground',
+    );
+    expect(html).toContain('Incorrect');
     expect(html).toContain('Because...');
   });
 
