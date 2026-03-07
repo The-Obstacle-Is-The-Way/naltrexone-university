@@ -147,7 +147,7 @@ The hardcoded UI-text pipeline is no longer described as "mostly compliant." The
 | Exam review compact stat cards (`text-xs` labels + `text-2xl` values) | Intentional compact tier | Compliant — governed by Pattern Registry 12.4 |
 | Arbitrary `text-[...]` / inline font styles in production UI code | None found in current audit | Compliant |
 
-**Current open Pipeline 1 drift:** the following files still rely on inherited default size for standard supporting copy instead of explicitly using `text-base text-muted-foreground`:
+**Current open Pipeline 1 drift:** the following 13 files contain 19 current supporting-copy occurrences that still rely on inherited default size instead of explicitly using `text-base text-muted-foreground`:
 
 - `app/(app)/app/dashboard/page.tsx`
 - `app/(app)/app/bookmarks/page.tsx`
@@ -162,6 +162,8 @@ The hardcoded UI-text pipeline is no longer described as "mostly compliant." The
 - `app/sign-up/[[...sign-up]]/sign-up-page-client.tsx`
 - `app/(marketing)/checkout/success/checkout-success-sync.tsx`
 - `components/marketing/marketing-home.tsx`
+
+The 2026-03-07 horizontal scan found no additional `app/` or `components/` files beyond this set. Remaining `text-muted-foreground` matches were intentional `text-sm`, `text-lg`, `text-xs`, `Input` (`text-base md:text-sm`), nav/icon chrome, or DEBT-282 Markdown/content-tier cases.
 
 ### Pipeline 2 (Content): Non-Compliant
 
