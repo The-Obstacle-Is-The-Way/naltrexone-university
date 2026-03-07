@@ -2,9 +2,23 @@
 
 **Priority:** P3
 **Created:** 2026-03-07
+**Status:** Resolved
+**Resolved:** 2026-03-07 — commit `08a4ecdb`
 **Source:** Typography policy + UI codebase audit
-**Governing Policy:** [Typography Policy](../frontend/typography-policy.md)
+**Governing Policy:** [Typography Policy](../../frontend/typography-policy.md)
 **Scope:** Align non-Markdown supporting copy to explicit typography roles and remove inherited-size drift across app, utility, and standard marketing sections
+
+---
+
+## Current Status
+
+As of **March 7, 2026**, commit `08a4ecdb` resolved the DEBT-283 implementation scope in full:
+
+- all 19 audited supporting-copy occurrences across the original 13 files now use explicit `text-base text-muted-foreground`
+- representative regression coverage landed for `dashboard/page.tsx`, `sign-in-page-client.tsx`, and `marketing-home.tsx`
+- the full verification gate passed: `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build`
+
+This archived document preserves the pre-fix audit and implementation plan that guided the work.
 
 ---
 
@@ -18,13 +32,13 @@ Today those strings usually inherit browser/root `1rem`, so the visual output is
 2. **Regression risk:** if parent composition or root sizing changes, these strings can drift without any explicit typography token changing.
 3. **Ambiguous hierarchy:** developers cannot tell whether a string is meant to be dense chrome (`text-sm`) or standard supporting copy (`text-base`) just by reading the JSX.
 
-This debt is about the **regular React/UI pipeline**, not Markdown content. [DEBT-282](./debt-282-feedback-visual-unification.md) already covers the Markdown-backed feedback mismatch inside the question flow.
+This debt is about the **regular React/UI pipeline**, not Markdown content. [DEBT-282](../../debt/debt-282-feedback-visual-unification.md) already covers the Markdown-backed feedback mismatch inside the question flow.
 
 ---
 
-## Verified Current Drift
+## Pre-Fix Audit
 
-As of 2026-03-07, the drift lives in **13 files / 19 current occurrences**. Every audited occurrence is a supporting-copy `<p>` with `text-muted-foreground` and no explicit `text-*` size class. None of the listed elements should stay `text-sm`; they are standard supporting copy and should normalize to explicit `text-base text-muted-foreground` in a follow-up implementation.
+Before the fix landed, the drift lived in **13 files / 19 occurrences**. Every audited occurrence was a supporting-copy `<p>` with `text-muted-foreground` and no explicit `text-*` size class. None of the listed elements should stay `text-sm`; they were standard supporting copy and needed to normalize to explicit `text-base text-muted-foreground`.
 
 ### Authenticated app pages
 
@@ -91,7 +105,7 @@ The following apparent matches were audited and excluded:
 - `app/pricing/pricing-view.tsx:48-57` — the pricing banner inherits `text-sm` from the alert container (`className="... p-4 text-sm shadow-sm ..."`). This is compact alert chrome, not standard supporting copy.
 - `app/not-found.tsx:23`, `app/pricing/pricing-view.tsx:42`, and `components/marketing/marketing-home.tsx:78` already claim explicit `text-base` or `text-lg` roles and are compliant.
 - Nav/icon utility classes in `components/app-desktop-nav.tsx`, `components/mobile-nav.tsx`, `components/marketing/marketing-layout.tsx`, `components/theme-toggle.tsx`, `components/auth-nav.tsx`, and `components/ui/*` are interactive chrome or icon tinting, not supporting-copy typography.
-- `components/question/feedback.tsx` remains intentionally excluded from this debt and is still tracked by [DEBT-282](./debt-282-feedback-visual-unification.md).
+- `components/question/feedback.tsx` remains intentionally excluded from this debt and is still tracked by [DEBT-282](../../debt/debt-282-feedback-visual-unification.md).
 
 Representative current pattern:
 
