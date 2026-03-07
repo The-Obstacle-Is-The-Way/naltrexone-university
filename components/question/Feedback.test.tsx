@@ -26,6 +26,20 @@ function findRoundedBadge(
   }) as HTMLDivElement | undefined;
 }
 
+function expectTokens(
+  tokens: Set<string>,
+  expected: string[],
+  absent: string[] = [],
+) {
+  for (const token of expected) {
+    expect(tokens.has(token)).toBe(true);
+  }
+
+  for (const token of absent) {
+    expect(tokens.has(token)).toBe(false);
+  }
+}
+
 function findMarkdownWrapper(
   container: ParentNode,
   text: string,
@@ -143,11 +157,20 @@ describe('Feedback', () => {
     const correctAnswerBadge = successCard
       ? findRoundedBadge(successCard, 'B')
       : undefined;
+    const correctAnswerBadgeTokens = getClassTokens(
+      correctAnswerBadge?.getAttribute('class') ?? '',
+    );
     const correctAnswerText = successCard
       ? findMarkdownWrapper(successCard, 'Second option')
       : undefined;
     const correctAnswerTextTokens = getClassTokens(
       correctAnswerText?.getAttribute('class') ?? '',
+    );
+    const correctAnswerExplanation = successCard
+      ? findMarkdownWrapper(successCard, 'General explanation.')
+      : undefined;
+    const correctAnswerExplanationTokens = getClassTokens(
+      correctAnswerExplanation?.getAttribute('class') ?? '',
     );
 
     expect(correctAnswerLabel).not.toBeUndefined();
@@ -159,6 +182,11 @@ describe('Feedback', () => {
     expect(correctAnswerRowTokens.has('gap-3')).toBe(true);
     expect(correctAnswerBadge).not.toBeUndefined();
     expect(correctAnswerBadge?.getAttribute('class')).toContain('rounded-full');
+    expectTokens(
+      correctAnswerBadgeTokens,
+      ['border-success', 'bg-success/15', 'text-success'],
+      ['border-border', 'bg-muted', 'text-foreground'],
+    );
     expect(successCardText).toContain('B');
     expect(successCardText).toContain('Second option');
     expect(successCardText).toContain('General explanation.');
@@ -166,6 +194,11 @@ describe('Feedback', () => {
     expect(correctAnswerTextTokens.has('text-base')).toBe(true);
     expect(correctAnswerTextTokens.has('text-foreground')).toBe(true);
     expect(correctAnswerTextTokens.has('text-muted-foreground')).toBe(false);
+    expect(correctAnswerExplanation).not.toBeUndefined();
+    expect(correctAnswerExplanationTokens.has('text-sm')).toBe(true);
+    expect(correctAnswerExplanationTokens.has('text-muted-foreground')).toBe(
+      true,
+    );
   });
 
   it('T2: wraps explanation-only fallback in a success card for correct flow', () => {
@@ -259,11 +292,20 @@ describe('Feedback', () => {
     const yourAnswerBadge = destructiveCard
       ? findRoundedBadge(destructiveCard, 'A')
       : undefined;
+    const yourAnswerBadgeTokens = getClassTokens(
+      yourAnswerBadge?.getAttribute('class') ?? '',
+    );
     const yourAnswerText = destructiveCard
       ? findMarkdownWrapper(destructiveCard, 'First option')
       : undefined;
     const yourAnswerTextTokens = getClassTokens(
       yourAnswerText?.getAttribute('class') ?? '',
+    );
+    const yourAnswerExplanation = destructiveCard
+      ? findMarkdownWrapper(destructiveCard, 'First option is incorrect.')
+      : undefined;
+    const yourAnswerExplanationTokens = getClassTokens(
+      yourAnswerExplanation?.getAttribute('class') ?? '',
     );
 
     expect(yourAnswerLabel).not.toBeUndefined();
@@ -277,6 +319,11 @@ describe('Feedback', () => {
     expect(yourAnswerRowTokens.has('gap-3')).toBe(true);
     expect(yourAnswerBadge).not.toBeUndefined();
     expect(yourAnswerBadge?.getAttribute('class')).toContain('rounded-full');
+    expectTokens(
+      yourAnswerBadgeTokens,
+      ['border-destructive', 'bg-destructive/15', 'text-destructive'],
+      ['border-border', 'bg-muted', 'text-foreground'],
+    );
     expect(destructiveCardText).toContain('A');
     expect(destructiveCardText).toContain('First option');
     expect(destructiveCardText).toContain('First option is incorrect.');
@@ -284,6 +331,9 @@ describe('Feedback', () => {
     expect(yourAnswerTextTokens.has('text-base')).toBe(true);
     expect(yourAnswerTextTokens.has('text-foreground')).toBe(true);
     expect(yourAnswerTextTokens.has('text-muted-foreground')).toBe(false);
+    expect(yourAnswerExplanation).not.toBeUndefined();
+    expect(yourAnswerExplanationTokens.has('text-sm')).toBe(true);
+    expect(yourAnswerExplanationTokens.has('text-muted-foreground')).toBe(true);
   });
 
   it('T4: wraps incorrect-flow correct-answer content in a success card', () => {
@@ -328,11 +378,20 @@ describe('Feedback', () => {
     const correctAnswerBadge = successCard
       ? findRoundedBadge(successCard, 'B')
       : undefined;
+    const correctAnswerBadgeTokens = getClassTokens(
+      correctAnswerBadge?.getAttribute('class') ?? '',
+    );
     const correctAnswerText = successCard
       ? findMarkdownWrapper(successCard, 'Second option')
       : undefined;
     const correctAnswerTextTokens = getClassTokens(
       correctAnswerText?.getAttribute('class') ?? '',
+    );
+    const correctAnswerExplanation = successCard
+      ? findMarkdownWrapper(successCard, 'General explanation.')
+      : undefined;
+    const correctAnswerExplanationTokens = getClassTokens(
+      correctAnswerExplanation?.getAttribute('class') ?? '',
     );
 
     expect(correctAnswerLabel).not.toBeUndefined();
@@ -344,6 +403,11 @@ describe('Feedback', () => {
     expect(correctAnswerRowTokens.has('gap-3')).toBe(true);
     expect(correctAnswerBadge).not.toBeUndefined();
     expect(correctAnswerBadge?.getAttribute('class')).toContain('rounded-full');
+    expectTokens(
+      correctAnswerBadgeTokens,
+      ['border-success', 'bg-success/15', 'text-success'],
+      ['border-border', 'bg-muted', 'text-foreground'],
+    );
     expect(successCardText).toContain('B');
     expect(successCardText).toContain('Second option');
     expect(successCardText).toContain('General explanation.');
@@ -351,6 +415,11 @@ describe('Feedback', () => {
     expect(correctAnswerTextTokens.has('text-base')).toBe(true);
     expect(correctAnswerTextTokens.has('text-foreground')).toBe(true);
     expect(correctAnswerTextTokens.has('text-muted-foreground')).toBe(false);
+    expect(correctAnswerExplanation).not.toBeUndefined();
+    expect(correctAnswerExplanationTokens.has('text-sm')).toBe(true);
+    expect(correctAnswerExplanationTokens.has('text-muted-foreground')).toBe(
+      true,
+    );
   });
 
   it('renders explanation fallback without top margin when no correct choice exists in incorrect flow', () => {
@@ -469,6 +538,9 @@ describe('Feedback', () => {
         answerRow?.getAttribute('class') ?? '',
       );
       const answerBadge = findRoundedBadge(card, expectedChoice.label);
+      const answerBadgeTokens = getClassTokens(
+        answerBadge?.getAttribute('class') ?? '',
+      );
       const answerText = findMarkdownWrapper(card, expectedChoice.answerText);
       const answerTextTokens = getClassTokens(
         answerText?.getAttribute('class') ?? '',
@@ -501,6 +573,16 @@ describe('Feedback', () => {
       expect(answerRowTokens.has('text-muted-foreground')).toBe(false);
       expect(answerBadge).not.toBeUndefined();
       expect(answerBadge?.getAttribute('class')).toContain('rounded-full');
+      expectTokens(
+        answerBadgeTokens,
+        ['border-border', 'bg-muted', 'text-foreground'],
+        ['border-success', 'bg-success/15', 'text-success'],
+      );
+      expectTokens(
+        answerBadgeTokens,
+        [],
+        ['border-destructive', 'bg-destructive/15', 'text-destructive'],
+      );
       expect(answerText).not.toBeUndefined();
       expect(answerTextTokens.has('text-base')).toBe(true);
       expect(answerTextTokens.has('text-foreground')).toBe(true);
@@ -652,6 +734,9 @@ describe('Feedback', () => {
     const correctAnswerBadge = successCard
       ? findRoundedBadge(successCard, 'B')
       : undefined;
+    const correctAnswerBadgeTokens = getClassTokens(
+      correctAnswerBadge?.getAttribute('class') ?? '',
+    );
     const correctAnswerText = successCard
       ? findMarkdownWrapper(successCard, 'Second option')
       : undefined;
@@ -662,6 +747,11 @@ describe('Feedback', () => {
     expect(html).toContain('Correct answer');
     expect(correctAnswerBadge).not.toBeUndefined();
     expect(correctAnswerBadge?.getAttribute('class')).toContain('rounded-full');
+    expectTokens(correctAnswerBadgeTokens, [
+      'border-success',
+      'bg-success/15',
+      'text-success',
+    ]);
     expect(html).toContain('Second option');
     expect(correctAnswerTextTokens.has('text-base')).toBe(true);
     expect(correctAnswerTextTokens.has('text-foreground')).toBe(true);
@@ -724,6 +814,9 @@ describe('Feedback', () => {
     const wrongAnswerBadge = wrongAnswerCard
       ? findRoundedBadge(wrongAnswerCard, 'A')
       : undefined;
+    const wrongAnswerBadgeTokens = getClassTokens(
+      wrongAnswerBadge?.getAttribute('class') ?? '',
+    );
     const wrongAnswerText = wrongAnswerCard
       ? findMarkdownWrapper(wrongAnswerCard, 'First option')
       : undefined;
@@ -744,6 +837,16 @@ describe('Feedback', () => {
     expect(wrongAnswerRowTokens.has('gap-3')).toBe(true);
     expect(wrongAnswerBadge).not.toBeUndefined();
     expect(wrongAnswerBadge?.getAttribute('class')).toContain('rounded-full');
+    expectTokens(
+      wrongAnswerBadgeTokens,
+      ['border-border', 'bg-muted', 'text-foreground'],
+      ['border-success', 'bg-success/15', 'text-success'],
+    );
+    expectTokens(
+      wrongAnswerBadgeTokens,
+      [],
+      ['border-destructive', 'bg-destructive/15', 'text-destructive'],
+    );
     expect(wrongAnswerText).not.toBeUndefined();
     expect(wrongAnswerTextTokens.has('text-base')).toBe(true);
     expect(wrongAnswerTextTokens.has('text-foreground')).toBe(true);
@@ -799,11 +902,21 @@ describe('Feedback', () => {
     const referenceLabel = Array.from(doc.querySelectorAll('div')).find(
       (div) => div.textContent?.trim() === 'Reference',
     );
+    const referenceContent = findMarkdownWrapper(
+      doc,
+      'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
+    );
+    const referenceContentTokens = getClassTokens(
+      referenceContent?.getAttribute('class') ?? '',
+    );
 
     expect(referenceLabel).not.toBeUndefined();
     expect(referenceLabel?.getAttribute('class')).toContain('font-semibold');
     expect(referenceLabel?.getAttribute('class')).toContain('uppercase');
     expect(referenceLabel?.getAttribute('class')).toContain('tracking-wide');
+    expect(referenceContent).not.toBeUndefined();
+    expect(referenceContentTokens.has('mt-1')).toBe(true);
+    expect(referenceContentTokens.has('text-xs')).toBe(true);
     expect(html).toContain('Reference');
     expect(html).toContain('Anton RF et al. JAMA. 2006;295(17):2003-2017.');
   });
@@ -1127,6 +1240,40 @@ describe('Feedback', () => {
 
     expect(html).toContain('Correct answer');
     expect(html).toContain('Explanation not available.');
+  });
+
+  it('preserves the clinical pearl callout inside the correct-answer explanation', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={true}
+        explanationMd={
+          'Main explanation.\n\n**Clinical Pearl:** Always verify the pearl.'
+        }
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: true,
+            explanationMd: 'Correct rationale.',
+          },
+        ]}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const clinicalPearlCallout = Array.from(doc.querySelectorAll('div')).find(
+      (div) => {
+        const classTokens = getClassTokens(div.getAttribute('class') ?? '');
+        return (
+          classTokens.has('border-l-2') &&
+          div.textContent?.includes('Clinical Pearl') &&
+          div.textContent?.includes('Always verify the pearl.')
+        );
+      },
+    );
+
+    expect(clinicalPearlCallout).not.toBeUndefined();
   });
 
   it('does not render a your-answer badge in correct-flow wrong-answer cards', () => {
