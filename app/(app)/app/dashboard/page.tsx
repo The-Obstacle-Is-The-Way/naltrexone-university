@@ -50,7 +50,7 @@ export function DashboardView({
         <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
           Dashboard
         </h1>
-        <p className="mt-1 text-muted-foreground">
+        <p className="mt-1 text-base text-muted-foreground">
           Track your progress and keep your streak alive.
         </p>
       </div>
@@ -282,7 +282,9 @@ export function renderDashboard({
           <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
             Dashboard
           </h1>
-          <p className="mt-1 text-muted-foreground">Unable to load stats.</p>
+          <p className="mt-1 text-base text-muted-foreground">
+            Unable to load stats.
+          </p>
         </div>
         <ErrorCard>{statsResult.error.message}</ErrorCard>
         <Button asChild className="rounded-full">

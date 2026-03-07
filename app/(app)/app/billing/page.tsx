@@ -142,7 +142,7 @@ export function BillingPageView(props: BillingPageViewProps) {
         <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
           Billing
         </h1>
-        <p className="mt-1 text-muted-foreground">
+        <p className="mt-1 text-base text-muted-foreground">
           Manage your subscription and billing details.
         </p>
       </div>

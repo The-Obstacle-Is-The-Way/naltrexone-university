@@ -283,7 +283,7 @@ export async function runCheckoutSuccessPage(
         <h1 className="text-xl font-semibold font-heading tracking-tight text-foreground">
           Finalizing your subscription…
         </h1>
-        <p className="mt-2 text-muted-foreground">
+        <p className="mt-2 text-base text-muted-foreground">
           You’ll be redirected to your dashboard shortly.
         </p>
       </div>

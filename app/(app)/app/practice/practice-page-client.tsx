@@ -25,7 +25,7 @@ export default function PracticePageClient() {
             <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
               Practice
             </h1>
-            <p className="mt-1 text-muted-foreground">
+            <p className="mt-1 text-base text-muted-foreground">
               Choose how you want to practice.
             </p>
           </div>

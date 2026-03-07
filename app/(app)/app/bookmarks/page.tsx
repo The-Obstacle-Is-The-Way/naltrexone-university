@@ -47,7 +47,7 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
           <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
             Bookmarks
           </h1>
-          <p className="mt-1 text-muted-foreground">
+          <p className="mt-1 text-base text-muted-foreground">
             Review questions you&apos;ve bookmarked.
           </p>
         </div>
@@ -208,7 +208,7 @@ export function renderBookmarks(result: ActionResult<GetBookmarksOutput>) {
           <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
             Bookmarks
           </h1>
-          <p className="mt-1 text-muted-foreground">
+          <p className="mt-1 text-base text-muted-foreground">
             Unable to load bookmarks.
           </p>
         </div>
