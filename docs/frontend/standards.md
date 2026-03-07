@@ -229,9 +229,9 @@ Every interactive element MUST have a visible focus indicator. Text links, icon 
 
 ## 4. Typography
 
-**Canonical policy:** [Typography Policy](./typography-policy.md) — Two-pipeline model (app chrome vs content), content tier system, Markdown component rules.
+**Canonical policy:** [Typography Policy](./typography-policy.md) — Two-pipeline model (hardcoded UI text vs content), content tier system, Markdown component rules.
 
-This section covers **app chrome** text sizing. For content text (question stems, choices, explanations, references), see the Typography Policy.
+This section covers **hardcoded UI text** sizing. For content text (question stems, choices, explanations, references), see the Typography Policy.
 
 ### Page headings
 

@@ -19,7 +19,7 @@ Text in this application flows through two fundamentally different pipelines. Th
 
 **What:** Labels, buttons, headings, metadata, timestamps, section headers, navigation links, stat labels, empty-state copy, error messages, marketing copy, auth fallbacks, and utility-page descriptions — any text authored directly in React components.
 
-**How it's sized:** Direct Tailwind classes in JSX. Each component applies its own `text-*` class.
+**How it's sized:** Canonical patterns use direct Tailwind classes in JSX. Legacy inheritance-based call sites are drift, not policy, and are tracked below.
 
 **Important:** Pipeline 1 is not one flat size scale. It has four subfamilies with different rules:
 
@@ -68,7 +68,7 @@ All content rendered through the `Markdown` component belongs to one of three ti
 
 ### Why primary content is `text-base`, not `text-sm`
 
-Question stems and answer choices are the primary reading material of the application. Users spend the majority of their time reading, comprehending, and deciding based on this content. It is intentionally one step larger than app chrome (`text-sm`) to:
+Question stems and answer choices are the primary reading material of the application. Users spend the majority of their time reading, comprehending, and deciding based on this content. It is intentionally one step larger than dense operational chrome (`text-sm`) to:
 
 1. Signal visual hierarchy — content is the focus, chrome is the frame
 2. Improve readability for dense clinical/pharmacological text
@@ -78,13 +78,13 @@ This was a deliberate decision made in BUG-157 (commit `48b5c9a4`, 2026-02-26). 
 
 ### Future: User-Selectable Content Size
 
-A planned feature will allow users to choose their preferred content reading size during practice. This toggle will ONLY affect Pipeline 2 (content rendered through Markdown), NOT Pipeline 1 (app chrome).
+A planned feature will allow users to choose their preferred content reading size during practice. This toggle will ONLY affect Pipeline 2 (content rendered through Markdown), NOT Pipeline 1 (hardcoded UI text).
 
-| Setting | Primary Tier | Secondary Tier | Tertiary Tier | App Chrome |
-|---------|-------------|---------------|--------------|------------|
-| **Small** | `text-sm` (14px) | `text-xs` (12px) | `text-xs` (12px) | `text-sm` (unchanged) |
-| **Medium** (default) | `text-base` (16px) | `text-sm` (14px) | `text-xs` (12px) | `text-sm` (unchanged) |
-| **Large** | `text-lg` (18px) | `text-base` (16px) | `text-sm` (14px) | `text-sm` (unchanged) |
+| Setting | Primary Tier | Secondary Tier | Tertiary Tier | Hardcoded UI Text |
+|---------|-------------|---------------|--------------|-------------------|
+| **Small** | `text-sm` (14px) | `text-xs` (12px) | `text-xs` (12px) | Unchanged |
+| **Medium** (default) | `text-base` (16px) | `text-sm` (14px) | `text-xs` (12px) | Unchanged |
+| **Large** | `text-lg` (18px) | `text-base` (16px) | `text-sm` (14px) | Unchanged |
 
 Implementation approach (when built):
 - Store preference in user settings or localStorage
