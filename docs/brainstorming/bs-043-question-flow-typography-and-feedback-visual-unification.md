@@ -228,3 +228,6 @@ Assign the next available DEBT ID when this brainstorming item is promoted.
 | 2026-03-05 | Defer until after DEBT-279 contrast fix | Contrast compliance is P1; typography unification is P2 |
 | 2026-03-06 | Dark-mode visual review confirmed all issues | Post-DEBT-280 review; badge treatment is highest-impact fix |
 | 2026-03-06 | Recommend Option B (promote feedback to match) | Keeps `text-base` reading experience, unifies badge + layout + spacing |
+| 2026-03-07 | Typography Policy written | [typography-policy.md](../frontend/typography-policy.md) establishes two-pipeline model and content tier system — provides the governing rules for this work |
+| 2026-03-07 | Chrome agent audit confirmed hierarchy inversion in wrong-answer cards | Answer title is muted, explanation body is bright — inverted. Added as Change 4 in DEBT-282. |
+| 2026-03-07 | **Promoted to [DEBT-282](../debt/debt-282-feedback-visual-unification.md)** | Option B confirmed. Implementation order: DEBT-278 (verdict badge) first, then DEBT-282 (badge + typography + layout + hierarchy fix) |

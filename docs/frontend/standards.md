@@ -229,6 +229,10 @@ Every interactive element MUST have a visible focus indicator. Text links, icon 
 
 ## 4. Typography
 
+**Canonical policy:** [Typography Policy](./typography-policy.md) — Two-pipeline model (app chrome vs content), content tier system, Markdown component rules.
+
+This section covers **app chrome** text sizing. For content text (question stems, choices, explanations, references), see the Typography Policy.
+
 ### Page headings
 
 | Context | Pattern |
@@ -255,6 +259,7 @@ Use `text-3xl font-bold font-display text-foreground` for prominent statistics. 
 | Labels / secondary text | `text-sm text-muted-foreground` |
 | Card headings | `text-sm font-medium text-foreground` |
 | Error details (digest) | `text-xs text-muted-foreground` |
+| Content text (Markdown) | See [Typography Policy](./typography-policy.md) — three-tier system (primary `text-base`, secondary `text-sm`, tertiary `text-xs`) |
 
 ---
 
