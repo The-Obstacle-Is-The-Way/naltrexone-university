@@ -21,8 +21,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 6 future enhancements (F1/F8 resolved by DEBT-277/DEBT-276) | P3 | — |
 | [DEBT-285](./debt-285-feedback-explanation-dark-mode-readability.md) | Feedback Explanation Dark Mode Readability — promote feedback explanations to `text-base text-foreground`, bump the feedback reference from `text-xs` to `text-sm`, and document the feedback-context override (implemented in current branch; pending merge/archive) | P2 | — |
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 7 verified client-side flows still report only to console or silent fallbacks | P2 | — |
+| [DEBT-287](./debt-287-clinical-pearl-label-dark-mode-prominence.md) | Clinical Pearl Label Dark Mode Prominence — pearl label at `text-xs text-muted-foreground` is the dimmest text on the feedback card after DEBT-285 promotions; promote to `text-foreground/60` | P3 | — |
 
-**Next Debt ID:** DEBT-287
+**Next Debt ID:** DEBT-288
 
 ---
 
