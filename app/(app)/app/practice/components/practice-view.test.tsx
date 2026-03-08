@@ -534,7 +534,9 @@ describe('PracticeView', () => {
       />,
     );
 
-    expect(html).toContain('Your answer');
+    expect(html).not.toContain('Your answer');
+    expect(html).toContain('Correct answer');
+    expect(html).toContain('Choice A');
   });
 
   it('does not render feedback when submit correctness is unknown', () => {

@@ -27,10 +27,17 @@ test.describe('practice', () => {
     await selectChoiceByLabel(page, 'A');
     await page.getByRole('button', { name: 'Submit' }).click();
 
-    await expect(page.getByText(/^(Correct|Incorrect)$/)).toBeVisible();
-    await expect(
-      page.getByText('Correct answer', { exact: true }),
-    ).toBeVisible();
+    const verdictPill = page.getByText(/^(Correct|Incorrect)$/).first();
+    await expect(verdictPill).toBeVisible();
+    if ((await verdictPill.textContent())?.trim() === 'Incorrect') {
+      await expect(
+        page.getByText('Correct answer', { exact: true }),
+      ).toBeVisible();
+    } else {
+      await expect(
+        page.getByText('Correct answer', { exact: true }),
+      ).toHaveCount(0);
+    }
     await expect(
       page.getByText('Explanation not available.', { exact: true }),
     ).toHaveCount(0);

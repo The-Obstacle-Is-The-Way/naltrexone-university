@@ -66,6 +66,26 @@ function findAnswerRow(
   }) as HTMLDivElement | undefined;
 }
 
+function findStyledCard(
+  container: ParentNode,
+  requiredTokens: string[],
+  answer?: { label: string; text: string },
+): HTMLDivElement | undefined {
+  return Array.from(container.querySelectorAll('div')).find((div) => {
+    const classTokens = getClassTokens(div.getAttribute('class') ?? '');
+
+    if (!requiredTokens.every((token) => classTokens.has(token))) {
+      return false;
+    }
+
+    if (!answer) {
+      return true;
+    }
+
+    return findAnswerRow(div, answer.label, answer.text) !== undefined;
+  }) as HTMLDivElement | undefined;
+}
+
 describe('Feedback', () => {
   it('renders a neutral status card with a verdict badge', () => {
     const html = renderToStaticMarkup(
@@ -141,10 +161,11 @@ describe('Feedback', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const correctAnswerLabel = Array.from(doc.querySelectorAll('div')).find(
-      (div) => div.textContent?.trim() === 'Correct answer',
+    const successCard = findStyledCard(
+      doc,
+      ['rounded-xl', 'border-success/60', 'bg-success/5', 'p-4'],
+      { label: 'B', text: 'Second option' },
     );
-    const successCard = correctAnswerLabel?.nextElementSibling;
     const successCardClassName = successCard?.getAttribute('class') ?? '';
     const successCardTokens = getClassTokens(successCardClassName);
     const successCardText = successCard?.textContent ?? '';
@@ -173,11 +194,11 @@ describe('Feedback', () => {
       correctAnswerExplanation?.getAttribute('class') ?? '',
     );
 
-    expect(correctAnswerLabel).not.toBeUndefined();
     expect(successCard).not.toBeNull();
     expect(successCardTokens.has('border-success/60')).toBe(true);
     expect(successCardTokens.has('bg-success/5')).toBe(true);
     expect(successCardTokens.has('p-4')).toBe(true);
+    expect(successCardTokens.has('mt-2')).toBe(false);
     expect(correctAnswerRow).not.toBeUndefined();
     expect(correctAnswerRowTokens.has('gap-3')).toBe(true);
     expect(correctAnswerBadge).not.toBeUndefined();
@@ -190,6 +211,8 @@ describe('Feedback', () => {
     expect(successCardText).toContain('B');
     expect(successCardText).toContain('Second option');
     expect(successCardText).toContain('General explanation.');
+    expect(html).not.toContain('Correct answer');
+    expect(html).not.toContain('>Explanation<');
     expect(correctAnswerText).not.toBeUndefined();
     expect(correctAnswerTextTokens.has('text-base')).toBe(true);
     expect(correctAnswerTextTokens.has('text-foreground')).toBe(true);
@@ -209,10 +232,11 @@ describe('Feedback', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const explanationLabel = Array.from(doc.querySelectorAll('div')).find(
-      (div) => div.textContent?.trim() === 'Explanation',
-    );
-    const successCard = explanationLabel?.nextElementSibling;
+    const successCard = findStyledCard(doc, [
+      'rounded-xl',
+      'border-success/60',
+      'bg-success/5',
+    ]);
     const successCardClassName = successCard?.getAttribute('class') ?? '';
     const successCardTokens = getClassTokens(successCardClassName);
     const successCardText = successCard?.textContent ?? '';
@@ -223,11 +247,13 @@ describe('Feedback', () => {
       explanationText?.getAttribute('class') ?? '',
     );
 
-    expect(explanationLabel).not.toBeUndefined();
     expect(successCard).not.toBeNull();
     expect(successCardTokens.has('border-success/60')).toBe(true);
     expect(successCardTokens.has('bg-success/5')).toBe(true);
+    expect(successCardTokens.has('mt-2')).toBe(false);
     expect(successCardText).toContain('General explanation.');
+    expect(html).not.toContain('Correct answer');
+    expect(html).not.toContain('>Explanation<');
     expect(explanationText).not.toBeUndefined();
     expect(explanationTextTokens.has('text-base')).toBe(true);
     expect(explanationTextTokens.has('text-foreground')).toBe(true);
@@ -243,10 +269,11 @@ describe('Feedback', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const explanationLabel = Array.from(doc.querySelectorAll('div')).find(
-      (div) => div.textContent?.trim() === 'Explanation',
-    );
-    const successCard = explanationLabel?.nextElementSibling;
+    const successCard = findStyledCard(doc, [
+      'rounded-xl',
+      'border-success/60',
+      'bg-success/5',
+    ]);
     const fallbackParagraph = Array.from(
       successCard?.querySelectorAll('p') ?? [],
     ).find(
@@ -255,7 +282,8 @@ describe('Feedback', () => {
     );
     const fallbackClassName = fallbackParagraph?.getAttribute('class') ?? '';
 
-    expect(explanationLabel).not.toBeUndefined();
+    expect(html).not.toContain('Correct answer');
+    expect(html).not.toContain('>Explanation<');
     expect(fallbackParagraph).not.toBeUndefined();
     expect(fallbackClassName).toContain('text-sm');
     expect(fallbackClassName).toContain('text-muted-foreground');
@@ -290,10 +318,11 @@ describe('Feedback', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const yourAnswerLabel = Array.from(doc.querySelectorAll('div')).find(
-      (div) => div.textContent?.trim() === 'Your answer',
+    const destructiveCard = findStyledCard(
+      doc,
+      ['rounded-xl', 'border-destructive', 'bg-destructive/5', 'p-4'],
+      { label: 'A', text: 'First option' },
     );
-    const destructiveCard = yourAnswerLabel?.nextElementSibling;
     const destructiveCardClassName =
       destructiveCard?.getAttribute('class') ?? '';
     const destructiveCardTokens = getClassTokens(destructiveCardClassName);
@@ -323,13 +352,13 @@ describe('Feedback', () => {
       yourAnswerExplanation?.getAttribute('class') ?? '',
     );
 
-    expect(yourAnswerLabel).not.toBeUndefined();
     expect(destructiveCard).not.toBeNull();
     expect(destructiveCardTokens.has('border-destructive')).toBe(true);
     expect(destructiveCardTokens.has('border-destructive/20')).toBe(false);
     expect(destructiveCardTokens.has('border-destructive/30')).toBe(false);
     expect(destructiveCardTokens.has('bg-destructive/5')).toBe(true);
     expect(destructiveCardTokens.has('p-4')).toBe(true);
+    expect(destructiveCardTokens.has('mt-2')).toBe(false);
     expect(yourAnswerRow).not.toBeUndefined();
     expect(yourAnswerRowTokens.has('gap-3')).toBe(true);
     expect(yourAnswerBadge).not.toBeUndefined();
@@ -342,6 +371,7 @@ describe('Feedback', () => {
     expect(destructiveCardText).toContain('A');
     expect(destructiveCardText).toContain('First option');
     expect(destructiveCardText).toContain('First option is incorrect.');
+    expect(html).not.toContain('Your answer');
     expect(yourAnswerText).not.toBeUndefined();
     expect(yourAnswerTextTokens.has('text-base')).toBe(true);
     expect(yourAnswerTextTokens.has('text-foreground')).toBe(true);
@@ -481,7 +511,7 @@ describe('Feedback', () => {
     );
     const fallbackClassName = fallbackParagraph?.getAttribute('class') ?? '';
 
-    expect(html).toContain('Your answer');
+    expect(html).not.toContain('Your answer');
     expect(explanationLabel).not.toBeUndefined();
     expect(fallbackParagraph).not.toBeUndefined();
     expect(fallbackClassName).toContain('text-sm');
@@ -1097,12 +1127,14 @@ describe('Feedback', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const yourAnswerIndex = html.indexOf('Your answer');
+    const incorrectIndex = html.indexOf('Incorrect');
     const correctAnswerIndex = html.indexOf('Correct answer');
-    const yourAnswerLabel = Array.from(doc.querySelectorAll('div')).find(
-      (div) => div.textContent?.trim() === 'Your answer',
+    const yourAnswerIndex = html.indexOf('Your answer');
+    const destructiveCard = findStyledCard(
+      doc,
+      ['rounded-xl', 'border-destructive', 'bg-destructive/5', 'p-4'],
+      { label: 'A', text: 'First option' },
     );
-    const destructiveCard = yourAnswerLabel?.nextElementSibling;
     const yourAnswerBadge = destructiveCard
       ? findRoundedBadge(destructiveCard, 'A')
       : undefined;
@@ -1113,9 +1145,10 @@ describe('Feedback', () => {
       yourAnswerText?.getAttribute('class') ?? '',
     );
 
-    expect(yourAnswerIndex).toBeGreaterThanOrEqual(0);
+    expect(yourAnswerIndex).toBe(-1);
+    expect(incorrectIndex).toBeGreaterThanOrEqual(0);
     expect(correctAnswerIndex).toBeGreaterThanOrEqual(0);
-    expect(yourAnswerIndex).toBeLessThan(correctAnswerIndex);
+    expect(incorrectIndex).toBeLessThan(correctAnswerIndex);
     expect(yourAnswerBadge).not.toBeUndefined();
     expect(yourAnswerBadge?.getAttribute('class')).toContain('rounded-full');
     expect(html).toContain('First option');
@@ -1208,7 +1241,7 @@ describe('Feedback', () => {
     const wrongAnswersSectionText =
       wrongAnswersHeading?.parentElement?.textContent ?? '';
 
-    expect(html).toContain('Your answer');
+    expect(html).not.toContain('Your answer');
     expect(wrongAnswersHeading).not.toBeUndefined();
     expect(wrongAnswersSectionText).not.toContain('Your answer');
   });
@@ -1249,14 +1282,16 @@ describe('Feedback', () => {
     const yourAnswerSectionLabel = Array.from(doc.querySelectorAll('div')).find(
       (div) => div.textContent?.trim() === 'Your answer',
     );
-    const correctAnswerIndex = html.indexOf('Correct answer');
+    const correctChoiceIndex = html.indexOf('Third option');
     const wrongAnswersHeadingIndex = html.indexOf(
       'Why other answers are wrong:',
     );
 
-    expect(correctAnswerIndex).toBeGreaterThanOrEqual(0);
+    expect(correctChoiceIndex).toBeGreaterThanOrEqual(0);
     expect(wrongAnswersHeadingIndex).toBeGreaterThanOrEqual(0);
-    expect(correctAnswerIndex).toBeLessThan(wrongAnswersHeadingIndex);
+    expect(correctChoiceIndex).toBeLessThan(wrongAnswersHeadingIndex);
+    expect(html).not.toContain('Correct answer');
+    expect(html).not.toContain('>Explanation<');
     expect(yourAnswerSectionLabel).toBeUndefined();
   });
 
@@ -1284,7 +1319,7 @@ describe('Feedback', () => {
       />,
     );
 
-    expect(html).toContain('Correct answer');
+    expect(html).not.toContain('Correct answer');
     expect(html).toContain('Explanation not available.');
   });
 
@@ -1392,10 +1427,11 @@ describe('Feedback', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const yourAnswerLabel = Array.from(doc.querySelectorAll('div')).find(
-      (div) => div.textContent?.trim() === 'Your answer',
+    const destructiveCard = findStyledCard(
+      doc,
+      ['rounded-xl', 'border-destructive', 'bg-destructive/5', 'p-4'],
+      { label: 'A', text: 'First option' },
     );
-    const destructiveCard = yourAnswerLabel?.nextElementSibling;
     const destructiveCardTokens = getClassTokens(
       destructiveCard?.getAttribute('class') ?? '',
     );
@@ -1415,8 +1451,9 @@ describe('Feedback', () => {
       yourAnswerText?.getAttribute('class') ?? '',
     );
 
-    expect(html).toContain('Your answer');
+    expect(html).not.toContain('Your answer');
     expect(destructiveCardTokens.has('p-4')).toBe(true);
+    expect(destructiveCardTokens.has('mt-2')).toBe(false);
     expect(yourAnswerRow).not.toBeUndefined();
     expect(yourAnswerRowTokens.has('gap-3')).toBe(true);
     expect(yourAnswerBadge).not.toBeUndefined();
@@ -1561,7 +1598,7 @@ describe('Feedback', () => {
       />,
     );
 
-    expect(html).toContain('Your answer');
+    expect(html).not.toContain('Your answer');
     expect(html).toContain('Correct answer');
     expect(html).toContain('Explanation not available.');
   });
@@ -1599,12 +1636,13 @@ describe('Feedback', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const yourAnswerSectionLabel = Array.from(doc.querySelectorAll('div')).find(
-      (div) =>
-        div.textContent?.trim() === 'Your answer' &&
-        (div.getAttribute('class') ?? '').includes('font-medium'),
+    const destructiveCard = findStyledCard(
+      doc,
+      ['rounded-xl', 'border-destructive', 'bg-destructive/5', 'p-4'],
+      { label: 'A', text: 'First option' },
     );
 
-    expect(yourAnswerSectionLabel).not.toBeUndefined();
+    expect(destructiveCard).not.toBeUndefined();
+    expect(html).not.toContain('Your answer');
   });
 });
