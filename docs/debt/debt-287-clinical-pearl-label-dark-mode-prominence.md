@@ -27,8 +27,8 @@ Explanation text is bright white at 16px. The pearl label immediately below/with
 
 | Element | Token | Hex (approx) | vs Card bg (#121212) | WCAG AA |
 |---------|-------|--------------|---------------------|---------|
-| Section headers ("Your answer", etc.) | `text-foreground` | #EDEDED | ~16.4:1 | Pass |
-| Explanation text (post-DEBT-285) | `text-foreground` | #EDEDED | ~16.4:1 | Pass |
+| Section headers ("Your answer", etc.) | `text-foreground` | #EDEDED | ~16.0:1 | Pass |
+| Explanation text (post-DEBT-285) | `text-foreground` | #EDEDED | ~16.0:1 | Pass |
 | **Clinical pearl label** | `text-muted-foreground` | #838383 | **~4.9:1** | Pass (4.5:1 threshold) |
 | Proposed label | `text-foreground/60` | ~#959595 | ~6.3:1 | Pass |
 | Clinical pearl border | `border-foreground/40` | ~#6A6A6A | ~3.5:1 | Pass (3.0:1 non-text) |
@@ -94,7 +94,7 @@ Change the clinical pearl label from `text-muted-foreground` to `text-foreground
 
 ### Light-mode impact
 
-Because `Markdown.tsx` is shared, this token change also affects light mode. On a white/light card surface, `text-foreground/60` composes to roughly `#6D6D6D` and still clears normal-text AA at roughly `5.2:1`. So the proposed token improves dark-mode readability without introducing a light-mode contrast regression.
+Because `Markdown.tsx` is shared, this token change also affects light mode. On a white/light card surface (`--card: 0 0% 100%`, `--foreground: 222.2 84% 4.9%`), `text-foreground/60` composes to roughly `#676B74` (slightly blue-tinted because the light-mode foreground is saturated) and still clears normal-text AA at roughly `5.3:1`. So the proposed token improves dark-mode readability without introducing a light-mode contrast regression.
 
 ### Explicitly out of scope for this debt
 
