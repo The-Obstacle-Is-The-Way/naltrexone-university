@@ -19,10 +19,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 6 future enhancements (F1/F8 resolved by DEBT-277/DEBT-276) | P3 | — |
-| [DEBT-285](./debt-285-feedback-explanation-dark-mode-readability.md) | Feedback Explanation Dark Mode Readability — promote feedback explanations to `text-base text-foreground`, bump the feedback reference from `text-xs` to `text-sm`, and document the feedback-context override (implemented in current branch; pending merge/archive) | P2 | — |
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 7 verified client-side flows still report only to console or silent fallbacks | P2 | — |
-
-**Next Debt ID:** DEBT-287
+**Next Debt ID:** DEBT-288
 
 ---
 
@@ -30,6 +28,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-287](../_archive/debt/debt-287-clinical-pearl-label-dark-mode-prominence.md) | Clinical Pearl Label Dark Mode Prominence — promoted the shared clinical pearl label token from `text-muted-foreground` to `text-foreground/60` and synced Pattern Registry F-7 | P3 | 2026-03-07 | — |
+| [DEBT-285](../_archive/debt/debt-285-feedback-explanation-dark-mode-readability.md) | Feedback Explanation Dark Mode Readability — promoted feedback explanations to `text-base text-foreground`, bumped the feedback reference from `text-xs` to `text-sm`, and documented the feedback-context override | P2 | 2026-03-07 | [#182](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/182) |
 | [DEBT-284](../_archive/debt/debt-284-feedback-visual-polish-phase-2.md) | Feedback Visual Polish Phase 2 — verdict-colored feedback badges (success/destructive), unified explanation muting across all card types | P2 | 2026-03-07 | [#180](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/180) |
 | [DEBT-283](../_archive/debt/debt-283-hardcoded-ui-typography-explicit-sizing-alignment.md) | Hardcoded UI Typography Explicit Sizing Alignment — normalized the audited 13-file / 19-occurrence supporting-copy drift to explicit `text-base text-muted-foreground` and added regression coverage | P3 | 2026-03-07 | — |
 | [DEBT-282](../_archive/debt/debt-282-feedback-visual-unification.md) | Feedback Visual Unification — circular badges, `text-base` typography, `gap-3`/`p-4` layout alignment with choice buttons, hierarchy inversion fix | P2 | 2026-03-07 | — |
