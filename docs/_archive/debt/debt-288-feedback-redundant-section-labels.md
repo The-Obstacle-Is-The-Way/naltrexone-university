@@ -2,7 +2,8 @@
 
 **Priority:** P3
 **Created:** 2026-03-08
-**Status:** Active
+**Status:** Resolved in current branch
+**Resolved in branch:** 2026-03-08 — commits `181b9c45` (`Remove redundant feedback section labels`) and `d196f6b6` (`Make feedback E2E selectors outcome-aware`)
 
 ---
 
@@ -12,8 +13,8 @@ The feedback component renders redundant section-header labels that restate info
 
 | Flow | Redundant Label | Why It's Redundant |
 |------|----------------|--------------------|
-| Correct | "Correct answer" (line 69 via `CorrectAnswerSection`) | The `Correct` pill (green) already communicates this. The green-bordered card reinforces it. |
-| Incorrect | "Your answer" (line 187) | The `Incorrect` pill (red) already communicates this. The red-bordered card + red letter circle reinforces it. |
+| Correct | "Correct answer" (line 72 via `CorrectAnswerSection`) | The `Correct` pill (green) already communicates this. The green-bordered card reinforces it. |
+| Incorrect | "Your answer" (pre-resolution line 187; removed in current branch) | The `Incorrect` pill (red) already communicates this. The red-bordered card + red letter circle reinforces it. |
 
 The visual hierarchy is already doing the work through three redundant channels:
 1. **Pill color** — green = correct, red = incorrect
@@ -75,8 +76,8 @@ type CorrectAnswerSectionProps = {
 ```
 
 When `showLabel` is `false`:
-- Do not render the label `<div>` (line 68-70)
-- Remove `mt-2` from the green card `<div>` (line 71), since `mt-2` was spacing from the label — the section container's `mt-6` handles spacing from the pill
+- Do not render the label `<div>` (line 70-74)
+- Remove `mt-2` from the green card `<div>` (line 75-80), since `mt-2` was spacing from the label — the section container's `mt-6` handles spacing from the pill
 
 ### 2. Correct flow — pass `showLabel={false}`
 
@@ -91,11 +92,11 @@ When `showLabel` is `false`:
 
 ### 3. Incorrect flow — remove "Your answer" label
 
-Remove the `<div>` at line 186-187 that renders "Your answer". Remove `mt-2` from the red card (line 189) for the same reason — the container's `mt-6` handles spacing from the pill.
+Remove the `<div>` that previously rendered "Your answer". Remove `mt-2` from the red card (now line 196) for the same reason — the container's `mt-6` handles spacing from the pill.
 
 ### 4. Incorrect flow — keep "Correct answer" label
 
-No change to the `CorrectAnswerSection` call in the incorrect flow (lines 209-213). It already defaults to `showLabel={true}`.
+No change to the `CorrectAnswerSection` call in the incorrect flow (lines 216-220). It already defaults to `showLabel={true}`.
 
 This intentionally preserves:
 - the `"Correct answer"` label when `correctChoice` is present in the incorrect flow
