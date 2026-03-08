@@ -61,6 +61,20 @@ describe('Markdown', () => {
     expect(html).not.toContain('<strong>Clinical pearl:</strong>');
   });
 
+  it('renders the clinical pearl label with the promoted foreground token', () => {
+    const html = renderToStaticMarkup(
+      <Markdown content={'**Clinical pearl:** This is the pearl.'} />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const callout = findClinicalPearlCallout(doc);
+    const label = callout?.querySelector('div');
+
+    expect(label).toBeDefined();
+    expect(label?.textContent).toBe('Clinical Pearl');
+    expect(label?.className).toContain('text-foreground/60');
+    expect(label?.className).not.toContain('text-muted-foreground');
+  });
+
   it('keeps regular bold paragraphs rendered inline', () => {
     const html = renderToStaticMarkup(
       <Markdown content={'**Important:** This is not a pearl.'} />,

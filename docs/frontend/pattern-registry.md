@@ -660,7 +660,7 @@ mt-3 border-l-2 border-foreground/40 pl-3
 
 **Label:**
 ```
-mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground
+mb-1 text-xs font-medium uppercase tracking-wide text-foreground/60
 ```
 
 **Content:** Standard markdown paragraph content inside the callout.
