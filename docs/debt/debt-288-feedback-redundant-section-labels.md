@@ -105,6 +105,18 @@ The redundancy claim only applies to the first card after the verdict pill:
 - correct flow: the success card
 - incorrect flow: the destructive `"Your answer"` card
 
+### Accessibility guardrail
+
+The visible labels are redundant for sighted users, but removing them must not make the first card semantically ambiguous for assistive-technology users.
+
+Implementation must therefore verify that:
+- the verdict pill text (`Correct` / `Incorrect`) is still announced before the first unlabeled card in DOM reading order
+- the first card remains understandable without relying on color alone
+
+If that validation fails, the compensation should stay inside `components/question/feedback.tsx`:
+- prefer `role="group"` plus `aria-label` / `aria-labelledby` on the affected card container
+- do **not** rely on a bare `aria-label` on a plain `div`
+
 ---
 
 ## Scope
@@ -133,3 +145,6 @@ The redundancy claim only applies to the first card after the verdict pill:
    - Correct flow: pill → green card (no label) → wrong cards → reference
    - Incorrect flow: pill → red card (no label) → "Correct answer" → green card → other wrong cards → reference
 5. Confirm spacing is uniform — no extra gaps from removed labels
+6. Accessibility verification:
+   - sequential screen-reader reading order still makes the first card understandable in both flows
+   - quick colorblind check confirms the kept `"Correct answer"` label and verdict pill still distinguish the two cards in the incorrect flow without relying only on red/green contrast
