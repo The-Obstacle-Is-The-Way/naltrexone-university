@@ -4,7 +4,7 @@
 **Created:** 2026-03-07
 **Source:** [AUDIT-011](../audits/audit-011-error-observability-defensive-coding.md)
 **Status:** Resolved
-**Resolved:** 2026-03-07 (commit `25f7c770`)
+**Resolved:** 2026-03-07 (commit `a8ce087c`)
 
 ---
 
