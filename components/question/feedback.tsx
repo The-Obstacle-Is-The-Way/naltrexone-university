@@ -39,6 +39,7 @@ type CorrectAnswerSectionProps = {
   sectionClassName: string;
   correctChoice: FeedbackChoiceExplanation | null;
   explanationMd: string | null;
+  showLabel?: boolean;
 };
 
 function getExplanationClassName(hasCorrectChoice: boolean): string {
@@ -57,6 +58,7 @@ function CorrectAnswerSection({
   sectionClassName,
   correctChoice,
   explanationMd,
+  showLabel = true,
 }: CorrectAnswerSectionProps) {
   const hasCorrectChoice = correctChoice !== null;
   const explanationClassName = getExplanationClassName(hasCorrectChoice);
@@ -65,10 +67,17 @@ function CorrectAnswerSection({
 
   return (
     <div className={sectionClassName}>
-      <div className="text-sm font-medium text-foreground">
-        {correctChoice ? 'Correct answer' : 'Explanation'}
-      </div>
-      <div className="mt-2 rounded-xl border border-success/60 bg-success/5 p-4">
+      {showLabel ? (
+        <div className="text-sm font-medium text-foreground">
+          {correctChoice ? 'Correct answer' : 'Explanation'}
+        </div>
+      ) : null}
+      <div
+        className={cn(
+          'rounded-xl border border-success/60 bg-success/5 p-4',
+          showLabel && 'mt-2',
+        )}
+      >
         {correctChoice ? (
           <div className="flex items-start gap-3">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-success bg-success/15 text-xs font-semibold leading-none text-success">
@@ -147,6 +156,7 @@ export function Feedback({
             sectionClassName="mt-6"
             correctChoice={correctChoice}
             explanationMd={explanationMd}
+            showLabel={false}
           />
 
           {shouldRenderChoiceExplanations ? (
@@ -183,10 +193,7 @@ export function Feedback({
         <>
           {userChoice ? (
             <div className="mt-6">
-              <div className="text-sm font-medium text-foreground">
-                Your answer
-              </div>
-              <div className="mt-2 rounded-xl border border-destructive bg-destructive/5 p-4">
+              <div className="rounded-xl border border-destructive bg-destructive/5 p-4">
                 <div className="flex items-start gap-3">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-destructive bg-destructive/15 text-xs font-semibold leading-none text-destructive">
                     {userChoice.displayLabel}
