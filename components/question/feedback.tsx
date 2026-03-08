@@ -43,12 +43,14 @@ type CorrectAnswerSectionProps = {
 
 function getExplanationClassName(hasCorrectChoice: boolean): string {
   return hasCorrectChoice
-    ? 'mt-2 text-sm text-muted-foreground'
-    : 'text-sm text-muted-foreground';
+    ? 'mt-2 text-base text-foreground'
+    : 'text-base text-foreground';
 }
 
 function getFallbackExplanationClassName(hasCorrectChoice: boolean): string {
-  return cn(getExplanationClassName(hasCorrectChoice), 'text-muted-foreground');
+  return hasCorrectChoice
+    ? 'mt-2 text-sm text-muted-foreground'
+    : 'text-sm text-muted-foreground';
 }
 
 function CorrectAnswerSection({
@@ -169,7 +171,7 @@ export function Feedback({
                     </div>
                     <Markdown
                       content={choice.explanationMd}
-                      className="mt-2 text-sm text-muted-foreground"
+                      className="mt-2 text-base text-foreground"
                     />
                   </div>
                 ))}
@@ -197,7 +199,7 @@ export function Feedback({
                 {userChoice.explanationMd ? (
                   <Markdown
                     content={userChoice.explanationMd}
-                    className="mt-2 text-sm text-muted-foreground"
+                    className="mt-2 text-base text-foreground"
                   />
                 ) : null}
               </div>
@@ -232,7 +234,7 @@ export function Feedback({
                     </div>
                     <Markdown
                       content={choice.explanationMd}
-                      className="mt-2 text-sm text-muted-foreground"
+                      className="mt-2 text-base text-foreground"
                     />
                   </div>
                 ))}
@@ -247,7 +249,7 @@ export function Feedback({
           <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Reference
           </div>
-          <Markdown content={referenceMd} className="mt-1 text-xs" />
+          <Markdown content={referenceMd} className="mt-1 text-sm" />
         </div>
       ) : null}
     </Card>

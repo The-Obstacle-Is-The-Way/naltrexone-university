@@ -66,6 +66,19 @@ All content rendered through the `Markdown` component belongs to one of three ti
 | **Secondary** | Supporting explanation subordinate to the answer | `text-sm` (14px) | `"text-sm"` | Explanations ("why this is correct/wrong") |
 | **Tertiary** | Footnote-level citation data | `text-xs` (12px) | `"text-xs"` | Reference sections |
 
+### Feedback Context Override
+
+The default content-tier system above is designed for the question-answering phase, where the stem and answer choices are the primary reading material and explanations are subordinate.
+
+Inside `components/question/feedback.tsx`, the learning context changes after submission:
+
+- answer text remains Primary because it is still the canonical answer label
+- explanation text is also promoted to Primary (`text-base text-foreground`) because it becomes the main learning payload
+- the feedback reference body is promoted from Tertiary to Secondary (`mt-1 text-sm`) because 12px citation text is too small for sustained dark-mode reading in this context
+- the fallback `Explanation not available.` placeholder stays recessed at `text-sm text-muted-foreground` because it is an empty-state message, not learning content
+
+This is a **narrow feedback-surface exception**, not a blanket redefinition of explanations or references everywhere else in the product.
+
 ### Why primary content is `text-base`, not `text-sm`
 
 Question stems and answer choices are the primary reading material of the application. Users spend the majority of their time reading, comprehending, and deciding based on this content. It is intentionally one step larger than dense operational chrome (`text-sm`) to:
@@ -119,6 +132,12 @@ The Markdown component is a thin wrapper around `react-markdown`. It provides:
 
 // Tertiary tier — references
 <Markdown content={referenceMd} className="mt-1 text-xs" />
+
+// Feedback-context primary — post-answer learning content
+<Markdown content={explanationMd} className="text-base text-foreground" />
+
+// Feedback-context secondary — feedback reference body
+<Markdown content={referenceMd} className="mt-1 text-sm" />
 ```
 
 ### Incorrect usage
@@ -157,15 +176,15 @@ All `<Markdown>` call sites now carry tier-appropriate classNames. The 4 violati
 
 | Call Site | Expected Tier | Actual className | Status |
 |-----------|--------------|-----------------|--------|
-| `feedback.tsx:73` — correct answer text | Primary | `"text-base text-foreground"` | Compliant |
-| `feedback.tsx:80` — explanation | Secondary | `explanationClassName` (`"mt-2 text-sm"` / `"text-sm"`) | Compliant |
-| `feedback.tsx:163` — wrong choice text (correct flow) | Primary | `"text-base text-foreground"` | Compliant |
-| `feedback.tsx:168` — wrong choice explanation (correct flow) | Secondary | `"mt-2 text-sm text-muted-foreground"` | Compliant |
-| `feedback.tsx:190` — user answer text | Primary | `"text-base text-foreground"` | Compliant |
-| `feedback.tsx:196` — user answer explanation | Secondary | `"mt-2 text-sm"` | Compliant |
-| `feedback.tsx:226` — other wrong choice text | Primary | `"text-base text-foreground"` | Compliant |
-| `feedback.tsx:231` — other wrong choice explanation | Secondary | `"mt-2 text-sm text-muted-foreground"` | Compliant |
-| `feedback.tsx:248` — reference | Tertiary | `"mt-1 text-xs"` | Compliant |
+| `feedback.tsx:77` — correct answer text | Primary | `"text-base text-foreground"` | Compliant |
+| `feedback.tsx:84` — explanation | Primary (feedback-context override) | `explanationClassName` (`"mt-2 text-base text-foreground"` / `"text-base text-foreground"`) | Compliant |
+| `feedback.tsx:167` — wrong choice text (correct flow) | Primary | `"text-base text-foreground"` | Compliant |
+| `feedback.tsx:172` — wrong choice explanation (correct flow) | Primary (feedback-context override) | `"mt-2 text-base text-foreground"` | Compliant |
+| `feedback.tsx:194` — user answer text | Primary | `"text-base text-foreground"` | Compliant |
+| `feedback.tsx:200` — user answer explanation | Primary (feedback-context override) | `"mt-2 text-base text-foreground"` | Compliant |
+| `feedback.tsx:230` — other wrong choice text | Primary | `"text-base text-foreground"` | Compliant |
+| `feedback.tsx:235` — other wrong choice explanation | Primary (feedback-context override) | `"mt-2 text-base text-foreground"` | Compliant |
+| `feedback.tsx:252` — reference | Secondary (feedback-context override) | `"mt-1 text-sm"` | Compliant |
 | `question-card.tsx:35` — stem | Primary | `"text-base text-foreground"` | Compliant |
 | `choice-button.tsx:72` — choice text | Primary | `"text-base text-foreground"` | Compliant |
 

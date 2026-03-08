@@ -19,8 +19,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 6 future enhancements (F1/F8 resolved by DEBT-277/DEBT-276) | P3 | — |
+| [DEBT-285](./debt-285-feedback-explanation-dark-mode-readability.md) | Feedback Explanation Dark Mode Readability — promote feedback explanations to `text-base text-foreground`, bump the feedback reference from `text-xs` to `text-sm`, and document the feedback-context override (implemented in current branch; pending merge/archive) | P2 | — |
 
-**Next Debt ID:** DEBT-285
+**Next Debt ID:** DEBT-286
 
 ---
 

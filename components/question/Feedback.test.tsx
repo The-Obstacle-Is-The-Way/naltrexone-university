@@ -195,9 +195,11 @@ describe('Feedback', () => {
     expect(correctAnswerTextTokens.has('text-foreground')).toBe(true);
     expect(correctAnswerTextTokens.has('text-muted-foreground')).toBe(false);
     expect(correctAnswerExplanation).not.toBeUndefined();
-    expect(correctAnswerExplanationTokens.has('text-sm')).toBe(true);
+    expect(correctAnswerExplanationTokens.has('text-base')).toBe(true);
+    expect(correctAnswerExplanationTokens.has('text-foreground')).toBe(true);
+    expect(correctAnswerExplanationTokens.has('text-sm')).toBe(false);
     expect(correctAnswerExplanationTokens.has('text-muted-foreground')).toBe(
-      true,
+      false,
     );
   });
 
@@ -214,12 +216,23 @@ describe('Feedback', () => {
     const successCardClassName = successCard?.getAttribute('class') ?? '';
     const successCardTokens = getClassTokens(successCardClassName);
     const successCardText = successCard?.textContent ?? '';
+    const explanationText = successCard
+      ? findMarkdownWrapper(successCard, 'General explanation.')
+      : undefined;
+    const explanationTextTokens = getClassTokens(
+      explanationText?.getAttribute('class') ?? '',
+    );
 
     expect(explanationLabel).not.toBeUndefined();
     expect(successCard).not.toBeNull();
     expect(successCardTokens.has('border-success/60')).toBe(true);
     expect(successCardTokens.has('bg-success/5')).toBe(true);
     expect(successCardText).toContain('General explanation.');
+    expect(explanationText).not.toBeUndefined();
+    expect(explanationTextTokens.has('text-base')).toBe(true);
+    expect(explanationTextTokens.has('text-foreground')).toBe(true);
+    expect(explanationTextTokens.has('text-sm')).toBe(false);
+    expect(explanationTextTokens.has('text-muted-foreground')).toBe(false);
     expect(successCardText).not.toContain('A)');
     expect(successCardText).not.toContain('B)');
   });
@@ -246,6 +259,8 @@ describe('Feedback', () => {
     expect(fallbackParagraph).not.toBeUndefined();
     expect(fallbackClassName).toContain('text-sm');
     expect(fallbackClassName).toContain('text-muted-foreground');
+    expect(fallbackClassName).not.toContain('text-base');
+    expect(fallbackClassName).not.toContain('text-foreground');
     expect(fallbackClassName).not.toContain('mt-2');
   });
 
@@ -332,8 +347,12 @@ describe('Feedback', () => {
     expect(yourAnswerTextTokens.has('text-foreground')).toBe(true);
     expect(yourAnswerTextTokens.has('text-muted-foreground')).toBe(false);
     expect(yourAnswerExplanation).not.toBeUndefined();
-    expect(yourAnswerExplanationTokens.has('text-sm')).toBe(true);
-    expect(yourAnswerExplanationTokens.has('text-muted-foreground')).toBe(true);
+    expect(yourAnswerExplanationTokens.has('text-base')).toBe(true);
+    expect(yourAnswerExplanationTokens.has('text-foreground')).toBe(true);
+    expect(yourAnswerExplanationTokens.has('text-sm')).toBe(false);
+    expect(yourAnswerExplanationTokens.has('text-muted-foreground')).toBe(
+      false,
+    );
   });
 
   it('T4: wraps incorrect-flow correct-answer content in a success card', () => {
@@ -416,9 +435,11 @@ describe('Feedback', () => {
     expect(correctAnswerTextTokens.has('text-foreground')).toBe(true);
     expect(correctAnswerTextTokens.has('text-muted-foreground')).toBe(false);
     expect(correctAnswerExplanation).not.toBeUndefined();
-    expect(correctAnswerExplanationTokens.has('text-sm')).toBe(true);
+    expect(correctAnswerExplanationTokens.has('text-base')).toBe(true);
+    expect(correctAnswerExplanationTokens.has('text-foreground')).toBe(true);
+    expect(correctAnswerExplanationTokens.has('text-sm')).toBe(false);
     expect(correctAnswerExplanationTokens.has('text-muted-foreground')).toBe(
-      true,
+      false,
     );
   });
 
@@ -465,6 +486,8 @@ describe('Feedback', () => {
     expect(fallbackParagraph).not.toBeUndefined();
     expect(fallbackClassName).toContain('text-sm');
     expect(fallbackClassName).toContain('text-muted-foreground');
+    expect(fallbackClassName).not.toContain('text-base');
+    expect(fallbackClassName).not.toContain('text-foreground');
     expect(fallbackClassName).not.toContain('mt-2');
   });
 
@@ -588,8 +611,10 @@ describe('Feedback', () => {
       expect(answerTextTokens.has('text-foreground')).toBe(true);
       expect(answerTextTokens.has('text-muted-foreground')).toBe(false);
       expect(explanationText).not.toBeUndefined();
-      expect(explanationTextTokens.has('text-sm')).toBe(true);
-      expect(explanationTextTokens.has('text-muted-foreground')).toBe(true);
+      expect(explanationTextTokens.has('text-base')).toBe(true);
+      expect(explanationTextTokens.has('text-foreground')).toBe(true);
+      expect(explanationTextTokens.has('text-sm')).toBe(false);
+      expect(explanationTextTokens.has('text-muted-foreground')).toBe(false);
     }
   });
 
@@ -643,7 +668,18 @@ describe('Feedback', () => {
     expect(wrongAnswerCards.length).toBeGreaterThan(0);
     for (const card of wrongAnswerCards) {
       const classTokens = getClassTokens(card.getAttribute('class') ?? '');
+      const explanationWrapper =
+        findMarkdownWrapper(card, 'First option is incorrect.') ??
+        findMarkdownWrapper(card, 'Second option is incorrect.');
+      const explanationWrapperTokens = getClassTokens(
+        explanationWrapper?.getAttribute('class') ?? '',
+      );
       expect(classTokens.has('dark:border-foreground/40')).toBe(true);
+      expect(explanationWrapper).not.toBeUndefined();
+      expect(explanationWrapperTokens.has('text-base')).toBe(true);
+      expect(explanationWrapperTokens.has('text-foreground')).toBe(true);
+      expect(explanationWrapperTokens.has('text-sm')).toBe(false);
+      expect(explanationWrapperTokens.has('text-muted-foreground')).toBe(false);
     }
   });
 
@@ -852,9 +888,11 @@ describe('Feedback', () => {
     expect(wrongAnswerTextTokens.has('text-foreground')).toBe(true);
     expect(wrongAnswerTextTokens.has('text-muted-foreground')).toBe(false);
     expect(wrongAnswerExplanation).not.toBeUndefined();
-    expect(wrongAnswerExplanationTokens.has('text-sm')).toBe(true);
+    expect(wrongAnswerExplanationTokens.has('text-base')).toBe(true);
+    expect(wrongAnswerExplanationTokens.has('text-foreground')).toBe(true);
+    expect(wrongAnswerExplanationTokens.has('text-sm')).toBe(false);
     expect(wrongAnswerExplanationTokens.has('text-muted-foreground')).toBe(
-      true,
+      false,
     );
     expect(wrongAnswersSectionText).toContain('First option');
     expect(wrongAnswersSectionText).toContain('First option is incorrect.');
@@ -916,7 +954,8 @@ describe('Feedback', () => {
     expect(referenceLabel?.getAttribute('class')).toContain('tracking-wide');
     expect(referenceContent).not.toBeUndefined();
     expect(referenceContentTokens.has('mt-1')).toBe(true);
-    expect(referenceContentTokens.has('text-xs')).toBe(true);
+    expect(referenceContentTokens.has('text-sm')).toBe(true);
+    expect(referenceContentTokens.has('text-xs')).toBe(false);
     expect(html).toContain('Reference');
     expect(html).toContain('Anton RF et al. JAMA. 2006;295(17):2003-2017.');
   });
@@ -958,7 +997,7 @@ describe('Feedback', () => {
     expect(html).not.toContain('Reference');
   });
 
-  it('uses larger verdict-to-explanation spacing and reduced wrong-answer text weight', () => {
+  it('uses larger verdict-to-explanation spacing and promotes wrong-answer explanation readability', () => {
     const html = renderToStaticMarkup(
       <Feedback
         isCorrect={false}
@@ -982,7 +1021,9 @@ describe('Feedback', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const card = doc.querySelector('[role="status"]');
+    const correctAnswerLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Correct answer',
+    );
     const wrongAnswersHeading = Array.from(doc.querySelectorAll('div')).find(
       (div) => div.textContent?.trim() === 'Why other answers are wrong:',
     );
@@ -1015,13 +1056,18 @@ describe('Feedback', () => {
       wrongAnswerExplanation?.getAttribute('class') ?? '',
     );
 
-    expect(card?.querySelector('div.mt-6')).not.toBeNull();
+    expect(correctAnswerLabel?.parentElement?.getAttribute('class')).toContain(
+      'mt-6',
+    );
     expect(wrongAnswerRow).not.toBeUndefined();
     expect(wrongAnswerRowTokens.has('gap-3')).toBe(true);
     expect(wrongAnswerTextTokens.has('text-muted-foreground')).toBe(false);
     expect(wrongAnswerExplanation).not.toBeUndefined();
+    expect(wrongAnswerExplanationTokens.has('text-base')).toBe(true);
+    expect(wrongAnswerExplanationTokens.has('text-foreground')).toBe(true);
+    expect(wrongAnswerExplanationTokens.has('text-sm')).toBe(false);
     expect(wrongAnswerExplanationTokens.has('text-muted-foreground')).toBe(
-      true,
+      false,
     );
   });
 
