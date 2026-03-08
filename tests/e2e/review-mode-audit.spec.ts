@@ -375,12 +375,17 @@ test.describe('review mode audit', () => {
     const feedbackCard = getFeedbackCard(page);
     await expect(feedbackCard).toBeVisible({ timeout: 10_000 });
 
-    await expect(
-      feedbackCard.getByText(/^(Correct|Incorrect)$/).first(),
-    ).toBeVisible();
-    await expect(
-      feedbackCard.getByText('Correct answer', { exact: true }),
-    ).toBeVisible();
+    const verdictPill = feedbackCard.getByText(/^(Correct|Incorrect)$/).first();
+    await expect(verdictPill).toBeVisible();
+    if ((await verdictPill.textContent())?.trim() === 'Incorrect') {
+      await expect(
+        feedbackCard.getByText('Correct answer', { exact: true }),
+      ).toBeVisible();
+    } else {
+      await expect(
+        feedbackCard.getByText('Correct answer', { exact: true }),
+      ).toHaveCount(0);
+    }
 
     await expect(page.getByRole('button', { name: 'Submit' })).toHaveCount(0);
     await expect(
