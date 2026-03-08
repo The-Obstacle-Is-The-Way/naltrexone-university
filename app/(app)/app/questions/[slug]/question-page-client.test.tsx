@@ -421,14 +421,19 @@ describe('QuestionView', () => {
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const feedbackCard = doc.querySelector('[role="status"]');
-    const yourAnswerHeading = Array.from(
+    const yourAnswerCard = Array.from(
       feedbackCard?.querySelectorAll('div') ?? [],
-    ).find((div) => div.textContent?.trim() === 'Your answer');
+    ).find((div) => {
+      const className = div.getAttribute('class') ?? '';
+      return (
+        className.includes('border-destructive') &&
+        className.includes('bg-destructive/5')
+      );
+    });
     const correctAnswerHeading = Array.from(
       feedbackCard?.querySelectorAll('div') ?? [],
     ).find((div) => div.textContent?.trim() === 'Correct answer');
 
-    const yourAnswerCard = yourAnswerHeading?.nextElementSibling;
     const correctAnswerCard = correctAnswerHeading?.nextElementSibling;
 
     const yourAnswerBadge = Array.from(
@@ -456,7 +461,7 @@ describe('QuestionView', () => {
     expect(html).toContain('Choice A text');
     expect(html).toContain('Choice B text');
     expect(html).toContain('A explanation');
-    expect(html).toContain('Your answer');
+    expect(html).not.toContain('Your answer');
   });
 
   it('shows Practice Again for any correct standalone review', () => {
