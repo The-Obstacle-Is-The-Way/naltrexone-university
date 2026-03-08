@@ -97,13 +97,29 @@ Remove the `<div>` at line 186-187 that renders "Your answer". Remove `mt-2` fro
 
 No change to the `CorrectAnswerSection` call in the incorrect flow (lines 209-213). It already defaults to `showLabel={true}`.
 
+This intentionally preserves:
+- the `"Correct answer"` label when `correctChoice` is present in the incorrect flow
+- the fallback `"Explanation"` label when `correctChoice === null` in the incorrect flow
+
+The redundancy claim only applies to the first card after the verdict pill:
+- correct flow: the success card
+- incorrect flow: the destructive `"Your answer"` card
+
 ---
 
 ## Scope
 
-- **1 file changed:** `components/question/feedback.tsx`
+- **Production code:** `components/question/feedback.tsx`
 - **0 new files**
-- **Test updates:** Existing tests in `components/question/feedback.test.tsx` — update snapshot/assertion expectations for removed labels
+- **Test updates required:**
+  - `components/question/Feedback.test.tsx`
+  - `app/(app)/app/questions/[slug]/question-page-client.test.tsx`
+  - `app/(app)/app/practice/components/practice-view.test.tsx`
+- **E2E selector audit required:** these specs currently query `"Correct answer"` by exact text and must be reviewed during implementation because removing the correct-flow label can make the assertion outcome-dependent:
+  - `tests/e2e/practice.spec.ts`
+  - `tests/e2e/subscribe-and-practice.spec.ts`
+  - `tests/e2e/core-app-pages.spec.ts`
+  - `tests/e2e/review-mode-audit.spec.ts`
 - **No doc changes needed** — this is a UI simplification, not a policy change
 
 ---
