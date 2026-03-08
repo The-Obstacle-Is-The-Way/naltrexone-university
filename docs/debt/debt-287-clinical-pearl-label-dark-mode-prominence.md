@@ -3,9 +3,9 @@
 **Priority:** P3
 **Created:** 2026-03-07
 **Status:** Open
-**Triggered by:** Visual review of feedback card after DEBT-285 explanation promotions — clinical pearl label is now the most conspicuously dim element
-**Scope:** Improve clinical pearl label readability in dark mode without disrupting the UI chrome hierarchy
-**Related:** [DEBT-285](./debt-285-feedback-explanation-dark-mode-readability.md) (explanation/reference promotion, pending merge), [Typography Policy](../frontend/typography-policy.md), [Pattern Registry F-7](../frontend/pattern-registry.md)
+**Triggered by:** Visual review of feedback cards after DEBT-285 explanation promotions — the clinical pearl label is now one of the most conspicuously dim labels inside primary learning content
+**Scope:** Improve clinical pearl label readability on feedback cards, via the shared Markdown clinical-pearl renderer, without disrupting the UI chrome hierarchy
+**Related:** [DEBT-285](../_archive/debt/debt-285-feedback-explanation-dark-mode-readability.md) (explanation/reference promotion, merged), [Typography Policy](../frontend/typography-policy.md), [Pattern Registry F-7](../frontend/pattern-registry.md), [Contrast Policy](../frontend/contrast-policy.md)
 
 ---
 
@@ -13,7 +13,7 @@
 
 DEBT-285 promoted feedback explanation text from `text-sm text-muted-foreground` to `text-base text-foreground` and bumped the reference body from `text-xs` to `text-sm`. This was correct — explanations are the primary learning content post-answer.
 
-But the clinical pearl label was explicitly excluded from those changes because it's Pipeline 1 UI chrome, not Pipeline 2 content. After the promotions, a "lift one boat, others look lower" effect occurs: the pearl label at `text-xs text-muted-foreground` is now the dimmest text element on the entire feedback card.
+But the clinical pearl label was explicitly excluded from those changes because the label itself is Pipeline 1 UI chrome embedded inside a Pipeline 2 content surface. After the promotions, a "lift one boat, others look lower" effect occurs: the pearl label at `text-xs text-muted-foreground` is now tied with the `REFERENCE` label as the dimmest label on the feedback card, but unlike the reference it sits inside the middle of the primary learning flow.
 
 ### Before DEBT-285
 
@@ -27,12 +27,13 @@ Explanation text is bright white at 16px. The pearl label immediately below/with
 
 | Element | Token | Hex (approx) | vs Card bg (#121212) | WCAG AA |
 |---------|-------|--------------|---------------------|---------|
-| Section headers ("Your answer", etc.) | `text-foreground` | #EDEDED | ~17:1 | Pass |
-| Explanation text (post-DEBT-285) | `text-foreground` | #EDEDED | ~17:1 | Pass |
-| **Clinical pearl label** | `text-muted-foreground` | #838383 | **~5.3:1** | Pass (4.5:1 threshold) |
-| Clinical pearl border | `border-foreground/40` | ~#6A6E6B | ~3.6:1 | Pass (3.0:1 non-text) |
+| Section headers ("Your answer", etc.) | `text-foreground` | #EDEDED | ~16.4:1 | Pass |
+| Explanation text (post-DEBT-285) | `text-foreground` | #EDEDED | ~16.4:1 | Pass |
+| **Clinical pearl label** | `text-muted-foreground` | #838383 | **~4.9:1** | Pass (4.5:1 threshold) |
+| Proposed label | `text-foreground/60` | ~#959595 | ~6.3:1 | Pass |
+| Clinical pearl border | `border-foreground/40` | ~#6A6A6A | ~3.5:1 | Pass (3.0:1 non-text) |
 
-The label technically passes WCAG AA at 5.3:1. This is not a compliance failure — it's a readability and pedagogical design issue. Clinical pearls are high-yield learning content. The label that identifies them shouldn't be the hardest-to-read text on the card.
+The label technically passes WCAG AA at ~4.9:1. This is not a compliance failure — it's a readability and pedagogical design issue. Clinical pearls are high-yield learning content. The label that identifies them should not be as recessed as footer metadata when it sits inline with the core explanation payload.
 
 ### Why it matters
 
@@ -56,6 +57,8 @@ Clinical pearls are specifically designed to distill high-yield clinical takeawa
 The label uses `text-xs font-medium uppercase tracking-wide text-muted-foreground` — 12px, medium weight, gray.
 
 The content `<p>` inherits color from the parent Markdown wrapper, which in the feedback context is `text-foreground` (white). So the pearl content is readable; only the label is dim.
+
+Because this renderer lives in `Markdown.tsx`, any future clinical pearl callout rendered through `<Markdown>` would inherit the same label token. In the current audited UI, the prominent visible usage is the feedback surface.
 
 **Pattern Registry:** F-7 documents this pattern.
 
@@ -83,17 +86,19 @@ Change the clinical pearl label from `text-muted-foreground` to `text-foreground
 
 | Property | From | To |
 |----------|------|-----|
-| Color | `text-muted-foreground` (51.5% gray, ~5.3:1) | `text-foreground/60` (~60% of 93% white, ~8-9:1) |
+| Color | `text-muted-foreground` (~#838383, ~4.9:1 on `#121212`) | `text-foreground/60` (~#959595, ~6.3:1 on `#121212`) |
 | Size | `text-xs` (12px) | `text-xs` (12px) — unchanged |
 | Weight | `font-medium` | `font-medium` — unchanged |
 
-**Rationale:** The label stays at 12px to remain clearly subordinate to the 16px content. The color improvement alone brings it from "technically passing" to "comfortably readable" without competing with the content text. The uppercase + tracking-wide treatment already signals "UI chrome label" regardless of color.
+**Rationale:** The label stays at 12px to remain clearly subordinate to the 16px content. The color improvement alone makes it materially easier to register without competing with the content text. The uppercase + tracking-wide treatment already signals "UI chrome label" regardless of color.
 
-### Optional: brighten the left border
+### Light-mode impact
 
-Consider promoting from `border-foreground/40` (~3.6:1) to `border-foreground/50` (~4.5:1). The border is the primary visual indicator of the callout. A slightly brighter border improves callout recognition, especially for users who scan by structure rather than reading labels.
+Because `Markdown.tsx` is shared, this token change also affects light mode. On a white/light card surface, `text-foreground/60` composes to roughly `#6D6D6D` and still clears normal-text AA at roughly `5.2:1`. So the proposed token improves dark-mode readability without introducing a light-mode contrast regression.
 
-This is cosmetic polish, not a contrast compliance issue (the border already passes 3.0:1 for non-text).
+### Explicitly out of scope for this debt
+
+Do **not** brighten the left border in this ticket. `border-foreground/40` already passes the non-text 3:1 threshold and is not the element causing the readability complaint in the screenshots. If the callout still feels too quiet after the label-color change, file a separate follow-up debt item for border emphasis.
 
 ---
 
@@ -101,7 +106,7 @@ This is cosmetic polish, not a contrast compliance issue (the border already pas
 
 - **Pearl content text** — inherits `text-foreground` from the explanation Markdown wrapper; already bright and readable
 - **REFERENCE label** — also `text-xs text-muted-foreground`, but it sits below a `border-t` separator at the card footer, a natural position for subordinate metadata. Less of a readability concern than the pearl label embedded in the middle of primary content.
-- **Section headers** — already `text-sm font-medium text-foreground`; fine
+- **Section headers** — already `text-sm font-medium text-foreground`; they are visually prominent enough and are not the outlier called out by the screenshots
 - **Badge text** — already appropriate for its role
 
 ---
@@ -121,7 +126,7 @@ This is cosmetic polish, not a contrast compliance issue (the border already pas
 1. **Label carries `text-foreground/60`** (not `text-muted-foreground`) — assert in Markdown.test.tsx
 2. **Pearl content text unchanged** — still inherits from parent; no explicit color on the `<p>`
 3. **Visual check in dark mode** — label should be comfortably readable without competing with content
-4. **No other callout sites affected** — the Markdown component is the single source for clinical pearl rendering
+4. **Shared-renderer impact is understood** — the Markdown component is the single source for clinical pearl rendering, so any clinical pearl callout rendered through `<Markdown>` will intentionally inherit the label-token change
 
 ---
 

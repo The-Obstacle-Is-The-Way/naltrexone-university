@@ -2,7 +2,8 @@
 
 **Priority:** P2
 **Created:** 2026-03-07
-**Status:** Resolved in current branch (pending merge/archive)
+**Status:** Resolved
+**Resolved:** 2026-03-07 — PR [#182](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/182)
 **Triggered by:** Visual review of feedback card in dark mode — explanation text is hard to read
 **Scope:** Promote feedback explanation text from Secondary tier to Primary tier; bump the feedback-card reference from Tertiary to Secondary; document the feedback-context typography override in policy/registry
 **Related:** [DEBT-284](../_archive/debt/debt-284-feedback-visual-polish-phase-2.md) (badge coloring, just completed), [Typography Policy](../frontend/typography-policy.md)
