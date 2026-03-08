@@ -2,10 +2,11 @@
 
 **Priority:** P3
 **Created:** 2026-03-07
-**Status:** Open
+**Status:** Resolved in current branch
+**Resolved in branch:** 2026-03-07 — commit `c9802828` (`Promote clinical pearl label to text-foreground/60 (DEBT-287)`)
 **Triggered by:** Visual review of feedback cards after DEBT-285 explanation promotions — the clinical pearl label is now one of the most conspicuously dim labels inside primary learning content
 **Scope:** Improve clinical pearl label readability on feedback cards, via the shared Markdown clinical-pearl renderer, without disrupting the UI chrome hierarchy
-**Related:** [DEBT-285](../_archive/debt/debt-285-feedback-explanation-dark-mode-readability.md) (explanation/reference promotion, merged), [Typography Policy](../frontend/typography-policy.md), [Pattern Registry F-7](../frontend/pattern-registry.md), [Contrast Policy](../frontend/contrast-policy.md)
+**Related:** [DEBT-285](./debt-285-feedback-explanation-dark-mode-readability.md) (explanation/reference promotion, merged), [Typography Policy](../../frontend/typography-policy.md), [Pattern Registry F-7](../../frontend/pattern-registry.md), [Contrast Policy](../../frontend/contrast-policy.md)
 
 ---
 
