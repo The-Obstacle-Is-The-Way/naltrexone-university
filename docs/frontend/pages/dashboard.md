@@ -42,10 +42,11 @@ Top to bottom:
 bg-background (Layer 0 — page)
   └─ <Card> bg-card (Layer 1 — stat / streak / CTA cards)         ← FLAT
   └─ <Card> bg-card (Layer 1 — session / activity containers)     ← NESTED
-       └─ <Link> bg-foreground/5 (borderless) (Layer 2 — rows)    ← TONAL FILL INSIDE CARD
+       └─ Row (`<Link>` / `<div>`) bg-foreground/5 (Layer 2)      ← TONAL FILL INSIDE CARD
+            └─ Badge pill bg-foreground/[0.06] (Layer 3)          ← SUBORDINATE MICRO-SURFACE
 ```
 
-The top-half cards are flat (card IS the content). The bottom-half cards are containers (card WRAPS a list of borderless tonal-fill rows). Inner rows use `bg-foreground/5` with `hover:bg-foreground/[0.08]` — no borders, just a subtle fill lift following Material Design 3's tonal elevation model. Badge pills use `bg-foreground/[0.06] border-0 text-foreground/60`. The bottom grid uses `items-start` so the shorter left panel does not stretch to match the taller right panel. See [DEBT-289](../../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) for the full rationale and design research.
+The top-half cards are flat (card IS the content). The bottom-half cards are containers (card WRAPS a list of borderless tonal-fill rows). Interactive rows use `bg-foreground/5` with `hover:bg-foreground/[0.08]`; the unavailable static row uses the same rest fill with no hover state. Badge pills use `bg-foreground/[0.06] border-0 text-foreground/60`. The bottom grid uses `items-start` so the shorter left panel does not stretch to match the taller right panel. See [DEBT-289](../../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) for the full rationale and design research.
 
 ---
 
@@ -72,6 +73,6 @@ Rows use borderless tonal fill elevation (implemented in [DEBT-289](../../_archi
 ## Related Documentation
 
 - [Frontend Standards](../standards.md) — Design tokens, Card component standard
-- [Pattern Registry](../pattern-registry.md) — S-1 (Card Surface), I-1 (Hoverable Row)
+- [Pattern Registry](../pattern-registry.md) — S-1 (Card Surface), S-2 (Muted Row), I-1 (Hoverable Row)
 - [Contrast Policy](../contrast-policy.md) — WCAG AA targets
 - [DEBT-289](../../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) — Nested card visual strategy
