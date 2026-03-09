@@ -275,6 +275,8 @@ When [DEBT-290](../../debt/debt-290-practice-filter-tonal-fill-elevation.md) is 
 | FilterChip unselected fill | `bg-background` | `bg-transparent` | Inherits parent tonal fill, fixes punch-out |
 | FilterChip unselected text | `text-muted-foreground` | `text-foreground/60` | Restores AA margin once the chip inherits the tonal parent |
 | FilterChip unselected hover | `hover:bg-muted/50` | `hover:bg-foreground/[0.08]` | Consistent foreground-based scale, fixes hover inversion |
+| Filter selected-count text | `text-muted-foreground` | `text-foreground/60` | Keeps `(N selected)` secondary but AA-compliant on `bg-foreground/5` |
+| Filter helper text | `text-muted-foreground` | `text-foreground/60` | Keeps helper copy subordinate without falling below AA on the tonal parent |
 
 Elements **not** changing: SegmentedControl (all three instances), Input, Card container, Button, header action link, incomplete session card, error states.
 

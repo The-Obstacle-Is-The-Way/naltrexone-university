@@ -84,6 +84,8 @@ The container is identifiable without the border through:
 
 The border is **not** a required boundary per SC 1.4.11 — it is supplementary. The same reasoning applies as in DEBT-289: identification relies on text content, interactive cues, and layout, not the border.
 
+**Collapsed-state guardrail:** If visual QA later finds the closed `<details>` rows too quiet after border removal, the follow-up should strengthen the `<summary>` affordance (for example, a chevron or summary-only hover treatment), not reintroduce heavy container borders or weaken chip boundaries.
+
 ### FilterChip: transparent fill, keep border
 
 Change the unselected chip's fill from `bg-background` to `transparent`. The chip inherits the parent's tonal fill, eliminating the punch-out.
@@ -111,6 +113,27 @@ Key decisions:
 3. **Hover token change.** `hover:bg-muted/50` was designed for page-background or card-background contexts. On a `bg-foreground/5` parent, it causes the same hover inversion that DEBT-289 documented (muted-based hover is darker than foreground-based rest fill in dark mode). `hover:bg-foreground/[0.08]` uses the same foreground scale, guaranteeing monotonic brightening.
 
 4. **Promote unselected chip text.** `text-muted-foreground` is acceptable on the current `bg-background` chip fill, but once the chip becomes transparent on `bg-foreground/5`, it drops to ~`4.45:1` in dark mode and narrowly fails normal-text AA. `text-foreground/60` restores comfortable margin at ~`6.07:1` while still reading as secondary metadata rather than primary content.
+
+### Filter container metadata: promote secondary copy
+
+The filter-container metadata currently uses `text-muted-foreground` in two places:
+
+- the selected-count text in `<summary>` — `app/(app)/app/practice/components/practice-session-starter.tsx:217`
+- the helper copy below the chips — `app/(app)/app/practice/components/practice-session-starter.tsx:235`
+
+Both currently sit on the bordered `bg-muted/20` container and are acceptable there. But after the container switches to `bg-foreground/5`, they would sit on `#1D1D1D`, where `text-muted-foreground` drops to ~`4.45:1` and narrowly fails normal-text AA.
+
+**Before:**
+```
+text-muted-foreground
+```
+
+**After:**
+```
+text-foreground/60
+```
+
+This keeps the count/helper copy visibly subordinate to the main summary label while restoring AA margin on the tonal fill surface.
 
 ### Resulting surface hierarchy
 
@@ -151,6 +174,13 @@ Note: The chip border ratio vs the tonal fill parent (#1D1D1D) is slightly lower
 | `text-muted-foreground` | #838383 | ~4.45:1 | No |
 | **`text-foreground/60`** | **#9B9B9B** | **~6.07:1** | **Yes** |
 
+### Container secondary metadata on tonal fill surface
+
+| Text token | Applies to | WCAG ratio vs bg-foreground/5 (#1D1D1D) | Passes 4.5:1? |
+|-----------|------------|------------------------------------------|---------------|
+| `text-muted-foreground` | Summary count, helper copy | ~4.45:1 | No |
+| **`text-foreground/60`** | **Summary count, helper copy** | **~6.07:1** | **Yes** |
+
 ### Chip hover fill
 
 | State | Dark mode (on tonal fill #1D1D1D) | Light mode | Direction |
@@ -167,6 +197,8 @@ Note: The chip border ratio vs the tonal fill parent (#1D1D1D) is slightly lower
 | File | Change |
 |------|--------|
 | `app/(app)/app/practice/components/practice-session-starter.tsx:213` | Filter `<details>`: remove `border border-border/60 dark:border-foreground/40`, change `bg-muted/20` → `bg-foreground/5` |
+| `app/(app)/app/practice/components/practice-session-starter.tsx:217` | Summary count: `text-muted-foreground` → `text-foreground/60` |
+| `app/(app)/app/practice/components/practice-session-starter.tsx:235` | Helper copy: `text-muted-foreground` → `text-foreground/60` |
 | `components/ui/filter-chip.tsx:28` | Unselected: `bg-background` → `bg-transparent`, `text-muted-foreground` → `text-foreground/60`, `hover:bg-muted/50` → `hover:bg-foreground/[0.08]` |
 
 ### Pattern registry updates
@@ -184,7 +216,7 @@ Add the practice filter containers to "Classified supplementary fills" in `docs/
 
 | File | Change |
 |------|--------|
-| `app/(app)/app/practice/components/practice-session-starter.test.tsx` | Update any class-based assertions for filter container border removal |
+| `app/(app)/app/practice/components/practice-session-starter.test.tsx` | Update any class-based assertions for filter container border removal and the summary/helper text token change |
 | `components/ui/filter-chip.test.tsx` | Update assertions for `bg-transparent`, `text-foreground/60`, and the new hover token |
 
 ### Doc updates
@@ -217,6 +249,8 @@ Add the practice filter containers to "Classified supplementary fills" in `docs/
 1. **FilterChip transparent fill + brighter text on non-tonal surfaces.** The FilterChip component is shared — changing `bg-background` to `bg-transparent` and `text-muted-foreground` to `text-foreground/60` affects every future consumer. Currently the only consumer is the practice starter's filter sections (inside `<details>` containers). If FilterChip is later used directly on a Card surface without a tonal-fill parent, `transparent` would inherit `bg-card` (#121212) rather than `bg-background` (#090909), and `text-foreground/60` would still clear AA comfortably. This is safe.
 
 2. **Light mode visual check.** `bg-foreground/5` in light mode uses `foreground` ≈ #020817 (dark navy) at 5% opacity on white: rgb(242, 243, 243). This should produce a clean cool-gray tint for the filter containers. Validate visually after implementation.
+
+3. **Collapsed-state affordance visual check.** After border removal, confirm the closed `Topic` / `Substance` / `Treatment` rows still read as expandable via summary text, count text, cursor, tonal fill, and keyboard focus ring alone. If that feels too quiet, the next move is a summary affordance enhancement, not a rollback to heavy container borders.
 
 ---
 
