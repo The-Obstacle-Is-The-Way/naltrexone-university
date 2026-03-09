@@ -61,7 +61,7 @@ Add a `ChevronDown` icon (from `lucide-react`, already a project dependency) to 
 
 ```tsx
 <details className="group rounded-xl bg-foreground/5">
-  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium text-foreground outline-none transition-colors hover:bg-foreground/[0.03] focus-visible:ring-ring/50 focus-visible:ring-[3px]">
+  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium text-foreground outline-none transition-colors hover:bg-foreground/[0.03] focus-visible:ring-ring/50 focus-visible:ring-[3px] [&::-webkit-details-marker]:hidden">
     <span>{label}</span>
     <span className="flex items-center gap-2">
       <span className="text-xs font-normal text-foreground/60">
@@ -146,9 +146,10 @@ The Chrome-based visual audit that surfaced this finding also confirmed:
 Resolved in `app/(app)/app/practice/components/practice-session-starter.tsx` by shipping Approach C:
 
 - `<details>` now carries `group` so disclosure state is available to child utilities
-- `<summary>` now owns the clickable row padding via `rounded-lg px-4 py-3 transition-colors hover:bg-foreground/[0.03]`
+- `<summary>` now owns the clickable row padding via `rounded-lg px-4 py-3 transition-colors hover:bg-foreground/[0.03] [&::-webkit-details-marker]:hidden`
 - The right side of `<summary>` now groups the selected-count text with a `ChevronDown` icon
 - The chevron uses `h-4 w-4 text-foreground/60 transition-transform group-open:rotate-180`
+- Safari/WebKit native disclosure markers are suppressed so only the custom chevron renders
 - Expanded filter content now sits in its own `px-4 pb-3` wrapper so the padded header remains the true disclosure hit area
 
 The tonal-fill container from DEBT-290 remains intact. No borders were reintroduced, and no FilterChip styling changed as part of this follow-up.

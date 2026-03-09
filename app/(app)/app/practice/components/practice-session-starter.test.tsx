@@ -214,6 +214,9 @@ describe('PracticeSessionStarter', () => {
     expect(substanceSummaryTokens.has('py-3')).toBe(true);
     expect(substanceSummaryTokens.has('transition-colors')).toBe(true);
     expect(substanceSummaryTokens.has('hover:bg-foreground/[0.03]')).toBe(true);
+    expect(
+      substanceSummaryTokens.has('[&::-webkit-details-marker]:hidden'),
+    ).toBe(true);
     expect(summaryCountTokens.has('text-foreground/60')).toBe(true);
     expect(summaryCountTokens.has('text-muted-foreground')).toBe(false);
     expect(summaryChevron).toBeTruthy();

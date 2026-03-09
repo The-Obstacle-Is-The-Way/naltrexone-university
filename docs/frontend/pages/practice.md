@@ -110,7 +110,7 @@ Three collapsible `<details>` elements, one per tag kind. Only rendered when `ta
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
 | Container | `<details>` | S-2 (practice variant, tonal fill) | `:212–243` | `group rounded-xl bg-foreground/5` |
-| Summary header | `<summary>` | — | `:216` | `flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-foreground/[0.03]` + focus ring |
+| Summary header | `<summary>` | — | `:216` | `flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-foreground/[0.03] [&::-webkit-details-marker]:hidden` + focus ring |
 | Section label | `<span>` | — | `:217` | "Topic" / "Substance" / "Treatment" |
 | Summary right cluster | `<span>` | — | `:218` | `flex items-center gap-2` — groups count + chevron |
 | Selected count | `<span>` | — | `:219` | `text-xs font-normal text-foreground/60` — "(N selected)" |
