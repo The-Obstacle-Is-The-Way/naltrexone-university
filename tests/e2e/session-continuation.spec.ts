@@ -3,6 +3,7 @@ import {
   hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
+import { runE2EUserStateReset } from './helpers/reset-e2e-user-state';
 import { startSession } from './helpers/session';
 import { ensureSubscribed } from './helpers/subscription';
 
@@ -10,6 +11,9 @@ test.describe('practice session continuation', () => {
   // Authenticated E2E flows include Clerk sign-in and seeded subscription setup; allow CI headroom.
   test.setTimeout(120_000);
   test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
+  test.beforeEach(async () => {
+    await runE2EUserStateReset();
+  });
 
   test('practice page shows continue-session card and resumes session', async ({
     page,

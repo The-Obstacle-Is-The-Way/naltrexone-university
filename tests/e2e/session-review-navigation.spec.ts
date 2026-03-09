@@ -4,6 +4,8 @@ import {
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
 import { escapeRegexLiteral, selectChoiceByLabel } from './helpers/question';
+import { parseQuestionProgressCount } from './helpers/question-progress';
+import { runE2EUserStateReset } from './helpers/reset-e2e-user-state';
 import { startSession } from './helpers/session';
 import { ensureSubscribed } from './helpers/subscription';
 
@@ -11,6 +13,9 @@ test.describe('session review navigation (SPEC-027)', () => {
   // Multi-page audit flows can exceed the default timeout due to sequential navigation and assertions in CI.
   test.setTimeout(180_000);
   test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
+  test.beforeEach(async () => {
+    await runE2EUserStateReset();
+  });
 
   test('Session Summary → sequential review with prev/next navigation', async ({
     page,
@@ -89,14 +94,22 @@ test.describe('session review navigation (SPEC-027)', () => {
     const navigatorHeading = page.getByText('Question navigator');
     await expect(navigatorHeading).toBeVisible({ timeout: 15_000 });
 
+    const reviewProgressIndicator = page.getByText(/^Question 1 of \d+$/);
+    await expect(reviewProgressIndicator).toBeVisible({ timeout: 15_000 });
+    const reviewQuestionCount = parseQuestionProgressCount(
+      (await reviewProgressIndicator.textContent()) ?? '',
+    );
+
     const navigatorButtons = navigatorCard.locator('[data-slot="button"]');
-    await expect(navigatorButtons).toHaveCount(2, { timeout: 15_000 });
+    await expect(navigatorButtons).toHaveCount(reviewQuestionCount, {
+      timeout: 15_000,
+    });
 
     await expect(
       navigatorCard.locator(
         '[data-slot="button"][aria-label*=": Correct"], [data-slot="button"][aria-label*=": Incorrect"]',
       ),
-    ).toHaveCount(2, { timeout: 15_000 });
+    ).toHaveCount(reviewQuestionCount, { timeout: 15_000 });
 
     const currentNavigatorButton = navigatorCard.locator(
       '[aria-current="step"]',

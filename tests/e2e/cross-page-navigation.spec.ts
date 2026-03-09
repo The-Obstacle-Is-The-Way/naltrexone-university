@@ -8,7 +8,7 @@ import {
   assertQuestionSlugExists,
   submitQuestionForOutcome,
 } from './helpers/question';
-import { resetBookmarksForE2EUser } from './helpers/reset-bookmarks-for-e2e-user';
+import { runE2EUserStateReset } from './helpers/reset-e2e-user-state';
 import { ensureSubscribed } from './helpers/subscription';
 
 // Seeded by content/questions/placeholder/placeholder-01-naltrexone-mechanism.mdx
@@ -18,6 +18,9 @@ test.describe('cross-page navigation', () => {
   // Multi-page audit flows can exceed the default timeout due to sequential navigation and assertions in CI.
   test.setTimeout(180_000);
   test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
+  test.beforeEach(async () => {
+    await runE2EUserStateReset();
+  });
 
   test('dashboard activity → question detail → back to dashboard', async ({
     page,
@@ -93,10 +96,6 @@ test.describe('cross-page navigation', () => {
   });
 
   test.describe('bookmark navigation', () => {
-    test.beforeEach(async () => {
-      await resetBookmarksForE2EUser();
-    });
-
     test('bookmarks → question detail → back to bookmarks', async ({
       page,
     }) => {

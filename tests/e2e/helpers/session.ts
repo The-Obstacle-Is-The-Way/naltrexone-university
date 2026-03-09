@@ -1,6 +1,27 @@
 import { expect, type Page } from '@playwright/test';
+import { parseQuestionProgressCount } from './question-progress';
 
 export type PracticeMode = 'tutor' | 'exam';
+
+async function verifyRequestedSessionCount(
+  page: Page,
+  requestedCount: number,
+): Promise<void> {
+  const progressIndicator = page.getByText(/^Question 1 of \d+$/);
+  await expect(progressIndicator).toBeVisible({ timeout: 15_000 });
+
+  const progressText = (await progressIndicator.textContent())?.trim() ?? '';
+  const actualCount = parseQuestionProgressCount(progressText);
+  if (actualCount < requestedCount) {
+    throw new Error(
+      `startSession created ${actualCount}-question session but ${requestedCount} were requested`,
+    );
+  }
+
+  await expect(page.getByText(`Question 1 of ${requestedCount}`)).toBeVisible({
+    timeout: 15_000,
+  });
+}
 
 export async function startSession(
   page: Page,
@@ -108,6 +129,7 @@ export async function startSession(
     });
 
     if (await answerChoices.isVisible().catch(() => false)) {
+      await verifyRequestedSessionCount(page, count);
       return; // Question loaded successfully
     }
 

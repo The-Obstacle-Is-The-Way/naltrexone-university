@@ -2,7 +2,8 @@
 
 **Priority:** P1
 **Created:** 2026-03-09
-**Status:** Open
+**Status:** Resolved
+**Resolved:** 2026-03-09
 **Discovered during:** CI run on `main` (PR #186 merge commit `ab5f21c1`, run `22852148955`)
 **Audited for accuracy:** 2026-03-09
 
@@ -11,6 +12,13 @@
 ## Audit Verdict
 
 The suite has a real shared-state isolation problem, but the original DEBT-293 draft overstated and misattributed several causal claims.
+
+The debt is now resolved in code:
+
+- mutating authenticated E2E specs reset the shared user back to the deterministic baseline in `beforeEach`
+- `tests/e2e/helpers/session.ts` verifies that the created session matches the requested count before returning
+- `tests/e2e/session-review-navigation.spec.ts` derives navigator expectations from the review page's own progress indicator instead of assuming the requested count
+- `docs/dev/testing-infrastructure.md` now points to the full reset helper as the primary shared-state mitigation pattern
 
 **Verified:**
 
@@ -219,9 +227,9 @@ With at least **963** unanswered questions still available in CI, the helper sho
 
 **Conclusion:** the original DEBT-293 claim that earlier specs exhausted the placeholder pool and thereby prevented `startSession(page, 'tutor', 2)` from finding 2 questions is not supported by the code or by the seeded content volume.
 
-### Important Secondary Risk in the Helper
+### Helper Risk Identified During Audit
 
-The helper still has a real weakness:
+The audit found a real helper weakness:
 
 - it waits only for `Start session` to be **enabled**
 - the UI intentionally allows starting a session where `actualCount < requestedCount`
@@ -232,7 +240,9 @@ So a future line-23 failure could still mean:
 - the helper started a **smaller session** than requested, or
 - the helper clicked through while counts were stale
 
-But that is a **helper/UI contract problem**, not the placeholder-exhaustion theory from the original draft.
+That was a **helper/UI contract problem**, not the placeholder-exhaustion theory from the original draft.
+
+It is now addressed: `tests/e2e/helpers/session.ts` reads the visible `Question 1 of N` progress indicator after answer choices load and throws `startSession created ${actual}-question session but ${requested} were requested` whenever the UI starts a smaller session than requested.
 
 ---
 
@@ -389,7 +399,7 @@ These tests explicitly rely on preexisting setup-seeded state:
 
 - `session-review-navigation.spec.ts` test 2 expects at least one completed history session
 - `session-review-navigation.spec.ts` test 3 expects at least one Quick Practice history row
-- bookmark-focused specs that call `resetBookmarksForE2EUser()` rely on the shared test user and placeholder content being resolvable
+- the authenticated mutating specs now satisfy those preconditions via per-test `runE2EUserStateReset()` instead of inheriting state from earlier specs
 
 ---
 
@@ -414,17 +424,11 @@ then the E2E user's question availability returns to a deterministic baseline. T
 
 ---
 
-## Revised Resolution
+## Resolution Implemented
 
-### Phase 1: Use Full Per-Test User-State Reset for All Mutating Specs
+### Phase 1: Full Per-Test User-State Reset Now Runs in Every Mutating Spec
 
-The strongest immediate fix is to reuse `runE2EUserStateReset()` in `beforeEach` for every spec that mutates:
-
-- attempts
-- sessions
-- bookmarks
-
-That includes:
+`runE2EUserStateReset()` is now wired into `beforeEach` for every authenticated spec that mutates attempts, sessions, or bookmarks:
 
 - `bookmarks.spec.ts`
 - `core-app-pages.spec.ts`
@@ -436,43 +440,37 @@ That includes:
 - `session-review-navigation.spec.ts`
 - `subscribe-and-practice.spec.ts`
 
-If the runtime cost is too high, the fallback is still **not** "session rows only." The minimum safe subset is:
+That removes the old suite-level-only assumption and restores the shared E2E user to the same deterministic baseline before each mutating test body runs.
 
-- `idempotency_keys`
-- `attempts`
-- `practice_sessions`
-- deterministic reseed + verification
+### Phase 2: `startSession()` Now Verifies the Created Session Count
 
-### Phase 2: Harden `tests/e2e/helpers/session.ts`
+`tests/e2e/helpers/session.ts` now:
 
-The helper should validate that it actually created the requested session shape before returning. For example:
+- waits for answer choices to load
+- reads the visible `Question 1 of N` progress indicator
+- throws an explicit error if `N < requestedCount`
 
-- wait for the count input state to settle before clicking `Start session`
-- verify the resulting session count via the page indicator or returned URL params
-- fail explicitly if `actualCount < requestedCount`
+`tests/e2e/helpers/session.test.ts` covers both the passing `Question 1 of 2` case and the explicit smaller-session failure case.
 
-### Phase 3: Align Navigator Assertions With the Actual Contract
+### Phase 3: Review Navigator Assertions Now Use the Page Contract
 
-The test should not assume:
+`tests/e2e/session-review-navigation.spec.ts` no longer hardcodes navigator count `2` after entering review mode.
 
-- requested count == navigator button count
+Instead it:
 
-without proving that all review rows are available.
+- reads the visible `Question 1 of N` review progress text
+- parses `N`
+- asserts that the navigator button count matches that displayed review count
 
-Either:
+The parsing logic lives in `tests/e2e/helpers/question-progress.ts` with unit coverage in `tests/e2e/helpers/question-progress.test.ts`.
 
-- the product contract should keep unavailable rows visible in the navigator, or
-- the spec should assert against the actual filtered review/navigation contract
+### Phase 4: Testing Infrastructure Docs Now Point to the Full Reset Pattern
 
-### Phase 4: Keep Troubleshooting Docs As-Is
+`docs/dev/testing-infrastructure.md` now reflects the resolved policy:
 
-`docs/dev/testing-infrastructure.md` already gives the right guidance:
-
-- do not use `networkidle` or `waitForTimeout()` as band-aids
-- diagnose shared mutable state
-- add per-test resets where needed
-
-DEBT-293 should align with that guidance, not claim the opposite.
+- shared authenticated mutating specs should prefer `runE2EUserStateReset()` in `beforeEach`
+- `networkidle` is no longer described as a blanket best practice
+- the E2E test inventory matches the current spec files
 
 ---
 
@@ -503,3 +501,8 @@ The original draft used real but weaker vendor/consultancy blog citations. This 
 - Verified from code that the review navigator count is driven by filtered review data, so line 93 is a data/contract failure mode, not a pure rendering-timing failure mode.
 - Replaced weaker vendor/consultancy references with Playwright/Fowler/Google sources.
 - Corrected the inaccurate statement about `docs/dev/testing-infrastructure.md`; the current doc already recommends structural fixes over band-aid waits.
+- Added a repeated-reset unit test proving `runE2EUserStateReset()` re-clears and re-seeds the deterministic baseline on consecutive calls.
+- Added `tests/e2e/helpers/session.test.ts` to cover the explicit smaller-session failure path.
+- Wired per-test full reset into all mutating authenticated E2E specs and removed the old bookmark-only double-reset cases.
+- Added `tests/e2e/helpers/question-progress.ts` plus unit coverage so the review navigator spec reads its expected count from the page contract.
+- Updated `docs/dev/testing-infrastructure.md` to document the full reset policy and the current E2E file inventory.

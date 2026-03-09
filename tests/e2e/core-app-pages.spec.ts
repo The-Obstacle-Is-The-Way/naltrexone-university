@@ -8,7 +8,7 @@ import {
   assertQuestionSlugExists,
   submitQuestionForOutcome,
 } from './helpers/question';
-import { resetBookmarksForE2EUser } from './helpers/reset-bookmarks-for-e2e-user';
+import { runE2EUserStateReset } from './helpers/reset-e2e-user-state';
 import { ensureSubscribed } from './helpers/subscription';
 
 // Seeded by content/questions/placeholder/placeholder-01-naltrexone-mechanism.mdx
@@ -19,7 +19,7 @@ test.describe('core app pages', () => {
   test.setTimeout(120_000);
   test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
   test.beforeEach(async () => {
-    await resetBookmarksForE2EUser();
+    await runE2EUserStateReset();
   });
 
   test('subscribed user can navigate dashboard, billing, bookmarks, and history', async ({
