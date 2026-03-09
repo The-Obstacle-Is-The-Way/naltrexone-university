@@ -84,6 +84,32 @@ Modern dashboards (Linear, Notion, Stripe, Apple) consistently avoid double-bord
 
 The pattern: **list containers either don't exist (items sit on the page background) or their items don't have individual borders (separated by hairlines/spacing instead).**
 
+### Material Design 3: Tonal Elevation Overlay
+
+Material Design's dark theme uses a fundamentally different strategy — **tonal elevation via white overlay opacity**, not borders. Higher elevation = slightly lighter surface. The official overlay table:
+
+| Elevation | White overlay opacity | Use case |
+|-----------|----------------------|----------|
+| 0dp | 0% | Page background |
+| 1dp | 5% | Card surface |
+| 2dp | 7% | Nested element on card |
+| 3dp | 8% | Nested interactive element |
+| 4dp | 9% | App bar |
+
+The step from card (1dp) to nested element (2dp) is only **2 percentage points** of white overlay. The system is designed to be barely perceptible — a whisper, not a shout. Borders are not used to differentiate elevation levels; fill alone carries the hierarchy.
+
+**Source:** [Material Design Dark Theme](https://m2.material.io/design/environment/elevation.html), [Prototypr Guide](https://blog.prototypr.io/how-to-design-a-dark-theme-for-your-android-app-3daeb264637)
+
+### Atlassian Elevation System
+
+Atlassian defines four surface levels (sunken → default → raised → overlay) and explicitly warns: **"Don't apply sunken elevations on raised or overlay elevations."** Their guidance for differentiating areas within a surface: use whitespace or borders — but not nested raised surfaces.
+
+**Source:** [Atlassian Elevation](https://atlassian.design/foundations/elevation/)
+
+### Key insight
+
+The industry consensus is that **borders are not the mechanism for expressing elevation in dark mode.** Material Design uses tonal fill overlays. Atlassian avoids nesting entirely. The current dashboard uses borders for both the outer card AND inner rows — that's what creates the noise. The fix is to remove the inner borders and let fill alone express the nesting, following Material Design's tonal overlay model.
+
 ---
 
 ## Options
@@ -229,53 +255,133 @@ Keep the current structure but make the rows less visually assertive: remove row
 
 ---
 
+### Option F: Borderless Inner Cards with Tonal Fill Elevation (Material Design approach)
+
+Keep the outer `<Card>` container. Keep the inner card **shape** (rounded-xl). Remove the inner card **border** entirely. Increase the fill from `bg-muted/20` (nearly invisible at ~1.1:1) to `bg-foreground/[0.04]`–`bg-foreground/5` — just enough to see the rounded rectangle shape without looking "punched out" or too gray.
+
+This follows Material Design 3's tonal elevation model: nested elements are differentiated by a subtle white overlay, not borders. The 1dp→2dp step in Material is only 2% more white overlay — barely perceptible but structurally present.
+
+```
+┌─Card (bg-card #121212, border, rounded-2xl)──┐
+│ Recent sessions                    View all   │
+│                                               │
+│ ┌─ bg-foreground/4 (no border) ──────────┐   │
+│ │ [Tutor] Mar 7, 2026                    │   │
+│ │ 0/5 correct (0%)                       │   │
+│ └────────────────────────────────────────┘   │
+│                                               │
+│ ┌─ bg-foreground/4 (no border) ──────────┐   │
+│ │ [Tutor] Mar 6, 2026                    │   │
+│ │ 0/20 correct (0%)                      │   │
+│ └────────────────────────────────────────┘   │
+│                                               │
+│ ┌─ bg-foreground/4 (no border) ──────────┐   │
+│ │ [Exam] Mar 4, 2026                     │   │
+│ │ 2/5 correct (40%)                      │   │
+│ └────────────────────────────────────────┘   │
+└───────────────────────────────────────────────┘
+```
+
+#### Why this is a pivot from Option B
+
+Option B (flush dividers) was previously recommended because it eliminates the double-border noise while preserving container grouping. However, it also eliminates the individual **card shape** of each row — rows become flat list items separated by hairlines, losing the rounded-rectangle elegance that the current design has.
+
+The core insight behind this pivot: **the problem was never the card-within-card nesting concept itself — it was the borders.** Before the WCAG dark-mode border strengthening (DEBT-279/DEBT-280), the inner rows had a nearly invisible `border-border` (#262626, ~1.3:1 vs card). That felt elegant. The WCAG fix bumped inner borders to `dark:border-foreground/40` (#6A6A6A, ~3.46:1 vs card) — 2.6x brighter than before — making the child borders louder than the parent card's border. That's what broke the visual hierarchy.
+
+Option F fixes the root cause: remove the inner borders entirely, and compensate with a slightly stronger fill so the card shape is still visible without needing a stroke.
+
+#### Computed fill values in dark mode
+
+| Fill token | Effective color on `bg-card` (#121212) | Lightness | Contrast vs card |
+|------------|----------------------------------------|-----------|-----------------|
+| `bg-muted/20` (current) | #141414 | 7.8% | ~1.1:1 (invisible) |
+| `bg-foreground/[0.04]` | #1B1B1B | 10.5% | ~1.3:1 (gentle) |
+| `bg-foreground/5` | #1D1D1D | 11.3% | ~1.4:1 (Material 1dp→2dp equivalent) |
+| `bg-foreground/6` | #202020 | 12.6% | ~1.5:1 (starts to feel distinct) |
+| `bg-foreground/8` (too much) | #252525 | 14.5% | ~1.7:1 (punched-out look) |
+
+The sweet spot is **`bg-foreground/[0.04]` to `bg-foreground/5`**. This is consistent with Material Design's 2% overlay step and avoids both extremes: invisible (current `bg-muted/20`) and punched-out (`bg-foreground/8`+).
+
+#### Implementation
+
+- Remove from rows: `border border-border/60`, `dark:border-foreground/40`, `dark:hover:border-foreground/70`
+- Change row fill: `bg-muted/20` → `bg-foreground/[0.04]` (or `bg-foreground/5` — validate visually)
+- Keep on rows: `rounded-xl`, `p-3`, `transition-colors`, `hover:bg-muted/40`, focus-visible ring
+- Keep: outer `<Card>` wrapper, `space-y-2` row rhythm, section heading + "View all"
+- Add to bottom grid: `items-start` to fix equal-height stretching
+
+Interactive rows:
+```
+block rounded-xl bg-foreground/[0.04] p-3 transition-colors hover:bg-muted/40
+focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
+```
+
+Unavailable/static rows:
+```
+rounded-xl bg-foreground/[0.04] p-3
+```
+
+**Pros:**
+- Preserves the card-within-card elegance — each row is still a distinct rounded rectangle
+- Removes the border noise that caused the "bipolar" feel — only the outer card has a visible border
+- Follows Material Design 3's tonal elevation model (industry standard)
+- Minimal code change — swap border classes for a fill class, remove dark border overrides
+- Hover state (`hover:bg-muted/40`) still works cleanly on top of the subtle fill
+- No dividers needed — the card shapes and `space-y-2` rhythm handle visual separation
+
+**Cons:**
+- The fill-only shape is subtle at rest — some users may not immediately perceive the inner cards as distinct elements. This is intentional (Material Design's philosophy) but worth validating visually.
+- Mode/difficulty badge borders become the loudest strokes inside the card once row borders are gone — may need to soften those badges too.
+
+**WCAG consideration:** The fill at `bg-foreground/[0.04]` does not meet 3:1 as a required boundary (SC 1.4.11). However, the inner rows are identifiable without the fill through: (1) text content and layout, (2) cursor change to pointer on hover, (3) hover fill change (`bg-muted/40`), (4) focus-visible ring on keyboard navigation. The tonal fill is a **supplementary visual cue**, not the primary boundary. The outer card's border remains the section-level required boundary. This mirrors Material Design's approach where elevation overlays are not relied upon as accessibility boundaries — they're hierarchy hints.
+
+---
+
 ## Evaluation
 
-### Steve Jobs minimalism
+> **Pivot (2026-03-08):** The original evaluation recommended Option B (Flush Dividers). After further analysis — including Material Design 3 research, Atlassian's elevation system, and stakeholder review of the current screenshots — the recommendation has shifted to **Option F (Borderless Inner Cards with Tonal Fill Elevation)**. The rationale: the core problem was never cards-within-cards itself — it was the inner borders being louder than the outer card border after WCAG dark-mode hardening. Option F fixes the root cause while preserving the card-within-card elegance. Option B would have worked but sacrifices the individual card shape that the stakeholder values.
 
-- **Strongest:** Option B
-- **Runner-up:** Option A
+### Visual elegance
 
-Option B removes the loudest part of the discord — row boxes inside card boxes — while preserving clean grouping. After the browser audit, the important nuance is that the dashboard bottom half is not just a list; it is two side-by-side summary panels with their own headings and actions. Option A is still visually pure, but on this specific page it risks making the headings and rows feel less anchored as groups.
+- **Strongest:** Option F
+- **Runner-up:** Option B
+
+Option F preserves the rounded-rectangle card shape for each row — the visual elegance of "items as cards" — while removing the border noise. Option B flattens rows into a divider-separated list, which is clean but loses the card feel. Option A is the purest flattening but unanchors the section grouping.
 
 ### WCAG AA compliance
 
-- **Safest:** Option A
-- **Potentially acceptable with care:** Option B
-- **Riskiest:** Option E
+- **Safest:** Option A (explicit borders on page background)
+- **Acceptable:** Option F and Option B
 
-Option A preserves explicit row boundaries on the page background. Option B can be made accessible, but only if the replacement separators/dividers are treated as real boundaries rather than decorative hairlines. Option E asks a near-invisible tinted fill to do too much.
+Option F's fill at `bg-foreground/[0.04]` does not meet 3:1 as a required boundary, but the fill is not the required boundary — it's a supplementary hierarchy hint. Row identification comes from text content, cursor, hover fill, and focus ring. This mirrors Material Design 3's approach. Option B faces the same question with dividers.
 
 ### Information density
 
-- **Best balance:** Option B
-- **Close second:** Option A
+- **Best balance:** Option F
+- **Close second:** Option B
 
-Option B packs the most rows into the least visual space because it removes duplicate row chrome while keeping a stable group container. Option A is still workable, but it spends more visual space per row and asks the page structure to do more grouping work on desktop.
+Option F preserves the current `space-y-2` rhythm and card padding. Option B is slightly denser (no card padding per row) but requires hover-radius hacks (`-mx-2 rounded-xl px-2`) to recover interactive target shapes.
 
 ### Consistency across the app
 
-- **Best reusable nested-list pattern:** Option B
-- **Best alignment with some existing standalone pages:** Option A
+- **Best reusable nested-card pattern:** Option F
+- **Best if nesting should be avoided entirely:** Option A
 
-Option A moves the dashboard closer to the app's existing standalone-item patterns:
-- History questions already use standalone bordered rows on the page background
-- Bookmarks already use one card per item
-
-But Option A does not actually define a reusable answer to the real design question here: how a grouped list should look when a container card is warranted. Option B does. History sessions is adjacent but not identical: it uses muted bordered rows directly on the page background with no wrapper. That is still closer to Option A than to the dashboard's current nested-card treatment.
+Option F defines a clean, reusable answer to "how should nested items look inside a container card?" — borderless tonal cards. This is applicable anywhere the pattern arises in the future. Option A sidesteps the question by eliminating containers.
 
 ### Implementation simplicity
 
-- **Least code churn:** Option B
-- **Simplest long-term dashboard fix:** Option B
+- **Least code churn:** Option F
+- **Most JSX restructuring:** Option A
 
-Option B is the most surgical change and reads as the better dashboard-specific answer once grouping, `View all` anchoring, and the two-column layout are accounted for. Option A requires more JSX restructuring and then further tuning to recover the same sense of grouped sections.
+Option F is a class-swap: remove border classes, change fill token. No JSX restructuring, no divider markup, no negative-margin hover hacks. Option B requires replacing `<ul className="space-y-2">` with `<ul className="divide-y">` and reworking row padding/hover.
 
 ### Bottom line
 
-- **Option B** is the best overall dashboard solution.
-- **Option A** remains the cleanest pure flattening strategy, but it is now the runner-up rather than the default recommendation.
-- **Options C, D, and E** should be rejected.
+- **Option F** is the recommended solution — fixes the root cause (border noise) while preserving the card-within-card elegance.
+- **Option B** remains a coherent alternative if fill-only differentiation proves too subtle after visual validation.
+- **Option A** remains the purest flattening fallback.
+- **Options C, D, and E** are rejected.
 
 ---
 
@@ -298,54 +404,80 @@ This decision does **not** automatically imply simultaneous code changes to Hist
 
 ## Open Questions
 
-1. **Is the row border a "required boundary" under SC 1.4.11?** If yes, Options B and E need a compensating mechanism. The row's text content, cursor change, hover fill, and focus ring may collectively suffice — but this needs validation.
+1. **Optimal fill value: `bg-foreground/[0.04]` vs `bg-foreground/5`?** Must be validated visually in browser. Material Design's 2% overlay step suggests the lower end, but our specific gray stack may need the slightly stronger value. Validate during implementation.
 
-2. **Does the "View all" header action pattern work without a container?** Option A needs a way to visually associate the "View all" link with its section heading when there's no enclosing card.
+2. **Light mode behavior?** The fill token `bg-foreground/[0.04]` uses `foreground` which adapts per theme. In light mode, `foreground` is dark (~#171717), so 4% opacity of dark on white card → very subtle gray tint. Should be fine, but validate visually.
 
-3. **Should History sessions eventually converge too?** It already avoids the dashboard's wrapper-card nesting, but it still uses the lower-contrast muted row treatment directly on `bg-background`, which is a separate consistency question.
+3. **Badge dominance after border removal?** Mode badges (Tutor/Exam) and difficulty badges (Easy/Medium) currently use `border-border/60 dark:border-foreground/40`. Once row borders are gone, these become the loudest strokes. May need to soften to borderless fill-only pills — but this is a secondary concern, not a blocker.
+
+4. **Should History sessions eventually adopt the same fill-only pattern?** It currently uses bordered muted rows on `bg-background` (no wrapper card). That's a separate consistency question — not part of this implementation.
 
 ---
 
 ## Scope
 
-- **Production code:** `app/(app)/app/dashboard/page.tsx` (primary)
-- **Pattern Registry update:** likely I-2 clarification for standalone dashboard rows, or a new dashboard/containerless section note if needed
-- **Test updates:** `app/(app)/app/dashboard/page.test.tsx` for class-based assertions affected by border/fill changes
+- **Production code:** `app/(app)/app/dashboard/page.tsx` — remove row border classes, change fill token, add `items-start` to bottom grid
+- **Pattern Registry update:** add a new pattern entry for borderless tonal inner cards (fill-only nested elevation), or extend I-1 with a "borderless variant" note
+- **Test updates:** `app/(app)/app/dashboard/page.test.tsx` — update class-based assertions for border removal and fill change
+- **Doc updates:** `docs/frontend/pages/dashboard.md` — update surface hierarchy and component inventory
 - **No new files** — this modifies existing patterns
 
 ---
 
 ## Recommendation
 
-Choose **Option B: Flush Dividers**.
+Choose **Option F: Borderless Inner Cards with Tonal Fill Elevation**.
 
 ### Ideal bottom-half structure
 
 Keep:
 - the existing two-column summary layout, but add `items-start` to the grid (`grid items-start gap-4 lg:grid-cols-2`) so the shorter left panel does not stretch to the taller right panel
 - the section header row: heading on the left, `View all` link on the right
-- the outer `<Card className="gap-0 rounded-2xl p-6 shadow-sm">` wrappers, because on this page they provide useful section grouping
-- empty/error states inside those section cards
+- the outer `<Card className="gap-0 rounded-2xl p-6 shadow-sm">` wrappers — they provide useful section grouping
+- the `<ul className="mt-4 space-y-2">` list rhythm — card shapes with spacing handle visual separation
+- the `rounded-xl p-3` shape on each row — this IS the card-within-card elegance
+- hover: `transition-colors hover:bg-muted/40`
+- focus: `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`
+- empty/error states inside the section cards
 
 Remove:
-- the nested in-card row borders and rest-state row boxes
-- the current `space-y-2` stacked-card rhythm for dashboard list rows
+- `border border-border/60` from all inner rows
+- `dark:border-foreground/40` from all inner rows
+- `dark:hover:border-foreground/70` from all inner rows
 
-Replace with:
-- container-internal lists that use real separators instead of nested boxes:
-  - list wrapper: `mt-4 divide-y divide-border/60 dark:divide-foreground/40`
-  - interactive rows: a flush hover zone such as `block -mx-2 rounded-xl px-2 py-3 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`
-  - unavailable/static rows: the same internal spacing (`px-2 py-3`) without hover
-- a quieter internal badge strategy if needed after the border removal, because bordered pills become more visually dominant once row borders are gone
+Replace:
+- `bg-muted/20` → `bg-foreground/[0.04]` (validate visually; `bg-foreground/5` is the next step up if too subtle)
+
+### Resulting row classes
+
+Interactive rows:
+```
+block rounded-xl bg-foreground/[0.04] p-3 transition-colors hover:bg-muted/40
+focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
+```
+
+Unavailable/static rows:
+```
+rounded-xl bg-foreground/[0.04] p-3
+```
 
 ### Why this is the right call
 
-- It removes the noisiest part of the current design: bordered rows inside bordered cards.
-- It preserves the useful grouping that the dashboard's two-column summary panels need.
-- It keeps the `View all` action naturally anchored to its section.
-- It aligns with grouped-list patterns used by products like Linear, GitHub, and Stripe more closely than the current nested-card treatment.
+- **Fixes the root cause.** The jarring visual was never the nesting concept — it was the inner borders at `foreground/40` being 2.6x brighter than the outer card's `border-border`. Removing the inner borders eliminates the noise at its source.
+- **Preserves the elegance.** Each row is still a distinct rounded rectangle — a card shape — just defined by a gentle fill instead of a competing border. This is the Material Design 3 tonal elevation approach.
+- **Minimal code change.** Remove border classes, swap fill token. No JSX restructuring, no divider markup, no negative-margin hacks.
+- **Keeps container grouping.** The outer card, "View all" link, and two-column layout all stay intact.
+- **Industry-validated.** Material Design uses 2% white overlay steps for nested elevation. Our `bg-foreground/[0.04]` is in that range.
 
-Option A is still a coherent fallback if the team wants maximum flattening. But for this specific dashboard, the best end state is a grouped card with flush internal rows, not a containerless field of mini-cards.
+### Validation during implementation
+
+1. Visual check in dark mode: do the inner card shapes read as distinct rounded rectangles at `bg-foreground/[0.04]`? If too subtle, step up to `bg-foreground/5`.
+2. Visual check in light mode: does the same fill token produce an acceptable result, or does it need a light-mode-specific value?
+3. Hover transition: does `bg-foreground/[0.04]` → `hover:bg-muted/40` produce a satisfying hover lift?
+4. Badge review: with row borders gone, are mode/difficulty pill borders now the loudest strokes? If so, consider softening them to borderless fill-only pills.
+5. Focus ring: verify the focus-visible ring still looks clean without a row border adjacent to it.
+
+Option B (flush dividers) is the fallback if fill-only differentiation proves too subtle after visual validation.
 
 ---
 

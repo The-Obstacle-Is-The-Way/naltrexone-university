@@ -45,7 +45,7 @@ bg-background (Layer 0 — page)
        └─ <Link> bg-muted/20 + border-border/60 (Layer 2 — rows) ← ROWS INSIDE CARD
 ```
 
-**Known issues:** The top-half cards are flat (card IS the content). The bottom-half cards are containers (card WRAPS a list of individually-bordered rows). This creates a visual inconsistency local to the dashboard. Adjacent pages use cleaner but different patterns: History sessions uses bordered rows directly on the page background, while History questions and Bookmarks use standalone cards per item. Also, the `lg:grid-cols-2` recent-lists row currently stretches both panels to equal height, which amplifies empty space in the shorter Recent sessions panel. See [DEBT-289](../../debt/debt-289-dashboard-nested-card-surface-strategy.md).
+**Known issues:** The top-half cards are flat (card IS the content). The bottom-half cards are containers (card WRAPS a list of individually-bordered rows). The inner row borders — strengthened to `dark:border-foreground/40` for WCAG compliance — are 2.6x brighter than the outer card's `border-border`, creating an inverted visual hierarchy where children shout louder than the parent. The fix (DEBT-289) is to remove inner borders entirely and use tonal fill elevation (`bg-foreground/[0.04]`, borderless `rounded-xl` shapes) following Material Design 3's dark-theme overlay model. Also, the `lg:grid-cols-2` recent-lists row currently stretches both panels to equal height, which amplifies empty space in the shorter Recent sessions panel (`items-start` fix included in DEBT-289). See [DEBT-289](../../debt/debt-289-dashboard-nested-card-surface-strategy.md).
 
 ---
 
@@ -61,13 +61,18 @@ bg-background (Layer 0 — page)
 
 ## Dark Mode Tokens
 
-Rows use the I-1 pattern dark mode overrides:
-- Rest border: `dark:border-foreground/40` (~3.46:1 vs card)
-- Hover border: `dark:hover:border-foreground/70`
-- Rest fill: `bg-muted/20` (tinted Layer 2)
-- Hover fill: `hover:bg-muted/40`
+**Current state** (pre-DEBT-289) — rows use I-1 pattern dark mode overrides:
+- Rest border: `dark:border-foreground/40` (~3.46:1 vs card) — **to be removed**
+- Hover border: `dark:hover:border-foreground/70` — **to be removed**
+- Rest fill: `bg-muted/20` (tinted Layer 2) — **to be replaced with `bg-foreground/[0.04]`**
+- Hover fill: `hover:bg-muted/40` — stays
 
-Mode/difficulty badge borders also use `dark:border-foreground/40`.
+**Target state** (post-DEBT-289) — borderless tonal fill elevation:
+- No rest border — inner cards defined by fill shape only
+- Rest fill: `bg-foreground/[0.04]` (~#1B1B1B, 10.5% lightness on card #121212)
+- Hover fill: `hover:bg-muted/40` — stays
+
+Mode/difficulty badge borders currently use `dark:border-foreground/40` — may need softening after row borders are removed (see DEBT-289 open question #3).
 
 ---
 
