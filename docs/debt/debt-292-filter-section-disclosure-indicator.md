@@ -60,8 +60,8 @@ DEBT-290 established that the response to "collapsed sections feel too quiet" mu
 Add a `ChevronDown` icon (from `lucide-react`, already a project dependency) to the `<summary>` that rotates 180° when the section is open.
 
 ```tsx
-<details className="rounded-xl bg-foreground/5 px-4 py-3 group">
-  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg text-sm font-medium text-foreground outline-none transition-colors hover:bg-foreground/[0.03] focus-visible:ring-ring/50 focus-visible:ring-[3px]">
+<details className="group rounded-xl bg-foreground/5">
+  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium text-foreground outline-none transition-colors hover:bg-foreground/[0.03] focus-visible:ring-ring/50 focus-visible:ring-[3px]">
     <span>{label}</span>
     <span className="flex items-center gap-2">
       <span className="text-xs font-normal text-foreground/60">
@@ -70,6 +70,7 @@ Add a `ChevronDown` icon (from `lucide-react`, already a project dependency) to 
       <ChevronDown className="h-4 w-4 text-foreground/60 transition-transform group-open:rotate-180" />
     </span>
   </summary>
+  <div className="px-4 pb-3">…</div>
 </details>
 ```
 
@@ -99,7 +100,7 @@ Combine the chevron (always-visible affordance) with a subtle hover treatment (i
 
 | File | Change |
 |------|--------|
-| `app/(app)/app/practice/components/practice-session-starter.tsx:212–223` | Add `group` to `<details>`, add chevron icon to `<summary>`, and add summary hover treatment |
+| `app/(app)/app/practice/components/practice-session-starter.tsx:212–225` | Add `group` to `<details>`, add chevron icon to `<summary>`, move disclosure-row padding onto `<summary>`, and give expanded content its own `px-4 pb-3` wrapper |
 
 ### Test updates
 
@@ -145,8 +146,9 @@ The Chrome-based visual audit that surfaced this finding also confirmed:
 Resolved in `app/(app)/app/practice/components/practice-session-starter.tsx` by shipping Approach C:
 
 - `<details>` now carries `group` so disclosure state is available to child utilities
-- `<summary>` now uses `rounded-lg transition-colors hover:bg-foreground/[0.03]`
+- `<summary>` now owns the clickable row padding via `rounded-lg px-4 py-3 transition-colors hover:bg-foreground/[0.03]`
 - The right side of `<summary>` now groups the selected-count text with a `ChevronDown` icon
 - The chevron uses `h-4 w-4 text-foreground/60 transition-transform group-open:rotate-180`
+- Expanded filter content now sits in its own `px-4 pb-3` wrapper so the padded header remains the true disclosure hit area
 
 The tonal-fill container from DEBT-290 remains intact. No borders were reintroduced, and no FilterChip styling changed as part of this follow-up.

@@ -148,12 +148,12 @@ rounded-xl border border-border/60 bg-muted/20 px-4 py-3 dark:border-foreground/
 
 **Practice variant (borderless tonal fill):**
 ```
-rounded-xl bg-foreground/5 px-4 py-3
+group rounded-xl bg-foreground/5
 ```
 
 **Used in:** Practice starter Topic / Substance / Treatment filter containers
 
-**Design rationale:** Applies the same tonal-fill elevation principle as the dashboard nested-row fix while preserving the wider `px-4 py-3` filter-container spacing. The `<summary>` label, selected-count metadata, disclosure behavior, pointer cursor, and keyboard focus ring identify the control; the fill is supplementary rather than a required boundary. Secondary metadata on this surface uses `text-foreground/60` rather than `text-muted-foreground` to preserve AA contrast on `bg-foreground/5`. The disclosure affordance is carried by the summary, not the container border: `<summary>` uses `rounded-lg transition-colors hover:bg-foreground/[0.03]`, and the chevron icon uses `h-4 w-4 text-foreground/60 transition-transform group-open:rotate-180` on a parent `<details class="group">`. See [DEBT-290](../debt/debt-290-practice-filter-tonal-fill-elevation.md) and [DEBT-292](../debt/debt-292-filter-section-disclosure-indicator.md).
+**Design rationale:** Applies the same tonal-fill elevation principle as the dashboard nested-row fix while preserving the wider practice filter spacing. The container owns the tonal surface, but the interactive hit area lives on the summary row: `<summary>` uses `rounded-lg px-4 py-3 transition-colors hover:bg-foreground/[0.03]` so the full visible header toggles the disclosure. Expanded content keeps its own `px-4 pb-3` wrapper below the summary. The `<summary>` label, selected-count metadata, disclosure behavior, pointer cursor, and keyboard focus ring identify the control; the fill is supplementary rather than a required boundary. Secondary metadata on this surface uses `text-foreground/60` rather than `text-muted-foreground` to preserve AA contrast on `bg-foreground/5`. The chevron icon uses `h-4 w-4 text-foreground/60 transition-transform group-open:rotate-180` on a parent `<details class="group">`. See [DEBT-290](../debt/debt-290-practice-filter-tonal-fill-elevation.md) and [DEBT-292](../debt/debt-292-filter-section-disclosure-indicator.md).
 
 **Dashboard variant (borderless tonal fill):**
 ```
