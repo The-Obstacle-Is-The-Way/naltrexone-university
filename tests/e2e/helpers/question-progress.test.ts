@@ -19,4 +19,12 @@ describe('parseQuestionProgressCount', () => {
       'Could not parse question progress count from "Ready to begin"',
     );
   });
+
+  it('throws when the progress marker is not at the start of the text', () => {
+    expect(() =>
+      parseQuestionProgressCount('Status: Question 1 of 2 — loading'),
+    ).toThrow(
+      'Could not parse question progress count from "Status: Question 1 of 2 — loading"',
+    );
+  });
 });

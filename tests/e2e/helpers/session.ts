@@ -7,20 +7,16 @@ async function verifyRequestedSessionCount(
   page: Page,
   requestedCount: number,
 ): Promise<void> {
-  const progressIndicator = page.getByText(/Question 1 of \d+/);
+  const progressIndicator = page.getByText(/^Question 1 of \d+\b/);
   await expect(progressIndicator).toBeVisible({ timeout: 15_000 });
 
   const progressText = (await progressIndicator.textContent())?.trim() ?? '';
   const actualCount = parseQuestionProgressCount(progressText);
-  if (actualCount < requestedCount) {
+  if (actualCount !== requestedCount) {
     throw new Error(
       `startSession created ${actualCount}-question session but ${requestedCount} were requested`,
     );
   }
-
-  await expect(page.getByText(`Question 1 of ${requestedCount}`)).toBeVisible({
-    timeout: 15_000,
-  });
 }
 
 export async function startSession(

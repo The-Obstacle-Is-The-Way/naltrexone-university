@@ -133,16 +133,20 @@ function createLocator(input: {
 }
 
 function createPracticePage(input: {
-  actualCount: number;
+  availableQuestionCount: number;
   availableStatus?: 'Unanswered' | 'Incorrect' | 'Bookmarked';
+  defaultQuestionCount?: number;
+  forcedActualCount?: number;
   incompleteSession?: boolean;
 }): PracticePageLike {
   const state = {
     abandonDialogOpen: false,
     currentUrl: '',
     hasIncompleteSession: input.incompleteSession ?? false,
+    requestedQuestionCount: input.defaultQuestionCount ?? 1,
     selectedMode: 'tutor' as 'tutor' | 'exam',
     selectedStatus: 'Unanswered' as 'Unanswered' | 'Incorrect' | 'Bookmarked',
+    startedQuestionCount: null as number | null,
     sessionStarted: false,
   };
   const availableStatus = input.availableStatus ?? 'Unanswered';
@@ -159,6 +163,9 @@ function createPracticePage(input: {
         throw new Error('Fake page only supports one enabled status.');
       }
 
+      state.startedQuestionCount =
+        input.forcedActualCount ??
+        Math.min(state.requestedQuestionCount, input.availableQuestionCount);
       state.currentUrl = '/app/practice/session-1';
       state.sessionStarted = true;
     },
@@ -202,6 +209,12 @@ function createPracticePage(input: {
       return createLocator({
         isVisible: () =>
           state.currentUrl === '/app/practice' && !state.hasIncompleteSession,
+        onFill: (value) => {
+          const parsed = Number(value);
+          if (Number.isFinite(parsed)) {
+            state.requestedQuestionCount = Math.trunc(parsed);
+          }
+        },
       });
     }),
     getByRole: vi.fn(
@@ -292,7 +305,7 @@ function createPracticePage(input: {
         state.selectedMode === 'tutor'
           ? 'Explanations shown after each answer.'
           : 'Explanations shown after you submit the exam.';
-      const sessionProgress = `Question 1 of ${input.actualCount} — ${modeHint}`;
+      const sessionProgress = `Question 1 of ${state.startedQuestionCount ?? 0} — ${modeHint}`;
       const matches =
         typeof text === 'string'
           ? sessionProgress.includes(text)
@@ -310,7 +323,10 @@ function createPracticePage(input: {
 
 describe('startSession helper', () => {
   it('returns only after the requested session progress indicator is visible', async () => {
-    const page = createPracticePage({ actualCount: 2 });
+    const page = createPracticePage({
+      availableQuestionCount: 5,
+      defaultQuestionCount: 1,
+    });
 
     await startSession(page as never, 'tutor', 2);
 
@@ -321,10 +337,25 @@ describe('startSession helper', () => {
   });
 
   it('fails explicitly when the created session is smaller than requested', async () => {
-    const page = createPracticePage({ actualCount: 1 });
+    const page = createPracticePage({
+      availableQuestionCount: 1,
+      defaultQuestionCount: 1,
+    });
 
     await expect(startSession(page as never, 'tutor', 2)).rejects.toThrow(
       'startSession created 1-question session but 2 were requested',
+    );
+  });
+
+  it('fails explicitly when the created session is larger than requested', async () => {
+    const page = createPracticePage({
+      availableQuestionCount: 5,
+      defaultQuestionCount: 1,
+      forcedActualCount: 3,
+    });
+
+    await expect(startSession(page as never, 'tutor', 2)).rejects.toThrow(
+      'startSession created 3-question session but 2 were requested',
     );
   });
 });
