@@ -2,7 +2,8 @@
 
 **Priority:** P3
 **Created:** 2026-03-09
-**Status:** Open
+**Status:** Resolved
+**Resolved:** 2026-03-09
 
 ---
 
@@ -10,7 +11,7 @@
 
 The practice page's collapsible filter sections (Topic, Substance, Treatment) have no visual disclosure indicator — no chevron, caret, or arrow. The default `<details>` marker is suppressed (`list-none` on `<summary>`) and no replacement icon is provided.
 
-**File:** `app/(app)/app/practice/components/practice-session-starter.tsx:215`
+**File:** `app/(app)/app/practice/components/practice-session-starter.tsx:216`
 
 ```tsx
 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-foreground outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]">
@@ -60,7 +61,7 @@ Add a `ChevronDown` icon (from `lucide-react`, already a project dependency) to 
 
 ```tsx
 <details className="rounded-xl bg-foreground/5 px-4 py-3 group">
-  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg text-sm font-medium text-foreground outline-none transition-colors hover:bg-foreground/[0.08] focus-visible:ring-ring/50 focus-visible:ring-[3px]">
+  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg text-sm font-medium text-foreground outline-none transition-colors hover:bg-foreground/[0.03] focus-visible:ring-ring/50 focus-visible:ring-[3px]">
     <span>{label}</span>
     <span className="flex items-center gap-2">
       <span className="text-xs font-normal text-foreground/60">
@@ -98,13 +99,13 @@ Combine the chevron (always-visible affordance) with a subtle hover treatment (i
 
 | File | Change |
 |------|--------|
-| `app/(app)/app/practice/components/practice-session-starter.tsx:215–219` | Add chevron icon to `<summary>`, optionally add summary hover treatment |
+| `app/(app)/app/practice/components/practice-session-starter.tsx:212–223` | Add `group` to `<details>`, add chevron icon to `<summary>`, and add summary hover treatment |
 
 ### Test updates
 
 | File | Change |
 |------|--------|
-| `app/(app)/app/practice/components/practice-session-starter.test.tsx` | Assert presence of disclosure icon in filter section summaries |
+| `app/(app)/app/practice/components/practice-session-starter.test.tsx` | Assert presence of disclosure icon in filter section summaries, plus `group` and `group-open:rotate-180` wiring |
 
 ### Doc updates
 
@@ -136,3 +137,16 @@ The Chrome-based visual audit that surfaced this finding also confirmed:
 - SegmentedControl containers are visually distinct from filter containers (different fill, explicit border, inline size)
 - Filter container tonal fill creates a faint grouping (~1.11:1 both themes) — works via spatial layout rather than fill contrast
 - Light mode chip border contrast is noncompliant (tracked separately as DEBT-291: ~1.10:1 vs the tonal-fill parent, ~1.23:1 vs plain white/card)
+
+---
+
+## Outcome
+
+Resolved in `app/(app)/app/practice/components/practice-session-starter.tsx` by shipping Approach C:
+
+- `<details>` now carries `group` so disclosure state is available to child utilities
+- `<summary>` now uses `rounded-lg transition-colors hover:bg-foreground/[0.03]`
+- The right side of `<summary>` now groups the selected-count text with a `ChevronDown` icon
+- The chevron uses `h-4 w-4 text-foreground/60 transition-transform group-open:rotate-180`
+
+The tonal-fill container from DEBT-290 remains intact. No borders were reintroduced, and no FilterChip styling changed as part of this follow-up.

@@ -109,13 +109,15 @@ Three collapsible `<details>` elements, one per tag kind. Only rendered when `ta
 
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
-| Container | `<details>` | S-2 (practice variant, tonal fill) | `:211–239` | `rounded-xl bg-foreground/5 px-4 py-3` |
-| Summary header | `<summary>` | — | `:215` | `flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-foreground` + focus ring |
-| Section label | `<span>` | — | `:216` | "Topic" / "Substance" / "Treatment" |
-| Selected count | `<span>` | — | `:217` | `text-xs font-normal text-foreground/60` — "(N selected)" |
-| Chip fieldset | `<fieldset>` | — | `:222` | `flex flex-wrap gap-2 border-0 p-0 m-0`, `aria-label={label}` |
-| Filter chips | `<FilterChip>` | I-4 | `:227` | Multi-select toggle buttons (see below) |
-| Helper text | `<div>` | — | `:235` | `text-xs text-foreground/60` — "Leave empty to include all {kind}." |
+| Container | `<details>` | S-2 (practice variant, tonal fill) | `:212–243` | `group rounded-xl bg-foreground/5 px-4 py-3` |
+| Summary header | `<summary>` | — | `:216` | `flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg text-sm font-medium text-foreground transition-colors hover:bg-foreground/[0.03]` + focus ring |
+| Section label | `<span>` | — | `:217` | "Topic" / "Substance" / "Treatment" |
+| Summary right cluster | `<span>` | — | `:218` | `flex items-center gap-2` — groups count + chevron |
+| Selected count | `<span>` | — | `:219` | `text-xs font-normal text-foreground/60` — "(N selected)" |
+| Disclosure chevron | `<ChevronDown>` | — | `:222` | `h-4 w-4 text-foreground/60 transition-transform group-open:rotate-180` |
+| Chip fieldset | `<fieldset>` | — | `:226` | `flex flex-wrap gap-2 border-0 p-0 m-0`, `aria-label={label}` |
+| Filter chips | `<FilterChip>` | I-4 | `:231` | Multi-select toggle buttons (see below) |
+| Helper text | `<div>` | — | `:239` | `text-xs text-foreground/60` — "Leave empty to include all {kind}." |
 
 #### Tag Loading/Error States
 
