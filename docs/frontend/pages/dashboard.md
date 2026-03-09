@@ -29,8 +29,8 @@ Top to bottom:
 | Session rows | `<Link>` with I-1 classes | I-1: Hoverable Row | Nested inside session container card |
 | Activity rows | `<Link>` with I-1 classes | I-1: Hoverable Row | Nested inside activity container card |
 | Unavailable activity | `<div>` with S-2 classes | S-2: Muted Row | Static nested row, no link — question deleted |
-| Mode badges | Inline `<span>` with pill classes | — | `border-border/60`, `dark:border-foreground/40`, `text-muted-foreground` |
-| Difficulty badges | Inline `<span>` with pill classes | — | Same border + text tokens as mode badges |
+| Mode badges | Inline `<span>` with pill classes | — | `bg-foreground/[0.06] border-0 text-foreground/60` (borderless tonal fill) |
+| Difficulty badges | Inline `<span>` with pill classes | — | Same fill + text tokens as mode badges |
 | Header action links | `<Button variant="link">` | L-5: Secondary Header Action | Uses `headerActionLinkClasses` |
 | Error state | `<ErrorCard>` | — | Session history fetch failure |
 
@@ -42,10 +42,10 @@ Top to bottom:
 bg-background (Layer 0 — page)
   └─ <Card> bg-card (Layer 1 — stat / streak / CTA cards)         ← FLAT
   └─ <Card> bg-card (Layer 1 — session / activity containers)     ← NESTED
-       └─ <Link> bg-muted/20 + border-border/60 (Layer 2 — rows) ← ROWS INSIDE CARD
+       └─ <Link> bg-foreground/5 (borderless) (Layer 2 — rows)    ← TONAL FILL INSIDE CARD
 ```
 
-**Known issues:** The top-half cards are flat (card IS the content). The bottom-half cards are containers (card WRAPS a list of individually-bordered rows). The inner row borders — strengthened to `dark:border-foreground/40` for WCAG compliance — are about **2.8x** stronger contrast than the outer card's `border-border`, creating an inverted visual hierarchy where children shout louder than the parent. The fix (DEBT-289) is to remove inner borders entirely and use tonal fill elevation (`bg-foreground/5`, borderless `rounded-xl` shapes) following Material Design 3's dark-theme overlay model, with `hover:bg-foreground/[0.08]` for a monotonic brightness ramp. Badge pills will also convert to borderless fill-only with `text-foreground/60` as a companion change. Also, the `lg:grid-cols-2` recent-lists row currently stretches both panels to equal height, which amplifies empty space in the shorter Recent sessions panel (`items-start` fix included in DEBT-289). See [DEBT-289](../../debt/debt-289-dashboard-nested-card-surface-strategy.md).
+The top-half cards are flat (card IS the content). The bottom-half cards are containers (card WRAPS a list of borderless tonal-fill rows). Inner rows use `bg-foreground/5` with `hover:bg-foreground/[0.08]` — no borders, just a subtle fill lift following Material Design 3's tonal elevation model. Badge pills use `bg-foreground/[0.06] border-0 text-foreground/60`. The bottom grid uses `items-start` so the shorter left panel does not stretch to match the taller right panel. See [DEBT-289](../../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) for the full rationale and design research.
 
 ---
 
@@ -61,19 +61,11 @@ bg-background (Layer 0 — page)
 
 ## Dark Mode Tokens
 
-**Current state** (pre-DEBT-289) — rows use I-1 pattern dark mode overrides:
-- Rest border: `dark:border-foreground/40` (~3.46:1 vs card) — **to be removed**
-- Hover border: `dark:hover:border-foreground/70` — **to be removed**
-- Rest fill: `bg-muted/20` (tinted Layer 2) — **to be replaced with `bg-foreground/5`**
-- Hover fill: `hover:bg-muted/40` — **to be replaced with `hover:bg-foreground/[0.08]`** (fixes hover inversion)
-
-**Target state** (post-DEBT-289) — borderless tonal fill elevation:
+Rows use borderless tonal fill elevation (implemented in [DEBT-289](../../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md)):
 - No rest border — inner cards defined by fill shape only
 - Rest fill: `bg-foreground/5` (~#1D1D1D, rgb(29) on card #121212, WCAG 1.11:1)
 - Hover fill: `hover:bg-foreground/[0.08]` (~#242424, rgb(36) — same foreground scale, monotonic lift)
-- Badge pills: borderless fill-only (`bg-foreground/[0.06] border-0 text-foreground/60`) — companion change
-
-Mode/difficulty badge borders currently use `dark:border-foreground/40` and `text-muted-foreground` — will be converted to borderless fill-only (`bg-foreground/[0.06] border-0 text-foreground/60`) as a companion change in DEBT-289 so small badge text stays AA-compliant in dark mode.
+- Badge pills: `bg-foreground/[0.06] border-0 text-foreground/60` — borderless fill-only, AA-compliant text in dark mode (5.94:1 on badge bg)
 
 ---
 
@@ -82,4 +74,4 @@ Mode/difficulty badge borders currently use `dark:border-foreground/40` and `tex
 - [Frontend Standards](../standards.md) — Design tokens, Card component standard
 - [Pattern Registry](../pattern-registry.md) — S-1 (Card Surface), I-1 (Hoverable Row)
 - [Contrast Policy](../contrast-policy.md) — WCAG AA targets
-- [DEBT-289](../../debt/debt-289-dashboard-nested-card-surface-strategy.md) — Nested card visual strategy
+- [DEBT-289](../../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) — Nested card visual strategy

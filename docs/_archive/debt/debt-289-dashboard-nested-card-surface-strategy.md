@@ -2,7 +2,8 @@
 
 **Priority:** P3
 **Created:** 2026-03-08
-**Status:** Brainstorming
+**Status:** Resolved
+**Resolved:** 2026-03-08 — commit `1112727f`
 
 ---
 
