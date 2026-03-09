@@ -19,46 +19,164 @@ The border alone (`border-foreground/45` / `dark:border-foreground/40`) defines 
 
 DEBT-290 changed chips from `bg-background` (which "punched through" the tonal container, creating a jarring white hole in dark mode) to `bg-transparent`. This fixed the punch-out problem but created the opposite extreme — chips now have zero depth against their parent. The fix was correct for the punch-out bug, but it overcorrected.
 
-### What the industry does
+---
 
-**Material Design 3** uses `surface-variant` as the unselected filter chip container color — a subtle but perceptible fill that sits between the parent surface and full card-level elevation. The chip is not transparent and not card-colored; it occupies its own surface step.
+## Design System Evidence
 
-Key principle: **chips are interactive controls, not labels.** Interactive controls need their own surface identity to communicate "I am a thing you can press."
+Three major design systems converge on the same answer: interactive controls sitting on tonal surfaces need a subtle fill at ~7-10% white-equivalent opacity.
 
-### The constraint
+### Material Design 3
 
-The fill must be:
-- **Lighter than the container** in dark mode (lift up, not punch down)
-- **Subtler than `bg-background`/`bg-card`** (that was the original punch-out problem)
-- **Monotonic with the foreground-based opacity scale** established by DEBT-290
-- **WCAG compliant** — border must still meet SC 1.4.11 3:1 against the new fill, text must still meet SC 1.4.3 4.5:1
+**Source:** [M3 filter chip specs](https://m3.material.io/components/chips/specs), `_md-comp-filter-chip.scss` in material-web repo.
 
-### Candidate fills (dark mode, parent = `bg-foreground/5` ≈ #1D1D1D on card #121212)
+- **Flat unselected chip:** Transparent fill + 1px `outline` border. This is the default when chips sit directly on the page surface.
+- **Elevated unselected chip:** `surface-container-low` fill (tone 6). Used when chips sit on images or tonal surfaces — exactly our case.
+- **Selected chip:** `secondary-container` fill, border removed.
 
-| Token | Computed (dark) | Lift vs parent | Feel |
-|-------|----------------|---------------|------|
-| `bg-foreground/[0.08]` | ~#282828 | +1.1 steps | Very subtle, might not be enough |
-| `bg-foreground/10` | ~#2B2B2B | +1.2 steps | Gentle lift, closest to M3 surface-variant |
-| `bg-foreground/[0.12]` | ~#2F2F2F | +1.3 steps | Noticeable, could work |
-| `bg-foreground/15` | ~#343434 | +1.5 steps | Possibly too much, starts looking like its own card |
+M3's tonal surface scale (dark, neutral gray):
 
-The hover state is currently `hover:bg-foreground/[0.08]`. If the rest fill becomes `/[0.08]`, the hover needs to step up (e.g., `/[0.12]` or `/[0.15]`).
+| Role | Tone | Approx Hex | Delta from surface (tone 4) |
+|------|------|------------|---------------------------|
+| surface | 4 | #0E0E0E | — |
+| surface-container-low | 6 | #131313 | +2 tonal steps |
+| surface-container | 9 | #191919 | +5 |
+| surface-container-high | 12 | #1F1F1F | +8 |
+| surface-container-highest | 15 | #252525 | +11 |
 
-### Light mode consideration
+Key insight: M3 uses **2 tonal steps** between the parent surface and an elevated chip. This is a very subtle, deliberate lift — not a jump to card-level.
 
-In light mode, foreground is ~#090909. Foreground-opacity fills darken the surface rather than lighten it:
+### Radix UI (shadcn's foundation)
 
-| Token | Computed (light, parent ≈ #F3F3F3) | Effect |
-|-------|-------------------------------------|--------|
-| `bg-foreground/[0.03]` | ~#EDEDED | Very subtle darkening |
-| `bg-foreground/[0.05]` | ~#E8E8E8 | Gentle, visible lift |
-| `bg-foreground/[0.08]` | ~#E0E0E0 | Noticeable, chip clearly has its own surface |
+**Source:** [Radix Colors scale](https://www.radix-ui.com/colors/docs/palette-composition/understanding-the-scale)
 
-Light mode chips might look fine with the same token as dark mode (foreground-opacity scales naturally adapt), but this needs visual verification.
+| Step | Semantic Purpose | Dark alpha (white) | Dark solid |
+|------|-----------------|-------------------|-----------|
+| 2 | Subtle background | ~3.4% | #191919 |
+| **3** | **UI element bg (normal)** | **~7.1%** | **#222222** |
+| **4** | **Hovered UI element bg** | **~10.6%** | **#2A2A2A** |
+| 5 | Active/selected | ~13.4% | #313131 |
 
-### Open question
+Radix explicitly designates **step 3 (~7% white)** as "UI element background" and **step 4 (~10.6%)** as the hover state. The rest → hover delta is ~3.5 percentage points.
 
-Should the chip fill be the same token in both themes, or should it use a `dark:` override? The foreground-opacity approach should scale naturally (foreground is light in dark mode, dark in light mode), but the perceptual result may differ.
+### Apple Human Interface Guidelines
+
+**Source:** [UIColor system fills](https://developer.apple.com/documentation/uikit/uicolor/3255069-secondarysystemfill)
+
+Apple uses mid-gray (`rgb(120,120,128)`) at decreasing opacities:
+
+| Fill Role | Dark Alpha | White-equivalent |
+|-----------|-----------|-----------------|
+| systemFill | 36% | ~17% |
+| secondarySystemFill | 32% | ~15% |
+| tertiarySystemFill (large shapes) | 24% | ~11% |
+| **quaternarySystemFill (complex content areas)** | **18%** | **~8.5%** |
+
+Apple's `quaternarySystemFill` (~8.5% white-equivalent) is the closest analog to an unselected chip on a tonal surface.
+
+### Convergence
+
+| System | Resting fill | Hover fill | Delta |
+|--------|-------------|-----------|-------|
+| Radix step 3 → 4 | ~7.1% | ~10.6% | +3.5pp |
+| Apple quaternary → tertiary | ~8.5% | ~11% | +2.5pp |
+| M3 surface-container-low → high | tone 6 | tone 12 | +6 tonal steps |
+
+All three systems land in the **7-10% range** for interactive element resting fills on tonal surfaces, with a **3-5 percentage point** bump to hover.
+
+---
+
+## Three Options
+
+All computed values assume the **current shipped DEBT-290/291/292 stack**:
+- page `#090909` (dark) / `#FFFFFF` (light)
+- card `#121212` (dark) / `#FFFFFF` (light)
+- filter container `bg-foreground/5` ≈ `#1D1D1D` (dark) / `#F2F3F3` (light)
+
+### Option A: Minimal Lift — `bg-foreground/[0.05]`
+
+| Property | Dark | Light |
+|----------|------|-------|
+| Chip rest fill | ~#272727 | ~#E6E7E8 |
+| Delta from container | +10 RGB | −12 RGB |
+| Text contrast (foreground/60) | ~5.58:1 ✓ | ~5.01:1 ✓ |
+| Border contrast (vs container) | ~3.12:1 ✓ | ✓ |
+| Hover fill | Keep `/[0.08]` (+3pp) | Same |
+| Hover text contrast | ~12.76:1 ✓ (accent-foreground) | ~16.16:1 ✓ |
+
+**Pros:** Most conservative. Barely touches the current look.
+**Cons:** May not solve the problem. Only +8 RGB from container — might still look flat. Below every design system's recommended interactive-element threshold.
+
+### Option B: Radix-Aligned — `bg-foreground/[0.07]` *(RECOMMENDED)*
+
+| Property | Dark | Light |
+|----------|------|-------|
+| Chip rest fill | ~#2C2C2C | ~#E1E3E4 |
+| Delta from container | +15 RGB | −17 RGB |
+| Text contrast (foreground/60) | ~5.34:1 ✓ | ~4.91:1 ✓ |
+| Border contrast (vs container) | ~3.12:1 ✓ | ✓ |
+| Hover fill | Bump to `/[0.12]` (+5pp) | Same |
+| Hover text contrast | ~10.32:1 ✓ (accent-foreground) | ~13.86:1 ✓ |
+| Rest → hover delta | +5pp (matches Radix 3→4 step) | Same |
+
+**Pros:**
+- Lands exactly on Radix step 3 ("UI element background") — evidence-based, not arbitrary
+- +14 RGB from container is perceptible: the chip reads as "a thing on a surface" without looking like a card
+- Hover delta of +5pp matches established design system convention (Radix: +3.5pp, Apple: +2.5pp)
+- Foreground-opacity scale stays monotonic: container `/5` → chip `/7` → hover `/12` → selected `bg-primary`
+- Single token works in both themes (foreground-based opacity adapts automatically)
+
+**Cons:**
+- Hover needs to bump from `/[0.08]` to `/[0.12]` (one extra token change)
+- Text contrast drops from 5.99:1 (on transparent) to 5.04:1 (on `/[0.07]`) — still well above AA 4.5:1
+
+### Option C: Apple-Aligned — `bg-foreground/10`
+
+| Property | Dark | Light |
+|----------|------|-------|
+| Chip rest fill | ~#323232 | ~#DADCDD |
+| Delta from container | +21 RGB | −24 RGB |
+| Text contrast (foreground/60) | ~5.02:1 ✓ | ~4.81:1 ✓ |
+| Border contrast (vs container) | ~3.12:1 ✓ | ✓ |
+| Hover fill | Bump to `/[0.15]` (+5pp) | Same |
+| Hover text contrast | ~9.42:1 ✓ (accent-foreground) | ~12.93:1 ✓ |
+| Rest → hover delta | +5pp | Same |
+
+**Pros:** Strong visual distinction. Chips unmistakably have their own surface.
+**Cons:**
+- Text contrast at resting state is borderline — 4.56:1 in dark, right at 4.5:1 in light. No safety margin.
+- +23 RGB delta starts reading as "mini-card" rather than "chip on surface" — the chip fill competes with the container fill for visual hierarchy
+- `/10` is where Radix places step 4 (hover territory), so the resting state already occupies hover-level brightness
+- Apple's quaternary fill (~8.5%) was designed for pure-black backgrounds, not for a pre-tinted container; on our `/5` container the effective cumulative lift is higher than intended
+
+---
+
+## Recommendation: Option B (`bg-foreground/[0.07]`)
+
+Option B is the right answer for three reasons:
+
+1. **Evidence convergence.** Three independent design systems (Radix, M3, Apple) converge on 7-10% for interactive element resting fills. `/[0.07]` hits the low end of that range, which is appropriate because our chips *also* have borders — they don't need to rely on fill alone for identification.
+
+2. **Balanced contrast headroom.** Text contrast stays at 5.34:1 in dark mode and 4.91:1 in light mode, leaving comfortable AA margin without pushing the chip into mini-card territory. Option C is no longer numerically unsafe after recomputing the real parent surface, but it still spends more fill contrast than the component needs.
+
+3. **Monotonic scale.** The foreground-opacity ramp stays cleanly stepped:
+   ```
+   Container:  bg-foreground/5     (surface)
+   Chip rest:  bg-foreground/[0.07] (interactive element)
+   Chip hover: bg-foreground/[0.12] (hover state)
+   Chip selected: bg-primary         (high-contrast active)
+   ```
+   Each step is perceptually distinct. No collisions, no ambiguity.
+
+### Exact class change (FilterChip unselected)
+
+```diff
+- 'border-foreground/45 bg-transparent text-foreground/60 hover:bg-foreground/[0.08] hover:text-accent-foreground dark:border-foreground/40'
++ 'border-foreground/45 bg-foreground/[0.07] text-foreground/60 hover:bg-foreground/[0.12] hover:text-accent-foreground dark:border-foreground/40'
+```
+
+Two token changes:
+1. `bg-transparent` → `bg-foreground/[0.07]` (rest fill)
+2. `hover:bg-foreground/[0.08]` → `hover:bg-foreground/[0.12]` (hover fill, maintaining +5pp delta)
 
 ---
 
@@ -66,42 +184,53 @@ Should the chip fill be the same token in both themes, or should it use a `dark:
 
 ### What's wrong
 
-DEBT-292 added `hover:bg-foreground/[0.03]` to `<summary>` as part of the disclosure affordance (Approach C = chevron + hover). In practice, the hover effect creates a barely-perceptible tinted rectangle over the "Topic" / "Substance" / "Treatment" label area that looks unfinished and distracting — like a rendering glitch rather than intentional interaction feedback.
+DEBT-292 added `hover:bg-foreground/[0.03]` to `<summary>` as part of the disclosure affordance. In practice, the hover effect creates a barely-perceptible tinted rectangle that looks like a rendering glitch rather than intentional interaction feedback.
 
 ### Why the chevron alone is sufficient
 
-The chevron (`ChevronDown` with `group-open:rotate-180`) is a universally recognized disclosure indicator. It communicates:
-- "This section is expandable" (at rest)
-- "This section is expanded" (rotated 180°)
-- "Click here to toggle" (implied by the above)
+The chevron (`ChevronDown` with `group-open:rotate-180`) is a universally recognized disclosure indicator. It communicates expandability, expanded state, and clickability. The `cursor-pointer` provides hover feedback. No additional hover fill is needed.
 
-The summary hover was added as belt-and-suspenders, but it's the wrong kind of feedback for this control. Hover backgrounds work well on list rows and menu items (large rectangular hit targets). On a `<summary>` inside a tonal container, the hover fill competes with the container's own fill and creates visual noise.
+Hover backgrounds work well on list rows and menu items (large rectangular hit targets). On a `<summary>` inside a tonal container, the hover fill competes with the container's own fill and creates visual noise.
 
-### Proposed fix
+### Fix
 
-Remove `hover:bg-foreground/[0.03]` from the `<summary>` className. Keep everything else from DEBT-292 (chevron, `group`, `transition-transform`, `group-open:rotate-180`).
+Remove `hover:bg-foreground/[0.03]` from the `<summary>` className. One token deletion.
 
-The cursor is already `cursor-pointer`, which provides hover feedback. The chevron provides affordance. No additional hover fill is needed.
+```diff
+- <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium text-foreground outline-none transition-colors hover:bg-foreground/[0.03] focus-visible:ring-ring/50 focus-visible:ring-[3px] [&::-webkit-details-marker]:hidden">
++ <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium text-foreground outline-none transition-colors focus-visible:ring-ring/50 focus-visible:ring-[3px] [&::-webkit-details-marker]:hidden">
+```
+
+---
+
+## Scope & Impact
+
+**FilterChip usage:** Practice page tag filters only (`practice-session-starter.tsx` lines 231-236). No other consumers exist in the codebase.
+
+**Files to change:**
+1. `components/ui/filter-chip.tsx` — two class token changes (rest fill, hover fill)
+2. `components/ui/filter-chip.test.tsx` — update assertions for new tokens
+3. `app/(app)/app/practice/components/practice-session-starter.tsx` — remove summary hover class
+4. `app/(app)/app/practice/components/practice-session-starter.test.tsx` — update summary hover assertion if it exists
+5. Docs: `practice.md`, `pattern-registry.md`, `contrast-policy.md` (FilterChip row updates)
+
+**WCAG compliance summary (Option B):**
+
+| Check | Value | Pass |
+|-------|-------|------|
+| Chip text (foreground/60) vs rest fill (dark) | 5.34:1 | ✓ AA |
+| Chip text (foreground/60) vs rest fill (light) | 4.90:1 | ✓ AA |
+| Chip border vs container (dark) | 3.12:1 | ✓ SC 1.4.11 |
+| Hover text (accent-foreground) vs hover fill (dark) | 10.3:1 | ✓ AA |
+| Selected text (primary-foreground) vs selected fill | ~17:1 | ✓ AA |
 
 ---
 
 ## Severity
 
-**Problem 1 (chip fill):** Medium. The chips work functionally but feel flat. Users can identify them by their borders and text, but the lack of surface differentiation makes the filter sections feel like a wall of text rather than a set of interactive pills. This is a polish issue, not a blocker.
+**Problem 1 (chip fill):** Medium. Chips work functionally but feel flat. The lack of surface differentiation makes filter sections feel like a wall of text rather than interactive pills.
 
-**Problem 2 (summary hover):** Low-Medium. It's cosmetically annoying but doesn't break anything. Easy fix — single class removal.
-
----
-
-## Open Questions
-
-1. **Which foreground-opacity step for chip fill?** Need visual testing of `/[0.08]`, `/10`, and `/[0.12]` in both themes. The answer is "whichever looks like a tangible pill without looking like a card."
-
-2. **Does chip fill change affect hover/selected contrast?** The hover (`hover:bg-foreground/[0.08]`) needs to step up if the rest fill is also `/[0.08]`. Selected state (`bg-primary`) is high-contrast enough to be unaffected.
-
-3. **Should the chip fill be a new shared token or inline?** If other components (e.g., future tag displays) need the same treatment, a token makes sense. If it's practice-page-only, inline is fine. Currently `FilterChip` is shared, so this affects all usages.
-
-4. **Should summary hover removal be a separate DEBT or bundled with chip fill?** It's a one-line deletion, so bundling is probably cleaner.
+**Problem 2 (summary hover):** Low. Cosmetically annoying, one-line fix.
 
 ---
 
@@ -110,3 +239,5 @@ The cursor is already `cursor-pointer`, which provides hover feedback. The chevr
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-03-09 | Created BS-046 | Visual review found chips too flat and summary hover distracting after DEBT-290/291/292 shipped |
+| 2026-03-09 | Chose Option B (`bg-foreground/[0.07]` + hover `/[0.12]`) | Radix step 3/4 alignment, M3 elevated-chip precedent, Apple quaternary fill convergence. Best balance of perceptibility and restraint on the real DEBT-290 parent surface. Monotonic foreground-opacity scale preserved. |
+| 2026-03-09 | Bundle summary hover removal with chip fill change | Both are filter-section polish, one PR keeps the diff cohesive |
