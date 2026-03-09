@@ -3,6 +3,7 @@
 **Priority:** P3
 **Created:** 2026-03-09
 **Status:** Open
+**Recommended:** Approach B (full `text-foreground`)
 
 ---
 
@@ -25,19 +26,43 @@ Unselected filter chips use `text-foreground/60` — 60% foreground opacity. Des
 
 The text only reaches full weight on hover (`hover:text-accent-foreground`), which is too late — users must already know the chip is interactive before they hover. The resting state must communicate "button" at a glance.
 
+### The hierarchy collision
+
+Our own helper text ("Leave empty to include all topics.") also uses `text-foreground/60`. This means chip labels — interactive button labels — sit at the **same visual hierarchy** as passive captions. Users see gray text on gray chips and process them as informational, not actionable.
+
 ### WCAG status
 
-Both themes pass AA (dark 5.34:1, light 4.91:1 from DEBT-294 audit), so this is not a compliance issue. It is a **design hierarchy** issue: the text opacity places the chips in "secondary info" territory rather than "interactive control" territory.
+Both themes pass AA at 60% (dark 5.34:1, light 4.91:1 from DEBT-294 audit). At 100%, contrast will increase significantly — well above AA. This is not a compliance issue. It is a **design hierarchy** issue.
 
-### Design system precedent
+---
 
-| System | Unselected chip label token | Opacity equivalent |
-|--------|---------------------------|-------------------|
-| Material Design 3 | `on-surface` (full color) | 100% |
-| Radix Themes | Step 12 high-contrast text | ~87% |
-| Apple HIG | Primary label for controls | 100% (secondary label at ~60% is for captions) |
+## Design System Evidence
 
-All three systems use full or near-full foreground weight for enabled interactive control labels. The current 60% matches what these systems use for **non-interactive secondary text**.
+### What the major systems actually do
+
+Research into the source code and specifications of M3, Apple, and shadcn reveals:
+
+| System | Unselected chip/toggle label | Method | Source |
+|--------|------------------------------|--------|--------|
+| **Material Design 3** | `on-surface-variant` (~80-85% brightness) | Distinct color token, NOT opacity | `_md-comp-filter-chip.scss` |
+| **Apple HIG** | `label` (100% — pure white dark, black light) | Background carries state, not text dimming | UIKit semantic colors |
+| **shadcn/Radix** | `foreground` (100%) | Inherits full foreground, no dimming | `toggle.tsx` base variant |
+
+**Key finding: no system uses opacity-based dimming for interactive control text.**
+
+- **M3** is the most muted of the three, but even its `on-surface-variant` is ~80-85% brightness in dark mode (`#cac4d0` vs full `on-surface` `#e6e0e9`). That's far above our 60%.
+- **Apple** uses `secondaryLabel` at 60% opacity — but exclusively for captions and metadata, never for control labels. Toggle controls use full `label` (100%).
+- **shadcn** toggle components use full `foreground` at rest. No opacity reduction.
+
+### What 60% maps to in each system
+
+| System | 60% opacity equivalent | Used for |
+|--------|----------------------|----------|
+| M3 | Below `on-surface-variant` | N/A — no control text this dim |
+| Apple | `secondaryLabel` | Captions, timestamps, metadata |
+| shadcn | `text-muted-foreground` | Helper text, descriptions |
+
+Our 60% matches what these systems use for **non-interactive secondary text**. It does not match what any of them use for button or toggle labels.
 
 ---
 
@@ -47,64 +72,78 @@ All three systems use full or near-full foreground weight for enabled interactiv
 
 - DEBT-294's surface depth (`bg-foreground/[0.07]`) gives chips a visible resting surface
 - The border at `foreground/45` (dark `foreground/40`) provides the SC 1.4.11 boundary
-- The hover state transitions to full `accent-foreground` — feels responsive once discovered
 - The selected state (`bg-primary text-primary-foreground`) is emphatic and clear
+- `cursor-pointer` signals interactivity on hover
 
-### The constraint from DEBT-294
+### The selected-state differentiation question
 
-DEBT-294 established the foreground-opacity ramp:
+The concern with full-weight unselected text: does it reduce the gap between selected and unselected states?
 
-```
-Container:  bg-foreground/5      (surface)
-Chip rest:  bg-foreground/[0.07]  (interactive element — Radix step 3)
-Chip hover: bg-foreground/[0.10]  (hover state — Radix step 4)
-Chip selected: bg-primary          (high-contrast active)
-```
+**No.** The selected state differentiates through **three simultaneous channels**:
+1. Fill flip: `bg-foreground/[0.07]` → `bg-primary` (dramatic color shift)
+2. Border flip: `border-foreground/45` → `border-primary`
+3. Text color: `text-foreground` → `text-primary-foreground` (different hue on different surface)
 
-Any text change must preserve this hierarchy. The unselected chip must remain visually subordinate to the selected chip, but should not be so quiet that it reads as passive.
+Even with full foreground text on both states, the fill + border carry the distinction. This is exactly how Apple and shadcn handle it — and it works because the background contrast is emphatically different.
 
-### The key tension
+### Internal consistency
 
-Bumping text closer to 100% increases resting legibility but reduces the **delta** between unselected and selected text weight. The selected state differentiates primarily through its fill flip (`bg-primary`) and border color, not text alone — so there is room to strengthen unselected text without collapsing the states.
+Other interactive controls in this codebase use full-weight text:
+- **SegmentedControl inactive buttons**: `text-muted-foreground` (semantic token, ~51.5% lightness — but on a solid `bg-muted` surface, not a tonal fill)
+- **"Start session" button**: full `text-primary-foreground`
+- **Section headers** ("Topic", "Substance"): full `text-foreground`
+
+FilterChip is the only interactive control that dims its label to 60%. It should match the rest of the UI.
 
 ---
 
-## Potential Approaches
+## Recommended Solution: Approach B — Full `text-foreground`
 
-### Approach A: Bump to `text-foreground/80`
-
-```tsx
-// Unselected:
-'border-foreground/45 bg-foreground/[0.07] text-foreground/80 hover:bg-foreground/[0.10] hover:text-accent-foreground dark:border-foreground/40'
-```
-
-**Rationale:** 80% sits between the current 60% (helper text) and 100% (maximum). This is close to Radix step 12 (~87%). The hover still transitions to full `accent-foreground`, preserving a hover lift.
-
-**Tradeoff:** Moderate improvement. May still feel slightly muted compared to full weight, but preserves clear unselected → selected text delta.
-
-### Approach B: Bump to `text-foreground` (100%)
+### Before
 
 ```tsx
-// Unselected:
-'border-foreground/45 bg-foreground/[0.07] text-foreground hover:bg-foreground/[0.10] hover:text-accent-foreground dark:border-foreground/40'
+'border-foreground/45 bg-foreground/[0.07] text-foreground/60 hover:bg-foreground/[0.10] hover:text-accent-foreground dark:border-foreground/40'
 ```
 
-**Rationale:** Matches M3 and Apple guidance — interactive control labels should be full weight. The selected vs. unselected distinction is carried entirely by fill + border, which is already emphatic (`bg-primary` + `border-primary`).
-
-**Tradeoff:** Unselected and selected text are both at full foreground weight (just different colors: foreground vs. primary-foreground). The fill contrast must do all the work to distinguish states. In dark mode, the selected chip's `text-primary-foreground` (white) on `bg-primary` (dark blue/black) vs. unselected `text-foreground` (near-white) on `bg-foreground/[0.07]` (dark gray) — the fill color is the differentiator. This should be sufficient given the dramatic fill flip.
-
-**Risk:** If the hover text was previously the "reward" for discovering the chip is interactive, making resting text equally strong removes that micro-interaction. However, discoverability at rest is more important than hover delight.
-
-### Approach C: Bump to `text-foreground/80` + remove `hover:text-accent-foreground`
+### After
 
 ```tsx
-// Unselected:
-'border-foreground/45 bg-foreground/[0.07] text-foreground/80 hover:bg-foreground/[0.10] dark:border-foreground/40'
+'border-foreground/45 bg-foreground/[0.07] text-foreground hover:bg-foreground/[0.10] dark:border-foreground/40'
 ```
 
-**Rationale:** If the text starts at 80%, the hover text transition to 100% is only a 20pp lift — barely perceptible. Removing the hover text change simplifies the class string and lets the hover fill change (`bg-foreground/[0.07]` → `bg-foreground/[0.10]`) be the sole hover signal.
+Three changes:
+1. `text-foreground/60` → `text-foreground` — full weight, matching Apple/shadcn and exceeding M3's ~80-85%
+2. Remove `hover:text-accent-foreground` — at full foreground, the hover text transition is imperceptible (in dark mode, `foreground` and `accent-foreground` are identical: `0 0% 93%`; in light mode the difference is negligible). The hover fill change (`bg-foreground/[0.07]` → `bg-foreground/[0.10]`) becomes the sole hover signal, which is cleaner.
+3. No other changes — fill, border, selected state all stay as-is.
 
-**Tradeoff:** Loses the hover text brightening entirely. This is fine if the fill hover delta is perceptible alone.
+### Why not Approach A (`text-foreground/80`)?
+
+80% is defensible (close to M3's `on-surface-variant`), but:
+- It's a compromise that doesn't fully solve the hierarchy collision with helper text at 60%
+- The hover text transition from 80% to `accent-foreground` (~93-100%) is still barely perceptible
+- Apple and shadcn — the two systems closest to our tech stack — both go full weight
+- Simplicity: `text-foreground` is one token, no arbitrary value needed
+
+### Resulting class string
+
+```tsx
+selected
+  ? 'border-primary bg-primary text-primary-foreground'
+  : 'border-foreground/45 bg-foreground/[0.07] text-foreground hover:bg-foreground/[0.10] dark:border-foreground/40'
+```
+
+### Updated foreground-opacity ramp
+
+```
+Container:     bg-foreground/5       (surface)
+Chip fill:     bg-foreground/[0.07]  (Radix step 3)
+Chip text:     text-foreground        (full weight — button label hierarchy)
+Chip hover:    bg-foreground/[0.10]  (Radix step 4)
+Chip selected: bg-primary             (high-contrast active)
+Helper text:   text-foreground/60     (caption hierarchy — unchanged)
+```
+
+The hierarchy is now clear: chip labels read as primary interactive content, helper text remains subordinate.
 
 ---
 
@@ -114,21 +153,21 @@ Bumping text closer to 100% increases resting legibility but reduces the **delta
 
 | File | Change |
 |------|--------|
-| `components/ui/filter-chip.tsx:28` | Update unselected text opacity token |
+| `components/ui/filter-chip.tsx:28` | `text-foreground/60` → `text-foreground`, remove `hover:text-accent-foreground` |
 
 ### Test updates
 
 | File | Change |
 |------|--------|
-| `components/ui/filter-chip.test.tsx` | Update text token assertion |
+| `components/ui/filter-chip.test.tsx` | Assert `text-foreground` present, `text-foreground/60` absent, `hover:text-accent-foreground` absent |
 
 ### Doc updates
 
 | File | Change |
 |------|--------|
-| `docs/frontend/pages/practice.md` | Update FilterChip token table |
+| `docs/frontend/pages/practice.md` | Update FilterChip token table (text token column) |
 | `docs/frontend/pattern-registry.md` | Update I-4 unselected class string |
-| `docs/frontend/contrast-policy.md` | Update chip text contrast ratio if changed |
+| `docs/frontend/contrast-policy.md` | Update chip text contrast description (ratio will increase) |
 | `docs/debt/index.md` | Move DEBT-295 to Resolved when implemented |
 
 ---
@@ -140,7 +179,7 @@ Bumping text closer to 100% increases resting legibility but reduces the **delta
 3. **FilterChip rest fill** — `bg-foreground/[0.07]` stays as shipped by DEBT-294.
 4. **FilterChip hover fill** — `hover:bg-foreground/[0.10]` stays.
 5. **Summary label text** — `text-foreground` at 100% on `<summary>` elements. No change.
-6. **Helper text** — `text-foreground/60` for "Leave empty to include all..." is correctly at helper-text hierarchy. No change.
+6. **Helper text** — `text-foreground/60` for "Leave empty to include all..." stays at helper-text hierarchy. This is the correct hierarchy for captions.
 
 ---
 
@@ -148,6 +187,6 @@ Bumping text closer to 100% increases resting legibility but reduces the **delta
 
 Screenshots captured from production show:
 
-- **Dark mode (before/after DEBT-294):** Chips now have visible surface depth from `bg-foreground/[0.07]`, but the text at 60% foreground still renders as gray-on-dark-gray, making the chips feel like passive labels rather than toggleable buttons
-- **Light mode (full page):** Chips are slightly more legible due to wider overall contrast range, but the 60% text still sits at helper-text visual weight — compare to the section headers ("Topic", "Substance", "Treatment") which are at full foreground and immediately read as primary content
-- **Selected chips (not shown in current screenshots):** When toggled, the flip to `bg-primary text-primary-foreground` is emphatic — the gap between unselected (muted gray) and selected (full contrast) is large enough that strengthening unselected text will not collapse this distinction
+- **Dark mode:** Chips have visible surface depth from `bg-foreground/[0.07]`, but the text at 60% foreground renders as gray-on-dark-gray — the same visual weight as the helper text beneath the chips. Users see a wall of gray and process the chips as informational rather than actionable.
+- **Light mode:** Slightly more legible due to wider overall contrast range, but the 60% text still sits at helper-text visual weight. Compare to the section headers ("Topic", "Substance", "Treatment") at full foreground — they immediately read as primary content while chip labels recede.
+- **Selected chips:** The flip to `bg-primary text-primary-foreground` is emphatic. The gap between unselected and selected is large enough that strengthening unselected text to full foreground will not collapse this distinction — the fill and border carry the state differentiation.
