@@ -76,6 +76,11 @@ Current repo posture:
 | `tests/e2e/review.spec.ts` | Missed questions review flow |
 | `tests/e2e/bookmarks.spec.ts` | Bookmarks CRUD flow |
 | `tests/e2e/core-app-pages.spec.ts` | Entitled app pages load |
+| `tests/e2e/cross-page-navigation.spec.ts` | Cross-page navigation flows |
+| `tests/e2e/session-review-navigation.spec.ts` | Session review with prev/next navigation (SPEC-027/028) |
+| `tests/e2e/review-mode-audit.spec.ts` | Review mode read-only audit |
+| `tests/e2e/history.spec.ts` | History page flows |
+| `tests/e2e/marketing-contrast.spec.ts` | Marketing page contrast checks |
 
 ### Running E2E Tests
 
@@ -353,9 +358,23 @@ killall "Google Chrome"
 
 ### Tests flaky on CI
 
-- Increase `timeout` in playwright.config.ts
-- Use `waitForLoadState('networkidle')` before assertions
-- Add explicit waits: `await page.waitForTimeout(1000)`
+**Do NOT reach for these band-aids:**
+- Do not increase timeouts as a first response
+- Do not add `waitForLoadState('networkidle')` without understanding why it helps
+- Do not add `page.waitForTimeout(1000)` — this masks the root cause
+
+**Instead, diagnose the structural root cause:**
+
+1. **Does the failing test mutate server-side state** (sessions, attempts, bookmarks)?
+   - If yes, add a per-test state reset in `beforeEach`. See `tests/e2e/helpers/reset-bookmarks-for-e2e-user.ts` for the established pattern.
+2. **Does the failure only occur on retries** (passes on attempt 1, fails on retry)?
+   - Suspect cascading state corruption: attempt 1 left database artifacts that retry inherits.
+3. **Does the failure occur on CI but not locally?**
+   - CI runners have fewer resources. Check if assertions need longer timeouts for legitimate async operations (not arbitrary waits).
+4. **Is the test asserting on state created by a different test?**
+   - This is a cross-spec dependency. Add explicit state setup in the affected test.
+
+See [DEBT-293](../debt/debt-293-e2e-shared-state-structural-flakiness.md) for the full analysis of shared-state flakiness and the per-test reset strategy.
 
 ### Server actions hang / UI stuck on "Loading..."
 

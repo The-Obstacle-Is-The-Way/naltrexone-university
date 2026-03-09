@@ -20,7 +20,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 6 future enhancements (F1/F8 resolved by DEBT-277/DEBT-276) | P3 | — |
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 7 verified client-side flows still report only to console or silent fallbacks | P2 | — |
-**Next Debt ID:** DEBT-293
+| [DEBT-293](./debt-293-e2e-shared-state-structural-flakiness.md) | E2E Shared-State Structural Flakiness — verified suite-level-only reset still leaves cross-spec session/attempt/bookmark coupling, but the original placeholder-exhaustion theory was disproven; fix requires full per-test user-state reset plus `startSession()`/review-contract hardening | P1 | — |
+**Next Debt ID:** DEBT-294
 
 ---
 
