@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-07
+**Last Updated:** 2026-03-09
 
 ---
 
@@ -15,32 +15,27 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 **Next Bug ID:** BUG-203
 
-**Latest archival (2026-03-03):**
+**Latest archival (2026-03-09):**
+- BUG-199 invalidated after tracer-bullet verification, archived to `docs/_archive/bugs/`.
+- BUG-200 reclassified as DEBT-286, archived to `docs/_archive/bugs/`.
+- BUG-201 and BUG-202 verified fixed (commit `a8ce087c`), archived to `docs/_archive/bugs/`.
+
+**Previous archival (2026-03-03):**
 - BUG-186, BUG-187, BUG-188 verified fixed (PR #164), archived to `docs/_archive/bugs/`.
 - BUG-189, BUG-190, BUG-191 verified fixed (PR #166), archived to `docs/_archive/bugs/`.
 - BUG-192, BUG-193, BUG-194 verified fixed (PR #165), archived to `docs/_archive/bugs/`.
 - BUG-195, BUG-196, BUG-197, BUG-198 verified fixed (PR #167), archived to `docs/_archive/bugs/`.
 
-**Previous archival (2026-03-02):**
+**Earlier archival (2026-03-02):**
 - BUG-182, BUG-183, and BUG-184 verified fixed (PR #163), archived to `docs/_archive/bugs/`.
 - BUG-180, BUG-181, and BUG-185 verified fixed (PR #162), archived to `docs/_archive/bugs/`.
 - Audit #8: all 12 bugs (BUG-167..179, excluding false-positive BUG-174) verified fixed, archived to `docs/_archive/audits/audit-008-deep-codebase-sweep.md`.
-
-**Earlier archival (2026-02-27):**
 - BUG-165 and BUG-166 verified fixed (PRs #146, #147), archived to `docs/_archive/bugs/`.
 - BUG-160 through BUG-164 verified fixed, merged (PR #144), and archived to `docs/_archive/bugs/`.
 
 ## Open Bugs
 
 None.
-
-**Recently resolved (2026-03-07):**
-- [BUG-201](bug-201-clerk-webhook-double-cast.md) resolved — removed only the unnecessary Clerk webhook output cast, kept the necessary input cast with an inline SDK-typing explanation, and added type-level regression coverage.
-- [BUG-202](bug-202-redundant-condition-after-find.md) resolved — simplified the failed-response branch to `if (failed)` and added an explicit type guard so TypeScript still narrows the failed result.
-
-**Reclassified / Invalidated (2026-03-07):**
-- BUG-199 invalidated — `stripeSubscriptionSchema` already requires `items.data.min(1)`, so the documented empty-array `TypeError` / HTTP 500 path is not reachable in current production code. See [BUG-199](bug-199-unsafe-array-index-access.md).
-- BUG-200 (Production error observability blind spots) reclassified as [DEBT-286](../debt/debt-286-client-side-error-reporting.md) — root cause is incomplete SPEC-016 rollout, not individual bugs. See AUDIT-011 for analysis.
 
 ## Audit #12 — Extended Sweep: Inference Leaks, Transaction Safety, Zombie Keys (2026-03-03)
 

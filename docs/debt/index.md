@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-08
+**Last Updated:** 2026-03-09
 
 ---
 
@@ -20,7 +20,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 6 future enhancements (F1/F8 resolved by DEBT-277/DEBT-276) | P3 | — |
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 7 verified client-side flows still report only to console or silent fallbacks | P2 | — |
-**Next Debt ID:** DEBT-290
+**Next Debt ID:** DEBT-291
 
 ---
 
@@ -28,6 +28,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-290](./debt-290-practice-filter-tonal-fill-elevation.md) | Practice Filter Container Tonal Fill Elevation — removed filter-container borders, applied `bg-foreground/5` tonal fill, promoted chip/count/helper secondary text to `text-foreground/60`, and switched FilterChip rest/hover to transparent + foreground-scale tokens | P3 | 2026-03-09 | — |
 | [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) | Dashboard Nested Card Surface Strategy — removed inner row borders, applied tonal fill elevation (`bg-foreground/5` + `hover:bg-foreground/[0.08]`) per Material Design 3; includes badge pill companion change (`bg-foreground/[0.06] border-0 text-foreground/60`); dashboard-local | P3 | 2026-03-08 | — |
 | [DEBT-288](../_archive/debt/debt-288-feedback-redundant-section-labels.md) | Feedback Redundant Section Labels — removed the redundant first-card labels in feedback, kept the second-card `"Correct answer"` transition label in incorrect flow, and updated outcome-aware selector coverage | P3 | 2026-03-08 | — |
 | [DEBT-287](../_archive/debt/debt-287-clinical-pearl-label-dark-mode-prominence.md) | Clinical Pearl Label Dark Mode Prominence — promoted the shared clinical pearl label token from `text-muted-foreground` to `text-foreground/60` and synced Pattern Registry F-7 | P3 | 2026-03-07 | — |

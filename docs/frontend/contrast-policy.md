@@ -1,6 +1,6 @@
 # Contrast Policy (WCAG AA)
 
-**Last Updated:** 2026-03-08
+**Last Updated:** 2026-03-09
 **Status:** Canonical
 
 This document defines the app's contrast targets and the engineering rules that follow from them.
@@ -46,6 +46,7 @@ Tonal fill elevation used as a supplementary hierarchy hint, not a required boun
 | Dashboard nested rows (I-1 variant) | `bg-foreground/5` rest, `hover:bg-foreground/[0.08]` hover | 1.11:1 rest, 1.21:1 hover (vs card #121212) | Borderless tonal fill following Material Design 3. Rows are identified by text content, pointer cursor, hover brightness lift, and focus ring — fill is supplementary. | [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) |
 | Dashboard unavailable rows (S-2 variant) | `bg-foreground/5` | 1.11:1 (vs card #121212) | Static tonal fill matching interactive row rest state for visual consistency. Row is identified by its text content. | [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) |
 | Dashboard badge pills (mode/difficulty) | `bg-foreground/[0.06] border-0 text-foreground/60` | Fill 1.14:1 (vs card), text 5.94:1 (AA pass) | Borderless fill-only badge. Text contrast is the required boundary (AA-compliant at 5.94:1); the fill shape is supplementary. | [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) |
+| Practice filter containers (S-2 variant) | `bg-foreground/5` | 1.11:1 (vs card #121212) | Borderless tonal fill for Topic/Substance/Treatment `<details>` containers. The control is identified by summary label, selected-count text, disclosure behavior, pointer cursor, and focus ring; the fill is supplementary. | [DEBT-290](../debt/debt-290-practice-filter-tonal-fill-elevation.md) |
 
 ---
 

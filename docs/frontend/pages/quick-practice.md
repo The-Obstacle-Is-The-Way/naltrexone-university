@@ -248,4 +248,4 @@ Keep WCAG compliance. The selected state gets an additional ring to clearly diff
 
 ## Scope Note
 
-This audit covers the Quick Practice question-answering page only. The Practice Starter page (`/app/practice`) has its own segmented controls and filter sections (`dark:border-foreground/40` on filter chip containers and individual chips). Those are tracked under [BS-044](../../brainstorming/bs-044-dark-mode-border-weight-tiering.md) and will be audited separately as part of the page-by-page dark mode review.
+This audit covers the Quick Practice question-answering page only. The Practice Starter page (`/app/practice`) now has its own page inventory at [practice.md](./practice.md), and its filter-container/chip surface work is tracked under [DEBT-290](../../debt/debt-290-practice-filter-tonal-fill-elevation.md).
