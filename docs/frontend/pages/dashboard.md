@@ -29,8 +29,8 @@ Top to bottom:
 | Session rows | `<Link>` with I-1 classes | I-1: Hoverable Row | Nested inside session container card |
 | Activity rows | `<Link>` with I-1 classes | I-1: Hoverable Row | Nested inside activity container card |
 | Unavailable activity | `<div>` with S-2 classes | S-2: Muted Row | Static nested row, no link — question deleted |
-| Mode badges | Inline `<span>` with pill classes | — | `border-border/60`, `dark:border-foreground/40` |
-| Difficulty badges | Inline `<span>` with pill classes | — | Same border tokens as mode badges |
+| Mode badges | Inline `<span>` with pill classes | — | `border-border/60`, `dark:border-foreground/40`, `text-muted-foreground` |
+| Difficulty badges | Inline `<span>` with pill classes | — | Same border + text tokens as mode badges |
 | Header action links | `<Button variant="link">` | L-5: Secondary Header Action | Uses `headerActionLinkClasses` |
 | Error state | `<ErrorCard>` | — | Session history fetch failure |
 

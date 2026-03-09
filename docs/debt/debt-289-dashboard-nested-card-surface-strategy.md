@@ -58,6 +58,7 @@ Surface: `bg-card` + `border` on `bg-background`. No children with their own bor
     <li>
       <Link className="block rounded-xl border border-border/60 bg-muted/20 p-3
         transition-colors hover:bg-muted/40
+        focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
         dark:border-foreground/40 dark:hover:border-foreground/70">
         {/* row content */}
       </Link>
@@ -66,7 +67,7 @@ Surface: `bg-card` + `border` on `bg-background`. No children with their own bor
 </Card>
 ```
 
-Surface: `bg-card` + `border` on `bg-background`, then inside: `bg-muted/20` + `border-border/60` rows. Two levels of bordered containers. Interactive rows add `dark:border-foreground/40 dark:hover:border-foreground/70`; the unavailable activity row at lines 207-220 is the same nested treatment without hover.
+Surface: `bg-card` + `border` on `bg-background`, then inside: `bg-muted/20` + `border-border/60` rows. Two levels of bordered containers. Interactive rows add `dark:border-foreground/40 dark:hover:border-foreground/70` plus the standard focus-visible ring; the unavailable activity row at lines 207-220 is the same nested treatment without hover.
 
 ---
 
