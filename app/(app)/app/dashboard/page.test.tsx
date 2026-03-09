@@ -505,6 +505,10 @@ describe('app/(app)/app/dashboard', () => {
     const unavailableActivityCardTokens = getClassTokens(
       unavailableActivityCard?.getAttribute('class') ?? '',
     );
+    const bottomGrid = sessionRow?.closest('div.grid');
+    const bottomGridTokens = getClassTokens(
+      bottomGrid?.getAttribute('class') ?? '',
+    );
     const sessionModeBadge = Array.from(doc.querySelectorAll('span')).find(
       (element) => element.textContent === 'Exam',
     );
@@ -521,8 +525,10 @@ describe('app/(app)/app/dashboard', () => {
     expect(sessionRow).not.toBeNull();
     expect(availableActivityRow).not.toBeNull();
     expect(unavailableActivityCard).not.toBeNull();
+    expect(bottomGrid).not.toBeNull();
     expect(sessionModeBadge).not.toBeNull();
     expect(activityDifficultyBadge).not.toBeNull();
+    expect(bottomGridTokens.has('items-start')).toBe(true);
     expect(sessionRowTokens.has('rounded-xl')).toBe(true);
     expect(availableActivityRowTokens.has('rounded-xl')).toBe(true);
     expect(unavailableActivityCardTokens.has('rounded-xl')).toBe(true);
