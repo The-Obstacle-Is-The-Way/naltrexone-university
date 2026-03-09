@@ -24,11 +24,13 @@ Unselected filter chips use `text-foreground/60` — 60% foreground opacity. Des
 | Dark  | ~`#8E8E8E` (60% of `#EDEDED` on `#2C2C2C`) | Gray on dark gray — reads as caption, not button label |
 | Light | ~`#676B73` (60% of `#020817` on `#E1E3E4`) | Medium gray on light gray — slightly better but still muted |
 
-The text only reaches full weight on hover (`hover:text-accent-foreground`), which is too late — users must already know the chip is interactive before they hover. The resting state must communicate "button" at a glance.
+The text only reaches full weight on hover (`hover:text-accent-foreground`), which is too late — users must already know the chip is interactive before they hover. On mobile, hover doesn't exist at all — there is no discovery path. The resting state must communicate "button" at a glance.
 
 ### The hierarchy collision
 
 Our own helper text ("Leave empty to include all topics.") also uses `text-foreground/60`. This means chip labels — interactive button labels — sit at the **same visual hierarchy** as passive captions. Users see gray text on gray chips and process them as informational, not actionable.
+
+Live inspection confirms the colors are identical — the only differentiator is typography: chip labels are `14px / font-weight 500` while helper text is `12px / font-weight 400`. That subtle size/weight gap is not enough to overcome identical color when users scan at a glance.
 
 ### WCAG status
 
@@ -50,9 +52,11 @@ Research into the source code and specifications of M3, Apple, and shadcn reveal
 
 **Key finding: no system uses opacity-based dimming for interactive control text.**
 
-- **M3** is the most muted of the three, but even its `on-surface-variant` is ~80-85% brightness in dark mode (`#cac4d0` vs full `on-surface` `#e6e0e9`). That's far above our 60%.
+- **M3** is the most muted of the three, but even its `on-surface-variant` is ~79-85% brightness in dark mode (`#cac4d0` vs full `on-surface` `#e6e0e9`). That's far above our 60%.
 - **Apple** uses `secondaryLabel` at 60% opacity — but exclusively for captions and metadata, never for control labels. Toggle controls use full `label` (100%).
-- **shadcn** toggle components use full `foreground` at rest. No opacity reduction.
+- **shadcn** toggle components use full `foreground` at rest. No opacity reduction. Their own docs wrap toggle demos in `dark:text-neutral-300` (~83% brightness), confirming the floor is well above 60%.
+
+**Industry consensus:** Interactive control labels in dark mode cluster between **80-93% brightness**. Our 60% is well below every major system's floor.
 
 ### What 60% maps to in each system
 
@@ -84,6 +88,8 @@ The concern with full-weight unselected text: does it reduce the gap between sel
 2. Border flip: `border-foreground/45` → `border-primary`
 3. Text color: `text-foreground` → `text-primary-foreground` (different hue on different surface)
 
+Live inspection confirms the selected state computes to `rgb(237,237,237)` background with `rgb(9,9,9)` text — a complete inversion from the unselected state. The visual distance between "white text on dark chip" (Approach B) and "dark text on white chip" (selected) is enormous. The differentiation comes from the **container fill flip**, not from text dimming.
+
 Even with full foreground text on both states, the fill + border carry the distinction. This is exactly how Apple and shadcn handle it — and it works because the background contrast is emphatically different.
 
 ### Internal consistency
@@ -94,6 +100,8 @@ Other interactive controls in this codebase use full-weight text:
 - **Section headers** ("Topic", "Substance"): full `text-foreground`
 
 FilterChip is the only interactive control that dims its label to 60%. It should match the rest of the UI.
+
+**Will full foreground overwhelm the card?** No. The SegmentedControl labels ("Unanswered", "Incorrect", "Bookmarked") already sit near full foreground brightness and don't read as heavy. Filter chips have smaller text (14px vs the segmented control's larger sizing), a constrained pill shape, and live inside a tonal container that visually contains them. Full foreground text on chips will not exceed the weight of the segmented controls above.
 
 ---
 
@@ -183,10 +191,30 @@ The hierarchy is now clear: chip labels read as primary interactive content, hel
 
 ---
 
-## Chrome Agent Visual Evidence (2026-03-09)
+## Chrome Agent Visual Audit (2026-03-09)
 
-Screenshots captured from production show:
+A Claude Chrome agent performed a live inspection of the practice page on the deployed production build, extracting computed colors and evaluating all three options. Key findings:
 
-- **Dark mode:** Chips have visible surface depth from `bg-foreground/[0.07]`, but the text at 60% foreground renders as gray-on-dark-gray — the same visual weight as the helper text beneath the chips. Users see a wall of gray and process the chips as informational rather than actionable.
-- **Light mode:** Slightly more legible due to wider overall contrast range, but the 60% text still sits at helper-text visual weight. Compare to the section headers ("Topic", "Substance", "Treatment") at full foreground — they immediately read as primary content while chip labels recede.
-- **Selected chips:** The flip to `bg-primary text-primary-foreground` is emphatic. The gap between unselected and selected is large enough that strengthening unselected text to full foreground will not collapse this distinction — the fill and border carry the state differentiation.
+### Hierarchy collision — confirmed via computed colors
+
+The agent extracted computed colors and confirmed that chip text and helper text resolve to **the exact same color** — both are `text-foreground/60`. The only differentiator is typography (14px/500 vs 12px/400), which is insufficient at a glance. The agent described this as "the real smoking gun against 60%."
+
+### Selected-state differentiation — no collapse risk
+
+The agent clicked chips and verified the selected state computes to `rgb(237,237,237)` background with `rgb(9,9,9)` text — a complete inversion. The visual distance between "white text on dark chip" (Approach B) and "dark text on white chip" (selected) was described as "enormous." The differentiation comes from the container fill flip, not from text dimming.
+
+### Hover-only brightening — confirmed too late
+
+The hover jump from 60% → `accent-foreground` is dramatic *once discovered*, but requires prior knowledge of interactivity. On mobile, hover doesn't exist. The agent recommended removing `hover:text-accent-foreground` entirely and letting the background fill change be the sole hover signal — matching Apple and shadcn's pattern.
+
+### Design system cross-reference
+
+The agent independently verified M3's `on-surface-variant` at `#CAC4D0` (~79% brightness) and found shadcn docs using `dark:text-neutral-300` (~83%) for toggle demos. Both sit well above 60%. The agent noted the industry consensus clusters at **80-93% brightness** for interactive control labels in dark mode.
+
+### Recommendation alignment
+
+The agent independently recommended **Option B** (full `text-foreground`) over Option C (80%), citing: our system has no semantic token for 80% foreground; `text-foreground` is a first-class token already used by all other interactive labels on the card; and chips have smaller text (14px) in constrained pill shapes inside tonal containers, so full foreground will not overwhelm the card.
+
+### Border token note
+
+The agent suggested softening the border to `border-foreground/25`. This was evaluated and **rejected** — per DEBT-294's SC 1.4.11 analysis, 25% opacity yields ~2.12:1 (dark) / ~1.79:1 (light), both below the 3.0:1 minimum for required UI boundaries. The existing `border-foreground/45` / `dark:border-foreground/40` stays.
