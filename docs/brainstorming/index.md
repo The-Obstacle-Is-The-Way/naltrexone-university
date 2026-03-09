@@ -29,8 +29,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
 | [BS-044](./bs-044-dark-mode-border-weight-tiering.md) | Dark Mode Border Weight Tiering — uniform `dark:border-foreground/40` is WCAG compliant but aesthetically heavy; explore tiered treatment by element role | Active | [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
+| [BS-046](./bs-046-filter-chip-fill-depth-and-summary-hover.md) | Filter Chip Fill Depth + Summary Hover Removal — chips are `bg-transparent` and look flat against container; summary hover is redundant with chevron and visually distracting | Active | [DEBT-290](../debt/debt-290-practice-filter-tonal-fill-elevation.md), [DEBT-292](../debt/debt-292-filter-section-disclosure-indicator.md) |
 
-**Next Brainstorming ID:** BS-046
+**Next Brainstorming ID:** BS-047
 
 ---
 
