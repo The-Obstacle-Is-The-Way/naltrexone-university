@@ -109,13 +109,16 @@ Three collapsible `<details>` elements, one per tag kind. Only rendered when `ta
 
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
-| Container | `<details>` | S-2 (practice variant, tonal fill) | `:211–239` | `rounded-xl bg-foreground/5 px-4 py-3` |
-| Summary header | `<summary>` | — | `:215` | `flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-foreground` + focus ring |
-| Section label | `<span>` | — | `:216` | "Topic" / "Substance" / "Treatment" |
-| Selected count | `<span>` | — | `:217` | `text-xs font-normal text-foreground/60` — "(N selected)" |
-| Chip fieldset | `<fieldset>` | — | `:222` | `flex flex-wrap gap-2 border-0 p-0 m-0`, `aria-label={label}` |
-| Filter chips | `<FilterChip>` | I-4 | `:227` | Multi-select toggle buttons (see below) |
-| Helper text | `<div>` | — | `:235` | `text-xs text-foreground/60` — "Leave empty to include all {kind}." |
+| Container | `<details>` | S-2 (practice variant, tonal fill) | `:212–243` | `group rounded-xl bg-foreground/5` |
+| Summary header | `<summary>` | — | `:216` | `flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-foreground/[0.03] [&::-webkit-details-marker]:hidden` + focus ring |
+| Section label | `<span>` | — | `:217` | "Topic" / "Substance" / "Treatment" |
+| Summary right cluster | `<span>` | — | `:218` | `flex items-center gap-2` — groups count + chevron |
+| Selected count | `<span>` | — | `:219` | `text-xs font-normal text-foreground/60` — "(N selected)" |
+| Disclosure chevron | `<ChevronDown>` | — | `:222` | `h-4 w-4 text-foreground/60 transition-transform group-open:rotate-180` |
+| Expanded content wrapper | `<div>` | — | `:225` | `px-4 pb-3` — keeps body spacing after summary owns the clickable padding |
+| Chip fieldset | `<fieldset>` | — | `:226` | `flex flex-wrap gap-2 border-0 p-0 m-0`, `aria-label={label}` |
+| Filter chips | `<FilterChip>` | I-4 | `:231` | Multi-select toggle buttons (see below) |
+| Helper text | `<div>` | — | `:239` | `text-xs text-foreground/60` — "Leave empty to include all {kind}." |
 
 #### Tag Loading/Error States
 
@@ -145,7 +148,7 @@ Toggle-style pill button. Uses `aria-pressed` for selected state.
 | **Base** | `inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors` |
 | **Focus** | `outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]` |
 | **Disabled** | `disabled:pointer-events-none disabled:opacity-50` |
-| **Unselected** | `border-border bg-transparent text-foreground/60 hover:bg-foreground/[0.08] hover:text-accent-foreground dark:border-foreground/40` |
+| **Unselected** | `border-foreground/45 bg-transparent text-foreground/60 hover:bg-foreground/[0.08] hover:text-accent-foreground dark:border-foreground/40` |
 | **Selected** | `border-primary bg-primary text-primary-foreground` |
 
 ### SegmentedControl (`components/ui/segmented-control.tsx`)
@@ -238,10 +241,10 @@ type PracticeFilters = {
 
 | State | Token | Computed (dark) | Contrast vs parent | Notes |
 |-------|-------|----------------|-------------------|-------|
-| Unselected border | `dark:border-foreground/40` | #6A6A6A | ~3.10:1 vs current `bg-foreground/5` parent (`#1D1D1D`) | Passes 3:1 (required boundary) |
+| Unselected border | `border-foreground/45` + `dark:border-foreground/40` | #707070 (dark override) | ~3.40:1 vs current `bg-foreground/5` parent (`#1D1D1D`) | Passes 3:1 in dark mode; light-mode base token is `border-foreground/45` |
 | Unselected fill | `bg-transparent` | Inherits `#1D1D1D` | N/A | Keeps the chip on the parent tonal surface — no punch-out |
-| Unselected text | `text-foreground/60` | #9B9B9B | ~6.07:1 vs parent | AA pass on the tonal surface |
-| Unselected hover | `hover:bg-foreground/[0.08]` | ~#242424 on the current `bg-foreground/5` parent | — | Foreground-based hover ramp stays monotonic |
+| Unselected text | `text-foreground/60` | #9A9A9A | ~5.99:1 vs parent | AA pass on the tonal surface |
+| Unselected hover | `hover:bg-foreground/[0.08]` | ~#2E2E2E on the current `bg-foreground/5` parent | — | Foreground-based hover ramp stays monotonic |
 | Selected fill | `bg-primary` | #EDEDED | — | High contrast |
 | Selected text | `text-primary-foreground` | #090909 | ~17:1 vs primary | AA pass |
 | Selected border | `border-primary` | #EDEDED | — | Matches fill |
@@ -251,7 +254,7 @@ type PracticeFilters = {
 | Token | Computed (dark) | Contrast vs card (#121212) | Notes |
 |-------|----------------|---------------------------|-------|
 | `bg-foreground/5` | #1D1D1D (rgb 29) | 1.11:1 | Subtle tonal lift — matches dashboard nested-row rest state |
-| Count/helper text `text-foreground/60` | #9B9B9B | ~6.07:1 vs `bg-foreground/5` | Secondary metadata stays AA-compliant on the tonal surface |
+| Count/helper text `text-foreground/60` | #9A9A9A | ~5.99:1 vs `bg-foreground/5` | Secondary metadata stays AA-compliant on the tonal surface |
 
 ### Input
 

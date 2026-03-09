@@ -1,5 +1,6 @@
 'use client';
 
+import { ChevronDown } from 'lucide-react';
 import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -210,15 +211,18 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
                 return (
                   <details
                     key={kind}
-                    className="rounded-xl bg-foreground/5 px-4 py-3"
+                    className="group rounded-xl bg-foreground/5"
                   >
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-foreground outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium text-foreground outline-none transition-colors hover:bg-foreground/[0.03] focus-visible:ring-ring/50 focus-visible:ring-[3px] [&::-webkit-details-marker]:hidden">
                       <span>{label}</span>
-                      <span className="text-xs font-normal text-foreground/60">
-                        ({selectedCount} selected)
+                      <span className="flex items-center gap-2">
+                        <span className="text-xs font-normal text-foreground/60">
+                          ({selectedCount} selected)
+                        </span>
+                        <ChevronDown className="h-4 w-4 text-foreground/60 transition-transform group-open:rotate-180" />
                       </span>
                     </summary>
-                    <div className="mt-3">
+                    <div className="px-4 pb-3">
                       <fieldset
                         className="flex flex-wrap gap-2 border-0 p-0 m-0"
                         aria-label={label}

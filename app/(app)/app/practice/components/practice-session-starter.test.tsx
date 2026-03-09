@@ -163,9 +163,25 @@ describe('PracticeSessionStarter', () => {
     const substanceDetailsTokens = getClassTokens(
       substanceDetails?.getAttribute('class') ?? '',
     );
-    const summaryCount = substanceDetails?.querySelectorAll('summary span')[1];
+    const substanceSummary = substanceDetails?.querySelector('summary');
+    const substanceSummaryTokens = getClassTokens(
+      substanceSummary?.getAttribute('class') ?? '',
+    );
+    const summaryCount = Array.from(
+      substanceDetails?.querySelectorAll('summary span') ?? [],
+    ).find(
+      (element) =>
+        (element.textContent ?? '').trim() === '(1 selected)' &&
+        getClassTokens(element.getAttribute('class') ?? '').has(
+          'text-foreground/60',
+        ),
+    );
     const summaryCountTokens = getClassTokens(
       summaryCount?.getAttribute('class') ?? '',
+    );
+    const summaryChevron = substanceSummary?.querySelector('svg');
+    const summaryChevronTokens = getClassTokens(
+      summaryChevron?.getAttribute('class') ?? '',
     );
     const helperText = Array.from(
       substanceDetails?.querySelectorAll('div') ?? [],
@@ -179,16 +195,36 @@ describe('PracticeSessionStarter', () => {
     const helperTextTokens = getClassTokens(
       helperText?.getAttribute('class') ?? '',
     );
+    const expandedContentWrapperTokens = getClassTokens(
+      helperText?.parentElement?.getAttribute('class') ?? '',
+    );
 
     expect(substanceDetails).toBeDefined();
+    expect(substanceDetailsTokens.has('group')).toBe(true);
     expect(substanceDetailsTokens.has('rounded-xl')).toBe(true);
     expect(substanceDetailsTokens.has('bg-foreground/5')).toBe(true);
+    expect(substanceDetailsTokens.has('px-4')).toBe(false);
+    expect(substanceDetailsTokens.has('py-3')).toBe(false);
     expect(substanceDetailsTokens.has('border')).toBe(false);
     expect(substanceDetailsTokens.has('border-border/60')).toBe(false);
     expect(substanceDetailsTokens.has('dark:border-foreground/40')).toBe(false);
+    expect(substanceSummary).toBeTruthy();
+    expect(substanceSummaryTokens.has('rounded-lg')).toBe(true);
+    expect(substanceSummaryTokens.has('px-4')).toBe(true);
+    expect(substanceSummaryTokens.has('py-3')).toBe(true);
+    expect(substanceSummaryTokens.has('transition-colors')).toBe(true);
+    expect(substanceSummaryTokens.has('hover:bg-foreground/[0.03]')).toBe(true);
+    expect(
+      substanceSummaryTokens.has('[&::-webkit-details-marker]:hidden'),
+    ).toBe(true);
     expect(summaryCountTokens.has('text-foreground/60')).toBe(true);
     expect(summaryCountTokens.has('text-muted-foreground')).toBe(false);
+    expect(summaryChevron).toBeTruthy();
+    expect(summaryChevronTokens.has('group-open:rotate-180')).toBe(true);
     expect(helperText).toBeDefined();
+    expect(expandedContentWrapperTokens.has('px-4')).toBe(true);
+    expect(expandedContentWrapperTokens.has('pb-3')).toBe(true);
+    expect(expandedContentWrapperTokens.has('mt-3')).toBe(false);
     expect(helperTextTokens.has('text-foreground/60')).toBe(true);
     expect(helperTextTokens.has('text-muted-foreground')).toBe(false);
   });

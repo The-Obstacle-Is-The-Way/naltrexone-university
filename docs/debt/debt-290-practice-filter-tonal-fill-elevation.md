@@ -113,7 +113,7 @@ Key decisions:
 
 3. **Hover token change.** `hover:bg-muted/50` was designed for page-background or card-background contexts. On a `bg-foreground/5` parent, it causes the same hover inversion that DEBT-289 documented (muted-based hover is darker than foreground-based rest fill in dark mode). `hover:bg-foreground/[0.08]` uses the same foreground scale, guaranteeing monotonic brightening.
 
-4. **Promote unselected chip text.** `text-muted-foreground` is acceptable on the current `bg-background` chip fill, but once the chip becomes transparent on `bg-foreground/5`, it drops to ~`4.45:1` in dark mode and narrowly fails normal-text AA. `text-foreground/60` restores comfortable margin at ~`6.07:1` while still reading as secondary metadata rather than primary content.
+4. **Promote unselected chip text.** `text-muted-foreground` is acceptable on the current `bg-background` chip fill, but once the chip becomes transparent on `bg-foreground/5`, it drops to ~`4.45:1` in dark mode and narrowly fails normal-text AA. `text-foreground/60` restores comfortable margin at ~`5.99:1` while still reading as secondary metadata rather than primary content.
 
 ### Filter container metadata: promote secondary copy
 
@@ -164,30 +164,30 @@ Same as DEBT-289 — `bg-foreground/5` on `bg-card` (#121212):
 
 | Border token | Effective color | WCAG ratio vs bg-foreground/5 (#1D1D1D) | Passes 3:1? |
 |-------------|----------------|------------------------------------------|-------------|
-| `dark:border-foreground/40` | #6A6A6A | ~3.1:1 | Yes (borderline — still passes) |
+| `dark:border-foreground/40` | #707070 | ~3.40:1 | Yes |
 
-Note: The chip border ratio vs the tonal fill parent (#1D1D1D) is slightly lower than vs the card (#121212, where it's ~3.46:1) because the background is lighter. At ~3.1:1 it still passes SC 1.4.11's 3:1 threshold. If future visual QA finds this too subtle, `border-foreground/45` (~3.5:1) is available as a step-up without changing the design approach.
+Note: The chip border ratio vs the tonal fill parent (#1D1D1D) is slightly lower than vs the card (#121212), because the background is lighter. At ~3.40:1 it still clears SC 1.4.11 comfortably. If future visual QA finds this too subtle, `border-foreground/45` (~3.98:1 on the tonal parent) is available as a step-up without changing the design approach.
 
 ### Chip text on tonal fill surface
 
 | Text token | Effective color | WCAG ratio vs bg-foreground/5 (#1D1D1D) | Passes 4.5:1? |
 |-----------|----------------|------------------------------------------|---------------|
 | `text-muted-foreground` | #838383 | ~4.45:1 | No |
-| **`text-foreground/60`** | **#9B9B9B** | **~6.07:1** | **Yes** |
+| **`text-foreground/60`** | **#9A9A9A** | **~5.99:1** | **Yes** |
 
 ### Container secondary metadata on tonal fill surface
 
 | Text token | Applies to | WCAG ratio vs bg-foreground/5 (#1D1D1D) | Passes 4.5:1? |
 |-----------|------------|------------------------------------------|---------------|
 | `text-muted-foreground` | Summary count, helper copy | ~4.45:1 | No |
-| **`text-foreground/60`** | **Summary count, helper copy** | **~6.07:1** | **Yes** |
+| **`text-foreground/60`** | **Summary count, helper copy** | **~5.99:1** | **Yes** |
 
 ### Chip hover fill
 
 | State | Dark mode (on tonal fill #1D1D1D) | Light mode | Direction |
 |-------|-----------------------------------|-----------|-----------|
 | Rest (transparent) | Inherits #1D1D1D | Inherits parent | — |
-| Hover `bg-foreground/[0.08]` | ~rgb(36) #242424 | ~rgb(235) | Brightens (dark) / Deepens (light) |
+| Hover `bg-foreground/[0.08]` | ~rgb(46) #2E2E2E | ~rgb(223, 224, 225) #DFE0E1 | Brightens (dark) / Deepens (light) |
 
 ---
 
@@ -249,9 +249,9 @@ Add the practice filter containers to "Classified supplementary fills" in `docs/
 
 1. **FilterChip transparent fill + brighter text on non-tonal surfaces.** The FilterChip component is shared — changing `bg-background` to `bg-transparent` and `text-muted-foreground` to `text-foreground/60` affects every future consumer. Currently the only consumer is the practice starter's filter sections (inside `<details>` containers). If FilterChip is later used directly on a Card surface without a tonal-fill parent, `transparent` would inherit `bg-card` (#121212) rather than `bg-background` (#090909), and `text-foreground/60` would still clear AA comfortably. This is safe.
 
-2. **Light mode visual check.** `bg-foreground/5` in light mode uses `foreground` ≈ #020817 (dark navy) at 5% opacity on white: rgb(242, 243, 243). This should produce a clean cool-gray tint for the filter containers. Validate visually after implementation.
+2. **Light mode visual check.** `bg-foreground/5` in light mode uses `foreground` ≈ #020817 (dark navy) at 5% opacity on white: rgb(242, 243, 243). This should produce a clean cool-gray tint for the filter containers. Validate visually after implementation. **Confirmed 2026-03-09:** Tonal fill produces a clean cool-gray tint. However, `border-border` (#E2E8F0) on chips is only ~1.10:1 against the tonal-fill parent (and ~1.23:1 against plain white/card) — effectively invisible. Tracked as [DEBT-291](./debt-291-filter-chip-light-mode-border-contrast.md).
 
-3. **Collapsed-state affordance visual check.** After border removal, confirm the closed `Topic` / `Substance` / `Treatment` rows still read as expandable via summary text, count text, cursor, tonal fill, and keyboard focus ring alone. If that feels too quiet, the next move is a summary affordance enhancement, not a rollback to heavy container borders.
+3. **Collapsed-state affordance visual check.** After border removal, confirm the closed `Topic` / `Substance` / `Treatment` rows still read as expandable via summary text, count text, cursor, tonal fill, and keyboard focus ring alone. If that feels too quiet, the next move is a summary affordance enhancement, not a rollback to heavy container borders. **Confirmed 2026-03-09:** Chrome visual audit found this too quiet — "Without a visual cue for expandability, first-time users may not realize these sections are interactive." A chevron disclosure indicator is the recommended fix. Tracked as [DEBT-292](./debt-292-filter-section-disclosure-indicator.md).
 
 ---
 
