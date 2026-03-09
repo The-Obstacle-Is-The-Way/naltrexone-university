@@ -247,7 +247,7 @@ Keep the current structure but make the rows less visually assertive: remove row
 - Hover state adds `bg-muted/40` — visible and satisfying
 
 **Cons:**
-- `bg-muted/20` against `bg-card` is very subtle in dark mode (~1.1:1). Rows may feel invisible at rest.
+- `bg-muted/20` against `bg-card` is very subtle in dark mode (~1.02:1). Rows may feel invisible at rest.
 - SC 1.4.11: the fill alone may not meet 3:1 as a required boundary. The fill contrast is decorative-level.
 - Loses the crisp "this is a clickable thing" signal the border provides
 
@@ -257,7 +257,7 @@ Keep the current structure but make the rows less visually assertive: remove row
 
 ### Option F: Borderless Inner Cards with Tonal Fill Elevation (Material Design approach)
 
-Keep the outer `<Card>` container. Keep the inner card **shape** (rounded-xl). Remove the inner card **border** entirely. Increase the fill from `bg-muted/20` (nearly invisible at ~1.1:1) to `bg-foreground/[0.04]`–`bg-foreground/5` — just enough to see the rounded rectangle shape without looking "punched out" or too gray.
+Keep the outer `<Card>` container. Keep the inner card **shape** (rounded-xl). Remove the inner card **border** entirely. Increase the fill from `bg-muted/20` (nearly invisible at ~1.02:1) to `bg-foreground/[0.04]`–`bg-foreground/5` — just enough to see the rounded rectangle shape without looking "punched out" or too gray.
 
 This follows Material Design 3's tonal elevation model: nested elements are differentiated by a subtle white overlay, not borders. The 1dp→2dp step in Material is only 2% more white overlay — barely perceptible but structurally present.
 
@@ -286,7 +286,7 @@ This follows Material Design 3's tonal elevation model: nested elements are diff
 
 Option B (flush dividers) was previously recommended because it eliminates the double-border noise while preserving container grouping. However, it also eliminates the individual **card shape** of each row — rows become flat list items separated by hairlines, losing the rounded-rectangle elegance that the current design has.
 
-The core insight behind this pivot: **the problem was never the card-within-card nesting concept itself — it was the borders.** Before the WCAG dark-mode border strengthening (DEBT-279/DEBT-280), the inner rows had a nearly invisible `border-border` (#262626, ~1.3:1 vs card). That felt elegant. The WCAG fix bumped inner borders to `dark:border-foreground/40` (#6A6A6A, ~3.46:1 vs card) — 2.6x brighter than before — making the child borders louder than the parent card's border. That's what broke the visual hierarchy.
+The core insight behind this pivot: **the problem was never the card-within-card nesting concept itself — it was the borders.** Before the WCAG dark-mode border strengthening (DEBT-279/DEBT-280), the inner rows had a nearly invisible `border-border` (#262626, ~1.24:1 vs card). That felt elegant. The WCAG fix bumped inner borders to `dark:border-foreground/40` (#6A6A6A, ~3.46:1 vs card) — about **2.8x** stronger contrast than before — making the child borders louder than the parent card's border. That's what broke the visual hierarchy.
 
 Option F fixes the root cause: remove the inner borders entirely, and compensate with a slightly stronger fill so the card shape is still visible without needing a stroke.
 
@@ -302,7 +302,7 @@ Option F fixes the root cause: remove the inner borders entirely, and compensate
 
 > **Note on WCAG ratios at very dark values:** The WCAG contrast formula includes a +0.05 luminance floor that compresses dark-on-dark ratios. An 11 RGB-level lift (rgb(18) → rgb(29)) is clearly visible to the eye, but the WCAG ratio is only 1.11:1. This is fine — these fills are supplementary hierarchy hints, not required boundaries. WCAG SC 1.4.11's 3:1 threshold does not apply here (see [Contrast Policy §3.2](../frontend/contrast-policy.md)).
 
-The recommended default is **`bg-foreground/5`**, with `bg-foreground/6` as the step-up if too subtle. `bg-foreground/[0.04]` is the lower bound — usable but borderline on lower-quality displays.
+The implementation default is **`bg-foreground/5`**. `bg-foreground/6` is no longer part of the initial implementation decision; if 5% proves too subtle in visual QA, that should be filed as a follow-up debt item rather than improvised during implementation. `bg-foreground/[0.04]` is the lower bound — usable but borderline on lower-quality displays.
 
 #### Hover inversion bug (resolved)
 
@@ -314,25 +314,30 @@ The original spec kept `hover:bg-muted/40` from the current implementation. This
 
 | State | Dark mode (on card #121212) | Light mode (on card #FFFFFF) | Direction |
 |-------|---------------------------|------------------------------|-----------|
-| Rest `bg-foreground/5` | rgb(29) | rgb(243, 243, 244) | — |
-| Hover `bg-foreground/[0.08]` | rgb(36) | rgb(235, 235, 237) | Brightens (dark) / Deepens (light) ✓ |
+| Rest `bg-foreground/5` | rgb(29) | rgb(242, 243, 243) | — |
+| Hover `bg-foreground/[0.08]` | rgb(36) | rgb(235, 235, 236) | Brightens (dark) / Deepens (light) ✓ |
 | ~~Hover `bg-muted/40`~~ (old) | ~~rgb(22)~~ | ~~rgb(249, 251, 253)~~ | ~~Dims / Washes out~~ ✗ |
 
 #### Badge treatment (companion change)
 
 Mode badges (Tutor/Exam) and difficulty badges (Easy/Medium) currently share `border-border/60 dark:border-foreground/40` — the same border treatment as the rows. Once row borders are removed, these become the only high-contrast strokes inside the card, looking orphaned and visually incongruent.
 
-**Fix:** Convert badges to borderless fill-only pills: `bg-foreground/[0.06] border-0 rounded-full`. This gives them a subtle tonal lift using the same visual language as the rows. The text contrast inside the badge is already sufficient for readability; the border was decorative, not functional. This is a companion change — ship it with the row border removal.
+**Fix:** Convert badges to borderless fill-only pills and promote the badge text token at the same time. In dark mode, `text-xs text-muted-foreground` drops below the 4.5:1 text minimum once it sits on `bg-foreground/[0.06]` (~4.35:1 at 6%). The safe companion change is:
+
+- Mode badge target: `inline-flex items-center rounded-full border-0 bg-foreground/[0.06] px-2 py-0.5 text-xs font-medium text-foreground/60`
+- Difficulty badge target: `inline-flex shrink-0 items-center rounded-full border-0 bg-foreground/[0.06] px-2 py-0.5 text-xs font-medium text-foreground/60`
+
+This keeps the badges quieter than the rows while preserving AA text contrast in both themes. This is a companion change — ship it with the row border removal.
 
 #### Implementation
 
 - Remove from rows: `border border-border/60`, `dark:border-foreground/40`, `dark:hover:border-foreground/70`
-- Change row fill: `bg-muted/20` → `bg-foreground/5` (or `bg-foreground/6` if too subtle — validate visually)
+- Change row fill: `bg-muted/20` → `bg-foreground/5`
 - Change hover: `hover:bg-muted/40` → `hover:bg-foreground/[0.08]` (fixes hover inversion — see above)
 - Keep on rows: `rounded-xl`, `p-3`, `transition-colors`, focus-visible ring
 - Keep: outer `<Card>` wrapper, `space-y-2` row rhythm, section heading + "View all"
 - Add to bottom grid: `items-start` to fix equal-height stretching
-- Companion: convert mode/difficulty badge pills to borderless fill-only (`bg-foreground/[0.06] border-0`)
+- Companion: convert mode/difficulty badge pills to borderless fill-only with promoted text (`bg-foreground/[0.06] border-0 text-foreground/60`)
 
 Interactive rows:
 ```
@@ -428,26 +433,40 @@ This decision does **not** automatically imply simultaneous code changes to Hist
 
 ## Open Questions
 
-1. **Optimal fill value: `bg-foreground/5` vs `bg-foreground/6`?** Default is `bg-foreground/5` (rgb(29), WCAG 1.11:1). Step up to `bg-foreground/6` (rgb(31), WCAG 1.14:1) if 5% is too subtle on lower-quality displays. Validate visually during implementation.
+1. **Fill token is locked.** Use `bg-foreground/5` for the initial implementation. Do not switch to `bg-foreground/6` during the same change unless the spec itself is amended.
 
-2. **Light mode visual check.** The `foreground`-based fill adapts per theme. In light mode, `foreground` = hsl(222.2, 84%, 4.9%) ≈ #020817 (dark navy). At 5% opacity on white: rgb(243, 243, 244) — a clean cool-gray tint. Should be fine, but validate visually. The hover (`bg-foreground/[0.08]`) produces rgb(235, 235, 237) — a correct darkening direction.
+2. **Light mode visual check remains required but is not a blocker.** The `foreground`-based fill adapts per theme. In light mode, `foreground` = hsl(222.2, 84%, 4.9%) ≈ #020817 (dark navy). At 5% opacity on white: rgb(242, 243, 243) — a clean cool-gray tint. The hover (`bg-foreground/[0.08]`) produces rgb(235, 235, 236) — a correct darkening direction. Validate visually after implementation; file follow-up debt only if it looks wrong.
 
-3. **Should History sessions eventually adopt the same fill-only pattern?** It currently uses bordered muted rows on `bg-background` (no wrapper card). That's a separate consistency question — not part of this implementation.
+3. **History sessions remains out of scope.** It currently uses bordered muted rows on `bg-background` (no wrapper card). Do not change it as part of DEBT-289.
 
 ### Resolved Questions
 
 - ~~**Hover inversion bug**~~ — Resolved. `hover:bg-muted/40` was darker than `bg-foreground/5` rest fill in dark mode (rgb(22) < rgb(29)). Fixed by switching to `hover:bg-foreground/[0.08]` (rgb(36) in dark mode, rgb(235) in light mode). See "Hover inversion fix" section in Option F.
-- ~~**Badge dominance**~~ — Resolved as companion change. Convert badges to borderless fill-only pills (`bg-foreground/[0.06] border-0`). See "Badge treatment" section in Option F.
+- ~~**Badge dominance**~~ — Resolved as companion change. Convert badges to borderless fill-only pills with promoted text (`bg-foreground/[0.06] border-0 text-foreground/60`). See "Badge treatment" section in Option F.
 
 ---
 
 ## Scope
 
-- **Production code:** `app/(app)/app/dashboard/page.tsx` — remove row border classes, change fill + hover tokens, add `items-start` to bottom grid, convert badge pills to borderless fill-only
-- **Pattern Registry update:** add a new pattern entry for borderless tonal inner cards (fill-only nested elevation), or extend I-1 with a "borderless variant" note
-- **Test updates:** `app/(app)/app/dashboard/page.test.tsx` — update class-based assertions for border removal and fill/hover change
+- **Production code:** `app/(app)/app/dashboard/page.tsx` — remove row border classes, change fill + hover tokens, add `items-start` to bottom grid, convert badge pills to borderless fill-only with `text-foreground/60`
+- **Pattern Registry update:** extend `I-1` and `S-2` with a dashboard-local borderless tonal variant note; do not create a brand-new pattern ID in this change
+- **Test updates:** `app/(app)/app/dashboard/page.test.tsx` — update class-based assertions for border removal, fill/hover change, and badge token changes
 - **Doc updates:** `docs/frontend/pages/dashboard.md` — update surface hierarchy and component inventory
 - **No new files** — this modifies existing patterns
+
+### Test impact (verified against current test file)
+
+The existing dashboard suite has exactly one assertion block that will fail after this change:
+
+- `app/(app)/app/dashboard/page.test.tsx:422-529` — `it('uses stronger dark-mode row boundary tokens for dashboard activity/session rows', ...)`
+
+The specific assertions that must change are:
+
+- `app/(app)/app/dashboard/page.test.tsx:515` — `border-border/60` on the unavailable activity card will be removed
+- `app/(app)/app/dashboard/page.test.tsx:516-518` — `dark:border-foreground/40` and `dark:hover:border-foreground/70` on interactive rows will be removed
+- `app/(app)/app/dashboard/page.test.tsx:522-528` — the remaining hover/border expectations will fail and should be replaced with assertions for `bg-foreground/5`, `hover:bg-foreground/[0.08]`, and the absence of the old border tokens
+
+No other current dashboard test in `page.test.tsx` asserts the row/badge class contract.
 
 ---
 
@@ -473,11 +492,11 @@ Remove:
 - `dark:hover:border-foreground/70` from all inner rows
 
 Replace:
-- `bg-muted/20` → `bg-foreground/5` (validate visually; `bg-foreground/6` is the step-up if too subtle)
+- `bg-muted/20` → `bg-foreground/5`
 - `hover:bg-muted/40` → `hover:bg-foreground/[0.08]` (fixes hover inversion — rest and hover on same foreground scale)
 
 Companion:
-- Convert mode/difficulty badge pills from `border-border/60 dark:border-foreground/40` to `bg-foreground/[0.06] border-0 rounded-full`
+- Convert mode/difficulty badge pills from `border-border/60 dark:border-foreground/40 text-muted-foreground` to `bg-foreground/[0.06] border-0 rounded-full text-foreground/60`
 
 ### Resulting row classes
 
@@ -494,7 +513,7 @@ rounded-xl bg-foreground/5 p-3
 
 ### Why this is the right call
 
-- **Fixes the root cause.** The jarring visual was never the nesting concept — it was the inner borders at `foreground/40` being 2.6x brighter than the outer card's `border-border`. Removing the inner borders eliminates the noise at its source.
+- **Fixes the root cause.** The jarring visual was never the nesting concept — it was the inner borders at `foreground/40` being about 2.8x stronger contrast than the outer card's `border-border`. Removing the inner borders eliminates the noise at its source.
 - **Preserves the elegance.** Each row is still a distinct rounded rectangle — a card shape — just defined by a gentle fill instead of a competing border. This is the Material Design 3 tonal elevation approach.
 - **Minimal code change.** Remove border classes, swap fill token. No JSX restructuring, no divider markup, no negative-margin hacks.
 - **Keeps container grouping.** The outer card, "View all" link, and two-column layout all stay intact.
@@ -503,10 +522,10 @@ rounded-xl bg-foreground/5 p-3
 
 ### Validation during implementation
 
-1. Visual check in dark mode: do the inner card shapes read as distinct rounded rectangles at `bg-foreground/5`? If too subtle, step up to `bg-foreground/6`.
-2. Visual check in light mode: does the same fill token produce an acceptable cool-gray tint? (Expected: rgb(243, 243, 244) on white — should be fine.)
-3. Hover transition: does `bg-foreground/5` → `hover:bg-foreground/[0.08]` produce a satisfying, monotonic brightness lift? (Expected: rgb(29→36) dark, rgb(243→235) light — both correct directions.)
-4. Badge pills: verify the borderless fill-only treatment (`bg-foreground/[0.06] border-0`) looks clean alongside the borderless rows.
+1. Visual check in dark mode: do the inner card shapes read as distinct rounded rectangles at `bg-foreground/5`?
+2. Visual check in light mode: does the same fill token produce an acceptable cool-gray tint? (Expected: rgb(242, 243, 243) on white — should be fine.)
+3. Hover transition: does `bg-foreground/5` → `hover:bg-foreground/[0.08]` produce a satisfying, monotonic brightness lift? (Expected: rgb(29→36) dark, rgb(242→235) light — both correct directions.)
+4. Badge pills: verify the borderless fill-only treatment (`bg-foreground/[0.06] border-0 text-foreground/60`) looks clean alongside the borderless rows and keeps small badge text AA-compliant.
 5. Focus ring: verify the focus-visible ring still looks clean without a row border adjacent to it.
 
 Option B (flush dividers) is the fallback if fill-only differentiation proves too subtle after visual validation.
@@ -516,7 +535,7 @@ Option B (flush dividers) is the fallback if fill-only differentiation proves to
 ## Other Observations
 
 - The unavailable activity row (`app/(app)/app/dashboard/page.tsx:210`) already demonstrates that the nested structure feels heavy even when the row is not interactive; the wrapper/row layering is the problem, not only the hover affordance.
-- The mode and difficulty pills introduce an additional micro-boundary inside already-bordered rows. With row borders removed, these become the loudest remaining strokes — addressed as companion change: convert to borderless fill-only pills (`bg-foreground/[0.06] border-0`). See "Badge treatment" in Option F.
+- The mode and difficulty pills introduce an additional micro-boundary inside already-bordered rows. With row borders removed, these become the loudest remaining strokes — addressed as companion change: convert to borderless fill-only pills with promoted text (`bg-foreground/[0.06] border-0 text-foreground/60`). See "Badge treatment" in Option F.
 - The `grid gap-4 lg:grid-cols-2` container currently stretches both bottom-half cards to equal height. Because `Recent activity` is much taller than `Recent sessions`, this creates a large empty void in the left column. Independent of the surface decision, `items-start` is likely the correct layout fix.
 - The `Recent activity` rows carry more visual signals than the session rows: stem preview, colored Correct/Incorrect text, timestamp metadata, and bordered difficulty pills. Once the row borders are reduced, that content stack should be re-checked so status color does not outrank the row title.
 - `View all` is structurally correct where it is today, but in the current muted link styling it is very quiet. That is a secondary discoverability issue, not the main DEBT-289 problem.

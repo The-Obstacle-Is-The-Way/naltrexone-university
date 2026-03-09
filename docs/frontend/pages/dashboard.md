@@ -45,7 +45,7 @@ bg-background (Layer 0 — page)
        └─ <Link> bg-muted/20 + border-border/60 (Layer 2 — rows) ← ROWS INSIDE CARD
 ```
 
-**Known issues:** The top-half cards are flat (card IS the content). The bottom-half cards are containers (card WRAPS a list of individually-bordered rows). The inner row borders — strengthened to `dark:border-foreground/40` for WCAG compliance — are 2.6x brighter than the outer card's `border-border`, creating an inverted visual hierarchy where children shout louder than the parent. The fix (DEBT-289) is to remove inner borders entirely and use tonal fill elevation (`bg-foreground/5`, borderless `rounded-xl` shapes) following Material Design 3's dark-theme overlay model, with `hover:bg-foreground/[0.08]` for a monotonic brightness ramp. Badge pills will also convert to borderless fill-only as a companion change. Also, the `lg:grid-cols-2` recent-lists row currently stretches both panels to equal height, which amplifies empty space in the shorter Recent sessions panel (`items-start` fix included in DEBT-289). See [DEBT-289](../../debt/debt-289-dashboard-nested-card-surface-strategy.md).
+**Known issues:** The top-half cards are flat (card IS the content). The bottom-half cards are containers (card WRAPS a list of individually-bordered rows). The inner row borders — strengthened to `dark:border-foreground/40` for WCAG compliance — are about **2.8x** stronger contrast than the outer card's `border-border`, creating an inverted visual hierarchy where children shout louder than the parent. The fix (DEBT-289) is to remove inner borders entirely and use tonal fill elevation (`bg-foreground/5`, borderless `rounded-xl` shapes) following Material Design 3's dark-theme overlay model, with `hover:bg-foreground/[0.08]` for a monotonic brightness ramp. Badge pills will also convert to borderless fill-only with `text-foreground/60` as a companion change. Also, the `lg:grid-cols-2` recent-lists row currently stretches both panels to equal height, which amplifies empty space in the shorter Recent sessions panel (`items-start` fix included in DEBT-289). See [DEBT-289](../../debt/debt-289-dashboard-nested-card-surface-strategy.md).
 
 ---
 
@@ -71,9 +71,9 @@ bg-background (Layer 0 — page)
 - No rest border — inner cards defined by fill shape only
 - Rest fill: `bg-foreground/5` (~#1D1D1D, rgb(29) on card #121212, WCAG 1.11:1)
 - Hover fill: `hover:bg-foreground/[0.08]` (~#242424, rgb(36) — same foreground scale, monotonic lift)
-- Badge pills: borderless fill-only (`bg-foreground/[0.06] border-0`) — companion change
+- Badge pills: borderless fill-only (`bg-foreground/[0.06] border-0 text-foreground/60`) — companion change
 
-Mode/difficulty badge borders currently use `dark:border-foreground/40` — will be converted to borderless fill-only (`bg-foreground/[0.06] border-0`) as a companion change in DEBT-289.
+Mode/difficulty badge borders currently use `dark:border-foreground/40` and `text-muted-foreground` — will be converted to borderless fill-only (`bg-foreground/[0.06] border-0 text-foreground/60`) as a companion change in DEBT-289 so small badge text stays AA-compliant in dark mode.
 
 ---
 
