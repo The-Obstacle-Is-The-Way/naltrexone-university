@@ -110,7 +110,7 @@ Three collapsible `<details>` elements, one per tag kind. Only rendered when `ta
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
 | Container | `<details>` | S-2 (practice variant, tonal fill) | `:212–243` | `group rounded-xl bg-foreground/5` |
-| Summary header | `<summary>` | — | `:216` | `flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-foreground/[0.03] [&::-webkit-details-marker]:hidden` + focus ring |
+| Summary header | `<summary>` | — | `:216` | `flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium text-foreground transition-colors [&::-webkit-details-marker]:hidden` + focus ring |
 | Section label | `<span>` | — | `:217` | "Topic" / "Substance" / "Treatment" |
 | Summary right cluster | `<span>` | — | `:218` | `flex items-center gap-2` — groups count + chevron |
 | Selected count | `<span>` | — | `:219` | `text-xs font-normal text-foreground/60` — "(N selected)" |
@@ -145,10 +145,10 @@ Toggle-style pill button. Uses `aria-pressed` for selected state.
 
 | State | Classes |
 |-------|---------|
-| **Base** | `inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors` |
+| **Base** | `inline-flex cursor-pointer items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors` |
 | **Focus** | `outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]` |
 | **Disabled** | `disabled:pointer-events-none disabled:opacity-50` |
-| **Unselected** | `border-foreground/45 bg-transparent text-foreground/60 hover:bg-foreground/[0.08] hover:text-accent-foreground dark:border-foreground/40` |
+| **Unselected** | `border-foreground/45 bg-foreground/[0.07] text-foreground/60 hover:bg-foreground/[0.10] hover:text-accent-foreground dark:border-foreground/40` |
 | **Selected** | `border-primary bg-primary text-primary-foreground` |
 
 ### SegmentedControl (`components/ui/segmented-control.tsx`)
@@ -184,7 +184,7 @@ bg-background (Layer 0 — page)
        │    └─ Inactive items transparent (inherit Layer 2)
        ├─ Input dark:bg-input/30 (Layer 2 — Questions count)
        └─ <details> bg-foreground/5 (Layer 2 — tag filter containers)
-            └─ FilterChip transparent + border (inherits Layer 2 at rest)
+            └─ FilterChip bg-foreground/[0.07] + border                 ← Layer 3 rest
             └─ FilterChip bg-primary (selected)                           ← Layer 3+, high contrast
 ```
 
@@ -242,9 +242,9 @@ type PracticeFilters = {
 | State | Token | Computed (dark) | Contrast vs parent | Notes |
 |-------|-------|----------------|-------------------|-------|
 | Unselected border | `border-foreground/45` + `dark:border-foreground/40` | #707070 (dark override) | ~3.40:1 vs current `bg-foreground/5` parent (`#1D1D1D`) | Passes 3:1 in dark mode; light-mode base token is `border-foreground/45` |
-| Unselected fill | `bg-transparent` | Inherits `#1D1D1D` | N/A | Keeps the chip on the parent tonal surface — no punch-out |
-| Unselected text | `text-foreground/60` | #9A9A9A | ~5.99:1 vs parent | AA pass on the tonal surface |
-| Unselected hover | `hover:bg-foreground/[0.08]` | ~#2E2E2E on the current `bg-foreground/5` parent | — | Foreground-based hover ramp stays monotonic |
+| Unselected fill | `bg-foreground/[0.07]` | ~#2C2C2C on the current `bg-foreground/5` parent | ~1.21:1 vs parent | Adds rest-state surface depth without replacing the border as the required boundary |
+| Unselected text | `text-foreground/60` | #A0A0A0 | ~5.34:1 vs chip fill | AA pass on the rest fill |
+| Unselected hover | `hover:bg-foreground/[0.10]` | ~#323232 on the current `bg-foreground/5` parent | — | Foreground-based hover ramp stays monotonic and remains visibly above the 7% rest fill |
 | Selected fill | `bg-primary` | #EDEDED | — | High contrast |
 | Selected text | `text-primary-foreground` | #090909 | ~17:1 vs primary | AA pass |
 | Selected border | `border-primary` | #EDEDED | — | Matches fill |
@@ -265,17 +265,19 @@ type PracticeFilters = {
 
 ---
 
-## DEBT-290 Resolution
-Resolved on 2026-03-09. [DEBT-290](../../debt/debt-290-practice-filter-tonal-fill-elevation.md) shipped the following changes:
+## Practice Filter Resolution History
+Resolved on 2026-03-09 and later refined by [DEBT-291](../../debt/debt-291-filter-chip-light-mode-border-contrast.md), [DEBT-292](../../debt/debt-292-filter-section-disclosure-indicator.md), and [DEBT-294](../../debt/debt-294-filter-chip-fill-depth-and-cursor.md). The current shipped state is:
 
 | Element | Shipped state | Effect |
 |---------|---------------|--------|
 | Filter container (`<details>`) | `bg-foreground/5` (no border) | Border removed, tonal fill defines the nested surface |
-| FilterChip unselected fill | `bg-transparent` | Inherits parent tonal fill, fixes punch-out |
+| FilterChip unselected fill | `bg-foreground/[0.07]` | Adds rest-state depth above the tonal parent without replacing the border as the required boundary |
 | FilterChip unselected text | `text-foreground/60` | Restores AA margin on the tonal parent |
-| FilterChip unselected hover | `hover:bg-foreground/[0.08]` | Consistent foreground-based scale, fixes hover inversion |
+| FilterChip unselected hover | `hover:bg-foreground/[0.10]` | Monotonic foreground-based hover ramp above the 7% rest fill |
 | Filter selected-count text | `text-foreground/60` | Keeps `(N selected)` secondary but AA-compliant on `bg-foreground/5` |
 | Filter helper text | `text-foreground/60` | Keeps helper copy subordinate without falling below AA on the tonal parent |
+| FilterChip base cursor | `cursor-pointer` | Restores the expected browser affordance for clickable chips |
+| Filter summary hover | none | Removed the imperceptible `hover:bg-foreground/[0.03]` summary tint; chevron + pointer cursor carry disclosure affordance |
 
 Elements **not** changing: SegmentedControl (all three instances), Input, Card container, Button, header action link, incomplete session card, error states.
 

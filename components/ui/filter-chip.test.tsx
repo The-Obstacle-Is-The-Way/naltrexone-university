@@ -50,11 +50,13 @@ describe('FilterChip', () => {
     expect(html).toContain('aria-pressed="false"');
     expect(button).not.toBeNull();
     expect(classTokens.has('bg-primary')).toBe(false);
-    expect(classTokens.has('bg-transparent')).toBe(true);
+    expect(classTokens.has('bg-foreground/[0.07]')).toBe(true);
+    expect(classTokens.has('bg-transparent')).toBe(false);
     expect(classTokens.has('bg-background')).toBe(false);
     expect(classTokens.has('border-border')).toBe(false);
     expect(classTokens.has('border-foreground/45')).toBe(true);
-    expect(classTokens.has('hover:bg-foreground/[0.08]')).toBe(true);
+    expect(classTokens.has('hover:bg-foreground/[0.10]')).toBe(true);
+    expect(classTokens.has('cursor-pointer')).toBe(true);
     expect(classTokens.has('dark:border-foreground/40')).toBe(true);
     expect(classTokens.has('hover:bg-accent')).toBe(false);
   });

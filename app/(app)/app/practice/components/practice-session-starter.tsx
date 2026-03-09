@@ -213,7 +213,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
                     key={kind}
                     className="group rounded-xl bg-foreground/5"
                   >
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium text-foreground outline-none transition-colors hover:bg-foreground/[0.03] focus-visible:ring-ring/50 focus-visible:ring-[3px] [&::-webkit-details-marker]:hidden">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium text-foreground outline-none transition-colors focus-visible:ring-ring/50 focus-visible:ring-[3px] [&::-webkit-details-marker]:hidden">
                       <span>{label}</span>
                       <span className="flex items-center gap-2">
                         <span className="text-xs font-normal text-foreground/60">

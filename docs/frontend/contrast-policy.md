@@ -47,6 +47,7 @@ Tonal fill elevation used as a supplementary hierarchy hint, not a required boun
 | Dashboard unavailable rows (S-2 variant) | `bg-foreground/5` | 1.11:1 (vs card #121212) | Static tonal fill matching interactive row rest state for visual consistency. Row is identified by its text content. | [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) |
 | Dashboard badge pills (mode/difficulty) | `bg-foreground/[0.06] border-0 text-foreground/60` | Fill 1.14:1 (vs card), text 5.94:1 (AA pass) | Borderless fill-only badge. Text contrast is the required boundary (AA-compliant at 5.94:1); the fill shape is supplementary. | [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) |
 | Practice filter containers (S-2 variant) | `bg-foreground/5` | 1.11:1 (vs card #121212) | Borderless tonal fill for Topic/Substance/Treatment `<details>` containers. The control is identified by summary label, selected-count text, disclosure behavior, pointer cursor, and focus ring; the fill is supplementary. | [DEBT-290](../debt/debt-290-practice-filter-tonal-fill-elevation.md) |
+| Practice filter chips rest fill (I-4 variant) | `bg-foreground/[0.07]` | 1.21:1 (vs practice filter container `#1D1D1D`) | The chip border remains the required SC 1.4.11 boundary. The rest fill only adds depth so the chip reads as a toggle surface rather than a transparent label; identification still comes from the border, text, cursor, hover fill, and focus ring. | [DEBT-294](../debt/debt-294-filter-chip-fill-depth-and-cursor.md) |
 
 ---
 

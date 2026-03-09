@@ -153,7 +153,7 @@ group rounded-xl bg-foreground/5
 
 **Used in:** Practice starter Topic / Substance / Treatment filter containers
 
-**Design rationale:** Applies the same tonal-fill elevation principle as the dashboard nested-row fix while preserving the wider practice filter spacing. The container owns the tonal surface, but the interactive hit area lives on the summary row: `<summary>` uses `rounded-lg px-4 py-3 transition-colors hover:bg-foreground/[0.03] [&::-webkit-details-marker]:hidden` so the full visible header toggles the disclosure and Safari/WebKit does not render a duplicate native marker next to the custom chevron. Expanded content keeps its own `px-4 pb-3` wrapper below the summary. The `<summary>` label, selected-count metadata, disclosure behavior, pointer cursor, and keyboard focus ring identify the control; the fill is supplementary rather than a required boundary. Secondary metadata on this surface uses `text-foreground/60` rather than `text-muted-foreground` to preserve AA contrast on `bg-foreground/5`. The chevron icon uses `h-4 w-4 text-foreground/60 transition-transform group-open:rotate-180` on a parent `<details class="group">`. See [DEBT-290](../debt/debt-290-practice-filter-tonal-fill-elevation.md) and [DEBT-292](../debt/debt-292-filter-section-disclosure-indicator.md).
+**Design rationale:** Applies the same tonal-fill elevation principle as the dashboard nested-row fix while preserving the wider practice filter spacing. The container owns the tonal surface, but the interactive hit area lives on the summary row: `<summary>` uses `rounded-lg px-4 py-3 transition-colors [&::-webkit-details-marker]:hidden` so the full visible header toggles the disclosure and Safari/WebKit does not render a duplicate native marker next to the custom chevron. Expanded content keeps its own `px-4 pb-3` wrapper below the summary. The `<summary>` label, selected-count metadata, disclosure behavior, pointer cursor, and keyboard focus ring identify the control; the fill is supplementary rather than a required boundary. Secondary metadata on this surface uses `text-foreground/60` rather than `text-muted-foreground` to preserve AA contrast on `bg-foreground/5`. The chevron icon uses `h-4 w-4 text-foreground/60 transition-transform group-open:rotate-180` on a parent `<details class="group">`. See [DEBT-290](../debt/debt-290-practice-filter-tonal-fill-elevation.md) and [DEBT-292](../debt/debt-292-filter-section-disclosure-indicator.md).
 
 **Dashboard variant (borderless tonal fill):**
 ```
@@ -307,7 +307,7 @@ Toggle-style filter for tags, modes, difficulty levels.
 
 **Unselected:**
 ```
-border-foreground/45 bg-transparent text-foreground/60 hover:bg-foreground/[0.08] hover:text-accent-foreground dark:border-foreground/40
+border-foreground/45 bg-foreground/[0.07] text-foreground/60 hover:bg-foreground/[0.10] hover:text-accent-foreground dark:border-foreground/40
 ```
 
 **Selected:**
@@ -317,15 +317,15 @@ border-primary bg-primary text-primary-foreground
 
 **Shared base:**
 ```
-inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors
+inline-flex cursor-pointer items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors
 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]
 disabled:pointer-events-none disabled:opacity-50
 ```
 
 **Source:** `components/ui/filter-chip.tsx`
 
-**Design rationale:** Unselected chips keep their border as the required boundary, but rest fill is transparent so the chip inherits its parent surface instead of punching down to `bg-background`. On the practice tonal-fill parent (`bg-foreground/5`), `border-foreground/45` clears SC 1.4.11 in light mode, `dark:border-foreground/40` preserves the compliant dark-mode override, `text-foreground/60` restores AA margin for secondary chip text, and `hover:bg-foreground/[0.08]` keeps the hover ramp on the same monotonic foreground scale.
-**Status:** Implemented in `components/ui/filter-chip.tsx` (DEBT-290, DEBT-291).
+**Design rationale:** Unselected chips keep their border as the required boundary, but now add a subtle rest fill (`bg-foreground/[0.07]`) so they read as interactive toggle surfaces instead of transparent labels floating on the parent tonal container. On the practice tonal-fill parent (`bg-foreground/5`), `border-foreground/45` clears SC 1.4.11 in light mode, `dark:border-foreground/40` preserves the compliant dark-mode override, `text-foreground/60` preserves AA margin for secondary chip text, `hover:bg-foreground/[0.10]` keeps the hover ramp on the same monotonic foreground scale, and `cursor-pointer` restores the expected browser affordance for a clickable button.
+**Status:** Implemented in `components/ui/filter-chip.tsx` (DEBT-290, DEBT-291, DEBT-294).
 
 ### I-5: Segmented Control Item
 
@@ -1318,7 +1318,7 @@ Compact lookup for code reviews and implementation.
 | I-1 | Row in Card | `hover:bg-muted/40` (+ `dark:hover:border-foreground/70`) | `rounded-xl` | `border-border/60 dark:border-foreground/40` |
 | I-2 | Standalone Row | `hover:bg-muted/50` | `rounded-2xl` | `border-border` |
 | I-3 | Choice Button | `hover:bg-muted/40` (+ `dark:hover:bg-foreground/8 dark:hover:border-foreground/55`) | `rounded-xl` | `border-border/60 dark:border-foreground/40` |
-| I-4 | Filter Chip | `hover:bg-foreground/[0.08]` | `rounded-full` | `border-foreground/45 dark:border-foreground/40` |
+| I-4 | Filter Chip | `hover:bg-foreground/[0.10]` | `rounded-full` | `border-foreground/45 dark:border-foreground/40` |
 | I-5 | Tab Switch Item | `hover:bg-muted/50` | `rounded-md` | Container uses `border-border` |
 | I-6 | Icon Toggle | `hover:text-foreground` | — | — |
 | L-1 | Nav Link | `hover:text-foreground` | `rounded-md` | — |

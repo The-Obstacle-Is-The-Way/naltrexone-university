@@ -2,7 +2,8 @@
 
 **Priority:** P3
 **Created:** 2026-03-09
-**Status:** Open
+**Status:** Resolved
+**Resolved:** 2026-03-09
 **Promoted from:** [BS-046](../_archive/brainstorming/bs-046-filter-chip-fill-depth-and-summary-hover.md)
 
 ---
@@ -151,3 +152,14 @@ Each step is perceptually distinct. Monotonic. No collisions.
 3. **SegmentedControl** — Different component, different surface context. No change.
 4. **Filter container fill** — `bg-foreground/5` on `<details>` stays as shipped by DEBT-290.
 5. **Filter helper/count text** — `text-foreground/60` stays as shipped by DEBT-290. Already AA-compliant.
+
+---
+
+## Outcome
+
+Approach B shipped as specified:
+
+- `FilterChip` unselected state now uses `bg-foreground/[0.07]` with `hover:bg-foreground/[0.10]`
+- `cursor-pointer` is now part of the shared chip base classes
+- the invisible `<summary>` hover fill was removed from practice filter sections
+- selected chip styling, border tokens, and parent container tonal fill were left unchanged
