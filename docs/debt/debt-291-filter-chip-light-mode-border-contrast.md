@@ -134,3 +134,20 @@ Create a `--chip-border` token defined differently in light and dark. This is mo
 2. **Selected chip** — `border-primary bg-primary text-primary-foreground` is high contrast in both themes.
 3. **Filter container tonal fill** — `bg-foreground/5` is a supplementary fill, not a required boundary. No change.
 4. **Chip text or hover tokens** — `text-foreground/60` and `hover:bg-foreground/[0.08]` are unaffected.
+
+---
+
+## Chrome Agent Audit Evidence (2026-03-09)
+
+A Chrome-based visual audit on the deployed practice page confirmed the light mode border issue:
+
+> "In light mode, chip borders are `rgb(226, 232, 240)` over white, giving only about **1.23:1** — this is extremely low. The borders are barely visible in light mode. They read more as a whisper of structure than a clear boundary, and on some monitors they'll disappear entirely."
+
+The agent also confirmed that dark mode borders work correctly:
+
+> "In dark mode, chip borders are `rgba(237, 237, 237, 0.4)` over an `rgb(18, 18, 18)` card, compositing to roughly `rgb(106, 106, 106)`. This yields a contrast ratio of about **3.46:1** against the card — acceptable for a non-text graphical element."
+
+Additional confirmed findings:
+- Chip text (`text-foreground/60`) passes AA in both themes: ~6.25:1 dark, ~5.34:1 light
+- Selected chip states are "emphatically" distinguishable with dramatic contrast flip
+- Hover states register (text opacity change is the more noticeable effect; background fill is subtle)
