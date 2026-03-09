@@ -238,10 +238,10 @@ type PracticeFilters = {
 
 | State | Token | Computed (dark) | Contrast vs parent | Notes |
 |-------|-------|----------------|-------------------|-------|
-| Unselected border | `dark:border-foreground/40` | #6A6A6A | ~3.10:1 vs current `bg-foreground/5` parent (`#1D1D1D`) | Passes 3:1 (required boundary) |
+| Unselected border | `dark:border-foreground/40` | #707070 | ~3.40:1 vs current `bg-foreground/5` parent (`#1D1D1D`) | Passes 3:1 (required boundary) |
 | Unselected fill | `bg-transparent` | Inherits `#1D1D1D` | N/A | Keeps the chip on the parent tonal surface — no punch-out |
-| Unselected text | `text-foreground/60` | #9B9B9B | ~6.07:1 vs parent | AA pass on the tonal surface |
-| Unselected hover | `hover:bg-foreground/[0.08]` | ~#242424 on the current `bg-foreground/5` parent | — | Foreground-based hover ramp stays monotonic |
+| Unselected text | `text-foreground/60` | #9A9A9A | ~5.99:1 vs parent | AA pass on the tonal surface |
+| Unselected hover | `hover:bg-foreground/[0.08]` | ~#2E2E2E on the current `bg-foreground/5` parent | — | Foreground-based hover ramp stays monotonic |
 | Selected fill | `bg-primary` | #EDEDED | — | High contrast |
 | Selected text | `text-primary-foreground` | #090909 | ~17:1 vs primary | AA pass |
 | Selected border | `border-primary` | #EDEDED | — | Matches fill |
@@ -251,7 +251,7 @@ type PracticeFilters = {
 | Token | Computed (dark) | Contrast vs card (#121212) | Notes |
 |-------|----------------|---------------------------|-------|
 | `bg-foreground/5` | #1D1D1D (rgb 29) | 1.11:1 | Subtle tonal lift — matches dashboard nested-row rest state |
-| Count/helper text `text-foreground/60` | #9B9B9B | ~6.07:1 vs `bg-foreground/5` | Secondary metadata stays AA-compliant on the tonal surface |
+| Count/helper text `text-foreground/60` | #9A9A9A | ~5.99:1 vs `bg-foreground/5` | Secondary metadata stays AA-compliant on the tonal surface |
 
 ### Input
 

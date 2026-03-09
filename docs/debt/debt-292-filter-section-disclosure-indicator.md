@@ -59,18 +59,20 @@ DEBT-290 established that the response to "collapsed sections feel too quiet" mu
 Add a `ChevronDown` icon (from `lucide-react`, already a project dependency) to the `<summary>` that rotates 180° when the section is open.
 
 ```tsx
-<summary className="... group">
-  <span>{label}</span>
-  <span className="flex items-center gap-2">
-    <span className="text-xs font-normal text-foreground/60">
-      ({selectedCount} selected)
+<details className="rounded-xl bg-foreground/5 px-4 py-3 group">
+  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg text-sm font-medium text-foreground outline-none transition-colors hover:bg-foreground/[0.08] focus-visible:ring-ring/50 focus-visible:ring-[3px]">
+    <span>{label}</span>
+    <span className="flex items-center gap-2">
+      <span className="text-xs font-normal text-foreground/60">
+        ({selectedCount} selected)
+      </span>
+      <ChevronDown className="h-4 w-4 text-foreground/60 transition-transform group-open:rotate-180" />
     </span>
-    <ChevronDown className="h-4 w-4 text-foreground/60 transition-transform group-open:rotate-180" />
-  </span>
-</summary>
+  </summary>
+</details>
 ```
 
-The `group-open:rotate-180` Tailwind utility targets the `<details>[open]` state. This is the standard disclosure pattern.
+The `group-open:rotate-180` Tailwind utility targets the parent `<details class="group">[open]` state. The `group` class must live on `<details>`, not `<summary>`, or the chevron will never rotate.
 
 **Tradeoff:** Adds a visual element. The icon needs to be subtle enough to not dominate the summary line but visible enough to communicate expandability.
 
@@ -133,4 +135,4 @@ The Chrome-based visual audit that surfaced this finding also confirmed:
 - Hover states register (text opacity 60%→100%, subtle bg-foreground/8 fill appears)
 - SegmentedControl containers are visually distinct from filter containers (different fill, explicit border, inline size)
 - Filter container tonal fill creates a faint grouping (~1.11:1 both themes) — works via spatial layout rather than fill contrast
-- Light mode chip border contrast ~1.23:1 (tracked separately as DEBT-291)
+- Light mode chip border contrast is noncompliant (tracked separately as DEBT-291: ~1.10:1 vs the tonal-fill parent, ~1.23:1 vs plain white/card)
