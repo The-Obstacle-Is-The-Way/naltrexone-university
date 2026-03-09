@@ -146,7 +146,7 @@ The Chrome-based visual audit that surfaced this finding also confirmed:
 Resolved in `app/(app)/app/practice/components/practice-session-starter.tsx` by shipping Approach C:
 
 - `<details>` now carries `group` so disclosure state is available to child utilities
-- `<summary>` now owns the clickable row padding via `rounded-lg px-4 py-3 transition-colors hover:bg-foreground/[0.03] [&::-webkit-details-marker]:hidden`
+- `<summary>` now owns the clickable row padding via `rounded-lg px-4 py-3 transition-colors [&::-webkit-details-marker]:hidden` (the `hover:bg-foreground/[0.03]` originally shipped here was later removed by [DEBT-294](./debt-294-filter-chip-fill-depth-and-cursor.md) — the chevron + cursor-pointer provide sufficient disclosure affordance without a summary hover fill)
 - The right side of `<summary>` now groups the selected-count text with a `ChevronDown` icon
 - The chevron uses `h-4 w-4 text-foreground/60 transition-transform group-open:rotate-180`
 - Safari/WebKit native disclosure markers are suppressed so only the custom chevron renders

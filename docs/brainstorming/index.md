@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-07
+**Last Updated:** 2026-03-09
 
 ---
 
@@ -29,7 +29,6 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
 | [BS-044](./bs-044-dark-mode-border-weight-tiering.md) | Dark Mode Border Weight Tiering — uniform `dark:border-foreground/40` is WCAG compliant but aesthetically heavy; explore tiered treatment by element role | Active | [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
-| [BS-046](./bs-046-filter-chip-fill-depth-and-summary-hover.md) | Filter Chip Fill Depth + Summary Hover Removal — chips are `bg-transparent` and look flat against container; summary hover is redundant with chevron and visually distracting | Active | [DEBT-290](../debt/debt-290-practice-filter-tonal-fill-elevation.md), [DEBT-292](../debt/debt-292-filter-section-disclosure-indicator.md) |
 
 **Next Brainstorming ID:** BS-047
 
@@ -39,6 +38,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 | ID | Title | Outcome |
 |----|-------|---------|
+| [BS-046](../_archive/brainstorming/bs-046-filter-chip-fill-depth-and-summary-hover.md) | Filter Chip Fill Depth + Summary Hover Removal — chips are `bg-transparent` and look flat against container; summary hover is redundant with chevron and visually distracting | Promoted to [DEBT-294](../debt/debt-294-filter-chip-fill-depth-and-cursor.md). Chrome visual audit added `cursor-pointer` fix and revised hover to `/[0.10]` (Radix-aligned). |
 | [BS-045](../_archive/brainstorming/bs-045-choice-button-dark-mode-fill-and-border-refinement.md) | Choice Button Dark Mode Fill and Border Refinement — gray rest fill, heavy border, indistinguishable states | Resolved by [DEBT-280](../_archive/debt/debt-280-choice-button-dark-mode-surface-refinement.md) (PR #175). Approach A implemented: rest fill removed, hover/selected steps widened, segmented control border softened. |
 | [BS-043](../_archive/brainstorming/bs-043-question-flow-typography-and-feedback-visual-unification.md) | Question Flow Typography and Feedback Visual Unification — text size mismatch and badge treatment divergence between choice buttons and feedback cards | Promoted to [DEBT-282](../_archive/debt/debt-282-feedback-visual-unification.md). Resolved by PR #179. Option B implemented: feedback badges, typography, layout, and hierarchy unified with choice buttons. |
 | [BS-042](../_archive/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md) | Contrast Consistency and WCAG Compliance Audit | Resolved by [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) (PR #174). All 9 baseline violations addressed: V1-V3, V5-V9 resolved; V4 deferred (low impact). Residual aesthetic tiering tracked in [BS-044](./bs-044-dark-mode-border-weight-tiering.md). |
