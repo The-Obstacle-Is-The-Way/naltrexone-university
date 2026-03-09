@@ -103,6 +103,86 @@ describe('runE2EUserStateReset', () => {
     });
   });
 
+  it('can be called repeatedly and restores the exact deterministic baseline each time', async () => {
+    const env = createEnv();
+    const expectedBaseline = {
+      completedSessions: 1,
+      attempts: 2,
+      bookmarks: 1,
+      idempotencyKeys: 0,
+    };
+    const state = {
+      completedSessions: 5,
+      attempts: 9,
+      bookmarks: 4,
+      idempotencyKeys: 7,
+    };
+    const observedBaselines: (typeof expectedBaseline)[] = [];
+    const callOrder: string[] = [];
+
+    const services: E2EUserStateResetServices = {
+      ensurePlaceholderQuestionsPublished: async () => {},
+      resolveClerkUserIdByEmail: async () => 'user_123',
+      resolveAppUserIdByClerkUserId: async () => 'db_user_123',
+      clearUserState: async () => {
+        callOrder.push('clear');
+        state.completedSessions = 0;
+        state.attempts = 0;
+        state.bookmarks = 0;
+        state.idempotencyKeys = 0;
+      },
+      resolveRequiredQuestionFixtures: async () => ({
+        placeholder01Id: 'question_01',
+        placeholder02Id: 'question_02',
+      }),
+      resolveRequiredChoiceFixtures: async () => ({
+        placeholder01CorrectChoiceId: 'choice_01_correct',
+        placeholder02IncorrectChoiceId: 'choice_02_incorrect',
+      }),
+      seedDeterministicBaseline: async () => {
+        callOrder.push('seed');
+        state.completedSessions = 1;
+        state.attempts = 2;
+        state.bookmarks = 1;
+      },
+      verifyDeterministicBaseline: async () => {
+        callOrder.push('verify');
+        expect(state).toEqual(expectedBaseline);
+        observedBaselines.push({ ...state });
+      },
+    };
+
+    await expect(
+      runE2EUserStateReset({
+        env,
+        services,
+      }),
+    ).resolves.toBeUndefined();
+
+    state.completedSessions = 4;
+    state.attempts = 8;
+    state.bookmarks = 3;
+    state.idempotencyKeys = 5;
+
+    await expect(
+      runE2EUserStateReset({
+        env,
+        services,
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(observedBaselines).toEqual([expectedBaseline, expectedBaseline]);
+    expect(callOrder).toEqual([
+      'clear',
+      'seed',
+      'verify',
+      'clear',
+      'seed',
+      'verify',
+    ]);
+    expect(state).toEqual(expectedBaseline);
+  });
+
   it('accepts Clerk paginated user-list response shape in the default resolver', async () => {
     const env = createEnv();
     const resolveAppUserIdByClerkUserId = vi.fn(async () => 'db_user_123');

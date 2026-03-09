@@ -1,6 +1,6 @@
 # Testing Infrastructure
 
-**Last Updated:** 2026-02-17
+**Last Updated:** 2026-03-09
 
 This document covers our E2E testing tools: Playwright and Vercel's agent-browser.
 
@@ -28,15 +28,16 @@ fullyParallel: false,
 retries: process.env.CI ? 2 : 0,
 workers: 1,
 webServer: {
-  command: process.env.CI ? 'pnpm start' : 'pnpm dev',
-  reuseExistingServer: !process.env.CI,
+  command: process.env.CI ? 'pnpm start' : 'pnpm build && pnpm start',
+  reuseExistingServer: false,
+  timeout: 120000,
 },
 ```
 
 - Uses `NEXT_PUBLIC_APP_URL` or defaults to `http://127.0.0.1:3000`
 - Runs Chromium only (for now)
-- Auto-starts dev server (`pnpm dev`) or uses production build in CI (`pnpm start`)
-- Runs with **1 worker** to avoid shared-user state conflicts (bookmarks, session continuation)
+- Starts a production server for E2E runs (`pnpm build && pnpm start` locally, `pnpm start` in CI)
+- Runs with **1 worker** because authenticated E2E flows share one Clerk user; mutating specs still reset that user to a deterministic baseline in `beforeEach`
 
 ### Playwright Timeout Policy
 
@@ -73,14 +74,12 @@ Current repo posture:
 | `tests/e2e/subscribe-and-practice.spec.ts` | Subscribe + answer a question |
 | `tests/e2e/practice.spec.ts` | Practice session answering flow |
 | `tests/e2e/session-continuation.spec.ts` | Resume incomplete session |
-| `tests/e2e/review.spec.ts` | Missed questions review flow |
 | `tests/e2e/bookmarks.spec.ts` | Bookmarks CRUD flow |
 | `tests/e2e/core-app-pages.spec.ts` | Entitled app pages load |
 | `tests/e2e/cross-page-navigation.spec.ts` | Cross-page navigation flows |
 | `tests/e2e/session-review-navigation.spec.ts` | Session review with prev/next navigation (SPEC-027/028) |
 | `tests/e2e/review-mode-audit.spec.ts` | Review mode read-only audit |
 | `tests/e2e/history.spec.ts` | History page flows |
-| `tests/e2e/marketing-contrast.spec.ts` | Marketing page contrast checks |
 
 ### Running E2E Tests
 
@@ -119,6 +118,8 @@ Subscription data is seeded via the Stripe API and direct DB writes in `global.s
 
 Seeding is skipped when `E2E_CLERK_USER_USERNAME` or `STRIPE_SECRET_KEY` are missing. Tests that depend on subscription already skip when Clerk credentials are absent, so this is safe.
 
+`global.setup.ts` also seeds a deterministic baseline for the shared authenticated E2E user once per suite run. That suite-level reset is not enough for mutating specs on its own: any spec that writes sessions, attempts, or bookmarks should call `runE2EUserStateReset()` in `beforeEach` so every test starts from the same baseline rather than inheriting artifacts from earlier files or retries.
+
 ### Writing New E2E Tests
 
 ```typescript
@@ -139,7 +140,7 @@ test.describe('feature name', () => {
 
 **Best Practices:**
 - Use `getByRole()`, `getByLabel()`, `getByText()` over CSS selectors
-- Wait for network: `await page.waitForLoadState('networkidle')`
+- Prefer locator/assertion waits over `waitForLoadState('networkidle')`; use `networkidle` only when it is the correct readiness signal for that page
 - Use `expect(locator).toBeVisible()` not `isVisible()`
 
 ---
@@ -366,7 +367,7 @@ killall "Google Chrome"
 **Instead, diagnose the structural root cause:**
 
 1. **Does the failing test mutate server-side state** (sessions, attempts, bookmarks)?
-   - If yes, add a per-test state reset in `beforeEach`. See `tests/e2e/helpers/reset-bookmarks-for-e2e-user.ts` for the established pattern.
+   - If yes, prefer `runE2EUserStateReset()` in `beforeEach`. See `tests/e2e/helpers/reset-e2e-user-state.ts` for the full reset pattern that clears `idempotency_keys`, `attempts`, `bookmarks`, and `practice_sessions`, then reseeds the deterministic baseline.
 2. **Does the failure only occur on retries** (passes on attempt 1, fails on retry)?
    - Suspect cascading state corruption: attempt 1 left database artifacts that retry inherits.
 3. **Does the failure occur on CI but not locally?**
@@ -374,7 +375,9 @@ killall "Google Chrome"
 4. **Is the test asserting on state created by a different test?**
    - This is a cross-spec dependency. Add explicit state setup in the affected test.
 
-See [DEBT-293](../debt/debt-293-e2e-shared-state-structural-flakiness.md) for the full analysis of shared-state flakiness and the per-test reset strategy.
+Use `resetBookmarksForE2EUser()` only when a test truly needs bookmark-only isolation and does not rely on session/attempt state.
+
+See [DEBT-293](../debt/debt-293-e2e-shared-state-structural-flakiness.md) for the full analysis and the resolved reset strategy.
 
 ### Server actions hang / UI stuck on "Loading..."
 

@@ -8,7 +8,7 @@ import {
   selectChoiceByLabel,
   submitQuestionForOutcome,
 } from './helpers/question';
-import { resetBookmarksForE2EUser } from './helpers/reset-bookmarks-for-e2e-user';
+import { runE2EUserStateReset } from './helpers/reset-e2e-user-state';
 import { startSession } from './helpers/session';
 import { ensureSubscribed } from './helpers/subscription';
 
@@ -58,6 +58,9 @@ test.describe('review mode audit', () => {
   // Multi-page audit flows can exceed the default timeout due to sequential navigation and assertions in CI.
   test.setTimeout(180_000);
   test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
+  test.beforeEach(async () => {
+    await runE2EUserStateReset();
+  });
 
   test('dashboard recent activity opens questions in review mode', async ({
     page,
@@ -302,10 +305,6 @@ test.describe('review mode audit', () => {
   });
 
   test.describe('bookmark review mode', () => {
-    test.beforeEach(async () => {
-      await resetBookmarksForE2EUser();
-    });
-
     test('bookmarks links include mode=review and open in review mode', async ({
       page,
     }) => {

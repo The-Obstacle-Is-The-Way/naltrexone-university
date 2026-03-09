@@ -20,7 +20,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 6 future enhancements (F1/F8 resolved by DEBT-277/DEBT-276) | P3 | — |
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 7 verified client-side flows still report only to console or silent fallbacks | P2 | — |
-| [DEBT-293](./debt-293-e2e-shared-state-structural-flakiness.md) | E2E Shared-State Structural Flakiness — verified suite-level-only reset still leaves cross-spec session/attempt/bookmark coupling, but the original placeholder-exhaustion theory was disproven; fix requires full per-test user-state reset plus `startSession()`/review-contract hardening | P1 | — |
 **Next Debt ID:** DEBT-295
 
 ---
@@ -30,6 +29,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
 | [DEBT-294](./debt-294-filter-chip-fill-depth-and-cursor.md) | Filter Chip Fill Depth, Cursor, and Summary Hover Removal — promoted unselected chips from transparent labels to tonal toggle surfaces (`bg-foreground/[0.07]` + `hover:bg-foreground/[0.10]`), added `cursor-pointer`, and removed the imperceptible filter-summary hover fill | P3 | 2026-03-09 | — |
+| [DEBT-293](./debt-293-e2e-shared-state-structural-flakiness.md) | E2E Shared-State Structural Flakiness — full per-test user-state reset now isolates mutating specs; `startSession()` verifies requested count; review navigator assertions now derive count from the page contract | P1 | 2026-03-09 | — |
 | [DEBT-291](./debt-291-filter-chip-light-mode-border-contrast.md) | FilterChip Light Mode Border Contrast — replaced the unselected light-mode chip border with `border-foreground/45` while preserving `dark:border-foreground/40` so the required chip boundary clears SC 1.4.11 in both themes | P3 | 2026-03-09 | — |
 | [DEBT-292](./debt-292-filter-section-disclosure-indicator.md) | Filter Section Disclosure Indicator — added a `ChevronDown` disclosure icon, `group-open:rotate-180`, and summary-only hover treatment to Topic/Substance/Treatment filter sections without reintroducing container borders | P3 | 2026-03-09 | — |
 | [DEBT-290](./debt-290-practice-filter-tonal-fill-elevation.md) | Practice Filter Container Tonal Fill Elevation — removed filter-container borders, applied `bg-foreground/5` tonal fill, promoted chip/count/helper secondary text to `text-foreground/60`, and switched FilterChip rest/hover to transparent + foreground-scale tokens | P3 | 2026-03-09 | — |
