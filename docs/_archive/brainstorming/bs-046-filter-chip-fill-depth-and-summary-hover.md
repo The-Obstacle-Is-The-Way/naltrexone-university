@@ -3,7 +3,7 @@
 **Date:** 2026-03-09
 **Triggered by:** Visual review of DEBT-290/291/292 shipped state — chips look flat/invisible against container, summary hover looks bad
 **Scope:** Two issues: (1) unselected filter chips need a subtle fill to differentiate from container; (2) summary hover effect is redundant with chevron and visually distracting
-**Related:** [DEBT-290](../debt/debt-290-practice-filter-tonal-fill-elevation.md), [DEBT-291](../debt/debt-291-filter-chip-light-mode-border-contrast.md), [DEBT-292](../debt/debt-292-filter-section-disclosure-indicator.md), [BS-044](./bs-044-dark-mode-border-weight-tiering.md)
+**Related:** [DEBT-290](../../debt/debt-290-practice-filter-tonal-fill-elevation.md), [DEBT-291](../../debt/debt-291-filter-chip-light-mode-border-contrast.md), [DEBT-292](../../debt/debt-292-filter-section-disclosure-indicator.md), [BS-044](../../brainstorming/bs-044-dark-mode-border-weight-tiering.md)
 
 ---
 
@@ -27,23 +27,13 @@ Three major design systems converge on the same answer: interactive controls sit
 
 ### Material Design 3
 
-**Source:** [M3 filter chip specs](https://m3.material.io/components/chips/specs), `_md-comp-filter-chip.scss` in material-web repo.
+**Source:** [M3 filter chip specs](https://m3.material.io/components/chips/specs) and Material's elevated filter-chip APIs.
 
-- **Flat unselected chip:** Transparent fill + 1px `outline` border. This is the default when chips sit directly on the page surface.
-- **Elevated unselected chip:** `surface-container-low` fill (tone 6). Used when chips sit on images or tonal surfaces — exactly our case.
-- **Selected chip:** `secondary-container` fill, border removed.
+- **Flat unselected chip:** transparent fill + 1px outline/border when the chip sits directly on the base surface.
+- **Elevated filter chip:** M3 also exposes an elevated variant and a family of surface-container roles for cases where the chip needs to read above its parent surface.
+- **Selected chip:** filled/high-contrast state with the border removed.
 
-M3's tonal surface scale (dark, neutral gray):
-
-| Role | Tone | Approx Hex | Delta from surface (tone 4) |
-|------|------|------------|---------------------------|
-| surface | 4 | #0E0E0E | — |
-| surface-container-low | 6 | #131313 | +2 tonal steps |
-| surface-container | 9 | #191919 | +5 |
-| surface-container-high | 12 | #1F1F1F | +8 |
-| surface-container-highest | 15 | #252525 | +11 |
-
-Key insight: M3 uses **2 tonal steps** between the parent surface and an elevated chip. This is a very subtle, deliberate lift — not a jump to card-level.
+Key insight: M3 supports the same qualitative move we need here, but its tonal roles do **not** map 1:1 to Tailwind `bg-foreground/[x]` percentages. The implementation recommendation below is grounded primarily in our local computed values plus the clearer Radix step 3 → 4 precedent.
 
 ### Radix UI (shadcn's foundation)
 
@@ -75,13 +65,13 @@ Apple's `quaternarySystemFill` (~8.5% white-equivalent) is the closest analog to
 
 ### Convergence
 
-| System | Resting fill | Hover fill | Delta |
-|--------|-------------|-----------|-------|
-| Radix step 3 → 4 | ~7.1% | ~10.6% | +3.5pp |
-| Apple quaternary → tertiary | ~8.5% | ~11% | +2.5pp |
-| M3 surface-container-low → high | tone 6 | tone 12 | +6 tonal steps |
+| System | Resting guidance | Hover guidance | Implication for us |
+|--------|------------------|----------------|--------------------|
+| Radix step 3 → 4 | ~7.1% | ~10.6% | Strongest direct match for our foreground-opacity scale |
+| Apple quaternary → tertiary | ~8.5% | ~11% | Confirms the same low-contrast-but-present rest fill band |
+| M3 elevated chip + surface containers | subtle elevated fill above parent surface | stronger elevated/hover surface | Confirms the direction, but not a direct % mapping |
 
-All three systems land in the **7-10% range** for interactive element resting fills on tonal surfaces, with a **3-5 percentage point** bump to hover.
+All three systems support the same design direction: a **non-zero resting fill** with a **modest hover lift**, not a transparent default.
 
 ---
 
@@ -99,12 +89,12 @@ All computed values assume the **current shipped DEBT-290/291/292 stack**:
 | Chip rest fill | ~#272727 | ~#E6E7E8 |
 | Delta from container | +10 RGB | −12 RGB |
 | Text contrast (foreground/60) | ~5.58:1 ✓ | ~5.01:1 ✓ |
-| Border contrast (vs container) | ~3.12:1 ✓ | ✓ |
+| Border contrast (vs container) | ~3.40:1 ✓ | ~3.15:1 ✓ |
 | Hover fill | Keep `/[0.08]` (+3pp) | Same |
-| Hover text contrast | ~12.76:1 ✓ (accent-foreground) | ~16.16:1 ✓ |
+| Hover text contrast | ~11.60:1 ✓ (accent-foreground) | ~15.14:1 ✓ |
 
 **Pros:** Most conservative. Barely touches the current look.
-**Cons:** May not solve the problem. Only +8 RGB from container — might still look flat. Below every design system's recommended interactive-element threshold.
+**Cons:** May not solve the problem. Only +10 RGB from container — might still look flat. Below every design system's recommended interactive-element threshold.
 
 ### Option B: Radix-Aligned — `bg-foreground/[0.07]` *(RECOMMENDED)*
 
@@ -113,9 +103,9 @@ All computed values assume the **current shipped DEBT-290/291/292 stack**:
 | Chip rest fill | ~#2C2C2C | ~#E1E3E4 |
 | Delta from container | +15 RGB | −17 RGB |
 | Text contrast (foreground/60) | ~5.34:1 ✓ | ~4.91:1 ✓ |
-| Border contrast (vs container) | ~3.12:1 ✓ | ✓ |
+| Border contrast (vs container) | ~3.40:1 ✓ | ~3.15:1 ✓ |
 | Hover fill | Bump to `/[0.10]` (+3pp) | Same |
-| Hover text contrast | ~11.2:1 ✓ (accent-foreground) | ~14.8:1 ✓ |
+| Hover text contrast | ~10.95:1 ✓ (accent-foreground) | ~14.54:1 ✓ |
 | Rest → hover delta | +3pp (matches Radix 3→4 step) | Same |
 
 **Pros:**
@@ -136,15 +126,15 @@ All computed values assume the **current shipped DEBT-290/291/292 stack**:
 | Chip rest fill | ~#323232 | ~#DADCDD |
 | Delta from container | +21 RGB | −24 RGB |
 | Text contrast (foreground/60) | ~5.02:1 ✓ | ~4.81:1 ✓ |
-| Border contrast (vs container) | ~3.12:1 ✓ | ✓ |
+| Border contrast (vs container) | ~3.40:1 ✓ | ~3.15:1 ✓ |
 | Hover fill | Bump to `/[0.15]` (+5pp) | Same |
 | Hover text contrast | ~9.42:1 ✓ (accent-foreground) | ~12.93:1 ✓ |
 | Rest → hover delta | +5pp | Same |
 
 **Pros:** Strong visual distinction. Chips unmistakably have their own surface.
 **Cons:**
-- Text contrast at resting state is borderline — 4.56:1 in dark, right at 4.5:1 in light. No safety margin.
-- +23 RGB delta starts reading as "mini-card" rather than "chip on surface" — the chip fill competes with the container fill for visual hierarchy
+- Text contrast still clears AA after recomputing against the real DEBT-290 parent surface, but it spends more of the available margin than Option B.
+- +21 RGB delta starts reading as "mini-card" rather than "chip on surface" — the chip fill competes with the container fill for visual hierarchy
 - `/10` is where Radix places step 4 (hover territory), so the resting state already occupies hover-level brightness
 - Apple's quaternary fill (~8.5%) was designed for pure-black backgrounds, not for a pre-tinted container; on our `/5` container the effective cumulative lift is higher than intended
 
@@ -221,8 +211,10 @@ Remove `hover:bg-foreground/[0.03]` from the `<summary>` className. One token de
 |-------|-------|------|
 | Chip text (foreground/60) vs rest fill (dark) | 5.34:1 | ✓ AA |
 | Chip text (foreground/60) vs rest fill (light) | 4.90:1 | ✓ AA |
-| Chip border vs container (dark) | 3.12:1 | ✓ SC 1.4.11 |
-| Hover text (accent-foreground) vs hover fill (dark) | 11.2:1 | ✓ AA |
+| Chip border vs container (dark) | 3.40:1 | ✓ SC 1.4.11 |
+| Chip border vs container (light) | 3.15:1 | ✓ SC 1.4.11 |
+| Hover text (accent-foreground) vs hover fill (dark) | 10.95:1 | ✓ AA |
+| Hover text (accent-foreground) vs hover fill (light) | 14.54:1 | ✓ AA |
 | Selected text (primary-foreground) vs selected fill | ~17:1 | ✓ AA |
 
 ---
@@ -243,5 +235,5 @@ Remove `hover:bg-foreground/[0.03]` from the `<summary>` className. One token de
 | 2026-03-09 | Chose Option B (`bg-foreground/[0.07]` + hover `/[0.10]`) | Radix step 3/4 alignment, M3 elevated-chip precedent, Apple quaternary fill convergence. Best balance of perceptibility and restraint on the real DEBT-290 parent surface. Monotonic foreground-opacity scale preserved. |
 | 2026-03-09 | Revised hover from `/[0.12]` to `/[0.10]` | Chrome visual audit feedback: Radix step 3→4 is actually +3.5pp, not +5pp. `/[0.10]` is the truer Radix match. Creates a tighter 7→10→solid ramp. |
 | 2026-03-09 | Added `cursor-pointer` to chip base classes | Chrome visual audit found chips lack pointer cursor — browsers default `<button>` to `cursor: default`. |
-| 2026-03-09 | Promoted to [DEBT-294](../debt/debt-294-filter-chip-fill-depth-and-cursor.md) | Investigation complete, no open questions. BS-046 archived. |
+| 2026-03-09 | Promoted to [DEBT-294](../../debt/debt-294-filter-chip-fill-depth-and-cursor.md) | Investigation complete, no open questions. BS-046 archived. |
 | 2026-03-09 | Bundle summary hover removal with chip fill change | Both are filter-section polish, one PR keeps the diff cohesive |

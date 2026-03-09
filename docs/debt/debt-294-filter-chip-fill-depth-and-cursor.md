@@ -21,17 +21,17 @@ Two polish issues in the practice page filter sections shipped with DEBT-290/291
 
 ## Design System Basis
 
-Three major systems converge on 7-10% foreground opacity for interactive element resting fills on tonal surfaces:
+Three major systems point in the same direction: interactive controls on tonal surfaces should have a subtle but non-zero resting fill, not a fully transparent default.
 
-| System | Resting fill | Hover fill | Delta |
-|--------|-------------|-----------|-------|
-| Radix step 3 → 4 | ~7.1% | ~10.6% | +3.5pp |
-| Apple quaternary → tertiary | ~8.5% | ~11% | +2.5pp |
-| M3 surface-container-low → high | tone 6 | tone 12 | +6 tonal steps |
+| System | Resting guidance | Hover guidance | Implication for us |
+|--------|------------------|----------------|--------------------|
+| Radix step 3 → 4 | ~7.1% | ~10.6% | Strongest direct match for our foreground-opacity scale |
+| Apple quaternary → tertiary | ~8.5% | ~11% | Confirms the same low-contrast-but-present rest fill band |
+| M3 elevated chip + surface containers | subtle elevated fill above parent surface | stronger elevated/hover surface | Confirms the direction, but not a direct % mapping |
 
-`bg-foreground/[0.07]` hits the low end of that range, appropriate because our chips also have borders — they don't need fill alone for identification.
+`bg-foreground/[0.07]` hits the low end of that range, which is appropriate because our chips also keep their border — the fill does not need to carry identification by itself.
 
-Full design system evidence (M3 tonal scale, Radix color steps, Apple system fills) is preserved in the archived [BS-046](../_archive/brainstorming/bs-046-filter-chip-fill-depth-and-summary-hover.md).
+Full design system evidence and the archived investigation trail are preserved in [BS-046](../_archive/brainstorming/bs-046-filter-chip-fill-depth-and-summary-hover.md).
 
 ---
 
@@ -96,13 +96,13 @@ Each step is perceptually distinct. Monotonic. No collisions.
 | Effective color | ~#2C2C2C | ~#E1E3E4 |
 | Delta from container (#1D1D1D / #F2F3F3) | +15 RGB | −17 RGB |
 | Text contrast (foreground/60) | ~5.34:1 ✓ | ~4.91:1 ✓ |
-| Border contrast (vs container) | ~3.12:1 ✓ | ✓ |
+| Border contrast (vs container) | ~3.40:1 ✓ | ~3.15:1 ✓ |
 
 ### Chip hover fill (`bg-foreground/[0.10]`)
 
 | Property | Dark | Light |
 |----------|------|-------|
-| Text contrast (accent-foreground) | ~11.2:1 ✓ | ~14.8:1 ✓ |
+| Text contrast (accent-foreground) | ~10.95:1 ✓ | ~14.54:1 ✓ |
 
 ### WCAG compliance summary
 
@@ -110,8 +110,10 @@ Each step is perceptually distinct. Monotonic. No collisions.
 |-------|-------|------|
 | Chip text (foreground/60) vs rest fill (dark) | 5.34:1 | ✓ AA |
 | Chip text (foreground/60) vs rest fill (light) | 4.91:1 | ✓ AA |
-| Chip border vs container (dark) | 3.12:1 | ✓ SC 1.4.11 |
-| Hover text (accent-foreground) vs hover fill (dark) | 11.2:1 | ✓ AA |
+| Chip border vs container (dark) | 3.40:1 | ✓ SC 1.4.11 |
+| Chip border vs container (light) | 3.15:1 | ✓ SC 1.4.11 |
+| Hover text (accent-foreground) vs hover fill (dark) | 10.95:1 | ✓ AA |
+| Hover text (accent-foreground) vs hover fill (light) | 14.54:1 | ✓ AA |
 | Selected text (primary-foreground) vs selected fill | ~17:1 | ✓ AA |
 
 ---
@@ -145,7 +147,7 @@ Each step is perceptually distinct. Monotonic. No collisions.
 ## What This Does NOT Change
 
 1. **Selected FilterChip** — `bg-primary text-primary-foreground` is high contrast. No change.
-2. **FilterChip border** — `dark:border-foreground/40` stays. It is a required SC 1.4.11 boundary. The Chrome audit suggested softening to 25-30%, but that would drop below 3:1 minimum (~1.7:1 at 25%). Rejected.
+2. **FilterChip border** — `dark:border-foreground/40` stays. It is a required SC 1.4.11 boundary. The Chrome audit suggested softening to 25-30%, but that would drop below 3:1 minimum in both themes (~2.12:1 dark / ~1.79:1 light at 25%). Rejected.
 3. **SegmentedControl** — Different component, different surface context. No change.
 4. **Filter container fill** — `bg-foreground/5` on `<details>` stays as shipped by DEBT-290.
 5. **Filter helper/count text** — `text-foreground/60` stays as shipped by DEBT-290. Already AA-compliant.
