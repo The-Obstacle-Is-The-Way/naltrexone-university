@@ -75,7 +75,7 @@ These are the verified user-facing client flows that should be moved onto a shar
 | `use-practice-session-tags.ts:25` | `console.error('createTagsEffect failed:', ...)` | Tag load failures are invisible to Sentry |
 | `use-question-page-controller.ts:249-295` | Development-only console output; production falls back silently | Session navigation fetch failures are invisible in production |
 | `question-page-logic.ts:350` | Bare `catch {}` with fallback UI only | Review hydration failures are invisible everywhere |
-| `use-quick-practice-status-counts.ts:125-126` | Routes caught effect errors through `logUnhandledAsyncError()` | Quick-practice status count failures reach console only |
+| `use-quick-practice-status-counts.ts:136-141` | Routes caught effect errors through `logUnhandledAsyncError()` | Quick-practice status count failures reach console only |
 | `use-practice-available-questions-count.ts:40-41` | Routes caught effect errors through `logUnhandledAsyncError()` | Available-count failures reach console only |
 
 ---

@@ -1,9 +1,9 @@
-# ~~BUG-200~~ → RECLASSIFIED as [DEBT-286](../debt/debt-286-client-side-error-reporting.md)
+# ~~BUG-200~~ → RECLASSIFIED as [DEBT-286](../../debt/debt-286-client-side-error-reporting.md)
 
 **Status:** Reclassified (2026-03-07)
 **Reason:** These are not independent bugs. They are symptoms of a systemic gap in SPEC-016 (Observability): `Sentry.captureException()` is called zero times in `app/` + `src/` application code, and there is no standard way for caught client-side failures to reach Sentry. Tracer-bullet verification after reclassification also showed that the original 5-location slice below was not exhaustive. DEBT-286 carries the corrected broader inventory and rollout plan.
 
-**See:** [DEBT-286: Client-Side Caught Error Reporting](../debt/debt-286-client-side-error-reporting.md)
+**See:** [DEBT-286: Client-Side Caught Error Reporting](../../debt/debt-286-client-side-error-reporting.md)
 
 ---
 

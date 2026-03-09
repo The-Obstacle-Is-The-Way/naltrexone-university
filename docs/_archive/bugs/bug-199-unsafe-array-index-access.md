@@ -1,7 +1,7 @@
 # ~~BUG-199~~ → INVALIDATED: Stripe Subscription Items Are Already Validated Upstream
 
 **Created:** 2026-03-07
-**Source:** [AUDIT-011](../audits/audit-011-error-observability-defensive-coding.md)
+**Source:** [AUDIT-011](../../audits/audit-011-error-observability-defensive-coding.md)
 **Status:** Invalidated (2026-03-07)
 **Reason:** The unguarded `[0]` access still exists in `src/adapters/gateways/stripe/stripe-subscription-normalizer.ts:55`, but the documented production failure mode is not reachable in the current codebase. Every production caller validates `subscription.items.data` with `stripeSubscriptionSchema`, which requires `.min(1)`, before the normalizer runs.
 
