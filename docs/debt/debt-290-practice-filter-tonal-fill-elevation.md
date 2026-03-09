@@ -20,19 +20,19 @@ This creates the same visual problem DEBT-289 fixed: `dark:border-foreground/40`
 
 ### The chip complication
 
-Unlike the dashboard (where nested rows contain only read-only badge pills), the practice filter containers hold interactive `FilterChip` components. Unselected chips currently use `bg-background` — the darkest surface in the stack (~#09090b). If the container gets the tonal fill treatment (`bg-foreground/5` ≈ #1D1D1D), unselected chips would be **darker than their parent surface**, punching through the tonal fill like dark holes. This is the punch-out problem.
+Unlike the dashboard (where nested rows contain only read-only badge pills), the practice filter containers hold interactive `FilterChip` components. Unselected chips currently use `bg-background` — the darkest surface in the stack (`#090909`). If the container gets the tonal fill treatment (`bg-foreground/5` ≈ `#1D1D1D`), unselected chips would be **darker than their parent surface**, punching through the tonal fill like dark holes. This is the punch-out problem.
 
 ### Current surface hierarchy (practice page)
 
 ```
-bg-background (#09090b, Layer 0 — page)
+bg-background (#090909, Layer 0 — page)
   └─ Card bg-card (#121212, Layer 1 — "Start a session")
        └─ <details> border-border/60 bg-muted/20 dark:border-foreground/40 (Layer 2 — filter container)
-            └─ FilterChip bg-background (#09090b) + border (Layer 3 — unselected chip)
+            └─ FilterChip bg-background (#090909) + border (Layer 3 — unselected chip)
             └─ FilterChip bg-primary (#EDEDED) (Layer 3 — selected chip)
 ```
 
-The unselected chip fill (`bg-background`, Layer 0) is **two layers below** its parent container (Layer 2). This is already a subtle hierarchy violation — chips at rest are darker than even the page background behind the card. It works today only because the container's border visually contains the chips. Without the border, the darkness becomes conspicuous.
+The unselected chip fill (`bg-background`, Layer 0) is **two layers below** its parent container (Layer 2). This is already a subtle hierarchy violation — chips at rest visually drop all the way back to the page-background tone instead of staying within the card's nested surface ladder. It works today only because the container's border visually contains the chips. Without the border, the darkness becomes conspicuous.
 
 ---
 
@@ -97,30 +97,32 @@ border-border bg-background text-muted-foreground hover:bg-muted/50 hover:text-a
 
 **After (unselected):**
 ```
-border-border bg-transparent text-muted-foreground hover:bg-foreground/[0.08] hover:text-accent-foreground dark:border-foreground/40
+border-border bg-transparent text-foreground/60 hover:bg-foreground/[0.08] hover:text-accent-foreground dark:border-foreground/40
 ```
 
 **Selected:** Unchanged (`border-primary bg-primary text-primary-foreground`).
 
 Key decisions:
 
-1. **Keep the chip border.** Unlike dashboard row fills (supplementary), the chip border **is** a required boundary per SC 1.4.11. It defines the clickable target area for a toggle control. `dark:border-foreground/40` at ~3.46:1 vs the tonal fill surface passes the 3:1 non-text minimum.
+1. **Keep the chip border.** Unlike dashboard row fills (supplementary), the chip border **is** a required boundary per SC 1.4.11. It defines the clickable target area for a toggle control. `dark:border-foreground/40` is still ~3.1:1 against the tonal fill surface, so it clears the 3:1 non-text minimum.
 
 2. **Transparent, not tonal fill.** Chips should not have their own `bg-foreground/X` fill because: (a) they already have a border providing the shape, and (b) adding tonal fill to an element inside a tonal fill container creates a double-fill that thickens the visual weight without adding information.
 
 3. **Hover token change.** `hover:bg-muted/50` was designed for page-background or card-background contexts. On a `bg-foreground/5` parent, it causes the same hover inversion that DEBT-289 documented (muted-based hover is darker than foreground-based rest fill in dark mode). `hover:bg-foreground/[0.08]` uses the same foreground scale, guaranteeing monotonic brightening.
 
+4. **Promote unselected chip text.** `text-muted-foreground` is acceptable on the current `bg-background` chip fill, but once the chip becomes transparent on `bg-foreground/5`, it drops to ~`4.45:1` in dark mode and narrowly fails normal-text AA. `text-foreground/60` restores comfortable margin at ~`6.07:1` while still reading as secondary metadata rather than primary content.
+
 ### Resulting surface hierarchy
 
 ```
-bg-background (#09090b, Layer 0 — page)
+bg-background (#090909, Layer 0 — page)
   └─ Card bg-card (#121212, Layer 1)
        └─ Filter section bg-foreground/5 (#1D1D1D, Layer 2)    ← tonal fill, no border
             └─ Chip transparent (inherits #1D1D1D) + border    ← border provides shape
             └─ Chip bg-primary (#EDEDED)                       ← selected, high contrast
 ```
 
-Each layer steps monotonically lighter: #09090b → #121212 → #1D1D1D. No punch-out. No hierarchy violations.
+Each layer steps monotonically lighter: #090909 → #121212 → #1D1D1D. No punch-out. No hierarchy violations.
 
 ---
 
@@ -142,6 +144,13 @@ Same as DEBT-289 — `bg-foreground/5` on `bg-card` (#121212):
 
 Note: The chip border ratio vs the tonal fill parent (#1D1D1D) is slightly lower than vs the card (#121212, where it's ~3.46:1) because the background is lighter. At ~3.1:1 it still passes SC 1.4.11's 3:1 threshold. If future visual QA finds this too subtle, `border-foreground/45` (~3.5:1) is available as a step-up without changing the design approach.
 
+### Chip text on tonal fill surface
+
+| Text token | Effective color | WCAG ratio vs bg-foreground/5 (#1D1D1D) | Passes 4.5:1? |
+|-----------|----------------|------------------------------------------|---------------|
+| `text-muted-foreground` | #838383 | ~4.45:1 | No |
+| **`text-foreground/60`** | **#9B9B9B** | **~6.07:1** | **Yes** |
+
 ### Chip hover fill
 
 | State | Dark mode (on tonal fill #1D1D1D) | Light mode | Direction |
@@ -158,32 +167,32 @@ Note: The chip border ratio vs the tonal fill parent (#1D1D1D) is slightly lower
 | File | Change |
 |------|--------|
 | `app/(app)/app/practice/components/practice-session-starter.tsx:213` | Filter `<details>`: remove `border border-border/60 dark:border-foreground/40`, change `bg-muted/20` → `bg-foreground/5` |
-| `components/ui/filter-chip.tsx:28` | Unselected: `bg-background` → `bg-transparent`, `hover:bg-muted/50` → `hover:bg-foreground/[0.08]` |
+| `components/ui/filter-chip.tsx:28` | Unselected: `bg-background` → `bg-transparent`, `text-muted-foreground` → `text-foreground/60`, `hover:bg-muted/50` → `hover:bg-foreground/[0.08]` |
 
 ### Pattern registry updates
 
 | Pattern ID | Change |
 |------------|--------|
 | S-2 (Muted Row) | Add practice variant using borderless tonal fill for filter containers |
-| I-4 (Filter Chip) | Update unselected fill from `bg-background` to `bg-transparent`, update hover token |
+| I-4 (Filter Chip) | Update unselected fill from `bg-background` to `bg-transparent`, promote unselected text to `text-foreground/60`, update hover token |
 
 ### Contrast policy updates
 
-Add FilterChip unselected fill to "Classified supplementary fills" table in `docs/frontend/contrast-policy.md`.
+Add the practice filter containers to "Classified supplementary fills" in `docs/frontend/contrast-policy.md`. No separate FilterChip fill entry is needed because the unselected chip becomes transparent and the chip border remains the required boundary.
 
 ### Test updates
 
 | File | Change |
 |------|--------|
 | `app/(app)/app/practice/components/practice-session-starter.test.tsx` | Update any class-based assertions for filter container border removal |
-| `components/ui/filter-chip.test.tsx` | Update assertions for `bg-transparent` and hover token |
+| `components/ui/filter-chip.test.tsx` | Update assertions for `bg-transparent`, `text-foreground/60`, and the new hover token |
 
 ### Doc updates
 
 | File | Change |
 |------|--------|
 | `docs/frontend/pages/quick-practice.md` | Update scope note referencing practice starter filter sections |
-| `docs/frontend/contrast-policy.md` | Add chip-on-tonal-fill entry |
+| `docs/frontend/contrast-policy.md` | Add practice filter-container supplementary-fill entry |
 | `docs/frontend/pattern-registry.md` | Update S-2 and I-4 entries |
 | `docs/debt/index.md` | Add DEBT-290 to active index |
 
@@ -205,7 +214,7 @@ Add FilterChip unselected fill to "Classified supplementary fills" table in `doc
 
 ## Open Questions
 
-1. **FilterChip `bg-transparent` on non-tonal surfaces.** The FilterChip component is shared — changing `bg-background` to `bg-transparent` affects it everywhere it's used. Currently the only consumers are the practice starter's filter sections (inside `<details>` containers). If FilterChip is ever used directly on a Card surface without a tonal fill parent, `transparent` would inherit `bg-card` (#121212) rather than `bg-background` (#09090b) — a 3.5 lightness-point difference that is imperceptible. This is safe.
+1. **FilterChip transparent fill + brighter text on non-tonal surfaces.** The FilterChip component is shared — changing `bg-background` to `bg-transparent` and `text-muted-foreground` to `text-foreground/60` affects every future consumer. Currently the only consumer is the practice starter's filter sections (inside `<details>` containers). If FilterChip is later used directly on a Card surface without a tonal-fill parent, `transparent` would inherit `bg-card` (#121212) rather than `bg-background` (#090909), and `text-foreground/60` would still clear AA comfortably. This is safe.
 
 2. **Light mode visual check.** `bg-foreground/5` in light mode uses `foreground` ≈ #020817 (dark navy) at 5% opacity on white: rgb(242, 243, 243). This should produce a clean cool-gray tint for the filter containers. Validate visually after implementation.
 

@@ -12,11 +12,14 @@ Top to bottom:
 
 1. **Page heading** — "Practice" h1 + subtitle + "Back to Dashboard" header action link
 2. **Incomplete session card** (conditional) — Resume/abandon CTA when an in-progress session exists
-3. **Incomplete session error** (conditional) — `<ErrorCard>` when session check fails
+3. **Incomplete session error** (conditional) — `<ErrorCard>` when session check fails and an error message is available
 4. **Session starter card** — The main form: mode, questions count, status, difficulty, tag filters, availability message, start button
-5. **Session starter placeholder** (conditional) — Skeleton card shown while incomplete session status is loading
+5. **Session starter placeholder** (conditional) — Static placeholder card shown whenever the real starter is hidden
 
-Only one of items 2–5 is visible at a time depending on `incompleteSessionStatus` and `incompleteSession` state.
+The lower stack is not mutually exclusive:
+- If `incompleteSession` exists, the incomplete-session card renders and the starter placeholder still renders beneath it.
+- If `incompleteSessionStatus === 'error'`, the error card renders and the starter placeholder renders beneath it.
+- Only the real starter card is mutually exclusive with the placeholder (`shouldShowSessionStarter` gates that split).
 
 ---
 
@@ -33,7 +36,7 @@ Only one of items 2–5 is visible at a time depending on `incompleteSessionStat
 ### Incomplete Session Card
 
 **Source:** `app/(app)/app/practice/components/incomplete-session-card.tsx`
-**Condition:** Shown when `sessionControls.incompleteSession` is truthy.
+**Condition:** Shown when `sessionControls.incompleteSession` is truthy. The placeholder card still renders beneath it because the starter itself is hidden.
 
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
@@ -46,7 +49,7 @@ Only one of items 2–5 is visible at a time depending on `incompleteSessionStat
 
 ### Incomplete Session Error
 
-**Condition:** Shown when `incompleteSessionStatus === 'error'`.
+**Condition:** Shown when `incompleteSessionStatus === 'error'` and `incompleteSessionError` is truthy. The placeholder card still renders beneath it because the starter itself is hidden.
 
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
@@ -54,7 +57,7 @@ Only one of items 2–5 is visible at a time depending on `incompleteSessionStat
 
 ### Session Starter Placeholder
 
-**Condition:** Shown while `incompleteSessionStatus` is `'loading'` or `'error'`, or when an incomplete session exists (starter is hidden).
+**Condition:** Shown whenever `shouldShowSessionStarter` is false: while `incompleteSessionStatus` is `'loading'` or `'error'`, or when an incomplete session exists.
 
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
@@ -178,11 +181,11 @@ bg-background (Layer 0 — page)
        │    └─ Inactive items transparent (inherit Layer 2)
        ├─ Input dark:bg-input/30 (Layer 2 — Questions count)
        └─ <details> border-border/60 bg-muted/20 dark:border-foreground/40 (Layer 2 — tag filter containers)
-            └─ FilterChip bg-background (Layer 0!) + border (unselected)  ← hierarchy violation
+            └─ FilterChip bg-background (Layer 0) + border (unselected)   ← hierarchy violation
             └─ FilterChip bg-primary (selected)                           ← Layer 3+, high contrast
 ```
 
-**Known hierarchy issue:** Unselected FilterChips use `bg-background` (#09090b) which is Layer 0 — two layers below their Layer 2 container. This works visually only because the container border contains them. See [DEBT-290](../../debt/debt-290-practice-filter-tonal-fill-elevation.md) for the proposed fix.
+**Known hierarchy issue:** Unselected FilterChips use `bg-background` (`#090909`), which is Layer 0 — two layers below their Layer 2 container. This works visually only because the container border contains them. See [DEBT-290](../../debt/debt-290-practice-filter-tonal-fill-elevation.md) for the proposed fix.
 
 ---
 
@@ -201,7 +204,7 @@ bg-background (Layer 0 — page)
 Page load
   → incompleteSessionStatus: 'loading'
   → Check for incomplete session
-    → Found → Show IncompleteSessionCard (hide starter)
+    → Found → Show IncompleteSessionCard + placeholder (hide starter)
       → Resume → Navigate to session
       → Abandon → Delete session, show starter
     → Not found → Show PracticeSessionStarter
@@ -231,16 +234,16 @@ type PracticeFilters = {
 | Active pill bg | `bg-primary` | #EDEDED | High contrast |
 | Active pill text | `text-primary-foreground` | #090909 | Dark on light |
 | Inactive text | `text-muted-foreground` | #838383 | ~4.6:1 on muted — passes AA |
-| Inactive hover | `hover:bg-muted/50` | ~#141414 | Subtle fill on muted surface |
+| Inactive hover | `hover:bg-muted/50` | Effectively neutral on the solid `bg-muted` container | The more noticeable hover cue is `hover:text-foreground` |
 
 ### FilterChip (I-4)
 
 | State | Token | Computed (dark) | Contrast vs parent | Notes |
 |-------|-------|----------------|-------------------|-------|
-| Unselected border | `dark:border-foreground/40` | #6A6A6A | ~3.46:1 vs card | Passes 3:1 (required boundary) |
-| Unselected fill | `bg-background` | #09090b | N/A | Darkest surface — causes punch-out on tonal parents |
-| Unselected text | `text-muted-foreground` | #838383 | ~8.3:1 vs bg-background | AA pass |
-| Unselected hover | `hover:bg-muted/50` | ~#0E0E0E | — | Subtle on background |
+| Unselected border | `dark:border-foreground/40` | #6A6A6A | ~3.41:1 vs current `bg-muted/20` parent (`#141414`) | Passes 3:1 (required boundary) |
+| Unselected fill | `bg-background` | #090909 | N/A | Drops back to the page-background tone — causes punch-out on tonal parents |
+| Unselected text | `text-muted-foreground` | #838383 | ~5.25:1 vs bg-background | AA pass in the current implementation |
+| Unselected hover | `hover:bg-muted/50` | ~#181818 on the current `bg-muted/20` parent | — | Lightens from the rest fill, but only within the bordered-container context |
 | Selected fill | `bg-primary` | #EDEDED | — | High contrast |
 | Selected text | `text-primary-foreground` | #090909 | ~17:1 vs primary | AA pass |
 | Selected border | `border-primary` | #EDEDED | — | Matches fill |
@@ -250,14 +253,14 @@ type PracticeFilters = {
 | Token | Computed (dark) | Contrast vs card (#121212) | Notes |
 |-------|----------------|---------------------------|-------|
 | `bg-muted/20` | ~#141414 (rgb 20) | 1.02:1 | Nearly invisible fill |
-| `border-border/60` | ~#171717 | ~1.07:1 vs card | Light-mode-only visible |
+| `border-border/60` | ~#1E1E1E (rgb 30) | ~1.09:1 vs card | Light-mode-only visible |
 | `dark:border-foreground/40` | #6A6A6A | ~3.46:1 vs card | Heavy dark override — louder than parent card border |
 
 ### Input
 
 | Token | Computed (dark) | Notes |
 |-------|----------------|-------|
-| `dark:bg-input/30` | ~#131313 | Subtle fill on card |
+| `dark:bg-input/30` | ~#181818 | Subtle fill on card |
 | `dark:border-foreground/40` | #6A6A6A | Same heavy border treatment |
 
 ---
@@ -270,6 +273,7 @@ When [DEBT-290](../../debt/debt-290-practice-filter-tonal-fill-elevation.md) is 
 |---------|---------|---------------|--------|
 | Filter container (`<details>`) | `border border-border/60 bg-muted/20 dark:border-foreground/40` | `bg-foreground/5` (no border) | Border removed, tonal fill replaces it |
 | FilterChip unselected fill | `bg-background` | `bg-transparent` | Inherits parent tonal fill, fixes punch-out |
+| FilterChip unselected text | `text-muted-foreground` | `text-foreground/60` | Restores AA margin once the chip inherits the tonal parent |
 | FilterChip unselected hover | `hover:bg-muted/50` | `hover:bg-foreground/[0.08]` | Consistent foreground-based scale, fixes hover inversion |
 
 Elements **not** changing: SegmentedControl (all three instances), Input, Card container, Button, header action link, incomplete session card, error states.

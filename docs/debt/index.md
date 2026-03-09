@@ -20,7 +20,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 6 future enhancements (F1/F8 resolved by DEBT-277/DEBT-276) | P3 | — |
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 7 verified client-side flows still report only to console or silent fallbacks | P2 | — |
-| [DEBT-290](./debt-290-practice-filter-tonal-fill-elevation.md) | Practice Filter Container Tonal Fill Elevation — apply DEBT-289 borderless tonal fill pattern to practice starter's Topic/Substance/Treatment `<details>` containers; fix FilterChip punch-out (`bg-background` → `bg-transparent`); update hover token to foreground-based scale | P3 | — |
+| [DEBT-290](./debt-290-practice-filter-tonal-fill-elevation.md) | Practice Filter Container Tonal Fill Elevation — apply DEBT-289 borderless tonal fill pattern to practice starter's Topic/Substance/Treatment `<details>` containers; fix FilterChip punch-out (`bg-background` → `bg-transparent`), promote unselected chip text to `text-foreground/60`, and update hover token to the foreground-based scale | P3 | — |
 **Next Debt ID:** DEBT-291
 
 ---
