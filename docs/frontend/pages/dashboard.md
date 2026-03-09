@@ -25,10 +25,10 @@ Top to bottom:
 | Streak card | `<Card>` (S-1) | S-1: Card Surface | Non-interactive |
 | CTA card | `<Card>` (S-1) + `<Button>` | S-1 + standard Button | `lg:col-span-2` |
 | Session container | `<Card>` (S-1) | S-1: Card Surface | Wraps list of interactive rows |
-| Activity container | `<Card>` (S-1) | S-1: Card Surface | Wraps list of interactive rows |
+| Activity container | `<Card>` (S-1) | S-1: Card Surface | Wraps list of interactive/static rows |
 | Session rows | `<Link>` with I-1 classes | I-1: Hoverable Row | Nested inside session container card |
 | Activity rows | `<Link>` with I-1 classes | I-1: Hoverable Row | Nested inside activity container card |
-| Unavailable activity | `<div>` with I-1 classes (static) | I-1 minus hover | No link — question deleted |
+| Unavailable activity | `<div>` with S-2 classes | S-2: Muted Row | Static nested row, no link — question deleted |
 | Mode badges | Inline `<span>` with pill classes | — | `border-border/60`, `dark:border-foreground/40` |
 | Difficulty badges | Inline `<span>` with pill classes | — | Same border tokens as mode badges |
 | Header action links | `<Button variant="link">` | L-5: Secondary Header Action | Uses `headerActionLinkClasses` |
@@ -45,7 +45,7 @@ bg-background (Layer 0 — page)
        └─ <Link> bg-muted/20 + border-border/60 (Layer 2 — rows) ← ROWS INSIDE CARD
 ```
 
-**Known issue:** The top-half cards are flat (card IS the content). The bottom-half cards are containers (card WRAPS a list of individually-bordered rows). This creates a visual inconsistency — see [DEBT-289](../../debt/debt-289-dashboard-nested-card-surface-strategy.md).
+**Known issues:** The top-half cards are flat (card IS the content). The bottom-half cards are containers (card WRAPS a list of individually-bordered rows). This creates a visual inconsistency local to the dashboard. Adjacent pages use cleaner but different patterns: History sessions uses bordered rows directly on the page background, while History questions and Bookmarks use standalone cards per item. Also, the `lg:grid-cols-2` recent-lists row currently stretches both panels to equal height, which amplifies empty space in the shorter Recent sessions panel. See [DEBT-289](../../debt/debt-289-dashboard-nested-card-surface-strategy.md).
 
 ---
 
