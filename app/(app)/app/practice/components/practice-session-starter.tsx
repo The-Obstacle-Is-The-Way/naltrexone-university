@@ -210,11 +210,11 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
                 return (
                   <details
                     key={kind}
-                    className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3 dark:border-foreground/40"
+                    className="rounded-xl bg-foreground/5 px-4 py-3"
                   >
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-foreground outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]">
                       <span>{label}</span>
-                      <span className="text-xs font-normal text-muted-foreground">
+                      <span className="text-xs font-normal text-foreground/60">
                         ({selectedCount} selected)
                       </span>
                     </summary>
@@ -232,7 +232,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
                           />
                         ))}
                       </fieldset>
-                      <div className="mt-1 text-xs text-muted-foreground">
+                      <div className="mt-1 text-xs text-foreground/60">
                         Leave empty to include all {tagKindPluralLabels[kind]}.
                       </div>
                     </div>

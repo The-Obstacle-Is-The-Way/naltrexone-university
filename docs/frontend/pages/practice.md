@@ -2,7 +2,7 @@
 
 **Page:** `/app/practice`
 **Source:** `app/(app)/app/practice/page.tsx` (server) → `practice-page-client.tsx` (client)
-**Last Updated:** 2026-03-08
+**Last Updated:** 2026-03-09
 
 ---
 
@@ -109,13 +109,13 @@ Three collapsible `<details>` elements, one per tag kind. Only rendered when `ta
 
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
-| Container | `<details>` | S-2 (default, bordered) | `:211–239` | `rounded-xl border border-border/60 bg-muted/20 px-4 py-3 dark:border-foreground/40` |
+| Container | `<details>` | S-2 (practice variant, tonal fill) | `:211–239` | `rounded-xl bg-foreground/5 px-4 py-3` |
 | Summary header | `<summary>` | — | `:215` | `flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-foreground` + focus ring |
 | Section label | `<span>` | — | `:216` | "Topic" / "Substance" / "Treatment" |
-| Selected count | `<span>` | — | `:217` | `text-xs font-normal text-muted-foreground` — "(N selected)" |
+| Selected count | `<span>` | — | `:217` | `text-xs font-normal text-foreground/60` — "(N selected)" |
 | Chip fieldset | `<fieldset>` | — | `:222` | `flex flex-wrap gap-2 border-0 p-0 m-0`, `aria-label={label}` |
 | Filter chips | `<FilterChip>` | I-4 | `:227` | Multi-select toggle buttons (see below) |
-| Helper text | `<div>` | — | `:235` | `text-xs text-muted-foreground` — "Leave empty to include all {kind}." |
+| Helper text | `<div>` | — | `:235` | `text-xs text-foreground/60` — "Leave empty to include all {kind}." |
 
 #### Tag Loading/Error States
 
@@ -145,7 +145,7 @@ Toggle-style pill button. Uses `aria-pressed` for selected state.
 | **Base** | `inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors` |
 | **Focus** | `outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]` |
 | **Disabled** | `disabled:pointer-events-none disabled:opacity-50` |
-| **Unselected** | `border-border bg-background text-muted-foreground hover:bg-muted/50 hover:text-accent-foreground dark:border-foreground/40` |
+| **Unselected** | `border-border bg-transparent text-foreground/60 hover:bg-foreground/[0.08] hover:text-accent-foreground dark:border-foreground/40` |
 | **Selected** | `border-primary bg-primary text-primary-foreground` |
 
 ### SegmentedControl (`components/ui/segmented-control.tsx`)
@@ -180,12 +180,10 @@ bg-background (Layer 0 — page)
        │    └─ Active item bg-primary (Layer 3)
        │    └─ Inactive items transparent (inherit Layer 2)
        ├─ Input dark:bg-input/30 (Layer 2 — Questions count)
-       └─ <details> border-border/60 bg-muted/20 dark:border-foreground/40 (Layer 2 — tag filter containers)
-            └─ FilterChip bg-background (Layer 0) + border (unselected)   ← hierarchy violation
+       └─ <details> bg-foreground/5 (Layer 2 — tag filter containers)
+            └─ FilterChip transparent + border (inherits Layer 2 at rest)
             └─ FilterChip bg-primary (selected)                           ← Layer 3+, high contrast
 ```
-
-**Known hierarchy issue:** Unselected FilterChips use `bg-background` (`#090909`), which is Layer 0 — two layers below their Layer 2 container. This works visually only because the container border contains them. See [DEBT-290](../../debt/debt-290-practice-filter-tonal-fill-elevation.md) for the proposed fix.
 
 ---
 
@@ -240,10 +238,10 @@ type PracticeFilters = {
 
 | State | Token | Computed (dark) | Contrast vs parent | Notes |
 |-------|-------|----------------|-------------------|-------|
-| Unselected border | `dark:border-foreground/40` | #6A6A6A | ~3.41:1 vs current `bg-muted/20` parent (`#141414`) | Passes 3:1 (required boundary) |
-| Unselected fill | `bg-background` | #090909 | N/A | Drops back to the page-background tone — causes punch-out on tonal parents |
-| Unselected text | `text-muted-foreground` | #838383 | ~5.25:1 vs bg-background | AA pass in the current implementation |
-| Unselected hover | `hover:bg-muted/50` | ~#181818 on the current `bg-muted/20` parent | — | Lightens from the rest fill, but only within the bordered-container context |
+| Unselected border | `dark:border-foreground/40` | #6A6A6A | ~3.10:1 vs current `bg-foreground/5` parent (`#1D1D1D`) | Passes 3:1 (required boundary) |
+| Unselected fill | `bg-transparent` | Inherits `#1D1D1D` | N/A | Keeps the chip on the parent tonal surface — no punch-out |
+| Unselected text | `text-foreground/60` | #9B9B9B | ~6.07:1 vs parent | AA pass on the tonal surface |
+| Unselected hover | `hover:bg-foreground/[0.08]` | ~#242424 on the current `bg-foreground/5` parent | — | Foreground-based hover ramp stays monotonic |
 | Selected fill | `bg-primary` | #EDEDED | — | High contrast |
 | Selected text | `text-primary-foreground` | #090909 | ~17:1 vs primary | AA pass |
 | Selected border | `border-primary` | #EDEDED | — | Matches fill |
@@ -252,9 +250,8 @@ type PracticeFilters = {
 
 | Token | Computed (dark) | Contrast vs card (#121212) | Notes |
 |-------|----------------|---------------------------|-------|
-| `bg-muted/20` | ~#141414 (rgb 20) | 1.02:1 | Nearly invisible fill |
-| `border-border/60` | ~#1E1E1E (rgb 30) | ~1.09:1 vs card | Light-mode-only visible |
-| `dark:border-foreground/40` | #6A6A6A | ~3.46:1 vs card | Heavy dark override — louder than parent card border |
+| `bg-foreground/5` | #1D1D1D (rgb 29) | 1.11:1 | Subtle tonal lift — matches dashboard nested-row rest state |
+| Count/helper text `text-foreground/60` | #9B9B9B | ~6.07:1 vs `bg-foreground/5` | Secondary metadata stays AA-compliant on the tonal surface |
 
 ### Input
 
@@ -265,18 +262,17 @@ type PracticeFilters = {
 
 ---
 
-## DEBT-290 Impact Map
+## DEBT-290 Resolution
+Resolved on 2026-03-09. [DEBT-290](../../debt/debt-290-practice-filter-tonal-fill-elevation.md) shipped the following changes:
 
-When [DEBT-290](../../debt/debt-290-practice-filter-tonal-fill-elevation.md) is implemented, the following elements change:
-
-| Element | Current | After DEBT-290 | Impact |
-|---------|---------|---------------|--------|
-| Filter container (`<details>`) | `border border-border/60 bg-muted/20 dark:border-foreground/40` | `bg-foreground/5` (no border) | Border removed, tonal fill replaces it |
-| FilterChip unselected fill | `bg-background` | `bg-transparent` | Inherits parent tonal fill, fixes punch-out |
-| FilterChip unselected text | `text-muted-foreground` | `text-foreground/60` | Restores AA margin once the chip inherits the tonal parent |
-| FilterChip unselected hover | `hover:bg-muted/50` | `hover:bg-foreground/[0.08]` | Consistent foreground-based scale, fixes hover inversion |
-| Filter selected-count text | `text-muted-foreground` | `text-foreground/60` | Keeps `(N selected)` secondary but AA-compliant on `bg-foreground/5` |
-| Filter helper text | `text-muted-foreground` | `text-foreground/60` | Keeps helper copy subordinate without falling below AA on the tonal parent |
+| Element | Shipped state | Effect |
+|---------|---------------|--------|
+| Filter container (`<details>`) | `bg-foreground/5` (no border) | Border removed, tonal fill defines the nested surface |
+| FilterChip unselected fill | `bg-transparent` | Inherits parent tonal fill, fixes punch-out |
+| FilterChip unselected text | `text-foreground/60` | Restores AA margin on the tonal parent |
+| FilterChip unselected hover | `hover:bg-foreground/[0.08]` | Consistent foreground-based scale, fixes hover inversion |
+| Filter selected-count text | `text-foreground/60` | Keeps `(N selected)` secondary but AA-compliant on `bg-foreground/5` |
+| Filter helper text | `text-foreground/60` | Keeps helper copy subordinate without falling below AA on the tonal parent |
 
 Elements **not** changing: SegmentedControl (all three instances), Input, Card container, Button, header action link, incomplete session card, error states.
 

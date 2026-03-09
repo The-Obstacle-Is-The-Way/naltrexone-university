@@ -163,9 +163,34 @@ describe('PracticeSessionStarter', () => {
     const substanceDetailsTokens = getClassTokens(
       substanceDetails?.getAttribute('class') ?? '',
     );
+    const summaryCount = substanceDetails?.querySelectorAll('summary span')[1];
+    const summaryCountTokens = getClassTokens(
+      summaryCount?.getAttribute('class') ?? '',
+    );
+    const helperText = Array.from(
+      substanceDetails?.querySelectorAll('div') ?? [],
+    )
+      .map((element) => element)
+      .find(
+        (element) =>
+          (element.textContent ?? '').trim() ===
+          'Leave empty to include all substances.',
+      );
+    const helperTextTokens = getClassTokens(
+      helperText?.getAttribute('class') ?? '',
+    );
 
     expect(substanceDetails).toBeDefined();
-    expect(substanceDetailsTokens.has('dark:border-foreground/40')).toBe(true);
+    expect(substanceDetailsTokens.has('rounded-xl')).toBe(true);
+    expect(substanceDetailsTokens.has('bg-foreground/5')).toBe(true);
+    expect(substanceDetailsTokens.has('border')).toBe(false);
+    expect(substanceDetailsTokens.has('border-border/60')).toBe(false);
+    expect(substanceDetailsTokens.has('dark:border-foreground/40')).toBe(false);
+    expect(summaryCountTokens.has('text-foreground/60')).toBe(true);
+    expect(summaryCountTokens.has('text-muted-foreground')).toBe(false);
+    expect(helperText).toBeDefined();
+    expect(helperTextTokens.has('text-foreground/60')).toBe(true);
+    expect(helperTextTokens.has('text-muted-foreground')).toBe(false);
   });
 
   it('renders status and difficulty segmented controls without hint text', () => {

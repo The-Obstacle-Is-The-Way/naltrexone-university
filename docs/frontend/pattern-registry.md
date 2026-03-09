@@ -1,6 +1,6 @@
 # Pattern Registry
 
-**Last Updated:** 2026-03-08
+**Last Updated:** 2026-03-09
 **Status:** Canonical — all UI changes MUST conform to this registry
 
 Single source of truth for every visual pattern in the app. If a pattern isn't here, don't invent one — add it here first, get approval, then implement.
@@ -142,9 +142,18 @@ A tinted row inside a Card, used when the row is not itself clickable but may co
 rounded-xl border border-border/60 bg-muted/20 px-4 py-3 dark:border-foreground/40
 ```
 
-**Used in:** Practice starter tag groups
+**Used in:** No active consumer. Retained for bordered muted groups that still need explicit container stroke.
 
 **Rule:** The row border (`/60`) must be lower than the parent Card border (100%).
+
+**Practice variant (borderless tonal fill):**
+```
+rounded-xl bg-foreground/5 px-4 py-3
+```
+
+**Used in:** Practice starter Topic / Substance / Treatment filter containers
+
+**Design rationale:** Applies the same tonal-fill elevation principle as the dashboard nested-row fix while preserving the wider `px-4 py-3` filter-container spacing. The `<summary>` label, selected-count metadata, disclosure behavior, pointer cursor, and keyboard focus ring identify the control; the fill is supplementary rather than a required boundary. Secondary metadata on this surface uses `text-foreground/60` rather than `text-muted-foreground` to preserve AA contrast on `bg-foreground/5`. See [DEBT-290](../debt/debt-290-practice-filter-tonal-fill-elevation.md).
 
 **Dashboard variant (borderless tonal fill):**
 ```
@@ -298,7 +307,7 @@ Toggle-style filter for tags, modes, difficulty levels.
 
 **Unselected:**
 ```
-border-border bg-background text-muted-foreground hover:bg-muted/50 hover:text-accent-foreground dark:border-foreground/40
+border-border bg-transparent text-foreground/60 hover:bg-foreground/[0.08] hover:text-accent-foreground dark:border-foreground/40
 ```
 
 **Selected:**
@@ -315,8 +324,8 @@ disabled:pointer-events-none disabled:opacity-50
 
 **Source:** `components/ui/filter-chip.tsx`
 
-**Design rationale:** Unselected hover uses `/50` (same as standalone row hover) rather than `100%` — full-opacity hover was too aggressive and visually inconsistent with every other interactive element.
-**Status:** Implemented in `components/ui/filter-chip.tsx` (`hover:bg-muted/50`).
+**Design rationale:** Unselected chips keep their border as the required boundary, but rest fill is transparent so the chip inherits its parent surface instead of punching down to `bg-background`. On the practice tonal-fill parent (`bg-foreground/5`), `text-foreground/60` restores AA margin for secondary chip text and `hover:bg-foreground/[0.08]` keeps the hover ramp on the same monotonic foreground scale.
+**Status:** Implemented in `components/ui/filter-chip.tsx` (DEBT-290).
 
 ### I-5: Segmented Control Item
 
@@ -1303,13 +1312,13 @@ Compact lookup for code reviews and implementation.
 | ID | Pattern | Canonical Hover | Radius | Border |
 |----|---------|----------------|--------|--------|
 | S-1 | Card | — (non-interactive) | `rounded-2xl` | `border` |
-| S-2 | Muted Row | — (non-interactive) | `rounded-xl` | `border-border/60 dark:border-foreground/40` |
+| S-2 | Muted Row | — (non-interactive) | `rounded-xl` | Default: `border-border/60 dark:border-foreground/40`; tonal variants may omit border |
 | S-3 | Menu Popover | — | `rounded-md` | `border` |
 | S-4 | Modal Dialog | — | `rounded-2xl` | `border-border` |
 | I-1 | Row in Card | `hover:bg-muted/40` (+ `dark:hover:border-foreground/70`) | `rounded-xl` | `border-border/60 dark:border-foreground/40` |
 | I-2 | Standalone Row | `hover:bg-muted/50` | `rounded-2xl` | `border-border` |
 | I-3 | Choice Button | `hover:bg-muted/40` (+ `dark:hover:bg-foreground/8 dark:hover:border-foreground/55`) | `rounded-xl` | `border-border/60 dark:border-foreground/40` |
-| I-4 | Filter Chip | `hover:bg-muted/50` | `rounded-full` | `border-border dark:border-foreground/40` |
+| I-4 | Filter Chip | `hover:bg-foreground/[0.08]` | `rounded-full` | `border-border dark:border-foreground/40` |
 | I-5 | Tab Switch Item | `hover:bg-muted/50` | `rounded-md` | Container uses `border-border` |
 | I-6 | Icon Toggle | `hover:text-foreground` | — | — |
 | L-1 | Nav Link | `hover:text-foreground` | `rounded-md` | — |

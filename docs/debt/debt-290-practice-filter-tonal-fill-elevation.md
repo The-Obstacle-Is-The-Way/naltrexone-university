@@ -2,7 +2,8 @@
 
 **Priority:** P3
 **Created:** 2026-03-08
-**Status:** Open
+**Status:** Resolved
+**Resolved:** 2026-03-09
 
 ---
 
@@ -59,7 +60,7 @@ The structural parallel is exact:
 
 ---
 
-## Proposed Solution
+## Implemented Solution
 
 ### Filter containers: borderless tonal fill
 
@@ -223,10 +224,10 @@ Add the practice filter containers to "Classified supplementary fills" in `docs/
 
 | File | Change |
 |------|--------|
-| `docs/frontend/pages/quick-practice.md` | Update scope note referencing practice starter filter sections |
 | `docs/frontend/contrast-policy.md` | Add practice filter-container supplementary-fill entry |
 | `docs/frontend/pattern-registry.md` | Update S-2 and I-4 entries |
-| `docs/debt/index.md` | Add DEBT-290 to active index |
+| `docs/frontend/pages/practice.md` | Update the shipped surface hierarchy, token tables, and resolution map |
+| `docs/debt/index.md` | Move DEBT-290 from Active to Resolved |
 
 ---
 
@@ -244,7 +245,7 @@ Add the practice filter containers to "Classified supplementary fills" in `docs/
 
 ---
 
-## Open Questions
+## Post-Implementation Notes
 
 1. **FilterChip transparent fill + brighter text on non-tonal surfaces.** The FilterChip component is shared — changing `bg-background` to `bg-transparent` and `text-muted-foreground` to `text-foreground/60` affects every future consumer. Currently the only consumer is the practice starter's filter sections (inside `<details>` containers). If FilterChip is later used directly on a Card surface without a tonal-fill parent, `transparent` would inherit `bg-card` (#121212) rather than `bg-background` (#090909), and `text-foreground/60` would still clear AA comfortably. This is safe.
 
@@ -254,8 +255,8 @@ Add the practice filter containers to "Classified supplementary fills" in `docs/
 
 ---
 
-## Recommendation
+## Outcome
 
-Implement the solution as described. The changes are minimal (two files, class-swaps only), follow the established DEBT-289 pattern, and resolve the last remaining instance of heavy bordered nesting inside a Card on the practice page.
+Implemented on 2026-03-09. The shipped changes follow the established DEBT-289 tonal-fill pattern, preserve the FilterChip border as the required boundary, and remove the last remaining heavy bordered nesting inside the practice starter card.
 
 The I-1 dashboard variant's pattern registry entry already recommends this exact reuse. This change makes the practice page consistent with the dashboard's tonal fill approach.
