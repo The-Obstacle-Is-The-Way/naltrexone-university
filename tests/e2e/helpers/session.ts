@@ -7,7 +7,7 @@ async function verifyRequestedSessionCount(
   page: Page,
   requestedCount: number,
 ): Promise<void> {
-  const progressIndicator = page.getByText(/^Question 1 of \d+$/);
+  const progressIndicator = page.getByText(/Question 1 of \d+/);
   await expect(progressIndicator).toBeVisible({ timeout: 15_000 });
 
   const progressText = (await progressIndicator.textContent())?.trim() ?? '';

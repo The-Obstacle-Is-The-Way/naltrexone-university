@@ -94,7 +94,7 @@ test.describe('session review navigation (SPEC-027)', () => {
     const navigatorHeading = page.getByText('Question navigator');
     await expect(navigatorHeading).toBeVisible({ timeout: 15_000 });
 
-    const reviewProgressIndicator = page.getByText(/^Question 1 of \d+$/);
+    const reviewProgressIndicator = page.getByText(/Question 1 of \d+/);
     await expect(reviewProgressIndicator).toBeVisible({ timeout: 15_000 });
     const reviewQuestionCount = parseQuestionProgressCount(
       (await reviewProgressIndicator.textContent()) ?? '',

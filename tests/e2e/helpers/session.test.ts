@@ -285,10 +285,17 @@ function createPracticePage(input: {
       },
     ),
     getByText: vi.fn((text: RegExp | string) => {
-      const sessionProgress = `Question 1 of ${input.actualCount}`;
+      // The real UI renders "Question 1 of 2 — Explanations shown after each answer."
+      // for tutor mode and similar suffixes for exam mode. Replicate the full text
+      // so that regex-based locators are tested against the real format.
+      const modeHint =
+        state.selectedMode === 'tutor'
+          ? 'Explanations shown after each answer.'
+          : 'Explanations shown after you submit the exam.';
+      const sessionProgress = `Question 1 of ${input.actualCount} — ${modeHint}`;
       const matches =
         typeof text === 'string'
-          ? text === sessionProgress
+          ? sessionProgress.includes(text)
           : text.test(sessionProgress);
 
       return createLocator({
