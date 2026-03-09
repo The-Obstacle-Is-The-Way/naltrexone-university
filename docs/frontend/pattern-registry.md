@@ -1,6 +1,6 @@
 # Pattern Registry
 
-**Last Updated:** 2026-03-07
+**Last Updated:** 2026-03-08
 **Status:** Canonical — all UI changes MUST conform to this registry
 
 Single source of truth for every visual pattern in the app. If a pattern isn't here, don't invent one — add it here first, get approval, then implement.
@@ -137,13 +137,23 @@ bg-card text-card-foreground flex flex-col gap-0 rounded-2xl border p-6 shadow-s
 
 A tinted row inside a Card, used when the row is not itself clickable but may contain interactive elements.
 
+**Default variant (bordered):**
 ```
-rounded-xl border border-border/60 bg-muted/20 p-3 dark:border-foreground/40
+rounded-xl border border-border/60 bg-muted/20 px-4 py-3 dark:border-foreground/40
 ```
 
-**Used in:** Dashboard unavailable activity rows, practice starter tag groups
+**Used in:** Practice starter tag groups
 
 **Rule:** The row border (`/60`) must be lower than the parent Card border (100%).
+
+**Dashboard variant (borderless tonal fill):**
+```
+rounded-xl bg-foreground/5 p-3
+```
+
+**Used in:** Dashboard unavailable activity rows (question no longer available)
+
+**Design rationale:** Matches the I-1 dashboard variant's borderless tonal fill approach for visual consistency within the same container. Static rows use the rest fill only — no hover or transition since the row is non-interactive. See [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) for the full design research.
 
 ### S-3: Menu Popover Surface
 
@@ -210,15 +220,28 @@ Action buttons inside dialogs use `buttonVariants` from `components/ui/button.ts
 
 A clickable row nested within a `<Card>` container. The card provides the primary surface; the row provides the interaction.
 
+**Default variant (bordered):**
 ```
 block rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-muted/40
 dark:border-foreground/40 dark:hover:border-foreground/70
 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 ```
 
-**Used in:** Dashboard session rows, dashboard activity rows, history sessions rows (delegated row click exception)
+**Used in:** History sessions rows (delegated row click exception)
 
 **Design rationale:** `/40` hover inside a card (base 7% lightness) produces ~8.6% effective lightness — a subtle, satisfying shift. The card surface already elevates the row above page background, so the hover only needs a gentle nudge.
+
+**Dashboard variant (borderless tonal fill):**
+```
+block rounded-xl bg-foreground/5 p-3 transition-colors hover:bg-foreground/[0.08]
+focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
+```
+
+**Used in:** Dashboard session rows, dashboard activity rows
+
+**Design rationale:** When a Card acts as a container wrapping a list of rows, bordered inner rows create visual noise — the inner border competes with the outer card border, producing an inverted hierarchy (inner borders louder than outer). Borderless tonal fill elevation follows Material Design 3's approach: rows are defined by fill shape only (`bg-foreground/5`), with hover producing a monotonic brightness lift (`hover:bg-foreground/[0.08]`). Both rest and hover use the same `foreground` color scale to avoid non-monotonic brightness (mixing scales causes hover inversion — see [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md)). The tonal fill is a supplementary hierarchy hint, not a required boundary per [Contrast Policy §3.2](./contrast-policy.md) — row identification comes from text content, cursor, hover fill, and focus ring.
+
+**Reuse candidate:** This variant is suitable for any nested-card list pattern where the parent card wraps multiple interactive rows. Practice question lists and similar surfaces should adopt this variant rather than the bordered default when rows appear inside a Card container.
 
 **Must be a `<Link>` element** (entire row is the click target).
 

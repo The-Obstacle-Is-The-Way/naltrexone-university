@@ -1,0 +1,78 @@
+# Dashboard Page
+
+**Page:** `/app/dashboard`
+**Source:** `app/(app)/app/dashboard/page.tsx`
+**Last Updated:** 2026-03-08
+
+---
+
+## Page Structure
+
+Top to bottom:
+
+1. **Page heading** — "Dashboard" h1 + subtitle
+2. **Stats grid** — 4 stat cards in a responsive row (`lg:grid-cols-4`)
+3. **Streak + CTA row** — Current streak card + "Ready to practice?" CTA card (`lg:grid-cols-3`)
+4. **Recent lists row** — "Recent sessions" + "Recent activity" side by side (`lg:grid-cols-2`)
+
+---
+
+## Component Inventory
+
+| Element | Component / Pattern | Pattern Registry | Notes |
+|---------|-------------------|-----------------|-------|
+| Stat cards | `<Card>` (S-1) | S-1: Card Surface | Non-interactive, no hover |
+| Streak card | `<Card>` (S-1) | S-1: Card Surface | Non-interactive |
+| CTA card | `<Card>` (S-1) + `<Button>` | S-1 + standard Button | `lg:col-span-2` |
+| Session container | `<Card>` (S-1) | S-1: Card Surface | Wraps list of interactive rows |
+| Activity container | `<Card>` (S-1) | S-1: Card Surface | Wraps list of interactive/static rows |
+| Session rows | `<Link>` with I-1 classes | I-1: Hoverable Row | Nested inside session container card |
+| Activity rows | `<Link>` with I-1 classes | I-1: Hoverable Row | Nested inside activity container card |
+| Unavailable activity | `<div>` with S-2 classes | S-2: Muted Row | Static nested row, no link — question deleted |
+| Mode badges | Inline `<span>` with pill classes | — | `bg-foreground/[0.06] border-0 text-foreground/60` (borderless tonal fill) |
+| Difficulty badges | Inline `<span>` with pill classes | — | Same fill + text tokens as mode badges |
+| Header action links | `<Button variant="link">` | L-5: Secondary Header Action | Uses `headerActionLinkClasses` |
+| Error state | `<ErrorCard>` | — | Session history fetch failure |
+
+---
+
+## Surface Hierarchy
+
+```
+bg-background (Layer 0 — page)
+  └─ <Card> bg-card (Layer 1 — stat / streak / CTA cards)         ← FLAT
+  └─ <Card> bg-card (Layer 1 — session / activity containers)     ← NESTED
+       └─ Row (`<Link>` / `<div>`) bg-foreground/5 (Layer 2)      ← TONAL FILL INSIDE CARD
+            └─ Badge pill bg-foreground/[0.06] (Layer 3)          ← SUBORDINATE MICRO-SURFACE
+```
+
+The top-half cards are flat (card IS the content). The bottom-half cards are containers (card WRAPS a list of borderless tonal-fill rows). Interactive rows use `bg-foreground/5` with `hover:bg-foreground/[0.08]`; the unavailable static row uses the same rest fill with no hover state. Badge pills use `bg-foreground/[0.06] border-0 text-foreground/60`. The bottom grid uses `items-start` so the shorter left panel does not stretch to match the taller right panel. See [DEBT-289](../../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) for the full rationale and design research.
+
+---
+
+## Data Flow
+
+- Server component (`DashboardPage`) fetches `getUserStats()` and `getSessionHistory({ limit: 3 })` in parallel
+- Stats failure → full error state (heading + `<ErrorCard>` + practice CTA)
+- Session history failure → partial error state (stats render, sessions show `<ErrorCard>`)
+- `recentActivity` sliced to 8 rows client-side from the stats response
+- `maxDuration = 30` (Vercel edge function timeout)
+
+---
+
+## Dark Mode Tokens
+
+Rows use borderless tonal fill elevation (implemented in [DEBT-289](../../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md)):
+- No rest border — inner cards defined by fill shape only
+- Rest fill: `bg-foreground/5` (~#1D1D1D, rgb(29) on card #121212, WCAG 1.11:1)
+- Hover fill: `hover:bg-foreground/[0.08]` (~#242424, rgb(36) — same foreground scale, monotonic lift)
+- Badge pills: `bg-foreground/[0.06] border-0 text-foreground/60` — borderless fill-only, AA-compliant text in dark mode (5.94:1 on badge bg)
+
+---
+
+## Related Documentation
+
+- [Frontend Standards](../standards.md) — Design tokens, Card component standard
+- [Pattern Registry](../pattern-registry.md) — S-1 (Card Surface), S-2 (Muted Row), I-1 (Hoverable Row)
+- [Contrast Policy](../contrast-policy.md) — WCAG AA targets
+- [DEBT-289](../../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) — Nested card visual strategy

@@ -419,7 +419,7 @@ describe('app/(app)/app/dashboard', () => {
     expect(html).toContain('Go to Practice');
   });
 
-  it('uses stronger dark-mode row boundary tokens for dashboard activity/session rows', () => {
+  it('uses borderless tonal fill elevation for dashboard activity/session rows', () => {
     const html = renderToStaticMarkup(
       <DashboardView
         stats={{
@@ -505,27 +505,75 @@ describe('app/(app)/app/dashboard', () => {
     const unavailableActivityCardTokens = getClassTokens(
       unavailableActivityCard?.getAttribute('class') ?? '',
     );
+    const bottomGrid = sessionRow?.closest('div.grid');
+    const bottomGridTokens = getClassTokens(
+      bottomGrid?.getAttribute('class') ?? '',
+    );
+    const sessionModeBadge = Array.from(doc.querySelectorAll('span')).find(
+      (element) => element.textContent === 'Exam',
+    );
+    const activityDifficultyBadge = Array.from(
+      doc.querySelectorAll('span'),
+    ).find((element) => element.textContent === 'Easy');
+    const sessionModeBadgeTokens = getClassTokens(
+      sessionModeBadge?.getAttribute('class') ?? '',
+    );
+    const activityDifficultyBadgeTokens = getClassTokens(
+      activityDifficultyBadge?.getAttribute('class') ?? '',
+    );
 
     expect(sessionRow).not.toBeNull();
     expect(availableActivityRow).not.toBeNull();
     expect(unavailableActivityCard).not.toBeNull();
+    expect(bottomGrid).not.toBeNull();
+    expect(sessionModeBadge).not.toBeNull();
+    expect(activityDifficultyBadge).not.toBeNull();
+    expect(bottomGridTokens.has('items-start')).toBe(true);
     expect(sessionRowTokens.has('rounded-xl')).toBe(true);
     expect(availableActivityRowTokens.has('rounded-xl')).toBe(true);
     expect(unavailableActivityCardTokens.has('rounded-xl')).toBe(true);
-    expect(unavailableActivityCardTokens.has('border-border/60')).toBe(true);
-    expect(sessionRowTokens.has('dark:border-foreground/40')).toBe(true);
-    expect(sessionRowTokens.has('dark:hover:border-foreground/70')).toBe(true);
-    expect(availableActivityRowTokens.has('dark:border-foreground/40')).toBe(
+    expect(sessionRowTokens.has('bg-foreground/5')).toBe(true);
+    expect(sessionRowTokens.has('hover:bg-foreground/[0.08]')).toBe(true);
+    expect(availableActivityRowTokens.has('bg-foreground/5')).toBe(true);
+    expect(availableActivityRowTokens.has('hover:bg-foreground/[0.08]')).toBe(
       true,
+    );
+    expect(unavailableActivityCardTokens.has('bg-foreground/5')).toBe(true);
+    expect(
+      unavailableActivityCardTokens.has('hover:bg-foreground/[0.08]'),
+    ).toBe(false);
+    expect(sessionRowTokens.has('border-border/60')).toBe(false);
+    expect(sessionRowTokens.has('bg-muted/20')).toBe(false);
+    expect(sessionRowTokens.has('hover:bg-muted/40')).toBe(false);
+    expect(sessionRowTokens.has('dark:border-foreground/40')).toBe(false);
+    expect(sessionRowTokens.has('dark:hover:border-foreground/70')).toBe(false);
+    expect(availableActivityRowTokens.has('border-border/60')).toBe(false);
+    expect(availableActivityRowTokens.has('bg-muted/20')).toBe(false);
+    expect(availableActivityRowTokens.has('hover:bg-muted/40')).toBe(false);
+    expect(availableActivityRowTokens.has('dark:border-foreground/40')).toBe(
+      false,
     );
     expect(
       availableActivityRowTokens.has('dark:hover:border-foreground/70'),
-    ).toBe(true);
+    ).toBe(false);
+    expect(unavailableActivityCardTokens.has('border-border/60')).toBe(false);
+    expect(unavailableActivityCardTokens.has('bg-muted/20')).toBe(false);
     expect(unavailableActivityCardTokens.has('dark:border-foreground/40')).toBe(
+      false,
+    );
+    expect(sessionModeBadgeTokens.has('bg-foreground/[0.06]')).toBe(true);
+    expect(sessionModeBadgeTokens.has('border-0')).toBe(true);
+    expect(sessionModeBadgeTokens.has('text-foreground/60')).toBe(true);
+    expect(sessionModeBadgeTokens.has('border-border/60')).toBe(false);
+    expect(sessionModeBadgeTokens.has('dark:border-foreground/40')).toBe(false);
+    expect(activityDifficultyBadgeTokens.has('bg-foreground/[0.06]')).toBe(
       true,
     );
-    expect(
-      unavailableActivityCardTokens.has('dark:hover:border-foreground/70'),
-    ).toBe(false);
+    expect(activityDifficultyBadgeTokens.has('border-0')).toBe(true);
+    expect(activityDifficultyBadgeTokens.has('text-foreground/60')).toBe(true);
+    expect(activityDifficultyBadgeTokens.has('border-border/60')).toBe(false);
+    expect(activityDifficultyBadgeTokens.has('dark:border-foreground/40')).toBe(
+      false,
+    );
   });
 });
