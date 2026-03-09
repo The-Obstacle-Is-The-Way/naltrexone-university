@@ -114,19 +114,19 @@ All computed values assume the **current shipped DEBT-290/291/292 stack**:
 | Delta from container | +15 RGB | −17 RGB |
 | Text contrast (foreground/60) | ~5.34:1 ✓ | ~4.91:1 ✓ |
 | Border contrast (vs container) | ~3.12:1 ✓ | ✓ |
-| Hover fill | Bump to `/[0.12]` (+5pp) | Same |
-| Hover text contrast | ~10.32:1 ✓ (accent-foreground) | ~13.86:1 ✓ |
-| Rest → hover delta | +5pp (matches Radix 3→4 step) | Same |
+| Hover fill | Bump to `/[0.10]` (+3pp) | Same |
+| Hover text contrast | ~11.2:1 ✓ (accent-foreground) | ~14.8:1 ✓ |
+| Rest → hover delta | +3pp (matches Radix 3→4 step) | Same |
 
 **Pros:**
 - Lands exactly on Radix step 3 ("UI element background") — evidence-based, not arbitrary
 - +14 RGB from container is perceptible: the chip reads as "a thing on a surface" without looking like a card
-- Hover delta of +5pp matches established design system convention (Radix: +3.5pp, Apple: +2.5pp)
-- Foreground-opacity scale stays monotonic: container `/5` → chip `/7` → hover `/12` → selected `bg-primary`
+- Hover delta of +3pp matches Radix's actual step 3→4 convention (+3.5pp)
+- Foreground-opacity scale stays monotonic: container `/5` → chip `/7` → hover `/10` → selected `bg-primary`
 - Single token works in both themes (foreground-based opacity adapts automatically)
 
 **Cons:**
-- Hover needs to bump from `/[0.08]` to `/[0.12]` (one extra token change)
+- Hover needs to bump from `/[0.08]` to `/[0.10]` (one extra token change)
 - Text contrast drops from 5.99:1 (on transparent) to 5.04:1 (on `/[0.07]`) — still well above AA 4.5:1
 
 ### Option C: Apple-Aligned — `bg-foreground/10`
@@ -162,7 +162,7 @@ Option B is the right answer for three reasons:
    ```
    Container:  bg-foreground/5     (surface)
    Chip rest:  bg-foreground/[0.07] (interactive element)
-   Chip hover: bg-foreground/[0.12] (hover state)
+   Chip hover: bg-foreground/[0.10] (hover state)
    Chip selected: bg-primary         (high-contrast active)
    ```
    Each step is perceptually distinct. No collisions, no ambiguity.
@@ -171,12 +171,13 @@ Option B is the right answer for three reasons:
 
 ```diff
 - 'border-foreground/45 bg-transparent text-foreground/60 hover:bg-foreground/[0.08] hover:text-accent-foreground dark:border-foreground/40'
-+ 'border-foreground/45 bg-foreground/[0.07] text-foreground/60 hover:bg-foreground/[0.12] hover:text-accent-foreground dark:border-foreground/40'
++ 'border-foreground/45 bg-foreground/[0.07] text-foreground/60 hover:bg-foreground/[0.10] hover:text-accent-foreground dark:border-foreground/40 cursor-pointer'
 ```
 
-Two token changes:
+Three token changes:
 1. `bg-transparent` → `bg-foreground/[0.07]` (rest fill)
-2. `hover:bg-foreground/[0.08]` → `hover:bg-foreground/[0.12]` (hover fill, maintaining +5pp delta)
+2. `hover:bg-foreground/[0.08]` → `hover:bg-foreground/[0.10]` (hover fill, +3pp delta matching Radix step 3→4)
+3. Add `cursor-pointer` (browsers default `<button>` to `cursor: default` — chips currently lack pointer cursor)
 
 ---
 
@@ -208,7 +209,7 @@ Remove `hover:bg-foreground/[0.03]` from the `<summary>` className. One token de
 **FilterChip usage:** Practice page tag filters only (`practice-session-starter.tsx` lines 231-236). No other consumers exist in the codebase.
 
 **Files to change:**
-1. `components/ui/filter-chip.tsx` — two class token changes (rest fill, hover fill)
+1. `components/ui/filter-chip.tsx` — three class token changes (rest fill, hover fill, cursor-pointer)
 2. `components/ui/filter-chip.test.tsx` — update assertions for new tokens
 3. `app/(app)/app/practice/components/practice-session-starter.tsx` — remove summary hover class
 4. `app/(app)/app/practice/components/practice-session-starter.test.tsx` — update summary hover assertion if it exists
@@ -221,7 +222,7 @@ Remove `hover:bg-foreground/[0.03]` from the `<summary>` className. One token de
 | Chip text (foreground/60) vs rest fill (dark) | 5.34:1 | ✓ AA |
 | Chip text (foreground/60) vs rest fill (light) | 4.90:1 | ✓ AA |
 | Chip border vs container (dark) | 3.12:1 | ✓ SC 1.4.11 |
-| Hover text (accent-foreground) vs hover fill (dark) | 10.3:1 | ✓ AA |
+| Hover text (accent-foreground) vs hover fill (dark) | 11.2:1 | ✓ AA |
 | Selected text (primary-foreground) vs selected fill | ~17:1 | ✓ AA |
 
 ---
@@ -239,5 +240,8 @@ Remove `hover:bg-foreground/[0.03]` from the `<summary>` className. One token de
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-03-09 | Created BS-046 | Visual review found chips too flat and summary hover distracting after DEBT-290/291/292 shipped |
-| 2026-03-09 | Chose Option B (`bg-foreground/[0.07]` + hover `/[0.12]`) | Radix step 3/4 alignment, M3 elevated-chip precedent, Apple quaternary fill convergence. Best balance of perceptibility and restraint on the real DEBT-290 parent surface. Monotonic foreground-opacity scale preserved. |
+| 2026-03-09 | Chose Option B (`bg-foreground/[0.07]` + hover `/[0.10]`) | Radix step 3/4 alignment, M3 elevated-chip precedent, Apple quaternary fill convergence. Best balance of perceptibility and restraint on the real DEBT-290 parent surface. Monotonic foreground-opacity scale preserved. |
+| 2026-03-09 | Revised hover from `/[0.12]` to `/[0.10]` | Chrome visual audit feedback: Radix step 3→4 is actually +3.5pp, not +5pp. `/[0.10]` is the truer Radix match. Creates a tighter 7→10→solid ramp. |
+| 2026-03-09 | Added `cursor-pointer` to chip base classes | Chrome visual audit found chips lack pointer cursor — browsers default `<button>` to `cursor: default`. |
+| 2026-03-09 | Promoted to [DEBT-294](../debt/debt-294-filter-chip-fill-depth-and-cursor.md) | Investigation complete, no open questions. BS-046 archived. |
 | 2026-03-09 | Bundle summary hover removal with chip fill change | Both are filter-section polish, one PR keeps the diff cohesive |

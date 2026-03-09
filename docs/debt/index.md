@@ -21,7 +21,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 6 future enhancements (F1/F8 resolved by DEBT-277/DEBT-276) | P3 | — |
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 7 verified client-side flows still report only to console or silent fallbacks | P2 | — |
 | [DEBT-293](./debt-293-e2e-shared-state-structural-flakiness.md) | E2E Shared-State Structural Flakiness — verified suite-level-only reset still leaves cross-spec session/attempt/bookmark coupling, but the original placeholder-exhaustion theory was disproven; fix requires full per-test user-state reset plus `startSession()`/review-contract hardening | P1 | — |
-**Next Debt ID:** DEBT-294
+| [DEBT-294](./debt-294-filter-chip-fill-depth-and-cursor.md) | Filter Chip Fill Depth, Cursor, and Summary Hover Removal — unselected chips are `bg-transparent` and lack `cursor-pointer`; add `bg-foreground/[0.07]` rest fill (Radix step 3), bump hover to `/[0.10]`, add pointer cursor, remove invisible summary hover | P3 | — |
+**Next Debt ID:** DEBT-295
 
 ---
 
