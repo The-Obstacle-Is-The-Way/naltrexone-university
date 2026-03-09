@@ -20,7 +20,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 6 future enhancements (F1/F8 resolved by DEBT-277/DEBT-276) | P3 | — |
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 7 verified client-side flows still report only to console or silent fallbacks | P2 | — |
-| [DEBT-289](./debt-289-dashboard-nested-card-surface-strategy.md) | Dashboard Nested Card Surface Strategy — inner row borders (strengthened for WCAG) are louder than outer card border; fix: remove inner borders, use tonal fill elevation (`bg-foreground/[0.04]`) per Material Design 3; dashboard-local, not app-wide | P3 | — |
+| [DEBT-289](./debt-289-dashboard-nested-card-surface-strategy.md) | Dashboard Nested Card Surface Strategy — inner row borders (strengthened for WCAG) are louder than outer card border; fix: remove inner borders, use tonal fill elevation (`bg-foreground/5` + `hover:bg-foreground/[0.08]`) per Material Design 3; includes badge pill companion change; dashboard-local, not app-wide | P3 | — |
 **Next Debt ID:** DEBT-290
 
 ---
