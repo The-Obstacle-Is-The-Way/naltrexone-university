@@ -307,7 +307,7 @@ Toggle-style filter for tags, modes, difficulty levels.
 
 **Unselected:**
 ```
-border-border bg-transparent text-foreground/60 hover:bg-foreground/[0.08] hover:text-accent-foreground dark:border-foreground/40
+border-foreground/45 bg-transparent text-foreground/60 hover:bg-foreground/[0.08] hover:text-accent-foreground dark:border-foreground/40
 ```
 
 **Selected:**
@@ -324,8 +324,8 @@ disabled:pointer-events-none disabled:opacity-50
 
 **Source:** `components/ui/filter-chip.tsx`
 
-**Design rationale:** Unselected chips keep their border as the required boundary, but rest fill is transparent so the chip inherits its parent surface instead of punching down to `bg-background`. On the practice tonal-fill parent (`bg-foreground/5`), `text-foreground/60` restores AA margin for secondary chip text and `hover:bg-foreground/[0.08]` keeps the hover ramp on the same monotonic foreground scale.
-**Status:** Implemented in `components/ui/filter-chip.tsx` (DEBT-290).
+**Design rationale:** Unselected chips keep their border as the required boundary, but rest fill is transparent so the chip inherits its parent surface instead of punching down to `bg-background`. On the practice tonal-fill parent (`bg-foreground/5`), `border-foreground/45` clears SC 1.4.11 in light mode, `dark:border-foreground/40` preserves the compliant dark-mode override, `text-foreground/60` restores AA margin for secondary chip text, and `hover:bg-foreground/[0.08]` keeps the hover ramp on the same monotonic foreground scale.
+**Status:** Implemented in `components/ui/filter-chip.tsx` (DEBT-290, DEBT-291).
 
 ### I-5: Segmented Control Item
 
@@ -1318,7 +1318,7 @@ Compact lookup for code reviews and implementation.
 | I-1 | Row in Card | `hover:bg-muted/40` (+ `dark:hover:border-foreground/70`) | `rounded-xl` | `border-border/60 dark:border-foreground/40` |
 | I-2 | Standalone Row | `hover:bg-muted/50` | `rounded-2xl` | `border-border` |
 | I-3 | Choice Button | `hover:bg-muted/40` (+ `dark:hover:bg-foreground/8 dark:hover:border-foreground/55`) | `rounded-xl` | `border-border/60 dark:border-foreground/40` |
-| I-4 | Filter Chip | `hover:bg-foreground/[0.08]` | `rounded-full` | `border-border dark:border-foreground/40` |
+| I-4 | Filter Chip | `hover:bg-foreground/[0.08]` | `rounded-full` | `border-foreground/45 dark:border-foreground/40` |
 | I-5 | Tab Switch Item | `hover:bg-muted/50` | `rounded-md` | Container uses `border-border` |
 | I-6 | Icon Toggle | `hover:text-foreground` | — | — |
 | L-1 | Nav Link | `hover:text-foreground` | `rounded-md` | — |

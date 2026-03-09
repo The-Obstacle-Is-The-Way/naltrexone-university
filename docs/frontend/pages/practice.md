@@ -147,7 +147,7 @@ Toggle-style pill button. Uses `aria-pressed` for selected state.
 | **Base** | `inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors` |
 | **Focus** | `outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]` |
 | **Disabled** | `disabled:pointer-events-none disabled:opacity-50` |
-| **Unselected** | `border-border bg-transparent text-foreground/60 hover:bg-foreground/[0.08] hover:text-accent-foreground dark:border-foreground/40` |
+| **Unselected** | `border-foreground/45 bg-transparent text-foreground/60 hover:bg-foreground/[0.08] hover:text-accent-foreground dark:border-foreground/40` |
 | **Selected** | `border-primary bg-primary text-primary-foreground` |
 
 ### SegmentedControl (`components/ui/segmented-control.tsx`)
@@ -240,7 +240,7 @@ type PracticeFilters = {
 
 | State | Token | Computed (dark) | Contrast vs parent | Notes |
 |-------|-------|----------------|-------------------|-------|
-| Unselected border | `dark:border-foreground/40` | #707070 | ~3.40:1 vs current `bg-foreground/5` parent (`#1D1D1D`) | Passes 3:1 (required boundary) |
+| Unselected border | `border-foreground/45` + `dark:border-foreground/40` | #707070 (dark override) | ~3.40:1 vs current `bg-foreground/5` parent (`#1D1D1D`) | Passes 3:1 in dark mode; light-mode base token is `border-foreground/45` |
 | Unselected fill | `bg-transparent` | Inherits `#1D1D1D` | N/A | Keeps the chip on the parent tonal surface — no punch-out |
 | Unselected text | `text-foreground/60` | #9A9A9A | ~5.99:1 vs parent | AA pass on the tonal surface |
 | Unselected hover | `hover:bg-foreground/[0.08]` | ~#2E2E2E on the current `bg-foreground/5` parent | — | Foreground-based hover ramp stays monotonic |

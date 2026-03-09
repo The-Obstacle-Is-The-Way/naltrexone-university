@@ -2,7 +2,8 @@
 
 **Priority:** P3
 **Created:** 2026-03-09
-**Status:** Open
+**Status:** Resolved
+**Resolved:** 2026-03-09
 
 ---
 
@@ -154,3 +155,15 @@ Additional confirmed findings:
 - Chip text (`text-foreground/60`) passes AA in both themes: ~5.99:1 dark on the tonal-fill parent, ~5.18:1 light on the tonal-fill parent
 - Selected chip states are "emphatically" distinguishable with dramatic contrast flip
 - Hover states register (text opacity change is the more noticeable effect; background fill is subtle)
+
+---
+
+## Outcome
+
+Implemented on 2026-03-09 using Approach B. The shipped unselected FilterChip classes are:
+
+```
+border-foreground/45 bg-transparent text-foreground/60 hover:bg-foreground/[0.08] hover:text-accent-foreground dark:border-foreground/40
+```
+
+This keeps the existing compliant dark-mode override, raises the light-mode base border above the 3:1 SC 1.4.11 minimum on the DEBT-290 tonal-fill parent, and leaves selected chips, text tokens, and hover/fill behavior unchanged.
