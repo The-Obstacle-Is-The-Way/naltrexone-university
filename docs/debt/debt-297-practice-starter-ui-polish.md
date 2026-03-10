@@ -1,19 +1,21 @@
-# DEBT-297: Practice Session Starter — UI Polish (Summary Text, Input Border, Number Input UX)
+# DEBT-297: Practice Session Starter — UI Polish (Summary Text, Input Border, Number Input UX, Title Hierarchy, Spinners)
 
 **Priority:** P3
 **Created:** 2026-03-10
 **Status:** Open
-**Related:** DEBT-296 (filter summary hierarchy swap — resolved)
+**Related:** DEBT-296 (filter summary hierarchy swap — resolved), DEBT-298 (broader UI consistency audit)
 
 ---
 
 ## Context
 
-After resolving DEBT-296 (filter section summary text hierarchy swap), three minor UI polish issues remain on the Practice Session Starter card:
+After resolving DEBT-296 (filter section summary text hierarchy swap), five UI polish issues remain on the Practice Session Starter card:
 
 1. Verbose default summary text in collapsed filter sections
 2. Questions input border inconsistency with surrounding controls
 3. Questions number input prevents clearing/retyping values
+4. Card title lacks visual hierarchy and heading semantics
+5. Native number input spinner arrows are unstyled
 
 These are cosmetic/UX improvements — none break functionality.
 
@@ -217,12 +219,82 @@ Low. The clamp-on-blur pattern is well-established in React. Need to ensure the 
 
 ---
 
+## Issue 4: Card Title Has No Visual Hierarchy and Is Not a Heading
+
+### Current behavior
+
+"Start a session" uses `<div className="text-sm font-medium text-foreground">` — identical styling to every section label (Mode, Questions, Status, Difficulty, Topic, Substance, Treatment). It is a `<div>`, not a heading element.
+
+### Problem
+
+- **Visual:** The card title reads as a peer of its field labels instead of standing above them. All seven labels share `text-sm font-medium text-foreground` (14px / weight 500).
+- **Accessibility:** Screen reader users navigating by headings skip the card entirely. The page has an `<h1>` ("Practice") but no sub-headings within the card.
+
+### Code location
+
+`app/(app)/app/practice/components/practice-session-starter.tsx`, line 106:
+
+```tsx
+// Before:
+<div className="text-sm font-medium text-foreground">
+  Start a session
+</div>
+
+// After:
+<h2 className="text-base font-semibold text-foreground">
+  Start a session
+</h2>
+```
+
+### Collateral changes
+
+- Update test assertions if any check for the title element type or class
+- Drive-by: add `block` class to the Questions `<label>` (line 131) for consistent display with `<div>` labels
+
+### Risk
+
+None. Semantic and visual improvement only.
+
+---
+
+## Issue 5: Native Number Input Spinner Arrows Are Unstyled
+
+### Current behavior
+
+The `<input type="number">` shows browser-native stepper arrows (up/down) that look unpolished, especially in dark mode. The arrows have low contrast and a distinctly "browser default" appearance that clashes with the custom-styled UI.
+
+### Proposed fix
+
+Hide the native spinners via CSS and rely on keyboard up/down arrows (which still work) and direct typing:
+
+```tsx
+<Input
+  id="session-count-input"
+  type="number"
+  min={SESSION_COUNT_MIN}
+  max={SESSION_COUNT_MAX}
+  className="w-24 border-0 shadow-none bg-foreground/5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+  value={props.sessionCount}
+  onChange={props.onSessionCountChange}
+/>
+```
+
+This can be combined with the Issue 2 border fix on the same `className` prop.
+
+### Risk
+
+Low. Keyboard increment (up/down arrows) still works. Users who relied on the tiny native steppers will use keyboard or direct typing instead.
+
+---
+
 ## Acceptance Criteria
 
 - [ ] Collapsed filter summaries read "All included by default" (not "All {kind} included by default")
 - [ ] `tagKindPluralLabels` removed if no longer used
 - [ ] Questions input border removed or softened to match surrounding controls
 - [ ] Questions input allows clearing the field and typing a new number (clamp on blur)
+- [ ] Card title uses `<h2>` with visually distinct styling (`text-base font-semibold`)
+- [ ] Native number input spinners hidden via CSS
 - [ ] All existing tests updated and passing
 - [ ] `docs/frontend/pages/practice.md` updated
 - [ ] `docs/content/tag-taxonomy-golden-spec.md` updated
@@ -236,3 +308,4 @@ Low. The clamp-on-blur pattern is well-established in React. Need to ensure the 
 - Summary text hierarchy (resolved in DEBT-296)
 - SegmentedControl styling
 - Session start logic or API behavior
+- Broader UI consistency patterns (tracked in DEBT-298)

@@ -20,8 +20,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 6 future enhancements (F1/F8 resolved by DEBT-277/DEBT-276) | P3 | — |
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 7 verified client-side flows still report only to console or silent fallbacks | P2 | — |
-| [DEBT-297](./debt-297-practice-starter-ui-polish.md) | Practice Session Starter UI Polish — shorten "All {kind} included by default" → "All included by default"; remove Questions input border; fix can't-clear-and-retype number input UX | P3 | — |
-**Next Debt ID:** DEBT-298
+| [DEBT-297](./debt-297-practice-starter-ui-polish.md) | Practice Session Starter UI Polish — shorten summary text; remove input border; fix can't-clear number input; promote card title to `<h2>`; hide native spinners | P3 | — |
+| [DEBT-298](./debt-298-ui-structural-consistency.md) | UI Structural Consistency Audit — mixed label semantics, inconsistent spacing patterns, card heading hierarchy, touch target sizes, flex alignment mismatches across pages | P3 | — |
+**Next Debt ID:** DEBT-299
 
 ---
 
