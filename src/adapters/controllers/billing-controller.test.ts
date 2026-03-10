@@ -279,16 +279,7 @@ describe('billing-controller', () => {
     });
 
     it('returns the cached portal session when idempotencyKey is reused', async () => {
-      const rateLimiter = new FakeRateLimiter([
-        {
-          success: true,
-          limit: 20,
-          remaining: 19,
-          retryAfterSeconds: 0,
-        },
-        new Error('duplicate portal request should not consume rate limit'),
-      ]);
-      const deps = createDeps({ rateLimiter });
+      const deps = createDeps();
 
       const input = {
         idempotencyKey: '11111111-1111-1111-1111-111111111111',
@@ -310,7 +301,41 @@ describe('billing-controller', () => {
           idempotencyKey: '11111111-1111-1111-1111-111111111111',
         },
       ]);
-      expect(rateLimiter.inputs).toHaveLength(1);
+    });
+
+    it('does not cache RATE_LIMITED under the idempotency key', async () => {
+      const rateLimiter = new FakeRateLimiter([
+        {
+          success: false,
+          limit: 20,
+          remaining: 0,
+          retryAfterSeconds: 60,
+        },
+        {
+          success: true,
+          limit: 20,
+          remaining: 19,
+          retryAfterSeconds: 0,
+        },
+      ]);
+      const deps = createDeps({ rateLimiter });
+
+      const input = {
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      const first = await createPortalSession(input, deps);
+      expect(first).toMatchObject({
+        ok: false,
+        error: { code: 'RATE_LIMITED' },
+      });
+
+      const second = await createPortalSession(input, deps);
+      expect(second).toEqual({
+        ok: true,
+        data: { url: 'https://stripe/portal' },
+      });
+      expect(deps.createPortalSessionUseCase.inputs).toHaveLength(1);
     });
 
     it('returns NOT_FOUND when use case throws ApplicationError', async () => {

@@ -107,18 +107,18 @@ export const createCheckoutSession = createAction({
     const user = await d.authGateway.requireUser();
     const { plan, idempotencyKey } = input;
 
-    async function createNewSession(): Promise<CreateCheckoutSessionOutput> {
-      const checkoutRateLimit = await d.rateLimiter.limit({
-        key: `billing:createCheckoutSession:${user.id}`,
-        ...CHECKOUT_SESSION_RATE_LIMIT,
-      });
-      if (!checkoutRateLimit.success) {
-        throw new ApplicationError(
-          'RATE_LIMITED',
-          `Too many checkout attempts. Try again in ${checkoutRateLimit.retryAfterSeconds}s.`,
-        );
-      }
+    const checkoutRateLimit = await d.rateLimiter.limit({
+      key: `billing:createCheckoutSession:${user.id}`,
+      ...CHECKOUT_SESSION_RATE_LIMIT,
+    });
+    if (!checkoutRateLimit.success) {
+      throw new ApplicationError(
+        'RATE_LIMITED',
+        `Too many checkout attempts. Try again in ${checkoutRateLimit.retryAfterSeconds}s.`,
+      );
+    }
 
+    async function createNewSession(): Promise<CreateCheckoutSessionOutput> {
       const checkoutSessionInput = {
         userId: user.id,
         clerkUserId: await d.getClerkUserId(),
@@ -159,18 +159,18 @@ export const createPortalSession = createAction({
     const user = await d.authGateway.requireUser();
     const { idempotencyKey } = input;
 
-    async function createNewSession(): Promise<CreatePortalSessionOutput> {
-      const portalRateLimit = await d.rateLimiter.limit({
-        key: `billing:createPortalSession:${user.id}`,
-        ...PORTAL_SESSION_RATE_LIMIT,
-      });
-      if (!portalRateLimit.success) {
-        throw new ApplicationError(
-          'RATE_LIMITED',
-          `Too many billing portal attempts. Try again in ${portalRateLimit.retryAfterSeconds}s.`,
-        );
-      }
+    const portalRateLimit = await d.rateLimiter.limit({
+      key: `billing:createPortalSession:${user.id}`,
+      ...PORTAL_SESSION_RATE_LIMIT,
+    });
+    if (!portalRateLimit.success) {
+      throw new ApplicationError(
+        'RATE_LIMITED',
+        `Too many billing portal attempts. Try again in ${portalRateLimit.retryAfterSeconds}s.`,
+      );
+    }
 
+    async function createNewSession(): Promise<CreatePortalSessionOutput> {
       const portalSessionInput = {
         userId: user.id,
         returnUrl: toBillingReturnUrl(d.appUrl),
