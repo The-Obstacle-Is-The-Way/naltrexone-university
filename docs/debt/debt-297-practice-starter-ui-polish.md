@@ -86,7 +86,7 @@ The Questions input is the only control in the starter card with a visible borde
 
 ### Current visual separation without border
 
-The Input already has `dark:bg-input/30` (30% opacity background tint in dark mode) and `bg-transparent` in light mode. In dark mode, this background tint provides some differentiation from the card surface. However, in light mode, the background is transparent, so removing the border would leave no visual boundary at all.
+The shared `Input` primitive already ships with `dark:bg-input/30` (30% opacity background tint in dark mode) and `bg-transparent` in light mode. That means a local `bg-foreground/5` override is sufficient in light mode, but **not** in dark mode: the base component's `dark:bg-input/30` still wins unless this instance also adds an explicit `dark:bg-foreground/5` override. Without that dark-specific override, the Questions input renders at a different gray than the sibling filter sections.
 
 ### Proposed fix options
 
@@ -98,12 +98,12 @@ Override the Input classes on this specific instance:
   type="number"
   min={SESSION_COUNT_MIN}
   max={SESSION_COUNT_MAX}
-  className="w-24 border-0 shadow-none bg-foreground/5"
+  className="w-24 border-0 bg-foreground/5 dark:bg-foreground/5 shadow-none"
   value={props.sessionCount}
   onChange={props.onSessionCountChange}
 />
 ```
-This uses the same `bg-foreground/5` as the filter `<details>` sections, giving visual consistency across the card. Focus ring (`focus-visible:ring-ring/50`) still provides clear focus indication.
+This uses the same `bg-foreground/5` as the filter `<details>` sections in both themes, giving visual consistency across the card. Focus ring (`focus-visible:ring-ring/50`) still provides clear focus indication.
 
 **Option B — Soften border only:**
 Reduce border opacity instead of removing it:
@@ -113,7 +113,11 @@ className="w-24 border-foreground/10 shadow-none"
 
 ### Test impact
 
-The test file does not assert border classes on the Input, only checks for `data-slot="input"` and the `id`/`for` pairing. No test changes needed for either option.
+The starter component test should assert the effective local override contract on the Questions input:
+- `border-0`
+- `shadow-none`
+- `bg-foreground/5`
+- `dark:bg-foreground/5`
 
 ### Risk
 
@@ -308,7 +312,7 @@ Low. Keyboard increment (up/down arrows) still works. Users who relied on the ti
 Implemented in the practice session starter.
 
 - Collapsed zero-state filter summaries now read `All included by default`.
-- The Questions input now matches the starter card's tonal surface treatment (`border-0 bg-foreground/5 shadow-none`) and hides native browser spinners.
+- The Questions input now matches the starter card's tonal surface treatment (`border-0 bg-foreground/5 dark:bg-foreground/5 shadow-none`) and hides native browser spinners.
 - Session count input now supports clear-and-retype via a raw string intermediate state and clamps back to the canonical numeric count on blur.
 - The starter card title is now a semantic `<h2>` with stronger visual hierarchy.
 
