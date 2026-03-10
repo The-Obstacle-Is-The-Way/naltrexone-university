@@ -21,8 +21,8 @@ Unselected filter chips use `text-foreground/60` — 60% foreground opacity. Des
 
 | Theme | Effective text color | Perception |
 |-------|---------------------|------------|
-| Dark  | ~`#8E8E8E` (60% of `#EDEDED` on `#2C2C2C`) | Gray on dark gray — reads as caption, not button label |
-| Light | ~`#676B73` (60% of `#020817` on `#E1E3E4`) | Medium gray on light gray — slightly better but still muted |
+| Dark  | ~`#A0A0A0` (60% of `#EDEDED` on `#2C2C2C`) | Gray on dark gray — reads as caption, not button label |
+| Light | ~`#5B6069` (60% of `#020817` on `#E1E3E4`) | Medium gray on light gray — slightly better but still muted |
 
 The text only reaches full weight on hover (`hover:text-accent-foreground`), which is too late — users must already know the chip is interactive before they hover. On mobile, hover doesn't exist at all — there is no discovery path. The resting state must communicate "button" at a glance.
 
@@ -42,29 +42,29 @@ Both themes pass AA at 60% (dark 5.34:1, light 4.91:1 from DEBT-294 audit). At 1
 
 ### What the major systems actually do
 
-Research into the source code and specifications of M3, Apple, and shadcn reveals:
+Research into the source code and specifications of Material Web (M3), Apple's semantic text system, and shadcn reveals:
 
 | System | Unselected chip/toggle label | Method | Source |
 |--------|------------------------------|--------|--------|
-| **Material Design 3** | `on-surface-variant` (~80-85% brightness) | Distinct color token, NOT opacity | `_md-comp-filter-chip.scss` |
-| **Apple HIG** | `label` (100% — pure white dark, black light) | Background carries state, not text dimming | UIKit semantic colors |
-| **shadcn/Radix** | `foreground` (100%) | Inherits full foreground, no dimming | `toggle.tsx` base variant |
+| **Material Web (M3)** | `on-surface` | Semantic text token, not opacity | Official filter-chip tokens (`--md-filter-chip-label-text-color`) |
+| **Apple semantic text colors** | Primary content uses `label` / `Color.primary`; subordinate content uses `secondaryLabel` / `Color.secondary` | Semantic role split, not a filter-chip-specific opacity scale | UIKit / SwiftUI semantic text colors |
+| **shadcn Toggle** | Inherited/full rest text | No rest-state dimming token on the outline toggle variant | Official `toggle.tsx` |
 
-**Key finding: no system uses opacity-based dimming for interactive control text.**
+**Key finding: the verified sources do not support a 60%-opacity chip label.**
 
-- **M3** is the most muted of the three, but even its `on-surface-variant` is ~79-85% brightness in dark mode (`#cac4d0` vs full `on-surface` `#e6e0e9`). That's far above our 60%.
-- **Apple** uses `secondaryLabel` at 60% opacity — but exclusively for captions and metadata, never for control labels. Toggle controls use full `label` (100%).
-- **shadcn** toggle components use full `foreground` at rest. No opacity reduction. Their own docs wrap toggle demos in `dark:text-neutral-300` (~83% brightness), confirming the floor is well above 60%.
+- **Material Web** is stronger than the earlier draft claimed: the official filter-chip label token is `on-surface`, not `on-surface-variant`. If we want to align with actual M3 component code, that points toward full-strength primary text, not an 80% compromise.
+- **Apple** does not publish a filter-chip token table we can map 1:1 here, but its semantic text system still separates primary labels from secondary metadata. Our current chip label is styled like the latter.
+- **shadcn** outline toggles do not dim their labels at rest. They rely on the control surface and state fill, not opacity-dimmed label text, to communicate affordance.
 
-**Industry consensus:** Interactive control labels in dark mode cluster between **80-93% brightness**. Our 60% is well below every major system's floor.
+**Safer conclusion:** the sources we can verify all land materially above our current 60%, and two of them (Material Web and shadcn) point directly to full-weight/inherited label text.
 
 ### What 60% maps to in each system
 
 | System | 60% opacity equivalent | Used for |
 |--------|----------------------|----------|
-| M3 | Below `on-surface-variant` | N/A — no control text this dim |
-| Apple | `secondaryLabel` | Captions, timestamps, metadata |
-| shadcn | `text-muted-foreground` | Helper text, descriptions |
+| Material Web | Below the official filter-chip label token (`on-surface`) | N/A — not used for filter-chip labels |
+| Apple | Closer to `secondaryLabel` / `Color.secondary` than `label` / `Color.primary` | Captions, metadata, subordinate copy |
+| shadcn | Closer to subdued descriptive text than the outline toggle rest state | Helper text, descriptions |
 
 Our 60% matches what these systems use for **non-interactive secondary text**. It does not match what any of them use for button or toggle labels.
 
@@ -90,7 +90,7 @@ The concern with full-weight unselected text: does it reduce the gap between sel
 
 Live inspection confirms the selected state computes to `rgb(237,237,237)` background with `rgb(9,9,9)` text — a complete inversion from the unselected state. The visual distance between "white text on dark chip" (Approach B) and "dark text on white chip" (selected) is enormous. The differentiation comes from the **container fill flip**, not from text dimming.
 
-Even with full foreground text on both states, the fill + border carry the distinction. This is exactly how Apple and shadcn handle it — and it works because the background contrast is emphatically different.
+Even with full foreground text on both states, the fill + border carry the distinction. This matches the Material Web and shadcn evidence better than the current 60% implementation because the background contrast is doing the state work.
 
 ### Internal consistency
 
@@ -120,16 +120,18 @@ FilterChip is the only interactive control that dims its label to 60%. It should
 ```
 
 Three changes:
-1. `text-foreground/60` → `text-foreground` — full weight, matching Apple/shadcn and exceeding M3's ~80-85%
-2. Remove `hover:text-accent-foreground` — at full foreground, the hover text transition is imperceptible (in dark mode, `foreground` and `accent-foreground` are identical: `0 0% 93%`; in light mode the difference is negligible). The hover fill change (`bg-foreground/[0.07]` → `bg-foreground/[0.10]`) becomes the sole hover signal, which is cleaner.
+1. `text-foreground/60` → `text-foreground` — full weight, matching the official Material Web filter-chip label token direction and the shadcn outline-toggle rest state
+2. Remove `hover:text-accent-foreground` — at full foreground, the extra hover text change adds little value. In dark mode, `foreground` and `accent-foreground` are identical (`0 0% 93%`). In light mode, `accent-foreground` is actually slightly lower-contrast than `foreground` on the hover fill. The hover fill change (`bg-foreground/[0.07]` → `bg-foreground/[0.10]`) becomes the sole hover signal, which is cleaner.
 3. No other changes — fill, border, selected state all stay as-is.
+
+With Approach B, chip label contrast rises to approximately **11.93:1** in dark mode and **15.54:1** in light mode against the unselected chip fill.
 
 ### Why not Approach A (`text-foreground/80`)?
 
-80% is defensible (close to M3's `on-surface-variant`), but:
+80% is aesthetically defensible as a local compromise, but:
 - It's a compromise that doesn't fully solve the hierarchy collision with helper text at 60%
-- The hover text transition from 80% to `accent-foreground` (~93-100%) is still barely perceptible
-- Apple and shadcn — the two systems closest to our tech stack — both go full weight
+- The hover text transition from 80% to `accent-foreground` is still barely perceptible
+- The verified source implementations point toward full-strength/inherited label text, not an 80% intermediate token
 - Simplicity: `text-foreground` is one token, no arbitrary value needed
 
 ### Resulting class string
@@ -209,7 +211,7 @@ The hover jump from 60% → `accent-foreground` is dramatic *once discovered*, b
 
 ### Design system cross-reference
 
-The agent independently verified M3's `on-surface-variant` at `#CAC4D0` (~79% brightness) and found shadcn docs using `dark:text-neutral-300` (~83%) for toggle demos. Both sit well above 60%. The agent noted the industry consensus clusters at **80-93% brightness** for interactive control labels in dark mode.
+The agent's direction was still useful, but the exact M3 claim has been corrected in this spec. Official Material Web filter-chip labels use `on-surface`, not `on-surface-variant`. The broader conclusion remains the same: the verified reference implementations do not support leaving interactive chip text at the same 60% opacity used for helper copy.
 
 ### Recommendation alignment
 
@@ -217,4 +219,4 @@ The agent independently recommended **Option B** (full `text-foreground`) over O
 
 ### Border token note
 
-The agent suggested softening the border to `border-foreground/25`. This was evaluated and **rejected** — per DEBT-294's SC 1.4.11 analysis, 25% opacity yields ~2.12:1 (dark) / ~1.79:1 (light), both below the 3.0:1 minimum for required UI boundaries. The existing `border-foreground/45` / `dark:border-foreground/40` stays.
+The agent suggested softening the border to `border-foreground/25`. This was evaluated and **rejected** — against the current tonal parent, 25% opacity yields approximately **2.52:1** in dark mode and **2.05:1** in light mode, both below the 3.0:1 minimum for required UI boundaries under SC 1.4.11. The existing `border-foreground/45` / `dark:border-foreground/40` stays.
