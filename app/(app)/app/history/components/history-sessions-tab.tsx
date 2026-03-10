@@ -186,6 +186,9 @@ export function HistorySessionsTab({
                 if (!sessionReviewHref) return;
                 const target = event.target;
                 if (!(target instanceof Element)) return;
+                if (target.closest('[data-session-breakdown-region="true"]')) {
+                  return;
+                }
                 const interactive = target.closest(
                   'a,button,input,select,textarea,[role="button"],[role="link"]',
                 );
@@ -246,6 +249,7 @@ export function HistorySessionsTab({
                   id={`breakdown-${row.sessionId}`}
                   role="region"
                   aria-label="Question breakdown"
+                  data-session-breakdown-region="true"
                   className="mt-3 border-t border-border/30 pt-3 dark:border-foreground/10"
                 >
                   {historySessions.reviewLoadState.status === 'loading' ? (

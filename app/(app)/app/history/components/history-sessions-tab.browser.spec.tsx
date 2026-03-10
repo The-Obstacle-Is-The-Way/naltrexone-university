@@ -169,6 +169,68 @@ describe('HistorySessionsTab (browser)', () => {
     await expect.element(screen.getByText('Stem for q1')).toBeVisible();
   });
 
+  it('does not navigate when clicking blank space inside the expanded breakdown region', async () => {
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [
+          {
+            questionId: 'q1',
+            slug: 'q-1',
+            order: 1,
+            isAvailable: true,
+            stemMd: 'Stem for q1',
+            difficulty: 'easy',
+            isAnswered: true,
+            isCorrect: false,
+            markedForReview: false,
+          },
+        ],
+      }),
+    );
+
+    const screen = await render(
+      <HistorySessionsTab
+        result={ok({
+          rows: [
+            {
+              sessionId: 'session-1',
+              mode: 'exam',
+              questionCount: 10,
+              firstQuestionSlug: 'q-1',
+              answered: 10,
+              correct: 8,
+              accuracy: 0.8,
+              durationSeconds: 1200,
+              startedAt: '2026-02-07T00:00:00.000Z',
+              endedAt: '2026-02-07T00:20:00.000Z',
+            },
+          ],
+          total: 1,
+          limit: 20,
+          offset: 0,
+        })}
+      />,
+    );
+
+    await getBreakdownToggle('session-1').click();
+    await expect
+      .element(screen.getByRole('region', { name: 'Question breakdown' }))
+      .toBeVisible();
+
+    pushMock.mockClear();
+
+    await screen.getByRole('region', { name: 'Question breakdown' }).click({
+      position: { x: 4, y: 4 },
+    });
+
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
   it('does not render a redundant Review session action in the expanded breakdown panel', async () => {
     getPracticeSessionReviewMock.mockResolvedValue(
       ok({
