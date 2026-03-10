@@ -14,7 +14,7 @@ The Dashboard has two "recent" sections:
 | Section | Shows | Date format |
 |---------|-------|-------------|
 | **Recent sessions** (left) | Tutor / Exam sessions | `Mar 7, 2026` |
-| **Recent activity** (right) | Ad-hoc question attempts | `Answered Mar 8, 2026` |
+| **Recent activity** (right) | Individual question attempts (ad-hoc + session-backed) | `Answered Mar 8, 2026` |
 
 In Recent activity, each chip displays the result status and date as:
 
@@ -22,7 +22,12 @@ In Recent activity, each chip displays the result status and date as:
 Incorrect  •  Answered Mar 8, 2026
 ```
 
-The word "Answered" is redundant — the item already appears in the "Recent activity" list, which by definition contains answered questions. The result label (`Correct` / `Incorrect`) already communicates that the question was answered.
+The word "Answered" is redundant. The item already appears in the "Recent activity" list, and the result label (`Correct` / `Incorrect`) already implies the question was answered.
+
+This copy appears in both Recent activity render branches:
+
+- available question rows (clickable links)
+- unavailable question rows (`[Question no longer available]`)
 
 ---
 
@@ -34,7 +39,7 @@ Remove the "Answered" prefix so the date line reads:
 Incorrect  •  Mar 8, 2026
 ```
 
-This aligns with the Recent sessions panel, which uses bare dates (`Mar 7, 2026`), and reduces visual noise.
+This aligns with the Recent sessions panel, which already uses bare dates (`Mar 7, 2026`), and with the History questions tab, which already renders a bare date in its metadata row. The change reduces visual noise without changing information density.
 
 ---
 
@@ -62,16 +67,40 @@ Two render paths in `app/(app)/app/dashboard/page.tsx`:
 
 ### Test updates
 
-`app/(app)/app/dashboard/page.test.tsx` — assertions at lines 159-160:
+`app/(app)/app/dashboard/page.test.tsx`
+
+1. **Available recent activity rows** — current assertions at lines 159-160:
 ```tsx
 expect(html).toContain('Answered Feb 2, 2026');
 expect(html).toContain('Answered Feb 3, 2026');
 ```
-Update to:
+Update to explicit positive + negative assertions:
 ```tsx
 expect(html).toContain('Feb 2, 2026');
 expect(html).toContain('Feb 3, 2026');
+expect(html).not.toContain('Answered Feb 2, 2026');
+expect(html).not.toContain('Answered Feb 3, 2026');
 ```
+
+`toContain('Feb 2, 2026')` alone is not sufficient, because the old string still contains that substring.
+
+2. **Unavailable recent activity rows** — extend the existing `renders placeholder text for unavailable recent activity rows` test (currently around lines 320-358) to assert the same copy contract for the unavailable branch:
+```tsx
+expect(html).toContain('Feb 1, 2026');
+expect(html).toContain('Feb 2, 2026');
+expect(html).not.toContain('Answered Feb 1, 2026');
+expect(html).not.toContain('Answered Feb 2, 2026');
+```
+
+### Documentation sync
+
+If docs are being updated in the same change, also update the dashboard-flavored example in `docs/frontend/typography-policy.md` so it no longer uses `Answered Mar 7, 2026` as a sample secondary label.
+
+### No additional app-surface changes required
+
+- No known Playwright/E2E assertions depend on the `Answered` prefix today
+- No route, query-param, or review-mode behavior changes are required
+- Do not broaden this debt to Bookmarks; `Bookmarked {date}` is a different event label and remains correct
 
 ---
 
@@ -79,5 +108,7 @@ expect(html).toContain('Feb 3, 2026');
 
 - [ ] "Answered" prefix removed from both render paths (available + unavailable rows)
 - [ ] Date displays as bare `{formatDate(row.answeredAt)}` — e.g., `Mar 8, 2026`
-- [ ] Unit tests updated to match new format
+- [ ] Dashboard render-output tests assert both presence of bare dates and absence of `Answered {date}` for available rows
+- [ ] Dashboard render-output tests assert both presence of bare dates and absence of `Answered {date}` for unavailable rows
+- [ ] Typography policy example updated if docs are touched in the same change
 - [ ] Visual verification: Recent activity chips show `Incorrect • Mar 8, 2026` / `Correct • Mar 8, 2026`
