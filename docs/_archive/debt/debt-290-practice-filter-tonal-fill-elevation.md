@@ -9,7 +9,7 @@
 
 ## Problem
 
-The practice page's Topic/Substance/Treatment filter containers use the same bordered nested-card pattern that was removed from the dashboard in [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md):
+The practice page's Topic/Substance/Treatment filter containers use the same bordered nested-card pattern that was removed from the dashboard in [DEBT-289](./debt-289-dashboard-nested-card-surface-strategy.md):
 
 ```tsx
 <details className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3 dark:border-foreground/40">
