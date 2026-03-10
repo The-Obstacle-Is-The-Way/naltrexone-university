@@ -20,7 +20,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 6 future enhancements (F1/F8 resolved by DEBT-277/DEBT-276) | P3 | — |
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 7 verified client-side flows still report only to console or silent fallbacks | P2 | — |
-| [DEBT-296](./debt-296-filter-section-summary-hierarchy-swap.md) | Filter Section Summary Text Hierarchy Swap — "(0 selected)" in collapsed summary implies obligation; helper text ("Leave unselected to include all topics") should be in summary instead; count moves below chips | P3 | — |
+| [DEBT-296](./debt-296-filter-section-summary-hierarchy-swap.md) | Filter Section Summary Text Hierarchy Swap — "(0 selected)" in collapsed summary implies obligation; default-state outcome copy ("All topics included by default") should surface in the summary instead; count moves below chips | P3 | — |
 **Next Debt ID:** DEBT-297
 
 ---
