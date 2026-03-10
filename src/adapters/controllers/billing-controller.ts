@@ -176,11 +176,13 @@ export const createPortalSession = createAction({
         returnUrl: toBillingReturnUrl(d.appUrl),
       } as const;
 
-      return d.createPortalSessionUseCase.execute(
+      const result = await d.createPortalSessionUseCase.execute(
         idempotencyKey
           ? { ...portalSessionInput, idempotencyKey }
           : portalSessionInput,
       );
+
+      return CreatePortalSessionOutputSchema.parse(result);
     }
 
     if (!idempotencyKey) {

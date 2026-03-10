@@ -259,8 +259,36 @@ describe('billing-controller', () => {
       ]);
     });
 
+    it('returns VALIDATION_ERROR when fresh portal session output is invalid', async () => {
+      const deps = createDeps({
+        portalOutput: { url: '' },
+      });
+
+      const result = await createPortalSession({}, deps);
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          fieldErrors: { url: expect.any(Array) },
+        },
+      });
+      expect(deps.createPortalSessionUseCase.inputs).toEqual([
+        { userId: 'user_1', returnUrl: 'https://app.example.com/app/billing' },
+      ]);
+    });
+
     it('returns the cached portal session when idempotencyKey is reused', async () => {
-      const deps = createDeps();
+      const rateLimiter = new FakeRateLimiter([
+        {
+          success: true,
+          limit: 20,
+          remaining: 19,
+          retryAfterSeconds: 0,
+        },
+        new Error('duplicate portal request should not consume rate limit'),
+      ]);
+      const deps = createDeps({ rateLimiter });
 
       const input = {
         idempotencyKey: '11111111-1111-1111-1111-111111111111',
@@ -282,6 +310,7 @@ describe('billing-controller', () => {
           idempotencyKey: '11111111-1111-1111-1111-111111111111',
         },
       ]);
+      expect(rateLimiter.inputs).toHaveLength(1);
     });
 
     it('returns NOT_FOUND when use case throws ApplicationError', async () => {
