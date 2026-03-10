@@ -24,6 +24,11 @@ export const CHECKOUT_SESSION_RATE_LIMIT = {
   windowMs: ONE_MINUTE_MS,
 } as const;
 
+export const PORTAL_SESSION_RATE_LIMIT = {
+  limit: 20,
+  windowMs: ONE_MINUTE_MS,
+} as const;
+
 export const SUBMIT_ANSWER_RATE_LIMIT = {
   limit: 120,
   windowMs: ONE_MINUTE_MS,

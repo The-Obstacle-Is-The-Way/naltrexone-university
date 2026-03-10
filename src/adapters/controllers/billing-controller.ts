@@ -3,7 +3,10 @@
 import { z } from 'zod';
 import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
 import { ROUTES } from '@/lib/routes';
-import { CHECKOUT_SESSION_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
+import {
+  CHECKOUT_SESSION_RATE_LIMIT,
+  PORTAL_SESSION_RATE_LIMIT,
+} from '@/src/adapters/shared/rate-limits';
 import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
 import { ApplicationError } from '@/src/application/errors';
 import type {
@@ -30,9 +33,19 @@ const CreateCheckoutSessionInputSchema = z
   })
   .strict();
 
-const CreatePortalSessionInputSchema = z.object({}).strict();
+const CreatePortalSessionInputSchema = z
+  .object({
+    idempotencyKey: zIdempotencyKey.optional(),
+  })
+  .strict();
 
 const CreateCheckoutSessionOutputSchema = z
+  .object({
+    url: z.string().min(1),
+  })
+  .strict();
+
+const CreatePortalSessionOutputSchema = z
   .object({
     url: z.string().min(1),
   })
@@ -142,11 +155,47 @@ export const createCheckoutSession = createAction({
 export const createPortalSession = createAction({
   schema: CreatePortalSessionInputSchema,
   getDeps,
-  execute: async (_input, d) => {
+  execute: async (input, d) => {
     const user = await d.authGateway.requireUser();
-    return d.createPortalSessionUseCase.execute({
+    const { idempotencyKey } = input;
+
+    async function createNewSession(): Promise<CreatePortalSessionOutput> {
+      const portalRateLimit = await d.rateLimiter.limit({
+        key: `billing:createPortalSession:${user.id}`,
+        ...PORTAL_SESSION_RATE_LIMIT,
+      });
+      if (!portalRateLimit.success) {
+        throw new ApplicationError(
+          'RATE_LIMITED',
+          `Too many billing portal attempts. Try again in ${portalRateLimit.retryAfterSeconds}s.`,
+        );
+      }
+
+      const portalSessionInput = {
+        userId: user.id,
+        returnUrl: toBillingReturnUrl(d.appUrl),
+      } as const;
+
+      return d.createPortalSessionUseCase.execute(
+        idempotencyKey
+          ? { ...portalSessionInput, idempotencyKey }
+          : portalSessionInput,
+      );
+    }
+
+    if (!idempotencyKey) {
+      return createNewSession();
+    }
+
+    return withIdempotency({
+      repo: d.idempotencyKeyRepository,
+      logger: d.logger,
       userId: user.id,
-      returnUrl: toBillingReturnUrl(d.appUrl),
+      action: 'billing:createPortalSession',
+      key: idempotencyKey,
+      now: d.now,
+      parseResult: (value) => CreatePortalSessionOutputSchema.parse(value),
+      execute: createNewSession,
     });
   },
 });
