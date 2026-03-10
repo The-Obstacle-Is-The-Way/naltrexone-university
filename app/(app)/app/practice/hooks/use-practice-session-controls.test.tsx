@@ -1,10 +1,18 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@/src/application/test-helpers/render-hook';
 import { usePracticeSessionControls } from './use-practice-session-controls';
 
+let DEFAULT_SESSION_COUNT: number | undefined;
+
 describe('usePracticeSessionControls', () => {
+  beforeAll(async () => {
+    DEFAULT_SESSION_COUNT = (
+      (await import('../practice-page-logic')) as Record<string, unknown>
+    ).DEFAULT_SESSION_COUNT as number | undefined;
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -18,8 +26,9 @@ describe('usePracticeSessionControls', () => {
       status: 'unanswered',
     });
     expect(output.sessionMode).toBe('tutor');
-    expect(output.sessionCount).toBe(20);
-    expect(output.sessionCountInputValue).toBe('20');
+    expect(DEFAULT_SESSION_COUNT).toBe(20);
+    expect(output.sessionCount).toBe(DEFAULT_SESSION_COUNT);
+    expect(output.sessionCountInputValue).toBe(String(DEFAULT_SESSION_COUNT));
     expect(output.availableCountStatus).toBe('loading');
     expect(output.availableCount).toBeNull();
     expect(output.tagLoadStatus).toBe('loading');

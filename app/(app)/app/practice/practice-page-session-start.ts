@@ -12,6 +12,7 @@ const SESSION_START_TIMEOUT_MS = 15_000;
 
 export const SESSION_COUNT_MIN = 1;
 export const SESSION_COUNT_MAX = 100;
+export const DEFAULT_SESSION_COUNT = 20;
 
 export function handleSessionModeChange(
   setSessionMode: (mode: 'tutor' | 'exam') => void,

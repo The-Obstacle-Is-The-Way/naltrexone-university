@@ -9,6 +9,7 @@ import {
   createSessionModeChangeHandler,
   createStatusChangeHandler,
   createToggleTagHandler,
+  DEFAULT_SESSION_COUNT,
   type PracticeFilters,
   startSession,
 } from '../practice-page-logic';
@@ -44,8 +45,10 @@ export function usePracticeSessionStart(
     status: 'unanswered',
   });
   const [sessionMode, setSessionMode] = useState<'tutor' | 'exam'>('tutor');
-  const [sessionCount, setSessionCount] = useState(20);
-  const [sessionCountInputValue, setSessionCountInputValue] = useState('20');
+  const [sessionCount, setSessionCount] = useState(DEFAULT_SESSION_COUNT);
+  const [sessionCountInputValue, setSessionCountInputValue] = useState(
+    String(DEFAULT_SESSION_COUNT),
+  );
   const [startSessionIdempotencyKey, setStartSessionIdempotencyKey] = useState(
     () => crypto.randomUUID(),
   );

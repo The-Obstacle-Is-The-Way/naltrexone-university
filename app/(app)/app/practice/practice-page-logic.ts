@@ -18,6 +18,7 @@ export {
   createSessionModeChangeHandler,
   createStatusChangeHandler,
   createToggleTagHandler,
+  DEFAULT_SESSION_COUNT,
   handleSessionCountBlur,
   handleSessionCountChange,
   handleSessionModeChange,
