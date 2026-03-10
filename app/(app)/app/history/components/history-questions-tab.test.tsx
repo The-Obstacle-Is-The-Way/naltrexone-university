@@ -146,6 +146,14 @@ describe('HistoryQuestionsTab', () => {
       (span) => span.textContent?.trim() === 'Review',
     );
     expect(reviewSpans).toHaveLength(2);
+    for (const reviewSpan of reviewSpans) {
+      const classTokens = (reviewSpan.getAttribute('class') ?? '').split(/\s+/);
+      expect(classTokens).toContain('border-0');
+      expect(classTokens).toContain('bg-foreground/[0.06]');
+      expect(classTokens).toContain('font-medium');
+      expect(classTokens).toContain('text-foreground/60');
+      expect(classTokens).not.toContain('border');
+    }
 
     expect(doc.querySelectorAll('a a')).toHaveLength(0);
 
@@ -154,11 +162,16 @@ describe('HistoryQuestionsTab', () => {
     );
     expect(cardLinks).toHaveLength(2);
     for (const link of cardLinks) {
-      const className = link.getAttribute('class') ?? '';
-      expect(className).toContain('transition-colors');
-      expect(className).toContain('hover:bg-muted/50');
-      expect(className).not.toContain('hover:bg-accent/40');
-      expect(className).toContain('focus-visible:ring-[3px]');
+      const classTokens = (link.getAttribute('class') ?? '').split(/\s+/);
+      expect(classTokens).toContain('bg-foreground/5');
+      expect(classTokens).toContain('transition-colors');
+      expect(classTokens).toContain('hover:bg-foreground/[0.08]');
+      expect(classTokens).toContain('focus-visible:ring-[3px]');
+      expect(classTokens).not.toContain('border');
+      expect(classTokens).not.toContain('border-border');
+      expect(classTokens).not.toContain('shadow-sm');
+      expect(classTokens).not.toContain('hover:bg-muted/50');
+      expect(classTokens).not.toContain('hover:bg-accent/40');
     }
   });
 
@@ -477,11 +490,24 @@ describe('HistoryQuestionsTab', () => {
     };
 
     const html = renderToStaticMarkup(<HistoryQuestionsTab result={result} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
 
     expect(html).toContain('[Question no longer available]');
     expect(html).toContain('Unavailable');
     expect(html).toContain('Correct');
     expect(html).not.toContain('/app/questions/');
+
+    const rowContainer = doc.querySelector('li > *');
+    expect(rowContainer?.tagName).toBe('DIV');
+
+    const classTokens = (rowContainer?.getAttribute('class') ?? '').split(
+      /\s+/,
+    );
+    expect(classTokens).toContain('rounded-2xl');
+    expect(classTokens).toContain('bg-foreground/5');
+    expect(classTokens).toContain('p-4');
+    expect(classTokens).not.toContain('border-border');
+    expect(classTokens).not.toContain('shadow-sm');
   });
 
   it('renders correct and incorrect result badges', () => {

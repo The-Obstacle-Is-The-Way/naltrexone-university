@@ -1,5 +1,6 @@
 'use client';
 
+import { ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { SessionBreakdownList } from '@/app/(app)/app/shared/components/session-breakdown-list';
@@ -178,10 +179,8 @@ export function HistorySessionsTab({
             <li
               key={row.sessionId}
               className={cn(
-                'rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors dark:border-foreground/40',
-                isRowInteractive
-                  ? 'cursor-pointer hover:bg-muted/40 dark:hover:border-foreground/70'
-                  : undefined,
+                'rounded-xl bg-foreground/5 p-3 transition-colors hover:bg-foreground/[0.08]',
+                isRowInteractive ? 'cursor-pointer' : undefined,
               )}
               onClick={(event) => {
                 if (!sessionReviewHref) return;
@@ -221,10 +220,9 @@ export function HistorySessionsTab({
                     />
                   </div>
                 )}
-                <Button
+                <button
                   type="button"
-                  variant="outline"
-                  className="rounded-full"
+                  className="shrink-0 rounded-md p-1 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                   aria-label={`${isSelected ? 'Hide' : 'View'} breakdown for ${sessionSummary}`}
                   aria-expanded={isSelected}
                   aria-controls={`breakdown-${row.sessionId}`}
@@ -232,8 +230,14 @@ export function HistorySessionsTab({
                     void historySessions.onOpenSession(row.sessionId);
                   }}
                 >
-                  {isSelected ? 'Hide breakdown' : 'View breakdown'}
-                </Button>
+                  <ChevronDown
+                    aria-hidden="true"
+                    className={cn(
+                      'h-4 w-4 text-foreground/60 transition-transform',
+                      isSelected ? 'rotate-180' : undefined,
+                    )}
+                  />
+                </button>
               </div>
 
               {isSelected ? (
@@ -242,7 +246,7 @@ export function HistorySessionsTab({
                   id={`breakdown-${row.sessionId}`}
                   role="region"
                   aria-label="Question breakdown"
-                  className="mt-3 border-t border-border/30 pt-3 dark:border-foreground/40"
+                  className="mt-3 border-t border-border/30 pt-3 dark:border-foreground/10"
                 >
                   {historySessions.reviewLoadState.status === 'loading' ? (
                     <output

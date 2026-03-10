@@ -425,7 +425,7 @@ export function HistoryQuestionsTab({
               if (!row.isAvailable) {
                 return (
                   <li key={row.questionId}>
-                    <Card className="gap-0 rounded-2xl border-border p-4 shadow-sm">
+                    <div className="rounded-2xl bg-foreground/5 p-4">
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div className="space-y-2">
                           <div className="text-sm font-medium text-foreground">
@@ -440,7 +440,7 @@ export function HistoryQuestionsTab({
                           />
                         </div>
                       </div>
-                    </Card>
+                    </div>
                   </li>
                 );
               }
@@ -459,7 +459,7 @@ export function HistoryQuestionsTab({
                 <li key={row.questionId}>
                   <Link
                     href={href}
-                    className="block rounded-2xl border border-border p-4 shadow-sm transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                    className="block rounded-2xl bg-foreground/5 p-4 transition-colors hover:bg-foreground/[0.08] focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                   >
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="space-y-2">
@@ -482,7 +482,7 @@ export function HistoryQuestionsTab({
                         />
                       </div>
 
-                      <span className="inline-flex items-center rounded-full border px-4 py-2 text-sm">
+                      <span className="inline-flex items-center rounded-full border-0 bg-foreground/[0.06] px-4 py-2 text-sm font-medium text-foreground/60">
                         Review
                       </span>
                     </div>

@@ -2,9 +2,10 @@
 
 **Priority:** P2
 **Created:** 2026-03-10
-**Status:** Open
-**Source:** [BS-047](../brainstorming/bs-047-history-sessions-tab-visual-unification.md)
-**Related:** [Dashboard page doc](../frontend/pages/dashboard.md), [Practice page doc](../frontend/pages/practice.md), [Pattern Registry](../frontend/pattern-registry.md), [Contrast Policy](../frontend/contrast-policy.md), [BS-044](../brainstorming/bs-044-dark-mode-border-weight-tiering.md)
+**Status:** Resolved
+**Resolved:** 2026-03-10
+**Source:** [BS-047](../../brainstorming/bs-047-history-sessions-tab-visual-unification.md)
+**Related:** [Dashboard page doc](../../frontend/pages/dashboard.md), [Practice page doc](../../frontend/pages/practice.md), [Pattern Registry](../../frontend/pattern-registry.md), [Contrast Policy](../../frontend/contrast-policy.md), [BS-044](../../brainstorming/bs-044-dark-mode-border-weight-tiering.md)
 
 ---
 
@@ -69,7 +70,7 @@ Target direction:
 mt-3 border-t border-border/30 pt-3 dark:border-foreground/10
 ```
 
-The separator between the session summary row and its expanded breakdown is a decorative/internal divider, not a required boundary. It should follow the softer T4 separator treatment from [BS-044](../brainstorming/bs-044-dark-mode-border-weight-tiering.md), not the current `dark:border-foreground/40` interactive-boundary weight.
+The separator between the session summary row and its expanded breakdown is a decorative/internal divider, not a required boundary. It should follow the softer T4 separator treatment from [BS-044](../../brainstorming/bs-044-dark-mode-border-weight-tiering.md), not the current `dark:border-foreground/40` interactive-boundary weight.
 
 ### 4. Breakdown list dividers → soften dark-mode divider weight
 
@@ -161,24 +162,24 @@ The following BS-047 items are intentionally **not** part of DEBT-301:
 
 ## Acceptance Criteria
 
-- [ ] Session rows in `history-sessions-tab.tsx` no longer use `border border-border/60 bg-muted/20 dark:border-foreground/40`
-- [ ] Session rows use `bg-foreground/5` at rest and `hover:bg-foreground/[0.08]` on hover
-- [ ] Interactive session rows preserve `cursor-pointer`
-- [ ] Existing focus-ring behavior on the interactive History row children remains unchanged
-- [ ] The bordered `View breakdown` / `Hide breakdown` button is removed
-- [ ] Expanded/collapsed state is represented by a trailing disclosure button with a `<ChevronDown>` icon driven by existing React state
-- [ ] The replacement disclosure control preserves `type="button"`, `aria-expanded`, `aria-controls`, and an informative `aria-label`
-- [ ] Expanded-session separator no longer uses `dark:border-foreground/40`
-- [ ] Expanded-session separator uses the softer decorative treatment `dark:border-foreground/10`
-- [ ] Breakdown list dividers no longer use `dark:divide-foreground/40`
-- [ ] Breakdown list dividers use `dark:divide-foreground/20`
-- [ ] Available question rows in `history-questions-tab.tsx` no longer use bordered/shadowed card chrome
-- [ ] Available question rows use the tonal row contract `bg-foreground/5` + `hover:bg-foreground/[0.08]`
-- [ ] Available question rows drop `shadow-sm`
-- [ ] The trailing `Review` affordance uses `border-0 bg-foreground/[0.06] text-foreground/60`
-- [ ] Unavailable question rows no longer render with bordered/shadowed Card chrome
-- [ ] Unavailable question rows move onto the same tonal-fill family as available rows
-- [ ] SegmentedControl instances, tab bars, filter dropdown controls, and pagination links remain unchanged
+- [x] Session rows in `history-sessions-tab.tsx` no longer use `border border-border/60 bg-muted/20 dark:border-foreground/40`
+- [x] Session rows use `bg-foreground/5` at rest and `hover:bg-foreground/[0.08]` on hover
+- [x] Interactive session rows preserve `cursor-pointer`
+- [x] Existing focus-ring behavior on the interactive History row children remains unchanged
+- [x] The bordered `View breakdown` / `Hide breakdown` button is removed
+- [x] Expanded/collapsed state is represented by a trailing disclosure button with a `<ChevronDown>` icon driven by existing React state
+- [x] The replacement disclosure control preserves `type="button"`, `aria-expanded`, `aria-controls`, and an informative `aria-label`
+- [x] Expanded-session separator no longer uses `dark:border-foreground/40`
+- [x] Expanded-session separator uses the softer decorative treatment `dark:border-foreground/10`
+- [x] Breakdown list dividers no longer use `dark:divide-foreground/40`
+- [x] Breakdown list dividers use `dark:divide-foreground/20`
+- [x] Available question rows in `history-questions-tab.tsx` no longer use bordered/shadowed card chrome
+- [x] Available question rows use the tonal row contract `bg-foreground/5` + `hover:bg-foreground/[0.08]`
+- [x] Available question rows drop `shadow-sm`
+- [x] The trailing `Review` affordance uses `border-0 bg-foreground/[0.06] text-foreground/60`
+- [x] Unavailable question rows no longer render with bordered/shadowed Card chrome
+- [x] Unavailable question rows move onto the same tonal-fill family as available rows
+- [x] SegmentedControl instances, tab bars, filter dropdown controls, and pagination links remain unchanged
 
 ---
 
@@ -200,26 +201,28 @@ Implementation should be scoped to the existing History surface and its direct t
 ### Documentation sync
 - `docs/frontend/pattern-registry.md`
 - `docs/frontend/contrast-policy.md`
-- `docs/debt/debt-301-history-page-visual-unification.md`
+- `docs/_archive/debt/debt-301-history-page-visual-unification.md`
 - `docs/debt/index.md`
 
 ---
 
 ## Visual Verification Checklist
 
+Verification method (2026-03-10): authenticated `agent-browser` pass on the seeded E2E baseline for the live Sessions/Questions surfaces in light + dark mode, plus the colocated browser/unit suites for loading, error, unavailable, empty, filter, and pagination variants that are not all present in the baseline dataset.
+
 After implementation, verify all of the following in both dark and light mode:
 
-- [ ] History Sessions tab with multiple collapsed rows
-- [ ] History Sessions tab with one expanded row
-- [ ] Expanded breakdown loading state
-- [ ] Expanded breakdown error state
-- [ ] Expanded breakdown list with available + unavailable questions
-- [ ] Sessions empty state
-- [ ] Sessions mode filter (`All / Tutor / Exam`) unchanged
-- [ ] Sessions pagination links unchanged
-- [ ] History Questions tab with available rows
-- [ ] History Questions tab with unavailable rows
-- [ ] Questions tab empty state(s)
-- [ ] Questions tab filter card and dropdown controls unchanged
-- [ ] Questions-tab trailing `Review` affordance is visually quieter than before
-- [ ] `sm:` breakpoint behavior for row headers and trailing disclosure/review affordances still feels balanced
+- [x] History Sessions tab with multiple collapsed rows
+- [x] History Sessions tab with one expanded row
+- [x] Expanded breakdown loading state
+- [x] Expanded breakdown error state
+- [x] Expanded breakdown list with available + unavailable questions
+- [x] Sessions empty state
+- [x] Sessions mode filter (`All / Tutor / Exam`) unchanged
+- [x] Sessions pagination links unchanged
+- [x] History Questions tab with available rows
+- [x] History Questions tab with unavailable rows
+- [x] Questions tab empty state(s)
+- [x] Questions tab filter card and dropdown controls unchanged
+- [x] Questions-tab trailing `Review` affordance is visually quieter than before
+- [x] `sm:` breakpoint behavior for row headers and trailing disclosure/review affordances still feels balanced

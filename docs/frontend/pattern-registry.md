@@ -75,9 +75,9 @@ When to use each opacity on `bg-muted` (or equivalent layer-2 token):
 
 **Key insight:** The same opacity produces different perceived contrast depending on the parent surface. `/40` inside a card (7% base) looks similar to `/50` on page background (3.5% base). The scale above accounts for this.
 
-**Decision:** Hover opacity is context-dependent. Use `/40` inside cards (including I-3 choice buttons), `/50` on page background. `/60` is exception-only and requires explicit design review.
+**Decision:** Hover opacity is context-dependent. Use `/40` inside cards (including I-3 choice buttons), `/50` on page background when the hover is driven by the muted/layer-2 scale, and the foreground-ramp tonal row contract (`bg-foreground/5` rest + `hover:bg-foreground/[0.08]`) for borderless row patterns documented in I-1/I-2. `/60` is exception-only and requires explicit design review.
 
-**Light-mode caveat (Decision 12 resolved):** This scale was designed for dark mode where `--muted` at 11% lightness provides ample contrast headroom. In light mode, `--muted` at 96.1% lightness is only 3.9% from white — opacities below `/100` produce imperceptible fill contrast. The system intentionally uses two hover channels: background-fill deltas in dark mode, and non-fill cues (border/text/shadow) in light mode. Any new interactive row component MUST include at least one non-fill hover cue. Current I-1 rows use fill + focus-ring cues plus a dedicated dark-mode hover-border cue.
+**Light-mode caveat (Decision 12 resolved):** This scale was designed for dark mode where `--muted` at 11% lightness provides ample contrast headroom. In light mode, `--muted` at 96.1% lightness is only 3.9% from white — opacities below `/100` produce imperceptible fill contrast. The system intentionally uses background-fill deltas as the primary hover channel for tonal rows, paired with non-fill affordances such as cursor state, CTA labels, and the shared focus ring. Add border/text/shadow hover reinforcement only when the fill delta is not sufficient for the specific surface.
 
 ### 1.3 Border Opacity Scale
 
@@ -164,6 +164,15 @@ rounded-xl bg-foreground/5 p-3
 
 **Design rationale:** Matches the I-1 dashboard variant's borderless tonal fill approach for visual consistency within the same container. Static rows use the rest fill only — no hover or transition since the row is non-interactive. See [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) for the full design research.
 
+**Page-background sibling variant:**
+```
+rounded-2xl bg-foreground/5 p-4
+```
+
+**Used in:** History questions unavailable rows
+
+**Design rationale:** Matches the History questions clickable-row family while keeping unavailable rows static. The unavailable state is communicated by the copy and metadata; the tonal fill keeps the row in the same visual family without reintroducing legacy border/shadow chrome. See [DEBT-301](../_archive/debt/debt-301-history-page-visual-unification.md).
+
 ### S-3: Menu Popover Surface
 
 Floating overlay for dropdowns, selects, context menus.
@@ -236,38 +245,38 @@ dark:border-foreground/40 dark:hover:border-foreground/70
 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 ```
 
-**Used in:** History sessions rows (page-background hybrid with delegated row click; see BS-047 Gap 3)
+**Used in:** No active consumer. Retained for nested-card rows that still need an explicit stroked inner boundary.
 
 **Design rationale:** `/40` hover inside a card (base 7% lightness) produces ~8.6% effective lightness — a subtle, satisfying shift. The card surface already elevates the row above page background, so the hover only needs a gentle nudge.
 
-**Dashboard variant (borderless tonal fill):**
+**Tonal-fill variant (Dashboard + History sessions):**
 ```
 block rounded-xl bg-foreground/5 p-3 transition-colors hover:bg-foreground/[0.08]
 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 ```
 
-**Used in:** Dashboard session rows, dashboard activity rows
+**Used in:** Dashboard session rows, dashboard activity rows, History sessions rows
 
-**Design rationale:** When a Card acts as a container wrapping a list of rows, bordered inner rows create visual noise — the inner border competes with the outer card border, producing an inverted hierarchy (inner borders louder than outer). Borderless tonal fill elevation follows Material Design 3's approach: rows are defined by fill shape only (`bg-foreground/5`), with hover producing a monotonic brightness lift (`hover:bg-foreground/[0.08]`). Both rest and hover use the same `foreground` color scale to avoid non-monotonic brightness (mixing scales causes hover inversion — see [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md)). The tonal fill is a supplementary hierarchy hint, not a required boundary per [Contrast Policy §3.2](./contrast-policy.md) — row identification comes from text content, cursor, hover fill, and focus ring.
+**Design rationale:** When a parent surface or surrounding layout already establishes hierarchy, bordered inner rows create visual noise. Borderless tonal fill elevation follows Material Design 3's approach: rows are defined by fill shape only (`bg-foreground/5`), with hover producing a monotonic brightness lift (`hover:bg-foreground/[0.08]`). Both rest and hover use the same `foreground` color scale to avoid non-monotonic brightness (mixing scales causes hover inversion — see [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md)). The tonal fill is a supplementary hierarchy hint, not a required boundary per [Contrast Policy §3.2](./contrast-policy.md) — row identification comes from text content, cursor, hover fill, and focus ring. History uses the same visual contract on page background to stay aligned with Dashboard while intentionally avoiding a wrapping Card (see [DEBT-301](../_archive/debt/debt-301-history-page-visual-unification.md)).
 
-**Reuse candidate:** This variant is suitable for any nested-card list pattern where the parent card wraps multiple interactive rows. Practice question lists and similar surfaces should adopt this variant rather than the bordered default when rows appear inside a Card container.
+**Reuse candidate:** This variant is suitable for any nested-card list pattern where the parent surface already provides hierarchy, or for page-background hybrids that intentionally avoid adding a wrapping Card.
 
 **Must be a `<Link>` element** (entire row is the click target).
 
-**Known structural exception:** `history-sessions-tab.tsx` uses delegated row click on `<li>` + nested `<Link>` to avoid nested link-role conflicts with inner links (`A11Y-1` resolution), and currently applies this bordered token set on page background rather than inside a wrapping `<Card>`. [BS-047](../brainstorming/bs-047-history-sessions-tab-visual-unification.md) Gap 3 tracks whether that hybrid layout should remain or be realigned.
+**Known structural exception:** `history-sessions-tab.tsx` uses delegated row click on `<li>` + nested `<Link>` to avoid nested link-role conflicts with inner links (`A11Y-1` resolution). DEBT-301 kept that interaction model but realigned the visual tokens to this tonal-fill variant on page background.
 
-### I-2: Hoverable Card Row (standalone)
+### I-2: Hoverable Row (standalone)
 
-A clickable row directly on the page background, not inside a Card. Uses Card-like styling since it IS the container.
+A clickable row directly on the page background, not inside a Card.
 
 ```
-block rounded-2xl border border-border p-4 shadow-sm transition-colors hover:bg-muted/50
+block rounded-2xl bg-foreground/5 p-4 transition-colors hover:bg-foreground/[0.08]
 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 ```
 
-**Used in:** History questions tab rows
+**Used in:** History questions available rows
 
-**Design rationale:** `/50` hover on page background (base 3.5% lightness) produces ~7.3% effective lightness — needs more opacity than I-1 because the base is darker. Uses `rounded-2xl` and `border-border` (full opacity) because it acts as its own container, matching Card radius and border.
+**Design rationale:** On page background, the same foreground-ramp tonal fill used by Dashboard and History sessions produces a quieter standalone row than the old border/shadow card chrome. The row still reads as interactive via its content, hover lift, focus ring, and the trailing Review pill. See [DEBT-301](../_archive/debt/debt-301-history-page-visual-unification.md).
 
 **Must be a `<Link>` element.**
 
@@ -806,14 +815,16 @@ transition-all hover:bg-muted/50         ← WRONG (animates everything, causes 
 
 ```
 Is the list inside a <Card> container?
-├── YES → Use I-1 (Hoverable Row inside Card)
-│         rounded-xl, border-border/60 + dark:border-foreground/40,
-│         bg-muted/20, hover:bg-muted/40, dark:hover:border-foreground/70
+├── YES → Use I-1 tonal-fill variant by default
+│         rounded-xl, bg-foreground/5, hover:bg-foreground/[0.08]
+│         Use the bordered default only when a spec explicitly requires an inner stroke
 │         Is the row non-interactive?
-│         └── YES → Use S-2 (Muted Row, no hover classes)
+│         └── YES → Use S-2 tonal sibling variant (no hover classes)
 └── NO → Is each item a standalone container?
-    ├── YES → Use I-2 (Hoverable Card Row standalone)
-    │         rounded-2xl, border-border, shadow-sm, hover:bg-muted/50
+    ├── YES → Use I-2 tonal standalone row
+    │         rounded-2xl, bg-foreground/5, hover:bg-foreground/[0.08]
+    │         Is the row non-interactive?
+    │         └── YES → Use S-2 page-background sibling variant
     └── NO → Use <Card> per item with interactive elements inside
               (bookmarks pattern — Card contains buttons/links)
 ```
@@ -1315,8 +1326,8 @@ Compact lookup for code reviews and implementation.
 | S-2 | Muted Row | — (non-interactive) | `rounded-xl` | Default: `border-border/60 dark:border-foreground/40`; tonal variants may omit border |
 | S-3 | Menu Popover | — | `rounded-md` | `border` |
 | S-4 | Modal Dialog | — | `rounded-2xl` | `border-border` |
-| I-1 | Row in Card | `hover:bg-muted/40` (+ `dark:hover:border-foreground/70`) | `rounded-xl` | `border-border/60 dark:border-foreground/40` |
-| I-2 | Standalone Row | `hover:bg-muted/50` | `rounded-2xl` | `border-border` |
+| I-1 | Row in Card | `hover:bg-foreground/[0.08]` | `rounded-xl` | tonal-fill variant omits border |
+| I-2 | Standalone Row | `hover:bg-foreground/[0.08]` | `rounded-2xl` | tonal-fill variant omits border |
 | I-3 | Choice Button | `hover:bg-muted/40` (+ `dark:hover:bg-foreground/8 dark:hover:border-foreground/55`) | `rounded-xl` | `border-border/60 dark:border-foreground/40` |
 | I-4 | Filter Chip | `hover:bg-foreground/[0.10]` | `rounded-full` | `border-foreground/45 dark:border-foreground/40` |
 | I-5 | Tab Switch Item | `hover:bg-muted/50` | `rounded-md` | Container uses `border-border` |

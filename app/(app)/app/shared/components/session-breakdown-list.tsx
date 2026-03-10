@@ -25,7 +25,7 @@ export function SessionBreakdownList({
   }
 
   return (
-    <ul className="divide-y divide-border/20 dark:divide-foreground/40">
+    <ul className="divide-y divide-border/20 dark:divide-foreground/20">
       {rows.map((row) => (
         <li
           key={row.questionId}
