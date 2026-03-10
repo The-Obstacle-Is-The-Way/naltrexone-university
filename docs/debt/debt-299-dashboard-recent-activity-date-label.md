@@ -2,7 +2,8 @@
 
 **Priority:** P3
 **Created:** 2026-03-10
-**Status:** Open
+**Status:** Resolved
+**Resolved:** 2026-03-10
 **Related:** DEBT-297 (practice starter UI polish), DEBT-298 (UI structural consistency)
 
 ---
@@ -106,9 +107,9 @@ If docs are being updated in the same change, also update the dashboard-flavored
 
 ## Acceptance Criteria
 
-- [ ] "Answered" prefix removed from both render paths (available + unavailable rows)
-- [ ] Date displays as bare `{formatDate(row.answeredAt)}` — e.g., `Mar 8, 2026`
-- [ ] Dashboard render-output tests assert both presence of bare dates and absence of `Answered {date}` for available rows
-- [ ] Dashboard render-output tests assert both presence of bare dates and absence of `Answered {date}` for unavailable rows
-- [ ] Typography policy example updated if docs are touched in the same change
-- [ ] Visual verification: Recent activity chips show `Incorrect • Mar 8, 2026` / `Correct • Mar 8, 2026`
+- [x] "Answered" prefix removed from both render paths (available + unavailable rows)
+- [x] Date displays as bare `{formatDate(row.answeredAt)}` — e.g., `Mar 8, 2026`
+- [x] Dashboard render-output tests assert both presence of bare dates and absence of `Answered {date}` for available rows
+- [x] Dashboard render-output tests assert both presence of bare dates and absence of `Answered {date}` for unavailable rows
+- [x] Typography policy example updated if docs are touched in the same change
+- [x] Visual verification: Recent activity chips show `Incorrect • Mar 8, 2026` / `Correct • Mar 8, 2026`
