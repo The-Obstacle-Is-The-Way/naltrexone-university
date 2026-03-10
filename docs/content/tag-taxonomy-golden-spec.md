@@ -194,6 +194,7 @@ These are all board-tested topics that the question bank is currently thin on â€
 
 ## UI Behavior (Unchanged)
 
-- "Leave empty to include all" logic stays the same
+- Zero-selected collapsed filter summaries show `All {kind} included by default`
+- Expanded filter sections show `({N} selected)` below the chips
 - Multi-select within each category
 - Live question count updates as filters change

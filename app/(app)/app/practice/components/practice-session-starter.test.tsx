@@ -101,7 +101,7 @@ describe('PracticeSessionStarter', () => {
     expect(doc.querySelector('fieldset[aria-label="Topic"]')).not.toBeNull();
   });
 
-  it('renders tag filters as collapsible categories with selected counts', () => {
+  it('renders tag filters as collapsible categories with summary outcome copy and footer counts', () => {
     const html = renderToStaticMarkup(
       <PracticeSessionStarter
         sessionMode="tutor"
@@ -151,54 +151,118 @@ describe('PracticeSessionStarter', () => {
     );
     expect(
       summaries.some(
+        (text) =>
+          text.includes('Topic') &&
+          text.includes('All topics included by default'),
+      ),
+    ).toBe(true);
+    expect(
+      summaries.some(
+        (text) => text.includes('Topic') && text.includes('(0 selected)'),
+      ),
+    ).toBe(false);
+    expect(
+      summaries.some(
         (text) => text.includes('Substance') && text.includes('1 selected'),
       ),
     ).toBe(true);
+    expect(
+      summaries.some(
+        (text) => text.includes('Substance') && text.includes('(1 selected)'),
+      ),
+    ).toBe(false);
+    expect(
+      doc.body.textContent?.includes('Leave empty to include all substances.'),
+    ).toBe(false);
     const substanceDetails = details.find((element) => {
       const summaryText = element.querySelector('summary')?.textContent ?? '';
       return (
         summaryText.includes('Substance') && summaryText.includes('1 selected')
       );
     });
+    const topicDetails = details.find((element) => {
+      const summaryText = element.querySelector('summary')?.textContent ?? '';
+      return (
+        summaryText.includes('Topic') &&
+        summaryText.includes('All topics included by default')
+      );
+    });
     const substanceDetailsTokens = getClassTokens(
       substanceDetails?.getAttribute('class') ?? '',
     );
+    const topicDetailsTokens = getClassTokens(
+      topicDetails?.getAttribute('class') ?? '',
+    );
     const substanceSummary = substanceDetails?.querySelector('summary');
+    const topicSummary = topicDetails?.querySelector('summary');
     const substanceSummaryTokens = getClassTokens(
       substanceSummary?.getAttribute('class') ?? '',
     );
-    const summaryCount = Array.from(
+    const topicSummaryTokens = getClassTokens(
+      topicSummary?.getAttribute('class') ?? '',
+    );
+    const substanceSummaryCount = Array.from(
       substanceDetails?.querySelectorAll('summary span') ?? [],
     ).find(
       (element) =>
-        (element.textContent ?? '').trim() === '(1 selected)' &&
+        (element.textContent ?? '').trim() === '1 selected' &&
         getClassTokens(element.getAttribute('class') ?? '').has(
           'text-foreground/60',
         ),
     );
-    const summaryCountTokens = getClassTokens(
-      summaryCount?.getAttribute('class') ?? '',
+    const substanceSummaryCountTokens = getClassTokens(
+      substanceSummaryCount?.getAttribute('class') ?? '',
+    );
+    const topicSummaryOutcome = Array.from(
+      topicDetails?.querySelectorAll('summary span') ?? [],
+    ).find(
+      (element) =>
+        (element.textContent ?? '').trim() ===
+          'All topics included by default' &&
+        getClassTokens(element.getAttribute('class') ?? '').has(
+          'text-foreground/60',
+        ),
+    );
+    const topicSummaryOutcomeTokens = getClassTokens(
+      topicSummaryOutcome?.getAttribute('class') ?? '',
     );
     const summaryChevron = substanceSummary?.querySelector('svg');
     const summaryChevronTokens = getClassTokens(
       summaryChevron?.getAttribute('class') ?? '',
     );
-    const helperText = Array.from(
+    const substanceFooterText = Array.from(
       substanceDetails?.querySelectorAll('div') ?? [],
     )
       .map((element) => element)
-      .find(
-        (element) =>
-          (element.textContent ?? '').trim() ===
-          'Leave empty to include all substances.',
-      );
-    const helperTextTokens = getClassTokens(
-      helperText?.getAttribute('class') ?? '',
+      .find((element) => (element.textContent ?? '').trim() === '(1 selected)');
+    const topicFooterText = Array.from(
+      topicDetails?.querySelectorAll('div') ?? [],
+    )
+      .map((element) => element)
+      .find((element) => (element.textContent ?? '').trim() === '(0 selected)');
+    const substanceFooterTextTokens = getClassTokens(
+      substanceFooterText?.getAttribute('class') ?? '',
+    );
+    const topicFooterTextTokens = getClassTokens(
+      topicFooterText?.getAttribute('class') ?? '',
     );
     const expandedContentWrapperTokens = getClassTokens(
-      helperText?.parentElement?.getAttribute('class') ?? '',
+      substanceFooterText?.parentElement?.getAttribute('class') ?? '',
     );
 
+    expect(topicDetails).toBeDefined();
+    expect(topicDetailsTokens.has('group')).toBe(true);
+    expect(topicDetailsTokens.has('rounded-xl')).toBe(true);
+    expect(topicDetailsTokens.has('bg-foreground/5')).toBe(true);
+    expect(topicSummary).toBeTruthy();
+    expect(topicSummaryTokens.has('rounded-lg')).toBe(true);
+    expect(topicSummaryTokens.has('px-4')).toBe(true);
+    expect(topicSummaryTokens.has('py-3')).toBe(true);
+    expect(topicSummaryOutcome).toBeDefined();
+    expect(topicSummaryOutcomeTokens.has('text-foreground/60')).toBe(true);
+    expect(topicFooterText).toBeDefined();
+    expect(topicFooterTextTokens.has('text-foreground/60')).toBe(true);
+    expect(topicFooterTextTokens.has('text-muted-foreground')).toBe(false);
     expect(substanceDetails).toBeDefined();
     expect(substanceDetailsTokens.has('group')).toBe(true);
     expect(substanceDetailsTokens.has('rounded-xl')).toBe(true);
@@ -219,16 +283,19 @@ describe('PracticeSessionStarter', () => {
     expect(
       substanceSummaryTokens.has('[&::-webkit-details-marker]:hidden'),
     ).toBe(true);
-    expect(summaryCountTokens.has('text-foreground/60')).toBe(true);
-    expect(summaryCountTokens.has('text-muted-foreground')).toBe(false);
+    expect(substanceSummaryCount).toBeDefined();
+    expect(substanceSummaryCountTokens.has('text-foreground/60')).toBe(true);
+    expect(substanceSummaryCountTokens.has('text-muted-foreground')).toBe(
+      false,
+    );
     expect(summaryChevron).toBeTruthy();
     expect(summaryChevronTokens.has('group-open:rotate-180')).toBe(true);
-    expect(helperText).toBeDefined();
+    expect(substanceFooterText).toBeDefined();
     expect(expandedContentWrapperTokens.has('px-4')).toBe(true);
     expect(expandedContentWrapperTokens.has('pb-3')).toBe(true);
     expect(expandedContentWrapperTokens.has('mt-3')).toBe(false);
-    expect(helperTextTokens.has('text-foreground/60')).toBe(true);
-    expect(helperTextTokens.has('text-muted-foreground')).toBe(false);
+    expect(substanceFooterTextTokens.has('text-foreground/60')).toBe(true);
+    expect(substanceFooterTextTokens.has('text-muted-foreground')).toBe(false);
   });
 
   it('renders status and difficulty segmented controls without hint text', () => {

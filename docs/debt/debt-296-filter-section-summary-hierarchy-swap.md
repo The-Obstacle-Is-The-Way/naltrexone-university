@@ -2,7 +2,8 @@
 
 **Priority:** P3
 **Created:** 2026-03-09
-**Status:** Open
+**Status:** Resolved
+**Resolved:** 2026-03-09
 
 ---
 
@@ -23,7 +24,7 @@ Topic                              (0 selected) ▾
 Leave empty to include all topics.
 ```
 
-**Live implementation reference:** `app/(app)/app/practice/components/practice-session-starter.tsx:216-240`
+**Live implementation reference:** `app/(app)/app/practice/components/practice-session-starter.tsx:216-242`
 
 - The `<summary>` right-side cluster currently renders `({selectedCount} selected)` plus the chevron.
 - The helper line below the chips currently renders `Leave empty to include all {tagKindPluralLabels[kind]}.`
@@ -113,7 +114,7 @@ The brief duplicated count while a section is open and selections exist is accep
 
 | File | Change |
 |------|--------|
-| `app/(app)/app/practice/components/practice-session-starter.test.tsx` | Update the existing `renders tag filters as collapsible categories with selected counts` test (`:149-230` in the current file). The summary-text lookup for `1 selected`, the summary-count span query, and the exact helper-text assertion for `Leave empty to include all substances.` all need to change. |
+| `app/(app)/app/practice/components/practice-session-starter.test.tsx` | Update the existing `renders tag filters as collapsible categories with selected counts` test (`:104-245` in the current file). The summary-text lookup for `1 selected`, the summary-count span query, and the exact helper-text assertion for `Leave empty to include all substances.` all need to change. |
 
 No current browser-spec assertions touch this summary/helper wording.
 
@@ -140,3 +141,12 @@ No current browser-spec assertions touch this summary/helper wording.
 |------|----------|-----------|
 | 2026-03-09 | Created DEBT-296 | User identified the hierarchy inversion during visual review: "(0 selected)" in the summary implies obligation; the optional-use helper is hidden inside the disclosure |
 | 2026-03-09 | Outcome copy selected over instruction copy | `All topics included by default` answers the zero-state question directly and reads more naturally than `Leave unselected to include all topics` |
+
+## Outcome
+
+Implemented in `app/(app)/app/practice/components/practice-session-starter.tsx`.
+
+- Zero-selected collapsed summaries now surface outcome copy (`All {kind} included by default`) instead of `(0 selected)`.
+- Collapsed summaries switch to count-only (`{N} selected`) once selections exist.
+- Expanded sections now show `({N} selected)` below the chips.
+- The old `Leave empty to include all {kind}` helper copy was removed from the UI and synced in the related docs.
