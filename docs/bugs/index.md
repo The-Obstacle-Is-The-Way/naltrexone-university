@@ -16,6 +16,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 **Next Bug ID:** BUG-206
 
 **Latest archival (2026-03-10):**
+- BUG-204 verified fixed (PR #193): rate limiting and idempotency added to portal session creation, archived to `docs/_archive/bugs/`.
 - BUG-203 invalidated after package-level tracer-bullet verification of Clerk `verifyWebhook()`, archived to `docs/_archive/bugs/`.
 
 **Previous archival (2026-03-09):**
@@ -40,7 +41,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | Bug | Priority | Summary |
 |-----|----------|---------|
-| [BUG-204](./bug-204-billing-portal-missing-abuse-controls.md) | P3 | Billing portal session creation has no per-user rate limit and no reachable idempotency path |
 | [BUG-205](./bug-205-reconciliation-prefers-stale-local-subscription-over-canonical-stripe-state.md) | P1 | Stripe reconciliation keeps a stale local subscription as canonical and can cancel the longer-lived Stripe subscription |
 
 ## Audit #14 — Boundary Sweep: Reconciliation Canonical Selection (2026-03-10)
