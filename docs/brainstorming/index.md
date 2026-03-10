@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-09
+**Last Updated:** 2026-03-10
 
 ---
 
@@ -29,8 +29,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
 | [BS-044](./bs-044-dark-mode-border-weight-tiering.md) | Dark Mode Border Weight Tiering — uniform `dark:border-foreground/40` is WCAG compliant but aesthetically heavy; explore tiered treatment by element role | Active | [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
+| [BS-047](./bs-047-history-sessions-tab-visual-unification.md) | History Sessions Tab Visual Unification — bordered rows, outline buttons, and heavy separators are visually dated vs. dashboard/practice tonal fill + chevron patterns | Active | [BS-044](./bs-044-dark-mode-border-weight-tiering.md) |
 
-**Next Brainstorming ID:** BS-047
+**Next Brainstorming ID:** BS-048
 
 ---
 
