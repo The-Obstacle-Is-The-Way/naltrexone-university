@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-09
+**Last Updated:** 2026-03-10
 
 ---
 
@@ -13,14 +13,18 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-203
+**Next Bug ID:** BUG-206
 
-**Latest archival (2026-03-09):**
+**Latest archival (2026-03-10):**
+- BUG-204 verified fixed (PR #193): rate limiting and idempotency added to portal session creation, archived to `docs/_archive/bugs/`.
+- BUG-203 invalidated after package-level tracer-bullet verification of Clerk `verifyWebhook()`, archived to `docs/_archive/bugs/`.
+
+**Previous archival (2026-03-09):**
 - BUG-199 invalidated after tracer-bullet verification, archived to `docs/_archive/bugs/`.
 - BUG-200 reclassified as DEBT-286, archived to `docs/_archive/bugs/`.
 - BUG-201 and BUG-202 verified fixed (commit `a8ce087c`), archived to `docs/_archive/bugs/`.
 
-**Previous archival (2026-03-03):**
+**Earlier archival (2026-03-03):**
 - BUG-186, BUG-187, BUG-188 verified fixed (PR #164), archived to `docs/_archive/bugs/`.
 - BUG-189, BUG-190, BUG-191 verified fixed (PR #166), archived to `docs/_archive/bugs/`.
 - BUG-192, BUG-193, BUG-194 verified fixed (PR #165), archived to `docs/_archive/bugs/`.
@@ -35,7 +39,47 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Open Bugs
 
-None.
+| Bug | Priority | Summary |
+|-----|----------|---------|
+| [BUG-205](./bug-205-reconciliation-prefers-stale-local-subscription-over-canonical-stripe-state.md) | P1 | Stripe reconciliation keeps a stale local subscription as canonical and can cancel the longer-lived Stripe subscription |
+
+## Audit #14 — Boundary Sweep: Reconciliation Canonical Selection (2026-03-10)
+
+Focused follow-up sweep on boundary-heavy billing and domain paths after the BUG-204 verification work. The goal was to find only non-duplicate, code-trace-confirmed bugs with realistic impact.
+
+**Methodology:**
+- Full-file review of reconciliation job logic, Stripe normalization, cron entrypoint, and adjacent tests.
+- Cross-check against archived reconciliation bugs and debt items to avoid refiling known issues.
+- Targeted verification run: `pnpm test --run src/adapters/jobs/reconcile-stripe-subscriptions.test.ts`
+
+**1 new bug filed (BUG-205):**
+
+| Bug | Family | Priority | Summary |
+|-----|--------|----------|---------|
+| BUG-205 | Billing / reconciliation | P1 | Reconciliation short-circuits canonical selection to the stale local subscription and may cancel the actual Stripe winner |
+
+## Audit #13 — Adversarial Security Re-Verification (2026-03-10)
+
+Follow-up adversarial audit focused on server actions, authorization boundaries, webhook verification, rate limiting, configuration, and transaction/race behavior. Every candidate finding was re-verified against the current code and cross-checked against archived bug/debt history before filing.
+
+**Methodology:**
+- Full-file review of all server-action/controller entry points, webhook routes, env validation, billing flows, schema/migrations, and key domain services.
+- Tracer-bullet traces from public entry points through controllers/use cases into repositories or Stripe gateways.
+- Targeted verification run: `pnpm test --run lib/env.test.ts app/api/webhooks/clerk/route.test.ts src/adapters/controllers/billing-controller.test.ts app/api/cron/reconcile-stripe-subscriptions/route.test.ts`
+- Prior audit/debt register cross-check to avoid refiling archived issues or known false positives.
+
+**1 new bug filed (BUG-204):**
+
+| Bug | Family | Priority | Summary |
+|-----|--------|----------|---------|
+| BUG-204 | Authenticated abuse / billing | P3 | Billing portal creation lacks rate limiting and blocks callers from supplying the idempotency key already supported by the application port |
+
+**1 bug invalidated after deeper runtime verification:**
+- BUG-203 was initially filed, then invalidated after inspecting the installed `@clerk/nextjs` and `@clerk/backend` runtime. `verifyWebhook()` reads `process.env.CLERK_WEBHOOK_SIGNING_SECRET` directly and fails closed when that env var is missing; our typed `env` fallback is not consulted by the Clerk SDK.
+
+**Candidate findings rejected after re-verification:**
+- Cron weak-secret guessing path was not filed as a bug because exploitation depends on operators choosing a weak `CRON_SECRET`; the code should be hardened, but the current evidence is too deployment-dependent for a bug filing.
+- The remove-bookmark double-submit race was not re-filed because it collapses to the previously rejected last-write-wins bookmark-toggle race family.
 
 ## Audit #12 — Extended Sweep: Inference Leaks, Transaction Safety, Zombie Keys (2026-03-03)
 

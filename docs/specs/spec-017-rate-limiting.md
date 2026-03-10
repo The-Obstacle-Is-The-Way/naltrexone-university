@@ -4,7 +4,7 @@
 > **Priority:** P2 (Important for Production)
 > **Author:** Claude
 > **Created:** 2026-02-01
-> **Updated:** 2026-02-09
+> **Updated:** 2026-03-10
 
 ---
 
@@ -16,6 +16,7 @@
 - `src/adapters/shared/rate-limits.ts` — Centralized limit configuration (no magic numbers)
 - Rate limiting applied to:
   - Checkout session creation (`billing-controller.ts`)
+  - Portal session creation (`billing-controller.ts`)
   - Practice session start (`practice-controller.ts`)
   - Answer submission (`question-controller.ts`)
   - Bookmark toggle (`bookmark-controller.ts`)
@@ -54,7 +55,7 @@ We implemented a custom rate limiter using Postgres for durability (fixed-window
 
 ### Post-MVP: Redis-Backed Rate Limiting (Optional Upgrade)
 
-When usage grows (or multi-region deployments require shared counters), consider migrating to **Upstash Redis** + `@upstash/ratelimit`:
+When usage grows (or multi-region deployments require lower-latency counters than Neon writes), consider migrating to **Upstash Redis** + `@upstash/ratelimit`. That is a performance/scalability upgrade, not a correctness prerequisite for the current Postgres-backed implementation:
 
 ```typescript
 // lib/rate-limit.ts (Post-MVP)
@@ -85,6 +86,7 @@ export const apiRateLimiter = new Ratelimit({
 | **Auth callbacks** | 20 | 1 min | IP |
 | **Question fetch** | 60 | 1 min | userId |
 | **Answer submit** | 30 | 1 min | userId |
+| **Billing portal** | 20 | 1 min | userId |
 | **Webhook** | 100 | 1 min | IP |
 
 ---
@@ -95,10 +97,11 @@ For MVP, we ship a Postgres-backed fixed-window rate limiter via
 `src/adapters/gateways/drizzle-rate-limiter.ts` and apply it to:
 
 1. Checkout session creation (`billing-controller.ts`)
-2. Practice session start (`practice-controller.ts`)
-3. Answer submission (`question-controller.ts`)
-4. Bookmark toggle (`bookmark-controller.ts`)
-5. Public route handlers (Stripe/Clerk webhooks, health)
+2. Portal session creation (`billing-controller.ts`)
+3. Practice session start (`practice-controller.ts`)
+4. Answer submission (`question-controller.ts`)
+5. Bookmark toggle (`bookmark-controller.ts`)
+6. Public route handlers (Stripe/Clerk webhooks, health)
 
 ### Historical Note (Pre-Implementation)
 

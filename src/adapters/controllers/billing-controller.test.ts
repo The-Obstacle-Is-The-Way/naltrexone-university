@@ -226,6 +226,25 @@ describe('billing-controller', () => {
       expect(deps.createPortalSessionUseCase.inputs).toEqual([]);
     });
 
+    it('returns RATE_LIMITED when portal session creation is rate limited', async () => {
+      const deps = createDeps({
+        rateLimiter: new FakeRateLimiter({
+          success: false,
+          limit: 20,
+          remaining: 0,
+          retryAfterSeconds: 60,
+        }),
+      });
+
+      const result = await createPortalSession({}, deps);
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'RATE_LIMITED' },
+      });
+      expect(deps.createPortalSessionUseCase.inputs).toEqual([]);
+    });
+
     it('returns portal URL when inputs are valid', async () => {
       const deps = createDeps({ appUrl: 'https://app.example.com' });
 
@@ -238,6 +257,85 @@ describe('billing-controller', () => {
       expect(deps.createPortalSessionUseCase.inputs).toEqual([
         { userId: 'user_1', returnUrl: 'https://app.example.com/app/billing' },
       ]);
+    });
+
+    it('returns VALIDATION_ERROR when fresh portal session output is invalid', async () => {
+      const deps = createDeps({
+        portalOutput: { url: '' },
+      });
+
+      const result = await createPortalSession({}, deps);
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          fieldErrors: { url: expect.any(Array) },
+        },
+      });
+      expect(deps.createPortalSessionUseCase.inputs).toEqual([
+        { userId: 'user_1', returnUrl: 'https://app.example.com/app/billing' },
+      ]);
+    });
+
+    it('returns the cached portal session when idempotencyKey is reused', async () => {
+      const deps = createDeps();
+
+      const input = {
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      const first = await createPortalSession(input, deps);
+      const second = await createPortalSession(input, deps);
+
+      expect(first).toEqual({
+        ok: true,
+        data: { url: 'https://stripe/portal' },
+      });
+      expect(second).toEqual(first);
+      expect(deps.createPortalSessionUseCase.inputs).toHaveLength(1);
+      expect(deps.createPortalSessionUseCase.inputs).toEqual([
+        {
+          userId: 'user_1',
+          returnUrl: 'https://app.example.com/app/billing',
+          idempotencyKey: '11111111-1111-1111-1111-111111111111',
+        },
+      ]);
+    });
+
+    it('does not cache RATE_LIMITED under the idempotency key', async () => {
+      const rateLimiter = new FakeRateLimiter([
+        {
+          success: false,
+          limit: 20,
+          remaining: 0,
+          retryAfterSeconds: 60,
+        },
+        {
+          success: true,
+          limit: 20,
+          remaining: 19,
+          retryAfterSeconds: 0,
+        },
+      ]);
+      const deps = createDeps({ rateLimiter });
+
+      const input = {
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      const first = await createPortalSession(input, deps);
+      expect(first).toMatchObject({
+        ok: false,
+        error: { code: 'RATE_LIMITED' },
+      });
+
+      const second = await createPortalSession(input, deps);
+      expect(second).toEqual({
+        ok: true,
+        data: { url: 'https://stripe/portal' },
+      });
+      expect(deps.createPortalSessionUseCase.inputs).toHaveLength(1);
     });
 
     it('returns NOT_FOUND when use case throws ApplicationError', async () => {
