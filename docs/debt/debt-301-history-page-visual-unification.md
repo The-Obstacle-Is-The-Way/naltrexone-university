@@ -37,6 +37,8 @@ rounded-xl bg-foreground/5 p-3 transition-colors
 hover:bg-foreground/[0.08]
 ```
 
+Interactive rows must also preserve their existing `cursor-pointer` class (applied conditionally when `isRowInteractive` is true).
+
 This matches the established Dashboard row pattern while keeping History on page background (no wrapping Card added). On page background, `bg-foreground/5` still reads as a repeating list-row surface rather than a standalone panel.
 
 ### 2. `View breakdown` outline button → chevron disclosure
@@ -123,6 +125,8 @@ inline-flex items-center rounded-full border-0 bg-foreground/[0.06] px-4 py-2 te
 
 The `Review` affordance stays visible, but it becomes a quieter tonal micro-surface that does not reintroduce a second loud border inside an already-tonal row.
 
+**Sizing note:** The `px-4 py-2 text-sm` sizing is intentionally larger than Dashboard's badge pills (`px-2 py-0.5 text-xs`). The Review label is a visual CTA indicator inside a clickable row, not subordinate metadata — it warrants the larger touch-friendly size. If it looks too heavy after implementation, sizing can be revisited as a follow-up.
+
 ### 7. Unavailable question rows → same tonal fill family
 
 Current unavailable-row contract:
@@ -158,6 +162,7 @@ The following BS-047 items are intentionally **not** part of DEBT-301:
 
 - [ ] Session rows in `history-sessions-tab.tsx` no longer use `border border-border/60 bg-muted/20 dark:border-foreground/40`
 - [ ] Session rows use `bg-foreground/5` at rest and `hover:bg-foreground/[0.08]` on hover
+- [ ] Interactive session rows preserve `cursor-pointer`
 - [ ] Existing focus-ring behavior on the interactive History row children remains unchanged
 - [ ] The bordered `View breakdown` / `Hide breakdown` button is removed
 - [ ] Expanded/collapsed state is represented by a trailing `<ChevronDown>` disclosure indicator driven by existing React state
