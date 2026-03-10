@@ -109,16 +109,16 @@ Three collapsible `<details>` elements, one per tag kind. Only rendered when `ta
 
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
-| Container | `<details>` | S-2 (practice variant, tonal fill) | `:212–243` | `group rounded-xl bg-foreground/5` |
+| Container | `<details>` | S-2 (practice variant, tonal fill) | `:212–245` | `group rounded-xl bg-foreground/5` |
 | Summary header | `<summary>` | — | `:216` | `flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium text-foreground transition-colors [&::-webkit-details-marker]:hidden` + focus ring |
 | Section label | `<span>` | — | `:217` | "Topic" / "Substance" / "Treatment" |
-| Summary right cluster | `<span>` | — | `:218` | `flex items-center gap-2` — groups count + chevron |
-| Selected count | `<span>` | — | `:219` | `text-xs font-normal text-foreground/60` — "(N selected)" |
+| Summary right cluster | `<span>` | — | `:218` | `flex items-center gap-2` — groups conditional summary metadata + chevron |
+| Summary metadata | `<span>` | — | `:219` | `text-xs font-normal text-foreground/60` — `All {kind} included by default` when `selectedCount === 0`, otherwise `{N} selected` |
 | Disclosure chevron | `<ChevronDown>` | — | `:222` | `h-4 w-4 text-foreground/60 transition-transform group-open:rotate-180` |
 | Expanded content wrapper | `<div>` | — | `:225` | `px-4 pb-3` — keeps body spacing after summary owns the clickable padding |
 | Chip fieldset | `<fieldset>` | — | `:226` | `flex flex-wrap gap-2 border-0 p-0 m-0`, `aria-label={label}` |
 | Filter chips | `<FilterChip>` | I-4 | `:231` | Multi-select toggle buttons (see below) |
-| Helper text | `<div>` | — | `:239` | `text-xs text-foreground/60` — "Leave empty to include all {kind}." |
+| Footer count | `<div>` | — | `:241` | `text-xs text-foreground/60` — `({N} selected)` below the chip group |
 
 #### Tag Loading/Error States
 
@@ -274,8 +274,8 @@ Resolved on 2026-03-09 and later refined by [DEBT-291](../../_archive/debt/debt-
 | FilterChip unselected fill | `bg-foreground/[0.07]` | Adds rest-state depth above the tonal parent without replacing the border as the required boundary |
 | FilterChip unselected text | `text-foreground` | Promotes chip labels to primary interactive hierarchy while raising contrast to ~11.93:1 dark / ~15.54:1 light |
 | FilterChip unselected hover | `hover:bg-foreground/[0.10]` | Monotonic foreground-based hover ramp above the 7% rest fill |
-| Filter selected-count text | `text-foreground/60` | Keeps `(N selected)` secondary but AA-compliant on `bg-foreground/5` |
-| Filter helper text | `text-foreground/60` | Keeps helper copy subordinate without falling below AA on the tonal parent |
+| Filter summary metadata text | `text-foreground/60` | Keeps zero-state outcome copy / nonzero summary counts secondary but AA-compliant on `bg-foreground/5` |
+| Filter footer count text | `text-foreground/60` | Keeps expanded-state `({N} selected)` subordinate without falling below AA on the tonal parent |
 | FilterChip base cursor | `cursor-pointer` | Restores the expected browser affordance for clickable chips |
 | Filter summary hover | none | Removed the imperceptible `hover:bg-foreground/[0.03]` summary tint; chevron + pointer cursor carry disclosure affordance |
 

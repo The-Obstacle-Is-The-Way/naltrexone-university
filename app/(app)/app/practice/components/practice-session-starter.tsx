@@ -217,7 +217,9 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
                       <span>{label}</span>
                       <span className="flex items-center gap-2">
                         <span className="text-xs font-normal text-foreground/60">
-                          ({selectedCount} selected)
+                          {selectedCount === 0
+                            ? `All ${tagKindPluralLabels[kind]} included by default`
+                            : `${selectedCount} selected`}
                         </span>
                         <ChevronDown className="h-4 w-4 text-foreground/60 transition-transform group-open:rotate-180" />
                       </span>
@@ -237,7 +239,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
                         ))}
                       </fieldset>
                       <div className="mt-1 text-xs text-foreground/60">
-                        Leave empty to include all {tagKindPluralLabels[kind]}.
+                        ({selectedCount} selected)
                       </div>
                     </div>
                   </details>
