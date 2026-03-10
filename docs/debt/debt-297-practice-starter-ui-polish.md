@@ -57,7 +57,7 @@ Replace `All ${tagKindPluralLabels[kind]} included by default` → **`All includ
 
 ### Collateral changes
 
-- Remove `tagKindPluralLabels` constant (currently `practice-session-starter.tsx:46-50`) — becomes unused
+- Remove `tagKindPluralLabels` constant (currently `practice-session-starter.tsx:50-54`) — becomes unused
 - Update tests that assert the old text (e.g., `practice-session-starter.test.tsx` lines 157, 187, 221)
 - Update `docs/frontend/pages/practice.md` line 116 — currently documents "All {kind} included by default"
 - Update `docs/content/tag-taxonomy-golden-spec.md` lines 197–198

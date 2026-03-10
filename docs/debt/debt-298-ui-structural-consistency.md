@@ -78,7 +78,7 @@ Multiple interactive control types are below the 44px WCAG 2.1 SC 2.5.5 (AAA) / 
 | Component | Vertical padding | Effective height |
 |-----------|-----------------|-----------------|
 | `SegmentedControl` button | `py-2` (8px) | ~36px |
-| `FilterChip` button | `py-1.5` (6px) | ~32px |
+| `FilterChip` button | `py-1.5` (6px) + `border` (2px) | ~34px |
 | `Button` (default) | `h-9 py-2` | 36px |
 
 ### Scope concern
