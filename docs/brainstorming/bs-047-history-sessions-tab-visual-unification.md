@@ -100,13 +100,13 @@ A Card container wraps the list. Tonal fill rows sit inside the card, creating t
 bg-background → bg-card → bg-foreground/5 (row)
 ```
 
-**Gap:** The History Sessions tab has no wrapping Card. The rows float directly on `bg-background`. This means the tonal fill rows would need to be visible against the page background rather than a card background. It also means the current implementation is a hybrid: Pattern Registry `I-1` currently names History sessions rows as a bordered "inside Card" consumer, but the live rows are not actually wrapped by an outer card today. Two options:
+**Gap:** The History Sessions tab has no wrapping Card. The rows float directly on `bg-background`. This means the tonal fill rows would need to read against the page background rather than a card background. It also means the current implementation is a hybrid: Pattern Registry `I-1` currently names History sessions rows as a bordered "inside Card" consumer, but the live rows are not actually wrapped by an outer card today. Two options:
 - **A**: Add a wrapping `<Card>` (matches Dashboard 1:1)
-- **B**: Keep rows on page background but ensure `bg-foreground/5` still reads as a distinct surface against `bg-background` (it does — the contrast is the same since `bg-card` and `bg-background` are very close in dark mode)
+- **B**: Keep rows on page background and still use the Dashboard row token (`bg-foreground/5`). On `bg-background`, that lands slightly above the standalone `bg-card` tier, so the row still reads as a repeating list surface rather than collapsing into the full panel/card treatment.
 
 **Decision:** This is a judgment call. The Dashboard has a denser layout with two side-by-side cards, so the Card wrapper serves double duty as a layout container. The History tab is a single-column list that fills the page width — a wrapping Card would add an extra border/surface layer that may not be needed.
 
-**Recommendation:** Option B — keep rows on page background without a wrapping Card. The tonal fill rows provide sufficient surface definition. If it looks thin in practice, the Card can be added in a follow-up.
+**Recommendation:** Option B — keep rows on page background without a wrapping Card. This preserves the lighter, full-width history layout while still aligning the row treatment with Dashboard's borderless tonal-fill language. A full `bg-card` row would push each item toward standalone-panel styling; `bg-foreground/5` keeps the row visually subordinate. If the rows still look too thin in practice, the next escalation should be adding a wrapping Card, not switching the row token to `bg-card`.
 
 **Risk:** None for Option B. Option A would need visual verification.
 
