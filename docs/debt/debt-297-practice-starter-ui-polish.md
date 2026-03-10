@@ -57,7 +57,7 @@ Replace `All ${tagKindPluralLabels[kind]} included by default` → **`All includ
 
 ### Collateral changes
 
-- Remove `tagKindPluralLabels` constant (lines 50–54) — becomes unused
+- Remove `tagKindPluralLabels` constant (currently `practice-session-starter.tsx:46-50`) — becomes unused
 - Update tests that assert the old text (e.g., `practice-session-starter.test.tsx` lines 157, 187, 221)
 - Update `docs/frontend/pages/practice.md` line 116 — currently documents "All {kind} included by default"
 - Update `docs/content/tag-taxonomy-golden-spec.md` lines 197–198
@@ -193,7 +193,8 @@ const onCountBlur = () => {
 This requires:
 - Adding `onBlur` prop to `PracticeSessionStarterProps` (or handling internally)
 - Changing `value` from `props.sessionCount` to the raw string
-- Updating `handleSessionCountChange` signature and tests
+- Updating `handleSessionCountChange` / `createSessionCountChangeHandler` and the existing unit coverage in `practice-page-logic.test.ts:977-1002` and `practice-page-logic.test.ts:1197-1210`
+- Updating `practice-session-starter.tsx` and `practice-session-starter.test.tsx` if the input starts rendering the transient raw string rather than the clamped numeric prop
 
 **Option B — Custom stepper component:**
 
@@ -249,7 +250,7 @@ Low. The clamp-on-blur pattern is well-established in React. Need to ensure the 
 ### Collateral changes
 
 - Update test assertions if any check for the title element type or class
-- Drive-by: add `block` class to the Questions `<label>` (line 131) for consistent display with `<div>` labels
+- Update `docs/frontend/pages/practice.md` so the Session Starter card inventory no longer documents the title as a plain `<div>`
 
 ### Risk
 
@@ -293,6 +294,7 @@ Low. Keyboard increment (up/down arrows) still works. Users who relied on the ti
 - [ ] `tagKindPluralLabels` removed if no longer used
 - [ ] Questions input border removed or softened to match surrounding controls
 - [ ] Questions input allows clearing the field and typing a new number (clamp on blur)
+- [ ] `practice-page-logic.test.ts` updated for the transient-empty-state session-count contract and idempotency-key rotation behavior
 - [ ] Card title uses `<h2>` with visually distinct styling (`text-base font-semibold`)
 - [ ] Native number input spinners hidden via CSS
 - [ ] All existing tests updated and passing

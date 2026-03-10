@@ -10,44 +10,17 @@
 
 ## Context
 
-A visual audit of the Practice page surfaced several structural inconsistencies. Codebase investigation confirmed these patterns are not isolated to one page — they repeat across dashboard, history, bookmarks, and practice session views.
+A visual audit of the Practice page surfaced several structural inconsistencies. Follow-up codebase spot-checks confirmed some of these patterns recur in the dashboard, history questions tab, and practice session review views. Not every issue repeats everywhere; each item below lists only the files actually verified.
 
 None of these break functionality. They are maintenance and accessibility improvements that compound over time if left unaddressed.
 
 ---
 
-## Issue 1: Mixed Label Semantics — `<label>` vs `<div>` for Field Labels
+## Issue 1: Inconsistent Label-to-Control Spacing Patterns
 
 ### Problem
 
-Some field labels use semantic `<label htmlFor="...">` elements (correct), while adjacent labels in the same component use `<div>` (non-semantic). The `<label>` elements also lack a `block` class, so they default to `display: inline`, creating subtle spacing differences from their `<div>` siblings.
-
-### Inventory
-
-| File | Line(s) | Element | Notes |
-|------|---------|---------|-------|
-| `practice-session-starter.tsx` | 131 | `<label>` | Questions — inline, no `block` class |
-| `practice-session-starter.tsx` | 118, 150, 167 | `<div>` | Mode, Status, Difficulty — block by default |
-| `history-questions-tab.tsx` | 193, 228, 268, 317 | `<label>` | Result, Difficulty, Tag, Sort — inline, no `block` class |
-| `session-summary-view.tsx` | 72 | `<div>` | "Question breakdown" — non-semantic |
-
-### Proposed fix
-
-- Use `<label htmlFor="...">` when a label is associated with a specific input/control
-- Use `<div>` (or `<h3>`) for section titles that label a group rather than a single control
-- Always add the `block` class to `<label>` elements for consistent spacing with `<div>` siblings
-
-### Risk
-
-None. Semantic markup improvement only.
-
----
-
-## Issue 2: Inconsistent Label-to-Control Spacing Patterns
-
-### Problem
-
-Within the same component, some field groups use `<div className="space-y-2">` wrapping both label and control, while siblings use a bare `<div>` with `<div className="mt-2">` around the control. Both produce ~8px spacing, but the inconsistent markup makes refactoring fragile.
+Within the same component, some field groups use `<div className="space-y-2">` wrapping both label and control, while siblings use a bare `<div>` with `<div className="mt-2">` around the control. Both produce ~8px spacing today, but the inconsistent markup makes refactoring fragile.
 
 ### Inventory
 
@@ -55,7 +28,7 @@ Within the same component, some field groups use `<div className="space-y-2">` w
 |------|--------|---------|
 | `practice-session-starter.tsx` | Mode, Questions | `space-y-2` parent wrapper |
 | `practice-session-starter.tsx` | Status, Difficulty | `mt-2` on control wrapper |
-| `history-questions-tab.tsx` | Result, Difficulty, Tag, Sort | `space-y-2` (consistent within this file) |
+| `history-questions-tab.tsx` | Result, Difficulty, Tag, Sort | `space-y-2` (reference pattern; internally consistent) |
 
 ### Proposed fix
 
@@ -67,11 +40,11 @@ None. Output is visually identical.
 
 ---
 
-## Issue 3: Card Titles Use `<div>` Instead of Heading Elements
+## Issue 2: Card Titles Use `<div>` Instead of Heading Elements
 
 ### Problem
 
-Most Card components use `<div className="text-sm font-medium text-foreground">` for their titles instead of `<h2>` or `<h3>`. This creates a flat document outline — screen reader users navigating by heading skip all cards.
+Several Card components still use `<div className="text-sm font-medium text-foreground">` for their titles instead of `<h2>` or `<h3>`. This creates a flatter document outline than necessary — screen reader users navigating by heading skip those cards.
 
 ### Inventory
 
@@ -80,14 +53,15 @@ Most Card components use `<div className="text-sm font-medium text-foreground">`
 | `practice-session-starter.tsx` | 106 | `<div>` | "Start a session" |
 | `dashboard/page.tsx` | 106 | `<div>` | "Ready to practice?" |
 | `dashboard/page.tsx` | 123 | `<div>` | "Recent sessions" |
-| `session-summary-view.tsx` | 72 | `<div>` | "Question breakdown" |
-| `exam-review-view.tsx` | 38 | `<h2>` | "Question navigator" (correct) |
+| `dashboard/page.tsx` | 187 | `<div>` | "Recent activity" |
+| `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` | 72 | `<div>` | "Question breakdown" |
+| `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` | 38 | `<h2>` | "Question navigator" (correct semantic reference) |
 
 ### Proposed fix
 
-- Card primary titles → `<h2>` with `text-base font-semibold` (visually distinct from field labels)
-- Card sub-section titles → `<h3>` if needed
-- `exam-review-view.tsx` is already correct — use as the reference pattern
+- Card titles should use real heading elements first (`<h2>` or `<h3>` depending on page outline)
+- Promote typography to `text-base font-semibold` only where the current title is visually competing with field labels or sibling helper copy
+- `exam-review-view.tsx` is already correct as the semantic reference pattern for card headings
 
 ### Risk
 
@@ -95,16 +69,16 @@ Low. Need to verify heading hierarchy doesn't create duplicate levels.
 
 ---
 
-## Issue 4: Touch Targets Below 44px on Interactive Controls
+## Issue 3: Touch Targets Below 44px on Interactive Controls
 
 ### Problem
 
-Multiple interactive control types have inconsistent heights, all below the 44px WCAG 2.5.5 (AAA) / Apple / Google recommended minimum:
+Multiple interactive control types are below the 44px WCAG 2.1 SC 2.5.5 (AAA) / Apple / Google recommended minimum. This is not an AA failure in the current codebase, but it is a real platform-guideline / ergonomics gap.
 
 | Component | Vertical padding | Effective height |
 |-----------|-----------------|-----------------|
-| `SegmentedControl` button | `py-2` (8px) | ~32px |
-| `FilterChip` button | `py-1.5` (6px) | ~28px |
+| `SegmentedControl` button | `py-2` (8px) | ~36px |
+| `FilterChip` button | `py-1.5` (6px) | ~32px |
 | `Button` (default) | `h-9 py-2` | 36px |
 
 ### Scope concern
@@ -113,7 +87,7 @@ These are shared components used across the entire app. Any height change affect
 
 ### Proposed approach
 
-- Decide on a minimum touch target height (36px for AA, 44px for AAA)
+- Decide whether the project wants to adopt 44px as a frontend standard, or explicitly accept the current sub-44px shared control heights
 - Audit which components fall short
 - Bump padding in the shared style constants (`tab-switch-styles.ts`, `filter-chip.tsx`, `button.tsx`)
 - May require visual regression review across all pages
@@ -124,7 +98,7 @@ Medium. Changing shared component heights has a wide blast radius. Should be don
 
 ---
 
-## Issue 5: Flex `items-center` with Differently-Sized Children
+## Issue 4: Flex `items-center` with Differently-Sized Children
 
 ### Problem
 
@@ -134,9 +108,8 @@ Several flex containers use `items-center` when child elements have noticeably d
 
 | File | Line | Container | Children | Issue |
 |------|------|-----------|----------|-------|
-| `practice-session-starter.tsx` | 116 | `sm:flex-row sm:items-center` | Mode block (~74px) + Questions block (~57px) | Labels sit at different vertical positions |
+| `practice-session-starter.tsx` | 116 | `sm:flex-row sm:items-center` | Taller Mode block + shorter Questions block | Labels sit at different vertical positions at the `sm:` breakpoint |
 | `dashboard/page.tsx` | 104 | `sm:flex-row sm:items-center` | Multi-line text + 36px button | Text block and button don't align naturally |
-| `dashboard/page.tsx` | 156 | `flex items-center` | 20px badge + 12px text | Minor but visible misalignment |
 
 ### Counter-example (correct pattern)
 
@@ -155,13 +128,11 @@ Low. Local layout changes only. Should verify visually per instance.
 
 ## Acceptance Criteria
 
-- [ ] All field labels use semantically appropriate elements (`<label>` for inputs, `<div>`/heading for sections)
-- [ ] All `<label>` elements include `block` class for consistent display
 - [ ] Label-to-control spacing standardized on `space-y-2` wrapper pattern
 - [ ] Card titles use heading elements (`<h2>`/`<h3>`) instead of `<div>`
-- [ ] Touch target minimum height decided and applied to shared components
+- [ ] Touch target minimum height policy decided and applied to shared components
 - [ ] Flex containers use appropriate alignment for disparate child heights
-- [ ] Visual regression check across dashboard, practice, history, bookmarks pages
+- [ ] Visual regression check across the verified affected pages
 
 ---
 
