@@ -4,7 +4,7 @@
 **Created:** 2026-03-10
 **Status:** Resolved
 **Resolved:** 2026-03-10
-**Source:** [BS-047](../../brainstorming/bs-047-history-sessions-tab-visual-unification.md)
+**Source:** [BS-047](../brainstorming/bs-047-history-sessions-tab-visual-unification.md)
 **Related:** [Dashboard page doc](../../frontend/pages/dashboard.md), [Practice page doc](../../frontend/pages/practice.md), [Pattern Registry](../../frontend/pattern-registry.md), [Contrast Policy](../../frontend/contrast-policy.md), [BS-044](../../brainstorming/bs-044-dark-mode-border-weight-tiering.md)
 
 ---
