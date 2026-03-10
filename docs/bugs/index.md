@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-09
+**Last Updated:** 2026-03-10
 
 ---
 
@@ -13,7 +13,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-203
+**Next Bug ID:** BUG-205
 
 **Latest archival (2026-03-09):**
 - BUG-199 invalidated after tracer-bullet verification, archived to `docs/_archive/bugs/`.
@@ -35,7 +35,31 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Open Bugs
 
-None.
+| Bug | Priority | Summary |
+|-----|----------|---------|
+| [BUG-203](./bug-203-clerk-webhook-public-fallback-secret.md) | P2 | Clerk webhook verification falls back to public `whsec_dummy` when the signing secret is missing outside Vercel production |
+| [BUG-204](./bug-204-billing-portal-missing-abuse-controls.md) | P3 | Billing portal session creation has no per-user rate limit and no reachable idempotency path |
+
+## Audit #13 — Adversarial Security Re-Verification (2026-03-10)
+
+Follow-up adversarial audit focused on server actions, authorization boundaries, webhook verification, rate limiting, configuration, and transaction/race behavior. Every candidate finding was re-verified against the current code and cross-checked against archived bug/debt history before filing.
+
+**Methodology:**
+- Full-file review of all server-action/controller entry points, webhook routes, env validation, billing flows, schema/migrations, and key domain services.
+- Tracer-bullet traces from public entry points through controllers/use cases into repositories or Stripe gateways.
+- Targeted verification run: `pnpm test --run lib/env.test.ts app/api/webhooks/clerk/route.test.ts src/adapters/controllers/billing-controller.test.ts app/api/cron/reconcile-stripe-subscriptions/route.test.ts`
+- Prior audit/debt register cross-check to avoid refiling archived issues or known false positives.
+
+**2 new bugs filed (BUG-203..204):**
+
+| Bug | Family | Priority | Summary |
+|-----|--------|----------|---------|
+| BUG-203 | Webhook security / config | P2 | Missing Clerk webhook secret is replaced with public `whsec_dummy`, enabling forged webhook acceptance outside Vercel production |
+| BUG-204 | Authenticated abuse / billing | P3 | Billing portal creation lacks rate limiting and blocks callers from supplying the idempotency key already supported by the application port |
+
+**Candidate findings rejected after re-verification:**
+- Cron weak-secret guessing path was not filed as a bug because exploitation depends on operators choosing a weak `CRON_SECRET`; the code should be hardened, but the current evidence is too deployment-dependent for a bug filing.
+- The remove-bookmark double-submit race was not re-filed because it collapses to the previously rejected last-write-wins bookmark-toggle race family.
 
 ## Audit #12 — Extended Sweep: Inference Leaks, Transaction Safety, Zombie Keys (2026-03-03)
 
