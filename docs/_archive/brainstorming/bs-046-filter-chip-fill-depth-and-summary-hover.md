@@ -3,7 +3,7 @@
 **Date:** 2026-03-09
 **Triggered by:** Visual review of DEBT-290/291/292 shipped state — chips look flat/invisible against container, summary hover looks bad
 **Scope:** Two issues: (1) unselected filter chips need a subtle fill to differentiate from container; (2) summary hover effect is redundant with chevron and visually distracting
-**Related:** [DEBT-290](../../debt/debt-290-practice-filter-tonal-fill-elevation.md), [DEBT-291](../../debt/debt-291-filter-chip-light-mode-border-contrast.md), [DEBT-292](../../debt/debt-292-filter-section-disclosure-indicator.md), [BS-044](../../brainstorming/bs-044-dark-mode-border-weight-tiering.md)
+**Related:** [DEBT-290](../debt/debt-290-practice-filter-tonal-fill-elevation.md), [DEBT-291](../debt/debt-291-filter-chip-light-mode-border-contrast.md), [DEBT-292](../debt/debt-292-filter-section-disclosure-indicator.md), [BS-044](../../brainstorming/bs-044-dark-mode-border-weight-tiering.md)
 
 ---
 
@@ -235,5 +235,5 @@ Remove `hover:bg-foreground/[0.03]` from the `<summary>` className. One token de
 | 2026-03-09 | Chose Option B (`bg-foreground/[0.07]` + hover `/[0.10]`) | Radix step 3/4 alignment, M3 elevated-chip precedent, Apple quaternary fill convergence. Best balance of perceptibility and restraint on the real DEBT-290 parent surface. Monotonic foreground-opacity scale preserved. |
 | 2026-03-09 | Revised hover from `/[0.12]` to `/[0.10]` | Chrome visual audit feedback: Radix step 3→4 is actually +3.5pp, not +5pp. `/[0.10]` is the truer Radix match. Creates a tighter 7→10→solid ramp. |
 | 2026-03-09 | Added `cursor-pointer` to chip base classes | Chrome visual audit found chips lack pointer cursor — browsers default `<button>` to `cursor: default`. |
-| 2026-03-09 | Promoted to [DEBT-294](../../debt/debt-294-filter-chip-fill-depth-and-cursor.md) | Investigation complete, no open questions. BS-046 archived. |
+| 2026-03-09 | Promoted to [DEBT-294](../debt/debt-294-filter-chip-fill-depth-and-cursor.md) | Investigation complete, no open questions. BS-046 archived. |
 | 2026-03-09 | Bundle summary hover removal with chip fill change | Both are filter-section polish, one PR keeps the diff cohesive |

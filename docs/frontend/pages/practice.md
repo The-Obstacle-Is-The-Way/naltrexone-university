@@ -148,7 +148,7 @@ Toggle-style pill button. Uses `aria-pressed` for selected state.
 | **Base** | `inline-flex cursor-pointer items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors` |
 | **Focus** | `outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]` |
 | **Disabled** | `disabled:pointer-events-none disabled:opacity-50` |
-| **Unselected** | `border-foreground/45 bg-foreground/[0.07] text-foreground/60 hover:bg-foreground/[0.10] hover:text-accent-foreground dark:border-foreground/40` |
+| **Unselected** | `border-foreground/45 bg-foreground/[0.07] text-foreground hover:bg-foreground/[0.10] dark:border-foreground/40` |
 | **Selected** | `border-primary bg-primary text-primary-foreground` |
 
 ### SegmentedControl (`components/ui/segmented-control.tsx`)
@@ -243,7 +243,7 @@ type PracticeFilters = {
 |-------|-------|----------------|-------------------|-------|
 | Unselected border | `border-foreground/45` + `dark:border-foreground/40` | #707070 (dark override) | ~3.40:1 vs current `bg-foreground/5` parent (`#1D1D1D`) | Passes 3:1 in dark mode; light-mode base token is `border-foreground/45` |
 | Unselected fill | `bg-foreground/[0.07]` | ~#2C2C2C on the current `bg-foreground/5` parent | ~1.21:1 vs parent | Adds rest-state surface depth without replacing the border as the required boundary |
-| Unselected text | `text-foreground/60` | #A0A0A0 | ~5.34:1 vs chip fill | AA pass on the rest fill |
+| Unselected text | `text-foreground` | #EDEDED | ~11.93:1 vs chip fill | Full-weight interactive label hierarchy with ample AA margin |
 | Unselected hover | `hover:bg-foreground/[0.10]` | ~#323232 on the current `bg-foreground/5` parent | — | Foreground-based hover ramp stays monotonic and remains visibly above the 7% rest fill |
 | Selected fill | `bg-primary` | #EDEDED | — | High contrast |
 | Selected text | `text-primary-foreground` | #090909 | ~17:1 vs primary | AA pass |
@@ -266,13 +266,13 @@ type PracticeFilters = {
 ---
 
 ## Practice Filter Resolution History
-Resolved on 2026-03-09 and later refined by [DEBT-291](../../debt/debt-291-filter-chip-light-mode-border-contrast.md), [DEBT-292](../../debt/debt-292-filter-section-disclosure-indicator.md), and [DEBT-294](../../debt/debt-294-filter-chip-fill-depth-and-cursor.md). The current shipped state is:
+Resolved on 2026-03-09 and later refined by [DEBT-291](../../_archive/debt/debt-291-filter-chip-light-mode-border-contrast.md), [DEBT-292](../../_archive/debt/debt-292-filter-section-disclosure-indicator.md), [DEBT-294](../../_archive/debt/debt-294-filter-chip-fill-depth-and-cursor.md), and [DEBT-295](../../_archive/debt/debt-295-filter-chip-unselected-text-weight.md). The current shipped state is:
 
 | Element | Shipped state | Effect |
 |---------|---------------|--------|
 | Filter container (`<details>`) | `bg-foreground/5` (no border) | Border removed, tonal fill defines the nested surface |
 | FilterChip unselected fill | `bg-foreground/[0.07]` | Adds rest-state depth above the tonal parent without replacing the border as the required boundary |
-| FilterChip unselected text | `text-foreground/60` | Restores AA margin on the tonal parent |
+| FilterChip unselected text | `text-foreground` | Promotes chip labels to primary interactive hierarchy while raising contrast to ~11.93:1 dark / ~15.54:1 light |
 | FilterChip unselected hover | `hover:bg-foreground/[0.10]` | Monotonic foreground-based hover ramp above the 7% rest fill |
 | Filter selected-count text | `text-foreground/60` | Keeps `(N selected)` secondary but AA-compliant on `bg-foreground/5` |
 | Filter helper text | `text-foreground/60` | Keeps helper copy subordinate without falling below AA on the tonal parent |
@@ -289,5 +289,5 @@ Elements **not** changing: SegmentedControl (all three instances), Input, Card c
 - [Pattern Registry](../pattern-registry.md) — S-1 (Card Surface), S-2 (Muted Row), I-4 (Filter Chip), I-5 (Segmented Control)
 - [Contrast Policy](../contrast-policy.md) — WCAG AA targets
 - [Quick Practice Audit](./quick-practice.md) — Dark mode audit of the question-answering view (separate page)
-- [DEBT-290](../../debt/debt-290-practice-filter-tonal-fill-elevation.md) — Practice filter container tonal fill elevation
+- [DEBT-290](../../_archive/debt/debt-290-practice-filter-tonal-fill-elevation.md) — Practice filter container tonal fill elevation
 - [DEBT-289](../../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) — Dashboard tonal fill elevation (precedent)

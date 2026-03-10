@@ -248,4 +248,4 @@ Keep WCAG compliance. The selected state gets an additional ring to clearly diff
 
 ## Scope Note
 
-This audit covers the Quick Practice question-answering page only. The Practice Starter page (`/app/practice`) now has its own page inventory at [practice.md](./practice.md), and its filter-container/chip surface work is tracked under [DEBT-290](../../debt/debt-290-practice-filter-tonal-fill-elevation.md).
+This audit covers the Quick Practice question-answering page only. The Practice Starter page (`/app/practice`) now has its own page inventory at [practice.md](./practice.md), and its filter-container/chip surface work is tracked under [DEBT-290](../../_archive/debt/debt-290-practice-filter-tonal-fill-elevation.md).

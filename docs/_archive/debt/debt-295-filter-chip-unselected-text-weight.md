@@ -2,7 +2,8 @@
 
 **Priority:** P3
 **Created:** 2026-03-09
-**Status:** Open
+**Status:** Resolved
+**Resolved:** 2026-03-09
 **Recommended:** Approach B (full `text-foreground`)
 
 ---
@@ -220,3 +221,14 @@ The agent independently recommended **Option B** (full `text-foreground`) over O
 ### Border token note
 
 The agent suggested softening the border to `border-foreground/25`. This was evaluated and **rejected** — against the current tonal parent, 25% opacity yields approximately **2.52:1** in dark mode and **2.05:1** in light mode, both below the 3.0:1 minimum for required UI boundaries under SC 1.4.11. The existing `border-foreground/45` / `dark:border-foreground/40` stays.
+
+---
+
+## Outcome
+
+Approach B shipped as specified.
+
+- `components/ui/filter-chip.tsx` now uses `text-foreground` for unselected chip labels.
+- `hover:text-accent-foreground` was removed; hover feedback now comes from the fill ramp alone.
+- The selected chip state, chip boundary tokens, and helper-text hierarchy remain unchanged.
+- Practice docs, the pattern registry, the contrast policy, and the debt register were synced to the shipped state.

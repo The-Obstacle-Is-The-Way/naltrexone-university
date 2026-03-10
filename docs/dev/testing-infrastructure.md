@@ -377,7 +377,7 @@ killall "Google Chrome"
 
 Use `resetBookmarksForE2EUser()` only when a test truly needs bookmark-only isolation and does not rely on session/attempt state.
 
-See [DEBT-293](../debt/debt-293-e2e-shared-state-structural-flakiness.md) for the full analysis and the resolved reset strategy.
+See [DEBT-293](../_archive/debt/debt-293-e2e-shared-state-structural-flakiness.md) for the full analysis and the resolved reset strategy.
 
 ### Server actions hang / UI stuck on "Loading..."
 

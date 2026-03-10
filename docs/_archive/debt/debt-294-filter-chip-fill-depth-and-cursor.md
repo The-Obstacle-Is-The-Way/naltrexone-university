@@ -4,7 +4,7 @@
 **Created:** 2026-03-09
 **Status:** Resolved
 **Resolved:** 2026-03-09
-**Promoted from:** [BS-046](../_archive/brainstorming/bs-046-filter-chip-fill-depth-and-summary-hover.md)
+**Promoted from:** [BS-046](../brainstorming/bs-046-filter-chip-fill-depth-and-summary-hover.md)
 
 ---
 
@@ -32,7 +32,7 @@ Three major systems point in the same direction: interactive controls on tonal s
 
 `bg-foreground/[0.07]` hits the low end of that range, which is appropriate because our chips also keep their border — the fill does not need to carry identification by itself.
 
-Full design system evidence and the archived investigation trail are preserved in [BS-046](../_archive/brainstorming/bs-046-filter-chip-fill-depth-and-summary-hover.md).
+Full design system evidence and the archived investigation trail are preserved in [BS-046](../brainstorming/bs-046-filter-chip-fill-depth-and-summary-hover.md).
 
 ---
 

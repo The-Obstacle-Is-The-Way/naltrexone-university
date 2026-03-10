@@ -55,10 +55,13 @@ describe('FilterChip', () => {
     expect(classTokens.has('bg-background')).toBe(false);
     expect(classTokens.has('border-border')).toBe(false);
     expect(classTokens.has('border-foreground/45')).toBe(true);
+    expect(classTokens.has('text-foreground')).toBe(true);
+    expect(classTokens.has('text-foreground/60')).toBe(false);
     expect(classTokens.has('hover:bg-foreground/[0.10]')).toBe(true);
     expect(classTokens.has('cursor-pointer')).toBe(true);
     expect(classTokens.has('dark:border-foreground/40')).toBe(true);
     expect(classTokens.has('hover:bg-accent')).toBe(false);
+    expect(classTokens.has('hover:text-accent-foreground')).toBe(false);
   });
 
   it('is disabled when disabled prop is true', () => {
