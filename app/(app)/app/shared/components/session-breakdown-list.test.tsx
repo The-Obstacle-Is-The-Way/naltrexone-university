@@ -186,6 +186,6 @@ describe('SessionBreakdownList', () => {
 
     expect(listTokens.has('divide-y')).toBe(true);
     expect(listTokens.has('divide-border/20')).toBe(true);
-    expect(listTokens.has('dark:divide-foreground/40')).toBe(true);
+    expect(listTokens.has('dark:divide-foreground/20')).toBe(true);
   });
 });

@@ -1,6 +1,6 @@
 # Contrast Policy (WCAG AA)
 
-**Last Updated:** 2026-03-09
+**Last Updated:** 2026-03-10
 **Status:** Canonical
 
 This document defines the app's contrast targets and the engineering rules that follow from them.
@@ -46,6 +46,9 @@ Tonal fill elevation used as a supplementary hierarchy hint, not a required boun
 | Dashboard nested rows (I-1 variant) | `bg-foreground/5` rest, `hover:bg-foreground/[0.08]` hover | 1.11:1 rest, 1.21:1 hover (vs card #121212) | Borderless tonal fill following Material Design 3. Rows are identified by text content, pointer cursor, hover brightness lift, and focus ring — fill is supplementary. | [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) |
 | Dashboard unavailable rows (S-2 variant) | `bg-foreground/5` | 1.11:1 (vs card #121212) | Static tonal fill matching interactive row rest state for visual consistency. Row is identified by its text content. | [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) |
 | Dashboard badge pills (mode/difficulty) | `bg-foreground/[0.06] border-0 text-foreground/60` | Fill 1.14:1 (vs card), text 5.94:1 (AA pass) | Borderless fill-only badge. Text contrast is the required boundary (AA-compliant at 5.94:1); the fill shape is supplementary. | [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) |
+| History sessions + available question rows | `bg-foreground/5` rest, `hover:bg-foreground/[0.08]` hover | 1.08:1 rest, 1.16:1 hover (vs page #090909) | Borderless tonal fill on page background. Rows are identified by text content, hover lift, cursor or explicit CTA treatment, and focus ring — fill is supplementary. | [DEBT-301](../_archive/debt/debt-301-history-page-visual-unification.md) |
+| History unavailable question rows | `bg-foreground/5` | 1.08:1 (vs page #090909) | Static tonal fill matching the available-row family so unavailable rows read as disabled siblings rather than legacy cards. | [DEBT-301](../_archive/debt/debt-301-history-page-visual-unification.md) |
+| History Review pill | `bg-foreground/[0.06] border-0 text-foreground/60` | Fill 1.14:1 (vs history row `#141414`), text 5.79:1 (AA pass) | Borderless fill-only row CTA indicator. Text contrast is the required boundary; the fill shape is supplementary. | [DEBT-301](../_archive/debt/debt-301-history-page-visual-unification.md) |
 | Practice filter containers (S-2 variant) | `bg-foreground/5` | 1.11:1 (vs card #121212) | Borderless tonal fill for Topic/Substance/Treatment `<details>` containers. The control is identified by summary label, selected-count text, disclosure behavior, pointer cursor, and focus ring; the fill is supplementary. | [DEBT-290](../_archive/debt/debt-290-practice-filter-tonal-fill-elevation.md) |
 | Practice filter chips rest fill (I-4 variant) | `bg-foreground/[0.07]` + `text-foreground` | Fill 1.21:1 (vs practice filter container `#1D1D1D`), text 11.93:1 dark / 15.54:1 light | The chip border remains the required SC 1.4.11 boundary. The rest fill only adds depth so the chip reads as a toggle surface rather than a transparent label; identification still comes from the border, text, cursor, hover fill, and focus ring. Full `text-foreground` restores primary interactive-label hierarchy while remaining well above AA in both themes. | [DEBT-294](../_archive/debt/debt-294-filter-chip-fill-depth-and-cursor.md), [DEBT-295](../_archive/debt/debt-295-filter-chip-unselected-text-weight.md) |
 

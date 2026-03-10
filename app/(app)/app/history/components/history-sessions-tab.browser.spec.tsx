@@ -16,6 +16,18 @@ vi.mock('@/src/adapters/controllers/practice-controller', () => ({
   getPracticeSessionReview: getPracticeSessionReviewMock,
 }));
 
+function getBreakdownToggle(sessionId: string) {
+  const toggle = document.querySelector(
+    `button[aria-controls="breakdown-${sessionId}"]`,
+  );
+
+  if (!(toggle instanceof HTMLButtonElement)) {
+    throw new Error(`Expected breakdown toggle for ${sessionId}`);
+  }
+
+  return toggle;
+}
+
 describe('HistorySessionsTab (browser)', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -48,7 +60,9 @@ describe('HistorySessionsTab (browser)', () => {
       />,
     );
 
-    await screen.getByRole('listitem').click();
+    await screen.getByRole('listitem').click({
+      position: { x: 4, y: 4 },
+    });
 
     expect(pushMock).toHaveBeenCalledWith(
       expect.stringContaining('/app/questions/q-1'),
@@ -93,7 +107,7 @@ describe('HistorySessionsTab (browser)', () => {
     await expect.element(summaryLink).not.toHaveAttribute('tabindex');
   });
 
-  it('clicking View breakdown loads and renders breakdown rows', async () => {
+  it('clicking the disclosure button loads and renders breakdown rows', async () => {
     getPracticeSessionReviewMock.mockResolvedValue(
       ok({
         sessionId: 'session-1',
@@ -141,13 +155,80 @@ describe('HistorySessionsTab (browser)', () => {
       />,
     );
 
-    await screen.getByRole('button', { name: 'View breakdown' }).click();
+    const breakdownToggle = getBreakdownToggle('session-1');
+    await expect
+      .element(breakdownToggle)
+      .toHaveAttribute('aria-expanded', 'false');
+
+    await breakdownToggle.click();
 
     expect(getPracticeSessionReviewMock).toHaveBeenCalledWith({
       sessionId: 'session-1',
     });
 
     await expect.element(screen.getByText('Stem for q1')).toBeVisible();
+  });
+
+  it('does not navigate when clicking blank space inside the expanded breakdown region', async () => {
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [
+          {
+            questionId: 'q1',
+            slug: 'q-1',
+            order: 1,
+            isAvailable: true,
+            stemMd: 'Stem for q1',
+            difficulty: 'easy',
+            isAnswered: true,
+            isCorrect: false,
+            markedForReview: false,
+          },
+        ],
+      }),
+    );
+
+    const screen = await render(
+      <HistorySessionsTab
+        result={ok({
+          rows: [
+            {
+              sessionId: 'session-1',
+              mode: 'exam',
+              questionCount: 10,
+              firstQuestionSlug: 'q-1',
+              answered: 10,
+              correct: 8,
+              accuracy: 0.8,
+              durationSeconds: 1200,
+              startedAt: '2026-02-07T00:00:00.000Z',
+              endedAt: '2026-02-07T00:20:00.000Z',
+            },
+          ],
+          total: 1,
+          limit: 20,
+          offset: 0,
+        })}
+      />,
+    );
+
+    await getBreakdownToggle('session-1').click();
+    await expect
+      .element(screen.getByRole('region', { name: 'Question breakdown' }))
+      .toBeVisible();
+
+    pushMock.mockClear();
+
+    await screen.getByRole('region', { name: 'Question breakdown' }).click({
+      position: { x: 4, y: 4 },
+    });
+
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it('does not render a redundant Review session action in the expanded breakdown panel', async () => {
@@ -198,7 +279,7 @@ describe('HistorySessionsTab (browser)', () => {
       />,
     );
 
-    await screen.getByRole('button', { name: 'View breakdown' }).click();
+    await getBreakdownToggle('session-1').click();
 
     await expect
       .element(screen.getByRole('link', { name: /Stem for q1/ }))
@@ -256,24 +337,32 @@ describe('HistorySessionsTab (browser)', () => {
       />,
     );
 
-    const collapsedToggle = screen.getByRole('button', {
-      name: /View breakdown for Exam session: 8\/10 correct \(80%\), 20m, Feb 7, 2026/,
-    });
+    const collapsedToggle = getBreakdownToggle('session-1');
     await expect
       .element(collapsedToggle)
       .toHaveAttribute('aria-expanded', 'false');
     await expect
       .element(collapsedToggle)
       .toHaveAttribute('aria-controls', 'breakdown-session-1');
+    await expect
+      .element(collapsedToggle)
+      .toHaveAttribute(
+        'aria-label',
+        'View breakdown for Exam session: 8/10 correct (80%), 20m, Feb 7, 2026',
+      );
 
     await collapsedToggle.click();
 
-    const expandedToggle = screen.getByRole('button', {
-      name: /Hide breakdown for Exam session: 8\/10 correct \(80%\), 20m, Feb 7, 2026/,
-    });
+    const expandedToggle = getBreakdownToggle('session-1');
     await expect
       .element(expandedToggle)
       .toHaveAttribute('aria-expanded', 'true');
+    await expect
+      .element(expandedToggle)
+      .toHaveAttribute(
+        'aria-label',
+        'Hide breakdown for Exam session: 8/10 correct (80%), 20m, Feb 7, 2026',
+      );
 
     await expect
       .element(screen.getByRole('region', { name: 'Question breakdown' }))
@@ -328,7 +417,7 @@ describe('HistorySessionsTab (browser)', () => {
       />,
     );
 
-    await screen.getByRole('button', { name: 'View breakdown' }).click();
+    await getBreakdownToggle('session-1').click();
 
     const expectedHref =
       '/app/questions/q-1?from=history&mode=review&sessionId=session-1&historyHref=%2Fapp%2Fhistory%3Ftab%3Dsessions%26offset%3D0%26limit%3D20';
@@ -338,7 +427,7 @@ describe('HistorySessionsTab (browser)', () => {
       .toHaveAttribute('href', expectedHref);
   });
 
-  it('clicking Hide breakdown collapses the selected session', async () => {
+  it('clicking the expanded disclosure button collapses the selected session', async () => {
     getPracticeSessionReviewMock.mockResolvedValue(
       ok({
         sessionId: 'session-1',
@@ -386,10 +475,10 @@ describe('HistorySessionsTab (browser)', () => {
       />,
     );
 
-    await screen.getByRole('button', { name: 'View breakdown' }).click();
+    await getBreakdownToggle('session-1').click();
     await expect.element(screen.getByText('Stem for q1')).toBeVisible();
 
-    await screen.getByRole('button', { name: 'Hide breakdown' }).click();
+    await getBreakdownToggle('session-1').click();
 
     await expect
       .element(screen.getByText('Stem for q1'))
@@ -480,18 +569,10 @@ describe('HistorySessionsTab (browser)', () => {
       />,
     );
 
-    await screen
-      .getByRole('button', {
-        name: 'View breakdown for Exam session: 8/10 correct (80%), 20m, Feb 7, 2026',
-      })
-      .click();
+    await getBreakdownToggle('session-1').click();
     await expect.element(screen.getByText('Stem for session 1')).toBeVisible();
 
-    await screen
-      .getByRole('button', {
-        name: 'View breakdown for Tutor session: 0/10 correct (0%), 3m, Feb 8, 2026',
-      })
-      .click();
+    await getBreakdownToggle('session-2').click();
     await expect.element(screen.getByText('Stem for session 2')).toBeVisible();
 
     await expect

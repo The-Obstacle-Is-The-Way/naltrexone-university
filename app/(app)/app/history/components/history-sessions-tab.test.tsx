@@ -138,12 +138,17 @@ describe('HistorySessionsTab', () => {
     };
 
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const breakdownToggle = doc.querySelector(
+      'button[aria-controls="breakdown-session-1"]',
+    );
 
     expect(html).toContain('Exam');
     expect(html).toContain('8/10 correct (80%)');
     expect(html).toContain('20m');
     expect(html).toContain('Feb 7, 2026');
-    expect(html).toContain('View breakdown');
+    expect(breakdownToggle).not.toBeNull();
+    expect(breakdownToggle?.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('renders showing-count context and mode filter controls', () => {
@@ -288,9 +293,13 @@ describe('HistorySessionsTab', () => {
 
     expect(row).toBeDefined();
     expect(rowClassTokens.has('cursor-pointer')).toBe(true);
-    expect(rowClassTokens.has('hover:bg-muted/40')).toBe(true);
-    expect(rowClassTokens.has('dark:border-foreground/40')).toBe(true);
-    expect(rowClassTokens.has('dark:hover:border-foreground/70')).toBe(true);
+    expect(rowClassTokens.has('bg-foreground/5')).toBe(true);
+    expect(rowClassTokens.has('hover:bg-foreground/[0.08]')).toBe(true);
+    expect(rowClassTokens.has('border')).toBe(false);
+    expect(rowClassTokens.has('border-border/60')).toBe(false);
+    expect(rowClassTokens.has('bg-muted/20')).toBe(false);
+    expect(rowClassTokens.has('dark:border-foreground/40')).toBe(false);
+    expect(rowClassTokens.has('dark:hover:border-foreground/70')).toBe(false);
     expect(rowClassTokens.has('hover:bg-accent/40')).toBe(false);
     expect(rowClassTokens.has('dark:hover:bg-foreground/10')).toBe(false);
     expect(html).not.toContain('tabindex="0"');
@@ -329,15 +338,19 @@ describe('HistorySessionsTab', () => {
 
     expect(row).toBeDefined();
     expect(rowClassTokens.has('cursor-pointer')).toBe(false);
-    expect(rowClassTokens.has('hover:bg-muted/40')).toBe(false);
-    expect(rowClassTokens.has('dark:border-foreground/40')).toBe(true);
+    expect(rowClassTokens.has('bg-foreground/5')).toBe(true);
+    expect(rowClassTokens.has('hover:bg-foreground/[0.08]')).toBe(true);
+    expect(rowClassTokens.has('border')).toBe(false);
+    expect(rowClassTokens.has('border-border/60')).toBe(false);
+    expect(rowClassTokens.has('bg-muted/20')).toBe(false);
+    expect(rowClassTokens.has('dark:border-foreground/40')).toBe(false);
     expect(rowClassTokens.has('dark:hover:border-foreground/70')).toBe(false);
     expect(rowClassTokens.has('hover:bg-accent/40')).toBe(false);
     expect(html).not.toContain('role="link"');
     expect(html).not.toContain('tabindex="0"');
   });
 
-  it('uses outline button dark-mode styling from the primitive without page-level dark overrides', () => {
+  it('renders a minimal chevron disclosure button with no button chrome', () => {
     const result: SessionHistoryResult = {
       ok: true,
       data: {
@@ -349,11 +362,28 @@ describe('HistorySessionsTab', () => {
     };
 
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const toggle = doc.querySelector(
+      'button[aria-controls="breakdown-session-1"]',
+    );
+    const icon = toggle?.querySelector('svg');
+    const toggleClassTokens = getClassTokens(
+      toggle?.getAttribute('class') ?? '',
+    );
+    const iconClassTokens = getClassTokens(icon?.getAttribute('class') ?? '');
 
-    expect(html).toContain('rounded-full');
-    expect(html).not.toContain('dark:border-foreground/30');
-    expect(html).not.toContain('dark:bg-foreground/10');
-    expect(html).not.toContain('dark:hover:bg-foreground/25');
+    expect(toggle).not.toBeNull();
+    expect(toggle?.textContent).toBe('');
+    expect(toggleClassTokens.has('rounded-full')).toBe(false);
+    expect(toggleClassTokens.has('border')).toBe(false);
+    expect(toggleClassTokens.has('focus-visible:ring-[3px]')).toBe(true);
+    expect(toggleClassTokens.has('focus-visible:ring-ring/50')).toBe(true);
+    expect(icon).not.toBeNull();
+    expect(iconClassTokens.has('h-4')).toBe(true);
+    expect(iconClassTokens.has('w-4')).toBe(true);
+    expect(iconClassTokens.has('text-foreground/60')).toBe(true);
+    expect(iconClassTokens.has('transition-transform')).toBe(true);
+    expect(iconClassTokens.has('rotate-180')).toBe(false);
   });
 
   it('wires collapsed disclosure accessibility attributes on the breakdown toggle', () => {
@@ -370,12 +400,15 @@ describe('HistorySessionsTab', () => {
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const toggle = doc.querySelector(
-      'button[aria-label^="View breakdown for"]',
+      'button[aria-controls="breakdown-session-1"]',
     );
 
     expect(toggle).not.toBeNull();
     expect(toggle?.getAttribute('aria-expanded')).toBe('false');
     expect(toggle?.getAttribute('aria-controls')).toBe('breakdown-session-1');
+    expect(toggle?.getAttribute('aria-label')).toContain(
+      'View breakdown for Exam session: 8/10 correct (80%), 20m, Feb 7, 2026',
+    );
   });
 
   it('renders expanded breakdown panel as a flat disclosure region', () => {
@@ -417,7 +450,12 @@ describe('HistorySessionsTab', () => {
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const panel = doc.getElementById('breakdown-session-1');
+    const toggle = doc.querySelector(
+      'button[aria-controls="breakdown-session-1"]',
+    );
+    const icon = toggle?.querySelector('svg');
     const panelClassTokens = getClassTokens(panel?.getAttribute('class') ?? '');
+    const iconClassTokens = getClassTokens(icon?.getAttribute('class') ?? '');
 
     expect(panel).not.toBeNull();
     expect(panel?.getAttribute('role')).toBe('region');
@@ -426,9 +464,14 @@ describe('HistorySessionsTab', () => {
     expect(panelClassTokens.has('pt-3')).toBe(true);
     expect(panelClassTokens.has('border-t')).toBe(true);
     expect(panelClassTokens.has('border-border/30')).toBe(true);
-    expect(panelClassTokens.has('dark:border-foreground/40')).toBe(true);
+    expect(panelClassTokens.has('dark:border-foreground/10')).toBe(true);
     expect(panelClassTokens.has('bg-background')).toBe(false);
     expect(panelClassTokens.has('rounded-lg')).toBe(false);
+    expect(toggle?.getAttribute('aria-expanded')).toBe('true');
+    expect(toggle?.getAttribute('aria-label')).toContain(
+      'Hide breakdown for Exam session: 8/10 correct (80%), 20m, Feb 7, 2026',
+    );
+    expect(iconClassTokens.has('rotate-180')).toBe(true);
   });
 
   it('does not render a redundant Review session button inside breakdown content', () => {

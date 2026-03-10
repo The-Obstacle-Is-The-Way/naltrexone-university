@@ -22,7 +22,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 7 verified client-side flows still report only to console or silent fallbacks | P2 | — |
 | [DEBT-298](./debt-298-ui-structural-consistency.md) | UI Structural Consistency Audit — inconsistent label/control spacing patterns, non-heading card titles, sub-44px shared touch targets, and `items-center` alignment mismatches across verified views | P3 | — |
 | [DEBT-300](./debt-300-history-questions-all-sources.md) | History Questions Tab — show all question sources (ad-hoc + tutor + exam) instead of ad-hoc only; add Source filter dropdown; fix Dashboard → History "View all" IA inconsistency | P2 | — |
-**Next Debt ID:** DEBT-301
+**Next Debt ID:** DEBT-302
 
 ---
 
@@ -30,6 +30,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-301](../_archive/debt/debt-301-history-page-visual-unification.md) | History Page Visual Unification — convert Sessions and Questions tabs from bordered/shadowed legacy rows to tonal-fill surfaces, replace the Sessions breakdown button with chevron disclosure, and soften internal breakdown separators/dividers | P2 | 2026-03-10 | — |
 | [DEBT-299](../_archive/debt/debt-299-dashboard-recent-activity-date-label.md) | Dashboard Recent Activity — remove redundant "Answered" prefix from date labels to match Recent sessions bare-date style | P3 | 2026-03-10 | [#196](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/196) |
 | [DEBT-295](../_archive/debt/debt-295-filter-chip-unselected-text-weight.md) | Filter Chip Unselected Text Weight — promoted unselected chip labels from `text-foreground/60` to full `text-foreground` and removed hover-only text brightening so chip labels read as primary interactive content at rest | P3 | 2026-03-09 | — |
 | [DEBT-294](../_archive/debt/debt-294-filter-chip-fill-depth-and-cursor.md) | Filter Chip Fill Depth, Cursor, and Summary Hover Removal — promoted unselected chips from transparent labels to tonal toggle surfaces (`bg-foreground/[0.07]` + `hover:bg-foreground/[0.10]`), added `cursor-pointer`, and removed the imperceptible filter-summary hover fill | P3 | 2026-03-09 | — |
