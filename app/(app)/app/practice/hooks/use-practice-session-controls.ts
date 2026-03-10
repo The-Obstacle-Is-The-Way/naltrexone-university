@@ -10,6 +10,7 @@ export type UsePracticeSessionControlsOutput = {
   filters: PracticeFilters;
   sessionMode: 'tutor' | 'exam';
   sessionCount: number;
+  sessionCountInputValue: string;
   availableCountStatus: 'idle' | 'loading' | 'error';
   availableCount: number | null;
   tagLoadStatus: 'idle' | 'loading' | 'error';
@@ -23,6 +24,9 @@ export type UsePracticeSessionControlsOutput = {
   >['incompleteSession'];
   onSessionModeChange: PracticeSessionStarterProps['onSessionModeChange'];
   onSessionCountChange: PracticeSessionStarterProps['onSessionCountChange'];
+  onSessionCountBlur: NonNullable<
+    PracticeSessionStarterProps['onSessionCountBlur']
+  >;
   onToggleTag: PracticeSessionStarterProps['onToggleTag'];
   onDifficultyChange: PracticeSessionStarterProps['onDifficultyChange'];
   onStatusChange: PracticeSessionStarterProps['onStatusChange'];
@@ -43,6 +47,7 @@ export function usePracticeSessionControls(): UsePracticeSessionControlsOutput {
     filters: sessionStart.filters,
     sessionMode: sessionStart.sessionMode,
     sessionCount: sessionStart.sessionCount,
+    sessionCountInputValue: sessionStart.sessionCountInputValue,
     availableCountStatus: availableCount.availableCountStatus,
     availableCount: availableCount.availableCount,
     tagLoadStatus: tags.tagLoadStatus,
@@ -54,6 +59,7 @@ export function usePracticeSessionControls(): UsePracticeSessionControlsOutput {
     incompleteSession: incomplete.incompleteSession,
     onSessionModeChange: sessionStart.onSessionModeChange,
     onSessionCountChange: sessionStart.onSessionCountChange,
+    onSessionCountBlur: sessionStart.onSessionCountBlur,
     onToggleTag: sessionStart.onToggleTag,
     onDifficultyChange: sessionStart.onDifficultyChange,
     onStatusChange: sessionStart.onStatusChange,

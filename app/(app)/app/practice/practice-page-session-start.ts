@@ -12,6 +12,7 @@ const SESSION_START_TIMEOUT_MS = 15_000;
 
 export const SESSION_COUNT_MIN = 1;
 export const SESSION_COUNT_MAX = 100;
+export const DEFAULT_SESSION_COUNT = 20;
 
 export function handleSessionModeChange(
   setSessionMode: (mode: 'tutor' | 'exam') => void,
@@ -24,20 +25,32 @@ export function handleSessionModeChange(
 }
 
 export function handleSessionCountChange(
+  setSessionCountInputValue: (value: string) => void,
   setSessionCount: (count: number) => void,
   event: { target: { value: string } },
 ): void {
-  const parsed = Number(event.target.value);
-  if (!Number.isFinite(parsed)) {
-    setSessionCount(SESSION_COUNT_MIN);
+  const value = event.target.value;
+  setSessionCountInputValue(value);
+
+  if (value === '') {
     return;
   }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return;
 
   const clamped = Math.min(
     SESSION_COUNT_MAX,
     Math.max(SESSION_COUNT_MIN, Math.trunc(parsed)),
   );
   setSessionCount(clamped);
+}
+
+export function handleSessionCountBlur(
+  sessionCount: number,
+  setSessionCountInputValue: (value: string) => void,
+): void {
+  setSessionCountInputValue(String(sessionCount));
 }
 
 export async function startSession(input: {
@@ -120,14 +133,30 @@ export function createSessionModeChangeHandler(input: {
 }
 
 export function createSessionCountChangeHandler(input: {
+  setSessionCountInputValue: (value: string) => void;
   setSessionCount: (count: number) => void;
   setIdempotencyKey: (key: string) => void;
   createIdempotencyKey: () => string;
 }): (event: { target: { value: string } }) => void {
-  return handleSessionCountChange.bind(null, (count) => {
-    input.setSessionCount(count);
-    input.setIdempotencyKey(input.createIdempotencyKey());
-  });
+  return handleSessionCountChange.bind(
+    null,
+    input.setSessionCountInputValue,
+    (count) => {
+      input.setSessionCount(count);
+      input.setIdempotencyKey(input.createIdempotencyKey());
+    },
+  );
+}
+
+export function createSessionCountBlurHandler(input: {
+  sessionCount: number;
+  setSessionCountInputValue: (value: string) => void;
+}): () => void {
+  return handleSessionCountBlur.bind(
+    null,
+    input.sessionCount,
+    input.setSessionCountInputValue,
+  );
 }
 
 export function createToggleTagHandler(input: {

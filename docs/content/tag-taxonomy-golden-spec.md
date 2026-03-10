@@ -194,7 +194,7 @@ These are all board-tested topics that the question bank is currently thin on â€
 
 ## UI Behavior (Unchanged)
 
-- Zero-selected collapsed filter summaries show `All {kind} included by default`
+- Zero-selected collapsed filter summaries show `All included by default`
 - Expanded filter sections show `({N} selected)` below the chips
 - Multi-select within each category
 - Live question count updates as filters change

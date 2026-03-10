@@ -24,6 +24,7 @@ import {
 export type PracticeSessionStarterProps = {
   sessionMode: 'tutor' | 'exam';
   sessionCount: number;
+  sessionCountInputValue?: string;
   filters: PracticeFilters;
   availableCountStatus: 'idle' | 'loading' | 'error';
   availableCount: number | null;
@@ -36,6 +37,7 @@ export type PracticeSessionStarterProps = {
   onToggleTag: (slug: string) => void;
   onSessionModeChange: (mode: string) => void;
   onSessionCountChange: (event: { target: { value: string } }) => void;
+  onSessionCountBlur?: () => void;
   onStartSession: () => void;
 };
 
@@ -45,12 +47,6 @@ const tagKindLabels: Record<VisibleTagKind, string> = {
   topic: 'Topic',
   substance: 'Substance',
   treatment: 'Treatment',
-};
-
-const tagKindPluralLabels: Record<VisibleTagKind, string> = {
-  topic: 'topics',
-  substance: 'substances',
-  treatment: 'treatments',
 };
 
 const tagKindOrder: VisibleTagKind[] = ['topic', 'substance', 'treatment'];
@@ -103,9 +99,9 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
       className="gap-0 rounded-2xl border-border p-6"
     >
       <div className="space-y-1">
-        <div className="text-sm font-medium text-foreground">
+        <h2 className="text-base font-semibold text-foreground">
           Start a session
-        </div>
+        </h2>
         <div className="text-sm text-muted-foreground">
           Tutor mode shows explanations immediately. Exam mode hides
           explanations until you end the session.
@@ -139,9 +135,10 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
               type="number"
               min={SESSION_COUNT_MIN}
               max={SESSION_COUNT_MAX}
-              className="w-24"
-              value={props.sessionCount}
+              className="w-24 border-0 bg-foreground/5 dark:bg-foreground/5 shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              value={props.sessionCountInputValue ?? String(props.sessionCount)}
               onChange={props.onSessionCountChange}
+              onBlur={props.onSessionCountBlur}
             />
           </div>
         </div>
@@ -218,7 +215,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
                       <span className="flex items-center gap-2">
                         <span className="text-xs font-normal text-foreground/60">
                           {selectedCount === 0
-                            ? `All ${tagKindPluralLabels[kind]} included by default`
+                            ? 'All included by default'
                             : `${selectedCount} selected`}
                         </span>
                         <ChevronDown className="h-4 w-4 text-foreground/60 transition-transform group-open:rotate-180" />
