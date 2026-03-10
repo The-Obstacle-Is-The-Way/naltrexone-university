@@ -21,7 +21,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 6 future enhancements (F1/F8 resolved by DEBT-277/DEBT-276) | P3 | — |
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 7 verified client-side flows still report only to console or silent fallbacks | P2 | — |
 | [DEBT-298](./debt-298-ui-structural-consistency.md) | UI Structural Consistency Audit — inconsistent label/control spacing patterns, non-heading card titles, sub-44px shared touch targets, and `items-center` alignment mismatches across verified views | P3 | — |
-**Next Debt ID:** DEBT-299
+| [DEBT-299](./debt-299-dashboard-recent-activity-date-label.md) | Dashboard Recent Activity — remove redundant "Answered" prefix from date labels to match Recent sessions bare-date style | P3 | — |
+**Next Debt ID:** DEBT-300
 
 ---
 
