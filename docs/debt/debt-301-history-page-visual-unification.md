@@ -47,10 +47,11 @@ Keep the existing React-state disclosure architecture (`selectedSessionId`, asyn
 
 Implementation direction:
 - Remove the bordered `View breakdown` / `Hide breakdown` button
-- Add a trailing `<ChevronDown>` disclosure indicator to the session row header
+- Replace it with a trailing disclosure **button** that renders a `<ChevronDown>` icon
 - Rotate the chevron when the row is expanded
 - Keep the existing row-level navigation link to session review intact
 - The disclosure trigger must remain explicit and must not hijack the row’s existing navigation target
+- Preserve the current accessibility wiring on that disclosure control: `type="button"`, `aria-expanded`, `aria-controls`, and an informative `aria-label`
 
 **Decision:** Use the existing React state (`isSelected`) to drive icon rotation and `aria-expanded`, not `group-open:rotate-180`.
 
@@ -165,7 +166,8 @@ The following BS-047 items are intentionally **not** part of DEBT-301:
 - [ ] Interactive session rows preserve `cursor-pointer`
 - [ ] Existing focus-ring behavior on the interactive History row children remains unchanged
 - [ ] The bordered `View breakdown` / `Hide breakdown` button is removed
-- [ ] Expanded/collapsed state is represented by a trailing `<ChevronDown>` disclosure indicator driven by existing React state
+- [ ] Expanded/collapsed state is represented by a trailing disclosure button with a `<ChevronDown>` icon driven by existing React state
+- [ ] The replacement disclosure control preserves `type="button"`, `aria-expanded`, `aria-controls`, and an informative `aria-label`
 - [ ] Expanded-session separator no longer uses `dark:border-foreground/40`
 - [ ] Expanded-session separator uses the softer decorative treatment `dark:border-foreground/10`
 - [ ] Breakdown list dividers no longer use `dark:divide-foreground/40`
