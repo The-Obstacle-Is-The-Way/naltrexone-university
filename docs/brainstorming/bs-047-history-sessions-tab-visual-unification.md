@@ -1,9 +1,10 @@
-# BS-047: History Sessions Tab — Visual Unification with Dashboard & Practice
+# BS-047: History Page — Visual Unification with Dashboard & Practice
 
 **Date:** 2026-03-10
-**Triggered by:** Visual audit of the History Sessions tab after dashboard (DEBT-289) and practice (DEBT-290/291/292/294/295/297) received tonal fill, borderless nested surfaces, and chevron disclosure patterns. The History tab is now the most visually dated page in the app.
-**Scope:** Identify every visual gap between the History Sessions tab and the established patterns on Dashboard and Practice, so the fixes can be specced and implemented sequentially.
+**Triggered by:** Visual audit of the History page (both tabs) after dashboard (DEBT-289) and practice (DEBT-290/291/292/294/295/297) received tonal fill, borderless nested surfaces, and chevron disclosure patterns. The History page is now the most visually dated page in the app.
+**Scope:** Identify every visual gap between the History page and the established patterns on Dashboard and Practice, so the fixes can be specced and implemented sequentially.
 **Related:** [Dashboard page doc](../frontend/pages/dashboard.md), [Practice page doc](../frontend/pages/practice.md), [BS-044](./bs-044-dark-mode-border-weight-tiering.md) (border tiering), [Pattern Registry](../frontend/pattern-registry.md), [Contrast Policy](../frontend/contrast-policy.md)
+**Validated by:** Chrome Claude cross-page visual audit (2026-03-10) — compared History against Dashboard and Practice side-by-side in both dark and light mode
 
 ---
 
@@ -165,16 +166,101 @@ A borderless tonal pill badge.
 
 ---
 
+### Gap 7: Pagination Links Are Solid Primary Buttons
+
+**Source:** Chrome Claude visual audit.
+
+**Current** (`history-sessions-tab.tsx:277–303`):
+```tsx
+<Button asChild variant="link" className={headerActionLinkClasses}>
+  <Link href={...}>Previous</Link>
+</Button>
+```
+Despite using `variant="link"`, the "Next" pagination link renders with the primary button treatment when it's the only action present (right-aligned). The Chrome audit flagged this as a **solid primary-colored button** — visually much heavier than Dashboard's "View all" header action links which are quiet text links.
+
+**Established pattern** (Dashboard `page.tsx:126`):
+```tsx
+<Button asChild variant="link" className={headerActionLinkClasses}>
+  <Link href={historySessionsHref}>View all</Link>
+</Button>
+```
+Uses `headerActionLinkClasses` from `lib/shared-styles.ts` — `text-muted-foreground no-underline hover:text-foreground h-auto`.
+
+**Gap:** Need to verify whether the History pagination actually uses `headerActionLinkClasses` correctly, or if the Chrome agent saw a computed style divergence. The code shows `className={headerActionLinkClasses}` on both Previous and Next — this should produce the same ghost-text treatment as Dashboard. If the Chrome audit saw a primary button, there may be a CSS specificity issue or the classes are being overridden.
+
+**Investigation needed:** Visual verification in browser to confirm whether this is a real rendering issue or a Chrome audit misread.
+
+**Risk:** Low if it's a real issue — just a class fix.
+
+---
+
+### Gap 8: Questions Tab — Question Row Cards Use Borders + Shadow
+
+**Source:** Chrome Claude visual audit.
+
+**Current** (`history-questions-tab.tsx:460–489`):
+```
+block rounded-2xl border border-border p-4 shadow-sm transition-colors hover:bg-muted/50
+```
+
+**Established pattern** (Dashboard activity rows):
+```
+rounded-xl bg-foreground/5 p-3 transition-colors hover:bg-foreground/[0.08]
+```
+No border, no shadow. Tonal fill only.
+
+**Gap:** Question cards on the Questions tab use the same bordered + shadowed treatment as the Sessions tab rows (Gap 1), just with `shadow-sm` added. This is Pattern I-2 (standalone hoverable card), which is technically correct per the Pattern Registry — but the Pattern Registry was written before the tonal fill revolution on Dashboard and Practice.
+
+**Proposed fix:** Same as Gap 1 — switch to borderless tonal fill. Drop `shadow-sm`. The question content (title, result badge, metadata) provides enough visual structure without the border/shadow chrome.
+
+**Risk:** Low. Same rationale as Gap 1. The Questions tab rows are standalone (not nested in a Card), so the same Option B reasoning from Gap 3 applies.
+
+---
+
+### Gap 9: Light Mode Border Amplification
+
+**Source:** Chrome Claude visual audit.
+
+**Finding:** The bordered-row issue is **more severe in light mode** than in dark mode:
+- Session row `border-border/60` renders as a medium-gray solid line in light mode (no light-mode softening override)
+- "View breakdown" button's `shadow-xs` is more visible against white backgrounds
+- Question cards' `shadow-sm` creates a visible drop shadow in addition to the border
+- The overall impression is a "cage grid" of boxes, while Dashboard's borderless tonal fills create a much calmer, flatter visual flow
+
+**Implication:** Gaps 1, 2, and 8 are not dark-mode-only concerns. The fix (switching to borderless tonal fill) improves both modes simultaneously, since `bg-foreground/5` is subtle in both light and dark mode.
+
+**Risk:** None — this reinforces the case for Gaps 1 and 8 rather than adding new work.
+
+---
+
+### Gap 10: Subtitle Spacing (Minor)
+
+**Source:** Chrome Claude visual audit.
+
+**Current:** History page description sits directly below the heading with no explicit margin.
+
+**Established pattern** (Dashboard): Description has `mt-1` between heading and subtitle text.
+
+**Gap:** Minor spacing inconsistency. The History subtitle sits slightly closer to the heading than Dashboard's.
+
+**Risk:** Trivial. One-line class addition.
+
+---
+
 ## Summary of Proposed Changes
 
 | # | Gap | Action | Priority | Risk |
 |---|-----|--------|----------|------|
-| 1 | Bordered rows → tonal fill | Switch session rows to `bg-foreground/5` borderless pattern | P1 | Low |
-| 2 | "View breakdown" button → chevron | Replace outline button with `<ChevronDown>` icon (Option A) | P1 | Low |
-| 3 | No container Card | Keep as-is (Option B) — rows on page background | — | — |
-| 4 | Heavy breakdown separator | Soften dark mode to `border-foreground/15` or remove | P2 | Low |
-| 5 | Asymmetric breakdown dividers | Soften dark mode to `divide-foreground/15` or `/20` | P2 | Low |
-| 6 | Mode badge treatment | Defer — different layout context | P3 | — |
+| 1 | Sessions: bordered rows → tonal fill | Switch to `bg-foreground/5` borderless pattern | P1 | Low |
+| 2 | Sessions: "View breakdown" button → chevron | Replace outline button with `<ChevronDown>` icon (Option A) | P1 | Low |
+| 3 | Sessions: no container Card | Keep as-is (Option B) — rows on page background | — | — |
+| 4 | Sessions: heavy breakdown separator | Soften dark mode to `border-foreground/15` or remove | P2 | Low |
+| 5 | Sessions: asymmetric breakdown dividers | Soften dark mode to `divide-foreground/15` or `/20` | P2 | Low |
+| 6 | Sessions: mode badge treatment | Defer — different layout context | P3 | — |
+| 7 | Sessions: pagination link visual weight | Investigate — may be CSS specificity issue or audit misread | P2 | Low |
+| 8 | Questions: row cards have borders + shadow | Switch to `bg-foreground/5` borderless, drop `shadow-sm` | P1 | Low |
+| 9 | Both: light mode amplification | No extra work — Gaps 1/8 fix both modes | — | — |
+| 10 | Both: subtitle spacing | Add `mt-1` to description | P3 | Trivial |
 
 ---
 
@@ -186,7 +272,7 @@ A borderless tonal pill badge.
 
 3. **Should the "Showing X–Y of Z sessions" text and mode filter move inside a Card header?** Dashboard puts its header ("Recent sessions" + "View all") inside the Card. History has the count and filter floating above the rows.
 
-4. **Does the Questions tab need the same treatment?** The Questions tab (`history-questions-tab.tsx`) uses standalone `I-2` rows (`block rounded-2xl border border-border p-4 shadow-sm`). These are already closer to the Card pattern but still use full borders. This brainstorming doc focuses on the Sessions tab; the Questions tab should be assessed separately.
+4. **Questions tab filter card container:** The filter card uses standard `<Card>` (`border + shadow-sm`), which is consistent with Dashboard's outer section cards. However, since the content is filters (like Practice's), it could be replaced with a tonal container. This is a design judgment call — lower priority than the row treatment.
 
 ---
 
@@ -195,3 +281,4 @@ A borderless tonal pill badge.
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-03-10 | Created BS-047 | History Sessions tab is visually dated after Dashboard and Practice received tonal fill, borderless rows, and chevron disclosure. Gap inventory needed before implementation. |
+| 2026-03-10 | Expanded scope to full History page | Chrome Claude cross-page audit surfaced 4 additional gaps: pagination link weight (Gap 7), Questions tab row borders (Gap 8), light mode amplification (Gap 9), subtitle spacing (Gap 10). Questions tab no longer deferred. |
