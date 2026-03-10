@@ -1,6 +1,6 @@
 # Pattern Registry
 
-**Last Updated:** 2026-03-09
+**Last Updated:** 2026-03-10
 **Status:** Canonical — all UI changes MUST conform to this registry
 
 Single source of truth for every visual pattern in the app. If a pattern isn't here, don't invent one — add it here first, get approval, then implement.
@@ -236,7 +236,7 @@ dark:border-foreground/40 dark:hover:border-foreground/70
 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 ```
 
-**Used in:** History sessions rows (delegated row click exception)
+**Used in:** History sessions rows (page-background hybrid with delegated row click; see BS-047 Gap 3)
 
 **Design rationale:** `/40` hover inside a card (base 7% lightness) produces ~8.6% effective lightness — a subtle, satisfying shift. The card surface already elevates the row above page background, so the hover only needs a gentle nudge.
 
@@ -254,7 +254,7 @@ focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 
 **Must be a `<Link>` element** (entire row is the click target).
 
-**Known structural exception:** `history-sessions-tab.tsx` uses delegated row click on `<li>` + nested `<Link>` to avoid nested link-role conflicts with inner links (`A11Y-1` resolution). Hover-token divergence from the original D-1 entry is resolved.
+**Known structural exception:** `history-sessions-tab.tsx` uses delegated row click on `<li>` + nested `<Link>` to avoid nested link-role conflicts with inner links (`A11Y-1` resolution), and currently applies this bordered token set on page background rather than inside a wrapping `<Card>`. [BS-047](../brainstorming/bs-047-history-sessions-tab-visual-unification.md) Gap 3 tracks whether that hybrid layout should remain or be realigned.
 
 ### I-2: Hoverable Card Row (standalone)
 

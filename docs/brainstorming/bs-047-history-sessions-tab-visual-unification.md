@@ -13,7 +13,7 @@
 The History Sessions tab shows a list of completed sessions as **fully bordered white-outlined boxes** on the dark background. Each row has:
 - A visible `border border-border/60` + `dark:border-foreground/40` border (the "cage" effect from BS-044)
 - A "View breakdown" outline button per row
-- No tonal fill differentiation — rows sit flat against the card/page background
+- A muted tonal rest fill (`bg-muted/20`) that is visually subordinate to the border rather than defining the surface
 - When expanded, the breakdown region uses a heavy `dark:border-foreground/40` separator
 
 **In contrast**, the Dashboard and Practice pages now use:
@@ -100,7 +100,7 @@ A Card container wraps the list. Tonal fill rows sit inside the card, creating t
 bg-background → bg-card → bg-foreground/5 (row)
 ```
 
-**Gap:** The History Sessions tab has no wrapping Card. The rows float directly on `bg-background`. This means the tonal fill rows would need to be visible against the page background rather than a card background. Two options:
+**Gap:** The History Sessions tab has no wrapping Card. The rows float directly on `bg-background`. This means the tonal fill rows would need to be visible against the page background rather than a card background. It also means the current implementation is a hybrid: Pattern Registry `I-1` currently names History sessions rows as a bordered "inside Card" consumer, but the live rows are not actually wrapped by an outer card today. Two options:
 - **A**: Add a wrapping `<Card>` (matches Dashboard 1:1)
 - **B**: Keep rows on page background but ensure `bg-foreground/5` still reads as a distinct surface against `bg-background` (it does — the contrast is the same since `bg-card` and `bg-background` are very close in dark mode)
 
@@ -166,31 +166,26 @@ A borderless tonal pill badge.
 
 ---
 
-### Gap 7: Pagination Links Are Solid Primary Buttons
+### Gap 7: Questions Tab "Review" Pill Uses Bordered Chrome Instead of a Tonal Micro-Surface
 
-**Source:** Chrome Claude visual audit.
-
-**Current** (`history-sessions-tab.tsx:277–303`):
+**Current** (`history-questions-tab.tsx:485–487`):
 ```tsx
-<Button asChild variant="link" className={headerActionLinkClasses}>
-  <Link href={...}>Previous</Link>
-</Button>
+<span className="inline-flex items-center rounded-full border px-4 py-2 text-sm">
+  Review
+</span>
 ```
-Despite using `variant="link"`, the "Next" pagination link renders with the primary button treatment when it's the only action present (right-aligned). The Chrome audit flagged this as a **solid primary-colored button** — visually much heavier than Dashboard's "View all" header action links which are quiet text links.
+A bordered trailing pill sits inside each already-bordered question row.
 
-**Established pattern** (Dashboard `page.tsx:126`):
-```tsx
-<Button asChild variant="link" className={headerActionLinkClasses}>
-  <Link href={historySessionsHref}>View all</Link>
-</Button>
-```
-Uses `headerActionLinkClasses` from `lib/shared-styles.ts` — `text-muted-foreground no-underline hover:text-foreground h-auto`.
+**Established pattern**:
+- Dashboard badge pills (`page.tsx:157`, `page.tsx:238`):
+  ```tsx
+  <span className="inline-flex items-center rounded-full border-0 bg-foreground/[0.06] px-2 py-0.5 text-xs font-medium text-foreground/60">
+  ```
+- Practice disclosure metadata clusters (`practice-session-starter.tsx:215–221`) likewise keep trailing micro-surfaces subdued with `text-foreground/60` and a chevron rather than another bordered pill.
 
-**Gap:** Need to verify whether the History pagination actually uses `headerActionLinkClasses` correctly, or if the Chrome agent saw a computed style divergence. The code shows `className={headerActionLinkClasses}` on both Previous and Next — this should produce the same ghost-text treatment as Dashboard. If the Chrome audit saw a primary button, there may be a CSS specificity issue or the classes are being overridden.
+**Gap:** Even if Gap 8 unifies the outer question row surface, the trailing "Review" pill would still introduce another hard border inside the row. This is the same visual over-chroming problem seen elsewhere in the app before Dashboard/Practice were softened. The review affordance should likely become a quieter tonal pill or other lower-weight trailing treatment.
 
-**Investigation needed:** Visual verification in browser to confirm whether this is a real rendering issue or a Chrome audit misread.
-
-**Risk:** Low if it's a real issue — just a class fix.
+**Risk:** Medium. This is a row-layout micro-surface change, not just a token swap.
 
 ---
 
@@ -233,17 +228,24 @@ No border, no shadow. Tonal fill only.
 
 ---
 
-### Gap 10: Subtitle Spacing (Minor)
+### Gap 10: Questions Tab Unavailable Rows Still Use the Old Bordered Card Treatment
 
-**Source:** Chrome Claude visual audit.
+**Current** (`history-questions-tab.tsx:428–443`):
+```tsx
+<Card className="gap-0 rounded-2xl border-border p-4 shadow-sm">
+```
+The unavailable-state row uses the same bordered + shadowed card language as the available question rows, plus muted helper copy inside the card.
 
-**Current:** History page description sits directly below the heading with no explicit margin.
+**Established pattern**:
+- Dashboard unavailable activity rows (`page.tsx:210`):
+  ```tsx
+  <div className="rounded-xl bg-foreground/5 p-3">
+  ```
+- Practice filter sections (`practice-session-starter.tsx:209–242`) also use borderless tonal containers for secondary surfaces.
 
-**Established pattern** (Dashboard): Description has `mt-1` between heading and subtitle text.
+**Gap:** Gap 8 covers the available question-row cards, but the unavailable state is a separate surface contract and should move with the same tonal-fill unification work instead of retaining legacy Card chrome.
 
-**Gap:** Minor spacing inconsistency. The History subtitle sits slightly closer to the heading than Dashboard's.
-
-**Risk:** Trivial. One-line class addition.
+**Risk:** Low. Same surface-direction change as Gap 8.
 
 ---
 
@@ -257,10 +259,10 @@ No border, no shadow. Tonal fill only.
 | 4 | Sessions: heavy breakdown separator | Soften dark mode to `border-foreground/15` or remove | P2 | Low |
 | 5 | Sessions: asymmetric breakdown dividers | Soften dark mode to `divide-foreground/15` or `/20` | P2 | Low |
 | 6 | Sessions: mode badge treatment | Defer — different layout context | P3 | — |
-| 7 | Sessions: pagination link visual weight | Investigate — may be CSS specificity issue or audit misread | P2 | Low |
-| 8 | Questions: row cards have borders + shadow | Switch to `bg-foreground/5` borderless, drop `shadow-sm` | P1 | Low |
-| 9 | Both: light mode amplification | No extra work — Gaps 1/8 fix both modes | — | — |
-| 10 | Both: subtitle spacing | Add `mt-1` to description | P3 | Trivial |
+| 7 | Questions: trailing "Review" pill is over-chromed | Soften or redesign the pill to avoid another bordered micro-surface | P2 | Medium |
+| 8 | Questions: available row cards have borders + shadow | Switch to `bg-foreground/5` borderless, drop `shadow-sm` | P1 | Low |
+| 9 | Both: light mode amplification | No extra work — Gaps 1/8/10 fix both modes | — | — |
+| 10 | Questions: unavailable rows still use bordered Card chrome | Unify unavailable rows with the tonal-fill direction too | P1 | Low |
 
 ---
 
@@ -281,4 +283,5 @@ No border, no shadow. Tonal fill only.
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-03-10 | Created BS-047 | History Sessions tab is visually dated after Dashboard and Practice received tonal fill, borderless rows, and chevron disclosure. Gap inventory needed before implementation. |
-| 2026-03-10 | Expanded scope to full History page | Chrome Claude cross-page audit surfaced 4 additional gaps: pagination link weight (Gap 7), Questions tab row borders (Gap 8), light mode amplification (Gap 9), subtitle spacing (Gap 10). Questions tab no longer deferred. |
+| 2026-03-10 | Expanded scope to full History page | Chrome Claude cross-page audit surfaced real Questions-tab gaps beyond the Sessions list. Questions tab no longer deferred. |
+| 2026-03-10 | Corrected Chrome-audit false positives | History pagination already uses the shared `headerActionLinkClasses`, and the History subtitle already matches Dashboard spacing via `space-y-1`. Replaced those false positives with the real Questions-tab gaps: trailing "Review" pill chrome and unavailable-row card chrome. |
