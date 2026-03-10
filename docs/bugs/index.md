@@ -15,12 +15,15 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 **Next Bug ID:** BUG-205
 
-**Latest archival (2026-03-09):**
+**Latest archival (2026-03-10):**
+- BUG-203 invalidated after package-level tracer-bullet verification of Clerk `verifyWebhook()`, archived to `docs/_archive/bugs/`.
+
+**Previous archival (2026-03-09):**
 - BUG-199 invalidated after tracer-bullet verification, archived to `docs/_archive/bugs/`.
 - BUG-200 reclassified as DEBT-286, archived to `docs/_archive/bugs/`.
 - BUG-201 and BUG-202 verified fixed (commit `a8ce087c`), archived to `docs/_archive/bugs/`.
 
-**Previous archival (2026-03-03):**
+**Earlier archival (2026-03-03):**
 - BUG-186, BUG-187, BUG-188 verified fixed (PR #164), archived to `docs/_archive/bugs/`.
 - BUG-189, BUG-190, BUG-191 verified fixed (PR #166), archived to `docs/_archive/bugs/`.
 - BUG-192, BUG-193, BUG-194 verified fixed (PR #165), archived to `docs/_archive/bugs/`.
@@ -37,7 +40,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | Bug | Priority | Summary |
 |-----|----------|---------|
-| [BUG-203](./bug-203-clerk-webhook-public-fallback-secret.md) | P2 | Clerk webhook verification falls back to public `whsec_dummy` when the signing secret is missing outside Vercel production |
 | [BUG-204](./bug-204-billing-portal-missing-abuse-controls.md) | P3 | Billing portal session creation has no per-user rate limit and no reachable idempotency path |
 
 ## Audit #13 — Adversarial Security Re-Verification (2026-03-10)
@@ -50,12 +52,14 @@ Follow-up adversarial audit focused on server actions, authorization boundaries,
 - Targeted verification run: `pnpm test --run lib/env.test.ts app/api/webhooks/clerk/route.test.ts src/adapters/controllers/billing-controller.test.ts app/api/cron/reconcile-stripe-subscriptions/route.test.ts`
 - Prior audit/debt register cross-check to avoid refiling archived issues or known false positives.
 
-**2 new bugs filed (BUG-203..204):**
+**1 new bug filed (BUG-204):**
 
 | Bug | Family | Priority | Summary |
 |-----|--------|----------|---------|
-| BUG-203 | Webhook security / config | P2 | Missing Clerk webhook secret is replaced with public `whsec_dummy`, enabling forged webhook acceptance outside Vercel production |
 | BUG-204 | Authenticated abuse / billing | P3 | Billing portal creation lacks rate limiting and blocks callers from supplying the idempotency key already supported by the application port |
+
+**1 bug invalidated after deeper runtime verification:**
+- BUG-203 was initially filed, then invalidated after inspecting the installed `@clerk/nextjs` and `@clerk/backend` runtime. `verifyWebhook()` reads `process.env.CLERK_WEBHOOK_SIGNING_SECRET` directly and fails closed when that env var is missing; our typed `env` fallback is not consulted by the Clerk SDK.
 
 **Candidate findings rejected after re-verification:**
 - Cron weak-secret guessing path was not filed as a bug because exploitation depends on operators choosing a weak `CRON_SECRET`; the code should be hardened, but the current evidence is too deployment-dependent for a bug filing.
