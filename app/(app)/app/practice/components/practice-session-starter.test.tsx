@@ -50,6 +50,7 @@ describe('PracticeSessionStarter', () => {
     expect(inputTokens.has('border-0')).toBe(true);
     expect(inputTokens.has('shadow-none')).toBe(true);
     expect(inputTokens.has('bg-foreground/5')).toBe(true);
+    expect(inputTokens.has('dark:bg-foreground/5')).toBe(true);
     expect(inputTokens.has('[appearance:textfield]')).toBe(true);
     expect(
       inputTokens.has('[&::-webkit-outer-spin-button]:appearance-none'),

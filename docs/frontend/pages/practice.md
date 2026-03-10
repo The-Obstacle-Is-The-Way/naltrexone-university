@@ -87,7 +87,7 @@ The lower stack is not mutually exclusive:
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
 | Label | `<label>` | — | `:127` | `text-sm font-medium text-foreground` — "Questions", `htmlFor="session-count-input"` |
-| Input | `<Input>` | — | `:133` | `type="number"`, `w-24 border-0 bg-foreground/5 shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`, min=`SESSION_COUNT_MIN`, max=`SESSION_COUNT_MAX`, value renders from the raw string state and clamps back to the canonical numeric count on blur |
+| Input | `<Input>` | — | `:133` | `type="number"`, `w-24 border-0 bg-foreground/5 dark:bg-foreground/5 shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`, min=`SESSION_COUNT_MIN`, max=`SESSION_COUNT_MAX`, value renders from the raw string state and clamps back to the canonical numeric count on blur |
 
 #### Status Selector
 
@@ -164,11 +164,11 @@ Single-select tab-style control. Uses shared `tabSwitchContainerClasses` from `t
 
 ### Input (`components/ui/input.tsx`)
 
-Standard shadcn input primitive. The Questions instance in the starter card overrides the base border/shadow/fill to `border-0 bg-foreground/5 shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`.
+Standard shadcn input primitive. The Questions instance in the starter card overrides the base border/shadow/fill to `border-0 bg-foreground/5 dark:bg-foreground/5 shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`. The explicit `dark:bg-foreground/5` is required to override the base component's `dark:bg-input/30`, which would otherwise leak through and produce a different shade than the sibling filter sections.
 
 | Key tokens | Value |
 |-----------|-------|
-| Starter fill override | `bg-foreground/5` |
+| Starter fill override | `bg-foreground/5 dark:bg-foreground/5` |
 | Starter border override | `border-0` |
 | Spinner hiding | `[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none` |
 | Focus | `focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]` |
