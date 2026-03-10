@@ -13,7 +13,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-205
+**Next Bug ID:** BUG-206
 
 **Latest archival (2026-03-10):**
 - BUG-203 invalidated after package-level tracer-bullet verification of Clerk `verifyWebhook()`, archived to `docs/_archive/bugs/`.
@@ -41,6 +41,22 @@ Bug reports document issues discovered in the codebase along with their root cau
 | Bug | Priority | Summary |
 |-----|----------|---------|
 | [BUG-204](./bug-204-billing-portal-missing-abuse-controls.md) | P3 | Billing portal session creation has no per-user rate limit and no reachable idempotency path |
+| [BUG-205](./bug-205-reconciliation-prefers-stale-local-subscription-over-canonical-stripe-state.md) | P1 | Stripe reconciliation keeps a stale local subscription as canonical and can cancel the longer-lived Stripe subscription |
+
+## Audit #14 — Boundary Sweep: Reconciliation Canonical Selection (2026-03-10)
+
+Focused follow-up sweep on boundary-heavy billing and domain paths after the BUG-204 verification work. The goal was to find only non-duplicate, code-trace-confirmed bugs with realistic impact.
+
+**Methodology:**
+- Full-file review of reconciliation job logic, Stripe normalization, cron entrypoint, and adjacent tests.
+- Cross-check against archived reconciliation bugs and debt items to avoid refiling known issues.
+- Targeted verification run: `pnpm test --run src/adapters/jobs/reconcile-stripe-subscriptions.test.ts`
+
+**1 new bug filed (BUG-205):**
+
+| Bug | Family | Priority | Summary |
+|-----|--------|----------|---------|
+| BUG-205 | Billing / reconciliation | P1 | Reconciliation short-circuits canonical selection to the stale local subscription and may cancel the actual Stripe winner |
 
 ## Audit #13 — Adversarial Security Re-Verification (2026-03-10)
 
