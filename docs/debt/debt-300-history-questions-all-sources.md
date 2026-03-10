@@ -18,12 +18,14 @@ The Dashboard has two "recent" panels:
 
 "View all" on Recent activity links to the History Questions tab (`/app/history?tab=questions`).
 
-The History Questions tab **hardcodes** `source: 'adhoc'` at `app/(app)/app/history/page.tsx:87`, so it only shows questions answered via Quick Practice. Questions answered inside Tutor or Exam sessions are invisible on this tab — they can only be found by navigating through the Sessions tab → session review flow.
+The History Questions tab **hardcodes** `source: 'adhoc'` at `app/(app)/app/history/page.tsx:87`, so it only shows sessionless attempts (`practiceSessionId = null`). In the current codebase, that bucket is broader than Quick Practice — it also includes standalone/review reattempts — but the History page subtitle and empty state currently market the tab as "Quick Practice questions."
+
+Questions answered inside Tutor or Exam sessions are invisible on the Questions tab, even though those same questions can appear on Dashboard Recent activity.
 
 This creates two problems:
 
 1. **IA inconsistency:** Dashboard Recent activity shows tutor/exam questions → user clicks "View all" → those questions disappear from the History Questions tab.
-2. **Missing capability:** A user who got a question wrong in a tutor session cannot find it later by searching by tag, difficulty, or result in the Questions tab. They must remember which session it was in.
+2. **Missing capability:** A user who got a question wrong in a tutor or exam session cannot find it later by searching by tag, difficulty, result, or source in the Questions tab. They must fall back to session-based review (or another surface like bookmarks/dashboard if the question still appears there).
 
 ### Why this matters for a question bank system
 
@@ -60,7 +62,7 @@ source: questionsFilters.source ?? undefined,
 
 ### 2. Parse source filter from search params
 
-`app/(app)/app/history/page.tsx` — add `source` to `questionsFilters`:
+`app/(app)/app/history/page.tsx` — add `source` to `HistorySearchParams`, import `parseSourceFilter`, and thread the parsed value into `questionsFilters`:
 
 ```tsx
 const questionsFilters: QuestionsFilters = {
@@ -101,14 +103,16 @@ type HistorySearchParams = {
   </SelectTrigger>
   <SelectContent>
     <SelectItem value={ALL_FILTER_VALUE}>All sources</SelectItem>
-    <SelectItem value="adhoc">Quick Practice</SelectItem>
+    <SelectItem value="adhoc">Ad-hoc practice</SelectItem>
     <SelectItem value="tutor">Tutor session</SelectItem>
     <SelectItem value="exam">Exam session</SelectItem>
   </SelectContent>
 </Select>
 ```
 
-Wire `source` into `questionsFilters`, `patchFilters`, and `hasActiveControls` in the same component.
+Wire `source` into `selectedSource`, `patchFilters`, and `hasActiveControls` in the same component.
+
+Use the existing provenance language already shown on question rows (`Tutor session` / `Exam session` / `Ad-hoc practice`). Do **not** relabel `adhoc` as "Quick Practice" in the filter UI without a broader schema/product decision, because `adhoc` is not Quick Practice-only.
 
 ### 4. Update grid layout
 
@@ -121,7 +125,15 @@ The filter grid currently uses `lg:grid-cols-4` for four controls. With five fil
 
 ### 6. No dashboard changes needed
 
-Dashboard Recent activity already shows all sources via `listRecentByUserId` (no source filter). The "View all" link already points to `/app/history?tab=questions`. No changes required.
+Dashboard Recent activity already shows all sources. The page's "View all" link already points to `/app/history?tab=questions`, and the upstream dashboard stats use `listRecentByUserId(...)` with no source filter. No dashboard JSX changes are required.
+
+### 7. No repository/controller changes needed
+
+- `src/adapters/controllers/review-controller.ts` already validates `source: z.enum(['tutor', 'exam', 'adhoc'])`
+- `src/adapters/repositories/drizzle-attempt-repository.ts` already implements source filtering:
+  - `adhoc` → `isNull(practiceSessionId)`
+  - `tutor` / `exam` → `practiceSessions.mode = sourceFilter`
+- This debt is a History page wiring + UI exposure change, not a repository-layer change
 
 ---
 
@@ -135,7 +147,9 @@ Dashboard Recent activity already shows all sources via `listRecentByUserId` (no
 
 ### `app/(app)/app/history/components/history-questions-tab.test.tsx`
 
-- Add test for the Source filter dropdown rendering with correct options
+- Replace the existing `does not render a Source filter control` assertion (currently around line 256) with a positive Source-filter assertion
+- Update the existing filter-control count assertions (currently expecting 4 triggers) to expect 5 triggers and include the `Source` label
+- Add/adjust a test for the Source filter dropdown rendering with correct options: All sources, Ad-hoc practice, Tutor session, Exam session
 - Update empty state test to match new copy
 
 ### `app/(app)/app/history/history-search-params.test.ts`
@@ -147,7 +161,7 @@ Dashboard Recent activity already shows all sources via `listRecentByUserId` (no
 ## Acceptance Criteria
 
 - [ ] History Questions tab shows all questions by default (ad-hoc + tutor + exam)
-- [ ] "Source" filter dropdown added with options: All sources, Quick Practice, Tutor session, Exam session
+- [ ] "Source" filter dropdown added with options: All sources, Ad-hoc practice, Tutor session, Exam session
 - [ ] Selecting a source filter narrows the list and appears in the URL as `&source=adhoc|tutor|exam`
 - [ ] "Clear filters" resets source along with other filters
 - [ ] Page subtitle updated to reflect all-source scope
@@ -156,3 +170,10 @@ Dashboard Recent activity already shows all sources via `listRecentByUserId` (no
 - [ ] Existing filter interactions (Result, Difficulty, Tag, Sort) unaffected
 - [ ] All unit tests updated and passing
 - [ ] Visual verification: tutor/exam session questions appear in Questions tab with correct origin labels
+
+## What This Does Not Change
+
+- No changes to the History Sessions tab
+- No changes to Dashboard Recent activity rendering or routing
+- No changes to `review-controller.ts` schema validation
+- No changes to `drizzle-attempt-repository.ts` source-filter semantics
