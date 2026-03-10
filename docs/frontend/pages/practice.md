@@ -2,7 +2,7 @@
 
 **Page:** `/app/practice`
 **Source:** `app/(app)/app/practice/page.tsx` (server) → `practice-page-client.tsx` (client)
-**Last Updated:** 2026-03-09
+**Last Updated:** 2026-03-10
 
 ---
 
@@ -72,36 +72,36 @@ The lower stack is not mutually exclusive:
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
 | Container | `<Card>` | S-1 | `practice-session-starter.tsx:100` | `gap-0 rounded-2xl border-border p-6`, id=`practice-session-starter` |
-| Heading | `<div>` | — | `:105` | `text-sm font-medium text-foreground` — "Start a session" |
-| Description | `<div>` | — | `:108` | `text-sm text-muted-foreground` — mode explanation |
+| Heading | `<h2>` | — | `:102` | `text-base font-semibold text-foreground` — "Start a session" |
+| Description | `<div>` | — | `:105` | `text-sm text-muted-foreground` — mode explanation |
 
 #### Mode Selector
 
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
-| Label | `<div>` | — | `:117` | `text-sm font-medium text-foreground` — "Mode" |
-| Control | `<SegmentedControl>` | I-5 | `:118` | Options: Tutor, Exam. Uses shared `tabSwitchContainerClasses` |
+| Label | `<div>` | — | `:114` | `text-sm font-medium text-foreground` — "Mode" |
+| Control | `<SegmentedControl>` | I-5 | `:115` | Options: Tutor, Exam. Uses shared `tabSwitchContainerClasses` |
 
 #### Questions Input
 
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
-| Label | `<label>` | — | `:130` | `text-sm font-medium text-foreground` — "Questions", `htmlFor="session-count-input"` |
-| Input | `<Input>` | — | `:136` | `type="number"`, `w-24`, min=`SESSION_COUNT_MIN`, max=`SESSION_COUNT_MAX` |
+| Label | `<label>` | — | `:127` | `text-sm font-medium text-foreground` — "Questions", `htmlFor="session-count-input"` |
+| Input | `<Input>` | — | `:133` | `type="number"`, `w-24 border-0 bg-foreground/5 shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`, min=`SESSION_COUNT_MIN`, max=`SESSION_COUNT_MAX`, value renders from the raw string state and clamps back to the canonical numeric count on blur |
 
 #### Status Selector
 
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
-| Label | `<div>` | — | `:149` | `text-sm font-medium text-foreground` — "Status" |
-| Control | `<SegmentedControl>` | I-5 | `:151` | Options: Unanswered, Incorrect, Bookmarked |
+| Label | `<div>` | — | `:147` | `text-sm font-medium text-foreground` — "Status" |
+| Control | `<SegmentedControl>` | I-5 | `:149` | Options: Unanswered, Incorrect, Bookmarked |
 
 #### Difficulty Selector
 
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
-| Label | `<div>` | — | `:166` | `text-sm font-medium text-foreground` — "Difficulty" |
-| Control | `<SegmentedControl>` | I-5 | `:168` | Options: All, Easy, Medium, Hard |
+| Label | `<div>` | — | `:164` | `text-sm font-medium text-foreground` — "Difficulty" |
+| Control | `<SegmentedControl>` | I-5 | `:166` | Options: All, Easy, Medium, Hard |
 
 #### Tag Filter Sections (Topic / Substance / Treatment)
 
@@ -109,16 +109,16 @@ Three collapsible `<details>` elements, one per tag kind. Only rendered when `ta
 
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
-| Container | `<details>` | S-2 (practice variant, tonal fill) | `:212–245` | `group rounded-xl bg-foreground/5` |
-| Summary header | `<summary>` | — | `:216` | `flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium text-foreground transition-colors [&::-webkit-details-marker]:hidden` + focus ring |
-| Section label | `<span>` | — | `:217` | "Topic" / "Substance" / "Treatment" |
-| Summary right cluster | `<span>` | — | `:218` | `flex items-center gap-2` — groups conditional summary metadata + chevron |
-| Summary metadata | `<span>` | — | `:219` | `text-xs font-normal text-foreground/60` — `All {kind} included by default` when `selectedCount === 0`, otherwise `{N} selected` |
-| Disclosure chevron | `<ChevronDown>` | — | `:222` | `h-4 w-4 text-foreground/60 transition-transform group-open:rotate-180` |
-| Expanded content wrapper | `<div>` | — | `:225` | `px-4 pb-3` — keeps body spacing after summary owns the clickable padding |
-| Chip fieldset | `<fieldset>` | — | `:226` | `flex flex-wrap gap-2 border-0 p-0 m-0`, `aria-label={label}` |
-| Filter chips | `<FilterChip>` | I-4 | `:231` | Multi-select toggle buttons (see below) |
-| Footer count | `<div>` | — | `:241` | `text-xs text-foreground/60` — `({N} selected)` below the chip group |
+| Container | `<details>` | S-2 (practice variant, tonal fill) | `:209–242` | `group rounded-xl bg-foreground/5` |
+| Summary header | `<summary>` | — | `:213` | `flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium text-foreground transition-colors [&::-webkit-details-marker]:hidden` + focus ring |
+| Section label | `<span>` | — | `:214` | "Topic" / "Substance" / "Treatment" |
+| Summary right cluster | `<span>` | — | `:215` | `flex items-center gap-2` — groups conditional summary metadata + chevron |
+| Summary metadata | `<span>` | — | `:216` | `text-xs font-normal text-foreground/60` — `All included by default` when `selectedCount === 0`, otherwise `{N} selected` |
+| Disclosure chevron | `<ChevronDown>` | — | `:221` | `h-4 w-4 text-foreground/60 transition-transform group-open:rotate-180` |
+| Expanded content wrapper | `<div>` | — | `:224` | `px-4 pb-3` — keeps body spacing after summary owns the clickable padding |
+| Chip fieldset | `<fieldset>` | — | `:225` | `flex flex-wrap gap-2 border-0 p-0 m-0`, `aria-label={label}` |
+| Filter chips | `<FilterChip>` | I-4 | `:230` | Multi-select toggle buttons (see below) |
+| Footer count | `<div>` | — | `:238` | `text-xs text-foreground/60` — `({N} selected)` below the chip group |
 
 #### Tag Loading/Error States
 
@@ -164,12 +164,13 @@ Single-select tab-style control. Uses shared `tabSwitchContainerClasses` from `t
 
 ### Input (`components/ui/input.tsx`)
 
-Standard shadcn input with dark mode overrides.
+Standard shadcn input primitive. The Questions instance in the starter card overrides the base border/shadow/fill to `border-0 bg-foreground/5 shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`.
 
-| Key dark tokens | Value |
-|----------------|-------|
-| Fill | `dark:bg-input/30` |
-| Border | `dark:border-foreground/40` |
+| Key tokens | Value |
+|-----------|-------|
+| Starter fill override | `bg-foreground/5` |
+| Starter border override | `border-0` |
+| Spinner hiding | `[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none` |
 | Focus | `focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]` |
 
 ---
@@ -182,7 +183,7 @@ bg-background (Layer 0 — page)
        ├─ SegmentedControl bg-muted (Layer 2 — Mode/Status/Difficulty)
        │    └─ Active item bg-primary (Layer 3)
        │    └─ Inactive items transparent (inherit Layer 2)
-       ├─ Input dark:bg-input/30 (Layer 2 — Questions count)
+       ├─ Input bg-foreground/5 (Layer 2 — Questions count)
        └─ <details> bg-foreground/5 (Layer 2 — tag filter containers)
             └─ FilterChip bg-foreground/[0.07] + border                 ← Layer 3 rest
             └─ FilterChip bg-primary (selected)                           ← Layer 3+, high contrast

@@ -23,10 +23,12 @@ describe('usePracticeSessionStart', () => {
     });
     expect(output.sessionMode).toBe('tutor');
     expect(output.sessionCount).toBe(20);
+    expect(output.sessionCountInputValue).toBe('20');
     expect(output.sessionStartStatus).toBe('idle');
     expect(output.sessionStartError).toBeNull();
     expect(typeof output.onSessionModeChange).toBe('function');
     expect(typeof output.onSessionCountChange).toBe('function');
+    expect(typeof output.onSessionCountBlur).toBe('function');
     expect(typeof output.onToggleTag).toBe('function');
     expect(typeof output.onDifficultyChange).toBe('function');
     expect(typeof output.onStatusChange).toBe('function');

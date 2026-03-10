@@ -19,6 +19,7 @@ describe('usePracticeSessionControls', () => {
     });
     expect(output.sessionMode).toBe('tutor');
     expect(output.sessionCount).toBe(20);
+    expect(output.sessionCountInputValue).toBe('20');
     expect(output.availableCountStatus).toBe('loading');
     expect(output.availableCount).toBeNull();
     expect(output.tagLoadStatus).toBe('loading');
@@ -30,6 +31,7 @@ describe('usePracticeSessionControls', () => {
     expect(output.incompleteSession).toBeNull();
     expect(typeof output.onSessionModeChange).toBe('function');
     expect(typeof output.onSessionCountChange).toBe('function');
+    expect(typeof output.onSessionCountBlur).toBe('function');
     expect(typeof output.onToggleTag).toBe('function');
     expect(typeof output.onDifficultyChange).toBe('function');
     expect(typeof output.onStatusChange).toBe('function');

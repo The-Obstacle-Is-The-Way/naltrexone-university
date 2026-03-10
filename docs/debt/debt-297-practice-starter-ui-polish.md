@@ -2,7 +2,8 @@
 
 **Priority:** P3
 **Created:** 2026-03-10
-**Status:** Open
+**Status:** Resolved
+**Resolved:** 2026-03-10
 **Related:** DEBT-296 (filter summary hierarchy swap — resolved), DEBT-298 (broader UI consistency audit)
 
 ---
@@ -290,17 +291,26 @@ Low. Keyboard increment (up/down arrows) still works. Users who relied on the ti
 
 ## Acceptance Criteria
 
-- [ ] Collapsed filter summaries read "All included by default" (not "All {kind} included by default")
-- [ ] `tagKindPluralLabels` removed if no longer used
-- [ ] Questions input border removed or softened to match surrounding controls
-- [ ] Questions input allows clearing the field and typing a new number (clamp on blur)
-- [ ] `practice-page-logic.test.ts` updated for the transient-empty-state session-count contract and idempotency-key rotation behavior
-- [ ] Card title uses `<h2>` with visually distinct styling (`text-base font-semibold`)
-- [ ] Native number input spinners hidden via CSS
-- [ ] All existing tests updated and passing
-- [ ] `docs/frontend/pages/practice.md` updated
-- [ ] `docs/content/tag-taxonomy-golden-spec.md` updated
-- [ ] Visual verification on both light and dark mode
+- [x] Collapsed filter summaries read "All included by default" (not "All {kind} included by default")
+- [x] `tagKindPluralLabels` removed if no longer used
+- [x] Questions input border removed or softened to match surrounding controls
+- [x] Questions input allows clearing the field and typing a new number (clamp on blur)
+- [x] `practice-page-logic.test.ts` updated for the transient-empty-state session-count contract and idempotency-key rotation behavior
+- [x] Card title uses `<h2>` with visually distinct styling (`text-base font-semibold`)
+- [x] Native number input spinners hidden via CSS
+- [x] All existing tests updated and passing
+- [x] `docs/frontend/pages/practice.md` updated
+- [x] `docs/content/tag-taxonomy-golden-spec.md` updated
+- [x] Visual verification on both light and dark mode
+
+## Outcome
+
+Implemented in the practice session starter.
+
+- Collapsed zero-state filter summaries now read `All included by default`.
+- The Questions input now matches the starter card's tonal surface treatment (`border-0 bg-foreground/5 shadow-none`) and hides native browser spinners.
+- Session count input now supports clear-and-retype via a raw string intermediate state and clamps back to the canonical numeric count on blur.
+- The starter card title is now a semantic `<h2>` with stronger visual hierarchy.
 
 ---
 

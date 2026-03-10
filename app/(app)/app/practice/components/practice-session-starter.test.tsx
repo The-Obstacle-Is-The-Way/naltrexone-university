@@ -36,6 +36,27 @@ describe('PracticeSessionStarter', () => {
 
     expect(html).toContain('data-slot="card"');
     expect(html).toContain('data-slot="input"');
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const title = doc.querySelector('h2');
+    const input = doc.querySelector('#session-count-input');
+    const inputTokens = getClassTokens(input?.getAttribute('class') ?? '');
+
+    expect(title?.textContent).toBe('Start a session');
+    expect(title?.getAttribute('class')).toContain(
+      'text-base font-semibold text-foreground',
+    );
+    expect(inputTokens.has('w-24')).toBe(true);
+    expect(inputTokens.has('border-0')).toBe(true);
+    expect(inputTokens.has('shadow-none')).toBe(true);
+    expect(inputTokens.has('bg-foreground/5')).toBe(true);
+    expect(inputTokens.has('[appearance:textfield]')).toBe(true);
+    expect(
+      inputTokens.has('[&::-webkit-outer-spin-button]:appearance-none'),
+    ).toBe(true);
+    expect(
+      inputTokens.has('[&::-webkit-inner-spin-button]:appearance-none'),
+    ).toBe(true);
   });
 
   it('associates a visible label with the session count input', () => {
@@ -152,8 +173,7 @@ describe('PracticeSessionStarter', () => {
     expect(
       summaries.some(
         (text) =>
-          text.includes('Topic') &&
-          text.includes('All topics included by default'),
+          text.includes('Topic') && text.includes('All included by default'),
       ),
     ).toBe(true);
     expect(
@@ -184,7 +204,7 @@ describe('PracticeSessionStarter', () => {
       const summaryText = element.querySelector('summary')?.textContent ?? '';
       return (
         summaryText.includes('Topic') &&
-        summaryText.includes('All topics included by default')
+        summaryText.includes('All included by default')
       );
     });
     const substanceDetailsTokens = getClassTokens(
@@ -217,8 +237,7 @@ describe('PracticeSessionStarter', () => {
       topicDetails?.querySelectorAll('summary span') ?? [],
     ).find(
       (element) =>
-        (element.textContent ?? '').trim() ===
-          'All topics included by default' &&
+        (element.textContent ?? '').trim() === 'All included by default' &&
         getClassTokens(element.getAttribute('class') ?? '').has(
           'text-foreground/60',
         ),

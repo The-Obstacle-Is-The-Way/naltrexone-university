@@ -7,10 +7,12 @@ import {
   createBookmarksEffect,
   createDifficultyChangeHandler,
   createLoadNextQuestionAction,
+  createSessionCountBlurHandler,
   createSessionCountChangeHandler,
   createSessionModeChangeHandler,
   createStatusChangeHandler,
   createToggleTagHandler,
+  handleSessionCountBlur,
   handleSessionCountChange,
   handleSessionModeChange,
   loadNextQuestion,
@@ -975,30 +977,71 @@ describe('practice-page-logic', () => {
   });
 
   describe('handleSessionCountChange', () => {
-    it('sets the count from numeric input', () => {
+    it('stores the raw input value and sets the count from numeric input', () => {
+      const setSessionCountInputValue = vi.fn();
       const setSessionCount = vi.fn();
 
-      handleSessionCountChange(setSessionCount, { target: { value: '12' } });
+      handleSessionCountChange(setSessionCountInputValue, setSessionCount, {
+        target: { value: '12' },
+      });
 
+      expect(setSessionCountInputValue).toHaveBeenCalledWith('12');
       expect(setSessionCount).toHaveBeenCalledWith(12);
     });
 
-    it('clamps to minimum when value is below range or not finite', () => {
+    it('stores the raw input value and clamps finite values within range', () => {
+      const setSessionCountInputValue = vi.fn();
       const setSessionCount = vi.fn();
 
-      handleSessionCountChange(setSessionCount, { target: { value: '0' } });
-      handleSessionCountChange(setSessionCount, { target: { value: '-1' } });
-      handleSessionCountChange(setSessionCount, { target: { value: 'NaN' } });
+      handleSessionCountChange(setSessionCountInputValue, setSessionCount, {
+        target: { value: '0' },
+      });
+      handleSessionCountChange(setSessionCountInputValue, setSessionCount, {
+        target: { value: '-1' },
+      });
 
-      expect(setSessionCount).toHaveBeenLastCalledWith(SESSION_COUNT_MIN);
+      expect(setSessionCountInputValue).toHaveBeenNthCalledWith(1, '0');
+      expect(setSessionCountInputValue).toHaveBeenNthCalledWith(2, '-1');
+      expect(setSessionCount).toHaveBeenNthCalledWith(1, SESSION_COUNT_MIN);
+      expect(setSessionCount).toHaveBeenNthCalledWith(2, SESSION_COUNT_MIN);
     });
 
-    it('clamps to maximum when value is above range', () => {
+    it('stores the raw input value and clamps to maximum when value is above range', () => {
+      const setSessionCountInputValue = vi.fn();
       const setSessionCount = vi.fn();
 
-      handleSessionCountChange(setSessionCount, { target: { value: '101' } });
+      handleSessionCountChange(setSessionCountInputValue, setSessionCount, {
+        target: { value: '101' },
+      });
 
+      expect(setSessionCountInputValue).toHaveBeenCalledWith('101');
       expect(setSessionCount).toHaveBeenCalledWith(SESSION_COUNT_MAX);
+    });
+
+    it('stores raw input without changing the count when the field is cleared or invalid', () => {
+      const setSessionCountInputValue = vi.fn();
+      const setSessionCount = vi.fn();
+
+      handleSessionCountChange(setSessionCountInputValue, setSessionCount, {
+        target: { value: '' },
+      });
+      handleSessionCountChange(setSessionCountInputValue, setSessionCount, {
+        target: { value: 'NaN' },
+      });
+
+      expect(setSessionCountInputValue).toHaveBeenNthCalledWith(1, '');
+      expect(setSessionCountInputValue).toHaveBeenNthCalledWith(2, 'NaN');
+      expect(setSessionCount).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleSessionCountBlur', () => {
+    it('resets the raw input string to the canonical numeric count on blur', () => {
+      const setSessionCountInputValue = vi.fn();
+
+      handleSessionCountBlur(20, setSessionCountInputValue);
+
+      expect(setSessionCountInputValue).toHaveBeenCalledWith('20');
     });
   });
 
@@ -1196,8 +1239,10 @@ describe('practice-page-session-start handlers', () => {
 
   it('rotates idempotency key when session count changes', () => {
     const setSessionCount = vi.fn();
+    const setSessionCountInputValue = vi.fn();
     const setIdempotencyKey = vi.fn();
     const handler = createSessionCountChangeHandler({
+      setSessionCountInputValue,
       setSessionCount,
       setIdempotencyKey,
       createIdempotencyKey: () => 'idem_2',
@@ -1205,8 +1250,39 @@ describe('practice-page-session-start handlers', () => {
 
     handler({ target: { value: '12' } });
 
+    expect(setSessionCountInputValue).toHaveBeenCalledWith('12');
     expect(setSessionCount).toHaveBeenCalledWith(12);
     expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
+  });
+
+  it('does not rotate idempotency key when the session count field is cleared', () => {
+    const setSessionCount = vi.fn();
+    const setSessionCountInputValue = vi.fn();
+    const setIdempotencyKey = vi.fn();
+    const handler = createSessionCountChangeHandler({
+      setSessionCountInputValue,
+      setSessionCount,
+      setIdempotencyKey,
+      createIdempotencyKey: () => 'idem_2',
+    });
+
+    handler({ target: { value: '' } });
+
+    expect(setSessionCountInputValue).toHaveBeenCalledWith('');
+    expect(setSessionCount).not.toHaveBeenCalled();
+    expect(setIdempotencyKey).not.toHaveBeenCalled();
+  });
+
+  it('resets the raw input string to the canonical numeric count on blur', () => {
+    const setSessionCountInputValue = vi.fn();
+    const handler = createSessionCountBlurHandler({
+      sessionCount: 20,
+      setSessionCountInputValue,
+    });
+
+    handler();
+
+    expect(setSessionCountInputValue).toHaveBeenCalledWith('20');
   });
 
   it('applies tag toggles and rotates idempotency key', () => {

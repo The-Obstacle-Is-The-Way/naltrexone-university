@@ -4,6 +4,7 @@ import { navigateTo } from '../client-navigation';
 import type { PracticeSessionStarterProps } from '../components/practice-session-starter';
 import {
   createDifficultyChangeHandler,
+  createSessionCountBlurHandler,
   createSessionCountChangeHandler,
   createSessionModeChangeHandler,
   createStatusChangeHandler,
@@ -20,10 +21,14 @@ export type UsePracticeSessionStartOutput = {
   filters: PracticeFilters;
   sessionMode: 'tutor' | 'exam';
   sessionCount: number;
+  sessionCountInputValue: string;
   sessionStartStatus: 'idle' | 'loading' | 'error';
   sessionStartError: string | null;
   onSessionModeChange: PracticeSessionStarterProps['onSessionModeChange'];
   onSessionCountChange: PracticeSessionStarterProps['onSessionCountChange'];
+  onSessionCountBlur: NonNullable<
+    PracticeSessionStarterProps['onSessionCountBlur']
+  >;
   onToggleTag: PracticeSessionStarterProps['onToggleTag'];
   onDifficultyChange: PracticeSessionStarterProps['onDifficultyChange'];
   onStatusChange: PracticeSessionStarterProps['onStatusChange'];
@@ -40,6 +45,7 @@ export function usePracticeSessionStart(
   });
   const [sessionMode, setSessionMode] = useState<'tutor' | 'exam'>('tutor');
   const [sessionCount, setSessionCount] = useState(20);
+  const [sessionCountInputValue, setSessionCountInputValue] = useState('20');
   const [startSessionIdempotencyKey, setStartSessionIdempotencyKey] = useState(
     () => crypto.randomUUID(),
   );
@@ -63,11 +69,21 @@ export function usePracticeSessionStart(
   const onSessionCountChange = useMemo(
     () =>
       createSessionCountChangeHandler({
+        setSessionCountInputValue,
         setSessionCount,
         setIdempotencyKey: setStartSessionIdempotencyKey,
         createIdempotencyKey: () => crypto.randomUUID(),
       }),
     [],
+  );
+
+  const onSessionCountBlur = useMemo(
+    () =>
+      createSessionCountBlurHandler({
+        sessionCount,
+        setSessionCountInputValue,
+      }),
+    [sessionCount],
   );
 
   const onToggleTag = useMemo(
@@ -128,10 +144,12 @@ export function usePracticeSessionStart(
     filters,
     sessionMode,
     sessionCount,
+    sessionCountInputValue,
     sessionStartStatus,
     sessionStartError,
     onSessionModeChange,
     onSessionCountChange,
+    onSessionCountBlur,
     onToggleTag,
     onDifficultyChange,
     onStatusChange,

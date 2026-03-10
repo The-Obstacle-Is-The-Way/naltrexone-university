@@ -61,6 +61,7 @@ export default function PracticePageClient() {
           <PracticeSessionStarter
             sessionMode={sessionControls.sessionMode}
             sessionCount={sessionControls.sessionCount}
+            sessionCountInputValue={sessionControls.sessionCountInputValue}
             filters={sessionControls.filters}
             availableCountStatus={sessionControls.availableCountStatus}
             availableCount={sessionControls.availableCount}
@@ -73,6 +74,7 @@ export default function PracticePageClient() {
             onToggleTag={sessionControls.onToggleTag}
             onSessionModeChange={sessionControls.onSessionModeChange}
             onSessionCountChange={sessionControls.onSessionCountChange}
+            onSessionCountBlur={sessionControls.onSessionCountBlur}
             onStartSession={() => {
               fireAndForget(
                 sessionControls.onStartSession(),
