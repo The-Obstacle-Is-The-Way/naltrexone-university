@@ -214,7 +214,7 @@ export function DashboardView({
                         <div className="mt-1 text-xs text-muted-foreground">
                           <span className={resultClass}>{resultLabel}</span>
                           <span className="mx-2">•</span>
-                          <span>Answered {formatDate(row.answeredAt)}</span>
+                          <span>{formatDate(row.answeredAt)}</span>
                         </div>
                       </div>
                     </li>
@@ -242,7 +242,7 @@ export function DashboardView({
                       <div className="mt-1 text-xs text-muted-foreground">
                         <span className={resultClass}>{resultLabel}</span>
                         <span className="mx-2">•</span>
-                        <span>Answered {formatDate(row.answeredAt)}</span>
+                        <span>{formatDate(row.answeredAt)}</span>
                       </div>
                     </Link>
                   </li>

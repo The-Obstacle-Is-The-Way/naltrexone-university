@@ -38,7 +38,7 @@ Text in this application flows through two fundamentally different pipelines. Th
 | Utility/auth h1 | `text-xl` | "Sign In", "Checkout complete" |
 | App/utility/section subtitle or helper copy | `text-base text-muted-foreground` | "Track your progress and keep your streak alive.", "Authentication unavailable in this environment." |
 | Section headers | `text-sm font-medium` | "Recent activity", "Correct answer" |
-| Labels / secondary text | `text-sm text-muted-foreground` | "Answered Mar 7, 2026", "Showing 1-20 of 65" |
+| Labels / secondary text | `text-sm text-muted-foreground` | "Mar 7, 2026", "Showing 1-20 of 65" |
 | Stat numbers | `text-3xl font-bold font-display` | "848", "72%" |
 | Error details | `text-xs text-muted-foreground` | Digest codes, fallback messages |
 | App buttons | `text-sm font-medium` | "Submit", "Next", "Bookmark" |

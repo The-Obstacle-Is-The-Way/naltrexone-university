@@ -156,8 +156,10 @@ describe('app/(app)/app/dashboard', () => {
     expect(html).toContain('Hard');
     expect(html).toContain('Correct');
     expect(html).toContain('Incorrect');
-    expect(html).toContain('Answered Feb 2, 2026');
-    expect(html).toContain('Answered Feb 3, 2026');
+    expect(html).toContain('Feb 2, 2026');
+    expect(html).toContain('Feb 3, 2026');
+    expect(html).not.toContain('Answered Feb 2, 2026');
+    expect(html).not.toContain('Answered Feb 3, 2026');
     expect(html).not.toContain('Recent missed');
   });
 
@@ -355,6 +357,10 @@ describe('app/(app)/app/dashboard', () => {
     expect(html).toContain('[Question no longer available]');
     expect(html).toContain('Incorrect');
     expect(html).toContain('Correct');
+    expect(html).toContain('Feb 1, 2026');
+    expect(html).toContain('Feb 2, 2026');
+    expect(html).not.toContain('Answered Feb 1, 2026');
+    expect(html).not.toContain('Answered Feb 2, 2026');
   });
 
   it('renders per-section error when sessionHistoryResult fails', () => {
