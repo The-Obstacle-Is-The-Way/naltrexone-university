@@ -134,6 +134,8 @@ export async function reconcileStripeSubscriptions(
             localSubscriptionUpdate,
           ],
         ]);
+        let duplicateIds: string[] = [];
+        let keptSubscriptionId: string | null = null;
 
         // Intentionally sequential: in this per-row callback we iterate
         // blockingSubscriptionIds one-at-a-time. retrieveAndNormalizeStripeSubscription
@@ -173,23 +175,19 @@ export async function reconcileStripeSubscriptions(
 
         if (blockingSubscriptionIds.length > 0) {
           // Phase 3: select the canonical subscription via period-end sort + deterministic tie-break.
-          const keptSubscriptionId = blockingSubscriptionIds.includes(
-            row.stripeSubscriptionId,
-          )
-            ? row.stripeSubscriptionId
-            : blockingSubscriptionIds
-                .map((id) => canonicalById.get(id))
-                .filter((subscription): subscription is typeof canonical => {
-                  return subscription !== undefined;
-                })
-                .sort((a, b) => {
-                  const periodDiff =
-                    b.currentPeriodEnd.getTime() - a.currentPeriodEnd.getTime();
-                  if (periodDiff !== 0) return periodDiff;
-                  return a.externalSubscriptionId.localeCompare(
-                    b.externalSubscriptionId,
-                  );
-                })[0]?.externalSubscriptionId;
+          keptSubscriptionId = blockingSubscriptionIds
+            .map((id) => canonicalById.get(id))
+            .filter((subscription): subscription is typeof canonical => {
+              return subscription !== undefined;
+            })
+            .sort((a, b) => {
+              const periodDiff =
+                b.currentPeriodEnd.getTime() - a.currentPeriodEnd.getTime();
+              if (periodDiff !== 0) return periodDiff;
+              return a.externalSubscriptionId.localeCompare(
+                b.externalSubscriptionId,
+              );
+            })[0]?.externalSubscriptionId;
 
           if (!keptSubscriptionId) {
             throw new ApplicationError(
@@ -207,41 +205,12 @@ export async function reconcileStripeSubscriptions(
           }
           canonical = kept;
 
-          const duplicateIds = blockingSubscriptionIds.filter(
+          duplicateIds = blockingSubscriptionIds.filter(
             (id) => id !== keptSubscriptionId,
           );
-
-          // Phase 4: cancel duplicate blocking subscriptions when not in dry-run mode.
-          if (!dryRun && duplicateIds.length > 0) {
-            for (const duplicateId of duplicateIds) {
-              await callStripeWithRetry({
-                operation: 'subscriptions.cancel',
-                fn: () =>
-                  cancelSubscription(duplicateId, {
-                    idempotencyKey: `reconcile_duplicate_subscription:${duplicateId}`,
-                  }),
-                logger: deps.logger,
-              });
-            }
-          }
-
-          if (duplicateIds.length > 0) {
-            deps.logger.warn(
-              {
-                userId: row.userId,
-                stripeCustomerId: localSubscriptionUpdate.externalCustomerId,
-                keptSubscriptionId,
-                duplicateSubscriptionIds: duplicateIds,
-                dryRun,
-              },
-              dryRun
-                ? 'Detected duplicate Stripe subscriptions (dry-run)'
-                : 'Canceled duplicate Stripe subscriptions',
-            );
-          }
         }
 
-        // Phase 5: persist canonical subscription and customer mapping atomically.
+        // Phase 4: persist canonical subscription and customer mapping atomically.
         await deps.transaction(async ({ stripeCustomers, subscriptions }) => {
           await stripeCustomers.insert(
             canonical.userId,
@@ -257,6 +226,36 @@ export async function reconcileStripeSubscriptions(
             cancelAtPeriodEnd: canonical.cancelAtPeriodEnd,
           });
         });
+
+        if (duplicateIds.length > 0) {
+          // Phase 5: cancel duplicate blocking subscriptions when not in dry-run mode.
+          if (!dryRun) {
+            for (const duplicateId of duplicateIds) {
+              await callStripeWithRetry({
+                operation: 'subscriptions.cancel',
+                fn: () =>
+                  cancelSubscription(duplicateId, {
+                    idempotencyKey: `reconcile_duplicate_subscription:${duplicateId}`,
+                  }),
+                logger: deps.logger,
+              });
+            }
+          }
+
+          deps.logger.warn(
+            {
+              userId: row.userId,
+              stripeCustomerId: localSubscriptionUpdate.externalCustomerId,
+              keptSubscriptionId:
+                keptSubscriptionId ?? canonical.externalSubscriptionId,
+              duplicateSubscriptionIds: duplicateIds,
+              dryRun,
+            },
+            dryRun
+              ? 'Detected duplicate Stripe subscriptions (dry-run)'
+              : 'Canceled duplicate Stripe subscriptions',
+          );
+        }
 
         return { ok: true as const };
       } catch (error) {

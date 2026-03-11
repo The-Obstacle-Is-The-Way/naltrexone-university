@@ -1,0 +1,94 @@
+# DEBT-303: Reconciliation Cancel Loop — Handle Already-Canceled Subscriptions Idempotently
+
+**Priority:** P3
+**Created:** 2026-03-11
+**Status:** Open
+**Related:** BUG-205 (canonical selection fix, PR #199)
+
+---
+
+## Context
+
+During the BUG-205 code review, CodeRabbit identified a defensive hardening opportunity in the reconciliation job's duplicate cancellation loop (Phase 5 of `reconcile-stripe-subscriptions.ts`).
+
+The cancel loop iterates `duplicateIds` — subscription IDs derived from a `subscriptions.list` snapshot taken earlier in the same job run. If an external actor (Stripe dashboard, webhook handler, another cron run) cancels one of those subscriptions between the list call and the cancel call, `callStripeWithRetry` will receive a non-transient Stripe error (likely `invalid_request_error` / `resource_missing`) and fail the entire row — even though the canonical subscription was already persisted in Phase 4.
+
+This is a pre-existing race condition, not introduced by BUG-205. It was deferred from PR #199 to avoid scope creep.
+
+---
+
+## Current Behavior
+
+Phase 5 cancel loop (`reconcile-stripe-subscriptions.ts:232-242`):
+
+```typescript
+for (const duplicateId of duplicateIds) {
+  await callStripeWithRetry({
+    operation: 'subscriptions.cancel',
+    fn: () =>
+      cancelSubscription(duplicateId, {
+        idempotencyKey: `reconcile_duplicate_subscription:${duplicateId}`,
+      }),
+    logger: deps.logger,
+  });
+}
+```
+
+If Stripe returns a non-transient error (e.g., subscription already canceled), `callStripeWithRetry` throws, the row is marked as failed, and remaining duplicates are not canceled.
+
+## Expected Behavior
+
+An already-canceled subscription is a success condition for the cancel loop — the goal was to cancel it, and it's canceled. The loop should:
+
+1. Catch Stripe errors indicating the subscription is already canceled or does not exist
+2. Log at info/debug level that the subscription was already canceled
+3. Continue to the next duplicate
+4. Only rethrow for genuinely unexpected Stripe errors
+
+## Recommended Fix
+
+Wrap the `callStripeWithRetry` call in a try-catch inside the cancel loop:
+
+```typescript
+for (const duplicateId of duplicateIds) {
+  try {
+    await callStripeWithRetry({
+      operation: 'subscriptions.cancel',
+      fn: () =>
+        cancelSubscription(duplicateId, {
+          idempotencyKey: `reconcile_duplicate_subscription:${duplicateId}`,
+        }),
+      logger: deps.logger,
+    });
+  } catch (error) {
+    if (isAlreadyCanceledError(error)) {
+      deps.logger.info(
+        { stripeSubscriptionId: duplicateId },
+        'Duplicate subscription already canceled externally',
+      );
+      continue;
+    }
+    throw error;
+  }
+}
+```
+
+The `isAlreadyCanceledError` helper should inspect Stripe error shape (e.g., `error.type === 'invalid_request_error'` with `resource_missing` code or an "already canceled" message). Check the existing `isTransientExternalError` in `src/adapters/shared/retry.ts` for the error classification pattern already in use.
+
+## Test Plan
+
+1. Add a test: cancel returns `invalid_request_error` / `resource_missing` for one duplicate → loop continues, remaining duplicates are still canceled, row succeeds
+2. Add a test: cancel returns a genuinely unexpected error → row fails as before
+3. Existing tests remain unchanged
+
+## Risk
+
+P3 because:
+- The race window is narrow (seconds between list and cancel within the same cron run)
+- Phase 4 persists the canonical subscription before any cancels, so DB state is always consistent
+- The failure mode is a row-level failure in the cron report, not data corruption
+- A re-run of the cron job would see the subscription as already canceled in the list (non-blocking status) and skip it
+
+## Source
+
+CodeRabbit review on PR #199 (commit `6dd4d778`), second review pass.

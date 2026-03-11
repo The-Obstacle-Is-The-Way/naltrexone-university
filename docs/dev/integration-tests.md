@@ -1,12 +1,14 @@
 # Integration Tests
 
-**Last Updated:** 2026-02-14
+**Last Updated:** 2026-03-11
 
 Integration tests run against a real PostgreSQL database to verify repository queries, controller actions, and database constraints.
 
 ---
 
 ## Local Setup
+
+All four steps are required. Skipping any step causes test failures that look like real bugs but aren't.
 
 ### 1. Start the Test Database
 
@@ -22,13 +24,35 @@ This runs `docker compose up -d --wait`, which starts a PostgreSQL 16 container 
 DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:migrate
 ```
 
-### 3. Run Tests
+This applies migration files from `db/migrations/` in order, including extensions like `pgcrypto`. **Do not use `drizzle-kit push`** — it creates tables from the schema but skips migration files, so extensions and constraints defined in migrations will be missing (e.g., `pgcrypto` for `gen_random_uuid`).
+
+### 3. Seed Test Data
+
+```bash
+DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:seed
+```
+
+Seeds question content and tags from `content/questions/`. Required for `tag-taxonomy-census.integration.test.ts` which validates that all tags have canonical kinds. Without seeding, that test file fails with `INTEGRATION_SEED_MISSING`.
+
+CI seeds with `SEED_INCLUDE_PLACEHOLDERS=true`. Local integration tests pass with plain `pnpm db:seed`, but you can add the flag for exact CI seed parity:
+
+```bash
+SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:seed
+```
+
+### 4. Run Tests
 
 ```bash
 pnpm test:integration
 ```
 
 If the database is unreachable, the test setup fails fast with a clear error message and the exact commands to fix it.
+
+### One-Liner (Full Setup)
+
+```bash
+pnpm db:test:up && DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:migrate && SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:seed && pnpm test:integration
+```
 
 ### Reset (Nuclear Option)
 
@@ -38,7 +62,7 @@ If the database gets into a bad state:
 pnpm db:test:reset
 ```
 
-This runs `docker compose down -v && docker compose up -d --wait` — destroys the volume and starts fresh. You'll need to re-run migrations afterward.
+This runs `docker compose down -v && docker compose up -d --wait` — destroys the volume and starts fresh. You'll need to re-run migrations and seeding (steps 2-3) afterward.
 
 ---
 
@@ -60,7 +84,7 @@ To use a non-default local port, set `DB_TEST_PORT` before starting Docker and u
 GitHub Actions (`.github/workflows/ci.yml`) spins up its own PostgreSQL 16 service container on every run. It does not depend on local Docker state. The pipeline runs:
 
 1. `pnpm db:migrate` — applies migrations to the CI database
-2. `pnpm db:seed` — seeds test data
+2. `SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed` — seeds test data, including placeholder content used by CI parity checks
 3. `pnpm test:integration:coverage` — runs all integration tests with coverage
 
 Integration tests are part of every PR and every push to `main`.
@@ -83,7 +107,7 @@ Integration tests are part of every PR and every push to `main`.
 | `tests/integration/bug-regression.integration.test.ts` | 10 | Bug regression tests (BUG-186, 187, 188, 192, 195) |
 | `tests/integration/controllers.integration.test.ts` | 5 | Controller → repository → DB round trips |
 | `tests/integration/actions.stripe.integration.test.ts` | 2 | Stripe billing controller actions |
-| `tests/integration/tag-taxonomy-census.integration.test.ts` | 7 | Tag taxonomy validation |
+| `tests/integration/tag-taxonomy-census.integration.test.ts` | 4 | Tag taxonomy validation (requires seed data) |
 
 ---
 
@@ -109,3 +133,21 @@ Integration tests load `.env.test` but do **not** override an already-set `DATAB
 ```bash
 DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm test:integration
 ```
+
+**`drizzle-kit push` was used instead of `pnpm db:migrate`**
+
+Symptoms: `pgcrypto` extension missing (`db.integration.test.ts` fails), `gen_random_uuid()` errors, or missing constraints. `drizzle-kit push` infers schema from TypeScript but does not run migration SQL files. Fix: reset and re-run migrations.
+
+```bash
+pnpm db:test:reset
+DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:migrate
+DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:seed
+```
+
+**`tag-taxonomy-census` fails / `INTEGRATION_SEED_MISSING`**
+
+The tags table is empty because `pnpm db:seed` was not run. See Step 3 above.
+
+**`drizzle.config.ts` reads `.env.local` first**
+
+`drizzle-kit` commands without an explicit `DATABASE_URL` prefix will use `.env.local`, which points to your remote Neon database — not the local test container. Always prefix drizzle-kit and db:migrate/db:seed commands with the test DATABASE_URL when targeting the local test DB.

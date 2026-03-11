@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-10
+**Last Updated:** 2026-03-11
 
 ---
 
@@ -22,7 +22,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 7 verified client-side flows still report only to console or silent fallbacks | P2 | — |
 | [DEBT-298](./debt-298-ui-structural-consistency.md) | UI Structural Consistency Audit — inconsistent label/control spacing patterns, non-heading card titles, sub-44px shared touch targets, and `items-center` alignment mismatches across verified views | P3 | — |
 | [DEBT-300](./debt-300-history-questions-all-sources.md) | History Questions Tab — show all question sources (ad-hoc + tutor + exam) instead of ad-hoc only; add Source filter dropdown; fix Dashboard → History "View all" IA inconsistency | P2 | — |
-**Next Debt ID:** DEBT-303
+| [DEBT-303](./debt-303-reconciliation-cancel-idempotency.md) | Reconciliation cancel loop — handle already-canceled Stripe subscriptions idempotently instead of failing the row | P3 | — |
+**Next Debt ID:** DEBT-304
 
 ---
 

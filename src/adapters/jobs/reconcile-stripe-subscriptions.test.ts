@@ -44,6 +44,7 @@ type ReconciliationTestScenarioInput = {
   stripeCustomers?: FakeStripeCustomerRepository;
   subscriptions?: FakeSubscriptionRepository;
   logger?: FakeLogger;
+  transaction?: ReconciliationDeps['transaction'];
 };
 
 function createSubscriptionFixture(input: {
@@ -185,6 +186,8 @@ function createReconciliationTestScenario(
   const listLocalSubscriptions =
     input.listLocalSubscriptions ??
     (async () => input.localSubscriptions ?? []);
+  const transaction =
+    input.transaction ?? (async (fn) => fn({ stripeCustomers, subscriptions }));
 
   async function run(overrides: Partial<ReconciliationInput> = {}) {
     return reconcileStripeSubscriptions(
@@ -198,7 +201,7 @@ function createReconciliationTestScenario(
         priceIds: { monthly: 'price_m', annual: 'price_a' },
         logger,
         listLocalSubscriptions,
-        transaction: async (fn) => fn({ stripeCustomers, subscriptions }),
+        transaction,
       },
     );
   }
@@ -667,9 +670,8 @@ describe('reconcileStripeSubscriptions', () => {
     expect(scenario.logger.errorCalls).toHaveLength(0);
   });
 
-  // sub_keep is retained because the production code short-circuits: when the
-  // local row's subscription is still in the blocking set, it is always chosen
-  // as canonical regardless of period-end ordering.
+  // The canonical blocking subscription is selected from the full blocking set:
+  // highest currentPeriodEnd wins, then externalSubscriptionId asc breaks ties.
   it('cancels duplicate blocking subscriptions when dryRun is disabled', async () => {
     const keep = createUserSubscriptionFixture('sub_keep', {
       status: 'active',
@@ -706,16 +708,33 @@ describe('reconcileStripeSubscriptions', () => {
       failures: [],
     });
     expect(stripe.subscriptions.cancel).toHaveBeenCalledTimes(2);
+    expect(stripe.subscriptions.cancel).toHaveBeenNthCalledWith(1, 'sub_keep', {
+      idempotencyKey: 'reconcile_duplicate_subscription:sub_keep',
+    });
     expect(stripe.subscriptions.cancel).toHaveBeenNthCalledWith(
-      1,
+      2,
       'sub_dup_1',
       { idempotencyKey: 'reconcile_duplicate_subscription:sub_dup_1' },
     );
-    expect(stripe.subscriptions.cancel).toHaveBeenNthCalledWith(
-      2,
-      'sub_dup_2',
-      { idempotencyKey: 'reconcile_duplicate_subscription:sub_dup_2' },
-    );
+    await expect(
+      scenario.subscriptions.findByUserId('user_1'),
+    ).resolves.toMatchObject({
+      status: 'pastDue',
+      currentPeriodEnd: new Date(1_700_000_200 * 1000),
+    });
+    await expect(
+      scenario.subscriptions.findByExternalSubscriptionId('sub_dup_2'),
+    ).resolves.toMatchObject({
+      userId: 'user_1',
+      status: 'pastDue',
+      currentPeriodEnd: new Date(1_700_000_200 * 1000),
+    });
+    await expect(
+      scenario.subscriptions.findByExternalSubscriptionId('sub_keep'),
+    ).resolves.toBeNull();
+    await expect(
+      scenario.subscriptions.findByExternalSubscriptionId('sub_dup_1'),
+    ).resolves.toBeNull();
   });
 
   it('does not cancel duplicate blocking subscriptions in dry-run mode', async () => {
@@ -789,6 +808,204 @@ describe('reconcileStripeSubscriptions', () => {
       scenario.subscriptions.findByExternalSubscriptionId(localCanceled.id),
     ).resolves.toBeNull();
     expect(stripe.subscriptions.cancel).not.toHaveBeenCalled();
+  });
+
+  it('selects canonical by highest currentPeriodEnd even when local row is blocking', async () => {
+    const local = createUserSubscriptionFixture('sub_local', {
+      status: 'active',
+      currentPeriodEnd: 1_700_000_000,
+    });
+    const better = createUserSubscriptionFixture('sub_better', {
+      status: 'active',
+      currentPeriodEnd: 1_800_000_000,
+    });
+
+    const stripe = createStripeFromFixtures({
+      fixtures: [{ fixture: local }, { fixture: better }],
+    });
+
+    const scenario = createSingleRowScenario({
+      stripe,
+      subscriptionId: local.id,
+    });
+
+    const result = await scenario.run({ dryRun: false });
+
+    expect(result).toEqual({
+      scanned: 1,
+      updated: 1,
+      failed: 0,
+      failures: [],
+    });
+    expect(stripe.subscriptions.cancel).toHaveBeenCalledTimes(1);
+    expect(stripe.subscriptions.cancel).toHaveBeenCalledWith('sub_local', {
+      idempotencyKey: 'reconcile_duplicate_subscription:sub_local',
+    });
+    await expect(
+      scenario.subscriptions.findByUserId('user_1'),
+    ).resolves.toMatchObject({
+      status: 'active',
+      currentPeriodEnd: new Date(1_800_000_000 * 1000),
+    });
+    await expect(
+      scenario.subscriptions.findByExternalSubscriptionId('sub_better'),
+    ).resolves.toMatchObject({
+      userId: 'user_1',
+      status: 'active',
+      currentPeriodEnd: new Date(1_800_000_000 * 1000),
+    });
+    await expect(
+      scenario.subscriptions.findByExternalSubscriptionId('sub_local'),
+    ).resolves.toBeNull();
+  });
+
+  it('breaks ties by lexicographically smallest subscription id', async () => {
+    const local = createUserSubscriptionFixture('sub_z', {
+      status: 'active',
+      currentPeriodEnd: 1_800_000_000,
+    });
+    const betterTieBreak = createUserSubscriptionFixture('sub_a', {
+      status: 'active',
+      currentPeriodEnd: 1_800_000_000,
+    });
+
+    const stripe = createStripeFromFixtures({
+      fixtures: [{ fixture: local }, { fixture: betterTieBreak }],
+    });
+
+    const scenario = createSingleRowScenario({
+      stripe,
+      subscriptionId: local.id,
+    });
+
+    const result = await scenario.run({ dryRun: false });
+
+    expect(result).toEqual({
+      scanned: 1,
+      updated: 1,
+      failed: 0,
+      failures: [],
+    });
+    expect(stripe.subscriptions.cancel).toHaveBeenCalledTimes(1);
+    expect(stripe.subscriptions.cancel).toHaveBeenCalledWith('sub_z', {
+      idempotencyKey: 'reconcile_duplicate_subscription:sub_z',
+    });
+    await expect(
+      scenario.subscriptions.findByExternalSubscriptionId('sub_a'),
+    ).resolves.toMatchObject({
+      userId: 'user_1',
+      status: 'active',
+      currentPeriodEnd: new Date(1_800_000_000 * 1000),
+    });
+    await expect(
+      scenario.subscriptions.findByExternalSubscriptionId('sub_z'),
+    ).resolves.toBeNull();
+  });
+
+  it('persists the canonical subscription before attempting duplicate cancellation', async () => {
+    const local = createUserSubscriptionFixture('sub_local', {
+      status: 'active',
+      currentPeriodEnd: 1_700_000_000,
+    });
+    const better = createUserSubscriptionFixture('sub_better', {
+      status: 'active',
+      currentPeriodEnd: 1_800_000_000,
+    });
+
+    const stripe = createStripeFromFixtures({
+      fixtures: [{ fixture: local }, { fixture: better }],
+    });
+    stripe.subscriptions.cancel.mockRejectedValueOnce(
+      new Error('cancel failed'),
+    );
+
+    const subscriptions = new FakeSubscriptionRepository();
+    await subscriptions.upsert({
+      userId: 'user_1',
+      externalSubscriptionId: local.id,
+      plan: 'monthly',
+      status: 'active',
+      currentPeriodEnd: new Date(1_700_000_000 * 1000),
+      cancelAtPeriodEnd: false,
+    });
+
+    const scenario = createReconciliationTestScenario({
+      stripe,
+      subscriptions,
+      localSubscriptions: [row('user_1', local.id)],
+    });
+
+    const result = await scenario.run({ dryRun: false });
+
+    expectSingleFailure(result, {
+      stripeSubscriptionId: local.id,
+      error: 'cancel failed',
+    });
+    expect(stripe.subscriptions.cancel).toHaveBeenCalledWith('sub_local', {
+      idempotencyKey: 'reconcile_duplicate_subscription:sub_local',
+    });
+    await expect(
+      scenario.subscriptions.findByExternalSubscriptionId('sub_better'),
+    ).resolves.toMatchObject({
+      userId: 'user_1',
+      status: 'active',
+      currentPeriodEnd: new Date(1_800_000_000 * 1000),
+    });
+    await expect(
+      scenario.subscriptions.findByExternalSubscriptionId('sub_local'),
+    ).resolves.toBeNull();
+  });
+
+  it('does not cancel duplicates when persisting the canonical subscription fails', async () => {
+    const local = createUserSubscriptionFixture('sub_local', {
+      status: 'active',
+      currentPeriodEnd: 1_700_000_000,
+    });
+    const better = createUserSubscriptionFixture('sub_better', {
+      status: 'active',
+      currentPeriodEnd: 1_800_000_000,
+    });
+
+    const stripe = createStripeFromFixtures({
+      fixtures: [{ fixture: local }, { fixture: better }],
+    });
+
+    const subscriptions = new FakeSubscriptionRepository();
+    await subscriptions.upsert({
+      userId: 'user_1',
+      externalSubscriptionId: local.id,
+      plan: 'monthly',
+      status: 'active',
+      currentPeriodEnd: new Date(1_700_000_000 * 1000),
+      cancelAtPeriodEnd: false,
+    });
+
+    const scenario = createReconciliationTestScenario({
+      stripe,
+      subscriptions,
+      localSubscriptions: [row('user_1', local.id)],
+      transaction: async () => {
+        throw new Error('db failed');
+      },
+    });
+
+    const result = await scenario.run({ dryRun: false });
+
+    expectSingleFailure(result, {
+      stripeSubscriptionId: local.id,
+      error: 'db failed',
+    });
+    expect(stripe.subscriptions.cancel).not.toHaveBeenCalled();
+    await expect(
+      scenario.subscriptions.findByExternalSubscriptionId('sub_local'),
+    ).resolves.toMatchObject({
+      userId: 'user_1',
+      status: 'active',
+      currentPeriodEnd: new Date(1_700_000_000 * 1000),
+    });
+    await expect(
+      scenario.subscriptions.findByExternalSubscriptionId('sub_better'),
+    ).resolves.toBeNull();
   });
 
   it('breaks ties deterministically when multiple blocking subscriptions share the same currentPeriodEnd', async () => {
