@@ -25,6 +25,14 @@ const BLOCKING_SUBSCRIPTION_STATUSES = new Set<StripeSubscriptionStatus>([
   'incomplete',
   'paused',
 ]);
+const ALREADY_TERMINAL_CHECKOUT_SESSION_ERROR_CODES = new Set([
+  'resource_missing',
+]);
+const ALREADY_TERMINAL_CHECKOUT_SESSION_MESSAGE_PATTERNS = [
+  'already complete',
+  'already expired',
+  'cannot be expired',
+] as const;
 
 function getBlockingSubscriptionStatus(
   subscription: StripeListedSubscription | undefined,
@@ -48,6 +56,32 @@ function isSessionInactive(session: StripeCheckoutSession): boolean {
   }
 
   return false;
+}
+
+function getStringProp(value: unknown, key: string): string | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const record = value as Record<string, unknown>;
+  return typeof record[key] === 'string' ? record[key] : null;
+}
+
+function isAlreadyTerminalSessionError(error: unknown): boolean {
+  if (getStringProp(error, 'rawType') !== 'invalid_request_error') {
+    return false;
+  }
+
+  const code = getStringProp(error, 'code');
+  if (code && ALREADY_TERMINAL_CHECKOUT_SESSION_ERROR_CODES.has(code)) {
+    return true;
+  }
+
+  const message = getStringProp(error, 'message')?.toLowerCase();
+  if (!message) {
+    return false;
+  }
+
+  return ALREADY_TERMINAL_CHECKOUT_SESSION_MESSAGE_PATTERNS.some((pattern) =>
+    message.includes(pattern),
+  );
 }
 
 function fallbackCheckoutSessionIdempotencyKey(
@@ -134,6 +168,7 @@ export async function createStripeCheckoutSession({
   const existingUrl = existingSession?.url;
   if (existingSession && existingUrl) {
     let existingPriceId: string | undefined;
+    let retrievedSession: StripeCheckoutSession | null = null;
     let shouldExpireExistingSession = false;
     let expireFailureIsFatal = false;
     try {
@@ -145,6 +180,7 @@ export async function createStripeCheckoutSession({
           }),
         logger,
       });
+      retrievedSession = session;
       existingPriceId = session.line_items?.data?.[0]?.price?.id;
     } catch (error) {
       const errorMessage =
@@ -160,10 +196,23 @@ export async function createStripeCheckoutSession({
     }
 
     if (existingPriceId === priceId) {
-      return { url: existingUrl };
-    }
+      if (!retrievedSession || !isSessionInactive(retrievedSession)) {
+        return { url: existingUrl };
+      }
 
-    if (existingPriceId) {
+      shouldExpireExistingSession = true;
+      expireFailureIsFatal = true;
+      logger.info(
+        {
+          sessionId: existingSession.id,
+          existingPriceId,
+          requestedPriceId: priceId,
+          status: retrievedSession.status ?? null,
+          expiresAt: retrievedSession.expires_at ?? null,
+        },
+        'Existing checkout session matched price but was already inactive; creating a fresh checkout session',
+      );
+    } else if (existingPriceId) {
       shouldExpireExistingSession = true;
       expireFailureIsFatal = true;
       // Avoid reusing a checkout session for a different plan. If the user
@@ -201,7 +250,19 @@ export async function createStripeCheckoutSession({
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error';
-        if (expireFailureIsFatal) {
+        if (isAlreadyTerminalSessionError(error)) {
+          logger.info(
+            {
+              sessionId: existingSession.id,
+              existingPriceId,
+              requestedPriceId: priceId,
+              error: errorMessage,
+            },
+            'Treating already-terminal checkout session expire error as success',
+          );
+          // Stripe already considers the session terminal, so the adapter can
+          // safely continue with fresh checkout creation.
+        } else if (expireFailureIsFatal) {
           logger.error(
             {
               sessionId: existingSession.id,
