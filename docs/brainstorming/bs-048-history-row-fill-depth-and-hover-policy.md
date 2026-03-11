@@ -17,7 +17,7 @@ After DEBT-301, History uses the same `bg-foreground/5` token as Dashboard and P
 |------|---------------|-----------|--------------------------|-------------------|
 | Dashboard | `bg-card` (#121212) | `bg-foreground/5` | ~#1D1D1D | 1.11:1 |
 | Practice filters | `bg-card` (#121212) | `bg-foreground/5` | ~#1D1D1D | 1.11:1 |
-| **History** | `bg-background` (#09090B) | `bg-foreground/5` | ~#141414 | 1.08:1 |
+| **History** | `bg-background` (#090909) | `bg-foreground/5` | ~#141414 | 1.08:1 |
 
 The pattern registry (§1.2) already codifies this principle for the muted scale: `/40` inside cards ≈ `/50` on page background. The foreground-ramp tonal fill needs the same parent-aware adjustment.
 
@@ -27,7 +27,7 @@ The pattern registry (§1.2) already codifies this principle for the muted scale
 
 1. **Fill depth:** DEBT-301 matched the token (`bg-foreground/5`) but not the parent surface. The "no wrapping Card" decision (DEBT-301 Gap 3) means History rows lack the `bg-card` intermediate surface.
 
-2. **Hover redundancy:** DEBT-301 carried `hover:bg-foreground/[0.08]` forward from pre-unification bordered rows. Practice established that disclosure containers with a chevron don't need row-level hover.
+2. **Hover redundancy:** DEBT-301 carried `hover:bg-foreground/[0.08]` forward from pre-unification bordered rows. Practice established the precedent that disclosure summaries with a chevron do not need a `hover:*` class: `practice-session-starter.tsx:213-221` uses `cursor-pointer` and `transition-colors`, but no hover fill or underline.
 
 3. **Session summary underline:** The inner `<Link>` at `history-sessions-tab.tsx:205` has `hover:underline`. Inside a tonal fill row, the underline is visually noisy — especially when the row already has cursor-pointer and a chevron.
 
@@ -52,9 +52,9 @@ The pattern registry (§1.2) already codifies this principle for the muted scale
 
 **Current:** `bg-foreground/5` on `bg-background` → ~#141414 (1.08:1)
 
-**Decision:** Raise to `bg-foreground/[0.08]` → ~#1B1B1D (1.14:1).
+**Decision:** Raise to `bg-foreground/[0.08]` → ~#1B1B1B (1.16:1).
 
-**Rationale:** `bg-foreground/[0.08]` on page background computes to near-identical perceived brightness as `bg-foreground/5` on card background (~#1D1D1D). This parallels the muted scale's parent-aware opacity adjustment (§1.2). The user confirmed the current hover value (`[0.08]`) "seems like the correct color" for the rest state.
+**Rationale:** With the live dark tokens (`--background: 0 0% 3.5%`, `--foreground: 0 0% 93%`), `bg-foreground/[0.08]` on page background composites to ~#1B1B1B, which is near-identical in perceived brightness to `bg-foreground/5` on `bg-card` (~#1D1D1D). This parallels the muted scale's parent-aware opacity adjustment (§1.2). The user confirmed the current hover value (`[0.08]`) "seems like the correct color" for the rest state.
 
 ### Gap 2: Session row hover removal — DECIDED
 
@@ -62,7 +62,7 @@ The pattern registry (§1.2) already codifies this principle for the muted scale
 
 **Decision:** Remove row-level hover entirely. Keep `cursor-pointer` on interactive rows.
 
-**Rationale:** Practice filter disclosure rows (Topic/Substance/Treatment) established the pattern: chevron + cursor-pointer, no row hover. History session rows are disclosure-primary (expand to see breakdown). Navigation feedback comes from cursor-pointer and the inner `<Link>` — the user never needs the entire row to light up. The `hover:underline` on the inner Link will also be removed (Gap 4), but the row click handler and cursor-pointer remain as navigation cues.
+**Rationale:** Practice filter disclosure summaries (Topic/Substance/Treatment) established the pattern: chevron + cursor-pointer, no hover class on the interactive summary row. History session rows are disclosure-primary (expand to see breakdown). Navigation feedback comes from `cursor-pointer` and the inner `<Link>` — the user never needs the entire row to light up. The `hover:underline` on the inner Link will also be removed (Gap 3), but the row click handler and cursor-pointer remain as navigation cues.
 
 ### Gap 3: Session summary Link underline removal — DECIDED
 
@@ -88,7 +88,7 @@ The pattern registry (§1.2) already codifies this principle for the muted scale
 
 **Current:** `bg-foreground/5` rest + `hover:bg-foreground/[0.08]` hover.
 
-**Decision:** Raise to `bg-foreground/[0.08]` rest + `hover:bg-foreground/[0.12]` hover. Unified with Sessions — same parent surface, same fill rule. The Review pill removal (Gap 5) will reduce visual content weight, making the too-dark fill more noticeable. One opacity for the entire page is simpler than maintaining two.
+**Decision:** Raise to `bg-foreground/[0.08]` rest + `hover:bg-foreground/[0.12]` hover. Unified with Sessions — same parent surface, same fill rule. At the live dark tokens, the hover state composites to ~#242424. The Review pill removal (Gap 5) will reduce visual content weight, making the too-dark fill more noticeable. One opacity for the entire page is simpler than maintaining two.
 
 Chrome visual audit confirmed: the parent-surface issue affects both tabs equally.
 

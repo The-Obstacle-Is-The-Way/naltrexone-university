@@ -10,7 +10,7 @@
 
 ## Context
 
-DEBT-301 unified History's visual language by removing borders/shadows and adopting `bg-foreground/5` tonal fill. However, History rows sit on `bg-background` (#09090B), not `bg-card` (#121212), so the same token produces a perceptually darker result than Dashboard or Practice. A cross-page Chrome visual audit confirmed: History rows are noticeably darker than Dashboard and Practice rows despite using the identical `bg-foreground/5` token, because the parent surface is darker.
+DEBT-301 unified History's visual language by removing borders/shadows and adopting `bg-foreground/5` tonal fill. However, History rows sit on `bg-background` (#090909), not `bg-card` (#121212), so the same token produces a perceptually darker result than Dashboard or Practice. A cross-page Chrome visual audit confirmed: History rows are noticeably darker than Dashboard and Practice rows despite using the identical `bg-foreground/5` token, because the parent surface is darker.
 
 The pattern registry (§1.2) already codifies parent-aware opacity adjustment for the muted scale (`/40` in-card ≈ `/50` on-page). This debt extends the same principle to the foreground-ramp tonal fill: `bg-foreground/5` in-card ≈ `bg-foreground/[0.08]` on-page.
 
@@ -22,10 +22,10 @@ Additionally, several affordances are now redundant or noisy after DEBT-301's ch
 
 **All History rows on page background use `bg-foreground/[0.08]` at rest.** Both tabs, both available and unavailable rows. One opacity for the entire page.
 
-`bg-foreground/[0.08]` on `bg-background` (#09090B) → ~#1B1B1D. This achieves perceptual parity with `bg-foreground/5` on `bg-card` (#121212) → ~#1D1D1D, following the same parent-aware adjustment the muted scale uses.
+`bg-foreground/[0.08]` on `bg-background` (#090909) → ~#1B1B1B (1.16:1 vs parent). This achieves perceptual parity with `bg-foreground/5` on `bg-card` (#121212) → ~#1D1D1D (1.11:1 vs parent), following the same parent-aware adjustment the muted scale uses.
 
 **Hover is functional, not decorative:**
-- Sessions rows: no hover (disclosure-primary, chevron is the affordance — matches Practice filter pattern)
+- Sessions rows: no hover (disclosure-primary, chevron is the affordance — matches the Practice filter summary precedent, where the interactive `<summary>` has `cursor-pointer` but no `hover:*` class)
 - Questions available rows: `hover:bg-foreground/[0.12]` (navigation-primary, entire row is a `<Link>` — matches Dashboard row pattern with parent-adjusted hover step)
 
 ---
@@ -82,7 +82,7 @@ Target:
 className="block rounded-2xl bg-foreground/[0.08] p-4 transition-colors hover:bg-foreground/[0.12] focus-visible:..."
 ```
 
-The rest fill moves from `/5` to `/[0.08]` (unified with Sessions). The hover moves from `/[0.08]` to `/[0.12]` to maintain a proportional step (same ~4pp delta that Dashboard uses with its 5→8 step on a brighter parent).
+The rest fill moves from `/5` to `/[0.08]` (unified with Sessions). The hover moves from `/[0.08]` to `/[0.12]` to maintain a visible step on the darker parent surface, analogous to Dashboard's smaller `5→8` lift inside a brighter card. At the live dark tokens, that hover state composites to ~#242424.
 
 ### 4. Remove trailing "Review" pill
 
@@ -169,6 +169,7 @@ After DEBT-302, both tabs share the same rest fill. Only hover and structural di
 - [ ] Session summary `<Link>` does NOT have `hover:underline` or `transition-colors`
 - [ ] Questions tab available rows use `bg-foreground/[0.08]` at rest (not `bg-foreground/5`)
 - [ ] Questions tab available rows use `hover:bg-foreground/[0.12]` (not `hover:bg-foreground/[0.08]`)
+- [ ] Questions tab available rows remain entire-row `<Link>` elements with `transition-colors` and the shared focus ring intact
 - [ ] Questions tab unavailable rows use `bg-foreground/[0.08]` (not `bg-foreground/5`)
 - [ ] Questions tab available rows do NOT render a trailing "Review" pill
 - [ ] Questions tab available row layout is cleaned up after pill removal
@@ -197,7 +198,9 @@ After DEBT-302, both tabs share the same rest fill. Only hover and structural di
 ### Documentation sync
 - `docs/frontend/pattern-registry.md` — Update §1.2 with foreground-ramp two-tier table; update I-1 tonal-fill variant History note; update I-2 with new on-page tokens
 - `docs/frontend/contrast-policy.md` — Update History row computed values for both tabs
-- `docs/debt/index.md` — Register DEBT-302
+- `docs/debt/index.md` — Move DEBT-302 from Active to Resolved when this debt ships
+- `docs/brainstorming/bs-048-history-row-fill-depth-and-hover-policy.md` — Archive alongside implementation resolution
+- `docs/brainstorming/index.md` — Move BS-048 from Active to Archived when this debt ships
 - `docs/debt/debt-302-history-row-fill-and-affordance-cleanup.md` — This file
 
 ---
