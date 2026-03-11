@@ -1,8 +1,9 @@
 # BUG-205: Reconciliation Prefers Stale Local Subscription Over Canonical Stripe State
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-03-10
+**Resolved:** 2026-03-11 (PR #199, merged to main)
 **Component:** Billing / Cron / Stripe Reconciliation
 
 ---

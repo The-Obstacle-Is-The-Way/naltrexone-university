@@ -15,11 +15,14 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 **Next Bug ID:** BUG-206
 
-**Latest archival (2026-03-10):**
+**Latest archival (2026-03-11):**
+- BUG-205 verified fixed (PR #199): reconciliation canonical selection short-circuit removed, always sorts full blocking set by period-end + deterministic tie-break, archived to `docs/_archive/bugs/`.
+
+**Previous archival (2026-03-10):**
 - BUG-204 verified fixed (PR #193): rate limiting and idempotency added to portal session creation, archived to `docs/_archive/bugs/`.
 - BUG-203 invalidated after package-level tracer-bullet verification of Clerk `verifyWebhook()`, archived to `docs/_archive/bugs/`.
 
-**Previous archival (2026-03-09):**
+**Earlier archival (2026-03-09):**
 - BUG-199 invalidated after tracer-bullet verification, archived to `docs/_archive/bugs/`.
 - BUG-200 reclassified as DEBT-286, archived to `docs/_archive/bugs/`.
 - BUG-201 and BUG-202 verified fixed (commit `a8ce087c`), archived to `docs/_archive/bugs/`.
@@ -39,9 +42,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Open Bugs
 
-| Bug | Priority | Summary |
-|-----|----------|---------|
-| [BUG-205](./bug-205-reconciliation-prefers-stale-local-subscription-over-canonical-stripe-state.md) | P1 | Stripe reconciliation keeps a stale local subscription as canonical and can cancel the longer-lived Stripe subscription |
+No open bugs.
 
 ## Audit #14 — Boundary Sweep: Reconciliation Canonical Selection (2026-03-10)
 
