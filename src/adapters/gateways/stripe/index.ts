@@ -17,6 +17,7 @@ export type {
   StripeSubscription,
 } from './stripe-client';
 export { createStripeCustomer } from './stripe-customers';
+export { isAlreadyCanceledError } from './stripe-errors';
 export { createStripePortalSession } from './stripe-portal';
 export { callStripeWithRetry } from './stripe-retry';
 export {
