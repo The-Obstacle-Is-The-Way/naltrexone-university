@@ -23,7 +23,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-298](./debt-298-ui-structural-consistency.md) | UI Structural Consistency Audit — inconsistent label/control spacing patterns, non-heading card titles, sub-44px shared touch targets, and `items-center` alignment mismatches across verified views | P3 | — |
 | [DEBT-303](./debt-303-reconciliation-cancel-idempotency.md) | Reconciliation cancel loop — handle already-canceled Stripe subscriptions idempotently instead of failing the row | P3 | — |
 | [DEBT-304](./debt-304-clerk-user-deleted-cancel-idempotency.md) | Clerk `user.deleted` Stripe cancel loop — handle already-canceled subscriptions idempotently instead of failing webhook processing | P2 | — |
-| [DEBT-305](./debt-305-checkout-session-reuse-expire-race.md) | Checkout session reuse/expire flow — treat already-terminal sessions idempotently and revalidate reused sessions before returning stale URLs | P2 | — |
 | [DEBT-306](./debt-306-stripe-customer-search-create-race.md) | Stripe customer search/create race — concurrent or late-visible customers can violate the intended 1:1 mapping | P2 | — |
 **Next Debt ID:** DEBT-307
 
@@ -33,6 +32,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-305](../_archive/debt/debt-305-checkout-session-reuse-expire-race.md) | Checkout session reuse/expire flow — treat already-terminal sessions idempotently and revalidate reused sessions before returning stale URLs | P2 | 2026-03-11 | [#202](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/202) |
 | [DEBT-300](../_archive/debt/debt-300-history-questions-all-sources.md) | History Questions Tab — show all question sources (ad-hoc + tutor + exam) instead of ad-hoc only; add Source filter dropdown; fix Dashboard → History "View all" IA inconsistency | P2 | 2026-03-11 | [#200](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/200) |
 | [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md) | History Row Fill Depth and Affordance Cleanup — raise all History rows from `bg-foreground/5` to `bg-foreground/[0.08]` for page-background perceptual parity with Dashboard/Practice; remove Sessions hover + underlines; remove Questions "Review" pill; adjust Questions hover to `/[0.12]` | P3 | 2026-03-10 | — |
 | [DEBT-301](../_archive/debt/debt-301-history-page-visual-unification.md) | History Page Visual Unification — convert Sessions and Questions tabs from bordered/shadowed legacy rows to tonal-fill surfaces, replace the Sessions breakdown button with chevron disclosure, and soften internal breakdown separators/dividers | P2 | 2026-03-10 | — |
