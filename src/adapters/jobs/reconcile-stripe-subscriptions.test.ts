@@ -801,6 +801,62 @@ describe('reconcileStripeSubscriptions', () => {
     ]);
   });
 
+  it('excludes already-canceled duplicates from the cancellation summary log', async () => {
+    const keep = createUserSubscriptionFixture('sub_keep', {
+      status: 'active',
+      currentPeriodEnd: 1_700_000_000,
+    });
+    const duplicateOne = createUserSubscriptionFixture('sub_dup_1', {
+      status: 'trialing',
+      currentPeriodEnd: 1_700_000_100,
+    });
+    const duplicateTwo = createUserSubscriptionFixture('sub_dup_2', {
+      status: 'past_due',
+      currentPeriodEnd: 1_700_000_200,
+    });
+
+    const stripe = createStripeFromFixtures({
+      fixtures: [
+        { fixture: keep },
+        { fixture: duplicateOne },
+        { fixture: duplicateTwo },
+      ],
+    });
+    stripe.subscriptions.cancel.mockImplementation(
+      async (subscriptionId: string) => {
+        if (subscriptionId === 'sub_keep') {
+          throw Object.assign(new Error('No such subscription: sub_keep'), {
+            rawType: 'invalid_request_error',
+            code: 'resource_missing',
+          });
+        }
+
+        return { id: `${subscriptionId}_canceled` };
+      },
+    );
+
+    const scenario = createSingleRowScenario({
+      stripe,
+      subscriptionId: keep.id,
+    });
+
+    await scenario.run({ dryRun: false });
+
+    expect(scenario.logger.warnCalls).toEqual([
+      {
+        context: {
+          userId: 'user_1',
+          stripeCustomerId: 'cus_123',
+          keptSubscriptionId: 'sub_dup_2',
+          duplicateSubscriptionIds: ['sub_dup_1'],
+          alreadyCanceledSubscriptionIds: ['sub_keep'],
+          dryRun: false,
+        },
+        msg: 'Canceled duplicate Stripe subscriptions',
+      },
+    ]);
+  });
+
   it('does not cancel duplicate blocking subscriptions in dry-run mode', async () => {
     const keep = createUserSubscriptionFixture('sub_keep', {
       status: 'active',

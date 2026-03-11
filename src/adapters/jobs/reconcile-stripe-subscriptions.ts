@@ -1,8 +1,8 @@
 import {
   callStripeWithRetry,
+  isAlreadyCanceledError,
   retrieveAndNormalizeStripeSubscription,
 } from '@/src/adapters/gateways/stripe';
-import { isAlreadyCanceledError } from '@/src/adapters/gateways/stripe/stripe-errors';
 import type {
   ReconcileStripeSubscriptionsDeps,
   ReconcileStripeSubscriptionsInput,
@@ -136,6 +136,7 @@ export async function reconcileStripeSubscriptions(
           ],
         ]);
         let duplicateIds: string[] = [];
+        const alreadyCanceledDuplicateIds: string[] = [];
         let keptSubscriptionId: string | null = null;
 
         // Intentionally sequential: in this per-row callback we iterate
@@ -243,6 +244,7 @@ export async function reconcileStripeSubscriptions(
                 });
               } catch (error) {
                 if (isAlreadyCanceledError(error)) {
+                  alreadyCanceledDuplicateIds.push(duplicateId);
                   deps.logger.info(
                     { stripeSubscriptionId: duplicateId },
                     'Duplicate subscription already canceled externally',
@@ -254,18 +256,31 @@ export async function reconcileStripeSubscriptions(
             }
           }
 
+          const canceledDuplicateIds = duplicateIds.filter(
+            (duplicateId) => !alreadyCanceledDuplicateIds.includes(duplicateId),
+          );
+
           deps.logger.warn(
             {
               userId: row.userId,
               stripeCustomerId: localSubscriptionUpdate.externalCustomerId,
               keptSubscriptionId:
                 keptSubscriptionId ?? canonical.externalSubscriptionId,
-              duplicateSubscriptionIds: duplicateIds,
+              duplicateSubscriptionIds: dryRun
+                ? duplicateIds
+                : canceledDuplicateIds,
+              ...(alreadyCanceledDuplicateIds.length > 0
+                ? {
+                    alreadyCanceledSubscriptionIds: alreadyCanceledDuplicateIds,
+                  }
+                : {}),
               dryRun,
             },
             dryRun
               ? 'Detected duplicate Stripe subscriptions (dry-run)'
-              : 'Canceled duplicate Stripe subscriptions',
+              : canceledDuplicateIds.length > 0
+                ? 'Canceled duplicate Stripe subscriptions'
+                : 'Duplicate Stripe subscriptions already canceled externally',
           );
         }
 
