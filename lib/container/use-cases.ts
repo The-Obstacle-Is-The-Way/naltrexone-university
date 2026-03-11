@@ -42,6 +42,7 @@ export function createUseCaseFactories(input: {
         repositories.createStripeCustomerRepository(),
         repositories.createSubscriptionRepository(),
         gateways.createPaymentGateway(),
+        primitives.logger,
         primitives.now,
       ),
     createPortalSessionUseCase: () =>
