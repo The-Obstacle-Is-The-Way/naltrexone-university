@@ -521,6 +521,44 @@ describe('createStripeCheckoutSession', () => {
     );
   });
 
+  it('treats expire error as idempotent success via message fallback when code is absent', async () => {
+    const alreadyExpiredError = Object.assign(
+      new Error('This checkout session has already expired'),
+      {
+        rawType: 'invalid_request_error',
+        // No `code` property — exercises the message-pattern fallback branch
+      },
+    );
+
+    const { stripe, sessionsCreate, sessionsExpire } = createStripeMock({
+      openSessionsData: [
+        { id: 'cs_open', url: 'https://stripe/checkout/open' },
+      ],
+      retrievedSessionPriceId: 'price_a',
+      expireError: alreadyExpiredError,
+      createdSessionUrl: 'https://stripe/checkout/new',
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger,
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
+
+    expect(sessionsExpire).toHaveBeenCalledTimes(1);
+    expect(sessionsCreate).toHaveBeenCalledTimes(1);
+    expect(logger.infoCalls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          msg: 'Treating already-terminal checkout session expire error as success',
+        }),
+      ]),
+    );
+  });
+
   it('creates a new checkout session when existing session inspection fails', async () => {
     const { stripe, sessionsCreate, sessionsRetrieve, sessionsExpire } =
       createStripeMock({
