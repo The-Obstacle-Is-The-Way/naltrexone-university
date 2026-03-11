@@ -200,8 +200,6 @@ export async function createStripeCheckoutSession({
         return { url: existingUrl };
       }
 
-      shouldExpireExistingSession = true;
-      expireFailureIsFatal = true;
       logger.info(
         {
           sessionId: existingSession.id,
@@ -276,17 +274,17 @@ export async function createStripeCheckoutSession({
             'STRIPE_ERROR',
             'Failed to expire existing checkout session',
           );
+        } else {
+          logger.warn(
+            {
+              sessionId: existingSession.id,
+              existingPriceId,
+              requestedPriceId: priceId,
+              error: errorMessage,
+            },
+            'Failed to expire existing checkout session after failed inspection; continuing with checkout creation',
+          );
         }
-
-        logger.warn(
-          {
-            sessionId: existingSession.id,
-            existingPriceId,
-            requestedPriceId: priceId,
-            error: errorMessage,
-          },
-          'Failed to expire existing checkout session after failed inspection; continuing with checkout creation',
-        );
       }
     }
   }

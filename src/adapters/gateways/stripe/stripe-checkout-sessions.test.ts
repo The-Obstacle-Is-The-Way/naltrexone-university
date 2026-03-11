@@ -398,7 +398,7 @@ describe('createStripeCheckoutSession', () => {
   });
 
   it('does not return stale URL when same-price session is already inactive', async () => {
-    const { stripe, sessionsCreate } = createStripeMock({
+    const { stripe, sessionsCreate, sessionsExpire } = createStripeMock({
       openSessionsData: [
         { id: 'cs_open', url: 'https://stripe/checkout/open' },
       ],
@@ -417,6 +417,7 @@ describe('createStripeCheckoutSession', () => {
     ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
 
     expect(sessionsCreate).toHaveBeenCalledTimes(1);
+    expect(sessionsExpire).not.toHaveBeenCalled();
   });
 
   it('expires mismatched open checkout session and creates a new session', async () => {
@@ -508,6 +509,13 @@ describe('createStripeCheckoutSession', () => {
       expect.arrayContaining([
         expect.objectContaining({
           msg: 'Treating already-terminal checkout session expire error as success',
+        }),
+      ]),
+    );
+    expect(logger.warnCalls).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          msg: 'Failed to expire existing checkout session after failed inspection; continuing with checkout creation',
         }),
       ]),
     );
