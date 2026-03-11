@@ -2,9 +2,11 @@
 
 **Priority:** P3
 **Created:** 2026-03-10
-**Status:** Active
+**Status:** Resolved
+**Resolved:** 2026-03-10
 **Source:** [BS-048](../brainstorming/bs-048-history-row-fill-depth-and-hover-policy.md)
-**Related:** [DEBT-301](../_archive/debt/debt-301-history-page-visual-unification.md), [Pattern Registry](../frontend/pattern-registry.md), [Contrast Policy](../frontend/contrast-policy.md)
+**Related:** [DEBT-301](./debt-301-history-page-visual-unification.md), [Pattern Registry](../../frontend/pattern-registry.md), [Contrast Policy](../../frontend/contrast-policy.md)
+**Verification:** `pnpm typecheck`, `pnpm lint`, `pnpm test --run`, `pnpm test:browser`, and `pnpm build` passed on 2026-03-10. Authenticated `agent-browser` checks covered History Sessions and Questions in dark mode and light mode.
 
 ---
 
@@ -162,23 +164,23 @@ After DEBT-302, both tabs share the same rest fill. Only hover and structural di
 
 ## Acceptance Criteria
 
-- [ ] Session rows use `bg-foreground/[0.08]` at rest (not `bg-foreground/5`)
-- [ ] Session rows do NOT have `hover:bg-foreground/[0.08]` (no row-level hover)
-- [ ] Session rows do NOT have `transition-colors` on the `<li>`
-- [ ] Interactive session rows preserve `cursor-pointer`
-- [ ] Session summary `<Link>` does NOT have `hover:underline` or `transition-colors`
-- [ ] Questions tab available rows use `bg-foreground/[0.08]` at rest (not `bg-foreground/5`)
-- [ ] Questions tab available rows use `hover:bg-foreground/[0.12]` (not `hover:bg-foreground/[0.08]`)
-- [ ] Questions tab available rows remain entire-row `<Link>` elements with `transition-colors` and the shared focus ring intact
-- [ ] Questions tab unavailable rows use `bg-foreground/[0.08]` (not `bg-foreground/5`)
-- [ ] Questions tab available rows do NOT render a trailing "Review" pill
-- [ ] Questions tab available row layout is cleaned up after pill removal
-- [ ] Breakdown list links do NOT have `hover:underline`
-- [ ] Breakdown list links preserve `hover:bg-muted/20`
-- [ ] SegmentedControl, filter dropdowns, and pagination links remain unchanged
-- [ ] Pattern Registry §1.2 updated with foreground-ramp two-tier table (in-card vs on-page)
-- [ ] Pattern Registry I-2 updated with new on-page tokens (`bg-foreground/[0.08]` + `hover:bg-foreground/[0.12]`)
-- [ ] Contrast Policy updated with revised History row computed values for both tabs
+- [x] Session rows use `bg-foreground/[0.08]` at rest (not `bg-foreground/5`)
+- [x] Session rows do NOT have `hover:bg-foreground/[0.08]` (no row-level hover)
+- [x] Session rows do NOT have `transition-colors` on the `<li>`
+- [x] Interactive session rows preserve `cursor-pointer`
+- [x] Session summary `<Link>` does NOT have `hover:underline` or `transition-colors`
+- [x] Questions tab available rows use `bg-foreground/[0.08]` at rest (not `bg-foreground/5`)
+- [x] Questions tab available rows use `hover:bg-foreground/[0.12]` (not `hover:bg-foreground/[0.08]`)
+- [x] Questions tab available rows remain entire-row `<Link>` elements with `transition-colors` and the shared focus ring intact
+- [x] Questions tab unavailable rows use `bg-foreground/[0.08]` (not `bg-foreground/5`)
+- [x] Questions tab available rows do NOT render a trailing "Review" pill
+- [x] Questions tab available row layout is cleaned up after pill removal
+- [x] Breakdown list links do NOT have `hover:underline`
+- [x] Breakdown list links preserve `hover:bg-muted/20`
+- [x] SegmentedControl, filter dropdowns, and pagination links remain unchanged
+- [x] Pattern Registry §1.2 updated with foreground-ramp two-tier table (in-card vs on-page)
+- [x] Pattern Registry I-2 updated with new on-page tokens (`bg-foreground/[0.08]` + `hover:bg-foreground/[0.12]`)
+- [x] Contrast Policy updated with revised History row computed values for both tabs
 
 ---
 
@@ -209,17 +211,17 @@ After DEBT-302, both tabs share the same rest fill. Only hover and structural di
 
 After implementation, verify in both dark and light mode:
 
-- [ ] History Sessions tab — collapsed rows are visually brighter than before, closer to Dashboard row brightness
-- [ ] History Sessions tab — hovering a row does NOT change its background fill
-- [ ] History Sessions tab — hovering the session summary text does NOT underline it
-- [ ] History Sessions tab — cursor changes to pointer on interactive rows
-- [ ] History Sessions tab — chevron still rotates on expand/collapse
-- [ ] History Sessions tab — expanded breakdown question links do NOT underline on hover
-- [ ] History Sessions tab — expanded breakdown question links still show subtle background on hover
-- [ ] History Questions tab — rows are visually brighter than before (same brightness as Sessions rows)
-- [ ] History Questions tab — no trailing "Review" pill on available rows
-- [ ] History Questions tab — row hover fill works (`bg-foreground/[0.12]`)
-- [ ] History Questions tab — row content is left-aligned without empty trailing space
-- [ ] History Questions tab — unavailable rows match available row rest brightness
-- [ ] Tab switch between Sessions and Questions — no jarring brightness shift
-- [ ] Compare with Dashboard "Recent sessions" rows — History rows should feel similar in brightness
+- [x] History Sessions tab — collapsed rows are visually brighter than before, closer to Dashboard row brightness
+- [x] History Sessions tab — hovering a row does NOT change its background fill
+- [x] History Sessions tab — hovering the session summary text does NOT underline it
+- [x] History Sessions tab — cursor changes to pointer on interactive rows
+- [x] History Sessions tab — chevron still rotates on expand/collapse
+- [x] History Sessions tab — expanded breakdown question links do NOT underline on hover
+- [x] History Sessions tab — expanded breakdown question links still show subtle background on hover
+- [x] History Questions tab — rows are visually brighter than before (same brightness as Sessions rows)
+- [x] History Questions tab — no trailing "Review" pill on available rows
+- [x] History Questions tab — row hover fill works (`bg-foreground/[0.12]`)
+- [x] History Questions tab — row content is left-aligned without empty trailing space
+- [x] History Questions tab — unavailable rows match available row rest brightness (render-output regression coverage; no unavailable question row was present in the seeded live History account during the `agent-browser` pass)
+- [x] Tab switch between Sessions and Questions — no jarring brightness shift
+- [x] Compare with Dashboard "Recent sessions" rows — History rows should feel similar in brightness

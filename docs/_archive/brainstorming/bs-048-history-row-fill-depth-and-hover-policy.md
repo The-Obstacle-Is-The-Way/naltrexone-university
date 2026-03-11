@@ -3,7 +3,7 @@
 **Date:** 2026-03-10
 **Triggered by:** Visual inspection of History page (both tabs) in dark mode after DEBT-301 visual unification
 **Scope:** Session rows appear perceptually darker than Dashboard/Practice rows despite using the same `bg-foreground/5` token (different parent surface). Session row hover and underlines are redundant with chevron disclosure. Questions tab "Review" pill is redundant with row-level navigation.
-**Related:** [DEBT-301](../_archive/debt/debt-301-history-page-visual-unification.md), [BS-044](./bs-044-dark-mode-border-weight-tiering.md), [Pattern Registry](../frontend/pattern-registry.md), [Contrast Policy](../frontend/contrast-policy.md)
+**Related:** [DEBT-301](../debt/debt-301-history-page-visual-unification.md), [BS-044](../../brainstorming/bs-044-dark-mode-border-weight-tiering.md), [Pattern Registry](../../frontend/pattern-registry.md), [Contrast Policy](../../frontend/contrast-policy.md)
 
 ---
 
@@ -129,4 +129,4 @@ After these changes, both tabs share the same rest fill. Only functional differe
 | 2026-03-10 | Gap 5: Remove Questions Review pill | Redundant label inside a clickable row |
 | 2026-03-10 | Gap 6: Unified fill — both tabs `bg-foreground/[0.08]` | Chrome audit confirmed parent-surface issue affects both tabs; one opacity per page is cleaner than two; Review pill removal reduces content weight making dark fill more noticeable |
 | 2026-03-10 | Gap 8: Radius/padding deferred | Intentional density difference; Sessions compact, Questions airy |
-| 2026-03-10 | Promoted to [DEBT-302](../debt/debt-302-history-row-fill-and-affordance-cleanup.md) | All gaps decided; ready for implementation |
+| 2026-03-10 | Promoted to [DEBT-302](../debt/debt-302-history-row-fill-and-affordance-cleanup.md) | All gaps decided; ready for implementation. Resolved on 2026-03-10 with the page-background foreground-ramp adjustment, affordance cleanup, and doc sync implemented end-to-end. |

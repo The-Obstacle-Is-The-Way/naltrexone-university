@@ -39,7 +39,7 @@ export function SessionBreakdownList({
                 sessionId,
                 historyHref,
               })}
-              className="-mx-2 flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 font-medium text-foreground transition-colors hover:bg-muted/20 hover:underline focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+              className="-mx-2 flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 font-medium text-foreground transition-colors hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
             >
               <span className="shrink-0">{row.order}.</span>
               <span className="truncate">
