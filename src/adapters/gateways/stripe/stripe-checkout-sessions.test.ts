@@ -420,6 +420,31 @@ describe('createStripeCheckoutSession', () => {
     expect(sessionsExpire).not.toHaveBeenCalled();
   });
 
+  it('does not return stale URL when same-price session is open but already past expires_at', async () => {
+    const nowUnix = Math.floor(Date.now() / 1000);
+    const { stripe, sessionsCreate, sessionsExpire } = createStripeMock({
+      openSessionsData: [
+        { id: 'cs_open', url: 'https://stripe/checkout/open' },
+      ],
+      retrievedSessionPriceId: 'price_m',
+      retrievedSessionStatus: 'open',
+      retrievedSessionExpiresAtUnix: nowUnix - 60,
+      createdSessionUrl: 'https://stripe/checkout/new',
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger,
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
+
+    expect(sessionsCreate).toHaveBeenCalledTimes(1);
+    expect(sessionsExpire).not.toHaveBeenCalled();
+  });
+
   it('expires mismatched open checkout session and creates a new session', async () => {
     const { stripe, sessionsExpire, sessionsCreate } = createStripeMock({
       openSessionsData: [
