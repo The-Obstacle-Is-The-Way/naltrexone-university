@@ -1,4 +1,6 @@
+import { isAlreadyCanceledError } from '@/src/adapters/gateways/stripe';
 import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
+import type { Logger } from '@/src/application/ports/logger';
 
 type StripeSubscriptionLike = {
   id: string;
@@ -30,6 +32,7 @@ const STRIPE_RETRY_OPTIONS = {
 
 export async function cancelStripeCustomerSubscriptions(
   stripe: StripeClientLike,
+  logger: Logger,
   stripeCustomerId: string,
 ): Promise<void> {
   for await (const subscription of stripe.subscriptions.list({
@@ -44,12 +47,24 @@ export async function cancelStripeCustomerSubscriptions(
       continue;
     }
 
-    await retry(
-      () =>
-        stripe.subscriptions.cancel(subscription.id, {
-          idempotencyKey: `cancel_subscription:${subscription.id}`,
-        }),
-      { ...STRIPE_RETRY_OPTIONS, shouldRetry: isTransientExternalError },
-    );
+    try {
+      await retry(
+        () =>
+          stripe.subscriptions.cancel(subscription.id, {
+            idempotencyKey: `cancel_subscription:${subscription.id}`,
+          }),
+        { ...STRIPE_RETRY_OPTIONS, shouldRetry: isTransientExternalError },
+      );
+    } catch (error) {
+      if (isAlreadyCanceledError(error)) {
+        logger.info(
+          { stripeSubscriptionId: subscription.id },
+          'Subscription already canceled externally',
+        );
+        continue;
+      }
+
+      throw error;
+    }
   }
 }

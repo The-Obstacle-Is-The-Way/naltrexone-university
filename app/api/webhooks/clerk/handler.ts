@@ -38,6 +38,7 @@ export type ClerkWebhookRouteContainer = {
 type VerifyWebhookFn = (req: Request) => Promise<ClerkWebhookEvent>;
 type CancelStripeCustomerSubscriptionsFn = (
   stripe: StripeClient,
+  logger: Logger,
   stripeCustomerId: string,
 ) => Promise<void>;
 
@@ -102,7 +103,11 @@ export function createWebhookHandler(
           userRepository: container.createUserRepository(),
           stripeCustomerRepository: container.createStripeCustomerRepository(),
           cancelStripeCustomerSubscriptions:
-            cancelStripeCustomerSubscriptions.bind(null, container.stripe),
+            cancelStripeCustomerSubscriptions.bind(
+              null,
+              container.stripe,
+              container.logger,
+            ),
           logger: container.logger,
         },
         event,
