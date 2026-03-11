@@ -2,7 +2,7 @@
 
 **Priority:** P3
 **Created:** 2026-03-11
-**Status:** Open
+**Status:** Resolved (PR #201, 2026-03-11)
 **Related:** BUG-205 (canonical selection fix, PR #199), DEBT-304
 
 ---

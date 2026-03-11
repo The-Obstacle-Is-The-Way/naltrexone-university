@@ -2,10 +2,24 @@
 
 **Priority:** P2
 **Created:** 2026-03-11
-**Status:** Open
+**Status:** Resolved
+**Resolved:** 2026-03-11 ([PR #202](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/202))
 **Related:** BUG-101 (Stripe-side duplicate-subscription guard)
+**Verification:** `pnpm test --run`, `pnpm typecheck`, and `pnpm lint` passed on 2026-03-11. Stripe adapter regression coverage now includes inactive same-price reuse, `expires_at`-driven inactivity, already-terminal expire errors, and the message-fallback classifier branch.
 
 ---
+
+## Resolution
+
+The Stripe checkout adapter now treats this sub-flow idempotently:
+
+1. Same-price reuse revalidates the retrieved session with `isSessionInactive(...)` before returning the existing checkout URL
+2. Inactive same-price sessions do not attempt an unnecessary `checkout.sessions.expire`; the flow creates a fresh session instead
+3. Mismatched-session expire calls classify already-terminal Stripe semantic `4xx` responses as idempotent success and continue to fresh session creation
+4. Unexpected expire failures still surface as `ApplicationError('STRIPE_ERROR', 'Failed to expire existing checkout session')`
+5. Regression tests cover both the code-based and message-based terminal-error classifier branches
+
+This debt is resolved inside the Stripe adapter boundary only; no domain or application-layer contracts changed.
 
 ## Context
 
@@ -26,7 +40,7 @@ Stripe state can change between the list, retrieve, reuse, and expire steps. For
 
 ---
 
-## Current Behavior
+## Original Behavior
 
 Two gaps are currently visible:
 

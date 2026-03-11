@@ -5,7 +5,7 @@
 **Scope:** Explore whether dark-mode borders should be tiered by element role (interactive vs. container vs. structural) instead of applied uniformly.
 **Related:** [DEBT-279](../debt/debt-279-wcag-aa-contrast-remediation-plan.md), [BS-042](./bs-042-contrast-consistency-and-wcag-compliance-audit.md), [BS-043](./bs-043-question-flow-typography-and-feedback-visual-unification.md), [Pattern Registry](../frontend/pattern-registry.md), [Contrast Policy](../frontend/contrast-policy.md)
 
-**Status:** Open for debate — requires a more rigorous element-by-element review across all views before making decisions.
+**Status:** Active — partially implemented through narrower follow-ups (`DEBT-280`, `DEBT-301`, `DEBT-302`), but the broader cross-surface tiering question remains unresolved and is not archiveable yet.
 
 ---
 
@@ -201,3 +201,4 @@ This is a preliminary list. Each item needs individual scrutiny across all views
 |------|----------|-----------|
 | 2026-03-05 | Created BS-044 | DEBT-279 fix is correct and workable, but the uniform border treatment is aesthetically heavy. Needs exploration before committing to changes. |
 | 2026-03-05 | Marked as open for debate | Requires rigorous element-by-element review across all views. No changes to code until the approach is validated visually. |
+| 2026-03-11 | Kept active after audit | The History and choice-button slices were extracted and resolved via narrower follow-ups (`DEBT-280`, `DEBT-301`, `DEBT-302`), but the broader app-wide tiering question still remains across surfaces like bookmarks, feedback cards, inputs/selects, and other dark-mode containers. |

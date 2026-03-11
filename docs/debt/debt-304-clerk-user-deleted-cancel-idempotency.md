@@ -3,7 +3,7 @@
 **Priority:** P2
 **Created:** 2026-03-11
 **Status:** Open
-**Related:** DEBT-303, ADR-017 (Webhook Processing Lifecycle)
+**Related:** DEBT-303 (resolved, PR #201 — provides `isAlreadyCanceledError`), ADR-017 (Webhook Processing Lifecycle)
 
 ---
 

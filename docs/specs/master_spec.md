@@ -811,11 +811,12 @@ export const zPagination = z.object({
 
 #### 4.5.0 Cross-Cutting Controller Policies (Required)
 
-**Idempotency (mutating server actions):**
+**Idempotency (supported server actions):**
 
-* Controllers accept optional `idempotencyKey?: UUID` and apply `withIdempotency(...)` when provided.
+* Controllers that support idempotent replay accept optional `idempotencyKey?: UUID` and apply `withIdempotency(...)` when provided.
 * Supported actions:
   * `billing:createCheckoutSession`
+  * `billing:createPortalSession` (explicit callers only; default manage-billing UI omits the key because portal session URLs are short-lived)
   * `practice:startPracticeSession`
   * `practice:endPracticeSession`
   * `practice:setPracticeSessionQuestionMark`
@@ -826,6 +827,7 @@ export const zPagination = z.object({
 **Server action rate limiting (fixed-window, 60s):**
 
 * `createCheckoutSession`: `10/min` per user key `billing:createCheckoutSession:${userId}`
+* `createPortalSession`: `20/min` per user key `billing:createPortalSession:${userId}`
 * `startPracticeSession`: `20/min` per user key `practice:startPracticeSession:${userId}`
 * `submitAnswer`: `120/min` per user key `question:submitAnswer:${userId}`
 * `toggleBookmark`: `60/min` per user key `bookmark:toggleBookmark:${userId}`
@@ -918,7 +920,9 @@ export type CreateCheckoutSessionOutput = {
 **Input (Zod):**
 
 ```ts
-export const CreatePortalSessionInputSchema = z.object({}).strict();
+export const CreatePortalSessionInputSchema = z.object({
+  idempotencyKey: zUuid.optional(),
+}).strict();
 ```
 
 **Output:**
@@ -931,18 +935,23 @@ export type CreatePortalSessionOutput = { url: string };
 
 * `UNAUTHENTICATED`
 * `NOT_FOUND` if user has no `stripe_customers` row
+* `VALIDATION_ERROR` if input invalid
+* `RATE_LIMITED` if billing portal session creation limit is exceeded
 * `STRIPE_ERROR`
 * `INTERNAL_ERROR`
 
 **Behavior (exact):**
 
-1. Ensure user row exists.
-2. Load `stripe_customer_id` from `stripe_customers`.
-3. Create Stripe Billing Portal Session:
+1. Enforce per-user rate limit: max 20 billing portal attempts per 60s window.
+2. Ensure user row exists.
+3. Load `stripe_customer_id` from `stripe_customers`.
+4. Create Stripe Billing Portal Session:
 
    * `customer: stripe_customer_id`
    * `return_url: ${NEXT_PUBLIC_APP_URL}/app/billing`
-4. Return portal URL.
+5. Return portal URL.
+6. If `idempotencyKey` is provided, wrap steps 2-5 with application-level idempotency (`action='billing:createPortalSession'`) so explicit retries replay the prior result instead of re-executing the flow.
+7. If `idempotencyKey` is omitted, create a fresh portal session on each request. The default manage-billing UI omits the key because portal session URLs are short-lived and should normally be created on demand.
 
 ---
 
