@@ -58,14 +58,16 @@ Configuration:
 
 ### 3. Client-Side Key Generation
 
-Controllers accept an optional `idempotencyKey` (UUID) from the client. The UI generates a fresh UUID per user-initiated action and reuses it on retry. This ensures:
+Controllers accept an optional `idempotencyKey` (UUID) from the client when replaying the prior successful result is semantically correct for that operation. For duplicate-sensitive actions such as practice session start, answer submission, bookmark toggle, and checkout creation, the UI generates a client UUID for the logical action and reuses it on retry. This ensures:
 - First request claims the key and executes.
 - Retries with the same key receive the cached result.
-- New user actions generate new keys.
+- A new logical action gets a new key.
+
+Short-lived redirect/session artifacts are the important exception. Stripe Billing Portal sessions are intentionally created on demand by the default manage-billing UI, which omits an idempotency key. Replaying a cached portal URL after Stripe's short validity window is incorrect, so portal-session idempotency remains an explicit opt-in for callers that truly need retry coordination.
 
 ### 4. Stripe Forwarding
 
-When the idempotency key is provided, adapters forward it to Stripe via `PaymentGatewayRequestOptions.idempotencyKey`, ensuring both our DB and Stripe see the same deduplication key.
+When a controller elects to use an idempotency key, adapters forward it to Stripe via `PaymentGatewayRequestOptions.idempotencyKey`, ensuring both our DB and Stripe see the same deduplication key. Adapters must not invent deterministic fallback keys for operations where replaying a prior short-lived redirect/session URL would be semantically wrong.
 
 ---
 
@@ -110,3 +112,5 @@ When the idempotency key is provided, adapters forward it to Stripe via `Payment
 - `db/schema.ts` — `idempotency_keys` table
 - ADR-005 (Payment Boundary) — Stripe idempotency key forwarding
 - ADR-006 (Error Handling Strategy) — Error code propagation through cached errors
+- Stripe Docs — Billing Portal sessions: https://docs.stripe.com/customer-management/integrate-customer-portal
+- Stripe Docs — Idempotent requests: https://docs.stripe.com/api/idempotent_requests
