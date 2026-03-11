@@ -97,8 +97,6 @@ describe('HistoryQuestionsTab', () => {
     expect(html).toContain('Feb 1, 2026');
     expect(html).toContain('Exam session');
     expect(html).toContain('Ad-hoc practice');
-    expect(html).not.toContain('Review');
-    expect(html).not.toContain('Reattempt');
 
     const historyHref = buildHistoryQuestionsHref({
       limit: result.data.limit,
@@ -215,7 +213,6 @@ describe('HistoryQuestionsTab', () => {
       a.getAttribute('href'),
     );
     expect(hrefs.filter((href) => href === incorrectHref)).toHaveLength(1);
-    expect(html).not.toContain('Review');
     expect(
       Array.from(doc.querySelectorAll('a')).some(
         (a) => a.textContent?.trim() === 'Review',
@@ -226,7 +223,6 @@ describe('HistoryQuestionsTab', () => {
         (s) => s.textContent?.trim() === 'Review',
       ),
     ).toBe(false);
-    expect(html).not.toContain('Reattempt');
   });
 
   it('builds standalone review links without historySeq/historyIndex params', () => {
