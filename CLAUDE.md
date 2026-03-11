@@ -64,9 +64,15 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_tes
 pnpm test:integration                              # Now tests will pass
 ```
 
+```bash
+# One-liner: local setup from scratch (matches CI order)
+pnpm db:test:up && DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm db:migrate && SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm db:seed && pnpm test:integration
+```
+
 - **Never use `drizzle-kit push`** — it skips migration files (missing `pgcrypto`, constraints)
 - **Always prefix with `DATABASE_URL=...`** — without it, drizzle-kit reads `.env.local` (remote Neon DB)
 - **Seeding is required** — `tag-taxonomy-census` tests fail without it
+- **CI seeds with `SEED_INCLUDE_PLACEHOLDERS=true`** — plain `pnpm db:seed` is enough locally, but the flag gives exact CI seed parity
 - Only needed for `pnpm test:integration`. Unit/browser/build tests don't touch the DB.
 
 ### Pre-PR Gate (CI Parity)

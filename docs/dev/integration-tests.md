@@ -34,6 +34,12 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test
 
 Seeds question content and tags from `content/questions/`. Required for `tag-taxonomy-census.integration.test.ts` which validates that all tags have canonical kinds. Without seeding, that test file fails with `INTEGRATION_SEED_MISSING`.
 
+CI seeds with `SEED_INCLUDE_PLACEHOLDERS=true`. Local integration tests pass with plain `pnpm db:seed`, but you can add the flag for exact CI seed parity:
+
+```bash
+SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:seed
+```
+
 ### 4. Run Tests
 
 ```bash
@@ -45,7 +51,7 @@ If the database is unreachable, the test setup fails fast with a clear error mes
 ### One-Liner (Full Setup)
 
 ```bash
-pnpm db:test:up && DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:migrate && DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:seed && pnpm test:integration
+pnpm db:test:up && DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:migrate && SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:seed && pnpm test:integration
 ```
 
 ### Reset (Nuclear Option)
@@ -78,7 +84,7 @@ To use a non-default local port, set `DB_TEST_PORT` before starting Docker and u
 GitHub Actions (`.github/workflows/ci.yml`) spins up its own PostgreSQL 16 service container on every run. It does not depend on local Docker state. The pipeline runs:
 
 1. `pnpm db:migrate` — applies migrations to the CI database
-2. `pnpm db:seed` — seeds test data
+2. `SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed` — seeds test data, including placeholder content used by CI parity checks
 3. `pnpm test:integration:coverage` — runs all integration tests with coverage
 
 Integration tests are part of every PR and every push to `main`.
@@ -101,7 +107,7 @@ Integration tests are part of every PR and every push to `main`.
 | `tests/integration/bug-regression.integration.test.ts` | 10 | Bug regression tests (BUG-186, 187, 188, 192, 195) |
 | `tests/integration/controllers.integration.test.ts` | 5 | Controller → repository → DB round trips |
 | `tests/integration/actions.stripe.integration.test.ts` | 2 | Stripe billing controller actions |
-| `tests/integration/tag-taxonomy-census.integration.test.ts` | 7 | Tag taxonomy validation |
+| `tests/integration/tag-taxonomy-census.integration.test.ts` | 4 | Tag taxonomy validation (requires seed data) |
 
 ---
 

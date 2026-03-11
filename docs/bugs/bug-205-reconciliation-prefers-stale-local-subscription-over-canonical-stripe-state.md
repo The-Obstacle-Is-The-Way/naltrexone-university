@@ -37,13 +37,13 @@ Expected behavior:
 
 ## Root Cause
 
-Tracer-bullet path:
-1. The reconciliation job builds `canonicalById` for all blocking subscriptions at [src/adapters/jobs/reconcile-stripe-subscriptions.ts#L130](/Users/ray/Desktop/github/naltrexone-university/src/adapters/jobs/reconcile-stripe-subscriptions.ts#L130).
-2. Its Phase 3 comment says canonical selection should use period-end sort plus deterministic tie-break at [src/adapters/jobs/reconcile-stripe-subscriptions.ts#L175](/Users/ray/Desktop/github/naltrexone-university/src/adapters/jobs/reconcile-stripe-subscriptions.ts#L175).
-3. The actual selection short-circuits to `row.stripeSubscriptionId` whenever that id is present in `blockingSubscriptionIds` at [src/adapters/jobs/reconcile-stripe-subscriptions.ts#L176](/Users/ray/Desktop/github/naltrexone-university/src/adapters/jobs/reconcile-stripe-subscriptions.ts#L176).
-4. The sort by `currentPeriodEnd` only runs when the local row is not itself blocking at [src/adapters/jobs/reconcile-stripe-subscriptions.ts#L180](/Users/ray/Desktop/github/naltrexone-university/src/adapters/jobs/reconcile-stripe-subscriptions.ts#L180).
-5. Duplicate cancellation is then driven off that biased `keptSubscriptionId` at [src/adapters/jobs/reconcile-stripe-subscriptions.ts#L210](/Users/ray/Desktop/github/naltrexone-university/src/adapters/jobs/reconcile-stripe-subscriptions.ts#L210) and [src/adapters/jobs/reconcile-stripe-subscriptions.ts#L215](/Users/ray/Desktop/github/naltrexone-university/src/adapters/jobs/reconcile-stripe-subscriptions.ts#L215).
-6. The current test suite explicitly documents this wrong behavior as expected at [src/adapters/jobs/reconcile-stripe-subscriptions.test.ts#L670](/Users/ray/Desktop/github/naltrexone-university/src/adapters/jobs/reconcile-stripe-subscriptions.test.ts#L670) and asserts cancellation of the newer subscriptions at [src/adapters/jobs/reconcile-stripe-subscriptions.test.ts#L708](/Users/ray/Desktop/github/naltrexone-university/src/adapters/jobs/reconcile-stripe-subscriptions.test.ts#L708).
+Tracer-bullet path at filing time (pre-fix):
+1. The reconciliation job built `canonicalById` for all blocking subscriptions.
+2. Its Phase 3 comment said canonical selection should use period-end sort plus deterministic tie-break.
+3. The actual selection short-circuited to `row.stripeSubscriptionId` whenever that id was present in `blockingSubscriptionIds`.
+4. The sort by `currentPeriodEnd` only ran when the local row was not itself blocking.
+5. Duplicate cancellation was then driven off that biased `keptSubscriptionId`.
+6. At filing time, the test suite explicitly documented this wrong behavior as expected and asserted cancellation of the newer subscriptions.
 
 ## Recommended Fix
 
@@ -57,8 +57,9 @@ Tracer-bullet path:
 ## Verification
 
 - [x] Code-level tracer-bullet verified on 2026-03-10.
-- [x] Existing tests currently encode the buggy behavior instead of guarding against it: [src/adapters/jobs/reconcile-stripe-subscriptions.test.ts#L670](/Users/ray/Desktop/github/naltrexone-university/src/adapters/jobs/reconcile-stripe-subscriptions.test.ts#L670).
-- [x] Targeted verification run passed: `pnpm test --run src/adapters/jobs/reconcile-stripe-subscriptions.test.ts`.
+- [x] At filing time, the existing tests encoded the buggy behavior instead of guarding against it.
+- [x] BUG-205 fix verified on branch: Phase 3 now always sorts the full blocking set, and regression tests cover the destructive local-blocker case, the lexicographic tie-break, and persist-before-cancel sequencing.
+- [x] Full branch verification passed on 2026-03-11: `pnpm typecheck`, `pnpm lint`, `pnpm test --run`, `pnpm test:browser`, `pnpm build`, `pnpm test:integration`.
 - [ ] Manual dry-run against a real duplicate-subscription customer set.
 
 ## Related
