@@ -53,10 +53,26 @@ pnpm lint                   # Biome lint + format
 pnpm build                  # Production build
 ```
 
+### Integration Test DB (Local Only)
+
+Integration tests require a local Postgres container with migrations **and** seed data. All steps are mandatory:
+
+```bash
+pnpm db:test:up                                    # Start Docker Postgres (port 5434)
+DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm db:migrate
+DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm db:seed
+pnpm test:integration                              # Now tests will pass
+```
+
+- **Never use `drizzle-kit push`** — it skips migration files (missing `pgcrypto`, constraints)
+- **Always prefix with `DATABASE_URL=...`** — without it, drizzle-kit reads `.env.local` (remote Neon DB)
+- **Seeding is required** — `tag-taxonomy-census` tests fail without it
+- Only needed for `pnpm test:integration`. Unit/browser/build tests don't touch the DB.
+
 ### Pre-PR Gate (CI Parity)
 
 ```bash
-# Ensure test DB is running first (see AGENTS.md "Running Integration Tests Locally")
+# Ensure test DB is running first (see above or AGENTS.md "Running Integration Tests Locally")
 pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
 ```
 

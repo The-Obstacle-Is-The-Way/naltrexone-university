@@ -334,11 +334,12 @@ All app pages under `/app/*` are protected by Clerk auth. If you need to visuall
 
 ### Running Integration Tests Locally
 
-Integration tests require a local Postgres database. Use Docker:
+Integration tests require a local Postgres database with migrations **and** seed data. All three setup steps are required:
 
 ```bash
 pnpm db:test:up                                    # Start local Postgres (port 5434)
 DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm db:migrate
+DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm db:seed
 pnpm test:integration                              # Run integration tests
 pnpm db:test:down                                  # Stop database when done
 ```
@@ -346,7 +347,9 @@ pnpm db:test:down                                  # Stop database when done
 - `.env.test` is committed and contains test database config (no secrets)
 - Integration tests auto-load `.env.test` via `tests/integration/setup.ts`
 - Port 5434 avoids conflicts with local Postgres installations
-- Migrations require explicit `DATABASE_URL` (drizzle-kit reads from env)
+- Migrations require explicit `DATABASE_URL` (drizzle-kit reads `.env.local` first, which points to remote Neon)
+- **Never use `drizzle-kit push`** for the test DB — it skips migration files (missing `pgcrypto`, constraints)
+- **Seeding is required** — `tag-taxonomy-census` tests fail without it (`INTEGRATION_SEED_MISSING`)
 
 ### React 19 Component Testing
 
