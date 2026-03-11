@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+import { toQuestionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { ok } from '@/src/adapters/controllers/action-result';
 import type { GetSessionHistoryOutput } from '@/src/adapters/controllers/practice-controller';
@@ -246,9 +247,19 @@ describe('app/(app)/app/history/page', () => {
       searchParams: Promise.resolve({ tab: 'questions' }),
     });
     const html = renderToStaticMarkup(element);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const questionLink = Array.from(doc.querySelectorAll('a')).find((anchor) =>
+      anchor.getAttribute('href')?.startsWith('/app/questions/q-1?'),
+    );
 
     expect(html).toContain('Stem for q1');
-    expect(html).toContain('Review');
+    expect(questionLink?.getAttribute('href')).toBe(
+      toQuestionRoute('q-1', {
+        from: 'history',
+        mode: 'review',
+        historyHref: '/app/history?tab=questions&offset=0&limit=20',
+      }),
+    );
     expect(html).not.toContain('Reattempt');
   });
 

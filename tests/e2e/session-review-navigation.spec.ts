@@ -295,13 +295,21 @@ test.describe('session review navigation (SPEC-027)', () => {
       waitUntil: 'domcontentloaded',
     });
     await expect(page.getByRole('heading', { name: 'History' })).toBeVisible();
+    await expect(page).not.toHaveURL(/source=/);
 
-    // Find a question link (from questions tab, not session-scoped)
-    const questionLink = page.locator('a[href*="/app/questions/"]').first();
+    // The reset helper seeds a completed tutor session plus an adhoc attempt.
+    // Assert the default Questions tab surfaces the tutor-backed row without
+    // requiring a source query param.
+    const tutorQuestionRow = page
+      .locator('li', {
+        has: page.locator('a[href*="/app/questions/"]'),
+      })
+      .filter({ hasText: 'Tutor session' })
+      .first();
     const noQuestionsMessage = page.getByText(/No questions attempted yet/i);
 
-    // Wait for either the question list to load or for the empty state to appear.
-    await questionLink.or(noQuestionsMessage).waitFor({
+    // Wait for either the tutor-backed row to load or the empty state to appear.
+    await tutorQuestionRow.or(noQuestionsMessage).waitFor({
       state: 'visible',
       timeout: 15_000,
     });
@@ -311,11 +319,23 @@ test.describe('session review navigation (SPEC-027)', () => {
       .catch(() => false);
     expect(
       hasNoQuestions,
-      '[E2E_BASELINE_MISSING] Expected at least one attempted question in history.',
+      '[E2E_BASELINE_MISSING] Expected a tutor-backed attempted question in the default History Questions view.',
     ).toBe(false);
 
-    // Verify the link does NOT contain sessionId or historySeq (BUG-152: removed)
+    await expect(
+      tutorQuestionRow,
+      '[E2E_BASELINE_MISSING] Expected a tutor-backed attempted question in the default History Questions view.',
+    ).toBeVisible({ timeout: 15_000 });
+
+    const questionLink = tutorQuestionRow
+      .locator('a[href*="/app/questions/"]')
+      .first();
+    await expect(questionLink).toBeVisible({ timeout: 15_000 });
+
+    // Verify the default all-sources view keeps standalone review links clean:
+    // no sessionId, no source filter, no removed history sequence params.
     const href = await questionLink.getAttribute('href');
+    expect(href).not.toContain('source=');
     expect(href).not.toContain('sessionId=');
     expect(href).not.toContain('historySeq=');
     expect(href).not.toContain('historyIndex=');
