@@ -18,10 +18,13 @@ vi.mock('next/navigation', () => ({
 }));
 
 let HistoryQuestionsTab: typeof import('./history-questions-tab').HistoryQuestionsTab;
+let HISTORY_QUESTION_SOURCE_FILTER_OPTIONS: typeof import('./history-questions-tab').HISTORY_QUESTION_SOURCE_FILTER_OPTIONS;
 
 beforeAll(async () => {
   const module = await import('./history-questions-tab');
   HistoryQuestionsTab = module.HistoryQuestionsTab;
+  HISTORY_QUESTION_SOURCE_FILTER_OPTIONS =
+    module.HISTORY_QUESTION_SOURCE_FILTER_OPTIONS;
 });
 
 type AttemptedQuestionRow = GetAttemptedQuestionsOutput['rows'][number];
@@ -225,6 +228,39 @@ describe('HistoryQuestionsTab', () => {
     ).toBe(false);
   });
 
+  it('renders tutor and exam provenance labels for session-backed question rows', () => {
+    const result: ActionResult<GetAttemptedQuestionsOutput> = {
+      ok: true,
+      data: {
+        rows: [
+          createAvailableAttemptedQuestionRow({
+            questionId: 'q_tutor',
+            sessionId: 'session-tutor',
+            sessionMode: 'tutor',
+            slug: 'q-tutor',
+            stemMd: 'Stem for tutor session',
+          }),
+          createAvailableAttemptedQuestionRow({
+            questionId: 'q_exam',
+            sessionId: 'session-exam',
+            sessionMode: 'exam',
+            slug: 'q-exam',
+            stemMd: 'Stem for exam session',
+            lastAnsweredAt: '2026-02-02T00:00:00.000Z',
+          }),
+        ],
+        totalCount: 2,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(<HistoryQuestionsTab result={result} />);
+
+    expect(html).toContain('Tutor session');
+    expect(html).toContain('Exam session');
+  });
+
   it('builds standalone review links without historySeq/historyIndex params', () => {
     const result: ActionResult<GetAttemptedQuestionsOutput> = {
       ok: true,
@@ -265,7 +301,7 @@ describe('HistoryQuestionsTab', () => {
     );
   });
 
-  it('does not render a Source filter control', () => {
+  it('renders a Source filter control with expected options', () => {
     const result: ActionResult<GetAttemptedQuestionsOutput> = {
       ok: true,
       data: {
@@ -279,9 +315,17 @@ describe('HistoryQuestionsTab', () => {
     const html = renderToStaticMarkup(<HistoryQuestionsTab result={result} />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
 
-    expect(html).not.toContain('Source');
+    expect(html).toContain('Source');
+    expect(
+      HISTORY_QUESTION_SOURCE_FILTER_OPTIONS.map((option) => option.label),
+    ).toEqual([
+      'All sources',
+      'Ad-hoc practice',
+      'Tutor session',
+      'Exam session',
+    ]);
     expect(doc.querySelectorAll('[data-slot="select-trigger"]')).toHaveLength(
-      4,
+      5,
     );
   });
 
@@ -347,12 +391,41 @@ describe('HistoryQuestionsTab', () => {
     expect(doc.querySelector('select[name="difficulty"]')).toBeNull();
     expect(doc.querySelector('select[name="tag"]')).toBeNull();
     expect(doc.querySelectorAll('[data-slot="select-trigger"]')).toHaveLength(
-      4,
+      5,
     );
     expect(html).toContain('Result');
     expect(html).toContain('Difficulty');
     expect(html).toContain('Tag');
+    expect(html).toContain('Source');
     expect(html).toContain('Sort');
+  });
+
+  it('renders a Clear filters link that drops source from the href', () => {
+    const result: ActionResult<GetAttemptedQuestionsOutput> = {
+      ok: true,
+      data: {
+        rows: [createAvailableAttemptedQuestionRow()],
+        totalCount: 1,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      <HistoryQuestionsTab
+        result={result}
+        filters={{ result: 'incorrect', source: 'exam' }}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const clearFiltersLink = Array.from(doc.querySelectorAll('a')).find(
+      (anchor) => anchor.textContent?.trim() === 'Clear filters',
+    );
+
+    expect(clearFiltersLink?.getAttribute('href')).toBe(
+      buildHistoryQuestionsHref({ limit: 20, offset: 0 }),
+    );
+    expect(clearFiltersLink?.getAttribute('href')).not.toContain('source=');
   });
 
   it('does not render a client-side filtering "(X visible after filters)" hint', () => {
@@ -433,7 +506,7 @@ describe('HistoryQuestionsTab', () => {
 
     const html = renderToStaticMarkup(<HistoryQuestionsTab result={result} />);
 
-    expect(html).toContain('No Quick Practice questions yet.');
+    expect(html).toContain('No questions attempted yet.');
   });
 
   it('renders pagination links when there are more rows than the page limit', () => {

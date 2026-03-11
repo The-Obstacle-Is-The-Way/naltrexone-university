@@ -26,6 +26,7 @@ import { getStemPreview } from '@/src/adapters/shared/stem-preview';
 import {
   buildHistoryQuestionsHref,
   type QuestionsFilters,
+  type SourceFilter,
 } from '../history-search-params';
 
 // WHY: This file exceeds the 300-line soft guideline intentionally.
@@ -41,6 +42,13 @@ const SORT_OPTIONS = [
   { value: 'incorrect-first', label: 'Incorrect first' },
   { value: 'correct-first', label: 'Correct first' },
   { value: 'difficulty', label: 'Difficulty' },
+] as const;
+
+export const HISTORY_QUESTION_SOURCE_FILTER_OPTIONS = [
+  { value: ALL_FILTER_VALUE, label: 'All sources' },
+  { value: 'adhoc', label: 'Ad-hoc practice' },
+  { value: 'tutor', label: 'Tutor session' },
+  { value: 'exam', label: 'Exam session' },
 ] as const;
 
 function getSessionOriginLabel(input: {
@@ -124,12 +132,14 @@ export function HistoryQuestionsTab({
   const selectedDifficulty = filters?.difficulty ?? null;
   const selectedTagSlug = filters?.tagSlug ?? null;
   const selectedResult = filters?.result ?? null;
+  const selectedSource = filters?.source ?? null;
   const selectedSort = filters?.sort ?? 'recent';
 
   const hasActiveControls = Boolean(
     selectedDifficulty ||
       selectedTagSlug ||
       selectedResult ||
+      selectedSource ||
       selectedSort !== 'recent',
   );
 
@@ -156,6 +166,7 @@ export function HistoryQuestionsTab({
         'difficulty' in next ? (next.difficulty ?? null) : selectedDifficulty,
       tagSlug: 'tagSlug' in next ? (next.tagSlug ?? null) : selectedTagSlug,
       result: 'result' in next ? (next.result ?? null) : selectedResult,
+      source: 'source' in next ? (next.source ?? null) : selectedSource,
       sort: 'sort' in next ? (next.sort ?? 'recent') : selectedSort,
     };
   }
@@ -188,7 +199,7 @@ export function HistoryQuestionsTab({
     <div className="space-y-6">
       {shouldShowFiltersCard ? (
         <Card className="gap-0 rounded-2xl border-border p-4 shadow-sm">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <div className="space-y-2 text-sm">
               <label
                 htmlFor="history-questions-result"
@@ -315,6 +326,43 @@ export function HistoryQuestionsTab({
 
             <div className="space-y-2 text-sm">
               <label
+                htmlFor="history-questions-source"
+                className="font-medium text-foreground"
+              >
+                Source
+              </label>
+              <Select
+                value={selectedSource ?? ALL_FILTER_VALUE}
+                onValueChange={(value) =>
+                  applyFilter(
+                    patchFilters({
+                      source:
+                        value === ALL_FILTER_VALUE
+                          ? null
+                          : (value as SourceFilter),
+                    }),
+                  )
+                }
+              >
+                <SelectTrigger
+                  id="history-questions-source"
+                  className="w-full"
+                  aria-label="Source"
+                >
+                  <SelectValue placeholder="All sources" />
+                </SelectTrigger>
+                <SelectContent>
+                  {HISTORY_QUESTION_SOURCE_FILTER_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2 text-sm">
+              <label
                 htmlFor="history-questions-sort"
                 className="font-medium text-foreground"
               >
@@ -379,10 +427,7 @@ export function HistoryQuestionsTab({
             </Card>
           ) : (
             <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
-              <div>
-                No Quick Practice questions yet. Questions from Tutor and Exam
-                sessions can be reviewed from the Sessions tab.
-              </div>
+              <div>No questions attempted yet.</div>
               <div className="mt-4">
                 <Button asChild variant="outline" className="rounded-full">
                   <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>

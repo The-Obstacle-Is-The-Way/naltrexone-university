@@ -298,9 +298,7 @@ test.describe('session review navigation (SPEC-027)', () => {
 
     // Find a question link (from questions tab, not session-scoped)
     const questionLink = page.locator('a[href*="/app/questions/"]').first();
-    const noQuestionsMessage = page.getByText(
-      /No Quick Practice questions yet/i,
-    );
+    const noQuestionsMessage = page.getByText(/No questions attempted yet/i);
 
     // Wait for either the question list to load or for the empty state to appear.
     await questionLink.or(noQuestionsMessage).waitFor({
@@ -313,7 +311,7 @@ test.describe('session review navigation (SPEC-027)', () => {
       .catch(() => false);
     expect(
       hasNoQuestions,
-      '[E2E_BASELINE_MISSING] Expected at least one Quick Practice question in history.',
+      '[E2E_BASELINE_MISSING] Expected at least one attempted question in history.',
     ).toBe(false);
 
     // Verify the link does NOT contain sessionId or historySeq (BUG-152: removed)
