@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+import { toQuestionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { ok } from '@/src/adapters/controllers/action-result';
 import type { GetSessionHistoryOutput } from '@/src/adapters/controllers/practice-controller';
@@ -93,16 +94,82 @@ describe('app/(app)/app/history/page', () => {
     });
     const html = renderToStaticMarkup(element);
 
+    expect(html).toContain(
+      'Review completed sessions and your attempted questions.',
+    );
     expect(getTabLinkAriaCurrent(html, 'Questions')).toBe('page');
     expect(getTabLinkAriaCurrent(html, 'Sessions')).toBeNull();
     expect(getAttemptedQuestionsFn).toHaveBeenCalledWith(
       expect.objectContaining({
         limit: 20,
         offset: 0,
-        source: 'adhoc',
+        source: undefined,
       }),
     );
     expect(getTagsFn).toHaveBeenCalledWith({});
+  });
+
+  it('passes source filter to attempted questions fetch when source is provided', async () => {
+    const output: GetAttemptedQuestionsOutput = {
+      rows: [],
+      totalCount: 0,
+      limit: 20,
+      offset: 0,
+    };
+
+    const getAttemptedQuestionsFn = vi.fn(async (_input: unknown) =>
+      ok(output),
+    );
+    const getTagsFn = vi.fn(async (_input: unknown) => ok({ rows: [] }));
+
+    const HistoryPage = createHistoryPage({
+      getAttemptedQuestionsFn,
+      getTagsFn,
+    });
+
+    await HistoryPage({
+      searchParams: Promise.resolve({
+        tab: 'questions',
+        source: 'tutor',
+      }),
+    });
+
+    expect(getAttemptedQuestionsFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: 'tutor',
+      }),
+    );
+  });
+
+  it('passes undefined source to attempted questions fetch when source is missing', async () => {
+    const output: GetAttemptedQuestionsOutput = {
+      rows: [],
+      totalCount: 0,
+      limit: 20,
+      offset: 0,
+    };
+
+    const getAttemptedQuestionsFn = vi.fn(async (_input: unknown) =>
+      ok(output),
+    );
+    const getTagsFn = vi.fn(async (_input: unknown) => ok({ rows: [] }));
+
+    const HistoryPage = createHistoryPage({
+      getAttemptedQuestionsFn,
+      getTagsFn,
+    });
+
+    await HistoryPage({
+      searchParams: Promise.resolve({
+        tab: 'questions',
+      }),
+    });
+
+    expect(getAttemptedQuestionsFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: undefined,
+      }),
+    );
   });
 
   it('passes session history data to the client component when tab=sessions', async () => {
@@ -180,9 +247,19 @@ describe('app/(app)/app/history/page', () => {
       searchParams: Promise.resolve({ tab: 'questions' }),
     });
     const html = renderToStaticMarkup(element);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const questionLink = Array.from(doc.querySelectorAll('a')).find((anchor) =>
+      anchor.getAttribute('href')?.startsWith('/app/questions/q-1?'),
+    );
 
     expect(html).toContain('Stem for q1');
-    expect(html).toContain('Review');
+    expect(questionLink?.getAttribute('href')).toBe(
+      toQuestionRoute('q-1', {
+        from: 'history',
+        mode: 'review',
+        historyHref: '/app/history?tab=questions&offset=0&limit=20',
+      }),
+    );
     expect(html).not.toContain('Reattempt');
   });
 
@@ -292,7 +369,7 @@ describe('app/(app)/app/history/page', () => {
       expect.objectContaining({
         difficulty: 'hard',
         tagSlug: 'opioids',
-        source: 'adhoc',
+        source: undefined,
       }),
     );
   });
@@ -369,7 +446,7 @@ describe('app/(app)/app/history/page', () => {
     expect(getAttemptedQuestionsFn).toHaveBeenCalledWith(
       expect.objectContaining({
         sort: 'incorrect-first',
-        source: 'adhoc',
+        source: undefined,
       }),
     );
     expect(correctRecentIndex).toBeLessThan(incorrectOldIndex);
@@ -448,7 +525,7 @@ describe('app/(app)/app/history/page', () => {
     expect(getAttemptedQuestionsFn).toHaveBeenCalledWith(
       expect.objectContaining({
         sort: 'difficulty',
-        source: 'adhoc',
+        source: undefined,
       }),
     );
     expect(easyIndex).toBeLessThan(hardIndex);

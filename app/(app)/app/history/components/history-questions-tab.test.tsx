@@ -18,10 +18,13 @@ vi.mock('next/navigation', () => ({
 }));
 
 let HistoryQuestionsTab: typeof import('./history-questions-tab').HistoryQuestionsTab;
+let HISTORY_QUESTION_SOURCE_FILTER_OPTIONS: typeof import('./history-questions-tab').HISTORY_QUESTION_SOURCE_FILTER_OPTIONS;
 
 beforeAll(async () => {
   const module = await import('./history-questions-tab');
   HistoryQuestionsTab = module.HistoryQuestionsTab;
+  HISTORY_QUESTION_SOURCE_FILTER_OPTIONS =
+    module.HISTORY_QUESTION_SOURCE_FILTER_OPTIONS;
 });
 
 type AttemptedQuestionRow = GetAttemptedQuestionsOutput['rows'][number];
@@ -225,6 +228,47 @@ describe('HistoryQuestionsTab', () => {
     ).toBe(false);
   });
 
+  it('renders tutor and exam provenance labels for session-backed question rows', () => {
+    const result: ActionResult<GetAttemptedQuestionsOutput> = {
+      ok: true,
+      data: {
+        rows: [
+          createAvailableAttemptedQuestionRow({
+            questionId: 'q_tutor',
+            sessionId: 'session-tutor',
+            sessionMode: 'tutor',
+            slug: 'q-tutor',
+            stemMd: 'Stem for tutor session',
+          }),
+          createAvailableAttemptedQuestionRow({
+            questionId: 'q_exam',
+            sessionId: 'session-exam',
+            sessionMode: 'exam',
+            slug: 'q-exam',
+            stemMd: 'Stem for exam session',
+            lastAnsweredAt: '2026-02-02T00:00:00.000Z',
+          }),
+        ],
+        totalCount: 2,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(<HistoryQuestionsTab result={result} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const rows = Array.from(doc.querySelectorAll('li'));
+    const tutorRow = rows.find((row) =>
+      row.textContent?.includes('Stem for tutor session'),
+    );
+    const examRow = rows.find((row) =>
+      row.textContent?.includes('Stem for exam session'),
+    );
+
+    expect(tutorRow?.textContent).toContain('Tutor session');
+    expect(examRow?.textContent).toContain('Exam session');
+  });
+
   it('builds standalone review links without historySeq/historyIndex params', () => {
     const result: ActionResult<GetAttemptedQuestionsOutput> = {
       ok: true,
@@ -265,7 +309,7 @@ describe('HistoryQuestionsTab', () => {
     );
   });
 
-  it('does not render a Source filter control', () => {
+  it('renders a Source filter control with expected options', () => {
     const result: ActionResult<GetAttemptedQuestionsOutput> = {
       ok: true,
       data: {
@@ -279,9 +323,17 @@ describe('HistoryQuestionsTab', () => {
     const html = renderToStaticMarkup(<HistoryQuestionsTab result={result} />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
 
-    expect(html).not.toContain('Source');
+    expect(html).toContain('Source');
+    expect(
+      HISTORY_QUESTION_SOURCE_FILTER_OPTIONS.map((option) => option.label),
+    ).toEqual([
+      'All sources',
+      'Ad-hoc practice',
+      'Tutor session',
+      'Exam session',
+    ]);
     expect(doc.querySelectorAll('[data-slot="select-trigger"]')).toHaveLength(
-      4,
+      5,
     );
   });
 
@@ -347,12 +399,41 @@ describe('HistoryQuestionsTab', () => {
     expect(doc.querySelector('select[name="difficulty"]')).toBeNull();
     expect(doc.querySelector('select[name="tag"]')).toBeNull();
     expect(doc.querySelectorAll('[data-slot="select-trigger"]')).toHaveLength(
-      4,
+      5,
     );
     expect(html).toContain('Result');
     expect(html).toContain('Difficulty');
     expect(html).toContain('Tag');
+    expect(html).toContain('Source');
     expect(html).toContain('Sort');
+  });
+
+  it('renders a Clear filters link that drops source from the href', () => {
+    const result: ActionResult<GetAttemptedQuestionsOutput> = {
+      ok: true,
+      data: {
+        rows: [createAvailableAttemptedQuestionRow()],
+        totalCount: 1,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      <HistoryQuestionsTab
+        result={result}
+        filters={{ result: 'incorrect', source: 'exam' }}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const clearFiltersLink = Array.from(doc.querySelectorAll('a')).find(
+      (anchor) => anchor.textContent?.trim() === 'Clear filters',
+    );
+
+    expect(clearFiltersLink?.getAttribute('href')).toBe(
+      buildHistoryQuestionsHref({ limit: 20, offset: 0 }),
+    );
+    expect(clearFiltersLink?.getAttribute('href')).not.toContain('source=');
   });
 
   it('does not render a client-side filtering "(X visible after filters)" hint', () => {
@@ -433,7 +514,34 @@ describe('HistoryQuestionsTab', () => {
 
     const html = renderToStaticMarkup(<HistoryQuestionsTab result={result} />);
 
-    expect(html).toContain('No Quick Practice questions yet.');
+    expect(html).toContain('No questions attempted yet.');
+  });
+
+  it('treats a source-only filter as active when no questions match', () => {
+    const result: ActionResult<GetAttemptedQuestionsOutput> = {
+      ok: true,
+      data: {
+        rows: [],
+        totalCount: 0,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      <HistoryQuestionsTab result={result} filters={{ source: 'exam' }} />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const clearFiltersLink = Array.from(doc.querySelectorAll('a')).find(
+      (anchor) => anchor.textContent?.trim() === 'Clear filters',
+    );
+
+    expect(html).toContain('No questions match these filters.');
+    expect(html).not.toContain('No questions attempted yet.');
+    expect(html).not.toContain('Go to Practice');
+    expect(clearFiltersLink?.getAttribute('href')).toBe(
+      buildHistoryQuestionsHref({ limit: 20, offset: 0 }),
+    );
   });
 
   it('renders pagination links when there are more rows than the page limit', () => {
@@ -465,6 +573,41 @@ describe('HistoryQuestionsTab', () => {
     expect(html).toContain('Next');
     expect(html).toContain(
       '/app/history?tab=questions&amp;offset=4&amp;limit=2',
+    );
+  });
+
+  it('preserves source filters in the back-to-first-page link when a page is empty', () => {
+    const result: ActionResult<GetAttemptedQuestionsOutput> = {
+      ok: true,
+      data: {
+        rows: [],
+        totalCount: 21,
+        limit: 20,
+        offset: 20,
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      <HistoryQuestionsTab
+        result={result}
+        filters={{ result: 'incorrect', source: 'exam' }}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const backToFirstPageLink = Array.from(doc.querySelectorAll('a')).find(
+      (anchor) => anchor.textContent?.trim() === 'Back to first page',
+    );
+
+    expect(html).toContain('No more questions on this page.');
+    expect(backToFirstPageLink?.getAttribute('href')).toBe(
+      buildHistoryQuestionsHref({
+        limit: 20,
+        offset: 0,
+        filters: {
+          result: 'incorrect',
+          source: 'exam',
+        },
+      }),
     );
   });
 
