@@ -737,6 +737,70 @@ describe('reconcileStripeSubscriptions', () => {
     ).resolves.toBeNull();
   });
 
+  it('continues canceling remaining duplicates when Stripe reports one duplicate is already canceled', async () => {
+    const keep = createUserSubscriptionFixture('sub_keep', {
+      status: 'active',
+      currentPeriodEnd: 1_700_000_000,
+    });
+    const duplicateOne = createUserSubscriptionFixture('sub_dup_1', {
+      status: 'trialing',
+      currentPeriodEnd: 1_700_000_100,
+    });
+    const duplicateTwo = createUserSubscriptionFixture('sub_dup_2', {
+      status: 'past_due',
+      currentPeriodEnd: 1_700_000_200,
+    });
+
+    const stripe = createStripeFromFixtures({
+      fixtures: [
+        { fixture: keep },
+        { fixture: duplicateOne },
+        { fixture: duplicateTwo },
+      ],
+    });
+    stripe.subscriptions.cancel.mockImplementation(
+      async (subscriptionId: string) => {
+        if (subscriptionId === 'sub_keep') {
+          throw Object.assign(new Error('No such subscription: sub_keep'), {
+            rawType: 'invalid_request_error',
+            code: 'resource_missing',
+          });
+        }
+
+        return { id: `${subscriptionId}_canceled` };
+      },
+    );
+
+    const scenario = createSingleRowScenario({
+      stripe,
+      subscriptionId: keep.id,
+    });
+
+    const result = await scenario.run({ dryRun: false });
+
+    expect(result).toEqual({
+      scanned: 1,
+      updated: 1,
+      failed: 0,
+      failures: [],
+    });
+    expect(stripe.subscriptions.cancel).toHaveBeenCalledTimes(2);
+    expect(stripe.subscriptions.cancel).toHaveBeenNthCalledWith(1, 'sub_keep', {
+      idempotencyKey: 'reconcile_duplicate_subscription:sub_keep',
+    });
+    expect(stripe.subscriptions.cancel).toHaveBeenNthCalledWith(
+      2,
+      'sub_dup_1',
+      { idempotencyKey: 'reconcile_duplicate_subscription:sub_dup_1' },
+    );
+    expect(scenario.logger.infoCalls).toEqual([
+      {
+        context: { stripeSubscriptionId: 'sub_keep' },
+        msg: 'Duplicate subscription already canceled externally',
+      },
+    ]);
+  });
+
   it('does not cancel duplicate blocking subscriptions in dry-run mode', async () => {
     const keep = createUserSubscriptionFixture('sub_keep', {
       status: 'active',
@@ -900,6 +964,39 @@ describe('reconcileStripeSubscriptions', () => {
     await expect(
       scenario.subscriptions.findByExternalSubscriptionId('sub_z'),
     ).resolves.toBeNull();
+  });
+
+  it('fails the row when Stripe cancel returns an unexpected authentication error', async () => {
+    const local = createUserSubscriptionFixture('sub_local', {
+      status: 'active',
+      currentPeriodEnd: 1_700_000_000,
+    });
+    const better = createUserSubscriptionFixture('sub_better', {
+      status: 'active',
+      currentPeriodEnd: 1_800_000_000,
+    });
+
+    const stripe = createStripeFromFixtures({
+      fixtures: [{ fixture: local }, { fixture: better }],
+    });
+    stripe.subscriptions.cancel.mockRejectedValueOnce(
+      Object.assign(new Error('Invalid API Key provided'), {
+        rawType: 'authentication_error',
+      }),
+    );
+
+    const scenario = createSingleRowScenario({
+      stripe,
+      subscriptionId: local.id,
+    });
+
+    const result = await scenario.run({ dryRun: false });
+
+    expectSingleFailure(result, {
+      stripeSubscriptionId: local.id,
+      error: 'Invalid API Key provided',
+    });
+    expect(scenario.logger.infoCalls).toEqual([]);
   });
 
   it('persists the canonical subscription before attempting duplicate cancellation', async () => {

@@ -2,6 +2,7 @@ import {
   callStripeWithRetry,
   retrieveAndNormalizeStripeSubscription,
 } from '@/src/adapters/gateways/stripe';
+import { isAlreadyCanceledError } from '@/src/adapters/gateways/stripe/stripe-errors';
 import type {
   ReconcileStripeSubscriptionsDeps,
   ReconcileStripeSubscriptionsInput,
@@ -231,14 +232,25 @@ export async function reconcileStripeSubscriptions(
           // Phase 5: cancel duplicate blocking subscriptions when not in dry-run mode.
           if (!dryRun) {
             for (const duplicateId of duplicateIds) {
-              await callStripeWithRetry({
-                operation: 'subscriptions.cancel',
-                fn: () =>
-                  cancelSubscription(duplicateId, {
-                    idempotencyKey: `reconcile_duplicate_subscription:${duplicateId}`,
-                  }),
-                logger: deps.logger,
-              });
+              try {
+                await callStripeWithRetry({
+                  operation: 'subscriptions.cancel',
+                  fn: () =>
+                    cancelSubscription(duplicateId, {
+                      idempotencyKey: `reconcile_duplicate_subscription:${duplicateId}`,
+                    }),
+                  logger: deps.logger,
+                });
+              } catch (error) {
+                if (isAlreadyCanceledError(error)) {
+                  deps.logger.info(
+                    { stripeSubscriptionId: duplicateId },
+                    'Duplicate subscription already canceled externally',
+                  );
+                  continue;
+                }
+                throw error;
+              }
             }
           }
 
