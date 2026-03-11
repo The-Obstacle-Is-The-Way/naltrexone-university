@@ -425,20 +425,15 @@ export function HistoryQuestionsTab({
               if (!row.isAvailable) {
                 return (
                   <li key={row.questionId}>
-                    <div className="rounded-2xl bg-foreground/5 p-4">
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="space-y-2">
-                          <div className="text-sm font-medium text-foreground">
-                            [Question no longer available]
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            This question was removed or unpublished.
-                          </div>
-                          <QuestionMetadata
-                            row={row}
-                            middleLabel="Unavailable"
-                          />
+                    <div className="rounded-2xl bg-foreground/[0.08] p-4">
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium text-foreground">
+                          [Question no longer available]
                         </div>
+                        <div className="text-sm text-muted-foreground">
+                          This question was removed or unpublished.
+                        </div>
+                        <QuestionMetadata row={row} middleLabel="Unavailable" />
                       </div>
                     </div>
                   </li>
@@ -459,32 +454,26 @@ export function HistoryQuestionsTab({
                 <li key={row.questionId}>
                   <Link
                     href={href}
-                    className="block rounded-2xl bg-foreground/5 p-4 transition-colors hover:bg-foreground/[0.08] focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                    className="block rounded-2xl bg-foreground/[0.08] p-4 transition-colors hover:bg-foreground/[0.12] focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                   >
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="space-y-2">
-                        <span className="text-sm font-medium text-foreground">
-                          {title}
-                        </span>
-
-                        {shouldShowBodyText ? (
-                          <div
-                            className="text-sm text-muted-foreground"
-                            data-testid="history-question-preview"
-                          >
-                            {bodyPreview}
-                          </div>
-                        ) : null}
-                        <QuestionMetadata
-                          row={row}
-                          middleLabel={row.difficulty}
-                          middleLabelClassName="capitalize"
-                        />
-                      </div>
-
-                      <span className="inline-flex items-center rounded-full border-0 bg-foreground/[0.06] px-4 py-2 text-sm font-medium text-foreground/60">
-                        Review
+                    <div className="space-y-2">
+                      <span className="text-sm font-medium text-foreground">
+                        {title}
                       </span>
+
+                      {shouldShowBodyText ? (
+                        <div
+                          className="text-sm text-muted-foreground"
+                          data-testid="history-question-preview"
+                        >
+                          {bodyPreview}
+                        </div>
+                      ) : null}
+                      <QuestionMetadata
+                        row={row}
+                        middleLabel={row.difficulty}
+                        middleLabelClassName="capitalize"
+                      />
                     </div>
                   </Link>
                 </li>

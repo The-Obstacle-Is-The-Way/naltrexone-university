@@ -255,10 +255,20 @@ describe('HistorySessionsTab', () => {
     const reviewLink = Array.from(doc.querySelectorAll('a')).find((link) =>
       link.textContent?.includes('8/10 correct (80%)'),
     );
+    const reviewLinkClassTokens = getClassTokens(
+      reviewLink?.getAttribute('class') ?? '',
+    );
 
     expect(reviewLink?.getAttribute('href')).toContain('/app/questions/q-1');
     expect(reviewLink?.getAttribute('href')).toContain('mode=review');
     expect(reviewLink?.getAttribute('href')).toContain('sessionId=session-1');
+    expect(reviewLinkClassTokens.has('rounded-md')).toBe(true);
+    expect(reviewLinkClassTokens.has('text-sm')).toBe(true);
+    expect(reviewLinkClassTokens.has('text-foreground')).toBe(true);
+    expect(reviewLinkClassTokens.has('focus-visible:ring-[3px]')).toBe(true);
+    expect(reviewLinkClassTokens.has('focus-visible:ring-ring/50')).toBe(true);
+    expect(reviewLinkClassTokens.has('hover:underline')).toBe(false);
+    expect(reviewLinkClassTokens.has('transition-colors')).toBe(false);
     expect(html).toContain('data-session-summary-content="true"');
   });
 
@@ -293,8 +303,12 @@ describe('HistorySessionsTab', () => {
 
     expect(row).toBeDefined();
     expect(rowClassTokens.has('cursor-pointer')).toBe(true);
-    expect(rowClassTokens.has('bg-foreground/5')).toBe(true);
-    expect(rowClassTokens.has('hover:bg-foreground/[0.08]')).toBe(true);
+    expect(rowClassTokens.has('rounded-xl')).toBe(true);
+    expect(rowClassTokens.has('p-3')).toBe(true);
+    expect(rowClassTokens.has('bg-foreground/[0.08]')).toBe(true);
+    expect(rowClassTokens.has('bg-foreground/5')).toBe(false);
+    expect(rowClassTokens.has('hover:bg-foreground/[0.08]')).toBe(false);
+    expect(rowClassTokens.has('transition-colors')).toBe(false);
     expect(rowClassTokens.has('border')).toBe(false);
     expect(rowClassTokens.has('border-border/60')).toBe(false);
     expect(rowClassTokens.has('bg-muted/20')).toBe(false);
@@ -338,8 +352,12 @@ describe('HistorySessionsTab', () => {
 
     expect(row).toBeDefined();
     expect(rowClassTokens.has('cursor-pointer')).toBe(false);
-    expect(rowClassTokens.has('bg-foreground/5')).toBe(true);
-    expect(rowClassTokens.has('hover:bg-foreground/[0.08]')).toBe(true);
+    expect(rowClassTokens.has('rounded-xl')).toBe(true);
+    expect(rowClassTokens.has('p-3')).toBe(true);
+    expect(rowClassTokens.has('bg-foreground/[0.08]')).toBe(true);
+    expect(rowClassTokens.has('bg-foreground/5')).toBe(false);
+    expect(rowClassTokens.has('hover:bg-foreground/[0.08]')).toBe(false);
+    expect(rowClassTokens.has('transition-colors')).toBe(false);
     expect(rowClassTokens.has('border')).toBe(false);
     expect(rowClassTokens.has('border-border/60')).toBe(false);
     expect(rowClassTokens.has('bg-muted/20')).toBe(false);

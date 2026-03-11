@@ -179,7 +179,7 @@ export function HistorySessionsTab({
             <li
               key={row.sessionId}
               className={cn(
-                'rounded-xl bg-foreground/5 p-3 transition-colors hover:bg-foreground/[0.08]',
+                'rounded-xl bg-foreground/[0.08] p-3',
                 isRowInteractive ? 'cursor-pointer' : undefined,
               )}
               onClick={(event) => {
@@ -202,7 +202,7 @@ export function HistorySessionsTab({
                 {sessionReviewHref ? (
                   <Link
                     href={sessionReviewHref}
-                    className="rounded-md text-sm text-foreground transition-colors hover:underline focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                    className="rounded-md text-sm text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                   >
                     <SessionSummaryContent
                       mode={row.mode}

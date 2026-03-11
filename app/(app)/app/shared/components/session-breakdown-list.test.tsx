@@ -168,6 +168,18 @@ describe('SessionBreakdownList', () => {
     );
   });
 
+  it('uses background-only hover feedback for available breakdown links', async () => {
+    const html = await renderList([availableRow]);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const link = doc.querySelector('a');
+
+    expect(link).not.toBeNull();
+    const linkTokens = getClassTokens(link?.getAttribute('class') ?? '');
+
+    expect(linkTokens.has('hover:bg-muted/20')).toBe(true);
+    expect(linkTokens.has('hover:underline')).toBe(false);
+  });
+
   it('renders an empty-state message when there are no breakdown rows', async () => {
     const html = await renderList([]);
 

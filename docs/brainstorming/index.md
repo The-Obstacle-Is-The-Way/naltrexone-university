@@ -30,7 +30,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
 | [BS-044](./bs-044-dark-mode-border-weight-tiering.md) | Dark Mode Border Weight Tiering — uniform `dark:border-foreground/40` is WCAG compliant but aesthetically heavy; explore tiered treatment by element role | Active | [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
 
-**Next Brainstorming ID:** BS-048
+**Next Brainstorming ID:** BS-049
 
 ---
 
@@ -38,6 +38,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 | ID | Title | Outcome |
 |----|-------|---------|
+| [BS-048](../_archive/brainstorming/bs-048-history-row-fill-depth-and-hover-policy.md) | History Row Fill Depth, Hover Policy, and Affordance Cleanup — `bg-foreground/5` on page background is perceptually darker than Dashboard/Practice rows on `bg-card`; hover and underlines redundant with chevron; Questions "Review" pill redundant with row Link | Promoted to [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md), resolved 2026-03-10. Parent-aware foreground-ramp tokens were implemented (`/[0.08]` rest on page, `hover:bg-foreground/[0.12]` for navigation rows), and redundant History affordances were removed. |
 | [BS-046](../_archive/brainstorming/bs-046-filter-chip-fill-depth-and-summary-hover.md) | Filter Chip Fill Depth + Summary Hover Removal — chips are `bg-transparent` and look flat against container; summary hover is redundant with chevron and visually distracting | Promoted to [DEBT-294](../_archive/debt/debt-294-filter-chip-fill-depth-and-cursor.md). Chrome visual audit added `cursor-pointer` fix and revised hover to `/[0.10]` (Radix-aligned). |
 | [BS-047](../_archive/brainstorming/bs-047-history-sessions-tab-visual-unification.md) | History Page Visual Unification — bordered rows, outline buttons, heavy separators, and question card borders+shadows are visually dated vs. dashboard/practice tonal fill + chevron patterns (both tabs) | Promoted to [DEBT-301](../_archive/debt/debt-301-history-page-visual-unification.md), resolved 2026-03-10. Gaps were converted into an implementation-ready History visual unification spec covering both Sessions and Questions tabs, with Gap 3 (`no wrapping Card`) explicitly decided as out of scope. |
 | [BS-045](../_archive/brainstorming/bs-045-choice-button-dark-mode-fill-and-border-refinement.md) | Choice Button Dark Mode Fill and Border Refinement — gray rest fill, heavy border, indistinguishable states | Resolved by [DEBT-280](../_archive/debt/debt-280-choice-button-dark-mode-surface-refinement.md) (PR #175). Approach A implemented: rest fill removed, hover/selected steps widened, segmented control border softened. |

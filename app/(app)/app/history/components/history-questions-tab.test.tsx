@@ -97,8 +97,6 @@ describe('HistoryQuestionsTab', () => {
     expect(html).toContain('Feb 1, 2026');
     expect(html).toContain('Exam session');
     expect(html).toContain('Ad-hoc practice');
-    expect(html).toContain('Review');
-    expect(html).not.toContain('Reattempt');
 
     const historyHref = buildHistoryQuestionsHref({
       limit: result.data.limit,
@@ -145,15 +143,7 @@ describe('HistoryQuestionsTab', () => {
     const reviewSpans = Array.from(doc.querySelectorAll('span')).filter(
       (span) => span.textContent?.trim() === 'Review',
     );
-    expect(reviewSpans).toHaveLength(2);
-    for (const reviewSpan of reviewSpans) {
-      const classTokens = (reviewSpan.getAttribute('class') ?? '').split(/\s+/);
-      expect(classTokens).toContain('border-0');
-      expect(classTokens).toContain('bg-foreground/[0.06]');
-      expect(classTokens).toContain('font-medium');
-      expect(classTokens).toContain('text-foreground/60');
-      expect(classTokens).not.toContain('border');
-    }
+    expect(reviewSpans).toHaveLength(0);
 
     expect(doc.querySelectorAll('a a')).toHaveLength(0);
 
@@ -163,15 +153,26 @@ describe('HistoryQuestionsTab', () => {
     expect(cardLinks).toHaveLength(2);
     for (const link of cardLinks) {
       const classTokens = (link.getAttribute('class') ?? '').split(/\s+/);
-      expect(classTokens).toContain('bg-foreground/5');
+      const contentStack = link.firstElementChild;
+      const contentStackTokens = (
+        contentStack?.getAttribute('class') ?? ''
+      ).split(/\s+/);
+
+      expect(classTokens).toContain('bg-foreground/[0.08]');
+      expect(classTokens).not.toContain('bg-foreground/5');
       expect(classTokens).toContain('transition-colors');
-      expect(classTokens).toContain('hover:bg-foreground/[0.08]');
+      expect(classTokens).toContain('hover:bg-foreground/[0.12]');
+      expect(classTokens).not.toContain('hover:bg-foreground/[0.08]');
       expect(classTokens).toContain('focus-visible:ring-[3px]');
       expect(classTokens).not.toContain('border');
       expect(classTokens).not.toContain('border-border');
       expect(classTokens).not.toContain('shadow-sm');
       expect(classTokens).not.toContain('hover:bg-muted/50');
       expect(classTokens).not.toContain('hover:bg-accent/40');
+      expect(contentStack?.tagName).toBe('DIV');
+      expect(contentStackTokens).toContain('space-y-2');
+      expect(contentStackTokens).not.toContain('sm:flex-row');
+      expect(contentStackTokens).not.toContain('sm:justify-between');
     }
   });
 
@@ -212,7 +213,6 @@ describe('HistoryQuestionsTab', () => {
       a.getAttribute('href'),
     );
     expect(hrefs.filter((href) => href === incorrectHref)).toHaveLength(1);
-    expect(html).toContain('Review');
     expect(
       Array.from(doc.querySelectorAll('a')).some(
         (a) => a.textContent?.trim() === 'Review',
@@ -222,8 +222,7 @@ describe('HistoryQuestionsTab', () => {
       Array.from(doc.querySelectorAll('span')).some(
         (s) => s.textContent?.trim() === 'Review',
       ),
-    ).toBe(true);
-    expect(html).not.toContain('Reattempt');
+    ).toBe(false);
   });
 
   it('builds standalone review links without historySeq/historyIndex params', () => {
@@ -504,10 +503,19 @@ describe('HistoryQuestionsTab', () => {
       /\s+/,
     );
     expect(classTokens).toContain('rounded-2xl');
-    expect(classTokens).toContain('bg-foreground/5');
+    expect(classTokens).toContain('bg-foreground/[0.08]');
+    expect(classTokens).not.toContain('bg-foreground/5');
     expect(classTokens).toContain('p-4');
     expect(classTokens).not.toContain('border-border');
     expect(classTokens).not.toContain('shadow-sm');
+
+    const contentStack = rowContainer?.firstElementChild;
+    const contentStackTokens = (
+      contentStack?.getAttribute('class') ?? ''
+    ).split(/\s+/);
+    expect(contentStackTokens).toContain('space-y-2');
+    expect(contentStackTokens).not.toContain('sm:flex-row');
+    expect(contentStackTokens).not.toContain('sm:justify-between');
   });
 
   it('renders correct and incorrect result badges', () => {
