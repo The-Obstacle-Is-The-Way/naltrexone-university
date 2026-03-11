@@ -831,7 +831,7 @@ Is the list inside a <Card> container?
 │         └── YES → Use S-2 tonal sibling variant (no hover classes)
 └── NO → Is each item a standalone container?
     ├── YES → Use I-2 tonal standalone row
-    │         rounded-2xl, bg-foreground/5, hover:bg-foreground/[0.08]
+    │         rounded-2xl, bg-foreground/[0.08], hover:bg-foreground/[0.12]
     │         Is the row non-interactive?
     │         └── YES → Use S-2 page-background sibling variant
     └── NO → Use <Card> per item with interactive elements inside

@@ -512,6 +512,14 @@ describe('HistoryQuestionsTab', () => {
     expect(classTokens).toContain('p-4');
     expect(classTokens).not.toContain('border-border');
     expect(classTokens).not.toContain('shadow-sm');
+
+    const contentStack = rowContainer?.firstElementChild;
+    const contentStackTokens = (
+      contentStack?.getAttribute('class') ?? ''
+    ).split(/\s+/);
+    expect(contentStackTokens).toContain('space-y-2');
+    expect(contentStackTokens).not.toContain('sm:flex-row');
+    expect(contentStackTokens).not.toContain('sm:justify-between');
   });
 
   it('renders correct and incorrect result badges', () => {

@@ -426,19 +426,14 @@ export function HistoryQuestionsTab({
                 return (
                   <li key={row.questionId}>
                     <div className="rounded-2xl bg-foreground/[0.08] p-4">
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="space-y-2">
-                          <div className="text-sm font-medium text-foreground">
-                            [Question no longer available]
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            This question was removed or unpublished.
-                          </div>
-                          <QuestionMetadata
-                            row={row}
-                            middleLabel="Unavailable"
-                          />
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium text-foreground">
+                          [Question no longer available]
                         </div>
+                        <div className="text-sm text-muted-foreground">
+                          This question was removed or unpublished.
+                        </div>
+                        <QuestionMetadata row={row} middleLabel="Unavailable" />
                       </div>
                     </div>
                   </li>
