@@ -499,9 +499,7 @@ describe('createStripeCheckoutSession', () => {
 
   it('treats already-terminal expire error as idempotent success and creates new session', async () => {
     const alreadyTerminalError = Object.assign(
-      new Error(
-        'Checkout Session cannot be expired because it is already complete',
-      ),
+      new Error("No such checkout.session: 'cs_open'"),
       {
         rawType: 'invalid_request_error',
         code: 'resource_missing',
@@ -576,6 +574,46 @@ describe('createStripeCheckoutSession', () => {
     expect(sessionsExpire).toHaveBeenCalledTimes(1);
     expect(sessionsCreate).toHaveBeenCalledTimes(1);
     expect(logger.infoCalls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          msg: 'Treating already-terminal checkout session expire error as success',
+        }),
+      ]),
+    );
+  });
+
+  it('throws STRIPE_ERROR when the terminal message is present but rawType differs', async () => {
+    const nonTerminalStripeError = Object.assign(
+      new Error('This checkout session has already expired'),
+      {
+        rawType: 'api_error',
+      },
+    );
+
+    const { stripe, sessionsCreate, sessionsExpire } = createStripeMock({
+      openSessionsData: [
+        { id: 'cs_open', url: 'https://stripe/checkout/open' },
+      ],
+      retrievedSessionPriceId: 'price_a',
+      expireError: nonTerminalStripeError,
+      createdSessionUrl: 'https://stripe/checkout/new',
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger,
+      }),
+    ).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+      message: 'Failed to expire existing checkout session',
+    });
+
+    expect(sessionsExpire).toHaveBeenCalledTimes(1);
+    expect(sessionsCreate).not.toHaveBeenCalled();
+    expect(logger.infoCalls).not.toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           msg: 'Treating already-terminal checkout session expire error as success',
