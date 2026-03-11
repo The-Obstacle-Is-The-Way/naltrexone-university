@@ -22,7 +22,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 7 verified client-side flows still report only to console or silent fallbacks | P2 | — |
 | [DEBT-298](./debt-298-ui-structural-consistency.md) | UI Structural Consistency Audit — inconsistent label/control spacing patterns, non-heading card titles, sub-44px shared touch targets, and `items-center` alignment mismatches across verified views | P3 | — |
 | [DEBT-300](./debt-300-history-questions-all-sources.md) | History Questions Tab — show all question sources (ad-hoc + tutor + exam) instead of ad-hoc only; add Source filter dropdown; fix Dashboard → History "View all" IA inconsistency | P2 | — |
-| [DEBT-302](./debt-302-history-row-fill-and-affordance-cleanup.md) | History Row Fill Depth and Affordance Cleanup — raise Sessions row fill from `/5` to `/[0.08]` for page-background perceptual parity, remove row hover + underlines, remove redundant Questions "Review" pill | P3 | — |
+| [DEBT-302](./debt-302-history-row-fill-and-affordance-cleanup.md) | History Row Fill Depth and Affordance Cleanup — raise all History rows from `bg-foreground/5` to `bg-foreground/[0.08]` for page-background perceptual parity with Dashboard/Practice; remove Sessions hover + underlines; remove Questions "Review" pill; adjust Questions hover to `/[0.12]` | P3 | — |
 **Next Debt ID:** DEBT-303
 
 ---

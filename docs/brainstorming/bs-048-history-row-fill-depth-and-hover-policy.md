@@ -84,36 +84,36 @@ The pattern registry (§1.2) already codifies this principle for the muted scale
 
 **Decision:** Remove the Review pill entirely. The entire available question row is a `<Link>` — the cursor, hover fill, and focus ring already communicate "this is clickable." A redundant label inside a clickable row adds visual weight without informational value.
 
-### Gap 6: Questions tab fill/hover — NO CHANGE
+### Gap 6: Questions tab fill — UNIFIED with Sessions
 
 **Current:** `bg-foreground/5` rest + `hover:bg-foreground/[0.08]` hover.
 
-**Decision:** Keep as-is. The user confirmed the Questions tab contrast and hover feel correct. Questions rows have different density, spacing, and content structure (title + preview + metadata) than Sessions rows. The tabs are never visible simultaneously, so cross-tab opacity difference (`[0.08]` Sessions vs `/5` Questions) is not jarring.
+**Decision:** Raise to `bg-foreground/[0.08]` rest + `hover:bg-foreground/[0.12]` hover. Unified with Sessions — same parent surface, same fill rule. The Review pill removal (Gap 5) will reduce visual content weight, making the too-dark fill more noticeable. One opacity for the entire page is simpler than maintaining two.
 
-**Note:** If Questions rows feel too dark after the Review pill is removed (losing visual content weight), the same fill raise to `[0.08]` can be applied as a follow-up.
+Chrome visual audit confirmed: the parent-surface issue affects both tabs equally.
 
 ### Gap 7: Unavailable row consistency
 
-Session rows don't have standalone unavailable variants — unavailable questions appear in the breakdown list (shared component, unchanged).
+Questions tab unavailable rows also move from `bg-foreground/5` to `bg-foreground/[0.08]` — matching their available-row siblings.
 
-Questions tab unavailable rows currently use `bg-foreground/5`. Since the Questions tab fill is not changing (Gap 6), these stay as-is.
+Session rows don't have standalone unavailable variants (those appear in the breakdown list, shared component, unchanged).
+
+### Gap 8: Cross-tab border radius / padding — DEFERRED
+
+Chrome audit flagged: Sessions use `rounded-xl p-3` while Questions use `rounded-2xl p-4`. This is an intentional density difference (Sessions are compact single-line summaries; Questions have multi-line previews), not a gap. Deferred as a separate design judgment if needed.
 
 ---
 
-## Cross-Tab Divergence
+## Cross-Tab Treatment Summary
 
-After these changes, the two History tabs will intentionally differ:
+After these changes, both tabs share the same rest fill. Only functional differences remain:
 
 | Aspect | Sessions tab | Questions tab |
 |--------|-------------|---------------|
-| Rest fill | `bg-foreground/[0.08]` | `bg-foreground/5` |
-| Hover fill | None (chevron only) | `hover:bg-foreground/[0.08]` |
+| Rest fill | `bg-foreground/[0.08]` | `bg-foreground/[0.08]` |
+| Hover fill | None (disclosure → chevron) | `hover:bg-foreground/[0.12]` (navigation → Link) |
 | Trailing affordance | Chevron button | None (Review pill removed) |
 | Row density | `p-3`, `space-y-2`, `rounded-xl` | `p-4`, `space-y-4`, `rounded-2xl` |
-
-**Why this is acceptable:** The tabs are never visible simultaneously. The visual shift on tab switch is softened by the shared tab bar, page header, and filter controls. The density/spacing difference already makes the tabs feel distinct.
-
-**Future alignment path:** If the divergence feels wrong after implementation (especially after the Review pill is removed from Questions), both tabs can be unified to `bg-foreground/[0.08]` with a trivial follow-up.
 
 ---
 
@@ -127,5 +127,6 @@ After these changes, the two History tabs will intentionally differ:
 | 2026-03-10 | Gap 3: Remove session summary `hover:underline` | Noisy inside tonal fill row; cursor-pointer provides navigation cue |
 | 2026-03-10 | Gap 4: Remove breakdown list `hover:underline` | Double hover (bg + underline) is cluttered; keep bg-only |
 | 2026-03-10 | Gap 5: Remove Questions Review pill | Redundant label inside a clickable row |
-| 2026-03-10 | Gap 6: Questions fill/hover unchanged | User confirmed current treatment feels correct |
+| 2026-03-10 | Gap 6: Unified fill — both tabs `bg-foreground/[0.08]` | Chrome audit confirmed parent-surface issue affects both tabs; one opacity per page is cleaner than two; Review pill removal reduces content weight making dark fill more noticeable |
+| 2026-03-10 | Gap 8: Radius/padding deferred | Intentional density difference; Sessions compact, Questions airy |
 | 2026-03-10 | Promoted to [DEBT-302](../debt/debt-302-history-row-fill-and-affordance-cleanup.md) | All gaps decided; ready for implementation |
