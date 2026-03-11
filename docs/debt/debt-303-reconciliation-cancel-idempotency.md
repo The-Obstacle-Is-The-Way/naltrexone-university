@@ -3,7 +3,7 @@
 **Priority:** P3
 **Created:** 2026-03-11
 **Status:** Open
-**Related:** BUG-205 (canonical selection fix, PR #199)
+**Related:** BUG-205 (canonical selection fix, PR #199), DEBT-304
 
 ---
 
@@ -11,7 +11,7 @@
 
 During the BUG-205 code review, CodeRabbit identified a defensive hardening opportunity in the reconciliation job's duplicate cancellation loop (Phase 5 of `reconcile-stripe-subscriptions.ts`).
 
-The cancel loop iterates `duplicateIds` — subscription IDs derived from a `subscriptions.list` snapshot taken earlier in the same job run. If an external actor (Stripe dashboard, webhook handler, another cron run) cancels one of those subscriptions between the list call and the cancel call, `callStripeWithRetry` will receive a non-transient Stripe error (likely `invalid_request_error` / `resource_missing`) and fail the entire row — even though the canonical subscription was already persisted in Phase 4.
+The cancel loop iterates `duplicateIds` — subscription IDs derived from a `subscriptions.list` snapshot taken earlier in the same job run. If an external actor (Stripe dashboard, the Clerk `user.deleted` cancel path, or another cron run) cancels one of those subscriptions between the list call and the cancel call, `callStripeWithRetry` will receive a non-transient Stripe error (likely Stripe `rawType: 'invalid_request_error'` with `code: 'resource_missing'`) and fail the entire row — even though the canonical subscription was already persisted in Phase 4.
 
 This is a pre-existing race condition, not introduced by BUG-205. It was deferred from PR #199 to avoid scope creep.
 
@@ -35,6 +35,18 @@ for (const duplicateId of duplicateIds) {
 ```
 
 If Stripe returns a non-transient error (e.g., subscription already canceled), `callStripeWithRetry` throws, the row is marked as failed, and remaining duplicates are not canceled.
+
+## Tracer-Bullet Verification
+
+Verified against the current codebase on 2026-03-11:
+
+- Phase 5 still lives at `reconcile-stripe-subscriptions.ts:232-242`.
+- `callStripeWithRetry` (`src/adapters/gateways/stripe/stripe-retry.ts`) delegates to `retry(...)`.
+- `retry(...)` rethrows immediately when `shouldRetry(error)` returns `false`.
+- `isTransientExternalError` (`src/adapters/shared/retry.ts`) only classifies network errors, `429`, and `5xx` as transient.
+- Existing retry tests confirm `400` / `404` are non-transient.
+- So a Stripe semantic `4xx` such as `StripeInvalidRequestError` with `rawType: 'invalid_request_error'` and `code: 'resource_missing'` would currently fail the reconciliation row.
+- The reconciliation test suite already covers generic cancel failure, but does not yet cover the already-canceled / resource-missing success case.
 
 ## Expected Behavior
 
@@ -73,7 +85,7 @@ for (const duplicateId of duplicateIds) {
 }
 ```
 
-The `isAlreadyCanceledError` helper should inspect Stripe error shape (e.g., `error.type === 'invalid_request_error'` with `resource_missing` code or an "already canceled" message). Check the existing `isTransientExternalError` in `src/adapters/shared/retry.ts` for the error classification pattern already in use.
+The `isAlreadyCanceledError` helper should live at the Stripe adapter boundary and inspect Stripe error shape using the same property-access pattern already used by `isTransientExternalError`. For the installed Stripe SDK, prefer `error.rawType === 'invalid_request_error'` (or `error instanceof Stripe.errors.StripeInvalidRequestError`) plus `error.code === 'resource_missing'`, with a message fallback for "already canceled" wording if needed. There is no existing production Stripe semantic-error classifier in `src/` today, so this helper would be the first one.
 
 ## Test Plan
 
