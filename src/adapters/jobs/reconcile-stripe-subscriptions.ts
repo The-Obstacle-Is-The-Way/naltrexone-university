@@ -266,9 +266,12 @@ export async function reconcileStripeSubscriptions(
               stripeCustomerId: localSubscriptionUpdate.externalCustomerId,
               keptSubscriptionId:
                 keptSubscriptionId ?? canonical.externalSubscriptionId,
-              duplicateSubscriptionIds: dryRun
-                ? duplicateIds
-                : canceledDuplicateIds,
+              duplicateSubscriptionIds: duplicateIds,
+              ...(dryRun
+                ? {}
+                : {
+                    canceledDuplicateSubscriptionIds: canceledDuplicateIds,
+                  }),
               ...(alreadyCanceledDuplicateIds.length > 0
                 ? {
                     alreadyCanceledSubscriptionIds: alreadyCanceledDuplicateIds,

@@ -848,11 +848,69 @@ describe('reconcileStripeSubscriptions', () => {
           userId: 'user_1',
           stripeCustomerId: 'cus_123',
           keptSubscriptionId: 'sub_dup_2',
-          duplicateSubscriptionIds: ['sub_dup_1'],
+          duplicateSubscriptionIds: ['sub_keep', 'sub_dup_1'],
+          canceledDuplicateSubscriptionIds: ['sub_dup_1'],
           alreadyCanceledSubscriptionIds: ['sub_keep'],
           dryRun: false,
         },
         msg: 'Canceled duplicate Stripe subscriptions',
+      },
+    ]);
+  });
+
+  it('reports when all duplicates were already canceled externally', async () => {
+    const keep = createUserSubscriptionFixture('sub_keep', {
+      status: 'active',
+      currentPeriodEnd: 1_700_000_000,
+    });
+    const duplicateOne = createUserSubscriptionFixture('sub_dup_1', {
+      status: 'trialing',
+      currentPeriodEnd: 1_700_000_100,
+    });
+    const duplicateTwo = createUserSubscriptionFixture('sub_dup_2', {
+      status: 'past_due',
+      currentPeriodEnd: 1_700_000_200,
+    });
+
+    const stripe = createStripeFromFixtures({
+      fixtures: [
+        { fixture: keep },
+        { fixture: duplicateOne },
+        { fixture: duplicateTwo },
+      ],
+    });
+    stripe.subscriptions.cancel.mockRejectedValue(
+      Object.assign(new Error('No such subscription'), {
+        rawType: 'invalid_request_error',
+        code: 'resource_missing',
+      }),
+    );
+
+    const scenario = createSingleRowScenario({
+      stripe,
+      subscriptionId: keep.id,
+    });
+
+    const result = await scenario.run({ dryRun: false });
+
+    expect(result).toEqual({
+      scanned: 1,
+      updated: 1,
+      failed: 0,
+      failures: [],
+    });
+    expect(scenario.logger.warnCalls).toEqual([
+      {
+        context: {
+          userId: 'user_1',
+          stripeCustomerId: 'cus_123',
+          keptSubscriptionId: 'sub_dup_2',
+          duplicateSubscriptionIds: ['sub_keep', 'sub_dup_1'],
+          canceledDuplicateSubscriptionIds: [],
+          alreadyCanceledSubscriptionIds: ['sub_keep', 'sub_dup_1'],
+          dryRun: false,
+        },
+        msg: 'Duplicate Stripe subscriptions already canceled externally',
       },
     ]);
   });
