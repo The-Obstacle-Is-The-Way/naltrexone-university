@@ -1,5 +1,6 @@
 import {
   callStripeWithRetry,
+  isAlreadyCanceledError,
   retrieveAndNormalizeStripeSubscription,
 } from '@/src/adapters/gateways/stripe';
 import type {
@@ -135,6 +136,7 @@ export async function reconcileStripeSubscriptions(
           ],
         ]);
         let duplicateIds: string[] = [];
+        const alreadyCanceledDuplicateIds: string[] = [];
         let keptSubscriptionId: string | null = null;
 
         // Intentionally sequential: in this per-row callback we iterate
@@ -231,16 +233,32 @@ export async function reconcileStripeSubscriptions(
           // Phase 5: cancel duplicate blocking subscriptions when not in dry-run mode.
           if (!dryRun) {
             for (const duplicateId of duplicateIds) {
-              await callStripeWithRetry({
-                operation: 'subscriptions.cancel',
-                fn: () =>
-                  cancelSubscription(duplicateId, {
-                    idempotencyKey: `reconcile_duplicate_subscription:${duplicateId}`,
-                  }),
-                logger: deps.logger,
-              });
+              try {
+                await callStripeWithRetry({
+                  operation: 'subscriptions.cancel',
+                  fn: () =>
+                    cancelSubscription(duplicateId, {
+                      idempotencyKey: `reconcile_duplicate_subscription:${duplicateId}`,
+                    }),
+                  logger: deps.logger,
+                });
+              } catch (error) {
+                if (isAlreadyCanceledError(error)) {
+                  alreadyCanceledDuplicateIds.push(duplicateId);
+                  deps.logger.info(
+                    { stripeSubscriptionId: duplicateId },
+                    'Duplicate subscription already canceled externally',
+                  );
+                  continue;
+                }
+                throw error;
+              }
             }
           }
+
+          const canceledDuplicateIds = duplicateIds.filter(
+            (duplicateId) => !alreadyCanceledDuplicateIds.includes(duplicateId),
+          );
 
           deps.logger.warn(
             {
@@ -249,11 +267,23 @@ export async function reconcileStripeSubscriptions(
               keptSubscriptionId:
                 keptSubscriptionId ?? canonical.externalSubscriptionId,
               duplicateSubscriptionIds: duplicateIds,
+              ...(dryRun
+                ? {}
+                : {
+                    canceledDuplicateSubscriptionIds: canceledDuplicateIds,
+                  }),
+              ...(alreadyCanceledDuplicateIds.length > 0
+                ? {
+                    alreadyCanceledSubscriptionIds: alreadyCanceledDuplicateIds,
+                  }
+                : {}),
               dryRun,
             },
             dryRun
               ? 'Detected duplicate Stripe subscriptions (dry-run)'
-              : 'Canceled duplicate Stripe subscriptions',
+              : canceledDuplicateIds.length > 0
+                ? 'Canceled duplicate Stripe subscriptions'
+                : 'Duplicate Stripe subscriptions already canceled externally',
           );
         }
 
