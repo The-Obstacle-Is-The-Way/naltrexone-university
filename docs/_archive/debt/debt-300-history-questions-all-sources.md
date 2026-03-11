@@ -2,7 +2,8 @@
 
 **Priority:** P2
 **Created:** 2026-03-10
-**Status:** Open
+**Status:** Resolved
+**Resolved:** 2026-03-11 (PR #200)
 **Related:** DEBT-299 (dashboard recent activity date label)
 
 ---
@@ -190,20 +191,20 @@ This debt does **not** change that review-link contract. If we later decide that
 
 ## Acceptance Criteria
 
-- [ ] History Questions tab no longer hardcodes `source: 'adhoc'`
-- [ ] History Questions tab shows all eligible questions by default (ad-hoc + tutor + exam, still subject to existing active-exam exclusion)
-- [ ] "Source" filter dropdown added with options: All sources, Ad-hoc practice, Tutor session, Exam session
-- [ ] Selecting a source filter narrows the list and appears in the URL as `&source=adhoc|tutor|exam`
-- [ ] "Clear filters" resets source along with other filters
-- [ ] Page subtitle updated to reflect all-source scope
-- [ ] Empty state copy updated (no longer references "Quick Practice" specifically)
-- [ ] Dashboard "View all" → History Questions is aligned on source scope (the destination no longer drops tutor/exam rows solely because of an ad-hoc-only filter)
-- [ ] Existing filter interactions (Result, Difficulty, Tag, Sort) unaffected
-- [ ] History Questions remains latest-attempt-per-question; this debt does not convert it into an attempt ledger
-- [ ] Source filter semantics remain "latest visible attempt per question," not "question was ever seen in this source"
-- [ ] Current History Questions review-link behavior remains unchanged
-- [ ] All unit tests updated and passing
-- [ ] Visual verification: tutor/exam session questions appear in Questions tab with correct origin labels
+- [x] History Questions tab no longer hardcodes `source: 'adhoc'`
+- [x] History Questions tab shows all eligible questions by default (ad-hoc + tutor + exam, still subject to existing active-exam exclusion)
+- [x] "Source" filter dropdown added with options: All sources, Ad-hoc practice, Tutor session, Exam session
+- [x] Selecting a source filter narrows the list and appears in the URL as `&source=adhoc|tutor|exam`
+- [x] "Clear filters" resets source along with other filters
+- [x] Page subtitle updated to reflect all-source scope
+- [x] Empty state copy updated (no longer references "Quick Practice" specifically)
+- [x] Dashboard "View all" → History Questions is aligned on source scope (the destination no longer drops tutor/exam rows solely because of an ad-hoc-only filter)
+- [x] Existing filter interactions (Result, Difficulty, Tag, Sort) unaffected
+- [x] History Questions remains latest-attempt-per-question; this debt does not convert it into an attempt ledger
+- [x] Source filter semantics remain "latest visible attempt per question," not "question was ever seen in this source"
+- [x] Current History Questions review-link behavior remains unchanged
+- [x] All unit tests updated and passing
+- [x] Visual verification: tutor/exam session questions appear in Questions tab with correct origin labels
 
 ## What This Does Not Change
 
