@@ -109,7 +109,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
       </div>
 
       <div className="mt-5 space-y-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
           <div className="space-y-2">
             <div className="text-sm font-medium text-foreground">Mode</div>
             <SegmentedControl
@@ -143,46 +143,42 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
           </div>
         </div>
 
-        <div>
+        <div className="space-y-2">
           <div className="text-sm font-medium text-foreground">Status</div>
-          <div className="mt-2">
-            <SegmentedControl
-              options={AllQuestionProgressStatuses.map((status) => ({
-                value: status,
-                label: statusDisplayLabel(status),
-              }))}
-              value={props.filters.status}
-              onChange={(value) =>
-                props.onStatusChange(value as QuestionProgressStatus)
-              }
-              legend="Status"
-            />
-          </div>
+          <SegmentedControl
+            options={AllQuestionProgressStatuses.map((status) => ({
+              value: status,
+              label: statusDisplayLabel(status),
+            }))}
+            value={props.filters.status}
+            onChange={(value) =>
+              props.onStatusChange(value as QuestionProgressStatus)
+            }
+            legend="Status"
+          />
         </div>
 
-        <div>
+        <div className="space-y-2">
           <div className="text-sm font-medium text-foreground">Difficulty</div>
-          <div className="mt-2">
-            <SegmentedControl
-              options={[
-                { value: 'all', label: 'All' },
-                ...AllDifficulties.map((difficulty) => ({
-                  value: difficulty,
-                  label: difficultyDisplayLabel(difficulty),
-                })),
-              ]}
-              value={props.filters.difficulty ?? 'all'}
-              onChange={(value) => {
-                if (value === 'all') {
-                  props.onDifficultyChange(null);
-                  return;
-                }
+          <SegmentedControl
+            options={[
+              { value: 'all', label: 'All' },
+              ...AllDifficulties.map((difficulty) => ({
+                value: difficulty,
+                label: difficultyDisplayLabel(difficulty),
+              })),
+            ]}
+            value={props.filters.difficulty ?? 'all'}
+            onChange={(value) => {
+              if (value === 'all') {
+                props.onDifficultyChange(null);
+                return;
+              }
 
-                props.onDifficultyChange(value as QuestionDifficulty);
-              }}
-              legend="Difficulty"
-            />
-          </div>
+              props.onDifficultyChange(value as QuestionDifficulty);
+            }}
+            legend="Difficulty"
+          />
         </div>
 
         {props.tagLoadStatus === 'loading' ? (

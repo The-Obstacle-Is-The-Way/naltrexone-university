@@ -101,11 +101,11 @@ export function DashboardView({
         </Card>
 
         <Card className="gap-0 rounded-2xl p-6 shadow-sm lg:col-span-2">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">
-              <div className="text-sm font-medium text-foreground">
+              <h2 className="text-sm font-medium text-foreground">
                 Ready to practice?
-              </div>
+              </h2>
               <div className="text-sm text-muted-foreground">
                 Start answering questions in tutor mode.
               </div>
@@ -120,9 +120,9 @@ export function DashboardView({
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <Card className="gap-0 rounded-2xl p-6 shadow-sm">
           <div className="flex items-baseline justify-between gap-3">
-            <div className="text-sm font-medium text-foreground">
+            <h2 className="text-sm font-medium text-foreground">
               Recent sessions
-            </div>
+            </h2>
             <Button asChild variant="link" className={headerActionLinkClasses}>
               <Link href={historySessionsHref}>View all</Link>
             </Button>
@@ -184,9 +184,9 @@ export function DashboardView({
 
         <Card className="gap-0 rounded-2xl p-6 shadow-sm">
           <div className="flex items-baseline justify-between gap-3">
-            <div className="text-sm font-medium text-foreground">
+            <h2 className="text-sm font-medium text-foreground">
               Recent activity
-            </div>
+            </h2>
             <Button asChild variant="link" className={headerActionLinkClasses}>
               <Link href={historyQuestionsHref}>View all</Link>
             </Button>

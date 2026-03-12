@@ -8,6 +8,17 @@ function getClassTokens(className: string): Set<string> {
   return new Set(className.split(/\s+/).filter(Boolean));
 }
 
+function findDivByExactText(
+  doc: Document,
+  text: string,
+): HTMLDivElement | null {
+  return (
+    Array.from(doc.querySelectorAll('div')).find(
+      (element): element is HTMLDivElement => element.textContent === text,
+    ) ?? null
+  );
+}
+
 describe('PracticeSessionStarter', () => {
   beforeAll(async () => {
     ({ PracticeSessionStarter } = await import('./practice-session-starter'));
@@ -83,6 +94,53 @@ describe('PracticeSessionStarter', () => {
 
     expect(html).toContain('for="session-count-input"');
     expect(html).toContain('id="session-count-input"');
+  });
+
+  it('uses consistent field wrappers and mixed-height alignment in the starter form', () => {
+    const html = renderToStaticMarkup(
+      <PracticeSessionStarter
+        sessionMode="tutor"
+        sessionCount={20}
+        filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+        availableCountStatus="idle"
+        availableCount={null}
+        tagLoadStatus="idle"
+        availableTags={[]}
+        sessionStartStatus="idle"
+        sessionStartError={null}
+        onDifficultyChange={() => undefined}
+        onStatusChange={() => undefined}
+        onToggleTag={() => undefined}
+        onSessionModeChange={() => undefined}
+        onSessionCountChange={() => undefined}
+        onStartSession={() => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const starterRow = Array.from(doc.querySelectorAll('div')).find((element) =>
+      getClassTokens(element.getAttribute('class') ?? '').has('sm:flex-row'),
+    );
+    const starterRowTokens = getClassTokens(
+      starterRow?.getAttribute('class') ?? '',
+    );
+    const statusWrapper = findDivByExactText(doc, 'Status')?.parentElement;
+    const difficultyWrapper = findDivByExactText(
+      doc,
+      'Difficulty',
+    )?.parentElement;
+    const statusWrapperTokens = getClassTokens(
+      statusWrapper?.getAttribute('class') ?? '',
+    );
+    const difficultyWrapperTokens = getClassTokens(
+      difficultyWrapper?.getAttribute('class') ?? '',
+    );
+
+    expect(starterRowTokens.has('sm:items-start')).toBe(true);
+    expect(starterRowTokens.has('sm:items-center')).toBe(false);
+    expect(statusWrapperTokens.has('space-y-2')).toBe(true);
+    expect(statusWrapperTokens.has('mt-2')).toBe(false);
+    expect(difficultyWrapperTokens.has('space-y-2')).toBe(true);
+    expect(difficultyWrapperTokens.has('mt-2')).toBe(false);
   });
 
   it('groups filter chip sets with accessible group roles', () => {
