@@ -1,6 +1,6 @@
 # Frontend Standards
 
-**Last Updated:** 2026-03-07
+**Last Updated:** 2026-03-12
 
 Canonical reference for all frontend patterns, component usage, accessibility, and styling conventions. Every UI change MUST be consistent with this document. If a pattern isn't documented here, don't invent one — add it here first.
 
@@ -255,6 +255,28 @@ Headings MUST follow a strict hierarchy: `h1` > `h2` > `h3`. Never skip levels (
 
 Every page MUST have exactly one `h1`.
 
+### Card title elements
+
+Card titles MUST use heading elements (`<h2>` or `<h3>` depending on page outline), not `<div>`. This ensures screen reader users can navigate by heading to find card sections.
+
+**Correct:**
+```tsx
+<Card>
+  <h2 className="text-sm font-medium text-foreground">Recent sessions</h2>
+  ...
+</Card>
+```
+
+**Incorrect:**
+```tsx
+<Card>
+  <div className="text-sm font-medium text-foreground">Recent sessions</div>
+  ...
+</Card>
+```
+
+Reference pattern: `exam-review-view.tsx` uses `<h2>` for "Question navigator".
+
 ### Stat numbers
 
 Use `text-3xl font-bold font-display text-foreground` for prominent statistics. Smaller/denser contexts may use `text-2xl`.
@@ -295,6 +317,46 @@ Standard: `p-6`. Use `p-4` only for intentionally dense/compact views (e.g., exa
 - Card grids: `gap-4`
 - Button groups: `gap-3`
 - Form fields: `gap-2` to `gap-4`
+
+### Label-to-control spacing
+
+All label + control pairs (e.g., a text label above a segmented control, select, or input) MUST use a `space-y-2` parent wrapper. Do not use bare `<div>` with `mt-2` on the control — it produces the same visual result but creates inconsistent markup that makes refactoring fragile.
+
+```tsx
+// Correct — space-y-2 wrapper
+<div className="space-y-2">
+  <label className="text-sm font-medium">Difficulty</label>
+  <SegmentedControl ... />
+</div>
+
+// Incorrect — mt-2 on control
+<div>
+  <label className="text-sm font-medium">Difficulty</label>
+  <div className="mt-2">
+    <SegmentedControl ... />
+  </div>
+</div>
+```
+
+### Flex alignment with mixed-height children
+
+When flex children have noticeably different intrinsic heights, use `items-start` or `items-baseline` — not `items-center`. Reserve `items-center` for cases where children are the same height.
+
+```tsx
+// Correct — different-height children
+<div className="flex sm:flex-row sm:items-start gap-4">
+  <div>Multi-line text block</div>
+  <Button>Action</Button>
+</div>
+
+// Incorrect — items-center with different heights causes misalignment
+<div className="flex sm:flex-row sm:items-center gap-4">
+  <div>Multi-line text block</div>
+  <Button>Action</Button>
+</div>
+```
+
+Reference pattern: `choice-button.tsx` correctly uses `items-start` with a fixed-height circle + variable-height markdown.
 
 ### Interactive row/card hover
 
@@ -486,6 +548,20 @@ After error recovery ("Try again"), focus SHOULD move to the result (the new con
 
 - Forms with multiple controls: add `aria-label` to the `<form>`
 - Single-button forms: button text provides context (acceptable)
+
+### Touch target sizes
+
+**Policy (decided 2026-03-12):** The project explicitly accepts the current shared component heights at their existing sizes. The 44px WCAG 2.1 SC 2.5.5 recommendation is AAA (aspirational), not AA (required). Current AA compliance is not affected.
+
+| Component | Current effective height | Status |
+|-----------|------------------------|--------|
+| `Button` (default) | 36px (`h-9`) | Accepted |
+| `SegmentedControl` button | ~36px (`py-2`) | Accepted |
+| `FilterChip` button | ~34px (`py-1.5` + border) | Accepted |
+
+**Rationale:** This is a desktop-first educational application. Bumping shared components to 44px has a wide blast radius (every page with buttons, chips, or segmented controls changes) for marginal mobile ergonomics gain. The current sizes provide adequate tap targets for the app's primary usage context.
+
+**Future consideration:** If mobile usage grows significantly, consider adding responsive padding (e.g., `py-1.5 sm:py-1.5` → `py-2.5 sm:py-1.5`) to shared components so mobile gets larger tap targets without affecting desktop layout. This would be a targeted change rather than a blanket height increase.
 
 ### Contrast (WCAG AA)
 

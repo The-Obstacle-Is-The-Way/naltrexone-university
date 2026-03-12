@@ -70,32 +70,19 @@ Low. Need to verify heading hierarchy doesn't create duplicate levels.
 
 ---
 
-## Issue 3: Touch Targets Below 44px on Interactive Controls
+## Issue 3: Touch Targets Below 44px on Interactive Controls — DECIDED: Accepted
 
-### Problem
+**Decision (2026-03-12):** Current sizes are explicitly accepted. Documented in [Frontend Standards §11 — Touch target sizes](../frontend/standards.md#touch-target-sizes).
 
-Multiple interactive control types are below the 44px WCAG 2.1 SC 2.5.5 (AAA) / Apple / Google recommended minimum. This is not an AA failure in the current codebase, but it is a real platform-guideline / ergonomics gap.
+| Component | Current effective height | Status |
+|-----------|------------------------|--------|
+| `SegmentedControl` button | ~36px (`py-2`) | Accepted |
+| `FilterChip` button | ~34px (`py-1.5` + border) | Accepted |
+| `Button` (default) | 36px (`h-9`) | Accepted |
 
-| Component | Vertical padding | Effective height |
-|-----------|-----------------|-----------------|
-| `SegmentedControl` button | `py-2` (8px) | ~36px |
-| `FilterChip` button | `py-1.5` (6px) + `border` (2px) | ~34px |
-| `Button` (default) | `h-9 py-2` | 36px |
+**Rationale:** The 44px guideline is WCAG AAA (aspirational), not AA (required). This is a desktop-first educational app. Bumping shared components has a wide blast radius for marginal mobile ergonomics gain.
 
-### Scope concern
-
-These are shared components used across the entire app. Any height change affects every page. This requires a deliberate design decision, not a drive-by fix.
-
-### Proposed approach
-
-- Decide whether the project wants to adopt 44px as a frontend standard, or explicitly accept the current sub-44px shared control heights
-- Audit which components fall short
-- Bump padding in the shared style constants (`components/ui/tab-switch-styles.ts`, `components/ui/filter-chip.tsx`, `components/ui/button.tsx`)
-- May require visual regression review across all pages
-
-### Risk
-
-Medium. Changing shared component heights has a wide blast radius. Should be done as a focused effort with visual regression testing.
+**Future reconsideration:** If mobile usage grows, consider responsive padding (e.g., larger `py` on mobile breakpoints, standard `py` on `sm:` and up) so mobile gets larger tap targets without affecting desktop layout. This would be a targeted per-component change, not a blanket height increase.
 
 ---
 
@@ -127,12 +114,21 @@ Low. Local layout changes only. Should verify visually per instance.
 
 ---
 
+## Standards References
+
+All four issues now have canonical standards documented in [Frontend Standards](../frontend/standards.md):
+
+- **Issue 1** → §5 Spacing & Layout — "Label-to-control spacing"
+- **Issue 2** → §4 Typography — "Card title elements"
+- **Issue 3** → §11 Accessibility — "Touch target sizes"
+- **Issue 4** → §5 Spacing & Layout — "Flex alignment with mixed-height children"
+
 ## Acceptance Criteria
 
-- [ ] Label-to-control spacing standardized on `space-y-2` wrapper pattern
-- [ ] Card titles use heading elements (`<h2>`/`<h3>`) instead of `<div>`
-- [ ] Touch target minimum height policy decided and applied to shared components
-- [ ] Flex containers use appropriate alignment for disparate child heights
+- [ ] Label-to-control spacing standardized on `space-y-2` wrapper pattern (Issue 1)
+- [ ] Card titles use heading elements (`<h2>`/`<h3>`) instead of `<div>` (Issue 2)
+- [x] Touch target minimum height policy decided — accepted at current sizes (Issue 3, decided 2026-03-12)
+- [ ] Flex containers use appropriate alignment for disparate child heights (Issue 4)
 - [ ] Visual regression check across the verified affected pages
 
 ---
