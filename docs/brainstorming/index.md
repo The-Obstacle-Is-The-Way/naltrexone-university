@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-11
+**Last Updated:** 2026-03-12
 
 ---
 
@@ -29,7 +29,6 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
 | [BS-044](./bs-044-dark-mode-border-weight-tiering.md) | Dark Mode Border Weight Tiering — broad cross-surface tiering remains open after narrower choice-button and History slices were resolved via `DEBT-280`, `DEBT-301`, and `DEBT-302` | Active | [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
-| [BS-049](./bs-049-bookmarks-card-visual-unification.md) | Bookmarks Card Visual Unification — replace bordered `<Card>` rows with borderless tonal fill to match History Questions and Dashboard patterns; remove redundant "Review" button and title underline hover | Active | [BS-048](../_archive/brainstorming/bs-048-history-row-fill-depth-and-hover-policy.md), [BS-044](./bs-044-dark-mode-border-weight-tiering.md) |
 
 **Next Brainstorming ID:** BS-050
 
@@ -39,6 +38,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 | ID | Title | Outcome |
 |----|-------|---------|
+| [BS-049](../_archive/brainstorming/bs-049-bookmarks-card-visual-unification.md) | Bookmarks Card Visual Unification — bordered bookmark cards are visually dated next to History Questions and Dashboard tonal rows; redundant `Review` button, title underline, and heavier card chrome needed a settled implementation contract | Promoted to [DEBT-307](../debt/debt-307-bookmarks-row-visual-unification.md). Decision set: use page-background tonal rows, delegated container activation for pointer clicks, keep outline `Remove`, and defer attempt-result metadata/source enrichment. |
 | [BS-048](../_archive/brainstorming/bs-048-history-row-fill-depth-and-hover-policy.md) | History Row Fill Depth, Hover Policy, and Affordance Cleanup — `bg-foreground/5` on page background is perceptually darker than Dashboard/Practice rows on `bg-card`; hover and underlines redundant with chevron; Questions "Review" pill redundant with row Link | Promoted to [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md), resolved 2026-03-10. Parent-aware foreground-ramp tokens were implemented (`/[0.08]` rest on page, `hover:bg-foreground/[0.12]` for navigation rows), and redundant History affordances were removed. |
 | [BS-046](../_archive/brainstorming/bs-046-filter-chip-fill-depth-and-summary-hover.md) | Filter Chip Fill Depth + Summary Hover Removal — chips are `bg-transparent` and look flat against container; summary hover is redundant with chevron and visually distracting | Promoted to [DEBT-294](../_archive/debt/debt-294-filter-chip-fill-depth-and-cursor.md). Chrome visual audit added `cursor-pointer` fix and revised hover to `/[0.10]` (Radix-aligned). |
 | [BS-047](../_archive/brainstorming/bs-047-history-sessions-tab-visual-unification.md) | History Page Visual Unification — bordered rows, outline buttons, heavy separators, and question card borders+shadows are visually dated vs. dashboard/practice tonal fill + chevron patterns (both tabs) | Promoted to [DEBT-301](../_archive/debt/debt-301-history-page-visual-unification.md), resolved 2026-03-10. Gaps were converted into an implementation-ready History visual unification spec covering both Sessions and Questions tabs, with Gap 3 (`no wrapping Card`) explicitly decided as out of scope. |

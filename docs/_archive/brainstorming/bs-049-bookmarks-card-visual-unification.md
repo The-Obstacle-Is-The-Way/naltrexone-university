@@ -3,7 +3,7 @@
 **Date:** 2026-03-12
 **Triggered by:** Visual comparison of Bookmarks page against recently unified History Questions tab and Dashboard Recent Activity
 **Scope:** Bookmark cards use bordered `<Card>` with elevated styling, redundant "Review" button, and title link hover. That bordered-card treatment now looks visually dated next to the borderless tonal-fill row patterns used by History Questions and Dashboard Recent Activity.
-**Related:** [BS-048](../_archive/brainstorming/bs-048-history-row-fill-depth-and-hover-policy.md) (History row fill/affordance cleanup — direct precedent), [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md), [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) (Dashboard tonal-fill row precedent), [BS-044](./bs-044-dark-mode-border-weight-tiering.md) (border weight tiering), [Pattern Registry](../frontend/pattern-registry.md), [Contrast Policy](../frontend/contrast-policy.md)
+**Related:** [DEBT-307](../../debt/debt-307-bookmarks-row-visual-unification.md), [BS-048](./bs-048-history-row-fill-depth-and-hover-policy.md) (History row fill/affordance cleanup — direct precedent), [DEBT-302](../debt/debt-302-history-row-fill-and-affordance-cleanup.md), [DEBT-289](../debt/debt-289-dashboard-nested-card-surface-strategy.md) (Dashboard tonal-fill row precedent), [BS-044](../../brainstorming/bs-044-dark-mode-border-weight-tiering.md) (border weight tiering), [Pattern Registry](../../frontend/pattern-registry.md), [Contrast Policy](../../frontend/contrast-policy.md)
 
 ---
 
@@ -201,3 +201,4 @@ The Pattern Registry decision tree currently routes standalone lists with embedd
 |------|----------|-----------|
 | 2026-03-12 | Created BS-049 | Visual audit identified bookmarks as the remaining surface using bordered cards while History/Dashboard have moved to borderless tonal fill. Direct precedent in BS-048 (History row cleanup). |
 | 2026-03-12 | Added Gap 8 (result status metadata) | Chrome browser visual audit revealed Bookmarks is the only question-list surface missing correct/incorrect result status. History and Dashboard both show colored result indicators. Data-layer change required — `BookmarkRow` currently lacks attempt data. |
+| 2026-03-12 | Promoted to DEBT-307 | Implementation contract settled in debt form: bookmarks will adopt page-background tonal rows, delegated container activation, outline `Remove`, and no result-status data expansion in this pass. |
