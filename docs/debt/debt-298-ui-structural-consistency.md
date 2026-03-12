@@ -96,7 +96,7 @@ Several flex containers use `items-center` when child elements have noticeably d
 
 | File | Line | Container | Children | Issue |
 |------|------|-----------|----------|-------|
-| `practice-session-starter.tsx` | 116 | `sm:flex-row sm:items-center` | Taller Mode block + shorter Questions block | Labels sit at different vertical positions at the `sm:` breakpoint |
+| `practice-session-starter.tsx` | 112 | `sm:flex-row sm:items-center` | Taller Mode block + shorter Questions block | Labels sit at different vertical positions at the `sm:` breakpoint |
 | `dashboard/page.tsx` | 104 | `sm:flex-row sm:items-center` | Multi-line text + 36px button | Text block and button don't align naturally |
 
 ### Counter-example (correct pattern)
