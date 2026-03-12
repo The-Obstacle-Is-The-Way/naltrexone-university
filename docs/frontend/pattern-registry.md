@@ -400,7 +400,7 @@ focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 
 ### L-2: Content Link
 
-Links embedded in content areas — session breakdown question lists, bookmark question links, inline references.
+Links embedded in content areas — session breakdown question lists, inline references.
 
 ```
 rounded-sm font-medium text-foreground hover:underline
@@ -1042,7 +1042,7 @@ mx-auto max-w-7xl px-4 sm:px-6 lg:px-8
 
 | Tier | Padding | Usage |
 |------|---------|-------|
-| Standard | `p-6` | All content cards (stats, sections, bookmarks, practice) |
+| Standard | `p-6` | All content cards (stats, sections, practice, bookmarks empty state) |
 | Dense | `p-4` | Compact cards (exam review stats, filter bars, question list items, navigator) |
 | Showcase | `p-8` | Marketing pricing cards, pricing page plan cards |
 
@@ -1062,8 +1062,8 @@ mx-auto max-w-7xl px-4 sm:px-6 lg:px-8
 | Spacing | Tier | Usage |
 |---------|------|-------|
 | `space-y-2` | Dense | In-card lists (dashboard recent, session breakdown, history sessions) |
-| `space-y-3` | Standard | Item lists (bookmarks, exam review questions, pricing features, choices) |
-| `space-y-4` | Card-level | Card-like item lists (history questions, practice sections) |
+| `space-y-3` | Standard | Item lists (exam review questions, pricing features, choices) |
+| `space-y-4` | Card-level | Card-like item lists (history questions, bookmarks, practice sections) |
 
 ### 13.6 Max-Width Scale
 
