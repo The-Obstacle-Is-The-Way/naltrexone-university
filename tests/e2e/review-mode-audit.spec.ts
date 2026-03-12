@@ -319,7 +319,9 @@ test.describe('review mode audit', () => {
         page.getByRole('heading', { name: 'Bookmarks' }),
       ).toBeVisible();
 
-      const reviewLinks = page.locator('a[aria-label^="Review question:"]');
+      const reviewLinks = page.locator(
+        'a[href^="/app/questions/"][href*="from=bookmarks"][href*="mode=review"]',
+      );
       const emptyState = page.getByText('No bookmarks yet.', { exact: true });
       await reviewLinks.first().or(emptyState).waitFor({
         state: 'visible',

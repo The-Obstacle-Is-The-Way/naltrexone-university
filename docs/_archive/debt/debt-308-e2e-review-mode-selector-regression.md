@@ -3,8 +3,10 @@
 **Priority:** P1
 **Created:** 2026-03-12
 **Source:** PR #206 (BS-049 / DEBT-307 — Bookmarks Row Visual Unification)
-**Status:** Open
-**CI Impact:** Blocks `main` CI; the latest failing `dev` CI run also included this selector break, but that run had multiple unrelated E2E failures
+**Status:** Resolved
+**Resolved:** 2026-03-12
+**Resolution:** Updated `tests/e2e/review-mode-audit.spec.ts` to select bookmark review links by their current `href` contract (`/app/questions/*` + `from=bookmarks` + `mode=review`) instead of the removed `Review question:` action-link `aria-label`.
+**Verification:** `pnpm test:e2e --grep "bookmarks links include mode=review and open in review mode"`, `pnpm typecheck`, `pnpm lint`, `pnpm test --run`, `pnpm test:browser`, and `pnpm build` passed on 2026-03-12.
 
 ---
 
@@ -132,23 +134,23 @@ Update the E2E selector. The failure is a stale test contract after an intention
 
 ---
 
-## Files to Modify
+## Files Updated
 
 | File | Change |
 |------|--------|
 | `tests/e2e/review-mode-audit.spec.ts` | Replace the obsolete `aria-label` selector with an `href`-based selector that matches the current bookmark review-link contract |
-| `docs/debt/debt-308-e2e-review-mode-selector-regression.md` | Keep the root-cause record aligned with the actual failure mode and recommended fix |
+| `docs/_archive/debt/debt-308-e2e-review-mode-selector-regression.md` | Archive the debt with the verified root cause, chosen fix, and final verification record |
 
 ---
 
-## Verification
+## Final Verification
 
 ```bash
-# Minimum targeted verification
+# Targeted E2E regression check
 pnpm test:e2e --grep "bookmarks links include mode=review and open in review mode"
 
-# Pre-PR gate for the eventual fix branch
+# Pre-PR gate
 pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm build
 
-# Then confirm CI E2E goes green on the branch and on the merge run
+# CI should then confirm the merge path is green
 ```
