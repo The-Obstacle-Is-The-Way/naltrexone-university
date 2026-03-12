@@ -20,7 +20,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 7 verified client-side flows still report only to console or silent fallbacks | P2 | — |
 | [DEBT-298](./debt-298-ui-structural-consistency.md) | UI Structural Consistency Audit — inconsistent label/control spacing patterns, non-heading card titles, and `items-center` alignment mismatches across verified views; touch target policy accepted at current sizes | P3 | — |
-**Next Debt ID:** DEBT-308
+| [DEBT-308](./debt-308-e2e-review-mode-selector-regression.md) | E2E Review-Mode Audit Selector Regression — PR #206 removed `aria-label="Review question: ..."` from bookmark row links, breaking the E2E locator; CI E2E suite fails on every push | P1 | — |
+**Next Debt ID:** DEBT-309
 
 ---
 
