@@ -1,20 +1,25 @@
-# DEBT-308: E2E Review-Mode Audit Selector Regression
+# DEBT-308: E2E Bookmark Review Selector Drift After DEBT-307
 
 **Priority:** P1
 **Created:** 2026-03-12
 **Source:** PR #206 (BS-049 / DEBT-307 — Bookmarks Row Visual Unification)
 **Status:** Open
-**CI Impact:** Blocks `main` — E2E suite fails on every push
+**CI Impact:** Blocks `main` CI; the latest failing `dev` CI run also included this selector break, but that run had multiple unrelated E2E failures
 
 ---
 
 ## Problem
 
-The E2E test `review-mode-audit.spec.ts › bookmark review mode › bookmarks links include mode=review and open in review mode` fails with a 15-second timeout on CI (and locally). It has failed consistently since PR #206 was merged.
+The E2E test `review-mode-audit.spec.ts › bookmark review mode › bookmarks links include mode=review and open in review mode` is selecting an element that no longer exists. After DEBT-307 removed the dedicated per-row `Review` action link, the test still looks for anchors with `aria-label^="Review question:"`, so it times out even though bookmark navigation still works through the remaining title link.
+
+Verified evidence:
+- PR #206 CI run `23013822896` failed on this exact selector.
+- `main` merge CI run `23014540939` failed on this exact selector.
+- The latest failing `dev` run `22911593463` also included this selector failure, but that run had 9 E2E failures total, so it is not clean evidence that `dev` is blocked solely by this issue.
 
 ### Error
 
-```
+```text
 TimeoutError: locator.waitFor: Timeout 15000ms exceeded.
 Call log:
   - waiting for locator('a[aria-label^="Review question:"]')
@@ -25,7 +30,12 @@ Call log:
 
 ## Root Cause
 
-PR #206 (DEBT-307) refactored the bookmarks page from per-row `<Card>` components to tonal `<div>` rows wrapped in a `<BookmarkRowShell>`. As part of this change, the dedicated **"Review" button** per bookmark row was removed:
+PR #206 (DEBT-307) intentionally changed the bookmarks interaction model:
+- Removed the dedicated per-row `Review` button/link.
+- Kept an explicit title `<Link>` for keyboard and screen-reader navigation.
+- Added delegated container activation for pointer users via `BookmarkRowShell`.
+
+Before DEBT-307, the audit test could find bookmark review entry points by selecting the old action link:
 
 ### Before (old markup)
 
@@ -42,7 +52,7 @@ PR #206 (DEBT-307) refactored the bookmarks page from per-row `<Card>` component
 
 ### After (new markup)
 
-The "Review" `<Link>` was removed entirely. The whole row is now clickable via `BookmarkRowShell` (a `<div onClick={...}>` wrapper). The only remaining `<Link>` inside each row is the stem preview text, which has **no `aria-label`** attribute:
+The dedicated `Review` action link is gone. The row is pointer-clickable via `BookmarkRowShell`, and the remaining keyboard-focusable `<Link>` is the visible stem preview:
 
 ```jsx
 <Link
@@ -60,23 +70,30 @@ The "Review" `<Link>` was removed entirely. The whole row is now clickable via `
 const reviewLinks = page.locator('a[aria-label^="Review question:"]');
 ```
 
-This selector now matches **zero elements**, so the `waitFor` call times out every run.
+That selector now matches zero elements because the element it described was intentionally removed.
+
+### What Did NOT Break
+
+This is **not** a production accessibility regression by itself:
+- The remaining title link still has a discernible accessible name from its visible text.
+- `docs/frontend/standards.md` requires contextual `aria-label`s for repeated generic controls like `Remove`, not for text links that already expose meaningful visible names.
+- `app/(app)/app/bookmarks/page.test.tsx` was explicitly updated in DEBT-307 to assert that `Review question:` labels are absent from the new markup.
 
 ---
 
 ## Why This Was Missed
 
-1. **E2E tests run only in CI** — the pre-PR gate (`pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build`) does not include `pnpm test:e2e`.
+1. **E2E tests run only in CI** — the pre-PR gate does not include `pnpm test:e2e`.
 2. **No local E2E run was performed** before opening the PR.
-3. **Unit and browser tests were updated** in the PR (the `page.test.tsx` changes and new `bookmark-row-shell.browser.spec.tsx`), but the E2E test was not checked for selector compatibility with the new DOM structure.
+3. **Unit and browser tests were updated** in the PR, including explicit assertions that the old `Review question:` label no longer exists, but the E2E audit selector was left behind.
 
 ---
 
 ## Fix Options
 
-### Option A: Add `aria-label` to the stem preview link (minimal change)
+### Option A: Add `aria-label` to the stem preview link
 
-Add `aria-label={`Review question: ${ariaLabelStem}`}` to the inner `<Link>` that renders the stem preview text. This restores the selector target without re-adding the removed "Review" button.
+Add `aria-label={`Review question: ${ariaLabelStem}`}` to the inner `<Link>` that renders the stem preview text.
 
 ```jsx
 <Link
@@ -88,24 +105,30 @@ Add `aria-label={`Review question: ${ariaLabelStem}`}` to the inner `<Link>` tha
 </Link>
 ```
 
-**Pros:** One-line fix, restores accessibility affordance, E2E passes unchanged.
-**Cons:** The `aria-label` on a link whose visible text is the question stem may be slightly redundant, though it adds useful context for screen readers.
+**Pros:** Minimal code diff. The stale E2E selector would pass unchanged.
+**Cons:** Wrong layer of fix. It reintroduces a removed label contract solely to satisfy a stale test, conflicts with the DEBT-307 render test that now asserts the label is absent, and changes the link's accessible name without any documented product or standards requirement to do so.
 
-### Option B: Update the E2E selector to match the new DOM structure
+### Option B: Update the E2E selector to match the current contract
 
-Change the E2E test to locate bookmark rows by a different stable selector (e.g., the stem preview links by `href` pattern or a `data-testid`).
+Change the E2E test to locate the current bookmark review links by the behavior the test actually cares about: question-detail navigation carrying `from=bookmarks` and `mode=review`.
 
 ```ts
-// Example: find all links whose href contains mode=review and from=bookmarks
-const reviewLinks = page.locator('a[href*="mode=review"][href*="from=bookmarks"]');
+const reviewLinks = page.locator(
+  'a[href^="/app/questions/"][href*="from=bookmarks"][href*="mode=review"]',
+);
 ```
 
-**Pros:** Doesn't require any production code changes.
-**Cons:** `href`-based selectors are less semantic; if route structure changes, the test breaks again.
+**Pros:** Aligns the test with the current SSOT and with existing E2E selector precedent in `cross-page-navigation.spec.ts` and earlier sections of `review-mode-audit.spec.ts`, both of which already use `href`-based review-link selectors. No production markup churn.
+**Cons:** Still couples the test to the route contract, but that route contract is exactly what this audit is asserting.
 
-### Recommended: Option A
+### Option C: Add a test-only hook (for example, `data-testid`)
 
-Adding the `aria-label` back is the right call. It was a meaningful accessibility attribute that was lost in the refactor — the "Review question:" prefix gives screen-reader users context that the link leads to a review-mode question view. The E2E fix is a free side-effect of restoring the correct a11y markup.
+**Pros:** Stable explicit selector.
+**Cons:** Adds production-only test chrome for a case where an existing stable contract already exists. Unnecessary.
+
+### Recommended: Option B
+
+Update the E2E selector. The failure is a stale test contract after an intentional UI change, not evidence that the bookmarks page should regain `Review question:` labels. Adding that label back would be a half-measure that makes production markup serve a dead test instead of the product.
 
 ---
 
@@ -113,15 +136,19 @@ Adding the `aria-label` back is the right call. It was a meaningful accessibilit
 
 | File | Change |
 |------|--------|
-| `app/(app)/app/bookmarks/page.tsx` (line ~146) | Add `aria-label={...}` to inner `<Link>` |
-| `app/(app)/app/bookmarks/page.test.tsx` | Verify unit test still passes (no selector change needed) |
+| `tests/e2e/review-mode-audit.spec.ts` | Replace the obsolete `aria-label` selector with an `href`-based selector that matches the current bookmark review-link contract |
+| `docs/debt/debt-308-e2e-review-mode-selector-regression.md` | Keep the root-cause record aligned with the actual failure mode and recommended fix |
 
 ---
 
 ## Verification
 
 ```bash
-# After fix, run:
+# Minimum targeted verification
+pnpm test:e2e --grep "bookmarks links include mode=review and open in review mode"
+
+# Pre-PR gate for the eventual fix branch
 pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm build
-# And confirm E2E passes in CI (or locally if Playwright + Clerk credentials available)
+
+# Then confirm CI E2E goes green on the branch and on the merge run
 ```
