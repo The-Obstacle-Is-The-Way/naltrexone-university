@@ -29,8 +29,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
 | [BS-044](./bs-044-dark-mode-border-weight-tiering.md) | Dark Mode Border Weight Tiering — broad cross-surface tiering remains open after narrower choice-button and History slices were resolved via `DEBT-280`, `DEBT-301`, and `DEBT-302` | Active | [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
+| [BS-049](./bs-049-bookmarks-card-visual-unification.md) | Bookmarks Card Visual Unification — replace bordered `<Card>` rows with borderless tonal fill to match History Questions and Dashboard patterns; remove redundant "Review" button and title underline hover | Active | [BS-048](../_archive/brainstorming/bs-048-history-row-fill-depth-and-hover-policy.md), [BS-044](./bs-044-dark-mode-border-weight-tiering.md) |
 
-**Next Brainstorming ID:** BS-049
+**Next Brainstorming ID:** BS-050
 
 ---
 
