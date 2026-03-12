@@ -57,7 +57,7 @@ describe('app/(app)/app/dashboard', () => {
     expect(subtitleClassTokens.has('text-muted-foreground')).toBe(true);
   });
 
-  it('uses h2 card titles and items-start alignment for dashboard sections', () => {
+  it('uses h2 card titles for dashboard sections', () => {
     const html = renderToStaticMarkup(
       <DashboardView
         stats={{
@@ -78,17 +78,40 @@ describe('app/(app)/app/dashboard', () => {
     const h2Texts = Array.from(doc.querySelectorAll('h2')).map(
       (element) => element.textContent ?? '',
     );
-    const practiceHeading = Array.from(doc.querySelectorAll('h2')).find(
-      (element) => element.textContent === 'Ready to practice?',
-    );
-    const practiceRowTokens = getClassTokens(
-      practiceHeading?.parentElement?.parentElement?.getAttribute('class') ??
-        '',
-    );
 
     expect(h2Texts).toContain('Ready to practice?');
     expect(h2Texts).toContain('Recent sessions');
     expect(h2Texts).toContain('Recent activity');
+  });
+
+  it('uses items-start alignment for the ready-to-practice card row', () => {
+    const html = renderToStaticMarkup(
+      <DashboardView
+        stats={{
+          totalAnswered: 0,
+          accuracyOverall: 0,
+          answeredLast7Days: 0,
+          accuracyLast7Days: 0,
+          currentStreakDays: 0,
+          recentActivity: [],
+        }}
+        sessionHistoryResult={{
+          ok: true,
+          data: { rows: [], total: 0, limit: 3, offset: 0 },
+        }}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const practiceHeading = Array.from(doc.querySelectorAll('h2')).find(
+      (element) => element.textContent === 'Ready to practice?',
+    );
+    const practiceRow = practiceHeading?.closest('div[class~="sm:flex-row"]');
+    const practiceRowTokens = getClassTokens(
+      practiceRow?.getAttribute('class') ?? '',
+    );
+
+    expect(practiceHeading).not.toBeNull();
+    expect(practiceRow).not.toBeNull();
     expect(practiceRowTokens.has('sm:items-start')).toBe(true);
     expect(practiceRowTokens.has('sm:items-center')).toBe(false);
   });

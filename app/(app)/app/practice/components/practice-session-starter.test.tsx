@@ -8,14 +8,12 @@ function getClassTokens(className: string): Set<string> {
   return new Set(className.split(/\s+/).filter(Boolean));
 }
 
-function findDivByExactText(
-  doc: Document,
-  text: string,
-): HTMLDivElement | null {
+function findFieldsetByLegend(doc: Document, text: string) {
   return (
-    Array.from(doc.querySelectorAll('div')).find(
-      (element): element is HTMLDivElement => element.textContent === text,
-    ) ?? null
+    Array.from(doc.querySelectorAll('fieldset')).find((element) => {
+      const legend = element.querySelector('legend');
+      return legend?.textContent === text;
+    }) ?? null
   );
 }
 
@@ -96,7 +94,7 @@ describe('PracticeSessionStarter', () => {
     expect(html).toContain('id="session-count-input"');
   });
 
-  it('uses consistent field wrappers and mixed-height alignment in the starter form', () => {
+  it('uses mixed-height alignment in the starter form row', () => {
     const html = renderToStaticMarkup(
       <PracticeSessionStarter
         sessionMode="tutor"
@@ -117,17 +115,45 @@ describe('PracticeSessionStarter', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const starterRow = Array.from(doc.querySelectorAll('div')).find((element) =>
-      getClassTokens(element.getAttribute('class') ?? '').has('sm:flex-row'),
-    );
+    const sessionCountInput = doc.querySelector('#session-count-input');
+    const starterRow = sessionCountInput?.closest('div[class~="sm:flex-row"]');
     const starterRowTokens = getClassTokens(
       starterRow?.getAttribute('class') ?? '',
     );
-    const statusWrapper = findDivByExactText(doc, 'Status')?.parentElement;
-    const difficultyWrapper = findDivByExactText(
-      doc,
-      'Difficulty',
-    )?.parentElement;
+
+    expect(sessionCountInput).not.toBeNull();
+    expect(starterRow).not.toBeNull();
+    expect(starterRowTokens.has('sm:items-start')).toBe(true);
+    expect(starterRowTokens.has('sm:items-center')).toBe(false);
+  });
+
+  it('wraps Status and Difficulty controls with consistent label spacing', () => {
+    const html = renderToStaticMarkup(
+      <PracticeSessionStarter
+        sessionMode="tutor"
+        sessionCount={20}
+        filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+        availableCountStatus="idle"
+        availableCount={null}
+        tagLoadStatus="idle"
+        availableTags={[]}
+        sessionStartStatus="idle"
+        sessionStartError={null}
+        onDifficultyChange={() => undefined}
+        onStatusChange={() => undefined}
+        onToggleTag={() => undefined}
+        onSessionModeChange={() => undefined}
+        onSessionCountChange={() => undefined}
+        onStartSession={() => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const statusFieldset = findFieldsetByLegend(doc, 'Status');
+    const difficultyFieldset = findFieldsetByLegend(doc, 'Difficulty');
+    const statusWrapper = statusFieldset?.closest('div[class~="space-y-2"]');
+    const difficultyWrapper = difficultyFieldset?.closest(
+      'div[class~="space-y-2"]',
+    );
     const statusWrapperTokens = getClassTokens(
       statusWrapper?.getAttribute('class') ?? '',
     );
@@ -135,8 +161,10 @@ describe('PracticeSessionStarter', () => {
       difficultyWrapper?.getAttribute('class') ?? '',
     );
 
-    expect(starterRowTokens.has('sm:items-start')).toBe(true);
-    expect(starterRowTokens.has('sm:items-center')).toBe(false);
+    expect(statusFieldset).not.toBeNull();
+    expect(difficultyFieldset).not.toBeNull();
+    expect(statusWrapper).not.toBeNull();
+    expect(difficultyWrapper).not.toBeNull();
     expect(statusWrapperTokens.has('space-y-2')).toBe(true);
     expect(statusWrapperTokens.has('mt-2')).toBe(false);
     expect(difficultyWrapperTokens.has('space-y-2')).toBe(true);
