@@ -2,7 +2,9 @@
 
 **Priority:** P2
 **Created:** 2026-03-11
-**Status:** Open
+**Status:** Resolved
+**Resolved:** 2026-03-11
+**PR:** [#204](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/204)
 **Related:** DEBT-303 (resolved, PR #201 — provides `isAlreadyCanceledError`), ADR-017 (Webhook Processing Lifecycle)
 
 ---
