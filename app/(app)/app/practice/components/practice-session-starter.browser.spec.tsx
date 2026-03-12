@@ -60,6 +60,19 @@ test('invokes onDifficultyChange when selecting a difficulty', async () => {
   expect(props.onDifficultyChange).toHaveBeenCalledWith('easy');
 });
 
+test('invokes onDifficultyChange with null when selecting all difficulties', async () => {
+  const { props, screen } = await renderStarter({
+    filters: {
+      tagSlugs: [],
+      difficulty: 'easy',
+      status: 'unanswered',
+    },
+  });
+
+  await screen.getByRole('button', { name: 'All' }).click();
+  expect(props.onDifficultyChange).toHaveBeenCalledWith(null);
+});
+
 test('invokes onStatusChange when selecting a status', async () => {
   const { props, screen } = await renderStarter();
   await screen.getByRole('button', { name: 'Incorrect' }).click();
