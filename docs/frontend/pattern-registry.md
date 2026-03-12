@@ -1,6 +1,6 @@
 # Pattern Registry
 
-**Last Updated:** 2026-03-10
+**Last Updated:** 2026-03-12
 **Status:** Canonical — all UI changes MUST conform to this registry
 
 Single source of truth for every visual pattern in the app. If a pattern isn't here, don't invent one — add it here first, get approval, then implement.
@@ -176,9 +176,9 @@ rounded-xl bg-foreground/5 p-3
 rounded-2xl bg-foreground/[0.08] p-4
 ```
 
-**Used in:** History questions unavailable rows
+**Used in:** History questions unavailable rows, bookmarks unavailable rows
 
-**Design rationale:** Matches the History questions clickable-row family while accounting for the darker page background. The unavailable state is communicated by the copy and metadata; the tonal fill keeps the row in the same visual family without reintroducing legacy border/shadow chrome. See [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md).
+**Design rationale:** Matches the History questions clickable-row family while accounting for the darker page background. The unavailable state is communicated by the copy and metadata; the tonal fill keeps the row in the same visual family without reintroducing legacy border/shadow chrome. When a static sibling still contains a separate action button (for example, bookmark removal), the row itself stays non-interactive and the button remains the only action target. See [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md) and [DEBT-307](../_archive/debt/debt-307-bookmarks-row-visual-unification.md).
 
 ### S-3: Menu Popover Surface
 
@@ -283,11 +283,13 @@ block rounded-2xl bg-foreground/[0.08] p-4 transition-colors hover:bg-foreground
 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 ```
 
-**Used in:** History questions available rows
+**Used in:** History questions available rows, bookmarks available rows
 
-**Design rationale:** On page background, standalone rows need a stronger foreground-ramp rest fill than in-card rows to achieve the same perceived lift. `bg-foreground/[0.08]` at rest and `hover:bg-foreground/[0.12]` on hover keep the hover step visible against `bg-background` without reintroducing border/shadow chrome. The row reads as interactive via its content, hover lift, and focus ring; no trailing CTA pill is required because the entire row is the Link. See [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md).
+**Design rationale:** On page background, standalone rows need a stronger foreground-ramp rest fill than in-card rows to achieve the same perceived lift. `bg-foreground/[0.08]` at rest and `hover:bg-foreground/[0.12]` on hover keep the hover step visible against `bg-background` without reintroducing border/shadow chrome. The row reads as interactive via its content, hover lift, and focus ring. See [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md) and [DEBT-307](../_archive/debt/debt-307-bookmarks-row-visual-unification.md).
 
-**Must be a `<Link>` element.**
+**Default structure:** Entire row is a `<Link>` element.
+
+**Multi-action variant (Bookmarks):** When the row also needs a separate secondary action, keep the same visual tokens on a non-focusable container (`<div className="cursor-pointer ...">`), keep the primary title as the explicit `<Link>`, and delegate pointer clicks on the container to the same href. Guard nested interactive descendants with `closest('a,button,input,select,textarea,[role="button"],[role="link"]')` so the title link and secondary button do not double-trigger. Focus rings stay on the explicit controls, not the row container.
 
 ### I-3: Choice Button
 
@@ -398,7 +400,7 @@ focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 
 ### L-2: Content Link
 
-Links embedded in content areas — session breakdown question lists, bookmark question links, inline references.
+Links embedded in content areas — session breakdown question lists, inline references.
 
 ```
 rounded-sm font-medium text-foreground hover:underline
@@ -834,8 +836,8 @@ Is the list inside a <Card> container?
     │         rounded-2xl, bg-foreground/[0.08], hover:bg-foreground/[0.12]
     │         Is the row non-interactive?
     │         └── YES → Use S-2 page-background sibling variant
-    └── NO → Use <Card> per item with interactive elements inside
-              (bookmarks pattern — Card contains buttons/links)
+    └── NO → Use a regular <Card> or a page-specific spec
+              Do not resurrect the legacy bookmarks card-with-buttons branch
 ```
 
 ### "I need a hover effect"
@@ -1040,7 +1042,7 @@ mx-auto max-w-7xl px-4 sm:px-6 lg:px-8
 
 | Tier | Padding | Usage |
 |------|---------|-------|
-| Standard | `p-6` | All content cards (stats, sections, bookmarks, practice) |
+| Standard | `p-6` | All content cards (stats, sections, practice, bookmarks empty state) |
 | Dense | `p-4` | Compact cards (exam review stats, filter bars, question list items, navigator) |
 | Showcase | `p-8` | Marketing pricing cards, pricing page plan cards |
 
@@ -1060,8 +1062,8 @@ mx-auto max-w-7xl px-4 sm:px-6 lg:px-8
 | Spacing | Tier | Usage |
 |---------|------|-------|
 | `space-y-2` | Dense | In-card lists (dashboard recent, session breakdown, history sessions) |
-| `space-y-3` | Standard | Item lists (bookmarks, exam review questions, pricing features, choices) |
-| `space-y-4` | Card-level | Card-like item lists (history questions, practice sections) |
+| `space-y-3` | Standard | Item lists (exam review questions, pricing features, choices) |
+| `space-y-4` | Card-level | Card-like item lists (history questions, bookmarks, practice sections) |
 
 ### 13.6 Max-Width Scale
 

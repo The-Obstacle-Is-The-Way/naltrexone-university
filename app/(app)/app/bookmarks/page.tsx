@@ -26,6 +26,7 @@ import {
   getStemPreview,
   toPlainText,
 } from '@/src/adapters/shared/stem-preview';
+import { BookmarkRowShell } from './bookmark-row-shell';
 import { removeBookmarkAction } from './bookmarks-actions';
 import {
   getRemoveBookmarkErrorMessage,
@@ -38,6 +39,54 @@ export const maxDuration = 30;
 export const metadata: Metadata = {
   title: 'Bookmarks - Addiction Boards',
 };
+
+function RemoveBookmarkControl({
+  ariaLabelStem,
+  questionId,
+  removeFormId,
+}: {
+  ariaLabelStem: string;
+  questionId: string;
+  removeFormId: string;
+}) {
+  return (
+    <>
+      <form id={removeFormId} action={removeBookmarkAction}>
+        <input type="hidden" name="questionId" value={questionId} />
+      </form>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-full"
+            aria-label={`Remove bookmark: ${ariaLabelStem}`}
+          >
+            Remove
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove bookmark?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the question from your bookmarks list.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel type="button">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              type="submit"
+              form={removeFormId}
+              variant="destructive"
+            >
+              Remove bookmark
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
 
 export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
   return (
@@ -57,7 +106,7 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
       </div>
 
       {rows.length === 0 ? (
-        <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm dark:border-foreground/40">
+        <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
           <div>No bookmarks yet.</div>
           <div className="mt-2">
             Bookmark questions as you practice to review them later.
@@ -69,128 +118,85 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
           </div>
         </Card>
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-4">
           {rows.map((row) => {
             const plainStem = row.isAvailable ? toPlainText(row.stemMd) : '';
             const ariaLabelStem = row.isAvailable
               ? getStemPreview(row.stemMd, 80)
               : 'unavailable question';
             const removeFormId = `remove-bookmark-${row.questionId}`;
+            const reviewHref = row.isAvailable
+              ? toQuestionRoute(row.slug, {
+                  from: 'bookmarks',
+                  mode: 'review',
+                })
+              : null;
 
             return (
               <li key={row.questionId}>
-                <Card className="gap-0 rounded-2xl p-6 shadow-sm dark:border-foreground/40">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="space-y-2">
-                      {row.isAvailable ? (
-                        <>
-                          <div className="text-sm font-medium text-foreground">
-                            <Link
-                              href={toQuestionRoute(row.slug, {
-                                from: 'bookmarks',
-                                mode: 'review',
-                              })}
-                              className="rounded-sm hover:underline focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-                            >
-                              {getStemPreview(row.stemMd, 80)}
-                            </Link>
-                          </div>
-                          {plainStem.length > 80 && (
-                            <div className="text-sm text-muted-foreground">
-                              {plainStem}
-                            </div>
-                          )}
-                          <div className="text-xs text-muted-foreground">
-                            <span className="capitalize">{row.difficulty}</span>
-                            <span className="mx-2">•</span>
-                            <span>
-                              Bookmarked {formatDate(row.bookmarkedAt)}
-                            </span>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="text-sm font-medium text-foreground">
-                            [Question no longer available]
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            This question was removed or unpublished.
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            <span>Unavailable</span>
-                            <span className="mx-2">•</span>
-                            <span>
-                              Bookmarked {formatDate(row.bookmarkedAt)}
-                            </span>
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col gap-2 sm:items-end">
-                      {row.isAvailable ? (
-                        <Button
-                          asChild
-                          variant="outline"
-                          className="rounded-full"
-                        >
+                {row.isAvailable && reviewHref ? (
+                  <BookmarkRowShell
+                    href={reviewHref}
+                    className="cursor-pointer rounded-2xl bg-foreground/[0.08] p-4 transition-colors hover:bg-foreground/[0.12]"
+                  >
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium text-foreground">
                           <Link
-                            href={toQuestionRoute(row.slug, {
-                              from: 'bookmarks',
-                              mode: 'review',
-                            })}
-                            aria-label={`Review question: ${ariaLabelStem}`}
+                            href={reviewHref}
+                            className="rounded-sm focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                           >
-                            Review
+                            {getStemPreview(row.stemMd, 80)}
                           </Link>
-                        </Button>
-                      ) : null}
+                        </div>
+                        {plainStem.length > 80 && (
+                          <div className="text-sm text-muted-foreground">
+                            {plainStem}
+                          </div>
+                        )}
+                        <div className="text-xs text-muted-foreground">
+                          <span className="capitalize">{row.difficulty}</span>
+                          <span className="mx-2">•</span>
+                          <span>Bookmarked {formatDate(row.bookmarkedAt)}</span>
+                        </div>
+                      </div>
 
-                      <form id={removeFormId} action={removeBookmarkAction}>
-                        <input
-                          type="hidden"
-                          name="questionId"
-                          value={row.questionId}
+                      <div className="flex flex-col gap-2 sm:items-end">
+                        <RemoveBookmarkControl
+                          ariaLabelStem={ariaLabelStem}
+                          questionId={row.questionId}
+                          removeFormId={removeFormId}
                         />
-                      </form>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="rounded-full"
-                            aria-label={`Remove bookmark: ${ariaLabelStem}`}
-                          >
-                            Remove
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              Remove bookmark?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This removes the question from your bookmarks
-                              list.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel type="button">
-                              Cancel
-                            </AlertDialogCancel>
-                            <AlertDialogAction
-                              type="submit"
-                              form={removeFormId}
-                              variant="destructive"
-                            >
-                              Remove bookmark
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      </div>
+                    </div>
+                  </BookmarkRowShell>
+                ) : (
+                  <div className="rounded-2xl bg-foreground/[0.08] p-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium text-foreground">
+                          [Question no longer available]
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          This question was removed or unpublished.
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          <span>Unavailable</span>
+                          <span className="mx-2">•</span>
+                          <span>Bookmarked {formatDate(row.bookmarkedAt)}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2 sm:items-end">
+                        <RemoveBookmarkControl
+                          ariaLabelStem={ariaLabelStem}
+                          questionId={row.questionId}
+                          removeFormId={removeFormId}
+                        />
+                      </div>
                     </div>
                   </div>
-                </Card>
+                )}
               </li>
             );
           })}

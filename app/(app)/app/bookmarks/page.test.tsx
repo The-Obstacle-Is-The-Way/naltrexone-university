@@ -1,19 +1,37 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
-import { removeBookmarkAction } from '@/app/(app)/app/bookmarks/bookmarks-actions';
-import {
-  BookmarksView,
-  createBookmarksPage,
-  renderBookmarks,
-} from '@/app/(app)/app/bookmarks/page';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import { getStemPreview } from '@/src/adapters/shared/stem-preview';
 
+vi.mock('next/link', () => ({
+  default: (props: Record<string, unknown>) => <a {...props} />,
+}));
+
+vi.mock('next/navigation', () => ({
+  redirect: vi.fn(),
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 function getClassTokens(className: string): Set<string> {
   return new Set(className.split(/\s+/).filter(Boolean));
 }
+
+let BookmarksView: typeof import('./page').BookmarksView;
+let createBookmarksPage: typeof import('./page').createBookmarksPage;
+let renderBookmarks: typeof import('./page').renderBookmarks;
+let removeBookmarkAction: typeof import('./bookmarks-actions').removeBookmarkAction;
+
+beforeAll(async () => {
+  const pageModule = await import('./page');
+  const actionsModule = await import('./bookmarks-actions');
+
+  BookmarksView = pageModule.BookmarksView;
+  createBookmarksPage = pageModule.createBookmarksPage;
+  renderBookmarks = pageModule.renderBookmarks;
+  removeBookmarkAction = actionsModule.removeBookmarkAction;
+});
 
 describe('app/(app)/app/bookmarks', () => {
   it('renders a truncated stem preview as the card title instead of raw slug text', () => {
@@ -87,11 +105,11 @@ describe('app/(app)/app/bookmarks', () => {
     expect(occurrences).toBe(1);
   });
 
-  it('renders bookmarks', () => {
+  it('renders available bookmarks as standalone tonal rows with title-link navigation only', () => {
     const reviewHref = toQuestionRoute('q-1', {
       from: 'bookmarks',
       mode: 'review',
-    }).replaceAll('&', '&amp;');
+    });
     const html = renderToStaticMarkup(
       <BookmarksView
         rows={[
@@ -107,23 +125,52 @@ describe('app/(app)/app/bookmarks', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const bookmarkCard = doc.querySelector('li [data-slot="card"]');
-    const bookmarkCardTokens = getClassTokens(
-      bookmarkCard?.getAttribute('class') ?? '',
+    const list = doc.querySelector('ul');
+    const listTokens = getClassTokens(list?.getAttribute('class') ?? '');
+    const bookmarkRow = doc.querySelector('li > div');
+    const bookmarkRowTokens = getClassTokens(
+      bookmarkRow?.getAttribute('class') ?? '',
+    );
+    const reviewLink = Array.from(doc.querySelectorAll('a')).find(
+      (anchor) => anchor.getAttribute('href') === reviewHref,
+    );
+    const reviewLinkTokens = getClassTokens(
+      reviewLink?.getAttribute('class') ?? '',
+    );
+    const removeButton = Array.from(doc.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Remove',
+    );
+    const removeButtonTokens = getClassTokens(
+      removeButton?.getAttribute('class') ?? '',
     );
 
     expect(html).toContain('Bookmarks');
     expect(html).toContain('Stem for q1');
     expect(html).toContain('easy');
     expect(html).toContain('Bookmarked Feb 1, 2026');
-    expect(html).toContain('>Review<');
-    expect(html).toContain(reviewHref);
-    expect(html).toContain('aria-label="Review question: Stem for q1"');
+    expect(html).not.toContain('>Review<');
+    expect(html).not.toContain('aria-label="Review question: Stem for q1"');
     expect(html).toContain('Remove');
     expect(html).toContain('aria-label="Remove bookmark: Stem for q1"');
     expect(html).toContain('Go to Practice');
     expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
-    expect(bookmarkCardTokens.has('dark:border-foreground/40')).toBe(true);
+    expect(listTokens.has('space-y-4')).toBe(true);
+    expect(listTokens.has('space-y-3')).toBe(false);
+    expect(doc.querySelector('li [data-slot="card"]')).toBeNull();
+    expect(bookmarkRowTokens.has('rounded-2xl')).toBe(true);
+    expect(bookmarkRowTokens.has('bg-foreground/[0.08]')).toBe(true);
+    expect(bookmarkRowTokens.has('p-4')).toBe(true);
+    expect(bookmarkRowTokens.has('transition-colors')).toBe(true);
+    expect(bookmarkRowTokens.has('hover:bg-foreground/[0.12]')).toBe(true);
+    expect(bookmarkRowTokens.has('cursor-pointer')).toBe(true);
+    expect(bookmarkRowTokens.has('shadow-sm')).toBe(false);
+    expect(bookmarkRowTokens.has('dark:border-foreground/40')).toBe(false);
+    expect(reviewLink).not.toBeUndefined();
+    expect(reviewLinkTokens.has('hover:underline')).toBe(false);
+    expect(reviewLinkTokens.has('focus-visible:outline-none')).toBe(true);
+    expect(reviewLinkTokens.has('focus-visible:ring-ring/50')).toBe(true);
+    expect(reviewLinkTokens.has('focus-visible:ring-[3px]')).toBe(true);
+    expect(removeButtonTokens.has('rounded-full')).toBe(true);
   });
 
   it('renders empty state when no bookmarks exist', () => {
@@ -141,10 +188,10 @@ describe('app/(app)/app/bookmarks', () => {
     );
     expect(html).toContain('Start practicing');
     expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
-    expect(emptyCardTokens.has('dark:border-foreground/40')).toBe(true);
+    expect(emptyCardTokens.has('dark:border-foreground/40')).toBe(false);
   });
 
-  it('renders unavailable bookmarks without a reattempt link', () => {
+  it('renders unavailable bookmarks as static tonal rows without review affordances', () => {
     const html = renderToStaticMarkup(
       <BookmarksView
         rows={[
@@ -156,11 +203,23 @@ describe('app/(app)/app/bookmarks', () => {
         ]}
       />,
     );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const unavailableRow = doc.querySelector('li > div');
+    const unavailableRowTokens = getClassTokens(
+      unavailableRow?.getAttribute('class') ?? '',
+    );
+    const unavailableListItem = doc.querySelector('li');
 
     expect(html).toContain('[Question no longer available]');
     expect(html).toContain('Bookmarked Feb 1, 2026');
     expect(html).toContain('Remove');
+    expect(unavailableRowTokens.has('rounded-2xl')).toBe(true);
+    expect(unavailableRowTokens.has('bg-foreground/[0.08]')).toBe(true);
+    expect(unavailableRowTokens.has('p-4')).toBe(true);
+    expect(unavailableRowTokens.has('cursor-pointer')).toBe(false);
+    expect(unavailableRowTokens.has('transition-colors')).toBe(false);
     expect(html).not.toContain('Review question:');
+    expect(unavailableListItem?.querySelectorAll('a')).toHaveLength(0);
   });
 
   it('renders an error state when bookmarks load fails', () => {
