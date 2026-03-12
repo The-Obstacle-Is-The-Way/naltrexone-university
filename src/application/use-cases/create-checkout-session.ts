@@ -1,5 +1,6 @@
-import { ApplicationError } from '../errors';
+import { ApplicationError, isApplicationError } from '../errors';
 import type { PaymentGateway } from '../ports/gateways';
+import type { Logger } from '../ports/logger';
 import type {
   StripeCustomerRepository,
   SubscriptionRepository,
@@ -17,13 +18,35 @@ export type CreateCheckoutSessionInput = {
 
 export type CreateCheckoutSessionOutput = { url: string };
 
+const STRIPE_CUSTOMER_IDEMPOTENCY_KEY_PREFIX = 'create_stripe_customer';
+
+function toStripeCustomerIdempotencyKey(userId: string): string {
+  return `${STRIPE_CUSTOMER_IDEMPOTENCY_KEY_PREFIX}:${userId}`;
+}
+
 export class CreateCheckoutSessionUseCase {
   constructor(
     private readonly stripeCustomers: StripeCustomerRepository,
     private readonly subscriptions: SubscriptionRepository,
     private readonly payments: PaymentGateway,
+    private readonly logger: Logger,
     private readonly now: () => Date = () => new Date(),
   ) {}
+
+  private warnOrphanedStripeCustomer(input: {
+    userId: string;
+    canonicalStripeCustomerId: string;
+    orphanedStripeCustomerId: string;
+  }): void {
+    try {
+      this.logger.warn(
+        input,
+        'Discarded orphaned Stripe customer created during concurrent mapping race',
+      );
+    } catch {
+      // Logging must not change checkout behavior.
+    }
+  }
 
   private async getOrCreateStripeCustomerId(input: {
     userId: string;
@@ -43,11 +66,42 @@ export class CreateCheckoutSessionUseCase {
         clerkUserId: input.clerkUserId,
         email: input.email,
       },
-      { idempotencyKey: `stripe_customer:${input.userId}` },
+      { idempotencyKey: toStripeCustomerIdempotencyKey(input.userId) },
     );
 
-    await this.stripeCustomers.insert(input.userId, created.externalCustomerId);
-    return created.externalCustomerId;
+    let conflictError: ApplicationError | null = null;
+
+    try {
+      await this.stripeCustomers.insert(
+        input.userId,
+        created.externalCustomerId,
+      );
+      return created.externalCustomerId;
+    } catch (error) {
+      if (!isApplicationError(error) || error.code !== 'CONFLICT') {
+        throw error;
+      }
+
+      conflictError = error;
+    }
+
+    const winner = await this.stripeCustomers.findByUserId(input.userId);
+    if (!winner) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Stripe customer mapping disappeared after conflict',
+        undefined,
+        conflictError ? { cause: conflictError } : undefined,
+      );
+    }
+
+    this.warnOrphanedStripeCustomer({
+      userId: input.userId,
+      canonicalStripeCustomerId: winner.stripeCustomerId,
+      orphanedStripeCustomerId: created.externalCustomerId,
+    });
+
+    return winner.stripeCustomerId;
   }
 
   async execute(

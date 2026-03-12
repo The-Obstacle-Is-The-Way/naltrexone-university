@@ -100,6 +100,7 @@ describe('billing controllers (integration)', () => {
       stripeCustomerRepository,
       new FakeSubscriptionRepository(),
       paymentGateway,
+      new FakeLogger(),
       () => new Date('2026-02-01T00:00:00.000Z'),
     );
     const createPortalSessionUseCase = new CreatePortalSessionUseCase(
@@ -174,6 +175,7 @@ describe('billing controllers (integration)', () => {
       stripeCustomerRepository,
       new FakeSubscriptionRepository(),
       paymentGateway,
+      new FakeLogger(),
       () => new Date('2026-02-01T00:00:00.000Z'),
     );
     const createPortalSessionUseCase = new CreatePortalSessionUseCase(

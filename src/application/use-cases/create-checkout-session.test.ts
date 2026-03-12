@@ -1,12 +1,90 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { createSubscription } from '@/src/domain/test-helpers';
+import { ApplicationError } from '../errors';
 import {
+  FakeLogger,
   FakePaymentGateway,
   FakeStripeCustomerRepository,
   FakeSubscriptionRepository,
 } from '../test-helpers/fakes';
 import { CreateCheckoutSessionUseCase } from './create-checkout-session';
+
+class SequencedFakePaymentGateway extends FakePaymentGateway {
+  constructor(private readonly externalCustomerIds: string[]) {
+    super({
+      externalCustomerId: externalCustomerIds[0] ?? 'cus_unused',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
+    });
+  }
+
+  override async createCustomer(
+    input: Parameters<FakePaymentGateway['createCustomer']>[0],
+    options?: Parameters<FakePaymentGateway['createCustomer']>[1],
+  ) {
+    this.customerInputs.push(input);
+    this.customerOptions.push(options);
+
+    const externalCustomerId = this.externalCustomerIds.shift();
+    if (!externalCustomerId) {
+      throw new Error('Missing external customer id test fixture');
+    }
+
+    return { externalCustomerId };
+  }
+}
+
+class ConcurrentCreateRaceStripeCustomerRepository extends FakeStripeCustomerRepository {
+  private initialMissCount = 0;
+  private resolveBarrier: (() => void) | null = null;
+  private readonly barrier = new Promise<void>((resolve) => {
+    this.resolveBarrier = resolve;
+  });
+
+  override async findByUserId(
+    userId: string,
+  ): Promise<{ stripeCustomerId: string } | null> {
+    const existing = await super.findByUserId(userId);
+    if (existing) {
+      return existing;
+    }
+
+    this.initialMissCount++;
+    if (this.initialMissCount <= 2) {
+      if (this.initialMissCount === 2) {
+        this.resolveBarrier?.();
+      }
+
+      await this.barrier;
+    }
+
+    return null;
+  }
+}
+
+class FailingInsertStripeCustomerRepository extends FakeStripeCustomerRepository {
+  override async insert(): Promise<void> {
+    throw new ApplicationError(
+      'INTERNAL_ERROR',
+      'Failed to persist Stripe customer mapping',
+    );
+  }
+}
+
+class EmptyAfterConflictStripeCustomerRepository extends FakeStripeCustomerRepository {
+  override async findByUserId(_userId: string): Promise<null> {
+    return null;
+  }
+
+  override async insert(): Promise<void> {
+    throw new ApplicationError(
+      'CONFLICT',
+      'User is already mapped to a different Stripe customer',
+    );
+  }
+}
 
 describe('CreateCheckoutSessionUseCase', () => {
   it('returns ALREADY_SUBSCRIBED when a subscription is still current', async () => {
@@ -29,6 +107,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       new FakeStripeCustomerRepository(),
       subscriptions,
       paymentGateway,
+      new FakeLogger(),
       () => new Date('2026-02-01T00:00:00Z'),
     );
 
@@ -63,6 +142,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       stripeCustomers,
       new FakeSubscriptionRepository(),
       paymentGateway,
+      new FakeLogger(),
       () => new Date('2026-02-01T00:00:00Z'),
     );
 
@@ -105,6 +185,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       stripeCustomers,
       new FakeSubscriptionRepository(),
       paymentGateway,
+      new FakeLogger(),
       () => new Date('2026-02-01T00:00:00Z'),
     );
 
@@ -132,7 +213,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       },
     ]);
     expect(paymentGateway.customerOptions).toEqual([
-      { idempotencyKey: 'stripe_customer:user-1' },
+      { idempotencyKey: 'create_stripe_customer:user-1' },
     ]);
     expect(paymentGateway.checkoutInputs).toEqual([
       {
@@ -144,5 +225,183 @@ describe('CreateCheckoutSessionUseCase', () => {
         cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
       },
     ]);
+  });
+
+  it('adopts winner mapping when concurrent create races on same user', async () => {
+    const paymentGateway = new SequencedFakePaymentGateway([
+      'cus_winner',
+      'cus_orphan',
+    ]);
+    const stripeCustomers = new ConcurrentCreateRaceStripeCustomerRepository();
+
+    const useCase = new CreateCheckoutSessionUseCase(
+      stripeCustomers,
+      new FakeSubscriptionRepository(),
+      paymentGateway,
+      new FakeLogger(),
+      () => new Date('2026-02-01T00:00:00Z'),
+    );
+
+    const input = {
+      userId: 'user-1',
+      clerkUserId: 'clerk-1',
+      email: 'user@example.com',
+      plan: 'monthly' as const,
+      successUrl:
+        'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
+      cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
+    };
+
+    await expect(
+      Promise.all([useCase.execute(input), useCase.execute(input)]),
+    ).resolves.toEqual([
+      { url: 'https://stripe/checkout' },
+      { url: 'https://stripe/checkout' },
+    ]);
+
+    await expect(stripeCustomers.findByUserId('user-1')).resolves.toEqual({
+      stripeCustomerId: 'cus_winner',
+    });
+
+    expect(paymentGateway.customerInputs).toHaveLength(2);
+    expect(paymentGateway.customerOptions).toEqual([
+      { idempotencyKey: 'create_stripe_customer:user-1' },
+      { idempotencyKey: 'create_stripe_customer:user-1' },
+    ]);
+    expect(paymentGateway.checkoutInputs).toEqual([
+      {
+        userId: 'user-1',
+        externalCustomerId: 'cus_winner',
+        plan: 'monthly',
+        successUrl:
+          'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
+        cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
+      },
+      {
+        userId: 'user-1',
+        externalCustomerId: 'cus_winner',
+        plan: 'monthly',
+        successUrl:
+          'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
+        cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
+      },
+    ]);
+  });
+
+  it('logs orphaned customer at warn level when losing race', async () => {
+    const paymentGateway = new SequencedFakePaymentGateway([
+      'cus_winner',
+      'cus_orphan',
+    ]);
+    const stripeCustomers = new ConcurrentCreateRaceStripeCustomerRepository();
+    const logger = new FakeLogger();
+
+    const useCase = new CreateCheckoutSessionUseCase(
+      stripeCustomers,
+      new FakeSubscriptionRepository(),
+      paymentGateway,
+      logger,
+      () => new Date('2026-02-01T00:00:00Z'),
+    );
+
+    const input = {
+      userId: 'user-1',
+      clerkUserId: 'clerk-1',
+      email: 'user@example.com',
+      plan: 'monthly' as const,
+      successUrl:
+        'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
+      cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
+    };
+
+    await Promise.all([useCase.execute(input), useCase.execute(input)]);
+
+    expect(logger.warnCalls).toEqual([
+      {
+        context: {
+          userId: 'user-1',
+          canonicalStripeCustomerId: 'cus_winner',
+          orphanedStripeCustomerId: 'cus_orphan',
+        },
+        msg: 'Discarded orphaned Stripe customer created during concurrent mapping race',
+      },
+    ]);
+  });
+
+  it('rethrows non-CONFLICT errors from insert', async () => {
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_new',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
+    });
+    const stripeCustomers = new FailingInsertStripeCustomerRepository();
+
+    const useCase = new CreateCheckoutSessionUseCase(
+      stripeCustomers,
+      new FakeSubscriptionRepository(),
+      paymentGateway,
+      new FakeLogger(),
+      () => new Date('2026-02-01T00:00:00Z'),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        clerkUserId: 'clerk-1',
+        email: 'user@example.com',
+        plan: 'monthly',
+        successUrl:
+          'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
+        cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
+      }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'Failed to persist Stripe customer mapping',
+    });
+
+    expect(paymentGateway.customerInputs).toHaveLength(1);
+    expect(paymentGateway.checkoutInputs).toEqual([]);
+  });
+
+  it('throws INTERNAL_ERROR with CONFLICT cause when mapping is still missing after conflict reread', async () => {
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_new',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
+    });
+    const stripeCustomers = new EmptyAfterConflictStripeCustomerRepository();
+
+    const useCase = new CreateCheckoutSessionUseCase(
+      stripeCustomers,
+      new FakeSubscriptionRepository(),
+      paymentGateway,
+      new FakeLogger(),
+      () => new Date('2026-02-01T00:00:00Z'),
+    );
+
+    const promise = useCase.execute({
+      userId: 'user-1',
+      clerkUserId: 'clerk-1',
+      email: 'user@example.com',
+      plan: 'monthly',
+      successUrl:
+        'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
+      cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
+    });
+
+    await expect(promise).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'Stripe customer mapping disappeared after conflict',
+      cause: expect.objectContaining({
+        code: 'CONFLICT',
+        message: 'User is already mapped to a different Stripe customer',
+      }),
+    });
+
+    await expect(stripeCustomers.findByUserId('user-1')).resolves.toBeNull();
+    expect(paymentGateway.customerInputs).toHaveLength(1);
+    expect(paymentGateway.checkoutInputs).toEqual([]);
   });
 });

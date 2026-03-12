@@ -22,7 +22,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 7 verified client-side flows still report only to console or silent fallbacks | P2 | — |
 | [DEBT-298](./debt-298-ui-structural-consistency.md) | UI Structural Consistency Audit — inconsistent label/control spacing patterns, non-heading card titles, sub-44px shared touch targets, and `items-center` alignment mismatches across verified views | P3 | — |
 | [DEBT-304](./debt-304-clerk-user-deleted-cancel-idempotency.md) | Clerk `user.deleted` Stripe cancel loop — handle already-canceled subscriptions idempotently instead of failing webhook processing | P2 | — |
-| [DEBT-306](./debt-306-stripe-customer-search-create-race.md) | Stripe customer search/create race — concurrent or late-visible customers can violate the intended 1:1 mapping | P2 | — |
 **Next Debt ID:** DEBT-307
 
 ---
@@ -31,6 +30,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-306](../_archive/debt/debt-306-stripe-customer-search-create-race.md) | Stripe customer search/create race — concurrent or late-visible customers can violate the intended 1:1 mapping | P2 | 2026-03-11 | — |
 | [DEBT-305](../_archive/debt/debt-305-checkout-session-reuse-expire-race.md) | Checkout session reuse/expire flow — treat already-terminal sessions idempotently and revalidate reused sessions before returning stale URLs | P2 | 2026-03-11 | [#202](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/202) |
 | [DEBT-303](../_archive/debt/debt-303-reconciliation-cancel-idempotency.md) | Reconciliation cancel loop — handle already-canceled Stripe subscriptions idempotently instead of failing the row | P3 | 2026-03-11 | [#201](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/201) |
 | [DEBT-300](../_archive/debt/debt-300-history-questions-all-sources.md) | History Questions Tab — show all question sources (ad-hoc + tutor + exam) instead of ad-hoc only; add Source filter dropdown; fix Dashboard → History "View all" IA inconsistency | P2 | 2026-03-11 | [#200](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/200) |
