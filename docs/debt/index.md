@@ -17,7 +17,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | GitHub Issue |
 |----|-------|----------|--------------|
-| [DEBT-249](./debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | — |
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 6 future enhancements (F1/F8 resolved by DEBT-277/DEBT-276) | P3 | — |
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 7 verified client-side flows still report only to console or silent fallbacks | P2 | — |
 | [DEBT-298](./debt-298-ui-structural-consistency.md) | UI Structural Consistency Audit — inconsistent label/control spacing patterns, non-heading card titles, sub-44px shared touch targets, and `items-center` alignment mismatches across verified views | P3 | — |
@@ -29,6 +28,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-249](../_archive/debt/debt-249-checkout-success-auth-boundary-hardening.md) | Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) | P1 | 2026-03-12 | — |
 | [DEBT-304](../_archive/debt/debt-304-clerk-user-deleted-cancel-idempotency.md) | Clerk `user.deleted` Stripe cancel loop — handle already-canceled subscriptions idempotently instead of failing webhook processing | P2 | 2026-03-11 | [#204](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/204) |
 | [DEBT-306](../_archive/debt/debt-306-stripe-customer-search-create-race.md) | Stripe customer search/create race — concurrent or late-visible customers can violate the intended 1:1 mapping | P2 | 2026-03-11 | — |
 | [DEBT-305](../_archive/debt/debt-305-checkout-session-reuse-expire-race.md) | Checkout session reuse/expire flow — treat already-terminal sessions idempotently and revalidate reused sessions before returning stale URLs | P2 | 2026-03-11 | [#202](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/202) |
