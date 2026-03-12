@@ -46,11 +46,12 @@ None. Output is visually identical.
 
 Several Card components still use `<div className="text-sm font-medium text-foreground">` for their titles instead of `<h2>` or `<h3>`. This creates a flatter document outline than necessary — screen reader users navigating by heading skip those cards.
 
+Partial progress since the initial audit: `practice-session-starter.tsx` now uses a real `<h2>` for "Start a session". The inventory below reflects the remaining open cases only.
+
 ### Inventory
 
 | File | Line | Current | Content |
 |------|------|---------|---------|
-| `practice-session-starter.tsx` | 106 | `<div>` | "Start a session" |
 | `dashboard/page.tsx` | 106 | `<div>` | "Ready to practice?" |
 | `dashboard/page.tsx` | 123 | `<div>` | "Recent sessions" |
 | `dashboard/page.tsx` | 187 | `<div>` | "Recent activity" |
@@ -89,7 +90,7 @@ These are shared components used across the entire app. Any height change affect
 
 - Decide whether the project wants to adopt 44px as a frontend standard, or explicitly accept the current sub-44px shared control heights
 - Audit which components fall short
-- Bump padding in the shared style constants (`tab-switch-styles.ts`, `filter-chip.tsx`, `button.tsx`)
+- Bump padding in the shared style constants (`components/ui/tab-switch-styles.ts`, `components/ui/filter-chip.tsx`, `components/ui/button.tsx`)
 - May require visual regression review across all pages
 
 ### Risk
@@ -113,7 +114,7 @@ Several flex containers use `items-center` when child elements have noticeably d
 
 ### Counter-example (correct pattern)
 
-`choice-button.tsx` line 58 uses `items-start` with a fixed-height circle + variable-height markdown — correct approach for disparate heights.
+`components/question/choice-button.tsx` line 58 uses `items-start` with a fixed-height circle + variable-height markdown — correct approach for disparate heights.
 
 ### Proposed fix
 

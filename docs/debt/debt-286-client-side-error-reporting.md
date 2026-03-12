@@ -31,13 +31,13 @@ Full sweep of `app/` + `src/` production code, excluding tests/specs:
 - `console.warn(...)` calls: **2**
 - `console.log(...)` calls: **0**
 - bare `catch {}` blocks in client files: **2**
-- bare `catch {}` blocks in server/application files: **4**
+- bare `catch {}` blocks in server/application files: **5**
 
 Not every console site belongs in this debt:
 
 - `app/global-error.tsx` is an error-boundary path
 - `components/error-boundary-page.tsx` is the shared route-error boundary path used by multiple `error.tsx` routes
-- `question-flow-actions.ts` and one `use-question-page-controller.ts` warning are development-only diagnostics
+- `question-flow-actions.ts` is development-only diagnostic output
 - `question-page-client.tsx` uses a bare catch for URL normalization, not an unexpected operational failure
 
 The actual gap is narrower and more important: **caught client-side failures that affect real user flows still do not reach Sentry.**
@@ -73,7 +73,7 @@ These are the verified user-facing client flows that should be moved onto a shar
 | `fire-and-forget.ts:1-13` | Central async UI error handler logs to `console.error` | Affects fire-and-forget practice flows such as submit, bookmark toggle, session finalization, and exam-review actions |
 | `use-practice-question-bookmarks.ts:52` | `console.error('createBookmarksEffect failed:', ...)` | Bookmark load failures are invisible to Sentry |
 | `use-practice-session-tags.ts:25` | `console.error('createTagsEffect failed:', ...)` | Tag load failures are invisible to Sentry |
-| `use-question-page-controller.ts:249-295` | Development-only console output; production falls back silently | Session navigation fetch failures are invisible in production |
+| `use-question-page-controller.ts` | Development-only console output for mixed-review-param normalization and session-navigation fetch failures; production falls back silently | Session navigation fetch failures are invisible in production |
 | `question-page-logic.ts:350` | Bare `catch {}` with fallback UI only | Review hydration failures are invisible everywhere |
 | `use-quick-practice-status-counts.ts:136-141` | Routes caught effect errors through `logUnhandledAsyncError()` | Quick-practice status count failures reach console only |
 | `use-practice-available-questions-count.ts:40-41` | Routes caught effect errors through `logUnhandledAsyncError()` | Available-count failures reach console only |

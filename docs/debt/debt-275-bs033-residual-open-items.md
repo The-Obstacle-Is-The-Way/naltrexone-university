@@ -3,7 +3,7 @@
 **Priority:** P3
 **Created:** 2026-03-04
 **Source:** [BS-033](../_archive/brainstorming/bs-033-question-display-formatting-and-feedback-ux.md)
-**Scope:** Content-layer fixes, one unresolved design decision, and future enhancement ideas extracted from BS-033 after all 22 component-layer fixes shipped (BUG-152–159, PRs #141–#143). F8 resolved by DEBT-276 (PR #172).
+**Scope:** Content-layer fixes, one unresolved design decision, and future enhancement ideas extracted from BS-033 after all 22 component-layer fixes shipped (BUG-152–159, PRs #141–#143). F1 resolved by DEBT-277, F4 is now shipped in `practice-session-page-view.tsx`, and F8 resolved by DEBT-276 (PR #172).
 
 ---
 
@@ -15,10 +15,10 @@ BS-033 identified 22 problems across question display and feedback UX. All compo
 
 | Question | Answer (settled in code) |
 |----------|------------------------|
-| Prose styling scope — global or contextual? | Global: `[&_p+p]:mt-3` on `<Markdown>` wrapper (`Markdown.tsx:16`) |
-| Correct answer display — show label + full text? | Yes: `correctChoice.displayLabel` + `textMd` shown in feedback (`feedback.tsx:89-100`) |
+| Prose styling scope — global or contextual? | Global: `[&_p+p]:mt-3` on the shared `<Markdown>` wrapper (`components/markdown/Markdown.tsx`) |
+| Correct answer display — show label + full text? | Yes: `correctChoice.displayLabel` + `textMd` shown in feedback (`components/question/feedback.tsx`) |
 | Text size — uniform or tiered? | Tiered: `text-base` for stem and choices, `text-sm` for feedback body/labels |
-| Feedback card color — badge-only or accent? | Badge-only pill for verdict. Inner sections now have semantic containment cards: `border-success/20 bg-success/5` (correct answer), `border-destructive/20 bg-destructive/5` (your answer). Outer `<Card>` remains neutral. Settled by DEBT-276 (PR #172). |
+| Feedback card color — badge-only or accent? | Badge-only pill for verdict. Inner sections now have semantic containment cards: `border-success/20 bg-success/5` (correct answer) and `border-destructive/20 bg-destructive/5` (your answer). Outer `<Card>` remains neutral. Settled by DEBT-276 (PR #172). |
 
 ---
 
@@ -26,7 +26,7 @@ BS-033 identified 22 problems across question display and feedback UX. All compo
 
 ### All-or-Nothing Wrong-Answer Display Rule
 
-**Current behavior** (`feedback.tsx:50-57`): If ANY incorrect choice has `null` or blank `explanationMd`, the entire "Why other answers are wrong" section is hidden. This means many questions show no wrong-answer feedback at all because their content is incomplete.
+**Current behavior** (`components/question/feedback.tsx`): If ANY incorrect choice has `null` or blank `explanationMd`, the entire "Why other answers are wrong" section is hidden. This means many questions show no wrong-answer feedback at all because their content is incomplete.
 
 ```tsx
 const hasMissingIncorrectExplanation = choiceExplanations.some(
@@ -49,13 +49,13 @@ const shouldRenderChoiceExplanations =
 
 ## Content-Layer Work (Deferred)
 
-These require editing raw MDX content files (~958 questions). No code changes — purely content authoring.
+These require editing the private question MDX corpus and authoring guidance, not app code. This checkout commits only placeholder questions plus authoring docs; real question content lives in gitignored/private `content/questions/**` directories per `content/questions/README.md`.
 
 ### C1: MDX Blank Lines in Stems (BS-033 P1, partial)
 
 Some question stems lack a blank line before "Which of the following...", causing the scenario and question to render as one paragraph. The component prose fix (`[&_p+p]:mt-3`) handles visual spacing, but adding blank lines is semantically correct markdown.
 
-**Scope:** Audit `content/drafts/questions/**/*.md` for missing blank lines before terminal question sentences.
+**Scope:** Audit private question `.mdx` files for missing blank lines before terminal question sentences.
 
 ### C2: MDX Blank Lines Before Clinical Pearls (BS-033 P4, partial)
 
@@ -94,7 +94,7 @@ These were identified during BS-033 analysis but never implemented. None are bug
 | ~~F1~~ | ~~Clinical pearl styled callout box~~ | ~~Detect `**Clinical pearl:**` pattern in `<Markdown>` and render as a visually distinct callout~~ → **Resolved by DEBT-277.** `<Markdown>` now renders detected clinical-pearl paragraphs as styled callouts with separated label/content. |
 | F2 | Clinical pearl as separate seed field | Parse clinical pearl at seed level (like `reference_md`), store as its own column/field |
 | F3 | Reference section styling improvements | Improve label/content hierarchy and reference readability in feedback |
-| F4 | Question counter / progress indicator | "Question 1 of 48" during practice sessions |
+| ~~F4~~ | ~~Question counter / progress indicator~~ | ~~"Question 1 of 48" during practice sessions~~ → **Resolved.** `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` now displays `"Question X of Y"` in the session description. |
 | F5 | Running score tracker | "3/5 correct so far" during practice sessions |
 | F6 | Post-submit question card collapse | Collapse question card after submission to reduce scroll to feedback |
 | F7 | Difficulty / topic tag display | Show difficulty level or topic tags on the question card |
@@ -119,5 +119,5 @@ Hitting `/app/questions/<slug>` directly (no query params) shows dashboard revie
 | Settled design questions | 4 | None — already shipped |
 | Open design decision | 1 | Decide on all-or-nothing rule |
 | Content-layer fixes | 4 | Content authoring pass |
-| Future enhancements | 6 (F1/F8 resolved by DEBT-277/DEBT-276) | Build when prioritized |
+| Future enhancements | 5 open (F2/F3/F5/F6/F7; F1/F4/F8 already resolved) | Build when prioritized |
 | Minor edge case | 1 | Fix if convenient |
