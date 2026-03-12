@@ -69,6 +69,8 @@ export class CreateCheckoutSessionUseCase {
       { idempotencyKey: toStripeCustomerIdempotencyKey(input.userId) },
     );
 
+    let conflictError: ApplicationError | null = null;
+
     try {
       await this.stripeCustomers.insert(
         input.userId,
@@ -79,6 +81,8 @@ export class CreateCheckoutSessionUseCase {
       if (!isApplicationError(error) || error.code !== 'CONFLICT') {
         throw error;
       }
+
+      conflictError = error;
     }
 
     const winner = await this.stripeCustomers.findByUserId(input.userId);
@@ -86,6 +90,8 @@ export class CreateCheckoutSessionUseCase {
       throw new ApplicationError(
         'INTERNAL_ERROR',
         'Stripe customer mapping disappeared after conflict',
+        undefined,
+        conflictError ? { cause: conflictError } : undefined,
       );
     }
 

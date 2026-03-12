@@ -73,6 +73,19 @@ class FailingInsertStripeCustomerRepository extends FakeStripeCustomerRepository
   }
 }
 
+class EmptyAfterConflictStripeCustomerRepository extends FakeStripeCustomerRepository {
+  override async findByUserId(_userId: string): Promise<null> {
+    return null;
+  }
+
+  override async insert(): Promise<void> {
+    throw new ApplicationError(
+      'CONFLICT',
+      'User is already mapped to a different Stripe customer',
+    );
+  }
+}
+
 describe('CreateCheckoutSessionUseCase', () => {
   it('returns ALREADY_SUBSCRIBED when a subscription is still current', async () => {
     const paymentGateway = new FakePaymentGateway({
@@ -347,6 +360,47 @@ describe('CreateCheckoutSessionUseCase', () => {
       message: 'Failed to persist Stripe customer mapping',
     });
 
+    expect(paymentGateway.customerInputs).toHaveLength(1);
+    expect(paymentGateway.checkoutInputs).toEqual([]);
+  });
+
+  it('throws INTERNAL_ERROR with CONFLICT cause when mapping is still missing after conflict reread', async () => {
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_new',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
+    });
+    const stripeCustomers = new EmptyAfterConflictStripeCustomerRepository();
+
+    const useCase = new CreateCheckoutSessionUseCase(
+      stripeCustomers,
+      new FakeSubscriptionRepository(),
+      paymentGateway,
+      new FakeLogger(),
+      () => new Date('2026-02-01T00:00:00Z'),
+    );
+
+    const promise = useCase.execute({
+      userId: 'user-1',
+      clerkUserId: 'clerk-1',
+      email: 'user@example.com',
+      plan: 'monthly',
+      successUrl:
+        'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
+      cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
+    });
+
+    await expect(promise).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'Stripe customer mapping disappeared after conflict',
+      cause: expect.objectContaining({
+        code: 'CONFLICT',
+        message: 'User is already mapped to a different Stripe customer',
+      }),
+    });
+
+    await expect(stripeCustomers.findByUserId('user-1')).resolves.toBeNull();
     expect(paymentGateway.customerInputs).toHaveLength(1);
     expect(paymentGateway.checkoutInputs).toEqual([]);
   });
