@@ -2,14 +2,14 @@
 
 **Date:** 2026-03-12
 **Triggered by:** Visual comparison of Bookmarks page against recently unified History Questions tab and Dashboard Recent Activity
-**Scope:** Bookmark cards use bordered `<Card>` with elevated styling, redundant "Review" button, and title link hover — all visually dated compared to the borderless tonal fill, whole-row-clickable pattern now established across History and Dashboard.
-**Related:** [BS-048](../_archive/brainstorming/bs-048-history-row-fill-depth-and-hover-policy.md) (History row fill/affordance cleanup — direct precedent), [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md), [BS-044](./bs-044-dark-mode-border-weight-tiering.md) (border weight tiering), [Pattern Registry](../frontend/pattern-registry.md), [Contrast Policy](../frontend/contrast-policy.md)
+**Scope:** Bookmark cards use bordered `<Card>` with elevated styling, redundant "Review" button, and title link hover. That bordered-card treatment now looks visually dated next to the borderless tonal-fill row patterns used by History Questions and Dashboard Recent Activity.
+**Related:** [BS-048](../_archive/brainstorming/bs-048-history-row-fill-depth-and-hover-policy.md) (History row fill/affordance cleanup — direct precedent), [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md), [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) (Dashboard tonal-fill row precedent), [BS-044](./bs-044-dark-mode-border-weight-tiering.md) (border weight tiering), [Pattern Registry](../frontend/pattern-registry.md), [Contrast Policy](../frontend/contrast-policy.md)
 
 ---
 
 ## The Problem
 
-The Bookmarks page (`app/(app)/app/bookmarks/page.tsx`) was last updated before the History and Dashboard visual unification work (DEBT-301, DEBT-302). It now stands out as the only question-list surface that still uses bordered, elevated `<Card>` containers with explicit action buttons.
+The Bookmarks page (`app/(app)/app/bookmarks/page.tsx`) still reflects the older bordered-card question-row pattern. It now stands out as the only question-list surface that still uses elevated `<Card>` containers with explicit action buttons instead of the newer tonal-fill row treatments used by History Questions and Dashboard Recent Activity.
 
 ### Current state (bookmark rows)
 
@@ -30,9 +30,11 @@ The Bookmarks page (`app/(app)/app/bookmarks/page.tsx`) was last updated before 
 | Hover | None on card; `hover:underline` on title | `hover:bg-foreground/[0.12]` | `hover:bg-foreground/[0.08]` |
 | Border | `dark:border-foreground/40` | None | None |
 | Shadow | `shadow-sm` | None | None |
-| Click target | Title link only | Entire row | Entire row |
+| Click target | Title link + redundant Review button | Entire row | Entire row |
 | Trailing action | "Review" button + "Remove" button | None (pill removed in DEBT-302) | None |
 | Nav affordance | Title underline + Review button | Cursor + hover fill + focus ring | Cursor + hover fill + focus ring |
+| Metadata shown | Difficulty (plain text) + bookmarked date | Result (colored) + difficulty + date + session type | Result (colored) + date; difficulty as pill badge |
+| Result status | Not shown | Correct/Incorrect with `text-success`/`text-destructive` | Correct/Incorrect with `text-success`/`text-destructive` |
 
 Bookmarks sits on `bg-background` (page surface, not inside a Card container), so it should follow the History Questions convention: `bg-foreground/[0.08]` rest, `hover:bg-foreground/[0.12]` hover (the parent-aware foreground ramp established in BS-048 Gap 1/6).
 
@@ -40,7 +42,7 @@ Bookmarks sits on `bg-background` (page surface, not inside a Card container), s
 
 ## Root Cause Analysis
 
-1. **Bookmarks was built before the tonal fill unification.** The bordered Card pattern was the standard when bookmarks was implemented. History and Dashboard have since moved to borderless tonal fill rows.
+1. **Bookmarks still uses the older bordered-card row treatment.** History Questions and Dashboard Recent Activity have since converged on borderless tonal fill rows, but bookmarks has not yet followed that visual shift.
 
 2. **"Review" button is redundant.** BS-048 Gap 5 established the precedent: a redundant label/button inside an already-clickable surface adds visual weight without informational value. The History Questions tab removed its "Review" pill for the same reason. Clicking the bookmark row itself should navigate to the question.
 
@@ -105,11 +107,11 @@ This is the key structural challenge. History Questions rows are pure `<Link>` e
 
 | Option | Structure | Pros | Cons |
 |--------|-----------|------|------|
-| **A: Overlay link** | `<div>` container + `<Link>` with `absolute inset-0` + Remove button at `relative z-10` | Preserves native link semantics (right-click, middle-click). Clean separation. Common pattern (Linear, GitHub, Vercel). | Slightly more markup. Need to verify AlertDialog trigger z-index layering. |
-| **B: Split layout** | Row is a `<div>`. Left content area wrapped in `<Link>`. Right column has Remove button outside the link. | Simplest HTML structure. No z-index concerns. | Link doesn't cover the full row width — clicking right-side whitespace does nothing. Less satisfying interaction feel. |
-| **C: JS onClick** | Row is a `<div>` with `onClick={() => router.push(...)}`. Remove button uses `e.stopPropagation()`. | Simple implementation. | Loses native link semantics (no right-click → open in new tab, no middle-click, no cmd+click). Bad for accessibility. |
+| **A: Overlay link** | `relative` container + absolutely positioned `<Link className="inset-0">` + Remove button at higher z-index | Preserves native link semantics (right-click, middle-click, open in new tab) while making the visible row feel fully clickable. | Not currently an established in-repo pattern. Needs explicit focus-ring handling and AlertDialog trigger layering verification. |
+| **B: Delegated container activation** | Pointer-clickable row container + explicit title `<Link>` + Remove button guard (History Sessions pattern) | Matches existing multi-action row precedent in this repo. No overlay stacking. Keyboard/native link semantics stay on the explicit Link. | Full-row activation is pointer convenience rather than a native full-surface link. Requires click-guard logic, and right-side whitespace is not a semantic Link target. |
+| **C: Split layout** | Row is a `<div>`. Left content area wrapped in `<Link>`. Right column has Remove button outside the link. | Simplest HTML structure. No z-index concerns. | Link doesn't cover the full row width, so the row can feel less unified than History Questions. |
 
-**Leaning toward Option A** — overlay link is the established premium pattern and preserves full link semantics. The AlertDialog trigger button would need `relative z-10` to sit above the overlay link.
+**Updated recommendation:** Option A is viable if we want native full-row link semantics, but it is not yet an established local pattern. Option B currently has the stronger in-repo precedent (`history-sessions-tab.tsx`) for rows that combine row-level navigation intent with separate secondary controls. If Option A is chosen, we should treat it as a new pattern and document the focus/z-index recipe in the Pattern Registry.
 
 ### Gap 6: Empty state card — PROPOSED
 
@@ -127,16 +129,35 @@ This is the key structural challenge. History Questions rows are pure `<Link>` e
 - No hover state (static — not clickable)
 - No cursor-pointer
 - No focus ring
-- Matches the History Questions unavailable row pattern exactly
+- Reuses the same static page-background tonal surface treatment as the History Questions unavailable row pattern
 
-### Gap 8: Padding density — OPEN
+**Rationale:** The visual surface treatment should align with the History unavailable-row family, but the metadata remains bookmarks-specific (`Unavailable • Bookmarked {date}` rather than result/session metadata).
 
-History Questions uses `p-4` (compact). Current bookmarks use `p-6` (spacious). The bookmark rows show more content (full question text excerpt below the title), so `p-4` may feel cramped.
+### Gap 8: Missing result status in metadata — OPEN
+
+**Current:** Bookmark metadata shows only `{difficulty} • Bookmarked {date}`. There is no indication of whether the user previously answered the question correctly or incorrectly.
+
+**History Questions shows:** `{Correct|Incorrect} • {difficulty} • {date} • {session type}` — with the result colored `text-success` (green) or `text-destructive` (red).
+
+**Dashboard Activity shows:** `{Correct|Incorrect} • {date}` — same colored result status.
+
+**The data gap:** `BookmarkRow` (`src/application/ports/bookmarks.ts`) currently only carries `questionId`, `slug`, `stemMd`, `difficulty`, and `bookmarkedAt`. It does **not** include `isCorrect` or any attempt result. Adding result status would require the `GetBookmarksUseCase` to join against the user's attempt history — a data-layer change, not just CSS.
 
 **Options:**
-- Match History Questions at `p-4` for full consistency
-- Keep `p-6` if content density justifies it
-- Split: `p-4` vertical + `px-5` horizontal (custom density)
+- **A: Add result status** — Enrich `BookmarkRow` with `lastResult?: 'correct' | 'incorrect'` by joining against attempts. Aligns metadata with History Questions. Adds query complexity.
+- **B: Keep metadata as-is** — Bookmarks serves a different purpose (review list, not history). The user bookmarked a question to revisit it — showing their previous result may not be the primary signal. Keep the simpler metadata.
+- **C: Add result status only if attempted** — Show result when available, show "Not yet attempted" otherwise. Most informative but adds visual complexity.
+
+**Needs decision.** This is a content/data question, not a visual treatment question. It can be deferred and addressed separately from the visual unification pass if needed.
+
+### Gap 9: Spacing density — OPEN
+
+History Questions uses `p-4` with `ul className="space-y-4"`. Current bookmarks use `p-6` with `ul className="space-y-3"`. The bookmark rows show more content (full question text excerpt below the title), so matching History exactly may feel cramped, but keeping the current roomier card padding and tighter inter-row gap may blunt the visual unification.
+
+**Options:**
+- Match History Questions at `p-4` and `space-y-4` for full consistency
+- Keep a roomier content density (`p-6` and/or `space-y-3`) if the longer excerpt needs more breathing room
+- Split the difference: `px-5 py-4` with `space-y-4`
 
 Needs visual verification after implementation.
 
@@ -149,24 +170,28 @@ After these changes, bookmarks would join the "standalone navigation row on page
 | Surface | Context | Rest fill | Hover fill | Trailing action |
 |---------|---------|-----------|------------|----------------|
 | History Questions | `/app/history` (Questions tab) | `bg-foreground/[0.08]` | `hover:bg-foreground/[0.12]` | None |
-| **Bookmarks (proposed)** | `/app/bookmarks` | `bg-foreground/[0.08]` | `hover:bg-foreground/[0.12]` | Remove button (z-10 above overlay link) |
+| **Bookmarks (proposed)** | `/app/bookmarks` | `bg-foreground/[0.08]` | `hover:bg-foreground/[0.12]` | Remove button with structure TBD (overlay link or delegated activation) |
 | Dashboard Activity | `/app/dashboard` (inside card) | `bg-foreground/5` | `hover:bg-foreground/[0.08]` | None |
 
-Bookmarks would be the first surface in this family with a nested destructive action, establishing a reusable pattern for "tonal fill row with secondary action button."
+Bookmarks would be the first surface in this family with a nested destructive action. If implemented, it should establish a reusable local pattern for "tonal fill row with secondary action button" rather than relying on one-off structure.
+
+The Pattern Registry decision tree currently routes standalone lists with embedded controls to the legacy "bookmarks pattern — Card contains buttons/links" branch. Implementing BS-049 should replace that branch with the chosen row-with-secondary-action pattern instead of leaving the new structure undocumented.
 
 ---
 
 ## Open Questions
 
-1. **Gap 5 decision:** Overlay link (Option A) vs split layout (Option B)? Need to verify AlertDialog plays well with overlay link z-index layering.
+1. **Gap 5 decision:** Overlay link (Option A, new local pattern) vs delegated container activation (Option B, existing local precedent from History Sessions)?
 
-2. **Gap 8 decision:** `p-4` or `p-6` padding? Needs visual verification.
+2. **Focus treatment for Gap 5:** If Option A wins, should the row-level focus ring live on the overlay Link itself or be mirrored onto the container with `focus-within` so the visible surface reads like the other row patterns?
 
-3. **Remove button variant:** Currently `variant="outline" className="rounded-full"`. Should this stay outline, or shift to `variant="ghost"` to reduce visual weight in the new borderless row? Ghost would be more subtle; outline would maintain the current explicit affordance.
+3. **Gap 8 decision:** Should bookmarks show result status (correct/incorrect)? This is a data-layer question that can be decoupled from the visual pass.
 
-4. **Should we also create a page spec?** `docs/frontend/pages/` has specs for dashboard, practice, and quick-practice but not bookmarks. A page spec would document the component inventory and surface hierarchy after these changes.
+4. **Gap 9 decision:** `p-4` + `space-y-4`, `p-6` + `space-y-3`, or a hybrid spacing recipe? Needs visual verification.
 
-5. **Mobile layout:** Current bookmarks stack vertically on mobile (`flex-col gap-4 sm:flex-row`). With the Review button removed and only Remove remaining, does the mobile layout need adjustment? The button could sit inline with metadata on mobile.
+5. **Remove button variant:** Pattern Registry currently classifies secondary actions like `Remove` as `outline` + `rounded-full`. Should bookmarks stay on that standard, or does the borderless row justify a documented `ghost` exception?
+
+6. **Mobile layout:** Current bookmarks stack vertically on mobile (`flex-col gap-4 sm:flex-row`). With the Review button removed and only Remove remaining, does the mobile layout need adjustment? The button could sit inline with metadata on mobile.
 
 ---
 
@@ -175,3 +200,4 @@ Bookmarks would be the first surface in this family with a nested destructive ac
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-03-12 | Created BS-049 | Visual audit identified bookmarks as the remaining surface using bordered cards while History/Dashboard have moved to borderless tonal fill. Direct precedent in BS-048 (History row cleanup). |
+| 2026-03-12 | Added Gap 8 (result status metadata) | Chrome browser visual audit revealed Bookmarks is the only question-list surface missing correct/incorrect result status. History and Dashboard both show colored result indicators. Data-layer change required — `BookmarkRow` currently lacks attempt data. |
