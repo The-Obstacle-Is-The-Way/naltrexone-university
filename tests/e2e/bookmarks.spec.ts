@@ -15,6 +15,37 @@ test.describe('bookmarks', () => {
     await runE2EUserStateReset();
   });
 
+  test('navigates to review when clicking a bookmark row outside nested controls', async ({
+    page,
+  }) => {
+    await signInWithClerkPassword(page);
+    await ensureSubscribed(page);
+    await ensureBookmarkExistsOnBookmarksPage(page);
+
+    const availableRow = page
+      .locator('li', {
+        has: page.locator('a[href*="/app/questions/"]'),
+      })
+      .first();
+    const titleLink = availableRow
+      .locator('a[href*="/app/questions/"]')
+      .first();
+    const href = await titleLink.getAttribute('href');
+
+    expect(href).toBeTruthy();
+
+    await availableRow
+      .locator('div.cursor-pointer')
+      .first()
+      .click({
+        position: { x: 4, y: 4 },
+      });
+
+    await page.waitForURL((url) => `${url.pathname}${url.search}` === href, {
+      timeout: 15_000,
+    });
+  });
+
   test('persists bookmark state and allows removing from bookmarks page', async ({
     page,
   }) => {

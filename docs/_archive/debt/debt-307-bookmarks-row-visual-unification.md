@@ -2,9 +2,11 @@
 
 **Priority:** P3
 **Created:** 2026-03-12
-**Status:** Open
-**Source:** [BS-049](../_archive/brainstorming/bs-049-bookmarks-card-visual-unification.md)
-**Related:** [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md), [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md), [BS-044](../brainstorming/bs-044-dark-mode-border-weight-tiering.md), [Pattern Registry](../frontend/pattern-registry.md), [Contrast Policy](../frontend/contrast-policy.md)
+**Status:** Resolved
+**Resolved:** 2026-03-12
+**Source:** [BS-049](../brainstorming/bs-049-bookmarks-card-visual-unification.md)
+**Related:** [DEBT-289](./debt-289-dashboard-nested-card-surface-strategy.md), [DEBT-302](./debt-302-history-row-fill-and-affordance-cleanup.md), [BS-044](../../brainstorming/bs-044-dark-mode-border-weight-tiering.md), [Pattern Registry](../../frontend/pattern-registry.md), [Contrast Policy](../../frontend/contrast-policy.md)
+**Verification:** `pnpm typecheck`, `pnpm lint`, `pnpm test --run`, `pnpm test:browser`, and `pnpm build` passed on 2026-03-12.
 
 ---
 
@@ -151,21 +153,21 @@ If bookmark metadata is expanded later, that should ship as a separate data-cont
 
 ## Acceptance Criteria
 
-- [ ] Available bookmark rows no longer render with per-item `<Card>` chrome
-- [ ] Available bookmark rows use `rounded-2xl bg-foreground/[0.08] p-4 transition-colors hover:bg-foreground/[0.12]`
-- [ ] Bookmark list spacing is `space-y-4`
-- [ ] Available rows do not render the `Review` button
-- [ ] Available row title link does not use `hover:underline`
-- [ ] Available rows use delegated container activation for pointer clicks, with guard logic for nested interactive descendants
-- [ ] Title link remains the explicit keyboard-accessible navigation control
-- [ ] `Remove` remains `variant="outline" className="rounded-full"`
-- [ ] Unavailable rows use the static page-background tonal contract with no hover/cursor/link behavior
-- [ ] Empty state `<Card>` no longer applies `dark:border-foreground/40`
-- [ ] Metadata remains bookmarks-specific: difficulty + bookmarked date only
-- [ ] No attempt-result join is added in this debt
-- [ ] Pattern Registry decision tree no longer references the legacy “bookmarks pattern — Card contains buttons/links” branch
-- [ ] Pattern Registry documents the chosen multi-action bookmarks row structure
-- [ ] Contrast Policy classifies the new bookmark row fills as supplementary tonal surfaces
+- [x] Available bookmark rows no longer render with per-item `<Card>` chrome
+- [x] Available bookmark rows use `rounded-2xl bg-foreground/[0.08] p-4 transition-colors hover:bg-foreground/[0.12]`
+- [x] Bookmark list spacing is `space-y-4`
+- [x] Available rows do not render the `Review` button
+- [x] Available row title link does not use `hover:underline`
+- [x] Available rows use delegated container activation for pointer clicks, with guard logic for nested interactive descendants
+- [x] Title link remains the explicit keyboard-accessible navigation control
+- [x] `Remove` remains `variant="outline" className="rounded-full"`
+- [x] Unavailable rows use the static page-background tonal contract with no hover/cursor/link behavior
+- [x] Empty state `<Card>` no longer applies `dark:border-foreground/40`
+- [x] Metadata remains bookmarks-specific: difficulty + bookmarked date only
+- [x] No attempt-result join is added in this debt
+- [x] Pattern Registry decision tree no longer references the legacy “bookmarks pattern — Card contains buttons/links” branch
+- [x] Pattern Registry documents the chosen multi-action bookmarks row structure
+- [x] Contrast Policy classifies the new bookmark row fills as supplementary tonal surfaces
 
 ---
 
@@ -174,10 +176,12 @@ If bookmark metadata is expanded later, that should ship as a separate data-cont
 ### Source
 
 - `app/(app)/app/bookmarks/page.tsx`
+- `app/(app)/app/bookmarks/bookmark-row-shell.tsx`
 
 ### Tests
 
 - `app/(app)/app/bookmarks/page.test.tsx`
+- `app/(app)/app/bookmarks/bookmark-row-shell.browser.spec.tsx`
 - `tests/e2e/bookmarks.spec.ts`
 
 ### Documentation sync
@@ -187,7 +191,7 @@ If bookmark metadata is expanded later, that should ship as a separate data-cont
 - `docs/debt/index.md`
 - `docs/_archive/brainstorming/bs-049-bookmarks-card-visual-unification.md`
 - `docs/brainstorming/index.md`
-- `docs/debt/debt-307-bookmarks-row-visual-unification.md`
+- `docs/_archive/debt/debt-307-bookmarks-row-visual-unification.md`
 
 ---
 
