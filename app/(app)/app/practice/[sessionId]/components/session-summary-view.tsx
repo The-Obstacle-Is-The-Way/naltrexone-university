@@ -69,9 +69,9 @@ export function SessionSummaryView({
       </div>
 
       <Card className="gap-0 rounded-2xl p-6 shadow-sm">
-        <div className="text-sm font-medium text-foreground">
+        <h2 className="text-sm font-medium text-foreground">
           Question breakdown
-        </div>
+        </h2>
         {summaryReviewLoadState.status === 'loading' ? (
           <output
             className="mt-2 text-sm text-muted-foreground"

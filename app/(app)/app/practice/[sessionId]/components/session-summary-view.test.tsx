@@ -23,6 +23,33 @@ function findStatValue(doc: Document, label: string): string | null {
 }
 
 describe('SessionSummaryView', () => {
+  it('uses a card heading for the question breakdown section', () => {
+    const html = renderToStaticMarkup(
+      <SessionSummaryView
+        summary={{
+          sessionId: 'session-1',
+          mode: 'tutor',
+          questionCount: 8,
+          endedAt: '2026-02-07T00:00:00.000Z',
+          totals: {
+            answered: 8,
+            correct: 6,
+            accuracy: 0.75,
+            durationSeconds: 600,
+          },
+        }}
+        review={null}
+        reviewLoadState={{ status: 'idle' }}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const h2Texts = Array.from(doc.querySelectorAll('h2')).map(
+      (element) => element.textContent ?? '',
+    );
+
+    expect(h2Texts).toContain('Question breakdown');
+  });
+
   it('renders percentage for accuracy when answered > 0', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView

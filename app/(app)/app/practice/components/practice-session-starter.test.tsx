@@ -8,6 +8,15 @@ function getClassTokens(className: string): Set<string> {
   return new Set(className.split(/\s+/).filter(Boolean));
 }
 
+function findFieldsetByLegend(doc: Document, text: string) {
+  return (
+    Array.from(doc.querySelectorAll('fieldset')).find((element) => {
+      const legend = element.querySelector('legend');
+      return legend?.textContent === text;
+    }) ?? null
+  );
+}
+
 describe('PracticeSessionStarter', () => {
   beforeAll(async () => {
     ({ PracticeSessionStarter } = await import('./practice-session-starter'));
@@ -83,6 +92,83 @@ describe('PracticeSessionStarter', () => {
 
     expect(html).toContain('for="session-count-input"');
     expect(html).toContain('id="session-count-input"');
+  });
+
+  it('uses mixed-height alignment in the starter form row', () => {
+    const html = renderToStaticMarkup(
+      <PracticeSessionStarter
+        sessionMode="tutor"
+        sessionCount={20}
+        filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+        availableCountStatus="idle"
+        availableCount={null}
+        tagLoadStatus="idle"
+        availableTags={[]}
+        sessionStartStatus="idle"
+        sessionStartError={null}
+        onDifficultyChange={() => undefined}
+        onStatusChange={() => undefined}
+        onToggleTag={() => undefined}
+        onSessionModeChange={() => undefined}
+        onSessionCountChange={() => undefined}
+        onStartSession={() => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const sessionCountInput = doc.querySelector('#session-count-input');
+    const starterRow = sessionCountInput?.closest('div[class~="sm:flex-row"]');
+    const starterRowTokens = getClassTokens(
+      starterRow?.getAttribute('class') ?? '',
+    );
+
+    expect(sessionCountInput).not.toBeNull();
+    expect(starterRow).not.toBeNull();
+    expect(starterRowTokens.has('sm:items-start')).toBe(true);
+    expect(starterRowTokens.has('sm:items-center')).toBe(false);
+  });
+
+  it('wraps Status and Difficulty controls with consistent label spacing', () => {
+    const html = renderToStaticMarkup(
+      <PracticeSessionStarter
+        sessionMode="tutor"
+        sessionCount={20}
+        filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+        availableCountStatus="idle"
+        availableCount={null}
+        tagLoadStatus="idle"
+        availableTags={[]}
+        sessionStartStatus="idle"
+        sessionStartError={null}
+        onDifficultyChange={() => undefined}
+        onStatusChange={() => undefined}
+        onToggleTag={() => undefined}
+        onSessionModeChange={() => undefined}
+        onSessionCountChange={() => undefined}
+        onStartSession={() => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const statusFieldset = findFieldsetByLegend(doc, 'Status');
+    const difficultyFieldset = findFieldsetByLegend(doc, 'Difficulty');
+    const statusWrapper = statusFieldset?.closest('div[class~="space-y-2"]');
+    const difficultyWrapper = difficultyFieldset?.closest(
+      'div[class~="space-y-2"]',
+    );
+    const statusWrapperTokens = getClassTokens(
+      statusWrapper?.getAttribute('class') ?? '',
+    );
+    const difficultyWrapperTokens = getClassTokens(
+      difficultyWrapper?.getAttribute('class') ?? '',
+    );
+
+    expect(statusFieldset).not.toBeNull();
+    expect(difficultyFieldset).not.toBeNull();
+    expect(statusWrapper).not.toBeNull();
+    expect(difficultyWrapper).not.toBeNull();
+    expect(statusWrapperTokens.has('space-y-2')).toBe(true);
+    expect(statusWrapperTokens.has('mt-2')).toBe(false);
+    expect(difficultyWrapperTokens.has('space-y-2')).toBe(true);
+    expect(difficultyWrapperTokens.has('mt-2')).toBe(false);
   });
 
   it('groups filter chip sets with accessible group roles', () => {
