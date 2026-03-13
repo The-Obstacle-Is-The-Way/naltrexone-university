@@ -99,8 +99,43 @@ Use a two-row layout within each column: labels in the first row share a top bas
 
 ---
 
+## Additional Findings (Browser Agent Review)
+
+A visual audit of the live page surfaced these related concerns on the same component:
+
+### A11y: Inconsistent label semantics
+
+The "Mode" label is a plain `<div>`, while "Questions" uses a proper `<label for="...">`. Clicking "Questions" focuses the input; clicking "Mode" does nothing. The `<fieldset>` has an `sr-only` `<legend>`, so screen readers work, but the visible label is disconnected.
+
+**Fix:** Either make Mode's visible text a `<label>` with `aria-labelledby` on the fieldset, or unify the pattern across all sections.
+
+### A11y: Duplicate label announcements
+
+Each SegmentedControl has both a visible `<div>` label ("Mode", "Status", "Difficulty") *and* an `sr-only` `<legend>` with identical text. Screen readers announce the label twice.
+
+**Fix:** Drop the `sr-only` legend and use `aria-labelledby` pointing to the visible label, or make the legend visible and remove the div.
+
+### Visual hierarchy: No separation between session config and filters
+
+Mode/Questions, Status, Difficulty, Topic, Substance, and Treatment are all siblings inside `space-y-5`. But Mode+Questions is conceptually the *session configuration*, while Status/Difficulty/Topic/Substance/Treatment are *filters*. A larger gap or subtle divider between the two tiers would establish hierarchy.
+
+### Visual consistency: Questions input borderless vs Mode bordered
+
+The Questions input uses `border-0` with a subtle `bg-foreground/5` fill, while the Mode fieldset has a visible `border-border`. On dark backgrounds the input edges are hard to perceive — it reads as floating text rather than an editable field. Consider adding a matching subtle border or increasing the background contrast.
+
+---
+
 ## Implementation
+
+### Primary fix (alignment)
 
 1. In `practice-session-starter.tsx` line 112, change `sm:items-start` → `sm:items-end`
 2. Visual verify on mobile (stacked) and desktop (side-by-side)
 3. No test changes needed — this is a pure CSS alignment fix
+
+### Optional follow-ups (from additional findings)
+
+4. Unify label semantics across Mode/Status/Difficulty sections
+5. Eliminate duplicate screen-reader announcements on SegmentedControl
+6. Add visual separator between session config row and filter sections
+7. Add subtle border to Questions input to match Mode affordance
