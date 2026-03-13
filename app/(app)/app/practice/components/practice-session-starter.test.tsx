@@ -122,6 +122,37 @@ describe('PracticeSessionStarter', () => {
     expect(starterRowTokens.has('sm:items-center')).toBe(false);
   });
 
+  it('centers the Questions label above the narrow input', () => {
+    const html = renderToStaticMarkup(
+      <PracticeSessionStarter
+        sessionMode="tutor"
+        sessionCount={20}
+        filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+        availableCountStatus="idle"
+        availableCount={null}
+        tagLoadStatus="idle"
+        availableTags={[]}
+        sessionStartStatus="idle"
+        sessionStartError={null}
+        onDifficultyChange={() => undefined}
+        onStatusChange={() => undefined}
+        onToggleTag={() => undefined}
+        onSessionModeChange={() => undefined}
+        onSessionCountChange={() => undefined}
+        onStartSession={() => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const label = doc.querySelector('label[for="session-count-input"]');
+    const questionsWrapper = label?.parentElement;
+    const wrapperTokens = getClassTokens(
+      questionsWrapper?.getAttribute('class') ?? '',
+    );
+
+    expect(questionsWrapper).not.toBeNull();
+    expect(wrapperTokens.has('items-center')).toBe(true);
+  });
+
   it('wraps Status and Difficulty controls with consistent label spacing', () => {
     const html = renderToStaticMarkup(
       <PracticeSessionStarter
