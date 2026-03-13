@@ -1,7 +1,7 @@
 # BS-050: Practice Page Chip Hover Affordance — Border Highlight + Contrast Lift
 
 **Date:** 2026-03-13
-**Triggered by:** Visual review of the Practice page topic/substance/treatment filter chips. On hover, the contrast change is barely perceptible in both dark and light mode (7% → 10% foreground opacity). Meanwhile, the Bookmarks page Remove pill (outline Button variant) gains a noticeably brighter border on hover in dark mode (`dark:hover:border-foreground/70`), creating a much clearer hover signal. The practice chips lack this border-level feedback entirely.
+**Triggered by:** Visual review of the Practice page topic/substance/treatment filter chips. On hover, the contrast change is barely perceptible in both dark and light mode (7% → 10% foreground opacity). Meanwhile, the Bookmarks page Remove pill (outline Button variant) gains a noticeably brighter border on hover in dark mode (`dark:hover:border-foreground/70`) alongside a stronger fill change, creating a much clearer hover signal. The practice chips lack this border-level feedback entirely.
 **Scope:** Improve hover affordance on unselected `FilterChip` components used in the Practice Session Starter, so users can clearly see which chip they're about to click.
 **Related:** [BS-044](./bs-044-dark-mode-border-weight-tiering.md) (dark-mode border tiering), [BS-046 (archived)](../_archive/brainstorming/bs-046-filter-chip-fill-depth-and-summary-hover.md) (prior chip fill depth work), [DEBT-294](../_archive/debt/debt-294-filter-chip-fill-depth-and-cursor.md) (chip fill + cursor fix), [BS-051](./bs-051-bookmark-pill-hover-pattern-investigation.md) (bookmark pill investigation)
 
@@ -37,7 +37,7 @@ The border jumps from **40% → 70%** on hover — a 30-point increase that is i
 |------|-------------|
 | Dark mode (practice chips) | Hovering over "Co-occurring Disorders" — nearly indistinguishable from rest state |
 | Light mode (practice chips) | Same issue — hover is subtle to the point of being invisible |
-| Dark mode (bookmark Remove pill) | Clear border brightening on hover without any fill contrast change needed |
+| Dark mode (bookmark Remove pill) | Clearer hover because the pill border brightens strongly and the overall hover stack is more pronounced than the practice chips |
 
 ---
 
@@ -85,7 +85,7 @@ The `hover:bg-foreground/[0.10]` stays. Combined with the border brightening, th
 
 ### Why both signals?
 
-The Bookmarks Remove pill works well with border-only hover because it's a single action button — the user knows what it does. Practice chips are **toggleable selectors** in a group — the hover needs to clearly indicate which specific chip the cursor is over. Dual signals (border + fill) provide stronger differentiation in a dense chip group.
+The Bookmarks Remove pill works well with a border-forward hover treatment because it's a single action button — the user knows what it does. Practice chips are **toggleable selectors** in a group — the hover needs to clearly indicate which specific chip the cursor is over. Dual signals (border + fill) provide stronger differentiation in a dense chip group.
 
 ---
 

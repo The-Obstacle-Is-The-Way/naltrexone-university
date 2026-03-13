@@ -41,7 +41,7 @@ Examples:
 - **Notion**: Star/bookmark icon toggle in the corner
 - **VS Code**: Bookmark icon toggle in editor gutter
 
-The pattern is: icon sits in a predictable position (usually top-right corner of the item), outlined when inactive, filled when active. One click toggles. No text needed, no confirmation dialog needed (undo is one click away).
+The pattern is: icon sits in a predictable position (usually top-right corner of the item), outlined when inactive, filled when active. One click toggles. No text needed, and heavier confirmation UX is often replaced with lightweight reversal or undo.
 
 ---
 
@@ -61,9 +61,10 @@ No domain changes needed. The icon toggle maps 1:1 to the existing use case.
 1. Shows a "Remove" outline pill
 2. On click, opens an `AlertDialog` confirmation ("Remove bookmark?")
 3. On confirm, calls `removeBookmarkAction` server action
-4. Redirects with toast
+4. Revalidates `/app/bookmarks` and redirects with toast
+5. Is covered by page tests and E2E flows that currently assume the confirm-then-redirect behavior
 
-With an icon toggle, the confirmation dialog becomes optional — the action is instantly reversible (click again to re-bookmark). This simplifies the UX significantly.
+With an icon toggle, the confirmation dialog becomes optional, but the reversibility story differs by surface. On the Practice page, the action is instantly reversible because the control stays visible. On the Bookmarks page, removing the bookmark removes the row from the current list, so reversal is **not** instant unless we also add undo support or keep the row visible optimistically. This makes the bookmarks-surface migration more behaviorally significant than a simple icon swap.
 
 ### Practice action bar — already has toggle state
 
@@ -111,14 +112,14 @@ This is one icon, two visual states. Clean and minimal.
 └─────────────────────────────────────────────────────────┘
 ```
 
-Where `[🔖]` is a filled Bookmark icon (since every item on this page is bookmarked). Clicking it removes the bookmark — the row disappears (or fades out) with an undo toast.
+Where `[🔖]` is a filled Bookmark icon (since every item on this page is bookmarked). Clicking it removes the bookmark, but the row-disappearing behavior means we need an explicit decision: keep confirmation, add undo, or keep the row around optimistically long enough to reverse.
 
 **Key decisions:**
 - **Position**: Right side of the row, vertically centered (replacing the Remove pill's position)
 - **Icon state**: Always filled on bookmarks page (they're all bookmarked by definition)
-- **Click behavior**: Remove bookmark immediately (no confirmation dialog). Show undo toast: "Bookmark removed. [Undo]"
+- **Click behavior**: Open question for decision. Options are immediate remove + undo toast, keep the existing confirmation until undo exists, or keep the row visible optimistically long enough to reverse
 - **Size**: `size-5` (20px) — standard for inline row icons
-- **Hit target**: Wrap in a `button` with `size="icon"` (36×36px) for comfortable tap/click area
+- **Hit target**: Use an icon-sized control only if the surrounding pill/padding still preserves an approximately 44×44px touch target
 - **Hover**: Icon color darkens/lightens, optional scale micro-animation
 
 ### Surface 2: Practice Action Bar (Toggle)
@@ -163,12 +164,15 @@ type BookmarkToggleProps = {
 function BookmarkToggle({ bookmarked, onToggle, disabled, size = 'default', label }: BookmarkToggleProps) {
   return (
     <Button
-      variant="ghost"
-      size="icon"
+      variant="outline"
       aria-label={bookmarked ? `Remove bookmark: ${label}` : `Bookmark: ${label}`}
       aria-pressed={bookmarked}
       disabled={disabled}
       onClick={onToggle}
+      className={cn(
+        'rounded-full',
+        size === 'sm' ? 'h-8 px-2.5' : 'h-9 px-3',
+      )}
     >
       <Bookmark
         className={cn(
@@ -222,17 +226,17 @@ When the bookmark state toggles:
 
 ### Phase 1: Bookmarks page only
 - Replace "Remove" pill with filled `BookmarkToggle` icon
-- Remove `AlertDialog` confirmation
-- Add undo toast (or accept the simplification without undo)
-- Lowest risk — only affects the bookmarks list page
+- Decide whether to remove `AlertDialog` immediately or keep it until undo/optimistic reversal exists
+- Update redirect/toast flow or replace it with a local state transition
+- Narrowest surface area, but not behavior-free because the current list removes the item entirely
 
 ### Phase 2: Practice action bar
 - Replace "Bookmark" / "Remove bookmark" text pills with `BookmarkToggle`
 - Keep existing toggle logic and toast notifications
 - Higher cross-cutting impact — touches quick practice, session practice, and action bar layout
 
-### Phase 3 (optional): Corner-positioned bookmark icon on question cards
-- Add a small bookmark icon in the top-right corner of question cards (history page, bookmarks page)
+### Phase 3 (optional): Corner-positioned bookmark icon on question surfaces
+- Add a small bookmark icon in the top-right corner of applicable question surfaces (for example history rows/cards or bookmark rows)
 - This is the "bookmark in the corner" pattern — visible bookmark state at a glance without needing to open the question
 - Largest scope — would touch card components across multiple pages
 
@@ -262,5 +266,5 @@ When the bookmark state toggles:
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-03-13 | Created BS-052 | Text pills for bookmark toggle are verbose and don't leverage universal bookmark iconography. The filled/unfilled bookmark icon pattern is a well-understood interaction across all major platforms. |
-| 2026-03-13 | Proposed phased rollout (bookmarks page first) | Lowest risk starting point; practice action bar changes are higher cross-cutting impact |
+| 2026-03-13 | Proposed phased rollout (bookmarks page first) | Narrowest initial surface area, though still behaviorally significant because removing from the list is not instantly reversible |
 | 2026-03-13 | No code changes yet | Brainstorming only — needs design decisions on icon color, undo behavior, and phasing before implementation |
