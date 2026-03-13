@@ -20,7 +20,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 7 verified client-side flows still report only to console or silent fallbacks | P2 | — |
 | [DEBT-309](./debt-309-filter-chip-hover-border-affordance.md) | FilterChip Hover Affordance — add `hover:border-foreground/60` (light) and `dark:hover:border-foreground/70` (dark), bump fill hover from `[0.10]` to `[0.12]` (+5pp delta); current hover is only a 3pp fill bump with no border change, barely perceptible | P3 | — |
-**Next Debt ID:** DEBT-310
+| [DEBT-310](./debt-310-stripe-stale-price-id-in-production-db.md) | Stale Stripe Price ID in Production DB — orphaned subscription record from dead Stripe account (`KAPxQwR68A`) crashes `/app/dashboard` with `Unknown Stripe price id`; data-only fix, no code changes | P1 | — |
+**Next Debt ID:** DEBT-311
 
 ---
 
