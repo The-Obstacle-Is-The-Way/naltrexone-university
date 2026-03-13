@@ -21,6 +21,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ### Invalidated (False Positives)
 - ~~[BUG-211](bug-211-count-query-fallback-masks-failures.md)~~: Four count-aggregate fallbacks across three repositories are dead defensive code; they do not mask DB failures
+- ~~[BUG-216](bug-216-health-handler-imports-drizzle-orm.md)~~: Health handler's direct Drizzle `SELECT 1` probe is framework-layer code explicitly required by the master spec; not a Clean Architecture bug
 
 ### P2 (High Risk)
 - [BUG-208](bug-208-clerk-webhook-deletion-not-transactional.md): `user.deleted` can miss a Stripe mapping inserted after its lookup and before its delete, leaving remote billing active after local cascade cleanup
@@ -30,9 +31,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 - [BUG-206](bug-206-raw-db-errors-escape-adapter-layer.md): Repositories rethrow unexpected DB failures raw across the application port boundary; controllers sanitize later, but the adapter contract is still violated
 - [BUG-207](bug-207-cron-route-leaks-config-state.md): Cron route reveals missing `CRON_SECRET` to public callers before auth check (low-risk config-state leak; route still fails closed)
 - [BUG-212](bug-212-bookmark-toggle-swallows-errors.md): Bookmark toggle collapses thrown and structured failures to generic UI without client-side logging; unknown server exceptions are still logged upstream
-- [BUG-213](bug-213-session-start-error-not-logged.md): Session start error not logged client-side (server-side captured by Sentry instrumentation)
-- [BUG-215](bug-215-checkout-success-business-logic-in-app-layer.md): Checkout orchestration in app layer + `@/db/schema` import leak (glue code, not domain logic)
-- [BUG-216](bug-216-health-handler-imports-drizzle-orm.md): Health handler directly imports `drizzle-orm` in app layer
+- [BUG-213](bug-213-session-start-error-not-logged.md): Session-start thrown errors/timeouts surface to UI but are not reported client-side; expected controller failures already return structured results
 - [BUG-217](bug-217-questionid-validation-inconsistency.md): `questionId` validation inconsistency — `string.min(1)` vs `zUuid`
 - [BUG-218](bug-218-idempotency-parse-error-loses-cause.md): `withIdempotency` discards original parse error context
 - [BUG-219](bug-219-dead-code-dropdown-menu-skip-auth-gateway.md): Dead code — `DropdownMenu` component and `SkipAuthGateway` class never used
@@ -41,6 +40,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 ### P4 (Code Smell / Tech Debt)
 - [BUG-210](bug-210-non-injectable-date-now-in-checkout-session.md): Hard-wired `Date.now()` in Stripe checkout inactivity checks is deterministic-testability debt, not a production bug
 - [BUG-214](bug-214-production-errors-silenced-in-transition-action.md): `runTransitionedAsyncAction` dev-only logging (by design; all callers handle errors; DEBT-286 tracks Sentry)
+- [BUG-215](bug-215-checkout-success-business-logic-in-app-layer.md): Checkout-success eager sync is intentional page-layer orchestration; the remaining issue is the direct `@/db/schema` type import in the assertions helper
 
 ---
 
