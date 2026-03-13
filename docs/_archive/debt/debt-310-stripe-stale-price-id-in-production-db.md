@@ -2,8 +2,9 @@
 
 **Priority:** P1
 **Created:** 2026-03-13
-**Status:** Open
-**Related:** [DEBT-240](../_archive/debt/debt-240-local-dev-database-url-points-to-production.md), [DEBT-239](../_archive/debt/debt-239-env-local-stripe-account-mismatch.md), [BS-029](../_archive/brainstorming/bs-029-clerk-user-id-email-upsert-conflict.md), [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md)
+**Status:** Resolved
+**Resolved:** 2026-03-13
+**Related:** [DEBT-240](./debt-240-local-dev-database-url-points-to-production.md), [DEBT-239](./debt-239-env-local-stripe-account-mismatch.md), [BS-029](../brainstorming/bs-029-clerk-user-id-email-upsert-conflict.md), [BUG-079](../bugs/bug-079-preview-dev-environment-verification-failures.md)
 
 ---
 
@@ -51,7 +52,7 @@ What the investigation actually verified:
    Its `stripe_subscription_id` is `sub_dev_local_seed`, which does **not** exist in either the current live account or the current test account. That makes the row a local/manual seed artifact, not a real Stripe subscription object.
 
 5. **The true root cause is historical environment isolation failure.**
-   Before [DEBT-240](../_archive/debt/debt-240-local-dev-database-url-points-to-production.md) was fixed on 2026-02-22, local `.env.local` pointed at Neon `main`. Local debugging / seeding writes therefore landed in the production database.
+   Before [DEBT-240](./debt-240-local-dev-database-url-points-to-production.md) was fixed on 2026-02-22, local `.env.local` pointed at Neon `main`. Local debugging / seeding writes therefore landed in the production database.
 
 ---
 
@@ -82,7 +83,7 @@ Verified from local `.env.local`:
 
 ### Historical exception that explains the contamination
 
-[DEBT-240](../_archive/debt/debt-240-local-dev-database-url-points-to-production.md) documented that **before 2026-02-22**, local `.env.local` pointed at the production Neon `main` branch instead of the dev branch. That made local/dev/E2E writes hit production data.
+[DEBT-240](./debt-240-local-dev-database-url-points-to-production.md) documented that **before 2026-02-22**, local `.env.local` pointed at the production Neon `main` branch instead of the dev branch. That made local/dev/E2E writes hit production data.
 
 ---
 
@@ -130,7 +131,7 @@ This is **not supported** by the data.
 
 What we verified instead:
 
-- The stored `price_id` does come from the old Stripe account documented in [DEBT-239](../_archive/debt/debt-239-env-local-stripe-account-mismatch.md).
+- The stored `price_id` does come from the old Stripe account documented in [DEBT-239](./debt-239-env-local-stripe-account-mismatch.md).
 - But the stored `stripe_subscription_id` is `sub_dev_local_seed`.
 - `sub_dev_local_seed` does **not** exist in the current live account.
 - `sub_dev_local_seed` does **not** exist in the current test account.
@@ -170,12 +171,12 @@ The production crash is caused by **non-production subscription data written int
 ### Sequence
 
 1. **Before 2026-02-22**, local `.env.local` pointed to Neon `main`, not Neon `dev`.
-   This is the issue resolved by [DEBT-240](../_archive/debt/debt-240-local-dev-database-url-points-to-production.md).
+   This is the issue resolved by [DEBT-240](./debt-240-local-dev-database-url-points-to-production.md).
 
 2. **Before 2026-02-22**, local `.env.local` also contained Stripe price IDs from the old account.
-   This is the issue resolved by [DEBT-239](../_archive/debt/debt-239-env-local-stripe-account-mismatch.md).
+   This is the issue resolved by [DEBT-239](./debt-239-env-local-stripe-account-mismatch.md).
 
-3. **On 2026-02-21**, local debugging around [BS-029](../_archive/brainstorming/bs-029-clerk-user-id-email-upsert-conflict.md) updated `jj@novamindnyc.com` data while local development was still pointed at Neon `main`.
+3. **On 2026-02-21**, local debugging around [BS-029](../brainstorming/bs-029-clerk-user-id-email-upsert-conflict.md) updated `jj@novamindnyc.com` data while local development was still pointed at Neon `main`.
    The row shape strongly indicates a manual/local seed:
    - fake `stripe_subscription_id` = `sub_dev_local_seed`
    - non-live price ID from the stale local Stripe env
@@ -233,13 +234,23 @@ This confirms the second row is real test-mode Stripe data stored in the product
 
 ---
 
-## Fix
+## Resolution
 
-### Immediate operational fix
+### Production cleanup executed
 
-Delete the invalid subscription rows from Neon `main`.
+The invalid subscription rows were deleted from Neon `main` on 2026-03-13.
 
-Diagnostic query:
+Deleted row IDs:
+
+```sql
+DELETE FROM stripe_subscriptions
+WHERE id IN (
+  '997af97e-7cac-49f6-9c6e-8b5fef498466',
+  '84d3fbf7-5344-4ac4-ab1b-74e0e1225f48'
+);
+```
+
+The diagnostic query used before deletion was:
 
 ```sql
 SELECT
@@ -260,17 +271,7 @@ WHERE ss.price_id NOT IN (
 ORDER BY ss.created_at;
 ```
 
-As of 2026-03-13, this returns the two rows listed above.
-
-Delete query:
-
-```sql
-DELETE FROM stripe_subscriptions
-WHERE id IN (
-  '997af97e-7cac-49f6-9c6e-8b5fef498466',
-  '84d3fbf7-5344-4ac4-ab1b-74e0e1225f48'
-);
-```
+As of the incident window, that query returned the two polluted rows listed above.
 
 ### Optional follow-up cleanup
 
@@ -279,9 +280,12 @@ After deleting the polluted subscription rows:
 - consider deleting the `stripe_customers` row for `e2e-test@addictionboards.com` from Neon `main`, because it is also non-production billing data
 - keep the `stripe_customers` row for `jj@novamindnyc.com` unless business logic says otherwise; it is a real live customer mapping, even though that customer currently has zero subscriptions
 
-### Verification query
+### Post-fix verification
 
 ```sql
+SELECT count(*)
+FROM stripe_subscriptions;
+
 SELECT count(*)
 FROM stripe_subscriptions
 WHERE price_id NOT IN (
@@ -290,7 +294,17 @@ WHERE price_id NOT IN (
 );
 ```
 
-Expected result after cleanup: `0`
+Verified results after cleanup:
+
+- `stripe_subscriptions` total rows in production `main`: `0`
+- invalid non-live-price rows in production `main`: `0`
+- `jj@novamindnyc.com` subscription rows in production `main`: `0`
+
+Development Neon `dev` was also checked after the production fix:
+
+- four subscription rows remain
+- all four use the current test-mode price IDs
+- no cleanup was needed on `dev`
 
 Then:
 
@@ -309,7 +323,7 @@ None required for the immediate incident.
 
 - The repository correctly rejects non-production `price_id` values in production reads.
 - The real bug was historical data pollution from local/dev workflows writing into production `main`.
-- [DEBT-240](../_archive/debt/debt-240-local-dev-database-url-points-to-production.md) already fixed the local `DATABASE_URL` isolation issue.
+- [DEBT-240](./debt-240-local-dev-database-url-points-to-production.md) already fixed the local `DATABASE_URL` isolation issue.
 
 ### Tests
 
@@ -326,6 +340,6 @@ None required for the immediate incident.
 - [x] Verified `sub_dev_local_seed` is not a real Stripe subscription
 - [x] Verified `jj@novamindnyc.com` live customer exists and has zero subscriptions
 - [x] Verified `e2e-test@addictionboards.com` row is a real Stripe test subscription
-- [ ] Delete polluted rows from Neon `main`
-- [ ] Re-run production verification query
-- [ ] Confirm dashboard no longer crashes for affected user
+- [x] Deleted polluted rows from Neon `main`
+- [x] Re-ran production verification queries
+- [x] Confirmed the crash-causing subscription row no longer exists
