@@ -32,15 +32,15 @@ Bug reports document issues discovered in the codebase along with their root cau
 - [BUG-207](bug-207-cron-route-leaks-config-state.md): Cron route reveals missing `CRON_SECRET` to public callers before auth check (low-risk config-state leak; route still fails closed)
 - [BUG-212](bug-212-bookmark-toggle-swallows-errors.md): Bookmark toggle collapses thrown and structured failures to generic UI without client-side logging; unknown server exceptions are still logged upstream
 - [BUG-213](bug-213-session-start-error-not-logged.md): Session-start thrown errors/timeouts surface to UI but are not reported client-side; expected controller failures already return structured results
-- [BUG-217](bug-217-questionid-validation-inconsistency.md): `questionId` validation inconsistency — `string.min(1)` vs `zUuid`
-- [BUG-218](bug-218-idempotency-parse-error-loses-cause.md): `withIdempotency` discards original parse error context
-- [BUG-219](bug-219-dead-code-dropdown-menu-skip-auth-gateway.md): Dead code — `DropdownMenu` component and `SkipAuthGateway` class never used
-- [BUG-220](bug-220-weak-test-assertions.md): Weak test assertions — proxy test and bookmark ordering (2 confirmed, 2 sub-cases invalidated)
+- [BUG-217](bug-217-questionid-validation-inconsistency.md): `getPreviousAttempt` still accepts non-UUID `questionId` values at both the controller and spec level, so malformed IDs are rejected too late
 
 ### P4 (Code Smell / Tech Debt)
 - [BUG-210](bug-210-non-injectable-date-now-in-checkout-session.md): Hard-wired `Date.now()` in Stripe checkout inactivity checks is deterministic-testability debt, not a production bug
 - [BUG-214](bug-214-production-errors-silenced-in-transition-action.md): `runTransitionedAsyncAction` dev-only logging (by design; all callers handle errors; DEBT-286 tracks Sentry)
 - [BUG-215](bug-215-checkout-success-business-logic-in-app-layer.md): Checkout-success eager sync is intentional page-layer orchestration; the remaining issue is the direct `@/db/schema` type import in the assertions helper
+- [BUG-218](bug-218-idempotency-parse-error-loses-cause.md): Cached idempotency replay parse failures drop the original parser cause, reducing diagnosability without changing the external error contract
+- [BUG-219](bug-219-dead-code-dropdown-menu-skip-auth-gateway.md): `DropdownMenu` is spec-mandated; the remaining issue is the unused `SkipAuthGateway` barrel export
+- [BUG-220](bug-220-weak-test-assertions.md): Two tests still assert existence instead of behavior (`proxy.test.ts` skip-Clerk response, bookmark repo ordering)
 
 ---
 
