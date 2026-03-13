@@ -12,8 +12,9 @@
 
 Tracer-bullet verification confirmed two different facts, and the distinction matters:
 
-1. **The repository bug is real:** `DrizzlePracticeSessionRepository.create()` rethrows unknown insert errors at `src/adapters/repositories/drizzle-practice-session-repository.ts`, and `DrizzleAttemptRepository.insert()` rethrows unknown insert errors at `src/adapters/repositories/drizzle-attempt-repository.ts`. `src/adapters/repositories/drizzle-attempt-repository.test.ts` explicitly locks in that raw passthrough with `it('rethrows unique violations from other constraints', ...)`.
-2. **The current server-action boundary sanitizes later:** the current user-facing `startPracticeSession` and `submitAnswer` paths do run through `createAction(...)`, so `src/adapters/controllers/create-action.ts` and `src/adapters/controllers/action-result.ts` eventually normalize those unknown throws into `INTERNAL_ERROR` for action callers.
+1. **The repository bug is real:** `DrizzlePracticeSessionRepository.create()` rethrows unknown insert errors at `src/adapters/repositories/drizzle-practice-session-repository.ts:171-191`, and `DrizzleAttemptRepository.insert()` rethrows unknown insert errors at `src/adapters/repositories/drizzle-attempt-repository.ts:187-213`.
+2. **The current test suite locks in the raw passthrough:** `src/adapters/repositories/drizzle-attempt-repository.test.ts:303-320` includes `it('rethrows unique violations from other constraints', ...)`.
+3. **The current server-action boundary sanitizes later:** the current user-facing `startPracticeSession` and `submitAnswer` paths do run through `createAction(...)`, so `src/adapters/controllers/create-action.ts:40-48` and `src/adapters/controllers/action-result.ts:38-61` eventually normalize those unknown throws into `INTERNAL_ERROR` for action callers.
 
 That second fact does **not** invalidate the first. The bug is not "raw DB errors reach the client." The bug is that raw infrastructure errors cross the repository adapter boundary into application/use-case code before the controller safety net runs.
 
@@ -21,7 +22,7 @@ That second fact does **not** invalidate the first. The bug is not "raw DB error
 
 - Application-layer callers receive driver- or Postgres-shaped errors instead of `ApplicationError`.
 - Behavior is inconsistent across entry points: controller-backed calls are sanitized later, while direct callers can still observe raw DB errors.
-- The repository contract is weaker than sibling adapters such as `DrizzleUserRepository`, which already wraps unexpected DB failures as `ApplicationError`.
+- The repository contract is weaker than sibling adapters such as `DrizzleUserRepository` (`src/adapters/repositories/drizzle-user-repository.ts:130-135`), `DrizzleStripeCustomerRepository` (`src/adapters/repositories/drizzle-stripe-customer-repository.ts:64-80`), and `DrizzleSubscriptionRepository` (`src/adapters/repositories/drizzle-subscription-repository.ts:100-108`), which already wrap unexpected DB failures as `ApplicationError`.
 
 ## Precise TDD Fix
 

@@ -11,7 +11,7 @@ The public `POST /api/cron/reconcile-stripe-subscriptions` endpoint checks wheth
 ## Verification Notes
 
 - `lib/public-routes.ts:1-10` exposes `/api/cron/reconcile-stripe-subscriptions(.*)` as a public route, so the handler itself must enforce auth.
-- `app/api/cron/reconcile-stripe-subscriptions/route.ts:57-82` reads `container.env.CRON_SECRET` and returns the explicit `"CRON_SECRET is not configured"` body before parsing the auth header.
+- `app/api/cron/reconcile-stripe-subscriptions/route.ts:57-69` reads `container.env.CRON_SECRET` and returns the explicit `"CRON_SECRET is not configured"` body before the auth check at `app/api/cron/reconcile-stripe-subscriptions/route.ts:72-81`.
 - `app/api/cron/reconcile-stripe-subscriptions/route.test.ts:130-145` locks in that exact response today.
 - `lib/env.test.ts:165-187` confirms missing `CRON_SECRET` is still allowed at startup, even when `VERCEL_ENV='production'`, because validation is intentionally deferred to the route layer.
 
@@ -19,7 +19,8 @@ This is a **real but low-risk information disclosure**. The route still fails cl
 
 ## Location
 
-- `app/api/cron/reconcile-stripe-subscriptions/route.ts:57-82`
+- `app/api/cron/reconcile-stripe-subscriptions/route.ts:57-69`
+- `app/api/cron/reconcile-stripe-subscriptions/route.ts:72-81`
 - `lib/public-routes.ts:1-10`
 - `app/api/cron/reconcile-stripe-subscriptions/route.test.ts:130-145`
 
