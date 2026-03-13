@@ -19,7 +19,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 7 verified client-side flows still report only to console or silent fallbacks | P2 | — |
-**Next Debt ID:** DEBT-309
+| [DEBT-309](./debt-309-filter-chip-hover-border-affordance.md) | FilterChip Hover Border Affordance — add `hover:border-foreground/70` and `dark:hover:border-foreground/70` to unselected chips; current hover is only a 3pp fill opacity bump which is barely perceptible | P3 | — |
+**Next Debt ID:** DEBT-310
 
 ---
 

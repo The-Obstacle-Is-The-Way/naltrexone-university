@@ -104,3 +104,4 @@ The Bookmarks Remove pill works well with a border-forward hover treatment becau
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-03-13 | Created BS-050 | Hover affordance on practice chips is barely perceptible; bookmark Remove pill demonstrates the border-brightening pattern that should be adopted |
+| 2026-03-13 | Promoted to [DEBT-309](../debt/debt-309-filter-chip-hover-border-affordance.md) | Implementation-ready debt doc with exact token changes, test scope, and doc updates |
