@@ -19,7 +19,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 7 verified client-side flows still report only to console or silent fallbacks | P2 | — |
-| [DEBT-311](./debt-311-practice-mode-questions-alignment.md) | Practice Page — Mode/Questions row vertical misalignment; SegmentedControl is ~44px vs Input `h-9` (36px), creating an unbalanced row; fix with `sm:items-end` | P3 | — |
 **Next Debt ID:** DEBT-312
 
 ---
@@ -28,6 +27,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-311](../_archive/debt/debt-311-practice-mode-questions-alignment.md) | Practice Page — bottom-align the mixed-height Mode/Questions controls at `sm`, and replace duplicate Practice starter SegmentedControl legends with visible-label `aria-labelledby` wiring | P3 | 2026-03-13 | — |
 | [DEBT-310](../_archive/debt/debt-310-stripe-stale-price-id-in-production-db.md) | Production Neon `main` contained non-production Stripe subscription rows (one manual old-price seed, one E2E test subscription); deleting the polluted subscription rows resolved the `/app/dashboard` crash | P1 | 2026-03-13 | — |
 | [DEBT-309](../_archive/debt/debt-309-filter-chip-hover-border-affordance.md) | FilterChip Hover Affordance — add `hover:border-foreground/60` (light) and `dark:hover:border-foreground/70` (dark), bump fill hover from `[0.10]` to `[0.12]` (+5pp delta); current hover is only a 3pp fill bump with no border change, barely perceptible | P3 | 2026-03-13 | — |
 | [DEBT-308](../_archive/debt/debt-308-e2e-review-mode-selector-regression.md) | E2E Bookmark Review Selector Drift After DEBT-307 — updated the bookmark review audit to target the current title-link route contract instead of the removed `Review question:` action-link selector | P1 | 2026-03-12 | — |

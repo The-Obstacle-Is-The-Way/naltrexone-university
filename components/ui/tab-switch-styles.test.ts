@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { compactControlShellClasses } from './control-shell-styles';
 import {
   tabSwitchContainerClasses,
   tabSwitchItemActiveClasses,
@@ -9,17 +10,18 @@ import {
 
 describe('tab-switch-styles', () => {
   it('defines the canonical container classes', () => {
-    expect(tabSwitchContainerClasses).toBe(
+    expect(compactControlShellClasses).toBe(
       'inline-flex rounded-lg border border-border bg-muted p-1',
     );
-    expect(tabSwitchContainerClasses).not.toContain(
+    expect(tabSwitchContainerClasses).toBe(compactControlShellClasses);
+    expect(compactControlShellClasses).not.toContain(
       'dark:border-foreground/40',
     );
-    expect(tabSwitchContainerClasses).not.toContain('rounded-full');
-    expect(tabSwitchContainerClasses).not.toContain('bg-muted/20');
-    expect(tabSwitchContainerClasses).not.toContain('border-border/60');
-    expect(tabSwitchContainerClasses).not.toContain('gap-');
-    expect(tabSwitchContainerClasses).not.toContain('items-');
+    expect(compactControlShellClasses).not.toContain('rounded-full');
+    expect(compactControlShellClasses).not.toContain('bg-muted/20');
+    expect(compactControlShellClasses).not.toContain('border-border/60');
+    expect(compactControlShellClasses).not.toContain('gap-');
+    expect(compactControlShellClasses).not.toContain('items-');
   });
 
   it('defines the canonical active classes', () => {

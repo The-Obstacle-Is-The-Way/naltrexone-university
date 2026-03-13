@@ -17,6 +17,7 @@ export type SegmentedControlProps = {
   onChange: (value: string) => void;
   disabled?: boolean;
   legend?: string;
+  ariaLabelledBy?: string;
 };
 
 export function SegmentedControl({
@@ -25,10 +26,16 @@ export function SegmentedControl({
   onChange,
   disabled,
   legend,
+  ariaLabelledBy,
 }: SegmentedControlProps) {
   return (
-    <fieldset className={tabSwitchContainerClasses}>
-      {legend ? <legend className="sr-only">{legend}</legend> : null}
+    <fieldset
+      className={tabSwitchContainerClasses}
+      aria-labelledby={ariaLabelledBy}
+    >
+      {legend && !ariaLabelledBy ? (
+        <legend className="sr-only">{legend}</legend>
+      ) : null}
       {options.map((option) => {
         const isActive = option.value === value;
         return (

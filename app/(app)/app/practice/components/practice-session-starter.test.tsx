@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { compactControlShellClasses } from '@/components/ui/control-shell-styles';
 
 let PracticeSessionStarter: typeof import('./practice-session-starter')['PracticeSessionStarter'];
 
@@ -8,13 +9,45 @@ function getClassTokens(className: string): Set<string> {
   return new Set(className.split(/\s+/).filter(Boolean));
 }
 
-function findFieldsetByLegend(doc: Document, text: string) {
-  return (
-    Array.from(doc.querySelectorAll('fieldset')).find((element) => {
-      const legend = element.querySelector('legend');
-      return legend?.textContent === text;
-    }) ?? null
+function expectTokensToIncludeClassName(
+  tokens: Set<string>,
+  className: string,
+) {
+  for (const token of getClassTokens(className)) {
+    expect(tokens.has(token)).toBe(true);
+  }
+}
+
+function findElementsByExactText(
+  doc: Document,
+  selector: string,
+  text: string,
+) {
+  return Array.from(doc.querySelectorAll(selector)).filter(
+    (element) => (element.textContent ?? '').trim() === text,
   );
+}
+
+function findVisibleLabelsWithId(doc: Document, text: string) {
+  return findElementsByExactText(doc, '[id]', text);
+}
+
+function findQuestionsLabel(doc: Document) {
+  return findElementsByExactText(doc, 'label[for]', 'Questions')[0] ?? null;
+}
+
+function findQuestionsInput(doc: Document) {
+  const label = findQuestionsLabel(doc);
+  const inputId = label?.getAttribute('for');
+  return inputId ? doc.getElementById(inputId) : null;
+}
+
+function findFieldsetByVisibleLabel(doc: Document, labelText: string) {
+  const label = findVisibleLabelsWithId(doc, labelText)[0] ?? null;
+  const labelId = label?.getAttribute('id');
+  return labelId
+    ? doc.querySelector(`fieldset[aria-labelledby="${labelId}"]`)
+    : null;
 }
 
 describe('PracticeSessionStarter', () => {
@@ -48,18 +81,18 @@ describe('PracticeSessionStarter', () => {
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const title = doc.querySelector('h2');
-    const input = doc.querySelector('#session-count-input');
+    const input = findQuestionsInput(doc);
     const inputTokens = getClassTokens(input?.getAttribute('class') ?? '');
 
     expect(title?.textContent).toBe('Start a session');
     expect(title?.getAttribute('class')).toContain(
       'text-base font-semibold text-foreground',
     );
-    expect(inputTokens.has('w-24')).toBe(true);
+    expect(inputTokens.has('w-16')).toBe(true);
     expect(inputTokens.has('border-0')).toBe(true);
     expect(inputTokens.has('shadow-none')).toBe(true);
-    expect(inputTokens.has('bg-foreground/5')).toBe(true);
-    expect(inputTokens.has('dark:bg-foreground/5')).toBe(true);
+    expect(inputTokens.has('bg-transparent')).toBe(true);
+    expect(inputTokens.has('rounded-md')).toBe(true);
     expect(inputTokens.has('[appearance:textfield]')).toBe(true);
     expect(
       inputTokens.has('[&::-webkit-outer-spin-button]:appearance-none'),
@@ -90,11 +123,85 @@ describe('PracticeSessionStarter', () => {
       />,
     );
 
-    expect(html).toContain('for="session-count-input"');
-    expect(html).toContain('id="session-count-input"');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const label = findQuestionsLabel(doc);
+    const input = findQuestionsInput(doc);
+
+    expect(label).not.toBeNull();
+    expect(input).not.toBeNull();
   });
 
-  it('uses mixed-height alignment in the starter form row', () => {
+  it('generates distinct ids for each starter instance', () => {
+    const html = renderToStaticMarkup(
+      <>
+        <PracticeSessionStarter
+          sessionMode="tutor"
+          sessionCount={20}
+          filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+          availableCountStatus="idle"
+          availableCount={null}
+          tagLoadStatus="idle"
+          availableTags={[]}
+          sessionStartStatus="idle"
+          sessionStartError={null}
+          onDifficultyChange={() => undefined}
+          onStatusChange={() => undefined}
+          onToggleTag={() => undefined}
+          onSessionModeChange={() => undefined}
+          onSessionCountChange={() => undefined}
+          onStartSession={() => undefined}
+        />
+        <PracticeSessionStarter
+          sessionMode="exam"
+          sessionCount={10}
+          filters={{ tagSlugs: [], difficulty: 'easy', status: 'incorrect' }}
+          availableCountStatus="idle"
+          availableCount={null}
+          tagLoadStatus="idle"
+          availableTags={[]}
+          sessionStartStatus="idle"
+          sessionStartError={null}
+          onDifficultyChange={() => undefined}
+          onStatusChange={() => undefined}
+          onToggleTag={() => undefined}
+          onSessionModeChange={() => undefined}
+          onSessionCountChange={() => undefined}
+          onStartSession={() => undefined}
+        />
+      </>,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const modeLabels = findVisibleLabelsWithId(doc, 'Mode');
+    const statusLabels = findVisibleLabelsWithId(doc, 'Status');
+    const difficultyLabels = findVisibleLabelsWithId(doc, 'Difficulty');
+    const questionLabels = findElementsByExactText(
+      doc,
+      'label[for]',
+      'Questions',
+    );
+
+    expect(new Set(modeLabels.map((element) => element.id)).size).toBe(2);
+    expect(new Set(statusLabels.map((element) => element.id)).size).toBe(2);
+    expect(new Set(difficultyLabels.map((element) => element.id)).size).toBe(2);
+
+    const questionInputIds = questionLabels
+      .map((label) => label.getAttribute('for'))
+      .filter((value): value is string => Boolean(value));
+    expect(new Set(questionInputIds).size).toBe(2);
+
+    for (const label of [...modeLabels, ...statusLabels, ...difficultyLabels]) {
+      expect(
+        doc.querySelector(`fieldset[aria-labelledby="${label.id}"]`),
+      ).not.toBeNull();
+    }
+
+    for (const inputId of questionInputIds) {
+      expect(doc.getElementById(inputId)).not.toBeNull();
+    }
+  });
+
+  it('bottom-aligns the mixed-height starter form row at the small-screen breakpoint', () => {
     const html = renderToStaticMarkup(
       <PracticeSessionStarter
         sessionMode="tutor"
@@ -115,7 +222,7 @@ describe('PracticeSessionStarter', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const sessionCountInput = doc.querySelector('#session-count-input');
+    const sessionCountInput = findQuestionsInput(doc);
     const starterRow = sessionCountInput?.closest('div[class~="sm:flex-row"]');
     const starterRowTokens = getClassTokens(
       starterRow?.getAttribute('class') ?? '',
@@ -123,8 +230,52 @@ describe('PracticeSessionStarter', () => {
 
     expect(sessionCountInput).not.toBeNull();
     expect(starterRow).not.toBeNull();
-    expect(starterRowTokens.has('sm:items-start')).toBe(true);
+    expect(starterRowTokens.has('sm:items-end')).toBe(true);
     expect(starterRowTokens.has('sm:items-center')).toBe(false);
+  });
+
+  it('centers the Questions label and matches the segmented-control shell', () => {
+    const html = renderToStaticMarkup(
+      <PracticeSessionStarter
+        sessionMode="tutor"
+        sessionCount={20}
+        filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+        availableCountStatus="idle"
+        availableCount={null}
+        tagLoadStatus="idle"
+        availableTags={[]}
+        sessionStartStatus="idle"
+        sessionStartError={null}
+        onDifficultyChange={() => undefined}
+        onStatusChange={() => undefined}
+        onToggleTag={() => undefined}
+        onSessionModeChange={() => undefined}
+        onSessionCountChange={() => undefined}
+        onStartSession={() => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const label = findQuestionsLabel(doc);
+    const input = findQuestionsInput(doc);
+    const questionsWrapper = label?.parentElement;
+    const inputShell = input?.parentElement;
+    const wrapperTokens = getClassTokens(
+      questionsWrapper?.getAttribute('class') ?? '',
+    );
+    const inputShellTokens = getClassTokens(
+      inputShell?.getAttribute('class') ?? '',
+    );
+    const inputTokens = getClassTokens(input?.getAttribute('class') ?? '');
+
+    expect(questionsWrapper).not.toBeNull();
+    expect(inputShell).not.toBeNull();
+    expect(input).not.toBeNull();
+    expect(wrapperTokens.has('items-center')).toBe(true);
+    expectTokensToIncludeClassName(
+      inputShellTokens,
+      compactControlShellClasses,
+    );
+    expect(inputTokens.has('text-center')).toBe(true);
   });
 
   it('wraps Status and Difficulty controls with consistent label spacing', () => {
@@ -148,8 +299,8 @@ describe('PracticeSessionStarter', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const statusFieldset = findFieldsetByLegend(doc, 'Status');
-    const difficultyFieldset = findFieldsetByLegend(doc, 'Difficulty');
+    const statusFieldset = findFieldsetByVisibleLabel(doc, 'Status');
+    const difficultyFieldset = findFieldsetByVisibleLabel(doc, 'Difficulty');
     const statusWrapper = statusFieldset?.closest('div[class~="space-y-2"]');
     const difficultyWrapper = difficultyFieldset?.closest(
       'div[class~="space-y-2"]',
@@ -200,12 +351,15 @@ describe('PracticeSessionStarter', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const legends = Array.from(doc.querySelectorAll('legend')).map(
-      (el) => el.textContent ?? '',
+    expect(findFieldsetByVisibleLabel(doc, 'Mode')).not.toBeNull();
+    expect(findFieldsetByVisibleLabel(doc, 'Status')).not.toBeNull();
+    expect(findFieldsetByVisibleLabel(doc, 'Difficulty')).not.toBeNull();
+    const legends = Array.from(doc.querySelectorAll('legend')).map((el) =>
+      (el.textContent ?? '').trim(),
     );
-    expect(legends).toContain('Mode');
-    expect(legends).toContain('Status');
-    expect(legends).toContain('Difficulty');
+    expect(legends).not.toContain('Mode');
+    expect(legends).not.toContain('Status');
+    expect(legends).not.toContain('Difficulty');
     expect(doc.querySelector('fieldset[aria-label="Topic"]')).not.toBeNull();
   });
 
@@ -442,19 +596,14 @@ describe('PracticeSessionStarter', () => {
     expect(html).not.toContain('Leave empty to include all difficulties');
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const statusControl = Array.from(doc.querySelectorAll('fieldset')).find(
-      (fieldset) => fieldset.querySelector('legend')?.textContent === 'Status',
-    );
+    const statusControl = findFieldsetByVisibleLabel(doc, 'Status');
     expect(statusControl).toBeTruthy();
     const activeStatus = statusControl?.querySelector(
       'button[aria-pressed="true"]',
     );
     expect(activeStatus?.textContent).toBe('Incorrect');
 
-    const difficultyControl = Array.from(doc.querySelectorAll('fieldset')).find(
-      (fieldset) =>
-        fieldset.querySelector('legend')?.textContent === 'Difficulty',
-    );
+    const difficultyControl = findFieldsetByVisibleLabel(doc, 'Difficulty');
     expect(difficultyControl).toBeTruthy();
     const activeDifficulty = difficultyControl?.querySelector(
       'button[aria-pressed="true"]',

@@ -106,6 +106,41 @@ describe('SegmentedControl', () => {
     expect(html).toContain('Mode');
   });
 
+  it('uses aria-labelledby without rendering a legend when ariaLabelledBy is provided', () => {
+    const html = renderToStaticMarkup(
+      <SegmentedControl
+        options={[
+          { value: 'tutor', label: 'Tutor' },
+          { value: 'exam', label: 'Exam' },
+        ]}
+        value="tutor"
+        onChange={() => undefined}
+        ariaLabelledBy="practice-session-mode-label"
+      />,
+    );
+
+    expect(html).toContain('aria-labelledby="practice-session-mode-label"');
+    expect(html).not.toContain('<legend');
+  });
+
+  it('ignores legend when ariaLabelledBy is also provided', () => {
+    const html = renderToStaticMarkup(
+      <SegmentedControl
+        options={[
+          { value: 'tutor', label: 'Tutor' },
+          { value: 'exam', label: 'Exam' },
+        ]}
+        value="tutor"
+        onChange={() => undefined}
+        legend="Mode"
+        ariaLabelledBy="external-label"
+      />,
+    );
+
+    expect(html).toContain('aria-labelledby="external-label"');
+    expect(html).not.toContain('<legend');
+  });
+
   it('omits legend when legend prop is not provided', () => {
     const html = renderToStaticMarkup(
       <SegmentedControl

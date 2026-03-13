@@ -1,9 +1,10 @@
 'use client';
 
 import { ChevronDown } from 'lucide-react';
-import { useMemo } from 'react';
+import { useId, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { compactControlShellClasses } from '@/components/ui/control-shell-styles';
 import { FilterChip } from '@/components/ui/filter-chip';
 import { Input } from '@/components/ui/input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
@@ -52,6 +53,13 @@ const tagKindLabels: Record<VisibleTagKind, string> = {
 const tagKindOrder: VisibleTagKind[] = ['topic', 'substance', 'treatment'];
 
 export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
+  const instanceId = useId();
+  const sessionCountInputId = `${instanceId}-practice-session-count-input`;
+  const segmentedControlLabelIds = {
+    mode: `${instanceId}-practice-session-mode-label`,
+    status: `${instanceId}-practice-session-status-label`,
+    difficulty: `${instanceId}-practice-session-difficulty-label`,
+  } as const;
   const selectedTagSlugs = useMemo(
     () => new Set(props.filters.tagSlugs),
     [props.filters.tagSlugs],
@@ -94,10 +102,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
   }, [props.availableTags]);
 
   return (
-    <Card
-      id="practice-session-starter"
-      className="gap-0 rounded-2xl border-border p-6"
-    >
+    <Card className="gap-0 rounded-2xl border-border p-6">
       <div className="space-y-1">
         <h2 className="text-base font-semibold text-foreground">
           Start a session
@@ -109,9 +114,14 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
       </div>
 
       <div className="mt-5 space-y-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <div className="space-y-2">
-            <div className="text-sm font-medium text-foreground">Mode</div>
+            <div
+              id={segmentedControlLabelIds.mode}
+              className="text-sm font-medium text-foreground"
+            >
+              Mode
+            </div>
             <SegmentedControl
               options={[
                 { value: 'tutor', label: 'Tutor' },
@@ -119,32 +129,41 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
               ]}
               value={props.sessionMode}
               onChange={props.onSessionModeChange}
-              legend="Mode"
+              ariaLabelledBy={segmentedControlLabelIds.mode}
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="flex flex-col items-center gap-2">
             <label
-              htmlFor="session-count-input"
+              htmlFor={sessionCountInputId}
               className="text-sm font-medium text-foreground"
             >
               Questions
             </label>
-            <Input
-              id="session-count-input"
-              type="number"
-              min={SESSION_COUNT_MIN}
-              max={SESSION_COUNT_MAX}
-              className="w-24 border-0 bg-foreground/5 dark:bg-foreground/5 shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              value={props.sessionCountInputValue ?? String(props.sessionCount)}
-              onChange={props.onSessionCountChange}
-              onBlur={props.onSessionCountBlur}
-            />
+            <div className={compactControlShellClasses}>
+              <Input
+                id={sessionCountInputId}
+                type="number"
+                min={SESSION_COUNT_MIN}
+                max={SESSION_COUNT_MAX}
+                className="w-16 rounded-md border-0 bg-transparent dark:bg-transparent px-4 py-2 text-center text-sm font-medium shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                value={
+                  props.sessionCountInputValue ?? String(props.sessionCount)
+                }
+                onChange={props.onSessionCountChange}
+                onBlur={props.onSessionCountBlur}
+              />
+            </div>
           </div>
         </div>
 
         <div className="space-y-2">
-          <div className="text-sm font-medium text-foreground">Status</div>
+          <div
+            id={segmentedControlLabelIds.status}
+            className="text-sm font-medium text-foreground"
+          >
+            Status
+          </div>
           <SegmentedControl
             options={AllQuestionProgressStatuses.map((status) => ({
               value: status,
@@ -154,12 +173,17 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
             onChange={(value) =>
               props.onStatusChange(value as QuestionProgressStatus)
             }
-            legend="Status"
+            ariaLabelledBy={segmentedControlLabelIds.status}
           />
         </div>
 
         <div className="space-y-2">
-          <div className="text-sm font-medium text-foreground">Difficulty</div>
+          <div
+            id={segmentedControlLabelIds.difficulty}
+            className="text-sm font-medium text-foreground"
+          >
+            Difficulty
+          </div>
           <SegmentedControl
             options={[
               { value: 'all', label: 'All' },
@@ -177,7 +201,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
 
               props.onDifficultyChange(value as QuestionDifficulty);
             }}
-            legend="Difficulty"
+            ariaLabelledBy={segmentedControlLabelIds.difficulty}
           />
         </div>
 

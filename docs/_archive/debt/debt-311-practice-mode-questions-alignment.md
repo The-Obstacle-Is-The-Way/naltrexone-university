@@ -1,6 +1,9 @@
 # DEBT-311: Practice Page — Mode/Questions Row Vertical Misalignment
 
 **Priority:** P3
+**Created:** 2026-03-13
+**Status:** Resolved
+**Resolved:** 2026-03-13
 **Area:** Frontend / UI
 **File:** `app/(app)/app/practice/components/practice-session-starter.tsx` (lines 112–144)
 
