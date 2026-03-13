@@ -50,11 +50,11 @@ describe('PracticeSessionStarter', () => {
     expect(title?.getAttribute('class')).toContain(
       'text-base font-semibold text-foreground',
     );
-    expect(inputTokens.has('w-24')).toBe(true);
+    expect(inputTokens.has('w-16')).toBe(true);
     expect(inputTokens.has('border-0')).toBe(true);
     expect(inputTokens.has('shadow-none')).toBe(true);
-    expect(inputTokens.has('bg-foreground/5')).toBe(true);
-    expect(inputTokens.has('dark:bg-foreground/5')).toBe(true);
+    expect(inputTokens.has('bg-transparent')).toBe(true);
+    expect(inputTokens.has('rounded-md')).toBe(true);
     expect(inputTokens.has('[appearance:textfield]')).toBe(true);
     expect(
       inputTokens.has('[&::-webkit-outer-spin-button]:appearance-none'),

@@ -134,23 +134,27 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
             />
           </div>
 
-          <div className="space-y-2 text-center">
+          <div className="space-y-2">
             <label
               htmlFor="session-count-input"
               className="text-sm font-medium text-foreground"
             >
               Questions
             </label>
-            <Input
-              id="session-count-input"
-              type="number"
-              min={SESSION_COUNT_MIN}
-              max={SESSION_COUNT_MAX}
-              className="w-24 border-0 bg-foreground/5 dark:bg-foreground/5 shadow-none text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              value={props.sessionCountInputValue ?? String(props.sessionCount)}
-              onChange={props.onSessionCountChange}
-              onBlur={props.onSessionCountBlur}
-            />
+            <div className="inline-flex rounded-lg border border-border bg-muted p-1">
+              <Input
+                id="session-count-input"
+                type="number"
+                min={SESSION_COUNT_MIN}
+                max={SESSION_COUNT_MAX}
+                className="w-16 rounded-md border-0 bg-transparent px-4 py-2 text-sm font-medium shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                value={
+                  props.sessionCountInputValue ?? String(props.sessionCount)
+                }
+                onChange={props.onSessionCountChange}
+                onBlur={props.onSessionCountBlur}
+              />
+            </div>
           </div>
         </div>
 
