@@ -1,11 +1,21 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { tabSwitchContainerClasses } from '@/components/ui/tab-switch-styles';
 
 let PracticeSessionStarter: typeof import('./practice-session-starter')['PracticeSessionStarter'];
 
 function getClassTokens(className: string): Set<string> {
   return new Set(className.split(/\s+/).filter(Boolean));
+}
+
+function expectTokensToIncludeClassName(
+  tokens: Set<string>,
+  className: string,
+) {
+  for (const token of getClassTokens(className)) {
+    expect(tokens.has(token)).toBe(true);
+  }
 }
 
 function findFieldsetByLabelId(doc: Document, id: string) {
@@ -122,7 +132,7 @@ describe('PracticeSessionStarter', () => {
     expect(starterRowTokens.has('sm:items-center')).toBe(false);
   });
 
-  it('centers the Questions label above the narrow input', () => {
+  it('centers the Questions label and matches the segmented-control shell', () => {
     const html = renderToStaticMarkup(
       <PracticeSessionStarter
         sessionMode="tutor"
@@ -144,13 +154,23 @@ describe('PracticeSessionStarter', () => {
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const label = doc.querySelector('label[for="session-count-input"]');
+    const input = doc.querySelector('#session-count-input');
     const questionsWrapper = label?.parentElement;
+    const inputShell = input?.parentElement;
     const wrapperTokens = getClassTokens(
       questionsWrapper?.getAttribute('class') ?? '',
     );
+    const inputShellTokens = getClassTokens(
+      inputShell?.getAttribute('class') ?? '',
+    );
+    const inputTokens = getClassTokens(input?.getAttribute('class') ?? '');
 
     expect(questionsWrapper).not.toBeNull();
+    expect(inputShell).not.toBeNull();
+    expect(input).not.toBeNull();
     expect(wrapperTokens.has('items-center')).toBe(true);
+    expectTokensToIncludeClassName(inputShellTokens, tabSwitchContainerClasses);
+    expect(inputTokens.has('text-center')).toBe(true);
   });
 
   it('wraps Status and Difficulty controls with consistent label spacing', () => {

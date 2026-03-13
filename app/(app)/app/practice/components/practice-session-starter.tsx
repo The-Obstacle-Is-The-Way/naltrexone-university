@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { FilterChip } from '@/components/ui/filter-chip';
 import { Input } from '@/components/ui/input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { tabSwitchContainerClasses } from '@/components/ui/tab-switch-styles';
 import type { TagRow } from '@/src/adapters/controllers/tag-controller';
 import {
   AllDifficulties,
@@ -141,7 +142,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
             >
               Questions
             </label>
-            <div className="inline-flex rounded-lg border border-border bg-muted p-1">
+            <div className={tabSwitchContainerClasses}>
               <Input
                 id="session-count-input"
                 type="number"
