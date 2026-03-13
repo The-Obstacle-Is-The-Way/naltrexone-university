@@ -2,8 +2,9 @@
 
 **Priority:** P3
 **Created:** 2026-03-13
-**Status:** Open
-**Promoted from:** [BS-050](../brainstorming/bs-050-practice-chip-hover-affordance.md)
+**Status:** Resolved
+**Resolved:** 2026-03-13
+**Promoted from:** [BS-050](../../brainstorming/bs-050-practice-chip-hover-affordance.md)
 
 ---
 
