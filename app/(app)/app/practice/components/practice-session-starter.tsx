@@ -134,7 +134,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 text-center">
             <label
               htmlFor="session-count-input"
               className="text-sm font-medium text-foreground"
@@ -146,7 +146,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
               type="number"
               min={SESSION_COUNT_MIN}
               max={SESSION_COUNT_MAX}
-              className="w-24 border-0 bg-foreground/5 dark:bg-foreground/5 shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-24 border-0 bg-foreground/5 dark:bg-foreground/5 shadow-none text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               value={props.sessionCountInputValue ?? String(props.sessionCount)}
               onChange={props.onSessionCountChange}
               onBlur={props.onSessionCountBlur}
