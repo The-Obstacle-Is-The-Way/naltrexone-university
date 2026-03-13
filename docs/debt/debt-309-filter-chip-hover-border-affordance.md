@@ -126,7 +126,7 @@ No resting state values change. All existing compliance is preserved.
 
 ## What This Does NOT Change
 
-1. **Selected FilterChip** — `bg-primary text-primary-foreground border-primary` is high contrast. No hover treatment added in this pass (tracked as open question in BS-050).
+1. **Selected FilterChip** — `bg-primary text-primary-foreground border-primary` is high contrast. No hover treatment added in this pass. Chrome visual audit (2026-03-13) confirmed selected chips feel "dead" on hover — zero hover feedback gives no signal that clicking will deselect. This needs its own follow-up (tracked as open question #2 in BS-050).
 2. **FilterChip rest border** — `border-foreground/45` (light) and `dark:border-foreground/40` (dark) stay unchanged. Only hover border changes.
 3. **FilterChip rest fill** — `bg-foreground/[0.07]` stays unchanged. Only the hover fill increases.
 4. **Button outline variant** — Already has `dark:hover:border-foreground/70`. No changes needed there.

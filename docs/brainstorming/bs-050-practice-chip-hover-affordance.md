@@ -91,11 +91,15 @@ The Bookmarks Remove pill works well with a border-forward hover treatment becau
 
 ## Open Questions
 
-1. **Light-mode border hover value?** `hover:border-foreground/70` might be too strong in light mode (where 45% is already fairly visible). Should light mode use a softer step like `hover:border-foreground/60`?
+1. ~~**Light-mode border hover value?**~~ **Resolved** — `hover:border-foreground/60` (light), `dark:hover:border-foreground/70` (dark). Adversarial review confirmed 70 is proportional in dark mode (proven precedent in `button.tsx`) but too aggressive in light mode where rest border is already 45%. Settled in DEBT-309.
 
-2. **Should the selected chip also get a hover effect?** Currently selected chips (`border-primary bg-primary text-primary-foreground`) have no hover treatment at all. Should they get a slight `hover:bg-primary/90` to indicate they can be toggled off?
+2. **Should the selected chip also get a hover effect?** Currently selected chips (`border-primary bg-primary text-primary-foreground`) have no hover treatment at all. Should they get a slight `hover:bg-primary/90` to indicate they can be toggled off? **Chrome visual audit (2026-03-13) confirmed this is a real issue** — selected chips feel "dead" on hover, giving no signal that clicking will deselect. This is arguably as important as the unselected hover fix but is explicitly out of scope for DEBT-309. Needs its own follow-up.
 
 3. **Does this interact with BS-044 border tiering?** FilterChip is classified as T1 (interactive) in BS-044's tiering model, so stronger borders on hover align with the tiering philosophy. But if BS-044 ever softens resting borders on chips, the hover delta would become even more dramatic (which might be a good thing).
+
+4. **Dark-mode rest border parity (40% vs 45%)** — Chrome audit noted the dark rest border (`dark:border-foreground/40`) is 5% weaker than light (`border-foreground/45`), which compounds the hover problem in dark mode. This is a rest-state concern, not a hover concern — tracked in [BS-044](./bs-044-dark-mode-border-weight-tiering.md) as part of the broader border tiering question, not in DEBT-309.
+
+5. **Focus-visible ring clarity in dark mode** — Chrome audit flagged that `focus-visible:ring-ring/50` may be too subtle in dark mode for keyboard navigation. Separate accessibility concern, not related to hover. Needs independent verification.
 
 ---
 
@@ -105,3 +109,5 @@ The Bookmarks Remove pill works well with a border-forward hover treatment becau
 |------|----------|-----------|
 | 2026-03-13 | Created BS-050 | Hover affordance on practice chips is barely perceptible; bookmark Remove pill demonstrates the border-brightening pattern that should be adopted |
 | 2026-03-13 | Promoted to [DEBT-309](../debt/debt-309-filter-chip-hover-border-affordance.md) | Implementation-ready debt doc with exact token changes, test scope, and doc updates |
+| 2026-03-13 | Light-mode hover border settled at 60 | Adversarial review: 70 has no light-mode precedent; 45→60 is proportional to dark 40→70 |
+| 2026-03-13 | Chrome visual audit confirms problem | Hover rated 1.5/5 dark, 2/5 light. Border brightening called "single highest-impact change." Also surfaced: selected chips have zero hover feedback, dark rest border 5% weaker than light, focus ring may be too subtle |
