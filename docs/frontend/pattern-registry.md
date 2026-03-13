@@ -345,7 +345,7 @@ disabled:pointer-events-none disabled:opacity-50
 **Source:** `components/ui/filter-chip.tsx`
 
 **Design rationale:** Unselected chips keep their border as the required boundary, but now add a subtle rest fill (`bg-foreground/[0.07]`) so they read as interactive toggle surfaces instead of transparent labels floating on the parent tonal container. On the practice tonal-fill parent (`bg-foreground/5`), `border-foreground/45` clears SC 1.4.11 in light mode, `dark:border-foreground/40` preserves the compliant dark-mode override, `text-foreground` restores primary interactive-label hierarchy while raising text contrast well above AA, `hover:bg-foreground/[0.12]` keeps the hover ramp on the same monotonic foreground scale, `hover:border-foreground/60 dark:hover:border-foreground/70` adds a clearer edge-level hover cue for dense chip groups, and `cursor-pointer` restores the expected browser affordance for a clickable button.
-**Status:** Implemented in `components/ui/filter-chip.tsx` (DEBT-290, DEBT-291, DEBT-294, DEBT-295).
+**Status:** Implemented in `components/ui/filter-chip.tsx` (DEBT-290, DEBT-291, DEBT-294, DEBT-295, DEBT-309).
 
 ### I-5: Segmented Control Item
 
