@@ -17,20 +17,18 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 **Audit batch (2026-03-13) — comprehensive codebase audit (verified via tracer bullets):**
 
-15 bugs filed, 3 invalidated as false positives, 5 downgraded after verification. **9 confirmed true positives remain.**
+15 bug docs were filed in this batch. The priority buckets below are the source of truth as each entry is re-verified.
 
 ### Invalidated (False Positives)
-- ~~[BUG-206](bug-206-raw-db-errors-escape-adapter-layer.md)~~: `createAction`/`handleError` catches and wraps raw errors at controller layer
-- ~~[BUG-208](bug-208-clerk-webhook-deletion-not-transactional.md)~~: `ON DELETE CASCADE` on all FK refs + idempotent Stripe cancel makes this safe
 - ~~[BUG-211](bug-211-count-query-fallback-masks-failures.md)~~: `count(*)` without GROUP BY always returns one row; `?? 0` is dead defensive code
 
-### P1 (Wrong Behavior)
-- [BUG-207](bug-207-cron-route-leaks-config-state.md): Cron route leaks `CRON_SECRET is not configured` to unauthenticated callers (route is public, config check before auth check)
-
 ### P2 (Silent Failure)
+- [BUG-208](bug-208-clerk-webhook-deletion-not-transactional.md): `user.deleted` can miss a Stripe mapping inserted after its lookup and before its delete, leaving remote billing active after local cascade cleanup
 - [BUG-212](bug-212-bookmark-toggle-swallows-errors.md): Bookmark toggle catch block swallows error without any logging — zero observability
 
 ### P3 (Poor Practice / Low Risk)
+- [BUG-206](bug-206-raw-db-errors-escape-adapter-layer.md): Repositories rethrow unexpected DB failures raw across the application port boundary; controllers sanitize later, but the adapter contract is still violated
+- [BUG-207](bug-207-cron-route-leaks-config-state.md): Cron route reveals missing `CRON_SECRET` to public callers before auth check (low-risk config-state leak; route still fails closed)
 - [BUG-209](bug-209-clerk-webhook-lacks-idempotency.md): Clerk webhook lacks event dedup (defense-in-depth gap; both paths naturally idempotent)
 - [BUG-210](bug-210-non-injectable-date-now-in-checkout-session.md): Non-injectable `Date.now()` — convention deviation, not production bug
 - [BUG-213](bug-213-session-start-error-not-logged.md): Session start error not logged client-side (server-side captured by Sentry instrumentation)
@@ -73,7 +71,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Open Bugs
 
-No open bugs.
+Active open bugs are listed in the priority sections above.
 
 ## Audit #14 — Boundary Sweep: Reconciliation Canonical Selection (2026-03-10)
 

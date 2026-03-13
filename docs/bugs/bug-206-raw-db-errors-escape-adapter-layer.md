@@ -1,21 +1,33 @@
 # BUG-206: Raw DB Errors Escape Adapter Layer via `throw error` Fallback
 
-**Status:** Invalidated (false positive)
-**Priority:** ~~P1~~ N/A
+**Status:** Open
+**Priority:** P3
 **Date:** 2026-03-13
 
 ## Summary
 
-In `drizzle-practice-session-repository.ts:191` and `drizzle-attempt-repository.ts:213`, catch blocks check for a specific Postgres unique-violation constraint and re-throw all other errors raw.
+`DrizzlePracticeSessionRepository.create()` and `DrizzleAttemptRepository.insert()` do re-throw non-targeted insert failures raw after handling their expected uniqueness conflicts.
 
-## Invalidation Reason
+## Verification Notes
 
-**Tracer-bullet verification revealed an outer catch in the controller layer that handles this.**
+Tracer-bullet verification confirmed two different facts, and the distinction matters:
 
-The `createAction` wrapper in `src/adapters/controllers/create-action.ts:40-49` wraps every use case execution in a try/catch. The `handleError` function in `src/adapters/controllers/action-result.ts:32-62` is the safety net:
+1. **The repository bug is real:** `DrizzlePracticeSessionRepository.create()` rethrows unknown insert errors at `src/adapters/repositories/drizzle-practice-session-repository.ts`, and `DrizzleAttemptRepository.insert()` rethrows unknown insert errors at `src/adapters/repositories/drizzle-attempt-repository.ts`. `src/adapters/repositories/drizzle-attempt-repository.test.ts` explicitly locks in that raw passthrough with `it('rethrows unique violations from other constraints', ...)`.
+2. **The current server-action boundary sanitizes later:** the current user-facing `startPracticeSession` and `submitAnswer` paths do run through `createAction(...)`, so `src/adapters/controllers/create-action.ts` and `src/adapters/controllers/action-result.ts` eventually normalize those unknown throws into `INTERNAL_ERROR` for action callers.
 
-1. `ApplicationError` -> maps to structured `ActionResult`
-2. `ZodError` -> maps to `VALIDATION_ERROR`
-3. **Any other unknown error** (including raw Postgres errors) -> logs `'Unhandled error in controller'` and returns `err('INTERNAL_ERROR', 'Internal error')`
+That second fact does **not** invalidate the first. The bug is not "raw DB errors reach the client." The bug is that raw infrastructure errors cross the repository adapter boundary into application/use-case code before the controller safety net runs.
 
-Raw errors thrown from repositories **never escape to the caller**. They are caught by `createAction`, logged, and converted to a safe `ActionResult`. The two flagged repositories simply let the controller layer handle the wrapping instead of doing it at the repository level -- a minor inconsistency in error-message specificity, not a contract violation.
+## Impact
+
+- Application-layer callers receive driver- or Postgres-shaped errors instead of `ApplicationError`.
+- Behavior is inconsistent across entry points: controller-backed calls are sanitized later, while direct callers can still observe raw DB errors.
+- The repository contract is weaker than sibling adapters such as `DrizzleUserRepository`, which already wraps unexpected DB failures as `ApplicationError`.
+
+## Precise TDD Fix
+
+1. Add a failing unit test in `src/adapters/repositories/drizzle-practice-session-repository.test.ts` proving that unexpected insert failures from `create()` are wrapped in `ApplicationError('INTERNAL_ERROR', 'Failed to create practice session', ..., { cause })`.
+2. Change `DrizzlePracticeSessionRepository.create()` to wrap non-targeted DB failures in `ApplicationError`, preserving the original error as `cause`.
+3. Change `DrizzleAttemptRepository.insert()` to do the same:
+   - keep `ATTEMPTS_SESSION_QUESTION_UQ` mapped to `CONFLICT`
+   - wrap every other DB failure in `ApplicationError('INTERNAL_ERROR', 'Failed to insert attempt', ..., { cause })`
+4. Update `src/adapters/repositories/drizzle-attempt-repository.test.ts` so the current raw-passthrough test asserts the wrapped `ApplicationError` behavior instead.
