@@ -8,13 +8,8 @@ function getClassTokens(className: string): Set<string> {
   return new Set(className.split(/\s+/).filter(Boolean));
 }
 
-function findFieldsetByLegend(doc: Document, text: string) {
-  return (
-    Array.from(doc.querySelectorAll('fieldset')).find((element) => {
-      const legend = element.querySelector('legend');
-      return legend?.textContent === text;
-    }) ?? null
-  );
+function findFieldsetByLabelId(doc: Document, id: string) {
+  return doc.querySelector(`fieldset[aria-labelledby="${id}"]`);
 }
 
 describe('PracticeSessionStarter', () => {
@@ -94,7 +89,7 @@ describe('PracticeSessionStarter', () => {
     expect(html).toContain('id="session-count-input"');
   });
 
-  it('uses mixed-height alignment in the starter form row', () => {
+  it('bottom-aligns the mixed-height starter form row at the small-screen breakpoint', () => {
     const html = renderToStaticMarkup(
       <PracticeSessionStarter
         sessionMode="tutor"
@@ -123,7 +118,7 @@ describe('PracticeSessionStarter', () => {
 
     expect(sessionCountInput).not.toBeNull();
     expect(starterRow).not.toBeNull();
-    expect(starterRowTokens.has('sm:items-start')).toBe(true);
+    expect(starterRowTokens.has('sm:items-end')).toBe(true);
     expect(starterRowTokens.has('sm:items-center')).toBe(false);
   });
 
@@ -148,8 +143,14 @@ describe('PracticeSessionStarter', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const statusFieldset = findFieldsetByLegend(doc, 'Status');
-    const difficultyFieldset = findFieldsetByLegend(doc, 'Difficulty');
+    const statusFieldset = findFieldsetByLabelId(
+      doc,
+      'practice-session-status-label',
+    );
+    const difficultyFieldset = findFieldsetByLabelId(
+      doc,
+      'practice-session-difficulty-label',
+    );
     const statusWrapper = statusFieldset?.closest('div[class~="space-y-2"]');
     const difficultyWrapper = difficultyFieldset?.closest(
       'div[class~="space-y-2"]',
@@ -200,12 +201,21 @@ describe('PracticeSessionStarter', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const legends = Array.from(doc.querySelectorAll('legend')).map(
-      (el) => el.textContent ?? '',
+    expect(
+      findFieldsetByLabelId(doc, 'practice-session-mode-label'),
+    ).not.toBeNull();
+    expect(
+      findFieldsetByLabelId(doc, 'practice-session-status-label'),
+    ).not.toBeNull();
+    expect(
+      findFieldsetByLabelId(doc, 'practice-session-difficulty-label'),
+    ).not.toBeNull();
+    const legends = Array.from(doc.querySelectorAll('legend')).map((el) =>
+      (el.textContent ?? '').trim(),
     );
-    expect(legends).toContain('Mode');
-    expect(legends).toContain('Status');
-    expect(legends).toContain('Difficulty');
+    expect(legends).not.toContain('Mode');
+    expect(legends).not.toContain('Status');
+    expect(legends).not.toContain('Difficulty');
     expect(doc.querySelector('fieldset[aria-label="Topic"]')).not.toBeNull();
   });
 
@@ -442,8 +452,9 @@ describe('PracticeSessionStarter', () => {
     expect(html).not.toContain('Leave empty to include all difficulties');
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const statusControl = Array.from(doc.querySelectorAll('fieldset')).find(
-      (fieldset) => fieldset.querySelector('legend')?.textContent === 'Status',
+    const statusControl = findFieldsetByLabelId(
+      doc,
+      'practice-session-status-label',
     );
     expect(statusControl).toBeTruthy();
     const activeStatus = statusControl?.querySelector(
@@ -451,9 +462,9 @@ describe('PracticeSessionStarter', () => {
     );
     expect(activeStatus?.textContent).toBe('Incorrect');
 
-    const difficultyControl = Array.from(doc.querySelectorAll('fieldset')).find(
-      (fieldset) =>
-        fieldset.querySelector('legend')?.textContent === 'Difficulty',
+    const difficultyControl = findFieldsetByLabelId(
+      doc,
+      'practice-session-difficulty-label',
     );
     expect(difficultyControl).toBeTruthy();
     const activeDifficulty = difficultyControl?.querySelector(

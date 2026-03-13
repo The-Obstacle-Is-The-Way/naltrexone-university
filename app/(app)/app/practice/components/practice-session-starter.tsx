@@ -51,6 +51,12 @@ const tagKindLabels: Record<VisibleTagKind, string> = {
 
 const tagKindOrder: VisibleTagKind[] = ['topic', 'substance', 'treatment'];
 
+const segmentedControlLabelIds = {
+  mode: 'practice-session-mode-label',
+  status: 'practice-session-status-label',
+  difficulty: 'practice-session-difficulty-label',
+} as const;
+
 export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
   const selectedTagSlugs = useMemo(
     () => new Set(props.filters.tagSlugs),
@@ -109,9 +115,14 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
       </div>
 
       <div className="mt-5 space-y-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <div className="space-y-2">
-            <div className="text-sm font-medium text-foreground">Mode</div>
+            <div
+              id={segmentedControlLabelIds.mode}
+              className="text-sm font-medium text-foreground"
+            >
+              Mode
+            </div>
             <SegmentedControl
               options={[
                 { value: 'tutor', label: 'Tutor' },
@@ -119,7 +130,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
               ]}
               value={props.sessionMode}
               onChange={props.onSessionModeChange}
-              legend="Mode"
+              ariaLabelledBy={segmentedControlLabelIds.mode}
             />
           </div>
 
@@ -144,7 +155,12 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
         </div>
 
         <div className="space-y-2">
-          <div className="text-sm font-medium text-foreground">Status</div>
+          <div
+            id={segmentedControlLabelIds.status}
+            className="text-sm font-medium text-foreground"
+          >
+            Status
+          </div>
           <SegmentedControl
             options={AllQuestionProgressStatuses.map((status) => ({
               value: status,
@@ -154,12 +170,17 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
             onChange={(value) =>
               props.onStatusChange(value as QuestionProgressStatus)
             }
-            legend="Status"
+            ariaLabelledBy={segmentedControlLabelIds.status}
           />
         </div>
 
         <div className="space-y-2">
-          <div className="text-sm font-medium text-foreground">Difficulty</div>
+          <div
+            id={segmentedControlLabelIds.difficulty}
+            className="text-sm font-medium text-foreground"
+          >
+            Difficulty
+          </div>
           <SegmentedControl
             options={[
               { value: 'all', label: 'All' },
@@ -177,7 +198,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
 
               props.onDifficultyChange(value as QuestionDifficulty);
             }}
-            legend="Difficulty"
+            ariaLabelledBy={segmentedControlLabelIds.difficulty}
           />
         </div>
 
