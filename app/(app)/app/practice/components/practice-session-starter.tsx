@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronDown } from 'lucide-react';
-import { useMemo } from 'react';
+import { useId, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { FilterChip } from '@/components/ui/filter-chip';
@@ -52,13 +52,14 @@ const tagKindLabels: Record<VisibleTagKind, string> = {
 
 const tagKindOrder: VisibleTagKind[] = ['topic', 'substance', 'treatment'];
 
-const segmentedControlLabelIds = {
-  mode: 'practice-session-mode-label',
-  status: 'practice-session-status-label',
-  difficulty: 'practice-session-difficulty-label',
-} as const;
-
 export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
+  const instanceId = useId();
+  const sessionCountInputId = `${instanceId}-practice-session-count-input`;
+  const segmentedControlLabelIds = {
+    mode: `${instanceId}-practice-session-mode-label`,
+    status: `${instanceId}-practice-session-status-label`,
+    difficulty: `${instanceId}-practice-session-difficulty-label`,
+  } as const;
   const selectedTagSlugs = useMemo(
     () => new Set(props.filters.tagSlugs),
     [props.filters.tagSlugs],
@@ -101,10 +102,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
   }, [props.availableTags]);
 
   return (
-    <Card
-      id="practice-session-starter"
-      className="gap-0 rounded-2xl border-border p-6"
-    >
+    <Card className="gap-0 rounded-2xl border-border p-6">
       <div className="space-y-1">
         <h2 className="text-base font-semibold text-foreground">
           Start a session
@@ -137,14 +135,14 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
 
           <div className="flex flex-col items-center gap-2">
             <label
-              htmlFor="session-count-input"
+              htmlFor={sessionCountInputId}
               className="text-sm font-medium text-foreground"
             >
               Questions
             </label>
             <div className={tabSwitchContainerClasses}>
               <Input
-                id="session-count-input"
+                id={sessionCountInputId}
                 type="number"
                 min={SESSION_COUNT_MIN}
                 max={SESSION_COUNT_MAX}
