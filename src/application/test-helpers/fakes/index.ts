@@ -1,5 +1,7 @@
 export { FakeAttemptRepository } from './fake-attempt-repository';
 export { FakeBookmarkRepository } from './fake-bookmark-repository';
+export { FakeClerkEventRepository } from './fake-clerk-event-repository';
+export { FakeDeletedClerkUserRepository } from './fake-deleted-clerk-user-repository';
 export {
   FakeAuthGateway,
   FakePaymentGateway,

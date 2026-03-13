@@ -1,6 +1,8 @@
 import {
   DrizzleAttemptRepository,
   DrizzleBookmarkRepository,
+  DrizzleClerkEventRepository,
+  DrizzleDeletedClerkUserRepository,
   DrizzleIdempotencyKeyRepository,
   DrizzlePracticeSessionRepository,
   DrizzleQuestionRepository,
@@ -25,6 +27,10 @@ export function createRepositoryFactories(
       new DrizzleAttemptRepository(dbOverride),
     createBookmarkRepository: (dbOverride = primitives.db) =>
       new DrizzleBookmarkRepository(dbOverride),
+    createClerkEventRepository: (dbOverride = primitives.db) =>
+      new DrizzleClerkEventRepository(dbOverride, primitives.now),
+    createDeletedClerkUserRepository: (dbOverride = primitives.db) =>
+      new DrizzleDeletedClerkUserRepository(dbOverride),
     createIdempotencyKeyRepository: (dbOverride = primitives.db) =>
       new DrizzleIdempotencyKeyRepository(dbOverride, primitives.now),
     createPracticeSessionRepository: (dbOverride = primitives.db) =>

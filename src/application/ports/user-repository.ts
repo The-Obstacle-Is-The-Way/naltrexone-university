@@ -17,6 +17,13 @@ export interface UserRepository {
   findByClerkId(clerkId: string): Promise<User | null>;
 
   /**
+   * Lock a user row by Clerk ID for exclusive mutation inside a transaction.
+   *
+   * IMPORTANT: This must be called inside a transaction.
+   */
+  lockByClerkId(clerkId: string): Promise<User | null>;
+
+  /**
    * Upsert a user by their Clerk ID.
    *
    * - If user doesn't exist, creates a new user row.

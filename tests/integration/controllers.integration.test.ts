@@ -16,6 +16,8 @@ import { getUserStats } from '@/src/adapters/controllers/stats-controller';
 import type { StripeWebhookInput } from '@/src/adapters/controllers/stripe-webhook-controller';
 import { processStripeWebhook } from '@/src/adapters/controllers/stripe-webhook-controller';
 import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-attempt-repository';
+import { DrizzleClerkEventRepository } from '@/src/adapters/repositories/drizzle-clerk-event-repository';
+import { DrizzleDeletedClerkUserRepository } from '@/src/adapters/repositories/drizzle-deleted-clerk-user-repository';
 import { DrizzleIdempotencyKeyRepository } from '@/src/adapters/repositories/drizzle-idempotency-key-repository';
 import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/drizzle-practice-session-repository';
 import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-question-repository';
@@ -58,6 +60,8 @@ type CleanupState = {
   userIds: string[];
   questionIds: string[];
   tagIds: string[];
+  clerkEventIds: string[];
+  deletedClerkUserIds: string[];
   stripeEventIds: string[];
 };
 
@@ -65,6 +69,8 @@ const cleanup: CleanupState = {
   userIds: [],
   questionIds: [],
   tagIds: [],
+  clerkEventIds: [],
+  deletedClerkUserIds: [],
   stripeEventIds: [],
 };
 
@@ -193,6 +199,23 @@ async function createQuestion(input: {
 }
 
 afterEach(async () => {
+  if (cleanup.clerkEventIds.length > 0) {
+    await db
+      .delete(schema.clerkEvents)
+      .where(inArray(schema.clerkEvents.id, cleanup.clerkEventIds));
+  }
+
+  if (cleanup.deletedClerkUserIds.length > 0) {
+    await db
+      .delete(schema.deletedClerkUsers)
+      .where(
+        inArray(
+          schema.deletedClerkUsers.clerkUserId,
+          cleanup.deletedClerkUserIds,
+        ),
+      );
+  }
+
   if (cleanup.stripeEventIds.length > 0) {
     await db
       .delete(schema.stripeEvents)
@@ -218,6 +241,8 @@ afterEach(async () => {
   cleanup.userIds.length = 0;
   cleanup.questionIds.length = 0;
   cleanup.tagIds.length = 0;
+  cleanup.clerkEventIds.length = 0;
+  cleanup.deletedClerkUserIds.length = 0;
   cleanup.stripeEventIds.length = 0;
 });
 
@@ -875,6 +900,7 @@ describe('clerk webhook controller (integration)', () => {
   it('deletes the user and cascades stripe data on user.deleted', async () => {
     const user = await createUser();
     const stripeCustomerId = `cus_${randomUUID().replaceAll('-', '')}`;
+    const eventId = `evt_${randomUUID().replaceAll('-', '')}`;
 
     await db.insert(schema.stripeCustomers).values({
       userId: user.id,
@@ -890,20 +916,43 @@ describe('clerk webhook controller (integration)', () => {
     });
 
     const cancelStripeCustomerSubscriptions = vi.fn(async () => undefined);
+    const userRepository = new DrizzleUserRepository(db);
+    const clerkEventRepository = new DrizzleClerkEventRepository(db);
+    const deletedClerkUserRepository = new DrizzleDeletedClerkUserRepository(
+      db,
+    );
+    const stripeCustomerRepository = new DrizzleStripeCustomerRepository(db);
 
     const deps = {
-      userRepository: new DrizzleUserRepository(db),
-      stripeCustomerRepository: new DrizzleStripeCustomerRepository(db),
+      transaction: async <T>(
+        fn: (tx: {
+          clerkEvents: DrizzleClerkEventRepository;
+          deletedClerkUsers: DrizzleDeletedClerkUserRepository;
+          userRepository: DrizzleUserRepository;
+          stripeCustomerRepository: DrizzleStripeCustomerRepository;
+        }) => Promise<T>,
+      ) =>
+        db.transaction(async (tx) =>
+          fn({
+            clerkEvents: new DrizzleClerkEventRepository(tx),
+            deletedClerkUsers: new DrizzleDeletedClerkUserRepository(tx),
+            userRepository: new DrizzleUserRepository(tx),
+            stripeCustomerRepository: new DrizzleStripeCustomerRepository(tx),
+          }),
+        ),
       cancelStripeCustomerSubscriptions,
       logger: new FakeLogger(),
     };
 
     const event: ClerkWebhookEvent = {
+      eventId,
       type: 'user.deleted',
       data: { id: user.clerkUserId },
     };
 
     await processClerkWebhook(deps, event);
+    cleanup.clerkEventIds.push(eventId);
+    cleanup.deletedClerkUserIds.push(user.clerkUserId);
 
     expect(cancelStripeCustomerSubscriptions).toHaveBeenCalledTimes(1);
     expect(cancelStripeCustomerSubscriptions).toHaveBeenCalledWith(
@@ -911,15 +960,91 @@ describe('clerk webhook controller (integration)', () => {
     );
 
     await expect(
-      deps.userRepository.findByClerkId(user.clerkUserId),
+      userRepository.findByClerkId(user.clerkUserId),
     ).resolves.toBeNull();
     await expect(
-      deps.stripeCustomerRepository.findByUserId(user.id),
+      deletedClerkUserRepository.exists(user.clerkUserId),
+    ).resolves.toBe(true);
+    await expect(clerkEventRepository.lock(eventId)).resolves.toMatchObject({
+      processedAt: expect.any(Date),
+      error: null,
+    });
+    await expect(
+      stripeCustomerRepository.findByUserId(user.id),
     ).resolves.toBeNull();
     await expect(
       db.query.stripeSubscriptions.findFirst({
         where: eq(schema.stripeSubscriptions.userId, user.id),
       }),
     ).resolves.toBeUndefined();
+  });
+
+  it('ignores replayed user.updated deliveries after user.deleted', async () => {
+    const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;
+    const updatedEventId = `evt_${randomUUID().replaceAll('-', '')}`;
+    const deletedEventId = `evt_${randomUUID().replaceAll('-', '')}`;
+
+    cleanup.clerkEventIds.push(updatedEventId, deletedEventId);
+    cleanup.deletedClerkUserIds.push(clerkUserId);
+
+    const userRepository = new DrizzleUserRepository(db);
+    const deletedClerkUserRepository = new DrizzleDeletedClerkUserRepository(
+      db,
+    );
+
+    const deps = {
+      transaction: async <T>(
+        fn: (tx: {
+          clerkEvents: DrizzleClerkEventRepository;
+          deletedClerkUsers: DrizzleDeletedClerkUserRepository;
+          userRepository: DrizzleUserRepository;
+          stripeCustomerRepository: DrizzleStripeCustomerRepository;
+        }) => Promise<T>,
+      ) =>
+        db.transaction(async (tx) =>
+          fn({
+            clerkEvents: new DrizzleClerkEventRepository(tx),
+            deletedClerkUsers: new DrizzleDeletedClerkUserRepository(tx),
+            userRepository: new DrizzleUserRepository(tx),
+            stripeCustomerRepository: new DrizzleStripeCustomerRepository(tx),
+          }),
+        ),
+      cancelStripeCustomerSubscriptions: vi.fn(async () => undefined),
+      logger: new FakeLogger(),
+    };
+
+    const updatedEvent: ClerkWebhookEvent = {
+      eventId: updatedEventId,
+      type: 'user.updated',
+      data: {
+        id: clerkUserId,
+        primary_email_address_id: 'email_1',
+        updated_at: 1769904000000,
+        email_addresses: [
+          { id: 'email_1', email_address: `it-${randomUUID()}@example.com` },
+        ],
+      },
+    };
+
+    await processClerkWebhook(deps, updatedEvent);
+
+    const createdUser = await userRepository.findByClerkId(clerkUserId);
+    expect(createdUser).toMatchObject({ email: expect.stringContaining('@') });
+    if (createdUser) {
+      cleanup.userIds.push(createdUser.id);
+    }
+
+    await processClerkWebhook(deps, {
+      eventId: deletedEventId,
+      type: 'user.deleted',
+      data: { id: clerkUserId },
+    });
+
+    await processClerkWebhook(deps, updatedEvent);
+
+    await expect(userRepository.findByClerkId(clerkUserId)).resolves.toBeNull();
+    await expect(deletedClerkUserRepository.exists(clerkUserId)).resolves.toBe(
+      true,
+    );
   });
 });

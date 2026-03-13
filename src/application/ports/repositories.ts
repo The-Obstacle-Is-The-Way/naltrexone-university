@@ -1,5 +1,7 @@
 export * from './attempt-repository';
 export * from './bookmark-repository';
+export * from './clerk-event-repository';
+export * from './deleted-clerk-user-repository';
 export * from './idempotency-key-repository';
 export * from './practice-session-repository';
 export * from './question-repository';

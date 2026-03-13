@@ -1,36 +1,30 @@
 # BUG-209: Clerk Webhook Replay Gap Can Recreate Deleted Users
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-03-13
 
 ## Summary
 
-Unlike the Stripe webhook path, the Clerk webhook path never claims or records webhook deliveries before processing and never leaves any deletion tombstone behind. That means the sequence `user.updated` -> `user.deleted` -> replay of the same old `user.updated` recreates a fresh local user row after deletion.
+The Clerk webhook path used to discard the Svix delivery ID at the route boundary, never claim or lock deliveries before processing, and never persist any deletion tombstone. That allowed the sequence `user.updated -> user.deleted -> replay old user.updated` to recreate a deleted local user.
+
+This is now fixed.
+
+## Implemented Fix
+
+1. **The route boundary now preserves the replay key.** `app/api/webhooks/clerk/route.ts:13-30` extracts `svix-id` (with a payload `id` fallback) and passes it into the local `ClerkWebhookEvent`.
+2. **The local event contract now requires that replay key.** `src/adapters/controllers/clerk-webhook-controller.ts:11-15` defines `eventId` on the controller input type.
+3. **The Clerk controller now mirrors Stripe-style event dedup.** `src/adapters/controllers/clerk-webhook-controller.ts:173-195` performs `claim() -> peek() -> lock()` before business logic, and `:279-280` records failure state with `markFailed(...)` on errors.
+4. **Webhook event state now has first-class persistence.** `db/schema.ts:199-215` defines `clerk_events`, and `src/adapters/repositories/drizzle-clerk-event-repository.ts:13-81` implements claim/peek/lock/markProcessed/markFailed against it.
+5. **Deletion tombstones now prevent both replayed and in-flight stale recreations.** `db/schema.ts:217-229` defines `deleted_clerk_users`, `src/adapters/repositories/drizzle-deleted-clerk-user-repository.ts:11-29` implements it, `src/adapters/controllers/clerk-webhook-controller.ts:216-218` short-circuits `user.updated` when a tombstone already exists, `:236-244` re-checks tombstone state after the upsert to close the `READ COMMITTED` interleaving where `user.deleted` commits between the pre-check and the upsert, and `:258-277` writes the tombstone after successful delete processing.
 
 ## Verification Notes
 
-Tracer-bullet verification confirmed the replay gap and the concrete failure mode:
+1. **Controller regressions now cover all three recreation paths.** `src/adapters/controllers/clerk-webhook-controller.test.ts:439-474` proves replaying the same `user.updated` delivery no longer recreates the user, `:476-529` proves later stale `user.updated` deliveries are ignored after deletion, and `:531-589` proves a delete that commits between the tombstone pre-check and the upsert still leaves the user deleted.
+2. **The new event repo is covered directly.** `src/adapters/repositories/drizzle-clerk-event-repository.test.ts:7-100` verifies claim, peek, lock, and processed/failed state transitions.
+3. **The new tombstone repo is covered directly.** `src/adapters/repositories/drizzle-deleted-clerk-user-repository.test.ts:6-60` verifies existence checks and idempotent tombstone writes.
+4. **The real DB-backed replay path is covered end-to-end.** `tests/integration/controllers.integration.test.ts:982-1049` proves `user.updated`, then `user.deleted`, then replay of the original `user.updated` leaves the user deleted and the tombstone intact.
 
-1. **The Clerk route never deduplicates before processing.** `app/api/webhooks/clerk/handler.ts:86-116` verifies the webhook and calls `processClerkWebhook(...)`, but there is no `claim()` / `lock()` / `markProcessed()` step analogous to the Stripe path.
-2. **The local type drops the event envelope ID at the boundary.** `src/adapters/controllers/clerk-webhook-controller.ts:9-12` defines `ClerkWebhookEvent` as only `{ type, data }`, and `app/api/webhooks/clerk/route.ts:13-16` narrows Clerk's verified output into that local type. Even if the verified Clerk/Svix payload carries an event ID, this adapter boundary does not preserve it.
-3. **The Stripe webhook path does implement event-level dedup.** `src/adapters/controllers/stripe-webhook-controller.ts:67-112` uses `stripeEvents.claim()` and `stripeEvents.lock()`, and `src/adapters/repositories/drizzle-stripe-event-repository.ts:13-21` plus `40-57` persist and row-lock the event record.
-4. **`user.updated` only behaves idempotently while the row still exists.** `src/adapters/controllers/clerk-webhook-controller.ts:159-165` passes Clerk's observed timestamp into `userRepository.upsertByClerkId(...)`, and `src/adapters/repositories/drizzle-user-repository.ts:61-80` only updates the row when the incoming `observedAt` is newer. Existing coverage at `src/adapters/controllers/clerk-webhook-controller.test.ts:41-68` proves an older replay cannot overwrite newer data when the user row is still present.
-5. **`user.deleted` removes the only state that prevents that replay from inserting again.** `src/adapters/controllers/clerk-webhook-controller.ts:180-193` looks up the user and then calls `deleteByClerkId(...)`. `src/adapters/repositories/drizzle-user-repository.ts:122-129` hard-deletes the row; it does not leave behind any tombstone, processed-event marker, or deleted-at state for that Clerk user ID.
-6. **After delete, replaying the old `user.updated` falls back to the insert path.** `src/adapters/repositories/drizzle-user-repository.ts:64-89` inserts when no `clerkUserId` row exists. A tracer-bullet executable repro with the existing fake repositories confirmed `user.updated -> user.deleted -> replay same user.updated` recreates a new local user row with a new local ID.
-7. **Current tests do not cover post-delete replay.** The existing Clerk controller tests only cover older-update ordering and the happy-path / missing-user delete cases at `src/adapters/controllers/clerk-webhook-controller.test.ts:41-68` and `140-166`.
+## Outcome
 
-This is a **real replay bug**, not just a symmetry gap with the Stripe webhook path.
-
-## Impact
-
-- A replayed stale `user.updated` can recreate a local user after `user.deleted`, violating the intended terminal semantics of account deletion.
-- The recreated user gets a fresh local ID, so the system can silently reintroduce local state for an account that was already deleted.
-- The current adapter boundary would need to change before true transport-level dedup can be added, because the event ID is not presently preserved.
-
-## Precise TDD Fix
-
-1. Add a failing regression that processes a valid `user.updated`, then `user.deleted`, then replays the same old `user.updated`, and assert that `findByClerkId(...)` still returns `null`.
-2. Extend the route/controller boundary so a transport replay key survives verification instead of being discarded; extracting a request header such as `svix-id` at the route boundary is the correct shape.
-3. Add a `clerk_events` table + repository with claim/mark-processed semantics analogous to the Stripe webhook path so exact delivery replays are short-circuited before business logic runs.
-4. Persist terminal deletion state for deleted Clerk user IDs, or an equivalent tombstone, so post-delete `user.updated` deliveries are ignored instead of recreating deleted users.
+Clerk webhook deliveries are now deduplicated at the event level, and deletion is a terminal state for a Clerk user ID. Exact replay deliveries short-circuit on `clerk_events`, later stale `user.updated` deliveries are rejected by `deleted_clerk_users`, and even the `READ COMMITTED` interleaving where delete commits between the tombstone check and the upsert now self-heals before the update transaction commits.

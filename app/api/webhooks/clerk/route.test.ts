@@ -7,11 +7,9 @@ import type {
 } from '@/src/adapters/controllers/clerk-webhook-controller';
 import { ApplicationError } from '@/src/application/errors';
 import type { RateLimiter } from '@/src/application/ports/gateways';
-import type {
-  StripeCustomerRepository,
-  UserRepository,
-} from '@/src/application/ports/repositories';
 import {
+  FakeClerkEventRepository,
+  FakeDeletedClerkUserRepository,
   FakeLogger,
   FakeStripeCustomerRepository,
   FakeUserRepository,
@@ -35,12 +33,15 @@ function createTestDeps() {
 
   const userRepository = new FakeUserRepository();
   const stripeCustomerRepository = new FakeStripeCustomerRepository();
-
-  const createUserRepository = vi.fn<() => UserRepository>(
-    () => userRepository,
-  );
-  const createStripeCustomerRepository = vi.fn<() => StripeCustomerRepository>(
-    () => stripeCustomerRepository,
+  const clerkEvents = new FakeClerkEventRepository();
+  const deletedClerkUsers = new FakeDeletedClerkUserRepository();
+  const transaction = vi.fn(async (fn) =>
+    fn({
+      clerkEvents,
+      deletedClerkUsers,
+      userRepository,
+      stripeCustomerRepository,
+    }),
   );
 
   const createContainer = vi.fn<() => ClerkWebhookRouteContainer>(() => ({
@@ -52,8 +53,7 @@ function createTestDeps() {
       },
     },
     createRateLimiter: () => rateLimiter,
-    createUserRepository,
-    createStripeCustomerRepository,
+    transaction,
   }));
 
   const verifyWebhook = vi.fn();
@@ -75,19 +75,16 @@ function createTestDeps() {
     processClerkWebhook,
     cancelStripeCustomerSubscriptions,
     logger,
-    createUserRepository,
-    createStripeCustomerRepository,
     userRepository,
     stripeCustomerRepository,
+    transaction,
     rateLimiter,
   };
 }
 
 describe('POST /api/webhooks/clerk', () => {
-  it('treats Clerk verifyWebhook output as assignable to the local event type', () => {
-    expectTypeOf<
-      Awaited<ReturnType<ClerkVerifyWebhook>>
-    >().toMatchTypeOf<ClerkWebhookEvent>();
+  it('requires a replay key at the local Clerk webhook boundary', () => {
+    expectTypeOf<ClerkWebhookEvent>().toMatchObjectType<{ eventId: string }>();
   });
 
   it('still requires an input cast for a standard Web Request', () => {
@@ -136,6 +133,7 @@ describe('POST /api/webhooks/clerk', () => {
     const { POST, verifyWebhook, processClerkWebhook } = createTestDeps();
 
     verifyWebhook.mockResolvedValue({
+      eventId: 'evt_1',
       type: 'user.updated',
       data: { id: 'clerk_1' },
     });
@@ -204,6 +202,7 @@ describe('POST /api/webhooks/clerk', () => {
     const { POST, verifyWebhook, processClerkWebhook } = createTestDeps();
 
     verifyWebhook.mockResolvedValue({
+      eventId: 'evt_1',
       type: 'user.updated',
       data: { id: 'clerk_1' },
     });
@@ -229,6 +228,7 @@ describe('POST /api/webhooks/clerk', () => {
       createTestDeps();
 
     verifyWebhook.mockResolvedValue({
+      eventId: 'evt_1',
       type: 'user.updated',
       data: { id: 'clerk_1' },
     });

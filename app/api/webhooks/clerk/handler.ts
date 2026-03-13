@@ -3,15 +3,12 @@ import { getClientIp } from '@/lib/request-ip';
 import type {
   ClerkWebhookDeps,
   ClerkWebhookEvent,
+  ClerkWebhookTransaction,
 } from '@/src/adapters/controllers/clerk-webhook-controller';
 import { CLERK_WEBHOOK_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import { isApplicationError } from '@/src/application/errors';
 import type { RateLimiter } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
-import type {
-  StripeCustomerRepository,
-  UserRepository,
-} from '@/src/application/ports/repositories';
 
 type StripeClient = {
   subscriptions: {
@@ -31,8 +28,9 @@ export type ClerkWebhookRouteContainer = {
   logger: Logger;
   stripe: StripeClient;
   createRateLimiter: () => RateLimiter;
-  createUserRepository: () => UserRepository;
-  createStripeCustomerRepository: () => StripeCustomerRepository;
+  transaction: <T>(
+    fn: (tx: ClerkWebhookTransaction) => Promise<T>,
+  ) => Promise<T>;
 };
 
 type VerifyWebhookFn = (req: Request) => Promise<ClerkWebhookEvent>;
@@ -100,8 +98,7 @@ export function createWebhookHandler(
     try {
       await processClerkWebhook(
         {
-          userRepository: container.createUserRepository(),
-          stripeCustomerRepository: container.createStripeCustomerRepository(),
+          transaction: container.transaction,
           cancelStripeCustomerSubscriptions:
             cancelStripeCustomerSubscriptions.bind(
               null,

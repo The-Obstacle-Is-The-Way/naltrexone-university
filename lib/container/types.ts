@@ -16,6 +16,8 @@ import type {
 import type {
   AttemptRepository,
   BookmarkRepository,
+  ClerkEventRepository,
+  DeletedClerkUserRepository,
   IdempotencyKeyRepository,
   PracticeSessionRepository,
   QuestionRepository,
@@ -64,6 +66,10 @@ export type StripePriceIds = {
 export type RepositoryFactories = {
   createAttemptRepository: (dbOverride?: DrizzleDb) => AttemptRepository;
   createBookmarkRepository: (dbOverride?: DrizzleDb) => BookmarkRepository;
+  createClerkEventRepository: (dbOverride?: DrizzleDb) => ClerkEventRepository;
+  createDeletedClerkUserRepository: (
+    dbOverride?: DrizzleDb,
+  ) => DeletedClerkUserRepository;
   createIdempotencyKeyRepository: (
     dbOverride?: DrizzleDb,
   ) => IdempotencyKeyRepository;

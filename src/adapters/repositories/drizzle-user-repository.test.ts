@@ -89,6 +89,44 @@ describe('DrizzleUserRepository', () => {
     });
   });
 
+  describe('lockByClerkId', () => {
+    it('returns null when the user does not exist', async () => {
+      const db = {
+        select: () => ({
+          from: () => ({
+            where: () => ({
+              for: async () => [],
+            }),
+          }),
+        }),
+      } as const;
+
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      await expect(repo.lockByClerkId('clerk_missing')).resolves.toBeNull();
+    });
+
+    it('locks and returns the user when found', async () => {
+      const row = {
+        id: 'user_1',
+        email: 'a@example.com',
+        createdAt: new Date('2026-02-01T00:00:00Z'),
+        updatedAt: new Date('2026-02-01T00:00:00Z'),
+      };
+      const forUpdate = vi.fn(async () => [row]);
+      const where = vi.fn(() => ({ for: forUpdate }));
+      const from = vi.fn(() => ({ where }));
+      const select = vi.fn(() => ({ from }));
+
+      const db = { select } as const;
+
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      await expect(repo.lockByClerkId('clerk_1')).resolves.toEqual(row);
+      expect(forUpdate).toHaveBeenCalledWith('update');
+    });
+  });
+
   describe('upsertByClerkId', () => {
     it('returns the user row returned by the upsert', async () => {
       vi.useFakeTimers();

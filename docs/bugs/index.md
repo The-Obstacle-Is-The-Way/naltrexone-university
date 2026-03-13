@@ -23,9 +23,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 - ~~[BUG-211](bug-211-count-query-fallback-masks-failures.md)~~: Four count-aggregate fallbacks across three repositories are dead defensive code; they do not mask DB failures
 - ~~[BUG-216](bug-216-health-handler-imports-drizzle-orm.md)~~: Health handler's direct Drizzle `SELECT 1` probe is framework-layer code explicitly required by the master spec; not a Clean Architecture bug
 
-### P2 (High Risk)
-- [BUG-208](bug-208-clerk-webhook-deletion-not-transactional.md): `user.deleted` can miss a Stripe mapping inserted after its lookup and before its delete, leaving remote billing active after local cascade cleanup
-- [BUG-209](bug-209-clerk-webhook-lacks-idempotency.md): Clerk replay gap can recreate a deleted local user when an old `user.updated` is delivered again after `user.deleted`
+### Resolved (Pending Archival)
+- [BUG-208](bug-208-clerk-webhook-deletion-not-transactional.md): Fixed with a transaction seam plus `lockByClerkId(...)`, closing the Stripe-mapping race during `user.deleted`
+- [BUG-209](bug-209-clerk-webhook-lacks-idempotency.md): Fixed with `svix-id` preservation, `clerk_events` delivery dedup, and `deleted_clerk_users` tombstones
 
 ### P3 (Poor Practice / Low Risk)
 - [BUG-206](bug-206-raw-db-errors-escape-adapter-layer.md): Repositories rethrow unexpected DB failures raw across the application port boundary; controllers sanitize later, but the adapter contract is still violated

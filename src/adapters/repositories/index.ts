@@ -1,5 +1,7 @@
 export { DrizzleAttemptRepository } from './drizzle-attempt-repository';
 export { DrizzleBookmarkRepository } from './drizzle-bookmark-repository';
+export { DrizzleClerkEventRepository } from './drizzle-clerk-event-repository';
+export { DrizzleDeletedClerkUserRepository } from './drizzle-deleted-clerk-user-repository';
 export { DrizzleIdempotencyKeyRepository } from './drizzle-idempotency-key-repository';
 export { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
 export { DrizzleQuestionRepository } from './drizzle-question-repository';

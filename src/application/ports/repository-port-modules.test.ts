@@ -1,12 +1,16 @@
 import { describe, expectTypeOf, it } from 'vitest';
 import type { AttemptRepository } from './attempt-repository';
 import type { BookmarkRepository } from './bookmark-repository';
+import type { ClerkEventRepository } from './clerk-event-repository';
+import type { DeletedClerkUserRepository } from './deleted-clerk-user-repository';
 import type { IdempotencyKeyRepository } from './idempotency-key-repository';
 import type { PracticeSessionRepository } from './practice-session-repository';
 import type { QuestionRepository } from './question-repository';
 import type {
   AttemptRepository as AttemptRepositoryFromBarrel,
   BookmarkRepository as BookmarkRepositoryFromBarrel,
+  ClerkEventRepository as ClerkEventRepositoryFromBarrel,
+  DeletedClerkUserRepository as DeletedClerkUserRepositoryFromBarrel,
   IdempotencyKeyRepository as IdempotencyKeyRepositoryFromBarrel,
   PracticeSessionRepository as PracticeSessionRepositoryFromBarrel,
   QuestionRepository as QuestionRepositoryFromBarrel,
@@ -28,6 +32,8 @@ describe('repository port modules', () => {
     expectTypeOf<AttemptRepositoryFromBarrel>().toEqualTypeOf<AttemptRepository>();
     expectTypeOf<PracticeSessionRepositoryFromBarrel>().toEqualTypeOf<PracticeSessionRepository>();
     expectTypeOf<BookmarkRepositoryFromBarrel>().toEqualTypeOf<BookmarkRepository>();
+    expectTypeOf<ClerkEventRepositoryFromBarrel>().toEqualTypeOf<ClerkEventRepository>();
+    expectTypeOf<DeletedClerkUserRepositoryFromBarrel>().toEqualTypeOf<DeletedClerkUserRepository>();
     expectTypeOf<TagRepositoryFromBarrel>().toEqualTypeOf<TagRepository>();
     expectTypeOf<SubscriptionRepositoryFromBarrel>().toEqualTypeOf<SubscriptionRepository>();
     expectTypeOf<StripeCustomerRepositoryFromBarrel>().toEqualTypeOf<StripeCustomerRepository>();
