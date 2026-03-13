@@ -273,12 +273,26 @@ ORDER BY ss.created_at;
 
 As of the incident window, that query returned the two polluted rows listed above.
 
-### Optional follow-up cleanup
+### Additional production hygiene cleanup executed
 
-After deleting the polluted subscription rows:
+After the subscription-row cleanup, production `main` still contained an orphaned `e2e-test@addictionboards.com` app user plus cascading child data that did not belong in Clerk Production:
 
-- consider deleting the `stripe_customers` row for `e2e-test@addictionboards.com` from Neon `main`, because it is also non-production billing data
-- keep the `stripe_customers` row for `jj@novamindnyc.com` unless business logic says otherwise; it is a real live customer mapping, even though that customer currently has zero subscriptions
+- `users`: 1
+- `stripe_customers`: 1
+- `practice_sessions`: 4
+- `attempts`: 1
+- `idempotency_keys`: 9
+
+This user was verified to exist in Clerk Development only and to be absent from Clerk Production, so the production app row was deleted:
+
+```sql
+DELETE FROM users
+WHERE email = 'e2e-test@addictionboards.com';
+```
+
+Because every `users.id` foreign key in these tables is `ON DELETE CASCADE`, that single delete removed the remaining non-production dependent rows automatically.
+
+The live `stripe_customers` row for `jj@novamindnyc.com` was kept. It maps to a real live Stripe customer even though that customer currently has zero subscriptions.
 
 ### Post-fix verification
 
@@ -343,3 +357,4 @@ None required for the immediate incident.
 - [x] Deleted polluted rows from Neon `main`
 - [x] Re-ran production verification queries
 - [x] Confirmed the crash-causing subscription row no longer exists
+- [x] Removed orphaned `e2e-test@addictionboards.com` production app row and cascading child data
