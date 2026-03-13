@@ -1,37 +1,27 @@
 # BUG-211: `row?.count ?? 0` Fallback Silently Masks Query Failures
 
-**Status:** Open
-**Priority:** P2
+**Status:** Invalidated (false positive)
+**Priority:** ~~P2~~ N/A
 **Date:** 2026-03-13
 
 ## Summary
 
-Three locations in the adapter repositories use `row?.count ?? 0` to extract a count from a `SELECT count(*)` query. A `count(*)` query always returns exactly one row (even when counting zero records, the result is `{ count: 0 }`, not `undefined`). If `row` is `undefined`, it means the query itself failed or returned an unexpected empty result set -- a condition that should be surfaced as an error, not silently reported as "0 results."
+Three locations use `row?.count ?? 0` after `SELECT count(*)` queries.
 
-## Impact
+## Invalidation Reason
 
-- A broken query (e.g., connection drop mid-query, query timeout) would report "0 questions" or "0 attempts" instead of raising an error.
-- Users would see incorrect zero-count statistics with no indication of a problem.
-- Monitoring systems would not be alerted because no error is thrown.
+**Tracer-bullet verification confirmed `count(*)` without GROUP BY always returns exactly one row in PostgreSQL.**
 
-## Locations
-
-- `src/adapters/repositories/drizzle-question-repository.ts:192` -- `return row?.count ?? 0;`
-- `src/adapters/repositories/drizzle-attempt-repository.ts:337` -- `return row?.count ?? 0;`
-- `src/adapters/repositories/drizzle-attempt-repository.ts:495` -- `return row?.count ?? 0;`
-
-## Suggested Fix
-
-Replace the fallback with an explicit check:
-
+All three queries use the pattern:
 ```typescript
-const [row] = await query;
-if (row === undefined) {
-  throw new ApplicationError('INTERNAL_ERROR', 'Count query returned no rows');
-}
-return row.count;
+const [row] = await this.db
+  .select({ count: sql<number>`count(*)::int` })
+  .from(tableName)
+  .where(conditions);
 ```
 
-## Prevention
+PostgreSQL's `count(*)` without GROUP BY is an aggregate that **always** produces a single result row, even when no rows match the WHERE clause (returning `{ count: 0 }`). The `row` from destructuring `const [row] = await query` can never be `undefined`.
 
-- Avoid `?? 0` on database count queries. Treat missing rows as errors, not defaults.
+If the database connection fails or the query errors, Drizzle throws an exception (does not return an empty array). The `?? 0` fallback can never execute.
+
+**Conclusion:** The `?? 0` is harmless dead defensive code, not a bug that masks failures. No action needed.

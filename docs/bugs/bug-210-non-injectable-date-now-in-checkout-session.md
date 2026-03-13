@@ -1,17 +1,22 @@
-# BUG-210: Non-Injectable `Date.now()` in `isSessionInactive` Prevents Deterministic Testing
+# BUG-210: Non-Injectable `Date.now()` in `isSessionInactive` — Convention Deviation
 
 **Status:** Open
-**Priority:** P2
+**Priority:** P3 (downgraded from P2 after verification)
 **Date:** 2026-03-13
 
 ## Summary
 
-The `isSessionInactive` function in `stripe-checkout-sessions.ts:53` uses a hard-wired `Date.now()` to check session expiration. The rest of the codebase consistently injects `now: () => Date` for time-dependent logic (e.g., `stripe-webhook-controller.ts`, `drizzle-user-repository.ts`). This outlier is untestable for time-sensitive edge cases without monkey-patching.
+The `isSessionInactive` function in `stripe-checkout-sessions.ts:53` uses hard-wired `Date.now()`. The rest of the codebase (15+ locations) consistently injects `now: () => Date` for time-dependent logic.
 
-## Impact
+## Verification Notes
 
-- Sessions at the expiration boundary cannot be tested deterministically.
-- A session that just expired could be incorrectly treated as active (or vice versa) depending on execution timing, and this race cannot be reproduced in tests.
+Tracer-bullet verification confirmed:
+
+- **This IS the sole `Date.now()` outlier in production code** (all other hits are in test files or fakes).
+- **This is NOT a production bug.** `isSessionInactive` compares `expires_at` against real wall-clock time. In production, using `Date.now()` produces correct behavior -- a session expired relative to the real clock IS inactive.
+- **The real issue is testability.** The tests work around this by computing `nowUnix = Math.floor(Date.now() / 1000)` and setting relative offsets (`nowUnix - 60` for expired, `nowUnix + 3600` for active). This works but creates minor time-coupling.
+
+Downgraded from P2 to P3: consistency/testability issue, not a correctness defect.
 
 ## Location
 
@@ -20,7 +25,3 @@ The `isSessionInactive` function in `stripe-checkout-sessions.ts:53` uses a hard
 ## Suggested Fix
 
 Add a `now?: () => number` parameter to `isSessionInactive` (or to the enclosing function/class), defaulting to `Date.now`. This matches the established pattern across the codebase.
-
-## Prevention
-
-- Grep for `Date.now()` in production code during review; all time-dependent logic should accept an injectable clock.

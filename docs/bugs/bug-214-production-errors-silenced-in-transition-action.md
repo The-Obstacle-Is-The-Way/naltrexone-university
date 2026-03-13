@@ -1,18 +1,26 @@
-# BUG-214: `runTransitionedAsyncAction` Silently Swallows Errors in Production
+# BUG-214: `runTransitionedAsyncAction` Dev-Only Error Logging
 
 **Status:** Open
-**Priority:** P2
+**Priority:** P4 (downgraded from P2 after verification)
 **Date:** 2026-03-13
 
 ## Summary
 
-In `question-flow-actions.ts:139-146`, `runTransitionedAsyncAction` catches errors from `input.run()` and only logs them in development mode (`process.env.NODE_ENV === 'development'`). In production, errors are silently swallowed -- no logging, no error reporting, no user notification beyond whatever the caller happens to set.
+In `question-flow-actions.ts:139-146`, `runTransitionedAsyncAction` catches errors from `input.run()` and only logs them when `NODE_ENV === 'development'`.
 
-## Impact
+## Verification Notes
 
-- Any unhandled error in the `run()` callback (submit answer, next question, session navigation) is completely invisible in production.
-- The comment says "The caller owns error state" but if the caller's error handling has its own bug, the safety net produces zero signal.
-- Production debugging is severely hampered.
+Tracer-bullet verification revealed this is **by design and low risk**:
+
+- **All callers handle their own errors internally.** Verified:
+  - `use-practice-session-question-flow.ts:186` passes `submitAnswerForQuestion` which has its own try/catch at line 209 that calls `setLoadState({ status: 'error', message: ... })`.
+  - `use-practice-question-answer-flow.ts:139` -- same pattern.
+  - `question-page-logic.ts:283` -- same pattern via `runSubmitAnswerFlow`.
+- The outer catch in `runTransitionedAsyncAction` is a **last-resort safety net** for truly unexpected errors that bypass the inner error handling. In practice, this catch should almost never fire.
+- The dev-only logging is a deliberate design choice: surface unexpected failures during development; prevent unhandled rejection crashes in production.
+- The proper fix (adding `Sentry.captureException` in this safety net) is already tracked by **DEBT-286** (client-side error reporting).
+
+Downgraded from P2 to P4: intentional defense-in-depth that should rarely fire. The missing Sentry integration is tracked separately.
 
 ## Location
 
@@ -20,16 +28,4 @@ In `question-flow-actions.ts:139-146`, `runTransitionedAsyncAction` catches erro
 
 ## Suggested Fix
 
-Remove the `NODE_ENV` guard so errors are always logged:
-
-```typescript
-} catch (error) {
-  console.error('runTransitionedAsyncAction: unhandled error in run()', error);
-}
-```
-
-Or add integration with Sentry/error reporting for production visibility.
-
-## Prevention
-
-- Avoid `NODE_ENV` guards on error logging. Logging infrastructure should handle environment-appropriate output levels.
+When DEBT-286 is implemented, add `Sentry.captureException(error)` in this catch block alongside the dev `console.error`.

@@ -1,37 +1,21 @@
 # BUG-208: Clerk Webhook User Deletion Is Not Transactional
 
-**Status:** Open
-**Priority:** P2
+**Status:** Invalidated (false positive)
+**Priority:** ~~P2~~ N/A
 **Date:** 2026-03-13
 
 ## Summary
 
-The `user.deleted` handler in `clerk-webhook-controller.ts:169-194` performs three sequential operations without a database transaction:
-1. `findByClerkId` -- look up the internal user
-2. `cancelStripeCustomerSubscriptions` -- cancel Stripe subscriptions via API
-3. `deleteByClerkId` -- delete the user row
+The `user.deleted` handler in `clerk-webhook-controller.ts:169-194` performs three sequential operations without a database transaction: find user, cancel Stripe subscriptions, delete user.
 
-If step 2 succeeds but step 3 fails (e.g., DB connection drops), the user row remains in the database with canceled Stripe subscriptions, creating an inconsistent state.
+## Invalidation Reason
 
-## Impact
+**Tracer-bullet verification revealed CASCADE constraints and idempotent Stripe cancellation make this safe.**
 
-- Orphaned user rows with canceled subscriptions that cannot be cleaned up by retry (Stripe cancel is already done, but user row persists).
-- On Clerk webhook retry, `cancelStripeCustomerSubscriptions` is called again for already-canceled subscriptions (mitigated by Stripe's idempotency, but wasteful).
+1. **`ON DELETE CASCADE` on all FK references:** The schema in `db/schema.ts` shows every table referencing `users.id` uses `onDelete: 'cascade'` -- including `stripe_customers`, `stripe_subscriptions`, `attempts`, `bookmarks`, `practice_sessions`, and `idempotency_keys`. When `deleteByClerkId` executes, PostgreSQL cascades the delete atomically.
 
-## Location
+2. **Stripe cancellation is gracefully idempotent:** `cancelStripeCustomerSubscriptions` in `stripe-subscription-canceler.ts` skips already-canceled subscriptions (checks `canceled`/`incomplete_expired` status), catches `isAlreadyCanceledError` and logs as info, and uses per-subscription idempotency keys.
 
-- `src/adapters/controllers/clerk-webhook-controller.ts:169-194`
+3. **Retry behavior is safe:** If `deleteByClerkId` fails after Stripe cancellation, Clerk retries, user is found again, Stripe cancel is idempotent (no-op), and delete retries. If the user IS deleted but Stripe cancel failed, the cascade already cleaned up `stripe_customers` rows, and the Stripe subscriptions will be caught by the existing reconciliation cron job.
 
-## Suggested Fix
-
-Wrap the user lookup and deletion in a database transaction. The Stripe API call is inherently non-transactional, so the recommended pattern is:
-1. Within a transaction: find user, mark for deletion (soft-delete or flag)
-2. Outside transaction: cancel Stripe subscriptions
-3. Within a transaction: hard-delete the user row
-
-Or, accept the current behavior and add a reconciliation mechanism that detects orphaned users (users in DB but deleted in Clerk).
-
-## Prevention
-
-- Document multi-step webhook handlers and their failure modes.
-- Consider adding a `user.deleted` reconciliation check to the existing Stripe reconciliation cron job.
+The "orphaned data" concern is unfounded given the CASCADE constraints.

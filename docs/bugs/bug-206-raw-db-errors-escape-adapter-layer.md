@@ -1,39 +1,21 @@
 # BUG-206: Raw DB Errors Escape Adapter Layer via `throw error` Fallback
 
-**Status:** Open
-**Priority:** P1
+**Status:** Invalidated (false positive)
+**Priority:** ~~P1~~ N/A
 **Date:** 2026-03-13
 
 ## Summary
 
-In `drizzle-practice-session-repository.ts:191` and `drizzle-attempt-repository.ts:213`, catch blocks check for a specific Postgres unique-violation constraint and re-throw all other errors raw. This means any non-unique-violation database error (connection timeout, syntax error, relation-not-found) propagates as a raw Drizzle/pg driver error instead of being wrapped in `ApplicationError`.
+In `drizzle-practice-session-repository.ts:191` and `drizzle-attempt-repository.ts:213`, catch blocks check for a specific Postgres unique-violation constraint and re-throw all other errors raw.
 
-## Impact
+## Invalidation Reason
 
-- Breaks the Clean Architecture contract that adapters translate infrastructure errors into domain errors.
-- Callers (use cases, controllers) cannot reliably match on `ApplicationError` codes for these failures.
-- Raw driver errors may leak Postgres internals (table names, constraint names, query fragments) into error responses or logs at incorrect abstraction levels.
+**Tracer-bullet verification revealed an outer catch in the controller layer that handles this.**
 
-## Locations
+The `createAction` wrapper in `src/adapters/controllers/create-action.ts:40-49` wraps every use case execution in a try/catch. The `handleError` function in `src/adapters/controllers/action-result.ts:32-62` is the safety net:
 
-- `src/adapters/repositories/drizzle-practice-session-repository.ts:191` -- `throw error` after unique-violation check in `create()`
-- `src/adapters/repositories/drizzle-attempt-repository.ts:213` -- `throw error` after unique-violation check in `insert()`
+1. `ApplicationError` -> maps to structured `ActionResult`
+2. `ZodError` -> maps to `VALIDATION_ERROR`
+3. **Any other unknown error** (including raw Postgres errors) -> logs `'Unhandled error in controller'` and returns `err('INTERNAL_ERROR', 'Internal error')`
 
-## Repro
-
-1. Trigger any non-unique-violation Postgres error during session creation or attempt insertion (e.g., connection timeout, killed connection).
-2. Observe raw `NeonDbError` or `PostgresError` propagating up the call stack instead of `ApplicationError('INTERNAL_ERROR', ...)`.
-
-## Suggested Fix
-
-Wrap the fallback `throw error` in both locations:
-
-```typescript
-throw new ApplicationError('INTERNAL_ERROR', 'Database operation failed', { cause: error });
-```
-
-This matches the pattern already used in `drizzle-subscription-repository.ts:108` and `drizzle-user-repository.ts:132`.
-
-## Prevention
-
-- Add a lint rule or code review checklist item: "All catch blocks in adapter repositories must wrap unknown errors in `ApplicationError`."
+Raw errors thrown from repositories **never escape to the caller**. They are caught by `createAction`, logged, and converted to a safe `ActionResult`. The two flagged repositories simply let the controller layer handle the wrapping instead of doing it at the repository level -- a minor inconsistency in error-message specificity, not a contract violation.

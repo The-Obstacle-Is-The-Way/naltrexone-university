@@ -15,28 +15,34 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 **Next Bug ID:** BUG-221
 
-**Audit batch (2026-03-13) — comprehensive codebase audit:**
+**Audit batch (2026-03-13) — comprehensive codebase audit (verified via tracer bullets):**
+
+15 bugs filed, 3 invalidated as false positives, 5 downgraded after verification. **9 confirmed true positives remain.**
+
+### Invalidated (False Positives)
+- ~~[BUG-206](bug-206-raw-db-errors-escape-adapter-layer.md)~~: `createAction`/`handleError` catches and wraps raw errors at controller layer
+- ~~[BUG-208](bug-208-clerk-webhook-deletion-not-transactional.md)~~: `ON DELETE CASCADE` on all FK refs + idempotent Stripe cancel makes this safe
+- ~~[BUG-211](bug-211-count-query-fallback-masks-failures.md)~~: `count(*)` without GROUP BY always returns one row; `?? 0` is dead defensive code
 
 ### P1 (Wrong Behavior)
-- [BUG-206](bug-206-raw-db-errors-escape-adapter-layer.md): Raw DB errors escape adapter layer via `throw error` fallback in drizzle-practice-session-repository and drizzle-attempt-repository
-- [BUG-207](bug-207-cron-route-leaks-config-state.md): Cron route leaks `CRON_SECRET is not configured` to unauthenticated callers
+- [BUG-207](bug-207-cron-route-leaks-config-state.md): Cron route leaks `CRON_SECRET is not configured` to unauthenticated callers (route is public, config check before auth check)
 
-### P2 (Silent Failure / Medium Risk)
-- [BUG-208](bug-208-clerk-webhook-deletion-not-transactional.md): Clerk webhook user deletion is not transactional — partial failure leaves orphaned data
-- [BUG-209](bug-209-clerk-webhook-lacks-idempotency.md): Clerk webhook handler lacks event deduplication (unlike Stripe handler)
-- [BUG-210](bug-210-non-injectable-date-now-in-checkout-session.md): Non-injectable `Date.now()` in `isSessionInactive` prevents deterministic testing
-- [BUG-211](bug-211-count-query-fallback-masks-failures.md): `row?.count ?? 0` fallback silently masks query failures (3 sites)
-- [BUG-212](bug-212-bookmark-toggle-swallows-errors.md): Bookmark toggle catch block swallows error without logging
-- [BUG-213](bug-213-session-start-error-not-logged.md): Session start error not logged server-side
-- [BUG-214](bug-214-production-errors-silenced-in-transition-action.md): `runTransitionedAsyncAction` silently swallows errors in production
-- [BUG-215](bug-215-checkout-success-business-logic-in-app-layer.md): `checkout-success-sync.tsx` contains 200+ lines of business logic in app layer
+### P2 (Silent Failure)
+- [BUG-212](bug-212-bookmark-toggle-swallows-errors.md): Bookmark toggle catch block swallows error without any logging — zero observability
 
 ### P3 (Poor Practice / Low Risk)
+- [BUG-209](bug-209-clerk-webhook-lacks-idempotency.md): Clerk webhook lacks event dedup (defense-in-depth gap; both paths naturally idempotent)
+- [BUG-210](bug-210-non-injectable-date-now-in-checkout-session.md): Non-injectable `Date.now()` — convention deviation, not production bug
+- [BUG-213](bug-213-session-start-error-not-logged.md): Session start error not logged client-side (server-side captured by Sentry instrumentation)
+- [BUG-215](bug-215-checkout-success-business-logic-in-app-layer.md): Checkout orchestration in app layer + `@/db/schema` import leak (glue code, not domain logic)
 - [BUG-216](bug-216-health-handler-imports-drizzle-orm.md): Health handler directly imports `drizzle-orm` in app layer
 - [BUG-217](bug-217-questionid-validation-inconsistency.md): `questionId` validation inconsistency — `string.min(1)` vs `zUuid`
 - [BUG-218](bug-218-idempotency-parse-error-loses-cause.md): `withIdempotency` discards original parse error context
 - [BUG-219](bug-219-dead-code-dropdown-menu-skip-auth-gateway.md): Dead code — `DropdownMenu` component and `SkipAuthGateway` class never used
-- [BUG-220](bug-220-weak-test-assertions.md): Weak test assertions provide false confidence (proxy, bookmark ordering, DOM guards)
+- [BUG-220](bug-220-weak-test-assertions.md): Weak test assertions — proxy test and bookmark ordering (2 confirmed, 2 sub-cases invalidated)
+
+### P4 (Code Smell / Tech Debt)
+- [BUG-214](bug-214-production-errors-silenced-in-transition-action.md): `runTransitionedAsyncAction` dev-only logging (by design; all callers handle errors; DEBT-286 tracks Sentry)
 
 ---
 
