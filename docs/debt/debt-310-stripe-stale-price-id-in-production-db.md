@@ -1,9 +1,9 @@
-# DEBT-310: Stale Stripe Price ID in Production Database — Old Account Subscription Record Breaks Dashboard
+# DEBT-310: Production Neon `main` Contains Non-Production Stripe Subscription Rows
 
 **Priority:** P1
 **Created:** 2026-03-13
 **Status:** Open
-**Related:** [DEBT-239](../_archive/debt/debt-239-env-local-stripe-account-mismatch.md), [DEBT-155](../_archive/debt/debt-155-stripe-legacy-duplicate-subscriptions-reconciliation.md), [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md)
+**Related:** [DEBT-240](../_archive/debt/debt-240-local-dev-database-url-points-to-production.md), [DEBT-239](../_archive/debt/debt-239-env-local-stripe-account-mismatch.md), [BS-029](../_archive/brainstorming/bs-029-clerk-user-id-email-upsert-conflict.md), [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md)
 
 ---
 
@@ -14,7 +14,6 @@
 **Environment:** production
 **URL:** `https://addictionboards.com/app/dashboard` (GET)
 **Release:** `90c85473babf7cd51a769bf1a521a1f9080ed8a5`
-**Runtime:** node v24.13.0, Chrome 145.0.0, macOS
 
 ```
 ApplicationError: Unknown Stripe price id "price_1SwOiNKAPxQwR68AemPhbAqG"
@@ -24,252 +23,309 @@ ApplicationError: Unknown Stripe price id "price_1SwOiNKAPxQwR68AemPhbAqG"
   at U.execute (lib_container_ts_4949882c._.js:5)
 ```
 
-**User impact:** The affected user's `/app/dashboard` page crashes. Any route that reads entitlement status for this user will also crash (`findByUserId` → `toDomain` → `ApplicationError`).
+**User impact:** The affected user's `/app/dashboard` request crashes when the subscription read path loads an invalid `stripe_subscriptions` row from the production database.
 
 ---
 
-## Root Cause
+## Executive Summary
 
-### Three sets of Stripe price IDs exist in project history
+The earlier "old Stripe account orphaned webhook row" explanation is **not accurate**.
 
-| Set | Monthly Price ID | Annual Price ID | Stripe Account |
-|-----|-----------------|----------------|----------------|
-| **Old account (dead)** | `price_1SwOiNKAPxQwR68AemPhbAqG` | `price_1SwOiZKAPxQwR68AGAZSsJ1X` | `51Svkj6KAPxQwR68A` |
-| **Current — LIVE mode** | `price_1SxttBKItmaHAwgUOYmmLy8o` | `price_1SxtuSKItmaHAwgUYUAl4Kxd` | `51SvkizKItmaHAwgU` |
-| **Current — TEST mode** | `price_1SxuYAKItmaHAwgUWaePv0AC` | `price_1SxuYXKItmaHAwgUjobv4lxY` | `51SvkizKItmaHAwgU` |
+What the investigation actually verified:
 
-Source: [deployment-environments.md](../dev/deployment-environments.md) lines 86-111 and [DEBT-239](../_archive/debt/debt-239-env-local-stripe-account-mismatch.md) lines 17-22.
+1. **Current production configuration is correct.**
+   Vercel Production is currently using:
+   - Neon `main` (`ep-withered-cell-ah14ik13-pooler`)
+   - live Stripe secret key
+   - live price IDs `price_1SxttBKItmaHAwgUOYmmLy8o` / `price_1SxtuSKItmaHAwgUYUAl4Kxd`
 
-### What happened
+2. **Production `main` is polluted with non-production subscription rows.**
+   At investigation time, `stripe_subscriptions` in Neon `main` contained exactly **two** rows:
+   - one row for `jj@novamindnyc.com` with the old-account price ID from the Sentry error
+   - one row for `e2e-test@addictionboards.com` with the current **test-mode** monthly price ID
 
-1. **Before 2026-02-22:** The project was configured with keys from a **different Stripe account** (prefix `KAPxQwR68A`). At some point during this period, a subscription was created via a webhook from the old account. The webhook processor stored the old account's price ID (`price_1SwOiNKAPxQwR68AemPhbAqG`) in the production Neon `main` database's `stripe_subscriptions.price_id` column.
+3. **There are zero live-price subscription rows in production `main`.**
+   This means the problem is broader than one stale row: the subscription mirror in production currently contains only non-production data.
 
-2. **2026-02-22 (DEBT-239 fix):** Environment variables were updated to the current Stripe account (`KItmaHAwgU`). The Vercel production env vars now contain the LIVE mode price IDs. `.env.local` was updated with the TEST mode IDs. The fix was verified for `.env.local` and source code. **The existing database records were not migrated.**
+4. **The affected row is not a real Stripe subscription synced by webhook.**
+   Its `stripe_subscription_id` is `sub_dev_local_seed`, which does **not** exist in either the current live account or the current test account. That makes the row a local/manual seed artifact, not a real Stripe subscription object.
 
-3. **2026-03-13 (this error):** The affected user hits `/app/dashboard`. The `DrizzleSubscriptionRepository.findByUserId()` loads the subscription row, which still has `price_id = 'price_1SwOiNKAPxQwR68AemPhbAqG'`. The `getSubscriptionPlanFromPriceId()` function compares this against the current LIVE price IDs, finds no match, returns `null`, and `toDomain()` throws `ApplicationError('INTERNAL_ERROR', ...)`.
-
-### The subscription record is an orphan
-
-The problem is deeper than just a stale price ID. The entire `stripe_subscriptions` row references a subscription that lives on the **old Stripe account** (`KAPxQwR68A`). This means:
-
-- The `stripe_subscription_id` column references a subscription ID on a Stripe account we no longer control
-- The `price_id` column contains a price from that dead account
-- The subscription cannot be refreshed, canceled, or reconciled via the current Stripe account's API
-- Updating just the `price_id` would mask the orphan — the `stripe_subscription_id` would still point to a ghost
+5. **The true root cause is historical environment isolation failure.**
+   Before [DEBT-240](../_archive/debt/debt-240-local-dev-database-url-points-to-production.md) was fixed on 2026-02-22, local `.env.local` pointed at Neon `main`. Local debugging / seeding writes therefore landed in the production database.
 
 ---
 
-## Failure Path (Code Walkthrough)
+## Verified Environment Matrix
 
-### Read path (where the error occurs)
+### Current production runtime
 
-```
-User visits /app/dashboard (GET)
-  └─ Server Component renders
-    └─ GetSubscriptionByUser.execute(userId)                    [use case]
-      └─ DrizzleSubscriptionRepository.findByUserId(userId)     [adapter]
-        └─ db.query.stripeSubscriptions.findFirst(...)          [drizzle query]
-          └─ Returns row with price_id = 'price_1SwOiNKAPxQwR68AemPhbAqG'
-        └─ toDomain(row)
-          └─ getSubscriptionPlanFromPriceId(row.priceId, this.priceIds)
-            ├─ priceId  = 'price_1SwOiNKAPxQwR68AemPhbAqG'    (old account)
-            ├─ monthly  = 'price_1SxttBKItmaHAwgUOYmmLy8o'    (live, current)
-            ├─ annual   = 'price_1SxtuSKItmaHAwgUYUAl4Kxd'    (live, current)
-            └─ No match → returns null
-          └─ plan is null → throw ApplicationError('INTERNAL_ERROR', ...)
-```
+Verified on 2026-03-13 via `vercel env pull` for the real Vercel project `john-h-jungs-projects/naltrexone-university`:
 
-**Key files:**
-- `src/adapters/config/stripe-prices.ts:15-22` — `getSubscriptionPlanFromPriceId()` returns `null` on mismatch
-- `src/adapters/repositories/drizzle-subscription-repository.ts:30-37` — `toDomain()` throws on null plan
-- `lib/container.ts:54-57` — price IDs sourced from env vars
+| Surface | Verified value | Meaning |
+|---------|----------------|---------|
+| `NEXT_PUBLIC_APP_URL` | `https://addictionboards.com` | Real production app |
+| `DATABASE_URL` host | `ep-withered-cell-ah14ik13-pooler...` | Neon `main` |
+| `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` | `price_1SxttBKItmaHAwgUOYmmLy8o` | live monthly |
+| `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL` | `price_1SxtuSKItmaHAwgUYUAl4Kxd` | live annual |
+| Stripe API lookup | both prices retrieved with `livemode: true` | production env is live-mode Stripe |
 
-### Write path (how the data got there originally)
+### Current local development runtime
 
-```
-Stripe sends webhook (old account, before 2026-02-22)
-  └─ stripe-webhook-processor → normalizeStripeSubscriptionUpdate()
-    └─ Extracts priceId from subscription.items.data[0].price.id
-    └─ getSubscriptionPlanFromPriceId(priceId, priceIds) → matched (env had old IDs)
-  └─ DrizzleSubscriptionRepository.upsert(...)
-    └─ INSERT INTO stripe_subscriptions (..., price_id = 'price_1SwOiN...', ...)
-```
+Verified from local `.env.local`:
 
-At the time the webhook was processed, the env vars **also** had the old price IDs, so the mapping succeeded. The mismatch only manifests after the env vars were updated without migrating the data.
+| Surface | Verified value | Meaning |
+|---------|----------------|---------|
+| `DATABASE_URL` host | `ep-still-frog-ahx7bp6y-pooler...` | Neon `dev` |
+| `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` | `price_1SxuYAKItmaHAwgUWaePv0AC` | test monthly |
+| `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL` | `price_1SxuYXKItmaHAwgUjobv4lxY` | test annual |
+| Stripe API lookup | both prices retrieved with `livemode: false` | local env is test-mode Stripe |
 
-### Other affected paths
+### Historical exception that explains the contamination
 
-Any code path that calls `toDomain()` or `normalizeStripeSubscriptionUpdate()` will fail for this user:
-
-| Path | File | Impact |
-|------|------|--------|
-| Dashboard entitlement check | `drizzle-subscription-repository.ts:51` | **Crashes** — this is the Sentry error |
-| Billing page | Same repository | **Crashes** — cannot render subscription status |
-| Webhook updates | `stripe-subscription-normalizer.ts:60` | **Won't fire** — old account isn't sending webhooks |
-| Reconciliation cron | `reconcile-stripe-subscriptions.ts:88` | **May crash** — if it tries to reconcile this user |
-| Checkout success sync | `checkout-success-sync.tsx:225` | **Logs warning** — `unknown_plan` |
+[DEBT-240](../_archive/debt/debt-240-local-dev-database-url-points-to-production.md) documented that **before 2026-02-22**, local `.env.local` pointed at the production Neon `main` branch instead of the dev branch. That made local/dev/E2E writes hit production data.
 
 ---
 
-## Codebase-Wide Verification
+## Production Data Actually Present
 
-### Environment variables are correctly configured
-
-Verified via [deployment-environments.md](../dev/deployment-environments.md) (last verified 2026-02-22):
-
-| Env | Monthly Price ID | Annual Price ID | Account Mode |
-|-----|-----------------|----------------|--------------|
-| **Vercel Production** | `price_1SxttBKItmaHAwgUOYmmLy8o` | `price_1SxtuSKItmaHAwgUYUAl4Kxd` | `KItmaHAwgU` live |
-| **Vercel Preview** | `price_1SxuYAKItmaHAwgUWaePv0AC` | `price_1SxuYXKItmaHAwgUjobv4lxY` | `KItmaHAwgU` test |
-| **Vercel Development** | `price_1SxuYAKItmaHAwgUWaePv0AC` | `price_1SxuYXKItmaHAwgUjobv4lxY` | `KItmaHAwgU` test |
-| **`.env.local`** | `price_1SxuYAKItmaHAwgUWaePv0AC` | `price_1SxuYXKItmaHAwgUjobv4lxY` | `KItmaHAwgU` test |
-| **`.env.test`** | `price_dummy_monthly` | `price_dummy_annual` | N/A (unit tests) |
-
-All env vars point to the **current account** (`KItmaHAwgU`). No old account references (`KAPxQwR68A`) exist in any env file or source code.
-
-### No hardcoded old price IDs in source code
-
-Searched entire codebase for `KAPxQwR68A` and `SwOiN` — zero matches in application code. The old IDs are only referenced in the archived DEBT-239 doc and this debt doc.
-
-### Database schema has no migration-level guard
-
-The `stripe_subscriptions.price_id` column is `varchar(255) NOT NULL` with no CHECK constraint or enum. Any string starting with `price_` is accepted. There is no database-level enforcement that stored price IDs match the application's configured IDs.
-
-### Neon branching is not the cause
-
-- Production uses Neon `main` branch (`ep-withered-cell-ah14ik13-pooler`)
-- Preview/Dev uses Neon `dev` branch (`ep-still-frog-ahx7bp6y-pooler`)
-- The branches are properly isolated via `DATABASE_URL` scoping in Vercel
-- The stale data exists in `main` because it was written when the old Stripe account was active
-
-### Multiple clone repos are not the cause
-
-The error is a data issue in the production Neon `main` database, not a code-level misconfiguration. All clone repos (`naltrexone-university`, `-2`, `-3`, `-4`) deploy from the same GitHub repo to the same Vercel project. They share the same Vercel env vars and the same Neon database. The old data predates the clone structure.
-
----
-
-## Solution
-
-### Step 1: Identify all affected records (diagnostic query)
-
-Run against the **production Neon `main` branch**:
+Query executed against Neon `main` on 2026-03-13:
 
 ```sql
--- Find all subscription records whose price_id does NOT match
--- any currently configured price ID (live or test mode).
 SELECT
-  id,
-  user_id,
-  stripe_subscription_id,
-  price_id,
-  status,
-  cancel_at_period_end,
-  current_period_end,
-  created_at,
-  updated_at
-FROM stripe_subscriptions
-WHERE price_id NOT IN (
-  -- Current account LIVE mode (Production env vars)
-  'price_1SxttBKItmaHAwgUOYmmLy8o',   -- monthly live
-  'price_1SxtuSKItmaHAwgUYUAl4Kxd',   -- annual live
-  -- Current account TEST mode (Preview/Dev env vars)
-  'price_1SxuYAKItmaHAwgUWaePv0AC',   -- monthly test
-  'price_1SxuYXKItmaHAwgUjobv4lxY'    -- annual test
-);
+  ss.id,
+  u.email,
+  sc.stripe_customer_id,
+  ss.stripe_subscription_id,
+  ss.price_id,
+  ss.created_at
+FROM stripe_subscriptions ss
+JOIN users u ON u.id = ss.user_id
+LEFT JOIN stripe_customers sc ON sc.user_id = ss.user_id
+ORDER BY ss.created_at;
 ```
 
-This will return all orphaned records, including the one from the Sentry error (`997af97e-7cac-49f6-9c6e-8b5fef498466`).
+Returned rows:
 
-### Step 2: Determine user status on the current Stripe account
+| Row ID | Email | Stripe Customer ID | Stripe Subscription ID | Price ID | Created At | Interpretation |
+|--------|-------|--------------------|------------------------|----------|------------|----------------|
+| `997af97e-7cac-49f6-9c6e-8b5fef498466` | `jj@novamindnyc.com` | `cus_TvoBcSUN9ZpK3A` | `sub_dev_local_seed` | `price_1SwOiNKAPxQwR68AemPhbAqG` | 2026-02-21 19:20:29 UTC | local/manual polluted row; this is the Sentry crash row |
+| `84d3fbf7-5344-4ac4-ab1b-74e0e1225f48` | `e2e-test@addictionboards.com` | `cus_TxDC4CL6IjuC3f` | `sub_1SzJcRKItmaHAwgUvAMv6MLb` | `price_1SxuYAKItmaHAwgUWaePv0AC` | 2026-02-22 15:02:40 UTC | real Stripe **test-mode** subscription leaked into production `main` |
 
-For each affected `user_id`:
+Additional verification:
 
-1. **Check if the user has an active subscription on the current Stripe account** — look up the user's Clerk ID, then search the current Stripe account for customers with that metadata.
-2. **If yes:** The user has a valid subscription elsewhere. Delete the orphaned row and let the webhook or reconciliation cron re-sync the correct subscription.
-3. **If no:** The user's only subscription was on the old dead account. The record is truly orphaned. Delete it. The user will see the paywall and can subscribe fresh on the current account.
+- `SELECT count(*) FROM stripe_subscriptions WHERE price_id IN ('price_1SxttBKItmaHAwgUOYmmLy8o', 'price_1SxtuSKItmaHAwgUYUAl4Kxd');`
+  - result: `0`
+- `SELECT count(*) FROM stripe_subscriptions WHERE price_id NOT IN ('price_1SxttBKItmaHAwgUOYmmLy8o', 'price_1SxtuSKItmaHAwgUYUAl4Kxd');`
+  - result: `2`
 
-### Step 3: Delete orphaned records
+So the production database currently has **zero live subscription rows** and **two non-production rows**.
+
+---
+
+## Why The Earlier Root Cause Was Wrong
+
+### Claim: "The affected row came from an old-account webhook"
+
+This is **not supported** by the data.
+
+What we verified instead:
+
+- The stored `price_id` does come from the old Stripe account documented in [DEBT-239](../_archive/debt/debt-239-env-local-stripe-account-mismatch.md).
+- But the stored `stripe_subscription_id` is `sub_dev_local_seed`.
+- `sub_dev_local_seed` does **not** exist in the current live account.
+- `sub_dev_local_seed` does **not** exist in the current test account.
+
+That means the row is **not** a real Stripe subscription object that was mirrored by the webhook pipeline.
+
+### Claim: "The entire row belongs to the dead Stripe account"
+
+This is also too strong.
+
+What we verified:
+
+- The related `stripe_customers` row for `jj@novamindnyc.com` points to `cus_TvoBcSUN9ZpK3A`.
+- That customer **does exist** in the current **live** Stripe account.
+- That live customer currently has **zero** subscriptions.
+
+So the accurate statement is:
+
+- the row stores an **old-account price ID**
+- the row stores a **fake/non-Stripe subscription ID**
+- the customer mapping points to the **current live account**
+
+This is a mixed, polluted record, not a clean "old account orphan."
+
+### Claim: "Test price IDs should be treated as valid in production cleanup"
+
+This is incorrect for this incident.
+
+Production runtime only recognizes the live production price pair. A test-mode price row in Neon `main` is also invalid production data and should be cleaned up there.
+
+---
+
+## Actual Root Cause
+
+The production crash is caused by **non-production subscription data written into Neon `main` before environment isolation was fixed**.
+
+### Sequence
+
+1. **Before 2026-02-22**, local `.env.local` pointed to Neon `main`, not Neon `dev`.
+   This is the issue resolved by [DEBT-240](../_archive/debt/debt-240-local-dev-database-url-points-to-production.md).
+
+2. **Before 2026-02-22**, local `.env.local` also contained Stripe price IDs from the old account.
+   This is the issue resolved by [DEBT-239](../_archive/debt/debt-239-env-local-stripe-account-mismatch.md).
+
+3. **On 2026-02-21**, local debugging around [BS-029](../_archive/brainstorming/bs-029-clerk-user-id-email-upsert-conflict.md) updated `jj@novamindnyc.com` data while local development was still pointed at Neon `main`.
+   The row shape strongly indicates a manual/local seed:
+   - fake `stripe_subscription_id` = `sub_dev_local_seed`
+   - non-live price ID from the stale local Stripe env
+   - no matching Stripe subscription in live or test mode
+
+4. **On 2026-02-22**, the E2E seed helper in [tests/e2e/helpers/seed-test-user.ts](../../tests/e2e/helpers/seed-test-user.ts) wrote a real Stripe **test-mode** subscription into the database using `DATABASE_URL` plus `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`.
+   Because `.env.local` had not yet been corrected to Neon `dev`, that write landed in Neon `main`.
+
+5. **On 2026-03-13**, the affected user hit `/app/dashboard`.
+   Production runtime loaded the polluted row and compared its stored `price_id` against the live production price IDs.
+
+### Read path (correct behavior)
+
+The crash path is the expected application behavior for invalid production data:
+
+```text
+GET /app/dashboard
+  -> GetSubscriptionByUser.execute(userId)
+    -> DrizzleSubscriptionRepository.findByUserId(userId)
+      -> toDomain(row)
+        -> getSubscriptionPlanFromPriceId(row.priceId, liveProductionPriceIds)
+          -> returns null for old/test price ids
+        -> throws ApplicationError('INTERNAL_ERROR', 'Unknown Stripe price id ...')
+```
+
+Relevant code:
+
+- `src/adapters/repositories/drizzle-subscription-repository.ts`
+- `src/adapters/config/stripe-prices.ts`
+
+The code is correctly surfacing invalid production data. The incident is a data-integrity problem, not a read-path bug.
+
+---
+
+## Stripe Verification Details
+
+### Affected user (`jj@novamindnyc.com`)
+
+Verified against the current **live** Stripe account:
+
+- customer `cus_TvoBcSUN9ZpK3A` exists
+- email matches `jj@novamindnyc.com`
+- `subscriptions.list({ customer: 'cus_TvoBcSUN9ZpK3A', status: 'all' })` returns **0** subscriptions
+- `subscriptions.retrieve('sub_dev_local_seed')` returns `resource_missing`
+
+### E2E user (`e2e-test@addictionboards.com`)
+
+Verified against the current **test** Stripe account:
+
+- `subscriptions.retrieve('sub_1SzJcRKItmaHAwgUvAMv6MLb')` succeeds
+- returned `priceId = 'price_1SxuYAKItmaHAwgUWaePv0AC'`
+- returned `livemode = false`
+
+This confirms the second row is real test-mode Stripe data stored in the production database.
+
+---
+
+## Fix
+
+### Immediate operational fix
+
+Delete the invalid subscription rows from Neon `main`.
+
+Diagnostic query:
 
 ```sql
--- After manual verification of each affected user_id (Step 2):
+SELECT
+  ss.id,
+  u.email,
+  sc.stripe_customer_id,
+  ss.stripe_subscription_id,
+  ss.price_id,
+  ss.status,
+  ss.created_at
+FROM stripe_subscriptions ss
+JOIN users u ON u.id = ss.user_id
+LEFT JOIN stripe_customers sc ON sc.user_id = ss.user_id
+WHERE ss.price_id NOT IN (
+  'price_1SxttBKItmaHAwgUOYmmLy8o',
+  'price_1SxtuSKItmaHAwgUYUAl4Kxd'
+)
+ORDER BY ss.created_at;
+```
+
+As of 2026-03-13, this returns the two rows listed above.
+
+Delete query:
+
+```sql
 DELETE FROM stripe_subscriptions
-WHERE price_id IN (
-  'price_1SwOiNKAPxQwR68AemPhbAqG',   -- old account monthly
-  'price_1SwOiZKAPxQwR68AGAZSsJ1X'    -- old account annual
+WHERE id IN (
+  '997af97e-7cac-49f6-9c6e-8b5fef498466',
+  '84d3fbf7-5344-4ac4-ab1b-74e0e1225f48'
 );
 ```
 
-**Why DELETE, not UPDATE:** The entire row is invalid — the `stripe_subscription_id` references a subscription on a dead Stripe account. Updating just the `price_id` would create a record that passes the mapping check but points to a `stripe_subscription_id` that cannot be verified, canceled, or reconciled via the current Stripe API. A clean delete is the correct approach.
+### Optional follow-up cleanup
 
-### Step 4: Verify the fix
+After deleting the polluted subscription rows:
+
+- consider deleting the `stripe_customers` row for `e2e-test@addictionboards.com` from Neon `main`, because it is also non-production billing data
+- keep the `stripe_customers` row for `jj@novamindnyc.com` unless business logic says otherwise; it is a real live customer mapping, even though that customer currently has zero subscriptions
+
+### Verification query
 
 ```sql
--- Confirm no orphaned records remain
 SELECT count(*)
 FROM stripe_subscriptions
 WHERE price_id NOT IN (
   'price_1SxttBKItmaHAwgUOYmmLy8o',
-  'price_1SxtuSKItmaHAwgUYUAl4Kxd',
-  'price_1SxuYAKItmaHAwgUWaePv0AC',
-  'price_1SxuYXKItmaHAwgUjobv4lxY'
+  'price_1SxtuSKItmaHAwgUYUAl4Kxd'
 );
--- Expected: 0
 ```
 
-Then visit `/app/dashboard` as the affected user (or check Sentry for recurrence).
+Expected result after cleanup: `0`
 
----
+Then:
 
-## What This Does NOT Include
-
-1. **No code changes.** The `toDomain()` error behavior is correct — it should throw when encountering an unknown price ID. Adding legacy fallback support would hide data integrity issues and introduce technical debt (tracked price ID sets, silent downgrades, stale mapping logic). This is a Greenfield project with a single-digit user count. Clean data, not defensive code, is the right fix.
-
-2. **No database CHECK constraint.** While a `CHECK (price_id IN (...))` would prevent future mismatches at the DB level, it would also break deployments when price IDs change (e.g., if Stripe products are recreated). The application-level validation in `toDomain()` is sufficient and more maintainable. A future ADR can revisit this if the risk profile changes.
-
-3. **No reconciliation cron changes.** The reconciliation job (`reconcile-stripe-subscriptions.ts`) already uses `getSubscriptionPlanFromPriceId()` for validation. Once the orphaned records are deleted, it will work correctly for all remaining records.
+- verify `/app/dashboard` loads for `jj@novamindnyc.com`
+- monitor Sentry for recurrence of `Unknown Stripe price id`
 
 ---
 
 ## Scope
 
-### Operations (manual)
-
-| Step | Action | Environment |
-|------|--------|-------------|
-| 1 | Run diagnostic query | Neon `main` (production) via Neon Console or `psql` |
-| 2 | Check affected users against current Stripe account | Stripe Dashboard (live mode) |
-| 3 | Delete orphaned records | Neon `main` (production) |
-| 4 | Verify fix | Neon `main` + Sentry |
-
 ### Production code changes
 
-None.
+None required for the immediate incident.
+
+### Why no code change
+
+- The repository correctly rejects non-production `price_id` values in production reads.
+- The real bug was historical data pollution from local/dev workflows writing into production `main`.
+- [DEBT-240](../_archive/debt/debt-240-local-dev-database-url-points-to-production.md) already fixed the local `DATABASE_URL` isolation issue.
 
 ### Tests
 
-None.
+None required for the immediate incident.
 
 ---
 
-## Verification
+## Verification Checklist
 
-- [ ] Diagnostic query executed — affected records identified and documented
-- [ ] Each affected user's status on current Stripe account verified
-- [ ] Orphaned records deleted from production Neon `main`
-- [ ] Post-deletion query confirms zero orphaned records
-- [ ] `/app/dashboard` loads successfully for affected user(s)
-- [ ] Sentry error `99a9219925464810ae62eb5008fe647b` does not recur within 24 hours
-- [ ] Reconciliation cron (`/api/cron/reconcile-stripe-subscriptions`) runs without errors
-
----
-
-## Prevention
-
-This class of issue (stale data from a previous vendor account) is inherently a one-time migration artifact. It cannot recur because:
-
-1. The old Stripe account (`KAPxQwR68A`) is no longer configured anywhere
-2. No webhooks from the old account can reach our endpoints
-3. The `normalizeStripeSubscriptionUpdate()` function validates price IDs on every incoming webhook — a webhook with an unknown price ID is rejected with `STRIPE_ERROR` before reaching the database
-4. The env validation in `lib/env.ts` ensures price IDs are always set and formatted correctly
-
-The only outstanding prevention gap is that `toDomain()` crashes instead of gracefully handling stale data. This is the **correct** behavior for a Greenfield project — it surfaces data integrity issues immediately rather than silently serving incorrect entitlement status.
+- [x] Pulled and verified current Vercel Production env
+- [x] Verified current local `.env.local` points to Neon `dev`
+- [x] Queried Neon `main` and captured all `stripe_subscriptions` rows
+- [x] Verified there are zero live-price rows in Neon `main`
+- [x] Verified `sub_dev_local_seed` is not a real Stripe subscription
+- [x] Verified `jj@novamindnyc.com` live customer exists and has zero subscriptions
+- [x] Verified `e2e-test@addictionboards.com` row is a real Stripe test subscription
+- [ ] Delete polluted rows from Neon `main`
+- [ ] Re-run production verification query
+- [ ] Confirm dashboard no longer crashes for affected user
