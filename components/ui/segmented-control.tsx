@@ -33,7 +33,9 @@ export function SegmentedControl({
       className={tabSwitchContainerClasses}
       aria-labelledby={ariaLabelledBy}
     >
-      {legend ? <legend className="sr-only">{legend}</legend> : null}
+      {legend && !ariaLabelledBy ? (
+        <legend className="sr-only">{legend}</legend>
+      ) : null}
       {options.map((option) => {
         const isActive = option.value === value;
         return (

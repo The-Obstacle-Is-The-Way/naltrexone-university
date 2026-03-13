@@ -123,6 +123,24 @@ describe('SegmentedControl', () => {
     expect(html).not.toContain('<legend');
   });
 
+  it('ignores legend when ariaLabelledBy is also provided', () => {
+    const html = renderToStaticMarkup(
+      <SegmentedControl
+        options={[
+          { value: 'tutor', label: 'Tutor' },
+          { value: 'exam', label: 'Exam' },
+        ]}
+        value="tutor"
+        onChange={() => undefined}
+        legend="Mode"
+        ariaLabelledBy="external-label"
+      />,
+    );
+
+    expect(html).toContain('aria-labelledby="external-label"');
+    expect(html).not.toContain('<legend');
+  });
+
   it('omits legend when legend prop is not provided', () => {
     const html = renderToStaticMarkup(
       <SegmentedControl
