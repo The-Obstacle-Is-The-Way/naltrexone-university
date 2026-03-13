@@ -72,14 +72,14 @@ Add hover border classes to the unselected chip:
 
 ```diff
 - 'border-foreground/45 bg-foreground/[0.07] text-foreground hover:bg-foreground/[0.10] dark:border-foreground/40'
-+ 'border-foreground/45 bg-foreground/[0.07] text-foreground hover:bg-foreground/[0.10] hover:border-foreground/70 dark:border-foreground/40 dark:hover:border-foreground/70'
++ 'border-foreground/45 bg-foreground/[0.07] text-foreground hover:bg-foreground/[0.12] hover:border-foreground/60 dark:border-foreground/40 dark:hover:border-foreground/70'
 ```
 
-This mirrors the Button outline variant's dark-mode border hover behavior and extends it to light mode as well.
+This mirrors the Button outline variant's dark-mode border hover behavior while using a softer light-mode border step.
 
-### Change 2: Keep the fill contrast lift
+### Change 2: Increase the fill contrast lift
 
-The `hover:bg-foreground/[0.10]` stays. Combined with the border brightening, the two signals reinforce each other:
+The fill also deepens slightly to `hover:bg-foreground/[0.12]`. Combined with the border brightening, the two signals reinforce each other:
 - Border edge lights up (primary signal)
 - Fill slightly deepens (secondary signal)
 

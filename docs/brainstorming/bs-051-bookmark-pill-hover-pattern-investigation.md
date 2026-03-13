@@ -99,7 +99,7 @@ The border hover behavior doesn't need to be invented — it exists in `button.t
 
 2. **When the icon replacement happens, should it use the same `Button variant="outline"` or switch to a custom component?** The current approach (Button + `rounded-full`) is pragmatic, but an icon-only pill might warrant a dedicated `IconPill` or similar.
 
-3. **Should light-mode outline buttons also get a border hover step?** Currently only dark mode brightens the border. The practice chip fix (BS-050) proposes adding `hover:border-foreground/70` for light mode too — should the Button outline variant follow suit for consistency?
+3. **Should light-mode outline buttons also get a border hover step?** Currently only dark mode brightens the border. The practice chip fix (BS-050 / DEBT-309) settles on `hover:border-foreground/60` for light mode on grouped chips — should the Button outline variant follow suit for consistency?
 
 ---
 
