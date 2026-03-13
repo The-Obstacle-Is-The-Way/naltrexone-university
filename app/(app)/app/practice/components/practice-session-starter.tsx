@@ -4,10 +4,10 @@ import { ChevronDown } from 'lucide-react';
 import { useId, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { compactControlShellClasses } from '@/components/ui/control-shell-styles';
 import { FilterChip } from '@/components/ui/filter-chip';
 import { Input } from '@/components/ui/input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { tabSwitchContainerClasses } from '@/components/ui/tab-switch-styles';
 import type { TagRow } from '@/src/adapters/controllers/tag-controller';
 import {
   AllDifficulties,
@@ -140,7 +140,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
             >
               Questions
             </label>
-            <div className={tabSwitchContainerClasses}>
+            <div className={compactControlShellClasses}>
               <Input
                 id={sessionCountInputId}
                 type="number"

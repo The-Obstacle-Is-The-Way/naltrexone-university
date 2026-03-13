@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { tabSwitchContainerClasses } from '@/components/ui/tab-switch-styles';
+import { compactControlShellClasses } from '@/components/ui/control-shell-styles';
 
 let PracticeSessionStarter: typeof import('./practice-session-starter')['PracticeSessionStarter'];
 
@@ -28,6 +28,10 @@ function findElementsByExactText(
   );
 }
 
+function findVisibleLabelsWithId(doc: Document, text: string) {
+  return findElementsByExactText(doc, '[id]', text);
+}
+
 function findQuestionsLabel(doc: Document) {
   return findElementsByExactText(doc, 'label[for]', 'Questions')[0] ?? null;
 }
@@ -39,7 +43,7 @@ function findQuestionsInput(doc: Document) {
 }
 
 function findFieldsetByVisibleLabel(doc: Document, labelText: string) {
-  const label = findElementsByExactText(doc, 'div[id]', labelText)[0] ?? null;
+  const label = findVisibleLabelsWithId(doc, labelText)[0] ?? null;
   const labelId = label?.getAttribute('id');
   return labelId
     ? doc.querySelector(`fieldset[aria-labelledby="${labelId}"]`)
@@ -168,13 +172,9 @@ describe('PracticeSessionStarter', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const modeLabels = findElementsByExactText(doc, 'div[id]', 'Mode');
-    const statusLabels = findElementsByExactText(doc, 'div[id]', 'Status');
-    const difficultyLabels = findElementsByExactText(
-      doc,
-      'div[id]',
-      'Difficulty',
-    );
+    const modeLabels = findVisibleLabelsWithId(doc, 'Mode');
+    const statusLabels = findVisibleLabelsWithId(doc, 'Status');
+    const difficultyLabels = findVisibleLabelsWithId(doc, 'Difficulty');
     const questionLabels = findElementsByExactText(
       doc,
       'label[for]',
@@ -271,7 +271,10 @@ describe('PracticeSessionStarter', () => {
     expect(inputShell).not.toBeNull();
     expect(input).not.toBeNull();
     expect(wrapperTokens.has('items-center')).toBe(true);
-    expectTokensToIncludeClassName(inputShellTokens, tabSwitchContainerClasses);
+    expectTokensToIncludeClassName(
+      inputShellTokens,
+      compactControlShellClasses,
+    );
     expect(inputTokens.has('text-center')).toBe(true);
   });
 

@@ -1,3 +1,5 @@
+import { compactControlShellClasses } from './control-shell-styles';
+
 /**
  * Canonical visual class constants for tab-switch components.
  *
@@ -7,8 +9,7 @@
  */
 
 /** Outer container wrapping all tab items. */
-export const tabSwitchContainerClasses =
-  'inline-flex rounded-lg border border-border bg-muted p-1';
+export const tabSwitchContainerClasses = compactControlShellClasses;
 
 /** Base classes for each tab item (active or inactive). */
 export const tabSwitchItemBaseClasses =
