@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-12
+**Last Updated:** 2026-03-13
 
 ---
 
@@ -29,8 +29,11 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
 | [BS-044](./bs-044-dark-mode-border-weight-tiering.md) | Dark Mode Border Weight Tiering — broad cross-surface tiering remains open after narrower choice-button and History slices were resolved via `DEBT-280`, `DEBT-301`, and `DEBT-302` | Active | [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
+| [BS-050](./bs-050-practice-chip-hover-affordance.md) | Practice Chip Hover Affordance — border brightening + fill contrast lift on unselected `FilterChip` hover; currently only a 3-point fill opacity bump which is barely perceptible | Active | [DEBT-309](../_archive/debt/debt-309-filter-chip-hover-border-affordance.md) |
+| [BS-051](./bs-051-bookmark-pill-hover-pattern-investigation.md) | Bookmark Pill Hover Pattern Investigation — documents the Remove button's effective border-brightening hover pattern as a reference, notes planned icon replacement | Active | [BS-050](./bs-050-practice-chip-hover-affordance.md) |
+| [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) | Bookmark Icon Toggle — replace "Remove" text pill and "Bookmark"/"Remove bookmark" action bar pills with filled/unfilled bookmark icon (Lucide `Bookmark` with `fill-current` toggle); phased rollout starting with Bookmarks page | Active | [BS-051](./bs-051-bookmark-pill-hover-pattern-investigation.md) |
 
-**Next Brainstorming ID:** BS-050
+**Next Brainstorming ID:** BS-053
 
 ---
 

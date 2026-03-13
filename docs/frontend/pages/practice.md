@@ -148,7 +148,7 @@ Toggle-style pill button. Uses `aria-pressed` for selected state.
 | **Base** | `inline-flex cursor-pointer items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors` |
 | **Focus** | `outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]` |
 | **Disabled** | `disabled:pointer-events-none disabled:opacity-50` |
-| **Unselected** | `border-foreground/45 bg-foreground/[0.07] text-foreground hover:bg-foreground/[0.10] dark:border-foreground/40` |
+| **Unselected** | `border-foreground/45 bg-foreground/[0.07] text-foreground hover:bg-foreground/[0.12] hover:border-foreground/60 dark:border-foreground/40 dark:hover:border-foreground/70` |
 | **Selected** | `border-primary bg-primary text-primary-foreground` |
 
 ### SegmentedControl (`components/ui/segmented-control.tsx`)
@@ -245,7 +245,7 @@ type PracticeFilters = {
 | Unselected border | `border-foreground/45` + `dark:border-foreground/40` | #707070 (dark override) | ~3.40:1 vs current `bg-foreground/5` parent (`#1D1D1D`) | Passes 3:1 in dark mode; light-mode base token is `border-foreground/45` |
 | Unselected fill | `bg-foreground/[0.07]` | ~#2C2C2C on the current `bg-foreground/5` parent | ~1.21:1 vs parent | Adds rest-state surface depth without replacing the border as the required boundary |
 | Unselected text | `text-foreground` | #EDEDED | ~11.93:1 vs chip fill | Full-weight interactive label hierarchy with ample AA margin |
-| Unselected hover | `hover:bg-foreground/[0.10]` | ~#323232 on the current `bg-foreground/5` parent | — | Foreground-based hover ramp stays monotonic and remains visibly above the 7% rest fill |
+| Unselected hover | `hover:bg-foreground/[0.12] dark:hover:border-foreground/70` | ~#363636 on the current `bg-foreground/5` parent | — | Foreground-based hover ramp stays monotonic above the 7% rest fill, while the dark hover border brightens distinctly; light mode adds `hover:border-foreground/60` |
 | Selected fill | `bg-primary` | #EDEDED | — | High contrast |
 | Selected text | `text-primary-foreground` | #090909 | ~17:1 vs primary | AA pass |
 | Selected border | `border-primary` | #EDEDED | — | Matches fill |
@@ -274,7 +274,7 @@ Resolved on 2026-03-09 and later refined by [DEBT-291](../../_archive/debt/debt-
 | Filter container (`<details>`) | `bg-foreground/5` (no border) | Border removed, tonal fill defines the nested surface |
 | FilterChip unselected fill | `bg-foreground/[0.07]` | Adds rest-state depth above the tonal parent without replacing the border as the required boundary |
 | FilterChip unselected text | `text-foreground` | Promotes chip labels to primary interactive hierarchy while raising contrast to ~11.93:1 dark / ~15.54:1 light |
-| FilterChip unselected hover | `hover:bg-foreground/[0.10]` | Monotonic foreground-based hover ramp above the 7% rest fill |
+| FilterChip unselected hover | `hover:bg-foreground/[0.12]` + `hover:border-foreground/60` + `dark:hover:border-foreground/70` | Monotonic foreground-based hover ramp above the 7% rest fill plus a clearer edge-level hover cue |
 | Filter summary metadata text | `text-foreground/60` | Keeps zero-state outcome copy / nonzero summary counts secondary but AA-compliant on `bg-foreground/5` |
 | Filter footer count text | `text-foreground/60` | Keeps expanded-state `({N} selected)` subordinate without falling below AA on the tonal parent |
 | FilterChip base cursor | `cursor-pointer` | Restores the expected browser affordance for clickable chips |

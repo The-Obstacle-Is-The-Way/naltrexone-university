@@ -2,8 +2,8 @@
 
 **Purpose:** Board-style questions for Addiction Psychiatry certification exam prep.
 
-**Version:** 1.9
-**Last Updated:** March 6, 2026
+**Version:** 1.10
+**Last Updated:** March 13, 2026
 
 **Related Files:**
 - `META.MD` - Full NBME quality standards, technical flaw taxonomy (Part 2)
@@ -20,6 +20,7 @@
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.10 | 2026-03-13 | Clarified wrong-answer explanation rule: do not prefix with choice text (full text or short labels before a colon); start directly with reasoning. |
 | 1.9 | 2026-03-06 | Added explicit wrong-answer explanation authoring rules to the quality checklist (do not restate full choice text; every wrong answer requires an explanation) |
 | 1.8 | 2026-02-18 | Synced with QUESTION-FORMAT-SPEC.md and runtime importer behavior (2-5 choices allowed, validation commands updated, legacy skill-file references removed) |
 | 1.7 | 2026-02-18 | Fixed broken legacy skill-file reference, added QUESTION-FORMAT-SPEC.md and TAG-TAXONOMY.md cross-references, added strict frontmatter note, treatments guidance |
@@ -296,7 +297,7 @@ Before finalizing questions:
 - [ ] `answer` is in frontmatter (A, B, C, D, or E)
 - [ ] `substances` and `topics` are arrays (use brackets even for single values)
 - [ ] Explanation covers correct answer AND why others are wrong
-- [ ] Wrong-answer explanations do NOT restate the full choice text (start with reasoning)
+- [ ] Wrong-answer explanations do NOT prefix with any form of the choice text (no full text, no short labels before a colon; start directly with reasoning)
 - [ ] Every wrong answer has an explanation (missing ones hide the section in the UI)
 - [ ] Vignettes follow logical clinical order
 - [ ] Lead-in is focused (passes cover-the-options test)

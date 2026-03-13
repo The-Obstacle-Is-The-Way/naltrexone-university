@@ -327,7 +327,7 @@ Toggle-style filter for tags, modes, difficulty levels.
 
 **Unselected:**
 ```
-border-foreground/45 bg-foreground/[0.07] text-foreground hover:bg-foreground/[0.10] dark:border-foreground/40
+border-foreground/45 bg-foreground/[0.07] text-foreground hover:bg-foreground/[0.12] hover:border-foreground/60 dark:border-foreground/40 dark:hover:border-foreground/70
 ```
 
 **Selected:**
@@ -344,8 +344,8 @@ disabled:pointer-events-none disabled:opacity-50
 
 **Source:** `components/ui/filter-chip.tsx`
 
-**Design rationale:** Unselected chips keep their border as the required boundary, but now add a subtle rest fill (`bg-foreground/[0.07]`) so they read as interactive toggle surfaces instead of transparent labels floating on the parent tonal container. On the practice tonal-fill parent (`bg-foreground/5`), `border-foreground/45` clears SC 1.4.11 in light mode, `dark:border-foreground/40` preserves the compliant dark-mode override, `text-foreground` restores primary interactive-label hierarchy while raising text contrast well above AA, `hover:bg-foreground/[0.10]` keeps the hover ramp on the same monotonic foreground scale, and `cursor-pointer` restores the expected browser affordance for a clickable button.
-**Status:** Implemented in `components/ui/filter-chip.tsx` (DEBT-290, DEBT-291, DEBT-294, DEBT-295).
+**Design rationale:** Unselected chips keep their border as the required boundary, but now add a subtle rest fill (`bg-foreground/[0.07]`) so they read as interactive toggle surfaces instead of transparent labels floating on the parent tonal container. On the practice tonal-fill parent (`bg-foreground/5`), `border-foreground/45` clears SC 1.4.11 in light mode, `dark:border-foreground/40` preserves the compliant dark-mode override, `text-foreground` restores primary interactive-label hierarchy while raising text contrast well above AA, `hover:bg-foreground/[0.12]` keeps the hover ramp on the same monotonic foreground scale, `hover:border-foreground/60 dark:hover:border-foreground/70` adds a clearer edge-level hover cue for dense chip groups, and `cursor-pointer` restores the expected browser affordance for a clickable button.
+**Status:** Implemented in `components/ui/filter-chip.tsx` (DEBT-290, DEBT-291, DEBT-294, DEBT-295, DEBT-309).
 
 ### I-5: Segmented Control Item
 
@@ -1340,7 +1340,7 @@ Compact lookup for code reviews and implementation.
 | I-1 | Row in Card | `hover:bg-foreground/[0.08]` | `rounded-xl` | tonal-fill variant omits border |
 | I-2 | Standalone Row | `hover:bg-foreground/[0.12]` | `rounded-2xl` | tonal-fill variant omits border |
 | I-3 | Choice Button | `hover:bg-muted/40` (+ `dark:hover:bg-foreground/8 dark:hover:border-foreground/55`) | `rounded-xl` | `border-border/60 dark:border-foreground/40` |
-| I-4 | Filter Chip | `hover:bg-foreground/[0.10]` | `rounded-full` | `border-foreground/45 dark:border-foreground/40` |
+| I-4 | Filter Chip | `hover:bg-foreground/[0.12]` (+ `hover:border-foreground/60 dark:hover:border-foreground/70`) | `rounded-full` | `border-foreground/45 dark:border-foreground/40` |
 | I-5 | Tab Switch Item | `hover:bg-muted/50` | `rounded-md` | Container uses `border-border` |
 | I-6 | Icon Toggle | `hover:text-foreground` | — | — |
 | L-1 | Nav Link | `hover:text-foreground` | `rounded-md` | — |
