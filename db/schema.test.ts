@@ -1,4 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
+import type {
+  NewPendingStripeCancellation,
+  PendingStripeCancellation,
+  pendingStripeCancellations,
+} from './schema';
 import {
   PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,
   practiceSessions,
@@ -82,5 +87,16 @@ describe('practiceSessions schema indexes', () => {
     expect(indexes.userIncompleteUq.config.name).toBe(
       PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,
     );
+  });
+});
+
+describe('db schema exports', () => {
+  it('exports select and insert aliases for pendingStripeCancellations', () => {
+    expectTypeOf<PendingStripeCancellation>().toEqualTypeOf<
+      typeof pendingStripeCancellations.$inferSelect
+    >();
+    expectTypeOf<NewPendingStripeCancellation>().toEqualTypeOf<
+      typeof pendingStripeCancellations.$inferInsert
+    >();
   });
 });

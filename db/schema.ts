@@ -609,6 +609,11 @@ export type NewClerkEvent = typeof clerkEvents.$inferInsert;
 export type DeletedClerkUser = typeof deletedClerkUsers.$inferSelect;
 export type NewDeletedClerkUser = typeof deletedClerkUsers.$inferInsert;
 
+export type PendingStripeCancellation =
+  typeof pendingStripeCancellations.$inferSelect;
+export type NewPendingStripeCancellation =
+  typeof pendingStripeCancellations.$inferInsert;
+
 export type Question = typeof questions.$inferSelect;
 export type NewQuestion = typeof questions.$inferInsert;
 
