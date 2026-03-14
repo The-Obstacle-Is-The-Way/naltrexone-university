@@ -1,4 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import {
+  STRIPE_SUBSCRIPTION_STATUSES,
+  type StripeSubscriptionStatus,
+} from '@/src/adapters/shared/stripe-types';
 import { createCheckoutSuccessAssertions } from './checkout-success-assertions';
 
 describe('checkout success assertions', () => {
@@ -127,17 +131,23 @@ describe('checkout success assertions', () => {
     ).toThrow('Expected Stripe subscription status');
   });
 
-  it('assertStripeSubscriptionStatus accepts known Stripe subscription statuses', () => {
+  it('assertStripeSubscriptionStatus accepts adapter-owned Stripe subscription statuses', () => {
     const assertions = createCheckoutSuccessAssertions((reason) => {
       throw new Error(reason);
     });
 
-    expect(() =>
-      assertions.assertStripeSubscriptionStatus(
-        'active',
-        'Expected Stripe subscription status',
-        {},
-      ),
-    ).not.toThrow();
+    const acceptAdapterOwnedStatus = (status: StripeSubscriptionStatus) => {
+      expect(() =>
+        assertions.assertStripeSubscriptionStatus(
+          status,
+          'Expected Stripe subscription status',
+          {},
+        ),
+      ).not.toThrow();
+    };
+
+    for (const status of STRIPE_SUBSCRIPTION_STATUSES) {
+      acceptAdapterOwnedStatus(status);
+    }
   });
 });
