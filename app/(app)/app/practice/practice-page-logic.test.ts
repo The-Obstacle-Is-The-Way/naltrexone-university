@@ -1219,6 +1219,41 @@ describe('practice-page-logic', () => {
       expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
     });
 
+    it('reports thrown session start errors while preserving error UI state', async () => {
+      const error = new Error('Boom');
+      const reportError = vi.fn();
+      const setSessionStartStatus = vi.fn();
+      const setSessionStartError = vi.fn();
+      const setIdempotencyKey = vi.fn();
+
+      await startSession({
+        sessionMode: 'tutor',
+        sessionCount: 20,
+        filters: {
+          tagSlugs: ['alcohol'],
+          difficulty: null,
+          status: 'unanswered',
+        },
+        idempotencyKey: 'idem_1',
+        createIdempotencyKey: () => 'idem_2',
+        setIdempotencyKey,
+        startPracticeSessionFn: async () => {
+          throw error;
+        },
+        reportError,
+        setSessionStartStatus,
+        setSessionStartError,
+        navigateTo: vi.fn(),
+      });
+
+      expect(reportError).toHaveBeenCalledWith(error, {
+        action: 'startSession',
+      });
+      expect(setSessionStartStatus).toHaveBeenCalledWith('error');
+      expect(setSessionStartError).toHaveBeenCalledWith('Boom');
+      expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
+    });
+
     it('returns without navigating when unmounted during startSession', async () => {
       const deferred =
         createDeferred<

@@ -63,6 +63,7 @@ export async function startSession(input: {
   startPracticeSessionFn: (
     input: unknown,
   ) => Promise<ActionResult<StartPracticeSessionOutput>>;
+  reportError?: (error: unknown, context: { action: string }) => void;
   setSessionStartStatus: (status: 'idle' | 'loading' | 'error') => void;
   setSessionStartError: (message: string | null) => void;
   navigateTo: (url: string) => void;
@@ -91,6 +92,7 @@ export async function startSession(input: {
   } catch (error) {
     if (!isMounted()) return;
 
+    input.reportError?.(error, { action: 'startSession' });
     input.setSessionStartStatus('error');
     input.setSessionStartError(getThrownErrorMessage(error));
     input.setIdempotencyKey(input.createIdempotencyKey());
