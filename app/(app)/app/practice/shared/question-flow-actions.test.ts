@@ -64,7 +64,6 @@ describe('question-flow-actions', () => {
   });
 
   it('resolves transitioned async action even when it throws', async () => {
-    vi.stubEnv('NODE_ENV', 'development');
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const promise = runTransitionedAsyncAction({
@@ -84,7 +83,6 @@ describe('question-flow-actions', () => {
     );
 
     consoleSpy.mockRestore();
-    vi.unstubAllEnvs();
   });
 
   it('reports unhandled transitioned async action errors in production and still resolves', async () => {
@@ -106,7 +104,34 @@ describe('question-flow-actions', () => {
     await expect(promise).resolves.toBeUndefined();
 
     expect(onUnhandledError).toHaveBeenCalledWith(error);
-    expect(consoleSpy).not.toHaveBeenCalled();
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'runTransitionedAsyncAction: unhandled error in run()',
+      error,
+    );
+
+    consoleSpy.mockRestore();
+    vi.unstubAllEnvs();
+  });
+
+  it('logs unhandled errors via console.error in production even without onUnhandledError callback', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const promise = runTransitionedAsyncAction({
+      startTransition: (fn) => {
+        fn();
+      },
+      run: async () => {
+        throw new Error('boom');
+      },
+    });
+
+    await expect(promise).resolves.toBeUndefined();
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'runTransitionedAsyncAction: unhandled error in run()',
+      expect.any(Error),
+    );
 
     consoleSpy.mockRestore();
     vi.unstubAllEnvs();

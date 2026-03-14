@@ -140,12 +140,10 @@ export function runTransitionedAsyncAction(input: {
       } catch (error) {
         // The caller owns error state; this prevents unhandled rejections.
         input.onUnhandledError?.(error);
-        if (process.env.NODE_ENV === 'development') {
-          console.error(
-            'runTransitionedAsyncAction: unhandled error in run()',
-            error,
-          );
-        }
+        console.error(
+          'runTransitionedAsyncAction: unhandled error in run()',
+          error,
+        );
       } finally {
         resolve();
       }
