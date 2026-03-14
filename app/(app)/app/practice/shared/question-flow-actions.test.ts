@@ -87,6 +87,31 @@ describe('question-flow-actions', () => {
     vi.unstubAllEnvs();
   });
 
+  it('reports unhandled transitioned async action errors in production and still resolves', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const error = new Error('boom');
+    const onUnhandledError = vi.fn();
+
+    const promise = runTransitionedAsyncAction({
+      startTransition: (fn) => {
+        fn();
+      },
+      run: async () => {
+        throw error;
+      },
+      onUnhandledError,
+    });
+
+    await expect(promise).resolves.toBeUndefined();
+
+    expect(onUnhandledError).toHaveBeenCalledWith(error);
+    expect(consoleSpy).not.toHaveBeenCalled();
+
+    consoleSpy.mockRestore();
+    vi.unstubAllEnvs();
+  });
+
   it('clears selection and submit state when question load returns non-ok after an async state mutation', async () => {
     let loadState: AsyncLoadStateWithIdle = { status: 'idle' };
     let selectedChoiceId: string | null = 'choice_1';
