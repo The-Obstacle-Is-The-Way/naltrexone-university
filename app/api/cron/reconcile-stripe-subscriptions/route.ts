@@ -12,6 +12,8 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
+const ROUTE = '/api/cron/reconcile-stripe-subscriptions';
+
 type AuthorizationTokenResult =
   | { ok: true; token: string }
   | {
@@ -61,7 +63,7 @@ export async function POST(req: Request) {
   if (!tokenResult.ok) {
     container.logger.warn(
       {
-        route: '/api/cron/reconcile-stripe-subscriptions',
+        route: ROUTE,
         reason: tokenResult.reason,
       },
       'Unauthorized cron request',
@@ -71,17 +73,14 @@ export async function POST(req: Request) {
 
   const cronSecret = container.env.CRON_SECRET ?? null;
   if (!cronSecret) {
-    container.logger.error(
-      { route: '/api/cron/reconcile-stripe-subscriptions' },
-      'CRON_SECRET is not configured',
-    );
+    container.logger.error({ route: ROUTE }, 'CRON_SECRET is not configured');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   if (!isValidCronToken(tokenResult.token, cronSecret)) {
     container.logger.warn(
       {
-        route: '/api/cron/reconcile-stripe-subscriptions',
+        route: ROUTE,
         reason: 'invalid_token',
       },
       'Unauthorized cron request',
@@ -111,7 +110,7 @@ export async function POST(req: Request) {
   } catch (error) {
     container.logger.error(
       {
-        route: '/api/cron/reconcile-stripe-subscriptions',
+        route: ROUTE,
         error: error instanceof Error ? error.message : String(error),
       },
       'Cron reconciliation rate limiter failed',
@@ -182,7 +181,7 @@ export async function POST(req: Request) {
   } catch (error) {
     container.logger.error(
       {
-        route: '/api/cron/reconcile-stripe-subscriptions',
+        route: ROUTE,
         error: error instanceof Error ? error.message : String(error),
       },
       'Failed to reconcile Stripe subscriptions',
