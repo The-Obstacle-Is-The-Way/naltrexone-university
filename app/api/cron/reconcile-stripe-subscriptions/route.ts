@@ -57,18 +57,6 @@ function parseBoolean(value: string | null, fallback: boolean): boolean {
 export async function POST(req: Request) {
   const container = createContainer();
 
-  const cronSecret = container.env.CRON_SECRET ?? null;
-  if (!cronSecret) {
-    container.logger.error(
-      { route: '/api/cron/reconcile-stripe-subscriptions' },
-      'CRON_SECRET is not configured',
-    );
-    return NextResponse.json(
-      { error: 'CRON_SECRET is not configured' },
-      { status: 503 },
-    );
-  }
-
   const tokenResult = getAuthorizationToken(req);
   if (!tokenResult.ok) {
     container.logger.warn(
@@ -77,6 +65,15 @@ export async function POST(req: Request) {
         reason: tokenResult.reason,
       },
       'Unauthorized cron request',
+    );
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const cronSecret = container.env.CRON_SECRET ?? null;
+  if (!cronSecret) {
+    container.logger.error(
+      { route: '/api/cron/reconcile-stripe-subscriptions' },
+      'CRON_SECRET is not configured',
     );
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

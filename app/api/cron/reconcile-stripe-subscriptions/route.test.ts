@@ -127,7 +127,7 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     );
   });
 
-  it('returns 503 when CRON_SECRET is not configured', async () => {
+  it('returns 401 when authorization header is missing even when CRON_SECRET is not configured', async () => {
     container.env.CRON_SECRET = undefined;
 
     const response = await POST(
@@ -136,12 +136,17 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
       }),
     );
 
-    expect(response.status).toBe(503);
-    await expect(response.json()).resolves.toEqual({
-      error: 'CRON_SECRET is not configured',
-    });
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({ error: 'Unauthorized' });
     expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
-    expect(container.logger.error).toHaveBeenCalledTimes(1);
+    expect(container.logger.warn).toHaveBeenCalledWith(
+      {
+        route: '/api/cron/reconcile-stripe-subscriptions',
+        reason: 'missing_authorization_header',
+      },
+      'Unauthorized cron request',
+    );
+    expect(container.logger.error).not.toHaveBeenCalled();
   });
 
   it('returns 401 when authorization header is missing', async () => {
