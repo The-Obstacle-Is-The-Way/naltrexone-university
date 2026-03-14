@@ -477,7 +477,9 @@ Re-run `pnpm db:seed` whenever the database's question/tag data may be out of sy
 
 ## 16. Seed Idempotency and Multi-Clone Safety
 
-The seed script is **fully idempotent** — running it multiple times with the same content produces the same result with no side effects.
+The seed script is idempotent for **question content upserts** — running it multiple times with the same MDX question content produces the same question rows and skips unchanged questions.
+
+**Important:** By default, every `pnpm db:seed` run also archives any `placeholder-%` rows unless `SEED_INCLUDE_PLACEHOLDERS=true`. That placeholder archival is a deliberate side effect and runs on every invocation.
 
 ### How it works
 
@@ -517,7 +519,7 @@ By default, `pnpm db:seed` **excludes** placeholder questions and archives any e
 
 ### What it does NOT do
 
-- **Does not prune stale files.** If you remove a question from a draft file and re-import, the old MDX file remains in `imported/`. This is harmless for seeding (the old question stays in the DB with its existing content), but can be confusing. To clean up: delete `content/questions/imported/` and re-import.
+- **Does not prune stale files.** If you remove a question from a draft file and re-import, the old MDX file remains in `imported/`. On the next seed, that stale file will still be read from `content/questions/**/*.mdx` and seeded into the database, which means stale questions can persist. To prevent that: delete `content/questions/imported/` before re-importing, then regenerate it from the latest drafts with `rm -rf content/questions/imported && pnpm content:import:drafts -- --status published`.
 - **Does not touch the database.** Import is a local file operation only. You must run `pnpm db:seed` separately.
 - **Does not read from `content/questions/`.** It reads drafts and writes MDX. The seed reads MDX.
 
