@@ -17,18 +17,12 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 **Audit batch (2026-03-13) — comprehensive codebase audit (verified via tracer bullets):**
 
-15 bug docs were filed in this batch (12 archived: BUG-206, BUG-207, BUG-208, BUG-209, BUG-210, BUG-215, BUG-217, BUG-218, BUG-219, BUG-220 resolved; BUG-211, BUG-216 invalidated). The priority buckets below are the source of truth for the 3 remaining.
-
-### P3 (Poor Practice / Low Risk)
-- [BUG-212](bug-212-bookmark-toggle-swallows-errors.md): Bookmark toggle collapses thrown and structured failures to generic UI without client-side logging; unknown server exceptions are still logged upstream
-- [BUG-213](bug-213-session-start-error-not-logged.md): Session-start thrown errors/timeouts surface to UI but are not reported client-side; expected controller failures already return structured results
-
-### P4 (Code Smell / Tech Debt)
-- [BUG-214](bug-214-production-errors-silenced-in-transition-action.md): `runTransitionedAsyncAction` dev-only logging (by design; all callers handle errors; DEBT-286 tracks Sentry)
+15 bug docs were filed in this batch (all 15 archived: 13 resolved, 2 invalidated). No remaining open bugs from this audit.
 
 ---
 
 **Latest archival (2026-03-14):**
+- BUG-212, BUG-213, BUG-214 verified fixed (PR #214): client-side error reporting — bookmark toggle, session start, and `runTransitionedAsyncAction` now log/report errors unconditionally with try/catch-hardened callbacks and mount-safe ordering, archived to `docs/_archive/bugs/`.
 - BUG-215, BUG-219, BUG-220 verified fixed (PR #215): dead code cleanup — consolidated `StripeSubscriptionStatus` to adapter-owned source, removed unused `SkipAuthGateway`, strengthened weak test assertions, archived to `docs/_archive/bugs/`.
 - BUG-207, BUG-210, BUG-217 verified fixed (PR #213): boundary hardening — cron auth ordering prevents config state leak, injectable clock for deterministic checkout session tests, UUID validation on `getPreviousAttempt` questionId, archived to `docs/_archive/bugs/`.
 - BUG-206 and BUG-218 verified fixed (PR #212): adapter error wrapping consistency — raw DB errors now wrapped in `ApplicationError` with `{ cause }`, idempotency parse errors now preserve original cause, archived to `docs/_archive/bugs/`.

@@ -64,7 +64,6 @@ describe('question-flow-actions', () => {
   });
 
   it('resolves transitioned async action even when it throws', async () => {
-    vi.stubEnv('NODE_ENV', 'development');
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const promise = runTransitionedAsyncAction({
@@ -84,7 +83,60 @@ describe('question-flow-actions', () => {
     );
 
     consoleSpy.mockRestore();
-    vi.unstubAllEnvs();
+  });
+
+  it('invokes onUnhandledError when run() throws and still resolves', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const error = new Error('boom');
+    const onUnhandledError = vi.fn();
+
+    const promise = runTransitionedAsyncAction({
+      startTransition: (fn) => {
+        fn();
+      },
+      run: async () => {
+        throw error;
+      },
+      onUnhandledError,
+    });
+
+    await expect(promise).resolves.toBeUndefined();
+
+    expect(onUnhandledError).toHaveBeenCalledWith(error);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'runTransitionedAsyncAction: unhandled error in run()',
+      error,
+    );
+
+    consoleSpy.mockRestore();
+  });
+
+  it('still logs the original error and resolves when onUnhandledError throws', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const error = new Error('boom');
+    const onUnhandledError = vi.fn(() => {
+      throw new Error('reporter failed');
+    });
+
+    const promise = runTransitionedAsyncAction({
+      startTransition: (fn) => {
+        fn();
+      },
+      run: async () => {
+        throw error;
+      },
+      onUnhandledError,
+    });
+
+    await expect(promise).resolves.toBeUndefined();
+
+    expect(onUnhandledError).toHaveBeenCalledWith(error);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'runTransitionedAsyncAction: unhandled error in run()',
+      error,
+    );
+
+    consoleSpy.mockRestore();
   });
 
   it('clears selection and submit state when question load returns non-ok after an async state mutation', async () => {

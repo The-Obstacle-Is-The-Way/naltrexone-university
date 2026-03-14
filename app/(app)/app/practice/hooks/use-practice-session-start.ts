@@ -129,6 +129,9 @@ export function usePracticeSessionStart(
         createIdempotencyKey: () => crypto.randomUUID(),
         setIdempotencyKey: setStartSessionIdempotencyKey,
         startPracticeSessionFn: startPracticeSession,
+        reportError: (error, context) => {
+          console.error('startSession failed:', error, context);
+        },
         setSessionStartStatus,
         setSessionStartError,
         navigateTo,

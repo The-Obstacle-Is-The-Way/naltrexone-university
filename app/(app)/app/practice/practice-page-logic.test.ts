@@ -865,6 +865,58 @@ describe('practice-page-logic', () => {
       );
     });
 
+    it('logs thrown toggle errors while preserving generic error UI state', async () => {
+      const error = new Error('Boom');
+      const logError = vi.fn();
+      const setBookmarkStatus = vi.fn();
+      const onBookmarkError = vi.fn();
+
+      await toggleBookmarkForQuestion({
+        question: createNextQuestion(),
+        toggleBookmarkFn: async () => {
+          throw error;
+        },
+        setBookmarkStatus,
+        setBookmarkedQuestionIds: vi.fn(),
+        onBookmarkError,
+        logError,
+      });
+
+      expect(logError).toHaveBeenCalledWith('Failed to toggle bookmark', error);
+      expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
+      expect(onBookmarkError).toHaveBeenCalledWith(
+        'Failed to save bookmark. Please try again.',
+      );
+    });
+
+    it('preserves generic bookmark error UI when logError throws for thrown errors', async () => {
+      const error = new Error('Boom');
+      const logError = vi.fn(() => {
+        throw new Error('logger failed');
+      });
+      const setBookmarkStatus = vi.fn();
+      const onBookmarkError = vi.fn();
+
+      await expect(
+        toggleBookmarkForQuestion({
+          question: createNextQuestion(),
+          toggleBookmarkFn: async () => {
+            throw error;
+          },
+          setBookmarkStatus,
+          setBookmarkedQuestionIds: vi.fn(),
+          onBookmarkError,
+          logError,
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(logError).toHaveBeenCalledWith('Failed to toggle bookmark', error);
+      expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
+      expect(onBookmarkError).toHaveBeenCalledWith(
+        'Failed to save bookmark. Please try again.',
+      );
+    });
+
     it('invokes error callback when toggle controller returns an error result', async () => {
       const setBookmarkStatus = vi.fn();
       const onBookmarkError = vi.fn();
@@ -879,6 +931,72 @@ describe('practice-page-logic', () => {
 
       expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
       expect(onBookmarkError).toHaveBeenCalledTimes(1);
+      expect(onBookmarkError).toHaveBeenCalledWith(
+        'Failed to save bookmark. Please try again.',
+      );
+    });
+
+    it('logs structured toggle failures while preserving generic error UI state', async () => {
+      const structuredError = {
+        code: 'INTERNAL_ERROR',
+        message: 'Boom',
+      } as const;
+      const logError = vi.fn();
+      const setBookmarkStatus = vi.fn();
+      const onBookmarkError = vi.fn();
+
+      await toggleBookmarkForQuestion({
+        question: createNextQuestion(),
+        toggleBookmarkFn: async () => ({
+          ok: false,
+          error: structuredError,
+        }),
+        setBookmarkStatus,
+        setBookmarkedQuestionIds: vi.fn(),
+        onBookmarkError,
+        logError,
+      });
+
+      expect(logError).toHaveBeenCalledWith(
+        'Failed to toggle bookmark',
+        structuredError,
+      );
+      expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
+      expect(onBookmarkError).toHaveBeenCalledWith(
+        'Failed to save bookmark. Please try again.',
+      );
+    });
+
+    it('preserves generic bookmark error UI when logError throws for structured failures', async () => {
+      const structuredError = {
+        code: 'INTERNAL_ERROR',
+        message: 'Boom',
+      } as const;
+      const logError = vi.fn(() => {
+        throw new Error('logger failed');
+      });
+      const setBookmarkStatus = vi.fn();
+      const onBookmarkError = vi.fn();
+
+      await expect(
+        toggleBookmarkForQuestion({
+          question: createNextQuestion(),
+          toggleBookmarkFn: async () => ({
+            ok: false,
+            error: structuredError,
+          }),
+          setBookmarkStatus,
+          setBookmarkedQuestionIds: vi.fn(),
+          onBookmarkError,
+          logError,
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(logError).toHaveBeenCalledWith(
+        'Failed to toggle bookmark',
+        structuredError,
+      );
+      expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
       expect(onBookmarkError).toHaveBeenCalledWith(
         'Failed to save bookmark. Please try again.',
       );
@@ -908,6 +1026,71 @@ describe('practice-page-logic', () => {
       expect(setBookmarkedQuestionIds).not.toHaveBeenCalled();
       expect(onBookmarkToggled).not.toHaveBeenCalled();
       expect(setBookmarkStatus).not.toHaveBeenCalledWith('idle');
+    });
+
+    it('logs thrown toggle errors after unmount without applying error UI state', async () => {
+      const deferred = createDeferred<ActionResult<{ bookmarked: boolean }>>();
+      const error = new Error('Boom');
+      let mounted = true;
+
+      const logError = vi.fn();
+      const setBookmarkStatus = vi.fn();
+      const onBookmarkError = vi.fn();
+
+      const promise = toggleBookmarkForQuestion({
+        question: createNextQuestion(),
+        toggleBookmarkFn: async () => deferred.promise,
+        setBookmarkStatus,
+        setBookmarkedQuestionIds: vi.fn(),
+        onBookmarkError,
+        logError,
+        isMounted: () => mounted,
+      });
+
+      mounted = false;
+      deferred.reject(error);
+      await promise;
+
+      expect(logError).toHaveBeenCalledWith('Failed to toggle bookmark', error);
+      expect(onBookmarkError).not.toHaveBeenCalled();
+      expect(setBookmarkStatus).not.toHaveBeenCalledWith('error');
+    });
+
+    it('logs structured toggle failures after unmount without applying error UI state', async () => {
+      const deferred = createDeferred<ActionResult<{ bookmarked: boolean }>>();
+      const structuredError = {
+        code: 'INTERNAL_ERROR',
+        message: 'Boom',
+      } as const;
+      let mounted = true;
+
+      const logError = vi.fn();
+      const setBookmarkStatus = vi.fn();
+      const onBookmarkError = vi.fn();
+
+      const promise = toggleBookmarkForQuestion({
+        question: createNextQuestion(),
+        toggleBookmarkFn: async () => deferred.promise,
+        setBookmarkStatus,
+        setBookmarkedQuestionIds: vi.fn(),
+        onBookmarkError,
+        logError,
+        isMounted: () => mounted,
+      });
+
+      mounted = false;
+      deferred.resolve({
+        ok: false,
+        error: structuredError,
+      });
+      await promise;
+
+      expect(logError).toHaveBeenCalledWith(
+        'Failed to toggle bookmark',
+        structuredError,
+      );
+      expect(onBookmarkError).not.toHaveBeenCalled();
+      expect(setBookmarkStatus).not.toHaveBeenCalledWith('error');
     });
   });
 
@@ -1164,6 +1347,80 @@ describe('practice-page-logic', () => {
       expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
     });
 
+    it('reports thrown session start errors while preserving error UI state', async () => {
+      const error = new Error('Boom');
+      const reportError = vi.fn();
+      const setSessionStartStatus = vi.fn();
+      const setSessionStartError = vi.fn();
+      const setIdempotencyKey = vi.fn();
+
+      await startSession({
+        sessionMode: 'tutor',
+        sessionCount: 20,
+        filters: {
+          tagSlugs: ['alcohol'],
+          difficulty: null,
+          status: 'unanswered',
+        },
+        idempotencyKey: 'idem_1',
+        createIdempotencyKey: () => 'idem_2',
+        setIdempotencyKey,
+        startPracticeSessionFn: async () => {
+          throw error;
+        },
+        reportError,
+        setSessionStartStatus,
+        setSessionStartError,
+        navigateTo: vi.fn(),
+      });
+
+      expect(reportError).toHaveBeenCalledWith(error, {
+        action: 'startSession',
+      });
+      expect(setSessionStartStatus).toHaveBeenCalledWith('error');
+      expect(setSessionStartError).toHaveBeenCalledWith('Boom');
+      expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
+    });
+
+    it('preserves session start error handling when reportError throws', async () => {
+      const error = new Error('Boom');
+      const reportError = vi.fn(() => {
+        throw new Error('reporter failed');
+      });
+      const setSessionStartStatus = vi.fn();
+      const setSessionStartError = vi.fn();
+      const setIdempotencyKey = vi.fn();
+
+      await expect(
+        startSession({
+          sessionMode: 'tutor',
+          sessionCount: 20,
+          filters: {
+            tagSlugs: ['alcohol'],
+            difficulty: null,
+            status: 'unanswered',
+          },
+          idempotencyKey: 'idem_1',
+          createIdempotencyKey: () => 'idem_2',
+          setIdempotencyKey,
+          startPracticeSessionFn: async () => {
+            throw error;
+          },
+          reportError,
+          setSessionStartStatus,
+          setSessionStartError,
+          navigateTo: vi.fn(),
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(reportError).toHaveBeenCalledWith(error, {
+        action: 'startSession',
+      });
+      expect(setSessionStartStatus).toHaveBeenCalledWith('error');
+      expect(setSessionStartError).toHaveBeenCalledWith('Boom');
+      expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
+    });
+
     it('returns without navigating when unmounted during startSession', async () => {
       const deferred =
         createDeferred<
@@ -1202,6 +1459,54 @@ describe('practice-page-logic', () => {
       await promise;
 
       expect(navigateTo).not.toHaveBeenCalled();
+    });
+
+    it('reports thrown session start errors after unmount without applying error UI state', async () => {
+      const deferred =
+        createDeferred<
+          ActionResult<{
+            sessionId: string;
+            requestedCount: number;
+            actualCount: number;
+          }>
+        >();
+      const error = new Error('Boom');
+      let mounted = true;
+
+      const reportError = vi.fn();
+      const setSessionStartStatus = vi.fn();
+      const setSessionStartError = vi.fn();
+      const setIdempotencyKey = vi.fn();
+
+      const promise = startSession({
+        sessionMode: 'exam',
+        sessionCount: 10,
+        filters: {
+          tagSlugs: ['opioids'],
+          difficulty: 'hard',
+          status: 'unanswered',
+        },
+        idempotencyKey: 'idem_1',
+        createIdempotencyKey: () => 'idem_2',
+        setIdempotencyKey,
+        startPracticeSessionFn: async () => deferred.promise,
+        reportError,
+        setSessionStartStatus,
+        setSessionStartError,
+        navigateTo: vi.fn(),
+        isMounted: () => mounted,
+      });
+
+      mounted = false;
+      deferred.reject(error);
+      await promise;
+
+      expect(reportError).toHaveBeenCalledWith(error, {
+        action: 'startSession',
+      });
+      expect(setSessionStartStatus).not.toHaveBeenCalledWith('error');
+      expect(setSessionStartError).not.toHaveBeenCalledWith('Boom');
+      expect(setIdempotencyKey).not.toHaveBeenCalledWith('idem_2');
     });
   });
 });
