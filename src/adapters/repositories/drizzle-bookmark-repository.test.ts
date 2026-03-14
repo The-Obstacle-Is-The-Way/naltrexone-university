@@ -1,3 +1,5 @@
+import type { SQL } from 'drizzle-orm';
+import { PgDialect } from 'drizzle-orm/pg-core';
 import { describe, expect, it, vi } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import { DrizzleBookmarkRepository } from './drizzle-bookmark-repository';
@@ -146,7 +148,15 @@ describe('DrizzleBookmarkRepository', () => {
       ]);
 
       const queryArgs = db._mocks.queryFindMany.mock.calls[0]?.[0];
-      expect(queryArgs?.orderBy).toBeDefined();
+      const orderBy = queryArgs?.orderBy;
+      expect(orderBy).toBeDefined();
+
+      if (!orderBy) {
+        throw new Error('Expected query to define an orderBy clause');
+      }
+
+      const orderBySql = new PgDialect().sqlToQuery(orderBy as SQL).sql;
+      expect(orderBySql).toMatch(/"bookmarks"\."created_at"\s+desc/i);
     });
   });
 });

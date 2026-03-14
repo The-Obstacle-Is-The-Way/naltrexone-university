@@ -1,5 +1,5 @@
-import type { StripeSubscriptionStatus } from '@/db/schema';
 import { isValidStripeSubscriptionStatus } from '@/src/adapters/gateways/stripe';
+import type { StripeSubscriptionStatus } from '@/src/adapters/shared/stripe-types';
 
 type AssertionContext = Record<string, unknown>;
 

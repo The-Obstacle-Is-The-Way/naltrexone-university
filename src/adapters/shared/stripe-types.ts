@@ -57,15 +57,18 @@ export type BillingPortalSessionCreateParams = {
 export type StripeBillingPortalSession = { url: string | null };
 
 export type StripeSubscription = unknown;
+export const STRIPE_SUBSCRIPTION_STATUSES = [
+  'active',
+  'canceled',
+  'incomplete',
+  'incomplete_expired',
+  'past_due',
+  'paused',
+  'trialing',
+  'unpaid',
+] as const;
 export type StripeSubscriptionStatus =
-  | 'active'
-  | 'canceled'
-  | 'incomplete'
-  | 'incomplete_expired'
-  | 'past_due'
-  | 'paused'
-  | 'trialing'
-  | 'unpaid';
+  (typeof STRIPE_SUBSCRIPTION_STATUSES)[number];
 export type StripeListedSubscription = {
   id?: string;
   status?: StripeSubscriptionStatus;
