@@ -4,6 +4,7 @@ import type { Logger } from '@/src/application/ports/logger';
 import type {
   ClerkEventRepository,
   DeletedClerkUserRepository,
+  PendingStripeCancellationRepository,
   StripeCustomerRepository,
   UserRepository,
 } from '@/src/application/ports/repositories';
@@ -17,6 +18,7 @@ export type ClerkWebhookEvent = {
 export type ClerkWebhookTransaction = {
   clerkEvents: ClerkEventRepository;
   deletedClerkUsers: DeletedClerkUserRepository;
+  pendingStripeCancellations: PendingStripeCancellationRepository;
   userRepository: UserRepository;
   stripeCustomerRepository: StripeCustomerRepository;
 };
@@ -138,7 +140,10 @@ function getPrimaryEmailOrNull(data: ClerkUserDataLike): string | null {
 
 const STACK_TRACE_LIMIT = 1000;
 
-type ClerkWebhookTxResult = { ok: true } | { ok: false; error: unknown };
+type ClerkWebhookPostCommitAction = {
+  eventId: string;
+  stripeCustomerId: string;
+};
 
 function toErrorData(error: unknown): string {
   if (isApplicationError(error)) {
@@ -169,6 +174,38 @@ function toErrorData(error: unknown): string {
   });
 }
 
+async function persistFailure(
+  deps: ClerkWebhookDeps,
+  event: ClerkWebhookEvent,
+  error: unknown,
+): Promise<void> {
+  const errorData = toErrorData(error);
+
+  try {
+    await deps.transaction(async ({ clerkEvents }) => {
+      await clerkEvents.claim(event.eventId, event.type);
+      const current = await clerkEvents.lock(event.eventId);
+
+      if (current.processedAt !== null && current.error === null) {
+        return;
+      }
+
+      await clerkEvents.markFailed(event.eventId, errorData);
+    });
+  } catch (persistError) {
+    deps.logger.error(
+      {
+        eventId: event.eventId,
+        error:
+          persistError instanceof Error
+            ? persistError.message
+            : String(persistError),
+      },
+      'Failed to persist Clerk webhook failure state',
+    );
+  }
+}
+
 export async function processClerkWebhook(
   deps: ClerkWebhookDeps,
   event: ClerkWebhookEvent,
@@ -177,31 +214,34 @@ export async function processClerkWebhook(
     return;
   }
 
-  const txResult = await deps.transaction(
-    async ({
-      clerkEvents,
-      deletedClerkUsers,
-      userRepository,
-      stripeCustomerRepository,
-    }): Promise<ClerkWebhookTxResult> => {
-      const claimed = await clerkEvents.claim(event.eventId, event.type);
-      if (!claimed) {
-        const snapshot = await clerkEvents.peek(event.eventId);
-        if (
-          snapshot &&
-          snapshot.processedAt !== null &&
-          snapshot.error === null
-        ) {
-          return { ok: true };
+  let postCommitAction: ClerkWebhookPostCommitAction | null = null;
+
+  try {
+    postCommitAction = await deps.transaction(
+      async ({
+        clerkEvents,
+        deletedClerkUsers,
+        pendingStripeCancellations,
+        userRepository,
+        stripeCustomerRepository,
+      }): Promise<ClerkWebhookPostCommitAction | null> => {
+        const claimed = await clerkEvents.claim(event.eventId, event.type);
+        if (!claimed) {
+          const snapshot = await clerkEvents.peek(event.eventId);
+          if (
+            snapshot &&
+            snapshot.processedAt !== null &&
+            snapshot.error === null
+          ) {
+            return null;
+          }
         }
-      }
 
-      const current = await clerkEvents.lock(event.eventId);
-      if (current.processedAt !== null && current.error === null) {
-        return { ok: true };
-      }
+        const current = await clerkEvents.lock(event.eventId);
+        if (current.processedAt !== null && current.error === null) {
+          return null;
+        }
 
-      try {
         if (event.type === 'user.updated') {
           const parsed = clerkUserUpdatedDataSchema.safeParse(event.data);
           if (!parsed.success) {
@@ -224,7 +264,7 @@ export async function processClerkWebhook(
 
           if (await deletedClerkUsers.exists(clerkUserId)) {
             await clerkEvents.markProcessed(event.eventId);
-            return { ok: true };
+            return null;
           }
 
           const email = getPrimaryEmailOrNull(data);
@@ -234,7 +274,7 @@ export async function processClerkWebhook(
               'Clerk user.updated missing email; skipping user upsert',
             );
             await clerkEvents.markProcessed(event.eventId);
-            return { ok: true };
+            return null;
           }
 
           const observedAtMs =
@@ -253,7 +293,7 @@ export async function processClerkWebhook(
           }
 
           await clerkEvents.markProcessed(event.eventId);
-          return { ok: true };
+          return null;
         }
 
         const parsed = clerkUserDeletedDataSchema.safeParse(event.data);
@@ -272,35 +312,67 @@ export async function processClerkWebhook(
           );
         }
 
+        const pendingCancellation =
+          await pendingStripeCancellations.findByEventId(event.eventId);
+
+        if (pendingCancellation) {
+          return {
+            eventId: event.eventId,
+            stripeCustomerId: pendingCancellation.stripeCustomerId,
+          };
+        }
+
         await deletedClerkUsers.lock(clerkUserId);
         const user = await userRepository.lockByClerkId(clerkUserId);
+        let stripeCustomerId: string | null = null;
 
         if (user) {
           const stripeCustomer = await stripeCustomerRepository.findByUserId(
             user.id,
           );
-
-          if (stripeCustomer) {
-            await deps.cancelStripeCustomerSubscriptions(
-              stripeCustomer.stripeCustomerId,
-            );
-          }
+          stripeCustomerId = stripeCustomer?.stripeCustomerId ?? null;
 
           await userRepository.deleteByClerkId(clerkUserId);
         }
 
         await deletedClerkUsers.markDeleted(clerkUserId);
 
-        await clerkEvents.markProcessed(event.eventId);
-        return { ok: true };
-      } catch (error) {
-        await clerkEvents.markFailed(event.eventId, toErrorData(error));
-        return { ok: false, error };
-      }
-    },
-  );
+        if (!stripeCustomerId) {
+          await clerkEvents.markProcessed(event.eventId);
+          return null;
+        }
 
-  if (!txResult.ok) {
-    throw txResult.error;
+        await pendingStripeCancellations.schedule(
+          event.eventId,
+          stripeCustomerId,
+        );
+        return { eventId: event.eventId, stripeCustomerId };
+      },
+    );
+  } catch (error) {
+    await persistFailure(deps, event, error);
+    throw error;
+  }
+
+  if (!postCommitAction) {
+    return;
+  }
+
+  try {
+    await deps.cancelStripeCustomerSubscriptions(
+      postCommitAction.stripeCustomerId,
+    );
+
+    await deps.transaction(
+      async ({ clerkEvents, pendingStripeCancellations }) => {
+        await pendingStripeCancellations.deleteByEventId(
+          postCommitAction.eventId,
+        );
+        await clerkEvents.markProcessed(postCommitAction.eventId);
+      },
+    );
+  } catch (error) {
+    await persistFailure(deps, event, error);
+    throw error;
   }
 }

@@ -11,6 +11,7 @@ import {
   FakeClerkEventRepository,
   FakeDeletedClerkUserRepository,
   FakeLogger,
+  FakePendingStripeCancellationRepository,
   FakeStripeCustomerRepository,
   FakeUserRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -35,10 +36,13 @@ function createTestDeps() {
   const stripeCustomerRepository = new FakeStripeCustomerRepository();
   const clerkEvents = new FakeClerkEventRepository();
   const deletedClerkUsers = new FakeDeletedClerkUserRepository();
+  const pendingStripeCancellations =
+    new FakePendingStripeCancellationRepository();
   const transaction = vi.fn(async (fn) =>
     fn({
       clerkEvents,
       deletedClerkUsers,
+      pendingStripeCancellations,
       userRepository,
       stripeCustomerRepository,
     }),

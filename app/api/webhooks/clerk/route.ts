@@ -45,6 +45,8 @@ export const POST = createWebhookHandler(
           fn({
             clerkEvents: container.createClerkEventRepository(tx),
             deletedClerkUsers: container.createDeletedClerkUserRepository(tx),
+            pendingStripeCancellations:
+              container.createPendingStripeCancellationRepository(tx),
             userRepository: container.createUserRepository(tx),
             stripeCustomerRepository:
               container.createStripeCustomerRepository(tx),

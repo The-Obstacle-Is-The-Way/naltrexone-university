@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-13
+**Last Updated:** 2026-03-14
 
 ---
 
@@ -24,7 +24,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 - ~~[BUG-216](bug-216-health-handler-imports-drizzle-orm.md)~~: Health handler's direct Drizzle `SELECT 1` probe is framework-layer code explicitly required by the master spec; not a Clean Architecture bug
 
 ### Resolved (Pending Archival)
-- [BUG-208](bug-208-clerk-webhook-deletion-not-transactional.md): Fixed with a transaction seam plus `lockByClerkId(...)`, closing the Stripe-mapping race during `user.deleted`
+- [BUG-208](bug-208-clerk-webhook-deletion-not-transactional.md): Fixed with a transaction seam, `lockByClerkId(...)`, and durable post-commit Stripe cancellation state for `user.deleted`
 - [BUG-209](bug-209-clerk-webhook-lacks-idempotency.md): Fixed with `svix-id` preservation, `clerk_events` delivery dedup, `deleted_clerk_users` tombstones, and per-`clerkUserId` transaction locks
 
 ### P3 (Poor Practice / Low Risk)

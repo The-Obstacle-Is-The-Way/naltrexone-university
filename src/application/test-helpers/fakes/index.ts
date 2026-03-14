@@ -9,6 +9,7 @@ export {
 } from './fake-gateways';
 export { FakeIdempotencyKeyRepository } from './fake-idempotency-key-repository';
 export { FakeLogger } from './fake-logger';
+export { FakePendingStripeCancellationRepository } from './fake-pending-stripe-cancellation-repository';
 export { FakePracticeSessionRepository } from './fake-practice-session-repository';
 export { FakeQuestionRepository } from './fake-question-repository';
 export { FakeStripeCustomerRepository } from './fake-stripe-customer-repository';

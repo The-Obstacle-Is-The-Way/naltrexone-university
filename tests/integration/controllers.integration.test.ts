@@ -19,6 +19,7 @@ import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-at
 import { DrizzleClerkEventRepository } from '@/src/adapters/repositories/drizzle-clerk-event-repository';
 import { DrizzleDeletedClerkUserRepository } from '@/src/adapters/repositories/drizzle-deleted-clerk-user-repository';
 import { DrizzleIdempotencyKeyRepository } from '@/src/adapters/repositories/drizzle-idempotency-key-repository';
+import { DrizzlePendingStripeCancellationRepository } from '@/src/adapters/repositories/drizzle-pending-stripe-cancellation-repository';
 import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/drizzle-practice-session-repository';
 import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-question-repository';
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
@@ -921,6 +922,8 @@ describe('clerk webhook controller (integration)', () => {
     const deletedClerkUserRepository = new DrizzleDeletedClerkUserRepository(
       db,
     );
+    const pendingStripeCancellationRepository =
+      new DrizzlePendingStripeCancellationRepository(db);
     const stripeCustomerRepository = new DrizzleStripeCustomerRepository(db);
 
     const deps = {
@@ -928,6 +931,7 @@ describe('clerk webhook controller (integration)', () => {
         fn: (tx: {
           clerkEvents: DrizzleClerkEventRepository;
           deletedClerkUsers: DrizzleDeletedClerkUserRepository;
+          pendingStripeCancellations: DrizzlePendingStripeCancellationRepository;
           userRepository: DrizzleUserRepository;
           stripeCustomerRepository: DrizzleStripeCustomerRepository;
         }) => Promise<T>,
@@ -936,6 +940,8 @@ describe('clerk webhook controller (integration)', () => {
           fn({
             clerkEvents: new DrizzleClerkEventRepository(tx),
             deletedClerkUsers: new DrizzleDeletedClerkUserRepository(tx),
+            pendingStripeCancellations:
+              new DrizzlePendingStripeCancellationRepository(tx),
             userRepository: new DrizzleUserRepository(tx),
             stripeCustomerRepository: new DrizzleStripeCustomerRepository(tx),
           }),
@@ -970,6 +976,9 @@ describe('clerk webhook controller (integration)', () => {
       error: null,
     });
     await expect(
+      pendingStripeCancellationRepository.findByEventId(eventId),
+    ).resolves.toBeNull();
+    await expect(
       stripeCustomerRepository.findByUserId(user.id),
     ).resolves.toBeNull();
     await expect(
@@ -977,6 +986,95 @@ describe('clerk webhook controller (integration)', () => {
         where: eq(schema.stripeSubscriptions.userId, user.id),
       }),
     ).resolves.toBeUndefined();
+  });
+
+  it('retries a pending Stripe cancellation after the local delete already committed', async () => {
+    const user = await createUser();
+    const stripeCustomerId = `cus_${randomUUID().replaceAll('-', '')}`;
+    const eventId = `evt_${randomUUID().replaceAll('-', '')}`;
+
+    await db.insert(schema.stripeCustomers).values({
+      userId: user.id,
+      stripeCustomerId,
+    });
+
+    const clerkEventRepository = new DrizzleClerkEventRepository(db);
+    const deletedClerkUserRepository = new DrizzleDeletedClerkUserRepository(
+      db,
+    );
+    const pendingStripeCancellationRepository =
+      new DrizzlePendingStripeCancellationRepository(db);
+    const userRepository = new DrizzleUserRepository(db);
+
+    let shouldFailCancel = true;
+    const cancelStripeCustomerSubscriptions = vi.fn(async () => {
+      if (shouldFailCancel) {
+        throw new Error('stripe cancel failed');
+      }
+    });
+
+    const deps = {
+      transaction: async <T>(
+        fn: (tx: {
+          clerkEvents: DrizzleClerkEventRepository;
+          deletedClerkUsers: DrizzleDeletedClerkUserRepository;
+          pendingStripeCancellations: DrizzlePendingStripeCancellationRepository;
+          userRepository: DrizzleUserRepository;
+          stripeCustomerRepository: DrizzleStripeCustomerRepository;
+        }) => Promise<T>,
+      ) =>
+        db.transaction(async (tx) =>
+          fn({
+            clerkEvents: new DrizzleClerkEventRepository(tx),
+            deletedClerkUsers: new DrizzleDeletedClerkUserRepository(tx),
+            pendingStripeCancellations:
+              new DrizzlePendingStripeCancellationRepository(tx),
+            userRepository: new DrizzleUserRepository(tx),
+            stripeCustomerRepository: new DrizzleStripeCustomerRepository(tx),
+          }),
+        ),
+      cancelStripeCustomerSubscriptions,
+      logger: new FakeLogger(),
+    };
+
+    const event: ClerkWebhookEvent = {
+      eventId,
+      type: 'user.deleted',
+      data: { id: user.clerkUserId },
+    };
+
+    cleanup.clerkEventIds.push(eventId);
+    cleanup.deletedClerkUserIds.push(user.clerkUserId);
+
+    await expect(processClerkWebhook(deps, event)).rejects.toThrow(
+      'stripe cancel failed',
+    );
+
+    await expect(
+      userRepository.findByClerkId(user.clerkUserId),
+    ).resolves.toBeNull();
+    await expect(
+      deletedClerkUserRepository.exists(user.clerkUserId),
+    ).resolves.toBe(true);
+    await expect(
+      pendingStripeCancellationRepository.findByEventId(eventId),
+    ).resolves.toEqual({ stripeCustomerId });
+    await expect(clerkEventRepository.peek(eventId)).resolves.toMatchObject({
+      processedAt: null,
+      error: expect.stringContaining('stripe cancel failed'),
+    });
+
+    shouldFailCancel = false;
+    await expect(processClerkWebhook(deps, event)).resolves.toBeUndefined();
+
+    expect(cancelStripeCustomerSubscriptions).toHaveBeenCalledTimes(2);
+    await expect(
+      pendingStripeCancellationRepository.findByEventId(eventId),
+    ).resolves.toBeNull();
+    await expect(clerkEventRepository.peek(eventId)).resolves.toMatchObject({
+      processedAt: expect.any(Date),
+      error: null,
+    });
   });
 
   it('ignores replayed user.updated deliveries after user.deleted', async () => {
@@ -997,6 +1095,7 @@ describe('clerk webhook controller (integration)', () => {
         fn: (tx: {
           clerkEvents: DrizzleClerkEventRepository;
           deletedClerkUsers: DrizzleDeletedClerkUserRepository;
+          pendingStripeCancellations: DrizzlePendingStripeCancellationRepository;
           userRepository: DrizzleUserRepository;
           stripeCustomerRepository: DrizzleStripeCustomerRepository;
         }) => Promise<T>,
@@ -1005,6 +1104,8 @@ describe('clerk webhook controller (integration)', () => {
           fn({
             clerkEvents: new DrizzleClerkEventRepository(tx),
             deletedClerkUsers: new DrizzleDeletedClerkUserRepository(tx),
+            pendingStripeCancellations:
+              new DrizzlePendingStripeCancellationRepository(tx),
             userRepository: new DrizzleUserRepository(tx),
             stripeCustomerRepository: new DrizzleStripeCustomerRepository(tx),
           }),

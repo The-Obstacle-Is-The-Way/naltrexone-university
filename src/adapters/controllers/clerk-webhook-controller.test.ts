@@ -5,6 +5,7 @@ import {
   FakeClerkEventRepository,
   FakeDeletedClerkUserRepository,
   FakeLogger,
+  FakePendingStripeCancellationRepository,
   FakeStripeCustomerRepository,
   FakeUserRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -104,6 +105,16 @@ class ThrowingUserRepository extends FakeUserRepository {
   }
 
   override async upsertByClerkId(): Promise<never> {
+    throw this.error;
+  }
+}
+
+class DeleteFailingUserRepository extends FakeUserRepository {
+  constructor(private readonly error: unknown) {
+    super();
+  }
+
+  override async deleteByClerkId(): Promise<boolean> {
     throw this.error;
   }
 }
@@ -276,18 +287,22 @@ function createDeps() {
   const logger = new FakeLogger();
   const clerkEvents = new FakeClerkEventRepository();
   const deletedClerkUsers = new FakeDeletedClerkUserRepository();
+  const pendingStripeCancellations =
+    new FakePendingStripeCancellationRepository();
   const userRepository = new FakeUserRepository();
   const stripeCustomerRepository = new FakeStripeCustomerRepository();
 
   return {
     clerkEvents,
     deletedClerkUsers,
+    pendingStripeCancellations,
     userRepository,
     stripeCustomerRepository,
     transaction: async <T>(
       fn: (tx: {
         clerkEvents: FakeClerkEventRepository;
         deletedClerkUsers: FakeDeletedClerkUserRepository;
+        pendingStripeCancellations: FakePendingStripeCancellationRepository;
         userRepository: FakeUserRepository;
         stripeCustomerRepository: FakeStripeCustomerRepository;
       }) => Promise<T>,
@@ -295,6 +310,7 @@ function createDeps() {
       fn({
         clerkEvents,
         deletedClerkUsers,
+        pendingStripeCancellations,
         userRepository,
         stripeCustomerRepository,
       }),
@@ -495,6 +511,71 @@ describe('processClerkWebhook', () => {
     ).resolves.toBeNull();
   });
 
+  it('does not cancel Stripe subscriptions when local user deletion fails', async () => {
+    const deleteError = new Error('delete failed');
+    const clerkEvents = new FakeClerkEventRepository();
+    const deletedClerkUsers = new FakeDeletedClerkUserRepository();
+    const pendingStripeCancellations =
+      new FakePendingStripeCancellationRepository();
+    const userRepository = new DeleteFailingUserRepository(deleteError);
+    const stripeCustomerRepository = new FakeStripeCustomerRepository();
+    const cancelCalls: string[] = [];
+
+    const user = await userRepository.upsertByClerkId(
+      'clerk_delete_failure',
+      'delete-failure@example.com',
+    );
+    await stripeCustomerRepository.insert(user.id, 'cus_delete_failure');
+
+    const deps = {
+      clerkEvents,
+      deletedClerkUsers,
+      userRepository,
+      stripeCustomerRepository,
+      transaction: async <T>(
+        fn: (tx: {
+          clerkEvents: FakeClerkEventRepository;
+          deletedClerkUsers: FakeDeletedClerkUserRepository;
+          pendingStripeCancellations: FakePendingStripeCancellationRepository;
+          userRepository: DeleteFailingUserRepository;
+          stripeCustomerRepository: FakeStripeCustomerRepository;
+        }) => Promise<T>,
+      ) =>
+        fn({
+          clerkEvents,
+          deletedClerkUsers,
+          pendingStripeCancellations,
+          userRepository,
+          stripeCustomerRepository,
+        }),
+      cancelStripeCustomerSubscriptions: async (stripeCustomerId: string) => {
+        cancelCalls.push(stripeCustomerId);
+      },
+      logger: new FakeLogger(),
+    };
+
+    await expect(
+      processClerkWebhook(
+        deps,
+        withEventId(
+          {
+            type: 'user.deleted',
+            data: { id: 'clerk_delete_failure' },
+          },
+          'evt_user_deleted_delete_failure',
+        ),
+      ),
+    ).rejects.toBe(deleteError);
+
+    expect(cancelCalls).toEqual([]);
+    await expect(
+      userRepository.findByClerkId('clerk_delete_failure'),
+    ).resolves.toMatchObject({ email: 'delete-failure@example.com' });
+    await expect(
+      deletedClerkUsers.exists('clerk_delete_failure'),
+    ).resolves.toBe(false);
+  });
+
   it('does nothing for user.deleted when the user does not exist in the database', async () => {
     const deps = createDeps();
 
@@ -539,6 +620,44 @@ describe('processClerkWebhook', () => {
     ).resolves.toBeNull();
   });
 
+  it('keeps the local delete committed when post-commit Stripe cancellation fails', async () => {
+    const deps = createDeps();
+    const user = await deps.userRepository.upsertByClerkId(
+      'clerk_post_commit_cancel',
+      'post-commit@example.com',
+    );
+    await deps.stripeCustomerRepository.insert(user.id, 'cus_post_commit');
+
+    let shouldFailCancel = true;
+    deps.cancelStripeCustomerSubscriptions = async () => {
+      if (shouldFailCancel) {
+        throw new Error('stripe cancel failed');
+      }
+    };
+
+    const event = withEventId(
+      {
+        type: 'user.deleted',
+        data: { id: 'clerk_post_commit_cancel' },
+      },
+      'evt_user_deleted_post_commit_cancel',
+    );
+
+    await expect(processClerkWebhook(deps, event)).rejects.toThrow(
+      'stripe cancel failed',
+    );
+
+    await expect(
+      deps.userRepository.findByClerkId('clerk_post_commit_cancel'),
+    ).resolves.toBeNull();
+    await expect(
+      deps.deletedClerkUsers.exists('clerk_post_commit_cancel'),
+    ).resolves.toBe(true);
+
+    shouldFailCancel = false;
+    await expect(processClerkWebhook(deps, event)).resolves.toBeUndefined();
+  });
+
   it('prevents a Stripe mapping from appearing after user.deleted has already checked for one', async () => {
     const userRepository = new DeletionBarrierUserRepository();
     const stripeCustomerRepository = new ConcurrentStripeSyncRepository(
@@ -547,16 +666,20 @@ describe('processClerkWebhook', () => {
     const cancelCalls: string[] = [];
     const clerkEvents = new FakeClerkEventRepository();
     const deletedClerkUsers = new FakeDeletedClerkUserRepository();
+    const pendingStripeCancellations =
+      new FakePendingStripeCancellationRepository();
 
     const deps = {
       clerkEvents,
       deletedClerkUsers,
+      pendingStripeCancellations,
       userRepository,
       stripeCustomerRepository,
       transaction: async <T>(
         fn: (tx: {
           clerkEvents: FakeClerkEventRepository;
           deletedClerkUsers: FakeDeletedClerkUserRepository;
+          pendingStripeCancellations: FakePendingStripeCancellationRepository;
           userRepository: DeletionBarrierUserRepository;
           stripeCustomerRepository: ConcurrentStripeSyncRepository;
         }) => Promise<T>,
@@ -564,6 +687,7 @@ describe('processClerkWebhook', () => {
         fn({
           clerkEvents,
           deletedClerkUsers,
+          pendingStripeCancellations,
           userRepository,
           stripeCustomerRepository,
         }),
@@ -695,6 +819,8 @@ describe('processClerkWebhook', () => {
   it('does not recreate a user when deletion commits between the tombstone check and upsert', async () => {
     const clerkEvents = new FakeClerkEventRepository();
     const deletedClerkUsers = new FakeDeletedClerkUserRepository();
+    const pendingStripeCancellations =
+      new FakePendingStripeCancellationRepository();
     const userRepository = new TombstoneDuringUpsertUserRepository(
       deletedClerkUsers,
     );
@@ -703,12 +829,14 @@ describe('processClerkWebhook', () => {
     const deps = {
       clerkEvents,
       deletedClerkUsers,
+      pendingStripeCancellations,
       userRepository,
       stripeCustomerRepository,
       transaction: async <T>(
         fn: (tx: {
           clerkEvents: FakeClerkEventRepository;
           deletedClerkUsers: FakeDeletedClerkUserRepository;
+          pendingStripeCancellations: FakePendingStripeCancellationRepository;
           userRepository: TombstoneDuringUpsertUserRepository;
           stripeCustomerRepository: FakeStripeCustomerRepository;
         }) => Promise<T>,
@@ -716,6 +844,7 @@ describe('processClerkWebhook', () => {
         fn({
           clerkEvents,
           deletedClerkUsers,
+          pendingStripeCancellations,
           userRepository,
           stripeCustomerRepository,
         }),
@@ -767,6 +896,8 @@ describe('processClerkWebhook', () => {
       },
     );
     const clerkEvents = new FakeClerkEventRepository();
+    const pendingStripeCancellations =
+      new FakePendingStripeCancellationRepository();
     const stripeCustomerRepository = new FakeStripeCustomerRepository();
     let txCount = 0;
 
@@ -777,6 +908,7 @@ describe('processClerkWebhook', () => {
           deletedClerkUsers: ReturnType<
             TransactionalDeletedClerkUserStore['createRepository']
           >;
+          pendingStripeCancellations: FakePendingStripeCancellationRepository;
           userRepository: ReturnType<
             TransactionalUserStore['createRepository']
           >;
@@ -790,6 +922,7 @@ describe('processClerkWebhook', () => {
         const result = await fn({
           clerkEvents,
           deletedClerkUsers,
+          pendingStripeCancellations,
           userRepository,
           stripeCustomerRepository,
         });
@@ -845,18 +978,22 @@ describe('processClerkWebhook', () => {
     };
     const clerkEvents = new FakeClerkEventRepository();
     const deletedClerkUsers = new FakeDeletedClerkUserRepository();
+    const pendingStripeCancellations =
+      new FakePendingStripeCancellationRepository();
     const userRepository = new ThrowingUserRepository(rawError);
     const stripeCustomerRepository = new FakeStripeCustomerRepository();
 
     const deps = {
       clerkEvents,
       deletedClerkUsers,
+      pendingStripeCancellations,
       userRepository,
       stripeCustomerRepository,
       transaction: async <T>(
         fn: (tx: {
           clerkEvents: FakeClerkEventRepository;
           deletedClerkUsers: FakeDeletedClerkUserRepository;
+          pendingStripeCancellations: FakePendingStripeCancellationRepository;
           userRepository: ThrowingUserRepository;
           stripeCustomerRepository: FakeStripeCustomerRepository;
         }) => Promise<T>,
@@ -864,6 +1001,7 @@ describe('processClerkWebhook', () => {
         fn({
           clerkEvents,
           deletedClerkUsers,
+          pendingStripeCancellations,
           userRepository,
           stripeCustomerRepository,
         }),

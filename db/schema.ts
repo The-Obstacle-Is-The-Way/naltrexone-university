@@ -228,6 +228,25 @@ export const deletedClerkUsers = pgTable(
   }),
 );
 
+// pending_stripe_cancellations
+export const pendingStripeCancellations = pgTable(
+  'pending_stripe_cancellations',
+  {
+    eventId: varchar('event_id', { length: 255 })
+      .primaryKey()
+      .references(() => clerkEvents.id, { onDelete: 'cascade' }),
+    stripeCustomerId: varchar('stripe_customer_id', { length: 255 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    createdAtIdx: index('pending_stripe_cancellations_created_at_idx').on(
+      t.createdAt,
+    ),
+  }),
+);
+
 // rate_limits (composite PK: key + window_start)
 export const rateLimits = pgTable(
   'rate_limits',

@@ -3,6 +3,7 @@ export { DrizzleBookmarkRepository } from './drizzle-bookmark-repository';
 export { DrizzleClerkEventRepository } from './drizzle-clerk-event-repository';
 export { DrizzleDeletedClerkUserRepository } from './drizzle-deleted-clerk-user-repository';
 export { DrizzleIdempotencyKeyRepository } from './drizzle-idempotency-key-repository';
+export { DrizzlePendingStripeCancellationRepository } from './drizzle-pending-stripe-cancellation-repository';
 export { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
 export { DrizzleQuestionRepository } from './drizzle-question-repository';
 export { DrizzleStripeCustomerRepository } from './drizzle-stripe-customer-repository';
