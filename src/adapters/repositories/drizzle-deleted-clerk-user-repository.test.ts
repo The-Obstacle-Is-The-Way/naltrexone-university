@@ -7,6 +7,16 @@ type RepoDb = ConstructorParameters<
 >[0];
 
 describe('DrizzleDeletedClerkUserRepository', () => {
+  it('acquires a transaction-scoped lock for the Clerk user id', async () => {
+    const execute = vi.fn(async () => undefined);
+    const db = { execute } as const;
+
+    const repo = new DrizzleDeletedClerkUserRepository(db as unknown as RepoDb);
+
+    await expect(repo.lock('clerk_1')).resolves.toBeUndefined();
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+
   it('returns false when no tombstone exists', async () => {
     const db = {
       select: () => ({

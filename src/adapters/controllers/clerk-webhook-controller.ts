@@ -220,6 +220,8 @@ export async function processClerkWebhook(
             );
           }
 
+          await deletedClerkUsers.lock(clerkUserId);
+
           if (await deletedClerkUsers.exists(clerkUserId)) {
             await clerkEvents.markProcessed(event.eventId);
             return { ok: true };
@@ -263,6 +265,14 @@ export async function processClerkWebhook(
         }
 
         const clerkUserId = parsed.data.id;
+        if (!clerkUserId) {
+          throw new ApplicationError(
+            'INVALID_WEBHOOK_PAYLOAD',
+            'Clerk user.deleted webhook payload is missing user id',
+          );
+        }
+
+        await deletedClerkUsers.lock(clerkUserId);
         const user = await userRepository.lockByClerkId(clerkUserId);
 
         if (user) {

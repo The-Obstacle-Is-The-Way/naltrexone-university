@@ -2,6 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { FakeDeletedClerkUserRepository } from './fake-deleted-clerk-user-repository';
 
 describe('FakeDeletedClerkUserRepository', () => {
+  it('allows transaction-scoped lock calls', async () => {
+    const repo = new FakeDeletedClerkUserRepository();
+
+    await expect(repo.lock('clerk_1')).resolves.toBeUndefined();
+  });
+
   it('tracks deleted Clerk user ids', async () => {
     const repo = new FakeDeletedClerkUserRepository();
 

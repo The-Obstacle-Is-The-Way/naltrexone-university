@@ -25,7 +25,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ### Resolved (Pending Archival)
 - [BUG-208](bug-208-clerk-webhook-deletion-not-transactional.md): Fixed with a transaction seam plus `lockByClerkId(...)`, closing the Stripe-mapping race during `user.deleted`
-- [BUG-209](bug-209-clerk-webhook-lacks-idempotency.md): Fixed with `svix-id` preservation, `clerk_events` delivery dedup, and `deleted_clerk_users` tombstones
+- [BUG-209](bug-209-clerk-webhook-lacks-idempotency.md): Fixed with `svix-id` preservation, `clerk_events` delivery dedup, `deleted_clerk_users` tombstones, and per-`clerkUserId` transaction locks
 
 ### P3 (Poor Practice / Low Risk)
 - [BUG-206](bug-206-raw-db-errors-escape-adapter-layer.md): Repositories rethrow unexpected DB failures raw across the application port boundary; controllers sanitize later, but the adapter contract is still violated

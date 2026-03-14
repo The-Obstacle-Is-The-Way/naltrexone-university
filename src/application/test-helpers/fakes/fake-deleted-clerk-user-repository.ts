@@ -7,6 +7,8 @@ export class FakeDeletedClerkUserRepository
 {
   private readonly deletedUsers = new Map<string, Date>();
 
+  async lock(_clerkUserId: string): Promise<void> {}
+
   async exists(clerkUserId: string): Promise<boolean> {
     return this.deletedUsers.has(clerkUserId);
   }

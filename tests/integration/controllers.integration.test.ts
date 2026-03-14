@@ -965,7 +965,7 @@ describe('clerk webhook controller (integration)', () => {
     await expect(
       deletedClerkUserRepository.exists(user.clerkUserId),
     ).resolves.toBe(true);
-    await expect(clerkEventRepository.lock(eventId)).resolves.toMatchObject({
+    await expect(clerkEventRepository.peek(eventId)).resolves.toMatchObject({
       processedAt: expect.any(Date),
       error: null,
     });
