@@ -1795,23 +1795,47 @@ export type GetQuestionBySlugOutput = {
 **Input (Zod):**
 
 ```ts
-export const GetPreviousAttemptInputSchema = z.object({
-  questionId: zUuid,
-}).strict();
+export const GetPreviousAttemptInputSchema = z
+  .object({
+    questionId: zUuid,
+    attemptId: zUuid.optional(),
+    sessionId: zUuid.optional(),
+  })
+  .strict()
+  .superRefine((input, ctx) => {
+    if (input.attemptId && input.sessionId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['attemptId'],
+        message: 'Provide either attemptId or sessionId, not both',
+      });
+    }
+  });
 ```
 
 **Output:**
 
 ```ts
-export type GetPreviousAttemptOutput = {
-  attemptId: string;
-  selectedChoiceId: string;
-  isCorrect: boolean;
-  correctChoiceId: string;
-  explanationMd: string | null;
-  choiceExplanations: ChoiceExplanation[]; // same type as submitAnswer output
-  answeredAt: string; // ISO 8601
-} | null; // null when no previous attempt exists
+export type GetPreviousAttemptOutput =
+  | {
+      kind: 'attempt';
+      attemptId: string;
+      selectedChoiceId: string;
+      isCorrect: boolean;
+      correctChoiceId: string;
+      explanationMd: string | null;
+      referenceMd: string | null;
+      choiceExplanations: ChoiceExplanation[]; // same type as submitAnswer output
+      answeredAt: string; // ISO 8601
+    }
+  | {
+      kind: 'session_unanswered';
+      correctChoiceId: string;
+      explanationMd: string | null;
+      referenceMd: string | null;
+      choiceExplanations: ChoiceExplanation[]; // same type as submitAnswer output
+    }
+  | null; // null when no prior revealable attempt exists
 ```
 
 **Errors:**
@@ -1819,17 +1843,33 @@ export type GetPreviousAttemptOutput = {
 * `UNAUTHENTICATED`
 * `UNSUBSCRIBED`
 * `VALIDATION_ERROR`
+* `NOT_FOUND` when `attemptId` exists but belongs to a different question
 * `INTERNAL_ERROR`
 
 **Behavior (exact):**
 
 1. Enforce entitlement (subscribed user).
-2. Load the user's most recent attempt for the given question via `AttemptSingleQuestionReader.findLatestByUserAndQuestion`.
-3. If no attempt exists: return `null` (caller falls back to attempt mode).
-4. Load the question by `questionId` from published questions.
-5. If question is missing (orphaned attempt): log warning and return `null`.
-6. Build `choiceExplanations` using `buildShuffledChoiceViews(question, userId)` for consistent display labels.
-7. Return previous attempt data including `correctChoiceId`, `explanationMd`, and `choiceExplanations`.
+2. Reject input when both `attemptId` and `sessionId` are provided.
+3. Resolve the prior result source in this order:
+   * `attemptId` provided: load that exact attempt via `AttemptSingleQuestionReader.findByIdAndUserId`.
+   * Else `sessionId` provided: load the attempt for that session/question pair via `AttemptSingleQuestionReader.findBySessionIdAndQuestionId`.
+   * Else: load the user's most recent attempt for the question via `AttemptSingleQuestionReader.findLatestByUserAndQuestion`.
+4. If no attempt is found and `sessionId` is absent (or `attemptId` was used), return `null`.
+5. If no attempt is found and `sessionId` is present:
+   * Load the session via `PracticeSessionRepository.findByIdAndUserId`.
+   * Return `null` if the session is missing, still active (`endedAt === null`), or does not include `questionId`.
+   * Load the published question by `questionId`.
+   * If the question is missing, log a warning and return `null`.
+   * Find the correct choice; if none exists, throw `INTERNAL_ERROR`.
+   * Build `choiceExplanations` using `buildShuffledChoiceViews(question, userId)` for consistent display labels.
+   * Return `{ kind: 'session_unanswered', correctChoiceId, explanationMd, referenceMd, choiceExplanations }`.
+6. If an attempt is found but its `questionId` does not equal the requested `questionId`, log a warning and throw `NOT_FOUND`.
+7. If the resolved attempt belongs to an active exam session, return `null` so the answer key is not revealed before the session ends.
+8. Load the published question referenced by the attempt.
+9. If the question is missing (orphaned attempt), log a warning and return `null`.
+10. Find the correct choice; if none exists, throw `INTERNAL_ERROR`.
+11. Build `choiceExplanations` using `buildShuffledChoiceViews(question, userId)` for consistent display labels.
+12. Return `{ kind: 'attempt', attemptId, selectedChoiceId, isCorrect, correctChoiceId, explanationMd, referenceMd, choiceExplanations, answeredAt }`.
 
 ---
 
