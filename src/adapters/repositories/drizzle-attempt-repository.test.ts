@@ -300,13 +300,13 @@ describe('DrizzleAttemptRepository', () => {
       );
     });
 
-    it('rethrows unique violations from other constraints', async () => {
+    it('wraps unique violations from other constraints in INTERNAL_ERROR with cause', async () => {
       const db = createDbMock();
-      const error = {
+      const cause = {
         code: '23505',
         constraint: 'some_other_unique_constraint',
       };
-      db._mocks.insertReturning.mockRejectedValue(error);
+      db._mocks.insertReturning.mockRejectedValue(cause);
 
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
@@ -319,7 +319,40 @@ describe('DrizzleAttemptRepository', () => {
         timeSpentSeconds: 12,
       });
 
-      await expect(promise).rejects.toBe(error);
+      await expect(promise).rejects.toMatchObject({
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to insert attempt',
+      });
+      const error = await promise.catch((caughtError: unknown) => caughtError);
+
+      expect(error).toBeInstanceOf(ApplicationError);
+      expect((error as Error).cause).toBe(cause);
+    });
+
+    it('wraps unexpected insert errors in INTERNAL_ERROR with cause', async () => {
+      const db = createDbMock();
+      const cause = new Error('db unavailable');
+      db._mocks.insertReturning.mockRejectedValue(cause);
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      const promise = repo.insert({
+        userId: 'user_1',
+        questionId: 'question_1',
+        practiceSessionId: null,
+        selectedChoiceId: 'choice_1',
+        isCorrect: true,
+        timeSpentSeconds: 12,
+      });
+
+      await expect(promise).rejects.toMatchObject({
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to insert attempt',
+      });
+      const error = await promise.catch((caughtError: unknown) => caughtError);
+
+      expect(error).toBeInstanceOf(ApplicationError);
+      expect((error as Error).cause).toBe(cause);
     });
   });
 

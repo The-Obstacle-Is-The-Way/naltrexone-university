@@ -210,7 +210,12 @@ export class DrizzleAttemptRepository implements AttemptRepository {
           'This question has already been answered in this session',
         );
       }
-      throw error;
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Failed to insert attempt',
+        undefined,
+        { cause: error },
+      );
     }
 
     if (!row) {
