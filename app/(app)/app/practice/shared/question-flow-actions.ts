@@ -139,7 +139,11 @@ export function runTransitionedAsyncAction(input: {
         await input.run();
       } catch (error) {
         // The caller owns error state; this prevents unhandled rejections.
-        input.onUnhandledError?.(error);
+        try {
+          input.onUnhandledError?.(error);
+        } catch {
+          // Reporter failures must not mask the original error.
+        }
         console.error(
           'runTransitionedAsyncAction: unhandled error in run()',
           error,

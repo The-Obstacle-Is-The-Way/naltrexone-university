@@ -90,7 +90,11 @@ export async function startSession(input: {
       SESSION_START_TIMEOUT_MS,
     );
   } catch (error) {
-    input.reportError?.(error, { action: 'startSession' });
+    try {
+      input.reportError?.(error, { action: 'startSession' });
+    } catch {
+      // Reporter failures must not block the primary error path.
+    }
     if (!isMounted()) return;
     input.setSessionStartStatus('error');
     input.setSessionStartError(getThrownErrorMessage(error));
