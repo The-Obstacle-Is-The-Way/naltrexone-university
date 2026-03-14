@@ -32,6 +32,28 @@ describe('DrizzleClerkEventRepository', () => {
     });
   });
 
+  it('returns false when claim hits an existing event', async () => {
+    const insertValues = vi.fn(() => ({
+      onConflictDoNothing: () => ({
+        returning: async () => [],
+      }),
+    }));
+
+    const db = {
+      insert: () => ({ values: insertValues }),
+    } as const;
+
+    const repo = new DrizzleClerkEventRepository(db as unknown as RepoDb);
+
+    await expect(repo.claim('evt_123', 'user.updated')).resolves.toBe(false);
+    expect(insertValues).toHaveBeenCalledWith({
+      id: 'evt_123',
+      type: 'user.updated',
+      processedAt: null,
+      error: null,
+    });
+  });
+
   it('peeks existing events without locking', async () => {
     const processedAt = new Date('2026-02-01T12:00:00.000Z');
     const db = {

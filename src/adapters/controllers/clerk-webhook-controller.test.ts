@@ -120,11 +120,19 @@ class DeleteFailingUserRepository extends FakeUserRepository {
 }
 
 function createDeferred() {
-  let resolve!: () => void;
+  let resolve: (() => void) | null = null;
   const promise = new Promise<void>((res) => {
     resolve = res;
   });
-  return { promise, resolve };
+  return {
+    promise,
+    resolve: () => {
+      if (!resolve) {
+        throw new Error('Deferred promise has not been initialized');
+      }
+      resolve();
+    },
+  };
 }
 
 class TransactionalUserStore {
@@ -226,7 +234,7 @@ class TransactionalDeletedClerkUserStore {
     return {
       lock: async (clerkId: string) => {
         const previous = this.pendingLocks.get(clerkId) ?? Promise.resolve();
-        let release!: () => void;
+        let release: (() => void) | null = null;
         const current = new Promise<void>((resolve) => {
           release = resolve;
         });
@@ -237,6 +245,9 @@ class TransactionalDeletedClerkUserStore {
         );
         await previous;
         heldLocks.push(() => {
+          if (!release) {
+            throw new Error('Lock release has not been initialized');
+          }
           release();
           if (this.pendingLocks.get(clerkId) === current) {
             this.pendingLocks.delete(clerkId);

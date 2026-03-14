@@ -94,5 +94,8 @@ describe('DrizzleDeletedClerkUserRepository', () => {
     expect(insertValues).toHaveBeenCalledWith({
       clerkUserId: 'clerk_1',
     });
+    expect(onConflictDoNothing).toHaveBeenCalledWith({
+      target: deletedClerkUsers.clerkUserId,
+    });
   });
 });

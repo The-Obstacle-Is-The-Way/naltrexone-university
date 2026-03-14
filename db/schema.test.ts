@@ -91,10 +91,13 @@ describe('practiceSessions schema indexes', () => {
 });
 
 describe('db schema exports', () => {
-  it('exports select and insert aliases for pendingStripeCancellations', () => {
+  it('returns PendingStripeCancellation when inferring select type from pendingStripeCancellations', () => {
     expectTypeOf<PendingStripeCancellation>().toEqualTypeOf<
       typeof pendingStripeCancellations.$inferSelect
     >();
+  });
+
+  it('returns NewPendingStripeCancellation when inferring insert type from pendingStripeCancellations', () => {
     expectTypeOf<NewPendingStripeCancellation>().toEqualTypeOf<
       typeof pendingStripeCancellations.$inferInsert
     >();
