@@ -150,10 +150,12 @@ export async function withIdempotency<T>(input: {
 
       try {
         return input.parseResult(existing.resultJson);
-      } catch {
+      } catch (cause) {
         throw new ApplicationError(
           'INTERNAL_ERROR',
           'Cached idempotency result is invalid',
+          undefined,
+          { cause },
         );
       }
     }
