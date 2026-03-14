@@ -90,9 +90,8 @@ export async function startSession(input: {
       SESSION_START_TIMEOUT_MS,
     );
   } catch (error) {
-    if (!isMounted()) return;
-
     input.reportError?.(error, { action: 'startSession' });
+    if (!isMounted()) return;
     input.setSessionStartStatus('error');
     input.setSessionStartError(getThrownErrorMessage(error));
     input.setIdempotencyKey(input.createIdempotencyKey());

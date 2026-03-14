@@ -188,19 +188,20 @@ export async function toggleBookmarkForQuestion(input: {
       TOGGLE_BOOKMARK_TIMEOUT_MS,
     );
   } catch (error) {
-    if (!isMounted()) return;
     input.logError?.('Failed to toggle bookmark', error);
+    if (!isMounted()) return;
+    input.onBookmarkError?.('Failed to save bookmark. Please try again.');
+    input.setBookmarkStatus('error');
+    return;
+  }
+  if (!res.ok) {
+    input.logError?.('Failed to toggle bookmark', res.error);
+    if (!isMounted()) return;
     input.onBookmarkError?.('Failed to save bookmark. Please try again.');
     input.setBookmarkStatus('error');
     return;
   }
   if (!isMounted()) return;
-  if (!res.ok) {
-    input.logError?.('Failed to toggle bookmark', res.error);
-    input.onBookmarkError?.('Failed to save bookmark. Please try again.');
-    input.setBookmarkStatus('error');
-    return;
-  }
 
   input.setBookmarkedQuestionIds((prev) => {
     const next = new Set(prev);
