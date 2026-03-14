@@ -27,7 +27,7 @@ Full sweep of `app/` + `src/` production code, excluding tests/specs:
 
 - `Sentry.captureException()` calls: **0**
 - `Sentry.captureMessage()` calls: **0**
-- `console.error(...)` calls: **7**
+- `console.error(...)` calls: **9**
 - `console.warn(...)` calls: **2**
 - `console.log(...)` calls: **0**
 - bare `catch {}` blocks in client files: **2**
@@ -37,7 +37,7 @@ Not every console site belongs in this debt:
 
 - `app/global-error.tsx` is an error-boundary path
 - `components/error-boundary-page.tsx` is the shared route-error boundary path used by multiple `error.tsx` routes
-- `question-flow-actions.ts` is development-only diagnostic output
+- `question-flow-actions.ts` now logs unconditionally after BUG-214; it remains a console-only fallback plus an unwired `onUnhandledError` extension point
 - `question-page-client.tsx` uses a bare catch for URL normalization, not an unexpected operational failure
 
 The actual gap is narrower and more important: **caught client-side failures that affect real user flows still do not reach Sentry.**
