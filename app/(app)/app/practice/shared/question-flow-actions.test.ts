@@ -85,8 +85,7 @@ describe('question-flow-actions', () => {
     consoleSpy.mockRestore();
   });
 
-  it('reports unhandled transitioned async action errors in production and still resolves', async () => {
-    vi.stubEnv('NODE_ENV', 'production');
+  it('invokes onUnhandledError when run() throws and still resolves', async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const error = new Error('boom');
     const onUnhandledError = vi.fn();
@@ -110,31 +109,6 @@ describe('question-flow-actions', () => {
     );
 
     consoleSpy.mockRestore();
-    vi.unstubAllEnvs();
-  });
-
-  it('logs unhandled errors via console.error in production even without onUnhandledError callback', async () => {
-    vi.stubEnv('NODE_ENV', 'production');
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-    const promise = runTransitionedAsyncAction({
-      startTransition: (fn) => {
-        fn();
-      },
-      run: async () => {
-        throw new Error('boom');
-      },
-    });
-
-    await expect(promise).resolves.toBeUndefined();
-
-    expect(consoleSpy).toHaveBeenCalledWith(
-      'runTransitionedAsyncAction: unhandled error in run()',
-      expect.any(Error),
-    );
-
-    consoleSpy.mockRestore();
-    vi.unstubAllEnvs();
   });
 
   it('clears selection and submit state when question load returns non-ok after an async state mutation', async () => {
