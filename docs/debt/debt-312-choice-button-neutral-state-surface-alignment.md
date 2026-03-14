@@ -141,6 +141,7 @@ Selected: dark:border-foreground/70 dark:bg-foreground/15
 - `border-foreground/50` clears `3.37:1` against `bg-foreground/5` in light mode, where `border-foreground/45` would still be too weak (`2.88:1`)
 - `hover:border-foreground/55` clears `3.76:1` against `bg-foreground/[0.08]` in light mode and remains visibly stronger than rest without jumping straight to a punched-out look
 - the dark rest fill at `bg-foreground/5` keeps the DEBT-280 direction intact: subtle containment, not gray bricks
+- the dark hover fill at `bg-foreground/8` produces a 3pp fill delta over the new `bg-foreground/5` rest fill (`~11.3%` → `~13.9%` lightness). This is the same gap used by Dashboard I-1 in-card tonal rows (`bg-foreground/5` → `hover:bg-foreground/[0.08]`), and acceptable here because the border jump (`/40` → `/55`) carries the primary dark-mode hover signal. If post-implementation QA reveals the combined hover cue is too subtle, the fallback is `dark:hover:bg-foreground/[0.10]` (5pp gap) — but start with the system-consistent value
 
 This is intentionally a **recommended baseline**, not a claim that the exact selected token is settled forever. If `border-ring` feels too loud once the neutral row is fixed, the fallback to evaluate is `border-foreground/60` on the selected neutral state, not a return to `bg-muted/*`.
 
@@ -164,8 +165,9 @@ This is intentionally a **recommended baseline**, not a claim that the exact sel
 
 | File | Change |
 |------|--------|
-| `docs/frontend/pattern-registry.md` | Update `I-3` to document the new hybrid "tonal row + required boundary" pattern |
+| `docs/frontend/pattern-registry.md` | Update `I-3` to document the new hybrid "tonal row + required boundary" pattern; rewrite the design rationale to explain why `bg-foreground/5` rest fill is acceptable containment while the old `bg-foreground/8` was "gray bricks" (5% is the system-standard tonal surface, not a mid-opacity fill); update the fill progression from `0 → 8 → 15` to `5 → 8 → 15` |
 | `docs/frontend/contrast-policy.md` | Add an explicit note that `ChoiceButton` uses a required boundary and light-mode foreground-based border because `muted` opacity is insufficient on white |
+| `docs/frontend/standards.md` | Update §5 "Interactive row/card hover" to reflect the new foreground-based choice button hover tokens (current table references stale `dark:hover:bg-foreground/15`); revise the blanket "Always use the `muted` token for neutral hover backgrounds" rule to account for foreground-ramp tonal patterns already established by I-1, I-2, I-3, and I-4 |
 | `docs/frontend/pages/quick-practice.md` | Expand from dark-mode-only historical note to a current cross-theme audit; explicitly document the light-mode rationale and the selected neutral-state contract |
 
 ---
