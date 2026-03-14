@@ -17,15 +17,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 **Audit batch (2026-03-13) — comprehensive codebase audit (verified via tracer bullets):**
 
-15 bug docs were filed in this batch. The priority buckets below are the source of truth as each entry is re-verified.
-
-### Invalidated (False Positives)
-- ~~[BUG-211](bug-211-count-query-fallback-masks-failures.md)~~: Four count-aggregate fallbacks across three repositories are dead defensive code; they do not mask DB failures
-- ~~[BUG-216](bug-216-health-handler-imports-drizzle-orm.md)~~: Health handler's direct Drizzle `SELECT 1` probe is framework-layer code explicitly required by the master spec; not a Clean Architecture bug
-
-### Resolved (Pending Archival)
-- [BUG-208](bug-208-clerk-webhook-deletion-not-transactional.md): Fixed with a transaction seam, `lockByClerkId(...)`, and durable post-commit Stripe cancellation state for `user.deleted`
-- [BUG-209](bug-209-clerk-webhook-lacks-idempotency.md): Fixed with `svix-id` preservation, `clerk_events` delivery dedup, `deleted_clerk_users` tombstones, and per-`clerkUserId` transaction locks
+15 bug docs were filed in this batch (4 archived: BUG-208, BUG-209 resolved; BUG-211, BUG-216 invalidated). The priority buckets below are the source of truth for the 11 remaining.
 
 ### P3 (Poor Practice / Low Risk)
 - [BUG-206](bug-206-raw-db-errors-escape-adapter-layer.md): Repositories rethrow unexpected DB failures raw across the application port boundary; controllers sanitize later, but the adapter contract is still violated
@@ -44,7 +36,11 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ---
 
-**Latest archival (2026-03-11):**
+**Latest archival (2026-03-14):**
+- BUG-208 and BUG-209 verified fixed (PR #210): Clerk webhook deletion races and replay resurrection resolved with transaction seams, event dedup, tombstones, and per-user advisory locks, archived to `docs/_archive/bugs/`.
+- BUG-211 and BUG-216 invalidated (false positives from audit batch): count-aggregate fallbacks are dead defensive code, health handler Drizzle import is spec-mandated framework-layer code, archived to `docs/_archive/bugs/`.
+
+**Previous archival (2026-03-11):**
 - BUG-205 verified fixed (PR #199): reconciliation canonical selection short-circuit removed, always sorts full blocking set by period-end + deterministic tie-break, archived to `docs/_archive/bugs/`.
 
 **Previous archival (2026-03-10):**
