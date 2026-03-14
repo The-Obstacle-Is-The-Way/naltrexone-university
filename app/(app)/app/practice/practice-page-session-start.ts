@@ -63,6 +63,7 @@ export async function startSession(input: {
   startPracticeSessionFn: (
     input: unknown,
   ) => Promise<ActionResult<StartPracticeSessionOutput>>;
+  reportError?: (error: unknown, context: { action: string }) => void;
   setSessionStartStatus: (status: 'idle' | 'loading' | 'error') => void;
   setSessionStartError: (message: string | null) => void;
   navigateTo: (url: string) => void;
@@ -89,8 +90,12 @@ export async function startSession(input: {
       SESSION_START_TIMEOUT_MS,
     );
   } catch (error) {
+    try {
+      input.reportError?.(error, { action: 'startSession' });
+    } catch {
+      // Reporter failures must not block the primary error path.
+    }
     if (!isMounted()) return;
-
     input.setSessionStartStatus('error');
     input.setSessionStartError(getThrownErrorMessage(error));
     input.setIdempotencyKey(input.createIdempotencyKey());

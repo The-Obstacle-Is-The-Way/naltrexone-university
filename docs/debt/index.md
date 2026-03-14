@@ -18,7 +18,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | GitHub Issue |
 |----|-------|----------|--------------|
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
-| [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 7 verified client-side flows still report only to console or silent fallbacks | P2 | — |
+| [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 10 verified client-side flows still report only to console or silent fallbacks | P2 | — |
 | [DEBT-312](./debt-312-choice-button-neutral-state-surface-alignment.md) | Choice Button Neutral-State Surface Alignment — replace the light-mode white-on-white `muted` recipe with a foreground-tonal hybrid boundary/surface pattern, and restore subtle containment in dark mode without reviving the old boxed look | P2 | — |
 **Next Debt ID:** DEBT-313
 
