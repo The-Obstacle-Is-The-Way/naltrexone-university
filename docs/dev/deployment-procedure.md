@@ -1,7 +1,7 @@
 # Deployment Procedure
 
 > **Parent:** [Deployment Environments](./deployment-environments.md)
-> **Last Updated:** 2026-02-18
+> **Last Updated:** 2026-03-14
 
 ---
 
@@ -89,6 +89,34 @@ Before merging to `main` (production deploy):
 - [ ] If schema changed: migration tested on local + preview DB first
 - [ ] If schema changed: `pnpm db:migrate` run against target Neon branch **immediately after deploy** (forgetting this causes silent write failures — see [Known Gotchas](./deployment-environments.md#missing-database-migration-causes-silent-write-failures))
 - [ ] If content changed: seed tested on local + preview DB first
+
+---
+
+## 6. Branch Sync After Merging to Main
+
+After merging a PR to `main`, the `dev` branch falls behind. To keep them in sync:
+
+```bash
+git checkout dev
+git merge main        # Fast-forward if no divergence
+git push origin dev
+```
+
+This is especially important when the PR included **migrations** — without syncing, any clone on `dev` will have an incomplete migration journal, which can cause confusion (the DB has the tables, but the local journal doesn't know about them).
+
+**Rule of thumb:** Always sync `dev` with `main` after every PR merge. The merge is always a fast-forward because PRs target `main` and `dev` doesn't diverge.
+
+---
+
+## 7. Seeding from Multiple Clones
+
+The seed script is fully idempotent. See [Content Pipeline §16: Seed Idempotency and Multi-Clone Safety](../practice-engine/content-pipeline.md#16-seed-idempotency-and-multi-clone-safety) for the full explanation.
+
+**Key points:**
+- The `slug` field is the stable identity key — same slug = same question across any clone or DB
+- SHA256 hashing skips unchanged questions entirely (zero writes)
+- Seeding the same content from different clones is a no-op
+- The only risk is seeding from a clone with *older* imported MDX, which would downgrade content
 
 ---
 

@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Full end-to-end trace from authored MDX files through seeding, database, shuffling, and UI rendering
-> **Last Verified:** 2026-02-18
+> **Last Verified:** 2026-03-14
 
 This document serves two purposes:
 1. **Architectural trace** — understanding where data flows and where bugs happen (e.g., BS-011 choice label desync)
@@ -475,7 +475,72 @@ Re-run `pnpm db:seed` whenever the database's question/tag data may be out of sy
 
 ---
 
-## 16. Troubleshooting
+## 16. Seed Idempotency and Multi-Clone Safety
+
+The seed script is **fully idempotent** — running it multiple times with the same content produces the same result with no side effects.
+
+### How it works
+
+1. **Slug is the identity key.** Each question is looked up by `slug`. If the slug exists, it's an update; if not, it's an insert.
+2. **SHA256 change detection.** Before writing, the seed computes a hash of the file's canonical representation and compares it to a hash of what's already in the DB. If they match, the question is **skipped entirely** — no writes, no `updatedAt` bump.
+3. **Choices use upsert.** `INSERT ... ON CONFLICT (questionId, label) DO UPDATE` — so even if the update path runs, it's a safe merge.
+4. **Tags are upserted** via `upsertTags()` — existing tags are reused by slug.
+
+### What this means for multiple clones
+
+You may have multiple local clones of the repo (e.g., `naltrexone-university`, `naltrexone-university-2`, `naltrexone-university-3`), each with their own copy of the draft questions. This is safe:
+
+| Scenario | Result |
+|----------|--------|
+| Seed same questions from two different clones against the same DB | All questions **skipped** on the second run (hashes match). Zero DB writes. |
+| Seed from clone A, edit a question in clone B, seed from clone B | Only the changed question is **updated**. Everything else skipped. |
+| Seed from different clones against different DBs (dev vs prod) | Each DB gets its own independent copy. No cross-contamination. |
+
+**The only risk:** If clone A has an *older* set of imported MDX files and you seed from it *after* seeding from clone B with newer content, it will **downgrade** those questions to the older version. The seed output will show this as "updated" (not "skipped"), which is your signal that content changed.
+
+**Best practice:** Always import (`pnpm content:import:drafts`) from the clone with the latest drafts before seeding. Or simply keep drafts in sync across clones by copying the `content/drafts/questions/` directory.
+
+### What about placeholders?
+
+By default, `pnpm db:seed` **excludes** placeholder questions and archives any existing `placeholder-%` rows in the DB. This is intentional — placeholders are templates, not production content. To include them (e.g., for CI): `SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed`.
+
+---
+
+## 17. Import Script Behavior
+
+### What `pnpm content:import:drafts` does
+
+- Scans `content/drafts/questions/` for files named `recall.md` and `vignettes.md`
+- Splits multi-question blocks within each file into individual questions
+- Validates tag slugs against the canonical taxonomy in `lib/content/draftTaxonomy.ts`
+- Writes one `.mdx` file per question to `content/questions/imported/`
+
+### What it does NOT do
+
+- **Does not prune stale files.** If you remove a question from a draft file and re-import, the old MDX file remains in `imported/`. This is harmless for seeding (the old question stays in the DB with its existing content), but can be confusing. To clean up: delete `content/questions/imported/` and re-import.
+- **Does not touch the database.** Import is a local file operation only. You must run `pnpm db:seed` separately.
+- **Does not read from `content/questions/`.** It reads drafts and writes MDX. The seed reads MDX.
+
+### Dry-run mode
+
+Validate without writing files:
+
+```bash
+pnpm content:import:drafts -- --dry-run
+```
+
+### Status flag
+
+Controls the `status` field in generated MDX frontmatter:
+
+```bash
+pnpm content:import:drafts -- --status published   # Questions will be served by the app
+pnpm content:import:drafts -- --status draft        # Default — questions seed but aren't served
+```
+
+---
+
+## 18. Troubleshooting
 
 ### Practice shows "Internal error" on Start session / Submit
 
