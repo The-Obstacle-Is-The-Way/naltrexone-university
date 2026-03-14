@@ -119,6 +119,8 @@ describe('createStripeCheckoutSession', () => {
     cancelUrl: 'https://app/cancel',
   };
   const priceIds = { monthly: 'price_m', annual: 'price_a' } as const;
+  const fixedNowMs = 1_700_000_000_000;
+  const fixedNowUnix = fixedNowMs / 1000;
   let logger: FakeLogger;
 
   beforeEach(() => {
@@ -172,8 +174,7 @@ describe('createStripeCheckoutSession', () => {
     );
   });
 
-  it('creates a fresh session when deterministic fallback key replays an expired session', async () => {
-    const nowUnix = Math.floor(Date.now() / 1000);
+  it('creates a fresh session when deterministic fallback key replays a session expiring at the injected nowMs boundary', async () => {
     const { stripe, sessionsCreate } = createStripeMock({
       openSessionsData: [],
       createdSessionResponses: [
@@ -181,13 +182,13 @@ describe('createStripeCheckoutSession', () => {
           id: 'cs_expired',
           url: 'https://stripe/checkout/expired',
           status: 'open',
-          expiresAtUnix: nowUnix - 60,
+          expiresAtUnix: fixedNowUnix,
         },
         {
           id: 'cs_fresh',
           url: 'https://stripe/checkout/fresh',
           status: 'open',
-          expiresAtUnix: nowUnix + 3600,
+          expiresAtUnix: fixedNowUnix + 3600,
         },
       ],
     });
@@ -198,6 +199,7 @@ describe('createStripeCheckoutSession', () => {
         input,
         priceIds,
         logger,
+        nowMs: () => fixedNowMs,
       }),
     ).resolves.toEqual({ url: 'https://stripe/checkout/fresh' });
 
@@ -218,8 +220,7 @@ describe('createStripeCheckoutSession', () => {
     );
   });
 
-  it('throws STRIPE_ERROR when caller-provided key returns an expired session', async () => {
-    const nowUnix = Math.floor(Date.now() / 1000);
+  it('throws STRIPE_ERROR when caller-provided key returns a session expiring at the injected nowMs boundary', async () => {
     const { stripe, sessionsCreate } = createStripeMock({
       openSessionsData: [],
       createdSessionResponses: [
@@ -227,7 +228,7 @@ describe('createStripeCheckoutSession', () => {
           id: 'cs_expired',
           url: 'https://stripe/checkout/expired',
           status: 'open',
-          expiresAtUnix: nowUnix - 60,
+          expiresAtUnix: fixedNowUnix,
         },
       ],
     });
@@ -239,6 +240,7 @@ describe('createStripeCheckoutSession', () => {
         options: { idempotencyKey: 'checkout_idem_custom_1' },
         priceIds,
         logger,
+        nowMs: () => fixedNowMs,
       }),
     ).rejects.toMatchObject({
       code: 'STRIPE_ERROR',
@@ -249,7 +251,6 @@ describe('createStripeCheckoutSession', () => {
   });
 
   it('throws STRIPE_ERROR when recovered session is missing URL', async () => {
-    const nowUnix = Math.floor(Date.now() / 1000);
     const { stripe, sessionsCreate } = createStripeMock({
       openSessionsData: [],
       createdSessionResponses: [
@@ -257,13 +258,13 @@ describe('createStripeCheckoutSession', () => {
           id: 'cs_expired',
           url: 'https://stripe/checkout/expired',
           status: 'open',
-          expiresAtUnix: nowUnix - 60,
+          expiresAtUnix: fixedNowUnix,
         },
         {
           id: 'cs_recovered',
           url: null,
           status: 'open',
-          expiresAtUnix: nowUnix + 3600,
+          expiresAtUnix: fixedNowUnix + 3600,
         },
       ],
     });
@@ -274,6 +275,7 @@ describe('createStripeCheckoutSession', () => {
         input,
         priceIds,
         logger,
+        nowMs: () => fixedNowMs,
       }),
     ).rejects.toMatchObject({
       code: 'STRIPE_ERROR',
@@ -284,7 +286,6 @@ describe('createStripeCheckoutSession', () => {
   });
 
   it('throws STRIPE_ERROR when recovered session is expired or inactive', async () => {
-    const nowUnix = Math.floor(Date.now() / 1000);
     const { stripe, sessionsCreate } = createStripeMock({
       openSessionsData: [],
       createdSessionResponses: [
@@ -292,13 +293,13 @@ describe('createStripeCheckoutSession', () => {
           id: 'cs_expired',
           url: 'https://stripe/checkout/expired',
           status: 'open',
-          expiresAtUnix: nowUnix - 60,
+          expiresAtUnix: fixedNowUnix,
         },
         {
           id: 'cs_recovered',
           url: 'https://stripe/checkout/recovered',
           status: 'expired',
-          expiresAtUnix: nowUnix + 3600,
+          expiresAtUnix: fixedNowUnix + 3600,
         },
       ],
     });
@@ -309,6 +310,7 @@ describe('createStripeCheckoutSession', () => {
         input,
         priceIds,
         logger,
+        nowMs: () => fixedNowMs,
       }),
     ).rejects.toMatchObject({
       code: 'STRIPE_ERROR',
@@ -374,12 +376,14 @@ describe('createStripeCheckoutSession', () => {
     });
   });
 
-  it('reuses an existing open checkout session when plan price matches', async () => {
+  it('reuses an existing open checkout session when plan price matches and expires after the injected nowMs boundary', async () => {
     const { stripe, sessionsCreate, sessionsRetrieve } = createStripeMock({
       openSessionsData: [
         { id: 'cs_open', url: 'https://stripe/checkout/open' },
       ],
       retrievedSessionPriceId: 'price_m',
+      retrievedSessionStatus: 'open',
+      retrievedSessionExpiresAtUnix: fixedNowUnix + 1,
     });
 
     await expect(
@@ -388,6 +392,7 @@ describe('createStripeCheckoutSession', () => {
         input,
         priceIds,
         logger,
+        nowMs: () => fixedNowMs,
       }),
     ).resolves.toEqual({ url: 'https://stripe/checkout/open' });
 
@@ -420,15 +425,14 @@ describe('createStripeCheckoutSession', () => {
     expect(sessionsExpire).not.toHaveBeenCalled();
   });
 
-  it('does not return stale URL when same-price session is open but already past expires_at', async () => {
-    const nowUnix = Math.floor(Date.now() / 1000);
+  it('does not return stale URL when same-price session expires at the injected nowMs boundary', async () => {
     const { stripe, sessionsCreate, sessionsExpire } = createStripeMock({
       openSessionsData: [
         { id: 'cs_open', url: 'https://stripe/checkout/open' },
       ],
       retrievedSessionPriceId: 'price_m',
       retrievedSessionStatus: 'open',
-      retrievedSessionExpiresAtUnix: nowUnix - 60,
+      retrievedSessionExpiresAtUnix: fixedNowUnix,
       createdSessionUrl: 'https://stripe/checkout/new',
     });
 
@@ -438,6 +442,7 @@ describe('createStripeCheckoutSession', () => {
         input,
         priceIds,
         logger,
+        nowMs: () => fixedNowMs,
       }),
     ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
 

@@ -43,14 +43,17 @@ function getBlockingSubscriptionStatus(
   return subscription.status;
 }
 
-function isSessionInactive(session: StripeCheckoutSession): boolean {
+function isSessionInactive(
+  session: StripeCheckoutSession,
+  nowMs: () => number,
+): boolean {
   if (session.status && session.status !== 'open') {
     return true;
   }
 
   if (
     typeof session.expires_at === 'number' &&
-    session.expires_at * 1000 <= Date.now()
+    session.expires_at * 1000 <= nowMs()
   ) {
     return true;
   }
@@ -103,12 +106,14 @@ export async function createStripeCheckoutSession({
   options,
   priceIds,
   logger,
+  nowMs = Date.now,
 }: {
   stripe: StripeClient;
   input: CheckoutSessionInput;
   options?: PaymentGatewayRequestOptions;
   priceIds: StripePriceIds;
   logger: Logger;
+  nowMs?: () => number;
 }): Promise<{ url: string }> {
   const priceId = getStripePriceId(input.plan, priceIds);
   const subscriptionsList = stripe.subscriptions?.list?.bind(
@@ -196,7 +201,7 @@ export async function createStripeCheckoutSession({
     }
 
     if (existingPriceId === priceId) {
-      if (!retrievedSession || !isSessionInactive(retrievedSession)) {
+      if (!retrievedSession || !isSessionInactive(retrievedSession, nowMs)) {
         return { url: existingUrl };
       }
 
@@ -329,7 +334,7 @@ export async function createStripeCheckoutSession({
     );
   }
 
-  if (!isSessionInactive(session)) {
+  if (!isSessionInactive(session, nowMs)) {
     return { url: session.url };
   }
 
@@ -364,7 +369,7 @@ export async function createStripeCheckoutSession({
     );
   }
 
-  if (isSessionInactive(recovered)) {
+  if (isSessionInactive(recovered, nowMs)) {
     throw new ApplicationError(
       'STRIPE_ERROR',
       'Stripe Checkout Session is expired or inactive',

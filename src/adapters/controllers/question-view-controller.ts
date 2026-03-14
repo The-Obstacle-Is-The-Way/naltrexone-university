@@ -100,7 +100,7 @@ export const getQuestionBySlug = createAction({
 
 const GetPreviousAttemptInputSchema = z
   .object({
-    questionId: z.string().min(1),
+    questionId: zUuid,
     attemptId: zUuid.optional(),
     sessionId: zUuid.optional(),
   })

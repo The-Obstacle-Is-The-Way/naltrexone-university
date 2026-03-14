@@ -1,8 +1,9 @@
 # BUG-207: Cron Route Leaks Internal Configuration State to Unauthenticated Callers
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3 (downgraded from P1 after verification)
 **Date:** 2026-03-13
+**Resolved:** 2026-03-14 (PR #213)
 
 ## Summary
 
@@ -17,29 +18,6 @@ The public `POST /api/cron/reconcile-stripe-subscriptions` endpoint checks wheth
 
 This is a **real but low-risk information disclosure**. The route still fails closed and does not run reconciliation work without a configured secret, so the original P1 classification overstated the impact.
 
-## Location
+## Resolution
 
-- `app/api/cron/reconcile-stripe-subscriptions/route.ts:57-69`
-- `app/api/cron/reconcile-stripe-subscriptions/route.ts:72-81`
-- `lib/public-routes.ts:1-10`
-- `app/api/cron/reconcile-stripe-subscriptions/route.test.ts:130-145`
-
-## Repro
-
-1. `curl -X POST https://example.com/api/cron/reconcile-stripe-subscriptions`
-2. If `CRON_SECRET` is not set, receive: `{"error":"CRON_SECRET is not configured"}` (503)
-
-## Suggested Fix
-
-Use TDD to harden the route boundary:
-
-1. Update `app/api/cron/reconcile-stripe-subscriptions/route.test.ts` first so:
-   - requests without a usable auth header still return `401 { error: 'Unauthorized' }` when `CRON_SECRET` is missing
-   - requests with a syntactically valid `Bearer` header also return `401 { error: 'Unauthorized' }` when `CRON_SECRET` is missing
-   - no response body ever mentions `CRON_SECRET`
-2. Reorder the handler to parse the auth header before the config branch.
-3. Keep the detailed `'CRON_SECRET is not configured'` message in server logs only; use the same external unauthorized response for the missing-secret branch.
-
-## Prevention
-
-- Review all API routes for error messages that leak infrastructure state.
+Auth check reordered before config check. External response changed from 503 `"CRON_SECRET is not configured"` to 401 `"Unauthorized"`. Detailed config message retained in server-side `logger.error` only. Tests cover both missing-header and valid-Bearer paths when CRON_SECRET is undefined.
