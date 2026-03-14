@@ -865,6 +865,30 @@ describe('practice-page-logic', () => {
       );
     });
 
+    it('logs thrown toggle errors while preserving generic error UI state', async () => {
+      const error = new Error('Boom');
+      const logError = vi.fn();
+      const setBookmarkStatus = vi.fn();
+      const onBookmarkError = vi.fn();
+
+      await toggleBookmarkForQuestion({
+        question: createNextQuestion(),
+        toggleBookmarkFn: async () => {
+          throw error;
+        },
+        setBookmarkStatus,
+        setBookmarkedQuestionIds: vi.fn(),
+        onBookmarkError,
+        logError,
+      });
+
+      expect(logError).toHaveBeenCalledWith('Failed to toggle bookmark', error);
+      expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
+      expect(onBookmarkError).toHaveBeenCalledWith(
+        'Failed to save bookmark. Please try again.',
+      );
+    });
+
     it('invokes error callback when toggle controller returns an error result', async () => {
       const setBookmarkStatus = vi.fn();
       const onBookmarkError = vi.fn();
@@ -879,6 +903,37 @@ describe('practice-page-logic', () => {
 
       expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
       expect(onBookmarkError).toHaveBeenCalledTimes(1);
+      expect(onBookmarkError).toHaveBeenCalledWith(
+        'Failed to save bookmark. Please try again.',
+      );
+    });
+
+    it('logs structured toggle failures while preserving generic error UI state', async () => {
+      const structuredError = {
+        code: 'INTERNAL_ERROR',
+        message: 'Boom',
+      } as const;
+      const logError = vi.fn();
+      const setBookmarkStatus = vi.fn();
+      const onBookmarkError = vi.fn();
+
+      await toggleBookmarkForQuestion({
+        question: createNextQuestion(),
+        toggleBookmarkFn: async () => ({
+          ok: false,
+          error: structuredError,
+        }),
+        setBookmarkStatus,
+        setBookmarkedQuestionIds: vi.fn(),
+        onBookmarkError,
+        logError,
+      });
+
+      expect(logError).toHaveBeenCalledWith(
+        'Failed to toggle bookmark',
+        structuredError,
+      );
+      expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
       expect(onBookmarkError).toHaveBeenCalledWith(
         'Failed to save bookmark. Please try again.',
       );

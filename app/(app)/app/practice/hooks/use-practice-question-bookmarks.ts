@@ -97,6 +97,9 @@ export function usePracticeQuestionBookmarks(
           isMounted: input.isMounted,
         });
       },
+      logError: (message: string, context: unknown) => {
+        console.error('toggleBookmarkForQuestion failed:', message, context);
+      },
       isMounted: input.isMounted,
     });
   }, [input.question, input.isMounted]);
