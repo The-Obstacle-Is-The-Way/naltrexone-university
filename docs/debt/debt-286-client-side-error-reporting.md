@@ -77,6 +77,9 @@ These are the verified user-facing client flows that should be moved onto a shar
 | `question-page-logic.ts:350` | Bare `catch {}` with fallback UI only | Review hydration failures are invisible everywhere |
 | `use-quick-practice-status-counts.ts:136-141` | Routes caught effect errors through `logUnhandledAsyncError()` | Quick-practice status count failures reach console only |
 | `use-practice-available-questions-count.ts:40-41` | Routes caught effect errors through `logUnhandledAsyncError()` | Available-count failures reach console only |
+| `use-practice-question-bookmarks.ts:100` | `console.error('toggleBookmarkForQuestion failed:', ...)` (BUG-212 fix) | Bookmark toggle failures reach console only |
+| `use-practice-session-start.ts:132` | `console.error('startSession failed:', ...)` (BUG-213 fix) | Session start thrown errors reach console only |
+| `question-flow-actions.ts:142` | `onUnhandledError?.()` hook (BUG-214 fix) — unwired by callers; `console.error` fires unconditionally | Hook ready for direct `reportClientError()` wiring |
 
 ---
 
@@ -86,7 +89,7 @@ Tracer-bullet verification also found these observability-adjacent sites. They s
 
 - `app/global-error.tsx:16` logs an already-bubbled boundary error
 - `components/error-boundary-page.tsx:33` logs already-bubbled route-boundary errors for shared `error.tsx` pages
-- `app/(app)/app/practice/shared/question-flow-actions.ts:142` logs only in development
+- `app/(app)/app/practice/shared/question-flow-actions.ts:143` logs unconditionally after BUG-214 fix (previously dev-only); `onUnhandledError` hook is available for direct Sentry wiring
 - `app/(app)/app/questions/[slug]/question-page-client.tsx:56` uses a bare catch for URL normalization
 - `app/(app)/app/questions/[slug]/page.tsx:65` uses direct server-side `console.info`
 
@@ -133,12 +136,14 @@ export function reportClientError(
 ### Phase 2: Roll out to the priority client flows
 
 1. `fire-and-forget.ts`
-2. `use-practice-question-bookmarks.ts`
+2. `use-practice-question-bookmarks.ts` (includes BUG-212 `logError` callback + bookmark load effect)
 3. `use-practice-session-tags.ts`
 4. `use-question-page-controller.ts`
 5. `question-page-logic.ts`
 6. `use-quick-practice-status-counts.ts`
 7. `use-practice-available-questions-count.ts`
+8. `use-practice-session-start.ts` (BUG-213 `reportError` callback)
+9. `question-flow-actions.ts` (BUG-214 `onUnhandledError` hook — wire `reportClientError()` from callers)
 
 ### Phase 3: Update SPEC-016
 
