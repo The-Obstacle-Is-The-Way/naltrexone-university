@@ -60,7 +60,13 @@ describe('proxy middleware', () => {
       {} as unknown as NextRequest,
       {} as unknown as NextFetchEvent,
     );
-    expect(res).toBeDefined();
+
+    if (!res) {
+      throw new Error('Expected middleware to return a response');
+    }
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('location')).toBeNull();
   });
 
   it('ignores NEXT_PUBLIC_SKIP_CLERK=true in production and still protects routes', async () => {
