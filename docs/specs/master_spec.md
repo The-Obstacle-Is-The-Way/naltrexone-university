@@ -1796,7 +1796,7 @@ export type GetQuestionBySlugOutput = {
 
 ```ts
 export const GetPreviousAttemptInputSchema = z.object({
-  questionId: z.string().min(1),
+  questionId: zUuid,
 }).strict();
 ```
 

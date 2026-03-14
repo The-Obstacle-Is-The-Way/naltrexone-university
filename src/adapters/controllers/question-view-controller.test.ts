@@ -149,6 +149,8 @@ function createDeps(overrides?: {
   };
 }
 
+const validPreviousAttemptQuestionId = '00000000-0000-4000-8000-000000000010';
+
 describe('question-view-controller', () => {
   describe('getQuestionBySlug', () => {
     it('returns VALIDATION_ERROR when input is invalid', async () => {
@@ -328,12 +330,35 @@ describe('question-view-controller', () => {
       });
     });
 
+    it('returns VALIDATION_ERROR when questionId is not a UUID and does not call the use case', async () => {
+      let executeCalled = false;
+      const deps = createDeps({
+        getPreviousAttemptUseCase: {
+          execute: async () => {
+            executeCalled = true;
+            return null;
+          },
+        },
+      });
+
+      const result = await getPreviousAttempt(
+        { questionId: 'not-a-uuid' },
+        deps as never,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'VALIDATION_ERROR' },
+      });
+      expect(executeCalled).toBe(false);
+    });
+
     it('returns VALIDATION_ERROR when both attemptId and sessionId are provided', async () => {
       const deps = createDeps();
 
       const result = await getPreviousAttempt(
         {
-          questionId: 'q1',
+          questionId: validPreviousAttemptQuestionId,
           attemptId: '00000000-0000-4000-8000-000000000001',
           sessionId: '00000000-0000-4000-8000-000000000002',
         },
@@ -350,7 +375,7 @@ describe('question-view-controller', () => {
       const deps = createDeps({ user: null });
 
       const result = await getPreviousAttempt(
-        { questionId: 'q1' },
+        { questionId: validPreviousAttemptQuestionId },
         deps as never,
       );
 
@@ -367,7 +392,7 @@ describe('question-view-controller', () => {
       });
 
       const result = await getPreviousAttempt(
-        { questionId: 'q1' },
+        { questionId: validPreviousAttemptQuestionId },
         deps as never,
       );
 
@@ -379,7 +404,7 @@ describe('question-view-controller', () => {
 
     it('passes attemptId to use case when provided', async () => {
       const userId = 'user_1';
-      const questionId = 'q1';
+      const questionId = validPreviousAttemptQuestionId;
       const attemptId = '00000000-0000-4000-8000-000000000001';
 
       let receivedInput: {
@@ -408,7 +433,7 @@ describe('question-view-controller', () => {
 
     it('passes sessionId to use case when provided', async () => {
       const userId = 'user_1';
-      const questionId = 'q1';
+      const questionId = validPreviousAttemptQuestionId;
       const sessionId = '00000000-0000-4000-8000-000000000002';
 
       let receivedInput: {
@@ -437,7 +462,7 @@ describe('question-view-controller', () => {
 
     it('returns the previous attempt when found', async () => {
       const userId = 'user_1';
-      const questionId = 'q1';
+      const questionId = validPreviousAttemptQuestionId;
       const logger = new FakeLogger();
 
       let receivedInput: {
@@ -488,7 +513,7 @@ describe('question-view-controller', () => {
           outcome: 'attempt',
           hasAttemptId: false,
           hasSessionId: false,
-          questionId: 'q1',
+          questionId,
           userId: 'user_1',
         },
         msg: 'Review hydration outcome',
@@ -497,7 +522,7 @@ describe('question-view-controller', () => {
 
     it('returns the previous attempt when hydration telemetry info logging throws', async () => {
       const userId = 'user_1';
-      const questionId = 'q1';
+      const questionId = validPreviousAttemptQuestionId;
       const logger = new ThrowingInfoLogger();
 
       const deps = createDeps({
@@ -547,7 +572,7 @@ describe('question-view-controller', () => {
       });
 
       const result = await getPreviousAttempt(
-        { questionId: 'q1' },
+        { questionId: validPreviousAttemptQuestionId },
         deps as never,
       );
 
@@ -573,7 +598,10 @@ describe('question-view-controller', () => {
       });
 
       const result = await getPreviousAttempt(
-        { questionId: 'q1', sessionId: '00000000-0000-4000-8000-000000000001' },
+        {
+          questionId: validPreviousAttemptQuestionId,
+          sessionId: '00000000-0000-4000-8000-000000000001',
+        },
         deps as never,
       );
 
@@ -594,7 +622,7 @@ describe('question-view-controller', () => {
           outcome: 'session_unanswered',
           hasAttemptId: false,
           hasSessionId: true,
-          questionId: 'q1',
+          questionId: validPreviousAttemptQuestionId,
           userId: 'user_1',
         },
         msg: 'Review hydration outcome',
@@ -611,7 +639,7 @@ describe('question-view-controller', () => {
       });
 
       const result = await getPreviousAttempt(
-        { questionId: 'q1' },
+        { questionId: validPreviousAttemptQuestionId },
         deps as never,
       );
 
@@ -623,7 +651,7 @@ describe('question-view-controller', () => {
           outcome: 'no_prior_attempt',
           hasAttemptId: false,
           hasSessionId: false,
-          questionId: 'q1',
+          questionId: validPreviousAttemptQuestionId,
           userId: 'user_1',
         },
         msg: 'Review hydration outcome',
@@ -642,7 +670,7 @@ describe('question-view-controller', () => {
       });
 
       const result = await getPreviousAttempt(
-        { questionId: 'q1' },
+        { questionId: validPreviousAttemptQuestionId },
         deps as never,
       );
 
@@ -657,7 +685,7 @@ describe('question-view-controller', () => {
           outcome: 'hydration_error',
           hasAttemptId: false,
           hasSessionId: false,
-          questionId: 'q1',
+          questionId: validPreviousAttemptQuestionId,
           userId: 'user_1',
           errorCode: 'INTERNAL_ERROR',
         },
@@ -677,7 +705,7 @@ describe('question-view-controller', () => {
       });
 
       const result = await getPreviousAttempt(
-        { questionId: 'q1' },
+        { questionId: validPreviousAttemptQuestionId },
         deps as never,
       );
 
