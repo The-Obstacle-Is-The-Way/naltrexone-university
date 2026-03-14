@@ -573,6 +573,54 @@ describe('DrizzlePracticeSessionRepository', () => {
     );
   });
 
+  it('wraps unexpected insert failures in INTERNAL_ERROR with cause', async () => {
+    const cause = new Error('db offline');
+    const insertValues = vi.fn(() => ({
+      returning: async () => {
+        throw cause;
+      },
+    }));
+
+    const db = {
+      insert: () => ({
+        values: insertValues,
+      }),
+      query: {
+        practiceSessions: {
+          findFirst: async () => null,
+        },
+      },
+      update: () => {
+        throw new Error('unexpected update');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    const promise = repo.create({
+      userId: 'user_1',
+      mode: 'exam',
+      paramsJson: {
+        count: 2,
+        tagSlugs: [],
+        difficulties: ['easy'],
+        questionIds: ['q1', 'q2'],
+      },
+    });
+
+    await expect(promise).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'Failed to create practice session',
+    });
+    const error = await promise.catch((caughtError: unknown) => caughtError);
+
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect((error as Error).cause).toBe(cause);
+  });
+
   it('returns VALIDATION_ERROR when create() is called with invalid paramsJson', async () => {
     const db = {
       query: {

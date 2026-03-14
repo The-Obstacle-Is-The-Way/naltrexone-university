@@ -188,7 +188,12 @@ export class DrizzlePracticeSessionRepository
           'You already have an incomplete practice session. Resume or abandon it before starting a new one.',
         );
       }
-      throw error;
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Failed to create practice session',
+        undefined,
+        { cause: error },
+      );
     }
 
     if (!row) {

@@ -229,27 +229,31 @@ describe('withIdempotency', () => {
       resultJson: null,
     });
 
+    const parseError = new Error('invalid');
     const parseResult = vi.fn(() => {
-      throw new Error('invalid');
+      throw parseError;
     });
     const execute = vi.fn(async () => ({ ok: true }));
 
-    await expect(
-      withIdempotency({
-        repo,
-        userId: 'user_1',
-        action: 'question:submitAnswer',
-        key,
-        now,
-        logger,
-        parseResult,
-        execute,
-      }),
-    ).rejects.toMatchObject({
+    const promise = withIdempotency({
+      repo,
+      userId: 'user_1',
+      action: 'question:submitAnswer',
+      key,
+      now,
+      logger,
+      parseResult,
+      execute,
+    });
+
+    await expect(promise).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',
       message: 'Cached idempotency result is invalid',
     });
+    const error = await promise.catch((caughtError: unknown) => caughtError);
 
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect((error as Error).cause).toBe(parseError);
     expect(parseResult).toHaveBeenCalledWith(null);
     expect(execute).not.toHaveBeenCalled();
   });
@@ -527,31 +531,36 @@ describe('withIdempotency', () => {
       }),
     ).resolves.toEqual({ raw: true });
 
-    await expect(
-      withIdempotency({
-        repo,
-        userId: 'user_1',
-        action: 'billing:createCheckoutSession',
-        key: '88888888-8888-8888-8888-888888888888',
-        now,
-        logger,
-        execute: async () => ({ parsed: true }),
-        parseResult: (value: unknown) => {
-          if (
-            typeof value !== 'object' ||
-            value === null ||
-            (value as { parsed?: boolean }).parsed !== true
-          ) {
-            throw new Error('invalid cached result');
-          }
+    const parseError = new Error('invalid cached result');
+    const promise = withIdempotency({
+      repo,
+      userId: 'user_1',
+      action: 'billing:createCheckoutSession',
+      key: '88888888-8888-8888-8888-888888888888',
+      now,
+      logger,
+      execute: async () => ({ parsed: true }),
+      parseResult: (value: unknown) => {
+        if (
+          typeof value !== 'object' ||
+          value === null ||
+          (value as { parsed?: boolean }).parsed !== true
+        ) {
+          throw parseError;
+        }
 
-          return { parsed: true };
-        },
-      }),
-    ).rejects.toMatchObject({
+        return { parsed: true };
+      },
+    });
+
+    await expect(promise).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',
       message: 'Cached idempotency result is invalid',
     });
+    const error = await promise.catch((caughtError: unknown) => caughtError);
+
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect((error as Error).cause).toBe(parseError);
   });
 
   it('stores non-ApplicationError failures as INTERNAL_ERROR for replay', async () => {
