@@ -18,13 +18,10 @@ export class DrizzleDeletedClerkUserRepository
     return !!row;
   }
 
-  async markDeleted(
-    clerkUserId: string,
-    deletedAt = new Date(),
-  ): Promise<void> {
+  async markDeleted(clerkUserId: string, deletedAt?: Date): Promise<void> {
     await this.db
       .insert(deletedClerkUsers)
-      .values({ clerkUserId, deletedAt })
+      .values(deletedAt ? { clerkUserId, deletedAt } : { clerkUserId })
       .onConflictDoNothing({ target: deletedClerkUsers.clerkUserId });
   }
 }

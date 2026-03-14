@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { deletedClerkUsers } from '@/db/schema';
 import { DrizzleDeletedClerkUserRepository } from './drizzle-deleted-clerk-user-repository';
 
 type RepoDb = ConstructorParameters<
@@ -40,8 +41,9 @@ describe('DrizzleDeletedClerkUserRepository', () => {
 
   it('marks deleted users idempotently', async () => {
     const deletedAt = new Date('2026-02-01T00:00:00.000Z');
+    const onConflictDoNothing = vi.fn(async () => undefined);
     const insertValues = vi.fn(() => ({
-      onConflictDoNothing: async () => undefined,
+      onConflictDoNothing,
     }));
 
     const db = {
@@ -58,6 +60,29 @@ describe('DrizzleDeletedClerkUserRepository', () => {
     expect(insertValues).toHaveBeenCalledWith({
       clerkUserId: 'clerk_1',
       deletedAt,
+    });
+    expect(onConflictDoNothing).toHaveBeenCalledWith({
+      target: deletedClerkUsers.clerkUserId,
+    });
+  });
+
+  it('uses the database default timestamp when deletedAt is omitted', async () => {
+    const onConflictDoNothing = vi.fn(async () => undefined);
+    const insertValues = vi.fn(() => ({
+      onConflictDoNothing,
+    }));
+
+    const db = {
+      insert: () => ({
+        values: insertValues,
+      }),
+    } as const;
+
+    const repo = new DrizzleDeletedClerkUserRepository(db as unknown as RepoDb);
+
+    await expect(repo.markDeleted('clerk_1')).resolves.toBeUndefined();
+    expect(insertValues).toHaveBeenCalledWith({
+      clerkUserId: 'clerk_1',
     });
   });
 });

@@ -950,9 +950,9 @@ describe('clerk webhook controller (integration)', () => {
       data: { id: user.clerkUserId },
     };
 
-    await processClerkWebhook(deps, event);
     cleanup.clerkEventIds.push(eventId);
     cleanup.deletedClerkUserIds.push(user.clerkUserId);
+    await processClerkWebhook(deps, event);
 
     expect(cancelStripeCustomerSubscriptions).toHaveBeenCalledTimes(1);
     expect(cancelStripeCustomerSubscriptions).toHaveBeenCalledWith(

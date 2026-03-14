@@ -98,14 +98,26 @@ class TombstoneDuringUpsertUserRepository extends FakeUserRepository {
   }
 }
 
+class ThrowingUserRepository extends FakeUserRepository {
+  constructor(private readonly error: unknown) {
+    super();
+  }
+
+  override async upsertByClerkId(): Promise<never> {
+    throw this.error;
+  }
+}
+
 function withEventId(
   event: Omit<ClerkWebhookEvent, 'eventId'>,
   eventId: string,
 ): ClerkWebhookEvent {
-  return {
+  const eventWithId = {
     ...event,
     eventId,
-  } as ClerkWebhookEvent;
+  } satisfies ClerkWebhookEvent;
+
+  return eventWithId;
 }
 
 function createDeps() {
@@ -260,8 +272,9 @@ describe('processClerkWebhook', () => {
     const deps = createDeps();
 
     await expect(
-      processClerkWebhook(deps, {
-        ...withEventId(
+      processClerkWebhook(
+        deps,
+        withEventId(
           {
             type: 'user.updated',
             data: {
@@ -272,7 +285,7 @@ describe('processClerkWebhook', () => {
           },
           'evt_user_updated_invalid_email_addresses',
         ),
-      }),
+      ),
     ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
 
     await expect(
@@ -588,19 +601,88 @@ describe('processClerkWebhook', () => {
     );
   });
 
+  it('truncates unknown raw errors before persisting failed Clerk events', async () => {
+    const rawError = {
+      toString: () => 'x'.repeat(1205),
+    };
+    const clerkEvents = new FakeClerkEventRepository();
+    const deletedClerkUsers = new FakeDeletedClerkUserRepository();
+    const userRepository = new ThrowingUserRepository(rawError);
+    const stripeCustomerRepository = new FakeStripeCustomerRepository();
+
+    const deps = {
+      clerkEvents,
+      deletedClerkUsers,
+      userRepository,
+      stripeCustomerRepository,
+      transaction: async <T>(
+        fn: (tx: {
+          clerkEvents: FakeClerkEventRepository;
+          deletedClerkUsers: FakeDeletedClerkUserRepository;
+          userRepository: ThrowingUserRepository;
+          stripeCustomerRepository: FakeStripeCustomerRepository;
+        }) => Promise<T>,
+      ) =>
+        fn({
+          clerkEvents,
+          deletedClerkUsers,
+          userRepository,
+          stripeCustomerRepository,
+        }),
+      cancelStripeCustomerSubscriptions: async () => undefined,
+      logger: new FakeLogger(),
+    };
+
+    await expect(
+      processClerkWebhook(
+        deps,
+        withEventId(
+          {
+            type: 'user.updated',
+            data: {
+              id: 'clerk_truncate',
+              primary_email_address_id: 'email_1',
+              updated_at: 1769904003000,
+              email_addresses: [
+                { id: 'email_1', email_address: 'truncate@example.com' },
+              ],
+            },
+          },
+          'evt_user_updated_truncate_unknown_error',
+        ),
+      ),
+    ).rejects.toBe(rawError);
+
+    const storedEvent = clerkEvents
+      .snapshot()
+      .find(
+        ([eventId]) => eventId === 'evt_user_updated_truncate_unknown_error',
+      );
+    const serializedError = storedEvent?.[1].error;
+    expect(serializedError).toBeTruthy();
+
+    const parsedError = JSON.parse(serializedError ?? '{}') as {
+      message?: string;
+      raw?: string;
+    };
+    expect(parsedError.message).toBe('Unknown error');
+    expect(parsedError.raw).toBe(`${'x'.repeat(1000)}...`);
+  });
+
   it('rejects user.updated when the payload is missing email addresses', async () => {
     const deps = createDeps();
 
     await expect(
-      processClerkWebhook(deps, {
-        ...withEventId(
+      processClerkWebhook(
+        deps,
+        withEventId(
           {
             type: 'user.updated',
             data: { id: 'clerk_1', updated_at: 1769904000000 },
           },
           'evt_user_updated_missing_email_array',
         ),
-      }),
+      ),
     ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
   });
 
@@ -608,8 +690,9 @@ describe('processClerkWebhook', () => {
     const deps = createDeps();
 
     await expect(
-      processClerkWebhook(deps, {
-        ...withEventId(
+      processClerkWebhook(
+        deps,
+        withEventId(
           {
             type: 'user.updated',
             data: {
@@ -620,7 +703,7 @@ describe('processClerkWebhook', () => {
           },
           'evt_user_updated_missing_email_field',
         ),
-      }),
+      ),
     ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
   });
 
@@ -628,8 +711,9 @@ describe('processClerkWebhook', () => {
     const deps = createDeps();
 
     await expect(
-      processClerkWebhook(deps, {
-        ...withEventId(
+      processClerkWebhook(
+        deps,
+        withEventId(
           {
             type: 'user.updated',
             data: {
@@ -642,7 +726,7 @@ describe('processClerkWebhook', () => {
           },
           'evt_user_updated_empty_user_id',
         ),
-      }),
+      ),
     ).rejects.toMatchObject({
       code: 'INVALID_WEBHOOK_PAYLOAD',
       message: 'Clerk user.updated webhook payload is missing user id',
@@ -653,15 +737,16 @@ describe('processClerkWebhook', () => {
     const deps = createDeps();
 
     await expect(
-      processClerkWebhook(deps, {
-        ...withEventId(
+      processClerkWebhook(
+        deps,
+        withEventId(
           {
             type: 'user.deleted',
             data: {},
           },
           'evt_user_deleted_invalid_payload',
         ),
-      }),
+      ),
     ).rejects.toMatchObject({
       code: 'INVALID_WEBHOOK_PAYLOAD',
       message: 'Invalid Clerk user.deleted webhook payload',

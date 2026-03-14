@@ -73,7 +73,7 @@ describe('DrizzleClerkEventRepository', () => {
     });
   });
 
-  it('marks events processed and failed', async () => {
+  it('marks events processed', async () => {
     const now = new Date('2026-02-01T13:00:00.000Z');
     const nowFn = vi.fn(() => now);
 
@@ -97,6 +97,20 @@ describe('DrizzleClerkEventRepository', () => {
       processedAt: now,
       error: null,
     });
+  });
+
+  it('marks events failed', async () => {
+    const updateSet = vi.fn(() => ({
+      where: () => ({
+        returning: async () => [{ id: 'evt_123' }],
+      }),
+    }));
+
+    const db = {
+      update: () => ({ set: updateSet }),
+    } as const;
+
+    const repo = new DrizzleClerkEventRepository(db as unknown as RepoDb);
 
     await expect(
       repo.markFailed('evt_123', 'Something went wrong'),

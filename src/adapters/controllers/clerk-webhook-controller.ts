@@ -159,7 +159,14 @@ function toErrorData(error: unknown): string {
     });
   }
 
-  return JSON.stringify({ message: 'Unknown error', raw: String(error) });
+  const raw = String(error);
+  return JSON.stringify({
+    message: 'Unknown error',
+    raw:
+      raw.length > STACK_TRACE_LIMIT
+        ? `${raw.slice(0, STACK_TRACE_LIMIT)}...`
+        : raw,
+  });
 }
 
 export async function processClerkWebhook(
