@@ -1,7 +1,7 @@
 import {
+  STRIPE_SUBSCRIPTION_STATUSES,
   type StripeSubscriptionStatus,
-  stripeSubscriptionStatusEnum,
-} from '@/db/schema';
+} from '@/src/adapters/shared/stripe-types';
 import type { SubscriptionStatus } from '@/src/domain/value-objects';
 
 const stripeToDomain: Record<StripeSubscriptionStatus, SubscriptionStatus> = {
@@ -29,9 +29,7 @@ const domainToStripe: Record<SubscriptionStatus, StripeSubscriptionStatus> = {
 export function isValidStripeSubscriptionStatus(
   value: string,
 ): value is StripeSubscriptionStatus {
-  return (
-    stripeSubscriptionStatusEnum.enumValues as readonly string[]
-  ).includes(value);
+  return (STRIPE_SUBSCRIPTION_STATUSES as readonly string[]).includes(value);
 }
 
 export function stripeSubscriptionStatusToSubscriptionStatus(
