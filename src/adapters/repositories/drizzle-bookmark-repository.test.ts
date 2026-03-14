@@ -148,12 +148,15 @@ describe('DrizzleBookmarkRepository', () => {
       ]);
 
       const queryArgs = db._mocks.queryFindMany.mock.calls[0]?.[0];
-      const orderBySql = new PgDialect().sqlToQuery(
-        queryArgs?.orderBy as SQL,
-      ).sql;
+      const orderBy = queryArgs?.orderBy;
+      expect(orderBy).toBeDefined();
 
-      expect(orderBySql).toContain('"bookmarks"."created_at"');
-      expect(orderBySql.toLowerCase()).toContain('desc');
+      if (!orderBy) {
+        throw new Error('Expected query to define an orderBy clause');
+      }
+
+      const orderBySql = new PgDialect().sqlToQuery(orderBy as SQL).sql;
+      expect(orderBySql).toMatch(/"bookmarks"\."created_at"\s+desc/i);
     });
   });
 });
