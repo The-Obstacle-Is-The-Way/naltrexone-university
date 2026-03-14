@@ -28,6 +28,7 @@ function createFakeUserRepository(): UserRepository & {
   return {
     _calls: calls,
     findByClerkId: async () => null,
+    lockByClerkId: async () => null,
     upsertByClerkId: async (clerkId, email, options) => {
       calls.upsertByClerkId.push({
         clerkId,

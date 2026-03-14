@@ -1,19 +1,32 @@
 import { z } from 'zod';
-import { ApplicationError } from '@/src/application/errors';
+import { ApplicationError, isApplicationError } from '@/src/application/errors';
 import type { Logger } from '@/src/application/ports/logger';
 import type {
+  ClerkEventRepository,
+  DeletedClerkUserRepository,
+  PendingStripeCancellationRepository,
   StripeCustomerRepository,
   UserRepository,
 } from '@/src/application/ports/repositories';
 
 export type ClerkWebhookEvent = {
+  eventId: string;
   type: string;
   data: unknown;
 };
 
-export type ClerkWebhookDeps = {
+export type ClerkWebhookTransaction = {
+  clerkEvents: ClerkEventRepository;
+  deletedClerkUsers: DeletedClerkUserRepository;
+  pendingStripeCancellations: PendingStripeCancellationRepository;
   userRepository: UserRepository;
   stripeCustomerRepository: StripeCustomerRepository;
+};
+
+export type ClerkWebhookDeps = {
+  transaction: <T>(
+    fn: (tx: ClerkWebhookTransaction) => Promise<T>,
+  ) => Promise<T>;
   cancelStripeCustomerSubscriptions: (
     stripeCustomerId: string,
   ) => Promise<void>;
@@ -125,72 +138,241 @@ function getPrimaryEmailOrNull(data: ClerkUserDataLike): string | null {
   );
 }
 
+const STACK_TRACE_LIMIT = 1000;
+
+type ClerkWebhookPostCommitAction = {
+  eventId: string;
+  stripeCustomerId: string;
+};
+
+function toErrorData(error: unknown): string {
+  if (isApplicationError(error)) {
+    return JSON.stringify({
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      fieldErrors: error.fieldErrors ?? undefined,
+      stack: error.stack?.slice(0, STACK_TRACE_LIMIT),
+    });
+  }
+
+  if (error instanceof Error) {
+    return JSON.stringify({
+      name: error.name,
+      message: error.message,
+      stack: error.stack?.slice(0, STACK_TRACE_LIMIT),
+    });
+  }
+
+  const raw = String(error);
+  return JSON.stringify({
+    message: 'Unknown error',
+    raw:
+      raw.length > STACK_TRACE_LIMIT
+        ? `${raw.slice(0, STACK_TRACE_LIMIT)}...`
+        : raw,
+  });
+}
+
+async function persistFailure(
+  deps: ClerkWebhookDeps,
+  event: ClerkWebhookEvent,
+  error: unknown,
+): Promise<void> {
+  const errorData = toErrorData(error);
+
+  try {
+    await deps.transaction(async ({ clerkEvents }) => {
+      await clerkEvents.claim(event.eventId, event.type);
+      const current = await clerkEvents.lock(event.eventId);
+
+      if (current.processedAt !== null && current.error === null) {
+        return;
+      }
+
+      await clerkEvents.markFailed(event.eventId, errorData);
+    });
+  } catch (persistError) {
+    deps.logger.error(
+      {
+        eventId: event.eventId,
+        error:
+          persistError instanceof Error
+            ? persistError.message
+            : String(persistError),
+      },
+      'Failed to persist Clerk webhook failure state',
+    );
+  }
+}
+
 export async function processClerkWebhook(
   deps: ClerkWebhookDeps,
   event: ClerkWebhookEvent,
 ): Promise<void> {
-  if (event.type === 'user.updated') {
-    const parsed = clerkUserUpdatedDataSchema.safeParse(event.data);
-    if (!parsed.success) {
-      throw new ApplicationError(
-        'INVALID_WEBHOOK_PAYLOAD',
-        'Invalid Clerk user.updated webhook payload',
-      );
-    }
-
-    const data = parsed.data as ClerkUserDataLike;
-    const clerkUserId = getStringOrNull(data.id);
-    if (!clerkUserId) {
-      throw new ApplicationError(
-        'INVALID_WEBHOOK_PAYLOAD',
-        'Clerk user.updated webhook payload is missing user id',
-      );
-    }
-
-    const email = getPrimaryEmailOrNull(data);
-    if (!email) {
-      deps.logger.warn(
-        { clerkUserId },
-        'Clerk user.updated missing email; skipping user upsert',
-      );
-      return;
-    }
-
-    const observedAtMs =
-      getNumberOrNull(data.updatedAt) ?? getNumberOrNull(data.updated_at);
-    const observedAt = observedAtMs === null ? null : new Date(observedAtMs);
-
-    await deps.userRepository.upsertByClerkId(clerkUserId, email, {
-      observedAt: observedAt ?? new Date(),
-    });
+  if (event.type !== 'user.updated' && event.type !== 'user.deleted') {
     return;
   }
 
-  if (event.type === 'user.deleted') {
-    const parsed = clerkUserDeletedDataSchema.safeParse(event.data);
-    if (!parsed.success) {
-      throw new ApplicationError(
-        'INVALID_WEBHOOK_PAYLOAD',
-        'Invalid Clerk user.deleted webhook payload',
-      );
-    }
+  let postCommitAction: ClerkWebhookPostCommitAction | null = null;
 
-    const clerkUserId = parsed.data.id;
+  try {
+    postCommitAction = await deps.transaction(
+      async ({
+        clerkEvents,
+        deletedClerkUsers,
+        pendingStripeCancellations,
+        userRepository,
+        stripeCustomerRepository,
+      }): Promise<ClerkWebhookPostCommitAction | null> => {
+        const claimed = await clerkEvents.claim(event.eventId, event.type);
+        if (!claimed) {
+          const snapshot = await clerkEvents.peek(event.eventId);
+          if (
+            snapshot &&
+            snapshot.processedAt !== null &&
+            snapshot.error === null
+          ) {
+            return null;
+          }
+        }
 
-    const user = await deps.userRepository.findByClerkId(clerkUserId);
-    if (!user) return;
+        const current = await clerkEvents.lock(event.eventId);
+        if (current.processedAt !== null && current.error === null) {
+          return null;
+        }
 
-    const stripeCustomer = await deps.stripeCustomerRepository.findByUserId(
-      user.id,
+        if (event.type === 'user.updated') {
+          const parsed = clerkUserUpdatedDataSchema.safeParse(event.data);
+          if (!parsed.success) {
+            throw new ApplicationError(
+              'INVALID_WEBHOOK_PAYLOAD',
+              'Invalid Clerk user.updated webhook payload',
+            );
+          }
+
+          const data = parsed.data as ClerkUserDataLike;
+          const clerkUserId = getStringOrNull(data.id);
+          if (!clerkUserId) {
+            throw new ApplicationError(
+              'INVALID_WEBHOOK_PAYLOAD',
+              'Clerk user.updated webhook payload is missing user id',
+            );
+          }
+
+          await deletedClerkUsers.lock(clerkUserId);
+
+          if (await deletedClerkUsers.exists(clerkUserId)) {
+            await clerkEvents.markProcessed(event.eventId);
+            return null;
+          }
+
+          const email = getPrimaryEmailOrNull(data);
+          if (!email) {
+            deps.logger.warn(
+              { clerkUserId },
+              'Clerk user.updated missing email; skipping user upsert',
+            );
+            await clerkEvents.markProcessed(event.eventId);
+            return null;
+          }
+
+          const observedAtMs =
+            getNumberOrNull(data.updatedAt) ?? getNumberOrNull(data.updated_at);
+          const observedAt =
+            observedAtMs === null ? null : new Date(observedAtMs);
+
+          await userRepository.upsertByClerkId(clerkUserId, email, {
+            observedAt: observedAt ?? new Date(),
+          });
+
+          // A delete can commit between the pre-check above and the upsert under
+          // READ COMMITTED. Re-check tombstone state before committing the update.
+          if (await deletedClerkUsers.exists(clerkUserId)) {
+            await userRepository.deleteByClerkId(clerkUserId);
+          }
+
+          await clerkEvents.markProcessed(event.eventId);
+          return null;
+        }
+
+        const parsed = clerkUserDeletedDataSchema.safeParse(event.data);
+        if (!parsed.success) {
+          throw new ApplicationError(
+            'INVALID_WEBHOOK_PAYLOAD',
+            'Invalid Clerk user.deleted webhook payload',
+          );
+        }
+
+        const clerkUserId = parsed.data.id;
+        if (!clerkUserId) {
+          throw new ApplicationError(
+            'INVALID_WEBHOOK_PAYLOAD',
+            'Clerk user.deleted webhook payload is missing user id',
+          );
+        }
+
+        const pendingCancellation =
+          await pendingStripeCancellations.findByEventId(event.eventId);
+
+        if (pendingCancellation) {
+          return {
+            eventId: event.eventId,
+            stripeCustomerId: pendingCancellation.stripeCustomerId,
+          };
+        }
+
+        await deletedClerkUsers.lock(clerkUserId);
+        const user = await userRepository.lockByClerkId(clerkUserId);
+        let stripeCustomerId: string | null = null;
+
+        if (user) {
+          const stripeCustomer = await stripeCustomerRepository.findByUserId(
+            user.id,
+          );
+          stripeCustomerId = stripeCustomer?.stripeCustomerId ?? null;
+
+          await userRepository.deleteByClerkId(clerkUserId);
+        }
+
+        await deletedClerkUsers.markDeleted(clerkUserId);
+
+        if (!stripeCustomerId) {
+          await clerkEvents.markProcessed(event.eventId);
+          return null;
+        }
+
+        await pendingStripeCancellations.schedule(
+          event.eventId,
+          stripeCustomerId,
+        );
+        return { eventId: event.eventId, stripeCustomerId };
+      },
+    );
+  } catch (error) {
+    await persistFailure(deps, event, error);
+    throw error;
+  }
+
+  if (!postCommitAction) {
+    return;
+  }
+
+  try {
+    await deps.cancelStripeCustomerSubscriptions(
+      postCommitAction.stripeCustomerId,
     );
 
-    if (stripeCustomer) {
-      await deps.cancelStripeCustomerSubscriptions(
-        stripeCustomer.stripeCustomerId,
-      );
-    }
-
-    await deps.userRepository.deleteByClerkId(clerkUserId);
-    return;
+    await deps.transaction(
+      async ({ clerkEvents, pendingStripeCancellations }) => {
+        await pendingStripeCancellations.deleteByEventId(
+          postCommitAction.eventId,
+        );
+        await clerkEvents.markProcessed(postCommitAction.eventId);
+      },
+    );
+  } catch (error) {
+    await persistFailure(deps, event, error);
+    throw error;
   }
 }

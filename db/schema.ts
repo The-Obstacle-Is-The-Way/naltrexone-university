@@ -196,6 +196,57 @@ export const stripeEvents = pgTable(
   }),
 );
 
+// clerk_events (id = Svix delivery id)
+export const clerkEvents = pgTable(
+  'clerk_events',
+  {
+    id: varchar('id', { length: 255 }).primaryKey(),
+    type: varchar('type', { length: 255 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    processedAt: timestamp('processed_at', { withTimezone: true }),
+    error: text('error'),
+  },
+  (t) => ({
+    typeIdx: index('clerk_events_type_idx').on(t.type),
+    processedAtIdx: index('clerk_events_processed_at_idx').on(t.processedAt),
+  }),
+);
+
+// deleted_clerk_users
+export const deletedClerkUsers = pgTable(
+  'deleted_clerk_users',
+  {
+    clerkUserId: varchar('clerk_user_id', { length: 64 }).primaryKey(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    deletedAtIdx: index('deleted_clerk_users_deleted_at_idx').on(t.deletedAt),
+  }),
+);
+
+// pending_stripe_cancellations
+export const pendingStripeCancellations = pgTable(
+  'pending_stripe_cancellations',
+  {
+    eventId: varchar('event_id', { length: 255 })
+      .primaryKey()
+      .references(() => clerkEvents.id, { onDelete: 'cascade' }),
+    stripeCustomerId: varchar('stripe_customer_id', { length: 255 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    createdAtIdx: index('pending_stripe_cancellations_created_at_idx').on(
+      t.createdAt,
+    ),
+  }),
+);
+
 // rate_limits (composite PK: key + window_start)
 export const rateLimits = pgTable(
   'rate_limits',
@@ -551,6 +602,17 @@ export type NewStripeSubscription = typeof stripeSubscriptions.$inferInsert;
 
 export type StripeEvent = typeof stripeEvents.$inferSelect;
 export type NewStripeEvent = typeof stripeEvents.$inferInsert;
+
+export type ClerkEvent = typeof clerkEvents.$inferSelect;
+export type NewClerkEvent = typeof clerkEvents.$inferInsert;
+
+export type DeletedClerkUser = typeof deletedClerkUsers.$inferSelect;
+export type NewDeletedClerkUser = typeof deletedClerkUsers.$inferInsert;
+
+export type PendingStripeCancellation =
+  typeof pendingStripeCancellations.$inferSelect;
+export type NewPendingStripeCancellation =
+  typeof pendingStripeCancellations.$inferInsert;
 
 export type Question = typeof questions.$inferSelect;
 export type NewQuestion = typeof questions.$inferInsert;

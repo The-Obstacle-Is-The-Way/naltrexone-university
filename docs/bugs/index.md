@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-11
+**Last Updated:** 2026-03-14
 
 ---
 
@@ -13,7 +13,36 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-206
+**Next Bug ID:** BUG-221
+
+**Audit batch (2026-03-13) — comprehensive codebase audit (verified via tracer bullets):**
+
+15 bug docs were filed in this batch. The priority buckets below are the source of truth as each entry is re-verified.
+
+### Invalidated (False Positives)
+- ~~[BUG-211](bug-211-count-query-fallback-masks-failures.md)~~: Four count-aggregate fallbacks across three repositories are dead defensive code; they do not mask DB failures
+- ~~[BUG-216](bug-216-health-handler-imports-drizzle-orm.md)~~: Health handler's direct Drizzle `SELECT 1` probe is framework-layer code explicitly required by the master spec; not a Clean Architecture bug
+
+### Resolved (Pending Archival)
+- [BUG-208](bug-208-clerk-webhook-deletion-not-transactional.md): Fixed with a transaction seam, `lockByClerkId(...)`, and durable post-commit Stripe cancellation state for `user.deleted`
+- [BUG-209](bug-209-clerk-webhook-lacks-idempotency.md): Fixed with `svix-id` preservation, `clerk_events` delivery dedup, `deleted_clerk_users` tombstones, and per-`clerkUserId` transaction locks
+
+### P3 (Poor Practice / Low Risk)
+- [BUG-206](bug-206-raw-db-errors-escape-adapter-layer.md): Repositories rethrow unexpected DB failures raw across the application port boundary; controllers sanitize later, but the adapter contract is still violated
+- [BUG-207](bug-207-cron-route-leaks-config-state.md): Cron route reveals missing `CRON_SECRET` to public callers before auth check (low-risk config-state leak; route still fails closed)
+- [BUG-212](bug-212-bookmark-toggle-swallows-errors.md): Bookmark toggle collapses thrown and structured failures to generic UI without client-side logging; unknown server exceptions are still logged upstream
+- [BUG-213](bug-213-session-start-error-not-logged.md): Session-start thrown errors/timeouts surface to UI but are not reported client-side; expected controller failures already return structured results
+- [BUG-217](bug-217-questionid-validation-inconsistency.md): `getPreviousAttempt` still accepts non-UUID `questionId` values at both the controller and spec level, so malformed IDs are rejected too late
+
+### P4 (Code Smell / Tech Debt)
+- [BUG-210](bug-210-non-injectable-date-now-in-checkout-session.md): Hard-wired `Date.now()` in Stripe checkout inactivity checks is deterministic-testability debt, not a production bug
+- [BUG-214](bug-214-production-errors-silenced-in-transition-action.md): `runTransitionedAsyncAction` dev-only logging (by design; all callers handle errors; DEBT-286 tracks Sentry)
+- [BUG-215](bug-215-checkout-success-business-logic-in-app-layer.md): Checkout-success eager sync is intentional page-layer orchestration; the remaining issue is the direct `@/db/schema` type import in the assertions helper
+- [BUG-218](bug-218-idempotency-parse-error-loses-cause.md): Cached idempotency replay parse failures drop the original parser cause, reducing diagnosability without changing the external error contract
+- [BUG-219](bug-219-dead-code-dropdown-menu-skip-auth-gateway.md): `DropdownMenu` is spec-mandated; the remaining issue is the unused `SkipAuthGateway` barrel export
+- [BUG-220](bug-220-weak-test-assertions.md): Two tests still assert existence instead of behavior (`proxy.test.ts` skip-Clerk response, bookmark repo ordering)
+
+---
 
 **Latest archival (2026-03-11):**
 - BUG-205 verified fixed (PR #199): reconciliation canonical selection short-circuit removed, always sorts full blocking set by period-end + deterministic tie-break, archived to `docs/_archive/bugs/`.
@@ -42,7 +71,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Open Bugs
 
-No open bugs.
+Active open bugs are listed in the priority sections above.
 
 ## Audit #14 — Boundary Sweep: Reconciliation Canonical Selection (2026-03-10)
 

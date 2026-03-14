@@ -34,6 +34,24 @@ describe('DrizzleUserRepository', () => {
     });
   });
 
+  it('locks and returns an existing user inside a transaction', async () => {
+    const repo = new DrizzleUserRepository(db);
+    const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;
+    const email = `it-${randomUUID()}@example.com`;
+
+    const user = await repo.upsertByClerkId(clerkUserId, email);
+    cleanup.userIds.push(user.id);
+
+    await db.transaction(async (tx) => {
+      const txRepo = new DrizzleUserRepository(tx);
+
+      await expect(txRepo.lockByClerkId(clerkUserId)).resolves.toMatchObject({
+        id: user.id,
+        email,
+      });
+    });
+  });
+
   it('applies observedAt clock-guard semantics when upserting', async () => {
     const repo = new DrizzleUserRepository(db);
     const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;

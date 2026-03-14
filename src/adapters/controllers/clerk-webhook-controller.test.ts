@@ -2,19 +2,329 @@ import { describe, expect, it } from 'vitest';
 import type { ClerkWebhookEvent } from '@/src/adapters/controllers/clerk-webhook-controller';
 import { processClerkWebhook } from '@/src/adapters/controllers/clerk-webhook-controller';
 import {
+  FakeClerkEventRepository,
+  FakeDeletedClerkUserRepository,
   FakeLogger,
+  FakePendingStripeCancellationRepository,
   FakeStripeCustomerRepository,
   FakeUserRepository,
 } from '@/src/application/test-helpers/fakes';
 import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
 
+class DeletionBarrierUserRepository extends FakeUserRepository {
+  private readonly lockedUserIds = new Set<string>();
+
+  async lockByClerkId(
+    clerkId: string,
+  ): Promise<Awaited<ReturnType<FakeUserRepository['findByClerkId']>>> {
+    const user = await super.findByClerkId(clerkId);
+    if (user) {
+      this.lockedUserIds.add(user.id);
+    }
+    return user;
+  }
+
+  isUserLocked(userId: string): boolean {
+    return this.lockedUserIds.has(userId);
+  }
+}
+
+class ConcurrentStripeSyncRepository extends FakeStripeCustomerRepository {
+  private readonly raceCustomerId = 'cus_race_after_lookup';
+
+  concurrentInsertAttempts = 0;
+  concurrentInsertBlocked = 0;
+
+  constructor(
+    private readonly canInsertForUserId: (userId: string) => boolean,
+  ) {
+    super();
+  }
+
+  async findByUserId(
+    userId: string,
+  ): Promise<{ stripeCustomerId: string } | null> {
+    const existing = await super.findByUserId(userId);
+    if (existing) return existing;
+
+    this.concurrentInsertAttempts += 1;
+
+    if (this.canInsertForUserId(userId)) {
+      await super.insert(userId, this.raceCustomerId, {
+        conflictStrategy: 'authoritative',
+      });
+    } else {
+      this.concurrentInsertBlocked += 1;
+    }
+
+    return null;
+  }
+
+  async peekStoredMapping(
+    userId: string,
+  ): Promise<{ stripeCustomerId: string } | null> {
+    return super.findByUserId(userId);
+  }
+}
+
+class TombstoneDuringUpsertUserRepository extends FakeUserRepository {
+  private shouldSimulateDelete = false;
+
+  constructor(
+    private readonly deletedClerkUsers: FakeDeletedClerkUserRepository,
+  ) {
+    super();
+  }
+
+  async seedUser(clerkId: string, email: string) {
+    return super.upsertByClerkId(clerkId, email);
+  }
+
+  armConcurrentDelete() {
+    this.shouldSimulateDelete = true;
+  }
+
+  override async upsertByClerkId(
+    clerkId: string,
+    email: string,
+    options?: Parameters<FakeUserRepository['upsertByClerkId']>[2],
+  ) {
+    if (this.shouldSimulateDelete) {
+      this.shouldSimulateDelete = false;
+      await super.deleteByClerkId(clerkId);
+      await this.deletedClerkUsers.markDeleted(clerkId);
+    }
+
+    return super.upsertByClerkId(clerkId, email, options);
+  }
+}
+
+class ThrowingUserRepository extends FakeUserRepository {
+  constructor(private readonly error: unknown) {
+    super();
+  }
+
+  override async upsertByClerkId(): Promise<never> {
+    throw this.error;
+  }
+}
+
+class DeleteFailingUserRepository extends FakeUserRepository {
+  constructor(private readonly error: unknown) {
+    super();
+  }
+
+  override async deleteByClerkId(): Promise<boolean> {
+    throw this.error;
+  }
+}
+
+function createDeferred() {
+  let resolve: (() => void) | null = null;
+  const promise = new Promise<void>((res) => {
+    resolve = res;
+  });
+  return {
+    promise,
+    resolve: () => {
+      if (!resolve) {
+        throw new Error('Deferred promise has not been initialized');
+      }
+      resolve();
+    },
+  };
+}
+
+class TransactionalUserStore {
+  private readonly committedUsers = new Map<
+    string,
+    Awaited<ReturnType<FakeUserRepository['upsertByClerkId']>>
+  >();
+  private nextId = 1;
+
+  constructor(private readonly pauseUpdateAfterUpsert?: () => Promise<void>) {}
+
+  createRepository(label: 'update' | 'delete') {
+    const stagedUsers = new Map<
+      string,
+      Awaited<ReturnType<FakeUserRepository['upsertByClerkId']>>
+    >();
+    const stagedDeletes = new Set<string>();
+
+    const readVisibleUser = (clerkId: string) => {
+      if (stagedDeletes.has(clerkId)) return null;
+      return (
+        stagedUsers.get(clerkId) ?? this.committedUsers.get(clerkId) ?? null
+      );
+    };
+
+    return {
+      findByClerkId: async (clerkId: string) => readVisibleUser(clerkId),
+      lockByClerkId: async (clerkId: string) => readVisibleUser(clerkId),
+      upsertByClerkId: async (
+        clerkId: string,
+        email: string,
+        options?: Parameters<FakeUserRepository['upsertByClerkId']>[2],
+      ) => {
+        const observedAt = options?.observedAt ?? new Date();
+        const existing = readVisibleUser(clerkId);
+        const user =
+          existing === null
+            ? {
+                id: `tx-user-${this.nextId++}`,
+                email,
+                createdAt: observedAt,
+                updatedAt: observedAt,
+              }
+            : {
+                ...existing,
+                email,
+                updatedAt: observedAt,
+              };
+
+        stagedDeletes.delete(clerkId);
+        stagedUsers.set(clerkId, user);
+
+        if (label === 'update' && this.pauseUpdateAfterUpsert) {
+          await this.pauseUpdateAfterUpsert();
+        }
+
+        return user;
+      },
+      deleteByClerkId: async (clerkId: string) => {
+        const existing = readVisibleUser(clerkId);
+        if (!existing) return false;
+        stagedUsers.delete(clerkId);
+        stagedDeletes.add(clerkId);
+        return true;
+      },
+      commit: () => {
+        for (const clerkId of stagedDeletes) {
+          this.committedUsers.delete(clerkId);
+        }
+
+        for (const [clerkId, user] of stagedUsers) {
+          this.committedUsers.set(clerkId, user);
+        }
+      },
+    };
+  }
+
+  async findCommittedUser(clerkId: string) {
+    return this.committedUsers.get(clerkId) ?? null;
+  }
+}
+
+class TransactionalDeletedClerkUserStore {
+  private readonly committedDeletedUsers = new Map<string, Date>();
+  private readonly pendingLocks = new Map<string, Promise<void>>();
+
+  constructor(
+    private readonly pauseDeleteBeforeTombstone?: () => Promise<void>,
+  ) {}
+
+  createRepository(label: 'update' | 'delete') {
+    const stagedDeletedUsers = new Map<string, Date>();
+    const heldLocks: Array<() => void> = [];
+
+    const readExists = (clerkId: string) =>
+      stagedDeletedUsers.has(clerkId) ||
+      this.committedDeletedUsers.has(clerkId);
+
+    return {
+      lock: async (clerkId: string) => {
+        const previous = this.pendingLocks.get(clerkId) ?? Promise.resolve();
+        let release: (() => void) | null = null;
+        const current = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+
+        this.pendingLocks.set(
+          clerkId,
+          previous.then(() => current),
+        );
+        await previous;
+        heldLocks.push(() => {
+          if (!release) {
+            throw new Error('Lock release has not been initialized');
+          }
+          release();
+          if (this.pendingLocks.get(clerkId) === current) {
+            this.pendingLocks.delete(clerkId);
+          }
+        });
+      },
+      exists: async (clerkId: string) => readExists(clerkId),
+      markDeleted: async (clerkId: string, deletedAt?: Date) => {
+        if (label === 'delete' && this.pauseDeleteBeforeTombstone) {
+          await this.pauseDeleteBeforeTombstone();
+        }
+
+        if (!readExists(clerkId)) {
+          stagedDeletedUsers.set(clerkId, deletedAt ?? new Date());
+        }
+      },
+      commit: () => {
+        for (const [clerkId, deletedAt] of stagedDeletedUsers) {
+          this.committedDeletedUsers.set(clerkId, deletedAt);
+        }
+
+        while (heldLocks.length > 0) {
+          heldLocks.pop()?.();
+        }
+      },
+    };
+  }
+
+  async exists(clerkId: string) {
+    return this.committedDeletedUsers.has(clerkId);
+  }
+}
+
+function withEventId(
+  event: Omit<ClerkWebhookEvent, 'eventId'>,
+  eventId: string,
+): ClerkWebhookEvent {
+  const eventWithId = {
+    ...event,
+    eventId,
+  } satisfies ClerkWebhookEvent;
+
+  return eventWithId;
+}
+
 function createDeps() {
   const cancelCalls: string[] = [];
   const logger = new FakeLogger();
+  const clerkEvents = new FakeClerkEventRepository();
+  const deletedClerkUsers = new FakeDeletedClerkUserRepository();
+  const pendingStripeCancellations =
+    new FakePendingStripeCancellationRepository();
+  const userRepository = new FakeUserRepository();
+  const stripeCustomerRepository = new FakeStripeCustomerRepository();
 
   return {
-    userRepository: new FakeUserRepository(),
-    stripeCustomerRepository: new FakeStripeCustomerRepository(),
+    clerkEvents,
+    deletedClerkUsers,
+    pendingStripeCancellations,
+    userRepository,
+    stripeCustomerRepository,
+    transaction: async <T>(
+      fn: (tx: {
+        clerkEvents: FakeClerkEventRepository;
+        deletedClerkUsers: FakeDeletedClerkUserRepository;
+        pendingStripeCancellations: FakePendingStripeCancellationRepository;
+        userRepository: FakeUserRepository;
+        stripeCustomerRepository: FakeStripeCustomerRepository;
+      }) => Promise<T>,
+    ) =>
+      fn({
+        clerkEvents,
+        deletedClerkUsers,
+        pendingStripeCancellations,
+        userRepository,
+        stripeCustomerRepository,
+      }),
     cancelCalls,
     cancelStripeCustomerSubscriptions: async (stripeCustomerId: string) => {
       cancelCalls.push(stripeCustomerId);
@@ -27,7 +337,12 @@ describe('processClerkWebhook', () => {
   it('upserts the user when receiving user.updated with a primary email', async () => {
     const deps = createDeps();
 
-    const event = loadJsonFixture<ClerkWebhookEvent>('clerk/user.updated.json');
+    const event = withEventId(
+      loadJsonFixture<Omit<ClerkWebhookEvent, 'eventId'>>(
+        'clerk/user.updated.json',
+      ),
+      'evt_fixture_updated',
+    );
 
     await processClerkWebhook(deps, event);
 
@@ -41,25 +356,41 @@ describe('processClerkWebhook', () => {
   it('returns the newer email when an older user.updated event is received', async () => {
     const deps = createDeps();
 
-    await processClerkWebhook(deps, {
-      type: 'user.updated',
-      data: {
-        id: 'clerk_1',
-        primary_email_address_id: 'email_1',
-        updated_at: 1769904001000,
-        email_addresses: [{ id: 'email_1', email_address: 'new@example.com' }],
-      },
-    });
+    await processClerkWebhook(
+      deps,
+      withEventId(
+        {
+          type: 'user.updated',
+          data: {
+            id: 'clerk_1',
+            primary_email_address_id: 'email_1',
+            updated_at: 1769904001000,
+            email_addresses: [
+              { id: 'email_1', email_address: 'new@example.com' },
+            ],
+          },
+        },
+        'evt_user_updated_newer',
+      ),
+    );
 
-    await processClerkWebhook(deps, {
-      type: 'user.updated',
-      data: {
-        id: 'clerk_1',
-        primary_email_address_id: 'email_1',
-        updated_at: 1769904000000,
-        email_addresses: [{ id: 'email_1', email_address: 'old@example.com' }],
-      },
-    });
+    await processClerkWebhook(
+      deps,
+      withEventId(
+        {
+          type: 'user.updated',
+          data: {
+            id: 'clerk_1',
+            primary_email_address_id: 'email_1',
+            updated_at: 1769904000000,
+            email_addresses: [
+              { id: 'email_1', email_address: 'old@example.com' },
+            ],
+          },
+        },
+        'evt_user_updated_older',
+      ),
+    );
 
     await expect(
       deps.userRepository.findByClerkId('clerk_1'),
@@ -71,10 +402,20 @@ describe('processClerkWebhook', () => {
   it('ignores user.updated when no email addresses are present', async () => {
     const deps = createDeps();
 
-    await processClerkWebhook(deps, {
-      type: 'user.updated',
-      data: { id: 'clerk_1', updated_at: 1769904000000, email_addresses: [] },
-    });
+    await processClerkWebhook(
+      deps,
+      withEventId(
+        {
+          type: 'user.updated',
+          data: {
+            id: 'clerk_1',
+            updated_at: 1769904000000,
+            email_addresses: [],
+          },
+        },
+        'evt_user_updated_missing_email_addresses',
+      ),
+    );
 
     await expect(
       deps.userRepository.findByClerkId('clerk_1'),
@@ -84,10 +425,20 @@ describe('processClerkWebhook', () => {
   it('logs a warning when user.updated is missing an email', async () => {
     const deps = createDeps();
 
-    await processClerkWebhook(deps, {
-      type: 'user.updated',
-      data: { id: 'clerk_1', updated_at: 1769904000000, email_addresses: [] },
-    });
+    await processClerkWebhook(
+      deps,
+      withEventId(
+        {
+          type: 'user.updated',
+          data: {
+            id: 'clerk_1',
+            updated_at: 1769904000000,
+            email_addresses: [],
+          },
+        },
+        'evt_user_updated_warn_missing_email',
+      ),
+    );
 
     expect(deps.logger.warnCalls).toContainEqual({
       context: { clerkUserId: 'clerk_1' },
@@ -99,14 +450,20 @@ describe('processClerkWebhook', () => {
     const deps = createDeps();
 
     await expect(
-      processClerkWebhook(deps, {
-        type: 'user.updated',
-        data: {
-          id: 'clerk_1',
-          updated_at: 1769904000000,
-          email_addresses: 'nope',
-        },
-      }),
+      processClerkWebhook(
+        deps,
+        withEventId(
+          {
+            type: 'user.updated',
+            data: {
+              id: 'clerk_1',
+              updated_at: 1769904000000,
+              email_addresses: 'nope',
+            },
+          },
+          'evt_user_updated_invalid_email_addresses',
+        ),
+      ),
     ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
 
     await expect(
@@ -117,18 +474,24 @@ describe('processClerkWebhook', () => {
   it('uses first email when no primary email is set', async () => {
     const deps = createDeps();
 
-    await processClerkWebhook(deps, {
-      type: 'user.updated',
-      data: {
-        id: 'clerk_1',
-        primary_email_address_id: null,
-        updated_at: 1769904000000,
-        email_addresses: [
-          { id: 'email_1', email_address: 'first@example.com' },
-          { id: 'email_2', email_address: 'second@example.com' },
-        ],
-      },
-    });
+    await processClerkWebhook(
+      deps,
+      withEventId(
+        {
+          type: 'user.updated',
+          data: {
+            id: 'clerk_1',
+            primary_email_address_id: null,
+            updated_at: 1769904000000,
+            email_addresses: [
+              { id: 'email_1', email_address: 'first@example.com' },
+              { id: 'email_2', email_address: 'second@example.com' },
+            ],
+          },
+        },
+        'evt_user_updated_no_primary_email',
+      ),
+    );
 
     await expect(
       deps.userRepository.findByClerkId('clerk_1'),
@@ -145,7 +508,12 @@ describe('processClerkWebhook', () => {
     );
     await deps.stripeCustomerRepository.insert(user.id, 'cus_123');
 
-    const event = loadJsonFixture<ClerkWebhookEvent>('clerk/user.deleted.json');
+    const event = withEventId(
+      loadJsonFixture<Omit<ClerkWebhookEvent, 'eventId'>>(
+        'clerk/user.deleted.json',
+      ),
+      'evt_fixture_deleted',
+    );
     await processClerkWebhook(deps, event);
 
     expect(deps.cancelCalls).toEqual(['cus_123']);
@@ -154,25 +522,554 @@ describe('processClerkWebhook', () => {
     ).resolves.toBeNull();
   });
 
+  it('does not cancel Stripe subscriptions when local user deletion fails', async () => {
+    const deleteError = new Error('delete failed');
+    const clerkEvents = new FakeClerkEventRepository();
+    const deletedClerkUsers = new FakeDeletedClerkUserRepository();
+    const pendingStripeCancellations =
+      new FakePendingStripeCancellationRepository();
+    const userRepository = new DeleteFailingUserRepository(deleteError);
+    const stripeCustomerRepository = new FakeStripeCustomerRepository();
+    const cancelCalls: string[] = [];
+
+    const user = await userRepository.upsertByClerkId(
+      'clerk_delete_failure',
+      'delete-failure@example.com',
+    );
+    await stripeCustomerRepository.insert(user.id, 'cus_delete_failure');
+
+    const deps = {
+      clerkEvents,
+      deletedClerkUsers,
+      userRepository,
+      stripeCustomerRepository,
+      transaction: async <T>(
+        fn: (tx: {
+          clerkEvents: FakeClerkEventRepository;
+          deletedClerkUsers: FakeDeletedClerkUserRepository;
+          pendingStripeCancellations: FakePendingStripeCancellationRepository;
+          userRepository: DeleteFailingUserRepository;
+          stripeCustomerRepository: FakeStripeCustomerRepository;
+        }) => Promise<T>,
+      ) =>
+        fn({
+          clerkEvents,
+          deletedClerkUsers,
+          pendingStripeCancellations,
+          userRepository,
+          stripeCustomerRepository,
+        }),
+      cancelStripeCustomerSubscriptions: async (stripeCustomerId: string) => {
+        cancelCalls.push(stripeCustomerId);
+      },
+      logger: new FakeLogger(),
+    };
+
+    await expect(
+      processClerkWebhook(
+        deps,
+        withEventId(
+          {
+            type: 'user.deleted',
+            data: { id: 'clerk_delete_failure' },
+          },
+          'evt_user_deleted_delete_failure',
+        ),
+      ),
+    ).rejects.toBe(deleteError);
+
+    expect(cancelCalls).toEqual([]);
+    await expect(
+      userRepository.findByClerkId('clerk_delete_failure'),
+    ).resolves.toMatchObject({ email: 'delete-failure@example.com' });
+    await expect(
+      deletedClerkUsers.exists('clerk_delete_failure'),
+    ).resolves.toBe(false);
+  });
+
   it('does nothing for user.deleted when the user does not exist in the database', async () => {
     const deps = createDeps();
 
-    await processClerkWebhook(deps, {
-      type: 'user.deleted',
-      data: { id: 'clerk_1' },
-    });
+    await processClerkWebhook(
+      deps,
+      withEventId(
+        {
+          type: 'user.deleted',
+          data: { id: 'clerk_1' },
+        },
+        'evt_user_deleted_missing_local_user',
+      ),
+    );
 
     expect(deps.cancelCalls).toEqual([]);
+  });
+
+  it('still deletes a stray local user when a tombstone already exists', async () => {
+    const deps = createDeps();
+    await deps.deletedClerkUsers.markDeleted('clerk_stray');
+
+    const user = await deps.userRepository.upsertByClerkId(
+      'clerk_stray',
+      'stray@example.com',
+    );
+    await deps.stripeCustomerRepository.insert(user.id, 'cus_stray');
+
+    await processClerkWebhook(
+      deps,
+      withEventId(
+        {
+          type: 'user.deleted',
+          data: { id: 'clerk_stray' },
+        },
+        'evt_user_deleted_stray_after_tombstone',
+      ),
+    );
+
+    expect(deps.cancelCalls).toEqual(['cus_stray']);
+    await expect(
+      deps.userRepository.findByClerkId('clerk_stray'),
+    ).resolves.toBeNull();
+  });
+
+  it('keeps the local delete committed when post-commit Stripe cancellation fails', async () => {
+    const deps = createDeps();
+    const user = await deps.userRepository.upsertByClerkId(
+      'clerk_post_commit_cancel',
+      'post-commit@example.com',
+    );
+    await deps.stripeCustomerRepository.insert(user.id, 'cus_post_commit');
+
+    let shouldFailCancel = true;
+    deps.cancelStripeCustomerSubscriptions = async () => {
+      if (shouldFailCancel) {
+        throw new Error('stripe cancel failed');
+      }
+    };
+
+    const event = withEventId(
+      {
+        type: 'user.deleted',
+        data: { id: 'clerk_post_commit_cancel' },
+      },
+      'evt_user_deleted_post_commit_cancel',
+    );
+
+    await expect(processClerkWebhook(deps, event)).rejects.toThrow(
+      'stripe cancel failed',
+    );
+
+    await expect(
+      deps.userRepository.findByClerkId('clerk_post_commit_cancel'),
+    ).resolves.toBeNull();
+    await expect(
+      deps.deletedClerkUsers.exists('clerk_post_commit_cancel'),
+    ).resolves.toBe(true);
+
+    shouldFailCancel = false;
+    await expect(processClerkWebhook(deps, event)).resolves.toBeUndefined();
+  });
+
+  it('prevents a Stripe mapping from appearing after user.deleted has already checked for one', async () => {
+    const userRepository = new DeletionBarrierUserRepository();
+    const stripeCustomerRepository = new ConcurrentStripeSyncRepository(
+      (userId) => !userRepository.isUserLocked(userId),
+    );
+    const cancelCalls: string[] = [];
+    const clerkEvents = new FakeClerkEventRepository();
+    const deletedClerkUsers = new FakeDeletedClerkUserRepository();
+    const pendingStripeCancellations =
+      new FakePendingStripeCancellationRepository();
+
+    const deps = {
+      clerkEvents,
+      deletedClerkUsers,
+      pendingStripeCancellations,
+      userRepository,
+      stripeCustomerRepository,
+      transaction: async <T>(
+        fn: (tx: {
+          clerkEvents: FakeClerkEventRepository;
+          deletedClerkUsers: FakeDeletedClerkUserRepository;
+          pendingStripeCancellations: FakePendingStripeCancellationRepository;
+          userRepository: DeletionBarrierUserRepository;
+          stripeCustomerRepository: ConcurrentStripeSyncRepository;
+        }) => Promise<T>,
+      ) =>
+        fn({
+          clerkEvents,
+          deletedClerkUsers,
+          pendingStripeCancellations,
+          userRepository,
+          stripeCustomerRepository,
+        }),
+      cancelStripeCustomerSubscriptions: async (stripeCustomerId: string) => {
+        cancelCalls.push(stripeCustomerId);
+      },
+      logger: new FakeLogger(),
+    };
+
+    const user = await deps.userRepository.upsertByClerkId(
+      'clerk_race',
+      'race@example.com',
+    );
+
+    await processClerkWebhook(
+      deps,
+      withEventId(
+        {
+          type: 'user.deleted',
+          data: { id: 'clerk_race' },
+        },
+        'evt_user_deleted_race',
+      ),
+    );
+
+    expect(stripeCustomerRepository.concurrentInsertAttempts).toBe(1);
+    expect(stripeCustomerRepository.concurrentInsertBlocked).toBe(1);
+    expect(cancelCalls).toEqual([]);
+    await expect(
+      stripeCustomerRepository.peekStoredMapping(user.id),
+    ).resolves.toBeNull();
+    await expect(
+      userRepository.findByClerkId('clerk_race'),
+    ).resolves.toBeNull();
+  });
+
+  it('does not recreate a deleted user when the same user.updated delivery is replayed', async () => {
+    const deps = createDeps();
+
+    const originalUpdate = withEventId(
+      {
+        type: 'user.updated',
+        data: {
+          id: 'clerk_replay',
+          primary_email_address_id: 'email_1',
+          updated_at: 1769904000000,
+          email_addresses: [
+            { id: 'email_1', email_address: 'replay@example.com' },
+          ],
+        },
+      },
+      'evt_clerk_replay',
+    );
+
+    await processClerkWebhook(deps, originalUpdate);
+    await processClerkWebhook(
+      deps,
+      withEventId(
+        {
+          type: 'user.deleted',
+          data: { id: 'clerk_replay' },
+        },
+        'evt_clerk_delete',
+      ),
+    );
+
+    await processClerkWebhook(deps, originalUpdate);
+
+    await expect(
+      deps.userRepository.findByClerkId('clerk_replay'),
+    ).resolves.toBeNull();
+  });
+
+  it('ignores later user.updated deliveries after a user has been deleted', async () => {
+    const deps = createDeps();
+
+    await processClerkWebhook(
+      deps,
+      withEventId(
+        {
+          type: 'user.updated',
+          data: {
+            id: 'clerk_tombstone',
+            primary_email_address_id: 'email_1',
+            updated_at: 1769904001000,
+            email_addresses: [
+              { id: 'email_1', email_address: 'before-delete@example.com' },
+            ],
+          },
+        },
+        'evt_user_updated_before_delete',
+      ),
+    );
+
+    await processClerkWebhook(
+      deps,
+      withEventId(
+        {
+          type: 'user.deleted',
+          data: { id: 'clerk_tombstone' },
+        },
+        'evt_user_deleted_tombstone',
+      ),
+    );
+
+    await processClerkWebhook(
+      deps,
+      withEventId(
+        {
+          type: 'user.updated',
+          data: {
+            id: 'clerk_tombstone',
+            primary_email_address_id: 'email_1',
+            updated_at: 1769904000000,
+            email_addresses: [
+              { id: 'email_1', email_address: 'after-delete@example.com' },
+            ],
+          },
+        },
+        'evt_user_updated_after_delete',
+      ),
+    );
+
+    await expect(
+      deps.userRepository.findByClerkId('clerk_tombstone'),
+    ).resolves.toBeNull();
+  });
+
+  it('does not recreate a user when deletion commits between the tombstone check and upsert', async () => {
+    const clerkEvents = new FakeClerkEventRepository();
+    const deletedClerkUsers = new FakeDeletedClerkUserRepository();
+    const pendingStripeCancellations =
+      new FakePendingStripeCancellationRepository();
+    const userRepository = new TombstoneDuringUpsertUserRepository(
+      deletedClerkUsers,
+    );
+    const stripeCustomerRepository = new FakeStripeCustomerRepository();
+
+    const deps = {
+      clerkEvents,
+      deletedClerkUsers,
+      pendingStripeCancellations,
+      userRepository,
+      stripeCustomerRepository,
+      transaction: async <T>(
+        fn: (tx: {
+          clerkEvents: FakeClerkEventRepository;
+          deletedClerkUsers: FakeDeletedClerkUserRepository;
+          pendingStripeCancellations: FakePendingStripeCancellationRepository;
+          userRepository: TombstoneDuringUpsertUserRepository;
+          stripeCustomerRepository: FakeStripeCustomerRepository;
+        }) => Promise<T>,
+      ) =>
+        fn({
+          clerkEvents,
+          deletedClerkUsers,
+          pendingStripeCancellations,
+          userRepository,
+          stripeCustomerRepository,
+        }),
+      cancelStripeCustomerSubscriptions: async () => undefined,
+      logger: new FakeLogger(),
+    };
+
+    await userRepository.seedUser('clerk_delete_wins', 'before@example.com');
+    userRepository.armConcurrentDelete();
+
+    await processClerkWebhook(
+      deps,
+      withEventId(
+        {
+          type: 'user.updated',
+          data: {
+            id: 'clerk_delete_wins',
+            primary_email_address_id: 'email_1',
+            updated_at: 1769904002000,
+            email_addresses: [
+              { id: 'email_1', email_address: 'after@example.com' },
+            ],
+          },
+        },
+        'evt_user_updated_concurrent_delete_commit',
+      ),
+    );
+
+    await expect(
+      userRepository.findByClerkId('clerk_delete_wins'),
+    ).resolves.toBeNull();
+    await expect(deletedClerkUsers.exists('clerk_delete_wins')).resolves.toBe(
+      true,
+    );
+  });
+
+  it('keeps user.deleted terminal when delete starts before user.updated commits', async () => {
+    const updateMayContinue = createDeferred();
+    const deleteMayWriteTombstone = createDeferred();
+    const updateReachedUpsert = createDeferred();
+
+    const userStore = new TransactionalUserStore(async () => {
+      updateReachedUpsert.resolve();
+      await updateMayContinue.promise;
+    });
+    const deletedClerkUserStore = new TransactionalDeletedClerkUserStore(
+      async () => {
+        await deleteMayWriteTombstone.promise;
+      },
+    );
+    const clerkEvents = new FakeClerkEventRepository();
+    const pendingStripeCancellations =
+      new FakePendingStripeCancellationRepository();
+    const stripeCustomerRepository = new FakeStripeCustomerRepository();
+    let txCount = 0;
+
+    const deps = {
+      transaction: async <T>(
+        fn: (tx: {
+          clerkEvents: FakeClerkEventRepository;
+          deletedClerkUsers: ReturnType<
+            TransactionalDeletedClerkUserStore['createRepository']
+          >;
+          pendingStripeCancellations: FakePendingStripeCancellationRepository;
+          userRepository: ReturnType<
+            TransactionalUserStore['createRepository']
+          >;
+          stripeCustomerRepository: FakeStripeCustomerRepository;
+        }) => Promise<T>,
+      ) => {
+        txCount += 1;
+        const label = txCount === 1 ? 'update' : 'delete';
+        const deletedClerkUsers = deletedClerkUserStore.createRepository(label);
+        const userRepository = userStore.createRepository(label);
+        const result = await fn({
+          clerkEvents,
+          deletedClerkUsers,
+          pendingStripeCancellations,
+          userRepository,
+          stripeCustomerRepository,
+        });
+        userRepository.commit();
+        deletedClerkUsers.commit();
+        return result;
+      },
+      cancelStripeCustomerSubscriptions: async () => undefined,
+      logger: new FakeLogger(),
+    };
+
+    const updatedEvent = withEventId(
+      {
+        type: 'user.updated',
+        data: {
+          id: 'clerk_late_delete',
+          primary_email_address_id: 'email_1',
+          updated_at: 1769904004000,
+          email_addresses: [
+            { id: 'email_1', email_address: 'late-delete@example.com' },
+          ],
+        },
+      },
+      'evt_user_updated_late_delete',
+    );
+    const deletedEvent = withEventId(
+      {
+        type: 'user.deleted',
+        data: { id: 'clerk_late_delete' },
+      },
+      'evt_user_deleted_late_delete',
+    );
+
+    const updatePromise = processClerkWebhook(deps, updatedEvent);
+    await updateReachedUpsert.promise;
+    const deletePromise = processClerkWebhook(deps, deletedEvent);
+    updateMayContinue.resolve();
+    await updatePromise;
+    deleteMayWriteTombstone.resolve();
+    await deletePromise;
+
+    await expect(
+      userStore.findCommittedUser('clerk_late_delete'),
+    ).resolves.toBeNull();
+    await expect(
+      deletedClerkUserStore.exists('clerk_late_delete'),
+    ).resolves.toBe(true);
+  });
+
+  it('truncates unknown raw errors before persisting failed Clerk events', async () => {
+    const rawError = {
+      toString: () => 'x'.repeat(1205),
+    };
+    const clerkEvents = new FakeClerkEventRepository();
+    const deletedClerkUsers = new FakeDeletedClerkUserRepository();
+    const pendingStripeCancellations =
+      new FakePendingStripeCancellationRepository();
+    const userRepository = new ThrowingUserRepository(rawError);
+    const stripeCustomerRepository = new FakeStripeCustomerRepository();
+
+    const deps = {
+      clerkEvents,
+      deletedClerkUsers,
+      pendingStripeCancellations,
+      userRepository,
+      stripeCustomerRepository,
+      transaction: async <T>(
+        fn: (tx: {
+          clerkEvents: FakeClerkEventRepository;
+          deletedClerkUsers: FakeDeletedClerkUserRepository;
+          pendingStripeCancellations: FakePendingStripeCancellationRepository;
+          userRepository: ThrowingUserRepository;
+          stripeCustomerRepository: FakeStripeCustomerRepository;
+        }) => Promise<T>,
+      ) =>
+        fn({
+          clerkEvents,
+          deletedClerkUsers,
+          pendingStripeCancellations,
+          userRepository,
+          stripeCustomerRepository,
+        }),
+      cancelStripeCustomerSubscriptions: async () => undefined,
+      logger: new FakeLogger(),
+    };
+
+    await expect(
+      processClerkWebhook(
+        deps,
+        withEventId(
+          {
+            type: 'user.updated',
+            data: {
+              id: 'clerk_truncate',
+              primary_email_address_id: 'email_1',
+              updated_at: 1769904003000,
+              email_addresses: [
+                { id: 'email_1', email_address: 'truncate@example.com' },
+              ],
+            },
+          },
+          'evt_user_updated_truncate_unknown_error',
+        ),
+      ),
+    ).rejects.toBe(rawError);
+
+    const storedEvent = clerkEvents
+      .snapshot()
+      .find(
+        ([eventId]) => eventId === 'evt_user_updated_truncate_unknown_error',
+      );
+    const serializedError = storedEvent?.[1].error;
+    expect(serializedError).toBeTruthy();
+
+    const parsedError = JSON.parse(serializedError ?? '{}') as {
+      message?: string;
+      raw?: string;
+    };
+    expect(parsedError.message).toBe('Unknown error');
+    expect(parsedError.raw).toBe(`${'x'.repeat(1000)}...`);
   });
 
   it('rejects user.updated when the payload is missing email addresses', async () => {
     const deps = createDeps();
 
     await expect(
-      processClerkWebhook(deps, {
-        type: 'user.updated',
-        data: { id: 'clerk_1', updated_at: 1769904000000 },
-      }),
+      processClerkWebhook(
+        deps,
+        withEventId(
+          {
+            type: 'user.updated',
+            data: { id: 'clerk_1', updated_at: 1769904000000 },
+          },
+          'evt_user_updated_missing_email_array',
+        ),
+      ),
     ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
   });
 
@@ -180,14 +1077,20 @@ describe('processClerkWebhook', () => {
     const deps = createDeps();
 
     await expect(
-      processClerkWebhook(deps, {
-        type: 'user.updated',
-        data: {
-          id: 'clerk_1',
-          updated_at: 1769904000000,
-          email_addresses: [{ id: 'email_1' }],
-        },
-      }),
+      processClerkWebhook(
+        deps,
+        withEventId(
+          {
+            type: 'user.updated',
+            data: {
+              id: 'clerk_1',
+              updated_at: 1769904000000,
+              email_addresses: [{ id: 'email_1' }],
+            },
+          },
+          'evt_user_updated_missing_email_field',
+        ),
+      ),
     ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
   });
 
@@ -195,16 +1098,22 @@ describe('processClerkWebhook', () => {
     const deps = createDeps();
 
     await expect(
-      processClerkWebhook(deps, {
-        type: 'user.updated',
-        data: {
-          id: '',
-          updated_at: 1769904000000,
-          email_addresses: [
-            { id: 'email_1', email_address: 'test@example.com' },
-          ],
-        },
-      }),
+      processClerkWebhook(
+        deps,
+        withEventId(
+          {
+            type: 'user.updated',
+            data: {
+              id: '',
+              updated_at: 1769904000000,
+              email_addresses: [
+                { id: 'email_1', email_address: 'test@example.com' },
+              ],
+            },
+          },
+          'evt_user_updated_empty_user_id',
+        ),
+      ),
     ).rejects.toMatchObject({
       code: 'INVALID_WEBHOOK_PAYLOAD',
       message: 'Clerk user.updated webhook payload is missing user id',
@@ -215,13 +1124,39 @@ describe('processClerkWebhook', () => {
     const deps = createDeps();
 
     await expect(
-      processClerkWebhook(deps, {
-        type: 'user.deleted',
-        data: {},
-      }),
+      processClerkWebhook(
+        deps,
+        withEventId(
+          {
+            type: 'user.deleted',
+            data: {},
+          },
+          'evt_user_deleted_invalid_payload',
+        ),
+      ),
     ).rejects.toMatchObject({
       code: 'INVALID_WEBHOOK_PAYLOAD',
       message: 'Invalid Clerk user.deleted webhook payload',
+    });
+  });
+
+  it('rejects user.deleted when the payload includes an empty user id', async () => {
+    const deps = createDeps();
+
+    await expect(
+      processClerkWebhook(
+        deps,
+        withEventId(
+          {
+            type: 'user.deleted',
+            data: { id: '' },
+          },
+          'evt_user_deleted_empty_user_id',
+        ),
+      ),
+    ).rejects.toMatchObject({
+      code: 'INVALID_WEBHOOK_PAYLOAD',
+      message: 'Clerk user.deleted webhook payload is missing user id',
     });
   });
 });

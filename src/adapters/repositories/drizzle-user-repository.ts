@@ -53,6 +53,21 @@ export class DrizzleUserRepository implements UserRepository {
     return row ? this.toDomain(row) : null;
   }
 
+  async lockByClerkId(clerkId: string): Promise<User | null> {
+    const [row] = await this.db
+      .select({
+        id: users.id,
+        email: users.email,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+      })
+      .from(users)
+      .where(eq(users.clerkUserId, clerkId))
+      .for('update');
+
+    return row ? this.toDomain(row) : null;
+  }
+
   async upsertByClerkId(
     clerkId: string,
     email: string,
