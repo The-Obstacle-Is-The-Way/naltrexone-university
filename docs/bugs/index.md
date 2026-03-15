@@ -23,7 +23,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 **Audit batch (2026-03-15) — search-param scalar assumption sweep (verified via tracer bullets):**
 
-5 bug docs were filed in this batch (1 resolved and archived, 4 still open).
+5 bug docs were filed in this batch (2 resolved and archived, 3 still open).
 
 ---
 
@@ -34,6 +34,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 ---
 
 **Latest archival (2026-03-15):**
+- BUG-222 verified fixed (PR #219): widened pricing-page `checkout` / `reason` search params to accept `string[]`, normalized both once with shared `normalizeSearchParam`, restored banner selection and the manage-billing CTA for repeated query params, and archived to `docs/_archive/bugs/`.
 - BUG-221 verified fixed (PR #217): extracted shared `normalizeSearchParam`, normalized array-valued checkout `session_id` at the page boundary, reused the helper in History and Billing, and archived to `docs/_archive/bugs/`.
 - BUG-212, BUG-213, BUG-214 verified fixed (PR #214): client-side error reporting — bookmark toggle, session start, and `runTransitionedAsyncAction` now log/report errors unconditionally with try/catch-hardened callbacks and mount-safe ordering, archived to `docs/_archive/bugs/`.
 - BUG-215, BUG-219, BUG-220 verified fixed (PR #215): dead code cleanup — consolidated `StripeSubscriptionStatus` to adapter-owned source, removed unused `SkipAuthGateway`, strengthened weak test assertions, archived to `docs/_archive/bugs/`.
@@ -74,7 +75,6 @@ Active open bugs are listed below.
 | Bug | Family | Priority | Summary |
 |-----|--------|----------|---------|
 | [BUG-226](./bug-226-tutor-session-next-button-no-questions-after-completion.md) | Practice / session navigation | P2 | Completed-session "Next" can dead-end into "No more questions found" because the view shows availability from navigator rows but dispatches through unanswered-only `fromIndex` |
-| [BUG-222](./bug-222-pricing-page-array-query-banners.md) | Search params / pricing | P4 | Pricing page still assumes scalar `checkout` / `reason` params, hiding recovery banners and manage-billing CTA |
 | [BUG-223](./bug-223-bookmarks-page-array-query-feedback-loss.md) | Search params / bookmarks | P4 | Repeated `error` / `toast` params suppress remove-bookmark feedback |
 | [BUG-224](./bug-224-practice-session-array-toast-loss.md) | Search params / practice | P4 | Repeated session-start toast params suppress or degrade practice-session startup feedback |
 | [BUG-225](./bug-225-question-review-array-context-loss.md) | Search params / review | P4 | Repeated review-context params are dropped instead of normalized, stripping session/attempt/history context |
