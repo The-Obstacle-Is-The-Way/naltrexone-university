@@ -3,6 +3,12 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { PRICING_DATA } from '@/lib/pricing-data';
 import type { AuthGateway } from '@/src/application/ports/gateways';
+import { FakeAuthGateway } from '@/src/application/test-helpers/fakes';
+import { FakeUseCase } from '@/src/application/test-helpers/fakes/fake-use-cases';
+import type {
+  CheckEntitlementInput,
+  CheckEntitlementOutput,
+} from '@/src/application/use-cases/check-entitlement';
 
 vi.mock('server-only', () => ({}));
 
@@ -298,6 +304,17 @@ describe('app/pricing', () => {
     });
   });
 
+  it('builds the manage-billing banner when reason is a repeated query param', async () => {
+    expect(
+      getPricingBanner({
+        reason: ['manage_billing', 'subscription_required'],
+      }),
+    ).toMatchObject({
+      tone: 'info',
+      message: 'Subscription found. Manage billing to resolve payment issues.',
+    });
+  });
+
   it('builds the payment-processing banner when reason=payment_processing', async () => {
     expect(getPricingBanner({ reason: 'payment_processing' })).toMatchObject({
       tone: 'info',
@@ -306,8 +323,23 @@ describe('app/pricing', () => {
     });
   });
 
+  it('builds the payment-processing banner when reason is a repeated query param', async () => {
+    expect(getPricingBanner({ reason: ['payment_processing'] })).toMatchObject({
+      tone: 'info',
+      message:
+        'Payment processing. It may take a moment for access to activate.',
+    });
+  });
+
   it('builds the checkout error banner when checkout=error', async () => {
     expect(getPricingBanner({ checkout: 'error' })).toMatchObject({
+      tone: 'error',
+      message: 'Checkout failed. Please try again.',
+    });
+  });
+
+  it('builds the checkout error banner when checkout is a repeated query param', async () => {
+    expect(getPricingBanner({ checkout: ['error', 'cancel'] })).toMatchObject({
       tone: 'error',
       message: 'Checkout failed. Please try again.',
     });
@@ -322,6 +354,13 @@ describe('app/pricing', () => {
 
   it('builds the rate-limited banner when checkout=rate_limited', async () => {
     expect(getPricingBanner({ checkout: 'rate_limited' })).toMatchObject({
+      tone: 'info',
+      message: 'Too many checkout attempts. Please wait and try again.',
+    });
+  });
+
+  it('builds the rate-limited banner when checkout is a repeated query param', async () => {
+    expect(getPricingBanner({ checkout: ['rate_limited'] })).toMatchObject({
       tone: 'info',
       message: 'Too many checkout attempts. Please wait and try again.',
     });
@@ -688,5 +727,30 @@ describe('app/pricing', () => {
 
     expect(html).toContain('Manage Billing');
     expect(html).not.toContain('Subscribe Monthly');
+  });
+
+  it('renders the manage billing action when reason is a repeated query param', async () => {
+    const checkEntitlementUseCase = new FakeUseCase<
+      CheckEntitlementInput,
+      CheckEntitlementOutput
+    >({
+      isEntitled: false,
+      reason: 'subscription_required',
+    });
+    const element = await PricingPage({
+      searchParams: Promise.resolve({
+        reason: ['manage_billing', 'subscription_required'],
+      }),
+      authNavFn: async () => <div>AuthNav</div>,
+      deps: {
+        authGateway: new FakeAuthGateway(null),
+        checkEntitlementUseCase,
+      },
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('Manage Billing');
+    expect(html).not.toContain('Subscribe Monthly');
+    expect(checkEntitlementUseCase.inputs).toHaveLength(0);
   });
 });
