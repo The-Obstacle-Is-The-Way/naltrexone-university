@@ -1,5 +1,10 @@
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
+import {
+  createReviewResponse,
+  createReviewRow,
+} from '../hooks/practice-session-page-controller.browser.fixtures';
 import { PracticeSessionPageView } from './practice-session-page-view';
 
 test('renders session summary branch when summary is present', async () => {
@@ -663,6 +668,179 @@ test('hasNextQuestion is false when current question is last available', async (
   await expect
     .element(screen.getByRole('button', { name: 'Next' }))
     .not.toBeInTheDocument();
+});
+
+test('clicking Next in a completed session navigates to the next available question id', async () => {
+  const onNavigateQuestion = vi.fn();
+  const onNextQuestion = vi.fn();
+
+  const screen = await render(
+    <PracticeSessionPageView
+      summary={null}
+      review={null}
+      navigator={createReviewResponse({
+        mode: 'tutor',
+        totalCount: 4,
+        answeredCount: 4,
+        markedCount: 0,
+        rows: [
+          createReviewRow({
+            questionId: 'q1',
+            order: 1,
+            isAnswered: true,
+            isCorrect: true,
+          }),
+          createReviewRow({
+            questionId: 'q2',
+            order: 2,
+            isAnswered: true,
+            isCorrect: true,
+          }),
+          createReviewRow({
+            questionId: 'q3',
+            order: 3,
+            isAnswered: true,
+            isCorrect: true,
+          }),
+          createReviewRow({
+            questionId: 'q4',
+            order: 4,
+            isAnswered: true,
+            isCorrect: true,
+          }),
+        ],
+      })}
+      sessionInfo={{
+        sessionId: 'session-1',
+        mode: 'tutor',
+        index: 1,
+        total: 4,
+        isMarkedForReview: false,
+      }}
+      loadState={{ status: 'ready' }}
+      question={createNextQuestion({
+        questionId: 'q2',
+        stemMd: 'Stem 2',
+        session: {
+          sessionId: 'session-1',
+          mode: 'tutor',
+          index: 1,
+          total: 4,
+          isMarkedForReview: false,
+          latestSelectedChoiceId: 'choice_1',
+          latestIsCorrect: true,
+        },
+      })}
+      selectedChoiceId="choice_1"
+      isAnswered={true}
+      submitResult={{
+        attemptId: 'attempt-2',
+        isCorrect: true,
+        correctChoiceId: 'choice_1',
+        explanationMd: 'Because.',
+        referenceMd: null,
+        choiceExplanations: [],
+      }}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      canSubmit={false}
+      onEndSession={() => undefined}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={onNextQuestion}
+      onNavigateQuestion={onNavigateQuestion}
+    />,
+  );
+
+  await screen.getByRole('button', { name: 'Next' }).click();
+
+  expect(onNavigateQuestion).toHaveBeenCalledWith('q3');
+  expect(onNextQuestion).not.toHaveBeenCalled();
+});
+
+test('clicking Next falls back to onNextQuestion when id-based navigation is unavailable', async () => {
+  const onNextQuestion = vi.fn();
+
+  const screen = await render(
+    <PracticeSessionPageView
+      summary={null}
+      review={null}
+      navigator={createReviewResponse({
+        mode: 'tutor',
+        totalCount: 3,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [
+          createReviewRow({
+            questionId: 'q1',
+            order: 1,
+            isAnswered: true,
+            isCorrect: true,
+          }),
+          createReviewRow({
+            questionId: 'q2',
+            order: 2,
+            isAnswered: false,
+            isCorrect: null,
+          }),
+          createReviewRow({
+            questionId: 'q3',
+            order: 3,
+            isAnswered: false,
+            isCorrect: null,
+          }),
+        ],
+      })}
+      sessionInfo={{
+        sessionId: 'session-1',
+        mode: 'tutor',
+        index: 0,
+        total: 3,
+        isMarkedForReview: false,
+      }}
+      loadState={{ status: 'ready' }}
+      question={createNextQuestion({
+        questionId: 'q1',
+        stemMd: 'Stem 1',
+        session: {
+          sessionId: 'session-1',
+          mode: 'tutor',
+          index: 0,
+          total: 3,
+          isMarkedForReview: false,
+          latestSelectedChoiceId: 'choice_1',
+          latestIsCorrect: true,
+        },
+      })}
+      selectedChoiceId="choice_1"
+      isAnswered={true}
+      submitResult={{
+        attemptId: 'attempt-1',
+        isCorrect: true,
+        correctChoiceId: 'choice_1',
+        explanationMd: 'Because.',
+        referenceMd: null,
+        choiceExplanations: [],
+      }}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      canSubmit={false}
+      onEndSession={() => undefined}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={onNextQuestion}
+    />,
+  );
+
+  await screen.getByRole('button', { name: 'Next' }).click();
+
+  expect(onNextQuestion).toHaveBeenCalledTimes(1);
 });
 
 test("clicking Previous calls onNavigateQuestion with the previous question's ID", async () => {
