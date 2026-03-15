@@ -187,6 +187,95 @@ describe('runCheckoutSuccessPage', () => {
     ]);
   });
 
+  it('uses the first session_id value when searchParams contains an array', async () => {
+    const stripeRetrieveCalls: Array<{
+      sessionId: string;
+      params?: { expand?: string[] };
+    }> = [];
+
+    const user = {
+      id: 'user_1',
+      email: 'user@example.com',
+      createdAt: new Date('2026-02-01T00:00:00Z'),
+      updatedAt: new Date('2026-02-01T00:00:00Z'),
+    };
+
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+
+    const deps = {
+      authGateway: new FakeAuthGateway(user),
+      getClerkAuth: async () => ({
+        userId: 'clerk_user_1',
+        redirectToSignIn: () => {
+          throw new Error('should not redirect to sign-in');
+        },
+      }),
+      logger: new FakeLogger(),
+      stripe: {
+        checkout: {
+          sessions: {
+            retrieve: async (
+              sessionId: string,
+              params?: { expand?: string[] },
+            ) => {
+              stripeRetrieveCalls.push({ sessionId, params });
+              return {
+                customer: 'cus_123',
+                subscription: { id: 'sub_123' },
+              };
+            },
+          },
+        },
+        subscriptions: {
+          retrieve: async () => ({
+            id: 'sub_123',
+            customer: 'cus_123',
+            status: 'active',
+            cancel_at_period_end: false,
+            metadata: { user_id: 'user_1' },
+            items: {
+              data: [
+                {
+                  current_period_end: 2_000_000_000,
+                  price: { id: 'price_monthly' },
+                },
+              ],
+            },
+          }),
+        },
+      },
+      priceIds: { monthly: 'price_monthly', annual: 'price_annual' },
+      appUrl: 'https://example.com',
+      transaction: async <T>(
+        fn: (tx: CheckoutSuccessTransaction) => Promise<T>,
+      ): Promise<T> =>
+        fn({
+          stripeCustomers,
+          subscriptions,
+        }),
+    };
+
+    const redirectFn = (url: string): never => {
+      throw new RedirectError(url);
+    };
+
+    const promise = runCheckoutSuccessPage(
+      {
+        searchParams: Promise.resolve({
+          session_id: ['cs_a', 'cs_b'],
+        }) as never,
+      },
+      deps,
+      redirectFn,
+    );
+    await expect(promise).rejects.toMatchObject({ url: ROUTES.APP_DASHBOARD });
+
+    expect(stripeRetrieveCalls).toEqual([
+      { sessionId: 'cs_a', params: { expand: ['subscription'] } },
+    ]);
+  });
+
   it('renders a semantic fallback shell with main landmark when redirect is intercepted', async () => {
     const user = {
       id: 'user_1',
