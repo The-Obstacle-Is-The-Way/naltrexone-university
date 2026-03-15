@@ -42,6 +42,10 @@ type CorrectAnswerSectionProps = {
   showLabel?: boolean;
 };
 
+type WrongAnswerSectionProps = {
+  choices: readonly IncorrectChoiceWithExplanation[];
+};
+
 function getExplanationClassName(hasCorrectChoice: boolean): string {
   return hasCorrectChoice
     ? 'mt-2 text-base text-foreground'
@@ -68,9 +72,16 @@ function CorrectAnswerSection({
   return (
     <div className={sectionClassName}>
       {showLabel ? (
-        <div className="text-sm font-medium text-foreground">
-          {correctChoice ? 'Correct answer' : 'Explanation'}
-        </div>
+        <span
+          className={cn(
+            'inline-flex rounded-full px-3 py-1 text-sm font-semibold',
+            correctChoice
+              ? 'bg-success text-success-foreground dark:bg-success/60'
+              : 'bg-muted text-foreground dark:bg-foreground/10',
+          )}
+        >
+          {correctChoice ? 'Correct Answer' : 'Explanation'}
+        </span>
       ) : null}
       <div
         className={cn(
@@ -96,6 +107,38 @@ function CorrectAnswerSection({
             Explanation not available.
           </p>
         )}
+      </div>
+    </div>
+  );
+}
+
+function WrongAnswerSection({ choices }: WrongAnswerSectionProps) {
+  return (
+    <div className="mt-4">
+      <span className="inline-flex rounded-full bg-muted px-3 py-1 text-sm font-semibold text-foreground dark:bg-foreground/10">
+        Why Other Answers Are Wrong
+      </span>
+      <div className="mt-2 space-y-3">
+        {choices.map((choice) => (
+          <div
+            key={choice.choiceId}
+            className="rounded-xl border border-border/60 bg-background/50 p-4 dark:border-foreground/40"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-foreground/20 bg-foreground/[0.06] text-xs font-semibold leading-none text-foreground dark:border-foreground/60 dark:bg-foreground/20">
+                {choice.displayLabel}
+              </div>
+              <Markdown
+                content={choice.textMd}
+                className="text-base text-foreground"
+              />
+            </div>
+            <Markdown
+              content={choice.explanationMd}
+              className="mt-2 text-base text-foreground"
+            />
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -160,33 +203,7 @@ export function Feedback({
           />
 
           {shouldRenderChoiceExplanations ? (
-            <div className="mt-4">
-              <div className="text-sm font-medium text-foreground">
-                Why other answers are wrong:
-              </div>
-              <div className="mt-2 space-y-3">
-                {visibleChoiceExplanations.map((choice) => (
-                  <div
-                    key={choice.choiceId}
-                    className="rounded-xl border border-border/60 bg-background/50 p-4 dark:border-foreground/40"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold leading-none text-foreground dark:border-foreground/60 dark:bg-foreground/20">
-                        {choice.displayLabel}
-                      </div>
-                      <Markdown
-                        content={choice.textMd}
-                        className="text-base text-foreground"
-                      />
-                    </div>
-                    <Markdown
-                      content={choice.explanationMd}
-                      className="mt-2 text-base text-foreground"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
+            <WrongAnswerSection choices={visibleChoiceExplanations} />
           ) : null}
         </>
       ) : (
@@ -220,33 +237,7 @@ export function Feedback({
           />
 
           {shouldRenderOtherWrongChoices ? (
-            <div className="mt-4">
-              <div className="text-sm font-medium text-foreground">
-                Why other answers are wrong:
-              </div>
-              <div className="mt-2 space-y-3">
-                {otherWrongChoices.map((choice) => (
-                  <div
-                    key={choice.choiceId}
-                    className="rounded-xl border border-border/60 bg-background/50 p-4 dark:border-foreground/40"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold leading-none text-foreground dark:border-foreground/60 dark:bg-foreground/20">
-                        {choice.displayLabel}
-                      </div>
-                      <Markdown
-                        content={choice.textMd}
-                        className="text-base text-foreground"
-                      />
-                    </div>
-                    <Markdown
-                      content={choice.explanationMd}
-                      className="mt-2 text-base text-foreground"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
+            <WrongAnswerSection choices={otherWrongChoices} />
           ) : null}
         </>
       )}

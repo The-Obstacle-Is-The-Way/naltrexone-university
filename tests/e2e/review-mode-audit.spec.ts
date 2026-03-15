@@ -380,11 +380,11 @@ test.describe('review mode audit', () => {
     await expect(verdictPill).toBeVisible();
     if ((await verdictPill.textContent())?.trim() === 'Incorrect') {
       await expect(
-        feedbackCard.getByText('Correct answer', { exact: true }),
+        feedbackCard.getByText('Correct Answer', { exact: true }),
       ).toBeVisible();
     } else {
       await expect(
-        feedbackCard.getByText('Correct answer', { exact: true }),
+        feedbackCard.getByText('Correct Answer', { exact: true }),
       ).toHaveCount(0);
     }
 

@@ -431,8 +431,8 @@ describe('QuestionView', () => {
       );
     });
     const correctAnswerHeading = Array.from(
-      feedbackCard?.querySelectorAll('div') ?? [],
-    ).find((div) => div.textContent?.trim() === 'Correct answer');
+      feedbackCard?.querySelectorAll('div, span') ?? [],
+    ).find((element) => element.textContent?.trim() === 'Correct Answer');
 
     const correctAnswerCard = correctAnswerHeading?.nextElementSibling;
 
@@ -454,10 +454,10 @@ describe('QuestionView', () => {
     });
 
     expect(yourAnswerCard).not.toBeNull();
+    expect(correctAnswerHeading?.textContent?.trim()).toBe('Correct Answer');
     expect(correctAnswerCard).not.toBeNull();
     expect(yourAnswerBadge).not.toBeUndefined();
     expect(correctAnswerBadge).not.toBeUndefined();
-    expect(html).toContain('Correct answer');
     expect(html).toContain('Choice A text');
     expect(html).toContain('Choice B text');
     expect(html).toContain('A explanation');
