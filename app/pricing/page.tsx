@@ -11,6 +11,7 @@ import type { PricingBanner } from '@/app/pricing/types';
 import { AuthNav } from '@/components/auth-nav';
 import { MarketingLayout } from '@/components/marketing/marketing-layout';
 import { ROUTES } from '@/lib/routes';
+import { normalizeSearchParam } from '@/lib/search-params';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
 import type { NonEntitledReason } from '@/src/application/use-cases/check-entitlement';
@@ -68,50 +69,53 @@ export async function loadPricingData(deps?: PricingPageDeps): Promise<{
 }
 
 type PricingSearchParams = {
-  checkout?: string | undefined;
-  reason?: string | undefined;
+  checkout?: string | string[] | undefined;
+  reason?: string | string[] | undefined;
   plan?: string;
 };
 
 export function getPricingBanner(
   searchParams: PricingSearchParams,
 ): PricingBanner | null {
-  if (searchParams.checkout === 'rate_limited') {
+  const checkout = normalizeSearchParam(searchParams.checkout);
+  const reason = normalizeSearchParam(searchParams.reason);
+
+  if (checkout === 'rate_limited') {
     return {
       tone: 'info',
       message: 'Too many checkout attempts. Please wait and try again.',
     };
   }
 
-  if (searchParams.checkout === 'error') {
+  if (checkout === 'error') {
     return {
       tone: 'error',
       message: 'Checkout failed. Please try again.',
     };
   }
 
-  if (searchParams.checkout === 'cancel') {
+  if (checkout === 'cancel') {
     return {
       tone: 'info',
       message: 'Checkout canceled.',
     };
   }
 
-  if (searchParams.reason === 'subscription_required') {
+  if (reason === 'subscription_required') {
     return {
       tone: 'info',
       message: 'Subscription required to access the app.',
     };
   }
 
-  if (searchParams.reason === 'manage_billing') {
+  if (reason === 'manage_billing') {
     return {
       tone: 'info',
       message: 'Subscription found. Manage billing to resolve payment issues.',
     };
   }
 
-  if (searchParams.reason === 'payment_processing') {
+  if (reason === 'payment_processing') {
     return {
       tone: 'info',
       message:
@@ -133,8 +137,8 @@ export default async function PricingPage({
 }) {
   const pricingData = await loadPricingData(deps);
   const resolvedSearchParams = await searchParams;
-  const effectiveReason =
-    resolvedSearchParams.reason ?? pricingData.reason ?? undefined;
+  const reason = normalizeSearchParam(resolvedSearchParams.reason);
+  const effectiveReason = reason ?? pricingData.reason ?? undefined;
   const banner = getPricingBanner({
     ...resolvedSearchParams,
     reason: effectiveReason,
