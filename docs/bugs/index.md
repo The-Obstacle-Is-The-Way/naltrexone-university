@@ -13,7 +13,13 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-226
+**Next Bug ID:** BUG-227
+
+**Manual report (2026-03-15) — tutor session post-completion navigation:**
+
+- [BUG-226](bug-226-tutor-session-next-button-no-questions-after-completion.md): **P2** — "Next" button shows "No more questions found" once all session questions are answered. `GetNextQuestionUseCase` only searches for unanswered questions; should fall back to next-by-index when reviewing.
+
+---
 
 **Audit batch (2026-03-15) — search-param scalar assumption sweep (verified via tracer bullets):**
 
