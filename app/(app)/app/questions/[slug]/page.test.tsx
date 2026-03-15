@@ -85,11 +85,49 @@ describe('app/(app)/app/questions/[slug]', () => {
     });
   });
 
+  it('passes the first sessionId value when searchParams contains an array', async () => {
+    const element = await QuestionPage({
+      params: Promise.resolve({ slug: 'q-1' }),
+      searchParams: Promise.resolve({
+        sessionId: [
+          '00000000-0000-4000-8000-000000000001',
+          '00000000-0000-4000-8000-000000000099',
+        ],
+      }),
+    } as never);
+
+    expect(element).toMatchObject({
+      props: {
+        slug: 'q-1',
+        sessionId: '00000000-0000-4000-8000-000000000001',
+      },
+    });
+  });
+
   it('passes attemptId searchParams into the client page', async () => {
     const element = await QuestionPage({
       params: Promise.resolve({ slug: 'q-1' }),
       searchParams: Promise.resolve({
         attemptId: '00000000-0000-4000-8000-000000000002',
+      }),
+    } as never);
+
+    expect(element).toMatchObject({
+      props: {
+        slug: 'q-1',
+        attemptId: '00000000-0000-4000-8000-000000000002',
+      },
+    });
+  });
+
+  it('passes the first attemptId value when searchParams contains an array', async () => {
+    const element = await QuestionPage({
+      params: Promise.resolve({ slug: 'q-1' }),
+      searchParams: Promise.resolve({
+        attemptId: [
+          '00000000-0000-4000-8000-000000000002',
+          '00000000-0000-4000-8000-000000000098',
+        ],
       }),
     } as never);
 
@@ -137,11 +175,72 @@ describe('app/(app)/app/questions/[slug]', () => {
     }
   });
 
+  it('normalizes mixed review attemptId/sessionId arrays by preferring the first sessionId value', async () => {
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+    try {
+      const element = await QuestionPage({
+        params: Promise.resolve({ slug: 'q-1' }),
+        searchParams: Promise.resolve({
+          mode: 'review',
+          attemptId: [
+            '00000000-0000-4000-8000-000000000002',
+            '00000000-0000-4000-8000-000000000098',
+          ],
+          sessionId: [
+            '00000000-0000-4000-8000-000000000001',
+            '00000000-0000-4000-8000-000000000099',
+          ],
+        }),
+      } as never);
+
+      expect(element).toMatchObject({
+        props: {
+          slug: 'q-1',
+          mode: 'review',
+          sessionId: '00000000-0000-4000-8000-000000000001',
+          attemptId: undefined,
+        },
+      });
+
+      expect(infoSpy).toHaveBeenCalledWith(
+        '[Telemetry]',
+        expect.objectContaining({
+          event: 'review_identifier_normalized',
+          normalizedTo: 'sessionId',
+          hadAttemptId: true,
+          hadSessionId: true,
+          mode: 'review',
+        }),
+      );
+    } finally {
+      infoSpy.mockRestore();
+    }
+  });
+
   it('passes historyHref searchParams into the client page', async () => {
     const element = await QuestionPage({
       params: Promise.resolve({ slug: 'q-1' }),
       searchParams: Promise.resolve({
         historyHref: '/app/history?tab=questions&offset=0&limit=20',
+      }),
+    } as never);
+
+    expect(element).toMatchObject({
+      props: {
+        slug: 'q-1',
+        historyHref: '/app/history?tab=questions&offset=0&limit=20',
+      },
+    });
+  });
+
+  it('passes the first historyHref value when searchParams contains an array', async () => {
+    const element = await QuestionPage({
+      params: Promise.resolve({ slug: 'q-1' }),
+      searchParams: Promise.resolve({
+        historyHref: [
+          '/app/history?tab=questions&offset=0&limit=20',
+          '/app/history?tab=questions&offset=20&limit=20',
+        ],
       }),
     } as never);
 
@@ -166,6 +265,38 @@ describe('app/(app)/app/questions/[slug]', () => {
       props: {
         slug: 'q-1',
         historySeq: 'q-1,q-2,q-3',
+        historyIndex: '1',
+      },
+    });
+  });
+
+  it('passes the first historySeq value when searchParams contains an array', async () => {
+    const element = await QuestionPage({
+      params: Promise.resolve({ slug: 'q-1' }),
+      searchParams: Promise.resolve({
+        historySeq: ['q-1,q-2,q-3', 'q-4,q-5,q-6'],
+      }),
+    } as never);
+
+    expect(element).toMatchObject({
+      props: {
+        slug: 'q-1',
+        historySeq: 'q-1,q-2,q-3',
+      },
+    });
+  });
+
+  it('passes the first historyIndex value when searchParams contains an array', async () => {
+    const element = await QuestionPage({
+      params: Promise.resolve({ slug: 'q-1' }),
+      searchParams: Promise.resolve({
+        historyIndex: ['1', '2'],
+      }),
+    } as never);
+
+    expect(element).toMatchObject({
+      props: {
+        slug: 'q-1',
         historyIndex: '1',
       },
     });
