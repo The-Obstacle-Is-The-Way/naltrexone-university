@@ -73,10 +73,10 @@ function CorrectAnswerSection({
             'inline-flex rounded-full px-3 py-1 text-sm font-semibold',
             correctChoice
               ? 'bg-success/15 text-success'
-              : 'bg-muted text-foreground/60 dark:bg-foreground/10',
+              : 'bg-muted text-foreground dark:bg-foreground/10',
           )}
         >
-          {correctChoice ? 'Correct' : 'Explanation'}
+          {correctChoice ? 'Correct Answer' : 'Explanation'}
         </span>
       ) : null}
       <div
@@ -168,8 +168,8 @@ export function Feedback({
 
           {shouldRenderChoiceExplanations ? (
             <div className="mt-4">
-              <span className="inline-flex rounded-full bg-muted px-3 py-1 text-sm font-semibold text-foreground/60 dark:bg-foreground/10">
-                Why other answers are wrong
+              <span className="inline-flex rounded-full bg-muted px-3 py-1 text-sm font-semibold text-foreground dark:bg-foreground/10">
+                Why Other Answers Are Wrong
               </span>
               <div className="mt-2 space-y-3">
                 {visibleChoiceExplanations.map((choice) => (
@@ -228,8 +228,8 @@ export function Feedback({
 
           {shouldRenderOtherWrongChoices ? (
             <div className="mt-4">
-              <span className="inline-flex rounded-full bg-muted px-3 py-1 text-sm font-semibold text-foreground/60 dark:bg-foreground/10">
-                Why other answers are wrong
+              <span className="inline-flex rounded-full bg-muted px-3 py-1 text-sm font-semibold text-foreground dark:bg-foreground/10">
+                Why Other Answers Are Wrong
               </span>
               <div className="mt-2 space-y-3">
                 {otherWrongChoices.map((choice) => (
