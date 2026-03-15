@@ -408,6 +408,58 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).toContain('Stem for q1');
   });
 
+  it('renders error banner when error searchParam is an array', async () => {
+    const getBookmarksFn = vi.fn(async () =>
+      ok({
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'q_1',
+            slug: 'q-1',
+            stemMd: 'Stem for q1',
+            difficulty: 'easy' as const,
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    );
+
+    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
+    const element = await BookmarksPage({
+      searchParams: Promise.resolve({ error: ['toggle_failed'] }),
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('Unable to remove bookmark. Please try again.');
+    expect(html).toContain('Stem for q1');
+  });
+
+  it('renders error banner when error searchParam is an array with missing_question_id', async () => {
+    const getBookmarksFn = vi.fn(async () =>
+      ok({
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'q_1',
+            slug: 'q-1',
+            stemMd: 'Stem for q1',
+            difficulty: 'easy' as const,
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    );
+
+    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
+    const element = await BookmarksPage({
+      searchParams: Promise.resolve({ error: ['missing_question_id'] }),
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('Unable to remove bookmark: missing question id.');
+    expect(html).toContain('Stem for q1');
+  });
+
   it('renders a banner when redirected back with remove_failed', async () => {
     const getBookmarksFn = vi.fn(async () =>
       ok({
@@ -434,6 +486,60 @@ describe('app/(app)/app/bookmarks', () => {
       'Unable to remove bookmark. Please refresh and try again.',
     );
     expect(html).toContain('Stem for q1');
+  });
+
+  it('renders error banner when error searchParam is an array with remove_failed', async () => {
+    const getBookmarksFn = vi.fn(async () =>
+      ok({
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'q_1',
+            slug: 'q-1',
+            stemMd: 'Stem for q1',
+            difficulty: 'easy' as const,
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    );
+
+    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
+    const element = await BookmarksPage({
+      searchParams: Promise.resolve({ error: ['remove_failed'] }),
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain(
+      'Unable to remove bookmark. Please refresh and try again.',
+    );
+    expect(html).toContain('Stem for q1');
+  });
+
+  it('renders page without error when toast searchParam is an array', async () => {
+    const getBookmarksFn = vi.fn(async () =>
+      ok({
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'q_1',
+            slug: 'q-1',
+            stemMd: 'Stem for q1',
+            difficulty: 'easy' as const,
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    );
+
+    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
+    const element = await BookmarksPage({
+      searchParams: Promise.resolve({ toast: ['bookmark_removed'] }),
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('Stem for q1');
+    expect(html).not.toContain('Unable to remove bookmark');
   });
 
   it('renders an error view when createBookmarksPage fails to load bookmarks', async () => {

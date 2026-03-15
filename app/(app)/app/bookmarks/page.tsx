@@ -235,7 +235,11 @@ export function createBookmarksPage(deps?: {
   const getBookmarksFn = deps?.getBookmarksFn ?? getBookmarks;
 
   return async function BookmarksPage(props?: {
-    searchParams?: Promise<Record<string, string | undefined>>;
+    searchParams?: Promise<{
+      error?: string | string[];
+      toast?: string | string[];
+      [key: string]: string | string[] | undefined;
+    }>;
   }) {
     const searchParams = await props?.searchParams;
     const errorMessage = getRemoveBookmarkErrorMessage(
