@@ -14,7 +14,7 @@
 - `src/adapters/gateways/drizzle-rate-limiter.ts` — Postgres-backed **fixed-window** rate limiter (atomic `INSERT ... ON CONFLICT DO UPDATE`)
 - `src/application/ports/gateways.ts` — `RateLimiter` interface (port)
 - `src/adapters/shared/rate-limits.ts` — Centralized limit configuration (no magic numbers)
-- `lib/request-ip.ts` — IP extraction trusting only `x-vercel-forwarded-for` (spoof-resistant)
+- `lib/request-ip.ts` — IP extraction trusting only `x-vercel-forwarded-for` in production (spoof-resistant)
 - `db/schema.ts` — `rateLimits` table with composite PK `(key, window_start)` + migration `0002`
 - `lib/container/gateways.ts` — `DrizzleRateLimiter` wired via constructor injection
 - `src/application/test-helpers/fakes/fake-gateways.ts` — `FakeRateLimiter` for unit tests
@@ -32,7 +32,7 @@
 | Health check | `health/handler.ts` | `health:{ip}` | 600/min |
 | Cron reconcile | `cron/reconcile-stripe-subscriptions/route.ts` | `cron:reconcile-stripe-subscriptions` | 5/min |
 
-**Response headers on 429:** `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`
+**Response headers on route-handler 429s:** `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`
 
 **Accepted risk:** Question fetching (read-only) is not rate limited. Content is non-secret medical knowledge. Add a read-rate limit key if scraping is observed.
 
@@ -77,7 +77,7 @@ Community consensus (as of March 2026) confirms this approach:
 
 ### Response Headers
 
-We return `Retry-After`, `X-RateLimit-Limit`, and `X-RateLimit-Remaining` on 429 responses. This matches the de facto standard used by GitHub, Stripe, and most major APIs.
+Our HTTP route handlers return `Retry-After`, `X-RateLimit-Limit`, and `X-RateLimit-Remaining` on 429 responses. This matches the de facto standard used by GitHub, Stripe, and most major APIs.
 
 The IETF is drafting standardized headers (`RateLimit-Policy`, `RateLimit`) via [draft-ietf-httpapi-ratelimit-headers](https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/) (draft-10, not yet an RFC as of March 2026). No action needed until ratified; when it becomes an RFC, consider dual-emitting both `X-RateLimit-*` and the standard headers during a transition period.
 
@@ -87,12 +87,12 @@ The IETF is drafting standardized headers (`RateLimit-Policy`, `RateLimit`) via 
 
 | Test Suite | File | Cases |
 |------------|------|-------|
-| Drizzle rate limiter unit | `src/adapters/gateways/drizzle-rate-limiter.test.ts` | 11 (pruning, overflow, isolation) |
+| Drizzle rate limiter unit | `src/adapters/gateways/drizzle-rate-limiter.test.ts` | 12 (pruning, invalid input, overflow, INTERNAL_ERROR paths) |
 | Fake rate limiter unit | `src/application/test-helpers/fakes/fake-rate-limiter.test.ts` | 5 (scripted results, errors) |
 | Integration (real Postgres) | `tests/integration/rate-limiter.integration.test.ts` | Counter increments + rejection |
 | Billing controller | `billing-controller.test.ts` | RATE_LIMITED path for checkout + portal |
 | Question controller | `question-controller.test.ts` | RATE_LIMITED path for answer submission |
-| Health route | `health/route.test.ts` | 4 (429 response, headers, limiter failure) |
+| Health route | `health/route.test.ts` | 8 (GET + POST success, DB failure, 429 headers, limiter failure) |
 | Stripe webhook route | `stripe/webhook/route.test.ts` | Rate limiter mocked + tested |
 | Clerk webhook route | `clerk/route.test.ts` | Rate limiter created + tested |
 | Cron reconcile route | `cron/reconcile-stripe-subscriptions/route.test.ts` | Rate limiter in mock container |
@@ -106,7 +106,7 @@ src/
 ├── adapters/
 │   ├── gateways/
 │   │   ├── drizzle-rate-limiter.ts          # ✅ Postgres fixed-window implementation
-│   │   └── drizzle-rate-limiter.test.ts     # ✅ 11 unit tests
+│   │   └── drizzle-rate-limiter.test.ts     # ✅ 12 unit tests
 │   └── shared/
 │       └── rate-limits.ts                   # ✅ Centralized limit configuration
 ├── application/
@@ -119,7 +119,7 @@ src/
 lib/
 ├── container/
 │   └── gateways.ts                         # ✅ DrizzleRateLimiter wiring
-└── request-ip.ts                           # ✅ Spoof-resistant IP extraction
+└── request-ip.ts                           # ✅ Spoof-resistant IP extraction in production
 db/
 ├── schema.ts                               # ✅ rateLimits table
 └── migrations/
