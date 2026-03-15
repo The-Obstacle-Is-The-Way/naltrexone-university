@@ -93,7 +93,7 @@ function findSectionLabel(
   return Array.from(container.querySelectorAll('div, span')).find(
     (element) =>
       element.textContent?.trim() === text &&
-      (element.getAttribute('class') ?? '').includes('text-xs'),
+      !(element.getAttribute('class') ?? '').includes('self-start'),
   ) as HTMLElement | undefined;
 }
 
@@ -106,12 +106,12 @@ function expectNeutralChip(element: Element | undefined) {
       'inline-flex',
       'rounded-full',
       'bg-muted',
-      'text-xs',
+      'text-sm',
       'font-semibold',
       'text-foreground/60',
       'dark:bg-foreground/10',
     ],
-    ['text-sm', 'font-medium', 'text-foreground', 'uppercase', 'tracking-wide'],
+    ['text-xs', 'font-medium', 'text-foreground', 'uppercase', 'tracking-wide'],
   );
 }
 
@@ -124,11 +124,11 @@ function expectCorrectChip(element: Element | undefined) {
       'inline-flex',
       'rounded-full',
       'bg-success/15',
-      'text-xs',
+      'text-sm',
       'font-semibold',
       'text-success',
     ],
-    ['bg-muted', 'text-foreground/60', 'uppercase', 'tracking-wide'],
+    ['bg-muted', 'text-foreground/60', 'uppercase', 'tracking-wide', 'text-xs'],
   );
 }
 

@@ -70,7 +70,7 @@ function CorrectAnswerSection({
       {showLabel ? (
         <span
           className={cn(
-            'inline-flex rounded-full px-3 py-1 text-xs font-semibold',
+            'inline-flex rounded-full px-3 py-1 text-sm font-semibold',
             correctChoice
               ? 'bg-success/15 text-success'
               : 'bg-muted text-foreground/60 dark:bg-foreground/10',
@@ -168,7 +168,7 @@ export function Feedback({
 
           {shouldRenderChoiceExplanations ? (
             <div className="mt-4">
-              <span className="inline-flex rounded-full bg-muted px-3 py-1 text-xs font-semibold text-foreground/60 dark:bg-foreground/10">
+              <span className="inline-flex rounded-full bg-muted px-3 py-1 text-sm font-semibold text-foreground/60 dark:bg-foreground/10">
                 Why other answers are wrong
               </span>
               <div className="mt-2 space-y-3">
@@ -228,7 +228,7 @@ export function Feedback({
 
           {shouldRenderOtherWrongChoices ? (
             <div className="mt-4">
-              <span className="inline-flex rounded-full bg-muted px-3 py-1 text-xs font-semibold text-foreground/60 dark:bg-foreground/10">
+              <span className="inline-flex rounded-full bg-muted px-3 py-1 text-sm font-semibold text-foreground/60 dark:bg-foreground/10">
                 Why other answers are wrong
               </span>
               <div className="mt-2 space-y-3">
