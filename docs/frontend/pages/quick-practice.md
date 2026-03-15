@@ -1,27 +1,37 @@
-# Quick Practice — Dark Mode UI Audit
+# Quick Practice — Cross-Theme UI Audit
 
-**Date:** 2026-03-06
+**Date:** 2026-03-14
 **Page:** `/app/practice/quick`
-**Theme:** Dark mode only (light mode not audited here)
+**Theme:** Light + dark
 **Source files:** `quick-practice-client.tsx`, `practice-view.tsx`, `question-card.tsx`, `choice-button.tsx`, `segmented-control.tsx`, `tab-switch-styles.ts`, `card.tsx`
 
-**Status:** Historical audit plus current-state note. The element-by-element findings below for choice buttons and the segmented control document the pre-DEBT-280 state that motivated the refinement. Current live tokens after DEBT-280 are summarized in the next section.
+**Status:** Current cross-theme audit plus historical appendix. The live neutral-state contract after DEBT-312 is documented first; the older dark-mode-only findings that motivated DEBT-280 are retained below as historical context.
 
 ---
 
-## Current State After DEBT-280
+## Current State After DEBT-312
 
 ### Choice Buttons
 
-- Rest (dark, unselected, no verdict): `dark:border-foreground/40` with no dark fill override
+- Rest (light, unselected, no verdict): `border-foreground/50 bg-foreground/5`
+- Hover (light, unselected): `hover:border-foreground/55 hover:bg-foreground/[0.08]`
+- Selected (light, neutral): `border-ring bg-foreground/[0.12]`
+- Rest (dark, unselected, no verdict): `dark:border-foreground/40 dark:bg-foreground/5`
 - Hover (dark, unselected): `dark:hover:border-foreground/55 dark:hover:bg-foreground/8`
 - Selected (dark, neutral): `dark:border-foreground/70 dark:bg-foreground/15`
 - Letter badge remains unchanged: `dark:border-foreground/60 dark:bg-foreground/20`
+- Branch rule: selected neutral markup intentionally does not inherit the unselected-only light hover tokens (`hover:border-foreground/55 hover:bg-foreground/[0.08]`)
+
+### Why the light-mode contract changed
+
+- The old light neutral recipe (`border-border/60 bg-muted/20`) was effectively invisible on a white `QuestionCard`: the fill only moved to `#FCFDFE` (`~1.02:1` vs white) and the border only reached `#EEF1F6` (`~1.13:1` vs white).
+- `border-foreground/50 bg-foreground/5` restores a visible child surface inside the card while keeping the row boundary compliant under the required-boundary rule.
+- The neutral fill ramp is now monotonic across themes instead of a white-on-white whisper in light mode: light uses `5 -> 8 -> 12`, dark uses `5 -> 8 -> 15`.
 
 ### Shared Tab-Switch Container
 
 - Container classes: `inline-flex rounded-lg border border-border bg-muted p-1`
-- The shared `dark:border-foreground/40` override was removed from `tabSwitchContainerClasses`
+- The shared `dark:border-foreground/40` override remains removed from `tabSwitchContainerClasses`
 
 ---
 
@@ -34,6 +44,21 @@ Top to bottom:
 3. **Segmented control** — Unanswered / Incorrect / Bookmarked tabs with counts
 4. **Question card** — stem text + 4 choice buttons (A–D)
 5. **Action bar** — Submit, Next, Bookmark buttons
+
+---
+
+## Light Mode Token Reference
+
+From `app/globals.css` `:root {}`:
+
+| Token | HSL | Hex | Description |
+|-------|-----|-----|-------------|
+| `--background` | `0 0% 100%` | `#FFFFFF` | Page background |
+| `--foreground` | `222.2 84% 4.9%` | `#020817` | Primary text / tonal source |
+| `--card` | `0 0% 100%` | `#FFFFFF` | Card surface |
+| `--muted` | `210 40% 96.1%` | `#F1F5F9` | Legacy muted fill |
+| `--border` | `214.3 31.8% 91.4%` | `#E2E8F0` | Default border |
+| `--ring` | `222.2 84% 4.9%` | `#020817` | Focus/selected ring |
 
 ---
 
@@ -54,7 +79,27 @@ From `app/globals.css` `.dark {}`:
 
 ---
 
-## Element-by-Element Audit (Pre-DEBT-280 Historical Snapshot)
+## Current Cross-Theme Assessment
+
+### 1. Choice Buttons
+
+**Light mode:** The choice buttons now match the repo's established child-surface language. `bg-foreground/5` gives the row a perceptible tonal body, `border-foreground/50` keeps the clickable edge legible, and the light ramp (`5 -> 8 -> 12`) preserves state hierarchy without turning the rows into heavy gray blocks. This is the same foreground-tonal system already used by Dashboard nested rows and Practice filter containers/chips.
+
+**Dark mode:** The rows no longer read as pure wireframes, but they also avoid the pre-DEBT-280 "gray brick" problem. `dark:bg-foreground/5` restores subtle containment, the hover delta stays restrained at `/8`, and selected still clearly outranks hover at `/15`.
+
+**Selected-state guard:** Because the light hover border/fill tokens live on the unselected branch only, a selected neutral choice no longer visually regresses when the pointer enters. That branch separation is part of the documented contract, not an implementation accident.
+
+### 2. Shared Tab-Switch Container
+
+The segmented control remains on the established `bg-muted` container pattern. Its container border is decorative, not required for identification, so leaving it on `border-border` is correct. The active pill continues to carry the state affordance.
+
+### 3. Action Bar
+
+The Submit / Next / Bookmark buttons still use the standard Button primitives and do not participate in the ChoiceButton tonal-row contract. No additional Quick Practice-specific changes are required there.
+
+---
+
+## Historical Appendix: Element-by-Element Audit (Pre-DEBT-280 Dark Snapshot)
 
 ### 1. Question Card Container
 
@@ -234,7 +279,7 @@ Keep WCAG compliance. The selected state gets an additional ring to clearly diff
 
 ---
 
-## Open Questions (Resolved)
+## Historical Open Questions (Resolved by DEBT-280)
 
 1. **Is the choice button border a "required boundary" under SC 1.4.11?** Yes — the border helps communicate the clickable area and is kept at `/40` (~3.46:1). Dropping below 3:1 is not justified for choice buttons. Resolved in [DEBT-280](../../_archive/debt/debt-280-choice-button-dark-mode-surface-refinement.md) Approach A.
 
@@ -248,4 +293,4 @@ Keep WCAG compliance. The selected state gets an additional ring to clearly diff
 
 ## Scope Note
 
-This audit covers the Quick Practice question-answering page only. The Practice Starter page (`/app/practice`) now has its own page inventory at [practice.md](./practice.md), and its filter-container/chip surface work is tracked under [DEBT-290](../../_archive/debt/debt-290-practice-filter-tonal-fill-elevation.md).
+This inventory covers the Quick Practice question-answering page only. It now documents the current DEBT-312 cross-theme choice-button contract and retains the older dark-mode-only DEBT-280 appendix for historical context. The Practice Starter page (`/app/practice`) has its own page inventory at [practice.md](./practice.md), and its filter-container/chip surface work is tracked under [DEBT-290](../../_archive/debt/debt-290-practice-filter-tonal-fill-elevation.md).

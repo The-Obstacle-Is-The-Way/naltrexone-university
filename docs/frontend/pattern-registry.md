@@ -1,6 +1,6 @@
 # Pattern Registry
 
-**Last Updated:** 2026-03-12
+**Last Updated:** 2026-03-14
 **Status:** Canonical — all UI changes MUST conform to this registry
 
 Single source of truth for every visual pattern in the app. If a pattern isn't here, don't invent one — add it here first, get approval, then implement.
@@ -75,7 +75,7 @@ When to use each opacity on `bg-muted` (or equivalent layer-2 token):
 
 **Key insight:** The same opacity produces different perceived contrast depending on the parent surface. `/40` inside a card (7% base) looks similar to `/50` on page background (3.5% base). The scale above accounts for this.
 
-**Decision:** Hover opacity is context-dependent. Use `/40` inside cards (including I-3 choice buttons), `/50` on page background when the hover is driven by the muted/layer-2 scale, and the foreground-ramp tonal row contract documented below for borderless row patterns in I-1/I-2. `/60` is exception-only and requires explicit design review.
+**Decision:** Hover opacity is context-dependent. Use `/40` inside cards when the pattern is intentionally using the muted/layer-2 hover scale, `/50` on page background when the hover is driven by that same muted/layer-2 scale, and the foreground-ramp tonal row contracts documented below for I-1, I-2, I-3, and I-4. `/60` is exception-only and requires explicit design review.
 
 **Foreground-ramp tonal row scale (parent-aware):**
 
@@ -293,33 +293,33 @@ focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 
 ### I-3: Choice Button
 
-Direct-action interactive target for answering questions. Choices render inside `QuestionCard` (`bg-card`) and follow in-card row hierarchy.
+Direct-action interactive target for answering questions. Choices render inside `QuestionCard` (`bg-card`) and use a hybrid pattern: a tonal child surface plus a required boundary because the row itself is the clickable control.
 
 **Base state:**
 ```
-block w-full rounded-xl border border-border/60 bg-muted/20 p-4 text-left shadow-sm transition-colors
-dark:border-foreground/40
+block w-full rounded-xl border border-foreground/50 bg-foreground/5 p-4 text-left shadow-sm transition-colors
+dark:border-foreground/40 dark:bg-foreground/5
 focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]
 ```
 
-**Hover (enabled, light mode):**
+**Hover (enabled):**
 ```
-cursor-pointer hover:bg-muted/40
-```
-
-**Hover (unselected only — border + dark fill):**
-```
-hover:border-muted-foreground/30 dark:hover:border-foreground/55 dark:hover:bg-foreground/8
+cursor-pointer
 ```
 
-**Selected (neutral):** `border-ring bg-muted/40 dark:border-foreground/70 dark:bg-foreground/15`
+**Hover (unselected only — border + fill):**
+```
+hover:border-foreground/55 hover:bg-foreground/[0.08] dark:hover:border-foreground/55 dark:hover:bg-foreground/8
+```
+
+**Selected (neutral):** `border-ring bg-foreground/[0.12] dark:border-foreground/70 dark:bg-foreground/15`
 
 **Correct:** `border-success bg-success/10 text-success`
 **Incorrect:** `border-destructive bg-destructive/10 text-destructive`
 **Disabled (no correctness):** `cursor-not-allowed opacity-50`
 **Wrong-unselected dimming:** do not apply parent opacity to the whole label subtree; keep answer content text at `text-foreground` for WCAG AA legibility.
 
-**Design rationale:** Choice buttons are rendered inside `QuestionCard` (`bg-card`) and follow in-card row hierarchy, not standalone page-surface hierarchy. In dark mode, the rest state stays flush with the card while the border carries SC 1.4.11 compliance. Fill only appears on interaction, using `0` -> `8` -> `15` for rest/hover/selected so the choices do not read as a stack of resting gray bricks.
+**Design rationale:** Choice buttons are rendered inside `QuestionCard` (`bg-card`) and follow in-card row hierarchy, not standalone page-surface hierarchy. The row is also the direct-action control, so unlike borderless tonal rows it still needs a clearly compliant boundary per [Contrast Policy §3.2](./contrast-policy.md). In light mode, the older `border-border/60 bg-muted/20` recipe was too quiet on white card surfaces; `border-foreground/50 bg-foreground/5` restores a perceptible child surface while keeping the edge readable. The fill ramp now starts at the system-standard tonal rest fill instead of zero: `5 -> 8 -> 12` in light mode and `5 -> 8 -> 15` in dark mode, while the border step (`/50 -> /55` in light, `/40 -> /55` in dark) carries the primary hover cue. Keep the hover border/fill tokens on the unselected branch only so selected neutral rows do not regress when hovered.
 
 ### I-4: Filter Chip
 
@@ -844,13 +844,15 @@ Is the list inside a <Card> container?
 
 ```
 What is the parent surface?
-├── Inside a Card (bg-card, ~7% dark) → hover:bg-muted/40
-├── On page background (bg-background, ~3.5% dark) → hover:bg-muted/50
-├── Choice button inside card (I-3) → hover:bg-muted/40 in light mode, dark:hover:bg-foreground/8 + dark:hover:border-foreground/55 in dark mode
+├── Inside a Card, muted-scale row → hover:bg-muted/40
+├── Inside a Card, tonal row/direct-action surface → hover:bg-foreground/[0.08]
+├── On page background, muted-scale row → hover:bg-muted/50
+├── On page background, tonal row → hover:bg-foreground/[0.12]
+├── Choice button inside card (I-3) → hover:bg-foreground/[0.08] + hover:border-foreground/55 in light mode; dark:hover:bg-foreground/8 + dark:hover:border-foreground/55 in dark mode (unselected branch only)
 ├── `/60` hover tier → exception-only (requires explicit design review)
 └── Tab-switch inactive → hover:bg-muted/50 (inside bg-muted container)
 
-Token (neutral surface fills): Use `muted`.
+Token (neutral surface fills): Use the pattern's scale. `muted` is for muted-scale rows/containers; `foreground` is for tonal-row families such as I-1, I-2, I-3, and I-4.
 Border hovers in remediated dark-mode interactive rows/buttons typically use `dark:hover:border-foreground/70`. I-3 choice buttons are the deliberate exception at `/55` so hover stays distinct from selected without over-brightening the full stack.
 Avoid introducing new `hover:bg-accent*` outside `components/ui/` (button variants use `accent` by design). Only use `foreground`-based hover fills where the pattern spec explicitly calls for them.
 ```
@@ -1339,7 +1341,7 @@ Compact lookup for code reviews and implementation.
 | S-4 | Modal Dialog | — | `rounded-2xl` | `border-border` |
 | I-1 | Row in Card | `hover:bg-foreground/[0.08]` | `rounded-xl` | tonal-fill variant omits border |
 | I-2 | Standalone Row | `hover:bg-foreground/[0.12]` | `rounded-2xl` | tonal-fill variant omits border |
-| I-3 | Choice Button | `hover:bg-muted/40` (+ `dark:hover:bg-foreground/8 dark:hover:border-foreground/55`) | `rounded-xl` | `border-border/60 dark:border-foreground/40` |
+| I-3 | Choice Button | `hover:bg-foreground/[0.08] hover:border-foreground/55` (+ `dark:hover:bg-foreground/8 dark:hover:border-foreground/55`) | `rounded-xl` | `border-foreground/50 dark:border-foreground/40` |
 | I-4 | Filter Chip | `hover:bg-foreground/[0.12]` (+ `hover:border-foreground/60 dark:hover:border-foreground/70`) | `rounded-full` | `border-foreground/45 dark:border-foreground/40` |
 | I-5 | Tab Switch Item | `hover:bg-muted/50` | `rounded-md` | Container uses `border-border` |
 | I-6 | Icon Toggle | `hover:text-foreground` | — | — |
