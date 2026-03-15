@@ -2,9 +2,13 @@
 
 **Priority:** P3
 **Created:** 2026-03-15
+**Status:** Resolved
+**Resolved:** 2026-03-15
+**Resolved in commit:** `edfff94d`
 **Source:** Post-DEBT-314 visual QA
-**Status:** Open
 **Scope:** Feedback section chip labels in `components/question/feedback.tsx`
+
+**Historical note:** This archived debt item records the follow-up polish that converted the incorrect-flow `"Correct answer"` transition label into a semantic `"Correct"` chip, dropped the all-caps casing from section chips, and strengthened the neutral chip background in dark mode while intentionally leaving the verdict pill and reference label unchanged.
 
 ---
 

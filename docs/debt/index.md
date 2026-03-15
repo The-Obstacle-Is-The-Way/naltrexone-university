@@ -19,7 +19,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 10 verified client-side flows still report only to console or silent fallbacks | P2 | — |
-| [DEBT-315](./debt-315-feedback-chip-semantic-color-and-casing.md) | Feedback Chip Semantic Color & Casing Polish — "Correct answer" → green "Correct" chip, evaluate casing consistency between verdict pill and section labels, strengthen neutral chip in dark mode | P3 | — |
 **Next Debt ID:** DEBT-316
 
 ---
@@ -28,6 +27,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-315](../_archive/debt/debt-315-feedback-chip-semantic-color-and-casing.md) | Feedback Chip Semantic Color & Casing Polish — converted the incorrect-flow transition label to a semantic green `"Correct"` chip, dropped uppercase/tracking from section chips, and strengthened the neutral chip background in dark mode | P3 | 2026-03-15 | — |
 | [DEBT-314](../_archive/debt/debt-314-feedback-section-label-chip-consistency.md) | Feedback Section Label Chip Consistency — converted the feedback section's plain-text labels into neutral muted chips, removed the trailing colon from `"Why other answers are wrong"`, and preserved the existing `showLabel` behavior | P3 | 2026-03-15 | — |
 | [DEBT-313](../_archive/debt/debt-313-choice-button-dark-surface-and-badge-visibility.md) | Choice Button Dark Surface & Badge Visibility — replaced the DEBT-312 gray rest fill with the recessed `bg-background/50` dark-surface model, calibrated hover/selected ramps, and fixed neutral badge visibility across ChoiceButton and Feedback | P1 | 2026-03-15 | — |
 | [DEBT-312](../_archive/debt/debt-312-choice-button-neutral-state-surface-alignment.md) | Choice Button Neutral-State Surface Alignment — landed the cross-theme required-boundary branch discipline and light-mode neutral-state alignment later refined by DEBT-313 | P2 | 2026-03-15 | — |
