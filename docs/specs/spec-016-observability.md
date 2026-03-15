@@ -1,6 +1,6 @@
 # SPEC-016: Observability (Logging, Error Tracking, Monitoring)
 
-> **Status:** Implemented (Core) — Pino + Sentry bootstrap complete; DEBT-286 client-side reporting rollout resolved ([DEBT-286](../debt/debt-286-client-side-error-reporting.md))
+> **Status:** Implemented (Core) — Pino + Sentry bootstrap complete; DEBT-286 client-side reporting rollout resolved ([DEBT-286](../_archive/debt/debt-286-client-side-error-reporting.md))
 > **Priority:** P1 (Critical for Production)
 > **Author:** Claude
 > **Created:** 2026-02-01
@@ -352,7 +352,7 @@ pnpm add -D pino-pretty              # Pretty logs in dev terminal
 
 Route/global error-boundary console cleanup remains observability-adjacent work, but it is not part of the core DEBT-286 rollout inventory unless that debt is explicitly expanded.
 
-See [DEBT-286](../debt/debt-286-client-side-error-reporting.md) for the full rollout plan and target inventory.
+See [DEBT-286](../_archive/debt/debt-286-client-side-error-reporting.md) for the full rollout plan and target inventory.
 
 **Completed (DEBT-249 Rollout Instrumentation):**
 - [x] Auth bounce count on `/checkout/success` — track middleware redirect bounces on this route

@@ -1,7 +1,7 @@
 # Implementation Specifications
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-02-23
+**Last Updated:** 2026-03-15
 
 ---
 
@@ -18,8 +18,8 @@ Implementation specifications provide detailed technical guidance for building e
 | ID | Title | Status | Layer |
 |----|-------|--------|-------|
 | [Master Spec](./master_spec.md) | Complete Technical Specification (SSOT) | Living | All |
-| [SPEC-016](./spec-016-observability.md) | Observability (Logging, Error Tracking) | Partially Implemented | Infrastructure |
-| [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Partial (MVP done) | Infrastructure |
+| [SPEC-016](./spec-016-observability.md) | Observability (Logging, Error Tracking) | Implemented (DEBT-286 resolved) | Infrastructure |
+| [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Implemented (MVP complete) | Infrastructure |
 
 **Master Spec split parts (readability):**
 

@@ -2,13 +2,9 @@
 
 **Priority:** P2
 **Created:** 2026-03-14
-**Status:** Resolved
-**Resolved:** 2026-03-15
-**Resolved in commits:** `f91bec51` (DEBT-312 baseline), `753db166` (final follow-up alignment via DEBT-313/314)
 **Source:** Quick Practice answer-choice contrast investigation (user-reported visual audit + repo-doc cross-check)
+**Status:** Open
 **Scope:** Neutral answer-choice states in `components/question/choice-button.tsx` across Quick Practice, active practice sessions, and review pages. Post-submit feedback cards are intentionally out of scope for this ticket.
-
-**Historical note:** This archived debt item records the original cross-theme alignment pass that replaced the old `muted`-opacity contract and locked in the branch-placement discipline still retained by the final implementation. The specific neutral rest surface proposed here was later refined by DEBT-313 after visual QA of the implemented result.
 
 ---
 
@@ -31,7 +27,7 @@ The repo's frontend system already established a clearer visual language for "su
 | Practice filter containers | `bg-foreground/5` |
 | Dashboard nested rows | `bg-foreground/5` |
 | Filter chips | `border-foreground/45 bg-foreground/[0.07]` in light mode, `dark:border-foreground/40` in dark mode |
-| Choice buttons | `border-border/60 bg-muted/20` in light mode, no dark-specific rest fill override (base `bg-muted/20` still composites to an almost card-matching fill) in dark mode |
+| Choice buttons | `border-border/60 bg-muted/20` in light mode, transparent card-matching fill in dark mode |
 
 Choice buttons are the outlier. They still rely on the old `muted`-opacity approach in light mode even though the repo already documented that light-mode `muted` opacity ramps are too weak on white surfaces.
 
@@ -42,25 +38,20 @@ Choice buttons are the outlier. They still rely on the old `muted`-opacity appro
 Current neutral-state `ChoiceButton` tokens:
 
 ```tsx
-Base rest:                    border-border/60 bg-muted/20
-Enabled hover fill branch:    hover:bg-muted/40
-Unselected hover branch:      hover:border-muted-foreground/30 dark:hover:border-foreground/55 dark:hover:bg-foreground/8
-Selected neutral branch:      border-ring bg-muted/40 dark:border-foreground/70 dark:bg-foreground/15
+Rest:     border-border/60 bg-muted/20
+Hover:    hover:bg-muted/40 hover:border-muted-foreground/30
+Selected: border-ring bg-muted/40
 
-Dark rest override (unselected/no verdict): dark:border-foreground/40
+Dark rest override:     dark:border-foreground/40
+Dark hover override:    dark:hover:border-foreground/55 dark:hover:bg-foreground/8
+Dark selected override: dark:border-foreground/70 dark:bg-foreground/15
 ```
-
-Implementation nuance that matters for this ticket:
-
-- `hover:bg-muted/40` is currently attached to the broad `!disabled` branch, so selected neutral choices still carry the light-mode hover fill token
-- `hover:border-muted-foreground/30` and the dark hover overrides are attached to the narrower `!disabled && !selected` branch
-- any replacement light-mode hover tokens must preserve that branch separation or selected neutral choices will regress from selected -> hover when the pointer enters
 
 This conflicts with three repo-level decisions already captured elsewhere:
 
-1. **Required boundaries must clear 3:1** when the border is doing the work of defining the control. See [Contrast Policy](../../frontend/contrast-policy.md) §3.2.
-2. **Light mode cannot depend on `bg-muted/*` opacity for meaningful affordance** on white or near-white surfaces. See [DEBT-262](./debt-262-light-mode-opacity.md) and [Pattern Registry](../../frontend/pattern-registry.md) Part 1.2.
-3. **Interactive children inside a card now generally use a foreground-based tonal ramp** (`bg-foreground/5`, `bg-foreground/[0.08]`, etc.) rather than white-on-white `muted` whisper fills. See [Practice](../../frontend/pages/practice.md), [Dashboard](../../frontend/pages/dashboard.md), [DEBT-291](./debt-291-filter-chip-light-mode-border-contrast.md), and [DEBT-309](./debt-309-filter-chip-hover-border-affordance.md).
+1. **Required boundaries must clear 3:1** when the border is doing the work of defining the control. See [Contrast Policy](../frontend/contrast-policy.md) §3.2.
+2. **Light mode cannot depend on `bg-muted/*` opacity for meaningful affordance** on white or near-white surfaces. See [DEBT-262](../_archive/debt/debt-262-light-mode-opacity.md) and [Pattern Registry](../frontend/pattern-registry.md) Part 1.2.
+3. **Interactive children inside a card now generally use a foreground-based tonal ramp** (`bg-foreground/5`, `bg-foreground/[0.08]`, etc.) rather than white-on-white `muted` whisper fills. See [Practice](../frontend/pages/practice.md), [Dashboard](../frontend/pages/dashboard.md), [DEBT-291](../_archive/debt/debt-291-filter-chip-light-mode-border-contrast.md), and [DEBT-309](../_archive/debt/debt-309-filter-chip-hover-border-affordance.md).
 
 ---
 
@@ -99,7 +90,7 @@ This is not just "taste drift." It is a pattern-level inconsistency:
 
 - `ChoiceButton` still uses the old light-mode `muted` opacity recipe
 - the rest of the question-adjacent UI has already moved toward a clearer foreground-tonal hierarchy
-- the page inventory for [Quick Practice](../../frontend/pages/quick-practice.md) is dark-mode-only, so the light-mode weakness was never fully documented
+- the page inventory for [Quick Practice](../frontend/pages/quick-practice.md) is dark-mode-only, so the light-mode weakness was never fully documented
 
 The result is a high-frequency core interaction that no longer feels visually integrated with the newer practice/dashboard surface system.
 
@@ -152,16 +143,6 @@ Selected: dark:border-foreground/70 dark:bg-foreground/15
 - the dark rest fill at `bg-foreground/5` keeps the DEBT-280 direction intact: subtle containment, not gray bricks
 - the dark hover fill at `bg-foreground/8` produces a 3pp fill delta over the new `bg-foreground/5` rest fill (`~11.3%` → `~13.9%` lightness). This is the same gap used by Dashboard I-1 in-card tonal rows (`bg-foreground/5` → `hover:bg-foreground/[0.08]`), and acceptable here because the border jump (`/40` → `/55`) carries the primary dark-mode hover signal. If post-implementation QA reveals the combined hover cue is too subtle, the fallback is `dark:hover:bg-foreground/[0.10]` (5pp gap) — but start with the system-consistent value
 
-### Branch placement requirement
-
-These replacement tokens are only correct if they land in the right conditional branches:
-
-- `border-foreground/50 bg-foreground/5` becomes the new neutral base
-- `hover:border-foreground/55 hover:bg-foreground/[0.08]` must live in the same unselected neutral hover branch as the current `hover:border-muted-foreground/30 ...` tokens
-- `border-ring bg-foreground/[0.12]` remains selected-neutral-only
-
-Do not leave `hover:bg-foreground/[0.08]` on the broad enabled branch. If it remains attached to all enabled choices, selected neutral choices will visually step backwards on hover (`[0.12]` → `[0.08]` in light mode).
-
 This is intentionally a **recommended baseline**, not a claim that the exact selected token is settled forever. If `border-ring` feels too loud once the neutral row is fixed, the fallback to evaluate is `border-foreground/60` on the selected neutral state, not a return to `bg-muted/*`.
 
 ---
@@ -172,21 +153,19 @@ This is intentionally a **recommended baseline**, not a claim that the exact sel
 
 | File | Change |
 |------|--------|
-| `components/question/choice-button.tsx` | Replace the light-mode `border-border/60 bg-muted/20` neutral-state recipe with the foreground-tonal hybrid recipe; add subtle dark rest fill; move the replacement light hover tokens into the unselected-neutral branch so selected choices do not regress on hover |
+| `components/question/choice-button.tsx` | Replace the light-mode `border-border/60 bg-muted/20` neutral-state recipe with the foreground-tonal hybrid recipe; add subtle dark rest fill |
 
 ### Tests
 
 | File | Change |
 |------|--------|
-| `components/question/choice-button.test.tsx` | Update positive token assertions; add negative assertions removing `border-border/60`, `bg-muted/20`, `hover:bg-muted/40`, and `hover:border-muted-foreground/30` from the neutral-state contract; assert selected neutral markup does not inherit the new unselected-only hover tokens |
-| `components/theme-token-regression.test.tsx` | Update the shared ChoiceButton token regression so it no longer asserts `border-border/60` / `bg-muted/40` for the neutral contract |
-| `components/question/ChoiceButton.browser.spec.tsx` | Keep the selected-hover guard, but update it to verify selected neutral markup does not inherit the new unselected-only light hover tokens |
+| `components/question/choice-button.test.tsx` | Update positive token assertions; add negative assertions removing `border-border/60`, `bg-muted/20`, and light-mode-only `hover:bg-muted/40` from the neutral-state contract |
 
 ### Documentation
 
 | File | Change |
 |------|--------|
-| `docs/frontend/pattern-registry.md` | Update `I-3` to document the new hybrid "tonal row + required boundary" pattern; rewrite the design rationale to explain why `bg-foreground/5` rest fill is acceptable containment while the old `bg-foreground/8` was "gray bricks" (5% is the system-standard tonal surface, not a mid-opacity fill); update the fill progression from `0 → 8 → 15` to `5 → 8 → 15`; update the I-3 summary row / hover decision-tree callouts that currently still encode the old light-mode contract |
+| `docs/frontend/pattern-registry.md` | Update `I-3` to document the new hybrid "tonal row + required boundary" pattern; rewrite the design rationale to explain why `bg-foreground/5` rest fill is acceptable containment while the old `bg-foreground/8` was "gray bricks" (5% is the system-standard tonal surface, not a mid-opacity fill); update the fill progression from `0 → 8 → 15` to `5 → 8 → 15` |
 | `docs/frontend/contrast-policy.md` | Add an explicit note that `ChoiceButton` uses a required boundary and light-mode foreground-based border because `muted` opacity is insufficient on white |
 | `docs/frontend/standards.md` | Update §5 "Interactive row/card hover" to reflect the new foreground-based choice button hover tokens (current table references stale `dark:hover:bg-foreground/15`); revise the blanket "Always use the `muted` token for neutral hover backgrounds" rule to account for foreground-ramp tonal patterns already established by I-1, I-2, I-3, and I-4 |
 | `docs/frontend/pages/quick-practice.md` | Expand from dark-mode-only historical note to a current cross-theme audit; explicitly document the light-mode rationale and the selected neutral-state contract |
@@ -212,11 +191,8 @@ These are intentionally excluded from DEBT-312:
 2. Neutral rest state no longer contains `border-border/60`
 3. Neutral rest state no longer contains `bg-muted/20`
 4. Neutral hover state no longer contains `hover:bg-muted/40`
-5. Neutral hover state no longer contains `hover:border-muted-foreground/30`
-6. Selected neutral markup does not inherit the new unselected-only light hover tokens
-7. Dark neutral rest state now includes the subtle dark fill
-8. Shared theme-token regression coverage is updated to the new neutral-state contract
-9. Correct / incorrect verdict states remain unchanged
+5. Dark neutral rest state now includes the subtle dark fill
+6. Correct / incorrect verdict states remain unchanged
 
 ### Manual visual QA
 
@@ -226,10 +202,8 @@ Validate in all of these contexts because `ChoiceButton` is shared:
 2. Quick Practice, dark mode
 3. Active Tutor session, light mode
 4. Active Tutor session, dark mode
-5. Active Exam session, light mode
-6. Active Exam session, dark mode
-7. Review question page, light mode
-8. Review question page, dark mode
+5. Review question page, light mode
+6. Review question page, dark mode
 
 ### Visual acceptance criteria
 
@@ -243,18 +217,7 @@ Validate in all of these contexts because `ChoiceButton` is shared:
 
 ## Relationship to Existing Work
 
-- **Extends [DEBT-280](./debt-280-choice-button-dark-mode-surface-refinement.md)** from dark-mode refinement into a cross-theme neutral-state alignment pass
-- **Applies the same light-mode reasoning used by [DEBT-291](./debt-291-filter-chip-light-mode-border-contrast.md)**: foreground-based borders are required when white/light surfaces make semantic `border` tokens too quiet
-- **Builds on [DEBT-309](./debt-309-filter-chip-hover-border-affordance.md)**: hover needs an edge-level cue, not just a tiny fill change
-- **Closes a documentation gap left by the current [Quick Practice page inventory](../../frontend/pages/quick-practice.md)**, which only audits dark mode
-
----
-
-## Audit Corrections Applied
-
-This ticket was tightened after a line-by-line repo audit on 2026-03-14. The corrections above are intentional and should not be reverted:
-
-- describe the hover branches exactly as implemented instead of flattening them into a single generic "Hover" line
-- stop calling the current dark rest fill "transparent" — there is no dark-specific rest fill override, but the base `bg-muted/20` token still exists and composites to a near-card value
-- include the shared theme-token regression and browser spec in scope because they encode the current neutral-state contract
-- include Active Exam in manual QA because `QuestionCard` is shared by both tutor and exam session flows
+- **Extends [DEBT-280](../_archive/debt/debt-280-choice-button-dark-mode-surface-refinement.md)** from dark-mode refinement into a cross-theme neutral-state alignment pass
+- **Applies the same light-mode reasoning used by [DEBT-291](../_archive/debt/debt-291-filter-chip-light-mode-border-contrast.md)**: foreground-based borders are required when white/light surfaces make semantic `border` tokens too quiet
+- **Builds on [DEBT-309](../_archive/debt/debt-309-filter-chip-hover-border-affordance.md)**: hover needs an edge-level cue, not just a tiny fill change
+- **Closes a documentation gap left by the current [Quick Practice page inventory](../frontend/pages/quick-practice.md)**, which only audits dark mode
