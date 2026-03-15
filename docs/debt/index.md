@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-14
+**Last Updated:** 2026-03-15
 
 ---
 
@@ -20,7 +20,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 10 verified client-side flows still report only to console or silent fallbacks | P2 | — |
 | [DEBT-312](./debt-312-choice-button-neutral-state-surface-alignment.md) | Choice Button Neutral-State Surface Alignment — replace the light-mode white-on-white `muted` recipe with a foreground-tonal hybrid boundary/surface pattern, and restore subtle containment in dark mode without reviving the old boxed look | P2 | — |
-**Next Debt ID:** DEBT-313
+| [DEBT-313](./debt-313-choice-button-dark-surface-and-badge-visibility.md) | Choice Button Dark Surface & Badge Visibility — supersedes DEBT-312's dark rest fill (`bg-foreground/5` → `bg-background/50`), drops the light gray tint, and fixes letter-badge visibility across ChoiceButton and Feedback | P1 | — |
+**Next Debt ID:** DEBT-314
 
 ---
 
