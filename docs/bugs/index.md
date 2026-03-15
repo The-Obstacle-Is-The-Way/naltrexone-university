@@ -74,6 +74,7 @@ Active open bugs are listed below.
 
 | Bug | Family | Priority | Summary |
 |-----|--------|----------|---------|
+| [BUG-221](./bug-221-checkout-success-repeated-session-id-breaks-sync.md) | Search params / checkout | P3 | Repeated `session_id` arrays are forwarded as invalid input and bounce successful checkout returns to the generic error route |
 | [BUG-226](./bug-226-tutor-session-next-button-no-questions-after-completion.md) | Practice / session navigation | P2 | Completed-session "Next" can dead-end into "No more questions found" because the view shows availability from navigator rows but dispatches through unanswered-only `fromIndex` |
 | [BUG-223](./bug-223-bookmarks-page-array-query-feedback-loss.md) | Search params / bookmarks | P4 | Repeated `error` / `toast` params suppress remove-bookmark feedback |
 | [BUG-224](./bug-224-practice-session-array-toast-loss.md) | Search params / practice | P4 | Repeated session-start toast params suppress or degrade practice-session startup feedback |
