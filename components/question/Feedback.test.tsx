@@ -86,6 +86,34 @@ function findStyledCard(
   }) as HTMLDivElement | undefined;
 }
 
+function findSectionLabel(
+  container: ParentNode,
+  text: string,
+): HTMLElement | undefined {
+  return Array.from(container.querySelectorAll('div, span')).find(
+    (element) => element.textContent?.trim() === text,
+  ) as HTMLElement | undefined;
+}
+
+function expectNeutralChip(element: Element | undefined) {
+  expect(element).not.toBeUndefined();
+  const chipTokens = getClassTokens(element?.getAttribute('class') ?? '');
+  expectTokens(
+    chipTokens,
+    [
+      'inline-flex',
+      'rounded-full',
+      'bg-muted',
+      'text-xs',
+      'font-semibold',
+      'uppercase',
+      'tracking-wide',
+      'text-foreground/60',
+    ],
+    ['text-sm', 'font-medium', 'text-foreground'],
+  );
+}
+
 describe('Feedback', () => {
   it('renders a neutral status card with a verdict badge', () => {
     const html = renderToStaticMarkup(
@@ -411,9 +439,7 @@ describe('Feedback', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const correctAnswerLabel = Array.from(doc.querySelectorAll('div')).find(
-      (div) => div.textContent?.trim() === 'Correct answer',
-    );
+    const correctAnswerLabel = findSectionLabel(doc, 'Correct answer');
     const successCard = correctAnswerLabel?.nextElementSibling;
     const successCardClassName = successCard?.getAttribute('class') ?? '';
     const successCardTokens = getClassTokens(successCardClassName);
@@ -444,6 +470,7 @@ describe('Feedback', () => {
     );
 
     expect(correctAnswerLabel).not.toBeUndefined();
+    expectNeutralChip(correctAnswerLabel);
     expect(successCard).not.toBeNull();
     expect(successCardTokens.has('border-success/60')).toBe(true);
     expect(successCardTokens.has('bg-success/5')).toBe(true);
@@ -499,9 +526,7 @@ describe('Feedback', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const explanationLabel = Array.from(doc.querySelectorAll('div')).find(
-      (div) => div.textContent?.trim() === 'Explanation',
-    );
+    const explanationLabel = findSectionLabel(doc, 'Explanation');
     const successCard = explanationLabel?.nextElementSibling;
     const fallbackParagraph = Array.from(
       successCard?.querySelectorAll('p') ?? [],
@@ -513,6 +538,7 @@ describe('Feedback', () => {
 
     expect(html).not.toContain('Your answer');
     expect(explanationLabel).not.toBeUndefined();
+    expectNeutralChip(explanationLabel);
     expect(fallbackParagraph).not.toBeUndefined();
     expect(fallbackClassName).toContain('text-sm');
     expect(fallbackClassName).toContain('text-muted-foreground');
@@ -554,8 +580,9 @@ describe('Feedback', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const wrongAnswersHeading = Array.from(doc.querySelectorAll('div')).find(
-      (div) => div.textContent?.trim() === 'Why other answers are wrong:',
+    const wrongAnswersHeading = findSectionLabel(
+      doc,
+      'Why other answers are wrong',
     );
     const wrongAnswersSection = wrongAnswersHeading?.parentElement;
     const wrongAnswerCards = Array.from(
@@ -577,6 +604,7 @@ describe('Feedback', () => {
     ];
 
     expect(wrongAnswersHeading).not.toBeUndefined();
+    expectNeutralChip(wrongAnswersHeading);
     expect(wrongAnswerCards.length).toBe(expectedWrongChoices.length);
     for (const [index, card] of wrongAnswerCards.entries()) {
       const className = card.getAttribute('class') ?? '';
@@ -628,7 +656,13 @@ describe('Feedback', () => {
       expect(answerBadge?.getAttribute('class')).toContain('rounded-full');
       expectTokens(
         answerBadgeTokens,
-        ['border-border', 'bg-muted', 'text-foreground'],
+        [
+          'border-foreground/20',
+          'bg-foreground/[0.06]',
+          'text-foreground',
+          'dark:border-foreground/60',
+          'dark:bg-foreground/20',
+        ],
         ['border-success', 'bg-success/15', 'text-success'],
       );
       expectTokens(
@@ -680,8 +714,9 @@ describe('Feedback', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const wrongAnswersHeading = Array.from(doc.querySelectorAll('div')).find(
-      (div) => div.textContent?.trim() === 'Why other answers are wrong:',
+    const wrongAnswersHeading = findSectionLabel(
+      doc,
+      'Why other answers are wrong',
     );
     const wrongAnswersSection = wrongAnswersHeading?.parentElement;
     const wrongAnswerCards = Array.from(
@@ -746,8 +781,9 @@ describe('Feedback', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const wrongAnswersHeading = Array.from(doc.querySelectorAll('div')).find(
-      (div) => div.textContent?.trim() === 'Why other answers are wrong:',
+    const wrongAnswersHeading = findSectionLabel(
+      doc,
+      'Why other answers are wrong',
     );
     const wrongAnswersSection = wrongAnswersHeading?.parentElement;
     const wrongAnswerCards = Array.from(
@@ -793,9 +829,7 @@ describe('Feedback', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const correctAnswerLabel = Array.from(doc.querySelectorAll('div')).find(
-      (div) => div.textContent?.trim() === 'Correct answer',
-    );
+    const correctAnswerLabel = findSectionLabel(doc, 'Correct answer');
     const successCard = correctAnswerLabel?.nextElementSibling;
     const correctAnswerBadge = successCard
       ? findRoundedBadge(successCard, 'B')
@@ -811,6 +845,7 @@ describe('Feedback', () => {
     );
 
     expect(html).toContain('Correct answer');
+    expectNeutralChip(correctAnswerLabel);
     expect(correctAnswerBadge).not.toBeUndefined();
     expect(correctAnswerBadge?.getAttribute('class')).toContain('rounded-full');
     expectTokens(correctAnswerBadgeTokens, [
@@ -829,6 +864,10 @@ describe('Feedback', () => {
       <Feedback isCorrect={false} explanationMd="General explanation." />,
     );
 
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const explanationLabel = findSectionLabel(doc, 'Explanation');
+
+    expectNeutralChip(explanationLabel);
     expect(html).toContain('>Explanation<');
     expect(html).not.toContain('Correct answer');
   });
@@ -858,8 +897,9 @@ describe('Feedback', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const wrongAnswersHeading = Array.from(doc.querySelectorAll('div')).find(
-      (div) => div.textContent?.trim() === 'Why other answers are wrong:',
+    const wrongAnswersHeading = findSectionLabel(
+      doc,
+      'Why other answers are wrong',
     );
     const wrongAnswersSection = wrongAnswersHeading?.parentElement;
     const wrongAnswerCard = Array.from(
@@ -897,7 +937,9 @@ describe('Feedback', () => {
     );
     const wrongAnswersSectionText = wrongAnswersSection?.textContent ?? '';
 
-    expect(html).toContain('Why other answers are wrong:');
+    expectNeutralChip(wrongAnswersHeading);
+    expect(html).toContain('Why other answers are wrong');
+    expect(html).not.toContain('Why other answers are wrong:');
     expect(wrongAnswerCard).not.toBeUndefined();
     expect(wrongAnswerRow).not.toBeUndefined();
     expect(wrongAnswerRowTokens.has('gap-3')).toBe(true);
@@ -905,7 +947,13 @@ describe('Feedback', () => {
     expect(wrongAnswerBadge?.getAttribute('class')).toContain('rounded-full');
     expectTokens(
       wrongAnswerBadgeTokens,
-      ['border-border', 'bg-muted', 'text-foreground'],
+      [
+        'border-foreground/20',
+        'bg-foreground/[0.06]',
+        'text-foreground',
+        'dark:border-foreground/60',
+        'dark:bg-foreground/20',
+      ],
       ['border-success', 'bg-success/15', 'text-success'],
     );
     expectTokens(
@@ -1051,11 +1099,10 @@ describe('Feedback', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const correctAnswerLabel = Array.from(doc.querySelectorAll('div')).find(
-      (div) => div.textContent?.trim() === 'Correct answer',
-    );
-    const wrongAnswersHeading = Array.from(doc.querySelectorAll('div')).find(
-      (div) => div.textContent?.trim() === 'Why other answers are wrong:',
+    const correctAnswerLabel = findSectionLabel(doc, 'Correct answer');
+    const wrongAnswersHeading = findSectionLabel(
+      doc,
+      'Why other answers are wrong',
     );
     const wrongAnswersSection = wrongAnswersHeading?.parentElement;
     const wrongAnswerCard = Array.from(
@@ -1089,6 +1136,8 @@ describe('Feedback', () => {
     expect(correctAnswerLabel?.parentElement?.getAttribute('class')).toContain(
       'mt-6',
     );
+    expectNeutralChip(correctAnswerLabel);
+    expectNeutralChip(wrongAnswersHeading);
     expect(wrongAnswerRow).not.toBeUndefined();
     expect(wrongAnswerRowTokens.has('gap-3')).toBe(true);
     expect(wrongAnswerTextTokens.has('text-muted-foreground')).toBe(false);
@@ -1190,8 +1239,9 @@ describe('Feedback', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const wrongAnswersHeading = Array.from(doc.querySelectorAll('div')).find(
-      (div) => div.textContent?.trim() === 'Why other answers are wrong:',
+    const wrongAnswersHeading = findSectionLabel(
+      doc,
+      'Why other answers are wrong',
     );
     const wrongAnswersSectionText =
       wrongAnswersHeading?.parentElement?.textContent ?? '';
@@ -1235,8 +1285,9 @@ describe('Feedback', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const wrongAnswersHeading = Array.from(doc.querySelectorAll('div')).find(
-      (div) => div.textContent?.trim() === 'Why other answers are wrong:',
+    const wrongAnswersHeading = findSectionLabel(
+      doc,
+      'Why other answers are wrong',
     );
     const wrongAnswersSectionText =
       wrongAnswersHeading?.parentElement?.textContent ?? '';
@@ -1284,7 +1335,7 @@ describe('Feedback', () => {
     );
     const correctChoiceIndex = html.indexOf('Third option');
     const wrongAnswersHeadingIndex = html.indexOf(
-      'Why other answers are wrong:',
+      'Why other answers are wrong',
     );
 
     expect(correctChoiceIndex).toBeGreaterThanOrEqual(0);
@@ -1383,8 +1434,9 @@ describe('Feedback', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const wrongAnswersHeading = Array.from(doc.querySelectorAll('div')).find(
-      (div) => div.textContent?.trim() === 'Why other answers are wrong:',
+    const wrongAnswersHeading = findSectionLabel(
+      doc,
+      'Why other answers are wrong',
     );
     const wrongAnswersSectionText =
       wrongAnswersHeading?.parentElement?.textContent ?? '';
@@ -1497,7 +1549,8 @@ describe('Feedback', () => {
 
     expect(yourAnswerSectionLabel).toBeUndefined();
     expect(html).toContain('Correct answer');
-    expect(html).toContain('Why other answers are wrong:');
+    expect(html).toContain('Why other answers are wrong');
+    expect(html).not.toContain('Why other answers are wrong:');
     expect(html).toContain('First option');
   });
 
@@ -1533,7 +1586,8 @@ describe('Feedback', () => {
 
     expect(yourAnswerSectionLabel).toBeUndefined();
     expect(html).toContain('Correct answer');
-    expect(html).toContain('Why other answers are wrong:');
+    expect(html).toContain('Why other answers are wrong');
+    expect(html).not.toContain('Why other answers are wrong:');
     expect(html).toContain('First option');
   });
 
@@ -1569,7 +1623,8 @@ describe('Feedback', () => {
 
     expect(yourAnswerSectionLabel).toBeUndefined();
     expect(html).toContain('Correct answer');
-    expect(html).toContain('Why other answers are wrong:');
+    expect(html).toContain('Why other answers are wrong');
+    expect(html).not.toContain('Why other answers are wrong:');
     expect(html).toContain('First option');
   });
 

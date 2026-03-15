@@ -142,7 +142,7 @@ describe('ChoiceButton', () => {
     expect(wrapperClassTokens.has('cursor-not-allowed')).toBe(true);
   });
 
-  it('uses the DEBT-312 neutral-state tokens for unselected choices', () => {
+  it('uses the DEBT-313 neutral-state tokens for unselected choices', () => {
     const html = renderToStaticMarkup(
       <ChoiceButton
         name="choices"
@@ -165,26 +165,38 @@ describe('ChoiceButton', () => {
     expect(wrapperLabel).not.toBeNull();
     expect(badge).not.toBeNull();
     expect(wrapperClassTokens.has('border-foreground/50')).toBe(true);
-    expect(wrapperClassTokens.has('bg-foreground/5')).toBe(true);
+    expect(wrapperClassTokens.has('bg-background/50')).toBe(true);
+    expect(wrapperClassTokens.has('bg-foreground/5')).toBe(false);
     expect(wrapperClassTokens.has('border-border/60')).toBe(false);
     expect(wrapperClassTokens.has('bg-muted/20')).toBe(false);
     expect(wrapperClassTokens.has('dark:border-foreground/40')).toBe(true);
-    expect(wrapperClassTokens.has('dark:bg-foreground/5')).toBe(true);
+    expect(wrapperClassTokens.has('dark:bg-background/50')).toBe(true);
+    expect(wrapperClassTokens.has('dark:bg-foreground/5')).toBe(false);
     expect(wrapperClassTokens.has('dark:bg-foreground/8')).toBe(false);
     expect(wrapperClassTokens.has('hover:bg-muted/40')).toBe(false);
-    expect(wrapperClassTokens.has('hover:bg-foreground/[0.08]')).toBe(true);
+    expect(wrapperClassTokens.has('hover:bg-foreground/[0.06]')).toBe(true);
+    expect(wrapperClassTokens.has('hover:bg-foreground/[0.08]')).toBe(false);
     expect(wrapperClassTokens.has('hover:border-foreground/55')).toBe(true);
     expect(wrapperClassTokens.has('hover:border-muted-foreground/30')).toBe(
       false,
     );
-    expect(wrapperClassTokens.has('dark:hover:border-foreground/55')).toBe(
+    expect(wrapperClassTokens.has('dark:hover:border-foreground/50')).toBe(
       true,
     );
-    expect(wrapperClassTokens.has('dark:hover:bg-foreground/8')).toBe(true);
+    expect(wrapperClassTokens.has('dark:hover:border-foreground/55')).toBe(
+      false,
+    );
+    expect(wrapperClassTokens.has('dark:hover:bg-foreground/[0.05]')).toBe(
+      true,
+    );
+    expect(wrapperClassTokens.has('dark:hover:bg-foreground/8')).toBe(false);
     expect(wrapperClassTokens.has('dark:hover:border-foreground/70')).toBe(
       false,
     );
-    expect(badgeClassTokens.has('bg-muted')).toBe(true);
+    expect(badgeClassTokens.has('border-foreground/20')).toBe(true);
+    expect(badgeClassTokens.has('bg-foreground/[0.06]')).toBe(true);
+    expect(badgeClassTokens.has('border-border')).toBe(false);
+    expect(badgeClassTokens.has('bg-muted')).toBe(false);
     expect(badgeClassTokens.has('dark:border-foreground/60')).toBe(true);
     expect(badgeClassTokens.has('dark:bg-foreground/20')).toBe(true);
     expect(badgeClassTokens.has('bg-background')).toBe(false);
@@ -208,9 +220,15 @@ describe('ChoiceButton', () => {
     );
 
     expect(wrapperLabel).not.toBeNull();
-    expect(wrapperClassTokens.has('dark:hover:bg-foreground/8')).toBe(true);
-    expect(wrapperClassTokens.has('dark:hover:border-foreground/55')).toBe(
+    expect(wrapperClassTokens.has('dark:hover:bg-foreground/[0.05]')).toBe(
       true,
+    );
+    expect(wrapperClassTokens.has('dark:hover:border-foreground/50')).toBe(
+      true,
+    );
+    expect(wrapperClassTokens.has('dark:hover:bg-foreground/8')).toBe(false);
+    expect(wrapperClassTokens.has('dark:hover:border-foreground/55')).toBe(
+      false,
     );
     expect(wrapperClassTokens.has('dark:hover:bg-foreground/15')).toBe(false);
     expect(wrapperClassTokens.has('dark:hover:border-foreground/70')).toBe(
@@ -276,7 +294,7 @@ describe('ChoiceButton', () => {
     expect(classTokens.has('text-success-foreground')).toBe(false);
   });
 
-  it('applies the DEBT-312 selected neutral treatment pre-submission', () => {
+  it('applies the DEBT-313 selected neutral treatment pre-submission', () => {
     const html = renderToStaticMarkup(
       <ChoiceButton
         name="choices"
@@ -293,22 +311,31 @@ describe('ChoiceButton', () => {
       wrapperLabel?.getAttribute('class') ?? '',
     );
 
-    expect(wrapperClassTokens.has('bg-foreground/[0.12]')).toBe(true);
+    expect(wrapperClassTokens.has('bg-foreground/[0.08]')).toBe(true);
+    expect(wrapperClassTokens.has('bg-foreground/[0.12]')).toBe(false);
     expect(wrapperClassTokens.has('bg-muted/40')).toBe(false);
     expect(wrapperClassTokens.has('border-ring')).toBe(true);
     expect(wrapperClassTokens.has('dark:border-foreground/40')).toBe(false);
-    expect(wrapperClassTokens.has('dark:bg-foreground/15')).toBe(true);
+    expect(wrapperClassTokens.has('dark:bg-foreground/[0.12]')).toBe(true);
+    expect(wrapperClassTokens.has('dark:bg-foreground/15')).toBe(false);
     expect(wrapperClassTokens.has('dark:border-foreground/70')).toBe(true);
     expect(wrapperClassTokens.has('dark:bg-foreground/20')).toBe(false);
+    expect(wrapperClassTokens.has('hover:bg-foreground/[0.06]')).toBe(false);
     expect(wrapperClassTokens.has('hover:bg-foreground/[0.08]')).toBe(false);
     expect(wrapperClassTokens.has('hover:border-foreground/55')).toBe(false);
+    expect(wrapperClassTokens.has('dark:hover:bg-foreground/[0.05]')).toBe(
+      false,
+    );
     expect(wrapperClassTokens.has('dark:hover:bg-foreground/8')).toBe(false);
+    expect(wrapperClassTokens.has('dark:hover:border-foreground/50')).toBe(
+      false,
+    );
     expect(wrapperClassTokens.has('dark:hover:border-foreground/55')).toBe(
       false,
     );
   });
 
-  it('adds the subtle dark neutral rest fill for unselected choices', () => {
+  it('uses the recessed dark neutral rest fill for unselected choices', () => {
     const html = renderToStaticMarkup(
       <ChoiceButton
         name="choices"
@@ -325,9 +352,11 @@ describe('ChoiceButton', () => {
       wrapperLabel?.getAttribute('class') ?? '',
     );
 
-    expect(wrapperClassTokens.has('bg-foreground/5')).toBe(true);
+    expect(wrapperClassTokens.has('bg-background/50')).toBe(true);
+    expect(wrapperClassTokens.has('bg-foreground/5')).toBe(false);
     expect(wrapperClassTokens.has('dark:border-foreground/40')).toBe(true);
-    expect(wrapperClassTokens.has('dark:bg-foreground/5')).toBe(true);
+    expect(wrapperClassTokens.has('dark:bg-background/50')).toBe(true);
+    expect(wrapperClassTokens.has('dark:bg-foreground/5')).toBe(false);
     expect(wrapperClassTokens.has('dark:bg-foreground/8')).toBe(false);
     expect(wrapperClassTokens.has('bg-muted/40')).toBe(false);
   });
@@ -411,8 +440,15 @@ describe('ChoiceButton', () => {
     expect(correctLabelTokens.has('border-success')).toBe(true);
     expect(correctLabelTokens.has('dark:border-foreground/40')).toBe(false);
     expect(correctLabelTokens.has('dark:bg-foreground/8')).toBe(false);
+    expect(correctLabelTokens.has('dark:bg-foreground/[0.12]')).toBe(false);
     expect(correctLabelTokens.has('dark:bg-foreground/15')).toBe(false);
+    expect(correctLabelTokens.has('dark:hover:bg-foreground/[0.05]')).toBe(
+      false,
+    );
     expect(correctLabelTokens.has('dark:hover:bg-foreground/8')).toBe(false);
+    expect(correctLabelTokens.has('dark:hover:border-foreground/50')).toBe(
+      false,
+    );
     expect(correctLabelTokens.has('dark:hover:border-foreground/55')).toBe(
       false,
     );
@@ -426,8 +462,15 @@ describe('ChoiceButton', () => {
     expect(incorrectLabelTokens.has('border-destructive')).toBe(true);
     expect(incorrectLabelTokens.has('dark:border-foreground/40')).toBe(false);
     expect(incorrectLabelTokens.has('dark:bg-foreground/8')).toBe(false);
+    expect(incorrectLabelTokens.has('dark:bg-foreground/[0.12]')).toBe(false);
     expect(incorrectLabelTokens.has('dark:bg-foreground/15')).toBe(false);
+    expect(incorrectLabelTokens.has('dark:hover:bg-foreground/[0.05]')).toBe(
+      false,
+    );
     expect(incorrectLabelTokens.has('dark:hover:bg-foreground/8')).toBe(false);
+    expect(incorrectLabelTokens.has('dark:hover:border-foreground/50')).toBe(
+      false,
+    );
     expect(incorrectLabelTokens.has('dark:hover:border-foreground/55')).toBe(
       false,
     );

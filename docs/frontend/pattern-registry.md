@@ -1,6 +1,6 @@
 # Pattern Registry
 
-**Last Updated:** 2026-03-14
+**Last Updated:** 2026-03-15
 **Status:** Canonical — all UI changes MUST conform to this registry
 
 Single source of truth for every visual pattern in the app. If a pattern isn't here, don't invent one — add it here first, get approval, then implement.
@@ -297,8 +297,8 @@ Direct-action interactive target for answering questions. Choices render inside 
 
 **Base state:**
 ```
-block w-full rounded-xl border border-foreground/50 bg-foreground/5 p-4 text-left shadow-sm transition-colors
-dark:border-foreground/40 dark:bg-foreground/5
+block w-full rounded-xl border border-foreground/50 bg-background/50 p-4 text-left shadow-sm transition-colors
+dark:border-foreground/40 dark:bg-background/50
 focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]
 ```
 
@@ -309,17 +309,17 @@ cursor-pointer
 
 **Hover (unselected only — border + fill):**
 ```
-hover:border-foreground/55 hover:bg-foreground/[0.08] dark:hover:border-foreground/55 dark:hover:bg-foreground/8
+hover:border-foreground/55 hover:bg-foreground/[0.06] dark:hover:border-foreground/50 dark:hover:bg-foreground/[0.05]
 ```
 
-**Selected (neutral):** `border-ring bg-foreground/[0.12] dark:border-foreground/70 dark:bg-foreground/15`
+**Selected (neutral):** `border-ring bg-foreground/[0.08] dark:border-foreground/70 dark:bg-foreground/[0.12]`
 
 **Correct:** `border-success bg-success/10 text-success`
 **Incorrect:** `border-destructive bg-destructive/10 text-destructive`
 **Disabled (no correctness):** `cursor-not-allowed opacity-50`
 **Wrong-unselected dimming:** do not apply parent opacity to the whole label subtree; keep answer content text at `text-foreground` for WCAG AA legibility.
 
-**Design rationale:** Choice buttons are rendered inside `QuestionCard` (`bg-card`) and follow in-card row hierarchy, not standalone page-surface hierarchy. The row is also the direct-action control, so unlike borderless tonal rows it still needs a clearly compliant boundary per [Contrast Policy §3.2](./contrast-policy.md). In light mode, the older `border-border/60 bg-muted/20` recipe was too quiet on white card surfaces; `border-foreground/50 bg-foreground/5` restores a perceptible child surface while keeping the edge readable. The fill ramp now starts at the system-standard tonal rest fill instead of zero: `5 -> 8 -> 12` in light mode and `5 -> 8 -> 15` in dark mode, while the border step (`/50 -> /55` in light, `/40 -> /55` in dark) carries the primary hover cue. Keep the hover border/fill tokens on the unselected branch only so selected neutral rows do not regress when hovered.
+**Design rationale:** Choice buttons are rendered inside `QuestionCard` (`bg-card`) and follow in-card row hierarchy, not standalone page-surface hierarchy. The row is also the direct-action control, so unlike borderless tonal rows it still needs a clearly compliant boundary per [Contrast Policy §3.2](./contrast-policy.md). In light mode, the older `border-border/60 bg-muted/20` recipe was too quiet on white card surfaces; `border-foreground/50 bg-background/50` keeps the required boundary strong while restoring a clean white rest surface. In dark mode, `dark:bg-background/50` intentionally recesses the row beneath the card's 7% surface to about 5.25% lightness, mirroring the crisp feedback-card treatment instead of reviving the muddy DEBT-312 gray veil. Hover and selected fills switch to foreground-based replacements that are evaluated directly against `bg-card`, not layered on top of the recessed rest fill: dark mode steps `5.25 -> 11.3 -> 17.3`, while light mode stays clean at rest and lifts to subtle foreground tints for hover and selected. Keep the hover border/fill tokens on the unselected branch only so selected neutral rows do not regress when hovered.
 
 ### I-4: Filter Chip
 
@@ -719,6 +719,18 @@ mb-1 text-xs font-medium uppercase tracking-wide text-foreground/60
 
 **Source:** `components/markdown/Markdown.tsx`
 
+### F-8: Feedback Section Label Chip
+
+Neutral micro-label chip used for feedback subsections such as "Correct answer", "Explanation", and "Why other answers are wrong".
+
+```
+inline-flex rounded-full bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-wide text-foreground/60
+```
+
+**Source:** `components/question/feedback.tsx`
+
+**Rule:** Use this pattern for subordinate structural labels inside the feedback card only. Do not replace the semantic verdict pill, the reference separator label, or the Markdown-driven clinical pearl label with this chip.
+
 ---
 
 ## Part 7: Metadata & Decoration
@@ -765,8 +777,10 @@ The letter label (A, B, C, D) inside choice buttons.
 
 **Default:**
 ```
-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold leading-none text-foreground dark:border-foreground/60 dark:bg-foreground/20
+flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-foreground/20 bg-foreground/[0.06] text-xs font-semibold leading-none text-foreground dark:border-foreground/60 dark:bg-foreground/20
 ```
+
+**Used in:** Choice buttons and neutral feedback wrong-answer cards
 
 **Correct:** `border-success bg-success/15 text-success`
 **Incorrect:** `border-destructive bg-destructive/15 text-destructive`
@@ -848,12 +862,12 @@ What is the parent surface?
 ├── Inside a Card, tonal row/direct-action surface → hover:bg-foreground/[0.08]
 ├── On page background, muted-scale row → hover:bg-muted/50
 ├── On page background, tonal row → hover:bg-foreground/[0.12]
-├── Choice button inside card (I-3) → hover:bg-foreground/[0.08] + hover:border-foreground/55 in light mode; dark:hover:bg-foreground/8 + dark:hover:border-foreground/55 in dark mode (unselected branch only)
+├── Choice button inside card (I-3) → hover:bg-foreground/[0.06] + hover:border-foreground/55 in light mode; dark:hover:bg-foreground/[0.05] + dark:hover:border-foreground/50 in dark mode (unselected branch only; replacement fills, not layers)
 ├── `/60` hover tier → exception-only (requires explicit design review)
 └── Tab-switch inactive → hover:bg-muted/50 (inside bg-muted container)
 
 Token (neutral surface fills): Use the pattern's scale. `muted` is for muted-scale rows/containers; `foreground` is for tonal-row families such as I-1, I-2, I-3, and I-4.
-Border hovers in remediated dark-mode interactive rows/buttons typically use `dark:hover:border-foreground/70`. I-3 choice buttons are the deliberate exception at `/55` so hover stays distinct from selected without over-brightening the full stack.
+Border hovers in remediated dark-mode interactive rows/buttons typically use `dark:hover:border-foreground/70`. I-3 choice buttons are the deliberate exception at `/50` because the recessed `dark:bg-background/50` rest surface already creates stronger separation; the softer hover border keeps the lift distinct from the darker selected stack without over-brightening the full row.
 Avoid introducing new `hover:bg-accent*` outside `components/ui/` (button variants use `accent` by design). Only use `foreground`-based hover fills where the pattern spec explicitly calls for them.
 ```
 
@@ -1341,7 +1355,7 @@ Compact lookup for code reviews and implementation.
 | S-4 | Modal Dialog | — | `rounded-2xl` | `border-border` |
 | I-1 | Row in Card | `hover:bg-foreground/[0.08]` | `rounded-xl` | tonal-fill variant omits border |
 | I-2 | Standalone Row | `hover:bg-foreground/[0.12]` | `rounded-2xl` | tonal-fill variant omits border |
-| I-3 | Choice Button | `hover:bg-foreground/[0.08] hover:border-foreground/55` (+ `dark:hover:bg-foreground/8 dark:hover:border-foreground/55`) | `rounded-xl` | `border-foreground/50 dark:border-foreground/40` |
+| I-3 | Choice Button | `hover:bg-foreground/[0.06] hover:border-foreground/55` (+ `dark:hover:bg-foreground/[0.05] dark:hover:border-foreground/50`) | `rounded-xl` | `border-foreground/50 dark:border-foreground/40` |
 | I-4 | Filter Chip | `hover:bg-foreground/[0.12]` (+ `hover:border-foreground/60 dark:hover:border-foreground/70`) | `rounded-full` | `border-foreground/45 dark:border-foreground/40` |
 | I-5 | Tab Switch Item | `hover:bg-muted/50` | `rounded-md` | Container uses `border-border` |
 | I-6 | Icon Toggle | `hover:text-foreground` | — | — |

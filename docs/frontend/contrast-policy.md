@@ -1,6 +1,6 @@
 # Contrast Policy (WCAG AA)
 
-**Last Updated:** 2026-03-14
+**Last Updated:** 2026-03-15
 **Status:** Canonical
 
 This document defines the app's contrast targets and the engineering rules that follow from them.
@@ -41,7 +41,7 @@ Notes:
 
 | Element | Tokens | WCAG ratio | Justification | Decided in |
 |---------|--------|------------|---------------|------------|
-| Choice button neutral boundary (I-3) | `border-foreground/50 bg-foreground/5` rest, `hover:border-foreground/55 hover:bg-foreground/[0.08]` hover, `dark:border-foreground/40 dark:bg-foreground/5` rest, `dark:hover:border-foreground/55 dark:hover:bg-foreground/8` hover | Light rest border `3.37:1` vs adjacent fill, light hover border `3.76:1` vs adjacent fill; dark required boundary continues to use the DEBT-280 override | The entire row is the clickable answer target inside `QuestionCard`, so the edge is a required SC 1.4.11 boundary. Light-mode `muted` opacity (`border-border/60`, `bg-muted/20`) was insufficient on white/card surfaces, so the required boundary moves to a foreground-based border while the tonal fill remains supplementary containment. | [DEBT-312](../debt/debt-312-choice-button-neutral-state-surface-alignment.md) |
+| Choice button neutral boundary (I-3) | `border-foreground/50 bg-background/50` rest, `hover:border-foreground/55 hover:bg-foreground/[0.06]` hover, `dark:border-foreground/40 dark:bg-background/50` rest, `dark:hover:border-foreground/50 dark:hover:bg-foreground/[0.05]` hover | Light rest border ~`3.76:1` vs white rest surface, light hover border ~`3.93:1` vs hover fill, dark `border-foreground/30` fails at roughly `2.4-2.5:1` against `dark:bg-background/50`, dark `border-foreground/40` remains compliant at roughly `3.4-3.6:1` | The entire row is the clickable answer target inside `QuestionCard`, so the edge is a required SC 1.4.11 boundary. Light-mode `muted` opacity (`border-border/60`, `bg-muted/20`) was insufficient on white/card surfaces, so the required boundary stays foreground-based while the rest fill shifts to a clean `bg-background/50`. In dark mode the rest surface is recessed via `dark:bg-background/50`, but the boundary still must remain compliant. | [DEBT-313](../debt/debt-313-choice-button-dark-surface-and-badge-visibility.md) |
 
 ### Classified supplementary fills (not required boundaries)
 
@@ -75,7 +75,7 @@ Tonal fill elevation used as a supplementary hierarchy hint, not a required boun
 - Any required boundary MUST meet 3.0:1 against the adjacent surface.
 - A focus indicator MUST be visible and treated as a required boundary.
 - SC 1.4.11 governs the required boundary itself, not every background fill inside the component. When a border carries the required-boundary role, the fill may remain subtler.
-- ChoiceButton (I-3) is the canonical example of this split: in light mode the row uses a foreground-based required boundary (`border-foreground/50`, hover `/55`) because `muted` opacity is too weak on white, while `bg-foreground/5` and `bg-foreground/[0.08]` stay supplementary tonal fills.
+- ChoiceButton (I-3) is the canonical example of this split: in light mode the row uses a foreground-based required boundary (`border-foreground/50`, hover `/55`) because `muted` opacity is too weak on white, while the clean `bg-background/50` rest surface and the subtle `bg-foreground/[0.06]` hover fill remain supplementary containment. In dark mode, `dark:border-foreground/30` is too soft against the recessed `dark:bg-background/50` rest surface, so the required boundary stays at `dark:border-foreground/40` or stronger.
 - State fills still matter. For interactive controls with base/hover/selected states, fills MUST remain stepped enough to preserve hierarchy and state recognition. Do not reuse the same fill token across multiple states just because the border is compliant.
 - If a component needs to remain visually subordinate, do not achieve that by dropping below 3.0:1 for a required boundary. Prefer spacing, typography, and hierarchy via layout rather than illegible edges.
 

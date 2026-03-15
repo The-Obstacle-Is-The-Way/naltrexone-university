@@ -68,9 +68,9 @@ function CorrectAnswerSection({
   return (
     <div className={sectionClassName}>
       {showLabel ? (
-        <div className="text-sm font-medium text-foreground">
+        <span className="inline-flex rounded-full bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-wide text-foreground/60">
           {correctChoice ? 'Correct answer' : 'Explanation'}
-        </div>
+        </span>
       ) : null}
       <div
         className={cn(
@@ -161,9 +161,9 @@ export function Feedback({
 
           {shouldRenderChoiceExplanations ? (
             <div className="mt-4">
-              <div className="text-sm font-medium text-foreground">
-                Why other answers are wrong:
-              </div>
+              <span className="inline-flex rounded-full bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-wide text-foreground/60">
+                Why other answers are wrong
+              </span>
               <div className="mt-2 space-y-3">
                 {visibleChoiceExplanations.map((choice) => (
                   <div
@@ -171,7 +171,7 @@ export function Feedback({
                     className="rounded-xl border border-border/60 bg-background/50 p-4 dark:border-foreground/40"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold leading-none text-foreground dark:border-foreground/60 dark:bg-foreground/20">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-foreground/20 bg-foreground/[0.06] text-xs font-semibold leading-none text-foreground dark:border-foreground/60 dark:bg-foreground/20">
                         {choice.displayLabel}
                       </div>
                       <Markdown
@@ -221,9 +221,9 @@ export function Feedback({
 
           {shouldRenderOtherWrongChoices ? (
             <div className="mt-4">
-              <div className="text-sm font-medium text-foreground">
-                Why other answers are wrong:
-              </div>
+              <span className="inline-flex rounded-full bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-wide text-foreground/60">
+                Why other answers are wrong
+              </span>
               <div className="mt-2 space-y-3">
                 {otherWrongChoices.map((choice) => (
                   <div
@@ -231,7 +231,7 @@ export function Feedback({
                     className="rounded-xl border border-border/60 bg-background/50 p-4 dark:border-foreground/40"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold leading-none text-foreground dark:border-foreground/60 dark:bg-foreground/20">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-foreground/20 bg-foreground/[0.06] text-xs font-semibold leading-none text-foreground dark:border-foreground/60 dark:bg-foreground/20">
                         {choice.displayLabel}
                       </div>
                       <Markdown

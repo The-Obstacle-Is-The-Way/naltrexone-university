@@ -298,7 +298,7 @@ describe('theme token regression', () => {
     }
   });
 
-  it('uses the DEBT-312 foreground-tonal neutral tokens for ChoiceButton states', async () => {
+  it('uses the DEBT-313 recessed-surface neutral tokens for ChoiceButton states', async () => {
     const selectedHtml = renderToStaticMarkup(
       <ChoiceButton
         name="choices"
@@ -339,10 +339,12 @@ describe('theme token regression', () => {
 
     expect(selectedHtml).not.toContain('border-zinc-400');
     expect(selectedTokens).toContain('border-ring');
-    expect(selectedTokens).toContain('bg-foreground/[0.12]');
+    expect(selectedTokens).toContain('bg-foreground/[0.08]');
+    expect(selectedTokens).not.toContain('bg-foreground/[0.12]');
     expect(selectedTokens).not.toContain('bg-muted/40');
     expect(unselectedTokens).toContain('border-foreground/50');
-    expect(unselectedTokens).toContain('bg-foreground/5');
+    expect(unselectedTokens).toContain('bg-background/50');
+    expect(unselectedTokens).not.toContain('bg-foreground/5');
     expect(unselectedTokens).not.toContain('border-border/60');
   });
 

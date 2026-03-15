@@ -29,19 +29,19 @@ export function ChoiceButton({
   return (
     <label
       className={cn(
-        'block w-full rounded-xl border border-foreground/50 bg-foreground/5 p-4 text-left shadow-sm transition-colors focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]',
+        'block w-full rounded-xl border border-foreground/50 bg-background/50 p-4 text-left shadow-sm transition-colors focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]',
         !hasVerdict &&
           !selected &&
-          'dark:border-foreground/40 dark:bg-foreground/5',
+          'dark:border-foreground/40 dark:bg-background/50',
         !disabled && 'cursor-pointer',
         !disabled &&
           !selected &&
-          'hover:border-foreground/55 hover:bg-foreground/[0.08] dark:hover:border-foreground/55 dark:hover:bg-foreground/8',
+          'hover:border-foreground/55 hover:bg-foreground/[0.06] dark:hover:border-foreground/50 dark:hover:bg-foreground/[0.05]',
         disabled && 'cursor-not-allowed',
         disabled && !correctness && 'opacity-50',
         selected &&
           correctness === null &&
-          'border-ring bg-foreground/[0.12] dark:border-foreground/70 dark:bg-foreground/15',
+          'border-ring bg-foreground/[0.08] dark:border-foreground/70 dark:bg-foreground/[0.12]',
         correctness === 'correct' &&
           'border-success bg-success/10 text-success',
         correctness === 'incorrect' &&
@@ -60,7 +60,7 @@ export function ChoiceButton({
       <div className="flex items-start gap-3">
         <div
           className={cn(
-            'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold leading-none text-foreground',
+            'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-foreground/20 bg-foreground/[0.06] text-xs font-semibold leading-none text-foreground',
             !hasVerdict && 'dark:border-foreground/60 dark:bg-foreground/20',
             selected && correctness === null && 'border-ring',
             correctness === 'correct' &&

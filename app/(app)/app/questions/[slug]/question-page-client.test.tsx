@@ -431,8 +431,8 @@ describe('QuestionView', () => {
       );
     });
     const correctAnswerHeading = Array.from(
-      feedbackCard?.querySelectorAll('div') ?? [],
-    ).find((div) => div.textContent?.trim() === 'Correct answer');
+      feedbackCard?.querySelectorAll('div, span') ?? [],
+    ).find((element) => element.textContent?.trim() === 'Correct answer');
 
     const correctAnswerCard = correctAnswerHeading?.nextElementSibling;
 

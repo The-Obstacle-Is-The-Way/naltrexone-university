@@ -1,32 +1,34 @@
 # Quick Practice — Cross-Theme UI Audit
 
-**Date:** 2026-03-14
+**Date:** 2026-03-15
 **Page:** `/app/practice/quick`
 **Theme:** Light + dark
 **Source files:** `quick-practice-client.tsx`, `practice-view.tsx`, `question-card.tsx`, `choice-button.tsx`, `segmented-control.tsx`, `tab-switch-styles.ts`, `card.tsx`
 
-**Status:** Current cross-theme audit plus historical appendix. The live neutral-state contract after DEBT-312 is documented first; the older dark-mode-only findings that motivated DEBT-280 are retained below as historical context.
+**Status:** Current cross-theme audit plus historical appendix. The live neutral-state contract after DEBT-313 is documented first; the older dark-mode-only findings that motivated DEBT-280 are retained below as historical context.
 
 ---
 
-## Current State After DEBT-312
+## Current State After DEBT-313
 
 ### Choice Buttons
 
-- Rest (light, unselected, no verdict): `border-foreground/50 bg-foreground/5`
-- Hover (light, unselected): `hover:border-foreground/55 hover:bg-foreground/[0.08]`
-- Selected (light, neutral): `border-ring bg-foreground/[0.12]`
-- Rest (dark, unselected, no verdict): `dark:border-foreground/40 dark:bg-foreground/5`
-- Hover (dark, unselected): `dark:hover:border-foreground/55 dark:hover:bg-foreground/8`
-- Selected (dark, neutral): `dark:border-foreground/70 dark:bg-foreground/15`
-- Letter badge remains unchanged: `dark:border-foreground/60 dark:bg-foreground/20`
-- Branch rule: selected neutral markup intentionally does not inherit the unselected-only light hover tokens (`hover:border-foreground/55 hover:bg-foreground/[0.08]`)
+- Rest (light, unselected, no verdict): `border-foreground/50 bg-background/50`
+- Hover (light, unselected): `hover:border-foreground/55 hover:bg-foreground/[0.06]`
+- Selected (light, neutral): `border-ring bg-foreground/[0.08]`
+- Rest (dark, unselected, no verdict): `dark:border-foreground/40 dark:bg-background/50`
+- Hover (dark, unselected): `dark:hover:border-foreground/50 dark:hover:bg-foreground/[0.05]`
+- Selected (dark, neutral): `dark:border-foreground/70 dark:bg-foreground/[0.12]`
+- Letter badge (light): `border-foreground/20 bg-foreground/[0.06]`
+- Letter badge (dark): `dark:border-foreground/60 dark:bg-foreground/20`
+- Branch rule: selected neutral markup intentionally does not inherit the unselected-only hover tokens (`hover:border-foreground/55 hover:bg-foreground/[0.06] dark:hover:border-foreground/50 dark:hover:bg-foreground/[0.05]`)
 
-### Why the light-mode contract changed
+### Why the cross-theme contract changed
 
-- The old light neutral recipe (`border-border/60 bg-muted/20`) was effectively invisible on a white `QuestionCard`: the fill only moved to `#FCFDFE` (`~1.02:1` vs white) and the border only reached `#EEF1F6` (`~1.13:1` vs white).
-- `border-foreground/50 bg-foreground/5` restores a visible child surface inside the card while keeping the row boundary compliant under the required-boundary rule.
-- The neutral fill ramp is now monotonic across themes instead of a white-on-white whisper in light mode: light uses `5 -> 8 -> 12`, dark uses `5 -> 8 -> 15`.
+- DEBT-312 fixed the technical contrast failure, but the dark-mode result (`dark:bg-foreground/5`) lifted the rows into a dusty gray veil that reduced perceived crispness.
+- DEBT-313 pivots the neutral rest surface to `bg-background/50`, which is effectively invisible on the light card but recesses the row in dark mode by darkening the card-adjacent surface.
+- The current dark progression is now `5.25 -> 11.3 -> 17.3` effective lightness for rest, hover, and selected. Hover and selected fills are direct replacements on `bg-card`, not layers over the recessed rest fill.
+- The badge fix is part of the same contract shift: light mode no longer relies on `border-border bg-muted`, so the letter circles remain visible against the clean white row.
 
 ### Shared Tab-Switch Container
 
@@ -83,11 +85,11 @@ From `app/globals.css` `.dark {}`:
 
 ### 1. Choice Buttons
 
-**Light mode:** The choice buttons now match the repo's established child-surface language. `bg-foreground/5` gives the row a perceptible tonal body, `border-foreground/50` keeps the clickable edge legible, and the light ramp (`5 -> 8 -> 12`) preserves state hierarchy without turning the rows into heavy gray blocks. This is the same foreground-tonal system already used by Dashboard nested rows and Practice filter containers/chips.
+**Light mode:** The choice buttons now read as clean white rows with a visible required boundary instead of pale gray slabs. `bg-background/50` stays visually neutral on the white card, `border-foreground/50` provides the edge definition, and the badge surface (`border-foreground/20 bg-foreground/[0.06]`) finally reads as a circle instead of a ghost outline.
 
-**Dark mode:** The rows no longer read as pure wireframes, but they also avoid the pre-DEBT-280 "gray brick" problem. `dark:bg-foreground/5` restores subtle containment, the hover delta stays restrained at `/8`, and selected still clearly outranks hover at `/15`.
+**Dark mode:** The rows now use the same recessed-dark strategy as the feedback cards. `dark:bg-background/50` pushes the rest state below the card surface, removing the muddy gray cast from DEBT-312. Hover (`dark:hover:bg-foreground/[0.05]`) and selected (`dark:bg-foreground/[0.12]`) step back up toward the foreground ramp, so the interaction model reads as recessed -> lifted -> committed instead of gray -> slightly lighter gray -> slightly lighter gray.
 
-**Selected-state guard:** Because the light hover border/fill tokens live on the unselected branch only, a selected neutral choice no longer visually regresses when the pointer enters. That branch separation is part of the documented contract, not an implementation accident.
+**Selected-state guard:** Because all hover border/fill tokens live on the unselected branch only, a selected neutral choice no longer visually regresses when the pointer enters. That branch separation is part of the documented contract, not an implementation accident.
 
 ### 2. Shared Tab-Switch Container
 
