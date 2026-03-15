@@ -25,14 +25,11 @@ const EXPECTED_BUSINESS_ERROR_CODES: ReadonlySet<ApplicationErrorCode> =
 function getTags(
   context: ClientErrorContext | undefined,
 ): Record<string, string> | undefined {
-  const tags = {
-    component: context?.component,
-    action: context?.action,
-  };
-
-  return Object.values(tags).some((value) => value !== undefined)
-    ? (tags as Record<string, string>)
-    : undefined;
+  if (!context) return undefined;
+  const tags: Record<string, string> = {};
+  if (context.component) tags.component = context.component;
+  if (context.action) tags.action = context.action;
+  return Object.keys(tags).length > 0 ? tags : undefined;
 }
 
 export function shouldReportClientError(error: unknown): boolean {

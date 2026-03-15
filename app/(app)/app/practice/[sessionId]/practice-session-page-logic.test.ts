@@ -938,6 +938,11 @@ describe('practice-session-page-logic', () => {
 });
 
 describe('practice-session-page-logic effects', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    reportClientErrorMock.mockReset();
+  });
+
   describe('createNavigatorEffect', () => {
     it('sets idle state when summary exists', () => {
       const getPracticeSessionReviewFn = vi.fn();
