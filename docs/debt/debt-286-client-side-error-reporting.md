@@ -2,9 +2,10 @@
 
 **Priority:** P2
 **Created:** 2026-03-07
+**Updated:** 2026-03-15
 **Source:** [AUDIT-011](../audits/audit-011-error-observability-defensive-coding.md), reclassified from BUG-200
 **Governing Spec:** [SPEC-016: Observability](../specs/spec-016-observability.md)
-**Status:** Open
+**Status:** In Progress (branch: `feat/debt-286-client-error-reporting`)
 
 ---
 
@@ -23,7 +24,9 @@ This debt is specifically about **caught client-side operational failures** in h
 
 ## Repo-Wide Verification
 
-Full sweep of `app/` + `src/` production code, excluding tests/specs:
+Full sweep of `app/` + `src/` production code, excluding tests/specs.
+
+> **Re-verified 2026-03-15.** Counts unchanged; all Sentry DSNs confirmed set in Vercel (Production, Preview, Development) and `.env.local`.
 
 - `Sentry.captureException()` calls: **0**
 - `Sentry.captureMessage()` calls: **0**
@@ -68,18 +71,33 @@ instead of a unified client-side reporting utility.
 
 These are the verified user-facing client flows that should be moved onto a shared `reportClientError()` utility. The list below is the current priority inventory, not a claim that these are the only console sites in the repo.
 
-| Location | Current Behavior | Impact |
-|----------|------------------|--------|
-| `fire-and-forget.ts:1-13` | Central async UI error handler logs to `console.error` | Affects fire-and-forget practice flows such as submit, bookmark toggle, session finalization, and exam-review actions |
-| `use-practice-question-bookmarks.ts:52` | `console.error('createBookmarksEffect failed:', ...)` | Bookmark load failures are invisible to Sentry |
-| `use-practice-session-tags.ts:25` | `console.error('createTagsEffect failed:', ...)` | Tag load failures are invisible to Sentry |
-| `use-question-page-controller.ts` | Development-only console output for mixed-review-param normalization and session-navigation fetch failures; production falls back silently | Session navigation fetch failures are invisible in production |
-| `question-page-logic.ts:350` | Bare `catch {}` with fallback UI only | Review hydration failures are invisible everywhere |
-| `use-quick-practice-status-counts.ts:136-141` | Routes caught effect errors through `logUnhandledAsyncError()` | Quick-practice status count failures reach console only |
-| `use-practice-available-questions-count.ts:40-41` | Routes caught effect errors through `logUnhandledAsyncError()` | Available-count failures reach console only |
-| `use-practice-question-bookmarks.ts:100` | `console.error('toggleBookmarkForQuestion failed:', ...)` (BUG-212 fix) | Bookmark toggle failures reach console only |
-| `use-practice-session-start.ts:132` | `console.error('startSession failed:', ...)` (BUG-213 fix) | Session start thrown errors reach console only |
-| `question-flow-actions.ts:142` | `onUnhandledError?.()` hook (BUG-214 fix) — unwired by callers; `console.error` fires unconditionally | Hook ready for direct `reportClientError()` wiring |
+> **Path update (2026-03-15):** Practice hooks moved from `shared/hooks/` to `hooks/`. Question-page files live under `app/(app)/app/questions/[slug]/`. Paths below reflect current codebase.
+
+| # | File (current path) | Current Behavior | Impact |
+|---|----------|------------------|--------|
+| 1 | `app/(app)/app/practice/fire-and-forget.ts` | Central async UI error handler logs to `console.error` | Affects fire-and-forget practice flows such as submit, bookmark toggle, session finalization, and exam-review actions |
+| 2 | `app/(app)/app/practice/hooks/use-practice-question-bookmarks.ts:51-52` | `console.error('createBookmarksEffect failed:', ...)` | Bookmark load failures are invisible to Sentry |
+| 3 | `app/(app)/app/practice/hooks/use-practice-session-tags.ts:24-26` | `console.error('createTagsEffect failed:', ...)` | Tag load failures are invisible to Sentry |
+| 4 | `app/(app)/app/questions/[slug]/use-question-page-controller.ts` | Development-only console output for mixed-review-param normalization and session-navigation fetch failures; production falls back silently | Session navigation fetch failures are invisible in production |
+| 5 | `app/(app)/app/questions/[slug]/question-page-logic.ts:350` | Bare `catch {}` with fallback UI only | Review hydration failures are invisible everywhere |
+| 6 | `app/(app)/app/practice/hooks/use-quick-practice-status-counts.ts:140-142` | Routes caught effect errors through `logUnhandledAsyncError()` | Quick-practice status count failures reach console only |
+| 7 | `app/(app)/app/practice/hooks/use-practice-available-questions-count.ts:40-42` | Routes caught effect errors through `logUnhandledAsyncError()` | Available-count failures reach console only |
+| 8 | `app/(app)/app/practice/hooks/use-practice-question-bookmarks.ts:100` | `console.error('toggleBookmarkForQuestion failed:', ...)` (BUG-212 fix) | Bookmark toggle failures reach console only |
+| 9 | `app/(app)/app/practice/hooks/use-practice-session-start.ts:132-134` | `console.error('startSession failed:', ...)` (BUG-213 fix) | Session start thrown errors reach console only |
+| 10 | `app/(app)/app/practice/shared/question-flow-actions.ts:147-150` | `onUnhandledError?.()` hook (BUG-214 fix) — unwired by callers; `console.error` fires unconditionally | Hook ready for direct `reportClientError()` wiring |
+
+---
+
+## Incidental Finding: `logUnhandledAsyncError` Signature Mismatch
+
+> **Found during 2026-03-15 path audit.**
+
+`fire-and-forget.ts` exports `logUnhandledAsyncError(error: unknown)`, but two callers pass `{ message, context }` instead of a raw error:
+
+- `use-quick-practice-status-counts.ts:141` → `logUnhandledAsyncError({ message, context })`
+- `use-practice-available-questions-count.ts:41` → `logUnhandledAsyncError({ message, context })`
+
+This is not a crash (the object is logged), but the structured `{ message, context }` shape is lost inside a generic "Unhandled async UI action error" console line. The `reportClientError()` rollout will fix this naturally by replacing these call sites with the properly typed utility.
 
 ---
 
@@ -89,9 +107,9 @@ Tracer-bullet verification also found these observability-adjacent sites. They s
 
 - `app/global-error.tsx:16` logs an already-bubbled boundary error
 - `components/error-boundary-page.tsx:33` logs already-bubbled route-boundary errors for shared `error.tsx` pages
-- `app/(app)/app/practice/shared/question-flow-actions.ts:143` logs unconditionally after BUG-214 fix (previously dev-only); `onUnhandledError` hook is available for direct Sentry wiring
-- `app/(app)/app/questions/[slug]/question-page-client.tsx:56` uses a bare catch for URL normalization
-- `app/(app)/app/questions/[slug]/page.tsx:65` uses direct server-side `console.info`
+- `app/(app)/app/practice/shared/question-flow-actions.ts` logs unconditionally after BUG-214 fix (previously dev-only); `onUnhandledError` hook is available for direct Sentry wiring
+- `app/(app)/app/questions/[slug]/question-page-client.tsx` uses a bare catch for URL normalization
+- `app/(app)/app/questions/[slug]/page.tsx` uses direct server-side `console.info`
 
 ---
 

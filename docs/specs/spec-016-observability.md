@@ -1,20 +1,29 @@
 # SPEC-016: Observability (Logging, Error Tracking, Monitoring)
 
-> **Status:** Partially Implemented
+> **Status:** Partially Implemented — server-side complete, client-side error reporting in progress ([DEBT-286](../debt/debt-286-client-side-error-reporting.md))
 > **Priority:** P1 (Critical for Production)
 > **Author:** Claude
 > **Created:** 2026-02-01
+> **Updated:** 2026-03-15
 
 ---
 
 ## Current State
 
 ✅ **Implemented:**
-- `lib/logger.ts` - Pino structured JSON logger with redaction
+- `lib/logger.ts` — Pino structured JSON logger with redaction (43 files, 100+ call sites)
 - `pino` package installed (v10.3.0)
 - Sentry error tracking (errors only) via `@sentry/nextjs` + Next instrumentation hooks
+- Sentry DSNs configured in Vercel (Production, Preview, Development) and local `.env.local`
+- Server `onRequestError` wired to `Sentry.captureRequestError` for unhandled request errors
+- Sentry environment auto-tagged via `VERCEL_ENV` / `NODE_ENV`
 
-❌ **Not Yet Implemented:**
+🔧 **In Progress (DEBT-286):**
+- `reportClientError()` utility — caught client-side errors currently reach `console.error` only, not Sentry
+- Zero `Sentry.captureException()` calls exist in the codebase today
+- Error boundaries (`global-error.tsx`, 11 route-level `error.tsx`) log to console only
+
+❌ **Not Yet Implemented (Optional):**
 - `pino-pretty` for dev (optional, logs are readable without it)
 
 ---
@@ -331,6 +340,15 @@ pnpm add -D pino-pretty              # Pretty logs in dev terminal
 **Not Yet Done (Optional):**
 - [ ] Pretty logs in dev (requires `pino-pretty`)
 - [ ] LOG_LEVEL documented in .env.example
+
+**Not Yet Done (DEBT-286: Client-Side Error Reporting):**
+- [ ] `reportClientError()` utility exists in `app/lib/`
+- [ ] Caught client-side operational failures are reported via `reportClientError()` → Sentry
+- [ ] Direct client-side error reporting does not use raw `console.error` in production paths
+- [ ] Bare `catch {}` blocks that swallow unexpected client-side operational failures are eliminated or explicitly justified
+- [ ] Error boundaries (`global-error.tsx`, `error-boundary-page.tsx`) report to Sentry before console logging
+
+See [DEBT-286](../debt/debt-286-client-side-error-reporting.md) for the full rollout plan and target inventory.
 
 **Completed (DEBT-249 Rollout Instrumentation):**
 - [x] Auth bounce count on `/checkout/success` — track middleware redirect bounces on this route
