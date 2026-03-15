@@ -82,6 +82,28 @@ describe('practice-page-tags', () => {
       });
     });
 
+    it('does not log expected business tag-load failures', async () => {
+      const setTagLoadStatus = vi.fn();
+      const setAvailableTags = vi.fn();
+      const logError = vi.fn();
+      const getTagsFn = vi.fn(async () =>
+        err('UNAUTHENTICATED', 'Authentication required'),
+      );
+
+      createTagsEffect({
+        getTagsFn,
+        setTagLoadStatus,
+        setAvailableTags,
+        logError,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(setTagLoadStatus).toHaveBeenLastCalledWith('error');
+      expect(setAvailableTags).not.toHaveBeenCalled();
+      expect(logError).not.toHaveBeenCalled();
+    });
+
     it('does not update state after cleanup', async () => {
       const setTagLoadStatus = vi.fn();
       const setAvailableTags = vi.fn();

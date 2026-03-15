@@ -13,11 +13,13 @@ const {
   getPreviousAttemptMock,
   submitAnswerMock,
   getPracticeSessionReviewMock,
+  reportClientErrorMock,
 } = vi.hoisted(() => ({
   getQuestionBySlugMock: vi.fn(),
   getPreviousAttemptMock: vi.fn(),
   submitAnswerMock: vi.fn(),
   getPracticeSessionReviewMock: vi.fn(),
+  reportClientErrorMock: vi.fn(),
 }));
 
 vi.mock('@/src/adapters/controllers/question-view-controller', () => ({
@@ -31,6 +33,15 @@ vi.mock('@/src/adapters/controllers/question-controller', () => ({
 
 vi.mock('@/src/adapters/controllers/practice-controller', () => ({
   getPracticeSessionReview: getPracticeSessionReviewMock,
+}));
+
+vi.mock('@/lib/report-client-error', () => ({
+  reportClientError: reportClientErrorMock,
+  shouldReportClientError: (error: unknown) =>
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: string }).code === 'INTERNAL_ERROR',
 }));
 
 function Probe({
@@ -128,6 +139,7 @@ describe('useQuestionPageController (browser)', () => {
     getPreviousAttemptMock.mockReset();
     submitAnswerMock.mockReset();
     getPracticeSessionReviewMock.mockReset();
+    reportClientErrorMock.mockReset();
   });
 
   it('loads previous attempt and pre-populates state in review mode', async () => {
@@ -684,6 +696,13 @@ describe('useQuestionPageController (browser)', () => {
     await expect
       .element(screen.getByTestId('session-nav-index'))
       .toHaveTextContent(/^$/);
+    expect(reportClientErrorMock).toHaveBeenCalledWith(
+      { code: 'INTERNAL_ERROR', message: 'Boom' },
+      {
+        component: 'UseQuestionPageController',
+        action: 'loadSessionNavigation',
+      },
+    );
   });
 
   it('discards stale session review response when slug changes mid-flight', async () => {

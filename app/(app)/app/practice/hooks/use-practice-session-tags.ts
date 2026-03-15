@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { reportClientError } from '@/lib/report-client-error';
 import {
   getTags,
   type TagRow,
@@ -21,8 +22,11 @@ export function usePracticeSessionTags(): UsePracticeSessionTagsOutput {
       getTagsFn: getTags,
       setTagLoadStatus,
       setAvailableTags,
-      logError: (message: string, context: unknown) => {
-        console.error('createTagsEffect failed:', message, context);
+      logError: (_message: string, error: unknown) => {
+        reportClientError(error, {
+          component: 'UsePracticeSessionTags',
+          action: 'loadTags',
+        });
       },
     });
   }, []);

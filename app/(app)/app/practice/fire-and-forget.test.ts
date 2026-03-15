@@ -1,9 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireAndForget } from './fire-and-forget';
+
+const { reportClientErrorMock } = vi.hoisted(() => ({
+  reportClientErrorMock: vi.fn(),
+}));
+
+vi.mock('@/lib/report-client-error', () => ({
+  reportClientError: reportClientErrorMock,
+}));
+
+import { fireAndForget, logUnhandledAsyncError } from './fire-and-forget';
 
 describe('fireAndForget', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    reportClientErrorMock.mockReset();
   });
 
   it('does not call onError when promise resolves', async () => {
@@ -25,11 +35,18 @@ describe('fireAndForget', () => {
     expect(onError).toHaveBeenCalledWith(error);
   });
 
-  it('does not throw when the onError handler throws', async () => {
-    const consoleError = vi
-      .spyOn(console, 'error')
-      .mockImplementation(() => undefined);
+  it('reports unhandled async errors via reportClientError', () => {
+    const error = new Error('boom');
 
+    logUnhandledAsyncError(error);
+
+    expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
+      component: 'FireAndForget',
+      action: 'unhandledAsyncAction',
+    });
+  });
+
+  it('does not throw when the onError handler throws', async () => {
     const error = new Error('boom');
     const handlerError = new Error('handler boom');
     const onError = vi.fn(() => {
@@ -40,9 +57,27 @@ describe('fireAndForget', () => {
     await Promise.resolve();
 
     expect(onError).toHaveBeenCalledWith(error);
-    expect(consoleError).toHaveBeenCalledWith(
-      'onError handler threw',
-      handlerError,
-    );
+    expect(reportClientErrorMock).toHaveBeenCalledWith(handlerError, {
+      component: 'FireAndForget',
+      action: 'onErrorHandler',
+    });
+  });
+
+  it('reports when the onError handler rejects asynchronously', async () => {
+    const error = new Error('boom');
+    const handlerError = new Error('handler boom');
+    const onError = vi.fn(async () => {
+      throw handlerError;
+    });
+
+    fireAndForget(Promise.reject(error), onError);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(onError).toHaveBeenCalledWith(error);
+    expect(reportClientErrorMock).toHaveBeenCalledWith(handlerError, {
+      component: 'FireAndForget',
+      action: 'onErrorHandler',
+    });
   });
 });

@@ -1,4 +1,13 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+const { reportClientErrorMock } = vi.hoisted(() => ({
+  reportClientErrorMock: vi.fn(),
+}));
+
+vi.mock('@/lib/report-client-error', () => ({
+  reportClientError: reportClientErrorMock,
+}));
+
 import {
   canSubmitQuestionAnswer,
   createLoadQuestionAction,
@@ -40,6 +49,11 @@ function createQuestionOutput(): GetQuestionBySlugOutput {
 }
 
 describe('question-page-logic', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    reportClientErrorMock.mockReset();
+  });
+
   describe('canSubmitQuestionAnswer', () => {
     it('returns false when loadState is loading', () => {
       expect(
@@ -282,12 +296,13 @@ describe('question-page-logic', () => {
     it('returns error state when controller throws', async () => {
       const setLoadState = vi.fn();
       const setQuestion = vi.fn();
+      const error = new Error('Boom');
 
       await expect(
         loadQuestion({
           slug: 'q-1',
           getQuestionBySlugFn: async () => {
-            throw new Error('Boom');
+            throw error;
           },
           createIdempotencyKey: () => 'idem_1',
           nowMs: () => 1234,
@@ -304,6 +319,10 @@ describe('question-page-logic', () => {
       expect(setLoadState).toHaveBeenCalledWith({
         status: 'error',
         message: 'Boom',
+      });
+      expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
+        component: 'QuestionPageLogic',
+        action: 'loadQuestion',
       });
     });
   });
@@ -501,11 +520,12 @@ describe('question-page-logic', () => {
       const setSelectedChoiceId = vi.fn();
       const setSubmitResult = vi.fn();
       const setReviewHydrationState = vi.fn();
+      const error = new Error('Boom');
 
       await loadPreviousAttempt({
         questionId: 'q_1',
         getPreviousAttemptFn: async () => {
-          throw new Error('Boom');
+          throw error;
         },
         setSelectedChoiceId,
         setSubmitResult,
@@ -515,6 +535,10 @@ describe('question-page-logic', () => {
       expect(setSelectedChoiceId).not.toHaveBeenCalled();
       expect(setSubmitResult).not.toHaveBeenCalled();
       expect(setReviewHydrationState).toHaveBeenCalledWith('hydration_error');
+      expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
+        component: 'QuestionPageLogic',
+        action: 'loadPreviousAttempt',
+      });
     });
 
     it('ignores stale response when isStale callback returns true', async () => {
@@ -602,6 +626,10 @@ describe('question-page-logic', () => {
         expect(setSelectedChoiceId).not.toHaveBeenCalled();
         expect(setSubmitResult).not.toHaveBeenCalled();
         expect(setReviewHydrationState).toHaveBeenCalledWith('hydration_error');
+        expect(reportClientErrorMock).toHaveBeenCalledWith(expect.any(Error), {
+          component: 'QuestionPageLogic',
+          action: 'loadPreviousAttempt',
+        });
       } finally {
         vi.useRealTimers();
       }
@@ -948,6 +976,7 @@ describe('question-page-logic', () => {
 
     it('returns error state when submit throws', async () => {
       const setLoadState = vi.fn();
+      const error = new Error('Boom');
 
       await expect(
         submitSelectedAnswer({
@@ -956,7 +985,7 @@ describe('question-page-logic', () => {
           questionLoadedAtMs: 0,
           submitIdempotencyKey: 'idem_1',
           submitAnswerFn: async () => {
-            throw new Error('Boom');
+            throw error;
           },
           nowMs: () => 0,
           setLoadState,
@@ -967,6 +996,10 @@ describe('question-page-logic', () => {
       expect(setLoadState).toHaveBeenCalledWith({
         status: 'error',
         message: 'Boom',
+      });
+      expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
+        component: 'QuestionPageLogic',
+        action: 'submitSelectedAnswer',
       });
     });
   });

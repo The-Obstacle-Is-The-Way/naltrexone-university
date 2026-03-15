@@ -1,4 +1,5 @@
 import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
+import { shouldReportClientError } from '@/lib/report-client-error';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
@@ -199,10 +200,12 @@ export async function toggleBookmarkForQuestion(input: {
     return;
   }
   if (!res.ok) {
-    try {
-      input.logError?.('Failed to toggle bookmark', res.error);
-    } catch {
-      // Reporter failures must not block the primary error path.
+    if (shouldReportClientError(res.error)) {
+      try {
+        input.logError?.('Failed to toggle bookmark', res.error);
+      } catch {
+        // Reporter failures must not block the primary error path.
+      }
     }
     if (!isMounted()) return;
     input.onBookmarkError?.('Failed to save bookmark. Please try again.');

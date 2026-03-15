@@ -2,6 +2,7 @@ import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
 } from '@/app/(app)/app/practice/practice-logic';
+import { reportClientError } from '@/lib/report-client-error';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 
@@ -31,6 +32,10 @@ export function createIncompleteSessionEffect<T>(input: {
       );
     } catch (error) {
       if (!mounted) return;
+      reportClientError(error, {
+        component: 'PracticePageIncompleteSession',
+        action: 'loadIncompleteSession',
+      });
       input.setIncompleteSessionStatus('error');
       input.setIncompleteSessionError(getThrownErrorMessage(error));
       return;
@@ -76,6 +81,10 @@ export async function abandonIncompleteSession<T>(input: {
     );
   } catch (error) {
     if (!input.isMounted()) return;
+    reportClientError(error, {
+      component: 'PracticePageIncompleteSession',
+      action: 'abandonIncompleteSession',
+    });
     input.setIncompleteSessionStatus('error');
     input.setIncompleteSessionError(getThrownErrorMessage(error));
     return;

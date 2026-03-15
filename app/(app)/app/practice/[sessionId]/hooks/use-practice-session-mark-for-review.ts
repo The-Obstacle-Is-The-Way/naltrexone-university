@@ -12,6 +12,10 @@ import {
   getThrownErrorMessage,
 } from '@/app/(app)/app/practice/practice-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
+import {
+  reportClientError,
+  shouldReportClientError,
+} from '@/lib/report-client-error';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
@@ -89,6 +93,10 @@ export function usePracticeSessionMarkForReview(
       );
     } catch (error) {
       if (!input.isMounted()) return;
+      reportClientError(error, {
+        component: 'UsePracticeSessionMarkForReview',
+        action: 'toggleMarkForReview',
+      });
       if (currentQuestionIdRef.current === requestQuestionId) {
         input.setLoadState({
           status: 'error',
@@ -102,6 +110,12 @@ export function usePracticeSessionMarkForReview(
     if (!input.isMounted()) return;
 
     if (!res.ok) {
+      if (shouldReportClientError(res.error)) {
+        reportClientError(res.error, {
+          component: 'UsePracticeSessionMarkForReview',
+          action: 'toggleMarkForReview',
+        });
+      }
       if (currentQuestionIdRef.current === requestQuestionId) {
         input.setLoadState({
           status: 'error',

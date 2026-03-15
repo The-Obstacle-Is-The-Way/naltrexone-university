@@ -8,12 +8,24 @@ import {
   usePracticeSessionReviewStageState,
 } from './use-practice-session-review-stage-state';
 
-const { getPracticeSessionReviewMock } = vi.hoisted(() => ({
-  getPracticeSessionReviewMock: vi.fn(),
-}));
+const { getPracticeSessionReviewMock, reportClientErrorMock } = vi.hoisted(
+  () => ({
+    getPracticeSessionReviewMock: vi.fn(),
+    reportClientErrorMock: vi.fn(),
+  }),
+);
 
 vi.mock('@/src/adapters/controllers/practice-controller', () => ({
   getPracticeSessionReview: getPracticeSessionReviewMock,
+}));
+
+vi.mock('@/lib/report-client-error', () => ({
+  reportClientError: reportClientErrorMock,
+  shouldReportClientError: (error: unknown) =>
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: string }).code === 'INTERNAL_ERROR',
 }));
 
 type ReviewLoadResult = {
@@ -38,6 +50,7 @@ function createInput(
 describe('usePracticeSessionReviewStageState (browser)', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    reportClientErrorMock.mockReset();
   });
 
   it('finalizes tutor sessions without attempting to load exam review', async () => {
@@ -124,9 +137,8 @@ describe('usePracticeSessionReviewStageState (browser)', () => {
     );
 
     const input = createInput('exam');
-    vi.mocked(input.finalizeSession).mockRejectedValue(
-      new Error('Finalize failed'),
-    );
+    const error = new Error('Finalize failed');
+    vi.mocked(input.finalizeSession).mockRejectedValue(error);
     const harness = await renderHook(() =>
       usePracticeSessionReviewStageState(input),
     );
@@ -139,6 +151,10 @@ describe('usePracticeSessionReviewStageState (browser)', () => {
     expect(harness.result.current.reviewLoadState).toEqual({
       status: 'error',
       message: 'Finalize failed',
+    });
+    expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
+      component: 'UsePracticeSessionReviewStageState',
+      action: 'finalizeSession',
     });
   });
 
@@ -174,9 +190,8 @@ describe('usePracticeSessionReviewStageState (browser)', () => {
   });
 
   it('sets an error state when review loading throws', async () => {
-    getPracticeSessionReviewMock.mockRejectedValue(
-      new Error('Review load failed'),
-    );
+    const error = new Error('Review load failed');
+    getPracticeSessionReviewMock.mockRejectedValue(error);
 
     const input = createInput('exam');
     const harness = await renderHook(() =>
@@ -191,6 +206,10 @@ describe('usePracticeSessionReviewStageState (browser)', () => {
     expect(harness.result.current.reviewLoadState).toEqual({
       status: 'error',
       message: 'Review load failed',
+    });
+    expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
+      component: 'UsePracticeSessionReviewStageState',
+      action: 'loadReview',
     });
   });
 

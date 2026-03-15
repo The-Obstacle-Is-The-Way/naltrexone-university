@@ -4,6 +4,7 @@ import {
   createBookmarksEffect,
   toggleBookmarkForQuestion,
 } from '@/app/(app)/app/practice/practice-page-logic';
+import { reportClientError } from '@/lib/report-client-error';
 import {
   getBookmarks,
   toggleBookmark,
@@ -48,8 +49,11 @@ export function usePracticeQuestionBookmarks(
       setBookmarkedQuestionIds,
       setBookmarkStatus,
       setBookmarkRetryCount,
-      logError: (message: string, context: unknown) => {
-        console.error('createBookmarksEffect failed:', message, context);
+      logError: (_message: string, error: unknown) => {
+        reportClientError(error, {
+          component: 'UsePracticeQuestionBookmarks',
+          action: 'loadBookmarks',
+        });
       },
     });
   }, [bookmarkRetryCount]);
@@ -97,8 +101,11 @@ export function usePracticeQuestionBookmarks(
           isMounted: input.isMounted,
         });
       },
-      logError: (message: string, context: unknown) => {
-        console.error('toggleBookmarkForQuestion failed:', message, context);
+      logError: (_message: string, error: unknown) => {
+        reportClientError(error, {
+          component: 'UsePracticeQuestionBookmarks',
+          action: 'toggleBookmark',
+        });
       },
       isMounted: input.isMounted,
     });

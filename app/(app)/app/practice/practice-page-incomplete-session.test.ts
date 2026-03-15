@@ -1,13 +1,27 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
+
+const { reportClientErrorMock } = vi.hoisted(() => ({
+  reportClientErrorMock: vi.fn(),
+}));
+
+vi.mock('@/lib/report-client-error', () => ({
+  reportClientError: reportClientErrorMock,
+}));
+
 import {
   abandonIncompleteSession,
   createIncompleteSessionEffect,
 } from './practice-page-incomplete-session';
 
 describe('practice-page-incomplete-session', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    reportClientErrorMock.mockReset();
+  });
+
   describe('createIncompleteSessionEffect', () => {
     it('loads the incomplete session and transitions to idle', async () => {
       const setStatus = vi.fn();
@@ -39,8 +53,9 @@ describe('practice-page-incomplete-session', () => {
       const setStatus = vi.fn();
       const setError = vi.fn();
       const setSession = vi.fn();
+      const error = new Error('boom');
       const getIncompletePracticeSessionFn = vi.fn(async () => {
-        throw new Error('boom');
+        throw error;
       });
 
       createIncompleteSessionEffect({
@@ -55,6 +70,10 @@ describe('practice-page-incomplete-session', () => {
       expect(setStatus).toHaveBeenLastCalledWith('error');
       expect(setError).toHaveBeenLastCalledWith('boom');
       expect(setSession).not.toHaveBeenCalled();
+      expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
+        component: 'PracticePageIncompleteSession',
+        action: 'loadIncompleteSession',
+      });
     });
 
     it('sets error state when the request returns a non-ok result', async () => {
@@ -139,8 +158,9 @@ describe('practice-page-incomplete-session', () => {
       const setStatus = vi.fn();
       const setError = vi.fn();
       const setSession = vi.fn();
+      const error = new Error('boom');
       const endPracticeSessionFn = vi.fn(async () => {
-        throw new Error('boom');
+        throw error;
       });
 
       await abandonIncompleteSession({
@@ -155,6 +175,10 @@ describe('practice-page-incomplete-session', () => {
       expect(setStatus).toHaveBeenLastCalledWith('error');
       expect(setError).toHaveBeenLastCalledWith('boom');
       expect(setSession).not.toHaveBeenCalled();
+      expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
+        component: 'PracticePageIncompleteSession',
+        action: 'abandonIncompleteSession',
+      });
     });
 
     it('does not set error state when unmounted after a thrown request', async () => {

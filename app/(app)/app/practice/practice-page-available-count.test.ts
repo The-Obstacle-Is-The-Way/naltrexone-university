@@ -96,6 +96,30 @@ describe('practice-page-available-count', () => {
       );
     });
 
+    it('does not log expected business available-count failures', async () => {
+      const setAvailableCountStatus = vi.fn();
+      const setAvailableCount = vi.fn();
+      const logError = vi.fn();
+      const countAvailableQuestionsFn = vi.fn(async () =>
+        err('UNAUTHENTICATED', 'Authentication required'),
+      );
+
+      createAvailableQuestionsCountEffect({
+        countAvailableQuestionsFn,
+        debounceMs: 0,
+        filters: { tagSlugs: [], difficulties: [], statuses: ['unanswered'] },
+        setAvailableCountStatus,
+        setAvailableCount,
+        logError,
+      });
+
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(setAvailableCountStatus).toHaveBeenLastCalledWith('error');
+      expect(setAvailableCount).not.toHaveBeenCalled();
+      expect(logError).not.toHaveBeenCalled();
+    });
+
     it('does not update state after cleanup', async () => {
       const setAvailableCountStatus = vi.fn();
       const setAvailableCount = vi.fn();

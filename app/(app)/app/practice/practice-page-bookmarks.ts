@@ -1,3 +1,4 @@
+import { shouldReportClientError } from '@/lib/report-client-error';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 
@@ -36,7 +37,9 @@ export function createBookmarksEffect(input: {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   const handleBookmarkLoadFailure = (error: unknown) => {
-    logError('Failed to load bookmarks', error);
+    if (shouldReportClientError(error)) {
+      logError('Failed to load bookmarks', error);
+    }
     input.setBookmarkStatus('error');
 
     if (input.bookmarkRetryCount < 2) {
