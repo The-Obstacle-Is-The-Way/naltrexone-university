@@ -719,17 +719,25 @@ mb-1 text-xs font-medium uppercase tracking-wide text-foreground/60
 
 **Source:** `components/markdown/Markdown.tsx`
 
-### F-8: Feedback Section Label Chip
+### F-8: Feedback Section Chips
 
-Neutral micro-label chip used for feedback subsections such as "Correct answer", "Explanation", and "Why other answers are wrong".
+Section-level pills used inside the feedback card. This family has two variants: a semantic success chip for the incorrect-flow correct-answer section, and a neutral structural chip for fallback/explanatory subsections.
 
+**Semantic correct-answer chip (incorrect flow only):**
 ```
-inline-flex rounded-full bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-wide text-foreground/60
+inline-flex rounded-full px-3 py-1 text-sm font-semibold bg-success text-success-foreground dark:bg-success/60
 ```
+
+**Neutral section chip:**
+```
+inline-flex rounded-full bg-muted px-3 py-1 text-sm font-semibold text-foreground dark:bg-foreground/10
+```
+
+**Used for:** `Correct Answer` (semantic success), `Explanation`, `Why Other Answers Are Wrong`
 
 **Source:** `components/question/feedback.tsx`
 
-**Rule:** Use this pattern for subordinate structural labels inside the feedback card only. Do not replace the semantic verdict pill, the reference separator label, or the Markdown-driven clinical pearl label with this chip.
+**Rule:** The semantic `Correct Answer` chip intentionally borrows the F-1 success-pill palette so the correct-answer section is visually distinct from the preceding incorrect-answer block. Neutral section chips are structural labels, not metadata chrome: keep them title case, `text-sm`, and full `text-foreground` rather than the older uppercase/tracking-wide micro-label treatment. In correct flow, `CorrectAnswerSection` passes `showLabel={false}`, so no section chip renders above the correct-answer card. Do not replace the verdict pill, the Reference label, or the Markdown-driven clinical pearl label with this pattern.
 
 ---
 
@@ -780,7 +788,7 @@ The letter label (A, B, C, D) inside choice buttons.
 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-foreground/20 bg-foreground/[0.06] text-xs font-semibold leading-none text-foreground dark:border-foreground/60 dark:bg-foreground/20
 ```
 
-**Used in:** Choice buttons and neutral feedback wrong-answer cards
+**Used in:** Choice buttons and feedback answer rows
 
 **Correct:** `border-success bg-success/15 text-success`
 **Incorrect:** `border-destructive bg-destructive/15 text-destructive`
