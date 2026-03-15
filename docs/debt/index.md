@@ -19,7 +19,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 10 verified client-side flows still report only to console or silent fallbacks | P2 | — |
-**Next Debt ID:** DEBT-315
+| [DEBT-315](./debt-315-feedback-chip-semantic-color-and-casing.md) | Feedback Chip Semantic Color & Casing Polish — "Correct answer" → green "Correct" chip, evaluate casing consistency between verdict pill and section labels, strengthen neutral chip in dark mode | P3 | — |
+**Next Debt ID:** DEBT-316
 
 ---
 
