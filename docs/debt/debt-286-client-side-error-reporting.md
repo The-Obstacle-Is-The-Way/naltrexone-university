@@ -26,15 +26,15 @@ This debt is specifically about **caught client-side operational failures** in h
 
 Full sweep of `app/` + `src/` production code, excluding tests/specs.
 
-> **Re-verified 2026-03-15.** Counts unchanged; all Sentry DSNs confirmed set in Vercel (Production, Preview, Development) and `.env.local`.
+> **Re-audited 2026-03-15.** `Sentry.captureException()` and `Sentry.captureMessage()` remain unused in `app/` + `src/`, and local `.env.local` still defines both DSNs. The historical console counts remain directionally useful, but the helper-level rollout inventory below was incomplete: the 2026-03-14 practice refactor added additional client-bundled reporter seams and bare `catch {}` blocks outside the original 10-row slice.
 
 - `Sentry.captureException()` calls: **0**
 - `Sentry.captureMessage()` calls: **0**
 - `console.error(...)` calls: **9**
 - `console.warn(...)` calls: **2**
-- `console.log(...)` calls: **0**
-- bare `catch {}` blocks in client files: **2**
-- bare `catch {}` blocks in server/application files: **5**
+- `console.info(...)` calls: **1**
+- bare `catch {}` blocks in `app/` + `src/`: **10** total (**6** client-bundled, **4** server/application)
+- `reportClientError()` utility: **does not exist**
 
 Not every console site belongs in this debt:
 
@@ -88,6 +88,34 @@ These are the verified user-facing client flows that should be moved onto a shar
 
 ---
 
+## Audit Corrections (2026-03-15)
+
+Two tracer-bullet corrections matter before implementation:
+
+1. `createAction()` catches controller/use-case/repository throws and converts them into `ActionResult` failures via `handleError()`. Most server-side operational failures therefore do **not** reject the client promise; they arrive as `!res.ok` UI-state paths. `fireAndForget()` and `runTransitionedAsyncAction()` only observe transport/client rejections plus truly uncaught client bugs.
+2. The original 10-row rollout list was not exhaustive at the helper layer. The current codebase has additional client-bundled catch sites that set fallback UI state without Sentry reporting.
+
+Missing-from-inventory helper/reporting seams confirmed by the 2026-03-15 audit:
+
+- `app/(app)/app/practice/practice-page-logic.ts` — bookmark-toggle `logError` seam plus reporter-guard catches
+- `app/(app)/app/practice/practice-page-session-start.ts` — session-start `reportError` seam plus reporter-guard catch
+- `app/(app)/app/practice/practice-page-incomplete-session.ts` — incomplete-session load/abandon failures set UI error only
+- `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts` — end-session, navigator, and summary-review failures set UI error only
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage-state.ts` — review-load/finalize failures set UI error only
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-mark-for-review.ts` — mark-for-review failures set UI error only
+- `app/(app)/app/history/hooks/use-history-sessions.ts` — history-session review fetch failures set UI error only
+- `app/(app)/app/questions/[slug]/question-page-logic.ts` — question-load and answer-submit failures set UI error only, in addition to the existing review-hydration catch
+
+Path correction:
+
+- The shared reporter should live in `lib/report-client-error.ts`, not `app/lib/...`, to match the existing client-safe utility layout (`lib/use-is-mounted.ts`, `lib/with-timeout.ts`, etc.).
+
+Scope correction:
+
+- Route/global error boundaries remain observability-adjacent cleanup, but they are not part of the core rollout table below unless SPEC-016 is explicitly expanded to include them.
+
+---
+
 ## Incidental Finding: `logUnhandledAsyncError` Signature Mismatch
 
 > **Found during 2026-03-15 path audit.**
@@ -131,7 +159,7 @@ The missing piece is architecture: there is no standard client-side counterpart 
 ### Phase 1: Add a client-side reporting utility
 
 ```typescript
-// app/lib/report-client-error.ts
+// lib/report-client-error.ts
 import * as Sentry from '@sentry/nextjs';
 
 export function reportClientError(
@@ -154,21 +182,27 @@ export function reportClientError(
 ### Phase 2: Roll out to the priority client flows
 
 1. `fire-and-forget.ts`
-2. `use-practice-question-bookmarks.ts` (includes BUG-212 `logError` callback + bookmark load effect)
-3. `use-practice-session-tags.ts`
-4. `use-question-page-controller.ts`
-5. `question-page-logic.ts`
-6. `use-quick-practice-status-counts.ts`
-7. `use-practice-available-questions-count.ts`
-8. `use-practice-session-start.ts` (BUG-213 `reportError` callback)
-9. `question-flow-actions.ts` (BUG-214 `onUnhandledError` hook — wire `reportClientError()` from callers)
+2. `practice-page-logic.ts` + `use-practice-question-bookmarks.ts` (BUG-212 bookmark-toggle reporter seam + bookmark load effect)
+3. `practice-page-session-start.ts` + `use-practice-session-start.ts` (BUG-213 session-start reporter seam)
+4. `practice-page-incomplete-session.ts`
+5. `practice/[sessionId]/practice-session-page-logic.ts`
+6. `use-practice-session-review-stage-state.ts`
+7. `use-practice-session-mark-for-review.ts`
+8. `use-history-sessions.ts`
+9. `use-question-page-controller.ts`
+10. `question-page-logic.ts`
+11. `use-quick-practice-status-counts.ts`
+12. `use-practice-available-questions-count.ts`
+13. `use-practice-session-tags.ts`
+14. `question-flow-actions.ts` (BUG-214 `onUnhandledError` hook — wire `reportClientError()` from callers where actual rejections can escape)
 
 ### Phase 3: Update SPEC-016
 
 Add acceptance criteria such as:
 
 - [ ] Caught client-side operational failures are reported via `reportClientError()`
-- [ ] `reportClientError()` exists in `app/lib/`
+- [ ] `reportClientError()` exists in `lib/`
+- [ ] Helper-level catch sites that currently convert thrown/rejected server-action calls into fallback UI state are routed through `reportClientError()` or explicitly justified
 - [ ] Direct client-side error reporting does not use raw `console.error` in production paths
 - [ ] Bare `catch {}` blocks that swallow unexpected client-side operational failures are eliminated or explicitly justified
 
@@ -181,6 +215,8 @@ Add acceptance criteria such as:
 - Sentry initialization files
 - React error-boundary behavior
 - Domain-layer purity
+
+Expected `ActionResult` business errors such as `VALIDATION_ERROR`, `UNAUTHENTICATED`, `UNSUBSCRIBED`, and `RATE_LIMITED` still remain UI/data-handling paths. The rollout is for unexpected operational failures that would otherwise disappear into console-only or silent fallback branches.
 
 ---
 
@@ -197,6 +233,14 @@ Add acceptance criteria such as:
 | T7 | Available question count fails | Error reaches Sentry |
 | T8 | Development environment | Console output still exists for local debugging |
 | T9 | No Sentry DSN configured | No crash; development console output still works |
+
+Add parity coverage for the newly audited silent-catch flows:
+
+- incomplete-session load + abandon
+- practice-session end/navigator/summary-review
+- session-review load/finalize + mark-for-review
+- history-session review fetch
+- standalone question load + submit
 
 ---
 

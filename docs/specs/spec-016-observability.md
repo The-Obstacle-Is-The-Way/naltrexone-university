@@ -1,6 +1,6 @@
 # SPEC-016: Observability (Logging, Error Tracking, Monitoring)
 
-> **Status:** Partially Implemented — server-side complete, client-side error reporting in progress ([DEBT-286](../debt/debt-286-client-side-error-reporting.md))
+> **Status:** Partially Implemented — Pino + Sentry bootstrap complete; caught client-side reporting still in progress ([DEBT-286](../debt/debt-286-client-side-error-reporting.md))
 > **Priority:** P1 (Critical for Production)
 > **Author:** Claude
 > **Created:** 2026-02-01
@@ -21,7 +21,7 @@
 🔧 **In Progress (DEBT-286):**
 - `reportClientError()` utility — caught client-side errors currently reach `console.error` only, not Sentry
 - Zero `Sentry.captureException()` calls exist in the codebase today
-- Error boundaries (`global-error.tsx`, 11 route-level `error.tsx`) log to console only
+- Several client-bundled flows still resolve unexpected operational failures into console-only or silent fallback state
 
 ❌ **Not Yet Implemented (Optional):**
 - `pino-pretty` for dev (optional, logs are readable without it)
@@ -245,15 +245,17 @@ export async function POST(req: Request) {
 
 ```typescript
 // src/application/use-cases/check-entitlement.ts
-import { logger } from '@/lib/logger';
+import type { Logger } from '@/src/application/ports/logger';
 
 export class CheckEntitlementUseCase {
+  constructor(private readonly logger: Logger) {}
+
   async execute(input: { userId: string }): Promise<{ isEntitled: boolean }> {
     const subscription = await this.subscriptions.findByUserId(input.userId);
     const result = isEntitled(subscription);
 
     // Audit log for business event
-    logger.info(
+    this.logger.info(
       { userId: input.userId, isEntitled: result, plan: subscription?.plan },
       'entitlement checked'
     );
@@ -342,11 +344,13 @@ pnpm add -D pino-pretty              # Pretty logs in dev terminal
 - [ ] LOG_LEVEL documented in .env.example
 
 **Not Yet Done (DEBT-286: Client-Side Error Reporting):**
-- [ ] `reportClientError()` utility exists in `app/lib/`
+- [ ] `reportClientError()` utility exists in `lib/`
 - [ ] Caught client-side operational failures are reported via `reportClientError()` → Sentry
+- [ ] Helper-level client catch sites that currently collapse thrown/rejected server-action calls into fallback UI state are routed through `reportClientError()` or explicitly justified
 - [ ] Direct client-side error reporting does not use raw `console.error` in production paths
 - [ ] Bare `catch {}` blocks that swallow unexpected client-side operational failures are eliminated or explicitly justified
-- [ ] Error boundaries (`global-error.tsx`, `error-boundary-page.tsx`) report to Sentry before console logging
+
+Route/global error-boundary console cleanup remains observability-adjacent work, but it is not part of the core DEBT-286 rollout inventory unless that debt is explicitly expanded.
 
 See [DEBT-286](../debt/debt-286-client-side-error-reporting.md) for the full rollout plan and target inventory.
 
@@ -367,8 +371,13 @@ For critical audit logs, you can:
 
 ```typescript
 // If you need to verify logging in tests:
-const mockLogger = { info: vi.fn(), error: vi.fn() };
-// Inject via dependency injection or module mock
+import { FakeLogger } from '@/src/application/test-helpers/fakes';
+
+const logger = new FakeLogger();
+// Assert against logger.infoCalls / logger.errorCalls
+
+// For client-side Sentry reporting, mock only the external SDK:
+vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn() }));
 ```
 
 ---
