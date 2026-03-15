@@ -71,7 +71,7 @@ export type SyncCheckoutSuccessInput = {
 };
 
 export type CheckoutSuccessSearchParams = {
-  session_id?: string;
+  session_id?: string | string[];
 };
 
 export type CheckoutSuccessContainerLike = {

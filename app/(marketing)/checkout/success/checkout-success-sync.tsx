@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation';
-import type { JSX } from 'react';
 import { ROUTES } from '@/lib/routes';
 import { getSubscriptionPlanFromPriceId } from '@/src/adapters/config/stripe-prices';
 import { stripeSubscriptionStatusToSubscriptionStatus } from '@/src/adapters/gateways/stripe';
@@ -16,7 +15,6 @@ import {
 import { getCheckoutSuccessDeps } from './checkout-success-deps';
 import type {
   CheckoutSuccessDeps,
-  CheckoutSuccessSearchParams,
   CheckoutSuccessTransaction,
   SyncCheckoutSuccessInput,
 } from './checkout-success-types';
@@ -259,34 +257,4 @@ export async function syncCheckoutSuccess(
   }
 
   return redirectFn(ROUTES.APP_DASHBOARD);
-}
-
-export async function runCheckoutSuccessPage(
-  { searchParams }: { searchParams: Promise<CheckoutSuccessSearchParams> },
-  deps?: CheckoutSuccessDeps,
-  redirectFn: (url: string) => never = redirect,
-): Promise<JSX.Element> {
-  const resolvedSearchParams = await searchParams;
-  await syncCheckoutSuccess(
-    { sessionId: resolvedSearchParams.session_id ?? null },
-    deps,
-    redirectFn,
-  );
-
-  return (
-    <main
-      id="main-content"
-      tabIndex={-1}
-      className="flex min-h-[60vh] items-center justify-center"
-    >
-      <div className="text-center">
-        <h1 className="text-xl font-semibold font-heading tracking-tight text-foreground">
-          Finalizing your subscription…
-        </h1>
-        <p className="mt-2 text-base text-muted-foreground">
-          You’ll be redirected to your dashboard shortly.
-        </p>
-      </div>
-    </main>
-  );
 }

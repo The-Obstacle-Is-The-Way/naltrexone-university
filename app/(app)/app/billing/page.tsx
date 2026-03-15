@@ -3,6 +3,7 @@ import { ManageBillingButton } from '@/app/(app)/app/billing/billing-client';
 import { manageBillingAction } from '@/app/(app)/app/billing/manage-billing-actions';
 import { ErrorCard } from '@/components/error-card';
 import { Card } from '@/components/ui/card';
+import { normalizeSearchParam } from '@/lib/search-params';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { SubscriptionRepository } from '@/src/application/ports/repositories';
 import type { Subscription } from '@/src/domain/entities';
@@ -109,7 +110,7 @@ type BillingBanner = { tone: 'error'; message: string };
 function parseBillingErrorCode(
   error: string | string[] | undefined,
 ): BillingPageErrorCode | undefined {
-  const value = Array.isArray(error) ? error[0] : error;
+  const value = normalizeSearchParam(error);
   if (value === 'portal_failed') return value;
   return undefined;
 }

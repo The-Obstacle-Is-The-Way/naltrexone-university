@@ -1,4 +1,5 @@
 import { ROUTES } from '@/lib/routes';
+import { normalizeSearchParam } from '@/lib/search-params';
 
 export type HistoryTab = 'sessions' | 'questions';
 export type SessionModeFilter = 'all' | 'tutor' | 'exam';
@@ -20,13 +21,6 @@ export type QuestionsFilters = {
   source?: SourceFilter | null;
   sort?: QuestionsSort | null;
 };
-
-function normalizeSearchParam(
-  value: string | string[] | undefined,
-): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
 
 export function parseHistoryTab(
   value: string | string[] | undefined,
