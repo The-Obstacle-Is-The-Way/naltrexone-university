@@ -129,10 +129,11 @@ function expectCorrectChip(element: Element | undefined) {
     [
       'inline-flex',
       'rounded-full',
-      'bg-success/15',
+      'bg-success',
       'text-sm',
       'font-semibold',
-      'text-success',
+      'text-success-foreground',
+      'dark:bg-success/60',
     ],
     ['bg-muted', 'text-foreground/60', 'uppercase', 'tracking-wide', 'text-xs'],
   );

@@ -72,7 +72,7 @@ function CorrectAnswerSection({
           className={cn(
             'inline-flex rounded-full px-3 py-1 text-sm font-semibold',
             correctChoice
-              ? 'bg-success/15 text-success'
+              ? 'bg-success text-success-foreground dark:bg-success/60'
               : 'bg-muted text-foreground dark:bg-foreground/10',
           )}
         >
