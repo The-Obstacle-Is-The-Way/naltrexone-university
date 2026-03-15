@@ -84,6 +84,21 @@ describe('reportClientError', () => {
     expect(captureExceptionMock).toHaveBeenCalledWith(error);
   });
 
+  it('does not call console.error in production', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+
+    reportClientError(new Error('boom'), {
+      component: 'PracticePage',
+      action: 'startSession',
+    });
+
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+    expect(captureExceptionMock).toHaveBeenCalled();
+  });
+
   it('returns false for expected business action-result errors', () => {
     expect(
       shouldReportClientError({

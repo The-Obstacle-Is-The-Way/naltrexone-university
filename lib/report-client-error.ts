@@ -1,16 +1,26 @@
 import * as Sentry from '@sentry/nextjs';
+import type { ApplicationErrorCode } from '@/src/application/errors';
 
 type ClientErrorContext = {
   component?: string;
   action?: string;
 };
 
-const NON_REPORTABLE_CLIENT_ERROR_CODES = new Set([
-  'VALIDATION_ERROR',
-  'UNAUTHENTICATED',
-  'UNSUBSCRIBED',
-  'RATE_LIMITED',
-]);
+/**
+ * ActionResult error codes that represent expected business outcomes, not
+ * operational failures. These should never reach Sentry — they are normal
+ * UI-state transitions (e.g. "you need a subscription", "too many requests").
+ *
+ * New codes default to reportable. Only add a code here when you are certain
+ * it is an expected user-facing business outcome, not a system failure.
+ */
+const EXPECTED_BUSINESS_ERROR_CODES: ReadonlySet<ApplicationErrorCode> =
+  new Set<ApplicationErrorCode>([
+    'VALIDATION_ERROR',
+    'UNAUTHENTICATED',
+    'UNSUBSCRIBED',
+    'RATE_LIMITED',
+  ]);
 
 function getTags(
   context: ClientErrorContext | undefined,
@@ -32,8 +42,8 @@ export function shouldReportClientError(error: unknown): boolean {
     'code' in error &&
     typeof (error as { code?: unknown }).code === 'string'
   ) {
-    return !NON_REPORTABLE_CLIENT_ERROR_CODES.has(
-      (error as { code: string }).code,
+    return !EXPECTED_BUSINESS_ERROR_CODES.has(
+      (error as { code: string }).code as ApplicationErrorCode,
     );
   }
 
