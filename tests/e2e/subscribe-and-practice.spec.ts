@@ -31,11 +31,11 @@ test.describe('subscribe and practice', () => {
     await expect(verdictPill).toBeVisible();
     if ((await verdictPill.textContent())?.trim() === 'Incorrect') {
       await expect(
-        page.getByText('Correct answer', { exact: true }),
+        page.getByText('Correct Answer', { exact: true }),
       ).toBeVisible();
     } else {
       await expect(
-        page.getByText('Correct answer', { exact: true }),
+        page.getByText('Correct Answer', { exact: true }),
       ).toHaveCount(0);
     }
   });

@@ -534,8 +534,14 @@ describe('PracticeView', () => {
       />,
     );
 
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const feedbackCard = doc.querySelector('[role="status"]');
+    const correctAnswerChip = Array.from(
+      feedbackCard?.querySelectorAll('div, span') ?? [],
+    ).find((element) => element.textContent?.trim() === 'Correct Answer');
+
     expect(html).not.toContain('Your answer');
-    expect(html).toContain('Correct answer');
+    expect(correctAnswerChip?.textContent?.trim()).toBe('Correct Answer');
     expect(html).toContain('Choice A');
   });
 

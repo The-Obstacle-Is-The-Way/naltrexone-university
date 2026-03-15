@@ -35,11 +35,11 @@ test.describe('practice', () => {
     await expect(verdictPill).toBeVisible();
     if ((await verdictPill.textContent())?.trim() === 'Incorrect') {
       await expect(
-        page.getByText('Correct answer', { exact: true }),
+        page.getByText('Correct Answer', { exact: true }),
       ).toBeVisible();
     } else {
       await expect(
-        page.getByText('Correct answer', { exact: true }),
+        page.getByText('Correct Answer', { exact: true }),
       ).toHaveCount(0);
     }
     await expect(
@@ -82,7 +82,7 @@ test.describe('practice', () => {
 
     // Exam mode does not show explanation after submit
     await expect(
-      page.getByText('Correct answer', { exact: true }),
+      page.getByText('Correct Answer', { exact: true }),
     ).not.toBeVisible();
     await expect(
       page.getByRole('button', { name: 'Mark for review' }),

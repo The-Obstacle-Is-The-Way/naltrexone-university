@@ -1,6 +1,6 @@
 # Frontend Standards
 
-**Last Updated:** 2026-03-12
+**Last Updated:** 2026-03-15
 
 Canonical reference for all frontend patterns, component usage, accessibility, and styling conventions. Every UI change MUST be consistent with this document. If a pattern isn't documented here, don't invent one — add it here first.
 
@@ -364,12 +364,13 @@ Hover opacity is context-dependent. Use the Pattern Registry (`Part 1.2`, `I-1` 
 
 | Context | Canonical Pattern |
 |---------|-------------------|
-| Inside card surface | `transition-colors hover:bg-muted/40` |
-| On page background (standalone row) | `transition-colors hover:bg-muted/50` |
-| Direct-action target (choice/chip) | Use the component-specific Pattern Registry entry. Choice buttons use stepped fills (`hover:bg-muted/40` in light mode, `dark:hover:bg-foreground/15` in dark mode); filter chips use `hover:bg-muted/50`. |
+| Inside card surface (muted-scale row) | `transition-colors hover:bg-muted/40` |
+| On page background (muted-scale row) | `transition-colors hover:bg-muted/50` |
+| Tonal row / direct-action target | Use the component-specific Pattern Registry entry. Dashboard-style in-card tonal rows use `hover:bg-foreground/[0.08]`; standalone tonal rows use `hover:bg-foreground/[0.12]`; choice buttons use `hover:bg-foreground/[0.06] hover:border-foreground/55` in light mode and `dark:hover:bg-foreground/[0.05] dark:hover:border-foreground/50` on the unselected branch; filter chips use `hover:bg-foreground/[0.12] hover:border-foreground/60`. |
 
 Rules:
-- Always use the `muted` token for neutral hover backgrounds
+- Use the pattern's neutral fill scale. `muted` is for muted-scale rows/containers; `foreground` is for tonal-row families and direct-action surfaces whose registry entry calls for a foreground ramp.
+- For ChoiceButton (I-3), treat hover fills as replacements on `bg-card`, not layers over the rest `bg-background/50` surface. `hover:bg-*` overrides the rest background token in CSS.
 - Do not use `transition-all` for hover color changes
 - Link-only underline hovers (`hover:underline`) are a separate link pattern (see Pattern Registry Part 4)
 

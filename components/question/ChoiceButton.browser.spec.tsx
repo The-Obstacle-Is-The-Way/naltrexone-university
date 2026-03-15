@@ -55,6 +55,7 @@ test('retains selected treatment while hovered', async () => {
 
   const className = wrapperLabel.getAttribute('class') ?? '';
   expect(className).toContain('border-ring');
-  expect(className).toContain('bg-muted/40');
-  expect(className).not.toContain('hover:border-muted-foreground/30');
+  expect(className).toContain('bg-foreground/[0.08]');
+  expect(className).not.toContain('hover:border-foreground/55');
+  expect(className).not.toContain('hover:bg-foreground/[0.06]');
 });

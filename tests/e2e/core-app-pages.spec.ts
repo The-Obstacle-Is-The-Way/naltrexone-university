@@ -32,7 +32,7 @@ test.describe('core app pages', () => {
     // Create a missed question attempt via a deterministic seeded slug.
     await submitQuestionForOutcome(page, QUESTION_SLUG, 'Incorrect');
     await expect(
-      page.getByText('Correct answer', { exact: true }),
+      page.getByText('Correct Answer', { exact: true }),
     ).toBeVisible();
 
     await page.goto('/app/history?tab=questions&result=incorrect', {

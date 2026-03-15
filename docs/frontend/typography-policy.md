@@ -1,6 +1,6 @@
 # Typography Policy
 
-**Last Updated:** 2026-03-07
+**Last Updated:** 2026-03-15
 
 Canonical reference for how text sizing is controlled across the application. This document establishes the two-pipeline model, the subfamilies inside hardcoded UI text, and the content tier system that all typography decisions must follow.
 
@@ -37,7 +37,7 @@ Text in this application flows through two fundamentally different pipelines. Th
 | App page h1 | `text-2xl` | "Quick Practice", "Dashboard" |
 | Utility/auth h1 | `text-xl` | "Sign In", "Checkout complete" |
 | App/utility/section subtitle or helper copy | `text-base text-muted-foreground` | "Track your progress and keep your streak alive.", "Authentication unavailable in this environment." |
-| Section headers | `text-sm font-medium` | "Recent activity", "Correct answer" |
+| Section headers | `text-sm font-medium` | "Recent activity", "Mode" |
 | Labels / secondary text | `text-sm text-muted-foreground` | "Mar 7, 2026", "Showing 1-20 of 65" |
 | Stat numbers | `text-3xl font-bold font-display` | "848", "72%" |
 | Error details | `text-xs text-muted-foreground` | Digest codes, fallback messages |
@@ -76,6 +76,7 @@ Inside `components/question/feedback.tsx`, the learning context changes after su
 - explanation text is also promoted to Primary (`text-base text-foreground`) because it becomes the main learning payload
 - the feedback reference body is promoted from Tertiary to Secondary (`mt-1 text-sm`) because 12px citation text is too small for sustained dark-mode reading in this context
 - the fallback `Explanation not available.` placeholder stays recessed at `text-sm text-muted-foreground` because it is an empty-state message, not learning content
+- feedback section chips (`Correct Answer`, `Explanation`, `Why Other Answers Are Wrong`) are Pipeline 1 UI chrome, not Markdown content. Their size, weight, casing, and semantic/neutral variants are governed by [Pattern Registry F-8](./pattern-registry.md#f-8-feedback-section-chips).
 
 This is a **narrow feedback-surface exception**, not a blanket redefinition of explanations or references everywhere else in the product.
 
@@ -176,17 +177,17 @@ All `<Markdown>` call sites now carry tier-appropriate classNames. The 4 violati
 
 | Call Site | Expected Tier | Actual className | Status |
 |-----------|--------------|-----------------|--------|
-| `feedback.tsx:77` — correct answer text | Primary | `"text-base text-foreground"` | Compliant |
-| `feedback.tsx:84` — explanation | Primary (feedback-context override) | `explanationClassName` (`"mt-2 text-base text-foreground"` / `"text-base text-foreground"`) | Compliant |
-| `feedback.tsx:167` — wrong choice text (correct flow) | Primary | `"text-base text-foreground"` | Compliant |
-| `feedback.tsx:172` — wrong choice explanation (correct flow) | Primary (feedback-context override) | `"mt-2 text-base text-foreground"` | Compliant |
-| `feedback.tsx:194` — user answer text | Primary | `"text-base text-foreground"` | Compliant |
-| `feedback.tsx:200` — user answer explanation | Primary (feedback-context override) | `"mt-2 text-base text-foreground"` | Compliant |
-| `feedback.tsx:230` — other wrong choice text | Primary | `"text-base text-foreground"` | Compliant |
-| `feedback.tsx:235` — other wrong choice explanation | Primary (feedback-context override) | `"mt-2 text-base text-foreground"` | Compliant |
-| `feedback.tsx:252` — reference | Secondary (feedback-context override) | `"mt-1 text-sm"` | Compliant |
+| `feedback.tsx:93` — correct answer text | Primary | `"text-base text-foreground"` | Compliant |
+| `feedback.tsx:100` — explanation | Primary (feedback-context override) | `explanationClassName` (`"mt-2 text-base text-foreground"` / `"text-base text-foreground"`) | Compliant |
+| `feedback.tsx:184` — wrong choice text (correct flow) | Primary | `"text-base text-foreground"` | Compliant |
+| `feedback.tsx:189` — wrong choice explanation (correct flow) | Primary (feedback-context override) | `"mt-2 text-base text-foreground"` | Compliant |
+| `feedback.tsx:208` — user answer text | Primary | `"text-base text-foreground"` | Compliant |
+| `feedback.tsx:214` — user answer explanation | Primary (feedback-context override) | `"mt-2 text-base text-foreground"` | Compliant |
+| `feedback.tsx:244` — other wrong choice text | Primary | `"text-base text-foreground"` | Compliant |
+| `feedback.tsx:249` — other wrong choice explanation | Primary (feedback-context override) | `"mt-2 text-base text-foreground"` | Compliant |
+| `feedback.tsx:266` — reference | Secondary (feedback-context override) | `"mt-1 text-sm"` | Compliant |
 | `question-card.tsx:35` — stem | Primary | `"text-base text-foreground"` | Compliant |
-| `choice-button.tsx:72` — choice text | Primary | `"text-base text-foreground"` | Compliant |
+| `choice-button.tsx:74` — choice text | Primary | `"text-base text-foreground"` | Compliant |
 
 **Current open Pipeline 2 drift:** none.
 
