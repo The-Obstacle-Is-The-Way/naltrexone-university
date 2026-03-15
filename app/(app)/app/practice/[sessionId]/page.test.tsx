@@ -477,6 +477,57 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain('Question 2: Marked for review, Unanswered');
   });
 
+  it('normalizes array-valued toast param to first element', async () => {
+    const element = await PracticeSessionPage({
+      params: Promise.resolve({ sessionId: 'session-1' }),
+      searchParams: Promise.resolve({
+        toast: ['session_started', 'ignored'],
+      }),
+    } as never);
+
+    expect(element).toMatchObject({
+      props: { toast: 'session_started' },
+    });
+  });
+
+  it('normalizes array-valued requestedCount and actualCount params', async () => {
+    const element = await PracticeSessionPage({
+      params: Promise.resolve({ sessionId: 'session-1' }),
+      searchParams: Promise.resolve({
+        toast: ['session_started'],
+        requestedCount: ['20', '10'],
+        actualCount: ['15', '5'],
+      }),
+    } as never);
+
+    expect(element).toMatchObject({
+      props: {
+        toast: 'session_started',
+        requestedCount: '20',
+        actualCount: '15',
+      },
+    });
+  });
+
+  it('passes scalar toast params unchanged', async () => {
+    const element = await PracticeSessionPage({
+      params: Promise.resolve({ sessionId: 'session-1' }),
+      searchParams: Promise.resolve({
+        toast: 'session_started',
+        requestedCount: '20',
+        actualCount: '15',
+      }),
+    } as never);
+
+    expect(element).toMatchObject({
+      props: {
+        toast: 'session_started',
+        requestedCount: '20',
+        actualCount: '15',
+      },
+    });
+  });
+
   it('isQuestionBookmarked returns true when questionId is in set', async () => {
     expect(
       isQuestionBookmarked(
