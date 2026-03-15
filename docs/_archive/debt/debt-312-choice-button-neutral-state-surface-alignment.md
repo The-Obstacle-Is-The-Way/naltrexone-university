@@ -2,9 +2,13 @@
 
 **Priority:** P2
 **Created:** 2026-03-14
+**Status:** Resolved
+**Resolved:** 2026-03-15
+**Resolved in commits:** `f91bec51` (DEBT-312 baseline), `753db166` (final follow-up alignment via DEBT-313/314)
 **Source:** Quick Practice answer-choice contrast investigation (user-reported visual audit + repo-doc cross-check)
-**Status:** Open
 **Scope:** Neutral answer-choice states in `components/question/choice-button.tsx` across Quick Practice, active practice sessions, and review pages. Post-submit feedback cards are intentionally out of scope for this ticket.
+
+**Historical note:** This archived debt item records the original cross-theme alignment pass that replaced the old `muted`-opacity contract and locked in the branch-placement discipline still retained by the final implementation. The specific neutral rest surface proposed here was later refined by DEBT-313 after visual QA of the implemented result.
 
 ---
 
@@ -54,9 +58,9 @@ Implementation nuance that matters for this ticket:
 
 This conflicts with three repo-level decisions already captured elsewhere:
 
-1. **Required boundaries must clear 3:1** when the border is doing the work of defining the control. See [Contrast Policy](../frontend/contrast-policy.md) §3.2.
-2. **Light mode cannot depend on `bg-muted/*` opacity for meaningful affordance** on white or near-white surfaces. See [DEBT-262](../_archive/debt/debt-262-light-mode-opacity.md) and [Pattern Registry](../frontend/pattern-registry.md) Part 1.2.
-3. **Interactive children inside a card now generally use a foreground-based tonal ramp** (`bg-foreground/5`, `bg-foreground/[0.08]`, etc.) rather than white-on-white `muted` whisper fills. See [Practice](../frontend/pages/practice.md), [Dashboard](../frontend/pages/dashboard.md), [DEBT-291](../_archive/debt/debt-291-filter-chip-light-mode-border-contrast.md), and [DEBT-309](../_archive/debt/debt-309-filter-chip-hover-border-affordance.md).
+1. **Required boundaries must clear 3:1** when the border is doing the work of defining the control. See [Contrast Policy](../../frontend/contrast-policy.md) §3.2.
+2. **Light mode cannot depend on `bg-muted/*` opacity for meaningful affordance** on white or near-white surfaces. See [DEBT-262](./debt-262-light-mode-opacity.md) and [Pattern Registry](../../frontend/pattern-registry.md) Part 1.2.
+3. **Interactive children inside a card now generally use a foreground-based tonal ramp** (`bg-foreground/5`, `bg-foreground/[0.08]`, etc.) rather than white-on-white `muted` whisper fills. See [Practice](../../frontend/pages/practice.md), [Dashboard](../../frontend/pages/dashboard.md), [DEBT-291](./debt-291-filter-chip-light-mode-border-contrast.md), and [DEBT-309](./debt-309-filter-chip-hover-border-affordance.md).
 
 ---
 
@@ -95,7 +99,7 @@ This is not just "taste drift." It is a pattern-level inconsistency:
 
 - `ChoiceButton` still uses the old light-mode `muted` opacity recipe
 - the rest of the question-adjacent UI has already moved toward a clearer foreground-tonal hierarchy
-- the page inventory for [Quick Practice](../frontend/pages/quick-practice.md) is dark-mode-only, so the light-mode weakness was never fully documented
+- the page inventory for [Quick Practice](../../frontend/pages/quick-practice.md) is dark-mode-only, so the light-mode weakness was never fully documented
 
 The result is a high-frequency core interaction that no longer feels visually integrated with the newer practice/dashboard surface system.
 
@@ -239,10 +243,10 @@ Validate in all of these contexts because `ChoiceButton` is shared:
 
 ## Relationship to Existing Work
 
-- **Extends [DEBT-280](../_archive/debt/debt-280-choice-button-dark-mode-surface-refinement.md)** from dark-mode refinement into a cross-theme neutral-state alignment pass
-- **Applies the same light-mode reasoning used by [DEBT-291](../_archive/debt/debt-291-filter-chip-light-mode-border-contrast.md)**: foreground-based borders are required when white/light surfaces make semantic `border` tokens too quiet
-- **Builds on [DEBT-309](../_archive/debt/debt-309-filter-chip-hover-border-affordance.md)**: hover needs an edge-level cue, not just a tiny fill change
-- **Closes a documentation gap left by the current [Quick Practice page inventory](../frontend/pages/quick-practice.md)**, which only audits dark mode
+- **Extends [DEBT-280](./debt-280-choice-button-dark-mode-surface-refinement.md)** from dark-mode refinement into a cross-theme neutral-state alignment pass
+- **Applies the same light-mode reasoning used by [DEBT-291](./debt-291-filter-chip-light-mode-border-contrast.md)**: foreground-based borders are required when white/light surfaces make semantic `border` tokens too quiet
+- **Builds on [DEBT-309](./debt-309-filter-chip-hover-border-affordance.md)**: hover needs an edge-level cue, not just a tiny fill change
+- **Closes a documentation gap left by the current [Quick Practice page inventory](../../frontend/pages/quick-practice.md)**, which only audits dark mode
 
 ---
 

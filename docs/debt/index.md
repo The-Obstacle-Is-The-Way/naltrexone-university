@@ -19,9 +19,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
 | [DEBT-286](./debt-286-client-side-error-reporting.md) | Client-Side Caught Error Reporting — complete SPEC-016 rollout; `Sentry.captureException()` never called in `app/` + `src/`; 10 verified client-side flows still report only to console or silent fallbacks | P2 | — |
-| [DEBT-312](./debt-312-choice-button-neutral-state-surface-alignment.md) | Choice Button Neutral-State Surface Alignment — replace the light-mode white-on-white `muted` recipe with a foreground-tonal hybrid boundary/surface pattern, and restore subtle containment in dark mode without reviving the old boxed look | P2 | — |
-| [DEBT-313](./debt-313-choice-button-dark-surface-and-badge-visibility.md) | Choice Button Dark Surface & Badge Visibility — follow-up to DEBT-312; revises the implemented rest surface (`bg-foreground/5` → `bg-background/50`), drops the light gray tint, and fixes letter-badge visibility across ChoiceButton and Feedback | P1 | — |
-| [DEBT-314](./debt-314-feedback-section-label-chip-consistency.md) | Feedback Section Label Chip Consistency — convert the current plain-text feedback section labels (`"Correct answer"` / `"Explanation"` when shown, plus `"Why other answers are wrong"`) to neutral muted chips; drop the trailing colon while preserving existing `showLabel` behavior | P3 | — |
 **Next Debt ID:** DEBT-315
 
 ---
@@ -30,6 +27,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-314](../_archive/debt/debt-314-feedback-section-label-chip-consistency.md) | Feedback Section Label Chip Consistency — converted the feedback section's plain-text labels into neutral muted chips, removed the trailing colon from `"Why other answers are wrong"`, and preserved the existing `showLabel` behavior | P3 | 2026-03-15 | — |
+| [DEBT-313](../_archive/debt/debt-313-choice-button-dark-surface-and-badge-visibility.md) | Choice Button Dark Surface & Badge Visibility — replaced the DEBT-312 gray rest fill with the recessed `bg-background/50` dark-surface model, calibrated hover/selected ramps, and fixed neutral badge visibility across ChoiceButton and Feedback | P1 | 2026-03-15 | — |
+| [DEBT-312](../_archive/debt/debt-312-choice-button-neutral-state-surface-alignment.md) | Choice Button Neutral-State Surface Alignment — landed the cross-theme required-boundary branch discipline and light-mode neutral-state alignment later refined by DEBT-313 | P2 | 2026-03-15 | — |
 | [DEBT-311](../_archive/debt/debt-311-practice-mode-questions-alignment.md) | Practice Page — bottom-align the mixed-height Mode/Questions controls at `sm`, and replace duplicate Practice starter SegmentedControl legends with visible-label `aria-labelledby` wiring | P3 | 2026-03-13 | — |
 | [DEBT-310](../_archive/debt/debt-310-stripe-stale-price-id-in-production-db.md) | Production Neon `main` contained non-production Stripe subscription rows (one manual old-price seed, one E2E test subscription); deleting the polluted subscription rows resolved the `/app/dashboard` crash | P1 | 2026-03-13 | — |
 | [DEBT-309](../_archive/debt/debt-309-filter-chip-hover-border-affordance.md) | FilterChip Hover Affordance — add `hover:border-foreground/60` (light) and `dark:hover:border-foreground/70` (dark), bump fill hover from `[0.10]` to `[0.12]` (+5pp delta); current hover is only a 3pp fill bump with no border change, barely perceptible | P3 | 2026-03-13 | — |

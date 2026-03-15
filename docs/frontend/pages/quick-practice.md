@@ -295,4 +295,4 @@ Keep WCAG compliance. The selected state gets an additional ring to clearly diff
 
 ## Scope Note
 
-This inventory covers the Quick Practice question-answering page only. It now documents the current DEBT-312 cross-theme choice-button contract and retains the older dark-mode-only DEBT-280 appendix for historical context. The Practice Starter page (`/app/practice`) has its own page inventory at [practice.md](./practice.md), and its filter-container/chip surface work is tracked under [DEBT-290](../../_archive/debt/debt-290-practice-filter-tonal-fill-elevation.md).
+This inventory covers the Quick Practice question-answering page only. It now documents the current DEBT-313 cross-theme choice-button contract and retains the older dark-mode-only DEBT-280 appendix for historical context. The Practice Starter page (`/app/practice`) has its own page inventory at [practice.md](./practice.md), and its filter-container/chip surface work is tracked under [DEBT-290](../../_archive/debt/debt-290-practice-filter-tonal-fill-elevation.md).

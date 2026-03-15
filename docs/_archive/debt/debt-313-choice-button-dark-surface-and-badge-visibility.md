@@ -2,8 +2,10 @@
 
 **Priority:** P1
 **Created:** 2026-03-15
+**Status:** Resolved
+**Resolved:** 2026-03-15
+**Resolved in commit:** `753db166`
 **Source:** Post-implementation visual QA of DEBT-312
-**Status:** Open
 **Follow-up to:** DEBT-312 (revises the implemented rest-surface direction and badge scope only — DEBT-312's branch placement discipline and light-mode required-boundary strategy remain correct)
 **Scope:** Neutral answer-choice rest surface in `components/question/choice-button.tsx` and letter-badge visibility across `ChoiceButton` and `Feedback`. Post-submit feedback card fills are the reference model, not the change target.
 
@@ -68,7 +70,7 @@ Measured against `dark:bg-background/50`, the softer candidates that initially l
 | `dark:border-foreground/[0.38]` | ~3.20:1 | First softer compliant candidate |
 | `dark:border-foreground/40` | ~3.42:1 | Compliant and already proven in `Feedback` |
 
-ChoiceButton's edge is still a required boundary under the current [Contrast Policy](../frontend/contrast-policy.md). DEBT-313 should not reclassify it as supplementary just to justify a softer border. If post-implementation QA still finds `/40` a touch too bright, the only named softening candidate in this debt item is `dark:border-foreground/[0.38]`; do not drop below compliance.
+ChoiceButton's edge is still a required boundary under the current [Contrast Policy](../../frontend/contrast-policy.md). DEBT-313 should not reclassify it as supplementary just to justify a softer border. If post-implementation QA still finds `/40` a touch too bright, the only named softening candidate in this debt item is `dark:border-foreground/[0.38]`; do not drop below compliance.
 
 ### 3. Light-mode rest fill: drop the gray tint
 

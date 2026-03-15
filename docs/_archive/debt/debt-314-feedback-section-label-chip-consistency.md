@@ -2,8 +2,10 @@
 
 **Priority:** P3
 **Created:** 2026-03-15
+**Status:** Resolved
+**Resolved:** 2026-03-15
+**Resolved in commit:** `753db166`
 **Source:** Visual QA of feedback section post-submit UI
-**Status:** Open
 **Scope:** Programmatic section labels inside `components/question/feedback.tsx` — the `CorrectAnswerSection` label (`"Correct answer"` / `"Explanation"` when `showLabel` is true) and the two `"Why other answers are wrong:"` headings. The verdict pill, reference separator label, and Markdown-rendered clinical pearl callout are reference points, not change targets.
 
 ---
