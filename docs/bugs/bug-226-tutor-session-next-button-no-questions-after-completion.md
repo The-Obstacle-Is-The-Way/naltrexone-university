@@ -1,4 +1,4 @@
-# BUG-226: Tutor Session "Next" Button Shows "No More Questions" After All Answered
+# BUG-226: Completed Session "Next" Button Can Dead-End Into "No More Questions"
 
 **Status:** Open
 **Priority:** P2
@@ -6,37 +6,49 @@
 
 ## Summary
 
-Once all questions in a tutor practice session are answered, the "Next" button on any completed question shows "No more questions found. End session" instead of advancing to the next question by index. The question navigator buttons (1–5) still work correctly because they use direct `questionId` navigation, but the primary "Next" action only searches for the next *unanswered* question — and finds none.
+When a user reopens an earlier question inside a completed practice session and clicks "Next", the session page can show "No more questions found. End session" instead of navigating to the next available question. The page decides whether the "Next" button should be visible from the navigator's `nextQuestionId`, but the click handler still routes through the unanswered-only `fromIndex` path. This is not tutor-only; the session flow is mode-agnostic, so exam sessions can hit the same path after completion if the user navigates backward before entering review.
 
 ## Impact
 
-- After completing a 5-question tutor session, clicking "Next" on question 3 does not go to question 4 — it shows the empty state.
-- The user's only recourse is to manually click a numbered navigator button or end the session.
-- This makes post-completion review feel broken. The "Previous" button works because it navigates by ID, but forward navigation is effectively disabled once the session is complete.
-- This is a UX-level regression that affects every completed tutor session.
+- In a completed tutor session, reopening question 3 and clicking "Next" can dead-end into the empty state instead of opening question 4.
+- In a completed exam session, the same dead-end is reachable if the user navigates back to an earlier answered question before entering review.
+- Previous and numbered navigator buttons still work, so the UI presents contradictory navigation behavior on the same screen.
+- The bug is confined to session-based practice. Quick practice is unaffected.
 
 ## Verification Notes
 
-1. `src/application/use-cases/get-next-question.ts:158-187` — `targetQuestionId` resolution only searches for unanswered questions when `fromIndex` is provided (via `!state.latestSelectedChoiceId` filter). Returns `null` when all questions have a `latestSelectedChoiceId`.
-2. `src/application/use-cases/get-next-question.test.ts:591-613` — Test `'returns null when session is complete'` explicitly asserts `null` return when all questions are answered. This confirms the behavior is codified (by-design for "advance", but wrong for "review next").
-3. `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts:158-179` — `onNextQuestion` passes `fromIndex` (current question index) but no `questionId`, so the use case enters the unanswered-search path.
-4. `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts:146-156` — `onNavigateQuestion` passes a specific `questionId`, bypassing the unanswered filter entirely. This is why navigator buttons still work.
-5. `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:84-99` — View computes `nextQuestionId` from navigator rows using `row.isAvailable` (not unanswered status), but this ID is only used for the navigator, not for the "Next" action.
-6. `app/(app)/app/practice/components/practice-view.tsx:229-245` — Renders "No more questions found." when `loadState.status === 'ready' && props.question === null`.
+### Vertical tracer bullets
+
+1. `app/(app)/app/practice/components/practice-view.tsx:312-323` renders the "Next" button and calls `props.onNextQuestion`.
+2. `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:84-99,183-240` computes `nextQuestionId` from navigator rows and `row.isAvailable`, but only uses that value to set `hasNextQuestion={nextQuestionId !== null}`. The click path is still `onNextQuestion={props.onNextQuestion}`. `Previous` is different: `101-105` calls `onNavigateQuestion(previousQuestionId)` directly.
+3. `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts:146-173` shows the exact asymmetry. `onNavigateQuestion` calls `loadNextQuestion({ questionId })`, while `onNextQuestion` computes `fromIndex` from the current session index and calls `loadNextQuestion({ fromIndex })`.
+4. `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts:28-57` forwards either `questionId` or `fromIndex` into the generic load flow. `src/adapters/controllers/question-controller.ts:192-204` forwards those same fields into `GetNextQuestionUseCase.execute(...)`.
+5. `src/application/use-cases/get-next-question.ts:158-187` uses `questionId` directly, but the `fromIndex` branch only scans unanswered states: forward, then wrapped, then the current unanswered state. There is no next-by-index fallback. If every state has `latestSelectedChoiceId`, it returns `null`.
+6. `app/(app)/app/practice/shared/question-flow-actions.ts:113-117` commits `res.data` directly. When `res.data` is `null`, the question becomes `null` while `loadState` still transitions to `ready`.
+7. `app/(app)/app/practice/components/practice-view.tsx:229-245` renders "No more questions found." exactly when `loadState.status === 'ready' && props.question === null`.
+8. `src/application/use-cases/get-next-question.test.ts:224-326` covers unanswered `fromIndex` behavior, and `src/application/use-cases/get-next-question.test.ts:591-613` covers the initial-load complete-session `null` case. There is no existing test for the completed-session `Next` path with `fromIndex`.
+
+### Horizontal tracer bullets
+
+1. The production `getNextQuestion` callers are quick practice and session practice. Only the session flow passes `fromIndex`; quick practice uses filter-based loading only (`app/(app)/app/practice/hooks/use-practice-question-answer-flow.ts:170-183`, `app/(app)/app/practice/quick/quick-practice-client.tsx:72-118`). The bug is therefore session-only.
+2. The `onNextQuestion` versus `onNavigateQuestion` asymmetry exists only in `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts`. Non-session practice has no sibling-question ID navigation.
+3. Exam mode shares the same session view, hook, page logic, controller, and use-case path. `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts:146-163` auto-advances after submit while unanswered questions remain, which hides the bug during ordinary exam progression, but it does not change the completed-session back-navigation path. This is an inference from the shared code path.
+4. Previous navigation does not have the inverse bug because it is ID-based in the page view (`app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:101-105`).
+5. "No more questions found." appears elsewhere in quick/general practice and is correct there. It is only wrong in session practice when `null` is produced by the mismatched completed-session `Next` path.
 
 ## Root Cause
 
-The `GetNextQuestionUseCase` conflates two distinct navigation intents:
+This is a navigation-contract mismatch, not just a use-case defect:
 
-- **"Advance"** (during active play): find the next unanswered question — correct behavior.
-- **"Next"** (during post-completion review): navigate to the next question by session index — broken because the same unanswered-search path returns `null`.
-
-The navigator buttons avoid this because they call `onNavigateQuestion(questionId)` with an explicit ID, which hits the `typeof questionId === 'string'` branch (line 159) and returns that question directly.
+- The session page decides whether a next question exists by computing `nextQuestionId` from navigator rows and `row.isAvailable`.
+- The same page then ignores that concrete ID and dispatches the "Next" click through `onNextQuestion()`, which only supplies `fromIndex`.
+- `GetNextQuestionUseCase` treats `fromIndex` as "find the next unanswered question", not "open the next available session question".
+- Once the session is complete, those two definitions diverge. The UI can show a valid "Next" button while the load path still returns `null`.
 
 ## Precise TDD Fix
 
-1. Add failing test in `get-next-question.test.ts` for the scenario: all questions answered, `fromIndex` provided — should return the next question by index rather than `null`.
-2. Update the `targetQuestionId` resolution in `get-next-question.ts:158-187`: when the unanswered search returns `null` and `fromIndex` is provided, fall back to the next question by index order (`orderedStates[startIndex + 1]?.questionId`) instead of returning `null`.
-3. Update or replace the existing `'returns null when session is complete'` test: `null` should only be returned when `fromIndex` is at the last question AND all are answered (i.e., there is genuinely no next question in the sequence).
-4. Verify the "Previous" direction is unaffected (it already navigates by ID via navigator).
-5. Verify exam-mode sessions are unaffected (exam mode may have different completion semantics).
+1. Add a failing session-navigation test at the UI/controller boundary, not just the use case. The red test should cover: completed session, user reopens a non-final question, the navigator has a next available row, and clicking "Next" opens that row instead of the empty state.
+2. Mirror the existing "Previous" behavior for forward navigation: when the session page already knows `nextQuestionId`, route the click through `onNavigateQuestion(nextQuestionId)` (or an equivalent explicit-ID API) instead of the unanswered-only `fromIndex` path.
+3. Keep `fromIndex` semantics for active-play advance and exam auto-advance, where "next unanswered" remains the correct behavior.
+4. Preserve the existing `returns null when session is complete` use-case contract for the no-`questionId`, no-`fromIndex` initial-load path. Add new tests for completed-session review navigation rather than rewriting that test to assert different semantics.
+5. Verify both tutor and exam completed-session back-navigation flows. Verify quick practice remains unchanged.

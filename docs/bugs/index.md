@@ -15,9 +15,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 **Next Bug ID:** BUG-227
 
-**Manual report (2026-03-15) — tutor session post-completion navigation:**
+**Manual report (2026-03-15) — completed-session navigation:**
 
-- [BUG-226](bug-226-tutor-session-next-button-no-questions-after-completion.md): **P2** — "Next" button shows "No more questions found" once all session questions are answered. `GetNextQuestionUseCase` only searches for unanswered questions; should fall back to next-by-index when reviewing.
+- [BUG-226](bug-226-tutor-session-next-button-no-questions-after-completion.md): **P2** — Session "Next" button can dead-end into "No more questions found" after completion because the page ignores navigator `nextQuestionId` and still routes through unanswered-only `fromIndex`.
 
 ---
 
@@ -72,6 +72,7 @@ Active open bugs are listed below.
 
 | Bug | Family | Priority | Summary |
 |-----|--------|----------|---------|
+| [BUG-226](./bug-226-tutor-session-next-button-no-questions-after-completion.md) | Practice / session navigation | P2 | Completed-session "Next" can dead-end into "No more questions found" because the view shows availability from navigator rows but dispatches through unanswered-only `fromIndex` |
 | [BUG-221](./bug-221-checkout-success-repeated-session-id-breaks-sync.md) | Search params / checkout | P3 | Repeated `session_id` arrays are forwarded as invalid input and bounce successful checkout returns to the generic error route |
 | [BUG-222](./bug-222-pricing-page-array-query-banners.md) | Search params / pricing | P4 | Pricing page still assumes scalar `checkout` / `reason` params, hiding recovery banners and manage-billing CTA |
 | [BUG-223](./bug-223-bookmarks-page-array-query-feedback-loss.md) | Search params / bookmarks | P4 | Repeated `error` / `toast` params suppress remove-bookmark feedback |
