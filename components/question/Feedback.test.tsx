@@ -97,6 +97,22 @@ function findSectionLabel(
   ) as HTMLElement | undefined;
 }
 
+function expectNodeBefore(
+  first: Node | null | undefined,
+  second: Node | null | undefined,
+) {
+  expect(first).toBeDefined();
+  expect(second).toBeDefined();
+  if (!first || !second) {
+    return;
+  }
+
+  const position = first.compareDocumentPosition(second);
+  expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+    Node.DOCUMENT_POSITION_FOLLOWING,
+  );
+}
+
 function expectNeutralChip(element: Element | undefined) {
   expect(element).not.toBeUndefined();
   const chipTokens = getClassTokens(element?.getAttribute('class') ?? '');
@@ -881,7 +897,7 @@ describe('Feedback', () => {
     expect(html).toContain('Second option');
     expect(correctAnswerTextTokens.has('text-base')).toBe(true);
     expect(correctAnswerTextTokens.has('text-foreground')).toBe(true);
-    expect(html).not.toContain('>Explanation<');
+    expect(findSectionLabel(doc, 'Explanation')).toBeUndefined();
   });
 
   it('falls back to explanation heading when no correct choice details are available', () => {
@@ -893,7 +909,7 @@ describe('Feedback', () => {
     const explanationLabel = findSectionLabel(doc, 'Explanation');
 
     expectNeutralChip(explanationLabel);
-    expect(html).toContain('>Explanation<');
+    expect(explanationLabel?.textContent?.trim()).toBe('Explanation');
     expect(findSectionLabel(doc, 'Correct Answer')).toBeUndefined();
   });
 
@@ -1201,9 +1217,15 @@ describe('Feedback', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const incorrectIndex = html.indexOf('Incorrect');
-    const correctAnswerIndex = html.indexOf('Correct Answer');
-    const yourAnswerIndex = html.indexOf('Your answer');
+    const verdictPill = Array.from(doc.querySelectorAll('div, span')).find(
+      (element) =>
+        element.textContent?.trim() === 'Incorrect' &&
+        (element.getAttribute('class') ?? '').includes('self-start'),
+    );
+    const correctAnswerLabel = findSectionLabel(doc, 'Correct Answer');
+    const yourAnswerSectionLabel = Array.from(doc.querySelectorAll('div')).find(
+      (div) => div.textContent?.trim() === 'Your answer',
+    );
     const destructiveCard = findStyledCard(
       doc,
       ['rounded-xl', 'border-destructive', 'bg-destructive/5', 'p-4'],
@@ -1219,10 +1241,9 @@ describe('Feedback', () => {
       yourAnswerText?.getAttribute('class') ?? '',
     );
 
-    expect(yourAnswerIndex).toBe(-1);
-    expect(incorrectIndex).toBeGreaterThanOrEqual(0);
-    expect(correctAnswerIndex).toBeGreaterThanOrEqual(0);
-    expect(incorrectIndex).toBeLessThan(correctAnswerIndex);
+    expect(verdictPill?.textContent?.trim()).toBe('Incorrect');
+    expect(yourAnswerSectionLabel).toBeUndefined();
+    expectNodeBefore(destructiveCard, correctAnswerLabel);
     expect(yourAnswerBadge).not.toBeUndefined();
     expect(yourAnswerBadge?.getAttribute('class')).toContain('rounded-full');
     expect(html).toContain('First option');
@@ -1358,14 +1379,17 @@ describe('Feedback', () => {
     const yourAnswerSectionLabel = Array.from(doc.querySelectorAll('div')).find(
       (div) => div.textContent?.trim() === 'Your answer',
     );
-    const correctChoiceIndex = html.indexOf('Third option');
-    const wrongAnswersHeadingIndex = html.indexOf(
+    const correctAnswerCard = findStyledCard(
+      doc,
+      ['rounded-xl', 'border-success/60', 'bg-success/5', 'p-4'],
+      { label: 'C', text: 'Third option' },
+    );
+    const wrongAnswersHeading = findSectionLabel(
+      doc,
       'Why Other Answers Are Wrong',
     );
 
-    expect(correctChoiceIndex).toBeGreaterThanOrEqual(0);
-    expect(wrongAnswersHeadingIndex).toBeGreaterThanOrEqual(0);
-    expect(correctChoiceIndex).toBeLessThan(wrongAnswersHeadingIndex);
+    expectNodeBefore(correctAnswerCard, wrongAnswersHeading);
     expect(findSectionLabel(doc, 'Correct Answer')).toBeUndefined();
     expect(findSectionLabel(doc, 'Explanation')).toBeUndefined();
     expect(yourAnswerSectionLabel).toBeUndefined();

@@ -454,10 +454,10 @@ describe('QuestionView', () => {
     });
 
     expect(yourAnswerCard).not.toBeNull();
+    expect(correctAnswerHeading?.textContent?.trim()).toBe('Correct Answer');
     expect(correctAnswerCard).not.toBeNull();
     expect(yourAnswerBadge).not.toBeUndefined();
     expect(correctAnswerBadge).not.toBeUndefined();
-    expect(html).toContain('Correct Answer');
     expect(html).toContain('Choice A text');
     expect(html).toContain('Choice B text');
     expect(html).toContain('A explanation');
