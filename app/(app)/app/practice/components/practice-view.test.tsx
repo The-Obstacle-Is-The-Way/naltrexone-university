@@ -535,7 +535,7 @@ describe('PracticeView', () => {
     );
 
     expect(html).not.toContain('Your answer');
-    expect(html).toContain('Correct answer');
+    expect(html).toContain('>Correct<');
     expect(html).toContain('Choice A');
   });
 

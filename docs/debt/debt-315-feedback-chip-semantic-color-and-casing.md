@@ -10,47 +10,95 @@
 
 ## Context
 
-DEBT-314 converted the plain-text section labels to neutral muted chips. The shape and structure are correct, but post-implementation visual QA surfaced three remaining polish items.
+DEBT-314 converted the plain-text section labels to neutral muted chips with `uppercase tracking-wide`. The chip shape is correct, but the screaming caps and neutral color on the "Correct answer" label look unbalanced next to the verdict pill's clean title case. The neutral chip is also too subtle in dark mode.
 
 ---
 
-## Issues
+## Changes
 
-### 1. "Correct answer" should be "Correct" with a green semantic chip
+### 1. "Correct answer" → "Correct" with green semantic chip
 
-The section label currently says "CORRECT ANSWER" in a neutral muted chip (`bg-muted text-foreground/60`). It should:
-- Drop "answer" → just "Correct"
-- Use a green semantic chip: `bg-success/15 text-success` instead of `bg-muted text-foreground/60`
-- This creates a clear visual parallel with the red "Incorrect" verdict pill at the top
+- Drop "answer" → just `"Correct"`
+- Use `bg-success/15 text-success` instead of `bg-muted text-foreground/60`
+- Drop `uppercase tracking-wide` → use title case to match the verdict pill's balanced feel
+- Keep `rounded-full px-3 py-1 text-xs font-semibold`
+- "Explanation" fallback (when no `correctChoice`) remains neutral muted, also title case
 
-The "Explanation" fallback label (when no `correctChoice` exists) should remain neutral muted.
+### 2. "Why other answers are wrong" → title case, stronger contrast
 
-### 2. Casing inconsistency between verdict pill and section labels
+- Drop `uppercase tracking-wide` → title case: `"Why other answers are wrong"`
+- Strengthen dark-mode chip: `bg-muted dark:bg-foreground/10` instead of plain `bg-muted`
+- Keep `text-foreground/60` for text color — with the stronger background it will read clearly
+- Keep `rounded-full px-3 py-1 text-xs font-semibold`
 
-The verdict pill ("Correct" / "Incorrect") uses title case at `text-sm`. The DEBT-314 section labels use `uppercase text-xs tracking-wide`. These are intentionally different visual tiers, but the coexistence of "Incorrect" (title case) and "CORRECT ANSWER" (all caps) on the same card looks inconsistent.
+### 3. Reference label — no change
 
-Options to evaluate:
-- Keep the tier distinction (different sizes justify different casing)
-- Remove `uppercase` from the section chips to match the verdict pill's casing
-- Add `uppercase` to the verdict pill to match the section chips
+The "REFERENCE" label stays exactly as-is. It uses a different visual pattern (separator label, not a section chip) and its `uppercase tracking-wide` convention is correct for that tier.
 
-### 3. "Why other answers are wrong" chip slightly too light in dark mode
+---
 
-The neutral muted chip (`bg-muted text-foreground/60`) is very subtle in dark mode. Consider `bg-foreground/[0.08] text-foreground/60` or `bg-muted dark:bg-foreground/10` for more presence.
+## Recommended Token Baseline
+
+### "Correct" section chip (when `correctChoice` exists)
+
+```tsx
+<span className="inline-flex rounded-full bg-success/15 px-3 py-1 text-xs font-semibold text-success">
+  Correct
+</span>
+```
+
+### "Explanation" section chip (fallback, no `correctChoice`)
+
+```tsx
+<span className="inline-flex rounded-full bg-muted px-3 py-1 text-xs font-semibold text-foreground/60 dark:bg-foreground/10">
+  Explanation
+</span>
+```
+
+### "Why other answers are wrong" section chip
+
+```tsx
+<span className="inline-flex rounded-full bg-muted px-3 py-1 text-xs font-semibold text-foreground/60 dark:bg-foreground/10">
+  Why other answers are wrong
+</span>
+```
 
 ---
 
 ## Files In Scope
 
+### Production
+
 | File | Change |
 |------|--------|
-| `components/question/feedback.tsx` | Update chip text/color for "Correct" label, evaluate casing, possibly strengthen neutral chip |
-| `components/question/Feedback.test.tsx` | Update assertions for changed label text and chip tokens |
+| `components/question/feedback.tsx` | Update "Correct answer" label to green semantic "Correct" chip; drop `uppercase tracking-wide` from all section chips; strengthen neutral chip dark-mode fill; text stays title case |
+
+### Tests
+
+| File | Change |
+|------|--------|
+| `components/question/Feedback.test.tsx` | Update label text assertions ("Correct answer" → "Correct"); update chip token assertions (add `bg-success/15 text-success` for correct label, `dark:bg-foreground/10` for neutral chips); assert `uppercase` is absent from section chips |
 
 ---
 
 ## Out of Scope
 
-- Verdict pill styling ("Correct" / "Incorrect") — evaluate casing alignment but do not change semantic colors
+- Verdict pill styling ("Correct" / "Incorrect") — unchanged
+- Reference label — unchanged, different visual tier
+- Clinical Pearl label — rendered by Markdown.tsx, not feedback.tsx
 - Choice button surface tokens — tracked in DEBT-313
-- Reference and Clinical Pearl labels — separate visual tier
+
+---
+
+## Test Plan
+
+### Unit coverage
+
+1. "Correct" label uses `bg-success/15 text-success` (not `bg-muted text-foreground/60`)
+2. "Correct" label text is `"Correct"` (not `"Correct answer"`)
+3. "Explanation" label retains neutral muted chip with `dark:bg-foreground/10`
+4. "Why other answers are wrong" label uses neutral muted chip with `dark:bg-foreground/10`
+5. No section chip contains `uppercase` or `tracking-wide`
+6. Verdict pill remains unchanged
+7. Reference label remains unchanged
+8. `showLabel={false}` behavior preserved in correct flow

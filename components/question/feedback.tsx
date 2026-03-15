@@ -68,8 +68,15 @@ function CorrectAnswerSection({
   return (
     <div className={sectionClassName}>
       {showLabel ? (
-        <span className="inline-flex rounded-full bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-wide text-foreground/60">
-          {correctChoice ? 'Correct answer' : 'Explanation'}
+        <span
+          className={cn(
+            'inline-flex rounded-full px-3 py-1 text-xs font-semibold',
+            correctChoice
+              ? 'bg-success/15 text-success'
+              : 'bg-muted text-foreground/60 dark:bg-foreground/10',
+          )}
+        >
+          {correctChoice ? 'Correct' : 'Explanation'}
         </span>
       ) : null}
       <div
@@ -161,7 +168,7 @@ export function Feedback({
 
           {shouldRenderChoiceExplanations ? (
             <div className="mt-4">
-              <span className="inline-flex rounded-full bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-wide text-foreground/60">
+              <span className="inline-flex rounded-full bg-muted px-3 py-1 text-xs font-semibold text-foreground/60 dark:bg-foreground/10">
                 Why other answers are wrong
               </span>
               <div className="mt-2 space-y-3">
@@ -221,7 +228,7 @@ export function Feedback({
 
           {shouldRenderOtherWrongChoices ? (
             <div className="mt-4">
-              <span className="inline-flex rounded-full bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-wide text-foreground/60">
+              <span className="inline-flex rounded-full bg-muted px-3 py-1 text-xs font-semibold text-foreground/60 dark:bg-foreground/10">
                 Why other answers are wrong
               </span>
               <div className="mt-2 space-y-3">

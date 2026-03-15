@@ -91,7 +91,9 @@ function findSectionLabel(
   text: string,
 ): HTMLElement | undefined {
   return Array.from(container.querySelectorAll('div, span')).find(
-    (element) => element.textContent?.trim() === text,
+    (element) =>
+      element.textContent?.trim() === text &&
+      (element.getAttribute('class') ?? '').includes('text-xs'),
   ) as HTMLElement | undefined;
 }
 
@@ -106,11 +108,27 @@ function expectNeutralChip(element: Element | undefined) {
       'bg-muted',
       'text-xs',
       'font-semibold',
-      'uppercase',
-      'tracking-wide',
       'text-foreground/60',
+      'dark:bg-foreground/10',
     ],
-    ['text-sm', 'font-medium', 'text-foreground'],
+    ['text-sm', 'font-medium', 'text-foreground', 'uppercase', 'tracking-wide'],
+  );
+}
+
+function expectCorrectChip(element: Element | undefined) {
+  expect(element).not.toBeUndefined();
+  const chipTokens = getClassTokens(element?.getAttribute('class') ?? '');
+  expectTokens(
+    chipTokens,
+    [
+      'inline-flex',
+      'rounded-full',
+      'bg-success/15',
+      'text-xs',
+      'font-semibold',
+      'text-success',
+    ],
+    ['bg-muted', 'text-foreground/60', 'uppercase', 'tracking-wide'],
   );
 }
 
@@ -239,8 +257,8 @@ describe('Feedback', () => {
     expect(successCardText).toContain('B');
     expect(successCardText).toContain('Second option');
     expect(successCardText).toContain('General explanation.');
-    expect(html).not.toContain('Correct answer');
-    expect(html).not.toContain('>Explanation<');
+    expect(findSectionLabel(doc, 'Correct')).toBeUndefined();
+    expect(findSectionLabel(doc, 'Explanation')).toBeUndefined();
     expect(correctAnswerText).not.toBeUndefined();
     expect(correctAnswerTextTokens.has('text-base')).toBe(true);
     expect(correctAnswerTextTokens.has('text-foreground')).toBe(true);
@@ -280,8 +298,8 @@ describe('Feedback', () => {
     expect(successCardTokens.has('bg-success/5')).toBe(true);
     expect(successCardTokens.has('mt-2')).toBe(false);
     expect(successCardText).toContain('General explanation.');
-    expect(html).not.toContain('Correct answer');
-    expect(html).not.toContain('>Explanation<');
+    expect(findSectionLabel(doc, 'Correct')).toBeUndefined();
+    expect(findSectionLabel(doc, 'Explanation')).toBeUndefined();
     expect(explanationText).not.toBeUndefined();
     expect(explanationTextTokens.has('text-base')).toBe(true);
     expect(explanationTextTokens.has('text-foreground')).toBe(true);
@@ -310,8 +328,8 @@ describe('Feedback', () => {
     );
     const fallbackClassName = fallbackParagraph?.getAttribute('class') ?? '';
 
-    expect(html).not.toContain('Correct answer');
-    expect(html).not.toContain('>Explanation<');
+    expect(findSectionLabel(doc, 'Correct')).toBeUndefined();
+    expect(findSectionLabel(doc, 'Explanation')).toBeUndefined();
     expect(fallbackParagraph).not.toBeUndefined();
     expect(fallbackClassName).toContain('text-sm');
     expect(fallbackClassName).toContain('text-muted-foreground');
@@ -439,7 +457,7 @@ describe('Feedback', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const correctAnswerLabel = findSectionLabel(doc, 'Correct answer');
+    const correctAnswerLabel = findSectionLabel(doc, 'Correct');
     const successCard = correctAnswerLabel?.nextElementSibling;
     const successCardClassName = successCard?.getAttribute('class') ?? '';
     const successCardTokens = getClassTokens(successCardClassName);
@@ -470,7 +488,7 @@ describe('Feedback', () => {
     );
 
     expect(correctAnswerLabel).not.toBeUndefined();
-    expectNeutralChip(correctAnswerLabel);
+    expectCorrectChip(correctAnswerLabel);
     expect(successCard).not.toBeNull();
     expect(successCardTokens.has('border-success/60')).toBe(true);
     expect(successCardTokens.has('bg-success/5')).toBe(true);
@@ -829,7 +847,7 @@ describe('Feedback', () => {
     );
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const correctAnswerLabel = findSectionLabel(doc, 'Correct answer');
+    const correctAnswerLabel = findSectionLabel(doc, 'Correct');
     const successCard = correctAnswerLabel?.nextElementSibling;
     const correctAnswerBadge = successCard
       ? findRoundedBadge(successCard, 'B')
@@ -844,8 +862,8 @@ describe('Feedback', () => {
       correctAnswerText?.getAttribute('class') ?? '',
     );
 
-    expect(html).toContain('Correct answer');
-    expectNeutralChip(correctAnswerLabel);
+    expect(html).toContain('Correct');
+    expectCorrectChip(correctAnswerLabel);
     expect(correctAnswerBadge).not.toBeUndefined();
     expect(correctAnswerBadge?.getAttribute('class')).toContain('rounded-full');
     expectTokens(correctAnswerBadgeTokens, [
@@ -869,7 +887,7 @@ describe('Feedback', () => {
 
     expectNeutralChip(explanationLabel);
     expect(html).toContain('>Explanation<');
-    expect(html).not.toContain('Correct answer');
+    expect(findSectionLabel(doc, 'Correct')).toBeUndefined();
   });
 
   it('renders non-null choice explanations in display-label order', () => {
@@ -1099,7 +1117,7 @@ describe('Feedback', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const correctAnswerLabel = findSectionLabel(doc, 'Correct answer');
+    const correctAnswerLabel = findSectionLabel(doc, 'Correct');
     const wrongAnswersHeading = findSectionLabel(
       doc,
       'Why other answers are wrong',
@@ -1136,7 +1154,7 @@ describe('Feedback', () => {
     expect(correctAnswerLabel?.parentElement?.getAttribute('class')).toContain(
       'mt-6',
     );
-    expectNeutralChip(correctAnswerLabel);
+    expectCorrectChip(correctAnswerLabel);
     expectNeutralChip(wrongAnswersHeading);
     expect(wrongAnswerRow).not.toBeUndefined();
     expect(wrongAnswerRowTokens.has('gap-3')).toBe(true);
@@ -1177,7 +1195,7 @@ describe('Feedback', () => {
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const incorrectIndex = html.indexOf('Incorrect');
-    const correctAnswerIndex = html.indexOf('Correct answer');
+    const correctAnswerIndex = html.indexOf('>Correct<');
     const yourAnswerIndex = html.indexOf('Your answer');
     const destructiveCard = findStyledCard(
       doc,
@@ -1341,8 +1359,8 @@ describe('Feedback', () => {
     expect(correctChoiceIndex).toBeGreaterThanOrEqual(0);
     expect(wrongAnswersHeadingIndex).toBeGreaterThanOrEqual(0);
     expect(correctChoiceIndex).toBeLessThan(wrongAnswersHeadingIndex);
-    expect(html).not.toContain('Correct answer');
-    expect(html).not.toContain('>Explanation<');
+    expect(findSectionLabel(doc, 'Correct')).toBeUndefined();
+    expect(findSectionLabel(doc, 'Explanation')).toBeUndefined();
     expect(yourAnswerSectionLabel).toBeUndefined();
   });
 
@@ -1370,7 +1388,8 @@ describe('Feedback', () => {
       />,
     );
 
-    expect(html).not.toContain('Correct answer');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    expect(findSectionLabel(doc, 'Correct')).toBeUndefined();
     expect(html).toContain('Explanation not available.');
   });
 
@@ -1548,7 +1567,7 @@ describe('Feedback', () => {
     );
 
     expect(yourAnswerSectionLabel).toBeUndefined();
-    expect(html).toContain('Correct answer');
+    expect(html).toContain('Correct');
     expect(html).toContain('Why other answers are wrong');
     expect(html).not.toContain('Why other answers are wrong:');
     expect(html).toContain('First option');
@@ -1585,7 +1604,7 @@ describe('Feedback', () => {
     );
 
     expect(yourAnswerSectionLabel).toBeUndefined();
-    expect(html).toContain('Correct answer');
+    expect(html).toContain('Correct');
     expect(html).toContain('Why other answers are wrong');
     expect(html).not.toContain('Why other answers are wrong:');
     expect(html).toContain('First option');
@@ -1622,7 +1641,7 @@ describe('Feedback', () => {
     );
 
     expect(yourAnswerSectionLabel).toBeUndefined();
-    expect(html).toContain('Correct answer');
+    expect(html).toContain('Correct');
     expect(html).toContain('Why other answers are wrong');
     expect(html).not.toContain('Why other answers are wrong:');
     expect(html).toContain('First option');
@@ -1654,7 +1673,7 @@ describe('Feedback', () => {
     );
 
     expect(html).not.toContain('Your answer');
-    expect(html).toContain('Correct answer');
+    expect(html).toContain('Correct');
     expect(html).toContain('Explanation not available.');
   });
 
