@@ -187,7 +187,7 @@ describe('runCheckoutSuccessPage', () => {
     ]);
   });
 
-  it('uses the first session_id value when searchParams contains an array', async () => {
+  it('returns the first session_id when searchParams contains an array', async () => {
     const stripeRetrieveCalls: Array<{
       sessionId: string;
       params?: { expand?: string[] };

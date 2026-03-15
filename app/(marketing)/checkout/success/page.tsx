@@ -21,8 +21,12 @@ export {
   type CheckoutSuccessTransaction,
 };
 
+export type CheckoutSuccessPageProps = {
+  searchParams: Promise<CheckoutSuccessSearchParams>;
+};
+
 export async function runCheckoutSuccessPage(
-  { searchParams }: { searchParams: Promise<CheckoutSuccessSearchParams> },
+  { searchParams }: CheckoutSuccessPageProps,
   deps?: CheckoutSuccessDeps,
   redirectFn: (url: string) => never = redirect,
 ): Promise<JSX.Element> {
@@ -50,10 +54,4 @@ export async function runCheckoutSuccessPage(
   );
 }
 
-export default async function CheckoutSuccessPage({
-  searchParams,
-}: {
-  searchParams: Promise<CheckoutSuccessSearchParams>;
-}): Promise<JSX.Element> {
-  return runCheckoutSuccessPage({ searchParams });
-}
+export default runCheckoutSuccessPage;
