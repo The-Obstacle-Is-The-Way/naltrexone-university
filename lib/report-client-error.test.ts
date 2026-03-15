@@ -99,6 +99,35 @@ describe('reportClientError', () => {
     expect(captureExceptionMock).toHaveBeenCalled();
   });
 
+  it('does not throw when Sentry.captureException throws', () => {
+    captureExceptionMock.mockImplementation(() => {
+      throw new Error('Sentry failed');
+    });
+
+    expect(() =>
+      reportClientError(new Error('boom'), {
+        component: 'PracticePage',
+        action: 'startSession',
+      }),
+    ).not.toThrow();
+  });
+
+  it('does not throw when console.error throws in development', () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.spyOn(console, 'error').mockImplementation(() => {
+      throw new Error('Console failed');
+    });
+
+    expect(() =>
+      reportClientError(new Error('boom'), {
+        component: 'PracticePage',
+        action: 'startSession',
+      }),
+    ).not.toThrow();
+  });
+});
+
+describe('shouldReportClientError', () => {
   it('returns false for expected business action-result errors', () => {
     expect(
       shouldReportClientError({

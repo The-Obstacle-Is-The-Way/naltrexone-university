@@ -54,15 +54,19 @@ export function reportClientError(
   error: unknown,
   context?: ClientErrorContext,
 ): void {
-  if (process.env.NODE_ENV === 'development') {
-    console.error('[ClientError]', context, error);
-  }
+  try {
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[ClientError]', context, error);
+    }
 
-  const tags = getTags(context);
-  if (tags) {
-    Sentry.captureException(error, { tags });
-    return;
-  }
+    const tags = getTags(context);
+    if (tags) {
+      Sentry.captureException(error, { tags });
+      return;
+    }
 
-  Sentry.captureException(error);
+    Sentry.captureException(error);
+  } catch {
+    // Telemetry is best-effort and must never break the caller's primary error path.
+  }
 }

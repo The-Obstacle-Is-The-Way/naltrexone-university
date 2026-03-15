@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const { reportClientErrorMock } = vi.hoisted(() => ({
   reportClientErrorMock: vi.fn(),
@@ -49,6 +49,11 @@ function createQuestionOutput(): GetQuestionBySlugOutput {
 }
 
 describe('question-page-logic', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    reportClientErrorMock.mockReset();
+  });
+
   describe('canSubmitQuestionAnswer', () => {
     it('returns false when loadState is loading', () => {
       expect(

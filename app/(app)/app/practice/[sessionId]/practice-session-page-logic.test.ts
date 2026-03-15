@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const { reportClientErrorMock } = vi.hoisted(() => ({
   reportClientErrorMock: vi.fn(),
@@ -29,6 +29,11 @@ import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answ
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
 describe('practice-session-page-logic', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    reportClientErrorMock.mockReset();
+  });
+
   describe('loadNextQuestion', () => {
     it('ignores stale responses when a newer request finishes first', async () => {
       const first = createDeferred<ActionResult<NextQuestion | null>>();

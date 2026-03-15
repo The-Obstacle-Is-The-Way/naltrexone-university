@@ -13,6 +13,7 @@ import { fireAndForget, logUnhandledAsyncError } from './fire-and-forget';
 describe('fireAndForget', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    reportClientErrorMock.mockReset();
   });
 
   it('does not call onError when promise resolves', async () => {
@@ -53,6 +54,24 @@ describe('fireAndForget', () => {
     });
 
     fireAndForget(Promise.reject(error), onError);
+    await Promise.resolve();
+
+    expect(onError).toHaveBeenCalledWith(error);
+    expect(reportClientErrorMock).toHaveBeenCalledWith(handlerError, {
+      component: 'FireAndForget',
+      action: 'onErrorHandler',
+    });
+  });
+
+  it('reports when the onError handler rejects asynchronously', async () => {
+    const error = new Error('boom');
+    const handlerError = new Error('handler boom');
+    const onError = vi.fn(async () => {
+      throw handlerError;
+    });
+
+    fireAndForget(Promise.reject(error), onError);
+    await Promise.resolve();
     await Promise.resolve();
 
     expect(onError).toHaveBeenCalledWith(error);

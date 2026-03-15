@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
@@ -17,6 +17,11 @@ import {
 } from './practice-page-incomplete-session';
 
 describe('practice-page-incomplete-session', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    reportClientErrorMock.mockReset();
+  });
+
   describe('createIncompleteSessionEffect', () => {
     it('loads the incomplete session and transitions to idle', async () => {
       const setStatus = vi.fn();

@@ -1,5 +1,12 @@
 import { reportClientError } from '@/lib/report-client-error';
 
+function reportFireAndForgetHandlerError(handlerError: unknown): void {
+  reportClientError(handlerError, {
+    component: 'FireAndForget',
+    action: 'onErrorHandler',
+  });
+}
+
 export function logUnhandledAsyncError(error: unknown): void {
   reportClientError(error, {
     component: 'FireAndForget',
@@ -9,16 +16,16 @@ export function logUnhandledAsyncError(error: unknown): void {
 
 export function fireAndForget(
   promise: Promise<unknown>,
-  onError: (error: unknown) => void,
+  onError: (error: unknown) => void | Promise<void>,
 ): void {
   promise.catch((error) => {
     try {
-      onError(error);
-    } catch (handlerError) {
-      reportClientError(handlerError, {
-        component: 'FireAndForget',
-        action: 'onErrorHandler',
+      const maybePromise = onError(error);
+      void Promise.resolve(maybePromise).catch((handlerError) => {
+        reportFireAndForgetHandlerError(handlerError);
       });
+    } catch (handlerError) {
+      reportFireAndForgetHandlerError(handlerError);
     }
   });
 }
