@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-14
+**Last Updated:** 2026-03-15
 
 ---
 
@@ -13,9 +13,15 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-221
+**Next Bug ID:** BUG-226
 
-**Audit batch (2026-03-13) — comprehensive codebase audit (verified via tracer bullets):**
+**Audit batch (2026-03-15) — search-param scalar assumption sweep (verified via tracer bullets):**
+
+5 bug docs were filed in this batch (1 P3, 4 P4). All 5 are open.
+
+---
+
+**Previous audit batch (2026-03-13) — comprehensive codebase audit (verified via tracer bullets):**
 
 15 bug docs were filed in this batch (all 15 archived: 13 resolved, 2 invalidated). No remaining open bugs from this audit.
 
@@ -56,7 +62,39 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Open Bugs
 
-Active open bugs are listed in the priority sections above.
+Active open bugs are listed below.
+
+| Bug | Family | Priority | Summary |
+|-----|--------|----------|---------|
+| [BUG-221](./bug-221-checkout-success-repeated-session-id-breaks-sync.md) | Search params / checkout | P3 | Repeated `session_id` arrays are forwarded as invalid input and bounce successful checkout returns to the generic error route |
+| [BUG-222](./bug-222-pricing-page-array-query-banners.md) | Search params / pricing | P4 | Pricing page still assumes scalar `checkout` / `reason` params, hiding recovery banners and manage-billing CTA |
+| [BUG-223](./bug-223-bookmarks-page-array-query-feedback-loss.md) | Search params / bookmarks | P4 | Repeated `error` / `toast` params suppress remove-bookmark feedback |
+| [BUG-224](./bug-224-practice-session-array-toast-loss.md) | Search params / practice | P4 | Repeated session-start toast params suppress or degrade practice-session startup feedback |
+| [BUG-225](./bug-225-question-review-array-context-loss.md) | Search params / review | P4 | Repeated review-context params are dropped instead of normalized, stripping session/attempt/history context |
+
+## Audit #15 — Search Param Scalar Assumption Sweep (2026-03-15)
+
+Focused follow-up sweep for page-level query parsing drift after BUG-182 fixed History normalization and Billing added explicit array handling. The goal was to find remaining server-page boundaries that still assume scalar `searchParams` despite Next.js runtime support for repeated params.
+
+**Methodology:**
+- Cross-check every server page and query-driven client handoff against the BUG-182 normalization pattern and Billing's array-safe parser.
+- Trace redirect-producing flows into their landing pages: checkout success, pricing recovery banners, bookmark removal, session start, and question review navigation.
+- File only cases where runtime `string[]` values cause a real user-visible failure, lost feedback, or lost review context.
+
+**5 new bugs filed (BUG-221..225):**
+
+| Bug | Family | Priority | Summary |
+|-----|--------|----------|---------|
+| BUG-221 | Search params / checkout | P3 | Repeated `session_id` arrays are forwarded as invalid input and bounce successful checkout returns to the generic error route |
+| BUG-222 | Search params / pricing | P4 | Pricing page still assumes scalar `checkout` / `reason` params, hiding recovery banners and manage-billing CTA |
+| BUG-223 | Search params / bookmarks | P4 | Repeated `error` / `toast` params suppress remove-bookmark feedback |
+| BUG-224 | Search params / practice | P4 | Repeated session-start toast params suppress or degrade practice-session startup feedback |
+| BUG-225 | Search params / review | P4 | Repeated review-context params are dropped instead of normalized, stripping session/attempt/history context |
+
+**Surfaces confirmed clean:**
+- History page parsers normalize `string | string[] | undefined` centrally (`app/(app)/app/history/history-search-params.ts`).
+- Billing page already normalizes array-valued `error` params before banner selection.
+- Quick-practice search param handling uses `URLSearchParams.get(...)`, which already returns a scalar.
 
 ## Audit #14 — Boundary Sweep: Reconciliation Canonical Selection (2026-03-10)
 
