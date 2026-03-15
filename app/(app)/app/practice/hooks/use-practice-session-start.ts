@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { reportClientError } from '@/lib/report-client-error';
 import { startPracticeSession } from '@/src/adapters/controllers/practice-controller';
 import { navigateTo } from '../client-navigation';
 import type { PracticeSessionStarterProps } from '../components/practice-session-starter';
@@ -130,7 +131,10 @@ export function usePracticeSessionStart(
         setIdempotencyKey: setStartSessionIdempotencyKey,
         startPracticeSessionFn: startPracticeSession,
         reportError: (error, context) => {
-          console.error('startSession failed:', error, context);
+          reportClientError(error, {
+            component: 'UsePracticeSessionStart',
+            action: context.action,
+          });
         },
         setSessionStartStatus,
         setSessionStartError,

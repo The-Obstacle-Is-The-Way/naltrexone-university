@@ -7,6 +7,7 @@ import {
 } from '@/app/(app)/app/practice/practice-page-logic';
 import { runTransitionedAsyncAction } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import { useQuestionFlowCore } from '@/app/(app)/app/practice/shared/use-question-flow-core';
+import { reportClientError } from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
@@ -152,6 +153,12 @@ export function usePracticeQuestionAnswerFlow(
           isLatestRequest,
           isMounted,
         }),
+      onUnhandledError: (error) => {
+        reportClientError(error, {
+          component: 'UsePracticeQuestionAnswerFlow',
+          action: 'submitAnswer',
+        });
+      },
     });
   }, [
     createRequestSequenceId,

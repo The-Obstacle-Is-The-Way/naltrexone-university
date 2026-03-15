@@ -2,13 +2,20 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { usePracticeSessionStart } from './use-practice-session-start';
 
-const { startPracticeSessionMock, navigateToMock } = vi.hoisted(() => ({
-  startPracticeSessionMock: vi.fn(),
-  navigateToMock: vi.fn(),
-}));
+const { startPracticeSessionMock, navigateToMock, reportClientErrorMock } =
+  vi.hoisted(() => ({
+    startPracticeSessionMock: vi.fn(),
+    navigateToMock: vi.fn(),
+    reportClientErrorMock: vi.fn(),
+  }));
 
 vi.mock('@/src/adapters/controllers/practice-controller', () => ({
   startPracticeSession: startPracticeSessionMock,
+}));
+
+vi.mock('@/lib/report-client-error', () => ({
+  reportClientError: reportClientErrorMock,
+  shouldReportClientError: () => true,
 }));
 
 vi.mock('../client-navigation', () => ({
@@ -55,6 +62,7 @@ function Probe() {
 afterEach(() => {
   startPracticeSessionMock.mockReset();
   navigateToMock.mockReset();
+  reportClientErrorMock.mockReset();
 });
 
 test('rotates the session start idempotency key when changing status', async () => {
@@ -83,4 +91,19 @@ test('rotates the session start idempotency key when changing status', async () 
   );
 
   expect(secondKey).not.toBe(firstKey);
+});
+
+test('reports thrown session start failures', async () => {
+  const error = new Error('Network down');
+  startPracticeSessionMock.mockRejectedValue(error);
+
+  const screen = await render(<Probe />);
+
+  await screen.getByTestId('start').click();
+
+  await expect.poll(() => reportClientErrorMock.mock.calls.length).toBe(1);
+  expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
+    component: 'UsePracticeSessionStart',
+    action: 'startSession',
+  });
 });

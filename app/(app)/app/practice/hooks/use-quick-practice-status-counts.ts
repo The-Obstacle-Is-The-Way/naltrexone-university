@@ -1,6 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import {
+  reportClientError,
+  shouldReportClientError,
+} from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { countAvailableQuestions } from '@/src/adapters/controllers/practice-controller';
 import {
@@ -8,7 +12,6 @@ import {
   type QuestionDifficulty,
   type QuestionProgressStatus,
 } from '@/src/domain/value-objects';
-import { logUnhandledAsyncError } from '../fire-and-forget';
 import type { PracticeFilters } from '../practice-page-logic';
 
 export type QuickPracticeStatusCounts = Record<
@@ -87,10 +90,12 @@ export function createQuickPracticeStatusCountsEffect(input: {
 
       const failed = responses.find(isFailedQuickPracticeCountResponse);
       if (failed) {
-        input.logError(
-          'Failed to count available quick practice questions',
-          failed.result.error,
-        );
+        if (shouldReportClientError(failed.result.error)) {
+          input.logError(
+            'Failed to count available quick practice questions',
+            failed.result.error,
+          );
+        }
         input.setCounts(createEmptyQuickPracticeStatusCounts());
         return;
       }
@@ -137,8 +142,11 @@ export function useQuickPracticeStatusCounts(input: {
       countAvailableQuestionsFn: countAvailableQuestions,
       filters: serverFilters,
       setCounts,
-      logError: (message: string, context: unknown) => {
-        logUnhandledAsyncError({ message, context });
+      logError: (_message: string, error: unknown) => {
+        reportClientError(error, {
+          component: 'UseQuickPracticeStatusCounts',
+          action: 'loadCounts',
+        });
       },
     });
   }, [serverFilters]);

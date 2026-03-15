@@ -5,7 +5,7 @@
 **Updated:** 2026-03-15
 **Source:** [AUDIT-011](../audits/audit-011-error-observability-defensive-coding.md), reclassified from BUG-200
 **Governing Spec:** [SPEC-016: Observability](../specs/spec-016-observability.md)
-**Status:** In Progress (branch: `feat/debt-286-client-error-reporting`)
+**Status:** Resolved (branch: `feat/debt-286-client-error-reporting`)
 
 ---
 
@@ -16,9 +16,18 @@ SPEC-016 established the observability foundation:
 - **Server-side:** structured logging plus Sentry request-error capture
 - **Client-side:** Sentry initialization in the browser
 
-That foundation exists. But tracer-bullet verification showed the client-side rollout is incomplete: caught client failures still do not have a standard path into Sentry.
+That foundation existed, but tracer-bullet verification showed the client-side rollout was incomplete: caught client failures still did not have a standard path into Sentry.
 
 This debt is specifically about **caught client-side operational failures** in hooks, effects, and async UI helpers. It is **not** a claim that every server-side telemetry concern is solved forever. A repo-wide sweep still found a direct server-side `console.info` in `app/(app)/app/questions/[slug]/page.tsx`, but that is a separate observability consistency issue, not this debt.
+
+## Resolution
+
+Implemented on 2026-03-15:
+
+- Added `lib/report-client-error.ts` as the shared client-side reporting utility.
+- Added `shouldReportClientError()` so expected `ActionResult` business errors remain UI/data paths instead of noisy Sentry events.
+- Wired every rollout target in this debt, including the helper/reporting seams added after the original audit.
+- Kept only documented exceptions: route/global error-boundary logging, server/config console sites, the explicit defense-in-depth `console.error` fallback in `question-flow-actions.ts`, and the URL-normalization catch in `question-page-client.tsx`.
 
 ---
 
@@ -26,38 +35,39 @@ This debt is specifically about **caught client-side operational failures** in h
 
 Full sweep of `app/` + `src/` production code, excluding tests/specs.
 
-> **Re-audited 2026-03-15.** `Sentry.captureException()` and `Sentry.captureMessage()` remain unused in `app/` + `src/`, and local `.env.local` still defines both DSNs. The historical console counts remain directionally useful, but the helper-level rollout inventory below was incomplete: the 2026-03-14 practice refactor added additional client-bundled reporter seams and bare `catch {}` blocks outside the original 10-row slice.
+> **Post-implementation snapshot (2026-03-15).** Direct `Sentry.captureException()` / `Sentry.captureMessage()` calls remain centralized outside `app/` + `src/`; unexpected caught client-side operational failures in the audited rollout now flow through `lib/report-client-error.ts`.
 
 - `Sentry.captureException()` calls: **0**
 - `Sentry.captureMessage()` calls: **0**
-- `console.error(...)` calls: **9**
-- `console.warn(...)` calls: **2**
+- direct `console.error(...)` calls: **2**
+- direct `console.warn(...)` calls: **1**
 - `console.info(...)` calls: **1**
-- bare `catch {}` blocks in `app/` + `src/`: **10** total (**6** client-bundled, **4** server/application)
-- `reportClientError()` utility: **does not exist**
+- bare `catch {}` blocks in `app/` + `src/`: **9** total; remaining client-bundled catches are reporter guards, URL parsing, or explicit fallback preservation
+- `reportClientError()` utility: **exists** in `lib/report-client-error.ts`
 
 Not every console site belongs in this debt:
 
 - `app/global-error.tsx` is an error-boundary path
 - `components/error-boundary-page.tsx` is the shared route-error boundary path used by multiple `error.tsx` routes
-- `question-flow-actions.ts` now logs unconditionally after BUG-214; it remains a console-only fallback plus an unwired `onUnhandledError` extension point
+- `question-flow-actions.ts` still logs unconditionally after BUG-214, but its `onUnhandledError` extension point is now wired from the real caller paths that can reject
+- `use-question-page-controller.ts` still emits a development-only normalization warning for mixed review params
 - `question-page-client.tsx` uses a bare catch for URL normalization, not an unexpected operational failure
 
-The actual gap is narrower and more important: **caught client-side failures that affect real user flows still do not reach Sentry.**
+The actual gap was narrower and more important: **caught client-side failures that affected real user flows did not reach Sentry before this rollout.**
 
 ---
 
-## The Gap
+## The Original Gap
 
-SPEC-016 says error tracking exists on both client and server, but its acceptance criteria stop at initialization:
+SPEC-016 originally said error tracking exists on both client and server, but its acceptance criteria stopped at initialization:
 
 > [x] Sentry is initialized (client + server) when DSNs are configured
 
-There is no acceptance criterion and no canonical pattern for:
+At audit time, there was no acceptance criterion and no canonical pattern for:
 
 > [ ] Unexpected caught client-side operational errors are reported to Sentry
 
-So the codebase currently relies on a mix of:
+At the time of the audit, the codebase relied on a mix of:
 
 - `console.error`
 - development-only `console.warn` / `console.error`
@@ -69,7 +79,7 @@ instead of a unified client-side reporting utility.
 
 ## Priority Rollout Targets
 
-These are the verified user-facing client flows that should be moved onto a shared `reportClientError()` utility. The list below is the current priority inventory, not a claim that these are the only console sites in the repo.
+These were the verified user-facing client flows that required migration onto a shared `reportClientError()` utility. The list below is the priority inventory that drove the rollout, not a claim that these were the only console sites in the repo.
 
 > **Path update (2026-03-15):** Practice hooks moved from `shared/hooks/` to `hooks/`. Question-page files live under `app/(app)/app/questions/[slug]/`. Paths below reflect current codebase.
 
@@ -85,6 +95,8 @@ These are the verified user-facing client flows that should be moved onto a shar
 | 8 | `app/(app)/app/practice/hooks/use-practice-question-bookmarks.ts:100` | `console.error('toggleBookmarkForQuestion failed:', ...)` (BUG-212 fix) | Bookmark toggle failures reach console only |
 | 9 | `app/(app)/app/practice/hooks/use-practice-session-start.ts:132-134` | `console.error('startSession failed:', ...)` (BUG-213 fix) | Session start thrown errors reach console only |
 | 10 | `app/(app)/app/practice/shared/question-flow-actions.ts:147-150` | `onUnhandledError?.()` hook (BUG-214 fix) — unwired by callers; `console.error` fires unconditionally | Hook ready for direct `reportClientError()` wiring |
+
+All items in the table above were completed in the 2026-03-15 rollout. `question-flow-actions.ts` was resolved by wiring `onUnhandledError` from callers while retaining its unconditional `console.error` as a last-resort fallback.
 
 ---
 
@@ -106,6 +118,8 @@ Missing-from-inventory helper/reporting seams confirmed by the 2026-03-15 audit:
 - `app/(app)/app/history/hooks/use-history-sessions.ts` — history-session review fetch failures set UI error only
 - `app/(app)/app/questions/[slug]/question-page-logic.ts` — question-load and answer-submit failures set UI error only, in addition to the existing review-hydration catch
 
+All of the helper/reporting seams above were included in the final rollout and no longer remain open inventory gaps.
+
 Path correction:
 
 - The shared reporter should live in `lib/report-client-error.ts`, not `app/lib/...`, to match the existing client-safe utility layout (`lib/use-is-mounted.ts`, `lib/with-timeout.ts`, etc.).
@@ -125,7 +139,7 @@ Scope correction:
 - `use-quick-practice-status-counts.ts:141` → `logUnhandledAsyncError({ message, context })`
 - `use-practice-available-questions-count.ts:41` → `logUnhandledAsyncError({ message, context })`
 
-This is not a crash (the object is logged), but the structured `{ message, context }` shape is lost inside a generic "Unhandled async UI action error" console line. The `reportClientError()` rollout will fix this naturally by replacing these call sites with the properly typed utility.
+This was not a crash (the object was logged), but the structured `{ message, context }` shape was lost inside a generic "Unhandled async UI action error" console line. The `reportClientError()` rollout fixed this by replacing these call sites with the properly typed utility.
 
 ---
 
@@ -154,7 +168,7 @@ The missing piece is architecture: there is no standard client-side counterpart 
 
 ---
 
-## Proposed Fix
+## Implemented Fix
 
 ### Phase 1: Add a client-side reporting utility
 
@@ -198,13 +212,13 @@ export function reportClientError(
 
 ### Phase 3: Update SPEC-016
 
-Add acceptance criteria such as:
+Implemented acceptance criteria:
 
-- [ ] Caught client-side operational failures are reported via `reportClientError()`
-- [ ] `reportClientError()` exists in `lib/`
-- [ ] Helper-level catch sites that currently convert thrown/rejected server-action calls into fallback UI state are routed through `reportClientError()` or explicitly justified
-- [ ] Direct client-side error reporting does not use raw `console.error` in production paths
-- [ ] Bare `catch {}` blocks that swallow unexpected client-side operational failures are eliminated or explicitly justified
+- [x] Caught client-side operational failures are reported via `reportClientError()`
+- [x] `reportClientError()` exists in `lib/`
+- [x] Helper-level catch sites that currently convert thrown/rejected server-action calls into fallback UI state are routed through `reportClientError()` or explicitly justified
+- [x] Direct client-side error reporting uses `reportClientError()` unless a fallback/error-boundary path is explicitly retained and documented
+- [x] Bare `catch {}` blocks that swallow unexpected client-side operational failures are eliminated or explicitly justified
 
 ---
 

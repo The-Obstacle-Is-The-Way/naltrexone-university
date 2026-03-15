@@ -6,12 +6,24 @@ import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { useHistorySessions } from './use-history-sessions';
 
-const { getPracticeSessionReviewMock } = vi.hoisted(() => ({
-  getPracticeSessionReviewMock: vi.fn(),
-}));
+const { getPracticeSessionReviewMock, reportClientErrorMock } = vi.hoisted(
+  () => ({
+    getPracticeSessionReviewMock: vi.fn(),
+    reportClientErrorMock: vi.fn(),
+  }),
+);
 
 vi.mock('@/src/adapters/controllers/practice-controller', () => ({
   getPracticeSessionReview: getPracticeSessionReviewMock,
+}));
+
+vi.mock('@/lib/report-client-error', () => ({
+  reportClientError: reportClientErrorMock,
+  shouldReportClientError: (error: unknown) =>
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: string }).code === 'INTERNAL_ERROR',
 }));
 
 function makeReviewOutput(sessionId: string): GetPracticeSessionReviewOutput {
@@ -75,6 +87,7 @@ describe('useHistorySessions (browser)', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     getPracticeSessionReviewMock.mockReset();
+    reportClientErrorMock.mockReset();
   });
 
   it('opens a session and transitions to ready on success', async () => {
@@ -139,12 +152,15 @@ describe('useHistorySessions (browser)', () => {
     await expect
       .element(screen.getByTestId('error-message'))
       .toHaveTextContent('Review load failed');
+    expect(reportClientErrorMock).toHaveBeenCalledWith(errorResult.error, {
+      component: 'UseHistorySessions',
+      action: 'openSession',
+    });
   });
 
   it('transitions to error state when the controller throws', async () => {
-    getPracticeSessionReviewMock.mockRejectedValue(
-      new Error('Network failure'),
-    );
+    const error = new Error('Network failure');
+    getPracticeSessionReviewMock.mockRejectedValue(error);
 
     const screen = await render(<Probe />);
 
@@ -156,6 +172,10 @@ describe('useHistorySessions (browser)', () => {
     await expect
       .element(screen.getByTestId('error-message'))
       .toHaveTextContent('Network failure');
+    expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
+      component: 'UseHistorySessions',
+      action: 'openSession',
+    });
   });
 
   it('discards stale response when same session is closed and reopened', async () => {

@@ -8,6 +8,7 @@ import {
   runLoadQuestionFlow,
   runSubmitAnswerFlow,
 } from '@/app/(app)/app/practice/shared/question-flow-actions';
+import { reportClientError } from '@/lib/report-client-error';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {
@@ -190,6 +191,10 @@ export async function endSession(input: {
   } catch (error) {
     if (!isMounted()) return;
 
+    reportClientError(error, {
+      component: 'PracticeSessionPageLogic',
+      action: 'endSession',
+    });
     input.rotateIdempotencyKey?.();
     input.setLoadState({
       status: 'error',
@@ -246,6 +251,10 @@ export function createNavigatorEffect(input: {
       );
     } catch (error) {
       if (!mounted || !isMounted()) return;
+      reportClientError(error, {
+        component: 'PracticeSessionPageLogic',
+        action: 'loadNavigator',
+      });
       input.setNavigator(null);
       input.setNavigatorLoadState({
         status: 'error',
@@ -305,6 +314,10 @@ export function createSummaryReviewEffect(input: {
       );
     } catch (error) {
       if (!mounted || !isMounted()) return;
+      reportClientError(error, {
+        component: 'PracticeSessionPageLogic',
+        action: 'loadSummaryReview',
+      });
       input.setSummaryReviewLoadState({
         status: 'error',
         message: getThrownErrorMessage(error),

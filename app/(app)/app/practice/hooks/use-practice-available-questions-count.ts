@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { reportClientError } from '@/lib/report-client-error';
 import { countAvailableQuestions } from '@/src/adapters/controllers/practice-controller';
-import { logUnhandledAsyncError } from '../fire-and-forget';
 import {
   type AvailableQuestionsCountFilters,
   type AvailableQuestionsCountStatus,
@@ -37,8 +37,11 @@ export function usePracticeAvailableQuestionsCount(input: {
       filters: serverFilters,
       setAvailableCountStatus,
       setAvailableCount,
-      logError: (message: string, context: unknown) => {
-        logUnhandledAsyncError({ message, context });
+      logError: (_message: string, error: unknown) => {
+        reportClientError(error, {
+          component: 'UsePracticeAvailableQuestionsCount',
+          action: 'loadAvailableCount',
+        });
       },
     });
   }, [serverFilters]);

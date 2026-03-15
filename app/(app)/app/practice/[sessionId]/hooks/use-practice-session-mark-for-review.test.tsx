@@ -1,6 +1,20 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+const { reportClientErrorMock } = vi.hoisted(() => ({
+  reportClientErrorMock: vi.fn(),
+}));
+
+vi.mock('@/lib/report-client-error', () => ({
+  reportClientError: reportClientErrorMock,
+  shouldReportClientError: (error: unknown) =>
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: string }).code === 'INTERNAL_ERROR',
+}));
+
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import { renderHook } from '@/src/application/test-helpers/render-hook';
@@ -9,6 +23,7 @@ import { usePracticeSessionMarkForReview } from './use-practice-session-mark-for
 describe('usePracticeSessionMarkForReview', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    reportClientErrorMock.mockReset();
   });
 
   it('returns the expected initial state contract', async () => {
@@ -99,9 +114,10 @@ describe('usePracticeSessionMarkForReview', () => {
     const setLoadState = vi.fn();
     const applySessionInfo = vi.fn();
     const setReview = vi.fn();
+    const error = new Error('Mark for review failed');
 
     const setPracticeSessionQuestionMarkFn = vi.fn(async () => {
-      throw new Error('Mark for review failed');
+      throw error;
     });
 
     const output = renderHook(() =>
@@ -132,6 +148,10 @@ describe('usePracticeSessionMarkForReview', () => {
     });
     expect(applySessionInfo).not.toHaveBeenCalled();
     expect(setReview).not.toHaveBeenCalled();
+    expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
+      component: 'UsePracticeSessionMarkForReview',
+      action: 'toggleMarkForReview',
+    });
   });
 
   it('sets loadState error when mark-for-review request returns an error result', async () => {
@@ -171,5 +191,15 @@ describe('usePracticeSessionMarkForReview', () => {
     });
     expect(applySessionInfo).not.toHaveBeenCalled();
     expect(setReview).not.toHaveBeenCalled();
+    expect(reportClientErrorMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: 'INTERNAL_ERROR',
+        message: 'Mark for review failed',
+      }),
+      {
+        component: 'UsePracticeSessionMarkForReview',
+        action: 'toggleMarkForReview',
+      },
+    );
   });
 });

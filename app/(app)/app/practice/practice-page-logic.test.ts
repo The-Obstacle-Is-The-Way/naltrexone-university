@@ -557,6 +557,35 @@ describe('practice-page-logic', () => {
         vi.useRealTimers();
       }
     });
+
+    it('does not log expected business bookmark-load failures', async () => {
+      vi.useFakeTimers();
+      try {
+        const setBookmarkStatus = vi.fn();
+        const logError = vi.fn();
+
+        createBookmarksEffect({
+          bookmarkRetryCount: 0,
+          getBookmarksFn: async () =>
+            err('UNAUTHENTICATED', 'Authentication required'),
+          setBookmarkedQuestionIds: vi.fn(),
+          setBookmarkStatus,
+          setBookmarkRetryCount: vi.fn(),
+          setTimeoutFn: vi.fn((fn: () => void, ms: number) =>
+            setTimeout(fn, ms),
+          ),
+          clearTimeoutFn: vi.fn(),
+          logError,
+        });
+
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
+        expect(logError).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   describe('submitAnswerForQuestion', () => {
@@ -961,6 +990,34 @@ describe('practice-page-logic', () => {
         'Failed to toggle bookmark',
         structuredError,
       );
+      expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
+      expect(onBookmarkError).toHaveBeenCalledWith(
+        'Failed to save bookmark. Please try again.',
+      );
+    });
+
+    it('does not log expected business toggle failures while preserving generic error UI state', async () => {
+      const structuredError = {
+        code: 'UNAUTHENTICATED',
+        message: 'Authentication required',
+      } as const;
+      const logError = vi.fn();
+      const setBookmarkStatus = vi.fn();
+      const onBookmarkError = vi.fn();
+
+      await toggleBookmarkForQuestion({
+        question: createNextQuestion(),
+        toggleBookmarkFn: async () => ({
+          ok: false,
+          error: structuredError,
+        }),
+        setBookmarkStatus,
+        setBookmarkedQuestionIds: vi.fn(),
+        onBookmarkError,
+        logError,
+      });
+
+      expect(logError).not.toHaveBeenCalled();
       expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
       expect(onBookmarkError).toHaveBeenCalledWith(
         'Failed to save bookmark. Please try again.',

@@ -15,6 +15,10 @@ import {
   type SessionUnansweredReveal,
 } from '@/app/(app)/app/questions/[slug]/question-page-logic';
 import { selectChoiceIfAllowed } from '@/app/(app)/app/shared/question-guards';
+import {
+  reportClientError,
+  shouldReportClientError,
+} from '@/lib/report-client-error';
 import type { QuestionMode, QuestionOrigin } from '@/lib/routes';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import { withTimeout } from '@/lib/with-timeout';
@@ -247,11 +251,11 @@ export function useQuestionPageController(
           if (isStale) return;
           if (!isMounted()) return;
           if (!result.ok) {
-            if (process.env.NODE_ENV === 'development') {
-              console.warn(
-                '[SessionNavigation] Review fetch failed:',
-                result.error,
-              );
+            if (shouldReportClientError(result.error)) {
+              reportClientError(result.error, {
+                component: 'UseQuestionPageController',
+                action: 'loadSessionNavigation',
+              });
             }
             setSessionNavigation(null);
             return;
@@ -289,9 +293,10 @@ export function useQuestionPageController(
         })
         .catch((error: unknown) => {
           if (isStale || !isMounted()) return;
-          if (process.env.NODE_ENV === 'development') {
-            console.error('[SessionNavigation] Review fetch threw:', error);
-          }
+          reportClientError(error, {
+            component: 'UseQuestionPageController',
+            action: 'loadSessionNavigation',
+          });
           setSessionNavigation(null);
         });
     });
@@ -431,6 +436,12 @@ export function useQuestionPageController(
         nowMs: Date.now,
         setLoadState,
         setSubmitResult,
+        onUnhandledError: (error) => {
+          reportClientError(error, {
+            component: 'UseQuestionPageController',
+            action: 'submitAnswer',
+          });
+        },
         isMounted,
         isStale: () =>
           latestSubmitRequestId.current !== requestId ||

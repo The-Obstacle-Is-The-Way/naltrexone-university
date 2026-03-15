@@ -1,4 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
+
+const { reportClientErrorMock } = vi.hoisted(() => ({
+  reportClientErrorMock: vi.fn(),
+}));
+
+vi.mock('@/lib/report-client-error', () => ({
+  reportClientError: reportClientErrorMock,
+}));
+
 import {
   createLoadNextQuestionAction,
   createNavigatorEffect,
@@ -831,12 +840,13 @@ describe('practice-session-page-logic', () => {
 
     it('sets error state when controller throws', async () => {
       const setLoadState = vi.fn();
+      const error = new Error('Boom');
 
       await endSession({
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
         endPracticeSessionFn: async () => {
-          throw new Error('Boom');
+          throw error;
         },
         setLoadState,
         setSummary: vi.fn(),
@@ -846,6 +856,10 @@ describe('practice-session-page-logic', () => {
       expect(setLoadState).toHaveBeenCalledWith({
         status: 'error',
         message: 'Boom',
+      });
+      expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
+        component: 'PracticeSessionPageLogic',
+        action: 'endSession',
       });
     });
 
@@ -1040,8 +1054,9 @@ describe('practice-session-page-logic effects', () => {
     });
 
     it('sets error state when the request throws', async () => {
+      const error = new Error('boom');
       const getPracticeSessionReviewFn = vi.fn(async () => {
-        throw new Error('boom');
+        throw error;
       });
       const setNavigator = vi.fn();
       const setNavigatorLoadState = vi.fn();
@@ -1067,6 +1082,10 @@ describe('practice-session-page-logic effects', () => {
       expect(setNavigatorLoadState).toHaveBeenLastCalledWith({
         status: 'error',
         message: 'boom',
+      });
+      expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
+        component: 'PracticeSessionPageLogic',
+        action: 'loadNavigator',
       });
     });
   });
@@ -1131,8 +1150,9 @@ describe('practice-session-page-logic effects', () => {
     });
 
     it('sets error state when request throws', async () => {
+      const error = new Error('boom');
       const getPracticeSessionReviewFn = vi.fn(async () => {
-        throw new Error('boom');
+        throw error;
       });
       const setSummaryReview = vi.fn();
       const setSummaryReviewLoadState = vi.fn();
@@ -1156,6 +1176,10 @@ describe('practice-session-page-logic effects', () => {
       expect(setSummaryReviewLoadState).toHaveBeenLastCalledWith({
         status: 'error',
         message: 'boom',
+      });
+      expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
+        component: 'PracticeSessionPageLogic',
+        action: 'loadSummaryReview',
       });
     });
 

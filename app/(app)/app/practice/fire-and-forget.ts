@@ -1,5 +1,10 @@
+import { reportClientError } from '@/lib/report-client-error';
+
 export function logUnhandledAsyncError(error: unknown): void {
-  console.error('Unhandled async UI action error', error);
+  reportClientError(error, {
+    component: 'FireAndForget',
+    action: 'unhandledAsyncAction',
+  });
 }
 
 export function fireAndForget(
@@ -10,7 +15,10 @@ export function fireAndForget(
     try {
       onError(error);
     } catch (handlerError) {
-      console.error('onError handler threw', handlerError);
+      reportClientError(handlerError, {
+        component: 'FireAndForget',
+        action: 'onErrorHandler',
+      });
     }
   });
 }

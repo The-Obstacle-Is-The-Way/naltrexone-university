@@ -108,4 +108,35 @@ describe('useQuickPracticeStatusCounts helpers', () => {
     );
     expect(logError).toHaveBeenCalledTimes(1);
   });
+
+  it('does not log expected business quick-practice count failures', async () => {
+    const setCounts = vi.fn();
+    const logError = vi.fn();
+
+    const countAvailableQuestionsFn = vi.fn(
+      async (input: {
+        statuses: readonly ('unanswered' | 'incorrect' | 'bookmarked')[];
+      }) => {
+        const status = input.statuses[0];
+        if (status === 'incorrect') {
+          return err('UNAUTHENTICATED', 'Authentication required');
+        }
+        return ok({ count: 1 });
+      },
+    );
+
+    createQuickPracticeStatusCountsEffect({
+      countAvailableQuestionsFn,
+      filters: baseFilters,
+      setCounts,
+      logError,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(setCounts).toHaveBeenLastCalledWith(
+      createEmptyQuickPracticeStatusCounts(),
+    );
+    expect(logError).not.toHaveBeenCalled();
+  });
 });

@@ -7,6 +7,10 @@ import {
   getThrownErrorMessage,
 } from '@/app/(app)/app/practice/practice-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
+import {
+  reportClientError,
+  shouldReportClientError,
+} from '@/lib/report-client-error';
 import { withTimeout } from '@/lib/with-timeout';
 import {
   type GetPracticeSessionReviewOutput,
@@ -50,6 +54,10 @@ export function usePracticeSessionReviewStageState(
   const finalizeSessionSafely = useCallback((): void => {
     void input.finalizeSession().catch((error) => {
       if (!input.isMounted()) return;
+      reportClientError(error, {
+        component: 'UsePracticeSessionReviewStageState',
+        action: 'finalizeSession',
+      });
       setReviewLoadState({
         status: 'error',
         message: getThrownErrorMessage(error),
@@ -71,6 +79,10 @@ export function usePracticeSessionReviewStageState(
         );
       } catch (error) {
         if (!input.isMounted()) return;
+        reportClientError(error, {
+          component: 'UsePracticeSessionReviewStageState',
+          action: 'loadReview',
+        });
         setReviewLoadState({
           status: 'error',
           message: getThrownErrorMessage(error),
@@ -80,6 +92,12 @@ export function usePracticeSessionReviewStageState(
       if (!input.isMounted()) return;
 
       if (!res.ok) {
+        if (shouldReportClientError(res.error)) {
+          reportClientError(res.error, {
+            component: 'UsePracticeSessionReviewStageState',
+            action: 'loadReview',
+          });
+        }
         setReviewLoadState({
           status: 'error',
           message: getActionResultErrorMessage(res),

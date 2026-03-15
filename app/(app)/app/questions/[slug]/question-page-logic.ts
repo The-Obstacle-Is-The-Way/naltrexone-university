@@ -4,6 +4,7 @@ import {
 } from '@/app/(app)/app/practice/practice-logic';
 import { runTransitionedAsyncAction } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import type { AsyncLoadState } from '@/app/(app)/app/shared/load-state';
+import { reportClientError } from '@/lib/report-client-error';
 import type { QuestionMode, QuestionOrigin } from '@/lib/routes';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
@@ -129,6 +130,10 @@ export async function loadQuestion(input: {
   } catch (error) {
     if (!isMounted() || isStale()) return;
 
+    reportClientError(error, {
+      component: 'QuestionPageLogic',
+      action: 'loadQuestion',
+    });
     input.setLoadState({
       status: 'error',
       message: getThrownErrorMessage(error),
@@ -243,6 +248,10 @@ export async function submitSelectedAnswer(input: {
   } catch (error) {
     if (!isMounted() || isStale()) return;
 
+    reportClientError(error, {
+      component: 'QuestionPageLogic',
+      action: 'submitSelectedAnswer',
+    });
     input.setLoadState({
       status: 'error',
       message: getThrownErrorMessage(error),
@@ -276,6 +285,7 @@ export function createSubmitSelectedAnswerAction(input: {
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  onUnhandledError?: (error: unknown) => void;
   isMounted?: () => boolean;
   isStale?: () => boolean;
 }): () => Promise<void> {
@@ -283,6 +293,7 @@ export function createSubmitSelectedAnswerAction(input: {
     runTransitionedAsyncAction({
       startTransition: input.startTransition,
       run: () => submitSelectedAnswer(input),
+      onUnhandledError: input.onUnhandledError,
     });
 }
 
@@ -347,8 +358,12 @@ export async function loadPreviousAttempt(input: {
       }),
       PREVIOUS_ATTEMPT_TIMEOUT_MS,
     );
-  } catch {
+  } catch (error) {
     if (!isMounted() || isStale()) return;
+    reportClientError(error, {
+      component: 'QuestionPageLogic',
+      action: 'loadPreviousAttempt',
+    });
     setReviewHydrationState('hydration_error');
     return;
   }

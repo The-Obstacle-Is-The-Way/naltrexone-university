@@ -1,3 +1,4 @@
+import { shouldReportClientError } from '@/lib/report-client-error';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 
@@ -27,7 +28,9 @@ export function createTagsEffect<T>(input: {
     if (!mounted) return;
 
     if (!res.ok) {
-      logError('Failed to load tags', res.error);
+      if (shouldReportClientError(res.error)) {
+        logError('Failed to load tags', res.error);
+      }
       input.setTagLoadStatus('error');
       return;
     }

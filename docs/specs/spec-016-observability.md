@@ -1,6 +1,6 @@
 # SPEC-016: Observability (Logging, Error Tracking, Monitoring)
 
-> **Status:** Partially Implemented — Pino + Sentry bootstrap complete; caught client-side reporting still in progress ([DEBT-286](../debt/debt-286-client-side-error-reporting.md))
+> **Status:** Implemented (Core) — Pino + Sentry bootstrap complete; DEBT-286 client-side reporting rollout resolved ([DEBT-286](../debt/debt-286-client-side-error-reporting.md))
 > **Priority:** P1 (Critical for Production)
 > **Author:** Claude
 > **Created:** 2026-02-01
@@ -17,11 +17,10 @@
 - Sentry DSNs configured in Vercel (Production, Preview, Development) and local `.env.local`
 - Server `onRequestError` wired to `Sentry.captureRequestError` for unhandled request errors
 - Sentry environment auto-tagged via `VERCEL_ENV` / `NODE_ENV`
-
-🔧 **In Progress (DEBT-286):**
-- `reportClientError()` utility — caught client-side errors currently reach `console.error` only, not Sentry
-- Zero `Sentry.captureException()` calls exist in the codebase today
-- Several client-bundled flows still resolve unexpected operational failures into console-only or silent fallback state
+- `lib/report-client-error.ts` — shared client-side Sentry reporter with development console fallback
+- `shouldReportClientError()` — filters expected `ActionResult` business errors out of client-side Sentry reporting
+- Audited client-side operational failure paths now report via `reportClientError()` instead of raw console-only or silent fallback behavior
+- Direct client-side Sentry capture remains centralized in `lib/report-client-error.ts`
 
 ❌ **Not Yet Implemented (Optional):**
 - `pino-pretty` for dev (optional, logs are readable without it)
@@ -310,7 +309,8 @@ SENTRY_DSN=                         # Server DSN (optional)
 ├── instrumentation-client.ts  # ✅ EXISTS - loads sentry.client.config.ts on the client
 ├── sentry.client.config.ts    # ✅ EXISTS - browser Sentry.init (errors only)
 └── lib/
-    └── logger.ts              # ✅ EXISTS - Pino logger instance with redaction
+    ├── logger.ts              # ✅ EXISTS - Pino logger instance with redaction
+    └── report-client-error.ts # ✅ EXISTS - shared client-side error reporter
 ```
 
 ---
@@ -343,12 +343,12 @@ pnpm add -D pino-pretty              # Pretty logs in dev terminal
 - [ ] Pretty logs in dev (requires `pino-pretty`)
 - [ ] LOG_LEVEL documented in .env.example
 
-**Not Yet Done (DEBT-286: Client-Side Error Reporting):**
-- [ ] `reportClientError()` utility exists in `lib/`
-- [ ] Caught client-side operational failures are reported via `reportClientError()` → Sentry
-- [ ] Helper-level client catch sites that currently collapse thrown/rejected server-action calls into fallback UI state are routed through `reportClientError()` or explicitly justified
-- [ ] Direct client-side error reporting does not use raw `console.error` in production paths
-- [ ] Bare `catch {}` blocks that swallow unexpected client-side operational failures are eliminated or explicitly justified
+**Completed (DEBT-286: Client-Side Error Reporting):**
+- [x] `reportClientError()` utility exists in `lib/`
+- [x] Caught client-side operational failures are reported via `reportClientError()` → Sentry
+- [x] Helper-level client catch sites that currently collapse thrown/rejected server-action calls into fallback UI state are routed through `reportClientError()` or explicitly justified
+- [x] Direct client-side error reporting uses `reportClientError()` unless a fallback/error-boundary path is explicitly retained and documented
+- [x] Bare `catch {}` blocks that swallow unexpected client-side operational failures are eliminated or explicitly justified
 
 Route/global error-boundary console cleanup remains observability-adjacent work, but it is not part of the core DEBT-286 rollout inventory unless that debt is explicitly expanded.
 
@@ -376,9 +376,13 @@ import { FakeLogger } from '@/src/application/test-helpers/fakes';
 const logger = new FakeLogger();
 // Assert against logger.infoCalls / logger.errorCalls
 
-// For client-side Sentry reporting, mock only the external SDK:
+// For the shared client reporter utility, mock only the external SDK:
 vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn() }));
 ```
+
+For client-side reporting consumers:
+1. Unit-test `lib/report-client-error.ts` by mocking only `@sentry/nextjs`
+2. In hook/controller/component tests that only verify wiring, mock `@/lib/report-client-error` and assert the wrapper is called with the expected context instead of mocking the Sentry SDK in every consumer test
 
 ---
 

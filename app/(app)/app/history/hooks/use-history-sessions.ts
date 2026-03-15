@@ -6,6 +6,10 @@ import {
   getThrownErrorMessage,
 } from '@/app/(app)/app/practice/practice-logic';
 import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
+import {
+  reportClientError,
+  shouldReportClientError,
+} from '@/lib/report-client-error';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import { withTimeout } from '@/lib/with-timeout';
 import {
@@ -61,6 +65,10 @@ export function useHistorySessions(): UseHistorySessionsOutput {
       } catch (error) {
         if (!isMounted()) return;
         if (latestRequestId.current !== requestId) return;
+        reportClientError(error, {
+          component: 'UseHistorySessions',
+          action: 'openSession',
+        });
         setReviewLoadState({
           status: 'error',
           message: getThrownErrorMessage(error),
@@ -71,6 +79,12 @@ export function useHistorySessions(): UseHistorySessionsOutput {
       if (latestRequestId.current !== requestId) return;
 
       if (!res.ok) {
+        if (shouldReportClientError(res.error)) {
+          reportClientError(res.error, {
+            component: 'UseHistorySessions',
+            action: 'openSession',
+          });
+        }
         setReviewLoadState({
           status: 'error',
           message: getActionResultErrorMessage(res),

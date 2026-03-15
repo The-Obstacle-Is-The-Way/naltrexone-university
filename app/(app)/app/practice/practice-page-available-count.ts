@@ -1,3 +1,4 @@
+import { shouldReportClientError } from '@/lib/report-client-error';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {
@@ -50,7 +51,9 @@ export function createAvailableQuestionsCountEffect(input: {
       if (!mounted) return;
 
       if (!res.ok) {
-        logError('Failed to count available questions', res.error);
+        if (shouldReportClientError(res.error)) {
+          logError('Failed to count available questions', res.error);
+        }
         input.setAvailableCountStatus('error');
         return;
       }
