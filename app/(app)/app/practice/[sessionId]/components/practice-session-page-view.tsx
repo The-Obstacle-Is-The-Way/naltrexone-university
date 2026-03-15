@@ -104,6 +104,15 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
     }
   }, [previousQuestionId, onNavigateQuestion]);
 
+  const onNextQuestionResolved = useCallback(() => {
+    if (nextQuestionId && onNavigateQuestion) {
+      onNavigateQuestion(nextQuestionId);
+      return;
+    }
+
+    props.onNextQuestion();
+  }, [nextQuestionId, onNavigateQuestion, props.onNextQuestion]);
+
   if (props.summary) {
     return (
       <SessionSummaryView
@@ -231,7 +240,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       onToggleMarkForReview={props.onToggleMarkForReview}
       onSelectChoice={props.onSelectChoice}
       onSubmit={props.onSubmit}
-      onNextQuestion={props.onNextQuestion}
+      onNextQuestion={onNextQuestionResolved}
       onPreviousQuestion={
         props.onNavigateQuestion ? onPreviousQuestion : undefined
       }
