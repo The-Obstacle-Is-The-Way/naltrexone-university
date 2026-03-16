@@ -456,10 +456,10 @@ Adding bookmark to the question review page requires:
    └──────────┬──────────┘            │  ?toast=bookmark_removed    │
               │                       └──────────────┬────────────┘
     ┌─────────┴─────────┐                           │
-    │ consumed by:       │              ┌───────────┴─────────────┐
-    │ - usePracticeQuestionFlow         │  BookmarkRowShell         │
-    │ - usePracticeSessionPageController│  → /app/questions/[slug] │
-    └─────────┬─────────┘               │    ?from=bookmarks       │
+    │ consumed by:       │              ┌───────────┴────────────────────────┐
+    │ - usePracticeQuestionFlow         │  BookmarkRowShell                    │
+    │ - usePracticeSessionPageController│  → /app/questions/[slug]             │
+    └─────────┬─────────┘               │    ?from=bookmarks&mode=review      │
               │                         └───────────┬─────────────┘
    ┌──────────┴──────────┐                          │
    │ PracticeView         │                          │
