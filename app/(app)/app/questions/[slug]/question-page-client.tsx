@@ -23,7 +23,10 @@ import type {
   SessionNavigation,
   SessionUnansweredReveal,
 } from './question-page-logic';
-import { useQuestionPageController } from './use-question-page-controller';
+import {
+  type QuestionPageBookmarkStatus,
+  useQuestionPageController,
+} from './use-question-page-controller';
 
 // WHY: This file exceeds the 300-line soft guideline intentionally.
 // DEBT-234 enforces a warning threshold at 350 lines; DEBT-224 keeps 300 as the design guideline.
@@ -142,11 +145,15 @@ export type QuestionViewProps = {
   sessionNavigation: SessionNavigation | null;
   canSubmit: boolean;
   isPending: boolean;
+  bookmarkStatus?: QuestionPageBookmarkStatus;
+  isBookmarkHydrated?: boolean;
+  isBookmarked?: boolean;
   mode?: QuestionMode | null;
   origin?: QuestionOrigin | null;
   sessionId?: string;
   historyHref?: string;
   onTryAgain: () => void;
+  onToggleBookmark?: () => void;
   onSelectChoice: (choiceId: string) => void;
   onSubmit: () => void;
   onReattempt: () => void;
@@ -190,6 +197,10 @@ export function QuestionView(props: QuestionViewProps) {
   const reattemptLabel = props.submitResult?.isCorrect
     ? 'Practice Again'
     : 'Try Again';
+  const bookmarkStatus = props.bookmarkStatus ?? 'loading';
+  const isBookmarkHydrated = props.isBookmarkHydrated ?? false;
+  const isBookmarked = props.isBookmarked ?? false;
+  const onToggleBookmark = props.onToggleBookmark ?? (() => undefined);
 
   return (
     <div className="space-y-6">
@@ -392,6 +403,19 @@ export function QuestionView(props: QuestionViewProps) {
               onClick={props.onReattempt}
             >
               {reattemptLabel}
+            </Button>
+          ) : null}
+
+          {isReviewMode && props.question && isBookmarkHydrated ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              aria-pressed={isBookmarked}
+              disabled={bookmarkStatus === 'saving' || props.isPending}
+              onClick={onToggleBookmark}
+            >
+              {isBookmarked ? 'Remove bookmark' : 'Bookmark'}
             </Button>
           ) : null}
 

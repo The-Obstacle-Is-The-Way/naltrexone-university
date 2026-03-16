@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import type { QuestionOrigin } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import type { GetBookmarksOutput } from '@/src/application/ports/bookmarks';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
@@ -13,12 +14,16 @@ const {
   getPreviousAttemptMock,
   submitAnswerMock,
   getPracticeSessionReviewMock,
+  getBookmarksMock,
+  toggleBookmarkMock,
   reportClientErrorMock,
 } = vi.hoisted(() => ({
   getQuestionBySlugMock: vi.fn(),
   getPreviousAttemptMock: vi.fn(),
   submitAnswerMock: vi.fn(),
   getPracticeSessionReviewMock: vi.fn(),
+  getBookmarksMock: vi.fn(),
+  toggleBookmarkMock: vi.fn(),
   reportClientErrorMock: vi.fn(),
 }));
 
@@ -33,6 +38,11 @@ vi.mock('@/src/adapters/controllers/question-controller', () => ({
 
 vi.mock('@/src/adapters/controllers/practice-controller', () => ({
   getPracticeSessionReview: getPracticeSessionReviewMock,
+}));
+
+vi.mock('@/src/adapters/controllers/bookmark-controller', () => ({
+  getBookmarks: getBookmarksMock,
+  toggleBookmark: toggleBookmarkMock,
 }));
 
 vi.mock('@/lib/report-client-error', () => ({
@@ -101,6 +111,13 @@ function Probe({
       <div data-testid="review-hydration-state">
         {output.reviewHydrationState ?? ''}
       </div>
+      <div data-testid="bookmark-status">{output.bookmarkStatus}</div>
+      <div data-testid="is-bookmark-hydrated">
+        {output.isBookmarkHydrated ? 'true' : 'false'}
+      </div>
+      <div data-testid="is-bookmarked">
+        {output.isBookmarked ? 'true' : 'false'}
+      </div>
       <button
         type="button"
         data-testid="select-choice-1"
@@ -129,16 +146,34 @@ function Probe({
       >
         Trigger answer as new
       </button>
+      <button
+        type="button"
+        data-testid="trigger-toggle-bookmark"
+        onClick={() => void output.onToggleBookmark()}
+      >
+        Trigger toggle bookmark
+      </button>
     </>
   );
 }
 
 describe('useQuestionPageController (browser)', () => {
+  const emptyBookmarksResult: { ok: true; data: GetBookmarksOutput } = ok({
+    rows: [],
+  });
+
+  beforeEach(() => {
+    getBookmarksMock.mockResolvedValue(emptyBookmarksResult);
+    toggleBookmarkMock.mockResolvedValue(ok({ bookmarked: false }));
+  });
+
   afterEach(() => {
     getQuestionBySlugMock.mockReset();
     getPreviousAttemptMock.mockReset();
     submitAnswerMock.mockReset();
     getPracticeSessionReviewMock.mockReset();
+    getBookmarksMock.mockReset();
+    toggleBookmarkMock.mockReset();
     reportClientErrorMock.mockReset();
   });
 
@@ -428,6 +463,215 @@ describe('useQuestionPageController (browser)', () => {
     await expect
       .element(screen.getByTestId('session-nav-next-slug'))
       .toHaveTextContent(/^$/);
+  });
+
+  it('loads bookmark state for the current review question', async () => {
+    getQuestionBySlugMock.mockResolvedValue(
+      ok({
+        questionId: 'question-1',
+        slug: 'q-1',
+        stemMd: 'Stem',
+        difficulty: 'easy',
+        choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
+      }),
+    );
+    getPreviousAttemptMock.mockResolvedValue(
+      ok({
+        kind: 'attempt',
+        attemptId: 'attempt-1',
+        selectedChoiceId: 'choice-1',
+        isCorrect: true,
+        correctChoiceId: 'choice-1',
+        explanationMd: 'Because.',
+        referenceMd: null,
+        choiceExplanations: [],
+        answeredAt: '2026-02-01T00:00:00.000Z',
+      }),
+    );
+    getBookmarksMock.mockResolvedValue(
+      ok({
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'question-1',
+            slug: 'q-1',
+            stemMd: 'Stem',
+            difficulty: 'easy',
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    );
+
+    const screen = await render(<Probe mode="review" />);
+
+    await expect
+      .element(screen.getByTestId('is-bookmarked'))
+      .toHaveTextContent('true');
+    await expect
+      .element(screen.getByTestId('bookmark-status'))
+      .toHaveTextContent('idle');
+    await expect
+      .element(screen.getByTestId('is-bookmark-hydrated'))
+      .toHaveTextContent('true');
+    expect(getBookmarksMock).toHaveBeenCalledWith({});
+  });
+
+  it('keeps bookmark state unhydrated until the bookmark lookup resolves', async () => {
+    getQuestionBySlugMock.mockResolvedValue(
+      ok({
+        questionId: 'question-1',
+        slug: 'q-1',
+        stemMd: 'Stem',
+        difficulty: 'easy',
+        choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
+      }),
+    );
+    getPreviousAttemptMock.mockResolvedValue(
+      ok({
+        kind: 'attempt',
+        attemptId: 'attempt-1',
+        selectedChoiceId: 'choice-1',
+        isCorrect: true,
+        correctChoiceId: 'choice-1',
+        explanationMd: 'Because.',
+        referenceMd: null,
+        choiceExplanations: [],
+        answeredAt: '2026-02-01T00:00:00.000Z',
+      }),
+    );
+    const deferred = createDeferred<ActionResult<GetBookmarksOutput>>();
+    getBookmarksMock.mockReturnValue(deferred.promise);
+
+    const screen = await render(<Probe mode="review" />);
+
+    await expect
+      .element(screen.getByTestId('bookmark-status'))
+      .toHaveTextContent('loading');
+    await expect
+      .element(screen.getByTestId('is-bookmark-hydrated'))
+      .toHaveTextContent('false');
+
+    deferred.resolve(
+      ok({
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'question-1',
+            slug: 'q-1',
+            stemMd: 'Stem',
+            difficulty: 'easy',
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    );
+    await deferred.promise;
+
+    await expect
+      .element(screen.getByTestId('bookmark-status'))
+      .toHaveTextContent('idle');
+    await expect
+      .element(screen.getByTestId('is-bookmark-hydrated'))
+      .toHaveTextContent('true');
+    await expect
+      .element(screen.getByTestId('is-bookmarked'))
+      .toHaveTextContent('true');
+  });
+
+  it('toggles bookmark state for the current review question', async () => {
+    getQuestionBySlugMock.mockResolvedValue(
+      ok({
+        questionId: 'question-1',
+        slug: 'q-1',
+        stemMd: 'Stem',
+        difficulty: 'easy',
+        choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
+      }),
+    );
+    getPreviousAttemptMock.mockResolvedValue(
+      ok({
+        kind: 'attempt',
+        attemptId: 'attempt-1',
+        selectedChoiceId: 'choice-1',
+        isCorrect: true,
+        correctChoiceId: 'choice-1',
+        explanationMd: 'Because.',
+        referenceMd: null,
+        choiceExplanations: [],
+        answeredAt: '2026-02-01T00:00:00.000Z',
+      }),
+    );
+    toggleBookmarkMock.mockResolvedValue(ok({ bookmarked: true }));
+
+    const screen = await render(<Probe mode="review" />);
+
+    await expect
+      .element(screen.getByTestId('is-bookmarked'))
+      .toHaveTextContent('false');
+
+    await screen.getByTestId('trigger-toggle-bookmark').click();
+
+    await expect.poll(() => toggleBookmarkMock.mock.calls.length).toBe(1);
+    expect(toggleBookmarkMock).toHaveBeenCalledWith({
+      questionId: 'question-1',
+      idempotencyKey: expect.any(String),
+    });
+    await expect
+      .element(screen.getByTestId('bookmark-status'))
+      .toHaveTextContent('idle');
+    await expect
+      .element(screen.getByTestId('is-bookmark-hydrated'))
+      .toHaveTextContent('true');
+    await expect
+      .element(screen.getByTestId('is-bookmarked'))
+      .toHaveTextContent('true');
+  });
+
+  it('reports saving state while a bookmark toggle is in flight', async () => {
+    getQuestionBySlugMock.mockResolvedValue(
+      ok({
+        questionId: 'question-1',
+        slug: 'q-1',
+        stemMd: 'Stem',
+        difficulty: 'easy',
+        choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
+      }),
+    );
+    getPreviousAttemptMock.mockResolvedValue(
+      ok({
+        kind: 'attempt',
+        attemptId: 'attempt-1',
+        selectedChoiceId: 'choice-1',
+        isCorrect: true,
+        correctChoiceId: 'choice-1',
+        explanationMd: 'Because.',
+        referenceMd: null,
+        choiceExplanations: [],
+        answeredAt: '2026-02-01T00:00:00.000Z',
+      }),
+    );
+    const deferred = createDeferred<ActionResult<{ bookmarked: boolean }>>();
+    toggleBookmarkMock.mockReturnValue(deferred.promise);
+
+    const screen = await render(<Probe mode="review" />);
+
+    await expect
+      .element(screen.getByTestId('is-bookmark-hydrated'))
+      .toHaveTextContent('true');
+
+    await screen.getByTestId('trigger-toggle-bookmark').click();
+
+    await expect
+      .element(screen.getByTestId('bookmark-status'))
+      .toHaveTextContent('saving');
+
+    deferred.resolve(ok({ bookmarked: true }));
+    await deferred.promise;
+
+    await expect
+      .element(screen.getByTestId('bookmark-status'))
+      .toHaveTextContent('idle');
   });
 
   it('does not refetch the session review when slug changes within the same session', async () => {

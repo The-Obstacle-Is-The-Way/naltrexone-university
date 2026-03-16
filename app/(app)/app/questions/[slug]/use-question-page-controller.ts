@@ -14,6 +14,7 @@ import {
   type SessionNavigation,
   type SessionUnansweredReveal,
 } from '@/app/(app)/app/questions/[slug]/question-page-logic';
+import { toggleBookmarkForQuestion } from '@/app/(app)/app/shared/bookmark-toggle';
 import { selectChoiceIfAllowed } from '@/app/(app)/app/shared/question-guards';
 import {
   reportClientError,
@@ -22,6 +23,10 @@ import {
 import type { QuestionMode, QuestionOrigin } from '@/lib/routes';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import { withTimeout } from '@/lib/with-timeout';
+import {
+  getBookmarks,
+  toggleBookmark,
+} from '@/src/adapters/controllers/bookmark-controller';
 import { getPracticeSessionReview } from '@/src/adapters/controllers/practice-controller';
 import { submitAnswer } from '@/src/adapters/controllers/question-controller';
 import {
@@ -34,6 +39,13 @@ import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answ
 import type { AttemptRetryOrigin } from '@/src/domain/entities';
 
 const SESSION_REVIEW_TIMEOUT_MS = 10_000;
+const BOOKMARK_LOOKUP_TIMEOUT_MS = 10_000;
+
+export type QuestionPageBookmarkStatus =
+  | 'idle'
+  | 'loading'
+  | 'saving'
+  | 'error';
 
 function resolveRetryOrigin(input: {
   mode?: QuestionMode | null;
@@ -68,7 +80,11 @@ export type UseQuestionPageControllerOutput = {
   sessionNavigation: SessionNavigation | null;
   canSubmit: boolean;
   isPending: boolean;
+  bookmarkStatus: QuestionPageBookmarkStatus;
+  isBookmarkHydrated: boolean;
+  isBookmarked: boolean;
   onTryAgain: () => void;
+  onToggleBookmark: () => void;
   onSelectChoice: (choiceId: string) => void;
   onSubmit: () => void;
   onReattempt: () => void;
@@ -105,6 +121,18 @@ export function useQuestionPageController(
     );
   const [pendingRetryProvenance, setPendingRetryProvenance] =
     useState<RetryProvenance | null>(null);
+  const [bookmarkedQuestionIds, setBookmarkedQuestionIds] = useState<
+    Set<string>
+  >(() => new Set());
+  const [bookmarkUiState, setBookmarkUiState] = useState<{
+    questionId: string | null;
+    status: QuestionPageBookmarkStatus;
+    isHydrated: boolean;
+  }>({
+    questionId: null,
+    status: input.mode === 'review' ? 'loading' : 'idle',
+    isHydrated: false,
+  });
   const [isPending, startTransition] = useTransition();
   const isMounted = useIsMounted();
   const latestSlugRef = useRef(input.slug);
@@ -113,6 +141,9 @@ export function useQuestionPageController(
   const latestPreviousAttemptRequestId = useRef(0);
   const activePreviousAttemptRequestId = useRef<number | null>(null);
   const latestSubmitRequestId = useRef(0);
+  const latestBookmarkLookupRequestId = useRef(0);
+  const bookmarkStateVersionRef = useRef(0);
+  const bookmarkIdempotencyKeyRef = useRef<string | null>(null);
   const sessionQuestionsBySessionIdRef = useRef<
     Map<string, SessionNavigation['questions']>
   >(new Map());
@@ -389,6 +420,113 @@ export function useQuestionPageController(
     isMounted,
   ]);
 
+  useEffect(() => {
+    if (input.mode !== 'review' || !question) {
+      setBookmarkUiState((current) => {
+        if (
+          current.questionId === null &&
+          current.status === 'idle' &&
+          current.isHydrated === false
+        ) {
+          return current;
+        }
+
+        return {
+          questionId: null,
+          status: 'idle',
+          isHydrated: false,
+        };
+      });
+      return;
+    }
+
+    latestBookmarkLookupRequestId.current += 1;
+    const requestId = latestBookmarkLookupRequestId.current;
+    const questionId = question.questionId;
+    bookmarkStateVersionRef.current += 1;
+    const stateVersion = bookmarkStateVersionRef.current;
+
+    setBookmarkUiState({
+      questionId,
+      status: 'loading',
+      isHydrated: false,
+    });
+    setBookmarkedQuestionIds((prev) => {
+      const next = new Set(prev);
+      next.delete(questionId);
+      return next;
+    });
+
+    void withTimeout(getBookmarks({}), BOOKMARK_LOOKUP_TIMEOUT_MS)
+      .then((result) => {
+        if (!isMounted()) return;
+        if (latestBookmarkLookupRequestId.current !== requestId) return;
+        if (bookmarkStateVersionRef.current !== stateVersion) return;
+
+        if (!result.ok) {
+          if (shouldReportClientError(result.error)) {
+            reportClientError(result.error, {
+              component: 'UseQuestionPageController',
+              action: 'loadBookmarkState',
+            });
+          }
+          setBookmarkUiState({
+            questionId,
+            status: 'error',
+            isHydrated: false,
+          });
+          return;
+        }
+
+        const isQuestionBookmarked = result.data.rows.some(
+          (row) => row.questionId === questionId,
+        );
+
+        setBookmarkedQuestionIds((prev) => {
+          const next = new Set(prev);
+          next.delete(questionId);
+          if (isQuestionBookmarked) {
+            next.add(questionId);
+          }
+          return next;
+        });
+        setBookmarkUiState({
+          questionId,
+          status: 'idle',
+          isHydrated: true,
+        });
+      })
+      .catch((error: unknown) => {
+        if (!isMounted()) return;
+        if (latestBookmarkLookupRequestId.current !== requestId) return;
+        if (bookmarkStateVersionRef.current !== stateVersion) return;
+        reportClientError(error, {
+          component: 'UseQuestionPageController',
+          action: 'loadBookmarkState',
+        });
+        setBookmarkUiState({
+          questionId,
+          status: 'error',
+          isHydrated: false,
+        });
+      });
+  }, [input.mode, question, isMounted]);
+
+  const isBookmarked = question
+    ? bookmarkedQuestionIds.has(question.questionId)
+    : false;
+  const bookmarkStatus =
+    input.mode === 'review' && question
+      ? bookmarkUiState.questionId === question.questionId
+        ? bookmarkUiState.status
+        : 'loading'
+      : 'idle';
+  const isBookmarkHydrated =
+    input.mode === 'review' &&
+    question !== null &&
+    bookmarkUiState.questionId === question.questionId &&
+    bookmarkUiState.isHydrated;
+
   const canSubmit = useMemo(() => {
     return canSubmitQuestionAnswer({
       loadState,
@@ -416,6 +554,44 @@ export function useQuestionPageController(
       );
     };
   }, [sessionUnansweredReveal, submitResult]);
+
+  const onToggleBookmark = useMemo(() => {
+    return () => {
+      if (!question) return;
+
+      bookmarkStateVersionRef.current += 1;
+      const stateVersion = bookmarkStateVersionRef.current;
+      const questionId = question.questionId;
+
+      void toggleBookmarkForQuestion({
+        question,
+        bookmarkIdempotencyKey: bookmarkIdempotencyKeyRef.current,
+        createIdempotencyKey: () => crypto.randomUUID(),
+        setBookmarkIdempotencyKey: (key) => {
+          bookmarkIdempotencyKeyRef.current = key;
+        },
+        toggleBookmarkFn: toggleBookmark,
+        setBookmarkStatus: (status) => {
+          if (!isMounted()) return;
+          if (bookmarkStateVersionRef.current !== stateVersion) return;
+
+          setBookmarkUiState({
+            questionId,
+            status: status === 'loading' ? 'saving' : status,
+            isHydrated: true,
+          });
+        },
+        setBookmarkedQuestionIds,
+        logError: (_message: string, error: unknown) => {
+          reportClientError(error, {
+            component: 'UseQuestionPageController',
+            action: 'toggleBookmark',
+          });
+        },
+        isMounted,
+      });
+    };
+  }, [question, isMounted]);
 
   const onSubmit = useMemo(
     () => () => {
@@ -546,7 +722,11 @@ export function useQuestionPageController(
     sessionUnansweredReveal,
     canSubmit,
     isPending,
+    bookmarkStatus,
+    isBookmarkHydrated,
+    isBookmarked,
     onTryAgain: loadQuestion,
+    onToggleBookmark,
     onSelectChoice,
     onSubmit,
     onReattempt,

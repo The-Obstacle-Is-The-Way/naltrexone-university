@@ -34,7 +34,6 @@ test('renders error state and retries when requested', async () => {
 });
 
 test('supports exam controls and question interactions', async () => {
-  const onToggleBookmark = vi.fn();
   const onToggleMarkForReview = vi.fn();
   const onSelectChoice = vi.fn();
   const onSubmit = vi.fn();
@@ -71,7 +70,7 @@ test('supports exam controls and question interactions', async () => {
       canSubmit
       onEndSession={() => undefined}
       onTryAgain={() => undefined}
-      onToggleBookmark={onToggleBookmark}
+      onToggleBookmark={() => undefined}
       onToggleMarkForReview={onToggleMarkForReview}
       onSelectChoice={onSelectChoice}
       onSubmit={onSubmit}
@@ -82,8 +81,9 @@ test('supports exam controls and question interactions', async () => {
   await screen.getByRole('button', { name: 'Mark for review' }).click();
   expect(onToggleMarkForReview).toHaveBeenCalledTimes(1);
 
-  await screen.getByRole('button', { name: 'Bookmark' }).click();
-  expect(onToggleBookmark).toHaveBeenCalledTimes(1);
+  await expect
+    .element(screen.getByRole('button', { name: 'Bookmark' }))
+    .not.toBeInTheDocument();
 
   await screen.getByRole('radio', { name: 'Option B' }).click();
   expect(onSelectChoice).toHaveBeenCalledWith('choice_b');

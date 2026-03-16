@@ -734,7 +734,16 @@ describe('QuestionView', () => {
         mode="review"
         origin="history"
         sessionId="session_123"
+        question={{
+          questionId: 'q2',
+          slug: 'q2',
+          stemMd: 'Question stem',
+          difficulty: 'easy',
+          choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
+        }}
         sessionNavigation={sharedSessionNavigation}
+        isBookmarkHydrated={true}
+        bookmarkStatus="idle"
         submitResult={{
           attemptId: 'attempt_1',
           isCorrect: false,
@@ -750,9 +759,116 @@ describe('QuestionView', () => {
     expect(getBottomActionLabels(doc)).toEqual([
       'Previous',
       'Try Again',
+      'Bookmark',
       'Next',
       'Back to History',
     ]);
+  });
+
+  it('renders the bookmark toggle in review mode with pressed state', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        {...createBaseProps()}
+        mode="review"
+        origin="history"
+        question={{
+          questionId: 'q1',
+          slug: 'q1',
+          stemMd: 'Question stem',
+          difficulty: 'easy',
+          choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
+        }}
+        submitResult={{
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'c1',
+          explanationMd: 'Explanation',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+        isBookmarked={true}
+        isBookmarkHydrated={true}
+        bookmarkStatus="idle"
+        onToggleBookmark={() => undefined}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const bookmarkButton = Array.from(doc.querySelectorAll('button')).find(
+      (button) => button.textContent?.includes('Remove bookmark'),
+    );
+
+    expect(bookmarkButton).not.toBeNull();
+    expect(bookmarkButton?.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('hides the bookmark toggle while bookmark state is still hydrating', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        {...createBaseProps()}
+        mode="review"
+        origin="history"
+        question={{
+          questionId: 'q1',
+          slug: 'q1',
+          stemMd: 'Question stem',
+          difficulty: 'easy',
+          choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
+        }}
+        submitResult={{
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'c1',
+          explanationMd: 'Explanation',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+        isBookmarked={false}
+        isBookmarkHydrated={false}
+        bookmarkStatus="loading"
+        onToggleBookmark={() => undefined}
+      />,
+    );
+
+    expect(html).not.toContain('>Bookmark<');
+    expect(html).not.toContain('>Remove bookmark<');
+  });
+
+  it('disables the bookmark toggle while a save is in flight', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        {...createBaseProps()}
+        mode="review"
+        origin="history"
+        question={{
+          questionId: 'q1',
+          slug: 'q1',
+          stemMd: 'Question stem',
+          difficulty: 'easy',
+          choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
+        }}
+        submitResult={{
+          attemptId: 'attempt_1',
+          isCorrect: true,
+          correctChoiceId: 'c1',
+          explanationMd: 'Explanation',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+        isBookmarked={true}
+        isBookmarkHydrated={true}
+        bookmarkStatus="saving"
+        onToggleBookmark={() => undefined}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const bookmarkButton = Array.from(doc.querySelectorAll('button')).find(
+      (button) => button.textContent?.includes('Remove bookmark'),
+    );
+
+    expect(bookmarkButton).not.toBeNull();
+    expect(bookmarkButton?.hasAttribute('disabled')).toBe(true);
   });
 
   it('renders the position indicator when sessionNavigation is present', () => {
