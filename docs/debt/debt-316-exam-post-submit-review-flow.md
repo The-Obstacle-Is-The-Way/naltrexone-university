@@ -1,10 +1,10 @@
-# DEBT-316: Exam Post-Submit Flow Skips Question Review
+# DEBT-316: Exam Session UX — Post-Submit Dead-End and In-Session Navigation Gaps
 
 **Priority:** P2
 **Created:** 2026-03-15
 **Status:** Open
-**Source:** Manual QA — exam mode walkthrough
-**Scope:** Practice session completion flow, session summary page, question review navigation
+**Source:** Manual QA + Claude-in-Chrome browser walkthrough (2026-03-15)
+**Scope:** Exam session end-to-end flow: in-session navigation, pre-submission review, session summary, post-submit review path
 
 ---
 
@@ -44,6 +44,48 @@ Answer Q1 (no explanation) → auto-advance → Answer Q2 → "Review answers"
   → [Back to Dashboard | View in History | Start another session]   ← DEAD END for learning
 ```
 **Problem:** The user has never seen any explanations. The session summary shows correct/incorrect status but no explanations. The only way to review is through the history page (4 clicks away).
+
+---
+
+## In-Session UX Issues (Browser Walkthrough Findings)
+
+Beyond the post-submit dead-end, a full browser walkthrough uncovered several related UX issues during the exam session itself:
+
+### 1. No "Finish Exam" Button After All Questions Answered
+
+After submitting the last question, the bottom bar shows only **Previous, Bookmark, Mark for review** — the Submit button disappears. The only forward path is the **"Review answers" button at the top right**, which is easy to miss. Users who just finished their last question have no obvious call-to-action guiding them to end the exam.
+
+**Fix:** Add a prominent "Finish Exam" or "Review & Submit" button to the bottom bar once all questions have been submitted.
+
+### 2. "Open question" From Pre-Submission Review Is a Dead-End
+
+On the Review Questions screen (pre-submission), clicking "Open question" navigates back to the question view, but:
+- The **Question navigator disappears**
+- There are **no Previous/Next buttons** to move between questions
+- The only way back is the "Review answers" button at the top right
+- Answer choices are grayed out (already locked), so there's nothing actionable
+
+The user loses their navigation context. They went to inspect a question but got stranded.
+
+**Fix:** Restore Previous/Next navigation and the question navigator when opening a question from the review screen.
+
+### 3. "Submit" Label Ambiguity
+
+"Submit" is used for two different actions: locking in an individual answer during the session, and "Submit exam" for finalizing the entire exam. Users may hesitate on their first question thinking "Submit" ends the whole exam.
+
+**Fix:** Consider renaming the per-question action to "Confirm Answer" or "Lock Answer" to disambiguate from "Submit exam."
+
+### 4. No Feedback When Answer Is Locked (Auto-Advance)
+
+After clicking Submit on a non-final question, the app auto-advances to the next question with no confirmation toast or "answer saved" feedback. The transition is silent and abrupt.
+
+**Fix:** Add a brief toast (e.g., "Answer saved") or subtle visual acknowledgment before auto-advancing.
+
+### 5. Session Summary Question Breakdown Is Not Clickable
+
+The question breakdown list on the Session Summary shows each question with Correct/Incorrect labels, but the rows are **not clickable**. Users instinctively try to tap a question to see the explanation — nothing happens.
+
+**Fix:** Make each breakdown row link directly to that question's review page with explanations.
 
 ---
 
@@ -117,23 +159,30 @@ The Session Summary page already lazy-loads the question breakdown via `getPract
 ### Out of Scope
 
 - Changing the tutor mode flow (already adequate)
-- Modifying the history page
-- Changing the exam review (pre-submission) stage
+- Modifying the history page layout or functionality
 - Adding new API endpoints (existing `getPracticeSessionReview` provides all needed data)
+- Renaming "Submit" to "Confirm Answer" (cosmetic, can be a separate follow-up)
 
 ---
 
 ## Test Plan
 
 ### Unit Coverage
-1. Session summary renders "Review Your Answers" button for exam sessions
+1. Session summary renders "Review Your Answers" primary CTA button for exam sessions
 2. Review button constructs correct URL with session question sequence
 3. Review button links to first question in the session's question order
 4. For tutor sessions, review button is either absent or demoted (TBD based on implementation)
+5. Question breakdown rows on session summary are clickable and link to the correct question review URL
+6. "Finish Exam" button renders in the bottom bar when all questions have been submitted
+7. Pre-submission "Open question" view retains Previous/Next navigation and question navigator
 
 ### Manual Visual QA
-1. Complete a 2-question exam → submit → verify "Review Your Answers" button appears prominently
+1. Complete a 2-question exam → submit → verify "Review Your Answers" button appears as primary CTA
 2. Click "Review Your Answers" → verify it opens question 1 with explanation visible
 3. Navigate through all questions → verify Previous/Next work correctly
 4. Click "Back to History" from review → verify it returns to appropriate page
 5. Complete a tutor session → verify session summary still works as expected
+6. After answering all exam questions, verify "Finish Exam" button appears in the bottom bar
+7. On pre-submission review, click "Open question" → verify question navigator and Previous/Next are present
+8. On session summary, click a question in the breakdown → verify it opens the explanation review
+9. Verify answer submission shows brief feedback before auto-advancing to next question
