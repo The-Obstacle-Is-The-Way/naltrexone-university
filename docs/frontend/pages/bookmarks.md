@@ -171,14 +171,14 @@ CREATE INDEX bookmarks_question_id_idx ON bookmarks (questionId);
 | `src/adapters/controllers/bookmark-controller.test.ts` | Unit | 13 | Validation/auth/entitlement/rate-limit/idempotency/use-case delegation |
 | `src/application/test-helpers/fakes/fake-bookmark-repository.test.ts` | Unit | 8 | Fake repo behavior and idempotency |
 | `tests/integration/bookmark-repository.integration.test.ts` | Integration | 1 | Real Postgres add/remove/idempotency cycle |
-| `app/(app)/app/bookmarks/page.test.tsx` | Unit | 24 | Bookmarks page rendering, remove action redirects, query-param error handling |
+| `app/(app)/app/bookmarks/page.test.tsx` | Unit | 26 | Bookmarks page rendering, remove action redirects, query-param error handling |
 | `app/(app)/app/bookmarks/bookmarks-toast.browser.spec.tsx` | Browser | 2 | Toast rendering from URL state |
 | `app/(app)/app/bookmarks/bookmark-row-shell.browser.spec.tsx` | Browser | 2 | Delegated row navigation and interactive-child guard |
 | `app/(app)/app/practice/hooks/bookmark-message-timeout.test.ts` | Unit | 3 | Bookmark message auto-clear timing helper |
 | `app/(app)/app/practice/hooks/use-practice-question-bookmarks.test.tsx` | Unit | 1 | Initial hook contract |
 | `app/(app)/app/practice/hooks/use-quick-practice-status-counts.test.ts` | Unit | 4 | Includes the bookmark-backed quick-practice count path |
 
-**Direct bookmark coverage total: 75 tests across 13 files.**
+**Direct bookmark coverage total: 77 tests across 13 files.**
 
 ### Additional downstream consumer coverage
 
