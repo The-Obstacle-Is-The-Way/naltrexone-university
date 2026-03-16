@@ -224,7 +224,7 @@ test.describe('review mode audit', () => {
     await breakdownLink.click();
     await expect(page).toHaveURL(/\/app\/questions\//, { timeout: 15_000 });
     await expect(page).toHaveURL(/mode=review/);
-    await expect(page).toHaveURL(/from=practice/);
+    await expect(page).toHaveURL(/from=history/);
     await expect(page.getByText(/Loading question/i)).toBeHidden({
       timeout: 15_000,
     });

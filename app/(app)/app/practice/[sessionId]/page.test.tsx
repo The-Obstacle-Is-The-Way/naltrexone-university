@@ -128,9 +128,189 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain('Question breakdown');
     expect(html).toContain('Stem for q1');
     expect(html).toContain(
-      'href="/app/questions/q-1?from=practice&amp;mode=review&amp;sessionId=session-1"',
+      'href="/app/questions/q-1?from=history&amp;mode=review&amp;sessionId=session-1"',
     );
     expect(html).toContain('[Question no longer available]');
+  });
+
+  it('renders a Review your answers CTA first for exam summaries with a reviewable question', async () => {
+    const html = renderToStaticMarkup(
+      <SessionSummaryView
+        summary={{
+          sessionId: 'session-1',
+          endedAt: '2026-02-01T00:00:00.000Z',
+          mode: 'exam',
+          questionCount: 2,
+          totals: {
+            answered: 2,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 120,
+          },
+        }}
+        review={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          totalCount: 2,
+          answeredCount: 2,
+          markedCount: 0,
+          rows: [
+            {
+              isAvailable: false,
+              questionId: 'q0',
+              order: 1,
+              isAnswered: true,
+              isCorrect: false,
+              markedForReview: false,
+            },
+            {
+              isAvailable: true,
+              questionId: 'q1',
+              slug: 'q-1',
+              stemMd: 'Stem for q1',
+              difficulty: 'easy',
+              order: 2,
+              isAnswered: true,
+              isCorrect: true,
+              markedForReview: false,
+            },
+          ],
+        }}
+        reviewLoadState={{ status: 'ready' }}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const actionLinks = Array.from(doc.querySelectorAll('a')).filter((link) => {
+      const text = link.textContent?.trim();
+      return (
+        text === 'Review your answers' ||
+        text === 'Back to Dashboard' ||
+        text === 'View in History' ||
+        text === 'Start another session'
+      );
+    });
+
+    expect(actionLinks.map((link) => link.textContent?.trim())).toEqual([
+      'Review your answers',
+      'Back to Dashboard',
+      'View in History',
+      'Start another session',
+    ]);
+    expect(html).toContain('Review your answers');
+    expect(html).toContain(
+      'href="/app/questions/q-1?from=history&amp;mode=review&amp;sessionId=session-1"',
+    );
+  });
+
+  it('does not render a Review your answers CTA for tutor summaries', async () => {
+    const html = renderToStaticMarkup(
+      <SessionSummaryView
+        summary={{
+          sessionId: 'session-1',
+          endedAt: '2026-02-01T00:00:00.000Z',
+          mode: 'tutor',
+          questionCount: 2,
+          totals: {
+            answered: 2,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 120,
+          },
+        }}
+        review={{
+          sessionId: 'session-1',
+          mode: 'tutor',
+          totalCount: 2,
+          answeredCount: 2,
+          markedCount: 0,
+          rows: [
+            {
+              isAvailable: true,
+              questionId: 'q1',
+              slug: 'q-1',
+              stemMd: 'Stem for q1',
+              difficulty: 'easy',
+              order: 1,
+              isAnswered: true,
+              isCorrect: true,
+              markedForReview: false,
+            },
+          ],
+        }}
+        reviewLoadState={{ status: 'ready' }}
+      />,
+    );
+
+    expect(html).not.toContain('Review your answers');
+  });
+
+  it('does not render a Review your answers CTA while summary review is unavailable', async () => {
+    const loadingHtml = renderToStaticMarkup(
+      <SessionSummaryView
+        summary={{
+          sessionId: 'session-1',
+          endedAt: '2026-02-01T00:00:00.000Z',
+          mode: 'exam',
+          questionCount: 2,
+          totals: {
+            answered: 2,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 120,
+          },
+        }}
+        reviewLoadState={{ status: 'loading' }}
+      />,
+    );
+
+    expect(loadingHtml).not.toContain('Review your answers');
+  });
+
+  it('does not render a Review your answers CTA when no reviewable slug exists', async () => {
+    const html = renderToStaticMarkup(
+      <SessionSummaryView
+        summary={{
+          sessionId: 'session-1',
+          endedAt: '2026-02-01T00:00:00.000Z',
+          mode: 'exam',
+          questionCount: 2,
+          totals: {
+            answered: 2,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 120,
+          },
+        }}
+        review={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          totalCount: 2,
+          answeredCount: 2,
+          markedCount: 0,
+          rows: [
+            {
+              isAvailable: false,
+              questionId: 'q1',
+              order: 1,
+              isAnswered: true,
+              isCorrect: false,
+              markedForReview: false,
+            },
+            {
+              isAvailable: false,
+              questionId: 'q2',
+              order: 2,
+              isAnswered: true,
+              isCorrect: true,
+              markedForReview: false,
+            },
+          ],
+        }}
+        reviewLoadState={{ status: 'ready' }}
+      />,
+    );
+
+    expect(html).not.toContain('Review your answers');
   });
 
   it('announces summary breakdown loading with live semantics', async () => {
@@ -177,6 +357,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
 
     expect(errorHtml).toContain('Review failed');
     expect(errorHtml).toContain('role="alert"');
+    expect(errorHtml).not.toContain('Review your answers');
   });
 
   it('renders the session summary branch in PracticeSessionPageView', async () => {
