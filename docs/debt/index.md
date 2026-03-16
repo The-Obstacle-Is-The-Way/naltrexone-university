@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-15
+**Last Updated:** 2026-03-16
 
 ---
 
@@ -17,7 +17,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | GitHub Issue |
 |----|-------|----------|--------------|
-| [DEBT-316](./debt-316-exam-post-submit-review-flow.md) | Exam Session UX — missing explicit post-submit review CTA, missing bottom-bar finish/review CTA after the last exam answer, and pre-submission "Open question" losing navigator/nav context; corrected code audit confirms summary/history review links already exist | P2 | — |
+| [DEBT-316](./debt-316-exam-post-submit-review-flow.md) | Exam Session UX — missing explicit post-submit review CTA, missing bottom-bar finish/review CTA after the last exam answer, pre-submission "Open question" loses navigator/nav context, and completed-session review uses a non-durable return path; corrected code audit confirms summary/history review links already exist | P2 | — |
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
 **Next Debt ID:** DEBT-317
 

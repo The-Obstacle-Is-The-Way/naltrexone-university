@@ -1,4 +1,4 @@
-# DEBT-316: Exam Session UX — Missing Explicit Review CTA and Review-Stage Navigation Gaps
+# DEBT-316: Exam Session UX — Missing Explicit Review CTA, Non-Durable Return Path, and Review-Stage Navigation Gaps
 
 **Priority:** P2
 **Created:** 2026-03-15
@@ -22,7 +22,7 @@ The real debt is narrower and more important:
 2. The only in-summary review affordance is a **lazy-loaded, visually subordinate** breakdown list with **no visual link styling** (no underline, no color differentiation — confirmed by browser verification).
 3. Opening a question from the **pre-submit review checklist** drops the user into a stripped-down question view with no navigator and no Previous/Next context.
 4. After the last exam answer is submitted, the bottom bar offers **no obvious finish/review CTA**.
-5. Summary breakdown review links have a **broken return path** — browser back or "Back to Session" link lands on a dead-end "No more questions" state because the practice session page's summary state is not URL-addressable (Root Cause E).
+5. Summary breakdown review links and any future summary CTA have a **non-durable return path** — the question review page points back to `/app/practice/[sessionId]`, but completed-session summary state is in-memory only and is lost on remount (Root Cause E).
 6. Summary-review fetch failure shows an error with **no retry button**, leaving the user with only off-screen escape hatches (Root Cause F).
 
 ---
@@ -123,8 +123,9 @@ Correction:
 Browser verification (2026-03-16):
 
 - A second browser walkthrough confirmed the links are real `<a>` elements with correct `href` attributes.
-- However, the links have **no visual link affordance**: no underline, no color differentiation from body text (`color: rgb(237, 237, 237)`, same as surrounding text), no hover underline. The only interactive hint is `cursor: pointer` on hover.
+- However, the links have **no visual link affordance**: no underline, no color differentiation from body text (`color: rgb(237, 237, 237)`, same as surrounding text), no hover underline. The only interactive hint is the pointer cursor on hover.
 - This means the links are functionally present but **visually invisible as interactive elements** — reinforcing why the first browser audit and real users would miss them entirely.
+- Improving this styling is worthwhile, but it is **not sufficient by itself** because it does not fix the lazy-load delay, the missing primary CTA, or the broken return path.
 
 ### 3. No bottom-bar "Finish Exam" / "Review answers" CTA after the last answer
 
@@ -339,11 +340,24 @@ Source:
 - `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts:60-71`
 - `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts:147-164`
 
-### Root Cause E: Summary breakdown review links have a broken return path
+### Root Cause E: Summary review uses a non-durable return path
 
-The summary breakdown links use `from=practice`, which makes the question review page render "Back to Session" linking to `/app/practice/[sessionId]`: `app/(app)/app/questions/[slug]/question-page-client.tsx:117`. But the practice session route is a client-side state machine — `summary` only exists when in-memory state was set by `endSession()`: `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:116`. On fresh load (browser back, or direct navigation), the page calls `getNextQuestion` instead: `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts:138`. `GetNextQuestionUseCase` does not reconstruct the summary; it returns an unanswered question or `null`: `src/application/use-cases/get-next-question.ts:158`.
+The summary breakdown links use `from=practice`, which makes the question review page render "Back to Session" linking to `/app/practice/[sessionId]`: `app/(app)/app/questions/[slug]/question-page-client.tsx:117-124`, `app/(app)/app/questions/[slug]/question-page-client.test.tsx:173-185`.
 
-Result: browser back from question review lands on a "No more questions found" dead-end, not the Session Summary. Confirmed by browser walkthrough (2026-03-16).
+That back-link target is structurally wrong after session completion because the practice session route is a client-side state machine:
+
+- `summary` only exists when in-memory state was set by `endSession()`: `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:116-123`, `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts:57-103`
+- On mount, the session page still runs `getNextQuestion()` instead of fetching a completed-session summary: `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts:138-139`
+- `GetNextQuestionUseCase` does not reconstruct summary state; when all questions are answered it returns `null`: `src/application/use-cases/get-next-question.ts:158-189`
+- When the practice surface is `ready` and `question === null`, the page renders the exhausted state card with `No more questions found.`: `app/(app)/app/practice/components/practice-view.tsx:229-245`
+
+Deterministic implication:
+
+- Any navigation that remounts `/app/practice/[sessionId]` after completion, including the explicit `Back to Session` link, can fall through to the exhausted-state card instead of the Session Summary.
+
+Browser implication:
+
+- In browser QA on 2026-03-16, this also surfaced via browser back. The code-level guarantee is broader and more precise: the return path is **not durable** because the completed summary is not URL-addressable.
 
 ### Root Cause F: Summary-review fetch failure has no retry path
 
@@ -404,7 +418,23 @@ Recommended approach:
 
 - Preserve the first available slug across finalization for exam sessions, then fall back to `summaryReview.rows` if needed.
 
-**Important caveat (from adversarial audit):** Option A alone is insufficient. The summary breakdown links already use `from=practice`, which creates a broken return path (Root Cause E). The new primary CTA would use the same route helper and inherit the same problem. The return-path fix (Root Cause E) should ship alongside Option A.
+**Important caveat (from adversarial audit):** Option A alone is insufficient. The summary breakdown links already use `from=practice`, which creates a non-durable return path (Root Cause E). The new primary CTA would use the same route helper and inherit the same problem. The return-path fix (Root Cause E) should ship alongside Option A.
+
+### Root Cause E implementation requirement
+
+The fix for Root Cause E is not just a query-param tweak. The app needs a durable way to render a completed session summary at `/app/practice/[sessionId]`.
+
+Recommended implementation direction:
+
+1. Add a completed-session summary read path, ideally a dedicated use case/controller such as `getPracticeSessionSummary(sessionId)`, that returns the data `SessionSummaryView` needs (`sessionId`, `mode`, `questionCount`, `endedAt`, and `totals`).
+2. Teach the `/app/practice/[sessionId]` page/controller to branch on completed sessions and hydrate `summary` from that read path instead of always booting question flow through `getNextQuestion()`.
+3. Keep `from=practice&mode=review&sessionId=...` for summary-origin review only after step 2 is in place, so `Back to Session` becomes a truthful, durable return path.
+
+Why this matters:
+
+- No existing route or query param currently represents the completed summary as durable state.
+- `getPracticeSessionReview()` is enough for review navigation, but it is **not** enough to rebuild the summary cards because it does not include `endedAt` or `durationSeconds`: `src/application/use-cases/get-practice-session-review.ts:44-51`
+- Styling the existing breakdown links is secondary polish, not the architectural fix.
 
 ### Option B: Add a bottom-bar completion CTA on the last exam question
 
@@ -426,8 +456,9 @@ The most direct code change is to stop suppressing the navigator for all review-
 
 Practical implementation direction:
 
-- thread `questionId` into `createNavigatorEffect()`
-- change the guard from `if (summary || isInReviewStage || !sessionInfo)` to a narrower condition such as "hide navigator only when in review stage and no specific question is open"
+- The hook already re-runs navigator loading when `questionId` changes: `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-navigator.ts:43-64`
+- The missing step is to thread the relevant "specific review question is open" signal into `createNavigatorEffect()` itself and narrow its guard
+- Change the guard from `if (summary || isInReviewStage || !sessionInfo)` to a narrower condition such as "hide navigator only when in review stage and no specific question is open"
 
 ---
 
@@ -450,7 +481,8 @@ These should be removed from DEBT-316 as primary claims:
 3. After answering the last exam question, the bottom bar renders `Review answers` or `Finish exam`.
 4. Opening a question from the pre-submit review checklist preserves the navigator and Previous/Next controls.
 5. Summary-review fetch failure renders a retry button.
-6. Question review "Back to Session" link returns the user to the Session Summary (not a dead-end state).
+6. Fresh-loading `/app/practice/[sessionId]` for a completed session renders Session Summary rather than the exhausted `No more questions found.` state.
+7. Question review `Back to Session` returns the user to the Session Summary after a direct navigation/remount, not only when client state is still warm.
 
 ### Existing coverage to keep in mind
 
@@ -464,4 +496,5 @@ These should be removed from DEBT-316 as primary claims:
 3. Submit the last question of an exam and verify the bottom bar exposes an obvious completion CTA.
 4. From `Review Questions`, click `Open question` and verify the navigator plus Previous/Next remain visible.
 5. Verify tutor mode remains unchanged except for any intentional summary CTA decisions.
-6. From Session Summary, click a breakdown link to open question review, then press browser back — verify the user returns to Session Summary (not a dead-end "No more questions" state).
+6. From Session Summary, click a breakdown link to open question review, then click `Back to Session` — verify the user returns to Session Summary rather than the exhausted `No more questions found.` card.
+7. Repeat step 6 after a browser refresh or other remount-inducing navigation to confirm the return path is durable, not only preserved by warm client state.
