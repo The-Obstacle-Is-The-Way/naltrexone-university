@@ -16,7 +16,7 @@ export function AppDesktopNav() {
   return (
     <nav
       aria-label="App navigation"
-      className="hidden items-center gap-4 text-sm sm:flex"
+      className="hidden items-center gap-4 text-sm md:flex"
     >
       {APP_NAV_ITEMS.map((item) => {
         const isActive = activeHref === item.href;
@@ -27,8 +27,8 @@ export function AppDesktopNav() {
             aria-current={isActive ? 'page' : undefined}
             className={
               isActive
-                ? `rounded-md text-foreground font-medium ${focusVisibleRing}`
-                : `rounded-md text-muted-foreground transition-colors hover:text-foreground ${focusVisibleRing}`
+                ? `rounded-md whitespace-nowrap text-foreground font-medium ${focusVisibleRing}`
+                : `rounded-md whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground ${focusVisibleRing}`
             }
           >
             {item.label}

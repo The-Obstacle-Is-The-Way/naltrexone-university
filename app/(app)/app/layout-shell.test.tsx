@@ -27,6 +27,16 @@ describe('app/(app)/app/layout (shell)', () => {
         <div>Child content</div>
       </AppLayoutShell>,
     );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const brandLink = doc.querySelector('header a[href="/app/dashboard"]');
+
+    expect(brandLink).not.toBeNull();
+    if (!brandLink) {
+      throw new Error('Expected app header brand link to exist');
+    }
+    const brandClassTokens = (brandLink.getAttribute('class') ?? '')
+      .split(/\s+/)
+      .filter(Boolean);
 
     expect(html).toContain('Addiction Boards');
     expect(html).toContain('href="/app/dashboard"');
@@ -40,6 +50,10 @@ describe('app/(app)/app/layout (shell)', () => {
     expect(html).toContain('min-h-screen bg-background');
     expect(html).not.toContain('min-h-screen bg-muted');
     expect(html).toContain('<main id="main-content"');
+    expect(brandClassTokens).toContain('font-heading');
+    expect(brandClassTokens).toContain('font-bold');
+    expect(brandClassTokens).toContain('text-base');
+    expect(brandClassTokens).toContain('whitespace-nowrap');
   });
 
   it('renders AppLayout via renderAppLayout with injected deps', async () => {

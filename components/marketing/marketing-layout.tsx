@@ -15,7 +15,7 @@ export function MarketingLayout({
   children,
 }: MarketingLayoutProps) {
   const brandLinkClass =
-    'rounded-md text-sm font-semibold text-foreground transition-colors hover:text-foreground/80 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
+    'rounded-md text-base font-bold font-heading whitespace-nowrap text-foreground transition-colors hover:text-foreground/80 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
   const navLinkClass =
     'rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
 
@@ -68,7 +68,9 @@ export function MarketingLayout({
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
           <div className="grid gap-8 md:grid-cols-3">
             <div>
-              <p className="font-semibold text-foreground">Addiction Boards</p>
+              <p className="font-bold font-heading text-foreground">
+                Addiction Boards
+              </p>
               <p className="mt-2 text-sm text-muted-foreground">
                 Board exam preparation for addiction medicine professionals.
               </p>
