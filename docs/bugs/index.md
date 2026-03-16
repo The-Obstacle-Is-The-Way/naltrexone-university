@@ -13,7 +13,12 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-227
+**Next Bug ID:** BUG-228
+
+**Latest archival (2026-03-16):**
+- BUG-227 resolved (PR #227): promoted app/marketing header brand to `font-heading`, raised app nav breakpoint from `sm:` to `md:`, added `whitespace-nowrap` to desktop nav links, and archived to `docs/_archive/bugs/`.
+
+---
 
 **Manual report (2026-03-15) — completed-session navigation:**
 

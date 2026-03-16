@@ -59,9 +59,17 @@ describe('MobileNav', () => {
     expect(html).not.toContain('/app/billing');
   });
 
-  it('has sm:hidden class to only show on mobile', () => {
+  it('has md:hidden class to only show below the app desktop breakpoint', () => {
     const html = renderToStaticMarkup(<MobileNav />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const wrapper = doc.body.firstElementChild;
 
-    expect(html).toContain('sm:hidden');
+    expect(wrapper).not.toBeNull();
+    const classTokens = (wrapper?.getAttribute('class') ?? '')
+      .split(/\s+/)
+      .filter(Boolean);
+
+    expect(classTokens).toContain('md:hidden');
+    expect(classTokens).not.toContain('sm:hidden');
   });
 });
