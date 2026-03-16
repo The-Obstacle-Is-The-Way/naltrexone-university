@@ -12,12 +12,28 @@ The app header brand text ("Addiction Boards") renders in plain Manrope (body fo
 
 - **Brand feels weak**: "Addiction Boards" in the header is visually indistinguishable from nav links — same font family, similar size/weight. It doesn't read as a brand mark.
 - **Font system gap**: The codebase has a well-established 3-font system (`font-heading` for headings, `font-display` for stats/prices, Manrope for body), but the header — the most persistent UI element — doesn't participate in it.
-- **Nav wrapping at sm breakpoint**: The desktop nav shows at `sm:` (640px), but 7 items at that width causes "Addiction Boards" and "Quick Practice" to wrap to two lines. The left-aligned text on wrapped items looks misaligned.
+- **Nav wrapping at sm breakpoint**: The desktop nav shows at `sm:` (640px), but 7 items don't fit comfortably until ~1200px. Between 640–1150px, "Addiction Boards" and "Quick Practice" wrap to two lines. Even at 1024px (a standard laptop width), wrapping is visible.
 - **Affects both app and marketing headers**: The marketing header (`components/marketing/marketing-layout.tsx`) and marketing footer have the same brand font issue.
 
-## Broader Design Concern (Documented, Not Addressed Here)
+## Broader Design Concerns (Documented, Not Addressed Here)
 
-All three project fonts (Manrope, Instrument Sans, Plus Jakarta Sans) are geometric sans-serifs with similar proportions. Font pairing best practices recommend mixing font categories (e.g., sans + serif) for clear visual contrast. The current 3-font system works because each font is used in a distinct context (body vs. headings vs. numbers), but the similarity means the hierarchy is subtle rather than obvious. This is a known design limitation documented here for future consideration — a full font-system overhaul is out of scope for this fix.
+### Font system similarity
+
+All three project fonts (Manrope, Instrument Sans, Plus Jakarta Sans) are geometric sans-serifs with similar proportions. Browser inspection confirms the perceptual differences are minimal — the fonts are effectively doing the work of one font at different weights/sizes while incurring the load cost of three font files. Font pairing best practices recommend mixing categories (e.g., sans + serif) for clear contrast. The current system works because each font occupies a distinct context (body vs. headings vs. numbers), but the hierarchy is subtle. A future overhaul should consider replacing one font (likely Instrument Sans, which is least distinguishable from Manrope) with a serif or more characterful typeface.
+
+### App-side H2s missing `font-heading`
+
+Section headings on app pages ("Ready to practice?", "Recent sessions", "Recent activity" on Dashboard) are plain `text-sm font-medium` Manrope with no `font-heading`. Meanwhile, the landing page H2s ("Everything you need to prep efficiently", "Simple pricing") correctly use `font-heading` (Instrument Sans) at `text-3xl font-bold tracking-tight`. This inconsistency means the font system is applied to marketing but not to the app interior. Fixing this touches many files across multiple pages and warrants a separate ticket.
+
+### Other typography observations (from browser audit)
+
+- **Active nav link differentiation is weak**: only a weight bump (400→500) + color change, no underline/background/border indicator
+- **No letter-spacing anywhere in Manrope text**: small labels and badges could benefit from slight positive tracking
+- **Stat number letter-spacing**: `font-display` numbers at large sizes would benefit from `tracking-tight`
+- **Subtitle gap**: only 4px between page H1 and description text; 8–12px would improve readability
+- **Bookmark card titles**: use plain Manrope at same size/weight as labels, should arguably use `font-heading`
+
+These are all valid observations for future polish passes but out of scope for this stopgap.
 
 ## Affected Files
 
@@ -31,7 +47,7 @@ All three project fonts (Manrope, Instrument Sans, Plus Jakarta Sans) are geomet
 
 ## Root Cause
 
-The header was built before the `font-heading` / `font-display` system was established and was never updated to use it. The `sm:` breakpoint (640px) was chosen as a generic mobile/desktop split but doesn't account for the actual content width of 7 nav items plus brand text.
+The header was built before the `font-heading` / `font-display` system was established and was never updated to use it. The `sm:` breakpoint (640px) was chosen as a generic mobile/desktop split but doesn't account for the actual content width of 7 nav items plus brand text. Browser inspection confirmed the brand "Addiction Boards" renders at Manrope 14px/600 — only 100 weight units different from the active nav link (Manrope 14px/500). It reads as "just another nav link that happens to be first" rather than an app identity.
 
 ## Stopgap Fix
 
@@ -54,7 +70,7 @@ className="rounded-md text-base font-bold font-heading whitespace-nowrap text-fo
 - `font-semibold` → `font-bold` — slightly more weight for brand presence
 - `whitespace-nowrap` — prevents "Addiction Boards" from wrapping
 
-### 2. Desktop nav breakpoint: `sm:` → `md:`
+### 2. Desktop nav breakpoint: `sm:` → `lg:`
 
 **Before:**
 ```tsx
@@ -63,14 +79,14 @@ className="hidden items-center gap-4 text-sm sm:flex"
 
 **After:**
 ```tsx
-className="hidden items-center gap-4 text-sm md:flex"
+className="hidden items-center gap-4 text-sm lg:flex"
 ```
 
-At 640–767px, show the mobile hamburger menu instead of cramming 7 items into insufficient space.
+Browser audit confirmed wrapping persists up to ~1150px. `md:` (768px) is insufficient — items would still be extremely cramped. `lg:` (1024px) gives enough room for all 7 items with `whitespace-nowrap`. Below 1024px, show the hamburger menu.
 
-### 3. Mobile nav breakpoint: `sm:hidden` → `md:hidden`
+### 3. Mobile nav breakpoint: `sm:hidden` → `lg:hidden`
 
-Mirror the desktop breakpoint change so the hamburger menu shows below `md:`.
+Mirror the desktop breakpoint change so the hamburger menu shows below `lg:`.
 
 ### 4. Nav links: Add `whitespace-nowrap`
 
