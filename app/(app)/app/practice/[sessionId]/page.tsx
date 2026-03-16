@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { normalizeSearchParam } from '@/lib/search-params';
 import PracticeSessionPageClient, {
   isQuestionBookmarked,
   PracticeSessionPageView,
@@ -18,16 +19,18 @@ export default async function PracticeSessionPage({
   searchParams,
 }: {
   params: Promise<{ sessionId: string }>;
-  searchParams?: Promise<Record<string, string | undefined>>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { sessionId } = await params;
   const resolvedSearchParams = await searchParams;
   return (
     <PracticeSessionPageClient
       sessionId={sessionId}
-      toast={resolvedSearchParams?.toast}
-      requestedCount={resolvedSearchParams?.requestedCount}
-      actualCount={resolvedSearchParams?.actualCount}
+      toast={normalizeSearchParam(resolvedSearchParams?.toast)}
+      requestedCount={normalizeSearchParam(
+        resolvedSearchParams?.requestedCount,
+      )}
+      actualCount={normalizeSearchParam(resolvedSearchParams?.actualCount)}
     />
   );
 }

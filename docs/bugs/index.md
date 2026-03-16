@@ -23,7 +23,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 **Audit batch (2026-03-15) — search-param scalar assumption sweep (verified via tracer bullets):**
 
-5 bug docs were filed in this batch (2 resolved and archived, 3 still open).
+5 bug docs were filed in this batch (3 resolved and archived, 2 still open).
 
 ---
 
@@ -34,6 +34,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 ---
 
 **Latest archival (2026-03-15):**
+- BUG-224 verified fixed (PR #221): widened practice-session page `searchParams` to accept `string | string[]`, normalized `toast`, `requestedCount`, and `actualCount` via shared `normalizeSearchParam` at the server page boundary, restored session-start and filtered-count toasts for repeated query params, and archived to `docs/_archive/bugs/`.
 - BUG-222 verified fixed (PR #219): widened pricing-page `checkout` / `reason` search params to accept `string[]`, normalized both once with shared `normalizeSearchParam`, restored banner selection and the manage-billing CTA for repeated query params, and archived to `docs/_archive/bugs/`.
 - BUG-221 verified fixed (PR #217): extracted shared `normalizeSearchParam`, normalized array-valued checkout `session_id` at the page boundary, reused the helper in History and Billing, and archived to `docs/_archive/bugs/`.
 - BUG-212, BUG-213, BUG-214 verified fixed (PR #214): client-side error reporting — bookmark toggle, session start, and `runTransitionedAsyncAction` now log/report errors unconditionally with try/catch-hardened callbacks and mount-safe ordering, archived to `docs/_archive/bugs/`.
@@ -77,7 +78,6 @@ Active open bugs are listed below.
 | [BUG-221](./bug-221-checkout-success-repeated-session-id-breaks-sync.md) | Search params / checkout | P3 | Repeated `session_id` arrays are forwarded as invalid input and bounce successful checkout returns to the generic error route |
 | [BUG-226](./bug-226-tutor-session-next-button-no-questions-after-completion.md) | Practice / session navigation | P2 | Completed-session "Next" can dead-end into "No more questions found" because the view shows availability from navigator rows but dispatches through unanswered-only `fromIndex` |
 | [BUG-223](./bug-223-bookmarks-page-array-query-feedback-loss.md) | Search params / bookmarks | P4 | Repeated `error` / `toast` params suppress remove-bookmark feedback |
-| [BUG-224](./bug-224-practice-session-array-toast-loss.md) | Search params / practice | P4 | Repeated session-start toast params suppress or degrade practice-session startup feedback |
 | [BUG-225](./bug-225-question-review-array-context-loss.md) | Search params / review | P4 | Repeated review-context params are dropped instead of normalized, stripping session/attempt/history context |
 
 ## Audit #15 — Search Param Scalar Assumption Sweep (2026-03-15)
