@@ -1,0 +1,256 @@
+# BS-053: Bookmark vs Mark-for-Review Collision in Exam Mode
+
+**Date:** 2026-03-16
+**Triggered by:** Visual audit of exam session action bar — "Bookmark" and "Mark for review" appear side-by-side as identically-styled pills, creating a confusing dual-action that maps to fundamentally different mental models.
+**Scope:** Bookmark presence in active sessions (especially exam mode) creates UX confusion when combined with the exam-only "Mark for review" action.
+**Related:** [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) (bookmark icon toggle), [DEBT-316](../_archive/debt/debt-316-exam-post-submit-review-flow-ctas.md) (exam post-submit review flow), [bookmark-surface-policy.md](../frontend/bookmark-surface-policy.md) (bookmark availability registry)
+
+---
+
+## The Problem
+
+There are two intertwined issues:
+
+1. **Collision** — In exam mode, "Bookmark" and "Mark for review" sit side-by-side as identical pills, creating confusion.
+2. **Missing bookmark on review** — The question review page (`/app/questions/[slug]?mode=review`) — the ideal place to bookmark — has no bookmark action at all.
+
+### Problem 1: Exam action bar collision
+
+In exam mode, the bottom action bar presents four actions:
+
+```
+[ Submit ]  [ Next ]  [ Bookmark ]  [ Mark for review ]
+```
+
+**"Bookmark" and "Mark for review" are visually identical pills that do very different things:**
+
+| Aspect | Bookmark | Mark for Review |
+|--------|----------|-----------------|
+| **Scope** | Global — persists permanently across sessions | Session-scoped — lives and dies with this exam |
+| **Storage** | Dedicated `bookmarks` table | JSON field inside `practice_sessions.question_states` |
+| **Purpose** | "I want to study this question later" | "I want to revisit this question before I submit the exam" |
+| **Available in** | All modes (tutor, exam, ad-hoc, history) | Exam mode only |
+| **Visible after session** | Yes — bookmarks page, history | No — mark data is meaningless after exam submission |
+
+A test-taker in exam mode is in **assessment mindset**: "Which questions do I need to revisit before I submit?" The bookmark action intrudes with a completely different intent: "I want to save this for future study." These are fundamentally different cognitive operations, but they look the same and sit next to each other.
+
+### Concrete confusion scenarios
+
+1. **User wants to flag a question for review before submitting** → sees two similar-looking actions, has to parse the difference mid-exam. Mental overhead at the worst possible time.
+
+2. **User bookmarks when they meant to mark for review** → proceeds through the exam thinking they've flagged the question → arrives at the review stage → question is not marked → they've lost track of which questions they wanted to revisit.
+
+3. **User marks for review when they meant to bookmark** → finishes exam → mark data is gone → they've lost the question they wanted to study later.
+
+4. **User does both** → now has two overlapping indicators on the same question, for different temporal scopes, with no visual distinction between their purposes.
+
+### Problem 2: Bookmark missing from the question review page
+
+The question review page (`/app/questions/[slug]`) is the destination when users click "Review" from history, session summaries, or bookmarks. It shows the full question with explanation, clinical pearl, and reference — exactly the moment when a user thinks "I should save this for later study."
+
+**Current action bar on the review page:**
+```
+[ Practice Again ]  [ Next ]  Back to History
+```
+
+**No bookmark button.** This is the surface where bookmarking makes the *most* sense, and it's absent.
+
+**Full bookmark availability audit:**
+
+| Surface | Route | Bookmark Available | Should Be |
+|---------|-------|--------------------|-----------|
+| Practice (Tutor) | `/app/practice/[sessionId]` | **YES** | Debatable (see options) |
+| Practice (Exam) | `/app/practice/[sessionId]` | **YES** | **NO** (collision with Mark for Review) |
+| Quick Practice | `/app/practice/quick` | **YES** | Debatable (see options) |
+| Exam Review (pre-submit) | `/app/practice/[sessionId]` (review state) | NO | NO (assessment mode) |
+| Session Summary | `/app/practice/[sessionId]` (summary state) | NO | Acceptable |
+| **Question Review** | **`/app/questions/[slug]?mode=review`** | **NO** | **YES — this is the gap** |
+| History Questions tab | `/app/history?tab=questions` | NO (list view) | Acceptable (click-through to review) |
+| Bookmarks Page | `/app/bookmarks` | Remove only | Acceptable |
+
+The question review page is a shared destination used by multiple entry points (`?from=history`, `?from=bookmarks`, `?from=practice`, `?from=dashboard`). Adding bookmark here would cover all post-session review flows in one place.
+
+---
+
+## Root Cause Analysis
+
+### Why does this happen?
+
+Bookmarking was designed as a universal feature — "save any question for later study." It was built before exam mode existed and naturally appeared everywhere questions are shown.
+
+Mark-for-review was designed as an exam-specific feature — "flag this question to revisit during the exam." It was correctly scoped to exam mode only.
+
+When exam mode launched, bookmark wasn't reconsidered. It was simply carried forward from tutor mode. The result: two "flag this question" actions with different semantics sharing the same visual space.
+
+### The mental model clash
+
+**Tutor mode** = learning mode. Bookmarking makes perfect sense here. You're studying, you see a hard question, you bookmark it. There's no "mark for review" because there's no deferred review stage — you see feedback immediately.
+
+**Exam mode** = assessment mode. The primary "flag" action should be mark-for-review. Bookmarking is a secondary concern that belongs to the study lifecycle, not the assessment lifecycle.
+
+### Why is bookmark missing from the review page?
+
+The question review page (`app/(app)/app/questions/[slug]/question-page-client.tsx`) was built as a read-only review surface. Its `QuestionView` component (lines ~343-429) renders navigation + "Practice Again" but never wires up bookmark state. The `useQuestionPageController` hook doesn't fetch or manage bookmark state for the current question.
+
+This is likely an oversight from when the review page was first built — bookmark was already available in the practice session, so nobody noticed it was missing from the post-session review path. But the practice session is the *wrong* place for bookmarking (you're busy answering), and the review page is the *right* place (you're reflecting on the explanation).
+
+### Code traces
+
+**Exam collision** — both buttons live in `app/(app)/app/practice/components/practice-view.tsx`:
+- Bookmark button: always rendered (lines ~345-354)
+- Mark for review button: conditionally rendered for exam mode (lines ~356-367)
+- Both are `<Button variant="outline" size="sm">` pills — identical styling
+
+**Missing bookmark on review** — `app/(app)/app/questions/[slug]/question-page-client.tsx`:
+- Action bar (lines ~343-429): Previous, Submit/Reattempt, Next, Back link
+- No `onToggleBookmark` prop, no `isBookmarked` state, no bookmark button
+
+---
+
+## Severity Assessment
+
+**Severity: Medium** — Not a blocker, but creates real cognitive friction in a high-stakes moment (mid-exam).
+
+**Who is affected:** Every user taking an exam. The confusion is worst for:
+- First-time exam takers who haven't built a mental model of the two features
+- Users under time pressure who need to make quick decisions
+- Users who are already anxious about exam performance
+
+**How often:** Every exam session. The buttons are always visible together.
+
+**Risk of wrong action:** Moderate. Bookmarking when you meant to mark-for-review is a silent failure — the question won't appear in the exam review stage, and the user may not notice until it's too late.
+
+---
+
+## Options
+
+All options below address **both** problems (exam collision + missing bookmark on review). The question review page bookmark addition is a prerequisite for any option that removes bookmark from sessions — without it, users have no natural place to bookmark after finishing a session.
+
+### Option A: Remove bookmark from exam sessions + add to question review page
+
+**What changes:**
+- Exam mode action bar: `[ Submit ] [ Next ] [ Mark for review ]`
+- Tutor mode action bar: `[ Submit ] [ Next ] [ Bookmark ]` (unchanged)
+- Question review page action bar: `[ Practice Again ] [ Bookmark ] [ Next ] Back to History`
+- Bookmarking available in: **question review page**, bookmarks page, tutor mode, quick practice
+
+**Pros:**
+- Clean separation: exam mode = mark for review, tutor mode = bookmark
+- Removes the confusing side-by-side presentation entirely
+- The review page — where users are reading explanations and reflecting — becomes the natural bookmarking surface
+- Users can still bookmark exam questions after the fact via history → review
+
+**Cons:**
+- Users lose the ability to bookmark mid-exam (must do it post-session)
+- If a user wants to save an exam question for future study, they need to remember to do it later
+
+**Mental model:** "In an exam, you mark for review. After the exam, bookmark from your review."
+
+### Option B: Remove bookmark from ALL active sessions + add to question review page
+
+**What changes:**
+- Exam mode action bar: `[ Submit ] [ Next ] [ Mark for review ]`
+- Tutor mode action bar: `[ Submit ] [ Next ]`
+- Quick practice action bar: `[ Submit ] [ Next ]`
+- Question review page action bar: `[ Practice Again ] [ Bookmark ] [ Next ] Back to History`
+- Bookmarking available in: **question review page**, bookmarks page only
+
+**Pros:**
+- One consistent rule: "You bookmark during review, not during sessions"
+- Further simplifies the action bar across all modes
+- Encourages a natural workflow: learn first, curate later
+- The review page becomes the single bookmarking surface (alongside the bookmarks page itself)
+
+**Cons:**
+- Tutor mode users lose mid-session bookmarking — but tutor mode shows explanations inline, so the "reflect and bookmark" moment happens naturally mid-session
+- Tutor mode doesn't have the same collision problem (no mark-for-review button), so removing bookmark there is solving a problem that doesn't exist
+- May feel like a regression for users who've built a habit of bookmarking mid-tutor-session
+
+**Mental model:** "Sessions are for answering. Review is for curating."
+
+### Option C: Keep both in sessions (visually differentiated) + add to question review page
+
+**What changes:**
+- Mark for review stays as a pill/button in the primary action bar (exam only)
+- Bookmark becomes an icon-only toggle (filled/unfilled bookmark icon) placed separately — e.g., top-right of the question card or in the question header
+- Question review page gets the same bookmark icon toggle
+- Visual separation makes it clear these are different features
+
+**Pros:**
+- No functionality loss — both actions remain available mid-exam
+- Visual differentiation reduces confusion
+- Aligns with BS-052 (bookmark icon toggle replacement) which is already planned
+- Review page gets bookmark too
+
+**Cons:**
+- Still two "flag" concepts on the same screen in exam mode
+- Relies on users understanding icon semantics without labels
+- More design work required to find the right placement
+
+**Mental model:** "The bookmark icon saves for later. The 'Mark for review' button is for this exam."
+
+### Option D: Merge concepts — mark-for-review auto-bookmarks + add to review page
+
+**What changes:**
+- Remove the bookmark button from exam mode
+- "Mark for review" both flags for exam review AND bookmarks the question
+- After the exam, marked questions appear in bookmarks
+- Question review page gets a standard bookmark toggle
+
+**Pros:**
+- Single action in exam mode, no confusion
+- Users who mark questions for review probably want to study them later anyway
+- Simplest mental model for exam mode
+
+**Cons:**
+- Conflates two intentionally separate concepts
+- Users may not want every mark-for-review to become a permanent bookmark
+- Adds bookmark churn — questions get bookmarked that the user only wanted to flag temporarily
+- Harder to undo — user would need to manually un-bookmark after the exam
+
+---
+
+## Open Questions
+
+1. **Do we have any analytics on mid-exam bookmark usage?** If very few users bookmark during exams, Option A is low-risk. If many do, we need to understand why.
+
+2. **Tutor mode: does bookmark belong in-session?** Tutor mode shows explanations inline, so the "reflect and bookmark" moment happens mid-session. This is different from exam mode where you don't see explanations until review. Keeping bookmark in tutor mode (Option A) may actually be the right call.
+
+3. **Does BS-052 (bookmark icon toggle) resolve enough of the exam collision?** If bookmark becomes a small icon instead of a text pill, the visual weight difference might be sufficient (see Option C). But this still leaves two "flag" concepts on the same screen.
+
+4. **Question review page: where should the bookmark button go?** Options include:
+   - In the action bar alongside "Practice Again" and "Next"
+   - As an icon toggle in the question card header (top-right)
+   - As an icon toggle near the question stem
+
+5. **What about the exam review stage (pre-submit)?** Currently bookmark is not shown during the review stage navigator. Should it be available there as a "save for later" action before submitting? This would give exam-takers one last chance to bookmark before the session ends.
+
+---
+
+## Recommendation
+
+**Option A (remove bookmark from exam sessions + add to question review page)** is the cleanest first step:
+
+- It directly addresses the exam collision without touching tutor mode
+- It respects the different mental models (assessment vs. learning)
+- Adding bookmark to the question review page fills the biggest gap — this is where users are actually reflecting on explanations
+- The existing post-submit review flow (DEBT-316) gives users a natural path: finish exam → review in history → bookmark from review page
+- Tutor mode keeps its bookmark since there's no collision there (no mark-for-review button)
+
+**Two implementation pieces:**
+1. **Remove** bookmark button from `PracticeView` when in exam mode
+2. **Add** bookmark toggle to `QuestionView` on the question review page (`/app/questions/[slug]`)
+
+If analytics or user feedback later shows that mid-exam bookmarking is valuable, Option C (visual differentiation via BS-052 icon toggle) could be layered on as a follow-up.
+
+**See also:** [bookmark-surface-policy.md](../frontend/bookmark-surface-policy.md) for the full surface registry and rationale.
+
+---
+
+## Decision Log
+
+| Date | Decision | Rationale |
+|------|----------|-----------|
+| 2026-03-16 | BS-053 opened | Exam action bar shows Bookmark + Mark for review side-by-side, creating cognitive collision |
+| 2026-03-16 | Scope expanded to include missing bookmark on question review page | Visual audit revealed the review page (`/app/questions/[slug]`) — the ideal bookmarking surface — has no bookmark action |
+| 2026-03-16 | Created [bookmark-surface-policy.md](../frontend/bookmark-surface-policy.md) | Registry of where bookmark should/shouldn't appear and why, to prevent future surface drift |

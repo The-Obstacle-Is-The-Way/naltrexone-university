@@ -8,6 +8,7 @@ Canonical reference for all frontend patterns, component usage, accessibility, a
 - [Pattern Registry](./pattern-registry.md) — Single source of truth for every visual pattern: hover opacities, link strategies, surface hierarchy, token scales, decision trees
 - [Design Principles](./design-principles.md) — Layout composition patterns, navigation zones, action bar conventions, state persistence expectations
 - [Contrast Policy](./contrast-policy.md) — Canonical WCAG AA contrast targets and rules
+- [Bookmark Surface Policy](./bookmark-surface-policy.md) — Where bookmark appears/doesn't and why (decision tree for new surfaces)
 
 ---
 
