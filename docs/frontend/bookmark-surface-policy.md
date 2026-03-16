@@ -22,16 +22,16 @@ This document is the single source of truth for **where the bookmark action appe
 
 | Surface | Route | Bookmark Present | Notes |
 |---------|-------|-----------------|-------|
-| Practice Session (Tutor) | `/app/practice/[sessionId]` | YES | Action bar pill |
-| Practice Session (Exam) | `/app/practice/[sessionId]` | YES | Action bar pill — **collides with Mark for Review** |
+| Practice Session (Tutor) | `/app/practice/[sessionId]` | YES | Action bar pill + toast feedback; no bookmark navigator indicator |
+| Practice Session (Exam) | `/app/practice/[sessionId]` | YES | Action bar pill + toast feedback; no bookmark navigator indicator; **collides with Mark for Review** |
 | Quick Practice | `/app/practice/quick` | YES | Action bar pill |
 | Exam Review (pre-submit) | `/app/practice/[sessionId]` (review state) | NO | List/navigator view only |
 | Session Summary | `/app/practice/[sessionId]` (summary state) | NO | Summary stats + CTAs only; current review CTA routes through `from=history&sessionId=...` |
 | Question Review | `/app/questions/[slug]?mode=review` | **NO** | **Gap — ideal bookmarking surface**; current production callers come from History, Bookmarks, and Dashboard |
-| History Questions tab | `/app/history?tab=questions` | NO | List view; click-through to review |
+| History Questions tab | `/app/history?tab=questions` | NO | List view; click-through to review; filters are result/difficulty/tag/source/sort only |
 | History Sessions breakdown | `/app/history?tab=sessions` | NO | Session rows + breakdown rows click through to review |
-| Dashboard Recent Sessions | `/app/dashboard` | NO | Summary row; click-through to review |
-| Dashboard Recent Activity | `/app/dashboard` | NO | Summary row; click-through to review |
+| Dashboard Recent Sessions | `/app/dashboard` | NO | Summary row; click-through to review; no bookmark-specific widget/count |
+| Dashboard Recent Activity | `/app/dashboard` | NO | Summary row; click-through to review; no bookmark-specific widget/count |
 | Bookmarks Page | `/app/bookmarks` | Remove only | Toggle not needed (already bookmarked) |
 
 `QuestionOrigin` in `lib/routes.ts` still supports `from=practice`, and `QuestionView` still has a matching `Back to Session` / `Back to Practice` branch, but current production callers do **not** emit that origin.

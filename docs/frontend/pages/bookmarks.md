@@ -255,6 +255,7 @@ The quick-practice `"bookmarked"` status is implemented end-to-end, but two lowe
 - Successful toggles rotate the idempotency key for the next request
 - Bookmark message state auto-clears after **2 seconds** via `scheduleBookmarkMessageAutoClear()`
 - `PracticeView` forwards bookmark messages to `NotificationProvider`; provider toasts default to **2500ms**
+- Successful toggle messages are `"Question bookmarked."` and `"Bookmark removed."`; failures use `"Failed to save bookmark. Please try again."`
 
 **Button rendering (practice-view.tsx lines 345-354):**
 ```tsx
@@ -271,6 +272,8 @@ The quick-practice `"bookmarked"` status is implemented end-to-end, but two lowe
 ```
 
 **Error handling:** If bookmark load fails, an `ErrorCard` renders above the question (practice-view.tsx lines 217-232) with a retry button.
+
+**Navigator detail:** The session question navigator (`exam-review-view.tsx` `QuestionNavigator`) does **not** receive bookmark state and therefore shows no bookmark badge/dot. Its only auxiliary indicator is the small dot for `markedForReview`.
 
 **Key detail:** The bookmark button is **always rendered** regardless of session mode (tutor or exam). This is the source of the BS-053 collision — in exam mode, it sits next to "Mark for review."
 
@@ -318,6 +321,7 @@ Bookmarks is a top-level nav item, visible in both desktop and mobile navigation
 - Renders only `Previous`, `Submit`, `Practice Again` / `Try Again`, `Next`, and origin-aware back actions
 - The exact combination varies by origin and session navigation state
 - It never renders a bookmark button
+- The review navigator (`review-question-navigator.tsx`) also carries no bookmark state or bookmark badge
 
 **No bookmark button. No bookmark state. No bookmark hook.**
 
@@ -351,9 +355,17 @@ Shows stats cards + question breakdown + CTAs ("Review your answers", "Back to D
 
 ### 7d. History Questions Tab
 
-**File:** `app/(app)/app/history/components/history-questions-tab.tsx`
+**Files:**
+- `app/(app)/app/history/components/history-questions-tab.tsx`
+- `app/(app)/app/history/history-search-params.ts`
 
-List view of attempted questions with filters. Each row links to question review page. No bookmark UI in the list itself. Acceptable — bookmark is one click away via the review page (once that gap is filled).
+List view of attempted questions with filters. Each row links to question review page. No bookmark UI in the list itself.
+
+**Current filter set:** `result`, `difficulty`, `tag`, `source`, `sort`
+
+There is **no bookmark-status filter** and **no bookmark indicator** in the row metadata. This differs from Quick Practice, which exposes bookmark-backed status filtering via the segmented control.
+
+Acceptable as a list surface — bookmark is one click away via the review page (once that gap is filled) — but it is a real discoverability gap compared with Quick Practice.
 
 ### 7e. History Sessions Tab
 
@@ -365,13 +377,13 @@ List of past sessions with expandable breakdowns. No bookmark UI. Acceptable —
 
 **File:** `app/(app)/app/dashboard/page.tsx`
 
-Recent session rows link into question review with `from=dashboard&mode=review&sessionId=...`. No bookmark UI on the dashboard row itself. Acceptable — it is a summary/launchpad surface.
+Recent session rows link into question review with `from=dashboard&mode=review&sessionId=...`. No bookmark UI on the dashboard row itself, and the dashboard does not fetch or render bookmark counts or bookmark-specific CTA modules. Acceptable — it is a summary/launchpad surface.
 
 ### 7g. Dashboard — Recent Activity
 
 **File:** `app/(app)/app/dashboard/page.tsx`
 
-Recent activity rows link into question review with `from=dashboard&mode=review&attemptId=...`. No bookmark UI on the dashboard row itself. Acceptable — it is a summary/launchpad surface.
+Recent activity rows link into question review with `from=dashboard&mode=review&attemptId=...`. No bookmark UI on the dashboard row itself, and no bookmark-specific dashboard affordance accompanies these rows. Acceptable — it is a summary/launchpad surface.
 
 ---
 

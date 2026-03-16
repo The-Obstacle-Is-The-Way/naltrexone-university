@@ -34,6 +34,12 @@ In exam mode, the bottom action bar presents four actions:
 
 A test-taker in exam mode is in **assessment mindset**: "Which questions do I need to revisit before I submit?" The bookmark action intrudes with a completely different intent: "I want to save this for future study." These are fundamentally different cognitive operations, but they look the same and sit next to each other.
 
+Current feedback is also uneven:
+
+- Bookmark does emit transient success/error toasts in `PracticeView`, so it is **not** a silent text-swap-only control
+- Mark-for-review gets the stronger persistent affordance: the session navigator shows a dot for marked questions
+- Bookmark state gets **no** navigator badge anywhere in the active session flow
+
 ### Concrete confusion scenarios
 
 1. **User wants to flag a question for review before submitting** → sees two similar-looking actions, has to parse the difference mid-exam. Mental overhead at the worst possible time.
@@ -117,10 +123,13 @@ This is likely an oversight from when the review page was first built — bookma
 - Bookmark button: always rendered (lines ~345-354)
 - Mark for review button: conditionally rendered for exam mode (lines ~356-367)
 - Both are outline `Button`s with the same rounded-pill styling in the bottom action bar; neither sets a distinct size prop
+- Bookmark feedback is routed through `useNotification()` (`Question bookmarked.`, `Bookmark removed.`, or error toast), but the action bar itself still relies on text labels rather than a distinct icon treatment
+- The session navigator dot lives in `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` and only tracks `markedForReview`, not bookmark state
 
 **Missing bookmark on review** — `app/(app)/app/questions/[slug]/question-page-client.tsx`:
 - Action bar (lines ~343-429): Previous, Submit/Reattempt, Next, Back link
 - No `onToggleBookmark` prop, no `isBookmarked` state, no bookmark button
+- The review navigator also carries no bookmark state or badge
 
 ---
 
