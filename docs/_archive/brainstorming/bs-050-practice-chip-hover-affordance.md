@@ -111,3 +111,4 @@ The Bookmarks Remove pill works well with a border-forward hover treatment becau
 | 2026-03-13 | Promoted to [DEBT-309](../_archive/debt/debt-309-filter-chip-hover-border-affordance.md) | Implementation-ready debt doc with exact token changes, test scope, and doc updates |
 | 2026-03-13 | Light-mode hover border settled at 60 | Adversarial review: 70 has no light-mode precedent; 45→60 is proportional to dark 40→70 |
 | 2026-03-13 | Chrome visual audit confirms problem | Hover rated 1.5/5 dark, 2/5 light. Border brightening called "single highest-impact change." Also surfaced: selected chips have zero hover feedback, dark rest border 5% weaker than light, focus ring may be too subtle |
+| 2026-03-16 | Archived — DEBT-309 resolved (PR #209) | Hover border affordance and fill lift implemented on FilterChip. Residual items (selected chip hover, dark rest border parity) tracked in BS-044. |
