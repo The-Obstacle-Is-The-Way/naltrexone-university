@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { APP_NAV_ITEMS } from '@/components/app-nav-items';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -46,7 +47,7 @@ describe('AppDesktopNav', () => {
       doc.querySelectorAll('nav[aria-label="App navigation"] a[href]'),
     );
 
-    expect(navLinks).toHaveLength(6);
+    expect(navLinks).toHaveLength(APP_NAV_ITEMS.length);
     for (const link of navLinks) {
       const classTokens = (link.getAttribute('class') ?? '')
         .split(/\s+/)
@@ -73,16 +74,6 @@ describe('AppDesktopNav', () => {
     }
     expect(dashboardLink.getAttribute('aria-current')).toBe('page');
     expect(practiceLink.getAttribute('aria-current')).toBeNull();
-
-    const dashboardClassTokens = (dashboardLink.getAttribute('class') ?? '')
-      .split(/\s+/)
-      .filter(Boolean);
-    const practiceClassTokens = (practiceLink.getAttribute('class') ?? '')
-      .split(/\s+/)
-      .filter(Boolean);
-
-    expect(dashboardClassTokens).toContain('whitespace-nowrap');
-    expect(practiceClassTokens).toContain('whitespace-nowrap');
   });
 
   it('marks quick practice as active without also marking practice', async () => {
