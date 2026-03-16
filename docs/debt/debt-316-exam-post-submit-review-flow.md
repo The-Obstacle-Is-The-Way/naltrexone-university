@@ -3,7 +3,7 @@
 **Priority:** P2
 **Created:** 2026-03-15
 **Status:** Open
-**Source:** Manual QA + browser walkthrough, corrected by code audit (2026-03-15)
+**Source:** Manual QA + browser walkthrough, corrected by code audit, verified by second browser pass (2026-03-16)
 **Scope:** Practice-session exam flow, with tutor-mode comparison where relevant
 
 ---
@@ -19,9 +19,11 @@ This debt doc was corrected after tracing the actual codepaths. The initial brow
 The real debt is narrower and more important:
 
 1. The exam Session Summary has **no explicit primary CTA** that says "review your answers".
-2. The only in-summary review affordance is a **lazy-loaded, visually subordinate** breakdown list.
+2. The only in-summary review affordance is a **lazy-loaded, visually subordinate** breakdown list with **no visual link styling** (no underline, no color differentiation — confirmed by browser verification).
 3. Opening a question from the **pre-submit review checklist** drops the user into a stripped-down question view with no navigator and no Previous/Next context.
 4. After the last exam answer is submitted, the bottom bar offers **no obvious finish/review CTA**.
+5. Summary breakdown review links have a **broken return path** — browser back or "Back to Session" link lands on a dead-end "No more questions" state because the practice session page's summary state is not URL-addressable (Root Cause E).
+6. Summary-review fetch failure shows an error with **no retry button**, leaving the user with only off-screen escape hatches (Root Cause F).
 
 ---
 
@@ -90,10 +92,11 @@ What is false:
 - `SessionBreakdownList` wraps each available question stem in a review `Link` built with `toQuestionRoute(..., { from: 'practice', mode: 'review', sessionId })`: `app/(app)/app/shared/components/session-breakdown-list.tsx:34-48`
 - Existing tests already assert those review links exist and include `sessionId` when provided: `app/(app)/app/shared/components/session-breakdown-list.test.tsx:66-107`
 
-Also false:
+Also false (with qualification):
 
-- History does **not** require chevron expansion to reach review.
-- The History Sessions tab already links the entire session summary row to the first question review route, and row click pushes that same route: `app/(app)/app/history/components/history-sessions-tab.tsx:167-205`
+- History does **not** require chevron expansion to reach review — **when `firstQuestionSlug` is present**.
+- The History Sessions tab links the session summary row to the first question review route, and row click pushes that route: `app/(app)/app/history/components/history-sessions-tab.tsx:167-205`
+- However, `firstQuestionSlug` can be `null` (e.g., if all questions in a session have been deleted): `src/application/use-cases/get-session-history.ts:86`. In that case, the row is **not** clickable and the non-interactive case is tested: `app/(app)/app/history/components/history-sessions-tab.test.tsx:324`
 
 Corrected description:
 
@@ -116,6 +119,12 @@ Correction:
 - The main text portion of each available row is clickable.
 - The entire row is **not** a single tap target; the status label sits outside the link: `app/(app)/app/shared/components/session-breakdown-list.tsx:59-71`
 - That is a weaker affordance than a primary CTA, but it is not "non-clickable".
+
+Browser verification (2026-03-16):
+
+- A second browser walkthrough confirmed the links are real `<a>` elements with correct `href` attributes.
+- However, the links have **no visual link affordance**: no underline, no color differentiation from body text (`color: rgb(237, 237, 237)`, same as surrounding text), no hover underline. The only interactive hint is `cursor: pointer` on hover.
+- This means the links are functionally present but **visually invisible as interactive elements** — reinforcing why the first browser audit and real users would miss them entirely.
 
 ### 3. No bottom-bar "Finish Exam" / "Review answers" CTA after the last answer
 
@@ -162,23 +171,28 @@ Corrected description:
 - But the user does lose the navigator, Previous/Next, and a strong sense of context.
 - The earlier writeup should say the per-question `Submit` is **disabled**, not absent.
 
-### 5. Auto-advance after submit has no explicit feedback
+### 5. Auto-advance after submit has no durable feedback
 
-**Verdict:** Accurate.
+**Verdict:** Partially accurate — overstated in original writeup.
 
 Evidence:
 
 - `usePracticeSessionPageController.onSubmit()` awaits the submit call and immediately invokes `maybeAutoAdvanceAfterSubmit()`: `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts:60-71`
 - `maybeAutoAdvanceAfterSubmit()` calls `advance()` immediately for non-final exam questions when the submit succeeded and the load state is ready: `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts:147-164`
-- `PracticeView` only emits notifications for bookmark transitions; there is no answer-save notification path: `app/(app)/app/practice/components/practice-view.tsx:116-133`
+
+Transient feedback does exist:
+
+- The Submit button renders `Submitting…` while the answer is in flight: `app/(app)/app/practice/components/practice-view.tsx:308`
+- The next-question load sets `loadState` to `loading`: `app/(app)/app/practice/shared/question-flow-actions.ts:70`
 
 Correction:
 
-- The UI change itself is feedback, but there is no explicit acknowledgment in code such as a toast, badge, or intentional dwell before advancing.
+- The original claim of "no feedback" is overstated. There **is** transient feedback (button text change + loading state).
+- The real gap is no **durable** "answer saved" acknowledgment before auto-advancing — no toast, no badge, no intentional dwell. This is a polish concern, not a structural gap.
 
 ### 6. "Submit" label ambiguity
 
-**Verdict:** Accurate, but lower priority than the navigation issues above.
+**Verdict:** Accurate as a copy overlap, but not a demonstrated flow break.
 
 Evidence:
 
@@ -187,7 +201,8 @@ Evidence:
 
 Correction:
 
-- This is a copy/clarity issue, not a structural blocker.
+- The two "Submit" variants render on **different screens** with different surrounding context (question view vs. review checklist). The overlap is real but the risk of actual user confusion is low.
+- This is a polish concern, not structural debt. Deprioritize relative to the navigation/return-path issues above.
 
 ---
 
@@ -324,6 +339,18 @@ Source:
 - `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts:60-71`
 - `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts:147-164`
 
+### Root Cause E: Summary breakdown review links have a broken return path
+
+The summary breakdown links use `from=practice`, which makes the question review page render "Back to Session" linking to `/app/practice/[sessionId]`: `app/(app)/app/questions/[slug]/question-page-client.tsx:117`. But the practice session route is a client-side state machine — `summary` only exists when in-memory state was set by `endSession()`: `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:116`. On fresh load (browser back, or direct navigation), the page calls `getNextQuestion` instead: `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts:138`. `GetNextQuestionUseCase` does not reconstruct the summary; it returns an unanswered question or `null`: `src/application/use-cases/get-next-question.ts:158`.
+
+Result: browser back from question review lands on a "No more questions found" dead-end, not the Session Summary. Confirmed by browser walkthrough (2026-03-16).
+
+### Root Cause F: Summary-review fetch failure has no retry path
+
+When the secondary `getPracticeSessionReview()` fetch fails after session end, the Session Summary shows an error message but offers **no retry button**: `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx:83-86`. In this state, the only review paths are the off-screen History escape hatches (generic CTAs).
+
+Source: `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx:83`, `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-summary-review.ts:37`
+
 ---
 
 ## Recommended Direction
@@ -377,6 +404,8 @@ Recommended approach:
 
 - Preserve the first available slug across finalization for exam sessions, then fall back to `summaryReview.rows` if needed.
 
+**Important caveat (from adversarial audit):** Option A alone is insufficient. The summary breakdown links already use `from=practice`, which creates a broken return path (Root Cause E). The new primary CTA would use the same route helper and inherit the same problem. The return-path fix (Root Cause E) should ship alongside Option A.
+
 ### Option B: Add a bottom-bar completion CTA on the last exam question
 
 When the user has just answered the final question, the bottom bar should render:
@@ -420,6 +449,8 @@ These should be removed from DEBT-316 as primary claims:
 2. That CTA links to `toQuestionRoute(firstSlug, { from: 'practice', mode: 'review', sessionId })`.
 3. After answering the last exam question, the bottom bar renders `Review answers` or `Finish exam`.
 4. Opening a question from the pre-submit review checklist preserves the navigator and Previous/Next controls.
+5. Summary-review fetch failure renders a retry button.
+6. Question review "Back to Session" link returns the user to the Session Summary (not a dead-end state).
 
 ### Existing coverage to keep in mind
 
@@ -433,3 +464,4 @@ These should be removed from DEBT-316 as primary claims:
 3. Submit the last question of an exam and verify the bottom bar exposes an obvious completion CTA.
 4. From `Review Questions`, click `Open question` and verify the navigator plus Previous/Next remain visible.
 5. Verify tutor mode remains unchanged except for any intentional summary CTA decisions.
+6. From Session Summary, click a breakdown link to open question review, then press browser back — verify the user returns to Session Summary (not a dead-end "No more questions" state).
