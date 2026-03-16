@@ -13,7 +13,13 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-227
+**Next Bug ID:** BUG-228
+
+**Manual report (2026-03-16) — header brand font and nav wrapping:**
+
+- [BUG-227](./bug-227-header-brand-font-mismatch-and-nav-wrapping.md): Header brand uses body font (Manrope) instead of `font-heading` (Instrument Sans); nav items wrap at mid-width viewports due to `sm:` breakpoint being too low. Stopgap fix: apply `font-heading` to brand, bump breakpoint to `md:`, add `whitespace-nowrap`.
+
+---
 
 **Manual report (2026-03-15) — completed-session navigation:**
 
