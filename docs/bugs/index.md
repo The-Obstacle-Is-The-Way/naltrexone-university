@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-15
+**Last Updated:** 2026-03-16
 
 ---
 
@@ -17,13 +17,13 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 **Manual report (2026-03-15) — completed-session navigation:**
 
-- [BUG-226](bug-226-tutor-session-next-button-no-questions-after-completion.md): **P2** — Session "Next" button can dead-end into "No more questions found" after completion because the page ignores navigator `nextQuestionId` and still routes through unanswered-only `fromIndex`.
+- BUG-226 resolved (PR #220) and archived.
 
 ---
 
 **Audit batch (2026-03-15) — search-param scalar assumption sweep (verified via tracer bullets):**
 
-5 bug docs were filed in this batch (4 resolved and archived, 1 still open).
+5 bug docs were filed in this batch (all 5 resolved and archived).
 
 ---
 
@@ -33,7 +33,12 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ---
 
-**Latest archival (2026-03-15):**
+**Latest archival (2026-03-16):**
+- BUG-226 verified fixed (PR #220): session "Next" button in completed sessions now routes through navigator `nextQuestionId` instead of unanswered-only `fromIndex`, restoring forward navigation after completion, and archived to `docs/_archive/bugs/`.
+- BUG-223 verified fixed (PR #222): widened bookmarks page `searchParams` to accept `string | string[]`, normalized `error` and `toast` via shared `normalizeSearchParam`, restored remove-bookmark error banners and success toasts for repeated query params, and archived to `docs/_archive/bugs/`.
+- BUG-221 stale `docs/bugs/` copy removed (already archived previously).
+
+**Previous archival (2026-03-15):**
 - BUG-225 verified fixed (PR #223): replaced 7 ad-hoc `typeof === 'string'` guards with shared `normalizeSearchParam` on the question review page, restoring session/attempt/history context for array-valued query params, and archived to `docs/_archive/bugs/`.
 - BUG-224 verified fixed (PR #221): widened practice-session page `searchParams` to accept `string | string[]`, normalized `toast`, `requestedCount`, and `actualCount` via shared `normalizeSearchParam` at the server page boundary, restored session-start and filtered-count toasts for repeated query params, and archived to `docs/_archive/bugs/`.
 - BUG-222 verified fixed (PR #219): widened pricing-page `checkout` / `reason` search params to accept `string[]`, normalized both once with shared `normalizeSearchParam`, restored banner selection and the manage-billing CTA for repeated query params, and archived to `docs/_archive/bugs/`.
@@ -74,11 +79,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 Active open bugs are listed below.
 
-| Bug | Family | Priority | Summary |
-|-----|--------|----------|---------|
-| [BUG-221](./bug-221-checkout-success-repeated-session-id-breaks-sync.md) | Search params / checkout | P3 | Repeated `session_id` arrays are forwarded as invalid input and bounce successful checkout returns to the generic error route |
-| [BUG-226](./bug-226-tutor-session-next-button-no-questions-after-completion.md) | Practice / session navigation | P2 | Completed-session "Next" can dead-end into "No more questions found" because the view shows availability from navigator rows but dispatches through unanswered-only `fromIndex` |
-| [BUG-223](./bug-223-bookmarks-page-array-query-feedback-loss.md) | Search params / bookmarks | P4 | Repeated `error` / `toast` params suppress remove-bookmark feedback |
+No open bugs.
 
 ## Audit #15 — Search Param Scalar Assumption Sweep (2026-03-15)
 

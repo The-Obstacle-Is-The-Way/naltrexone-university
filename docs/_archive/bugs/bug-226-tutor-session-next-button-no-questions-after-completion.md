@@ -1,8 +1,9 @@
 # BUG-226: Completed Session "Next" Button Can Dead-End Into "No More Questions"
 
-**Status:** Open
+**Status:** Resolved (PR #220)
 **Priority:** P2
 **Date:** 2026-03-15
+**Resolved:** 2026-03-15
 
 ## Summary
 

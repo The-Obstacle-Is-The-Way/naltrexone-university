@@ -1,8 +1,9 @@
 # BUG-223: Bookmarks Page Drops Repeated `error` / `toast` Query Params
 
-**Status:** Open
+**Status:** Resolved (PR #222)
 **Priority:** P4
 **Date:** 2026-03-15
+**Resolved:** 2026-03-15
 
 ## Summary
 

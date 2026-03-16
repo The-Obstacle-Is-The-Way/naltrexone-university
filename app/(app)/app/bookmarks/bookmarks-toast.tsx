@@ -2,17 +2,23 @@
 
 import { useEffect, useRef } from 'react';
 import { useNotification } from '@/components/ui/notification-provider';
+import { normalizeSearchParam } from '@/lib/search-params';
 
 type BookmarksToastCode = 'bookmark_removed';
 
 function parseBookmarksToastCode(
-  code: string | undefined,
+  code: string | string[] | undefined,
 ): BookmarksToastCode | null {
-  if (code === 'bookmark_removed') return code;
+  const normalized = normalizeSearchParam(code);
+  if (normalized === 'bookmark_removed') return normalized;
   return null;
 }
 
-export function BookmarksToast({ code }: { code: string | undefined }) {
+export function BookmarksToast({
+  code,
+}: {
+  code: string | string[] | undefined;
+}) {
   const { notify } = useNotification();
   const lastHandledToastRef = useRef<BookmarksToastCode | null>(null);
 

@@ -110,3 +110,4 @@ The border hover behavior doesn't need to be invented — it exists in `button.t
 | 2026-03-13 | Created BS-051 | Document the bookmark pill's hover pattern as a reference, note planned icon replacement, and cross-reference with BS-050 practice chip fix |
 | 2026-03-13 | No immediate code changes to bookmark pill | The current hover behavior is the positive example. Changes are deferred to a future icon-replacement pass. |
 | 2026-03-13 | Icon replacement brainstormed in [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) | Full exploration of replacing text pills with filled/unfilled Bookmark icon toggle across both the Bookmarks page and Practice action bar. |
+| 2026-03-16 | Archived | Primary value was feeding BS-050/DEBT-309 (now resolved via PR #209). Icon replacement tracked in BS-052. No further action needed on this doc. |

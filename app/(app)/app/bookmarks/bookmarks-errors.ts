@@ -1,3 +1,5 @@
+import { normalizeSearchParam } from '@/lib/search-params';
+
 const REMOVE_BOOKMARK_ERROR_CODES = [
   'missing_question_id',
   'toggle_failed',
@@ -14,10 +16,11 @@ function isRemoveBookmarkErrorCode(
 }
 
 export function parseRemoveBookmarkErrorCode(
-  code: string | undefined,
+  code: string | string[] | undefined,
 ): RemoveBookmarkErrorCode | undefined {
-  if (!code) return undefined;
-  return isRemoveBookmarkErrorCode(code) ? code : undefined;
+  const normalized = normalizeSearchParam(code);
+  if (!normalized) return undefined;
+  return isRemoveBookmarkErrorCode(normalized) ? normalized : undefined;
 }
 
 export function getRemoveBookmarkErrorMessage(

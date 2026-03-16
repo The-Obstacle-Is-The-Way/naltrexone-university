@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-13
+**Last Updated:** 2026-03-16
 
 ---
 
@@ -29,9 +29,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 |----|-------|--------|--------------|
 | [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
 | [BS-044](./bs-044-dark-mode-border-weight-tiering.md) | Dark Mode Border Weight Tiering — broad cross-surface tiering remains open after narrower choice-button and History slices were resolved via `DEBT-280`, `DEBT-301`, and `DEBT-302` | Active | [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
-| [BS-050](./bs-050-practice-chip-hover-affordance.md) | Practice Chip Hover Affordance — border brightening + fill contrast lift on unselected `FilterChip` hover; currently only a 3-point fill opacity bump which is barely perceptible | Active | [DEBT-309](../_archive/debt/debt-309-filter-chip-hover-border-affordance.md) |
-| [BS-051](./bs-051-bookmark-pill-hover-pattern-investigation.md) | Bookmark Pill Hover Pattern Investigation — documents the Remove button's effective border-brightening hover pattern as a reference, notes planned icon replacement | Active | [BS-050](./bs-050-practice-chip-hover-affordance.md) |
-| [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) | Bookmark Icon Toggle — replace "Remove" text pill and "Bookmark"/"Remove bookmark" action bar pills with filled/unfilled bookmark icon (Lucide `Bookmark` with `fill-current` toggle); phased rollout starting with Bookmarks page | Active | [BS-051](./bs-051-bookmark-pill-hover-pattern-investigation.md) |
+| [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) | Bookmark Icon Toggle — replace "Remove" text pill and "Bookmark"/"Remove bookmark" action bar pills with filled/unfilled bookmark icon (Lucide `Bookmark` with `fill-current` toggle); phased rollout starting with Bookmarks page | Active | [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) |
 
 **Next Brainstorming ID:** BS-053
 
@@ -41,6 +39,8 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 | ID | Title | Outcome |
 |----|-------|---------|
+| [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) | Bookmark Pill Hover Pattern Investigation | Reference doc for BS-050; primary value consumed by DEBT-309 (PR #209). Icon replacement tracked in BS-052. |
+| [BS-050](../_archive/brainstorming/bs-050-practice-chip-hover-affordance.md) | Practice Chip Hover Affordance | Promoted to [DEBT-309](../_archive/debt/debt-309-filter-chip-hover-border-affordance.md), resolved by PR #209. Hover border affordance and fill lift implemented on FilterChip. |
 | [BS-049](../_archive/brainstorming/bs-049-bookmarks-card-visual-unification.md) | Bookmarks Card Visual Unification — bordered bookmark cards are visually dated next to History Questions and Dashboard tonal rows; redundant `Review` button, title underline, and heavier card chrome needed a settled implementation contract | Resolved by [DEBT-307](../_archive/debt/debt-307-bookmarks-row-visual-unification.md) on 2026-03-12. Bookmarks now use page-background tonal rows with delegated pointer activation, outline `Remove`, and no attempt-result metadata expansion in this pass. |
 | [BS-048](../_archive/brainstorming/bs-048-history-row-fill-depth-and-hover-policy.md) | History Row Fill Depth, Hover Policy, and Affordance Cleanup — `bg-foreground/5` on page background is perceptually darker than Dashboard/Practice rows on `bg-card`; hover and underlines redundant with chevron; Questions "Review" pill redundant with row Link | Promoted to [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md), resolved 2026-03-10. Parent-aware foreground-ramp tokens were implemented (`/[0.08]` rest on page, `hover:bg-foreground/[0.12]` for navigation rows), and redundant History affordances were removed. |
 | [BS-046](../_archive/brainstorming/bs-046-filter-chip-fill-depth-and-summary-hover.md) | Filter Chip Fill Depth + Summary Hover Removal — chips are `bg-transparent` and look flat against container; summary hover is redundant with chevron and visually distracting | Promoted to [DEBT-294](../_archive/debt/debt-294-filter-chip-fill-depth-and-cursor.md). Chrome visual audit added `cursor-pointer` fix and revised hover to `/[0.10]` (Radix-aligned). |
