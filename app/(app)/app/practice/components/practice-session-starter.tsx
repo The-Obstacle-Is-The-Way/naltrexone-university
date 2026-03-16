@@ -133,7 +133,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
             />
           </div>
 
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-start gap-2">
             <label
               htmlFor={sessionCountInputId}
               className="text-sm font-medium text-foreground"
