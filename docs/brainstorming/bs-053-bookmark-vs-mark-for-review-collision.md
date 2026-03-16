@@ -3,7 +3,7 @@
 **Date:** 2026-03-16
 **Triggered by:** Visual audit of exam session action bar — "Bookmark" and "Mark for review" appear side-by-side as identically-styled pills, creating a confusing dual-action that maps to fundamentally different mental models.
 **Scope:** Bookmark presence in active sessions (especially exam mode) creates UX confusion when combined with the exam-only "Mark for review" action.
-**Related:** [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) (bookmark icon toggle), [DEBT-316](../_archive/debt/debt-316-exam-post-submit-review-flow-ctas.md) (exam post-submit review flow), [bookmark-surface-policy.md](../frontend/bookmark-surface-policy.md) (bookmark availability registry)
+**Related:** [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) (bookmark icon toggle), [DEBT-316](../_archive/debt/debt-316-exam-post-submit-review-flow.md) (exam post-submit review flow), [bookmark-surface-policy.md](../frontend/bookmark-surface-policy.md) (bookmark availability registry)
 
 ---
 
@@ -29,7 +29,7 @@ In exam mode, the bottom action bar presents four actions:
 | **Scope** | Global — persists permanently across sessions | Session-scoped — lives and dies with this exam |
 | **Storage** | Dedicated `bookmarks` table | JSON field inside `practice_sessions.question_states` |
 | **Purpose** | "I want to study this question later" | "I want to revisit this question before I submit the exam" |
-| **Available in** | All modes (tutor, exam, ad-hoc, history) | Exam mode only |
+| **Available in (today)** | Tutor sessions, exam sessions, quick practice, bookmarks page remove flow; **missing from question review** | Exam mode only |
 | **Visible after session** | Yes — bookmarks page, history | No — mark data is meaningless after exam submission |
 
 A test-taker in exam mode is in **assessment mindset**: "Which questions do I need to revisit before I submit?" The bookmark action intrudes with a completely different intent: "I want to save this for future study." These are fundamentally different cognitive operations, but they look the same and sit next to each other.
@@ -46,14 +46,21 @@ A test-taker in exam mode is in **assessment mindset**: "Which questions do I ne
 
 ### Problem 2: Bookmark missing from the question review page
 
-The question review page (`/app/questions/[slug]`) is the destination when users click "Review" from history, session summaries, or bookmarks. It shows the full question with explanation, clinical pearl, and reference — exactly the moment when a user thinks "I should save this for later study."
+The question review page (`/app/questions/[slug]?mode=review`) is the destination when users click into review from history, session summaries, bookmarks, or dashboard surfaces. It is always a long-form question detail page, and when a prior attempt exists it also shows feedback content (explanation, reference, and any clinical-pearl callouts embedded in the markdown) — exactly the moment when a user thinks "I should save this for later study."
 
-**Current action bar on the review page:**
+**Current review-page bottom bar:** it only renders combinations of `Previous`, `Submit`, `Practice Again` / `Try Again`, `Next`, and an origin-aware back link. There is **no bookmark action** in any variant.
+
+Representative examples:
+
 ```
-[ Practice Again ]  [ Next ]  Back to History
+Standalone bookmark review:
+[ Practice Again ]  Back to Bookmarks
+
+History/session review:
+[ Previous ]  [ Practice Again ]  [ Next ]  Back to History
 ```
 
-**No bookmark button.** This is the surface where bookmarking makes the *most* sense, and it's absent.
+This is the surface where bookmarking makes the *most* sense, and it's absent.
 
 **Full bookmark availability audit:**
 
@@ -66,9 +73,19 @@ The question review page (`/app/questions/[slug]`) is the destination when users
 | Session Summary | `/app/practice/[sessionId]` (summary state) | NO | Acceptable |
 | **Question Review** | **`/app/questions/[slug]?mode=review`** | **NO** | **YES — this is the gap** |
 | History Questions tab | `/app/history?tab=questions` | NO (list view) | Acceptable (click-through to review) |
+| History Sessions breakdown | `/app/history?tab=sessions` | NO | Acceptable (click-through to review) |
+| Dashboard Recent Sessions | `/app/dashboard` | NO | Acceptable (click-through to review) |
+| Dashboard Recent Activity | `/app/dashboard` | NO | Acceptable (click-through to review) |
 | Bookmarks Page | `/app/bookmarks` | Remove only | Acceptable |
 
-The question review page is a shared destination used by multiple entry points (`?from=history`, `?from=bookmarks`, `?from=practice`, `?from=dashboard`). Adding bookmark here would cover all post-session review flows in one place.
+The question review page is a shared destination used by multiple entry points:
+
+- `?from=history` from History Questions
+- `?from=history&sessionId=...` from History Sessions and the Session Summary CTA
+- `?from=bookmarks` from Bookmarks
+- `?from=dashboard` from Dashboard Recent Sessions / Recent Activity
+
+`QuestionOrigin` still supports `from=practice` in the route contract, and `QuestionView` still has matching back-link behavior for it, but current production callers do **not** emit that origin.
 
 ---
 
@@ -76,7 +93,7 @@ The question review page is a shared destination used by multiple entry points (
 
 ### Why does this happen?
 
-Bookmarking was designed as a universal feature — "save any question for later study." It was built before exam mode existed and naturally appeared everywhere questions are shown.
+Bookmarking was designed as a universal feature — "save any question for later study." It was built before exam mode existed and naturally appeared across the active practice question flows.
 
 Mark-for-review was designed as an exam-specific feature — "flag this question to revisit during the exam." It was correctly scoped to exam mode only.
 
@@ -90,16 +107,16 @@ When exam mode launched, bookmark wasn't reconsidered. It was simply carried for
 
 ### Why is bookmark missing from the review page?
 
-The question review page (`app/(app)/app/questions/[slug]/question-page-client.tsx`) was built as a read-only review surface. Its `QuestionView` component (lines ~343-429) renders navigation + "Practice Again" but never wires up bookmark state. The `useQuestionPageController` hook doesn't fetch or manage bookmark state for the current question.
+The question review page (`app/(app)/app/questions/[slug]/question-page-client.tsx`) was built as a review-oriented question surface with navigation and reattempt support. Its `QuestionView` component (lines ~343-429) renders bottom-bar navigation/submit/reattempt/back controls but never wires up bookmark state. The `useQuestionPageController` hook doesn't fetch or manage bookmark state for the current question.
 
-This is likely an oversight from when the review page was first built — bookmark was already available in the practice session, so nobody noticed it was missing from the post-session review path. But the practice session is the *wrong* place for bookmarking (you're busy answering), and the review page is the *right* place (you're reflecting on the explanation).
+This is likely an oversight from when the review page was first built — bookmark was already available in the active practice flows, so nobody noticed it was missing from the post-session review path. But the practice session is the *wrong* place for bookmarking (you're busy answering), and the review page is the *right* place (you're reflecting on the explanation).
 
 ### Code traces
 
 **Exam collision** — both buttons live in `app/(app)/app/practice/components/practice-view.tsx`:
 - Bookmark button: always rendered (lines ~345-354)
 - Mark for review button: conditionally rendered for exam mode (lines ~356-367)
-- Both are `<Button variant="outline" size="sm">` pills — identical styling
+- Both are outline `Button`s with the same rounded-pill styling in the bottom action bar; neither sets a distinct size prop
 
 **Missing bookmark on review** — `app/(app)/app/questions/[slug]/question-page-client.tsx`:
 - Action bar (lines ~343-429): Previous, Submit/Reattempt, Next, Back link
@@ -131,7 +148,7 @@ All options below address **both** problems (exam collision + missing bookmark o
 **What changes:**
 - Exam mode action bar: `[ Submit ] [ Next ] [ Mark for review ]`
 - Tutor mode action bar: `[ Submit ] [ Next ] [ Bookmark ]` (unchanged)
-- Question review page action bar: `[ Practice Again ] [ Bookmark ] [ Next ] Back to History`
+- Question review page action bar example: `[ Practice Again ] [ Bookmark ] [ Next ] Back to History`
 - Bookmarking available in: **question review page**, bookmarks page, tutor mode, quick practice
 
 **Pros:**
@@ -152,7 +169,7 @@ All options below address **both** problems (exam collision + missing bookmark o
 - Exam mode action bar: `[ Submit ] [ Next ] [ Mark for review ]`
 - Tutor mode action bar: `[ Submit ] [ Next ]`
 - Quick practice action bar: `[ Submit ] [ Next ]`
-- Question review page action bar: `[ Practice Again ] [ Bookmark ] [ Next ] Back to History`
+- Question review page action bar example: `[ Practice Again ] [ Bookmark ] [ Next ] Back to History`
 - Bookmarking available in: **question review page**, bookmarks page only
 
 **Pros:**
@@ -239,7 +256,7 @@ All options below address **both** problems (exam collision + missing bookmark o
 
 **Two implementation pieces:**
 1. **Remove** bookmark button from `PracticeView` when in exam mode
-2. **Add** bookmark toggle to `QuestionView` on the question review page (`/app/questions/[slug]`)
+2. **Add** bookmark toggle to `QuestionView` on the question review page (`/app/questions/[slug]?mode=review`)
 
 If analytics or user feedback later shows that mid-exam bookmarking is valuable, Option C (visual differentiation via BS-052 icon toggle) could be layered on as a follow-up.
 
@@ -252,5 +269,5 @@ If analytics or user feedback later shows that mid-exam bookmarking is valuable,
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-03-16 | BS-053 opened | Exam action bar shows Bookmark + Mark for review side-by-side, creating cognitive collision |
-| 2026-03-16 | Scope expanded to include missing bookmark on question review page | Visual audit revealed the review page (`/app/questions/[slug]`) — the ideal bookmarking surface — has no bookmark action |
+| 2026-03-16 | Scope expanded to include missing bookmark on question review page | Visual audit revealed the review page (`/app/questions/[slug]?mode=review`) — the ideal bookmarking surface — has no bookmark action |
 | 2026-03-16 | Created [bookmark-surface-policy.md](../frontend/bookmark-surface-policy.md) | Registry of where bookmark should/shouldn't appear and why, to prevent future surface drift |
