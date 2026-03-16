@@ -12,6 +12,49 @@ describe('AppDesktopNav', () => {
     vi.restoreAllMocks();
   });
 
+  it('uses md:flex on the desktop nav container', async () => {
+    vi.doMock('next/navigation', () => ({
+      usePathname: () => '/app/dashboard',
+    }));
+    const { AppDesktopNav } = await import('./app-desktop-nav');
+
+    const html = renderToStaticMarkup(<AppDesktopNav />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const nav = doc.querySelector('nav[aria-label="App navigation"]');
+
+    expect(nav).not.toBeNull();
+    if (!nav) {
+      throw new Error('Expected app desktop nav container to exist');
+    }
+
+    const classTokens = (nav.getAttribute('class') ?? '')
+      .split(/\s+/)
+      .filter(Boolean);
+    expect(classTokens).toContain('md:flex');
+    expect(classTokens).not.toContain('sm:flex');
+  });
+
+  it('adds whitespace-nowrap to every app desktop nav link', async () => {
+    vi.doMock('next/navigation', () => ({
+      usePathname: () => '/app/dashboard',
+    }));
+    const { AppDesktopNav } = await import('./app-desktop-nav');
+
+    const html = renderToStaticMarkup(<AppDesktopNav />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const navLinks = Array.from(
+      doc.querySelectorAll('nav[aria-label="App navigation"] a[href]'),
+    );
+
+    expect(navLinks).toHaveLength(6);
+    for (const link of navLinks) {
+      const classTokens = (link.getAttribute('class') ?? '')
+        .split(/\s+/)
+        .filter(Boolean);
+      expect(classTokens).toContain('whitespace-nowrap');
+    }
+  });
+
   it('marks the current route link with aria-current', async () => {
     vi.doMock('next/navigation', () => ({
       usePathname: () => '/app/dashboard',
@@ -30,6 +73,16 @@ describe('AppDesktopNav', () => {
     }
     expect(dashboardLink.getAttribute('aria-current')).toBe('page');
     expect(practiceLink.getAttribute('aria-current')).toBeNull();
+
+    const dashboardClassTokens = (dashboardLink.getAttribute('class') ?? '')
+      .split(/\s+/)
+      .filter(Boolean);
+    const practiceClassTokens = (practiceLink.getAttribute('class') ?? '')
+      .split(/\s+/)
+      .filter(Boolean);
+
+    expect(dashboardClassTokens).toContain('whitespace-nowrap');
+    expect(practiceClassTokens).toContain('whitespace-nowrap');
   });
 
   it('marks quick practice as active without also marking practice', async () => {
