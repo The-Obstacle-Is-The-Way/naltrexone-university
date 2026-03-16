@@ -17,8 +17,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | GitHub Issue |
 |----|-------|----------|--------------|
+| [DEBT-316](./debt-316-exam-post-submit-review-flow.md) | Exam Post-Submit Flow Skips Question Review — after submitting an exam the user lands on a session summary dead-end with no direct path to review questions with explanations; requires 4 clicks through history to reach the review page | P2 | — |
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
-**Next Debt ID:** DEBT-316
+**Next Debt ID:** DEBT-317
 
 ---
 
