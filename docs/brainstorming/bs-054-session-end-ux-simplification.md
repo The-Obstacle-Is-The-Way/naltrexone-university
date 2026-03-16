@@ -133,21 +133,88 @@ Use `router.replace()` instead of `router.push()` when navigating away from the 
 
 ---
 
-## Open Questions
+## Decisions
 
-1. **Button set for tutor mode:** Is `[ Back to Practice ] [ View in History ]` the right simplification, or should "View in History" also be dropped for maximum simplicity? (Two buttons vs. one.)
+### D1 — Button set (tutor mode): Simplify to two buttons
 
-2. **Button set for exam mode:** Should "Review your answers" remain as the primary CTA, or is reviewing redundant once the session is over? (It's currently only shown when at least one question is reviewable.)
+**Decision:** Replace the three buttons with two:
 
-3. **Back-navigation strategy:** Which option for P2/P3?
-   - B1 (redirect to Practice) — simplest, but user loses access to summary on back
-   - B2 (re-fetch and show summary) — best UX, but requires a new server action to retrieve ended-session summary
-   - B3 (friendly "session ended" message) — middle ground, no error styling
-   - C (replaceState) — prevents the problem entirely but changes history behavior
+```
+[ Back to Practice ]   [ View in History ]
+```
 
-4. **Should the error card for "Practice session already ended" (`CONFLICT`) be softened regardless?** Even if we fix the navigation, the error could still surface via race conditions (double-click, slow network). The red error styling feels too alarming for what's essentially an idempotent "already done" state.
+- **"Back to Practice"** (filled, primary) replaces both "Back to Dashboard" and "Start another session"
+- **"View in History"** (outline, secondary) stays
 
-5. **Does this apply to exam review mode too?** After submitting an exam and viewing the summary, does browser back also land on a stale review state?
+**Reasoning from first principles:**
+
+Every major learning platform (Duolingo, Khan Academy, Anki, Quizlet) converges on the same post-session pattern: **one primary CTA** that takes you back to the hub where you'd start again, plus optionally one secondary action. The reason is simple — the session summary's job is to report results and get the user to their next action as fast as possible. Every additional button is a decision the user has to make while their brain is still processing how they performed.
+
+The current set has three problems:
+1. **Wrong primary CTA.** "Back to Dashboard" is the filled button, but Dashboard is the least likely post-practice destination. The user was practicing — their next intent is to practice again or review.
+2. **Redundant navigation.** "Start another session" goes to `/app/practice`. "Back to Practice" would go to `/app/practice`. They're the same destination with different labels. Two buttons, one place.
+3. **Dashboard access is already universal.** The top nav bar has a Dashboard link on every page. It doesn't need a dedicated CTA in the session summary — it's always one click away.
+
+"View in History" earns its space because it serves a *different intent* (deep review of the session) that isn't reachable from Practice. It's a meaningful fork in the user's decision tree, not a redundant path.
+
+### D2 — Button set (exam mode): Keep "Review your answers" as primary
+
+**Decision:**
+
+```
+[ Review your answers ]   [ Back to Practice ]   [ View in History ]
+```
+
+Three buttons in exam mode. "Review your answers" stays as the primary filled CTA when at least one question is reviewable.
+
+**Reasoning:**
+
+After an exam, the user's dominant intent is to see what they got wrong — that's the entire pedagogical payoff of taking an exam in the first place. Every testing platform (board prep, certification, academic) makes "Review" the post-exam primary action because that's where learning happens. Removing it would break the learning loop.
+
+Three buttons is acceptable here because exam mode has a genuinely different primary action ("Review") that tutor mode doesn't need (tutor already shows explanations inline). The three buttons map to three distinct user intents: learn from mistakes → practice more → check history. No redundancy.
+
+### D3 — Back-navigation strategy: B2 (re-fetch and show summary)
+
+**Decision:** When the page mounts and the session is already ended (`endedAt` is set), re-fetch the session summary data and render the `SessionSummaryView`.
+
+**Reasoning:**
+
+The browser back button is the single most instinctive navigation gesture on the web. When a user presses back, they expect to see *what they last saw* at that URL. The session summary is the last meaningful state of `/app/practice/{sessionId}` — showing anything else (empty state, error, redirect) violates that expectation.
+
+Options considered:
+- **B1 (redirect to Practice):** Violates back-button expectations. The user pressed back to return to something, not to be bounced somewhere else. Redirecting on back is a well-known UX anti-pattern.
+- **B2 (re-fetch summary) — chosen:** Matches user expectation perfectly. The session data is immutable once ended — it's just stats and question IDs. A lightweight server action to retrieve it is straightforward.
+- **B3 (friendly "ended" message):** Better than an error, but still makes the user take another action to get somewhere useful. The summary view already has navigation buttons — just show the summary.
+- **C (replaceState):** Prevents back-navigation entirely, which is aggressive. Users should be able to go back to their results. This also wouldn't help if the user bookmarks the URL or opens it in a new tab later.
+
+**Implementation note:** On page mount, check if the session's `endedAt` is set. If so, fetch summary data (answered, correct, accuracy, duration, question breakdown) via a new or existing server action and render `SessionSummaryView` directly — bypassing the question-loading flow entirely.
+
+### D4 — Soften the CONFLICT error styling: Yes
+
+**Decision:** Change the "Practice session already ended" error from destructive (red) styling to an informational/neutral treatment. Show the session summary if possible; if not, show a friendly message with navigation.
+
+**Reasoning:**
+
+Error styling (red border, destructive text) should be reserved for states where something went wrong that requires user attention — data loss risk, failed saves, broken state. "Session already ended" is none of these. The thing the user wanted to happen *already happened successfully*. Showing a red error for a benign idempotent state is like showing a fire alarm when someone tries to lock an already-locked door.
+
+This matters even with D3 in place, because the CONFLICT error can still surface through:
+- **Double-click on "End session"** — first request succeeds, second hits CONFLICT
+- **Slow network** — user navigates away before response arrives, comes back, tries again
+- **Multiple tabs** — user has the same session open in two tabs
+
+In all these cases, the right response is "your session is complete, here are your results" — not a red error card.
+
+**Proposed treatment:** When the end-session action returns CONFLICT, treat it as a success: fetch the summary data and show `SessionSummaryView`. The user's intent (end the session) was already fulfilled. Honor the intent, not the HTTP status.
+
+### D5 — Exam review mode: Same fix applies
+
+**Decision:** Yes, the same back-navigation issue affects exam review mode. Apply the same D3 pattern.
+
+**Reasoning:**
+
+The exam flow is: questions → "Review answers" (exam review stage) → "Submit exam" → session summary. If the user navigates away from the summary and hits back, the same re-mount problem occurs — the page enters the question-loading flow instead of showing the summary.
+
+The fix is identical: on mount, check `endedAt`. If set, show the summary. The session entity is the same regardless of mode — `endedAt` is the universal signal that the session is complete. One guard covers both tutor and exam flows.
 
 ---
 
@@ -155,3 +222,8 @@ Use `router.replace()` instead of `router.push()` when navigating away from the 
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-03-16 | D1: Simplify tutor-mode buttons to `[ Back to Practice ] [ View in History ]` | Dashboard access is universal via nav; "Start another session" and "Back to Practice" are the same destination; 2 buttons > 3 for post-session cognitive load |
+| 2026-03-16 | D2: Keep 3 buttons in exam mode with "Review your answers" as primary | Exam review is the dominant post-exam intent; three buttons map to three distinct intents with no redundancy |
+| 2026-03-16 | D3: Re-fetch summary on back-navigation (B2) | Back button should show what was last seen; summary data is immutable once ended; redirect/error/message all violate back-button expectations |
+| 2026-03-16 | D4: Soften CONFLICT error to informational; ideally show summary | "Already ended" is a success from the user's perspective; red error styling reserved for actual problems; defense in depth for double-click/race conditions |
+| 2026-03-16 | D5: Same fix covers exam review mode | `endedAt` is the universal signal; one guard on mount covers both tutor and exam flows |
