@@ -3,7 +3,7 @@ import { SessionBreakdownList } from '@/app/(app)/app/shared/components/session-
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatDuration } from '@/lib/format-duration';
-import { ROUTES } from '@/lib/routes';
+import { ROUTES, toQuestionRoute } from '@/lib/routes';
 import type {
   EndPracticeSessionOutput,
   GetPracticeSessionReviewOutput,
@@ -26,6 +26,10 @@ export function SessionSummaryView({
     summary.mode === 'exam' || summary.totals.answered > 0
       ? accuracyPercent
       : '—';
+  const firstReviewableSlug =
+    summary.mode === 'exam'
+      ? (summaryReview?.rows.find((row) => row.isAvailable)?.slug ?? null)
+      : null;
 
   return (
     <div className="space-y-6">
@@ -89,6 +93,7 @@ export function SessionSummaryView({
           <div className="mt-3">
             <SessionBreakdownList
               rows={summaryReview.rows}
+              from="history"
               sessionId={summary.sessionId}
             />
           </div>
@@ -96,6 +101,19 @@ export function SessionSummaryView({
       </Card>
 
       <div className="flex flex-col gap-3 sm:flex-row">
+        {firstReviewableSlug ? (
+          <Button asChild className="rounded-full">
+            <Link
+              href={toQuestionRoute(firstReviewableSlug, {
+                from: 'history',
+                mode: 'review',
+                sessionId: summary.sessionId,
+              })}
+            >
+              Review your answers
+            </Link>
+          </Button>
+        ) : null}
         <Button asChild className="rounded-full">
           <Link href={ROUTES.APP_DASHBOARD}>Back to Dashboard</Link>
         </Button>

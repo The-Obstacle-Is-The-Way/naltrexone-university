@@ -97,6 +97,11 @@ export function PracticeView(props: PracticeViewProps) {
     href: ROUTES.APP_DASHBOARD,
     label: 'Back to Dashboard',
   };
+  const isLastSessionQuestion =
+    sessionInfo !== null &&
+    typeof sessionInfo.index === 'number' &&
+    typeof sessionInfo.total === 'number' &&
+    sessionInfo.index >= sessionInfo.total - 1;
   const isAnswerLocked = props.isAnswered || props.submitResult !== null;
   const correctChoiceId = isExamMode
     ? null
@@ -306,6 +311,20 @@ export function PracticeView(props: PracticeViewProps) {
               onClick={props.onSubmit}
             >
               {isSubmittingAnswer ? 'Submitting…' : 'Submit'}
+            </Button>
+          ) : null}
+
+          {props.submitResult &&
+          isExamMode &&
+          isLastSessionQuestion &&
+          props.onEndSession ? (
+            <Button
+              type="button"
+              className="rounded-full"
+              disabled={props.isPending || props.loadState.status === 'loading'}
+              onClick={props.onEndSession}
+            >
+              Review answers
             </Button>
           ) : null}
 

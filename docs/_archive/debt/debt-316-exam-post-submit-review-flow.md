@@ -2,7 +2,8 @@
 
 **Priority:** P2
 **Created:** 2026-03-15
-**Status:** Open
+**Status:** Resolved
+**Resolved:** 2026-03-16
 **Source:** Manual QA + browser walkthrough + code audit + adversarial audit (2026-03-15/16)
 **Scope:** Exam session post-submit flow and last-question bottom bar
 
