@@ -164,7 +164,7 @@ CREATE INDEX bookmarks_question_id_idx ON bookmarks (questionId);
 
 | File | Type | Tests | Coverage |
 |------|------|-------|----------|
-| `src/domain/value-objects/question-progress-status.test.ts` | Unit | 2 | Includes `'bookmarked'` as a valid status |
+| `src/domain/value-objects/question-progress-status.test.ts` | Unit | 3 | Includes `'bookmarked'` as a valid status |
 | `src/application/use-cases/toggle-bookmark.test.ts` | Unit | 3 | Remove existing, add new, missing question |
 | `src/application/use-cases/get-bookmarks.test.ts` | Unit | 4 | Empty, available, unavailable, error propagation |
 | `src/adapters/repositories/drizzle-bookmark-repository.test.ts` | Unit | 7 | `exists`, `add`, `remove`, `listByUserId` |
@@ -178,7 +178,7 @@ CREATE INDEX bookmarks_question_id_idx ON bookmarks (questionId);
 | `app/(app)/app/practice/hooks/use-practice-question-bookmarks.test.tsx` | Unit | 1 | Initial hook contract |
 | `app/(app)/app/practice/hooks/use-quick-practice-status-counts.test.ts` | Unit | 4 | Includes the bookmark-backed quick-practice count path |
 
-**Direct bookmark coverage total: 74 tests across 13 files.**
+**Direct bookmark coverage total: 75 tests across 13 files.**
 
 ### Additional downstream consumer coverage
 
