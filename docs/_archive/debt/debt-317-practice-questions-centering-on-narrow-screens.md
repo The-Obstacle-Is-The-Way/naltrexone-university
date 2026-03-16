@@ -2,6 +2,8 @@
 
 **Priority:** P3
 **Created:** 2026-03-16
+**Status:** Resolved
+**Resolved:** 2026-03-16
 **Scope:** Page-local CSS alignment bug in the Practice session starter.
 
 ---
@@ -71,6 +73,16 @@ Why this is the right fix:
 - The input can keep `text-center`; only the wrapper needs to stop centering itself.
 
 If design requirements later become stricter than "make Questions align with the rest of the card," a small grid could align both labels and controls with more precision. That is not necessary for this defect.
+
+---
+
+## Resolution
+
+Implemented on 2026-03-16:
+
+- Changed the Questions wrapper in `practice-session-starter.tsx` from `items-center` to `items-start`
+- Updated the existing static render test to assert `items-start` instead of `items-center`
+- Verified with the full gate: `pnpm typecheck`, `pnpm lint`, `pnpm test --run`, `pnpm test:browser`, and `pnpm build`
 
 ---
 

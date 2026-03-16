@@ -234,7 +234,7 @@ describe('PracticeSessionStarter', () => {
     expect(starterRowTokens.has('sm:items-center')).toBe(false);
   });
 
-  it('centers the Questions label and matches the segmented-control shell', () => {
+  it('left-aligns the Questions label and matches the segmented-control shell', () => {
     const html = renderToStaticMarkup(
       <PracticeSessionStarter
         sessionMode="tutor"
@@ -270,7 +270,8 @@ describe('PracticeSessionStarter', () => {
     expect(questionsWrapper).not.toBeNull();
     expect(inputShell).not.toBeNull();
     expect(input).not.toBeNull();
-    expect(wrapperTokens.has('items-center')).toBe(true);
+    expect(wrapperTokens.has('items-start')).toBe(true);
+    expect(wrapperTokens.has('items-center')).toBe(false);
     expectTokensToIncludeClassName(
       inputShellTokens,
       compactControlShellClasses,
