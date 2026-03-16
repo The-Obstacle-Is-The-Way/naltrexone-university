@@ -1,8 +1,9 @@
 # BUG-227: Header Brand Uses Body Font; App Nav Wraps Immediately Above `sm`
 
-**Status:** Open
+**Status:** Resolved (PR #227)
 **Priority:** P3
 **Date:** 2026-03-16
+**Resolved:** 2026-03-16
 
 ## Summary
 

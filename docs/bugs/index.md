@@ -15,9 +15,8 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 **Next Bug ID:** BUG-228
 
-**Manual report (2026-03-16) — header brand font and nav wrapping:**
-
-- [BUG-227](./bug-227-header-brand-font-mismatch-and-nav-wrapping.md): App and marketing header brands use body font (Manrope) instead of `font-heading` (Instrument Sans); the app nav wraps immediately above `sm:`. Stopgap fix: promote the brand to `font-heading`, add `whitespace-nowrap`, and raise the app header breakpoint to at least `md:` (`lg:` only if intentionally conservative).
+**Latest archival (2026-03-16):**
+- BUG-227 resolved (PR #227): promoted app/marketing header brand to `font-heading`, raised app nav breakpoint from `sm:` to `md:`, added `whitespace-nowrap` to desktop nav links, and archived to `docs/_archive/bugs/`.
 
 ---
 
