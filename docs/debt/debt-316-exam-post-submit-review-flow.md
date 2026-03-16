@@ -16,7 +16,7 @@ There ARE clickable review links in the question breakdown list, but they are:
 - **Lazy-loaded** — not available until a secondary fetch completes
 - **Visually invisible as links** — no underline, no color differentiation, just a pointer cursor on hover (confirmed by browser walkthrough)
 
-Additionally, after answering the last exam question, the bottom bar loses all forward-facing buttons (Submit disappears, Next was already hidden). The only way to proceed is the "Review answers" button in the header, which is easy to miss.
+Additionally, after answering the last exam question, the bottom bar loses all forward-facing buttons. Submit disappears. On the actual last question, Next is already hidden. The only way to proceed is the `Review answers` button in the header, which is easy to miss.
 
 ---
 
@@ -29,8 +29,11 @@ Two UI changes. Zero architectural changes. No new use cases, no new endpoints, 
 - Render an exam-only primary button labeled `Review your answers`
 - Position it as the **first and most prominent** action button, before "Back to Dashboard"
 - Link it to: `toQuestionRoute(firstSlug, { from: 'history', mode: 'review', sessionId })`
+- Pass `from="history"` into the existing Session Summary `SessionBreakdownList` as well
 
-**Key decision: use `from=history`, not `from=practice`.** This makes the return link on the question review page say "Back to History" instead of "Back to Session". This completely sidesteps the non-durable return path problem (the practice session page cannot rehydrate a completed summary on remount). The user already saw their stats on the summary screen — going to History after reviewing is a natural endpoint.
+**Key decision: use `from=history`, not `from=practice`.** In this route contract, `from` controls the review page's return destination and chrome, not literal browser provenance. Using `from=history` makes the return link say `Back to History` instead of `Back to Session`, which cleanly avoids the non-durable completed-session return path. The user already saw their stats on the summary screen; History is the natural endpoint after review.
+
+**Important constraint:** Do not add the CTA and leave the existing summary breakdown links on `from=practice`. That would keep two different review routes on the same screen, and one of them would still point users back to the broken `Back to Session` target.
 
 **Where to get `firstSlug`:** Use `summaryReview.rows` after the summary-review fetch completes. The CTA renders once the breakdown data is available (same timing as the existing breakdown links). If the fetch fails, the CTA doesn't render and the user falls back to the existing "View in History" path.
 
@@ -105,29 +108,53 @@ const firstReviewableSlug = review?.rows.find(r => r.isAvailable)?.slug;
 ) : null}
 ```
 
+Also change the existing breakdown list on the Session Summary to use the same review origin:
+
+```typescript
+<SessionBreakdownList
+  rows={summaryReview.rows}
+  from="history"
+  sessionId={summary.sessionId}
+/>
+```
+
+That keeps every completed-session review entry point on the summary screen aligned to the same durable return destination.
+
 Source files:
 - `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx:98-108` — action button row
 - `lib/routes.ts:25-49` — `toQuestionRoute` helper
 - `app/(app)/app/shared/components/session-breakdown-list.tsx:34-48` — existing review link pattern to follow
+- `app/(app)/app/practice/[sessionId]/page.test.tsx:81-134` — existing summary-link expectation currently uses `from=practice` and must be updated
 
 ### Change 2: `practice-view.tsx`
 
-In the bottom action bar, after the Submit button conditional and before the Next button conditional, add an exam-specific completion CTA:
+In the bottom action bar, after the Submit button conditional and before the Next button conditional, add an exam-specific completion CTA. Key it off the authoritative session position, not navigator-derived `hasNextQuestion`.
 
 ```typescript
-// When: exam mode, answer submitted (submitResult exists), last question (no next)
-{props.submitResult && props.hasNextQuestion === false && props.isExamMode && props.onEndSession ? (
+const isExamMode = sessionInfo?.mode === 'exam';
+const isLastSessionQuestion =
+  sessionInfo !== null &&
+  typeof sessionInfo.index === 'number' &&
+  typeof sessionInfo.total === 'number' &&
+  sessionInfo.index >= sessionInfo.total - 1;
+
+{props.submitResult && isExamMode && isLastSessionQuestion && props.onEndSession ? (
   <Button type="button" className="rounded-full" onClick={props.onEndSession}>
     Review answers
   </Button>
 ) : null}
 ```
 
+**Do not use `hasNextQuestion === false` as the deciding condition.** In the current page composition, `hasNextQuestion` comes from the review navigator data, not from the authoritative `sessionInfo.index/total` session position. Navigator absence or filtering can make it `false` for reasons other than "the user is on the final session question."
+
 Source files:
 - `app/(app)/app/practice/components/practice-view.tsx:301-324` — bottom bar conditionals
+- `app/(app)/app/practice/components/practice-view.tsx:90-92` — current exam-mode derivation from `sessionInfo`
 - `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:235-236` — `onEndSession` already wired
+- `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts:147-164` — last-question auto-advance already keys off `sessionInfo.index/total`
+- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.browser.spec.tsx:599-660` — existing tests show `hasNextQuestion` means "last available navigable question", not necessarily "last session question"
 
-The `onEndSession` prop is already passed through from the page view. The only new prop needed is `isExamMode` and `onEndSession` on `PracticeView` if not already present (check existing props).
+No new props are required for this minimal fix. `PracticeView` already receives `sessionInfo`, `submitResult`, and `onEndSession`.
 
 ---
 
@@ -136,7 +163,7 @@ The `onEndSession` prop is already passed through from the page view. The only n
 | Issue | Why deferred |
 |-------|-------------|
 | Pre-submit "Open question" loses navigator context (Root Cause B) | Header "Review answers" works as escape hatch. Lower urgency. |
-| Non-durable return path for `from=practice` links (Root Cause E) | Sidestepped by using `from=history` for the new CTA. Existing breakdown links still have this issue but it's not made worse. |
+| Non-durable return path for other `from=practice` completed-session links (Root Cause E) | This fix should remove the problem from Session Summary entry points by using `from=history` there. Other practice-origin review links remain out of scope here. |
 | Summary-review fetch failure has no retry button (Root Cause F) | Edge case. User falls back to "View in History". |
 | Auto-advance has no durable feedback (Claim 5) | Transient "Submitting..." exists. Polish concern. |
 | "Submit" label overlap with "Submit exam" (Claim 6) | Different screens, low confusion risk. Polish concern. |
@@ -151,17 +178,22 @@ The `onEndSession` prop is already passed through from the page view. The only n
 2. CTA is NOT rendered for tutor sessions.
 3. CTA is NOT rendered when `review` is null (loading/error state).
 4. CTA links to `toQuestionRoute(firstSlug, { from: 'history', mode: 'review', sessionId })`.
-5. After last exam question is submitted, bottom bar renders `Review answers` button.
-6. `Review answers` bottom bar button calls `onEndSession` when clicked.
-7. `Review answers` bottom bar button does NOT render for tutor mode.
-8. `Review answers` bottom bar button does NOT render when there are more questions (`hasNextQuestion !== false`).
+5. Session Summary breakdown links also use `from=history` when rendered from the summary screen.
+6. CTA is NOT rendered when `review.rows` exists but contains no available question slug.
+7. After the last exam question is submitted, bottom bar renders `Review answers` button.
+8. `Review answers` bottom bar button calls `onEndSession` when clicked.
+9. `Review answers` bottom bar button does NOT render for tutor mode.
+10. `Review answers` bottom bar button does NOT render after a submitted answer on a non-final exam question, even if `hasNextQuestion` is false or omitted.
+11. Summary error state still renders the existing alert text and omits the CTA.
 
 ### Manual QA
 
 1. Complete a 2-question exam → submit → verify `Review your answers` appears as the first/primary button on Session Summary.
-2. Click it → verify Q1 opens with explanations, question navigator, and session navigation.
-3. Navigate through all questions with Next → verify Previous/Next work and "Back to History" is the return link.
-4. Click "Back to History" → verify it goes to `/app/history`, not a dead-end.
-5. After answering the last exam question, verify `Review answers` appears in the bottom bar.
-6. Click the bottom-bar `Review answers` → verify it opens the Review Questions checklist.
-7. Complete a tutor session → verify Session Summary does NOT show "Review your answers" (or shows it demoted, TBD).
+2. Click it → verify Q1 opens with explanations, question navigator, and `Back to History` in the review UI.
+3. From the same Session Summary, click a question breakdown link → verify it also opens review with `Back to History` rather than `Back to Session`.
+4. Navigate through all questions with Next/Previous → verify session navigation works.
+5. Click `Back to History` → verify it goes to `/app/history?tab=sessions`, not a dead-end.
+6. Submit question 1 of a 2-question exam → verify the app auto-advances to question 2 and does NOT expose a finish/review CTA on question 1.
+7. After answering the last exam question, verify `Review answers` appears in the bottom bar.
+8. Click the bottom-bar `Review answers` → verify it opens the Review Questions checklist.
+9. Complete a tutor session → verify Session Summary does NOT show the new exam-only `Review your answers` CTA.

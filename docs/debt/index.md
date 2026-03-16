@@ -17,7 +17,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | GitHub Issue |
 |----|-------|----------|--------------|
-| [DEBT-316](./debt-316-exam-post-submit-review-flow.md) | Exam Post-Submit Review Flow — add "Review your answers" primary CTA to Session Summary and "Review answers" to bottom bar after last exam question; two UI changes, zero architectural changes | P2 | — |
+| [DEBT-316](./debt-316-exam-post-submit-review-flow.md) | Exam Post-Submit Review Flow — add a primary Session Summary `Review your answers` CTA, retarget Session Summary breakdown links to history-origin review, and add a bottom-bar `Review answers` CTA keyed off the true last session question; zero architectural changes | P2 | — |
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
 **Next Debt ID:** DEBT-317
 
