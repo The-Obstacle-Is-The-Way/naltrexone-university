@@ -22,12 +22,12 @@ This document is the single source of truth for **where the bookmark action appe
 
 | Surface | Route | Bookmark Present | Notes |
 |---------|-------|-----------------|-------|
-| Practice Session (Tutor) | `/app/practice/[sessionId]` | YES | Action bar pill + toast feedback; no bookmark navigator indicator |
-| Practice Session (Exam) | `/app/practice/[sessionId]` | YES | Action bar pill + toast feedback; no bookmark navigator indicator; **collides with Mark for Review** |
-| Quick Practice | `/app/practice/quick` | YES | Action bar pill |
+| Practice Session (Tutor) | `/app/practice/[sessionId]` | YES | Action bar pill + toast feedback; no bookmark navigator indicator; current implementation shows it before submit as well, with DEBT-318 tracking a post-feedback-only refinement |
+| Practice Session (Exam) | `/app/practice/[sessionId]` | NO | Bookmark removed by BS-053; exam action bar keeps only exam-scoped mark-for-review |
+| Quick Practice | `/app/practice/quick` | YES | Action bar pill; current implementation shows it before submit as well, with DEBT-318 tracking a post-feedback-only refinement |
 | Exam Review (pre-submit) | `/app/practice/[sessionId]` (review state) | NO | List/navigator view only |
 | Session Summary | `/app/practice/[sessionId]` (summary state) | NO | Summary stats + CTAs only; current review CTA routes through `from=history&sessionId=...` |
-| Question Review | `/app/questions/[slug]?mode=review` | **NO** | **Gap — ideal bookmarking surface**; current production callers come from History, Bookmarks, and Dashboard |
+| Question Review | `/app/questions/[slug]?mode=review` | YES | Action bar pill in review mode once bookmark state hydrates; current production callers come from History, Bookmarks, and Dashboard |
 | History Questions tab | `/app/history?tab=questions` | NO | List view; click-through to review; filters are result/difficulty/tag/source/sort only |
 | History Sessions breakdown | `/app/history?tab=sessions` | NO | Session rows + breakdown rows click through to review |
 | Dashboard Recent Sessions | `/app/dashboard` | NO | Summary row; click-through to review; no bookmark-specific widget/count |
@@ -36,18 +36,18 @@ This document is the single source of truth for **where the bookmark action appe
 
 `QuestionOrigin` in `lib/routes.ts` still supports `from=practice`, and `QuestionView` still has a matching `Back to Session` / `Back to Practice` branch, but current production callers do **not** emit that origin.
 
-### Proposed State (after BS-053 resolution)
+Current implementation now matches the BS-053 resolved policy below.
 
-Assuming Option A from BS-053 is adopted:
+### Resolved Policy (implemented via BS-053)
 
 | Surface | Route | Bookmark Present | Rationale |
 |---------|-------|-----------------|-----------|
-| Practice Session (Tutor) | `/app/practice/[sessionId]` | **YES** | No collision (mark-for-review absent). User sees explanations inline — natural "reflect and bookmark" moment. |
-| Practice Session (Exam) | `/app/practice/[sessionId]` | **NO** | Remove. Collides with Mark for Review. Assessment mindset — bookmark doesn't belong here. |
-| Quick Practice | `/app/practice/quick` | **YES** | Same as tutor mode — no collision, explanations shown inline. |
+| Practice Session (Tutor) | `/app/practice/[sessionId]` | **YES** | No collision (mark-for-review absent). User sees explanations inline — natural "reflect and bookmark" moment. A follow-up refinement can still narrow this to the post-feedback state within the tutor flow. |
+| Practice Session (Exam) | `/app/practice/[sessionId]` | **NO** | Removed. Collides with Mark for Review. Assessment mindset — bookmark doesn't belong here. |
+| Quick Practice | `/app/practice/quick` | **YES** | Same as tutor mode — no collision, explanations shown inline. A follow-up refinement can still narrow this to the post-feedback state within quick practice. |
 | Exam Review (pre-submit) | `/app/practice/[sessionId]` (review state) | **NO** | Assessment mode. User is deciding whether to revisit questions, not curating study material. |
 | Session Summary | `/app/practice/[sessionId]` (summary state) | **NO** | Summary view. User can reach review page via the existing review CTA. |
-| **Question Review** | **`/app/questions/[slug]?mode=review`** | **YES** | **Add.** This is the primary reflection surface — always a long-form question detail page, and when a prior attempt exists it also shows full feedback content. Natural "I should save this" moment. |
+| **Question Review** | **`/app/questions/[slug]?mode=review`** | **YES** | **Present.** This is the primary reflection surface — always a long-form question detail page, and when a prior attempt exists it also shows full feedback content. Natural "I should save this" moment. |
 | History Questions tab | `/app/history?tab=questions` | NO | List view. Bookmark is one click away via question review page. |
 | History Sessions breakdown | `/app/history?tab=sessions` | NO | Session rows and breakdown rows should stay navigational; bookmark belongs on review. |
 | Dashboard Recent Sessions | `/app/dashboard` | NO | Summary/launchpad row; bookmark belongs on review. |
@@ -63,7 +63,7 @@ Is the user in an active assessment (exam mode, pre-submit review)?
   → NO bookmark. Use Mark for Review if flagging is needed.
 
 Is the user answering questions with inline feedback (tutor mode, quick practice)?
-  → YES bookmark. The "reflect and bookmark" moment happens mid-session.
+  → YES bookmark. The "reflect and bookmark" moment happens mid-session, specifically once feedback is visible.
 
 Is the user reviewing past attempts with full explanations visible?
   → YES bookmark. This is the ideal curation moment.
