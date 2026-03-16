@@ -62,6 +62,59 @@ Continuing from P2:
 
 This is technically correct error handling, but the user should never reach this state through normal navigation. It's a UX dead end.
 
+### P4 — Stale page always shows "Tutor Session" regardless of actual mode
+
+When navigating back to a stale session page for an **exam** session, the header reads **"Tutor Session"** with **"Explanations shown after each answer"** — wrong on both counts.
+
+**Code trace:** `practice-session-page-view.tsx:181` — `const mode = props.sessionInfo?.mode ?? 'tutor'`. On re-mount, `sessionInfo` is `null` (initial state), so the nullish coalescing defaults to `'tutor'`. The actual mode is never populated because the question-fetch either fails or returns null for an ended session.
+
+### P5 — Exam stale state diverges from tutor: shows Review Questions instead of error
+
+In tutor mode, the stale "End session" button calls `finalizeSessionSafely()` → hits the CONFLICT error → red error card.
+
+In exam mode, the same button calls `loadReview()` instead (because `sessionMode` is null on re-mount, which matches the `input.sessionMode === null` branch in `use-practice-session-review-stage-state.ts:152`). `getPracticeSessionReview()` has **no `endedAt` guard** (`get-practice-session-review.ts:60-155`) — it returns review data for ended sessions. So the user sees a functional-looking Review Questions screen with a "Submit exam" button.
+
+Clicking "Submit exam" → "Confirm submit" then hits the CONFLICT error (the backend's atomic `isNull(practiceSessions.endedAt)` WHERE clause at `drizzle-practice-session-repository.ts:271` prevents actual double-end). **No data corruption is possible**, but the UX path is misleading — the user sees a working UI for a completed session before hitting a wall.
+
+### P6 — Exam summary truncates "Start another session" button
+
+Exam mode shows 4 buttons (`Review your answers` + `Back to Dashboard` + `View in History` + `Start another session`), which overflow the viewport. The 4th button text is truncated. This is a direct consequence of P1's button count — D1/D2 reduce exam buttons to 3, which resolves this.
+
+---
+
+## Chrome Agent Audit (2026-03-16)
+
+A Chrome browser agent independently walked both tutor and exam session-end flows. Its 10 findings were audited adversarially:
+
+### Verified and added (3 genuinely new)
+
+| # | Finding | Assessment | Added as |
+|---|---------|------------|----------|
+| 2 | Wrong mode label on stale page — always "Tutor Session" | **Verified.** `sessionInfo?.mode ?? 'tutor'` default. | P4 |
+| 3/8 | Exam stale → Review Questions (inconsistent with tutor stale → error) | **Verified.** `loadReview()` has no `endedAt` guard. Backend prevents double-end atomically. | P5 |
+| 6 | "Start another session" truncated in exam summary | **Verified.** 4 buttons overflow viewport. | P6 |
+
+### Already documented in BS-054
+
+| # | Finding | Maps to |
+|---|---------|---------|
+| 1 | Browser back breaks both flows | P2 |
+| 8 | Inconsistent error recovery paths | P2 + P3 |
+| 10 | "Try again" red text is alarming | D4 |
+
+### False flags or misunderstood design (4 rejected)
+
+| # | Claim | Why it's wrong |
+|---|-------|---------------|
+| 4 | "Next doesn't save answers in exam mode" — framed as major bug | **By design.** Exam mode uses per-question submission: "Submit" locks your answer, "Next" navigates. This mirrors real board exams where you skip questions and return later. If "Next" auto-saved, users couldn't skip without answering. The Submit/Next distinction IS the exam paradigm. |
+| 5 | "Question navigator disappears after submit" | **By design.** After the last question is submitted, `isInReviewStage` becomes `true`, intentionally hiding the navigator and surfacing "Review answers" as the next step. This signals the transition from answering to reviewing. |
+| 3 | "Allows re-submission of ended sessions" — framed as critical | **Overstated.** The backend has an atomic `isNull(endedAt)` WHERE clause (`drizzle-practice-session-repository.ts:271`) that prevents double-end. No data corruption is possible. The real issue (stale review UI) is captured as P5. |
+| 7 | "No Finish button at end of tutor mode" | **Minor polish at best.** Tutor mode shows feedback inline after each answer — the "End session" header button is the natural completion action. Adding a redundant bottom CTA is a separate design discussion, not a session-end bug. |
+
+### Reliability assessment
+
+The Chrome agent was **accurate on observable facts** (button labels, navigation destinations, error messages, viewport overflow) but **unreliable on design intent** (misidentified intentional exam behavior as bugs). Consistent with prior Chrome agent audits: strong on pixel-level observation, weak on architectural reasoning.
+
 ---
 
 ## Root Cause Analysis
@@ -69,17 +122,21 @@ This is technically correct error handling, but the user should never reach this
 ### P1 (button redundancy)
 The button set was likely designed early when the app's information architecture was simpler. "Back to Dashboard" made sense when Dashboard was the only hub. Now that Practice is the natural "home" for session flow, the primary CTA should go there instead.
 
-### P2 + P3 (stale state on back-navigation)
+### P2 + P3 + P4 + P5 (stale state on back-navigation)
 The practice session page (`/app/practice/[sessionId]`) is a **forward-only flow** — it was designed to be consumed once (question → answer → next question → end → summary). There is no mechanism to detect that a session has already been ended and show the summary on re-mount.
 
 When the page re-mounts (via browser back), `usePracticeSession` refetches state:
 - The session's question queue is exhausted → `question === null`
 - `loadState` is `ready` (no error)
+- `sessionInfo` is `null` (initial state) → mode defaults to `'tutor'` regardless of actual mode (P4)
 - This matches the "No more questions found" conditional (`practice-view.tsx:234`)
 
 The summary data is not re-fetched because `endSession()` is what populates it, and that function hasn't been called in this mount cycle.
 
 **File:** `practice-session-page-logic.ts` — `endSession` (lines 166-218) is the only path that sets `summary` state. On a fresh mount, `summary` starts as `null`, so the summary view never renders even though the session is already ended server-side.
+
+### P5 (exam path divergence)
+`onEndSession` in `use-practice-session-review-stage-state.ts:150-160` branches on `sessionMode`. On a stale re-mount, `sessionMode` is `null`, which matches the `input.sessionMode === null` condition and routes to `loadReview()` instead of `finalizeSessionSafely()`. Since `getPracticeSessionReview()` has no `endedAt` guard, it returns data and the user sees a functional-looking review screen for a completed session. D3's `endedAt` check on mount would short-circuit before this branch is ever reached.
 
 ---
 
@@ -90,8 +147,11 @@ The summary data is not re-fetched because `endSession()` is what populates it, 
 | P1 — Button redundancy | Low (cosmetic/UX) | Every session end | All users |
 | P2 — Stale "no more questions" on back | Medium (confusing) | Any user who clicks "View in History" then hits back | Exploratory users |
 | P3 — "Already ended" error | Medium (alarming) | Subset of P2 who then click "End session" | Same as P2 |
+| P4 — Wrong mode label on stale page | Low (cosmetic sub-bug of P2) | Any exam session that hits P2 | Exam users |
+| P5 — Exam stale state shows Review Questions | Medium (misleading) | Exam users who hit P2 and click "End session" | Exam users |
+| P6 — Exam summary button truncation | Low (viewport overflow) | Every exam session end on narrow viewports | Exam users |
 
-P2 and P3 are **production bugs**, not dev-environment artifacts. The back-navigation scenario is entirely normal user behavior — clicking a link, then hitting back. This will happen in production.
+P2, P3, and P5 are **production bugs**, not dev-environment artifacts. The back-navigation scenario is entirely normal user behavior — clicking a link, then hitting back. P4 and P6 are cosmetic sub-issues that get resolved by D3 and D1/D2 respectively.
 
 ---
 
