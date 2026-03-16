@@ -6,16 +6,20 @@ import {
   usePracticeSessionReviewStage,
 } from './use-practice-session-review-stage';
 
-const { endPracticeSessionMock, getPracticeSessionReviewMock } = vi.hoisted(
-  () => ({
-    endPracticeSessionMock: vi.fn(),
-    getPracticeSessionReviewMock: vi.fn(),
-  }),
-);
+const {
+  endPracticeSessionMock,
+  getPracticeSessionReviewMock,
+  getPracticeSessionSummaryMock,
+} = vi.hoisted(() => ({
+  endPracticeSessionMock: vi.fn(),
+  getPracticeSessionReviewMock: vi.fn(),
+  getPracticeSessionSummaryMock: vi.fn(),
+}));
 
 vi.mock('@/src/adapters/controllers/practice-controller', () => ({
   endPracticeSession: endPracticeSessionMock,
   getPracticeSessionReview: getPracticeSessionReviewMock,
+  getPracticeSessionSummary: getPracticeSessionSummaryMock,
 }));
 
 function createInput(sessionMode: 'tutor' | 'exam') {

@@ -1,9 +1,17 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { usePracticeSessionQuestionFlow } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow';
 import { maybeAutoAdvanceAfterSubmit } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import { usePracticeQuestionBookmarks } from '@/app/(app)/app/practice/hooks/use-practice-question-bookmarks';
+import {
+  getActionResultErrorMessage,
+  getThrownErrorMessage,
+} from '@/app/(app)/app/practice/practice-logic';
+import { reportClientError } from '@/lib/report-client-error';
 import { useIsMounted } from '@/lib/use-is-mounted';
-import { setPracticeSessionQuestionMark } from '@/src/adapters/controllers/practice-controller';
+import {
+  getPracticeSessionSummary,
+  setPracticeSessionQuestionMark,
+} from '@/src/adapters/controllers/practice-controller';
 import {
   getNextQuestion,
   submitAnswer,
@@ -19,6 +27,7 @@ export function usePracticeSessionPageController(
 
   const questionFlow = usePracticeSessionQuestionFlow({
     sessionId,
+    autoload: false,
     isMounted,
     getNextQuestionFn: getNextQuestion,
     submitAnswerFn: submitAnswer,
@@ -41,6 +50,58 @@ export function usePracticeSessionPageController(
     resetQuestionState: questionFlow.resetQuestionState,
     loadSpecificQuestion: questionFlow.onNavigateQuestion,
   });
+
+  useEffect(() => {
+    let isStale = false;
+    reviewStage.setSummary(null);
+    questionFlow.setLoadState({ status: 'loading' });
+
+    void getPracticeSessionSummary({ sessionId })
+      .then((result) => {
+        if (isStale || !isMounted()) return;
+
+        if (result.ok) {
+          reviewStage.setSummary(result.data);
+          questionFlow.setSessionMode(result.data.mode);
+          questionFlow.resetQuestionState();
+          questionFlow.setLoadState({ status: 'ready' });
+          return;
+        }
+
+        if (result.error.code === 'CONFLICT') {
+          questionFlow.onTryAgain();
+          return;
+        }
+
+        questionFlow.setLoadState({
+          status: 'error',
+          message: getActionResultErrorMessage(result),
+        });
+      })
+      .catch((error: unknown) => {
+        if (isStale || !isMounted()) return;
+        reportClientError(error, {
+          component: 'UsePracticeSessionPageController',
+          action: 'bootstrapSessionSummary',
+        });
+        questionFlow.setLoadState({
+          status: 'error',
+          message: getThrownErrorMessage(error),
+        });
+      });
+
+    return () => {
+      isStale = true;
+    };
+  }, [
+    sessionId,
+    isMounted,
+    questionFlow.onTryAgain,
+    questionFlow.resetQuestionState,
+    questionFlow.setLoadState,
+    questionFlow.setSessionMode,
+    reviewStage.setSummary,
+  ]);
 
   const isInReviewStageRef = useRef(reviewStage.isInReviewStage);
   isInReviewStageRef.current = reviewStage.isInReviewStage;

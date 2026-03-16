@@ -26,6 +26,7 @@ describe('usePracticeSessionReviewStage', () => {
     );
 
     expect(output.summary).toBeNull();
+    expect(typeof output.setSummary).toBe('function');
     expect(output.summaryReview).toBeNull();
     expect(output.summaryReviewLoadState).toEqual({ status: 'idle' });
     expect(output.review).toBeNull();

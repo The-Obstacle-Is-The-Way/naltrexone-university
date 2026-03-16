@@ -17,6 +17,7 @@ import {
   endPracticeSession,
   type GetPracticeSessionReviewOutput,
   getPracticeSessionReview,
+  getPracticeSessionSummary,
 } from '@/src/adapters/controllers/practice-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
@@ -36,6 +37,7 @@ export type UsePracticeSessionReviewStageInput = {
 
 export type UsePracticeSessionReviewStageOutput = {
   summary: EndPracticeSessionOutput | null;
+  setSummary: Dispatch<SetStateAction<EndPracticeSessionOutput | null>>;
   summaryReview: GetPracticeSessionReviewOutput | null;
   summaryReviewLoadState: LoadState;
   review: GetPracticeSessionReviewOutput | null;
@@ -64,6 +66,7 @@ export function usePracticeSessionReviewStage(
         sessionId: input.sessionId,
         endSessionIdempotencyKey: endSessionIdempotencyKeyRef.current,
         endPracticeSessionFn: endPracticeSession,
+        getPracticeSessionSummaryFn: getPracticeSessionSummary,
         setLoadState: input.setLoadState,
         setSummary,
         resetQuestionState: input.resetQuestionState,
@@ -116,6 +119,7 @@ export function usePracticeSessionReviewStage(
 
   return {
     summary,
+    setSummary,
     summaryReview,
     summaryReviewLoadState,
     review: reviewStage.review,

@@ -250,6 +250,29 @@ describe('GetNextQuestionUseCase', () => {
     });
   });
 
+  it('throws CONFLICT when loading a question for an ended session', async () => {
+    const q1 = createSingleChoiceQuestion('q1', 'c1');
+    const session = createPracticeSession({
+      id: SESSION_ID,
+      userId: USER_ID,
+      questionIds: ['q1'],
+      questionStates: [createQuestionState('q1')],
+      endedAt: new Date('2026-02-01T00:05:00Z'),
+    });
+
+    const { getNextQuestion } = createTestDeps({
+      questions: [q1],
+      sessions: [session],
+    });
+
+    await expect(
+      getNextQuestion.execute({ userId: USER_ID, sessionId: SESSION_ID }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'Practice session already ended',
+    });
+  });
+
   it('wraps to earlier unanswered questions when no unanswered remain after fromIndex', async () => {
     const q1 = createSingleChoiceQuestion('q1', 'c1');
     const q2 = createSingleChoiceQuestion('q2', 'c2');
@@ -1322,7 +1345,7 @@ describe('GetNextQuestionUseCase', () => {
     expect(result?.session?.latestIsCorrect).toBeNull();
   });
 
-  it('returns latestIsCorrect after exam ends', async () => {
+  it('throws CONFLICT when requesting a specific question after exam ends', async () => {
     const q1 = createSingleChoiceQuestion('q1', 'c1');
 
     const session = createPracticeSession({
@@ -1343,13 +1366,16 @@ describe('GetNextQuestionUseCase', () => {
       sessions: [session],
     });
 
-    const result = await getNextQuestion.execute({
-      userId: USER_ID,
-      sessionId: SESSION_ID,
-      questionId: 'q1',
+    await expect(
+      getNextQuestion.execute({
+        userId: USER_ID,
+        sessionId: SESSION_ID,
+        questionId: 'q1',
+      }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'Practice session already ended',
     });
-
-    expect(result?.session?.latestIsCorrect).toBe(true);
   });
 
   it('throws VALIDATION_ERROR when input is missing both sessionId and filters', async () => {

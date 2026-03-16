@@ -1,28 +1,16 @@
-import {
-  computeAccuracy,
-  computeSessionDurationSeconds,
-  computeSessionStats,
-} from '@/src/domain/services';
 import { ApplicationError } from '../errors';
 import type { PracticeSessionRepository } from '../ports/repositories';
+import {
+  type PracticeSessionSummary,
+  projectPracticeSessionSummary,
+} from './practice-session-summary';
 
 export type EndPracticeSessionInput = {
   userId: string;
   sessionId: string;
 };
 
-export type EndPracticeSessionOutput = {
-  sessionId: string;
-  mode: 'tutor' | 'exam';
-  questionCount: number;
-  endedAt: string; // ISO
-  totals: {
-    answered: number;
-    correct: number;
-    accuracy: number; // 0..1
-    durationSeconds: number;
-  };
-};
+export type EndPracticeSessionOutput = PracticeSessionSummary;
 
 export class EndPracticeSessionUseCase {
   constructor(private readonly sessions: PracticeSessionRepository) {}
@@ -40,27 +28,6 @@ export class EndPracticeSessionUseCase {
       );
     }
 
-    const { answered, correct } = computeSessionStats(session.questionStates);
-    const questionCount = session.questionIds.length;
-    const accuracyDenominator = questionCount;
-    const accuracy = computeAccuracy(accuracyDenominator, correct);
-
-    const durationSeconds = computeSessionDurationSeconds(
-      session.startedAt,
-      endedAt,
-    );
-
-    return {
-      sessionId: session.id,
-      mode: session.mode,
-      questionCount,
-      endedAt: endedAt.toISOString(),
-      totals: {
-        answered,
-        correct,
-        accuracy,
-        durationSeconds,
-      },
-    };
+    return projectPracticeSessionSummary(session, endedAt);
   }
 }

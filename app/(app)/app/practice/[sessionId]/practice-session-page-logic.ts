@@ -169,6 +169,9 @@ export async function endSession(input: {
   endPracticeSessionFn: (
     input: unknown,
   ) => Promise<ActionResult<EndPracticeSessionOutput>>;
+  getPracticeSessionSummaryFn?: (
+    input: unknown,
+  ) => Promise<ActionResult<EndPracticeSessionOutput>>;
   setLoadState: (state: LoadState) => void;
   setSummary: (summary: EndPracticeSessionOutput | null) => void;
   resetQuestionState: () => void;
@@ -204,6 +207,30 @@ export async function endSession(input: {
   }
   if (!isMounted()) return;
   if (!res.ok) {
+    if (res.error.code === 'CONFLICT' && input.getPracticeSessionSummaryFn) {
+      try {
+        const summaryRes = await withTimeout(
+          input.getPracticeSessionSummaryFn({
+            sessionId: input.sessionId,
+          }),
+          END_SESSION_TIMEOUT_MS,
+        );
+        if (!isMounted()) return;
+        if (summaryRes.ok) {
+          input.setSummary(summaryRes.data);
+          input.resetQuestionState();
+          input.setLoadState({ status: 'ready' });
+          return;
+        }
+      } catch (error) {
+        if (!isMounted()) return;
+        reportClientError(error, {
+          component: 'PracticeSessionPageLogic',
+          action: 'getPracticeSessionSummary',
+        });
+      }
+    }
+
     input.rotateIdempotencyKey?.();
     input.setLoadState({
       status: 'error',

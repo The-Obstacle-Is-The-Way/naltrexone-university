@@ -17,6 +17,7 @@ const { getPracticeSessionReviewMock, reportClientErrorMock } = vi.hoisted(
 
 vi.mock('@/src/adapters/controllers/practice-controller', () => ({
   getPracticeSessionReview: getPracticeSessionReviewMock,
+  getPracticeSessionSummary: vi.fn(),
 }));
 
 vi.mock('@/lib/report-client-error', () => ({

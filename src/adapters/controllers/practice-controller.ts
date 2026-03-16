@@ -19,6 +19,8 @@ import type {
   GetIncompletePracticeSessionOutput,
   GetPracticeSessionReviewInput,
   GetPracticeSessionReviewOutput,
+  GetPracticeSessionSummaryInput,
+  GetPracticeSessionSummaryOutput,
   GetSessionHistoryInput,
   GetSessionHistoryOutput,
   SetPracticeSessionQuestionMarkInput,
@@ -35,6 +37,7 @@ import {
   EndPracticeSessionOutputSchema,
   GetIncompletePracticeSessionOutputSchema,
   GetPracticeSessionReviewInputSchema,
+  GetPracticeSessionSummaryInputSchema,
   GetSessionHistoryInputSchema,
   SetPracticeSessionQuestionMarkInputSchema,
   SetPracticeSessionQuestionMarkOutputSchema,
@@ -49,6 +52,7 @@ export type {
   EndPracticeSessionOutput,
   GetIncompletePracticeSessionOutput,
   GetPracticeSessionReviewOutput,
+  GetPracticeSessionSummaryOutput,
   GetSessionHistoryOutput,
   SetPracticeSessionQuestionMarkOutput,
   StartPracticeSessionOutput,
@@ -84,6 +88,11 @@ export type PracticeControllerDeps = {
     execute: (
       input: GetPracticeSessionReviewInput,
     ) => Promise<GetPracticeSessionReviewOutput>;
+  };
+  getPracticeSessionSummaryUseCase: {
+    execute: (
+      input: GetPracticeSessionSummaryInput,
+    ) => Promise<GetPracticeSessionSummaryOutput>;
   };
   getSessionHistoryUseCase: {
     execute: (
@@ -225,6 +234,20 @@ export const getPracticeSessionReview = createAction({
       userId,
       sessionId: input.sessionId,
     });
+  },
+});
+
+export const getPracticeSessionSummary = createAction({
+  schema: GetPracticeSessionSummaryInputSchema,
+  getDeps,
+  execute: async (input, d) => {
+    const userId = await requireEntitledUserId(d);
+    return EndPracticeSessionOutputSchema.parse(
+      await d.getPracticeSessionSummaryUseCase.execute({
+        userId,
+        sessionId: input.sessionId,
+      }),
+    );
   },
 });
 

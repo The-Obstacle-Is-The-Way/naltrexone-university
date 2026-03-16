@@ -16,6 +16,7 @@ import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answ
 
 export type UsePracticeSessionQuestionFlowInput = {
   sessionId: string;
+  autoload?: boolean;
   isMounted: () => boolean;
   getNextQuestionFn: (
     input: unknown,
@@ -136,7 +137,10 @@ export function usePracticeSessionQuestionFlow(
   );
 
   // Load the first question on mount and whenever the sessionId changes.
-  useEffect(onTryAgain, [onTryAgain]);
+  useEffect(() => {
+    if (input.autoload === false) return;
+    onTryAgain();
+  }, [input.autoload, onTryAgain]);
 
   const resetQuestionState = useCallback(() => {
     setQuestion(null);

@@ -843,6 +843,33 @@ describe('practice-session-page-logic', () => {
       expect(rotateIdempotencyKey).toHaveBeenCalledTimes(1);
     });
 
+    it('recovers summary state when endPracticeSession returns CONFLICT', async () => {
+      const setLoadState = vi.fn();
+      const setSummary = vi.fn();
+      const resetQuestionState = vi.fn();
+      const getPracticeSessionSummaryFn = vi.fn(async () =>
+        ok(successfulEndSessionOutput),
+      );
+
+      await endSession({
+        sessionId: 'session-1',
+        endSessionIdempotencyKey: 'idem_1',
+        endPracticeSessionFn: async () =>
+          err('CONFLICT', 'Practice session already ended'),
+        getPracticeSessionSummaryFn,
+        setLoadState,
+        setSummary,
+        resetQuestionState,
+      });
+
+      expect(getPracticeSessionSummaryFn).toHaveBeenCalledWith({
+        sessionId: 'session-1',
+      });
+      expect(setSummary).toHaveBeenCalledWith(successfulEndSessionOutput);
+      expect(resetQuestionState).toHaveBeenCalledTimes(1);
+      expect(setLoadState).toHaveBeenLastCalledWith({ status: 'ready' });
+    });
+
     it('sets error state when controller throws', async () => {
       const setLoadState = vi.fn();
       const error = new Error('Boom');

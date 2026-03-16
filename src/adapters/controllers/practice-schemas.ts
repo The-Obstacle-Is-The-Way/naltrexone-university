@@ -56,6 +56,12 @@ export const GetPracticeSessionReviewInputSchema = z
   })
   .strict();
 
+export const GetPracticeSessionSummaryInputSchema = z
+  .object({
+    sessionId: zUuid,
+  })
+  .strict();
+
 export const SetPracticeSessionQuestionMarkInputSchema = z
   .object({
     sessionId: zUuid,
@@ -93,7 +99,7 @@ export const EndPracticeSessionOutputSchema = z
   .object({
     sessionId: zUuid,
     mode: zPracticeMode,
-    questionCount: z.number().int().min(1).max(MAX_PRACTICE_SESSION_QUESTIONS),
+    questionCount: z.number().int().min(0).max(MAX_PRACTICE_SESSION_QUESTIONS),
     endedAt: z.string().datetime(),
     totals: z
       .object({

@@ -56,6 +56,10 @@ export class FakeGetPracticeSessionReviewUseCase extends FakeUseCase<
   U.GetPracticeSessionReviewInput,
   U.GetPracticeSessionReviewOutput
 > {}
+export class FakeGetPracticeSessionSummaryUseCase extends FakeUseCase<
+  U.GetPracticeSessionSummaryInput,
+  U.GetPracticeSessionSummaryOutput
+> {}
 export class FakeGetSessionHistoryUseCase extends FakeUseCase<
   U.GetSessionHistoryInput,
   U.GetSessionHistoryOutput
