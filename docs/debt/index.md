@@ -18,7 +18,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | GitHub Issue |
 |----|-------|----------|--------------|
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
-**Next Debt ID:** DEBT-317
+| [DEBT-317](./debt-317-practice-questions-centering-on-narrow-screens.md) | Practice "Questions" block centers itself on narrow screens — the local `items-center` wrapper, not the parent row structure, causes the horizontal alignment mismatch below `sm`; includes the required test follow-up and a scoped note on shared SegmentedControl overflow risk | P3 | — |
+**Next Debt ID:** DEBT-318
 
 ---
 
