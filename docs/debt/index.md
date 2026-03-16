@@ -17,7 +17,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | GitHub Issue |
 |----|-------|----------|--------------|
-| [DEBT-316](./debt-316-exam-post-submit-review-flow.md) | Exam Post-Submit Review Flow — add a primary Session Summary `Review your answers` CTA, retarget Session Summary breakdown links to history-origin review, and add a bottom-bar `Review answers` CTA keyed off the true last session question; zero architectural changes | P2 | — |
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
 **Next Debt ID:** DEBT-317
 
@@ -27,6 +26,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-316](../_archive/debt/debt-316-exam-post-submit-review-flow.md) | Exam Post-Submit Review Flow — add "Review your answers" CTA to Session Summary, retarget breakdown links to `from=history`, add bottom-bar "Review answers" after last exam question | P2 | 2026-03-16 | — |
 | [DEBT-315](../_archive/debt/debt-315-feedback-chip-semantic-color-and-casing.md) | Feedback Chip Semantic Color & Casing Polish — converted the incorrect-flow transition label to a semantic green `"Correct"` chip, dropped uppercase/tracking from section chips, and strengthened the neutral chip background in dark mode | P3 | 2026-03-15 | — |
 | [DEBT-314](../_archive/debt/debt-314-feedback-section-label-chip-consistency.md) | Feedback Section Label Chip Consistency — converted the feedback section's plain-text labels into neutral muted chips, removed the trailing colon from `"Why other answers are wrong"`, and preserved the existing `showLabel` behavior | P3 | 2026-03-15 | — |
 | [DEBT-313](../_archive/debt/debt-313-choice-button-dark-surface-and-badge-visibility.md) | Choice Button Dark Surface & Badge Visibility — replaced the DEBT-312 gray rest fill with the recessed `bg-background/50` dark-surface model, calibrated hover/selected ramps, and fixed neutral badge visibility across ChoiceButton and Feedback | P1 | 2026-03-15 | — |

@@ -332,3 +332,57 @@ test('calls onPreviousQuestion when clicked', async () => {
   await screen.getByRole('button', { name: 'Previous' }).click();
   expect(onPreviousQuestion).toHaveBeenCalledTimes(1);
 });
+
+test('calls onEndSession from the bottom-bar Review answers button after the last exam answer', async () => {
+  const onEndSession = vi.fn();
+
+  const screen = await render(
+    <PracticeView
+      sessionInfo={{
+        sessionId: 'session-1',
+        mode: 'exam',
+        index: 1,
+        total: 2,
+        isMarkedForReview: false,
+      }}
+      loadState={{ status: 'ready' }}
+      question={{
+        questionId: 'question-2',
+        slug: 'question-2',
+        stemMd: 'What is the next best step?',
+        difficulty: 'easy',
+        choices: [
+          { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
+        ],
+        session: null,
+      }}
+      selectedChoiceId="choice_a"
+      isAnswered={true}
+      submitResult={{
+        attemptId: 'attempt-1',
+        isCorrect: true,
+        correctChoiceId: 'choice_a',
+        explanationMd: 'Because',
+        referenceMd: null,
+        choiceExplanations: [],
+      }}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      canSubmit={false}
+      onEndSession={onEndSession}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onToggleMarkForReview={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={() => undefined}
+      onPreviousQuestion={() => undefined}
+      hasPreviousQuestion
+      hasNextQuestion={false}
+    />,
+  );
+
+  await screen.getByRole('button', { name: 'Review answers' }).click();
+  expect(onEndSession).toHaveBeenCalledTimes(1);
+});
