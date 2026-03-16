@@ -2,7 +2,12 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
-import { err, ok } from '@/src/adapters/controllers/action-result';
+import {
+  type ActionResult,
+  err,
+  ok,
+} from '@/src/adapters/controllers/action-result';
+import type { GetBookmarksOutput } from '@/src/adapters/controllers/bookmark-controller';
 import { getStemPreview } from '@/src/adapters/shared/stem-preview';
 
 vi.mock('next/link', () => ({
@@ -16,6 +21,37 @@ vi.mock('next/navigation', () => ({
 
 function getClassTokens(className: string): Set<string> {
   return new Set(className.split(/\s+/).filter(Boolean));
+}
+
+type AvailableBookmarkRow = Extract<
+  GetBookmarksOutput['rows'][number],
+  { isAvailable: true }
+>;
+
+function createAvailableBookmarkRow(
+  overrides: Partial<AvailableBookmarkRow> = {},
+): AvailableBookmarkRow {
+  return {
+    isAvailable: true,
+    questionId: 'q_1',
+    slug: 'q-1',
+    stemMd: 'Stem for q1',
+    difficulty: 'easy',
+    bookmarkedAt: '2026-02-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+function createBookmarksSuccessResult(
+  rows: GetBookmarksOutput['rows'] = [createAvailableBookmarkRow()],
+): ActionResult<GetBookmarksOutput> {
+  return ok({ rows });
+}
+
+function createGetBookmarksFn(
+  result: ActionResult<GetBookmarksOutput> = createBookmarksSuccessResult(),
+) {
+  return vi.fn(async () => result);
 }
 
 let BookmarksView: typeof import('./page').BookmarksView;
@@ -333,20 +369,7 @@ describe('app/(app)/app/bookmarks', () => {
   });
 
   it('loads bookmarks via createBookmarksPage', async () => {
-    const getBookmarksFn = vi.fn(async () =>
-      ok({
-        rows: [
-          {
-            isAvailable: true,
-            questionId: 'q_1',
-            slug: 'q-1',
-            stemMd: 'Stem for q1',
-            difficulty: 'easy' as const,
-            bookmarkedAt: '2026-02-01T00:00:00.000Z',
-          },
-        ],
-      }),
-    );
+    const getBookmarksFn = createGetBookmarksFn();
 
     const BookmarksPage = createBookmarksPage({ getBookmarksFn });
     const element = await BookmarksPage();
@@ -357,20 +380,7 @@ describe('app/(app)/app/bookmarks', () => {
   });
 
   it('renders a banner when redirected back with an error code', async () => {
-    const getBookmarksFn = vi.fn(async () =>
-      ok({
-        rows: [
-          {
-            isAvailable: true,
-            questionId: 'q_1',
-            slug: 'q-1',
-            stemMd: 'Stem for q1',
-            difficulty: 'easy' as const,
-            bookmarkedAt: '2026-02-01T00:00:00.000Z',
-          },
-        ],
-      }),
-    );
+    const getBookmarksFn = createGetBookmarksFn();
 
     const BookmarksPage = createBookmarksPage({ getBookmarksFn });
     const element = await BookmarksPage({
@@ -383,20 +393,7 @@ describe('app/(app)/app/bookmarks', () => {
   });
 
   it('renders a banner when redirected back with missing_question_id', async () => {
-    const getBookmarksFn = vi.fn(async () =>
-      ok({
-        rows: [
-          {
-            isAvailable: true,
-            questionId: 'q_1',
-            slug: 'q-1',
-            stemMd: 'Stem for q1',
-            difficulty: 'easy' as const,
-            bookmarkedAt: '2026-02-01T00:00:00.000Z',
-          },
-        ],
-      }),
-    );
+    const getBookmarksFn = createGetBookmarksFn();
 
     const BookmarksPage = createBookmarksPage({ getBookmarksFn });
     const element = await BookmarksPage({
@@ -409,20 +406,7 @@ describe('app/(app)/app/bookmarks', () => {
   });
 
   it('renders error banner when error searchParam is an array', async () => {
-    const getBookmarksFn = vi.fn(async () =>
-      ok({
-        rows: [
-          {
-            isAvailable: true,
-            questionId: 'q_1',
-            slug: 'q-1',
-            stemMd: 'Stem for q1',
-            difficulty: 'easy' as const,
-            bookmarkedAt: '2026-02-01T00:00:00.000Z',
-          },
-        ],
-      }),
-    );
+    const getBookmarksFn = createGetBookmarksFn();
 
     const BookmarksPage = createBookmarksPage({ getBookmarksFn });
     const element = await BookmarksPage({
@@ -435,20 +419,7 @@ describe('app/(app)/app/bookmarks', () => {
   });
 
   it('renders the first matching error when error searchParam has multiple values', async () => {
-    const getBookmarksFn = vi.fn(async () =>
-      ok({
-        rows: [
-          {
-            isAvailable: true,
-            questionId: 'q_1',
-            slug: 'q-1',
-            stemMd: 'Stem for q1',
-            difficulty: 'easy' as const,
-            bookmarkedAt: '2026-02-01T00:00:00.000Z',
-          },
-        ],
-      }),
-    );
+    const getBookmarksFn = createGetBookmarksFn();
 
     const BookmarksPage = createBookmarksPage({ getBookmarksFn });
     const element = await BookmarksPage({
@@ -465,20 +436,7 @@ describe('app/(app)/app/bookmarks', () => {
   });
 
   it('renders error banner when error searchParam is an array with missing_question_id', async () => {
-    const getBookmarksFn = vi.fn(async () =>
-      ok({
-        rows: [
-          {
-            isAvailable: true,
-            questionId: 'q_1',
-            slug: 'q-1',
-            stemMd: 'Stem for q1',
-            difficulty: 'easy' as const,
-            bookmarkedAt: '2026-02-01T00:00:00.000Z',
-          },
-        ],
-      }),
-    );
+    const getBookmarksFn = createGetBookmarksFn();
 
     const BookmarksPage = createBookmarksPage({ getBookmarksFn });
     const element = await BookmarksPage({
@@ -491,20 +449,7 @@ describe('app/(app)/app/bookmarks', () => {
   });
 
   it('renders a banner when redirected back with remove_failed', async () => {
-    const getBookmarksFn = vi.fn(async () =>
-      ok({
-        rows: [
-          {
-            isAvailable: true,
-            questionId: 'q_1',
-            slug: 'q-1',
-            stemMd: 'Stem for q1',
-            difficulty: 'easy' as const,
-            bookmarkedAt: '2026-02-01T00:00:00.000Z',
-          },
-        ],
-      }),
-    );
+    const getBookmarksFn = createGetBookmarksFn();
 
     const BookmarksPage = createBookmarksPage({ getBookmarksFn });
     const element = await BookmarksPage({
@@ -519,20 +464,7 @@ describe('app/(app)/app/bookmarks', () => {
   });
 
   it('renders error banner when error searchParam is an array with remove_failed', async () => {
-    const getBookmarksFn = vi.fn(async () =>
-      ok({
-        rows: [
-          {
-            isAvailable: true,
-            questionId: 'q_1',
-            slug: 'q-1',
-            stemMd: 'Stem for q1',
-            difficulty: 'easy' as const,
-            bookmarkedAt: '2026-02-01T00:00:00.000Z',
-          },
-        ],
-      }),
-    );
+    const getBookmarksFn = createGetBookmarksFn();
 
     const BookmarksPage = createBookmarksPage({ getBookmarksFn });
     const element = await BookmarksPage({
@@ -547,20 +479,7 @@ describe('app/(app)/app/bookmarks', () => {
   });
 
   it('does not render an error when first error value is invalid even if a later value is valid', async () => {
-    const getBookmarksFn = vi.fn(async () =>
-      ok({
-        rows: [
-          {
-            isAvailable: true,
-            questionId: 'q_1',
-            slug: 'q-1',
-            stemMd: 'Stem for q1',
-            difficulty: 'easy' as const,
-            bookmarkedAt: '2026-02-01T00:00:00.000Z',
-          },
-        ],
-      }),
-    );
+    const getBookmarksFn = createGetBookmarksFn();
 
     const BookmarksPage = createBookmarksPage({ getBookmarksFn });
     const element = await BookmarksPage({
@@ -575,20 +494,7 @@ describe('app/(app)/app/bookmarks', () => {
   });
 
   it('renders page without error when toast searchParam is a multi-value array', async () => {
-    const getBookmarksFn = vi.fn(async () =>
-      ok({
-        rows: [
-          {
-            isAvailable: true,
-            questionId: 'q_1',
-            slug: 'q-1',
-            stemMd: 'Stem for q1',
-            difficulty: 'easy' as const,
-            bookmarkedAt: '2026-02-01T00:00:00.000Z',
-          },
-        ],
-      }),
-    );
+    const getBookmarksFn = createGetBookmarksFn();
 
     const BookmarksPage = createBookmarksPage({ getBookmarksFn });
     const element = await BookmarksPage({
@@ -603,7 +509,7 @@ describe('app/(app)/app/bookmarks', () => {
   });
 
   it('renders an error view when createBookmarksPage fails to load bookmarks', async () => {
-    const getBookmarksFn = vi.fn(async () => err('INTERNAL_ERROR', 'Boom'));
+    const getBookmarksFn = createGetBookmarksFn(err('INTERNAL_ERROR', 'Boom'));
 
     const BookmarksPage = createBookmarksPage({ getBookmarksFn });
     const element = await BookmarksPage();
