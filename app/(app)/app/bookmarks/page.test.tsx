@@ -434,6 +434,36 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).toContain('Stem for q1');
   });
 
+  it('renders the first matching error when error searchParam has multiple values', async () => {
+    const getBookmarksFn = vi.fn(async () =>
+      ok({
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'q_1',
+            slug: 'q-1',
+            stemMd: 'Stem for q1',
+            difficulty: 'easy' as const,
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    );
+
+    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
+    const element = await BookmarksPage({
+      searchParams: Promise.resolve({
+        error: ['toggle_failed', 'missing_question_id'],
+      }),
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('Unable to remove bookmark. Please try again.');
+    expect(html).not.toContain(
+      'Unable to remove bookmark: missing question id.',
+    );
+  });
+
   it('renders error banner when error searchParam is an array with missing_question_id', async () => {
     const getBookmarksFn = vi.fn(async () =>
       ok({
@@ -516,7 +546,7 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).toContain('Stem for q1');
   });
 
-  it('renders page without error when toast searchParam is an array', async () => {
+  it('does not render an error when first error value is invalid even if a later value is valid', async () => {
     const getBookmarksFn = vi.fn(async () =>
       ok({
         rows: [
@@ -534,7 +564,37 @@ describe('app/(app)/app/bookmarks', () => {
 
     const BookmarksPage = createBookmarksPage({ getBookmarksFn });
     const element = await BookmarksPage({
-      searchParams: Promise.resolve({ toast: ['bookmark_removed'] }),
+      searchParams: Promise.resolve({
+        error: ['unknown_code', 'remove_failed'],
+      }),
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('Stem for q1');
+    expect(html).not.toContain('Unable to remove bookmark');
+  });
+
+  it('renders page without error when toast searchParam is a multi-value array', async () => {
+    const getBookmarksFn = vi.fn(async () =>
+      ok({
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'q_1',
+            slug: 'q-1',
+            stemMd: 'Stem for q1',
+            difficulty: 'easy' as const,
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    );
+
+    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
+    const element = await BookmarksPage({
+      searchParams: Promise.resolve({
+        toast: ['bookmark_removed', 'ignored'],
+      }),
     });
     const html = renderToStaticMarkup(element);
 

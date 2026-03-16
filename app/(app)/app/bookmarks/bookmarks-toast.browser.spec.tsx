@@ -14,10 +14,10 @@ test('shows a toast when a bookmark is removed', async () => {
   await expect.element(screen.getByText('Bookmark removed.')).toBeVisible();
 });
 
-test('shows toast when code is an array', async () => {
+test('shows toast when code is a multi-value array', async () => {
   const screen = await render(
     <NotificationProvider>
-      <BookmarksToast code={['bookmark_removed']} />
+      <BookmarksToast code={['bookmark_removed', 'ignored']} />
       <div>page</div>
     </NotificationProvider>,
   );
