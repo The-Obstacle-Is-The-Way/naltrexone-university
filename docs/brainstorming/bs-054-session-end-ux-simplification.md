@@ -1,223 +1,299 @@
-# BS-054: Session End UX — Button Simplification and Back-Navigation Bugs
+# BS-054: Session End UX -- Button Simplification and Ended-Session Reopen Bugs
 
 **Date:** 2026-03-16
-**Triggered by:** Manual walkthrough of tutor/exam session end flow; browser back button from "View in History" lands on stale "No more questions found" screen, double-end produces "Practice session already ended" error
-**Scope:** Session summary action buttons are redundant and back-navigation after session end exposes broken states
-**Related:** [BS-009](../_archive/brainstorming/bs-009-session-review-navigation-gap.md), [BS-004](../_archive/brainstorming/bs-004-review-page-flow-audit.md)
+**Triggered by:** Manual walkthrough of tutor/exam session-end flow; browser back from "View in History" lands on a stale session runner, and re-ending can produce "Practice session already ended"
+**Scope:** Session summary action buttons are redundant/misdirected, and reopening an ended session URL exposes broken runner states instead of the durable summary
+**Related:** [BS-009](../_archive/brainstorming/bs-009-session-review-navigation-gap.md), [BS-004](../_archive/brainstorming/bs-004-review-page-flow-audit.md), [BS-002](../_archive/brainstorming/bs-002-practice-engine-state-audit.md)
+**Verification note:** All code traces and file references in this doc were re-checked against the current `bs-054-session-end-ux` branch on 2026-03-16.
 
 ---
 
 ## The Problem
 
-Three distinct issues surfaced during a manual walkthrough of the session end flow:
+Six distinct issues exist in the current session-end flow.
 
-### P1 — Session summary buttons are redundant and misdirected
+### P1 -- Session summary buttons are redundant and misdirected
 
-The current session summary view (`session-summary-view.tsx:103-126`) presents three navigation buttons after a session ends:
+The current session summary view (`session-summary-view.tsx:103-126`) presents:
 
 ```
 [ Back to Dashboard ]  [ View in History ]  [ Start another session ]
 ```
 
-(Exam mode adds a fourth: `Review your answers`.)
+Exam mode adds a fourth button: `Review your answers`.
 
 **Issues:**
 
-- **"Back to Dashboard"** is the primary (filled) CTA, but the user just finished practicing — they almost certainly want to return to the **Practice** page, not the Dashboard. The Practice page is where they'd start another session anyway.
-- **"Start another session"** navigates to `/app/practice` — the exact same destination "Back to Practice" would go to. Having both is redundant.
-- **"View in History"** is fine as a secondary action, but most users want to either review their answers or start fresh. It's unclear whether this button earns its space.
+- **"Back to Dashboard"** is the filled primary CTA, but the user just finished practicing. The most natural next destination is **Practice**, not Dashboard.
+- **"Start another session"** goes to `/app/practice`, which is the same destination a `Back to Practice` button would use.
+- **"View in History"** is a legitimate secondary path, but it should compete with one primary next step, not two overlapping ones.
 
 **Current button destinations:**
 
-| Button | Route | Primary user intent? |
-|--------|-------|---------------------|
-| Back to Dashboard | `/app/dashboard` | Unlikely — user was practicing |
-| View in History | `/app/history` | Occasionally — nice-to-have |
-| Start another session | `/app/practice` | Yes — this is the main "next" action |
+| Button | Route | Likely primary intent? |
+|--------|-------|------------------------|
+| Back to Dashboard | `/app/dashboard` | No |
+| View in History | `/app/history` | Sometimes |
+| Start another session | `/app/practice` | Yes |
 
-### P2 — Browser back from "View in History" hits a stale session page
+### P2 -- Reopening an ended session URL lands in stale runner states
 
-**Repro steps:**
-1. Complete a practice session → arrive at Session Summary
-2. Click **"View in History"** → navigate to `/app/history`
-3. Press **browser back** → return to `/app/practice/{sessionId}`
+**Observed repro:**
+1. Complete a practice session and reach Session Summary
+2. Click **"View in History"**
+3. Press browser back to return to `/app/practice/{sessionId}`
 
-**Expected:** Session Summary (the last meaningful state of this page)
+**Expected:** Session Summary, because that is the last meaningful state for that URL
 
-**Actual:** The page shows **"No more questions found."** with an **"End session"** button. This is a stale intermediate state — the session has already been ended and the summary was already shown. The page re-mounts and re-fetches the next question, gets `null` (session exhausted), and renders this empty state instead of recognizing the session is already finalized.
+**Actual:** The page remounts the session runner instead of restoring the summary
 
-### P3 — Double-end produces "Practice session already ended" error
+There are currently two stale outcomes:
 
-Continuing from P2:
+- **If no unanswered questions remain**, the mount-time question fetch returns `null`, and the page renders **"No more questions found."** with an **"End session"** or **"Review answers"** button.
+- **If the session was ended early with unanswered questions remaining**, the mount-time fetch can return a real question because `GetNextQuestionUseCase` does **not** guard on `endedAt`. That means an already-ended session can reopen looking active.
 
-4. Click **"End session"** on the stale "No more questions found" screen
-5. Server returns `CONFLICT: Practice session already ended`
-
-**What the user sees:** A red error card with "Practice session already ended" and buttons "Try again" / "Return to dashboard".
+This is not a dev-only artifact. It affects normal browser back behavior, direct URL entry, bookmarks, new tabs, and multi-tab reopen of ended sessions.
 
 **Code trace:**
-- `drizzle-practice-session-repository.ts:260` — throws `ApplicationError('CONFLICT', 'Practice session already ended')` when `existing.endedAt` is truthy
-- `practice-session-page-logic.ts:166-218` — catches the error and sets load state to error
-- `practice-view.tsx:192-208` — renders `ErrorCard` with the CONFLICT message
 
-This is technically correct error handling, but the user should never reach this state through normal navigation. It's a UX dead end.
+- `app/(app)/app/practice/[sessionId]/page.tsx:17-35` and `practice-session-page-client.tsx:15-37` do not hydrate ended-session summary data; they just hand `sessionId` to the client controller.
+- `use-practice-session-question-flow.ts:138-139` always starts the page by calling `onTryAgain()` on mount.
+- `practice-session-page-logic.ts:29-75` runs `loadNextQuestion()` and only sets `sessionInfo` if a question payload comes back.
+- `get-next-question.ts:146-190` reads the session but does not reject ended sessions; it only returns `null` when there is no target unanswered question.
+- `practice-session-page-view.tsx:116-123` only renders `SessionSummaryView` when `summary` exists in local client state.
 
-### P4 — Stale page always shows "Tutor Session" regardless of actual mode
+### P3 -- Re-ending a stale tutor session produces a destructive CONFLICT error
 
-When navigating back to a stale session page for an **exam** session, the header reads **"Tutor Session"** with **"Explanations shown after each answer"** — wrong on both counts.
+Starting from the stale tutor runner state in P2:
 
-**Code trace:** `practice-session-page-view.tsx:181` — `const mode = props.sessionInfo?.mode ?? 'tutor'`. On re-mount, `sessionInfo` is `null` (initial state), so the nullish coalescing defaults to `'tutor'`. The actual mode is never populated because the question-fetch either fails or returns null for an ended session.
+1. User sees **"No more questions found."**
+2. User clicks **"End session"**
+3. The page eventually surfaces a red error card: **"Practice session already ended"**
 
-### P5 — Exam stale state diverges from tutor: shows Review Questions instead of error
+**Important current trace:** the stale tutor path does **not** go straight to `finalizeSessionSafely()`
 
-In tutor mode, the stale "End session" button calls `finalizeSessionSafely()` → hits the CONFLICT error → red error card.
+What actually happens:
 
-In exam mode, the same button calls `loadReview()` instead (because `sessionMode` is null on re-mount, which matches the `input.sessionMode === null` branch in `use-practice-session-review-stage-state.ts:152`). `getPracticeSessionReview()` has **no `endedAt` guard** (`get-practice-session-review.ts:60-155`) — it returns review data for ended sessions. So the user sees a functional-looking Review Questions screen with a "Submit exam" button.
+- `use-practice-session-review-stage-state.ts:150-160` branches `onEndSession()` to `loadReview()` whenever `sessionMode === null`
+- On a stale remount, `sessionMode` is still `null`
+- `getPracticeSessionReview()` returns tutor review data for the ended session
+- `use-practice-session-review-stage-state.ts:108-114` sees `mode !== 'exam'` and then calls `finalizeSessionSafely()`
+- `practice-session-page-logic.ts:166-218` calls `endPracticeSession`
+- `drizzle-practice-session-repository.ts:259-285` throws `CONFLICT` because `endedAt` is already set
+- `practice-view.tsx:192-208` renders the red `ErrorCard`
 
-Clicking "Submit exam" → "Confirm submit" then hits the CONFLICT error (the backend's atomic `isNull(practiceSessions.endedAt)` WHERE clause at `drizzle-practice-session-repository.ts:271` prevents actual double-end). **No data corruption is possible**, but the UX path is misleading — the user sees a working UI for a completed session before hitting a wall.
+The observed user-facing result is real, but the old "tutor goes directly to finalize" trace was inaccurate.
 
-### P6 — Exam summary truncates "Start another session" button
+### P4 -- Stale ended-session runner defaults to "Tutor Session"
 
-Exam mode shows 4 buttons (`Review your answers` + `Back to Dashboard` + `View in History` + `Start another session`), which overflow the viewport. The 4th button text is truncated. This is a direct consequence of P1's button count — D1/D2 reduce exam buttons to 3, which resolves this.
+When the stale runner renders without `sessionInfo`, the page header defaults to tutor copy:
+
+- title: **"Tutor Session"**
+- subtitle: **"Explanations shown after each answer."**
+
+This is wrong for ended exam sessions.
+
+**Code trace:** `practice-session-page-view.tsx:181-190`
+
+```ts
+const mode = props.sessionInfo?.mode ?? 'tutor';
+```
+
+If no question payload has populated `sessionInfo`, the UI falls back to tutor copy even for exam sessions.
+
+### P5 -- Stale ended exam session reopens into Review Questions
+
+The stale exam path diverges from the stale tutor path:
+
+- `onEndSession()` still routes to `loadReview()` because `sessionMode === null`
+- `getPracticeSessionReview()` has no `endedAt` guard and intentionally returns ended-session review data (`get-practice-session-review.ts:60-155`)
+- `use-practice-session-review-stage-state.ts:117-123` sets `review`, marks `isInReviewStage = true`, and resets question state
+- The user sees a functional-looking **Review Questions** screen with a working **Submit exam** confirmation flow
+
+Only when the user confirms **Submit exam** does the backend reject the second end attempt:
+
+- `drizzle-practice-session-repository.ts:264-274` updates only where `endedAt IS NULL`
+- `drizzle-practice-session-repository.ts:276-285` falls back to `CONFLICT` if the row is already ended
+
+No data corruption occurs, but the UX is misleading: an already-ended exam should never reopen into a live review-stage UI.
+
+### P6 -- Exam summary action row truncates on narrower viewports
+
+Exam summaries currently render four buttons:
+
+```
+[ Review your answers ] [ Back to Dashboard ] [ View in History ] [ Start another session ]
+```
+
+That four-button row can overflow and truncate the fourth label. Reducing the action count resolves this without additional layout complexity.
 
 ---
 
 ## Chrome Agent Audit (2026-03-16)
 
-A Chrome browser agent independently walked both tutor and exam session-end flows. Its 10 findings were audited adversarially:
+A Chrome browser agent independently walked the tutor and exam session-end flows. Its findings break down as follows.
 
-### Verified and added (3 genuinely new)
+### Verified and added
 
-| # | Finding | Assessment | Added as |
-|---|---------|------------|----------|
-| 2 | Wrong mode label on stale page — always "Tutor Session" | **Verified.** `sessionInfo?.mode ?? 'tutor'` default. | P4 |
-| 3/8 | Exam stale → Review Questions (inconsistent with tutor stale → error) | **Verified.** `loadReview()` has no `endedAt` guard. Backend prevents double-end atomically. | P5 |
-| 6 | "Start another session" truncated in exam summary | **Verified.** 4 buttons overflow viewport. | P6 |
+| # | Finding | Assessment | Maps to |
+|---|---------|------------|---------|
+| 2 | Wrong mode label on stale page | Verified: `sessionInfo?.mode ?? 'tutor'` default | P4 |
+| 3/8 | Ended exam can reopen into Review Questions instead of a durable ended state | Verified: `loadReview()` + no ended guard | P5 |
+| 6 | "Start another session" truncates in exam summary | Verified: four-button overflow | P6 |
 
-### Already documented in BS-054
+### Already documented by BS-054
 
 | # | Finding | Maps to |
 |---|---------|---------|
 | 1 | Browser back breaks both flows | P2 |
-| 8 | Inconsistent error recovery paths | P2 + P3 |
-| 10 | "Try again" red text is alarming | D4 |
+| 8 | Inconsistent stale-state recovery paths | P3 + P5 |
+| 10 | Red destructive styling is too alarming for an already-ended state | D4 |
 
-### False flags or misunderstood design (4 rejected)
+### Rejected, but with corrected rationale
 
-| # | Claim | Why it's wrong |
-|---|-------|---------------|
-| 4 | "Next doesn't save answers in exam mode" — framed as major bug | **By design.** Exam mode uses per-question submission: "Submit" locks your answer, "Next" navigates. This mirrors real board exams where you skip questions and return later. If "Next" auto-saved, users couldn't skip without answering. The Submit/Next distinction IS the exam paradigm. |
-| 5 | "Question navigator disappears after submit" | **By design.** After the last question is submitted, `isInReviewStage` becomes `true`, intentionally hiding the navigator and surfacing "Review answers" as the next step. This signals the transition from answering to reviewing. |
-| 3 | "Allows re-submission of ended sessions" — framed as critical | **Overstated.** The backend has an atomic `isNull(endedAt)` WHERE clause (`drizzle-practice-session-repository.ts:271`) that prevents double-end. No data corruption is possible. The real issue (stale review UI) is captured as P5. |
-| 7 | "No Finish button at end of tutor mode" | **Minor polish at best.** Tutor mode shows feedback inline after each answer — the "End session" header button is the natural completion action. Adding a redundant bottom CTA is a separate design discussion, not a session-end bug. |
+| # | Claim | Correct assessment |
+|---|-------|--------------------|
+| 4 | "Next doesn't save answers in exam mode" | Not a BS-054 session-end bug. Current code deliberately persists only on `Submit`; `Next` is navigation. The UX concern is still real enough to have prior documentation in BS-002, but it is out of scope for this session-end fix. |
+| 5 | "Question navigator disappears after submit" | The prior rejection rationale was wrong. `isInReviewStage` does **not** become `true` on submit. During active answering, the navigator remains in the session runner. After the last exam answer, the bottom bar now exposes `Review answers`; the navigator only disappears once review stage is explicitly entered. |
+| 3 | "Allows re-submission of ended sessions" framed as critical | Overstated. The UX is broken, but the backend's `endedAt IS NULL` CAS guard prevents double-end data corruption. The real product issue is stale ended-session UI, not write integrity. |
+| 7 | "Tutor mode needs a bottom Finish CTA" | Reasonable polish discussion, but separate from the ended-session reopen bug. Keep it out of BS-054 scope unless we explicitly choose to redesign tutor completion affordances. |
 
 ### Reliability assessment
 
-The Chrome agent was **accurate on observable facts** (button labels, navigation destinations, error messages, viewport overflow) but **unreliable on design intent** (misidentified intentional exam behavior as bugs). Consistent with prior Chrome agent audits: strong on pixel-level observation, weak on architectural reasoning.
+The Chrome agent was strong on observable UI facts and weak on intent/scope boundaries. It helped identify real stale-state behavior, but its design interpretations need code/spec review before being promoted to product bugs.
 
 ---
 
 ## Root Cause Analysis
 
 ### P1 (button redundancy)
-The button set was likely designed early when the app's information architecture was simpler. "Back to Dashboard" made sense when Dashboard was the only hub. Now that Practice is the natural "home" for session flow, the primary CTA should go there instead.
 
-### P2 + P3 + P4 + P5 (stale state on back-navigation)
-The practice session page (`/app/practice/[sessionId]`) is a **forward-only flow** — it was designed to be consumed once (question → answer → next question → end → summary). There is no mechanism to detect that a session has already been ended and show the summary on re-mount.
+The summary action set reflects an older hub-and-spoke mental model where Dashboard was the default destination. The current IA makes Practice the natural next step after a session, so the summary is carrying too many actions and the wrong primary one.
 
-When the page re-mounts (via browser back), `usePracticeSession` refetches state:
-- The session's question queue is exhausted → `question === null`
-- `loadState` is `ready` (no error)
-- `sessionInfo` is `null` (initial state) → mode defaults to `'tutor'` regardless of actual mode (P4)
-- This matches the "No more questions found" conditional (`practice-view.tsx:234`)
+### P2 + P3 + P4 + P5 (ended session reopen bug)
 
-The summary data is not re-fetched because `endSession()` is what populates it, and that function hasn't been called in this mount cycle.
+The core bug is architectural:
 
-**File:** `practice-session-page-logic.ts` — `endSession` (lines 166-218) is the only path that sets `summary` state. On a fresh mount, `summary` starts as `null`, so the summary view never renders even though the session is already ended server-side.
+- `/app/practice/[sessionId]` is a client-orchestrated runner page
+- The durable ended-state summary is **not** loaded from the server on mount
+- The only way `summary` becomes non-null today is by successfully calling `endPracticeSession()` during the current mount cycle
 
-### P5 (exam path divergence)
-`onEndSession` in `use-practice-session-review-stage-state.ts:150-160` branches on `sessionMode`. On a stale re-mount, `sessionMode` is `null`, which matches the `input.sessionMode === null` condition and routes to `loadReview()` instead of `finalizeSessionSafely()`. Since `getPracticeSessionReview()` has no `endedAt` guard, it returns data and the user sees a functional-looking review screen for a completed session. D3's `endedAt` check on mount would short-circuit before this branch is ever reached.
+**Current flow shape:**
+
+- `page.tsx` does not load session state or summary server-side
+- `PracticeSessionPageClient` mounts
+- `usePracticeSessionQuestionFlow` immediately calls `loadNextQuestion()`
+- `GetNextQuestionUseCase` does not reject ended sessions
+- If `summary` is still `null`, `PracticeSessionPageView` stays in runner mode
+
+That creates a stale-ended-session gap:
+
+- **Exhausted ended session:** `loadNextQuestion()` returns `null` -> runner renders "No more questions found."
+- **Early-ended session with unanswered questions left:** `loadNextQuestion()` returns a real question -> ended session looks active
+
+Because `sessionInfo` starts as `null`, stale renders also inherit the `?? 'tutor'` fallback, producing the wrong header copy for exam sessions.
+
+### P3 (tutor stale path specifics)
+
+The stale tutor path is:
+
+1. Stale runner renders with `sessionMode === null`
+2. User clicks **End session**
+3. `onEndSession()` routes to `loadReview()`
+4. Review payload comes back with `mode: 'tutor'`
+5. Hook treats that as "not an exam review stage" and immediately calls `finalizeSessionSafely()`
+6. `endPracticeSession()` hits repo-level `CONFLICT`
+7. Runner shows destructive error card
+
+So the tutor path is "stale runner -> review fetch -> finalize -> conflict", not "stale runner -> finalize immediately".
+
+### P5 (exam stale path specifics)
+
+The stale exam path is:
+
+1. Stale runner renders with `sessionMode === null`
+2. User clicks **Review answers** or **End session** equivalent
+3. `onEndSession()` routes to `loadReview()`
+4. Review payload comes back with `mode: 'exam'`
+5. Hook enters review stage
+6. User sees a valid-looking Review Questions UI for an already-ended session
+7. Only on final submit does the backend reject the duplicate end
+
+This is why P5 feels worse than the tutor path: the stale exam branch looks more legitimate before it fails.
 
 ---
 
 ## Severity Assessment
 
-| Issue | Severity | Frequency | User Segment |
+| Issue | Severity | Frequency | User segment |
 |-------|----------|-----------|--------------|
-| P1 — Button redundancy | Low (cosmetic/UX) | Every session end | All users |
-| P2 — Stale "no more questions" on back | Medium (confusing) | Any user who clicks "View in History" then hits back | Exploratory users |
-| P3 — "Already ended" error | Medium (alarming) | Subset of P2 who then click "End session" | Same as P2 |
-| P4 — Wrong mode label on stale page | Low (cosmetic sub-bug of P2) | Any exam session that hits P2 | Exam users |
-| P5 — Exam stale state shows Review Questions | Medium (misleading) | Exam users who hit P2 and click "End session" | Exam users |
-| P6 — Exam summary button truncation | Low (viewport overflow) | Every exam session end on narrow viewports | Exam users |
+| P1 -- Button redundancy | Low | Every session end | All users |
+| P2 -- Ended session URL reopens into stale runner states | Medium | Browser back, bookmarks, copied URLs, new tabs, multi-tab reopen | Users who revisit session URLs |
+| P3 -- Stale tutor path ends in destructive CONFLICT card | Medium | Subset of P2 tutor users | Tutor users |
+| P4 -- Stale runner defaults to tutor copy | Low | Subset of P2 exam users | Exam users |
+| P5 -- Stale exam path reopens Review Questions | Medium | Subset of P2 exam users | Exam users |
+| P6 -- Exam summary button truncation | Low | Narrower viewports on exam summary | Exam users |
 
-P2, P3, and P5 are **production bugs**, not dev-environment artifacts. The back-navigation scenario is entirely normal user behavior — clicking a link, then hitting back. P4 and P6 are cosmetic sub-issues that get resolved by D3 and D1/D2 respectively.
+P2 through P5 are production bugs, not temporary dev-environment weirdness.
 
 ---
 
-## Proposed Fix (Sketch)
+## Proposed Fix Options
 
-### Option A — Minimal: Fix buttons only (P1)
+### Option A -- Fix buttons only
 
-Replace the three buttons with a simplified set:
+**Tutor mode**
 
-**Tutor mode:**
 ```
 [ Back to Practice ]   [ View in History ]
 ```
 
-**Exam mode:**
+**Exam mode**
+
 ```
 [ Review your answers ]   [ Back to Practice ]   [ View in History ]
 ```
 
-- **"Back to Practice"** replaces both "Back to Dashboard" and "Start another session" (same destination: `/app/practice`, which is where you start a new session)
-- **"View in History"** stays as an outline/secondary button for users who want the detailed history view
-- **"Back to Dashboard"** is removed — Dashboard is one click away from Practice anyway
-- Primary CTA is "Back to Practice" (or "Review your answers" in exam mode)
+This resolves P1 and P6 only.
 
-### Option B — Minimal + back-navigation guard (P1 + P2 + P3)
+### Option B -- Fix buttons and ended-session bootstrap
 
 Everything in Option A, plus:
 
-On page mount, check if the session is already ended (the server already knows `endedAt`). If it is:
-- **Option B1:** Redirect to `/app/practice` automatically (session is over, nothing to show)
-- **Option B2:** Re-fetch the summary data and show the Session Summary view (user sees their results again)
-- **Option B3:** Show a simple "This session has ended" message with a "Back to Practice" link (no error styling, no "End session" button)
+- Detect ended sessions when `/app/practice/[sessionId]` loads
+- Render a durable ended-state summary instead of remounting the runner
 
-### Option C — Full: Replace history.pushState with replaceState
+Sub-options:
 
-Use `router.replace()` instead of `router.push()` when navigating away from the session summary. This removes the session page from the browser history stack entirely, so back-navigation skips it. Combined with Option A for button cleanup.
+- **B1:** redirect to `/app/practice`
+- **B2:** fetch summary and render `SessionSummaryView`
+- **B3:** show a friendly "This session has ended" screen
 
-**Trade-off:** This changes browser history behavior and may feel unexpected if the user genuinely wants to go back to see their summary.
+### Option C -- Remove session page from browser history
+
+Use `router.replace()` when leaving the summary so browser back skips the session URL.
+
+This does **not** solve direct URL entry, bookmarks, copied links, or new tabs. It is not sufficient on its own.
 
 ---
 
 ## Decisions
 
-### D1 — Button set (tutor mode): Simplify to two buttons
+### D1 -- Tutor summary should simplify to two actions
 
-**Decision:** Replace the three buttons with two:
+**Decision:**
 
 ```
 [ Back to Practice ]   [ View in History ]
 ```
 
-- **"Back to Practice"** (filled, primary) replaces both "Back to Dashboard" and "Start another session"
-- **"View in History"** (outline, secondary) stays
+**Why:**
 
-**Reasoning from first principles:**
+- `Back to Dashboard` is the wrong primary next step
+- `Start another session` duplicates the `/app/practice` destination
+- `View in History` is a meaningful secondary branch and can stay
 
-Every major learning platform (Duolingo, Khan Academy, Anki, Quizlet) converges on the same post-session pattern: **one primary CTA** that takes you back to the hub where you'd start again, plus optionally one secondary action. The reason is simple — the session summary's job is to report results and get the user to their next action as fast as possible. Every additional button is a decision the user has to make while their brain is still processing how they performed.
-
-The current set has three problems:
-1. **Wrong primary CTA.** "Back to Dashboard" is the filled button, but Dashboard is the least likely post-practice destination. The user was practicing — their next intent is to practice again or review.
-2. **Redundant navigation.** "Start another session" goes to `/app/practice`. "Back to Practice" would go to `/app/practice`. They're the same destination with different labels. Two buttons, one place.
-3. **Dashboard access is already universal.** The top nav bar has a Dashboard link on every page. It doesn't need a dedicated CTA in the session summary — it's always one click away.
-
-"View in History" earns its space because it serves a *different intent* (deep review of the session) that isn't reachable from Practice. It's a meaningful fork in the user's decision tree, not a redundant path.
-
-### D2 — Button set (exam mode): Keep "Review your answers" as primary
+### D2 -- Exam summary should keep Review as the primary action
 
 **Decision:**
 
@@ -225,56 +301,132 @@ The current set has three problems:
 [ Review your answers ]   [ Back to Practice ]   [ View in History ]
 ```
 
-Three buttons in exam mode. "Review your answers" stays as the primary filled CTA when at least one question is reviewable.
+**Why:**
 
-**Reasoning:**
+- Post-exam review is a distinct, valuable user intent
+- Exam mode has one genuinely extra action that tutor mode does not need
+- Three buttons is acceptable here because each serves a different job
 
-After an exam, the user's dominant intent is to see what they got wrong — that's the entire pedagogical payoff of taking an exam in the first place. Every testing platform (board prep, certification, academic) makes "Review" the post-exam primary action because that's where learning happens. Removing it would break the learning loop.
+### D3 -- Ended session URLs must bootstrap into summary, not runner
 
-Three buttons is acceptable here because exam mode has a genuinely different primary action ("Review") that tutor mode doesn't need (tutor already shows explanations inline). The three buttons map to three distinct user intents: learn from mistakes → practice more → check history. No redundancy.
+**Decision:** Choose Option B2.
 
-### D3 — Back-navigation strategy: B2 (re-fetch and show summary)
+When `/app/practice/[sessionId]` loads, the app must first determine whether the session is already ended. If it is, the page must fetch ended-session summary data and render `SessionSummaryView` instead of entering the question runner.
 
-**Decision:** When the page mounts and the session is already ended (`endedAt` is set), re-fetch the session summary data and render the `SessionSummaryView`.
+**Why:**
 
-**Reasoning:**
+- Browser back should show what the user last saw at that URL
+- Direct URL access to an ended session should also be durable
+- Redirecting away or showing a generic message is weaker than showing the actual results
 
-The browser back button is the single most instinctive navigation gesture on the web. When a user presses back, they expect to see *what they last saw* at that URL. The session summary is the last meaningful state of `/app/practice/{sessionId}` — showing anything else (empty state, error, redirect) violates that expectation.
+**Implementation requirements:**
 
-Options considered:
-- **B1 (redirect to Practice):** Violates back-button expectations. The user pressed back to return to something, not to be bounced somewhere else. Redirecting on back is a well-known UX anti-pattern.
-- **B2 (re-fetch summary) — chosen:** Matches user expectation perfectly. The session data is immutable once ended — it's just stats and question IDs. A lightweight server action to retrieve it is straightforward.
-- **B3 (friendly "ended" message):** Better than an error, but still makes the user take another action to get somewhere useful. The summary view already has navigation buttons — just show the summary.
-- **C (replaceState):** Prevents back-navigation entirely, which is aggressive. Users should be able to go back to their results. This also wouldn't help if the user bookmarks the URL or opens it in a new tab later.
+1. Add a read-side server action/use case for ended session summary retrieval.
+   Recommended shape: `getPracticeSessionSummary({ sessionId })`.
 
-**Implementation note:** On page mount, check if the session's `endedAt` is set. If so, fetch summary data (answered, correct, accuracy, duration, question breakdown) via a new or existing server action and render `SessionSummaryView` directly — bypassing the question-loading flow entirely.
+2. Reuse shared projection logic instead of duplicating summary math.
+   Today, summary projection lives implicitly inside `EndPracticeSessionUseCase`. Extract the summary-building logic so both:
+   - `EndPracticeSessionUseCase`
+   - the new read-side summary use case
+   produce the same `EndPracticeSessionOutput` shape.
 
-### D4 — Soften the CONFLICT error styling: Yes
+3. Keep using existing `getPracticeSessionReview()` for:
+   - summary breakdown rows
+   - `Review your answers` CTA slug lookup
 
-**Decision:** Change the "Practice session already ended" error from destructive (red) styling to an informational/neutral treatment. Show the session summary if possible; if not, show a friendly message with navigation.
+4. Do **not** run "ended summary bootstrap" and `loadNextQuestion()` in parallel.
+   If both fire at mount, a late question response can overwrite the ended summary state or reintroduce stale runner UI. The bootstrap must be serialized or server-hydrated so the page decides **first** whether it is ended or active.
 
-**Reasoning:**
+5. Recommended defense in depth: reject ended sessions in `GetNextQuestionUseCase`.
+   The normal session page should not rely on that error path for rendering, but ended sessions also should never be able to return live question payloads to any caller.
 
-Error styling (red border, destructive text) should be reserved for states where something went wrong that requires user attention — data loss risk, failed saves, broken state. "Session already ended" is none of these. The thing the user wanted to happen *already happened successfully*. Showing a red error for a benign idempotent state is like showing a fire alarm when someone tries to lock an already-locked door.
+**Edge cases:**
 
-This matters even with D3 in place, because the CONFLICT error can still surface through:
-- **Double-click on "End session"** — first request succeeds, second hits CONFLICT
-- **Slow network** — user navigates away before response arrives, comes back, tries again
-- **Multiple tabs** — user has the same session open in two tabs
+- Ended session with **0 answered** questions: valid summary, totals stay stable
+- Ended session with **unanswered questions remaining**: must still show summary, never runner
+- Session with **0 questions**: summary math is still stable (`accuracy = 0`, duration clamped, view already handles empty-answer tutor summaries)
 
-In all these cases, the right response is "your session is complete, here are your results" — not a red error card.
+### D4 -- Treat "already ended" as an idempotent success state
 
-**Proposed treatment:** When the end-session action returns CONFLICT, treat it as a success: fetch the summary data and show `SessionSummaryView`. The user's intent (end the session) was already fulfilled. Honor the intent, not the HTTP status.
+**Decision:** If `endPracticeSession()` returns `CONFLICT: Practice session already ended`, do not surface it as a destructive red error during normal session-end UX.
 
-### D5 — Exam review mode: Same fix applies
+Preferred handling:
 
-**Decision:** Yes, the same back-navigation issue affects exam review mode. Apply the same D3 pattern.
+- Fetch ended-session summary via the D3 read path
+- Render `SessionSummaryView`
+- If summary fetch fails, show a neutral informational ended-state message with navigation
 
-**Reasoning:**
+**Why:**
 
-The exam flow is: questions → "Review answers" (exam review stage) → "Submit exam" → session summary. If the user navigates away from the summary and hits back, the same re-mount problem occurs — the page enters the question-loading flow instead of showing the summary.
+- The user's intent was already fulfilled
+- This can still happen via double-clicks, slow networks, stale tabs, or multiple tabs
+- Red destructive treatment is misleading for a benign idempotent state
 
-The fix is identical: on mount, check `endedAt`. If set, show the summary. The session entity is the same regardless of mode — `endedAt` is the universal signal that the session is complete. One guard covers both tutor and exam flows.
+### D5 -- The same ended-session bootstrap fixes tutor and exam
+
+**Decision:** D3 is the universal fix for both modes.
+
+**Why:**
+
+- Tutor stale path and exam stale path are just different consequences of the same missing ended-session bootstrap
+- `endedAt` is the canonical "this session is complete" signal
+- One correct mount-time decision removes P2, P3, P4, and P5 together
+
+---
+
+## Implementation Requirements (SSOT)
+
+Any fix for BS-054 must satisfy all of the following:
+
+1. Summary buttons change to:
+   - tutor: `Back to Practice`, `View in History`
+   - exam: `Review your answers`, `Back to Practice`, `View in History`
+
+2. Reopening an ended session URL never renders:
+   - an active question
+   - `No more questions found.`
+   - Review Questions for an already-ended exam
+
+3. Browser back from History to an ended session URL shows the durable summary.
+
+4. Direct URL access to `/app/practice/{sessionId}` for an ended session also shows the durable summary.
+
+5. Ending an already-ended session is handled idempotently in the UI.
+
+6. The fix is not allowed to rely solely on `router.replace()` history tricks.
+
+7. The fix must not duplicate summary projection logic in multiple use cases.
+
+8. The fix must explicitly handle mount-time race conditions between ended-summary bootstrap and question loading.
+
+---
+
+## Required Verification Matrix
+
+Before closing BS-054, verify all of these:
+
+1. Tutor session -> Summary -> View in History -> browser back -> Summary
+2. Exam session -> Summary -> View in History -> browser back -> Summary
+3. Direct URL to ended tutor session -> Summary
+4. Direct URL to ended exam session -> Summary
+5. End a session early with unanswered questions remaining -> reopen URL -> Summary, not question runner
+6. Double-end from a stale tab or second click -> Summary or neutral ended-state message, not destructive red error
+7. Exam summary buttons do not truncate on narrow viewport
+8. Tutor summary has exactly 2 primary actions
+9. Exam summary has exactly 3 primary actions
+10. Summary breakdown still loads and exam `Review your answers` still resolves through existing review data
+
+---
+
+## Out of Scope for BS-054
+
+These are real or arguable UX topics, but they are not the session-end bug being fixed here:
+
+- Persisting unsubmitted exam selections when users navigate with `Next`
+- Adding a tutor-only bottom "Finish" CTA
+- Broader review-mode IA changes outside the session summary and ended-session bootstrap
+
+The "Next loses unsubmitted selection" concern remains documented separately in [BS-002](../_archive/brainstorming/bs-002-practice-engine-state-audit.md).
 
 ---
 
@@ -282,8 +434,8 @@ The fix is identical: on mount, check `endedAt`. If set, show the summary. The s
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-03-16 | D1: Simplify tutor-mode buttons to `[ Back to Practice ] [ View in History ]` | Dashboard access is universal via nav; "Start another session" and "Back to Practice" are the same destination; 2 buttons > 3 for post-session cognitive load |
-| 2026-03-16 | D2: Keep 3 buttons in exam mode with "Review your answers" as primary | Exam review is the dominant post-exam intent; three buttons map to three distinct intents with no redundancy |
-| 2026-03-16 | D3: Re-fetch summary on back-navigation (B2) | Back button should show what was last seen; summary data is immutable once ended; redirect/error/message all violate back-button expectations |
-| 2026-03-16 | D4: Soften CONFLICT error to informational; ideally show summary | "Already ended" is a success from the user's perspective; red error styling reserved for actual problems; defense in depth for double-click/race conditions |
-| 2026-03-16 | D5: Same fix covers exam review mode | `endedAt` is the universal signal; one guard on mount covers both tutor and exam flows |
+| 2026-03-16 | D1: Simplify tutor summary actions to `[ Back to Practice ] [ View in History ]` | Dashboard is not the natural post-session destination; "Start another session" duplicates Practice |
+| 2026-03-16 | D2: Keep `[ Review your answers ] [ Back to Practice ] [ View in History ]` for exam summaries | Exam review is the main post-exam intent; three actions are distinct and non-redundant |
+| 2026-03-16 | D3: Bootstrap ended session URLs into summary (Option B2) | Durable URL behavior must work for browser back, direct URL entry, bookmarks, and new tabs |
+| 2026-03-16 | D4: Treat already-ended as idempotent success in UI | "Already ended" is not a destructive failure from the user's perspective |
+| 2026-03-16 | D5: One ended-session bootstrap covers tutor and exam | `endedAt` is the universal completion signal |
