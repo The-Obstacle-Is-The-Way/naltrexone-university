@@ -3,7 +3,7 @@ import {
   hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
-import { escapeRegexLiteral, selectChoiceByLabel } from './helpers/question';
+import { selectChoiceByLabel } from './helpers/question';
 import { parseQuestionProgressCount } from './helpers/question-progress';
 import { runE2EUserStateReset } from './helpers/reset-e2e-user-state';
 import { startSession } from './helpers/session';
@@ -76,10 +76,10 @@ test.describe('session review navigation (SPEC-027)', () => {
     const breakdownLink = breakdownLinks.first();
     await breakdownLink.click();
 
-    // Verify URL contains sessionId, from=practice, mode=review
+    // Verify URL contains sessionId, from=history, mode=review
     await expect(page).toHaveURL(/\/app\/questions\//, { timeout: 15_000 });
     await expect(page).toHaveURL(/sessionId=/);
-    await expect(page).toHaveURL(/from=practice/);
+    await expect(page).toHaveURL(/from=history/);
     await expect(page).toHaveURL(/mode=review/);
 
     // Wait for question content to load
@@ -119,15 +119,14 @@ test.describe('session review navigation (SPEC-027)', () => {
       await currentNavigatorButton.textContent();
     expect(navigatorCurrentTextOnFirstQuestion).not.toBeNull();
 
-    // Verify back link goes to /app/practice/{sessionId} with label "Back to Session"
+    // Verify the summary-origin review path returns to durable sessions history.
     const backLink = page
-      .getByRole('link', { name: 'Back to Session' })
+      .getByRole('link', { name: 'Back to History' })
       .first();
     await expect(backLink).toBeVisible({ timeout: 15_000 });
-    const escapedSessionId = escapeRegexLiteral(sessionId ?? '');
     await expect(backLink).toHaveAttribute(
       'href',
-      new RegExp(`/app/practice/${escapedSessionId}`),
+      /\/app\/history\?tab=sessions/,
     );
 
     // Verify "Next" link is present (we're on question 1)
@@ -149,7 +148,7 @@ test.describe('session review navigation (SPEC-027)', () => {
         url.toString() !== urlBeforeNext &&
         url.pathname.startsWith('/app/questions/') &&
         url.searchParams.get('sessionId') === sessionId &&
-        url.searchParams.get('from') === 'practice' &&
+        url.searchParams.get('from') === 'history' &&
         url.searchParams.get('mode') === 'review',
       { timeout: 15_000 },
     );
@@ -195,7 +194,7 @@ test.describe('session review navigation (SPEC-027)', () => {
         url.pathname !== pathnameBeforeJump &&
         url.pathname.startsWith('/app/questions/') &&
         url.searchParams.get('sessionId') === sessionId &&
-        url.searchParams.get('from') === 'practice' &&
+        url.searchParams.get('from') === 'history' &&
         url.searchParams.get('mode') === 'review',
       { timeout: 15_000 },
     );
