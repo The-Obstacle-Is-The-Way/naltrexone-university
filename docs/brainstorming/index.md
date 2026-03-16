@@ -31,8 +31,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-044](./bs-044-dark-mode-border-weight-tiering.md) | Dark Mode Border Weight Tiering — broad cross-surface tiering remains open after narrower choice-button and History slices were resolved via `DEBT-280`, `DEBT-301`, and `DEBT-302` | Active | [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
 | [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) | Bookmark Icon Toggle — replace "Remove" text pill and "Bookmark"/"Remove bookmark" action bar pills with filled/unfilled bookmark icon (Lucide `Bookmark` with `fill-current` toggle); phased rollout starting with Bookmarks page | Active | [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) |
 | [BS-053](./bs-053-bookmark-vs-mark-for-review-collision.md) | Bookmark vs Mark-for-Review Collision — exam action bar shows both "Bookmark" and "Mark for review" as identical pills, creating cognitive confusion between permanent curation and session-scoped flagging | Active | [BS-052](./bs-052-bookmark-icon-toggle-replacement.md), [DEBT-316](../_archive/debt/debt-316-exam-post-submit-review-flow.md) |
+| [BS-054](./bs-054-session-end-ux-simplification.md) | Session End UX — summary buttons are redundant/misdirected ("Back to Dashboard" instead of Practice, duplicate "Start another session"), and browser back from History exposes stale "No more questions" + "already ended" error states | Active | — |
 
-**Next Brainstorming ID:** BS-054
+**Next Brainstorming ID:** BS-055
 
 ---
 
