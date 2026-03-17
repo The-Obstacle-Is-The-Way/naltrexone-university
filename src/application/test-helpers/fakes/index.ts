@@ -26,6 +26,7 @@ export {
   FakeGetIncompletePracticeSessionUseCase,
   FakeGetNextQuestionUseCase,
   FakeGetPracticeSessionReviewUseCase,
+  FakeGetPracticeSessionSummaryUseCase,
   FakeGetSessionHistoryUseCase,
   FakeGetUserStatsUseCase,
   FakeSetPracticeSessionQuestionMarkUseCase,

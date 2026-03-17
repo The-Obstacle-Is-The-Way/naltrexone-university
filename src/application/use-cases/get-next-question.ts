@@ -147,6 +147,9 @@ export class GetNextQuestionUseCase {
     if (!session) {
       throw new ApplicationError('NOT_FOUND', 'Practice session not found');
     }
+    if (session.endedAt) {
+      throw new ApplicationError('CONFLICT', 'Practice session already ended');
+    }
 
     const stateByQuestionId = new Map(
       session.questionStates.map((state) => [state.questionId, state]),

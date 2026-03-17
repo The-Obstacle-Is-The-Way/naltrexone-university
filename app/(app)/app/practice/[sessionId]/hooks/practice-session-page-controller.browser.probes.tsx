@@ -37,6 +37,7 @@ function renderActionButtons(actions: readonly ProbeAction[]) {
 function getActiveView(
   output: ReturnType<typeof usePracticeSessionPageController>,
 ) {
+  if (output.summary) return 'summary';
   if (output.review) return 'review';
   if (output.question) return 'question';
   return '';
@@ -261,6 +262,35 @@ export function PracticeSessionPageControllerMarkForReviewProbe() {
         {
           label: 'next-question',
           onClick: () => output.onNextQuestion(),
+        },
+      ])}
+    </>
+  );
+}
+
+export function PracticeSessionPageControllerSummaryProbe() {
+  const output = usePracticeSessionPageController('session-1');
+  const errorMessage =
+    output.loadState.status === 'error' ? output.loadState.message : '';
+
+  return (
+    <>
+      {renderHookState([
+        { testId: 'active-view', value: getActiveView(output) },
+        { testId: 'load-status', value: output.loadState.status },
+        { testId: 'question-id', value: output.question?.questionId },
+        { testId: 'summary-session-id', value: output.summary?.sessionId },
+        { testId: 'summary-mode', value: output.summary?.mode },
+        { testId: 'error-message', value: errorMessage },
+      ])}
+      {renderActionButtons([
+        {
+          label: 'end-session',
+          onClick: () => output.onEndSession(),
+        },
+        {
+          label: 'try-again',
+          onClick: () => output.onTryAgain(),
         },
       ])}
     </>

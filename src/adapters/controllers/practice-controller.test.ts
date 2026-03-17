@@ -9,6 +9,7 @@ import {
   FakeEndPracticeSessionUseCase,
   FakeGetIncompletePracticeSessionUseCase,
   FakeGetPracticeSessionReviewUseCase,
+  FakeGetPracticeSessionSummaryUseCase,
   FakeGetSessionHistoryUseCase,
   FakeIdempotencyKeyRepository,
   FakeLogger,
@@ -20,6 +21,7 @@ import {
 import type {
   EndPracticeSessionOutput,
   GetPracticeSessionReviewOutput,
+  GetPracticeSessionSummaryOutput,
   GetSessionHistoryOutput,
   SetPracticeSessionQuestionMarkOutput,
   StartPracticeSessionOutput,
@@ -32,6 +34,7 @@ import {
   endPracticeSession,
   getIncompletePracticeSession,
   getPracticeSessionReview,
+  getPracticeSessionSummary,
   getSessionHistory,
   type PracticeControllerDeps,
   setPracticeSessionQuestionMark,
@@ -44,6 +47,7 @@ type PracticeControllerTestDeps = PracticeControllerDeps & {
   startPracticeSessionUseCase: FakeStartPracticeSessionUseCase;
   endPracticeSessionUseCase: FakeEndPracticeSessionUseCase;
   getPracticeSessionReviewUseCase: FakeGetPracticeSessionReviewUseCase;
+  getPracticeSessionSummaryUseCase: FakeGetPracticeSessionSummaryUseCase;
   getSessionHistoryUseCase: FakeGetSessionHistoryUseCase;
   setPracticeSessionQuestionMarkUseCase: FakeSetPracticeSessionQuestionMarkUseCase;
 };
@@ -60,6 +64,8 @@ function createDeps(overrides?: {
   endThrows?: unknown;
   reviewOutput?: GetPracticeSessionReviewOutput;
   reviewThrows?: unknown;
+  summaryOutput?: GetPracticeSessionSummaryOutput;
+  summaryThrows?: unknown;
   sessionHistoryOutput?: GetSessionHistoryOutput;
   sessionHistoryThrows?: unknown;
   setMarkOutput?: SetPracticeSessionQuestionMarkOutput;
@@ -146,6 +152,18 @@ function createDeps(overrides?: {
       overrides?.reviewThrows,
     );
 
+  const getPracticeSessionSummaryUseCase =
+    new FakeGetPracticeSessionSummaryUseCase(
+      overrides?.summaryOutput ?? {
+        sessionId: '22222222-2222-2222-2222-222222222222',
+        endedAt: '2026-02-01T00:00:00.000Z',
+        mode: 'tutor',
+        questionCount: 0,
+        totals: { answered: 0, correct: 0, accuracy: 0, durationSeconds: 0 },
+      },
+      overrides?.summaryThrows,
+    );
+
   const setPracticeSessionQuestionMarkUseCase =
     new FakeSetPracticeSessionQuestionMarkUseCase(
       overrides?.setMarkOutput ?? {
@@ -182,6 +200,7 @@ function createDeps(overrides?: {
     countAvailableQuestionsUseCase,
     endPracticeSessionUseCase,
     getPracticeSessionReviewUseCase,
+    getPracticeSessionSummaryUseCase,
     getSessionHistoryUseCase,
     setPracticeSessionQuestionMarkUseCase,
     now,
@@ -723,6 +742,118 @@ describe('practice-controller', () => {
         data: { sessionId, markedCount: 1 },
       });
       expect(deps.getPracticeSessionReviewUseCase.inputs).toEqual([
+        { userId: 'user_1', sessionId },
+      ]);
+    });
+  });
+
+  describe('getPracticeSessionSummary', () => {
+    it('returns VALIDATION_ERROR when input is invalid', async () => {
+      const deps = createDeps();
+
+      const result = await getPracticeSessionSummary(
+        { sessionId: 'bad' },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          fieldErrors: { sessionId: expect.any(Array) },
+        },
+      });
+      expect(deps.getPracticeSessionSummaryUseCase.inputs).toEqual([]);
+    });
+
+    it('returns UNAUTHENTICATED when unauthenticated', async () => {
+      const deps = createDeps({ user: null });
+
+      const result = await getPracticeSessionSummary(
+        { sessionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNAUTHENTICATED' },
+      });
+      expect(deps.getPracticeSessionSummaryUseCase.inputs).toEqual([]);
+    });
+
+    it('returns UNSUBSCRIBED when not entitled', async () => {
+      const deps = createDeps({ isEntitled: false });
+
+      const result = await getPracticeSessionSummary(
+        { sessionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNSUBSCRIBED' },
+      });
+      expect(deps.getPracticeSessionSummaryUseCase.inputs).toEqual([]);
+    });
+
+    it('returns CONFLICT when the use case rejects active sessions', async () => {
+      const deps = createDeps({
+        summaryThrows: new ApplicationError(
+          'CONFLICT',
+          'Practice session has not ended',
+        ),
+      });
+
+      const result = await getPracticeSessionSummary(
+        { sessionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toEqual({
+        ok: false,
+        error: { code: 'CONFLICT', message: 'Practice session has not ended' },
+      });
+    });
+
+    it('returns NOT_FOUND when the use case cannot find the session', async () => {
+      const deps = createDeps({
+        summaryThrows: new ApplicationError(
+          'NOT_FOUND',
+          'Practice session not found',
+        ),
+      });
+
+      const sessionId = '11111111-1111-1111-1111-111111111111';
+      const result = await getPracticeSessionSummary({ sessionId }, deps);
+
+      expect(result).toEqual({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Practice session not found' },
+      });
+      expect(deps.getPracticeSessionSummaryUseCase.inputs).toEqual([
+        { userId: 'user_1', sessionId },
+      ]);
+    });
+
+    it('returns summary payload when use case succeeds', async () => {
+      const deps = createDeps({
+        summaryOutput: {
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          endedAt: '2026-02-01T00:00:00.000Z',
+          mode: 'exam',
+          questionCount: 0,
+          totals: { answered: 0, correct: 0, accuracy: 0, durationSeconds: 0 },
+        },
+      });
+
+      const sessionId = '11111111-1111-1111-1111-111111111111';
+      const result = await getPracticeSessionSummary({ sessionId }, deps);
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: { sessionId, questionCount: 0 },
+      });
+      expect(deps.getPracticeSessionSummaryUseCase.inputs).toEqual([
         { userId: 'user_1', sessionId },
       ]);
     });

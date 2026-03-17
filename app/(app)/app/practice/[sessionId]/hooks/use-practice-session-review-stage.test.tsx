@@ -1,6 +1,11 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import type {
+  EndPracticeSessionOutput,
+  GetPracticeSessionReviewOutput,
+} from '@/src/adapters/controllers/practice-controller';
 import { renderHook } from '@/src/application/test-helpers/render-hook';
 import { usePracticeSessionReviewStage } from './use-practice-session-review-stage';
 
@@ -22,10 +27,26 @@ describe('usePracticeSessionReviewStage', () => {
         setLoadState: () => undefined,
         resetQuestionState: () => undefined,
         loadSpecificQuestion: () => undefined,
+        endPracticeSessionFn: async (): Promise<
+          ActionResult<EndPracticeSessionOutput>
+        > => {
+          throw new Error('not used');
+        },
+        getPracticeSessionReviewFn: async (): Promise<
+          ActionResult<GetPracticeSessionReviewOutput>
+        > => {
+          throw new Error('not used');
+        },
+        getPracticeSessionSummaryFn: async (): Promise<
+          ActionResult<EndPracticeSessionOutput>
+        > => {
+          throw new Error('not used');
+        },
       }),
     );
 
     expect(output.summary).toBeNull();
+    expect(typeof output.setSummary).toBe('function');
     expect(output.summaryReview).toBeNull();
     expect(output.summaryReviewLoadState).toEqual({ status: 'idle' });
     expect(output.review).toBeNull();

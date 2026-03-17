@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
+import { ROUTES, toQuestionRoute } from '@/lib/routes';
 import { SessionSummaryView } from './session-summary-view';
 
 test('renders summary totals and per-question breakdown', async () => {
@@ -57,11 +58,21 @@ test('renders summary totals and per-question breakdown', async () => {
     .element(screen.getByText('[Question no longer available]'))
     .toBeVisible();
   await expect
-    .element(screen.getByRole('link', { name: 'Back to Dashboard' }))
-    .toHaveAttribute('href', '/app/dashboard');
-  await expect
     .element(screen.getByRole('link', { name: 'View in History' }))
-    .toHaveAttribute('href', '/app/history');
+    .toHaveAttribute('href', ROUTES.APP_HISTORY);
+  await expect
+    .element(screen.getByRole('link', { name: 'Back to Practice' }))
+    .toHaveAttribute('href', ROUTES.APP_PRACTICE);
+  await expect
+    .element(screen.getByRole('link', { name: 'Review your answers' }))
+    .toHaveAttribute(
+      'href',
+      toQuestionRoute('q-1', {
+        from: 'history',
+        mode: 'review',
+        sessionId: 'session-1',
+      }),
+    );
 });
 
 test('renders loading and error states for summary review', async () => {
@@ -85,4 +96,41 @@ test('renders loading and error states for summary review', async () => {
   );
 
   await expect.element(screen.getByText('Review unavailable.')).toBeVisible();
+});
+
+test('renders exactly 2 tutor actions', async () => {
+  const screen = await render(
+    <SessionSummaryView
+      summary={{
+        sessionId: 'session-1',
+        endedAt: '2026-02-07T00:00:00.000Z',
+        mode: 'tutor',
+        questionCount: 1,
+        totals: {
+          answered: 1,
+          correct: 1,
+          accuracy: 1,
+          durationSeconds: 30,
+        },
+      }}
+      review={null}
+      reviewLoadState={{ status: 'idle' }}
+    />,
+  );
+
+  await expect
+    .element(screen.getByRole('link', { name: 'Back to Practice' }))
+    .toBeVisible();
+  await expect
+    .element(screen.getByRole('link', { name: 'View in History' }))
+    .toBeVisible();
+  await expect
+    .element(screen.getByRole('link', { name: 'Review your answers' }))
+    .not.toBeInTheDocument();
+  await expect
+    .element(screen.getByRole('link', { name: 'Back to Dashboard' }))
+    .not.toBeInTheDocument();
+  await expect
+    .element(screen.getByRole('link', { name: 'Start another session' }))
+    .not.toBeInTheDocument();
 });

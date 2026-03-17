@@ -1,9 +1,19 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePracticeSessionQuestionFlow } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow';
 import { maybeAutoAdvanceAfterSubmit } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import { usePracticeQuestionBookmarks } from '@/app/(app)/app/practice/hooks/use-practice-question-bookmarks';
+import {
+  getActionResultErrorMessage,
+  getThrownErrorMessage,
+} from '@/app/(app)/app/practice/practice-logic';
+import { reportClientError } from '@/lib/report-client-error';
 import { useIsMounted } from '@/lib/use-is-mounted';
-import { setPracticeSessionQuestionMark } from '@/src/adapters/controllers/practice-controller';
+import {
+  endPracticeSession,
+  getPracticeSessionReview,
+  getPracticeSessionSummary,
+  setPracticeSessionQuestionMark,
+} from '@/src/adapters/controllers/practice-controller';
 import {
   getNextQuestion,
   submitAnswer,
@@ -16,9 +26,12 @@ export function usePracticeSessionPageController(
   sessionId: string,
 ): PracticeSessionPageViewProps {
   const isMounted = useIsMounted();
+  const bootstrapRequestIdRef = useRef(0);
+  const [shouldRetryBootstrap, setShouldRetryBootstrap] = useState(false);
 
   const questionFlow = usePracticeSessionQuestionFlow({
     sessionId,
+    autoload: false,
     isMounted,
     getNextQuestionFn: getNextQuestion,
     submitAnswerFn: submitAnswer,
@@ -40,7 +53,78 @@ export function usePracticeSessionPageController(
     setLoadState: questionFlow.setLoadState,
     resetQuestionState: questionFlow.resetQuestionState,
     loadSpecificQuestion: questionFlow.onNavigateQuestion,
+    endPracticeSessionFn: endPracticeSession,
+    getPracticeSessionReviewFn: getPracticeSessionReview,
+    getPracticeSessionSummaryFn: getPracticeSessionSummary,
   });
+
+  const bootstrapSessionSummary = useCallback(() => {
+    const requestId = bootstrapRequestIdRef.current + 1;
+    bootstrapRequestIdRef.current = requestId;
+    reviewStage.setSummary(null);
+    setShouldRetryBootstrap(false);
+    questionFlow.setLoadState({ status: 'loading' });
+
+    void getPracticeSessionSummary({ sessionId })
+      .then((result) => {
+        if (requestId !== bootstrapRequestIdRef.current || !isMounted()) return;
+
+        if (result.ok) {
+          reviewStage.setSummary(result.data);
+          questionFlow.setSessionMode(result.data.mode);
+          questionFlow.resetQuestionState();
+          questionFlow.setLoadState({ status: 'ready' });
+          return;
+        }
+
+        if (result.error.code === 'CONFLICT') {
+          questionFlow.onTryAgain();
+          return;
+        }
+
+        setShouldRetryBootstrap(true);
+        questionFlow.setLoadState({
+          status: 'error',
+          message: getActionResultErrorMessage(result),
+        });
+      })
+      .catch((error: unknown) => {
+        if (requestId !== bootstrapRequestIdRef.current || !isMounted()) return;
+        reportClientError(error, {
+          component: 'UsePracticeSessionPageController',
+          action: 'bootstrapSessionSummary',
+        });
+        setShouldRetryBootstrap(true);
+        questionFlow.setLoadState({
+          status: 'error',
+          message: getThrownErrorMessage(error),
+        });
+      });
+  }, [
+    sessionId,
+    isMounted,
+    questionFlow.onTryAgain,
+    questionFlow.resetQuestionState,
+    questionFlow.setLoadState,
+    questionFlow.setSessionMode,
+    reviewStage.setSummary,
+  ]);
+
+  useEffect(() => {
+    bootstrapSessionSummary();
+    return () => {
+      bootstrapRequestIdRef.current += 1;
+    };
+  }, [bootstrapSessionSummary]);
+
+  const onTryAgain = useCallback(() => {
+    if (shouldRetryBootstrap) {
+      bootstrapSessionSummary();
+      return;
+    }
+
+    questionFlow.onTryAgain();
+  }, [bootstrapSessionSummary, questionFlow.onTryAgain, shouldRetryBootstrap]);
 
   const isInReviewStageRef = useRef(reviewStage.isInReviewStage);
   isInReviewStageRef.current = reviewStage.isInReviewStage;
@@ -107,7 +191,7 @@ export function usePracticeSessionPageController(
     onEndSession: reviewStage.onEndSession,
     onRetryReview: reviewStage.onRetryReview,
     onRetryNavigator: reviewStage.onRetryNavigator,
-    onTryAgain: questionFlow.onTryAgain,
+    onTryAgain,
     onRetryBookmarks: bookmarks.onRetryBookmarks,
     onToggleBookmark: bookmarks.onToggleBookmark,
     onToggleMarkForReview,

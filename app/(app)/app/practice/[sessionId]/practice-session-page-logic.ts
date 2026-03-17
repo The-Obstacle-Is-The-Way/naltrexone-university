@@ -14,6 +14,7 @@ import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {
   EndPracticeSessionOutput,
   GetPracticeSessionReviewOutput,
+  GetPracticeSessionSummaryOutput,
 } from '@/src/adapters/controllers/practice-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
@@ -25,6 +26,10 @@ import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answ
 // Reviewed in DEBT-224 audit (2026-02-18).
 const END_SESSION_TIMEOUT_MS = 15_000;
 const SESSION_REVIEW_TIMEOUT_MS = 10_000;
+type SessionIdInput = { sessionId: string };
+type EndPracticeSessionActionInput = SessionIdInput & {
+  idempotencyKey?: string;
+};
 
 export async function loadNextQuestion(input: {
   sessionId: string;
@@ -167,8 +172,11 @@ export async function endSession(input: {
   sessionId: string;
   endSessionIdempotencyKey: string;
   endPracticeSessionFn: (
-    input: unknown,
+    input: EndPracticeSessionActionInput,
   ) => Promise<ActionResult<EndPracticeSessionOutput>>;
+  getPracticeSessionSummaryFn: (
+    input: SessionIdInput,
+  ) => Promise<ActionResult<GetPracticeSessionSummaryOutput>>;
   setLoadState: (state: LoadState) => void;
   setSummary: (summary: EndPracticeSessionOutput | null) => void;
   resetQuestionState: () => void;
@@ -204,10 +212,39 @@ export async function endSession(input: {
   }
   if (!isMounted()) return;
   if (!res.ok) {
+    let recoveryErrorMessage: string | null = null;
+
+    if (res.error.code === 'CONFLICT') {
+      try {
+        const summaryRes = await withTimeout(
+          input.getPracticeSessionSummaryFn({
+            sessionId: input.sessionId,
+          }),
+          END_SESSION_TIMEOUT_MS,
+        );
+        if (!isMounted()) return;
+        if (summaryRes.ok) {
+          input.setSummary(summaryRes.data);
+          input.resetQuestionState();
+          input.setLoadState({ status: 'ready' });
+          return;
+        }
+
+        recoveryErrorMessage = getActionResultErrorMessage(summaryRes);
+      } catch (error) {
+        if (!isMounted()) return;
+        reportClientError(error, {
+          component: 'PracticeSessionPageLogic',
+          action: 'getPracticeSessionSummary',
+        });
+        recoveryErrorMessage = getThrownErrorMessage(error);
+      }
+    }
+
     input.rotateIdempotencyKey?.();
     input.setLoadState({
       status: 'error',
-      message: getActionResultErrorMessage(res),
+      message: recoveryErrorMessage ?? getActionResultErrorMessage(res),
     });
     return;
   }
@@ -223,7 +260,7 @@ export function createNavigatorEffect(input: {
   sessionInfo: NextQuestion['session'];
   sessionId: string;
   getPracticeSessionReviewFn: (
-    input: unknown,
+    input: SessionIdInput,
   ) => Promise<ActionResult<GetPracticeSessionReviewOutput>>;
   setNavigator: (navigator: GetPracticeSessionReviewOutput | null) => void;
   setNavigatorLoadState: (state: LoadState) => void;
@@ -285,7 +322,7 @@ export function createSummaryReviewEffect(input: {
   summary: EndPracticeSessionOutput | null;
   sessionId: string;
   getPracticeSessionReviewFn: (
-    input: unknown,
+    input: SessionIdInput,
   ) => Promise<ActionResult<GetPracticeSessionReviewOutput>>;
   setSummaryReview: (review: GetPracticeSessionReviewOutput | null) => void;
   setSummaryReviewLoadState: (state: LoadState) => void;

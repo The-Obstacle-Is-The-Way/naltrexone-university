@@ -121,4 +121,97 @@ describe('SessionSummaryView', () => {
 
     expect(findStatValue(doc, 'Accuracy')).toBe('—');
   });
+
+  it('returns tutor summary primary actions when mode is tutor and omits legacy links', () => {
+    const html = renderToStaticMarkup(
+      <SessionSummaryView
+        summary={{
+          sessionId: 'session-1',
+          mode: 'tutor',
+          questionCount: 10,
+          endedAt: '2026-02-07T00:00:00.000Z',
+          totals: {
+            answered: 0,
+            correct: 0,
+            accuracy: 0,
+            durationSeconds: 0,
+          },
+        }}
+        review={null}
+        reviewLoadState={{ status: 'idle' }}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const actionLinks = Array.from(doc.querySelectorAll('a')).filter((link) => {
+      const text = link.textContent?.trim();
+      return (
+        text === 'Back to Practice' ||
+        text === 'View in History' ||
+        text === 'Back to Dashboard' ||
+        text === 'Start another session'
+      );
+    });
+
+    expect(actionLinks.map((link) => link.textContent?.trim())).toEqual([
+      'Back to Practice',
+      'View in History',
+    ]);
+  });
+
+  it('returns exam summary actions when review is available and omits legacy links', () => {
+    const html = renderToStaticMarkup(
+      <SessionSummaryView
+        summary={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          questionCount: 2,
+          endedAt: '2026-02-07T00:00:00.000Z',
+          totals: {
+            answered: 2,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 120,
+          },
+        }}
+        review={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          totalCount: 2,
+          answeredCount: 2,
+          markedCount: 0,
+          rows: [
+            {
+              isAvailable: true,
+              questionId: 'q1',
+              slug: 'q-1',
+              stemMd: 'Stem for q1',
+              difficulty: 'easy',
+              order: 1,
+              isAnswered: true,
+              isCorrect: true,
+              markedForReview: false,
+            },
+          ],
+        }}
+        reviewLoadState={{ status: 'ready' }}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const actionLinks = Array.from(doc.querySelectorAll('a')).filter((link) => {
+      const text = link.textContent?.trim();
+      return (
+        text === 'Review your answers' ||
+        text === 'Back to Practice' ||
+        text === 'View in History' ||
+        text === 'Back to Dashboard' ||
+        text === 'Start another session'
+      );
+    });
+
+    expect(actionLinks.map((link) => link.textContent?.trim())).toEqual([
+      'Review your answers',
+      'Back to Practice',
+      'View in History',
+    ]);
+  });
 });

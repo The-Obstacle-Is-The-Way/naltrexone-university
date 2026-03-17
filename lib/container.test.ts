@@ -32,6 +32,7 @@ import {
   GetBookmarksUseCase,
   GetIncompletePracticeSessionUseCase,
   GetNextQuestionUseCase,
+  GetPracticeSessionSummaryUseCase,
   GetPreviousAttemptUseCase,
   GetUserStatsUseCase,
   StartPracticeSessionUseCase,
@@ -110,6 +111,9 @@ describe('container factories', () => {
       'function',
     );
     expect(typeof container.createGetIncompletePracticeSessionUseCase).toBe(
+      'function',
+    );
+    expect(typeof container.createGetPracticeSessionSummaryUseCase).toBe(
       'function',
     );
 
@@ -219,6 +223,9 @@ describe('container factories', () => {
     expect(container.createEndPracticeSessionUseCase()).toBeInstanceOf(
       EndPracticeSessionUseCase,
     );
+    expect(container.createGetPracticeSessionSummaryUseCase()).toBeInstanceOf(
+      GetPracticeSessionSummaryUseCase,
+    );
     expect(container.createCheckoutSessionUseCase()).toBeInstanceOf(
       CreateCheckoutSessionUseCase,
     );
@@ -307,6 +314,9 @@ describe('container factories', () => {
     );
     expect(practiceDeps.endPracticeSessionUseCase).toBeInstanceOf(
       EndPracticeSessionUseCase,
+    );
+    expect(practiceDeps.getPracticeSessionSummaryUseCase).toBeInstanceOf(
+      GetPracticeSessionSummaryUseCase,
     );
     expect(typeof practiceDeps.now).toBe('function');
 

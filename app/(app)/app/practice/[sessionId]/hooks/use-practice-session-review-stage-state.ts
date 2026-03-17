@@ -12,10 +12,9 @@ import {
   shouldReportClientError,
 } from '@/lib/report-client-error';
 import { withTimeout } from '@/lib/with-timeout';
-import {
-  type GetPracticeSessionReviewOutput,
-  getPracticeSessionReview,
-} from '@/src/adapters/controllers/practice-controller';
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import type { GetPracticeSessionReviewOutput } from '@/src/adapters/controllers/practice-controller';
+import type { GetPracticeSessionReviewInput as GetPracticeSessionReviewUseCaseInput } from '@/src/application/use-cases';
 
 const SESSION_REVIEW_TIMEOUT_MS = 10_000;
 
@@ -27,6 +26,9 @@ export type UsePracticeSessionReviewStageStateInput = {
   resetQuestionState: () => void;
   loadSpecificQuestion: (questionId: string) => void;
   finalizeSession: () => Promise<void>;
+  getPracticeSessionReviewFn: (
+    input: Pick<GetPracticeSessionReviewUseCaseInput, 'sessionId'>,
+  ) => Promise<ActionResult<GetPracticeSessionReviewOutput>>;
 };
 
 export type UsePracticeSessionReviewStageStateOutput = {
@@ -71,10 +73,10 @@ export function usePracticeSessionReviewStageState(
     setReviewLoadState({ status: 'loading' });
 
     try {
-      let res: Awaited<ReturnType<typeof getPracticeSessionReview>>;
+      let res: Awaited<ReturnType<typeof input.getPracticeSessionReviewFn>>;
       try {
         res = await withTimeout(
-          getPracticeSessionReview({ sessionId: input.sessionId }),
+          input.getPracticeSessionReviewFn({ sessionId: input.sessionId }),
           SESSION_REVIEW_TIMEOUT_MS,
         );
       } catch (error) {
@@ -123,6 +125,7 @@ export function usePracticeSessionReviewStageState(
       isLoadingReviewRef.current = false;
     }
   }, [
+    input.getPracticeSessionReviewFn,
     input.isMounted,
     input.resetQuestionState,
     input.sessionId,

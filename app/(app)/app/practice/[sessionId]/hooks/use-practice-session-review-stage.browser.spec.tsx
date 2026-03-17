@@ -1,22 +1,27 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import type {
+  EndPracticeSessionOutput,
+  GetPracticeSessionReviewOutput,
+  GetPracticeSessionSummaryOutput,
+} from '@/src/adapters/controllers/practice-controller';
 import { ok } from '@/tests/test-helpers/ok';
 import {
   type UsePracticeSessionReviewStageInput,
   usePracticeSessionReviewStage,
 } from './use-practice-session-review-stage';
 
-const { endPracticeSessionMock, getPracticeSessionReviewMock } = vi.hoisted(
-  () => ({
-    endPracticeSessionMock: vi.fn(),
-    getPracticeSessionReviewMock: vi.fn(),
-  }),
-);
-
-vi.mock('@/src/adapters/controllers/practice-controller', () => ({
-  endPracticeSession: endPracticeSessionMock,
-  getPracticeSessionReview: getPracticeSessionReviewMock,
-}));
+const endPracticeSessionMock =
+  vi.fn<(input: unknown) => Promise<ActionResult<EndPracticeSessionOutput>>>();
+const getPracticeSessionReviewMock =
+  vi.fn<
+    (input: unknown) => Promise<ActionResult<GetPracticeSessionReviewOutput>>
+  >();
+const getPracticeSessionSummaryMock =
+  vi.fn<
+    (input: unknown) => Promise<ActionResult<GetPracticeSessionSummaryOutput>>
+  >();
 
 function createInput(sessionMode: 'tutor' | 'exam') {
   return {
@@ -30,12 +35,18 @@ function createInput(sessionMode: 'tutor' | 'exam') {
     setLoadState: vi.fn(),
     resetQuestionState: vi.fn(),
     loadSpecificQuestion: vi.fn(),
+    endPracticeSessionFn: endPracticeSessionMock,
+    getPracticeSessionReviewFn: getPracticeSessionReviewMock,
+    getPracticeSessionSummaryFn: getPracticeSessionSummaryMock,
   };
 }
 
 describe('usePracticeSessionReviewStage (browser)', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    endPracticeSessionMock.mockReset();
+    getPracticeSessionReviewMock.mockReset();
+    getPracticeSessionSummaryMock.mockReset();
   });
 
   it('finalizes tutor sessions and loads summary review data', async () => {
@@ -43,6 +54,8 @@ describe('usePracticeSessionReviewStage (browser)', () => {
       ok({
         sessionId: 'session-1',
         endedAt: '2026-02-07T00:20:00.000Z',
+        mode: 'tutor',
+        questionCount: 10,
         totals: {
           answered: 10,
           correct: 8,
@@ -117,6 +130,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
           {
             isAvailable: true,
             questionId: 'q1',
+            slug: 'q-1',
             stemMd: 'Stem 1',
             difficulty: 'easy',
             order: 1,
@@ -127,6 +141,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
           {
             isAvailable: true,
             questionId: 'q2',
+            slug: 'q-2',
             stemMd: 'Stem 2',
             difficulty: 'medium',
             order: 2,

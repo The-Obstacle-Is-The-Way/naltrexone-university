@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { ROUTES } from '@/lib/routes';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -75,7 +76,10 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain('Question breakdown');
     expect(html).toContain('View in History');
     expect(html).toContain('href="/app/history"');
-    expect(html).toContain('Start another session');
+    expect(html).toContain('Back to Practice');
+    expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
+    expect(html).not.toContain('Back to Dashboard');
+    expect(html).not.toContain('Start another session');
   });
 
   it('renders per-question breakdown on session summary when review rows are provided', async () => {
@@ -184,17 +188,17 @@ describe('app/(app)/app/practice/[sessionId]', () => {
       const text = link.textContent?.trim();
       return (
         text === 'Review your answers' ||
-        text === 'Back to Dashboard' ||
+        text === 'Back to Practice' ||
         text === 'View in History' ||
+        text === 'Back to Dashboard' ||
         text === 'Start another session'
       );
     });
 
     expect(actionLinks.map((link) => link.textContent?.trim())).toEqual([
       'Review your answers',
-      'Back to Dashboard',
+      'Back to Practice',
       'View in History',
-      'Start another session',
     ]);
     expect(html).toContain('Review your answers');
     expect(html).toContain(

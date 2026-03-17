@@ -782,6 +782,10 @@ describe('practice-session-page-logic', () => {
         durationSeconds: 123,
       },
     };
+    const createUnusedGetPracticeSessionSummaryFn = () =>
+      vi.fn(async (): Promise<ActionResult<EndPracticeSessionOutput>> => {
+        throw new Error('getPracticeSessionSummaryFn should not be called');
+      });
 
     it('sets summary and resets state on success', async () => {
       const setSummary = vi.fn();
@@ -794,6 +798,7 @@ describe('practice-session-page-logic', () => {
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
         endPracticeSessionFn,
+        getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState: vi.fn(),
         setSummary,
         resetQuestionState,
@@ -816,6 +821,7 @@ describe('practice-session-page-logic', () => {
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
         endPracticeSessionFn: async () => err('INTERNAL_ERROR', 'Boom'),
+        getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState,
         setSummary: vi.fn(),
         resetQuestionState: vi.fn(),
@@ -834,6 +840,7 @@ describe('practice-session-page-logic', () => {
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
         endPracticeSessionFn: async () => err('INTERNAL_ERROR', 'Boom'),
+        getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState: vi.fn(),
         setSummary: vi.fn(),
         resetQuestionState: vi.fn(),
@@ -841,6 +848,87 @@ describe('practice-session-page-logic', () => {
       });
 
       expect(rotateIdempotencyKey).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns recovered summary state when endPracticeSession returns CONFLICT', async () => {
+      const setLoadState = vi.fn();
+      const setSummary = vi.fn();
+      const resetQuestionState = vi.fn();
+      const getPracticeSessionSummaryFn = vi.fn(async () =>
+        ok(successfulEndSessionOutput),
+      );
+
+      await endSession({
+        sessionId: 'session-1',
+        endSessionIdempotencyKey: 'idem_1',
+        endPracticeSessionFn: async () =>
+          err('CONFLICT', 'Practice session already ended'),
+        getPracticeSessionSummaryFn,
+        setLoadState,
+        setSummary,
+        resetQuestionState,
+      });
+
+      expect(getPracticeSessionSummaryFn).toHaveBeenCalledWith({
+        sessionId: 'session-1',
+      });
+      expect(setSummary).toHaveBeenCalledWith(successfulEndSessionOutput);
+      expect(resetQuestionState).toHaveBeenCalledTimes(1);
+      expect(setLoadState).toHaveBeenLastCalledWith({ status: 'ready' });
+    });
+
+    it('returns an error when summary recovery fails and endPracticeSession returns CONFLICT', async () => {
+      const setLoadState = vi.fn();
+      const rotateIdempotencyKey = vi.fn();
+
+      await endSession({
+        sessionId: 'session-1',
+        endSessionIdempotencyKey: 'idem_1',
+        endPracticeSessionFn: async () =>
+          err('CONFLICT', 'Practice session already ended'),
+        getPracticeSessionSummaryFn: async () =>
+          err('NOT_FOUND', 'Practice session summary not found'),
+        setLoadState,
+        setSummary: vi.fn(),
+        resetQuestionState: vi.fn(),
+        rotateIdempotencyKey,
+      });
+
+      expect(rotateIdempotencyKey).toHaveBeenCalledTimes(1);
+      expect(setLoadState).toHaveBeenLastCalledWith({
+        status: 'error',
+        message: 'Practice session summary not found',
+      });
+    });
+
+    it('returns an error when summary recovery throws and endPracticeSession returns CONFLICT', async () => {
+      const setLoadState = vi.fn();
+      const rotateIdempotencyKey = vi.fn();
+      const error = new Error('Summary fetch failed');
+
+      await endSession({
+        sessionId: 'session-1',
+        endSessionIdempotencyKey: 'idem_1',
+        endPracticeSessionFn: async () =>
+          err('CONFLICT', 'Practice session already ended'),
+        getPracticeSessionSummaryFn: async () => {
+          throw error;
+        },
+        setLoadState,
+        setSummary: vi.fn(),
+        resetQuestionState: vi.fn(),
+        rotateIdempotencyKey,
+      });
+
+      expect(rotateIdempotencyKey).toHaveBeenCalledTimes(1);
+      expect(setLoadState).toHaveBeenLastCalledWith({
+        status: 'error',
+        message: 'Summary fetch failed',
+      });
+      expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
+        component: 'PracticeSessionPageLogic',
+        action: 'getPracticeSessionSummary',
+      });
     });
 
     it('sets error state when controller throws', async () => {
@@ -853,6 +941,7 @@ describe('practice-session-page-logic', () => {
         endPracticeSessionFn: async () => {
           throw error;
         },
+        getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState,
         setSummary: vi.fn(),
         resetQuestionState: vi.fn(),
@@ -877,6 +966,7 @@ describe('practice-session-page-logic', () => {
         endPracticeSessionFn: async () => {
           throw new Error('Boom');
         },
+        getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState: vi.fn(),
         setSummary: vi.fn(),
         resetQuestionState: vi.fn(),
@@ -893,6 +983,7 @@ describe('practice-session-page-logic', () => {
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
         endPracticeSessionFn: async () => ok(successfulEndSessionOutput),
+        getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState: vi.fn(),
         setSummary: vi.fn(),
         resetQuestionState: vi.fn(),
@@ -913,6 +1004,7 @@ describe('practice-session-page-logic', () => {
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
         endPracticeSessionFn: async () => deferred.promise,
+        getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState,
         setSummary,
         resetQuestionState: vi.fn(),

@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-16
+**Last Updated:** 2026-03-17
 
 ---
 
@@ -32,7 +32,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) | Bookmark Icon Toggle — replace "Remove" text pill and "Bookmark"/"Remove bookmark" action bar pills with filled/unfilled bookmark icon (Lucide `Bookmark` with `fill-current` toggle); phased rollout starting with Bookmarks page | Active | [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) |
 | [BS-053](./bs-053-bookmark-vs-mark-for-review-collision.md) | Bookmark vs Mark-for-Review Collision — exam action bar shows both "Bookmark" and "Mark for review" as identical pills, creating cognitive confusion between permanent curation and session-scoped flagging | Active | [BS-052](./bs-052-bookmark-icon-toggle-replacement.md), [DEBT-316](../_archive/debt/debt-316-exam-post-submit-review-flow.md) |
 
-**Next Brainstorming ID:** BS-054
+**Next Brainstorming ID:** BS-055
 
 ---
 
@@ -40,6 +40,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 | ID | Title | Outcome |
 |----|-------|---------|
+| [BS-054](../_archive/brainstorming/bs-054-session-end-ux-simplification.md) | Session End UX -- Button Simplification and Ended-Session Reopen Bugs | Resolved by PR #229 on 2026-03-17. Session summaries now use the simplified CTA set, ended-session URLs bootstrap directly into durable summaries, stale double-end flows recover idempotently, and the verification matrix in BS-054 passed before archival. |
 | [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) | Bookmark Pill Hover Pattern Investigation | Reference doc for BS-050; primary value consumed by DEBT-309 (PR #209). Icon replacement tracked in BS-052. |
 | [BS-050](../_archive/brainstorming/bs-050-practice-chip-hover-affordance.md) | Practice Chip Hover Affordance | Promoted to [DEBT-309](../_archive/debt/debt-309-filter-chip-hover-border-affordance.md), resolved by PR #209. Hover border affordance and fill lift implemented on FilterChip. |
 | [BS-049](../_archive/brainstorming/bs-049-bookmarks-card-visual-unification.md) | Bookmarks Card Visual Unification — bordered bookmark cards are visually dated next to History Questions and Dashboard tonal rows; redundant `Review` button, title underline, and heavier card chrome needed a settled implementation contract | Resolved by [DEBT-307](../_archive/debt/debt-307-bookmarks-row-visual-unification.md) on 2026-03-12. Bookmarks now use page-background tonal rows with delegated pointer activation, outline `Remove`, and no attempt-result metadata expansion in this pass. |

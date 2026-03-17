@@ -12,14 +12,19 @@ import { usePracticeSessionReviewStageState } from '@/app/(app)/app/practice/[se
 import { usePracticeSessionSummaryReview } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-summary-review';
 import { endSession } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
-import {
-  type EndPracticeSessionOutput,
-  endPracticeSession,
-  type GetPracticeSessionReviewOutput,
-  getPracticeSessionReview,
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import type {
+  EndPracticeSessionOutput,
+  GetPracticeSessionReviewOutput,
+  GetPracticeSessionSummaryOutput,
 } from '@/src/adapters/controllers/practice-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+
+type SessionIdInput = { sessionId: string };
+type EndPracticeSessionActionInput = SessionIdInput & {
+  idempotencyKey?: string;
+};
 
 export type UsePracticeSessionReviewStageInput = {
   sessionId: string;
@@ -32,10 +37,20 @@ export type UsePracticeSessionReviewStageInput = {
   setLoadState: (state: LoadState) => void;
   resetQuestionState: () => void;
   loadSpecificQuestion: (questionId: string) => void;
+  endPracticeSessionFn: (
+    input: EndPracticeSessionActionInput,
+  ) => Promise<ActionResult<EndPracticeSessionOutput>>;
+  getPracticeSessionReviewFn: (
+    input: SessionIdInput,
+  ) => Promise<ActionResult<GetPracticeSessionReviewOutput>>;
+  getPracticeSessionSummaryFn: (
+    input: SessionIdInput,
+  ) => Promise<ActionResult<GetPracticeSessionSummaryOutput>>;
 };
 
 export type UsePracticeSessionReviewStageOutput = {
   summary: EndPracticeSessionOutput | null;
+  setSummary: Dispatch<SetStateAction<EndPracticeSessionOutput | null>>;
   summaryReview: GetPracticeSessionReviewOutput | null;
   summaryReviewLoadState: LoadState;
   review: GetPracticeSessionReviewOutput | null;
@@ -63,7 +78,8 @@ export function usePracticeSessionReviewStage(
       endSession({
         sessionId: input.sessionId,
         endSessionIdempotencyKey: endSessionIdempotencyKeyRef.current,
-        endPracticeSessionFn: endPracticeSession,
+        endPracticeSessionFn: input.endPracticeSessionFn,
+        getPracticeSessionSummaryFn: input.getPracticeSessionSummaryFn,
         setLoadState: input.setLoadState,
         setSummary,
         resetQuestionState: input.resetQuestionState,
@@ -73,6 +89,8 @@ export function usePracticeSessionReviewStage(
         isMounted: input.isMounted,
       }),
     [
+      input.endPracticeSessionFn,
+      input.getPracticeSessionSummaryFn,
       input.sessionId,
       input.setLoadState,
       input.resetQuestionState,
@@ -88,6 +106,7 @@ export function usePracticeSessionReviewStage(
     resetQuestionState: input.resetQuestionState,
     loadSpecificQuestion: input.loadSpecificQuestion,
     finalizeSession,
+    getPracticeSessionReviewFn: input.getPracticeSessionReviewFn,
   });
 
   const onRetryNavigator = useCallback(() => {
@@ -99,7 +118,7 @@ export function usePracticeSessionReviewStage(
       summary,
       sessionId: input.sessionId,
       isMounted: input.isMounted,
-      getPracticeSessionReviewFn: getPracticeSessionReview,
+      getPracticeSessionReviewFn: input.getPracticeSessionReviewFn,
     });
 
   const { navigator, navigatorLoadState } = usePracticeSessionNavigator({
@@ -110,12 +129,13 @@ export function usePracticeSessionReviewStage(
     questionId: input.questionId,
     submitResult: input.submitResult,
     navigatorReloadCount,
-    getPracticeSessionReviewFn: getPracticeSessionReview,
+    getPracticeSessionReviewFn: input.getPracticeSessionReviewFn,
     isMounted: input.isMounted,
   });
 
   return {
     summary,
+    setSummary,
     summaryReview,
     summaryReviewLoadState,
     review: reviewStage.review,
