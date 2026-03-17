@@ -51,7 +51,7 @@ describe('GetPracticeSessionSummaryUseCase', () => {
     });
   });
 
-  it('throws NOT_FOUND when the session does not exist', async () => {
+  it('returns NOT_FOUND when the session does not exist', async () => {
     const useCase = new GetPracticeSessionSummaryUseCase(
       new FakePracticeSessionRepository([]),
     );
@@ -63,7 +63,7 @@ describe('GetPracticeSessionSummaryUseCase', () => {
     } satisfies Partial<ApplicationError>);
   });
 
-  it('throws CONFLICT when the session is still active', async () => {
+  it('returns CONFLICT when the session is still active', async () => {
     const useCase = new GetPracticeSessionSummaryUseCase(
       new FakePracticeSessionRepository([
         createPracticeSession({

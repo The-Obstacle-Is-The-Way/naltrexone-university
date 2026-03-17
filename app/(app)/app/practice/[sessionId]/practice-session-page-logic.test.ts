@@ -850,7 +850,7 @@ describe('practice-session-page-logic', () => {
       expect(rotateIdempotencyKey).toHaveBeenCalledTimes(1);
     });
 
-    it('recovers summary state when endPracticeSession returns CONFLICT', async () => {
+    it('returns recovered summary state when endPracticeSession returns CONFLICT', async () => {
       const setLoadState = vi.fn();
       const setSummary = vi.fn();
       const resetQuestionState = vi.fn();
@@ -877,7 +877,7 @@ describe('practice-session-page-logic', () => {
       expect(setLoadState).toHaveBeenLastCalledWith({ status: 'ready' });
     });
 
-    it('surfaces summary recovery errors when endPracticeSession returns CONFLICT', async () => {
+    it('returns an error when summary recovery fails and endPracticeSession returns CONFLICT', async () => {
       const setLoadState = vi.fn();
       const rotateIdempotencyKey = vi.fn();
 
@@ -901,7 +901,7 @@ describe('practice-session-page-logic', () => {
       });
     });
 
-    it('surfaces thrown summary recovery errors when endPracticeSession returns CONFLICT', async () => {
+    it('returns an error when summary recovery throws and endPracticeSession returns CONFLICT', async () => {
       const setLoadState = vi.fn();
       const rotateIdempotencyKey = vi.fn();
       const error = new Error('Summary fetch failed');

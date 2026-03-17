@@ -44,7 +44,7 @@ describe('projectPracticeSessionSummary', () => {
     });
   });
 
-  it('uses total question count as the accuracy denominator for early-ended sessions', () => {
+  it('returns total question count as the accuracy denominator when the session ends early', () => {
     const endedAt = new Date('2026-02-01T00:10:00Z');
     const session = createPracticeSession({
       id: 'session-2',

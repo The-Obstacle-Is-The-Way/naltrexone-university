@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { ROUTES } from '@/lib/routes';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -76,7 +77,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain('View in History');
     expect(html).toContain('href="/app/history"');
     expect(html).toContain('Back to Practice');
-    expect(html).toContain('href="/app/practice"');
+    expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
     expect(html).not.toContain('Back to Dashboard');
     expect(html).not.toContain('Start another session');
   });

@@ -122,7 +122,7 @@ describe('SessionSummaryView', () => {
     expect(findStatValue(doc, 'Accuracy')).toBe('—');
   });
 
-  it('renders tutor summary primary actions and omits legacy links', () => {
+  it('returns tutor summary primary actions when mode is tutor and omits legacy links', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
@@ -158,7 +158,7 @@ describe('SessionSummaryView', () => {
     ]);
   });
 
-  it('renders exam summary actions when review is available and omits legacy links', () => {
+  it('returns exam summary actions when review is available and omits legacy links', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{

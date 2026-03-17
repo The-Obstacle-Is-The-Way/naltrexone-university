@@ -14,6 +14,7 @@ import {
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetPracticeSessionReviewOutput } from '@/src/adapters/controllers/practice-controller';
+import type { GetPracticeSessionReviewInput as GetPracticeSessionReviewUseCaseInput } from '@/src/application/use-cases';
 
 const SESSION_REVIEW_TIMEOUT_MS = 10_000;
 
@@ -26,7 +27,7 @@ export type UsePracticeSessionReviewStageStateInput = {
   loadSpecificQuestion: (questionId: string) => void;
   finalizeSession: () => Promise<void>;
   getPracticeSessionReviewFn: (
-    input: unknown,
+    input: Pick<GetPracticeSessionReviewUseCaseInput, 'sessionId'>,
   ) => Promise<ActionResult<GetPracticeSessionReviewOutput>>;
 };
 
