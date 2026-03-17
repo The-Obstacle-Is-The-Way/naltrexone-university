@@ -19,7 +19,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
 | [DEBT-318](./debt-318-tutor-bookmark-before-answer.md) | Bookmark visible before feedback in tutor mode and quick practice — keep the surface, but delay the action until inline feedback/explanation is visible | P3 | — |
-**Next Debt ID:** DEBT-321
+| [DEBT-321](./debt-321-bs055-exam-interaction-model-overhaul.md) | BS-055 Exam Interaction Model Overhaul — 8 ordered stages with explicit port boundaries, active-reader updates, and a coupled frontend cutover chain: draft fields → save-draft use case → finalize use case → draft-aware active readers → action bar redesign → draft-save on navigation → wire finalization → summary back-target fix | P1 | — |
+**Next Debt ID:** DEBT-322
 
 ---
 
