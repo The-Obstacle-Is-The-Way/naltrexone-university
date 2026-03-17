@@ -420,10 +420,15 @@ If a fake class exists (e.g., `FakeAttemptRepository`), you MUST use it. Do NOT 
 - `FakeStripeCustomerRepository`
 - `FakeStripeEventRepository`
 - `FakeIdempotencyKeyRepository`
+- `FakeClerkEventRepository`
+- `FakeDeletedClerkUserRepository`
+- `FakePendingStripeCancellationRepository`
 - `FakeLogger`
 - `FakeAuthGateway`
 - `FakePaymentGateway`
 - `FakeRateLimiter`
+
+Use-case fakes also exist (e.g. `FakeSubmitAnswerUseCase`, `FakeGetNextQuestionUseCase`). Check the barrel export at `src/application/test-helpers/fakes/index.ts` for the full list.
 
 **The Decision Tree:**
 ```
@@ -587,7 +592,7 @@ gh pr view <PR_NUMBER> --comments
 ## Documentation
 
 - `docs/specs/master_spec.md` — Complete technical specification (SSOT)
-- `docs/specs/index.md` — Full spec register (SPEC-001 through SPEC-038; active + archived)
+- `docs/specs/index.md` — Full spec register (SPEC-001 through SPEC-038 archived; SPEC-016 and SPEC-017 active)
 - `docs/adr/` — Architecture Decision Records (ADR-001 through ADR-018)
 - `docs/debt/index.md` — Technical debt register (active + resolved)
 - `docs/bugs/index.md` — Bug report register
