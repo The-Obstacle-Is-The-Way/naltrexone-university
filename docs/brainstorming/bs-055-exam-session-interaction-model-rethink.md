@@ -276,7 +276,11 @@ Submit stays in tutor mode because it serves a real purpose: gating feedback rev
 - It avoids fighting the existing one-attempt-per-session-question constraints.
 - It preserves tutor semantics instead of muddying both modes with one overloaded mutation.
 
-**Hidden technical dependency that must be specced:** revisitable exam answers break the current one-shot `timeSpentSeconds` model. The draft path needs a defined per-question accumulation rule and likely a new session-state field (or equivalent finalize-time accounting) so final attempts do not lose or undercount dwell time.
+**Clarification after code verification:** current `questionStates.latestSelectedChoiceId`, `latestIsCorrect`, and `latestAnsweredAt` are populated only by `recordQuestionAnswer(...)`. They are **post-submit fields today**, not an existing draft model.
+
+**Recommended data-shape decision:** add explicit draft fields (or an equivalent nested draft object) to per-question session state instead of repurposing `latest*`. Keep `latest*` reserved for finalized answer state so summary/stats semantics remain honest and tutor mode stays clean.
+
+**Hidden technical dependency that must be specced:** revisitable exam answers break the current one-shot `timeSpentSeconds` model. The draft path needs a defined per-question accumulation rule plus draft-aware reads in `GetNextQuestion` / review counts, so final attempts do not lose or undercount dwell time and in-progress exam review does not keep reading the wrong field.
 
 ### Q7: Does tutor mode need changes now?
 
@@ -329,7 +333,9 @@ Written at [`docs/practice-engine/interaction-contracts.md`](../practice-engine/
 
 Before coding, the implementation spec must explicitly answer:
 - What the draft-save API is called and which layer owns it
+- What the draft-state shape is (`draft*` fields vs equivalent object) and how it coexists with finalized `latest*` fields
 - How per-question draft time is accumulated
+- Which readers (`GetNextQuestion`, `GetPracticeSessionReview`, summary/review projections) become draft-aware during active exam sessions
 - When final attempts are materialized
 - How the summary review link returns to the summary instead of History
 - Whether post-submit session review reattempt remains allowed or is split into separate follow-up work
@@ -424,5 +430,6 @@ Current question review code still renders `Practice Again` / `Try Again` and wi
 | 2026-03-17 | `Practice Again` / `Try Again` inconsistency de-scoped from BS-055 | Current source derives the label from correctness and tests cover the expected standalone-review behavior. The active post-exam issues are back-targeting and session-review reattempt semantics, not label text. |
 | 2026-03-17 | Biggest remaining implementation risk identified | Mutable exam answers require a draft-save path plus a per-question time-accumulation model. Without that, final attempts will have broken or undercounted `timeSpentSeconds`. |
 | 2026-03-17 | AF-5 scope audit completed | Silent-discard bug affects exam Next, exam navigator jumps, AND tutor Next (low severity). Quick Practice and Question Review are safe. Root cause: `runLoadQuestionFlow` unconditionally resets `selectedChoiceId`. |
-| 2026-03-17 | Industry research completed | USMLE/NBME, LSAT, Moodle, Pearson VUE all use save-as-draft + batch finalize. Moodle's two-level state machine (session + per-question) maps directly to our needs. Stopwatch accumulation model recommended for per-question time tracking. |
+| 2026-03-17 | Common digital-assessment research completed | External research directionally supported save-as-draft + batch finalize and stopwatch-style time accumulation. The contract no longer depends on brand-specific precedent. |
 | 2026-03-17 | Interaction contract doc written | `docs/practice-engine/interaction-contracts.md` — canonical click-by-click contracts for tutor, exam, and quick practice modes. Linked from `practice-modes.md`. |
+| 2026-03-17 | Draft-state semantics clarified | `latestSelectedChoiceId/latestIsCorrect/latestAnsweredAt` are current post-submit fields only. Recommended path: add explicit draft fields and make active exam readers draft-aware instead of overloading `latest*`. |

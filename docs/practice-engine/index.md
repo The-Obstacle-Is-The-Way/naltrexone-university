@@ -1,7 +1,7 @@
 # Practice Engine
 
 > **Type:** Canonical Reference Document (Living)
-> **Last Verified:** 2026-03-03 (exam secrecy drift status sync)
+> **Last Verified:** 2026-03-17 (interaction-contract sync)
 > **Scope:** Everything related to practicing questions — the core product feature
 
 ---
@@ -98,13 +98,13 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 
 ## 3.1 Canonical Policy Registry
 
-These documents define cross-layer invariants. If other docs conflict, these win until updated:
+These documents define cross-layer invariants or accepted target contracts. If other docs conflict, these win until updated. When a canonical doc describes a target state rather than current code, it says so explicitly:
 
 | Policy | Canonical Doc | Applies To |
 |--------|----------------|------------|
 | Exam answer secrecy (active exam = no correctness/explanation exposure) | [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md) | Use cases, repositories, controllers, frontend rendering, test contracts |
 | Ordering determinism (question/choice ordering) | [Ordering Policy](./ordering-policy.md) | Session start, quick practice, review routes, rendering contracts |
-| Mode interaction contracts (buttons, persistence, locking) | [Interaction Contracts](./interaction-contracts.md) | PracticeView action bar, question-flow-actions, session hooks, post-session navigation |
+| Mode interaction contracts (buttons, persistence, locking) | [Interaction Contracts](./interaction-contracts.md) | PracticeView action bar, question-flow-actions, session hooks, post-session navigation. Target state for the accepted exam-mode redesign; current-vs-target drift is called out inside the doc. |
 
 ---
 
@@ -144,6 +144,7 @@ These documents define cross-layer invariants. If other docs conflict, these win
 
 | Date | Change |
 |------|--------|
+| 2026-03-17 | Added Interaction Contracts document as the canonical target-state UI contract for tutor, exam, and quick practice. Synced `practice-modes.md` and policy-registry wording so current implementation vs accepted target state is explicit. |
 | 2026-03-03 | Fixed BUG-186, BUG-187, and BUG-188 on branch `bug-fix-186-187-188` (pending archive). Remaining open exam-secrecy drift: BUG-191, BUG-192, BUG-193. |
 | 2026-03-03 | Synced exam-secrecy documentation to current code reality: initial BUG-180/181/185 family remains archived as fixed, but active drift is open in BUG-186, BUG-187, BUG-191, BUG-192, and BUG-193. Aligned `exam-answer-secrecy-policy.md`, `security-model.md`, `practice-modes.md`, `retry-logic.md`, `current-state.md`, `spec-coverage-map.md`, and `frontend-layer.md`. |
 | 2026-03-02 | Resolved DEBT-268: daily-seeded shuffle implemented in `executeForFilters`, ordering-policy.md updated from target to implemented state, satellite docs aligned. |

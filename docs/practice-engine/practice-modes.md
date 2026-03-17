@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Ad-hoc, Tutor, and Exam modes — lifecycle, grading, concurrency
-> **Last Verified:** 2026-03-03
+> **Last Verified:** 2026-03-17
 
 ---
 
@@ -34,6 +34,8 @@ EndPracticeSession → computes totals from questionStates
 [Summary view: totals + per-question breakdown]
     ↓ (exam: all explanations now revealed)
 ```
+
+**Current-vs-target note:** the lifecycle above reflects the **current implementation path**. The accepted target redesign in [Interaction Contracts](./interaction-contracts.md) changes active exam mode specifically: draft-save on navigation, mutable answers while the session is in progress, and batch finalization on `Submit exam`. Tutor and Quick Practice continue to use the one-shot `submitAnswer` path.
 
 ---
 
@@ -75,7 +77,7 @@ This keeps same-day behavior stable for the same user while changing the daily s
 
 ## 6. Interaction Contracts
 
-For the full click-by-click UI contract (buttons, persistence boundaries, locking rules, navigation, and post-session flows) for each mode, see **[Interaction Contracts](./interaction-contracts.md)**.
+For the full click-by-click UI contract (buttons, persistence boundaries, locking rules, navigation, and post-session flows) for each mode, see **[Interaction Contracts](./interaction-contracts.md)**. That doc also calls out the current-vs-target gap for the accepted exam-mode redesign.
 
 ---
 

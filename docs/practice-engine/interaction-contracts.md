@@ -10,7 +10,7 @@
 
 ## 1. Design Principles
 
-These principles govern both modes. They are derived from BS-055 first-principles analysis and validated against industry standard exam platforms (USMLE/NBME, Moodle, Pearson VUE).
+These principles govern both modes. They are derived from BS-055 first-principles analysis and informed by common digital-assessment patterns. The key point for this repo is the contract itself, not the brand-specific precedent.
 
 1. **"Submit" means one thing per mode.** In tutor mode, Submit = "reveal feedback for this question." In exam mode, Submit = "finalize the entire exam." There is no per-question submit in exam mode.
 2. **Buttons don't move.** Action bar slots are fixed per mode. The user builds spatial memory — shifting button positions causes misclicks.
@@ -46,7 +46,7 @@ Question displayed
 
 **After submit (feedback visible):**
 ```text
-[           [ Next (default) ]  [ Bookmark ]
+[ spacer ]  [ Next (default) ]  [ Bookmark ]
 ```
 
 **Q1 (no Previous):**
@@ -126,7 +126,7 @@ Question displayed
 
 ### Persistence model: Save-as-draft + finalize
 
-This follows the Moodle question engine pattern and aligns with how USMLE/NBME, LSAT, and Pearson VUE handle mutable exam answers. The core idea: exam answers live as **drafts** until the user submits the entire exam, at which point they are **finalized** in a single transaction.
+This is the BS-055-selected model for mutable exam answers: draft state while the session is `in_progress`, then batch finalization when the user clicks `Submit exam`.
 
 #### Draft-save triggers
 
@@ -141,9 +141,20 @@ The navigation boundary is the minimum viable persistence point. Autosave and vi
 
 #### Draft storage
 
-Drafts are stored in `questionStates` within `paramsJson` on the `practice_sessions` table. The existing `latestSelectedChoiceId` field can be repurposed for draft state in exam mode, since it's currently only populated after submit.
+Drafts should continue to live in session-scoped state on `practice_sessions`, but the current `questionStates` shape is **not already a draft model**.
 
-A new per-question field `draftSelectedChoiceId` (or repurpose of existing field with mode-aware semantics) stores the user's current selection. This field is freely overwritable while the session is `in_progress`.
+Today, `questionStates.latestSelectedChoiceId`, `latestIsCorrect`, and `latestAnsweredAt` are written only by `recordQuestionAnswer(...)`. In current source, they represent **recorded post-submit answer state**, not mutable draft state.
+
+**Recommendation:** keep `questionStates` as the container, but add explicit exam-draft fields instead of silently redefining `latest*`.
+
+Suggested shape (names can change in the implementation spec):
+- `draftSelectedChoiceId: string | null`
+- `draftSavedAt: string | null`
+- `draftCumulativeMs: number`
+
+Keep `latestSelectedChoiceId`, `latestIsCorrect`, and `latestAnsweredAt` reserved for finalized answer state. That preserves current summary/stat semantics and avoids overloading one field with two different lifecycle meanings.
+
+**Reader implication:** current readers such as `GetNextQuestion` and `GetPracticeSessionReview` derive answered/unanswered state from `latestSelectedChoiceId`. Under the draft model, active exam-session reads must become draft-aware.
 
 #### Finalization
 
@@ -151,11 +162,11 @@ When the user clicks `Submit exam` in the review stage:
 
 1. Save the current question's selection (if any unsaved draft exists).
 2. In a single database transaction:
-   - For each question with a draft answer: call `submitAnswer` (creates the `attempts` row, grades, updates `questionStates` with final `latestSelectedChoiceId`, `latestIsCorrect`, `latestAnsweredAt`).
+   - For each question with a draft answer: run a finalization write path that creates exactly one `attempts` row and writes finalized `latestSelectedChoiceId`, `latestIsCorrect`, and `latestAnsweredAt` exactly once.
    - Call `EndPracticeSession` to compute totals and transition session to `completed`.
 3. Return results. Feedback and scores become visible.
 
-This preserves the existing `attempts` table constraint — each question gets exactly one `submitAnswer` call, but it happens at finalization rather than during the exam.
+This preserves the existing `attempts` table constraint — each answered question gets exactly one final answer write, but it happens at exam submission rather than during the question loop.
 
 #### Per-question time accumulation
 
@@ -180,7 +191,7 @@ This handles revisits naturally: visit Q1 for 30s → jump to Q3 → come back t
 
 - **No per-question locking during the exam.** Answers are freely changeable.
 - **Exam-level locking on `Submit exam`.** All answers become permanent. Feedback is revealed.
-- This matches every major exam platform: USMLE, NBME, LSAT, Moodle, Pearson VUE.
+- This matches the intended paper-exam mental model and common digital-assessment behavior.
 
 ### Current state vs proposed
 
@@ -194,6 +205,7 @@ The current implementation differs significantly. BS-055 documents the full gap:
 | Auto-advance | After submit (non-last Q) | Removed |
 | Next pre-submit | Visible but silently discards selection (AF-5) | Visible and saves draft on click |
 | Button positions | Shift between states | Fixed slots |
+| `questionStates` meaning | `latest*` fields represent recorded answer state only | `latest*` stays finalized-only; explicit `draft*` fields track mutable exam state |
 | Time tracking | Single-shot on submit | Cumulative across visits |
 | Finalization | Per-question | Batch on Submit exam |
 
