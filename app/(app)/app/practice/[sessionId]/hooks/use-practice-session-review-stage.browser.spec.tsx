@@ -4,6 +4,7 @@ import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {
   EndPracticeSessionOutput,
   GetPracticeSessionReviewOutput,
+  GetPracticeSessionSummaryOutput,
 } from '@/src/adapters/controllers/practice-controller';
 import { ok } from '@/tests/test-helpers/ok';
 import {
@@ -18,7 +19,9 @@ const getPracticeSessionReviewMock =
     (input: unknown) => Promise<ActionResult<GetPracticeSessionReviewOutput>>
   >();
 const getPracticeSessionSummaryMock =
-  vi.fn<(input: unknown) => Promise<ActionResult<EndPracticeSessionOutput>>>();
+  vi.fn<
+    (input: unknown) => Promise<ActionResult<GetPracticeSessionSummaryOutput>>
+  >();
 
 function createInput(sessionMode: 'tutor' | 'exam') {
   return {
