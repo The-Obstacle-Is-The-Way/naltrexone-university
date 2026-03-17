@@ -238,7 +238,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
                             ? 'All included by default'
                             : `${selectedCount} selected`}
                         </span>
-                        <ChevronDown className="h-4 w-4 text-foreground/60 transition-transform group-open:rotate-180" />
+                        <ChevronDown className="size-4 text-foreground/60 transition-transform group-open:rotate-180" />
                       </span>
                     </summary>
                     <div className="px-4 pb-3">

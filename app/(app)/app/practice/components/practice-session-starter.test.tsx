@@ -550,6 +550,7 @@ describe('PracticeSessionStarter', () => {
       false,
     );
     expect(summaryChevron).toBeTruthy();
+    expect(summaryChevronTokens.has('size-4')).toBe(true);
     expect(summaryChevronTokens.has('group-open:rotate-180')).toBe(true);
     expect(substanceFooterText).toBeDefined();
     expect(expandedContentWrapperTokens.has('px-4')).toBe(true);
