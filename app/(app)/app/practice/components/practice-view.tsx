@@ -342,16 +342,18 @@ export function PracticeView(props: PracticeViewProps) {
             </Button>
           )}
 
-          <Button
-            type="button"
-            variant="outline"
-            className="rounded-full"
-            aria-pressed={props.isBookmarked}
-            disabled={props.bookmarkStatus === 'loading' || props.isPending}
-            onClick={props.onToggleBookmark}
-          >
-            {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
-          </Button>
+          {!isExamMode ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              aria-pressed={props.isBookmarked}
+              disabled={props.bookmarkStatus === 'loading' || props.isPending}
+              onClick={props.onToggleBookmark}
+            >
+              {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
+            </Button>
+          ) : null}
 
           {isExamMode && props.onToggleMarkForReview ? (
             <Button

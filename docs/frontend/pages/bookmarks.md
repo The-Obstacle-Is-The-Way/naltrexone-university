@@ -162,6 +162,8 @@ CREATE INDEX bookmarks_question_id_idx ON bookmarks (questionId);
 
 ### Direct bookmark and bookmark-backed filter suites
 
+For mixed-purpose files, the count below reflects the bookmark-focused cases rather than the file's entire test count.
+
 | File | Type | Tests | Coverage |
 |------|------|-------|----------|
 | `src/domain/value-objects/question-progress-status.test.ts` | Unit | 3 | Includes `'bookmarked'` as a valid status |
@@ -171,14 +173,17 @@ CREATE INDEX bookmarks_question_id_idx ON bookmarks (questionId);
 | `src/adapters/controllers/bookmark-controller.test.ts` | Unit | 13 | Validation/auth/entitlement/rate-limit/idempotency/use-case delegation |
 | `src/application/test-helpers/fakes/fake-bookmark-repository.test.ts` | Unit | 8 | Fake repo behavior and idempotency |
 | `tests/integration/bookmark-repository.integration.test.ts` | Integration | 1 | Real Postgres add/remove/idempotency cycle |
-| `app/(app)/app/bookmarks/page.test.tsx` | Unit | 26 | Bookmarks page rendering, remove action redirects, query-param error handling |
+| `app/(app)/app/bookmarks/page.test.tsx` | Unit | 24 | Bookmarks page rendering, remove action redirects, query-param error handling |
 | `app/(app)/app/bookmarks/bookmarks-toast.browser.spec.tsx` | Browser | 2 | Toast rendering from URL state |
 | `app/(app)/app/bookmarks/bookmark-row-shell.browser.spec.tsx` | Browser | 2 | Delegated row navigation and interactive-child guard |
 | `app/(app)/app/practice/hooks/bookmark-message-timeout.test.ts` | Unit | 3 | Bookmark message auto-clear timing helper |
 | `app/(app)/app/practice/hooks/use-practice-question-bookmarks.test.tsx` | Unit | 1 | Initial hook contract |
 | `app/(app)/app/practice/hooks/use-quick-practice-status-counts.test.ts` | Unit | 4 | Includes the bookmark-backed quick-practice count path |
+| `app/(app)/app/shared/bookmark-toggle.test.ts` | Unit | 1 | Shared toggle helper persists the generated idempotency key before the request |
+| `app/(app)/app/questions/[slug]/question-page-client.test.tsx` | Unit | 4 | Review-page bookmark action-bar presence, hydration gating, and saving-state disablement |
+| `app/(app)/app/questions/[slug]/use-question-page-controller.browser.spec.tsx` | Browser | 4 | Review-page bookmark hydration, loaded state, toggle behavior, and in-flight saving state |
 
-**Direct bookmark coverage total: 77 tests across 13 files.**
+**Direct bookmark coverage total: 84 tests across 16 files.**
 
 ### Additional downstream consumer coverage
 
@@ -188,13 +193,10 @@ Bookmark assertions also appear in broader consumer suites, including:
 - `app/(app)/app/practice/[sessionId]/page.test.tsx`
 - `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.browser.spec.tsx`
 - `app/(app)/app/practice/quick/quick-practice-client.test.tsx` and `.browser.spec.tsx`
-- `app/(app)/app/questions/[slug]/question-page-client.test.tsx` (origin/back-link behavior for bookmark review)
 - `tests/e2e/bookmarks.spec.ts`
 - `tests/e2e/cross-page-navigation.spec.ts`
 - `tests/e2e/core-app-pages.spec.ts`
 - `tests/e2e/review-mode-audit.spec.ts`
-
-There is **no bookmark-specific review-page interaction test yet**, which matches the current product state: the review page has no bookmark control to exercise.
 
 ### Explicit coverage gap inside the bookmark-backed filter path
 
@@ -240,7 +242,8 @@ The quick-practice `"bookmarked"` status is implemented end-to-end, but two lowe
 - `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts` — Composes session question flow + bookmark state
 - `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` — Wires bookmark props to PracticeView
 - `app/(app)/app/practice/components/practice-view.tsx` — Renders bookmark button (lines 345-354)
-- `app/(app)/app/practice/practice-page-logic.ts` — Shared bookmark toggle helper + 10s timeout wrapper
+- `app/(app)/app/shared/bookmark-toggle.ts` — Shared bookmark toggle helper + 10s timeout wrapper
+- `app/(app)/app/practice/practice-page-logic.ts` — Re-exports the shared toggle helper for practice consumers
 - `app/(app)/app/practice/practice-page-bookmarks.ts` — Shared bookmark load effect + retry scheduling
 - `app/(app)/app/practice/hooks/use-practice-question-bookmarks.ts` — State management hook
 - `app/(app)/app/practice/hooks/bookmark-message-timeout.ts` — Auto-clear helper for bookmark message state
@@ -257,33 +260,66 @@ The quick-practice `"bookmarked"` status is implemented end-to-end, but two lowe
 - `PracticeView` forwards bookmark messages to `NotificationProvider`; provider toasts default to **2500ms**
 - Successful toggle messages are `"Question bookmarked."` and `"Bookmark removed."`; failures use `"Failed to save bookmark. Please try again."`
 
-**Button rendering (practice-view.tsx lines 345-354):**
+**Button rendering (practice-view.tsx bookmark branch):**
 ```tsx
-<Button
-  type="button"
-  variant="outline"
-  className="rounded-full"
-  aria-pressed={props.isBookmarked}
-  disabled={props.bookmarkStatus === 'loading' || props.isPending}
-  onClick={props.onToggleBookmark}
->
-  {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
-</Button>
+{!isExamMode ? (
+  <Button
+    type="button"
+    variant="outline"
+    className="rounded-full"
+    aria-pressed={props.isBookmarked}
+    disabled={props.bookmarkStatus === 'loading' || props.isPending}
+    onClick={props.onToggleBookmark}
+  >
+    {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
+  </Button>
+) : null}
 ```
 
 **Error handling:** If bookmark load fails, an `ErrorCard` renders above the question (practice-view.tsx lines 217-232) with a retry button.
 
 **Navigator detail:** The session question navigator (`exam-review-view.tsx` `QuestionNavigator`) does **not** receive bookmark state and therefore shows no bookmark badge/dot. Its only auxiliary indicator is the small dot for `markedForReview`.
 
-**Key detail:** The bookmark button is **always rendered** regardless of session mode (tutor or exam). This is the source of the BS-053 collision — in exam mode, it sits next to "Mark for review."
+**Key detail:** The bookmark button is rendered only when `!isExamMode`. Tutor-mode sessions keep bookmark in the action bar; exam-mode sessions now omit it entirely and show only the exam-scoped "Mark for review" control. Because there is no additional feedback-visible gate, tutor mode and quick practice currently show bookmark before submission as well; DEBT-318 tracks narrowing that timing to the post-feedback state.
 
-### 6c. Quick Practice — `/app/practice/quick`
+### 6c. Question Review Page (`/app/questions/[slug]?mode=review`)
+
+**Files:**
+- `app/(app)/app/questions/[slug]/question-page-client.tsx` — Renders the bookmark button in the review-mode action bar
+- `app/(app)/app/questions/[slug]/use-question-page-controller.ts` — Loads bookmark state for the current review question and exposes toggle actions
+- `app/(app)/app/shared/bookmark-toggle.ts` — Shared toggle helper reused by practice and review surfaces
+
+**How it works:**
+- In review mode, `useQuestionPageController` looks up the current question's bookmark membership by calling `getBookmarks({})` and filtering the returned rows for the active `questionId`
+- The controller exposes `bookmarkStatus`, `isBookmarkHydrated`, `isBookmarked`, and `onToggleBookmark`
+- `bookmarkStatus` distinguishes `loading`, `saving`, `idle`, and `error`, so the view does not collapse "unknown" and "in-flight save" into the same boolean
+- `QuestionView` renders the bookmark button only when the page is in review mode, a question is loaded, and bookmark state for that question has hydrated
+- While a toggle is in flight, the review-page button is disabled
+- Toggle execution uses the same shared `toggleBookmarkForQuestion()` helper as practice mode, including the 10-second timeout and persisted idempotency-key retry behavior
+
+**Button rendering (`question-page-client.tsx` action bar):**
+```tsx
+<Button
+  type="button"
+  variant="outline"
+  className="rounded-full"
+  aria-pressed={isBookmarked}
+  disabled={bookmarkStatus === 'saving' || props.isPending}
+  onClick={onToggleBookmark}
+>
+  {isBookmarked ? 'Remove bookmark' : 'Bookmark'}
+</Button>
+```
+
+**Navigator detail:** The review navigator (`review-question-navigator.tsx`) still carries no bookmark badge or bookmark-specific state. Bookmark is available in the detail action bar, not represented in the navigator chrome.
+
+### 6d. Quick Practice — `/app/practice/quick`
 
 **File:** `app/(app)/app/practice/quick/quick-practice-client.tsx`
 
 Identical bookmark wiring to practice sessions. Uses the same `usePracticeQuestionBookmarks` hook via the shared `usePracticeQuestionFlow`. Passes all bookmark props to `PracticeView`.
 
-### 6d. Quick Practice Bookmark-Backed Status Filter
+### 6e. Quick Practice Bookmark-Backed Status Filter
 
 Bookmarking also appears in Quick Practice as a **question-progress filter**, not just an action-bar toggle:
 
@@ -295,7 +331,7 @@ Bookmarking also appears in Quick Practice as a **question-progress filter**, no
 
 This is **not** a bookmark toggle surface, but it is a real bookmark consumer and part of the vertical slice.
 
-### 6e. Navigation
+### 6f. Navigation
 
 **File:** `components/app-nav-items.ts`
 
@@ -309,51 +345,19 @@ Bookmarks is a top-level nav item, visible in both desktop and mobile navigation
 
 ## 7. Frontend — Where Bookmark is NOT Wired
 
-### 7a. Question Review Page (`/app/questions/[slug]?mode=review`) — THE GAP
-
-**Files:**
-- `app/(app)/app/questions/[slug]/page.tsx` — Server component
-- `app/(app)/app/questions/[slug]/question-page-client.tsx` — Client component with `QuestionView`
-- `app/(app)/app/questions/[slug]/use-question-page-controller.ts` — Controller hook
-
-**Current bottom action bar (question-page-client.tsx lines 343-429):**
-
-- Renders only `Previous`, `Submit`, `Practice Again` / `Try Again`, `Next`, and origin-aware back actions
-- The exact combination varies by origin and session navigation state
-- It never renders a bookmark button
-- The review navigator (`review-question-navigator.tsx`) also carries no bookmark state or bookmark badge
-
-**No bookmark button. No bookmark state. No bookmark hook.**
-
-The `useQuestionPageController` hook manages: question loading, answer submission, session review navigation, reattempt flow. It does not import, reference, or expose any bookmark state.
-
-**This is the primary gap.** The question review page is the destination when users click:
-- "Review" from History Questions tab → `?from=history&mode=review&historyHref=...`
-- A bookmark row from the Bookmarks page → `?from=bookmarks&mode=review`
-- "Review your answers" from Session Summary → `?from=history&mode=review&sessionId=...`
-- A session row or session-breakdown question from History Sessions → `?from=history&mode=review&sessionId=...`
-- A question from Dashboard Recent Activity → `?from=dashboard&mode=review&attemptId=...`
-- A session row from Dashboard Recent Sessions → `?from=dashboard&mode=review&sessionId=...`
-
-`QuestionOrigin` still supports `from=practice` in `lib/routes.ts`, and `QuestionView` still has a `Back to Session` / `Back to Practice` branch for it, but current production callers do **not** emit that origin.
-
-Users arrive here on a long-form question detail surface. When a prior attempt exists, they also see feedback content (explanation, reference, and any clinical-pearl callouts embedded in the markdown). Even when no prior attempt exists, this is still the strongest "save this for later study" surface in the app. But the action isn't available.
-
-**Irony:** When you click a bookmark on the Bookmarks page, you land on this review page with "Back to Bookmarks" in the action bar — acknowledging you came from bookmarks — but you can't toggle the bookmark from here.
-
-### 7b. Exam Review Stage (pre-submit)
+### 7a. Exam Review Stage (pre-submit)
 
 **File:** `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx`
 
 Shows question navigator grid + stats (answered, unanswered, marked). No bookmark UI. This is appropriate — user is in assessment mode, deciding whether to revisit questions before submitting.
 
-### 7c. Session Summary (post-submit)
+### 7b. Session Summary (post-submit)
 
 **File:** `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx`
 
-Shows stats cards + question breakdown + CTAs ("Review your answers", "Back to Dashboard"). No bookmark UI. Acceptable — the summary is a waypoint, not a reflection surface. "Review your answers" links to the question review page (which should have bookmarks).
+Shows stats cards + question breakdown + CTAs ("Review your answers", "Back to Dashboard"). No bookmark UI. Acceptable — the summary is a waypoint, not a reflection surface. "Review your answers" links to the question review page, which now carries the bookmark action.
 
-### 7d. History Questions Tab
+### 7c. History Questions Tab
 
 **Files:**
 - `app/(app)/app/history/components/history-questions-tab.tsx`
@@ -365,21 +369,21 @@ List view of attempted questions with filters. Each row links to question review
 
 There is **no bookmark-status filter** and **no bookmark indicator** in the row metadata. This differs from Quick Practice, which exposes bookmark-backed status filtering via the segmented control.
 
-Acceptable as a list surface — bookmark is one click away via the review page (once that gap is filled) — but it is a real discoverability gap compared with Quick Practice.
+Acceptable as a list surface — bookmark is one click away via the review page — but it is a real discoverability gap compared with Quick Practice.
 
-### 7e. History Sessions Tab
+### 7d. History Sessions Tab
 
 **File:** `app/(app)/app/history/components/history-sessions-tab.tsx`
 
 List of past sessions with expandable breakdowns. No bookmark UI. Acceptable — the session rows and breakdown rows are navigational containers that click through to question review.
 
-### 7f. Dashboard — Recent Sessions
+### 7e. Dashboard — Recent Sessions
 
 **File:** `app/(app)/app/dashboard/page.tsx`
 
 Recent session rows link into question review with `from=dashboard&mode=review&sessionId=...`. No bookmark UI on the dashboard row itself, and the dashboard does not fetch or render bookmark counts or bookmark-specific CTA modules. Acceptable — it is a summary/launchpad surface.
 
-### 7g. Dashboard — Recent Activity
+### 7f. Dashboard — Recent Activity
 
 **File:** `app/(app)/app/dashboard/page.tsx`
 
@@ -391,11 +395,11 @@ Recent activity rows link into question review with `from=dashboard&mode=review&
 
 | Surface | Route | Bookmark Today | Appropriate? | Notes |
 |---------|-------|---------------|-------------|-------|
-| Practice (Tutor) | `/app/practice/[sessionId]` | YES (toggle) | **YES** | No collision. User sees explanations inline — natural reflect-and-bookmark moment. |
-| Practice (Exam) | `/app/practice/[sessionId]` | YES (toggle) | **NO** | Collides with "Mark for review." Assessment mindset — bookmark doesn't belong here. |
-| Quick Practice | `/app/practice/quick` | YES (toggle) | **YES** | Same as tutor mode — no collision, explanations shown inline. |
+| Practice (Tutor) | `/app/practice/[sessionId]` | YES (toggle) | **YES** | No collision. User sees explanations inline — natural reflect-and-bookmark moment. Current implementation still exposes bookmark before submit; DEBT-318 tracks narrowing that timing to post-feedback only. |
+| Practice (Exam) | `/app/practice/[sessionId]` | NO | **YES** | BS-053 removed bookmark from the exam action bar; exam mode now keeps only mark-for-review. |
+| Quick Practice | `/app/practice/quick` | YES (toggle) | **YES** | Same as tutor mode — no collision, explanations shown inline. Current implementation still exposes bookmark before submit; DEBT-318 tracks narrowing that timing to post-feedback only. |
 | Bookmarks Page | `/app/bookmarks` | YES (remove only) | **YES** | Remove-only is correct — questions are already bookmarked. |
-| **Question Review** | **`/app/questions/[slug]?mode=review`** | **NO** | **SHOULD BE YES** | The ideal bookmarking surface. Current production callers come from History, Bookmarks, and Dashboard. |
+| **Question Review** | **`/app/questions/[slug]?mode=review`** | **YES (toggle)** | **YES** | Primary reflection surface. Button renders after bookmark hydration and disables while saving. |
 | Exam Review (pre-submit) | `/app/practice/[sessionId]` | NO | YES (correct) | Assessment mode. Mark-for-review only. |
 | Session Summary | `/app/practice/[sessionId]` | NO | YES (correct) | Waypoint — CTA leads to review page via `from=history&sessionId=...`. |
 | History Questions | `/app/history?tab=questions` | NO | YES (correct) | List view — click-through to review. |
@@ -403,33 +407,39 @@ Recent activity rows link into question review with `from=dashboard&mode=review&
 | Dashboard Recent Sessions | `/app/dashboard` | NO | YES (correct) | Summary/launchpad row linking to review. |
 | Dashboard Recent Activity | `/app/dashboard` | NO | YES (correct) | Summary/launchpad row linking to review. |
 
-**Two changes needed:**
-1. **Remove** bookmark from exam mode practice view (fix collision)
-2. **Add** bookmark toggle to question review page (fill the gap)
+**BS-053 implemented two structural changes:**
+1. **Removed** bookmark from exam-mode practice view (fixed the collision with mark-for-review)
+2. **Added** bookmark toggle to the question review page (filled the primary reflection-surface gap)
 
 ---
 
-## 9. Shared Infrastructure for Adding Bookmark to Question Review Page
+## 9. Shared Infrastructure Used by Practice + Question Review
 
-Adding bookmark to the question review page requires:
+BS-053 landed with the lightest clean-architecture-friendly version of the options above: **extract the shared toggle logic downward, keep page-specific state in the page controllers.**
 
-### What already exists and can be reused
-- `toggleBookmark` controller action — no changes needed
-- `getBookmarks` controller action — no changes needed
-- `ToggleBookmarkUseCase` and `GetBookmarksUseCase` — no changes needed
-- `BookmarkRepository` port + Drizzle implementation — no changes needed
-- Notification system (`useNotification()`) — already available in the component tree
-- `toggleBookmarkForQuestion()` in `practice-page-logic.ts` — reusable toggle + timeout + idempotency-key rotation logic
-- `scheduleBookmarkMessageAutoClear()` in `bookmark-message-timeout.ts` — reusable 2-second message-clear helper
+### What is shared
+- `toggleBookmark` controller action — reused unchanged by practice and question review
+- `getBookmarks` controller action — reused unchanged by practice and question review
+- `ToggleBookmarkUseCase`, `GetBookmarksUseCase`, repository port, and Drizzle implementation — unchanged
+- `app/(app)/app/shared/bookmark-toggle.ts` — route-agnostic `toggleBookmarkForQuestion()` helper with:
+  - 10-second timeout wrapper
+  - shared error handling
+  - persisted idempotency key before the request
+  - post-success key rotation
 
-### What needs to be built
-- **Bookmark state in `useQuestionPageController`** (or a new companion hook): The question review page needs to know if the current question is bookmarked and expose a toggle function. Two approaches:
-  - **Option 1:** Import `usePracticeQuestionBookmarks` and wire it into `QuestionView`. This hook already handles load, toggle, retry, error, and toast handoff — but it loads the user's **entire** bookmark set on mount. For the review page, we only need to check one question at a time.
-  - **Option 2:** Create a lighter-weight hook (e.g., `useQuestionBookmark`) that checks/toggles a single question's bookmark state. Simpler, but duplicates some logic from `usePracticeQuestionBookmarks`.
-  - **Option 3:** Extract shared bookmark toggle logic into a lower-level utility, consumed by both the practice hook and the review page hook.
+### What remains surface-specific
+- `usePracticeQuestionBookmarks` still owns the practice/quick-practice bookmark set, retry scheduling, message state, and bookmark-to-toast handoff
+- `useQuestionPageController` owns the review-page bookmark membership for the current question and exposes:
+  - `bookmarkStatus`
+  - `isBookmarkHydrated`
+  - `isBookmarked`
+  - `onToggleBookmark`
 
-### What needs to change to remove bookmark from exam mode
-- `practice-view.tsx` lines 345-354: Wrap the bookmark button in a condition that hides it when `isExamMode` is true. Do **not** key off `onToggleMarkForReview`; that prop is still passed from the session page view outside exam mode, and the mark-for-review hook itself guards on session mode.
+### Why this shape
+- It removes the question review page's dependency on the practice route module
+- It avoids a god-hook that tries to own both practice-set state and review-page state
+- It fixes the idempotency retry hole in one place shared by both consumers
+- It keeps the current tradeoff explicit: review-page hydration still calls `getBookmarks({})` and filters client-side because there is no dedicated single-question bookmark lookup controller today
 
 ---
 
@@ -458,34 +468,30 @@ Adding bookmark to the question review page requires:
    │                  BookmarkController                            │
    │  toggleBookmark() — auth + rate limit + idempotency           │
    │  getBookmarks()   — auth + entitlement                        │
-   └──────────┬──────────────────────────────────────┬────────────┘
-              │                                      │
-   ┌──────────┴──────────┐            ┌──────────────┴────────────┐
-   │ usePracticeQuestion  │            │  Bookmarks Page (server)   │
-   │ Bookmarks (hook)     │            │  calls getBookmarks()      │
-   │ - loads all on mount │            │  renders list + remove     │
-   │ - toggles single     │            │  BookmarksToast handles    │
-   └──────────┬──────────┘            │  ?toast=bookmark_removed    │
-              │                       └──────────────┬────────────┘
-    ┌─────────┴─────────┐                           │
-    │ consumed by:       │              ┌───────────┴────────────────────────┐
-    │ - usePracticeQuestionFlow         │  BookmarkRowShell                    │
-    │ - usePracticeSessionPageController│  → /app/questions/[slug]             │
-    └─────────┬─────────┘               │    ?from=bookmarks&mode=review      │
-              │                         └───────────┬─────────────┘
-   ┌──────────┴──────────┐                          │
-   │ PracticeView         │                          │
-   │ + QuickPracticeClient│                          │
-   │ + PracticeSessionView│                          │
-   └─────────────────────┘                          │
-                                                    │
-                         ┌──────────────────────────┴──────────────────────────┐
-                         │                 Question Review Page                 │
-                         │ /app/questions/[slug]?mode=review                   │
-                         │ entry points today: History, Bookmarks, Dashboard   │
-                         │ route contract also supports `from=practice`        │
-                         │ ❌ NO BOOKMARK WIRING                               │
-                         └─────────────────────────────────────────────────────┘
+   └──────────┬───────────────────────┬──────────────────┬─────────┘
+              │                       │                  │
+   ┌──────────┴──────────┐   ┌────────┴────────┐  ┌──────┴────────────┐
+   │ usePracticeQuestion  │   │ shared bookmark │  │ Bookmarks Page     │
+   │ Bookmarks (hook)     │   │ toggle helper   │  │ (server)           │
+   │ - loads all on mount │   │ - timeout       │  │ - getBookmarks()   │
+   │ - toggles single     │   │ - persisted idem│  │ - list + remove    │
+   └──────────┬──────────┘   └────────┬────────┘  └──────┬────────────┘
+              │                       │                  │
+    ┌─────────┴─────────┐   ┌─────────┴─────────┐        │
+    │ consumed by:       │   │ consumed by:      │        │
+    │ - usePracticeQuestionFlow │ - practice hook│        │
+    │ - usePracticeSessionPageController│ - question review│
+    └─────────┬─────────┘   └─────────┬─────────┘        │
+              │                       │                  │
+   ┌──────────┴──────────┐   ┌────────┴──────────────────────────────┐
+   │ PracticeView         │   │ Question Review Page                  │
+   │ + QuickPracticeClient│   │ /app/questions/[slug]?mode=review    │
+   │ + PracticeSessionView│   │ - controller loads current bookmark   │
+   └─────────────────────┘   │ - action bar toggles bookmark         │
+                              │ - entry points: History/Bookmarks/    │
+                              │   Dashboard (+ route contract still    │
+                              │   supports `from=practice`)            │
+                              └────────────────────────────────────────┘
 ```
 
 ---
@@ -532,24 +538,25 @@ Direct implementation/support files with bookmark-specific behavior:
 ### Frontend — Practice (bookmark consumer)
 | File | Purpose |
 |------|---------|
-| `app/(app)/app/practice/practice-page-logic.ts` | Shared `toggleBookmarkForQuestion()` helper |
+| `app/(app)/app/shared/bookmark-toggle.ts` | Route-agnostic `toggleBookmarkForQuestion()` helper shared by practice and question review |
+| `app/(app)/app/practice/practice-page-logic.ts` | Re-exports the shared toggle helper for practice consumers |
 | `app/(app)/app/practice/hooks/use-practice-question-bookmarks.ts` | Bookmark state hook (load, toggle, retry) |
 | `app/(app)/app/practice/practice-page-bookmarks.ts` | Effect factory for initial bookmark load |
 | `app/(app)/app/practice/hooks/bookmark-message-timeout.ts` | Shared bookmark message auto-clear helper |
 | `app/(app)/app/practice/hooks/use-practice-question-flow.ts` | Quick-practice composition point for bookmark state |
-| `app/(app)/app/practice/components/practice-view.tsx` | Renders bookmark button (lines 345-354) |
+| `app/(app)/app/practice/components/practice-view.tsx` | Renders bookmark button outside exam mode |
 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts` | Session composition point for bookmark state |
 | `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` | Wires bookmark props to PracticeView |
 | `app/(app)/app/practice/quick/quick-practice-client.tsx` | Wires bookmark props to PracticeView |
 | `app/(app)/app/practice/hooks/use-quick-practice-status-counts.ts` | Loads bookmark-backed quick-practice segmented counts |
 | `app/(app)/app/practice/practice-page-types.ts` | Displays `"Bookmarked"` status label |
 
-### Frontend — Question Review Page (NO bookmark wiring)
+### Frontend — Question Review Page
 | File | Purpose |
 |------|---------|
 | `app/(app)/app/questions/[slug]/page.tsx` | Page component (server) |
-| `app/(app)/app/questions/[slug]/question-page-client.tsx` | QuestionView — **no bookmark button** |
-| `app/(app)/app/questions/[slug]/use-question-page-controller.ts` | Controller hook — **no bookmark state** |
+| `app/(app)/app/questions/[slug]/question-page-client.tsx` | QuestionView — review action bar bookmark button + hydration/saving gating |
+| `app/(app)/app/questions/[slug]/use-question-page-controller.ts` | Controller hook — question bookmark hydration, status, and toggle wiring |
 | `app/(app)/app/shared/components/session-breakdown-list.tsx` | Shared breakdown list that links History/Summary rows into question review |
 | `app/(app)/app/history/components/history-questions-tab.tsx` | Links attempted questions into question review |
 | `app/(app)/app/history/components/history-sessions-tab.tsx` | Links session rows into question review; renders breakdown links |
@@ -579,3 +586,6 @@ Direct implementation/support files with bookmark-specific behavior:
 | `app/(app)/app/practice/hooks/bookmark-message-timeout.test.ts` | Unit |
 | `app/(app)/app/practice/hooks/use-practice-question-bookmarks.test.tsx` | Unit |
 | `app/(app)/app/practice/hooks/use-quick-practice-status-counts.test.ts` | Unit |
+| `app/(app)/app/shared/bookmark-toggle.test.ts` | Unit |
+| `app/(app)/app/questions/[slug]/question-page-client.test.tsx` | Unit |
+| `app/(app)/app/questions/[slug]/use-question-page-controller.browser.spec.tsx` | Browser |

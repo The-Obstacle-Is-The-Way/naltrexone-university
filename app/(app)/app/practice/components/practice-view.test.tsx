@@ -233,6 +233,93 @@ describe('PracticeView', () => {
     expect(bookmarkButton?.getAttribute('aria-pressed')).toBe('true');
   });
 
+  it('does not render the bookmark button in exam mode', () => {
+    const html = renderToStaticMarkup(
+      <PracticeView
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 0,
+          total: 10,
+          isMarkedForReview: false,
+        }}
+        loadState={{ status: 'ready' }}
+        question={createQuestionProps()}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onToggleMarkForReview={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    expect(html).not.toContain('>Bookmark<');
+    expect(html).toContain('>Mark for review<');
+  });
+
+  it('renders the bookmark button in tutor mode', () => {
+    const html = renderToStaticMarkup(
+      <PracticeView
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'tutor',
+          index: 0,
+          total: 10,
+          isMarkedForReview: false,
+        }}
+        loadState={{ status: 'ready' }}
+        question={createQuestionProps()}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onToggleMarkForReview={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('>Bookmark<');
+    expect(html).not.toContain('>Mark for review<');
+  });
+
+  it('renders the bookmark button in quick practice', () => {
+    const html = renderToStaticMarkup(
+      <PracticeView
+        loadState={{ status: 'ready' }}
+        question={createQuestionProps()}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('>Bookmark<');
+  });
+
   it('renders an explicit session action when no more questions remain', () => {
     const html = renderToStaticMarkup(
       <PracticeView
@@ -546,12 +633,7 @@ describe('PracticeView', () => {
       (button) => (button.textContent ?? '').trim(),
     );
 
-    expect(labels).toEqual([
-      'Previous',
-      'Review answers',
-      'Bookmark',
-      'Mark for review',
-    ]);
+    expect(labels).toEqual(['Previous', 'Review answers', 'Mark for review']);
   });
 
   it('does not render Review answers for tutor mode after submit', () => {
