@@ -143,6 +143,7 @@ export function useQuestionPageController(
   const bookmarkStateVersionRef = useRef(0);
   const bookmarkIdempotencyKeysRef = useRef<Map<string, string>>(new Map());
   const pendingRetryProvenanceRef = useRef<RetryProvenance | null>(null);
+  const previousModeRef = useRef(input.mode);
   const sessionQuestionsBySessionIdRef = useRef<
     Map<string, SessionNavigation['questions']>
   >(new Map());
@@ -157,6 +158,8 @@ export function useQuestionPageController(
   );
   const normalizedSessionId = normalizedReviewIds.sessionId;
   const normalizedAttemptId = normalizedReviewIds.attemptId;
+  const didModeChange = previousModeRef.current !== input.mode;
+  previousModeRef.current = input.mode;
 
   const loadQuestion = useMemo(
     () => () => {
@@ -340,17 +343,6 @@ export function useQuestionPageController(
   ]);
 
   useEffect(() => {
-    if (input.mode === 'review') {
-      setIsLoadingPreviousAttempt(true);
-      setReviewHydrationState('no_prior_attempt');
-      return;
-    }
-
-    setIsLoadingPreviousAttempt(false);
-    setReviewHydrationState(null);
-  }, [input.mode]);
-
-  useEffect(() => {
     latestPreviousAttemptRequestId.current += 1;
     const requestId = latestPreviousAttemptRequestId.current;
     const requestSlug = latestSlugRef.current;
@@ -510,6 +502,18 @@ export function useQuestionPageController(
   const isBookmarked = question
     ? bookmarkedQuestionIds.has(question.questionId)
     : false;
+  const effectiveIsLoadingPreviousAttempt = didModeChange
+    ? input.mode === 'review'
+    : input.mode === 'review'
+      ? isLoadingPreviousAttempt
+      : false;
+  const effectiveReviewHydrationState = didModeChange
+    ? input.mode === 'review'
+      ? 'no_prior_attempt'
+      : null
+    : input.mode === 'review'
+      ? reviewHydrationState
+      : null;
   const bookmarkStatus =
     input.mode === 'review' && question
       ? bookmarkUiState.questionId === question.questionId
@@ -709,8 +713,8 @@ export function useQuestionPageController(
     question,
     selectedChoiceId,
     submitResult,
-    isLoadingPreviousAttempt,
-    reviewHydrationState,
+    isLoadingPreviousAttempt: effectiveIsLoadingPreviousAttempt,
+    reviewHydrationState: effectiveReviewHydrationState,
     sessionUnansweredReveal,
     canSubmit,
     isPending,
