@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Full end-to-end trace from authored MDX files through seeding, database, shuffling, and UI rendering
-> **Last Verified:** 2026-03-14
+> **Last Verified:** 2026-03-17
 
 This document serves two purposes:
 1. **Architectural trace** — understanding where data flows and where bugs happen (e.g., BS-011 choice label desync)
@@ -17,7 +17,7 @@ This document serves two purposes:
 │ 1. AUTHORING                                                          │
 │    content/drafts/questions/**/*.md (draft format, optional)          │
 │         ↓ pnpm content:import:drafts                                  │
-│    content/questions/**/*.mdx (canonical format, 958 files)           │
+│    content/questions/**/*.mdx (canonical format, 958 files verified)  │
 ├───────────────────────────────────────────────────────────────────────┤
 │ 2. SEEDING                                                            │
 │    pnpm db:seed                                                       │
@@ -290,9 +290,9 @@ This excludes `content/questions/placeholder/**/*.mdx` from the seed input and a
 
 **Repository:** `src/adapters/repositories/drizzle-question-repository.ts`
 
-The `toDomain()` method (line 242) converts DB rows to domain entities:
+The `toDomain()` method converts DB rows to domain entities:
 - Validates each choice label with `isValidChoiceLabel()`
-- **Sorts choices by `sortOrder` ascending** (line 274): `mappedChoices.sort((a, b) => a.sortOrder - b.sortOrder)`
+- **Sorts choices by `sortOrder` ascending** before returning them to the domain layer
 - Returns choices in canonical/authored order: A(1), B(2), C(3), D(4), E(5) (when present)
 
 The domain `Question` entity has `choices: Choice[]` always in this canonical order.
@@ -320,10 +320,10 @@ The domain `Question` entity has `choices: Choice[]` always in this canonical or
 
 | Caller | File | Returns shuffled labels? |
 |--------|------|------------------------|
-| `getQuestionBySlug` controller | `question-view-controller.ts:77` | **Yes** — returns `choice.displayLabel` as `label` (added by SPEC-025) |
-| `GetNextQuestionUseCase.mapChoicesForOutput()` | `get-next-question.ts:87-97` | **Yes** — returns `choice.displayLabel` as `label` |
-| `SubmitAnswerUseCase.mapChoiceExplanations()` | `submit-answer.ts:49-60` | **Yes** — returns `choice.displayLabel` |
-| `GetPreviousAttemptUseCase.execute()` | `get-previous-attempt.ts:79-88` | **Yes** — returns `choice.displayLabel` |
+| `getQuestionBySlug` controller | `src/adapters/controllers/question-view-controller.ts` | **Yes** — returns `choice.displayLabel` as `label` (added by SPEC-025) |
+| `GetNextQuestionUseCase.mapChoicesForOutput()` | `src/application/use-cases/get-next-question.ts` | **Yes** — returns `choice.displayLabel` as `label` |
+| `SubmitAnswerUseCase.mapChoiceExplanations()` | `src/application/use-cases/submit-answer.ts` | **Yes** — returns `choice.displayLabel` |
+| `GetPreviousAttemptUseCase.execute()` | `src/application/use-cases/get-previous-attempt.ts` | **Yes** — returns `choice.displayLabel` |
 
 All four callers produce **shuffled** labels for their outputs. This was unified by SPEC-025 (previously, `getQuestionBySlug` returned canonical labels).
 
@@ -361,7 +361,7 @@ Previously, `getQuestionBySlug` returned choices with canonical DB labels (A–E
 `getQuestionBySlug` now calls `buildShuffledChoiceViews(question, userId)` just like the use cases:
 
 ```typescript
-// question-view-controller.ts:77-81
+// src/adapters/controllers/question-view-controller.ts
 choices: buildShuffledChoiceViews(question, userId).map((choice) => ({
   id: choice.choiceId,
   label: choice.displayLabel,  // ← NOW SHUFFLED (was canonical)
@@ -410,7 +410,7 @@ Both bugs identified during the BS-011 audit have been fixed:
 | **Bug B: Choice label desync** | `getQuestionBySlug` now calls `buildShuffledChoiceViews()` — all paths produce consistent shuffled labels | SPEC-025 |
 | **Bug A: Result-dependent `mode=review` wiring** | History Questions tab now routes all rows through `mode=review` consistently, regardless of result | SPEC-026 |
 
-No known content-pipeline bugs remain as of 2026-02-16.
+No known content-pipeline bugs remain as of 2026-03-17.
 
 ---
 

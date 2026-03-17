@@ -1,6 +1,6 @@
 # Stabilization Checklist
 
-**Date:** 2026-03-03 (last reviewed 2026-03-16)
+**Date:** 2026-03-03 (last reviewed 2026-03-17)
 **Purpose:** Verify core behavior and documentation accuracy before new feature work.
 
 > Principle: fix correctness risks first, then expand scope.
@@ -35,7 +35,10 @@
 - [ ] `pnpm typecheck`
 - [ ] `pnpm lint`
 - [ ] `pnpm test --run`
+- [ ] `pnpm test:browser`
+- [ ] `pnpm test:integration`
 - [ ] `pnpm build`
+- [ ] `pnpm test:e2e` when local auth/billing env is available
 
 ---
 

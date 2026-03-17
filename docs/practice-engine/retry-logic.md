@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Current retry/reattempt behavior, provenance rules, and cross-mode consistency
-> **Last Verified:** 2026-03-03
+> **Last Verified:** 2026-03-17
 
 ---
 
@@ -194,9 +194,9 @@ Core retry lineage behavior remains implemented across DEBT-265, DEBT-266, and D
 - Observability events are emitted for retry submissions, review hydration outcomes, and mixed-id normalization.
 - `GetPreviousAttempt` mixed-id contract is hardened (deterministic rejection at controller + use case).
 - Session-review retry marker persistence policy is explicitly accepted as visit-scoped (Option A).
-- Exam-answer secrecy: initial drift family (BUG-180/181/185) is archived as fixed. Active drift remains — see [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md) for current status.
+- Exam-answer secrecy gates are enforced across `GetPreviousAttempt`, `GetPracticeSessionReview`, `GetNextQuestion`, `SubmitAnswer`, and repository-backed status projections. The archived BUG-180/181/185 and BUG-186/187/191/192/193/195 family remains the regression lineage.
 
-Retry lineage is structurally in place; secrecy enforcement is still partially applied and must remain an active regression target.
+Retry lineage is structurally in place and the secrecy contract is now enforced, but the archived bug family must remain an explicit regression target.
 
 ---
 
@@ -214,7 +214,7 @@ Retry lineage is structurally in place; secrecy enforcement is still partially a
 - [x] Server telemetry for mixed-id normalization + hydration outcomes is in place.
 - [x] Session-review retry marker persistence policy is explicitly defined (visit-scoped).
 - [x] `GetPreviousAttempt` mixed-id contract is hardened beyond boundary normalization.
-- [ ] Active-exam secrecy gates are fully enforced across all surfaces (see [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md)).
+- [x] Active-exam secrecy gates are fully enforced across all verified surfaces (see [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md)).
 
 ---
 

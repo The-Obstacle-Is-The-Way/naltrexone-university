@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Authentication, authorization, rate limiting, idempotency, data isolation
-> **Last Verified:** 2026-03-03
+> **Last Verified:** 2026-03-17
 
 ---
 
@@ -14,5 +14,6 @@
 | **Input validation** | All controller inputs validated with strict Zod schemas (UUIDs, bounded pagination, mode enums) |
 | **Rate limiting** | Mutation-heavy actions: `startPracticeSession`, `submitAnswer`, `toggleBookmark` |
 | **Idempotency** | Mutations accept optional idempotency keys; when provided, controllers wrap execution with `withIdempotency` to prevent duplicate operations |
-| **Exam answer secrecy** | Canonical policy: [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md). Active drift exists — see policy doc for current status. |
+| **Exam answer secrecy** | Canonical policy: [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md). Enforced in `GetNextQuestion`, `SubmitAnswer`, `GetPracticeSessionReview`, `GetPreviousAttempt`, and repository-backed status/history projections. |
+| **Review identifier hardening** | Question review normalizes mixed `attemptId + sessionId` inputs to the session path at the route boundary, and server-side contracts reject bypassed mixed-id requests. |
 | **Error sanitization** | `handleError()` maps all unknown errors to `'Internal error'` — no stack traces leak |

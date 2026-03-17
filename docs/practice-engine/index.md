@@ -1,7 +1,7 @@
 # Practice Engine
 
 > **Type:** Canonical Reference Document (Living)
-> **Last Verified:** 2026-03-17 (interaction-contract sync)
+> **Last Verified:** 2026-03-17 (interaction-contract sync + doc accuracy refresh)
 > **Scope:** Everything related to practicing questions — the core product feature
 
 ---
@@ -34,9 +34,9 @@ The Practice Engine is the core feature of Naltrexone University. It's the syste
 │                      Controllers (adapters/)                        │
 │  question-controller    — getNextQuestion, submitAnswer             │
 │  question-view-controller — getQuestionBySlug, getPreviousAttempt    │
-│  practice-controller    — start/end session, review, history, mark  │
+│  practice-controller    — start/count/end, review, history, mark    │
 │  bookmark-controller    — toggle, list                              │
-│  tag-controller         — listAll                                   │
+│  tag-controller         — getTags                                   │
 │  review-controller      — getAttemptedQuestions                     │
 │  stats-controller       — getUserStats                              │
 └──────────────────────────────┬──────────────────────────────────────┘
@@ -145,10 +145,10 @@ These documents define cross-layer invariants or accepted target contracts. If o
 | Date | Change |
 |------|--------|
 | 2026-03-17 | Added Interaction Contracts document as the canonical target-state UI contract for tutor, exam, and quick practice. Synced `practice-modes.md` and policy-registry wording so current implementation vs accepted target state is explicit. |
-| 2026-03-03 | Fixed BUG-186, BUG-187, and BUG-188 on branch `bug-fix-186-187-188` (pending archive). Remaining open exam-secrecy drift: BUG-191, BUG-192, BUG-193. |
-| 2026-03-03 | Synced exam-secrecy documentation to current code reality: initial BUG-180/181/185 family remains archived as fixed, but active drift is open in BUG-186, BUG-187, BUG-191, BUG-192, and BUG-193. Aligned `exam-answer-secrecy-policy.md`, `security-model.md`, `practice-modes.md`, `retry-logic.md`, `current-state.md`, `spec-coverage-map.md`, and `frontend-layer.md`. |
+| 2026-03-17 | Accuracy refresh after code-truth audit: removed stale “active exam-secrecy drift” language, aligned current-state and coverage docs with the archived BUG-186 through BUG-198 family, corrected question-page/action-bar behavior, updated hook/file inventories, and synced Session Summary review routes to current `from=history` behavior. |
+| 2026-03-03 | Archived BUG-186 through BUG-198 in bug tracking after PRs #164 through #167. The exam-secrecy policy and dependent docs now treat that family as enforced behavior plus regression lineage. |
 | 2026-03-02 | Resolved DEBT-268: daily-seeded shuffle implemented in `executeForFilters`, ordering-policy.md updated from target to implemented state, satellite docs aligned. |
-| 2026-03-02 | Added Exam Answer Secrecy Policy as canonical registry for correctness/explanation exposure timing across use cases, repositories, controllers, and frontend. Added Canonical Policy Registry section in this index and synced security/retry/current-state/spec-coverage docs to active BUG-180/181/185 status. |
+| 2026-03-02 | Added Exam Answer Secrecy Policy as canonical registry for correctness/explanation exposure timing across use cases, repositories, controllers, and frontend. Added Canonical Policy Registry section in this index and seeded the dependent-doc sync that now tracks the archived BUG-180/181/185 family as regression lineage. |
 | 2026-03-02 | Added Ordering Policy document — canonical question/choice ordering rules across all paths. BS-038 audit promoted to DEBT-268 for Quick Practice ordering fix. |
 | 2026-03-01 | Closed DEBT-266 and DEBT-267 after implementation: added retry/hydration/normalization telemetry, accepted visit-scoped retry-marker policy, and hardened mixed `attemptId + sessionId` previous-attempt contract. |
 | 2026-03-01 | Closed DEBT-265 core scope in debt tracking, moved observability/retry-marker persistence slices into DEBT-266, and added DEBT-267 for downstream mixed-identifier contract hardening. |

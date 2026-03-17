@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Clean Architecture layers — Domain, Application, Adapters
-> **Last Verified:** 2026-03-02
+> **Last Verified:** 2026-03-17
 
 ---
 
@@ -76,7 +76,7 @@ All use cases follow the pattern: constructor injection of port interfaces, sing
 | Use Case | Input | Output | Error Codes |
 |----------|-------|--------|-------------|
 | `GetNextQuestion` | `{ userId, sessionId, questionId?, fromIndex? }` or `{ userId, filters }` | `NextQuestion` (stem, choices without `isCorrect`, session info) or `null` | `NOT_FOUND`, `VALIDATION_ERROR` |
-| `SubmitAnswer` | `{ userId, questionId, choiceId, sessionId?, timeSpentSeconds?, retryOfAttemptId?, retryOrigin?, retrySessionId? }` | `{ attemptId, isCorrect, correctChoiceId, explanationMd?, referenceMd?, choiceExplanations[] }` | `NOT_FOUND`, `CONFLICT`, `INTERNAL_ERROR`, `VALIDATION_ERROR` |
+| `SubmitAnswer` | `{ userId, questionId, choiceId, sessionId?, timeSpentSeconds?, retryOfAttemptId?, retryOrigin?, retrySessionId? }` | `{ attemptId, isCorrect: boolean \| null, correctChoiceId: string \| null, explanationMd: string \| null, referenceMd: string \| null, choiceExplanations[] }` | `NOT_FOUND`, `CONFLICT`, `INTERNAL_ERROR`, `VALIDATION_ERROR` |
 
 Answer-key exposure in active exam contexts is governed by the [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md).
 
@@ -85,6 +85,7 @@ Answer-key exposure in active exam contexts is governed by the [Exam Answer Secr
 | Use Case | Input | Output | Error Codes |
 |----------|-------|--------|-------------|
 | `StartPracticeSession` | `{ userId, mode, count, tagSlugs, difficulties, statuses? }` | `{ sessionId, requestedCount, actualCount }` | `NOT_FOUND` (no matching questions), `CONFLICT` (incomplete session exists) |
+| `CountAvailableQuestions` | `{ userId, tagSlugs, difficulties, statuses }` | `{ count }` | (propagates) |
 | `EndPracticeSession` | `{ userId, sessionId }` | `{ sessionId, endedAt, totals }` | `INTERNAL_ERROR` |
 | `GetIncompletePracticeSession` | `{ userId }` | Session summary or `null` | (propagates) |
 | `GetPracticeSessionReview` | `{ userId, sessionId }` | Per-question breakdown with states | `NOT_FOUND` |
@@ -122,7 +123,7 @@ Other ports: `QuestionRepository` (5 methods), `PracticeSessionRepository` (7 me
 
 ### 2.3 Test Coverage
 
-**100% — every use case has a colocated test file.** All tests use fakes from `src/application/test-helpers/fakes/`. Zero `vi.mock()` on application code.
+Every practice-engine use case has a colocated test file. All tests use fakes from `src/application/test-helpers/fakes/`. Zero `vi.mock()` on application code.
 
 ---
 
@@ -150,7 +151,7 @@ Every practice-related server action:
 |-----------|---------|-------------|-----------|
 | `question-controller` | `getNextQuestion`, `submitAnswer` | submitAnswer: yes | submitAnswer: yes |
 | `question-view-controller` | `getQuestionBySlug`, `getPreviousAttempt` | no | no |
-| `practice-controller` | `startPracticeSession`, `getIncompletePracticeSession`, `endPracticeSession`, `getPracticeSessionReview`, `getSessionHistory`, `setPracticeSessionQuestionMark` | startPracticeSession: yes | start/end/mark: yes |
+| `practice-controller` | `startPracticeSession`, `countAvailableQuestions`, `getIncompletePracticeSession`, `endPracticeSession`, `getPracticeSessionReview`, `getSessionHistory`, `setPracticeSessionQuestionMark` | startPracticeSession: yes | start/end/mark: yes |
 | `bookmark-controller` | `toggleBookmark`, `getBookmarks` | toggleBookmark: yes | toggleBookmark: yes |
 | `tag-controller` | `getTags` | no | no |
 | `review-controller` | `getAttemptedQuestions` | no | no |
@@ -172,4 +173,4 @@ Practice-related tables in `db/schema.ts`:
 
 ### 3.4 Test Coverage
 
-All 5 practice-engine repositories have colocated unit tests (62 `it()` cases total) plus domain-scoped integration tests in `tests/integration/` (e.g., `question-repository.integration.test.ts`, `session-attempt-repository.integration.test.ts`).
+All five core practice-engine repositories have colocated unit tests plus domain-scoped integration tests in `tests/integration/` (for example `question-repository.integration.test.ts` and `session-attempt-repository.integration.test.ts`).

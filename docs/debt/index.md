@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-16
+**Last Updated:** 2026-03-17
 
 ---
 
@@ -19,7 +19,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
 | [DEBT-318](./debt-318-tutor-bookmark-before-answer.md) | Bookmark visible before feedback in tutor mode and quick practice — keep the surface, but delay the action until inline feedback/explanation is visible | P3 | — |
-**Next Debt ID:** DEBT-319
+| [DEBT-319](./debt-319-icon-size-shorthand-drift.md) | Lucide icon size shorthand drift in disclosure chevrons — two production chevrons still use `h-4 w-4` instead of the canonical `size-4` shorthand | P3 | — |
+**Next Debt ID:** DEBT-320
 
 ---
 

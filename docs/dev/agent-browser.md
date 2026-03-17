@@ -4,6 +4,7 @@
 **Repo:** https://github.com/vercel-labs/agent-browser
 **Full command reference:** `../../.agents/skills/agent-browser/SKILL.md`
 **Project integration:** `./testing-infrastructure.md` §Agent-Browser
+**CLI verified locally:** `agent-browser 0.20.13`
 
 ---
 
@@ -35,13 +36,13 @@ Re-snapshot after navigation or significant DOM changes — refs are invalidated
 
 ### Note: `agent-browser` Does Not Load `.env.local`
 
-If you need values from `.env.local` (e.g., `E2E_CLERK_USER_USERNAME`), you must load them yourself. This repo keeps `.env.local` **shell-compatible** (values quoted), so you can safely export them in your current shell session:
+If you need values from `.env.local` (e.g., `E2E_CLERK_USER_USERNAME`), you must load them yourself. If your `.env.local` is shell-compatible, you can export it in your current shell session:
 
 ```bash
 set -a && source .env.local && set +a
 ```
 
-If you ever add values that break shell parsing, prefer Node-based extraction (matches how Playwright/Next parse dotenv files).
+If your `.env.local` contains values that are not shell-safe, prefer Node-based extraction instead. That matches how Playwright and Next load dotenv files.
 
 To extract env vars for CLI use:
 
@@ -58,6 +59,8 @@ If the browser is already signed in (e.g., from a previous session or manual log
 agent-browser state save /tmp/auth-state.json    # Save after login
 agent-browser --state /tmp/auth-state.json open http://localhost:3000/app/dashboard
 ```
+
+For automatic save/restore across restarts, current versions also support `agent-browser --session-name <name> ...`.
 
 ### Option B: Persistent Profile (Manual Login Once)
 

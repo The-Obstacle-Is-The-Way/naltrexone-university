@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Maps each part of the Practice Engine to the spec that defines it
-> **Last Verified:** 2026-03-03
+> **Last Verified:** 2026-03-17
 
 ---
 
@@ -35,12 +35,12 @@
 | Status Filter Segmented Control + Review Navigator | SPEC-028 | Implemented | Segmented control for status/difficulty filters; color-coded question navigator grid in review mode |
 | Dev Environment Resilience | SPEC-029 | Implemented | Client-side timeouts, observable failure states, `ErrorCard` recovery actions |
 | Question View UX Unification | SPEC-030 | Implemented | Tutor state persistence fix, Previous button in practice, review nav relocation to bottom bar |
-| Retry Lineage + Session Review Inline Retry | [Retry Logic SSOT](./retry-logic.md) + DEBT-265 | Implemented (with active secrecy drift) | Provenance + validation + inline retry + observability + mixed-id hardening complete. Active secrecy drift exists — see [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md). |
+| Retry Lineage + Session Review Inline Retry | [Retry Logic SSOT](./retry-logic.md) + DEBT-265 | Implemented | Provenance + validation + inline retry + observability + mixed-id hardening are complete. Active-exam secrecy gates are enforced; keep the archived bug family in the regression set. |
 
 ---
 
 ## 2. Spec/Doc Drift Summary
 
-As of **2026-03-03**, SPEC-021 through SPEC-030 implementation coverage remains strong. Active drift tracked in [Bug Reports](../bugs/index.md) and [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md).
+As of **2026-03-17**, SPEC-021 through SPEC-030 implementation coverage remains strong. The open bug register currently has no active bugs; remaining practice-area follow-ups are UX/debt items such as [BS-014](../brainstorming/bs-014-practice-starter-question-count-ux.md) and [DEBT-318](../debt/debt-318-tutor-bookmark-before-answer.md), not uncovered spec drift.
 
 When behavior changes introduce new public contracts (ports/use case IO/controller outputs), update the corresponding spec and add a changelog entry.

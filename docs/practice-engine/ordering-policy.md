@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Canonical ordering rules for question selection and choice display across all practice paths
-> **Last Verified:** 2026-03-02
+> **Last Verified:** 2026-03-17
 
 ---
 

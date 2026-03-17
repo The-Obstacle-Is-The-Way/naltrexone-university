@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Routes, hooks, data flow, shared UI components, error handling
-> **Last Verified:** 2026-03-03
+> **Last Verified:** 2026-03-17
 
 ---
 
@@ -26,15 +26,16 @@ Route-level correctness/explanation exposure rules are centralized in the [Exam 
 
 ```text
 PracticePageClient (/app/practice)
-└── usePracticeSessionControls (63 lines, composite)
-    ├── usePracticeSessionStart (140 lines)
-    ├── usePracticeSessionTags (34 lines)
+└── usePracticeSessionControls (69 lines, composite)
+    ├── usePracticeSessionStart (168 lines) ← over 150-line guideline
+    ├── usePracticeAvailableQuestionsCount (53 lines)
+    ├── usePracticeSessionTags (38 lines)
     └── usePracticeIncompleteSession (66 lines)
 
 QuickPracticeClient (/app/practice/quick)
 └── usePracticeQuestionFlow (63 lines, composite)
-    ├── usePracticeQuestionAnswerFlow (180 lines) ← over 150-line guideline
-    └── usePracticeQuestionBookmarks (116 lines)
+    ├── usePracticeQuestionAnswerFlow (191 lines) ← over 150-line guideline
+    └── usePracticeQuestionBookmarks (131 lines)
 ```
 
 Note: Session history was moved to the dedicated `/app/history` route (SPEC-021) and is no longer embedded in the practice landing page.
@@ -46,13 +47,13 @@ Note: Session history was moved to the dedicated `/app/history` route (SPEC-021)
 ```text
 PracticeSessionPageClient
 └── usePracticeSessionPageController (121 lines, composite)
-    ├── usePracticeSessionQuestionFlow (238 lines) ← over 150-line guideline
-    ├── usePracticeQuestionBookmarks (116 lines, reused)
+    ├── usePracticeSessionQuestionFlow (249 lines) ← over 150-line guideline
+    ├── usePracticeQuestionBookmarks (131 lines, reused)
     ├── usePracticeSessionReviewStage (133 lines)
-    │   ├── usePracticeSessionReviewStageState (state machine for review stage)
-    │   ├── usePracticeSessionNavigator (70 lines)
-    │   └── usePracticeSessionSummaryReview (52 lines)
-    └── usePracticeSessionMarkForReview (155 lines)
+      │   ├── usePracticeSessionReviewStageState (state machine for review stage)
+      │   ├── usePracticeSessionNavigator (70 lines)
+      │   └── usePracticeSessionSummaryReview (52 lines)
+    └── usePracticeSessionMarkForReview (169 lines) ← over 150-line guideline
 ```
 
 ---
@@ -73,7 +74,7 @@ Page Components (thin orchestrators)
 View Components (presentational, receive props, never call server actions)
 ```
 
-Client components import only **types** from controllers. Server actions are invoked either (a) directly in server components/pages, or (b) from client hooks for interactive flows. This is architecturally correct.
+View components import only **types** from controllers. Interactive client hooks import the server actions they need (`getNextQuestion`, `submitAnswer`, `startPracticeSession`, etc.), while keeping server-action calls out of presentational components. This matches the current Clean Architecture boundary in the app layer.
 
 ---
 
@@ -98,10 +99,11 @@ Interactive hooks typically wrap async calls in try/catch and check `ActionResul
 | Question load failure | `ErrorCard` + "Try again" + "Return to dashboard" | Retry or navigate |
 | Answer submit failure | Same `ErrorCard` | Same |
 | Session start failure | `role="alert"` inline error | Retry |
-| Bookmark toggle failure | Toast notification | Auto-clears |
+| Bookmark toggle failure | Notification message | Auto-clears |
+| Bookmark bootstrap failure | `ErrorCard` ("Bookmarks unavailable.") + retry action | Retry bookmarks |
 | Tag load failure | "Tags unavailable." static text | No action needed |
 | Session end failure | `ErrorCard` + idempotency key rotation | Retry |
 | Navigator load failure | `ErrorCard` + "Retry navigator" | Retry |
 | Uncaught error | Next.js error boundary (`error.tsx`) | "Try again" / "Back to Dashboard" / "Report issue" |
 
-Most failures surface via `ErrorCard`, inline error text, or toasts; a small number of fire-and-forget UI actions log errors to the console as a safety net (`fireAndForget`).
+Most failures surface via `ErrorCard`, inline error text, or notifications. Fire-and-forget UI actions report through `reportClientError()` via `fireAndForget`; they do not rely on raw `console` logging anymore.

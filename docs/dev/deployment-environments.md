@@ -1,326 +1,153 @@
 # Deployment Environments: Source of Truth
 
-**Last Verified:** 2026-03-04 (migration 0014 smoke test passed end-to-end on Preview/Dev; write paths confirmed healthy)
-**Last Reviewed (docs/code):** 2026-03-04 (env + migration incident docs reconciled with post-fix smoke evidence)
+**Last Reviewed (code/docs):** 2026-03-17
 
-This document is the single source of truth for how Clerk, Stripe, Neon, and Vercel are configured across all environments.
+This document is the repo-backed source of truth for environment scoping and the operator checklist around Clerk, Stripe, Postgres/Neon, and Vercel.
 
----
-
-## Current State Audit (2026-02-06)
-
-### What's Working
-
-- [x] **Production** (`addictionboards.com`) — sign-up, sign-in, dashboard all working
-- [x] **Database isolation** — Neon `main` (Production) and `dev` (Preview/Local) branches created
-- [x] **Env var scoping** — DATABASE_URL, Stripe keys, Clerk keys all scoped per environment
-- [x] **Stripe Live Mode** — Production uses `sk_live_*` / `pk_live_*` keys (account review in progress)
-- [x] **Stripe Production Webhook** — `addictionboards.com/api/stripe/webhook` configured with 5 events
-- [x] **Stripe Live Price IDs** — Monthly ($29) and Annual ($199) products created in live mode
-- [x] **Stripe Single Account** — Test and live modes on same Stripe account (`51SvkizKItmaHAwgU`), fixed in [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md)
-- [x] **Stripe Test Webhook** — Test endpoint configured for Preview deployment with 5 events
-- [x] **Stripe Test Price IDs** — Monthly ($29) and Annual ($199) test products created
-- [x] **Preview** (`*.vercel.app`, non-main branches) — E2E verified 2026-02-06: sign-in → paywall → Stripe test checkout → subscription active → full app access. See [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md) for issues resolved during verification.
-- [ ] **Local Development** (`localhost:3000`) — not yet E2E verified (run `pnpm test:e2e` locally with a valid `.env.local`)
+It intentionally avoids hard-coding private dashboard values that the repo cannot self-verify, such as exact account IDs, branch hostnames, webhook secrets, or live price IDs. Those belong in the providers themselves. This document records the contract the codebase expects.
 
 ---
 
-## Architecture: Three Environments, Three Isolation Boundaries
+## Environment Model
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         PRODUCTION                                       │
-│  URL:      addictionboards.com                                          │
-│  Branch:   main                                                          │
-│  Clerk:    Production instance (pk_live_*, sk_live_*)                   │
-│  Stripe:   Live mode (sk_live_*, pk_live_*)                  [WORKING] │
-│  Database: Neon main branch (ep-withered-cell-ah14ik13)                 │
-│  Webhook:  addictionboards.com/api/webhooks/clerk            [WORKING] │
-│  Webhook:  addictionboards.com/api/stripe/webhook            [WORKING] │
-│                                                                          │
-│  Users: Real paying customers only                                       │
-└─────────────────────────────────────────────────────────────────────────┘
+| Environment | URL shape | Branch / deploy source | Auth + billing mode | Database target | Notes |
+|-------------|-----------|------------------------|---------------------|-----------------|-------|
+| Production | `https://addictionboards.com` | `main` | Clerk live + Stripe live | Isolated production database | Vercel Production deployment |
+| Preview | `https://*.vercel.app` on non-`main` branches | Any non-`main` branch | Clerk test/dev + Stripe test | Isolated non-production database | Public URL required for webhook testing |
+| Local app runtime | `http://localhost:3000` or `http://127.0.0.1:3000` | Local checkout | Clerk test/dev + Stripe test | Whatever `DATABASE_URL` in `.env.local` points to | Should mirror Preview semantics, not Production |
+| Local integration tests | n/a | Local checkout | Clerk skipped (`NEXT_PUBLIC_SKIP_CLERK=true`) | Docker Postgres on `localhost:5434` via `.env.test` | Uses `pnpm db:test:*` scripts |
 
-┌─────────────────────────────────────────────────────────────────────────┐
-│                     PREVIEW / DEVELOPMENT                                │
-│  URL:      *.vercel.app (Preview) / localhost:3000 (Local)              │
-│  Branch:   Any non-main branch / local                                   │
-│  Clerk:    Development instance (pk_test_*, sk_test_*)                  │
-│  Stripe:   Test mode (sk_test_*, pk_test_*)              [CONFIGURED] │
-│  Database: Neon dev branch (ep-still-frog-ahx7bp6y)                     │
-│  Webhook:  Dev Clerk webhook (if configured)                             │
-│  Webhook:  Test Stripe webhook (Preview URL)             [CONFIGURED] │
-│                                                                          │
-│  Users: Test accounts, E2E test user, your personal dev account         │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+### Core isolation rule
+
+Production, Preview, and local development must never share the same live database or live billing/auth keys.
 
 ---
 
-## Current Vercel Environment Variables (Verified 2026-02-22)
+## Code-Enforced Contract
 
-### Properly Scoped (each environment has its own value)
+These rules are enforced by the repo today:
 
-| Variable | Production | Preview | Development | Status |
-|----------|-----------|---------|-------------|--------|
-| `DATABASE_URL` | Neon `main` branch | Neon `dev` branch | Neon `dev` branch | Correct |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | `pk_live_*` | `pk_test_*` | `pk_test_*` | Correct |
-| `CLERK_SECRET_KEY` | `sk_live_*` | `sk_test_*` | `sk_test_*` | Correct |
-| `CLERK_WEBHOOK_SIGNING_SECRET` | Production webhook | Preview webhook | Dev webhook | Correct |
-| `NEXT_PUBLIC_APP_URL` | `https://addictionboards.com` | Preview URL | Dev URL | Correct |
-| `STRIPE_SECRET_KEY` | `sk_live_51SvkizK...` | `sk_test_51SvkizK...` | `sk_test_51SvkizK...` | Correct (same account) |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_live_51SvkizK...` | `pk_test_51SvkizK...` | `pk_test_51SvkizK...` | Correct (same account) |
-| `STRIPE_WEBHOOK_SECRET` | Live webhook secret | Test webhook secret | Test webhook secret | Correct |
-| `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` | Live price ID ($29/mo) | Test price ID ($29/mo) | Test price ID ($29/mo) | Correct |
-| `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL` | Live price ID ($199/yr) | Test price ID ($199/yr) | Test price ID ($199/yr) | Correct |
-| `NEXT_PUBLIC_SENTRY_DSN` | Same DSN (all envs) | Same DSN (all envs) | Same DSN (all envs) | Correct (added 2026-02-22) |
-| `SENTRY_DSN` | Same DSN (all envs) | Same DSN (all envs) | Same DSN (all envs) | Correct (added 2026-02-22) |
-| `CRON_SECRET` | Shared secret | Shared secret | Shared secret | Correct (Dev added 2026-02-22) |
-
-### Auto-Generated Neon Vars — REMOVED (2026-02-06)
-
-15 auto-generated vars from the Vercel-Neon integration (`POSTGRES_URL`, `PGHOST`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `POSTGRES_HOST`, `POSTGRES_DATABASE`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_URL_NON_POOLING`, `POSTGRES_URL_NO_SSL`, `POSTGRES_PRISMA_URL`, `DATABASE_URL_UNPOOLED`, `PGHOST_UNPOOLED`, `NEON_PROJECT_ID`) were removed via `vercel env rm`. They all pointed to the `main` (Production) branch across all environments — a latent risk if any dependency ever read `POSTGRES_URL` instead of `DATABASE_URL`. Our app only reads `DATABASE_URL`, which is properly scoped per environment.
+- `lib/env.ts` requires `DATABASE_URL`, Stripe keys, Stripe price IDs, and `NEXT_PUBLIC_APP_URL` in every runtime.
+- `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` and `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL` must start with `price_`.
+- Clerk keys are required unless `NEXT_PUBLIC_SKIP_CLERK=true`.
+- `NEXT_PUBLIC_SKIP_CLERK=true` is allowed for local/CI non-production flows, but it is rejected when `VERCEL_ENV=production`.
+- `CLERK_WEBHOOK_SIGNING_SECRET` is required at Vercel production runtime when Clerk is enabled.
+- `CRON_SECRET` is intentionally not startup-validated. The cron route validates it at request time and returns `401` when it is missing or invalid.
+- Sentry DSNs are optional. `instrumentation.ts` logs `[SENTRY_DISABLED] ...` on Vercel production when server telemetry is unset.
+- `playwright.config.ts` loads `.env.local` first, then `.env`, and uses `NEXT_PUBLIC_APP_URL` for `baseURL`.
+- `NEXT_PUBLIC_*` values are build-time values. Changing them requires a fresh build.
 
 ---
 
-## Stripe Configuration (Single Account — Configured 2026-02-06)
+## Intended Operator Scoping
 
-**IMPORTANT:** Test mode and live mode MUST use the same Stripe account. Account ID: `51SvkizKItmaHAwgU`. See [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md) for what happens when they don't match.
+| Variable family | Production | Preview | Development / local |
+|-----------------|------------|---------|----------------------|
+| `DATABASE_URL` | Production database only | Isolated non-production database | Non-production database only |
+| Clerk keys | Live production Clerk instance | Test/development Clerk instance | Test/development Clerk instance |
+| Clerk webhook secret | Production Clerk webhook | Preview/dev Clerk webhook if used | Local/dev webhook secret if used |
+| Stripe secret + publishable keys | Live mode | Test mode | Test mode |
+| Stripe price IDs | Live price IDs | Test price IDs | Test price IDs |
+| `NEXT_PUBLIC_APP_URL` | Canonical production domain | Actual preview deployment URL | Local origin you are serving (`127.0.0.1` or `localhost`) |
+| `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` | Optional, set intentionally | Optional | Optional |
+| `CRON_SECRET` | Required anywhere cron route is exercised | Required if you hit cron route | Required if you hit cron route |
 
-### Live Mode (Production)
+### Stripe account rule
 
-- [x] Stripe account activated (business verification in progress — 2-3 business days)
-- [x] Live API keys (`sk_live_*`, `pk_live_*`) set in Vercel Production
-- [x] Live webhook endpoint: `https://addictionboards.com/api/stripe/webhook`
-  - Events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_succeeded`, `invoice.payment_failed`
-- [x] Live webhook signing secret set in Vercel Production
-- [x] Live Price IDs created and set in Vercel Production:
-  - Monthly: `price_1SxttBKItmaHAwgUOYmmLy8o` ($29/mo)
-  - Annual: `price_1SxtuSKItmaHAwgUYUAl4Kxd` ($199/yr)
-- [ ] Verify a real checkout flow on `addictionboards.com` (after Stripe review completes)
+Stripe live mode and test mode should remain on the same Stripe account. This avoids cross-account price/customer drift and matches the historical fix documented in [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md).
 
-### Test Mode (Preview / Development / Local)
+### Clerk key pairing rule
 
-- [x] Test API keys (`sk_test_51SvkizK...`, `pk_test_51SvkizK...`) set in Vercel Preview + Development + `.env.local`
-- [x] Test webhook endpoint: Preview deployment URL + `/api/stripe/webhook`
-  - Same 5 events as live
-- [x] Test webhook signing secret set in Vercel Preview + Development + `.env.local`
-- [x] Test Price IDs created and set everywhere:
-  - Monthly: `price_1SxuYAKItmaHAwgUWaePv0AC` ($29/mo)
-  - Annual: `price_1SxuYXKItmaHAwgUjobv4lxY` ($199/yr)
-- [x] Test checkout flow on Preview deployment — Verified 2026-02-06 (after [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md) fixes)
+`CLERK_SECRET_KEY` and `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` must come from the same Clerk instance and the same environment type (`test` vs `live`). `lib/env.ts` validates both conditions.
 
 ---
 
-## Neon Database
-
-| Property | Value |
-|----------|-------|
-| Project ID | `summer-math-94727887` |
-| Database | `neondb` |
-| PostgreSQL | 17.7 |
-| Questions | 958 (on both branches) |
-
-### Branches
-
-| Branch | Endpoint | Purpose | Created |
-|--------|----------|---------|---------|
-| `main` (default) | `ep-withered-cell-ah14ik13-pooler` | Production | 2026-01-31 |
-| `dev` | `ep-still-frog-ahx7bp6y-pooler` | Preview + Local Dev | 2026-02-06 |
-
-### Managing Branches via CLI
-
-```bash
-# List branches
-neonctl branches list --project-id summer-math-94727887
-
-# Create a new branch
-neonctl branches create --project-id summer-math-94727887 --name <name> --parent main
-
-# Get connection string (pooled)
-neonctl connection-string <branch-name> --project-id summer-math-94727887 --pooled
-
-# Run migrations against a specific branch
-DATABASE_URL="<branch-connection-string>" pnpm db:migrate
-```
-
----
-
-## Clerk Production Configuration (Verified 2026-02-06)
-
-All of these are confirmed working:
-
-| Setting | Location | Value | Status |
-|---------|----------|-------|--------|
-| Domain | Developers → Domains | `addictionboards.com` | Verified |
-| DNS (Frontend API) | Developers → Domains | `clerk.addictionboards.com` → `frontend-api.clerk.services` | Verified |
-| DNS (Account Portal) | Developers → Domains | `accounts.addictionboards.com` → `accounts.clerk.services` | Verified |
-| DNS (Email DKIM) | Developers → Domains | 3 CNAME records | Verified |
-| SSL | Developers → Domains | Issued for both Frontend API + Account Portal | Verified |
-| Google OAuth | SSO Connections → Google | Client ID + Secret configured | Verified |
-| Google OAuth App | Google Cloud Console | Published (not Testing) | Verified |
-| Component Paths (SignIn) | Developers → Paths | Application domain: `addictionboards.com/sign-in` | Verified |
-| Component Paths (SignUp) | Developers → Paths | Application domain: `addictionboards.com/sign-up` | Verified |
-| Component Paths (SignOut) | Developers → Paths | Application domain: `addictionboards.com/sign-in` | Verified |
-| Webhook | Developers → Webhooks | `https://addictionboards.com/api/webhooks/clerk` | Verified |
-| Webhook Events | Developers → Webhooks | `user.created`, `user.updated`, `user.deleted` | Verified |
-
----
-
-## Clerk Development Configuration
-
-| Setting | Status |
-|---------|--------|
-| Google OAuth | Configured (was working before BUG-066) |
-| Webhook | Needs verification — may need endpoint for Preview URLs |
-| Users | Your personal dev account exists here |
-
-**Note:** Clerk Development webhooks are tricky with Preview deployments because the URL changes with each deploy. Options:
-1. Use [Clerk's Svix CLI](https://docs.svix.com/receiving/using-app-portal/replay) for local testing
-2. Rely on `ClerkAuthGateway.getCurrentUser()` upsert (works without webhook)
-3. Set a stable Preview URL (Vercel allows custom aliases)
-
----
-
-## URL Reference
-
-| URL | Environment | Clerk Keys | Database | Auth Works? |
-|-----|-------------|-----------|----------|-------------|
-| `addictionboards.com` | Production | `pk_live_*` | Neon `main` | Yes |
-| `*.vercel.app` (main branch) | Production | `pk_live_*` | Neon `main` | No (domain-locked, expected) |
-| `*.vercel.app` (non-main branch) | Preview | `pk_test_*` | Neon `dev` | Verified (2026-02-06) |
-| `localhost:3000` | Development | `pk_test_*` | Neon `dev` | Needs verification |
-
----
-
-## Post-Migration Smoke Verification (2026-03-04)
-
-After the 0014 migration fix (`claimed_at` on `idempotency_keys`), a full 7-phase smoke run on Preview/Dev confirmed healthy behavior across core user flows.
-
-**Result:** PASS (no blocking issues)
-
-- Quick Practice submit path healthy (correct + incorrect flows, explanations, next question)
-- Tutor session lifecycle healthy (start → answer with feedback → end summary)
-- Exam session lifecycle healthy (start → answer without immediate feedback → review → end summary)
-- Bookmark add/remove healthy
-- Dashboard, History, Bookmarks, Billing loaded with correct data
-- No `Internal error` banners observed during writes
-- No console errors beyond expected Clerk dev-key warning
-
-**Write operation coverage (observed):**
-- Submit answer: 6 successful writes
-- Bookmark add/remove: 2 successful writes
-- Session start/end (Tutor + Exam): 4 successful writes
-
-This confirms that the migration issue documented below ("Missing Database Migration Causes Silent Write Failures") is resolved for the tested environment.
-
----
-
-## Known Gotchas (Learned the Hard Way)
+## Known Gotchas
 
 ### Vercel Deployment Protection Blocks Webhooks
 
-Vercel's **Standard Protection** (Project Settings → Deployment Protection → Vercel Authentication) intercepts ALL unauthenticated requests to Preview URLs with a 401 + SSO redirect. This blocks server-to-server webhooks from Clerk and Stripe, which use signature verification, not session cookies.
+If Vercel Standard Protection is enabled for Preview deployments, Clerk and Stripe webhooks will be intercepted by Vercel auth before they reach your route handlers.
 
-**Current state:** Disabled for this project. Preview deployments rely on Clerk/Stripe's own signature verification for webhook security.
+Preview webhook targets must therefore be publicly reachable without Vercel login gates, or webhook testing must use another public endpoint.
 
-See [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md) Issue 1.
+See [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md).
 
 ### Trailing `\n` in Vercel Dashboard Env Vars
 
-When pasting values into the Vercel dashboard, invisible trailing newline characters can be stored. This silently breaks HTTP headers (e.g., `Authorization: Bearer sk_test_...\n` → transport error).
+When pasting secrets into the Vercel dashboard, invisible trailing newline characters can be stored. This silently breaks authorization headers and signature checks.
 
-**Prevention:**
-- Use CLI to set secrets: `printf '%s' "value" | vercel env add NAME env --yes --force`
-- Never use `echo` (appends `\n`). Always use `printf '%s'`.
-- After pasting in dashboard, pull back and verify: `vercel env pull /tmp/check && cat -A /tmp/check | grep VAR_NAME`
+**Prevention**
 
-See [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md) Issue 2.
+- Use `printf '%s'` when piping values to `vercel env add`.
+- Do not use `echo`, which appends a newline.
+- After setting a secret, pull it back and inspect it if behavior looks suspicious.
 
 ### `NEXT_PUBLIC_*` Vars Require Fresh Builds
 
-`NEXT_PUBLIC_*` variables are inlined at build time by Next.js's webpack DefinePlugin. Changing the Vercel env var alone is **not sufficient** — a fresh build is required.
+`NEXT_PUBLIC_*` values are inlined at build time. Updating the environment variable alone is not enough.
 
-**Critical:** `vercel redeploy` reuses build cache and will serve stale `NEXT_PUBLIC_*` values. Push a commit (even `git commit --allow-empty`) to trigger a fresh GitHub-linked build.
-
-**`NEXT_PUBLIC_APP_URL` for Preview** must be set to the stable branch URL (e.g., `https://naltrexone-university-git-dev-john-h-jungs-projects.vercel.app`), not `localhost:3000`. This URL is used by the billing controller to construct Stripe `success_url` and `cancel_url`.
-
-See [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md) Issue 3.
+If you change `NEXT_PUBLIC_APP_URL`, Clerk publishable keys, Stripe publishable keys, or any other `NEXT_PUBLIC_*` value, trigger a fresh build rather than relying on a cached redeploy.
 
 ### Missing Database Migration Causes Silent Write Failures
 
-When a PR adds a new column to `db/schema.ts` and the migration (`pnpm db:migrate`) is not run against the target Neon branch, **all write operations touching that table silently fail**. The app appears fully functional — auth works, pages load, questions render, filter counts display — but every INSERT/UPDATE that includes the new column crashes with a Postgres `column "X" does not exist` error.
+When code references a newly added column but the target database has not had `pnpm db:migrate` run yet, reads can still work while writes fail with generic `Internal error` responses.
 
-**Symptoms:**
-- UI shows generic "Internal error" banner on submit/start actions
-- Reads work perfectly (SELECT queries don't reference the new column)
-- Auth works (Clerk session is fine)
-- The app looks completely normal until you try to write
+**Typical symptoms**
 
-**Diagnosis:**
-- Vercel Function Logs → filter for `level:50` (Pino ERROR) → expand the row
-- Error will show: `column "X" of relation "Y" does not exist`
-- Stack trace points to `handleError` → `Unhandled error in controller`
+- Pages load normally.
+- Auth works.
+- Server actions that write start failing.
+- Logs show Postgres errors such as `column "X" does not exist`.
 
-**Root cause:** Vercel deploys code only. Drizzle generates the INSERT with all schema columns, but the database hasn't been altered yet. Postgres rejects the query, `handleError()` catches the non-`ApplicationError` exception, logs the real error, and returns `err('INTERNAL_ERROR', 'Internal error')` to the client.
+**Diagnosis**
 
-**Fix:** Run the migration against the correct Neon branch:
+- Inspect Vercel function logs or local server logs.
+- Look for the real Postgres error behind the generic controller error handling.
+
+**Fix**
+
+Run migrations against the exact database backing the failing environment:
+
 ```bash
-# For dev/preview:
-pnpm db:migrate
-# For production (double-check the target!):
-DATABASE_URL="$(neonctl connection-string main --project-id summer-math-94727887 --pooled)" pnpm db:migrate
+# Preview / shared non-production DB
+DATABASE_URL="<preview-or-dev-connection-string>" pnpm db:migrate
+
+# Production DB
+DATABASE_URL="<production-connection-string>" pnpm db:migrate
 ```
 
-**Prevention:** After merging any PR that touches `db/schema.ts` or adds files to `db/migrations/`, immediately run `pnpm db:migrate` against the affected Neon branch. The pre-deployment checklist in [deployment-procedure.md](./deployment-procedure.md) covers this, but it's easy to forget because the deploy itself succeeds and the app loads normally.
+Historical example: PR #169 added `claimed_at` to `idempotency_keys`; the code deployed before the non-production database was migrated, which broke write paths until `pnpm db:migrate` was run.
 
-**Incident:** 2026-03-03 — PR #169 added `claimed_at` column to `idempotency_keys`. Migration 0014 was generated but never applied to the `dev` Neon branch. All server actions using idempotency (submit answer, start session) returned "Internal error" on both dev preview and main preview deployments. Fixed by running `pnpm db:migrate`.
+### Clerk Development Mode Can Re-Authenticate After Stripe Checkout
 
-### Intermittent `_rsc` Prefetch 503s on Vercel Preview (Usually Non-Blocking)
+In Clerk development mode, non-production sessions may rely on development-mode transport that behaves differently from production cookies. A redirect back from Stripe can therefore land on a sign-in screen in dev/preview even though the equivalent production flow would stay signed in.
 
-During post-fix smoke testing (2026-03-04), intermittent `503` responses were observed on Next.js `_rsc` prefetch/navigation requests in Preview.
-
-**Observed pattern:**
-- Request fails as background prefetch (`503`)
-- Immediate retry succeeds (`200`)
-- No visible page failure or user-facing error state
-
-**Interpretation:** Typically Vercel Preview cold-start behavior for serverless functions, not an application regression.
-
-**Escalate only if one of these is true:**
-- Foreground page request (not prefetch) fails persistently
-- User-visible error banners appear
-- Same route repeatedly fails without recovery
-- Production environment shows the same behavior
-
-### Clerk Development Mode Re-Authentication After Stripe Checkout
-
-In Clerk Development mode, sessions use `__clerk_db_jwt` URL parameters (not HTTP-only cookies). When Stripe redirects back to `/checkout/success`, it doesn't carry the `__clerk_db_jwt` param, so Clerk's middleware sees an unauthenticated request and redirects to sign-in.
-
-**This is expected behavior in Development mode only.** In Production, Clerk uses HTTP-only cookies on `addictionboards.com`, so the redirect from Stripe automatically carries the auth cookie. No re-sign-in needed.
+Treat this as an environment-mode behavior difference first, not automatically as a production auth bug.
 
 ---
 
-## Prevention Checklist
+## Operator Verification Checklist
 
-When setting up a new service or changing environment configuration:
+When changing environment configuration, verify all of the following:
 
-1. [ ] Is the variable scoped correctly? (Production-only vs shared vs Preview-only)
-2. [ ] Does Production use live/production keys?
-3. [ ] Does Preview/Dev use test/development keys?
-4. [ ] Are databases isolated? (Production data never touched by test code)
-5. [ ] Are webhooks configured for the correct environment?
-6. [ ] Has end-to-end auth been tested on the target environment?
-7. [ ] Has payment flow been tested on the target environment?
+1. Production uses production/live auth and billing keys only.
+2. Preview/local use non-production auth and billing keys only.
+3. Production and non-production databases are isolated.
+4. `NEXT_PUBLIC_APP_URL` matches the environment actually serving the app.
+5. Preview webhook targets are publicly reachable.
+6. Any schema change is followed by `pnpm db:migrate` on the target database.
+7. Any content change that affects seeded data is followed by `pnpm db:seed` on the target database.
+8. Auth and payment flows have been smoke-tested on the target environment after changes.
 
 ---
 
 ## Related
 
-- [BUG-066](../_archive/bugs/bug-066-clerk-development-keys-in-production.md) — Original Production key switch
-- [BUG-078](../_archive/bugs/bug-078-clerk-production-google-oauth-not-configured.md) — Production auth broken (resolved)
-- [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md) — Vercel env var + Deployment Protection issues (resolved)
-- `proxy.ts` — Clerk middleware
-- `lib/env.ts` — Environment validation
-- `app/api/webhooks/clerk/route.ts` — Clerk webhook handler
-- `app/api/stripe/webhook/route.ts` — Stripe webhook handler
+- [deployment-procedure.md](./deployment-procedure.md)
+- [database-rollbacks.md](./database-rollbacks.md)
+- [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md)
+- [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md)
+- [proxy.ts](/Users/ray/Desktop/github/naltrexone-university/proxy.ts)
+- [lib/env.ts](/Users/ray/Desktop/github/naltrexone-university/lib/env.ts)
+- [app/api/webhooks/clerk/route.ts](/Users/ray/Desktop/github/naltrexone-university/app/api/webhooks/clerk/route.ts)
+- [app/api/stripe/webhook/route.ts](/Users/ray/Desktop/github/naltrexone-university/app/api/stripe/webhook/route.ts)

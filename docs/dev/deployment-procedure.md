@@ -1,7 +1,7 @@
 # Deployment Procedure
 
 > **Parent:** [Deployment Environments](./deployment-environments.md)
-> **Last Updated:** 2026-03-14
+> **Last Updated:** 2026-03-17
 
 ---
 
@@ -21,7 +21,15 @@ These are always manual operator steps, run from a local machine with the approp
 
 ```text
 1. CI (GitHub Actions)
-   └─ pnpm typecheck && pnpm lint && pnpm test --run && pnpm build
+   └─ pnpm typecheck
+   └─ pnpm lint:ci
+   └─ pnpm db:migrate            # CI database only
+   └─ SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed
+   └─ pnpm test:coverage
+   └─ pnpm test:integration:coverage
+   └─ pnpm test:browser:coverage # pushes + same-repo PRs
+   └─ pnpm build
+   └─ pnpm test:e2e             # pushes + same-repo PRs
    └─ Must pass before merge
 
 2. Vercel (automatic on push/merge)
@@ -33,6 +41,8 @@ These are always manual operator steps, run from a local machine with the approp
    └─ DATABASE_URL="<target>" pnpm db:migrate   # if schema changed
    └─ DATABASE_URL="<target>" pnpm db:seed      # if content changed
 ```
+
+**Important:** CI never migrates or seeds the actual Preview/Production database used by Vercel. It only validates migrations and seed logic against the CI database. Target-environment migrations and reseeds are still manual operator steps.
 
 ---
 
@@ -62,17 +72,19 @@ DATABASE_URL="<target>" pnpm db:seed
 | Environment | How to Connect | DATABASE_URL Source |
 |-------------|---------------|---------------------|
 | **Local** | Direct (already in `.env.local`) | `.env.local` |
-| **Preview** | Neon `dev` branch | `neonctl connection-string dev --project-id summer-math-94727887 --pooled` |
-| **Production** | Neon `main` branch | `neonctl connection-string main --project-id summer-math-94727887 --pooled` |
+| **Preview / shared non-production** | Use your provider CLI/dashboard to fetch the non-production connection string | Provider secret manager / CLI output |
+| **Production** | Use your provider CLI/dashboard to fetch the production connection string | Provider secret manager / CLI output |
 
 Example for preview/production:
 
 ```bash
-DATABASE_URL="$(neonctl connection-string dev --project-id summer-math-94727887 --pooled)" pnpm db:migrate
-DATABASE_URL="$(neonctl connection-string dev --project-id summer-math-94727887 --pooled)" pnpm db:seed
+DATABASE_URL="<non-production connection string>" pnpm db:migrate
+DATABASE_URL="<non-production connection string>" pnpm db:seed
 ```
 
-**Caution:** Always double-check which branch you're targeting. Running migrations or seeds against the wrong branch can corrupt data. Production operations should be done deliberately and verified immediately.
+If you are using Neon, fetch the connection string for the intended branch first and then pass it explicitly as `DATABASE_URL`.
+
+**Caution:** Always double-check which database/branch you're targeting. Running migrations or seeds against the wrong environment can corrupt data. Production operations should be done deliberately and verified immediately.
 
 ---
 
@@ -81,13 +93,15 @@ DATABASE_URL="$(neonctl connection-string dev --project-id summer-math-94727887 
 Before merging to `main` (production deploy):
 
 - [ ] `pnpm typecheck` passes
-- [ ] `pnpm lint` passes
+- [ ] `pnpm lint:ci` or `pnpm lint` passes
 - [ ] `pnpm test --run` passes
+- [ ] `pnpm test:browser` passes
 - [ ] `pnpm test:integration` passes
 - [ ] `pnpm build` passes
+- [ ] `pnpm test:e2e` passes when local auth/billing env is available (CI enforces this on pushes and same-repo PRs)
 - [ ] CodeRabbit review completed and feedback addressed
 - [ ] If schema changed: migration tested on local + preview DB first
-- [ ] If schema changed: `pnpm db:migrate` run against target Neon branch **immediately after deploy** (forgetting this causes silent write failures — see [Known Gotchas](./deployment-environments.md#missing-database-migration-causes-silent-write-failures))
+- [ ] If schema changed: `pnpm db:migrate` run against the target deployed database **immediately after deploy** (forgetting this causes silent write failures — see [Known Gotchas](./deployment-environments.md#missing-database-migration-causes-silent-write-failures))
 - [ ] If content changed: seed tested on local + preview DB first
 
 ---
@@ -97,14 +111,15 @@ Before merging to `main` (production deploy):
 After merging a PR to `main`, the `dev` branch falls behind. To keep them in sync:
 
 ```bash
-git checkout dev
-git merge main        # Fast-forward if no divergence
+git fetch origin
+git switch dev
+git merge --ff-only origin/main
 git push origin dev
 ```
 
 This is especially important when the PR included **migrations** — without syncing, any clone on `dev` will have an incomplete migration journal, which can cause confusion (the DB has the tables, but the local journal doesn't know about them).
 
-**Rule of thumb:** Always sync `dev` with `main` after every PR merge. The merge is always a fast-forward because PRs target `main` and `dev` doesn't diverge.
+**Rule of thumb:** Keep `dev` fast-forwarded to `main` after every merge. If `git merge --ff-only origin/main` fails, stop and resolve the divergence explicitly rather than creating an accidental merge commit.
 
 ---
 

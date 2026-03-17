@@ -2,8 +2,8 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Canonical policy for when correctness/explanations may be exposed
-> **Last Verified:** 2026-03-03
-> **Status:** Active (known open drift in BUG-191/BUG-192/BUG-193; BUG-180/BUG-181/BUG-185 are archived as fixed and BUG-186/BUG-187 are fixed on branch)
+> **Last Verified:** 2026-03-17
+> **Status:** Enforced. BUG-180/181/185 and BUG-186/187/191/192/193/195 are archived as fixed; this document remains the regression contract.
 
 ---
 
@@ -17,10 +17,10 @@ This is a cross-layer invariant, not a UI preference.
 
 ## 2. Why This Exists
 
-The product contract is explicit: exam mode hides correctness/explanations until session end.
+The product contract is explicit: exam mode hides correctness and explanations until session end.
 
-- Master spec: [master_spec.md](/Users/ray/Desktop/github/naltrexone-university-1/docs/specs/master_spec.md:2383)
-- Active answering must remain neutral: [master_spec.md](/Users/ray/Desktop/github/naltrexone-university-1/docs/specs/master_spec.md:2384)
+- Master spec: [master_spec.md](../specs/master_spec.md)
+- Active answering must remain neutral until the exam is ended.
 
 Recent bugs showed this invariant can drift when enforcement is duplicated across routes/use-cases/projections.
 
@@ -87,7 +87,19 @@ Use this guard consistently at all answer-key disclosure points. Do not duplicat
 
 ---
 
-## 6. Minimum Regression Test Set
+## 6. Current Enforcement Status
+
+These code paths were re-verified on 2026-03-17:
+
+- `GetPreviousAttempt` returns `null` for active-exam attempts and only reveals `session_unanswered` answers after the exam session has ended.
+- `GetPracticeSessionReview` redacts per-question `isCorrect` while an exam session is still active.
+- `GetNextQuestion` redacts `session.latestIsCorrect` for active exams and only hydrates `previousSubmission` for answered tutor-session questions.
+- `SubmitAnswer` returns `isCorrect: null`, `correctChoiceId: null`, `explanationMd: null`, `referenceMd: null`, and an empty `choiceExplanations` array for active exam submits.
+- `DrizzleQuestionRepository` excludes active-exam attempts from status-filter and user-history correctness projections via `activeExamVisibilityCondition()`.
+
+---
+
+## 7. Minimum Regression Test Set
 
 Every change that touches review hydration, retry, stats projections, or exam rendering must keep these tests green:
 
@@ -110,7 +122,7 @@ Every change that touches review hydration, retry, stats projections, or exam re
 
 ---
 
-## 7. Documentation Ownership
+## 8. Documentation Ownership
 
 This file is the canonical registry for exam-answer secrecy.
 

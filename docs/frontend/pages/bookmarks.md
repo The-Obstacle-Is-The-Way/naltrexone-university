@@ -1,7 +1,7 @@
 # Bookmarks — Feature Dossier
 
 **Feature:** Bookmarking (cross-cutting, not a single page)
-**Last Updated:** 2026-03-16
+**Last Updated:** 2026-03-17
 **Related:** [BS-053](../../brainstorming/bs-053-bookmark-vs-mark-for-review-collision.md) (bookmark vs mark-for-review collision), [BS-052](../../brainstorming/bs-052-bookmark-icon-toggle-replacement.md) (bookmark icon toggle), [Bookmark Surface Policy](../bookmark-surface-policy.md)
 
 ---
@@ -179,11 +179,11 @@ For mixed-purpose files, the count below reflects the bookmark-focused cases rat
 | `app/(app)/app/practice/hooks/bookmark-message-timeout.test.ts` | Unit | 3 | Bookmark message auto-clear timing helper |
 | `app/(app)/app/practice/hooks/use-practice-question-bookmarks.test.tsx` | Unit | 1 | Initial hook contract |
 | `app/(app)/app/practice/hooks/use-quick-practice-status-counts.test.ts` | Unit | 4 | Includes the bookmark-backed quick-practice count path |
-| `app/(app)/app/shared/bookmark-toggle.test.ts` | Unit | 1 | Shared toggle helper persists the generated idempotency key before the request |
+| `app/(app)/app/shared/bookmark-toggle.test.ts` | Unit | 5 | Shared toggle helper covers success rotation, failure preservation, non-ok handling, null-question early return, and unmount safety |
 | `app/(app)/app/questions/[slug]/question-page-client.test.tsx` | Unit | 4 | Review-page bookmark action-bar presence, hydration gating, and saving-state disablement |
-| `app/(app)/app/questions/[slug]/use-question-page-controller.browser.spec.tsx` | Browser | 4 | Review-page bookmark hydration, loaded state, toggle behavior, and in-flight saving state |
+| `app/(app)/app/questions/[slug]/use-question-page-controller.browser.spec.tsx` | Browser | 5 | Review-page bookmark hydration, loaded state, toggle behavior, in-flight saving state, and per-question idempotency-key rollover after a failed toggle |
 
-**Direct bookmark coverage total: 84 tests across 16 files.**
+**Direct bookmark coverage total: 89 bookmark-focused tests across 16 files.**
 
 ### Additional downstream consumer coverage
 

@@ -1,6 +1,6 @@
 # Frontend Design Principles
 
-**Last Updated:** 2026-03-02
+**Last Updated:** 2026-03-17
 
 Canonical reference for layout composition patterns and UX design rules. While [standards.md](./standards.md) covers atoms (tokens, components, accessibility), this document covers how those atoms compose into consistent page layouts.
 
@@ -51,11 +51,11 @@ Question-related pages use two non-overlapping navigation zones:
 
 ## 2. Action Bar Composition
 
-Action bars are rendered inline per context (not via a shared component). The button sets differ enough that abstraction would add complexity without benefit. However, they follow consistent ordering:
+Action bars are rendered inline per context (not via a shared component). The button sets differ enough that abstraction would add complexity without benefit. There is no single universal slot order across every question surface; instead, each context keeps related actions adjacent and preserves stable left-to-right sequencing within that family.
 
 ```
-[← Previous] [Submit / Try Again] [Next →] [Bookmark / Mark for review] [Back link]
- sequential    primary action      sequential  secondary actions           navigation
+[← Previous] [Submit / Try Again / Review answers] [Bookmark / Mark for review] [Next →] [Back link]
+ sequential    primary learning / session action   secondary action         sequential   navigation
 ```
 
 ### By Context
@@ -63,20 +63,24 @@ Action bars are rendered inline per context (not via a shared component). The bu
 | Context | Bottom Action Bar |
 |---------|-------------------|
 | Practice — before submit | [← Previous] [Submit] [Next →] [Bookmark] |
-| Practice — after submit (Tutor) | [← Previous] [Submit] (disabled) [Next →] [Bookmark] |
-| Practice — after submit (Exam) | [← Previous] [Submit] (disabled) [Next →] [Bookmark] [Mark for review] |
+| Practice — after submit (Tutor) | [← Previous] [Next →] [Bookmark] |
+| Practice — exam before submit | [← Previous] [Submit] [Next →] [Mark for review] |
+| Practice — exam after submit | [← Previous] [Next →] [Mark for review] |
+| Practice — last answered exam question | [← Previous] [Review answers] [Mark for review] |
 | Quick Practice | [Submit] [Next →] [Bookmark] |
-| Quick Practice — after submit | [Submit] (disabled) [Next →] [Bookmark] |
-| History Session Review (answered) | [← Previous] [Try Again] [Next →] [Back to ...] |
-| History Session Review (unanswered) | [← Previous] [Submit] [Next →] [Back to ...] |
-| History Individual Review | [Try Again] [Back to ...] |
+| Quick Practice — after submit | [Next →] [Bookmark] |
+| History Session Review (answered) | [← Previous] [Try Again / Practice Again] [Bookmark] [Next →] [Back to ...] |
+| History Session Review (unanswered reveal) | [← Previous] [Try Again] [Bookmark] [Next →] [Back to ...] |
+| Standalone Question Review (dashboard / bookmarks, unanswered) | [Submit] [Bookmark] |
+| Standalone Question Review (answered) | [Try Again / Practice Again] [Bookmark] [Back to ...] |
 | Exam Review Stage | [Submit Exam] |
 
 **Rules:**
 - Previous only appears when there's a session-ordered question list
 - Quick Practice has no Previous (no session context, no ordering)
 - Individual review has no Previous/Next (no session context)
-- Standalone individual review intentionally omits bookmark actions by design (DEBT-250 Decision 7 confirmed: focused-reading context, not collection-oriented).
+- Review-mode bookmark actions belong on the question detail surface, not the navigator/list surface
+- History origin suppresses the duplicate top-right back link; other standalone review origins keep the header back link until the bottom-bar back action becomes relevant
 
 ---
 

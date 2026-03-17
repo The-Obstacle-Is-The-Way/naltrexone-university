@@ -1,6 +1,6 @@
 # Integration Tests
 
-**Last Updated:** 2026-03-11
+**Last Updated:** 2026-03-17
 
 Integration tests run against a real PostgreSQL database to verify repository queries, controller actions, and database constraints.
 
@@ -8,7 +8,7 @@ Integration tests run against a real PostgreSQL database to verify repository qu
 
 ## Local Setup
 
-All four steps are required. Skipping any step causes test failures that look like real bugs but aren't.
+From a fresh local test database, all four steps are required. Skipping any step causes test failures that look like real bugs but aren't.
 
 ### 1. Start the Test Database
 
@@ -75,7 +75,7 @@ This runs `docker compose down -v && docker compose up -d --wait` — destroys t
 
 The `.env.test` file (committed) hardcodes `localhost:5434`. CI overrides `DATABASE_URL` with its own service on port 5432.
 
-To use a non-default local port, set `DB_TEST_PORT` before starting Docker and update `.env.test` to match.
+To use a non-default local port, set `DB_TEST_PORT` before starting Docker and override `DATABASE_URL` on the command line when running migrations/tests. Do not edit committed `.env.test` just for a one-off local port.
 
 ---
 
@@ -100,12 +100,12 @@ Integration tests are part of every PR and every push to `main`.
 | `tests/integration/session-attempt-repository.integration.test.ts` | 19 | DrizzlePracticeSessionRepository + DrizzleAttemptRepository lifecycle |
 | `tests/integration/bookmark-repository.integration.test.ts` | 1 | DrizzleBookmarkRepository idempotent add/remove |
 | `tests/integration/stripe-repositories.integration.test.ts` | 5 | Stripe customer, event, and subscription repos |
-| `tests/integration/user-repository.integration.test.ts` | 6 | DrizzleUserRepository upsert + clock-guard semantics |
+| `tests/integration/user-repository.integration.test.ts` | 7 | DrizzleUserRepository upsert + clock-guard semantics |
 | `tests/integration/idempotency-key-repository.integration.test.ts` | 4 | DrizzleIdempotencyKeyRepository claim/store/reclaim |
 | `tests/integration/rate-limiter.integration.test.ts` | 1 | DrizzleRateLimiter sliding window |
 | `tests/integration/tag-repository.integration.test.ts` | 1 | DrizzleTagRepository ordered listing |
 | `tests/integration/bug-regression.integration.test.ts` | 10 | Bug regression tests (BUG-186, 187, 188, 192, 195) |
-| `tests/integration/controllers.integration.test.ts` | 5 | Controller → repository → DB round trips |
+| `tests/integration/controllers.integration.test.ts` | 10 | Controller → repository → DB round trips |
 | `tests/integration/actions.stripe.integration.test.ts` | 2 | Stripe billing controller actions |
 | `tests/integration/tag-taxonomy-census.integration.test.ts` | 4 | Tag taxonomy validation (requires seed data) |
 
@@ -133,6 +133,12 @@ Integration tests load `.env.test` but do **not** override an already-set `DATAB
 ```bash
 DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm test:integration
 ```
+
+**Refused non-local DATABASE_URL**
+
+`tests/integration/setup.ts` refuses to run against a non-local host by default. If `DATABASE_URL` points at Neon or any other remote host, the suite aborts before running tests. This is intentional protection against hitting shared environments by mistake.
+
+Only use `ALLOW_NON_LOCAL_DATABASE_URL=true` when you explicitly intend to run against a non-local database and understand the risk.
 
 **`drizzle-kit push` was used instead of `pnpm db:migrate`**
 

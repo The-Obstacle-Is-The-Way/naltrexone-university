@@ -2,7 +2,7 @@
 
 **Page:** `/app/practice`
 **Source:** `app/(app)/app/practice/page.tsx` (server) → `practice-page-client.tsx` (client)
-**Last Updated:** 2026-03-10
+**Last Updated:** 2026-03-17
 
 ---
 
@@ -87,7 +87,8 @@ The lower stack is not mutually exclusive:
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
 | Label | `<label>` | — | `:127` | `text-sm font-medium text-foreground` — "Questions", `htmlFor="session-count-input"` |
-| Input | `<Input>` | — | `:133` | `type="number"`, `w-24 border-0 bg-foreground/5 dark:bg-foreground/5 shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`, min=`SESSION_COUNT_MIN`, max=`SESSION_COUNT_MAX`, value renders from the raw string state and clamps back to the canonical numeric count on blur |
+| Control shell | `compactControlShellClasses` | I-5 container family | `control-shell-styles.ts` | Shared compact shell: `inline-flex rounded-lg border border-border bg-muted p-1` |
+| Input | `<Input>` | — | `practice-session-starter.tsx` | `type="number"`, `w-16 rounded-md border-0 bg-transparent dark:bg-transparent px-4 py-2 text-center text-sm font-medium shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`, min=`SESSION_COUNT_MIN`, max=`SESSION_COUNT_MAX`, value renders from the raw string state and clamps back to the canonical numeric count on blur |
 
 #### Status Selector
 
@@ -114,7 +115,7 @@ Three collapsible `<details>` elements, one per tag kind. Only rendered when `ta
 | Section label | `<span>` | — | `:214` | "Topic" / "Substance" / "Treatment" |
 | Summary right cluster | `<span>` | — | `:215` | `flex items-center gap-2` — groups conditional summary metadata + chevron |
 | Summary metadata | `<span>` | — | `:216` | `text-xs font-normal text-foreground/60` — `All included by default` when `selectedCount === 0`, otherwise `{N} selected` |
-| Disclosure chevron | `<ChevronDown>` | — | `:221` | `h-4 w-4 text-foreground/60 transition-transform group-open:rotate-180` |
+| Disclosure chevron | `<ChevronDown>` | — | `:221` | `size-4 text-foreground/60 transition-transform group-open:rotate-180` |
 | Expanded content wrapper | `<div>` | — | `:224` | `px-4 pb-3` — keeps body spacing after summary owns the clickable padding |
 | Chip fieldset | `<fieldset>` | — | `:225` | `flex flex-wrap gap-2 border-0 p-0 m-0`, `aria-label={label}` |
 | Filter chips | `<FilterChip>` | I-4 | `:230` | Multi-select toggle buttons (see below) |
@@ -162,14 +163,16 @@ Single-select tab-style control. Uses shared `tabSwitchContainerClasses` from `t
 | **Active** | `bg-primary text-primary-foreground shadow-sm` |
 | **Inactive** | `text-muted-foreground hover:bg-muted/50 hover:text-foreground` |
 
-### Input (`components/ui/input.tsx`)
+### Questions Input Shell (`components/ui/control-shell-styles.ts` + `components/ui/input.tsx`)
 
-Standard shadcn input primitive. The Questions instance in the starter card overrides the base border/shadow/fill to `border-0 bg-foreground/5 dark:bg-foreground/5 shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`. The explicit `dark:bg-foreground/5` is required to override the base component's `dark:bg-input/30`, which would otherwise leak through and produce a different shade than the sibling filter sections.
+The Questions control now uses the shared compact shell instead of a standalone tonal-fill input. The shell owns the visible surface; the inner input stays transparent.
 
 | Key tokens | Value |
 |-----------|-------|
-| Starter fill override | `bg-foreground/5 dark:bg-foreground/5` |
-| Starter border override | `border-0` |
+| Shell | `inline-flex rounded-lg border border-border bg-muted p-1` |
+| Input fill | `bg-transparent dark:bg-transparent` |
+| Input border override | `border-0` |
+| Width | `w-16` |
 | Spinner hiding | `[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none` |
 | Focus | `focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]` |
 
@@ -183,7 +186,8 @@ bg-background (Layer 0 — page)
        ├─ SegmentedControl bg-muted (Layer 2 — Mode/Status/Difficulty)
        │    └─ Active item bg-primary (Layer 3)
        │    └─ Inactive items transparent (inherit Layer 2)
-       ├─ Input bg-foreground/5 (Layer 2 — Questions count)
+       ├─ Compact control shell bg-muted + border-border (Layer 2 — Questions count)
+       │    └─ Input bg-transparent (inherits shell surface)
        └─ <details> bg-foreground/5 (Layer 2 — tag filter containers)
             └─ FilterChip bg-foreground/[0.07] + border                 ← Layer 3 rest
             └─ FilterChip bg-primary (selected)                           ← Layer 3+, high contrast
@@ -257,12 +261,13 @@ type PracticeFilters = {
 | `bg-foreground/5` | #1D1D1D (rgb 29) | 1.11:1 | Subtle tonal lift — matches dashboard nested-row rest state |
 | Count/helper text `text-foreground/60` | #9A9A9A | ~5.99:1 vs `bg-foreground/5` | Secondary metadata stays AA-compliant on the tonal surface |
 
-### Input
+### Questions Input Shell
 
 | Token | Computed (dark) | Notes |
 |-------|----------------|-------|
-| `dark:bg-input/30` | ~#181818 | Subtle fill on card |
-| `dark:border-foreground/40` | #6A6A6A | Same heavy border treatment |
+| Shell `bg-muted` | #1C1C1C | Shared compact control surface |
+| Shell `border-border` | #262626 | Decorative container edge |
+| Inner input `bg-transparent` | Transparent | Lets the shell own the surface instead of introducing a second fill |
 
 ---
 

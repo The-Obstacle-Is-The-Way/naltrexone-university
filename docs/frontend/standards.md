@@ -1,6 +1,6 @@
 # Frontend Standards
 
-**Last Updated:** 2026-03-15
+**Last Updated:** 2026-03-17
 
 Canonical reference for all frontend patterns, component usage, accessibility, and styling conventions. Every UI change MUST be consistent with this document. If a pattern isn't documented here, don't invent one — add it here first.
 
@@ -180,7 +180,7 @@ Do not create new tab-switch components without consuming these constants.
 
 ```tsx
 const { notify } = useNotification();
-notify({ message: 'Bookmarked!', tone: 'success' });
+notify({ message: 'Question bookmarked.', tone: 'success' });
 notify({ message: 'Failed to save', tone: 'error' });
 ```
 
@@ -258,7 +258,7 @@ Every page MUST have exactly one `h1`.
 
 ### Card title elements
 
-Card titles MUST use heading elements (`<h2>` or `<h3>` depending on page outline), not `<div>`. This ensures screen reader users can navigate by heading to find card sections.
+Card titles that introduce a real page section MUST use heading elements (`<h2>` or `<h3>` depending on page outline), not `<div>`. Small inline utility/status labels inside a card may stay plain text when they do not create a meaningful outline node.
 
 **Correct:**
 ```tsx
@@ -492,8 +492,8 @@ Empty states SHOULD include a helpful CTA guiding the user to take action:
 
 | Action | Feedback type |
 |--------|--------------|
-| Bookmark toggled (practice) | Toast: "Bookmarked!" / "Removed" |
-| Bookmark removed (bookmarks page) | Toast (not page reload) |
+| Bookmark toggled (practice) | Toast: `"Question bookmarked."` / `"Bookmark removed."` |
+| Bookmark removed (bookmarks page) | Redirect-backed success toast after revalidation; toast message is `"Bookmark removed."` |
 | Session started | Navigation to session page |
 | Session ended | Summary view renders |
 | Answer submitted | Inline Feedback component |
@@ -728,7 +728,8 @@ Dark mode is implemented via CSS custom properties in `.dark` class (globals.css
 
 **Rules:**
 - Use semantic tokens (`bg-background`, `text-foreground`, `bg-card`, etc.) — they adapt automatically
-- Do NOT add explicit `dark:` color overrides in page/component code — keep dark color logic in `components/ui/` primitives
+- Prefer shared primitives/constants for recurring dark-mode behavior, but component-specific `dark:` overrides are allowed when they are part of a canonical Pattern Registry or Contrast Policy contract
+- If the same dark override appears across multiple consumers, promote it into a shared primitive or shared style constant instead of duplicating page-local classes
 - Structural visibility toggles (`dark:hidden`, `dark:block`) are acceptable when needed for theme-specific icon/content swaps
 - Clerk appearance follows the app theme via `providers.tsx`
 
@@ -748,7 +749,7 @@ Three hooks exceed the 200-line "god hook" threshold (§12):
 
 | Hook | Lines | File |
 |------|-------|------|
-| `useQuestionPageController` | 370 | `app/(app)/app/questions/[slug]/use-question-page-controller.ts` |
+| `useQuestionPageController` | 737 | `app/(app)/app/questions/[slug]/use-question-page-controller.ts` |
 | `usePracticeSessionQuestionFlow` | 238 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` |
 | `useQuestionFlowCore` | 263 | `app/(app)/app/practice/shared/use-question-flow-core.ts` |
 
@@ -760,6 +761,7 @@ Contrast compliance gaps (WCAG AA) are documented in `docs/_archive/brainstormin
 |----|---------|---------|
 | — | Visual divergences from BS-035 audit are resolved. Only approved exception `D-15` (MetallicCtaButton) remains. See Pattern Registry Part 11 for historical record. | `docs/frontend/pattern-registry.md` |
 | — | History sessions expanded breakdown UI remains functionally correct but is under active redesign review for hierarchy/density/navigation clarity (BS-036). | `app/(app)/app/history/components/history-sessions-tab.tsx`, `app/(app)/app/shared/components/session-breakdown-list.tsx`, `docs/_archive/brainstorming/bs-036-history-breakdown-ux-redesign.md` |
+| [DEBT-319](../debt/debt-319-icon-size-shorthand-drift.md) | Disclosure chevrons still use `h-4 w-4` instead of the canonical `size-4` Lucide shorthand documented in §2. | `app/(app)/app/history/components/history-sessions-tab.tsx`, `app/(app)/app/practice/components/practice-session-starter.tsx` |
 | — | `Markdown.tsx` uses PascalCase filename (violates §13 kebab-case convention) | `components/markdown/Markdown.tsx` |
 
 ---

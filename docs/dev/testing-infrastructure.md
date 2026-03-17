@@ -1,6 +1,6 @@
 # Testing Infrastructure
 
-**Last Updated:** 2026-03-09
+**Last Updated:** 2026-03-17
 
 This document covers our E2E testing tools: Playwright and Vercel's agent-browser.
 
@@ -27,8 +27,10 @@ testDir: './tests/e2e',
 fullyParallel: false,
 retries: process.env.CI ? 2 : 0,
 workers: 1,
+projects: [{ name: 'setup' }, { name: 'chromium', dependencies: ['setup'] }],
 webServer: {
   command: process.env.CI ? 'pnpm start' : 'pnpm build && pnpm start',
+  url: `${baseURL}/api/health`,
   reuseExistingServer: false,
   timeout: 120000,
 },
@@ -37,6 +39,7 @@ webServer: {
 - Uses `NEXT_PUBLIC_APP_URL` or defaults to `http://127.0.0.1:3000`
 - Runs Chromium only (for now)
 - Starts a production server for E2E runs (`pnpm build && pnpm start` locally, `pnpm start` in CI)
+- Waits on `/api/health`, not just the root URL, so Playwright startup includes a DB-aware readiness check
 - Runs with **1 worker** because authenticated E2E flows share one Clerk user; mutating specs still reset that user to a deterministic baseline in `beforeEach`
 
 ### Playwright Timeout Policy
@@ -84,6 +87,9 @@ Current repo posture:
 ### Running E2E Tests
 
 ```bash
+# Clean up stale local servers first
+lsof -ti:3000 | xargs kill -9 2>/dev/null
+
 # Run all E2E tests
 pnpm test:e2e
 
@@ -97,26 +103,48 @@ pnpm playwright test smoke.spec.ts
 pnpm playwright test --debug
 ```
 
+These commands still execute the setup project by default. If your goal is to run an unauthenticated spec without the authenticated preflight, you must opt out of project dependencies explicitly.
+
 ### Environment Variables for E2E
 
-For tests requiring Clerk authentication:
+The full Playwright suite currently assumes authenticated E2E infrastructure because `tests/e2e/global.setup.ts` always runs first. For a normal `pnpm test:e2e` run, these must be present:
 
 ```bash
+DATABASE_URL=postgresql://...
+CLERK_SECRET_KEY=sk_test_...
 E2E_CLERK_USER_USERNAME=test@example.com
 E2E_CLERK_USER_PASSWORD=your-password
+STRIPE_SECRET_KEY=sk_test_...
+NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY=price_...
 ```
 
-These can be provided via `.env.local` (loaded by `playwright.config.ts`) or CI secrets. Tests that require auth will `test.skip()` when these are missing.
+These can be provided via `.env.local` (loaded by `playwright.config.ts`) or CI secrets.
+
+Individual spec files still use `test.skip(!hasClerkCredentials, ...)`, but that guard does **not** replace suite setup: `global.setup.ts` runs a preflight and seed/reset pass before the Chromium project starts. Missing or invalid credentials therefore fail the suite fast instead of silently skipping it.
 
 ### Test Data Seeding
 
-Subscription data is seeded via the Stripe API and direct DB writes in `global.setup.ts` — **no Stripe UI automation**. The `seedTestSubscription()` helper (in `tests/e2e/helpers/seed-test-user.ts`) runs before any test and idempotently ensures:
+Subscription data is seeded via the Stripe API and direct DB writes in `global.setup.ts` — **no Stripe UI automation**.
+
+The setup project currently runs three steps, in this order:
+
+1. `runE2ECredentialHealthCheck()` validates the required env vars and checks:
+   - database connectivity
+   - `idempotency_keys.completed_at` schema presence
+   - Clerk user existence + password validity
+   - Stripe secret-key validity
+   - Stripe monthly price-ID validity
+2. `seedTestSubscription()` idempotently ensures:
+   - the E2E user exists in `users`
+   - a Stripe customer exists and is mirrored in `stripe_customers`
+   - an active subscription exists and is mirrored in `stripe_subscriptions`
+3. `runE2EUserStateReset()` clears mutable user state and reseeds a deterministic baseline
+
+`seedTestSubscription()` ensures:
 
 1. The test user exists in the `users` table (matched by email, Clerk user ID resolved via Clerk API)
 2. A Stripe customer exists (checked in DB, then Stripe API, created if needed) and is mirrored in `stripe_customers`
 3. An active subscription exists (using `pm_card_visa` test payment method) and is mirrored in `stripe_subscriptions`
-
-Seeding is skipped when `E2E_CLERK_USER_USERNAME` or `STRIPE_SECRET_KEY` are missing. Tests that depend on subscription already skip when Clerk credentials are absent, so this is safe.
 
 `global.setup.ts` also seeds a deterministic baseline for the shared authenticated E2E user once per suite run. That suite-level reset is not enough for mutating specs on its own: any spec that writes sessions, attempts, or bookmarks should call `runE2EUserStateReset()` in `beforeEach` so every test starts from the same baseline rather than inheriting artifacts from earlier files or retries.
 
@@ -163,7 +191,7 @@ agent-browser install
 
 **Verify:**
 ```bash
-agent-browser --version  # Should show 0.9.x (or newer)
+agent-browser --version  # Confirm the CLI is installed and responding
 ```
 
 ### Core Concepts
@@ -295,7 +323,9 @@ python .agents/skills/webapp-testing/scripts/with_server.py \
 
 ### GitHub Actions
 
-E2E tests run in CI via Playwright (see `.github/workflows/ci.yml`):
+CI runs the browser and E2E layers only on pushes and same-repo PRs, because those jobs require secrets and Playwright browser installation. Fork PRs still run the non-browser gates.
+
+E2E runs in CI via Playwright (see `.github/workflows/ci.yml`):
 
 ```yaml
 # .github/workflows/ci.yml (excerpt)
@@ -338,7 +368,7 @@ For feature-level acceptance criteria and planned routes (e.g., Quick Practice a
 
 ```bash
 # Kill any zombie processes
-lsof -ti:3000 | xargs kill -9
+lsof -ti:3000 | xargs kill -9 2>/dev/null
 
 # Clear Next.js cache
 rm -rf .next

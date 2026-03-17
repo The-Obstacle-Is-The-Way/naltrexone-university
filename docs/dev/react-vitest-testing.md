@@ -1,6 +1,6 @@
 # React 19 + Vitest Testing Guide
 
-**Last Updated:** 2026-02-17
+**Last Updated:** 2026-03-17
 
 This document exists because we got burned. Every claim is validated against official sources.
 
@@ -179,18 +179,25 @@ pnpm test:browser   # Runs *.browser.spec.tsx files in real Chromium
 
 Before Browser Mode was set up (Feb 4), we built `renderLiveHook` — a custom harness using `createRoot` in jsdom to test hooks with async state transitions. It works, but produces React act() warnings because jsdom's `createRoot` goes through React's concurrent scheduler.
 
-**Browser Mode is the correct solution for these six suites.** `vitest-browser-react` runs in real Chromium and uses CDP + locator retries for synchronization. `renderHook()` still provides `act()` when explicit update boundaries are needed, but this migration removes the current jsdom `createRoot` warning pattern from these tests.
+**Browser Mode is the correct solution for async hooks and interactive UI.** `vitest-browser-react` runs in real Chromium and uses CDP + locator retries for synchronization. `renderHook()` still provides `act()` when explicit update boundaries are needed, but this migration removes the jsdom `createRoot` warning pattern from async suites.
 
-### Migrated Files (DEBT-141)
+### Current Browser Mode Coverage
 
-These 6 async hook suites were migrated to Browser Mode `*.browser.spec.tsx`:
+Browser Mode is no longer limited to the original DEBT-141 migration set. It is now the standing harness for async hook and interactive component suites.
 
+Representative current hook/browser suites include:
+
+- `app/(app)/app/history/hooks/use-history-sessions.browser.spec.tsx`
+- `app/(app)/app/questions/[slug]/use-question-page-controller.browser.spec.tsx`
 - `app/(app)/app/practice/hooks/use-practice-session-controls.browser.spec.tsx`
-- `app/(app)/app/practice/hooks/use-practice-session-history.browser.spec.tsx`
+- `app/(app)/app/practice/hooks/use-practice-question-answer-flow.browser.spec.tsx`
+- `app/(app)/app/practice/hooks/use-practice-question-bookmarks.browser.spec.tsx`
 - `app/(app)/app/practice/hooks/use-practice-question-flow.browser.spec.tsx`
-- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.browser.spec.tsx`
+- `app/(app)/app/practice/hooks/use-practice-session-start.browser.spec.tsx`
 - `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-mark-for-review.browser.spec.tsx`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.browser.spec.tsx`
 - `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.browser.spec.tsx`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage-state.browser.spec.tsx`
 
 Retired infrastructure:
 - `src/application/test-helpers/render-live-hook.tsx`
@@ -237,11 +244,13 @@ test('hook updates state correctly', async () => {
 
 ### What stays in jsdom
 
-The `renderHook` helper (not `renderLiveHook`) stays. It uses `renderToStaticMarkup` for synchronous hook capture and has zero act() warnings. 40+ test files use it correctly.
+The `renderHook` helper (not `renderLiveHook`) stays. It uses `renderToStaticMarkup` for synchronous hook capture and has zero act() warnings. Many colocated `.test.tsx` suites use it for initial-state-only hook coverage.
 
 ### Browser Mode Mocking Note (Controller Boundaries)
 
-In Browser Mode hook specs, controller modules are often Node-only and cannot execute in Chromium runtime. For these suites, use top-level `vi.mock(modulePath, () => ({ ... }))` factories to provide explicit function stubs.
+In Browser Mode hook specs, controller modules are often Node-only and cannot execute in Chromium runtime. The current repo pattern is top-level `vi.mock(modulePath, () => ({ ... }))` factories that provide explicit function stubs for controller boundaries such as `practice-controller`, `question-controller`, and `bookmark-controller`.
+
+If you need wrapped real exports instead of a full replacement, `vi.mock(modulePath, { spy: true })` is the approved escape hatch for sealed ESM namespaces.
 
 This is a targeted exception for non-injectable module boundaries in browser tests. Prefer fakes via DI everywhere else.
 
@@ -251,14 +260,14 @@ Also keep hook inputs/callback refs stable in tests (avoid recreating object/fun
 
 ## The Ecosystem Reality
 
-**@testing-library/react is in zombie maintenance mode:**
-- The creator (Kent C. Dodds) moved on and considers it "graduated"
-- Kent himself endorses [vitest-browser-react as the successor](https://github.com/vitest-community/vitest-browser-react)
-- One part-time maintainer, no bandwidth for React 19 fixes
-- 63 open issues, 14 open PRs, core bugs sitting for almost a year
-- No timeline for fixes, no assigned developers
+Avoid `@testing-library/react` in this repo. Our maintained path is:
 
-**Our stance (2026-02-07):**
+- `renderToStaticMarkup` for render-output tests
+- `renderHook` for synchronous hook capture
+- `vitest-browser-react` for async hooks and interactive UI
+- Playwright for full user journeys
+
+**Our stance (current repo policy):**
 - Do NOT use `@testing-library/react` (Vitest + React 19 compatibility broken, no fix coming)
 - Use `renderToStaticMarkup` for render-output tests (`pnpm test`)
 - Use `renderHook` for synchronous hook capture (`pnpm test`)
@@ -284,12 +293,12 @@ Also keep hook inputs/callback refs stable in tests (avoid recreating object/fun
 
 ## Fakes Over Mocks
 
-**NEVER use `vi.mock()` for our own code.**
+**NEVER use `vi.mock()` for our own code unless you are in the Browser Mode controller-boundary exception described above.**
 
 | Pattern | When to Use |
 |---------|-------------|
 | Fake via DI | Our own repos, gateways, services |
-| vi.mock() | External SDKs only (Clerk, Next.js, Stripe) |
+| vi.mock() | External SDKs, plus Browser Mode controller-boundary exceptions |
 
 ```typescript
 // CORRECT
@@ -331,7 +340,8 @@ vi.mock('./user-repository');
 - [ ] Use `import { render } from 'vitest-browser-react'`
 - [ ] Use `await expect.element(locator)` for assertions (built-in retry)
 - [ ] Run with `pnpm test:browser`
-- [ ] Use fakes for DI, not vi.mock() for our code
+- [ ] Use fakes for DI where the code under test supports injection
+- [ ] For Node-only controller modules in Browser Mode, use top-level `vi.mock()` factories (or `{ spy: true }` when you need wrapped real exports)
 
 ---
 
@@ -349,6 +359,7 @@ vi.mock('./user-repository');
 | 2026-02-07 | Added hook test migration guide (DEBT-141) |
 | 2026-02-07 | Completed DEBT-141 migration and removed renderLiveHook harness |
 | 2026-02-17 | Added DEBT-225 guidance: import placement in hooks + explicit Vitest timeout policy |
+| 2026-03-17 | Updated Browser Mode guidance to match the expanded current browser-spec footprint and current mocking patterns |
 
 ---
 

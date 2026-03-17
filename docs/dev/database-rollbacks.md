@@ -4,28 +4,31 @@ This project uses Drizzle Kit migrations (`db/migrations/*.sql`). These migratio
 
 ## Why There Are No “Down” Migrations
 
-- Drizzle Kit generates *up* migrations, but does not generate or run *down* migrations.
-- In practice, “down” migrations are risky in production (data loss, long locks, partial rollbacks).
+- Drizzle Kit generates and applies forward migrations only.
+- In production, rollback migrations are risky because they can lose data, hold locks for a long time, or only partially reverse the system state.
 
 ## Production Rollback Strategy
 
 Preferred order of operations:
 
-1. **Fix forward**: ship a new migration that corrects the schema.
-2. If you must roll back a deployment quickly:
-   - **Roll back the application code** (redeploy the previous version).
-   - If the schema change is incompatible with the previous code, use **database point-in-time recovery (PITR)** or restore a snapshot (provider-specific).
+1. **Fix forward** by shipping a new migration.
+2. If you must revert the app quickly, roll back application code first.
+3. If old code is incompatible with the migrated schema, use provider-level recovery such as PITR or snapshot restore.
 
-Notes:
-
-- Always treat rollbacks as an incident response procedure (confirm impact, communicate, and capture a postmortem).
-- Assume schema rollback can cause data loss; verify with stakeholders before restoring.
+Treat schema rollback as incident response work, not a routine deploy step.
 
 ## Local / Test Database
 
 For local integration testing, prefer recreating the database state:
 
-- `pnpm db:test:reset` (Docker Postgres on port 5434)
-- `pnpm db:migrate`
+```bash
+pnpm db:test:reset
+DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:migrate
+DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:seed
+```
 
-**Note:** Drizzle commands read `DATABASE_URL` from the environment. After `pnpm db:test:up`, set `DATABASE_URL` to your local test Postgres instance (for example `postgresql://postgres:postgres@localhost:5434/addiction_boards_test`) before running `pnpm db:test:reset` or `pnpm db:migrate` so migrations target the intended database.
+Notes:
+
+- `pnpm db:test:reset` only restarts the Docker Postgres container. It does **not** read `DATABASE_URL`.
+- Drizzle commands such as `pnpm db:migrate` and `pnpm db:seed` **do** read `DATABASE_URL`, so prefix them explicitly when targeting the local test database.
+- After a reset, rerun both migrations and seed data before running `pnpm test:integration`.

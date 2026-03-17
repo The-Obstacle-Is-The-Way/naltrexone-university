@@ -28,6 +28,7 @@ StartPracticeSession → creates session with shuffled questionIds
 [Question loop: getNextQuestion → render → submitAnswer → repeat]
     ↓ (tutor: explanation shown immediately)
     ↓ (exam: answer stored, no explanation)
+    ↓ (exam only: user enters review stage before final submit)
     ↓
 EndPracticeSession → computes totals from questionStates
     ↓
@@ -42,8 +43,8 @@ EndPracticeSession → computes totals from questionStates
 ## 3. Exam Mode Special Features
 
 - **Mark for review:** Users can flag questions during the session. `SetPracticeSessionQuestionMark` persists the flag. Only available in exam mode.
-- **Review stage:** Before finalizing, users see a navigator grid showing answered/unanswered/marked questions and can jump to any question.
-- **Deferred explanations (policy):** Correctness/explanations must remain hidden while exam session is active, then become visible after `EndPracticeSession`. See [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md) for enforcement status and open drift.
+- **Review stage:** Before finalizing, users enter a review checklist with answered/unanswered/marked counts and can jump back into any exam question. Entry is via the header `Review answers` action and the last-question bottom-bar CTA.
+- **Deferred explanations (policy):** Correctness/explanations remain hidden while the exam session is active, then become visible after `EndPracticeSession`. See [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md) for the canonical enforcement contract and regression scope.
 
 ---
 
