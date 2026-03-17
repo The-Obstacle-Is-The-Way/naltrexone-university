@@ -13,7 +13,11 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-228
+**Next Bug ID:** BUG-229
+
+**Manual report (2026-03-16) — agent-browser auth + observability sweep:**
+
+- BUG-228 filed: Clerk-owned CSP omits Sentry ingest from `connect-src`, so browser-side error reporting is blocked even when `NEXT_PUBLIC_SENTRY_DSN` is configured.
 
 **Latest archival (2026-03-16):**
 - BUG-227 resolved (PR #227): promoted app/marketing header brand to `font-heading`, raised app nav breakpoint from `sm:` to `md:`, added `whitespace-nowrap` to desktop nav links, and archived to `docs/_archive/bugs/`.
@@ -84,7 +88,31 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 Active open bugs are listed below.
 
-No open bugs.
+| Bug | Priority | Summary |
+|-----|----------|---------|
+| [BUG-228](./bug-228-client-sentry-ingest-blocked-by-csp.md) | P2 | Browser-side Sentry requests are blocked by the emitted `connect-src`, so configured client telemetry never reaches Sentry |
+
+## Audit #16 — Agent-Browser Auth + Observability Sweep (2026-03-16)
+
+Targeted browser-led sweep focused on local auth setup, documented `agent-browser` gotchas, and whether current observability plumbing survives a real browser session.
+
+**Methodology:**
+- Read repo-local browser/auth docs first: `docs/dev/agent-browser.md`, `docs/dev/testing-infrastructure.md`, `docs/dev/deployment-environments.md`
+- Verified local auth prerequisites from `.env.local` without exposing secret values
+- Started the app locally and generated a clean authenticated baseline with the repo's Clerk/Playwright helpers
+- Used `agent-browser` for live sign-in exploration and page inspection, then used a narrow Playwright corroboration pass where console/runtime evidence was needed
+- Cross-checked findings against archived bug/debt history before filing
+
+**1 new bug filed (BUG-228):**
+
+| Bug | Family | Priority | Summary |
+|-----|--------|----------|---------|
+| BUG-228 | Observability / CSP | P2 | Clerk-owned CSP omits Sentry ingest from `connect-src`, so browser-side error reporting is silently blocked |
+
+**Surfaces confirmed clean:**
+- Authenticated dashboard load succeeds under plain Playwright password sign-in with the local E2E Clerk user
+- The current repo docs correctly call out several `agent-browser` gotchas: `.env.local` is not auto-loaded, refs expire after navigation, hidden radio inputs can hang direct clicks, and Clerk direct-fill is less reliable than Playwright-assisted auth
+- `agent-browser --state /tmp/agent-browser-state.json` did not preserve local Clerk dev-mode auth into a fresh session during this sweep; treated as a workflow/tooling gotcha rather than an app bug because the same app session loaded correctly under plain Playwright
 
 ## Audit #15 — Search Param Scalar Assumption Sweep (2026-03-15)
 
