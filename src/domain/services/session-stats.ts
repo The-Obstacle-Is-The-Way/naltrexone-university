@@ -1,11 +1,10 @@
 import type { PracticeSessionQuestionState } from '../entities';
+import { MS_PER_SECOND } from './time-constants';
 
 export type SessionStats = {
   answered: number;
   correct: number;
 };
-
-const MS_PER_SECOND = 1000;
 
 /**
  * Compute answered/correct counts from mutable per-question session state (pure function).

@@ -4,7 +4,10 @@ import { getSubscriptionPlanFromPriceId } from '@/src/adapters/config/stripe-pri
 import { stripeSubscriptionStatusToSubscriptionStatus } from '@/src/adapters/gateways/stripe';
 import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
 import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
-import { determineNonEntitledReason } from '@/src/domain/services';
+import {
+  determineNonEntitledReason,
+  MS_PER_SECOND,
+} from '@/src/domain/services';
 import {
   isEntitledStatus,
   type SubscriptionStatus,
@@ -223,7 +226,7 @@ export async function syncCheckoutSuccess(
     configuredPriceIds: d.priceIds,
   });
 
-  const currentPeriodEnd = new Date(currentPeriodEndSeconds * 1000);
+  const currentPeriodEnd = new Date(currentPeriodEndSeconds * MS_PER_SECOND);
 
   await d.transaction(async ({ stripeCustomers, subscriptions }) => {
     await stripeCustomers.insert(user.id, stripeCustomerId, {

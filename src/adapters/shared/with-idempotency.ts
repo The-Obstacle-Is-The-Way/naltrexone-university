@@ -5,9 +5,10 @@ import {
   DEFAULT_IDEMPOTENCY_ZOMBIE_THRESHOLD_MS,
   type IdempotencyKeyRepository,
 } from '@/src/application/ports/repositories';
+import { DAY_MS } from '@/src/domain/services';
 import { PRUNE_BATCH_LIMIT } from './prune-constants';
 
-const DEFAULT_TTL_MS = 86_400_000; // 24 hours
+const DEFAULT_TTL_MS = DAY_MS;
 const DEFAULT_MAX_WAIT_MS = 2_000;
 const DEFAULT_POLL_INTERVAL_MS = 50;
 const ERROR_MESSAGE_LIMIT = 1000;

@@ -6,6 +6,7 @@ import type {
   StripeEventRepository,
   SubscriptionRepository,
 } from '@/src/application/ports/repositories';
+import { DAY_MS } from '@/src/domain/services';
 import { STACK_TRACE_LIMIT } from '../shared/error-logging-constants';
 
 export type StripeWebhookInput = {
@@ -30,7 +31,7 @@ export type StripeWebhookDeps = {
 
 type StripeWebhookTxResult = { ok: true } | { ok: false; error: unknown };
 
-const STRIPE_EVENTS_RETENTION_MS = 90 * 86_400_000;
+const STRIPE_EVENTS_RETENTION_MS = 90 * DAY_MS;
 const STRIPE_EVENTS_PRUNE_LIMIT = 100;
 
 function toErrorData(error: unknown): string {

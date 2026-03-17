@@ -7,6 +7,7 @@ import type {
 import { isValidAttemptProvenance } from '@/src/domain/entities';
 import {
   gradeAnswer,
+  SECONDS_PER_DAY,
   shouldShowExplanation as sessionShouldShowExplanation,
 } from '@/src/domain/services';
 import { ApplicationError } from '../errors';
@@ -41,7 +42,7 @@ export type SubmitAnswerOutput = {
   choiceExplanations: ChoiceExplanation[];
 };
 
-export const SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS = 86_400;
+export const SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS = SECONDS_PER_DAY;
 
 export type SubmitAnswerWriteTransaction = <T>(
   fn: (tx: {

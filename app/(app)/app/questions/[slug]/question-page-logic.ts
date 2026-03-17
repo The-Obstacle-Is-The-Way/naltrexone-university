@@ -16,6 +16,7 @@ import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/questio
 import type { GetPreviousAttemptOutput } from '@/src/application/use-cases/get-previous-attempt';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import type { AttemptRetryOrigin } from '@/src/domain/entities';
+import { MS_PER_SECOND } from '@/src/domain/services';
 
 const QUESTION_LOAD_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
 const ANSWER_SUBMIT_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
@@ -216,7 +217,9 @@ export async function submitSelectedAnswer(input: {
       ? 0
       : Math.max(
           0,
-          Math.floor((input.nowMs() - input.questionLoadedAtMs) / 1000),
+          Math.floor(
+            (input.nowMs() - input.questionLoadedAtMs) / MS_PER_SECOND,
+          ),
         );
 
   let res: ActionResult<SubmitAnswerOutput>;

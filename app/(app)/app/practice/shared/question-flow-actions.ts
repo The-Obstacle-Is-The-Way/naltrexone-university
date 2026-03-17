@@ -7,6 +7,7 @@ import { STANDARD_MUTATION_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tie
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+import { MS_PER_SECOND } from '@/src/domain/services';
 
 const LOAD_QUESTION_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
 const SUBMIT_ANSWER_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
@@ -37,7 +38,7 @@ export function buildTimeSpentSeconds(
 ): number {
   if (questionLoadedAtMs === null) return 0;
 
-  return Math.max(0, Math.floor((nowMs - questionLoadedAtMs) / 1000));
+  return Math.max(0, Math.floor((nowMs - questionLoadedAtMs) / MS_PER_SECOND));
 }
 
 export async function runLoadQuestionFlow<TQuestion>(input: {

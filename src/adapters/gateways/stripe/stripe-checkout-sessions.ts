@@ -13,6 +13,7 @@ import type {
   PaymentGatewayRequestOptions,
 } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
+import { MS_PER_SECOND } from '@/src/domain/services';
 import { callStripeWithRetry } from './stripe-retry';
 
 export const SUBSCRIPTION_LIST_LIMIT = 10;
@@ -53,7 +54,7 @@ function isSessionInactive(
 
   if (
     typeof session.expires_at === 'number' &&
-    session.expires_at * 1000 <= nowMs()
+    session.expires_at * MS_PER_SECOND <= nowMs()
   ) {
     return true;
   }

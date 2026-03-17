@@ -6,6 +6,7 @@ import type { Question } from '../entities/question';
 import type { Subscription } from '../entities/subscription';
 import type { Tag } from '../entities/tag';
 import type { User } from '../entities/user';
+import { DAY_MS } from '../services';
 import type {
   ChoiceLabel,
   PracticeMode,
@@ -120,7 +121,7 @@ export function createSubscription(
     userId: 'user-1',
     plan: 'monthly' satisfies SubscriptionPlan,
     status: 'active' satisfies SubscriptionStatus,
-    currentPeriodEnd: new Date(now.getTime() + 86_400_000),
+    currentPeriodEnd: new Date(now.getTime() + DAY_MS),
     cancelAtPeriodEnd: false,
     createdAt: now,
     updatedAt: now,
