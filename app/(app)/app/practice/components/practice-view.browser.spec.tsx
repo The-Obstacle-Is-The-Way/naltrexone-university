@@ -36,7 +36,6 @@ test('renders error state and retries when requested', async () => {
 test('supports exam controls and question interactions', async () => {
   const onToggleMarkForReview = vi.fn();
   const onSelectChoice = vi.fn();
-  const onSubmit = vi.fn();
   const onNextQuestion = vi.fn();
 
   const screen = await render(
@@ -73,7 +72,7 @@ test('supports exam controls and question interactions', async () => {
       onToggleBookmark={() => undefined}
       onToggleMarkForReview={onToggleMarkForReview}
       onSelectChoice={onSelectChoice}
-      onSubmit={onSubmit}
+      onSubmit={() => undefined}
       onNextQuestion={onNextQuestion}
     />,
   );
@@ -88,8 +87,9 @@ test('supports exam controls and question interactions', async () => {
   await screen.getByRole('radio', { name: 'Option B' }).click();
   expect(onSelectChoice).toHaveBeenCalledWith('choice_b');
 
-  await screen.getByRole('button', { name: 'Submit' }).click();
-  expect(onSubmit).toHaveBeenCalledTimes(1);
+  await expect
+    .element(screen.getByRole('button', { name: 'Submit' }))
+    .not.toBeInTheDocument();
 
   await screen.getByRole('button', { name: 'Next' }).click();
   expect(onNextQuestion).toHaveBeenCalledTimes(1);

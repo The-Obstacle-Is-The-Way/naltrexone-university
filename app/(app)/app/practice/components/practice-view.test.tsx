@@ -467,10 +467,17 @@ describe('PracticeView', () => {
     expect(nextButton).toBeUndefined();
   });
 
-  it('orders session buttons as Previous, Submit, Next, Bookmark', () => {
+  it('keeps tutor action bar ordering as Previous, Submit, Next, Bookmark', () => {
     const question = createNextQuestion();
 
     const props: Parameters<typeof PracticeView>[0] = {
+      sessionInfo: {
+        sessionId: 'session-1',
+        mode: 'tutor',
+        index: 1,
+        total: 3,
+        isMarkedForReview: false,
+      },
       loadState: { status: 'ready' },
       question,
       selectedChoiceId: null,
@@ -500,6 +507,52 @@ describe('PracticeView', () => {
     );
 
     expect(labels).toEqual(['Previous', 'Submit', 'Next', 'Bookmark']);
+  });
+
+  it('renders exam action bar with Next and Mark for review and no Submit on the first question', () => {
+    const question = createQuestionProps();
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 0,
+          total: 2,
+          isMarkedForReview: false,
+        }}
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onToggleMarkForReview={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+        onPreviousQuestion={() => undefined}
+        hasPreviousQuestion={false}
+        hasNextQuestion={true}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
+    if (!actionBar) throw new Error('Expected action bar');
+
+    const labels = Array.from(actionBar.querySelectorAll('button')).map(
+      (button) => (button.textContent ?? '').trim(),
+    );
+
+    expect(labels).toEqual(['Next', 'Mark for review']);
+    expect(html).not.toContain('>Submit<');
+    expect(html).not.toContain('>Previous<');
   });
 
   it('keeps Submit visible and Next outlined before submission', () => {
@@ -581,13 +634,8 @@ describe('PracticeView', () => {
     expect(nextButton?.className).toContain('bg-primary');
   });
 
-  it('renders Review answers in the bottom bar after the last exam answer is submitted', () => {
+  it('renders Review answers in the bottom bar on the last exam question before submission', () => {
     const question = createQuestionProps();
-    const selectedChoice = question.choices[0];
-    if (!selectedChoice) {
-      throw new Error('Expected at least one choice');
-    }
-
     const html = renderToStaticMarkup(
       <PracticeView
         sessionInfo={{
@@ -599,16 +647,9 @@ describe('PracticeView', () => {
         }}
         loadState={{ status: 'ready' }}
         question={question}
-        selectedChoiceId={selectedChoice.id}
-        isAnswered={true}
-        submitResult={{
-          attemptId: 'attempt-1',
-          isCorrect: true,
-          correctChoiceId: selectedChoice.id,
-          explanationMd: 'Because.',
-          referenceMd: null,
-          choiceExplanations: [],
-        }}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
@@ -683,13 +724,8 @@ describe('PracticeView', () => {
     expect(html).not.toContain('Review answers');
   });
 
-  it('does not render Review answers on non-final exam questions even when hasNextQuestion is false', () => {
+  it('keeps Next in position 2 on non-final exam questions even when hasNextQuestion is false', () => {
     const question = createQuestionProps();
-    const selectedChoice = question.choices[0];
-    if (!selectedChoice) {
-      throw new Error('Expected at least one choice');
-    }
-
     const html = renderToStaticMarkup(
       <PracticeView
         sessionInfo={{
@@ -701,16 +737,9 @@ describe('PracticeView', () => {
         }}
         loadState={{ status: 'ready' }}
         question={question}
-        selectedChoiceId={selectedChoice.id}
-        isAnswered={true}
-        submitResult={{
-          attemptId: 'attempt-1',
-          isCorrect: true,
-          correctChoiceId: selectedChoice.id,
-          explanationMd: 'Because.',
-          referenceMd: null,
-          choiceExplanations: [],
-        }}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
@@ -728,10 +757,19 @@ describe('PracticeView', () => {
       />,
     );
 
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
+    if (!actionBar) throw new Error('Expected action bar');
+
+    const labels = Array.from(actionBar.querySelectorAll('button')).map(
+      (button) => (button.textContent ?? '').trim(),
+    );
+
+    expect(labels).toEqual(['Next', 'Mark for review']);
     expect(html).not.toContain('Review answers');
   });
 
-  it('does not render Review answers before the final exam answer is submitted', () => {
+  it('does not render Submit in exam mode', () => {
     const question = createQuestionProps();
 
     const html = renderToStaticMarkup(
@@ -765,7 +803,110 @@ describe('PracticeView', () => {
       />,
     );
 
-    expect(html).not.toContain('Review answers');
+    expect(html).not.toContain('>Submit<');
+  });
+
+  it('keeps exam action bar labels stable regardless of answered state', () => {
+    const question = createQuestionProps();
+    const selectedChoice = question.choices[0];
+    if (!selectedChoice) {
+      throw new Error('Expected at least one choice');
+    }
+
+    const unansweredHtml = renderToStaticMarkup(
+      <PracticeView
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 1,
+          total: 3,
+          isMarkedForReview: false,
+        }}
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onToggleMarkForReview={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+        onPreviousQuestion={() => undefined}
+        hasPreviousQuestion={true}
+        hasNextQuestion={true}
+      />,
+    );
+
+    const answeredHtml = renderToStaticMarkup(
+      <PracticeView
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 1,
+          total: 3,
+          isMarkedForReview: false,
+        }}
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={selectedChoice.id}
+        isAnswered={true}
+        submitResult={{
+          attemptId: 'attempt-1',
+          isCorrect: null,
+          correctChoiceId: null,
+          explanationMd: null,
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onToggleMarkForReview={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+        onPreviousQuestion={() => undefined}
+        hasPreviousQuestion={true}
+        hasNextQuestion={true}
+      />,
+    );
+
+    const unansweredDoc = new DOMParser().parseFromString(
+      unansweredHtml,
+      'text/html',
+    );
+    const answeredDoc = new DOMParser().parseFromString(
+      answeredHtml,
+      'text/html',
+    );
+    const unansweredActionBar = unansweredDoc.querySelector(
+      '[data-testid="bottom-action-bar"]',
+    );
+    const answeredActionBar = answeredDoc.querySelector(
+      '[data-testid="bottom-action-bar"]',
+    );
+    if (!unansweredActionBar || !answeredActionBar) {
+      throw new Error('Expected action bar');
+    }
+
+    const unansweredLabels = Array.from(
+      unansweredActionBar.querySelectorAll('button'),
+    ).map((button) => (button.textContent ?? '').trim());
+    const answeredLabels = Array.from(
+      answeredActionBar.querySelectorAll('button'),
+    ).map((button) => (button.textContent ?? '').trim());
+
+    expect(unansweredLabels).toEqual(['Previous', 'Next', 'Mark for review']);
+    expect(answeredLabels).toEqual(['Previous', 'Next', 'Mark for review']);
   });
 
   it('passes selected choice context to feedback after submit', () => {

@@ -594,7 +594,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       .toHaveTextContent('false');
   });
 
-  it('auto-advances in exam mode after a successful submit when more questions remain', async () => {
+  it('does not auto-advance in exam mode after a successful submit when more questions remain', async () => {
     getNextQuestionMock
       .mockResolvedValueOnce(
         ok({
@@ -659,10 +659,10 @@ describe('usePracticeSessionPageController (browser)', () => {
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
     await screen.getByRole('button', { name: 'submit-answer' }).click();
 
-    await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(2);
+    await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(1);
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('question-2');
+      .toHaveTextContent('question-1');
   });
 
   it('restores draft selections when navigating away and back before submit', async () => {

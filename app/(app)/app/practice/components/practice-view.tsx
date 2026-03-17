@@ -85,6 +85,156 @@ function hasBooleanCorrectness(
   return submitResult !== null && typeof submitResult.isCorrect === 'boolean';
 }
 
+function ActionBarSpacer() {
+  return <span aria-hidden="true" className="h-9 min-w-24" />;
+}
+
+type TutorActionBarProps = Pick<
+  PracticeViewProps,
+  | 'bookmarkStatus'
+  | 'canSubmit'
+  | 'hasNextQuestion'
+  | 'hasPreviousQuestion'
+  | 'isBookmarked'
+  | 'isPending'
+  | 'loadState'
+  | 'onNextQuestion'
+  | 'onPreviousQuestion'
+  | 'onSubmit'
+  | 'onToggleBookmark'
+  | 'submitResult'
+> & {
+  isSubmittingAnswer: boolean;
+};
+
+function TutorActionBar(props: TutorActionBarProps) {
+  return (
+    <>
+      {props.onPreviousQuestion ? (
+        props.hasPreviousQuestion ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-full"
+            disabled={props.isPending || props.loadState.status === 'loading'}
+            onClick={props.onPreviousQuestion}
+          >
+            Previous
+          </Button>
+        ) : (
+          <ActionBarSpacer />
+        )
+      ) : null}
+
+      {!props.submitResult ? (
+        <Button
+          type="button"
+          className="rounded-full"
+          disabled={!props.canSubmit || props.isPending}
+          onClick={props.onSubmit}
+        >
+          {props.isSubmittingAnswer ? 'Submitting…' : 'Submit'}
+        </Button>
+      ) : null}
+
+      {props.hasNextQuestion === false ? (
+        <ActionBarSpacer />
+      ) : (
+        <Button
+          type="button"
+          variant={props.submitResult ? 'default' : 'outline'}
+          className="rounded-full"
+          disabled={props.isPending || props.loadState.status === 'loading'}
+          onClick={props.onNextQuestion}
+        >
+          Next
+        </Button>
+      )}
+
+      <Button
+        type="button"
+        variant="outline"
+        className="rounded-full"
+        aria-pressed={props.isBookmarked}
+        disabled={props.bookmarkStatus === 'loading' || props.isPending}
+        onClick={props.onToggleBookmark}
+      >
+        {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
+      </Button>
+    </>
+  );
+}
+
+type ExamActionBarProps = Pick<
+  PracticeViewProps,
+  | 'hasPreviousQuestion'
+  | 'isMarkingForReview'
+  | 'isPending'
+  | 'loadState'
+  | 'onEndSession'
+  | 'onNextQuestion'
+  | 'onPreviousQuestion'
+  | 'onToggleMarkForReview'
+> & {
+  isLastSessionQuestion: boolean;
+  isMarkedForReview: boolean;
+};
+
+function ExamActionBar(props: ExamActionBarProps) {
+  const isNavigationDisabled =
+    props.isPending || props.loadState.status === 'loading';
+  const middleLabel =
+    props.isLastSessionQuestion && props.onEndSession
+      ? 'Review answers'
+      : 'Next';
+  const onMiddleAction =
+    props.isLastSessionQuestion && props.onEndSession
+      ? props.onEndSession
+      : props.onNextQuestion;
+
+  return (
+    <>
+      {props.onPreviousQuestion ? (
+        props.hasPreviousQuestion ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-full"
+            disabled={isNavigationDisabled}
+            onClick={props.onPreviousQuestion}
+          >
+            Previous
+          </Button>
+        ) : (
+          <ActionBarSpacer />
+        )
+      ) : null}
+
+      <Button
+        type="button"
+        className="rounded-full"
+        disabled={isNavigationDisabled}
+        onClick={onMiddleAction}
+      >
+        {middleLabel}
+      </Button>
+
+      {props.onToggleMarkForReview ? (
+        <Button
+          type="button"
+          variant="outline"
+          className="rounded-full"
+          aria-pressed={props.isMarkedForReview}
+          disabled={props.isMarkingForReview || props.isPending}
+          onClick={props.onToggleMarkForReview}
+        >
+          {props.isMarkedForReview ? 'Unmark review' : 'Mark for review'}
+        </Button>
+      ) : null}
+    </>
+  );
+}
+
 export function PracticeView(props: PracticeViewProps) {
   const { notify } = useNotification();
   const sessionInfo = props.sessionInfo ?? null;
@@ -285,88 +435,36 @@ export function PracticeView(props: PracticeViewProps) {
           className="flex flex-wrap items-center gap-3"
           data-testid="bottom-action-bar"
         >
-          {props.onPreviousQuestion ? (
-            props.hasPreviousQuestion ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="rounded-full"
-                disabled={
-                  props.isPending || props.loadState.status === 'loading'
-                }
-                onClick={props.onPreviousQuestion}
-              >
-                Previous
-              </Button>
-            ) : (
-              <span />
-            )
-          ) : null}
-
-          {!props.submitResult ? (
-            <Button
-              type="button"
-              className="rounded-full"
-              disabled={!props.canSubmit || props.isPending}
-              onClick={props.onSubmit}
-            >
-              {isSubmittingAnswer ? 'Submitting…' : 'Submit'}
-            </Button>
-          ) : null}
-
-          {props.submitResult &&
-          isExamMode &&
-          isLastSessionQuestion &&
-          props.onEndSession ? (
-            <Button
-              type="button"
-              className="rounded-full"
-              disabled={props.isPending || props.loadState.status === 'loading'}
-              onClick={props.onEndSession}
-            >
-              Review answers
-            </Button>
-          ) : null}
-
-          {props.hasNextQuestion === false ? (
-            <span />
+          {isExamMode ? (
+            <ExamActionBar
+              hasPreviousQuestion={props.hasPreviousQuestion}
+              isLastSessionQuestion={isLastSessionQuestion}
+              isMarkedForReview={isMarkedForReview}
+              isMarkingForReview={props.isMarkingForReview}
+              isPending={props.isPending}
+              loadState={props.loadState}
+              onEndSession={props.onEndSession}
+              onNextQuestion={props.onNextQuestion}
+              onPreviousQuestion={props.onPreviousQuestion}
+              onToggleMarkForReview={props.onToggleMarkForReview}
+            />
           ) : (
-            <Button
-              type="button"
-              variant={props.submitResult ? 'default' : 'outline'}
-              className="rounded-full"
-              disabled={props.isPending || props.loadState.status === 'loading'}
-              onClick={props.onNextQuestion}
-            >
-              Next
-            </Button>
+            <TutorActionBar
+              bookmarkStatus={props.bookmarkStatus}
+              canSubmit={props.canSubmit}
+              hasNextQuestion={props.hasNextQuestion}
+              hasPreviousQuestion={props.hasPreviousQuestion}
+              isBookmarked={props.isBookmarked}
+              isPending={props.isPending}
+              isSubmittingAnswer={isSubmittingAnswer}
+              loadState={props.loadState}
+              onNextQuestion={props.onNextQuestion}
+              onPreviousQuestion={props.onPreviousQuestion}
+              onSubmit={props.onSubmit}
+              onToggleBookmark={props.onToggleBookmark}
+              submitResult={props.submitResult}
+            />
           )}
-
-          {!isExamMode ? (
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-full"
-              aria-pressed={props.isBookmarked}
-              disabled={props.bookmarkStatus === 'loading' || props.isPending}
-              onClick={props.onToggleBookmark}
-            >
-              {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
-            </Button>
-          ) : null}
-
-          {isExamMode && props.onToggleMarkForReview ? (
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-full"
-              aria-pressed={isMarkedForReview}
-              disabled={props.isMarkingForReview || props.isPending}
-              onClick={props.onToggleMarkForReview}
-            >
-              {isMarkedForReview ? 'Unmark review' : 'Mark for review'}
-            </Button>
-          ) : null}
         </div>
       ) : null}
     </div>
