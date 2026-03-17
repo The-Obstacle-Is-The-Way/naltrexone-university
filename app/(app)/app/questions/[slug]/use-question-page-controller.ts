@@ -119,8 +119,6 @@ export function useQuestionPageController(
     useState<ReviewHydrationState | null>(
       input.mode === 'review' ? 'no_prior_attempt' : null,
     );
-  const [pendingRetryProvenance, setPendingRetryProvenance] =
-    useState<RetryProvenance | null>(null);
   const [bookmarkedQuestionIds, setBookmarkedQuestionIds] = useState<
     Set<string>
   >(() => new Set());
@@ -144,6 +142,7 @@ export function useQuestionPageController(
   const latestBookmarkLookupRequestId = useRef(0);
   const bookmarkStateVersionRef = useRef(0);
   const bookmarkIdempotencyKeysRef = useRef<Map<string, string>>(new Map());
+  const pendingRetryProvenanceRef = useRef<RetryProvenance | null>(null);
   const sessionQuestionsBySessionIdRef = useRef<
     Map<string, SessionNavigation['questions']>
   >(new Map());
@@ -164,6 +163,7 @@ export function useQuestionPageController(
       latestLoadQuestionRequestId.current += 1;
       const requestId = latestLoadQuestionRequestId.current;
       const requestSlug = input.slug;
+      pendingRetryProvenanceRef.current = null;
 
       const runLoadQuestion = createLoadQuestionAction({
         slug: input.slug,
@@ -190,11 +190,6 @@ export function useQuestionPageController(
   );
 
   useEffect(loadQuestion, [loadQuestion]);
-
-  useEffect(() => {
-    if (!input.slug) return;
-    setPendingRetryProvenance(null);
-  }, [input.slug]);
 
   useEffect(() => {
     if (!normalizedReviewIds.normalized) return;
@@ -599,6 +594,7 @@ export function useQuestionPageController(
       latestSubmitRequestId.current += 1;
       const requestId = latestSubmitRequestId.current;
       const requestSlug = input.slug;
+      const retryProvenance = pendingRetryProvenanceRef.current;
 
       const runSubmit = createSubmitSelectedAnswerAction({
         startTransition,
@@ -608,11 +604,38 @@ export function useQuestionPageController(
         sessionId: normalizedSessionId,
         questionLoadedAtMs: questionLoadedAt,
         submitIdempotencyKey,
-        retryProvenance: pendingRetryProvenance,
+        retryProvenance,
         submitAnswerFn: submitAnswer,
         nowMs: Date.now,
         setLoadState,
         setSubmitResult,
+        onSuccess: () => {
+          if (
+            retryProvenance?.retryOrigin === 'session_review' &&
+            normalizedSessionId
+          ) {
+            setSessionNavigation((current) => {
+              if (!current) return current;
+              if (
+                current.currentIndex < 0 ||
+                current.currentIndex >= current.questions.length
+              ) {
+                return current;
+              }
+
+              const questions = current.questions.map((q, index) =>
+                index === current.currentIndex ? { ...q, wasRetried: true } : q,
+              );
+              sessionQuestionsBySessionIdRef.current.set(
+                normalizedSessionId,
+                questions,
+              );
+              return { ...current, questions };
+            });
+          }
+
+          pendingRetryProvenanceRef.current = null;
+        },
         onUnhandledError: (error) => {
           reportClientError(error, {
             component: 'UseQuestionPageController',
@@ -635,7 +658,6 @@ export function useQuestionPageController(
       submitIdempotencyKey,
       input.mode,
       normalizedSessionId,
-      pendingRetryProvenance,
       isMounted,
     ],
   );
@@ -664,16 +686,15 @@ export function useQuestionPageController(
         setSubmitIdempotencyKey,
         setQuestionLoadedAt,
         setSessionUnansweredReveal,
-        setRetryProvenance: setPendingRetryProvenance,
-        retryProvenance,
       });
+      pendingRetryProvenanceRef.current = retryProvenance;
       setReviewHydrationState('no_prior_attempt');
     };
   }, [input.mode, input.from, normalizedSessionId, submitResult]);
 
   const onAnswerAsNew = useMemo(() => {
     return () => {
-      setPendingRetryProvenance(null);
+      pendingRetryProvenanceRef.current = null;
       setSelectedChoiceId(null);
       setSubmitResult(null);
       setSessionUnansweredReveal(null);
@@ -682,36 +703,6 @@ export function useQuestionPageController(
       setReviewHydrationState('no_prior_attempt');
     };
   }, []);
-
-  useEffect(() => {
-    if (!submitResult || !pendingRetryProvenance) return;
-
-    if (
-      pendingRetryProvenance.retryOrigin === 'session_review' &&
-      normalizedSessionId
-    ) {
-      setSessionNavigation((current) => {
-        if (!current) return current;
-        if (
-          current.currentIndex < 0 ||
-          current.currentIndex >= current.questions.length
-        ) {
-          return current;
-        }
-
-        const questions = current.questions.map((q, index) =>
-          index === current.currentIndex ? { ...q, wasRetried: true } : q,
-        );
-        sessionQuestionsBySessionIdRef.current.set(
-          normalizedSessionId,
-          questions,
-        );
-        return { ...current, questions };
-      });
-    }
-
-    setPendingRetryProvenance(null);
-  }, [submitResult, pendingRetryProvenance, normalizedSessionId]);
 
   return {
     loadState,

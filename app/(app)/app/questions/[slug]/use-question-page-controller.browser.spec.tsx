@@ -83,6 +83,10 @@ function Probe({
 
   const total = output.sessionNavigation?.questions.length ?? null;
   const index = output.sessionNavigation?.currentIndex ?? null;
+  const currentWasRetried =
+    index === null
+      ? null
+      : (output.sessionNavigation?.questions[index]?.wasRetried ?? null);
   const prevSlug =
     index === null || index <= 0
       ? null
@@ -103,6 +107,9 @@ function Probe({
       </div>
       <div data-testid="session-nav-total">{total ?? ''}</div>
       <div data-testid="session-nav-index">{index ?? ''}</div>
+      <div data-testid="session-nav-current-was-retried">
+        {currentWasRetried === null ? '' : currentWasRetried ? 'true' : 'false'}
+      </div>
       <div data-testid="session-nav-prev-slug">{prevSlug ?? ''}</div>
       <div data-testid="session-nav-next-slug">{nextSlug ?? ''}</div>
       <div data-testid="is-loading-previous-attempt">
@@ -1566,6 +1573,9 @@ describe('useQuestionPageController (browser)', () => {
     await expect
       .element(screen.getByTestId('attempt-id'))
       .toHaveTextContent('attempt-1');
+    await expect
+      .element(screen.getByTestId('session-nav-current-was-retried'))
+      .toHaveTextContent('false');
 
     await screen.getByTestId('trigger-reattempt').click();
     await expect
@@ -1588,6 +1598,9 @@ describe('useQuestionPageController (browser)', () => {
       retryOrigin: 'session_review',
       retrySessionId: sessionId,
     });
+    await expect
+      .element(screen.getByTestId('session-nav-current-was-retried'))
+      .toHaveTextContent('true');
   });
 
   it('maps kind=session_unanswered to reveal state and clears selected choice/result', async () => {
