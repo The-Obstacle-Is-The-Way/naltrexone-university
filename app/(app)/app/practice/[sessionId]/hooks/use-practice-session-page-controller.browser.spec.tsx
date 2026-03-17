@@ -35,6 +35,7 @@ const {
   getPracticeSessionReviewMock,
   getPracticeSessionSummaryMock,
   endPracticeSessionMock,
+  saveExamDraftAnswerMock,
   setPracticeSessionQuestionMarkMock,
 } = getPracticeSessionPageControllerBrowserMocks();
 
@@ -98,6 +99,36 @@ describe('usePracticeSessionPageController (browser)', () => {
       errorResult('CONFLICT', 'Practice session has not ended'),
     );
     getBookmarksMock.mockResolvedValue(EMPTY_BOOKMARKS_RESULT);
+    saveExamDraftAnswerMock.mockImplementation(async (input) =>
+      ok({
+        questionId:
+          typeof input === 'object' &&
+          input &&
+          'questionId' in input &&
+          typeof input.questionId === 'string'
+            ? input.questionId
+            : 'question-1',
+        markedForReview: false,
+        latestSelectedChoiceId: null,
+        latestIsCorrect: null,
+        latestAnsweredAt: null,
+        draftSelectedChoiceId:
+          typeof input === 'object' &&
+          input &&
+          'selectedChoiceId' in input &&
+          typeof input.selectedChoiceId === 'string'
+            ? input.selectedChoiceId
+            : 'choice_1',
+        draftSavedAt: new Date('2026-02-07T00:00:00.000Z'),
+        draftCumulativeMs:
+          typeof input === 'object' &&
+          input &&
+          'cumulativeMs' in input &&
+          typeof input.cumulativeMs === 'number'
+            ? input.cumulativeMs
+            : 1_000,
+      }),
+    );
   });
 
   afterEach(() => {
@@ -241,6 +272,79 @@ describe('usePracticeSessionPageController (browser)', () => {
       .element(screen.getByTestId('question-id'))
       .toHaveTextContent('question-1');
     expect(callOrder).toEqual(['summary', 'question']);
+  });
+
+  it('saves the current exam draft before moving to the next question', async () => {
+    getNextQuestionMock
+      .mockResolvedValueOnce(
+        ok(
+          createQuestionResponse({
+            questionId: 'question-1',
+            choices: [CHOICE_1, CHOICE_2, CHOICE_3],
+            session: {
+              mode: 'exam',
+              index: 0,
+              total: 2,
+              isMarkedForReview: false,
+            },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        ok(
+          createQuestionResponse({
+            questionId: 'question-2',
+            choices: [CHOICE_1, CHOICE_2, CHOICE_3],
+            session: {
+              mode: 'exam',
+              index: 1,
+              total: 2,
+              isMarkedForReview: false,
+            },
+          }),
+        ),
+      );
+    saveExamDraftAnswerMock.mockResolvedValue(
+      ok({
+        questionId: 'question-1',
+        markedForReview: false,
+        latestSelectedChoiceId: null,
+        latestIsCorrect: null,
+        latestAnsweredAt: null,
+        draftSelectedChoiceId: 'choice_1',
+        draftSavedAt: new Date('2026-02-07T00:00:00.000Z'),
+        draftCumulativeMs: 1_000,
+      }),
+    );
+    mockBookmarksAndReview(
+      createReviewResponse({
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 1,
+        markedCount: 0,
+      }),
+    );
+
+    const screen = await render(
+      <PracticeSessionPageControllerNavigationProbe />,
+    );
+
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent('question-1');
+
+    await screen.getByRole('button', { name: 'select-choice-1' }).click();
+    await screen.getByRole('button', { name: 'next-question' }).click();
+
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent('question-2');
+    expect(saveExamDraftAnswerMock).toHaveBeenCalledWith({
+      sessionId: 'session-1',
+      questionId: 'question-1',
+      selectedChoiceId: 'choice_1',
+      cumulativeMs: expect.any(Number),
+    });
   });
 
   it('recovers a summary when ending an active tutor session returns CONFLICT', async () => {
@@ -676,12 +780,10 @@ describe('usePracticeSessionPageController (browser)', () => {
           choices: [CHOICE_1],
           session: {
             sessionId: 'session-1',
-            mode: 'tutor',
+            mode: 'exam',
             index: 0,
             total: 2,
             isMarkedForReview: false,
-            latestSelectedChoiceId: null,
-            latestIsCorrect: null,
           },
         }),
       )
@@ -693,12 +795,10 @@ describe('usePracticeSessionPageController (browser)', () => {
             choices: [createChoice({ id: 'choice_2' })],
             session: {
               sessionId: 'session-1',
-              mode: 'tutor',
+              mode: 'exam',
               index: 1,
               total: 2,
               isMarkedForReview: false,
-              latestSelectedChoiceId: null,
-              latestIsCorrect: null,
             },
           }),
         ),
@@ -712,20 +812,20 @@ describe('usePracticeSessionPageController (browser)', () => {
           choices: [CHOICE_1],
           session: {
             sessionId: 'session-1',
-            mode: 'tutor',
+            mode: 'exam',
             index: 0,
             total: 2,
             isMarkedForReview: false,
-            latestSelectedChoiceId: null,
-            latestIsCorrect: null,
+            draftSelectedChoiceId: 'choice_1',
+            draftCumulativeMs: 1_000,
           },
         }),
       );
     mockBookmarksAndReview(
       createReviewResponse({
-        mode: 'tutor',
+        mode: 'exam',
         totalCount: 2,
-        answeredCount: 0,
+        answeredCount: 1,
         markedCount: 0,
       }),
     );

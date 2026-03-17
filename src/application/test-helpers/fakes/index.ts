@@ -30,6 +30,7 @@ export {
   FakeGetPracticeSessionSummaryUseCase,
   FakeGetSessionHistoryUseCase,
   FakeGetUserStatsUseCase,
+  FakeSaveExamDraftAnswerUseCase,
   FakeSetPracticeSessionQuestionMarkUseCase,
   FakeStartPracticeSessionUseCase,
   FakeSubmitAnswerUseCase,

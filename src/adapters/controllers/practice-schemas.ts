@@ -52,6 +52,15 @@ export const EndPracticeSessionInputSchema = z
 
 export const FinalizeExamAnswersInputSchema = EndPracticeSessionInputSchema;
 
+export const SaveExamDraftAnswerInputSchema = z
+  .object({
+    sessionId: zUuid,
+    questionId: zUuid,
+    selectedChoiceId: zUuid,
+    cumulativeMs: z.number().int().min(0),
+  })
+  .strict();
+
 export const GetPracticeSessionReviewInputSchema = z
   .object({
     sessionId: zUuid,

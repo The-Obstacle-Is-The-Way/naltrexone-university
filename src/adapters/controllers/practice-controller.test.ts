@@ -15,6 +15,7 @@ import {
   FakeIdempotencyKeyRepository,
   FakeLogger,
   FakeRateLimiter,
+  FakeSaveExamDraftAnswerUseCase,
   FakeSetPracticeSessionQuestionMarkUseCase,
   FakeStartPracticeSessionUseCase,
   FakeSubscriptionRepository,
@@ -25,6 +26,7 @@ import type {
   GetPracticeSessionReviewOutput,
   GetPracticeSessionSummaryOutput,
   GetSessionHistoryOutput,
+  SaveExamDraftAnswerOutput,
   SetPracticeSessionQuestionMarkOutput,
   StartPracticeSessionOutput,
 } from '@/src/application/use-cases';
@@ -40,6 +42,7 @@ import {
   getPracticeSessionSummary,
   getSessionHistory,
   type PracticeControllerDeps,
+  saveExamDraftAnswer,
   setPracticeSessionQuestionMark,
   startPracticeSession,
 } from './practice-controller';
@@ -50,6 +53,7 @@ type PracticeControllerTestDeps = PracticeControllerDeps & {
   startPracticeSessionUseCase: FakeStartPracticeSessionUseCase;
   endPracticeSessionUseCase: FakeEndPracticeSessionUseCase;
   finalizeExamAnswersUseCase: FakeFinalizeExamAnswersUseCase;
+  saveExamDraftAnswerUseCase: FakeSaveExamDraftAnswerUseCase;
   getPracticeSessionReviewUseCase: FakeGetPracticeSessionReviewUseCase;
   getPracticeSessionSummaryUseCase: FakeGetPracticeSessionSummaryUseCase;
   getSessionHistoryUseCase: FakeGetSessionHistoryUseCase;
@@ -68,6 +72,8 @@ function createDeps(overrides?: {
   endThrows?: unknown;
   finalizeOutput?: FinalizeExamAnswersOutput;
   finalizeThrows?: unknown;
+  saveDraftOutput?: SaveExamDraftAnswerOutput;
+  saveDraftThrows?: unknown;
   reviewOutput?: GetPracticeSessionReviewOutput;
   reviewThrows?: unknown;
   summaryOutput?: GetPracticeSessionSummaryOutput;
@@ -169,6 +175,20 @@ function createDeps(overrides?: {
     overrides?.finalizeThrows,
   );
 
+  const saveExamDraftAnswerUseCase = new FakeSaveExamDraftAnswerUseCase(
+    overrides?.saveDraftOutput ?? {
+      questionId: '33333333-3333-3333-3333-333333333333',
+      markedForReview: false,
+      latestSelectedChoiceId: null,
+      latestIsCorrect: null,
+      latestAnsweredAt: null,
+      draftSelectedChoiceId: '44444444-4444-4444-4444-444444444444',
+      draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
+      draftCumulativeMs: 30_000,
+    },
+    overrides?.saveDraftThrows,
+  );
+
   const getPracticeSessionSummaryUseCase =
     new FakeGetPracticeSessionSummaryUseCase(
       overrides?.summaryOutput ?? {
@@ -217,6 +237,7 @@ function createDeps(overrides?: {
     countAvailableQuestionsUseCase,
     endPracticeSessionUseCase,
     finalizeExamAnswersUseCase,
+    saveExamDraftAnswerUseCase,
     getPracticeSessionReviewUseCase,
     getPracticeSessionSummaryUseCase,
     getSessionHistoryUseCase,
@@ -666,6 +687,92 @@ describe('practice-controller', () => {
       });
       expect(second).toEqual(first);
       expect(deps.finalizeExamAnswersUseCase.inputs).toHaveLength(1);
+    });
+  });
+
+  describe('saveExamDraftAnswer', () => {
+    it('returns VALIDATION_ERROR when input is invalid', async () => {
+      const deps = createDeps();
+
+      const result = await saveExamDraftAnswer(
+        {
+          sessionId: 'bad',
+          questionId: 'still-bad',
+          selectedChoiceId: 'also-bad',
+          cumulativeMs: -1,
+        },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          fieldErrors: {
+            sessionId: expect.any(Array),
+            questionId: expect.any(Array),
+            selectedChoiceId: expect.any(Array),
+            cumulativeMs: expect.any(Array),
+          },
+        },
+      });
+      expect(deps.saveExamDraftAnswerUseCase.inputs).toEqual([]);
+    });
+
+    it('returns UNAUTHENTICATED when unauthenticated', async () => {
+      const deps = createDeps({ user: null });
+
+      const result = await saveExamDraftAnswer(
+        {
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          questionId: '22222222-2222-2222-2222-222222222222',
+          selectedChoiceId: '33333333-3333-3333-3333-333333333333',
+          cumulativeMs: 30_000,
+        },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNAUTHENTICATED' },
+      });
+      expect(deps.saveExamDraftAnswerUseCase.inputs).toEqual([]);
+    });
+
+    it('returns saved draft state when use case succeeds', async () => {
+      const saveDraftOutput = {
+        questionId: '22222222-2222-2222-2222-222222222222',
+        markedForReview: false,
+        latestSelectedChoiceId: null,
+        latestIsCorrect: null,
+        latestAnsweredAt: null,
+        draftSelectedChoiceId: '33333333-3333-3333-3333-333333333333',
+        draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
+        draftCumulativeMs: 50_000,
+      } as const;
+
+      const deps = createDeps({ saveDraftOutput });
+
+      const result = await saveExamDraftAnswer(
+        {
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          questionId: '22222222-2222-2222-2222-222222222222',
+          selectedChoiceId: '33333333-3333-3333-3333-333333333333',
+          cumulativeMs: 50_000,
+        },
+        deps,
+      );
+
+      expect(result).toEqual({ ok: true, data: saveDraftOutput });
+      expect(deps.saveExamDraftAnswerUseCase.inputs).toEqual([
+        {
+          userId: 'user_1',
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          questionId: '22222222-2222-2222-2222-222222222222',
+          selectedChoiceId: '33333333-3333-3333-3333-333333333333',
+          cumulativeMs: 50_000,
+        },
+      ]);
     });
   });
 

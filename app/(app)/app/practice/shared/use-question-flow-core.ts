@@ -65,7 +65,6 @@ export function useQuestionFlowCore(
   const [submitResult, setSubmitResultState] =
     useState<SubmitAnswerOutput | null>(null);
   const questionRef = useRef<NextQuestion | null>(null);
-  const draftSelectedChoicesRef = useRef<Map<string, string>>(new Map());
   const submitResultQuestionIdRef = useRef<string | null>(null);
   const [loadState, setLoadStateState] = useState<LoadState>({
     status: 'idle',
@@ -106,13 +105,6 @@ export function useQuestionFlowCore(
     });
   }, [isAnswered, loadState, question, selectedChoiceId, submitResult]);
 
-  const updateDraftSelectedChoices = useCallback(
-    (update: (prev: Map<string, string>) => Map<string, string>) => {
-      draftSelectedChoicesRef.current = update(draftSelectedChoicesRef.current);
-    },
-    [],
-  );
-
   const setQuestion = useCallback((nextQuestion: NextQuestion | null) => {
     questionRef.current = nextQuestion;
     setQuestionState(nextQuestion);
@@ -147,10 +139,23 @@ export function useQuestionFlowCore(
         return;
       }
 
-      const sessionSelectedChoiceId =
+      const isActiveExamQuestion = nextQuestion.session?.mode === 'exam';
+      const examDraftSelectedChoiceId =
+        nextQuestion.session?.draftSelectedChoiceId;
+      if (
+        isActiveExamQuestion &&
+        typeof examDraftSelectedChoiceId === 'string'
+      ) {
+        setSelectedChoiceId(examDraftSelectedChoiceId);
+        setIsAnswered(false);
+        setSubmitResult(null);
+        return;
+      }
+
+      const latestSelectedChoiceId =
         nextQuestion.session?.latestSelectedChoiceId;
-      if (typeof sessionSelectedChoiceId === 'string') {
-        setSelectedChoiceId(sessionSelectedChoiceId);
+      if (typeof latestSelectedChoiceId === 'string') {
+        setSelectedChoiceId(latestSelectedChoiceId);
         setIsAnswered(true);
 
         const prev = nextQuestion.session?.previousSubmission;
@@ -160,7 +165,7 @@ export function useQuestionFlowCore(
           const isCorrect =
             typeof sessionIsCorrect === 'boolean'
               ? sessionIsCorrect
-              : prev.correctChoiceId === sessionSelectedChoiceId;
+              : prev.correctChoiceId === latestSelectedChoiceId;
 
           setSubmitResult(
             {
@@ -176,19 +181,10 @@ export function useQuestionFlowCore(
         } else {
           setSubmitResult(null);
         }
-
-        updateDraftSelectedChoices((prev) => {
-          if (!prev.has(nextQuestion.questionId)) return prev;
-          const next = new Map(prev);
-          next.delete(nextQuestion.questionId);
-          return next;
-        });
         return;
       }
 
-      setSelectedChoiceId(
-        draftSelectedChoicesRef.current.get(nextQuestion.questionId) ?? null,
-      );
+      setSelectedChoiceId(null);
 
       if (submitResultQuestionIdRef.current === nextQuestion.questionId) {
         return;
@@ -197,7 +193,7 @@ export function useQuestionFlowCore(
       setIsAnswered(false);
       setSubmitResult(null);
     },
-    [updateDraftSelectedChoices, setSubmitResult],
+    [setSubmitResult],
   );
 
   const setLoadState = useCallback(
@@ -226,14 +222,8 @@ export function useQuestionFlowCore(
         choiceId,
       );
       if (!changed) return;
-
-      updateDraftSelectedChoices((prev) => {
-        const next = new Map(prev);
-        next.set(question.questionId, choiceId);
-        return next;
-      });
     },
-    [isAnswered, question, submitResult, updateDraftSelectedChoices],
+    [isAnswered, question, submitResult],
   );
 
   return {

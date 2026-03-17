@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {
@@ -22,6 +22,7 @@ const getPracticeSessionSummaryMock =
   vi.fn<
     (input: unknown) => Promise<ActionResult<GetPracticeSessionSummaryOutput>>
   >();
+const saveCurrentExamDraftMock = vi.fn<() => Promise<boolean>>();
 
 function createInput(sessionMode: 'tutor' | 'exam') {
   return {
@@ -38,15 +39,21 @@ function createInput(sessionMode: 'tutor' | 'exam') {
     endPracticeSessionFn: endPracticeSessionMock,
     getPracticeSessionReviewFn: getPracticeSessionReviewMock,
     getPracticeSessionSummaryFn: getPracticeSessionSummaryMock,
+    saveCurrentExamDraft: saveCurrentExamDraftMock,
   };
 }
 
 describe('usePracticeSessionReviewStage (browser)', () => {
+  beforeEach(() => {
+    saveCurrentExamDraftMock.mockResolvedValue(true);
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
     endPracticeSessionMock.mockReset();
     getPracticeSessionReviewMock.mockReset();
     getPracticeSessionSummaryMock.mockReset();
+    saveCurrentExamDraftMock.mockReset();
   });
 
   it('finalizes tutor sessions and loads summary review data', async () => {
@@ -182,5 +189,36 @@ describe('usePracticeSessionReviewStage (browser)', () => {
       .poll(() => harness.result.current.navigatorLoadState.status)
       .toBe('ready');
     expect(harness.result.current.navigator?.sessionId).toBe('session-1');
+  });
+
+  it('saves the current exam draft before entering review stage', async () => {
+    const callOrder: string[] = [];
+    saveCurrentExamDraftMock.mockImplementation(async () => {
+      callOrder.push('save');
+      return true;
+    });
+    getPracticeSessionReviewMock.mockImplementation(async () => {
+      callOrder.push('review');
+      return ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [],
+      });
+    });
+
+    const input = createInput('exam');
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStage(input),
+    );
+
+    harness.result.current.onEndSession();
+
+    await expect
+      .poll(() => harness.result.current.reviewLoadState.status)
+      .toBe('ready');
+    expect(callOrder).toEqual(['save', 'review']);
   });
 });

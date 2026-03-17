@@ -14,6 +14,7 @@ import {
   GetPreviousAttemptUseCase,
   GetSessionHistoryUseCase,
   GetUserStatsUseCase,
+  SaveExamDraftAnswerUseCase,
   SetPracticeSessionQuestionMarkUseCase,
   StartPracticeSessionUseCase,
   SubmitAnswerUseCase,
@@ -73,6 +74,10 @@ export function createUseCaseFactories(input: {
               sessions: repositories.createPracticeSessionRepository(tx),
             }),
           ),
+      ),
+    createSaveExamDraftAnswerUseCase: () =>
+      new SaveExamDraftAnswerUseCase(
+        repositories.createPracticeSessionRepository(),
       ),
     createGetNextQuestionUseCase: () =>
       new GetNextQuestionUseCase(

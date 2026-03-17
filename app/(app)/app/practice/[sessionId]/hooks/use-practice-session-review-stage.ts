@@ -37,6 +37,7 @@ export type UsePracticeSessionReviewStageInput = {
   setLoadState: (state: LoadState) => void;
   resetQuestionState: () => void;
   loadSpecificQuestion: (questionId: string) => void;
+  saveCurrentExamDraft: () => Promise<boolean>;
   endPracticeSessionFn: (
     input: EndPracticeSessionActionInput,
   ) => Promise<ActionResult<EndPracticeSessionOutput>>;
@@ -133,6 +134,17 @@ export function usePracticeSessionReviewStage(
     isMounted: input.isMounted,
   });
 
+  const onEndSession = useCallback(() => {
+    void (async () => {
+      if (input.sessionMode === 'exam') {
+        const saved = await input.saveCurrentExamDraft();
+        if (!saved) return;
+      }
+
+      reviewStage.onEndSession();
+    })();
+  }, [input.saveCurrentExamDraft, input.sessionMode, reviewStage.onEndSession]);
+
   return {
     summary,
     setSummary,
@@ -144,7 +156,7 @@ export function usePracticeSessionReviewStage(
     navigator,
     navigatorLoadState,
     isInReviewStage: reviewStage.isInReviewStage,
-    onEndSession: reviewStage.onEndSession,
+    onEndSession,
     onRetryReview: reviewStage.onRetryReview,
     onRetryNavigator,
     onOpenReviewQuestion: reviewStage.onOpenReviewQuestion,

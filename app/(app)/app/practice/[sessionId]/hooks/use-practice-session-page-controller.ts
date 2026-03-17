@@ -11,6 +11,7 @@ import {
   endPracticeSession,
   getPracticeSessionReview,
   getPracticeSessionSummary,
+  saveExamDraftAnswer,
   setPracticeSessionQuestionMark,
 } from '@/src/adapters/controllers/practice-controller';
 import {
@@ -34,6 +35,7 @@ export function usePracticeSessionPageController(
     isMounted,
     getNextQuestionFn: getNextQuestion,
     submitAnswerFn: submitAnswer,
+    saveExamDraftAnswerFn: saveExamDraftAnswer,
   });
 
   const bookmarks = usePracticeQuestionBookmarks({
@@ -55,6 +57,7 @@ export function usePracticeSessionPageController(
     endPracticeSessionFn: endPracticeSession,
     getPracticeSessionReviewFn: getPracticeSessionReview,
     getPracticeSessionSummaryFn: getPracticeSessionSummary,
+    saveCurrentExamDraft: questionFlow.saveCurrentExamDraft,
   });
 
   const bootstrapSessionSummary = useCallback(() => {

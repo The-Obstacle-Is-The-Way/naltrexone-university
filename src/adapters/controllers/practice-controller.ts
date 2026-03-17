@@ -25,6 +25,8 @@ import type {
   GetPracticeSessionSummaryOutput,
   GetSessionHistoryInput,
   GetSessionHistoryOutput,
+  SaveExamDraftAnswerInput,
+  SaveExamDraftAnswerOutput,
   SetPracticeSessionQuestionMarkInput,
   SetPracticeSessionQuestionMarkOutput,
   StartPracticeSessionInput,
@@ -42,6 +44,7 @@ import {
   GetPracticeSessionReviewInputSchema,
   GetPracticeSessionSummaryInputSchema,
   GetSessionHistoryInputSchema,
+  SaveExamDraftAnswerInputSchema,
   SetPracticeSessionQuestionMarkInputSchema,
   SetPracticeSessionQuestionMarkOutputSchema,
   StartPracticeSessionInputSchema,
@@ -58,6 +61,7 @@ export type {
   GetPracticeSessionReviewOutput,
   GetPracticeSessionSummaryOutput,
   GetSessionHistoryOutput,
+  SaveExamDraftAnswerOutput,
   SetPracticeSessionQuestionMarkOutput,
   StartPracticeSessionOutput,
 } from '@/src/application/use-cases';
@@ -92,6 +96,11 @@ export type PracticeControllerDeps = {
     execute: (
       input: FinalizeExamAnswersInput,
     ) => Promise<FinalizeExamAnswersOutput>;
+  };
+  saveExamDraftAnswerUseCase: {
+    execute: (
+      input: SaveExamDraftAnswerInput,
+    ) => Promise<SaveExamDraftAnswerOutput>;
   };
   getPracticeSessionReviewUseCase: {
     execute: (
@@ -274,6 +283,22 @@ export const getPracticeSessionReview = createAction({
     return d.getPracticeSessionReviewUseCase.execute({
       userId,
       sessionId: input.sessionId,
+    });
+  },
+});
+
+export const saveExamDraftAnswer = createAction({
+  schema: SaveExamDraftAnswerInputSchema,
+  getDeps,
+  execute: async (input, d) => {
+    const userId = await requireEntitledUserId(d);
+
+    return d.saveExamDraftAnswerUseCase.execute({
+      userId,
+      sessionId: input.sessionId,
+      questionId: input.questionId,
+      selectedChoiceId: input.selectedChoiceId,
+      cumulativeMs: input.cumulativeMs,
     });
   },
 });

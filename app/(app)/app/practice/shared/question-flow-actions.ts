@@ -9,10 +9,12 @@ import {
 } from '@/app/(app)/app/shared/timeout-tiers';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import type { SaveExamDraftAnswerOutput } from '@/src/adapters/controllers/practice-controller';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { MS_PER_SECOND } from '@/src/domain/services';
 
 const LOAD_QUESTION_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
+const SAVE_DRAFT_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
 const SUBMIT_ANSWER_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
 
 export type RequestSequencingHooks = {
@@ -158,6 +160,78 @@ export function runTransitionedAsyncAction(input: {
       }
     });
   });
+}
+
+export async function maybeSaveDraftBeforeNavigation<
+  TQuestion extends {
+    questionId: string;
+    session?: {
+      mode?: 'tutor' | 'exam';
+    } | null;
+  },
+>(input: {
+  sessionId: string;
+  question: TQuestion | null;
+  selectedChoiceId: string | null;
+  currentCumulativeMs: number;
+  lastSavedDraftSelectedChoiceId: string | null;
+  lastSavedDraftCumulativeMs: number;
+  saveExamDraftAnswerFn: (
+    input: unknown,
+  ) => Promise<ActionResult<SaveExamDraftAnswerOutput>>;
+  setLoadState: (state: AsyncLoadStateWithIdle) => void;
+  onSaved?: (draft: {
+    questionId: string;
+    selectedChoiceId: string;
+    cumulativeMs: number;
+  }) => void;
+}): Promise<boolean> {
+  if (!input.question) return true;
+  if (input.question.session?.mode !== 'exam') return true;
+  if (!input.selectedChoiceId) return true;
+
+  const hasDraftChanged =
+    input.selectedChoiceId !== input.lastSavedDraftSelectedChoiceId;
+  const hasCumulativeTimeAdvanced =
+    input.currentCumulativeMs > input.lastSavedDraftCumulativeMs;
+
+  if (!hasDraftChanged && !hasCumulativeTimeAdvanced) {
+    return true;
+  }
+
+  let res: ActionResult<SaveExamDraftAnswerOutput>;
+  try {
+    res = await withTimeout(
+      input.saveExamDraftAnswerFn({
+        sessionId: input.sessionId,
+        questionId: input.question.questionId,
+        selectedChoiceId: input.selectedChoiceId,
+        cumulativeMs: input.currentCumulativeMs,
+      }),
+      SAVE_DRAFT_TIMEOUT_MS,
+    );
+  } catch (error) {
+    input.setLoadState({
+      status: 'error',
+      message: getThrownErrorMessage(error),
+    });
+    return false;
+  }
+
+  if (!res.ok) {
+    input.setLoadState({
+      status: 'error',
+      message: getActionResultErrorMessage(res),
+    });
+    return false;
+  }
+
+  input.onSaved?.({
+    questionId: input.question.questionId,
+    selectedChoiceId: res.data.draftSelectedChoiceId ?? input.selectedChoiceId,
+    cumulativeMs: res.data.draftCumulativeMs,
+  });
+  return true;
 }
 
 export async function runSubmitAnswerFlow<

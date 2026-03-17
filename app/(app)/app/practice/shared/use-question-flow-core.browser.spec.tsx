@@ -106,14 +106,15 @@ function QuestionFlowCoreProbe() {
                 mode: 'exam',
                 index: 0,
                 total: 1,
-                latestSelectedChoiceId: 'choice_2',
+                draftSelectedChoiceId: 'choice_2',
+                draftCumulativeMs: 30_000,
               },
             }),
           );
           core.setLoadState({ status: 'ready' });
         }}
       >
-        load-with-session-selection
+        load-with-exam-draft
       </button>
       <button type="button" onClick={() => core.onSelectChoice('choice_1')}>
         select-choice-1
@@ -199,7 +200,7 @@ test('clears derived selection state when the current question becomes null', as
     .toHaveTextContent('');
 });
 
-test('prefers session-selected choices over drafts and clears draft state', async () => {
+test('restores exam draft selections without locking the answer', async () => {
   const screen = await render(<QuestionFlowCoreProbe />);
 
   await screen
@@ -213,15 +214,13 @@ test('prefers session-selected choices over drafts and clears draft state', asyn
     .element(screen.getByTestId('is-answered'))
     .toHaveTextContent('false');
 
-  await screen
-    .getByRole('button', { name: 'load-with-session-selection' })
-    .click();
+  await screen.getByRole('button', { name: 'load-with-exam-draft' }).click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
     .toHaveTextContent('choice_2');
   await expect
     .element(screen.getByTestId('is-answered'))
-    .toHaveTextContent('true');
+    .toHaveTextContent('false');
 
   await screen
     .getByRole('button', { name: 'load-no-session', exact: true })
@@ -288,9 +287,7 @@ test('clears submitResult when previousSubmission is not present or question is 
     .element(screen.getByTestId('has-submit-result'))
     .toHaveTextContent('true');
 
-  await screen
-    .getByRole('button', { name: 'load-with-session-selection' })
-    .click();
+  await screen.getByRole('button', { name: 'load-with-exam-draft' }).click();
   await expect
     .element(screen.getByTestId('has-submit-result'))
     .toHaveTextContent('false');

@@ -1,16 +1,20 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   createLoadNextQuestionAction,
   loadNextQuestion,
   submitAnswerForQuestion,
 } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
-import { runTransitionedAsyncAction } from '@/app/(app)/app/practice/shared/question-flow-actions';
+import {
+  maybeSaveDraftBeforeNavigation,
+  runTransitionedAsyncAction,
+} from '@/app/(app)/app/practice/shared/question-flow-actions';
 import { useQuestionFlowCore } from '@/app/(app)/app/practice/shared/use-question-flow-core';
 import { reportClientError } from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import type { SaveExamDraftAnswerOutput } from '@/src/adapters/controllers/practice-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
@@ -22,6 +26,9 @@ export type UsePracticeSessionQuestionFlowInput = {
     input: unknown,
   ) => Promise<ActionResult<NextQuestion | null>>;
   submitAnswerFn: (input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>;
+  saveExamDraftAnswerFn: (
+    input: unknown,
+  ) => Promise<ActionResult<SaveExamDraftAnswerOutput>>;
 };
 
 export type UsePracticeSessionQuestionFlowOutput = {
@@ -47,6 +54,7 @@ export type UsePracticeSessionQuestionFlowOutput = {
   onNavigateQuestion: (questionId: string) => void;
   onSelectChoice: (choiceId: string) => void;
   onSubmit: () => Promise<SubmitAnswerOutput | null>;
+  saveCurrentExamDraft: () => Promise<boolean>;
 };
 
 export function usePracticeSessionQuestionFlow(
@@ -78,6 +86,11 @@ export function usePracticeSessionQuestionFlow(
 
   const [sessionInfo, setSessionInfo] = useState<NextQuestion['session']>(null);
   const [sessionMode, setSessionMode] = useState<'tutor' | 'exam' | null>(null);
+  const savedExamDraftsRef = useRef<
+    Map<string, { selectedChoiceId: string | null; cumulativeMs: number }>
+  >(new Map());
+  const currentExamDraftEnteredAtRef = useRef<number | null>(null);
+  const currentExamDraftCumulativeMsRef = useRef(0);
 
   const applySessionInfo = useCallback<
     UsePracticeSessionQuestionFlowOutput['applySessionInfo']
@@ -142,23 +155,114 @@ export function usePracticeSessionQuestionFlow(
     onTryAgain();
   }, [input.autoload, onTryAgain]);
 
+  useEffect(() => {
+    if (question?.session?.mode !== 'exam') {
+      currentExamDraftEnteredAtRef.current = null;
+      currentExamDraftCumulativeMsRef.current = 0;
+      return;
+    }
+
+    const draftSelectedChoiceId =
+      question.session.draftSelectedChoiceId ?? null;
+    const draftCumulativeMs = question.session.draftCumulativeMs ?? 0;
+
+    savedExamDraftsRef.current.set(question.questionId, {
+      selectedChoiceId: draftSelectedChoiceId,
+      cumulativeMs: draftCumulativeMs,
+    });
+    currentExamDraftCumulativeMsRef.current = draftCumulativeMs;
+    currentExamDraftEnteredAtRef.current = Date.now();
+  }, [
+    question?.questionId,
+    question?.session?.mode,
+    question?.session?.draftSelectedChoiceId,
+    question?.session?.draftCumulativeMs,
+  ]);
+
   const resetQuestionState = useCallback(() => {
     setSessionInfo(null);
     setQuestion(null);
     setSubmitResult(null);
     setSelectedChoiceId(null);
+    savedExamDraftsRef.current.clear();
+    currentExamDraftEnteredAtRef.current = null;
+    currentExamDraftCumulativeMsRef.current = 0;
   }, [setQuestion, setSelectedChoiceId, setSubmitResult]);
+
+  const saveCurrentExamDraft = useCallback(async (): Promise<boolean> => {
+    if (!question || question.session?.mode !== 'exam') return true;
+
+    const nowMs = Date.now();
+    const enteredAtMs = currentExamDraftEnteredAtRef.current;
+    const elapsedMs =
+      enteredAtMs === null ? 0 : Math.max(0, nowMs - enteredAtMs);
+    const currentCumulativeMs =
+      currentExamDraftCumulativeMsRef.current + elapsedMs;
+    const lastSavedDraft = savedExamDraftsRef.current.get(
+      question.questionId,
+    ) ?? {
+      selectedChoiceId: question.session.draftSelectedChoiceId ?? null,
+      cumulativeMs: question.session.draftCumulativeMs ?? 0,
+    };
+
+    const saved = await maybeSaveDraftBeforeNavigation({
+      sessionId: input.sessionId,
+      question,
+      selectedChoiceId,
+      currentCumulativeMs,
+      lastSavedDraftSelectedChoiceId: lastSavedDraft.selectedChoiceId,
+      lastSavedDraftCumulativeMs: lastSavedDraft.cumulativeMs,
+      saveExamDraftAnswerFn: input.saveExamDraftAnswerFn,
+      setLoadState,
+      onSaved: (draft) => {
+        savedExamDraftsRef.current.set(draft.questionId, {
+          selectedChoiceId: draft.selectedChoiceId,
+          cumulativeMs: draft.cumulativeMs,
+        });
+        if (draft.questionId === question.questionId) {
+          currentExamDraftCumulativeMsRef.current = draft.cumulativeMs;
+          currentExamDraftEnteredAtRef.current = nowMs;
+        }
+      },
+    });
+
+    if (!saved) return false;
+
+    if (!selectedChoiceId) {
+      currentExamDraftEnteredAtRef.current = nowMs;
+    }
+
+    return true;
+  }, [
+    input.saveExamDraftAnswerFn,
+    input.sessionId,
+    question,
+    selectedChoiceId,
+    setLoadState,
+  ]);
 
   const onNavigateQuestion = useCallback(
     (questionId: string): void => {
-      startTransition(() => {
-        void loadNextQuestion({
-          ...loadQuestionConfig,
-          questionId,
-        });
+      void runTransitionedAsyncAction({
+        startTransition,
+        run: async () => {
+          const shouldNavigate = await saveCurrentExamDraft();
+          if (!shouldNavigate) return;
+
+          await loadNextQuestion({
+            ...loadQuestionConfig,
+            questionId,
+          });
+        },
+        onUnhandledError: (error) => {
+          reportClientError(error, {
+            component: 'UsePracticeSessionQuestionFlow',
+            action: 'navigateQuestion',
+          });
+        },
       });
     },
-    [loadQuestionConfig, startTransition],
+    [loadQuestionConfig, saveCurrentExamDraft, startTransition],
   );
 
   const onNextQuestion = useCallback((): void => {
@@ -171,15 +275,28 @@ export function usePracticeSessionQuestionFlow(
       return undefined;
     })();
 
-    startTransition(() => {
-      void loadNextQuestion({
-        ...loadQuestionConfig,
-        fromIndex,
-      });
+    void runTransitionedAsyncAction({
+      startTransition,
+      run: async () => {
+        const shouldNavigate = await saveCurrentExamDraft();
+        if (!shouldNavigate) return;
+
+        await loadNextQuestion({
+          ...loadQuestionConfig,
+          fromIndex,
+        });
+      },
+      onUnhandledError: (error) => {
+        reportClientError(error, {
+          component: 'UsePracticeSessionQuestionFlow',
+          action: 'nextQuestion',
+        });
+      },
     });
   }, [
     loadQuestionConfig,
     question?.session?.index,
+    saveCurrentExamDraft,
     sessionInfo?.index,
     startTransition,
   ]);
@@ -250,5 +367,6 @@ export function usePracticeSessionQuestionFlow(
     onNavigateQuestion,
     onSelectChoice,
     onSubmit,
+    saveCurrentExamDraft,
   };
 }

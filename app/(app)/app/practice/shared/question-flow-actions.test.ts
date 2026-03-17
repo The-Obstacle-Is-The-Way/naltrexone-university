@@ -2,12 +2,14 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   buildTimeSpentSeconds,
   createTransitionedLoadAction,
+  maybeSaveDraftBeforeNavigation,
   runLoadQuestionFlow,
   runSubmitAnswerFlow,
   runTransitionedAsyncAction,
 } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import type { SaveExamDraftAnswerOutput } from '@/src/adapters/controllers/practice-controller';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
@@ -753,5 +755,180 @@ describe('question-flow-actions', () => {
     expect(setSubmitResult).not.toHaveBeenCalled();
     expect(setLoadState).not.toHaveBeenCalled();
     expect(onSuccess).not.toHaveBeenCalled();
+  });
+
+  it('saves an exam draft before navigation when the selection changed', async () => {
+    const loadStateTransitions: AsyncLoadStateWithIdle[] = [];
+    const saveExamDraftAnswerFn = vi
+      .fn<
+        (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
+      >()
+      .mockResolvedValue(
+        ok({
+          questionId: 'q_1',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId: 'choice_2',
+          draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
+          draftCumulativeMs: 50_000,
+        }),
+      );
+    const onSaved = vi.fn();
+
+    const shouldNavigate = await maybeSaveDraftBeforeNavigation({
+      sessionId: 'session_1',
+      question: {
+        questionId: 'q_1',
+        session: {
+          sessionId: 'session_1',
+          mode: 'exam',
+          index: 0,
+          total: 2,
+          draftSelectedChoiceId: 'choice_1',
+          draftCumulativeMs: 30_000,
+        },
+      },
+      selectedChoiceId: 'choice_2',
+      currentCumulativeMs: 50_000,
+      lastSavedDraftSelectedChoiceId: 'choice_1',
+      lastSavedDraftCumulativeMs: 30_000,
+      saveExamDraftAnswerFn,
+      setLoadState: (state) => {
+        loadStateTransitions.push(state);
+      },
+      onSaved,
+    });
+
+    expect(shouldNavigate).toBe(true);
+    expect(saveExamDraftAnswerFn).toHaveBeenCalledWith({
+      sessionId: 'session_1',
+      questionId: 'q_1',
+      selectedChoiceId: 'choice_2',
+      cumulativeMs: 50_000,
+    });
+    expect(onSaved).toHaveBeenCalledWith({
+      questionId: 'q_1',
+      selectedChoiceId: 'choice_2',
+      cumulativeMs: 50_000,
+    });
+    expect(loadStateTransitions).toEqual([]);
+  });
+
+  it('saves an exam draft before navigation when only cumulative time advanced', async () => {
+    const saveExamDraftAnswerFn = vi
+      .fn<
+        (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
+      >()
+      .mockResolvedValue(
+        ok({
+          questionId: 'q_1',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId: 'choice_1',
+          draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
+          draftCumulativeMs: 50_000,
+        }),
+      );
+
+    const shouldNavigate = await maybeSaveDraftBeforeNavigation({
+      sessionId: 'session_1',
+      question: {
+        questionId: 'q_1',
+        session: {
+          sessionId: 'session_1',
+          mode: 'exam',
+          index: 0,
+          total: 2,
+          draftSelectedChoiceId: 'choice_1',
+          draftCumulativeMs: 30_000,
+        },
+      },
+      selectedChoiceId: 'choice_1',
+      currentCumulativeMs: 50_000,
+      lastSavedDraftSelectedChoiceId: 'choice_1',
+      lastSavedDraftCumulativeMs: 30_000,
+      saveExamDraftAnswerFn,
+      setLoadState: () => {},
+    });
+
+    expect(shouldNavigate).toBe(true);
+    expect(saveExamDraftAnswerFn).toHaveBeenCalledWith({
+      sessionId: 'session_1',
+      questionId: 'q_1',
+      selectedChoiceId: 'choice_1',
+      cumulativeMs: 50_000,
+    });
+  });
+
+  it('skips draft saving when no exam selection exists', async () => {
+    const saveExamDraftAnswerFn =
+      vi.fn<
+        (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
+      >();
+
+    const shouldNavigate = await maybeSaveDraftBeforeNavigation({
+      sessionId: 'session_1',
+      question: {
+        questionId: 'q_1',
+        session: {
+          sessionId: 'session_1',
+          mode: 'exam',
+          index: 0,
+          total: 2,
+        },
+      },
+      selectedChoiceId: null,
+      currentCumulativeMs: 0,
+      lastSavedDraftSelectedChoiceId: null,
+      lastSavedDraftCumulativeMs: 0,
+      saveExamDraftAnswerFn,
+      setLoadState: () => {},
+    });
+
+    expect(shouldNavigate).toBe(true);
+    expect(saveExamDraftAnswerFn).not.toHaveBeenCalled();
+  });
+
+  it('blocks navigation and sets load error when draft save fails', async () => {
+    const loadStates: AsyncLoadStateWithIdle[] = [];
+    const saveExamDraftAnswerFn = vi
+      .fn<
+        (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
+      >()
+      .mockResolvedValue({
+        ok: false,
+        error: { code: 'INTERNAL_ERROR', message: 'Draft save failed' },
+      });
+
+    const shouldNavigate = await maybeSaveDraftBeforeNavigation({
+      sessionId: 'session_1',
+      question: {
+        questionId: 'q_1',
+        session: {
+          sessionId: 'session_1',
+          mode: 'exam',
+          index: 0,
+          total: 2,
+        },
+      },
+      selectedChoiceId: 'choice_1',
+      currentCumulativeMs: 50_000,
+      lastSavedDraftSelectedChoiceId: null,
+      lastSavedDraftCumulativeMs: 0,
+      saveExamDraftAnswerFn,
+      setLoadState: (state) => {
+        loadStates.push(state);
+      },
+    });
+
+    expect(shouldNavigate).toBe(false);
+    expect(loadStates.at(-1)).toEqual({
+      status: 'error',
+      message: 'Draft save failed',
+    });
   });
 });
