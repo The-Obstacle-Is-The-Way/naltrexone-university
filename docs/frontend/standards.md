@@ -620,6 +620,69 @@ if (!res.ok) {
 
 All hooks return objects (not tuples). Properties should be named descriptively.
 
+### `useEffect` Guidelines
+
+`useEffect` is not banned, but most uses are wrong. Before writing one, check whether a simpler primitive fits.
+
+#### Decision tree
+
+1. **State derived from other state or props?** Compute it inline — no effect, no extra render.
+   ```tsx
+   // Wrong — extra render cycle, stale flash
+   useEffect(() => { setFiltered(items.filter(predicate)); }, [items]);
+
+   // Right — one render, always correct
+   const filtered = items.filter(predicate);
+   ```
+
+2. **Responding to a user action (click, submit, navigate)?** Do the work in the event handler, not via a state flag + effect.
+   ```tsx
+   // Wrong — flag → effect → reset flag
+   useEffect(() => {
+     if (pending) { doWork(); setPending(false); }
+   }, [pending]);
+
+   // Right — direct
+   const onClick = () => doWork();
+   ```
+
+3. **Fetching data?** Prefer a factory function (`createXxxEffect`) that returns a cleanup function, and call it from the effect. This is our established pattern (see `createBookmarksEffect`, `createSummaryReviewEffect`, etc.). Keep the fetch logic outside the hook and testable in isolation.
+   ```tsx
+   // Our pattern — testable factory with cleanup
+   useEffect(() => {
+     return createBookmarksEffect({ getBookmarksFn, setCounts, ... });
+   }, [deps]);
+   ```
+
+4. **Syncing with an external system on mount (DOM focus, scroll, third-party widget)?** This is a legitimate effect. Use `[]` deps and make the intent clear with a comment.
+
+5. **Resetting state when an ID/key changes?** Prefer React's `key` prop on the parent to force a clean remount, rather than an effect that manually resets state.
+
+#### Anti-patterns to avoid
+
+| Pattern | Problem | Fix |
+|---------|---------|-----|
+| `useEffect(() => setX(f(y)), [y])` | Derived state — extra render, stale flash | Compute `x` inline |
+| Flag → effect → reset flag | Indirect control flow, interleaving risk | Move work into the event handler |
+| `useEffect` with 6+ dependencies | Hard to reason about, fragile | Decompose into smaller hooks or extract a factory function |
+| Multiple effects setting overlapping state | Effect chains — A triggers B triggers C | Consolidate into one effect or move to event handler path |
+| `useEffect` for dev-only logging | Acceptable but noisy | Guard with `process.env.NODE_ENV` check (we do this already) |
+
+#### What's fine
+
+- **Error boundary logging** — React provides `error` as a prop; logging on mount is the intended pattern.
+- **URL-driven one-time side effects** — Toast from search params, URL cleanup. Use a dedup ref guard.
+- **SSR hydration guards** — `useEffect(() => setMounted(true), [])` for `next-themes` and similar.
+- **DOM interactions** — Focus management, scroll-into-view after state transitions.
+- **Cleanup on unmount** — Timer cleanup, subscription teardown. Idiomatic.
+- **Ref sync** — Keeping a ref up-to-date with a callback prop to avoid stale closures.
+
+#### Our codebase context
+
+The practice hooks (`use-practice-question-bookmarks`, `use-practice-session-navigator`, etc.) demonstrate the preferred pattern: extract fetch/async logic into a testable factory function (`createXxxEffect`), call it from a single `useEffect`, and return the cleanup function. This keeps effects small and pushes complexity into pure, testable code.
+
+The `use-question-page-controller` hook (737 lines, 8 effects) is a known god hook (§12 size limits, DEBT-320). It contains two instances of the anti-patterns above (derived state via effect at line 347, flag→effect→reset at line 686). These are tracked for paydown but are not causing active bugs.
+
 ### Duplication
 
 Logic shared between `/practice` and `/practice/[sessionId]` (question loading, answer submission, bookmark state) MUST be extracted to shared functions or a shared hook. Do not copy-paste between session and non-session variants.
