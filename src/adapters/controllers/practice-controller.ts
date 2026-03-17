@@ -15,6 +15,8 @@ import type {
   CountAvailableQuestionsOutput,
   EndPracticeSessionInput,
   EndPracticeSessionOutput,
+  FinalizeExamAnswersInput,
+  FinalizeExamAnswersOutput,
   GetIncompletePracticeSessionInput,
   GetIncompletePracticeSessionOutput,
   GetPracticeSessionReviewInput,
@@ -35,6 +37,7 @@ import {
   EmptyInputSchema,
   EndPracticeSessionInputSchema,
   EndPracticeSessionOutputSchema,
+  FinalizeExamAnswersInputSchema,
   GetIncompletePracticeSessionOutputSchema,
   GetPracticeSessionReviewInputSchema,
   GetPracticeSessionSummaryInputSchema,
@@ -50,6 +53,7 @@ import { requireEntitledUserId } from './require-entitled-user-id';
 export type {
   CountAvailableQuestionsOutput,
   EndPracticeSessionOutput,
+  FinalizeExamAnswersOutput,
   GetIncompletePracticeSessionOutput,
   GetPracticeSessionReviewOutput,
   GetPracticeSessionSummaryOutput,
@@ -83,6 +87,11 @@ export type PracticeControllerDeps = {
     execute: (
       input: EndPracticeSessionInput,
     ) => Promise<EndPracticeSessionOutput>;
+  };
+  finalizeExamAnswersUseCase: {
+    execute: (
+      input: FinalizeExamAnswersInput,
+    ) => Promise<FinalizeExamAnswersOutput>;
   };
   getPracticeSessionReviewUseCase: {
     execute: (
@@ -221,6 +230,38 @@ export const endPracticeSession = createAction({
       now: d.now,
       parseResult: (value) => EndPracticeSessionOutputSchema.parse(value),
       execute: endSession,
+    });
+  },
+});
+
+export const finalizeExamAnswers = createAction({
+  schema: FinalizeExamAnswersInputSchema,
+  getDeps,
+  execute: async (input, d) => {
+    const userId = await requireEntitledUserId(d);
+
+    const { sessionId, idempotencyKey } = input;
+
+    async function finalizeExam(): Promise<FinalizeExamAnswersOutput> {
+      return d.finalizeExamAnswersUseCase.execute({
+        userId,
+        sessionId,
+      });
+    }
+
+    if (!idempotencyKey) {
+      return finalizeExam();
+    }
+
+    return withIdempotency({
+      repo: d.idempotencyKeyRepository,
+      logger: d.logger,
+      userId,
+      action: 'practice:finalizeExamAnswers',
+      key: idempotencyKey,
+      now: d.now,
+      parseResult: (value) => EndPracticeSessionOutputSchema.parse(value),
+      execute: finalizeExam,
     });
   },
 });

@@ -7,6 +7,7 @@ import {
   FakeAuthGateway,
   FakeCountAvailableQuestionsUseCase,
   FakeEndPracticeSessionUseCase,
+  FakeFinalizeExamAnswersUseCase,
   FakeGetIncompletePracticeSessionUseCase,
   FakeGetPracticeSessionReviewUseCase,
   FakeGetPracticeSessionSummaryUseCase,
@@ -20,6 +21,7 @@ import {
 } from '@/src/application/test-helpers/fakes';
 import type {
   EndPracticeSessionOutput,
+  FinalizeExamAnswersOutput,
   GetPracticeSessionReviewOutput,
   GetPracticeSessionSummaryOutput,
   GetSessionHistoryOutput,
@@ -32,6 +34,7 @@ import { createSubscription, createUser } from '@/src/domain/test-helpers';
 import {
   countAvailableQuestions,
   endPracticeSession,
+  finalizeExamAnswers,
   getIncompletePracticeSession,
   getPracticeSessionReview,
   getPracticeSessionSummary,
@@ -46,6 +49,7 @@ type PracticeControllerTestDeps = PracticeControllerDeps & {
   getIncompletePracticeSessionUseCase: FakeGetIncompletePracticeSessionUseCase;
   startPracticeSessionUseCase: FakeStartPracticeSessionUseCase;
   endPracticeSessionUseCase: FakeEndPracticeSessionUseCase;
+  finalizeExamAnswersUseCase: FakeFinalizeExamAnswersUseCase;
   getPracticeSessionReviewUseCase: FakeGetPracticeSessionReviewUseCase;
   getPracticeSessionSummaryUseCase: FakeGetPracticeSessionSummaryUseCase;
   getSessionHistoryUseCase: FakeGetSessionHistoryUseCase;
@@ -62,6 +66,8 @@ function createDeps(overrides?: {
   countThrows?: unknown;
   endOutput?: EndPracticeSessionOutput;
   endThrows?: unknown;
+  finalizeOutput?: FinalizeExamAnswersOutput;
+  finalizeThrows?: unknown;
   reviewOutput?: GetPracticeSessionReviewOutput;
   reviewThrows?: unknown;
   summaryOutput?: GetPracticeSessionSummaryOutput;
@@ -152,6 +158,17 @@ function createDeps(overrides?: {
       overrides?.reviewThrows,
     );
 
+  const finalizeExamAnswersUseCase = new FakeFinalizeExamAnswersUseCase(
+    overrides?.finalizeOutput ?? {
+      sessionId: '22222222-2222-2222-2222-222222222222',
+      endedAt: '2026-02-01T00:00:00.000Z',
+      mode: 'exam',
+      questionCount: 1,
+      totals: { answered: 0, correct: 0, accuracy: 0, durationSeconds: 0 },
+    },
+    overrides?.finalizeThrows,
+  );
+
   const getPracticeSessionSummaryUseCase =
     new FakeGetPracticeSessionSummaryUseCase(
       overrides?.summaryOutput ?? {
@@ -199,6 +216,7 @@ function createDeps(overrides?: {
     startPracticeSessionUseCase,
     countAvailableQuestionsUseCase,
     endPracticeSessionUseCase,
+    finalizeExamAnswersUseCase,
     getPracticeSessionReviewUseCase,
     getPracticeSessionSummaryUseCase,
     getSessionHistoryUseCase,
@@ -561,6 +579,93 @@ describe('practice-controller', () => {
       });
       expect(second).toEqual(first);
       expect(deps.endPracticeSessionUseCase.inputs).toHaveLength(1);
+    });
+  });
+
+  describe('finalizeExamAnswers', () => {
+    it('returns VALIDATION_ERROR when input is invalid', async () => {
+      const deps = createDeps();
+
+      const result = await finalizeExamAnswers({ sessionId: 'bad' }, deps);
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          fieldErrors: { sessionId: expect.any(Array) },
+        },
+      });
+      expect(deps.finalizeExamAnswersUseCase.inputs).toEqual([]);
+    });
+
+    it('returns exam summary when use case succeeds', async () => {
+      const finalizeOutput = {
+        sessionId: 'session_123',
+        endedAt: '2026-02-01T00:00:00.000Z',
+        mode: 'exam',
+        questionCount: 2,
+        totals: {
+          answered: 2,
+          correct: 1,
+          accuracy: 0.5,
+          durationSeconds: 60,
+        },
+      } as const;
+
+      const deps = createDeps({ finalizeOutput });
+
+      const result = await finalizeExamAnswers(
+        { sessionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toEqual({ ok: true, data: finalizeOutput });
+      expect(deps.finalizeExamAnswersUseCase.inputs).toEqual([
+        { userId: 'user_1', sessionId: '11111111-1111-1111-1111-111111111111' },
+      ]);
+    });
+
+    it('returns the cached summary when idempotencyKey is reused', async () => {
+      const deps = createDeps({
+        finalizeOutput: {
+          sessionId: '22222222-2222-2222-2222-222222222222',
+          endedAt: '2026-02-01T00:00:00.000Z',
+          mode: 'exam',
+          questionCount: 2,
+          totals: {
+            answered: 2,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 60,
+          },
+        },
+      });
+
+      const input = {
+        sessionId: '11111111-1111-1111-1111-111111111111',
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      const first = await finalizeExamAnswers(input, deps);
+      const second = await finalizeExamAnswers(input, deps);
+
+      expect(first).toEqual({
+        ok: true,
+        data: {
+          sessionId: '22222222-2222-2222-2222-222222222222',
+          endedAt: '2026-02-01T00:00:00.000Z',
+          mode: 'exam',
+          questionCount: 2,
+          totals: {
+            answered: 2,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 60,
+          },
+        },
+      });
+      expect(second).toEqual(first);
+      expect(deps.finalizeExamAnswersUseCase.inputs).toHaveLength(1);
     });
   });
 

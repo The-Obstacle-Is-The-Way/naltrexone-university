@@ -24,6 +24,12 @@ export {
   EndPracticeSessionUseCase,
 } from './end-practice-session';
 export {
+  type FinalizeExamAnswersInput,
+  type FinalizeExamAnswersOutput,
+  FinalizeExamAnswersUseCase,
+  type FinalizeExamAnswersWriteTransaction,
+} from './finalize-exam-answers';
+export {
   type AttemptedQuestionRow,
   type GetAttemptedQuestionsInput,
   type GetAttemptedQuestionsOutput,

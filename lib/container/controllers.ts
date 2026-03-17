@@ -87,6 +87,7 @@ export function createControllerFactories(input: {
         useCases.createCountAvailableQuestionsUseCase(),
       startPracticeSessionUseCase: useCases.createStartPracticeSessionUseCase(),
       endPracticeSessionUseCase: useCases.createEndPracticeSessionUseCase(),
+      finalizeExamAnswersUseCase: useCases.createFinalizeExamAnswersUseCase(),
       now: primitives.now,
     }),
     createReviewControllerDeps: () => ({

@@ -4,6 +4,7 @@ import {
   CreateCheckoutSessionUseCase,
   CreatePortalSessionUseCase,
   EndPracticeSessionUseCase,
+  FinalizeExamAnswersUseCase,
   GetAttemptedQuestionsUseCase,
   GetBookmarksUseCase,
   GetIncompletePracticeSessionUseCase,
@@ -58,6 +59,20 @@ export function createUseCaseFactories(input: {
     createEndPracticeSessionUseCase: () =>
       new EndPracticeSessionUseCase(
         repositories.createPracticeSessionRepository(),
+      ),
+    createFinalizeExamAnswersUseCase: () =>
+      new FinalizeExamAnswersUseCase(
+        repositories.createQuestionRepository(),
+        repositories.createAttemptRepository(),
+        repositories.createPracticeSessionRepository(),
+        async (fn) =>
+          primitives.db.transaction(async (tx) =>
+            fn({
+              questions: repositories.createQuestionRepository(tx),
+              attempts: repositories.createAttemptRepository(tx),
+              sessions: repositories.createPracticeSessionRepository(tx),
+            }),
+          ),
       ),
     createGetNextQuestionUseCase: () =>
       new GetNextQuestionUseCase(

@@ -255,6 +255,33 @@ export class DrizzlePracticeSessionRepository
     });
   }
 
+  async finalizeDraftAnswer(input: {
+    sessionId: string;
+    userId: string;
+    questionId: string;
+    selectedChoiceId: string;
+    isCorrect: boolean;
+    answeredAt: Date;
+  }): Promise<PracticeSessionQuestionState> {
+    return updatePracticeSessionQuestionState({
+      db: this.db,
+      findByIdAndUserId: this.findSnapshotByIdAndUserId.bind(this),
+      sessionId: input.sessionId,
+      userId: input.userId,
+      questionId: input.questionId,
+      updateFn: (current) => ({
+        ...current,
+        latestSelectedChoiceId: input.selectedChoiceId,
+        latestIsCorrect: input.isCorrect,
+        latestAnsweredAt: input.answeredAt,
+        draftSelectedChoiceId: null,
+        draftSavedAt: null,
+        draftCumulativeMs: 0,
+      }),
+      failureMessage: 'Failed to finalize practice session draft answer state',
+    });
+  }
+
   async setQuestionMarkedForReview(input: {
     sessionId: string;
     userId: string;

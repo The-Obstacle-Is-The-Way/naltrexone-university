@@ -50,6 +50,8 @@ export const EndPracticeSessionInputSchema = z
   })
   .strict();
 
+export const FinalizeExamAnswersInputSchema = EndPracticeSessionInputSchema;
+
 export const GetPracticeSessionReviewInputSchema = z
   .object({
     sessionId: zUuid,

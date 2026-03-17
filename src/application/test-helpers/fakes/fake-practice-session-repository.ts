@@ -254,6 +254,45 @@ export class FakePracticeSessionRepository
     return updatedState;
   }
 
+  async finalizeDraftAnswer(input: {
+    sessionId: string;
+    userId: string;
+    questionId: string;
+    selectedChoiceId: string;
+    isCorrect: boolean;
+    answeredAt: Date;
+  }): Promise<PracticeSession['questionStates'][number]> {
+    const session = await this.getActiveSession(input.sessionId, input.userId);
+    this.requireQuestionState(session, input.questionId);
+
+    let updatedState: PracticeSession['questionStates'][number] | null = null;
+    this.updateSession(input.sessionId, (existing) => {
+      const next = this.withNormalizedQuestionStates(existing);
+      const questionStates = next.questionStates.map((state) => {
+        if (state.questionId !== input.questionId) return state;
+        updatedState = {
+          ...state,
+          latestSelectedChoiceId: input.selectedChoiceId,
+          latestIsCorrect: input.isCorrect,
+          latestAnsweredAt: input.answeredAt,
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 0,
+        };
+        return updatedState;
+      });
+      return { ...next, questionStates };
+    });
+
+    if (!updatedState) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Failed to finalize practice session draft answer state',
+      );
+    }
+    return updatedState;
+  }
+
   async recordQuestionAnswer(input: {
     sessionId: string;
     userId: string;
