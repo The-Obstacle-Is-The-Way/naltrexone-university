@@ -218,6 +218,42 @@ export class FakePracticeSessionRepository
     return session;
   }
 
+  async saveDraftAnswer(input: {
+    sessionId: string;
+    userId: string;
+    questionId: string;
+    selectedChoiceId: string;
+    cumulativeMs: number;
+  }): Promise<PracticeSession['questionStates'][number]> {
+    const session = await this.getActiveSession(input.sessionId, input.userId);
+    this.requireQuestionState(session, input.questionId);
+
+    const savedAt = new Date();
+    let updatedState: PracticeSession['questionStates'][number] | null = null;
+    this.updateSession(input.sessionId, (existing) => {
+      const next = this.withNormalizedQuestionStates(existing);
+      const questionStates = next.questionStates.map((state) => {
+        if (state.questionId !== input.questionId) return state;
+        updatedState = {
+          ...state,
+          draftSelectedChoiceId: input.selectedChoiceId,
+          draftSavedAt: savedAt,
+          draftCumulativeMs: input.cumulativeMs,
+        };
+        return updatedState;
+      });
+      return { ...next, questionStates };
+    });
+
+    if (!updatedState) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Failed to persist practice session draft answer state',
+      );
+    }
+    return updatedState;
+  }
+
   async recordQuestionAnswer(input: {
     sessionId: string;
     userId: string;

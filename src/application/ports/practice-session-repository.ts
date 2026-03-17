@@ -26,6 +26,13 @@ export interface PracticeSessionRepository {
     mode: 'tutor' | 'exam';
     paramsJson: unknown; // adapter validates + persists exact shape
   }): Promise<PracticeSession>;
+  saveDraftAnswer(input: {
+    sessionId: string;
+    userId: string;
+    questionId: string;
+    selectedChoiceId: string;
+    cumulativeMs: number;
+  }): Promise<PracticeSessionQuestionState>;
   recordQuestionAnswer(input: {
     sessionId: string;
     userId: string;

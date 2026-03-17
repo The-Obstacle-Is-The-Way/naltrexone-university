@@ -75,6 +75,11 @@ export {
   type UserStatsOutput,
 } from './get-user-stats';
 export {
+  type SaveExamDraftAnswerInput,
+  type SaveExamDraftAnswerOutput,
+  SaveExamDraftAnswerUseCase,
+} from './save-exam-draft-answer';
+export {
   type SetPracticeSessionQuestionMarkInput,
   type SetPracticeSessionQuestionMarkOutput,
   SetPracticeSessionQuestionMarkUseCase,
