@@ -1,8 +1,9 @@
 # Question Rendering Architecture
 
-> **Type:** Canonical Reference Document (Living)
+> **Type:** Current-Implementation Reference
 > **Last Verified:** 2026-03-17
-> **Scope:** How questions are rendered, navigated, and state-managed across all viewing contexts
+> **Scope:** How questions are rendered, navigated, and state-managed across all viewing contexts in the current shipped implementation
+> **Important:** This is **not** the target-state spec for active exam mode. If this document conflicts with [Interaction Contracts](./interaction-contracts.md), [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md), or [DEBT-320](../debt/debt-320-bs055-exam-interaction-model-overhaul.md), those newer documents win for the accepted exam redesign.
 
 ---
 
@@ -10,7 +11,7 @@
 
 Questions appear in **6 distinct viewing contexts** across the application (plus multiple “origin” variants on the question page). Each context shares the same core display components (`QuestionCard`, `ChoiceButton`, `Feedback`) but differs in navigation chrome, action bars, state management, and data sources.
 
-This document is the single source of truth for understanding how each context works today.
+This document is the single source of truth for understanding the **current shipped behavior**. It intentionally includes exam-mode details that BS-055 has since marked for replacement.
 
 ---
 

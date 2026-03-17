@@ -3,6 +3,7 @@
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Clean Architecture layers — Domain, Application, Adapters
 > **Last Verified:** 2026-03-17
+> **Current-vs-target note:** This document describes the current layer boundaries and shipped use cases. For the accepted target-state redesign of active exam mode, see [Interaction Contracts](./interaction-contracts.md), [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md), and [DEBT-320](../debt/debt-320-bs055-exam-interaction-model-overhaul.md).
 
 ---
 
@@ -18,7 +19,7 @@ All entities are pure TypeScript type aliases with no runtime behavior. They liv
 | `Choice` | `id`, `questionId`, `label` (A–E), `textMd`, `isCorrect`, `explanationMd`, `sortOrder` | One answer choice; `explanationMd` is per-choice (beyond question-level explanation) |
 | `Attempt` | `id`, `userId`, `questionId`, `practiceSessionId` (nullable), `selectedChoiceId`, `isCorrect`, `timeSpentSeconds`, `retryOfAttemptId` (nullable), `retryOrigin` (nullable), `retrySessionId` (nullable), `answeredAt` | A single answer submission with optional retry provenance lineage |
 | `PracticeSession` | `id`, `userId`, `mode`, `questionIds[]`, `questionStates[]`, `tagFilters[]`, `difficultyFilters[]`, `startedAt`, `endedAt` (nullable) | A structured practice session (tutor or exam) |
-| `PracticeSessionQuestionState` | `questionId`, `markedForReview`, `latestSelectedChoiceId` (nullable), `latestIsCorrect` (nullable), `latestAnsweredAt` (nullable) | Per-question state within a session |
+| `PracticeSessionQuestionState` | `questionId`, `markedForReview`, `latestSelectedChoiceId` (nullable), `latestIsCorrect` (nullable), `latestAnsweredAt` (nullable) | Current shipped per-question state within a session. Target-state exam redesign adds explicit draft fields rather than repurposing `latest*`. |
 | `Bookmark` | `userId`, `questionId`, `createdAt` | A user-saved question |
 | `Tag` | `id`, `slug`, `name`, `kind` | A categorization label (topic, substance, treatment, diagnosis) |
 
@@ -79,6 +80,8 @@ All use cases follow the pattern: constructor injection of port interfaces, sing
 | `SubmitAnswer` | `{ userId, questionId, choiceId, sessionId?, timeSpentSeconds?, retryOfAttemptId?, retryOrigin?, retrySessionId? }` | `{ attemptId, isCorrect: boolean \| null, correctChoiceId: string \| null, explanationMd: string \| null, referenceMd: string \| null, choiceExplanations[] }` | `NOT_FOUND`, `CONFLICT`, `INTERNAL_ERROR`, `VALIDATION_ERROR` |
 
 Answer-key exposure in active exam contexts is governed by the [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md).
+
+**Target-state note:** the accepted exam redesign adds `SaveExamDraftAnswer` and `FinalizeExamAnswers` as new exam-only use cases. They are intentionally not listed here yet because they are not implemented in the current source.
 
 #### Practice Sessions
 

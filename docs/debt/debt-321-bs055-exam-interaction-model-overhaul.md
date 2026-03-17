@@ -12,7 +12,7 @@ BS-055 identified that exam mode's interaction model is fundamentally broken: a 
 
 The fix is a new exam interaction contract: answers are drafts (saved on navigation boundaries), freely changeable, and only finalized when the user clicks `Submit exam`. Tutor mode and quick practice are unchanged.
 
-This debt doc decomposes that into ordered implementation stages. Each stage is independently shippable and testable. No stage requires a later stage to work. **Do not reorder stages** — later stages depend on earlier ones.
+This debt doc decomposes that into ordered implementation stages. **Stages 1-4 and 8 are independently shippable. Stages 5-7 are a coupled frontend cutover chain unless protected by a feature flag.** Do not deploy Stage 5 or Stage 6 alone — the exam loop would lose persistence or finalization. **Do not reorder stages** — later stages depend on earlier ones.
 
 ---
 
@@ -22,6 +22,8 @@ This debt doc decomposes that into ordered implementation stages. Each stage is 
 2. **Extend existing structures, don't create parallel universes.** The draft model extends `questionStates` in `paramsJson`. It does not create a new table, a new session entity, or a shadow state store.
 3. **Each stage has a verification gate.** No stage is done until its specific tests pass AND the pre-PR gate is green.
 4. **Domain changes land before frontend changes.** The draft-save operation must exist before the UI can call it.
+5. **Application code talks to repository ports, not adapter helpers.** If a use case needs a new state transition, add a `PracticeSessionRepository` method and implement it in adapters/fakes. Do not call `practice-session-question-state-updater.ts` directly from the application layer.
+6. **All active-session readers must become draft-aware before the new UI relies on drafts.** The critical readers are `GetNextQuestion`, `GetPracticeSessionReview`, and `GetIncompletePracticeSession`.
 
 ---
 
@@ -38,6 +40,9 @@ This debt doc decomposes that into ordered implementation stages. Each stage is 
 | `src/domain/entities/practice-session.ts` | Add `draftSelectedChoiceId: string \| null`, `draftSavedAt: Date \| null`, `draftCumulativeMs: number` to `PracticeSessionQuestionState` |
 | `db/schema.ts` | Add same three fields to `PracticeSessionParams.questionStates` array type (serialized: `draftSavedAt` as ISO string, `draftCumulativeMs` as number) |
 | `src/adapters/repositories/practice-session-params.ts` | Add the three fields to the Zod validation schema (`practiceSessionQuestionStateSchema`). Make them optional with defaults (`null`, `null`, `0`) so existing sessions deserialize without error |
+| `src/domain/services/session-stats.ts` | Extend `createDefaultQuestionState(...)` so default state includes `draftSelectedChoiceId`, `draftSavedAt`, `draftCumulativeMs` |
+| `src/domain/test-helpers/factories.ts` | Extend `createPracticeSession(...)` default `questionStates` with the new draft fields |
+| `src/application/test-helpers/fakes/fake-practice-session-repository.ts` | Normalize seeded/default `questionStates` to include the new draft fields during create/read |
 
 **What NOT to change:** No use case changes. No frontend changes. No changes to `latestSelectedChoiceId` / `latestIsCorrect` / `latestAnsweredAt` — those remain finalized-answer-only fields.
 
@@ -61,21 +66,25 @@ This debt doc decomposes that into ordered implementation stages. Each stage is 
 1. Input: `{ userId, sessionId, questionId, selectedChoiceId, cumulativeMs }`
 2. Validate: session exists, belongs to user, is `mode === 'exam'`, is not ended (`endedAt === null`)
 3. Reject if `mode !== 'exam'` — this operation is exam-only by definition
-4. Update `questionStates` via the existing CAS updater (`updatePracticeSessionQuestionState`):
+4. Update `questionStates` via a new repository-port method that uses CAS semantics under the hood:
    - Set `draftSelectedChoiceId = selectedChoiceId`
    - Set `draftSavedAt = new Date()`
    - Set `draftCumulativeMs = cumulativeMs`
    - Do NOT touch `latestSelectedChoiceId`, `latestIsCorrect`, `latestAnsweredAt`, or `markedForReview`
-5. Return the updated state
+5. Overwrite semantics are **last write wins**. Re-saving the same question is expected and should simply replace the prior draft snapshot.
+6. Return the updated state
 
 **Also modify:**
 
 | File | Change |
 |------|--------|
-| `src/application/ports/practice-session-repository.ts` | If needed: confirm `recordQuestionAnswer` interface is reusable or add a `saveDraftAnswer` port method. Likely reuse the same `updatePracticeSessionQuestionState` CAS helper directly — no new port needed if the use case calls the updater. |
-| `src/adapters/repositories/practice-session-question-state-updater.ts` | No change needed — the existing `updateFn` pattern already supports arbitrary state transforms. The new use case just provides a different `updateFn`. |
+| `src/application/ports/practice-session-repository.ts` | Add a `saveDraftAnswer(...)` port method (or equivalent explicit draft-save method). Do **not** route around the port into adapter helpers. |
+| `src/adapters/repositories/drizzle-practice-session-repository.ts` | Implement the new draft-save repository method using the existing CAS updater pattern internally |
+| `src/adapters/repositories/practice-session-question-state-updater.ts` | Reuse internally from the repository adapter only; no application-layer caller should import this file directly |
+| `src/application/test-helpers/fakes/fake-practice-session-repository.ts` | Implement the new draft-save method in the fake |
+| `src/application/use-cases/index.ts` | Export `SaveExamDraftAnswerUseCase` and its input/output types |
 
-**What NOT to change:** No changes to `SubmitAnswer`. No changes to `EndPracticeSession`. No frontend changes.
+**What NOT to change:** No changes to `SubmitAnswer`. No changes to `EndPracticeSession`. No controller/DI/frontend changes in this stage.
 
 **Verification:**
 - TDD: write `save-exam-draft-answer.test.ts` using `FakePracticeSessionRepository`
@@ -107,8 +116,8 @@ This debt doc decomposes that into ordered implementation stages. Each stage is 
      - Clear draft fields: `draftSelectedChoiceId = null`, `draftSavedAt = null`, `draftCumulativeMs = 0`
    - Questions with no draft (`draftSelectedChoiceId === null`) remain unanswered — no attempt row, no `latest*` write
    - Set `endedAt = now` on the session
-   - Compute summary totals (answered count, correct count, accuracy)
-4. Return the same shape as current `EndPracticeSession` output so the summary view doesn't need changes
+4. After the transaction commits, return the same shape as current `EndPracticeSession` output by reusing the shared summary projection (`projectPracticeSessionSummary(...)` or equivalent shared mapper). Do **not** fork summary math in a second place.
+5. Do **not** call `EndPracticeSessionUseCase` from inside `FinalizeExamAnswers`. This use case owns the exam-finalization transaction; it should share summary projection logic, not chain use cases.
 
 **Critical constraint:** The `attempts` table unique constraint `(practiceSessionId, questionId)` means each question gets exactly one insert. This is satisfied because draft-save never touches `attempts` — only finalization does.
 
@@ -116,8 +125,18 @@ This debt doc decomposes that into ordered implementation stages. Each stage is 
 
 | File | Change |
 |------|--------|
-| Controller layer | Add a `finalizeExamAnswers` server action that calls this use case |
-| Composition root | Wire the new use case with its dependencies |
+| `src/application/ports/practice-session-repository.ts` | Add a finalization-capable write path that writes `latest*` and clears `draft*` atomically per question (do not overload application code with adapter-specific updater calls) |
+| `src/adapters/repositories/drizzle-practice-session-repository.ts` | Implement the finalization repository method used by this use case |
+| `src/application/test-helpers/fakes/fake-practice-session-repository.ts` | Implement the same finalization behavior in the fake |
+| `src/application/use-cases/index.ts` | Export `FinalizeExamAnswersUseCase` and its input/output types |
+| `lib/container/types.ts` | Add factory types for `createFinalizeExamAnswersUseCase` and expose it through practice-controller deps |
+| `lib/container/use-cases.ts` | Wire the new use case factory with its repositories/transaction wrapper |
+| `lib/container/controllers.ts` | Expose `finalizeExamAnswersUseCase` on `createPracticeControllerDeps()` |
+| `src/adapters/controllers/practice-schemas.ts` | Add input schema for `finalizeExamAnswers` |
+| `src/adapters/controllers/practice-controller.ts` | Add a `finalizeExamAnswers` server action that calls this use case and mirrors the existing idempotent controller pattern used by `endPracticeSession` |
+| `src/adapters/controllers/practice-controller.test.ts` | Add controller coverage for the new action |
+| `src/application/test-helpers/fakes/fake-use-cases.ts` | Add `FakeFinalizeExamAnswersUseCase` |
+| `src/application/test-helpers/fakes/index.ts` | Export the new fake use case |
 
 **What NOT to change:** The existing `SubmitAnswer` and `EndPracticeSession` use cases stay untouched. Tutor mode continues to use them.
 
@@ -128,42 +147,48 @@ This debt doc decomposes that into ordered implementation stages. Each stage is 
 - Test: `timeSpentSeconds` derived from `draftCumulativeMs`
 - Test: draft fields cleared after finalization
 - Test: session `endedAt` set
-- Test: output matches `EndPracticeSession` shape
+- Test: output matches `EndPracticeSession` shape and is projected via the shared summary mapper
 - Test: rejects if already ended (idempotent)
 - Test: rejects for tutor session
 - `pnpm typecheck && pnpm test --run`
 
 ---
 
-## Stage 4: Application — Make `GetPracticeSessionReview` draft-aware
+## Stage 4: Application — Make active exam readers draft-aware
 
-**What:** During an active (not ended) exam session, the review stage needs to count draft answers as "answered," not just finalized ones.
+**What:** During an active (not ended) exam session, every reader that derives answered/unanswered or restores question state must understand draft answers, not just finalized `latest*` fields.
 
-**Why:** The review stage shows answered/unanswered/marked counts. Without this change, all questions would show as "unanswered" in the review stage because `latestSelectedChoiceId` is still `null` during an active exam under the draft model.
+**Why:** Without this stage, active exam state lies in three places:
+- The review stage would show drafted questions as unanswered
+- The question loader would still pick "next unanswered" based only on `latestSelectedChoiceId`
+- The continue-session surface would report `answeredCount = 0` for active exams with saved drafts
 
-**File to modify:** `src/application/use-cases/get-practice-session-review.ts`
+**Files to modify:**
 
-**Change (lines ~103-104):**
+| File | Change |
+|------|--------|
+| `src/application/use-cases/get-practice-session-review.ts` | For active exam sessions, treat `draftSelectedChoiceId` as the source of answered/unanswered status; for ended sessions and tutor mode, keep using finalized `latestSelectedChoiceId` |
+| `src/application/use-cases/get-next-question.ts` | Make active exam reads draft-aware when selecting the next unanswered question and when hydrating the current question's session payload |
+| `src/application/use-cases/get-next-question.ts` | Extend `NextQuestion['session']` to carry explicit draft fields needed by the frontend (`draftSelectedChoiceId` and `draftCumulativeMs`, or equivalent names) so revisit restoration and stopwatch hydration survive reloads |
+| `src/application/use-cases/get-incomplete-practice-session.ts` | For active exam sessions, count drafted questions as answered when computing the resume-card `answeredCount` |
 
-Current:
+**Draft-aware read rule:**
+
 ```typescript
-const isAnswered = state.latestSelectedChoiceId !== null;
+const selectedChoiceIdForActiveRead =
+  session.mode === 'exam' && session.endedAt === null
+    ? state.draftSelectedChoiceId
+    : state.latestSelectedChoiceId;
 ```
 
-Proposed:
-```typescript
-const isAnswered = session.endedAt !== null
-  ? state.latestSelectedChoiceId !== null          // Post-finalization: use finalized field
-  : (state.draftSelectedChoiceId ?? state.latestSelectedChoiceId) !== null;  // Active exam: check draft first
-```
-
-This is a narrow, mode-aware read. For ended sessions (tutor or exam), it reads `latestSelectedChoiceId` as today. For active sessions, it checks `draftSelectedChoiceId` first (exam draft), falling back to `latestSelectedChoiceId` (tutor's already-submitted answer).
-
-**What NOT to change:** `GetNextQuestion` does not need changes yet — it already works based on `questionIds` order, not answered status.
+**What NOT to change:** Do not redefine `computeSessionStats(...)` to count drafts globally. Finalized session summaries should continue to derive from `latest*`. Keep draft-aware branching localized to active exam readers.
 
 **Verification:**
-- TDD: extend existing `get-practice-session-review.test.ts`
+- TDD: extend `get-practice-session-review.test.ts`, `get-next-question.test.ts`, and `get-incomplete-practice-session.test.ts`
 - Test: active exam with 2 drafts + 1 unanswered → `answeredCount = 2`
+- Test: active exam `GetNextQuestion` skips questions with drafts when looking for next unanswered
+- Test: active exam `GetNextQuestion` returns `draftSelectedChoiceId` / `draftCumulativeMs` for the current question
+- Test: active exam resume card uses drafts for `answeredCount`
 - Test: ended exam (finalized) → uses `latestSelectedChoiceId` as before
 - Test: tutor session → uses `latestSelectedChoiceId` as before (no regression)
 - `pnpm typecheck && pnpm test --run`
@@ -176,6 +201,8 @@ This is a narrow, mode-aware read. For ended sessions (tutor or exam), it reads 
 
 **Why:** This is the core UX fix — the thing the user actually sees.
 
+**Deployment note:** This stage is **not independently shippable** without Stage 6 (draft-save on navigation) and Stage 7 (review-stage finalization). Land these three stages together or behind a feature flag.
+
 **Files to modify:**
 
 | File | Change |
@@ -183,6 +210,7 @@ This is a narrow, mode-aware read. For ended sessions (tutor or exam), it reads 
 | `app/(app)/app/practice/components/practice-view.tsx` | Split action bar rendering: `isExamMode ? <ExamActionBar /> : <TutorActionBar />`. Exam bar: fixed slots `[Previous] [Next / Review answers] [Mark for review]`. No Submit button. No conditional visibility shifts. |
 | `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts` | Remove `maybeAutoAdvanceAfterSubmit` function entirely. It's exam-only and no longer needed. |
 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts` | Remove the `maybeAutoAdvanceAfterSubmit` call from `onSubmit`. Wire exam Next to call draft-save + navigate (see Stage 6). |
+| `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` | Keep exam Previous/Next slot wiring stable after the split; the view currently derives Previous via `onNavigateQuestion`, not a dedicated hook-level previous handler |
 
 **Exam action bar contract (from interaction-contracts.md):**
 
@@ -221,24 +249,33 @@ Q1:                 [ spacer   ]  [ Next ]           [ Mark for review ]
 
 | File | Change |
 |------|--------|
-| `app/(app)/app/practice/shared/question-flow-actions.ts` | Add a `maybeSaveDraftBeforeNavigation` function that calls `saveExamDraftAnswer` server action if: (a) exam mode, (b) a choice is selected, (c) choice differs from last saved draft. Call it BEFORE `runLoadQuestionFlow` resets `selectedChoiceId`. |
-| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` | Inject `maybeSaveDraftBeforeNavigation` into `onNextQuestion`, `onPreviousQuestion`, and `onNavigateQuestion` handlers. Pass cumulative time. |
+| `app/(app)/app/practice/shared/question-flow-actions.ts` | Add a `maybeSaveDraftBeforeNavigation` function that calls `saveExamDraftAnswer` server action if: (a) exam mode, (b) a choice is selected, (c) choice differs from the last saved draft. Call it BEFORE `runLoadQuestionFlow` resets `selectedChoiceId`. |
+| `app/(app)/app/practice/shared/use-question-flow-core.ts` | Reconcile the existing local `draftSelectedChoicesRef` with the new server-backed draft model. Do not leave the local map as a second source of truth. Restore active exam selection from explicit server draft fields, not finalized `latestSelectedChoiceId`. Hydrate stopwatch baseline from server draft time. |
+| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` | Inject `maybeSaveDraftBeforeNavigation` into `onNextQuestion` and `onNavigateQuestion`. There is no dedicated `onPreviousQuestion` handler here; Previous flows through `onNavigateQuestion` from the page view. |
 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` | Add stopwatch state: `cumulativeMs` (per question, in a ref or state map) and `enteredAt` (timestamp). On question enter: set `enteredAt`. On question leave: `cumulativeMs += now - enteredAt`. |
+| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts` | Pass the new `saveExamDraftAnswer` server action into the question-flow hook and keep tutor wiring untouched |
 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts` | Save current draft before entering review stage (the header "Review answers" button and the last-question "Review answers" button both must trigger a save). |
 
 **Server action to add:**
 
 | File | Change |
 |------|--------|
-| Controller layer (e.g. `src/adapters/controllers/practice-controller.ts`) | Add `saveExamDraftAnswer` server action wrapping the Stage 2 use case |
+| `src/adapters/controllers/practice-schemas.ts` | Add input schema for `saveExamDraftAnswer` |
+| `src/adapters/controllers/practice-controller.ts` | Add `saveExamDraftAnswer` server action wrapping the Stage 2 use case |
+| `src/adapters/controllers/practice-controller.test.ts` | Add controller coverage for the new action |
+| `lib/container/types.ts` | Add `saveExamDraftAnswerUseCase` to practice-controller deps |
+| `lib/container/use-cases.ts` | Expose the Stage 2 use case through the container |
+| `lib/container/controllers.ts` | Pass the new use case into `createPracticeControllerDeps()` |
+| `src/application/test-helpers/fakes/fake-use-cases.ts` | Add `FakeSaveExamDraftAnswerUseCase` |
+| `src/application/test-helpers/fakes/index.ts` | Export the new fake |
 
 **QuestionCard re-selection on revisit:**
 
 | File | Change |
 |------|--------|
-| `app/(app)/app/practice/shared/question-flow-actions.ts` | In `runLoadQuestionFlow`, after loading the question for exam mode: if `questionStates` for this question has a `draftSelectedChoiceId`, pre-populate `setSelectedChoiceId(draftSelectedChoiceId)` instead of `null`. This restores the user's previous selection when they navigate back. |
+| `app/(app)/app/practice/shared/use-question-flow-core.ts` | After loading the question for exam mode: if the session payload exposes `draftSelectedChoiceId`, pre-populate `selectedChoiceId` from that value instead of `null`. This restores the user's previous selection when they navigate back or refresh. |
 
-**What NOT to change:** Tutor mode navigation — `runLoadQuestionFlow` continues to reset `selectedChoiceId` to `null` for tutor mode (correct: tutor answers are locked after submit, so revisiting shows the locked state, not a re-selectable draft).
+**What NOT to change:** Tutor mode navigation — revisiting a tutor question still restores finalized/locked state only. Do not introduce mutable draft behavior into tutor mode.
 
 **Verification:**
 - Test: exam select answer + click Next → draft saved server-side, then navigates
@@ -254,7 +291,7 @@ Q1:                 [ spacer   ]  [ Next ]           [ Mark for review ]
 
 ## Stage 7: Frontend — Wire `FinalizeExamAnswers` into review stage
 
-**What:** Replace the current exam submission flow (per-question `submitAnswer` already happened → `endPracticeSession`) with the new batch finalization.
+**What:** Replace the current exam submission flow (`endPracticeSession` from the review stage) with the new batch finalization action. Under the draft model, no exam `attempts` rows exist until this step.
 
 **Why:** Under the draft model, no `attempts` rows exist yet when the user enters the review stage. `Submit exam` must call `FinalizeExamAnswers` to materialize them.
 
@@ -263,6 +300,7 @@ Q1:                 [ spacer   ]  [ Next ]           [ Mark for review ]
 | File | Change |
 |------|--------|
 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts` | Change `onFinalizeReview` to call `finalizeExamAnswers` server action instead of `endPracticeSession` for exam mode. Tutor continues using `endPracticeSession`. |
+| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts` | Pass `finalizeExamAnswers` into the review-stage hook while preserving tutor-mode `endPracticeSession` wiring |
 | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` | No structural change needed — it already renders answered/unanswered/marked from the review output. Stage 4 made the review output draft-aware. |
 
 **What NOT to change:** The review stage UI, the submit confirmation dialog, the summary view, the summary cards. These all work off the same output shape.
@@ -278,17 +316,20 @@ Q1:                 [ spacer   ]  [ Next ]           [ Mark for review ]
 
 ## Stage 8: Bug fix — Session summary back-target (AF-4)
 
-**What:** Fix the "Review your answers" CTA on the session summary to pass a session-summary-aware origin instead of `from: 'history'`.
+**What:** Fix all summary-launched review links to pass a session-summary-aware origin instead of `from: 'history'`.
 
 **Why:** Currently, clicking "Review your answers" on the summary takes you to question review with `from=history`, so "Back to History" goes to `/app/history` instead of back to the summary. This is a navigation dead-end.
 
-**File to modify:**
+**Files to modify:**
 
 | File | Change |
 |------|--------|
 | `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` (line ~108) | Change `from: 'history'` to a summary-aware origin (e.g. `from: 'summary'` with `sessionId`) |
+| `app/(app)/app/shared/components/session-breakdown-list.tsx` | Ensure summary breakdown links also pass the summary-aware origin instead of `history` |
 | `app/(app)/app/questions/[slug]/question-page-client.tsx` | Handle the new `from=summary` origin: render "Back to Summary" linking to `/app/practice/[sessionId]` |
-| Route/origin types | Add `'summary'` to `QuestionOrigin` if not already present |
+| `lib/routes.ts` | Add `'summary'` to `QuestionOrigin` and support it in `toQuestionRoute(...)` |
+| `lib/routes.test.ts` | Add/update route-origin tests for `summary` |
+| Question review tests | Update tests that currently assert summary-origin review resolves as `history` |
 
 **Verification:**
 - Test: summary CTA → question review → "Back to Summary" → returns to summary page
@@ -312,20 +353,20 @@ Q1:                 [ spacer   ]  [ Next ]           [ Mark for review ]
 ## Stage Dependency Graph
 
 ```text
-Stage 1 (domain: draft fields)
+Stage 1 (domain + serialized draft fields)
     ↓
-Stage 2 (use case: SaveExamDraftAnswer)
-    ↓                                    ↘
-Stage 3 (use case: FinalizeExamAnswers)   Stage 4 (use case: review draft-aware)
-    ↓                                    ↙
-Stage 5 (frontend: action bar redesign)
+Stage 2 (application: SaveExamDraftAnswer + draft-save repository port)
     ↓
-Stage 6 (frontend: draft-save on navigation + time)
+Stage 3 (application: FinalizeExamAnswers + finalization repository/controller wiring)
     ↓
-Stage 7 (frontend: wire finalization into review stage)
+Stage 4 (application: active exam readers become draft-aware)
+    ↓
+Stages 5-7 (frontend cutover chain: split action bar → save on navigation → finalize from review)
 
-Stage 8 (bug fix: summary back-target) — independent, can ship anytime
+Stage 8 (summary-origin bug fix) — independent, can ship anytime
 ```
+
+**Hidden dependency note:** Stage 4 must land before Stage 6 uses server-backed drafts for revisit restoration or resume counts. Stages 5-7 should be treated as one production rollout unless behind a feature flag.
 
 ---
 
