@@ -2,16 +2,31 @@
 
 **Date:** 2026-03-17
 **Triggered by:** Proactive codebase-wide debt sweep for hard-coded values, magic numbers, and duplicated constant definitions.
-**Scope:** Anywhere in `src/` and `app/` where a raw literal should be a named constant, or where named constants are duplicated instead of shared.
+**Scope:** Runtime TypeScript in `app/`, `src/`, `components/`, and `lib/`, plus production-adjacent helper modules when they duplicate canonical runtime constants. Excludes `docs/`, generated files, `db/migrations/`, CSS/Tailwind numeric tokens, marketing copy/content numerals, fixtures, and test-only timeout values in unit/E2E suites.
 **Related:** None (first audit of this category)
 
 ---
 
 ## The Problem
 
-The codebase is well-disciplined about naming constants — most values live in dedicated files like `rate-limits.ts`, `validation-limits.ts`, and `routes.ts`. However, a full audit reveals **six categories** of inconsistency where raw literals survive alongside named constants, or where identical constants are defined in multiple files instead of imported from a single source.
+The codebase is generally disciplined about constants. Routes are centralized in `lib/routes.ts`, validation limits live in `src/adapters/shared/validation-limits.ts`, and rate limits live in `src/adapters/shared/rate-limits.ts`.
 
-None of these are bugs. All are maintainability risks: a future developer changes the timeout in one file but not the other eleven, or uses raw `1000` for a ms→s conversion that drifts from the named constant elsewhere.
+The remaining debt is narrower and more specific: **eight categories** where raw literals survive beside existing shared constants, or where the same constant policy is redefined in multiple files. Most of this is not functional breakage. It is maintainability debt that makes policy changes harder than they need to be.
+
+The main risk is not "someone used a number." The main risk is **policy drift**:
+
+- Retry defaults change in one Stripe path but not another.
+- A timeout tier moves from `10_000` to `12_000` in one feature slice and nowhere else.
+- A pagination cap or Stripe list limit stays anonymous, so the next caller copy-pastes `100` again.
+
+---
+
+## Root Cause Analysis
+
+- The repo already has strong owners for some shared literals (`routes`, `rate-limits`, `validation-limits`), but there is **no equivalent owner** for retry defaults, UI timeout tiers, HTTP status constants, or basic time primitives.
+- Feature-slice app code added local `withTimeout(...)` wrappers independently, which produced many same-valued constants with different local names.
+- Stripe and Clerk adapter code converged on identical retry behavior without a shared default object.
+- Some same-valued constants are only **coincidentally equal**. That creates a second risk: over-normalizing unrelated `100` or `1000` values into one shared constant when the semantics are different.
 
 ---
 
@@ -19,22 +34,22 @@ None of these are bugs. All are maintainability risks: a future developer change
 
 ### F1: Retry Configuration Duplication — HIGH
 
-The identical retry config `{ maxAttempts: 3, initialDelayMs: 100, factor: 2, maxDelayMs: 1000 }` is defined **four times** in three separate files:
+The identical retry config `{ maxAttempts: 3, initialDelayMs: 100, factor: 2, maxDelayMs: 1000 }` is defined **four times in four files**:
 
 | File | Line | Form |
 |------|------|------|
 | `src/adapters/gateways/stripe/stripe-retry.ts` | 4–9 | `const STRIPE_RETRY_OPTIONS = { ... } as const` |
-| `src/adapters/gateways/stripe-subscription-canceler.ts` | 26–31 | `const STRIPE_RETRY_OPTIONS = { ... } as const` (duplicate name, different file) |
-| `app/(marketing)/checkout/success/checkout-success-sync.tsx` | 25–30 | `const STRIPE_RETRY_OPTIONS = { ... } as const` (third copy, app layer) |
-| `src/adapters/gateways/clerk-auth-gateway.ts` | 49–52 | Inline raw values in `retry()` call — no constant at all |
+| `src/adapters/gateways/stripe-subscription-canceler.ts` | 26–31 | `const STRIPE_RETRY_OPTIONS = { ... } as const` |
+| `app/(marketing)/checkout/success/checkout-success-sync.tsx` | 25–30 | `const STRIPE_RETRY_OPTIONS = { ... } as const` |
+| `src/adapters/gateways/clerk-auth-gateway.ts` | 49–52 | Inline raw values in `retry()` call |
 
-**Risk:** If retry policy changes (e.g., bump `maxAttempts` to 5 after an incident), three files need updating and the fourth has no constant to update.
+**Risk:** Retry policy can drift across Stripe and Clerk callers even though the current behavior is intentionally identical.
 
 ---
 
 ### F2: Duplicated Timeout Constants (10s and 15s tiers) — HIGH
 
-**12 separate `= 10_000` constants**, all representing "standard API call timeout":
+**12 separate `= 10_000` constants**, all representing the same "standard read / lookup timeout" tier:
 
 | File | Line | Constant Name |
 |------|------|---------------|
@@ -45,13 +60,13 @@ The identical retry config `{ maxAttempts: 3, initialDelayMs: 100, factor: 2, ma
 | `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts` | 28 | `SESSION_REVIEW_TIMEOUT_MS` |
 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage-state.ts` | 19 | `SESSION_REVIEW_TIMEOUT_MS` |
 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-mark-for-review.ts` | 24 | `MARK_FOR_REVIEW_TIMEOUT_MS` |
-| `app/(app)/app/practice/shared/question-flow-actions.ts` | — | (not 10k — see 15k below) |
 | `app/(app)/app/history/hooks/use-history-sessions.ts` | 20 | `SESSION_REVIEW_TIMEOUT_MS` |
 | `app/(app)/app/shared/bookmark-toggle.ts` | 5 | `TOGGLE_BOOKMARK_TIMEOUT_MS` |
 | `app/(app)/app/questions/[slug]/question-page-logic.ts` | 18 | `PREVIOUS_ATTEMPT_TIMEOUT_MS` |
-| `app/(app)/app/questions/[slug]/use-question-page-controller.ts` | 41–42 | `SESSION_REVIEW_TIMEOUT_MS`, `BOOKMARK_LOOKUP_TIMEOUT_MS` |
+| `app/(app)/app/questions/[slug]/use-question-page-controller.ts` | 41 | `SESSION_REVIEW_TIMEOUT_MS` |
+| `app/(app)/app/questions/[slug]/use-question-page-controller.ts` | 42 | `BOOKMARK_LOOKUP_TIMEOUT_MS` |
 
-**7 separate `= 15_000` constants**, all representing "critical mutation timeout":
+**7 separate `= 15_000` constants**, all representing the same "longer mutation / critical action timeout" tier:
 
 | File | Line | Constant Name |
 |------|------|---------------|
@@ -63,65 +78,93 @@ The identical retry config `{ maxAttempts: 3, initialDelayMs: 100, factor: 2, ma
 | `app/(app)/app/questions/[slug]/question-page-logic.ts` | 16 | `QUESTION_LOAD_TIMEOUT_MS` |
 | `app/(app)/app/questions/[slug]/question-page-logic.ts` | 17 | `ANSWER_SUBMIT_TIMEOUT_MS` |
 
-**Risk:** Two implicit timeout tiers exist (10s for reads, 15s for mutations) but the policy is not codified. Each file redeclares the magic number independently.
+**Risk:** The codebase already behaves as if two timeout tiers exist, but the tier policy is implicit instead of owned.
 
 ---
 
-### F3: HTTP Status Codes as Raw Literals — MEDIUM
+### F3: Raw `100` Limits with Better Owners Available — MEDIUM
 
-**22 raw status code literals** across 4 route handlers, plus 2 in `retry.ts`:
+Three `100` literals remain inline even though each one has a clearer semantic owner than "anonymous number":
+
+| File | Line | Literal | Better Owner |
+|------|------|---------|--------------|
+| `app/(app)/app/history/history-search-params.ts` | 48 | `Math.min(..., 100)` | `MAX_PAGINATION_LIMIT` from `src/adapters/shared/validation-limits.ts` |
+| `app/api/cron/reconcile-stripe-subscriptions/route.ts` | 126 | `parseNonNegativeInt(..., 100)` | Exported reconcile default limit or route-local named constant |
+| `src/adapters/gateways/stripe-subscription-canceler.ts` | 41 | `limit: 100` | Stripe-specific list limit constant |
+
+**Risk:** Same-valued operational limits are currently mixed together. One is clearly pagination, two are Stripe/cron operational bounds, and the code does not make that distinction explicit.
+
+---
+
+### F4: HTTP Status Codes as Raw Literals — MEDIUM
+
+There are **24 raw HTTP status code usages**:
+
+- **22** in route handlers
+- **2** in `src/adapters/shared/retry.ts`
 
 | File | Raw Codes Used |
 |------|----------------|
-| `app/api/stripe/webhook/handler.ts` | `400`, `429`, `503`, `200`, `400`, `500` (6 instances) |
-| `app/api/cron/reconcile-stripe-subscriptions/route.ts` | `401` ×3, `429`, `503`, `500`, `200` (7 instances) |
-| `app/api/webhooks/clerk/handler.ts` | `429`, `503`, `400` ×2, `200`, `500` (6 instances) |
-| `app/api/health/handler.ts` | `429`, `503`, `500` (3 instances) |
-| `src/adapters/shared/retry.ts:48,52` | `=== 429`, `>= 500`, `< 600` |
+| `app/api/stripe/webhook/handler.ts` | `400`, `429`, `503`, `200`, `400`, `500` |
+| `app/api/cron/reconcile-stripe-subscriptions/route.ts` | `401` ×3, `429`, `503`, `500`, `200` |
+| `app/api/webhooks/clerk/handler.ts` | `429`, `503`, `400` ×2, `200`, `500` |
+| `app/api/health/handler.ts` | `429`, `503`, `500` |
+| `src/adapters/shared/retry.ts` | `429`, `500`, `600` boundary check |
 
-No `HTTP_STATUS` constants file exists. Every handler writes raw numbers.
+No shared HTTP status constants file exists.
 
-**Risk:** Low functional risk (HTTP codes don't change), but it's inconsistent with the codebase's otherwise thorough constant extraction. Readability suffers — `{ status: 503 }` is less self-documenting than `{ status: HTTP_SERVICE_UNAVAILABLE }`.
+**Risk:** Low functional risk, medium consistency/readability risk. `status: 503` is correct, but less self-documenting than a named constant. This is a lower-ROI cleanup than F1-F3.
 
 ---
 
-### F4: Duplicated `STACK_TRACE_LIMIT` — MEDIUM
+### F5: Duplicated `STACK_TRACE_LIMIT` — MEDIUM
 
-`const STACK_TRACE_LIMIT = 1000` is defined identically in two files:
+`const STACK_TRACE_LIMIT = 1000` is defined identically in two controllers:
 
 | File | Line |
 |------|------|
 | `src/adapters/controllers/stripe-webhook-controller.ts` | 32 |
 | `src/adapters/controllers/clerk-webhook-controller.ts` | 141 |
 
-Both use it for `error.stack?.slice(0, STACK_TRACE_LIMIT)`. Should be a single shared constant.
+Both use it for stack truncation in error logging.
+
+**Risk:** Small surface area, but this is a clean cross-file duplication with a single meaning.
 
 ---
 
-### F5: Duplicated Day-in-Milliseconds Definitions — MEDIUM
+### F6: 24-Hour / Day Constants Are Duplicated or Re-encoded — MEDIUM
 
-`86_400_000` (ms/day) is defined or used as a raw literal in multiple places:
-
-| File | Line | Form |
-|------|------|------|
-| `src/domain/services/statistics.ts` | 1 | `export const DAY_MS = 86_400_000` (canonical) |
-| `src/adapters/shared/with-idempotency.ts` | 9 | `const DEFAULT_TTL_MS = 86_400_000` (redefinition) |
-| `src/adapters/controllers/stripe-webhook-controller.ts` | 33 | `90 * 86_400_000` (raw literal in expression) |
-| `src/domain/test-helpers/factories.ts` | 123 | `+ 86_400_000` (raw in test factory) |
-
-And `86_400` (seconds/day):
+The codebase has a canonical runtime day constant:
 
 | File | Line | Form |
 |------|------|------|
+| `src/domain/services/statistics.ts` | 1 | `export const DAY_MS = 86_400_000` |
+
+But the same concept is still reintroduced elsewhere:
+
+| File | Line | Form |
+|------|------|------|
+| `src/adapters/shared/with-idempotency.ts` | 9 | `const DEFAULT_TTL_MS = 86_400_000` |
+| `src/adapters/controllers/stripe-webhook-controller.ts` | 33 | `90 * 86_400_000` |
+| `src/domain/test-helpers/factories.ts` | 123 | `+ 86_400_000` |
 | `src/application/use-cases/submit-answer.ts` | 44 | `SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS = 86_400` |
 
-**Risk:** `DAY_MS` is exported but not imported where it could be. Three files use the raw number instead.
+Important nuance: `src/adapters/shared/validation-limits.ts` already re-exports the submit-answer cap as `MAX_TIME_SPENT_SECONDS`, so the remaining debt is not "missing adapter exposure." The remaining debt is that basic time primitives do not have a clear single owner outside `statistics.ts`.
+
+**Risk:** A time primitive already exists, but its home (`statistics.ts`) is not an obvious place for adapter-layer imports, so callers keep re-encoding "24 hours" locally.
 
 ---
 
-### F6: Raw Millisecond ↔ Second Conversions — LOW
+### F7: Raw Millisecond ↔ Second Conversions and Split Constant Naming — LOW
 
-Named constants exist (`MS_PER_SECOND` in `session-stats.ts:8`, `SECOND_MS` in `drizzle-rate-limiter.ts:13`) but raw `* 1000` and `/ 1000` appear in 5 non-test locations:
+Named constants exist, but they are inconsistent:
+
+| File | Line | Constant |
+|------|------|----------|
+| `src/domain/services/session-stats.ts` | 8 | `MS_PER_SECOND = 1000` |
+| `src/adapters/gateways/drizzle-rate-limiter.ts` | 13 | `SECOND_MS = 1000` |
+
+At the same time, five runtime files still use raw `* 1000` or `/ 1000` conversions:
 
 | File | Line | Expression |
 |------|------|------------|
@@ -131,20 +174,33 @@ Named constants exist (`MS_PER_SECOND` in `session-stats.ts:8`, `SECOND_MS` in `
 | `app/(app)/app/practice/shared/question-flow-actions.ts` | 39 | `/ 1000` |
 | `app/(marketing)/checkout/success/checkout-success-sync.tsx` | 231 | `currentPeriodEndSeconds * 1000` |
 
-Additionally, the two named constants have **different names** for the same value (`MS_PER_SECOND` vs `SECOND_MS`), which is itself inconsistent.
-
-**Risk:** Low. `* 1000` for timestamp conversions is idiomatic and readable. The inconsistency between constant names is the real issue.
+**Risk:** Low. Raw timestamp conversion is idiomatic. The bigger issue is that two different constant names already exist for the same value.
 
 ---
 
-### F7: Minor Magic Numbers — LOW
+### F8: Minor Anonymous UI / Client Timing Values — LOW
+
+These are localized and low-risk, but still count as unnamed policy values:
 
 | File | Line | Value | Meaning |
 |------|------|-------|---------|
-| `app/(app)/app/practice/hooks/bookmark-message-timeout.ts` | 22 | `?? 2000` | Default toast auto-dismiss delay (ms) |
-| `app/(app)/app/practice/practice-page-bookmarks.ts` | 45 | `< 2` | Max bookmark retry attempts |
-| `app/(app)/app/practice/practice-page-bookmarks.ts` | 52 | `1000 * (count + 1)` | Retry backoff base (ms) — raw `1000` |
-| `app/(app)/app/practice/practice-page-available-count.ts` | 19 | `= 200` | Debounce delay (ms) |
+| `app/(app)/app/practice/hooks/bookmark-message-timeout.ts` | 22 | `?? 2000` | Bookmark toast auto-clear delay |
+| `app/(app)/app/practice/practice-page-bookmarks.ts` | 45 | `< 2` | Max retry attempts |
+| `app/(app)/app/practice/practice-page-bookmarks.ts` | 52 | `1000 * (count + 1)` | Retry backoff base |
+| `app/(app)/app/practice/practice-page-available-count.ts` | 19 | `= 200` | Debounce delay |
+| `components/ui/notification-provider.tsx` | 81 | `durationMs = 2500` | Default app toast duration |
+
+**Risk:** Localized and easy to change, but these are still policy defaults hiding in implementation sites.
+
+---
+
+## Non-Findings / Explicit Exclusions
+
+- **Routes are mostly centralized correctly.** Raw route literals were limited to route matcher files and route self-identification strings such as `const ROUTE = '/api/cron/reconcile-stripe-subscriptions'`.
+- **Validation and rate-limit configs are already centralized.** This audit did not count named one-owner constants like `MAX_PRACTICE_SESSION_QUESTIONS`, `ONE_MINUTE_MS`, or `HEALTH_CHECK_RATE_LIMIT`.
+- **Named one-off limits were not counted as debt.** Examples: `MAX_HISTORY_SEQUENCE_LENGTH`, `MAX_SLUG_LENGTH`, `MAX_DISPLAY_DURATION_MINUTES`, `SESSION_ATTEMPT_READ_LIMIT`.
+- **Repeated shallow response copy was not counted.** Strings like `'Too many requests'`, `'Rate limiter unavailable'`, and `'Webhook processing failed'` repeat across handlers, but centralizing them would add indirection with little payoff.
+- **Test-only timeout duplication was excluded.** `tests/e2e/**` contains many repeated `10_000`, `15_000`, and `60_000` values, but that is better handled as a separate testing-infrastructure audit.
 
 ---
 
@@ -152,42 +208,90 @@ Additionally, the two named constants have **different names** for the same valu
 
 | ID | Category | Instances | Severity | Risk |
 |----|----------|-----------|----------|------|
-| F1 | Retry config duplication | 4 definitions | **High** | Policy drift across Stripe/Clerk gateways |
-| F2 | Timeout constant duplication | 19 definitions (12 × 10s + 7 × 15s) | **High** | Timeout tier policy is implicit and fragile |
-| F3 | HTTP status codes raw | 24 instances | **Medium** | Readability; low functional risk |
-| F4 | STACK_TRACE_LIMIT duplication | 2 definitions | **Medium** | Easy to fix, moderate inconsistency |
-| F5 | DAY_MS duplication | 4 instances | **Medium** | Canonical export exists but isn't used |
-| F6 | Raw ms↔s conversions | 5 instances + naming split | **Low** | Idiomatic but inconsistent with named constants |
-| F7 | Minor magic numbers | 4 instances | **Low** | Localized, unlikely to drift |
+| F1 | Retry config duplication | 4 definitions | **High** | Policy drift across Stripe/Clerk retry paths |
+| F2 | Timeout constant duplication | 19 definitions | **High** | Timeout tiers exist implicitly but are not owned |
+| F3 | Raw `100` limits | 3 instances | **Medium** | Anonymous operational bounds; one should use existing pagination cap |
+| F4 | Raw HTTP status codes | 24 instances | **Medium** | Readability and consistency, low functional risk |
+| F5 | `STACK_TRACE_LIMIT` duplication | 2 definitions | **Medium** | Clean duplication with one meaning |
+| F6 | 24-hour/day constant duplication | 4 non-canonical occurrences | **Medium** | Basic time primitives lack an obvious shared owner |
+| F7 | Raw ms↔s conversions + split naming | 5 raw conversions + 2 names | **Low** | Mostly stylistic unless naming remains split |
+| F8 | Minor anonymous UI/client timings | 5 instances | **Low** | Localized policy defaults hiding inline |
 
 ---
 
 ## Proposed Fix (Sketch)
 
-### Phase 1: Shared constants extraction
+### Phase 1: High-signal, low-risk deduplication
 
-1. **`src/adapters/shared/retry-defaults.ts`** — Single `DEFAULT_RETRY_OPTIONS` constant. All four retry sites import it. Files that need `shouldRetry` override via spread.
+1. **Extract retry defaults**
 
-2. **`app/(app)/app/shared/timeout-constants.ts`** — Two named tiers:
+   Add a shared constant in `src/adapters/shared/` for:
+
+   ```ts
+   {
+     maxAttempts: 3,
+     initialDelayMs: 100,
+     factor: 2,
+     maxDelayMs: 1000,
+   }
    ```
-   STANDARD_READ_TIMEOUT_MS = 10_000
-   STANDARD_MUTATION_TIMEOUT_MS = 15_000
+
+   Keep `shouldRetry` and `onRetry` at the call site.
+
+2. **Introduce explicit timeout tiers**
+
+   Add a shared app-level timeout owner, for example:
+
+   ```ts
+   export const STANDARD_READ_TIMEOUT_MS = 10_000;
+   export const STANDARD_MUTATION_TIMEOUT_MS = 15_000;
    ```
-   All 19 timeout constants become imports. Per-feature naming (`BOOKMARKS_LOAD_TIMEOUT_MS`) is replaced by the shared tier constant, since the value is uniform and the feature name adds no information.
 
-3. **`src/adapters/shared/http-status.ts`** — Named HTTP status codes (`HTTP_OK`, `HTTP_BAD_REQUEST`, `HTTP_UNAUTHORIZED`, `HTTP_RATE_LIMITED`, `HTTP_INTERNAL_ERROR`, `HTTP_SERVICE_UNAVAILABLE`). Route handlers import instead of raw numbers.
+   Prefer either:
 
-4. **`src/adapters/shared/error-logging.ts`** (or add to existing shared file) — Single `STACK_TRACE_LIMIT = 1000`. Both webhook controllers import it.
+   - direct imports at the call site, or
+   - local aliases such as `const BOOKMARKS_LOAD_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS`
 
-### Phase 2: Consolidate time constants
+   The second option preserves grep-friendly names while still centralizing the values.
 
-5. **Promote `DAY_MS`** — `stripe-webhook-controller.ts` and `with-idempotency.ts` import from `src/domain/services/statistics.ts` (or extract to a new `src/domain/constants/time.ts` if the domain layer should own it).
+3. **Fix the raw `100`s by semantic owner, not by shared value alone**
 
-6. **Unify ms↔s constant name** — Pick one (`MS_PER_SECOND`) and use it everywhere. Remove `SECOND_MS` alias.
+   - `parseLimit(...)` in history should import `MAX_PAGINATION_LIMIT`
+   - reconcile route should reference an exported reconcile default limit or a clearly named route constant
+   - Stripe canceler should introduce a Stripe-specific list limit constant
 
-### Phase 3: Minor cleanup
+   Do **not** tie prune batch sizes or Stripe list limits to `MAX_PAGINATION_LIMIT` just because the current number matches.
 
-7. Extract `BOOKMARK_MESSAGE_CLEAR_DELAY_MS = 2000` and `MAX_BOOKMARK_RETRY_ATTEMPTS = 2` as named constants in their respective files.
+4. **Share `STACK_TRACE_LIMIT`**
+
+   Move the stack truncation constant into a small shared error-logging module and import it from both webhook controllers.
+
+### Phase 2: Give basic time primitives a clean home
+
+5. **Create a dedicated time-constants module**
+
+   Move or re-home primitives such as:
+
+   - `DAY_MS`
+   - `MS_PER_SECOND`
+   - optionally `SECONDS_PER_DAY`
+
+   This avoids importing base time constants from `statistics.ts`, which is a reasonable source file for behavior but an awkward source file for generic primitives.
+
+6. **Normalize only the conversions that improve clarity**
+
+   - App-side elapsed-time math likely benefits from a shared `MS_PER_SECOND`
+   - Stripe timestamp adapters may remain raw `* 1000` if the team prefers idiomatic vendor-field conversion over extra indirection
+
+### Phase 3: Optional readability cleanup
+
+7. **Decide whether HTTP status extraction is worth it**
+
+   This is the lowest-ROI medium finding. If the team wants stronger consistency, add a small `http-status.ts`; otherwise leave raw status codes alone and focus on F1-F6.
+
+8. **Name the local UI/client timing defaults**
+
+   Add small file-local constants for the bookmark toast, notification duration, retry count, retry backoff base, and debounce delay where doing so improves readability.
 
 ---
 
@@ -195,11 +299,11 @@ Additionally, the two named constants have **different names** for the same valu
 
 | # | Question | Context |
 |---|----------|---------|
-| 1 | **Should timeout constants use per-feature names or shared tier names?** | Per-feature names (`BOOKMARKS_LOAD_TIMEOUT_MS`) are more grep-friendly but create 19 constants for 2 values. Shared tier names (`STANDARD_READ_TIMEOUT_MS`) are DRY but lose the feature context at the call site. |
-| 2 | **Are the retry configs intentionally identical or coincidentally identical?** | All four use `maxAttempts: 3, initialDelayMs: 100, factor: 2, maxDelayMs: 1000`. If Clerk should have different retry behavior than Stripe, sharing a constant would mask that. |
-| 3 | **Is HTTP status constant extraction worth the import noise?** | Every route handler would gain an import line. Raw `200`, `400`, `500` are arguably self-documenting for experienced developers. The win is consistency with the codebase's otherwise thorough constant discipline. |
-| 4 | **Should `DAY_MS` stay in the domain layer or move to a shared constants file?** | Currently lives in `src/domain/services/statistics.ts`. Adapter-layer files importing from domain is fine (dependency direction is inward), but a pure time constant feels more like infrastructure than domain logic. |
-| 5 | **Should the `PRUNE_BATCH_LIMIT = 100` values (in `with-idempotency.ts` and `stripe-webhook-controller.ts`) reference `MAX_PAGINATION_LIMIT` or remain separate?** | They're semantically different (prune batch size vs. API pagination cap) but coincidentally the same number. Linking them means changing pagination also changes prune behavior. |
+| 1 | **Should timeout tiers be imported directly, or aliased locally for readability?** | Direct imports maximize DRY. Local aliases preserve feature intent at the call site. |
+| 2 | **Are Clerk and Stripe retry defaults intentionally coupled long-term?** | They are identical today. A shared default is correct only if that identity is deliberate. |
+| 3 | **Is HTTP status extraction worth the import noise?** | This is a consistency win, not a correctness win. |
+| 4 | **Where should base time primitives live?** | A dedicated constants module is cleaner than importing `DAY_MS` from `statistics.ts`, but either approach is valid if dependency direction stays inward. |
+| 5 | **Should test-only timeout duplication be audited separately?** | `tests/e2e/**` has many repeated timeout values, but it follows a different policy surface than runtime app/adapters code. |
 
 ---
 
@@ -207,4 +311,4 @@ Additionally, the two named constants have **different names** for the same valu
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-03-17 | Created BS-056 | Proactive debt audit identified 6 categories of constant duplication / magic number inconsistency |
+| 2026-03-17 | Created BS-056 | Proactive debt audit identified 8 categories of constant duplication / magic number inconsistency |
