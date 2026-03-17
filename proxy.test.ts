@@ -446,6 +446,16 @@ describe('proxy middleware', () => {
       ).toBe('https://o456.ingest.us.sentry.io');
     });
 
+    it('returns null when DSN uses an opaque origin scheme', async () => {
+      const { parseSentryIngestOrigin } = await import('./proxy');
+      expect(parseSentryIngestOrigin('mailto:test@example.com')).toBeNull();
+    });
+
+    it('returns null when DSN uses a non-http scheme', async () => {
+      const { parseSentryIngestOrigin } = await import('./proxy');
+      expect(parseSentryIngestOrigin('ftp://example.com/123')).toBeNull();
+    });
+
     it('returns null when DSN is undefined', async () => {
       const { parseSentryIngestOrigin } = await import('./proxy');
       expect(parseSentryIngestOrigin(undefined)).toBeNull();
@@ -513,6 +523,49 @@ describe('proxy middleware', () => {
   it('excludes Sentry ingest origin from connect-src when NEXT_PUBLIC_SENTRY_DSN is not set', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     delete process.env.NEXT_PUBLIC_SENTRY_DSN;
+
+    type ClerkMiddlewareCallback = (
+      auth: { protect: () => Promise<void> },
+      request: unknown,
+    ) => Promise<void> | void;
+
+    const protect = vi.fn(async () => undefined);
+    let capturedOptions: unknown;
+    const clerkMiddleware = vi.fn(
+      (cb: ClerkMiddlewareCallback, options?: unknown) => {
+        capturedOptions = options;
+        return vi.fn(async (req: unknown) => {
+          await cb({ protect }, req);
+          return new Response('ok');
+        });
+      },
+    );
+    const createRouteMatcher = vi.fn(() => () => false);
+
+    vi.doMock('@clerk/nextjs/server', () => ({
+      clerkMiddleware,
+      createRouteMatcher,
+    }));
+
+    const { default: middleware } = await import('./proxy');
+
+    await middleware(
+      {} as unknown as NextRequest,
+      {} as unknown as NextFetchEvent,
+    );
+
+    const directives = (
+      capturedOptions as {
+        contentSecurityPolicy: { directives: Record<string, string[]> };
+      }
+    ).contentSecurityPolicy.directives;
+
+    expect(directives['connect-src']).toEqual(['ws:', 'wss:']);
+  });
+
+  it('excludes invalid-scheme Sentry DSNs from connect-src', async () => {
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+    process.env.NEXT_PUBLIC_SENTRY_DSN = 'mailto:test@example.com';
 
     type ClerkMiddlewareCallback = (
       auth: { protect: () => Promise<void> },

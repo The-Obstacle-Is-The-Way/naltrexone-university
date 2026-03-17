@@ -12,7 +12,11 @@ export function parseSentryIngestOrigin(
 ): string | null {
   if (!dsn) return null;
   try {
-    return new URL(dsn).origin;
+    const url = new URL(dsn);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return null;
+    }
+    return url.origin;
   } catch {
     return null;
   }
