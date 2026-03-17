@@ -3,8 +3,9 @@
 **Date:** 2026-03-16
 **Triggered by:** Manual walkthrough of tutor/exam session-end flow; browser back from "View in History" lands on a stale session runner, and re-ending can produce "Practice session already ended"
 **Scope:** Session summary action buttons are redundant/misdirected, and reopening an ended session URL exposes broken runner states instead of the durable summary
-**Related:** [BS-009](../_archive/brainstorming/bs-009-session-review-navigation-gap.md), [BS-004](../_archive/brainstorming/bs-004-review-page-flow-audit.md), [BS-002](../_archive/brainstorming/bs-002-practice-engine-state-audit.md)
+**Related:** [BS-009](./bs-009-session-review-navigation-gap.md), [BS-004](./bs-004-review-page-flow-audit.md), [BS-002](./bs-002-practice-engine-state-audit.md)
 **Verification note:** All code traces and file references in this doc were re-checked against the current `bs-054-session-end-ux` branch on 2026-03-16.
+**Resolution note:** Resolved by PR #229 on 2026-03-17. D1-D5 were implemented and the verification matrix passed before archival.
 
 ---
 
@@ -426,7 +427,7 @@ These are real or arguable UX topics, but they are not the session-end bug being
 - Adding a tutor-only bottom "Finish" CTA
 - Broader review-mode IA changes outside the session summary and ended-session bootstrap
 
-The "Next loses unsubmitted selection" concern remains documented separately in [BS-002](../_archive/brainstorming/bs-002-practice-engine-state-audit.md).
+The "Next loses unsubmitted selection" concern remains documented separately in [BS-002](./bs-002-practice-engine-state-audit.md).
 
 ---
 
