@@ -622,7 +622,9 @@ All hooks return objects (not tuples). Properties should be named descriptively.
 
 ### `useEffect` Guidelines
 
-`useEffect` is not banned, but most uses are wrong. Before writing one, check whether a simpler primitive fits.
+`useEffect` is not banned here. Treat it as an escape hatch for external synchronization after ruling out derived state, event handlers, and an existing fetch abstraction.
+
+We do **not** require a repo-wide wrapper such as `useMountEffect()`. The guardrail is choosing the right primitive, not hiding `useEffect` behind another name.
 
 #### Decision tree
 

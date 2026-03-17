@@ -8,7 +8,18 @@
 
 ## Summary
 
-An audit of all `useEffect` usage across the codebase found **30 calls in production code** (plus a few in test helpers). Most are well-structured, but two specific anti-patterns and one systemic gap warrant attention.
+An audit of all direct `useEffect` usage across the codebase found **31 calls in production code**:
+
+- **30 feature/shell effects** in `app/` and `components/`
+- **1 infrastructure helper effect** in `lib/use-is-mounted.ts`
+
+The split is:
+
+- **2 genuine anti-patterns worth fixing**
+- **14 manual data-fetching effects** that work today but expose a missing abstraction
+- **15 effects that are idiomatic and low-risk**
+
+We do **not** need a blanket ban on `useEffect`. The current debt is specific and localized.
 
 ---
 
@@ -27,7 +38,7 @@ An audit of all `useEffect` usage across the codebase found **30 calls in produc
 | 9 | `app/(app)/app/practice/components/practice-view.tsx` | 140 | Scroll to feedback | OK |
 | 10 | `app/(app)/app/practice/shared/use-question-flow-core.ts` | 81 | Ref sync | OK |
 | 11 | `use-question-page-controller.ts` | 192 | Data fetch | Fetch |
-| 12 | `use-question-page-controller.ts` | 194 | Reset state on slug | Key pattern |
+| 12 | `use-question-page-controller.ts` | 194 | Reset state on slug | Low-risk smell (subsumed) |
 | 13 | `use-question-page-controller.ts` | 199 | Dev-only warning | OK |
 | 14 | `use-question-page-controller.ts` | 218 | Data fetch (session nav) | Fetch (complex) |
 | 15 | **`use-question-page-controller.ts`** | **347** | **Derived state via effect** | **Problem** |
@@ -46,6 +57,7 @@ An audit of all `useEffect` usage across the codebase found **30 calls in produc
 | 28 | `use-practice-session-tags.ts` | 20 | Data fetch (mount) | Fetch |
 | 29 | `use-practice-available-questions-count.ts` | 34 | Data fetch | Fetch |
 | 30 | `use-practice-incomplete-session.ts` | 38 | Data fetch (mount) | Fetch |
+| 31 | `lib/use-is-mounted.ts` | 8 | Mount/unmount flag helper | OK (infra) |
 
 ---
 
@@ -107,11 +119,17 @@ The hook mixes concerns:
 
 **Fix (decomposition):** Split into smaller, focused hooks analogous to the practice-session pattern (which already uses `usePracticeSessionQuestionFlow`, `usePracticeQuestionBookmarks`, `usePracticeSessionNavigator`, etc.). The question page controller should compose these rather than inlining all logic.
 
+### Related low-risk smell: reset-on-slug effect (Line 194)
+
+`use-question-page-controller.ts:194` resets `pendingRetryProvenance` when `input.slug` changes. That is the "reset on key change" pattern the React docs generally prefer to solve with a parent `key`.
+
+This is **not** a standalone bug and is already localized to one field, so it should not be prioritized separately. It will likely disappear naturally when Problem 2 and the broader controller decomposition are addressed.
+
 ---
 
 ## Systemic Gap: No Data-Fetching Abstraction
 
-**14 of 30 effects** are data-fetching patterns that manually handle:
+**14 of 31 direct effects** are data-fetching patterns that manually handle:
 - Stale-request cancellation via ref counters
 - `isMounted()` guards
 - Error reporting
@@ -131,7 +149,7 @@ Adopting React Query / SWR is a large migration. Many of the existing factory fu
 
 ## What's Fine
 
-The remaining ~15 effects are idiomatic and low-risk:
+The remaining **15 effects** are idiomatic and low-risk:
 
 - **Error boundary logging** (2) — React error boundaries provide `error` as a prop; logging it on mount/change is the intended pattern.
 - **URL-driven toasts** (2) — One-time effects with dedup guards; correctly clean up the URL after firing.
@@ -139,6 +157,7 @@ The remaining ~15 effects are idiomatic and low-risk:
 - **DOM interactions** (3) — Focus management, scroll-into-view. Legitimate external system sync.
 - **Cleanup** (3) — Timer cleanup on unmount. Idiomatic.
 - **Ref sync** (1) — Keeping a ref up-to-date with a callback prop.
+- **Infra mount helper** (1) — `useIsMounted()` flips a ref on mount/unmount. Acceptable as infrastructure, though its presence also reflects the current manual-fetch style.
 - **Dev-only warning** (1) — Harmless.
 - **Well-factored fetch effects** (multiple) — The practice hooks use factory functions with cleanup returns. These are the best-structured effects in the codebase.
 
