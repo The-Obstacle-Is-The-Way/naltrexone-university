@@ -4,6 +4,7 @@
 **Triggered by:** Proactive codebase-wide debt sweep for hard-coded values, magic numbers, and duplicated constant definitions.
 **Scope:** Runtime TypeScript in `app/`, `src/`, `components/`, and `lib/`, plus production-adjacent helper modules when they duplicate canonical runtime constants. Excludes `docs/`, generated files, `db/migrations/`, CSS/Tailwind numeric tokens, marketing copy/content numerals, fixtures, and test-only timeout values in unit/E2E suites.
 **Related:** None (first audit of this category)
+**Resolution note:** Resolved on 2026-03-17 in `debt/magic-numbers-audit`. All F1-F8 were implemented, and the full verification gate passed before archival: `pnpm typecheck`, `pnpm lint`, `pnpm test --run`, `pnpm test:browser`, and `pnpm build`.
 
 ---
 
@@ -324,3 +325,6 @@ These are localized and low-risk, but still count as unnamed policy values:
 |------|----------|-----------|
 | 2026-03-17 | Created BS-056 | Proactive debt audit identified 8 categories of constant duplication / magic number inconsistency |
 | 2026-03-17 | Corrected F4 count and expanded F5 | F4: retry.ts has 3 raw status literals (429, 500, 600), not 2 — total is 25, not 24. F5: added `PRUNE_BATCH_LIMIT = 100` duplication across `with-idempotency.ts` and `drizzle-rate-limiter.ts` (same pattern as `STACK_TRACE_LIMIT`). |
+| 2026-03-17 | Resolved F1, F2, F3, and F5 | Added `DEFAULT_RETRY_OPTIONS`, `timeout-tiers.ts`, semantic `100` owners (`MAX_PAGINATION_LIMIT`, `RECONCILE_DEFAULT_LIMIT`, `STRIPE_LIST_LIMIT`), and shared `STACK_TRACE_LIMIT` / `PRUNE_BATCH_LIMIT` modules. |
+| 2026-03-17 | Resolved F6 and F7 with canonical time primitives | Added `src/domain/services/time-constants.ts`, re-homed `DAY_MS`, standardized on `MS_PER_SECOND`, and replaced the audited non-canonical day/second math across runtime call sites. |
+| 2026-03-17 | Resolved F4 and F8; archived BS-056 | Added `src/adapters/shared/http-status.ts`, replaced the audited raw status literals, named the remaining local UI timing defaults, and archived the doc after the full verification gate passed. |
