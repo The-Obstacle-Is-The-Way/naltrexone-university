@@ -40,7 +40,7 @@ export function usePracticeQuestionBookmarks(
     null,
   );
   const [bookmarkRetryCount, setBookmarkRetryCount] = useState(0);
-  const bookmarkIdempotencyKeyRef = useRef<string | null>(null);
+  const bookmarkIdempotencyKeysRef = useRef<Map<string, string>>(new Map());
 
   useEffect(() => {
     return createBookmarksEffect({
@@ -71,12 +71,17 @@ export function usePracticeQuestionBookmarks(
     : false;
 
   const onToggleBookmark = useCallback(async () => {
+    const questionId = input.question?.questionId;
+
     await toggleBookmarkForQuestion({
       question: input.question,
-      bookmarkIdempotencyKey: bookmarkIdempotencyKeyRef.current,
+      bookmarkIdempotencyKey: questionId
+        ? (bookmarkIdempotencyKeysRef.current.get(questionId) ?? null)
+        : null,
       createIdempotencyKey: () => crypto.randomUUID(),
       setBookmarkIdempotencyKey: (key) => {
-        bookmarkIdempotencyKeyRef.current = key;
+        if (!questionId) return;
+        bookmarkIdempotencyKeysRef.current.set(questionId, key);
       },
       toggleBookmarkFn: toggleBookmark,
       setBookmarkStatus,

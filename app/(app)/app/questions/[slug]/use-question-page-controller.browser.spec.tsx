@@ -674,6 +674,90 @@ describe('useQuestionPageController (browser)', () => {
       .toHaveTextContent('idle');
   });
 
+  it('uses a different bookmark idempotency key after moving to a different review question following a failed toggle', async () => {
+    getQuestionBySlugMock.mockImplementation(async (input: unknown) => {
+      const slug = (input as { slug: string }).slug;
+      return ok({
+        questionId: `question-${slug}`,
+        slug,
+        stemMd: 'Stem',
+        difficulty: 'easy',
+        choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
+      });
+    });
+    getPreviousAttemptMock.mockResolvedValue(
+      ok({
+        kind: 'attempt',
+        attemptId: 'attempt-1',
+        selectedChoiceId: 'choice-1',
+        isCorrect: true,
+        correctChoiceId: 'choice-1',
+        explanationMd: 'Because.',
+        referenceMd: null,
+        choiceExplanations: [],
+        answeredAt: '2026-02-01T00:00:00.000Z',
+      }),
+    );
+    toggleBookmarkMock
+      .mockResolvedValueOnce({
+        ok: false,
+        error: { code: 'INTERNAL_ERROR', message: 'Boom' },
+      })
+      .mockResolvedValueOnce(ok({ bookmarked: true }));
+
+    function Wrapper() {
+      const [slug, setSlug] = useState('q-1');
+
+      return (
+        <>
+          <Probe slug={slug} mode="review" />
+          <button
+            type="button"
+            data-testid="set-slug-q-2"
+            onClick={() => setSlug('q-2')}
+          >
+            Set slug q-2
+          </button>
+        </>
+      );
+    }
+
+    const screen = await render(<Wrapper />);
+
+    await expect
+      .element(screen.getByTestId('question-slug'))
+      .toHaveTextContent('q-1');
+
+    await screen.getByTestId('trigger-toggle-bookmark').click();
+
+    await expect.poll(() => toggleBookmarkMock.mock.calls.length).toBe(1);
+    const firstInput = toggleBookmarkMock.mock.calls[0]?.[0] as {
+      idempotencyKey: string;
+      questionId: string;
+    };
+
+    await expect
+      .element(screen.getByTestId('bookmark-status'))
+      .toHaveTextContent('error');
+
+    await screen.getByTestId('set-slug-q-2').click();
+    await expect
+      .element(screen.getByTestId('question-slug'))
+      .toHaveTextContent('q-2');
+
+    await screen.getByTestId('trigger-toggle-bookmark').click();
+
+    await expect.poll(() => toggleBookmarkMock.mock.calls.length).toBe(2);
+    const secondInput = toggleBookmarkMock.mock.calls[1]?.[0] as {
+      idempotencyKey: string;
+      questionId: string;
+    };
+
+    expect(firstInput.questionId).toBe('question-q-1');
+    expect(secondInput.questionId).toBe('question-q-2');
+    expect(secondInput.idempotencyKey).not.toBe(firstInput.idempotencyKey);
+  });
+
   it('does not refetch the session review when slug changes within the same session', async () => {
     getQuestionBySlugMock.mockImplementation(async (input: unknown) => {
       const slug = (input as { slug: string }).slug;

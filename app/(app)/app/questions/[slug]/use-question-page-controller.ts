@@ -143,7 +143,7 @@ export function useQuestionPageController(
   const latestSubmitRequestId = useRef(0);
   const latestBookmarkLookupRequestId = useRef(0);
   const bookmarkStateVersionRef = useRef(0);
-  const bookmarkIdempotencyKeyRef = useRef<string | null>(null);
+  const bookmarkIdempotencyKeysRef = useRef<Map<string, string>>(new Map());
   const sessionQuestionsBySessionIdRef = useRef<
     Map<string, SessionNavigation['questions']>
   >(new Map());
@@ -565,10 +565,11 @@ export function useQuestionPageController(
 
       void toggleBookmarkForQuestion({
         question,
-        bookmarkIdempotencyKey: bookmarkIdempotencyKeyRef.current,
+        bookmarkIdempotencyKey:
+          bookmarkIdempotencyKeysRef.current.get(questionId) ?? null,
         createIdempotencyKey: () => crypto.randomUUID(),
         setBookmarkIdempotencyKey: (key) => {
-          bookmarkIdempotencyKeyRef.current = key;
+          bookmarkIdempotencyKeysRef.current.set(questionId, key);
         },
         toggleBookmarkFn: toggleBookmark,
         setBookmarkStatus: (status) => {
