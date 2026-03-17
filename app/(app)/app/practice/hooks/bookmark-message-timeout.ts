@@ -9,6 +9,8 @@ type SetTimeoutLike = (
 
 type ClearTimeoutLike = (timeoutId: ReturnType<typeof setTimeout>) => void;
 
+const DEFAULT_BOOKMARK_MESSAGE_TIMEOUT_MS = 2000;
+
 export function scheduleBookmarkMessageAutoClear(input: {
   timeoutIdRef: BookmarkMessageTimeoutRef;
   setBookmarkMessage: (message: string | null) => void;
@@ -19,7 +21,7 @@ export function scheduleBookmarkMessageAutoClear(input: {
 }): void {
   const setTimeoutFn = input.setTimeoutFn ?? setTimeout;
   const clearTimeoutFn = input.clearTimeoutFn ?? clearTimeout;
-  const delayMs = input.delayMs ?? 2000;
+  const delayMs = input.delayMs ?? DEFAULT_BOOKMARK_MESSAGE_TIMEOUT_MS;
 
   if (input.timeoutIdRef.current) {
     clearTimeoutFn(input.timeoutIdRef.current);

@@ -8,6 +8,7 @@ import type {
 } from '@/src/domain/value-objects';
 
 const AVAILABLE_COUNT_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
+const AVAILABLE_COUNT_DEBOUNCE_MS = 200;
 
 export type AvailableQuestionsCountStatus = 'idle' | 'loading' | 'error';
 
@@ -16,8 +17,6 @@ export type AvailableQuestionsCountFilters = {
   difficulties: readonly QuestionDifficulty[];
   statuses: readonly QuestionProgressStatus[];
 };
-
-const DEFAULT_DEBOUNCE_MS = 200;
 
 export function createAvailableQuestionsCountEffect(input: {
   countAvailableQuestionsFn: (
@@ -31,7 +30,7 @@ export function createAvailableQuestionsCountEffect(input: {
 }): () => void {
   let mounted = true;
   const logError = input.logError;
-  const debounceMs = input.debounceMs ?? DEFAULT_DEBOUNCE_MS;
+  const debounceMs = input.debounceMs ?? AVAILABLE_COUNT_DEBOUNCE_MS;
 
   input.setAvailableCountStatus('loading');
 
