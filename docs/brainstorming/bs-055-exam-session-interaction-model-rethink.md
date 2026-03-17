@@ -27,16 +27,27 @@ Select answer → Click Submit → No feedback shown → Auto-advance to next qu
 
 The user selects an answer, then clicks Submit, and... nothing happens except the exam moves forward. There is no feedback, no explanation, no visual payoff. Submit is a vestigial gate from tutor mode that adds a click without adding value. The auto-advance behavior (which already exists for non-last questions) proves the system knows Submit is a formality — it immediately moves past it.
 
-**Current click count per question (exam mode):**
+Worse, the current exam bar already exposes **Next** before submit. That means exam mode currently has **two forward actions with different semantics**:
+
+- **Submit** = record the answer, lock it, then auto-advance on non-last questions
+- **Next** = navigate away without recording anything
+
+So a highlighted selection in exam mode is visually meaningful but **not durable** until Submit is pressed. If the user selects B and clicks Next, the view advances and that selection is discarded. This is a bad interaction contract: the UI implies "you picked B," but the system treats that state as provisional and throwaway unless the user understands the hidden Submit rule.
+
+**Current click count per answered question (exam mode):**
 - Select answer: 1 click
-- Click Submit: 1 click (redundant — no feedback shown)
-- Auto-advance (non-last) or manual Next: 0-1 clicks
-- **Total: 2-3 clicks per question**
+- Click Submit: 1 click (required to actually record the answer)
+- Auto-advance (non-last) or manual Review Answers on the last question: 0-1 clicks
+- **Total: 2-3 clicks per answered question**
+
+**Current click count to skip a question (exam mode):**
+- Click Next: 1 click
+- **Total: 1 click**
 
 **Ideal click count per question (exam mode):**
 - Select answer: 1 click
-- Click Next (or auto-advance): 0-1 clicks
-- **Total: 1-2 clicks per question**
+- Click Next: 1 click
+- **Total: 2 clicks to answer and advance, 1 click to skip**
 
 For a 25-question exam, that's 25 unnecessary clicks. Under time pressure, this friction compounds.
 
@@ -101,7 +112,7 @@ Despite these different mental models, both modes use Submit as the primary acti
 
 The action bar is built with conditional rendering:
 - Submit shows when `canSubmit && !submitResult`
-- Next shows when `!isLastQuestion && submitResult` (or always in tutor when there are more questions)
+- Next shows whenever there is a next question, regardless of whether the current exam answer has been submitted
 - Previous shows when `onPreviousQuestion` is provided
 - Review Answers shows on last question after submit in exam mode
 - Mark for review shows when `isExamMode`
@@ -127,7 +138,7 @@ The top-right "Review answers" was added as a persistent escape hatch — users 
 
 ---
 
-## Proposed Fix (Sketch)
+## Proposed Fix (Recommended Interaction Contract)
 
 ### First principles: What does "Submit" actually mean?
 
@@ -136,204 +147,254 @@ The word "Submit" means fundamentally different things in each mode, and this is
 | | Tutor Mode | Exam Mode |
 |---|-----------|-----------|
 | **"Submit" means** | "Reveal the answer — show me feedback" | "I'm done with the whole exam — score it" |
-| **Per-question action** | Submit (reveals feedback) | Just select and move on |
-| **Locking point** | Per-question — once you see the answer, it's locked | End-of-exam — nothing is locked until you submit the entire exam |
+| **Per-question action** | Submit (reveals feedback) | Select, navigate, and review later |
+| **Locking point** | Per-question — once you see the answer, it's locked | End-of-exam — nothing is final until you submit the exam |
 | **Analogy** | Flashcard flip | Paper exam — circle, erase, re-circle freely until you hand it in |
 
 In tutor mode, Submit is a per-question operation that gates feedback. Correct.
 
-In exam mode, Submit should be an **exam-level** operation, not a per-question operation. The only real "submit" in an exam is handing in the whole thing. Individual answer selections are just tentative marks on paper — freely changeable until you're done.
+In exam mode, Submit should be an **exam-level** operation, not a per-question operation. The only real submit is handing in the whole exam. Individual answer selections are draft state until then.
 
-**The current implementation puts a per-question Submit gate in exam mode, which makes no sense because:**
-1. There's no feedback to gate
-2. It locks the answer permanently (you can't go back and change it)
-3. It forces an unnecessary click on every single question
-4. It creates the illusion that each question is a commitment, when the exam mental model is "commit everything at the end"
+### Core idea: exam answers are drafts until "Submit exam"
 
-### Core idea: Answers are tentative until the exam is submitted.
+**Exam mode flow (recommended):**
 
-**Exam mode flow (proposed):**
-
-```
+```text
 Question displayed
-  → User clicks a choice (selection highlighted — this is a tentative mark)
-  → User clicks Next to move forward (selection is saved, NOT locked)
-  → User can navigate back and change any answer at any time
-  → On last question: "Next" becomes "End Exam"
-  → "End Exam" → Review stage → "Submit Exam" (THIS is the real submit)
+  → User may select a choice (local draft)
+  → User may click Next / Previous / navigator / Review answers
+  → Leaving the question persists the current selection as a draft, if one exists
+  → User may revisit any question and change the draft answer
+  → Review stage shows answered / unanswered / marked counts
+  → "Submit exam" finalizes the exam and reveals correctness/explanations
 ```
 
-No per-question Submit button. Answers are freely changeable until the user submits the entire exam. This matches how every real exam works — you circle an answer, move on, come back and change it if you want, and nothing is final until you hand in the test.
+No per-question Submit button. No per-question locking. No auto-advance. No frozen post-submit dead-end state.
 
 **Tutor mode flow (unchanged):**
 
-```
+```text
 Question displayed
   → User clicks a choice
-  → User clicks Submit (reveals feedback — the real purpose of per-question submit)
-  → User reads feedback
+  → User clicks Submit
+  → Immediate feedback appears
   → User clicks Next
 ```
 
-Submit stays in tutor mode because it serves a real purpose: gating feedback reveal. Per-question locking is correct here because you've already seen the answer.
+Submit stays in tutor mode because it serves a real purpose: gating feedback reveal. Per-question locking remains correct there because the user has already seen the answer.
 
-### Button bar (proposed, exam mode):
+### Recommended active exam controls
 
-**Any non-last question (no answer selected):**
-```
-[ Previous ]  [ Next (disabled) ]  [ Mark for review ]
-```
-
-**Any non-last question (answer selected):**
-```
+**Any non-last question:**
+```text
 [ Previous ]  [ Next ]  [ Mark for review ]
 ```
 
-**Last question (answer selected):**
-```
-[ Previous ]  [ End Exam ]  [ Mark for review ]
+**Last question:**
+```text
+[ Previous ]  [ Review answers ]  [ Mark for review ]
 ```
 
-**Consistent rules:**
-- Previous always on the left (hidden on Q1 with spacer, per BS-037 pattern)
-- Navigation action always in the middle
-- Mark for review always on the right
-- "Review answers" lives ONLY in the top-right header — one canonical location
-- "End Exam" on the last question replaces Next and opens the review stage
+**Header action on every question:**
+```text
+[ Review answers ]
+```
 
-### What changes from current:
+**Contract rules:**
+- Previous always occupies the left slot (hidden on Q1 with spacer, per BS-037).
+- The middle slot is the sequential progression control: `Next` on non-last questions, `Review answers` on the last question.
+- `Review answers` remains available in the header as the persistent escape hatch from anywhere in the exam.
+- The last-question middle button intentionally mirrors the header action. That duplication is acceptable because both label and destination are identical; it replaces the current harmful duplication where bottom-bar `Review answers` appears only after a dead-end submit state.
+- Next is always enabled. If no choice is selected, it skips the question and persists nothing. If a choice is selected, leaving the question saves the draft answer.
+- Mark for review remains available only while the user is actively taking the exam, not after a pseudo-submit freeze state.
+
+### What changes from current
 
 | Element | Current | Proposed |
 |---------|---------|----------|
-| Submit button | Present in exam mode (per-question) | Removed — "Submit Exam" is the only submit |
-| Answer locking | Per-question on submit (permanent) | End-of-exam on "Submit Exam" (everything unlocked until then) |
-| Answer mutability | Cannot change after submit | Freely changeable — navigate back, re-select, move on |
-| Auto-advance | After submit (non-last Q) | Removed — user controls pacing with Next |
-| Next button | Hidden until submit | Always visible (disabled if no selection on current Q, or always enabled — TBD) |
-| Previous button | Conditionally shown | Always shown (hidden on Q1) |
-| Review Answers (bottom bar) | Appears on last Q after submit | Removed — top-right only |
-| End Exam | Doesn't exist | Replaces Next on last question |
-| Button positions | Shift between states | Fixed layout — same slots every question |
-| Click count per Q | 2-3 | 1-2 |
+| Submit button | Present in exam mode (per-question) | Removed from active exam flow; `Submit exam` is the only submit |
+| Selection durability | Highlighted choice is only visual until Submit; clicking Next drops it | Leaving the question persists the current selection as a draft |
+| Answer locking | Per-question on submit (permanent) | End-of-exam on `Submit exam` |
+| Answer mutability | Cannot change after submit | Freely changeable until exam submission |
+| Auto-advance | After submit on non-last exam questions | Removed entirely |
+| Next button | Visible before submit, but navigates without saving | Visible on every non-last question and acts as the save-or-skip boundary |
+| Skip behavior | Supported implicitly via Next, but ambiguous | Supported intentionally; unanswered stays unanswered |
+| Last-question primary action | Submit, then separate Review Answers step | `Review answers` directly |
+| Review Answers (header) | Persistent, but semantically overlaps with bottom-bar rescue state | Persistent global escape hatch into review stage |
+| Review Answers (bottom bar) | Appears after last-question submit | Used only as the last-question middle-slot progression action |
+| Button positions | Shift between states | Fixed slots every question |
+| Click count to answer and advance | 2-3 | 2 |
 
 ---
 
-## Open Questions
+## Decisions
 
-### Q1: Should Next auto-advance (no click needed) after selection?
+### Q1: Should Next auto-advance after selection?
 
-**Option A — Click to advance (recommended):** User selects answer, then clicks Next. Two clicks total but both are intentional. Allows the user to change their mind before committing.
+**Decision:** No. Exam mode should require an explicit navigation click.
 
-**Option B — Auto-advance on selection:** User clicks answer, immediately advances. One click total. Fastest possible, but no chance to reconsider. Accidental taps on mobile would be punishing. Also: how would "Mark for review" work if the question auto-advances?
+**Rationale:** Auto-advance is fast, but it makes accidental taps punishing, weakens mark-for-review utility, and removes the user’s chance to reconsider before leaving the question. The right fast path is `select → Next`, not `select → surprise navigation`.
 
-**Option C — Configurable:** Let users toggle auto-advance in exam settings. Most flexible but adds settings complexity.
+### Q2: What happens when the user leaves an unanswered question?
 
-**Leaning toward A.** The ability to change your selection before committing is important in an assessment context.
+**Decision:** Skipping is allowed. If the user leaves with no selection, nothing is persisted and the question remains unanswered.
 
-### Q2: When the user navigates away from an unanswered question, what happens?
+**Rationale:** Exams need a real skip behavior. Forcing an answer before navigation makes review-stage counts less meaningful and makes mark-for-review less useful. Current exam mode already exposes skip via Next; the fix is to make that behavior intentional rather than accidental.
 
-Current behavior: unanswered questions stay unanswered. The exam review stage shows them as unanswered.
+### Q3: Should review / end-exam affordances be last-question only?
 
-Proposed: Same behavior. Clicking Next without selecting an answer should navigate forward without recording anything. The question stays unanswered and shows up as such in the review stage. This matches paper exam behavior.
+**Decision:** `Review answers` stays accessible from every question in the header. On the last question, the middle footer action also becomes `Review answers`. Do **not** label this `End Exam`.
 
-### Q3: Should "End Exam" only appear on the last question, or should it always be accessible?
+**Rationale:** The user should be able to leave the question loop at any time. But the action does not actually submit the exam; it opens the review checklist. `End Exam` would be misleading because the real terminal action is still `Submit exam` inside the review stage.
 
-**Option A — Last question only:** End Exam replaces Next on the last question. Clean, but forces users to navigate to the last question to end the exam.
+### Q4: When should answers persist?
 
-**Option B — Always accessible via top-right:** The "Review answers" button in the top-right IS the "end exam" escape hatch. It's already there on every question. When you click it, you go to the review stage. From there you can submit. This is already how it works — just needs clearer labeling.
+**Decision:** Persist on the navigation boundary: Next, Previous, navigator jump, or entry into the review stage.
 
-**Leaning toward B.** The top-right button already serves this purpose. We just need to make sure it's clearly labeled and that the last-question "End Exam" button leads to the same place.
+**Rationale:** This is the best initial tradeoff. Persisting on every radio click is noisy and makes every tentative tap a server mutation. Persisting only on final submit risks catastrophic loss on refresh/crash. The navigation boundary is deliberate and aligns with the mental model of "I’m moving on from this version of my answer."
 
-### Q4: When does the answer get persisted to the server?
+**Important detail:** entering the review stage from the header or from the last-question middle button must also save the current question’s selection if one exists.
 
-Currently: on Submit (server action `submitAnswer`).
+### Q5: What happens to auto-advance?
 
-**Option A — Persist on navigate-away:** When the user clicks Next, Previous, or a navigator button, the selected answer is persisted. If they navigate back and change it, the new selection is persisted on the next navigation.
+**Decision:** Remove it entirely from exam mode.
 
-**Option B — Persist on selection:** Every click on a choice immediately persists to the server. Navigation just moves the view.
+**Rationale:** Auto-advance is a workaround for a redundant Submit button. Once Submit disappears, auto-advance has no job left. User-controlled pacing is simpler and more predictable.
 
-**Option C — Persist on exam submit only:** Keep answers in client state throughout the exam. Only persist when the user submits the entire exam.
+### Q6: What is the correct mutability / persistence model?
 
-**Leaning toward A.** Persist on navigate-away balances responsiveness with data safety. Option B creates unnecessary server traffic. Option C risks data loss if the browser crashes.
+**Decision:** Use **save-as-draft + finalize exam**. Do not overload `submitAnswer` for mutable exam behavior.
 
-### Q5: How does this interact with the existing auto-advance after submit?
+**Recommended contract:**
+1. Add an exam-only draft-save operation that persists the current selected choice into session state without finalizing the question.
+2. Allow draft answers to be overwritten freely until final exam submission.
+3. On `Submit exam`, materialize one final attempt per answered question from the final draft selections, then end the session.
+4. Tutor mode continues to use the existing one-shot `submitAnswer` path unchanged.
 
-The current auto-advance behavior (exam mode, non-last questions) would be removed entirely. Navigation becomes fully user-controlled via Next/Previous/navigator. This is actually simpler — auto-advance was a band-aid for the fact that Submit didn't show feedback.
+**Why this wins:**
+- It keeps the meaning of "submit" honest.
+- It avoids fighting the existing one-attempt-per-session-question constraints.
+- It preserves tutor semantics instead of muddying both modes with one overloaded mutation.
 
-### Q6: Answer mutability — the core domain change
+**Hidden technical dependency that must be specced:** revisitable exam answers break the current one-shot `timeSpentSeconds` model. The draft path needs a defined per-question accumulation rule and likely a new session-state field (or equivalent finalize-time accounting) so final attempts do not lose or undercount dwell time.
 
-This is the biggest technical implication of the proposal and is **not optional** — it's the whole point.
+### Q7: Does tutor mode need changes now?
 
-**Current behavior:** `submitAnswer` is a one-way, per-question lock. Once submitted, the answer cannot be changed even if you navigate back. This is correct for tutor mode (you've seen the feedback — changing the answer would be cheating).
+**Decision:** No.
 
-**Required behavior for exam mode:** Answers must be changeable until the entire exam is submitted. The user should be able to navigate back to any question, see their previous selection, change it, and move on. Nothing is final until "Submit Exam."
+**Rationale:** Tutor mode’s Submit → feedback → Next contract is coherent and should remain intact. There may be future tutor simplifications, but BS-055 should not absorb them.
 
-**Implementation approaches (need domain analysis):**
+### Q8: How do we avoid breaking tutor mode while fixing exam mode?
 
-1. **Save-as-draft + batch finalize:** Introduce a `saveAnswer` (or `selectAnswer`) operation that persists the selection without locking it. A separate `finalizeExam` operation locks all answers at once and triggers scoring. This is the cleanest domain model — it separates "I picked C" from "I'm done."
+**Decision:** Split the mode-specific action and mutation paths explicitly. Keep shared question rendering where it helps, but stop forcing both modes through one conditional action-bar contract.
 
-2. **Allow overwrite until exam submission:** Let `submitAnswer` be called multiple times per question in exam mode. The last call wins. `endSession` triggers scoring on whatever the final answers are. Simpler to implement but muddies the domain semantics of "submit."
-
-3. **Client-only until exam submit:** Keep all selections in client state. Only call `submitAnswer` for each question when the user clicks "Submit Exam." Simplest domain model but risks data loss on browser crash/refresh mid-exam.
-
-**Leaning toward approach 1.** It's the most honest domain model — a "draft answer" and a "submitted answer" are genuinely different things. But approach 2 may be pragmatic if the domain refactor is too large.
-
-**Note:** This change ONLY affects exam mode. Tutor mode continues to use the current one-way `submitAnswer` — once you've seen the feedback, the answer is locked. That's correct behavior.
-
-### Q7: Does tutor mode need any changes?
-
-**For now: No.** Tutor mode's Submit → feedback → Next flow is correct for its mental model. Submit gates the feedback reveal, which is a real user action.
-
-There's a softer question of whether tutor mode could also merge Submit into Next (click Next → auto-submit → show feedback inline), but that's a separate concern and lower priority. The current tutor flow works. Park this.
-
-### Q8: Could exam mode changes accidentally break tutor mode?
-
-**This is the highest implementation risk.** Both modes share `PracticeView`, `QuestionCard`, `usePracticeSessionQuestionFlow`, and `question-flow-actions.ts`. The exam changes (remove per-question Submit, add answer mutability, change persistence model) will touch these shared components.
-
-**Guard rails needed:**
-- Every shared component change must be validated against BOTH modes
-- The `isExamMode` / `shouldShowExplanationForMode()` branching points are the seams — changes should happen at these seams, not in shared logic
-- Tutor mode's existing test coverage must stay green throughout
-- If a shared component needs to behave differently, prefer explicit mode branching over removing shared behavior
+**Guard rails:**
+- `PracticeView` should not continue evolving as one dense conditional matrix for both modes. Extract explicit tutor vs exam action-bar branches or dedicated subcomponents.
+- Tutor mode keeps the current `submitAnswer` path.
+- Exam mode gets a separate draft-save + finalize path.
+- Shared components (`QuestionCard`, navigator, review-stage checklist) can remain shared, but the action contract cannot stay implicit.
+- Validate shared-file edits against both tutor and exam tests every time.
 
 **Current shared component risk map:**
 
 | Shared Component | Exam Change Needed | Tutor Impact Risk |
 |-----------------|-------------------|-------------------|
-| `PracticeView` (action bar) | Remove Submit button, change Next behavior | HIGH — Submit must stay for tutor |
-| `QuestionCard` + `ChoiceButton` | Allow re-selection after "submit" | MEDIUM — tutor locks choices after submit, must keep that |
-| `question-flow-actions.ts` | New save-draft path vs one-way submit | HIGH — tutor's submit must remain one-way |
-| `usePracticeSessionQuestionFlow` | Navigation without submission | HIGH — tutor's submit-then-navigate must stay |
-| `usePracticeSessionReviewStage` | No change (exam only already) | NONE |
-| `usePracticeSessionMarkForReview` | No change (exam only already) | NONE |
+| `PracticeView` (action bar) | Remove per-question Submit, replace with save-or-skip navigation contract | HIGH — split mode-specific action bars here |
+| `QuestionCard` + `ChoiceButton` | Allow exam re-selection across revisits without tutor regression | MEDIUM |
+| `question-flow-actions.ts` | Add draft-save path and remove exam dependence on submit-to-advance | HIGH |
+| `usePracticeSessionQuestionFlow` | Support draft persistence on navigation boundaries | HIGH |
+| `usePracticeSessionReviewStage` | Save current draft before entering review | MEDIUM |
+| `usePracticeSessionMarkForReview` | Keep behavior, but only in active exam flow | LOW |
 
 ---
 
 ## Deliverables
 
-### Deliverable 1: Mode Interaction Contract Documentation
+### Deliverable 1: Canonical interaction-contract doc
 
-Before implementation, we need a canonical doc that specifies exactly how tutor and exam modes differ at the interaction level — not just "explanations are deferred" (which `practice-modes.md` already covers) but the full click-by-click contract:
+Write a dedicated interaction contract doc at `docs/practice-engine/interaction-contracts.md`, then link to it from `docs/practice-engine/practice-modes.md`.
 
-- What buttons appear, in what positions, in what states
-- What each click does (what gets persisted, what gets shown, what navigates)
-- When answers are locked and why
-- What "Submit" means in each mode
-- How navigation works (linear vs random-access)
-- The post-session flow (summary → review → bookmark)
+**Why dedicated instead of expanding `practice-modes.md`:** the current modes doc is lifecycle/data-flow oriented. The missing artifact is a click-by-click UI contract. That is large enough, and important enough, to deserve its own canonical page.
 
-**Target location:** New section in `docs/practice-engine/practice-modes.md` (Section 7: "Interaction Contracts") or a dedicated `docs/practice-engine/interaction-contracts.md` if it's too large.
+**Minimum contents:**
+- Active tutor contract
+- Active exam contract
+- Persistence boundaries
+- Locking rules
+- Review-stage entry rules
+- Summary → review → back-navigation rules
+- Mode-specific action-bar maps
 
-**Why this matters:** The current `practice-modes.md` describes the backend lifecycle and data flow. It says nothing about the frontend interaction model — which buttons, which clicks, which states. That's the gap that let vestigial tutor-mode patterns (per-question Submit, answer locking) persist into exam mode unchallenged. Without a written contract, the next person who touches `PracticeView` will have to reverse-engineer the intended differences from code.
+### Deliverable 2: Implementation-spec inputs
 
-**This doc should be written AFTER BS-055 decisions are made but BEFORE implementation begins.** It serves as the implementation spec's interaction layer.
+Before coding, the implementation spec must explicitly answer:
+- What the draft-save API is called and which layer owns it
+- How per-question draft time is accumulated
+- When final attempts are materialized
+- How the summary review link returns to the summary instead of History
+- Whether post-submit session review reattempt remains allowed or is split into separate follow-up work
 
-### Deliverable 2: Chrome Agent Audit Findings
+---
 
-Incorporate any new findings from the Chrome agent's full exam flow walkthrough (queued above). Especially:
-- Post-submit review stage UX
-- Session summary → question review handoff
-- Any button/state issues not yet captured in this doc
+## Audit Findings (Screenshots + Code Verification)
+
+The screenshot walkthrough was useful, but the repo code adds important corrections and exposes one additional active issue. For this doc, **current source code is the tie-breaker**.
+
+### Active findings that BS-055 should track
+
+#### AF-1: Post-submit dead-end state on last question (Medium)
+
+After submitting the last question, the user is left on a frozen question state with disabled choices and nothing meaningful to do except click `Review answers`. This state should disappear entirely under the recommended contract.
+
+#### AF-2: Mark-for-review persists into the dead-end post-submit state (Low)
+
+`Mark for review` / `Unmark review` remains available after the last question is already locked, which weakens the meaning of that control. Under the recommended contract, mark-for-review exists only during active exam-taking.
+
+#### AF-3: Primary action position shift creates a misclick trap (High)
+
+The active primary action moves between slots:
+
+| State | Pos 1 | Pos 2 | Pos 3 |
+|-------|-------|-------|-------|
+| **Q1 (before submit)** | **Submit** | Next | Mark for review |
+| **Q2 (before submit)** | Previous | **Submit** | Mark for review |
+| **Q2 (after submit)** | Previous | **Review answers** | Mark for review |
+
+Users can build spatial memory quickly. Moving the primary action between positions is a real input-risk problem, not just visual inconsistency.
+
+#### AF-4: Session Summary → question review has the wrong return target (Medium)
+
+The current summary CTA links into question review with `from=history`, so the question review page resolves its back target to History rather than the session summary route. This is why users cannot naturally return to the summary after reviewing answers.
+
+**Required fix:** summary-launched review must carry a session-summary-aware origin/back target instead of masquerading as History.
+
+#### AF-5: Current exam mode exposes two forward actions with contradictory semantics (High)
+
+Code verification shows `PracticeView` already renders `Next` before submit. In current exam mode:
+
+- `Submit` records and locks the answer
+- `Next` navigates away without recording anything
+
+That means a selected answer looks committed, but is silently dropped if the user presses the wrong forward control. This is a core contract bug and should be tracked explicitly in BS-055.
+
+#### AF-6: Post-submit session review still exposes reattempt actions (Cross-cutting, Medium)
+
+Current question review code still renders `Practice Again` / `Try Again` and wires `onReattempt` for session-review contexts via `retryOrigin = 'session_review'`. That is outside the active exam-session loop, but it still weakens exam finality and deserves a separate follow-up if not handled in the eventual spec.
+
+### Corrections after code verification
+
+- The earlier label-inconsistency claim (`Practice Again` vs `Try Again`) is **not an active source-level bug** in the current repo. `question-page-client.tsx` now derives that label from correctness, and tests cover the correct standalone-review cases.
+- The more important post-exam problems are the wrong back target and the still-available session-review reattempt action, not the label text itself.
+- The current `Next` button is **not** hidden until submit. It is already visible pre-submit except on the last question. The real bug is that its semantics are disconnected from the visible selection state.
+
+### Things that work well
+
+| Element | Notes |
+|---------|-------|
+| **Review stage checklist** | Answered / unanswered / marked summary is clear and useful. |
+| **Submit exam confirmation dialog** | Good confirmation pattern with clear destructive action. |
+| **Session summary cards** | Stats hierarchy is strong and does not need a redesign. |
+| **Post-exam review content structure** | Color-coded navigator, explanations, clinical pearl, and references are strong. The issue is navigation/reattempt semantics, not the content layout. |
 
 ---
 
@@ -346,3 +407,7 @@ Incorporate any new findings from the Chrome agent's full exam flow walkthrough 
 | 2026-03-17 | Chrome agent audit queued | Full exam flow walkthrough to catch post-submit/review-stage issues not yet documented |
 | 2026-03-17 | Added shared component risk map + documentation deliverable | Both modes share PracticeView/QuestionCard/flow hooks. Changes must branch at mode seams, not rip out shared behavior. A mode interaction contract doc is needed before implementation. |
 | 2026-03-17 | Tutor mode Submit: keep for now | Submit gates feedback reveal — it has a real purpose. Merging Submit into Next for tutor is a softer future question, not part of this scope. |
+| 2026-03-17 | Q1-Q8 closed | Explicit Next, intentional skipping, review-stage entry from any question, navigation-boundary draft persistence, no exam auto-advance, save-as-draft + finalize as the required domain model, tutor unchanged, and explicit mode-branching as the regression guardrail. |
+| 2026-03-17 | Code verification corrected screenshot-only assumptions | Current source shows Next is already visible pre-submit and can discard a highlighted answer. That contract bug is more important than the earlier label-inconsistency claim. |
+| 2026-03-17 | `Practice Again` / `Try Again` inconsistency de-scoped from BS-055 | Current source derives the label from correctness and tests cover the expected standalone-review behavior. The active post-exam issues are back-targeting and session-review reattempt semantics, not label text. |
+| 2026-03-17 | Biggest remaining implementation risk identified | Mutable exam answers require a draft-save path plus a per-question time-accumulation model. Without that, final attempts will have broken or undercounted `timeSpentSeconds`. |
