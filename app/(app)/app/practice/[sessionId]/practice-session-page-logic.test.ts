@@ -877,6 +877,60 @@ describe('practice-session-page-logic', () => {
       expect(setLoadState).toHaveBeenLastCalledWith({ status: 'ready' });
     });
 
+    it('surfaces summary recovery errors when endPracticeSession returns CONFLICT', async () => {
+      const setLoadState = vi.fn();
+      const rotateIdempotencyKey = vi.fn();
+
+      await endSession({
+        sessionId: 'session-1',
+        endSessionIdempotencyKey: 'idem_1',
+        endPracticeSessionFn: async () =>
+          err('CONFLICT', 'Practice session already ended'),
+        getPracticeSessionSummaryFn: async () =>
+          err('NOT_FOUND', 'Practice session summary not found'),
+        setLoadState,
+        setSummary: vi.fn(),
+        resetQuestionState: vi.fn(),
+        rotateIdempotencyKey,
+      });
+
+      expect(rotateIdempotencyKey).toHaveBeenCalledTimes(1);
+      expect(setLoadState).toHaveBeenLastCalledWith({
+        status: 'error',
+        message: 'Practice session summary not found',
+      });
+    });
+
+    it('surfaces thrown summary recovery errors when endPracticeSession returns CONFLICT', async () => {
+      const setLoadState = vi.fn();
+      const rotateIdempotencyKey = vi.fn();
+      const error = new Error('Summary fetch failed');
+
+      await endSession({
+        sessionId: 'session-1',
+        endSessionIdempotencyKey: 'idem_1',
+        endPracticeSessionFn: async () =>
+          err('CONFLICT', 'Practice session already ended'),
+        getPracticeSessionSummaryFn: async () => {
+          throw error;
+        },
+        setLoadState,
+        setSummary: vi.fn(),
+        resetQuestionState: vi.fn(),
+        rotateIdempotencyKey,
+      });
+
+      expect(rotateIdempotencyKey).toHaveBeenCalledTimes(1);
+      expect(setLoadState).toHaveBeenLastCalledWith({
+        status: 'error',
+        message: 'Summary fetch failed',
+      });
+      expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
+        component: 'PracticeSessionPageLogic',
+        action: 'getPracticeSessionSummary',
+      });
+    });
+
     it('sets error state when controller throws', async () => {
       const setLoadState = vi.fn();
       const error = new Error('Boom');

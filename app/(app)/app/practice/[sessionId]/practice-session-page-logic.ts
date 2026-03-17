@@ -207,6 +207,8 @@ export async function endSession(input: {
   }
   if (!isMounted()) return;
   if (!res.ok) {
+    let recoveryErrorMessage: string | null = null;
+
     if (res.error.code === 'CONFLICT') {
       try {
         const summaryRes = await withTimeout(
@@ -222,19 +224,22 @@ export async function endSession(input: {
           input.setLoadState({ status: 'ready' });
           return;
         }
+
+        recoveryErrorMessage = getActionResultErrorMessage(summaryRes);
       } catch (error) {
         if (!isMounted()) return;
         reportClientError(error, {
           component: 'PracticeSessionPageLogic',
           action: 'getPracticeSessionSummary',
         });
+        recoveryErrorMessage = getThrownErrorMessage(error);
       }
     }
 
     input.rotateIdempotencyKey?.();
     input.setLoadState({
       status: 'error',
-      message: getActionResultErrorMessage(res),
+      message: recoveryErrorMessage ?? getActionResultErrorMessage(res),
     });
     return;
   }
