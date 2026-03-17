@@ -377,3 +377,20 @@ pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test
 ```
 
 Plus Chrome agent visual verification of the full exam flow (start exam → answer questions → navigate back and change → review stage → submit exam → summary → question review → back to summary).
+
+---
+
+## Implementation Progress
+
+| Stage | Status | Commit | Notes |
+|-------|--------|--------|-------|
+| 1 | **Done** | `b7bb2cd6` | Draft fields on domain entity, Zod schema, factories, fakes. 14 files, 367 insertions. |
+| 2 | **Done** | `c5817fb7` | SaveExamDraftAnswer use case + port + fake. 7 files, 385 insertions. |
+| 3 | **Done** | `4b7f5ec9` | FinalizeExamAnswers use case + DI wiring + controller + server action. 15 files, 834 insertions. |
+| 4 | **Done** | `b8a28c1b` | GetPracticeSessionReview, GetNextQuestion, GetIncompletePracticeSession draft-aware. 6 files, 221 insertions. |
+| 5 | **Done** | `30471043` | ExamActionBar/TutorActionBar split, maybeAutoAdvanceAfterSubmit deleted. 7 files, 364 insertions. |
+| 6 | **Done** | `edbb472d` | maybeSaveDraftBeforeNavigation, stopwatch accumulation, draft restoration on revisit, server action wiring. 21 files, 1074 insertions. |
+| 7 | **Not started** | — | Review stage still routes exam submit through endPracticeSession instead of finalizeExamAnswers. |
+| 8 | **Not started** | — | Summary back-target still passes `from: 'history'`. |
+
+**Gate status (Stages 1-6):** `pnpm typecheck` clean, `pnpm lint` clean, `pnpm test --run` 2119/2119 passing (22 new tests added). Browser tests and build not yet verified for the full gate.
