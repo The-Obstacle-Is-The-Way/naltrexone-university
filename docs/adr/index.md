@@ -1,7 +1,7 @@
 # Architecture Decision Records
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-11
+**Last Updated:** 2026-03-17
 
 ---
 
@@ -57,13 +57,15 @@ Dependencies point inward only. Domain has zero external dependencies.
 
 ### ADR-002: Domain Model
 
-Core entities: User, Question, Choice, Attempt, Subscription, PracticeSession
+Core entities: User, Question, Choice, Attempt, Subscription, PracticeSession,
+Bookmark, Tag
 
-Domain services (pure functions): `gradeAnswer()`, `isEntitled()`, `computeStreak()`
+Domain services (pure functions): `gradeAnswer()`, `isEntitled()`,
+`computeAccuracy()`, `computeStreak()`
 
 ### ADR-003: Testing Strategy
 
-- **Unit tests** — Domain and Use Cases, no mocks, 100% coverage
+- **Unit tests** — Domain and Use Cases, fakes over mocks, strong colocated coverage
 - **Integration tests** — Real database; external providers mocked at the boundary (Stripe/Clerk)
 - **E2E tests** — Critical user flows only
 
@@ -105,14 +107,17 @@ Constructor injection with factory functions. Use cases receive interfaces, not 
 Controller/Route Handler → Factory → Use Case (with injected ports)
 ```
 
-No DI framework — wiring lives in `lib/container.ts` factories that are called by entry points (DB client is the only allowed singleton).
+No DI framework. Wiring is centered on `lib/container.ts` with focused modules
+under `lib/container/**`, and controllers resolve deps via
+`lib/controller-helpers.ts` at the entry point.
 
 ### ADR-008: Logging & Observability
 
 Structured JSON logging via Pino with request ID correlation. Security-aware: no PII in logs.
 
 ```text
-Controller → Logger (with requestId, userId) → Vercel Log Drain
+Entry points create request context and child loggers so structured JSON logs
+carry `requestId` and, when available, internal `userId`.
 ```
 
 Domain layer has zero logging imports.
@@ -127,10 +132,11 @@ Defense in depth aligned with OWASP Top 10:
 
 ### ADR-010: Caching Strategy
 
-Layered caching with Next.js 16 Cache Components:
-- Static pages: ISR with revalidation
-- Questions/Tags: Cache Components with `use cache`
-- User data: No cache (real-time)
+Conservative framework-only caching policy:
+- Static or marketing surfaces may use framework caching
+- User-specific reads stay uncached across requests
+- No explicit `use cache` read path is checked into the app today; targeted
+  invalidation is used selectively where needed
 
 ### ADR-011: API Design Principles
 

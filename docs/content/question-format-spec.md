@@ -1,10 +1,14 @@
 # Question Format Spec — Single Source of Truth
 
 > **Status:** Active
-> **Last Updated:** 2026-02-18
-> **Purpose:** Complete reference for authoring draft questions that will pass cleanly through the import → MDX → seed → database → UI pipeline.
+> **Last Updated:** 2026-03-17
+> **Purpose:** Complete reference for authoring draft questions that pass
+> cleanly through the draft -> import -> MDX -> seed -> database -> UI
+> pipeline.
 >
-> This is the ONE document that defines what a draft question must look like.
+> This document is intentionally code-backed. When in doubt, verify against
+> `scripts/draft-question-import.ts`, `lib/content/schemas.ts`,
+> `scripts/seed/question-parser.ts`, and `scripts/seed-helpers.ts`.
 
 ---
 
@@ -40,20 +44,24 @@ alcohol use in women?
 
 ## Explanation
 
-The AUDIT-C uses sex-specific cutoffs: ≥3 for women and ≥4 for men.
+The AUDIT-C uses sex-specific cutoffs: >=3 for women and >=4 for men.
 Women achieve higher blood alcohol concentrations than men at equivalent
 doses due to lower body water content and reduced gastric ADH activity.
 
-**Clinical pearl:** The AUDIT-C is the most validated brief screening tool
-in primary care, taking under 1 minute to administer.
+**Clinical pearl:** The AUDIT-C is a fast, well-validated screening tool for
+unhealthy alcohol use in primary care.
 
 **Why other answers are wrong:**
-- A) A score of ≥2 is too sensitive, leading to excessive false positives
-  in clinical practice and unnecessary follow-up.
-- C) A score of ≥4 is the male cutoff. Using it for women misses
-  at-risk female drinkers who metabolize alcohol differently.
-- D) A score of ≥5 would miss the majority of at-risk drinkers
-  regardless of sex.
+- A) This is too sensitive for the standard female cutoff and would overcall
+  unhealthy use.
+- C) This is the standard male cutoff, not the standard female cutoff.
+- D) This threshold is too high and would miss many at-risk patients.
+
+### Reference
+
+White AM, Castle IP, Hingson RW, Powell PA. Using death certificates to
+explore changes in alcohol-related mortality in the United States, 1999 to
+2017. Alcohol Clin Exp Res. 2020;44(1):178-187.
 ```
 
 ---
@@ -64,11 +72,11 @@ in primary care, taking under 1 minute to administer.
 
 | Field | Type | Description | Example |
 |-------|------|-------------|---------|
-| `qid` | string | Non-empty string. Used as the output MDX `slug` | `white-2020-001` |
+| `qid` | string | Non-empty string. Becomes the output MDX `slug` | `white-2020-001` |
 | `type` | enum | `recall` or `vignette` | `recall` |
 | `difficulty` | enum | `easy`, `medium`, or `hard` | `medium` |
-| `substances` | string[] | At least one canonical substance slug (see §3) | `[alcohol]` |
-| `topics` | string[] | At least one canonical topic slug (see §3) | `[screening-diagnosis]` |
+| `substances` | string[] | At least one canonical substance slug | `[alcohol]` |
+| `topics` | string[] | At least one canonical topic slug | `[screening-diagnosis]` |
 | `source` | string | Non-empty source identifier | `white-2020` |
 | `answer` | enum | Correct answer letter: `A`, `B`, `C`, `D`, or `E` | `B` |
 
@@ -76,39 +84,41 @@ in primary care, taking under 1 minute to administer.
 
 | Field | Type | Description | Example |
 |-------|------|-------------|---------|
-| `treatments` | string[] | Canonical treatment slugs when a specific medication is discussed (see §3) | `[naltrexone, acamprosate]` |
+| `treatments` | string[] | Canonical treatment slugs when a medication is discussed by name | `[naltrexone, acamprosate]` |
 | `diagnoses` | string[] | Free-form kebab-case diagnosis slugs | `[alcohol-use-disorder]` |
 
-**When to include `treatments`:** If the question stem, correct answer, or explanation discusses a specific medication by name, tag it. For prescriber's guide questions, always include the medication being discussed.
+### Importer Enforcement Details
 
-**When to include `diagnoses`:** When the question tests a specific DSM-5 / ICD diagnosis. Currently stored in the database but not exposed in the practice UI.
-
-### Importer enforcement details
-
-- Frontmatter is strict: unknown YAML keys are rejected (`DraftFrontmatterSchema.strict()`).
+- Frontmatter is strict. Unknown YAML keys are rejected.
 - `treatments` and `diagnoses` default to `[]` when omitted.
-- `qid` and `source` are validated as non-empty strings only (no regex/uniqueness check in code).
+- `qid` and `source` are validated as non-empty strings during draft parse.
+- `answer` must match `A-E`.
+- `diagnoses` must be kebab-case slugs.
+- During draft -> MDX conversion, `qid` is revalidated by
+  `QuestionFrontmatterSchema.slug`, so non-kebab-case QIDs fail before write.
 
-### QID Policy (authoring convention)
+### QID Policy (Authoring Convention)
 
-- Must be globally unique across the entire 948+ question bank
-- Format: `{source}-{number}` (e.g., `white-2020-001`)
-- Number sequentially within each source (001, 002, 003...)
-- Never reuse a QID, even if you delete a question
-- **Prescriber's guide exception:** QID includes medication name for clarity (e.g., `stahls-naltrexone-001`) because many questions share the same `source: stahls-8e`
+- Keep `qid` globally unique across the question bank.
+- Default format: `{source}-{number}`.
+- Number sequentially within each source (`001`, `002`, `003`, ...).
+- Never reuse a `qid`, even if a question is later removed.
+- Prescriber's guide exception: include the medication in the `qid` when a
+  shared `source` value would otherwise collide
+  (example: `stahls-naltrexone-001` with `source: stahls-8e`).
 
 ---
 
 ## 3. Canonical Tag Vocabularies
 
-These are the ONLY valid values. The import script rejects anything else.
+These are the only valid canonical values for topic, substance, and treatment.
 
 **Code source of truth:** `lib/content/draftTaxonomy.ts`
 
 ### Topic (13 values)
 
-| Slug | Display Name (auto-populated) |
-|------|------|
+| Slug | Display Name |
+|------|--------------|
 | `screening-diagnosis` | Screening & Diagnosis |
 | `epidemiology-prevention` | Epidemiology & Prevention |
 | `pharmacology-neuroscience` | Pharmacology & Neuroscience |
@@ -126,7 +136,7 @@ These are the ONLY valid values. The import script rejects anything else.
 ### Substance (11 values)
 
 | Slug | Display Name |
-|------|------|
+|------|--------------|
 | `alcohol` | Alcohol |
 | `cannabis` | Cannabis |
 | `cocaine` | Cocaine |
@@ -142,7 +152,7 @@ These are the ONLY valid values. The import script rejects anything else.
 ### Treatment (12 values)
 
 | Slug | Display Name |
-|------|------|
+|------|--------------|
 | `acamprosate` | Acamprosate |
 | `buprenorphine` | Buprenorphine |
 | `bupropion` | Bupropion |
@@ -156,370 +166,274 @@ These are the ONLY valid values. The import script rejects anything else.
 | `varenicline` | Varenicline |
 | `other-treatment` | Other |
 
-> **Note:** Treatment "Other" uses `other-treatment` (not `other`) because slugs are globally unique across all tag kinds, and `other` is already used by substances.
-
-### Diagnosis (free-form)
-
-No canonical list. Use kebab-case (e.g., `alcohol-use-disorder`, `opioid-use-disorder`). Display names are auto-generated from the slug by title-casing.
+Diagnosis has no canonical list. Use kebab-case slugs and let the importer
+title-case the display name.
 
 ---
 
 ## 4. Legacy Slug Migration Map
 
-If your existing drafts use old slugs, here is the mapping. **All old slugs will be rejected by the import script.**
+Old topic slugs that still appear in source material should be remapped before
+import:
 
 | Old Topic Slug | New Canonical Slug |
 |----------------|-------------------|
-| `treatment` | `treatment-pharmacotherapy` |
-| `pharmacology` | `pharmacology-neuroscience` |
-| `epidemiology` | `epidemiology-prevention` |
 | `comorbidity` | `co-occurring-disorders` |
-| `psychotherapy` | `psychosocial-interventions` |
-| `withdrawal` | `withdrawal-management` |
 | `diagnosis` | `screening-diagnosis` |
-| `screening` | `screening-diagnosis` |
-| `toxicology` | `intoxication-toxicology` |
-| `neurobiology` | `pharmacology-neuroscience` |
+| `epidemiology` | `epidemiology-prevention` |
+| `ethics-legal` | `ethics-legal` |
+| `harm-reduction` | `harm-reduction` |
 | `intoxication` | `intoxication-toxicology` |
+| `medical-complications` | `medical-complications` |
+| `neurobiology` | `pharmacology-neuroscience` |
+| `pharmacology` | `pharmacology-neuroscience` |
+| `psychosocial` | `psychosocial-interventions` |
+| `psychotherapy` | `psychosocial-interventions` |
+| `screening` | `screening-diagnosis` |
+| `special-populations` | `special-populations` |
+| `topic` | DELETE — retag manually based on content |
+| `toxicology` | `intoxication-toxicology` |
+| `treatment` | `treatment-pharmacotherapy` |
+| `withdrawal` | `withdrawal-management` |
 
 ---
 
 ## 5. Markdown Body Structure
 
-The body after the YAML frontmatter has three required sections, identified by `##` headings.
-
 ### `## Question` (or `## Stem`)
 
-The question stem. For recall questions, this is a direct clinical question. For vignette questions, this is a clinical scenario followed by a lead-in question ending with `?`.
+Drafts may use `## Question` or `## Stem`. The importer accepts both and emits
+`## Stem` in generated MDX.
 
-**Rules:**
-- Supports full Markdown (bold, italic, lists, tables)
-- Lead-in must end with a question mark
-- Must pass the "cover-the-options" test — a knowledgeable test-taker should be able to formulate an answer before seeing the choices
-- Vignettes follow clinical order: demographics → history → physical → labs → treatment → question
+Rules:
+
+- Supports normal Markdown.
+- Lead-in should end with `?`.
+- Vignettes should preserve clinical order and pass the cover-the-options test.
 
 ### `## Choices`
 
-2-5 answer options as a bullet list. Standard is 4; the pipeline allows 2-5.
+Choices are parsed from bullets under `## Choices`.
 
-Draft parser bullet pattern:
-- Must start with `-`
-- Label must be uppercase `A`-`E`
-- Delimiter can be `)`, `.`, or `:`
+Rules:
 
-```markdown
-## Choices
-
-- A) First choice text
-- B) Second choice text
-- C) Third choice text
-- D) Fourth choice text
-```
-
-**Rules:**
-- Labels must be uppercase A-E
-- The correct answer is specified in the YAML `answer` field, NOT marked in the choices
-- Import parse requires at least 2 parsed choices; MDX schema enforces max 5 choices
-- Label sequence is recommended, not strictly enforced
-- All choices must be plausible and homogeneous (same category of thing)
-- The correct answer must not be longer than distractors (length cue)
-- No "all of the above" or "none of the above"
+- 2-5 choices are allowed by the pipeline; the current authoring standard is 4.
+- Labels must be `A-E`.
+- Accepted delimiters are `)`, `.`, or `:`.
+- The correct answer is identified only by the YAML `answer` field.
+- Label order is recommended but not code-enforced.
 
 ### `## Explanation`
 
-Two parts: a general explanation, then per-choice explanations.
+The explanation block can contain three logical parts:
 
-```markdown
-## Explanation
+1. General explanation
+2. `Why other answers are wrong` per-choice bullets
+3. `### Reference`
 
-General explanation of the correct answer. Explain the underlying
-concept, mechanism, or clinical reasoning. Include relevant context
-that helps the learner understand WHY this is correct.
+Current parser behavior:
 
-**Clinical pearl:** A practical takeaway for clinical practice.
+- The wrong-answer heading is matched case-insensitively, with optional
+  bold/underline markers and an optional trailing `:`.
+- Per-choice bullets can start with `-`, `*`, or `+`.
+- Bullet labels can use `A)`, `A.`, or `A:`.
+- Parsing stops at the next markdown heading.
+- If a wrong-answer bullet references a choice label not present in the
+  question, seed fails.
+- If any incorrect choice lacks an explanation, the UI hides the entire
+  wrong-answer section rather than showing a partial list.
 
-**Why other answers are wrong:**
-- A) Why choice A is wrong — explain the misconception or error
-  in reasoning. Multi-line explanations are fine; indent continuation
-  lines.
-- C) Why choice C is wrong — teach something useful, don't just
-  say "this is incorrect."
-- D) Why choice D is wrong — each wrong-answer explanation should
-  correct a common misconception.
-```
+Authoring guidance:
 
-**How this is parsed by the system:**
+- Do not repeat the wrong choice text inside the explanation bullet. The UI
+  already renders the choice text above the explanation.
+- Use the general explanation for the correct-answer teaching point.
+- Use the per-choice bullets to teach why each incorrect option is wrong.
 
-The seed script splits the explanation into two parts at the `**Why other answers are wrong:**` heading:
+### `### Reference`
 
-1. **General explanation** — everything ABOVE that heading. Stored in `questions.explanation_md`. Displayed to all users after answering.
+`### Reference` is supported today, but with one important parser constraint:
+it is extracted into `reference_md` only when it appears inside `## Explanation`
+after the `Why other answers are wrong` subsection. If the wrong-answer heading
+is missing entirely, the whole explanation body is treated as general
+explanation and `reference_md` remains `null`.
 
-2. **Per-choice explanations** — each `- X)` bullet below the heading is parsed into a separate explanation keyed by choice label. Stored in `choices.explanation_md`. Displayed next to the specific wrong choice in the feedback UI.
+Current authoring convention:
 
-**Important:**
-- Heading match is case-insensitive; bold/underline markers are optional; trailing `:` is optional
-- Per-choice bullets can start with `-`, `*`, or `+`
-- Bullet label can use `A)` / `A.` / `A:` (and lowercase is normalized to uppercase)
-- Parsing stops at the next markdown heading (`#`..`######`)
-- Any non-heading lines after a bullet are included in that bullet body (multi-line supported)
-- You do NOT need to include the correct answer in the per-choice section (it's already covered by the general explanation)
-- If you omit the "Why other answers are wrong" section entirely, per-choice explanations will be empty — the general explanation still displays
-- Per-choice labels must exist in the question's choices, or seed fails
+- Put `### Reference` at the end of `## Explanation`.
+- Use AMA-style citation text.
+- Treat it as parser-supported but not schema-required.
 
 ---
 
-## 6. How the Answer Field Works
+## 6. Answer Field and Choice Shuffling
 
-The `answer` field in YAML specifies which choice letter is correct:
+The `answer` field marks which authored choice is correct:
 
 ```yaml
 answer: B
 ```
 
-**In the draft:** Choices are NOT marked correct/incorrect — they're all just `- X) text`. The `answer` field is the sole indicator.
+Pipeline behavior:
 
-**During import (`pnpm content:import:drafts`):** The import script maps `answer: B` to `correct: true` on the matching choice object in the output MDX:
+1. Draft choices are plain text bullets, not `correct: true/false` objects.
+2. The importer converts `answer: B` into MDX `choices[].correct`.
+3. Seed enforces exactly one correct choice before insert/update.
+4. Runtime presentation shuffles choices deterministically per user and
+   question, so authored letters are not guaranteed to match displayed letters.
 
-```yaml
-# Output MDX (generated, do not hand-edit)
-choices:
-  - label: A
-    text: "First choice"
-    correct: false
-  - label: B
-    text: "Correct choice"
-    correct: true     # ← derived from answer: B
-  - label: C
-    text: "Third choice"
-    correct: false
-```
-
-**In the database:** Each choice row has `is_correct: boolean`. The pipeline enforces exactly one `true` before insert/update.
-
-**In the UI:** Choices are shuffled per-user using a deterministic seed (`userId + questionId`). The user sees different letter labels than the authored labels, but the correct choice is always the same.
+Authoring implication: write the best answer at the letter you specify in
+`answer`; do not try to pre-randomize choices.
 
 ---
 
-## 7. Choice Shuffling (What Authors Need to Know)
-
-**You do NOT need to randomize answers.** Always put the correct answer at whichever letter the `answer` field specifies. The system handles randomization:
-
-1. Choices are stored in the database in canonical order (A=1, B=2, C=3, D=4)
-2. At display time, choices are shuffled deterministically per `(userId, questionId)` pair
-3. Each user sees a different letter ordering, but the same user always sees the same order for the same question
-4. The feedback UI correctly maps explanations to the shuffled positions
-
-**Implication for authoring:** Write choices in whatever order makes sense. Put the correct answer at the letter you specify in `answer`. The system handles the rest.
-
----
-
-## 8. How Tags Flow Through the System
+## 7. How Tags and References Flow Through the System
 
 ```text
-Draft YAML                    Import Script               MDX Output
-─────────────                 ──────────────              ──────────
-substances: [alcohol]    →    Looks up display name  →    tags:
-topics: [screening-        from draftTaxonomy.ts          - slug: alcohol
-  diagnosis]               (you never write display         name: Alcohol
-treatments: [naltrexone]     names in drafts)               kind: substance
-diagnoses: [aud]                                          - slug: screening-diagnosis
-                                                            name: Screening & Diagnosis
-                                                            kind: topic
-                                                          - slug: naltrexone
-                                                            name: Naltrexone
-                                                            kind: treatment
-                                                          - slug: aud
-                                                            name: Aud
-                                                            kind: diagnosis
+Draft YAML                         Import                    MDX / Seed / UI
+──────────                         ──────                    ───────────────
+topics: [screening-diagnosis]  ->  display names looked up  -> tags.kind = topic
+substances: [alcohol]          ->  from draftTaxonomy.ts    -> tags stored in DB
+treatments: [naltrexone]                                    -> practice/history
+diagnoses: [aud]                                            -> hide diagnosis
 
-MDX Output                    Seed Script                 Database
-──────────                    ───────────                 ────────
-tags:                    →    Validates against       →   tags table:
-  - slug: alcohol              canonical lists             id, slug, name, kind
-    name: Alcohol              Rejects non-canonical
-    kind: substance            Requires ≥1 topic       question_tags table:
-  ...                          Requires ≥1 substance     questionId, tagId (junction)
-
-Database                      UI
-────────                      ──
-tags table              →     Practice page filter pills:
-  kind=topic                    Topic: [Screening & Diagnosis] [Pharmacology...]
-  kind=substance                Substance: [Alcohol] [Opioids] ...
-  kind=treatment                Treatment: [Naltrexone] [Acamprosate] ...
-  kind=diagnosis                (diagnosis: stored but NOT shown in UI)
+## Explanation                  ->  carried into MDX        -> seed splits into:
+  general text                                                  explanation_md
+  Why other answers are wrong                                   choice explanations
+  ### Reference                                                 reference_md
 ```
 
 ---
 
-## 9. What the System Validates (Rejection Points)
+## 8. What the System Validates (Rejection Points)
 
-Your draft will be **rejected** if any of these fail:
-
-| Validation | Where | Error |
-|-----------|-------|-------|
-| Unknown draft frontmatter key | Import script (Zod `.strict()`) | `Unrecognized key(s) in object` |
-| `topics` contains non-canonical slug | Import script (Zod) | `Invalid enum value` |
-| `substances` contains non-canonical slug | Import script (Zod) | `Invalid enum value` |
-| `treatments` contains non-canonical slug | Import script (Zod) | `Invalid enum value` |
-| Missing `topics` or empty array | Import script (Zod) | `Array must contain at least 1 element` |
-| Missing `substances` or empty array | Import script (Zod) | `Array must contain at least 1 element` |
-| `qid` missing or empty | Import script (Zod) | `String must contain at least 1 character` |
-| `answer` not A-E | Import script (Zod) | `Invalid enum value` |
-| `type` not recall/vignette | Import script (Zod) | `Invalid enum value` |
-| Missing required headings / bad heading order | Import parser | `Missing required heading` / `Invalid heading order` |
-| Choices parse fewer than 2 options | Import parser | `Choices parsing failed: expected at least 2 choices` |
-| No matching choice for `answer` (0 or >1 correct after conversion) | MDX schema (`QuestionFrontmatterSchema`) | `choices must contain exactly 1 correct=true` |
-| Duplicate choice labels | MDX schema (`QuestionFrontmatterSchema`) | `choice labels must be unique` |
-| More than 5 choices | MDX schema (`QuestionFrontmatterSchema`) | `Array must contain at most 5 element(s)` |
-| Duplicate tag slugs in one question | MDX schema (`QuestionFrontmatterSchema`) | `tag slugs must be unique` |
-| Missing topic or substance tags in MDX | MDX schema + seed validation | `at least one topic tag is required` / `at least one substance tag is required` |
-| Tag with `kind: domain` in MDX | Seed script | `Question \"...\" has domain tag \"...\" which is not allowed` |
-| Per-choice explanation references label not in choices | Seed script | `Explanation references choice label` |
+| Validation | Where |
+|-----------|-------|
+| Unknown draft frontmatter key | Draft parse (`.strict()`) |
+| Non-canonical topic / substance / treatment slug | Draft parse / MDX schema |
+| Missing or empty `topics` / `substances` | Draft parse / MDX schema / seed |
+| Empty `qid` or `source` | Draft parse |
+| Non-kebab-case diagnosis slug | Draft parse |
+| Non-kebab-case `qid` | MDX schema (`slug` regex) |
+| `answer` not `A-E` | Draft parse |
+| `type` not `recall` / `vignette` | Draft parse |
+| `difficulty` not `easy` / `medium` / `hard` | Draft parse |
+| Missing required headings or bad heading order | Draft parse |
+| Fewer than 2 choices or more than 5 choices | Draft parse / MDX schema |
+| Duplicate choice labels | MDX schema |
+| Duplicate tag slugs in one question | MDX schema |
+| More than one or zero correct choices after conversion | MDX schema |
+| `domain` tags or non-canonical runtime tags in MDX | Seed validation |
+| Wrong-answer explanation references unknown label | Seed validation |
 
 ---
 
-## 10. What's Currently Missing From the System
+## 9. File Organization
 
-### Citations / References
+### Multi-question Draft Files
 
-**Not yet implemented.** There is no `citation`, `reference`, or `doi` field in the draft schema, MDX schema, or database. When this is added, it should include:
+Each draft file can contain multiple questions. Discovery depends on the exact
+splitter pattern `^---\nqid:`:
 
-- A structured citation field in draft YAML (e.g., `citation: "White AM, et al. JAMA. 2020;323(2):130-131."`)
-- A DOI field (e.g., `doi: "10.1001/jama.2019.20318"`)
-- Pipeline support to carry these through import → MDX → seed → database → UI
+- each question block must start with `---`
+- `qid:` must be the first frontmatter key on the next line
 
-For now, include citation information in the explanation text if relevant:
-
-```markdown
-## Explanation
-
-According to White et al. (JAMA, 2020), the AUDIT-C uses sex-specific
-cutoffs...
-```
-
-### Diagnosis UI Exposure
-
-Diagnosis tags are stored in the database but intentionally hidden from the practice filter UI. They may be surfaced in a future version.
-
----
-
-## 11. File Organization
-
-### Multi-question files
-
-Each draft `.md` file can contain multiple questions, separated by `---`:
-
-**Important splitter rule:** each question block must start with `---` followed immediately by `qid:` on the next line. (`splitDraftQuestionsFile()` looks for `^---\nqid:`.)
-
-```markdown
----
-qid: source-001
-type: recall
-...
----
-
-## Question
-...
-
----
-
----
-qid: source-002
-type: recall
-...
----
-
-## Question
-...
-```
-
-Notes:
-- Extra separator lines between blocks are tolerated, but not required.
-- If `qid` is not the first frontmatter key in a block, that block will not be discovered by the splitter.
-
-### Directory structure
+### Draft Directory Structure
 
 ```text
 content/drafts/questions/
 ├── article-based-pathway/{chapter}/{paper}/
-│   ├── {paper}.md          ← source paper (Markdown conversion)
-│   ├── recall.md           ← 6 recall questions
-│   └── vignettes.md        ← 6 vignette questions
-├── prescribers-guide/{nn}-{medication}/
-│   └── recall.md           ← 4 recall questions (no vignettes)
-├── cochrane/{review}/
+│   ├── {paper}.md
 │   ├── recall.md
 │   └── vignettes.md
-└── ... (other sources follow same pattern)
+├── prescribers-guide/{nn}-{medication}/
+│   └── recall.md
+└── ...
 ```
 
-### Import output
+### Import Output
 
-`pnpm content:import:drafts` reads from `content/drafts/questions/`, scans only `**/recall.md` and `**/vignettes.md`, and writes one MDX file per question to `content/questions/imported/`:
+`pnpm content:import:drafts` defaults to:
+
+- input root: `content/drafts/questions`
+- output root: `content/questions/imported`
+- status: `draft`
+
+Output path shape:
 
 ```text
-content/questions/imported/
-├── article-based-pathway/{source}/{qid}.mdx
-├── prescribers-guide/{source}/{qid}.mdx
-└── ...
+content/questions/imported/<source-group>/<source>/<qid>.mdx
 ```
 
 ---
 
-## 12. Commands
+## 10. Commands
 
 ```bash
 # Validate drafts without writing files
 pnpm content:import:drafts -- --dry-run
 
-# Import drafts → MDX (as draft status)
+# Import drafts as draft status
 pnpm content:import:drafts
 
-# Import drafts → MDX (as published, so questions appear in app)
+# Import drafts as published status
 pnpm content:import:drafts -- --status published
 
-# Seed MDX → database
+# Seed generated MDX into the database
 pnpm db:seed
 
-# Include placeholders (debug/template seeding)
+# Include placeholders during seed
 SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed
-
-# Full pipeline: import + seed
-pnpm content:import:drafts -- --status published && pnpm db:seed
 ```
 
 ---
 
-## 13. Quick Checklist for Draft Authors
+## 11. Unsupported or Convention-Only Areas
 
-Before submitting questions:
+### Structured Citation Frontmatter
 
-- [ ] Every `qid` is globally unique (`{source}-{number}`)
-- [ ] In multi-question files, each block starts with `---` then `qid:` as the first key
-- [ ] `answer` is in YAML frontmatter (A-E), NOT marked in choices
-- [ ] `substances` uses canonical slugs from §3 (array, even for single values)
-- [ ] `topics` uses canonical slugs from §3 (NOT old slugs like `pharmacology`)
-- [ ] `treatments` included when a specific medication is discussed
-- [ ] File is named `recall.md` or `vignettes.md` so importer will pick it up
-- [ ] `## Question`, `## Choices`, `## Explanation` sections all present
-- [ ] Lead-in ends with `?` and passes cover-the-options test
-- [ ] 4 choices, all plausible, homogeneous, no length cues
-- [ ] Explanation has general section + `**Why other answers are wrong:**` with per-choice bullets
-- [ ] Per-choice explanations teach concepts, not just "this is incorrect"
-- [ ] Clinical pearl included
-- [ ] Tests clinical application, NOT study statistics or sample sizes
+`### Reference` in the markdown body is supported today. Structured YAML fields
+such as `citation:` or `doi:` are not. Do not add them until the draft schema
+allows them.
+
+### Diagnosis UI Exposure
+
+Diagnosis tags are stored and validated, but current Practice and History
+filters intentionally hide them.
+
+### Global Uniqueness
+
+The code validates non-empty and kebab-case `qid` values, but it does not
+centrally enforce global uniqueness across the entire corpus. That remains an
+authoring responsibility.
+
+---
+
+## 12. Quick Checklist for Draft Authors
+
+- [ ] Every `qid` is globally unique
+- [ ] Each block starts with `---` followed immediately by `qid:`
+- [ ] `answer` is in YAML, not marked in the choices
+- [ ] `topics`, `substances`, and `treatments` use canonical slugs
+- [ ] Diagnoses are kebab-case slugs
+- [ ] File names are `recall.md` or `vignettes.md`
+- [ ] `## Question` / `## Choices` / `## Explanation` are present
+- [ ] Choices are plausible, homogeneous, and avoid cueing
+- [ ] Wrong-answer bullets explain reasoning, not just correctness
+- [ ] `### Reference` appears after the wrong-answer subsection if you want it
+      stored separately
 - [ ] `pnpm content:import:drafts -- --dry-run` passes
 
 ---
 
-## Related Documents
+## 13. Related Documents
 
-- `lib/content/draftTaxonomy.ts` — Code source of truth for canonical tag slugs
-- `docs/content/tag-taxonomy-golden-spec.md` — Canonical tag tables with display names
-- `docs/content/tag-taxonomy-pipeline.md` — How tags flow through the system
-- `docs/practice-engine/content-pipeline.md` — Full pipeline architecture (import, seed, shuffle, render)
-- `docs/dev/deployment-procedure.md` — How to deploy and sync databases
-- `lib/content/schemas.ts` — Zod validation schemas (MDX format)
-- `scripts/draft-question-import.ts` — Import script (draft → MDX conversion)
-- `scripts/seed.ts` — Seed script (MDX → database)
-- `scripts/seed-helpers.ts` — Per-choice explanation parser
+- [tag-taxonomy-golden-spec.md](./tag-taxonomy-golden-spec.md)
+- [tag-taxonomy-pipeline.md](./tag-taxonomy-pipeline.md)
+- [content-pipeline.md](../practice-engine/content-pipeline.md)
+- `lib/content/draftTaxonomy.ts`
+- `lib/content/schemas.ts`
+- `scripts/draft-question-import.ts`
+- `scripts/import-draft-questions.ts`
+- `scripts/seed/question-parser.ts`
+- `scripts/seed-helpers.ts`

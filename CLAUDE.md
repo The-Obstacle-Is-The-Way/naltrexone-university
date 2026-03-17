@@ -2,13 +2,20 @@
 
 > **All project rules are in [`AGENTS.md`](./AGENTS.md).** This file contains Claude Code-specific supplements only.
 >
-> Claude Code reads both `AGENTS.md` (universal rules for all agents) and this file. Everything in `AGENTS.md` applies here — do not duplicate it.
+> Claude Code reads both `AGENTS.md` (universal rules for all agents) and this file. Everything in `AGENTS.md` applies here. Keep this file concise, Claude-specific, and aligned with `AGENTS.md`; if guidance is universal, move it to `AGENTS.md` instead of duplicating or contradicting it here.
+
+## Maintenance
+
+- Prefer concrete, verifiable instructions with exact commands or paths.
+- Keep most topic- or path-specific Claude guidance in `.claude/rules/`.
+- If this file grows beyond a quick-start supplement, split the extra Claude-only material into `.claude/rules/` or imported markdown files instead of copying `AGENTS.md`.
+- When `AGENTS.md` or `.claude/rules/` changes, update this file in the same patch if its summary becomes stale.
 
 ---
 
 ## Path-Scoped Rules (`.claude/rules/`)
 
-Claude Code loads additional context from `.claude/rules/` based on which files you're editing:
+Claude Code loads additional context from `.claude/rules/` based on which files it is reading or editing:
 
 | Rule File | Activates When Editing | Content |
 |-----------|----------------------|---------|

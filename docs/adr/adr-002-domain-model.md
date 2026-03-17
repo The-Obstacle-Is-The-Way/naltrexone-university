@@ -51,6 +51,7 @@ export type Question = {
   readonly slug: string;
   readonly stemMd: string;
   readonly explanationMd: string;
+  readonly referenceMd: string | null;
   readonly difficulty: QuestionDifficulty;
   readonly status: QuestionStatus;
   readonly choices: readonly Choice[];
@@ -66,6 +67,7 @@ export type Question = {
 - Choice labels must be unique within the question
 - Slug must be kebab-case and unique system-wide
 - `stemMd` and `explanationMd` must be non-empty
+- `referenceMd` is nullable, but when present is markdown content shown in the feedback UI
 
 #### Choice
 
@@ -77,6 +79,7 @@ export type Choice = {
   readonly label: ChoiceLabel;      // 'A' | 'B' | 'C' | 'D' | 'E'
   readonly textMd: string;
   readonly isCorrect: boolean;
+  readonly explanationMd: string | null;
   readonly sortOrder: number;       // 1-based
 };
 ```
@@ -85,6 +88,7 @@ export type Choice = {
 - `label` is A-E
 - `textMd` is non-empty
 - `sortOrder` is positive integer
+- `explanationMd` is optional per-choice feedback content
 
 #### Attempt
 
@@ -132,11 +136,20 @@ export type Subscription = {
 
 ```typescript
 // src/domain/entities/practice-session.ts
+export type PracticeSessionQuestionState = {
+  readonly questionId: string;
+  readonly markedForReview: boolean;
+  readonly latestSelectedChoiceId: string | null;
+  readonly latestIsCorrect: boolean | null;
+  readonly latestAnsweredAt: Date | null;
+};
+
 export type PracticeSession = {
   readonly id: string;
   readonly userId: string;
   readonly mode: PracticeMode;
   readonly questionIds: readonly string[];  // Ordered list
+  readonly questionStates: readonly PracticeSessionQuestionState[];
   readonly tagFilters: readonly string[];   // Tag slugs used
   readonly difficultyFilters: readonly QuestionDifficulty[];
   readonly startedAt: Date;
@@ -146,6 +159,7 @@ export type PracticeSession = {
 
 **Invariants:**
 - `questionIds` is non-empty
+- `questionStates` tracks persisted per-question session state
 - `endedAt` is null or >= `startedAt`
 
 #### Bookmark
@@ -284,7 +298,6 @@ export function isValidChoiceLabel(value: string): value is ChoiceLabel {
 ```typescript
 // src/domain/value-objects/tag-kind.ts
 export const AllTagKinds = [
-  'domain', // exam blueprint domain
   'topic', // clinical topic
   'substance', // drug/substance class
   'treatment', // treatment modality
@@ -297,6 +310,10 @@ export function isValidTagKind(value: string): value is TagKind {
   return AllTagKinds.includes(value as TagKind);
 }
 ```
+
+**Note:** The legacy `domain` / exam-section tag kind has been removed from the
+runtime taxonomy. Active kinds are `topic`, `substance`, `treatment`, and
+`diagnosis`.
 
 #### SubscriptionPlan
 

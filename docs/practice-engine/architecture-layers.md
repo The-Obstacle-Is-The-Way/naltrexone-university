@@ -20,7 +20,7 @@ All entities are pure TypeScript type aliases with no runtime behavior. They liv
 | `PracticeSession` | `id`, `userId`, `mode`, `questionIds[]`, `questionStates[]`, `tagFilters[]`, `difficultyFilters[]`, `startedAt`, `endedAt` (nullable) | A structured practice session (tutor or exam) |
 | `PracticeSessionQuestionState` | `questionId`, `markedForReview`, `latestSelectedChoiceId` (nullable), `latestIsCorrect` (nullable), `latestAnsweredAt` (nullable) | Per-question state within a session |
 | `Bookmark` | `userId`, `questionId`, `createdAt` | A user-saved question |
-| `Tag` | `id`, `slug`, `name`, `kind` | A categorization label (domain/exam section, topic, substance, treatment, diagnosis) |
+| `Tag` | `id`, `slug`, `name`, `kind` | A categorization label (topic, substance, treatment, diagnosis) |
 
 ### 1.2 Value Objects
 
@@ -32,7 +32,7 @@ All value objects provide union string types (derived from `All*` constants), va
 | `QuestionDifficulty` | `'easy'` \| `'medium'` \| `'hard'` | `isValidDifficulty()` |
 | `QuestionStatus` | `'draft'` \| `'published'` \| `'archived'` | `isVisibleStatus()` |
 | `ChoiceLabel` | `'A'` \| `'B'` \| `'C'` \| `'D'` \| `'E'` | `isValidChoiceLabel()` |
-| `TagKind` | `'domain'` \| `'topic'` \| `'substance'` \| `'treatment'` \| `'diagnosis'` | `isValidTagKind()` |
+| `TagKind` | `'topic'` \| `'substance'` \| `'treatment'` \| `'diagnosis'` | `isValidTagKind()` |
 | `SubscriptionPlan` | `'monthly'` \| `'annual'` | `isValidSubscriptionPlan()` |
 | `SubscriptionStatus` | 8 statuses | `isEntitledStatus()` — includes `'active'`, `'inTrial'`, `'pastDue'` |
 

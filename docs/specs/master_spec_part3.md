@@ -100,7 +100,7 @@ export const ChoiceFrontmatterSchema = z.object({
 export const TagFrontmatterSchema = z.object({
   slug: z.string().min(1).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   name: z.string().min(1),
-  kind: z.enum(['domain', 'topic', 'substance', 'treatment', 'diagnosis']),
+  kind: z.enum(['topic', 'substance', 'treatment', 'diagnosis']),
 }).strict();
 
 export const QuestionFrontmatterSchema = z.object({

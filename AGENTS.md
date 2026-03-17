@@ -2,7 +2,7 @@
 
 Repository guidelines for AI coding agents (Codex CLI, Claude Code, Cursor, GitHub Copilot, etc.) working with this codebase.
 
-> **This is the single source of truth for all agents.** Claude Code also reads `CLAUDE.md` (slim, Claude-specific supplements) and `.claude/rules/` (path-scoped rules).
+> **This is the single source of truth for all agents.** Claude Code also reads `CLAUDE.md` (slim, Claude-specific supplements) and `.claude/rules/` (path-scoped rules). Keep universal project rules here; keep Claude-only or path-scoped guidance in those Claude-specific files so instructions do not drift or conflict.
 
 ---
 
@@ -216,7 +216,7 @@ All code in this repository MUST adhere to these principles:
 
 6. **Design Patterns** - Use appropriate patterns (Repository, Factory, Strategy, Composition Root) where they add clarity, not complexity.
 
-### Layer Structure (planned, see ADR-012)
+### Layer Structure (implemented, see ADR-012)
 
 ```
 src/domain/        → Entities, value objects, pure business logic (zero dependencies)
@@ -227,11 +227,12 @@ app/, lib/, db/    → Next.js framework code, infrastructure (outermost layer)
 
 ### Current State
 
-All layers are implemented. See `docs/specs/index.md` for the full spec register (SPEC-001 through SPEC-038, with SPEC-016 and SPEC-017 partially implemented).
+All layers are implemented. See `docs/specs/index.md` for the full spec register (SPEC-001 through SPEC-038, with SPEC-016 and SPEC-017 now implemented).
 
 - **Domain:** entities, value objects, services, errors (`src/domain/**`)
 - **Application:** ports, core use cases, app errors (`src/application/**`)
 - **Adapters:** schema, repositories, gateways, controllers (`db/schema.ts`, `src/adapters/**`)
+- **Composition root:** runtime wiring lives in `lib/container.ts`, focused factories under `lib/container/**`, and controller dependency loaders in `lib/controller-helpers.ts`
 - **Feature slices:** paywall, question loop, practice sessions, review + bookmarks, dashboard, UI integration, practice engine, history, observability (`app/**`, `components/**`)
 
 Framework code lives in:
@@ -250,7 +251,7 @@ Framework code lives in:
 
 3. **Fakes over mocks** - Tests use in-memory fake implementations, not jest.mock().
 
-4. **Composition root** - Dependencies wired at entry points (Server Actions, Route Handlers), not global singletons.
+4. **Composition root** - Dependencies are wired at entry points via `lib/container.ts`, `lib/container/**`, and `lib/controller-helpers.ts`, not ad hoc imports inside use cases.
 
 See `docs/adr/` for all Architecture Decision Records (ADR-001 through ADR-018).
 

@@ -27,14 +27,17 @@ We need a DI strategy that is:
 
 ## Decision
 
-We use **constructor injection + factory functions**.
+We use **constructor injection + factory-based composition**.
 
 ### Composition Root
 
-- The composition root is `lib/container.ts` (factory functions that wire ports → implementations).
-- Entry points call the factories:
-  - `src/adapters/controllers/*.ts` (Server Actions)
-  - `app/api/**/route.ts` (Route Handlers)
+- The composition root is centered on `lib/container.ts`, with focused factory
+  modules under `lib/container/**`.
+- Controllers usually resolve container-backed deps through
+  `lib/controller-helpers.ts` (`loadAppContainer()` + `createDepsResolver()`).
+- Entry points resolve deps at the boundary:
+  - `src/adapters/controllers/*.ts`
+  - `app/api/**/route.ts`
 
 ### Singleton Policy
 
@@ -64,8 +67,8 @@ Use cases are instantiated directly in tests with fake ports. Controllers may op
 
 ### Mitigations
 
-- Keep a small set of focused factory helpers (if needed).
-- Prefer “compose at entry point” over a global container.
+- Keep a small set of focused factory helpers under `lib/container/**`.
+- Prefer resolving deps at the entry point over global mutable state.
 
 ---
 

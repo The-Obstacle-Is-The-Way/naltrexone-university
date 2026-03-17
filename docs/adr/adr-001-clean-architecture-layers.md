@@ -340,32 +340,37 @@ components/                    # Layer 4: Frameworks
 
 ## Composition Root
 
-Dependencies are wired in a single location: `lib/container.ts` (the composition root). Controllers and route handlers call factory functions from the composition root to obtain concrete implementations for ports.
+Dependencies are wired through the container composition root centered on
+`lib/container.ts`, with helper modules under `lib/container/**`. Controllers
+and route handlers resolve concrete dependencies from that container at the
+entry point.
 
 **Pattern:**
 ```typescript
-// src/adapters/controllers/question-controller.ts
+// src/adapters/controllers/tag-controller.ts
 'use server';
 
-import { createQuestionControllerDeps } from '@/lib/container';
+import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
 
-export async function submitAnswer(input: SubmitAnswerInput, deps?: Dependencies) {
-  // Composition happens via a factory, called at the entry point
-  const { questionRepo, attemptRepo, authGateway } =
-    deps ?? createQuestionControllerDeps();
+type TagControllerContainer = {
+  createTagControllerDeps: () => TagControllerDeps;
+};
 
-  // ... use case execution
-}
+const getDeps = createDepsResolver<TagControllerDeps, TagControllerContainer>(
+  (container) => container.createTagControllerDeps(),
+  loadAppContainer,
+);
 ```
 
 **Why no DI framework/container library?**
 - Next.js has no long-lived “app bootstrap” phase for container setup
-- Factory functions are explicit, tree-shakeable, and test-friendly
+- Factory-based wiring is explicit and test-friendly
 - Test injection is simple: pass `deps` or call a test factory
 
 **Allowed composition locations:**
-- `lib/container.ts` — factory functions wiring dependencies
-- `src/adapters/controllers/*.ts` — Server Actions (Controllers) calling factories
+- `lib/container.ts` and `lib/container/**` — composition root and focused factory modules
+- `lib/controller-helpers.ts` — controller/container resolution helpers
+- `src/adapters/controllers/*.ts` — Server Actions (Controllers) resolving deps
 - `app/api/**/route.ts` — Route Handlers calling factories
 - `tests/**/*.test.ts` — Test files (with fakes or injected deps)
 
@@ -382,7 +387,7 @@ export async function submitAnswer(input: SubmitAnswerInput, deps?: Dependencies
 
 1. **Dependency Check:** Run `madge --circular src/` — no circular dependencies
 2. **Import Enforcement:** Use `dependency-cruiser` with rules preventing inner layers importing outer layers (Biome does not provide import boundary enforcement)
-3. **Test Coverage:** Domain and Use Cases must have 100% coverage without mocks
+3. **Testability:** Domain and Use Cases must remain unit-testable without mocks
 
 ### Code Review Checklist
 

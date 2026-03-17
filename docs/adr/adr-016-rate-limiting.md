@@ -66,6 +66,8 @@ All rate limits are defined in `src/adapters/shared/rate-limits.ts`:
 | Bookmark toggle | 60/min | 60s |
 | Start practice session | 20/min | 60s |
 | Checkout session | 10/min | 60s |
+| Portal session | 20/min | 60s |
+| Cron reconcile stripe subscriptions | 5/min | 60s |
 
 Limits are tuned per-action based on expected usage patterns. All use a 1-minute window for simplicity and predictability.
 
@@ -119,7 +121,8 @@ Controllers call `rateLimiter.limit()` before executing the use case. On failure
   - `src/adapters/controllers/practice-controller.test.ts`
   - `src/adapters/controllers/question-controller.test.ts`
   - `src/adapters/controllers/bookmark-controller.test.ts`
-- SPEC-017 tracks the rate-limiting feature with "Partial" status (Postgres MVP, Redis post-MVP).
+- SPEC-017 tracks the implemented Postgres MVP. A Redis / multi-region upgrade
+  remains an optional future evolution, not an active partial status.
 
 ---
 

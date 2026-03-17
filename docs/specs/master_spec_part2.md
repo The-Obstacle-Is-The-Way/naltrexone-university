@@ -1132,7 +1132,7 @@ export type TagRow = {
   id: string;
   slug: string;
   name: string;
-  kind: 'domain' | 'topic' | 'substance' | 'treatment' | 'diagnosis';
+  kind: 'topic' | 'substance' | 'treatment' | 'diagnosis';
 };
 
 export type GetTagsOutput = {

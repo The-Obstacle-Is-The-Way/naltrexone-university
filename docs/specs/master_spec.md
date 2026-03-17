@@ -111,7 +111,6 @@ export const questionStatusEnum = pgEnum('question_status', [
 ]);
 
 export const tagKindEnum = pgEnum('tag_kind', [
-  'domain',     // exam blueprint / big domain bucket
   'topic',      // clinical topic
   'substance',  // alcohol/opioids/etc
   'treatment',  // meds/psychosocial tx
@@ -1715,7 +1714,7 @@ export type TagRow = {
   id: string;
   slug: string;
   name: string;
-  kind: 'domain' | 'topic' | 'substance' | 'treatment' | 'diagnosis';
+  kind: 'topic' | 'substance' | 'treatment' | 'diagnosis';
 };
 
 export type GetTagsOutput = {
@@ -1959,7 +1958,7 @@ export const ChoiceFrontmatterSchema = z.object({
 export const TagFrontmatterSchema = z.object({
   slug: z.string().min(1).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   name: z.string().min(1),
-  kind: z.enum(['domain', 'topic', 'substance', 'treatment', 'diagnosis']),
+  kind: z.enum(['topic', 'substance', 'treatment', 'diagnosis']),
 }).strict();
 
 export const QuestionFrontmatterSchema = z.object({

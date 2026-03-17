@@ -63,7 +63,9 @@ We adopt a **hybrid structure** that places Clean Architecture layers under `src
 │   └── loading/
 │
 ├── lib/                              # FRAMEWORKS LAYER (Infrastructure)
-│   ├── container.ts                  # Composition root (DI)
+│   ├── container.ts                  # Composition root entry
+│   ├── container/                    # Focused factory modules (controllers, gateways, repos, use cases)
+│   ├── controller-helpers.ts         # Container-loading helpers for controllers
 │   ├── db.ts                         # Drizzle client singleton
 │   ├── env.ts                        # Zod-validated env vars
 │   ├── routes.ts                     # Route constants + helpers
@@ -168,7 +170,8 @@ export default async function PracticePage() {
 
 ### Composition Root
 
-Dependency wiring happens at entry points (controllers and route handlers), using factory functions (see ADR-007).
+Dependency wiring happens at entry points (controllers and route handlers)
+through the container composition root (see ADR-007).
 
 - Allowed singleton: `lib/db.ts` (connection pooling / client reuse)
 - Prohibited singletons: repositories, gateways, and use cases
@@ -193,7 +196,7 @@ If starting with flat structure, migrate in this order:
 5. Create `src/adapters/repositories/` — Implement interfaces with Drizzle
 6. Create `src/adapters/gateways/` — Wrap Clerk/Stripe
 7. Create `src/adapters/controllers/` — Move server actions
-8. Update `lib/container.ts` — Wire everything
+8. Update `lib/container.ts` / `lib/container/**` — Wire everything
 9. Update imports throughout `app/` and `components/`
 
 ## Consequences
@@ -225,7 +228,7 @@ If starting with flat structure, migrate in this order:
 - [ ] All repository/gateway interfaces in `src/application/ports/`
 - [ ] All implementations in `src/adapters/`
 - [ ] Server actions in `src/adapters/controllers/` with `'use server'`
-- [ ] Composition root in `lib/container.ts`
+- [ ] Composition root centered on `lib/container.ts` (with supporting modules under `lib/container/**`)
 - [ ] No circular dependencies between layers
 - [ ] Path aliases configured in `tsconfig.json`
 

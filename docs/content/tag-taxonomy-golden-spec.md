@@ -1,23 +1,27 @@
 # Tag Taxonomy — Golden Spec
 
-> **Status:** Implemented (2026-02-18 via SPEC-033)
-> **Companion doc:** [`tag-taxonomy-pipeline.md`](./tag-taxonomy-pipeline.md) — traces how tags flow through the system today
+> **Status:** Implemented (2026-02-18 via SPEC-033; re-verified 2026-03-17)
+> **Companion docs:** [tag-taxonomy-pipeline.md](./tag-taxonomy-pipeline.md),
+> [question-format-spec.md](./question-format-spec.md)
 >
-> This is the canonical taxonomy reference. Runtime implementation is aligned; use this with `tag-taxonomy-pipeline.md` for day-to-day validation.
+> This is the canonical taxonomy reference. Runtime implementation is aligned;
+> use this doc for slugs, display names, ordering, and migration intent.
 
 ---
 
 ## Decision
 
-Kill the "Exam Section" (domain kind) filter entirely. Reduce from 4 filter categories to 3:
+Kill the legacy Exam Section (`domain`) filter entirely. Reduce visible filter
+categories to 3:
 
 1. **Topic** (13 values)
 2. **Substance** (11 values)
 3. **Treatment** (12 values)
 
-Display order on the Practice page: Topic → Substance → Treatment.
+Display order in the current Practice UI: Topic -> Substance -> Treatment.
 
-The `diagnosis` tag kind remains in the schema but is intentionally not exposed in the Practice filter UI.
+The `diagnosis` tag kind remains valid in schema and storage, but it is
+intentionally hidden from current Practice and History filter UIs.
 
 ---
 
@@ -82,17 +86,19 @@ Medications only. Alphabetical order:
 | 11 | `varenicline` | Varenicline |
 | 12 | `other-treatment` | Other |
 
-> **Slug note:** Treatment "Other" uses `other-treatment` (not `other`) because `tags.slug` is globally unique across all kinds. Substance already uses `other`, so the treatment fallback must use a distinct slug. Display name remains "Other".
+> **Slug note:** Treatment "Other" uses `other-treatment` instead of `other`
+> because `tags.slug` is globally unique across kinds. Substance already uses
+> `other`.
 
 ---
 
 ## Migration Rules
 
-### Exam Section → Topic (delete the entire Exam Section / domain kind)
+### Exam Section → Topic
 
 | Old Exam Section (domain tag) | New Topic |
 |-------------------------------|-----------|
-| Co-occurring & Medical Complications | Split: psychiatric comorbidity → `co-occurring-disorders`, medical consequences → `medical-complications` |
+| Co-occurring & Medical Complications | Split: psychiatric comorbidity -> `co-occurring-disorders`, medical consequences -> `medical-complications` |
 | Epidemiology & Prevention | `epidemiology-prevention` |
 | Ethics, Legal & Policy | `ethics-legal` |
 | General | `general` |
@@ -101,7 +107,7 @@ Medications only. Alphabetical order:
 | Screening & Diagnosis | `screening-diagnosis` |
 | Treatment & Pharmacotherapy | `treatment-pharmacotherapy` |
 
-### Old Topic → New Topic (clean up the 17 messy values)
+### Old Topic → New Topic
 
 | Old Topic Slug | New Topic Slug |
 |----------------|----------------|
@@ -125,9 +131,11 @@ Medications only. Alphabetical order:
 
 ### Old Substance → New Substance
 
-All 10 current values carry over unchanged. Add `inhalants` as a new empty tag (no questions yet).
+All 10 carried-over values remain valid. `inhalants` stays in the canonical
+set even though the current corpus is still empty for that slug.
 
-Note: `caffeine` from the draft taxonomy (`DRAFT_SUBSTANCE_SLUGS`) is dropped — no published questions use it, and it's not board-relevant enough to surface as a filter.
+Note: `caffeine` was removed from the canonical draft taxonomy and is no longer
+valid runtime content.
 
 ### Old Treatment → New Treatment
 
@@ -137,15 +145,15 @@ Note: `caffeine` from the draft taxonomy (`DRAFT_SUBSTANCE_SLUGS`) is dropped �
 | `naloxone` | `naloxone` |
 | `naltrexone` | `naltrexone` |
 
-Add 9 new treatment tags: `acamprosate`, `bupropion`, `disulfiram`, `gabapentin`, `methadone`, `nrt`, `topiramate`, `varenicline`, `other-treatment`.
-
-Existing questions should be re-scanned for treatment mentions and tagged accordingly.
+Added treatment slugs:
+`acamprosate`, `bupropion`, `disulfiram`, `gabapentin`, `methadone`, `nrt`,
+`topiramate`, `varenicline`, `other-treatment`.
 
 ---
 
 ## Implementation Status (SPEC-033)
 
-The migration defined by this doc is complete. Summary by phase:
+The migration defined by this doc is complete.
 
 ### Phase 1: Content (MDX files)
 
@@ -159,40 +167,49 @@ The migration defined by this doc is complete. Summary by phase:
 
 ### Phase 2: Pipeline code
 
-- [x] `lib/content/draftTaxonomy.ts` aligned to canonical topic/substance/treatment sets
-- [x] `scripts/import-draft-questions.ts` no longer assigns taxonomy from directory names
-- [x] `scripts/draft-question-import.ts` no longer emits domain tags; canonical name lookups are explicit
-- [x] `lib/content/schemas.ts` enforces canonical slugs by kind and required topic/substance presence
-- [x] `scripts/seed.ts` rejects domain tags and non-canonical slugs
+- [x] `lib/content/draftTaxonomy.ts` aligned to canonical topic / substance /
+      treatment sets
+- [x] `scripts/import-draft-questions.ts` no longer assigns taxonomy from
+      directory names
+- [x] `scripts/draft-question-import.ts` no longer emits `domain` tags
+- [x] `lib/content/schemas.ts` enforces canonical slugs by kind and required
+      topic / substance presence
+- [x] `scripts/seed.ts` rejects `domain` tags and non-canonical slugs
 
 ### Phase 3: UI
 
-- [x] Practice filter UI shows Topic → Substance → Treatment
-- [x] "Exam Section" removed from runtime filters
-- [x] History filter options restricted to visible kinds (topic/substance/treatment)
+- [x] Practice filter UI shows Topic -> Substance -> Treatment
+- [x] History question filters are restricted to visible kinds
+- [x] "Exam Section" is removed from runtime filters
 
 ### Phase 4: Cleanup
 
 - [x] `caffeine` removed from canonical draft taxonomy
-- [x] `scripts/migrate-domain-tags.ts` retired
+- [x] Legacy migration-only scripts retired
 - [x] Pipeline docs updated
-- [x] Census report generated (`docs/content/reports/tag-census-2026-02-18.md`)
+- [x] Coverage reports generated via `scripts/tag-census.ts`
 
 ---
 
-## Content Gaps (Post-Migration Priorities)
+## Coverage Tracking
 
-Once migration is complete, run a count per tag. Expected near-zero question counts for:
+Use dated census reports for coverage analysis instead of relying on old
+migration-era expectations.
 
-**Substances:** Inhalants, Cocaine, Hallucinogens
+Latest verified report:
+[tag-census-2026-03-17.md](./reports/tag-census-2026-03-17.md)
 
-**Treatments:** Acamprosate, Disulfiram, Varenicline, NRT, Topiramate, Gabapentin, Methadone, Bupropion
+As of 2026-03-17:
 
-These are all board-tested topics that the question bank is currently thin on — they become content generation priorities.
+- Zero-count canonical slugs: substance `inhalants`
+- Low-count canonical slugs at the default `<= 3` threshold: none
+
+Historical snapshot:
+[tag-census-2026-02-18.md](./reports/tag-census-2026-02-18.md)
 
 ---
 
-## UI Behavior (Unchanged)
+## UI Behavior
 
 - Zero-selected collapsed filter summaries show `All included by default`
 - Expanded filter sections show `({N} selected)` below the chips

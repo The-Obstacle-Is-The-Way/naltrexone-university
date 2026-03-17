@@ -13,7 +13,8 @@ We need performance without correctness regressions:
 
 - Questions/tags are read-heavy and can be cached safely.
 - User-specific state (subscription status, attempts, stats) must remain fresh.
-- Next.js 16 introduces Cache Components (`use cache`) as an explicit opt-in model.
+- Next.js 16 offers explicit caching primitives, but misuse here risks stale
+  entitlement and answer-state bugs.
 
 ---
 
@@ -23,6 +24,16 @@ We need performance without correctness regressions:
 
 - **Framework layer only** (pages/controllers/repositories).
 - **Never** in domain or application layers.
+
+### Current Runtime Position
+
+- No explicit app-level read caching (`use cache`, `cacheTag`, `unstable_cache`)
+  is checked into the repo today.
+- The current codebase uses targeted invalidation only where needed. The active
+  example is `revalidatePath(ROUTES.APP_BOOKMARKS)` in
+  `app/(app)/app/bookmarks/bookmarks-actions.ts`.
+- This ADR is therefore a conservative policy document: if explicit caching is
+  added later, it must follow the rules below.
 
 ### What We Cache
 
@@ -44,12 +55,13 @@ Do not call Next.js cache invalidation from standalone scripts (e.g., `scripts/s
 
 ### Positive
 
-- Predictable caching model (explicit opt-in)
+- Predictable caching model (explicit opt-in only)
 - Avoids stale entitlement/security bugs
 
 ### Negative
 
 - Requires discipline to avoid caching user-specific reads
+- Offers fewer performance wins until explicit caching is introduced safely
 
 ---
 

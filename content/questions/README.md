@@ -1,19 +1,24 @@
-# Question Content
+# Question Seed Content
 
-This folder contains MDX question files that seed into the database.
+This directory contains the MDX files that `pnpm db:seed` loads into the
+database.
 
 ## Structure
 
 ```text
-questions/
-├── placeholder/     ← Example questions (committed, public)
-├── imported/        ← Generated from drafts (gitignored)
-└── your-topic/      ← Real questions (gitignored, private)
+content/questions/
+├── README.md
+├── imported/      # generated from content/drafts/questions
+└── placeholder/   # committed sample/debug corpus
 ```
+
+`content/questions/imported/` is the maintained output of
+`pnpm content:import:drafts`. It is gitignored and should be treated as
+generated content, not the primary authoring surface.
 
 ## File Format
 
-Each `.mdx` file has YAML frontmatter + Markdown body:
+Each `.mdx` file has strict YAML frontmatter plus a markdown body:
 
 ```yaml
 ---
@@ -31,38 +36,63 @@ choices:
   - label: "B"
     text: "Correct answer..."
     correct: true
-  # ... 2-5 choices total, exactly 1 correct
+  # 2-5 choices total, exactly 1 correct
 ---
 
 ## Stem
 
-Your question text here. Supports **Markdown**.
+Your question text here. Supports Markdown.
 
 ## Explanation
 
-Detailed explanation of the correct answer.
+General explanation of the correct answer.
+
+**Why other answers are wrong:**
+- A) Explanation for choice A
+- C) Explanation for choice C
+
+### Reference
+
+Citation or source note.
 ```
+
+Notes:
+
+- `lib/content/schemas.ts` validates frontmatter strictly.
+- `scripts/seed/question-parser.ts` splits `## Explanation` into the general
+  explanation, per-choice wrong-answer explanations, and optional
+  `### Reference` content.
+- Diagnosis tags are valid in stored content but are hidden from current
+  Practice and History filter UIs.
 
 ## Commands
 
 ```bash
-# Sync questions to database
+# Validate draft inputs without writing MDX
+pnpm content:import:drafts -- --dry-run
+
+# Generate imported MDX as draft status
+pnpm content:import:drafts
+
+# Generate imported MDX as published status
+pnpm content:import:drafts -- --status published
+
+# Seed MDX into the database
 pnpm db:seed
 
-# Seed without placeholder questions (archives placeholder-* rows in the DB)
-SEED_INCLUDE_PLACEHOLDERS=false pnpm db:seed
-
-# View in database
-pnpm db:studio
+# Include placeholder content during seed
+SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed
 ```
 
-## Privacy Note
+## Workflow
 
-Real questions are gitignored. Only `placeholder/` is committed as format examples.
+1. Author in `content/drafts/questions/**`.
+2. Import drafts into `content/questions/imported/`.
+3. Seed from `content/questions/**/*.mdx`.
 
-To add real content:
-1. Create a folder (e.g., `stahls/`, `papers/`)
-2. Add `.mdx` files following the format above
-3. Run `pnpm db:seed`
+`pnpm db:seed` reads every `.mdx` file under `content/questions/`. By default it
+excludes `content/questions/placeholder/**/*.mdx`; when placeholders are
+excluded, existing `placeholder-*` database rows are archived during seed.
 
-The folder will be ignored by git automatically.
+Manual `.mdx` files outside `imported/` will still be read by the seed script,
+but the maintained workflow is draft -> import -> seed.

@@ -127,7 +127,6 @@ export const questionStatusEnum = pgEnum('question_status', [
 ]);
 
 export const tagKindEnum = pgEnum('tag_kind', [
-  'domain',     // exam blueprint / big domain bucket
   'topic',      // clinical topic
   'substance',  // alcohol/opioids/etc
   'treatment',  // meds/psychosocial tx
