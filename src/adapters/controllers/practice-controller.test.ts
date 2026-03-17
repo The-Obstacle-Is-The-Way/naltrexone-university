@@ -815,6 +815,26 @@ describe('practice-controller', () => {
       });
     });
 
+    it('returns NOT_FOUND when the use case cannot find the session', async () => {
+      const deps = createDeps({
+        summaryThrows: new ApplicationError(
+          'NOT_FOUND',
+          'Practice session not found',
+        ),
+      });
+
+      const sessionId = '11111111-1111-1111-1111-111111111111';
+      const result = await getPracticeSessionSummary({ sessionId }, deps);
+
+      expect(result).toEqual({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Practice session not found' },
+      });
+      expect(deps.getPracticeSessionSummaryUseCase.inputs).toEqual([
+        { userId: 'user_1', sessionId },
+      ]);
+    });
+
     it('returns summary payload when use case succeeds', async () => {
       const deps = createDeps({
         summaryOutput: {

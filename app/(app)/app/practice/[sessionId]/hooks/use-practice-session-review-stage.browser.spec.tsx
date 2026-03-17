@@ -40,7 +40,10 @@ function createInput(sessionMode: 'tutor' | 'exam') {
 
 describe('usePracticeSessionReviewStage (browser)', () => {
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
+    endPracticeSessionMock.mockReset();
+    getPracticeSessionReviewMock.mockReset();
+    getPracticeSessionSummaryMock.mockReset();
   });
 
   it('finalizes tutor sessions and loads summary review data', async () => {
@@ -176,5 +179,9 @@ describe('usePracticeSessionReviewStage (browser)', () => {
       .poll(() => harness.result.current.navigatorLoadState.status)
       .toBe('ready');
     expect(harness.result.current.navigator?.sessionId).toBe('session-1');
+  });
+
+  it('restores console.error between tests', () => {
+    expect(vi.isMockFunction(console.error)).toBe(false);
   });
 });
