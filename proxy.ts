@@ -7,9 +7,32 @@ import {
 import { PUBLIC_ROUTE_PATTERNS } from '@/lib/public-routes';
 import { ROUTES } from '@/lib/routes';
 
+export function parseSentryIngestOrigin(
+  dsn: string | undefined,
+): string | null {
+  if (!dsn) return null;
+  try {
+    const url = new URL(dsn);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return null;
+    }
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
+const sentryIngestOrigin = parseSentryIngestOrigin(
+  process.env.NEXT_PUBLIC_SENTRY_DSN,
+);
+
 const CLERK_CSP_DIRECTIVES = {
   'base-uri': ['self'],
-  'connect-src': ['ws:', 'wss:'],
+  'connect-src': [
+    'ws:',
+    'wss:',
+    ...(sentryIngestOrigin ? [sentryIngestOrigin] : []),
+  ],
   'font-src': ['self', 'data:', 'https:'],
   'frame-ancestors': ['none'],
   'img-src': ['self', 'data:', 'blob:', 'https:'],
