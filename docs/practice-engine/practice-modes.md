@@ -73,7 +73,13 @@ This keeps same-day behavior stable for the same user while changing the daily s
 
 ---
 
-## 6. Concurrency Protection
+## 6. Interaction Contracts
+
+For the full click-by-click UI contract (buttons, persistence boundaries, locking rules, navigation, and post-session flows) for each mode, see **[Interaction Contracts](./interaction-contracts.md)**.
+
+---
+
+## 7. Concurrency Protection
 
 - **Duplicate session answers:** Partial unique index `attempts(practiceSessionId, questionId)` prevents two concurrent submits for the same question in a session. Postgres error code `23505` is caught and mapped to `ApplicationError('CONFLICT')`.
 - **Session state updates:** CAS (compare-and-swap) pattern — read current `paramsJson`, compute update, write with `WHERE paramsJson = expectedValue`. Retries up to 3 times on conflict.

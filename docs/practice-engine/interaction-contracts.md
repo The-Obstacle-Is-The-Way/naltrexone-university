@@ -1,0 +1,280 @@
+# Practice Engine: Interaction Contracts
+
+> **Parent:** [Practice Engine Index](./index.md)
+> **Scope:** Click-by-click UI contracts for tutor and exam modes — buttons, persistence, locking, navigation, and post-session flows
+> **Related:** [Practice Modes](./practice-modes.md) (lifecycle/data), [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md) (decisions)
+> **Status:** Proposed — documents the target state from BS-055 decisions. Current implementation differs (see "Current vs Proposed" sections).
+> **Last Updated:** 2026-03-17
+
+---
+
+## 1. Design Principles
+
+These principles govern both modes. They are derived from BS-055 first-principles analysis and validated against industry standard exam platforms (USMLE/NBME, Moodle, Pearson VUE).
+
+1. **"Submit" means one thing per mode.** In tutor mode, Submit = "reveal feedback for this question." In exam mode, Submit = "finalize the entire exam." There is no per-question submit in exam mode.
+2. **Buttons don't move.** Action bar slots are fixed per mode. The user builds spatial memory — shifting button positions causes misclicks.
+3. **What you see is what gets saved.** If the UI shows a highlighted selection, that selection must be durable. A visual state that silently disappears on navigation is a contract violation.
+4. **Exam answers are drafts until the exam is submitted.** Like a paper exam — circle, erase, re-circle freely until you hand it in. Nothing is locked until `Submit exam`.
+5. **Tutor answers are locked after feedback.** Once you see the correct answer, your response is permanently recorded. This prevents gaming.
+
+---
+
+## 2. Tutor Mode Contract
+
+### Mental model
+
+Flashcard-style learning. Submit gates the feedback reveal. Each question is a self-contained learn-then-advance cycle.
+
+### Flow
+
+```text
+Question displayed
+  → User selects a choice
+  → User clicks Submit
+  → Feedback appears (correct/incorrect, explanation, clinical pearl)
+  → Answer is locked — choices become non-interactive
+  → User clicks Next to advance
+```
+
+### Action bar layout
+
+**Before submit (answer selected):**
+```text
+[ Submit ]  [ Next (outline) ]  [ Bookmark ]
+```
+
+**After submit (feedback visible):**
+```text
+[           [ Next (default) ]  [ Bookmark ]
+```
+
+**Q1 (no Previous):**
+```text
+[spacer]  [ Submit / Next ]  [ Bookmark ]
+```
+
+**Contract rules:**
+- Submit occupies position 1. Hidden after feedback is revealed (becomes spacer).
+- Next occupies position 2. Always visible when there are more questions. Variant changes from outline → default after submit to signal "advance."
+- Bookmark occupies position 3.
+- Previous is hidden in tutor mode (linear progression only).
+
+### Persistence
+
+- Answer is persisted via `submitAnswer` when Submit is clicked. One-shot, permanent.
+- `attempts` table unique constraint `(practiceSessionId, questionId)` enforces single-answer-per-question.
+- `timeSpentSeconds` = `now - questionLoadedAt`, captured at submit time.
+
+### Locking
+
+- Per-question, on submit. Once feedback is shown, the answer cannot be changed.
+- This is correct because the user has seen the correct answer.
+
+### Current state vs proposed
+
+Tutor mode is **unchanged** by BS-055. The current implementation matches this contract, with one exception:
+
+**Known issue (AF-5):** Next is currently visible and clickable before submit. If clicked pre-submit, the selected answer is silently discarded (`runLoadQuestionFlow` resets `selectedChoiceId` at `question-flow-actions.ts:71`). This is a low-severity UX issue in tutor mode because users naturally click Submit first to see feedback, but it should be guarded — either disable Next pre-submit, or save the selection before navigating.
+
+---
+
+## 3. Exam Mode Contract (Proposed — BS-055)
+
+### Mental model
+
+Paper exam. Select answers, navigate freely, change your mind, hand it in when done.
+
+### Flow
+
+```text
+Question displayed
+  → User may select a choice (local draft, highlighted)
+  → User clicks Next / Previous / navigator button / Review answers
+  → Leaving the question persists the current selection as a draft (if one exists)
+  → User may revisit any question and change the draft answer freely
+  → Review stage shows answered / unanswered / marked counts
+  → "Submit exam" finalizes all answers in a single transaction
+  → Feedback and scores become visible
+```
+
+### Action bar layout
+
+**Any non-last question:**
+```text
+[ Previous ]  [ Next ]  [ Mark for review ]
+```
+
+**Last question:**
+```text
+[ Previous ]  [ Review answers ]  [ Mark for review ]
+```
+
+**Header (every question):**
+```text
+                                          [ Review answers ]
+```
+
+**Contract rules:**
+- Previous always occupies position 1 (hidden on Q1 with spacer, per BS-037 pattern).
+- Position 2 is the sequential progression control: `Next` on non-last questions, `Review answers` on the last question.
+- `Mark for review` always occupies position 3.
+- `Review answers` also lives in the header as a persistent escape hatch — accessible from any question.
+- The last-question duplication of `Review answers` (header + position 2) is intentional. Same label, same destination. Replaces the current harmful pattern where `Review answers` appears only after a dead-end submit state.
+- Next is always enabled. No selection = skip (navigate without saving). Selection exists = save draft and advance.
+- **No Submit button in the action bar.** The only submit is `Submit exam` inside the review stage.
+
+### Persistence model: Save-as-draft + finalize
+
+This follows the Moodle question engine pattern and aligns with how USMLE/NBME, LSAT, and Pearson VUE handle mutable exam answers. The core idea: exam answers live as **drafts** until the user submits the entire exam, at which point they are **finalized** in a single transaction.
+
+#### Draft-save triggers
+
+| Trigger | What it catches |
+|---------|-----------------|
+| **Navigation boundary** (Next, Previous, navigator jump) | User moves on — save current selection |
+| **Review stage entry** (header or last-question button) | User wants to review — save current question first |
+| **Periodic autosave** (every 30-60 seconds, future enhancement) | User sits on one question for a long time, then crashes |
+| **`visibilitychange` / `beforeunload`** (future enhancement) | Tab switch, browser close |
+
+The navigation boundary is the minimum viable persistence point. Autosave and visibility-change saves are recommended follow-ups for crash resilience but are not required for the initial implementation.
+
+#### Draft storage
+
+Drafts are stored in `questionStates` within `paramsJson` on the `practice_sessions` table. The existing `latestSelectedChoiceId` field can be repurposed for draft state in exam mode, since it's currently only populated after submit.
+
+A new per-question field `draftSelectedChoiceId` (or repurpose of existing field with mode-aware semantics) stores the user's current selection. This field is freely overwritable while the session is `in_progress`.
+
+#### Finalization
+
+When the user clicks `Submit exam` in the review stage:
+
+1. Save the current question's selection (if any unsaved draft exists).
+2. In a single database transaction:
+   - For each question with a draft answer: call `submitAnswer` (creates the `attempts` row, grades, updates `questionStates` with final `latestSelectedChoiceId`, `latestIsCorrect`, `latestAnsweredAt`).
+   - Call `EndPracticeSession` to compute totals and transition session to `completed`.
+3. Return results. Feedback and scores become visible.
+
+This preserves the existing `attempts` table constraint — each question gets exactly one `submitAnswer` call, but it happens at finalization rather than during the exam.
+
+#### Per-question time accumulation
+
+Current model: `timeSpentSeconds = now - questionLoadedAt` (single-shot, captured on submit).
+
+**Proposed model: Stopwatch accumulation.**
+
+Two fields per question in client state:
+- `cumulativeMs` (number) — total time spent across all visits
+- `enteredAt` (timestamp, nullable) — when the current visit started
+
+```text
+On enter question:  enteredAt = Date.now()
+On leave question:  cumulativeMs += (Date.now() - enteredAt); enteredAt = null
+On draft save:      persist cumulativeMs alongside the draft choiceId
+On finalize:        timeSpentSeconds = Math.floor(cumulativeMs / 1000)
+```
+
+This handles revisits naturally: visit Q1 for 30s → jump to Q3 → come back to Q1 for 20s → Q1 total = 50s.
+
+### Locking
+
+- **No per-question locking during the exam.** Answers are freely changeable.
+- **Exam-level locking on `Submit exam`.** All answers become permanent. Feedback is revealed.
+- This matches every major exam platform: USMLE, NBME, LSAT, Moodle, Pearson VUE.
+
+### Current state vs proposed
+
+The current implementation differs significantly. BS-055 documents the full gap:
+
+| Aspect | Current | Proposed |
+|--------|---------|----------|
+| Per-question Submit | Present | Removed |
+| Answer saved when | On Submit click | On navigation boundary |
+| Answer mutability | Locked permanently on Submit | Freely changeable until exam finalization |
+| Auto-advance | After submit (non-last Q) | Removed |
+| Next pre-submit | Visible but silently discards selection (AF-5) | Visible and saves draft on click |
+| Button positions | Shift between states | Fixed slots |
+| Time tracking | Single-shot on submit | Cumulative across visits |
+| Finalization | Per-question | Batch on Submit exam |
+
+---
+
+## 4. Quick Practice Contract
+
+### Mental model
+
+Lightweight, no-session question flow. Submit → see feedback → get another question.
+
+### Flow
+
+```text
+Question displayed
+  → User selects a choice
+  → User clicks Submit
+  → Feedback appears immediately
+  → Next button appears (or "Try again")
+  → User clicks Next to get another question
+```
+
+### Contract rules
+
+- Next is gated behind submit (not visible pre-submit). This is correct and safe.
+- No session state, no persistence beyond the `attempts` table row.
+- No navigator, no Previous.
+
+### Current state
+
+Quick Practice matches its contract. No changes needed (AF-5 safe — Next is hidden pre-submit).
+
+---
+
+## 5. Post-Session Flows
+
+### Session summary
+
+After a session ends (tutor or exam), the user sees a summary page with:
+- Stats cards (answered, correct, accuracy, duration)
+- Per-question breakdown
+- CTAs: "Review your answers," "Back to Practice," "View in History"
+
+### Summary → Question review
+
+"Review your answers" navigates to the question review page (`/app/questions/[slug]?mode=review`).
+
+**Known issue (AF-4):** The current summary CTA passes `from=history` as the origin, so the question review page resolves its back link to `/app/history?tab=sessions` instead of back to the session summary. This is a navigation dead-end.
+
+**Required fix:** Summary-launched review must carry a session-summary-aware origin so the back link returns to the summary route, not History.
+
+### Question review page
+
+- Color-coded navigator (green = correct, red = incorrect, outline = unanswered)
+- Full feedback content (explanation, clinical pearl, references)
+- Bookmark action available (per BS-053)
+- Navigation between questions in the session
+
+**Known issue (AF-6):** Post-exam question review currently exposes `Practice Again` / `Try Again` reattempt actions, which weakens exam finality. Whether session-review reattempt should be suppressed for exam sessions is a separate follow-up concern.
+
+---
+
+## 6. Shared Component Boundaries
+
+Both modes share rendering components but must have separate action contracts. The following table defines the boundary:
+
+| Component | Shared Across Modes | Mode-Specific Behavior |
+|-----------|--------------------|-----------------------|
+| `QuestionCard` | Yes — renders stem + choices | Exam allows re-selection on revisit; tutor locks after submit |
+| `ChoiceButton` | Yes — renders individual choice | State variants differ (exam: selected/unselected only; tutor: selected/correct/incorrect) |
+| `QuestionNavigator` | Exam only | N/A for tutor |
+| `PracticeView` action bar | Shared component | **Must branch explicitly.** Tutor: Submit/Next/Bookmark. Exam: Previous/Next/Mark-for-review. Do not evolve as a single conditional matrix. |
+| `question-flow-actions.ts` | Shared load logic | **Must branch on save.** Tutor: one-shot `submitAnswer`. Exam: draft-save on navigation boundary. |
+| Review stage | Exam only | N/A for tutor |
+| Feedback display | Shared rendering | Timing gated by mode (immediate vs deferred) |
+
+---
+
+## Related Documents
+
+- [Practice Modes](./practice-modes.md) — lifecycle, grading, concurrency (data layer)
+- [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md) — when correctness/explanations are exposed
+- [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md) — full problem analysis, decisions, and audit findings
+- [Bookmark Surface Policy](../frontend/bookmark-surface-policy.md) — where bookmark appears per surface

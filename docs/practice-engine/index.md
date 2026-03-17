@@ -92,6 +92,7 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 | [Question Rendering Architecture](./question-rendering-architecture.md) | How questions are rendered, navigated, and state-managed across all 6 viewing contexts. Shared vs context-specific components, hydration/retry state flows, navigation patterns. |
 | [Retry Logic](./retry-logic.md) | Canonical retry/reattempt behavior across tutor, exam, quick practice, history, dashboard, and bookmarks; includes runtime topology, provenance contract, tracer bullets, and acceptance status. |
 | [Ordering Policy](./ordering-policy.md) | Canonical question and choice ordering rules across all practice paths. Design principles, per-path ordering contracts, domain service roles, and anti-patterns. |
+| [Interaction Contracts](./interaction-contracts.md) | Click-by-click UI contracts for tutor, exam, and quick practice modes. Buttons, persistence boundaries, locking rules, navigation, post-session flows. Proposed exam redesign from BS-055. |
 
 ---
 
@@ -103,6 +104,7 @@ These documents define cross-layer invariants. If other docs conflict, these win
 |--------|----------------|------------|
 | Exam answer secrecy (active exam = no correctness/explanation exposure) | [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md) | Use cases, repositories, controllers, frontend rendering, test contracts |
 | Ordering determinism (question/choice ordering) | [Ordering Policy](./ordering-policy.md) | Session start, quick practice, review routes, rendering contracts |
+| Mode interaction contracts (buttons, persistence, locking) | [Interaction Contracts](./interaction-contracts.md) | PracticeView action bar, question-flow-actions, session hooks, post-session navigation |
 
 ---
 

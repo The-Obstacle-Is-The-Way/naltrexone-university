@@ -310,9 +310,9 @@ Submit stays in tutor mode because it serves a real purpose: gating feedback rev
 
 ## Deliverables
 
-### Deliverable 1: Canonical interaction-contract doc
+### Deliverable 1: Canonical interaction-contract doc (DONE)
 
-Write a dedicated interaction contract doc at `docs/practice-engine/interaction-contracts.md`, then link to it from `docs/practice-engine/practice-modes.md`.
+Written at [`docs/practice-engine/interaction-contracts.md`](../practice-engine/interaction-contracts.md), linked from `practice-modes.md`.
 
 **Why dedicated instead of expanding `practice-modes.md`:** the current modes doc is lifecycle/data-flow oriented. The missing artifact is a click-by-click UI contract. That is large enough, and important enough, to deserve its own canonical page.
 
@@ -377,6 +377,18 @@ Code verification shows `PracticeView` already renders `Next` before submit. In 
 
 That means a selected answer looks committed, but is silently dropped if the user presses the wrong forward control. This is a core contract bug and should be tracked explicitly in BS-055.
 
+**Scope audit (2026-03-17):** The root cause is `runLoadQuestionFlow` in `question-flow-actions.ts:71`, which unconditionally resets `selectedChoiceId` to `null` on every navigation — regardless of whether the answer was submitted.
+
+| Flow | Vulnerable? | Notes |
+|------|------------|-------|
+| Exam mode Next | **YES** | Next visible pre-submit, discards selection |
+| Exam navigator jumps | **YES** | Same code path as Next |
+| Tutor mode Next | **YES (low severity)** | Same code path, but users naturally submit first to see feedback |
+| Quick Practice | No | Next is gated behind submit (not visible pre-submit) |
+| Question Review | No | Uses Link-based navigation (page reload) |
+
+The proposed draft-save-on-navigation model fixes this for exam mode. Tutor mode should also guard against this (either disable Next pre-submit, or save before navigating), but that is a lower-priority follow-up.
+
 #### AF-6: Post-submit session review still exposes reattempt actions (Cross-cutting, Medium)
 
 Current question review code still renders `Practice Again` / `Try Again` and wires `onReattempt` for session-review contexts via `retryOrigin = 'session_review'`. That is outside the active exam-session loop, but it still weakens exam finality and deserves a separate follow-up if not handled in the eventual spec.
@@ -411,3 +423,6 @@ Current question review code still renders `Practice Again` / `Try Again` and wi
 | 2026-03-17 | Code verification corrected screenshot-only assumptions | Current source shows Next is already visible pre-submit and can discard a highlighted answer. That contract bug is more important than the earlier label-inconsistency claim. |
 | 2026-03-17 | `Practice Again` / `Try Again` inconsistency de-scoped from BS-055 | Current source derives the label from correctness and tests cover the expected standalone-review behavior. The active post-exam issues are back-targeting and session-review reattempt semantics, not label text. |
 | 2026-03-17 | Biggest remaining implementation risk identified | Mutable exam answers require a draft-save path plus a per-question time-accumulation model. Without that, final attempts will have broken or undercounted `timeSpentSeconds`. |
+| 2026-03-17 | AF-5 scope audit completed | Silent-discard bug affects exam Next, exam navigator jumps, AND tutor Next (low severity). Quick Practice and Question Review are safe. Root cause: `runLoadQuestionFlow` unconditionally resets `selectedChoiceId`. |
+| 2026-03-17 | Industry research completed | USMLE/NBME, LSAT, Moodle, Pearson VUE all use save-as-draft + batch finalize. Moodle's two-level state machine (session + per-question) maps directly to our needs. Stopwatch accumulation model recommended for per-question time tracking. |
+| 2026-03-17 | Interaction contract doc written | `docs/practice-engine/interaction-contracts.md` — canonical click-by-click contracts for tutor, exam, and quick practice modes. Linked from `practice-modes.md`. |
