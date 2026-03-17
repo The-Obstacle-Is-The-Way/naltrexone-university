@@ -3,6 +3,7 @@ import { ROUTES } from '@/lib/routes';
 import { getSubscriptionPlanFromPriceId } from '@/src/adapters/config/stripe-prices';
 import { stripeSubscriptionStatusToSubscriptionStatus } from '@/src/adapters/gateways/stripe';
 import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
+import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
 import { determineNonEntitledReason } from '@/src/domain/services';
 import {
   isEntitledStatus,
@@ -22,12 +23,6 @@ export type { CheckoutSuccessDeps, CheckoutSuccessTransaction };
 export { getCheckoutSuccessDeps };
 
 const CHECKOUT_ERROR_ROUTE = `${ROUTES.PRICING}?checkout=error`;
-const STRIPE_RETRY_OPTIONS = {
-  maxAttempts: 3,
-  initialDelayMs: 100,
-  factor: 2,
-  maxDelayMs: 1000,
-} as const;
 
 type RetryLogInput = {
   attempt: number;
@@ -133,7 +128,7 @@ export async function syncCheckoutSuccess(
         expand: ['subscription'],
       }),
     {
-      ...STRIPE_RETRY_OPTIONS,
+      ...DEFAULT_RETRY_OPTIONS,
       shouldRetry: isTransientExternalError,
       onRetry: createStripeOnRetry(d.logger, { sessionId }),
     },
@@ -156,7 +151,7 @@ export async function syncCheckoutSuccess(
   const subscription = await retry(
     () => d.stripe.subscriptions.retrieve(subscriptionId),
     {
-      ...STRIPE_RETRY_OPTIONS,
+      ...DEFAULT_RETRY_OPTIONS,
       shouldRetry: isTransientExternalError,
       onRetry: createStripeOnRetry(d.logger, { subscriptionId }),
     },

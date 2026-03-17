@@ -3,12 +3,13 @@ import {
   getThrownErrorMessage,
 } from '@/app/(app)/app/practice/practice-logic';
 import type { PracticeFilters } from '@/app/(app)/app/practice/practice-page-types';
+import { STANDARD_MUTATION_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import { toPracticeSessionRoute } from '@/lib/routes';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { StartPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
 
-const SESSION_START_TIMEOUT_MS = 15_000;
+const SESSION_START_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
 
 export const SESSION_COUNT_MIN = 1;
 export const SESSION_COUNT_MAX = 100;

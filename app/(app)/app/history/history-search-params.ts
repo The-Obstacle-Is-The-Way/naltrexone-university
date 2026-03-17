@@ -1,5 +1,6 @@
 import { ROUTES } from '@/lib/routes';
 import { normalizeSearchParam } from '@/lib/search-params';
+import { MAX_PAGINATION_LIMIT } from '@/src/adapters/shared/validation-limits';
 
 export type HistoryTab = 'sessions' | 'questions';
 export type SessionModeFilter = 'all' | 'tutor' | 'exam';
@@ -45,7 +46,7 @@ export function parseNonNegativeInt(
 
 export function parseLimit(value: string | string[] | undefined): number {
   const limit = parseNonNegativeInt(value, 20);
-  return Math.min(Math.max(limit, 1), 100);
+  return Math.min(Math.max(limit, 1), MAX_PAGINATION_LIMIT);
 }
 
 export function parseDifficultyFilter(

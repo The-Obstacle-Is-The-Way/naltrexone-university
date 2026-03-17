@@ -9,10 +9,10 @@ import type {
 import type { Logger } from '@/src/application/ports/logger';
 import { DAY_MS } from '@/src/domain/services';
 import type { DrizzleDb } from '../shared/database-types';
+import { PRUNE_BATCH_LIMIT } from '../shared/prune-constants';
 
 const SECOND_MS = 1000;
 const PRUNE_RETENTION_DAYS = 90;
-const PRUNE_BATCH_LIMIT = 100;
 const NOOP_LOGGER: Logger = {
   debug: () => undefined,
   info: () => undefined,

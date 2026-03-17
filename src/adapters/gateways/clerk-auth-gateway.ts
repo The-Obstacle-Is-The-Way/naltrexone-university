@@ -1,4 +1,5 @@
 import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
+import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
 import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { UserRepository } from '@/src/application/ports/repositories';
@@ -46,10 +47,7 @@ export class ClerkAuthGateway implements AuthGateway {
 
   async getCurrentUser(): Promise<User | null> {
     const clerkUser = await retry(() => this.deps.getClerkUser(), {
-      maxAttempts: 3,
-      initialDelayMs: 100,
-      factor: 2,
-      maxDelayMs: 1000,
+      ...DEFAULT_RETRY_OPTIONS,
       shouldRetry: isTransientExternalError,
     });
     if (!clerkUser) return null;

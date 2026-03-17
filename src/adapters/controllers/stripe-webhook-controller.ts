@@ -6,6 +6,7 @@ import type {
   StripeEventRepository,
   SubscriptionRepository,
 } from '@/src/application/ports/repositories';
+import { STACK_TRACE_LIMIT } from '../shared/error-logging-constants';
 
 export type StripeWebhookInput = {
   rawBody: string;
@@ -29,7 +30,6 @@ export type StripeWebhookDeps = {
 
 type StripeWebhookTxResult = { ok: true } | { ok: false; error: unknown };
 
-const STACK_TRACE_LIMIT = 1000;
 const STRIPE_EVENTS_RETENTION_MS = 90 * 86_400_000;
 const STRIPE_EVENTS_PRUNE_LIMIT = 100;
 

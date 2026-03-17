@@ -14,6 +14,7 @@ import {
   type SessionUnansweredReveal,
 } from '@/app/(app)/app/questions/[slug]/question-page-logic';
 import { selectChoiceIfAllowed } from '@/app/(app)/app/shared/question-guards';
+import { STANDARD_READ_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import { reportClientError } from '@/lib/report-client-error';
 import type { QuestionMode, QuestionOrigin } from '@/lib/routes';
 import { useIsMounted } from '@/lib/use-is-mounted';
@@ -30,6 +31,9 @@ import {
 } from './use-question-page-bookmarks';
 import { useQuestionPagePreviousAttempt } from './use-question-page-previous-attempt';
 import { useQuestionPageSessionNavigation } from './use-question-page-session-navigation';
+
+const SESSION_REVIEW_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
+const BOOKMARK_LOOKUP_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 
 export type { QuestionPageBookmarkStatus } from './use-question-page-bookmarks';
 

@@ -13,6 +13,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 const ROUTE = '/api/cron/reconcile-stripe-subscriptions';
+const RECONCILE_DEFAULT_LIMIT = 100;
 
 type AuthorizationTokenResult =
   | { ok: true; token: string }
@@ -123,7 +124,7 @@ export async function POST(req: Request) {
 
   const url = new URL(req.url);
   const limit = Math.min(
-    parseNonNegativeInt(url.searchParams.get('limit'), 100),
+    parseNonNegativeInt(url.searchParams.get('limit'), RECONCILE_DEFAULT_LIMIT),
     RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT,
   );
   const offset = parseNonNegativeInt(url.searchParams.get('offset'), 0);

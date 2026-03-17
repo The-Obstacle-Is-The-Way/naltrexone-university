@@ -4,6 +4,10 @@ import {
 } from '@/app/(app)/app/practice/practice-logic';
 import { runTransitionedAsyncAction } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import type { AsyncLoadState } from '@/app/(app)/app/shared/load-state';
+import {
+  STANDARD_MUTATION_TIMEOUT_MS,
+  STANDARD_READ_TIMEOUT_MS,
+} from '@/app/(app)/app/shared/timeout-tiers';
 import { reportClientError } from '@/lib/report-client-error';
 import type { QuestionMode, QuestionOrigin } from '@/lib/routes';
 import { withTimeout } from '@/lib/with-timeout';
@@ -13,9 +17,9 @@ import type { GetPreviousAttemptOutput } from '@/src/application/use-cases/get-p
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import type { AttemptRetryOrigin } from '@/src/domain/entities';
 
-const QUESTION_LOAD_TIMEOUT_MS = 15_000;
-const ANSWER_SUBMIT_TIMEOUT_MS = 15_000;
-const PREVIOUS_ATTEMPT_TIMEOUT_MS = 10_000;
+const QUESTION_LOAD_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
+const ANSWER_SUBMIT_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
+const PREVIOUS_ATTEMPT_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 
 export type LoadState = AsyncLoadState;
 

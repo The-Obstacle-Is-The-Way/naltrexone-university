@@ -8,6 +8,10 @@ import {
   runLoadQuestionFlow,
   runSubmitAnswerFlow,
 } from '@/app/(app)/app/practice/shared/question-flow-actions';
+import {
+  STANDARD_MUTATION_TIMEOUT_MS,
+  STANDARD_READ_TIMEOUT_MS,
+} from '@/app/(app)/app/shared/timeout-tiers';
 import { reportClientError } from '@/lib/report-client-error';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
@@ -24,8 +28,8 @@ import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answ
 // It is a deep module (Ousterhout) with a single responsibility: orchestrate practice-session question lifecycle flows (load, submit, auto-advance, end session, and review loading effects).
 // Splitting would separate tightly coupled async state-transition logic and increase race-condition risk between idempotency, timeout, and mounted-state guards.
 // Reviewed in DEBT-224 audit (2026-02-18).
-const END_SESSION_TIMEOUT_MS = 15_000;
-const SESSION_REVIEW_TIMEOUT_MS = 10_000;
+const END_SESSION_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
+const SESSION_REVIEW_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 type SessionIdInput = { sessionId: string };
 type EndPracticeSessionActionInput = SessionIdInput & {
   idempotencyKey?: string;

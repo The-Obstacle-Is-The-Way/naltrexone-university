@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { STACK_TRACE_LIMIT } from '@/src/adapters/shared/error-logging-constants';
 import { ApplicationError, isApplicationError } from '@/src/application/errors';
 import type { Logger } from '@/src/application/ports/logger';
 import type {
@@ -137,8 +138,6 @@ function getPrimaryEmailOrNull(data: ClerkUserDataLike): string | null {
     getStringOrNull(first?.email_address)
   );
 }
-
-const STACK_TRACE_LIMIT = 1000;
 
 type ClerkWebhookPostCommitAction = {
   eventId: string;

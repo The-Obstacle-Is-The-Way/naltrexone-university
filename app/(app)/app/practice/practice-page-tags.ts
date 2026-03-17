@@ -1,8 +1,9 @@
+import { STANDARD_READ_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import { shouldReportClientError } from '@/lib/report-client-error';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 
-const TAGS_LOAD_TIMEOUT_MS = 10_000;
+const TAGS_LOAD_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 
 export function createTagsEffect<T>(input: {
   getTagsFn: (input: unknown) => Promise<ActionResult<{ rows: T[] }>>;

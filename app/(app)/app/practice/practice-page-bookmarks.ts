@@ -1,8 +1,9 @@
+import { STANDARD_READ_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import { shouldReportClientError } from '@/lib/report-client-error';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 
-const BOOKMARKS_LOAD_TIMEOUT_MS = 10_000;
+const BOOKMARKS_LOAD_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 
 type SetTimeoutFn = (
   fn: () => void,
