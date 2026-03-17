@@ -93,7 +93,7 @@ export function SessionSummaryView({
           <div className="mt-3">
             <SessionBreakdownList
               rows={summaryReview.rows}
-              from="history"
+              from="summary"
               sessionId={summary.sessionId}
             />
           </div>
@@ -105,7 +105,7 @@ export function SessionSummaryView({
           <Button asChild className="rounded-full">
             <Link
               href={toQuestionRoute(firstReviewableSlug, {
-                from: 'history',
+                from: 'summary',
                 mode: 'review',
                 sessionId: summary.sessionId,
               })}

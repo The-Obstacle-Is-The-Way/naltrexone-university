@@ -1253,6 +1253,12 @@ describe('usePracticeSessionPageController (browser)', () => {
 
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
     await screen.getByRole('button', { name: 'submit-answer' }).click();
+    await expect
+      .element(screen.getByTestId('has-submit-result'))
+      .toHaveTextContent('true');
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
 
     await screen.getByRole('button', { name: 'review-answers' }).click();
     await expect

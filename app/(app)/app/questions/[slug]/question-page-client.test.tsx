@@ -184,6 +184,30 @@ describe('QuestionView', () => {
     expect(backLink?.textContent?.trim()).toBe('Back to Session');
   });
 
+  it('uses a summary-aware back link when origin=summary and sessionId is present', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        {...createBaseProps()}
+        origin="summary"
+        sessionId="session_123"
+        sessionNavigation={{
+          ...sharedSessionNavigation,
+          from: 'summary',
+        }}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const summaryLinks = Array.from(doc.querySelectorAll('a')).filter(
+      (link) => link.textContent?.trim() === 'Back to Summary',
+    );
+
+    expect(summaryLinks).toHaveLength(2);
+    for (const link of summaryLinks) {
+      expect(link.getAttribute('href')).toBe('/app/practice/session_123');
+    }
+    expect(html).toContain('Reviewing a question from your session summary.');
+  });
+
   it('uses a sessions-tab back link when origin=history and sessionId is present', () => {
     const html = renderToStaticMarkup(
       <QuestionView

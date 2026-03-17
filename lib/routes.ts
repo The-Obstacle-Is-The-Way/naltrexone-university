@@ -18,7 +18,12 @@ export function toPracticeSessionRoute(sessionId: string): string {
   return `${ROUTES.APP_PRACTICE}/${sessionId}`;
 }
 
-export type QuestionOrigin = 'dashboard' | 'bookmarks' | 'practice' | 'history';
+export type QuestionOrigin =
+  | 'dashboard'
+  | 'bookmarks'
+  | 'practice'
+  | 'history'
+  | 'summary';
 
 export type QuestionMode = 'review';
 

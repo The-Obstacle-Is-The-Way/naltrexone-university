@@ -390,7 +390,7 @@ Plus Chrome agent visual verification of the full exam flow (start exam → answ
 | 4 | **Done** | `b8a28c1b` | GetPracticeSessionReview, GetNextQuestion, GetIncompletePracticeSession draft-aware. 6 files, 221 insertions. |
 | 5 | **Done** | `30471043` | ExamActionBar/TutorActionBar split, maybeAutoAdvanceAfterSubmit deleted. 7 files, 364 insertions. |
 | 6 | **Done** | `edbb472d` | maybeSaveDraftBeforeNavigation, stopwatch accumulation, draft restoration on revisit, server action wiring. 21 files, 1074 insertions. |
-| 7 | **Not started** | — | Review stage still routes exam submit through endPracticeSession instead of finalizeExamAnswers. |
-| 8 | **Not started** | — | Summary back-target still passes `from: 'history'`. |
+| 7 | **Done** | `0dd0754d` | Review-stage submit now branches exam → `finalizeExamAnswers` and tutor → `endPracticeSession`; controller wiring and browser coverage updated. |
+| 8 | **Done** | `—` | Summary CTA + breakdown links now pass `from=summary`, and question review resolves that origin to `Back to Summary` via `/app/practice/[sessionId]`. |
 
-**Gate status (Stages 1-6):** `pnpm typecheck` clean, `pnpm lint` clean, `pnpm test --run` 2119/2119 passing (22 new tests added). Browser tests and build not yet verified for the full gate.
+**Gate status (all stages):** `pnpm typecheck` clean, `pnpm lint` clean, `pnpm test --run` 2123/2123 passing, `pnpm test:browser` 177/177 passing, `pnpm build` passing.

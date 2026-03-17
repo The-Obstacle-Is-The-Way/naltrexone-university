@@ -213,5 +213,60 @@ describe('SessionSummaryView', () => {
       'Back to Practice',
       'View in History',
     ]);
+
+    const reviewLink = Array.from(doc.querySelectorAll('a')).find(
+      (link) => link.textContent?.trim() === 'Review your answers',
+    );
+    expect(reviewLink?.getAttribute('href')).toBe(
+      '/app/questions/q-1?from=summary&mode=review&sessionId=session-1',
+    );
+  });
+
+  it('threads summary origin through breakdown links', () => {
+    const html = renderToStaticMarkup(
+      <SessionSummaryView
+        summary={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          questionCount: 2,
+          endedAt: '2026-02-07T00:00:00.000Z',
+          totals: {
+            answered: 2,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 120,
+          },
+        }}
+        review={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          totalCount: 2,
+          answeredCount: 2,
+          markedCount: 0,
+          rows: [
+            {
+              isAvailable: true,
+              questionId: 'q1',
+              slug: 'q-1',
+              stemMd: 'Stem for q1',
+              difficulty: 'easy',
+              order: 1,
+              isAnswered: true,
+              isCorrect: true,
+              markedForReview: false,
+            },
+          ],
+        }}
+        reviewLoadState={{ status: 'ready' }}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const breakdownLink = Array.from(doc.querySelectorAll('a')).find((link) =>
+      link.textContent?.includes('Stem for q1'),
+    );
+
+    expect(breakdownLink?.getAttribute('href')).toBe(
+      '/app/questions/q-1?from=summary&mode=review&sessionId=session-1',
+    );
   });
 });

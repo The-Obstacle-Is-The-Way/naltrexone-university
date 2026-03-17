@@ -132,7 +132,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain('Question breakdown');
     expect(html).toContain('Stem for q1');
     expect(html).toContain(
-      'href="/app/questions/q-1?from=history&amp;mode=review&amp;sessionId=session-1"',
+      'href="/app/questions/q-1?from=summary&amp;mode=review&amp;sessionId=session-1"',
     );
     expect(html).toContain('[Question no longer available]');
   });
@@ -202,7 +202,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     ]);
     expect(html).toContain('Review your answers');
     expect(html).toContain(
-      'href="/app/questions/q-1?from=history&amp;mode=review&amp;sessionId=session-1"',
+      'href="/app/questions/q-1?from=summary&amp;mode=review&amp;sessionId=session-1"',
     );
   });
 

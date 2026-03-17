@@ -15,6 +15,12 @@ describe('lib/routes', () => {
     );
   });
 
+  it("supports 'summary' origin query parameter for question routes", () => {
+    expect(toQuestionRoute('opioid-use-disorder', { from: 'summary' })).toBe(
+      '/app/questions/opioid-use-disorder?from=summary',
+    );
+  });
+
   it('supports mode query parameters for question routes', () => {
     expect(toQuestionRoute('opioid-use-disorder', { mode: 'review' })).toBe(
       '/app/questions/opioid-use-disorder?mode=review',
