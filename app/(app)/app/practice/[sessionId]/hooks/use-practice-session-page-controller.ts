@@ -9,6 +9,8 @@ import {
 import { reportClientError } from '@/lib/report-client-error';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import {
+  endPracticeSession,
+  getPracticeSessionReview,
   getPracticeSessionSummary,
   setPracticeSessionQuestionMark,
 } from '@/src/adapters/controllers/practice-controller';
@@ -49,6 +51,9 @@ export function usePracticeSessionPageController(
     setLoadState: questionFlow.setLoadState,
     resetQuestionState: questionFlow.resetQuestionState,
     loadSpecificQuestion: questionFlow.onNavigateQuestion,
+    endPracticeSessionFn: endPracticeSession,
+    getPracticeSessionReviewFn: getPracticeSessionReview,
+    getPracticeSessionSummaryFn: getPracticeSessionSummary,
   });
 
   useEffect(() => {

@@ -781,6 +781,21 @@ describe('practice-controller', () => {
       expect(deps.getPracticeSessionSummaryUseCase.inputs).toEqual([]);
     });
 
+    it('returns UNSUBSCRIBED when not entitled', async () => {
+      const deps = createDeps({ isEntitled: false });
+
+      const result = await getPracticeSessionSummary(
+        { sessionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNSUBSCRIBED' },
+      });
+      expect(deps.getPracticeSessionSummaryUseCase.inputs).toEqual([]);
+    });
+
     it('returns CONFLICT when the use case rejects active sessions', async () => {
       const deps = createDeps({
         summaryThrows: new ApplicationError(

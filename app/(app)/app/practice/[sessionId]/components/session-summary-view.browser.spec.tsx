@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
+import { ROUTES, toQuestionRoute } from '@/lib/routes';
 import { SessionSummaryView } from './session-summary-view';
 
 test('renders summary totals and per-question breakdown', async () => {
@@ -58,15 +59,19 @@ test('renders summary totals and per-question breakdown', async () => {
     .toBeVisible();
   await expect
     .element(screen.getByRole('link', { name: 'View in History' }))
-    .toHaveAttribute('href', '/app/history');
+    .toHaveAttribute('href', ROUTES.APP_HISTORY);
   await expect
     .element(screen.getByRole('link', { name: 'Back to Practice' }))
-    .toHaveAttribute('href', '/app/practice');
+    .toHaveAttribute('href', ROUTES.APP_PRACTICE);
   await expect
     .element(screen.getByRole('link', { name: 'Review your answers' }))
     .toHaveAttribute(
       'href',
-      '/app/questions/q-1?from=history&mode=review&sessionId=session-1',
+      toQuestionRoute('q-1', {
+        from: 'history',
+        mode: 'review',
+        sessionId: 'session-1',
+      }),
     );
 });
 
@@ -119,6 +124,9 @@ test('renders exactly 2 tutor actions', async () => {
   await expect
     .element(screen.getByRole('link', { name: 'View in History' }))
     .toBeVisible();
+  await expect
+    .element(screen.getByRole('link', { name: 'Review your answers' }))
+    .not.toBeInTheDocument();
   await expect
     .element(screen.getByRole('link', { name: 'Back to Dashboard' }))
     .not.toBeInTheDocument();

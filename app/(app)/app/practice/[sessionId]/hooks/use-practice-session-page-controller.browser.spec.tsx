@@ -105,6 +105,9 @@ describe('usePracticeSessionPageController (browser)', () => {
   });
 
   it('bootstraps an ended tutor session into summary without loading a question', async () => {
+    getNextQuestionMock.mockImplementation(async () => {
+      throw new Error('getNextQuestion should not be called');
+    });
     getPracticeSessionSummaryMock.mockResolvedValue(
       ok({
         sessionId: 'session-1',
@@ -146,6 +149,9 @@ describe('usePracticeSessionPageController (browser)', () => {
   });
 
   it('bootstraps an ended exam session into summary without loading a question', async () => {
+    getNextQuestionMock.mockImplementation(async () => {
+      throw new Error('getNextQuestion should not be called');
+    });
     getPracticeSessionSummaryMock.mockResolvedValue(
       ok({
         sessionId: 'session-1',
@@ -185,10 +191,11 @@ describe('usePracticeSessionPageController (browser)', () => {
 
   it('loads active session questions only after summary bootstrap reports an active session', async () => {
     const callOrder: string[] = [];
+    const deferredSummary = createDeferred<ActionResult<never>>();
 
-    getPracticeSessionSummaryMock.mockImplementation(async () => {
+    getPracticeSessionSummaryMock.mockImplementation(() => {
       callOrder.push('summary');
-      return errorResult('CONFLICT', 'Practice session has not ended');
+      return deferredSummary.promise;
     });
     getNextQuestionMock.mockImplementation(async () => {
       callOrder.push('question');
@@ -217,11 +224,20 @@ describe('usePracticeSessionPageController (browser)', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('');
+    expect(getNextQuestionMock).not.toHaveBeenCalled();
+
+    deferredSummary.resolve(
+      errorResult('CONFLICT', 'Practice session has not ended'),
+    );
+
+    await expect
+      .element(screen.getByTestId('active-view'))
       .toHaveTextContent('question');
     await expect
       .element(screen.getByTestId('question-id'))
       .toHaveTextContent('question-1');
-    expect(callOrder.slice(0, 2)).toEqual(['summary', 'question']);
+    expect(callOrder).toEqual(['summary', 'question']);
   });
 
   it('recovers a summary when ending an active tutor session returns CONFLICT', async () => {

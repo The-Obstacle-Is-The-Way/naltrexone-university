@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetPracticeSessionReviewOutput } from '@/src/adapters/controllers/practice-controller';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
@@ -8,16 +9,12 @@ import {
   usePracticeSessionReviewStageState,
 } from './use-practice-session-review-stage-state';
 
-const { getPracticeSessionReviewMock, reportClientErrorMock } = vi.hoisted(
-  () => ({
-    getPracticeSessionReviewMock: vi.fn(),
-    reportClientErrorMock: vi.fn(),
-  }),
-);
-
-vi.mock('@/src/adapters/controllers/practice-controller', () => ({
-  getPracticeSessionReview: getPracticeSessionReviewMock,
-  getPracticeSessionSummary: vi.fn(),
+const getPracticeSessionReviewMock =
+  vi.fn<
+    (input: unknown) => Promise<ActionResult<GetPracticeSessionReviewOutput>>
+  >();
+const { reportClientErrorMock } = vi.hoisted(() => ({
+  reportClientErrorMock: vi.fn(),
 }));
 
 vi.mock('@/lib/report-client-error', () => ({
@@ -45,12 +42,13 @@ function createInput(
     resetQuestionState: vi.fn(),
     loadSpecificQuestion: vi.fn(),
     finalizeSession: vi.fn().mockResolvedValue(undefined),
+    getPracticeSessionReviewFn: getPracticeSessionReviewMock,
   };
 }
 
 describe('usePracticeSessionReviewStageState (browser)', () => {
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
     reportClientErrorMock.mockReset();
   });
 
@@ -217,7 +215,7 @@ describe('usePracticeSessionReviewStageState (browser)', () => {
   it('sets an error state when the controller returns an error ActionResult', async () => {
     getPracticeSessionReviewMock.mockResolvedValue({
       ok: false,
-      error: { code: 'TEST_ERROR', message: 'Review not available' },
+      error: { code: 'CONFLICT', message: 'Review not available' },
     });
 
     const input = createInput('exam');
