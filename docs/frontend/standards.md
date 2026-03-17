@@ -761,7 +761,6 @@ Contrast compliance gaps (WCAG AA) are documented in `docs/_archive/brainstormin
 |----|---------|---------|
 | — | Visual divergences from BS-035 audit are resolved. Only approved exception `D-15` (MetallicCtaButton) remains. See Pattern Registry Part 11 for historical record. | `docs/frontend/pattern-registry.md` |
 | — | History sessions expanded breakdown UI remains functionally correct but is under active redesign review for hierarchy/density/navigation clarity (BS-036). | `app/(app)/app/history/components/history-sessions-tab.tsx`, `app/(app)/app/shared/components/session-breakdown-list.tsx`, `docs/_archive/brainstorming/bs-036-history-breakdown-ux-redesign.md` |
-| [DEBT-319](../debt/debt-319-icon-size-shorthand-drift.md) | Disclosure chevrons still use `h-4 w-4` instead of the canonical `size-4` Lucide shorthand documented in §2. | `app/(app)/app/history/components/history-sessions-tab.tsx`, `app/(app)/app/practice/components/practice-session-starter.tsx` |
 | — | `Markdown.tsx` uses PascalCase filename (violates §13 kebab-case convention) | `components/markdown/Markdown.tsx` |
 
 ---

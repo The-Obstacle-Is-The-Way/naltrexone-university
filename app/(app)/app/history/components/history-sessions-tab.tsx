@@ -236,7 +236,7 @@ export function HistorySessionsTab({
                   <ChevronDown
                     aria-hidden="true"
                     className={cn(
-                      'h-4 w-4 text-foreground/60 transition-transform',
+                      'size-4 text-foreground/60 transition-transform',
                       isSelected ? 'rotate-180' : undefined,
                     )}
                   />

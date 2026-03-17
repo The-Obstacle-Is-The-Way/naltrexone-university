@@ -397,8 +397,7 @@ describe('HistorySessionsTab', () => {
     expect(toggleClassTokens.has('focus-visible:ring-[3px]')).toBe(true);
     expect(toggleClassTokens.has('focus-visible:ring-ring/50')).toBe(true);
     expect(icon).not.toBeNull();
-    expect(iconClassTokens.has('h-4')).toBe(true);
-    expect(iconClassTokens.has('w-4')).toBe(true);
+    expect(iconClassTokens.has('size-4')).toBe(true);
     expect(iconClassTokens.has('text-foreground/60')).toBe(true);
     expect(iconClassTokens.has('transition-transform')).toBe(true);
     expect(iconClassTokens.has('rotate-180')).toBe(false);
