@@ -223,9 +223,12 @@ describe('usePracticeSessionPageController (browser)', () => {
     const screen = await render(<PracticeSessionPageControllerSummaryProbe />);
 
     await expect
+      .poll(() => getPracticeSessionSummaryMock.mock.calls.length)
+      .toBe(1);
+    await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(0);
+    await expect
       .element(screen.getByTestId('active-view'))
       .toHaveTextContent('');
-    expect(getNextQuestionMock).not.toHaveBeenCalled();
 
     deferredSummary.resolve(
       errorResult('CONFLICT', 'Practice session has not ended'),
@@ -304,6 +307,70 @@ describe('usePracticeSessionPageController (browser)', () => {
     await expect
       .element(screen.getByTestId('error-message'))
       .toHaveTextContent('');
+  });
+
+  it('retries summary bootstrap before loading questions after a bootstrap error', async () => {
+    const deferredRetrySummary = createDeferred<ActionResult<never>>();
+
+    getPracticeSessionSummaryMock
+      .mockResolvedValueOnce(
+        errorResult('INTERNAL_ERROR', 'Summary bootstrap failed'),
+      )
+      .mockImplementationOnce(() => deferredRetrySummary.promise);
+    getNextQuestionMock.mockResolvedValue(
+      ok(
+        createQuestionResponse({
+          questionId: 'question-1',
+          session: {
+            mode: 'tutor',
+            index: 0,
+            total: 2,
+            isMarkedForReview: false,
+          },
+        }),
+      ),
+    );
+    mockBookmarksAndReview(
+      createReviewResponse({
+        mode: 'tutor',
+        totalCount: 2,
+        answeredCount: 0,
+        markedCount: 0,
+      }),
+    );
+
+    const screen = await render(<PracticeSessionPageControllerSummaryProbe />);
+
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('error');
+    await expect
+      .element(screen.getByTestId('error-message'))
+      .toHaveTextContent('Summary bootstrap failed');
+    expect(getPracticeSessionSummaryMock).toHaveBeenCalledTimes(1);
+    expect(getNextQuestionMock).not.toHaveBeenCalled();
+
+    await screen.getByRole('button', { name: 'try-again' }).click();
+
+    await expect
+      .poll(() => getPracticeSessionSummaryMock.mock.calls.length)
+      .toBe(2);
+    await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(0);
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('loading');
+
+    deferredRetrySummary.resolve(
+      errorResult('CONFLICT', 'Practice session has not ended'),
+    );
+
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent('question-1');
+    await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(1);
   });
 
   it('loads the current question and allows selecting a choice', async () => {

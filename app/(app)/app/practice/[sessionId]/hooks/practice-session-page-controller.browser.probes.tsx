@@ -288,6 +288,10 @@ export function PracticeSessionPageControllerSummaryProbe() {
           label: 'end-session',
           onClick: () => output.onEndSession(),
         },
+        {
+          label: 'try-again',
+          onClick: () => output.onTryAgain(),
+        },
       ])}
     </>
   );

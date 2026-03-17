@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePracticeSessionQuestionFlow } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow';
 import { maybeAutoAdvanceAfterSubmit } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import { usePracticeQuestionBookmarks } from '@/app/(app)/app/practice/hooks/use-practice-question-bookmarks';
@@ -26,6 +26,8 @@ export function usePracticeSessionPageController(
   sessionId: string,
 ): PracticeSessionPageViewProps {
   const isMounted = useIsMounted();
+  const bootstrapRequestIdRef = useRef(0);
+  const [shouldRetryBootstrap, setShouldRetryBootstrap] = useState(false);
 
   const questionFlow = usePracticeSessionQuestionFlow({
     sessionId,
@@ -56,14 +58,16 @@ export function usePracticeSessionPageController(
     getPracticeSessionSummaryFn: getPracticeSessionSummary,
   });
 
-  useEffect(() => {
-    let isStale = false;
+  const bootstrapSessionSummary = useCallback(() => {
+    const requestId = bootstrapRequestIdRef.current + 1;
+    bootstrapRequestIdRef.current = requestId;
     reviewStage.setSummary(null);
+    setShouldRetryBootstrap(false);
     questionFlow.setLoadState({ status: 'loading' });
 
     void getPracticeSessionSummary({ sessionId })
       .then((result) => {
-        if (isStale || !isMounted()) return;
+        if (requestId !== bootstrapRequestIdRef.current || !isMounted()) return;
 
         if (result.ok) {
           reviewStage.setSummary(result.data);
@@ -78,26 +82,24 @@ export function usePracticeSessionPageController(
           return;
         }
 
+        setShouldRetryBootstrap(true);
         questionFlow.setLoadState({
           status: 'error',
           message: getActionResultErrorMessage(result),
         });
       })
       .catch((error: unknown) => {
-        if (isStale || !isMounted()) return;
+        if (requestId !== bootstrapRequestIdRef.current || !isMounted()) return;
         reportClientError(error, {
           component: 'UsePracticeSessionPageController',
           action: 'bootstrapSessionSummary',
         });
+        setShouldRetryBootstrap(true);
         questionFlow.setLoadState({
           status: 'error',
           message: getThrownErrorMessage(error),
         });
       });
-
-    return () => {
-      isStale = true;
-    };
   }, [
     sessionId,
     isMounted,
@@ -107,6 +109,22 @@ export function usePracticeSessionPageController(
     questionFlow.setSessionMode,
     reviewStage.setSummary,
   ]);
+
+  useEffect(() => {
+    bootstrapSessionSummary();
+    return () => {
+      bootstrapRequestIdRef.current += 1;
+    };
+  }, [bootstrapSessionSummary]);
+
+  const onTryAgain = useCallback(() => {
+    if (shouldRetryBootstrap) {
+      bootstrapSessionSummary();
+      return;
+    }
+
+    questionFlow.onTryAgain();
+  }, [bootstrapSessionSummary, questionFlow.onTryAgain, shouldRetryBootstrap]);
 
   const isInReviewStageRef = useRef(reviewStage.isInReviewStage);
   isInReviewStageRef.current = reviewStage.isInReviewStage;
@@ -173,7 +191,7 @@ export function usePracticeSessionPageController(
     onEndSession: reviewStage.onEndSession,
     onRetryReview: reviewStage.onRetryReview,
     onRetryNavigator: reviewStage.onRetryNavigator,
-    onTryAgain: questionFlow.onTryAgain,
+    onTryAgain,
     onRetryBookmarks: bookmarks.onRetryBookmarks,
     onToggleBookmark: bookmarks.onToggleBookmark,
     onToggleMarkForReview,
