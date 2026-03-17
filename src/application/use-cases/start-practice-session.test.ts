@@ -223,6 +223,9 @@ describe('StartPracticeSessionUseCase', () => {
         latestSelectedChoiceId: string | null;
         latestIsCorrect: boolean | null;
         latestAnsweredAt: string | null;
+        draftSelectedChoiceId: string | null;
+        draftSavedAt: string | null;
+        draftCumulativeMs: number;
       }>;
     };
 
@@ -236,6 +239,9 @@ describe('StartPracticeSessionUseCase', () => {
         latestSelectedChoiceId: null,
         latestIsCorrect: null,
         latestAnsweredAt: null,
+        draftSelectedChoiceId: null,
+        draftSavedAt: null,
+        draftCumulativeMs: 0,
       })),
     );
   });

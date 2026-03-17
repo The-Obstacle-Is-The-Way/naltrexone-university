@@ -1133,6 +1133,9 @@ describe('SubmitAnswerUseCase', () => {
         latestSelectedChoiceId: 'c2',
         latestIsCorrect: true,
         latestAnsweredAt: expect.any(Date),
+        draftSelectedChoiceId: null,
+        draftSavedAt: null,
+        draftCumulativeMs: 0,
       },
     ]);
   });

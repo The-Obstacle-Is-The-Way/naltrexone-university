@@ -22,6 +22,34 @@ export class FakePracticeSessionRepository
     );
   }
 
+  private normalizeQuestionState(
+    state: Pick<
+      PracticeSession['questionStates'][number],
+      | 'questionId'
+      | 'markedForReview'
+      | 'latestSelectedChoiceId'
+      | 'latestIsCorrect'
+      | 'latestAnsweredAt'
+    > &
+      Partial<
+        Pick<
+          PracticeSession['questionStates'][number],
+          'draftSelectedChoiceId' | 'draftSavedAt' | 'draftCumulativeMs'
+        >
+      >,
+  ): PracticeSession['questionStates'][number] {
+    return {
+      questionId: state.questionId,
+      markedForReview: state.markedForReview,
+      latestSelectedChoiceId: state.latestSelectedChoiceId,
+      latestIsCorrect: state.latestIsCorrect,
+      latestAnsweredAt: state.latestAnsweredAt,
+      draftSelectedChoiceId: state.draftSelectedChoiceId ?? null,
+      draftSavedAt: state.draftSavedAt ?? null,
+      draftCumulativeMs: state.draftCumulativeMs ?? 0,
+    };
+  }
+
   private withNormalizedQuestionStates(
     session: PracticeSession,
   ): PracticeSession {
@@ -32,14 +60,14 @@ export class FakePracticeSessionRepository
       ...session,
       questionStates: session.questionIds.map((questionId) => {
         const existing = existingByQuestionId.get(questionId);
-        if (existing) return existing;
-        return {
+        if (existing) return this.normalizeQuestionState(existing);
+        return this.normalizeQuestionState({
           questionId,
           markedForReview: false,
           latestSelectedChoiceId: null,
           latestIsCorrect: null,
           latestAnsweredAt: null,
-        };
+        });
       }),
     };
   }
@@ -150,6 +178,9 @@ export class FakePracticeSessionRepository
         latestSelectedChoiceId: string | null;
         latestIsCorrect: boolean | null;
         latestAnsweredAt: string | null;
+        draftSelectedChoiceId?: string | null;
+        draftSavedAt?: string | null;
+        draftCumulativeMs?: number;
       }>;
     };
     const statesByQuestionId = new Map(
@@ -162,7 +193,7 @@ export class FakePracticeSessionRepository
       questionIds: params.questionIds,
       questionStates: params.questionIds.map((questionId) => {
         const state = statesByQuestionId.get(questionId);
-        return {
+        return this.normalizeQuestionState({
           questionId,
           markedForReview: state?.markedForReview ?? false,
           latestSelectedChoiceId: state?.latestSelectedChoiceId ?? null,
@@ -170,7 +201,12 @@ export class FakePracticeSessionRepository
           latestAnsweredAt: state?.latestAnsweredAt
             ? new Date(state.latestAnsweredAt)
             : null,
-        };
+          draftSelectedChoiceId: state?.draftSelectedChoiceId ?? null,
+          draftSavedAt: state?.draftSavedAt
+            ? new Date(state.draftSavedAt)
+            : null,
+          draftCumulativeMs: state?.draftCumulativeMs ?? 0,
+        });
       }),
       tagFilters: params.tagSlugs,
       difficultyFilters: params.difficulties,

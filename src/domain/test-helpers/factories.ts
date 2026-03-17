@@ -1,7 +1,10 @@
 import type { Attempt } from '../entities/attempt';
 import type { Bookmark } from '../entities/bookmark';
 import type { Choice } from '../entities/choice';
-import type { PracticeSession } from '../entities/practice-session';
+import type {
+  PracticeSession,
+  PracticeSessionQuestionState,
+} from '../entities/practice-session';
 import type { Question } from '../entities/question';
 import type { Subscription } from '../entities/subscription';
 import type { Tag } from '../entities/tag';
@@ -130,7 +133,22 @@ export function createSubscription(
 }
 
 export function createPracticeSession(
-  overrides: Partial<PracticeSession> = {},
+  overrides: Partial<Omit<PracticeSession, 'questionStates'>> & {
+    questionStates?: readonly (Pick<
+      PracticeSessionQuestionState,
+      | 'questionId'
+      | 'markedForReview'
+      | 'latestSelectedChoiceId'
+      | 'latestIsCorrect'
+      | 'latestAnsweredAt'
+    > &
+      Partial<
+        Pick<
+          PracticeSessionQuestionState,
+          'draftSelectedChoiceId' | 'draftSavedAt' | 'draftCumulativeMs'
+        >
+      >)[];
+  } = {},
 ): PracticeSession {
   const questionIds = overrides.questionIds ?? ['question-1'];
   const questionStates =
@@ -141,6 +159,20 @@ export function createPracticeSession(
       latestSelectedChoiceId: null,
       latestIsCorrect: null,
       latestAnsweredAt: null,
+      draftSelectedChoiceId: null,
+      draftSavedAt: null,
+      draftCumulativeMs: 0,
+    }));
+  const normalizedQuestionStates: PracticeSessionQuestionState[] =
+    questionStates.map((state) => ({
+      questionId: state.questionId,
+      markedForReview: state.markedForReview,
+      latestSelectedChoiceId: state.latestSelectedChoiceId,
+      latestIsCorrect: state.latestIsCorrect,
+      latestAnsweredAt: state.latestAnsweredAt,
+      draftSelectedChoiceId: state.draftSelectedChoiceId ?? null,
+      draftSavedAt: state.draftSavedAt ?? null,
+      draftCumulativeMs: state.draftCumulativeMs ?? 0,
     }));
 
   return {
@@ -148,11 +180,11 @@ export function createPracticeSession(
     userId: 'user-1',
     mode: 'tutor' satisfies PracticeMode,
     questionIds,
-    questionStates,
     tagFilters: [],
     difficultyFilters: [],
     startedAt: new Date(),
     endedAt: null,
     ...overrides,
+    questionStates: normalizedQuestionStates,
   };
 }

@@ -9,6 +9,9 @@ export type PracticeSessionQuestionState = {
   readonly latestSelectedChoiceId: string | null;
   readonly latestIsCorrect: boolean | null;
   readonly latestAnsweredAt: Date | null;
+  readonly draftSelectedChoiceId: string | null;
+  readonly draftSavedAt: Date | null;
+  readonly draftCumulativeMs: number;
 };
 
 export type PracticeSession = {

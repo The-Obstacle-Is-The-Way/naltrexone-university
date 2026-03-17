@@ -19,6 +19,9 @@ describe('computeSessionStats', () => {
         latestSelectedChoiceId: null,
         latestIsCorrect: null,
         latestAnsweredAt: null,
+        draftSelectedChoiceId: null,
+        draftSavedAt: null,
+        draftCumulativeMs: 0,
       },
       {
         questionId: 'q2',
@@ -26,6 +29,9 @@ describe('computeSessionStats', () => {
         latestSelectedChoiceId: 'choice_1',
         latestIsCorrect: true,
         latestAnsweredAt: new Date('2026-02-08T00:00:00Z'),
+        draftSelectedChoiceId: null,
+        draftSavedAt: null,
+        draftCumulativeMs: 0,
       },
       {
         questionId: 'q3',
@@ -33,6 +39,9 @@ describe('computeSessionStats', () => {
         latestSelectedChoiceId: 'choice_2',
         latestIsCorrect: false,
         latestAnsweredAt: new Date('2026-02-08T00:00:01Z'),
+        draftSelectedChoiceId: null,
+        draftSavedAt: null,
+        draftCumulativeMs: 0,
       },
       {
         questionId: 'q4',
@@ -40,6 +49,9 @@ describe('computeSessionStats', () => {
         latestSelectedChoiceId: 'choice_3',
         latestIsCorrect: null,
         latestAnsweredAt: new Date('2026-02-08T00:00:02Z'),
+        draftSelectedChoiceId: null,
+        draftSavedAt: null,
+        draftCumulativeMs: 0,
       },
     ];
 
@@ -92,6 +104,9 @@ describe('createDefaultQuestionState', () => {
       latestSelectedChoiceId: null,
       latestIsCorrect: null,
       latestAnsweredAt: null,
+      draftSelectedChoiceId: null,
+      draftSavedAt: null,
+      draftCumulativeMs: 0,
     });
   });
 });

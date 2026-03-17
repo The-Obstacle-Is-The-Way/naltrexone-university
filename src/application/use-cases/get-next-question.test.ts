@@ -62,6 +62,9 @@ function createQuestionState(
     latestSelectedChoiceId: null,
     latestIsCorrect: null,
     latestAnsweredAt: null,
+    draftSelectedChoiceId: null,
+    draftSavedAt: null,
+    draftCumulativeMs: 0,
     ...overrides,
   };
 }

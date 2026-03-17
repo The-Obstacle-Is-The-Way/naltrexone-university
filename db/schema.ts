@@ -94,6 +94,9 @@ export type PracticeSessionParams = {
     latestSelectedChoiceId: string | null;
     latestIsCorrect: boolean | null;
     latestAnsweredAt: string | null;
+    draftSelectedChoiceId?: string | null;
+    draftSavedAt?: string | null;
+    draftCumulativeMs?: number;
   }>;
 };
 

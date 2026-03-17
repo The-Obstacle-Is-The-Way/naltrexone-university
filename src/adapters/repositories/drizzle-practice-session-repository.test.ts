@@ -81,6 +81,9 @@ describe('DrizzlePracticeSessionRepository', () => {
           latestSelectedChoiceId: null,
           latestIsCorrect: null,
           latestAnsweredAt: null,
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 0,
         },
         {
           questionId: 'q2',
@@ -88,6 +91,9 @@ describe('DrizzlePracticeSessionRepository', () => {
           latestSelectedChoiceId: null,
           latestIsCorrect: null,
           latestAnsweredAt: null,
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 0,
         },
         {
           questionId: 'q3',
@@ -95,6 +101,9 @@ describe('DrizzlePracticeSessionRepository', () => {
           latestSelectedChoiceId: null,
           latestIsCorrect: null,
           latestAnsweredAt: null,
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 0,
         },
       ],
       tagFilters: ['tag-1'],
@@ -185,6 +194,9 @@ describe('DrizzlePracticeSessionRepository', () => {
               latestSelectedChoiceId: null,
               latestIsCorrect: null,
               latestAnsweredAt: null,
+              draftSelectedChoiceId: null,
+              draftSavedAt: null,
+              draftCumulativeMs: 0,
             },
             {
               questionId: 'q2',
@@ -192,6 +204,9 @@ describe('DrizzlePracticeSessionRepository', () => {
               latestSelectedChoiceId: null,
               latestIsCorrect: null,
               latestAnsweredAt: null,
+              draftSelectedChoiceId: null,
+              draftSavedAt: null,
+              draftCumulativeMs: 0,
             },
           ],
           tagFilters: ['tag-1'],
@@ -345,6 +360,9 @@ describe('DrizzlePracticeSessionRepository', () => {
           latestSelectedChoiceId: null,
           latestIsCorrect: null,
           latestAnsweredAt: null,
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 0,
         },
         {
           questionId: 'q2',
@@ -352,6 +370,9 @@ describe('DrizzlePracticeSessionRepository', () => {
           latestSelectedChoiceId: null,
           latestIsCorrect: null,
           latestAnsweredAt: null,
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 0,
         },
       ],
       tagFilters: ['tag-1'],
@@ -462,6 +483,9 @@ describe('DrizzlePracticeSessionRepository', () => {
         latestSelectedChoiceId: null,
         latestIsCorrect: null,
         latestAnsweredAt: null,
+        draftSelectedChoiceId: null,
+        draftSavedAt: null,
+        draftCumulativeMs: 0,
       },
     ]);
 
@@ -742,6 +766,9 @@ describe('DrizzlePracticeSessionRepository', () => {
       latestSelectedChoiceId: 'choice_1',
       latestIsCorrect: true,
       latestAnsweredAt: answeredAt,
+      draftSelectedChoiceId: null,
+      draftSavedAt: null,
+      draftCumulativeMs: 0,
     });
 
     expect(updateSet).toHaveBeenCalledWith({
@@ -753,6 +780,9 @@ describe('DrizzlePracticeSessionRepository', () => {
             latestSelectedChoiceId: 'choice_1',
             latestIsCorrect: true,
             latestAnsweredAt: answeredAt.toISOString(),
+            draftSelectedChoiceId: null,
+            draftSavedAt: null,
+            draftCumulativeMs: 0,
           },
           {
             questionId: 'q2',
@@ -760,6 +790,9 @@ describe('DrizzlePracticeSessionRepository', () => {
             latestSelectedChoiceId: null,
             latestIsCorrect: null,
             latestAnsweredAt: null,
+            draftSelectedChoiceId: null,
+            draftSavedAt: null,
+            draftCumulativeMs: 0,
           },
         ],
       }),
@@ -932,6 +965,9 @@ describe('DrizzlePracticeSessionRepository', () => {
       latestSelectedChoiceId: null,
       latestIsCorrect: null,
       latestAnsweredAt: null,
+      draftSelectedChoiceId: null,
+      draftSavedAt: null,
+      draftCumulativeMs: 0,
     });
 
     expect(updateSet).toHaveBeenCalledWith({
@@ -943,6 +979,9 @@ describe('DrizzlePracticeSessionRepository', () => {
             latestSelectedChoiceId: null,
             latestIsCorrect: null,
             latestAnsweredAt: null,
+            draftSelectedChoiceId: null,
+            draftSavedAt: null,
+            draftCumulativeMs: 0,
           },
           {
             questionId: 'q2',
@@ -950,6 +989,9 @@ describe('DrizzlePracticeSessionRepository', () => {
             latestSelectedChoiceId: null,
             latestIsCorrect: null,
             latestAnsweredAt: null,
+            draftSelectedChoiceId: null,
+            draftSavedAt: null,
+            draftCumulativeMs: 0,
           },
         ],
       }),
