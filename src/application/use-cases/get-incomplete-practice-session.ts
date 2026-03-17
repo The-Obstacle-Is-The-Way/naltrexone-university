@@ -27,7 +27,7 @@ function getIncompleteSelectedChoiceId(
   },
 ): string | null {
   return session.mode === 'exam' && session.endedAt === null
-    ? state.draftSelectedChoiceId
+    ? (state.draftSelectedChoiceId ?? state.latestSelectedChoiceId)
     : state.latestSelectedChoiceId;
 }
 

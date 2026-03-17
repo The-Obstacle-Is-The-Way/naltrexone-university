@@ -141,6 +141,11 @@ export const EndPracticeSessionOutputSchema = z
     }
   });
 
+export const PracticeSessionSummaryOutputSchema =
+  EndPracticeSessionOutputSchema;
+export const FinalizeExamAnswersOutputSchema =
+  PracticeSessionSummaryOutputSchema;
+
 export const SetPracticeSessionQuestionMarkOutputSchema = z
   .object({
     questionId: zUuid,

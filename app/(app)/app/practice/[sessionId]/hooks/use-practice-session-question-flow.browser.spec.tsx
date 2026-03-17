@@ -424,4 +424,158 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
       cumulativeMs: 50_000,
     });
   });
+
+  it('carries unanswered exam time across revisits before a later answer is saved', async () => {
+    let nowMs = 1_000;
+    vi.spyOn(Date, 'now').mockImplementation(() => nowMs);
+
+    const getNextQuestionFn = vi
+      .fn<(input: unknown) => Promise<ActionResult<NextQuestion | null>>>()
+      .mockImplementation(async (request) => {
+        if (
+          typeof request === 'object' &&
+          request &&
+          'questionId' in request &&
+          request.questionId === 'q_1'
+        ) {
+          return ok(
+            createNextQuestion({
+              questionId: 'q_1',
+              choices: [
+                { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
+                { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+              ],
+              session: {
+                sessionId: 'session-1',
+                mode: 'exam',
+                index: 0,
+                total: 2,
+                isMarkedForReview: false,
+                draftSelectedChoiceId: null,
+                draftCumulativeMs: 0,
+              },
+            }),
+          );
+        }
+
+        if (
+          typeof request === 'object' &&
+          request &&
+          'fromIndex' in request &&
+          request.fromIndex === 0
+        ) {
+          return ok(
+            createNextQuestion({
+              questionId: 'q_2',
+              session: {
+                sessionId: 'session-1',
+                mode: 'exam',
+                index: 1,
+                total: 2,
+                isMarkedForReview: false,
+              },
+            }),
+          );
+        }
+
+        return ok(
+          createNextQuestion({
+            questionId: 'q_1',
+            choices: [
+              { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
+              { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+            ],
+            session: {
+              sessionId: 'session-1',
+              mode: 'exam',
+              index: 0,
+              total: 2,
+              isMarkedForReview: false,
+            },
+          }),
+        );
+      });
+    const submitAnswerFn =
+      vi.fn<(input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>>();
+    const saveExamDraftAnswerFn = vi
+      .fn<
+        (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
+      >()
+      .mockImplementation(async (input) =>
+        ok({
+          questionId:
+            typeof input === 'object' &&
+            input &&
+            'questionId' in input &&
+            typeof input.questionId === 'string'
+              ? input.questionId
+              : 'q_1',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId:
+            typeof input === 'object' &&
+            input &&
+            'selectedChoiceId' in input &&
+            typeof input.selectedChoiceId === 'string'
+              ? input.selectedChoiceId
+              : null,
+          draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
+          draftCumulativeMs:
+            typeof input === 'object' &&
+            input &&
+            'cumulativeMs' in input &&
+            typeof input.cumulativeMs === 'number'
+              ? input.cumulativeMs
+              : 0,
+        }),
+      );
+
+    const harness = await renderHook(() =>
+      usePracticeSessionQuestionFlow({
+        sessionId: 'session-1',
+        isMounted: () => true,
+        getNextQuestionFn,
+        submitAnswerFn,
+        saveExamDraftAnswerFn,
+      }),
+    );
+
+    await expect
+      .poll(() => harness.result.current.question?.questionId)
+      .toBe('q_1');
+
+    nowMs = 31_000;
+    harness.result.current.onNextQuestion();
+    await expect
+      .poll(() => harness.result.current.question?.questionId)
+      .toBe('q_2');
+    expect(saveExamDraftAnswerFn).not.toHaveBeenCalled();
+
+    nowMs = 31_500;
+    harness.result.current.onNavigateQuestion('q_1');
+    await expect
+      .poll(() => harness.result.current.question?.questionId)
+      .toBe('q_1');
+
+    harness.result.current.onSelectChoice('choice_2');
+    await expect
+      .poll(() => harness.result.current.selectedChoiceId)
+      .toBe('choice_2');
+
+    nowMs = 51_500;
+    harness.result.current.onNextQuestion();
+    await expect
+      .poll(() => harness.result.current.question?.questionId)
+      .toBe('q_2');
+
+    expect(saveExamDraftAnswerFn).toHaveBeenCalledTimes(1);
+    expect(saveExamDraftAnswerFn).toHaveBeenCalledWith({
+      sessionId: 'session-1',
+      questionId: 'q_1',
+      selectedChoiceId: 'choice_2',
+      cumulativeMs: 50_000,
+    });
+  });
 });

@@ -40,10 +40,12 @@ import {
   EndPracticeSessionInputSchema,
   EndPracticeSessionOutputSchema,
   FinalizeExamAnswersInputSchema,
+  FinalizeExamAnswersOutputSchema,
   GetIncompletePracticeSessionOutputSchema,
   GetPracticeSessionReviewInputSchema,
   GetPracticeSessionSummaryInputSchema,
   GetSessionHistoryInputSchema,
+  PracticeSessionSummaryOutputSchema,
   SaveExamDraftAnswerInputSchema,
   SetPracticeSessionQuestionMarkInputSchema,
   SetPracticeSessionQuestionMarkOutputSchema,
@@ -269,7 +271,7 @@ export const finalizeExamAnswers = createAction({
       action: 'practice:finalizeExamAnswers',
       key: idempotencyKey,
       now: d.now,
-      parseResult: (value) => EndPracticeSessionOutputSchema.parse(value),
+      parseResult: (value) => FinalizeExamAnswersOutputSchema.parse(value),
       execute: finalizeExam,
     });
   },
@@ -308,7 +310,7 @@ export const getPracticeSessionSummary = createAction({
   getDeps,
   execute: async (input, d) => {
     const userId = await requireEntitledUserId(d);
-    return EndPracticeSessionOutputSchema.parse(
+    return PracticeSessionSummaryOutputSchema.parse(
       await d.getPracticeSessionSummaryUseCase.execute({
         userId,
         sessionId: input.sessionId,

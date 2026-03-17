@@ -85,7 +85,7 @@ function getSessionSelectedChoiceId(
   },
 ): string | null {
   return session.mode === 'exam' && session.endedAt === null
-    ? state.draftSelectedChoiceId
+    ? (state.draftSelectedChoiceId ?? state.latestSelectedChoiceId)
     : state.latestSelectedChoiceId;
 }
 
@@ -252,7 +252,9 @@ export class GetNextQuestionUseCase {
         latestIsCorrect: showCorrectness ? targetState.latestIsCorrect : null,
         ...(session.mode === 'exam'
           ? {
-              draftSelectedChoiceId: targetState.draftSelectedChoiceId,
+              draftSelectedChoiceId:
+                targetState.draftSelectedChoiceId ??
+                targetState.latestSelectedChoiceId,
               draftCumulativeMs: targetState.draftCumulativeMs,
             }
           : {}),

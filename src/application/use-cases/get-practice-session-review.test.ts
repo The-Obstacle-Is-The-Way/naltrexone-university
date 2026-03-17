@@ -213,6 +213,78 @@ describe('GetPracticeSessionReviewUseCase', () => {
     );
   });
 
+  it('falls back to latestSelectedChoiceId for legacy active exam sessions with no draft', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'exam',
+      endedAt: null,
+      questionIds: ['q1', 'q2'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: 'legacy-choice-1',
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 0,
+        },
+        {
+          questionId: 'q2',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 0,
+        },
+      ],
+    });
+
+    const useCase = new GetPracticeSessionReviewUseCase(
+      new FakePracticeSessionRepository([session]),
+      new FakeQuestionRepository([
+        createQuestion({
+          id: 'q1',
+          slug: 'q-1',
+          stemMd: 'Stem for q1',
+          difficulty: 'easy',
+        }),
+        createQuestion({
+          id: 'q2',
+          slug: 'q-2',
+          stemMd: 'Stem for q2',
+          difficulty: 'medium',
+        }),
+      ]),
+      new FakeLogger(),
+    );
+
+    await expect(useCase.execute({ userId, sessionId })).resolves.toMatchObject(
+      {
+        answeredCount: 1,
+        rows: [
+          {
+            questionId: 'q1',
+            isAnswered: true,
+            isCorrect: null,
+          },
+          {
+            questionId: 'q2',
+            isAnswered: false,
+            isCorrect: null,
+          },
+        ],
+      },
+    );
+  });
+
   it('redacts correctness for active exam sessions', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';

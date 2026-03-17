@@ -162,9 +162,20 @@ export function usePracticeSessionQuestionFlow(
       return;
     }
 
-    const draftSelectedChoiceId =
+    const localDraft =
+      savedExamDraftsRef.current.get(question.questionId) ?? null;
+    const serverDraftSelectedChoiceId =
       question.session.draftSelectedChoiceId ?? null;
-    const draftCumulativeMs = question.session.draftCumulativeMs ?? 0;
+    const serverDraftCumulativeMs = question.session.draftCumulativeMs ?? 0;
+    const draftSelectedChoiceId =
+      serverDraftSelectedChoiceId ??
+      (serverDraftCumulativeMs === 0
+        ? (localDraft?.selectedChoiceId ?? null)
+        : null);
+    const draftCumulativeMs =
+      serverDraftSelectedChoiceId !== null || serverDraftCumulativeMs > 0
+        ? serverDraftCumulativeMs
+        : (localDraft?.cumulativeMs ?? 0);
 
     savedExamDraftsRef.current.set(question.questionId, {
       selectedChoiceId: draftSelectedChoiceId,
@@ -220,6 +231,17 @@ export function usePracticeSessionQuestionFlow(
           cumulativeMs: draft.cumulativeMs,
         });
         if (draft.questionId === question.questionId) {
+          setQuestion({
+            ...question,
+            session:
+              question.session?.mode === 'exam'
+                ? {
+                    ...question.session,
+                    draftSelectedChoiceId: draft.selectedChoiceId,
+                    draftCumulativeMs: draft.cumulativeMs,
+                  }
+                : question.session,
+          });
           currentExamDraftCumulativeMsRef.current = draft.cumulativeMs;
           currentExamDraftEnteredAtRef.current = nowMs;
         }
@@ -239,6 +261,7 @@ export function usePracticeSessionQuestionFlow(
     question,
     selectedChoiceId,
     setLoadState,
+    setQuestion,
   ]);
 
   const onNavigateQuestion = useCallback(

@@ -65,6 +65,10 @@ export function useQuestionFlowCore(
   const [submitResult, setSubmitResultState] =
     useState<SubmitAnswerOutput | null>(null);
   const questionRef = useRef<NextQuestion | null>(null);
+  const selectedChoiceIdRef = useRef<string | null>(null);
+  const isAnsweredRef = useRef(false);
+  const submitResultRef = useRef<SubmitAnswerOutput | null>(null);
+  const lastSynchronizedQuestionIdRef = useRef<string | null>(null);
   const submitResultQuestionIdRef = useRef<string | null>(null);
   const [loadState, setLoadStateState] = useState<LoadState>({
     status: 'idle',
@@ -80,6 +84,18 @@ export function useQuestionFlowCore(
   useEffect(() => {
     isMountedFnRef.current = input.isMounted;
   }, [input.isMounted]);
+
+  useEffect(() => {
+    selectedChoiceIdRef.current = selectedChoiceId;
+  }, [selectedChoiceId]);
+
+  useEffect(() => {
+    isAnsweredRef.current = isAnswered;
+  }, [isAnswered]);
+
+  useEffect(() => {
+    submitResultRef.current = submitResult;
+  }, [submitResult]);
 
   const isMounted = useCallback(() => isMountedFnRef.current(), []);
 
@@ -136,6 +152,7 @@ export function useQuestionFlowCore(
         setSelectedChoiceId(null);
         setIsAnswered(false);
         setSubmitResult(null);
+        lastSynchronizedQuestionIdRef.current = null;
         return;
       }
 
@@ -149,6 +166,7 @@ export function useQuestionFlowCore(
         setSelectedChoiceId(examDraftSelectedChoiceId);
         setIsAnswered(false);
         setSubmitResult(null);
+        lastSynchronizedQuestionIdRef.current = nextQuestion.questionId;
         return;
       }
 
@@ -181,10 +199,22 @@ export function useQuestionFlowCore(
         } else {
           setSubmitResult(null);
         }
+        lastSynchronizedQuestionIdRef.current = nextQuestion.questionId;
+        return;
+      }
+
+      if (
+        isActiveExamQuestion &&
+        lastSynchronizedQuestionIdRef.current === nextQuestion.questionId &&
+        selectedChoiceIdRef.current !== null &&
+        !isAnsweredRef.current &&
+        submitResultRef.current === null
+      ) {
         return;
       }
 
       setSelectedChoiceId(null);
+      lastSynchronizedQuestionIdRef.current = nextQuestion.questionId;
 
       if (submitResultQuestionIdRef.current === nextQuestion.questionId) {
         return;

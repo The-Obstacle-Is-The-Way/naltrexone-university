@@ -116,6 +116,31 @@ function QuestionFlowCoreProbe() {
       >
         load-with-exam-draft
       </button>
+      <button
+        type="button"
+        onClick={() => {
+          core.setQuestion(
+            createNextQuestion({
+              questionId: 'q_1',
+              choices: [
+                { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
+                { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+              ],
+              session: {
+                sessionId: 'session_1',
+                mode: 'exam',
+                index: 0,
+                total: 1,
+                draftSelectedChoiceId: null,
+                draftCumulativeMs: 0,
+              },
+            }),
+          );
+          core.setLoadState({ status: 'ready' });
+        }}
+      >
+        load-active-exam-no-draft
+      </button>
       <button type="button" onClick={() => core.onSelectChoice('choice_1')}>
         select-choice-1
       </button>
@@ -228,6 +253,26 @@ test('restores exam draft selections without locking the answer', async () => {
   await expect
     .element(screen.getByTestId('selected-choice-id'))
     .toHaveTextContent('');
+  await expect
+    .element(screen.getByTestId('is-answered'))
+    .toHaveTextContent('false');
+});
+
+test('preserves an unsaved exam selection on same-question ready resync', async () => {
+  const screen = await render(<QuestionFlowCoreProbe />);
+
+  await screen
+    .getByRole('button', { name: 'load-active-exam-no-draft' })
+    .click();
+  await screen.getByRole('button', { name: 'select-choice-1' }).click();
+  await expect
+    .element(screen.getByTestId('selected-choice-id'))
+    .toHaveTextContent('choice_1');
+
+  await screen.getByRole('button', { name: 'set-ready' }).click();
+  await expect
+    .element(screen.getByTestId('selected-choice-id'))
+    .toHaveTextContent('choice_1');
   await expect
     .element(screen.getByTestId('is-answered'))
     .toHaveTextContent('false');

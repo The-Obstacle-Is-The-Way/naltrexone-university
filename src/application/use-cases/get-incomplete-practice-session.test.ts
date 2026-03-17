@@ -90,6 +90,50 @@ describe('GetIncompletePracticeSessionUseCase', () => {
     });
   });
 
+  it('falls back to latestSelectedChoiceId for legacy active exam sessions with no draft', async () => {
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-new',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q4', 'q5'],
+        questionStates: [
+          {
+            questionId: 'q4',
+            markedForReview: false,
+            latestSelectedChoiceId: 'choice-1',
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+            draftSelectedChoiceId: null,
+            draftSavedAt: null,
+            draftCumulativeMs: 0,
+          },
+          {
+            questionId: 'q5',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+            draftSelectedChoiceId: null,
+            draftSavedAt: null,
+            draftCumulativeMs: 0,
+          },
+        ],
+        startedAt: new Date('2026-02-05T09:00:00Z'),
+        endedAt: null,
+      }),
+    ]);
+    const useCase = new GetIncompletePracticeSessionUseCase(sessions);
+
+    await expect(useCase.execute({ userId: 'user-1' })).resolves.toEqual({
+      sessionId: 'session-new',
+      mode: 'exam',
+      answeredCount: 1,
+      totalCount: 2,
+      startedAt: '2026-02-05T09:00:00.000Z',
+    });
+  });
+
   it('propagates repository failures', async () => {
     const sessions = new FakePracticeSessionRepository([]);
     sessions.findLatestIncompleteByUserId = async () => {

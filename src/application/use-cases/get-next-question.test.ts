@@ -438,6 +438,56 @@ describe('GetNextQuestionUseCase', () => {
     });
   });
 
+  it('treats legacy latestSelectedChoiceId as a draft fallback for active exam sessions', async () => {
+    const q1 = createSingleChoiceQuestion('q1', 'c1');
+    const q2 = createSingleChoiceQuestion('q2', 'c2');
+
+    const session = createPracticeSession({
+      mode: 'exam',
+      questionIds: ['q1', 'q2'],
+      questionStates: [
+        createQuestionState('q1', {
+          latestSelectedChoiceId: 'c1',
+          latestIsCorrect: true,
+          latestAnsweredAt: ANSWERED_AT,
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 25_000,
+        }),
+        createQuestionState('q2'),
+      ],
+    });
+
+    const { getNextQuestion } = createTestDeps({
+      questions: [q1, q2],
+      sessions: [session],
+    });
+
+    const nextResult = await getNextQuestion.execute({
+      userId: USER_ID,
+      sessionId: SESSION_ID,
+    });
+
+    expect(nextResult?.questionId).toBe('q2');
+
+    const revisitResult = await getNextQuestion.execute({
+      userId: USER_ID,
+      sessionId: SESSION_ID,
+      questionId: 'q1',
+    });
+
+    expect(revisitResult?.session).toMatchObject({
+      sessionId: SESSION_ID,
+      mode: 'exam',
+      index: 0,
+      total: 2,
+      latestSelectedChoiceId: 'c1',
+      latestIsCorrect: null,
+      draftSelectedChoiceId: 'c1',
+      draftCumulativeMs: 25_000,
+    });
+  });
+
   it('includes previousSubmission when question was answered in tutor mode', async () => {
     const questionId = 'q1';
 

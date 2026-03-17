@@ -864,11 +864,12 @@ describe('question-flow-actions', () => {
     });
   });
 
-  it('skips draft saving when no exam selection exists', async () => {
+  it('tracks unanswered exam time locally when no exam selection exists', async () => {
     const saveExamDraftAnswerFn =
       vi.fn<
         (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
       >();
+    const onSaved = vi.fn();
 
     const shouldNavigate = await maybeSaveDraftBeforeNavigation({
       sessionId: 'session_1',
@@ -882,15 +883,21 @@ describe('question-flow-actions', () => {
         },
       },
       selectedChoiceId: null,
-      currentCumulativeMs: 0,
+      currentCumulativeMs: 15_000,
       lastSavedDraftSelectedChoiceId: null,
       lastSavedDraftCumulativeMs: 0,
       saveExamDraftAnswerFn,
       setLoadState: () => {},
+      onSaved,
     });
 
     expect(shouldNavigate).toBe(true);
     expect(saveExamDraftAnswerFn).not.toHaveBeenCalled();
+    expect(onSaved).toHaveBeenCalledWith({
+      questionId: 'q_1',
+      selectedChoiceId: null,
+      cumulativeMs: 15_000,
+    });
   });
 
   it('blocks navigation and sets load error when draft save fails', async () => {

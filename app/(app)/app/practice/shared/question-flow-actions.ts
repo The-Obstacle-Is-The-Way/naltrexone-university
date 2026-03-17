@@ -182,13 +182,12 @@ export async function maybeSaveDraftBeforeNavigation<
   setLoadState: (state: AsyncLoadStateWithIdle) => void;
   onSaved?: (draft: {
     questionId: string;
-    selectedChoiceId: string;
+    selectedChoiceId: string | null;
     cumulativeMs: number;
   }) => void;
 }): Promise<boolean> {
   if (!input.question) return true;
   if (input.question.session?.mode !== 'exam') return true;
-  if (!input.selectedChoiceId) return true;
 
   const hasDraftChanged =
     input.selectedChoiceId !== input.lastSavedDraftSelectedChoiceId;
@@ -196,6 +195,15 @@ export async function maybeSaveDraftBeforeNavigation<
     input.currentCumulativeMs > input.lastSavedDraftCumulativeMs;
 
   if (!hasDraftChanged && !hasCumulativeTimeAdvanced) {
+    return true;
+  }
+
+  if (!input.selectedChoiceId) {
+    input.onSaved?.({
+      questionId: input.question.questionId,
+      selectedChoiceId: null,
+      cumulativeMs: input.currentCumulativeMs,
+    });
     return true;
   }
 
