@@ -782,6 +782,10 @@ describe('practice-session-page-logic', () => {
         durationSeconds: 123,
       },
     };
+    const createUnusedGetPracticeSessionSummaryFn = () =>
+      vi.fn(async (): Promise<ActionResult<EndPracticeSessionOutput>> => {
+        throw new Error('getPracticeSessionSummaryFn should not be called');
+      });
 
     it('sets summary and resets state on success', async () => {
       const setSummary = vi.fn();
@@ -794,6 +798,7 @@ describe('practice-session-page-logic', () => {
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
         endPracticeSessionFn,
+        getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState: vi.fn(),
         setSummary,
         resetQuestionState,
@@ -816,6 +821,7 @@ describe('practice-session-page-logic', () => {
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
         endPracticeSessionFn: async () => err('INTERNAL_ERROR', 'Boom'),
+        getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState,
         setSummary: vi.fn(),
         resetQuestionState: vi.fn(),
@@ -834,6 +840,7 @@ describe('practice-session-page-logic', () => {
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
         endPracticeSessionFn: async () => err('INTERNAL_ERROR', 'Boom'),
+        getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState: vi.fn(),
         setSummary: vi.fn(),
         resetQuestionState: vi.fn(),
@@ -880,6 +887,7 @@ describe('practice-session-page-logic', () => {
         endPracticeSessionFn: async () => {
           throw error;
         },
+        getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState,
         setSummary: vi.fn(),
         resetQuestionState: vi.fn(),
@@ -904,6 +912,7 @@ describe('practice-session-page-logic', () => {
         endPracticeSessionFn: async () => {
           throw new Error('Boom');
         },
+        getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState: vi.fn(),
         setSummary: vi.fn(),
         resetQuestionState: vi.fn(),
@@ -920,6 +929,7 @@ describe('practice-session-page-logic', () => {
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
         endPracticeSessionFn: async () => ok(successfulEndSessionOutput),
+        getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState: vi.fn(),
         setSummary: vi.fn(),
         resetQuestionState: vi.fn(),
@@ -940,6 +950,7 @@ describe('practice-session-page-logic', () => {
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
         endPracticeSessionFn: async () => deferred.promise,
+        getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState,
         setSummary,
         resetQuestionState: vi.fn(),

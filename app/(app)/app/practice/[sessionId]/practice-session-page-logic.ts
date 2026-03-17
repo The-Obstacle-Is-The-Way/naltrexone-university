@@ -169,7 +169,7 @@ export async function endSession(input: {
   endPracticeSessionFn: (
     input: unknown,
   ) => Promise<ActionResult<EndPracticeSessionOutput>>;
-  getPracticeSessionSummaryFn?: (
+  getPracticeSessionSummaryFn: (
     input: unknown,
   ) => Promise<ActionResult<EndPracticeSessionOutput>>;
   setLoadState: (state: LoadState) => void;
@@ -207,7 +207,7 @@ export async function endSession(input: {
   }
   if (!isMounted()) return;
   if (!res.ok) {
-    if (res.error.code === 'CONFLICT' && input.getPracticeSessionSummaryFn) {
+    if (res.error.code === 'CONFLICT') {
       try {
         const summaryRes = await withTimeout(
           input.getPracticeSessionSummaryFn({

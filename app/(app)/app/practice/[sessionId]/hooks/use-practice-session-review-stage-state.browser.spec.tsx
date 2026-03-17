@@ -95,12 +95,6 @@ describe('usePracticeSessionReviewStageState (browser)', () => {
     expect(vi.mocked(input.resetQuestionState)).toHaveBeenCalledTimes(1);
   });
 
-  it('resets the shared review mock implementation between tests', () => {
-    expect(getPracticeSessionReviewMock({ sessionId: 'session-1' })).toBe(
-      undefined,
-    );
-  });
-
   it('finalizes the session when review data reports a non-exam mode', async () => {
     getPracticeSessionReviewMock.mockResolvedValue(
       ok({
