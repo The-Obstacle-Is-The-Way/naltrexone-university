@@ -50,6 +50,21 @@ export type GetPracticeSessionReviewOutput = {
   rows: PracticeSessionReviewRow[];
 };
 
+function getReviewSelectedChoiceId(
+  session: {
+    mode: 'tutor' | 'exam';
+    endedAt: Date | null;
+  },
+  state: {
+    latestSelectedChoiceId: string | null;
+    draftSelectedChoiceId: string | null;
+  },
+): string | null {
+  return session.mode === 'exam' && session.endedAt === null
+    ? state.draftSelectedChoiceId
+    : state.latestSelectedChoiceId;
+}
+
 export class GetPracticeSessionReviewUseCase {
   constructor(
     private readonly sessions: PracticeSessionRepository,
@@ -104,7 +119,7 @@ export class GetPracticeSessionReviewUseCase {
       }
 
       const state = existingState ?? createDefaultQuestionState(questionId);
-      const isAnswered = state.latestSelectedChoiceId !== null;
+      const isAnswered = getReviewSelectedChoiceId(session, state) !== null;
       if (isAnswered) answeredCount += 1;
 
       reviewSeeds.push({

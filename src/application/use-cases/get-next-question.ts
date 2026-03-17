@@ -51,6 +51,8 @@ export type NextQuestion = {
     isMarkedForReview?: boolean;
     latestSelectedChoiceId?: string | null;
     latestIsCorrect?: boolean | null;
+    draftSelectedChoiceId?: string | null;
+    draftCumulativeMs?: number;
     previousSubmission?: PreviousSubmission;
   };
 };
@@ -71,6 +73,21 @@ export type GetNextQuestionInput =
     };
 
 export type GetNextQuestionOutput = NextQuestion | null;
+
+function getSessionSelectedChoiceId(
+  session: {
+    mode: PracticeMode;
+    endedAt: Date | null;
+  },
+  state: {
+    latestSelectedChoiceId: string | null;
+    draftSelectedChoiceId: string | null;
+  },
+): string | null {
+  return session.mode === 'exam' && session.endedAt === null
+    ? state.draftSelectedChoiceId
+    : state.latestSelectedChoiceId;
+}
 
 export class GetNextQuestionUseCase {
   constructor(
@@ -169,7 +186,8 @@ export class GetNextQuestionUseCase {
       const nextUnanswered =
         orderedStates
           .slice(startIndex + 1)
-          .find((state) => !state.latestSelectedChoiceId)?.questionId ?? null;
+          .find((state) => !getSessionSelectedChoiceId(session, state))
+          ?.questionId ?? null;
 
       if (nextUnanswered) return nextUnanswered;
       if (startIndex === -1) return null;
@@ -177,12 +195,13 @@ export class GetNextQuestionUseCase {
       const wrappedUnanswered =
         orderedStates
           .slice(0, startIndex)
-          .find((state) => !state.latestSelectedChoiceId)?.questionId ?? null;
+          .find((state) => !getSessionSelectedChoiceId(session, state))
+          ?.questionId ?? null;
 
       if (wrappedUnanswered) return wrappedUnanswered;
 
       const currentState = orderedStates[startIndex];
-      if (currentState && !currentState.latestSelectedChoiceId) {
+      if (currentState && !getSessionSelectedChoiceId(session, currentState)) {
         return currentState.questionId;
       }
 
@@ -208,7 +227,8 @@ export class GetNextQuestionUseCase {
 
     const choiceViews = buildShuffledChoiceViews(question, userId);
     const choices = this.mapChoiceViewsForOutput(choiceViews);
-    const isAnswered = typeof targetState.latestSelectedChoiceId === 'string';
+    const isAnswered =
+      typeof getSessionSelectedChoiceId(session, targetState) === 'string';
     const isTutor = session.mode === 'tutor';
     const showCorrectness = shouldShowExplanation(session);
     const previousSubmission =
@@ -230,6 +250,12 @@ export class GetNextQuestionUseCase {
         isMarkedForReview: targetState.markedForReview,
         latestSelectedChoiceId: targetState.latestSelectedChoiceId,
         latestIsCorrect: showCorrectness ? targetState.latestIsCorrect : null,
+        ...(session.mode === 'exam'
+          ? {
+              draftSelectedChoiceId: targetState.draftSelectedChoiceId,
+              draftCumulativeMs: targetState.draftCumulativeMs,
+            }
+          : {}),
         ...(previousSubmission ? { previousSubmission } : {}),
       },
     };

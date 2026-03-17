@@ -286,9 +286,9 @@ describe('GetNextQuestionUseCase', () => {
       questionIds: ['q1', 'q2', 'q3'],
       questionStates: [
         createQuestionState('q1', {
-          latestSelectedChoiceId: 'c1',
-          latestIsCorrect: true,
-          latestAnsweredAt: ANSWERED_AT,
+          draftSelectedChoiceId: 'c1',
+          draftSavedAt: ANSWERED_AT,
+          draftCumulativeMs: 10_000,
         }),
         createQuestionState('q2'),
         createQuestionState('q3'),
@@ -367,9 +367,9 @@ describe('GetNextQuestionUseCase', () => {
       questionIds: ['q1', 'q2'],
       questionStates: [
         createQuestionState('q1', {
-          latestSelectedChoiceId: 'c1',
-          latestIsCorrect: true,
-          latestAnsweredAt: ANSWERED_AT,
+          draftSelectedChoiceId: 'c1',
+          draftSavedAt: ANSWERED_AT,
+          draftCumulativeMs: 10_000,
         }),
         createQuestionState('q2'),
       ],
@@ -405,9 +405,9 @@ describe('GetNextQuestionUseCase', () => {
       questionStates: [
         createQuestionState('q1', {
           markedForReview: true,
-          latestSelectedChoiceId: 'c1',
-          latestIsCorrect: false,
-          latestAnsweredAt: ANSWERED_AT,
+          draftSelectedChoiceId: 'c1',
+          draftSavedAt: ANSWERED_AT,
+          draftCumulativeMs: 25_000,
         }),
         createQuestionState('q2'),
       ],
@@ -431,6 +431,10 @@ describe('GetNextQuestionUseCase', () => {
       index: 0,
       total: 2,
       isMarkedForReview: true,
+      latestSelectedChoiceId: null,
+      latestIsCorrect: null,
+      draftSelectedChoiceId: 'c1',
+      draftCumulativeMs: 25_000,
     });
   });
 
@@ -520,9 +524,9 @@ describe('GetNextQuestionUseCase', () => {
       name: 'does not include previousSubmission in exam mode even when answered',
       mode: 'exam' as const,
       questionState: createQuestionState('q1', {
-        latestSelectedChoiceId: 'c1',
-        latestIsCorrect: true,
-        latestAnsweredAt: ANSWERED_AT,
+        draftSelectedChoiceId: 'c1',
+        draftSavedAt: ANSWERED_AT,
+        draftCumulativeMs: 10_000,
       }),
     },
   ])('$name', async ({ mode, questionState }) => {
@@ -1327,9 +1331,9 @@ describe('GetNextQuestionUseCase', () => {
       questionIds: ['q1'],
       questionStates: [
         createQuestionState('q1', {
-          latestSelectedChoiceId: 'c1',
-          latestIsCorrect: true,
-          latestAnsweredAt: ANSWERED_AT,
+          draftSelectedChoiceId: 'c1',
+          draftSavedAt: ANSWERED_AT,
+          draftCumulativeMs: 30_000,
         }),
       ],
     });
