@@ -98,10 +98,10 @@ Three `100` literals remain inline even though each one has a clearer semantic o
 
 ### F4: HTTP Status Codes as Raw Literals — MEDIUM
 
-There are **24 raw HTTP status code usages**:
+There are **25 raw HTTP status code usages**:
 
 - **22** in route handlers
-- **2** in `src/adapters/shared/retry.ts`
+- **3** in `src/adapters/shared/retry.ts`
 
 | File | Raw Codes Used |
 |------|----------------|
@@ -117,9 +117,11 @@ No shared HTTP status constants file exists.
 
 ---
 
-### F5: Duplicated `STACK_TRACE_LIMIT` — MEDIUM
+### F5: Duplicated Cross-File Constants (`STACK_TRACE_LIMIT`, `PRUNE_BATCH_LIMIT`) — MEDIUM
 
-`const STACK_TRACE_LIMIT = 1000` is defined identically in two controllers:
+Two named constants are defined identically in multiple files:
+
+**`STACK_TRACE_LIMIT = 1000`** — defined in two webhook controllers:
 
 | File | Line |
 |------|------|
@@ -128,7 +130,16 @@ No shared HTTP status constants file exists.
 
 Both use it for stack truncation in error logging.
 
-**Risk:** Small surface area, but this is a clean cross-file duplication with a single meaning.
+**`PRUNE_BATCH_LIMIT = 100`** — defined in two adapter modules:
+
+| File | Line |
+|------|------|
+| `src/adapters/shared/with-idempotency.ts` | 13 |
+| `src/adapters/gateways/drizzle-rate-limiter.ts` | 15 |
+
+Both use it to cap best-effort cleanup queries (idempotency key pruning and rate-limit window pruning respectively). Same name, same value, same semantic purpose.
+
+**Risk:** Small surface area, but these are clean cross-file duplications with a single meaning per constant. If either pruning or truncation policy changes, the other file silently drifts.
 
 ---
 
@@ -211,8 +222,8 @@ These are localized and low-risk, but still count as unnamed policy values:
 | F1 | Retry config duplication | 4 definitions | **High** | Policy drift across Stripe/Clerk retry paths |
 | F2 | Timeout constant duplication | 19 definitions | **High** | Timeout tiers exist implicitly but are not owned |
 | F3 | Raw `100` limits | 3 instances | **Medium** | Anonymous operational bounds; one should use existing pagination cap |
-| F4 | Raw HTTP status codes | 24 instances | **Medium** | Readability and consistency, low functional risk |
-| F5 | `STACK_TRACE_LIMIT` duplication | 2 definitions | **Medium** | Clean duplication with one meaning |
+| F4 | Raw HTTP status codes | 25 instances | **Medium** | Readability and consistency, low functional risk |
+| F5 | Cross-file constant duplication (`STACK_TRACE_LIMIT`, `PRUNE_BATCH_LIMIT`) | 4 definitions (2+2) | **Medium** | Clean duplication; policy drift if one changes without the other |
 | F6 | 24-hour/day constant duplication | 4 non-canonical occurrences | **Medium** | Basic time primitives lack an obvious shared owner |
 | F7 | Raw ms↔s conversions + split naming | 5 raw conversions + 2 names | **Low** | Mostly stylistic unless naming remains split |
 | F8 | Minor anonymous UI/client timings | 5 instances | **Low** | Localized policy defaults hiding inline |
@@ -262,9 +273,9 @@ These are localized and low-risk, but still count as unnamed policy values:
 
    Do **not** tie prune batch sizes or Stripe list limits to `MAX_PAGINATION_LIMIT` just because the current number matches.
 
-4. **Share `STACK_TRACE_LIMIT`**
+4. **Share `STACK_TRACE_LIMIT` and `PRUNE_BATCH_LIMIT`**
 
-   Move the stack truncation constant into a small shared error-logging module and import it from both webhook controllers.
+   Move `STACK_TRACE_LIMIT` into a small shared error-logging module and import it from both webhook controllers. Move `PRUNE_BATCH_LIMIT` into `src/adapters/shared/` and import it from both `with-idempotency.ts` and `drizzle-rate-limiter.ts`.
 
 ### Phase 2: Give basic time primitives a clean home
 
@@ -312,3 +323,4 @@ These are localized and low-risk, but still count as unnamed policy values:
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-03-17 | Created BS-056 | Proactive debt audit identified 8 categories of constant duplication / magic number inconsistency |
+| 2026-03-17 | Corrected F4 count and expanded F5 | F4: retry.ts has 3 raw status literals (429, 500, 600), not 2 — total is 25, not 24. F5: added `PRUNE_BATCH_LIMIT = 100` duplication across `with-idempotency.ts` and `drizzle-rate-limiter.ts` (same pattern as `STACK_TRACE_LIMIT`). |
