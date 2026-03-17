@@ -9,6 +9,8 @@ import type { NextQuestion } from '@/src/application/use-cases/get-next-question
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createNavigatorEffect } from '../practice-session-page-logic';
 
+type SessionIdInput = { sessionId: string };
+
 export type UsePracticeSessionNavigatorInput = {
   summary: EndPracticeSessionOutput | null;
   isInReviewStage: boolean;
@@ -18,7 +20,7 @@ export type UsePracticeSessionNavigatorInput = {
   submitResult: SubmitAnswerOutput | null;
   navigatorReloadCount: number;
   getPracticeSessionReviewFn: (
-    input: unknown,
+    input: SessionIdInput,
   ) => Promise<ActionResult<GetPracticeSessionReviewOutput>>;
   isMounted: () => boolean;
 };

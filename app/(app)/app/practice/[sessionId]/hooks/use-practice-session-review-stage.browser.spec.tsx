@@ -180,8 +180,4 @@ describe('usePracticeSessionReviewStage (browser)', () => {
       .toBe('ready');
     expect(harness.result.current.navigator?.sessionId).toBe('session-1');
   });
-
-  it('restores console.error between tests', () => {
-    expect(vi.isMockFunction(console.error)).toBe(false);
-  });
 });

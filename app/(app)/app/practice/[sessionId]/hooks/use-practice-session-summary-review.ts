@@ -7,12 +7,14 @@ import type {
 } from '@/src/adapters/controllers/practice-controller';
 import { createSummaryReviewEffect } from '../practice-session-page-logic';
 
+type SessionIdInput = { sessionId: string };
+
 export type UsePracticeSessionSummaryReviewInput = {
   summary: EndPracticeSessionOutput | null;
   sessionId: string;
   isMounted: () => boolean;
   getPracticeSessionReviewFn: (
-    input: unknown,
+    input: SessionIdInput,
   ) => Promise<ActionResult<GetPracticeSessionReviewOutput>>;
 };
 

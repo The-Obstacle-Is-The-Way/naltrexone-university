@@ -16,9 +16,15 @@ import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {
   EndPracticeSessionOutput,
   GetPracticeSessionReviewOutput,
+  GetPracticeSessionSummaryOutput,
 } from '@/src/adapters/controllers/practice-controller';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+
+type SessionIdInput = { sessionId: string };
+type EndPracticeSessionActionInput = SessionIdInput & {
+  idempotencyKey?: string;
+};
 
 export type UsePracticeSessionReviewStageInput = {
   sessionId: string;
@@ -32,14 +38,14 @@ export type UsePracticeSessionReviewStageInput = {
   resetQuestionState: () => void;
   loadSpecificQuestion: (questionId: string) => void;
   endPracticeSessionFn: (
-    input: unknown,
+    input: EndPracticeSessionActionInput,
   ) => Promise<ActionResult<EndPracticeSessionOutput>>;
   getPracticeSessionReviewFn: (
-    input: unknown,
+    input: SessionIdInput,
   ) => Promise<ActionResult<GetPracticeSessionReviewOutput>>;
   getPracticeSessionSummaryFn: (
-    input: unknown,
-  ) => Promise<ActionResult<EndPracticeSessionOutput>>;
+    input: SessionIdInput,
+  ) => Promise<ActionResult<GetPracticeSessionSummaryOutput>>;
 };
 
 export type UsePracticeSessionReviewStageOutput = {

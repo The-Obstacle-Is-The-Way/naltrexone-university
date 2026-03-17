@@ -3,6 +3,7 @@ import {
   computeAccuracy,
   computeSessionDurationSeconds,
   computeSessionStats,
+  createDefaultQuestionState,
 } from '@/src/domain/services';
 
 export type PracticeSessionSummary = {
@@ -22,8 +23,17 @@ export function projectPracticeSessionSummary(
   session: PracticeSession,
   endedAt: Date,
 ): PracticeSessionSummary {
-  const { answered, correct } = computeSessionStats(session.questionStates);
   const questionCount = session.questionIds.length;
+  const stateByQuestionId = new Map(
+    session.questionStates.map((state) => [state.questionId, state]),
+  );
+  const orderedStates = session.questionIds.map((questionId) => {
+    return (
+      stateByQuestionId.get(questionId) ??
+      createDefaultQuestionState(questionId)
+    );
+  });
+  const { answered, correct } = computeSessionStats(orderedStates);
 
   return {
     sessionId: session.id,

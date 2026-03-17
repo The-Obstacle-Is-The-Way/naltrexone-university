@@ -114,4 +114,42 @@ describe('projectPracticeSessionSummary', () => {
       },
     });
   });
+
+  it('returns canonical totals when persisted state includes out-of-band rows', () => {
+    const endedAt = new Date('2026-02-01T00:10:00Z');
+    const session = createPracticeSession({
+      id: 'session-4',
+      userId: 'user-1',
+      mode: 'exam',
+      questionIds: ['q1', 'q2'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: 'choice-1',
+          latestIsCorrect: true,
+          latestAnsweredAt: new Date('2026-02-01T00:03:00Z'),
+        },
+        {
+          questionId: 'q-extra',
+          markedForReview: false,
+          latestSelectedChoiceId: 'choice-extra',
+          latestIsCorrect: true,
+          latestAnsweredAt: new Date('2026-02-01T00:04:00Z'),
+        },
+      ],
+      startedAt: new Date('2026-02-01T00:00:00Z'),
+      endedAt,
+    });
+
+    expect(projectPracticeSessionSummary(session, endedAt)).toMatchObject({
+      questionCount: 2,
+      totals: {
+        answered: 1,
+        correct: 1,
+        accuracy: 0.5,
+        durationSeconds: 600,
+      },
+    });
+  });
 });

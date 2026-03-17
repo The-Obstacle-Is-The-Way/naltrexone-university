@@ -143,6 +143,7 @@ export function usePracticeSessionQuestionFlow(
   }, [input.autoload, onTryAgain]);
 
   const resetQuestionState = useCallback(() => {
+    setSessionInfo(null);
     setQuestion(null);
     setSubmitResult(null);
     setSelectedChoiceId(null);
