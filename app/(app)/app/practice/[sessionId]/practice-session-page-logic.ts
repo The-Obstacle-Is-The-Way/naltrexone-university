@@ -17,6 +17,7 @@ import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {
   EndPracticeSessionOutput,
+  FinalizeExamAnswersOutput,
   GetPracticeSessionReviewOutput,
   GetPracticeSessionSummaryOutput,
 } from '@/src/adapters/controllers/practice-controller';
@@ -34,6 +35,10 @@ type SessionIdInput = { sessionId: string };
 type EndPracticeSessionActionInput = SessionIdInput & {
   idempotencyKey?: string;
 };
+type PracticeSessionFinalizationOutput =
+  | EndPracticeSessionOutput
+  | FinalizeExamAnswersOutput
+  | GetPracticeSessionSummaryOutput;
 
 export async function loadNextQuestion(input: {
   sessionId: string;
@@ -156,14 +161,14 @@ export async function submitAnswerForQuestion(input: {
 export async function endSession(input: {
   sessionId: string;
   endSessionIdempotencyKey: string;
-  endPracticeSessionFn: (
+  finalizeSessionFn: (
     input: EndPracticeSessionActionInput,
-  ) => Promise<ActionResult<EndPracticeSessionOutput>>;
+  ) => Promise<ActionResult<PracticeSessionFinalizationOutput>>;
   getPracticeSessionSummaryFn: (
     input: SessionIdInput,
   ) => Promise<ActionResult<GetPracticeSessionSummaryOutput>>;
   setLoadState: (state: LoadState) => void;
-  setSummary: (summary: EndPracticeSessionOutput | null) => void;
+  setSummary: (summary: PracticeSessionFinalizationOutput | null) => void;
   resetQuestionState: () => void;
   rotateIdempotencyKey?: () => void;
   isMounted?: () => boolean;
@@ -172,10 +177,10 @@ export async function endSession(input: {
 
   input.setLoadState({ status: 'loading' });
 
-  let res: ActionResult<EndPracticeSessionOutput>;
+  let res: ActionResult<PracticeSessionFinalizationOutput>;
   try {
     res = await withTimeout(
-      input.endPracticeSessionFn({
+      input.finalizeSessionFn({
         sessionId: input.sessionId,
         idempotencyKey: input.endSessionIdempotencyKey,
       }),

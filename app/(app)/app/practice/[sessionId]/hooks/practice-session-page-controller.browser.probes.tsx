@@ -192,6 +192,12 @@ export function PracticeSessionPageControllerReviewProbe() {
           onClick: () => output.onEndSession(),
         },
         {
+          label: 'finalize-review',
+          onClick: () => {
+            void output.onFinalizeReview?.();
+          },
+        },
+        {
           label: 'open-review-question-1',
           onClick: () => output.onOpenReviewQuestion?.('question-1'),
         },
@@ -234,6 +240,12 @@ export function PracticeSessionPageControllerSubmitDuringReviewProbe() {
         {
           label: 'review-answers',
           onClick: () => output.onEndSession(),
+        },
+        {
+          label: 'finalize-review',
+          onClick: () => {
+            void output.onFinalizeReview?.();
+          },
         },
       ])}
     </>

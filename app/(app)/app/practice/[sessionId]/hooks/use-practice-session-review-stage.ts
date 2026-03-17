@@ -15,6 +15,7 @@ import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {
   EndPracticeSessionOutput,
+  FinalizeExamAnswersOutput,
   GetPracticeSessionReviewOutput,
   GetPracticeSessionSummaryOutput,
 } from '@/src/adapters/controllers/practice-controller';
@@ -23,6 +24,9 @@ import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answ
 
 type SessionIdInput = { sessionId: string };
 type EndPracticeSessionActionInput = SessionIdInput & {
+  idempotencyKey?: string;
+};
+type FinalizeExamAnswersActionInput = SessionIdInput & {
   idempotencyKey?: string;
 };
 
@@ -41,6 +45,9 @@ export type UsePracticeSessionReviewStageInput = {
   endPracticeSessionFn: (
     input: EndPracticeSessionActionInput,
   ) => Promise<ActionResult<EndPracticeSessionOutput>>;
+  finalizeExamAnswersFn: (
+    input: FinalizeExamAnswersActionInput,
+  ) => Promise<ActionResult<FinalizeExamAnswersOutput>>;
   getPracticeSessionReviewFn: (
     input: SessionIdInput,
   ) => Promise<ActionResult<GetPracticeSessionReviewOutput>>;
@@ -73,13 +80,14 @@ export function usePracticeSessionReviewStage(
   const [summary, setSummary] = useState<EndPracticeSessionOutput | null>(null);
   const [navigatorReloadCount, setNavigatorReloadCount] = useState(0);
   const endSessionIdempotencyKeyRef = useRef(crypto.randomUUID());
+  const finalizeExamIdempotencyKeyRef = useRef(crypto.randomUUID());
 
-  const finalizeSession = useCallback(
+  const endTutorSession = useCallback(
     () =>
       endSession({
         sessionId: input.sessionId,
         endSessionIdempotencyKey: endSessionIdempotencyKeyRef.current,
-        endPracticeSessionFn: input.endPracticeSessionFn,
+        finalizeSessionFn: input.endPracticeSessionFn,
         getPracticeSessionSummaryFn: input.getPracticeSessionSummaryFn,
         setLoadState: input.setLoadState,
         setSummary,
@@ -97,6 +105,37 @@ export function usePracticeSessionReviewStage(
       input.resetQuestionState,
       input.isMounted,
     ],
+  );
+
+  const finalizeExamSession = useCallback(
+    () =>
+      endSession({
+        sessionId: input.sessionId,
+        endSessionIdempotencyKey: finalizeExamIdempotencyKeyRef.current,
+        finalizeSessionFn: input.finalizeExamAnswersFn,
+        getPracticeSessionSummaryFn: input.getPracticeSessionSummaryFn,
+        setLoadState: input.setLoadState,
+        setSummary,
+        resetQuestionState: input.resetQuestionState,
+        rotateIdempotencyKey: () => {
+          finalizeExamIdempotencyKeyRef.current = crypto.randomUUID();
+        },
+        isMounted: input.isMounted,
+      }),
+    [
+      input.finalizeExamAnswersFn,
+      input.getPracticeSessionSummaryFn,
+      input.sessionId,
+      input.setLoadState,
+      input.resetQuestionState,
+      input.isMounted,
+    ],
+  );
+
+  const finalizeSession = useCallback(
+    () =>
+      input.sessionMode === 'exam' ? finalizeExamSession() : endTutorSession(),
+    [endTutorSession, finalizeExamSession, input.sessionMode],
   );
 
   const reviewStage = usePracticeSessionReviewStageState({

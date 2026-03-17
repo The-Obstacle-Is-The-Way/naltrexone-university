@@ -617,21 +617,21 @@ describe('practice-session-page-logic', () => {
     it('sets summary and resets state on success', async () => {
       const setSummary = vi.fn();
       const resetQuestionState = vi.fn();
-      const endPracticeSessionFn = vi.fn(async () =>
+      const finalizeSessionFn = vi.fn(async () =>
         ok(successfulEndSessionOutput),
       );
 
       await endSession({
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
-        endPracticeSessionFn,
+        finalizeSessionFn,
         getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState: vi.fn(),
         setSummary,
         resetQuestionState,
       });
 
-      expect(endPracticeSessionFn).toHaveBeenCalledWith({
+      expect(finalizeSessionFn).toHaveBeenCalledWith({
         sessionId: 'session-1',
         idempotencyKey: 'idem_1',
       });
@@ -647,7 +647,7 @@ describe('practice-session-page-logic', () => {
       await endSession({
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
-        endPracticeSessionFn: async () => err('INTERNAL_ERROR', 'Boom'),
+        finalizeSessionFn: async () => err('INTERNAL_ERROR', 'Boom'),
         getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState,
         setSummary: vi.fn(),
@@ -666,7 +666,7 @@ describe('practice-session-page-logic', () => {
       await endSession({
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
-        endPracticeSessionFn: async () => err('INTERNAL_ERROR', 'Boom'),
+        finalizeSessionFn: async () => err('INTERNAL_ERROR', 'Boom'),
         getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState: vi.fn(),
         setSummary: vi.fn(),
@@ -688,7 +688,7 @@ describe('practice-session-page-logic', () => {
       await endSession({
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
-        endPracticeSessionFn: async () =>
+        finalizeSessionFn: async () =>
           err('CONFLICT', 'Practice session already ended'),
         getPracticeSessionSummaryFn,
         setLoadState,
@@ -711,7 +711,7 @@ describe('practice-session-page-logic', () => {
       await endSession({
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
-        endPracticeSessionFn: async () =>
+        finalizeSessionFn: async () =>
           err('CONFLICT', 'Practice session already ended'),
         getPracticeSessionSummaryFn: async () =>
           err('NOT_FOUND', 'Practice session summary not found'),
@@ -736,7 +736,7 @@ describe('practice-session-page-logic', () => {
       await endSession({
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
-        endPracticeSessionFn: async () =>
+        finalizeSessionFn: async () =>
           err('CONFLICT', 'Practice session already ended'),
         getPracticeSessionSummaryFn: async () => {
           throw error;
@@ -765,7 +765,7 @@ describe('practice-session-page-logic', () => {
       await endSession({
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
-        endPracticeSessionFn: async () => {
+        finalizeSessionFn: async () => {
           throw error;
         },
         getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
@@ -790,7 +790,7 @@ describe('practice-session-page-logic', () => {
       await endSession({
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
-        endPracticeSessionFn: async () => {
+        finalizeSessionFn: async () => {
           throw new Error('Boom');
         },
         getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
@@ -809,7 +809,7 @@ describe('practice-session-page-logic', () => {
       await endSession({
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
-        endPracticeSessionFn: async () => ok(successfulEndSessionOutput),
+        finalizeSessionFn: async () => ok(successfulEndSessionOutput),
         getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState: vi.fn(),
         setSummary: vi.fn(),
@@ -830,7 +830,7 @@ describe('practice-session-page-logic', () => {
       const promise = endSession({
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
-        endPracticeSessionFn: async () => deferred.promise,
+        finalizeSessionFn: async () => deferred.promise,
         getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState,
         setSummary,

@@ -35,6 +35,7 @@ const {
   getPracticeSessionReviewMock,
   getPracticeSessionSummaryMock,
   endPracticeSessionMock,
+  finalizeExamAnswersMock,
   saveExamDraftAnswerMock,
   setPracticeSessionQuestionMarkMock,
 } = getPracticeSessionPageControllerBrowserMocks();
@@ -345,6 +346,71 @@ describe('usePracticeSessionPageController (browser)', () => {
       selectedChoiceId: 'choice_1',
       cumulativeMs: expect.any(Number),
     });
+  });
+
+  it('finalizes active exam review through finalizeExamAnswers', async () => {
+    getPracticeSessionSummaryMock.mockResolvedValue(
+      errorResult('CONFLICT', 'Practice session has not ended'),
+    );
+    getNextQuestionMock.mockResolvedValue(
+      ok(
+        createQuestionResponse({
+          questionId: 'question-1',
+          choices: [CHOICE_1, CHOICE_2, CHOICE_3],
+          session: {
+            mode: 'exam',
+            index: 0,
+            total: 2,
+            isMarkedForReview: false,
+          },
+        }),
+      ),
+    );
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok(
+        createReviewResponse({
+          mode: 'exam',
+          totalCount: 2,
+          answeredCount: 1,
+          markedCount: 0,
+          rows: [createReviewRow({ questionId: 'question-1', order: 1 })],
+        }),
+      ),
+    );
+    finalizeExamAnswersMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        endedAt: '2026-02-07T00:20:00.000Z',
+        mode: 'exam',
+        questionCount: 2,
+        totals: {
+          answered: 1,
+          correct: 1,
+          accuracy: 0.5,
+          durationSeconds: 120,
+        },
+      }),
+    );
+
+    const screen = await render(<PracticeSessionPageControllerReviewProbe />);
+
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('question');
+
+    await screen.getByRole('button', { name: 'review-answers' }).click();
+
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('review');
+
+    await screen.getByRole('button', { name: 'finalize-review' }).click();
+
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('summary');
+    expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(1);
+    expect(endPracticeSessionMock).not.toHaveBeenCalled();
   });
 
   it('recovers a summary when ending an active tutor session returns CONFLICT', async () => {

@@ -3,6 +3,7 @@ import { renderHook } from 'vitest-browser-react';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {
   EndPracticeSessionOutput,
+  FinalizeExamAnswersOutput,
   GetPracticeSessionReviewOutput,
   GetPracticeSessionSummaryOutput,
 } from '@/src/adapters/controllers/practice-controller';
@@ -14,6 +15,8 @@ import {
 
 const endPracticeSessionMock =
   vi.fn<(input: unknown) => Promise<ActionResult<EndPracticeSessionOutput>>>();
+const finalizeExamAnswersMock =
+  vi.fn<(input: unknown) => Promise<ActionResult<FinalizeExamAnswersOutput>>>();
 const getPracticeSessionReviewMock =
   vi.fn<
     (input: unknown) => Promise<ActionResult<GetPracticeSessionReviewOutput>>
@@ -37,6 +40,7 @@ function createInput(sessionMode: 'tutor' | 'exam') {
     resetQuestionState: vi.fn(),
     loadSpecificQuestion: vi.fn(),
     endPracticeSessionFn: endPracticeSessionMock,
+    finalizeExamAnswersFn: finalizeExamAnswersMock,
     getPracticeSessionReviewFn: getPracticeSessionReviewMock,
     getPracticeSessionSummaryFn: getPracticeSessionSummaryMock,
     saveCurrentExamDraft: saveCurrentExamDraftMock,
@@ -51,6 +55,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     endPracticeSessionMock.mockReset();
+    finalizeExamAnswersMock.mockReset();
     getPracticeSessionReviewMock.mockReset();
     getPracticeSessionSummaryMock.mockReset();
     saveCurrentExamDraftMock.mockReset();
@@ -189,6 +194,46 @@ describe('usePracticeSessionReviewStage (browser)', () => {
       .poll(() => harness.result.current.navigatorLoadState.status)
       .toBe('ready');
     expect(harness.result.current.navigator?.sessionId).toBe('session-1');
+  });
+
+  it('finalizes exam review via finalizeExamAnswers instead of endPracticeSession', async () => {
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 2,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+    finalizeExamAnswersMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        endedAt: '2026-02-07T00:20:00.000Z',
+        mode: 'exam',
+        questionCount: 2,
+        totals: {
+          answered: 2,
+          correct: 1,
+          accuracy: 0.5,
+          durationSeconds: 120,
+        },
+      }),
+    );
+
+    const input = createInput('exam');
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStage(input),
+    );
+
+    await harness.result.current.onFinalizeReview();
+
+    await expect
+      .poll(() => harness.result.current.summary?.sessionId ?? null)
+      .toBe('session-1');
+    expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(1);
+    expect(endPracticeSessionMock).not.toHaveBeenCalled();
   });
 
   it('saves the current exam draft before entering review stage', async () => {

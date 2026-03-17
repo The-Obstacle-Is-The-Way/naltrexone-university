@@ -9,6 +9,7 @@ import { reportClientError } from '@/lib/report-client-error';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import {
   endPracticeSession,
+  finalizeExamAnswers,
   getPracticeSessionReview,
   getPracticeSessionSummary,
   saveExamDraftAnswer,
@@ -55,6 +56,7 @@ export function usePracticeSessionPageController(
     resetQuestionState: questionFlow.resetQuestionState,
     loadSpecificQuestion: questionFlow.onNavigateQuestion,
     endPracticeSessionFn: endPracticeSession,
+    finalizeExamAnswersFn: finalizeExamAnswers,
     getPracticeSessionReviewFn: getPracticeSessionReview,
     getPracticeSessionSummaryFn: getPracticeSessionSummary,
     saveCurrentExamDraft: questionFlow.saveCurrentExamDraft,
