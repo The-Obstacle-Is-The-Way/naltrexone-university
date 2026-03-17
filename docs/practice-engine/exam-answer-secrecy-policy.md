@@ -29,15 +29,13 @@ Initial drift family fixed and archived:
 - [BUG-181](../_archive/bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md)
 - [BUG-185](../_archive/bugs/bug-185-dashboard-recent-activity-reveals-active-exam-correctness.md)
 
-Current open drift set:
-- [BUG-191](../bugs/bug-191-get-next-question-leaks-latestIsCorrect-active-exam.md)
-- [BUG-192](../bugs/bug-192-history-page-exposes-active-exam-correctness.md)
-- [BUG-193](../bugs/bug-193-submit-answer-returns-isCorrect-active-exam.md)
-- [BUG-195](../bugs/bug-195-question-candidate-status-filter-leaks-active-exam-correctness.md) (inference via count delta)
-
-Recently fixed (pending archive):
-- [BUG-186](../bugs/bug-186-active-exam-review-projection-leaks-correctness.md)
-- [BUG-187](../bugs/bug-187-dashboard-accuracy-includes-active-exam-attempts.md)
+All previously open drift bugs have been resolved and archived:
+- [BUG-186](../_archive/bugs/bug-186-active-exam-review-projection-leaks-correctness.md)
+- [BUG-187](../_archive/bugs/bug-187-dashboard-accuracy-includes-active-exam-attempts.md)
+- [BUG-191](../_archive/bugs/bug-191-get-next-question-leaks-latestIsCorrect-active-exam.md)
+- [BUG-192](../_archive/bugs/bug-192-history-page-exposes-active-exam-correctness.md)
+- [BUG-193](../_archive/bugs/bug-193-submit-answer-returns-isCorrect-active-exam.md)
+- [BUG-195](../_archive/bugs/bug-195-question-candidate-status-filter-leaks-active-exam-correctness.md) (inference via count delta)
 
 ---
 

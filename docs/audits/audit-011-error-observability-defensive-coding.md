@@ -57,7 +57,7 @@ This remains the major outcome from the sweep.
 - SPEC-016 still stops its acceptance criteria at Sentry initialization
 - verified client-side caught-error flows still fall back to console-only or silent handling
 
-**Reclassified as [DEBT-286](../debt/debt-286-client-side-error-reporting.md)** — extends SPEC-016 with a `reportClientError()` utility that wraps `Sentry.captureException()`, then systematically replaces all 7 ad-hoc `console.error` / bare-catch locations.
+**Reclassified as [DEBT-286](../_archive/debt/debt-286-client-side-error-reporting.md)** — extends SPEC-016 with a `reportClientError()` utility that wraps `Sentry.captureException()`, then systematically replaces all 7 ad-hoc `console.error` / bare-catch locations.
 
 Priority rollout targets:
 

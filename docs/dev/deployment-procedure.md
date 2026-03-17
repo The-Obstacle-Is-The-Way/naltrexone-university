@@ -124,4 +124,4 @@ The seed script is fully idempotent. See [Content Pipeline §16: Seed Idempotenc
 
 - [Deployment Environments](./deployment-environments.md) — Env var scoping, Clerk/Stripe/Neon config
 - [Content Pipeline](../practice-engine/content-pipeline.md) — MDX → seed → DB flow
-- [SPEC-033 §14](../specs/spec-033-tag-taxonomy-migration.md) — Tag taxonomy DB sync procedure
+- [SPEC-033 §14](../_archive/specs/spec-033-tag-taxonomy-migration.md) — Tag taxonomy DB sync procedure

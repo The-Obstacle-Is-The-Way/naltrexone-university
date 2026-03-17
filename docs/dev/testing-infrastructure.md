@@ -409,7 +409,7 @@ See [DEBT-293](../_archive/debt/debt-293-e2e-shared-state-structural-flakiness.m
 - `createAction` try/catch wraps every server action
 - Error boundaries on every route
 
-**Client-side timeouts:** `lib/with-timeout.ts` wraps client-side server action calls (SPEC-029), preventing indefinite "Loading..." states. See [SPEC-029](../specs/spec-029-dev-environment-resilience.md).
+**Client-side timeouts:** `lib/with-timeout.ts` wraps client-side server action calls (SPEC-029), preventing indefinite "Loading..." states. See [SPEC-029](../_archive/specs/spec-029-dev-environment-resilience.md).
 
 ---
 

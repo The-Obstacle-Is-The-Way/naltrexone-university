@@ -5,7 +5,7 @@
 
 This document defines the app's contrast targets and the engineering rules that follow from them.
 
-Use `docs/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md` for computed findings and evidence. This doc is normative: it describes what we are aiming for and what is allowed.
+Use `docs/_archive/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md` for computed findings and evidence. This doc is normative: it describes what we are aiming for and what is allowed.
 
 ---
 
@@ -88,7 +88,7 @@ Tonal fill elevation used as a supplementary hierarchy hint, not a required boun
 
 ## 4. Evidence and Audits
 
-- Computed findings and screenshots belong in: `docs/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md`
+- Computed findings and screenshots belong in: `docs/_archive/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md`
 - When a contrast change is proposed, include:
   - Token values involved (`app/globals.css`)
   - The component/pattern and file path

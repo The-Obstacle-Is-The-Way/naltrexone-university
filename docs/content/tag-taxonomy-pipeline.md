@@ -136,8 +136,8 @@ History question filters:
 ## 6) Related Files
 
 - `docs/content/tag-taxonomy-golden-spec.md`
-- `docs/brainstorming/bs-024-tag-taxonomy-cleanup.md`
-- `docs/specs/spec-033-tag-taxonomy-migration.md`
+- `docs/_archive/brainstorming/bs-024-tag-taxonomy-cleanup.md`
+- `docs/_archive/specs/spec-033-tag-taxonomy-migration.md`
 - `lib/content/draftTaxonomy.ts`
 - `lib/content/schemas.ts`
 - `scripts/import-draft-questions.ts`
