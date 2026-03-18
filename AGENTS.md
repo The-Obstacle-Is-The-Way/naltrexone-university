@@ -331,8 +331,10 @@ All app pages under `/app/*` are protected by Clerk auth. If you need to visuall
 pnpm agent-browser:auth
 # Shell 2: connect and explore
 agent-browser connect 9224
-agent-browser open http://localhost:3000/app/dashboard
+agent-browser get url
 ```
+
+Success criterion: `agent-browser get url` must remain on `/app/dashboard` or another authenticated `/app/*` route. If it lands on Clerk sign-in, the current CDP attach did not reproduce authenticated access in that environment. Do not assume the bridge is working just because `pnpm agent-browser:auth` printed readiness.
 
 Do not use `agent-browser --state` — it is unreliable upstream. Full details and fallback options: `docs/dev/agent-browser.md`.
 

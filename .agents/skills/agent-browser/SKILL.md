@@ -40,11 +40,11 @@ pnpm agent-browser:auth
 # Waits until it prints "Agent-browser Clerk auth bridge is ready" with the CDP port
 ```
 
-**Shell 2 — connect and use:**
+**Shell 2 — connect and verify:**
 ```bash
 agent-browser connect 9224
-agent-browser get url                                          # should show /app/dashboard
-agent-browser open http://localhost:3000/app/practice          # navigate anywhere in /app/*
+agent-browser get url                                          # must still show /app/dashboard or another /app/* route
+agent-browser open http://localhost:3000/app/practice          # only continue if the session stayed authenticated
 agent-browser screenshot /tmp/screenshot.png --full            # capture evidence
 ```
 
@@ -53,7 +53,8 @@ When done, Ctrl+C in Shell 1 to close the authenticated browser.
 ### Gotchas
 
 - **Host must match exactly.** `localhost` and `127.0.0.1` are not interchangeable for Clerk cookies. Use whichever `NEXT_PUBLIC_APP_URL` resolves to (default: `localhost`).
-- **React server action clicks via refs may silently fail.** If `agent-browser click @ref` on a Submit/action button does nothing, fall back to: `agent-browser eval "document.querySelector('button[text]').click()"` or use `agent-browser eval` with a targeted selector. This is a CDP dispatch quirk with React's event system.
+- **The current CDP bridge is still under re-validation.** `pnpm agent-browser:auth` can print readiness while the connected `agent-browser` session still lands on Clerk sign-in. Always verify with `agent-browser get url` before assuming authenticated access.
+- **React server action clicks via refs may silently fail.** If `agent-browser click @ref` on a Submit/action button does nothing, fall back to a targeted JS click such as `agent-browser eval "Array.from(document.querySelectorAll('button')).find((button) => button.textContent?.includes('Submit'))?.click()"`. This is a CDP dispatch quirk with React's event system.
 - **Hidden radio inputs can hang clicks.** Our choice inputs are `sr-only`. Prefer `agent-browser find text "<choice text>" click` over clicking radio refs directly.
 - **Always re-snapshot after navigation.** Refs are invalidated when the DOM changes.
 

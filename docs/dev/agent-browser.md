@@ -4,7 +4,7 @@
 **Repo:** https://github.com/vercel-labs/agent-browser
 **Full command reference:** `../../.agents/skills/agent-browser/SKILL.md`
 **Project integration:** `./testing-infrastructure.md` §Agent-Browser
-**CLI verified locally:** `agent-browser 0.20.13`
+**CLI verified locally:** `agent-browser 0.21.1`
 
 ---
 
@@ -51,9 +51,9 @@ EMAIL=$(node -e "require('dotenv').config({path:'.env.local'});require('dotenv')
 PASSWORD=$(node -e "require('dotenv').config({path:'.env.local'});require('dotenv').config({path:'.env'});process.stdout.write(process.env.E2E_CLERK_USER_PASSWORD||'')")
 ```
 
-### Option A: Playwright + CDP Bridge (Recommended for authenticated local verification)
+### Option A: Playwright + CDP Bridge (Current best lead, but re-verify locally)
 
-As of 2026-03-18, the reliable Clerk auth path for `agent-browser` in this repo is:
+As of 2026-03-18, the committed CDP bridge is the best path under active investigation:
 
 1. Use Playwright + `@clerk/testing/playwright` to authenticate a real browser session
 2. Launch that browser with a fixed remote debugging port
@@ -74,6 +74,7 @@ Important:
 - Use the exact host from `NEXT_PUBLIC_APP_URL`. Do not switch between `localhost` and `127.0.0.1`; Clerk cookies are host-specific.
 - Keep the Playwright browser process alive while `agent-browser` is connected.
 - `scripts/start-agent-browser-cdp.ts` also accepts `AGENT_BROWSER_CDP_PORT` if you need a non-default port.
+- Re-verify immediately after connect: `agent-browser get url` must remain on `/app/dashboard` or another authenticated `/app/*` route. On local `agent-browser 0.21.1`, the launcher itself reached `/app/dashboard`, but a subsequent `agent-browser connect/open` smoke run still landed on Clerk sign-in. Treat this as unresolved until the connected agent-browser session is proven authenticated in your current environment.
 
 ### Option B: Persistent Profile (Manual Login Once, fallback)
 
@@ -214,10 +215,11 @@ Each session has independent cookies, storage, and auth state.
 1. **Dev server must be running** — `pnpm dev` must be live before running `pnpm agent-browser:auth`. The CDP bridge authenticates against the running app at `NEXT_PUBLIC_APP_URL` (default `http://localhost:3000`).
 2. **Refs expire after navigation** — Always re-snapshot after `open`, `click` that navigates, or DOM changes
 3. **Hidden radios can hang clicks** — Our answer-choice inputs are `sr-only`; clicking the `radio` refs may hang. Prefer `agent-browser find text "<choice text>" click` (or click the wrapping `<label>`).
-4. **React server action clicks via refs may silently fail** — If `agent-browser click @ref` on a Submit or action button does nothing (no error, no state change), the CDP click dispatch isn’t triggering React’s event system. Fall back to: `agent-browser eval "document.querySelector(‘button’).click()"` with a targeted selector. Verified on 2026-03-18: ref-based Submit click failed, `eval`-based `.click()` succeeded.
+4. **React server action clicks via refs may silently fail** — If `agent-browser click @ref` on a Submit or action button does nothing (no error, no state change), the CDP click dispatch isn’t triggering React’s event system. Fall back to a targeted JS click such as `agent-browser eval "Array.from(document.querySelectorAll('button')).find((button) => button.textContent?.includes('Submit'))?.click()"`. Verified on 2026-03-18: ref-based Submit click failed, `eval`-based `.click()` succeeded.
 5. **`.env.local` isn’t auto-loaded** — Export env vars yourself or use Node dotenv extraction (see above)
 6. **Clerk auth + hostnames** — `localhost` and `127.0.0.1` are not interchangeable for Clerk cookies in this repo; use the exact host from `NEXT_PUBLIC_APP_URL`
-7. **`agent-browser --state` is currently unreliable** — Prefer the Playwright + CDP bridge (Option A) over native state restore
-8. **Clerk sign-in has anti-automation** — Prefer Playwright + CDP (Option A) over direct fill (Option E)
+7. **`agent-browser --state` is currently unreliable** — Native state restore is still not trustworthy on local `agent-browser 0.21.1`
+8. **The current CDP bridge still requires verification per run** — `pnpm agent-browser:auth` can reach `/app/dashboard`, but the connected `agent-browser` session may still land on Clerk sign-in. Check `agent-browser get url` before assuming authenticated access.
+9. **Clerk sign-in has anti-automation** — Prefer Playwright itself over direct fill (Option E) when you need guaranteed authenticated verification
 9. **`agent-browser wait --url` uses glob patterns** — Use `**/dashboard` not `/app/dashboard`
 10. **Temp files** — Never commit state JSON, screenshots, or temp scripts to the repo
