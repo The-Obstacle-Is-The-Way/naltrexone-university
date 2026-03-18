@@ -90,7 +90,7 @@ Paper exam. Select answers, navigate freely, change your mind, hand it in when d
 ```text
 Question displayed
   → User may select a choice (local draft, highlighted)
-  → User clicks Next / Previous / navigator button / Review answers
+  → User clicks Next / Previous / navigator button / Finish exam
   → Leaving the question persists the current selection as a draft (if one exists)
   → User may revisit any question and change the draft answer freely
   → Review stage shows answered / unanswered / marked counts
@@ -107,20 +107,19 @@ Question displayed
 
 **Last question:**
 ```text
-[ Previous ]  [ Review answers ]  [ Mark for review ]
+[ Previous ]  [ Next ]  [ Mark for review ]
 ```
 
 **Header (every question):**
 ```text
-                                          [ Review answers ]
+                                          [ Finish exam ]
 ```
 
 **Contract rules:**
-- Previous always occupies position 1 (hidden on Q1 with spacer, per BS-037 pattern).
-- Position 2 is the sequential progression control: `Next` on non-last questions, `Review answers` on the last question.
+- Previous always occupies position 1 when available. On Q1, slot 1 is empty; there is no spacer.
+- Position 2 is the sequential progression control: `Next` on every question. On the last question, clicking `Next` enters the review stage.
 - `Mark for review` always occupies position 3.
-- `Review answers` also lives in the header as a persistent escape hatch — accessible from any question.
-- The last-question duplication of `Review answers` (header + position 2) is intentional. Same label, same destination. Replaces the current harmful pattern where `Review answers` appears only after a dead-end submit state.
+- `Finish exam` lives in the header as a persistent escape hatch — accessible from any question.
 - Next is always enabled. No selection = skip (navigate without saving). Selection exists = save draft and advance.
 - **No Submit button in the action bar.** The only submit is `Submit exam` inside the review stage.
 
@@ -133,7 +132,7 @@ This is the BS-055-selected model for mutable exam answers: draft state while th
 | Trigger | What it catches |
 |---------|-----------------|
 | **Navigation boundary** (Next, Previous, navigator jump) | User moves on — save current selection |
-| **Review stage entry** (header or last-question button) | User wants to review — save current question first |
+| **Review stage entry** (`Finish exam` header or last-question `Next`) | User wants to review — save current question first |
 | **Periodic autosave** (every 30-60 seconds, future enhancement) | User sits on one question for a long time, then crashes |
 | **`visibilitychange` / `beforeunload`** (future enhancement) | Tab switch, browser close |
 

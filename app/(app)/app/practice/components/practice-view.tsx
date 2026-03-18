@@ -186,10 +186,6 @@ type ExamActionBarProps = Pick<
 function ExamActionBar(props: ExamActionBarProps) {
   const isNavigationDisabled =
     props.isPending || props.loadState.status === 'loading';
-  const middleLabel =
-    props.isLastSessionQuestion && props.onEndSession
-      ? 'Review answers'
-      : 'Next';
   const onMiddleAction =
     props.isLastSessionQuestion && props.onEndSession
       ? props.onEndSession
@@ -208,9 +204,7 @@ function ExamActionBar(props: ExamActionBarProps) {
           >
             Previous
           </Button>
-        ) : (
-          <ActionBarSpacer />
-        )
+        ) : null
       ) : null}
 
       <Button
@@ -219,7 +213,7 @@ function ExamActionBar(props: ExamActionBarProps) {
         disabled={isNavigationDisabled}
         onClick={onMiddleAction}
       >
-        {middleLabel}
+        Next
       </Button>
 
       {props.onToggleMarkForReview ? (

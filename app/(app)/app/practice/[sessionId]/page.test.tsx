@@ -490,7 +490,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
       />,
     );
 
-    expect(html).toContain('Review Questions');
+    expect(html).toContain('Review &amp; Submit');
     expect(html).toContain('Submit exam');
     expect(html).toContain('Marked for review');
   });

@@ -153,7 +153,7 @@ test('opens a review question and finalizes the exam', async () => {
     />,
   );
 
-  await expect.element(screen.getByText('Review Questions')).toBeVisible();
+  await expect.element(screen.getByText('Review & Submit')).toBeVisible();
   await expect
     .element(screen.getByText('Marked', { exact: true }))
     .toBeVisible();

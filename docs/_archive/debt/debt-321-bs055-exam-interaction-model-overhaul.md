@@ -207,7 +207,7 @@ const selectedChoiceIdForActiveRead =
 
 | File | Change |
 |------|--------|
-| `app/(app)/app/practice/components/practice-view.tsx` | Split action bar rendering: `isExamMode ? <ExamActionBar /> : <TutorActionBar />`. Exam bar: fixed slots `[Previous] [Next / Review answers] [Mark for review]`. No Submit button. No conditional visibility shifts. |
+| `app/(app)/app/practice/components/practice-view.tsx` | Split action bar rendering: `isExamMode ? <ExamActionBar /> : <TutorActionBar />`. Exam bar: fixed slots `[Previous] [Next] [Mark for review]`. No Submit button. On Q1 slot 1 is empty; there is no spacer. |
 | `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts` | Remove `maybeAutoAdvanceAfterSubmit` function entirely. It's exam-only and no longer needed. |
 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts` | Remove the `maybeAutoAdvanceAfterSubmit` call from `onSubmit`. Wire exam Next to call draft-save + navigate (see Stage 6). |
 | `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` | Keep exam Previous/Next slot wiring stable after the split; the view currently derives Previous via `onNavigateQuestion`, not a dedicated hook-level previous handler |
@@ -215,13 +215,13 @@ const selectedChoiceIdForActiveRead =
 **Exam action bar contract (from interaction-contracts.md):**
 
 ```
-Non-last question:  [ Previous ]  [ Next ]           [ Mark for review ]
-Last question:      [ Previous ]  [ Review answers ]  [ Mark for review ]
-Q1:                 [ spacer   ]  [ Next ]           [ Mark for review ]
+Non-last question:  [ Previous ]  [ Next ]  [ Mark for review ]
+Last question:      [ Previous ]  [ Next ]  [ Mark for review ]
+Q1:                 [            ]  [ Next ]  [ Mark for review ]
 ```
 
-- Previous: hidden on Q1 (spacer), visible otherwise. Always position 1.
-- Next / Review answers: always position 2. Next on non-last, Review answers on last.
+- Previous: hidden on Q1 (no spacer), visible otherwise. Always position 1 when present.
+- Next: always position 2. On the last question, the label stays `Next`, but the click still enters the review stage.
 - Mark for review: always position 3.
 - Next is always enabled. No disabled state based on selection.
 
@@ -232,8 +232,8 @@ Q1:                 [ spacer   ]  [ Next ]           [ Mark for review ]
 **Verification:**
 - Update `practice-view.test.tsx`: exam mode renders `[Previous] [Next] [Mark for review]`, no Submit
 - Update `practice-view.test.tsx`: tutor mode still renders Submit, still shows feedback
-- Test: exam Q1 hides Previous (spacer)
-- Test: exam last question shows "Review answers" in position 2
+- Test: exam Q1 hides Previous without rendering a spacer
+- Test: exam last question still shows "Next" in position 2 and routes through review-stage entry
 - Test: button positions are consistent regardless of answered state
 - `pnpm typecheck && pnpm test --run && pnpm test:browser`
 
@@ -254,7 +254,7 @@ Q1:                 [ spacer   ]  [ Next ]           [ Mark for review ]
 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` | Inject `maybeSaveDraftBeforeNavigation` into `onNextQuestion` and `onNavigateQuestion`. There is no dedicated `onPreviousQuestion` handler here; Previous flows through `onNavigateQuestion` from the page view. |
 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` | Add stopwatch state: `cumulativeMs` (per question, in a ref or state map) and `enteredAt` (timestamp). On question enter: set `enteredAt`. On question leave: `cumulativeMs += now - enteredAt`. |
 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts` | Pass the new `saveExamDraftAnswer` server action into the question-flow hook and keep tutor wiring untouched |
-| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts` | Save current draft before entering review stage (the header "Review answers" button and the last-question "Review answers" button both must trigger a save). |
+| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts` | Save current draft before entering review stage (the header `Finish exam` button and the last-question footer `Next` button both must trigger a save). |
 
 **Server action to add:**
 

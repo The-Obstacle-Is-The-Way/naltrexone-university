@@ -19,7 +19,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
 | [DEBT-318](./debt-318-tutor-bookmark-before-answer.md) | Bookmark visible before feedback in tutor mode and quick practice — keep the surface, but delay the action until inline feedback/explanation is visible | P3 | — |
-| [DEBT-322](./debt-322-exam-action-bar-ux-polish.md) | Exam action bar UX polish — remove Q1 spacer (D-1), rename exit to "Finish exam" and heading to "Review & Submit" (D-2), footer always "Next" with onEndSession routing on last Q (D-3), stabilize Previous visibility from sessionInfo.index (D-4b). All frontend-only. | P2 | — |
+| [DEBT-322](./debt-322-exam-action-bar-ux-polish.md) | Exam action bar UX polish — remove the Q1 spacer (D-1), rename the header exit to "Finish exam" and the review heading to "Review & Submit" (D-2), keep the footer label "Next" while the last-question click still routes into review (D-3), and stabilize Previous visibility from sessionInfo.index (D-4b). All frontend-only. | P2 | — |
 **Next Debt ID:** DEBT-324
 
 ---

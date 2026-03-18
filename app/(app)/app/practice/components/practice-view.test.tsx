@@ -323,7 +323,7 @@ describe('PracticeView', () => {
   it('renders an explicit session action when no more questions remain', () => {
     const html = renderToStaticMarkup(
       <PracticeView
-        endSessionLabel="Review answers"
+        endSessionLabel="Finish exam"
         loadState={{ status: 'ready' }}
         question={null}
         selectedChoiceId={null}
@@ -344,7 +344,7 @@ describe('PracticeView', () => {
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const endButtons = Array.from(doc.querySelectorAll('button')).filter(
-      (button) => button.textContent?.includes('Review answers'),
+      (button) => button.textContent?.includes('Finish exam'),
     );
     expect(endButtons).toHaveLength(2);
   });
@@ -555,6 +555,9 @@ describe('PracticeView', () => {
     );
 
     expect(labels).toEqual(['Next', 'Mark for review']);
+    expect(actionBar.querySelectorAll('span[aria-hidden="true"]')).toHaveLength(
+      0,
+    );
     expect(html).not.toContain('>Submit<');
     expect(html).not.toContain('>Previous<');
   });
@@ -638,7 +641,7 @@ describe('PracticeView', () => {
     expect(nextButton?.className).toContain('bg-primary');
   });
 
-  it('renders Review answers in the bottom bar on the last exam question before submission', () => {
+  it('renders Next in the bottom bar on the last exam question before submission', () => {
     const question = createQuestionProps();
     const selectedChoice = question.choices[0];
     if (!selectedChoice) {
@@ -682,7 +685,7 @@ describe('PracticeView', () => {
       (button) => (button.textContent ?? '').trim(),
     );
 
-    expect(labels).toEqual(['Previous', 'Review answers', 'Mark for review']);
+    expect(labels).toEqual(['Previous', 'Next', 'Mark for review']);
   });
 
   it('does not render Review answers for tutor mode after submit', () => {

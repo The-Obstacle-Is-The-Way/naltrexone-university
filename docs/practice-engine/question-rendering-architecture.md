@@ -21,7 +21,7 @@ This document is the single source of truth for understanding the **current ship
 |---|---------|---------------|-------------|
 | A | **Tutor Mode** (active session) | `/app/practice/[sessionId]` | Practice landing → Start session (tutor) |
 | B | **Exam Mode** (active session) | `/app/practice/[sessionId]` | Practice landing → Start session (exam) |
-| C | **Exam Review Stage** (pre-submit review) | `/app/practice/[sessionId]` (same URL, different view) | Exam mode → click `Review answers` in the header, or the last-question bottom-bar CTA |
+| C | **Exam Review Stage** (pre-submit review) | `/app/practice/[sessionId]` (same URL, different view) | Exam mode → click `Finish exam` in the header, or click `Next` on the last question |
 | D | **Ended Session Review** (post-session) | `/app/questions/[slug]?from=history&mode=review&sessionId=...` | History → Sessions tab → View breakdown → click question, or Session Summary → `Review your answers` / breakdown link |
 | E | **History Individual Review** (standalone) | `/app/questions/[slug]?from=history&mode=review` | History → Questions tab → Review |
 | F | **Quick Practice** (ad-hoc, no session) | `/app/practice/quick` | Practice → Quick Practice |
@@ -81,7 +81,7 @@ Action bars are **not abstracted** — each context renders its own buttons inli
 
 | Context | File:Lines | Buttons |
 |---------|-----------|---------|
-| Practice answering UI (active sessions + quick practice) | `app/(app)/app/practice/components/practice-view.tsx` | Previous (session only), Submit, Review answers (exam last question only), Next, Bookmark (non-exam only), Mark for review (exam only) |
+| Practice answering UI (active sessions + quick practice) | `app/(app)/app/practice/components/practice-view.tsx` | Previous (session only), Submit (non-exam only), Next, Bookmark (non-exam only), Mark for review (exam only) |
 | Exam Review Stage | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:186-235` | Submit exam (with AlertDialog confirmation) |
 | Session Summary | `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` | Review your answers (exam only), Back to Dashboard, View in History, Start another session |
 | Question page (all review origins) | `app/(app)/app/questions/[slug]/question-page-client.tsx` | Previous/Next (session review only), Submit (pre-answer), Try Again / Practice Again (post-answer), Bookmark (review mode after bookmark hydration), Back link |
@@ -154,18 +154,18 @@ Same component tree as Tutor, differentiated by `sessionInfo.mode === 'exam'`:
 - Feedback hidden: `{submitResult && !isExamMode ? ... : null}` (`app/(app)/app/practice/components/practice-view.tsx:239`)
 - After submit, exam mode **auto-advances** to the next question (unless last) via `maybeAutoAdvanceAfterSubmit` in `usePracticeSessionPageController`
 - "Mark for review" button visible (`app/(app)/app/practice/components/practice-view.tsx:277-288`)
-- Header action changes from "End session" to "Review answers" (triggers exam review stage)
-- Last exam question also shows a bottom-bar `Review answers` CTA after submit, so the user does not have to move back to the header
+- Header action changes from "End session" to "Finish exam" (triggers exam review stage)
+- Last exam question keeps the bottom-bar `Next` label; that click still routes through `onEndSession` to enter the review stage
 - QuestionNavigator does **not** reveal correctness in exam mode (answered buttons are labeled "Answered", not "Correct/Incorrect")
 
 ### Context C: Exam Review Stage
 
-When the user clicks "Review answers" (top-right) in exam mode, `PracticeSessionPageView` loads review data and switches to `ExamReviewView`:
+When the user clicks `Finish exam` (top-right) in exam mode, or clicks `Next` on the last question, `PracticeSessionPageView` loads review data and switches to `ExamReviewView`:
 
 ```
 PracticeSessionPageView (app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:111 — if (review) → ExamReviewView)
   └─ ExamReviewView
-       ├─ Header: "Review Questions"
+       ├─ Header: "Review & Submit"
        ├─ Stats cards: Answered / Unanswered / Marked
        ├─ Question list (each row: stem preview + "Open question" button)
        └─ Action bar: [Submit exam] (with AlertDialog confirmation)
@@ -271,7 +271,7 @@ QuickPracticePage (server)
 | Sequential nav (X of Y) | In description | In description | No | Yes (inline row) | No | No |
 | Mark for review | No | Yes | View only | No | No | No |
 | Bookmark button | Yes | No | No | Yes (after review bookmark hydration) | Yes (after review bookmark hydration) | Yes |
-| Top-right control | End session | Review answers | None | None | None | Back to Practice |
+| Top-right control | End session | Finish exam | None | None | None | Back to Practice |
 
 Dashboard and bookmarks standalone review variants reuse the same question-page state machine as Context E, but keep their origin-specific top-right back link because `origin !== 'history'`.
 
@@ -497,6 +497,7 @@ The bottom action bar is implemented inline in 4 different places. A future spec
 
 | Date | Change |
 |------|--------|
+| 2026-03-18 | Implemented DEBT-322: removed the exam Q1 spacer, renamed the exam header exit to `Finish exam`, renamed the review heading to `Review & Submit`, and kept the footer label `Next` on the last question while preserving review-stage routing. |
 | 2026-03-17 | Accuracy pass: updated completed-session review entry points to current `from=history` behavior, documented last-question exam `Review answers` CTA, corrected bookmark availability in review mode, removed stale top-right back-link claims for history review, and fixed related spec-link labels. |
 | 2026-03-02 | Linked canonical Exam Answer Secrecy Policy for cross-context correctness/explanation exposure rules. |
 | 2026-03-01 | Closed DEBT-266 and DEBT-267: documented server telemetry events, accepted visit-scoped retry-marker policy, and synced previous-attempt mixed-id contract hardening. |

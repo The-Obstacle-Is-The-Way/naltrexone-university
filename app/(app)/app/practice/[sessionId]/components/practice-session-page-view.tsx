@@ -232,7 +232,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       bookmarkMessage={props.bookmarkMessage}
       bookmarkMessageVersion={props.bookmarkMessageVersion}
       canSubmit={props.canSubmit}
-      endSessionLabel={mode === 'exam' ? 'Review answers' : 'End session'}
+      endSessionLabel={mode === 'exam' ? 'Finish exam' : 'End session'}
       onEndSession={props.onEndSession}
       onTryAgain={props.onTryAgain}
       onRetryBookmarks={props.onRetryBookmarks}
@@ -244,7 +244,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       onPreviousQuestion={
         props.onNavigateQuestion ? onPreviousQuestion : undefined
       }
-      hasPreviousQuestion={previousQuestionId !== null}
+      hasPreviousQuestion={(props.sessionInfo?.index ?? 0) > 0}
       hasNextQuestion={nextQuestionId !== null}
     />
   );

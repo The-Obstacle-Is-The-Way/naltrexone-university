@@ -94,7 +94,7 @@ test('renders exam review branch and triggers review actions', async () => {
     />,
   );
 
-  await expect.element(screen.getByText('Review Questions')).toBeVisible();
+  await expect.element(screen.getByText('Review & Submit')).toBeVisible();
   await screen.getByRole('button', { name: 'Open question' }).click();
   expect(onOpenReviewQuestion).toHaveBeenCalledWith('q1');
 
@@ -152,7 +152,7 @@ test('falls back to onEndSession when onFinalizeReview is omitted in the review 
     />,
   );
 
-  await expect.element(screen.getByText('Review Questions')).toBeVisible();
+  await expect.element(screen.getByText('Review & Submit')).toBeVisible();
   await screen.getByRole('button', { name: 'Submit exam' }).click();
   await expect
     .element(screen.getByRole('alertdialog', { name: 'Submit exam?' }))
@@ -243,6 +243,50 @@ test('renders active question branch with navigator and navigation callback', as
   await expect.element(screen.getByText('Question navigator')).toBeVisible();
   await screen.getByRole('button', { name: 'Question 2: Unanswered' }).click();
   expect(onNavigateQuestion).toHaveBeenCalledWith('q2');
+});
+
+test('renders Finish exam in the active exam-question header', async () => {
+  const screen = await render(
+    <PracticeSessionPageView
+      summary={null}
+      review={null}
+      navigator={null}
+      sessionInfo={{
+        sessionId: 'session-1',
+        mode: 'exam',
+        index: 0,
+        total: 2,
+        isMarkedForReview: false,
+      }}
+      loadState={{ status: 'ready' }}
+      question={{
+        questionId: 'q1',
+        slug: 'q-1',
+        stemMd: 'Stem 1',
+        difficulty: 'easy',
+        choices: [{ id: 'c1', label: 'A', textMd: 'Choice A', sortOrder: 1 }],
+        session: null,
+      }}
+      selectedChoiceId={null}
+      isAnswered={false}
+      submitResult={null}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      canSubmit={false}
+      onEndSession={() => undefined}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onToggleMarkForReview={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={() => undefined}
+    />,
+  );
+
+  await expect
+    .element(screen.getByRole('button', { name: 'Finish exam' }))
+    .toBeVisible();
 });
 
 test('wires navigator aria-controls to an existing question panel id', async () => {
@@ -478,7 +522,7 @@ test('hasPreviousQuestion is false when current question is first in navigator',
     .not.toBeInTheDocument();
 });
 
-test('hasPreviousQuestion is false when navigator is missing or current question is not found', async () => {
+test('hasPreviousQuestion is false on the first question when navigator is missing', async () => {
   const screen = await render(
     <PracticeSessionPageView
       summary={null}
@@ -520,6 +564,115 @@ test('hasPreviousQuestion is false when navigator is missing or current question
   await expect
     .element(screen.getByRole('button', { name: 'Previous' }))
     .not.toBeInTheDocument();
+});
+
+test('renders Previous when navigator is missing but sessionInfo indicates a prior question exists', async () => {
+  const screen = await render(
+    <PracticeSessionPageView
+      summary={null}
+      review={null}
+      navigator={null}
+      sessionInfo={{
+        sessionId: 'session-1',
+        mode: 'tutor',
+        index: 1,
+        total: 2,
+        isMarkedForReview: false,
+      }}
+      loadState={{ status: 'ready' }}
+      question={{
+        questionId: 'q2',
+        slug: 'q-2',
+        stemMd: 'Stem 2',
+        difficulty: 'medium',
+        choices: [{ id: 'c1', label: 'A', textMd: 'Choice A', sortOrder: 1 }],
+        session: null,
+      }}
+      selectedChoiceId={null}
+      isAnswered={false}
+      submitResult={null}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      canSubmit={false}
+      onEndSession={() => undefined}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={() => undefined}
+      onNavigateQuestion={() => undefined}
+    />,
+  );
+
+  await expect
+    .element(screen.getByRole('button', { name: 'Previous' }))
+    .toBeVisible();
+});
+
+test('routes the last exam-question footer Next button through onEndSession instead of onNextQuestion', async () => {
+  const onEndSession = vi.fn();
+  const onNextQuestion = vi.fn();
+
+  const screen = await render(
+    <PracticeSessionPageView
+      summary={null}
+      review={null}
+      navigator={createReviewResponse({
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 2,
+        markedCount: 0,
+        rows: [
+          createReviewRow({
+            questionId: 'q1',
+            order: 1,
+            isAnswered: true,
+            isCorrect: true,
+          }),
+          createReviewRow({
+            questionId: 'q2',
+            order: 2,
+            isAnswered: true,
+            isCorrect: true,
+          }),
+        ],
+      })}
+      sessionInfo={{
+        sessionId: 'session-1',
+        mode: 'exam',
+        index: 1,
+        total: 2,
+        isMarkedForReview: false,
+      }}
+      loadState={{ status: 'ready' }}
+      question={createNextQuestion({
+        questionId: 'q2',
+        slug: 'q-2',
+        stemMd: 'Last exam question',
+        difficulty: 'medium',
+      })}
+      selectedChoiceId={null}
+      isAnswered={false}
+      submitResult={null}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      canSubmit={false}
+      onEndSession={onEndSession}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onToggleMarkForReview={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={onNextQuestion}
+      onNavigateQuestion={() => undefined}
+    />,
+  );
+
+  await screen.getByRole('button', { name: 'Next' }).click();
+  expect(onEndSession).toHaveBeenCalledTimes(1);
+  expect(onNextQuestion).not.toHaveBeenCalled();
 });
 
 test('hasPreviousQuestion is true when current question is not first', async () => {
