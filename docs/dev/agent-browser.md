@@ -71,8 +71,7 @@ config({ path: '.env' });
 
 const baseURL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-const helper = (await import('../tests/e2e/helpers/clerk-auth.ts')).default;
-const { signInWithClerkPassword } = helper;
+const { signInWithClerkPassword } = await import('../tests/e2e/helpers/clerk-auth.ts');
 
 await clerkSetup();
 
