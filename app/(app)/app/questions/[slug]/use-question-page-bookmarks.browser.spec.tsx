@@ -1,0 +1,145 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { render } from 'vitest-browser-react';
+import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
+import type { GetBookmarksOutput } from '@/src/application/ports/bookmarks';
+import { ok } from '@/tests/test-helpers/ok';
+import { useQuestionPageBookmarks } from './use-question-page-bookmarks';
+
+const { getBookmarksMock, toggleBookmarkMock, reportClientErrorMock } =
+  vi.hoisted(() => ({
+    getBookmarksMock: vi.fn(),
+    toggleBookmarkMock: vi.fn(),
+    reportClientErrorMock: vi.fn(),
+  }));
+
+vi.mock('@/src/adapters/controllers/bookmark-controller', () => ({
+  getBookmarks: getBookmarksMock,
+  toggleBookmark: toggleBookmarkMock,
+}));
+
+vi.mock('@/lib/report-client-error', () => ({
+  reportClientError: reportClientErrorMock,
+  shouldReportClientError: (error: unknown) =>
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: string }).code === 'INTERNAL_ERROR',
+}));
+
+function createQuestion(): GetQuestionBySlugOutput {
+  return {
+    questionId: 'question-1',
+    slug: 'q-1',
+    stemMd: 'Stem',
+    difficulty: 'easy',
+    choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
+  };
+}
+
+const defaultQuestion = createQuestion();
+
+function Probe({
+  question = defaultQuestion,
+  mode = 'review',
+}: {
+  question?: GetQuestionBySlugOutput | null;
+  mode?: 'review' | null;
+}) {
+  const output = useQuestionPageBookmarks({
+    mode,
+    question,
+    isMounted: () => true,
+  });
+
+  return (
+    <>
+      <div data-testid="bookmark-status">{output.bookmarkStatus}</div>
+      <div data-testid="is-bookmark-hydrated">
+        {output.isBookmarkHydrated ? 'true' : 'false'}
+      </div>
+      <div data-testid="is-bookmarked">
+        {output.isBookmarked ? 'true' : 'false'}
+      </div>
+      <button
+        type="button"
+        data-testid="trigger-toggle-bookmark"
+        onClick={() => void output.onToggleBookmark()}
+      >
+        Trigger toggle bookmark
+      </button>
+    </>
+  );
+}
+
+describe('useQuestionPageBookmarks (browser)', () => {
+  const emptyBookmarksResult: { ok: true; data: GetBookmarksOutput } = ok({
+    rows: [],
+  });
+
+  beforeEach(() => {
+    getBookmarksMock.mockResolvedValue(emptyBookmarksResult);
+    toggleBookmarkMock.mockResolvedValue(ok({ bookmarked: false }));
+  });
+
+  afterEach(() => {
+    getBookmarksMock.mockReset();
+    toggleBookmarkMock.mockReset();
+    reportClientErrorMock.mockReset();
+  });
+
+  it('loads bookmark state for the current review question', async () => {
+    getBookmarksMock.mockResolvedValue(
+      ok({
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'question-1',
+            slug: 'q-1',
+            stemMd: 'Stem',
+            difficulty: 'easy',
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    );
+
+    const screen = await render(<Probe />);
+
+    await expect
+      .element(screen.getByTestId('bookmark-status'))
+      .toHaveTextContent('idle');
+    await expect
+      .element(screen.getByTestId('is-bookmark-hydrated'))
+      .toHaveTextContent('true');
+    await expect
+      .element(screen.getByTestId('is-bookmarked'))
+      .toHaveTextContent('true');
+  });
+
+  it('toggles bookmark state for the current review question', async () => {
+    toggleBookmarkMock.mockResolvedValue(ok({ bookmarked: true }));
+
+    const screen = await render(<Probe />);
+
+    await expect
+      .element(screen.getByTestId('is-bookmark-hydrated'))
+      .toHaveTextContent('true');
+    await expect
+      .element(screen.getByTestId('is-bookmarked'))
+      .toHaveTextContent('false');
+
+    await screen.getByTestId('trigger-toggle-bookmark').click();
+
+    await expect.poll(() => toggleBookmarkMock.mock.calls.length).toBe(1);
+    expect(toggleBookmarkMock).toHaveBeenCalledWith({
+      questionId: 'question-1',
+      idempotencyKey: expect.any(String),
+    });
+    await expect
+      .element(screen.getByTestId('bookmark-status'))
+      .toHaveTextContent('idle');
+    await expect
+      .element(screen.getByTestId('is-bookmarked'))
+      .toHaveTextContent('true');
+  });
+});
