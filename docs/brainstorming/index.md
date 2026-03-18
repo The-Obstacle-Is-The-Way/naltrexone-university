@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-17
+**Last Updated:** 2026-03-18
 
 ---
 
@@ -32,8 +32,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) | Bookmark Icon Toggle — replace "Remove" text pill and "Bookmark"/"Remove bookmark" action bar pills with filled/unfilled bookmark icon (Lucide `Bookmark` with `fill-current` toggle); phased rollout starting with Bookmarks page | Active | [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) |
 | [BS-053](./bs-053-bookmark-vs-mark-for-review-collision.md) | Bookmark vs Mark-for-Review Collision — exam action bar shows both "Bookmark" and "Mark for review" as identical pills, creating cognitive confusion between permanent curation and session-scoped flagging | Active | [BS-052](./bs-052-bookmark-icon-toggle-replacement.md), [DEBT-316](../_archive/debt/debt-316-exam-post-submit-review-flow.md) |
 | [BS-055](./bs-055-exam-session-interaction-model-rethink.md) | Exam Session Interaction Model — Submit button is redundant (no feedback shown), button bar mutates unpredictably across questions, click count per question is 2-3x what it should be | Active | [BS-054](../_archive/brainstorming/bs-054-session-end-ux-simplification.md), [BS-053](./bs-053-bookmark-vs-mark-for-review-collision.md) |
+| [BS-057](./bs-057-agent-browser-clerk-auth-reliability.md) | Agent-Browser Clerk Auth Reliability — AI agents using Vercel's agent-browser cannot authenticate through Clerk to access `/app/*` routes, blocking automated visual verification | Active | [DEBT-322](../debt/debt-322-exam-action-bar-ux-polish.md) |
 
-**Next Brainstorming ID:** BS-057
+**Next Brainstorming ID:** BS-058
 
 ---
 
