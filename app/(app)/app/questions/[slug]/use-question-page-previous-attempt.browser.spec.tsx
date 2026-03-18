@@ -98,6 +98,13 @@ function Probe({
       <div data-testid="review-hydration-state">
         {output.reviewHydrationState ?? ''}
       </div>
+      <button
+        type="button"
+        data-testid="reset-review-hydration-state"
+        onClick={output.resetReviewHydrationState}
+      >
+        Reset review hydration state
+      </button>
     </>
   );
 }
@@ -218,5 +225,64 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
       }),
     );
     await deferred.promise;
+  });
+
+  it('ignores an in-flight previous-attempt response after reset', async () => {
+    const deferred =
+      createDeferred<
+        ActionResult<{
+          kind: 'attempt';
+          attemptId: string;
+          selectedChoiceId: string;
+          isCorrect: boolean;
+          correctChoiceId: string;
+          explanationMd: string | null;
+          referenceMd: string | null;
+          choiceExplanations: [];
+          answeredAt: string;
+        }>
+      >();
+    getPreviousAttemptMock.mockReturnValue(deferred.promise);
+
+    const screen = await render(<Probe mode="review" />);
+
+    await expect
+      .element(screen.getByTestId('is-loading-previous-attempt'))
+      .toHaveTextContent('true');
+
+    await screen.getByTestId('reset-review-hydration-state').click();
+
+    await expect
+      .element(screen.getByTestId('is-loading-previous-attempt'))
+      .toHaveTextContent('false');
+    await expect
+      .element(screen.getByTestId('review-hydration-state'))
+      .toHaveTextContent('no_prior_attempt');
+
+    deferred.resolve(
+      ok({
+        kind: 'attempt',
+        attemptId: 'attempt-1',
+        selectedChoiceId: 'choice-2',
+        isCorrect: true,
+        correctChoiceId: 'choice-2',
+        explanationMd: 'Because.',
+        referenceMd: null,
+        choiceExplanations: [],
+        answeredAt: '2026-02-01T00:00:00.000Z',
+      }),
+    );
+    await deferred.promise;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    await expect
+      .element(screen.getByTestId('selected-choice'))
+      .toHaveTextContent(/^$/);
+    await expect
+      .element(screen.getByTestId('attempt-id'))
+      .toHaveTextContent(/^$/);
+    await expect
+      .element(screen.getByTestId('review-hydration-state'))
+      .toHaveTextContent('no_prior_attempt');
   });
 });

@@ -135,6 +135,8 @@ export function useQuestionPagePreviousAttempt(
 
   const resetReviewHydrationState = useMemo(() => {
     return () => {
+      latestPreviousAttemptRequestId.current += 1;
+      activePreviousAttemptRequestId.current = null;
       setIsLoadingPreviousAttempt(false);
       setReviewHydrationState('no_prior_attempt');
     };
