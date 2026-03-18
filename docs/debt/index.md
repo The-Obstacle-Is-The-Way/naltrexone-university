@@ -19,9 +19,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
 | [DEBT-318](./debt-318-tutor-bookmark-before-answer.md) | Bookmark visible before feedback in tutor mode and quick practice — keep the surface, but delay the action until inline feedback/explanation is visible | P3 | — |
-| [DEBT-321](./debt-321-bs055-exam-interaction-model-overhaul.md) | BS-055 Exam Interaction Model Overhaul — 8 ordered stages with explicit port boundaries, active-reader updates, and a coupled frontend cutover chain: draft fields → save-draft use case → finalize use case → draft-aware active readers → action bar redesign → draft-save on navigation → wire finalization → summary back-target fix | P1 | — |
-| [DEBT-322](./debt-322-exam-action-bar-ux-polish.md) | Exam action bar UX polish — Q1 layout imbalance (spacer gap), "Review answers" naming confusion, last-question button duplication. 3 independent items, all frontend-only. | P2 | — |
-| [DEBT-323](./debt-323-agent-browser-react-click-failures.md) | Agent-browser React interaction reliability gaps — Submit/action-button refs and toggle buttons are unreliable; radio refs are inconsistent by surface. Eval workarounds documented. Toggle buttons have no workaround. | P3 | — |
+| [DEBT-322](./debt-322-exam-action-bar-ux-polish.md) | Exam action bar UX polish — Q1 spacer gap (D-1, worse on mobile), "Review answers" triple-overloaded naming (D-2), last-question button duplication (D-3), Previous button race condition (D-4b), header responsive stacking (D-4c). All frontend-only. | P2 | — |
 **Next Debt ID:** DEBT-324
 
 ---
@@ -30,6 +28,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-323](../_archive/debt/debt-323-agent-browser-react-click-failures.md) | Agent-browser React click failures — upstream limitation documented in `docs/tooling/agent-browser.md`. Not a code bug. Eval workarounds and toggle-button limitation permanently documented. | P3 | 2026-03-18 | — |
+| [DEBT-321](../_archive/debt/debt-321-bs055-exam-interaction-model-overhaul.md) | BS-055 Exam Interaction Model Overhaul — all 8 stages complete. Draft fields, save-draft, finalize, draft-aware readers, action bar split, navigation save, review wiring, summary back-target. | P1 | 2026-03-18 | — |
 | [DEBT-320](../_archive/debt/debt-320-useeffect-audit.md) | useEffect audit — resolved the two `use-question-page-controller` anti-patterns and decomposed the question-page flow into focused bookmark, session-navigation, and previous-attempt hooks; broader fetch-abstraction discussion remains informational only | P2 | 2026-03-17 | — |
 | [DEBT-319](../_archive/debt/debt-319-icon-size-shorthand-drift.md) | Lucide icon size shorthand drift in disclosure chevrons — replaced `h-4 w-4` with canonical `size-4` shorthand in both production chevrons and updated the corresponding test assertion | P3 | 2026-03-17 | — |
 | [DEBT-317](../_archive/debt/debt-317-practice-questions-centering-on-narrow-screens.md) | Practice "Questions" block centering on narrow screens — changed the Questions wrapper from `items-center` to `items-start`, kept the existing sibling row structure, and updated the static markup test | P3 | 2026-03-16 | — |

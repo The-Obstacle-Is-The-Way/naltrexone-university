@@ -91,7 +91,7 @@ EMAIL=$(node -e "require('dotenv').config({path:'.env.local'});require('dotenv')
 
 agent-browser's accessibility-tree-based click does not produce the event sequence React 19's root-level event delegation expects. Radix toggle groups listen for `pointerdown` specifically — neither agent-browser refs nor programmatic `dispatchEvent` produces a trusted pointer event that Radix accepts.
 
-Full test matrix: [DEBT-323](../debt/debt-323-agent-browser-react-click-failures.md)
+Full test matrix: [DEBT-323](../_archive/debt/debt-323-agent-browser-react-click-failures.md)
 
 ---
 

@@ -15,6 +15,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 **Next Bug ID:** BUG-229
 
+**Latest archival (2026-03-18):**
+- BUG-228 resolved and archived: `parseSentryIngestOrigin()` now extracts the DSN origin at middleware init and adds it to `connect-src`. Browser Sentry transport is unblocked.
+
 **Manual report (2026-03-16) — agent-browser auth + observability sweep:**
 
 - BUG-228 filed: Clerk-owned CSP omits Sentry ingest from `connect-src`, so browser-side error reporting is blocked even when `NEXT_PUBLIC_SENTRY_DSN` is configured.
@@ -90,7 +93,7 @@ Active open bugs are listed below.
 
 | Bug | Priority | Summary |
 |-----|----------|---------|
-| [BUG-228](./bug-228-client-sentry-ingest-blocked-by-csp.md) | P2 | Browser-side Sentry requests are blocked by the emitted `connect-src`, so configured client telemetry never reaches Sentry |
+| ~~BUG-228~~ | P2 | ~~Browser-side Sentry requests blocked by CSP~~ — **Resolved 2026-03-18.** `parseSentryIngestOrigin()` adds DSN origin to `connect-src`. [Archived](../_archive/bugs/bug-228-client-sentry-ingest-blocked-by-csp.md). |
 
 ## Audit #16 — Agent-Browser Auth + Observability Sweep (2026-03-16)
 
@@ -107,7 +110,7 @@ Targeted browser-led sweep focused on local auth setup, documented `agent-browse
 
 | Bug | Family | Priority | Summary |
 |-----|--------|----------|---------|
-| BUG-228 | Observability / CSP | P2 | Clerk-owned CSP omits Sentry ingest from `connect-src`, so browser-side error reporting is silently blocked |
+| ~~BUG-228~~ | Observability / CSP | P2 | ~~Clerk-owned CSP omits Sentry ingest~~ — **Resolved.** [Archived](../_archive/bugs/bug-228-client-sentry-ingest-blocked-by-csp.md). |
 
 **Surfaces confirmed clean:**
 - Authenticated dashboard load succeeds under plain Playwright password sign-in with the local E2E Clerk user
