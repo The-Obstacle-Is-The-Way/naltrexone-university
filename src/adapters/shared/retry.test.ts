@@ -113,4 +113,12 @@ describe('isTransientExternalError', () => {
       isTransientExternalError(createError('not found', { statusCode: 404 })),
     ).toBe(false);
   });
+
+  it('returns false for status codes at the exclusive 5xx upper bound', () => {
+    expect(
+      isTransientExternalError(
+        createError('not an HTTP status', { statusCode: 600 }),
+      ),
+    ).toBe(false);
+  });
 });

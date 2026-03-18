@@ -224,6 +224,46 @@ describe('question-page-logic', () => {
       });
     });
 
+    it('uses the standard read timeout tier when loading a question', async () => {
+      vi.useFakeTimers();
+      try {
+        const setLoadState = vi.fn();
+        const setSelectedChoiceId = vi.fn();
+        const setSubmitResult = vi.fn();
+        const setSubmitIdempotencyKey = vi.fn();
+        const setQuestionLoadedAt = vi.fn();
+        const setQuestion = vi.fn();
+
+        const promise = loadQuestion({
+          slug: 'q-1',
+          getQuestionBySlugFn: async () => new Promise<never>(() => {}),
+          createIdempotencyKey: () => 'idem_1',
+          nowMs: () => 1234,
+          setLoadState,
+          setSelectedChoiceId,
+          setSubmitResult,
+          setSubmitIdempotencyKey,
+          setQuestionLoadedAt,
+          setQuestion,
+        });
+
+        await vi.advanceTimersByTimeAsync(10_000);
+        await promise;
+
+        expect(setQuestion).toHaveBeenCalledWith(null);
+        expect(setLoadState).toHaveBeenCalledWith({
+          status: 'error',
+          message: 'Request timed out. Please try again.',
+        });
+        expect(reportClientErrorMock).toHaveBeenCalledWith(expect.any(Error), {
+          component: 'QuestionPageLogic',
+          action: 'loadQuestion',
+        });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('returns no state updates when unmounted during loadQuestion', async () => {
       const deferred = createDeferred<ActionResult<GetQuestionBySlugOutput>>();
       let mounted = true;

@@ -1,3 +1,4 @@
+import { STACK_TRACE_LIMIT } from '@/src/adapters/shared/error-logging-constants';
 import { isApplicationError } from '@/src/application/errors';
 import type { PaymentGateway } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
@@ -7,7 +8,6 @@ import type {
   SubscriptionRepository,
 } from '@/src/application/ports/repositories';
 import { DAY_MS } from '@/src/domain/services';
-import { STACK_TRACE_LIMIT } from '../shared/error-logging-constants';
 
 export type StripeWebhookInput = {
   rawBody: string;

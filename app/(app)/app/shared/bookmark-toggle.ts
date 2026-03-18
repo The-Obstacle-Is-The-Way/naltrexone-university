@@ -1,9 +1,9 @@
 import { shouldReportClientError } from '@/lib/report-client-error';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
-import { STANDARD_READ_TIMEOUT_MS } from './timeout-tiers';
+import { STANDARD_MUTATION_TIMEOUT_MS } from './timeout-tiers';
 
-const TOGGLE_BOOKMARK_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
+const TOGGLE_BOOKMARK_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
 
 export type BookmarkableQuestion = {
   questionId: string;

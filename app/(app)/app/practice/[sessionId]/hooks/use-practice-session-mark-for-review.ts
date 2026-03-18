@@ -12,7 +12,7 @@ import {
   getThrownErrorMessage,
 } from '@/app/(app)/app/practice/practice-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
-import { STANDARD_READ_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
+import { STANDARD_MUTATION_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import {
   reportClientError,
   shouldReportClientError,
@@ -22,7 +22,7 @@ import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
 
-const MARK_FOR_REVIEW_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
+const MARK_FOR_REVIEW_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
 
 export type SetPracticeSessionQuestionMarkFn = (input: {
   sessionId: string;

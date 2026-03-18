@@ -18,7 +18,7 @@ import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answ
 import type { AttemptRetryOrigin } from '@/src/domain/entities';
 import { MS_PER_SECOND } from '@/src/domain/services';
 
-const QUESTION_LOAD_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
+const QUESTION_LOAD_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 const ANSWER_SUBMIT_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
 const PREVIOUS_ATTEMPT_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 

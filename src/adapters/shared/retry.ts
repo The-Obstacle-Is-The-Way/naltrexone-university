@@ -1,7 +1,6 @@
 import { delay } from '@/src/adapters/shared/delay';
 import {
   HTTP_INTERNAL_SERVER_ERROR,
-  HTTP_SERVER_ERROR_UPPER,
   HTTP_TOO_MANY_REQUESTS,
 } from './http-status';
 
@@ -21,6 +20,8 @@ export type RetryOptions = {
   onRetry?: (info: RetryAttemptInfo) => void;
   sleep?: (ms: number) => Promise<void>;
 };
+
+const HTTP_SERVER_ERROR_EXCLUSIVE_UPPER_BOUND = 600;
 
 function getStringProp(value: unknown, key: string): string | null {
   if (typeof value !== 'object' || value === null) return null;
@@ -57,7 +58,7 @@ export function isTransientExternalError(error: unknown): boolean {
   if (
     typeof statusCode === 'number' &&
     statusCode >= HTTP_INTERNAL_SERVER_ERROR &&
-    statusCode < HTTP_SERVER_ERROR_UPPER
+    statusCode < HTTP_SERVER_ERROR_EXCLUSIVE_UPPER_BOUND
   ) {
     return true;
   }
