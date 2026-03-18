@@ -39,6 +39,7 @@ function parseQuestionOrigin(value: string | undefined): QuestionOrigin | null {
   if (value === 'bookmarks') return value;
   if (value === 'practice') return value;
   if (value === 'history') return value;
+  if (value === 'summary') return value;
   return null;
 }
 
@@ -106,6 +107,16 @@ function getOriginUi(
           : `${ROUTES.APP_HISTORY}?tab=questions`),
       backLabel: 'Back to History',
       subtitle: 'Reviewing a question from your history.',
+    };
+  }
+
+  if (resolvedOrigin === 'summary') {
+    return {
+      backHref: sessionId
+        ? toPracticeSessionRoute(sessionId)
+        : ROUTES.APP_PRACTICE,
+      backLabel: sessionId ? 'Back to Summary' : 'Back to Practice',
+      subtitle: 'Reviewing a question from your session summary.',
     };
   }
 

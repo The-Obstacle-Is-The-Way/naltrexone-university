@@ -16,6 +16,7 @@ describe('usePracticeSessionQuestionFlow', () => {
         isMounted: () => true,
         getNextQuestionFn: vi.fn(),
         submitAnswerFn: vi.fn(),
+        saveExamDraftAnswerFn: vi.fn(),
       }),
     );
 
@@ -37,5 +38,6 @@ describe('usePracticeSessionQuestionFlow', () => {
     expect(typeof output.setSessionMode).toBe('function');
     expect(typeof output.setLoadState).toBe('function');
     expect(typeof output.resetQuestionState).toBe('function');
+    expect(typeof output.saveCurrentExamDraft).toBe('function');
   });
 });

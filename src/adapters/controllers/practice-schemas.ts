@@ -50,6 +50,17 @@ export const EndPracticeSessionInputSchema = z
   })
   .strict();
 
+export const FinalizeExamAnswersInputSchema = EndPracticeSessionInputSchema;
+
+export const SaveExamDraftAnswerInputSchema = z
+  .object({
+    sessionId: zUuid,
+    questionId: zUuid,
+    selectedChoiceId: zUuid,
+    cumulativeMs: z.number().int().min(0),
+  })
+  .strict();
+
 export const GetPracticeSessionReviewInputSchema = z
   .object({
     sessionId: zUuid,
@@ -129,6 +140,24 @@ export const EndPracticeSessionOutputSchema = z
       });
     }
   });
+
+export const PracticeSessionSummaryOutputSchema =
+  EndPracticeSessionOutputSchema;
+export const FinalizeExamAnswersOutputSchema =
+  PracticeSessionSummaryOutputSchema;
+
+export const SaveExamDraftAnswerOutputSchema = z
+  .object({
+    questionId: zUuid,
+    markedForReview: z.boolean(),
+    latestSelectedChoiceId: zUuid.nullable(),
+    latestIsCorrect: z.boolean().nullable(),
+    latestAnsweredAt: z.date().nullable(),
+    draftSelectedChoiceId: zUuid.nullable(),
+    draftSavedAt: z.date().nullable(),
+    draftCumulativeMs: z.number().int().min(0),
+  })
+  .strict();
 
 export const SetPracticeSessionQuestionMarkOutputSchema = z
   .object({

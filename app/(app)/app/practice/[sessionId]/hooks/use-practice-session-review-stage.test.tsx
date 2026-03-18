@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {
   EndPracticeSessionOutput,
+  FinalizeExamAnswersOutput,
   GetPracticeSessionReviewOutput,
 } from '@/src/adapters/controllers/practice-controller';
 import { renderHook } from '@/src/application/test-helpers/render-hook';
@@ -27,8 +28,14 @@ describe('usePracticeSessionReviewStage', () => {
         setLoadState: () => undefined,
         resetQuestionState: () => undefined,
         loadSpecificQuestion: () => undefined,
+        saveCurrentExamDraft: async () => true,
         endPracticeSessionFn: async (): Promise<
           ActionResult<EndPracticeSessionOutput>
+        > => {
+          throw new Error('not used');
+        },
+        finalizeExamAnswersFn: async (): Promise<
+          ActionResult<FinalizeExamAnswersOutput>
         > => {
           throw new Error('not used');
         },

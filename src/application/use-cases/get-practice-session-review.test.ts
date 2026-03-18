@@ -52,6 +52,9 @@ describe('GetPracticeSessionReviewUseCase', () => {
           latestSelectedChoiceId: null,
           latestIsCorrect: null,
           latestAnsweredAt: null,
+          draftSelectedChoiceId: 'draft-choice-2',
+          draftSavedAt: new Date('2026-02-06T00:05:00Z'),
+          draftCumulativeMs: 20_000,
         },
       ],
     });
@@ -110,6 +113,178 @@ describe('GetPracticeSessionReviewUseCase', () => {
     );
   });
 
+  it('counts draft answers for active exam sessions while keeping correctness hidden', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'exam',
+      endedAt: null,
+      questionIds: ['q1', 'q2', 'q3'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId: 'draft-choice-1',
+          draftSavedAt: new Date('2026-02-06T00:00:00Z'),
+          draftCumulativeMs: 10_000,
+        },
+        {
+          questionId: 'q2',
+          markedForReview: true,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId: 'draft-choice-2',
+          draftSavedAt: new Date('2026-02-06T00:02:00Z'),
+          draftCumulativeMs: 20_000,
+        },
+        {
+          questionId: 'q3',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 0,
+        },
+      ],
+    });
+
+    const useCase = new GetPracticeSessionReviewUseCase(
+      new FakePracticeSessionRepository([session]),
+      new FakeQuestionRepository([
+        createQuestion({
+          id: 'q1',
+          slug: 'q-1',
+          stemMd: 'Stem for q1',
+          difficulty: 'easy',
+        }),
+        createQuestion({
+          id: 'q2',
+          slug: 'q-2',
+          stemMd: 'Stem for q2',
+          difficulty: 'medium',
+        }),
+        createQuestion({
+          id: 'q3',
+          slug: 'q-3',
+          stemMd: 'Stem for q3',
+          difficulty: 'hard',
+        }),
+      ]),
+      new FakeLogger(),
+    );
+
+    await expect(useCase.execute({ userId, sessionId })).resolves.toMatchObject(
+      {
+        sessionId,
+        mode: 'exam',
+        totalCount: 3,
+        answeredCount: 2,
+        markedCount: 1,
+        rows: [
+          {
+            questionId: 'q1',
+            isAnswered: true,
+            isCorrect: null,
+            markedForReview: false,
+          },
+          {
+            questionId: 'q2',
+            isAnswered: true,
+            isCorrect: null,
+            markedForReview: true,
+          },
+          {
+            questionId: 'q3',
+            isAnswered: false,
+            isCorrect: null,
+            markedForReview: false,
+          },
+        ],
+      },
+    );
+  });
+
+  it('falls back to latestSelectedChoiceId for legacy active exam sessions with no draft', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'exam',
+      endedAt: null,
+      questionIds: ['q1', 'q2'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: 'legacy-choice-1',
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 0,
+        },
+        {
+          questionId: 'q2',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 0,
+        },
+      ],
+    });
+
+    const useCase = new GetPracticeSessionReviewUseCase(
+      new FakePracticeSessionRepository([session]),
+      new FakeQuestionRepository([
+        createQuestion({
+          id: 'q1',
+          slug: 'q-1',
+          stemMd: 'Stem for q1',
+          difficulty: 'easy',
+        }),
+        createQuestion({
+          id: 'q2',
+          slug: 'q-2',
+          stemMd: 'Stem for q2',
+          difficulty: 'medium',
+        }),
+      ]),
+      new FakeLogger(),
+    );
+
+    await expect(useCase.execute({ userId, sessionId })).resolves.toMatchObject(
+      {
+        answeredCount: 1,
+        rows: [
+          {
+            questionId: 'q1',
+            isAnswered: true,
+            isCorrect: null,
+          },
+          {
+            questionId: 'q2',
+            isAnswered: false,
+            isCorrect: null,
+          },
+        ],
+      },
+    );
+  });
+
   it('redacts correctness for active exam sessions', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';
@@ -124,9 +299,12 @@ describe('GetPracticeSessionReviewUseCase', () => {
         {
           questionId: 'q1',
           markedForReview: false,
-          latestSelectedChoiceId: 'choice-1',
-          latestIsCorrect: true,
-          latestAnsweredAt: new Date('2026-02-06T00:00:00Z'),
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId: 'choice-1',
+          draftSavedAt: new Date('2026-02-06T00:00:00Z'),
+          draftCumulativeMs: 10_000,
         },
       ],
     });

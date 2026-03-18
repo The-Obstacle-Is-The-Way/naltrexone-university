@@ -4,6 +4,41 @@ import { createPracticeSession } from '@/src/domain/test-helpers';
 import { FakePracticeSessionRepository } from './fake-practice-session-repository';
 
 describe('FakePracticeSessionRepository', () => {
+  it('normalizes missing draft fields for seeded legacy sessions', async () => {
+    const legacySession = {
+      ...createPracticeSession({
+        id: 'session-legacy',
+        userId: 'user-1',
+        questionIds: ['question-1'],
+      }),
+      questionStates: [
+        {
+          questionId: 'question-1',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        },
+      ],
+    };
+
+    const repo = new FakePracticeSessionRepository([
+      legacySession as unknown as ReturnType<typeof createPracticeSession>,
+    ]);
+
+    await expect(
+      repo.findByIdAndUserId('session-legacy', 'user-1'),
+    ).resolves.toMatchObject({
+      questionStates: [
+        {
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 0,
+        },
+      ],
+    });
+  });
+
   it('throws NOT_FOUND when ending a missing session', async () => {
     const repo = new FakePracticeSessionRepository();
 
@@ -25,5 +60,82 @@ describe('FakePracticeSessionRepository', () => {
     await expect(repo.end('session-1', 'user-1')).rejects.toEqual(
       new ApplicationError('CONFLICT', 'Practice session already ended'),
     );
+  });
+
+  it('normalizes missing draft fields when creating a session from legacy params', async () => {
+    const repo = new FakePracticeSessionRepository();
+
+    const created = await repo.create({
+      userId: 'user-1',
+      mode: 'exam',
+      paramsJson: {
+        questionIds: ['question-1'],
+        tagSlugs: [],
+        difficulties: [],
+        questionStates: [
+          {
+            questionId: 'question-1',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+          },
+        ],
+      },
+    });
+
+    expect(created.questionStates).toEqual([
+      {
+        questionId: 'question-1',
+        markedForReview: false,
+        latestSelectedChoiceId: null,
+        latestIsCorrect: null,
+        latestAnsweredAt: null,
+        draftSelectedChoiceId: null,
+        draftSavedAt: null,
+        draftCumulativeMs: 0,
+      },
+    ]);
+  });
+
+  it('ignores stale draft saves when a newer draft snapshot already exists', async () => {
+    const repo = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q1'],
+        questionStates: [
+          {
+            questionId: 'q1',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+            draftSelectedChoiceId: 'choice-1',
+            draftSavedAt: new Date('2099-02-01T00:00:00.000Z'),
+            draftCumulativeMs: 25_000,
+          },
+        ],
+      }),
+    ]);
+
+    await expect(
+      repo.saveDraftAnswer({
+        sessionId: 'session-1',
+        userId: 'user-1',
+        questionId: 'q1',
+        selectedChoiceId: 'choice-2',
+        cumulativeMs: 10_000,
+      }),
+    ).resolves.toMatchObject({
+      questionId: 'q1',
+      latestSelectedChoiceId: null,
+      latestIsCorrect: null,
+      latestAnsweredAt: null,
+      draftSelectedChoiceId: 'choice-1',
+      draftSavedAt: new Date('2099-02-01T00:00:00.000Z'),
+      draftCumulativeMs: 25_000,
+    });
   });
 });

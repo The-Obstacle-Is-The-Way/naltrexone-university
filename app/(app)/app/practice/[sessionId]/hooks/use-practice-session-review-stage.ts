@@ -11,10 +11,13 @@ import { usePracticeSessionNavigator } from '@/app/(app)/app/practice/[sessionId
 import { usePracticeSessionReviewStageState } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage-state';
 import { usePracticeSessionSummaryReview } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-summary-review';
 import { endSession } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
+import { getThrownErrorMessage } from '@/app/(app)/app/practice/practice-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
+import { reportClientError } from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {
   EndPracticeSessionOutput,
+  FinalizeExamAnswersOutput,
   GetPracticeSessionReviewOutput,
   GetPracticeSessionSummaryOutput,
 } from '@/src/adapters/controllers/practice-controller';
@@ -23,6 +26,9 @@ import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answ
 
 type SessionIdInput = { sessionId: string };
 type EndPracticeSessionActionInput = SessionIdInput & {
+  idempotencyKey?: string;
+};
+type FinalizeExamAnswersActionInput = SessionIdInput & {
   idempotencyKey?: string;
 };
 
@@ -37,9 +43,13 @@ export type UsePracticeSessionReviewStageInput = {
   setLoadState: (state: LoadState) => void;
   resetQuestionState: () => void;
   loadSpecificQuestion: (questionId: string) => void;
+  saveCurrentExamDraft: () => Promise<boolean>;
   endPracticeSessionFn: (
     input: EndPracticeSessionActionInput,
   ) => Promise<ActionResult<EndPracticeSessionOutput>>;
+  finalizeExamAnswersFn: (
+    input: FinalizeExamAnswersActionInput,
+  ) => Promise<ActionResult<FinalizeExamAnswersOutput>>;
   getPracticeSessionReviewFn: (
     input: SessionIdInput,
   ) => Promise<ActionResult<GetPracticeSessionReviewOutput>>;
@@ -72,13 +82,14 @@ export function usePracticeSessionReviewStage(
   const [summary, setSummary] = useState<EndPracticeSessionOutput | null>(null);
   const [navigatorReloadCount, setNavigatorReloadCount] = useState(0);
   const endSessionIdempotencyKeyRef = useRef(crypto.randomUUID());
+  const finalizeExamIdempotencyKeyRef = useRef(crypto.randomUUID());
 
-  const finalizeSession = useCallback(
+  const endTutorSession = useCallback(
     () =>
       endSession({
         sessionId: input.sessionId,
         endSessionIdempotencyKey: endSessionIdempotencyKeyRef.current,
-        endPracticeSessionFn: input.endPracticeSessionFn,
+        finalizeSessionFn: input.endPracticeSessionFn,
         getPracticeSessionSummaryFn: input.getPracticeSessionSummaryFn,
         setLoadState: input.setLoadState,
         setSummary,
@@ -96,6 +107,37 @@ export function usePracticeSessionReviewStage(
       input.resetQuestionState,
       input.isMounted,
     ],
+  );
+
+  const finalizeExamSession = useCallback(
+    () =>
+      endSession({
+        sessionId: input.sessionId,
+        endSessionIdempotencyKey: finalizeExamIdempotencyKeyRef.current,
+        finalizeSessionFn: input.finalizeExamAnswersFn,
+        getPracticeSessionSummaryFn: input.getPracticeSessionSummaryFn,
+        setLoadState: input.setLoadState,
+        setSummary,
+        resetQuestionState: input.resetQuestionState,
+        rotateIdempotencyKey: () => {
+          finalizeExamIdempotencyKeyRef.current = crypto.randomUUID();
+        },
+        isMounted: input.isMounted,
+      }),
+    [
+      input.finalizeExamAnswersFn,
+      input.getPracticeSessionSummaryFn,
+      input.sessionId,
+      input.setLoadState,
+      input.resetQuestionState,
+      input.isMounted,
+    ],
+  );
+
+  const finalizeSession = useCallback(
+    () =>
+      input.sessionMode === 'exam' ? finalizeExamSession() : endTutorSession(),
+    [endTutorSession, finalizeExamSession, input.sessionMode],
   );
 
   const reviewStage = usePracticeSessionReviewStageState({
@@ -133,6 +175,36 @@ export function usePracticeSessionReviewStage(
     isMounted: input.isMounted,
   });
 
+  const onEndSession = useCallback(() => {
+    void (async () => {
+      try {
+        if (input.sessionMode === 'exam') {
+          const saved = await input.saveCurrentExamDraft();
+          if (!saved) return;
+        }
+      } catch (error) {
+        if (!input.isMounted()) return;
+        reportClientError(error, {
+          component: 'UsePracticeSessionReviewStage',
+          action: 'saveCurrentExamDraftBeforeReview',
+        });
+        input.setLoadState({
+          status: 'error',
+          message: getThrownErrorMessage(error),
+        });
+        return;
+      }
+
+      reviewStage.onEndSession();
+    })();
+  }, [
+    input.isMounted,
+    input.saveCurrentExamDraft,
+    input.sessionMode,
+    input.setLoadState,
+    reviewStage.onEndSession,
+  ]);
+
   return {
     summary,
     setSummary,
@@ -144,7 +216,7 @@ export function usePracticeSessionReviewStage(
     navigator,
     navigatorLoadState,
     isInReviewStage: reviewStage.isInReviewStage,
-    onEndSession: reviewStage.onEndSession,
+    onEndSession,
     onRetryReview: reviewStage.onRetryReview,
     onRetryNavigator,
     onOpenReviewQuestion: reviewStage.onOpenReviewQuestion,

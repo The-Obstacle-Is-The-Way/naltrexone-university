@@ -168,6 +168,24 @@ describe('SessionBreakdownList', () => {
     );
   });
 
+  it('includes summary origin and sessionId in question routes', async () => {
+    const html = await renderList([availableRow], {
+      from: 'summary',
+      sessionId: 'session_123',
+    });
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const link = doc.querySelector('a');
+
+    expect(link?.getAttribute('href')).toBe(
+      toQuestionRoute('q-1', {
+        from: 'summary',
+        mode: 'review',
+        sessionId: 'session_123',
+      }),
+    );
+  });
+
   it('uses background-only hover feedback for available breakdown links', async () => {
     const html = await renderList([availableRow]);
     const doc = new DOMParser().parseFromString(html, 'text/html');

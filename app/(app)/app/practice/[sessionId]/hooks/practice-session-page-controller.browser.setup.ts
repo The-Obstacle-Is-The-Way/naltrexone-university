@@ -8,6 +8,8 @@ type PracticeSessionPageControllerBrowserMocks = {
   getPracticeSessionReviewMock: ReturnType<typeof vi.fn>;
   getPracticeSessionSummaryMock: ReturnType<typeof vi.fn>;
   endPracticeSessionMock: ReturnType<typeof vi.fn>;
+  finalizeExamAnswersMock: ReturnType<typeof vi.fn>;
+  saveExamDraftAnswerMock: ReturnType<typeof vi.fn>;
   setPracticeSessionQuestionMarkMock: ReturnType<typeof vi.fn>;
 };
 
@@ -20,6 +22,8 @@ const practiceSessionPageControllerBrowserMocks =
     getPracticeSessionReviewMock: vi.fn(),
     getPracticeSessionSummaryMock: vi.fn(),
     endPracticeSessionMock: vi.fn(),
+    finalizeExamAnswersMock: vi.fn(),
+    saveExamDraftAnswerMock: vi.fn(),
     setPracticeSessionQuestionMarkMock: vi.fn(),
   }));
 
@@ -41,6 +45,10 @@ vi.mock('@/src/adapters/controllers/practice-controller', () => ({
     practiceSessionPageControllerBrowserMocks.getPracticeSessionSummaryMock,
   endPracticeSession:
     practiceSessionPageControllerBrowserMocks.endPracticeSessionMock,
+  finalizeExamAnswers:
+    practiceSessionPageControllerBrowserMocks.finalizeExamAnswersMock,
+  saveExamDraftAnswer:
+    practiceSessionPageControllerBrowserMocks.saveExamDraftAnswerMock,
   setPracticeSessionQuestionMark:
     practiceSessionPageControllerBrowserMocks.setPracticeSessionQuestionMarkMock,
 }));

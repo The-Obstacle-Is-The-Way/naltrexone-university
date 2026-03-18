@@ -23,6 +23,14 @@ const practiceSessionQuestionStateSchema = z
     latestSelectedChoiceId: z.string().min(1).nullable(),
     latestIsCorrect: z.boolean().nullable(),
     latestAnsweredAt: z.string().datetime().nullable(),
+    draftSelectedChoiceId: z
+      .string()
+      .min(1)
+      .nullable()
+      .optional()
+      .default(null),
+    draftSavedAt: z.string().datetime().nullable().optional().default(null),
+    draftCumulativeMs: z.number().int().min(0).optional().default(0),
   })
   .strict();
 
@@ -74,6 +82,9 @@ function toDomainQuestionState(
     latestAnsweredAt: state.latestAnsweredAt
       ? new Date(state.latestAnsweredAt)
       : null,
+    draftSelectedChoiceId: state.draftSelectedChoiceId,
+    draftSavedAt: state.draftSavedAt ? new Date(state.draftSavedAt) : null,
+    draftCumulativeMs: state.draftCumulativeMs,
   };
 }
 
@@ -88,6 +99,9 @@ function serializeQuestionState(
     latestAnsweredAt: state.latestAnsweredAt
       ? state.latestAnsweredAt.toISOString()
       : null,
+    draftSelectedChoiceId: state.draftSelectedChoiceId,
+    draftSavedAt: state.draftSavedAt ? state.draftSavedAt.toISOString() : null,
+    draftCumulativeMs: state.draftCumulativeMs,
   };
 }
 
@@ -113,6 +127,9 @@ function normalizeParams(
         latestSelectedChoiceId: null,
         latestIsCorrect: null,
         latestAnsweredAt: null,
+        draftSelectedChoiceId: null,
+        draftSavedAt: null,
+        draftCumulativeMs: 0,
       };
     }),
   };

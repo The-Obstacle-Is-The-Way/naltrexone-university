@@ -280,7 +280,7 @@ Submit stays in tutor mode because it serves a real purpose: gating feedback rev
 
 **Recommended data-shape decision:** add explicit draft fields (or an equivalent nested draft object) to per-question session state instead of repurposing `latest*`. Keep `latest*` reserved for finalized answer state so summary/stats semantics remain honest and tutor mode stays clean.
 
-**Hidden technical dependency that must be specced:** revisitable exam answers break the current one-shot `timeSpentSeconds` model. The draft path needs a defined per-question accumulation rule plus draft-aware reads in `GetNextQuestion` / review counts, so final attempts do not lose or undercount dwell time and in-progress exam review does not keep reading the wrong field.
+**Hidden technical dependency that must be specced:** revisitable exam answers break the current one-shot `timeSpentSeconds` model. The draft path needs a defined per-question accumulation rule plus draft-aware reads in `GetNextQuestion`, `GetPracticeSessionReview`, and `GetIncompletePracticeSession`, so final attempts do not lose or undercount dwell time and active exam surfaces do not keep reading the wrong field.
 
 ### Q7: Does tutor mode need changes now?
 
@@ -335,7 +335,7 @@ Before coding, the implementation spec must explicitly answer:
 - What the draft-save API is called and which layer owns it
 - What the draft-state shape is (`draft*` fields vs equivalent object) and how it coexists with finalized `latest*` fields
 - How per-question draft time is accumulated
-- Which readers (`GetNextQuestion`, `GetPracticeSessionReview`, summary/review projections) become draft-aware during active exam sessions
+- Which readers (`GetNextQuestion`, `GetPracticeSessionReview`, `GetIncompletePracticeSession`, and summary/review projections) become draft-aware during active exam sessions
 - When final attempts are materialized
 - How the summary review link returns to the summary instead of History
 - Whether post-submit session review reattempt remains allowed or is split into separate follow-up work
@@ -368,9 +368,9 @@ The active primary action moves between slots:
 
 Users can build spatial memory quickly. Moving the primary action between positions is a real input-risk problem, not just visual inconsistency.
 
-#### AF-4: Session Summary → question review has the wrong return target (Medium)
+#### AF-4: Session Summary-launched review has the wrong return target (Medium)
 
-The current summary CTA links into question review with `from=history`, so the question review page resolves its back target to History rather than the session summary route. This is why users cannot naturally return to the summary after reviewing answers.
+The current summary surface launches question review with `from=history`, so the question review page resolves its back target to History rather than the session summary route. This affects both the primary `Review your answers` CTA and the per-question breakdown links rendered on the summary.
 
 **Required fix:** summary-launched review must carry a session-summary-aware origin/back target instead of masquerading as History.
 

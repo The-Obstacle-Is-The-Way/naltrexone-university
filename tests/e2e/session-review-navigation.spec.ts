@@ -76,10 +76,10 @@ test.describe('session review navigation (SPEC-027)', () => {
     const breakdownLink = breakdownLinks.first();
     await breakdownLink.click();
 
-    // Verify URL contains sessionId, from=history, mode=review
+    // Verify URL contains sessionId, from=summary, mode=review
     await expect(page).toHaveURL(/\/app\/questions\//, { timeout: 15_000 });
     await expect(page).toHaveURL(/sessionId=/);
-    await expect(page).toHaveURL(/from=history/);
+    await expect(page).toHaveURL(/from=summary/);
     await expect(page).toHaveURL(/mode=review/);
 
     // Wait for question content to load
@@ -119,14 +119,14 @@ test.describe('session review navigation (SPEC-027)', () => {
       await currentNavigatorButton.textContent();
     expect(navigatorCurrentTextOnFirstQuestion).not.toBeNull();
 
-    // Verify the summary-origin review path returns to durable sessions history.
+    // Verify the summary-origin review path returns to the session summary.
     const backLink = page
-      .getByRole('link', { name: 'Back to History' })
+      .getByRole('link', { name: 'Back to Summary' })
       .first();
     await expect(backLink).toBeVisible({ timeout: 15_000 });
     await expect(backLink).toHaveAttribute(
       'href',
-      /\/app\/history\?tab=sessions/,
+      `/app/practice/${sessionId}`,
     );
 
     // Verify "Next" link is present (we're on question 1)
@@ -148,7 +148,7 @@ test.describe('session review navigation (SPEC-027)', () => {
         url.toString() !== urlBeforeNext &&
         url.pathname.startsWith('/app/questions/') &&
         url.searchParams.get('sessionId') === sessionId &&
-        url.searchParams.get('from') === 'history' &&
+        url.searchParams.get('from') === 'summary' &&
         url.searchParams.get('mode') === 'review',
       { timeout: 15_000 },
     );
@@ -194,7 +194,7 @@ test.describe('session review navigation (SPEC-027)', () => {
         url.pathname !== pathnameBeforeJump &&
         url.pathname.startsWith('/app/questions/') &&
         url.searchParams.get('sessionId') === sessionId &&
-        url.searchParams.get('from') === 'history' &&
+        url.searchParams.get('from') === 'summary' &&
         url.searchParams.get('mode') === 'review',
       { timeout: 15_000 },
     );

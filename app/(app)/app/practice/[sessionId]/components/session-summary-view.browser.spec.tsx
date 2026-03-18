@@ -68,7 +68,18 @@ test('renders summary totals and per-question breakdown', async () => {
     .toHaveAttribute(
       'href',
       toQuestionRoute('q-1', {
-        from: 'history',
+        from: 'summary',
+        mode: 'review',
+        sessionId: 'session-1',
+      }),
+    );
+
+  await expect
+    .element(screen.getByRole('link', { name: /Stem for q1/i }))
+    .toHaveAttribute(
+      'href',
+      toQuestionRoute('q-1', {
+        from: 'summary',
         mode: 'review',
         sessionId: 'session-1',
       }),

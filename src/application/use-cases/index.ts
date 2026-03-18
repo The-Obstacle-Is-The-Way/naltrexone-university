@@ -24,6 +24,12 @@ export {
   EndPracticeSessionUseCase,
 } from './end-practice-session';
 export {
+  type FinalizeExamAnswersInput,
+  type FinalizeExamAnswersOutput,
+  FinalizeExamAnswersUseCase,
+  type FinalizeExamAnswersWriteTransaction,
+} from './finalize-exam-answers';
+export {
   type AttemptedQuestionRow,
   type GetAttemptedQuestionsInput,
   type GetAttemptedQuestionsOutput,
@@ -74,6 +80,11 @@ export {
   GetUserStatsUseCase,
   type UserStatsOutput,
 } from './get-user-stats';
+export {
+  type SaveExamDraftAnswerInput,
+  type SaveExamDraftAnswerOutput,
+  SaveExamDraftAnswerUseCase,
+} from './save-exam-draft-answer';
 export {
   type SetPracticeSessionQuestionMarkInput,
   type SetPracticeSessionQuestionMarkOutput,

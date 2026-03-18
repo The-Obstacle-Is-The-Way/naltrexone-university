@@ -60,12 +60,17 @@ export function useQuestionFlowCore(
   input: UseQuestionFlowCoreInput,
 ): UseQuestionFlowCoreOutput {
   const [question, setQuestionState] = useState<NextQuestion | null>(null);
-  const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
-  const [isAnswered, setIsAnswered] = useState(false);
+  const [selectedChoiceId, setSelectedChoiceIdState] = useState<string | null>(
+    null,
+  );
+  const [isAnswered, setIsAnsweredState] = useState(false);
   const [submitResult, setSubmitResultState] =
     useState<SubmitAnswerOutput | null>(null);
   const questionRef = useRef<NextQuestion | null>(null);
-  const draftSelectedChoicesRef = useRef<Map<string, string>>(new Map());
+  const selectedChoiceIdRef = useRef<string | null>(null);
+  const isAnsweredRef = useRef(false);
+  const submitResultRef = useRef<SubmitAnswerOutput | null>(null);
+  const lastSynchronizedQuestionIdRef = useRef<string | null>(null);
   const submitResultQuestionIdRef = useRef<string | null>(null);
   const [loadState, setLoadStateState] = useState<LoadState>({
     status: 'idle',
@@ -106,37 +111,47 @@ export function useQuestionFlowCore(
     });
   }, [isAnswered, loadState, question, selectedChoiceId, submitResult]);
 
-  const updateDraftSelectedChoices = useCallback(
-    (update: (prev: Map<string, string>) => Map<string, string>) => {
-      draftSelectedChoicesRef.current = update(draftSelectedChoicesRef.current);
-    },
-    [],
-  );
-
-  const setQuestion = useCallback((nextQuestion: NextQuestion | null) => {
-    questionRef.current = nextQuestion;
-    setQuestionState(nextQuestion);
-    if (!nextQuestion) {
-      setIsAnswered(false);
-    }
+  const setSelectedChoiceId = useCallback((choiceId: string | null) => {
+    selectedChoiceIdRef.current = choiceId;
+    setSelectedChoiceIdState(choiceId);
   }, []);
+
+  const setIsAnswered = useCallback((answered: boolean) => {
+    isAnsweredRef.current = answered;
+    setIsAnsweredState(answered);
+  }, []);
+
+  const setQuestion = useCallback(
+    (nextQuestion: NextQuestion | null) => {
+      questionRef.current = nextQuestion;
+      setQuestionState(nextQuestion);
+      if (!nextQuestion) {
+        setIsAnswered(false);
+      }
+    },
+    [setIsAnswered],
+  );
 
   const setSubmitResult = useCallback<
     UseQuestionFlowCoreOutput['setSubmitResult']
-  >((result, questionId) => {
-    setSubmitResultState(result);
+  >(
+    (result, questionId) => {
+      submitResultRef.current = result;
+      setSubmitResultState(result);
 
-    if (result) {
-      submitResultQuestionIdRef.current =
-        typeof questionId === 'string'
-          ? questionId
-          : (questionRef.current?.questionId ?? null);
-      setIsAnswered(true);
-      return;
-    }
+      if (result) {
+        submitResultQuestionIdRef.current =
+          typeof questionId === 'string'
+            ? questionId
+            : (questionRef.current?.questionId ?? null);
+        setIsAnswered(true);
+        return;
+      }
 
-    submitResultQuestionIdRef.current = null;
-  }, []);
+      submitResultQuestionIdRef.current = null;
+    },
+    [setIsAnswered],
+  );
 
   const syncQuestionStateFromDraftOrSession = useCallback(
     (nextQuestion: NextQuestion | null) => {
@@ -144,13 +159,38 @@ export function useQuestionFlowCore(
         setSelectedChoiceId(null);
         setIsAnswered(false);
         setSubmitResult(null);
+        lastSynchronizedQuestionIdRef.current = null;
         return;
       }
 
-      const sessionSelectedChoiceId =
+      const isActiveExamQuestion = nextQuestion.session?.mode === 'exam';
+      if (
+        isActiveExamQuestion &&
+        lastSynchronizedQuestionIdRef.current === nextQuestion.questionId &&
+        selectedChoiceIdRef.current !== null &&
+        !isAnsweredRef.current &&
+        submitResultRef.current === null
+      ) {
+        return;
+      }
+
+      const examDraftSelectedChoiceId =
+        nextQuestion.session?.draftSelectedChoiceId;
+      if (
+        isActiveExamQuestion &&
+        typeof examDraftSelectedChoiceId === 'string'
+      ) {
+        setSelectedChoiceId(examDraftSelectedChoiceId);
+        setIsAnswered(false);
+        setSubmitResult(null);
+        lastSynchronizedQuestionIdRef.current = nextQuestion.questionId;
+        return;
+      }
+
+      const latestSelectedChoiceId =
         nextQuestion.session?.latestSelectedChoiceId;
-      if (typeof sessionSelectedChoiceId === 'string') {
-        setSelectedChoiceId(sessionSelectedChoiceId);
+      if (typeof latestSelectedChoiceId === 'string') {
+        setSelectedChoiceId(latestSelectedChoiceId);
         setIsAnswered(true);
 
         const prev = nextQuestion.session?.previousSubmission;
@@ -160,7 +200,7 @@ export function useQuestionFlowCore(
           const isCorrect =
             typeof sessionIsCorrect === 'boolean'
               ? sessionIsCorrect
-              : prev.correctChoiceId === sessionSelectedChoiceId;
+              : prev.correctChoiceId === latestSelectedChoiceId;
 
           setSubmitResult(
             {
@@ -176,28 +216,21 @@ export function useQuestionFlowCore(
         } else {
           setSubmitResult(null);
         }
-
-        updateDraftSelectedChoices((prev) => {
-          if (!prev.has(nextQuestion.questionId)) return prev;
-          const next = new Map(prev);
-          next.delete(nextQuestion.questionId);
-          return next;
-        });
+        lastSynchronizedQuestionIdRef.current = nextQuestion.questionId;
         return;
       }
 
-      setSelectedChoiceId(
-        draftSelectedChoicesRef.current.get(nextQuestion.questionId) ?? null,
-      );
+      lastSynchronizedQuestionIdRef.current = nextQuestion.questionId;
 
       if (submitResultQuestionIdRef.current === nextQuestion.questionId) {
         return;
       }
 
+      setSelectedChoiceId(null);
       setIsAnswered(false);
       setSubmitResult(null);
     },
-    [updateDraftSelectedChoices, setSubmitResult],
+    [setIsAnswered, setSelectedChoiceId, setSubmitResult],
   );
 
   const setLoadState = useCallback(
@@ -213,7 +246,7 @@ export function useQuestionFlowCore(
 
       syncQuestionStateFromDraftOrSession(questionRef.current);
     },
-    [syncQuestionStateFromDraftOrSession],
+    [setIsAnswered, syncQuestionStateFromDraftOrSession],
   );
 
   const onSelectChoice = useCallback(
@@ -226,14 +259,8 @@ export function useQuestionFlowCore(
         choiceId,
       );
       if (!changed) return;
-
-      updateDraftSelectedChoices((prev) => {
-        const next = new Map(prev);
-        next.set(question.questionId, choiceId);
-        return next;
-      });
     },
-    [isAnswered, question, submitResult, updateDraftSelectedChoices],
+    [isAnswered, question, submitResult, setSelectedChoiceId],
   );
 
   return {

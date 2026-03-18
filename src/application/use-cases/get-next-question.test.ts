@@ -62,6 +62,9 @@ function createQuestionState(
     latestSelectedChoiceId: null,
     latestIsCorrect: null,
     latestAnsweredAt: null,
+    draftSelectedChoiceId: null,
+    draftSavedAt: null,
+    draftCumulativeMs: 0,
     ...overrides,
   };
 }
@@ -283,9 +286,9 @@ describe('GetNextQuestionUseCase', () => {
       questionIds: ['q1', 'q2', 'q3'],
       questionStates: [
         createQuestionState('q1', {
-          latestSelectedChoiceId: 'c1',
-          latestIsCorrect: true,
-          latestAnsweredAt: ANSWERED_AT,
+          draftSelectedChoiceId: 'c1',
+          draftSavedAt: ANSWERED_AT,
+          draftCumulativeMs: 10_000,
         }),
         createQuestionState('q2'),
         createQuestionState('q3'),
@@ -364,9 +367,9 @@ describe('GetNextQuestionUseCase', () => {
       questionIds: ['q1', 'q2'],
       questionStates: [
         createQuestionState('q1', {
-          latestSelectedChoiceId: 'c1',
-          latestIsCorrect: true,
-          latestAnsweredAt: ANSWERED_AT,
+          draftSelectedChoiceId: 'c1',
+          draftSavedAt: ANSWERED_AT,
+          draftCumulativeMs: 10_000,
         }),
         createQuestionState('q2'),
       ],
@@ -402,9 +405,9 @@ describe('GetNextQuestionUseCase', () => {
       questionStates: [
         createQuestionState('q1', {
           markedForReview: true,
-          latestSelectedChoiceId: 'c1',
-          latestIsCorrect: false,
-          latestAnsweredAt: ANSWERED_AT,
+          draftSelectedChoiceId: 'c1',
+          draftSavedAt: ANSWERED_AT,
+          draftCumulativeMs: 25_000,
         }),
         createQuestionState('q2'),
       ],
@@ -428,6 +431,60 @@ describe('GetNextQuestionUseCase', () => {
       index: 0,
       total: 2,
       isMarkedForReview: true,
+      latestSelectedChoiceId: null,
+      latestIsCorrect: null,
+      draftSelectedChoiceId: 'c1',
+      draftCumulativeMs: 25_000,
+    });
+  });
+
+  it('treats legacy latestSelectedChoiceId as a draft fallback for active exam sessions', async () => {
+    const q1 = createSingleChoiceQuestion('q1', 'c1');
+    const q2 = createSingleChoiceQuestion('q2', 'c2');
+
+    const session = createPracticeSession({
+      mode: 'exam',
+      questionIds: ['q1', 'q2'],
+      questionStates: [
+        createQuestionState('q1', {
+          latestSelectedChoiceId: 'c1',
+          latestIsCorrect: true,
+          latestAnsweredAt: ANSWERED_AT,
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 25_000,
+        }),
+        createQuestionState('q2'),
+      ],
+    });
+
+    const { getNextQuestion } = createTestDeps({
+      questions: [q1, q2],
+      sessions: [session],
+    });
+
+    const nextResult = await getNextQuestion.execute({
+      userId: USER_ID,
+      sessionId: SESSION_ID,
+    });
+
+    expect(nextResult?.questionId).toBe('q2');
+
+    const revisitResult = await getNextQuestion.execute({
+      userId: USER_ID,
+      sessionId: SESSION_ID,
+      questionId: 'q1',
+    });
+
+    expect(revisitResult?.session).toMatchObject({
+      sessionId: SESSION_ID,
+      mode: 'exam',
+      index: 0,
+      total: 2,
+      latestSelectedChoiceId: 'c1',
+      latestIsCorrect: null,
+      draftSelectedChoiceId: 'c1',
+      draftCumulativeMs: 25_000,
     });
   });
 
@@ -517,9 +574,9 @@ describe('GetNextQuestionUseCase', () => {
       name: 'does not include previousSubmission in exam mode even when answered',
       mode: 'exam' as const,
       questionState: createQuestionState('q1', {
-        latestSelectedChoiceId: 'c1',
-        latestIsCorrect: true,
-        latestAnsweredAt: ANSWERED_AT,
+        draftSelectedChoiceId: 'c1',
+        draftSavedAt: ANSWERED_AT,
+        draftCumulativeMs: 10_000,
       }),
     },
   ])('$name', async ({ mode, questionState }) => {
@@ -1324,9 +1381,9 @@ describe('GetNextQuestionUseCase', () => {
       questionIds: ['q1'],
       questionStates: [
         createQuestionState('q1', {
-          latestSelectedChoiceId: 'c1',
-          latestIsCorrect: true,
-          latestAnsweredAt: ANSWERED_AT,
+          draftSelectedChoiceId: 'c1',
+          draftSavedAt: ANSWERED_AT,
+          draftCumulativeMs: 30_000,
         }),
       ],
     });

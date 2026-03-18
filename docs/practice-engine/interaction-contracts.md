@@ -154,7 +154,7 @@ Suggested shape (names can change in the implementation spec):
 
 Keep `latestSelectedChoiceId`, `latestIsCorrect`, and `latestAnsweredAt` reserved for finalized answer state. That preserves current summary/stat semantics and avoids overloading one field with two different lifecycle meanings.
 
-**Reader implication:** current readers such as `GetNextQuestion` and `GetPracticeSessionReview` derive answered/unanswered state from `latestSelectedChoiceId`. Under the draft model, active exam-session reads must become draft-aware.
+**Reader implication:** current readers such as `GetNextQuestion`, `GetPracticeSessionReview`, and `GetIncompletePracticeSession` derive answered/unanswered state from `latestSelectedChoiceId`. Under the draft model, active exam-session reads must become draft-aware.
 
 #### Finalization
 
@@ -253,7 +253,7 @@ After a session ends (tutor or exam), the user sees a summary page with:
 
 "Review your answers" navigates to the question review page (`/app/questions/[slug]?mode=review`).
 
-**Known issue (AF-4):** The current summary CTA passes `from=history` as the origin, so the question review page resolves its back link to `/app/history?tab=sessions` instead of back to the session summary. This is a navigation dead-end.
+**Known issue (AF-4):** The current summary-launched review paths pass `from=history` as the origin, so the question review page resolves its back link to `/app/history?tab=sessions` instead of back to the session summary. This affects both the primary summary CTA and the breakdown links rendered inside the summary.
 
 **Required fix:** Summary-launched review must carry a session-summary-aware origin so the back link returns to the summary route, not History.
 

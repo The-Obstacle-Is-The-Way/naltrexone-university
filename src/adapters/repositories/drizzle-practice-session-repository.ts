@@ -230,6 +230,67 @@ export class DrizzlePracticeSessionRepository
     });
   }
 
+  async saveDraftAnswer(input: {
+    sessionId: string;
+    userId: string;
+    questionId: string;
+    selectedChoiceId: string;
+    cumulativeMs: number;
+  }): Promise<PracticeSessionQuestionState> {
+    const savedAt = this.now();
+
+    return updatePracticeSessionQuestionState({
+      db: this.db,
+      findByIdAndUserId: this.findSnapshotByIdAndUserId.bind(this),
+      sessionId: input.sessionId,
+      userId: input.userId,
+      questionId: input.questionId,
+      updateFn: (current) => {
+        if (
+          (current.draftSavedAt && current.draftSavedAt > savedAt) ||
+          input.cumulativeMs < current.draftCumulativeMs
+        ) {
+          return current;
+        }
+
+        return {
+          ...current,
+          draftSelectedChoiceId: input.selectedChoiceId,
+          draftSavedAt: savedAt,
+          draftCumulativeMs: input.cumulativeMs,
+        };
+      },
+      failureMessage: 'Failed to persist practice session draft answer state',
+    });
+  }
+
+  async finalizeDraftAnswer(input: {
+    sessionId: string;
+    userId: string;
+    questionId: string;
+    selectedChoiceId: string;
+    isCorrect: boolean;
+    answeredAt: Date;
+  }): Promise<PracticeSessionQuestionState> {
+    return updatePracticeSessionQuestionState({
+      db: this.db,
+      findByIdAndUserId: this.findSnapshotByIdAndUserId.bind(this),
+      sessionId: input.sessionId,
+      userId: input.userId,
+      questionId: input.questionId,
+      updateFn: (current) => ({
+        ...current,
+        latestSelectedChoiceId: input.selectedChoiceId,
+        latestIsCorrect: input.isCorrect,
+        latestAnsweredAt: input.answeredAt,
+        draftSelectedChoiceId: null,
+        draftSavedAt: null,
+        draftCumulativeMs: 0,
+      }),
+      failureMessage: 'Failed to finalize practice session draft answer state',
+    });
+  }
+
   async setQuestionMarkedForReview(input: {
     sessionId: string;
     userId: string;

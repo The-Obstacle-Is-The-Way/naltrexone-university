@@ -37,9 +37,12 @@ describe('GetIncompletePracticeSessionUseCase', () => {
           {
             questionId: 'q4',
             markedForReview: false,
-            latestSelectedChoiceId: 'choice-1',
-            latestIsCorrect: true,
-            latestAnsweredAt: new Date('2026-02-05T09:01:00Z'),
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+            draftSelectedChoiceId: 'choice-1',
+            draftSavedAt: new Date('2026-02-05T09:01:00Z'),
+            draftCumulativeMs: 15_000,
           },
           {
             questionId: 'q5',
@@ -47,6 +50,9 @@ describe('GetIncompletePracticeSessionUseCase', () => {
             latestSelectedChoiceId: null,
             latestIsCorrect: null,
             latestAnsweredAt: null,
+            draftSelectedChoiceId: null,
+            draftSavedAt: null,
+            draftCumulativeMs: 0,
           },
           {
             questionId: 'q6',
@@ -54,6 +60,9 @@ describe('GetIncompletePracticeSessionUseCase', () => {
             latestSelectedChoiceId: null,
             latestIsCorrect: null,
             latestAnsweredAt: null,
+            draftSelectedChoiceId: null,
+            draftSavedAt: null,
+            draftCumulativeMs: 0,
           },
           {
             questionId: 'q7',
@@ -61,6 +70,9 @@ describe('GetIncompletePracticeSessionUseCase', () => {
             latestSelectedChoiceId: null,
             latestIsCorrect: null,
             latestAnsweredAt: null,
+            draftSelectedChoiceId: null,
+            draftSavedAt: null,
+            draftCumulativeMs: 0,
           },
         ],
         startedAt: new Date('2026-02-05T09:00:00Z'),
@@ -74,6 +86,50 @@ describe('GetIncompletePracticeSessionUseCase', () => {
       mode: 'exam',
       answeredCount: 1,
       totalCount: 4,
+      startedAt: '2026-02-05T09:00:00.000Z',
+    });
+  });
+
+  it('falls back to latestSelectedChoiceId for legacy active exam sessions with no draft', async () => {
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-new',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q4', 'q5'],
+        questionStates: [
+          {
+            questionId: 'q4',
+            markedForReview: false,
+            latestSelectedChoiceId: 'choice-1',
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+            draftSelectedChoiceId: null,
+            draftSavedAt: null,
+            draftCumulativeMs: 0,
+          },
+          {
+            questionId: 'q5',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+            draftSelectedChoiceId: null,
+            draftSavedAt: null,
+            draftCumulativeMs: 0,
+          },
+        ],
+        startedAt: new Date('2026-02-05T09:00:00Z'),
+        endedAt: null,
+      }),
+    ]);
+    const useCase = new GetIncompletePracticeSessionUseCase(sessions);
+
+    await expect(useCase.execute({ userId: 'user-1' })).resolves.toEqual({
+      sessionId: 'session-new',
+      mode: 'exam',
+      answeredCount: 1,
+      totalCount: 2,
       startedAt: '2026-02-05T09:00:00.000Z',
     });
   });

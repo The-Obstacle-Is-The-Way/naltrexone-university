@@ -177,6 +177,8 @@ export function PracticeSessionPageControllerReviewProbe() {
       {renderHookState([
         { testId: 'active-view', value: getActiveView(output) },
         { testId: 'load-status', value: output.loadState.status },
+        { testId: 'question-id', value: output.question?.questionId },
+        { testId: 'has-submit-result', value: output.submitResult !== null },
         {
           testId: 'review-answered-count',
           value: output.review?.answeredCount,
@@ -190,6 +192,12 @@ export function PracticeSessionPageControllerReviewProbe() {
         {
           label: 'review-answers',
           onClick: () => output.onEndSession(),
+        },
+        {
+          label: 'finalize-review',
+          onClick: () => {
+            void output.onFinalizeReview?.();
+          },
         },
         {
           label: 'open-review-question-1',
@@ -234,6 +242,12 @@ export function PracticeSessionPageControllerSubmitDuringReviewProbe() {
         {
           label: 'review-answers',
           onClick: () => output.onEndSession(),
+        },
+        {
+          label: 'finalize-review',
+          onClick: () => {
+            void output.onFinalizeReview?.();
+          },
         },
       ])}
     </>

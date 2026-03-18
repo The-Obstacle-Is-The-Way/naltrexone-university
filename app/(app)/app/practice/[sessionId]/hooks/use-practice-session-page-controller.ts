@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePracticeSessionQuestionFlow } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow';
-import { maybeAutoAdvanceAfterSubmit } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import { usePracticeQuestionBookmarks } from '@/app/(app)/app/practice/hooks/use-practice-question-bookmarks';
 import {
   getActionResultErrorMessage,
@@ -10,8 +9,10 @@ import { reportClientError } from '@/lib/report-client-error';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import {
   endPracticeSession,
+  finalizeExamAnswers,
   getPracticeSessionReview,
   getPracticeSessionSummary,
+  saveExamDraftAnswer,
   setPracticeSessionQuestionMark,
 } from '@/src/adapters/controllers/practice-controller';
 import {
@@ -35,6 +36,7 @@ export function usePracticeSessionPageController(
     isMounted,
     getNextQuestionFn: getNextQuestion,
     submitAnswerFn: submitAnswer,
+    saveExamDraftAnswerFn: saveExamDraftAnswer,
   });
 
   const bookmarks = usePracticeQuestionBookmarks({
@@ -54,8 +56,10 @@ export function usePracticeSessionPageController(
     resetQuestionState: questionFlow.resetQuestionState,
     loadSpecificQuestion: questionFlow.onNavigateQuestion,
     endPracticeSessionFn: endPracticeSession,
+    finalizeExamAnswersFn: finalizeExamAnswers,
     getPracticeSessionReviewFn: getPracticeSessionReview,
     getPracticeSessionSummaryFn: getPracticeSessionSummary,
+    saveCurrentExamDraft: questionFlow.saveCurrentExamDraft,
   });
 
   const bootstrapSessionSummary = useCallback(() => {
@@ -125,34 +129,9 @@ export function usePracticeSessionPageController(
 
     questionFlow.onTryAgain();
   }, [bootstrapSessionSummary, questionFlow.onTryAgain, shouldRetryBootstrap]);
-
-  const isInReviewStageRef = useRef(reviewStage.isInReviewStage);
-  isInReviewStageRef.current = reviewStage.isInReviewStage;
-
-  const sessionModeRef = useRef(questionFlow.sessionMode);
-  sessionModeRef.current = questionFlow.sessionMode;
-
-  const loadStateStatusRef = useRef(questionFlow.loadState.status);
-  loadStateStatusRef.current = questionFlow.loadState.status;
-
-  const sessionInfoRef = useRef(questionFlow.sessionInfo);
-  sessionInfoRef.current = questionFlow.sessionInfo;
-
-  const submitCurrentAnswer = questionFlow.onSubmit;
-  const advanceToNextQuestion = questionFlow.onNextQuestion;
-
-  const onSubmit = useCallback(async (): Promise<void> => {
-    const submitResult = await submitCurrentAnswer();
-    if (isInReviewStageRef.current) return;
-
-    maybeAutoAdvanceAfterSubmit({
-      mode: sessionModeRef.current,
-      submitResult,
-      loadStateStatus: loadStateStatusRef.current,
-      sessionInfo: sessionInfoRef.current,
-      advance: advanceToNextQuestion,
-    });
-  }, [advanceToNextQuestion, submitCurrentAnswer]);
+  const onSubmit = useCallback((): void => {
+    void questionFlow.onSubmit();
+  }, [questionFlow.onSubmit]);
 
   const { isMarkingForReview, onToggleMarkForReview } =
     usePracticeSessionMarkForReview({

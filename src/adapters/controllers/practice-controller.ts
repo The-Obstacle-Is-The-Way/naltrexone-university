@@ -15,6 +15,8 @@ import type {
   CountAvailableQuestionsOutput,
   EndPracticeSessionInput,
   EndPracticeSessionOutput,
+  FinalizeExamAnswersInput,
+  FinalizeExamAnswersOutput,
   GetIncompletePracticeSessionInput,
   GetIncompletePracticeSessionOutput,
   GetPracticeSessionReviewInput,
@@ -23,6 +25,8 @@ import type {
   GetPracticeSessionSummaryOutput,
   GetSessionHistoryInput,
   GetSessionHistoryOutput,
+  SaveExamDraftAnswerInput,
+  SaveExamDraftAnswerOutput,
   SetPracticeSessionQuestionMarkInput,
   SetPracticeSessionQuestionMarkOutput,
   StartPracticeSessionInput,
@@ -35,10 +39,15 @@ import {
   EmptyInputSchema,
   EndPracticeSessionInputSchema,
   EndPracticeSessionOutputSchema,
+  FinalizeExamAnswersInputSchema,
+  FinalizeExamAnswersOutputSchema,
   GetIncompletePracticeSessionOutputSchema,
   GetPracticeSessionReviewInputSchema,
   GetPracticeSessionSummaryInputSchema,
   GetSessionHistoryInputSchema,
+  PracticeSessionSummaryOutputSchema,
+  SaveExamDraftAnswerInputSchema,
+  SaveExamDraftAnswerOutputSchema,
   SetPracticeSessionQuestionMarkInputSchema,
   SetPracticeSessionQuestionMarkOutputSchema,
   StartPracticeSessionInputSchema,
@@ -50,10 +59,12 @@ import { requireEntitledUserId } from './require-entitled-user-id';
 export type {
   CountAvailableQuestionsOutput,
   EndPracticeSessionOutput,
+  FinalizeExamAnswersOutput,
   GetIncompletePracticeSessionOutput,
   GetPracticeSessionReviewOutput,
   GetPracticeSessionSummaryOutput,
   GetSessionHistoryOutput,
+  SaveExamDraftAnswerOutput,
   SetPracticeSessionQuestionMarkOutput,
   StartPracticeSessionOutput,
 } from '@/src/application/use-cases';
@@ -83,6 +94,16 @@ export type PracticeControllerDeps = {
     execute: (
       input: EndPracticeSessionInput,
     ) => Promise<EndPracticeSessionOutput>;
+  };
+  finalizeExamAnswersUseCase: {
+    execute: (
+      input: FinalizeExamAnswersInput,
+    ) => Promise<FinalizeExamAnswersOutput>;
+  };
+  saveExamDraftAnswerUseCase: {
+    execute: (
+      input: SaveExamDraftAnswerInput,
+    ) => Promise<SaveExamDraftAnswerOutput>;
   };
   getPracticeSessionReviewUseCase: {
     execute: (
@@ -225,6 +246,40 @@ export const endPracticeSession = createAction({
   },
 });
 
+export const finalizeExamAnswers = createAction({
+  schema: FinalizeExamAnswersInputSchema,
+  getDeps,
+  execute: async (input, d) => {
+    const userId = await requireEntitledUserId(d);
+
+    const { sessionId, idempotencyKey } = input;
+
+    async function finalizeExam(): Promise<FinalizeExamAnswersOutput> {
+      return FinalizeExamAnswersOutputSchema.parse(
+        await d.finalizeExamAnswersUseCase.execute({
+          userId,
+          sessionId,
+        }),
+      );
+    }
+
+    if (!idempotencyKey) {
+      return finalizeExam();
+    }
+
+    return withIdempotency({
+      repo: d.idempotencyKeyRepository,
+      logger: d.logger,
+      userId,
+      action: 'practice:finalizeExamAnswers',
+      key: idempotencyKey,
+      now: d.now,
+      parseResult: (value) => FinalizeExamAnswersOutputSchema.parse(value),
+      execute: finalizeExam,
+    });
+  },
+});
+
 export const getPracticeSessionReview = createAction({
   schema: GetPracticeSessionReviewInputSchema,
   getDeps,
@@ -237,12 +292,30 @@ export const getPracticeSessionReview = createAction({
   },
 });
 
+export const saveExamDraftAnswer = createAction({
+  schema: SaveExamDraftAnswerInputSchema,
+  getDeps,
+  execute: async (input, d) => {
+    const userId = await requireEntitledUserId(d);
+
+    return SaveExamDraftAnswerOutputSchema.parse(
+      await d.saveExamDraftAnswerUseCase.execute({
+        userId,
+        sessionId: input.sessionId,
+        questionId: input.questionId,
+        selectedChoiceId: input.selectedChoiceId,
+        cumulativeMs: input.cumulativeMs,
+      }),
+    );
+  },
+});
+
 export const getPracticeSessionSummary = createAction({
   schema: GetPracticeSessionSummaryInputSchema,
   getDeps,
   execute: async (input, d) => {
     const userId = await requireEntitledUserId(d);
-    return EndPracticeSessionOutputSchema.parse(
+    return PracticeSessionSummaryOutputSchema.parse(
       await d.getPracticeSessionSummaryUseCase.execute({
         userId,
         sessionId: input.sessionId,

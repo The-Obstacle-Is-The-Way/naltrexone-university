@@ -22,6 +22,34 @@ export class FakePracticeSessionRepository
     );
   }
 
+  private normalizeQuestionState(
+    state: Pick<
+      PracticeSession['questionStates'][number],
+      | 'questionId'
+      | 'markedForReview'
+      | 'latestSelectedChoiceId'
+      | 'latestIsCorrect'
+      | 'latestAnsweredAt'
+    > &
+      Partial<
+        Pick<
+          PracticeSession['questionStates'][number],
+          'draftSelectedChoiceId' | 'draftSavedAt' | 'draftCumulativeMs'
+        >
+      >,
+  ): PracticeSession['questionStates'][number] {
+    return {
+      questionId: state.questionId,
+      markedForReview: state.markedForReview,
+      latestSelectedChoiceId: state.latestSelectedChoiceId,
+      latestIsCorrect: state.latestIsCorrect,
+      latestAnsweredAt: state.latestAnsweredAt,
+      draftSelectedChoiceId: state.draftSelectedChoiceId ?? null,
+      draftSavedAt: state.draftSavedAt ?? null,
+      draftCumulativeMs: state.draftCumulativeMs ?? 0,
+    };
+  }
+
   private withNormalizedQuestionStates(
     session: PracticeSession,
   ): PracticeSession {
@@ -32,14 +60,14 @@ export class FakePracticeSessionRepository
       ...session,
       questionStates: session.questionIds.map((questionId) => {
         const existing = existingByQuestionId.get(questionId);
-        if (existing) return existing;
-        return {
+        if (existing) return this.normalizeQuestionState(existing);
+        return this.normalizeQuestionState({
           questionId,
           markedForReview: false,
           latestSelectedChoiceId: null,
           latestIsCorrect: null,
           latestAnsweredAt: null,
-        };
+        });
       }),
     };
   }
@@ -150,6 +178,9 @@ export class FakePracticeSessionRepository
         latestSelectedChoiceId: string | null;
         latestIsCorrect: boolean | null;
         latestAnsweredAt: string | null;
+        draftSelectedChoiceId?: string | null;
+        draftSavedAt?: string | null;
+        draftCumulativeMs?: number;
       }>;
     };
     const statesByQuestionId = new Map(
@@ -162,7 +193,7 @@ export class FakePracticeSessionRepository
       questionIds: params.questionIds,
       questionStates: params.questionIds.map((questionId) => {
         const state = statesByQuestionId.get(questionId);
-        return {
+        return this.normalizeQuestionState({
           questionId,
           markedForReview: state?.markedForReview ?? false,
           latestSelectedChoiceId: state?.latestSelectedChoiceId ?? null,
@@ -170,7 +201,12 @@ export class FakePracticeSessionRepository
           latestAnsweredAt: state?.latestAnsweredAt
             ? new Date(state.latestAnsweredAt)
             : null,
-        };
+          draftSelectedChoiceId: state?.draftSelectedChoiceId ?? null,
+          draftSavedAt: state?.draftSavedAt
+            ? new Date(state.draftSavedAt)
+            : null,
+          draftCumulativeMs: state?.draftCumulativeMs ?? 0,
+        });
       }),
       tagFilters: params.tagSlugs,
       difficultyFilters: params.difficulties,
@@ -180,6 +216,90 @@ export class FakePracticeSessionRepository
 
     this.sessions = [...this.sessions, session];
     return session;
+  }
+
+  async saveDraftAnswer(input: {
+    sessionId: string;
+    userId: string;
+    questionId: string;
+    selectedChoiceId: string;
+    cumulativeMs: number;
+  }): Promise<PracticeSession['questionStates'][number]> {
+    const session = await this.getActiveSession(input.sessionId, input.userId);
+    this.requireQuestionState(session, input.questionId);
+
+    const savedAt = new Date();
+    let updatedState: PracticeSession['questionStates'][number] | null = null;
+    this.updateSession(input.sessionId, (existing) => {
+      const next = this.withNormalizedQuestionStates(existing);
+      const questionStates = next.questionStates.map((state) => {
+        if (state.questionId !== input.questionId) return state;
+
+        if (
+          (state.draftSavedAt && state.draftSavedAt > savedAt) ||
+          input.cumulativeMs < state.draftCumulativeMs
+        ) {
+          updatedState = state;
+          return state;
+        }
+
+        updatedState = {
+          ...state,
+          draftSelectedChoiceId: input.selectedChoiceId,
+          draftSavedAt: savedAt,
+          draftCumulativeMs: input.cumulativeMs,
+        };
+        return updatedState;
+      });
+      return { ...next, questionStates };
+    });
+
+    if (!updatedState) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Failed to persist practice session draft answer state',
+      );
+    }
+    return updatedState;
+  }
+
+  async finalizeDraftAnswer(input: {
+    sessionId: string;
+    userId: string;
+    questionId: string;
+    selectedChoiceId: string;
+    isCorrect: boolean;
+    answeredAt: Date;
+  }): Promise<PracticeSession['questionStates'][number]> {
+    const session = await this.getActiveSession(input.sessionId, input.userId);
+    this.requireQuestionState(session, input.questionId);
+
+    let updatedState: PracticeSession['questionStates'][number] | null = null;
+    this.updateSession(input.sessionId, (existing) => {
+      const next = this.withNormalizedQuestionStates(existing);
+      const questionStates = next.questionStates.map((state) => {
+        if (state.questionId !== input.questionId) return state;
+        updatedState = {
+          ...state,
+          latestSelectedChoiceId: input.selectedChoiceId,
+          latestIsCorrect: input.isCorrect,
+          latestAnsweredAt: input.answeredAt,
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 0,
+        };
+        return updatedState;
+      });
+      return { ...next, questionStates };
+    });
+
+    if (!updatedState) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Failed to finalize practice session draft answer state',
+      );
+    }
+    return updatedState;
   }
 
   async recordQuestionAnswer(input: {

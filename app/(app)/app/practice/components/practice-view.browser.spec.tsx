@@ -1,7 +1,54 @@
+import { useState } from 'react';
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { NotificationProvider } from '@/components/ui/notification-provider';
 import { PracticeView } from './practice-view';
+
+function ExamPracticeViewHarness(input: {
+  onNextQuestion: () => void;
+  onToggleMarkForReview: () => void;
+}) {
+  const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
+
+  return (
+    <PracticeView
+      sessionInfo={{
+        sessionId: 'session-1',
+        mode: 'exam',
+        index: 0,
+        total: 10,
+        isMarkedForReview: false,
+      }}
+      loadState={{ status: 'ready' }}
+      question={{
+        questionId: 'question-1',
+        slug: 'question-1',
+        stemMd: 'What is the next best step?',
+        difficulty: 'easy',
+        choices: [
+          { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
+          { id: 'choice_b', label: 'B', textMd: 'Option B', sortOrder: 2 },
+        ],
+        session: null,
+      }}
+      selectedChoiceId={selectedChoiceId}
+      isAnswered={false}
+      submitResult={null}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      isMarkingForReview={false}
+      canSubmit={selectedChoiceId !== null}
+      onEndSession={() => undefined}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onToggleMarkForReview={input.onToggleMarkForReview}
+      onSelectChoice={setSelectedChoiceId}
+      onSubmit={() => undefined}
+      onNextQuestion={input.onNextQuestion}
+    />
+  );
+}
 
 test('renders error state and retries when requested', async () => {
   const onTryAgain = vi.fn();
@@ -35,46 +82,12 @@ test('renders error state and retries when requested', async () => {
 
 test('supports exam controls and question interactions', async () => {
   const onToggleMarkForReview = vi.fn();
-  const onSelectChoice = vi.fn();
-  const onSubmit = vi.fn();
   const onNextQuestion = vi.fn();
 
   const screen = await render(
-    <PracticeView
-      sessionInfo={{
-        sessionId: 'session-1',
-        mode: 'exam',
-        index: 0,
-        total: 10,
-        isMarkedForReview: false,
-      }}
-      loadState={{ status: 'ready' }}
-      question={{
-        questionId: 'question-1',
-        slug: 'question-1',
-        stemMd: 'What is the next best step?',
-        difficulty: 'easy',
-        choices: [
-          { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
-          { id: 'choice_b', label: 'B', textMd: 'Option B', sortOrder: 2 },
-        ],
-        session: null,
-      }}
-      selectedChoiceId={null}
-      isAnswered={false}
-      submitResult={null}
-      isPending={false}
-      bookmarkStatus="idle"
-      isBookmarked={false}
-      isMarkingForReview={false}
-      canSubmit
-      onEndSession={() => undefined}
-      onTryAgain={() => undefined}
-      onToggleBookmark={() => undefined}
-      onToggleMarkForReview={onToggleMarkForReview}
-      onSelectChoice={onSelectChoice}
-      onSubmit={onSubmit}
+    <ExamPracticeViewHarness
       onNextQuestion={onNextQuestion}
+      onToggleMarkForReview={onToggleMarkForReview}
     />,
   );
 
@@ -86,13 +99,111 @@ test('supports exam controls and question interactions', async () => {
     .not.toBeInTheDocument();
 
   await screen.getByRole('radio', { name: 'Option B' }).click();
-  expect(onSelectChoice).toHaveBeenCalledWith('choice_b');
+  await expect
+    .element(screen.getByRole('radio', { name: 'Option B' }))
+    .toBeChecked();
 
-  await screen.getByRole('button', { name: 'Submit' }).click();
-  expect(onSubmit).toHaveBeenCalledTimes(1);
+  await expect
+    .element(screen.getByRole('button', { name: 'Submit' }))
+    .not.toBeInTheDocument();
 
   await screen.getByRole('button', { name: 'Next' }).click();
   expect(onNextQuestion).toHaveBeenCalledTimes(1);
+});
+
+test('disables mutation controls while internal question loading is in progress', async () => {
+  const tutorScreen = await render(
+    <PracticeView
+      loadState={{ status: 'loading' }}
+      question={{
+        questionId: 'question-1',
+        slug: 'question-1',
+        stemMd: 'What is the next best step?',
+        difficulty: 'easy',
+        choices: [
+          {
+            id: 'choice_a',
+            label: 'A',
+            textMd: 'Tutor Option A',
+            sortOrder: 1,
+          },
+        ],
+        session: null,
+      }}
+      selectedChoiceId="choice_a"
+      isAnswered={false}
+      submitResult={null}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      canSubmit={true}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={() => undefined}
+    />,
+  );
+
+  await expect
+    .element(tutorScreen.getByRole('button', { name: 'Submit' }))
+    .toBeDisabled();
+  await expect
+    .element(tutorScreen.getByRole('button', { name: 'Bookmark' }))
+    .toBeDisabled();
+  await expect
+    .element(tutorScreen.getByRole('radio', { name: 'Tutor Option A' }))
+    .toBeDisabled();
+
+  const examScreen = await render(
+    <PracticeView
+      sessionInfo={{
+        sessionId: 'session-1',
+        mode: 'exam',
+        index: 0,
+        total: 10,
+        isMarkedForReview: false,
+      }}
+      loadState={{ status: 'loading' }}
+      question={{
+        questionId: 'question-1',
+        slug: 'question-1',
+        stemMd: 'What is the next best step?',
+        difficulty: 'easy',
+        choices: [
+          {
+            id: 'choice_a',
+            label: 'A',
+            textMd: 'Exam Option A',
+            sortOrder: 1,
+          },
+        ],
+        session: null,
+      }}
+      selectedChoiceId="choice_a"
+      isAnswered={false}
+      submitResult={null}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      isMarkingForReview={false}
+      canSubmit={true}
+      onEndSession={() => undefined}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onToggleMarkForReview={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={() => undefined}
+    />,
+  );
+
+  await expect
+    .element(examScreen.getByRole('button', { name: 'Mark for review' }))
+    .toBeDisabled();
+  await expect
+    .element(examScreen.getByRole('radio', { name: 'Exam Option A' }))
+    .toBeDisabled();
 });
 
 test('disables choice selection after a submit in exam mode', async () => {

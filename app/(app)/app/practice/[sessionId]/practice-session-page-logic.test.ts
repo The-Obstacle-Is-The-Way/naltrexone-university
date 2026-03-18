@@ -14,7 +14,6 @@ import {
   createSummaryReviewEffect,
   endSession,
   loadNextQuestion,
-  maybeAutoAdvanceAfterSubmit,
   submitAnswerForQuestion,
 } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
@@ -597,178 +596,6 @@ describe('practice-session-page-logic', () => {
     });
   });
 
-  describe('maybeAutoAdvanceAfterSubmit', () => {
-    it('returns advance invocation when mode is exam and submitResult exists', () => {
-      const advance = vi.fn();
-
-      maybeAutoAdvanceAfterSubmit({
-        mode: 'exam',
-        submitResult: {
-          attemptId: 'attempt_1',
-          isCorrect: true,
-          correctChoiceId: 'choice_1',
-          explanationMd: null,
-          referenceMd: null,
-          choiceExplanations: [],
-        },
-        loadStateStatus: 'ready',
-        sessionInfo: {
-          sessionId: 'session-1',
-          mode: 'exam',
-          index: 0,
-          total: 2,
-        },
-        advance,
-      });
-
-      expect(advance).toHaveBeenCalledTimes(1);
-    });
-
-    it('returns no advance invocation when current question is the last question', () => {
-      const advance = vi.fn();
-
-      maybeAutoAdvanceAfterSubmit({
-        mode: 'exam',
-        submitResult: {
-          attemptId: 'attempt_1',
-          isCorrect: true,
-          correctChoiceId: 'choice_1',
-          explanationMd: null,
-          referenceMd: null,
-          choiceExplanations: [],
-        },
-        loadStateStatus: 'ready',
-        sessionInfo: {
-          sessionId: 'session-1',
-          mode: 'exam',
-          index: 1,
-          total: 2,
-        },
-        advance,
-      });
-
-      expect(advance).not.toHaveBeenCalled();
-    });
-
-    it('returns no advance invocation for a single-question session', () => {
-      const advance = vi.fn();
-
-      maybeAutoAdvanceAfterSubmit({
-        mode: 'exam',
-        submitResult: {
-          attemptId: 'attempt_1',
-          isCorrect: true,
-          correctChoiceId: 'choice_1',
-          explanationMd: null,
-          referenceMd: null,
-          choiceExplanations: [],
-        },
-        loadStateStatus: 'ready',
-        sessionInfo: {
-          sessionId: 'session-1',
-          mode: 'exam',
-          index: 0,
-          total: 1,
-        },
-        advance,
-      });
-
-      expect(advance).not.toHaveBeenCalled();
-    });
-
-    it('returns no advance invocation when mode is tutor', () => {
-      const advance = vi.fn();
-
-      maybeAutoAdvanceAfterSubmit({
-        mode: 'tutor',
-        submitResult: {
-          attemptId: 'attempt_1',
-          isCorrect: true,
-          correctChoiceId: 'choice_1',
-          explanationMd: null,
-          referenceMd: null,
-          choiceExplanations: [],
-        },
-        loadStateStatus: 'ready',
-        sessionInfo: {
-          sessionId: 'session-1',
-          mode: 'tutor',
-          index: 0,
-          total: 2,
-        },
-        advance,
-      });
-
-      expect(advance).not.toHaveBeenCalled();
-    });
-
-    it('returns no advance invocation when submitResult is null', () => {
-      const advance = vi.fn();
-
-      maybeAutoAdvanceAfterSubmit({
-        mode: 'exam',
-        submitResult: null,
-        loadStateStatus: 'ready',
-        sessionInfo: {
-          sessionId: 'session-1',
-          mode: 'exam',
-          index: 0,
-          total: 2,
-        },
-        advance,
-      });
-
-      expect(advance).not.toHaveBeenCalled();
-    });
-
-    it('returns no advance invocation when loadState is loading', () => {
-      const advance = vi.fn();
-
-      maybeAutoAdvanceAfterSubmit({
-        mode: 'exam',
-        submitResult: {
-          attemptId: 'attempt_1',
-          isCorrect: true,
-          correctChoiceId: 'choice_1',
-          explanationMd: null,
-          referenceMd: null,
-          choiceExplanations: [],
-        },
-        loadStateStatus: 'loading',
-        sessionInfo: {
-          sessionId: 'session-1',
-          mode: 'exam',
-          index: 0,
-          total: 2,
-        },
-        advance,
-      });
-
-      expect(advance).not.toHaveBeenCalled();
-    });
-
-    it('returns no advance invocation when mode is null', () => {
-      const advance = vi.fn();
-
-      maybeAutoAdvanceAfterSubmit({
-        mode: null,
-        submitResult: {
-          attemptId: 'attempt_1',
-          isCorrect: true,
-          correctChoiceId: 'choice_1',
-          explanationMd: null,
-          referenceMd: null,
-          choiceExplanations: [],
-        },
-        loadStateStatus: 'ready',
-        sessionInfo: null,
-        advance,
-      });
-
-      expect(advance).not.toHaveBeenCalled();
-    });
-  });
-
   describe('endSession', () => {
     const successfulEndSessionOutput: EndPracticeSessionOutput = {
       sessionId: 'session-1',
@@ -790,21 +617,21 @@ describe('practice-session-page-logic', () => {
     it('sets summary and resets state on success', async () => {
       const setSummary = vi.fn();
       const resetQuestionState = vi.fn();
-      const endPracticeSessionFn = vi.fn(async () =>
+      const finalizeSessionFn = vi.fn(async () =>
         ok(successfulEndSessionOutput),
       );
 
       await endSession({
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
-        endPracticeSessionFn,
+        finalizeSessionFn,
         getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState: vi.fn(),
         setSummary,
         resetQuestionState,
       });
 
-      expect(endPracticeSessionFn).toHaveBeenCalledWith({
+      expect(finalizeSessionFn).toHaveBeenCalledWith({
         sessionId: 'session-1',
         idempotencyKey: 'idem_1',
       });
@@ -820,7 +647,7 @@ describe('practice-session-page-logic', () => {
       await endSession({
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
-        endPracticeSessionFn: async () => err('INTERNAL_ERROR', 'Boom'),
+        finalizeSessionFn: async () => err('INTERNAL_ERROR', 'Boom'),
         getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState,
         setSummary: vi.fn(),
@@ -839,7 +666,7 @@ describe('practice-session-page-logic', () => {
       await endSession({
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
-        endPracticeSessionFn: async () => err('INTERNAL_ERROR', 'Boom'),
+        finalizeSessionFn: async () => err('INTERNAL_ERROR', 'Boom'),
         getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState: vi.fn(),
         setSummary: vi.fn(),
@@ -861,7 +688,7 @@ describe('practice-session-page-logic', () => {
       await endSession({
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
-        endPracticeSessionFn: async () =>
+        finalizeSessionFn: async () =>
           err('CONFLICT', 'Practice session already ended'),
         getPracticeSessionSummaryFn,
         setLoadState,
@@ -884,7 +711,7 @@ describe('practice-session-page-logic', () => {
       await endSession({
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
-        endPracticeSessionFn: async () =>
+        finalizeSessionFn: async () =>
           err('CONFLICT', 'Practice session already ended'),
         getPracticeSessionSummaryFn: async () =>
           err('NOT_FOUND', 'Practice session summary not found'),
@@ -909,7 +736,7 @@ describe('practice-session-page-logic', () => {
       await endSession({
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
-        endPracticeSessionFn: async () =>
+        finalizeSessionFn: async () =>
           err('CONFLICT', 'Practice session already ended'),
         getPracticeSessionSummaryFn: async () => {
           throw error;
@@ -938,7 +765,7 @@ describe('practice-session-page-logic', () => {
       await endSession({
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
-        endPracticeSessionFn: async () => {
+        finalizeSessionFn: async () => {
           throw error;
         },
         getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
@@ -963,7 +790,7 @@ describe('practice-session-page-logic', () => {
       await endSession({
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
-        endPracticeSessionFn: async () => {
+        finalizeSessionFn: async () => {
           throw new Error('Boom');
         },
         getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
@@ -982,7 +809,7 @@ describe('practice-session-page-logic', () => {
       await endSession({
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
-        endPracticeSessionFn: async () => ok(successfulEndSessionOutput),
+        finalizeSessionFn: async () => ok(successfulEndSessionOutput),
         getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState: vi.fn(),
         setSummary: vi.fn(),
@@ -1003,7 +830,7 @@ describe('practice-session-page-logic', () => {
       const promise = endSession({
         sessionId: 'session-1',
         endSessionIdempotencyKey: 'idem_1',
-        endPracticeSessionFn: async () => deferred.promise,
+        finalizeSessionFn: async () => deferred.promise,
         getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
         setLoadState,
         setSummary,

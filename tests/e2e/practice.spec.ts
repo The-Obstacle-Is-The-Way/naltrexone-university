@@ -78,18 +78,21 @@ test.describe('practice', () => {
     await startSession(page, 'exam');
 
     await selectChoiceByLabel(page, 'A');
-    await page.getByRole('button', { name: 'Submit' }).click();
 
-    // Exam mode does not show explanation after submit
+    // Exam mode does not show feedback or explanations while the exam is active.
     await expect(
       page.getByText('Correct Answer', { exact: true }),
     ).not.toBeVisible();
+    await expect(page.getByRole('button', { name: 'Submit' })).toHaveCount(0);
     await expect(
       page.getByRole('button', { name: 'Mark for review' }),
     ).toBeVisible();
 
     // Click "Review answers" to enter exam review view
-    await page.getByRole('button', { name: 'Review answers' }).click();
+    await page
+      .getByTestId('bottom-action-bar')
+      .getByRole('button', { name: 'Review answers' })
+      .click();
 
     // Wait for exam review to load with the "Submit exam" button
     const submitExamButton = page.getByRole('button', { name: 'Submit exam' });

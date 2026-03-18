@@ -36,6 +36,14 @@ export class FakeEndPracticeSessionUseCase extends FakeUseCase<
   U.EndPracticeSessionInput,
   U.EndPracticeSessionOutput
 > {}
+export class FakeFinalizeExamAnswersUseCase extends FakeUseCase<
+  U.FinalizeExamAnswersInput,
+  U.FinalizeExamAnswersOutput
+> {}
+export class FakeSaveExamDraftAnswerUseCase extends FakeUseCase<
+  U.SaveExamDraftAnswerInput,
+  U.SaveExamDraftAnswerOutput
+> {}
 export class FakeCreateCheckoutSessionUseCase extends FakeUseCase<
   U.CreateCheckoutSessionInput,
   U.CreateCheckoutSessionOutput
