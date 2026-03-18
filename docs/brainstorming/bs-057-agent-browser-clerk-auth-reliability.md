@@ -3,7 +3,7 @@
 **Date:** 2026-03-18
 **Triggered by:** DEBT-322 audit agent failed to visually verify exam UX issues because it could not authenticate through Clerk in agent-browser. This is a recurring pattern — every agent tasked with browser-based verification hits the same Clerk auth wall.
 **Scope:** Native `agent-browser` auth/state reuse cannot reliably access Clerk-protected `/app/*` routes. The verified working path is a persistent `--profile` with one-time human login.
-**Related:** [DEBT-322](../debt/debt-322-exam-action-bar-ux-polish.md), [agent-browser docs](../dev/agent-browser.md), [testing infrastructure](../dev/testing-infrastructure.md)
+**Related:** [DEBT-322](../debt/debt-322-exam-action-bar-ux-polish.md), [DEBT-323](../debt/debt-323-agent-browser-react-click-failures.md), [agent-browser docs](../dev/agent-browser.md), [testing infrastructure](../dev/testing-infrastructure.md)
 
 ---
 
@@ -126,7 +126,7 @@ Operational gotchas discovered during verification:
 
 #### B: Playwright storageState bridge (`--state`) is currently unreliable
 
-Already documented in `docs/dev/agent-browser.md` as a rejected path. A script authenticates via `@clerk/testing/playwright`, exports `storageState`, and passes it to agent-browser via `--state`.
+Already documented in `docs/tooling/agent-browser.md` as a rejected path. A script authenticates via `@clerk/testing/playwright`, exports `storageState`, and passes it to agent-browser via `--state`.
 
 ```ts
 // scripts/tmp-create-agent-browser-state.ts

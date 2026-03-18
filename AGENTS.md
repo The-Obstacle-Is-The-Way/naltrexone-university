@@ -335,11 +335,11 @@ agent-browser get url          # must show /app/dashboard, not Clerk sign-in
 
 If no profile exists yet, a human must log in once: `agent-browser --profile /tmp/clerk-profile --headed open http://localhost:3000/sign-in` — then log in through the Chromium window that opens.
 
-Do not use `agent-browser --state` or CDP bridge approaches — both are unreliable with Clerk. Full details: `docs/dev/agent-browser.md`.
+Do not use `agent-browser --state` or CDP bridge approaches — both are unreliable with Clerk. Full details: `docs/tooling/agent-browser.md`.
 
 Keep the host exact: `localhost` and `127.0.0.1` are not interchangeable for Clerk cookies.
 
-Do not over-attribute button-click oddities to auth. In local verification, auth via `--profile` worked while some ref-based action-button clicks (`Start session`, `Submit`) still no-op'd. Treat that as a separate interaction investigation.
+`agent-browser click @ref` silently fails on most React components (radios, Submit, toggle buttons). This is an upstream agent-browser 0.21.1 limitation, not a code bug (DEBT-323). Use JS eval instead: `agent-browser eval "Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('Submit'))?.click()"`. For radios: `agent-browser eval "document.querySelectorAll('label')[0].click()"`. Toggle buttons (Tutor/Exam mode) have no working workaround — use Playwright for those flows.
 
 **If using Claude Code with Chrome MCP tools**, the user's browser is typically already authenticated — use `tabs_context_mcp` to check existing tabs before creating new ones.
 
@@ -612,7 +612,7 @@ gh pr view <PR_NUMBER> --comments
 - `docs/frontend/pattern-registry.md` — Every visual pattern: hover, border, surface, token scales
 - `docs/frontend/design-principles.md` — Layout composition, navigation zones, action bar conventions
 - `docs/frontend/pages/` — Per-page dark mode UI audits
-- `docs/dev/agent-browser.md` — Browser automation and Clerk auth for visual verification
+- `docs/tooling/agent-browser.md` — Browser automation, Clerk auth, and React click workarounds
 
 ---
 

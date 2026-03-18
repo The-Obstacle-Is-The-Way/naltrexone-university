@@ -97,7 +97,7 @@ Active open bugs are listed below.
 Targeted browser-led sweep focused on local auth setup, documented `agent-browser` gotchas, and whether current observability plumbing survives a real browser session.
 
 **Methodology:**
-- Read repo-local browser/auth docs first: `docs/dev/agent-browser.md`, `docs/dev/testing-infrastructure.md`, `docs/dev/deployment-environments.md`
+- Read repo-local browser/auth docs first: `docs/tooling/agent-browser.md`, `docs/dev/testing-infrastructure.md`, `docs/dev/deployment-environments.md`
 - Verified local auth prerequisites from `.env.local` without exposing secret values
 - Started the app locally and generated a clean authenticated baseline with the repo's Clerk/Playwright helpers
 - Used `agent-browser` for live sign-in exploration and page inspection, then used a narrow Playwright corroboration pass where console/runtime evidence was needed

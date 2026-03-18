@@ -72,7 +72,7 @@ agent-browser eval "Array.from(document.querySelectorAll('button')).find(b => b.
 
 **What still works via refs:** navigation links (`<a>` elements) and simple dialog buttons (Abandon/Confirm).
 
-Full details: `docs/dev/agent-browser.md`
+Full details: `docs/tooling/agent-browser.md`
 
 ## Commands
 
