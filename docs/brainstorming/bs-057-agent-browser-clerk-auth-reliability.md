@@ -39,14 +39,19 @@ This is not a one-off. Any future task requiring an agent to visually verify aut
 
 **The critical gap:** This is a **request-interception pattern at the Playwright API level** (`browserContext.route`). agent-browser's `network route` command can only abort or mock responses — it **cannot modify outgoing request URLs** by appending query params. The Clerk testing token mechanism cannot be directly replicated using agent-browser's built-in commands.
 
-### Why storageState export also fails
+### Why the Playwright storageState bridge failed (reproduced locally)
 
-Playwright's `storageState()` exports cookies and localStorage. Clerk sessions rely on:
-- Short-lived session tokens (60s default) that rotate
-- The `__session` cookie which may expire before agent-browser loads it
-- Potentially different cookie domains between Playwright's context and agent-browser's Chromium
+The bridge failure is not best explained by JSON shape mismatch or Clerk token expiry alone.
 
-The state file format compatibility between Playwright and agent-browser is also undocumented and unverified.
+What we verified locally:
+- Playwright `storageState()` and `agent-browser state save` are structurally close enough to be considered compatible at the file-shape level (`cookies` + `origins[]`).
+- A real Clerk-authenticated Playwright `storageState` successfully authenticated a fresh plain Playwright browser without any testing-token route active.
+- `agent-browser 0.20.13` failed to restore that same state on `http://localhost:3000`, redirecting to Clerk sign-in.
+- `agent-browser 0.20.13` also failed to round-trip a trivial non-Clerk `example.com` localStorage value on a fresh daemon via `--state`.
+
+Current best explanation: the failure is in `agent-browser --state` restore behavior, not in Clerk's testing-token mechanism.
+
+**Important confounder:** hostnames must match exactly. This repo's app and Clerk cookies use `localhost` by default. A bridge flow that signs in on `localhost` and later opens `127.0.0.1` will fail because the cookies do not match that host. This is a real footgun, but it does not fully explain the `agent-browser` localhost failure reproduced above.
 
 ---
 
@@ -68,9 +73,9 @@ agent-browser has generic auth support: state save/load, persistent profiles, se
 
 | Issue | Title | Relevance |
 |-------|-------|-----------|
-| [#586](https://github.com/vercel-labs/agent-browser/issues/586) | Azure AD / Entra ID auth | Closest analog — shows pattern for complex SSO auth providers |
-| [#279](https://github.com/vercel-labs/agent-browser/issues/279) | frameLocator for cross-origin iframes | Clerk's `<SignIn/>` uses iframes; may affect direct-fill approaches |
-| [#297](https://github.com/vercel-labs/agent-browser/issues/297) | `--state`/`--profile` daemon crash on macOS arm64 | Could explain state file failures on our M-series Macs |
+| [#586](https://github.com/vercel-labs/agent-browser/issues/586) | Azure AD / Entra ID auth | Still open. Relevant because it proposes broader auth/profile/channel improvements, but those capabilities are not present in the currently verified local CLI. |
+| [#279](https://github.com/vercel-labs/agent-browser/issues/279) | frameLocator for cross-origin iframes | Still open, but not a strong explanation for this repo's Clerk failure. The hosted Clerk sign-in page used here was observed as a top-level page with no iframes in Playwright. |
+| [#297](https://github.com/vercel-labs/agent-browser/issues/297) | `--state`/`--profile` daemon crash on macOS arm64 | Still open, but not our reproduced symptom. On local `agent-browser 0.20.13`, `--state` did not crash; it silently failed to restore state. |
 
 ### Clerk's own guidance
 
@@ -94,13 +99,55 @@ Playwright E2E tests authenticate through Clerk without any issues:
 
 **Status: Fully working.** Agents should prefer Playwright for visual verification tasks when possible.
 
-### Tool 2: agent-browser (Needs Investigation)
+### Tool 2: agent-browser (Needs A Different Bridge)
 
-agent-browser is built on Playwright's Chromium, so there should be a viable path. Two approaches to investigate:
+agent-browser is built on Playwright's Chromium, but the reliable path is not `--state`. Two approaches matter:
 
-#### A: Playwright storageState bridge (documented, failed once, needs debugging)
+#### A: Playwright + CDP bridge (working)
 
-Already documented in `docs/dev/agent-browser.md` as Option C. A script authenticates via `@clerk/testing/playwright`, exports `storageState`, and passes it to agent-browser via `--state`.
+Authenticate a real Playwright browser with `@clerk/testing/playwright`, keep that browser alive with a fixed remote debugging port, then attach `agent-browser` via `agent-browser connect <port>`.
+
+```ts
+// scripts/tmp-start-agent-browser-cdp.ts
+import { config } from 'dotenv';
+import { clerkSetup } from '@clerk/testing/playwright';
+import { chromium } from '@playwright/test';
+
+config({ path: '.env.local' });
+config({ path: '.env' });
+
+const baseURL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+const helper = (await import('../../tests/e2e/helpers/clerk-auth.ts')).default;
+const { signInWithClerkPassword } = helper;
+
+await clerkSetup();
+const browser = await chromium.launch({
+  headless: true,
+  args: ['--remote-debugging-port=9224'],
+});
+
+const context = await browser.newContext({ baseURL });
+const page = await context.newPage();
+
+await signInWithClerkPassword(page);
+await page.goto('/app/dashboard');
+await page.waitForLoadState('networkidle');
+
+console.log('CDP ready on 9224:', page.url());
+setInterval(() => {}, 1000);
+```
+
+```bash
+pnpm tsx scripts/tmp-start-agent-browser-cdp.ts
+agent-browser connect 9224
+agent-browser open http://localhost:3000/app/practice
+```
+
+**Status:** verified locally. This is the cleanest working path today because it reuses the existing Clerk-tested Playwright infrastructure and avoids the broken `--state` restore path.
+
+#### B: Playwright storageState bridge (`--state`) is currently unreliable
+
+Already documented in `docs/dev/agent-browser.md` as the older Option C. A script authenticates via `@clerk/testing/playwright`, exports `storageState`, and passes it to agent-browser via `--state`.
 
 ```ts
 // scripts/tmp-create-agent-browser-state.ts
@@ -114,15 +161,14 @@ pnpm tsx scripts/tmp-create-agent-browser-state.ts
 agent-browser --state /tmp/agent-browser-state.json open http://localhost:3000/app/dashboard
 ```
 
-**Status:** DEBT-322 audit agent tried this and it failed — the state file didn't carry the session. This needs debugging:
-- Is it a state file format incompatibility between Playwright and agent-browser?
-- Is it a timing issue (Clerk session token expired between export and load)?
-- Is it the macOS arm64 `--state`/`--profile` daemon crash (agent-browser issue #297)?
-- Is the `storageState` missing critical Clerk cookies or localStorage keys?
+**Status:** reproduced as unreliable locally. The failure is not best explained by Clerk timing or JSON-shape mismatch:
+- the same saved Clerk state works in fresh plain Playwright
+- `agent-browser --state` fails even on `localhost`
+- `agent-browser --state` also failed to restore a trivial non-Clerk localStorage round-trip
 
-**This is the highest-priority investigation item.**
+This remains worth tracking as an upstream `agent-browser` issue, but it should not be the recommended auth bridge for this repo.
 
-#### B: Persistent profile with manual one-time login (fallback)
+#### C: Persistent profile with manual one-time login (fallback)
 
 ```bash
 agent-browser --profile /tmp/clerk-profile --headed open http://localhost:3000/sign-in
@@ -131,8 +177,8 @@ agent-browser --profile /tmp/clerk-profile --headed open http://localhost:3000/s
 agent-browser --profile /tmp/clerk-profile open http://localhost:3000/app/dashboard
 ```
 
-**Pros:** Simple. Works with Clerk's anti-automation because it's a real human login.
-**Cons:** Manual step. Profile may expire. macOS arm64 crash risk (#297).
+**Pros:** Human login avoids Clerk's anti-automation for the login itself.
+**Cons:** Manual step. We did not fully re-verify a real Clerk profile workflow end-to-end in this audit, so this remains a plausible fallback rather than the primary recommendation.
 
 ## Deprioritized / Rejected Approaches
 
@@ -146,20 +192,22 @@ agent-browser --profile /tmp/clerk-profile open http://localhost:3000/app/dashbo
 
 ## Open Questions
 
-1. **Why did the Playwright storageState → agent-browser bridge fail?** Is it a format incompatibility, timing issue (token expired), or the macOS arm64 bug (#297)? This is the #1 question to answer.
-2. **What does agent-browser's state file format actually look like vs. Playwright's?** Compare the two JSON structures to identify incompatibilities.
-3. **Can agent-browser consume Playwright's storageState directly, or does it need transformation?** If transformation is needed, write a bridge script.
-4. **Does our E2E infrastructure need any updates to support agent-browser auth export?** Or can we reuse `tests/e2e/helpers/clerk-auth.ts` directly?
+1. **Is `agent-browser --state` fundamentally broken in the current local build, or only broken under specific daemon/session conditions?** The local evidence points to a broader restore problem.
+2. **Should we upstream a minimal reproduction against `agent-browser` showing `--state` fails even for non-Clerk localStorage round-trips?** This is likely more useful than continuing to debug Clerk-specific behavior first.
+3. **Do we want a reusable repo-local helper script for the Playwright + CDP bridge?** The pattern works today but is still documented as a temporary/manual flow.
+4. **Do we want to keep the persistent-profile fallback documented, or remove it until a real Clerk profile flow is verified end-to-end?**
 
 ---
 
 ## Recommendation
 
-**Primary tools:** Playwright (already working) and agent-browser (needs the storageState bridge debugged).
+**Primary working path:** Playwright-authenticated browser + `agent-browser connect <cdp-port>`.
 
-**Next step:** Debug the Playwright storageState → agent-browser bridge failure. Compare state file formats, test with fresh credentials, check for macOS arm64 issues. If the bridge works, commit a reusable script and update the agent-browser skill/docs.
+This reuses our existing Clerk-tested Playwright infrastructure and avoids the currently unreliable `--state` restore path.
 
-**Fallback:** If the bridge cannot be made reliable, use the persistent profile approach (manual one-time login) for agent-browser, and Playwright for everything else.
+**Fallback:** manual one-time login with `--profile` remains plausible if a human can complete the login interactively.
+
+**Do not recommend right now:** Playwright `storageState` -> `agent-browser --state` as the primary auth path. Treat it as an upstream bug investigation, not a solved workflow.
 
 ---
 
@@ -170,3 +218,4 @@ agent-browser --profile /tmp/clerk-profile open http://localhost:3000/app/dashbo
 | 2026-03-18 | Created as brainstorming doc | Recurring agent auth failure needs investigation before committing to a fix. |
 | 2026-03-18 | Playwright + agent-browser as primary tools; Chrome MCP deprioritized | Playwright already works. agent-browser is Playwright-based, so it should be solvable. Chrome MCP depends on user state and is unreliable for autonomous agent work. |
 | 2026-03-18 | Rejected: bot detection disable, eval token injection | Hacky approaches that change security posture or depend on undocumented internals. |
+| 2026-03-18 | Updated recommendation: Playwright + CDP is primary, `--state` is unreliable | Local verification showed Clerk-authenticated Playwright state works in fresh Playwright but not in `agent-browser --state`, even on `localhost`. |

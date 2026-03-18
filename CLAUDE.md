@@ -97,4 +97,4 @@ pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test
 
 ### Browser Visual Verification
 
-All `/app/*` pages require Clerk auth. When using Chrome MCP tools, the user's browser is typically already authenticated — use `tabs_context_mcp` to check existing tabs. For other browser tools, see `docs/dev/agent-browser.md` for auth approaches. **Never skip visual verification because of an auth redirect — authenticate first.**
+All `/app/*` pages require Clerk auth. For this repo, prefer the Playwright + CDP bridge documented in `docs/dev/agent-browser.md` when using `agent-browser`. Do not assume `agent-browser --state` can reliably reuse a Playwright Clerk login. Keep the app host exact (`localhost` vs `127.0.0.1` matters for Clerk cookies). When using Chrome MCP tools, the user's browser is typically already authenticated — use `tabs_context_mcp` to check existing tabs. **Never skip visual verification because of an auth redirect — authenticate first.**

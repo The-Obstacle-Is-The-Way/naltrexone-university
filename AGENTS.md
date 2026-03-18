@@ -326,10 +326,14 @@ All app pages under `/app/*` are protected by Clerk auth. If you need to visuall
 
 **Full instructions:** `docs/dev/agent-browser.md` — covers 4 approaches (state save, persistent profile, Playwright storageState, direct Clerk sign-in). The recommended approach for agents:
 
-1. Extract credentials: `E2E_CLERK_USER_USERNAME` and `E2E_CLERK_USER_PASSWORD` from `.env.local`
-2. Sign in via the Clerk sign-in page or Playwright storageState script
-3. Save auth state for reuse across multiple page visits
+1. Use Playwright + `@clerk/testing/playwright` to authenticate a real browser session
+2. Keep that browser alive with a fixed CDP port
+3. Attach `agent-browser` via `agent-browser connect <port>`
 4. Then navigate to protected pages
+
+For this repo, do not assume `agent-browser --state` can reliably consume a Playwright Clerk login. As of 2026-03-18 on local `agent-browser 0.20.13`, the reliable path is Playwright-authenticated browser + CDP attach (`agent-browser connect <port>`). See `docs/dev/agent-browser.md`.
+
+Keep the host exact when reusing auth state: `localhost` and `127.0.0.1` are not interchangeable for Clerk cookies.
 
 **If using Claude Code with Chrome MCP tools**, the user's browser is typically already authenticated — use `tabs_context_mcp` to check existing tabs before creating new ones.
 

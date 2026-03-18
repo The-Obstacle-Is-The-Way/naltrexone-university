@@ -23,6 +23,16 @@ agent-browser close             # Close browser
 3. Interact using refs from the snapshot
 4. Re-snapshot after navigation or significant DOM changes
 
+## Project Note: Clerk-authenticated local apps
+
+In this repo, authenticated `/app/*` verification should not default to `agent-browser --state` with a Playwright Clerk `storageState` file. As of 2026-03-18 on local `agent-browser 0.20.13`, the reliable path is:
+
+1. authenticate a real browser with Playwright + `@clerk/testing/playwright`
+2. keep that browser alive with `--remote-debugging-port=<port>`
+3. attach `agent-browser` via `agent-browser connect <port>`
+
+Also keep the app host exact. `localhost` and `127.0.0.1` are not interchangeable for Clerk cookies in this project.
+
 ## Commands
 
 ### Navigation
