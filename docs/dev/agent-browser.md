@@ -211,11 +211,13 @@ Each session has independent cookies, storage, and auth state.
 
 ## Common Pitfalls
 
-1. **Refs expire after navigation** — Always re-snapshot after `open`, `click` that navigates, or DOM changes
-2. **Hidden radios can hang clicks** — Our answer-choice inputs are `sr-only`; clicking the `radio` refs may hang. Prefer `agent-browser find text "<choice text>" click` (or click the wrapping `<label>`).
-3. **`.env.local` isn’t auto-loaded** — Export env vars yourself or use Node dotenv extraction (see above)
-4. **Clerk auth + hostnames** — `localhost` and `127.0.0.1` are not interchangeable for Clerk cookies in this repo; use the exact host from `NEXT_PUBLIC_APP_URL`
-5. **`agent-browser --state` is currently unreliable** — Prefer the Playwright + CDP bridge (Option A) over native state restore
-6. **Clerk sign-in has anti-automation** — Prefer Playwright + CDP (Option A) over direct fill (Option E)
-7. **`agent-browser wait --url` uses glob patterns** — Use `**/dashboard` not `/app/dashboard`
-8. **Temp files** — Never commit state JSON, screenshots, or temp scripts to the repo
+1. **Dev server must be running** — `pnpm dev` must be live before running `pnpm agent-browser:auth`. The CDP bridge authenticates against the running app at `NEXT_PUBLIC_APP_URL` (default `http://localhost:3000`).
+2. **Refs expire after navigation** — Always re-snapshot after `open`, `click` that navigates, or DOM changes
+3. **Hidden radios can hang clicks** — Our answer-choice inputs are `sr-only`; clicking the `radio` refs may hang. Prefer `agent-browser find text "<choice text>" click` (or click the wrapping `<label>`).
+4. **React server action clicks via refs may silently fail** — If `agent-browser click @ref` on a Submit or action button does nothing (no error, no state change), the CDP click dispatch isn’t triggering React’s event system. Fall back to: `agent-browser eval "document.querySelector(‘button’).click()"` with a targeted selector. Verified on 2026-03-18: ref-based Submit click failed, `eval`-based `.click()` succeeded.
+5. **`.env.local` isn’t auto-loaded** — Export env vars yourself or use Node dotenv extraction (see above)
+6. **Clerk auth + hostnames** — `localhost` and `127.0.0.1` are not interchangeable for Clerk cookies in this repo; use the exact host from `NEXT_PUBLIC_APP_URL`
+7. **`agent-browser --state` is currently unreliable** — Prefer the Playwright + CDP bridge (Option A) over native state restore
+8. **Clerk sign-in has anti-automation** — Prefer Playwright + CDP (Option A) over direct fill (Option E)
+9. **`agent-browser wait --url` uses glob patterns** — Use `**/dashboard` not `/app/dashboard`
+10. **Temp files** — Never commit state JSON, screenshots, or temp scripts to the repo

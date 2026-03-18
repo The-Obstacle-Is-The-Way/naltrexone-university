@@ -324,14 +324,17 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 All app pages under `/app/*` are protected by Clerk auth. If you need to visually verify UI changes in a running browser (e.g., `pnpm dev` at `http://localhost:3000`), you **must** authenticate first. Do NOT just navigate to a protected URL and give up when it redirects to sign-in.
 
-**Full instructions:** `docs/dev/agent-browser.md` — covers the supported agent-browser auth approaches for this repo. The recommended approach for agents:
+**Quick start** (requires `pnpm dev` running first):
 
-1. Use Playwright + `@clerk/testing/playwright` to authenticate a real browser session
-2. Keep that browser alive with a fixed CDP port
-3. Attach `agent-browser` via `agent-browser connect <port>`
-4. Then navigate to protected pages
+```bash
+# Shell 1: start authenticated CDP bridge
+pnpm agent-browser:auth
+# Shell 2: connect and explore
+agent-browser connect 9224
+agent-browser open http://localhost:3000/app/dashboard
+```
 
-For this repo, do not assume `agent-browser --state` can reliably consume a Playwright Clerk login. As of 2026-03-18 on local `agent-browser 0.20.13`, the reliable path is Playwright-authenticated browser + CDP attach (`agent-browser connect <port>`). See `docs/dev/agent-browser.md`.
+Do not use `agent-browser --state` — it is unreliable upstream. Full details and fallback options: `docs/dev/agent-browser.md`.
 
 Keep the host exact when reusing auth state: `localhost` and `127.0.0.1` are not interchangeable for Clerk cookies.
 

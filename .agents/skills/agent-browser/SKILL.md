@@ -25,13 +25,39 @@ agent-browser close             # Close browser
 
 ## Project Note: Clerk-authenticated local apps
 
-In this repo, authenticated `/app/*` verification should not default to `agent-browser --state` with a Playwright Clerk `storageState` file. As of 2026-03-18 on local `agent-browser 0.20.13`, the reliable path is:
+All `/app/*` routes require Clerk auth. Do **not** use `agent-browser --state` — it is unreliable upstream.
 
-1. authenticate a real browser with Playwright + `@clerk/testing/playwright`
-2. keep that browser alive with `--remote-debugging-port=<port>`
-3. attach `agent-browser` via `agent-browser connect <port>`
+### Prerequisites
 
-Also keep the app host exact. `localhost` and `127.0.0.1` are not interchangeable for Clerk cookies in this project.
+1. Dev server must be running: `pnpm dev` (wait for http://localhost:3000/api/health to return 200)
+2. `.env.local` must contain: `E2E_CLERK_USER_USERNAME`, `E2E_CLERK_USER_PASSWORD`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+
+### Authenticate (run in two shells)
+
+**Shell 1 — start the CDP bridge:**
+```bash
+pnpm agent-browser:auth
+# Waits until it prints "Agent-browser Clerk auth bridge is ready" with the CDP port
+```
+
+**Shell 2 — connect and use:**
+```bash
+agent-browser connect 9224
+agent-browser get url                                          # should show /app/dashboard
+agent-browser open http://localhost:3000/app/practice          # navigate anywhere in /app/*
+agent-browser screenshot /tmp/screenshot.png --full            # capture evidence
+```
+
+When done, Ctrl+C in Shell 1 to close the authenticated browser.
+
+### Gotchas
+
+- **Host must match exactly.** `localhost` and `127.0.0.1` are not interchangeable for Clerk cookies. Use whichever `NEXT_PUBLIC_APP_URL` resolves to (default: `localhost`).
+- **React server action clicks via refs may silently fail.** If `agent-browser click @ref` on a Submit/action button does nothing, fall back to: `agent-browser eval "document.querySelector('button[text]').click()"` or use `agent-browser eval` with a targeted selector. This is a CDP dispatch quirk with React's event system.
+- **Hidden radio inputs can hang clicks.** Our choice inputs are `sr-only`. Prefer `agent-browser find text "<choice text>" click` over clicking radio refs directly.
+- **Always re-snapshot after navigation.** Refs are invalidated when the DOM changes.
+
+Full details: `docs/dev/agent-browser.md`
 
 ## Commands
 
