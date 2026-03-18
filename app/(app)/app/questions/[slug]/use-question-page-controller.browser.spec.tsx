@@ -62,6 +62,7 @@ function Probe({
   from,
   historySequence,
   historyIndex,
+  onRender,
 }: {
   slug?: string;
   mode?: 'review' | null;
@@ -70,6 +71,11 @@ function Probe({
   from?: QuestionOrigin | null;
   historySequence?: readonly string[] | null;
   historyIndex?: number | null;
+  onRender?: (snapshot: {
+    mode?: 'review' | null;
+    isLoadingPreviousAttempt: boolean;
+    reviewHydrationState: string | null;
+  }) => void;
 }) {
   const output = useQuestionPageController({
     slug,
@@ -81,8 +87,18 @@ function Probe({
     historyIndex,
   });
 
+  onRender?.({
+    mode,
+    isLoadingPreviousAttempt: output.isLoadingPreviousAttempt,
+    reviewHydrationState: output.reviewHydrationState,
+  });
+
   const total = output.sessionNavigation?.questions.length ?? null;
   const index = output.sessionNavigation?.currentIndex ?? null;
+  const currentWasRetried =
+    index === null
+      ? null
+      : (output.sessionNavigation?.questions[index]?.wasRetried ?? null);
   const prevSlug =
     index === null || index <= 0
       ? null
@@ -103,6 +119,9 @@ function Probe({
       </div>
       <div data-testid="session-nav-total">{total ?? ''}</div>
       <div data-testid="session-nav-index">{index ?? ''}</div>
+      <div data-testid="session-nav-current-was-retried">
+        {currentWasRetried === null ? '' : currentWasRetried ? 'true' : 'false'}
+      </div>
       <div data-testid="session-nav-prev-slug">{prevSlug ?? ''}</div>
       <div data-testid="session-nav-next-slug">{nextSlug ?? ''}</div>
       <div data-testid="is-loading-previous-attempt">
@@ -280,6 +299,102 @@ describe('useQuestionPageController (browser)', () => {
     await expect
       .element(screen.getByTestId('is-loading-previous-attempt'))
       .toHaveTextContent('false');
+  });
+
+  it('shows review loading state on the first render after mode changes to review', async () => {
+    getQuestionBySlugMock.mockResolvedValue(
+      ok({
+        questionId: 'question-1',
+        slug: 'q-1',
+        stemMd: 'Stem',
+        difficulty: 'easy',
+        choices: [
+          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
+          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+        ],
+      }),
+    );
+
+    const deferred =
+      createDeferred<
+        ActionResult<{
+          kind: 'attempt';
+          attemptId: string;
+          selectedChoiceId: string;
+          isCorrect: boolean;
+          correctChoiceId: string;
+          explanationMd: string | null;
+          referenceMd: string | null;
+          choiceExplanations: [];
+          answeredAt: string;
+        }>
+      >();
+    getPreviousAttemptMock.mockReturnValue(deferred.promise);
+
+    const reviewSnapshots: Array<{
+      mode?: 'review' | null;
+      isLoadingPreviousAttempt: boolean;
+      reviewHydrationState: string | null;
+    }> = [];
+
+    function Wrapper() {
+      const [mode, setMode] = useState<'review' | null>(null);
+
+      return (
+        <>
+          <Probe
+            mode={mode}
+            onRender={(snapshot) => {
+              if (snapshot.mode === 'review') {
+                reviewSnapshots.push(snapshot);
+              }
+            }}
+          />
+          <button
+            type="button"
+            data-testid="set-review-mode"
+            onClick={() => setMode('review')}
+          >
+            Set review mode
+          </button>
+        </>
+      );
+    }
+
+    const screen = await render(<Wrapper />);
+
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+    await expect
+      .element(screen.getByTestId('is-loading-previous-attempt'))
+      .toHaveTextContent('false');
+    await expect
+      .element(screen.getByTestId('review-hydration-state'))
+      .toHaveTextContent(/^$/);
+
+    await screen.getByTestId('set-review-mode').click();
+
+    expect(reviewSnapshots[0]).toEqual({
+      mode: 'review',
+      isLoadingPreviousAttempt: true,
+      reviewHydrationState: 'no_prior_attempt',
+    });
+
+    deferred.resolve(
+      ok({
+        kind: 'attempt',
+        attemptId: 'attempt-1',
+        selectedChoiceId: 'choice-2',
+        isCorrect: true,
+        correctChoiceId: 'choice-2',
+        explanationMd: 'Because.',
+        referenceMd: null,
+        choiceExplanations: [],
+        answeredAt: '2026-02-01T00:00:00.000Z',
+      }),
+    );
+    await deferred.promise;
   });
 
   it('normalizes mixed attemptId and sessionId by preferring sessionId in review mode', async () => {
@@ -1566,6 +1681,9 @@ describe('useQuestionPageController (browser)', () => {
     await expect
       .element(screen.getByTestId('attempt-id'))
       .toHaveTextContent('attempt-1');
+    await expect
+      .element(screen.getByTestId('session-nav-current-was-retried'))
+      .toHaveTextContent('false');
 
     await screen.getByTestId('trigger-reattempt').click();
     await expect
@@ -1588,6 +1706,9 @@ describe('useQuestionPageController (browser)', () => {
       retryOrigin: 'session_review',
       retrySessionId: sessionId,
     });
+    await expect
+      .element(screen.getByTestId('session-nav-current-was-retried'))
+      .toHaveTextContent('true');
   });
 
   it('maps kind=session_unanswered to reveal state and clears selected choice/result', async () => {

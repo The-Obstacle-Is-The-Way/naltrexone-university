@@ -19,7 +19,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
 | [DEBT-318](./debt-318-tutor-bookmark-before-answer.md) | Bookmark visible before feedback in tutor mode and quick practice — keep the surface, but delay the action until inline feedback/explanation is visible | P3 | — |
-**Next Debt ID:** DEBT-320
+**Next Debt ID:** DEBT-321
 
 ---
 
@@ -27,6 +27,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-320](../_archive/debt/debt-320-useeffect-audit.md) | useEffect audit — resolved the two `use-question-page-controller` anti-patterns and decomposed the question-page flow into focused bookmark, session-navigation, and previous-attempt hooks; broader fetch-abstraction discussion remains informational only | P2 | 2026-03-17 | — |
 | [DEBT-319](../_archive/debt/debt-319-icon-size-shorthand-drift.md) | Lucide icon size shorthand drift in disclosure chevrons — replaced `h-4 w-4` with canonical `size-4` shorthand in both production chevrons and updated the corresponding test assertion | P3 | 2026-03-17 | — |
 | [DEBT-317](../_archive/debt/debt-317-practice-questions-centering-on-narrow-screens.md) | Practice "Questions" block centering on narrow screens — changed the Questions wrapper from `items-center` to `items-start`, kept the existing sibling row structure, and updated the static markup test | P3 | 2026-03-16 | — |
 | [DEBT-316](../_archive/debt/debt-316-exam-post-submit-review-flow.md) | Exam Post-Submit Review Flow — add "Review your answers" CTA to Session Summary, retarget breakdown links to `from=history`, add bottom-bar "Review answers" after last exam question | P2 | 2026-03-16 | — |

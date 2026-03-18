@@ -386,6 +386,38 @@ describe('question-page-logic', () => {
       expect(setSubmitResult).toHaveBeenCalledWith(submitResult);
       expect(setLoadState).toHaveBeenCalledWith({ status: 'ready' });
     });
+
+    it('calls onSuccess with the submit result after a successful submit', async () => {
+      const startTransition = vi.fn((fn: () => void) => fn());
+      const setLoadState = vi.fn();
+      const setSubmitResult = vi.fn();
+      const onSuccess = vi.fn();
+      const submitResult = {
+        attemptId: 'attempt_1',
+        isCorrect: true,
+        correctChoiceId: 'choice_1',
+        explanationMd: null,
+        referenceMd: null,
+        choiceExplanations: [],
+      } satisfies SubmitAnswerOutput;
+
+      const action = createSubmitSelectedAnswerAction({
+        startTransition,
+        question: createQuestionOutput(),
+        selectedChoiceId: 'choice_1',
+        questionLoadedAtMs: 0,
+        submitIdempotencyKey: 'idem_1',
+        submitAnswerFn: async () => ok(submitResult),
+        nowMs: () => 1000,
+        setLoadState,
+        setSubmitResult,
+        onSuccess,
+      });
+
+      await action();
+
+      expect(onSuccess).toHaveBeenCalledWith(submitResult);
+    });
   });
 
   describe('loadPreviousAttempt', () => {

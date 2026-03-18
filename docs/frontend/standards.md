@@ -620,6 +620,71 @@ if (!res.ok) {
 
 All hooks return objects (not tuples). Properties should be named descriptively.
 
+### `useEffect` Guidelines
+
+`useEffect` is not banned here. Treat it as an escape hatch for external synchronization after ruling out derived state, event handlers, and an existing fetch abstraction.
+
+We do **not** require a repo-wide wrapper such as `useMountEffect()`. The guardrail is choosing the right primitive, not hiding `useEffect` behind another name.
+
+#### Decision tree
+
+1. **State derived from other state or props?** Compute it inline — no effect, no extra render.
+   ```tsx
+   // Wrong — extra render cycle, stale flash
+   useEffect(() => { setFiltered(items.filter(predicate)); }, [items]);
+
+   // Right — one render, always correct
+   const filtered = items.filter(predicate);
+   ```
+
+2. **Responding to a user action (click, submit, navigate)?** Do the work in the event handler, not via a state flag + effect.
+   ```tsx
+   // Wrong — flag → effect → reset flag
+   useEffect(() => {
+     if (pending) { doWork(); setPending(false); }
+   }, [pending]);
+
+   // Right — direct
+   const onClick = () => doWork();
+   ```
+
+3. **Fetching data?** Prefer a factory function (`createXxxEffect`) that returns a cleanup function, and call it from the effect. This is our established pattern (see `createBookmarksEffect`, `createSummaryReviewEffect`, etc.). Keep the fetch logic outside the hook and testable in isolation.
+   ```tsx
+   // Our pattern — testable factory with cleanup
+   useEffect(() => {
+     return createBookmarksEffect({ getBookmarksFn, setCounts, ... });
+   }, [deps]);
+   ```
+
+4. **Syncing with an external system on mount (DOM focus, scroll, third-party widget)?** This is a legitimate effect. Use `[]` deps and make the intent clear with a comment.
+
+5. **Resetting state when an ID/key changes?** Prefer React's `key` prop on the parent to force a clean remount, rather than an effect that manually resets state.
+
+#### Anti-patterns to avoid
+
+| Pattern | Problem | Fix |
+|---------|---------|-----|
+| `useEffect(() => setX(f(y)), [y])` | Derived state — extra render, stale flash | Compute `x` inline |
+| Flag → effect → reset flag | Indirect control flow, interleaving risk | Move work into the event handler |
+| `useEffect` with 6+ dependencies | Hard to reason about, fragile | Decompose into smaller hooks or extract a factory function |
+| Multiple effects setting overlapping state | Effect chains — A triggers B triggers C | Consolidate into one effect or move to event handler path |
+| `useEffect` for dev-only logging | Acceptable but noisy | Guard with `process.env.NODE_ENV` check (we do this already) |
+
+#### What's fine
+
+- **Error boundary logging** — React provides `error` as a prop; logging on mount is the intended pattern.
+- **URL-driven one-time side effects** — Toast from search params, URL cleanup. Use a dedup ref guard.
+- **SSR hydration guards** — `useEffect(() => setMounted(true), [])` for `next-themes` and similar.
+- **DOM interactions** — Focus management, scroll-into-view after state transitions.
+- **Cleanup on unmount** — Timer cleanup, subscription teardown. Idiomatic.
+- **Ref sync** — Keeping a ref up-to-date with a callback prop to avoid stale closures.
+
+#### Our codebase context
+
+The practice hooks (`use-practice-question-bookmarks`, `use-practice-session-navigator`, etc.) demonstrate the preferred pattern: extract fetch/async logic into a testable factory function (`createXxxEffect`), call it from a single `useEffect`, and return the cleanup function. This keeps effects small and pushes complexity into pure, testable code.
+
+The question-page flow should follow the same composition style: focused hooks for bookmarks, session navigation, and previous-attempt hydration, with the controller acting as the composition root instead of inlining every effect.
+
 ### Duplication
 
 Logic shared between `/practice` and `/practice/[sessionId]` (question loading, answer submission, bookmark state) MUST be extracted to shared functions or a shared hook. Do not copy-paste between session and non-session variants.
@@ -745,12 +810,14 @@ Issues documented below are tracked as tech debt in `docs/debt/index.md` (Fronte
 
 ### P2 — Fix during UI/UX refactor
 
-Three hooks exceed the 200-line "god hook" threshold (§12):
+Five hooks exceed the 200-line "god hook" threshold (§12). `useQuestionPageController` was reduced from 737 lines / 8 effects to 357 lines / 2 effects by DEBT-320, but it still exceeds the size cap as a composition root.
 
 | Hook | Lines | File |
 |------|-------|------|
-| `useQuestionPageController` | 737 | `app/(app)/app/questions/[slug]/use-question-page-controller.ts` |
-| `usePracticeSessionQuestionFlow` | 238 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` |
+| `useQuestionPageController` | 357 | `app/(app)/app/questions/[slug]/use-question-page-controller.ts` |
+| `useQuestionPageBookmarks` | 211 | `app/(app)/app/questions/[slug]/use-question-page-bookmarks.ts` |
+| `useQuestionPageSessionNavigation` | 206 | `app/(app)/app/questions/[slug]/use-question-page-session-navigation.ts` |
+| `usePracticeSessionQuestionFlow` | 254 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` |
 | `useQuestionFlowCore` | 263 | `app/(app)/app/practice/shared/use-question-flow-core.ts` |
 
 Contrast compliance gaps (WCAG AA) are documented in `docs/_archive/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md` and governed by `docs/frontend/contrast-policy.md`.

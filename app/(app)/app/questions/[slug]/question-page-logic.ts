@@ -195,6 +195,7 @@ export async function submitSelectedAnswer(input: {
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  onSuccess?: (result: SubmitAnswerOutput) => void;
   isMounted?: () => boolean;
   isStale?: () => boolean;
 }): Promise<void> {
@@ -269,6 +270,7 @@ export async function submitSelectedAnswer(input: {
   }
 
   input.setSubmitResult(res.data);
+  input.onSuccess?.(res.data);
   input.setLoadState({ status: 'ready' });
 }
 
@@ -285,6 +287,7 @@ export function createSubmitSelectedAnswerAction(input: {
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  onSuccess?: (result: SubmitAnswerOutput) => void;
   onUnhandledError?: (error: unknown) => void;
   isMounted?: () => boolean;
   isStale?: () => boolean;
@@ -305,15 +308,12 @@ export function reattemptQuestion(input: {
   setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number) => void;
   setSessionUnansweredReveal?: (reveal: SessionUnansweredReveal | null) => void;
-  setRetryProvenance?: (provenance: RetryProvenance | null) => void;
-  retryProvenance?: RetryProvenance | null;
 }): void {
   input.setSelectedChoiceId(null);
   input.setSubmitResult(null);
   input.setSubmitIdempotencyKey(input.createIdempotencyKey());
   input.setQuestionLoadedAt(input.nowMs());
   input.setSessionUnansweredReveal?.(null);
-  input.setRetryProvenance?.(input.retryProvenance ?? null);
 }
 
 export async function loadPreviousAttempt(input: {
