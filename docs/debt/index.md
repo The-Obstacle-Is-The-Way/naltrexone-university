@@ -21,7 +21,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-318](./debt-318-tutor-bookmark-before-answer.md) | Bookmark visible before feedback in tutor mode and quick practice — keep the surface, but delay the action until inline feedback/explanation is visible | P3 | — |
 | [DEBT-321](./debt-321-bs055-exam-interaction-model-overhaul.md) | BS-055 Exam Interaction Model Overhaul — 8 ordered stages with explicit port boundaries, active-reader updates, and a coupled frontend cutover chain: draft fields → save-draft use case → finalize use case → draft-aware active readers → action bar redesign → draft-save on navigation → wire finalization → summary back-target fix | P1 | — |
 | [DEBT-322](./debt-322-exam-action-bar-ux-polish.md) | Exam action bar UX polish — Q1 layout imbalance (spacer gap), "Review answers" naming confusion, last-question button duplication. 3 independent items, all frontend-only. | P2 | — |
-**Next Debt ID:** DEBT-323
+| [DEBT-323](./debt-323-agent-browser-react-click-failures.md) | Agent-browser ref-click silently fails on React components (radios, submit, toggles). Upstream limitation — eval workarounds documented. Toggle buttons have no workaround. | P3 | — |
+**Next Debt ID:** DEBT-324
 
 ---
 

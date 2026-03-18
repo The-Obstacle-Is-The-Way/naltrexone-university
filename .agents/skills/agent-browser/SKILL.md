@@ -50,9 +50,27 @@ agent-browser screenshot /tmp/screenshot.png --full
 - **Profile may expire.** If Clerk redirects to sign-in, redo the headed login step.
 - **`--profile` is ignored if a daemon is already running.** Run `agent-browser close` before switching into a profiled session or changing profile paths.
 - **Host must match exactly.** `localhost` and `127.0.0.1` are not interchangeable for Clerk cookies. Use whichever `NEXT_PUBLIC_APP_URL` resolves to (default: `localhost`).
-- **Some action-button ref clicks may silently fail.** We reproduced this on `Start session` and `Submit`: `agent-browser click @ref` returned success without changing app state, while a targeted JS click did work. Fallback: `agent-browser eval "Array.from(document.querySelectorAll('button')).find((button) => button.textContent?.includes('Submit'))?.click()"`.
-- **Radio refs are not universally broken.** On Quick Practice, direct radio-ref clicks worked. Prefer `agent-browser find text "<choice text>" click` when it is clearer, but do not assume every radio ref will hang.
 - **Always re-snapshot after navigation.** Refs are invalidated when the DOM changes.
+
+### React click failures (DEBT-323)
+
+`agent-browser click @ref` silently fails on most React components in this app. It reports `✓ Done` but nothing happens. This is an upstream agent-browser limitation — not a code bug.
+
+**Use these patterns instead of ref-clicks for interactive elements:**
+
+```bash
+# Select an answer choice (radios are sr-only — ref and find-text clicks both fail)
+agent-browser eval "document.querySelectorAll('label')[0].click()"
+
+# Click Submit, Next, Start session, or any action button
+agent-browser eval "Array.from(document.querySelectorAll('button')).find(b => b.textContent?.trim() === 'Submit')?.click()"
+
+# Toggle buttons (Tutor/Exam, question filters) — NO WORKING WORKAROUND
+# Mouse coords change DOM but not React state. JS .click() also fails.
+# For flows requiring mode toggles, use Playwright E2E tests instead.
+```
+
+**What still works via refs:** navigation links (`<a>` elements) and simple dialog buttons (Abandon/Confirm).
 
 Full details: `docs/dev/agent-browser.md`
 
