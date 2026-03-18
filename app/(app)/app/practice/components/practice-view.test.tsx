@@ -511,6 +511,10 @@ describe('PracticeView', () => {
 
   it('renders exam action bar with Next and Mark for review and no Submit on the first question', () => {
     const question = createQuestionProps();
+    const selectedChoice = question.choices[0];
+    if (!selectedChoice) {
+      throw new Error('Expected at least one choice');
+    }
 
     const html = renderToStaticMarkup(
       <PracticeView
@@ -523,7 +527,7 @@ describe('PracticeView', () => {
         }}
         loadState={{ status: 'ready' }}
         question={question}
-        selectedChoiceId={null}
+        selectedChoiceId={selectedChoice.id}
         isAnswered={false}
         submitResult={null}
         isPending={false}
@@ -636,6 +640,10 @@ describe('PracticeView', () => {
 
   it('renders Review answers in the bottom bar on the last exam question before submission', () => {
     const question = createQuestionProps();
+    const selectedChoice = question.choices[0];
+    if (!selectedChoice) {
+      throw new Error('Expected at least one choice');
+    }
     const html = renderToStaticMarkup(
       <PracticeView
         sessionInfo={{
@@ -647,7 +655,7 @@ describe('PracticeView', () => {
         }}
         loadState={{ status: 'ready' }}
         question={question}
-        selectedChoiceId={null}
+        selectedChoiceId={selectedChoice.id}
         isAnswered={false}
         submitResult={null}
         isPending={false}
@@ -806,7 +814,7 @@ describe('PracticeView', () => {
     expect(html).not.toContain('>Submit<');
   });
 
-  it('keeps exam action bar labels stable regardless of answered state', () => {
+  it('keeps exam action bar labels stable when a draft selection exists', () => {
     const question = createQuestionProps();
     const selectedChoice = question.choices[0];
     if (!selectedChoice) {
@@ -843,7 +851,7 @@ describe('PracticeView', () => {
       />,
     );
 
-    const answeredHtml = renderToStaticMarkup(
+    const draftedHtml = renderToStaticMarkup(
       <PracticeView
         sessionInfo={{
           sessionId: 'session-1',
@@ -855,15 +863,8 @@ describe('PracticeView', () => {
         loadState={{ status: 'ready' }}
         question={question}
         selectedChoiceId={selectedChoice.id}
-        isAnswered={true}
-        submitResult={{
-          attemptId: 'attempt-1',
-          isCorrect: null,
-          correctChoiceId: null,
-          explanationMd: null,
-          referenceMd: null,
-          choiceExplanations: [],
-        }}
+        isAnswered={false}
+        submitResult={null}
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
@@ -884,29 +885,29 @@ describe('PracticeView', () => {
       unansweredHtml,
       'text/html',
     );
-    const answeredDoc = new DOMParser().parseFromString(
-      answeredHtml,
+    const draftedDoc = new DOMParser().parseFromString(
+      draftedHtml,
       'text/html',
     );
     const unansweredActionBar = unansweredDoc.querySelector(
       '[data-testid="bottom-action-bar"]',
     );
-    const answeredActionBar = answeredDoc.querySelector(
+    const draftedActionBar = draftedDoc.querySelector(
       '[data-testid="bottom-action-bar"]',
     );
-    if (!unansweredActionBar || !answeredActionBar) {
+    if (!unansweredActionBar || !draftedActionBar) {
       throw new Error('Expected action bar');
     }
 
     const unansweredLabels = Array.from(
       unansweredActionBar.querySelectorAll('button'),
     ).map((button) => (button.textContent ?? '').trim());
-    const answeredLabels = Array.from(
-      answeredActionBar.querySelectorAll('button'),
+    const draftedLabels = Array.from(
+      draftedActionBar.querySelectorAll('button'),
     ).map((button) => (button.textContent ?? '').trim());
 
     expect(unansweredLabels).toEqual(['Previous', 'Next', 'Mark for review']);
-    expect(answeredLabels).toEqual(['Previous', 'Next', 'Mark for review']);
+    expect(draftedLabels).toEqual(['Previous', 'Next', 'Mark for review']);
   });
 
   it('passes selected choice context to feedback after submit', () => {

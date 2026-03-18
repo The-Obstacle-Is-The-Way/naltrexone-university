@@ -60,8 +60,10 @@ export function useQuestionFlowCore(
   input: UseQuestionFlowCoreInput,
 ): UseQuestionFlowCoreOutput {
   const [question, setQuestionState] = useState<NextQuestion | null>(null);
-  const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
-  const [isAnswered, setIsAnswered] = useState(false);
+  const [selectedChoiceId, setSelectedChoiceIdState] = useState<string | null>(
+    null,
+  );
+  const [isAnswered, setIsAnsweredState] = useState(false);
   const [submitResult, setSubmitResultState] =
     useState<SubmitAnswerOutput | null>(null);
   const questionRef = useRef<NextQuestion | null>(null);
@@ -84,18 +86,6 @@ export function useQuestionFlowCore(
   useEffect(() => {
     isMountedFnRef.current = input.isMounted;
   }, [input.isMounted]);
-
-  useEffect(() => {
-    selectedChoiceIdRef.current = selectedChoiceId;
-  }, [selectedChoiceId]);
-
-  useEffect(() => {
-    isAnsweredRef.current = isAnswered;
-  }, [isAnswered]);
-
-  useEffect(() => {
-    submitResultRef.current = submitResult;
-  }, [submitResult]);
 
   const isMounted = useCallback(() => isMountedFnRef.current(), []);
 
@@ -121,30 +111,47 @@ export function useQuestionFlowCore(
     });
   }, [isAnswered, loadState, question, selectedChoiceId, submitResult]);
 
-  const setQuestion = useCallback((nextQuestion: NextQuestion | null) => {
-    questionRef.current = nextQuestion;
-    setQuestionState(nextQuestion);
-    if (!nextQuestion) {
-      setIsAnswered(false);
-    }
+  const setSelectedChoiceId = useCallback((choiceId: string | null) => {
+    selectedChoiceIdRef.current = choiceId;
+    setSelectedChoiceIdState(choiceId);
   }, []);
+
+  const setIsAnswered = useCallback((answered: boolean) => {
+    isAnsweredRef.current = answered;
+    setIsAnsweredState(answered);
+  }, []);
+
+  const setQuestion = useCallback(
+    (nextQuestion: NextQuestion | null) => {
+      questionRef.current = nextQuestion;
+      setQuestionState(nextQuestion);
+      if (!nextQuestion) {
+        setIsAnswered(false);
+      }
+    },
+    [setIsAnswered],
+  );
 
   const setSubmitResult = useCallback<
     UseQuestionFlowCoreOutput['setSubmitResult']
-  >((result, questionId) => {
-    setSubmitResultState(result);
+  >(
+    (result, questionId) => {
+      submitResultRef.current = result;
+      setSubmitResultState(result);
 
-    if (result) {
-      submitResultQuestionIdRef.current =
-        typeof questionId === 'string'
-          ? questionId
-          : (questionRef.current?.questionId ?? null);
-      setIsAnswered(true);
-      return;
-    }
+      if (result) {
+        submitResultQuestionIdRef.current =
+          typeof questionId === 'string'
+            ? questionId
+            : (questionRef.current?.questionId ?? null);
+        setIsAnswered(true);
+        return;
+      }
 
-    submitResultQuestionIdRef.current = null;
-  }, []);
+      submitResultQuestionIdRef.current = null;
+    },
+    [setIsAnswered],
+  );
 
   const syncQuestionStateFromDraftOrSession = useCallback(
     (nextQuestion: NextQuestion | null) => {
@@ -223,7 +230,7 @@ export function useQuestionFlowCore(
       setIsAnswered(false);
       setSubmitResult(null);
     },
-    [setSubmitResult],
+    [setIsAnswered, setSelectedChoiceId, setSubmitResult],
   );
 
   const setLoadState = useCallback(
@@ -239,7 +246,7 @@ export function useQuestionFlowCore(
 
       syncQuestionStateFromDraftOrSession(questionRef.current);
     },
-    [syncQuestionStateFromDraftOrSession],
+    [setIsAnswered, syncQuestionStateFromDraftOrSession],
   );
 
   const onSelectChoice = useCallback(
@@ -253,7 +260,7 @@ export function useQuestionFlowCore(
       );
       if (!changed) return;
     },
-    [isAnswered, question, submitResult],
+    [isAnswered, question, submitResult, setSelectedChoiceId],
   );
 
   return {

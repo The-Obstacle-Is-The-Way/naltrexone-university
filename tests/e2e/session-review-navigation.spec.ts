@@ -126,7 +126,7 @@ test.describe('session review navigation (SPEC-027)', () => {
     await expect(backLink).toBeVisible({ timeout: 15_000 });
     await expect(backLink).toHaveAttribute(
       'href',
-      new RegExp(`/app/practice/${sessionId}`),
+      `/app/practice/${sessionId}`,
     );
 
     // Verify "Next" link is present (we're on question 1)

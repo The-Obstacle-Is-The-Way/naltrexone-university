@@ -195,6 +195,15 @@ function QuestionFlowCoreProbe() {
       </button>
       <button
         type="button"
+        onClick={() => {
+          core.onSelectChoice('choice_1');
+          core.setLoadState({ status: 'ready' });
+        }}
+      >
+        select-choice-1-and-same-question-ready-resync
+      </button>
+      <button
+        type="button"
         onClick={() => core.setLoadState({ status: 'loading' })}
       >
         set-loading
@@ -209,7 +218,9 @@ test('clears derived selection state when the current question becomes null', as
   await screen
     .getByRole('button', { name: 'load-no-session', exact: true })
     .click();
-  await screen.getByRole('button', { name: 'select-choice-1' }).click();
+  await screen
+    .getByRole('button', { name: 'select-choice-1', exact: true })
+    .click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
     .toHaveTextContent('choice_1');
@@ -235,7 +246,9 @@ test('restores exam draft selections without locking the answer', async () => {
   await screen
     .getByRole('button', { name: 'load-no-session', exact: true })
     .click();
-  await screen.getByRole('button', { name: 'select-choice-1' }).click();
+  await screen
+    .getByRole('button', { name: 'select-choice-1', exact: true })
+    .click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
     .toHaveTextContent('choice_1');
@@ -272,7 +285,9 @@ test('preserves a newer local exam selection during same-question resync', async
     .element(screen.getByTestId('selected-choice-id'))
     .toHaveTextContent('choice_2');
 
-  await screen.getByRole('button', { name: 'select-choice-1' }).click();
+  await screen
+    .getByRole('button', { name: 'select-choice-1', exact: true })
+    .click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
     .toHaveTextContent('choice_1');
@@ -295,7 +310,9 @@ test('preserves an unsaved exam selection on same-question ready resync', async 
   await screen
     .getByRole('button', { name: 'load-active-exam-no-draft' })
     .click();
-  await screen.getByRole('button', { name: 'select-choice-1' }).click();
+  await screen
+    .getByRole('button', { name: 'select-choice-1', exact: true })
+    .click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
     .toHaveTextContent('choice_1');
@@ -306,6 +323,32 @@ test('preserves an unsaved exam selection on same-question ready resync', async 
     .toHaveTextContent('choice_1');
   await expect
     .element(screen.getByTestId('is-answered'))
+    .toHaveTextContent('false');
+});
+
+test('preserves a freshly selected exam choice during same-tick ready resync', async () => {
+  const screen = await render(<QuestionFlowCoreProbe />);
+
+  await screen
+    .getByRole('button', { name: 'load-active-exam-no-draft' })
+    .click();
+  await expect
+    .element(screen.getByTestId('selected-choice-id'))
+    .toHaveTextContent('');
+
+  await screen
+    .getByRole('button', {
+      name: 'select-choice-1-and-same-question-ready-resync',
+    })
+    .click();
+  await expect
+    .element(screen.getByTestId('selected-choice-id'))
+    .toHaveTextContent('choice_1');
+  await expect
+    .element(screen.getByTestId('is-answered'))
+    .toHaveTextContent('false');
+  await expect
+    .element(screen.getByTestId('has-submit-result'))
     .toHaveTextContent('false');
 });
 
