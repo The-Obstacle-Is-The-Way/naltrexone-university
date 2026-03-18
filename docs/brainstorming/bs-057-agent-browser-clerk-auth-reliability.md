@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-18
 **Triggered by:** DEBT-322 audit agent failed to visually verify exam UX issues because it could not authenticate through Clerk in agent-browser. This is a recurring pattern — every agent tasked with browser-based verification hits the same Clerk auth wall.
-**Scope:** AI agents using Vercel's agent-browser cannot reliably authenticate through Clerk to access `/app/*` routes, making browser-based visual verification unreliable.
+**Scope:** Native `agent-browser` auth/state reuse cannot reliably access Clerk-protected `/app/*` routes; the clean working path is a Playwright-authenticated CDP bridge.
 **Related:** [DEBT-322](../debt/debt-322-exam-action-bar-ux-polish.md), [agent-browser docs](../dev/agent-browser.md), [testing infrastructure](../dev/testing-infrastructure.md)
 
 ---
@@ -14,7 +14,7 @@ We have three browser automation tools with three different auth stories:
 | Tool | Clerk Auth | Why |
 |------|-----------|-----|
 | **Playwright E2E** | Works perfectly | `@clerk/testing/playwright` injects a testing token via `browserContext.route()` that bypasses Clerk's bot detection |
-| **agent-browser (Vercel)** | Fails reliably | No Clerk SDK integration. Clerk's anti-automation blocks sign-in attempts |
+| **agent-browser (Vercel)** | Native auth/state reuse fails reliably | No Clerk SDK integration, and local `--state` restore proved unreliable. The workable path is attaching to a live Playwright-authenticated browser via CDP |
 | **Chrome MCP (claude-in-chrome)** | Works if user is already logged in | Piggybacks on the user's real Chrome session |
 
 The DEBT-322 audit agent tried two approaches and both failed:
@@ -59,7 +59,7 @@ Current best explanation: the failure is in `agent-browser --state` restore beha
 
 **Impact:** Medium. Blocks automated visual verification of any authenticated page.
 **Frequency:** Every audit or visual QA task that requires seeing `/app/*` routes.
-**Workaround exists:** Chrome MCP works if the user is already logged in via their browser. Agents can also verify via code analysis + test assertions instead of visual screenshots.
+**Workaround exists:** Playwright-authenticated browser + CDP attach works today. Chrome MCP also works if the user is already logged in via their browser. Agents can still verify via code analysis + test assertions when live browser proof is unnecessary.
 
 ---
 
@@ -85,7 +85,7 @@ Clerk's testing docs only cover Playwright and Cypress via `@clerk/testing`. No 
 
 ## Primary Tools (Preferred)
 
-Our browser automation strategy should rely on **Playwright** and **agent-browser** — not Chrome MCP. Playwright already works perfectly with Clerk auth. agent-browser is built on Playwright under the hood, so it should be solvable.
+Our browser automation strategy should rely on **Playwright** and **agent-browser** — not Chrome MCP. Playwright already works perfectly with Clerk auth. For `agent-browser`, the pragmatic path is to reuse that working auth via a CDP bridge rather than force native `--state` reuse.
 
 Chrome MCP (`claude-in-chrome`) remains available as a supplementary tool but is not a primary — it depends on the user's browser state and is unreliable for autonomous agent work.
 
@@ -107,42 +107,15 @@ agent-browser is built on Playwright's Chromium, but the reliable path is not `-
 
 Authenticate a real Playwright browser with `@clerk/testing/playwright`, keep that browser alive with a fixed remote debugging port, then attach `agent-browser` via `agent-browser connect <port>`.
 
-```ts
-// scripts/tmp-start-agent-browser-cdp.ts
-import { config } from 'dotenv';
-import { clerkSetup } from '@clerk/testing/playwright';
-import { chromium } from '@playwright/test';
-
-config({ path: '.env.local' });
-config({ path: '.env' });
-
-const baseURL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-const { signInWithClerkPassword } = await import('../tests/e2e/helpers/clerk-auth.ts');
-
-await clerkSetup();
-const browser = await chromium.launch({
-  headless: true,
-  args: ['--remote-debugging-port=9224'],
-});
-
-const context = await browser.newContext({ baseURL });
-const page = await context.newPage();
-
-await signInWithClerkPassword(page);
-await page.goto('/app/dashboard');
-await page.waitForLoadState('networkidle');
-
-console.log('CDP ready on 9224:', page.url());
-setInterval(() => {}, 1000);
-```
+The committed launcher lives in [scripts/start-agent-browser-cdp.ts](/Users/ray/Desktop/github/naltrexone-university-1/scripts/start-agent-browser-cdp.ts). It loads dotenv, validates the required Clerk env vars, authenticates through `signInWithClerkPassword`, opens `/app/dashboard`, prints the exact `agent-browser connect <port>` command, and keeps the authenticated browser alive until shutdown.
 
 ```bash
-pnpm tsx scripts/tmp-start-agent-browser-cdp.ts
+pnpm agent-browser:auth
 agent-browser connect 9224
 agent-browser open http://localhost:3000/app/practice
 ```
 
-**Status:** verified locally. This is the cleanest working path today because it reuses the existing Clerk-tested Playwright infrastructure and avoids the broken `--state` restore path.
+**Status:** verified locally and now committed as `scripts/start-agent-browser-cdp.ts`. This is the cleanest working path today because it reuses the existing Clerk-tested Playwright infrastructure and avoids the broken `--state` restore path.
 
 #### B: Playwright storageState bridge (`--state`) is currently unreliable
 
@@ -193,8 +166,7 @@ agent-browser --profile /tmp/clerk-profile open http://localhost:3000/app/dashbo
 
 1. **Is `agent-browser --state` fundamentally broken in the current local build, or only broken under specific daemon/session conditions?** The local evidence points to a broader restore problem.
 2. **Should we upstream a minimal reproduction against `agent-browser` showing `--state` fails even for non-Clerk localStorage round-trips?** This is likely more useful than continuing to debug Clerk-specific behavior first.
-3. **Do we want a reusable repo-local helper script for the Playwright + CDP bridge?** The pattern works today but is still documented as a temporary/manual flow.
-4. **Do we want to keep the persistent-profile fallback documented, or remove it until a real Clerk profile flow is verified end-to-end?**
+3. **Do we want to keep the persistent-profile fallback documented, or remove it until a real Clerk profile flow is verified end-to-end?**
 
 ---
 
@@ -218,3 +190,4 @@ This reuses our existing Clerk-tested Playwright infrastructure and avoids the c
 | 2026-03-18 | Playwright + agent-browser as primary tools; Chrome MCP deprioritized | Playwright already works. agent-browser is Playwright-based, so it should be solvable. Chrome MCP depends on user state and is unreliable for autonomous agent work. |
 | 2026-03-18 | Rejected: bot detection disable, eval token injection | Hacky approaches that change security posture or depend on undocumented internals. |
 | 2026-03-18 | Updated recommendation: Playwright + CDP is primary, `--state` is unreliable | Local verification showed Clerk-authenticated Playwright state works in fresh Playwright but not in `agent-browser --state`, even on `localhost`. |
+| 2026-03-18 | Committed Playwright + CDP launcher script | `scripts/start-agent-browser-cdp.ts` and `pnpm agent-browser:auth` make the proven bridge reusable instead of leaving it as a throwaway doc snippet. |

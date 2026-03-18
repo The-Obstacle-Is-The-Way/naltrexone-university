@@ -324,7 +324,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 All app pages under `/app/*` are protected by Clerk auth. If you need to visually verify UI changes in a running browser (e.g., `pnpm dev` at `http://localhost:3000`), you **must** authenticate first. Do NOT just navigate to a protected URL and give up when it redirects to sign-in.
 
-**Full instructions:** `docs/dev/agent-browser.md` — covers 4 approaches (state save, persistent profile, Playwright storageState, direct Clerk sign-in). The recommended approach for agents:
+**Full instructions:** `docs/dev/agent-browser.md` — covers the supported agent-browser auth approaches for this repo. The recommended approach for agents:
 
 1. Use Playwright + `@clerk/testing/playwright` to authenticate a real browser session
 2. Keep that browser alive with a fixed CDP port

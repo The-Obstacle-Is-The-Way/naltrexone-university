@@ -59,44 +59,12 @@ As of 2026-03-18, the reliable Clerk auth path for `agent-browser` in this repo 
 2. Launch that browser with a fixed remote debugging port
 3. Attach `agent-browser` to the live authenticated browser via CDP
 
-Example temporary script (do NOT commit):
-
-```ts
-import { config } from 'dotenv';
-import { clerkSetup } from '@clerk/testing/playwright';
-import { chromium } from '@playwright/test';
-
-config({ path: '.env.local' });
-config({ path: '.env' });
-
-const baseURL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-
-const { signInWithClerkPassword } = await import('../tests/e2e/helpers/clerk-auth.ts');
-
-await clerkSetup();
-
-const browser = await chromium.launch({
-  headless: true,
-  args: ['--remote-debugging-port=9224'],
-});
-
-const context = await browser.newContext({ baseURL });
-const page = await context.newPage();
-
-await signInWithClerkPassword(page);
-await page.goto('/app/dashboard');
-await page.waitForLoadState('networkidle');
-
-console.log('CDP ready on port 9224:', page.url());
-
-// Keep the browser alive while agent-browser is attached.
-setInterval(() => {}, 1000);
-```
+Use the committed launcher in [scripts/start-agent-browser-cdp.ts](/Users/ray/Desktop/github/naltrexone-university-1/scripts/start-agent-browser-cdp.ts). It loads dotenv, validates the required Clerk env vars, authenticates with `signInWithClerkPassword`, opens `/app/dashboard`, prints the exact `agent-browser connect <port>` command, and stays alive until you stop it.
 
 In another shell:
 
 ```bash
-pnpm tsx scripts/tmp-start-agent-browser-cdp.ts
+pnpm agent-browser:auth
 agent-browser connect 9224
 agent-browser get url
 agent-browser open http://localhost:3000/app/practice
@@ -105,6 +73,7 @@ agent-browser open http://localhost:3000/app/practice
 Important:
 - Use the exact host from `NEXT_PUBLIC_APP_URL`. Do not switch between `localhost` and `127.0.0.1`; Clerk cookies are host-specific.
 - Keep the Playwright browser process alive while `agent-browser` is connected.
+- `scripts/start-agent-browser-cdp.ts` also accepts `AGENT_BROWSER_CDP_PORT` if you need a non-default port.
 
 ### Option B: Persistent Profile (Manual Login Once, fallback)
 
