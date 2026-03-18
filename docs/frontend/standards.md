@@ -810,7 +810,7 @@ Issues documented below are tracked as tech debt in `docs/debt/index.md` (Fronte
 
 ### P2 — Fix during UI/UX refactor
 
-Five hooks exceed the 200-line "god hook" threshold (§12). `useQuestionPageController` was reduced from 737 lines / 8 effects to 362 lines / 2 effects by DEBT-320, but it still exceeds the size cap as a composition root.
+Five hooks exceed the 200-line "god hook" threshold (§12). `useQuestionPageController` was reduced from 737 lines / 8 effects to 357 lines / 2 effects by DEBT-320, but it still exceeds the size cap as a composition root.
 
 | Hook | Lines | File |
 |------|-------|------|
