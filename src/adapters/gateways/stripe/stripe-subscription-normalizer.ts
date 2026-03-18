@@ -5,6 +5,7 @@ import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
 import type { WebhookEventResult } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
+import { MS_PER_SECOND } from '@/src/domain/services';
 import { callStripeWithRetry } from './stripe-retry';
 import {
   isValidStripeSubscriptionStatus,
@@ -71,7 +72,7 @@ export function normalizeStripeSubscriptionUpdate(input: {
     externalSubscriptionId: stripeSubscriptionId,
     plan,
     status,
-    currentPeriodEnd: new Date(currentPeriodEndSeconds * 1000),
+    currentPeriodEnd: new Date(currentPeriodEndSeconds * MS_PER_SECOND),
     cancelAtPeriodEnd,
   };
 }

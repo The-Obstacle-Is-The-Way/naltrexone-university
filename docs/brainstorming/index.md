@@ -33,7 +33,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-053](./bs-053-bookmark-vs-mark-for-review-collision.md) | Bookmark vs Mark-for-Review Collision — exam action bar shows both "Bookmark" and "Mark for review" as identical pills, creating cognitive confusion between permanent curation and session-scoped flagging | Active | [BS-052](./bs-052-bookmark-icon-toggle-replacement.md), [DEBT-316](../_archive/debt/debt-316-exam-post-submit-review-flow.md) |
 | [BS-055](./bs-055-exam-session-interaction-model-rethink.md) | Exam Session Interaction Model — Submit button is redundant (no feedback shown), button bar mutates unpredictably across questions, click count per question is 2-3x what it should be | Active | [BS-054](../_archive/brainstorming/bs-054-session-end-ux-simplification.md), [BS-053](./bs-053-bookmark-vs-mark-for-review-collision.md) |
 
-**Next Brainstorming ID:** BS-056
+**Next Brainstorming ID:** BS-057
 
 ---
 
@@ -41,6 +41,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 | ID | Title | Outcome |
 |----|-------|---------|
+| [BS-056](../_archive/brainstorming/bs-056-magic-numbers-and-hardcoded-literals-audit.md) | Magic Numbers and Hard-Coded Literals — retry config, timeout tiers, semantic `100` owners, HTTP status constants, shared stack/prune constants, canonical time primitives, and local UI timing defaults | Resolved on 2026-03-17 in `debt/magic-numbers-audit`. All F1-F8 were implemented, and `pnpm typecheck`, `pnpm lint`, `pnpm test --run`, `pnpm test:browser`, and `pnpm build` passed before archival. |
 | [BS-054](../_archive/brainstorming/bs-054-session-end-ux-simplification.md) | Session End UX -- Button Simplification and Ended-Session Reopen Bugs | Resolved by PR #229 on 2026-03-17. Session summaries now use the simplified CTA set, ended-session URLs bootstrap directly into durable summaries, stale double-end flows recover idempotently, and the verification matrix in BS-054 passed before archival. |
 | [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) | Bookmark Pill Hover Pattern Investigation | Reference doc for BS-050; primary value consumed by DEBT-309 (PR #209). Icon replacement tracked in BS-052. |
 | [BS-050](../_archive/brainstorming/bs-050-practice-chip-hover-affordance.md) | Practice Chip Hover Affordance | Promoted to [DEBT-309](../_archive/debt/debt-309-filter-chip-hover-border-affordance.md), resolved by PR #209. Hover border affordance and fill lift implemented on FilterChip. |

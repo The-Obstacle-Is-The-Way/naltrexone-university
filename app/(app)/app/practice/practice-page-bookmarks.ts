@@ -1,8 +1,11 @@
+import { STANDARD_READ_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import { shouldReportClientError } from '@/lib/report-client-error';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 
-const BOOKMARKS_LOAD_TIMEOUT_MS = 10_000;
+const BOOKMARKS_LOAD_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
+const MAX_BOOKMARK_LOAD_RETRY_COUNT = 2;
+const BOOKMARK_LOAD_RETRY_BACKOFF_BASE_MS = 1000;
 
 type SetTimeoutFn = (
   fn: () => void,
@@ -42,14 +45,14 @@ export function createBookmarksEffect(input: {
     }
     input.setBookmarkStatus('error');
 
-    if (input.bookmarkRetryCount < 2) {
+    if (input.bookmarkRetryCount < MAX_BOOKMARK_LOAD_RETRY_COUNT) {
       timeoutId = setTimeoutFn(
         () => {
           if (mounted) {
             input.setBookmarkRetryCount((prev) => prev + 1);
           }
         },
-        1000 * (input.bookmarkRetryCount + 1),
+        BOOKMARK_LOAD_RETRY_BACKOFF_BASE_MS * (input.bookmarkRetryCount + 1),
       );
     }
   };

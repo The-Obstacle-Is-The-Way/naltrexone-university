@@ -2,12 +2,16 @@ import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
 } from '@/app/(app)/app/practice/practice-logic';
+import {
+  STANDARD_MUTATION_TIMEOUT_MS,
+  STANDARD_READ_TIMEOUT_MS,
+} from '@/app/(app)/app/shared/timeout-tiers';
 import { reportClientError } from '@/lib/report-client-error';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 
-const INCOMPLETE_SESSION_TIMEOUT_MS = 10_000;
-const ABANDON_SESSION_TIMEOUT_MS = 15_000;
+const INCOMPLETE_SESSION_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
+const ABANDON_SESSION_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
 
 export type IncompleteSessionStatus = 'idle' | 'loading' | 'error';
 

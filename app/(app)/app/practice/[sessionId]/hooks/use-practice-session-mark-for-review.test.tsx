@@ -202,4 +202,50 @@ describe('usePracticeSessionMarkForReview', () => {
       },
     );
   });
+
+  it('uses the mutation timeout tier for mark-for-review requests', async () => {
+    vi.useFakeTimers();
+    try {
+      const setLoadState = vi.fn();
+      const output = renderHook(() =>
+        usePracticeSessionMarkForReview({
+          question: createNextQuestion(),
+          sessionMode: 'exam',
+          sessionInfo: {
+            sessionId: 'session-1',
+            mode: 'exam',
+            index: 0,
+            total: 10,
+            isMarkedForReview: false,
+          },
+          sessionId: 'session-1',
+          applySessionInfo: vi.fn(),
+          setLoadState,
+          setReview: vi.fn(),
+          isMounted: () => true,
+          setPracticeSessionQuestionMarkFn: async () =>
+            new Promise<never>(() => {}),
+        }),
+      );
+
+      const promise = output.onToggleMarkForReview();
+
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(setLoadState).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(5_000);
+      await promise;
+
+      expect(setLoadState).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Request timed out. Please try again.',
+      });
+      expect(reportClientErrorMock).toHaveBeenCalledWith(expect.any(Error), {
+        component: 'UsePracticeSessionMarkForReview',
+        action: 'toggleMarkForReview',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

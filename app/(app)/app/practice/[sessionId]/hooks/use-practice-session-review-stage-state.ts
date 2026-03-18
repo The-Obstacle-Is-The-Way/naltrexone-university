@@ -7,6 +7,7 @@ import {
   getThrownErrorMessage,
 } from '@/app/(app)/app/practice/practice-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
+import { STANDARD_READ_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import {
   reportClientError,
   shouldReportClientError,
@@ -16,7 +17,7 @@ import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetPracticeSessionReviewOutput } from '@/src/adapters/controllers/practice-controller';
 import type { GetPracticeSessionReviewInput as GetPracticeSessionReviewUseCaseInput } from '@/src/application/use-cases';
 
-const SESSION_REVIEW_TIMEOUT_MS = 10_000;
+const SESSION_REVIEW_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 
 export type UsePracticeSessionReviewStageStateInput = {
   sessionId: string;

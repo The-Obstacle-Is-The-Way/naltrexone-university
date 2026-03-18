@@ -6,6 +6,7 @@ import {
   getThrownErrorMessage,
 } from '@/app/(app)/app/practice/practice-logic';
 import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
+import { STANDARD_READ_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import {
   reportClientError,
   shouldReportClientError,
@@ -17,7 +18,7 @@ import {
   getPracticeSessionReview,
 } from '@/src/adapters/controllers/practice-controller';
 
-const SESSION_REVIEW_TIMEOUT_MS = 10_000;
+const SESSION_REVIEW_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 
 export type UseHistorySessionsOutput = {
   selectedSessionId: string | null;

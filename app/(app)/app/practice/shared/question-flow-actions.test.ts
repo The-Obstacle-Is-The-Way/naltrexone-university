@@ -269,6 +269,65 @@ describe('question-flow-actions', () => {
     expect(onLoaded).toHaveBeenCalledWith({ questionId: 'q_1' });
   });
 
+  it('uses the standard read timeout tier when loading questions', async () => {
+    vi.useFakeTimers();
+    try {
+      let loadState: AsyncLoadStateWithIdle = { status: 'idle' };
+      let selectedChoiceId: string | null = 'choice_1';
+      let submitResult: SubmitAnswerOutput | null = {
+        attemptId: 'attempt_1',
+        isCorrect: false,
+        correctChoiceId: 'choice_1',
+        explanationMd: null,
+        referenceMd: null,
+        choiceExplanations: [],
+      };
+      let submitIdempotencyKey: string | null = 'idemp_1';
+      let questionLoadedAt: number | null = 1234;
+      let question: unknown = { questionId: 'q_old' };
+
+      const promise = runLoadQuestionFlow({
+        requestInput: {},
+        getQuestionFn: async () => new Promise<never>(() => {}),
+        createIdempotencyKey: () => 'idemp_new',
+        nowMs: () => 9999,
+        setLoadState: (next) => {
+          loadState = next;
+        },
+        setSelectedChoiceId: (next) => {
+          selectedChoiceId = next;
+        },
+        setSubmitResult: (next) => {
+          submitResult = next;
+        },
+        setSubmitIdempotencyKey: (next) => {
+          submitIdempotencyKey = next;
+        },
+        setQuestionLoadedAt: (next) => {
+          questionLoadedAt = next;
+        },
+        setQuestion: (next) => {
+          question = next;
+        },
+      });
+
+      await vi.advanceTimersByTimeAsync(10_000);
+      await promise;
+
+      expect(loadState).toEqual({
+        status: 'error',
+        message: 'Request timed out. Please try again.',
+      });
+      expect(question).toBeNull();
+      expect(selectedChoiceId).toBeNull();
+      expect(submitResult).toBeNull();
+      expect(submitIdempotencyKey).toBeNull();
+      expect(questionLoadedAt).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('commits error state when question loading throws', async () => {
     let loadState: AsyncLoadStateWithIdle = { status: 'idle' };
     let selectedChoiceId: string | null = 'choice_1';

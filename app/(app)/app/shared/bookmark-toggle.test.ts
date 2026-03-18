@@ -139,5 +139,39 @@ describe('bookmark-toggle', () => {
       expect(setBookmarkIdempotencyKey).toHaveBeenCalledWith('idem_1');
       expect(createIdempotencyKey).toHaveBeenCalledTimes(1);
     });
+
+    it('uses the mutation timeout tier for bookmark toggles', async () => {
+      vi.useFakeTimers();
+      try {
+        const setBookmarkStatus = vi.fn();
+        const setBookmarkedQuestionIds = vi.fn();
+        const onBookmarkError = vi.fn();
+
+        const promise = toggleBookmarkForQuestion({
+          question: createNextQuestion({ questionId: 'question-1' }),
+          toggleBookmarkFn: async () => new Promise<never>(() => {}),
+          setBookmarkStatus,
+          setBookmarkedQuestionIds,
+          onBookmarkError,
+        });
+
+        await vi.advanceTimersByTimeAsync(10_000);
+
+        expect(onBookmarkError).not.toHaveBeenCalled();
+        expect(setBookmarkStatus).toHaveBeenCalledTimes(1);
+        expect(setBookmarkStatus).toHaveBeenCalledWith('loading');
+
+        await vi.advanceTimersByTimeAsync(5_000);
+        await promise;
+
+        expect(onBookmarkError).toHaveBeenCalledWith(
+          'Failed to save bookmark. Please try again.',
+        );
+        expect(setBookmarkStatus).toHaveBeenNthCalledWith(2, 'error');
+        expect(setBookmarkedQuestionIds).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 });

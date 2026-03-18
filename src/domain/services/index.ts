@@ -24,6 +24,6 @@ export { createQuestionSeed, createSeed, shuffleWithSeed } from './shuffle';
 export {
   computeAccuracy,
   computeStreak,
-  DAY_MS,
   filterAttemptsInWindow,
 } from './statistics';
+export { DAY_MS, MS_PER_SECOND, SECONDS_PER_DAY } from './time-constants';

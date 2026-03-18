@@ -4,6 +4,13 @@ import type {
   StripeWebhookDeps,
   StripeWebhookInput,
 } from '@/src/adapters/controllers/stripe-webhook-controller';
+import {
+  HTTP_BAD_REQUEST,
+  HTTP_INTERNAL_SERVER_ERROR,
+  HTTP_OK,
+  HTTP_SERVICE_UNAVAILABLE,
+  HTTP_TOO_MANY_REQUESTS,
+} from '@/src/adapters/shared/http-status';
 import { STRIPE_WEBHOOK_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import { isApplicationError } from '@/src/application/errors';
 import type { RateLimiter } from '@/src/application/ports/gateways';
@@ -30,7 +37,7 @@ export function createWebhookHandler(
     if (!signature) {
       return NextResponse.json(
         { error: 'Missing stripe-signature header' },
-        { status: 400 },
+        { status: HTTP_BAD_REQUEST },
       );
     }
 
@@ -48,7 +55,7 @@ export function createWebhookHandler(
         return NextResponse.json(
           { error: 'Too many requests' },
           {
-            status: 429,
+            status: HTTP_TOO_MANY_REQUESTS,
             headers: {
               'Retry-After': String(rate.retryAfterSeconds),
               'X-RateLimit-Limit': String(rate.limit),
@@ -61,7 +68,7 @@ export function createWebhookHandler(
       container.logger.error({ error }, 'Stripe webhook rate limiter failed');
       return NextResponse.json(
         { error: 'Rate limiter unavailable' },
-        { status: 503 },
+        { status: HTTP_SERVICE_UNAVAILABLE },
       );
     }
 
@@ -73,7 +80,7 @@ export function createWebhookHandler(
         signature,
       });
 
-      return NextResponse.json({ received: true }, { status: 200 });
+      return NextResponse.json({ received: true }, { status: HTTP_OK });
     } catch (error) {
       if (
         isApplicationError(error) &&
@@ -83,14 +90,14 @@ export function createWebhookHandler(
         container.logger.error({ error }, 'Stripe webhook validation failed');
         return NextResponse.json(
           { error: 'Webhook validation failed' },
-          { status: 400 },
+          { status: HTTP_BAD_REQUEST },
         );
       }
 
       container.logger.error({ error }, 'Stripe webhook failed');
       return NextResponse.json(
         { error: 'Webhook processing failed' },
-        { status: 500 },
+        { status: HTTP_INTERNAL_SERVER_ERROR },
       );
     }
   };

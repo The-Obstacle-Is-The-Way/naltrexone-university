@@ -1,3 +1,4 @@
+import { STACK_TRACE_LIMIT } from '@/src/adapters/shared/error-logging-constants';
 import { isApplicationError } from '@/src/application/errors';
 import type { PaymentGateway } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
@@ -6,6 +7,7 @@ import type {
   StripeEventRepository,
   SubscriptionRepository,
 } from '@/src/application/ports/repositories';
+import { DAY_MS } from '@/src/domain/services';
 
 export type StripeWebhookInput = {
   rawBody: string;
@@ -29,8 +31,7 @@ export type StripeWebhookDeps = {
 
 type StripeWebhookTxResult = { ok: true } | { ok: false; error: unknown };
 
-const STACK_TRACE_LIMIT = 1000;
-const STRIPE_EVENTS_RETENTION_MS = 90 * 86_400_000;
+const STRIPE_EVENTS_RETENTION_MS = 90 * DAY_MS;
 const STRIPE_EVENTS_PRUNE_LIMIT = 100;
 
 function toErrorData(error: unknown): string {

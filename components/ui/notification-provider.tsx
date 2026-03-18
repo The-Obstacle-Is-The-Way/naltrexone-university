@@ -36,6 +36,7 @@ const NotificationContext = createContext<NotificationContextValue>({
 });
 
 const MAX_NOTIFICATIONS = 50;
+const DEFAULT_NOTIFICATION_DURATION_MS = 2500;
 
 function createNotificationId(): string {
   return (
@@ -78,7 +79,11 @@ export function NotificationProvider({
   }, []);
 
   const notify = useCallback(
-    ({ message, tone = 'info', durationMs = 2500 }: NotifyInput) => {
+    ({
+      message,
+      tone = 'info',
+      durationMs = DEFAULT_NOTIFICATION_DURATION_MS,
+    }: NotifyInput) => {
       const id = createNotificationId();
       setNotifications((prev) => {
         const next = [...prev, { id, message, tone }];

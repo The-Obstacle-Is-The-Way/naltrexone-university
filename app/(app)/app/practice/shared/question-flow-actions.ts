@@ -3,12 +3,17 @@ import {
   getThrownErrorMessage,
 } from '@/app/(app)/app/practice/practice-logic';
 import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
+import {
+  STANDARD_MUTATION_TIMEOUT_MS,
+  STANDARD_READ_TIMEOUT_MS,
+} from '@/app/(app)/app/shared/timeout-tiers';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+import { MS_PER_SECOND } from '@/src/domain/services';
 
-const LOAD_QUESTION_TIMEOUT_MS = 15_000;
-const SUBMIT_ANSWER_TIMEOUT_MS = 15_000;
+const LOAD_QUESTION_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
+const SUBMIT_ANSWER_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
 
 export type RequestSequencingHooks = {
   createRequestSequenceId: () => number;
@@ -36,7 +41,7 @@ export function buildTimeSpentSeconds(
 ): number {
   if (questionLoadedAtMs === null) return 0;
 
-  return Math.max(0, Math.floor((nowMs - questionLoadedAtMs) / 1000));
+  return Math.max(0, Math.floor((nowMs - questionLoadedAtMs) / MS_PER_SECOND));
 }
 
 export async function runLoadQuestionFlow<TQuestion>(input: {

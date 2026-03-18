@@ -7,12 +7,11 @@ import type {
   RateLimitResult,
 } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
-import { DAY_MS } from '@/src/domain/services';
+import { DAY_MS, MS_PER_SECOND } from '@/src/domain/services';
 import type { DrizzleDb } from '../shared/database-types';
+import { PRUNE_BATCH_LIMIT } from '../shared/prune-constants';
 
-const SECOND_MS = 1000;
 const PRUNE_RETENTION_DAYS = 90;
-const PRUNE_BATCH_LIMIT = 100;
 const NOOP_LOGGER: Logger = {
   debug: () => undefined,
   info: () => undefined,
@@ -48,7 +47,7 @@ export class DrizzleRateLimiter implements RateLimiter {
     const resetAtMs = windowStartMs + input.windowMs;
     const retryAfterSeconds = Math.max(
       0,
-      Math.ceil((resetAtMs - nowMs) / SECOND_MS),
+      Math.ceil((resetAtMs - nowMs) / MS_PER_SECOND),
     );
 
     const [row] = await this.db

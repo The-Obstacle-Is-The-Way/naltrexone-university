@@ -1,12 +1,6 @@
 import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
+import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
 import type { Logger } from '@/src/application/ports/logger';
-
-const STRIPE_RETRY_OPTIONS = {
-  maxAttempts: 3,
-  initialDelayMs: 100,
-  factor: 2,
-  maxDelayMs: 1000,
-} as const;
 
 function toStripeErrorContext(error: unknown): Record<string, unknown> {
   if (error instanceof Error) {
@@ -34,7 +28,7 @@ export function callStripeWithRetry<T>({
   logger: Logger;
 }): Promise<T> {
   return retry(fn, {
-    ...STRIPE_RETRY_OPTIONS,
+    ...DEFAULT_RETRY_OPTIONS,
     shouldRetry: isTransientExternalError,
     onRetry: ({ attempt, maxAttempts, delayMs, error }) => {
       logger.warn(

@@ -3,9 +3,17 @@ import { NextResponse } from 'next/server';
 import { createContainer } from '@/lib/container';
 import {
   RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_CONCURRENCY,
+  RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_LIMIT,
   RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT,
   reconcileStripeSubscriptions,
 } from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
+import {
+  HTTP_INTERNAL_SERVER_ERROR,
+  HTTP_OK,
+  HTTP_SERVICE_UNAVAILABLE,
+  HTTP_TOO_MANY_REQUESTS,
+  HTTP_UNAUTHORIZED,
+} from '@/src/adapters/shared/http-status';
 import { CRON_RECONCILE_STRIPE_SUBSCRIPTIONS_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 
 export const runtime = 'nodejs';
@@ -68,13 +76,19 @@ export async function POST(req: Request) {
       },
       'Unauthorized cron request',
     );
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: HTTP_UNAUTHORIZED },
+    );
   }
 
   const cronSecret = container.env.CRON_SECRET ?? null;
   if (!cronSecret) {
     container.logger.error({ route: ROUTE }, 'CRON_SECRET is not configured');
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: HTTP_UNAUTHORIZED },
+    );
   }
 
   if (!isValidCronToken(tokenResult.token, cronSecret)) {
@@ -85,7 +99,10 @@ export async function POST(req: Request) {
       },
       'Unauthorized cron request',
     );
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: HTTP_UNAUTHORIZED },
+    );
   }
 
   try {
@@ -98,7 +115,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: 'Too many requests' },
         {
-          status: 429,
+          status: HTTP_TOO_MANY_REQUESTS,
           headers: {
             'Retry-After': String(rate.retryAfterSeconds),
             'X-RateLimit-Limit': String(rate.limit),
@@ -117,13 +134,16 @@ export async function POST(req: Request) {
     );
     return NextResponse.json(
       { error: 'Rate limiter unavailable' },
-      { status: 503 },
+      { status: HTTP_SERVICE_UNAVAILABLE },
     );
   }
 
   const url = new URL(req.url);
   const limit = Math.min(
-    parseNonNegativeInt(url.searchParams.get('limit'), 100),
+    parseNonNegativeInt(
+      url.searchParams.get('limit'),
+      RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_LIMIT,
+    ),
     RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT,
   );
   const offset = parseNonNegativeInt(url.searchParams.get('offset'), 0);
@@ -186,8 +206,11 @@ export async function POST(req: Request) {
       },
       'Failed to reconcile Stripe subscriptions',
     );
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal error' },
+      { status: HTTP_INTERNAL_SERVER_ERROR },
+    );
   }
 
-  return NextResponse.json(result, { status: 200 });
+  return NextResponse.json(result, { status: HTTP_OK });
 }
