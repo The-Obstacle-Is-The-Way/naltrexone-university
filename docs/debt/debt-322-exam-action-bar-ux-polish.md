@@ -10,13 +10,24 @@
 
 DEBT-321 shipped the exam action bar redesign: fixed three-slot layout (`[Previous] [Next/Review answers] [Mark for review]`), no per-question Submit, draft-save on navigation. The structural overhaul is correct. These are UX refinements discovered during manual walkthrough of the live exam flow.
 
+## Audit status (2026-03-18)
+
+- **Code verification:** Completed against current `HEAD`. D-1, D-2, and D-3 all still match the live code paths in `PracticeView`, `PracticeSessionPageView`, and `ExamReviewView`.
+- **Recent-commit check:** No production change after DEBT-322 creation has already resolved these issues. Current `HEAD` still renders the same spacer, labels, and last-question duplication described below.
+- **Browser verification:** Attempted after starting `pnpm dev`, but **not completed** because Clerk auth could not be completed in `agent-browser` after the two allowed approaches:
+  1. **Playwright storageState → `agent-browser --state`:** a valid authenticated state file was created with the repo's Clerk Playwright helper, but `agent-browser` still redirected `/app/practice` to the hosted Clerk sign-in page.
+  2. **Direct fill in `agent-browser`:** the E2E email/password were filled on the hosted Clerk sign-in page, but the session did not advance into the app and follow-up snapshots were not usable for the in-app walkthrough.
+
+  Per audit constraints, no further auth attempts were made.
+- **Test impact:** Current tests already encode parts of the status quo for D-2 and D-3. D-1 is only partially encoded — visible-button assertions exist, but there is no test that explicitly asserts spacer presence or Q1 visual alignment.
+
 ---
 
 ## D-1: Q1 action bar visual imbalance
 
 ### Current behavior
 
-On Q1, `hasPreviousQuestion` is false. The code renders an `ActionBarSpacer` (invisible `<span>` with `h-9 min-w-24`) in position 1, keeping Next in position 2. This is per-spec — BS-055 interaction contracts say "Previous always occupies position 1 (hidden on Q1 with spacer, per BS-037 pattern)."
+On Q1, `PracticeSessionPageView` still passes `onPreviousQuestion`, but `hasPreviousQuestion` is false. `PracticeView` therefore renders `ExamActionBar`, which renders an `ActionBarSpacer` (invisible `<span>` with `h-9 min-w-24`) in position 1, keeping Next in position 2. This is per current spec — BS-055 and the interaction contracts say "Previous always occupies position 1 (hidden on Q1 with spacer, per BS-037 pattern)."
 
 **Result:** Q1 shows `[___invisible___] [Next] [Mark for review]` — two visible buttons with an empty left gap. Q2+ shows `[Previous] [Next] [Mark for review]` — three visible buttons filling the space naturally.
 
@@ -34,8 +45,11 @@ The spacer preserves positional stability (Next stays in slot 2), but the visual
 
 ### Files
 
-- `app/(app)/app/practice/components/practice-view.tsx` — `ExamActionBar` component (lines 186-239), `ActionBarSpacer` (line 88-90)
-- `app/(app)/app/practice/components/practice-view.test.tsx` — Q1 action bar assertions
+- `app/(app)/app/practice/components/practice-view.tsx` — `ActionBarSpacer` (lines 88-90), `ExamActionBar` (lines 186-239), bottom action bar wrapper (lines 438-455)
+- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` — navigator-backed `onPreviousQuestion` / `hasPreviousQuestion` wiring (lines 101-114, 244-248)
+- `app/(app)/app/practice/components/practice-view.test.tsx` — Q1 visible-button assertions (lines 512-560, 735-778)
+
+**Test note:** current tests assert the visible Q1 labels (`Next`, `Mark for review`) and the absence of a visible `Previous` button, but they do **not** assert spacer presence or layout directly. A D-1 fix would likely need new layout-focused coverage, not just existing assertion rewrites.
 
 ---
 
@@ -54,6 +68,8 @@ Both the header button and the last-question action bar button say "Review answe
 
 The page heading itself ("Review Questions") is slightly better but still ambiguous. The actual finalization action is "Submit exam" — buried at the bottom of the review page.
 
+**SSOT note:** this is **not** accidental implementation drift. BS-055 Q3 and the current interaction contract explicitly chose `Review answers` and explicitly rejected `End Exam` for the active exam flow. Treat D-2 as a proposal to reopen that decision, not as a bug fix that can land silently.
+
 ### Suggested rename
 
 | Current label | Suggested label | Rationale |
@@ -66,9 +82,11 @@ The page heading itself ("Review Questions") is slightly better but still ambigu
 
 ### Files
 
-- `app/(app)/app/practice/components/practice-view.tsx` — `endSessionLabel` (line 248), `ExamActionBar` middle button label (line 191)
-- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` — `endSessionLabel` prop passed to `PracticeView` (search for `endSessionLabel`)
-- `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` — "Review Questions" heading
+- `app/(app)/app/practice/components/practice-view.tsx` — header button label render (lines 315-326), last-question middle-button label switch (lines 189-196), default fallback `endSessionLabel` (line 248)
+- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` — exam-specific `endSessionLabel="Review answers"` wiring (lines 235-236)
+- `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` — `"Review Questions"` heading (lines 110-115), `Submit exam` CTA + confirm dialog (lines 189-235)
+- `app/(app)/app/practice/components/practice-view.test.tsx` — current label assertions that would need updating if renamed (lines 323-350, 641-685)
+- `app/(app)/app/practice/components/practice-view.browser.spec.tsx` — browser test that clicks the bottom-bar `Review answers` button by name (lines 447-499)
 
 ---
 
@@ -81,6 +99,10 @@ On the last exam question, "Review answers" appears in **two** places:
 2. **Action bar** (position 2) — replaces "Next" on the last question only
 
 Both call the same `onEndSession` handler. Both navigate to the same review stage.
+
+Code verification confirms this is implemented in two separate places:
+- `PracticeSessionPageView` hard-codes the header label to `Review answers` for exam mode
+- `PracticeView` switches the middle action-bar label from `Next` to `Review answers` when `isLastSessionQuestion && onEndSession`
 
 ### Problem
 
@@ -99,9 +121,13 @@ In practice, having the same button in two places on one screen looks redundant.
 
 ### Files
 
-- `app/(app)/app/practice/components/practice-view.tsx` — `ExamActionBar` (lines 189-196), header button (lines 315-326)
-- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` — `isLastSessionQuestion` prop derivation
-- `docs/practice-engine/interaction-contracts.md` — Section 3 action bar layout
+- `app/(app)/app/practice/components/practice-view.tsx` — last-question derivation from `sessionInfo.index/total` (lines 253-257), `ExamActionBar` middle-label switch (lines 189-196), header button (lines 315-326)
+- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` — exam header-label wiring and navigation props into `PracticeView` (lines 235-248)
+- `docs/practice-engine/interaction-contracts.md` — Section 3 exam action bar layout and explicit "intentional duplication" note
+- `app/(app)/app/practice/components/practice-view.test.tsx` — bottom-bar last-question label assertions (lines 641-685)
+- `app/(app)/app/practice/components/practice-view.browser.spec.tsx` — browser interaction test for the bottom-bar `Review answers` button (lines 447-499)
+
+**Test note:** current tests encode the bottom-bar `Review answers` label and click path, but there is not yet a dedicated test that asserts the simultaneous header + footer duplication on the last question. If D-3 is implemented, coverage should be added for the deduplicated end state rather than relying on incidental label assertions alone.
 
 ---
 
@@ -118,8 +144,10 @@ These items were observed during the same walkthrough but are tracked elsewhere 
 
 ## Implementation notes
 
-- D-1, D-2, and D-3 are independent and can be shipped in any order
-- All changes are frontend-only — no backend/use-case/repository changes needed
-- D-2 requires updating test assertions that match on button label text
-- D-3 may require updating interaction contracts doc to reflect the new decision
-- If D-2 and D-3 are done together, the label rename + deduplication can land in one PR
+- D-1 is a pure frontend refinement and can ship independently.
+- D-2 and D-3 are **not** mere implementation drift; both intentionally reopen the current BS-055 / interaction-contract SSOT. If either lands, the docs must change in the same PR.
+- All three issues are frontend-local in production code — no backend/use-case/repository changes needed.
+- D-2 requires updating test assertions that currently match the literal `Review answers` label.
+- D-3 requires updating the interaction contract if the "intentional duplication" decision is reversed.
+- If D-2 and D-3 are done together, the rename + deduplication can land in one PR.
+- Before implementation, rerun the blocked browser walkthrough in a local environment where Clerk auth is actually healthy for `agent-browser`, so the final UX decision is validated visually instead of only from source and prior screenshots.
