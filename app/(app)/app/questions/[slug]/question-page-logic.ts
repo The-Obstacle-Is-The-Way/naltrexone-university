@@ -308,15 +308,12 @@ export function reattemptQuestion(input: {
   setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number) => void;
   setSessionUnansweredReveal?: (reveal: SessionUnansweredReveal | null) => void;
-  setRetryProvenance?: (provenance: RetryProvenance | null) => void;
-  retryProvenance?: RetryProvenance | null;
 }): void {
   input.setSelectedChoiceId(null);
   input.setSubmitResult(null);
   input.setSubmitIdempotencyKey(input.createIdempotencyKey());
   input.setQuestionLoadedAt(input.nowMs());
   input.setSessionUnansweredReveal?.(null);
-  input.setRetryProvenance?.(input.retryProvenance ?? null);
 }
 
 export async function loadPreviousAttempt(input: {

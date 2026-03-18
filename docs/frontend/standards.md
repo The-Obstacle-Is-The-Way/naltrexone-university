@@ -814,10 +814,10 @@ Five hooks exceed the 200-line "god hook" threshold (§12). `useQuestionPageCont
 
 | Hook | Lines | File |
 |------|-------|------|
-| `useQuestionPageController` | 362 | `app/(app)/app/questions/[slug]/use-question-page-controller.ts` |
+| `useQuestionPageController` | 357 | `app/(app)/app/questions/[slug]/use-question-page-controller.ts` |
 | `useQuestionPageBookmarks` | 211 | `app/(app)/app/questions/[slug]/use-question-page-bookmarks.ts` |
 | `useQuestionPageSessionNavigation` | 206 | `app/(app)/app/questions/[slug]/use-question-page-session-navigation.ts` |
-| `usePracticeSessionQuestionFlow` | 238 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` |
+| `usePracticeSessionQuestionFlow` | 254 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` |
 | `useQuestionFlowCore` | 263 | `app/(app)/app/practice/shared/use-question-flow-core.ts` |
 
 Contrast compliance gaps (WCAG AA) are documented in `docs/_archive/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md` and governed by `docs/frontend/contrast-policy.md`.
