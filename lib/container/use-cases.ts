@@ -77,6 +77,7 @@ export function createUseCaseFactories(input: {
       ),
     createSaveExamDraftAnswerUseCase: () =>
       new SaveExamDraftAnswerUseCase(
+        repositories.createQuestionRepository(),
         repositories.createPracticeSessionRepository(),
       ),
     createGetNextQuestionUseCase: () =>

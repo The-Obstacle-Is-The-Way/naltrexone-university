@@ -236,7 +236,7 @@ export async function maybeSaveDraftBeforeNavigation<
 
   input.onSaved?.({
     questionId: input.question.questionId,
-    selectedChoiceId: res.data.draftSelectedChoiceId ?? input.selectedChoiceId,
+    selectedChoiceId: res.data.draftSelectedChoiceId,
     cumulativeMs: res.data.draftCumulativeMs,
   });
   return true;

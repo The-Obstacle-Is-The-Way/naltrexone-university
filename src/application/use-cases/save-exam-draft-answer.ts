@@ -1,5 +1,8 @@
 import { ApplicationError } from '@/src/application/errors';
-import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
+import type {
+  PracticeSessionRepository,
+  QuestionRepository,
+} from '@/src/application/ports/repositories';
 import type { PracticeSessionQuestionState } from '@/src/domain/entities';
 
 export type SaveExamDraftAnswerInput = {
@@ -13,7 +16,10 @@ export type SaveExamDraftAnswerInput = {
 export type SaveExamDraftAnswerOutput = PracticeSessionQuestionState;
 
 export class SaveExamDraftAnswerUseCase {
-  constructor(private readonly sessions: PracticeSessionRepository) {}
+  constructor(
+    private readonly questions: QuestionRepository,
+    private readonly sessions: PracticeSessionRepository,
+  ) {}
 
   async execute(
     input: SaveExamDraftAnswerInput,
@@ -37,6 +43,21 @@ export class SaveExamDraftAnswerUseCase {
       throw new ApplicationError(
         'CONFLICT',
         'Cannot modify a completed session',
+      );
+    }
+
+    const question = await this.questions.findPublishedById(input.questionId);
+    if (!question) {
+      throw new ApplicationError('NOT_FOUND', 'Question not found');
+    }
+
+    const selectedChoice = question.choices.find(
+      (choice) => choice.id === input.selectedChoiceId,
+    );
+    if (!selectedChoice) {
+      throw new ApplicationError(
+        'VALIDATION_ERROR',
+        'Selected choice does not belong to the question',
       );
     }
 

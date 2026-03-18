@@ -437,3 +437,30 @@ test('clears submitResult when it belongs to a different question than the curre
     .element(screen.getByTestId('has-submit-result'))
     .toHaveTextContent('false');
 });
+
+test('preserves the selected choice when a local submit result is resynchronized for the same question', async () => {
+  const screen = await render(<QuestionFlowCoreProbe />);
+
+  await screen
+    .getByRole('button', { name: 'load-no-session', exact: true })
+    .click();
+  await screen
+    .getByRole('button', { name: 'select-choice-1', exact: true })
+    .click();
+  await expect
+    .element(screen.getByTestId('selected-choice-id'))
+    .toHaveTextContent('choice_1');
+
+  await screen.getByRole('button', { name: 'set-submit-result' }).click();
+  await expect
+    .element(screen.getByTestId('has-submit-result'))
+    .toHaveTextContent('true');
+
+  await screen.getByRole('button', { name: 'set-ready' }).click();
+  await expect
+    .element(screen.getByTestId('selected-choice-id'))
+    .toHaveTextContent('choice_1');
+  await expect
+    .element(screen.getByTestId('has-submit-result'))
+    .toHaveTextContent('true');
+});

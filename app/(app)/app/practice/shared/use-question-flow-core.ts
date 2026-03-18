@@ -220,13 +220,13 @@ export function useQuestionFlowCore(
         return;
       }
 
-      setSelectedChoiceId(null);
       lastSynchronizedQuestionIdRef.current = nextQuestion.questionId;
 
       if (submitResultQuestionIdRef.current === nextQuestion.questionId) {
         return;
       }
 
+      setSelectedChoiceId(null);
       setIsAnswered(false);
       setSubmitResult(null);
     },

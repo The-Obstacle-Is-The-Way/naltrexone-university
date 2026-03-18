@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
-import { FakePracticeSessionRepository } from '@/src/application/test-helpers/fakes';
-import { createPracticeSession } from '@/src/domain/test-helpers';
+import {
+  FakePracticeSessionRepository,
+  FakeQuestionRepository,
+} from '@/src/application/test-helpers/fakes';
+import {
+  createChoice,
+  createPracticeSession,
+  createQuestion,
+} from '@/src/domain/test-helpers';
 import { SaveExamDraftAnswerUseCase } from './save-exam-draft-answer';
 
 describe('SaveExamDraftAnswerUseCase', () => {
@@ -23,7 +30,16 @@ describe('SaveExamDraftAnswerUseCase', () => {
     });
 
     const sessions = new FakePracticeSessionRepository([session]);
-    const useCase = new SaveExamDraftAnswerUseCase(sessions);
+    const questions = new FakeQuestionRepository([
+      createQuestion({
+        id: 'q1',
+        choices: [
+          createChoice({ id: 'draft-choice', questionId: 'q1', label: 'A' }),
+          createChoice({ id: 'final-choice', questionId: 'q1', label: 'B' }),
+        ],
+      }),
+    ]);
+    const useCase = new SaveExamDraftAnswerUseCase(questions, sessions);
 
     await expect(
       useCase.execute({
@@ -65,7 +81,16 @@ describe('SaveExamDraftAnswerUseCase', () => {
         ],
       }),
     ]);
-    const useCase = new SaveExamDraftAnswerUseCase(sessions);
+    const questions = new FakeQuestionRepository([
+      createQuestion({
+        id: 'q1',
+        choices: [
+          createChoice({ id: 'old-choice', questionId: 'q1', label: 'A' }),
+          createChoice({ id: 'new-choice', questionId: 'q1', label: 'B' }),
+        ],
+      }),
+    ]);
+    const useCase = new SaveExamDraftAnswerUseCase(questions, sessions);
 
     await expect(
       useCase.execute({
@@ -84,6 +109,7 @@ describe('SaveExamDraftAnswerUseCase', () => {
 
   it('rejects tutor sessions', async () => {
     const useCase = new SaveExamDraftAnswerUseCase(
+      new FakeQuestionRepository([]),
       new FakePracticeSessionRepository([
         createPracticeSession({
           id: 'session-1',
@@ -112,6 +138,7 @@ describe('SaveExamDraftAnswerUseCase', () => {
 
   it('rejects ended sessions', async () => {
     const useCase = new SaveExamDraftAnswerUseCase(
+      new FakeQuestionRepository([]),
       new FakePracticeSessionRepository([
         createPracticeSession({
           id: 'session-1',
@@ -138,6 +165,7 @@ describe('SaveExamDraftAnswerUseCase', () => {
 
   it('rejects missing sessions', async () => {
     const useCase = new SaveExamDraftAnswerUseCase(
+      new FakeQuestionRepository([]),
       new FakePracticeSessionRepository([]),
     );
 
@@ -151,6 +179,42 @@ describe('SaveExamDraftAnswerUseCase', () => {
       }),
     ).rejects.toEqual(
       new ApplicationError('NOT_FOUND', 'Practice session not found'),
+    );
+  });
+
+  it('rejects draft choices that do not belong to the question', async () => {
+    const session = createPracticeSession({
+      id: 'session-1',
+      userId: 'user-1',
+      mode: 'exam',
+      questionIds: ['q1'],
+    });
+
+    const questions = new FakeQuestionRepository([
+      createQuestion({
+        id: 'q1',
+        choices: [
+          createChoice({ id: 'choice-1', questionId: 'q1', label: 'A' }),
+          createChoice({ id: 'choice-2', questionId: 'q1', label: 'B' }),
+        ],
+      }),
+    ]);
+    const sessions = new FakePracticeSessionRepository([session]);
+    const useCase = new SaveExamDraftAnswerUseCase(questions, sessions);
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+        questionId: 'q1',
+        selectedChoiceId: 'not-a-real-choice',
+        cumulativeMs: 5_000,
+      }),
+    ).rejects.toEqual(
+      new ApplicationError(
+        'VALIDATION_ERROR',
+        'Selected choice does not belong to the question',
+      ),
     );
   });
 });

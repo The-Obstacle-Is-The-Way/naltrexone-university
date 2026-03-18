@@ -234,6 +234,15 @@ export class FakePracticeSessionRepository
       const next = this.withNormalizedQuestionStates(existing);
       const questionStates = next.questionStates.map((state) => {
         if (state.questionId !== input.questionId) return state;
+
+        if (
+          (state.draftSavedAt && state.draftSavedAt > savedAt) ||
+          input.cumulativeMs < state.draftCumulativeMs
+        ) {
+          updatedState = state;
+          return state;
+        }
+
         updatedState = {
           ...state,
           draftSelectedChoiceId: input.selectedChoiceId,

@@ -255,10 +255,12 @@ export const finalizeExamAnswers = createAction({
     const { sessionId, idempotencyKey } = input;
 
     async function finalizeExam(): Promise<FinalizeExamAnswersOutput> {
-      return d.finalizeExamAnswersUseCase.execute({
-        userId,
-        sessionId,
-      });
+      return FinalizeExamAnswersOutputSchema.parse(
+        await d.finalizeExamAnswersUseCase.execute({
+          userId,
+          sessionId,
+        }),
+      );
     }
 
     if (!idempotencyKey) {

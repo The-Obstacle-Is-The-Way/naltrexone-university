@@ -277,11 +277,9 @@ describe('usePracticeSessionReviewStage (browser)', () => {
 
     harness.result.current.onEndSession();
 
-    await expect
-      .poll(() => getPracticeSessionReviewMock.mock.calls.length)
-      .toBe(0);
+    await expect.poll(() => saveCurrentExamDraftMock.mock.calls.length).toBe(1);
     expect(getPracticeSessionReviewMock).not.toHaveBeenCalled();
+    await expect.poll(() => harness.result.current.isInReviewStage).toBe(false);
     expect(harness.result.current.reviewLoadState).toEqual({ status: 'idle' });
-    expect(harness.result.current.isInReviewStage).toBe(false);
   });
 });

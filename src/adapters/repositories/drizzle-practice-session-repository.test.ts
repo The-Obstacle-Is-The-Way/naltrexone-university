@@ -1012,6 +1012,74 @@ describe('DrizzlePracticeSessionRepository', () => {
     });
   });
 
+  it('ignores stale draft saves when the stored draft snapshot is newer', async () => {
+    const row = {
+      id: 'session_1',
+      userId: 'user_1',
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: ['easy'],
+        questionIds: ['q1'],
+        questionStates: [
+          {
+            questionId: 'q1',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+            draftSelectedChoiceId: 'newer-choice',
+            draftSavedAt: '2026-02-01T00:05:00.000Z',
+            draftCumulativeMs: 45_000,
+          },
+        ],
+      },
+      startedAt: new Date('2026-02-01T00:00:00.000Z'),
+      endedAt: null,
+    } as const;
+
+    const updateReturning = vi.fn(async () => [{ id: 'session_1' }]);
+    const updateWhere = vi.fn(() => ({ returning: updateReturning }));
+    const updateSet = vi.fn(() => ({ where: updateWhere }));
+    const update = vi.fn(() => ({ set: updateSet }));
+
+    const db = {
+      query: {
+        practiceSessions: {
+          findFirst: vi.fn(async () => row),
+        },
+      },
+      update,
+      insert: () => {
+        throw new Error('unexpected insert');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(
+      db as unknown as RepoDb,
+      () => new Date('2026-02-01T00:04:00.000Z'),
+    );
+
+    await expect(
+      repo.saveDraftAnswer({
+        sessionId: 'session_1',
+        userId: 'user_1',
+        questionId: 'q1',
+        selectedChoiceId: 'older-choice',
+        cumulativeMs: 30_000,
+      }),
+    ).resolves.toMatchObject({
+      questionId: 'q1',
+      draftSelectedChoiceId: 'newer-choice',
+      draftSavedAt: new Date('2026-02-01T00:05:00.000Z'),
+      draftCumulativeMs: 45_000,
+    });
+  });
+
   it('retries question-state update when a concurrent write causes a stale write miss', async () => {
     const row = {
       id: 'session_1',

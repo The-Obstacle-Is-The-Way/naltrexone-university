@@ -245,12 +245,21 @@ export class DrizzlePracticeSessionRepository
       sessionId: input.sessionId,
       userId: input.userId,
       questionId: input.questionId,
-      updateFn: (current) => ({
-        ...current,
-        draftSelectedChoiceId: input.selectedChoiceId,
-        draftSavedAt: savedAt,
-        draftCumulativeMs: input.cumulativeMs,
-      }),
+      updateFn: (current) => {
+        if (
+          (current.draftSavedAt && current.draftSavedAt > savedAt) ||
+          input.cumulativeMs < current.draftCumulativeMs
+        ) {
+          return current;
+        }
+
+        return {
+          ...current,
+          draftSelectedChoiceId: input.selectedChoiceId,
+          draftSavedAt: savedAt,
+          draftCumulativeMs: input.cumulativeMs,
+        };
+      },
       failureMessage: 'Failed to persist practice session draft answer state',
     });
   }

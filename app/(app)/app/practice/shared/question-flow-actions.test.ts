@@ -864,6 +864,55 @@ describe('question-flow-actions', () => {
     });
   });
 
+  it('preserves an explicit null draftSelectedChoiceId returned by the server', async () => {
+    const onSaved = vi.fn();
+    const saveExamDraftAnswerFn = vi
+      .fn<
+        (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
+      >()
+      .mockResolvedValue(
+        ok({
+          questionId: 'q_1',
+          markedForReview: false,
+          latestSelectedChoiceId: 'choice_2',
+          latestIsCorrect: true,
+          latestAnsweredAt: new Date('2026-02-01T00:00:00.000Z'),
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 50_000,
+        }),
+      );
+
+    const shouldNavigate = await maybeSaveDraftBeforeNavigation({
+      sessionId: 'session_1',
+      question: {
+        questionId: 'q_1',
+        session: {
+          sessionId: 'session_1',
+          mode: 'exam',
+          index: 0,
+          total: 2,
+          draftSelectedChoiceId: 'choice_1',
+          draftCumulativeMs: 30_000,
+        },
+      },
+      selectedChoiceId: 'choice_2',
+      currentCumulativeMs: 50_000,
+      lastSavedDraftSelectedChoiceId: 'choice_1',
+      lastSavedDraftCumulativeMs: 30_000,
+      saveExamDraftAnswerFn,
+      setLoadState: () => {},
+      onSaved,
+    });
+
+    expect(shouldNavigate).toBe(true);
+    expect(onSaved).toHaveBeenCalledWith({
+      questionId: 'q_1',
+      selectedChoiceId: null,
+      cumulativeMs: 50_000,
+    });
+  });
+
   it('tracks unanswered exam time locally when no exam selection exists', async () => {
     const saveExamDraftAnswerFn =
       vi.fn<

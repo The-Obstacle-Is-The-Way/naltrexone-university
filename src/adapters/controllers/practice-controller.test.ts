@@ -621,7 +621,7 @@ describe('practice-controller', () => {
 
     it('returns exam summary when use case succeeds', async () => {
       const finalizeOutput = {
-        sessionId: 'session_123',
+        sessionId: '22222222-2222-2222-2222-222222222223',
         endedAt: '2026-02-01T00:00:00.000Z',
         mode: 'exam',
         questionCount: 2,
@@ -717,6 +717,35 @@ describe('practice-controller', () => {
       });
       expect(second).toEqual(first);
       expect(deps.finalizeExamAnswersUseCase.inputs).toHaveLength(1);
+    });
+
+    it('returns VALIDATION_ERROR when finalize output is invalid without idempotency', async () => {
+      const deps = createDeps({
+        finalizeOutput: {
+          sessionId: 'session_123',
+          endedAt: '2026-02-01T00:00:00.000Z',
+          mode: 'exam',
+          questionCount: -1,
+          totals: {
+            answered: 2,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 60,
+          },
+        } as unknown as FinalizeExamAnswersOutput,
+      });
+
+      const result = await finalizeExamAnswers(
+        { sessionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+        },
+      });
     });
   });
 

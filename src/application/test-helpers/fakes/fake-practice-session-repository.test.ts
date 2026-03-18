@@ -97,4 +97,45 @@ describe('FakePracticeSessionRepository', () => {
       },
     ]);
   });
+
+  it('ignores stale draft saves when a newer draft snapshot already exists', async () => {
+    const repo = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q1'],
+        questionStates: [
+          {
+            questionId: 'q1',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+            draftSelectedChoiceId: 'choice-1',
+            draftSavedAt: new Date('2099-02-01T00:00:00.000Z'),
+            draftCumulativeMs: 25_000,
+          },
+        ],
+      }),
+    ]);
+
+    await expect(
+      repo.saveDraftAnswer({
+        sessionId: 'session-1',
+        userId: 'user-1',
+        questionId: 'q1',
+        selectedChoiceId: 'choice-2',
+        cumulativeMs: 10_000,
+      }),
+    ).resolves.toMatchObject({
+      questionId: 'q1',
+      latestSelectedChoiceId: null,
+      latestIsCorrect: null,
+      latestAnsweredAt: null,
+      draftSelectedChoiceId: 'choice-1',
+      draftSavedAt: new Date('2099-02-01T00:00:00.000Z'),
+      draftCumulativeMs: 25_000,
+    });
+  });
 });
