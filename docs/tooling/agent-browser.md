@@ -73,15 +73,15 @@ EMAIL=$(node -e "require('dotenv').config({path:'.env.local'});require('dotenv')
 
 ---
 
-## Known Limitation: React Click Failures (DEBT-323)
+## Known Limitation: React Interaction Reliability Gaps (DEBT-323)
 
-`agent-browser click @ref` silently fails on most React 19 + Radix UI components. It reports `✓ Done` but nothing happens. **This is an upstream agent-browser limitation, not a code bug** — the application works perfectly in real browsers.
+`agent-browser click @ref` is unreliable on parts of the React 19 + Radix UI practice flow. The dependable failure is primary action buttons like `Submit`, which report `✓ Done` but do nothing. Toggle buttons remain unreliable. Radios are not uniformly broken: latest verification on Quick Practice showed radio ref-click working, but semantic text-click still failed. Treat this as an agent-browser limitation unless the same behavior reproduces in a real browser.
 
 ### What works and what doesn't
 
 | Element | `click @ref` | JS eval workaround |
 |---------|-------------|-------------------|
-| **Answer radios** (sr-only) | Fails | `eval "document.querySelectorAll('label')[0].click()"` |
+| **Answer radios** (practice questions) | Inconsistent by surface; worked on `/app/practice/quick` in latest verification | Safest fallback: `eval "document.querySelectorAll('label')[0].click()"` |
 | **Submit / action buttons** | Fails | `eval "Array.from(document.querySelectorAll('button')).find(b => b.textContent?.trim() === 'Submit')?.click()"` |
 | **Toggle buttons** (Tutor/Exam, filters) | Fails | **No workaround.** Use Playwright for these flows. |
 | **Links** (`<a>` elements) | Works | N/A |
@@ -134,6 +134,6 @@ Each session has independent cookies, storage, and auth state.
 1. **Dev server must be running** — `pnpm dev` must be live before using agent-browser against `localhost:3000`.
 2. **Always use `--profile /tmp/clerk-profile`** — Without it, Clerk redirects to sign-in.
 3. **Refs expire after navigation** — Always re-snapshot after `open`, `click` that navigates, or DOM changes.
-4. **Use JS eval for React components** — `click @ref` silently no-ops on radios, submit buttons, and toggles. See DEBT-323 section above.
+4. **Use JS eval for unreliable React components** — do not rely on `click @ref` for Submit/primary action buttons or toggle buttons. Radios may work on some surfaces, but `label.click()` remains the safest answer-selection fallback. See DEBT-323 section above.
 5. **`agent-browser wait --url` uses glob patterns** — Use `**/dashboard` not `/app/dashboard`.
 6. **Temp files** — Never commit state JSON, screenshots, or temp scripts to the repo.

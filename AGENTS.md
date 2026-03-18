@@ -339,7 +339,7 @@ Do not use `agent-browser --state` or CDP bridge approaches — both are unrelia
 
 Keep the host exact: `localhost` and `127.0.0.1` are not interchangeable for Clerk cookies.
 
-`agent-browser click @ref` silently fails on most React components (radios, Submit, toggle buttons). This is an upstream agent-browser 0.21.1 limitation, not a code bug (DEBT-323). Use JS eval instead: `agent-browser eval "Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('Submit'))?.click()"`. For radios: `agent-browser eval "document.querySelectorAll('label')[0].click()"`. Toggle buttons (Tutor/Exam mode) have no working workaround — use Playwright for those flows.
+`agent-browser click @ref` is unreliable on practice-flow React components (DEBT-323). Do not rely on it for Submit/primary action buttons or toggle buttons. For answer choices, `agent-browser eval "document.querySelectorAll('label')[0].click()"` remains the safest fallback even though radio refs may work on some surfaces. Toggle buttons (Tutor/Exam mode) still have no working workaround — use Playwright for those flows.
 
 **If using Claude Code with Chrome MCP tools**, the user's browser is typically already authenticated — use `tabs_context_mcp` to check existing tabs before creating new ones.
 

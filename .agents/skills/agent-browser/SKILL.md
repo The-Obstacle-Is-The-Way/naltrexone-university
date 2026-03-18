@@ -54,15 +54,15 @@ agent-browser screenshot /tmp/screenshot.png --full
 
 ### React click failures (DEBT-323)
 
-`agent-browser click @ref` silently fails on most React components in this app. It reports `✓ Done` but nothing happens. This is an upstream agent-browser limitation — not a code bug.
+`agent-browser click @ref` is unreliable on parts of the React practice flow in this app. Submit/primary action buttons are the dependable failure. Toggle buttons still have no working workaround. Answer-choice radios are inconsistent: ref-click worked on Quick Practice in latest verification, but `find text` did not. This is an upstream agent-browser limitation unless the same behavior reproduces in a real browser.
 
 **Use these patterns instead of ref-clicks for interactive elements:**
 
 ```bash
-# Select an answer choice (radios are sr-only — ref and find-text clicks both fail)
+# Select an answer choice (safest cross-page fallback)
 agent-browser eval "document.querySelectorAll('label')[0].click()"
 
-# Click Submit, Next, Start session, or any action button
+# Click Submit, Next, Start session, or any primary action button
 agent-browser eval "Array.from(document.querySelectorAll('button')).find(b => b.textContent?.trim() === 'Submit')?.click()"
 
 # Toggle buttons (Tutor/Exam, question filters) — NO WORKING WORKAROUND
