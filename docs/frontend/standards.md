@@ -683,7 +683,7 @@ We do **not** require a repo-wide wrapper such as `useMountEffect()`. The guardr
 
 The practice hooks (`use-practice-question-bookmarks`, `use-practice-session-navigator`, etc.) demonstrate the preferred pattern: extract fetch/async logic into a testable factory function (`createXxxEffect`), call it from a single `useEffect`, and return the cleanup function. This keeps effects small and pushes complexity into pure, testable code.
 
-The `use-question-page-controller` hook (737 lines, 8 effects) is a known god hook (§12 size limits, DEBT-320). It contains two instances of the anti-patterns above (derived state via effect at line 347, flag→effect→reset at line 686). These are tracked for paydown but are not causing active bugs.
+The question-page flow should follow the same composition style: focused hooks for bookmarks, session navigation, and previous-attempt hydration, with the controller acting as the composition root instead of inlining every effect.
 
 ### Duplication
 
@@ -810,11 +810,13 @@ Issues documented below are tracked as tech debt in `docs/debt/index.md` (Fronte
 
 ### P2 — Fix during UI/UX refactor
 
-Three hooks exceed the 200-line "god hook" threshold (§12):
+Five hooks exceed the 200-line "god hook" threshold (§12). `useQuestionPageController` was reduced from 737 lines / 8 effects to 362 lines / 2 effects by DEBT-320, but it still exceeds the size cap as a composition root.
 
 | Hook | Lines | File |
 |------|-------|------|
-| `useQuestionPageController` | 737 | `app/(app)/app/questions/[slug]/use-question-page-controller.ts` |
+| `useQuestionPageController` | 362 | `app/(app)/app/questions/[slug]/use-question-page-controller.ts` |
+| `useQuestionPageBookmarks` | 211 | `app/(app)/app/questions/[slug]/use-question-page-bookmarks.ts` |
+| `useQuestionPageSessionNavigation` | 206 | `app/(app)/app/questions/[slug]/use-question-page-session-navigation.ts` |
 | `usePracticeSessionQuestionFlow` | 238 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` |
 | `useQuestionFlowCore` | 263 | `app/(app)/app/practice/shared/use-question-flow-core.ts` |
 

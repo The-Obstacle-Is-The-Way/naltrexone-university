@@ -2,9 +2,11 @@
 
 **Priority:** P2
 **Created:** 2026-03-17
-**Status:** Open
+**Status:** Resolved (2026-03-17)
 
 ---
+
+> Archived after the DEBT-320 paydown landed. Historical line references below describe the pre-refactor `use-question-page-controller` shape that was audited.
 
 ## Summary
 
