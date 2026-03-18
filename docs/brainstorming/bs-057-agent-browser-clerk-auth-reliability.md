@@ -78,74 +78,88 @@ Clerk's testing docs only cover Playwright and Cypress via `@clerk/testing`. No 
 
 ---
 
-## Possible Approaches (Ranked by Feasibility)
+## Primary Tools (Preferred)
 
-### A: Chrome MCP as primary visual verification tool (pragmatic)
+Our browser automation strategy should rely on **Playwright** and **agent-browser** — not Chrome MCP. Playwright already works perfectly with Clerk auth. agent-browser is built on Playwright under the hood, so it should be solvable.
 
-**How:** Use `claude-in-chrome` MCP tools instead of agent-browser for authenticated visual verification. The user's Chrome is already authenticated.
-**Pros:** Works now, no infrastructure changes needed.
-**Cons:** Requires the user's browser to be open and authenticated. Can't run unattended.
-**Effort:** Zero — just update agent prompts to prefer Chrome MCP over agent-browser.
+Chrome MCP (`claude-in-chrome`) remains available as a supplementary tool but is not a primary — it depends on the user's browser state and is unreliable for autonomous agent work.
 
-### B: Persistent profile with manual one-time login (simple)
+### Tool 1: Playwright (Already Working)
+
+Playwright E2E tests authenticate through Clerk without any issues:
+- `clerkSetup()` in `tests/e2e/global.setup.ts` fetches a testing token
+- `clerk.signIn()` in `tests/e2e/helpers/clerk-auth.ts` authenticates via `@clerk/testing/playwright`
+- All 26 E2E spec files reuse the authenticated session
+- Credential health check validates Clerk + DB + Stripe before any test runs
+
+**Status: Fully working.** Agents should prefer Playwright for visual verification tasks when possible.
+
+### Tool 2: agent-browser (Needs Investigation)
+
+agent-browser is built on Playwright's Chromium, so there should be a viable path. Two approaches to investigate:
+
+#### A: Playwright storageState bridge (documented, failed once, needs debugging)
+
+Already documented in `docs/dev/agent-browser.md` as Option C. A script authenticates via `@clerk/testing/playwright`, exports `storageState`, and passes it to agent-browser via `--state`.
+
+```ts
+// scripts/tmp-create-agent-browser-state.ts
+import { clerkSetup, clerk } from '@clerk/testing/playwright';
+import { chromium } from '@playwright/test';
+// ... authenticate, export storageState to JSON
+```
+
+```bash
+pnpm tsx scripts/tmp-create-agent-browser-state.ts
+agent-browser --state /tmp/agent-browser-state.json open http://localhost:3000/app/dashboard
+```
+
+**Status:** DEBT-322 audit agent tried this and it failed — the state file didn't carry the session. This needs debugging:
+- Is it a state file format incompatibility between Playwright and agent-browser?
+- Is it a timing issue (Clerk session token expired between export and load)?
+- Is it the macOS arm64 `--state`/`--profile` daemon crash (agent-browser issue #297)?
+- Is the `storageState` missing critical Clerk cookies or localStorage keys?
+
+**This is the highest-priority investigation item.**
+
+#### B: Persistent profile with manual one-time login (fallback)
 
 ```bash
 agent-browser --profile /tmp/clerk-profile --headed open http://localhost:3000/sign-in
-# User logs in manually once via --headed mode
+# Log in manually once via --headed mode
 # All subsequent agent-browser runs reuse the profile:
 agent-browser --profile /tmp/clerk-profile open http://localhost:3000/app/dashboard
 ```
 
-**Pros:** Simple. Works with Clerk's anti-automation because it's a real login.
-**Cons:** Manual step required. Profile may expire. macOS arm64 crash risk (#297).
-**Effort:** Low — document the pattern, add to skill.
+**Pros:** Simple. Works with Clerk's anti-automation because it's a real human login.
+**Cons:** Manual step. Profile may expire. macOS arm64 crash risk (#297).
 
-### C: Disable Clerk bot detection in dev environment
+## Deprioritized / Rejected Approaches
 
-Per [Stably AI docs](https://docs.stably.ai/trouble-shooting/clerk-bot-detection), Clerk Dashboard allows disabling bot detection per environment.
-**Pros:** Enables direct-fill approach (Option D in agent-browser docs) to actually work.
-**Cons:** Security trade-off for dev environment. Doesn't help with production visual verification.
-**Effort:** Low — one toggle in Clerk Dashboard + update docs.
-
-### D: `eval`-based testing token injection (advanced)
-
-Use agent-browser's `eval` command to inject JavaScript that patches `fetch` to append `__clerk_testing_token` to Clerk API requests — replicating what `setupClerkTestingToken` does at the Playwright layer but at the page JS layer.
-
-```bash
-# Pseudocode — would need actual implementation
-TOKEN=$(node -e "/* create testing token via Clerk Backend API */")
-agent-browser eval "window.__clerkTestingToken = '$TOKEN'; /* patch fetch */"
-```
-
-**Pros:** Fully automated, replicates E2E test mechanism.
-**Cons:** Fragile. Depends on Clerk's internal fetch patterns. Undocumented. May break on Clerk SDK updates.
-**Effort:** High — needs research, implementation, and ongoing maintenance.
-
-### E: Playwright-bridge script (documented but unverified)
-
-Already documented in `docs/dev/agent-browser.md` as Option C. Create a script that authenticates via `@clerk/testing/playwright`, exports `storageState`, and passes it to agent-browser.
-**Pros:** Leverages our existing E2E auth infrastructure.
-**Cons:** DEBT-322 audit agent tried this and it failed (state file didn't carry the session). May be a format incompatibility or timing issue. Needs investigation.
-**Effort:** Medium — debug why it fails, fix, and verify.
+| Approach | Status | Reason |
+|----------|--------|--------|
+| Chrome MCP as primary tool | Deprioritized | Depends on user's browser state; unreliable for autonomous agents |
+| Disable Clerk bot detection in dev | Rejected | Hacky; changes security posture for a tooling convenience |
+| `eval`-based testing token injection | Rejected | Fragile monkey-patching; undocumented; breaks on Clerk SDK updates |
 
 ---
 
 ## Open Questions
 
-1. **Why did the Playwright storageState → agent-browser bridge fail?** Is it a format incompatibility, timing issue (token expired), or the macOS arm64 bug (#297)?
-2. **Can we disable Clerk bot detection just for our dev environment?** What's the security trade-off?
-3. **Is Chrome MCP sufficient for our visual verification needs?** If so, do we even need agent-browser auth to work?
-4. **Should we invest in fixing this at all?** Code analysis + test assertions may be "good enough" for agent-driven audits.
+1. **Why did the Playwright storageState → agent-browser bridge fail?** Is it a format incompatibility, timing issue (token expired), or the macOS arm64 bug (#297)? This is the #1 question to answer.
+2. **What does agent-browser's state file format actually look like vs. Playwright's?** Compare the two JSON structures to identify incompatibilities.
+3. **Can agent-browser consume Playwright's storageState directly, or does it need transformation?** If transformation is needed, write a bridge script.
+4. **Does our E2E infrastructure need any updates to support agent-browser auth export?** Or can we reuse `tests/e2e/helpers/clerk-auth.ts` directly?
 
 ---
 
 ## Recommendation
 
-**Short term (now):** Approach A — update agent prompts and skill docs to prefer Chrome MCP for authenticated visual verification. Document that agent-browser is for unauthenticated pages only.
+**Primary tools:** Playwright (already working) and agent-browser (needs the storageState bridge debugged).
 
-**Medium term (if needed):** Investigate Approach C (disable bot detection in dev) + retry Approach E (Playwright bridge) to see if the combination works. Debug the state file failure from the DEBT-322 audit.
+**Next step:** Debug the Playwright storageState → agent-browser bridge failure. Compare state file formats, test with fresh credentials, check for macOS arm64 issues. If the bridge works, commit a reusable script and update the agent-browser skill/docs.
 
-**Long term:** Watch for agent-browser to add Clerk-style auth provider support (issue #586 pattern). Or wait for `@clerk/testing` to support non-Playwright tools.
+**Fallback:** If the bridge cannot be made reliable, use the persistent profile approach (manual one-time login) for agent-browser, and Playwright for everything else.
 
 ---
 
@@ -153,4 +167,6 @@ Already documented in `docs/dev/agent-browser.md` as Option C. Create a script t
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-03-18 | Created as brainstorming doc, not immediate fix | Not mission-critical — workarounds exist (Chrome MCP, code analysis). Needs more investigation before committing to an approach. |
+| 2026-03-18 | Created as brainstorming doc | Recurring agent auth failure needs investigation before committing to a fix. |
+| 2026-03-18 | Playwright + agent-browser as primary tools; Chrome MCP deprioritized | Playwright already works. agent-browser is Playwright-based, so it should be solvable. Chrome MCP depends on user state and is unreliable for autonomous agent work. |
+| 2026-03-18 | Rejected: bot detection disable, eval token injection | Hacky approaches that change security posture or depend on undocumented internals. |
