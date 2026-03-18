@@ -27,12 +27,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 | ID | Title | Status | Related Spec |
 |----|-------|--------|--------------|
-| [BS-014](./bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish (4 decisions pending) | Active | — |
 | [BS-044](./bs-044-dark-mode-border-weight-tiering.md) | Dark Mode Border Weight Tiering — broad cross-surface tiering remains open after narrower choice-button and History slices were resolved via `DEBT-280`, `DEBT-301`, and `DEBT-302` | Active | [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
 | [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) | Bookmark Icon Toggle — replace "Remove" text pill and "Bookmark"/"Remove bookmark" action bar pills with filled/unfilled bookmark icon (Lucide `Bookmark` with `fill-current` toggle); phased rollout starting with Bookmarks page | Active | [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) |
-| [BS-053](./bs-053-bookmark-vs-mark-for-review-collision.md) | Bookmark vs Mark-for-Review Collision — exam action bar shows both "Bookmark" and "Mark for review" as identical pills, creating cognitive confusion between permanent curation and session-scoped flagging | Active | [BS-052](./bs-052-bookmark-icon-toggle-replacement.md), [DEBT-316](../_archive/debt/debt-316-exam-post-submit-review-flow.md) |
-| [BS-055](./bs-055-exam-session-interaction-model-rethink.md) | Exam Session Interaction Model — Submit button is redundant (no feedback shown), button bar mutates unpredictably across questions, click count per question is 2-3x what it should be | Active | [BS-054](../_archive/brainstorming/bs-054-session-end-ux-simplification.md), [BS-053](./bs-053-bookmark-vs-mark-for-review-collision.md) |
-| [BS-057](./bs-057-agent-browser-clerk-auth-reliability.md) | Agent-Browser Clerk Auth Reliability — native `agent-browser` auth/state reuse is unreliable for Clerk-protected `/app/*` routes; the verified working path is persistent `--profile` reuse after one human login | Active | [DEBT-322](../debt/debt-322-exam-action-bar-ux-polish.md) |
+| [BS-055](./bs-055-exam-session-interaction-model-rethink.md) | Exam Session Interaction Model — Submit button is redundant (no feedback shown), button bar mutates unpredictably across questions, click count per question is 2-3x what it should be | Active | [BS-054](../_archive/brainstorming/bs-054-session-end-ux-simplification.md), [BS-053](../_archive/brainstorming/bs-053-bookmark-vs-mark-for-review-collision.md) |
 
 **Next Brainstorming ID:** BS-058
 
@@ -42,6 +39,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 | ID | Title | Outcome |
 |----|-------|---------|
+| [BS-057](../_archive/brainstorming/bs-057-agent-browser-clerk-auth-reliability.md) | Agent-Browser Clerk Auth Reliability | Resolved 2026-03-18. Known limitation permanently documented in `docs/tooling/agent-browser.md`. `--profile` is the verified working path. |
+| [BS-053](../_archive/brainstorming/bs-053-bookmark-vs-mark-for-review-collision.md) | Bookmark vs Mark-for-Review Collision | Implemented 2026-03-16. Collision resolved; decision record preserved. |
+| [BS-014](../_archive/brainstorming/bs-014-practice-starter-question-count-ux.md) | Practice Starter — Question Count UX Polish | Core fix shipped (GitHub #82). 4 optional polish decisions remain documented if future tuning desired. |
 | [BS-056](../_archive/brainstorming/bs-056-magic-numbers-and-hardcoded-literals-audit.md) | Magic Numbers and Hard-Coded Literals — retry config, timeout tiers, semantic `100` owners, HTTP status constants, shared stack/prune constants, canonical time primitives, and local UI timing defaults | Resolved on 2026-03-17 in `debt/magic-numbers-audit`. All F1-F8 were implemented, and `pnpm typecheck`, `pnpm lint`, `pnpm test --run`, `pnpm test:browser`, and `pnpm build` passed before archival. |
 | [BS-054](../_archive/brainstorming/bs-054-session-end-ux-simplification.md) | Session End UX -- Button Simplification and Ended-Session Reopen Bugs | Resolved by PR #229 on 2026-03-17. Session summaries now use the simplified CTA set, ended-session URLs bootstrap directly into durable summaries, stale double-end flows recover idempotently, and the verification matrix in BS-054 passed before archival. |
 | [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) | Bookmark Pill Hover Pattern Investigation | Reference doc for BS-050; primary value consumed by DEBT-309 (PR #209). Icon replacement tracked in BS-052. |

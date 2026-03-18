@@ -3,7 +3,7 @@
 **Date:** 2026-03-17
 **Triggered by:** Manual walkthrough of exam mode. The select → submit → auto-advance flow requires too many clicks when no feedback is shown, and the bottom action bar mutates unpredictably between questions.
 **Scope:** Exam mode's interaction model (click count, button presence, and navigation consistency) needs a first-principles rethink relative to tutor mode.
-**Related:** [BS-054](../_archive/brainstorming/bs-054-session-end-ux-simplification.md) (session end UX), [BS-053](./bs-053-bookmark-vs-mark-for-review-collision.md) (bookmark/mark-for-review collision — resolved), [BS-037](../_archive/brainstorming/bs-037-navigation-button-ux-audit.md) (navigation button UX)
+**Related:** [BS-054](../_archive/brainstorming/bs-054-session-end-ux-simplification.md) (session end UX), [BS-053](../_archive/brainstorming/bs-053-bookmark-vs-mark-for-review-collision.md) (bookmark/mark-for-review collision — resolved), [BS-037](../_archive/brainstorming/bs-037-navigation-button-ux-audit.md) (navigation button UX)
 
 ---
 
