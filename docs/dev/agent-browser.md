@@ -66,6 +66,7 @@ agent-browser --profile /tmp/clerk-profile --headed open http://localhost:3000/s
 **All subsequent sessions — agents reuse the profile (no human needed):**
 
 ```bash
+agent-browser close # if a daemon is already running with different options
 agent-browser --profile /tmp/clerk-profile open http://localhost:3000/app/dashboard
 agent-browser get url          # verify: must show /app/dashboard, not Clerk sign-in
 agent-browser screenshot /tmp/screenshot.png --full
@@ -77,6 +78,7 @@ If Clerk redirects to sign-in, the profile session has expired — redo the head
 Important:
 - Use the exact host from `NEXT_PUBLIC_APP_URL`. Do not switch between `localhost` and `127.0.0.1`; Clerk cookies are host-specific.
 - The profile is stored at `/tmp/clerk-profile`. Do not commit it to the repo.
+- If an `agent-browser` daemon is already running, later `--profile` flags are ignored until `agent-browser close`.
 
 ### Rejected Approaches (Do Not Use)
 
@@ -130,8 +132,8 @@ Each session has independent cookies, storage, and auth state.
 1. **Dev server must be running** — `pnpm dev` must be live before using agent-browser against `localhost:3000`.
 2. **Always use `--profile /tmp/clerk-profile`** — Without it, agent-browser starts an unauthenticated session that Clerk will redirect to sign-in.
 3. **Refs expire after navigation** — Always re-snapshot after `open`, `click` that navigates, or DOM changes.
-4. **Hidden radios can hang clicks** — Our answer-choice inputs are `sr-only`; clicking the `radio` refs may hang. Prefer `agent-browser find text "<choice text>" click` (or click the wrapping `<label>`).
-5. **React server action clicks via refs may silently fail** — If `agent-browser click @ref` on a Submit or action button does nothing, fall back to: `agent-browser eval "Array.from(document.querySelectorAll(‘button’)).find(b => b.textContent?.includes(‘Submit’))?.click()"`.
+4. **Radio refs are not the main failure mode we observed** — On Quick Practice, both direct radio-ref click and text-based choice click worked. Prefer `agent-browser find text "<choice text>" click` when you want the most readable command, but do not assume every radio ref will fail.
+5. **Some action-button ref clicks may silently fail** — We reproduced this on `Start session` and `Submit`: `agent-browser click @ref` returned success without changing app state, while a targeted JS click did work. Treat this as an unresolved interaction issue, not a proven auth bug. Fallback example: `agent-browser eval "Array.from(document.querySelectorAll('button')).find((button) => button.textContent?.includes('Submit'))?.click()"`.
 6. **Clerk auth + hostnames** — `localhost` and `127.0.0.1` are not interchangeable for Clerk cookies; use the exact host from `NEXT_PUBLIC_APP_URL`.
 7. **`agent-browser wait --url` uses glob patterns** — Use `**/dashboard` not `/app/dashboard`.
 8. **Temp files** — Never commit state JSON, screenshots, or temp scripts to the repo.

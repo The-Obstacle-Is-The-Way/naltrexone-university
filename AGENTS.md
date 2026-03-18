@@ -328,6 +328,7 @@ All app pages under `/app/*` are protected by Clerk auth. If you need to visuall
 
 ```bash
 # Reuse existing profile (human must have logged in once via --headed):
+agent-browser close # if a daemon is already running with different options
 agent-browser --profile /tmp/clerk-profile open http://localhost:3000/app/dashboard
 agent-browser get url          # must show /app/dashboard, not Clerk sign-in
 ```
@@ -337,6 +338,8 @@ If no profile exists yet, a human must log in once: `agent-browser --profile /tm
 Do not use `agent-browser --state` or CDP bridge approaches — both are unreliable with Clerk. Full details: `docs/dev/agent-browser.md`.
 
 Keep the host exact: `localhost` and `127.0.0.1` are not interchangeable for Clerk cookies.
+
+Do not over-attribute button-click oddities to auth. In local verification, auth via `--profile` worked while some ref-based action-button clicks (`Start session`, `Submit`) still no-op'd. Treat that as a separate interaction investigation.
 
 **If using Claude Code with Chrome MCP tools**, the user's browser is typically already authenticated — use `tabs_context_mcp` to check existing tabs before creating new ones.
 

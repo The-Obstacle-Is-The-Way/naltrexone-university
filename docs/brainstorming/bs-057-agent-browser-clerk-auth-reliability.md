@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-18
 **Triggered by:** DEBT-322 audit agent failed to visually verify exam UX issues because it could not authenticate through Clerk in agent-browser. This is a recurring pattern — every agent tasked with browser-based verification hits the same Clerk auth wall.
-**Scope:** Native `agent-browser` auth/state reuse cannot reliably access Clerk-protected `/app/*` routes; the committed Playwright-authenticated CDP bridge is still the best lead, but it is not yet reproducibly verified on local `agent-browser 0.21.1`.
+**Scope:** Native `agent-browser` auth/state reuse cannot reliably access Clerk-protected `/app/*` routes. The verified working path is a persistent `--profile` with one-time human login.
 **Related:** [DEBT-322](../debt/debt-322-exam-action-bar-ux-polish.md), [agent-browser docs](../dev/agent-browser.md), [testing infrastructure](../dev/testing-infrastructure.md)
 
 ---
@@ -14,7 +14,7 @@ We have three browser automation tools with three different auth stories:
 | Tool | Clerk Auth | Why |
 |------|-----------|-----|
 | **Playwright E2E** | Works perfectly | `@clerk/testing/playwright` injects a testing token via `browserContext.route()` that bypasses Clerk's bot detection |
-| **agent-browser (Vercel)** | Native auth/state reuse fails reliably; CDP bridge still unresolved | No Clerk SDK integration, local `--state` restore proved unreliable, and the committed CDP launcher still needs per-run verification that the attached agent-browser session remains authenticated |
+| **agent-browser (Vercel)** | Works with persistent profile; native auth/state reuse fails | No Clerk SDK integration. `--state` proved unreliable, CDP attach did not preserve auth, but `--profile` with one-time human login persisted a usable Clerk session |
 | **Chrome MCP (claude-in-chrome)** | Works if user is already logged in | Piggybacks on the user's real Chrome session |
 
 The DEBT-322 audit agent tried two approaches and both failed:
@@ -59,7 +59,7 @@ Current best explanation: the failure is in `agent-browser --state` restore beha
 
 **Impact:** Medium. Blocks automated visual verification of any authenticated page.
 **Frequency:** Every audit or visual QA task that requires seeing `/app/*` routes.
-**Workaround exists:** Playwright itself works today. Chrome MCP also works if the user is already logged in via their browser. The committed CDP bridge is still worth pursuing, but it is not yet a guaranteed authenticated agent-browser workflow on local `agent-browser 0.21.1`.
+**Workaround exists:** Playwright itself works today. Chrome MCP also works if the user is already logged in via their browser. For `agent-browser`, `--profile` with one-time human login now works and persists across runs until the Clerk session expires.
 
 ---
 
@@ -85,7 +85,7 @@ Clerk's testing docs only cover Playwright and Cypress via `@clerk/testing`. No 
 
 ## Primary Tools (Preferred)
 
-Our browser automation strategy should rely on **Playwright** and **agent-browser** — not Chrome MCP. Playwright already works perfectly with Clerk auth. For `agent-browser`, the pragmatic path is to reuse that working auth via a CDP bridge rather than force native `--state` reuse.
+Our browser automation strategy should rely on **Playwright** and **agent-browser** — not Chrome MCP. Playwright already works perfectly with Clerk auth. For `agent-browser`, the pragmatic path is a persistent browser profile with one-time human login, not `--state` reuse or CDP attach.
 
 Chrome MCP (`claude-in-chrome`) remains available as a supplementary tool but is not a primary — it depends on the user's browser state and is unreliable for autonomous agent work.
 
@@ -99,27 +99,34 @@ Playwright E2E tests authenticate through Clerk without any issues:
 
 **Status: Fully working.** Agents should prefer Playwright for visual verification tasks when possible.
 
-### Tool 2: agent-browser (Needs A Different Bridge)
+### Tool 2: agent-browser (Needs A Profile-Based Auth Path)
 
-agent-browser is built on Playwright's Chromium, but the reliable path is not `--state`. Two approaches matter:
+agent-browser can be useful for interactive verification, but the reliable path is not `--state` or CDP. Three approaches matter:
 
-#### A: Playwright + CDP bridge (committed, but not yet reproducibly verified)
-
-Authenticate a real Playwright browser with `@clerk/testing/playwright`, keep that browser alive with a fixed remote debugging port, then attach `agent-browser` via `agent-browser connect <port>`.
-
-The committed launcher lives in [scripts/start-agent-browser-cdp.ts](/Users/ray/Desktop/github/naltrexone-university-1/scripts/start-agent-browser-cdp.ts). It loads dotenv, validates the required Clerk env vars, authenticates through `signInWithClerkPassword`, opens `/app/dashboard`, prints the exact `agent-browser connect <port>` command, and keeps the authenticated browser alive until shutdown.
+#### A: Persistent profile with manual one-time login (working)
 
 ```bash
-pnpm agent-browser:auth
-agent-browser connect 9224
-agent-browser open http://localhost:3000/app/practice
+agent-browser --profile /tmp/clerk-profile --headed open http://localhost:3000/sign-in
+# Log in manually once via --headed mode
+# All subsequent agent-browser runs reuse the profile:
+agent-browser --profile /tmp/clerk-profile open http://localhost:3000/app/dashboard
 ```
 
-**Status:** partially verified only. The launcher itself reaches `/app/dashboard`, but a fresh local smoke run on `agent-browser 0.21.1` still redirected the connected `agent-browser` session to Clerk sign-in when opening `/app/dashboard` or `/app/practice`. Keep the launcher, but do not treat it as a solved authenticated workflow until the attached session is proven to stay inside `/app/*`.
+**Status:** verified locally on 2026-03-18 with `agent-browser 0.21.1`.
+
+What was verified:
+- human login in headed Chromium reached `/app/dashboard`
+- subsequent profile reuse stayed authenticated on `/app/dashboard`
+- authenticated navigation succeeded on `/app/practice`, `/app/history`, `/app/bookmarks`, and `/app/billing`
+- auth persisted after `agent-browser close` and reopen with the same profile path
+
+Operational gotchas discovered during verification:
+- if an `agent-browser` daemon is already running, later `--profile` flags are ignored until `agent-browser close`
+- the profile session still expires eventually; if Clerk redirects to sign-in again, redo the headed login step
 
 #### B: Playwright storageState bridge (`--state`) is currently unreliable
 
-Already documented in `docs/dev/agent-browser.md` as the older Option C. A script authenticates via `@clerk/testing/playwright`, exports `storageState`, and passes it to agent-browser via `--state`.
+Already documented in `docs/dev/agent-browser.md` as a rejected path. A script authenticates via `@clerk/testing/playwright`, exports `storageState`, and passes it to agent-browser via `--state`.
 
 ```ts
 // scripts/tmp-create-agent-browser-state.ts
@@ -140,24 +147,18 @@ agent-browser --state /tmp/agent-browser-state.json open http://localhost:3000/a
 
 This remains worth tracking as an upstream `agent-browser` issue, but it should not be the recommended auth bridge for this repo.
 
-#### C: Persistent profile with manual one-time login (fallback)
+#### C: Playwright + CDP bridge (`agent-browser connect`) is rejected
 
-```bash
-agent-browser --profile /tmp/clerk-profile --headed open http://localhost:3000/sign-in
-# Log in manually once via --headed mode
-# All subsequent agent-browser runs reuse the profile:
-agent-browser --profile /tmp/clerk-profile open http://localhost:3000/app/dashboard
-```
+CDP attach was investigated because it looked like a clean way to reuse Playwright's already-authenticated browser. In practice, the connected `agent-browser` session did not stay authenticated, even when the Playwright-owned browser itself was on `/app/dashboard`.
 
-**Pros:** Human login avoids Clerk's anti-automation for the login itself.
-**Cons:** Manual step. We did not fully re-verify a real Clerk profile workflow end-to-end in this audit, so this remains a plausible fallback rather than the primary recommendation.
+**Status:** rejected for this repo. Do not treat it as a working auth bridge.
 
 ## Deprioritized / Rejected Approaches
 
 | Approach | Status | Reason |
 |----------|--------|--------|
 | Chrome MCP as primary tool | Deprioritized | Depends on user's browser state; unreliable for autonomous agents |
-| CDP bridge (`agent-browser connect` to Playwright browser) | **Rejected** | CDP creates a new browser context that does not inherit Playwright's authenticated cookies. Fundamental CDP limitation ([Playwright #11442](https://github.com/microsoft/playwright/issues/11442)). Removed from codebase. |
+| CDP bridge (`agent-browser connect` to Playwright browser) | **Rejected** | Local verification did not preserve authenticated access in the attached `agent-browser` session. Treat as non-working for this repo. |
 | `--state` / storageState | **Rejected** | `agent-browser --state` silently fails to restore cookies/localStorage, even for non-Clerk sites. Upstream bug. |
 | Direct CLI fill | **Rejected** | Clerk's anti-automation blocks automated sign-in through agent-browser. |
 | Disable Clerk bot detection in dev | Rejected | Hacky; changes security posture for a tooling convenience |
@@ -179,6 +180,23 @@ agent-browser --profile /tmp/clerk-profile --headed open http://localhost:3000/s
 agent-browser --profile /tmp/clerk-profile open http://localhost:3000/app/dashboard
 ```
 
+If a daemon is already running, close it first so the new `--profile` flag actually takes effect:
+
+```bash
+agent-browser close
+agent-browser --profile /tmp/clerk-profile open http://localhost:3000/app/dashboard
+```
+
+### Separate Follow-Up: Ref-Click Interaction Weirdness
+
+During profile verification, auth worked but some ref-based button clicks did not:
+- `agent-browser click @ref` on `Start session` returned success without navigation
+- `agent-browser click @ref` on `Submit` returned success without submitting
+- a targeted `agent-browser eval "...click()"` fallback did work for those buttons
+- radio choice refs on Quick Practice did work in the same session
+
+This is **not** sufficient to classify as an agent-browser auth problem. Treat it as a separate interaction/tooling investigation, potentially involving app behavior, React event dispatch, or route-specific rendering timing.
+
 ---
 
 ## Decision Log
@@ -188,5 +206,6 @@ agent-browser --profile /tmp/clerk-profile open http://localhost:3000/app/dashbo
 | 2026-03-18 | Created as brainstorming doc | Recurring agent auth failure needs investigation before committing to a fix. |
 | 2026-03-18 | Playwright + agent-browser as primary tools; Chrome MCP deprioritized | Playwright already works. agent-browser is Playwright-based, so it should be solvable. Chrome MCP depends on user state and is unreliable for autonomous agent work. |
 | 2026-03-18 | Rejected: bot detection disable, eval token injection | Hacky approaches that change security posture or depend on undocumented internals. |
-| 2026-03-18 | Investigated `--state` and CDP bridge; both unreliable | `--state` fails even for non-Clerk localStorage. CDP bridge creates isolated contexts that don't inherit Playwright's auth cookies (Playwright #11442). |
-| 2026-03-18 | Removed CDP bridge script; `--profile` is the working path | `--profile` with one-time `--headed` human login verified working. CDP bridge script and `pnpm agent-browser:auth` removed as dead code. |
+| 2026-03-18 | Investigated `--state` and CDP bridge; both unreliable | `--state` fails even for non-Clerk localStorage. Local CDP attach did not preserve authenticated access in the connected `agent-browser` session. |
+| 2026-03-18 | `--profile` is the working path | `--profile` with one-time `--headed` human login verified working on dashboard, practice, history, bookmarks, and billing, and persisted after `agent-browser close` + reopen. |
+| 2026-03-18 | Ref-click weirdness scoped out of auth resolution | `Start session` and `Submit` ref-clicks could no-op while auth was already working. This needs separate investigation and should not be blamed on auth alone. |

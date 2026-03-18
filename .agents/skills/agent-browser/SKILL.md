@@ -39,6 +39,7 @@ agent-browser --profile /tmp/clerk-profile --headed open http://localhost:3000/s
 ```
 3. All subsequent agent-browser sessions reuse the profile (no human needed):
 ```bash
+agent-browser close # if a daemon is already running with different options
 agent-browser --profile /tmp/clerk-profile open http://localhost:3000/app/dashboard
 agent-browser get url          # verify: must show /app/dashboard, not Clerk sign-in
 agent-browser screenshot /tmp/screenshot.png --full
@@ -47,9 +48,10 @@ agent-browser screenshot /tmp/screenshot.png --full
 ### Gotchas
 
 - **Profile may expire.** If Clerk redirects to sign-in, redo the headed login step.
+- **`--profile` is ignored if a daemon is already running.** Run `agent-browser close` before switching into a profiled session or changing profile paths.
 - **Host must match exactly.** `localhost` and `127.0.0.1` are not interchangeable for Clerk cookies. Use whichever `NEXT_PUBLIC_APP_URL` resolves to (default: `localhost`).
-- **React server action clicks via refs may silently fail.** If `agent-browser click @ref` on a Submit/action button does nothing, fall back to: `agent-browser eval "Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('Submit'))?.click()"`.
-- **Hidden radio inputs can hang clicks.** Our choice inputs are `sr-only`. Prefer `agent-browser find text "<choice text>" click` over clicking radio refs directly.
+- **Some action-button ref clicks may silently fail.** We reproduced this on `Start session` and `Submit`: `agent-browser click @ref` returned success without changing app state, while a targeted JS click did work. Fallback: `agent-browser eval "Array.from(document.querySelectorAll('button')).find((button) => button.textContent?.includes('Submit'))?.click()"`.
+- **Radio refs are not universally broken.** On Quick Practice, direct radio-ref clicks worked. Prefer `agent-browser find text "<choice text>" click` when it is clearer, but do not assume every radio ref will hang.
 - **Always re-snapshot after navigation.** Refs are invalidated when the DOM changes.
 
 Full details: `docs/dev/agent-browser.md`
