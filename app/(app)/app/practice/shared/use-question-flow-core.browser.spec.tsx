@@ -101,6 +101,10 @@ function QuestionFlowCoreProbe() {
           core.setQuestion(
             createNextQuestion({
               questionId: 'q_1',
+              choices: [
+                { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
+                { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+              ],
               session: {
                 sessionId: 'session_1',
                 mode: 'exam',
@@ -239,6 +243,8 @@ test('restores exam draft selections without locking the answer', async () => {
     .element(screen.getByTestId('is-answered'))
     .toHaveTextContent('false');
 
+  await screen.getByRole('button', { name: 'load-no-session-q2' }).click();
+
   await screen.getByRole('button', { name: 'load-with-exam-draft' }).click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
@@ -255,6 +261,31 @@ test('restores exam draft selections without locking the answer', async () => {
     .toHaveTextContent('');
   await expect
     .element(screen.getByTestId('is-answered'))
+    .toHaveTextContent('false');
+});
+
+test('preserves a newer local exam selection during same-question resync', async () => {
+  const screen = await render(<QuestionFlowCoreProbe />);
+
+  await screen.getByRole('button', { name: 'load-with-exam-draft' }).click();
+  await expect
+    .element(screen.getByTestId('selected-choice-id'))
+    .toHaveTextContent('choice_2');
+
+  await screen.getByRole('button', { name: 'select-choice-1' }).click();
+  await expect
+    .element(screen.getByTestId('selected-choice-id'))
+    .toHaveTextContent('choice_1');
+
+  await screen.getByRole('button', { name: 'load-with-exam-draft' }).click();
+  await expect
+    .element(screen.getByTestId('selected-choice-id'))
+    .toHaveTextContent('choice_1');
+  await expect
+    .element(screen.getByTestId('is-answered'))
+    .toHaveTextContent('false');
+  await expect
+    .element(screen.getByTestId('has-submit-result'))
     .toHaveTextContent('false');
 });
 

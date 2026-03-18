@@ -300,6 +300,27 @@ describe('FinalizeExamAnswersUseCase', () => {
     );
   });
 
+  it('rejects missing sessions', async () => {
+    const questions = new FakeQuestionRepository([]);
+    const attempts = new FakeAttemptRepository();
+    const sessions = new FakePracticeSessionRepository([]);
+    const useCase = new FinalizeExamAnswersUseCase(
+      questions,
+      attempts,
+      sessions,
+      passthroughTransaction(questions, attempts, sessions),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        sessionId: 'missing',
+      }),
+    ).rejects.toEqual(
+      new ApplicationError('NOT_FOUND', 'Practice session not found'),
+    );
+  });
+
   it('rejects tutor sessions', async () => {
     const questions = new FakeQuestionRepository([]);
     const attempts = new FakeAttemptRepository();

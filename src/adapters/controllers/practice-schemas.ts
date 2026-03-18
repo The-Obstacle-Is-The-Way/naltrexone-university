@@ -146,6 +146,19 @@ export const PracticeSessionSummaryOutputSchema =
 export const FinalizeExamAnswersOutputSchema =
   PracticeSessionSummaryOutputSchema;
 
+export const SaveExamDraftAnswerOutputSchema = z
+  .object({
+    questionId: zUuid,
+    markedForReview: z.boolean(),
+    latestSelectedChoiceId: zUuid.nullable(),
+    latestIsCorrect: z.boolean().nullable(),
+    latestAnsweredAt: z.date().nullable(),
+    draftSelectedChoiceId: zUuid.nullable(),
+    draftSavedAt: z.date().nullable(),
+    draftCumulativeMs: z.number().int().min(0),
+  })
+  .strict();
+
 export const SetPracticeSessionQuestionMarkOutputSchema = z
   .object({
     questionId: zUuid,

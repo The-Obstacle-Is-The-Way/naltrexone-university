@@ -224,7 +224,7 @@ test.describe('review mode audit', () => {
     await breakdownLink.click();
     await expect(page).toHaveURL(/\/app\/questions\//, { timeout: 15_000 });
     await expect(page).toHaveURL(/mode=review/);
-    await expect(page).toHaveURL(/from=history/);
+    await expect(page).toHaveURL(/from=summary/);
     await expect(page.getByText(/Loading question/i)).toBeHidden({
       timeout: 15_000,
     });
@@ -266,6 +266,7 @@ test.describe('review mode audit', () => {
     await expect(page).toHaveURL(/\/app\/questions\//, { timeout: 15_000 });
     await expect(page).toHaveURL(/mode=review/);
     await expect(page).toHaveURL(/sessionId=/);
+    await expect(page).toHaveURL(/from=summary/);
     await expectFeedbackVisible(page);
     const sessionReviewRetryButton = page.getByRole('button', {
       name: /^(Practice Again|Try Again)$/,

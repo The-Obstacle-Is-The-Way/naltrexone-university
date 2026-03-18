@@ -11,7 +11,9 @@ import { usePracticeSessionNavigator } from '@/app/(app)/app/practice/[sessionId
 import { usePracticeSessionReviewStageState } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage-state';
 import { usePracticeSessionSummaryReview } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-summary-review';
 import { endSession } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
+import { getThrownErrorMessage } from '@/app/(app)/app/practice/practice-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
+import { reportClientError } from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {
   EndPracticeSessionOutput,
@@ -175,14 +177,33 @@ export function usePracticeSessionReviewStage(
 
   const onEndSession = useCallback(() => {
     void (async () => {
-      if (input.sessionMode === 'exam') {
-        const saved = await input.saveCurrentExamDraft();
-        if (!saved) return;
+      try {
+        if (input.sessionMode === 'exam') {
+          const saved = await input.saveCurrentExamDraft();
+          if (!saved) return;
+        }
+      } catch (error) {
+        if (!input.isMounted()) return;
+        reportClientError(error, {
+          component: 'UsePracticeSessionReviewStage',
+          action: 'saveCurrentExamDraftBeforeReview',
+        });
+        input.setLoadState({
+          status: 'error',
+          message: getThrownErrorMessage(error),
+        });
+        return;
       }
 
       reviewStage.onEndSession();
     })();
-  }, [input.saveCurrentExamDraft, input.sessionMode, reviewStage.onEndSession]);
+  }, [
+    input.isMounted,
+    input.saveCurrentExamDraft,
+    input.sessionMode,
+    input.setLoadState,
+    reviewStage.onEndSession,
+  ]);
 
   return {
     summary,

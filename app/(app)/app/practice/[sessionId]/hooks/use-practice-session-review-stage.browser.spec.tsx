@@ -266,4 +266,22 @@ describe('usePracticeSessionReviewStage (browser)', () => {
       .toBe('ready');
     expect(callOrder).toEqual(['save', 'review']);
   });
+
+  it('reports draft-save exceptions and does not enter the review stage', async () => {
+    saveCurrentExamDraftMock.mockRejectedValue(new Error('Draft save failed'));
+
+    const input = createInput('exam');
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStage(input),
+    );
+
+    harness.result.current.onEndSession();
+
+    await expect
+      .poll(() => getPracticeSessionReviewMock.mock.calls.length)
+      .toBe(0);
+    expect(getPracticeSessionReviewMock).not.toHaveBeenCalled();
+    expect(harness.result.current.reviewLoadState).toEqual({ status: 'idle' });
+    expect(harness.result.current.isInReviewStage).toBe(false);
+  });
 });

@@ -157,6 +157,16 @@ export function useQuestionFlowCore(
       }
 
       const isActiveExamQuestion = nextQuestion.session?.mode === 'exam';
+      if (
+        isActiveExamQuestion &&
+        lastSynchronizedQuestionIdRef.current === nextQuestion.questionId &&
+        selectedChoiceIdRef.current !== null &&
+        !isAnsweredRef.current &&
+        submitResultRef.current === null
+      ) {
+        return;
+      }
+
       const examDraftSelectedChoiceId =
         nextQuestion.session?.draftSelectedChoiceId;
       if (
@@ -200,16 +210,6 @@ export function useQuestionFlowCore(
           setSubmitResult(null);
         }
         lastSynchronizedQuestionIdRef.current = nextQuestion.questionId;
-        return;
-      }
-
-      if (
-        isActiveExamQuestion &&
-        lastSynchronizedQuestionIdRef.current === nextQuestion.questionId &&
-        selectedChoiceIdRef.current !== null &&
-        !isAnsweredRef.current &&
-        submitResultRef.current === null
-      ) {
         return;
       }
 

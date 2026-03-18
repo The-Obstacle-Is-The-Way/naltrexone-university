@@ -578,4 +578,149 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
       cumulativeMs: 50_000,
     });
   });
+
+  it('clears local exam draft state when the sessionId changes', async () => {
+    let nowMs = 1_000;
+    vi.spyOn(Date, 'now').mockImplementation(() => nowMs);
+
+    const getNextQuestionFn = vi
+      .fn<(input: unknown) => Promise<ActionResult<NextQuestion | null>>>()
+      .mockImplementation(async (request) => {
+        if (
+          typeof request === 'object' &&
+          request &&
+          'sessionId' in request &&
+          request.sessionId === 'session-2'
+        ) {
+          return ok(
+            createNextQuestion({
+              questionId: 'q_1',
+              choices: [
+                { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
+                { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+              ],
+              session: {
+                sessionId: 'session-2',
+                mode: 'exam',
+                index: 0,
+                total: 2,
+                isMarkedForReview: false,
+                draftSelectedChoiceId: null,
+                draftCumulativeMs: 0,
+              },
+            }),
+          );
+        }
+
+        if (
+          typeof request === 'object' &&
+          request &&
+          'fromIndex' in request &&
+          request.fromIndex === 0
+        ) {
+          return ok(
+            createNextQuestion({
+              questionId: 'q_2',
+              session: {
+                sessionId: 'session-1',
+                mode: 'exam',
+                index: 1,
+                total: 2,
+                isMarkedForReview: false,
+              },
+            }),
+          );
+        }
+
+        return ok(
+          createNextQuestion({
+            questionId: 'q_1',
+            choices: [
+              { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
+              { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+            ],
+            session: {
+              sessionId: 'session-1',
+              mode: 'exam',
+              index: 0,
+              total: 2,
+              isMarkedForReview: false,
+              draftSelectedChoiceId: null,
+              draftCumulativeMs: 0,
+            },
+          }),
+        );
+      });
+    const submitAnswerFn =
+      vi.fn<(input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>>();
+    const saveExamDraftAnswerFn = vi
+      .fn<
+        (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
+      >()
+      .mockImplementation(async (input) =>
+        ok({
+          questionId:
+            typeof input === 'object' &&
+            input &&
+            'questionId' in input &&
+            typeof input.questionId === 'string'
+              ? input.questionId
+              : 'q_1',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId:
+            typeof input === 'object' &&
+            input &&
+            'selectedChoiceId' in input &&
+            typeof input.selectedChoiceId === 'string'
+              ? input.selectedChoiceId
+              : 'choice_2',
+          draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
+          draftCumulativeMs:
+            typeof input === 'object' &&
+            input &&
+            'cumulativeMs' in input &&
+            typeof input.cumulativeMs === 'number'
+              ? input.cumulativeMs
+              : 0,
+        }),
+      );
+
+    const harness = await renderHook(
+      (props?: { sessionId: string }) =>
+        usePracticeSessionQuestionFlow({
+          sessionId: props?.sessionId ?? 'session-1',
+          isMounted: () => true,
+          getNextQuestionFn,
+          submitAnswerFn,
+          saveExamDraftAnswerFn,
+        }),
+      {
+        initialProps: { sessionId: 'session-1' },
+      },
+    );
+
+    await expect
+      .poll(() => harness.result.current.question?.questionId)
+      .toBe('q_1');
+
+    harness.result.current.onSelectChoice('choice_2');
+    await expect
+      .poll(() => harness.result.current.selectedChoiceId)
+      .toBe('choice_2');
+
+    nowMs = 31_000;
+    harness.result.current.onNextQuestion();
+    await expect
+      .poll(() => harness.result.current.question?.questionId)
+      .toBe('q_2');
+
+    await harness.rerender({ sessionId: 'session-2' });
+    await expect
+      .poll(() => harness.result.current.question?.session?.sessionId ?? null)
+      .toBe('session-2');
+    await expect.poll(() => harness.result.current.selectedChoiceId).toBeNull();
+  });
 });

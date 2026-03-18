@@ -1060,6 +1060,18 @@ describe('SubmitAnswerUseCase', () => {
       mode: 'exam',
       endedAt: null,
       questionIds: [questionId],
+      questionStates: [
+        {
+          questionId,
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId: 'c1',
+          draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
+          draftCumulativeMs: 12_000,
+        },
+      ],
     });
 
     const attempts = new FakeAttemptRepository();

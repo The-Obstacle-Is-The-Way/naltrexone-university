@@ -47,6 +47,7 @@ import {
   GetSessionHistoryInputSchema,
   PracticeSessionSummaryOutputSchema,
   SaveExamDraftAnswerInputSchema,
+  SaveExamDraftAnswerOutputSchema,
   SetPracticeSessionQuestionMarkInputSchema,
   SetPracticeSessionQuestionMarkOutputSchema,
   StartPracticeSessionInputSchema,
@@ -295,13 +296,15 @@ export const saveExamDraftAnswer = createAction({
   execute: async (input, d) => {
     const userId = await requireEntitledUserId(d);
 
-    return d.saveExamDraftAnswerUseCase.execute({
-      userId,
-      sessionId: input.sessionId,
-      questionId: input.questionId,
-      selectedChoiceId: input.selectedChoiceId,
-      cumulativeMs: input.cumulativeMs,
-    });
+    return SaveExamDraftAnswerOutputSchema.parse(
+      await d.saveExamDraftAnswerUseCase.execute({
+        userId,
+        sessionId: input.sessionId,
+        questionId: input.questionId,
+        selectedChoiceId: input.selectedChoiceId,
+        cumulativeMs: input.cumulativeMs,
+      }),
+    );
   },
 });
 

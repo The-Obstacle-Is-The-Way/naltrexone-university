@@ -108,6 +108,9 @@ type TutorActionBarProps = Pick<
 };
 
 function TutorActionBar(props: TutorActionBarProps) {
+  const isActionBarDisabled =
+    props.isPending || props.loadState.status === 'loading';
+
   return (
     <>
       {props.onPreviousQuestion ? (
@@ -116,7 +119,7 @@ function TutorActionBar(props: TutorActionBarProps) {
             type="button"
             variant="outline"
             className="rounded-full"
-            disabled={props.isPending || props.loadState.status === 'loading'}
+            disabled={isActionBarDisabled}
             onClick={props.onPreviousQuestion}
           >
             Previous
@@ -130,7 +133,7 @@ function TutorActionBar(props: TutorActionBarProps) {
         <Button
           type="button"
           className="rounded-full"
-          disabled={!props.canSubmit || props.isPending}
+          disabled={!props.canSubmit || isActionBarDisabled}
           onClick={props.onSubmit}
         >
           {props.isSubmittingAnswer ? 'Submitting…' : 'Submit'}
@@ -144,7 +147,7 @@ function TutorActionBar(props: TutorActionBarProps) {
           type="button"
           variant={props.submitResult ? 'default' : 'outline'}
           className="rounded-full"
-          disabled={props.isPending || props.loadState.status === 'loading'}
+          disabled={isActionBarDisabled}
           onClick={props.onNextQuestion}
         >
           Next
@@ -156,7 +159,7 @@ function TutorActionBar(props: TutorActionBarProps) {
         variant="outline"
         className="rounded-full"
         aria-pressed={props.isBookmarked}
-        disabled={props.bookmarkStatus === 'loading' || props.isPending}
+        disabled={props.bookmarkStatus === 'loading' || isActionBarDisabled}
         onClick={props.onToggleBookmark}
       >
         {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
@@ -225,7 +228,7 @@ function ExamActionBar(props: ExamActionBarProps) {
           variant="outline"
           className="rounded-full"
           aria-pressed={props.isMarkedForReview}
-          disabled={props.isMarkingForReview || props.isPending}
+          disabled={props.isMarkingForReview || isNavigationDisabled}
           onClick={props.onToggleMarkForReview}
         >
           {props.isMarkedForReview ? 'Unmark review' : 'Mark for review'}
@@ -314,7 +317,9 @@ export function PracticeView(props: PracticeViewProps) {
                 type="button"
                 variant="outline"
                 className="rounded-full"
-                disabled={props.isPending}
+                disabled={
+                  props.isPending || props.loadState.status === 'loading'
+                }
                 onClick={props.onEndSession}
               >
                 {endSessionLabel}

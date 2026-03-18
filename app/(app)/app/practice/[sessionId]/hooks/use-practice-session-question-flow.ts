@@ -155,6 +155,13 @@ export function usePracticeSessionQuestionFlow(
     onTryAgain();
   }, [input.autoload, onTryAgain]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: sessionId changes must clear session-scoped draft refs.
+  useEffect(() => {
+    savedExamDraftsRef.current.clear();
+    currentExamDraftEnteredAtRef.current = null;
+    currentExamDraftCumulativeMsRef.current = 0;
+  }, [input.sessionId]);
+
   useEffect(() => {
     if (question?.session?.mode !== 'exam') {
       currentExamDraftEnteredAtRef.current = null;

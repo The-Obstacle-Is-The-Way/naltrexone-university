@@ -95,6 +95,85 @@ test('supports exam controls and question interactions', async () => {
   expect(onNextQuestion).toHaveBeenCalledTimes(1);
 });
 
+test('disables mutation controls while internal question loading is in progress', async () => {
+  const tutorScreen = await render(
+    <PracticeView
+      loadState={{ status: 'loading' }}
+      question={{
+        questionId: 'question-1',
+        slug: 'question-1',
+        stemMd: 'What is the next best step?',
+        difficulty: 'easy',
+        choices: [
+          { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
+        ],
+        session: null,
+      }}
+      selectedChoiceId="choice_a"
+      isAnswered={false}
+      submitResult={null}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      canSubmit={true}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={() => undefined}
+    />,
+  );
+
+  await expect
+    .element(tutorScreen.getByRole('button', { name: 'Submit' }))
+    .toBeDisabled();
+  await expect
+    .element(tutorScreen.getByRole('button', { name: 'Bookmark' }))
+    .toBeDisabled();
+
+  const examScreen = await render(
+    <PracticeView
+      sessionInfo={{
+        sessionId: 'session-1',
+        mode: 'exam',
+        index: 0,
+        total: 10,
+        isMarkedForReview: false,
+      }}
+      loadState={{ status: 'loading' }}
+      question={{
+        questionId: 'question-1',
+        slug: 'question-1',
+        stemMd: 'What is the next best step?',
+        difficulty: 'easy',
+        choices: [
+          { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
+        ],
+        session: null,
+      }}
+      selectedChoiceId="choice_a"
+      isAnswered={false}
+      submitResult={null}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      isMarkingForReview={false}
+      canSubmit={true}
+      onEndSession={() => undefined}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onToggleMarkForReview={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={() => undefined}
+    />,
+  );
+
+  await expect
+    .element(examScreen.getByRole('button', { name: 'Mark for review' }))
+    .toBeDisabled();
+});
+
 test('disables choice selection after a submit in exam mode', async () => {
   const screen = await render(
     <PracticeView

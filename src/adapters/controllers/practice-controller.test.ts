@@ -646,6 +646,36 @@ describe('practice-controller', () => {
       ]);
     });
 
+    it('returns UNAUTHENTICATED when unauthenticated', async () => {
+      const deps = createDeps({ user: null });
+
+      const result = await finalizeExamAnswers(
+        { sessionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNAUTHENTICATED' },
+      });
+      expect(deps.finalizeExamAnswersUseCase.inputs).toEqual([]);
+    });
+
+    it('returns UNSUBSCRIBED when not entitled', async () => {
+      const deps = createDeps({ isEntitled: false });
+
+      const result = await finalizeExamAnswers(
+        { sessionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNSUBSCRIBED' },
+      });
+      expect(deps.finalizeExamAnswersUseCase.inputs).toEqual([]);
+    });
+
     it('returns the cached summary when idempotencyKey is reused', async () => {
       const deps = createDeps({
         finalizeOutput: {
@@ -739,6 +769,26 @@ describe('practice-controller', () => {
       expect(deps.saveExamDraftAnswerUseCase.inputs).toEqual([]);
     });
 
+    it('returns UNSUBSCRIBED when not entitled', async () => {
+      const deps = createDeps({ isEntitled: false });
+
+      const result = await saveExamDraftAnswer(
+        {
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          questionId: '22222222-2222-2222-2222-222222222222',
+          selectedChoiceId: '33333333-3333-3333-3333-333333333333',
+          cumulativeMs: 30_000,
+        },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNSUBSCRIBED' },
+      });
+      expect(deps.saveExamDraftAnswerUseCase.inputs).toEqual([]);
+    });
+
     it('returns saved draft state when use case succeeds', async () => {
       const saveDraftOutput = {
         questionId: '22222222-2222-2222-2222-222222222222',
@@ -773,6 +823,36 @@ describe('practice-controller', () => {
           cumulativeMs: 50_000,
         },
       ]);
+    });
+
+    it('returns VALIDATION_ERROR when the saved draft payload is malformed', async () => {
+      const deps = createDeps({
+        saveDraftOutput: {
+          questionId: '22222222-2222-2222-2222-222222222222',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId: '33333333-3333-3333-3333-333333333333',
+          draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
+          draftCumulativeMs: -1,
+        },
+      });
+
+      const result = await saveExamDraftAnswer(
+        {
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          questionId: '22222222-2222-2222-2222-222222222222',
+          selectedChoiceId: '33333333-3333-3333-3333-333333333333',
+          cumulativeMs: 50_000,
+        },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'VALIDATION_ERROR' },
+      });
     });
   });
 
