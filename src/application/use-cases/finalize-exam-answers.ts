@@ -31,7 +31,7 @@ export class FinalizeExamAnswersUseCase {
     private readonly questions: QuestionRepository,
     private readonly attempts: AttemptWriter,
     private readonly sessions: PracticeSessionRepository,
-    private readonly writeTransaction?: FinalizeExamAnswersWriteTransaction,
+    private readonly writeTransaction: FinalizeExamAnswersWriteTransaction,
   ) {}
 
   async execute(
@@ -56,13 +56,6 @@ export class FinalizeExamAnswersUseCase {
       throw new ApplicationError(
         'CONFLICT',
         'Cannot finalize a completed session',
-      );
-    }
-
-    if (!this.writeTransaction) {
-      throw new ApplicationError(
-        'INTERNAL_ERROR',
-        'writeTransaction is required for exam finalization',
       );
     }
 

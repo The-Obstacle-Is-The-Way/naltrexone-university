@@ -62,6 +62,15 @@ describe('FinalizeExamAnswersUseCase', () => {
     vi.useRealTimers();
   });
 
+  it('requires a writeTransaction dependency at compile time', () => {
+    const questions = new FakeQuestionRepository([]);
+    const attempts = new FakeAttemptRepository();
+    const sessions = new FakePracticeSessionRepository([]);
+
+    // @ts-expect-error Finalize exam requires an explicit transaction boundary.
+    void new FinalizeExamAnswersUseCase(questions, attempts, sessions);
+  });
+
   it('finalizes drafted exam answers into attempts and leaves unanswered questions untouched', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-17T12:30:00.000Z'));
