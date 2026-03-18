@@ -14,7 +14,7 @@ DEBT-321 shipped the exam action bar redesign: fixed three-slot layout (`[Previo
 
 - **Code verification:** Completed against current `HEAD`. D-1, D-2, and D-3 all still match the live code paths in `PracticeView`, `PracticeSessionPageView`, and `ExamReviewView`.
 - **Recent-commit check:** No production change after DEBT-322 creation has already resolved these issues. Current `HEAD` still renders the same spacer, labels, and last-question duplication described below.
-- **Browser verification (2026-03-18):** **Completed** via Claude-in-Chrome on the `dev` Vercel preview (authenticated session). A 2-question exam session was walked through Q1 → Q2 (last) → Review page → back to Q1. All three issues (D-1, D-2, D-3) confirmed with DOM inspection and visual evidence. Additional responsive and naming issues surfaced during the walkthrough (see D-4 below).
+- **Browser verification (2026-03-18):** **Completed** via Claude-in-Chrome on the `dev` Vercel preview (authenticated session). A 2-question exam session was walked through Q1 → Q2 (last) → Review page → back to Q1. D-1, D-2, and D-3 were confirmed with DOM inspection and visual evidence. Additional responsive and navigation observations surfaced during the walkthrough (see D-4 below), but D-4a is **not** corroborated by the current component code.
 - **Test impact:** Current tests already encode parts of the status quo for D-2 and D-3. D-1 is only partially encoded — visible-button assertions exist, but there is no test that explicitly asserts spacer presence or Q1 visual alignment.
 
 ---
@@ -46,7 +46,7 @@ The spacer preserves positional stability (Next stays in slot 2), but the visual
 ### Files
 
 - `app/(app)/app/practice/components/practice-view.tsx` — `ActionBarSpacer` (lines 88-90), `ExamActionBar` (lines 186-239), bottom action bar wrapper (lines 438-455)
-- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` — navigator-backed `onPreviousQuestion` / `hasPreviousQuestion` wiring (lines 101-114, 244-248)
+- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` — navigator-backed `previousQuestionId` derivation (lines 67-82) and `onPreviousQuestion` / `hasPreviousQuestion` wiring (lines 101-114, 244-248)
 - `app/(app)/app/practice/components/practice-view.test.tsx` — Q1 visible-button assertions (lines 512-560, 735-778)
 
 **Test note:** current tests assert the visible Q1 labels (`Next`, `Mark for review`) and the absence of a visible `Previous` button, but they do **not** assert spacer presence or layout directly. A D-1 fix would likely need new layout-focused coverage, not just existing assertion rewrites.
@@ -109,7 +109,7 @@ On the last exam question, "Review answers" appears in **two** places:
 Both call the same `onEndSession` handler. Both navigate to the same review stage.
 
 Code verification confirms this is implemented in two separate places:
-- `PracticeSessionPageView` hard-codes the header label to `Review answers` for exam mode
+- `PracticeSessionPageView` hard-codes the exam-mode `endSessionLabel` prop to `Review answers`
 - `PracticeView` switches the middle action-bar label from `Next` to `Review answers` when `isLastSessionQuestion && onEndSession`
 
 ### Problem
@@ -132,7 +132,7 @@ In practice, having the same button in two places on one screen looks redundant.
 ### Files
 
 - `app/(app)/app/practice/components/practice-view.tsx` — last-question derivation from `sessionInfo.index/total` (lines 253-257), `ExamActionBar` middle-label switch (lines 189-196), header button (lines 315-326)
-- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` — exam header-label wiring and navigation props into `PracticeView` (lines 235-248)
+- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` — exam-mode `endSessionLabel` wiring and navigation props into `PracticeView` (lines 235-248)
 - `docs/practice-engine/interaction-contracts.md` — Section 3 exam action bar layout and explicit "intentional duplication" note
 - `app/(app)/app/practice/components/practice-view.test.tsx` — bottom-bar last-question label assertions (lines 641-685)
 - `app/(app)/app/practice/components/practice-view.browser.spec.tsx` — browser interaction test for the bottom-bar `Review answers` button (lines 447-499)
@@ -147,10 +147,17 @@ These were surfaced during the 2026-03-18 Chrome agent walkthrough. They are not
 
 ### D-4a: Question navigator disappears at narrow viewports
 
-At ~460px width and below, the question navigator (numbered button bar at the top) vanishes entirely, leaving no way to jump between questions except via Previous/Next. This is a significant mobile usability gap — users on phones lose random-access navigation entirely.
+The browser walkthrough reported that at ~460px width and below, the question navigator (numbered button bar at the top) appeared to vanish, leaving no way to jump between questions except via Previous/Next.
 
-**Severity:** Medium. Mobile users are forced into strictly sequential navigation.
-**Recommendation:** Track as a separate responsive/mobile debt item.
+**Code audit correction:** the current `QuestionNavigator` implementation does **not** contain any responsive hiding. The navigator is rendered from `PracticeSessionPageView` whenever both `navigator` and `onNavigateQuestion` are present, and the navigator grid itself stays visible at all breakpoints:
+
+- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` — `QuestionNavigator` render gate (lines 198-205)
+- `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` — navigator grid classes `grid grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-10` (line 41)
+
+There is no `hidden`, `sm:hidden`, `sm:flex`, or media-query-based removal in the current component code. If the disappearance is still reproducible in a live browser, the cause is likely outside the currently audited navigator markup/classes (for example viewport clipping, parent layout, or environment-specific rendering).
+
+**Severity:** Unconfirmed in code.
+**Recommendation:** Do not treat this as code-confirmed product debt until it is reproduced again with a viewport-specific DOM/screenshot capture. If reproduced, track it as a separate responsive/mobile bug with exact repro steps.
 
 ### D-4b: Previous button potential race condition (low probability)
 
@@ -162,24 +169,42 @@ The browser walkthrough observed that when navigating to Q2 via certain paths, t
 
 **Mitigating factors:** Both navigation paths (Next button and Question Navigator) use the same `onNavigateQuestion` handler. The navigator refetches immediately on `questionId` change. The race window is typically <100ms. Buttons are disabled during loading via `isNavigationDisabled`.
 
-**Simple fix:** Derive `hasPreviousQuestion` from `sessionInfo.index > 0` instead of from the navigator lookup. This eliminates the navigator dependency entirely:
+**Important correction:** the implementation currently derives `previousQuestionId` from `navigator + currentQuestionId` via `useMemo`, then passes `hasPreviousQuestion={previousQuestionId !== null}` into `PracticeView`. That part of the original analysis was accurate. The original proposed fix, however, was overstated.
+
+**Visibility-only tweak:** derive the visibility flag from `props.sessionInfo?.index > 0` instead of from `previousQuestionId !== null`:
 ```typescript
-// Current (navigator-dependent, race-prone):
+// Current:
 hasPreviousQuestion={previousQuestionId !== null}
 
-// Proposed (index-based, race-free):
-hasPreviousQuestion={sessionInfo?.index > 0}
+// Visibility-only tweak:
+hasPreviousQuestion={props.sessionInfo?.index > 0}
 ```
 
-**Severity:** Low — hard to reproduce in normal usage, but trivial to fix.
-**Files:** `practice-session-page-view.tsx` lines 67-82, 247
+That would make the **button visibility** independent of navigator staleness, but it would **not** remove navigator dependency entirely because `onPreviousQuestion` still resolves the previous target from `previousQuestionId`:
+
+- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` — `previousQuestionId` derivation (lines 67-82)
+- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` — `onPreviousQuestion` callback (lines 101-105)
+- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` — `hasPreviousQuestion` prop wiring (line 247)
+
+So the fully correct statement is:
+
+1. The current visibility logic is navigator-derived and therefore theoretically race-prone.
+2. A one-line change to `props.sessionInfo?.index > 0` would only fix visibility.
+3. A complete fix would need both the visibility flag **and** the previous-question target to come from a stable, non-stale source.
+
+**Severity:** Low — theoretically plausible, hard to reproduce reliably, and not fully fixable with the original one-line snippet alone.
 
 ### D-4c: Responsive layout breaks header "Review answers" position
 
 At narrower widths, the "Review answers" header button drops from the right-side position to below the heading, changing the visual hierarchy. Users could miss it or confuse it with a different element.
 
+**Code audit clarification:** this is caused by the `PracticeView` header container switching from stacked to horizontal layout at the Tailwind `sm` breakpoint, not by flex-wrap:
+
+- `app/(app)/app/practice/components/practice-view.tsx` — outer header layout `flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between` (lines 302-303)
+- `app/(app)/app/practice/components/practice-view.tsx` — header action wrapper `flex items-center gap-3` (line 314)
+
 **Severity:** Low. Only affects narrow viewports; the action bar at the bottom is always available.
-**Recommendation:** Track with D-4a as part of a responsive audit.
+**Recommendation:** Track as part of a responsive audit. If D-4a is reproduced on current `HEAD`, handle both together.
 
 ---
 
@@ -202,6 +227,7 @@ These items were observed during the same walkthrough but are tracked elsewhere 
 - D-2 requires updating test assertions that currently match the literal `Review answers` label. If renamed, also update the flow naming chain (button → page heading → CTA) for consistency.
 - D-3 requires updating the interaction contract if the "intentional duplication" decision is reversed.
 - If D-2 and D-3 are done together, the rename + deduplication can land in one PR.
-- D-4b (Previous button race condition) is a one-line fix (`sessionInfo.index > 0`) that can ship independently in any PR touching this area.
-- D-4a and D-4c (responsive issues) should be tracked as a separate responsive audit debt item — they affect more than just the exam action bar.
-- ~~Before implementation, rerun the blocked browser walkthrough~~ — **Done.** Browser verification completed 2026-03-18 via Claude-in-Chrome on the `dev` Vercel preview. All items visually confirmed.
+- D-4b (Previous button race condition) is **not** fully solved by the original one-line snippet. `props.sessionInfo?.index > 0` would only stabilize button visibility; a complete fix must also remove navigator staleness from the previous-target resolution.
+- D-4a is currently a browser-only observation, not a code-confirmed responsive rule in `QuestionNavigator`. Do not treat it as resolved or even fully diagnosed without a fresh repro tied to current `HEAD`.
+- D-4c is a real responsive layout effect caused by the `PracticeView` header stacking below the Tailwind `sm` breakpoint.
+- ~~Before implementation, rerun the blocked browser walkthrough~~ — **Done.** Browser verification completed 2026-03-18 via Claude-in-Chrome on the `dev` Vercel preview. D-1, D-2, and D-3 were visually confirmed. D-4 items were recorded from that walkthrough, but only D-4b and D-4c are directly supported by the current code audit.
