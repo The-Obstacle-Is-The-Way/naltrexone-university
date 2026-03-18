@@ -21,7 +21,6 @@
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:integration:coverage": "vitest run --config vitest.integration.config.ts --coverage",
     "test:e2e": "playwright test",
-    "agent-browser:auth": "tsx scripts/start-agent-browser-cdp.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx scripts/seed.ts",

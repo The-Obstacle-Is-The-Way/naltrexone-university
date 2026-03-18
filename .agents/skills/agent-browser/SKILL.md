@@ -25,36 +25,30 @@ agent-browser close             # Close browser
 
 ## Project Note: Clerk-authenticated local apps
 
-All `/app/*` routes require Clerk auth. Do **not** use `agent-browser --state` — it is unreliable upstream.
+All `/app/*` routes require Clerk auth. Do **not** use `agent-browser --state` or CDP bridge approaches — both are unreliable with Clerk.
 
-### Prerequisites
+### How to authenticate
+
+The only reliable path is a **persistent profile with a one-time human login**:
 
 1. Dev server must be running: `pnpm dev` (wait for http://localhost:3000/api/health to return 200)
-2. `.env.local` must contain: `E2E_CLERK_USER_USERNAME`, `E2E_CLERK_USER_PASSWORD`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-
-### Authenticate (run in two shells)
-
-**Shell 1 — start the CDP bridge:**
+2. First time — human logs in via headed Chromium:
 ```bash
-pnpm agent-browser:auth
-# Waits until it prints "Agent-browser Clerk auth bridge is ready" with the CDP port
+agent-browser --profile /tmp/clerk-profile --headed open http://localhost:3000/sign-in
+# A Chromium window opens. Log in manually through Clerk. Once on /app/dashboard, you're done.
 ```
-
-**Shell 2 — connect and verify:**
+3. All subsequent agent-browser sessions reuse the profile (no human needed):
 ```bash
-agent-browser connect 9224
-agent-browser get url                                          # must still show /app/dashboard or another /app/* route
-agent-browser open http://localhost:3000/app/practice          # only continue if the session stayed authenticated
-agent-browser screenshot /tmp/screenshot.png --full            # capture evidence
+agent-browser --profile /tmp/clerk-profile open http://localhost:3000/app/dashboard
+agent-browser get url          # verify: must show /app/dashboard, not Clerk sign-in
+agent-browser screenshot /tmp/screenshot.png --full
 ```
-
-When done, Ctrl+C in Shell 1 to close the authenticated browser.
 
 ### Gotchas
 
+- **Profile may expire.** If Clerk redirects to sign-in, redo the headed login step.
 - **Host must match exactly.** `localhost` and `127.0.0.1` are not interchangeable for Clerk cookies. Use whichever `NEXT_PUBLIC_APP_URL` resolves to (default: `localhost`).
-- **The current CDP bridge is still under re-validation.** `pnpm agent-browser:auth` can print readiness while the connected `agent-browser` session still lands on Clerk sign-in. Always verify with `agent-browser get url` before assuming authenticated access.
-- **React server action clicks via refs may silently fail.** If `agent-browser click @ref` on a Submit/action button does nothing, fall back to a targeted JS click such as `agent-browser eval "Array.from(document.querySelectorAll('button')).find((button) => button.textContent?.includes('Submit'))?.click()"`. This is a CDP dispatch quirk with React's event system.
+- **React server action clicks via refs may silently fail.** If `agent-browser click @ref` on a Submit/action button does nothing, fall back to: `agent-browser eval "Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('Submit'))?.click()"`.
 - **Hidden radio inputs can hang clicks.** Our choice inputs are `sr-only`. Prefer `agent-browser find text "<choice text>" click` over clicking radio refs directly.
 - **Always re-snapshot after navigation.** Refs are invalidated when the DOM changes.
 

@@ -327,18 +327,16 @@ All app pages under `/app/*` are protected by Clerk auth. If you need to visuall
 **Quick start** (requires `pnpm dev` running first):
 
 ```bash
-# Shell 1: start authenticated CDP bridge
-pnpm agent-browser:auth
-# Shell 2: connect and explore
-agent-browser connect 9224
-agent-browser get url
+# Reuse existing profile (human must have logged in once via --headed):
+agent-browser --profile /tmp/clerk-profile open http://localhost:3000/app/dashboard
+agent-browser get url          # must show /app/dashboard, not Clerk sign-in
 ```
 
-Success criterion: `agent-browser get url` must remain on `/app/dashboard` or another authenticated `/app/*` route. If it lands on Clerk sign-in, the current CDP attach did not reproduce authenticated access in that environment. Do not assume the bridge is working just because `pnpm agent-browser:auth` printed readiness.
+If no profile exists yet, a human must log in once: `agent-browser --profile /tmp/clerk-profile --headed open http://localhost:3000/sign-in` — then log in through the Chromium window that opens.
 
-Do not use `agent-browser --state` — it is unreliable upstream. Full details and fallback options: `docs/dev/agent-browser.md`.
+Do not use `agent-browser --state` or CDP bridge approaches — both are unreliable with Clerk. Full details: `docs/dev/agent-browser.md`.
 
-Keep the host exact when reusing auth state: `localhost` and `127.0.0.1` are not interchangeable for Clerk cookies.
+Keep the host exact: `localhost` and `127.0.0.1` are not interchangeable for Clerk cookies.
 
 **If using Claude Code with Chrome MCP tools**, the user's browser is typically already authenticated — use `tabs_context_mcp` to check existing tabs before creating new ones.
 

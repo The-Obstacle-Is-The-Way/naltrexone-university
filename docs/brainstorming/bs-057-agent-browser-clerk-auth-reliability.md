@@ -157,30 +157,27 @@ agent-browser --profile /tmp/clerk-profile open http://localhost:3000/app/dashbo
 | Approach | Status | Reason |
 |----------|--------|--------|
 | Chrome MCP as primary tool | Deprioritized | Depends on user's browser state; unreliable for autonomous agents |
+| CDP bridge (`agent-browser connect` to Playwright browser) | **Rejected** | CDP creates a new browser context that does not inherit Playwright's authenticated cookies. Fundamental CDP limitation ([Playwright #11442](https://github.com/microsoft/playwright/issues/11442)). Removed from codebase. |
+| `--state` / storageState | **Rejected** | `agent-browser --state` silently fails to restore cookies/localStorage, even for non-Clerk sites. Upstream bug. |
+| Direct CLI fill | **Rejected** | Clerk's anti-automation blocks automated sign-in through agent-browser. |
 | Disable Clerk bot detection in dev | Rejected | Hacky; changes security posture for a tooling convenience |
 | `eval`-based testing token injection | Rejected | Fragile monkey-patching; undocumented; breaks on Clerk SDK updates |
 
 ---
 
-## Open Questions
-
-1. **Is `agent-browser --state` fundamentally broken in the current local build, or only broken under specific daemon/session conditions?** The local evidence points to a broader restore problem.
-2. **Should we upstream a minimal reproduction against `agent-browser` showing `--state` fails even for non-Clerk localStorage round-trips?** This is likely more useful than continuing to debug Clerk-specific behavior first.
-3. **Do we want to keep the persistent-profile fallback documented, or remove it until a real Clerk profile flow is verified end-to-end?**
-
----
-
 ## Recommendation
 
-**Primary guaranteed path:** Playwright itself for authenticated verification.
+**For Playwright-based verification:** Use Playwright directly via `@clerk/testing/playwright`. This is the fully automated, zero-human-intervention path. It works perfectly and always will.
 
-**Most promising agent-browser path:** Playwright-authenticated browser + `agent-browser connect <cdp-port>`, but re-verify locally before relying on it.
+**For agent-browser interactive verification:** Use `--profile` with a one-time human login via `--headed` mode. Verified working on 2026-03-18 with `agent-browser 0.21.1`. The profile persists the Clerk session across agent-browser runs until it expires.
 
-This keeps reusing our existing Clerk-tested Playwright infrastructure and still looks better than `--state`, but the attached session is not yet reproducibly authenticated on local `agent-browser 0.21.1`.
+```bash
+# One-time setup (human logs in):
+agent-browser --profile /tmp/clerk-profile --headed open http://localhost:3000/sign-in
 
-**Fallback:** manual one-time login with `--profile` remains plausible if a human can complete the login interactively.
-
-**Do not recommend right now:** Playwright `storageState` -> `agent-browser --state` as the primary auth path. Treat it as an upstream bug investigation, not a solved workflow.
+# All subsequent agent runs (no human needed):
+agent-browser --profile /tmp/clerk-profile open http://localhost:3000/app/dashboard
+```
 
 ---
 
@@ -191,6 +188,5 @@ This keeps reusing our existing Clerk-tested Playwright infrastructure and still
 | 2026-03-18 | Created as brainstorming doc | Recurring agent auth failure needs investigation before committing to a fix. |
 | 2026-03-18 | Playwright + agent-browser as primary tools; Chrome MCP deprioritized | Playwright already works. agent-browser is Playwright-based, so it should be solvable. Chrome MCP depends on user state and is unreliable for autonomous agent work. |
 | 2026-03-18 | Rejected: bot detection disable, eval token injection | Hacky approaches that change security posture or depend on undocumented internals. |
-| 2026-03-18 | Updated recommendation: Playwright + CDP is primary, `--state` is unreliable | Local verification showed Clerk-authenticated Playwright state works in fresh Playwright but not in `agent-browser --state`, even on `localhost`. |
-| 2026-03-18 | Committed Playwright + CDP launcher script | `scripts/start-agent-browser-cdp.ts` and `pnpm agent-browser:auth` make the leading bridge reusable instead of leaving it as a throwaway doc snippet. |
-| 2026-03-18 | Reopened CDP bridge verification after live smoke on `agent-browser 0.21.1` | `pnpm agent-browser:auth` reached `/app/dashboard`, but `agent-browser connect/open` still landed on Clerk sign-in. The launcher remains useful, but the authenticated attach workflow is not yet reproducibly verified. |
+| 2026-03-18 | Investigated `--state` and CDP bridge; both unreliable | `--state` fails even for non-Clerk localStorage. CDP bridge creates isolated contexts that don't inherit Playwright's auth cookies (Playwright #11442). |
+| 2026-03-18 | Removed CDP bridge script; `--profile` is the working path | `--profile` with one-time `--headed` human login verified working. CDP bridge script and `pnpm agent-browser:auth` removed as dead code. |

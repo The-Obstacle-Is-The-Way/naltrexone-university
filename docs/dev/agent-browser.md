@@ -51,125 +51,40 @@ EMAIL=$(node -e "require('dotenv').config({path:'.env.local'});require('dotenv')
 PASSWORD=$(node -e "require('dotenv').config({path:'.env.local'});require('dotenv').config({path:'.env'});process.stdout.write(process.env.E2E_CLERK_USER_PASSWORD||'')")
 ```
 
-### Option A: Playwright + CDP Bridge (Current best lead, but re-verify locally)
+### Option A: Persistent Profile with Human Login (Recommended)
 
-As of 2026-03-18, the committed CDP bridge is the best path under active investigation:
+Verified working on 2026-03-18 with `agent-browser 0.21.1` and Clerk.
 
-1. Use Playwright + `@clerk/testing/playwright` to authenticate a real browser session
-2. Launch that browser with a fixed remote debugging port
-3. Attach `agent-browser` to the live authenticated browser via CDP
-
-Use the committed launcher in [scripts/start-agent-browser-cdp.ts](/Users/ray/Desktop/github/naltrexone-university-1/scripts/start-agent-browser-cdp.ts). It loads dotenv, validates the required Clerk env vars, authenticates with `signInWithClerkPassword`, opens `/app/dashboard`, prints the exact `agent-browser connect <port>` command, and stays alive until you stop it.
-
-In another shell:
+**First time — human logs in once via headed Chromium:**
 
 ```bash
-pnpm agent-browser:auth
-agent-browser connect 9224
-agent-browser get url
+agent-browser --profile /tmp/clerk-profile --headed open http://localhost:3000/sign-in
+# A Chromium window opens on screen. Log in manually through Clerk.
+# Once you reach /app/dashboard, the profile is saved automatically.
+```
+
+**All subsequent sessions — agents reuse the profile (no human needed):**
+
+```bash
+agent-browser --profile /tmp/clerk-profile open http://localhost:3000/app/dashboard
+agent-browser get url          # verify: must show /app/dashboard, not Clerk sign-in
+agent-browser screenshot /tmp/screenshot.png --full
 agent-browser open http://localhost:3000/app/practice
 ```
 
+If Clerk redirects to sign-in, the profile session has expired — redo the headed login step.
+
 Important:
 - Use the exact host from `NEXT_PUBLIC_APP_URL`. Do not switch between `localhost` and `127.0.0.1`; Clerk cookies are host-specific.
-- Keep the Playwright browser process alive while `agent-browser` is connected.
-- `scripts/start-agent-browser-cdp.ts` also accepts `AGENT_BROWSER_CDP_PORT` if you need a non-default port.
-- Re-verify immediately after connect: `agent-browser get url` must remain on `/app/dashboard` or another authenticated `/app/*` route. On local `agent-browser 0.21.1`, the launcher itself reached `/app/dashboard`, but a subsequent `agent-browser connect/open` smoke run still landed on Clerk sign-in. Treat this as unresolved until the connected agent-browser session is proven authenticated in your current environment.
+- The profile is stored at `/tmp/clerk-profile`. Do not commit it to the repo.
 
-### Option B: Persistent Profile (Manual Login Once, fallback)
+### Rejected Approaches (Do Not Use)
 
-This remains the most plausible human-assisted fallback:
-
-```bash
-agent-browser --profile /tmp/agent-browser-profile --headed open http://localhost:3000/sign-in
-# Log in manually via --headed mode, then reuse the profile:
-agent-browser --profile /tmp/agent-browser-profile open http://localhost:3000/app/dashboard
-```
-
-We did not fully re-verify a real Clerk manual-login profile flow end-to-end in this audit, so treat this as a fallback rather than the primary recommendation.
-
-### Option C: Native State Save/Load (Currently unreliable; do not rely on this)
-
-As of 2026-03-18 on local `agent-browser 0.20.13`, `--state` did not reliably restore cookies/localStorage, even on a fresh daemon and even when the state file came from `agent-browser state save` itself.
-
-Plain Playwright `storageState` works correctly in plain Playwright. The failure appears to be in `agent-browser --state`, not in Clerk's testing-token design.
-
-Do not use this path as the recommended auth strategy until upstream behavior is fixed and re-verified.
-
-If you experiment with it anyway:
-- Use the exact host from `NEXT_PUBLIC_APP_URL`
-- Do not mix `localhost` and `127.0.0.1`
-- Treat success as provisional until manually verified
-
-### Option D: Playwright StorageState -> `--state` (Also currently unreliable)
-
-Create a temporary script that signs in via Clerk and exports cookies:
-
-```ts
-// scripts/tmp-create-agent-browser-state.ts (do NOT commit)
-import { clerkSetup, clerk } from '@clerk/testing/playwright';
-import { config } from 'dotenv';
-import { chromium } from '@playwright/test';
-
-async function main() {
-  config({ path: '.env.local' });
-  config({ path: '.env' });
-  const baseURL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  const username = process.env.E2E_CLERK_USER_USERNAME;
-  const password = process.env.E2E_CLERK_USER_PASSWORD;
-
-  if (!username || !password) throw new Error('Missing Clerk E2E credentials');
-
-  await clerkSetup();
-  const browser = await chromium.launch();
-  const context = await browser.newContext({ baseURL });
-  const page = await context.newPage();
-
-  await page.goto('/sign-in');
-  await clerk.signIn({
-    page,
-    signInParams: { strategy: 'password', identifier: username, password },
-  });
-  await page.goto('/app/dashboard');
-  await context.storageState({ path: '/tmp/agent-browser-state.json' });
-  await browser.close();
-}
-
-main().catch((e) => { console.error(e); process.exit(1); });
-```
-
-```bash
-pnpm tsx scripts/tmp-create-agent-browser-state.ts
-agent-browser --state /tmp/agent-browser-state.json open http://localhost:3000/app/dashboard
-```
-
-This path is retained only for reference while the upstream `--state` restore problem is unresolved.
-
-Requires a running dev server at `NEXT_PUBLIC_APP_URL` (e.g., `pnpm dev`), and the host must match exactly.
-
-Delete `scripts/tmp-create-agent-browser-state.ts` when done — do not commit it.
-
-### Option E: Direct Fill via CLI
-
-If you must sign in directly through agent-browser (least reliable due to Clerk's anti-automation):
-
-```bash
-# Extract credentials via Node (most robust; avoids shell parsing differences)
-EMAIL=$(node -e "require('dotenv').config({path:'.env.local'});require('dotenv').config({path:'.env'});process.stdout.write(process.env.E2E_CLERK_USER_USERNAME||'')")
-PASSWORD=$(node -e "require('dotenv').config({path:'.env.local'});require('dotenv').config({path:'.env'});process.stdout.write(process.env.E2E_CLERK_USER_PASSWORD||'')")
-
-agent-browser open http://localhost:3000/sign-in
-agent-browser wait --load networkidle
-agent-browser snapshot -i
-agent-browser fill @e3 "$EMAIL"          # Email field (verify ref from snapshot)
-agent-browser click @e6                  # Continue button (verify ref)
-agent-browser wait 2000                  # Wait for password field
-agent-browser snapshot -i                # Re-snapshot for new refs
-agent-browser fill @eN "$PASSWORD"       # Password field (use actual ref)
-agent-browser click @eM                  # Continue button (use actual ref)
-agent-browser wait --url "**/app/dashboard"
-agent-browser state save /tmp/auth-state.json   # Save for reuse
-```
+| Approach | Why It Failed |
+|----------|--------------|
+| **CDP bridge** (`agent-browser connect <port>` to Playwright browser) | CDP creates a new browser context that does not inherit Playwright's authenticated cookies. The connected session lands on Clerk sign-in regardless of Playwright's auth state. Fundamental CDP limitation ([Playwright #11442](https://github.com/microsoft/playwright/issues/11442)). |
+| **`--state` / storageState** | `agent-browser --state` silently fails to restore cookies/localStorage, even for non-Clerk sites. Upstream bug in agent-browser. |
+| **Direct CLI fill** | Clerk's anti-automation blocks automated sign-in attempts through agent-browser. |
 
 ---
 
@@ -212,14 +127,11 @@ Each session has independent cookies, storage, and auth state.
 
 ## Common Pitfalls
 
-1. **Dev server must be running** — `pnpm dev` must be live before running `pnpm agent-browser:auth`. The CDP bridge authenticates against the running app at `NEXT_PUBLIC_APP_URL` (default `http://localhost:3000`).
-2. **Refs expire after navigation** — Always re-snapshot after `open`, `click` that navigates, or DOM changes
-3. **Hidden radios can hang clicks** — Our answer-choice inputs are `sr-only`; clicking the `radio` refs may hang. Prefer `agent-browser find text "<choice text>" click` (or click the wrapping `<label>`).
-4. **React server action clicks via refs may silently fail** — If `agent-browser click @ref` on a Submit or action button does nothing (no error, no state change), the CDP click dispatch isn’t triggering React’s event system. Fall back to a targeted JS click such as `agent-browser eval "Array.from(document.querySelectorAll('button')).find((button) => button.textContent?.includes('Submit'))?.click()"`. Verified on 2026-03-18: ref-based Submit click failed, `eval`-based `.click()` succeeded.
-5. **`.env.local` isn’t auto-loaded** — Export env vars yourself or use Node dotenv extraction (see above)
-6. **Clerk auth + hostnames** — `localhost` and `127.0.0.1` are not interchangeable for Clerk cookies in this repo; use the exact host from `NEXT_PUBLIC_APP_URL`
-7. **`agent-browser --state` is currently unreliable** — Native state restore is still not trustworthy on local `agent-browser 0.21.1`
-8. **The current CDP bridge still requires verification per run** — `pnpm agent-browser:auth` can reach `/app/dashboard`, but the connected `agent-browser` session may still land on Clerk sign-in. Check `agent-browser get url` before assuming authenticated access.
-9. **Clerk sign-in has anti-automation** — Prefer Playwright itself over direct fill (Option E) when you need guaranteed authenticated verification
-9. **`agent-browser wait --url` uses glob patterns** — Use `**/dashboard` not `/app/dashboard`
-10. **Temp files** — Never commit state JSON, screenshots, or temp scripts to the repo
+1. **Dev server must be running** — `pnpm dev` must be live before using agent-browser against `localhost:3000`.
+2. **Always use `--profile /tmp/clerk-profile`** — Without it, agent-browser starts an unauthenticated session that Clerk will redirect to sign-in.
+3. **Refs expire after navigation** — Always re-snapshot after `open`, `click` that navigates, or DOM changes.
+4. **Hidden radios can hang clicks** — Our answer-choice inputs are `sr-only`; clicking the `radio` refs may hang. Prefer `agent-browser find text "<choice text>" click` (or click the wrapping `<label>`).
+5. **React server action clicks via refs may silently fail** — If `agent-browser click @ref` on a Submit or action button does nothing, fall back to: `agent-browser eval "Array.from(document.querySelectorAll(‘button’)).find(b => b.textContent?.includes(‘Submit’))?.click()"`.
+6. **Clerk auth + hostnames** — `localhost` and `127.0.0.1` are not interchangeable for Clerk cookies; use the exact host from `NEXT_PUBLIC_APP_URL`.
+7. **`agent-browser wait --url` uses glob patterns** — Use `**/dashboard` not `/app/dashboard`.
+8. **Temp files** — Never commit state JSON, screenshots, or temp scripts to the repo.
