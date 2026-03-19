@@ -14,7 +14,7 @@ Implement exactly these four changes in one PR:
 1. **D-1:** Remove the exam-mode Q1 spacer. When `hasPreviousQuestion` is false, render nothing in slot 1 and let the visible buttons left-align.
 2. **D-2:** Rename the exam header exit from `Review answers` to `Finish exam`. Rename the exam review page heading from `Review Questions` to `Review & Submit`.
 3. **D-3:** Keep the exam bottom-bar middle button labeled `Next` on every question, including the last question. On the last question it must still enter the review stage.
-4. **D-4b:** Change exam/tutor session Previous-button visibility from navigator-derived `previousQuestionId !== null` to `(props.sessionInfo?.index ?? 0) > 0`.
+4. **D-4b:** Change exam/tutor session Previous-button visibility from navigator-derived `previousQuestionId !== null` to `(props.sessionInfo?.index ?? 0) > 0`, while disabling the visible button until a concrete previous target resolves.
 
 Do **not** implement D-4a or D-4c in this item. D-4a is not code-confirmed. D-4c is real but out of scope for this locked implementation.
 
@@ -263,22 +263,34 @@ That test is required. It protects the exact D-3 failure mode described above.
 
 In `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx`:
 
-- Line **247**
+- Lines **247-248**
 - Old:
   - `hasPreviousQuestion={previousQuestionId !== null}`
 - New:
   - `hasPreviousQuestion={(props.sessionInfo?.index ?? 0) > 0}`
+  - `canNavigatePrevious={previousQuestionId !== null}`
+
+In `app/(app)/app/practice/components/practice-view.tsx`:
+
+- Add `canNavigatePrevious?: boolean` to `PracticeViewProps` at lines **17-53**.
+- Thread that prop through `TutorActionBarProps` and `ExamActionBarProps` at lines **93-108** and **175-189**.
+- Disable the `Previous` button when `canNavigatePrevious === false`:
+  - tutor action bar at lines **112-133**
+  - exam action bar at lines **191-214**
 
 ### Scope boundary
 
-This debt item intentionally fixes **visibility only**.
+This debt item still does **not** re-source the previous target. It only separates:
+
+- **visibility** from `sessionInfo.index`
+- **clickability** from `previousQuestionId !== null`
 
 Do **not** change:
 
 - `previousQuestionId` derivation at lines **67-82**
 - `onPreviousQuestion` callback at lines **101-105**
 
-That means this item removes the spacer/visibility regression but does **not** change how the previous target is resolved.
+That means this item removes the spacer/visibility regression, avoids an enabled no-op `Previous` button, and still leaves previous-target resolution navigator-derived.
 
 ### Test updates
 
@@ -297,8 +309,12 @@ Add a new browser test adjacent to that block:
 - `sessionInfo.index = 1`
 - `onNavigateQuestion={() => undefined}`
 - expect the `Previous` button to be visible
+- expect the `Previous` button to be disabled
 
-Do **not** click the button in that new test. This item does not change previous-target resolution.
+Add one direct `PracticeView` unit assertion:
+
+- render `PracticeView` with `hasPreviousQuestion={true}` and `canNavigatePrevious={false}`
+- assert the rendered `Previous` button carries the `disabled` attribute
 
 ---
 
@@ -348,6 +364,6 @@ This item is intentionally narrow:
 - rename the exam review heading to `Review & Submit`
 - keep the footer label `Next` on every question
 - preserve the existing last-question `onEndSession` click path
-- stabilize Previous-button visibility from `sessionInfo.index`
+- stabilize Previous-button visibility from `sessionInfo.index` while disabling it until the previous target resolves
 
 No backend, use-case, repository, or schema changes are required.

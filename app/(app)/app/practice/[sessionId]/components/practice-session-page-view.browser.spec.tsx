@@ -566,7 +566,7 @@ test('hasPreviousQuestion is false on the first question when navigator is missi
     .not.toBeInTheDocument();
 });
 
-test('renders Previous when navigator is missing but sessionInfo indicates a prior question exists', async () => {
+test('renders Previous when navigator is missing but sessionInfo indicates a prior question exists, but keeps it disabled until the target resolves', async () => {
   const screen = await render(
     <PracticeSessionPageView
       summary={null}
@@ -605,9 +605,9 @@ test('renders Previous when navigator is missing but sessionInfo indicates a pri
     />,
   );
 
-  await expect
-    .element(screen.getByRole('button', { name: 'Previous' }))
-    .toBeVisible();
+  const previousButton = screen.getByRole('button', { name: 'Previous' });
+  await expect.element(previousButton).toBeVisible();
+  await expect.element(previousButton).toBeDisabled();
 });
 
 test('routes the last exam-question footer Next button through onEndSession instead of onNextQuestion', async () => {

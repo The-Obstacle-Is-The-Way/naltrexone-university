@@ -376,6 +376,40 @@ describe('PracticeView', () => {
     expect(html).toContain('Previous');
   });
 
+  it('disables Previous when canNavigatePrevious is false', () => {
+    const question = createNextQuestion();
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+        onPreviousQuestion={() => undefined}
+        hasPreviousQuestion={true}
+        canNavigatePrevious={false}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const previousButton = Array.from(doc.querySelectorAll('button')).find(
+      (button) => button.textContent?.includes('Previous'),
+    );
+
+    expect(previousButton).toBeDefined();
+    expect(previousButton?.hasAttribute('disabled')).toBe(true);
+  });
+
   it('hides Previous when hasPreviousQuestion is false', () => {
     const question = createNextQuestion();
 

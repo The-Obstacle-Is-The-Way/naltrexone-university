@@ -244,6 +244,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       onPreviousQuestion={
         props.onNavigateQuestion ? onPreviousQuestion : undefined
       }
+      canNavigatePrevious={previousQuestionId !== null}
       hasPreviousQuestion={(props.sessionInfo?.index ?? 0) > 0}
       hasNextQuestion={nextQuestionId !== null}
     />

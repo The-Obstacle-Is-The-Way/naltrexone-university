@@ -49,6 +49,7 @@ export type PracticeViewProps = {
   onNextQuestion: () => void;
   onPreviousQuestion?: () => void;
   hasPreviousQuestion?: boolean;
+  canNavigatePrevious?: boolean;
   hasNextQuestion?: boolean;
 };
 
@@ -95,6 +96,7 @@ type TutorActionBarProps = Pick<
   | 'canSubmit'
   | 'hasNextQuestion'
   | 'hasPreviousQuestion'
+  | 'canNavigatePrevious'
   | 'isBookmarked'
   | 'isPending'
   | 'loadState'
@@ -110,6 +112,8 @@ type TutorActionBarProps = Pick<
 function TutorActionBar(props: TutorActionBarProps) {
   const isActionBarDisabled =
     props.isPending || props.loadState.status === 'loading';
+  const isPreviousDisabled =
+    isActionBarDisabled || props.canNavigatePrevious === false;
 
   return (
     <>
@@ -119,7 +123,7 @@ function TutorActionBar(props: TutorActionBarProps) {
             type="button"
             variant="outline"
             className="rounded-full"
-            disabled={isActionBarDisabled}
+            disabled={isPreviousDisabled}
             onClick={props.onPreviousQuestion}
           >
             Previous
@@ -171,6 +175,7 @@ function TutorActionBar(props: TutorActionBarProps) {
 type ExamActionBarProps = Pick<
   PracticeViewProps,
   | 'hasPreviousQuestion'
+  | 'canNavigatePrevious'
   | 'isMarkingForReview'
   | 'isPending'
   | 'loadState'
@@ -186,6 +191,8 @@ type ExamActionBarProps = Pick<
 function ExamActionBar(props: ExamActionBarProps) {
   const isNavigationDisabled =
     props.isPending || props.loadState.status === 'loading';
+  const isPreviousDisabled =
+    isNavigationDisabled || props.canNavigatePrevious === false;
   const onMiddleAction =
     props.isLastSessionQuestion && props.onEndSession
       ? props.onEndSession
@@ -199,7 +206,7 @@ function ExamActionBar(props: ExamActionBarProps) {
             type="button"
             variant="outline"
             className="rounded-full"
-            disabled={isNavigationDisabled}
+            disabled={isPreviousDisabled}
             onClick={props.onPreviousQuestion}
           >
             Previous
@@ -436,6 +443,7 @@ export function PracticeView(props: PracticeViewProps) {
         >
           {isExamMode ? (
             <ExamActionBar
+              canNavigatePrevious={props.canNavigatePrevious}
               hasPreviousQuestion={props.hasPreviousQuestion}
               isLastSessionQuestion={isLastSessionQuestion}
               isMarkedForReview={isMarkedForReview}
@@ -451,6 +459,7 @@ export function PracticeView(props: PracticeViewProps) {
             <TutorActionBar
               bookmarkStatus={props.bookmarkStatus}
               canSubmit={props.canSubmit}
+              canNavigatePrevious={props.canNavigatePrevious}
               hasNextQuestion={props.hasNextQuestion}
               hasPreviousQuestion={props.hasPreviousQuestion}
               isBookmarked={props.isBookmarked}
