@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-19
 **Triggered by:** Manual walkthrough of the exam mode end-to-end flow; "summary sandwich" friction
-**Scope:** After clicking "Submit exam," the user lands on Session Summary before seeing any feedback — the highest-value learning moment is gated behind an extra click
+**Scope:** After clicking "Submit exam," the user lands on Session Summary before seeing any detailed explanations — the highest-value learning moment is still gated behind an extra action
 **Related:** [BS-055](./bs-055-exam-session-interaction-model-rethink.md) (exam interaction model), [interaction-contracts.md](../practice-engine/interaction-contracts.md) (§5 Post-Session Flows), AF-6 (Try Again in exam review)
 
 ---
@@ -12,16 +12,16 @@
 ### Current exam flow
 
 ```text
-Questions → Review & Submit → [Submit exam] → Session Summary → [Review your answers] → Question Review → [Back to Summary] → Session Summary
+Questions → Review & Submit → [Submit exam] → Session Summary → [Review your answers] or [question row link] → Question Review → [Back to Summary] → Session Summary
 ```
 
 Three distinct friction points:
 
 **P1 — The "summary sandwich."** The user visits Session Summary twice: once immediately after submission, and again after reviewing questions (via "Back to Summary"). The two visits are identical. The first feels premature; the second feels redundant.
 
-**P2 — Feedback gated behind an extra click.** In exam mode, the user has seen zero feedback during the entire session. The feedback reveal — seeing what they got right and wrong, reading explanations, clinical pearls — is the climactic learning moment. But the current flow puts a stats page between them and that moment. The user must scan the summary, find the "Review your answers" button, click it, and only then see what they actually got wrong.
+**P2 — Explanations gated behind an extra action.** In exam mode, the user has seen zero explanations during the entire session. The feedback reveal — reading the rationale, clinical pearls, and why-other-answers breakdowns — is the climactic learning moment. But the current flow puts a stats page between them and that moment. The user must take a second action from Summary (`Review your answers` or a clickable question row) before seeing the full explanation content.
 
-**P3 — Visual confusion.** The Session Summary page and the Question Review page share similar visual structures (cards, question lists, stats). Landing on Session Summary immediately after the Review & Submit screen feels like "another screen that looks the same" — the user doesn't immediately register that the exam is over and learning mode has begun.
+**P3 — The two summary-style screens are too similar.** The strongest visual resemblance is between **Review & Submit** and **Session Summary**: both lead with a heading, stat cards, a question list, and a CTA area. That makes the transition after submission feel flatter than it should. The question review page is more distinct, but the user does not reach it until after another click.
 
 ### How it contrasts with tutor mode
 
@@ -55,7 +55,11 @@ Because `review` is cleared and `summary` is set in the same logical flow, the p
 
 ### The question review page is a separate route
 
-"Review your answers" navigates to `/app/questions/[slug]?from=summary&mode=review&sessionId=...` — a completely different Next.js page (`question-page-client.tsx`). This is by design: the question review page is a shared component used by History, Bookmarks, Summary, and the Dashboard. It's not embedded within the practice session page.
+`SessionSummaryView` exposes **two** routes into the question review page:
+- the primary CTA: `Review your answers`
+- each clickable question row inside `Question breakdown`
+
+Both navigate to `/app/questions/[slug]?from=summary&mode=review&sessionId=...` — a completely different Next.js page (`question-page-client.tsx`). This is by design: the question review page is a shared component used by History, Bookmarks, Summary, and the Dashboard. It's not embedded within the practice session page.
 
 This means the proposed flow change has two architectural options:
 - **Option A:** Embed a question-by-question review within the practice session page (new in-session review stage)
@@ -69,8 +73,8 @@ This means the proposed flow change has two architectural options:
 |-----------|------------|
 | **User impact** | Medium-high. Every exam session ends with this friction. Users who want to learn from mistakes (the app's primary value) face a needless detour. |
 | **Frequency** | Every completed exam session. |
-| **Workaround** | User can click "Review your answers" (one extra click). Not broken, just suboptimal. |
-| **Learning cost** | Some users may not click "Review your answers" at all, missing the feedback entirely. The default path (summary → leave) optimizes for "see score and go" rather than "learn from mistakes." |
+| **Workaround** | User can click `Review your answers` or a question row in `Question breakdown` (still one extra action). Not broken, just suboptimal. |
+| **Learning cost** | Some users may leave after the score screen without drilling into explanations. The default path still optimizes for "see score and go" rather than "learn from mistakes." |
 
 ---
 
@@ -87,7 +91,10 @@ After "Submit exam" finalizes the session:
 2. The page enters a new **post-exam review stage** that shows the first question with full feedback (correct/incorrect pill, explanation, clinical pearl, "Why Other Answers Are Wrong")
 3. The existing `QuestionNavigator` component (already used during the exam) stays visible, now color-coded by correctness (green/red/gray)
 4. Previous/Next navigate between questions with feedback revealed
-5. **"View Summary"** button replaces "Back to Summary" — takes user to Session Summary as the final destination
+5. A single **`View Summary`** escape hatch is visible from the start, but it should not create another overloaded four-button footer. Recommended pattern:
+   - persistent top-right `View Summary` link during review
+   - bottom bar focused on movement/utility (`Previous`, `Bookmark`, `Next`)
+   - on the last reviewed question, the primary forward action becomes `Finish review` or `View Summary`
 6. No "Try Again" button (addresses AF-6)
 
 **Pros:**
@@ -172,7 +179,7 @@ The [exam-answer-secrecy-policy.md](../practice-engine/exam-answer-secrecy-polic
 
 ### G4 — "Skip review" escape hatch
 
-Some users want their score and want to leave. The new flow should always offer a quick path to Summary without requiring the user to navigate through every question. A persistent "View Summary" / "Skip to Summary" link satisfies this.
+Some users want their score and want to leave. The new flow should always offer a quick path to Summary without requiring the user to navigate through every question. A persistent top-right `View Summary` link satisfies this without adding yet another always-visible footer action.
 
 ### G5 — Session reopen behavior
 
@@ -208,6 +215,24 @@ The Session Summary shows "View in History" as one of three CTAs (`session-summa
 
 The label "Back to Summary" (code-verified at `question-page-client.tsx:118`) frames the action as regression — returning to a screen already visited. In the proposed Option A flow, the user hasn't visited Summary yet, making "Back to" factually wrong. Even in the current flow, the label encourages a mental model of looping rather than forward progression. Renaming to **"View Summary"** or **"Finish Review"** reframes the action as forward movement.
 
+### G10 — Session Summary hydrates in two beats
+
+The post-submit Summary does **not** arrive fully hydrated in one paint. `PracticeSessionPageView` switches to `SessionSummaryView` as soon as `props.summary` exists (`practice-session-page-view.tsx:116-123`), but the breakdown/CTA content depends on `summaryReview`. In the live walkthrough, the heading and stat cards appeared first, then the `Question breakdown` links and `Review your answers` CTA appeared after `summaryReview` resolved (`session-summary-view.tsx:22-32`, `75-127`).
+
+This makes the current experience even more stats-first than a static screenshot suggests: the user first sees score tiles, then the review affordances hydrate a moment later.
+
+### G11 — `Review your answers` is not the only path into explanations
+
+The brainstorming claim that the CTA is the only route into explanations is inaccurate. `SessionBreakdownList` renders each question row as a direct review link when the question is available (`session-summary-view.tsx:92-99` + `session-breakdown-list.tsx:27-48`). The real friction is not button scarcity; it is that **any** explanation path requires a second action after submission.
+
+### G12 — Question review currently has two separate "Back to Summary" exits
+
+In the current summary-origin question review route, the same destination appears twice:
+- top-right text link (`question-page-client.tsx:227-234`)
+- bottom ghost action (`question-page-client.tsx:456-461`)
+
+Any BS-058 implementation that renames or removes the summary exit needs to update **both** surfaces or intentionally collapse them into one.
+
 ---
 
 ## 6. Recommendation
@@ -219,6 +244,12 @@ The label "Back to Summary" (code-verified at `question-page-client.tsx:118`) fr
 3. It naturally addresses AF-6 (the practice session page controls what actions are available, not the shared question review route)
 4. Session state (summary data) stays in memory — no need to refetch or pass via URL
 5. The score banner + first question with feedback is the ideal "climactic reveal" moment
+6. It lets us fix AF-6 and the duplicate summary exits at the same time, instead of carrying those quirks into a new route-based flow
+
+**Important refinement:** do **not** preserve the current four-choice question-review footer by simply swapping `Try Again` for `View Summary`. That would keep most of the decision fatigue while only changing the label. The cleaner model is:
+- top-right `View Summary` link from the start
+- bottom bar centered on question-to-question movement and bookmarking
+- final question uses a forward-completion CTA (`Finish review` or `View Summary`)
 
 The implementation would add a fourth state to `PracticeSessionPageView`:
 
@@ -240,23 +271,52 @@ onFinalizeReview():
 
 ---
 
-## 7. Open Questions
+## 7. Resolved Product Decisions
 
-| # | Question | Options | Leaning |
-|---|----------|---------|---------|
-| Q1 | Should the score banner show accuracy + counts, or just the headline number? | (a) Full stats (b) Just accuracy (c) Compact | **Decided: (c)** — "Score: 60% (3/5)", concise but informative |
-| Q2 | Bulk fetch vs per-question fetch for feedback data? | (a) Bulk fetch (b) Per-question | **Decided: (a)** — single server call, no loading spinners between questions |
-| Q3 | Should the post-exam review auto-start on Q1 or on the first incorrect question? | (a) Always Q1 (b) First incorrect (c) First incorrect or Q1 | **Decided: (a)** — predictable, linear, review everything in order |
-| Q4 | Should the post-exam review be skippable from the start? | (a) "View Summary" visible from the beginning (b) Only after viewing all questions (c) Always visible + "Skip" label initially | Open — leaning (a), respect user autonomy |
-| Q5 | Should the question review route also suppress "Try Again" for exam sessions independently of BS-058? | Yes (AF-6 is a standalone fix) / No (bundle with BS-058) | Open — leaning Yes |
-| Q6 | Should the question breakdown in SessionSummaryView still show "Review your answers" after BS-058? | (a) Keep it (b) Remove it (c) Keep but label "Review again" | Open — leaning (a), keep for History-launched and reopen scenarios |
-| Q7 | What happens on session reopen? | (a) Always show summary (post-exam review is ephemeral) (b) Track review completion in session state | Open — leaning (a), simpler, matches tutor mode |
-| Q8 | Should AF-6 be replaced with a batch "Practice missed questions" CTA on Summary? | (a) Just suppress (b) Suppress + add batch CTA (c) Keep per-question but relabel | **Decided: (b)** — suppress per-question "Try Again", add "Practice missed questions" on Summary, demote "View in History" to subtle link |
-| Q9 | Should "View in History" be deprioritized on the post-exam Summary? | (a) Keep as-is (b) Demote to subtle link (c) Remove entirely | **Decided: (b)** — bundled with Q8 decision |
+| # | Question | Decision |
+|---|----------|----------|
+| Q1 | Should the score banner show accuracy + counts, or just the headline number? | **Compact.** Show something like `Score: 60% (3/5)` — concise but informative. |
+| Q2 | Bulk fetch vs per-question fetch for feedback data? | **Bulk fetch.** One server call avoids loading spinners between reviewed questions. |
+| Q3 | Should the post-exam review auto-start on Q1 or on the first incorrect question? | **Always Q1.** Predictable, linear, and avoids hidden ordering rules. |
+| Q4 | Should the post-exam review be skippable from the start? | **Yes.** Keep `View Summary` visible from the beginning as a top-right escape hatch. Do not force completion. |
+| Q5 | Should the question review route also suppress `Try Again` for exam sessions independently of BS-058? | **Yes.** AF-6 should be fixed independently as well, so reopened summary/history review paths do not keep reviving exam-inappropriate reattempt actions. |
+| Q6 | Should the question breakdown in `SessionSummaryView` still show `Review your answers` after BS-058? | **Yes.** Keep `Review your answers` plus clickable question rows on the terminal summary for reopen and re-review scenarios. Summary is no longer the first post-submit surface, but it still needs re-entry paths. |
+| Q7 | What happens on session reopen? | **Always show summary.** The post-exam review stage is ephemeral; a completed session reopens to Summary, matching tutor-mode expectations. |
+| Q8 | Should AF-6 be replaced with a batch `Practice missed questions` CTA on Summary? | **Yes.** Suppress per-question reattempt in exam review and replace it with a batch tutor-mode follow-up on Summary. |
+| Q9 | Should `View in History` be deprioritized on the post-exam Summary? | **Yes.** Demote it to a subtle link; it is a power-user path, not the main post-exam outcome. |
 
 ---
 
-## 8. External Review: Chrome Agent Walkthrough (2026-03-19)
+## 8. Verification Notes
+
+### Local Playwright walkthrough (2026-03-19)
+
+A local Playwright walkthrough of the current app was run against the checked-out code using the repo's Clerk E2E helpers. Screenshots were captured at each transition:
+
+- `audit-screenshots/bs-058/01-practice-setup.png`
+- `audit-screenshots/bs-058/02-q1-exam.png`
+- `audit-screenshots/bs-058/03-q2-exam.png`
+- `audit-screenshots/bs-058/04-review-and-submit.png`
+- `audit-screenshots/bs-058/05-submit-confirm-modal.png`
+- `audit-screenshots/bs-058/06-session-summary.png`
+- `audit-screenshots/bs-058/07-question-review-q1.png`
+- `audit-screenshots/bs-058/08-question-review-q2.png`
+- `audit-screenshots/bs-058/09-session-summary-return.png`
+
+Key confirmations from that walkthrough:
+
+- After `Confirm submit`, the user lands on **Session Summary** before seeing explanations.
+- `Review your answers` is **not** the only route into explanations; the question breakdown rows are also direct review links.
+- `Back to Summary` returns to the same Summary screen already visited, producing the loop.
+- `Finish exam` is visible in the header on every active exam question.
+- The active exam navigator uses answered/unanswered styling, not correct/incorrect colors.
+- The review-question navigator uses correctness colors (green/red/outline).
+- The review screen shows **four bottom actions per question**, with the reattempt label varying by correctness:
+  - Q1 in the walkthrough: `Practice Again`, `Bookmark`, `Next`, `Back to Summary`
+  - Q2 in the walkthrough: `Previous`, `Try Again`, `Bookmark`, `Back to Summary`
+- The review screen also duplicates the summary exit with a top-right `Back to Summary` link.
+
+### External Review: Chrome Agent Walkthrough (2026-03-19)
 
 An independent Claude-in-Chrome agent performed a full end-to-end exam walkthrough (2 questions, exam mode, submission through review). Its observations were verified against the codebase. Findings are integrated throughout this document. Key takeaways:
 
@@ -267,11 +327,13 @@ An independent Claude-in-Chrome agent performed a full end-to-end exam walkthrou
 - **Summary→Review→Summary loop:** Structural fact — the flow is a round-trip, not a funnel
 - **"Back to Summary" label implies regression:** Confirmed exact label at `question-page-client.tsx:118`
 - **"View in History" is low-value in post-exam context:** Leads to the same content via a longer path
+- **Review & Submit and Session Summary are the visually similar pair:** This is the flatter transition, more than Summary vs Question Review
 
 ### Verified false positives (claims contradicted by code)
 
 - **"All three CTAs have equal visual weight"** — FALSE. "Review your answers" uses `variant='default'` (filled primary button). "View in History" uses `variant='outline'`. "Back to Practice" is conditional: `variant='outline'` when "Review your answers" is present, `variant='default'` when it's not (i.e., no reviewable questions exist). When all three CTAs are visible, the hierarchy is correctly established (`session-summary-view.tsx:103-127`). The dark theme may reduce perceived contrast between filled and outline buttons, but the code is correct.
 - **"No red/urgency for incorrect answers"** — FALSE. The breakdown list uses `text-destructive` (red) for "Incorrect" and `text-success` (green) for "Correct" (`session-breakdown-list.tsx:63-65`). Color coding exists and is correctly implemented.
+- **"`Review your answers` is the only way into explanations"** — FALSE. The summary breakdown rows are also clickable review links (`session-summary-view.tsx:92-99` + `session-breakdown-list.tsx:27-48`).
 
 ### Novel suggestion worth considering
 
@@ -288,5 +350,6 @@ The Chrome agent preferred a variant of **Option C** (single scrollable summary 
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-03-19 | Created BS-058 | Manual walkthrough revealed "summary sandwich" friction: feedback gated behind extra click, summary visited twice, visual confusion between screens |
-| 2026-03-19 | Added Chrome agent review findings | Independent walkthrough confirmed AF-6, decision fatigue (4 buttons), loop structure, and "Back to Summary" regression label. Rejected 2 false claims (CTA weight parity, missing red color coding). Incorporated "Practice missed questions" batch CTA idea. |
-| 2026-03-19 | Decided Q1 (compact score banner), Q2 (bulk fetch), Q3 (start at Q1), Q8+Q9 (suppress Try Again + add batch CTA + demote View in History) | User confirmed all recommended options. 4 of 9 questions remain open (Q4-Q7) — all have clear leanings and can be finalized during implementation spec. |
+| 2026-03-19 | Added Chrome agent review findings | Independent walkthrough confirmed AF-6, decision fatigue (4 buttons), loop structure, and "Back to Summary" regression label. Rejected false claims around CTA weight parity and missing color coding. Incorporated "Practice missed questions" batch CTA idea. |
+| 2026-03-19 | Added local Playwright verification | Verified the live flow with captured screenshots, confirmed the summary hydration delay, confirmed duplicate summary exits on the question review screen, and corrected the claim that `Review your answers` is the only path into explanations. |
+| 2026-03-19 | Finalized Q1-Q9 | No open product questions remain. Chosen direction: Option A, compact score banner, bulk fetch, linear Q1 start, skippable review, standalone AF-6 suppression, terminal Summary, batch `Practice missed questions`, demoted `View in History`. |
