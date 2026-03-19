@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-18
+**Last Updated:** 2026-03-19
 
 ---
 
@@ -19,7 +19,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
 | [DEBT-318](./debt-318-tutor-bookmark-before-answer.md) | Bookmark visible before feedback in tutor mode and quick practice — keep the surface, but delay the action until inline feedback/explanation is visible | P3 | — |
-| [DEBT-324](./debt-324-session-scoped-practice-missed-questions.md) | "Practice missed questions" CTA on exam Summary — currently links to global incorrect pool instead of session-scoped questions. Open decision: remove the CTA entirely (A), fix with session-scoped filtering (B), or relabel honestly (C). Needs live walkthrough to decide. | P3 | — |
+| [DEBT-324](./debt-324-session-scoped-practice-missed-questions.md) | Remove misleading `Practice missed questions` CTA from exam Summary — current link opens the user's global latest-incorrect Quick Practice pool, and BS-058 post-exam review already covers the immediate learning/review need. | P3 | — |
 **Next Debt ID:** DEBT-325
 
 ---
