@@ -1,29 +1,25 @@
-# DEBT-327: Interaction Contracts Doc — Mixed Current/Proposed Status Cleanup
+# DEBT-327: Interaction Contracts Doc — Mixed Current/Proposed Status Cleanup (Resolved)
 
 **Priority:** P4
 **Created:** 2026-03-19
+**Resolved:** 2026-03-19
 **Source:** BS-058 post-implementation audit
 **Related:** [interaction-contracts.md](../practice-engine/interaction-contracts.md)
 
 ---
 
-## The Problem
+## Resolution
 
-`docs/practice-engine/interaction-contracts.md` was written during BS-055 as a proposed target. After DEBT-321, DEBT-322, and BS-058, most sections now describe shipped behavior, but:
+Resolved during the 2026-03-19 BS-058/post-BS-058 documentation audit.
 
-- The document header still says "Proposed — documents the target state from BS-055 decisions"
-- Section 3 (Exam Mode) has "Current vs Proposed" tables that are now stale — the "Proposed" column is the current implementation
-- Section 5 (Post-Session Flows) was updated for BS-058 but the surrounding sections weren't reconciled
+Changes made:
 
-## Proposed Fix
+- Updated the document header so it now describes current implementation rather than a proposed target
+- Removed the stale "Current state vs proposed" headings/tables
+- Reconciled the surrounding sections so Section 5's BS-058 post-session flow no longer sits inside a mixed current/proposed frame
 
-- Update header status to "Implemented" or "Current"
-- Remove or collapse "Current vs Proposed" tables into single "Current" descriptions
-- Verify each section against shipped code and remove any remaining proposed-future language
-- Docs-only change, no production code
+This debt no longer needs to remain active.
 
-## Acceptance Criteria
+## Audit Note
 
-- [ ] Header status reflects "Implemented" or "Current"
-- [ ] No "Current vs Proposed" tables remain
-- [ ] Every section accurately describes shipped behavior
+The underlying behavior did not change. This was a documentation-status cleanup only.

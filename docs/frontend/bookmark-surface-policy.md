@@ -1,6 +1,6 @@
 # Bookmark Surface Policy
 
-**Last Updated:** 2026-03-16
+**Last Updated:** 2026-03-19
 **Related:** [BS-053](../brainstorming/bs-053-bookmark-vs-mark-for-review-collision.md) (bookmark vs mark-for-review collision), [BS-052](../brainstorming/bs-052-bookmark-icon-toggle-replacement.md) (bookmark icon toggle), [Bookmarks Dossier](./pages/bookmarks.md) (complete vertical-slice documentation)
 
 ---
@@ -26,8 +26,8 @@ This document is the single source of truth for **where the bookmark action appe
 | Practice Session (Exam) | `/app/practice/[sessionId]` | NO | Bookmark removed by BS-053; exam action bar keeps only exam-scoped mark-for-review |
 | Quick Practice | `/app/practice/quick` | YES | Action bar pill; current implementation shows it before submit as well, with DEBT-318 tracking a post-feedback-only refinement |
 | Exam Review (pre-submit) | `/app/practice/[sessionId]` (review state) | NO | List/navigator view only |
-| Session Summary | `/app/practice/[sessionId]` (summary state) | NO | Summary stats + CTAs only; current review CTA routes through `from=history&sessionId=...` |
-| Question Review | `/app/questions/[slug]?mode=review` | YES | Action bar pill in review mode once bookmark state hydrates; current production callers come from History, Bookmarks, and Dashboard |
+| Session Summary | `/app/practice/[sessionId]` (summary state) | NO | Summary stats + CTAs only; current review CTA routes through `from=summary&sessionId=...` |
+| Question Review | `/app/questions/[slug]?mode=review` | YES | Action bar pill in review mode once bookmark state hydrates; current production callers come from Summary, History, Bookmarks, and Dashboard |
 | History Questions tab | `/app/history?tab=questions` | NO | List view; click-through to review; filters are result/difficulty/tag/source/sort only |
 | History Sessions breakdown | `/app/history?tab=sessions` | NO | Session rows + breakdown rows click through to review |
 | Dashboard Recent Sessions | `/app/dashboard` | NO | Summary row; click-through to review; no bookmark-specific widget/count |

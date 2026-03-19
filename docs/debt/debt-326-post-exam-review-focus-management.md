@@ -13,15 +13,25 @@ When the user clicks Previous/Next or a navigator button in the post-exam review
 
 The controlled panel (`id={controlledPanelId}`, `tabIndex={-1}`) has `outline-none` but no effect moves focus to it after navigation.
 
-## How the Active Exam Handles This
+## What The Current Code Actually Does Elsewhere
 
-During the active exam, `PracticeView` receives a `questionAreaRef` prop and the parent hook calls `questionAreaRef.current?.focus()` after loading a new question. The post-exam review does not wire this up.
+There is **not** an existing session-level focus handoff in the active exam flow that the post-exam review simply forgot to copy.
+
+What exists today:
+
+- `PracticeView` can accept a `questionAreaRef`, but the session runner does not pass one during active exam navigation
+- the only nearby focus recovery in this slice is Quick Practice error recovery, where `usePracticeQuestionAnswerFlow` focuses the question area after an error-path reload
+
+So this debt is still real, but it is a **new accessibility gap in the post-exam review**, not a regression from an already-solved active-exam pattern.
 
 ## Proposed Fix
 
 After question navigation in `PostExamReviewView`, move focus to the controlled question panel (`id={controlledPanelId}`). This can be done with a `useEffect` that fires when `currentQuestionId` changes, calling `.focus()` on the panel ref.
 
-Optionally, add an `aria-live="polite"` region or visually hidden announcement like "Question 3 of 10" so screen readers announce the transition.
+Also add a polite announcement mechanism for screen readers, either by:
+
+- making the focused panel sufficiently descriptive to announce the question change, or
+- adding an `aria-live="polite"` region such as "Question 3 of 10"
 
 ## Acceptance Criteria
 

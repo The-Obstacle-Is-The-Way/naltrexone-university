@@ -39,7 +39,12 @@ When `currentRow.isCorrect === null` and `currentRow.selectedChoiceId === null` 
 
 1. The yellow warning banner: "You did not answer this question during this session." (matching the standalone route's `border-warning/50 bg-warning/5` styling)
 2. The `QuestionCard` with `correctChoiceId` highlighted but no selected choice
-3. The `Feedback` component with `isCorrect={false}` (the explanation is still valuable) — OR skip the "Incorrect" pill and show only the explanation content
+3. The explanation/reference/choice-explanation content **without** the red `Incorrect` verdict pill
+
+`Feedback` as currently written is **not** sufficient for step 3, because `isCorrect={false}` always renders the red `Incorrect` pill. The implementation therefore needs one of these two shapes:
+
+- extend `Feedback` with an unanswered/verdict-suppressed mode, or
+- render a small explanation-only wrapper for the unanswered case instead of using `Feedback` directly
 
 The key visual signal: **yellow/warning for unanswered, red/destructive for incorrect.** This matches the navigator colors (outline vs destructive) and gives the user accurate feedback about what happened.
 

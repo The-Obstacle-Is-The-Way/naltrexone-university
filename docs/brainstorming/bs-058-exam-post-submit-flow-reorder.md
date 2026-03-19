@@ -1,15 +1,34 @@
 # BS-058: Exam Post-Submit Flow Reorder
 
 **Date:** 2026-03-19
-**Triggered by:** Manual walkthrough of the exam mode end-to-end flow; "summary sandwich" friction
-**Scope:** After clicking "Submit exam," the user lands on Session Summary before seeing any detailed explanations — the highest-value learning moment is still gated behind an extra action
+**Triggered by:** Manual walkthrough of the pre-BS-058 exam mode end-to-end flow; "summary sandwich" friction
+**Status:** Implemented on 2026-03-19. The shipped flow now enters an in-session post-exam review stage before Session Summary. This document preserves the original analysis, records the implementation outcome, and notes follow-up debt discovered after ship.
+**Scope:** Historical problem analysis for the old "Submit exam → Session Summary first" flow, plus the code-verified implementation outcome that replaced it
 **Related:** [BS-055](../_archive/brainstorming/bs-055-exam-session-interaction-model-rethink.md) (exam interaction model), [interaction-contracts.md](../practice-engine/interaction-contracts.md) (§5 Post-Session Flows), AF-6 (Try Again in exam review)
 
 ---
 
-## 1. The Problem
+## Current Shipped State
 
-### Current exam flow
+The current exam post-submit flow is:
+
+```text
+Questions → Review & Submit → [Submit exam] → Confirm submit → Post-Exam Review → [View Summary / Finish review] → Session Summary
+```
+
+Shipped implementation, verified against code:
+
+- `PracticeSessionPageView` now has a dedicated `postExamSummary + postExamReview` branch before `summary` (`app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx`)
+- `usePracticeSessionReviewStage` defers the finalized summary, loads completed-session feedback in bulk, and only promotes Summary when `onViewSummary()` fires (`app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts`)
+- `PostExamReviewView` renders the score banner, correctness-colored navigator, inline feedback, top-right `View Summary`, and `Finish review` on the last question (`app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx`)
+- The standalone question-review route now suppresses `Practice Again` / `Try Again` for exam-owned review attempts via `reviewSessionMode !== 'exam'` (`app/(app)/app/questions/[slug]/question-page-client.tsx`)
+- `Practice missed questions` also shipped on `SessionSummaryView`, but post-ship audit now tracks that CTA for removal in [DEBT-324](../debt/debt-324-session-scoped-practice-missed-questions.md)
+
+---
+
+## 1. Original Problem Statement (Pre-BS-058 Audit)
+
+### Pre-BS-058 audited flow
 
 ```text
 Questions → Review & Submit → [Submit exam] → Session Summary → [Review your answers] or [question row link] → Question Review → [Back to Summary] → Session Summary
@@ -33,25 +52,20 @@ In exam mode, the user has processed nothing yet. Session Summary is not a wrap-
 
 ## 2. Root Cause Analysis
 
-### Why it works this way today
+### Why it worked that way before BS-058
 
-The state machine in `practice-session-page-view.tsx` has a strict priority chain (lines 116–179):
+Before BS-058, the practice-session page had no post-submit review branch. Finalizing the exam tore down the pre-submit review state and promoted `summary`, so the user transitioned directly from `ExamReviewView` to `SessionSummaryView`. There was no intermediate in-session state for "graded question review."
 
-```text
-1. if (props.summary)                              → render SessionSummaryView   ← catches everything after finalize
-2. if (reviewLoadState loading && !review)          → render loading card
-3. if (reviewLoadState error && !review)            → render error card
-4. if (review)                                      → render ExamReviewView       ← pre-submit review
-5. else                                             → render PracticeView         ← active question
-```
+BS-058 fixed that by splitting finalization into two steps:
 
-When `onFinalizeReview` fires (`use-practice-session-review-stage-state.ts:147-152`):
-1. `setReview(null)` — tears down the review stage
-2. `setReviewLoadState({ status: 'idle' })` — resets review load state
-3. `setIsInReviewStage(false)`
-4. Calls `input.finalizeSession()` → `endSession()` → sets `summary`
+1. finalize the exam and hold the resulting summary aside
+2. bulk-load completed-session feedback and enter a dedicated `PostExamReviewView`
 
-Because `review` is cleared and `summary` is set in the same logical flow, the page transitions directly from ExamReviewView → SessionSummaryView. There is no intermediate state for "graded question review."
+Only after the user clicks `View Summary` does the deferred summary become the terminal state. That current implementation lives in:
+
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts`
+- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx`
+- `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx`
 
 ### The question review page is a separate route
 
@@ -201,15 +215,23 @@ Since the session is already `completed` in the database after finalization, the
 
 ### G6 — AF-6: "Try Again" in exam review (code-verified)
 
-The question review page renders "Practice Again" / "Try Again" unconditionally whenever `submitResult` exists (`question-page-client.tsx:408-418`). There is **no mode-aware or origin-aware suppression** — the button shows identically whether the review came from an exam session, a tutor session, bookmarks, or history. This weakens exam finality and adds decision fatigue (4 buttons per question in review: Reattempt + Bookmark + Next/Previous + Back to Summary).
+**Pre-BS-058 / pre-AF-6 state:** the question review page rendered `Practice Again` / `Try Again` whenever `submitResult` existed, with no exam-session suppression.
 
-**Two fixes required (Q5 + Q8):**
+**Shipped outcome:** this is now fixed. `QuestionView` computes:
+
+```tsx
+const shouldShowReattempt =
+  (props.submitResult !== null || isSessionReviewUnansweredReveal) &&
+  reviewSessionMode !== 'exam';
+```
+
+So exam-owned review attempts suppress reattempt on the standalone route as intended.
+
+**What remains after ship:**
 
 1. **Option A in-session review (BS-058):** The new post-exam review stage simply does not render a reattempt button. No conditional needed — it's a new component we control.
 
-2. **Standalone AF-6 fix for the existing `/app/questions/[slug]` route (Q5):** The existing route is still used for History-launched and reopen-summary reviews of exam sessions. Suppression mechanism: the route already receives `from` and `sessionId` as URL params. The `useQuestionPagePreviousAttempt` hook fetches the attempt data which includes the session. Add a `sessionMode` field to the previous attempt response (or fetch it alongside), then suppress the reattempt button when `sessionMode === 'exam'`. This is cleaner than checking `from` alone, because it correctly suppresses reattempt regardless of which surface launched the review (summary, history, or direct URL).
-
-3. **Batch CTA replacement (Q8):** Add a **"Practice missed questions"** button on `SessionSummaryView` (visible only when `summary.totals.correct < summary.totals.answered`). This links to the practice starter with a pre-filled filter for incorrect status, or creates a new tutor session scoped to the missed question IDs. Exact mechanism is an implementation detail for the spec.
+2. **Batch CTA replacement (Q8):** BS-058 shipped a **`Practice missed questions`** CTA on `SessionSummaryView`, but that choice is now under active follow-up review. [DEBT-324](../debt/debt-324-session-scoped-practice-missed-questions.md) documents why the shipped CTA is misleading and recommends removing it rather than extending it.
 
 ### G7 — E2E test impact
 
@@ -225,9 +247,9 @@ Submit exam → Score banner visible → Question feedback visible → View Summ
 
 ### G8 — "View in History" CTA relevance
 
-The Session Summary shows "View in History" as one of three CTAs (`session-summary-view.tsx:124-126`, `variant="outline"`). Immediately after finishing an exam, this is a power-user action — most students want to either review their mistakes or start a new session. Clicking it navigates to the full history list page, and clicking the session from there opens the same question review content the user just saw (with "Back to History" instead of "Back to Summary"). It's redundant in the post-exam context.
+**Pre-BS-058 state:** the Session Summary showed `View in History` as an outline CTA with too much visual weight for an immediate post-exam power-user action.
 
-**Fix (Q9):** Change from `variant="outline"` `<Button>` to a `variant="ghost"` `<Button>` or a plain text `<Link>` with muted styling. Keep it accessible but visually subordinate to "Review your answers" (default), "Practice missed questions" (outline), and "Back to Practice" (outline).
+**Shipped outcome (Q9):** this landed. `SessionSummaryView` now renders `View in History` as a `variant="ghost"` button, visually subordinate to the primary follow-up actions.
 
 ### G9 — "Back to Summary" label implies backtracking
 
@@ -253,7 +275,7 @@ Any BS-058 implementation that renames or removes the summary exit needs to upda
 
 ---
 
-## 6. Recommendation
+## 6. Chosen Recommendation (Implemented)
 
 **Option A (Inline Post-Exam Review Stage)** is the strongest choice despite larger scope, because:
 
@@ -269,18 +291,18 @@ Any BS-058 implementation that renames or removes the summary exit needs to upda
 - bottom bar centered on question-to-question movement and bookmarking
 - final question uses a forward-completion CTA (`Finish review` or `View Summary`)
 
-The implementation would add a fourth state to `PracticeSessionPageView`:
+The implementation added a fourth state to `PracticeSessionPageView`:
 
 ```text
-Current:  active-question | review-and-submit | summary
-Proposed: active-question | review-and-submit | post-exam-review | summary
+Pre-BS-058: active-question | review-and-submit | summary
+Shipped:    active-question | review-and-submit | post-exam-review | summary
 ```
 
-The state transition becomes:
+The shipped state transition is:
 ```text
 onFinalizeReview():
   1. Call finalizeSession() → get summary data
-  2. DON'T set summary yet — store it aside
+  2. DON'T promote summary yet — store it aside
   3. Fetch review data (question details + feedback) for the completed session
   4. Enter post-exam-review stage
   5. User navigates questions, sees feedback
@@ -300,16 +322,16 @@ onFinalizeReview():
 | Q5 | Should the question review route also suppress `Try Again` for exam sessions independently of BS-058? | **Yes.** AF-6 should be fixed independently as well, so reopened summary/history review paths do not keep reviving exam-inappropriate reattempt actions. |
 | Q6 | Should the question breakdown in `SessionSummaryView` still show `Review your answers` after BS-058? | **Yes.** Keep `Review your answers` plus clickable question rows on the terminal summary for reopen and re-review scenarios. Summary is no longer the first post-submit surface, but it still needs re-entry paths. |
 | Q7 | What happens on session reopen? | **Always show summary.** The post-exam review stage is ephemeral; a completed session reopens to Summary, matching tutor-mode expectations. |
-| Q8 | Should AF-6 be replaced with a batch `Practice missed questions` CTA on Summary? | **Yes.** Suppress per-question reattempt in exam review and replace it with a batch tutor-mode follow-up on Summary. |
+| Q8 | Should AF-6 be replaced with a batch `Practice missed questions` CTA on Summary? | **Implemented, then re-opened.** BS-058 shipped this CTA, but [DEBT-324](../debt/debt-324-session-scoped-practice-missed-questions.md) now recommends removing it because the shipped link opens the user's global latest-visible incorrect Quick Practice pool rather than a session-scoped follow-up. |
 | Q9 | Should `View in History` be deprioritized on the post-exam Summary? | **Yes.** Demote it to a subtle link; it is a power-user path, not the main post-exam outcome. |
 
 ---
 
 ## 8. Verification Notes
 
-### Local Playwright walkthrough (2026-03-19)
+### Pre-implementation local Playwright walkthrough (2026-03-19)
 
-A local Playwright walkthrough of the current app was run against the checked-out code using the repo's Clerk E2E helpers. Screenshots were captured at each transition:
+A local Playwright walkthrough of the pre-BS-058 app was run against the checked-out code using the repo's Clerk E2E helpers. Screenshots were captured at each transition:
 
 - `audit-screenshots/bs-058/01-practice-setup.png`
 - `audit-screenshots/bs-058/02-q1-exam.png`
@@ -321,7 +343,7 @@ A local Playwright walkthrough of the current app was run against the checked-ou
 - `audit-screenshots/bs-058/08-question-review-q2.png`
 - `audit-screenshots/bs-058/09-session-summary-return.png`
 
-Key confirmations from that walkthrough:
+Key confirmations from that historical walkthrough:
 
 - After `Confirm submit`, the user lands on **Session Summary** before seeing explanations.
 - `Review your answers` is **not** the only route into explanations; the question breakdown rows are also direct review links.
@@ -334,7 +356,7 @@ Key confirmations from that walkthrough:
   - Q2 in the walkthrough: `Previous`, `Try Again`, `Bookmark`, `Back to Summary`
 - The review screen also duplicates the summary exit with a top-right `Back to Summary` link.
 
-### External Review: Chrome Agent Walkthrough (2026-03-19)
+### Historical external review: Chrome Agent Walkthrough (2026-03-19)
 
 An independent Claude-in-Chrome agent performed a full end-to-end exam walkthrough (2 questions, exam mode, submission through review). Its observations were verified against the codebase. Findings are integrated throughout this document. Key takeaways:
 
@@ -353,13 +375,29 @@ An independent Claude-in-Chrome agent performed a full end-to-end exam walkthrou
 - **"No red/urgency for incorrect answers"** — FALSE. The breakdown list uses `text-destructive` (red) for "Incorrect" and `text-success` (green) for "Correct" (`session-breakdown-list.tsx:63-65`). Color coding exists and is correctly implemented.
 - **"`Review your answers` is the only way into explanations"** — FALSE. The summary breakdown rows are also clickable review links (`session-summary-view.tsx:92-99` + `session-breakdown-list.tsx:27-48`).
 
-### Novel suggestion worth considering
+### Historical suggestion later re-opened by debt audit
 
-The Chrome agent proposed replacing per-question "Try Again" with a single **"Practice missed questions"** CTA on the Summary page, creating a new tutor-mode session filtered to incorrect questions only. This is a stronger AF-6 fix than simple suppression — it preserves the reattempt pathway while respecting exam finality and reducing per-question decision fatigue. Added to G6 above.
+The Chrome agent proposed replacing per-question "Try Again" with a single **"Practice missed questions"** CTA on the Summary page, creating a new tutor-mode session filtered to incorrect questions only. BS-058 shipped that CTA, but the post-ship audit now tracked in [DEBT-324](../debt/debt-324-session-scoped-practice-missed-questions.md) concluded the shipped behavior is misleading and should be removed rather than extended.
 
 ### Disagreement on preferred option
 
 The Chrome agent preferred a variant of **Option C** (single scrollable summary page with inline expandable explanations). This doc recommends **Option A** (separate post-exam review stage). The disagreement is acknowledged — Option C has the advantage of "one page, no navigation" simplicity, but fails to make feedback the default experience (stats still lead) and creates mobile UX issues at scale (10+ expandable cards).
+
+### Current shipped verification (2026-03-19 code audit)
+
+Current code confirms the implemented flow is now:
+
+```text
+Review & Submit → Submit exam → Post-Exam Review → View Summary / Finish review → Session Summary
+```
+
+Current-code confirmations:
+
+- `PracticeSessionPageView` renders `PostExamReviewView` when `postExamSummary && postExamReview` are present, before `SessionSummaryView`
+- `usePracticeSessionReviewStage` stores the finalized summary in `pendingExamSummary`, bulk-loads `GetCompletedSessionQuestionsWithFeedback`, and only promotes Summary on `onViewSummary()`
+- `PostExamReviewView` keeps the bottom bar limited to `Previous`, `Bookmark`, `Next` / `Finish review`, with a separate top-right `View Summary` escape hatch
+- `QuestionView` now suppresses reattempt for exam-owned review attempts
+- `SessionSummaryView` still ships `Practice missed questions` today, but that exact CTA is now under active removal consideration in DEBT-324
 
 ---
 
@@ -370,5 +408,6 @@ The Chrome agent preferred a variant of **Option C** (single scrollable summary 
 | 2026-03-19 | Created BS-058 | Manual walkthrough revealed "summary sandwich" friction: feedback gated behind extra click, summary visited twice, visual confusion between screens |
 | 2026-03-19 | Added Chrome agent review findings | Independent walkthrough confirmed AF-6, decision fatigue (4 buttons), loop structure, and "Back to Summary" regression label. Rejected false claims around CTA weight parity and missing color coding. Incorporated "Practice missed questions" batch CTA idea. |
 | 2026-03-19 | Added local Playwright verification | Verified the live flow with captured screenshots, confirmed the summary hydration delay, confirmed duplicate summary exits on the question review screen, and corrected the claim that `Review your answers` is the only path into explanations. |
-| 2026-03-19 | Finalized Q1-Q9 | No open product questions remain. Chosen direction: Option A, compact score banner, bulk fetch, linear Q1 start, skippable review, standalone AF-6 suppression, terminal Summary, batch `Practice missed questions`, demoted `View in History`. |
+| 2026-03-19 | Finalized Q1-Q9 | No open product questions remained at implementation time. Chosen direction: Option A, compact score banner, bulk fetch, linear Q1 start, skippable review, standalone AF-6 suppression, terminal Summary, batch `Practice missed questions`, demoted `View in History`. |
 | 2026-03-19 | Specified G1, G2, G6, G8 implementation details | G1: add `mode` prop to `QuestionNavigator` for correctness-based styling. G2: documented exact data gap (6 missing fields per question), specified bulk fetch use case shape. G6: split into three discrete fixes with suppression mechanism. G8: specified target variant (`ghost` or plain text link). |
+| 2026-03-19 | Final accuracy audit after ship | Reframed the document so the original problem analysis reads as historical, added a current shipped-state section, recorded the AF-6 suppression as implemented, and linked DEBT-324 as the post-ship follow-up that re-opens the `Practice missed questions` decision. |

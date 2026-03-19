@@ -1,7 +1,7 @@
 # Practice Engine
 
 > **Type:** Canonical Reference Document (Living)
-> **Last Verified:** 2026-03-17 (interaction-contract sync + doc accuracy refresh)
+> **Last Verified:** 2026-03-19 (BS-058/post-BS-058 doc accuracy audit)
 > **Scope:** Everything related to practicing questions — the core product feature
 
 ---
@@ -92,7 +92,7 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 | [Question Rendering Architecture](./question-rendering-architecture.md) | How questions are rendered, navigated, and state-managed across all 6 viewing contexts. Shared vs context-specific components, hydration/retry state flows, navigation patterns. |
 | [Retry Logic](./retry-logic.md) | Canonical retry/reattempt behavior across tutor, exam, quick practice, history, dashboard, and bookmarks; includes runtime topology, provenance contract, tracer bullets, and acceptance status. |
 | [Ordering Policy](./ordering-policy.md) | Canonical question and choice ordering rules across all practice paths. Design principles, per-path ordering contracts, domain service roles, and anti-patterns. |
-| [Interaction Contracts](./interaction-contracts.md) | Click-by-click UI contracts for tutor, exam, and quick practice modes. Buttons, persistence boundaries, locking rules, navigation, post-session flows. Proposed exam redesign from BS-055. |
+| [Interaction Contracts](./interaction-contracts.md) | Click-by-click UI contracts for tutor, exam, and quick practice modes. Buttons, persistence boundaries, locking rules, navigation, and post-session flows for the current shipped implementation. |
 
 ---
 
@@ -104,7 +104,7 @@ These documents define cross-layer invariants or accepted target contracts. If o
 |--------|----------------|------------|
 | Exam answer secrecy (active exam = no correctness/explanation exposure) | [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md) | Use cases, repositories, controllers, frontend rendering, test contracts |
 | Ordering determinism (question/choice ordering) | [Ordering Policy](./ordering-policy.md) | Session start, quick practice, review routes, rendering contracts |
-| Mode interaction contracts (buttons, persistence, locking) | [Interaction Contracts](./interaction-contracts.md) | PracticeView action bar, question-flow-actions, session hooks, post-session navigation. Target state for the accepted exam-mode redesign; current-vs-target drift is called out inside the doc. |
+| Mode interaction contracts (buttons, persistence, locking) | [Interaction Contracts](./interaction-contracts.md) | PracticeView action bar, question-flow-actions, session hooks, and post-session navigation. Current shipped contract, with follow-up deltas tracked in linked debt docs where relevant. |
 
 ---
 
@@ -144,8 +144,9 @@ These documents define cross-layer invariants or accepted target contracts. If o
 
 | Date | Change |
 |------|--------|
+| 2026-03-19 | BS-058/post-BS-058 accuracy audit sync | Updated interaction-contract references from target-state wording to current shipped-contract wording and synced the summary-review origin note to `from=summary`. |
 | 2026-03-17 | Added Interaction Contracts document as the canonical target-state UI contract for tutor, exam, and quick practice. Synced `practice-modes.md` and policy-registry wording so current implementation vs accepted target state is explicit. |
-| 2026-03-17 | Accuracy refresh after code-truth audit: removed stale “active exam-secrecy drift” language, aligned current-state and coverage docs with the archived BUG-186 through BUG-198 family, corrected question-page/action-bar behavior, updated hook/file inventories, and synced Session Summary review routes to current `from=history` behavior. |
+| 2026-03-17 | Accuracy refresh after code-truth audit: removed stale “active exam-secrecy drift” language, aligned current-state and coverage docs with the archived BUG-186 through BUG-198 family, corrected question-page/action-bar behavior, updated hook/file inventories, and synced Session Summary review routes to current `from=summary` behavior. |
 | 2026-03-03 | Archived BUG-186 through BUG-198 in bug tracking after PRs #164 through #167. The exam-secrecy policy and dependent docs now treat that family as enforced behavior plus regression lineage. |
 | 2026-03-02 | Resolved DEBT-268: daily-seeded shuffle implemented in `executeForFilters`, ordering-policy.md updated from target to implemented state, satellite docs aligned. |
 | 2026-03-02 | Added Exam Answer Secrecy Policy as canonical registry for correctness/explanation exposure timing across use cases, repositories, controllers, and frontend. Added Canonical Policy Registry section in this index and seeded the dependent-doc sync that now tracks the archived BUG-180/181/185 family as regression lineage. |

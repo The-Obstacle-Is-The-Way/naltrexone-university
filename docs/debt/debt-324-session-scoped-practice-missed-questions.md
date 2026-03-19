@@ -303,17 +303,14 @@ That means unanswered questions are visually collapsed into plain incorrect feed
 
 **Recommendation:** track as a separate accessibility debt.
 
-### 3. `interaction-contracts.md` is accurate for the shipped post-session flow, but mixed in status
+### 3. Related docs drift was resolved during this audit
 
-Section 5 accurately documents the shipped BS-058 flow. However, the document header still describes the overall exam contract as a BS-055 proposed target while some sections now document current shipped behavior. That mixed current/target framing is understandable, but it is easy to misread.
+The earlier post-BS-058 audit also found two adjacent doc-only issues:
 
-**Recommendation:** future docs cleanup, not part of DEBT-324.
+- `interaction-contracts.md` still framed the exam contract as "Proposed"
+- `bookmark-surface-policy.md` still said summary-launched review used `from=history`
 
-### 4. `bookmark-surface-policy.md` contains stale summary-review provenance wording
-
-It still says the summary review CTA routes through `from=history&sessionId=...`, but production now uses `from=summary`.
-
-**Recommendation:** doc-only cleanup outside this debt.
+Those documentation issues were corrected during the 2026-03-19 accuracy audit and no longer need to be treated as open adjacent debt for DEBT-324.
 
 ---
 
