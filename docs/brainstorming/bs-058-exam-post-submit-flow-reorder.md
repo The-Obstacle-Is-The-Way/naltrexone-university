@@ -3,7 +3,7 @@
 **Date:** 2026-03-19
 **Triggered by:** Manual walkthrough of the exam mode end-to-end flow; "summary sandwich" friction
 **Scope:** After clicking "Submit exam," the user lands on Session Summary before seeing any detailed explanations — the highest-value learning moment is still gated behind an extra action
-**Related:** [BS-055](./bs-055-exam-session-interaction-model-rethink.md) (exam interaction model), [interaction-contracts.md](../practice-engine/interaction-contracts.md) (§5 Post-Session Flows), AF-6 (Try Again in exam review)
+**Related:** [BS-055](../_archive/brainstorming/bs-055-exam-session-interaction-model-rethink.md) (exam interaction model), [interaction-contracts.md](../practice-engine/interaction-contracts.md) (§5 Post-Session Flows), AF-6 (Try Again in exam review)
 
 ---
 
