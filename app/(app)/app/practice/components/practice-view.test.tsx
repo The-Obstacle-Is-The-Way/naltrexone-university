@@ -589,9 +589,9 @@ describe('PracticeView', () => {
     );
 
     expect(labels).toEqual(['Next', 'Mark for review']);
-    expect(actionBar.querySelectorAll('span[aria-hidden="true"]')).toHaveLength(
-      0,
-    );
+    expect(
+      actionBar.querySelectorAll('span[aria-hidden="true"].h-9.min-w-24'),
+    ).toHaveLength(0);
     expect(html).not.toContain('>Submit<');
     expect(html).not.toContain('>Previous<');
   });
@@ -720,6 +720,52 @@ describe('PracticeView', () => {
     );
 
     expect(labels).toEqual(['Previous', 'Next', 'Mark for review']);
+  });
+
+  it('describes the last-question Next action for assistive tech', () => {
+    const question = createQuestionProps();
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 1,
+          total: 2,
+          isMarkedForReview: false,
+        }}
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onEndSession={() => undefined}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onToggleMarkForReview={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+        onPreviousQuestion={() => undefined}
+        hasPreviousQuestion={true}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const nextButton = Array.from(doc.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Next',
+    );
+    const descriptionId = nextButton?.getAttribute('aria-describedby');
+    const description = descriptionId
+      ? doc.getElementById(descriptionId)
+      : null;
+
+    expect(descriptionId).toBeTruthy();
+    expect(description?.textContent).toBe('Opens review and submit.');
   });
 
   it('does not render Review answers for tutor mode after submit', () => {

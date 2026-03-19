@@ -94,7 +94,9 @@ test('renders exam review branch and triggers review actions', async () => {
     />,
   );
 
-  await expect.element(screen.getByText('Review & Submit')).toBeVisible();
+  await expect
+    .element(screen.getByRole('heading', { name: 'Review & Submit' }))
+    .toBeVisible();
   await screen.getByRole('button', { name: 'Open question' }).click();
   expect(onOpenReviewQuestion).toHaveBeenCalledWith('q1');
 
@@ -152,7 +154,9 @@ test('falls back to onEndSession when onFinalizeReview is omitted in the review 
     />,
   );
 
-  await expect.element(screen.getByText('Review & Submit')).toBeVisible();
+  await expect
+    .element(screen.getByRole('heading', { name: 'Review & Submit' }))
+    .toBeVisible();
   await screen.getByRole('button', { name: 'Submit exam' }).click();
   await expect
     .element(screen.getByRole('alertdialog', { name: 'Submit exam?' }))

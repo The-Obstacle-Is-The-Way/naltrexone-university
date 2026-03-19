@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { ErrorCard } from '@/components/error-card';
 import { Feedback } from '@/components/question/feedback';
 import { QuestionCard } from '@/components/question/question-card';
@@ -193,6 +193,11 @@ function ExamActionBar(props: ExamActionBarProps) {
     props.isPending || props.loadState.status === 'loading';
   const isPreviousDisabled =
     isNavigationDisabled || props.canNavigatePrevious === false;
+  const nextActionDescriptionId = useId();
+  const nextActionDescription =
+    props.isLastSessionQuestion && props.onEndSession
+      ? 'Opens review and submit.'
+      : null;
   const onMiddleAction =
     props.isLastSessionQuestion && props.onEndSession
       ? props.onEndSession
@@ -214,11 +219,20 @@ function ExamActionBar(props: ExamActionBarProps) {
         ) : null
       ) : null}
 
+      {nextActionDescription ? (
+        <span id={nextActionDescriptionId} className="sr-only">
+          {nextActionDescription}
+        </span>
+      ) : null}
+
       <Button
         type="button"
         className="rounded-full"
         disabled={isNavigationDisabled}
         onClick={onMiddleAction}
+        aria-describedby={
+          nextActionDescription ? nextActionDescriptionId : undefined
+        }
       >
         Next
       </Button>
