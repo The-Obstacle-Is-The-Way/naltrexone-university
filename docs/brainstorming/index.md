@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-18
+**Last Updated:** 2026-03-19
 
 ---
 
@@ -30,8 +30,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-044](./bs-044-dark-mode-border-weight-tiering.md) | Dark Mode Border Weight Tiering — broad cross-surface tiering remains open after narrower choice-button and History slices were resolved via `DEBT-280`, `DEBT-301`, and `DEBT-302` | Active | [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
 | [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) | Bookmark Icon Toggle — replace "Remove" text pill and "Bookmark"/"Remove bookmark" action bar pills with filled/unfilled bookmark icon (Lucide `Bookmark` with `fill-current` toggle); phased rollout starting with Bookmarks page | Active | [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) |
 | [BS-055](./bs-055-exam-session-interaction-model-rethink.md) | Exam Session Interaction Model — Submit button is redundant (no feedback shown), button bar mutates unpredictably across questions, click count per question is 2-3x what it should be | Active | [BS-054](../_archive/brainstorming/bs-054-session-end-ux-simplification.md), [BS-053](../_archive/brainstorming/bs-053-bookmark-vs-mark-for-review-collision.md) |
+| [BS-058](./bs-058-exam-post-submit-flow-reorder.md) | Exam Post-Submit Flow Reorder — "summary sandwich" friction; feedback gated behind extra click after exam submission; Session Summary visited twice; post-exam learning moment deprioritized | Active | [BS-055](./bs-055-exam-session-interaction-model-rethink.md), [interaction-contracts.md](../practice-engine/interaction-contracts.md) §5 |
 
-**Next Brainstorming ID:** BS-058
+**Next Brainstorming ID:** BS-059
 
 ---
 
