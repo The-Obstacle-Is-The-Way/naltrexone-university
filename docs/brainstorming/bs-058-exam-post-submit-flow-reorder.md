@@ -38,16 +38,18 @@ In exam mode, the user has processed nothing yet. Session Summary is not a wrap-
 The state machine in `practice-session-page-view.tsx` has a strict priority chain (lines 116–179):
 
 ```text
-1. if (props.summary)        → render SessionSummaryView   ← catches everything after finalize
-2. if (reviewLoadState error) → render error card
-3. if (review)                → render ExamReviewView       ← pre-submit review
-4. else                       → render PracticeView         ← active question
+1. if (props.summary)                              → render SessionSummaryView   ← catches everything after finalize
+2. if (reviewLoadState loading && !review)          → render loading card
+3. if (reviewLoadState error && !review)            → render error card
+4. if (review)                                      → render ExamReviewView       ← pre-submit review
+5. else                                             → render PracticeView         ← active question
 ```
 
 When `onFinalizeReview` fires (`use-practice-session-review-stage-state.ts:147-152`):
 1. `setReview(null)` — tears down the review stage
-2. `setIsInReviewStage(false)`
-3. Calls `finalizeSession()` → `endSession()` → sets `summary`
+2. `setReviewLoadState({ status: 'idle' })` — resets review load state
+3. `setIsInReviewStage(false)`
+4. Calls `input.finalizeSession()` → `endSession()` → sets `summary`
 
 Because `review` is cleared and `summary` is set in the same logical flow, the page transitions directly from ExamReviewView → SessionSummaryView. There is no intermediate state for "graded question review."
 
@@ -152,7 +154,7 @@ Session Summary stays the first screen, but each question in the breakdown is ex
 
 ### G1 — Navigator color coding
 
-During the active exam, the `QuestionNavigator` uses answer status (answered/unanswered) for styling. After finalization, it needs correctness data (correct/incorrect/unanswered) for color coding. The `GetPracticeSessionReviewOutput` already contains `isCorrect` per row, so the data is available — but the navigator component currently only uses `isAnswered` and `markedForReview` for styling. It would need a variant or mode prop to switch to correctness-based styling.
+During the active exam, the `QuestionNavigator` uses `isCurrent` and `row.isAnswered` for button variant styling (`exam-review-view.tsx:59-63`): current = `default`, answered = `secondary`, unanswered = `outline`. The `markedForReview` field only controls a small dot indicator, not the button variant. After finalization, the navigator needs correctness data (correct/incorrect/unanswered) for color coding. The `GetPracticeSessionReviewOutput` already contains `isCorrect` per row, so the data is available — but the navigator component would need a variant or mode prop to switch to correctness-based styling (e.g., correct = green/success, incorrect = red/destructive, unanswered = outline).
 
 ### G2 — Feedback data per question
 
@@ -197,6 +199,14 @@ Any flow change must update this test. If Option A is chosen, the test should ve
 ```text
 Submit exam → Score banner visible → Question feedback visible → View Summary → Session Summary heading
 ```
+
+### G8 — "View in History" CTA relevance
+
+The Session Summary shows "View in History" as one of three CTAs (`session-summary-view.tsx:124-126`, `variant="outline"`). Immediately after finishing an exam, this is a power-user action — most students want to either review their mistakes or start a new session. Clicking it navigates to the full history list page, and clicking the session from there opens the same question review content the user just saw (with "Back to History" instead of "Back to Summary"). It's redundant in the post-exam context.
+
+### G9 — "Back to Summary" label implies backtracking
+
+The label "Back to Summary" (code-verified at `question-page-client.tsx:118`) frames the action as regression — returning to a screen already visited. In the proposed Option A flow, the user hasn't visited Summary yet, making "Back to" factually wrong. Even in the current flow, the label encourages a mental model of looping rather than forward progression. Renaming to **"View Summary"** or **"Finish Review"** reframes the action as forward movement.
 
 ---
 
@@ -244,14 +254,6 @@ onFinalizeReview():
 | Q8 | Should AF-6 be replaced with a batch "Practice missed questions" CTA on Summary? | (a) Just suppress (b) Suppress + add batch CTA (c) Keep per-question but relabel | **Decided: (b)** — suppress per-question "Try Again", add "Practice missed questions" on Summary, demote "View in History" to subtle link |
 | Q9 | Should "View in History" be deprioritized on the post-exam Summary? | (a) Keep as-is (b) Demote to subtle link (c) Remove entirely | **Decided: (b)** — bundled with Q8 decision |
 
-### G8 — "View in History" CTA relevance
-
-The Session Summary shows "View in History" as one of three CTAs. Immediately after finishing an exam, this is a power-user action — most students want to either review their mistakes or start a new session. Clicking it navigates to the full history list page, and clicking the session from there opens the same question review content the user just saw (with "Back to History" instead of "Back to Summary"). It's redundant in the post-exam context. Consider deprioritizing to a subtle link or relocating to a less prominent position.
-
-### G9 — "Back to Summary" label implies backtracking
-
-The label "Back to Summary" (code-verified at `question-page-client.tsx:118`) frames the action as regression — returning to a screen already visited. In the proposed Option A flow, the user hasn't visited Summary yet, making "Back to" factually wrong. Even in the current flow, the label encourages a mental model of looping rather than forward progression. Renaming to **"View Summary"** or **"Finish Review"** reframes the action as forward movement.
-
 ---
 
 ## 8. External Review: Chrome Agent Walkthrough (2026-03-19)
@@ -268,7 +270,7 @@ An independent Claude-in-Chrome agent performed a full end-to-end exam walkthrou
 
 ### Verified false positives (claims contradicted by code)
 
-- **"All three CTAs have equal visual weight"** — FALSE. "Review your answers" uses `variant='default'` (filled primary button). "Back to Practice" and "View in History" use `variant='outline'`. The hierarchy is correctly established in code (`session-summary-view.tsx:103-127`). The dark theme may reduce perceived contrast between filled and outline buttons, but the code is correct.
+- **"All three CTAs have equal visual weight"** — FALSE. "Review your answers" uses `variant='default'` (filled primary button). "View in History" uses `variant='outline'`. "Back to Practice" is conditional: `variant='outline'` when "Review your answers" is present, `variant='default'` when it's not (i.e., no reviewable questions exist). When all three CTAs are visible, the hierarchy is correctly established (`session-summary-view.tsx:103-127`). The dark theme may reduce perceived contrast between filled and outline buttons, but the code is correct.
 - **"No red/urgency for incorrect answers"** — FALSE. The breakdown list uses `text-destructive` (red) for "Incorrect" and `text-success` (green) for "Correct" (`session-breakdown-list.tsx:63-65`). Color coding exists and is correctly implemented.
 
 ### Novel suggestion worth considering
