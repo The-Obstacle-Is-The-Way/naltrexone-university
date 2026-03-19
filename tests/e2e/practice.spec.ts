@@ -88,10 +88,10 @@ test.describe('practice', () => {
       page.getByRole('button', { name: 'Mark for review' }),
     ).toBeVisible();
 
-    // Click "Review answers" to enter exam review view
+    // Click "Next" on the last question to enter exam review view
     await page
       .getByTestId('bottom-action-bar')
-      .getByRole('button', { name: 'Review answers' })
+      .getByRole('button', { name: 'Next' })
       .click();
 
     // Wait for exam review to load with the "Submit exam" button

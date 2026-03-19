@@ -43,7 +43,7 @@ EndPracticeSession → computes totals from questionStates
 ## 3. Exam Mode Special Features
 
 - **Mark for review:** Users can flag questions during the session. `SetPracticeSessionQuestionMark` persists the flag. Only available in exam mode.
-- **Review stage:** Before finalizing, users enter a review checklist with answered/unanswered/marked counts and can jump back into any exam question. Entry is via the header `Review answers` action and the last-question bottom-bar CTA.
+- **Review stage:** Before finalizing, users enter a review checklist with answered/unanswered/marked counts and can jump back into any exam question. Entry is via the header `Finish exam` action and the last-question footer `Next` action.
 - **Deferred explanations (policy):** Correctness/explanations remain hidden while the exam session is active, then become visible after `EndPracticeSession`. See [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md) for the canonical enforcement contract and regression scope.
 
 ---

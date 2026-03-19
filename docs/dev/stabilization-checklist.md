@@ -63,7 +63,7 @@
 1. [ ] Start exam session
 2. [ ] Submit answer
 3. [ ] Confirm explanations are hidden while session is active
-4. [ ] Click `Review answers`
+4. [ ] Click `Finish exam` (or `Next` on the last question)
 5. [ ] Confirm answered/unanswered/marked counts + open-question jump work
 6. [ ] Submit exam from review stage
 7. [ ] Confirm aggregate summary renders

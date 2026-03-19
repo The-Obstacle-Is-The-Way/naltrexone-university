@@ -490,7 +490,8 @@ describe('app/(app)/app/practice/[sessionId]', () => {
       />,
     );
 
-    expect(html).toContain('Review Questions');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    expect(doc.querySelector('h1')?.textContent).toBe('Review & Submit');
     expect(html).toContain('Submit exam');
     expect(html).toContain('Marked for review');
   });

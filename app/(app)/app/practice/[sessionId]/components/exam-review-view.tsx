@@ -108,7 +108,7 @@ export function ExamReviewView({
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
-          Review Questions
+          Review & Submit
         </h1>
         <p className="mt-1 text-base text-muted-foreground">
           Check answered, unanswered, and marked questions before final submit.

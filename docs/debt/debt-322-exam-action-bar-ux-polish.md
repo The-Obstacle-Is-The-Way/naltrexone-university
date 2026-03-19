@@ -1,153 +1,369 @@
-# DEBT-322: Exam action bar UX polish — Q1 layout imbalance, "Review answers" duplication and naming
+# DEBT-322: Exam action bar UX polish — implementation spec
 
 **Priority:** P2
 **Created:** 2026-03-18
+**Status:** Ready for implementation
 **Related:** [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md), [DEBT-321](./debt-321-bs055-exam-interaction-model-overhaul.md), [Interaction Contracts](../practice-engine/interaction-contracts.md)
 
 ---
 
-## Context
+## Scope
 
-DEBT-321 shipped the exam action bar redesign: fixed three-slot layout (`[Previous] [Next/Review answers] [Mark for review]`), no per-question Submit, draft-save on navigation. The structural overhaul is correct. These are UX refinements discovered during manual walkthrough of the live exam flow.
+Implement exactly these four changes in one PR:
 
-## Audit status (2026-03-18)
+1. **D-1:** Remove the exam-mode Q1 spacer. When `hasPreviousQuestion` is false, render nothing in slot 1 and let the visible buttons left-align.
+2. **D-2:** Rename the exam header exit from `Review answers` to `Finish exam`. Rename the exam review page heading from `Review Questions` to `Review & Submit`.
+3. **D-3:** Keep the exam bottom-bar middle button labeled `Next` on every question, including the last question. On the last question it must still enter the review stage.
+4. **D-4b:** Change exam/tutor session Previous-button visibility from navigator-derived `previousQuestionId !== null` to `(props.sessionInfo?.index ?? 0) > 0`, while disabling the visible button until a concrete previous target resolves.
 
-- **Code verification:** Completed against current `HEAD`. D-1, D-2, and D-3 all still match the live code paths in `PracticeView`, `PracticeSessionPageView`, and `ExamReviewView`.
-- **Recent-commit check:** No production change after DEBT-322 creation has already resolved these issues. Current `HEAD` still renders the same spacer, labels, and last-question duplication described below.
-- **Browser verification:** Attempted after starting `pnpm dev`, but **not completed** because Clerk auth could not be completed in `agent-browser` after the two allowed approaches:
-  1. **Playwright storageState → `agent-browser --state`:** a valid authenticated state file was created with the repo's Clerk Playwright helper, but `agent-browser` still redirected `/app/practice` to the hosted Clerk sign-in page.
-  2. **Direct fill in `agent-browser`:** the E2E email/password were filled on the hosted Clerk sign-in page, but the session did not advance into the app and follow-up snapshots were not usable for the in-app walkthrough.
-
-  Per audit constraints, no further auth attempts were made.
-- **Test impact:** Current tests already encode parts of the status quo for D-2 and D-3. D-1 is only partially encoded — visible-button assertions exist, but there is no test that explicitly asserts spacer presence or Q1 visual alignment.
+Do **not** implement D-4a or D-4c in this item. D-4a is not code-confirmed. D-4c is real but out of scope for this locked implementation.
 
 ---
 
-## D-1: Q1 action bar visual imbalance
+## Verified Wiring Constraints
 
-### Current behavior
+These constraints were re-verified against current `HEAD` before locking the implementation.
 
-On Q1, `PracticeSessionPageView` still passes `onPreviousQuestion`, but `hasPreviousQuestion` is false. `PracticeView` therefore renders `ExamActionBar`, which renders an `ActionBarSpacer` (invisible `<span>` with `h-9 min-w-24`) in position 1, keeping Next in position 2. This is per current spec — BS-055 and the interaction contracts say "Previous always occupies position 1 (hidden on Q1 with spacer, per BS-037 pattern)."
+### Header exit path is independent of `ExamActionBar`
 
-**Result:** Q1 shows `[___invisible___] [Next] [Mark for review]` — two visible buttons with an empty left gap. Q2+ shows `[Previous] [Next] [Mark for review]` — three visible buttons filling the space naturally.
+- `PracticeView` renders the header button directly from `props.onEndSession` and `endSessionLabel` at `app/(app)/app/practice/components/practice-view.tsx` lines **315-326**.
+- `PracticeView` also reuses the same `endSessionLabel` in the null-question fallback card at `app/(app)/app/practice/components/practice-view.tsx` lines **389-401**.
+- So the header `Finish exam` button does **not** depend on `ExamActionBar`.
 
-### Problem
+### Current last-question footer path is already correct
 
-The spacer preserves positional stability (Next stays in slot 2), but the visual weight shift between Q1 and Q2+ is noticeable. The action bar on Q1 looks unbalanced — two visible buttons floating right of an empty void.
+The current last-question footer button reaches the exam review stage through `onEndSession`, not through the normal sequential Next path:
 
-### Possible fixes
+1. `PracticeView` passes `onEndSession={props.onEndSession}` into `ExamActionBar` at `app/(app)/app/practice/components/practice-view.tsx` lines **444-455**.
+2. `ExamActionBar` currently resolves `onMiddleAction` to `props.onEndSession` when `props.isLastSessionQuestion && props.onEndSession` at `app/(app)/app/practice/components/practice-view.tsx` lines **193-196**.
+3. `usePracticeSessionPageController` wires `onEndSession: reviewStage.onEndSession` at `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts` lines **149-182**, specifically line **170**.
+4. `usePracticeSessionReviewStage.onEndSession` saves the current exam draft, then calls `reviewStage.onEndSession()` at `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts` lines **178-199**.
+5. `usePracticeSessionReviewStageState.onEndSession` loads review for exam sessions at `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage-state.ts` lines **154-161**.
 
-1. **Left-align on Q1:** When the spacer is active, remove it and let the remaining buttons left-align naturally. Accept the position shift on Q1→Q2 transition as a one-time event (Q1 is always the entry point, so users haven't built spatial memory yet).
-2. **Center-align the visible buttons:** Use CSS to center the non-spacer buttons when the spacer is present.
-3. **Keep as-is:** The positional stability argument from BS-055 still holds — Next never moves between questions. The visual imbalance is a minor aesthetic issue.
+This means D-3 can be implemented safely by changing the **label only** while leaving the existing last-question click-handler branch intact.
 
-**Decision needed:** Which approach to take. Option 1 is simplest and aligns with the user's instinct that it "looks awkward."
+### Broken path if `ExamActionBar` loses `onEndSession`
 
-### Files
+If an implementer removes `onEndSession` from `ExamActionBar` and makes the last-question footer button call the ordinary `onNextQuestion` path, the behavior is wrong:
 
-- `app/(app)/app/practice/components/practice-view.tsx` — `ActionBarSpacer` (lines 88-90), `ExamActionBar` (lines 186-239), bottom action bar wrapper (lines 438-455)
-- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` — navigator-backed `onPreviousQuestion` / `hasPreviousQuestion` wiring (lines 101-114, 244-248)
-- `app/(app)/app/practice/components/practice-view.test.tsx` — Q1 visible-button assertions (lines 512-560, 735-778)
+1. `PracticeSessionPageView.onNextQuestionResolved` falls through to `props.onNextQuestion()` when `nextQuestionId` is null at `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` lines **107-114**.
+2. `usePracticeSessionPageController` passes `questionFlow.onNextQuestion` at `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts` line **179**.
+3. `usePracticeSessionQuestionFlow.onNextQuestion` calls `loadNextQuestion({ fromIndex })` at `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` lines **298-317**.
+4. `GetNextQuestionUseCase.executeForSession()` does **not** mean "go to review". It can:
+   - wrap to an earlier unanswered question (`src/application/use-cases/get-next-question.ts` lines **195-201**),
+   - reload the current unanswered question (`src/application/use-cases/get-next-question.ts` lines **203-205**),
+   - or return `null` when no unanswered target exists (`src/application/use-cases/get-next-question.ts` lines **208-211**).
+5. When `res.data` is `null`, `runLoadQuestionFlow()` commits `question=null` at `app/(app)/app/practice/shared/question-flow-actions.ts` line **120**, and `PracticeView` then renders `No more questions found.` plus the end-session button at `app/(app)/app/practice/components/practice-view.tsx` lines **389-401**.
 
-**Test note:** current tests assert the visible Q1 labels (`Next`, `Mark for review`) and the absence of a visible `Previous` button, but they do **not** assert spacer presence or layout directly. A D-1 fix would likely need new layout-focused coverage, not just existing assertion rewrites.
-
----
-
-## D-2: "Review answers" label is misleading
-
-### Current behavior
-
-Both the header button and the last-question action bar button say "Review answers." Clicking either triggers `onEndSession`, which transitions to the review stage — a pre-submit checklist page titled "Review Questions" showing answered/unanswered/marked counts with an "Open question" button per question and a "Submit exam" button at the bottom.
-
-### Problem
-
-"Review answers" implies the system is reviewing/grading your answers, not that you're navigating to a pre-submission checklist. The mental model mismatch:
-
-- **User expectation:** "Review answers" → some kind of feedback or grading
-- **Actual behavior:** Opens a checklist where you can still go back and change things, then explicitly submit
-
-The page heading itself ("Review Questions") is slightly better but still ambiguous. The actual finalization action is "Submit exam" — buried at the bottom of the review page.
-
-**SSOT note:** this is **not** accidental implementation drift. BS-055 Q3 and the current interaction contract explicitly chose `Review answers` and explicitly rejected `End Exam` for the active exam flow. Treat D-2 as a proposal to reopen that decision, not as a bug fix that can land silently.
-
-### Suggested rename
-
-| Current label | Suggested label | Rationale |
-|--------------|----------------|-----------|
-| "Review answers" (header button) | "End exam" or "Finish exam" | Signals session termination, not grading. The review stage naturally follows as a confirmation step before "Submit exam." |
-| "Review answers" (last-Q action bar) | Same as header | Consistency |
-| "Review Questions" (review page heading) | Keep or rename to "Review & Submit" | The page already serves as the pre-submit gate. Adding "Submit" to the heading makes the purpose explicit. |
-
-**Decision needed:** Exact wording. "End exam" is direct but may sound abrupt. "Finish exam" is softer. Both are clearer than "Review answers." Alternative: "Review & submit" to signal both steps happen from this exit point.
-
-### Files
-
-- `app/(app)/app/practice/components/practice-view.tsx` — header button label render (lines 315-326), last-question middle-button label switch (lines 189-196), default fallback `endSessionLabel` (line 248)
-- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` — exam-specific `endSessionLabel="Review answers"` wiring (lines 235-236)
-- `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` — `"Review Questions"` heading (lines 110-115), `Submit exam` CTA + confirm dialog (lines 189-235)
-- `app/(app)/app/practice/components/practice-view.test.tsx` — current label assertions that would need updating if renamed (lines 323-350, 641-685)
-- `app/(app)/app/practice/components/practice-view.browser.spec.tsx` — browser test that clicks the bottom-bar `Review answers` button by name (lines 447-499)
+**Implementation rule:** do **not** remove `onEndSession` from `ExamActionBar` in this debt item.
 
 ---
 
-## D-3: "Review answers" duplication on last question
+## D-1: Remove The Exam Q1 Spacer
 
-### Current behavior
+### Current code
 
-On the last exam question, "Review answers" appears in **two** places:
-1. **Header** (top right) — persistent across all questions, styled as outline button
-2. **Action bar** (position 2) — replaces "Next" on the last question only
+- `ActionBarSpacer` is defined at `app/(app)/app/practice/components/practice-view.tsx` lines **88-90** with `className="h-9 min-w-24"`.
+- `ExamActionBar` currently renders that spacer when `props.onPreviousQuestion` exists but `props.hasPreviousQuestion` is false at `app/(app)/app/practice/components/practice-view.tsx` lines **200-216**.
+- `TutorActionBar` also uses `ActionBarSpacer` at `app/(app)/app/practice/components/practice-view.tsx` lines **116-145**.
 
-Both call the same `onEndSession` handler. Both navigate to the same review stage.
+### Required implementation
 
-Code verification confirms this is implemented in two separate places:
-- `PracticeSessionPageView` hard-codes the header label to `Review answers` for exam mode
-- `PracticeView` switches the middle action-bar label from `Next` to `Review answers` when `isLastSessionQuestion && onEndSession`
+In `app/(app)/app/practice/components/practice-view.tsx`:
 
-### Problem
+- Change the exam-only Previous slot logic at lines **200-216**.
+- Old behavior:
+  - `props.onPreviousQuestion ? (props.hasPreviousQuestion ? <Previous /> : <ActionBarSpacer />) : null`
+- New behavior:
+  - `props.onPreviousQuestion && props.hasPreviousQuestion ? <Previous /> : null`
 
-The BS-055 interaction contracts explicitly marked this as intentional: "The last-question duplication of Review answers (header + position 2) is intentional. Same label, same destination." The rationale was that replacing Next with Review answers signals "you've reached the end."
+### Do not change
 
-In practice, having the same button in two places on one screen looks redundant. The user correctly identifies this as awkward. On non-last questions, the header is the only escape hatch — fine. On the last question, doubling it adds visual noise without new information.
+- Do **not** delete `ActionBarSpacer`. Tutor mode still uses it.
+- Do **not** change `TutorActionBar`.
+- Do **not** change the bottom action-bar wrapper at lines **438-455**.
 
-### Possible fixes
+### Test updates
 
-1. **Keep action bar, hide header on last Q:** The action bar's "Review answers" (renamed per D-2) is the primary CTA on the last question. Temporarily hide the header button on the last question to avoid duplication.
-2. **Keep both but differentiate:** Make the action bar button the primary CTA ("Finish exam") and keep the header as a secondary outline escape hatch ("Review & submit"). Different labels reduce the "why are there two" feeling.
-3. **Remove action bar duplication:** Keep "Next" on the last question (it just navigates to the review stage instead of the next question). The header button is always available as the explicit "Finish exam" exit. This is the simplest option and preserves the "buttons don't change labels" principle — Next always says Next.
-4. **Keep as-is:** Accept the duplication per original BS-055 rationale.
+Update `app/(app)/app/practice/components/practice-view.test.tsx` lines **512-560**:
 
-**Decision needed:** Which approach. Option 3 has the cleanest alignment with "buttons don't move AND don't change labels" — Next always means "advance one step forward," and on the last question, the next step is the review stage.
+- Keep the existing visible-label assertion:
+  - `expect(labels).toEqual(['Next', 'Mark for review']);`
+- Add a scoped assertion that the exam Q1 action bar contains no spacer placeholder:
+  - Parse `actionBar` and assert `actionBar.querySelectorAll('span[aria-hidden=\"true\"]').length === 0`
 
-### Files
-
-- `app/(app)/app/practice/components/practice-view.tsx` — last-question derivation from `sessionInfo.index/total` (lines 253-257), `ExamActionBar` middle-label switch (lines 189-196), header button (lines 315-326)
-- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` — exam header-label wiring and navigation props into `PracticeView` (lines 235-248)
-- `docs/practice-engine/interaction-contracts.md` — Section 3 exam action bar layout and explicit "intentional duplication" note
-- `app/(app)/app/practice/components/practice-view.test.tsx` — bottom-bar last-question label assertions (lines 641-685)
-- `app/(app)/app/practice/components/practice-view.browser.spec.tsx` — browser interaction test for the bottom-bar `Review answers` button (lines 447-499)
-
-**Test note:** current tests encode the bottom-bar `Review answers` label and click path, but there is not yet a dedicated test that asserts the simultaneous header + footer duplication on the last question. If D-3 is implemented, coverage should be added for the deduplicated end state rather than relying on incidental label assertions alone.
+No other existing test assertions need to change for D-1.
 
 ---
 
-## Out of scope
+## D-2: Rename The Exam Exit And Review Heading
 
-These items were observed during the same walkthrough but are tracked elsewhere or are separate concerns:
+### Required implementation
 
-- **Tutor mode button timing** (DEBT-318): Bookmark visible before feedback
-- **Post-exam reattempt suppression** (AF-6 in BS-055): "Practice Again" / "Try Again" in post-exam review
-- **Periodic autosave / `visibilitychange` saves** (future enhancement noted in interaction contracts)
-- **Downstream post-submit flows** (summary, history, question review navigation): Require their own walkthrough and separate debt tracking
+#### 1. Header label
+
+In `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx`:
+
+- Line **235**
+- Old:
+  - `endSessionLabel={mode === 'exam' ? 'Review answers' : 'End session'}`
+- New:
+  - `endSessionLabel={mode === 'exam' ? 'Finish exam' : 'End session'}`
+
+This automatically updates both exam surfaces that render `endSessionLabel` inside `PracticeView`:
+
+- header button: `app/(app)/app/practice/components/practice-view.tsx` lines **315-326**
+- null-question fallback card button: `app/(app)/app/practice/components/practice-view.tsx` lines **392-401**
+
+#### 2. Review page heading
+
+In `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx`:
+
+- Lines **110-112**
+- Old heading:
+  - `Review Questions`
+- New heading:
+  - `Review & Submit`
+
+### Do not change
+
+- Keep `Submit exam` unchanged at `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` lines **192-194**.
+- Keep `Submit exam?` unchanged at `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` line **198**.
+- Do **not** change post-submit `Review your answers` in `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` lines **103-115**.
+
+### Test updates
+
+Update `app/(app)/app/practice/components/practice-view.test.tsx` lines **323-350**:
+
+- Change the prop passed into `PracticeView`:
+  - old: `endSessionLabel="Review answers"`
+  - new: `endSessionLabel="Finish exam"`
+- Change the button filter:
+  - old: `button.textContent?.includes('Review answers')`
+  - new: `button.textContent?.includes('Finish exam')`
+- Keep the expectation at length `2`.
+
+Update review-heading assertions:
+
+- `app/(app)/app/practice/[sessionId]/page.test.tsx` lines **493-495**
+  - old: `expect(html).toContain('Review Questions');`
+  - new: `expect(html).toContain('Review & Submit');`
+- `app/(app)/app/practice/[sessionId]/components/exam-review-view.browser.spec.tsx` line **156**
+  - old: `getByText('Review Questions')`
+  - new: `getByText('Review & Submit')`
+- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.browser.spec.tsx` lines **97** and **155**
+  - old: `getByText('Review Questions')`
+  - new: `getByText('Review & Submit')`
+
+### Recommended new regression coverage
+
+Add one active-session exam assertion in `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.browser.spec.tsx`:
+
+- render the answering branch in exam mode
+- assert the header button name is `Finish exam`
+
+That covers the actual `PracticeSessionPageView` label wiring, not just raw `PracticeView` rendering.
 
 ---
 
-## Implementation notes
+## D-3: Keep Footer Label `Next` On The Last Question
 
-- D-1 is a pure frontend refinement and can ship independently.
-- D-2 and D-3 are **not** mere implementation drift; both intentionally reopen the current BS-055 / interaction-contract SSOT. If either lands, the docs must change in the same PR.
-- All three issues are frontend-local in production code — no backend/use-case/repository changes needed.
-- D-2 requires updating test assertions that currently match the literal `Review answers` label.
-- D-3 requires updating the interaction contract if the "intentional duplication" decision is reversed.
-- If D-2 and D-3 are done together, the rename + deduplication can land in one PR.
-- Before implementation, rerun the blocked browser walkthrough in a local environment where Clerk auth is actually healthy for `agent-browser`, so the final UX decision is validated visually instead of only from source and prior screenshots.
+### Required behavior
+
+- The exam bottom-bar middle button must render `Next` on **every** active question, including the last question.
+- On the last exam question, clicking that `Next` button must still enter the review stage through `onEndSession`.
+- The header `Finish exam` button is the only distinct exit label.
+
+### Required implementation
+
+In `app/(app)/app/practice/components/practice-view.tsx`:
+
+#### 1. Remove only the label switch
+
+- Lines **189-192**
+- Old:
+  - `const middleLabel = props.isLastSessionQuestion && props.onEndSession ? 'Review answers' : 'Next';`
+- New:
+  - remove `middleLabel` entirely
+  - render the middle button text as the literal `Next`
+
+#### 2. Keep the click-handler switch
+
+- Lines **193-196**
+- Keep this logic unchanged:
+  - `props.isLastSessionQuestion && props.onEndSession ? props.onEndSession : props.onNextQuestion`
+
+#### 3. Keep last-question state available to `ExamActionBar`
+
+- Keep `isLastSessionQuestion` derivation at `app/(app)/app/practice/components/practice-view.tsx` lines **253-257**
+- Keep the `isLastSessionQuestion={isLastSessionQuestion}` prop at line **446**
+
+#### 4. Keep `onEndSession` in `ExamActionBar`
+
+- Keep `onEndSession` in `ExamActionBarProps` at `app/(app)/app/practice/components/practice-view.tsx` lines **171-180**
+- Keep `onEndSession={props.onEndSession}` in the `ExamActionBar` call at line **451**
+
+### Explicit non-change
+
+Do **not** move this last-question review-stage routing into:
+
+- `PracticeSessionPageView.onNextQuestionResolved()` at lines **107-114**
+- `usePracticeSessionQuestionFlow.onNextQuestion()` at lines **298-317**
+
+Those paths are not review-stage paths.
+
+### Test updates
+
+Update `app/(app)/app/practice/components/practice-view.test.tsx` lines **641-685**:
+
+- Rename the test from:
+  - `renders Review answers in the bottom bar on the last exam question before submission`
+- To:
+  - `renders Next in the bottom bar on the last exam question before submission`
+- Change the label assertion:
+  - old: `['Previous', 'Review answers', 'Mark for review']`
+  - new: `['Previous', 'Next', 'Mark for review']`
+
+Update `app/(app)/app/practice/components/practice-view.browser.spec.tsx` lines **447-498**:
+
+- Rename the test from:
+  - `calls onEndSession from the bottom-bar Review answers button after the last exam answer`
+- To:
+  - `calls onEndSession from the bottom-bar Next button on the last exam question`
+- Change the click target:
+  - old: `screen.getByRole('button', { name: 'Review answers' })`
+  - new: `screen.getByRole('button', { name: 'Next' })`
+- Keep the expectation:
+  - `expect(onEndSession).toHaveBeenCalledTimes(1);`
+
+### Required new regression coverage
+
+Add a page-level wiring test in `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.browser.spec.tsx`:
+
+- render the active exam-question branch on the **last** question
+- pass both `onNextQuestion` and `onEndSession` spies
+- click the footer `Next` button
+- assert:
+  - `onEndSession` was called once
+  - `onNextQuestion` was **not** called
+
+That test is required. It protects the exact D-3 failure mode described above.
+
+---
+
+## D-4b: Stabilize Previous-Button Visibility From `sessionInfo.index`
+
+### Current code
+
+- `previousQuestionId` is navigator-derived via `useMemo` at `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` lines **67-82**
+- `onPreviousQuestion` depends on `previousQuestionId` at `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` lines **101-105**
+- `hasPreviousQuestion` currently uses `previousQuestionId !== null` at `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` line **247**
+
+### Required implementation
+
+In `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx`:
+
+- Lines **247-248**
+- Old:
+  - `hasPreviousQuestion={previousQuestionId !== null}`
+- New:
+  - `hasPreviousQuestion={(props.sessionInfo?.index ?? 0) > 0}`
+  - `canNavigatePrevious={previousQuestionId !== null}`
+
+In `app/(app)/app/practice/components/practice-view.tsx`:
+
+- Add `canNavigatePrevious?: boolean` to `PracticeViewProps` at lines **17-53**.
+- Thread that prop through `TutorActionBarProps` and `ExamActionBarProps` at lines **93-108** and **175-189**.
+- Disable the `Previous` button when `canNavigatePrevious === false`:
+  - tutor action bar at lines **112-133**
+  - exam action bar at lines **191-214**
+
+### Scope boundary
+
+This debt item still does **not** re-source the previous target. It only separates:
+
+- **visibility** from `sessionInfo.index`
+- **clickability** from `previousQuestionId !== null`
+
+Do **not** change:
+
+- `previousQuestionId` derivation at lines **67-82**
+- `onPreviousQuestion` callback at lines **101-105**
+
+That means this item removes the spacer/visibility regression, avoids an enabled no-op `Previous` button, and still leaves previous-target resolution navigator-derived.
+
+### Test updates
+
+Update `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.browser.spec.tsx` lines **481-523**:
+
+- Rename the test from:
+  - `hasPreviousQuestion is false when navigator is missing or current question is not found`
+- To:
+  - `hasPreviousQuestion is false on the first question when navigator is missing`
+- Keep the existing expectation:
+  - no `Previous` button for `sessionInfo.index === 0`
+
+Add a new browser test adjacent to that block:
+
+- `navigator={null}`
+- `sessionInfo.index = 1`
+- `onNavigateQuestion={() => undefined}`
+- expect the `Previous` button to be visible
+- expect the `Previous` button to be disabled
+
+Add one direct `PracticeView` unit assertion:
+
+- render `PracticeView` with `hasPreviousQuestion={true}` and `canNavigatePrevious={false}`
+- assert the rendered `Previous` button carries the `disabled` attribute
+
+---
+
+## Docs That Must Change In The Same Implementation PR
+
+These active docs encode the old contract and must be updated when the code lands.
+
+- `docs/practice-engine/interaction-contracts.md` lines **101-125**
+  - remove Q1 spacer language
+  - change header label `Review answers` → `Finish exam`
+  - change last-question footer label from `Review answers` to `Next`
+  - remove the "intentional duplication" note
+- `docs/debt/debt-321-bs055-exam-interaction-model-overhaul.md` lines **210-224**, **233-237**, **257**
+  - update the exam action-bar contract
+  - replace the last-question `Review answers` test description
+  - update the review-entry wording from two `Review answers` triggers to header `Finish exam` + last-question footer `Next`
+- `docs/practice-engine/question-rendering-architecture.md` lines **24**, **84**, **157-168**, **274**
+  - update exam review-stage entry wording
+  - update action inventory
+  - update heading text `Review Questions` → `Review & Submit`
+- `docs/practice-engine/practice-modes.md` line **46**
+  - update review-stage entry wording
+- `docs/frontend/design-principles.md` lines **67-69**
+  - remove the special `Review answers` last-question row
+- `docs/dev/stabilization-checklist.md` line **66**
+  - change `Click Review answers` to the new exam exit wording/path
+
+`docs/debt/index.md` also needs its DEBT-322 summary refreshed in this same docs pass.
+
+---
+
+## Out Of Scope
+
+- **D-4a:** not code-confirmed; do not implement in this item
+- **D-4c:** responsive header stacking remains unchanged in this item
+- **Session Summary CTA:** do not rename `Review your answers`
+- **Previous target re-sourcing:** do not change `previousQuestionId` or `onPreviousQuestion`
+
+---
+
+## Implementation Summary
+
+This item is intentionally narrow:
+
+- remove the exam-only Q1 spacer
+- rename the exam header exit to `Finish exam`
+- rename the exam review heading to `Review & Submit`
+- keep the footer label `Next` on every question
+- preserve the existing last-question `onEndSession` click path
+- stabilize Previous-button visibility from `sessionInfo.index` while disabling it until the previous target resolves
+
+No backend, use-case, repository, or schema changes are required.

@@ -54,7 +54,7 @@ Question-related pages use two non-overlapping navigation zones:
 Action bars are rendered inline per context (not via a shared component). The button sets differ enough that abstraction would add complexity without benefit. There is no single universal slot order across every question surface; instead, each context keeps related actions adjacent and preserves stable left-to-right sequencing within that family.
 
 ```
-[← Previous] [Submit / Try Again / Review answers] [Bookmark / Mark for review] [Next →] [Back link]
+[← Previous] [Submit / Try Again / Finish exam] [Bookmark / Mark for review] [Next →] [Back link]
  sequential    primary learning / session action   secondary action         sequential   navigation
 ```
 
@@ -64,9 +64,8 @@ Action bars are rendered inline per context (not via a shared component). The bu
 |---------|-------------------|
 | Practice — before submit | [← Previous] [Submit] [Next →] [Bookmark] |
 | Practice — after submit (Tutor) | [← Previous] [Next →] [Bookmark] |
-| Practice — exam before submit | [← Previous] [Submit] [Next →] [Mark for review] |
+| Practice — exam before submit | [← Previous] [Next →] [Mark for review] |
 | Practice — exam after submit | [← Previous] [Next →] [Mark for review] |
-| Practice — last answered exam question | [← Previous] [Review answers] [Mark for review] |
 | Quick Practice | [Submit] [Next →] [Bookmark] |
 | Quick Practice — after submit | [Next →] [Bookmark] |
 | History Session Review (answered) | [← Previous] [Try Again / Practice Again] [Bookmark] [Next →] [Back to ...] |
