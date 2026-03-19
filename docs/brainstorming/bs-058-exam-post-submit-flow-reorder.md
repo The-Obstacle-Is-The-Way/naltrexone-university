@@ -161,17 +161,27 @@ Session Summary stays the first screen, but each question in the breakdown is ex
 
 ### G1 — Navigator color coding
 
-During the active exam, the `QuestionNavigator` uses `isCurrent` and `row.isAnswered` for button variant styling (`exam-review-view.tsx:59-63`): current = `default`, answered = `secondary`, unanswered = `outline`. The `markedForReview` field only controls a small dot indicator, not the button variant. After finalization, the navigator needs correctness data (correct/incorrect/unanswered) for color coding. The `GetPracticeSessionReviewOutput` already contains `isCorrect` per row, so the data is available — but the navigator component would need a variant or mode prop to switch to correctness-based styling (e.g., correct = green/success, incorrect = red/destructive, unanswered = outline).
+**Current:** The `QuestionNavigator` in `exam-review-view.tsx:59-63` styles buttons by: `isCurrent` → `default`, `row.isAnswered` → `secondary`, unanswered → `outline`. The `markedForReview` field only controls a small dot indicator, not the button variant.
+
+**Needed:** After finalization, the navigator must switch to correctness-based colors. The `ReviewQuestionNavigator` in `review-question-navigator.tsx:15-21` already implements this pattern: `isCorrect === true` → `success`, `isCorrect === false` → `destructive`, `null` → `outline`.
+
+**Implementation path:** Add a `mode` prop to `QuestionNavigator`: `'exam'` (current behavior) vs `'review'` (correctness-based). When `mode='review'`, derive the variant from `row.isCorrect` using the same `success`/`destructive`/`outline` mapping that `ReviewQuestionNavigator` uses. The data is already available — `GetPracticeSessionReviewOutput` includes `isCorrect` per row.
 
 ### G2 — Feedback data per question
 
-The `Feedback` component needs: `isCorrect`, `explanationMd`, `referenceMd`, `choiceExplanations`, and `selectedChoiceId`. During the active exam, this data isn't loaded (exam answer secrecy policy). After finalization, the data must be fetched.
+**What the post-exam review needs per question** (to render `QuestionCard` + `Feedback`):
+- `stemMd` — already in `GetPracticeSessionReviewOutput` rows
+- `choices: Array<{ id, label, textMd }>` — **NOT in review output.** Currently fetched via `GetQuestionBySlug`.
+- `selectedChoiceId: string | null` — **NOT in review output.** Currently fetched via `GetPreviousAttempt`.
+- `correctChoiceId: string` — **NOT in review output.** Currently fetched via `GetPreviousAttempt`.
+- `isCorrect: boolean` — already in review output (for completed exam sessions)
+- `explanationMd: string | null` — **NOT in review output.** Currently fetched via `GetPreviousAttempt`.
+- `referenceMd: string | null` — **NOT in review output.** Currently fetched via `GetPreviousAttempt`.
+- `choiceExplanations: ChoiceExplanation[]` — **NOT in review output.** Currently fetched via `GetPreviousAttempt`.
 
-Two paths:
-- **Bulk fetch:** A new use case that returns all questions with feedback for a completed session (avoids N+1 loads as the user navigates)
-- **Per-question fetch:** Reuse the existing `GetQuestionBySlug` + previous attempt hydration (what the question review route does today)
+**The current question review route loads 2 requests per question** (waterfall): `getQuestionBySlug` + `getPreviousAttempt`. For a 20-question exam with Option A, this would be 40 sequential fetches unless batched.
 
-The bulk fetch is better for Option A (in-session review); per-question is what Option B gets for free.
+**Decision (Q2): Bulk fetch.** A new use case (e.g., `GetCompletedSessionQuestionsWithFeedback`) returns all questions for a completed session in one call. Each row extends the existing review row with: `choices`, `selectedChoiceId`, `correctChoiceId`, `explanationMd`, `referenceMd`, `choiceExplanations`. This eliminates all per-question loading spinners during the post-exam review.
 
 ### G3 — Exam answer secrecy timing
 
@@ -193,7 +203,13 @@ Since the session is already `completed` in the database after finalization, the
 
 The question review page renders "Practice Again" / "Try Again" unconditionally whenever `submitResult` exists (`question-page-client.tsx:408-418`). There is **no mode-aware or origin-aware suppression** — the button shows identically whether the review came from an exam session, a tutor session, bookmarks, or history. This weakens exam finality and adds decision fatigue (4 buttons per question in review: Reattempt + Bookmark + Next/Previous + Back to Summary).
 
-**Fix:** Suppress reattempt actions when `from=summary` and the session mode is exam. Consider replacing per-question reattempt with a single **"Practice missed questions"** CTA on the Session Summary page that creates a new tutor-mode session filtered to only the questions answered incorrectly. This preserves the learning loop while respecting exam finality.
+**Two fixes required (Q5 + Q8):**
+
+1. **Option A in-session review (BS-058):** The new post-exam review stage simply does not render a reattempt button. No conditional needed — it's a new component we control.
+
+2. **Standalone AF-6 fix for the existing `/app/questions/[slug]` route (Q5):** The existing route is still used for History-launched and reopen-summary reviews of exam sessions. Suppression mechanism: the route already receives `from` and `sessionId` as URL params. The `useQuestionPagePreviousAttempt` hook fetches the attempt data which includes the session. Add a `sessionMode` field to the previous attempt response (or fetch it alongside), then suppress the reattempt button when `sessionMode === 'exam'`. This is cleaner than checking `from` alone, because it correctly suppresses reattempt regardless of which surface launched the review (summary, history, or direct URL).
+
+3. **Batch CTA replacement (Q8):** Add a **"Practice missed questions"** button on `SessionSummaryView` (visible only when `summary.totals.correct < summary.totals.answered`). This links to the practice starter with a pre-filled filter for incorrect status, or creates a new tutor session scoped to the missed question IDs. Exact mechanism is an implementation detail for the spec.
 
 ### G7 — E2E test impact
 
@@ -210,6 +226,8 @@ Submit exam → Score banner visible → Question feedback visible → View Summ
 ### G8 — "View in History" CTA relevance
 
 The Session Summary shows "View in History" as one of three CTAs (`session-summary-view.tsx:124-126`, `variant="outline"`). Immediately after finishing an exam, this is a power-user action — most students want to either review their mistakes or start a new session. Clicking it navigates to the full history list page, and clicking the session from there opens the same question review content the user just saw (with "Back to History" instead of "Back to Summary"). It's redundant in the post-exam context.
+
+**Fix (Q9):** Change from `variant="outline"` `<Button>` to a `variant="ghost"` `<Button>` or a plain text `<Link>` with muted styling. Keep it accessible but visually subordinate to "Review your answers" (default), "Practice missed questions" (outline), and "Back to Practice" (outline).
 
 ### G9 — "Back to Summary" label implies backtracking
 
@@ -353,3 +371,4 @@ The Chrome agent preferred a variant of **Option C** (single scrollable summary 
 | 2026-03-19 | Added Chrome agent review findings | Independent walkthrough confirmed AF-6, decision fatigue (4 buttons), loop structure, and "Back to Summary" regression label. Rejected false claims around CTA weight parity and missing color coding. Incorporated "Practice missed questions" batch CTA idea. |
 | 2026-03-19 | Added local Playwright verification | Verified the live flow with captured screenshots, confirmed the summary hydration delay, confirmed duplicate summary exits on the question review screen, and corrected the claim that `Review your answers` is the only path into explanations. |
 | 2026-03-19 | Finalized Q1-Q9 | No open product questions remain. Chosen direction: Option A, compact score banner, bulk fetch, linear Q1 start, skippable review, standalone AF-6 suppression, terminal Summary, batch `Practice missed questions`, demoted `View in History`. |
+| 2026-03-19 | Specified G1, G2, G6, G8 implementation details | G1: add `mode` prop to `QuestionNavigator` for correctness-based styling. G2: documented exact data gap (6 missing fields per question), specified bulk fetch use case shape. G6: split into three discrete fixes with suppression mechanism. G8: specified target variant (`ghost` or plain text link). |
