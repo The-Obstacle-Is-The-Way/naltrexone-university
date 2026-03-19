@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePracticeSessionQuestionFlow } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow';
 import { usePracticeQuestionBookmarks } from '@/app/(app)/app/practice/hooks/use-practice-question-bookmarks';
 import {
@@ -10,6 +10,7 @@ import { useIsMounted } from '@/lib/use-is-mounted';
 import {
   endPracticeSession,
   finalizeExamAnswers,
+  getCompletedSessionQuestionsWithFeedback,
   getPracticeSessionReview,
   getPracticeSessionSummary,
   saveExamDraftAnswer,
@@ -39,11 +40,6 @@ export function usePracticeSessionPageController(
     saveExamDraftAnswerFn: saveExamDraftAnswer,
   });
 
-  const bookmarks = usePracticeQuestionBookmarks({
-    question: questionFlow.question,
-    isMounted,
-  });
-
   const reviewStage = usePracticeSessionReviewStage({
     sessionId,
     isMounted,
@@ -58,8 +54,27 @@ export function usePracticeSessionPageController(
     endPracticeSessionFn: endPracticeSession,
     finalizeExamAnswersFn: finalizeExamAnswers,
     getPracticeSessionReviewFn: getPracticeSessionReview,
+    getCompletedSessionQuestionsWithFeedbackFn:
+      getCompletedSessionQuestionsWithFeedback,
     getPracticeSessionSummaryFn: getPracticeSessionSummary,
     saveCurrentExamDraft: questionFlow.saveCurrentExamDraft,
+  });
+
+  const currentPostExamBookmarkQuestion = useMemo(() => {
+    const currentRow =
+      reviewStage.postExamReview?.rows.find(
+        (row) => row.questionId === reviewStage.postExamReviewCurrentQuestionId,
+      ) ??
+      reviewStage.postExamReview?.rows[0] ??
+      null;
+
+    if (!currentRow?.isAvailable) return null;
+    return { questionId: currentRow.questionId };
+  }, [reviewStage.postExamReview, reviewStage.postExamReviewCurrentQuestionId]);
+
+  const bookmarks = usePracticeQuestionBookmarks({
+    question: currentPostExamBookmarkQuestion ?? questionFlow.question,
+    isMounted,
   });
 
   const bootstrapSessionSummary = useCallback(() => {
@@ -148,6 +163,11 @@ export function usePracticeSessionPageController(
 
   return {
     summary: reviewStage.summary,
+    postExamSummary: reviewStage.postExamSummary,
+    postExamReview: reviewStage.postExamReview,
+    postExamReviewLoadState: reviewStage.postExamReviewLoadState,
+    postExamReviewCurrentQuestionId:
+      reviewStage.postExamReviewCurrentQuestionId,
     summaryReview: reviewStage.summaryReview,
     summaryReviewLoadState: reviewStage.summaryReviewLoadState,
     review: reviewStage.review,
@@ -169,6 +189,7 @@ export function usePracticeSessionPageController(
     canSubmit: questionFlow.canSubmit,
     onEndSession: reviewStage.onEndSession,
     onRetryReview: reviewStage.onRetryReview,
+    onRetryPostExamReview: reviewStage.onRetryPostExamReview,
     onRetryNavigator: reviewStage.onRetryNavigator,
     onTryAgain,
     onRetryBookmarks: bookmarks.onRetryBookmarks,
@@ -179,6 +200,9 @@ export function usePracticeSessionPageController(
     onNextQuestion: questionFlow.onNextQuestion,
     onNavigateQuestion: questionFlow.onNavigateQuestion,
     onOpenReviewQuestion: reviewStage.onOpenReviewQuestion,
+    onNavigatePostExamReviewQuestion:
+      reviewStage.onNavigatePostExamReviewQuestion,
+    onViewSummary: reviewStage.onViewSummary,
     onFinalizeReview: reviewStage.onFinalizeReview,
   };
 }

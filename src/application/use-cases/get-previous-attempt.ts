@@ -4,6 +4,7 @@ import type {
   QuestionRepository,
 } from '@/src/application/ports/repositories';
 import type { Question } from '@/src/domain/entities';
+import type { PracticeMode } from '@/src/domain/value-objects';
 import { ApplicationError } from '../errors';
 import type { AttemptSingleQuestionReader } from '../ports/attempt-repository';
 import {
@@ -20,6 +21,7 @@ export type GetPreviousAttemptInput = {
 
 export type AttemptPreviousAttemptOutput = {
   kind: 'attempt';
+  sessionMode: PracticeMode | null;
   attemptId: string;
   selectedChoiceId: string;
   isCorrect: boolean;
@@ -32,6 +34,7 @@ export type AttemptPreviousAttemptOutput = {
 
 export type SessionUnansweredPreviousAttemptOutput = {
   kind: 'session_unanswered';
+  sessionMode: PracticeMode | null;
   correctChoiceId: string;
   explanationMd: string | null;
   referenceMd: string | null;
@@ -125,6 +128,7 @@ export class GetPreviousAttemptUseCase {
 
       return {
         kind: 'session_unanswered',
+        sessionMode: session.mode,
         correctChoiceId: correctChoice.id,
         explanationMd: question.explanationMd,
         referenceMd: question.referenceMd ?? null,
@@ -154,6 +158,43 @@ export class GetPreviousAttemptUseCase {
       if (attemptSession?.mode === 'exam' && attemptSession.endedAt === null) {
         return null;
       }
+
+      const sessionMode = attemptSession?.mode ?? null;
+
+      const question = await this.questions.findPublishedById(
+        attempt.questionId,
+      );
+
+      if (!question) {
+        this.logger.warn(
+          { questionId: attempt.questionId },
+          'Previous attempt references missing question',
+        );
+        return null;
+      }
+
+      const correctChoice = question.choices.find((c) => c.isCorrect);
+      if (!correctChoice) {
+        throw new ApplicationError(
+          'INTERNAL_ERROR',
+          `Question ${question.id} has no correct choice`,
+        );
+      }
+
+      const choiceExplanations = mapChoiceExplanations(question, input.userId);
+
+      return {
+        kind: 'attempt',
+        sessionMode,
+        attemptId: attempt.id,
+        selectedChoiceId: attempt.selectedChoiceId,
+        isCorrect: attempt.isCorrect,
+        correctChoiceId: correctChoice.id,
+        explanationMd: question.explanationMd,
+        referenceMd: question.referenceMd ?? null,
+        choiceExplanations,
+        answeredAt: attempt.answeredAt.toISOString(),
+      };
     }
 
     const question = await this.questions.findPublishedById(attempt.questionId);
@@ -178,6 +219,7 @@ export class GetPreviousAttemptUseCase {
 
     return {
       kind: 'attempt',
+      sessionMode: null,
       attemptId: attempt.id,
       selectedChoiceId: attempt.selectedChoiceId,
       isCorrect: attempt.isCorrect,

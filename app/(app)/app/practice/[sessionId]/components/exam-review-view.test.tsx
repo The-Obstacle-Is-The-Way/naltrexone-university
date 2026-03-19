@@ -52,9 +52,14 @@ describe('QuestionNavigator', () => {
     );
   }
 
+  function getClassList(el: Element | null): string[] {
+    return (el?.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
+  }
+
   async function renderNavigator(input?: {
     currentQuestionId?: string | null;
     controlledPanelId?: string;
+    mode?: 'exam' | 'review';
   }) {
     const { QuestionNavigator } = await import('./exam-review-view');
     const controlledPanelId =
@@ -64,6 +69,7 @@ describe('QuestionNavigator', () => {
         review={review}
         currentQuestionId={input?.currentQuestionId ?? 'q2'}
         controlledPanelId={controlledPanelId}
+        mode={input?.mode}
         onNavigateQuestion={() => undefined}
       />,
     );
@@ -105,5 +111,22 @@ describe('QuestionNavigator', () => {
         'practice-question-panel',
       );
     });
+  });
+
+  it('uses correctness styling in review mode', async () => {
+    const { doc } = await renderNavigator({
+      currentQuestionId: 'q3',
+      mode: 'review',
+    });
+
+    const correct = findByAriaLabel(doc, 'Question 1: Correct');
+    const incorrect = findByAriaLabel(doc, 'Question 2: Incorrect');
+    const unanswered = findByAriaLabel(doc, 'Question 3: Current, Unanswered');
+
+    expect(getClassList(correct)).toContain('bg-success');
+    expect(getClassList(correct)).toContain('text-success-foreground');
+    expect(getClassList(incorrect)).toContain('bg-destructive');
+    expect(getClassList(unanswered)).toContain('bg-background');
+    expect(getClassList(unanswered)).toContain('border');
   });
 });

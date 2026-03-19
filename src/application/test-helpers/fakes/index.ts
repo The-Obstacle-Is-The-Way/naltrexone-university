@@ -24,6 +24,7 @@ export {
   FakeFinalizeExamAnswersUseCase,
   FakeGetAttemptedQuestionsUseCase,
   FakeGetBookmarksUseCase,
+  FakeGetCompletedSessionQuestionsWithFeedbackUseCase,
   FakeGetIncompletePracticeSessionUseCase,
   FakeGetNextQuestionUseCase,
   FakeGetPracticeSessionReviewUseCase,

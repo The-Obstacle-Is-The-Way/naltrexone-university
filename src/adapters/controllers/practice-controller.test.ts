@@ -8,6 +8,7 @@ import {
   FakeCountAvailableQuestionsUseCase,
   FakeEndPracticeSessionUseCase,
   FakeFinalizeExamAnswersUseCase,
+  FakeGetCompletedSessionQuestionsWithFeedbackUseCase,
   FakeGetIncompletePracticeSessionUseCase,
   FakeGetPracticeSessionReviewUseCase,
   FakeGetPracticeSessionSummaryUseCase,
@@ -23,6 +24,7 @@ import {
 import type {
   EndPracticeSessionOutput,
   FinalizeExamAnswersOutput,
+  GetCompletedSessionQuestionsWithFeedbackOutput,
   GetPracticeSessionReviewOutput,
   GetPracticeSessionSummaryOutput,
   GetSessionHistoryOutput,
@@ -37,6 +39,7 @@ import {
   countAvailableQuestions,
   endPracticeSession,
   finalizeExamAnswers,
+  getCompletedSessionQuestionsWithFeedback,
   getIncompletePracticeSession,
   getPracticeSessionReview,
   getPracticeSessionSummary,
@@ -50,6 +53,7 @@ import {
 type PracticeControllerTestDeps = PracticeControllerDeps & {
   countAvailableQuestionsUseCase: FakeCountAvailableQuestionsUseCase;
   getIncompletePracticeSessionUseCase: FakeGetIncompletePracticeSessionUseCase;
+  getCompletedSessionQuestionsWithFeedbackUseCase: FakeGetCompletedSessionQuestionsWithFeedbackUseCase;
   startPracticeSessionUseCase: FakeStartPracticeSessionUseCase;
   endPracticeSessionUseCase: FakeEndPracticeSessionUseCase;
   finalizeExamAnswersUseCase: FakeFinalizeExamAnswersUseCase;
@@ -90,6 +94,8 @@ function createDeps(overrides?: {
     startedAt: string;
   } | null;
   incompleteThrows?: unknown;
+  completedQuestionsOutput?: GetCompletedSessionQuestionsWithFeedbackOutput;
+  completedQuestionsThrows?: unknown;
   now?: () => Date;
 }): PracticeControllerTestDeps {
   const user =
@@ -164,6 +170,19 @@ function createDeps(overrides?: {
       overrides?.reviewThrows,
     );
 
+  const getCompletedSessionQuestionsWithFeedbackUseCase =
+    new FakeGetCompletedSessionQuestionsWithFeedbackUseCase(
+      overrides?.completedQuestionsOutput ?? {
+        sessionId: '22222222-2222-2222-2222-222222222222',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 0,
+        markedCount: 0,
+        rows: [],
+      },
+      overrides?.completedQuestionsThrows,
+    );
+
   const finalizeExamAnswersUseCase = new FakeFinalizeExamAnswersUseCase(
     overrides?.finalizeOutput ?? {
       sessionId: '22222222-2222-2222-2222-222222222222',
@@ -233,6 +252,7 @@ function createDeps(overrides?: {
     idempotencyKeyRepository: new FakeIdempotencyKeyRepository(now),
     checkEntitlementUseCase,
     getIncompletePracticeSessionUseCase,
+    getCompletedSessionQuestionsWithFeedbackUseCase,
     startPracticeSessionUseCase,
     countAvailableQuestionsUseCase,
     endPracticeSessionUseCase,
@@ -1065,6 +1085,136 @@ describe('practice-controller', () => {
       expect(deps.getPracticeSessionReviewUseCase.inputs).toEqual([
         { userId: 'user_1', sessionId },
       ]);
+    });
+  });
+
+  describe('getCompletedSessionQuestionsWithFeedback', () => {
+    it('returns VALIDATION_ERROR when input is invalid', async () => {
+      const deps = createDeps();
+
+      const result = await getCompletedSessionQuestionsWithFeedback(
+        { sessionId: 'bad' },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          fieldErrors: { sessionId: expect.any(Array) },
+        },
+      });
+      expect(
+        deps.getCompletedSessionQuestionsWithFeedbackUseCase.inputs,
+      ).toEqual([]);
+    });
+
+    it('returns UNAUTHENTICATED when unauthenticated', async () => {
+      const deps = createDeps({ user: null });
+
+      const result = await getCompletedSessionQuestionsWithFeedback(
+        { sessionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNAUTHENTICATED' },
+      });
+      expect(
+        deps.getCompletedSessionQuestionsWithFeedbackUseCase.inputs,
+      ).toEqual([]);
+    });
+
+    it('returns UNSUBSCRIBED when not entitled', async () => {
+      const deps = createDeps({ isEntitled: false });
+
+      const result = await getCompletedSessionQuestionsWithFeedback(
+        { sessionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNSUBSCRIBED' },
+      });
+      expect(
+        deps.getCompletedSessionQuestionsWithFeedbackUseCase.inputs,
+      ).toEqual([]);
+    });
+
+    it('returns NOT_FOUND when use case throws ApplicationError', async () => {
+      const sessionId = '11111111-1111-1111-1111-111111111111';
+      const deps = createDeps({
+        completedQuestionsThrows: new ApplicationError(
+          'NOT_FOUND',
+          'Practice session not found',
+        ),
+      });
+
+      const result = await getCompletedSessionQuestionsWithFeedback(
+        { sessionId },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Practice session not found' },
+      });
+      expect(
+        deps.getCompletedSessionQuestionsWithFeedbackUseCase.inputs,
+      ).toEqual([{ userId: 'user_1', sessionId }]);
+    });
+
+    it('returns completed feedback rows when the use case succeeds', async () => {
+      const deps = createDeps({
+        completedQuestionsOutput: {
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          mode: 'exam',
+          totalCount: 1,
+          answeredCount: 1,
+          markedCount: 0,
+          rows: [
+            {
+              isAvailable: true,
+              questionId: '22222222-2222-2222-2222-222222222222',
+              slug: 'question-1',
+              stemMd: 'Stem',
+              difficulty: 'easy',
+              order: 1,
+              isAnswered: true,
+              isCorrect: false,
+              markedForReview: false,
+              choices: [
+                {
+                  id: '33333333-3333-3333-3333-333333333333',
+                  label: 'A',
+                  textMd: 'Choice A',
+                },
+              ],
+              selectedChoiceId: '33333333-3333-3333-3333-333333333333',
+              correctChoiceId: '44444444-4444-4444-4444-444444444444',
+              explanationMd: 'Explanation',
+              referenceMd: null,
+              choiceExplanations: [],
+            },
+          ],
+        },
+      });
+
+      const sessionId = '11111111-1111-1111-1111-111111111111';
+      const result = await getCompletedSessionQuestionsWithFeedback(
+        { sessionId },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: { sessionId, answeredCount: 1 },
+      });
+      expect(
+        deps.getCompletedSessionQuestionsWithFeedbackUseCase.inputs,
+      ).toEqual([{ userId: 'user_1', sessionId }]);
     });
   });
 

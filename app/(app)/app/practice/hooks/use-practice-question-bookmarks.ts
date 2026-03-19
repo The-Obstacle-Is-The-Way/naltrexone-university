@@ -4,15 +4,15 @@ import {
   createBookmarksEffect,
   toggleBookmarkForQuestion,
 } from '@/app/(app)/app/practice/practice-page-logic';
+import type { BookmarkableQuestion } from '@/app/(app)/app/shared/bookmark-toggle';
 import { reportClientError } from '@/lib/report-client-error';
 import {
   getBookmarks,
   toggleBookmark,
 } from '@/src/adapters/controllers/bookmark-controller';
-import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 
 export type UsePracticeQuestionBookmarksInput = {
-  question: NextQuestion | null;
+  question: BookmarkableQuestion | null;
   isMounted: () => boolean;
 };
 

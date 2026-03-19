@@ -1,7 +1,7 @@
 # Audit Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-07
+**Last Updated:** 2026-03-19
 **Next ID:** AUDIT-012
 
 ---
@@ -12,15 +12,14 @@ Audit reports capture deep, cross-cutting evaluations of architecture, implement
 
 ## Active Audits
 
-| ID | Title | Date | Scope | Status |
-|----|-------|------|-------|--------|
-| AUDIT-011 | [Error Observability & Defensive Coding Sweep](audit-011-error-observability-defensive-coding.md) | 2026-03-07 | Error handling, type safety, array access, concurrency | 2 bugs resolved (BUG-201, BUG-202) + 1 debt (DEBT-286); BUG-199 invalidated after tracer-bullet verification |
-| AUDIT-010 | Exam Secrecy and Cross-Layer Invariant Sweep | 2026-03-02 | Exam-answer secrecy invariant enforcement across use cases, controllers, projections, retry/review | 6 bugs filed (BUG-180–185), fixes pending |
+None.
 
 ## Archived Audits
 
 | ID | Title | Date | Scope | Outcome |
 |----|-------|------|-------|---------|
+| AUDIT-011 | [Error Observability & Defensive Coding Sweep](../_archive/audits/audit-011-error-observability-defensive-coding.md) | 2026-03-07 | Error handling, type safety, array access, concurrency | Resolved 2026-03-19. BUG-201, BUG-202 resolved; BUG-199 invalidated; DEBT-286 resolved (PR #218). |
+| AUDIT-010 | Exam Secrecy and Cross-Layer Invariant Sweep | 2026-03-02 | Exam-answer secrecy invariant enforcement across use cases, controllers, projections, retry/review | Resolved 2026-03-19. All 6 bugs (BUG-180–185) resolved and archived. |
 | AUDIT-009 | Bug Hunt #9 | 2026-03-02 | General sweep | 0 bugs found; reverted as cruft |
 | AUDIT-008 | [Deep Codebase Sweep](../_archive/audits/audit-008-deep-codebase-sweep.md) | 2026-03-02 | Full-stack sweep (12 bugs: BUG-167–179) | All findings resolved and archived |
 | AUDIT-007 | Deep Sweep for First-Principles, Silent-Drop, and Relative Bugs (inline in [bugs/index.md](../bugs/index.md)) | 2026-02-27 | Five-axis investigation with parallel agents | 2 bugs filed (BUG-165, BUG-166), both resolved |

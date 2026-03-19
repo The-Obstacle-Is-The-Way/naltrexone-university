@@ -1,7 +1,7 @@
 # Bookmarks — Feature Dossier
 
 **Feature:** Bookmarking (cross-cutting, not a single page)
-**Last Updated:** 2026-03-17
+**Last Updated:** 2026-03-19
 **Related:** [BS-053](../../brainstorming/bs-053-bookmark-vs-mark-for-review-collision.md) (bookmark vs mark-for-review collision), [BS-052](../../brainstorming/bs-052-bookmark-icon-toggle-replacement.md) (bookmark icon toggle), [Bookmark Surface Policy](../bookmark-surface-policy.md)
 
 ---
@@ -401,7 +401,7 @@ Recent activity rows link into question review with `from=dashboard&mode=review&
 | Bookmarks Page | `/app/bookmarks` | YES (remove only) | **YES** | Remove-only is correct — questions are already bookmarked. |
 | **Question Review** | **`/app/questions/[slug]?mode=review`** | **YES (toggle)** | **YES** | Primary reflection surface. Button renders after bookmark hydration and disables while saving. |
 | Exam Review (pre-submit) | `/app/practice/[sessionId]` | NO | YES (correct) | Assessment mode. Mark-for-review only. |
-| Session Summary | `/app/practice/[sessionId]` | NO | YES (correct) | Waypoint — CTA leads to review page via `from=history&sessionId=...`. |
+| Session Summary | `/app/practice/[sessionId]` | NO | YES (correct) | Waypoint — CTA leads to review page via `from=summary&sessionId=...`. |
 | History Questions | `/app/history?tab=questions` | NO | YES (correct) | List view — click-through to review. |
 | History Sessions breakdown | `/app/history?tab=sessions` | NO | YES (correct) | Session rows and breakdown rows click through to review. |
 | Dashboard Recent Sessions | `/app/dashboard` | NO | YES (correct) | Summary/launchpad row linking to review. |

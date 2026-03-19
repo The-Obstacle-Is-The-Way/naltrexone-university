@@ -33,6 +33,7 @@ const {
   getBookmarksMock,
   toggleBookmarkMock,
   getPracticeSessionReviewMock,
+  getCompletedSessionQuestionsWithFeedbackMock,
   getPracticeSessionSummaryMock,
   endPracticeSessionMock,
   finalizeExamAnswersMock,
@@ -391,6 +392,51 @@ describe('usePracticeSessionPageController (browser)', () => {
         },
       }),
     );
+    getCompletedSessionQuestionsWithFeedbackMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'question-1',
+            slug: 'question-1',
+            stemMd: 'Question 1',
+            difficulty: 'easy',
+            order: 1,
+            isAnswered: true,
+            isCorrect: true,
+            markedForReview: false,
+            choices: [{ id: 'choice_1', label: 'A', textMd: 'Choice A' }],
+            selectedChoiceId: 'choice_1',
+            correctChoiceId: 'choice_1',
+            explanationMd: 'Because A is correct.',
+            referenceMd: null,
+            choiceExplanations: [],
+          },
+          {
+            isAvailable: true,
+            questionId: 'question-2',
+            slug: 'question-2',
+            stemMd: 'Question 2',
+            difficulty: 'medium',
+            order: 2,
+            isAnswered: false,
+            isCorrect: false,
+            markedForReview: false,
+            choices: [{ id: 'choice_2', label: 'A', textMd: 'Choice B' }],
+            selectedChoiceId: null,
+            correctChoiceId: 'choice_2',
+            explanationMd: 'Because B is correct.',
+            referenceMd: null,
+            choiceExplanations: [],
+          },
+        ],
+      }),
+    );
 
     const screen = await render(<PracticeSessionPageControllerReviewProbe />);
 
@@ -408,9 +454,21 @@ describe('usePracticeSessionPageController (browser)', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('summary');
+      .toHaveTextContent('post-exam-review');
+    await expect
+      .element(screen.getByTestId('post-exam-current-question-id'))
+      .toHaveTextContent('question-1');
     expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(1);
     expect(endPracticeSessionMock).not.toHaveBeenCalled();
+
+    await screen.getByRole('button', { name: 'view-summary' }).click();
+
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('summary');
+    await expect
+      .element(screen.getByTestId('summary-session-id'))
+      .toHaveTextContent('session-1');
   });
 
   it('recovers a summary when ending an active tutor session returns CONFLICT', async () => {

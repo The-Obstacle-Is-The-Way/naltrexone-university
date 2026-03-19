@@ -482,6 +482,7 @@ describe('question-page-logic', () => {
     it('sets selectedChoiceId and submitResult when previous attempt exists', async () => {
       const setSelectedChoiceId = vi.fn();
       const setSubmitResult = vi.fn();
+      const setReviewSessionMode = vi.fn();
       const setReviewHydrationState = vi.fn();
 
       await loadPreviousAttempt({
@@ -490,6 +491,7 @@ describe('question-page-logic', () => {
           ok({
             kind: 'attempt',
             attemptId: 'attempt_1',
+            sessionMode: 'exam',
             selectedChoiceId: 'choice_1',
             isCorrect: false,
             correctChoiceId: 'choice_2',
@@ -500,9 +502,11 @@ describe('question-page-logic', () => {
           } satisfies GetPreviousAttemptOutput),
         setSelectedChoiceId,
         setSubmitResult,
+        setReviewSessionMode,
         setReviewHydrationState,
       });
 
+      expect(setReviewSessionMode).toHaveBeenCalledWith('exam');
       expect(setSelectedChoiceId).toHaveBeenCalledWith('choice_1');
       expect(setSubmitResult).toHaveBeenCalledWith({
         attemptId: 'attempt_1',
@@ -527,6 +531,7 @@ describe('question-page-logic', () => {
         getPreviousAttemptFn: async () =>
           ok({
             kind: 'session_unanswered',
+            sessionMode: 'tutor',
             correctChoiceId: 'choice_2',
             explanationMd: 'Explanation',
             referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
@@ -539,6 +544,7 @@ describe('question-page-logic', () => {
       });
 
       expect(setSessionUnansweredReveal).toHaveBeenLastCalledWith({
+        sessionMode: 'tutor',
         correctChoiceId: 'choice_2',
         explanationMd: 'Explanation',
         referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
@@ -637,6 +643,7 @@ describe('question-page-logic', () => {
         ok({
           kind: 'attempt',
           attemptId: 'attempt_1',
+          sessionMode: null,
           selectedChoiceId: 'choice_1',
           isCorrect: true,
           correctChoiceId: 'choice_1',
@@ -735,6 +742,7 @@ describe('question-page-logic', () => {
           ok({
             kind: 'attempt',
             attemptId: 'attempt_1',
+            sessionMode: null,
             selectedChoiceId: 'choice_1',
             isCorrect: true,
             correctChoiceId: 'choice_1',

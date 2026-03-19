@@ -2,14 +2,14 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** What's working, open debt, SPEC-019 status, product decisions
-> **Last Verified:** 2026-03-17
+> **Last Verified:** 2026-03-19
 
 ---
 
 ## 1. What's Fully Working
 
 - Two session modes (tutor, exam) + Quick Practice route (stateless, filters-based, no session tracking)
-- Session lifecycle: create → answer → navigate → review → end → summary
+- Session lifecycle: create → answer → navigate → review-and-submit → finalize → post-exam review (exam only) → summary
 - In-run question navigation (back/jump) in both tutor and exam modes via Question Navigator grid
 - Per-question session summary with explanations
 - Bookmark toggle on question view
@@ -57,7 +57,7 @@
 | **Questions tab scope** | Questions tab is a filterable attempted-question log (result/source server-side filtering; difficulty/tag client-side in v1). | SPEC-022 |
 | **Session runner route** | Stays at `/app/practice/[sessionId]` (NOT renamed to `/app/practice/sessions/[id]`). Static `quick` segment takes priority over dynamic `[sessionId]` in Next.js routing. | SPEC-019 §5.2 |
 | **Nav label** | Nav item is **History** (not Review). | SPEC-021 |
-| **Completed-session review origin** | Session Summary review CTA and breakdown links use `from=history` so review returns to the durable History IA instead of the ended session route. | DEBT-316 |
+| **Completed-session review origin** | Session Summary review CTA and breakdown links use `from=summary`, while History session drill-down keeps `from=history`. Each review surface returns to its own parent. | SPEC-027, BS-058 |
 | **Session review retry ownership** | Inline retry for ended sessions is owned by `/app/questions/[slug]?mode=review&sessionId=...`; active session runner remains `/app/practice/[sessionId]`. | Retry Logic SSOT §3 |
 | **Session immutability on retry** | Retry attempts are standalone writes (`practiceSessionId = null`); historical session score/question states are never mutated. | Retry Logic SSOT §1, §6 |
 | **Session-review retried marker persistence** | `wasRetried` is intentionally visit-scoped (no cross-visit persistence requirement in current contract). | DEBT-266 |

@@ -137,7 +137,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain('[Question no longer available]');
   });
 
-  it('renders a Review your answers CTA first for exam summaries with a reviewable question', async () => {
+  it('renders exam follow-up CTAs with missed-question practice when answers were missed', async () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
@@ -188,6 +188,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
       const text = link.textContent?.trim();
       return (
         text === 'Review your answers' ||
+        text === 'Practice missed questions' ||
         text === 'Back to Practice' ||
         text === 'View in History' ||
         text === 'Back to Dashboard' ||
@@ -197,6 +198,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
 
     expect(actionLinks.map((link) => link.textContent?.trim())).toEqual([
       'Review your answers',
+      'Practice missed questions',
       'Back to Practice',
       'View in History',
     ]);
@@ -204,6 +206,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain(
       'href="/app/questions/q-1?from=summary&amp;mode=review&amp;sessionId=session-1"',
     );
+    expect(html).toContain('href="/app/practice/quick?status=incorrect"');
   });
 
   it('does not render a Review your answers CTA for tutor summaries', async () => {

@@ -108,6 +108,135 @@ test('renders exam review branch and triggers review actions', async () => {
   expect(onFinalizeReview).toHaveBeenCalledTimes(1);
 });
 
+test('renders post-exam review with score banner, feedback, and a summary exit', async () => {
+  const onNavigatePostExamReviewQuestion = vi.fn();
+  const onViewSummary = vi.fn();
+  const screen = await render(
+    <PracticeSessionPageView
+      summary={null}
+      postExamSummary={{
+        sessionId: 'session-1',
+        endedAt: '2026-02-07T00:20:00.000Z',
+        mode: 'exam',
+        questionCount: 2,
+        totals: {
+          answered: 2,
+          correct: 1,
+          accuracy: 0.5,
+          durationSeconds: 120,
+        },
+      }}
+      postExamReview={{
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 2,
+        markedCount: 0,
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'q1',
+            slug: 'q-1',
+            stemMd: 'Stem 1',
+            difficulty: 'easy',
+            order: 1,
+            isAnswered: true,
+            isCorrect: false,
+            markedForReview: false,
+            choices: [
+              { id: 'c1', label: 'A', textMd: 'Choice A' },
+              { id: 'c2', label: 'B', textMd: 'Choice B' },
+            ],
+            selectedChoiceId: 'c1',
+            correctChoiceId: 'c2',
+            explanationMd: 'Because B is correct.',
+            referenceMd: 'Reference 1',
+            choiceExplanations: [
+              {
+                choiceId: 'c1',
+                displayLabel: 'A',
+                textMd: 'Choice A',
+                isCorrect: false,
+                explanationMd: 'A is not correct.',
+              },
+              {
+                choiceId: 'c2',
+                displayLabel: 'B',
+                textMd: 'Choice B',
+                isCorrect: true,
+                explanationMd: null,
+              },
+            ],
+          },
+          {
+            isAvailable: true,
+            questionId: 'q2',
+            slug: 'q-2',
+            stemMd: 'Stem 2',
+            difficulty: 'medium',
+            order: 2,
+            isAnswered: true,
+            isCorrect: true,
+            markedForReview: false,
+            choices: [{ id: 'c3', label: 'A', textMd: 'Choice C' }],
+            selectedChoiceId: 'c3',
+            correctChoiceId: 'c3',
+            explanationMd: 'Because C is correct.',
+            referenceMd: null,
+            choiceExplanations: [
+              {
+                choiceId: 'c3',
+                displayLabel: 'A',
+                textMd: 'Choice C',
+                isCorrect: true,
+                explanationMd: null,
+              },
+            ],
+          },
+        ],
+      }}
+      postExamReviewLoadState={{ status: 'ready' }}
+      postExamReviewCurrentQuestionId="q1"
+      sessionInfo={null}
+      loadState={{ status: 'ready' }}
+      question={null}
+      selectedChoiceId={null}
+      isAnswered={false}
+      submitResult={null}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      canSubmit={false}
+      onEndSession={() => undefined}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={() => undefined}
+      onNavigatePostExamReviewQuestion={onNavigatePostExamReviewQuestion}
+      onViewSummary={onViewSummary}
+    />,
+  );
+
+  await expect.element(screen.getByText('Score: 50% (1/2)')).toBeVisible();
+  await expect.element(screen.getByText('Because B is correct.')).toBeVisible();
+  await expect
+    .element(screen.getByRole('button', { name: 'Question 2: Correct' }))
+    .toBeVisible();
+  await expect
+    .element(screen.getByRole('button', { name: 'Try Again' }))
+    .not.toBeInTheDocument();
+  await expect
+    .element(screen.getByRole('button', { name: 'Practice Again' }))
+    .not.toBeInTheDocument();
+
+  await screen.getByRole('button', { name: 'Next' }).click();
+  expect(onNavigatePostExamReviewQuestion).toHaveBeenCalledWith('q2');
+
+  await screen.getByRole('button', { name: 'View Summary' }).click();
+  expect(onViewSummary).toHaveBeenCalledTimes(1);
+});
+
 test('falls back to onEndSession when onFinalizeReview is omitted in the review stage', async () => {
   const onEndSession = vi.fn();
 

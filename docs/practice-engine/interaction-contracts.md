@@ -3,8 +3,8 @@
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Click-by-click UI contracts for tutor and exam modes — buttons, persistence, locking, navigation, and post-session flows
 > **Related:** [Practice Modes](./practice-modes.md) (lifecycle/data), [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md) (decisions)
-> **Status:** Proposed — documents the target state from BS-055 decisions. Current implementation differs (see "Current vs Proposed" sections).
-> **Last Updated:** 2026-03-17
+> **Status:** Current implementation. Historical BS-055 rationale remains, but the contracts below now describe shipped behavior; follow-up deltas are tracked separately in debt docs where noted.
+> **Last Updated:** 2026-03-19
 
 ---
 
@@ -71,7 +71,7 @@ Question displayed
 - Per-question, on submit. Once feedback is shown, the answer cannot be changed.
 - This is correct because the user has seen the correct answer.
 
-### Current state vs proposed
+### Implementation note
 
 Tutor mode is **unchanged** by BS-055. The current implementation matches this contract, with one exception:
 
@@ -79,7 +79,7 @@ Tutor mode is **unchanged** by BS-055. The current implementation matches this c
 
 ---
 
-## 3. Exam Mode Contract (Proposed — BS-055)
+## 3. Exam Mode Contract (Current Implementation)
 
 ### Mental model
 
@@ -192,21 +192,9 @@ This handles revisits naturally: visit Q1 for 30s → jump to Q3 → come back t
 - **Exam-level locking on `Submit exam`.** All answers become permanent. Feedback is revealed.
 - This matches the intended paper-exam mental model and common digital-assessment behavior.
 
-### Current state vs proposed
+### Implementation note
 
-The current implementation differs significantly. BS-055 documents the full gap:
-
-| Aspect | Current | Proposed |
-|--------|---------|----------|
-| Per-question Submit | Present | Removed |
-| Answer saved when | On Submit click | On navigation boundary |
-| Answer mutability | Locked permanently on Submit | Freely changeable until exam finalization |
-| Auto-advance | After submit (non-last Q) | Removed |
-| Next pre-submit | Visible but silently discards selection (AF-5) | Visible and saves draft on click |
-| Button positions | Shift between states | Fixed slots |
-| `questionStates` meaning | `latest*` fields represent recorded answer state only | `latest*` stays finalized-only; explicit `draft*` fields track mutable exam state |
-| Time tracking | Single-shot on submit | Cumulative across visits |
-| Finalization | Per-question | Batch on Submit exam |
+The legacy pre-BS-055 behavior that differed from this contract (per-question submit in exam mode, locked answers, shifting action labels, no post-exam review stage) has now been retired by DEBT-321, DEBT-322, and BS-058. This section describes the shipped contract.
 
 ---
 
@@ -243,18 +231,42 @@ Quick Practice matches its contract. No changes needed (AF-5 safe — Next is hi
 
 ### Session summary
 
-After a session ends (tutor or exam), the user sees a summary page with:
+After a tutor session ends, the user sees a summary page with:
 - Stats cards (answered, correct, accuracy, duration)
 - Per-question breakdown
-- CTAs: "Review your answers," "Back to Practice," "View in History"
+- CTAs: "Back to Practice" and "View in History"
+
+After an exam is submitted, the flow is now:
+
+```text
+Review & Submit
+  → Submit exam
+  → Post-exam review stage
+  → View Summary / Finish review
+  → Session Summary
+```
+
+The post-exam review stage shows:
+- Score banner (`Score: X% (correct/total)`)
+- Correctness-colored navigator (green/red/outline)
+- Full question feedback inline
+- Top-right `View Summary` escape hatch
+- Bottom bar focused on movement/utility: `Previous`, `Bookmark`, `Next`
+- Last reviewed question swaps the forward CTA to `Finish review`
+- No reattempt action
 
 ### Summary → Question review
 
-"Review your answers" navigates to the question review page (`/app/questions/[slug]?mode=review`).
+The terminal exam summary still exposes:
+- `Review your answers`
+- Clickable breakdown rows
+- `Practice missed questions` when `correct < answered` (shipped today; [DEBT-324](../debt/debt-324-session-scoped-practice-missed-questions.md) recommends removing this CTA because it opens the global latest-visible incorrect Quick Practice pool)
+- `Back to Practice`
+- `View in History` as a demoted secondary action
 
-**Known issue (AF-4):** The current summary-launched review paths pass `from=history` as the origin, so the question review page resolves its back link to `/app/history?tab=sessions` instead of back to the session summary. This affects both the primary summary CTA and the breakdown links rendered inside the summary.
-
-**Required fix:** Summary-launched review must carry a session-summary-aware origin so the back link returns to the summary route, not History.
+Summary-launched review uses a summary-aware origin:
+- Route shape: `/app/questions/[slug]?from=summary&mode=review&sessionId=...`
+- The question review page resolves its return path back to the session summary, not History
 
 ### Question review page
 
@@ -262,8 +274,8 @@ After a session ends (tutor or exam), the user sees a summary page with:
 - Full feedback content (explanation, clinical pearl, references)
 - Bookmark action available (per BS-053)
 - Navigation between questions in the session
-
-**Known issue (AF-6):** Post-exam question review currently exposes `Practice Again` / `Try Again` reattempt actions, which weakens exam finality. Whether session-review reattempt should be suppressed for exam sessions is a separate follow-up concern.
+- Exam-session review suppresses `Practice Again` / `Try Again`
+- Non-exam review paths may still expose reattempt flows where the underlying attempt is not exam-owned
 
 ---
 

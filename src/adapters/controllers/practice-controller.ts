@@ -17,6 +17,8 @@ import type {
   EndPracticeSessionOutput,
   FinalizeExamAnswersInput,
   FinalizeExamAnswersOutput,
+  GetCompletedSessionQuestionsWithFeedbackInput,
+  GetCompletedSessionQuestionsWithFeedbackOutput,
   GetIncompletePracticeSessionInput,
   GetIncompletePracticeSessionOutput,
   GetPracticeSessionReviewInput,
@@ -41,6 +43,7 @@ import {
   EndPracticeSessionOutputSchema,
   FinalizeExamAnswersInputSchema,
   FinalizeExamAnswersOutputSchema,
+  GetCompletedSessionQuestionsWithFeedbackInputSchema,
   GetIncompletePracticeSessionOutputSchema,
   GetPracticeSessionReviewInputSchema,
   GetPracticeSessionSummaryInputSchema,
@@ -60,6 +63,7 @@ export type {
   CountAvailableQuestionsOutput,
   EndPracticeSessionOutput,
   FinalizeExamAnswersOutput,
+  GetCompletedSessionQuestionsWithFeedbackOutput,
   GetIncompletePracticeSessionOutput,
   GetPracticeSessionReviewOutput,
   GetPracticeSessionSummaryOutput,
@@ -79,6 +83,11 @@ export type PracticeControllerDeps = {
     execute: (
       input: GetIncompletePracticeSessionInput,
     ) => Promise<GetIncompletePracticeSessionOutput>;
+  };
+  getCompletedSessionQuestionsWithFeedbackUseCase: {
+    execute: (
+      input: GetCompletedSessionQuestionsWithFeedbackInput,
+    ) => Promise<GetCompletedSessionQuestionsWithFeedbackOutput>;
   };
   startPracticeSessionUseCase: {
     execute: (
@@ -211,6 +220,18 @@ export const getIncompletePracticeSession = createAction({
       userId,
     });
     return GetIncompletePracticeSessionOutputSchema.parse(output);
+  },
+});
+
+export const getCompletedSessionQuestionsWithFeedback = createAction({
+  schema: GetCompletedSessionQuestionsWithFeedbackInputSchema,
+  getDeps,
+  execute: async (input, d) => {
+    const userId = await requireEntitledUserId(d);
+    return d.getCompletedSessionQuestionsWithFeedbackUseCase.execute({
+      userId,
+      sessionId: input.sessionId,
+    });
   },
 });
 

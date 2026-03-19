@@ -11,13 +11,19 @@ import { usePracticeSessionNavigator } from '@/app/(app)/app/practice/[sessionId
 import { usePracticeSessionReviewStageState } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage-state';
 import { usePracticeSessionSummaryReview } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-summary-review';
 import { endSession } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
-import { getThrownErrorMessage } from '@/app/(app)/app/practice/practice-logic';
+import {
+  getActionResultErrorMessage,
+  getThrownErrorMessage,
+} from '@/app/(app)/app/practice/practice-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
+import { STANDARD_READ_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import { reportClientError } from '@/lib/report-client-error';
+import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {
   EndPracticeSessionOutput,
   FinalizeExamAnswersOutput,
+  GetCompletedSessionQuestionsWithFeedbackOutput,
   GetPracticeSessionReviewOutput,
   GetPracticeSessionSummaryOutput,
 } from '@/src/adapters/controllers/practice-controller';
@@ -31,6 +37,8 @@ type EndPracticeSessionActionInput = SessionIdInput & {
 type FinalizeExamAnswersActionInput = SessionIdInput & {
   idempotencyKey?: string;
 };
+
+const POST_EXAM_REVIEW_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 
 export type UsePracticeSessionReviewStageInput = {
   sessionId: string;
@@ -53,6 +61,9 @@ export type UsePracticeSessionReviewStageInput = {
   getPracticeSessionReviewFn: (
     input: SessionIdInput,
   ) => Promise<ActionResult<GetPracticeSessionReviewOutput>>;
+  getCompletedSessionQuestionsWithFeedbackFn: (
+    input: SessionIdInput,
+  ) => Promise<ActionResult<GetCompletedSessionQuestionsWithFeedbackOutput>>;
   getPracticeSessionSummaryFn: (
     input: SessionIdInput,
   ) => Promise<ActionResult<GetPracticeSessionSummaryOutput>>;
@@ -61,6 +72,10 @@ export type UsePracticeSessionReviewStageInput = {
 export type UsePracticeSessionReviewStageOutput = {
   summary: EndPracticeSessionOutput | null;
   setSummary: Dispatch<SetStateAction<EndPracticeSessionOutput | null>>;
+  postExamSummary: EndPracticeSessionOutput | null;
+  postExamReview: GetCompletedSessionQuestionsWithFeedbackOutput | null;
+  postExamReviewLoadState: LoadState;
+  postExamReviewCurrentQuestionId: string | null;
   summaryReview: GetPracticeSessionReviewOutput | null;
   summaryReviewLoadState: LoadState;
   review: GetPracticeSessionReviewOutput | null;
@@ -73,6 +88,9 @@ export type UsePracticeSessionReviewStageOutput = {
   onRetryReview: () => void;
   onRetryNavigator: () => void;
   onOpenReviewQuestion: (questionId: string) => void;
+  onNavigatePostExamReviewQuestion: (questionId: string) => void;
+  onRetryPostExamReview: () => void;
+  onViewSummary: () => void;
   onFinalizeReview: () => Promise<void>;
 };
 
@@ -80,6 +98,16 @@ export function usePracticeSessionReviewStage(
   input: UsePracticeSessionReviewStageInput,
 ): UsePracticeSessionReviewStageOutput {
   const [summary, setSummary] = useState<EndPracticeSessionOutput | null>(null);
+  const [pendingExamSummary, setPendingExamSummary] =
+    useState<EndPracticeSessionOutput | null>(null);
+  const [postExamReview, setPostExamReview] =
+    useState<GetCompletedSessionQuestionsWithFeedbackOutput | null>(null);
+  const [postExamReviewLoadState, setPostExamReviewLoadState] =
+    useState<LoadState>({
+      status: 'idle',
+    });
+  const [postExamReviewCurrentQuestionId, setPostExamReviewCurrentQuestionId] =
+    useState<string | null>(null);
   const [navigatorReloadCount, setNavigatorReloadCount] = useState(0);
   const endSessionIdempotencyKeyRef = useRef(crypto.randomUUID());
   const finalizeExamIdempotencyKeyRef = useRef(crypto.randomUUID());
@@ -102,10 +130,10 @@ export function usePracticeSessionReviewStage(
     [
       input.endPracticeSessionFn,
       input.getPracticeSessionSummaryFn,
+      input.isMounted,
+      input.resetQuestionState,
       input.sessionId,
       input.setLoadState,
-      input.resetQuestionState,
-      input.isMounted,
     ],
   );
 
@@ -127,12 +155,41 @@ export function usePracticeSessionReviewStage(
     [
       input.finalizeExamAnswersFn,
       input.getPracticeSessionSummaryFn,
+      input.isMounted,
+      input.resetQuestionState,
       input.sessionId,
       input.setLoadState,
-      input.resetQuestionState,
-      input.isMounted,
     ],
   );
+
+  const finalizeExamSessionForPostReview = useCallback(async () => {
+    let finalizedSummary: EndPracticeSessionOutput | null = null;
+
+    await endSession({
+      sessionId: input.sessionId,
+      endSessionIdempotencyKey: finalizeExamIdempotencyKeyRef.current,
+      finalizeSessionFn: input.finalizeExamAnswersFn,
+      getPracticeSessionSummaryFn: input.getPracticeSessionSummaryFn,
+      setLoadState: input.setLoadState,
+      setSummary: (nextSummary) => {
+        finalizedSummary = nextSummary;
+      },
+      resetQuestionState: input.resetQuestionState,
+      rotateIdempotencyKey: () => {
+        finalizeExamIdempotencyKeyRef.current = crypto.randomUUID();
+      },
+      isMounted: input.isMounted,
+    });
+
+    return finalizedSummary;
+  }, [
+    input.finalizeExamAnswersFn,
+    input.getPracticeSessionSummaryFn,
+    input.isMounted,
+    input.resetQuestionState,
+    input.sessionId,
+    input.setLoadState,
+  ]);
 
   const finalizeSession = useCallback(
     () =>
@@ -150,6 +207,60 @@ export function usePracticeSessionReviewStage(
     finalizeSession,
     getPracticeSessionReviewFn: input.getPracticeSessionReviewFn,
   });
+
+  const loadPostExamReview = useCallback(
+    async (nextSummary: EndPracticeSessionOutput | null): Promise<void> => {
+      if (!nextSummary) return;
+
+      setPendingExamSummary(nextSummary);
+      setPostExamReview(null);
+      setPostExamReviewCurrentQuestionId(null);
+      setPostExamReviewLoadState({ status: 'loading' });
+
+      let result: Awaited<
+        ReturnType<typeof input.getCompletedSessionQuestionsWithFeedbackFn>
+      >;
+      try {
+        result = await withTimeout(
+          input.getCompletedSessionQuestionsWithFeedbackFn({
+            sessionId: input.sessionId,
+          }),
+          POST_EXAM_REVIEW_TIMEOUT_MS,
+        );
+      } catch (error) {
+        if (!input.isMounted()) return;
+        reportClientError(error, {
+          component: 'UsePracticeSessionReviewStage',
+          action: 'loadPostExamReview',
+        });
+        setPostExamReviewLoadState({
+          status: 'error',
+          message: getThrownErrorMessage(error),
+        });
+        return;
+      }
+
+      if (!input.isMounted()) return;
+      if (!result.ok) {
+        setPostExamReviewLoadState({
+          status: 'error',
+          message: getActionResultErrorMessage(result),
+        });
+        return;
+      }
+
+      setPostExamReview(result.data);
+      setPostExamReviewCurrentQuestionId(
+        result.data.rows[0]?.questionId ?? null,
+      );
+      setPostExamReviewLoadState({ status: 'ready' });
+    },
+    [
+      input.getCompletedSessionQuestionsWithFeedbackFn,
+      input.isMounted,
+      input.sessionId,
+    ],
+  );
 
   const onRetryNavigator = useCallback(() => {
     setNavigatorReloadCount((prev) => prev + 1);
@@ -205,9 +316,50 @@ export function usePracticeSessionReviewStage(
     reviewStage.onEndSession,
   ]);
 
+  const onNavigatePostExamReviewQuestion = useCallback((questionId: string) => {
+    setPostExamReviewCurrentQuestionId(questionId);
+  }, []);
+
+  const onRetryPostExamReview = useCallback(() => {
+    void loadPostExamReview(pendingExamSummary);
+  }, [loadPostExamReview, pendingExamSummary]);
+
+  const onViewSummary = useCallback(() => {
+    if (!pendingExamSummary) return;
+
+    setSummary(pendingExamSummary);
+    setPendingExamSummary(null);
+    setPostExamReview(null);
+    setPostExamReviewCurrentQuestionId(null);
+    setPostExamReviewLoadState({ status: 'idle' });
+  }, [pendingExamSummary]);
+
+  const onFinalizeReview = useCallback(async (): Promise<void> => {
+    if (input.sessionMode !== 'exam') {
+      return reviewStage.onFinalizeReview();
+    }
+
+    const finalizedSummary = await finalizeExamSessionForPostReview();
+    if (!input.isMounted()) return;
+    if (!finalizedSummary) return;
+
+    reviewStage.setReview(null);
+    await loadPostExamReview(finalizedSummary);
+  }, [
+    finalizeExamSessionForPostReview,
+    input.isMounted,
+    input.sessionMode,
+    loadPostExamReview,
+    reviewStage,
+  ]);
+
   return {
     summary,
     setSummary,
+    postExamSummary: pendingExamSummary,
+    postExamReview,
+    postExamReviewLoadState,
+    postExamReviewCurrentQuestionId,
     summaryReview,
     summaryReviewLoadState,
     review: reviewStage.review,
@@ -220,6 +372,9 @@ export function usePracticeSessionReviewStage(
     onRetryReview: reviewStage.onRetryReview,
     onRetryNavigator,
     onOpenReviewQuestion: reviewStage.onOpenReviewQuestion,
-    onFinalizeReview: reviewStage.onFinalizeReview,
+    onNavigatePostExamReviewQuestion,
+    onRetryPostExamReview,
+    onViewSummary,
+    onFinalizeReview,
   };
 }

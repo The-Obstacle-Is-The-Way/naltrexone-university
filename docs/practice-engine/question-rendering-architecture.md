@@ -1,7 +1,7 @@
 # Question Rendering Architecture
 
 > **Type:** Current-Implementation Reference
-> **Last Verified:** 2026-03-17
+> **Last Verified:** 2026-03-19
 > **Scope:** How questions are rendered, navigated, and state-managed across all viewing contexts in the current shipped implementation
 > **Important:** This is **not** the target-state spec for active exam mode. If this document conflicts with [Interaction Contracts](./interaction-contracts.md), [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md), or [DEBT-320](../debt/debt-320-bs055-exam-interaction-model-overhaul.md), those newer documents win for the accepted exam redesign.
 
@@ -9,7 +9,7 @@
 
 ## 1. Overview
 
-Questions appear in **6 distinct viewing contexts** across the application (plus multiple “origin” variants on the question page). Each context shares the same core display components (`QuestionCard`, `ChoiceButton`, `Feedback`) but differs in navigation chrome, action bars, state management, and data sources.
+Questions appear in **7 distinct viewing contexts** across the application (plus multiple “origin” variants on the question page). Each context shares the same core display components (`QuestionCard`, `ChoiceButton`, `Feedback`) but differs in navigation chrome, action bars, state management, and data sources.
 
 This document is the single source of truth for understanding the **current shipped behavior**. It intentionally includes exam-mode details that BS-055 has since marked for replacement.
 
@@ -22,9 +22,10 @@ This document is the single source of truth for understanding the **current ship
 | A | **Tutor Mode** (active session) | `/app/practice/[sessionId]` | Practice landing → Start session (tutor) |
 | B | **Exam Mode** (active session) | `/app/practice/[sessionId]` | Practice landing → Start session (exam) |
 | C | **Exam Review Stage** (pre-submit review) | `/app/practice/[sessionId]` (same URL, different view) | Exam mode → click `Finish exam` in the header, or click `Next` on the last question |
-| D | **Ended Session Review** (post-session) | `/app/questions/[slug]?from=history&mode=review&sessionId=...` | History → Sessions tab → View breakdown → click question, or Session Summary → `Review your answers` / breakdown link |
-| E | **History Individual Review** (standalone) | `/app/questions/[slug]?from=history&mode=review` | History → Questions tab → Review |
-| F | **Quick Practice** (ad-hoc, no session) | `/app/practice/quick` | Practice → Quick Practice |
+| D | **Post-Exam Review Stage** (post-submit, in-session) | `/app/practice/[sessionId]` (same URL, different view) | Exam Review Stage → `Submit exam` → confirm |
+| E | **Ended Session Review** (post-session) | `/app/questions/[slug]?from=summary|history&mode=review&sessionId=...` | Session Summary → `Review your answers` / breakdown link, or History → Sessions tab → View breakdown → click question |
+| F | **History Individual Review** (standalone) | `/app/questions/[slug]?from=history&mode=review` | History → Questions tab → Review |
+| G | **Quick Practice** (ad-hoc, no session) | `/app/practice/quick` | Practice → Quick Practice |
 
 Additional minor contexts (use same `/app/questions/[slug]` route):
 - **Bookmarks Review:** `?from=bookmarks&mode=review`
@@ -83,8 +84,9 @@ Action bars are **not abstracted** — each context renders its own buttons inli
 |---------|-----------|---------|
 | Practice answering UI (active sessions + quick practice) | `app/(app)/app/practice/components/practice-view.tsx` | Previous (session only), Submit (non-exam only), Next, Bookmark (non-exam only), Mark for review (exam only) |
 | Exam Review Stage | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:186-235` | Submit exam (with AlertDialog confirmation) |
-| Session Summary | `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` | Review your answers (exam only), Back to Dashboard, View in History, Start another session |
-| Question page (all review origins) | `app/(app)/app/questions/[slug]/question-page-client.tsx` | Previous/Next (session review only), Submit (pre-answer), Try Again / Practice Again (post-answer), Bookmark (review mode after bookmark hydration), Back link |
+| Post-Exam Review Stage | `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx` | Previous, Bookmark, Next / Finish review, View Summary |
+| Session Summary | `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` | Review your answers (exam only), Practice missed questions (exam with misses only), Back to Practice, View in History |
+| Question page (all review origins) | `app/(app)/app/questions/[slug]/question-page-client.tsx` | Previous/Next (session review only), Submit (pre-answer), conditional Try Again / Practice Again (non-exam review only), Bookmark (review mode after bookmark hydration), Back link |
 
 ### 3.5 Back Links
 
@@ -94,6 +96,8 @@ Handled by `getOriginUi()` in `app/(app)/app/questions/[slug]/question-page-clie
 |-------------------|---------------------|------------|-----------|
 | `history` | Yes | "Back to History" | `historyHref` or `/app/history?tab=sessions` |
 | `history` | No | "Back to History" | `historyHref` or `/app/history?tab=questions` |
+| `summary` | Yes | "Back to Summary" | `/app/practice/{sessionId}` |
+| `summary` | No | "Back to Practice" | `/app/practice` |
 | `practice` | Yes | "Back to Session" | `/app/practice/{sessionId}` |
 | `practice` | No | "Back to Practice" | `/app/practice` |
 | `bookmarks` | — | "Back to Bookmarks" | `/app/bookmarks` |
@@ -152,7 +156,8 @@ Same component tree as Tutor, differentiated by `sessionInfo.mode === 'exam'`:
 **Differences from Tutor:**
 - `correctChoiceId` forced to `null` (`app/(app)/app/practice/components/practice-view.tsx:90-92`) — no green/red highlighting during exam
 - Feedback hidden: `{submitResult && !isExamMode ? ... : null}` (`app/(app)/app/practice/components/practice-view.tsx:239`)
-- After submit, exam mode **auto-advances** to the next question (unless last) via `maybeAutoAdvanceAfterSubmit` in `usePracticeSessionPageController`
+- No per-question `Submit` button. The active exam footer is `[Previous] [Next] [Mark for review]`, with `Next` also acting as the last-question transition into the review stage.
+- Draft answer state is persisted on navigation boundaries and when entering the review stage
 - "Mark for review" button visible (`app/(app)/app/practice/components/practice-view.tsx:277-288`)
 - Header action changes from "End session" to "Finish exam" (triggers exam review stage)
 - Last exam question keeps the bottom-bar `Next` label; that click still routes through `onEndSession` to enter the review stage
@@ -173,12 +178,31 @@ PracticeSessionPageView (app/(app)/app/practice/[sessionId]/components/practice-
 
 **Navigation model:** This is a **checklist UI**, not sequential. "Open question" buttons call `onOpenReviewQuestion(questionId)` which navigates the session runner back to that question (re-entering PracticeView for that question). There is no "Previous/Next" here.
 
-### Context D: Ended Session Review (History / Session Summary Entry)
+### Context D: Post-Exam Review Stage
+
+Immediately after `Submit exam` finalizes an exam, the session runner stays on `/app/practice/[sessionId]` and switches to an inline review surface:
+
+```
+PracticeSessionPageView
+  └─ PostExamReviewView
+       ├─ Score banner: "Score: 60% (3/5)"
+       ├─ QuestionNavigator (mode="review", correctness-colored)
+       ├─ QuestionCard (shared)
+       ├─ Feedback (shared)
+       ├─ Top-right: [View Summary]
+       └─ Bottom bar: [Previous] [Bookmark] [Next / Finish review]
+```
+
+**Navigation model:** This is a sequential in-session review. It is ephemeral: if the user reloads or reopens a completed session URL later, the page boots to the terminal Summary instead of recreating this stage.
+
+**Notable contract:** No `Try Again` / `Practice Again` action exists here.
+
+### Context E: Ended Session Review (History / Session Summary Entry)
 
 ```
 Entry:     /app/history?tab=sessions → "View breakdown" → click question link
            or Session Summary → "Review your answers" / breakdown link
-Route:     /app/questions/[slug]?from=history&mode=review&sessionId={uuid}&historyHref={encoded}
+Route:     /app/questions/[slug]?from=summary|history&mode=review&sessionId={uuid}&historyHref={encoded}
 Server:    app/(app)/app/questions/[slug]/page.tsx
 Client:    app/(app)/app/questions/[slug]/question-page-client.tsx → QuestionView
 Controller: app/(app)/app/questions/[slug]/use-question-page-controller.ts
@@ -189,18 +213,19 @@ Controller: app/(app)/app/questions/[slug]/use-question-page-controller.ts
 QuestionPage (server)
   └─ QuestionPageClient
        └─ QuestionView
-            ├─ Header: "Question" / "Reviewing a question from your history."
+            ├─ Header: "Question" / origin-specific review subtitle
             ├─ ReviewQuestionNavigator (color-coded grid)
             ├─ Session progress label ("Question X of Y")
             ├─ QuestionCard (shared)
             ├─ Feedback (shared) — shown when `submitResult` exists
             └─ Action bar:
                  - [← Previous] / [Next →] when session navigation neighbors exist
-                 - Hydrated answered question: [Try Again] (+ [Submit] after reset)
+                 - Non-exam hydrated review question: [Try Again]/[Practice Again] (+ [Submit] after reset)
+                 - Exam-session hydrated review question: reattempt suppressed
                  - `session_unanswered` reveal: [Try Again] (then [Submit] after reset)
                  - `hydration_error`: explicit fallback card [Retry load] / [Answer as new]
                  - Hydrated review question: [Bookmark] after bookmark lookup resolves
-                 - [Back to History]
+                 - Back link matches origin (`Back to Summary` or `Back to History`)
 ```
 
 **State management:**
@@ -211,13 +236,13 @@ QuestionPage (server)
   - `no_prior_attempt`
   - `hydration_error`
 - Session navigation loaded via `getPracticeSessionReview({ sessionId })` — cached per sessionId
-- Inline retry in this context submits standalone attempts with provenance (`retryOrigin=session_review`)
+- Inline retry in this context submits standalone attempts with provenance (`retryOrigin=session_review`) when the review source is allowed to reattempt
 - Retry marker (`wasRetried`) is maintained in session-scoped client navigation state for the current visit
 - Navigation is URL-driven (`<Link>` elements) — fully supports browser back/forward
 
-### Context E: History Individual Review
+### Context F: History Individual Review
 
-Same route and component tree as Context D, but **without `sessionId`**:
+Same route and component tree as Context E, but **without `sessionId`**:
 
 ```
 Entry:     /app/history?tab=questions → "Review" button
@@ -231,7 +256,7 @@ Route:     /app/questions/[slug]?from=history&mode=review&historyHref={encoded}
 - Action flow: hydrated attempts show [Try Again], which unlocks [Submit] for a new standalone attempt; hydration errors require explicit [Answer as new]
 - Review-mode bookmark action appears once bookmark hydration resolves
 
-### Context F: Quick Practice (Ad-hoc, No Session)
+### Context G: Quick Practice (Ad-hoc, No Session)
 
 ```
 Route:     /app/practice/quick
@@ -259,19 +284,19 @@ QuickPracticePage (server)
 
 ### 5.1 Feature Presence
 
-| Feature | A: Tutor | B: Exam | C: Exam Review | D: Session Review | E: Individual Review | F: Quick Practice |
-|---------|:--------:|:-------:|:--------------:|:-----------------:|:--------------------:|:----------------:|
-| QuestionCard | Yes | Yes | No (list view) | Yes | Yes | Yes |
-| Feedback (explanation) | Immediate | Hidden | No | Hydrated attempt/reveal | Hydrated attempt | Immediate |
-| Can submit answer | Yes | Yes | No | Yes (after Try Again or explicit fallback) | Yes (after Try Again or explicit fallback) | Yes |
-| Can reattempt | No | No | No | Yes (`attempt` and `session_unanswered`) | Yes (`attempt`) | No |
-| Next Question button | Yes | Yes | No | No | No | Yes |
-| Previous Question button | Yes (session-only) | Yes (session-only) | No | Yes (← Previous link) | No | No |
-| Question Navigator grid | Yes | Yes | No (inline list) | Yes (color-coded) | No | No |
-| Sequential nav (X of Y) | In description | In description | No | Yes (inline row) | No | No |
-| Mark for review | No | Yes | View only | No | No | No |
-| Bookmark button | Yes | No | No | Yes (after review bookmark hydration) | Yes (after review bookmark hydration) | Yes |
-| Top-right control | End session | Finish exam | None | None | None | Back to Practice |
+| Feature | A: Tutor | B: Exam | C: Exam Review | D: Post-Exam Review | E: Session Review | F: Individual Review | G: Quick Practice |
+|---------|:--------:|:-------:|:--------------:|:-------------------:|:-----------------:|:--------------------:|:----------------:|
+| QuestionCard | Yes | Yes | No (list view) | Yes | Yes | Yes | Yes |
+| Feedback (explanation) | Immediate | Hidden | No | Immediate after finalization | Hydrated attempt/reveal | Hydrated attempt | Immediate |
+| Can submit answer | Yes | No | No | No | Sometimes (non-exam retry paths only) | Yes (after Try Again or explicit fallback) | Yes |
+| Can reattempt | No | No | No | No | Sometimes (non-exam session review only) | Yes (`attempt`) | No |
+| Next Question button | Yes | Yes | No | Yes | No | No | Yes |
+| Previous Question button | Yes (session-only) | Yes (session-only) | No | Yes | Yes (← Previous link) | No | No |
+| Question Navigator grid | Yes | Yes | No (inline list) | Yes (color-coded) | Yes (color-coded) | No | No |
+| Sequential nav (X of Y) | In description | In description | No | Yes | Yes (inline row) | No | No |
+| Mark for review | No | Yes | View only | No | No | No | No |
+| Bookmark button | Yes | No | No | Yes | Yes (after review bookmark hydration) | Yes (after review bookmark hydration) | Yes |
+| Top-right control | End session | Finish exam | None | View Summary | Origin-specific back link | None | Back to Practice |
 
 Dashboard and bookmarks standalone review variants reuse the same question-page state machine as Context E, but keep their origin-specific top-right back link because `origin !== 'history'`.
 
@@ -318,7 +343,7 @@ This behavior is resolved by SPEC-030 implementation.
 | `historyHref` | History-based contexts | Preserves history page pagination/filter state |
 | `attemptId` | Dashboard review | Specific attempt to load (attempt identity) |
 
-`from=practice` remains part of the route contract, but current production callers use `from=history` for completed-session review entry points.
+`from=practice` remains part of the route contract, but current production callers use `from=summary` for summary-launched review and `from=history` for History session entry points.
 
 ### 7.3 Two Navigator Implementations
 
@@ -328,8 +353,8 @@ The codebase has two navigators that look similar but serve different contexts:
 |--------|-------------------------------------------|---------------------------------------------------------|
 | Renders in | Active session page | Standalone question page |
 | Navigation | `onNavigateQuestion(questionId)` callback | `<Link href={toQuestionRoute(...)}>` routing |
-| Color coding | default/secondary/outline (answered status) | success/destructive/outline (correctness) |
-| Mark-for-review indicator | Red dot overlay | Not applicable |
+| Color coding | default/secondary/outline in active exam; success/destructive/outline in post-exam review | success/destructive/outline (correctness) |
+| Mark-for-review indicator | Red dot overlay in active exam; none in post-exam review | Not applicable |
 | `aria-label` format | "Question N: Current, Marked for review, (Correct/Incorrect/Answered/Unanswered)" | "Question N: Correct/Incorrect/Unanswered, Current" |
 
 ---
@@ -404,6 +429,7 @@ The codebase has two navigators that look similar but serve different contexts:
 | `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` | `PracticeSessionPageView` | Practice session client |
 | `app/(app)/app/practice/components/practice-view.tsx` | `PracticeView` | Active answering (sessions + quick practice) |
 | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` | `ExamReviewView`, `QuestionNavigator` | Exam review stage + active-session navigator grid |
+| `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx` | `PostExamReviewView` | In-session post-exam review stage |
 | `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` | `SessionSummaryView` | Post-session summary |
 | `app/(app)/app/questions/[slug]/components/review-question-navigator.tsx` | `ReviewQuestionNavigator` | Session-based question review |
 | `app/(app)/app/history/components/history-sessions-tab.tsx` | `HistorySessionsTab` | History sessions list |
@@ -424,10 +450,11 @@ The codebase has two navigators that look similar but serve different contexts:
 | File | Hook/Function | Role |
 |------|---------------|------|
 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts` | `usePracticeSessionPageController` | Master controller for practice session |
+| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts` | `usePracticeSessionReviewStage` | Review stage + post-exam review state machine |
 | `app/(app)/app/practice/shared/use-question-flow-core.ts` | `useQuestionFlowCore` | Shared question state (selection, submission, loading) |
 | `app/(app)/app/practice/shared/question-flow-actions.ts` | `runLoadQuestionFlow`, `runSubmitAnswerFlow` | Async action flows with timeout |
 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` | `usePracticeSessionQuestionFlow` | Session-specific question flow (next, navigate, submit) |
-| `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts` | `loadNextQuestion`, `createLoadNextQuestionAction`, `submitAnswerForQuestion`, `maybeAutoAdvanceAfterSubmit`, `endSession`, `createNavigatorEffect`, `createSummaryReviewEffect` | Session runner async flows + review/navigator wiring |
+| `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts` | `loadNextQuestion`, `createLoadNextQuestionAction`, `submitAnswerForQuestion`, `endSession`, `createNavigatorEffect`, `createSummaryReviewEffect` | Session runner async flows + review/navigator wiring |
 | `app/(app)/app/practice/hooks/use-practice-question-flow.ts` | `usePracticeQuestionFlow` | Quick practice/ad-hoc question flow (filters-based) |
 | `app/(app)/app/practice/practice-page-logic.ts` | `loadNextQuestion`, `submitAnswerForQuestion` | Quick practice async flows (filters-based) |
 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-mark-for-review.ts` | `usePracticeSessionMarkForReview` | Mark-for-review toggle (exam only) |
@@ -497,8 +524,9 @@ The bottom action bar is implemented inline in 4 different places. A future spec
 
 | Date | Change |
 |------|--------|
+| 2026-03-19 | Implemented BS-058: exam finalization now enters an in-session post-exam review stage with score banner + inline feedback, Session Summary gained `Practice missed questions`, summary-origin review remains `from=summary`, and exam-session review suppresses per-question reattempt actions. |
 | 2026-03-18 | Implemented DEBT-322: removed the exam Q1 spacer, renamed the exam header exit to `Finish exam`, renamed the review heading to `Review & Submit`, and kept the footer label `Next` on the last question while preserving review-stage routing. |
-| 2026-03-17 | Accuracy pass: updated completed-session review entry points to current `from=history` behavior, documented last-question exam `Review answers` CTA, corrected bookmark availability in review mode, removed stale top-right back-link claims for history review, and fixed related spec-link labels. |
+| 2026-03-17 | Accuracy pass: documented the then-current completed-session review entry points, corrected bookmark availability in review mode, removed stale top-right back-link claims for history review, and fixed related spec-link labels. |
 | 2026-03-02 | Linked canonical Exam Answer Secrecy Policy for cross-context correctness/explanation exposure rules. |
 | 2026-03-01 | Closed DEBT-266 and DEBT-267: documented server telemetry events, accepted visit-scoped retry-marker policy, and synced previous-attempt mixed-id contract hardening. |
 | 2026-03-01 | Synced to DEBT-265 implementation: updated review route ownership, hydration outcome model, session-review submit/reattempt matrix, and `mode=review` semantics. Added follow-up debt references for retry observability and marker-persistence policy (DEBT-266). |

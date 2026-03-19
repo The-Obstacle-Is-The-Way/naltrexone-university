@@ -66,7 +66,9 @@
 4. [ ] Click `Finish exam` (or `Next` on the last question)
 5. [ ] Confirm answered/unanswered/marked counts + open-question jump work
 6. [ ] Submit exam from review stage
-7. [ ] Confirm aggregate summary renders
+7. [ ] Confirm post-exam review renders with score banner + inline feedback
+8. [ ] Click `View Summary`
+9. [ ] Confirm aggregate summary renders
 
 ### Flow D: Review + Bookmarks + Dashboard
 

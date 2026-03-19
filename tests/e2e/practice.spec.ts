@@ -102,7 +102,19 @@ test.describe('practice', () => {
     await submitExamButton.click();
     await page.getByRole('button', { name: 'Confirm submit' }).click();
 
-    // Wait for session to end and summary to appear
+    await expect(
+      page.getByRole('heading', { name: /^Score: \d+% \(\d\/1\)$/ }),
+    ).toBeVisible({ timeout: 30_000 });
+    await expect(
+      page.getByText(
+        'Review each question with feedback before moving to your session summary.',
+      ),
+    ).toBeVisible();
+    await expect(page.getByText(/^(Correct|Incorrect)$/).first()).toBeVisible();
+
+    await page.getByRole('button', { name: 'View Summary' }).click();
+
+    // Wait for the terminal session summary to appear
     await expect(
       page.getByRole('heading', { name: 'Session Summary' }),
     ).toBeVisible({ timeout: 30_000 });
