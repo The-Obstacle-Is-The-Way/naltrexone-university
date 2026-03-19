@@ -146,13 +146,14 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
       throw new Error('Expected first row to be available');
     }
     expect(output.rows[0].choices).toHaveLength(2);
-    expect(output.rows[0].choices.map((choice) => choice.id)).toEqual(
-      expect.arrayContaining(['q1-choice-a', 'q1-choice-b']),
-    );
+    expect(output.rows[0].choices.map((choice) => choice.id)).toEqual([
+      'q1-choice-b',
+      'q1-choice-a',
+    ]);
     expect(output.rows[0].choiceExplanations).toHaveLength(2);
     expect(
       output.rows[0].choiceExplanations.map((choice) => choice.choiceId),
-    ).toEqual(expect.arrayContaining(['q1-choice-a', 'q1-choice-b']));
+    ).toEqual(['q1-choice-b', 'q1-choice-a']);
 
     expect(output.rows[1]).toMatchObject({
       isAvailable: true,
@@ -167,6 +168,18 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
       explanationMd: 'Overall explanation for q2',
       referenceMd: 'Reference for q2',
     });
+    if (!output.rows[1] || !output.rows[1].isAvailable) {
+      throw new Error('Expected second row to be available');
+    }
+    expect(output.rows[1].choices).toHaveLength(2);
+    expect(output.rows[1].choices.map((choice) => choice.id)).toEqual([
+      'q2-choice-a',
+      'q2-choice-b',
+    ]);
+    expect(output.rows[1].choiceExplanations).toHaveLength(2);
+    expect(
+      output.rows[1].choiceExplanations.map((choice) => choice.choiceId),
+    ).toEqual(['q2-choice-a', 'q2-choice-b']);
   });
 
   it('throws CONFLICT when the session is still in progress', async () => {
