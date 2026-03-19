@@ -22,6 +22,10 @@ function findStatValue(doc: Document, label: string): string | null {
   return labelEl?.nextElementSibling?.textContent ?? null;
 }
 
+function getClassTokens(className: string): Set<string> {
+  return new Set(className.split(/\s+/).filter(Boolean));
+}
+
 describe('SessionSummaryView', () => {
   it('uses a card heading for the question breakdown section', () => {
     const html = renderToStaticMarkup(
@@ -158,7 +162,7 @@ describe('SessionSummaryView', () => {
     ]);
   });
 
-  it('returns exam summary actions when review is available and omits legacy links', () => {
+  it('returns exam summary actions when review is available and there are missed questions', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
@@ -201,6 +205,7 @@ describe('SessionSummaryView', () => {
       const text = link.textContent?.trim();
       return (
         text === 'Review your answers' ||
+        text === 'Practice missed questions' ||
         text === 'Back to Practice' ||
         text === 'View in History' ||
         text === 'Back to Dashboard' ||
@@ -210,6 +215,7 @@ describe('SessionSummaryView', () => {
 
     expect(actionLinks.map((link) => link.textContent?.trim())).toEqual([
       'Review your answers',
+      'Practice missed questions',
       'Back to Practice',
       'View in History',
     ]);
@@ -220,6 +226,64 @@ describe('SessionSummaryView', () => {
     expect(reviewLink?.getAttribute('href')).toBe(
       '/app/questions/q-1?from=summary&mode=review&sessionId=session-1',
     );
+
+    const missedQuestionsLink = Array.from(doc.querySelectorAll('a')).find(
+      (link) => link.textContent?.trim() === 'Practice missed questions',
+    );
+    expect(missedQuestionsLink?.getAttribute('href')).toBe(
+      '/app/practice/quick?status=incorrect',
+    );
+
+    const historyLink = Array.from(doc.querySelectorAll('a')).find(
+      (link) => link.textContent?.trim() === 'View in History',
+    );
+    const historyLinkTokens = getClassTokens(
+      historyLink?.getAttribute('class') ?? '',
+    );
+    expect(historyLinkTokens.has('hover:bg-accent')).toBe(true);
+    expect(historyLinkTokens.has('border')).toBe(false);
+  });
+
+  it('omits practice missed questions when the exam summary is perfect', () => {
+    const html = renderToStaticMarkup(
+      <SessionSummaryView
+        summary={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          questionCount: 2,
+          endedAt: '2026-02-07T00:00:00.000Z',
+          totals: {
+            answered: 2,
+            correct: 2,
+            accuracy: 1,
+            durationSeconds: 120,
+          },
+        }}
+        review={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          totalCount: 2,
+          answeredCount: 2,
+          markedCount: 0,
+          rows: [
+            {
+              isAvailable: true,
+              questionId: 'q1',
+              slug: 'q-1',
+              stemMd: 'Stem for q1',
+              difficulty: 'easy',
+              order: 1,
+              isAnswered: true,
+              isCorrect: true,
+              markedForReview: false,
+            },
+          ],
+        }}
+        reviewLoadState={{ status: 'ready' }}
+      />,
+    );
+
+    expect(html).not.toContain('Practice missed questions');
   });
 
   it('threads summary origin through breakdown links', () => {

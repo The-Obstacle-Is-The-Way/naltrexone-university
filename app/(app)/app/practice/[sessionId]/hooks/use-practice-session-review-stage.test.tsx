@@ -44,6 +44,11 @@ describe('usePracticeSessionReviewStage', () => {
         > => {
           throw new Error('not used');
         },
+        getCompletedSessionQuestionsWithFeedbackFn: async (): Promise<
+          ActionResult<never>
+        > => {
+          throw new Error('not used');
+        },
         getPracticeSessionSummaryFn: async (): Promise<
           ActionResult<EndPracticeSessionOutput>
         > => {
@@ -54,6 +59,10 @@ describe('usePracticeSessionReviewStage', () => {
 
     expect(output.summary).toBeNull();
     expect(typeof output.setSummary).toBe('function');
+    expect(output.postExamSummary).toBeNull();
+    expect(output.postExamReview).toBeNull();
+    expect(output.postExamReviewLoadState).toEqual({ status: 'idle' });
+    expect(output.postExamReviewCurrentQuestionId).toBeNull();
     expect(output.summaryReview).toBeNull();
     expect(output.summaryReviewLoadState).toEqual({ status: 'idle' });
     expect(output.review).toBeNull();
@@ -64,6 +73,9 @@ describe('usePracticeSessionReviewStage', () => {
     expect(output.isInReviewStage).toBe(false);
     expect(typeof output.onEndSession).toBe('function');
     expect(typeof output.onOpenReviewQuestion).toBe('function');
+    expect(typeof output.onNavigatePostExamReviewQuestion).toBe('function');
+    expect(typeof output.onRetryPostExamReview).toBe('function');
+    expect(typeof output.onViewSummary).toBe('function');
     expect(typeof output.onFinalizeReview).toBe('function');
     expect(typeof output.onRetryNavigator).toBe('function');
     expect(typeof output.onRetryReview).toBe('function');

@@ -62,6 +62,7 @@ export type UseQuestionPageControllerOutput = {
   submitResult: SubmitAnswerOutput | null;
   isLoadingPreviousAttempt: boolean;
   reviewHydrationState: ReviewHydrationState | null;
+  reviewSessionMode: 'tutor' | 'exam' | null;
   sessionUnansweredReveal: SessionUnansweredReveal | null;
   sessionNavigation: SessionNavigation | null;
   canSubmit: boolean;
@@ -186,6 +187,7 @@ export function useQuestionPageController(
   const {
     isLoadingPreviousAttempt,
     reviewHydrationState,
+    reviewSessionMode,
     resetReviewHydrationState,
   } = useQuestionPagePreviousAttempt({
     mode: input.mode,
@@ -340,6 +342,7 @@ export function useQuestionPageController(
     submitResult,
     isLoadingPreviousAttempt,
     reviewHydrationState,
+    reviewSessionMode,
     sessionUnansweredReveal,
     canSubmit,
     isPending,

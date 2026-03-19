@@ -38,6 +38,7 @@ function getActiveView(
   output: ReturnType<typeof usePracticeSessionPageController>,
 ) {
   if (output.summary) return 'summary';
+  if (output.postExamReview) return 'post-exam-review';
   if (output.review) return 'review';
   if (output.question) return 'question';
   return '';
@@ -178,6 +179,7 @@ export function PracticeSessionPageControllerReviewProbe() {
         { testId: 'active-view', value: getActiveView(output) },
         { testId: 'load-status', value: output.loadState.status },
         { testId: 'question-id', value: output.question?.questionId },
+        { testId: 'summary-session-id', value: output.summary?.sessionId },
         { testId: 'has-submit-result', value: output.submitResult !== null },
         {
           testId: 'review-answered-count',
@@ -186,6 +188,10 @@ export function PracticeSessionPageControllerReviewProbe() {
         {
           testId: 'review-row-answered',
           value: output.review?.rows[0]?.isAnswered,
+        },
+        {
+          testId: 'post-exam-current-question-id',
+          value: output.postExamReviewCurrentQuestionId,
         },
       ])}
       {renderActionButtons([
@@ -198,6 +204,10 @@ export function PracticeSessionPageControllerReviewProbe() {
           onClick: () => {
             void output.onFinalizeReview?.();
           },
+        },
+        {
+          label: 'view-summary',
+          onClick: () => output.onViewSummary?.(),
         },
         {
           label: 'open-review-question-1',

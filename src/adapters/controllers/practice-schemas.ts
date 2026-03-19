@@ -67,6 +67,12 @@ export const GetPracticeSessionReviewInputSchema = z
   })
   .strict();
 
+export const GetCompletedSessionQuestionsWithFeedbackInputSchema = z
+  .object({
+    sessionId: zUuid,
+  })
+  .strict();
+
 export const GetPracticeSessionSummaryInputSchema = z
   .object({
     sessionId: zUuid,

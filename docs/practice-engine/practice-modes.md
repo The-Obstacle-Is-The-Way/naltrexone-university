@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Ad-hoc, Tutor, and Exam modes — lifecycle, grading, concurrency
-> **Last Verified:** 2026-03-17
+> **Last Verified:** 2026-03-19
 
 ---
 
@@ -14,7 +14,7 @@ The Practice Engine supports two session modes (tutor, exam) plus a stateless Qu
 |------|-------|----------|-------------------|----------|---------|
 | **Ad-hoc (Quick Practice)** | `/app/practice/quick` | No | Immediate | No | No |
 | **Tutor** | `/app/practice/[sessionId]` | Yes | Immediate after each answer | X/N counter | Yes (totals + per-question) |
-| **Exam** | `/app/practice/[sessionId]` | Yes | Hidden until session ends | X/N counter + mark-for-review | Yes (totals + per-question + explanations revealed) |
+| **Exam** | `/app/practice/[sessionId]` | Yes | Hidden until `Submit exam`, then shown in post-exam review and summary | X/N counter + mark-for-review | Yes (post-exam review → terminal summary) |
 
 ---
 
@@ -25,15 +25,16 @@ The Practice Engine supports two session modes (tutor, exam) plus a stateless Qu
     ↓
 StartPracticeSession → creates session with shuffled questionIds
     ↓
-[Question loop: getNextQuestion → render → submitAnswer → repeat]
+[Question loop: getNextQuestion → render → answer drafts / submitAnswer → repeat]
     ↓ (tutor: explanation shown immediately)
-    ↓ (exam: answer stored, no explanation)
-    ↓ (exam only: user enters review stage before final submit)
+    ↓ (exam: draft answer stored on navigation, no explanation)
+    ↓ (exam only: user enters review-and-submit stage before final submit)
     ↓
 EndPracticeSession → computes totals from questionStates
     ↓
+[Exam only: post-exam review stage with score banner + inline feedback]
+    ↓
 [Summary view: totals + per-question breakdown]
-    ↓ (exam: all explanations now revealed)
 ```
 
 **Current-vs-target note:** the lifecycle above reflects the **current implementation path**. The accepted target redesign in [Interaction Contracts](./interaction-contracts.md) changes active exam mode specifically: draft-save on navigation, mutable answers while the session is in progress, and batch finalization on `Submit exam`. Tutor and Quick Practice continue to use the one-shot `submitAnswer` path.
@@ -44,7 +45,8 @@ EndPracticeSession → computes totals from questionStates
 
 - **Mark for review:** Users can flag questions during the session. `SetPracticeSessionQuestionMark` persists the flag. Only available in exam mode.
 - **Review stage:** Before finalizing, users enter a review checklist with answered/unanswered/marked counts and can jump back into any exam question. Entry is via the header `Finish exam` action and the last-question footer `Next` action.
-- **Deferred explanations (policy):** Correctness/explanations remain hidden while the exam session is active, then become visible after `EndPracticeSession`. See [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md) for the canonical enforcement contract and regression scope.
+- **Post-exam review stage:** After `Submit exam`, the user stays on the session route and enters an ephemeral post-exam review stage with a score banner, correctness-colored navigator, inline feedback, and a `View Summary` escape hatch.
+- **Deferred explanations (policy):** Correctness/explanations remain hidden while the exam session is active, then become visible only after `Submit exam` finalizes the session. See [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md) for the canonical enforcement contract and regression scope.
 
 ---
 

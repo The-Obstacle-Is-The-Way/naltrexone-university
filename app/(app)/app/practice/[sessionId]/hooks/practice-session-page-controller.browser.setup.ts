@@ -6,6 +6,7 @@ type PracticeSessionPageControllerBrowserMocks = {
   getBookmarksMock: ReturnType<typeof vi.fn>;
   toggleBookmarkMock: ReturnType<typeof vi.fn>;
   getPracticeSessionReviewMock: ReturnType<typeof vi.fn>;
+  getCompletedSessionQuestionsWithFeedbackMock: ReturnType<typeof vi.fn>;
   getPracticeSessionSummaryMock: ReturnType<typeof vi.fn>;
   endPracticeSessionMock: ReturnType<typeof vi.fn>;
   finalizeExamAnswersMock: ReturnType<typeof vi.fn>;
@@ -20,6 +21,7 @@ const practiceSessionPageControllerBrowserMocks =
     getBookmarksMock: vi.fn(),
     toggleBookmarkMock: vi.fn(),
     getPracticeSessionReviewMock: vi.fn(),
+    getCompletedSessionQuestionsWithFeedbackMock: vi.fn(),
     getPracticeSessionSummaryMock: vi.fn(),
     endPracticeSessionMock: vi.fn(),
     finalizeExamAnswersMock: vi.fn(),
@@ -41,6 +43,8 @@ vi.mock('@/src/adapters/controllers/bookmark-controller', () => ({
 vi.mock('@/src/adapters/controllers/practice-controller', () => ({
   getPracticeSessionReview:
     practiceSessionPageControllerBrowserMocks.getPracticeSessionReviewMock,
+  getCompletedSessionQuestionsWithFeedback:
+    practiceSessionPageControllerBrowserMocks.getCompletedSessionQuestionsWithFeedbackMock,
   getPracticeSessionSummary:
     practiceSessionPageControllerBrowserMocks.getPracticeSessionSummaryMock,
   endPracticeSession:

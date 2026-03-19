@@ -163,6 +163,7 @@ export type QuestionViewProps = {
   origin?: QuestionOrigin | null;
   sessionId?: string;
   historyHref?: string;
+  reviewSessionMode?: 'tutor' | 'exam' | null;
   onTryAgain: () => void;
   onToggleBookmark?: () => void;
   onSelectChoice: (choiceId: string) => void;
@@ -174,10 +175,14 @@ export type QuestionViewProps = {
 export function QuestionView(props: QuestionViewProps) {
   const sessionUnansweredReveal = props.sessionUnansweredReveal ?? null;
   const reviewHydrationState = props.reviewHydrationState ?? null;
+  const reviewSessionMode = props.reviewSessionMode ?? null;
   const isReviewMode = props.mode === 'review';
   const isSessionReviewUnansweredReveal = sessionUnansweredReveal !== null;
   const isReviewHydrationError =
     isReviewMode && reviewHydrationState === 'hydration_error';
+  const shouldShowReattempt =
+    (props.submitResult !== null || isSessionReviewUnansweredReveal) &&
+    reviewSessionMode !== 'exam';
   const onAnswerAsNew = props.onAnswerAsNew ?? (() => undefined);
   const correctChoiceId =
     sessionUnansweredReveal?.correctChoiceId ??
@@ -405,7 +410,7 @@ export function QuestionView(props: QuestionViewProps) {
             </Button>
           ) : null}
 
-          {props.submitResult || isSessionReviewUnansweredReveal ? (
+          {shouldShowReattempt ? (
             <Button
               type="button"
               variant="outline"
@@ -511,6 +516,7 @@ export default function QuestionPageClient({
       origin={origin}
       sessionId={sessionId}
       historyHref={historyHref}
+      reviewSessionMode={controller.reviewSessionMode}
     />
   );
 }

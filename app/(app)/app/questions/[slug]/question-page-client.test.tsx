@@ -1085,6 +1085,7 @@ describe('QuestionView', () => {
         sessionNavigation={sharedSessionNavigation}
         submitResult={null}
         sessionUnansweredReveal={{
+          sessionMode: 'tutor',
           correctChoiceId: 'c2',
           explanationMd: 'Explanation for unanswered review',
           referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
@@ -1129,6 +1130,7 @@ describe('QuestionView', () => {
         sessionNavigation={sharedSessionNavigation}
         submitResult={null}
         sessionUnansweredReveal={{
+          sessionMode: 'tutor',
           correctChoiceId: 'c2',
           explanationMd: 'Explanation for unanswered review',
           referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',

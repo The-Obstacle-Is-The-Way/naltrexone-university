@@ -42,6 +42,12 @@ export {
   GetBookmarksUseCase,
 } from './get-bookmarks';
 export {
+  type CompletedSessionQuestionWithFeedbackRow,
+  type GetCompletedSessionQuestionsWithFeedbackInput,
+  type GetCompletedSessionQuestionsWithFeedbackOutput,
+  GetCompletedSessionQuestionsWithFeedbackUseCase,
+} from './get-completed-session-questions-with-feedback';
+export {
   type GetIncompletePracticeSessionInput,
   type GetIncompletePracticeSessionOutput,
   GetIncompletePracticeSessionUseCase,

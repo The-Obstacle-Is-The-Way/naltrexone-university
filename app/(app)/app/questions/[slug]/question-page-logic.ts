@@ -38,6 +38,7 @@ export type SessionNavigation = {
 };
 
 export type SessionUnansweredReveal = {
+  sessionMode: 'tutor' | 'exam' | null;
   correctChoiceId: string;
   explanationMd: string | null;
   referenceMd: string | null;
@@ -332,6 +333,7 @@ export async function loadPreviousAttempt(input: {
   ) => Promise<ActionResult<GetPreviousAttemptOutput | null>>;
   setSelectedChoiceId: (choiceId: string | null) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  setReviewSessionMode?: (mode: 'tutor' | 'exam' | null) => void;
   setSessionUnansweredReveal?: (reveal: SessionUnansweredReveal | null) => void;
   setReviewHydrationState?: (state: ReviewHydrationState) => void;
   isMounted?: () => boolean;
@@ -341,9 +343,11 @@ export async function loadPreviousAttempt(input: {
   const isStale = input.isStale ?? (() => false);
   const setSessionUnansweredReveal =
     input.setSessionUnansweredReveal ?? (() => undefined);
+  const setReviewSessionMode = input.setReviewSessionMode ?? (() => undefined);
   const setReviewHydrationState =
     input.setReviewHydrationState ?? (() => undefined);
   setSessionUnansweredReveal(null);
+  setReviewSessionMode(null);
 
   let res: ActionResult<GetPreviousAttemptOutput | null>;
   const normalizedReviewIds = normalizeReviewIdentifiers({
@@ -384,6 +388,7 @@ export async function loadPreviousAttempt(input: {
   }
 
   if (!res.data) {
+    setReviewSessionMode(null);
     setReviewHydrationState('no_prior_attempt');
     return;
   }
@@ -392,7 +397,9 @@ export async function loadPreviousAttempt(input: {
   if (data.kind === 'session_unanswered') {
     input.setSelectedChoiceId(null);
     input.setSubmitResult(null);
+    setReviewSessionMode(data.sessionMode);
     setSessionUnansweredReveal({
+      sessionMode: data.sessionMode,
       correctChoiceId: data.correctChoiceId,
       explanationMd: data.explanationMd,
       referenceMd: data.referenceMd ?? null,
@@ -403,6 +410,7 @@ export async function loadPreviousAttempt(input: {
   }
 
   setSessionUnansweredReveal(null);
+  setReviewSessionMode(data.sessionMode);
   input.setSelectedChoiceId(data.selectedChoiceId);
   input.setSubmitResult({
     attemptId: data.attemptId,

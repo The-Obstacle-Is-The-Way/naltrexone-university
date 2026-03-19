@@ -37,6 +37,7 @@ import type {
   FinalizeExamAnswersUseCase,
   GetAttemptedQuestionsUseCase,
   GetBookmarksUseCase,
+  GetCompletedSessionQuestionsWithFeedbackUseCase,
   GetIncompletePracticeSessionUseCase,
   GetNextQuestionUseCase,
   GetPracticeSessionReviewUseCase,
@@ -116,6 +117,7 @@ export type UseCaseFactories = {
   createGetBookmarksUseCase: () => GetBookmarksUseCase;
   createGetAttemptedQuestionsUseCase: () => GetAttemptedQuestionsUseCase;
   createGetIncompletePracticeSessionUseCase: () => GetIncompletePracticeSessionUseCase;
+  createGetCompletedSessionQuestionsWithFeedbackUseCase: () => GetCompletedSessionQuestionsWithFeedbackUseCase;
   createGetPracticeSessionReviewUseCase: () => GetPracticeSessionReviewUseCase;
   createGetPracticeSessionSummaryUseCase: () => GetPracticeSessionSummaryUseCase;
   createGetSessionHistoryUseCase: () => GetSessionHistoryUseCase;

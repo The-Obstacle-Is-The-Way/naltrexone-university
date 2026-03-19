@@ -4,6 +4,7 @@ import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {
   EndPracticeSessionOutput,
   FinalizeExamAnswersOutput,
+  GetCompletedSessionQuestionsWithFeedbackOutput,
   GetPracticeSessionReviewOutput,
   GetPracticeSessionSummaryOutput,
 } from '@/src/adapters/controllers/practice-controller';
@@ -25,6 +26,12 @@ const getPracticeSessionSummaryMock =
   vi.fn<
     (input: unknown) => Promise<ActionResult<GetPracticeSessionSummaryOutput>>
   >();
+const getCompletedSessionQuestionsWithFeedbackMock =
+  vi.fn<
+    (
+      input: unknown,
+    ) => Promise<ActionResult<GetCompletedSessionQuestionsWithFeedbackOutput>>
+  >();
 const saveCurrentExamDraftMock = vi.fn<() => Promise<boolean>>();
 
 function createInput(sessionMode: 'tutor' | 'exam') {
@@ -43,6 +50,8 @@ function createInput(sessionMode: 'tutor' | 'exam') {
     finalizeExamAnswersFn: finalizeExamAnswersMock,
     getPracticeSessionReviewFn: getPracticeSessionReviewMock,
     getPracticeSessionSummaryFn: getPracticeSessionSummaryMock,
+    getCompletedSessionQuestionsWithFeedbackFn:
+      getCompletedSessionQuestionsWithFeedbackMock,
     saveCurrentExamDraft: saveCurrentExamDraftMock,
   };
 }
@@ -58,6 +67,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     finalizeExamAnswersMock.mockReset();
     getPracticeSessionReviewMock.mockReset();
     getPracticeSessionSummaryMock.mockReset();
+    getCompletedSessionQuestionsWithFeedbackMock.mockReset();
     saveCurrentExamDraftMock.mockReset();
   });
 
@@ -197,16 +207,6 @@ describe('usePracticeSessionReviewStage (browser)', () => {
   });
 
   it('finalizes exam review via finalizeExamAnswers instead of endPracticeSession', async () => {
-    getPracticeSessionReviewMock.mockResolvedValue(
-      ok({
-        sessionId: 'session-1',
-        mode: 'exam',
-        totalCount: 2,
-        answeredCount: 2,
-        markedCount: 0,
-        rows: [],
-      }),
-    );
     finalizeExamAnswersMock.mockResolvedValue(
       ok({
         sessionId: 'session-1',
@@ -221,6 +221,26 @@ describe('usePracticeSessionReviewStage (browser)', () => {
         },
       }),
     );
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+    getCompletedSessionQuestionsWithFeedbackMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 2,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
 
     const input = createInput('exam');
     const harness = await renderHook(() =>
@@ -230,10 +250,176 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     await harness.result.current.onFinalizeReview();
 
     await expect
-      .poll(() => harness.result.current.summary?.sessionId ?? null)
-      .toBe('session-1');
+      .poll(() => harness.result.current.postExamReviewLoadState.status)
+      .toBe('ready');
+    expect(harness.result.current.summary).toBeNull();
     expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(1);
     expect(endPracticeSessionMock).not.toHaveBeenCalled();
+  });
+
+  it('enters post-exam review after finalizing an exam instead of showing summary immediately', async () => {
+    finalizeExamAnswersMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        endedAt: '2026-02-07T00:20:00.000Z',
+        mode: 'exam',
+        questionCount: 2,
+        totals: {
+          answered: 2,
+          correct: 1,
+          accuracy: 0.5,
+          durationSeconds: 120,
+        },
+      }),
+    );
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+    getCompletedSessionQuestionsWithFeedbackMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 2,
+        markedCount: 0,
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'q1',
+            slug: 'q-1',
+            stemMd: 'Stem 1',
+            difficulty: 'easy',
+            order: 1,
+            isAnswered: true,
+            isCorrect: false,
+            markedForReview: false,
+            choices: [
+              { id: 'c1', label: 'A', textMd: 'Choice A' },
+              { id: 'c2', label: 'B', textMd: 'Choice B' },
+            ],
+            selectedChoiceId: 'c1',
+            correctChoiceId: 'c2',
+            explanationMd: 'Because B is correct.',
+            referenceMd: 'Reference 1',
+            choiceExplanations: [],
+          },
+          {
+            isAvailable: true,
+            questionId: 'q2',
+            slug: 'q-2',
+            stemMd: 'Stem 2',
+            difficulty: 'medium',
+            order: 2,
+            isAnswered: true,
+            isCorrect: true,
+            markedForReview: false,
+            choices: [{ id: 'c3', label: 'A', textMd: 'Choice A' }],
+            selectedChoiceId: 'c3',
+            correctChoiceId: 'c3',
+            explanationMd: 'Because A is correct.',
+            referenceMd: null,
+            choiceExplanations: [],
+          },
+        ],
+      }),
+    );
+
+    const input = createInput('exam');
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStage(input),
+    );
+
+    await harness.result.current.onFinalizeReview();
+
+    await expect
+      .poll(() => harness.result.current.postExamReviewLoadState.status)
+      .toBe('ready');
+    expect(harness.result.current.summary).toBeNull();
+    expect(harness.result.current.postExamReview?.sessionId).toBe('session-1');
+    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe('q1');
+  });
+
+  it('promotes the deferred exam summary after post-exam review is dismissed', async () => {
+    finalizeExamAnswersMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        endedAt: '2026-02-07T00:20:00.000Z',
+        mode: 'exam',
+        questionCount: 1,
+        totals: {
+          answered: 1,
+          correct: 1,
+          accuracy: 1,
+          durationSeconds: 60,
+        },
+      }),
+    );
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+    getCompletedSessionQuestionsWithFeedbackMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'q1',
+            slug: 'q-1',
+            stemMd: 'Stem 1',
+            difficulty: 'easy',
+            order: 1,
+            isAnswered: true,
+            isCorrect: true,
+            markedForReview: false,
+            choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
+            selectedChoiceId: 'c1',
+            correctChoiceId: 'c1',
+            explanationMd: 'Because A is correct.',
+            referenceMd: null,
+            choiceExplanations: [],
+          },
+        ],
+      }),
+    );
+
+    const input = createInput('exam');
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStage(input),
+    );
+
+    await harness.result.current.onFinalizeReview();
+    await expect
+      .poll(() => harness.result.current.postExamReviewLoadState.status)
+      .toBe('ready');
+
+    harness.result.current.onViewSummary();
+
+    await expect
+      .poll(() => harness.result.current.summary?.sessionId ?? null)
+      .toBe('session-1');
+    await expect
+      .poll(() => harness.result.current.summaryReviewLoadState.status)
+      .toBe('ready');
+    expect(harness.result.current.postExamReview).toBeNull();
+    expect(harness.result.current.postExamReviewCurrentQuestionId).toBeNull();
   });
 
   it('saves the current exam draft before entering review stage', async () => {

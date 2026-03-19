@@ -8,15 +8,21 @@ import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import type { EndPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
+import type { GetCompletedSessionQuestionsWithFeedbackOutput } from '@/src/application/use-cases';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import type { LoadState } from '../../practice-page-logic';
 import { ExamReviewView, QuestionNavigator } from './exam-review-view';
+import { PostExamReviewView } from './post-exam-review-view';
 import { SessionSummaryView } from './session-summary-view';
 
 export type PracticeSessionPageViewProps = {
   summary: EndPracticeSessionOutput | null;
+  postExamSummary?: EndPracticeSessionOutput | null;
+  postExamReview?: GetCompletedSessionQuestionsWithFeedbackOutput | null;
+  postExamReviewLoadState?: LoadState;
+  postExamReviewCurrentQuestionId?: string | null;
   summaryReview?: GetPracticeSessionReviewOutput | null;
   summaryReviewLoadState?: LoadState;
   review?: GetPracticeSessionReviewOutput | null;
@@ -38,6 +44,7 @@ export type PracticeSessionPageViewProps = {
   canSubmit: boolean;
   onEndSession: () => void;
   onRetryReview?: () => void;
+  onRetryPostExamReview?: () => void;
   onRetryNavigator?: () => void;
   onTryAgain: () => void;
   onRetryBookmarks?: () => void;
@@ -48,11 +55,18 @@ export type PracticeSessionPageViewProps = {
   onNextQuestion: () => void;
   onNavigateQuestion?: (questionId: string) => void;
   onOpenReviewQuestion?: (questionId: string) => void;
+  onNavigatePostExamReviewQuestion?: (questionId: string) => void;
+  onViewSummary?: () => void;
   onFinalizeReview?: () => Promise<void>;
 };
 
 export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
   const review = props.review ?? null;
+  const postExamSummary = props.postExamSummary ?? null;
+  const postExamReview = props.postExamReview ?? null;
+  const postExamReviewLoadState = props.postExamReviewLoadState ?? {
+    status: 'idle',
+  };
   const reviewLoadState = props.reviewLoadState ?? { status: 'idle' };
   const summaryReview = props.summaryReview ?? null;
   const summaryReviewLoadState = props.summaryReviewLoadState ?? {
@@ -119,6 +133,60 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
         summary={props.summary}
         review={summaryReview}
         reviewLoadState={summaryReviewLoadState}
+      />
+    );
+  }
+
+  if (postExamReviewLoadState.status === 'loading' && postExamSummary) {
+    return (
+      <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
+        <output aria-live="polite">Loading review...</output>
+      </Card>
+    );
+  }
+
+  if (postExamReviewLoadState.status === 'error' && postExamSummary) {
+    return (
+      <div className="space-y-4">
+        <ErrorCard>{postExamReviewLoadState.message}</ErrorCard>
+        <div className="flex flex-wrap gap-3">
+          {props.onRetryPostExamReview ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={props.onRetryPostExamReview}
+            >
+              Retry review
+            </Button>
+          ) : null}
+          {props.onViewSummary ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={props.onViewSummary}
+            >
+              View Summary
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  if (postExamSummary && postExamReview) {
+    return (
+      <PostExamReviewView
+        summary={postExamSummary}
+        review={postExamReview}
+        currentQuestionId={props.postExamReviewCurrentQuestionId ?? null}
+        controlledPanelId={questionPanelId}
+        bookmarkStatus={props.bookmarkStatus}
+        isBookmarked={props.isBookmarked}
+        onToggleBookmark={props.onToggleBookmark}
+        onNavigateQuestion={
+          props.onNavigatePostExamReviewQuestion ?? (() => undefined)
+        }
+        onViewSummary={props.onViewSummary ?? (() => undefined)}
       />
     );
   }

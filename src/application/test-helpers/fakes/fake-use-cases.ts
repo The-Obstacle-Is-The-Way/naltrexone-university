@@ -60,6 +60,10 @@ export class FakeGetIncompletePracticeSessionUseCase extends FakeUseCase<
   U.GetIncompletePracticeSessionInput,
   U.GetIncompletePracticeSessionOutput
 > {}
+export class FakeGetCompletedSessionQuestionsWithFeedbackUseCase extends FakeUseCase<
+  U.GetCompletedSessionQuestionsWithFeedbackInput,
+  U.GetCompletedSessionQuestionsWithFeedbackOutput
+> {}
 export class FakeGetPracticeSessionReviewUseCase extends FakeUseCase<
   U.GetPracticeSessionReviewInput,
   U.GetPracticeSessionReviewOutput

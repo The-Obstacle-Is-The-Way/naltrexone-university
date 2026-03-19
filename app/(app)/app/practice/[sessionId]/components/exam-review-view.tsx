@@ -18,18 +18,28 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import { getStemPreview } from '@/src/adapters/shared/stem-preview';
-import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
+import type {
+  GetCompletedSessionQuestionsWithFeedbackOutput,
+  GetPracticeSessionReviewOutput,
+} from '@/src/application/use-cases';
+
+type NavigatorReview =
+  | GetPracticeSessionReviewOutput
+  | GetCompletedSessionQuestionsWithFeedbackOutput;
 
 export function QuestionNavigator({
   review,
   currentQuestionId,
   controlledPanelId,
+  mode = 'exam',
   onNavigateQuestion,
 }: {
-  review: GetPracticeSessionReviewOutput;
+  review: NavigatorReview;
   currentQuestionId: string | null;
   controlledPanelId: string;
+  mode?: 'exam' | 'review';
   onNavigateQuestion: (questionId: string) => void;
 }) {
   return (
@@ -41,33 +51,50 @@ export function QuestionNavigator({
         <div className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-10">
           {review.rows.map((row) => {
             const isCurrent = row.questionId === currentQuestionId;
-            const answeredLabel = row.isAnswered
-              ? review.mode === 'tutor'
+            const answeredLabel =
+              mode === 'review'
                 ? row.isCorrect === true
                   ? 'Correct'
                   : row.isCorrect === false
                     ? 'Incorrect'
+                    : 'Unanswered'
+                : row.isAnswered
+                  ? review.mode === 'tutor'
+                    ? row.isCorrect === true
+                      ? 'Correct'
+                      : row.isCorrect === false
+                        ? 'Incorrect'
+                        : 'Answered'
                     : 'Answered'
-                : 'Answered'
-              : 'Unanswered';
+                  : 'Unanswered';
             const statusParts = [
               ...(isCurrent ? (['Current'] as const) : []),
               ...(row.markedForReview ? (['Marked for review'] as const) : []),
               answeredLabel,
             ];
 
-            const variant = isCurrent
-              ? 'default'
-              : row.isAnswered
-                ? 'secondary'
-                : 'outline';
+            const variant =
+              mode === 'review'
+                ? row.isCorrect === true
+                  ? 'success'
+                  : row.isCorrect === false
+                    ? 'destructive'
+                    : 'outline'
+                : isCurrent
+                  ? 'default'
+                  : row.isAnswered
+                    ? 'secondary'
+                    : 'outline';
 
             return (
               <Button
                 key={row.questionId}
                 type="button"
                 variant={variant}
-                className="relative rounded-full"
+                className={cn(
+                  'relative rounded-full',
+                  mode === 'review' && isCurrent && 'ring-[3px] ring-ring/50',
+                )}
                 disabled={!row.isAvailable}
                 onClick={() => onNavigateQuestion(row.questionId)}
                 aria-label={`Question ${row.order}: ${statusParts.join(', ')}`}

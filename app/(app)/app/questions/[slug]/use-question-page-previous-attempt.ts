@@ -25,6 +25,7 @@ export type UseQuestionPagePreviousAttemptInput = {
 export type UseQuestionPagePreviousAttemptOutput = {
   isLoadingPreviousAttempt: boolean;
   reviewHydrationState: ReviewHydrationState | null;
+  reviewSessionMode: 'tutor' | 'exam' | null;
   resetReviewHydrationState: () => void;
 };
 
@@ -38,6 +39,9 @@ export function useQuestionPagePreviousAttempt(
     useState<ReviewHydrationState | null>(
       input.mode === 'review' ? 'no_prior_attempt' : null,
     );
+  const [reviewSessionMode, setReviewSessionMode] = useState<
+    'tutor' | 'exam' | null
+  >(null);
   const latestPreviousAttemptRequestId = useRef(0);
   const activePreviousAttemptRequestId = useRef<number | null>(null);
   const latestQuestionIdRef = useRef(input.question?.questionId ?? null);
@@ -94,6 +98,7 @@ export function useQuestionPagePreviousAttempt(
         getPreviousAttemptFn: getPreviousAttempt,
         setSelectedChoiceId: input.setSelectedChoiceId,
         setSubmitResult: input.setSubmitResult,
+        setReviewSessionMode,
         setSessionUnansweredReveal: input.setSessionUnansweredReveal,
         setReviewHydrationState,
         isMounted,
@@ -132,6 +137,11 @@ export function useQuestionPagePreviousAttempt(
     : input.mode === 'review'
       ? reviewHydrationState
       : null;
+  const effectiveReviewSessionMode = didModeChange
+    ? null
+    : input.mode === 'review'
+      ? reviewSessionMode
+      : null;
 
   const resetReviewHydrationState = useMemo(() => {
     return () => {
@@ -139,12 +149,14 @@ export function useQuestionPagePreviousAttempt(
       activePreviousAttemptRequestId.current = null;
       setIsLoadingPreviousAttempt(false);
       setReviewHydrationState('no_prior_attempt');
+      setReviewSessionMode(null);
     };
   }, []);
 
   return {
     isLoadingPreviousAttempt: effectiveIsLoadingPreviousAttempt,
     reviewHydrationState: effectiveReviewHydrationState,
+    reviewSessionMode: effectiveReviewSessionMode,
     resetReviewHydrationState,
   };
 }

@@ -30,6 +30,7 @@ import {
   EndPracticeSessionUseCase,
   GetAttemptedQuestionsUseCase,
   GetBookmarksUseCase,
+  GetCompletedSessionQuestionsWithFeedbackUseCase,
   GetIncompletePracticeSessionUseCase,
   GetNextQuestionUseCase,
   GetPracticeSessionSummaryUseCase,
@@ -106,6 +107,9 @@ describe('container factories', () => {
     expect(typeof container.createCheckEntitlementUseCase).toBe('function');
     expect(typeof container.createGetNextQuestionUseCase).toBe('function');
     expect(typeof container.createGetPreviousAttemptUseCase).toBe('function');
+    expect(
+      typeof container.createGetCompletedSessionQuestionsWithFeedbackUseCase,
+    ).toBe('function');
     expect(typeof container.createSubmitAnswerUseCase).toBe('function');
     expect(typeof container.createGetAttemptedQuestionsUseCase).toBe(
       'function',
@@ -199,6 +203,9 @@ describe('container factories', () => {
     expect(container.createGetPreviousAttemptUseCase()).toBeInstanceOf(
       GetPreviousAttemptUseCase,
     );
+    expect(
+      container.createGetCompletedSessionQuestionsWithFeedbackUseCase(),
+    ).toBeInstanceOf(GetCompletedSessionQuestionsWithFeedbackUseCase);
     expect(container.createSubmitAnswerUseCase()).toBeInstanceOf(
       SubmitAnswerUseCase,
     );
@@ -306,6 +313,9 @@ describe('container factories', () => {
     expect(practiceDeps.getIncompletePracticeSessionUseCase).toBeInstanceOf(
       GetIncompletePracticeSessionUseCase,
     );
+    expect(
+      practiceDeps.getCompletedSessionQuestionsWithFeedbackUseCase,
+    ).toBeInstanceOf(GetCompletedSessionQuestionsWithFeedbackUseCase);
     expect(practiceDeps.countAvailableQuestionsUseCase).toBeInstanceOf(
       CountAvailableQuestionsUseCase,
     );

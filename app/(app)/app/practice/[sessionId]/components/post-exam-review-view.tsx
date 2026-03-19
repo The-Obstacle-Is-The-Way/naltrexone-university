@@ -1,0 +1,169 @@
+'use client';
+
+import { Feedback } from '@/components/question/feedback';
+import { QuestionCard } from '@/components/question/question-card';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import type {
+  EndPracticeSessionOutput,
+  GetCompletedSessionQuestionsWithFeedbackOutput,
+} from '@/src/adapters/controllers/practice-controller';
+import { QuestionNavigator } from './exam-review-view';
+
+type PostExamReviewViewProps = {
+  summary: EndPracticeSessionOutput;
+  review: GetCompletedSessionQuestionsWithFeedbackOutput;
+  currentQuestionId: string | null;
+  controlledPanelId: string;
+  bookmarkStatus: 'idle' | 'loading' | 'error';
+  isBookmarked: boolean;
+  onToggleBookmark: () => void;
+  onNavigateQuestion: (questionId: string) => void;
+  onViewSummary: () => void;
+};
+
+export function PostExamReviewView({
+  summary,
+  review,
+  currentQuestionId,
+  controlledPanelId,
+  bookmarkStatus,
+  isBookmarked,
+  onToggleBookmark,
+  onNavigateQuestion,
+  onViewSummary,
+}: PostExamReviewViewProps) {
+  const currentRow =
+    review.rows.find((row) => row.questionId === currentQuestionId) ??
+    review.rows[0] ??
+    null;
+  const currentIndex = currentRow
+    ? review.rows.findIndex((row) => row.questionId === currentRow.questionId)
+    : -1;
+  const previousRow =
+    currentIndex > 0 ? (review.rows[currentIndex - 1] ?? null) : null;
+  const nextRow =
+    currentIndex >= 0 && currentIndex < review.rows.length - 1
+      ? (review.rows[currentIndex + 1] ?? null)
+      : null;
+  const scoreLabel = `Score: ${Math.round(summary.totals.accuracy * 100)}% (${summary.totals.correct}/${summary.questionCount})`;
+
+  return (
+    <div className="space-y-6">
+      <Card className="rounded-2xl p-4 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="text-sm text-muted-foreground">Exam complete</div>
+            <h1 className="mt-1 text-2xl font-bold font-heading tracking-tight text-foreground">
+              {scoreLabel}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Review each question with feedback before moving to your session
+              summary.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            className="self-start rounded-full sm:self-auto"
+            onClick={onViewSummary}
+          >
+            View Summary
+          </Button>
+        </div>
+      </Card>
+
+      <QuestionNavigator
+        review={review}
+        currentQuestionId={currentRow?.questionId ?? null}
+        controlledPanelId={controlledPanelId}
+        mode="review"
+        onNavigateQuestion={onNavigateQuestion}
+      />
+
+      {currentRow ? (
+        <div
+          id={controlledPanelId}
+          className="space-y-6 outline-none"
+          tabIndex={-1}
+        >
+          <p className="text-sm text-muted-foreground">
+            Question {currentRow.order} of {review.totalCount}
+          </p>
+
+          {currentRow.isAvailable ? (
+            <>
+              <QuestionCard
+                stemMd={currentRow.stemMd}
+                choices={currentRow.choices}
+                selectedChoiceId={currentRow.selectedChoiceId}
+                correctChoiceId={currentRow.correctChoiceId}
+                disabled
+                onSelectChoice={() => undefined}
+              />
+              <Feedback
+                isCorrect={currentRow.isCorrect === true}
+                explanationMd={currentRow.explanationMd}
+                referenceMd={currentRow.referenceMd}
+                choiceExplanations={currentRow.choiceExplanations}
+                selectedChoiceId={currentRow.selectedChoiceId}
+              />
+            </>
+          ) : (
+            <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
+              Question no longer available.
+            </Card>
+          )}
+        </div>
+      ) : (
+        <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
+          No reviewed questions available.
+        </Card>
+      )}
+
+      <div className="flex flex-col gap-3 sm:flex-row">
+        {previousRow ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-full"
+            onClick={() => onNavigateQuestion(previousRow.questionId)}
+          >
+            Previous
+          </Button>
+        ) : null}
+
+        {currentRow?.isAvailable ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-full"
+            aria-pressed={isBookmarked}
+            disabled={bookmarkStatus === 'loading'}
+            onClick={onToggleBookmark}
+          >
+            {isBookmarked ? 'Remove bookmark' : 'Bookmark'}
+          </Button>
+        ) : null}
+
+        {nextRow ? (
+          <Button
+            type="button"
+            className="rounded-full"
+            onClick={() => onNavigateQuestion(nextRow.questionId)}
+          >
+            Next
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            className="rounded-full"
+            onClick={onViewSummary}
+          >
+            Finish review
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
