@@ -20,7 +20,11 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
 | [DEBT-318](./debt-318-tutor-bookmark-before-answer.md) | Bookmark visible before feedback in tutor mode and quick practice — keep the surface, but delay the action until inline feedback/explanation is visible | P3 | — |
 | [DEBT-324](./debt-324-session-scoped-practice-missed-questions.md) | Remove misleading `Practice missed questions` CTA from exam Summary — current link opens the user's global latest-incorrect Quick Practice pool, and BS-058 post-exam review already covers the immediate learning/review need. | P3 | — |
-**Next Debt ID:** DEBT-325
+| [DEBT-325](./debt-325-post-exam-review-unanswered-display.md) | Post-exam review shows unanswered questions as "Incorrect" instead of yellow "did not answer" banner — scoring is correct (unanswered = incorrect) but display should distinguish skipped from wrong | P2 | — |
+| [DEBT-326](./debt-326-post-exam-review-focus-management.md) | Post-exam review navigation does not move focus after question change — keyboard/screen-reader accessibility gap | P3 | — |
+| [DEBT-327](./debt-327-interaction-contracts-status-cleanup.md) | `interaction-contracts.md` mixed current/proposed status — header still says "Proposed," "Current vs Proposed" tables are stale post-BS-055/BS-058 | P4 | — |
+| [DEBT-328](./debt-328-bookmark-surface-policy-stale-origin.md) | `bookmark-surface-policy.md` stale `from=history` wording for summary-launched review — production uses `from=summary` | P4 | — |
+**Next Debt ID:** DEBT-329
 
 ---
 
