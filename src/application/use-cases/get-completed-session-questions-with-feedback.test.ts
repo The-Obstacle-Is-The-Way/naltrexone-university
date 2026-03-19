@@ -201,4 +201,77 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
       code: 'CONFLICT',
     });
   });
+
+  it('returns an unavailable row when a completed session references a missing question', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+    const availableQuestion = createQuestion({
+      id: 'q1',
+      slug: 'q-1',
+      stemMd: 'Stem for q1',
+      difficulty: 'easy',
+      explanationMd: 'Overall explanation for q1',
+      referenceMd: 'Reference for q1',
+      choices: [
+        createChoice({
+          id: 'q1-choice-a',
+          questionId: 'q1',
+          label: 'A',
+          textMd: 'Q1 choice A',
+          explanationMd: 'Why A is correct',
+          isCorrect: true,
+          sortOrder: 1,
+        }),
+      ],
+    });
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'exam',
+      endedAt: new Date('2026-03-19T12:00:00Z'),
+      questionIds: ['q1', 'q2'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: 'q1-choice-a',
+          latestIsCorrect: true,
+          latestAnsweredAt: new Date('2026-03-19T11:58:00Z'),
+        },
+        {
+          questionId: 'q2',
+          markedForReview: true,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        },
+      ],
+    });
+
+    const useCase = new GetCompletedSessionQuestionsWithFeedbackUseCase(
+      new FakePracticeSessionRepository([session]),
+      new FakeQuestionRepository([availableQuestion]),
+      new FakeAttemptRepository([]),
+      new FakeLogger(),
+    );
+
+    const output = await useCase.execute({ userId, sessionId });
+
+    expect(output.rows).toHaveLength(2);
+    expect(output.rows[0]).toMatchObject({
+      isAvailable: true,
+      questionId: 'q1',
+      order: 1,
+      isAnswered: true,
+      isCorrect: true,
+    });
+    expect(output.rows[1]).toEqual({
+      isAvailable: false,
+      questionId: 'q2',
+      order: 2,
+      isAnswered: false,
+      isCorrect: null,
+      markedForReview: true,
+    });
+  });
 });

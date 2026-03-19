@@ -1143,6 +1143,29 @@ describe('practice-controller', () => {
       ).toEqual([]);
     });
 
+    it('returns NOT_FOUND when use case throws ApplicationError', async () => {
+      const sessionId = '11111111-1111-1111-1111-111111111111';
+      const deps = createDeps({
+        completedQuestionsThrows: new ApplicationError(
+          'NOT_FOUND',
+          'Practice session not found',
+        ),
+      });
+
+      const result = await getCompletedSessionQuestionsWithFeedback(
+        { sessionId },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Practice session not found' },
+      });
+      expect(
+        deps.getCompletedSessionQuestionsWithFeedbackUseCase.inputs,
+      ).toEqual([{ userId: 'user_1', sessionId }]);
+    });
+
     it('returns completed feedback rows when the use case succeeds', async () => {
       const deps = createDeps({
         completedQuestionsOutput: {
