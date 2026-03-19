@@ -1109,6 +1109,40 @@ describe('practice-controller', () => {
       ).toEqual([]);
     });
 
+    it('returns UNAUTHENTICATED when unauthenticated', async () => {
+      const deps = createDeps({ user: null });
+
+      const result = await getCompletedSessionQuestionsWithFeedback(
+        { sessionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNAUTHENTICATED' },
+      });
+      expect(
+        deps.getCompletedSessionQuestionsWithFeedbackUseCase.inputs,
+      ).toEqual([]);
+    });
+
+    it('returns UNSUBSCRIBED when not entitled', async () => {
+      const deps = createDeps({ isEntitled: false });
+
+      const result = await getCompletedSessionQuestionsWithFeedback(
+        { sessionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNSUBSCRIBED' },
+      });
+      expect(
+        deps.getCompletedSessionQuestionsWithFeedbackUseCase.inputs,
+      ).toEqual([]);
+    });
+
     it('returns completed feedback rows when the use case succeeds', async () => {
       const deps = createDeps({
         completedQuestionsOutput: {

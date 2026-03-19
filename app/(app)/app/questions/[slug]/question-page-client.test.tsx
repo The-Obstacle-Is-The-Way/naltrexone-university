@@ -758,6 +758,7 @@ describe('QuestionView', () => {
         mode="review"
         origin="history"
         sessionId="session_123"
+        reviewSessionMode="tutor"
         question={{
           questionId: 'q2',
           slug: 'q2',
@@ -783,6 +784,44 @@ describe('QuestionView', () => {
     expect(getBottomActionLabels(doc)).toEqual([
       'Previous',
       'Try Again',
+      'Bookmark',
+      'Next',
+      'Back to History',
+    ]);
+  });
+
+  it('suppresses reattempt in answered exam-session review', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        {...createBaseProps()}
+        mode="review"
+        origin="history"
+        sessionId="session_123"
+        reviewSessionMode="exam"
+        question={{
+          questionId: 'q2',
+          slug: 'q2',
+          stemMd: 'Question stem',
+          difficulty: 'easy',
+          choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
+        }}
+        sessionNavigation={sharedSessionNavigation}
+        isBookmarkHydrated={true}
+        bookmarkStatus="idle"
+        submitResult={{
+          attemptId: 'attempt_1',
+          isCorrect: false,
+          correctChoiceId: 'c1',
+          explanationMd: 'Explanation',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    expect(getBottomActionLabels(doc)).toEqual([
+      'Previous',
       'Bookmark',
       'Next',
       'Back to History',
@@ -1072,6 +1111,7 @@ describe('QuestionView', () => {
         mode="review"
         origin="history"
         sessionId="session_123"
+        reviewSessionMode="tutor"
         question={{
           questionId: 'q2',
           slug: 'q2',
@@ -1110,6 +1150,48 @@ describe('QuestionView', () => {
     expect(bottomBar.textContent).toContain('Back to History');
   });
 
+  it('suppresses Try Again for exam-session unanswered review questions', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        {...createBaseProps()}
+        mode="review"
+        origin="history"
+        sessionId="session_123"
+        reviewSessionMode="exam"
+        question={{
+          questionId: 'q2',
+          slug: 'q2',
+          stemMd: 'Question stem',
+          difficulty: 'easy',
+          choices: [
+            { id: 'c1', label: 'A', textMd: 'Choice A' },
+            { id: 'c2', label: 'B', textMd: 'Choice B' },
+          ],
+        }}
+        sessionNavigation={sharedSessionNavigation}
+        submitResult={null}
+        sessionUnansweredReveal={{
+          sessionMode: 'exam',
+          correctChoiceId: 'c2',
+          explanationMd: 'Explanation for unanswered review',
+          referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
+          choiceExplanations: [],
+        }}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const bottomBar = getBottomActionBar(doc);
+    if (!bottomBar) throw new Error('Expected bottom action bar');
+
+    expect(html).toContain(
+      'You did not answer this question during this session.',
+    );
+    expect(bottomBar.textContent).not.toContain('Try Again');
+    expect(bottomBar.textContent).toContain('Previous');
+    expect(bottomBar.textContent).toContain('Next');
+  });
+
   it('does not render a your-answer section for session review unanswered hydration', () => {
     const html = renderToStaticMarkup(
       <QuestionView
@@ -1117,6 +1199,7 @@ describe('QuestionView', () => {
         mode="review"
         origin="history"
         sessionId="session_123"
+        reviewSessionMode="tutor"
         question={{
           questionId: 'q2',
           slug: 'q2',

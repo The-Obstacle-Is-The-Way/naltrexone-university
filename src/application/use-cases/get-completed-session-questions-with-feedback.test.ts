@@ -192,10 +192,12 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
       new FakeLogger(),
     );
 
-    const promise = useCase.execute({ userId, sessionId });
+    const error = await useCase
+      .execute({ userId, sessionId })
+      .catch((caught: unknown) => caught);
 
-    await expect(promise).rejects.toBeInstanceOf(ApplicationError);
-    await expect(promise).rejects.toMatchObject({
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect(error).toMatchObject({
       code: 'CONFLICT',
     });
   });

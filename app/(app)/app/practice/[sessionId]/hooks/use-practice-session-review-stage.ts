@@ -212,6 +212,7 @@ export function usePracticeSessionReviewStage(
     async (nextSummary: EndPracticeSessionOutput | null): Promise<void> => {
       if (!nextSummary) return;
 
+      setPendingExamSummary(nextSummary);
       setPostExamReview(null);
       setPostExamReviewCurrentQuestionId(null);
       setPostExamReviewLoadState({ status: 'loading' });
@@ -248,7 +249,6 @@ export function usePracticeSessionReviewStage(
         return;
       }
 
-      setPendingExamSummary(nextSummary);
       setPostExamReview(result.data);
       setPostExamReviewCurrentQuestionId(
         result.data.rows[0]?.questionId ?? null,

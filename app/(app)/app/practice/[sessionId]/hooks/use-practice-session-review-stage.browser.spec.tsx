@@ -422,6 +422,88 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     expect(harness.result.current.postExamReviewCurrentQuestionId).toBeNull();
   });
 
+  it('preserves the deferred exam summary when post-exam review loading fails so retry and summary recovery still work', async () => {
+    finalizeExamAnswersMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        endedAt: '2026-02-07T00:20:00.000Z',
+        mode: 'exam',
+        questionCount: 1,
+        totals: {
+          answered: 1,
+          correct: 0,
+          accuracy: 0,
+          durationSeconds: 60,
+        },
+      }),
+    );
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+    getCompletedSessionQuestionsWithFeedbackMock
+      .mockRejectedValueOnce(new Error('Review fetch failed'))
+      .mockResolvedValueOnce(
+        ok({
+          sessionId: 'session-1',
+          mode: 'exam',
+          totalCount: 1,
+          answeredCount: 1,
+          markedCount: 0,
+          rows: [
+            {
+              isAvailable: true,
+              questionId: 'q1',
+              slug: 'q-1',
+              stemMd: 'Stem 1',
+              difficulty: 'easy',
+              order: 1,
+              isAnswered: true,
+              isCorrect: false,
+              markedForReview: false,
+              choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
+              selectedChoiceId: 'c1',
+              correctChoiceId: 'c2',
+              explanationMd: 'Because B is correct.',
+              referenceMd: null,
+              choiceExplanations: [],
+            },
+          ],
+        }),
+      );
+
+    const input = createInput('exam');
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStage(input),
+    );
+
+    await harness.result.current.onFinalizeReview();
+
+    await expect
+      .poll(() => harness.result.current.postExamReviewLoadState.status)
+      .toBe('error');
+    expect(harness.result.current.postExamSummary?.sessionId).toBe('session-1');
+
+    harness.result.current.onRetryPostExamReview();
+
+    await expect
+      .poll(() => harness.result.current.postExamReviewLoadState.status)
+      .toBe('ready');
+    expect(harness.result.current.postExamReview?.sessionId).toBe('session-1');
+
+    harness.result.current.onViewSummary();
+
+    await expect
+      .poll(() => harness.result.current.summary?.sessionId ?? null)
+      .toBe('session-1');
+  });
+
   it('saves the current exam draft before entering review stage', async () => {
     const callOrder: string[] = [];
     saveCurrentExamDraftMock.mockImplementation(async () => {
