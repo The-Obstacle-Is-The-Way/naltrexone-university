@@ -82,9 +82,10 @@ export function PostExamReviewView({
       />
 
       {currentRow ? (
-        <div
+        <section
           id={controlledPanelId}
-          className="space-y-6 outline-none"
+          aria-label={`Question ${currentRow.order} of ${review.totalCount}`}
+          className="space-y-6 outline-none focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
           tabIndex={-1}
         >
           <p className="text-sm text-muted-foreground">
@@ -123,7 +124,7 @@ export function PostExamReviewView({
               Question no longer available.
             </Card>
           )}
-        </div>
+        </section>
       ) : (
         <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
           No reviewed questions available.

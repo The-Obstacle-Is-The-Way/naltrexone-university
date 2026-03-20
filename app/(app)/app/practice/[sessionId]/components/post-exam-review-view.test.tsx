@@ -123,6 +123,29 @@ function renderView(input?: {
 }
 
 describe('PostExamReviewView', () => {
+  it('gives the review panel an accessible name for screen readers', () => {
+    const doc = renderView();
+    const panel = doc.querySelector('#practice-question-panel');
+
+    expect(panel?.getAttribute('aria-label')).toBe('Question 1 of 1');
+  });
+
+  it('uses a semantic section for the labeled review panel', () => {
+    const doc = renderView();
+    const panel = doc.querySelector('#practice-question-panel');
+
+    expect(panel?.tagName).toBe('SECTION');
+  });
+
+  it('applies the repo-standard focus-visible ring classes to the review panel', () => {
+    const doc = renderView();
+    const panel = doc.querySelector('#practice-question-panel');
+    const className = panel?.getAttribute('class') ?? '';
+
+    expect(className).toContain('focus-visible:ring-ring/50');
+    expect(className).toContain('focus-visible:ring-[3px]');
+  });
+
   it('renders a warning banner for unanswered questions', () => {
     const doc = renderView();
     const banner = Array.from(doc.querySelectorAll('[role="status"]')).find(
