@@ -1141,7 +1141,7 @@ describe('QuestionView', () => {
     expect(html).toContain(
       'You did not answer this question during this session.',
     );
-    expect(html).toContain('Incorrect');
+    expect(doc.querySelector('[data-testid="verdict-pill"]')).toBeNull();
     expect(html).toContain('Explanation for unanswered review');
     expect(bottomBar.textContent).not.toContain('Submit');
     expect(bottomBar.textContent).toContain('Try Again');
@@ -1226,7 +1226,7 @@ describe('QuestionView', () => {
     const bottomBar = getBottomActionBar(doc);
     if (!bottomBar) throw new Error('Expected bottom action bar');
 
-    expect(html).toContain('Incorrect');
+    expect(doc.querySelector('[data-testid="verdict-pill"]')).toBeNull();
     expect(html).toContain('Explanation for unanswered review');
     expect(html).not.toContain('Your answer');
     expect(html).toContain(

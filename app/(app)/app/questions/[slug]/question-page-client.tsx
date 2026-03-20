@@ -348,6 +348,7 @@ export function QuestionView(props: QuestionViewProps) {
       !props.isLoadingPreviousAttempt ? (
         <Feedback
           isCorrect={props.submitResult?.isCorrect ?? false}
+          isUnanswered={isSessionReviewUnansweredReveal}
           explanationMd={
             props.submitResult?.explanationMd ??
             sessionUnansweredReveal?.explanationMd ??

@@ -205,6 +205,70 @@ describe('Feedback', () => {
     expect(html).toContain('Because...');
   });
 
+  it('does not render a verdict pill when isUnanswered is true', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={false}
+        isUnanswered={true}
+        explanationMd="Explanation for unanswered review."
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    expect(doc.querySelector('[data-testid="verdict-pill"]')).toBeNull();
+  });
+
+  it('still renders explanation, reference, and choice explanations when isUnanswered is true', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={false}
+        isUnanswered={true}
+        explanationMd="Explanation for unanswered review."
+        referenceMd="Anton RF et al. JAMA. 2006;295(17):2003-2017."
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: true,
+            explanationMd: 'Second option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    expect(html).toContain('Explanation for unanswered review.');
+    expect(html).toContain('Reference');
+    expect(html).toContain('Anton RF et al. JAMA. 2006;295(17):2003-2017.');
+    expect(html).toContain('Correct Answer');
+    expect(html).toContain('Why Other Answers Are Wrong');
+    expect(html).toContain('First option is incorrect.');
+  });
+
+  it('still renders the verdict pill when isUnanswered is false', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={false}
+        isUnanswered={false}
+        explanationMd="Because..."
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    expect(
+      doc.querySelector('[data-testid="verdict-pill"]')?.textContent?.trim(),
+    ).toBe('Incorrect');
+  });
+
   it('T1: wraps correct-flow correct-answer content in a success card', () => {
     const html = renderToStaticMarkup(
       <Feedback
