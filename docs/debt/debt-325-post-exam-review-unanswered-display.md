@@ -11,9 +11,9 @@
 
 In the new post-exam review stage (`PostExamReviewView`), unanswered questions are visually indistinguishable from incorrect answers. The user sees the red "Incorrect" pill and the feedback content, but no indication that they *didn't answer* — only that the question is wrong.
 
-**Root cause:** `post-exam-review-view.tsx:105` passes `isCorrect={currentRow.isCorrect === true}` to the `Feedback` component. When `isCorrect` is `null` (unanswered), this evaluates to `false`, which renders the "Incorrect" feedback path.
+**Root cause:** `post-exam-review-view.tsx:104-110` passes `isCorrect={currentRow.isCorrect === true}` to the `Feedback` component. When `isCorrect` is `null` (unanswered), this evaluates to `false`, which renders the "Incorrect" feedback path.
 
-**The standalone review route handles this correctly.** When `from=summary` and the question was unanswered, `question-page-client.tsx:319-325` renders a yellow warning banner:
+**The standalone review route is only partially correct.** When `from=summary` and the question was unanswered, `question-page-client.tsx:319-325` does render the yellow warning banner:
 
 ```tsx
 <Card className="gap-0 rounded-2xl border-warning/50 bg-warning/5 p-4 text-sm text-foreground shadow-sm" role="status">
@@ -21,7 +21,23 @@ In the new post-exam review stage (`PostExamReviewView`), unanswered questions a
 </Card>
 ```
 
-The post-exam review has no equivalent.
+But the standalone route then still renders the shared `Feedback` component with:
+
+```tsx
+<Feedback
+  isCorrect={props.submitResult?.isCorrect ?? false}
+  ...
+/>
+```
+
+at `question-page-client.tsx:347-367`. In the unanswered-review case, `submitResult` is `null`, so this still becomes `false` and produces the red `Incorrect` verdict pill.
+
+So the current contrast is:
+
+- **post-exam review:** red `Incorrect` verdict, no unanswered banner
+- **standalone session review:** yellow unanswered banner **plus** the same red `Incorrect` verdict underneath
+
+The post-exam review is worse, but the standalone route is not a fully correct end state yet.
 
 ## Scoring vs Display
 
@@ -31,13 +47,13 @@ The post-exam review has no equivalent.
 - "You answered B but the answer was D" → wrong reasoning, study the content
 - "You didn't answer this one" → time management issue, or unfamiliarity with the topic
 
-**Navigator:** The `QuestionNavigator` in review mode already handles this correctly — unanswered questions get `outline` variant (gray) while incorrect gets `destructive` (red). The inconsistency is only in the question detail + feedback area.
+**Navigator:** The `QuestionNavigator` in review mode already handles the unanswered/correct/incorrect distinction correctly — unanswered questions get `outline` while incorrect gets `destructive`. The inconsistency is in the question detail + feedback area.
 
 ## Proposed Fix
 
 When `currentRow.isCorrect === null` and `currentRow.selectedChoiceId === null` (unanswered), render:
 
-1. The yellow warning banner: "You did not answer this question during this session." (matching the standalone route's `border-warning/50 bg-warning/5` styling)
+1. The yellow warning banner: "You did not answer this question during this session." (reusing the standalone route's `border-warning/50 bg-warning/5` styling)
 2. The `QuestionCard` with `correctChoiceId` highlighted but no selected choice
 3. The explanation/reference/choice-explanation content **without** the red `Incorrect` verdict pill
 
@@ -48,14 +64,16 @@ When `currentRow.isCorrect === null` and `currentRow.selectedChoiceId === null` 
 
 The key visual signal: **yellow/warning for unanswered, red/destructive for incorrect.** This matches the navigator colors (outline vs destructive) and gives the user accurate feedback about what happened.
 
+If the team extends `Feedback` with an unanswered mode, the standalone session-review unanswered path should adopt the same verdict-suppression behavior in the same PR or be tracked explicitly as follow-up debt. The yellow banner alone is not enough if the shared verdict pill still says `Incorrect`.
+
 ## Where Else This Matters
 
 | Surface | Unanswered Handling | Status |
 |---------|-------------------|--------|
 | **Exam confirmation dialog** | "scored as incorrect" warning | Correct |
-| **Post-exam review navigator** | `outline` (gray) variant | Correct |
-| **Post-exam review question detail** | Shows as "Incorrect" | **Broken — this debt** |
-| **Standalone question review** | Yellow "did not answer" banner | Correct |
+| **Post-exam review navigator** | `outline` variant for unanswered | Correct |
+| **Post-exam review question detail** | Red `Incorrect` verdict, no unanswered banner | **Broken — this debt** |
+| **Standalone question review** | Yellow unanswered banner, but still red `Incorrect` verdict from shared `Feedback` | **Partially correct — reference pattern exists, verdict still misleading** |
 | **Session Summary breakdown** | `text-muted-foreground` "Unanswered" label | Correct |
 | **Tutor mode** | N/A — tutor locks after submit, no skip-without-answer path | N/A |
 | **Quick Practice** | N/A — no session context | N/A |
@@ -68,3 +86,4 @@ The key visual signal: **yellow/warning for unanswered, red/destructive for inco
 - [ ] Navigator `outline` variant for unanswered remains unchanged
 - [ ] Scoring is unchanged — unanswered still counts as incorrect in totals
 - [ ] Test coverage for the unanswered display path in post-exam review
+- [ ] If shared `Feedback` is extended, standalone session-review unanswered presentation is kept consistent or explicitly tracked as separate follow-up

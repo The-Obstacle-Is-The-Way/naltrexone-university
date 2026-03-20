@@ -260,7 +260,6 @@ The post-exam review stage shows:
 The terminal exam summary still exposes:
 - `Review your answers`
 - Clickable breakdown rows
-- `Practice missed questions` when `correct < answered` (shipped today; [DEBT-324](../debt/debt-324-session-scoped-practice-missed-questions.md) recommends removing this CTA because it opens the global latest-visible incorrect Quick Practice pool)
 - `Back to Practice`
 - `View in History` as a demoted secondary action
 

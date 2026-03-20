@@ -85,7 +85,7 @@ Action bars are **not abstracted** — each context renders its own buttons inli
 | Practice answering UI (active sessions + quick practice) | `app/(app)/app/practice/components/practice-view.tsx` | Previous (session only), Submit (non-exam only), Next, Bookmark (non-exam only), Mark for review (exam only) |
 | Exam Review Stage | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:186-235` | Submit exam (with AlertDialog confirmation) |
 | Post-Exam Review Stage | `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx` | Previous, Bookmark, Next / Finish review, View Summary |
-| Session Summary | `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` | Review your answers (exam only), Practice missed questions (exam with misses only), Back to Practice, View in History |
+| Session Summary | `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` | Review your answers (exam only, when reviewable questions exist), Back to Practice, View in History |
 | Question page (all review origins) | `app/(app)/app/questions/[slug]/question-page-client.tsx` | Previous/Next (session review only), Submit (pre-answer), conditional Try Again / Practice Again (non-exam review only), Bookmark (review mode after bookmark hydration), Back link |
 
 ### 3.5 Back Links
@@ -524,6 +524,7 @@ The bottom action bar is implemented inline in 4 different places. A future spec
 
 | Date | Change |
 |------|--------|
+| 2026-03-19 | Implemented DEBT-324: removed misleading `Practice missed questions` CTA from exam Session Summary. The BS-058 post-exam review already provides full question-level feedback before the terminal summary. |
 | 2026-03-19 | Implemented BS-058: exam finalization now enters an in-session post-exam review stage with score banner + inline feedback, Session Summary gained `Practice missed questions`, summary-origin review remains `from=summary`, and exam-session review suppresses per-question reattempt actions. |
 | 2026-03-18 | Implemented DEBT-322: removed the exam Q1 spacer, renamed the exam header exit to `Finish exam`, renamed the review heading to `Review & Submit`, and kept the footer label `Next` on the last question while preserving review-stage routing. |
 | 2026-03-17 | Accuracy pass: documented the then-current completed-session review entry points, corrected bookmark availability in review mode, removed stale top-right back-link claims for history review, and fixed related spec-link labels. |

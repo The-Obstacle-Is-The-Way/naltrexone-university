@@ -162,7 +162,7 @@ describe('SessionSummaryView', () => {
     ]);
   });
 
-  it('returns exam summary actions when review is available and there are missed questions', () => {
+  it('returns exam summary actions when review is available', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
@@ -205,7 +205,6 @@ describe('SessionSummaryView', () => {
       const text = link.textContent?.trim();
       return (
         text === 'Review your answers' ||
-        text === 'Practice missed questions' ||
         text === 'Back to Practice' ||
         text === 'View in History' ||
         text === 'Back to Dashboard' ||
@@ -215,7 +214,6 @@ describe('SessionSummaryView', () => {
 
     expect(actionLinks.map((link) => link.textContent?.trim())).toEqual([
       'Review your answers',
-      'Practice missed questions',
       'Back to Practice',
       'View in History',
     ]);
@@ -227,12 +225,14 @@ describe('SessionSummaryView', () => {
       '/app/questions/q-1?from=summary&mode=review&sessionId=session-1',
     );
 
-    const missedQuestionsLink = Array.from(doc.querySelectorAll('a')).find(
-      (link) => link.textContent?.trim() === 'Practice missed questions',
+    const backToPracticeLink = Array.from(doc.querySelectorAll('a')).find(
+      (link) => link.textContent?.trim() === 'Back to Practice',
     );
-    expect(missedQuestionsLink?.getAttribute('href')).toBe(
-      '/app/practice/quick?status=incorrect',
+    const backToPracticeTokens = getClassTokens(
+      backToPracticeLink?.getAttribute('class') ?? '',
     );
+    expect(backToPracticeTokens.has('border')).toBe(true);
+    expect(backToPracticeTokens.has('bg-background')).toBe(true);
 
     const historyLink = Array.from(doc.querySelectorAll('a')).find(
       (link) => link.textContent?.trim() === 'View in History',
@@ -244,7 +244,7 @@ describe('SessionSummaryView', () => {
     expect(historyLinkTokens.has('border')).toBe(false);
   });
 
-  it('omits practice missed questions when the exam summary is perfect', () => {
+  it('omits the removed practice-missed CTA when the exam summary is perfect', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
@@ -284,6 +284,55 @@ describe('SessionSummaryView', () => {
     );
 
     expect(html).not.toContain('Practice missed questions');
+  });
+
+  it('uses a default Back to Practice button when no reviewable slug exists', () => {
+    const html = renderToStaticMarkup(
+      <SessionSummaryView
+        summary={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          questionCount: 2,
+          endedAt: '2026-02-07T00:00:00.000Z',
+          totals: {
+            answered: 2,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 120,
+          },
+        }}
+        review={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          totalCount: 2,
+          answeredCount: 2,
+          markedCount: 0,
+          rows: [
+            {
+              isAvailable: false,
+              questionId: 'q1',
+              order: 1,
+              isAnswered: true,
+              isCorrect: false,
+              markedForReview: false,
+            },
+          ],
+        }}
+        reviewLoadState={{ status: 'ready' }}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const backToPracticeLink = Array.from(doc.querySelectorAll('a')).find(
+      (link) => link.textContent?.trim() === 'Back to Practice',
+    );
+    const tokens = getClassTokens(
+      backToPracticeLink?.getAttribute('class') ?? '',
+    );
+
+    expect(backToPracticeLink).not.toBeNull();
+    expect(tokens.has('bg-primary')).toBe(true);
+    expect(tokens.has('text-primary-foreground')).toBe(true);
+    expect(tokens.has('border')).toBe(false);
   });
 
   it('threads summary origin through breakdown links', () => {
