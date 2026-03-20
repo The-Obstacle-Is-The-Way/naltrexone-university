@@ -21,7 +21,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-318](./debt-318-tutor-bookmark-before-answer.md) | Bookmark visible before feedback in tutor mode and quick practice — keep the surface, but delay the action until inline feedback/explanation is visible | P3 | — |
 | [DEBT-326](./debt-326-post-exam-review-focus-management.md) | Post-exam review navigation does not move focus after question change — keyboard/screen-reader accessibility gap | P3 | — |
 | [DEBT-329](./debt-329-navigator-colorblind-accessibility.md) | Question navigator relies on color alone (red/green) to distinguish correct from incorrect — fails WCAG 1.4.1 for colorblind users. Both `QuestionNavigator` and `ReviewQuestionNavigator` affected. | P3 | — |
-**Next Debt ID:** DEBT-330
+| [DEBT-330](./debt-330-review-action-bar-bookmark-placement.md) | Post-exam review action bar places Bookmark between Previous and Next — intermixes secondary action with primary navigation controls, confusing at a glance | P3 | — |
+| [DEBT-331](./debt-331-session-started-toast-overlap.md) | "Session started" toast overlaps navigation bar — `fixed top-4` positioning garbles both toast text and nav tabs | P3 | — |
+**Next Debt ID:** DEBT-332
 
 ---
 
