@@ -42,17 +42,6 @@ describe('QuestionView', () => {
     );
   }
 
-  function findVerdictPill(
-    doc: Document,
-    text: 'Correct' | 'Incorrect',
-  ): HTMLElement | undefined {
-    return Array.from(doc.querySelectorAll('div, span')).find(
-      (element) =>
-        element.textContent?.trim() === text &&
-        (element.getAttribute('class') ?? '').includes('self-start'),
-    ) as HTMLElement | undefined;
-  }
-
   // Uses shadcn's data-slot="button" to capture both <button> and asChild <a> elements.
   // If shadcn removes data-slot, fall back to 'button, a' combined selector.
   function getBottomActionLabels(doc: Document): string[] {
@@ -1152,7 +1141,7 @@ describe('QuestionView', () => {
     expect(html).toContain(
       'You did not answer this question during this session.',
     );
-    expect(findVerdictPill(doc, 'Incorrect')).toBeUndefined();
+    expect(doc.querySelector('[data-testid="verdict-pill"]')).toBeNull();
     expect(html).toContain('Explanation for unanswered review');
     expect(bottomBar.textContent).not.toContain('Submit');
     expect(bottomBar.textContent).toContain('Try Again');
@@ -1237,7 +1226,7 @@ describe('QuestionView', () => {
     const bottomBar = getBottomActionBar(doc);
     if (!bottomBar) throw new Error('Expected bottom action bar');
 
-    expect(findVerdictPill(doc, 'Incorrect')).toBeUndefined();
+    expect(doc.querySelector('[data-testid="verdict-pill"]')).toBeNull();
     expect(html).toContain('Explanation for unanswered review');
     expect(html).not.toContain('Your answer');
     expect(html).toContain(

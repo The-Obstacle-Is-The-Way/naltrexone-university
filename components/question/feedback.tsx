@@ -186,6 +186,7 @@ export function Feedback({
     <Card role="status">
       {isUnanswered ? null : (
         <span
+          data-testid="verdict-pill"
           className={cn(
             'inline-flex self-start rounded-full px-3 py-1 text-sm font-semibold',
             isCorrect &&

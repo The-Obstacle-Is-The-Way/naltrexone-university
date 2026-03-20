@@ -97,17 +97,6 @@ function findSectionLabel(
   ) as HTMLElement | undefined;
 }
 
-function findVerdictPill(
-  container: ParentNode,
-  text: 'Correct' | 'Incorrect',
-): HTMLElement | undefined {
-  return Array.from(container.querySelectorAll('div, span')).find(
-    (element) =>
-      element.textContent?.trim() === text &&
-      (element.getAttribute('class') ?? '').includes('self-start'),
-  ) as HTMLElement | undefined;
-}
-
 function expectNodeBefore(
   first: Node | null | undefined,
   second: Node | null | undefined,
@@ -227,8 +216,7 @@ describe('Feedback', () => {
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
 
-    expect(findVerdictPill(doc, 'Incorrect')).toBeUndefined();
-    expect(findVerdictPill(doc, 'Correct')).toBeUndefined();
+    expect(doc.querySelector('[data-testid="verdict-pill"]')).toBeNull();
   });
 
   it('still renders explanation, reference, and choice explanations when isUnanswered is true', () => {
@@ -276,9 +264,9 @@ describe('Feedback', () => {
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
 
-    expect(findVerdictPill(doc, 'Incorrect')?.textContent?.trim()).toBe(
-      'Incorrect',
-    );
+    expect(
+      doc.querySelector('[data-testid="verdict-pill"]')?.textContent?.trim(),
+    ).toBe('Incorrect');
   });
 
   it('T1: wraps correct-flow correct-answer content in a success card', () => {

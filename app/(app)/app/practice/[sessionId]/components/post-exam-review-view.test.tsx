@@ -90,17 +90,6 @@ function createReview(
   };
 }
 
-function findVerdictPill(
-  container: ParentNode,
-  text: 'Correct' | 'Incorrect',
-): HTMLElement | undefined {
-  return Array.from(container.querySelectorAll('div, span')).find(
-    (element) =>
-      element.textContent?.trim() === text &&
-      (element.getAttribute('class') ?? '').includes('self-start'),
-  ) as HTMLElement | undefined;
-}
-
 function renderView(input?: {
   row?: GetCompletedSessionQuestionsWithFeedbackOutput['rows'][number];
   summary?: EndPracticeSessionOutput;
@@ -151,7 +140,7 @@ describe('PostExamReviewView', () => {
   it('does not render an incorrect verdict pill for unanswered questions', () => {
     const doc = renderView();
 
-    expect(findVerdictPill(doc, 'Incorrect')).toBeUndefined();
+    expect(doc.querySelector('[data-testid="verdict-pill"]')).toBeNull();
   });
 
   it('still renders the incorrect verdict pill for answered incorrect questions', () => {
@@ -163,9 +152,9 @@ describe('PostExamReviewView', () => {
       }),
     });
 
-    expect(findVerdictPill(doc, 'Incorrect')?.textContent?.trim()).toBe(
-      'Incorrect',
-    );
+    expect(
+      doc.querySelector('[data-testid="verdict-pill"]')?.textContent?.trim(),
+    ).toBe('Incorrect');
   });
 
   it('still renders the correct verdict pill for answered correct questions', () => {
@@ -177,8 +166,8 @@ describe('PostExamReviewView', () => {
       }),
     });
 
-    expect(findVerdictPill(doc, 'Correct')?.textContent?.trim()).toBe(
-      'Correct',
-    );
+    expect(
+      doc.querySelector('[data-testid="verdict-pill"]')?.textContent?.trim(),
+    ).toBe('Correct');
   });
 });
