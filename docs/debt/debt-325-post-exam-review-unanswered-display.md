@@ -49,22 +49,74 @@ The post-exam review is worse, but the standalone route is not a fully correct e
 
 **Navigator:** The `QuestionNavigator` in review mode already handles the unanswered/correct/incorrect distinction correctly — unanswered questions get `outline` while incorrect gets `destructive`. The inconsistency is in the question detail + feedback area.
 
-## Proposed Fix
+## Implementation Decision (2026-03-20)
 
-When `currentRow.isCorrect === null` and `currentRow.selectedChoiceId === null` (unanswered), render:
+**Approach:** Extend the shared `Feedback` component with an `isUnanswered` prop.
+**Scope:** Fix both post-exam review AND standalone route in the same PR.
+
+### Rationale
+
+Both surfaces use the same `Feedback` component. Adding `isUnanswered?: boolean` to `FeedbackProps` lets both call sites opt into verdict suppression with a single prop, keeping the rendering logic centralized. A separate wrapper would duplicate explanation/reference/choice-explanation rendering.
+
+### Concrete Changes
+
+When `currentRow.isCorrect === null` and `currentRow.isAnswered === false` (unanswered), render:
 
 1. The yellow warning banner: "You did not answer this question during this session." (reusing the standalone route's `border-warning/50 bg-warning/5` styling)
 2. The `QuestionCard` with `correctChoiceId` highlighted but no selected choice
 3. The explanation/reference/choice-explanation content **without** the red `Incorrect` verdict pill
 
-`Feedback` as currently written is **not** sufficient for step 3, because `isCorrect={false}` always renders the red `Incorrect` pill. The implementation therefore needs one of these two shapes:
+**`Feedback` extension:**
 
-- extend `Feedback` with an unanswered/verdict-suppressed mode, or
-- render a small explanation-only wrapper for the unanswered case instead of using `Feedback` directly
+```tsx
+// feedback.tsx
+export type FeedbackProps = {
+  isCorrect: boolean;
+  isUnanswered?: boolean; // NEW — suppresses verdict pill when true
+  explanationMd: string | null;
+  referenceMd?: string | null;
+  choiceExplanations?: readonly FeedbackChoiceExplanation[];
+  selectedChoiceId?: string | null;
+};
+```
+
+When `isUnanswered` is true, `Feedback` skips the verdict pill (no "Correct"/"Incorrect" badge) but still renders explanation, reference, and choice explanations.
+
+**Post-exam review (`post-exam-review-view.tsx:104-110`):**
+
+```tsx
+<Feedback
+  isCorrect={currentRow.isCorrect === true}
+  isUnanswered={!currentRow.isAnswered}
+  ...
+/>
+```
+
+Plus a yellow warning banner above Feedback when `!currentRow.isAnswered`.
+
+**Standalone route (`question-page-client.tsx:347-368`):**
+
+```tsx
+<Feedback
+  isCorrect={props.submitResult?.isCorrect ?? false}
+  isUnanswered={!!isSessionReviewUnansweredReveal}
+  ...
+/>
+```
+
+The existing yellow banner at `question-page-client.tsx:319-326` already covers the banner. Adding `isUnanswered` suppresses the redundant red verdict pill underneath.
 
 The key visual signal: **yellow/warning for unanswered, red/destructive for incorrect.** This matches the navigator colors (outline vs destructive) and gives the user accurate feedback about what happened.
 
-If the team extends `Feedback` with an unanswered mode, the standalone session-review unanswered path should adopt the same verdict-suppression behavior in the same PR or be tracked explicitly as follow-up debt. The yellow banner alone is not enough if the shared verdict pill still says `Incorrect`.
+### Mode coverage
+
+The `isUnanswered` prop is **mode-agnostic**. It keys off `!currentRow.isAnswered` (or `!!isSessionReviewUnansweredReveal` on the standalone route), not off the session mode. This means:
+
+- **Exam mode** (primary case): unanswered questions from skipping → yellow banner + verdict suppressed
+- **Tutor mode early exit** (edge case): `end-practice-session.ts` has no validation requiring all questions to be answered, so ending a tutor session early can produce unanswered questions → same yellow banner + verdict suppressed, zero extra logic
+- **Quick Practice**: impossible — each question creates an immediate attempt with `selectedChoiceId` and `isCorrect: boolean`, no session that can be left incomplete
+
+No mode-specific branching needed. The existing `isAnswered` / `isCorrect: null` data model already captures the distinction uniformly across modes.
 
 ## Where Else This Matters
 
@@ -75,8 +127,8 @@ If the team extends `Feedback` with an unanswered mode, the standalone session-r
 | **Post-exam review question detail** | Red `Incorrect` verdict, no unanswered banner | **Broken — this debt** |
 | **Standalone question review** | Yellow unanswered banner, but still red `Incorrect` verdict from shared `Feedback` | **Partially correct — reference pattern exists, verdict still misleading** |
 | **Session Summary breakdown** | `text-muted-foreground` "Unanswered" label | Correct |
-| **Tutor mode** | N/A — tutor locks after submit, no skip-without-answer path | N/A |
-| **Quick Practice** | N/A — no session context | N/A |
+| **Tutor mode (early exit)** | Unanswered questions possible if user clicks "End session" before answering all; `end-practice-session.ts` has no all-answered validation | **Handled for free** — `isUnanswered` prop is mode-agnostic; `!currentRow.isAnswered` works identically for tutor and exam rows |
+| **Quick Practice** | N/A — each question creates an immediate attempt, no session context, no unanswered path | N/A |
 
 ## Acceptance Criteria
 
@@ -86,4 +138,5 @@ If the team extends `Feedback` with an unanswered mode, the standalone session-r
 - [ ] Navigator `outline` variant for unanswered remains unchanged
 - [ ] Scoring is unchanged — unanswered still counts as incorrect in totals
 - [ ] Test coverage for the unanswered display path in post-exam review
-- [ ] If shared `Feedback` is extended, standalone session-review unanswered presentation is kept consistent or explicitly tracked as separate follow-up
+- [ ] Standalone route (`question-page-client.tsx`) verdict pill suppressed for unanswered review via the same `isUnanswered` prop
+- [ ] Test coverage for the standalone unanswered review path (verdict suppressed, yellow banner preserved)
