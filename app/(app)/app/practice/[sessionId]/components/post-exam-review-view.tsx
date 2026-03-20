@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { Feedback } from '@/components/question/feedback';
 import { QuestionCard } from '@/components/question/question-card';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ export function PostExamReviewView({
   onNavigateQuestion,
   onViewSummary,
 }: PostExamReviewViewProps) {
+  const panelRef = useRef<HTMLElement | null>(null);
   const currentRow =
     review.rows.find((row) => row.questionId === currentQuestionId) ??
     review.rows[0] ??
@@ -46,7 +48,13 @@ export function PostExamReviewView({
     currentIndex >= 0 && currentIndex < review.rows.length - 1
       ? (review.rows[currentIndex + 1] ?? null)
       : null;
+  const focusedQuestionId = currentRow?.questionId ?? null;
   const scoreLabel = `Score: ${Math.round(summary.totals.accuracy * 100)}% (${summary.totals.correct}/${summary.questionCount})`;
+
+  useEffect(() => {
+    if (focusedQuestionId === null) return;
+    panelRef.current?.focus({ focusVisible: true });
+  }, [focusedQuestionId]);
 
   return (
     <div className="space-y-6">
@@ -83,6 +91,7 @@ export function PostExamReviewView({
 
       {currentRow ? (
         <section
+          ref={panelRef}
           id={controlledPanelId}
           aria-label={`Question ${currentRow.order} of ${review.totalCount}`}
           className="space-y-6 outline-none focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
