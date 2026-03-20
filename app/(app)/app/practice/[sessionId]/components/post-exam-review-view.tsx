@@ -53,7 +53,7 @@ export function PostExamReviewView({
 
   useEffect(() => {
     if (focusedQuestionId === null) return;
-    panelRef.current?.focus({ focusVisible: true });
+    panelRef.current?.focus({ focusVisible: true } as FocusOptions);
   }, [focusedQuestionId]);
 
   return (
