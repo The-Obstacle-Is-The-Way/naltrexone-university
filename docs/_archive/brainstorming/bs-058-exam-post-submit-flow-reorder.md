@@ -4,7 +4,7 @@
 **Triggered by:** Manual walkthrough of the pre-BS-058 exam mode end-to-end flow; "summary sandwich" friction
 **Status:** Implemented on 2026-03-19. The shipped flow now enters an in-session post-exam review stage before Session Summary. This document preserves the original analysis, records the implementation outcome, and notes follow-up debt discovered after ship.
 **Scope:** Historical problem analysis for the old "Submit exam → Session Summary first" flow, plus the code-verified implementation outcome that replaced it
-**Related:** [BS-055](../_archive/brainstorming/bs-055-exam-session-interaction-model-rethink.md) (exam interaction model), [interaction-contracts.md](../practice-engine/interaction-contracts.md) (§5 Post-Session Flows), AF-6 (Try Again in exam review)
+**Related:** [BS-055](./bs-055-exam-session-interaction-model-rethink.md) (exam interaction model), [interaction-contracts.md](../../practice-engine/interaction-contracts.md) (§5 Post-Session Flows), AF-6 (Try Again in exam review)
 
 ---
 

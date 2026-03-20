@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-19
+**Last Updated:** 2026-03-20
 
 ---
 
@@ -30,7 +30,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
-| [DEBT-324](./debt-324-session-scoped-practice-missed-questions.md) | Removed misleading `Practice missed questions` CTA from exam Summary — DEBT-324 confirmed the link opened the user's global latest-incorrect Quick Practice pool, so the terminal summary now stays focused on review re-entry and exit paths. | P3 | 2026-03-19 | — |
+| [DEBT-324](../_archive/debt/debt-324-session-scoped-practice-missed-questions.md) | Removed misleading `Practice missed questions` CTA from exam Summary — DEBT-324 confirmed the link opened the user's global latest-incorrect Quick Practice pool, so the terminal summary now stays focused on review re-entry and exit paths. | P3 | 2026-03-19 | — |
 | [DEBT-323](../_archive/debt/debt-323-agent-browser-react-click-failures.md) | Agent-browser React click failures — upstream limitation documented in `docs/tooling/agent-browser.md`. Not a code bug. Eval workarounds and toggle-button limitation permanently documented. | P3 | 2026-03-18 | — |
 | [DEBT-328](../_archive/debt/debt-328-bookmark-surface-policy-stale-origin.md) | Bookmark Surface Policy — stale summary-review origin wording fixed; summary-launched review now documented as `from=summary` in the active frontend docs. | P4 | 2026-03-19 | — |
 | [DEBT-327](../_archive/debt/debt-327-interaction-contracts-status-cleanup.md) | Interaction Contracts doc status cleanup — header/current-state framing reconciled so the document now reads as current implementation instead of mixed proposed/shipped state. | P4 | 2026-03-19 | — |

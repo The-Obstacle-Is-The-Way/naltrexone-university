@@ -3,7 +3,7 @@
 **Priority:** P2
 **Created:** 2026-03-19
 **Source:** BS-058 post-implementation audit
-**Related:** [BS-058](../brainstorming/bs-058-exam-post-submit-flow-reorder.md), [PostExamReviewView](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx)
+**Related:** [BS-058](../_archive/brainstorming/bs-058-exam-post-submit-flow-reorder.md), [PostExamReviewView](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx)
 
 ---
 

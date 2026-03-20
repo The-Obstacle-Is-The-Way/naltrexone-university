@@ -1,30 +1,34 @@
-# DEBT-324: Remove Misleading "Practice Missed Questions" CTA From Exam Summary
+# DEBT-324: Remove Misleading "Practice Missed Questions" CTA From Exam Summary (Resolved)
 
 **Priority:** P3
 **Created:** 2026-03-19
-**Updated:** 2026-03-19
+**Resolved:** 2026-03-19
 **Source:** BS-058 implementation audit
-**Related:** [BS-058](../brainstorming/bs-058-exam-post-submit-flow-reorder.md), [interaction-contracts.md](../practice-engine/interaction-contracts.md)
+**Related:** [BS-058](../brainstorming/bs-058-exam-post-submit-flow-reorder.md), [interaction-contracts.md](../../practice-engine/interaction-contracts.md)
 
 ---
 
-## Decision
+## Resolution
 
-**Recommendation: Option A. Remove the CTA.**
+Resolved on 2026-03-19 by removing `Practice missed questions` from the exam `SessionSummaryView`.
 
-This recommendation still holds after the final 2026-03-19 code re-audit.
+The shipped exam summary CTA set is now:
 
-Do **not** extend Quick Practice for session-scoped missed-question filtering as part of this debt. After BS-058, the user already gets a full in-session post-exam review with explanations, choice-level feedback, and navigator-driven review before reaching the terminal summary. An immediate reattempt CTA on the summary is now redundant, and the current implementation is also misleading.
+- `Review your answers` when a reviewable slug exists
+- `Back to Practice`
+- `View in History`
+
+This archived doc preserves the pre-removal audit that justified the change.
 
 ---
 
-## Verified Current Behavior
+## Pre-Resolution Audit
 
-### What the button does right now
+### What the button did before removal
 
-The CTA still exists in the shipped exam summary.
+Before DEBT-324 landed, the CTA existed in the shipped exam summary.
 
-Current render contract in `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx`:
+Pre-removal render contract in `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx`:
 
 - `showPracticeMissedQuestions` is computed at lines 29-30:
 
@@ -106,7 +110,7 @@ return inArray(
 );
 ```
 
-So the current CTA launches a **global latest-incorrect pool**, not a session-scoped retry set.
+So the removed CTA launched a **global latest-incorrect pool**, not a session-scoped retry set.
 
 ---
 
@@ -169,12 +173,12 @@ const missedSlugs = review.rows
   .map((row) => row.slug);
 ```
 
-But the existing Quick Practice route cannot consume those slugs. So the missing piece is **not** slug derivation; it is the lack of a question-id/slug-scoped filter path in the Quick Practice stack.
+But the existing Quick Practice route cannot consume those slugs. So the missing piece was **not** slug derivation; it was the lack of a question-id/slug-scoped filter path in the Quick Practice stack.
 
 Also note the boundary conditions:
 
 - unavailable rows have no slug, so a client-derived session-scoped retry set would still need an explicit omission policy
-- review-fetch failure would leave no session-scoped slug list at all, while the current CTA still appears today
+- review-fetch failure would leave no session-scoped slug list at all, while the pre-removal CTA still appeared anyway
 
 ---
 
@@ -268,7 +272,7 @@ Tutor summary:
 
 ### Explicit non-goals
 
-Do **not** change the Quick Practice `status=incorrect` route itself. That route still has a valid meaning for the Quick Practice segmented control; this debt is specifically about removing the misleading exam-summary shortcut into that global pool.
+Do **not** change the Quick Practice `status=incorrect` route itself. That route still has a valid meaning for the Quick Practice segmented control; this debt was specifically about removing the misleading exam-summary shortcut into that global pool.
 
 ### Tests to update
 
@@ -292,7 +296,7 @@ Files:
 - `docs/practice-engine/interaction-contracts.md:260-265`
 - `docs/practice-engine/question-rendering-architecture.md:83-89`
 - `docs/practice-engine/question-rendering-architecture.md:527`
-- `docs/brainstorming/bs-058-exam-post-submit-flow-reorder.md`
+- `docs/_archive/brainstorming/bs-058-exam-post-submit-flow-reorder.md`
 - `docs/debt/index.md`
 
 Update the shipped exam-summary CTA set to remove `Practice missed questions`.
