@@ -11,7 +11,7 @@
 
 When the user clicks Previous/Next or a navigator button in the post-exam review, the question content swaps in place but focus stays on the button that was clicked. Keyboard and screen-reader users may not realize the main content area has changed.
 
-The controlled panel in `post-exam-review-view.tsx:84-89` is focusable (`tabIndex={-1}`) and has `outline-none`, but there is no `useEffect`, no `.focus()` call, and no other post-navigation focus handoff in that file.
+The controlled panel in `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx:84-89` is focusable (`tabIndex={-1}`) and has `outline-none`, but that file currently has no React hook imports, no `useEffect`, no `useRef`, and no `.focus()` call.
 
 ## What The Current Code Actually Does Elsewhere
 
@@ -19,10 +19,27 @@ There is **not** an existing session-level focus handoff in the active exam flow
 
 What exists today:
 
-- `PracticeView` can accept a `questionAreaRef` (`practice-view.tsx:356-360`), but the session runner does not pass one during active exam navigation
-- the only nearby focus recovery in this slice is Quick Practice error recovery, where `usePracticeQuestionAnswerFlow` focuses the question area after an error-path reload (`use-practice-question-answer-flow.ts:126-136`)
+- `PracticeView` can accept `questionAreaRef?: React.RefObject<HTMLDivElement | null>` and applies it to the controlled panel in `app/(app)/app/practice/components/practice-view.tsx:41-42` and `app/(app)/app/practice/components/practice-view.tsx:356-360`
+- the only live runtime caller that passes `questionAreaRef` is Quick Practice in `app/(app)/app/practice/quick/quick-practice-client.tsx:100`; the session runner in `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:261-318` does **not** pass one during active exam navigation
+- the only nearby focus recovery in this slice is Quick Practice error recovery, where `usePracticeQuestionAnswerFlow` focuses the question area after an error-path reload in `app/(app)/app/practice/hooks/use-practice-question-answer-flow.ts:126-137`
+- `getFocusRecoveryTransition` in that hook is error-path-only: it sets `pendingFocus` on `status === 'error'` and only returns `shouldFocus: true` when a later `ready` arrives with `pendingFocus === true`
+- other review surfaces currently do **not** perform focus handoff on navigation: there is no `.focus()` or focus-management `useEffect` in `app/(app)/app/questions/[slug]/question-page-client.tsx`, `app/(app)/app/questions/[slug]/components/review-question-navigator.tsx`, or `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx`
 
 So this debt is still real, but it is a **new accessibility gap in the post-exam review**, not a regression from an already-solved active-exam pattern.
+
+## Parent State Flow
+
+`PostExamReviewView` is rendered by `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx`, but the selection state does not live in that component.
+
+The actual state owner is `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts`, which stores `postExamReviewCurrentQuestionId` and updates it in `onNavigatePostExamReviewQuestion` via `setPostExamReviewCurrentQuestionId(questionId)` (`:109-110`, `:319-320`).
+
+That state flows through:
+
+- `usePracticeSessionReviewStage`
+- `usePracticeSessionPageController`
+- `PracticeSessionPageClient`
+- `PracticeSessionPageView`
+- `PostExamReviewView` as `currentQuestionId`
 
 ## Implementation Decision (2026-03-20)
 
@@ -32,17 +49,23 @@ The panel (`id={controlledPanelId}`, `tabIndex={-1}`) already follows the standa
 
 ### Screen reader announcement: dynamic `aria-label` on the panel
 
-Add `aria-label={`Question ${currentRow.order} of ${review.rows.length}`}` to the panel div. When focus lands, the screen reader announces the position. This is simpler and more reliable than a separate `aria-live="polite"` region, which can sometimes double-announce alongside the focus event.
+The panel itself currently has no `aria-label`, `aria-labelledby`, `role`, or landmark semantics. The only related semantics are `id={controlledPanelId}`, `tabIndex={-1}`, and navigator buttons that point at it with `aria-controls={controlledPanelId}`.
 
-### Visible focus treatment: `focus-visible` ring + `focusVisible: true`
+Adding `aria-label={`Question ${currentRow.order} of ${review.totalCount}`}` to the panel would not conflict with current markup. It would be additive, though it would overlap the visible "Question X of Y" text already rendered inside the panel.
 
-Replace `outline-none` with `outline-none focus-visible:ring-2 focus-visible:ring-ring` on the panel. In the `useEffect`, call `.focus({ focusVisible: true })` instead of plain `.focus()`. Programmatic `.focus()` alone does not trigger `:focus-visible` in browsers; `.focus({ focusVisible: true })` does (Chrome 122+, Firefox 104+, Safari 17.4+ — all well past baseline for a 2026 app). This means the ring appears after keyboard/programmatic navigation but not after mouse clicks.
+### Visible focus treatment: repo-standard focus ring
+
+Use the repo's current focus-visible pattern: `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`.
+
+The original `focus-visible:ring-2 focus-visible:ring-ring` proposal is **not** the established live pattern in this codebase. Current app code uses `focus-visible:ring-ring/50 focus-visible:ring-[3px]` for focus-visible treatment, and both review navigators use `ring-[3px] ring-ring/50` for current-item emphasis.
+
+The repo currently has no live use of `.focus({ focusVisible: true })`, so that should be treated as a new implementation choice to validate in browser mode, not an existing project convention.
 
 ### Concrete changes
 
 **`post-exam-review-view.tsx`:**
 
-The component is already a `'use client'` component but currently uses no hooks. This change adds `useEffect` + `useRef`.
+The component is already a `'use client'` component on line 1 and currently imports no React hooks. This change would add `useEffect` + `useRef`.
 
 ```tsx
 'use client';
@@ -64,13 +87,13 @@ export function PostExamReviewView({ ... }: PostExamReviewViewProps) {
   <div
     id={controlledPanelId}
     ref={panelRef}
-    aria-label={`Question ${currentRow.order} of ${review.rows.length}`}
-    className="space-y-6 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    aria-label={`Question ${currentRow.order} of ${review.totalCount}`}
+    className="space-y-6 outline-none focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
     tabIndex={-1}
   >
 ```
 
-No changes needed to any other file. The `onNavigateQuestion` callback already updates `currentQuestionId` in the parent, which triggers a re-render with the new prop value, which fires the `useEffect`.
+The `onNavigateQuestion` callback path already updates the state that feeds `currentQuestionId`; no new navigation state wiring is needed. The component change can stay local to `post-exam-review-view.tsx`, but tests will also need updates or additions.
 
 ### Skip-on-mount behavior
 
@@ -80,14 +103,16 @@ The `useEffect` fires on mount as well as on subsequent `currentQuestionId` chan
 
 The existing `post-exam-review-view.test.tsx` uses `renderToStaticMarkup`, which cannot test focus behavior (no DOM lifecycle, no `useEffect`). The focus-management behavior requires:
 
-- **Static markup tests** (existing `*.test.tsx`): Verify `aria-label` attribute and `focus-visible:ring-2` class are present in the rendered HTML. These are structural assertions that `renderToStaticMarkup` can handle.
-- **Browser mode test** (`*.browser.spec.tsx`): Verify that after navigation, `document.activeElement` is the panel element. This requires a real browser DOM with `useEffect` execution.
+- **Static markup tests** (existing `*.test.tsx`): Verify the accessible-name attribute and repo-standard focus-visible classes are present in the rendered HTML. `renderToStaticMarkup` can already assert `aria-label` and class tokens in this repo.
+- **Browser mode test** (`*.browser.spec.tsx`): Verify that after navigation the panel receives focus. The same directory already has browser specs (`exam-review-view.browser.spec.tsx`, `practice-session-page-view.browser.spec.tsx`), and the repo already uses focus assertions in browser mode (`components/mobile-nav.browser.spec.tsx` uses `toHaveFocus()` under `vitest-browser-react` + Chromium).
+- `PostExamReviewView` has no runtime controller or server-action imports, so a direct browser-mode render can use fixture props without mocking controller modules.
 
 ## Acceptance Criteria
 
-- [ ] `useEffect` in `PostExamReviewView` calls `.focus({ focusVisible: true })` on the panel ref when `currentQuestionId` changes
-- [ ] Panel has `aria-label` with "Question X of Y" for screen reader announcement
-- [ ] Panel has `focus-visible:ring-2 focus-visible:ring-ring` so the focus destination is perceivable
-- [ ] Static markup test verifies `aria-label` and focus-visible class presence
-- [ ] Browser mode test verifies `document.activeElement` is the panel after navigation
+- [ ] `useEffect` in `PostExamReviewView` focuses the panel ref when `currentQuestionId` changes
+- [ ] Panel keeps `id={controlledPanelId}` and `tabIndex={-1}`
+- [ ] Panel has an accessible name with "Question X of Y" for screen reader announcement
+- [ ] Panel uses repo-standard focus-visible classes: `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`
+- [ ] Static markup test verifies the accessible-name attribute and focus-visible class presence
+- [ ] Browser mode test verifies the panel receives focus after navigation
 - [ ] Existing PostExamReviewView behavior (unanswered banner, verdict pills, feedback content) is unchanged
