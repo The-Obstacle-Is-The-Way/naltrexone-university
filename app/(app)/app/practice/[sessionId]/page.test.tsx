@@ -23,6 +23,10 @@ beforeAll(async () => {
   isQuestionBookmarked = module.isQuestionBookmarked;
 });
 
+function getClassTokens(className: string): Set<string> {
+  return new Set(className.split(/\s+/).filter(Boolean));
+}
+
 describe('app/(app)/app/practice/[sessionId]', () => {
   it('unwraps async params before rendering the client page', async () => {
     const element = await PracticeSessionPage({
@@ -137,7 +141,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain('[Question no longer available]');
   });
 
-  it('renders exam follow-up CTAs with missed-question practice when answers were missed', async () => {
+  it('renders exam follow-up CTAs without the removed practice-missed shortcut', async () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
@@ -188,7 +192,6 @@ describe('app/(app)/app/practice/[sessionId]', () => {
       const text = link.textContent?.trim();
       return (
         text === 'Review your answers' ||
-        text === 'Practice missed questions' ||
         text === 'Back to Practice' ||
         text === 'View in History' ||
         text === 'Back to Dashboard' ||
@@ -198,7 +201,6 @@ describe('app/(app)/app/practice/[sessionId]', () => {
 
     expect(actionLinks.map((link) => link.textContent?.trim())).toEqual([
       'Review your answers',
-      'Practice missed questions',
       'Back to Practice',
       'View in History',
     ]);
@@ -206,7 +208,8 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain(
       'href="/app/questions/q-1?from=summary&amp;mode=review&amp;sessionId=session-1"',
     );
-    expect(html).toContain('href="/app/practice/quick?status=incorrect"');
+    expect(html).not.toContain('Practice missed questions');
+    expect(html).not.toContain('href="/app/practice/quick?status=incorrect"');
   });
 
   it('does not render a Review your answers CTA for tutor summaries', async () => {
@@ -318,6 +321,53 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     );
 
     expect(html).not.toContain('Review your answers');
+  });
+
+  it('uses a primary Back to Practice CTA when no reviewable slug exists', async () => {
+    const html = renderToStaticMarkup(
+      <SessionSummaryView
+        summary={{
+          sessionId: 'session-1',
+          endedAt: '2026-02-01T00:00:00.000Z',
+          mode: 'exam',
+          questionCount: 2,
+          totals: {
+            answered: 2,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 120,
+          },
+        }}
+        review={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          totalCount: 2,
+          answeredCount: 2,
+          markedCount: 0,
+          rows: [
+            {
+              isAvailable: false,
+              questionId: 'q1',
+              order: 1,
+              isAnswered: true,
+              isCorrect: false,
+              markedForReview: false,
+            },
+          ],
+        }}
+        reviewLoadState={{ status: 'ready' }}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const backToPracticeLink = Array.from(doc.querySelectorAll('a')).find(
+      (link) => link.textContent?.trim() === 'Back to Practice',
+    );
+    const tokens = getClassTokens(
+      backToPracticeLink?.getAttribute('class') ?? '',
+    );
+
+    expect(tokens.has('bg-primary')).toBe(true);
+    expect(tokens.has('border')).toBe(false);
   });
 
   it('announces summary breakdown loading with live semantics', async () => {

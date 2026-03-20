@@ -26,14 +26,11 @@ export function SessionSummaryView({
     summary.mode === 'exam' || summary.totals.answered > 0
       ? accuracyPercent
       : '—';
-  const showPracticeMissedQuestions =
-    summary.mode === 'exam' && summary.totals.correct < summary.totals.answered;
   const firstReviewableSlug =
     summary.mode === 'exam'
       ? (summaryReview?.rows.find((row) => row.isAvailable)?.slug ?? null)
       : null;
-  const hasPrimaryFollowUp =
-    firstReviewableSlug !== null || showPracticeMissedQuestions;
+  const hasPrimaryFollowUp = firstReviewableSlug !== null;
 
   return (
     <div className="space-y-6">
@@ -115,13 +112,6 @@ export function SessionSummaryView({
               })}
             >
               Review your answers
-            </Link>
-          </Button>
-        ) : null}
-        {showPracticeMissedQuestions ? (
-          <Button asChild className="rounded-full" variant="outline">
-            <Link href={`${ROUTES.APP_PRACTICE_QUICK}?status=incorrect`}>
-              Practice missed questions
             </Link>
           </Button>
         ) : null}

@@ -61,9 +61,6 @@ test('renders summary totals and per-question breakdown', async () => {
     .element(screen.getByRole('link', { name: 'View in History' }))
     .toHaveAttribute('href', ROUTES.APP_HISTORY);
   await expect
-    .element(screen.getByRole('link', { name: 'Practice missed questions' }))
-    .toHaveAttribute('href', `${ROUTES.APP_PRACTICE_QUICK}?status=incorrect`);
-  await expect
     .element(screen.getByRole('link', { name: 'Back to Practice' }))
     .toHaveAttribute('href', ROUTES.APP_PRACTICE);
   await expect
@@ -89,7 +86,7 @@ test('renders summary totals and per-question breakdown', async () => {
     );
 });
 
-test('omits practice missed questions when all exam answers are correct', async () => {
+test('omits the removed practice-missed CTA when all exam answers are correct', async () => {
   const screen = await render(
     <SessionSummaryView
       summary={{
@@ -128,6 +125,53 @@ test('omits practice missed questions when all exam answers are correct', async 
     />,
   );
 
+  await expect
+    .element(screen.getByRole('link', { name: 'Practice missed questions' }))
+    .not.toBeInTheDocument();
+});
+
+test('uses Back to Practice as the primary CTA when no reviewable slug exists', async () => {
+  const screen = await render(
+    <SessionSummaryView
+      summary={{
+        sessionId: 'session-1',
+        endedAt: '2026-02-07T00:00:00.000Z',
+        mode: 'exam',
+        questionCount: 2,
+        totals: {
+          answered: 2,
+          correct: 1,
+          accuracy: 0.5,
+          durationSeconds: 30,
+        },
+      }}
+      review={{
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 2,
+        markedCount: 0,
+        rows: [
+          {
+            questionId: 'q1',
+            order: 1,
+            isAvailable: false,
+            isAnswered: true,
+            isCorrect: false,
+            markedForReview: false,
+          },
+        ],
+      }}
+      reviewLoadState={{ status: 'ready' }}
+    />,
+  );
+
+  await expect
+    .element(screen.getByRole('link', { name: 'Review your answers' }))
+    .not.toBeInTheDocument();
+  await expect
+    .element(screen.getByRole('link', { name: 'Back to Practice' }))
+    .toHaveClass(/bg-primary/);
   await expect
     .element(screen.getByRole('link', { name: 'Practice missed questions' }))
     .not.toBeInTheDocument();

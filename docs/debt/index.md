@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-19
+**Last Updated:** 2026-03-20
 
 ---
 
@@ -19,10 +19,10 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
 | [DEBT-318](./debt-318-tutor-bookmark-before-answer.md) | Bookmark visible before feedback in tutor mode and quick practice — keep the surface, but delay the action until inline feedback/explanation is visible | P3 | — |
-| [DEBT-324](./debt-324-session-scoped-practice-missed-questions.md) | Remove misleading `Practice missed questions` CTA from exam Summary — current link opens the user's global latest-incorrect Quick Practice pool, and BS-058 post-exam review already covers the immediate learning/review need. | P3 | — |
 | [DEBT-325](./debt-325-post-exam-review-unanswered-display.md) | Post-exam review shows unanswered questions as "Incorrect" instead of yellow "did not answer" banner — scoring is correct (unanswered = incorrect) but display should distinguish skipped from wrong | P2 | — |
 | [DEBT-326](./debt-326-post-exam-review-focus-management.md) | Post-exam review navigation does not move focus after question change — keyboard/screen-reader accessibility gap | P3 | — |
-**Next Debt ID:** DEBT-329
+| [DEBT-329](./debt-329-navigator-colorblind-accessibility.md) | Question navigator relies on color alone (red/green) to distinguish correct from incorrect — fails WCAG 1.4.1 for colorblind users. Both `QuestionNavigator` and `ReviewQuestionNavigator` affected. | P3 | — |
+**Next Debt ID:** DEBT-330
 
 ---
 
@@ -30,6 +30,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-324](../_archive/debt/debt-324-session-scoped-practice-missed-questions.md) | Removed misleading `Practice missed questions` CTA from exam Summary — DEBT-324 confirmed the link opened the user's global latest-incorrect Quick Practice pool, so the terminal summary now stays focused on review re-entry and exit paths. | P3 | 2026-03-19 | — |
 | [DEBT-323](../_archive/debt/debt-323-agent-browser-react-click-failures.md) | Agent-browser React click failures — upstream limitation documented in `docs/tooling/agent-browser.md`. Not a code bug. Eval workarounds and toggle-button limitation permanently documented. | P3 | 2026-03-18 | — |
 | [DEBT-328](../_archive/debt/debt-328-bookmark-surface-policy-stale-origin.md) | Bookmark Surface Policy — stale summary-review origin wording fixed; summary-launched review now documented as `from=summary` in the active frontend docs. | P4 | 2026-03-19 | — |
 | [DEBT-327](../_archive/debt/debt-327-interaction-contracts-status-cleanup.md) | Interaction Contracts doc status cleanup — header/current-state framing reconciled so the document now reads as current implementation instead of mixed proposed/shipped state. | P4 | 2026-03-19 | — |

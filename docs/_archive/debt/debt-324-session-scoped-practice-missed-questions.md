@@ -1,26 +1,43 @@
-# DEBT-324: Remove Misleading "Practice Missed Questions" CTA From Exam Summary
+# DEBT-324: Remove Misleading "Practice Missed Questions" CTA From Exam Summary (Resolved)
 
 **Priority:** P3
 **Created:** 2026-03-19
-**Updated:** 2026-03-19
+**Resolved:** 2026-03-19
 **Source:** BS-058 implementation audit
-**Related:** [BS-058](../brainstorming/bs-058-exam-post-submit-flow-reorder.md), [interaction-contracts.md](../practice-engine/interaction-contracts.md)
+**Related:** [BS-058](../brainstorming/bs-058-exam-post-submit-flow-reorder.md), [interaction-contracts.md](../../practice-engine/interaction-contracts.md)
 
 ---
 
-## Decision
+## Resolution
 
-**Recommendation: Option A. Remove the CTA.**
+Resolved on 2026-03-19 by removing `Practice missed questions` from the exam `SessionSummaryView`.
 
-Do **not** extend Quick Practice for session-scoped missed-question filtering as part of this debt. After BS-058, the user already gets a full in-session post-exam review with explanations, choice-level feedback, and navigator-driven review before reaching the terminal summary. An immediate reattempt CTA on the summary is now redundant, and the current implementation is also misleading.
+The shipped exam summary CTA set is now:
+
+- `Review your answers` when a reviewable slug exists
+- `Back to Practice`
+- `View in History`
+
+This archived doc preserves the pre-removal audit that justified the change.
 
 ---
 
-## Verified Current Behavior
+## Pre-Resolution Audit
 
-### What the button does right now
+### What the button did before removal
 
-`SessionSummaryView` renders the CTA as:
+Before DEBT-324 landed, the CTA existed in the shipped exam summary.
+
+Pre-removal render contract in `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx`:
+
+- `showPracticeMissedQuestions` is computed at lines 29-30:
+
+```ts
+const showPracticeMissedQuestions =
+  summary.mode === 'exam' && summary.totals.correct < summary.totals.answered;
+```
+
+- The CTA renders at lines 121-126:
 
 ```tsx
 <Link href={`${ROUTES.APP_PRACTICE_QUICK}?status=incorrect`}>
@@ -28,22 +45,38 @@ Do **not** extend Quick Practice for session-scoped missed-question filtering as
 </Link>
 ```
 
+- The CTA also currently participates in the button-weighting branch at lines 35-36 and 128-131:
+
+```ts
+const hasPrimaryFollowUp =
+  firstReviewableSlug !== null || showPracticeMissedQuestions;
+```
+
 Source:
-- `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx`
+- `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx:29-36`
+- `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx:121-131`
 
 ### Exact code path
 
 1. User clicks `Practice missed questions` on the exam summary.
+   Source: `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx:121-125`
 2. Browser navigates to `/app/practice/quick?status=incorrect`.
 3. `QuickPracticeClient` reads the query string via `parseStatusParam(...)`.
+   Source: `app/(app)/app/practice/quick/quick-practice-client.tsx:26-31,54`
 4. `QuickPracticeClient` builds `filters = { tagSlugs: [], difficulty: null, status: 'incorrect' }`.
+   Source: `app/(app)/app/practice/quick/quick-practice-client.tsx:56-63`
 5. `usePracticeQuestionFlow()` passes those filters into `usePracticeQuestionAnswerFlow()`.
+   Source: `app/(app)/app/practice/quick/quick-practice-client.tsx:65-67`; `app/(app)/app/practice/hooks/use-practice-question-flow.ts:47-52`
 6. `practice-page-logic.ts` converts them to server filters:
    - `statuses: [input.filters.status]`
+   Source: `app/(app)/app/practice/practice-page-logic.ts:66-70`
 7. `question-controller.ts` calls `GetNextQuestionUseCase.execute({ userId, filters })`.
+   Source: `src/adapters/controllers/question-controller.ts:192-210`
 8. `GetNextQuestionUseCase.executeForFilters()` calls:
    - `questions.listPublishedCandidateIds({ ...filters, userId })`
+   Source: `src/application/use-cases/get-next-question.ts:266-273`
 9. `DrizzleQuestionRepository.listPublishedCandidateIds()` applies the status filter in `buildStatusCondition('incorrect', userId)`.
+   Source: `src/adapters/repositories/drizzle-question-repository.ts:195-215,217-257`
 10. The repository query selects questions whose **latest visible attempt** for this user is incorrect.
 
 ### What `status=incorrect` actually means
@@ -77,7 +110,7 @@ return inArray(
 );
 ```
 
-So the current CTA launches a **global latest-incorrect pool**, not a session-scoped retry set.
+So the removed CTA launched a **global latest-incorrect pool**, not a session-scoped retry set.
 
 ---
 
@@ -101,7 +134,7 @@ const summaryReview = review ?? null;
 ```
 
 Source:
-- `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx`
+- `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx:13-23`
 
 ### Is the review data available by the time the user sees Summary?
 
@@ -114,10 +147,12 @@ That means:
 - `Session Summary` heading and stat cards can render first
 - `summaryReview` may still be `null`
 - breakdown links and `Review your answers` wait on the review fetch
+- `Practice missed questions` does **not** wait on the review fetch; it renders solely from `summary.mode` and `summary.totals`
 
 Sources:
-- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-summary-review.ts`
-- `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-summary-review.ts:21-23,32-52`
+- `app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts:311-360`
+- `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx:29-36,83-127`
 
 ### Could we derive session-scoped missed question slugs on the client today?
 
@@ -138,7 +173,12 @@ const missedSlugs = review.rows
   .map((row) => row.slug);
 ```
 
-But the existing Quick Practice route cannot consume those slugs. So the missing piece is **not** slug derivation; it is the lack of a question-id/slug-scoped filter path in the Quick Practice stack.
+But the existing Quick Practice route cannot consume those slugs. So the missing piece was **not** slug derivation; it was the lack of a question-id/slug-scoped filter path in the Quick Practice stack.
+
+Also note the boundary conditions:
+
+- unavailable rows have no slug, so a client-derived session-scoped retry set would still need an explicit omission policy
+- review-fetch failure would leave no session-scoped slug list at all, while the pre-removal CTA still appeared anyway
 
 ---
 
@@ -204,15 +244,17 @@ The main problem is no longer just naming. It is that the CTA itself is unnecess
 
 Remove `Practice missed questions` from the exam `SessionSummaryView`.
 
+There are **no open product questions** left in this debt. This is a UI-surface removal, not a Quick Practice redesign.
+
 ### Production change
 
 File:
 - `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx`
 
 Remove:
-- `showPracticeMissedQuestions`
-- the outline CTA linking to `${ROUTES.APP_PRACTICE_QUICK}?status=incorrect`
-- any layout branching that exists only to support that CTA
+- `showPracticeMissedQuestions` (`session-summary-view.tsx:29-30`)
+- the outline CTA linking to `${ROUTES.APP_PRACTICE_QUICK}?status=incorrect` (`session-summary-view.tsx:121-126`)
+- the `hasPrimaryFollowUp` dependency on `showPracticeMissedQuestions` (`session-summary-view.tsx:35-36`) so button weighting only depends on whether `Review your answers` exists
 
 ### Expected summary CTA set after removal
 
@@ -221,32 +263,59 @@ Exam summary:
 - `Back to Practice`
 - `View in History`
 
+Exam summary when review data is still loading, errors, or has no available slug:
+- `Back to Practice`
+- `View in History`
+
 Tutor summary:
 - unchanged
+
+### Explicit non-goals
+
+Do **not** change the Quick Practice `status=incorrect` route itself. That route still has a valid meaning for the Quick Practice segmented control; this debt was specifically about removing the misleading exam-summary shortcut into that global pool.
 
 ### Tests to update
 
 Files:
-- `app/(app)/app/practice/[sessionId]/components/session-summary-view.test.tsx`
-- `app/(app)/app/practice/[sessionId]/components/session-summary-view.browser.spec.tsx`
-- `app/(app)/app/practice/[sessionId]/page.test.tsx`
+- `app/(app)/app/practice/[sessionId]/components/session-summary-view.test.tsx:204-235,247-286`
+- `app/(app)/app/practice/[sessionId]/components/session-summary-view.browser.spec.tsx:61-65,92-133`
+- `app/(app)/app/practice/[sessionId]/page.test.tsx:187-209`
 
 Update assertions so exam summaries no longer expect:
 - `Practice missed questions`
 - `/app/practice/quick?status=incorrect`
 
+Do **not** touch unrelated Quick Practice tests that assert the status-filter route contract itself, for example:
+
+- `app/(app)/app/practice/quick/quick-practice-client.test.tsx`
+- `app/(app)/app/practice/quick/quick-practice-client.browser.spec.tsx`
+
 ### Docs to update in the implementation PR
 
 Files:
-- `docs/practice-engine/interaction-contracts.md`
-- `docs/practice-engine/question-rendering-architecture.md`
+- `docs/practice-engine/interaction-contracts.md:260-265`
+- `docs/practice-engine/question-rendering-architecture.md:83-89`
+- `docs/practice-engine/question-rendering-architecture.md:527`
+- `docs/_archive/brainstorming/bs-058-exam-post-submit-flow-reorder.md`
 - `docs/debt/index.md`
 
-Remove references to `Practice missed questions` from the shipped exam-summary CTA set.
+Update the shipped exam-summary CTA set to remove `Practice missed questions`.
+
+For `question-rendering-architecture.md`, also append a new changelog entry when the CTA is removed; do **not** rewrite the historical 2026-03-19 BS-058 entry that records the CTA being added.
 
 ---
 
 ## Edge Cases Audited
+
+### Browser-audited CTA scenarios
+
+These all still match the current guard in `session-summary-view.tsx:29-30`:
+
+| Scenario | `correct` | `answered` | Guard (`correct < answered`) | CTA renders? |
+|---------|-----------|------------|------------------------------|--------------|
+| 1 wrong + 1 unanswered | 1 | 2 | `1 < 2` | Yes |
+| Both correct | 2 | 2 | `2 < 2` | No |
+| Both unanswered | 0 | 0 | `0 < 0` | No |
 
 ### 0 answered exam
 
@@ -274,6 +343,14 @@ This does not change the recommendation. It only confirms the CTA is not needed 
 ### Session reopen
 
 Handled correctly today. Completed-session reopen goes to terminal `Session Summary`, not back into ephemeral post-exam review.
+
+### No other production component depends on this CTA
+
+Audit result:
+
+- the only runtime render site is `SessionSummaryView`
+- the current dependency surface outside production code is the three summary tests above plus documentation references
+- there is no second production caller that would break if this CTA is removed
 
 ---
 
