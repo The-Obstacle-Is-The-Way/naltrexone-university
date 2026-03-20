@@ -29,6 +29,7 @@ function isIncorrectChoiceWithExplanation(
 
 export type FeedbackProps = {
   isCorrect: boolean;
+  isUnanswered?: boolean;
   explanationMd: string | null;
   referenceMd?: string | null;
   choiceExplanations?: readonly FeedbackChoiceExplanation[];
@@ -146,6 +147,7 @@ function WrongAnswerSection({ choices }: WrongAnswerSectionProps) {
 
 export function Feedback({
   isCorrect,
+  isUnanswered = false,
   explanationMd,
   referenceMd,
   choiceExplanations = [],
@@ -182,16 +184,19 @@ export function Feedback({
 
   return (
     <Card role="status">
-      <span
-        className={cn(
-          'inline-flex self-start rounded-full px-3 py-1 text-sm font-semibold',
-          isCorrect && 'bg-success text-success-foreground dark:bg-success/60',
-          !isCorrect &&
-            'bg-destructive text-destructive-foreground dark:bg-destructive/60',
-        )}
-      >
-        {isCorrect ? 'Correct' : 'Incorrect'}
-      </span>
+      {isUnanswered ? null : (
+        <span
+          className={cn(
+            'inline-flex self-start rounded-full px-3 py-1 text-sm font-semibold',
+            isCorrect &&
+              'bg-success text-success-foreground dark:bg-success/60',
+            !isCorrect &&
+              'bg-destructive text-destructive-foreground dark:bg-destructive/60',
+          )}
+        >
+          {isCorrect ? 'Correct' : 'Incorrect'}
+        </span>
+      )}
 
       {isCorrect ? (
         <>
