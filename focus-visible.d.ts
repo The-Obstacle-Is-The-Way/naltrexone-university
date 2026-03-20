@@ -1,7 +1,12 @@
-// Augment FocusOptions with the `focusVisible` property used by
-// HTMLElement.focus(). Runtime support exists in modern browsers, but
-// TypeScript's lib.dom.d.ts does not declare it yet. Remove this file once
-// TypeScript ships the property natively.
-interface FocusOptions {
-  focusVisible?: boolean;
+// Augment the global FocusOptions used by HTMLElement.focus() with the
+// standards-track `focusVisible` option.
+// Spec: https://html.spec.whatwg.org/multipage/interaction.html#dom-focus-options
+// TypeScript tracking: https://github.com/microsoft/TypeScript/issues/61458
+// Remove this file once TypeScript's lib.dom.d.ts includes `focusVisible`.
+export {};
+
+declare global {
+  interface FocusOptions {
+    focusVisible?: boolean;
+  }
 }
