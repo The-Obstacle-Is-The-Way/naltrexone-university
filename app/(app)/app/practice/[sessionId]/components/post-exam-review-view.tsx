@@ -101,8 +101,17 @@ export function PostExamReviewView({
                 disabled
                 onSelectChoice={() => undefined}
               />
+              {!currentRow.isAnswered ? (
+                <Card
+                  className="gap-0 rounded-2xl border-warning/50 bg-warning/5 p-4 text-sm text-foreground shadow-sm"
+                  role="status"
+                >
+                  You did not answer this question during this session.
+                </Card>
+              ) : null}
               <Feedback
                 isCorrect={currentRow.isCorrect === true}
+                isUnanswered={!currentRow.isAnswered}
                 explanationMd={currentRow.explanationMd}
                 referenceMd={currentRow.referenceMd}
                 choiceExplanations={currentRow.choiceExplanations}
