@@ -3,8 +3,19 @@
 **Priority:** P2  
 **Created:** 2026-03-21  
 **Source:** Transient failure in `use-practice-session-page-controller.browser.spec.tsx` during the DEBT-330 pre-PR gate; the same "fails in full suite, passes in isolation/rerun" pattern has been observed across sessions  
-**Related:** [vitest.browser.config.ts](../../vitest.browser.config.ts), [vitest.browser.setup.ts](../../vitest.browser.setup.ts)  
+**Related:** [vitest.browser.config.ts](../../../vitest.browser.config.ts), [vitest.browser.setup.ts](../../../vitest.browser.setup.ts)  
 **External references:** [Vitest browser config](https://vitest.dev/config/browser), [Vitest Playwright/browser guide](https://vitest.dev/guide/browser/playwright.html), [Vite dep optimization](https://vite.dev/config/dep-optimization-options)
+
+---
+
+## Implementation Update (2026-03-21)
+
+- The former CRITICAL deferred browser-spec call site was fixed by awaiting the deferred after `deferred.resolve(...)` in `use-practice-session-page-controller.browser.spec.tsx`.
+- The same browser spec now flushes one event-loop tick in `afterEach` before resetting its shared mocks, which keeps the defense-in-depth cleanup scoped to the one file that demonstrated same-file contamination risk.
+- `vitest.browser.config.ts` now matches Vitest's current browser defaults for `testTimeout` and `hookTimeout`.
+- `vitest.browser.setup.ts` now disables motion via an idempotent `vitest-motion-style` element so repeated setup evaluation does not append duplicate `<style>` tags.
+- Verification passed on `2026-03-21`: `pnpm test:browser && pnpm test:browser && pnpm test:browser` and `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm build`.
+- Result: no audited browser-spec deferred call site remains CRITICAL. This debt is resolved.
 
 ---
 
@@ -589,12 +600,12 @@ Split the two biggest deferred-heavy browser files only if Phase 1 does not full
 
 ## Acceptance Criteria
 
-- [ ] The CRITICAL call site at `use-practice-session-page-controller.browser.spec.tsx:761` is eliminated
-- [ ] Every browser-spec `resolve` / `reject` call site remains either SAFE or is upgraded to SAFE
-- [ ] No browser-spec call site remains CRITICAL
-- [ ] `pnpm test:browser` passes on repeated runs
-- [ ] Any `afterEach` async flush added is justified by a proven same-file contamination risk
-- [ ] No speculative `optimizeDeps.include` changes are made without an observed warning
+- [x] The CRITICAL call site at `use-practice-session-page-controller.browser.spec.tsx:761` is eliminated
+- [x] Every browser-spec `resolve` / `reject` call site remains either SAFE or is upgraded to SAFE
+- [x] No browser-spec call site remains CRITICAL
+- [x] `pnpm test:browser` passes on repeated runs
+- [x] Any `afterEach` async flush added is justified by a proven same-file contamination risk
+- [x] No speculative `optimizeDeps.include` changes are made without an observed warning
 
 ---
 
@@ -606,3 +617,4 @@ Split the two biggest deferred-heavy browser files only if Phase 1 does not full
 | 2026-03-21 | Re-audited the debt from production code | The first draft overstated the number of confirmed bad deferred sites. |
 | 2026-03-21 | Classified the deferred inventory as 68 SAFE / 0 HIGH / 1 CRITICAL | This is the actual repo-wide result after auditing every `createDeferred` resolve/reject site. |
 | 2026-03-21 | Contracted Phase 1 scope | The only confirmed browser correctness bug is `use-practice-session-page-controller.browser.spec.tsx:761`; broader config/setup work is defense in depth. |
+| 2026-03-21 | Resolved DEBT-333 | The CRITICAL browser-spec leak was fixed, same-file cleanup hardening stayed scoped to the proven-risk file, browser config/setup hardening landed, and repeated suite runs passed. |
