@@ -49,7 +49,7 @@ Tracer-bullet path:
 - repeated retry clicks should not let stale responses overwrite newer results
 - the retry surface should behave deterministically under slow or failing network conditions
 
-## Fix
+## Recommended Fix
 
 Add a stale-request guard to `loadPostExamReview(...)`.
 
@@ -60,15 +60,20 @@ Good implementation options:
 
 The request-id guard is the more important correctness fix because it protects against out-of-order settlement, not just duplicate clicks.
 
+Current branch verification implements option 1: `loadPostExamReview(...)` now increments a monotonic `latestPostExamReviewRequestIdRef` before the async call and returns early from every post-await state commit when the request id is stale.
+
 ## Verification
 
-- [ ] Browser-spec regression test where retry request B succeeds before stale request A fails, and the hook remains in `ready`
-- [ ] Browser-spec regression test where stale request A succeeds after newer request B fails, and the hook preserves the latest state
+- [x] Browser-spec regression test where retry request B succeeds before stale request A fails, and the hook remains in `ready`
+- [x] Browser-spec regression test where stale request A succeeds after newer request B fails, and the hook preserves the latest `error` state
+- [x] BUG-230 fix verified on branch: `loadPostExamReview(...)` now uses `latestPostExamReviewRequestIdRef` to drop stale thrown-error and result-commit paths
+- [x] Full branch verification passed on 2026-03-21: `pnpm test:browser`, `pnpm typecheck`, `pnpm lint`, `pnpm test --run`
 - [ ] Manual verification under throttled network
 
 ## Related
 
 - `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.browser.spec.tsx`
 - `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx`
 - `docs/_archive/bugs/bug-190-history-session-reopen-race-applies-stale-result.md`
 - `docs/_archive/bugs/bug-196-review-stage-load-review-double-call-race.md`
