@@ -135,3 +135,4 @@ Recommendation boundaries:
 - [ ] Bookmark remains a labeled, accessible toggle (`aria-pressed` preserved)
 - [ ] Bookmark remains visually subordinate to the primary navigation flow
 - [ ] Regression coverage is added for button order / grouping because no current test file asserts it
+- [ ] Update `docs/frontend/design-principles.md` action bar table (lines 63-76) to include the post-exam review layout — currently undocumented
