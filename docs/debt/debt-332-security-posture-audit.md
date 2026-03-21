@@ -48,10 +48,11 @@ proxy.ts Clerk middleware:   ✅ Automatic Clerk CSP is enabled
 
 ### Captured CSP Headers (Ground Truth)
 
-I independently re-ran runtime verification on **2026-03-21** against both:
+Verification was performed on **2026-03-21** across three environments:
 
-- `pnpm dev`
-- `pnpm build && pnpm start`
+1. **Local dev:** `pnpm dev`
+2. **Local production build:** `pnpm build && pnpm start`
+3. **Deployed production:** `addictionboards.com` (real Vercel deployment, real Clerk production instance) — captured via Chrome browser agent reading network response headers
 
 Under the current `proxy.ts` matcher, the same base Clerk-owned CSP is emitted on:
 
@@ -60,7 +61,17 @@ Under the current `proxy.ts` matcher, the same base Clerk-owned CSP is emitted o
 - protected-route responses such as `/app/dashboard` (404 protect-rewrite in dev, 307 redirect in prod when signed out)
 - API routes such as `/api/health` and `/api/stripe/webhook`
 
-The block below reflects the **production-build** header captured from `pnpm start`. The **dev** header is identical except that it additionally includes `'unsafe-eval'` in `script-src`.
+The CSP header is **identical across all pages** (public, authenticated, API) within each environment. The **only difference between environments** is:
+
+| Environment | Clerk FAPI host in `connect-src` | `'unsafe-eval'` in `script-src` |
+|---|---|---|
+| Local dev (`pnpm dev`) | `infinite-jaguar-35.clerk.accounts.dev` | Present (Next.js dev mode) |
+| Local prod build (`pnpm start`) | `infinite-jaguar-35.clerk.accounts.dev` | Absent |
+| Deployed production (`addictionboards.com`) | `clerk.addictionboards.com` | Absent |
+
+Everything else — every directive, every token — is character-for-character identical across all three environments. The Clerk FAPI host is the only value that changes, and it correctly reflects the Clerk instance configuration (dev instance locally, production custom domain on Vercel).
+
+The block below reflects the **deployed production** header captured from `addictionboards.com`:
 
 ```
 content-security-policy:
@@ -72,7 +83,7 @@ content-security-policy:
                     https://maps.googleapis.com
                     https://img.clerk.com
                     https://images.clerkstage.dev
-                    infinite-jaguar-35.clerk.accounts.dev
+                    clerk.addictionboards.com
                     ws: wss:
                     https://o4508933259198464.ingest.us.sentry.io;
   default-src       'self';
@@ -106,7 +117,7 @@ content-security-policy:
 | `script-src` | Dev adds `'unsafe-eval'`; production does **not** | Verified: this is a Next.js development-mode artifact, not part of the production header |
 | `connect-src` | Includes `api.stripe.com`, `maps.googleapis.com` | We don't use Stripe.js or Google Maps client-side — unnecessary allowances from Clerk defaults |
 | `connect-src` | Includes `clerk-telemetry.com` | Clerk analytics; not required for app function but harmless |
-| `connect-src` | Includes `images.clerkstage.dev` | Still present in a local production build using the Clerk dev instance; whether this disappears only with a true Clerk production instance/custom domain remains an open question |
+| `connect-src` | Includes `images.clerkstage.dev` | **Verified as a Clerk SDK hardcoded default** — present in all environments including deployed production. See "Clerk SDK `images.clerkstage.dev` Finding" below |
 | `frame-src` | Includes Stripe JS hosts and hooks | We don't embed Stripe iframes — unnecessary from Clerk defaults |
 
 **The `https: http:` in `script-src` is the critical finding.** This makes the CSP effectively a no-op for script injection prevention, because any origin qualifies. This is what Clerk strict mode eliminates by switching to nonce + `'strict-dynamic'`.
@@ -130,11 +141,12 @@ What that means for this repo:
 - The prior claim that public routes had no CSP was also false. `proxy.ts` still runs Clerk middleware on public routes; it only skips `auth.protect()`. `proxy.test.ts` covers this behavior.
 - Because Clerk merges defaults, our current `CLERK_CSP_DIRECTIVES` object **adds** values but cannot remove Clerk defaults such as broad `script-src` sources.
 
-Cross-checking the installed `@clerk/nextjs` **6.38.1** runtime confirms the current automatic default includes a broad `script-src` containing `'unsafe-inline'`, `https:`, `http:`, Stripe JS hosts, and Google Maps. It also includes Clerk telemetry, `api.stripe.com`, and Google Maps in `connect-src`. This is broader than our application needs. Runtime verification against both `pnpm dev` and `pnpm start` confirms that:
+Cross-checking the installed `@clerk/nextjs` **6.38.1** runtime confirms the current automatic default includes a broad `script-src` containing `'unsafe-inline'`, `https:`, `http:`, Stripe JS hosts, and Google Maps. It also includes Clerk telemetry, `api.stripe.com`, Google Maps, and `images.clerkstage.dev` (a hardcoded staging domain — see gotcha #4 below) in `connect-src`. This is broader than our application needs. Runtime verification against `pnpm dev`, `pnpm start`, and the deployed production site (`addictionboards.com`) confirms that:
 
-- `'unsafe-eval'` is present only in development
+- `'unsafe-eval'` is present only in development (absent from both local prod build and deployed production)
 - the broader `https:` / `http:` script allowances remain in production
 - public pages, auth pages, protected-route responses, and API routes all receive the Clerk-owned CSP header under the current matcher
+- the CSP is character-for-character identical across all pages within each environment; the only cross-environment difference is the Clerk FAPI host (`infinite-jaguar-35.clerk.accounts.dev` locally vs `clerk.addictionboards.com` in production)
 
 #### Stripe
 
@@ -201,6 +213,15 @@ But the earlier "NOT in `next.config.ts`" wording was too absolute. Next.js offi
    - The exact narrow allowlist previously written in this doc is **not realizable** through the current `contentSecurityPolicy.directives` merge behavior.
    - If we want to remove broad defaults such as `http:` / `https:` in `script-src` or unused Stripe / Google Maps domains, we need a different ownership model.
 
+4. **Clerk SDK hardcodes `images.clerkstage.dev` in all environments (not a project misconfiguration).**
+   - `images.clerkstage.dev` appears in the production CSP `connect-src` on `addictionboards.com`. This is **not** caused by a Clerk dashboard misconfiguration or an environment variable issue.
+   - The domain is unconditionally hardcoded in [`@clerk/nextjs` → `packages/nextjs/src/server/content-security-policy.ts`](https://github.com/clerk/javascript/blob/main/packages/nextjs/src/server/content-security-policy.ts) inside the `DEFAULT_DIRECTIVES` object for `connect-src`.
+   - It was added by Clerk engineer LauraBeatris in [PR #7610](https://github.com/clerk/javascript/pull/7610) (merged 2026-01-16) to support `fetch()` calls for organization creation image downloads. The `img-src` allowance for `img.clerk.com` only covers `<img>` tags, not `fetch()`, so both `img.clerk.com` and `images.clerkstage.dev` were added to `connect-src`.
+   - There is **no conditional logic** — the staging domain ships to every Clerk instance, dev and production alike. The only environment-conditional directive in the entire file is `'unsafe-eval'` in `script-src`.
+   - Clerk's official CSP docs do **not** document `images.clerkstage.dev`. No public GitHub issues exist about it.
+   - **Impact:** Low. It widens the `connect-src` surface area by one unnecessary staging domain. It cannot be removed without leaving Clerk's automatic CSP entirely.
+   - **Recommendation:** Optionally file a low-severity issue on [`clerk/javascript`](https://github.com/clerk/javascript) requesting that `images.clerkstage.dev` be made conditional on instance type.
+
 ### Recommended Posture
 
 For this application, the technically accurate recommendation is:
@@ -236,15 +257,19 @@ For this application, the technically accurate recommendation is:
 - We do **not** have a catastrophic "missing CSP" hole.
 - We **do** have a documentation bug and a false sense of precision.
 - We also currently rely on a Clerk-owned default policy that is broader than necessary, which weakens CSP's value as a hard allowlist.
+- The `images.clerkstage.dev` staging domain in production CSP is a Clerk SDK default with no project-side fix — low risk, but worth noting for completeness.
 
 ### Sources Verified on 2026-03-21
 
 - Clerk CSP docs: <https://clerk.com/docs/guides/secure/best-practices/csp-headers>
+- Clerk SDK CSP source: [`packages/nextjs/src/server/content-security-policy.ts`](https://github.com/clerk/javascript/blob/main/packages/nextjs/src/server/content-security-policy.ts)
+- Clerk SDK PR #7610 (added `images.clerkstage.dev`): <https://github.com/clerk/javascript/pull/7610>
 - Stripe Integration Security Guide: <https://docs.stripe.com/security/guide>
 - Sentry Security Policy Reporting (JavaScript): <https://docs.sentry.io/platforms/javascript/security-policy-reporting/>
 - Sentry client key API (DSN / security header endpoints): <https://docs.sentry.io/api/projects/retrieve-a-client-key/>
 - Next.js CSP guide (App Router): <https://nextjs.org/docs/app/guides/content-security-policy>
-- **Local runtime verification:** `curl -sSI` against `/`, `/pricing`, `/sign-in`, `/app/dashboard`, `/api/health`, and `/api/stripe/webhook` on 2026-03-21 under both `pnpm dev` and `pnpm start` with `@clerk/nextjs` 6.38.1 (captured production header included in this doc)
+- **Local runtime verification:** `curl -sSI` against `/`, `/pricing`, `/sign-in`, `/app/dashboard`, `/api/health`, and `/api/stripe/webhook` on 2026-03-21 under both `pnpm dev` and `pnpm start` with `@clerk/nextjs` 6.38.1
+- **Deployed production verification:** Chrome browser agent captured response headers from `addictionboards.com` on `/`, `/pricing`, and `/app/dashboard` on 2026-03-21 — confirmed character-for-character match with local prod build (only difference: Clerk FAPI host correctly reflects production custom domain `clerk.addictionboards.com`)
 
 ### Repo Files Relevant to This Audit
 
