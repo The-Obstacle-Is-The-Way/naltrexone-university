@@ -68,6 +68,7 @@ Action bars are rendered inline per context (not via a shared component). The bu
 | Practice — exam after submit | [← Previous] [Next →] [Mark for review] |
 | Quick Practice | [Submit] [Next →] [Bookmark] |
 | Quick Practice — after submit | [Next →] [Bookmark] |
+| Post-Exam Review | [← Previous] [Next → / Finish review] [Bookmark] |
 | History Session Review (answered) | [← Previous] [Try Again / Practice Again] [Bookmark] [Next →] [Back to ...] |
 | History Session Review (unanswered reveal) | [← Previous] [Try Again] [Bookmark] [Next →] [Back to ...] |
 | Standalone Question Review (dashboard / bookmarks, unanswered) | [Submit] [Bookmark] |

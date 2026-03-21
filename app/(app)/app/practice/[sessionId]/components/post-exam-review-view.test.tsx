@@ -9,6 +9,7 @@ import {
 } from './post-exam-review-view.fixtures';
 
 type PostExamReviewViewModule = typeof import('./post-exam-review-view');
+type ReviewRow = GetCompletedSessionQuestionsWithFeedbackOutput['rows'][number];
 
 let PostExamReviewView: PostExamReviewViewModule['PostExamReviewView'];
 
@@ -17,25 +18,34 @@ beforeAll(async () => {
 });
 
 function renderView(input?: {
+  rows?: ReviewRow[];
   row?: GetCompletedSessionQuestionsWithFeedbackOutput['rows'][number];
+  currentQuestionId?: string | null;
+  isBookmarked?: boolean;
 }) {
-  const row = input?.row ?? createReviewRow();
+  const rows = input?.rows ?? [input?.row ?? createReviewRow()];
+  const answered = rows.filter((row) => row.isAnswered).length;
+  const correct = rows.filter((row) => row.isCorrect === true).length;
+  const questionCount = rows.length;
   const summary = createSummary({
+    questionCount,
     totals: {
-      answered: row.isAnswered ? 1 : 0,
-      correct: row.isCorrect === true ? 1 : 0,
-      accuracy: row.isCorrect === true ? 1 : 0,
+      answered,
+      correct,
+      accuracy: questionCount === 0 ? 0 : correct / questionCount,
       durationSeconds: 120,
     },
   });
   const html = renderToStaticMarkup(
     <PostExamReviewView
       summary={summary}
-      review={createReview([row])}
-      currentQuestionId={row.questionId}
+      review={createReview(rows)}
+      currentQuestionId={
+        input?.currentQuestionId ?? rows[0]?.questionId ?? null
+      }
       controlledPanelId="practice-question-panel"
       bookmarkStatus="idle"
-      isBookmarked={false}
+      isBookmarked={input?.isBookmarked ?? false}
       onToggleBookmark={() => undefined}
       onNavigateQuestion={() => undefined}
       onViewSummary={() => undefined}
@@ -43,6 +53,20 @@ function renderView(input?: {
   );
 
   return new DOMParser().parseFromString(html, 'text/html');
+}
+
+function getReviewActionLabels(doc: Document) {
+  return Array.from(doc.querySelectorAll('button'))
+    .filter((button) => {
+      const label = button.textContent?.trim();
+      return (
+        label === 'Previous' ||
+        label === 'Next' ||
+        label === 'Finish review' ||
+        button.hasAttribute('aria-pressed')
+      );
+    })
+    .map((button) => button.textContent?.trim());
 }
 
 describe('PostExamReviewView', () => {
@@ -115,5 +139,103 @@ describe('PostExamReviewView', () => {
     expect(
       doc.querySelector('[data-testid="verdict-pill"]')?.textContent?.trim(),
     ).toBe('Correct');
+  });
+
+  it('renders the middle-question action bar in navigation-first DOM order', () => {
+    const rows = [
+      createReviewRow({
+        questionId: 'question-1',
+        slug: 'question-1',
+        order: 1,
+      }),
+      createReviewRow({
+        questionId: 'question-2',
+        slug: 'question-2',
+        order: 2,
+      }),
+      createReviewRow({
+        questionId: 'question-3',
+        slug: 'question-3',
+        order: 3,
+      }),
+    ];
+
+    const doc = renderView({
+      rows,
+      currentQuestionId: 'question-2',
+    });
+
+    expect(getReviewActionLabels(doc)).toEqual([
+      'Previous',
+      'Next',
+      'Bookmark',
+    ]);
+    expect(
+      doc.querySelector('button[aria-pressed="false"]')?.textContent?.trim(),
+    ).toBe('Bookmark');
+  });
+
+  it('renders the first-question action bar with next before bookmark', () => {
+    const rows = [
+      createReviewRow({
+        questionId: 'question-1',
+        slug: 'question-1',
+        order: 1,
+      }),
+      createReviewRow({
+        questionId: 'question-2',
+        slug: 'question-2',
+        order: 2,
+      }),
+    ];
+
+    const doc = renderView({
+      rows,
+      currentQuestionId: 'question-1',
+    });
+
+    expect(getReviewActionLabels(doc)).toEqual(['Next', 'Bookmark']);
+  });
+
+  it('renders the last-question action bar with finish review before bookmark', () => {
+    const rows = [
+      createReviewRow({
+        questionId: 'question-1',
+        slug: 'question-1',
+        order: 1,
+      }),
+      createReviewRow({
+        questionId: 'question-2',
+        slug: 'question-2',
+        order: 2,
+      }),
+    ];
+
+    const doc = renderView({
+      rows,
+      currentQuestionId: 'question-2',
+    });
+
+    expect(getReviewActionLabels(doc)).toEqual([
+      'Previous',
+      'Finish review',
+      'Bookmark',
+    ]);
+  });
+
+  it('renders the single-question action bar with finish review before bookmark', () => {
+    const doc = renderView();
+
+    expect(getReviewActionLabels(doc)).toEqual(['Finish review', 'Bookmark']);
+  });
+
+  it('does not render the bookmark toggle for unavailable questions', () => {
+    const doc = renderView({
+      row: createReviewRow({
+        isAvailable: false,
+      }),
+    });
+
+    expect(doc.querySelector('button[aria-pressed]')).toBeNull();
   });
 });
