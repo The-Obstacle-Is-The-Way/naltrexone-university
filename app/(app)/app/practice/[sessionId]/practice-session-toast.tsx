@@ -38,22 +38,23 @@ export function PracticeSessionToast({
 
     const requested = parsePositiveInt(requestedCount);
     const actual = parsePositiveInt(actualCount);
+    if (
+      typeof requested !== 'number' ||
+      typeof actual !== 'number' ||
+      actual >= requested
+    ) {
+      return;
+    }
+
     const handledKey = `${toast}:${requested ?? ''}:${actual ?? ''}`;
 
     if (lastHandledToastRef.current === handledKey) return;
     lastHandledToastRef.current = handledKey;
 
-    const payload =
-      typeof requested === 'number' &&
-      typeof actual === 'number' &&
-      actual < requested
-        ? {
-            message: `Only ${actual} of ${requested} questions matched your filters. Starting session with ${actual} questions.`,
-            tone: 'info' as const,
-          }
-        : { message: 'Session started.', tone: 'success' as const };
-
-    notify(payload);
+    notify({
+      message: `Only ${actual} of ${requested} questions matched your filters. Starting session with ${actual} questions.`,
+      tone: 'info',
+    });
 
     const url = new URL(window.location.href);
     url.searchParams.delete('toast');

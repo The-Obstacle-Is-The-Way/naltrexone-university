@@ -23,6 +23,7 @@ import {
   submitAnswerForQuestion,
   toggleBookmarkForQuestion,
 } from '@/app/(app)/app/practice/practice-page-logic';
+import { toPracticeSessionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
@@ -1313,7 +1314,7 @@ describe('practice-page-logic', () => {
       expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
     });
 
-    it('navigates to the session route on success', async () => {
+    it('navigates to the session route on success without toast params when counts match', async () => {
       const startPracticeSessionFn = vi.fn(async () =>
         ok({ sessionId: 'session-1', requestedCount: 10, actualCount: 10 }),
       );
@@ -1346,7 +1347,7 @@ describe('practice-page-logic', () => {
         statuses: ['unanswered'],
       });
       expect(navigateTo).toHaveBeenCalledWith(
-        '/app/practice/session-1?toast=session_started',
+        toPracticeSessionRoute('session-1'),
       );
       expect(setIdempotencyKey).not.toHaveBeenCalled();
     });
@@ -1371,7 +1372,7 @@ describe('practice-page-logic', () => {
       });
 
       expect(navigateTo).toHaveBeenCalledWith(
-        '/app/practice/session-1?toast=session_started&requestedCount=50&actualCount=30',
+        `${toPracticeSessionRoute('session-1')}?toast=session_started&requestedCount=50&actualCount=30`,
       );
     });
 

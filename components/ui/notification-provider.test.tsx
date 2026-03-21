@@ -15,6 +15,15 @@ function getClassTokens(className: string): Set<string> {
   return new Set(className.split(/\s+/).filter(Boolean));
 }
 
+function getToastRegionClassName(html: string): string {
+  return (
+    new DOMParser()
+      .parseFromString(html, 'text/html')
+      .querySelector('[data-testid="app-toast-region"]')
+      ?.getAttribute('class') ?? ''
+  );
+}
+
 describe('NotificationProvider', () => {
   it('renders a shared toast region wrapper', () => {
     const html = renderToStaticMarkup(
@@ -22,9 +31,13 @@ describe('NotificationProvider', () => {
         <div>Child content</div>
       </NotificationProvider>,
     );
+    const className = getToastRegionClassName(html);
+    const classTokens = getClassTokens(className);
 
     expect(html).toContain('Child content');
     expect(html).toContain('data-testid="app-toast-region"');
+    expect(classTokens.has('bottom-4')).toBe(true);
+    expect(classTokens.has('top-4')).toBe(false);
   });
 
   it('uses stronger semantic border tokens for success and error toasts', () => {

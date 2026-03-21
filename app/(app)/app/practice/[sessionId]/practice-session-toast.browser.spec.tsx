@@ -3,15 +3,17 @@ import { render } from 'vitest-browser-react';
 import { NotificationProvider } from '@/components/ui/notification-provider';
 import { PracticeSessionToast } from './practice-session-toast';
 
-test('shows a success toast when a session is started', async () => {
-  const screen = await render(
+test('does not show a toast when a session is started without count data', async () => {
+  await render(
     <NotificationProvider>
       <PracticeSessionToast code="session_started" />
       <div>page</div>
     </NotificationProvider>,
   );
 
-  await expect.element(screen.getByText('Session started.')).toBeVisible();
+  await expect
+    .poll(() => document.querySelectorAll('[data-testid="app-toast"]').length)
+    .toBe(0);
 });
 
 test('shows an info toast when fewer questions are available than requested', async () => {
@@ -35,8 +37,8 @@ test('shows an info toast when fewer questions are available than requested', as
     .toBeVisible();
 });
 
-test('shows a success toast when requestedCount equals actualCount', async () => {
-  const screen = await render(
+test('does not show a toast when requestedCount equals actualCount', async () => {
+  await render(
     <NotificationProvider>
       <PracticeSessionToast
         code="session_started"
@@ -47,11 +49,13 @@ test('shows a success toast when requestedCount equals actualCount', async () =>
     </NotificationProvider>,
   );
 
-  await expect.element(screen.getByText('Session started.')).toBeVisible();
+  await expect
+    .poll(() => document.querySelectorAll('[data-testid="app-toast"]').length)
+    .toBe(0);
 });
 
-test('falls back to a success toast when requestedCount is not numeric', async () => {
-  const screen = await render(
+test('does not show a toast when requestedCount is not numeric', async () => {
+  await render(
     <NotificationProvider>
       <PracticeSessionToast
         code="session_started"
@@ -62,11 +66,13 @@ test('falls back to a success toast when requestedCount is not numeric', async (
     </NotificationProvider>,
   );
 
-  await expect.element(screen.getByText('Session started.')).toBeVisible();
+  await expect
+    .poll(() => document.querySelectorAll('[data-testid="app-toast"]').length)
+    .toBe(0);
 });
 
-test('falls back to a success toast when counts are non-positive', async () => {
-  const screen = await render(
+test('does not show a toast when counts are non-positive', async () => {
+  await render(
     <NotificationProvider>
       <PracticeSessionToast
         code="session_started"
@@ -77,5 +83,7 @@ test('falls back to a success toast when counts are non-positive', async () => {
     </NotificationProvider>,
   );
 
-  await expect.element(screen.getByText('Session started.')).toBeVisible();
+  await expect
+    .poll(() => document.querySelectorAll('[data-testid="app-toast"]').length)
+    .toBe(0);
 });

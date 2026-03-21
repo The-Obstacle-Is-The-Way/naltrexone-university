@@ -111,12 +111,17 @@ export async function startSession(input: {
     return;
   }
 
-  const params = new URLSearchParams({ toast: 'session_started' });
+  const route = toPracticeSessionRoute(res.data.sessionId);
+
   if (res.data.actualCount < res.data.requestedCount) {
+    const params = new URLSearchParams({ toast: 'session_started' });
     params.set('requestedCount', String(res.data.requestedCount));
     params.set('actualCount', String(res.data.actualCount));
+    input.navigateTo(`${route}?${params}`);
+    return;
   }
-  input.navigateTo(`${toPracticeSessionRoute(res.data.sessionId)}?${params}`);
+
+  input.navigateTo(route);
 }
 
 function toggleInArray<T>(array: readonly T[], value: T): T[] {
