@@ -251,6 +251,10 @@ For this application, the technically accurate recommendation is:
 5. **If we want a truly minimal exact policy, Clerk automatic CSP is the wrong abstraction.**
    - We would need to own the CSP header manually and explicitly include only the sources justified by our actual stack.
 
+### Decision Record
+
+Decision (2026-03-21): Target Clerk strict mode. Accept dynamic-rendering tradeoff. Keep Clerk automatic (default mode) as the current baseline while report-only validates the path.
+
 ### Effort Estimate
 
 - Documentation correction: Small
