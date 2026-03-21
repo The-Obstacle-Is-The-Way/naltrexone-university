@@ -86,6 +86,7 @@ There are no other production `notify()` callers today.
   - Those rows are not `fixed` or `sticky`; they scroll with content.
   - The toast region is already `pointer-events-none`, so this remains a visual-only overlap, not a click-blocking layer.
   - The current top placement causes guaranteed header overlap on route-entry toasts. The bottom placement trades that for a lower-frequency, non-blocking overlay over in-flow content.
+  - For the primary in-session consumer (bookmark toggle during practice), bottom placement is actually *better* UX: the user just clicked the Bookmark button in the action bar, so their eyes are already at the bottom of the viewport. Feedback appears near the action (Fitts's Law), rather than at a distant `top-4` position they may not notice.
 - Verdict:
   - Best global placement option for the current codebase.
 
