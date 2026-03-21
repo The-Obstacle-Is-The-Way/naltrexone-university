@@ -197,6 +197,7 @@ describe('proxy middleware', () => {
     // Assert
     expect(capturedOptions).toMatchObject({
       contentSecurityPolicy: {
+        strict: true,
         reportOnly: true,
         directives: expect.objectContaining({
           'base-uri': expect.arrayContaining(['self']),
@@ -552,6 +553,7 @@ describe('proxy middleware', () => {
 
     expect(capturedOptions).toMatchObject({
       contentSecurityPolicy: {
+        strict: true,
         reportOnly: true,
         reportTo:
           'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123',
@@ -607,12 +609,14 @@ describe('proxy middleware', () => {
       capturedOptions as {
         contentSecurityPolicy: {
           directives: Record<string, string[]>;
+          strict?: boolean;
           reportOnly: boolean;
           reportTo?: string;
         };
       }
     ).contentSecurityPolicy;
 
+    expect(directives.strict).toBe(true);
     expect(directives.reportOnly).toBe(true);
     expect(directives.reportTo).toBeUndefined();
     expect(directives.directives['connect-src']).toEqual(['ws:', 'wss:']);

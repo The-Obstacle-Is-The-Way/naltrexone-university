@@ -13,6 +13,14 @@ A third-party compliance company (Delve) was exposed for having a publicly acces
 
 **Overall finding: no critical vulnerabilities.** The architecture is fundamentally sound — database access is server-only, auth is enforced at every layer, webhooks verify signatures, rate limiting is comprehensive. However, a rigorous security review surfaces three items that best-practice-first engineers (or a real SOC 2 auditor) would flag.
 
+## Implementation Update (2026-03-21)
+
+- **Item 2 resolved:** `GET /api/health` now returns only `{ ok: true, db: true }` to unauthenticated callers. The public timestamp disclosure was removed.
+- **Item 1 Phase 0-2 implemented:** the current runtime target is **Clerk strict mode in report-only**. `proxy.ts` now uses Clerk `strict: true` with `reportOnly: true`, wires `report-uri` plus Clerk `reportTo`/`Reporting-Endpoints` to Sentry's Security Header endpoint, and keeps enforcing mode disabled.
+- **Nonce plumbing is in place:** `app/layout.tsx` reads `x-nonce` from `next/headers`, `components/providers.tsx` passes `dynamic` plus `nonce` into `ClerkProvider`, and `components/theme-provider.tsx` forwards the nonce to `next-themes`.
+- **Local runtime verification passed:** on `2026-03-21`, `pnpm build && pnpm start` confirmed `Content-Security-Policy-Report-Only`, `Reporting-Endpoints`, and `x-nonce` are emitted, and a same-response capture confirmed the rendered HTML nonce matches the response `x-nonce` header.
+- **Remaining work:** deploy-phase validation and any move from report-only to enforcing mode remain separate follow-up work.
+
 ---
 
 ## Item 1: CSP Exists, but the Current Posture Is Broader Than Intended and the Prior Write-Up Was Inaccurate (MEDIUM)
@@ -386,10 +394,10 @@ If a competent security auditor reviewed this codebase:
 
 ## Definition of Done
 
-- [ ] Health endpoint no longer returns `timestamp` to unauthenticated callers
+- [x] Health endpoint no longer returns `timestamp` to unauthenticated callers
 - [ ] This debt doc no longer misstates current CSP behavior
-- [ ] A CSP ownership decision is recorded: Clerk automatic, Clerk strict mode, or manual CSP
-- [ ] If report-only is used, `report-uri`, the CSP `report-to` directive, and `Reporting-Endpoints` are wired to Sentry's Security Header endpoint; add legacy `Report-To` too if we want Sentry's widest compatibility path
-- [ ] If strict mode is chosen, `ClerkProvider` and `next-themes` nonce requirements are implemented and validated
+- [x] A CSP ownership decision is recorded: Clerk automatic, Clerk strict mode, or manual CSP
+- [x] If report-only is used, `report-uri`, the CSP `report-to` directive, and `Reporting-Endpoints` are wired to Sentry's Security Header endpoint; add legacy `Report-To` too if we want Sentry's widest compatibility path
+- [x] If strict mode is chosen, `ClerkProvider` and `next-themes` nonce requirements are implemented and validated
 - [ ] Clerk auth flows, theme initialization, Sentry reporting, and billing redirects are verified under the chosen policy
 - [ ] Enforcing CSP is enabled or the accepted residual risk of Clerk automatic defaults is explicitly documented

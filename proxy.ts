@@ -164,6 +164,7 @@ async function getClerkMiddleware(): Promise<NextMiddleware> {
     {
       contentSecurityPolicy: {
         directives: CLERK_CSP_DIRECTIVES,
+        strict: true,
         reportOnly: true,
         ...(sentrySecurityHeaderEndpoint
           ? { reportTo: sentrySecurityHeaderEndpoint }
