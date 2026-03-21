@@ -22,8 +22,20 @@ vi.mock('next/link', () => ({
   }) => createElement('a', { href, ...props }, children),
 }));
 
-const style = document.createElement('style');
-style.textContent = `
+const VITEST_MOTION_STYLE_ID = 'vitest-motion-style';
+
+const existingMotionStyle = document.getElementById(VITEST_MOTION_STYLE_ID);
+if (existingMotionStyle && !(existingMotionStyle instanceof HTMLStyleElement)) {
+  existingMotionStyle.remove();
+}
+
+const motionStyle =
+  existingMotionStyle instanceof HTMLStyleElement
+    ? existingMotionStyle
+    : document.createElement('style');
+
+motionStyle.id = VITEST_MOTION_STYLE_ID;
+motionStyle.textContent = `
   *, *::before, *::after {
     animation-duration: 0s !important;
     animation-delay: 0s !important;
@@ -31,4 +43,7 @@ style.textContent = `
     transition-delay: 0s !important;
   }
 `;
-document.head.appendChild(style);
+
+if (!motionStyle.isConnected) {
+  document.head.appendChild(motionStyle);
+}
