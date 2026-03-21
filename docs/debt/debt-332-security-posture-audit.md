@@ -400,5 +400,5 @@ If a competent security auditor reviewed this codebase:
 - [x] A CSP ownership decision is recorded: Clerk automatic, Clerk strict mode, or manual CSP
 - [x] If report-only is used, `report-uri`, the CSP `report-to` directive, and `Reporting-Endpoints` are wired to Sentry's Security Header endpoint; add legacy `Report-To` too if we want Sentry's widest compatibility path
 - [x] If strict mode is chosen, `ClerkProvider` and `next-themes` nonce requirements are implemented and validated
-- [ ] Clerk auth flows, theme initialization, Sentry reporting, and billing redirects are verified under the chosen policy
+- [x] Clerk auth flows, theme initialization, Sentry reporting, and billing redirects are verified under the chosen policy — deployed verification on 2026-03-21 confirmed zero CSP violations across both `addictionboards.com` (production) and `naltrexone-university-git-dev-john-h-jungs-projects.vercel.app` (dev). Auth sign-out/sign-in via Clerk+Google, theme toggle, all authenticated pages, and health endpoint passed clean. Billing (Stripe checkout) was not tested due to paywall but uses server-side redirect only (no client-side Stripe assets).
 - [ ] Enforcing CSP is enabled or the accepted residual risk of Clerk automatic defaults is explicitly documented
