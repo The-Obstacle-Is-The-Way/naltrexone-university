@@ -1313,7 +1313,7 @@ describe('practice-page-logic', () => {
       expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
     });
 
-    it('navigates to the session route on success', async () => {
+    it('navigates to the session route on success without toast params when counts match', async () => {
       const startPracticeSessionFn = vi.fn(async () =>
         ok({ sessionId: 'session-1', requestedCount: 10, actualCount: 10 }),
       );
@@ -1345,9 +1345,7 @@ describe('practice-page-logic', () => {
         difficulties: ['hard'],
         statuses: ['unanswered'],
       });
-      expect(navigateTo).toHaveBeenCalledWith(
-        '/app/practice/session-1?toast=session_started',
-      );
+      expect(navigateTo).toHaveBeenCalledWith('/app/practice/session-1');
       expect(setIdempotencyKey).not.toHaveBeenCalled();
     });
 
