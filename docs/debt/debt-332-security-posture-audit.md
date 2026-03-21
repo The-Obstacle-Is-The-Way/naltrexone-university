@@ -261,7 +261,7 @@ For this application, the technically accurate recommendation is:
 
 ### Decision Record
 
-Decision (2026-03-21): Target Clerk strict mode. Accept dynamic-rendering tradeoff. Keep Clerk automatic (default mode) as the current baseline while report-only validates the path.
+Decision (2026-03-21): Target Clerk strict mode. Accept dynamic-rendering tradeoff. Strict mode is now enabled in report-only (`strict: true`, `reportOnly: true`) with `report-uri` and `reportTo` wired to Sentry's Security Header endpoint. Provider and theme nonce plumbing is in place. Remaining step: promote to enforcing mode after deployed verification of auth flows, theme initialization, Sentry reporting, and billing redirects.
 
 ### Effort Estimate
 
@@ -395,7 +395,7 @@ If a competent security auditor reviewed this codebase:
 ## Definition of Done
 
 - [x] Health endpoint no longer returns `timestamp` to unauthenticated callers
-- [ ] This debt doc no longer misstates current CSP behavior
+- [x] This debt doc no longer misstates current CSP behavior
 - [x] A CSP ownership decision is recorded: Clerk automatic, Clerk strict mode, or manual CSP
 - [x] If report-only is used, `report-uri`, the CSP `report-to` directive, and `Reporting-Endpoints` are wired to Sentry's Security Header endpoint; add legacy `Report-To` too if we want Sentry's widest compatibility path
 - [x] If strict mode is chosen, `ClerkProvider` and `next-themes` nonce requirements are implemented and validated
