@@ -133,7 +133,8 @@ describe('usePracticeSessionPageController (browser)', () => {
     );
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
     resetPracticeSessionPageControllerBrowserMocks();
   });
 
@@ -759,6 +760,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       .toHaveTextContent('false');
 
     deferred.resolve(ok({ bookmarked: true }));
+    await deferred.promise;
   });
 
   it('uses transition pending state for session answer submit without switching to loading status', async () => {
