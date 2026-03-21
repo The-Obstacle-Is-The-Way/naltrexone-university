@@ -23,6 +23,7 @@ import {
   submitAnswerForQuestion,
   toggleBookmarkForQuestion,
 } from '@/app/(app)/app/practice/practice-page-logic';
+import { toPracticeSessionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
@@ -1345,7 +1346,9 @@ describe('practice-page-logic', () => {
         difficulties: ['hard'],
         statuses: ['unanswered'],
       });
-      expect(navigateTo).toHaveBeenCalledWith('/app/practice/session-1');
+      expect(navigateTo).toHaveBeenCalledWith(
+        toPracticeSessionRoute('session-1'),
+      );
       expect(setIdempotencyKey).not.toHaveBeenCalled();
     });
 
@@ -1369,7 +1372,7 @@ describe('practice-page-logic', () => {
       });
 
       expect(navigateTo).toHaveBeenCalledWith(
-        '/app/practice/session-1?toast=session_started&requestedCount=50&actualCount=30',
+        `${toPracticeSessionRoute('session-1')}?toast=session_started&requestedCount=50&actualCount=30`,
       );
     });
 

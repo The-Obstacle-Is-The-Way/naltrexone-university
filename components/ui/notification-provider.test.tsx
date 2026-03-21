@@ -15,6 +15,15 @@ function getClassTokens(className: string): Set<string> {
   return new Set(className.split(/\s+/).filter(Boolean));
 }
 
+function getToastRegionClassName(html: string): string {
+  return (
+    new DOMParser()
+      .parseFromString(html, 'text/html')
+      .querySelector('[data-testid="app-toast-region"]')
+      ?.getAttribute('class') ?? ''
+  );
+}
+
 describe('NotificationProvider', () => {
   it('renders a shared toast region wrapper', () => {
     const html = renderToStaticMarkup(
@@ -22,8 +31,7 @@ describe('NotificationProvider', () => {
         <div>Child content</div>
       </NotificationProvider>,
     );
-    const className =
-      html.match(/data-testid="app-toast-region" class="([^"]+)"/)?.[1] ?? '';
+    const className = getToastRegionClassName(html);
     const classTokens = getClassTokens(className);
 
     expect(html).toContain('Child content');

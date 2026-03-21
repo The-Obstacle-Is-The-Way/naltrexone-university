@@ -5,9 +5,8 @@
 language: en-US
 
 tone_instructions: |
-  Be direct and technical. Focus on correctness and best practices.
-  Prioritize actionable feedback over praise. Flag violations of
-  project conventions documented in AGENTS.md, CLAUDE.md, and docs/specs/master_spec.md.
+  Be direct and technical. Focus on correctness, risk, and repo conventions over praise.
+  Do not suggest JSDoc or docstrings for TypeScript unless a file already uses that pattern.
 
 early_access: false
 
@@ -18,9 +17,13 @@ reviews:
   poem: false
   review_status: true
   collapse_walkthrough: false
+  review_details: true
   auto_review:
     enabled: true
     drafts: false
+  pre_merge_checks:
+    docstrings:
+      mode: off
   path_instructions:
     # Domain Layer - Pure business logic, no external dependencies
     - path: "src/domain/**"
@@ -39,7 +42,7 @@ reviews:
         Dependencies flow INWARD only (can import from domain/).
         Use cases orchestrate, they don't implement business rules.
         Ports (interfaces) define contracts for adapters.
-        Tests should use fakes from test-helpers/fakes.ts, NOT vi.mock().
+        Tests should use fakes from src/application/test-helpers/fakes/, NOT vi.mock().
 
     # Adapters Layer - Implementations
     - path: "src/adapters/**"
@@ -70,7 +73,13 @@ reviews:
         2. Use renderToStaticMarkup from react-dom/server for render tests
         3. DO NOT use @testing-library/react (broken with React 19)
         4. DO NOT use react-test-renderer (deprecated in React 19)
-        5. For interactive tests, add conditions: ['development'] to vitest.config.ts
+        5. Interactive or async UI tests belong in *.browser.spec.tsx, not here
+
+    - path: "**/*.browser.spec.tsx"
+      instructions: |
+        Browser mode tests use vitest-browser-react and run with pnpm test:browser.
+        Use real browser interactions and async expectations.
+        Do not suggest @testing-library/react or jsdom-only interaction patterns here.
 
     # E2E tests - Playwright
     - path: "tests/e2e/**"
@@ -94,13 +103,15 @@ reviews:
         Schema changes require running pnpm db:generate.
         Tables should have appropriate indexes for query patterns.
 
+  finishing_touches:
+    docstrings:
+      enabled: false
   path_filters:
     - "!**/node_modules/**"
     - "!**/pnpm-lock.yaml"
     - "!**/.next/**"
     - "!**/dist/**"
     - "!db/migrations/**"
-    - "!docs/**"
 
   # Focus on these tools
   tools:
@@ -114,6 +125,18 @@ chat:
   auto_reply: true
 
 knowledge_base:
+  web_search:
+    enabled: true
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "**/AGENTS.md"
+      - "**/CLAUDE.md"
+      - ".claude/rules/**"
+      - "docs/specs/master_spec.md"
+      - "docs/frontend/standards.md"
+      - "docs/frontend/design-principles.md"
+      - "docs/dev/react-vitest-testing.md"
   learnings:
     scope: auto
   issues:
