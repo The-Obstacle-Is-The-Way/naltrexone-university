@@ -197,6 +197,7 @@ describe('proxy middleware', () => {
     // Assert
     expect(capturedOptions).toMatchObject({
       contentSecurityPolicy: {
+        reportOnly: true,
         directives: expect.objectContaining({
           'base-uri': expect.arrayContaining(['self']),
           'connect-src': expect.arrayContaining(['ws:', 'wss:']),
@@ -472,6 +473,48 @@ describe('proxy middleware', () => {
     });
   });
 
+  describe('parseSentrySecurityHeaderEndpoint', () => {
+    it('builds the Sentry security header endpoint from a valid DSN', async () => {
+      const { parseSentrySecurityHeaderEndpoint } = await import('./proxy');
+
+      expect(
+        parseSentrySecurityHeaderEndpoint(
+          'https://abc123@o456.ingest.us.sentry.io/789',
+        ),
+      ).toBe(
+        'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123',
+      );
+    });
+
+    it('preserves DSN path prefixes when building the security header endpoint', async () => {
+      const { parseSentrySecurityHeaderEndpoint } = await import('./proxy');
+
+      expect(
+        parseSentrySecurityHeaderEndpoint(
+          'https://abc123@example.com/sentry/project/789',
+        ),
+      ).toBe(
+        'https://example.com/sentry/project/api/789/security/?sentry_key=abc123',
+      );
+    });
+
+    it('returns null when the DSN has no public key', async () => {
+      const { parseSentrySecurityHeaderEndpoint } = await import('./proxy');
+
+      expect(
+        parseSentrySecurityHeaderEndpoint('https://example.com/789'),
+      ).toBeNull();
+    });
+
+    it('returns null when the DSN has no project id', async () => {
+      const { parseSentrySecurityHeaderEndpoint } = await import('./proxy');
+
+      expect(
+        parseSentrySecurityHeaderEndpoint('https://abc123@example.com'),
+      ).toBeNull();
+    });
+  });
+
   it('includes Sentry ingest origin in connect-src when NEXT_PUBLIC_SENTRY_DSN is set', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     process.env.NEXT_PUBLIC_SENTRY_DSN =
@@ -509,12 +552,18 @@ describe('proxy middleware', () => {
 
     expect(capturedOptions).toMatchObject({
       contentSecurityPolicy: {
+        reportOnly: true,
+        reportTo:
+          'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123',
         directives: expect.objectContaining({
           'connect-src': expect.arrayContaining([
             'ws:',
             'wss:',
             'https://o456.ingest.us.sentry.io',
           ]),
+          'report-uri': [
+            'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123',
+          ],
         }),
       },
     });
@@ -556,11 +605,18 @@ describe('proxy middleware', () => {
 
     const directives = (
       capturedOptions as {
-        contentSecurityPolicy: { directives: Record<string, string[]> };
+        contentSecurityPolicy: {
+          directives: Record<string, string[]>;
+          reportOnly: boolean;
+          reportTo?: string;
+        };
       }
-    ).contentSecurityPolicy.directives;
+    ).contentSecurityPolicy;
 
-    expect(directives['connect-src']).toEqual(['ws:', 'wss:']);
+    expect(directives.reportOnly).toBe(true);
+    expect(directives.reportTo).toBeUndefined();
+    expect(directives.directives['connect-src']).toEqual(['ws:', 'wss:']);
+    expect(directives.directives['report-uri']).toBeUndefined();
   });
 
   it('excludes invalid-scheme Sentry DSNs from connect-src', async () => {

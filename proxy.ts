@@ -22,7 +22,41 @@ export function parseSentryIngestOrigin(
   }
 }
 
+export function parseSentrySecurityHeaderEndpoint(
+  dsn: string | undefined,
+): string | null {
+  if (!dsn) return null;
+
+  try {
+    const url = new URL(dsn);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return null;
+    }
+
+    const publicKey = url.username;
+    const pathnameSegments = url.pathname.split('/').filter(Boolean);
+    const projectId = pathnameSegments.at(-1);
+    if (!publicKey || !projectId) {
+      return null;
+    }
+
+    const pathPrefix = pathnameSegments.slice(0, -1).join('/');
+    const endpointPath = pathPrefix
+      ? `/${pathPrefix}/api/${projectId}/security/`
+      : `/api/${projectId}/security/`;
+    const endpoint = new URL(endpointPath, url.origin);
+    endpoint.searchParams.set('sentry_key', publicKey);
+
+    return endpoint.toString();
+  } catch {
+    return null;
+  }
+}
+
 const sentryIngestOrigin = parseSentryIngestOrigin(
+  process.env.NEXT_PUBLIC_SENTRY_DSN,
+);
+const sentrySecurityHeaderEndpoint = parseSentrySecurityHeaderEndpoint(
   process.env.NEXT_PUBLIC_SENTRY_DSN,
 );
 
@@ -37,6 +71,9 @@ const CLERK_CSP_DIRECTIVES = {
   'frame-ancestors': ['none'],
   'img-src': ['self', 'data:', 'blob:', 'https:'],
   'object-src': ['none'],
+  ...(sentrySecurityHeaderEndpoint
+    ? { 'report-uri': [sentrySecurityHeaderEndpoint] }
+    : {}),
 } satisfies Record<string, string[]>;
 
 let cachedClerkMiddleware: NextMiddleware | null = null;
@@ -127,6 +164,10 @@ async function getClerkMiddleware(): Promise<NextMiddleware> {
     {
       contentSecurityPolicy: {
         directives: CLERK_CSP_DIRECTIVES,
+        reportOnly: true,
+        ...(sentrySecurityHeaderEndpoint
+          ? { reportTo: sentrySecurityHeaderEndpoint }
+          : {}),
       },
     },
   );
