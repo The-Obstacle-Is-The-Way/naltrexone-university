@@ -43,7 +43,7 @@ CSP is still worth caring about. It is a strong defense-in-depth control against
 
 ### Current State
 
-```
+```text
 next.config.ts headers:     ✅ X-Content-Type-Options, Referrer-Policy, X-Frame-Options,
                               Permissions-Policy, Strict-Transport-Security
                             ❌ No static/manual CSP in next.config.ts
@@ -83,7 +83,7 @@ Everything else — every directive, every token — is character-for-character 
 
 The block below reflects the **deployed production** header captured from `addictionboards.com`:
 
-```
+```http
 content-security-policy:
   base-uri          'self';
   connect-src       'self'
@@ -212,15 +212,16 @@ But the earlier "NOT in `next.config.ts`" wording was too absolute. Next.js offi
 
 ### Hidden Gotchas the Prior Doc Missed
 
-1. **Clerk strict mode is not drop-in for the current provider tree.**
+1. **Clerk strict mode was not drop-in for the previous provider tree (now addressed, with one remaining nuance).**
    - Clerk's docs require `<ClerkProvider dynamic>` for strict mode.
-   - `components/providers.tsx` currently loads `ClerkProvider` through `next/dynamic` with `ssr: false` and does not pass `dynamic`.
-   - Inference: a strict-mode rollout requires provider refactoring, not just a proxy option flip.
+   - Prior state: `components/providers.tsx` loaded `ClerkProvider` through `next/dynamic` with `ssr: false` and did not pass `dynamic`.
+   - Current state: `components/providers.tsx` still uses the client-side `next/dynamic` wrapper, but now passes both `dynamic` and `nonce`, which is the key strict-mode requirement.
+   - Remaining nuance: this differs from Clerk's simplest server-layout example, so deployed verification of auth flows remains part of the rollout before enforcing mode.
 
-2. **`next-themes` needs nonce plumbing if we pursue strict mode.**
+2. **`next-themes` nonce plumbing was required for strict mode (now addressed).**
    - `next-themes` supports a `nonce` prop for its injected inline script/style.
-   - Our `components/theme-provider.tsx` does not currently pass one.
-   - Inference: strict mode will require threading `x-nonce` into the theme provider or theme initialization will generate violations.
+   - Prior state: `components/theme-provider.tsx` did not pass one.
+   - Current state: `app/layout.tsx` reads `x-nonce` and threads it into `components/theme-provider.tsx`, which now forwards the nonce to `next-themes`.
 
 3. **Clerk's automatic CSP is additive, not subtractive.**
    - The exact narrow allowlist previously written in this doc is **not realizable** through the current `contentSecurityPolicy.directives` merge behavior.
@@ -307,12 +308,12 @@ Decision (2026-03-21): Target Clerk strict mode. Accept dynamic-rendering tradeo
 
 ### The Problem
 
-`GET /api/health` returns `{ ok: true, db: true, timestamp: "..." }` to any unauthenticated caller. This tells the world:
+Before this fix, `GET /api/health` returned `{ ok: true, db: true, timestamp: "..." }` to any unauthenticated caller. This told the world:
 - Whether the application is up
 - Whether the database is reachable
 - The server's clock (useful for timing attacks against rate-limit windows)
 
-**File:** `app/api/health/handler.ts:55-58`
+**Historical file:** `app/api/health/handler.ts` (pre-fix implementation)
 
 ### Why This Matters (Barely)
 

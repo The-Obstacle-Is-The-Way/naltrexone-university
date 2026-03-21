@@ -499,6 +499,20 @@ describe('proxy middleware', () => {
       );
     });
 
+    it('returns null when the DSN uses a non-http scheme', async () => {
+      const { parseSentrySecurityHeaderEndpoint } = await import('./proxy');
+
+      expect(
+        parseSentrySecurityHeaderEndpoint('ftp://abc123@example.com/789'),
+      ).toBeNull();
+    });
+
+    it('returns null when the DSN is not a valid URL', async () => {
+      const { parseSentrySecurityHeaderEndpoint } = await import('./proxy');
+
+      expect(parseSentrySecurityHeaderEndpoint('not-a-url')).toBeNull();
+    });
+
     it('returns null when the DSN has no public key', async () => {
       const { parseSentrySecurityHeaderEndpoint } = await import('./proxy');
 
