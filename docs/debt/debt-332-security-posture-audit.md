@@ -46,9 +46,21 @@ proxy.ts Clerk middleware:   ✅ Automatic Clerk CSP is enabled
                             ⚠️ Effective policy is broader than our app needs
 ```
 
-### Captured CSP Header (Ground Truth)
+### Captured CSP Headers (Ground Truth)
 
-The following header was captured from the running dev server on **2026-03-21** (`@clerk/nextjs` 6.38.1). Both authenticated (`/app/dashboard`) and public (`/pricing`) routes return the **identical** CSP header, confirming the audit agent's finding that public routes do receive CSP.
+I independently re-ran runtime verification on **2026-03-21** against both:
+
+- `pnpm dev`
+- `pnpm build && pnpm start`
+
+Under the current `proxy.ts` matcher, the same base Clerk-owned CSP is emitted on:
+
+- public pages such as `/` and `/pricing`
+- auth pages such as `/sign-in`
+- protected-route responses such as `/app/dashboard` (404 protect-rewrite in dev, 307 redirect in prod when signed out)
+- API routes such as `/api/health` and `/api/stripe/webhook`
+
+The block below reflects the **production-build** header captured from `pnpm start`. The **dev** header is identical except that it additionally includes `'unsafe-eval'` in `script-src`.
 
 ```
 content-security-policy:
@@ -77,7 +89,6 @@ content-security-policy:
                     data: blob: https:;
   object-src        'none';
   script-src        'self'
-                    'unsafe-eval'
                     'unsafe-inline'
                     https: http:
                     https://*.js.stripe.com
@@ -92,10 +103,10 @@ content-security-policy:
 | Directive | Observation | Concern |
 |---|---|---|
 | `script-src` | Includes `https:` and `http:` — allows scripts from **any** HTTPS or HTTP origin | Defeats the purpose of CSP for script injection; any attacker-controlled domain qualifies |
-| `script-src` | Includes `'unsafe-eval'` | In dev this is expected (Next.js HMR); must verify this is stripped in production builds |
+| `script-src` | Dev adds `'unsafe-eval'`; production does **not** | Verified: this is a Next.js development-mode artifact, not part of the production header |
 | `connect-src` | Includes `api.stripe.com`, `maps.googleapis.com` | We don't use Stripe.js or Google Maps client-side — unnecessary allowances from Clerk defaults |
 | `connect-src` | Includes `clerk-telemetry.com` | Clerk analytics; not required for app function but harmless |
-| `connect-src` | Includes `images.clerkstage.dev` | Clerk staging asset host; should not appear in production |
+| `connect-src` | Includes `images.clerkstage.dev` | Still present in a local production build using the Clerk dev instance; whether this disappears only with a true Clerk production instance/custom domain remains an open question |
 | `frame-src` | Includes Stripe JS hosts and hooks | We don't embed Stripe iframes — unnecessary from Clerk defaults |
 
 **The `https: http:` in `script-src` is the critical finding.** This makes the CSP effectively a no-op for script injection prevention, because any origin qualifies. This is what Clerk strict mode eliminates by switching to nonce + `'strict-dynamic'`.
@@ -119,9 +130,11 @@ What that means for this repo:
 - The prior claim that public routes had no CSP was also false. `proxy.ts` still runs Clerk middleware on public routes; it only skips `auth.protect()`. `proxy.test.ts` covers this behavior.
 - Because Clerk merges defaults, our current `CLERK_CSP_DIRECTIVES` object **adds** values but cannot remove Clerk defaults such as broad `script-src` sources.
 
-Cross-checking the installed `@clerk/nextjs` **6.38.1** runtime confirms the current automatic default includes a broad `script-src` containing `'unsafe-inline'`, `https:`, `http:`, Stripe JS hosts, and Google Maps. It also includes Clerk telemetry, `api.stripe.com`, and Google Maps in `connect-src`. This is broader than our application needs. The captured CSP header (see "Captured CSP Header" section below) provides ground-truth evidence of the exact policy browsers receive.
+Cross-checking the installed `@clerk/nextjs` **6.38.1** runtime confirms the current automatic default includes a broad `script-src` containing `'unsafe-inline'`, `https:`, `http:`, Stripe JS hosts, and Google Maps. It also includes Clerk telemetry, `api.stripe.com`, and Google Maps in `connect-src`. This is broader than our application needs. Runtime verification against both `pnpm dev` and `pnpm start` confirms that:
 
-**Production verification TODO:** The captured header is from the dev server. `'unsafe-eval'` in `script-src` may be a dev-only injection by Next.js. A production build should be checked to confirm it is stripped. If Clerk's automatic CSP also injects `'unsafe-eval'` in production, that is a separate concern to raise with Clerk.
+- `'unsafe-eval'` is present only in development
+- the broader `https:` / `http:` script allowances remain in production
+- public pages, auth pages, protected-route responses, and API routes all receive the Clerk-owned CSP header under the current matcher
 
 #### Stripe
 
@@ -231,7 +244,7 @@ For this application, the technically accurate recommendation is:
 - Sentry Security Policy Reporting (JavaScript): <https://docs.sentry.io/platforms/javascript/security-policy-reporting/>
 - Sentry client key API (DSN / security header endpoints): <https://docs.sentry.io/api/projects/retrieve-a-client-key/>
 - Next.js CSP guide (App Router): <https://nextjs.org/docs/app/guides/content-security-policy>
-- **Local runtime verification:** `curl -sI http://localhost:3000/` and `curl -sI http://localhost:3000/pricing` on 2026-03-21 with `@clerk/nextjs` 6.38.1 (captured header included in this doc)
+- **Local runtime verification:** `curl -sSI` against `/`, `/pricing`, `/sign-in`, `/app/dashboard`, `/api/health`, and `/api/stripe/webhook` on 2026-03-21 under both `pnpm dev` and `pnpm start` with `@clerk/nextjs` 6.38.1 (captured production header included in this doc)
 
 ### Repo Files Relevant to This Audit
 
