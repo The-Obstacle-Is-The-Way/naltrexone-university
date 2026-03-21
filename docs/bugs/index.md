@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-16
+**Last Updated:** 2026-03-21
 
 ---
 
@@ -13,7 +13,10 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-229
+**Next Bug ID:** BUG-230
+
+**Latest archival (2026-03-21):**
+- BUG-229 verified fixed: marketing footer copyright year now derives from UTC via `toISOString().slice(0, 4)`, regression coverage freezes `2026-01-01T00:30:00.000Z` under `America/New_York`, and the bug doc is archived to `docs/_archive/bugs/`.
 
 **Latest archival (2026-03-18):**
 - BUG-228 resolved and archived: `parseSentryIngestOrigin()` now extracts the DSN origin at middleware init and adds it to `connect-src`. Browser Sentry transport is unblocked.
@@ -93,7 +96,24 @@ Active open bugs are listed below.
 
 | Bug | Priority | Summary |
 |-----|----------|---------|
+| ~~BUG-229~~ | P4 | ~~Marketing footer copyright year used local runtime time instead of UTC~~ — **Resolved 2026-03-21.** Footer now derives the year from a UTC ISO string. [Archived](../_archive/bugs/bug-229-marketing-footer-year-uses-local-time.md). |
 | ~~BUG-228~~ | P2 | ~~Browser-side Sentry requests blocked by CSP~~ — **Resolved 2026-03-18.** `parseSentryIngestOrigin()` adds DSN origin to `connect-src`. [Archived](../_archive/bugs/bug-228-client-sentry-ingest-blocked-by-csp.md). |
+
+## Audit #17 — UTC/Date Consistency Sweep (2026-03-21)
+
+Targeted audit of date/time handling after a broad claim that the codebase had zero UTC inconsistencies.
+
+**Methodology:**
+- Read representative adapter tests/source first to match repo patterns before auditing.
+- Verified schema timestamp definitions and the shared Postgres session timezone config.
+- Searched production code for timezone-sensitive APIs, date formatting, Unix-second normalization, and non-injected clock usage.
+- Confirmed the footer-year bug with the absolute instant `2026-01-01T00:30:00.000Z` under a forced `America/New_York` runtime timezone.
+
+**1 bug filed and fixed (BUG-229):**
+
+| Bug | Family | Priority | Summary |
+|-----|--------|----------|---------|
+| ~~BUG-229~~ | Marketing / datetime consistency | P4 | ~~Marketing footer year used local runtime timezone instead of UTC~~ — **Resolved.** Footer now derives the year from UTC and has a regression test covering the January 1 rollover. [Archived](../_archive/bugs/bug-229-marketing-footer-year-uses-local-time.md). |
 
 ## Audit #16 — Agent-Browser Auth + Observability Sweep (2026-03-16)
 
