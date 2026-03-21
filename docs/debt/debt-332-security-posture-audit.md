@@ -50,18 +50,20 @@ proxy.ts Clerk middleware:   ✅ Automatic Clerk CSP is enabled
 
 Verification was performed on **2026-03-21** across three environments:
 
-1. **Local dev:** `pnpm dev`
-2. **Local production build:** `pnpm build && pnpm start`
-3. **Deployed production:** `addictionboards.com` (real Vercel deployment, real Clerk production instance) — captured via Chrome browser agent reading network response headers
+1. **Local dev:** `pnpm dev`, captured via `curl -sSI`
+2. **Local production build:** `pnpm build && pnpm start`, captured via `curl -sSI`
+3. **Deployed production:** `https://addictionboards.com` public routes (`/` and `/pricing`), captured first via Chrome browser agent and then independently re-verified via `curl -sSI`
 
-Under the current `proxy.ts` matcher, the same base Clerk-owned CSP is emitted on:
+Local dev/prod verification covered:
 
 - public pages such as `/` and `/pricing`
 - auth pages such as `/sign-in`
 - protected-route responses such as `/app/dashboard` (404 protect-rewrite in dev, 307 redirect in prod when signed out)
 - API routes such as `/api/health` and `/api/stripe/webhook`
 
-The CSP header is **identical across all pages** (public, authenticated, API) within each environment. The **only difference between environments** is:
+Deployed production verification covered the live public pages `/` and `/pricing`. Those two live headers are identical to each other and match the local production header except for the Clerk FAPI host.
+
+The **only difference between environments** is:
 
 | Environment | Clerk FAPI host in `connect-src` | `'unsafe-eval'` in `script-src` |
 |---|---|---|
@@ -69,7 +71,7 @@ The CSP header is **identical across all pages** (public, authenticated, API) wi
 | Local prod build (`pnpm start`) | `infinite-jaguar-35.clerk.accounts.dev` | Absent |
 | Deployed production (`addictionboards.com`) | `clerk.addictionboards.com` | Absent |
 
-Everything else — every directive, every token — is character-for-character identical across all three environments. The Clerk FAPI host is the only value that changes, and it correctly reflects the Clerk instance configuration (dev instance locally, production custom domain on Vercel).
+Everything else — every directive, every token — is character-for-character identical across the locally verified routes and the live production public routes. The Clerk FAPI host is the only value that changes, and it correctly reflects the Clerk instance configuration (dev instance locally, production custom domain on Vercel).
 
 The block below reflects the **deployed production** header captured from `addictionboards.com`:
 
@@ -106,7 +108,7 @@ content-security-policy:
                     https://js.stripe.com
                     https://maps.googleapis.com;
   style-src         'self' 'unsafe-inline';
-  worker-src        'self' blob:;
+  worker-src        'self' blob:
 ```
 
 **What this tells us:**
@@ -129,7 +131,7 @@ This section was re-audited on **2026-03-21** against current official documenta
 #### Clerk
 
 - Official Clerk docs say automatic CSP is available for `@clerk/nextjs >= 6.14.0` and is configured through `clerkMiddleware(..., { contentSecurityPolicy: ... })`.
-- Clerk explicitly documents the following requirements: FAPI host in `script-src` and `connect-src`, `https://img.clerk.com` in `img-src`, `'self' blob:` in `worker-src`, `'unsafe-inline'` in `style-src`, and `https://challenges.cloudflare.com` in `frame-src`.
+- Clerk explicitly documents the following requirements in its prose guidance: the FAPI host and `https://challenges.cloudflare.com` in `script-src`, the FAPI host in `connect-src`, `https://img.clerk.com` in `img-src`, `'self' blob:` in `worker-src`, `'unsafe-inline'` in `style-src`, and `https://challenges.cloudflare.com` in `frame-src`.
 - Clerk's **default automatic configuration** already injects `connect-src`, `default-src`, `form-action`, `frame-src`, `img-src`, `script-src`, `style-src`, and `worker-src`.
 - Clerk's docs say additional directives are **merged with Clerk's default security settings**.
 - Clerk strict mode still exists. It generates a per-request nonce, exposes it via `x-nonce`, and requires `<ClerkProvider dynamic>` for App Router usage.
@@ -141,12 +143,14 @@ What that means for this repo:
 - The prior claim that public routes had no CSP was also false. `proxy.ts` still runs Clerk middleware on public routes; it only skips `auth.protect()`. `proxy.test.ts` covers this behavior.
 - Because Clerk merges defaults, our current `CLERK_CSP_DIRECTIVES` object **adds** values but cannot remove Clerk defaults such as broad `script-src` sources.
 
-Cross-checking the installed `@clerk/nextjs` **6.38.1** runtime confirms the current automatic default includes a broad `script-src` containing `'unsafe-inline'`, `https:`, `http:`, Stripe JS hosts, and Google Maps. It also includes Clerk telemetry, `api.stripe.com`, Google Maps, and `images.clerkstage.dev` (a hardcoded staging domain — see gotcha #4 below) in `connect-src`. This is broader than our application needs. Runtime verification against `pnpm dev`, `pnpm start`, and the deployed production site (`addictionboards.com`) confirms that:
+One important Clerk-doc nuance: the prose requirement list is internally inconsistent with Clerk's documented **default configuration**, shipped source, and emitted runtime header. The prose says `script-src` should include the FAPI host and `https://challenges.cloudflare.com`, but Clerk's default-mode directive list, the current source, and the actual emitted header do **not** add those hosts to `script-src`. In practice, default mode relies on the broad `https:` / `http:` scheme sources instead.
+
+Cross-checking the installed `@clerk/nextjs` **6.38.1** runtime confirms the current automatic default includes a broad `script-src` containing `'unsafe-inline'`, `https:`, `http:`, Stripe JS hosts, and Google Maps. It also includes Clerk telemetry, `api.stripe.com`, Google Maps, and `images.clerkstage.dev` (a hardcoded staging domain — see gotcha #4 below) in `connect-src`. This is broader than our application needs. Runtime verification confirms that:
 
 - `'unsafe-eval'` is present only in development (absent from both local prod build and deployed production)
 - the broader `https:` / `http:` script allowances remain in production
-- public pages, auth pages, protected-route responses, and API routes all receive the Clerk-owned CSP header under the current matcher
-- the CSP is character-for-character identical across all pages within each environment; the only cross-environment difference is the Clerk FAPI host (`infinite-jaguar-35.clerk.accounts.dev` locally vs `clerk.addictionboards.com` in production)
+- local runtime (`pnpm dev`, `pnpm start`) shows public pages, auth pages, protected-route responses, and API routes all receive the Clerk-owned CSP header under the current matcher
+- deployed production public-route verification (`/` and `/pricing`) matches the same header shape as local production; the only cross-environment differences are the Clerk FAPI host (`infinite-jaguar-35.clerk.accounts.dev` locally vs `clerk.addictionboards.com` in production) and the expected dev-only `'unsafe-eval'`
 
 #### Stripe
 
@@ -172,6 +176,7 @@ What that means for this repo:
   - using the project's **Security Header endpoint**
   - sending **both** `report-uri` and `report-to` / `Reporting-Endpoints` for compatibility
   - ensuring the Sentry domain is permitted by `default-src` or `connect-src`, or the browser will block the report itself
+- The installed Clerk SDK's `contentSecurityPolicy.reportTo` support is helpful but limited: it appends the CSP `report-to` directive and emits the `Reporting-Endpoints` header, but it does **not** emit the legacy `Report-To` header from Sentry's broader compatibility example.
 - The previous wildcard example `https://*.ingest.us.sentry.io` is not the tightest or most portable rule. The current implementation is better: parse the **exact** origin from `NEXT_PUBLIC_SENTRY_DSN` and allow only that origin.
 - Session Replay is disabled in `sentry.client.config.ts`, so Sentry does not create an additional replay-worker requirement in the current configuration.
 
@@ -218,8 +223,8 @@ But the earlier "NOT in `next.config.ts`" wording was too absolute. Next.js offi
    - The domain is unconditionally hardcoded in [`@clerk/nextjs` → `packages/nextjs/src/server/content-security-policy.ts`](https://github.com/clerk/javascript/blob/main/packages/nextjs/src/server/content-security-policy.ts) inside the `DEFAULT_DIRECTIVES` object for `connect-src`.
    - It was added by Clerk engineer LauraBeatris in [PR #7610](https://github.com/clerk/javascript/pull/7610) (merged 2026-01-16) to support `fetch()` calls for organization creation image downloads. The `img-src` allowance for `img.clerk.com` only covers `<img>` tags, not `fetch()`, so both `img.clerk.com` and `images.clerkstage.dev` were added to `connect-src`.
    - There is **no conditional logic** — the staging domain ships to every Clerk instance, dev and production alike. The only environment-conditional directive in the entire file is `'unsafe-eval'` in `script-src`.
-   - Clerk's official CSP docs do **not** document `images.clerkstage.dev`. No public GitHub issues exist about it.
-   - **Impact:** Low. It widens the `connect-src` surface area by one unnecessary staging domain. It cannot be removed without leaving Clerk's automatic CSP entirely.
+   - Clerk's official CSP docs do **not** document `images.clerkstage.dev`. During this audit, I did **not** find a newer upstream change making the domain conditional or removing it from the current `main` branch source.
+   - **Impact:** Low. It widens the `connect-src` surface area by one unnecessary staging domain. It cannot be removed through `contentSecurityPolicy.directives`; removing it would require either an upstream Clerk change or taking full CSP ownership away from Clerk's automatic defaults.
    - **Recommendation:** Optionally file a low-severity issue on [`clerk/javascript`](https://github.com/clerk/javascript) requesting that `images.clerkstage.dev` be made conditional on instance type.
 
 ### Recommended Posture
@@ -236,7 +241,8 @@ For this application, the technically accurate recommendation is:
 
 3. **Use Clerk's built-in report-only support if we want a low-risk visibility phase.**
    - The installed Clerk SDK now exposes `reportOnly?: boolean` and `reportTo?: string` on `contentSecurityPolicy`.
-   - For compatibility, also add `report-uri` pointing at Sentry's Security Header endpoint.
+   - Clerk's `reportTo` support covers the CSP `report-to` directive plus `Reporting-Endpoints`, but not the legacy `Report-To` header.
+   - For compatibility, add `report-uri` and, if we want to match Sentry's full recommendation, set `Report-To` manually alongside Clerk's `reportTo` support.
 
 4. **If we want a materially stronger CSP, plan a strict-mode rollout rather than a hand-written additive allowlist.**
    - Strict mode removes Clerk's broad `http:` / `https:` script allowances and gives us nonce-based protection.
@@ -269,7 +275,8 @@ For this application, the technically accurate recommendation is:
 - Sentry client key API (DSN / security header endpoints): <https://docs.sentry.io/api/projects/retrieve-a-client-key/>
 - Next.js CSP guide (App Router): <https://nextjs.org/docs/app/guides/content-security-policy>
 - **Local runtime verification:** `curl -sSI` against `/`, `/pricing`, `/sign-in`, `/app/dashboard`, `/api/health`, and `/api/stripe/webhook` on 2026-03-21 under both `pnpm dev` and `pnpm start` with `@clerk/nextjs` 6.38.1
-- **Deployed production verification:** Chrome browser agent captured response headers from `addictionboards.com` on `/`, `/pricing`, and `/app/dashboard` on 2026-03-21 — confirmed character-for-character match with local prod build (only difference: Clerk FAPI host correctly reflects production custom domain `clerk.addictionboards.com`)
+- **Installed package cross-checks:** `@clerk/nextjs` 6.38.1 source/types and `next-themes` 0.4.6 source/types were inspected locally to verify `reportOnly`, `reportTo`, default CSP directives, and `nonce` support
+- **Deployed production verification:** Chrome browser agent and direct `curl -sSI` captured response headers from `https://addictionboards.com/` and `https://addictionboards.com/pricing` on 2026-03-21 — confirmed they match the doc block exactly and match local prod build except for the Clerk FAPI host (`clerk.addictionboards.com`)
 
 ### Repo Files Relevant to This Audit
 
@@ -378,7 +385,7 @@ If a competent security auditor reviewed this codebase:
 - [ ] Health endpoint no longer returns `timestamp` to unauthenticated callers
 - [ ] This debt doc no longer misstates current CSP behavior
 - [ ] A CSP ownership decision is recorded: Clerk automatic, Clerk strict mode, or manual CSP
-- [ ] If report-only is used, `report-uri` and `report-to` / `Reporting-Endpoints` are wired to Sentry's Security Header endpoint
+- [ ] If report-only is used, `report-uri`, the CSP `report-to` directive, and `Reporting-Endpoints` are wired to Sentry's Security Header endpoint; add legacy `Report-To` too if we want Sentry's widest compatibility path
 - [ ] If strict mode is chosen, `ClerkProvider` and `next-themes` nonce requirements are implemented and validated
 - [ ] Clerk auth flows, theme initialization, Sentry reporting, and billing redirects are verified under the chosen policy
 - [ ] Enforcing CSP is enabled or the accepted residual risk of Clerk automatic defaults is explicitly documented
