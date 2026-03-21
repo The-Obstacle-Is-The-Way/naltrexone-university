@@ -21,7 +21,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-318](./debt-318-tutor-bookmark-before-answer.md) | Bookmark visible before feedback in tutor mode and quick practice — keep the surface, but delay the action until inline feedback/explanation is visible | P3 | — |
 | [DEBT-329](./debt-329-navigator-colorblind-accessibility.md) | Question navigator relies on color alone (red/green) to distinguish correct from incorrect — fails WCAG 1.4.1 for colorblind users. Both `QuestionNavigator` and `ReviewQuestionNavigator` affected. | P3 | — |
 | [DEBT-330](./debt-330-review-action-bar-bookmark-placement.md) | Post-exam review action bar places Bookmark between Previous and Next — intermixes secondary action with primary navigation controls, confusing at a glance | P3 | — |
-| [DEBT-331](./debt-331-session-started-toast-overlap.md) | "Session started" toast overlaps navigation bar — `fixed top-4` positioning garbles both toast text and nav tabs | P3 | — |
 **Next Debt ID:** DEBT-332
 
 ---
@@ -30,6 +29,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-331](../_archive/debt/debt-331-session-started-toast-overlap.md) | Remove redundant "Session started" toast and reposition shared toast region from `top-4` to `bottom-4` — eliminates nav bar overlap, keeps shortfall warning and bookmark toasts, CodeRabbit config hardened against docstring nags | P3 | 2026-03-21 | [PR #240](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/240) |
 | [DEBT-326](../_archive/debt/debt-326-post-exam-review-focus-management.md) | Post-exam review focus management — `useEffect` + `useRef` focuses the review panel on mount and navigation, `aria-label` for screen reader announcement, `<section>` landmark, repo-standard focus-visible ring, shared test fixtures, `FocusOptions` type augmentation | P3 | 2026-03-20 | [PR #239](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/239) |
 | [DEBT-325](../_archive/debt/debt-325-post-exam-review-unanswered-display.md) | Post-exam review unanswered display — added `isUnanswered` prop to shared `Feedback` component, yellow warning banner in post-exam review, verdict pill suppression for unanswered on both review surfaces | P2 | 2026-03-20 | [PR #238](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/238) |
 | [DEBT-324](../_archive/debt/debt-324-session-scoped-practice-missed-questions.md) | Removed misleading `Practice missed questions` CTA from exam Summary — DEBT-324 confirmed the link opened the user's global latest-incorrect Quick Practice pool, so the terminal summary now stays focused on review re-entry and exit paths. | P3 | 2026-03-19 | — |
