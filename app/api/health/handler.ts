@@ -16,7 +16,6 @@ export type HealthHandlerDeps = {
   };
   logger: Logger;
   rateLimiter: RateLimiter;
-  now: () => Date;
 };
 
 async function handleHealthCheck(deps: HealthHandlerDeps, req: Request) {
@@ -55,7 +54,6 @@ async function handleHealthCheck(deps: HealthHandlerDeps, req: Request) {
     return NextResponse.json({
       ok: true,
       db: true,
-      timestamp: deps.now().toISOString(),
     });
   } catch (error) {
     deps.logger.error({ error }, 'Health check failed');

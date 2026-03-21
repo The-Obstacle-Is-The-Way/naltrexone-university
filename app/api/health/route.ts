@@ -16,7 +16,6 @@ function buildHandler() {
     db,
     logger,
     rateLimiter,
-    now: () => new Date(),
   });
 }
 

@@ -40,7 +40,13 @@ const CLERK_APPEARANCE_LIGHT = {
  * page generation. This component skips the provider when NEXT_PUBLIC_SKIP_CLERK
  * is set, allowing builds to succeed without real Clerk credentials.
  */
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({
+  children,
+  nonce,
+}: {
+  children: React.ReactNode;
+  nonce?: string;
+}) {
   const { resolvedTheme } = useTheme();
   const skipClerk = process.env.NEXT_PUBLIC_SKIP_CLERK === 'true';
   const clerkAppearance = useMemo(() => {
@@ -57,6 +63,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <NotificationProvider>
       <ClerkProvider
+        dynamic
+        nonce={nonce}
         signInFallbackRedirectUrl={ROUTES.APP_DASHBOARD}
         signUpFallbackRedirectUrl={ROUTES.APP_DASHBOARD}
         appearance={clerkAppearance}

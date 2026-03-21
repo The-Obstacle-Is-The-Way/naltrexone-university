@@ -10,13 +10,11 @@ describe('GET /api/health', () => {
     const execute = vi.fn(async () => undefined);
     const logger = new FakeLogger();
     const rateLimiter = new FakeRateLimiter();
-    const now = () => new Date('2026-02-04T00:00:00.000Z');
 
     const { GET } = createHealthHandler({
       db: { execute },
       logger,
       rateLimiter,
-      now,
     });
 
     const res = await GET(
@@ -30,7 +28,6 @@ describe('GET /api/health', () => {
     await expect(res.json()).resolves.toEqual({
       ok: true,
       db: true,
-      timestamp: '2026-02-04T00:00:00.000Z',
     });
     expect(execute).toHaveBeenCalledTimes(1);
   });
@@ -41,13 +38,11 @@ describe('GET /api/health', () => {
     });
     const logger = new FakeLogger();
     const rateLimiter = new FakeRateLimiter();
-    const now = () => new Date('2026-02-04T00:00:00.000Z');
 
     const { GET } = createHealthHandler({
       db: { execute },
       logger,
       rateLimiter,
-      now,
     });
 
     const res = await GET(
@@ -74,13 +69,11 @@ describe('GET /api/health', () => {
       remaining: 0,
       retryAfterSeconds: 42,
     });
-    const now = () => new Date('2026-02-04T00:00:00.000Z');
 
     const { GET } = createHealthHandler({
       db: { execute },
       logger,
       rateLimiter,
-      now,
     });
 
     const res = await GET(
@@ -113,13 +106,11 @@ describe('GET /api/health', () => {
     const execute = vi.fn(async () => undefined);
     const logger = new FakeLogger();
     const rateLimiter = new FakeRateLimiter(new Error('rate limiter down'));
-    const now = () => new Date('2026-02-04T00:00:00.000Z');
 
     const { GET } = createHealthHandler({
       db: { execute },
       logger,
       rateLimiter,
-      now,
     });
 
     const res = await GET(
@@ -154,13 +145,11 @@ describe('POST /api/health', () => {
     const execute = vi.fn(async () => undefined);
     const logger = new FakeLogger();
     const rateLimiter = new FakeRateLimiter();
-    const now = () => new Date('2026-02-04T00:00:00.000Z');
 
     const { POST } = createHealthHandler({
       db: { execute },
       logger,
       rateLimiter,
-      now,
     });
 
     const res = await POST(
@@ -174,7 +163,6 @@ describe('POST /api/health', () => {
     await expect(res.json()).resolves.toEqual({
       ok: true,
       db: true,
-      timestamp: '2026-02-04T00:00:00.000Z',
     });
     expect(rateLimiter.inputs).toEqual([
       {
@@ -193,13 +181,11 @@ describe('POST /api/health', () => {
     });
     const logger = new FakeLogger();
     const rateLimiter = new FakeRateLimiter();
-    const now = () => new Date('2026-02-04T00:00:00.000Z');
 
     const { POST } = createHealthHandler({
       db: { execute },
       logger,
       rateLimiter,
-      now,
     });
 
     const res = await POST(
@@ -238,13 +224,11 @@ describe('POST /api/health', () => {
       remaining: 0,
       retryAfterSeconds: 42,
     });
-    const now = () => new Date('2026-02-04T00:00:00.000Z');
 
     const { POST } = createHealthHandler({
       db: { execute },
       logger,
       rateLimiter,
-      now,
     });
 
     const res = await POST(
@@ -277,13 +261,11 @@ describe('POST /api/health', () => {
     const execute = vi.fn(async () => undefined);
     const logger = new FakeLogger();
     const rateLimiter = new FakeRateLimiter(new Error('rate limiter down'));
-    const now = () => new Date('2026-02-04T00:00:00.000Z');
 
     const { POST } = createHealthHandler({
       db: { execute },
       logger,
       rateLimiter,
-      now,
     });
 
     const res = await POST(

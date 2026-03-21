@@ -8,17 +8,20 @@ vi.mock('next-themes', () => ({
     attribute,
     defaultTheme,
     enableSystem,
+    nonce,
   }: {
     children: React.ReactNode;
     attribute?: string;
     defaultTheme?: string;
     enableSystem?: boolean;
+    nonce?: string;
   }) => (
     <div
       data-testid="next-themes-provider"
       data-attribute={attribute}
       data-default-theme={defaultTheme}
       data-enable-system={enableSystem ? 'true' : 'false'}
+      data-nonce={nonce}
     >
       {children}
     </div>
@@ -30,7 +33,12 @@ describe('components/theme-provider', () => {
     const { ThemeProvider } = await import('@/components/theme-provider');
 
     const html = renderToStaticMarkup(
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        nonce="nonce-123"
+      >
         <div>child</div>
       </ThemeProvider>,
     );
@@ -39,6 +47,7 @@ describe('components/theme-provider', () => {
     expect(html).toContain('data-attribute="class"');
     expect(html).toContain('data-default-theme="system"');
     expect(html).toContain('data-enable-system="true"');
+    expect(html).toContain('data-nonce="nonce-123"');
     expect(html).toContain('child');
   });
 });

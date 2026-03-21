@@ -44,16 +44,22 @@ describe('Providers', () => {
       default: () =>
         function MockClerkProvider({
           children,
+          dynamic,
+          nonce,
           signInFallbackRedirectUrl,
           signUpFallbackRedirectUrl,
         }: {
           children: ReactNode;
+          dynamic?: boolean;
+          nonce?: string;
           signInFallbackRedirectUrl?: string;
           signUpFallbackRedirectUrl?: string;
         }) {
           return (
             <div
               data-testid="clerk-provider"
+              data-dynamic={dynamic ? 'true' : 'false'}
+              data-nonce={nonce}
               data-sign-in-fallback={signInFallbackRedirectUrl}
               data-sign-up-fallback={signUpFallbackRedirectUrl}
             >
@@ -66,7 +72,7 @@ describe('Providers', () => {
     const { Providers } = await import('@/components/providers');
 
     const html = renderToStaticMarkup(
-      <Providers>
+      <Providers nonce="nonce-123">
         <div>child</div>
       </Providers>,
     );
@@ -76,5 +82,7 @@ describe('Providers', () => {
     expect(html).toContain('data-testid="app-toast-region"');
     expect(html).toContain('data-sign-in-fallback="/app/dashboard"');
     expect(html).toContain('data-sign-up-fallback="/app/dashboard"');
+    expect(html).toContain('data-dynamic="true"');
+    expect(html).toContain('data-nonce="nonce-123"');
   });
 });
