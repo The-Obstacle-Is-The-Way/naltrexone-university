@@ -1,4 +1,4 @@
-# DEBT-332: Security Posture Audit — CSP Gap, Health Endpoint Disclosure, Hardening Opportunities
+# DEBT-332: Security Posture Audit — CSP Findings, Health Endpoint Disclosure, Hardening Opportunities
 
 **Priority:** P2
 **Created:** 2026-03-21
@@ -15,170 +15,177 @@ A third-party compliance company (Delve) was exposed for having a publicly acces
 
 ---
 
-## Item 1: No Global Content-Security-Policy Header (HIGH)
+## Item 1: CSP Exists, but the Current Posture Is Broader Than Intended and the Prior Write-Up Was Inaccurate (MEDIUM)
 
 ### The Problem
 
-There is no global `Content-Security-Policy` (CSP) header. CSP directives are only applied through Clerk middleware (`proxy.ts:128-130`), which means:
+The original version of this debt doc got the CSP situation wrong in several important ways:
 
-1. **Public/unauthenticated routes have zero CSP protection.** The landing page (`/`), pricing page (`/pricing`), and Clerk auth pages receive no CSP header at all.
-2. **Even Clerk-protected routes have an incomplete CSP.** The `CLERK_CSP_DIRECTIVES` object (`proxy.ts:29-40`) defines `base-uri`, `connect-src`, `font-src`, `frame-ancestors`, `img-src`, and `object-src` — but omits the most critical directives: `default-src`, `script-src`, and `style-src`.
+1. **We do already have CSP on proxy-matched routes.** `proxy.ts` configures Clerk's automatic CSP via `contentSecurityPolicy`, and public routes still traverse the middleware; they only skip `auth.protect()`.
+2. **Clerk already injects `default-src`, `script-src`, and `style-src`.** Our custom directives are *merged into* Clerk's defaults; they do not replace them.
+3. **The real problem is the opposite of what this doc originally claimed:** the effective automatic policy is broader than our app actually needs, and the previously proposed "exact combined policy" is not what browsers would receive from the current implementation.
 
 ### Why This Matters
 
-CSP is the single most effective defense against XSS after output encoding. Without `script-src`, a browser will execute any injected `<script>` tag. Our markdown sanitization (`skipHtml={true}` + `rehype-sanitize`) makes XSS via question content extremely unlikely, but CSP is a defense-in-depth layer — it catches the cases your other defenses miss. Every major security framework (OWASP, CIS, NIST) recommends CSP.
+CSP is still worth caring about. It is a strong defense-in-depth control against XSS and unexpected third-party resource execution. But this repo is **not** in a "no CSP at all" state. The security debt is subtler:
 
-Without it, a compromised third-party script (Clerk JS, Sentry JS, Stripe JS, analytics) could execute arbitrary code with no browser-level constraint.
+- We are relying on a **Clerk-owned automatic policy** whose defaults are broader than this application needs.
+- The current implementation **cannot produce a minimal exact allowlist** by simply expanding `CLERK_CSP_DIRECTIVES`, because Clerk merges custom directives with its defaults.
+- The previous version of this document created a false mental model of both the current risk and the available implementation options.
 
 ### Current State
 
 ```
 next.config.ts headers:     ✅ X-Content-Type-Options, Referrer-Policy, X-Frame-Options,
                               Permissions-Policy, Strict-Transport-Security
-                            ❌ Content-Security-Policy (MISSING)
+                            ❌ No static/manual CSP in next.config.ts
 
-proxy.ts Clerk middleware:   Partial CSP (no default-src, no script-src, no style-src)
-                            Only applied to Clerk-handled routes
+proxy.ts Clerk middleware:   ✅ Automatic Clerk CSP is enabled
+                            ✅ Public routes still traverse middleware
+                            ✅ Clerk injects default-src/script-src/style-src
+                            ⚠️ Effective policy is broader than our app needs
 ```
 
-### Stack-Specific CSP Requirements (Researched)
+### Verified Findings (Official Docs + Local Runtime)
 
-Each third-party service in our stack requires specific CSP directives. These were researched from official docs (Clerk CSP guide, Stripe security guide, Sentry CSP docs, Next.js CSP guide).
+This section was re-audited on **2026-03-21** against current official documentation for Clerk, Stripe, Sentry, and Next.js, then cross-checked against the installed packages and this repo's implementation.
 
-#### Clerk (clerk.com/docs/security/clerk-csp)
+#### Clerk
 
-| Directive | Required Values | Why |
-|---|---|---|
-| `script-src` | `'unsafe-inline'` or nonce+`'strict-dynamic'`, FAPI hostname, `https://challenges.cloudflare.com` | Auth bootstrapping, bot protection (Turnstile) |
-| `style-src` | **`'unsafe-inline'` (REQUIRED, no alternative)** | Clerk uses runtime CSS-in-JS for component styling; no nonce support for styles |
-| `connect-src` | FAPI hostname | API calls for session management, token refresh |
-| `img-src` | `https://img.clerk.com` | User avatars, organization logos |
-| `frame-src` | `https://challenges.cloudflare.com` | Cloudflare Turnstile bot protection iframe |
-| `worker-src` | `'self' blob:` | Web Workers for performance |
+- Official Clerk docs say automatic CSP is available for `@clerk/nextjs >= 6.14.0` and is configured through `clerkMiddleware(..., { contentSecurityPolicy: ... })`.
+- Clerk explicitly documents the following requirements: FAPI host in `script-src` and `connect-src`, `https://img.clerk.com` in `img-src`, `'self' blob:` in `worker-src`, `'unsafe-inline'` in `style-src`, and `https://challenges.cloudflare.com` in `frame-src`.
+- Clerk's **default automatic configuration** already injects `connect-src`, `default-src`, `form-action`, `frame-src`, `img-src`, `script-src`, `style-src`, and `worker-src`.
+- Clerk's docs say additional directives are **merged with Clerk's default security settings**.
+- Clerk strict mode still exists. It generates a per-request nonce, exposes it via `x-nonce`, and requires `<ClerkProvider dynamic>` for App Router usage.
+- Clerk's docs still say `style-src 'unsafe-inline'` is required for Clerk component styling, and removing that requirement is merely "on Clerk's roadmap."
 
-**FAPI hostname:** Decoded from our Clerk publishable key → `infinite-jaguar-35.clerk.accounts.dev` (dev). Production with custom domain → `clerk.{production-domain}.com`.
+What that means for this repo:
 
-**Critical constraint:** `style-src 'unsafe-inline'` is non-negotiable with Clerk. Their CSS-in-JS has no nonce support. This is the single biggest CSP weakening and it's entirely on Clerk's side.
+- The prior claim that protected routes lacked `default-src`, `script-src`, and `style-src` was false.
+- The prior claim that public routes had no CSP was also false. `proxy.ts` still runs Clerk middleware on public routes; it only skips `auth.protect()`. `proxy.test.ts` covers this behavior.
+- Because Clerk merges defaults, our current `CLERK_CSP_DIRECTIVES` object **adds** values but cannot remove Clerk defaults such as broad `script-src` sources.
 
-**Two CSP modes available:**
-- **Default mode:** `script-src` includes `'unsafe-inline'` — simpler, weaker
-- **Strict mode** (`contentSecurityPolicy: { strict: true }`): Per-request nonces + `'strict-dynamic'` — eliminates `'unsafe-inline'` from `script-src` only. Clerk generates nonces via `crypto.getRandomValues()` and Next.js auto-propagates them to framework `<script>` tags.
+Cross-checking the installed `@clerk/nextjs` **6.38.1** runtime confirms the current automatic default includes a broad `script-src` containing `'unsafe-inline'`, `https:`, `http:`, Stripe JS hosts, and Google Maps. It also includes Clerk telemetry, `api.stripe.com`, and Google Maps in `connect-src`. This is broader than our application needs.
 
-#### Stripe (docs.stripe.com/security/guide)
+#### Stripe
 
-| Directive | Required Values | Why |
-|---|---|---|
-| `script-src` | `https://js.stripe.com`, `https://checkout.stripe.com` | Stripe.js library, Checkout redirect page |
-| `connect-src` | `https://api.stripe.com`, `https://checkout.stripe.com` | Payment API calls, Checkout session |
-| `frame-src` | `https://js.stripe.com`, `https://hooks.stripe.com`, `https://checkout.stripe.com` | Payment element iframes, 3D Secure, Checkout |
-| `img-src` | `https://*.stripe.com` | Product images in Checkout |
+- Stripe's official security guide is **product-specific**:
+  - Checkout requires `checkout.stripe.com`
+  - Stripe.js requires `api.stripe.com`, `js.stripe.com`, `hooks.stripe.com`, and `maps.googleapis.com` only for Address Element / Google Maps cases
+  - Connect embedded components require `connect-js.stripe.com`, `js.stripe.com`, and a specific `style-src` SHA
+- Stripe's official docs do **not** say that every Stripe integration needs the union of all Stripe domains.
+- Stripe's official docs do **not** list `q.stripe.com` or `r.stripe.com` as required CSP sources for the products relevant to this app.
+- Stripe's official docs also say they do **not** currently support cross-origin isolated sites.
 
-**No `'unsafe-inline'` or `'unsafe-eval'` required.** Stripe is CSP-friendly.
+What that means for this repo:
 
-**Not needed for us:** `https://maps.googleapis.com` (only for Stripe Address Element, which we don't use), `https://q.stripe.com` (telemetry — can be safely blocked with no functional impact).
+- This app does **not** load Stripe.js, Elements, embedded Checkout, or Connect embedded components on our pages.
+- Billing is implemented as **server-side redirect only**: server actions create Checkout / Billing Portal URLs and Next redirects the user to Stripe-hosted pages.
+- Because our origin is not embedding Stripe client assets, the prior "combined policy" over-whitelisted Stripe domains for the current architecture.
+- If we later add Stripe.js, Elements, embedded Checkout, Connect embedded components, or Address Element, this analysis changes and the policy must be revisited against the exact Stripe product docs.
 
-#### Sentry (@sentry/nextjs, bundled)
+#### Sentry
 
-| Directive | Required Values | Why |
-|---|---|---|
-| `script-src` | Nothing extra (`'self'` covers it) | SDK is bundled by Next.js, not loaded from CDN |
-| `connect-src` | `https://*.ingest.us.sentry.io` | Error/performance data ingest endpoint |
-| `worker-src` | Not needed | Session Replay is disabled (`replaysSessionSampleRate: 0`, `replaysOnErrorSampleRate: 0` in `sentry.client.config.ts`) |
+- The app uses `@sentry/nextjs`, and the client SDK is bundled in the app. There is no Sentry CDN loader in use, so there is no separate Sentry `script-src` requirement for this repo.
+- Official Sentry docs for Security Policy Reporting recommend:
+  - using the project's **Security Header endpoint**
+  - sending **both** `report-uri` and `report-to` / `Reporting-Endpoints` for compatibility
+  - ensuring the Sentry domain is permitted by `default-src` or `connect-src`, or the browser will block the report itself
+- The previous wildcard example `https://*.ingest.us.sentry.io` is not the tightest or most portable rule. The current implementation is better: parse the **exact** origin from `NEXT_PUBLIC_SENTRY_DSN` and allow only that origin.
+- Session Replay is disabled in `sentry.client.config.ts`, so Sentry does not create an additional replay-worker requirement in the current configuration.
 
-**Bonus:** Sentry can natively receive CSP violation reports. Set `report-uri` to `https://o{ORG}.ingest.us.sentry.io/api/{PROJECT}/security/?sentry_key={KEY}` (from Sentry Project Settings → Security Headers). This creates CSP violation issues in Sentry automatically — perfect for the report-only rollout phase.
+#### Next.js
 
-#### Next.js (App Router)
-
-| Directive | Required Values | Why |
-|---|---|---|
-| `script-src` | `'self'` + `'unsafe-inline'` (or nonce) | Next.js injects inline scripts for React hydration |
-| `style-src` | `'self'` + `'unsafe-inline'` | Inline style injection during development and potentially production |
-| Dev only | `'unsafe-eval'` in `script-src` | React uses `eval()` for enhanced error stacks in dev; NOT needed in production |
-
-**Nonce propagation:** Next.js 13.4.20+ automatically extracts the nonce from the `Content-Security-Policy` header's `script-src` directive and attaches it to all framework-generated `<script>` tags. No manual threading needed.
+- Next.js still documents two valid CSP architectures:
+  - **Proxy/middleware** for nonce-based CSP
+  - **`next.config.js` headers** for non-nonce CSP
+- Next.js still auto-extracts the nonce from the request `Content-Security-Policy` header and applies it to framework scripts, page bundles, and inline styles/scripts generated by Next.js.
+- `unsafe-eval` remains a **development-only** requirement.
+- Next.js also documents the tradeoff that nonce-based CSP requires **dynamic rendering**, disables static optimization / ISR / PPR compatibility, and reduces CDN caching opportunities.
 
 ### Implementation Architecture
 
-**Where to set CSP:** In `proxy.ts` via Clerk's `contentSecurityPolicy` option — NOT in `next.config.ts`.
+**Where to set CSP:** `proxy.ts` is the correct ownership point for:
 
-Rationale:
-- Clerk middleware already generates CSP and merges custom directives — doing it in `next.config.ts` would create two competing CSP headers
-- `proxy.ts` runs per-request, enabling nonce generation if we upgrade to strict mode later
-- `next.config.ts` headers are static (set at build time) — cannot support nonces
-- All routes (including public) pass through the proxy matcher, so CSP covers everything
+- Clerk automatic CSP
+- any future nonce-based CSP
+- per-request report-only / report-to configuration
 
-**What to change in `proxy.ts`:**
-1. Expand `CLERK_CSP_DIRECTIVES` to include `default-src`, `script-src`, `style-src`, `frame-src`, `form-action`, and `upgrade-insecure-requests`
-2. Clerk's middleware merges these with its own required domains (FAPI hostname, Cloudflare challenges)
+But the earlier "NOT in `next.config.ts`" wording was too absolute. Next.js officially documents `next.config.js` as the right place for non-nonce CSP. The pragmatic repo-specific conclusion is:
 
-### Combined CSP Policy
+- **If we stay on Clerk automatic CSP or move to strict mode, keep ownership in `proxy.ts`.**
+- **If we ever decide to stop relying on Clerk automatic merging and own the exact policy ourselves, `next.config.ts` remains a valid option for a non-nonce policy.**
 
-This is the researched, stack-verified policy covering Clerk + Stripe + Sentry + Next.js:
+### Hidden Gotchas the Prior Doc Missed
 
-```
-default-src 'self';
-script-src 'self' 'unsafe-inline' https://js.stripe.com https://checkout.stripe.com https://challenges.cloudflare.com;
-style-src 'self' 'unsafe-inline';
-connect-src 'self' ws: wss: https://api.stripe.com https://checkout.stripe.com https://*.ingest.us.sentry.io;
-img-src 'self' data: blob: https: https://img.clerk.com;
-font-src 'self' data: https:;
-frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://checkout.stripe.com https://challenges.cloudflare.com;
-frame-ancestors 'none';
-object-src 'none';
-base-uri 'self';
-form-action 'self';
-upgrade-insecure-requests;
-```
+1. **Clerk strict mode is not drop-in for the current provider tree.**
+   - Clerk's docs require `<ClerkProvider dynamic>` for strict mode.
+   - `components/providers.tsx` currently loads `ClerkProvider` through `next/dynamic` with `ssr: false` and does not pass `dynamic`.
+   - Inference: a strict-mode rollout requires provider refactoring, not just a proxy option flip.
 
-**Notes on this policy:**
-- `'unsafe-inline'` in `style-src` — required by Clerk (CSS-in-JS, no nonce support)
-- `'unsafe-inline'` in `script-src` — the easy-path choice; can be upgraded to nonce + `'strict-dynamic'` via Clerk's `strict: true` mode in a future pass
-- `ws: wss:` in `connect-src` — required for Next.js hot reload (dev) and Clerk's real-time session updates
-- Clerk's middleware auto-adds the FAPI hostname to `script-src` and `connect-src`, so it's not listed here explicitly
-- `https:` in `img-src` — broad but necessary; Clerk avatars, Stripe product images, and markdown-embedded images can come from arbitrary HTTPS origins
-- `upgrade-insecure-requests` — forces HTTPS for all subresources (aligns with HSTS already in `next.config.ts`)
-- Dev mode: add `'unsafe-eval'` to `script-src` conditionally (`process.env.NODE_ENV === 'development'`)
+2. **`next-themes` needs nonce plumbing if we pursue strict mode.**
+   - `next-themes` supports a `nonce` prop for its injected inline script/style.
+   - Our `components/theme-provider.tsx` does not currently pass one.
+   - Inference: strict mode will require threading `x-nonce` into the theme provider or theme initialization will generate violations.
 
-### Rollout Plan (Three Phases)
+3. **Clerk's automatic CSP is additive, not subtractive.**
+   - The exact narrow allowlist previously written in this doc is **not realizable** through the current `contentSecurityPolicy.directives` merge behavior.
+   - If we want to remove broad defaults such as `http:` / `https:` in `script-src` or unused Stripe / Google Maps domains, we need a different ownership model.
 
-#### Phase 1: Report-Only (Zero Risk)
+### Recommended Posture
 
-Deploy the policy as `Content-Security-Policy-Report-Only` with `report-uri` pointing to Sentry's CSP endpoint. Browsers log violations but block nothing. The site works exactly as before.
+For this application, the technically accurate recommendation is:
 
-**How:** Clerk's `contentSecurityPolicy` option may not support report-only mode directly. If not, manually set the `Content-Security-Policy-Report-Only` header on the response object in `proxy.ts` after Clerk middleware runs.
+1. **Fix the documentation first.**
+   - Stop claiming there is no CSP.
+   - Stop claiming public routes receive no CSP.
+   - Stop claiming the exact synthetic allowlist shown earlier is the policy browsers actually receive.
 
-**Duration:** 1-2 weeks in production.
+2. **Keep `proxy.ts` as the current CSP ownership point.**
+   - That aligns with Clerk automatic CSP and any future nonce-based rollout.
 
-**Monitor:** Check Sentry for CSP violation events. Each violation shows the blocked URI, the violated directive, and the page URL — enough to identify missing domains.
+3. **Use Clerk's built-in report-only support if we want a low-risk visibility phase.**
+   - The installed Clerk SDK now exposes `reportOnly?: boolean` and `reportTo?: string` on `contentSecurityPolicy`.
+   - For compatibility, also add `report-uri` pointing at Sentry's Security Header endpoint.
 
-#### Phase 2: Refine
+4. **If we want a materially stronger CSP, plan a strict-mode rollout rather than a hand-written additive allowlist.**
+   - Strict mode removes Clerk's broad `http:` / `https:` script allowances and gives us nonce-based protection.
+   - But it requires provider / theme nonce work and dynamic-rendering tradeoff acceptance.
 
-Adjust directives based on violation reports. Common surprises:
-- Clerk FAPI hostname not matching (dev vs production)
-- Third-party images blocked by `img-src`
-- WebSocket connections blocked by `connect-src`
-
-#### Phase 3: Enforce
-
-Switch from `Content-Security-Policy-Report-Only` to `Content-Security-Policy`. Optionally keep a report-only header with a *stricter* experimental policy (e.g., nonce-based) alongside the enforcing one.
-
-### Future Enhancement: Strict Mode (Nonce-Based)
-
-After the `'unsafe-inline'` policy is stable, upgrade `script-src` to nonce-based:
-
-1. Set `contentSecurityPolicy: { strict: true }` in Clerk middleware config
-2. Clerk generates per-request nonces and adds `'strict-dynamic'` + `'nonce-{value}'` to `script-src`
-3. Next.js auto-propagates the nonce to all framework `<script>` tags
-4. `'unsafe-inline'` in `script-src` becomes a no-op (ignored when nonce is present) — can be removed
-5. `style-src 'unsafe-inline'` remains (Clerk limitation, no workaround)
-
-This eliminates the `'unsafe-inline'` weakness for scripts while keeping styles as-is. It's a meaningful security upgrade but not urgent — the domain-restricted policy above is already a strong improvement over no CSP.
+5. **If we want a truly minimal exact policy, Clerk automatic CSP is the wrong abstraction.**
+   - We would need to own the CSP header manually and explicitly include only the sources justified by our actual stack.
 
 ### Effort Estimate
 
-- Implementation: Small (expand `CLERK_CSP_DIRECTIVES` in `proxy.ts`)
-- Testing/rollout: Medium (report-only phase, verify Clerk sign-in/sign-up, Stripe checkout, Sentry reporting)
-- Risk if skipped: An XSS via a compromised third-party CDN or a future code regression would have no browser-level mitigation
+- Documentation correction: Small
+- Add report-only + reporting endpoints in current architecture: Small
+- Strict-mode rollout with provider/theme fixes: Medium
+- Manual exact CSP ownership replacing Clerk automatic CSP: Medium to Large
+
+### Risk if Skipped
+
+- We do **not** have a catastrophic "missing CSP" hole.
+- We **do** have a documentation bug and a false sense of precision.
+- We also currently rely on a Clerk-owned default policy that is broader than necessary, which weakens CSP's value as a hard allowlist.
+
+### Sources Verified on 2026-03-21
+
+- Clerk CSP docs: <https://clerk.com/docs/guides/secure/best-practices/csp-headers>
+- Stripe Integration Security Guide: <https://docs.stripe.com/security/guide>
+- Sentry Security Policy Reporting docs: <https://docs.sentry.io/platforms/dotnet/guides/uwp/security-policy-reporting/>
+- Sentry client key API example showing DSN / security header endpoints: <https://docs.sentry.io/api/projects/retrieve-a-client-key/>
+- Next.js CSP guide: <https://nextjs.org/docs/pages/guides/content-security-policy>
+
+### Repo Files Relevant to This Audit
+
+- `proxy.ts`
+- `proxy.test.ts`
+- `components/providers.tsx`
+- `components/theme-provider.tsx`
+- `sentry.client.config.ts`
+- `app/pricing/subscribe-actions.ts`
+- `app/pricing/subscribe-action.ts`
+- `src/adapters/controllers/billing-controller.ts`
 
 ---
 
@@ -248,7 +255,7 @@ If a competent security auditor reviewed this codebase:
 
 | Finding | Severity | Their Verdict |
 |---------|----------|---------------|
-| No global CSP | **Medium** | "Implement CSP with report-only rollout. Required for compliance." |
+| CSP is present but broad / Clerk-owned / underdocumented | **Medium** | "Correct the documentation, decide whether Clerk automatic CSP is acceptable, and tighten if compliance requires a stronger allowlist." |
 | Health endpoint timestamp | **Informational** | "Minor information disclosure. Consider removing." |
 | No RLS | **Informational** | "Application-level auth is adequate. Document the decision." |
 | Secrets management | **Pass** | "Server-only, env-validated, gitignored. No findings." |
@@ -263,10 +270,10 @@ If a competent security auditor reviewed this codebase:
 ## Recommended Execution Order
 
 1. **Item 2** — Drop `timestamp` from health endpoint (5-minute fix, zero risk)
-2. **Item 1 Phase 1** — Expand `CLERK_CSP_DIRECTIVES` in `proxy.ts` with the combined policy above; deploy as `Content-Security-Policy-Report-Only`; point `report-uri` at Sentry CSP endpoint
-3. **Item 1 Phase 2** — Monitor Sentry for CSP violations for 1-2 weeks; fix any missing domains
-4. **Item 1 Phase 3** — Promote to enforcing `Content-Security-Policy`
-5. **Item 1 Future** — Upgrade to nonce-based `script-src` via Clerk's `strict: true` mode
+2. **Item 1 Phase 0** — Accept the corrected CSP model in this doc and record the desired ownership path: keep Clerk automatic CSP, move to Clerk strict mode, or own CSP manually
+3. **Item 1 Phase 1** — If we want visibility first, enable Clerk `reportOnly` / `reportTo` in `proxy.ts` and add `report-uri` pointing to Sentry's Security Header endpoint
+4. **Item 1 Phase 2** — If we want a stronger CSP, refactor `ClerkProvider` / `next-themes` for nonce support and run a strict-mode report-only rollout
+5. **Item 1 Phase 3** — Promote the chosen policy to enforcing mode only after auth flows, theme initialization, Sentry reporting, and billing redirects are verified
 6. **Item 3** — No action; re-evaluate if architecture changes
 
 ---
@@ -274,9 +281,9 @@ If a competent security auditor reviewed this codebase:
 ## Definition of Done
 
 - [ ] Health endpoint no longer returns `timestamp` to unauthenticated callers
-- [ ] `CLERK_CSP_DIRECTIVES` in `proxy.ts` expanded with `default-src`, `script-src`, `style-src`, `frame-src`, `form-action`, `upgrade-insecure-requests`
-- [ ] CSP deployed as `Content-Security-Policy-Report-Only` in production
-- [ ] `report-uri` pointing to Sentry CSP endpoint for violation monitoring
-- [ ] CSP violations monitored for 1-2 weeks with no false positives
-- [ ] All Clerk auth flows (sign-in, sign-up, user button), Stripe checkout, and Sentry error reporting verified under the policy
-- [ ] Promoted to enforcing `Content-Security-Policy`
+- [ ] This debt doc no longer misstates current CSP behavior
+- [ ] A CSP ownership decision is recorded: Clerk automatic, Clerk strict mode, or manual CSP
+- [ ] If report-only is used, `report-uri` and `report-to` / `Reporting-Endpoints` are wired to Sentry's Security Header endpoint
+- [ ] If strict mode is chosen, `ClerkProvider` and `next-themes` nonce requirements are implemented and validated
+- [ ] Clerk auth flows, theme initialization, Sentry reporting, and billing redirects are verified under the chosen policy
+- [ ] Enforcing CSP is enabled or the accepted residual risk of Clerk automatic defaults is explicitly documented
