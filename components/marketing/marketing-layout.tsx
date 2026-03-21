@@ -99,7 +99,9 @@ export function MarketingLayout({
             </div>
           </div>
           <div className="mt-8 border-t border-border pt-8 text-sm text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} Addiction Boards</p>
+            <p>
+              &copy; {new Date().toISOString().slice(0, 4)} Addiction Boards
+            </p>
           </div>
         </div>
       </footer>

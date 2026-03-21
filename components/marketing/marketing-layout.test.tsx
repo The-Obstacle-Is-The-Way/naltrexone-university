@@ -31,7 +31,38 @@ beforeAll(async () => {
   ));
 });
 
+function restoreTimeZone(originalTimeZone: string | undefined) {
+  if (originalTimeZone === undefined) {
+    delete process.env.TZ;
+    return;
+  }
+
+  process.env.TZ = originalTimeZone;
+}
+
 describe('MarketingLayout', () => {
+  it('renders the footer copyright year from UTC, not the local runtime year', () => {
+    const originalTimeZone = process.env.TZ;
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:30:00.000Z'));
+    process.env.TZ = 'America/New_York';
+
+    try {
+      const html = renderToStaticMarkup(
+        <MarketingLayout authNav={<div>Auth</div>} featuresHref="/#features">
+          <div>Content</div>
+        </MarketingLayout>,
+      );
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const footer = doc.querySelector('footer');
+
+      expect(footer?.textContent).toContain('© 2026 Addiction Boards');
+    } finally {
+      restoreTimeZone(originalTimeZone);
+      vi.useRealTimers();
+    }
+  });
+
   it('renders a single focusable main landmark', () => {
     const html = renderToStaticMarkup(
       <MarketingLayout authNav={<div>Auth</div>} featuresHref="/#features">
