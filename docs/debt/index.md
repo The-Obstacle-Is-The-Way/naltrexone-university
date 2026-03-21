@@ -20,6 +20,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
 | [DEBT-318](./debt-318-tutor-bookmark-before-answer.md) | Bookmark visible before feedback in tutor mode and quick practice — keep the surface, but delay the action until inline feedback/explanation is visible | P3 | — |
 | [DEBT-329](./debt-329-navigator-colorblind-accessibility.md) | Question navigator relies on color alone (red/green) to distinguish correct from incorrect — fails WCAG 1.4.1 for colorblind users. Both `QuestionNavigator` and `ReviewQuestionNavigator` affected. | P3 | — |
+| [DEBT-330](./debt-330-review-action-bar-bookmark-placement.md) | Post-exam review action bar places Bookmark between Previous and Next — intermixes secondary action with primary navigation controls, confusing at a glance | P3 | — |
+| [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — no global Content-Security-Policy header (CSP only via Clerk middleware, public routes unprotected), health endpoint leaks timestamp, no RLS (accepted architecture decision) | P2 | — |
 | [DEBT-333](./debt-333-browser-test-flakiness-audit.md) | Browser test flakiness — one confirmed `deferred.resolve()` call site ends a browser test before async state settles; optional same-file cleanup hardening remains under consideration | P2 | — |
 
 **Next Debt ID:** DEBT-334
