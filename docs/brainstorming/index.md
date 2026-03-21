@@ -29,7 +29,8 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 |----|-------|--------|--------------|
 | [BS-044](./bs-044-dark-mode-border-weight-tiering.md) | Dark Mode Border Weight Tiering — broad cross-surface tiering remains open after narrower choice-button and History slices were resolved via `DEBT-280`, `DEBT-301`, and `DEBT-302` | Active | [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
 | [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) | Bookmark Icon Toggle — replace "Remove" text pill and "Bookmark"/"Remove bookmark" action bar pills with filled/unfilled bookmark icon (Lucide `Bookmark` with `fill-current` toggle); phased rollout starting with Bookmarks page | Active | [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) |
-**Next Brainstorming ID:** BS-059
+| [BS-059](./bs-059-practice-session-action-bar-button-arrangement.md) | Practice session action bar has up to 6 buttons (Previous, Submit, Try Again, Bookmark, Next, Back to...) with no visual grouping — same bookmark-between-nav issue as DEBT-330 plus additional state complexity | Active | [DEBT-330](../debt/debt-330-review-action-bar-bookmark-placement.md) |
+**Next Brainstorming ID:** BS-060
 
 ---
 
