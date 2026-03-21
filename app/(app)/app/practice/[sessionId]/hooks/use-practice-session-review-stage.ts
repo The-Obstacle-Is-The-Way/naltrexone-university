@@ -109,6 +109,7 @@ export function usePracticeSessionReviewStage(
   const [postExamReviewCurrentQuestionId, setPostExamReviewCurrentQuestionId] =
     useState<string | null>(null);
   const [navigatorReloadCount, setNavigatorReloadCount] = useState(0);
+  const latestPostExamReviewRequestIdRef = useRef(0);
   const endSessionIdempotencyKeyRef = useRef(crypto.randomUUID());
   const finalizeExamIdempotencyKeyRef = useRef(crypto.randomUUID());
 
@@ -212,6 +213,8 @@ export function usePracticeSessionReviewStage(
     async (nextSummary: EndPracticeSessionOutput | null): Promise<void> => {
       if (!nextSummary) return;
 
+      latestPostExamReviewRequestIdRef.current += 1;
+      const requestId = latestPostExamReviewRequestIdRef.current;
       setPendingExamSummary(nextSummary);
       setPostExamReview(null);
       setPostExamReviewCurrentQuestionId(null);
@@ -229,6 +232,7 @@ export function usePracticeSessionReviewStage(
         );
       } catch (error) {
         if (!input.isMounted()) return;
+        if (requestId !== latestPostExamReviewRequestIdRef.current) return;
         reportClientError(error, {
           component: 'UsePracticeSessionReviewStage',
           action: 'loadPostExamReview',
@@ -241,6 +245,7 @@ export function usePracticeSessionReviewStage(
       }
 
       if (!input.isMounted()) return;
+      if (requestId !== latestPostExamReviewRequestIdRef.current) return;
       if (!result.ok) {
         setPostExamReviewLoadState({
           status: 'error',

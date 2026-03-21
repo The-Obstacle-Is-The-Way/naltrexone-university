@@ -8,6 +8,7 @@ import type {
   GetPracticeSessionReviewOutput,
   GetPracticeSessionSummaryOutput,
 } from '@/src/adapters/controllers/practice-controller';
+import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import {
   type UsePracticeSessionReviewStageInput,
@@ -54,6 +55,43 @@ function createInput(sessionMode: 'tutor' | 'exam') {
       getCompletedSessionQuestionsWithFeedbackMock,
     saveCurrentExamDraft: saveCurrentExamDraftMock,
   };
+}
+
+function createPostExamReview(
+  questionId: string,
+): GetCompletedSessionQuestionsWithFeedbackOutput {
+  return {
+    sessionId: 'session-1',
+    mode: 'exam',
+    totalCount: 1,
+    answeredCount: 1,
+    markedCount: 0,
+    rows: [
+      {
+        isAvailable: true,
+        questionId,
+        slug: `${questionId}-slug`,
+        stemMd: `Stem for ${questionId}`,
+        difficulty: 'easy',
+        order: 1,
+        isAnswered: true,
+        isCorrect: true,
+        markedForReview: false,
+        choices: [
+          { id: `${questionId}-choice-1`, label: 'A', textMd: 'Choice A' },
+        ],
+        selectedChoiceId: `${questionId}-choice-1`,
+        correctChoiceId: `${questionId}-choice-1`,
+        explanationMd: `Explanation for ${questionId}`,
+        referenceMd: null,
+        choiceExplanations: [],
+      },
+    ],
+  };
+}
+
+async function flushDeferredSettlement(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 10));
 }
 
 describe('usePracticeSessionReviewStage (browser)', () => {
@@ -502,6 +540,165 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     await expect
       .poll(() => harness.result.current.summary?.sessionId ?? null)
       .toBe('session-1');
+  });
+
+  it("keeps retry request B's success when stale retry request A rejects afterward", async () => {
+    const retryA =
+      createDeferred<
+        ActionResult<GetCompletedSessionQuestionsWithFeedbackOutput>
+      >();
+    const retryB =
+      createDeferred<
+        ActionResult<GetCompletedSessionQuestionsWithFeedbackOutput>
+      >();
+    finalizeExamAnswersMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        endedAt: '2026-02-07T00:20:00.000Z',
+        mode: 'exam',
+        questionCount: 1,
+        totals: {
+          answered: 1,
+          correct: 1,
+          accuracy: 1,
+          durationSeconds: 60,
+        },
+      }),
+    );
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+    getCompletedSessionQuestionsWithFeedbackMock
+      .mockRejectedValueOnce(new Error('Initial review fetch failed'))
+      .mockImplementationOnce(async () => retryA.promise)
+      .mockImplementationOnce(async () => retryB.promise);
+
+    const input = createInput('exam');
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStage(input),
+    );
+
+    await harness.result.current.onFinalizeReview();
+
+    await expect
+      .poll(() => harness.result.current.postExamReviewLoadState.status)
+      .toBe('error');
+
+    harness.result.current.onRetryPostExamReview();
+    harness.result.current.onRetryPostExamReview();
+
+    await expect
+      .poll(
+        () => getCompletedSessionQuestionsWithFeedbackMock.mock.calls.length,
+      )
+      .toBe(3);
+
+    retryB.resolve(ok(createPostExamReview('question-b')));
+    await expect
+      .poll(() => harness.result.current.postExamReviewLoadState)
+      .toEqual({ status: 'ready' });
+    expect(harness.result.current.postExamReview?.rows[0]?.questionId).toBe(
+      'question-b',
+    );
+    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe(
+      'question-b',
+    );
+
+    retryA.reject(new Error('Stale retry failed'));
+    await flushDeferredSettlement();
+
+    expect(harness.result.current.postExamReviewLoadState).toEqual({
+      status: 'ready',
+    });
+    expect(harness.result.current.postExamReview?.rows[0]?.questionId).toBe(
+      'question-b',
+    );
+    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe(
+      'question-b',
+    );
+  });
+
+  it("preserves retry request B's error when stale retry request A succeeds afterward", async () => {
+    const retryA =
+      createDeferred<
+        ActionResult<GetCompletedSessionQuestionsWithFeedbackOutput>
+      >();
+    const retryB =
+      createDeferred<
+        ActionResult<GetCompletedSessionQuestionsWithFeedbackOutput>
+      >();
+    finalizeExamAnswersMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        endedAt: '2026-02-07T00:20:00.000Z',
+        mode: 'exam',
+        questionCount: 1,
+        totals: {
+          answered: 1,
+          correct: 1,
+          accuracy: 1,
+          durationSeconds: 60,
+        },
+      }),
+    );
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+    getCompletedSessionQuestionsWithFeedbackMock
+      .mockRejectedValueOnce(new Error('Initial review fetch failed'))
+      .mockImplementationOnce(async () => retryA.promise)
+      .mockImplementationOnce(async () => retryB.promise);
+
+    const input = createInput('exam');
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStage(input),
+    );
+
+    await harness.result.current.onFinalizeReview();
+
+    await expect
+      .poll(() => harness.result.current.postExamReviewLoadState.status)
+      .toBe('error');
+
+    harness.result.current.onRetryPostExamReview();
+    harness.result.current.onRetryPostExamReview();
+
+    await expect
+      .poll(
+        () => getCompletedSessionQuestionsWithFeedbackMock.mock.calls.length,
+      )
+      .toBe(3);
+
+    retryB.reject(new Error('Latest retry failed'));
+    await expect
+      .poll(() => harness.result.current.postExamReviewLoadState)
+      .toEqual({ status: 'error', message: 'Latest retry failed' });
+    expect(harness.result.current.postExamReview).toBeNull();
+    expect(harness.result.current.postExamReviewCurrentQuestionId).toBeNull();
+
+    retryA.resolve(ok(createPostExamReview('question-a')));
+    await flushDeferredSettlement();
+
+    expect(harness.result.current.postExamReviewLoadState).toEqual({
+      status: 'error',
+      message: 'Latest retry failed',
+    });
+    expect(harness.result.current.postExamReview).toBeNull();
+    expect(harness.result.current.postExamReviewCurrentQuestionId).toBeNull();
   });
 
   it('saves the current exam draft before entering review stage', async () => {

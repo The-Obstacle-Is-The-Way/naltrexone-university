@@ -13,7 +13,11 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-230
+**Next Bug ID:** BUG-231
+
+**Manual report (2026-03-21) — follow-up bug sweep:**
+
+- BUG-230 filed: post-exam review retry path has no request-sequencing guard, so stale retry responses can overwrite newer state in `usePracticeSessionReviewStage`.
 
 **Latest archival (2026-03-21):**
 - BUG-229 verified fixed: marketing footer copyright year now derives from UTC via `toISOString().slice(0, 4)`, regression coverage freezes `2026-01-01T00:30:00.000Z` under `America/New_York`, and the bug doc is archived to `docs/_archive/bugs/`.
@@ -96,6 +100,7 @@ Active open bugs are listed below.
 
 | Bug | Priority | Summary |
 |-----|----------|---------|
+| [BUG-230](./bug-230-post-exam-review-retry-race.md) | P3 | Post-exam review retry path has no request-sequencing guard, so overlapping retry loads can let stale success/error responses overwrite the newest state |
 | ~~BUG-229~~ | P4 | ~~Marketing footer copyright year used local runtime time instead of UTC~~ — **Resolved 2026-03-21.** Footer now derives the year from a UTC ISO string. [Archived](../_archive/bugs/bug-229-marketing-footer-year-uses-local-time.md). |
 | ~~BUG-228~~ | P2 | ~~Browser-side Sentry requests blocked by CSP~~ — **Resolved 2026-03-18.** `parseSentryIngestOrigin()` adds DSN origin to `connect-src`. [Archived](../_archive/bugs/bug-228-client-sentry-ingest-blocked-by-csp.md). |
 
