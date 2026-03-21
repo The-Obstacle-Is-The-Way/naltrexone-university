@@ -152,19 +152,6 @@ export function PostExamReviewView({
           </Button>
         ) : null}
 
-        {currentRow?.isAvailable ? (
-          <Button
-            type="button"
-            variant="outline"
-            className="rounded-full"
-            aria-pressed={isBookmarked}
-            disabled={bookmarkStatus === 'loading'}
-            onClick={onToggleBookmark}
-          >
-            {isBookmarked ? 'Remove bookmark' : 'Bookmark'}
-          </Button>
-        ) : null}
-
         {nextRow ? (
           <Button
             type="button"
@@ -182,6 +169,19 @@ export function PostExamReviewView({
             Finish review
           </Button>
         )}
+
+        {currentRow?.isAvailable ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-full sm:ml-auto"
+            aria-pressed={isBookmarked}
+            disabled={bookmarkStatus === 'loading'}
+            onClick={onToggleBookmark}
+          >
+            {isBookmarked ? 'Remove bookmark' : 'Bookmark'}
+          </Button>
+        ) : null}
       </div>
     </div>
   );
