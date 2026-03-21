@@ -3,7 +3,7 @@
 **Date:** 2026-03-21
 **Triggered by:** DEBT-330 investigation revealed the same bookmark-between-nav-controls problem exists on the practice session surface (`question-page-client.tsx:371-470`), but with more buttons and more state combinations making it harder to reason about in isolation.
 **Scope:** Audit the practice session action bar's button arrangement across all states (pre-submit, post-submit, review mode, session nav present/absent) and determine if the button grouping needs the same kind of fix as DEBT-330 (post-exam review surface).
-**Related:** [DEBT-330](../debt/debt-330-review-action-bar-bookmark-placement.md), [BS-052](./bs-052-bookmark-icon-toggle-replacement.md), [BS-019 (archived)](../_archive/brainstorming/bs-019-action-bar-label-and-ordering-consistency.md)
+**Related:** [DEBT-330 (resolved)](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md), [BS-052](./bs-052-bookmark-icon-toggle-replacement.md), [BS-019 (archived)](../_archive/brainstorming/bs-019-action-bar-label-and-ordering-consistency.md)
 
 ---
 
@@ -25,27 +25,32 @@ The practice session action bar at `question-page-client.tsx:371-470` renders up
 ### State combinations (what the user actually sees)
 
 **Pre-submit (first question, no session nav):**
-```
+
+```text
 [ Submit ]
 ```
 
 **Pre-submit (with session nav):**
-```
+
+```text
 [ Previous ]  [ Submit ]  [ Next ]  [ Back to... ]
 ```
 
 **Post-submit (tutor mode, with session nav):**
-```
+
+```text
 [ Previous ]  [ Try Again ]  [ Bookmark ]  [ Next ]  [ Back to... ]
 ```
 
 **Review mode (session review, with nav):**
-```
+
+```text
 [ Previous ]  [ Bookmark ]  [ Next ]  [ Back to... ]
 ```
 
 **Review mode (first question, session review):**
-```
+
+```text
 [ <spacer> ]  [ Bookmark ]  [ Next ]  [ Back to... ]
 ```
 
@@ -70,6 +75,7 @@ This surface has 6 possible buttons across multiple states. The fix isn't just "
 ## Severity Assessment
 
 **Low-medium.** The bar works. Users can find and press all the buttons. The confusion is subtle:
+
 - Bookmark between nav controls (same as DEBT-330 but masked by more buttons)
 - Visual flatness (all buttons look equally important)
 - Mobile stacking produces a tall column of 4-5 pills
@@ -78,7 +84,7 @@ This is polish, not broken functionality.
 
 ## Possible Directions (Not Proposals Yet)
 
-1. **Apply the same DEBT-330 fix** — push Bookmark to the far right with `ml-auto`, keep everything else in source order. Simple, consistent with whatever DEBT-330 lands.
+1. **Apply the same DEBT-330 fix** — push Bookmark to the far right with `ml-auto`, keep everything else in source order. Simple, consistent with the post-exam review pattern that DEBT-330 already shipped.
 
 2. **Group buttons into zones** — Navigation (Previous/Next) left, Actions (Submit/Try Again) center, Secondary (Bookmark) + Exit (Back to...) right. Use spacers or nested flex containers.
 
@@ -88,7 +94,7 @@ This is polish, not broken functionality.
 
 ## Open Questions
 
-1. Should we resolve DEBT-330 first and then apply the same pattern here, or design both surfaces together?
+1. How closely should this surface mirror the DEBT-330 pattern now that post-exam review already ships it?
 2. Does BS-052 (icon toggle) need to land before or after this?
 3. Is the 5-button mobile stack actually a problem users have noticed, or is it theoretical?
 4. Should "Back to..." move out of the action bar entirely (e.g., breadcrumb or top-of-page link)?
@@ -99,3 +105,4 @@ This is polish, not broken functionality.
 |------|----------|-----------|
 | 2026-03-21 | Created BS-059 | DEBT-330 investigation surfaced that the practice session action bar has the same bookmark placement issue plus additional complexity from more buttons and state combinations. Needs its own exploration separate from the narrowly-scoped DEBT-330 fix. |
 | 2026-03-21 | Not blocking DEBT-330 | The post-exam review fix can land independently. This doc captures the broader question for future work. |
+| 2026-03-21 | DEBT-330 resolved independently | Post-exam review now ships navigation-first ordering with trailing Bookmark, so this doc now represents a follow-up consistency exploration rather than a dependency blocker. |

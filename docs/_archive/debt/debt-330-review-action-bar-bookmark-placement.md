@@ -2,18 +2,41 @@
 
 **Priority:** P3
 **Created:** 2026-03-20
+**Resolved:** 2026-03-21 — [PR #241](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/241)
 **Source:** Manual UI review during DEBT-326 investigation
 **Related:** [PostExamReviewView](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx)
 
 ---
 
-## The Problem
+## Resolution
 
-This debt was re-audited against production code on 2026-03-21.
+This debt was resolved on 2026-03-21 in [PR #241](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/241).
 
-In the post-exam review bottom action bar, the Bookmark button currently sits between Previous and Next (or Finish review) for available questions. That intermixes a secondary action with the primary sequential-review controls.
+The post-exam review action bar now ships the recommended navigation-first layout:
 
-Verified production implementation:
+```text
+Available middle question: [ Previous ] [ Next ] [ Bookmark ]
+Available first question:  [ Next ] [ Bookmark ]
+Available last question:   [ Previous ] [ Finish review ] [ Bookmark ]
+Single available question: [ Finish review ] [ Bookmark ]
+Unavailable question:      bookmark omitted entirely
+```
+
+What shipped:
+
+- `post-exam-review-view.tsx` now renders `Bookmark` after `Next` / `Finish review` in DOM order and uses `sm:ml-auto` to keep bookmark visually trailing on desktop while stacking last on mobile.
+- `post-exam-review-view.test.tsx` now locks in button order for middle, first, last, single-question, and unavailable-question states.
+- `docs/frontend/design-principles.md` now documents the post-exam review action-bar layout.
+
+The original pre-fix audit and recommendation are preserved below as the historical decision record.
+
+## Original Problem
+
+This debt was re-audited against production code on 2026-03-21 before the fix shipped in PR #241.
+
+In the post-exam review bottom action bar, the Bookmark button sat between Previous and Next (or Finish review) for available questions. That intermixed a secondary action with the primary sequential-review controls.
+
+Verified pre-fix production implementation:
 
 - The bottom bar lives at [`app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx:143-185`](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx). The previous `:133-175` citation was wrong; lines 133-140 are still inside the unavailable/empty-state branch.
 - The flex container is exactly `className="flex flex-col gap-3 sm:flex-row"`.
@@ -21,7 +44,7 @@ Verified production implementation:
 - `Next` and `Finish review` use the default filled button with the same `rounded-full` shape.
 - Bookmark renders only when `currentRow?.isAvailable` is true.
 
-Current as-built layouts:
+Pre-fix layouts observed during the audit:
 
 ```text
 Available middle question: [ Previous ] [ Bookmark ] [ Next ]
@@ -42,9 +65,9 @@ Consumer check:
 
 Test coverage check:
 
-- [`app/(app)/app/practice/[sessionId]/components/post-exam-review-view.test.tsx`](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.test.tsx) currently covers panel semantics, focus-ring classes, and feedback states only.
-- [`app/(app)/app/practice/[sessionId]/components/post-exam-review-view.browser.spec.tsx`](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.browser.spec.tsx) currently covers focus movement only.
-- There is no existing regression test for button order or grouping.
+- At audit time, [`app/(app)/app/practice/[sessionId]/components/post-exam-review-view.test.tsx`](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.test.tsx) covered panel semantics, focus-ring classes, and feedback states only.
+- At audit time, [`app/(app)/app/practice/[sessionId]/components/post-exam-review-view.browser.spec.tsx`](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.browser.spec.tsx) covered focus movement only.
+- At audit time, there was no regression test for button order or grouping.
 
 ## Why This Is Confusing
 
@@ -103,9 +126,9 @@ Mobile:  [ Previous ] [ Next / Finish review ]
 - On desktop, push Bookmark to the trailing edge with `sm:ml-auto` on the secondary-action group.
 - On mobile, stack the secondary action below the navigation group so Bookmark no longer interrupts the paging flow.
 
-## Recommendation
+## Resolution Rationale
 
-Choose **Option 4: a two-group responsive action bar**.
+The audit recommended, and PR #241 implemented, **Option 4: a two-group responsive action bar**.
 
 Why this is the best fit:
 
@@ -130,9 +153,9 @@ Recommendation boundaries:
 
 ## Acceptance Criteria
 
-- [ ] Previous and Next/Finish review render as one visual navigation group on desktop
-- [ ] On mobile, the stacked order is navigation group first, Bookmark second
-- [ ] Bookmark remains a labeled, accessible toggle (`aria-pressed` preserved)
-- [ ] Bookmark remains visually subordinate to the primary navigation flow
-- [ ] Regression coverage is added for button order / grouping because no current test file asserts it
-- [ ] Update `docs/frontend/design-principles.md` action bar table (lines 63-76) to include the post-exam review layout — currently undocumented
+- [x] Previous and Next/Finish review render as one visual navigation group on desktop
+- [x] On mobile, the stacked order is navigation group first, Bookmark second
+- [x] Bookmark remains a labeled, accessible toggle (`aria-pressed` preserved)
+- [x] Bookmark remains visually subordinate to the primary navigation flow
+- [x] Regression coverage is added for button order / grouping because no current test file asserted it before this fix
+- [x] `docs/frontend/design-principles.md` action bar table now includes the post-exam review layout
