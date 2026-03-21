@@ -236,6 +236,13 @@ But the earlier "NOT in `next.config.ts`" wording was too absolute. Next.js offi
    - **Impact:** Low. It widens the `connect-src` surface area by one unnecessary staging domain. It cannot be removed through `contentSecurityPolicy.directives`; removing it would require either an upstream Clerk change or taking full CSP ownership away from Clerk's automatic defaults.
    - **Recommendation:** Optionally file a low-severity issue on [`clerk/javascript`](https://github.com/clerk/javascript) requesting that `images.clerkstage.dev` be made conditional on instance type.
 
+5. **`form-action 'self'` may interact unpredictably with Stripe checkout redirects — must verify before enforcing.**
+   - Clerk's automatic CSP includes `form-action 'self'`, which restricts form submissions to same-origin.
+   - The pricing page uses HTML forms that POST to same-origin server actions (`app/pricing/subscribe-actions.ts`), which then call `redirect()` with the Stripe Checkout URL returned by `billing-controller.ts`.
+   - [MDN explicitly notes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/form-action) that browser behavior is inconsistent on whether `form-action` blocks redirects *after* a form submission.
+   - In report-only mode this is safe — violations are logged, not enforced. But before flipping to enforcing mode, the Subscribe and Manage Billing flows **must** be exercised in a browser and checked for `form-action` violation reports.
+   - This also applies to any future auth provider that uses traditional `<form>` POST to an external domain (Clerk currently uses JS-based redirects, so it is unaffected today).
+
 ### Recommended Posture
 
 For this application, the technically accurate recommendation is:
@@ -401,4 +408,4 @@ If a competent security auditor reviewed this codebase:
 - [x] If report-only is used, `report-uri`, the CSP `report-to` directive, and `Reporting-Endpoints` are wired to Sentry's Security Header endpoint; add legacy `Report-To` too if we want Sentry's widest compatibility path
 - [x] If strict mode is chosen, `ClerkProvider` and `next-themes` nonce requirements are implemented and validated
 - [x] Clerk auth flows, theme initialization, Sentry reporting, and billing redirects are verified under the chosen policy — deployed verification on 2026-03-21 confirmed zero CSP violations across both `addictionboards.com` (production) and `naltrexone-university-git-dev-john-h-jungs-projects.vercel.app` (dev). Auth sign-out/sign-in via Clerk+Google, theme toggle, all authenticated pages, and health endpoint passed clean. Billing (Stripe checkout) was not tested due to paywall but uses server-side redirect only (no client-side Stripe assets).
-- [ ] Enforcing CSP is enabled or the accepted residual risk of Clerk automatic defaults is explicitly documented
+- [ ] Enforcing CSP is enabled or the accepted residual risk of Clerk automatic defaults is explicitly documented — before flipping, exercise Subscribe and Manage Billing flows in a browser and check for `form-action 'self'` violations (see gotcha #5)
