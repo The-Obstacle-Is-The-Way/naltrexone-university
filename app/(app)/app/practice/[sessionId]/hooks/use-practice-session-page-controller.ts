@@ -5,8 +5,10 @@ import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
 } from '@/app/(app)/app/practice/practice-logic';
+import { STANDARD_READ_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import { reportClientError } from '@/lib/report-client-error';
 import { useIsMounted } from '@/lib/use-is-mounted';
+import { withTimeout } from '@/lib/with-timeout';
 import {
   endPracticeSession,
   finalizeExamAnswers,
@@ -23,6 +25,8 @@ import {
 import type { PracticeSessionPageViewProps } from '../components/practice-session-page-view';
 import { usePracticeSessionMarkForReview } from './use-practice-session-mark-for-review';
 import { usePracticeSessionReviewStage } from './use-practice-session-review-stage';
+
+const BOOTSTRAP_SUMMARY_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 
 export function usePracticeSessionPageController(
   sessionId: string,
@@ -84,7 +88,10 @@ export function usePracticeSessionPageController(
     setShouldRetryBootstrap(false);
     questionFlow.setLoadState({ status: 'loading' });
 
-    void getPracticeSessionSummary({ sessionId })
+    void withTimeout(
+      getPracticeSessionSummary({ sessionId }),
+      BOOTSTRAP_SUMMARY_TIMEOUT_MS,
+    )
       .then((result) => {
         if (requestId !== bootstrapRequestIdRef.current || !isMounted()) return;
 

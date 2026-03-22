@@ -1,5 +1,14 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { render } from 'vitest-browser-react';
+import { STANDARD_READ_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import type {
   ActionErrorCode,
   ActionResult,
@@ -600,6 +609,75 @@ describe('usePracticeSessionPageController (browser)', () => {
       .element(screen.getByTestId('question-id'))
       .toHaveTextContent('question-1');
     await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(1);
+  });
+
+  it('sets error state and enables retry when bootstrap summary times out', async () => {
+    vi.useFakeTimers();
+    try {
+      const deferredSummary = createDeferred<ActionResult<never>>();
+
+      getPracticeSessionSummaryMock
+        .mockImplementationOnce(() => deferredSummary.promise)
+        .mockResolvedValueOnce(
+          errorResult('CONFLICT', 'Practice session has not ended'),
+        );
+      getNextQuestionMock.mockResolvedValue(
+        ok(
+          createQuestionResponse({
+            questionId: 'question-1',
+            session: {
+              mode: 'tutor',
+              index: 0,
+              total: 2,
+              isMarkedForReview: false,
+            },
+          }),
+        ),
+      );
+      mockBookmarksAndReview(
+        createReviewResponse({
+          mode: 'tutor',
+          totalCount: 2,
+          answeredCount: 0,
+          markedCount: 0,
+        }),
+      );
+
+      const screen = await render(
+        <PracticeSessionPageControllerSummaryProbe />,
+      );
+
+      await expect
+        .element(screen.getByTestId('load-status'))
+        .toHaveTextContent('loading');
+      expect(getPracticeSessionSummaryMock).toHaveBeenCalledTimes(1);
+      expect(getNextQuestionMock).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(STANDARD_READ_TIMEOUT_MS);
+
+      await expect
+        .element(screen.getByTestId('load-status'))
+        .toHaveTextContent('error');
+      await expect
+        .element(screen.getByTestId('error-message'))
+        .toHaveTextContent('Request timed out. Please try again.');
+      expect(getNextQuestionMock).not.toHaveBeenCalled();
+
+      await screen.getByRole('button', { name: 'try-again' }).click();
+
+      await expect
+        .poll(() => getPracticeSessionSummaryMock.mock.calls.length)
+        .toBe(2);
+      await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(1);
+      await expect
+        .element(screen.getByTestId('load-status'))
+        .toHaveTextContent('ready');
+      await expect
+        .element(screen.getByTestId('question-id'))
+        .toHaveTextContent('question-1');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('loads the current question and allows selecting a choice', async () => {

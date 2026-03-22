@@ -64,6 +64,16 @@ This makes the bootstrap summary path the outlier in the current production audi
   - add explicit coverage for timeout/error fallback on bootstrap
   - preserve current sequencing coverage for active-session bootstrap vs question load
 
+## Resolution (2026-03-21)
+
+- `usePracticeSessionPageController()` now wraps the bootstrap summary read in `withTimeout(..., BOOTSTRAP_SUMMARY_TIMEOUT_MS)`, with `BOOTSTRAP_SUMMARY_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS`
+- added browser regression coverage in `use-practice-session-page-controller.browser.spec.tsx`:
+  - `sets error state and enables retry when bootstrap summary times out`
+  - verifies timeout-driven transition to `loadState.status = 'error'` and that `Try again` re-invokes the bootstrap path
+- verification passed on `2026-03-21`:
+  - `pnpm test:browser`
+  - `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser`
+
 ## Notes
 
 - This debt came out of the async/await audit, but it is **not** evidence of a broader unawaited-promise problem in the codebase
