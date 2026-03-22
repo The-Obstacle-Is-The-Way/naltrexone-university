@@ -3,7 +3,7 @@
 **Priority:** P3
 **Created:** 2026-03-21
 **Source:** Repo-wide async/await audit prompted by DEBT-333 / PR #244
-**Related:** [DEBT-333](./debt-333-browser-test-flakiness-audit.md), [use-practice-session-page-controller.ts](../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts), [with-timeout.ts](../../lib/with-timeout.ts), [timeout-tiers](../../app/(app)/app/shared/timeout-tiers.ts)
+**Related:** [DEBT-333](../_archive/debt/debt-333-browser-test-flakiness-audit.md), [use-practice-session-page-controller.ts](../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts), [with-timeout.ts](../../lib/with-timeout.ts), [timeout-tiers](../../app/(app)/app/shared/timeout-tiers.ts)
 
 ---
 
@@ -43,7 +43,9 @@ This makes the bootstrap summary path the outlier in the current production audi
 - the existing browser spec already demonstrates that the page waits on the unresolved bootstrap promise before it loads questions:
   - `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.browser.spec.tsx`
   - test: `loads active session questions only after summary bootstrap reports an active session`
-  - current coverage proves sequencing, but does not prove timeout fallback
+- the same browser spec already covers non-timeout bootstrap error recovery and retry:
+  - test: `retries summary bootstrap before loading questions after a bootstrap error`
+  - current coverage proves sequencing plus explicit error-result retry behavior, but does not prove timeout fallback
 
 ## Expected Behavior
 
