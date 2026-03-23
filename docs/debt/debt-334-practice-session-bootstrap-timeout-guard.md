@@ -3,7 +3,7 @@
 **Priority:** P3
 **Created:** 2026-03-21
 **Source:** Repo-wide async/await audit prompted by DEBT-333 / PR #244
-**Related:** [DEBT-333](./debt-333-browser-test-flakiness-audit.md), [use-practice-session-page-controller.ts](../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts), [with-timeout.ts](../../lib/with-timeout.ts), [timeout-tiers](../../app/(app)/app/shared/timeout-tiers.ts)
+**Related:** [DEBT-333](../_archive/debt/debt-333-browser-test-flakiness-audit.md), [use-practice-session-page-controller.ts](../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts), [with-timeout.ts](../../lib/with-timeout.ts), [timeout-tiers](../../app/(app)/app/shared/timeout-tiers.ts)
 
 ---
 
@@ -43,7 +43,9 @@ This makes the bootstrap summary path the outlier in the current production audi
 - the existing browser spec already demonstrates that the page waits on the unresolved bootstrap promise before it loads questions:
   - `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.browser.spec.tsx`
   - test: `loads active session questions only after summary bootstrap reports an active session`
-  - current coverage proves sequencing, but does not prove timeout fallback
+- the same browser spec already covers non-timeout bootstrap error recovery and retry:
+  - test: `retries summary bootstrap before loading questions after a bootstrap error`
+  - current coverage proves sequencing plus explicit error-result retry behavior, but does not prove timeout fallback
 
 ## Expected Behavior
 
@@ -61,6 +63,16 @@ This makes the bootstrap summary path the outlier in the current production audi
 - **Tests:** extend `use-practice-session-page-controller.browser.spec.tsx`
   - add explicit coverage for timeout/error fallback on bootstrap
   - preserve current sequencing coverage for active-session bootstrap vs question load
+
+## Resolution (2026-03-21)
+
+- `usePracticeSessionPageController()` now wraps the bootstrap summary read in `withTimeout(..., BOOTSTRAP_SUMMARY_TIMEOUT_MS)`, with `BOOTSTRAP_SUMMARY_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS`
+- added browser regression coverage in `use-practice-session-page-controller.browser.spec.tsx`:
+  - `sets error state and enables retry when bootstrap summary times out`
+  - verifies timeout-driven transition to `loadState.status = 'error'` and that `Try again` re-invokes the bootstrap path
+- verification passed on `2026-03-21`:
+  - `pnpm test:browser`
+  - `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser`
 
 ## Notes
 
