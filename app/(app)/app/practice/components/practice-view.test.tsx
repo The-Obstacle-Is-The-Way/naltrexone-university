@@ -308,37 +308,6 @@ describe('PracticeView', () => {
     expect(html).not.toContain('>Mark for review<');
   });
 
-  it('does not render the bookmark button in tutor mode before feedback', () => {
-    const html = renderToStaticMarkup(
-      <PracticeView
-        sessionInfo={{
-          sessionId: 'session-1',
-          mode: 'tutor',
-          index: 0,
-          total: 10,
-          isMarkedForReview: false,
-        }}
-        loadState={{ status: 'ready' }}
-        question={createQuestionProps()}
-        selectedChoiceId={null}
-        isAnswered={false}
-        submitResult={null}
-        isPending={false}
-        bookmarkStatus="idle"
-        isBookmarked={false}
-        canSubmit={false}
-        onTryAgain={() => undefined}
-        onToggleBookmark={() => undefined}
-        onToggleMarkForReview={() => undefined}
-        onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
-        onNextQuestion={() => undefined}
-      />,
-    );
-
-    expect(html).not.toContain('>Bookmark<');
-  });
-
   it('renders the bookmark button in tutor mode after feedback is visible', () => {
     const question = createQuestionProps();
     const selectedChoice = question.choices[0];
@@ -384,29 +353,6 @@ describe('PracticeView', () => {
   });
 
   it('does not render the bookmark button in quick practice on unanswered questions', () => {
-    const html = renderToStaticMarkup(
-      <PracticeView
-        loadState={{ status: 'ready' }}
-        question={createQuestionProps()}
-        selectedChoiceId={null}
-        isAnswered={false}
-        submitResult={null}
-        isPending={false}
-        bookmarkStatus="idle"
-        isBookmarked={false}
-        canSubmit={false}
-        onTryAgain={() => undefined}
-        onToggleBookmark={() => undefined}
-        onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
-        onNextQuestion={() => undefined}
-      />,
-    );
-
-    expect(html).not.toContain('>Bookmark<');
-  });
-
-  it('does not render the bookmark button in quick practice before feedback', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         loadState={{ status: 'ready' }}
@@ -686,6 +632,59 @@ describe('PracticeView', () => {
     );
 
     expect(labels).toEqual(['Previous', 'Submit', 'Next']);
+  });
+
+  it('keeps tutor action bar ordering as Previous, Next, Bookmark after feedback', () => {
+    const question = createNextQuestion();
+    const selectedChoice = question.choices[0];
+    if (!selectedChoice) {
+      throw new Error('Expected at least one choice');
+    }
+
+    const props: Parameters<typeof PracticeView>[0] = {
+      sessionInfo: {
+        sessionId: 'session-1',
+        mode: 'tutor',
+        index: 1,
+        total: 3,
+        isMarkedForReview: false,
+      },
+      loadState: { status: 'ready' },
+      question,
+      selectedChoiceId: selectedChoice.id,
+      isAnswered: true,
+      submitResult: {
+        attemptId: 'attempt-1',
+        isCorrect: true,
+        correctChoiceId: selectedChoice.id,
+        explanationMd: 'Because.',
+        referenceMd: null,
+        choiceExplanations: [],
+      },
+      isPending: false,
+      bookmarkStatus: 'idle',
+      isBookmarked: false,
+      canSubmit: false,
+      onTryAgain: () => undefined,
+      onToggleBookmark: () => undefined,
+      onSelectChoice: () => undefined,
+      onSubmit: () => undefined,
+      onNextQuestion: () => undefined,
+      onPreviousQuestion: () => undefined,
+      hasPreviousQuestion: true,
+      hasNextQuestion: true,
+    };
+
+    const html = renderToStaticMarkup(<PracticeView {...props} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
+    if (!actionBar) throw new Error('Expected action bar');
+
+    const labels = Array.from(actionBar.querySelectorAll('button')).map(
+      (button) => (button.textContent ?? '').trim(),
+    );
+
+    expect(labels).toEqual(['Previous', 'Next', 'Bookmark']);
   });
 
   it('renders exam action bar with Next and Mark for review and no Submit on the first question', () => {
