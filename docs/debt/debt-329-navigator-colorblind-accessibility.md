@@ -93,15 +93,11 @@ The correct/incorrect badge must use a **different corner** (e.g., bottom-right)
 
 `QuestionNavigator` and `ReviewQuestionNavigator` currently duplicate the review-state mapping, pill grid layout, current-ring styling, and badge positioning logic. A small shared helper or review-specific navigator item component would reduce drift and make the DEBT-329 fix easier to keep consistent across both surfaces.
 
-## Known Visual Limitation
+## Known Visual Notes
 
-The overflow badges meet WCAG 1.4.1 via shape distinction (✓ vs ✗) but have rough visual polish:
-
-- **Light mode:** The `bg-background` badge circle blends into the light page background, making badges less prominent.
-- **Size:** Badges are small (`size-3.5` container, `size-2.5` icon) and feel like a functional band-aid rather than a designed feature.
+- **Light-mode badge visibility (resolved):** The initial `bg-background` badge circle was invisible where it overflowed the button edge in light mode (white on white). Fixed by adding `ring-1 ring-border` to the badge container, which provides a 1px ring that guarantees visibility in both themes without changing the dark-mode appearance.
+- **Size:** Badges are small (`size-3.5` container, `size-2.5` icon) — at the lower end of comfortable readability but recognizable. Any smaller would fail.
 - **Icon colors:** The ✓ is `text-success` (green) and the ✗ is `text-destructive` (red) — matching their parent button. This is redundant reinforcement, not the accessibility mechanism (shape is). A future polish pass could use a neutral color (e.g., `text-foreground`) for better contrast against the button fill.
-
-These are cosmetic — the accessibility fix is functional. Polish can be revisited if users report visual confusion or if a broader design pass touches the navigator.
 
 ## Acceptance Criteria
 
