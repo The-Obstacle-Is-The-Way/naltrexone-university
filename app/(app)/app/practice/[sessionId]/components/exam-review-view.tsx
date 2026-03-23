@@ -7,6 +7,10 @@ import {
 } from '@/app/(app)/app/practice/fire-and-forget';
 import { ReviewCorrectnessBadge } from '@/app/(app)/app/shared/components/review-correctness-badge';
 import {
+  getReviewStatusLabel,
+  getReviewVariant,
+} from '@/app/(app)/app/shared/components/review-navigator-utils';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -54,11 +58,7 @@ export function QuestionNavigator({
             const isCurrent = row.questionId === currentQuestionId;
             const answeredLabel =
               mode === 'review'
-                ? row.isCorrect === true
-                  ? 'Correct'
-                  : row.isCorrect === false
-                    ? 'Incorrect'
-                    : 'Unanswered'
+                ? getReviewStatusLabel(row.isCorrect)
                 : row.isAnswered
                   ? review.mode === 'tutor'
                     ? row.isCorrect === true
@@ -76,11 +76,7 @@ export function QuestionNavigator({
 
             const variant =
               mode === 'review'
-                ? row.isCorrect === true
-                  ? 'success'
-                  : row.isCorrect === false
-                    ? 'destructive'
-                    : 'outline'
+                ? getReviewVariant(row.isCorrect)
                 : isCurrent
                   ? 'default'
                   : row.isAnswered
