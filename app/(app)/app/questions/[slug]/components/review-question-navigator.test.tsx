@@ -222,7 +222,7 @@ describe('ReviewQuestionNavigator', () => {
 
     expect(correctBadge?.getAttribute('aria-hidden')).toBe('true');
     expect(getClassList(correctBadge?.querySelector('svg') ?? null)).toContain(
-      'text-foreground',
+      'text-success',
     );
     expect(getClassList(correctBadge?.querySelector('svg') ?? null)).toContain(
       'size-2.5',
@@ -231,7 +231,7 @@ describe('ReviewQuestionNavigator', () => {
     expect(incorrectBadge?.getAttribute('aria-hidden')).toBe('true');
     expect(
       getClassList(incorrectBadge?.querySelector('svg') ?? null),
-    ).toContain('text-foreground');
+    ).toContain('text-destructive');
     expect(findBottomRightBadge(unanswered)).toBeNull();
     expect(unanswered?.querySelector('svg')).toBeNull();
   });
@@ -255,7 +255,7 @@ describe('ReviewQuestionNavigator', () => {
     const badge = findBottomRightBadge(retriedCorrect);
     expect(badge).not.toBeNull();
     expect(getClassList(badge?.querySelector('svg') ?? null)).toContain(
-      'text-foreground',
+      'text-success',
     );
   });
 });

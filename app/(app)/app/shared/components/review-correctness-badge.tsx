@@ -8,13 +8,14 @@ export function ReviewCorrectnessBadge({
   if (isCorrect === null) return null;
 
   const Icon = isCorrect ? Check : X;
+  const toneClassName = isCorrect ? 'text-success' : 'text-destructive';
 
   return (
     <span
       aria-hidden="true"
       className="absolute -bottom-1 -right-1 flex size-3.5 items-center justify-center rounded-full bg-background ring-1 ring-border"
     >
-      <Icon aria-hidden="true" className="size-2.5 text-foreground" />
+      <Icon aria-hidden="true" className={`size-2.5 ${toneClassName}`} />
     </span>
   );
 }

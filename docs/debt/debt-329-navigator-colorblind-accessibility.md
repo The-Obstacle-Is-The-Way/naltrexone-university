@@ -36,7 +36,7 @@ The problem is exclusively visual for sighted colorblind users.
 |-----------|------|---------|
 | `QuestionNavigator` | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:33-118` | Shared navigator used by the live session shell (`practice-session-page-view.tsx:267-272`) and post-exam review (`post-exam-review-view.tsx:84-90`); review-mode correctness styling lives at `exam-review-view.tsx:77-84`, and the implemented badge injection lives at `exam-review-view.tsx:102-104` |
 | `ReviewQuestionNavigator` | `app/(app)/app/questions/[slug]/components/review-question-navigator.tsx:15-18,20-91` | Standalone question review rendered from `question-page-client.tsx:244-247`; the implemented badge injection lives in the shared `innerContent` fragment at `review-question-navigator.tsx:43-53` |
-| `ReviewCorrectnessBadge` | `app/(app)/app/shared/components/review-correctness-badge.tsx:1-20` | Shared bottom-right overflow badge used by both review navigators; renders `Check` / `X` in a `size-3.5` badge container with `bg-background ring-1 ring-border` and neutral `text-foreground` icons |
+| `ReviewCorrectnessBadge` | `app/(app)/app/shared/components/review-correctness-badge.tsx:1-21` | Shared bottom-right overflow badge used by both review navigators; renders `Check` / `X` in a `size-3.5` badge container with `bg-background ring-1 ring-border` and tone-matched `text-success` / `text-destructive` icons |
 | `Review Navigator Utils` | `app/(app)/app/shared/components/review-navigator-utils.ts:1-13` | Shared review-mode correctness mapping used by both navigators; centralizes `getReviewVariant` and `getReviewStatusLabel` so success/destructive/outline and Correct/Incorrect/Unanswered logic stay in sync |
 
 Both navigators still use the same `success` / `destructive` / `outline` correctness pattern in review mode. The shared badge adds the non-color cue on top of that fill treatment.
@@ -56,7 +56,7 @@ The current-question ring (`ring-[3px] ring-ring/50`) is helpful for "where am I
 - `app/(app)/app/practice/[sessionId]/components/exam-review-view.test.tsx` asserts review-mode `bg-success`, `bg-destructive`, and `bg-background`/`border` styling, badge absence in exam mode, correct/incorrect badge presence, unanswered badge absence, and coexistence with the `markedForReview` top-right dot.
 - `app/(app)/app/questions/[slug]/components/review-question-navigator.test.tsx` asserts the same success/destructive/outline mapping, current-question ring behavior, correct/incorrect badge presence, unanswered badge absence, and coexistence with the `wasRetried` top-right dot.
 - `app/(app)/app/shared/components/review-navigator-utils.test.ts` asserts the shared `getReviewVariant` and `getReviewStatusLabel` helpers for correct / incorrect / unanswered states.
-- The navigator badge tests also verify the implemented badge sizing/tone tokens via `size-2.5` and `text-foreground` class assertions.
+- The navigator badge tests also verify the implemented badge sizing/tone tokens via `size-2.5`, `text-success`, and `text-destructive` class assertions.
 
 ### Surfaces NOT Affected
 
@@ -70,8 +70,8 @@ These surfaces were verified via Chrome agent walkthrough (2026-03-23) and do NO
 
 The final implementation uses a shared `ReviewCorrectnessBadge` component:
 
-1. **Correct** renders a bottom-right overflow badge with `Check` and neutral `text-foreground`.
-2. **Incorrect** renders a bottom-right overflow badge with `X` and neutral `text-foreground`.
+1. **Correct** renders a bottom-right overflow badge with `Check` and `text-success`.
+2. **Incorrect** renders a bottom-right overflow badge with `X` and `text-destructive`.
 3. **Unanswered** renders no badge.
 
 The badge stays in an absolutely-positioned wrapper span (`absolute -bottom-1 -right-1 flex size-3.5 items-center justify-center rounded-full bg-background ring-1 ring-border`) so the SVG remains a grandchild, not a direct `Button` child. That preserves the default `px-4` button padding despite the global `has-[>svg]:px-3` rule. The controls are still `h-9` (36 px tall) and still do not set `overflow-hidden`, so the overflow badge remains visible outside the pill edge.
@@ -109,7 +109,7 @@ The two navigators still remain separate components, which is intentional. Their
 
 - **Light-mode badge visibility (resolved):** The initial `bg-background` badge circle was invisible where it overflowed the button edge in light mode (white on white). Fixed in `review-correctness-badge.tsx:15` by adding `ring-1 ring-border` to the badge container, which provides a 1px ring that guarantees visibility in both themes without changing the dark-mode appearance.
 - **Size:** Badges are small (`size-3.5` container, `size-2.5` icon) — at the lower end of comfortable readability but recognizable. Any smaller would fail.
-- **Icon colors (resolved):** Both icons now use `text-foreground` in `review-correctness-badge.tsx:17`, giving maximum contrast against the badge background in both themes. The accessibility mechanism remains shape (✓ vs ✗), not icon hue.
+- **Icon colors (resolved):** The ✓ uses `text-success` and the ✗ uses `text-destructive` in `review-correctness-badge.tsx:17`, matching their parent button fills. This is redundant reinforcement for sighted non-colorblind users — the accessibility mechanism remains shape (✓ vs ✗), not icon hue. Colorblind users distinguish by shape; everyone else gets both shape and color.
 
 ## Acceptance Criteria
 
