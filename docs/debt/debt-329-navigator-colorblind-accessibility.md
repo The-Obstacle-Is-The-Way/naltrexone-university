@@ -2,7 +2,7 @@
 
 **Priority:** P3
 **Created:** 2026-03-19
-**Updated:** 2026-03-23 (Chrome agent visual audit + adversarial review)
+**Updated:** 2026-03-23 (Chrome agent visual audit, adversarial review, and final implementation reconciliation)
 **Source:** Chrome browser agent visual audit during DEBT-324 pre-removal documentation
 **Related:** [DEBT-326](./debt-326-post-exam-review-focus-management.md), [ReviewQuestionNavigator](../../app/(app)/app/questions/[slug]/components/review-question-navigator.tsx), [QuestionNavigator](../../app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx)
 
@@ -34,26 +34,27 @@ The problem is exclusively visual for sighted colorblind users.
 
 | Component | File | Used In |
 |-----------|------|---------|
-| `QuestionNavigator` | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:32-118` | Shared navigator used by the live session shell (`practice-session-page-view.tsx:267-272`) and post-exam review (`post-exam-review-view.tsx:84-90`); the colorblind issue is specifically the `mode="review"` branch at `exam-review-view.tsx:76-82` |
-| `ReviewQuestionNavigator` | `app/(app)/app/questions/[slug]/components/review-question-navigator.tsx:15-27,29-101` | Standalone question review rendered from `question-page-client.tsx:244-247` |
+| `QuestionNavigator` | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:33-122` | Shared navigator used by the live session shell (`practice-session-page-view.tsx:267-272`) and post-exam review (`post-exam-review-view.tsx:84-90`); review-mode correctness styling lives at `exam-review-view.tsx:77-83`, and the implemented badge injection lives at `exam-review-view.tsx:106-108` |
+| `ReviewQuestionNavigator` | `app/(app)/app/questions/[slug]/components/review-question-navigator.tsx:16-27,30-101` | Standalone question review rendered from `question-page-client.tsx:244-247`; the implemented badge injection lives in the shared `innerContent` fragment at `review-question-navigator.tsx:53-62` |
+| `ReviewCorrectnessBadge` | `app/(app)/app/shared/components/review-correctness-badge.tsx:1-21` | Shared bottom-right overflow badge used by both review navigators; renders `Check` / `X` in a `size-3.5` badge container with `bg-background ring-1 ring-border` |
 
-Both use the same `success` / `destructive` / `outline` correctness pattern in review mode.
+Both navigators still use the same `success` / `destructive` / `outline` correctness pattern in review mode. The shared badge adds the non-color cue on top of that fill treatment.
 
 The current-question ring (`ring-[3px] ring-ring/50`) is helpful for "where am I?" but does not distinguish correct from incorrect.
 
 ## Codebase Trace Notes
 
-- `components/ui/button.tsx:14-19` confirms the actual review fills come from the shared button variants, including `dark:bg-success/60` and `dark:bg-destructive/60`.
+- `components/ui/button.tsx:14-19,27` confirms the actual review fills come from the shared button variants, including `dark:bg-success/60` and `dark:bg-destructive/60`, and confirms the `has-[>svg]:px-3` padding trap on default-sized buttons.
 - A codebase search found no third navigator/grid surface that uses `Button` `success` + `destructive` variants for correctness. The accessibility debt is confined to these two navigator components.
 - Adjacent review surfaces already use text labels instead of color-only pills:
-  - `ExamReviewView` (`exam-review-view.tsx:120-268`) renders text-labeled review cards, not a colored grid.
+  - `ExamReviewView` (`app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx`) renders text-labeled review cards, not a colored grid.
   - `SessionBreakdownList` (`app/(app)/app/shared/components/session-breakdown-list.tsx`) renders explicit `Correct` / `Incorrect` / `Unanswered` text, so it is not affected by WCAG 1.4.1 on this axis.
 
 ## Existing Test Coverage
 
-- `app/(app)/app/practice/[sessionId]/components/exam-review-view.test.tsx` already asserts that review-mode navigator buttons render `bg-success`, `bg-destructive`, and `bg-background`/`border`.
-- `app/(app)/app/questions/[slug]/components/review-question-navigator.test.tsx` already asserts the same success/destructive/outline mapping and the current-question ring.
-- The DEBT-329 implementation should extend these tests to assert the new non-color cue, including coexistence with `markedForReview` / `wasRetried` badges.
+- `app/(app)/app/practice/[sessionId]/components/exam-review-view.test.tsx` asserts review-mode `bg-success`, `bg-destructive`, and `bg-background`/`border` styling, badge absence in exam mode, correct/incorrect badge presence, unanswered badge absence, and coexistence with the `markedForReview` top-right dot.
+- `app/(app)/app/questions/[slug]/components/review-question-navigator.test.tsx` asserts the same success/destructive/outline mapping, current-question ring behavior, correct/incorrect badge presence, unanswered badge absence, and coexistence with the `wasRetried` top-right dot.
+- These tests also verify the implemented badge sizing/tone tokens via `size-2.5`, `text-success`, and `text-destructive` class assertions.
 
 ### Surfaces NOT Affected
 
@@ -63,15 +64,15 @@ These surfaces were verified via Chrome agent walkthrough (2026-03-23) and do NO
 - **Active exam session navigator:** Uses `default`/`secondary`/`outline` variants (no red/green). Color is not the distinguishing axis.
 - **Active tutor session navigator:** Despite tutor mode revealing correctness after each answer, the navigator still uses `default`/`secondary`/`outline` during the live session. The red/green variants only appear when `mode="review"`.
 
-## Proposed Fix
+## Implemented Fix
 
-Add a non-color indicator to distinguish correct from incorrect. Options:
+The final implementation uses a shared `ReviewCorrectnessBadge` component:
 
-1. **Absolutely-positioned badge/glyph** — small checkmark (✓) badge for correct, X badge for incorrect, nothing for unanswered. This must be rendered in its own absolutely-positioned wrapper rather than as a direct child SVG, because `Button` uses `has-[>svg]:px-3` and direct-child icons would change the pill padding. The buttons are `h-9` (36 px tall) but do **not** set `overflow-hidden`, so a tiny overflow badge can remain visible outside the pill edge.
-2. **Border/shape variation** — e.g., dashed border for incorrect vs solid for correct.
-3. **Legend below the heading** — "Green = Correct, Red = Incorrect, Outline = Unanswered" (weakest option — doesn't fix the buttons themselves).
+1. **Correct** renders a bottom-right overflow badge with `Check` and `text-success`.
+2. **Incorrect** renders a bottom-right overflow badge with `X` and `text-destructive`.
+3. **Unanswered** renders no badge.
 
-Option 1 remains the strongest fix, but it should be treated as a **small overflow badge**, not an interior corner icon. A badge tucked partly outside the pill edge matches the current dot pattern and avoids crowding the number inside a 36 px-tall control.
+The badge stays in an absolutely-positioned wrapper span (`absolute -bottom-1 -right-1 flex size-3.5 items-center justify-center rounded-full bg-background ring-1 ring-border`) so the SVG remains a grandchild, not a direct `Button` child. That preserves the default `px-4` button padding despite the global `has-[>svg]:px-3` rule. The controls are still `h-9` (36 px tall) and still do not set `overflow-hidden`, so the overflow badge remains visible outside the pill edge.
 
 ### Design Constraint: `markedForReview` Dot Collision
 
@@ -87,22 +88,27 @@ Both navigators already render an absolutely-positioned dot in the **top-right**
   className="absolute -right-1 -top-1 size-2 rounded-full bg-primary" />
 ```
 
-The correct/incorrect badge must use a **different corner** (e.g., bottom-right) or a different indicator style to avoid visual collision when a question is both marked/retried and correct/incorrect. Any shared implementation must account for the current offset mismatch or deliberately standardize it.
+The implemented correctness badge uses the **bottom-right** corner (`-bottom-1 -right-1`), so it does not collide with either top-right dot. The current offset mismatch between the two top-right dots remains intentional and non-blocking.
 
-## Secondary Recommendation
+## DRY Status
 
-`QuestionNavigator` and `ReviewQuestionNavigator` currently duplicate the review-state mapping, pill grid layout, current-ring styling, and badge positioning logic. A small shared helper or review-specific navigator item component would reduce drift and make the DEBT-329 fix easier to keep consistent across both surfaces.
+The original DRY concern is now **partially addressed**:
+
+- The badge rendering has been centralized in `ReviewCorrectnessBadge`.
+- `ReviewQuestionNavigator` no longer duplicates the badge + retry-dot fragment across its `isCurrent` and `Link` branches.
+
+The remaining duplication is the broader review-state mapping and pill-grid structure across the two navigator components. That is acceptable for now and no longer a DEBT-329 blocker.
 
 ## Known Visual Notes
 
-- **Light-mode badge visibility (resolved):** The initial `bg-background` badge circle was invisible where it overflowed the button edge in light mode (white on white). Fixed by adding `ring-1 ring-border` to the badge container, which provides a 1px ring that guarantees visibility in both themes without changing the dark-mode appearance.
+- **Light-mode badge visibility (resolved):** The initial `bg-background` badge circle was invisible where it overflowed the button edge in light mode (white on white). Fixed in `review-correctness-badge.tsx:16` by adding `ring-1 ring-border` to the badge container, which provides a 1px ring that guarantees visibility in both themes without changing the dark-mode appearance.
 - **Size:** Badges are small (`size-3.5` container, `size-2.5` icon) — at the lower end of comfortable readability but recognizable. Any smaller would fail.
-- **Icon colors:** The ✓ is `text-success` (green) and the ✗ is `text-destructive` (red) — matching their parent button. This is redundant reinforcement, not the accessibility mechanism (shape is). A future polish pass could use a neutral color (e.g., `text-foreground`) for better contrast against the button fill.
+- **Icon colors:** The ✓ is `text-success` (green) and the ✗ is `text-destructive` (red) in `review-correctness-badge.tsx:11,18` — matching their parent button. This is redundant reinforcement, not the accessibility mechanism (shape is). A future polish pass could use a neutral color (e.g., `text-foreground`) for better contrast against the button fill.
 
 ## Acceptance Criteria
 
-- [ ] Correct and incorrect navigator buttons are visually distinguishable without relying on color
-- [ ] Unanswered distinction is preserved
-- [ ] Screen-reader `aria-label` behavior remains unchanged
-- [ ] Both `QuestionNavigator` and `ReviewQuestionNavigator` are updated consistently
-- [ ] Colorblind indicator does not visually collide with the existing `markedForReview` dot
+- [x] Correct and incorrect navigator buttons are visually distinguishable without relying on color
+- [x] Unanswered distinction is preserved
+- [x] Screen-reader `aria-label` behavior remains unchanged
+- [x] Both `QuestionNavigator` and `ReviewQuestionNavigator` are updated consistently
+- [x] Colorblind indicator does not visually collide with the existing `markedForReview` dot
