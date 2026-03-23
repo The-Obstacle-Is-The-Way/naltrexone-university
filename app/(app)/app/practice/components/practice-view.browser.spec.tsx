@@ -150,7 +150,7 @@ test('disables mutation controls while internal question loading is in progress'
     .toBeDisabled();
   await expect
     .element(tutorScreen.getByRole('button', { name: 'Bookmark' }))
-    .toBeDisabled();
+    .not.toBeInTheDocument();
   await expect
     .element(tutorScreen.getByRole('radio', { name: 'Tutor Option A' }))
     .toBeDisabled();

@@ -123,7 +123,7 @@ describe('app/(app)/app/practice', () => {
     expect(html).toContain('No more questions found.');
   });
 
-  it('renders bookmark control when question is present', () => {
+  it('renders bookmark control when tutor feedback is present', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         loadState={{ status: 'ready' }}
@@ -142,9 +142,16 @@ describe('app/(app)/app/practice', () => {
           ],
           session: null,
         }}
-        selectedChoiceId={null}
-        isAnswered={false}
-        submitResult={null}
+        selectedChoiceId="choice-1"
+        isAnswered={true}
+        submitResult={{
+          attemptId: 'attempt-1',
+          isCorrect: true,
+          correctChoiceId: 'choice-1',
+          explanationMd: 'Explanation',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked
