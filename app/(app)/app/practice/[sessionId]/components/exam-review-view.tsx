@@ -5,6 +5,7 @@ import {
   fireAndForget,
   logUnhandledAsyncError,
 } from '@/app/(app)/app/practice/fire-and-forget';
+import { ReviewCorrectnessBadge } from '@/app/(app)/app/shared/components/review-correctness-badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -102,6 +103,9 @@ export function QuestionNavigator({
                 aria-controls={controlledPanelId}
               >
                 {row.order}
+                {mode === 'review' ? (
+                  <ReviewCorrectnessBadge isCorrect={row.isCorrect} />
+                ) : null}
                 {row.markedForReview ? (
                   <span
                     aria-hidden="true"

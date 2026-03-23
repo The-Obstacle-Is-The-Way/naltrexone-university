@@ -24,6 +24,34 @@ describe('ReviewQuestionNavigator', () => {
     return (el?.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
   }
 
+  function findBottomRightBadge(el: Element | null): Element | null {
+    return (
+      Array.from(el?.querySelectorAll('span') ?? []).find((span) => {
+        const tokens = getClassList(span);
+        return (
+          tokens.includes('absolute') &&
+          tokens.includes('-bottom-1') &&
+          tokens.includes('-right-1') &&
+          tokens.includes('bg-background')
+        );
+      }) ?? null
+    );
+  }
+
+  function findTopRightRetryDot(el: Element | null): Element | null {
+    return (
+      Array.from(el?.querySelectorAll('span') ?? []).find((span) => {
+        const tokens = getClassList(span);
+        return (
+          tokens.includes('absolute') &&
+          tokens.includes('bg-primary') &&
+          tokens.includes('-right-1') &&
+          tokens.includes('-top-1')
+        );
+      }) ?? null
+    );
+  }
+
   function findByAriaLabel(doc: Document, label: string): Element | null {
     return (
       Array.from(doc.querySelectorAll('[aria-label]')).find(
@@ -180,5 +208,54 @@ describe('ReviewQuestionNavigator', () => {
     const retried = findByAriaLabel(doc, 'Question 1: Correct, Retried');
     expect(retried).not.toBeNull();
     expect(getClassList(retried)).toContain('bg-success');
+  });
+
+  it('renders check and x overflow badges only for answered review buttons', async () => {
+    const { doc } = await renderNavigator();
+
+    const correct = findByAriaLabel(doc, 'Question 1: Correct');
+    const incorrect = findByAriaLabel(doc, 'Question 2: Incorrect, Current');
+    const unanswered = findByAriaLabel(doc, 'Question 3: Unanswered');
+
+    const correctBadge = findBottomRightBadge(correct);
+    const incorrectBadge = findBottomRightBadge(incorrect);
+
+    expect(correctBadge?.getAttribute('aria-hidden')).toBe('true');
+    expect(getClassList(correctBadge?.querySelector('svg') ?? null)).toContain(
+      'text-success',
+    );
+    expect(getClassList(correctBadge?.querySelector('svg') ?? null)).toContain(
+      'size-2.5',
+    );
+
+    expect(incorrectBadge?.getAttribute('aria-hidden')).toBe('true');
+    expect(
+      getClassList(incorrectBadge?.querySelector('svg') ?? null),
+    ).toContain('text-destructive');
+    expect(findBottomRightBadge(unanswered)).toBeNull();
+    expect(unanswered?.querySelector('svg')).toBeNull();
+  });
+
+  it('renders both the retry dot and bottom-right check badge for retried correct questions', async () => {
+    const { doc } = await renderNavigator({
+      navigation: {
+        ...baseNavigation,
+        currentIndex: 2,
+        questions: [
+          { slug: 'q1', order: 1, isCorrect: true, wasRetried: true },
+          { slug: 'q2', order: 2, isCorrect: false },
+          { slug: 'q3', order: 3, isCorrect: null },
+        ],
+      },
+    });
+
+    const retriedCorrect = findByAriaLabel(doc, 'Question 1: Correct, Retried');
+
+    expect(findTopRightRetryDot(retriedCorrect)).not.toBeNull();
+    const badge = findBottomRightBadge(retriedCorrect);
+    expect(badge).not.toBeNull();
+    expect(getClassList(badge?.querySelector('svg') ?? null)).toContain(
+      'text-success',
+    );
   });
 });

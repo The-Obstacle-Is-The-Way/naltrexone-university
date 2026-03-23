@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import type { SessionNavigation } from '@/app/(app)/app/questions/[slug]/question-page-logic';
+import { ReviewCorrectnessBadge } from '@/app/(app)/app/shared/components/review-correctness-badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toQuestionRoute } from '@/lib/routes';
@@ -64,6 +65,7 @@ export function ReviewQuestionNavigator({
                 {isCurrent ? (
                   <span>
                     {q.order}
+                    <ReviewCorrectnessBadge isCorrect={q.isCorrect} />
                     {q.wasRetried ? (
                       <span
                         aria-hidden
@@ -83,6 +85,7 @@ export function ReviewQuestionNavigator({
                     })}
                   >
                     {q.order}
+                    <ReviewCorrectnessBadge isCorrect={q.isCorrect} />
                     {q.wasRetried ? (
                       <span
                         aria-hidden

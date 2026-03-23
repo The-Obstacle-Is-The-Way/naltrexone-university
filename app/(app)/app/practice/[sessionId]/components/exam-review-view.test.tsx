@@ -56,7 +56,36 @@ describe('QuestionNavigator', () => {
     return (el?.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
   }
 
+  function findBottomRightBadge(el: Element | null): Element | null {
+    return (
+      Array.from(el?.querySelectorAll('span') ?? []).find((span) => {
+        const tokens = getClassList(span);
+        return (
+          tokens.includes('absolute') &&
+          tokens.includes('-bottom-1') &&
+          tokens.includes('-right-1') &&
+          tokens.includes('bg-background')
+        );
+      }) ?? null
+    );
+  }
+
+  function findTopRightReviewDot(el: Element | null): Element | null {
+    return (
+      Array.from(el?.querySelectorAll('span') ?? []).find((span) => {
+        const tokens = getClassList(span);
+        return (
+          tokens.includes('absolute') &&
+          tokens.includes('bg-primary') &&
+          tokens.includes('-right-0.5') &&
+          tokens.includes('-top-0.5')
+        );
+      }) ?? null
+    );
+  }
+
   async function renderNavigator(input?: {
+    review?: GetPracticeSessionReviewOutput;
     currentQuestionId?: string | null;
     controlledPanelId?: string;
     mode?: 'exam' | 'review';
@@ -66,7 +95,7 @@ describe('QuestionNavigator', () => {
       input?.controlledPanelId ?? 'practice-question-panel';
     const html = renderToStaticMarkup(
       <QuestionNavigator
-        review={review}
+        review={input?.review ?? review}
         currentQuestionId={input?.currentQuestionId ?? 'q2'}
         controlledPanelId={controlledPanelId}
         mode={input?.mode}
@@ -128,5 +157,60 @@ describe('QuestionNavigator', () => {
     expect(getClassList(incorrect)).toContain('bg-destructive');
     expect(getClassList(unanswered)).toContain('bg-background');
     expect(getClassList(unanswered)).toContain('border');
+  });
+
+  it('renders check and x overflow badges only for answered review buttons', async () => {
+    const { doc } = await renderNavigator({
+      currentQuestionId: 'q3',
+      mode: 'review',
+    });
+
+    const correct = findByAriaLabel(doc, 'Question 1: Correct');
+    const incorrect = findByAriaLabel(doc, 'Question 2: Incorrect');
+    const unanswered = findByAriaLabel(doc, 'Question 3: Current, Unanswered');
+
+    const correctBadge = findBottomRightBadge(correct);
+    const incorrectBadge = findBottomRightBadge(incorrect);
+
+    expect(correctBadge?.getAttribute('aria-hidden')).toBe('true');
+    expect(getClassList(correctBadge?.querySelector('svg') ?? null)).toContain(
+      'text-success',
+    );
+    expect(getClassList(correctBadge?.querySelector('svg') ?? null)).toContain(
+      'size-2.5',
+    );
+
+    expect(incorrectBadge?.getAttribute('aria-hidden')).toBe('true');
+    expect(
+      getClassList(incorrectBadge?.querySelector('svg') ?? null),
+    ).toContain('text-destructive');
+    expect(findBottomRightBadge(unanswered)).toBeNull();
+    expect(unanswered?.querySelector('svg')).toBeNull();
+  });
+
+  it('renders both the review dot and bottom-right check badge for marked correct review buttons', async () => {
+    const { doc } = await renderNavigator({
+      review: {
+        ...review,
+        markedCount: 1,
+        rows: review.rows.map((row) =>
+          row.questionId === 'q1' ? { ...row, markedForReview: true } : row,
+        ),
+      },
+      currentQuestionId: 'q3',
+      mode: 'review',
+    });
+
+    const markedCorrect = findByAriaLabel(
+      doc,
+      'Question 1: Marked for review, Correct',
+    );
+
+    expect(findTopRightReviewDot(markedCorrect)).not.toBeNull();
+    const badge = findBottomRightBadge(markedCorrect);
+    expect(badge).not.toBeNull();
+    expect(getClassList(badge?.querySelector('svg') ?? null)).toContain(
+      'text-success',
+    );
   });
 });
