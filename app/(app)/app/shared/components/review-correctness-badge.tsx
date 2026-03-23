@@ -13,6 +13,7 @@ export function ReviewCorrectnessBadge({
   return (
     <span
       aria-hidden="true"
+      data-testid="review-correctness-badge"
       className="absolute -bottom-1 -right-1 flex size-3.5 items-center justify-center rounded-full bg-background ring-1 ring-border"
     >
       <Icon aria-hidden="true" className={`size-2.5 ${toneClassName}`} />

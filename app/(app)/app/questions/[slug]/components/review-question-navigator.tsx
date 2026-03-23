@@ -47,6 +47,7 @@ export function ReviewQuestionNavigator({
                 {q.wasRetried ? (
                   <span
                     aria-hidden
+                    data-testid="review-question-retry-dot"
                     className="absolute -right-1 -top-1 size-2 rounded-full bg-primary"
                   />
                 ) : null}

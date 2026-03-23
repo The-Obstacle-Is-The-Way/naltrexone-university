@@ -105,6 +105,7 @@ export function QuestionNavigator({
                 {row.markedForReview ? (
                   <span
                     aria-hidden="true"
+                    data-testid="question-nav-marked-dot"
                     className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-primary"
                   />
                 ) : null}

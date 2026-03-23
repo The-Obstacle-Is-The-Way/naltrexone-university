@@ -26,29 +26,13 @@ describe('ReviewQuestionNavigator', () => {
 
   function findBottomRightBadge(el: Element | null): Element | null {
     return (
-      Array.from(el?.querySelectorAll('span') ?? []).find((span) => {
-        const tokens = getClassList(span);
-        return (
-          tokens.includes('absolute') &&
-          tokens.includes('-bottom-1') &&
-          tokens.includes('-right-1') &&
-          tokens.includes('bg-background')
-        );
-      }) ?? null
+      el?.querySelector('[data-testid="review-correctness-badge"]') ?? null
     );
   }
 
   function findTopRightRetryDot(el: Element | null): Element | null {
     return (
-      Array.from(el?.querySelectorAll('span') ?? []).find((span) => {
-        const tokens = getClassList(span);
-        return (
-          tokens.includes('absolute') &&
-          tokens.includes('bg-primary') &&
-          tokens.includes('-right-1') &&
-          tokens.includes('-top-1')
-        );
-      }) ?? null
+      el?.querySelector('[data-testid="review-question-retry-dot"]') ?? null
     );
   }
 

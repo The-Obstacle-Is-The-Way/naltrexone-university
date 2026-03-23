@@ -58,30 +58,12 @@ describe('QuestionNavigator', () => {
 
   function findBottomRightBadge(el: Element | null): Element | null {
     return (
-      Array.from(el?.querySelectorAll('span') ?? []).find((span) => {
-        const tokens = getClassList(span);
-        return (
-          tokens.includes('absolute') &&
-          tokens.includes('-bottom-1') &&
-          tokens.includes('-right-1') &&
-          tokens.includes('bg-background')
-        );
-      }) ?? null
+      el?.querySelector('[data-testid="review-correctness-badge"]') ?? null
     );
   }
 
   function findTopRightReviewDot(el: Element | null): Element | null {
-    return (
-      Array.from(el?.querySelectorAll('span') ?? []).find((span) => {
-        const tokens = getClassList(span);
-        return (
-          tokens.includes('absolute') &&
-          tokens.includes('bg-primary') &&
-          tokens.includes('-right-0.5') &&
-          tokens.includes('-top-0.5')
-        );
-      }) ?? null
-    );
+    return el?.querySelector('[data-testid="question-nav-marked-dot"]') ?? null;
   }
 
   async function renderNavigator(input?: {
