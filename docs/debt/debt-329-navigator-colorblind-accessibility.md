@@ -34,12 +34,26 @@ The problem is exclusively visual for sighted colorblind users.
 
 | Component | File | Used In |
 |-----------|------|---------|
-| `QuestionNavigator` | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:32-118` | Active session navigator + post-exam review; the colorblind issue is specifically the `mode="review"` branch at `exam-review-view.tsx:77-82` |
-| `ReviewQuestionNavigator` | `app/(app)/app/questions/[slug]/components/review-question-navigator.tsx:15-27,29-101` | Standalone question review (from summary, history) |
+| `QuestionNavigator` | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:32-118` | Shared navigator used by the live session shell (`practice-session-page-view.tsx:267-272`) and post-exam review (`post-exam-review-view.tsx:84-90`); the colorblind issue is specifically the `mode="review"` branch at `exam-review-view.tsx:76-82` |
+| `ReviewQuestionNavigator` | `app/(app)/app/questions/[slug]/components/review-question-navigator.tsx:15-27,29-101` | Standalone question review rendered from `question-page-client.tsx:244-247` |
 
 Both use the same `success` / `destructive` / `outline` correctness pattern in review mode.
 
 The current-question ring (`ring-[3px] ring-ring/50`) is helpful for "where am I?" but does not distinguish correct from incorrect.
+
+## Codebase Trace Notes
+
+- `components/ui/button.tsx:14-19` confirms the actual review fills come from the shared button variants, including `dark:bg-success/60` and `dark:bg-destructive/60`.
+- A codebase search found no third navigator/grid surface that uses `Button` `success` + `destructive` variants for correctness. The accessibility debt is confined to these two navigator components.
+- Adjacent review surfaces already use text labels instead of color-only pills:
+  - `ExamReviewView` (`exam-review-view.tsx:120-257`) renders text-labeled review cards, not a colored grid.
+  - `SessionBreakdownList` (`app/(app)/app/shared/components/session-breakdown-list.tsx`) renders explicit `Correct` / `Incorrect` / `Unanswered` text, so it is not affected by WCAG 1.4.1 on this axis.
+
+## Existing Test Coverage
+
+- `app/(app)/app/practice/[sessionId]/components/exam-review-view.test.tsx` already asserts that review-mode navigator buttons render `bg-success`, `bg-destructive`, and `bg-background`/`border`.
+- `app/(app)/app/questions/[slug]/components/review-question-navigator.test.tsx` already asserts the same success/destructive/outline mapping and the current-question ring.
+- The DEBT-329 implementation should extend these tests to assert the new non-color cue, including coexistence with `markedForReview` / `wasRetried` badges.
 
 ### Surfaces NOT Affected
 
@@ -53,22 +67,31 @@ These surfaces were verified via Chrome agent walkthrough (2026-03-23) and do NO
 
 Add a non-color indicator to distinguish correct from incorrect. Options:
 
-1. **Absolutely-positioned corner icons** — small checkmark (✓) badge for correct, X badge for incorrect, nothing for unanswered. Uses the same positioning pattern as the existing `markedForReview` dot (`absolute -right-0.5 -top-0.5 size-2 rounded-full`).
+1. **Absolutely-positioned badge/glyph** — small checkmark (✓) badge for correct, X badge for incorrect, nothing for unanswered. This must be rendered in its own absolutely-positioned wrapper rather than as a direct child SVG, because `Button` uses `has-[>svg]:px-3` and direct-child icons would change the pill padding. The buttons are `h-9` (36 px tall) but do **not** set `overflow-hidden`, so a tiny overflow badge can remain visible outside the pill edge.
 2. **Border/shape variation** — e.g., dashed border for incorrect vs solid for correct.
 3. **Legend below the heading** — "Green = Correct, Red = Incorrect, Outline = Unanswered" (weakest option — doesn't fix the buttons themselves).
 
-Option 1 (corner icons) provides the strongest non-color signal, follows WCAG 1.4.1 (Use of Color), and is proven by the existing review-dot pattern.
+Option 1 remains the strongest fix, but it should be treated as a **small overflow badge**, not an interior corner icon. A badge tucked partly outside the pill edge matches the current dot pattern and avoids crowding the number inside a 36 px-tall control.
 
 ### Design Constraint: `markedForReview` Dot Collision
 
-Both navigators already render an absolutely-positioned dot in the **top-right** corner for questions marked for review:
+Both navigators already render an absolutely-positioned dot in the **top-right** corner, but the offsets are not identical:
 
 ```tsx
+// QuestionNavigator
 <span aria-hidden="true"
   className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-primary" />
+
+// ReviewQuestionNavigator
+<span aria-hidden
+  className="absolute -right-1 -top-1 size-2 rounded-full bg-primary" />
 ```
 
-The correct/incorrect icon must use a **different corner** (e.g., bottom-right) or a different indicator style to avoid visual collision when a question is both marked-for-review and correct/incorrect.
+The correct/incorrect badge must use a **different corner** (e.g., bottom-right) or a different indicator style to avoid visual collision when a question is both marked/retried and correct/incorrect. Any shared implementation must account for the current offset mismatch or deliberately standardize it.
+
+## Secondary Recommendation
+
+`QuestionNavigator` and `ReviewQuestionNavigator` currently duplicate the review-state mapping, pill grid layout, current-ring styling, and badge positioning logic. A small shared helper or review-specific navigator item component would reduce drift and make the DEBT-329 fix easier to keep consistent across both surfaces.
 
 ## Acceptance Criteria
 
