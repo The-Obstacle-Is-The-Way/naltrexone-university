@@ -1232,6 +1232,7 @@ describe('PracticeView', () => {
 
     expect(html).not.toContain('Your answer');
     expect(html).not.toContain('Redacted explanation.');
+    expect(html).not.toContain('>Bookmark<');
   });
 
   it('renders a question panel id for navigator aria-controls wiring', () => {

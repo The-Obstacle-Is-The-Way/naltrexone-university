@@ -158,7 +158,7 @@ function TutorActionBar(props: TutorActionBarProps) {
         </Button>
       )}
 
-      {props.submitResult ? (
+      {hasBooleanCorrectness(props.submitResult) ? (
         <Button
           type="button"
           variant="outline"
