@@ -46,7 +46,7 @@ The current-question ring (`ring-[3px] ring-ring/50`) is helpful for "where am I
 - `components/ui/button.tsx:14-19` confirms the actual review fills come from the shared button variants, including `dark:bg-success/60` and `dark:bg-destructive/60`.
 - A codebase search found no third navigator/grid surface that uses `Button` `success` + `destructive` variants for correctness. The accessibility debt is confined to these two navigator components.
 - Adjacent review surfaces already use text labels instead of color-only pills:
-  - `ExamReviewView` (`exam-review-view.tsx:120-257`) renders text-labeled review cards, not a colored grid.
+  - `ExamReviewView` (`exam-review-view.tsx:120-268`) renders text-labeled review cards, not a colored grid.
   - `SessionBreakdownList` (`app/(app)/app/shared/components/session-breakdown-list.tsx`) renders explicit `Correct` / `Incorrect` / `Unanswered` text, so it is not affected by WCAG 1.4.1 on this axis.
 
 ## Existing Test Coverage
