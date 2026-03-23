@@ -2,6 +2,11 @@
 
 import Link from 'next/link';
 import type { SessionNavigation } from '@/app/(app)/app/questions/[slug]/question-page-logic';
+import { ReviewCorrectnessBadge } from '@/app/(app)/app/shared/components/review-correctness-badge';
+import {
+  getReviewStatusLabel,
+  getReviewVariant,
+} from '@/app/(app)/app/shared/components/review-navigator-utils';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toQuestionRoute } from '@/lib/routes';
@@ -11,20 +16,6 @@ type ReviewQuestionNavigatorProps = {
   navigation: SessionNavigation;
   historyHref?: string;
 };
-
-function getVariant(
-  isCorrect: boolean | null,
-): 'success' | 'destructive' | 'outline' {
-  if (isCorrect === true) return 'success';
-  if (isCorrect === false) return 'destructive';
-  return 'outline';
-}
-
-function getStatusLabel(isCorrect: boolean | null): string {
-  if (isCorrect === true) return 'Correct';
-  if (isCorrect === false) return 'Incorrect';
-  return 'Unanswered';
-}
 
 export function ReviewQuestionNavigator({
   navigation,
@@ -45,9 +36,23 @@ export function ReviewQuestionNavigator({
         <div className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-10">
           {questions.map((q, i) => {
             const isCurrent = i === currentIndex;
-            const variant = getVariant(q.isCorrect);
-            const statusLabel = getStatusLabel(q.isCorrect);
+            const variant = getReviewVariant(q.isCorrect);
+            const statusLabel = getReviewStatusLabel(q.isCorrect);
             const retryLabel = q.wasRetried ? ', Retried' : '';
+
+            const innerContent = (
+              <>
+                {q.order}
+                <ReviewCorrectnessBadge isCorrect={q.isCorrect} />
+                {q.wasRetried ? (
+                  <span
+                    aria-hidden
+                    data-testid="review-question-retry-dot"
+                    className="absolute -right-1 -top-1 size-2 rounded-full bg-primary"
+                  />
+                ) : null}
+              </>
+            );
 
             return (
               <Button
@@ -62,15 +67,7 @@ export function ReviewQuestionNavigator({
                 aria-current={isCurrent ? 'step' : undefined}
               >
                 {isCurrent ? (
-                  <span>
-                    {q.order}
-                    {q.wasRetried ? (
-                      <span
-                        aria-hidden
-                        className="absolute -right-1 -top-1 size-2 rounded-full bg-primary"
-                      />
-                    ) : null}
-                  </span>
+                  <span>{innerContent}</span>
                 ) : (
                   <Link
                     href={toQuestionRoute(q.slug, {
@@ -82,13 +79,7 @@ export function ReviewQuestionNavigator({
                       historyIndex: historySeqParam ? i : undefined,
                     })}
                   >
-                    {q.order}
-                    {q.wasRetried ? (
-                      <span
-                        aria-hidden
-                        className="absolute -right-1 -top-1 size-2 rounded-full bg-primary"
-                      />
-                    ) : null}
+                    {innerContent}
                   </Link>
                 )}
               </Button>
