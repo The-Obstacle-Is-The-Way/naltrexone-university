@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-22
+**Last Updated:** 2026-03-23
 
 ---
 
@@ -18,7 +18,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | GitHub Issue |
 |----|-------|----------|--------------|
 | [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
-| [DEBT-318](./debt-318-tutor-bookmark-before-answer.md) | Bookmark visible before feedback in tutor mode and quick practice — keep the surface, but delay the action until inline feedback/explanation is visible | P3 | — |
 | [DEBT-329](./debt-329-navigator-colorblind-accessibility.md) | Question navigator relies on color alone (red/green) to distinguish correct from incorrect — fails WCAG 1.4.1 for colorblind users. Both `QuestionNavigator` and `ReviewQuestionNavigator` affected. | P3 | — |
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 **Next Debt ID:** DEBT-335
@@ -29,6 +28,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-318](../_archive/debt/debt-318-tutor-bookmark-before-answer.md) | Bookmark visible before feedback in tutor mode and quick practice — tutor/quick bookmark now renders only when inline feedback is actually visible, including the `isCorrect === null` edge case | P3 | 2026-03-23 | [PR #248](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/248) |
 | [DEBT-334](../_archive/debt/debt-334-practice-session-bootstrap-timeout-guard.md) | Practice-session summary bootstrap timeout guard — wrapped bootstrap `getPracticeSessionSummary` in `withTimeout(...)` so hung requests no longer pin the page in `loading` forever | P3 | 2026-03-22 | [PR #247](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/247) |
 | [DEBT-333](../_archive/debt/debt-333-browser-test-flakiness-audit.md) | Browser test flakiness — fixed the one confirmed unawaited deferred browser-spec bug, added same-file cleanup hardening plus browser config/setup hardening, and verified stability with repeated full-suite runs | P2 | 2026-03-21 | [PR #244](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/244) |
 | [DEBT-331](../_archive/debt/debt-331-session-started-toast-overlap.md) | Remove redundant "Session started" toast and reposition shared toast region from `top-4` to `bottom-4` — eliminates nav bar overlap, keeps shortfall warning and bookmark toasts, CodeRabbit config hardened against docstring nags | P3 | 2026-03-21 | [PR #240](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/240) |

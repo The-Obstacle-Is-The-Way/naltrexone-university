@@ -205,14 +205,25 @@ describe('PracticeView', () => {
 
   it('exposes toggle state via aria-pressed for bookmark button', () => {
     const question = createNextQuestion();
+    const selectedChoice = question.choices[0];
+    if (!selectedChoice) {
+      throw new Error('Expected at least one choice');
+    }
 
     const html = renderToStaticMarkup(
       <PracticeView
         loadState={{ status: 'ready' }}
         question={question}
-        selectedChoiceId={null}
-        isAnswered={false}
-        submitResult={null}
+        selectedChoiceId={selectedChoice.id}
+        isAnswered={true}
+        submitResult={{
+          attemptId: 'attempt-1',
+          isCorrect: true,
+          correctChoiceId: selectedChoice.id,
+          explanationMd: 'Because.',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={true}
@@ -265,7 +276,7 @@ describe('PracticeView', () => {
     expect(html).toContain('>Mark for review<');
   });
 
-  it('renders the bookmark button in tutor mode', () => {
+  it('does not render the bookmark button in tutor mode on unanswered session questions', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         sessionInfo={{
@@ -293,11 +304,55 @@ describe('PracticeView', () => {
       />,
     );
 
-    expect(html).toContain('>Bookmark<');
+    expect(html).not.toContain('>Bookmark<');
     expect(html).not.toContain('>Mark for review<');
   });
 
-  it('renders the bookmark button in quick practice', () => {
+  it('renders the bookmark button in tutor mode after feedback is visible', () => {
+    const question = createQuestionProps();
+    const selectedChoice = question.choices[0];
+    if (!selectedChoice) {
+      throw new Error('Expected at least one choice');
+    }
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'tutor',
+          index: 0,
+          total: 10,
+          isMarkedForReview: false,
+        }}
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={selectedChoice.id}
+        isAnswered={true}
+        submitResult={{
+          attemptId: 'attempt-1',
+          isCorrect: true,
+          correctChoiceId: selectedChoice.id,
+          explanationMd: 'Because.',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onToggleMarkForReview={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('>Bookmark<');
+  });
+
+  it('does not render the bookmark button in quick practice on unanswered questions', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         loadState={{ status: 'ready' }}
@@ -305,6 +360,42 @@ describe('PracticeView', () => {
         selectedChoiceId={null}
         isAnswered={false}
         submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    expect(html).not.toContain('>Bookmark<');
+  });
+
+  it('renders the bookmark button in quick practice after feedback is visible', () => {
+    const question = createQuestionProps();
+    const selectedChoice = question.choices[0];
+    if (!selectedChoice) {
+      throw new Error('Expected at least one choice');
+    }
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={selectedChoice.id}
+        isAnswered={true}
+        submitResult={{
+          attemptId: 'attempt-1',
+          isCorrect: true,
+          correctChoiceId: selectedChoice.id,
+          explanationMd: 'Because.',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
@@ -501,7 +592,7 @@ describe('PracticeView', () => {
     expect(nextButton).toBeUndefined();
   });
 
-  it('keeps tutor action bar ordering as Previous, Submit, Next, Bookmark', () => {
+  it('keeps tutor action bar ordering as Previous, Submit, Next before feedback', () => {
     const question = createNextQuestion();
 
     const props: Parameters<typeof PracticeView>[0] = {
@@ -540,7 +631,60 @@ describe('PracticeView', () => {
       (button) => (button.textContent ?? '').trim(),
     );
 
-    expect(labels).toEqual(['Previous', 'Submit', 'Next', 'Bookmark']);
+    expect(labels).toEqual(['Previous', 'Submit', 'Next']);
+  });
+
+  it('keeps tutor action bar ordering as Previous, Next, Bookmark after feedback', () => {
+    const question = createNextQuestion();
+    const selectedChoice = question.choices[0];
+    if (!selectedChoice) {
+      throw new Error('Expected at least one choice');
+    }
+
+    const props: Parameters<typeof PracticeView>[0] = {
+      sessionInfo: {
+        sessionId: 'session-1',
+        mode: 'tutor',
+        index: 1,
+        total: 3,
+        isMarkedForReview: false,
+      },
+      loadState: { status: 'ready' },
+      question,
+      selectedChoiceId: selectedChoice.id,
+      isAnswered: true,
+      submitResult: {
+        attemptId: 'attempt-1',
+        isCorrect: true,
+        correctChoiceId: selectedChoice.id,
+        explanationMd: 'Because.',
+        referenceMd: null,
+        choiceExplanations: [],
+      },
+      isPending: false,
+      bookmarkStatus: 'idle',
+      isBookmarked: false,
+      canSubmit: false,
+      onTryAgain: () => undefined,
+      onToggleBookmark: () => undefined,
+      onSelectChoice: () => undefined,
+      onSubmit: () => undefined,
+      onNextQuestion: () => undefined,
+      onPreviousQuestion: () => undefined,
+      hasPreviousQuestion: true,
+      hasNextQuestion: true,
+    };
+
+    const html = renderToStaticMarkup(<PracticeView {...props} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
+    if (!actionBar) throw new Error('Expected action bar');
+
+    const labels = Array.from(actionBar.querySelectorAll('button')).map(
+      (button) => (button.textContent ?? '').trim(),
+    );
+
+    expect(labels).toEqual(['Previous', 'Next', 'Bookmark']);
   });
 
   it('renders exam action bar with Next and Mark for review and no Submit on the first question', () => {
@@ -1088,6 +1232,7 @@ describe('PracticeView', () => {
 
     expect(html).not.toContain('Your answer');
     expect(html).not.toContain('Redacted explanation.');
+    expect(html).not.toContain('>Bookmark<');
   });
 
   it('renders a question panel id for navigator aria-controls wiring', () => {

@@ -1,6 +1,6 @@
 # Bookmark Surface Policy
 
-**Last Updated:** 2026-03-19
+**Last Updated:** 2026-03-22
 **Related:** [BS-053](../brainstorming/bs-053-bookmark-vs-mark-for-review-collision.md) (bookmark vs mark-for-review collision), [BS-052](../brainstorming/bs-052-bookmark-icon-toggle-replacement.md) (bookmark icon toggle), [Bookmarks Dossier](./pages/bookmarks.md) (complete vertical-slice documentation)
 
 ---
@@ -22,9 +22,9 @@ This document is the single source of truth for **where the bookmark action appe
 
 | Surface | Route | Bookmark Present | Notes |
 |---------|-------|-----------------|-------|
-| Practice Session (Tutor) | `/app/practice/[sessionId]` | YES | Action bar pill + toast feedback; no bookmark navigator indicator; current implementation shows it before submit as well, with DEBT-318 tracking a post-feedback-only refinement |
+| Practice Session (Tutor) | `/app/practice/[sessionId]` | YES | Action bar pill + toast feedback; no bookmark navigator indicator |
 | Practice Session (Exam) | `/app/practice/[sessionId]` | NO | Bookmark removed by BS-053; exam action bar keeps only exam-scoped mark-for-review |
-| Quick Practice | `/app/practice/quick` | YES | Action bar pill; current implementation shows it before submit as well, with DEBT-318 tracking a post-feedback-only refinement |
+| Quick Practice | `/app/practice/quick` | YES | Action bar pill |
 | Exam Review (pre-submit) | `/app/practice/[sessionId]` (review state) | NO | List/navigator view only |
 | Session Summary | `/app/practice/[sessionId]` (summary state) | NO | Summary stats + CTAs only; current review CTA routes through `from=summary&sessionId=...` |
 | Question Review | `/app/questions/[slug]?mode=review` | YES | Action bar pill in review mode once bookmark state hydrates; current production callers come from Summary, History, Bookmarks, and Dashboard |
@@ -42,9 +42,9 @@ Current implementation now matches the BS-053 resolved policy below.
 
 | Surface | Route | Bookmark Present | Rationale |
 |---------|-------|-----------------|-----------|
-| Practice Session (Tutor) | `/app/practice/[sessionId]` | **YES** | No collision (mark-for-review absent). User sees explanations inline — natural "reflect and bookmark" moment. A follow-up refinement can still narrow this to the post-feedback state within the tutor flow. |
+| Practice Session (Tutor) | `/app/practice/[sessionId]` | **YES** | No collision (mark-for-review absent). User sees explanations inline — natural "reflect and bookmark" moment. |
 | Practice Session (Exam) | `/app/practice/[sessionId]` | **NO** | Removed. Collides with Mark for Review. Assessment mindset — bookmark doesn't belong here. |
-| Quick Practice | `/app/practice/quick` | **YES** | Same as tutor mode — no collision, explanations shown inline. A follow-up refinement can still narrow this to the post-feedback state within quick practice. |
+| Quick Practice | `/app/practice/quick` | **YES** | Same as tutor mode — no collision, explanations shown inline. |
 | Exam Review (pre-submit) | `/app/practice/[sessionId]` (review state) | **NO** | Assessment mode. User is deciding whether to revisit questions, not curating study material. |
 | Session Summary | `/app/practice/[sessionId]` (summary state) | **NO** | Summary view. User can reach review page via the existing review CTA. |
 | **Question Review** | **`/app/questions/[slug]?mode=review`** | **YES** | **Present.** This is the primary reflection surface — always a long-form question detail page, and when a prior attempt exists it also shows full feedback content. Natural "I should save this" moment. |

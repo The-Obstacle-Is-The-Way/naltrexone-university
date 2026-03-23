@@ -158,16 +158,18 @@ function TutorActionBar(props: TutorActionBarProps) {
         </Button>
       )}
 
-      <Button
-        type="button"
-        variant="outline"
-        className="rounded-full"
-        aria-pressed={props.isBookmarked}
-        disabled={props.bookmarkStatus === 'loading' || isActionBarDisabled}
-        onClick={props.onToggleBookmark}
-      >
-        {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
-      </Button>
+      {hasBooleanCorrectness(props.submitResult) ? (
+        <Button
+          type="button"
+          variant="outline"
+          className="rounded-full"
+          aria-pressed={props.isBookmarked}
+          disabled={props.bookmarkStatus === 'loading' || isActionBarDisabled}
+          onClick={props.onToggleBookmark}
+        >
+          {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
+        </Button>
+      ) : null}
     </>
   );
 }
