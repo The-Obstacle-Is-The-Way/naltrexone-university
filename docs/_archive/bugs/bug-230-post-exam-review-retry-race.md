@@ -1,9 +1,10 @@
 # BUG-230: Post-Exam Review Retry Race Can Reapply Stale Error or Stale Success
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-03-21
 **Confirmed:** 2026-03-21
+**Resolved:** 2026-03-21 — [PR #246](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/246)
 
 ## Summary
 
