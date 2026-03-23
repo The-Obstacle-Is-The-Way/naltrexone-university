@@ -159,6 +159,19 @@ describe('QuestionNavigator', () => {
     expect(getClassList(unanswered)).toContain('border');
   });
 
+  it('does not render correctness badges in exam mode', async () => {
+    const { doc } = await renderNavigator({ mode: 'exam' });
+
+    const buttons = Array.from(
+      doc.querySelectorAll('button[aria-label^="Question "]'),
+    );
+    expect(buttons.length).toBeGreaterThan(0);
+    for (const btn of buttons) {
+      expect(findBottomRightBadge(btn)).toBeNull();
+      expect(btn.querySelector('svg')).toBeNull();
+    }
+  });
+
   it('renders check and x overflow badges only for answered review buttons', async () => {
     const { doc } = await renderNavigator({
       currentQuestionId: 'q3',

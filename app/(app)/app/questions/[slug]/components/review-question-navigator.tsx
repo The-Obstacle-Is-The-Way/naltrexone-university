@@ -50,6 +50,19 @@ export function ReviewQuestionNavigator({
             const statusLabel = getStatusLabel(q.isCorrect);
             const retryLabel = q.wasRetried ? ', Retried' : '';
 
+            const innerContent = (
+              <>
+                {q.order}
+                <ReviewCorrectnessBadge isCorrect={q.isCorrect} />
+                {q.wasRetried ? (
+                  <span
+                    aria-hidden
+                    className="absolute -right-1 -top-1 size-2 rounded-full bg-primary"
+                  />
+                ) : null}
+              </>
+            );
+
             return (
               <Button
                 key={q.slug}
@@ -63,16 +76,7 @@ export function ReviewQuestionNavigator({
                 aria-current={isCurrent ? 'step' : undefined}
               >
                 {isCurrent ? (
-                  <span>
-                    {q.order}
-                    <ReviewCorrectnessBadge isCorrect={q.isCorrect} />
-                    {q.wasRetried ? (
-                      <span
-                        aria-hidden
-                        className="absolute -right-1 -top-1 size-2 rounded-full bg-primary"
-                      />
-                    ) : null}
-                  </span>
+                  <span>{innerContent}</span>
                 ) : (
                   <Link
                     href={toQuestionRoute(q.slug, {
@@ -84,14 +88,7 @@ export function ReviewQuestionNavigator({
                       historyIndex: historySeqParam ? i : undefined,
                     })}
                   >
-                    {q.order}
-                    <ReviewCorrectnessBadge isCorrect={q.isCorrect} />
-                    {q.wasRetried ? (
-                      <span
-                        aria-hidden
-                        className="absolute -right-1 -top-1 size-2 rounded-full bg-primary"
-                      />
-                    ) : null}
+                    {innerContent}
                   </Link>
                 )}
               </Button>
