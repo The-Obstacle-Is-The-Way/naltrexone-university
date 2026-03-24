@@ -101,7 +101,7 @@ in primary care, taking under 1 minute to administer.
 
 **What's wrong:** Many questions are missing `**Why other answers are wrong:**` sections entirely, or have the section but are missing explanations for some choices.
 
-**Why it matters:** Without per-choice explanations, the "Why other answers are wrong" section is either hidden (current all-or-nothing guard) or partially empty (after DEBT-335 ships). Either way, the learner misses valuable teaching content.
+**Why it matters:** Without per-choice explanations, the "Why other answers are wrong" section is either hidden (current all-or-nothing guard) or only partially represented (after DEBT-335 ships). Either way, the learner misses valuable teaching content.
 
 **What to do:** Audit all questions. For each question:
 1. Ensure the `**Why other answers are wrong:**` section exists

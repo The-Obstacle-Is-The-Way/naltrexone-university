@@ -106,7 +106,7 @@ Before saving, verify:
 - [ ] Clinical pearl included
 - [ ] `treatments` tag included if a medication is mentioned
 - [ ] Per-choice explanations do NOT prefix with any form of the choice text (no full text, no short labels before a colon; start directly with reasoning)
-- [ ] Every wrong answer has an explanation (missing ones are excluded; section still renders for choices with content)
+- [ ] Every wrong answer has an explanation (today, any missing or blank wrong-answer explanation hides the entire section in the UI; DEBT-335 would relax this later)
 - [ ] `### Reference` at end of explanation with AMA-format citation
 - [ ] Optional: run `python3 scripts/validate_questions.py --root questions` for structural validation
 

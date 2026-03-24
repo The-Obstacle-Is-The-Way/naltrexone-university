@@ -4,18 +4,23 @@
 **Created:** 2026-03-04
 **Status:** Decomposed (2026-03-24)
 **Source:** [BS-033](../_archive/brainstorming/bs-033-question-display-formatting-and-feedback-ux.md)
-**Scope:** Content-layer fixes, one unresolved design decision, and future enhancement ideas extracted from BS-033 after all 22 component-layer fixes shipped (BUG-152–159, PRs #141–#143). F1 resolved by DEBT-277, F4 is now shipped in `practice-session-page-view.tsx`, and F8 resolved by DEBT-276 (PR #172).
+**Scope:** Content-layer fixes, one design decision later split into DEBT-335, and future enhancement ideas extracted from BS-033 after all 22 component-layer fixes shipped (BUG-152–159, PRs #141–#143). F1 resolved by DEBT-277, F4 is now shipped in `practice-session-page-view.tsx`, and F8 resolved by DEBT-276 (PR #172).
 
 > **Decomposed:** This omnibus doc has been split into focused debt items. See:
 > - [DEBT-335](./debt-335-remove-all-or-nothing-wrong-answer-guard.md) — Remove all-or-nothing wrong-answer display guard (code fix)
 > - [DEBT-336](./debt-336-content-markdown-quality-pass.md) — Content markdown quality pass C1–C4 (external repo)
 > - [DEBT-337](./debt-337-future-feedback-enhancements.md) — Future enhancements F2/F3/F5/F6/F7 (parked)
+>
+> The sections below are preserved as the original omnibus snapshot. Use
+> DEBT-335, DEBT-336, and DEBT-337 for current status.
 
 ---
 
 ## Context
 
-BS-033 identified 22 problems across question display and feedback UX. All component-layer fixes are complete. This debt doc captures everything that remains genuinely open so BS-033 can be archived.
+BS-033 identified 22 problems across question display and feedback UX. All
+component-layer fixes are complete. Before decomposition, this debt doc
+captured everything that remained open so BS-033 could be archived.
 
 **Four design questions from BS-033 are now settled by shipped code:**
 
@@ -28,11 +33,14 @@ BS-033 identified 22 problems across question display and feedback UX. All compo
 
 ---
 
-## Open Design Decision
+## Historical Snapshot: Open Design Decision
 
 ### All-or-Nothing Wrong-Answer Display Rule
 
-**Current behavior** (`components/question/feedback.tsx`): If ANY incorrect choice has `null` or blank `explanationMd`, the entire "Why other answers are wrong" section is hidden. This means many questions show no wrong-answer feedback at all because their content is incomplete.
+**Current behavior** (`components/question/feedback.tsx:161-168`): If ANY
+incorrect choice has `null` or blank `explanationMd`, the entire
+"Why other answers are wrong" section is hidden. This means many questions show
+no wrong-answer feedback at all because their content is incomplete.
 
 ```tsx
 const hasMissingIncorrectExplanation = choiceExplanations.some(
@@ -49,7 +57,8 @@ const shouldRenderChoiceExplanations =
 - **Keep all-or-nothing** — Motivates complete content authoring; prevents partial/misleading display
 - **Show whatever exists** — Shows available explanations even when some choices lack them; better than nothing for the learner
 
-**Decision needed:** Pick one. No code change needed if keeping current behavior.
+**Decision (recorded in DEBT-335):** Show whatever exists. The implementation
+remains pending in DEBT-335.
 
 ---
 
@@ -123,7 +132,7 @@ Hitting `/app/questions/<slug>` directly (no query params) shows dashboard revie
 | Category | Count | Action Required |
 |----------|-------|----------------|
 | Settled design questions | 4 | None — already shipped |
-| Open design decision | 1 | Decide on all-or-nothing rule |
+| Open design decision | 1 | Decision recorded in DEBT-335; code change pending |
 | Content-layer fixes | 4 | Content authoring pass |
 | Future enhancements | 5 open (F2/F3/F5/F6/F7; F1/F4/F8 already resolved) | Build when prioritized |
 | Minor edge case | 1 | Fix if convenient |
