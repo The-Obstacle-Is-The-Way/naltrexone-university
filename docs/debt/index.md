@@ -17,9 +17,12 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | GitHub Issue |
 |----|-------|----------|--------------|
-| [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — 1 open design decision, 4 content-layer fixes, 5 open future enhancements (F1/F4/F8 already resolved) | P3 | — |
+| [DEBT-275](./debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — **decomposed** into DEBT-335/336/337 (2026-03-24) | P3 | — |
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
-**Next Debt ID:** DEBT-335
+| [DEBT-335](./debt-335-remove-all-or-nothing-wrong-answer-guard.md) | Remove all-or-nothing wrong-answer display guard — show available explanations even when some choices lack them | P2 | — |
+| [DEBT-336](./debt-336-content-markdown-quality-pass.md) | Content markdown quality pass (C1–C4) — blank lines, redundant prefixes, missing explanations; executed in external `addiction-final-2026` repo then re-imported | P3 | — |
+| [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
+**Next Debt ID:** DEBT-338
 
 ---
 

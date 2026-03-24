@@ -2,8 +2,14 @@
 
 **Priority:** P3
 **Created:** 2026-03-04
+**Status:** Decomposed (2026-03-24)
 **Source:** [BS-033](../_archive/brainstorming/bs-033-question-display-formatting-and-feedback-ux.md)
 **Scope:** Content-layer fixes, one unresolved design decision, and future enhancement ideas extracted from BS-033 after all 22 component-layer fixes shipped (BUG-152–159, PRs #141–#143). F1 resolved by DEBT-277, F4 is now shipped in `practice-session-page-view.tsx`, and F8 resolved by DEBT-276 (PR #172).
+
+> **Decomposed:** This omnibus doc has been split into focused debt items. See:
+> - [DEBT-335](./debt-335-remove-all-or-nothing-wrong-answer-guard.md) — Remove all-or-nothing wrong-answer display guard (code fix)
+> - [DEBT-336](./debt-336-content-markdown-quality-pass.md) — Content markdown quality pass C1–C4 (external repo)
+> - [DEBT-337](./debt-337-future-feedback-enhancements.md) — Future enhancements F2/F3/F5/F6/F7 (parked)
 
 ---
 
