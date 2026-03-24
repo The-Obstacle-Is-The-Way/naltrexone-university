@@ -58,15 +58,15 @@ All are in `content/questions/imported/article-based-pathway/`. The same orderin
 
 **Affected file:** `content/questions/imported/article-based-pathway/palis-2022/palis-2022-002.mdx`
 
-### Verified NOT Present (0 files)
+### Verified NOT Present (0 additional files)
 
-A scan of all 948 imported MDX files confirmed zero instances of:
+A scan of all 948 imported MDX files confirmed zero **additional** instances of:
 - Invalid labels outside A–E (e.g., `- F)`)
-- Stray non-bullet text before the first bullet (other than the clinical pearl pattern)
 - Duplicate labels
-- Empty wrong-answer sections (heading present, zero bullets)
+- Missing wrong-answer headings
+- Literally blank wrong-answer subsections (heading present, then only blank lines until the next heading)
 
-These remain latent risks that the parser would silently accept, but they are not present in the current corpus.
+The single combined-label file (`palis-2022-002`) is already tracked above and is also the only current case where the heading contains non-empty content but zero valid parsed bullets / non-bullet content before the first valid bullet.
 
 Windows line endings are **not** part of the problem: `parseChoiceExplanations()` normalizes `\r\n` / `\r` to `\n` before parsing.
 
@@ -145,10 +145,12 @@ Follow TDD. Tighten `parseChoiceExplanations()` so malformed wrong-answer sectio
 - Once inside the wrong-answer subsection, any non-empty, non-blank line before the first valid bullet is an error
 - Any bullet-like line with a label outside A–E is an error
 - Any duplicate parsed label is an error
+- Any recognized choice bullet whose body is blank / whitespace-only is an error
 - If the subsection heading exists with non-empty content but zero valid bullets survive parsing, throw
 - Combined-label patterns (comma-separated) are an error with an actionable message
 - Numbered-list items used in place of `- A)` bullets are an error
-- Heading-like lines inside a bullet body are an error unless they begin a legitimate section break after the bullet list is finished
+- After the first valid bullet, only blank lines, valid continuation paragraphs, additional valid bullets, and the terminal `### Reference` heading are allowed
+- Heading-like lines inside the wrong-answer subsection are an error unless they are the terminal `### Reference` heading
 - Indentation-sensitive nested markdown inside wrong-answer bullets is rejected until/unless the parser can preserve it structurally
 
 Error messages must include enough context (slug, line content) for content authors to fix quickly.
@@ -161,9 +163,9 @@ The root cause of DEBT-338 is architectural: per-choice explanations are **struc
 
 The correct fix is to put structured data where structured data belongs: in YAML frontmatter, next to the choice it describes.
 
-The choices already have three of four fields in frontmatter (`label`, `text`, `correct`). The missing fourth field is `explanation`. After Phase 2, the `**Why other answers are wrong:**` markdown section is eliminated entirely.
+The imported MDX format already has three of four choice fields in frontmatter (`label`, `text`, `correct`). The missing fourth field is `explanation`. The external **draft** format does **not** currently have structured choices in YAML at all; it still uses `answer` in frontmatter plus a `## Choices` markdown section. That means the Phase 2 end-state requires changing the draft authoring contract too, not just the seed parser.
 
-**Current format (structured data in markdown — fragile):**
+**Current imported MDX format (structured data in markdown — fragile):**
 ```yaml
 choices:
   - label: "A"
@@ -184,18 +186,19 @@ choices:
     explanation: "The extra questions in TAPS did not improve performance; simplicity is preferred in busy clinical settings."
 ```
 
-This is the industry-standard approach for structured quiz/question content. The Galaxy Project training platform, Electric Book template, and other educational content systems all co-locate per-choice feedback with the choice definition in structured data rather than parsing it from prose.
+This is the structurally correct end-state for this codebase: per-choice feedback lives with the choice definition in structured data instead of being reverse-parsed from prose.
 
 **Why not AST parsing?** An AST parser (remark/unified) is a better way to guess at structured data in markdown. YAML frontmatter means you don't have to guess at all. gray-matter (already used) parses it, Zod (already used) validates it. The parser gets **simpler**, not more complex.
 
 **Phase 2 implementation scope:**
-1. Add optional `explanation` field to `QuestionFrontmatterSchema` and `DraftFrontmatterSchema` (Zod)
-2. Read `explanation` directly from frontmatter choices in `buildSeedRepFromParsed()` — no more per-choice markdown regex parsing
-3. `parseChoiceExplanations()` simplifies to: extract general explanation + reference only
-4. The `**Why other answers are wrong:**` section becomes unnecessary (parser can warn if present for backwards compat during migration)
-5. Migrate content in external `addiction-final-2026` repo — move per-choice explanations from markdown body into YAML `explanation` field on each choice
-6. Update import pipeline (`scripts/draft-question-import.ts`) to carry `explanation` through from draft to MDX
-7. Update authoring docs and agent instructions
+1. Add optional `explanation` field to the imported MDX `QuestionFrontmatterSchema`
+2. Redesign the **draft-side** schema (currently local `DraftFrontmatterSchema` in `scripts/draft-question-import.ts`) so structured per-choice explanations can exist at the authoring source
+3. Preferred end-state: draft files also adopt structured `choices[]` YAML objects (`label`, `text`, `correct`, `explanation`) so the authoring source and imported MDX format align
+4. Update `parseDraftQuestionBlock()` / `convertDraftQuestionToMdx()` / `scripts/import-draft-questions.ts` to support both the legacy draft format (`answer` + `## Choices` + markdown wrong-answer section) and the new structured draft format during migration
+5. Read `explanation` directly from frontmatter choices in `buildSeedRepFromParsed()` when present; fall back to the Phase 1 markdown parser when absent
+6. After the migration is complete, `parseChoiceExplanations()` simplifies to: extract general explanation + reference only
+7. The `**Why other answers are wrong:**` section becomes unnecessary in both repos once all content is migrated
+8. Update authoring docs and agent instructions, then re-import and re-seed
 
 **Multiline explanations** work fine with YAML block scalars:
 ```yaml
@@ -205,7 +208,7 @@ This is the industry-standard approach for structured quiz/question content. The
       and equivalent accuracy favor the shorter instruments.
 ```
 
-**Phase 2 can be incremental.** Support both formats during migration: if `explanation` is present in frontmatter, use it; if not, fall back to the Phase 1 markdown parser. This allows gradual migration without a flag day.
+**Phase 2 can be incremental.** Support both formats during migration: if `explanation` is present in frontmatter, use it; if not, fall back to the Phase 1 markdown parser. On the draft side, that means `parseDraftQuestionBlock()` and `convertDraftQuestionToMdx()` must temporarily support both the legacy `answer` + `## Choices` format and the new structured choice format. This allows gradual migration without a flag day.
 
 ---
 
@@ -219,14 +222,14 @@ The content instruction files in `content/drafts/questions/` are copied to the e
 |------|---------|---------|
 | `AGENTS.md` | Agent-specific quick-start | Overlaps with CLAUDE.md; both have quality checklists |
 | `CLAUDE.md` | Claude Code quick-start | Overlaps with AGENTS.md; both have quality checklists |
-| `META.MD` | NBME quality standards (Part 2) | Part 1 is an outdated inventory; Part 2 is the real value |
+| `META.MD` | Current inventory/integrity checks + archival bootstrap appendix | Useful quality guidance is mixed with historical examples and inventory/progress context |
 | `NOTES.md` | Audit findings, corruption log | Historical reference; growing unboundedly |
 | `PLAN.md` | Progress tracker | Needed but separate concern |
 | `QUESTION-FORMAT-SPEC.md` | Complete pipeline spec | Overlaps heavily with SCHEMA.md |
 | `SCHEMA.md` | YAML format, tags, quality checklist | Overlaps heavily with QUESTION-FORMAT-SPEC.md |
 | `TAG-TAXONOMY.md` | Canonical tag tables | Could be a section of SCHEMA.md |
 
-An agent working on questions has to read 4+ files just to understand the format. Quality rules are scattered across at least 3 files (AGENTS.md, CLAUDE.md, SCHEMA.md) and must be kept manually in sync. This is unsustainable and directly contributed to the formatting inconsistencies that caused DEBT-338.
+An agent working on questions has to read 4+ files just to understand the format. Quality rules are scattered across at least 3 files (AGENTS.md, CLAUDE.md, SCHEMA.md) and must be kept manually in sync. This is unsustainable, increases drift risk, and likely contributed to the formatting inconsistencies behind DEBT-338.
 
 ### Two-Repo Workflow
 
@@ -245,27 +248,29 @@ The instruction files must be accurate in BOTH repos. Consolidation reduces the 
 
 ### Ideal Consolidation Target
 
-Before Phase 2 content migration, consolidate to **4 files**:
+Before Phase 2 content migration, reduce the active tracked-doc surface from **8 files to 5 total**: **4 core instruction/reference files plus `PLAN.md` as the separate progress tracker**.
 
 | File | Content | Audience |
 |------|---------|----------|
 | `CLAUDE.md` | Quick-start for Claude Code agents: workflow, critical rules, quality checklist, vocabularies. Single file an agent reads to generate questions. | Claude Code / agent sessions |
 | `AGENTS.md` | Quick-start for non-Claude agents: same structure as CLAUDE.md but adapted for other agent interfaces. | Other agent interfaces |
-| `SCHEMA.md` | Single source of truth for format: YAML frontmatter spec, tag taxonomy, pipeline behavior, validation rules. Absorbs QUESTION-FORMAT-SPEC.md and TAG-TAXONOMY.md. | Agents + humans |
-| `NOTES.md` | Historical audit log and known-issue tracker. Not required reading for question generation — reference only. Absorbs META.MD Part 2 quality standards into SCHEMA.md; audit history stays here. | Humans reviewing quality |
+| `SCHEMA.md` | Single source of truth for format: YAML frontmatter spec, tag taxonomy, migration maps, pipeline behavior, validation rules. Absorbs QUESTION-FORMAT-SPEC.md and TAG-TAXONOMY.md. | Agents + humans |
+| `NOTES.md` | Historical audit log and known-issue tracker. Not required reading for question generation — reference only. Receives any inventory / integrity snapshots or audit notes that should not live in the active schema spec. | Humans reviewing quality |
 
-`PLAN.md` stays as-is (progress tracker, separate concern). `META.MD`, `QUESTION-FORMAT-SPEC.md`, and `TAG-TAXONOMY.md` get absorbed and removed.
+`PLAN.md` stays as-is (progress tracker, separate concern). `QUESTION-FORMAT-SPEC.md` and `TAG-TAXONOMY.md` get absorbed and removed. `META.MD` should either be archived entirely or split so that any still-useful current inventory / integrity notes move into `PLAN.md` or `NOTES.md`, while active quality guidance moves into `SCHEMA.md`.
 
-### Consolidation Must Happen Before Phase 2
+### Consolidation Before Phase 2 (Operationally Recommended)
 
-Phase 2 changes the question format (adding `explanation` to YAML frontmatter, removing the `**Why other answers are wrong:**` markdown section). If we update 8 fragmented files for the new format, we'll introduce new inconsistencies. Consolidate first, then update the consolidated docs once for Phase 2.
+Phase 2 changes the question format in a major way. If we update 8 fragmented files for the new format, we'll introduce new inconsistencies. Consolidate first, then update the consolidated docs once for Phase 2.
 
 ### Sequencing
 
 1. **Phase 1** (this repo): Strict parser validation — code changes only, no doc restructuring needed
 2. **Fix 24 corrupted files** (external repo): Content alignment using current format
-3. **Consolidate instruction files** (both repos): Reduce 8 → 4 files, ensure single source of truth
+3. **Consolidate instruction files** (both repos): Reduce 8 tracked files → 5 total / 4 core docs + `PLAN.md`, ensure single source of truth
 4. **Phase 2** (both repos): Add `explanation` to YAML frontmatter, update consolidated docs, migrate content
+
+Tracks 1 and 2 can be developed in parallel, but the strict-validation code should not be merged / enforced against a still-corrupted imported corpus unless the team is intentionally ready for `pnpm db:seed` to fail until the 24 content fixes are re-imported.
 
 ---
 
@@ -275,31 +280,36 @@ Phase 2 changes the question format (adding `explanation` to YAML frontmatter, r
 
 - [ ] `scripts/seed-helpers.test.ts` has regression coverage for: stray non-bullet text, invalid labels (F–Z), duplicate labels, combined-label bullets, heading-with-no-valid-bullets, clinical-pearl-after-bullets
 - [ ] `scripts/seed-helpers.test.ts` also covers: top-level numbered lists, heading-like lines inside a bullet body, `### Reference` inside a bullet body, inline markdown inside a bullet body, and CRLF input
+- [ ] `scripts/seed-helpers.test.ts` covers recognized bullets with blank / whitespace-only bodies
 - [ ] `scripts/seed.test.ts` verifies `parseSeedQuestionFile()` fails fast on malformed wrong-answer sections
 - [ ] Errors identify the offending question slug and offending line content
 - [ ] Well-formed partial wrong-answer sections still parse successfully
 - [ ] Phase 1 rejects indentation-sensitive nested markdown inside wrong-answer bullets unless/until the parser can preserve it structurally
+- [ ] Only `### Reference` is accepted as a legal heading that terminates the wrong-answer list under the current format
 - [ ] No malformed content is silently dropped or silently attached to the wrong choice explanation
 - [ ] Content alignment in external repo is complete (24 files fixed, re-imported, re-seeded)
 - [ ] Content instruction files updated with explicit ordering rules (done 2026-03-24)
 
 ### Instruction File Consolidation (Before Phase 2)
 
-- [ ] QUESTION-FORMAT-SPEC.md absorbed into SCHEMA.md (pipeline behavior, format rules)
-- [ ] TAG-TAXONOMY.md absorbed into SCHEMA.md (canonical tag tables)
-- [ ] META.MD Part 2 quality standards absorbed into SCHEMA.md; historical audit content moved to NOTES.md or archived
+- [ ] QUESTION-FORMAT-SPEC.md absorbed into SCHEMA.md (pipeline behavior, format rules, commands)
+- [ ] TAG-TAXONOMY.md absorbed into SCHEMA.md (canonical tag tables + migration maps + remaining useful content-gap guidance)
+- [ ] Useful current META.MD content is redistributed deliberately: active quality guidance into SCHEMA.md, inventory/progress context into PLAN.md or NOTES.md, archival bootstrap content archived or clearly marked as non-authoring reference
 - [ ] CLAUDE.md and AGENTS.md updated to reference consolidated SCHEMA.md; no duplicated quality rules
 - [ ] Consolidated files synced to external `addiction-final-2026` repo
 - [ ] Agents can generate correct questions by reading only CLAUDE.md (or AGENTS.md) + SCHEMA.md
 
 ### Phase 2 (YAML Frontmatter Migration)
 
-- [ ] `QuestionFrontmatterSchema` and `DraftFrontmatterSchema` accept optional `explanation` field on each choice
+- [ ] Imported MDX `QuestionFrontmatterSchema` accepts optional `explanation` field on each choice
+- [ ] Draft-side schema is redesigned so per-choice explanations exist in structured authoring data instead of markdown prose
+- [ ] `parseDraftQuestionBlock()` / `convertDraftQuestionToMdx()` support both the legacy draft format and the new structured draft format during migration
 - [ ] `buildSeedRepFromParsed()` reads `explanation` from frontmatter when present, falls back to markdown parser when absent
 - [ ] `parseChoiceExplanations()` no longer needed for per-choice data once all content is migrated
 - [ ] Import pipeline carries `explanation` through draft → MDX conversion
 - [ ] All 948+ question files migrated to YAML `explanation` field in external repo
 - [ ] `**Why other answers are wrong:**` markdown section no longer required by any pipeline stage
+- [ ] Migrated content is re-imported and `pnpm db:seed` succeeds against the full corpus
 - [ ] All existing tests pass; new tests cover YAML-sourced explanations
 
 ---

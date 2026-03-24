@@ -112,7 +112,7 @@ Before saving, verify:
 - [ ] Every wrong answer has a non-blank explanation
 - Runtime fallback: if a wrong-answer explanation is missing or blank, the UI omits only that choice's explanation and still renders the section for choices with content
 - [ ] `### Reference` at end of explanation with AMA-format citation
-- [ ] Optional: run `python3 scripts/validate_questions.py --root questions` for structural validation
+- [ ] Optional: after syncing changes into the app repo, run `pnpm content:import:drafts -- --dry-run` there for structural validation
 
 **For the full checklist and technical flaw taxonomy, see META.MD Part 2.**
 

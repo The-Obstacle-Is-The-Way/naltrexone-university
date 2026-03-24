@@ -202,6 +202,7 @@ Before finalizing any question, the agent must verify:
 
 > **Archival note:** The template below reflects the historical bootstrap prompt and is **not** the current parser contract.
 > For active authoring, follow `SCHEMA.md` and `QUESTION-FORMAT-SPEC.md` (YAML frontmatter with `answer` in frontmatter, and sections `## Question`, `## Choices`, `## Explanation`).
+> Do **not** copy the historical wrong-answer formatting below as-is: it predates DEBT-338 ordering rules and DEBT-335 runtime behavior, so current authoring must keep `**Clinical pearl:**` before `**Why other answers are wrong:**`, avoid choice-text prefixes, and follow the active pipeline docs instead.
 
 ### Question Schema (Markdown)
 ```markdown

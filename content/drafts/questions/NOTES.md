@@ -838,14 +838,15 @@ All in `content/questions/imported/article-based-pathway/`.
 **Corresponding imported MDX file:**
 - `content/questions/imported/article-based-pathway/palis-2022/palis-2022-002.mdx` line 41
 
-### Patterns Verified Not Present (0 files)
+### Patterns Verified Not Present (0 additional files)
 
-Scanned all 948 imported MDX files. Zero instances of:
+Scanned all 948 imported MDX files. Zero additional instances of:
 - Invalid labels outside A–E (e.g., `- F)`)
-- Stray non-bullet text before the first bullet (other than clinical pearl)
 - Duplicate labels within a single question
-- Empty wrong-answer sections (heading present, zero bullets)
 - Missing wrong-answer heading (all 948 files have one)
+- Literally blank wrong-answer sections (heading present, then only blank lines until the next heading)
+
+The combined-label `palis-2022-002` file above is also the only current case with non-empty content under the heading but zero valid parsed bullets / stray non-bullet content before the first valid bullet.
 
 **Additional parser behavior verified (latent risk, not present in current corpus):**
 - Top-level numbered lists under `**Why other answers are wrong:**` are silently ignored
@@ -858,4 +859,4 @@ Scanned all 948 imported MDX files. Zero instances of:
 
 1. **Content fixes (external `addiction-final-2026` repo):** Fix the 24 affected draft source files per the patterns above, then re-run `pnpm content:import:drafts` and `pnpm db:seed`
 2. **Parser hardening (this repo):** DEBT-338 Phase 1 — add strict validation so these patterns throw errors instead of silently corrupting data
-3. **Long-term (this repo):** DEBT-338 Phase 2 — replace line-by-line regex parser with remark/unified AST-based parser
+3. **Long-term (both repos):** DEBT-338 Phase 2 — move per-choice explanations into structured YAML choice data, then retire markdown parsing for per-choice feedback
