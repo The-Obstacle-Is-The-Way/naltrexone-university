@@ -2,7 +2,7 @@
 
 **Purpose:** Board-style questions for Addiction Psychiatry certification exam prep.
 
-**Version:** 1.11
+**Version:** 1.12
 **Last Updated:** March 24, 2026
 
 **Related Files:**
@@ -20,6 +20,7 @@
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.12 | 2026-03-24 | Added an explicit parser-safety rule that wrong-answer bullet bodies must stay plain-paragraph text only (no nested lists/headings/other indentation-sensitive markdown). |
 | 1.11 | 2026-03-24 | Split wrong-answer explanation guidance into an explicit authoring rule plus runtime fallback note so the checklist no longer conflates content expectations with UI behavior. |
 | 1.10 | 2026-03-13 | Clarified wrong-answer explanation rule: do not prefix with choice text (full text or short labels before a colon); start directly with reasoning. |
 | 1.9 | 2026-03-06 | Added explicit wrong-answer explanation authoring rules to the quality checklist (do not restate full choice text; every wrong answer requires an explanation) |
@@ -301,6 +302,7 @@ Before finalizing questions:
 - [ ] **`**Clinical pearl:**` appears BEFORE `**Why other answers are wrong:**`** — placing it after the bullets corrupts the data (see DEBT-338)
 - [ ] **One bullet per wrong choice** — no combined labels like `- A, B, D)` (parser drops them silently)
 - [ ] **Nothing between the last bullet and `### Reference`** except blank lines — any text gets appended to the last choice's explanation
+- [ ] **Wrong-answer bullets use plain paragraph text only** — no nested lists, numbered sublists, blockquotes, code blocks, or heading-style lines inside a bullet body
 - [ ] Wrong-answer explanations do NOT prefix with any form of the choice text (no full text, no short labels before a colon; start directly with reasoning)
 - [ ] Every wrong answer has a non-blank explanation
 - Runtime fallback: if a wrong-answer explanation is missing or blank, the UI omits only that choice's explanation and still renders the section for choices with content

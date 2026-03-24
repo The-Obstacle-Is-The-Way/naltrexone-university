@@ -37,10 +37,12 @@ Use `SCHEMA.md` and `QUESTION-FORMAT-SPEC.md` as the source of truth for formatt
 6. **No choice-text prefixes**: Wrong-answer explanations must NOT prefix with any form of the choice text (no full text, no short labels before a colon); start directly with the reasoning
 7. **Clinical pearl BEFORE wrong-answer section**: `**Clinical pearl:**` must appear ABOVE `**Why other answers are wrong:**` — placing it after the bullets corrupts the data (DEBT-338)
 8. **One bullet per choice**: No combined labels like `- A, B, D)` — the parser drops them silently. Each wrong choice needs its own `- X)` bullet.
-9. **Nothing after the last bullet** except blank lines and `### Reference` — any other text gets appended to the last choice's explanation
-10. **Check for technical flaws** (see META.MD Part 2 for full taxonomy)
-11. **No domain tags** in draft frontmatter (taxonomy is topic/substance/treatment/diagnosis)
-12. **Frontmatter is strict**: unknown YAML keys will be rejected by the import script
+9. **Keep wrong-answer bullets simple**: Bullet bodies should be plain paragraph text only. Do not put nested lists, numbered sublists, blockquotes, code blocks, or heading-style lines inside a bullet body.
+10. **Every wrong choice needs a non-blank explanation**: Missing explanations degrade the learner-facing feedback and are still content debt even though the UI now renders partial coverage
+11. **Nothing after the last bullet** except blank lines and `### Reference` — any other text gets appended to the last choice's explanation
+12. **Check for technical flaws** (see META.MD Part 2 for full taxonomy)
+13. **No domain tags** in draft frontmatter (taxonomy is topic/substance/treatment/diagnosis)
+14. **Frontmatter is strict**: unknown YAML keys will be rejected by the import script
 
 ### Workflow
 

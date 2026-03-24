@@ -68,6 +68,17 @@ A scan of all 948 imported MDX files confirmed zero instances of:
 
 These remain latent risks that the parser would silently accept, but they are not present in the current corpus.
 
+Windows line endings are **not** part of the problem: `parseChoiceExplanations()` normalizes `\r\n` / `\r` to `\n` before parsing.
+
+### Additional Latent Risks (Verified Parser Behavior, Not Present in Current Corpus)
+
+These patterns are not present in the current 948-file corpus, but they are real parser hazards verified against the live implementation:
+
+- **Top-level numbered lists are silently ignored.** If an author writes `1. A is wrong` / `2. B is wrong` under the wrong-answer heading instead of `- A)` bullets, no per-choice explanations are parsed.
+- **Heading-like lines inside an open bullet terminate parsing.** Because the loop checks `SECTION_HEADING_PATTERN` before bullet/continuation handling, a line such as `### Reference` or `### Note` inside a bullet body ends the wrong-answer subsection immediately.
+- **`### Reference` inside a bullet body is reclassified as question reference content.** The current implementation will store everything after that heading in `referenceMd`, even if the author intended it to remain inside the choice explanation.
+- **Indentation-sensitive nested markdown is flattened.** Continuation lines are appended with `trimStart()`, so inline markdown like bold/italic survives, but nested lists, blockquotes, code blocks, and other indentation-sensitive constructs do not preserve their original structure.
+
 ---
 
 ## Root Cause Analysis
@@ -82,6 +93,7 @@ This matches single-letter labels A–E with one or more delimiters from `).:`  
 - Labels outside A–E (silently treated as continuation text)
 - Combined labels like `A, B, D)` (comma breaks the match)
 - Labels without a delimiter (e.g., `- A ` with no `)`, `.`, or `:`)
+- Numbered lists like `1. A is wrong` (silently dropped unless a valid bullet is already open)
 
 ### The Append-or-Drop Logic (`scripts/seed-helpers.ts:75-101`)
 
@@ -135,6 +147,9 @@ Follow TDD. Tighten `parseChoiceExplanations()` so malformed wrong-answer sectio
 - Any duplicate parsed label is an error
 - If the subsection heading exists with non-empty content but zero valid bullets survive parsing, throw
 - Combined-label patterns (comma-separated) are an error with an actionable message
+- Numbered-list items used in place of `- A)` bullets are an error
+- Heading-like lines inside a bullet body are an error unless they begin a legitimate section break after the bullet list is finished
+- Indentation-sensitive nested markdown inside wrong-answer bullets is rejected until/unless the parser can preserve it structurally
 
 Error messages must include enough context (slug, line content) for content authors to fix quickly.
 
@@ -149,9 +164,9 @@ The line-by-line regex approach is fundamentally fragile for semi-structured mar
 3. Find the following list node
 4. Extract list items with their labels from the AST structure
 
-This would naturally reject stray text (separate paragraph nodes), handle multi-line bullets correctly (same list item node), and eliminate the append-or-drop ambiguity entirely.
+This would naturally reject stray text (separate paragraph nodes), handle multi-line bullets correctly (same list item node), preserve indentation-sensitive markdown structure, and eliminate the append-or-drop ambiguity entirely.
 
-This is a larger scope change and can be a separate follow-up. Phase 1 strict validation is sufficient to prevent silent corruption.
+This is a larger scope change and can be a separate follow-up. Phase 1 strict validation is sufficient to prevent silent corruption, but Phase 2 remains the durable answer if authors need richer markdown inside per-choice explanations. `remark-gfm` is already present in `package.json`; any AST implementation should add the parser packages it imports directly (for example `unified` / `remark-parse`) as first-class dependencies rather than relying on transitive packages.
 
 ---
 
@@ -160,9 +175,11 @@ This is a larger scope change and can be a separate follow-up. Phase 1 strict va
 ### Phase 1 (Strict Validation)
 
 - [ ] `scripts/seed-helpers.test.ts` has regression coverage for: stray non-bullet text, invalid labels (F–Z), duplicate labels, combined-label bullets, heading-with-no-valid-bullets, clinical-pearl-after-bullets
+- [ ] `scripts/seed-helpers.test.ts` also covers: top-level numbered lists, heading-like lines inside a bullet body, `### Reference` inside a bullet body, inline markdown inside a bullet body, and CRLF input
 - [ ] `scripts/seed.test.ts` verifies `parseSeedQuestionFile()` fails fast on malformed wrong-answer sections
 - [ ] Errors identify the offending question slug and offending line content
 - [ ] Well-formed partial wrong-answer sections still parse successfully
+- [ ] Phase 1 rejects indentation-sensitive nested markdown inside wrong-answer bullets unless/until the parser can preserve it structurally
 - [ ] No malformed content is silently dropped or silently attached to the wrong choice explanation
 - [ ] Content alignment in external repo is complete (24 files fixed, re-imported, re-seeded)
 - [ ] Content instruction files updated with explicit ordering rules (done 2026-03-24)
@@ -171,7 +188,7 @@ This is a larger scope change and can be a separate follow-up. Phase 1 strict va
 
 - [ ] `parseChoiceExplanations()` uses remark/unified AST instead of line-by-line regex
 - [ ] All existing `scripts/seed-helpers.test.ts` tests pass without modification
-- [ ] Parser handles multi-line bullets, blank lines, and markdown formatting natively
+- [ ] Parser handles multi-line bullets, blank lines, inline formatting, nested lists, and heading boundaries natively
 
 ---
 

@@ -106,6 +106,7 @@ Before saving, verify:
 - [ ] Clinical pearl included **and placed BEFORE `**Why other answers are wrong:**`** — placing it after the bullets corrupts the data (DEBT-338)
 - [ ] One bullet per wrong choice — no combined labels like `- A, B, D)` (parser drops them)
 - [ ] Nothing between the last bullet and `### Reference` except blank lines
+- [ ] Wrong-answer bullets use plain paragraph text only — no nested lists, numbered sublists, blockquotes, code blocks, or heading-style lines inside a bullet body
 - [ ] `treatments` tag included if a medication is mentioned
 - [ ] Per-choice explanations do NOT prefix with any form of the choice text (no full text, no short labels before a colon; start directly with reasoning)
 - [ ] Every wrong answer has a non-blank explanation

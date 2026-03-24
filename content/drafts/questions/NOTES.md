@@ -847,6 +847,13 @@ Scanned all 948 imported MDX files. Zero instances of:
 - Empty wrong-answer sections (heading present, zero bullets)
 - Missing wrong-answer heading (all 948 files have one)
 
+**Additional parser behavior verified (latent risk, not present in current corpus):**
+- Top-level numbered lists under `**Why other answers are wrong:**` are silently ignored
+- Heading-style lines inside a bullet body terminate wrong-answer parsing immediately
+- `### Reference` inside a bullet body is reclassified as question-level reference content
+- Inline markdown inside a bullet body is preserved, but indentation-sensitive nested markdown is flattened because continuation lines are `trimStart()`ed
+- Windows line endings are normalized before parsing and are not part of the corruption problem
+
 ### Required Actions
 
 1. **Content fixes (external `addiction-final-2026` repo):** Fix the 24 affected draft source files per the patterns above, then re-run `pnpm content:import:drafts` and `pnpm db:seed`

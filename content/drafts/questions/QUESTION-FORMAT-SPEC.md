@@ -298,6 +298,7 @@ General explanation paragraph.
 - **Good:** `- A) Administering another injection would extend the duration of opioid receptor blockade and make postoperative opioid analgesia ineffective.`
 - **Good:** `- A) Suspension contradicts the CM principle of maintaining continuous engagement and providing immediate reinforcement opportunities.`
 - **One bullet per choice.** Do NOT combine multiple choices into a single bullet (e.g., `- A, B, D) They are all wrong because...`). The parser cannot match combined labels — the entire line will be silently dropped. Each wrong choice needs its own bullet.
+- **Keep bullet bodies to plain paragraph text plus inline emphasis only.** Do NOT put nested lists, numbered sublists, blockquotes, code blocks, or heading-style lines inside a wrong-answer bullet. The current parser is line-based: it flattens indentation-sensitive markdown and treats heading-style lines as section breaks.
 - Every wrong answer should have an explanation. Missing or blank wrong-answer explanations are excluded from the UI, and the `Why other answers are wrong` section still renders for the choices that have content.
 
 **How this is parsed by the system:**
@@ -316,7 +317,9 @@ The seed script splits the explanation into parts at the `**Why other answers ar
 - Bullet label can use `A)` / `A.` / `A:` (and lowercase is normalized to uppercase)
 - Only labels A–E are recognized. Any other label is invisible to the parser.
 - Parsing stops at the next markdown heading (`#`..`######`)
+- Numbered lists are NOT recognized as per-choice entries; use `- A)` / `- B)` bullets only
 - **Any non-bullet line after the heading is either silently dropped (if no bullet is open yet) or silently appended to the current bullet's body.** This is the source of the clinical pearl corruption bug — see DEBT-338.
+- Because continuation lines are `trimStart()`ed, indentation-sensitive nested markdown is not preserved inside choice explanations
 - You do NOT need to include the correct answer in the per-choice section (it's already covered by the general explanation)
 - If you omit the "Why other answers are wrong" section entirely, per-choice explanations will be empty — the general explanation still displays
 - Per-choice labels must exist in the question's choices, or seed fails
@@ -591,6 +594,10 @@ Before submitting questions:
 - [ ] Explanation has general section + `**Why other answers are wrong:**` with per-choice bullets
 - [ ] Per-choice explanations teach concepts, not just "this is incorrect"
 - [ ] Per-choice explanations do NOT prefix with any form of the choice text (no full text, no short labels before a colon; start directly with reasoning)
+- [ ] Clinical pearl appears before `**Why other answers are wrong:**`
+- [ ] Exactly one bullet per wrong choice (no combined labels like `- A, B, D)`)
+- [ ] Nothing appears between the last wrong-answer bullet and `### Reference` except blank lines
+- [ ] Wrong-answer bullets use plain paragraph text only (no nested lists, numbered sublists, blockquotes, code blocks, or heading-style lines)
 - [ ] Every wrong answer has an explanation (missing or blank wrong-answer explanations are excluded; the section still renders for choices with content)
 - [ ] Clinical pearl included
 - [ ] `### Reference` section at end of explanation with AMA-format citation
