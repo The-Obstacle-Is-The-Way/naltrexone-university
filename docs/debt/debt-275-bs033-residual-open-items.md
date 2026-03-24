@@ -33,7 +33,7 @@ captured everything that remained open so BS-033 could be archived.
 
 ---
 
-## Historical Snapshot: Open Design Decision
+## Historical Snapshot: Former Open Design Decision
 
 ### All-or-Nothing Wrong-Answer Display Rule
 
@@ -134,7 +134,7 @@ Hitting `/app/questions/<slug>` directly (no query params) shows dashboard revie
 | Category | Count | Action Required |
 |----------|-------|----------------|
 | Settled design questions | 4 | None — already shipped |
-| Open design decision | 1 | Resolved by DEBT-335 on 2026-03-24 |
+| Resolved design decision | 1 | Resolved by DEBT-335 on 2026-03-24 |
 | Content-layer fixes | 4 | Content authoring pass |
 | Future enhancements | 5 open (F2/F3/F5/F6/F7; F1/F4/F8 already resolved) | Build when prioritized |
 | Minor edge case | 1 | Fix if convenient |

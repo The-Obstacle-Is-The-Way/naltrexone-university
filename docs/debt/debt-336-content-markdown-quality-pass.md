@@ -9,7 +9,7 @@
 
 ## Context
 
-The question content lives in a separate repo (`addiction-final-2026`) and is imported into this app via `pnpm content:import:drafts`. Four content quality issues were identified during the BS-033 UX audit. All four are about the **markdown text itself**, not the app code.
+The question content lives in a separate repo (`addiction-final-2026`) and is imported into this app via `pnpm content:import:drafts`. Four content quality issues were identified during the BS-033 UX audit. All four are about the **Markdown text itself**, not the app code.
 
 These instructions should be copied to the external repo so agents there can execute the fixes against the actual question files.
 
@@ -26,6 +26,7 @@ These instructions should be copied to the external repo so agents there can exe
 ### Example
 
 **Bad (no blank line — renders as one paragraph):**
+
 ```markdown
 ## Question
 
@@ -35,6 +36,7 @@ Which of the following medications would be most appropriate to address his crav
 ```
 
 **Good (blank line — renders as two paragraphs):**
+
 ```markdown
 ## Question
 
@@ -57,6 +59,7 @@ Which of the following medications would be most appropriate to address his crav
 ### Example
 
 **Bad:**
+
 ```markdown
 The AUDIT-C uses sex-specific cutoffs: ≥3 for women and ≥4 for men.
 **Clinical pearl:** The AUDIT-C is the most validated brief screening tool
@@ -64,6 +67,7 @@ in primary care, taking under 1 minute to administer.
 ```
 
 **Good:**
+
 ```markdown
 The AUDIT-C uses sex-specific cutoffs: ≥3 for women and ≥4 for men.
 
@@ -75,7 +79,7 @@ in primary care, taking under 1 minute to administer.
 
 ## C3: Wrong-Answer Explanation Redundant Prefix
 
-**What's wrong:** Some wrong-answer explanations restate the choice text before explaining why it's wrong. The UI already shows the full choice text above the explanation, so this creates a redundant, hard-to-read block.
+**What's wrong:** Some wrong-answer explanations restate the choice text before stating why the option is wrong. The UI already shows the full choice text above the explanation, so this creates a redundant, hard-to-read block.
 
 **Why it matters:** Learners see the choice text twice — once in the choice display, once at the start of the explanation. The `QUESTION-FORMAT-SPEC.md` already prohibits this pattern (see §5, "Wrong-answer explanation format rules"), but older questions predate the rule.
 
@@ -84,12 +88,14 @@ in primary care, taking under 1 minute to administer.
 ### Example
 
 **Bad (restates the choice):**
+
 ```markdown
 - A) CYP interaction increasing methadone: While drug interactions should always
   be checked, the primary concern here is...
 ```
 
 **Good (starts with reasoning):**
+
 ```markdown
 - A) While drug interactions should always be checked, the primary concern
   here is...

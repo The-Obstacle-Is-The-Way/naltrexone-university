@@ -1,7 +1,7 @@
 # Question Format Spec — Single Source of Truth
 
 > **Status:** Active
-> **Last Updated:** 2026-03-17
+> **Last Updated:** 2026-03-24
 > **Purpose:** Complete reference for authoring draft questions that pass
 > cleanly through the draft -> import -> MDX -> seed -> database -> UI
 > pipeline.
@@ -240,16 +240,20 @@ Current parser behavior:
 - Parsing stops at the next markdown heading.
 - If a wrong-answer bullet references a choice label not present in the
   question, seed fails.
-- If some incorrect choices have explanations and others do not, the UI omits
-  only the missing ones and still renders the wrong-answer section for the
-  remaining explained choices.
 
 Authoring guidance:
 
+- Provide a non-blank explanation bullet for every incorrect choice.
 - Do not repeat the wrong choice text inside the explanation bullet. The UI
   already renders the choice text above the explanation.
 - Use the general explanation for the correct-answer teaching point.
 - Use the per-choice bullets to teach why each incorrect option is wrong.
+
+Runtime/UI behavior:
+
+- If some incorrect choices have explanations and others do not, the UI omits
+  only the missing ones and still renders the wrong-answer section for the
+  remaining explained choices.
 
 ### `### Reference`
 
