@@ -240,8 +240,9 @@ Current parser behavior:
 - Parsing stops at the next markdown heading.
 - If a wrong-answer bullet references a choice label not present in the
   question, seed fails.
-- If any incorrect choice lacks an explanation, the UI hides the entire
-  wrong-answer section rather than showing a partial list.
+- If some incorrect choices have explanations and others do not, the UI omits
+  only the missing ones and still renders the wrong-answer section for the
+  remaining explained choices.
 
 Authoring guidance:
 

@@ -1082,6 +1082,52 @@ describe('Feedback', () => {
     expect(wrongAnswersSectionText).not.toContain('Second option');
   });
 
+  it('renders available wrong-answer cards in correct flow when a sibling incorrect explanation is blank', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={true}
+        explanationMd="General explanation."
+        choiceExplanations={[
+          {
+            choiceId: 'choice-a',
+            displayLabel: 'A',
+            textMd: 'First option',
+            isCorrect: false,
+            explanationMd: 'First option is incorrect.',
+          },
+          {
+            choiceId: 'choice-b',
+            displayLabel: 'B',
+            textMd: 'Second option',
+            isCorrect: false,
+            explanationMd: '   ',
+          },
+          {
+            choiceId: 'choice-c',
+            displayLabel: 'C',
+            textMd: 'Third option',
+            isCorrect: true,
+            explanationMd: 'Third option is correct.',
+          },
+        ]}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const wrongAnswersHeading = findSectionLabel(
+      doc,
+      'Why Other Answers Are Wrong',
+    );
+    const wrongAnswersSectionText =
+      wrongAnswersHeading?.parentElement?.textContent ?? '';
+
+    expectNeutralChip(wrongAnswersHeading);
+    expect(wrongAnswersSectionText).toContain('First option');
+    expect(wrongAnswersSectionText).toContain('First option is incorrect.');
+    expect(wrongAnswersSectionText).not.toContain('Second option');
+    expect(wrongAnswersSectionText).not.toContain('Third option');
+  });
+
   it('falls back to general explanation when an incorrect choice explanation is missing', () => {
     const html = renderToStaticMarkup(
       <Feedback
@@ -1616,6 +1662,12 @@ describe('Feedback', () => {
     const yourAnswerTextTokens = getClassTokens(
       yourAnswerText?.getAttribute('class') ?? '',
     );
+    const wrongAnswersHeading = findSectionLabel(
+      doc,
+      'Why Other Answers Are Wrong',
+    );
+    const wrongAnswersSectionText =
+      wrongAnswersHeading?.parentElement?.textContent ?? '';
 
     expect(html).not.toContain('Your answer');
     expect(destructiveCardTokens.has('p-4')).toBe(true);
@@ -1625,7 +1677,12 @@ describe('Feedback', () => {
     expect(yourAnswerBadge).not.toBeUndefined();
     expect(yourAnswerBadge?.getAttribute('class')).toContain('rounded-full');
     expect(html).toContain('First option');
+    expectNeutralChip(wrongAnswersHeading);
+    expect(html).toContain('Why Other Answers Are Wrong');
     expect(html).not.toContain('Why Other Answers Are Wrong:');
+    expect(wrongAnswersSectionText).toContain('Second option');
+    expect(wrongAnswersSectionText).toContain('Second option is incorrect.');
+    expect(wrongAnswersSectionText).not.toContain('First option');
     expect(html).toContain('General explanation.');
     expect(yourAnswerTextTokens.has('text-base')).toBe(true);
     expect(yourAnswerTextTokens.has('text-foreground')).toBe(true);

@@ -7,7 +7,7 @@
 **Scope:** Content-layer fixes, one design decision later split into DEBT-335, and future enhancement ideas extracted from BS-033 after all 22 component-layer fixes shipped (BUG-152–159, PRs #141–#143). F1 resolved by DEBT-277, F4 is now shipped in `practice-session-page-view.tsx`, and F8 resolved by DEBT-276 (PR #172).
 
 > **Decomposed:** This omnibus doc has been split into focused debt items. See:
-> - [DEBT-335](./debt-335-remove-all-or-nothing-wrong-answer-guard.md) — Remove all-or-nothing wrong-answer display guard (code fix)
+> - [DEBT-335](../_archive/debt/debt-335-remove-all-or-nothing-wrong-answer-guard.md) — Remove all-or-nothing wrong-answer display guard (resolved 2026-03-24)
 > - [DEBT-336](./debt-336-content-markdown-quality-pass.md) — Content markdown quality pass C1–C4 (external repo)
 > - [DEBT-337](./debt-337-future-feedback-enhancements.md) — Future enhancements F2/F3/F5/F6/F7 (parked)
 >
@@ -37,7 +37,7 @@ captured everything that remained open so BS-033 could be archived.
 
 ### All-or-Nothing Wrong-Answer Display Rule
 
-**Current behavior** (`components/question/feedback.tsx:161-168`): If ANY
+**Historical behavior** (`components/question/feedback.tsx:161-168` before DEBT-335 closure): If ANY
 incorrect choice has `null` or blank `explanationMd`, the entire
 "Why other answers are wrong" section is hidden. This means many questions show
 no wrong-answer feedback at all because their content is incomplete.
@@ -57,8 +57,7 @@ const shouldRenderChoiceExplanations =
 - **Keep all-or-nothing** — Motivates complete content authoring; prevents partial/misleading display
 - **Show whatever exists** — Shows available explanations even when some choices lack them; better than nothing for the learner
 
-**Decision (recorded in DEBT-335):** Show whatever exists. The implementation
-remains pending in DEBT-335.
+**Decision (implemented by DEBT-335 on 2026-03-24):** Show whatever exists.
 
 ---
 
@@ -94,7 +93,10 @@ This restates the answer before explaining why it's wrong. Should directly expla
 
 ### C4: Wrong-Answer Explanation Completeness (BS-033 P6)
 
-Many questions are missing per-choice wrong-answer explanations entirely. Related to the all-or-nothing display decision above — incomplete content triggers the hide-all guard.
+Many questions are missing per-choice wrong-answer explanations entirely. Before
+DEBT-335, that incomplete content triggered the hide-all guard. After DEBT-335,
+the UI shows whatever wrong-answer explanations exist, but missing content still
+leaves the learner with only partial teaching value.
 
 **Scope:** Bulk audit of content completeness. Scale depends on authoring pipeline.
 
@@ -132,7 +134,7 @@ Hitting `/app/questions/<slug>` directly (no query params) shows dashboard revie
 | Category | Count | Action Required |
 |----------|-------|----------------|
 | Settled design questions | 4 | None — already shipped |
-| Open design decision | 1 | Decision recorded in DEBT-335; code change pending |
+| Open design decision | 1 | Resolved by DEBT-335 on 2026-03-24 |
 | Content-layer fixes | 4 | Content authoring pass |
 | Future enhancements | 5 open (F2/F3/F5/F6/F7; F1/F4/F8 already resolved) | Build when prioritized |
 | Minor edge case | 1 | Fix if convenient |

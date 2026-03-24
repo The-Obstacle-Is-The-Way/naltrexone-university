@@ -158,14 +158,7 @@ export function Feedback({
   const visibleChoiceExplanations = choiceExplanations.filter(
     isIncorrectChoiceWithExplanation,
   );
-  const hasMissingIncorrectExplanation = choiceExplanations.some(
-    (choice) =>
-      !choice.isCorrect &&
-      (choice.explanationMd === null ||
-        choice.explanationMd.trim().length === 0),
-  );
-  const shouldRenderChoiceExplanations =
-    !hasMissingIncorrectExplanation && visibleChoiceExplanations.length > 0;
+  const shouldRenderChoiceExplanations = visibleChoiceExplanations.length > 0;
   const userChoice =
     !isCorrect && selectedChoiceId
       ? (choiceExplanations.find(
