@@ -209,6 +209,66 @@ This is the industry-standard approach for structured quiz/question content. The
 
 ---
 
+## Content Instruction File Consolidation (Before Phase 2)
+
+### The Problem
+
+The content instruction files in `content/drafts/questions/` are copied to the external `addiction-final-2026` repo where agents generate and edit questions. There are currently **8 files**, and they have significant overlap and fragmentation:
+
+| File | Purpose | Problem |
+|------|---------|---------|
+| `AGENTS.md` | Agent-specific quick-start | Overlaps with CLAUDE.md; both have quality checklists |
+| `CLAUDE.md` | Claude Code quick-start | Overlaps with AGENTS.md; both have quality checklists |
+| `META.MD` | NBME quality standards (Part 2) | Part 1 is an outdated inventory; Part 2 is the real value |
+| `NOTES.md` | Audit findings, corruption log | Historical reference; growing unboundedly |
+| `PLAN.md` | Progress tracker | Needed but separate concern |
+| `QUESTION-FORMAT-SPEC.md` | Complete pipeline spec | Overlaps heavily with SCHEMA.md |
+| `SCHEMA.md` | YAML format, tags, quality checklist | Overlaps heavily with QUESTION-FORMAT-SPEC.md |
+| `TAG-TAXONOMY.md` | Canonical tag tables | Could be a section of SCHEMA.md |
+
+An agent working on questions has to read 4+ files just to understand the format. Quality rules are scattered across at least 3 files (AGENTS.md, CLAUDE.md, SCHEMA.md) and must be kept manually in sync. This is unsustainable and directly contributed to the formatting inconsistencies that caused DEBT-338.
+
+### Two-Repo Workflow
+
+```
+content/drafts/questions/*.md, *.MD  (instruction files — tracked in git)
+        ↕  manually copied
+addiction-final-2026/questions/*.md, *.MD  (same instruction files)
+addiction-final-2026/questions/**/*.md     (actual question content — authored here)
+        ↓  pnpm content:import:drafts
+content/questions/imported/**/*.mdx        (imported MDX — gitignored)
+        ↓  pnpm db:seed
+database                                   (production data)
+```
+
+The instruction files must be accurate in BOTH repos. Consolidation reduces the surface area that needs to stay in sync.
+
+### Ideal Consolidation Target
+
+Before Phase 2 content migration, consolidate to **4 files**:
+
+| File | Content | Audience |
+|------|---------|----------|
+| `CLAUDE.md` | Quick-start for Claude Code agents: workflow, critical rules, quality checklist, vocabularies. Single file an agent reads to generate questions. | Claude Code / agent sessions |
+| `AGENTS.md` | Quick-start for non-Claude agents: same structure as CLAUDE.md but adapted for other agent interfaces. | Other agent interfaces |
+| `SCHEMA.md` | Single source of truth for format: YAML frontmatter spec, tag taxonomy, pipeline behavior, validation rules. Absorbs QUESTION-FORMAT-SPEC.md and TAG-TAXONOMY.md. | Agents + humans |
+| `NOTES.md` | Historical audit log and known-issue tracker. Not required reading for question generation — reference only. Absorbs META.MD Part 2 quality standards into SCHEMA.md; audit history stays here. | Humans reviewing quality |
+
+`PLAN.md` stays as-is (progress tracker, separate concern). `META.MD`, `QUESTION-FORMAT-SPEC.md`, and `TAG-TAXONOMY.md` get absorbed and removed.
+
+### Consolidation Must Happen Before Phase 2
+
+Phase 2 changes the question format (adding `explanation` to YAML frontmatter, removing the `**Why other answers are wrong:**` markdown section). If we update 8 fragmented files for the new format, we'll introduce new inconsistencies. Consolidate first, then update the consolidated docs once for Phase 2.
+
+### Sequencing
+
+1. **Phase 1** (this repo): Strict parser validation — code changes only, no doc restructuring needed
+2. **Fix 24 corrupted files** (external repo): Content alignment using current format
+3. **Consolidate instruction files** (both repos): Reduce 8 → 4 files, ensure single source of truth
+4. **Phase 2** (both repos): Add `explanation` to YAML frontmatter, update consolidated docs, migrate content
+
+---
+
 ## Acceptance Criteria
 
 ### Phase 1 (Strict Validation — Near-Term)
@@ -222,6 +282,15 @@ This is the industry-standard approach for structured quiz/question content. The
 - [ ] No malformed content is silently dropped or silently attached to the wrong choice explanation
 - [ ] Content alignment in external repo is complete (24 files fixed, re-imported, re-seeded)
 - [ ] Content instruction files updated with explicit ordering rules (done 2026-03-24)
+
+### Instruction File Consolidation (Before Phase 2)
+
+- [ ] QUESTION-FORMAT-SPEC.md absorbed into SCHEMA.md (pipeline behavior, format rules)
+- [ ] TAG-TAXONOMY.md absorbed into SCHEMA.md (canonical tag tables)
+- [ ] META.MD Part 2 quality standards absorbed into SCHEMA.md; historical audit content moved to NOTES.md or archived
+- [ ] CLAUDE.md and AGENTS.md updated to reference consolidated SCHEMA.md; no duplicated quality rules
+- [ ] Consolidated files synced to external `addiction-final-2026` repo
+- [ ] Agents can generate correct questions by reading only CLAUDE.md (or AGENTS.md) + SCHEMA.md
 
 ### Phase 2 (YAML Frontmatter Migration)
 
