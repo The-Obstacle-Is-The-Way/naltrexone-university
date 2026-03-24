@@ -103,7 +103,9 @@ Before saving, verify:
 - [ ] Correct answer is NOT longer than distractors
 - [ ] No word repeats between stem and correct answer
 - [ ] Each wrong answer explanation teaches a concept
-- [ ] Clinical pearl included
+- [ ] Clinical pearl included **and placed BEFORE `**Why other answers are wrong:**`** — placing it after the bullets corrupts the data (DEBT-338)
+- [ ] One bullet per wrong choice — no combined labels like `- A, B, D)` (parser drops them)
+- [ ] Nothing between the last bullet and `### Reference` except blank lines
 - [ ] `treatments` tag included if a medication is mentioned
 - [ ] Per-choice explanations do NOT prefix with any form of the choice text (no full text, no short labels before a colon; start directly with reasoning)
 - [ ] Every wrong answer has a non-blank explanation

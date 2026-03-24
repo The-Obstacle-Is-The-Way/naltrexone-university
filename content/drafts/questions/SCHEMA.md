@@ -298,6 +298,9 @@ Before finalizing questions:
 - [ ] `answer` is in frontmatter (A, B, C, D, or E)
 - [ ] `substances` and `topics` are arrays (use brackets even for single values)
 - [ ] Explanation covers correct answer AND why others are wrong
+- [ ] **`**Clinical pearl:**` appears BEFORE `**Why other answers are wrong:**`** — placing it after the bullets corrupts the data (see DEBT-338)
+- [ ] **One bullet per wrong choice** — no combined labels like `- A, B, D)` (parser drops them silently)
+- [ ] **Nothing between the last bullet and `### Reference`** except blank lines — any text gets appended to the last choice's explanation
 - [ ] Wrong-answer explanations do NOT prefix with any form of the choice text (no full text, no short labels before a colon; start directly with reasoning)
 - [ ] Every wrong answer has a non-blank explanation
 - Runtime fallback: if a wrong-answer explanation is missing or blank, the UI omits only that choice's explanation and still renders the section for choices with content

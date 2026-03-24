@@ -35,9 +35,12 @@ Use `SCHEMA.md` and `QUESTION-FORMAT-SPEC.md` as the source of truth for formatt
 4. **Test clinical concepts, NOT statistics**
 5. **Cover-the-options rule**: Can you answer without seeing the choices?
 6. **No choice-text prefixes**: Wrong-answer explanations must NOT prefix with any form of the choice text (no full text, no short labels before a colon); start directly with the reasoning
-7. **Check for technical flaws** (see META.MD Part 2 for full taxonomy)
-8. **No domain tags** in draft frontmatter (taxonomy is topic/substance/treatment/diagnosis)
-9. **Frontmatter is strict**: unknown YAML keys will be rejected by the import script
+7. **Clinical pearl BEFORE wrong-answer section**: `**Clinical pearl:**` must appear ABOVE `**Why other answers are wrong:**` — placing it after the bullets corrupts the data (DEBT-338)
+8. **One bullet per choice**: No combined labels like `- A, B, D)` — the parser drops them silently. Each wrong choice needs its own `- X)` bullet.
+9. **Nothing after the last bullet** except blank lines and `### Reference` — any other text gets appended to the last choice's explanation
+10. **Check for technical flaws** (see META.MD Part 2 for full taxonomy)
+11. **No domain tags** in draft frontmatter (taxonomy is topic/substance/treatment/diagnosis)
+12. **Frontmatter is strict**: unknown YAML keys will be rejected by the import script
 
 ### Workflow
 

@@ -52,5 +52,10 @@ content/questions/*
 !content/questions/placeholder/
 !content/questions/placeholder/**/*
 !content/questions/README.md
-content/drafts/
+# Content drafts — question content is proprietary, instruction files are tracked
+content/drafts/*
+!content/drafts/questions/
+content/drafts/questions/*
+!content/drafts/questions/*.md
+!content/drafts/questions/*.MD
 content/imports/

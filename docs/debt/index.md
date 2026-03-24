@@ -21,7 +21,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-336](./debt-336-content-markdown-quality-pass.md) | Content markdown quality pass (C1–C4) — blank lines, redundant prefixes, missing explanations; executed in external `addiction-final-2026` repo then re-imported | P3 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
-| [DEBT-338](./debt-338-seed-parser-silent-wrong-answer-section-corruption.md) | Seed parser silently accepts malformed `Why other answers are wrong` sections — stray lines can be dropped, invalid labels can contaminate a prior choice explanation, and malformed sections do not fail fast during seed/import | P2 | — |
+| [DEBT-338](./debt-338-seed-parser-silent-wrong-answer-section-corruption.md) | Seed parser silently accepts malformed `Why other answers are wrong` sections — **24 files confirmed corrupted** (23 clinical pearl contamination, 1 combined-label drop); parser needs strict validation (Phase 1) then AST rewrite (Phase 2) | P1 | — |
 
 **Next Debt ID:** DEBT-339
 
