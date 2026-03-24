@@ -2,8 +2,8 @@
 
 **Purpose:** Board-style questions for Addiction Psychiatry certification exam prep.
 
-**Version:** 1.10
-**Last Updated:** March 13, 2026
+**Version:** 1.11
+**Last Updated:** March 24, 2026
 
 **Related Files:**
 - `META.MD` - Full NBME quality standards, technical flaw taxonomy (Part 2)
@@ -20,6 +20,7 @@
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.11 | 2026-03-24 | Split wrong-answer explanation guidance into an explicit authoring rule plus runtime fallback note so the checklist no longer conflates content expectations with UI behavior. |
 | 1.10 | 2026-03-13 | Clarified wrong-answer explanation rule: do not prefix with choice text (full text or short labels before a colon); start directly with reasoning. |
 | 1.9 | 2026-03-06 | Added explicit wrong-answer explanation authoring rules to the quality checklist (do not restate full choice text; every wrong answer requires an explanation) |
 | 1.8 | 2026-02-18 | Synced with QUESTION-FORMAT-SPEC.md and runtime importer behavior (2-5 choices allowed, validation commands updated, legacy skill-file references removed) |
@@ -298,7 +299,8 @@ Before finalizing questions:
 - [ ] `substances` and `topics` are arrays (use brackets even for single values)
 - [ ] Explanation covers correct answer AND why others are wrong
 - [ ] Wrong-answer explanations do NOT prefix with any form of the choice text (no full text, no short labels before a colon; start directly with reasoning)
-- [ ] Every wrong answer has an explanation (missing ones hide the section in the UI)
+- [ ] Every wrong answer has a non-blank explanation
+- Runtime fallback: if a wrong-answer explanation is missing or blank, the UI omits only that choice's explanation and still renders the section for choices with content
 - [ ] Vignettes follow logical clinical order
 - [ ] Lead-in is focused (passes cover-the-options test)
 - [ ] Distractors are plausible, not obviously wrong

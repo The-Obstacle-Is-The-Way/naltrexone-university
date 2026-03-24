@@ -106,7 +106,8 @@ Before saving, verify:
 - [ ] Clinical pearl included
 - [ ] `treatments` tag included if a medication is mentioned
 - [ ] Per-choice explanations do NOT prefix with any form of the choice text (no full text, no short labels before a colon; start directly with reasoning)
-- [ ] Every wrong answer has an explanation (missing ones hide the entire section in the UI)
+- [ ] Every wrong answer has a non-blank explanation
+- Runtime fallback: if a wrong-answer explanation is missing or blank, the UI omits only that choice's explanation and still renders the section for choices with content
 - [ ] `### Reference` at end of explanation with AMA-format citation
 - [ ] Optional: run `python3 scripts/validate_questions.py --root questions` for structural validation
 
