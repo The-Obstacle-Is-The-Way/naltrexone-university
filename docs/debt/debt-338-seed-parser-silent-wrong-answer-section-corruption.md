@@ -155,24 +155,63 @@ Error messages must include enough context (slug, line content) for content auth
 
 Well-formed partial coverage (some choices have explanations, some don't) remains valid per DEBT-336.
 
-**Phase 2 — AST-Based Parser (long-term)**
+**Phase 2 — Move Per-Choice Explanations to YAML Frontmatter (long-term)**
 
-The line-by-line regex approach is fundamentally fragile for semi-structured markdown. `remark-gfm` is already in `package.json`. A more durable approach:
+The root cause of DEBT-338 is architectural: per-choice explanations are **structured data** (keyed to a specific choice label) stored in **unstructured markdown** (freeform text parsed by regex). No amount of regex hardening or AST parsing eliminates this fundamental mismatch — you're always heuristically extracting structure from prose.
 
-1. Parse the explanation markdown into an AST using remark/unified
-2. Find the "Why other answers are wrong" paragraph node (bold text)
-3. Find the following list node
-4. Extract list items with their labels from the AST structure
+The correct fix is to put structured data where structured data belongs: in YAML frontmatter, next to the choice it describes.
 
-This would naturally reject stray text (separate paragraph nodes), handle multi-line bullets correctly (same list item node), preserve indentation-sensitive markdown structure, and eliminate the append-or-drop ambiguity entirely.
+The choices already have three of four fields in frontmatter (`label`, `text`, `correct`). The missing fourth field is `explanation`. After Phase 2, the `**Why other answers are wrong:**` markdown section is eliminated entirely.
 
-This is a larger scope change and can be a separate follow-up. Phase 1 strict validation is sufficient to prevent silent corruption, but Phase 2 remains the durable answer if authors need richer markdown inside per-choice explanations. `remark-gfm` is already present in `package.json`; any AST implementation should add the parser packages it imports directly (for example `unified` / `remark-parse`) as first-class dependencies rather than relying on transitive packages.
+**Current format (structured data in markdown — fragile):**
+```yaml
+choices:
+  - label: "A"
+    text: "TAPS is preferred because..."
+    correct: false
+```
+```markdown
+**Why other answers are wrong:**
+- A) The extra questions in TAPS did not improve performance...
+```
+
+**Phase 2 format (structured data in YAML — no parsing ambiguity):**
+```yaml
+choices:
+  - label: "A"
+    text: "TAPS is preferred because..."
+    correct: false
+    explanation: "The extra questions in TAPS did not improve performance; simplicity is preferred in busy clinical settings."
+```
+
+This is the industry-standard approach for structured quiz/question content. The Galaxy Project training platform, Electric Book template, and other educational content systems all co-locate per-choice feedback with the choice definition in structured data rather than parsing it from prose.
+
+**Why not AST parsing?** An AST parser (remark/unified) is a better way to guess at structured data in markdown. YAML frontmatter means you don't have to guess at all. gray-matter (already used) parses it, Zod (already used) validates it. The parser gets **simpler**, not more complex.
+
+**Phase 2 implementation scope:**
+1. Add optional `explanation` field to `QuestionFrontmatterSchema` and `DraftFrontmatterSchema` (Zod)
+2. Read `explanation` directly from frontmatter choices in `buildSeedRepFromParsed()` — no more per-choice markdown regex parsing
+3. `parseChoiceExplanations()` simplifies to: extract general explanation + reference only
+4. The `**Why other answers are wrong:**` section becomes unnecessary (parser can warn if present for backwards compat during migration)
+5. Migrate content in external `addiction-final-2026` repo — move per-choice explanations from markdown body into YAML `explanation` field on each choice
+6. Update import pipeline (`scripts/draft-question-import.ts`) to carry `explanation` through from draft to MDX
+7. Update authoring docs and agent instructions
+
+**Multiline explanations** work fine with YAML block scalars:
+```yaml
+    explanation: >
+      The extra questions in TAPS did not improve diagnostic performance
+      compared to shorter tools. In busy clinical settings, simplicity
+      and equivalent accuracy favor the shorter instruments.
+```
+
+**Phase 2 can be incremental.** Support both formats during migration: if `explanation` is present in frontmatter, use it; if not, fall back to the Phase 1 markdown parser. This allows gradual migration without a flag day.
 
 ---
 
 ## Acceptance Criteria
 
-### Phase 1 (Strict Validation)
+### Phase 1 (Strict Validation — Near-Term)
 
 - [ ] `scripts/seed-helpers.test.ts` has regression coverage for: stray non-bullet text, invalid labels (F–Z), duplicate labels, combined-label bullets, heading-with-no-valid-bullets, clinical-pearl-after-bullets
 - [ ] `scripts/seed-helpers.test.ts` also covers: top-level numbered lists, heading-like lines inside a bullet body, `### Reference` inside a bullet body, inline markdown inside a bullet body, and CRLF input
@@ -184,11 +223,15 @@ This is a larger scope change and can be a separate follow-up. Phase 1 strict va
 - [ ] Content alignment in external repo is complete (24 files fixed, re-imported, re-seeded)
 - [ ] Content instruction files updated with explicit ordering rules (done 2026-03-24)
 
-### Phase 2 (AST Parser — Future)
+### Phase 2 (YAML Frontmatter Migration)
 
-- [ ] `parseChoiceExplanations()` uses remark/unified AST instead of line-by-line regex
-- [ ] All existing `scripts/seed-helpers.test.ts` tests pass without modification
-- [ ] Parser handles multi-line bullets, blank lines, inline formatting, nested lists, and heading boundaries natively
+- [ ] `QuestionFrontmatterSchema` and `DraftFrontmatterSchema` accept optional `explanation` field on each choice
+- [ ] `buildSeedRepFromParsed()` reads `explanation` from frontmatter when present, falls back to markdown parser when absent
+- [ ] `parseChoiceExplanations()` no longer needed for per-choice data once all content is migrated
+- [ ] Import pipeline carries `explanation` through draft → MDX conversion
+- [ ] All 948+ question files migrated to YAML `explanation` field in external repo
+- [ ] `**Why other answers are wrong:**` markdown section no longer required by any pipeline stage
+- [ ] All existing tests pass; new tests cover YAML-sourced explanations
 
 ---
 
