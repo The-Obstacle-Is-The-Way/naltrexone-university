@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-21
+**Last Updated:** 2026-03-24
 
 ---
 
@@ -30,8 +30,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-044](./bs-044-dark-mode-border-weight-tiering.md) | Dark Mode Border Weight Tiering — broad cross-surface tiering remains open after narrower choice-button and History slices were resolved via `DEBT-280`, `DEBT-301`, and `DEBT-302` | Active | [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
 | [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) | Bookmark Icon Toggle — replace "Remove" text pill and "Bookmark"/"Remove bookmark" action bar pills with filled/unfilled bookmark icon (Lucide `Bookmark` with `fill-current` toggle); phased rollout starting with Bookmarks page | Active | [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) |
 | [BS-059](./bs-059-practice-session-action-bar-button-arrangement.md) | Practice session action bar has up to 6 buttons (Previous, Submit, Try Again, Bookmark, Next, Back to...) with no visual grouping — same bookmark-between-nav issue as DEBT-330 plus additional state complexity | Active | [DEBT-330](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md) |
-
-**Next Brainstorming ID:** BS-060
+**Next Brainstorming ID:** BS-061
 
 ---
 
@@ -39,6 +38,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 | ID | Title | Outcome |
 |----|-------|---------|
+| [BS-060](../_archive/brainstorming/bs-060-sentry-error-triage-and-environment-hygiene.md) | Sentry Error Triage and Environment Hygiene — alert rule scoped to production, localhost filter enabled, preview-only Vercel Toolbar CSP support and `sentry_environment` tagging added | Implemented 2026-03-24 in PR #250. Post-deploy verification tracked in GitHub issue #251. |
 | [BS-058](../_archive/brainstorming/bs-058-exam-post-submit-flow-reorder.md) | Exam Post-Submit Flow Reorder — summary-first post-submit exam flow created a "summary sandwich" and delayed question-level learning behind an extra click | Implemented 2026-03-19 in PR #236. Core post-exam review stage shipped; residual post-ship follow-ups are tracked separately in DEBT-325, DEBT-326, and DEBT-329. |
 | [BS-057](../_archive/brainstorming/bs-057-agent-browser-clerk-auth-reliability.md) | Agent-Browser Clerk Auth Reliability | Resolved 2026-03-18. Known limitation permanently documented in `docs/tooling/agent-browser.md`. `--profile` is the verified working path. |
 | [BS-055](../_archive/brainstorming/bs-055-exam-session-interaction-model-rethink.md) | Exam Session Interaction Model — Submit redundancy, button bar inconsistency, click count per question | Resolved 2026-03-19. Implemented via DEBT-321 (full overhaul, 8 stages) and DEBT-322 (UX polish, PR #235). Interaction contracts documented in `docs/practice-engine/interaction-contracts.md`. |

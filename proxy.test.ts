@@ -10,6 +10,18 @@ const ORIGINAL_ENV = snapshotProcessEnv();
 const CHECKOUT_SUCCESS_URL = `https://example.com${ROUTES.CHECKOUT_SUCCESS}`;
 const CHECKOUT_SUCCESS_WITH_SESSION_ID_URL = `${CHECKOUT_SUCCESS_URL}?session_id=cs_test_xxx`;
 
+type CapturedContentSecurityPolicy = {
+  directives: Record<string, string[]>;
+  strict?: boolean;
+  reportOnly: boolean;
+  reportTo?: string;
+};
+
+type ClerkMiddlewareCallback = (
+  auth: { protect: () => Promise<void> },
+  request: unknown,
+) => Promise<void> | void;
+
 const matchesPathnameAgainstPattern = (
   pathname: string,
   pattern: string,
@@ -21,6 +33,40 @@ const matchesPathnameAgainstPattern = (
     return false;
   }
 };
+
+const captureContentSecurityPolicyOptions =
+  async (): Promise<CapturedContentSecurityPolicy> => {
+    const protect = vi.fn(async () => undefined);
+    let capturedOptions: unknown;
+    const clerkMiddleware = vi.fn(
+      (cb: ClerkMiddlewareCallback, options?: unknown) => {
+        capturedOptions = options;
+        return vi.fn(async (req: unknown) => {
+          await cb({ protect }, req);
+          return new Response('ok');
+        });
+      },
+    );
+    const createRouteMatcher = vi.fn(() => () => false);
+
+    vi.doMock('@clerk/nextjs/server', () => ({
+      clerkMiddleware,
+      createRouteMatcher,
+    }));
+
+    const { default: middleware } = await import('./proxy');
+
+    await middleware(
+      {} as unknown as NextRequest,
+      {} as unknown as NextFetchEvent,
+    );
+
+    return (
+      capturedOptions as {
+        contentSecurityPolicy: CapturedContentSecurityPolicy;
+      }
+    ).contentSecurityPolicy;
+  };
 
 describe('proxy middleware', () => {
   afterEach(() => {
@@ -75,11 +121,6 @@ describe('proxy middleware', () => {
     vi.stubEnv('NODE_ENV', 'development');
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    type ClerkMiddlewareCallback = (
-      auth: { protect: () => Promise<void> },
-      request: unknown,
-    ) => Promise<void> | void;
-
     const protect = vi.fn(async () => undefined);
     const clerkMiddleware = vi.fn((cb: ClerkMiddlewareCallback) =>
       vi.fn(async (req: unknown) => {
@@ -113,11 +154,6 @@ describe('proxy middleware', () => {
 
   it('initializes and caches clerkMiddleware when NEXT_PUBLIC_SKIP_CLERK is not true', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
-
-    type ClerkMiddlewareCallback = (
-      auth: { protect: () => Promise<void> },
-      request: unknown,
-    ) => Promise<void> | void;
 
     const protect = vi.fn(async () => undefined);
     const clerkMiddleware = vi.fn((cb: ClerkMiddlewareCallback) =>
@@ -158,11 +194,6 @@ describe('proxy middleware', () => {
   it('returns configured Clerk CSP directives when NEXT_PUBLIC_SKIP_CLERK is false', async () => {
     // Arrange
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
-
-    type ClerkMiddlewareCallback = (
-      auth: { protect: () => Promise<void> },
-      request: unknown,
-    ) => Promise<void> | void;
 
     const protect = vi.fn(async () => undefined);
     let capturedOptions: unknown;
@@ -212,11 +243,6 @@ describe('proxy middleware', () => {
   it('does not call auth.protect for public routes', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
 
-    type ClerkMiddlewareCallback = (
-      auth: { protect: () => Promise<void> },
-      request: unknown,
-    ) => Promise<void> | void;
-
     const protect = vi.fn(async () => undefined);
     const clerkMiddleware = vi.fn((cb: ClerkMiddlewareCallback) =>
       vi.fn(async (req: unknown) => {
@@ -248,11 +274,6 @@ describe('proxy middleware', () => {
 
   it('calls auth.protect for /checkout/success when the route is not public', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
-
-    type ClerkMiddlewareCallback = (
-      auth: { protect: () => Promise<void> },
-      request: unknown,
-    ) => Promise<void> | void;
 
     const protect = vi.fn(async () => undefined);
     const clerkMiddleware = vi.fn((cb: ClerkMiddlewareCallback) =>
@@ -293,11 +314,6 @@ describe('proxy middleware', () => {
   it('preserves full checkout success URL including session_id when auth.protect redirects to sign-in', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
-
-    type ClerkMiddlewareCallback = (
-      auth: { protect: () => Promise<void> },
-      request: unknown,
-    ) => Promise<void> | void;
 
     const checkoutSuccessUrl = CHECKOUT_SUCCESS_WITH_SESSION_ID_URL;
 
@@ -382,11 +398,6 @@ describe('proxy middleware', () => {
   it('preserves full checkout success URL including session_id when Clerk handshake redirects before callback execution', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
-
-    type ClerkMiddlewareCallback = (
-      auth: { protect: () => Promise<void> },
-      request: unknown,
-    ) => Promise<void> | void;
 
     const checkoutSuccessUrl = CHECKOUT_SUCCESS_WITH_SESSION_ID_URL;
 
@@ -499,6 +510,45 @@ describe('proxy middleware', () => {
       );
     });
 
+    it('appends sentry_environment when environment is provided', async () => {
+      const { parseSentrySecurityHeaderEndpoint } = await import('./proxy');
+
+      expect(
+        parseSentrySecurityHeaderEndpoint(
+          'https://abc123@o456.ingest.us.sentry.io/789',
+          'preview',
+        ),
+      ).toBe(
+        'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123&sentry_environment=preview',
+      );
+    });
+
+    it('omits sentry_environment when environment is undefined', async () => {
+      const { parseSentrySecurityHeaderEndpoint } = await import('./proxy');
+
+      expect(
+        parseSentrySecurityHeaderEndpoint(
+          'https://abc123@o456.ingest.us.sentry.io/789',
+          undefined,
+        ),
+      ).toBe(
+        'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123',
+      );
+    });
+
+    it('omits sentry_environment when environment is empty string', async () => {
+      const { parseSentrySecurityHeaderEndpoint } = await import('./proxy');
+
+      expect(
+        parseSentrySecurityHeaderEndpoint(
+          'https://abc123@o456.ingest.us.sentry.io/789',
+          '',
+        ),
+      ).toBe(
+        'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123',
+      );
+    });
+
     it('returns null when the DSN uses a non-http scheme', async () => {
       const { parseSentrySecurityHeaderEndpoint } = await import('./proxy');
 
@@ -530,15 +580,134 @@ describe('proxy middleware', () => {
     });
   });
 
+  describe('preview-only Vercel Toolbar CSP support', () => {
+    it('includes the Vercel Toolbar origins when VERCEL_ENV=preview', async () => {
+      vi.stubEnv('NEXT_PUBLIC_SKIP_CLERK', 'false');
+      vi.stubEnv('VERCEL_ENV', 'preview');
+      vi.stubEnv('NODE_ENV', 'production');
+
+      const contentSecurityPolicy = await captureContentSecurityPolicyOptions();
+
+      expect(contentSecurityPolicy.strict).toBe(true);
+      expect(contentSecurityPolicy.reportOnly).toBe(true);
+      expect(contentSecurityPolicy.directives['script-src']).toEqual([
+        'https://vercel.live',
+      ]);
+      expect(contentSecurityPolicy.directives['connect-src']).toEqual(
+        expect.arrayContaining([
+          'ws:',
+          'wss:',
+          'https://vercel.live',
+          'wss://ws-us3.pusher.com',
+        ]),
+      );
+      expect(contentSecurityPolicy.directives['img-src']).toEqual(
+        expect.arrayContaining([
+          'self',
+          'data:',
+          'blob:',
+          'https:',
+          'https://vercel.live',
+          'https://vercel.com',
+        ]),
+      );
+      expect(contentSecurityPolicy.directives['frame-src']).toEqual([
+        'https://vercel.live',
+      ]);
+      expect(contentSecurityPolicy.directives['style-src']).toEqual([
+        'https://vercel.live',
+        "'unsafe-inline'",
+      ]);
+      expect(contentSecurityPolicy.directives['font-src']).toEqual(
+        expect.arrayContaining([
+          'self',
+          'data:',
+          'https:',
+          'https://vercel.live',
+          'https://assets.vercel.com',
+        ]),
+      );
+    });
+
+    it('does not include the Vercel Toolbar origins when VERCEL_ENV=production', async () => {
+      vi.stubEnv('NEXT_PUBLIC_SKIP_CLERK', 'false');
+      vi.stubEnv('VERCEL_ENV', 'production');
+      vi.stubEnv('NODE_ENV', 'production');
+
+      const contentSecurityPolicy = await captureContentSecurityPolicyOptions();
+
+      expect(contentSecurityPolicy.directives['script-src']).toBeUndefined();
+      expect(contentSecurityPolicy.directives['frame-src']).toBeUndefined();
+      expect(contentSecurityPolicy.directives['style-src']).toBeUndefined();
+      expect(contentSecurityPolicy.directives['connect-src']).not.toContain(
+        'https://vercel.live',
+      );
+      expect(contentSecurityPolicy.directives['connect-src']).not.toContain(
+        'wss://ws-us3.pusher.com',
+      );
+      expect(contentSecurityPolicy.directives['img-src']).not.toContain(
+        'https://vercel.live',
+      );
+      expect(contentSecurityPolicy.directives['img-src']).not.toContain(
+        'https://vercel.com',
+      );
+      expect(contentSecurityPolicy.directives['font-src']).not.toContain(
+        'https://vercel.live',
+      );
+      expect(contentSecurityPolicy.directives['font-src']).not.toContain(
+        'https://assets.vercel.com',
+      );
+    });
+
+    it('does not include the Vercel Toolbar origins when VERCEL_ENV is not set', async () => {
+      vi.stubEnv('NEXT_PUBLIC_SKIP_CLERK', 'false');
+      vi.unstubAllEnvs();
+      process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+      delete process.env.VERCEL_ENV;
+      vi.stubEnv('NODE_ENV', 'production');
+
+      const contentSecurityPolicy = await captureContentSecurityPolicyOptions();
+
+      expect(contentSecurityPolicy.directives['script-src']).toBeUndefined();
+      expect(contentSecurityPolicy.directives['frame-src']).toBeUndefined();
+      expect(contentSecurityPolicy.directives['style-src']).toBeUndefined();
+      expect(contentSecurityPolicy.directives['connect-src']).not.toContain(
+        'https://vercel.live',
+      );
+      expect(contentSecurityPolicy.directives['img-src']).not.toContain(
+        'https://vercel.live',
+      );
+      expect(contentSecurityPolicy.directives['font-src']).not.toContain(
+        'https://vercel.live',
+      );
+    });
+
+    it('includes sentry_environment=preview in report-uri when VERCEL_ENV=preview and NEXT_PUBLIC_SENTRY_DSN is set', async () => {
+      vi.stubEnv('NEXT_PUBLIC_SKIP_CLERK', 'false');
+      vi.stubEnv(
+        'NEXT_PUBLIC_SENTRY_DSN',
+        'https://abc123@o456.ingest.us.sentry.io/789',
+      );
+      vi.stubEnv('VERCEL_ENV', 'preview');
+      vi.stubEnv('NODE_ENV', 'production');
+
+      const contentSecurityPolicy = await captureContentSecurityPolicyOptions();
+
+      expect(contentSecurityPolicy.reportTo).toBe(
+        'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123&sentry_environment=preview',
+      );
+      expect(contentSecurityPolicy.directives['report-uri']).toEqual([
+        'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123&sentry_environment=preview',
+      ]);
+    });
+  });
+
   it('includes Sentry ingest origin in connect-src when NEXT_PUBLIC_SENTRY_DSN is set', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     process.env.NEXT_PUBLIC_SENTRY_DSN =
       'https://abc123@o456.ingest.us.sentry.io/789';
-
-    type ClerkMiddlewareCallback = (
-      auth: { protect: () => Promise<void> },
-      request: unknown,
-    ) => Promise<void> | void;
+    delete process.env.VERCEL_ENV;
+    vi.stubEnv('NODE_ENV', 'test');
 
     const protect = vi.fn(async () => undefined);
     let capturedOptions: unknown;
@@ -570,7 +739,7 @@ describe('proxy middleware', () => {
         strict: true,
         reportOnly: true,
         reportTo:
-          'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123',
+          'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123&sentry_environment=test',
         directives: expect.objectContaining({
           'connect-src': expect.arrayContaining([
             'ws:',
@@ -578,7 +747,7 @@ describe('proxy middleware', () => {
             'https://o456.ingest.us.sentry.io',
           ]),
           'report-uri': [
-            'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123',
+            'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123&sentry_environment=test',
           ],
         }),
       },
@@ -588,11 +757,6 @@ describe('proxy middleware', () => {
   it('excludes Sentry ingest origin from connect-src when NEXT_PUBLIC_SENTRY_DSN is not set', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     delete process.env.NEXT_PUBLIC_SENTRY_DSN;
-
-    type ClerkMiddlewareCallback = (
-      auth: { protect: () => Promise<void> },
-      request: unknown,
-    ) => Promise<void> | void;
 
     const protect = vi.fn(async () => undefined);
     let capturedOptions: unknown;
@@ -641,11 +805,6 @@ describe('proxy middleware', () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     process.env.NEXT_PUBLIC_SENTRY_DSN = 'mailto:test@example.com';
 
-    type ClerkMiddlewareCallback = (
-      auth: { protect: () => Promise<void> },
-      request: unknown,
-    ) => Promise<void> | void;
-
     const protect = vi.fn(async () => undefined);
     let capturedOptions: unknown;
     const clerkMiddleware = vi.fn(
@@ -683,11 +842,6 @@ describe('proxy middleware', () => {
   it('logs checkout success auth bounce when redirect_url is relative', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
-
-    type ClerkMiddlewareCallback = (
-      auth: { protect: () => Promise<void> },
-      request: unknown,
-    ) => Promise<void> | void;
 
     const checkoutSuccessUrl = CHECKOUT_SUCCESS_WITH_SESSION_ID_URL;
 
