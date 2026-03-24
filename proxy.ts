@@ -24,6 +24,7 @@ export function parseSentryIngestOrigin(
 
 export function parseSentrySecurityHeaderEndpoint(
   dsn: string | undefined,
+  environment?: string,
 ): string | null {
   if (!dsn) return null;
 
@@ -46,6 +47,10 @@ export function parseSentrySecurityHeaderEndpoint(
       : `/api/${projectId}/security/`;
     const endpoint = new URL(endpointPath, url.origin);
     endpoint.searchParams.set('sentry_key', publicKey);
+    const normalizedEnvironment = environment?.trim();
+    if (normalizedEnvironment) {
+      endpoint.searchParams.set('sentry_environment', normalizedEnvironment);
+    }
 
     return endpoint.toString();
   } catch {
@@ -53,14 +58,42 @@ export function parseSentrySecurityHeaderEndpoint(
   }
 }
 
+function mergeCspDirectives(
+  baseDirectives: Record<string, string[]>,
+  additionalDirectives: Record<string, string[]>,
+): Record<string, string[]> {
+  return Object.entries(additionalDirectives).reduce<Record<string, string[]>>(
+    (mergedDirectives, [directive, values]) => {
+      const existingValues = mergedDirectives[directive] ?? [];
+      mergedDirectives[directive] = Array.from(
+        new Set([...existingValues, ...values]),
+      );
+      return mergedDirectives;
+    },
+    { ...baseDirectives },
+  );
+}
+
 const sentryIngestOrigin = parseSentryIngestOrigin(
   process.env.NEXT_PUBLIC_SENTRY_DSN,
 );
+const sentryEnvironment =
+  process.env.VERCEL_ENV?.trim() || process.env.NODE_ENV?.trim();
 const sentrySecurityHeaderEndpoint = parseSentrySecurityHeaderEndpoint(
   process.env.NEXT_PUBLIC_SENTRY_DSN,
+  sentryEnvironment,
 );
 
-const CLERK_CSP_DIRECTIVES = {
+const VERCEL_TOOLBAR_CSP_DIRECTIVES = {
+  'script-src': ['https://vercel.live'],
+  'connect-src': ['https://vercel.live', 'wss://ws-us3.pusher.com'],
+  'img-src': ['https://vercel.live', 'https://vercel.com', 'data:', 'blob:'],
+  'frame-src': ['https://vercel.live'],
+  'style-src': ['https://vercel.live', "'unsafe-inline'"],
+  'font-src': ['https://vercel.live', 'https://assets.vercel.com'],
+} satisfies Record<string, string[]>;
+
+const BASE_CLERK_CSP_DIRECTIVES = {
   'base-uri': ['self'],
   'connect-src': [
     'ws:',
@@ -75,6 +108,13 @@ const CLERK_CSP_DIRECTIVES = {
     ? { 'report-uri': [sentrySecurityHeaderEndpoint] }
     : {}),
 } satisfies Record<string, string[]>;
+const CLERK_CSP_DIRECTIVES =
+  process.env.VERCEL_ENV === 'preview'
+    ? mergeCspDirectives(
+        BASE_CLERK_CSP_DIRECTIVES,
+        VERCEL_TOOLBAR_CSP_DIRECTIVES,
+      )
+    : BASE_CLERK_CSP_DIRECTIVES;
 
 let cachedClerkMiddleware: NextMiddleware | null = null;
 let hasLoggedSkipClerkProductionWarning = false;
