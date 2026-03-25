@@ -129,11 +129,12 @@ During consolidation, verify these are preserved somewhere:
 
 DEBT-338 has a "Content Instruction File Consolidation" section that describes this same plan. After DEBT-339 is resolved, that section of DEBT-338 can be marked done and cross-referenced here.
 
-**Sequencing (from DEBT-338):**
-1. ~~Phase 1: Strict parser validation~~ — done
-2. Fix 24 corrupted files (external repo) — pending
-3. **DEBT-339: Consolidate instruction files (both repos)** ← this doc
-4. Phase 2: YAML frontmatter migration (both repos)
+**Sequencing (updated):**
+1. ~~Phase 1: Strict parser validation~~ — done (2026-03-24)
+2. **DEBT-339: Consolidate instruction files** ← DO THIS NOW, before transplanting to external repo
+3. Transplant consolidated docs to external `addiction-final-2026` repo
+4. Fix 24 corrupted files (external repo) — guided by the consolidated docs
+5. Phase 2: YAML frontmatter migration (both repos)
 
 Consolidation should happen BEFORE Phase 2 because Phase 2 changes the question format. Updating 8 fragmented files for the new format will introduce inconsistencies. Consolidate first, then update the consolidated docs once.
 

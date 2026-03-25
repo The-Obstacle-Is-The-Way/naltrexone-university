@@ -268,10 +268,11 @@ Phase 2 changes the question format in a major way. If we update 8 fragmented fi
 
 ### Sequencing
 
-1. **Phase 1** (this repo): Strict parser validation — code changes only, no doc restructuring needed
-2. **Fix 24 corrupted files** (external repo): Content alignment using current format
-3. **Consolidate instruction files** (both repos): Reduce 8 tracked files → 5 total / 4 core docs + `PLAN.md`, ensure single source of truth
-4. **Phase 2** (both repos): Add `explanation` to YAML frontmatter, update consolidated docs, migrate content
+1. ~~**Phase 1** (this repo): Strict parser validation~~ — done (2026-03-24)
+2. **Consolidate instruction files** ([DEBT-339](./debt-339-consolidate-question-instruction-files.md)): Reduce 8 → 5 files, ensure single source of truth — do this BEFORE transplanting docs to the external repo so agents get clean, focused documentation
+3. **Transplant consolidated docs** to external `addiction-final-2026` repo
+4. **Fix 24 corrupted files** (external repo): Content alignment using current format, guided by the consolidated docs
+5. **Phase 2** (both repos): Add `explanation` to YAML frontmatter, update consolidated docs, migrate content
 
 Tracks 1 and 2 can be developed in parallel, but the strict-validation code should not be merged / enforced against a still-corrupted imported corpus unless the team is intentionally ready for `pnpm db:seed` to fail until the 24 content fixes are re-imported.
 
