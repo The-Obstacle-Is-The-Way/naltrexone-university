@@ -215,6 +215,8 @@ This is the structurally correct end-state for this codebase: per-choice feedbac
 
 ## Content Instruction File Consolidation (Before Phase 2)
 
+This consolidation track is now also tracked explicitly as [DEBT-339](./debt-339-consolidate-question-instruction-files.md).
+
 ### The Problem
 
 The content instruction files in `content/drafts/questions/` are copied to the external `addiction-final-2026` repo where agents generate and edit questions. There are currently **8 files**, and they have significant overlap and fragmentation:
@@ -230,7 +232,7 @@ The content instruction files in `content/drafts/questions/` are copied to the e
 | `SCHEMA.md` | YAML format, tags, quality checklist | Overlaps heavily with QUESTION-FORMAT-SPEC.md |
 | `TAG-TAXONOMY.md` | Canonical tag tables | Could be a section of SCHEMA.md |
 
-An agent working on questions has to read 4+ files just to understand the format. Quality rules are scattered across at least 3 files (AGENTS.md, CLAUDE.md, SCHEMA.md) and must be kept manually in sync. This is unsustainable, increases drift risk, and likely contributed to the formatting inconsistencies behind DEBT-338.
+An agent working on questions has to read 4+ files just to understand the format. Quality rules are scattered across at least 4 files (`AGENTS.md`, `CLAUDE.md`, `SCHEMA.md`, and `QUESTION-FORMAT-SPEC.md`) and must be kept manually in sync. This is unsustainable, increases drift risk, and likely contributed to the formatting inconsistencies behind DEBT-338.
 
 ### Two-Repo Workflow
 
