@@ -2,7 +2,8 @@
 
 **Priority:** P1
 **Created:** 2026-03-24
-**Updated:** 2026-03-24 (verified findings — live data corruption confirmed in 24 files)
+**Updated:** 2026-03-25 (Phase 1 strict validation implemented; next actions clarified)
+**Status:** Open — Phase 1 is implemented in this repo; external content alignment, instruction-file consolidation, and Phase 2 migration remain open
 **Source:** Codebase-wide audit after DEBT-335 / adjacent to [DEBT-336](./debt-336-content-markdown-quality-pass.md)
 **Scope:** `scripts/seed-helpers.ts` parser validation, content format alignment in external `addiction-final-2026` repo, long-term parser architecture
 
@@ -146,7 +147,7 @@ Follow TDD. Tighten `parseChoiceExplanations()` so malformed wrong-answer sectio
 - Any bullet-like line with a label outside A–E is an error
 - Any duplicate parsed label is an error
 - Any recognized choice bullet whose body is blank / whitespace-only is an error
-- If the subsection heading exists with non-empty content but zero valid bullets survive parsing, throw
+- If the subsection heading exists but zero valid bullets survive parsing, throw (including literally blank wrong-answer subsections where the heading is followed only by blank lines / EOF)
 - Combined-label patterns (comma-separated) are an error with an actionable message
 - Numbered-list items used in place of `- A)` bullets are an error
 - After the first valid bullet, only blank lines, valid continuation paragraphs, additional valid bullets, and the terminal `### Reference` heading are allowed
@@ -272,23 +273,47 @@ Phase 2 changes the question format in a major way. If we update 8 fragmented fi
 
 Tracks 1 and 2 can be developed in parallel, but the strict-validation code should not be merged / enforced against a still-corrupted imported corpus unless the team is intentionally ready for `pnpm db:seed` to fail until the 24 content fixes are re-imported.
 
+### Current State After Phase 1
+
+As of this update:
+
+1. **Phase 1 is done in this repo.** The seed parser now fails fast instead of silently corrupting malformed wrong-answer sections.
+2. **The immediate next operational step is external content repair.** Fix the 24 affected draft files in `addiction-final-2026`, then re-import them here.
+3. **Do not expect a full corpus re-seed to succeed until that external content repair is complete.** That is now an intentional fail-fast guard, not a regression.
+4. **After the corpus is clean, consolidate the instruction files before changing the authoring format.**
+5. **After consolidation, execute Phase 2** so per-choice explanations live in structured YAML instead of markdown prose.
+
+### What To Do Next
+
+If this Phase 1 PR is merged, the recommended next queue is:
+
+1. External repo: fix the 23 clinical-pearl ordering files and the 1 combined-label file
+2. External repo + this repo: sync the corrected instruction docs and re-import the repaired content
+3. This repo: verify `pnpm db:seed` succeeds against the repaired imported corpus
+4. Both repos: consolidate instruction files (`QUESTION-FORMAT-SPEC.md` + `TAG-TAXONOMY.md` into `SCHEMA.md`, rationalize `META.MD`)
+5. Both repos: execute Phase 2 YAML migration and retire markdown parsing for per-choice explanations
+
+No additional parser-architecture work is the recommended next move before step 1 unless a newly discovered malformed-content pattern requires another fail-fast validator.
+
 ---
 
 ## Acceptance Criteria
 
-### Phase 1 (Strict Validation — Near-Term)
+### Phase 1 (Strict Validation — Implemented 2026-03-24)
 
-- [ ] `scripts/seed-helpers.test.ts` has regression coverage for: stray non-bullet text, invalid labels (F–Z), duplicate labels, combined-label bullets, heading-with-no-valid-bullets, clinical-pearl-after-bullets
-- [ ] `scripts/seed-helpers.test.ts` also covers: top-level numbered lists, heading-like lines inside a bullet body, `### Reference` inside a bullet body, inline markdown inside a bullet body, and CRLF input
-- [ ] `scripts/seed-helpers.test.ts` covers recognized bullets with blank / whitespace-only bodies
-- [ ] `scripts/seed.test.ts` verifies `parseSeedQuestionFile()` fails fast on malformed wrong-answer sections
-- [ ] Errors identify the offending question slug and offending line content
-- [ ] Well-formed partial wrong-answer sections still parse successfully
-- [ ] Phase 1 rejects indentation-sensitive nested markdown inside wrong-answer bullets unless/until the parser can preserve it structurally
-- [ ] Only `### Reference` is accepted as a legal heading that terminates the wrong-answer list under the current format
-- [ ] No malformed content is silently dropped or silently attached to the wrong choice explanation
-- [ ] Content alignment in external repo is complete (24 files fixed, re-imported, re-seeded)
-- [ ] Content instruction files updated with explicit ordering rules (done 2026-03-24)
+- [x] `scripts/seed-helpers.test.ts` has regression coverage for: stray non-bullet text, invalid labels (F–Z), duplicate labels, combined-label bullets, heading-with-no-valid-bullets (including heading-only blank sections), clinical-pearl-after-bullets
+- [x] `scripts/seed-helpers.test.ts` also covers: top-level numbered lists, heading-like lines inside a bullet body, `### Reference` inside a bullet body, inline markdown inside a bullet body, and CRLF input
+- [x] `scripts/seed-helpers.test.ts` covers recognized bullets with blank / whitespace-only bodies
+- [x] `scripts/seed.test.ts` verifies `parseSeedQuestionFile()` fails fast on malformed wrong-answer sections
+- [x] Errors identify the offending question slug and offending line content
+- [x] Well-formed partial wrong-answer sections still parse successfully
+- [x] Phase 1 rejects indentation-sensitive nested markdown inside wrong-answer bullets unless/until the parser can preserve it structurally
+- [x] Only `### Reference` is accepted as a legal heading that terminates the wrong-answer list under the current format
+- [x] No malformed content is silently dropped or silently attached to the wrong choice explanation
+- [x] Verified against real corrupted files: `levy-2023-006.mdx` and `palis-2022-002.mdx` both throw with actionable slugged errors
+- [x] Corpus-wide parse of all 948 imported MDX files fails on exactly 24 files (23 clinical pearl + 1 combined label), matching DEBT-338 findings
+- [x] Content instruction files updated with explicit ordering rules (done 2026-03-24)
+- [ ] Content alignment in external repo is complete (24 files fixed, re-imported, re-seeded) — pending external repo work
 
 ### Instruction File Consolidation (Before Phase 2)
 
@@ -311,6 +336,16 @@ Tracks 1 and 2 can be developed in parallel, but the strict-validation code shou
 - [ ] `**Why other answers are wrong:**` markdown section no longer required by any pipeline stage
 - [ ] Migrated content is re-imported and `pnpm db:seed` succeeds against the full corpus
 - [ ] All existing tests pass; new tests cover YAML-sourced explanations
+
+### Debt Closure / Exit Condition
+
+DEBT-338 should remain open until all of the following are true:
+
+- [ ] The 24 known corrupted files are fixed in the external repo and re-imported here
+- [ ] `pnpm db:seed` succeeds against the full imported corpus with Phase 1 validation enabled
+- [ ] Instruction-file consolidation is complete in both repos
+- [ ] Per-choice explanations are stored in structured YAML authoring data and carried through import/seed
+- [ ] Markdown parsing is no longer required for per-choice wrong-answer explanations
 
 ---
 
