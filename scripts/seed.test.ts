@@ -1,8 +1,15 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseSeedQuestionFile } from './seed/question-parser';
 import { validateSeedQuestionTags } from './seed/tag-manager';
+
+function readSeedFixture(fileName: string): string {
+  return readFileSync(
+    path.join(process.cwd(), 'tests/fixtures/seed', fileName),
+    'utf8',
+  );
+}
 
 describe('validateSeedQuestionTags', () => {
   it('rejects domain tags before minimum tag count checks', () => {
@@ -224,51 +231,19 @@ describe('parseSeedQuestionFile', () => {
     );
   });
 
-  it.skipIf(
-    !existsSync(
-      path.join(
-        process.cwd(),
-        'content/questions/imported/article-based-pathway/levy-2023/levy-2023-006.mdx',
-      ),
-    ),
-  )(
-    'rejects the real levy-2023-006 imported file with a clear slugged error',
-    () => {
-      const raw = readFileSync(
-        path.join(
-          process.cwd(),
-          'content/questions/imported/article-based-pathway/levy-2023/levy-2023-006.mdx',
-        ),
-        'utf8',
-      );
+  it('rejects the levy-2023-006 corruption pattern fixture with a clear slugged error', () => {
+    const raw = readSeedFixture('levy-2023-006-corrupted.mdx');
 
-      expect(() => parseSeedQuestionFile(raw)).toThrow(
-        /levy-2023-006: .*after a choice bullet.*Clinical Pearl/i,
-      );
-    },
-  );
+    expect(() => parseSeedQuestionFile(raw)).toThrow(
+      /levy-2023-006: .*after a choice bullet.*Clinical Pearl/i,
+    );
+  });
 
-  it.skipIf(
-    !existsSync(
-      path.join(
-        process.cwd(),
-        'content/questions/imported/article-based-pathway/palis-2022/palis-2022-002.mdx',
-      ),
-    ),
-  )(
-    'rejects the real palis-2022-002 imported file with a clear slugged error',
-    () => {
-      const raw = readFileSync(
-        path.join(
-          process.cwd(),
-          'content/questions/imported/article-based-pathway/palis-2022/palis-2022-002.mdx',
-        ),
-        'utf8',
-      );
+  it('rejects the palis-2022-002 combined-label fixture with a clear slugged error', () => {
+    const raw = readSeedFixture('palis-2022-002-combined-labels.mdx');
 
-      expect(() => parseSeedQuestionFile(raw)).toThrow(
-        /palis-2022-002: .*combined choice labels/i,
-      );
-    },
-  );
+    expect(() => parseSeedQuestionFile(raw)).toThrow(
+      /palis-2022-002: .*combined choice labels/i,
+    );
+  });
 });
