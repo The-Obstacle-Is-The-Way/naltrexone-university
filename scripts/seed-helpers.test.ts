@@ -7,6 +7,16 @@ function mapEntries(map: ReadonlyMap<string, string>): Record<string, string> {
   );
 }
 
+function getErrorMessage(fn: () => unknown): string {
+  try {
+    fn();
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+
+  throw new Error('Expected function to throw');
+}
+
 describe('computeChoiceSyncPlan', () => {
   it('throws if asked to delete a choice that is referenced by an attempt', () => {
     expect(() =>
@@ -136,7 +146,7 @@ describe('parseChoiceExplanations', () => {
     );
   });
 
-  it('extracts referenceMd when another heading appears before reference', () => {
+  it('throws when a non-reference heading appears inside the wrong-answer section', () => {
     const explanationMd = [
       'General rationale paragraph.',
       '',
@@ -151,12 +161,12 @@ describe('parseChoiceExplanations', () => {
       "Anton RF, O'Malley SS, Ciraulo DA, et al. JAMA. 2006;295(17):2003-2017.",
     ].join('\n');
 
-    const parsed = parseChoiceExplanations(explanationMd);
-
-    expect(parsed.perChoice.get('A')).toBe('Reason A.');
-    expect(parsed.referenceMd).toBe(
-      "Anton RF, O'Malley SS, Ciraulo DA, et al. JAMA. 2006;295(17):2003-2017.",
+    const message = getErrorMessage(() =>
+      parseChoiceExplanations(explanationMd),
     );
+
+    expect(message).toContain('unexpected heading');
+    expect(message).toContain('### Clinical Pearl');
   });
 
   it('extracts multiline referenceMd when citation spans lines', () => {
@@ -227,5 +237,277 @@ describe('parseChoiceExplanations', () => {
       C: 'Reason C.',
     });
     expect(parsed.referenceMd).toBe('A concise AMA citation.');
+  });
+});
+
+describe('parseChoiceExplanations strict validation', () => {
+  it('throws on stray text before the first bullet', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '**Why other answers are wrong:**',
+      'Clinical Pearl: misplaced content.',
+      '- A) Reason A.',
+    ].join('\n');
+
+    const message = getErrorMessage(() =>
+      parseChoiceExplanations(explanationMd),
+    );
+
+    expect(message).toContain('before the first choice bullet');
+    expect(message).toContain('Clinical Pearl: misplaced content.');
+  });
+
+  it('throws on invalid bullet labels outside A-E', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '**Why other answers are wrong:**',
+      '- F) Reason F.',
+    ].join('\n');
+
+    const message = getErrorMessage(() =>
+      parseChoiceExplanations(explanationMd),
+    );
+
+    expect(message).toContain('invalid choice label');
+    expect(message).toContain('- F) Reason F.');
+  });
+
+  it('throws on duplicate choice labels', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '**Why other answers are wrong:**',
+      '- A) First reason.',
+      '- A) Duplicate reason.',
+    ].join('\n');
+
+    const message = getErrorMessage(() =>
+      parseChoiceExplanations(explanationMd),
+    );
+
+    expect(message).toContain('duplicate choice label');
+    expect(message).toContain('- A) Duplicate reason.');
+  });
+
+  it('throws on recognized bullets with blank bodies', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '**Why other answers are wrong:**',
+      '- A)    ',
+    ].join('\n');
+
+    const message = getErrorMessage(() =>
+      parseChoiceExplanations(explanationMd),
+    );
+
+    expect(message).toContain('blank explanation body');
+    expect(message).toContain('- A)    ');
+  });
+
+  it('throws on combined-label bullets', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '**Why other answers are wrong:**',
+      '- A, B, D) While descriptive, these are not the cited term.',
+    ].join('\n');
+
+    const message = getErrorMessage(() =>
+      parseChoiceExplanations(explanationMd),
+    );
+
+    expect(message).toContain('combined choice labels');
+    expect(message).toContain('- A, B, D)');
+  });
+
+  it('throws when the heading has non-empty content but no valid bullets', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '**Why other answers are wrong:**',
+      '',
+      '### Reference',
+      '',
+      'A citation that appears before any valid bullets.',
+    ].join('\n');
+
+    const message = getErrorMessage(() =>
+      parseChoiceExplanations(explanationMd),
+    );
+
+    expect(message).toContain('contains content but no valid choice bullets');
+    expect(message).toContain('### Reference');
+  });
+
+  it('throws on numbered lists inside the wrong-answer section', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '**Why other answers are wrong:**',
+      '1. A is wrong because...',
+    ].join('\n');
+
+    const message = getErrorMessage(() =>
+      parseChoiceExplanations(explanationMd),
+    );
+
+    expect(message).toContain('numbered list');
+    expect(message).toContain('1. A is wrong because...');
+  });
+
+  it('throws on heading-like lines inside the section unless they are ### Reference', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '**Why other answers are wrong:**',
+      '- A) Reason A.',
+      '',
+      '## Clinical Pearl',
+      'Ancillary note.',
+    ].join('\n');
+
+    const message = getErrorMessage(() =>
+      parseChoiceExplanations(explanationMd),
+    );
+
+    expect(message).toContain('unexpected heading');
+    expect(message).toContain('## Clinical Pearl');
+  });
+
+  it('throws on non-bullet content after a parsed bullet', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '**Why other answers are wrong:**',
+      '- A) Reason A.',
+      'Clinical Pearl: misplaced after bullets.',
+    ].join('\n');
+
+    const message = getErrorMessage(() =>
+      parseChoiceExplanations(explanationMd),
+    );
+
+    expect(message).toContain('after a choice bullet');
+    expect(message).toContain('Clinical Pearl: misplaced after bullets.');
+  });
+
+  it('throws on the real clinical-pearl-after-bullets corruption pattern', () => {
+    const explanationMd = [
+      'The TAPS contains more questions and takes longer to administer than either the S2BI or BSTAD, yet psychometric properties were similar across all tools.',
+      '',
+      '**Why other answers are wrong:**',
+      '- A) The extra questions in TAPS did not improve performance; simplicity is preferred in busy clinical settings',
+      '- B) While BSTAD had excellent sensitivity for some substances, no single tool was recommended over others based on psychometric properties alone',
+      '- C) S2BI did not have superior specificity; the recommendation was based on efficiency and equivalent performance across shorter tools',
+      '',
+      '**Clinical Pearl:** The S2BI showed higher rates of substance use disclosure (27.1% vs ~19% for other tools), which may be clinically important since early identification enables early intervention.',
+    ].join('\n');
+
+    const message = getErrorMessage(() =>
+      parseChoiceExplanations(explanationMd),
+    );
+
+    expect(message).toContain('after a choice bullet');
+    expect(message).toContain(
+      '**Clinical Pearl:** The S2BI showed higher rates of substance use disclosure',
+    );
+  });
+
+  it('throws on the real combined-label corruption pattern', () => {
+    const explanationMd = [
+      'Palis et al. (2022) reference the term "twin epidemics" to describe the rise in stimulant use among people who use opioids.',
+      '',
+      '**Why other answers are wrong:**',
+      '- A, B, D) While descriptive, these are not the specific term cited in the literature',
+    ].join('\n');
+
+    const message = getErrorMessage(() =>
+      parseChoiceExplanations(explanationMd),
+    );
+
+    expect(message).toContain('combined choice labels');
+    expect(message).toContain('- A, B, D)');
+  });
+
+  it('preserves well-formed partial coverage', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '**Why other answers are wrong:**',
+      '- A) Reason A.',
+      '- C) Reason C.',
+    ].join('\n');
+
+    const parsed = parseChoiceExplanations(explanationMd);
+
+    expect(mapEntries(parsed.perChoice)).toEqual({
+      A: 'Reason A.',
+      C: 'Reason C.',
+    });
+  });
+
+  it('accepts CRLF input', () => {
+    const explanationMd =
+      'General rationale.\r\n\r\n**Why other answers are wrong:**\r\n- A) Reason A.\r\n- C) Reason C.\r\n';
+
+    const parsed = parseChoiceExplanations(explanationMd);
+
+    expect(mapEntries(parsed.perChoice)).toEqual({
+      A: 'Reason A.',
+      C: 'Reason C.',
+    });
+  });
+
+  it('accepts inline markdown inside bullet bodies', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '**Why other answers are wrong:**',
+      '- A) **Bold** and _italic_ emphasis are still inline markdown.',
+    ].join('\n');
+
+    const parsed = parseChoiceExplanations(explanationMd);
+
+    expect(parsed.perChoice.get('A')).toBe(
+      '**Bold** and _italic_ emphasis are still inline markdown.',
+    );
+  });
+
+  it('treats ### Reference as the only legal terminating heading', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '**Why other answers are wrong:**',
+      '- A) Reason A.',
+      '### Reference',
+      'Citation line.',
+    ].join('\n');
+
+    const parsed = parseChoiceExplanations(explanationMd);
+
+    expect(parsed.perChoice.get('A')).toBe('Reason A.');
+    expect(parsed.referenceMd).toBe('Citation line.');
+  });
+
+  it('rejects indentation-sensitive nested markdown inside bullet bodies', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '**Why other answers are wrong:**',
+      '- A) Reason A.',
+      '  - Nested bullet that cannot be preserved structurally.',
+    ].join('\n');
+
+    const message = getErrorMessage(() =>
+      parseChoiceExplanations(explanationMd),
+    );
+
+    expect(message).toContain('nested markdown');
+    expect(message).toContain(
+      '- Nested bullet that cannot be preserved structurally.',
+    );
   });
 });

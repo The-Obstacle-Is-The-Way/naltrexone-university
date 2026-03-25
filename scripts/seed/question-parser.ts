@@ -43,7 +43,16 @@ export type SeedQuestionRep = {
 
 function buildSeedRepFromParsed(full: unknown): SeedQuestionRep {
   const parsed = FullQuestionSchema.parse(full);
-  const parsedExplanations = parseChoiceExplanations(parsed.explanationMd);
+  const slug = parsed.frontmatter.slug;
+
+  let parsedExplanations: ReturnType<typeof parseChoiceExplanations>;
+  try {
+    parsedExplanations = parseChoiceExplanations(parsed.explanationMd);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`${slug}: ${message}`);
+  }
+
   const generalExplanation = parsedExplanations.generalExplanation;
 
   const sortedTags = [...parsed.frontmatter.tags].sort((a, b) =>

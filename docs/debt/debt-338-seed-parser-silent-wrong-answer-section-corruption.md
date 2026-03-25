@@ -2,7 +2,7 @@
 
 **Priority:** P1
 **Created:** 2026-03-24
-**Updated:** 2026-03-24 (verified findings — live data corruption confirmed in 24 files)
+**Updated:** 2026-03-24 (Phase 1 strict validation implemented and verified)
 **Source:** Codebase-wide audit after DEBT-335 / adjacent to [DEBT-336](./debt-336-content-markdown-quality-pass.md)
 **Scope:** `scripts/seed-helpers.ts` parser validation, content format alignment in external `addiction-final-2026` repo, long-term parser architecture
 
@@ -276,19 +276,21 @@ Tracks 1 and 2 can be developed in parallel, but the strict-validation code shou
 
 ## Acceptance Criteria
 
-### Phase 1 (Strict Validation — Near-Term)
+### Phase 1 (Strict Validation — Implemented 2026-03-24)
 
-- [ ] `scripts/seed-helpers.test.ts` has regression coverage for: stray non-bullet text, invalid labels (F–Z), duplicate labels, combined-label bullets, heading-with-no-valid-bullets, clinical-pearl-after-bullets
-- [ ] `scripts/seed-helpers.test.ts` also covers: top-level numbered lists, heading-like lines inside a bullet body, `### Reference` inside a bullet body, inline markdown inside a bullet body, and CRLF input
-- [ ] `scripts/seed-helpers.test.ts` covers recognized bullets with blank / whitespace-only bodies
-- [ ] `scripts/seed.test.ts` verifies `parseSeedQuestionFile()` fails fast on malformed wrong-answer sections
-- [ ] Errors identify the offending question slug and offending line content
-- [ ] Well-formed partial wrong-answer sections still parse successfully
-- [ ] Phase 1 rejects indentation-sensitive nested markdown inside wrong-answer bullets unless/until the parser can preserve it structurally
-- [ ] Only `### Reference` is accepted as a legal heading that terminates the wrong-answer list under the current format
-- [ ] No malformed content is silently dropped or silently attached to the wrong choice explanation
-- [ ] Content alignment in external repo is complete (24 files fixed, re-imported, re-seeded)
-- [ ] Content instruction files updated with explicit ordering rules (done 2026-03-24)
+- [x] `scripts/seed-helpers.test.ts` has regression coverage for: stray non-bullet text, invalid labels (F–Z), duplicate labels, combined-label bullets, heading-with-no-valid-bullets, clinical-pearl-after-bullets
+- [x] `scripts/seed-helpers.test.ts` also covers: top-level numbered lists, heading-like lines inside a bullet body, `### Reference` inside a bullet body, inline markdown inside a bullet body, and CRLF input
+- [x] `scripts/seed-helpers.test.ts` covers recognized bullets with blank / whitespace-only bodies
+- [x] `scripts/seed.test.ts` verifies `parseSeedQuestionFile()` fails fast on malformed wrong-answer sections
+- [x] Errors identify the offending question slug and offending line content
+- [x] Well-formed partial wrong-answer sections still parse successfully
+- [x] Phase 1 rejects indentation-sensitive nested markdown inside wrong-answer bullets unless/until the parser can preserve it structurally
+- [x] Only `### Reference` is accepted as a legal heading that terminates the wrong-answer list under the current format
+- [x] No malformed content is silently dropped or silently attached to the wrong choice explanation
+- [x] Verified against real corrupted files: `levy-2023-006.mdx` and `palis-2022-002.mdx` both throw with actionable slugged errors
+- [x] Corpus-wide parse of all 948 imported MDX files fails on exactly 24 files (23 clinical pearl + 1 combined label), matching DEBT-338 findings
+- [x] Content instruction files updated with explicit ordering rules (done 2026-03-24)
+- [ ] Content alignment in external repo is complete (24 files fixed, re-imported, re-seeded) — pending external repo work
 
 ### Instruction File Consolidation (Before Phase 2)
 
