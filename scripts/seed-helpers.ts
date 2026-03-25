@@ -31,15 +31,15 @@ export function computeChoiceSyncPlan(input: {
 const WRONG_ANSWERS_HEADING_PATTERN =
   /^\s*(?:\*\*|__)?\s*Why other answers are wrong\s*:?\s*(?:\*\*|__)?\s*$/i;
 const SECTION_HEADING_PATTERN = /^\s*#{1,6}\s+\S+/;
-const REFERENCE_HEADING_PATTERN = /^\s*###\s+Reference\b/i;
+const REFERENCE_HEADING_PATTERN = /^\s*###\s+Reference\s*$/i;
 const CHOICE_BULLET_PATTERN = /^\s*[-*+]\s*([A-Ea-e])\s*(?:[).:])+\s*(.*)$/;
 const SINGLE_LETTER_BULLET_PATTERN =
   /^\s*[-*+]\s*([A-Za-z])\s*(?:[).:])+\s*(.*)$/;
 const COMBINED_LABEL_BULLET_PATTERN =
   /^\s*[-*+]\s*[A-Za-z](?:\s*,\s*[A-Za-z])+\s*(?:[).:])+\s*(.*)$/;
-const NUMBERED_LIST_PATTERN = /^\s*\d+\.\s+\S+/;
+const NUMBERED_LIST_PATTERN = /^\s*\d+[.)]\s+\S+/;
 const NESTED_MARKDOWN_CONTINUATION_PATTERN =
-  /^[ \t]+(?:[-*+]\s+\S|\d+\.\s+\S|>\s+\S|```|~~~)/;
+  /^[ \t]+(?:[-*+]\s+\S|\d+[.)]\s+\S|>\s+\S|```|~~~)/;
 const INDENTED_CONTINUATION_PATTERN = /^[ \t]+\S/;
 
 function createWrongAnswerValidationError(

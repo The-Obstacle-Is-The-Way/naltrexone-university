@@ -358,6 +358,22 @@ describe('parseChoiceExplanations strict validation', () => {
     expect(message).toContain('1. A is wrong because...');
   });
 
+  it('throws on parenthesized numbered lists inside the wrong-answer section', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '**Why other answers are wrong:**',
+      '1) A is wrong because...',
+    ].join('\n');
+
+    const message = getErrorMessage(() =>
+      parseChoiceExplanations(explanationMd),
+    );
+
+    expect(message).toContain('numbered list');
+    expect(message).toContain('1) A is wrong because...');
+  });
+
   it('throws on heading-like lines inside the section unless they are ### Reference', () => {
     const explanationMd = [
       'General rationale paragraph.',
@@ -377,6 +393,25 @@ describe('parseChoiceExplanations strict validation', () => {
     expect(message).toContain('## Clinical Pearl');
   });
 
+  it('throws on malformed reference-style headings inside the section', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '**Why other answers are wrong:**',
+      '- A) Reason A.',
+      '',
+      '### Reference:',
+      'Ancillary note.',
+    ].join('\n');
+
+    const message = getErrorMessage(() =>
+      parseChoiceExplanations(explanationMd),
+    );
+
+    expect(message).toContain('unexpected heading');
+    expect(message).toContain('### Reference:');
+  });
+
   it('throws on non-bullet content after a parsed bullet', () => {
     const explanationMd = [
       'General rationale paragraph.',
@@ -392,6 +427,23 @@ describe('parseChoiceExplanations strict validation', () => {
 
     expect(message).toContain('after a choice bullet');
     expect(message).toContain('Clinical Pearl: misplaced after bullets.');
+  });
+
+  it('throws on indented parenthesized numbered continuations after a bullet', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '**Why other answers are wrong:**',
+      '- A) Reason A.',
+      '  1) Nested detail.',
+    ].join('\n');
+
+    const message = getErrorMessage(() =>
+      parseChoiceExplanations(explanationMd),
+    );
+
+    expect(message).toContain('numbered list');
+    expect(message).toContain('1) Nested detail.');
   });
 
   it('throws on the real clinical-pearl-after-bullets corruption pattern', () => {
