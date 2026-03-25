@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseSeedQuestionFile } from './seed/question-parser';
@@ -224,31 +224,51 @@ describe('parseSeedQuestionFile', () => {
     );
   });
 
-  it('rejects the real levy-2023-006 imported file with a clear slugged error', () => {
-    const raw = readFileSync(
+  it.skipIf(
+    !existsSync(
       path.join(
         process.cwd(),
         'content/questions/imported/article-based-pathway/levy-2023/levy-2023-006.mdx',
       ),
-      'utf8',
-    );
+    ),
+  )(
+    'rejects the real levy-2023-006 imported file with a clear slugged error',
+    () => {
+      const raw = readFileSync(
+        path.join(
+          process.cwd(),
+          'content/questions/imported/article-based-pathway/levy-2023/levy-2023-006.mdx',
+        ),
+        'utf8',
+      );
 
-    expect(() => parseSeedQuestionFile(raw)).toThrow(
-      /levy-2023-006: .*after a choice bullet.*Clinical Pearl/i,
-    );
-  });
+      expect(() => parseSeedQuestionFile(raw)).toThrow(
+        /levy-2023-006: .*after a choice bullet.*Clinical Pearl/i,
+      );
+    },
+  );
 
-  it('rejects the real palis-2022-002 imported file with a clear slugged error', () => {
-    const raw = readFileSync(
+  it.skipIf(
+    !existsSync(
       path.join(
         process.cwd(),
         'content/questions/imported/article-based-pathway/palis-2022/palis-2022-002.mdx',
       ),
-      'utf8',
-    );
+    ),
+  )(
+    'rejects the real palis-2022-002 imported file with a clear slugged error',
+    () => {
+      const raw = readFileSync(
+        path.join(
+          process.cwd(),
+          'content/questions/imported/article-based-pathway/palis-2022/palis-2022-002.mdx',
+        ),
+        'utf8',
+      );
 
-    expect(() => parseSeedQuestionFile(raw)).toThrow(
-      /palis-2022-002: .*combined choice labels/i,
-    );
-  });
+      expect(() => parseSeedQuestionFile(raw)).toThrow(
+        /palis-2022-002: .*combined choice labels/i,
+      );
+    },
+  );
 });
