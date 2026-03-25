@@ -20,6 +20,10 @@ reviews:
   review_details: true
   auto_review:
     enabled: true
+    # CodeRabbit auto-reviews the default branch automatically.
+    # `.*` matches every additional non-default PR base branch.
+    base_branches:
+      - '.*'
     drafts: false
   pre_merge_checks:
     docstrings:
