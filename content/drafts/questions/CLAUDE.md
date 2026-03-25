@@ -2,128 +2,85 @@
 
 Generate board-style questions for Addiction Psychiatry certification (NTX University).
 
-## Before Starting
+## Read First
 
-**Read these files in order:**
+Read these in order:
 
-1. `META.MD` - Part 2 has **full quality standards** (NBME rules, technical flaws, examples)
-2. `SCHEMA.md` - Format, tags, vocabularies
-3. `QUESTION-FORMAT-SPEC.md` - Complete pipeline spec (how fields map through the system)
-4. `PLAN.md` - Targets, progress tracker
+1. `CLAUDE.md` — workflow and critical reminders
+2. `SCHEMA.md` — complete active authoring contract, taxonomy, validation rules, and canonical quality checklist
+3. `PLAN.md` — inventory/progress tracker when you need current status or need to update checkboxes
+4. `NOTES.md` — optional reference for historical audits, DEBT-338 corruption file list, or Prescriber's rewrite queue
 
-Use `SCHEMA.md` and `QUESTION-FORMAT-SPEC.md` as the source of truth for formatting/validation. Use `META.MD` Part 2 for quality principles only.
+If this file conflicts with `SCHEMA.md`, follow `SCHEMA.md`.
 
 ---
 
-## Per Paper
+## Per Paper Targets
 
-Generate **12 questions**: 6 recall + 6 vignette
-
-Difficulty per file: 2 easy, 2 medium, 2 hard
+Generate **12 questions** per standard source paper:
 
 | File | Questions | Easy | Medium | Hard |
 |------|-----------|------|--------|------|
-| recall.md | 6 | 2 | 2 | 2 |
-| vignettes.md | 6 | 2 | 2 | 2 |
+| `recall.md` | 6 | 2 | 2 | 2 |
+| `vignettes.md` | 6 | 2 | 2 | 2 |
 | **Total** | **12** | **4** | **4** | **4** |
 
----
-
-## Special Cases
-
-- `questions/prescribers-guide/`: 4 recall questions per medication (no vignettes). See `SCHEMA.md` for details. (App repo path: `content/drafts/questions/prescribers-guide/`.)
-- `questions/article-based-pathway/09-therapy/2024-cooperman-more-trial-correction/`: correction notice folder (no questions). (App repo path: `content/drafts/questions/article-based-pathway/09-therapy/2024-cooperman-more-trial-correction/`.)
-
-### Prescriber's Guide: Addiction Relevance Filter
-
-Every Prescriber's Guide question must have an explicit addiction psychiatry connection. The 36 medications were hand-selected for their relevance to addiction practice, but generic pharmacology questions about them do not belong in an addiction board prep product.
-
-**Every question must test at least one addiction hook:**
-- Abuse/dependence potential (scheduling, misuse patterns, abuse-deterrent design)
-- Withdrawal or overdose recognition and management
-- Drug interactions with SUD treatment medications (methadone, buprenorphine, naltrexone, etc.)
-- Prescribing considerations in patients with SUD history
-- Harm reduction (naloxone reversal, drug-facilitated assault detection, overdose prevention)
-- Behavioral addiction connections (binge eating disorder, food addiction)
-- Forensic/legal relevance (diversion, drug-facilitated assault, controlled substance scheduling)
-- Comorbid SUD management (e.g., smoking cessation impact on olanzapine dosing)
-- Tolerance, cross-tolerance, and sensitization relevant to substance use
-- Dependence/addiction potential of the medication as a clinical concern (e.g., ketamine, esketamine, Z-drugs)
-
-**Do NOT test in isolation (without an addiction hook):**
-- Generic pharmacology (metabolic pathways, release kinetics) unless tied to abuse potential or SUD interactions
-- Non-addiction indications (ADHD, bipolar, obesity, TRD) unless the question includes a SUD patient or addiction-relevant angle
-- Formulation minutiae not related to abuse deterrence or adherence in SUD populations
-- Side effects unrelated to SUD population management
-- Generic drug interactions not relevant to patients with SUDs
-- Geriatric/pediatric dosing without SUD context
-
-**Rewrite pattern:** Convert off-target questions to clinical scenarios where the addiction hook is explicit. Example: instead of testing Concerta's osmotic delivery in GI narrowing, test stimulant formulation features that reduce diversion risk.
+Prescriber's Guide is the main exception: 4 recall questions per medication, no vignettes. See `SCHEMA.md`.
 
 ---
 
-## Critical Rules
+## Critical Rules Summary
 
-1. `answer: B` in frontmatter (NOT `*` in choices)
-2. `substances: [alcohol]` and `topics: [screening-diagnosis]` (arrays with brackets)
-3. `qid: {source}-{number}` format (e.g., `white-2020-001`)
-4. **Test clinical concepts, NOT statistics** (see META.MD Part 2 for full list)
-5. **Cover-the-options rule**: Can you answer without seeing the choices?
-6. **No technical flaws**: Word repeats, convergence, length cues, grammatical cues
-7. **No domain tags** in draft frontmatter (taxonomy is topic/substance/treatment/diagnosis)
-8. **Frontmatter is strict**: unknown YAML keys are rejected by the import script
-9. **Include `treatments`** when a specific medication is discussed by name
-10. **Include `### Reference`** at the very end of `## Explanation` with AMA-format citation for the source paper
+1. Use the **current** draft format from `SCHEMA.md`, not the future Phase 2 YAML `choices[]` format.
+2. Put `answer: B` in frontmatter. Do not mark the correct choice in `## Choices`.
+3. Use canonical `substances`, `topics`, and `treatments` slugs from `SCHEMA.md`.
+4. Test clinical concepts, not study trivia or raw statistics.
+5. Make the lead-in answerable without seeing the options.
+6. Keep `**Clinical pearl:**` before `**Why other answers are wrong:**`.
+7. Use exactly one wrong-answer bullet per wrong choice, with plain paragraph text only.
+8. End `## Explanation` with `### Reference`.
+9. Run the **single canonical checklist in `SCHEMA.md`** before saving.
 
 ---
 
 ## Workflow
 
-```
-1. Read: questions/[chapter]/[paper]/[paper].md
-2. Identify 6-12 clinically relevant concepts (NOT statistics)
-3. For each concept, ask: "What would a physician need to DO with this?"
-4. Write 6 recall questions (2 easy, 2 medium, 2 hard)
-5. Save: questions/[chapter]/[paper]/recall.md
-6. Write 6 vignette questions (2 easy, 2 medium, 2 hard)
-7. Save: questions/[chapter]/[paper]/vignettes.md
-8. Apply quality checklist from META.MD Part 2
-9. Update PLAN.md checkboxes
+```text
+1. Read the source markdown for the paper or medication
+2. Identify clinically relevant concepts (not raw statistics)
+3. Draft questions in the current format from SCHEMA.md
+4. Use the SCHEMA.md checklist before saving
+5. Save to recall.md / vignettes.md (or recall.md only for Prescriber's Guide)
+6. Update PLAN.md if you are advancing tracked progress
+7. Validate in the app repo with: pnpm content:import:drafts -- --dry-run
 ```
 
 ---
 
-## Quick Quality Check
+## Special Cases
 
-Before saving, verify:
+- `questions/prescribers-guide/`: 4 recall questions per medication, no `vignettes.md`
+- `questions/article-based-pathway/09-therapy/2024-cooperman-more-trial-correction/`: correction-note folder, no questions
 
-- [ ] Tests APPLICATION, not recall of statistics
-- [ ] Lead-in ends with `?` and passes cover-the-options test
-- [ ] All 4 options are homogeneous and plausible
-- [ ] Correct answer is NOT longer than distractors
-- [ ] No word repeats between stem and correct answer
-- [ ] Each wrong answer explanation teaches a concept
-- [ ] Clinical pearl included **and placed BEFORE `**Why other answers are wrong:**`** — placing it after the bullets corrupts the data (DEBT-338)
-- [ ] One bullet per wrong choice — no combined labels like `- A, B, D)` (parser drops them)
-- [ ] Nothing between the last bullet and `### Reference` except blank lines
-- [ ] Wrong-answer bullets use plain paragraph text only — no nested lists, numbered sublists, blockquotes, code blocks, or heading-style lines inside a bullet body
-- [ ] `treatments` tag included if a medication is mentioned
-- [ ] Per-choice explanations do NOT prefix with any form of the choice text (no full text, no short labels before a colon; start directly with reasoning)
-- [ ] Every wrong answer has a non-blank explanation
-- Runtime fallback: if a wrong-answer explanation is missing or blank, the UI omits only that choice's explanation and still renders the section for choices with content
-- [ ] `### Reference` at end of explanation with AMA-format citation
-- [ ] Optional: after syncing changes into the app repo, run `pnpm content:import:drafts -- --dry-run` there for structural validation
+### Prescriber's Guide: Addiction Relevance Filter
 
-**For the full checklist and technical flaw taxonomy, see META.MD Part 2.**
+Every Prescriber's Guide question must have an explicit addiction-psychiatry connection.
 
----
+**Every question must test at least one addiction hook:**
+- Abuse/dependence potential
+- Withdrawal or overdose recognition and management
+- Drug interactions with SUD treatment medications
+- Prescribing considerations in patients with SUD history
+- Harm reduction relevance
+- Forensic/legal relevance tied to addiction practice
+- Comorbid SUD management
+- Tolerance, cross-tolerance, or sensitization relevant to substance use
+- Dependence/addiction potential of the medication as a clinical concern
 
-## Vocabularies
+**Do not test in isolation:**
+- Generic pharmacology without an addiction hook
+- Non-addiction indications unless the scenario makes the addiction relevance explicit
+- Formulation minutiae unrelated to misuse/diversion/adherence in SUD populations
+- Generic side effects or drug interactions with no addiction relevance
 
-**Substances:** alcohol, cannabis, cocaine, hallucinogens, inhalants, opioids, polysubstance, sedatives, stimulants, tobacco, other
-
-**Topics:** screening-diagnosis, epidemiology-prevention, pharmacology-neuroscience, intoxication-toxicology, withdrawal-management, treatment-pharmacotherapy, psychosocial-interventions, co-occurring-disorders, medical-complications, harm-reduction, ethics-legal, special-populations, general
-
-**Treatments:** acamprosate, buprenorphine, bupropion, disulfiram, gabapentin, methadone, naloxone, naltrexone, nrt, topiramate, varenicline, other-treatment
-
-> Old slugs like `pharmacology`, `treatment`, `withdrawal` are rejected. See the migration map in `QUESTION-FORMAT-SPEC.md` §4.
+**Rewrite pattern:** If a Prescriber's question feels like generic psychopharmacology, recast it so the addiction hook is explicit.

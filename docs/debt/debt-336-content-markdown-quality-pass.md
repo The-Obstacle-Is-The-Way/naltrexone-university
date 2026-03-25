@@ -81,7 +81,7 @@ in primary care, taking under 1 minute to administer.
 
 **What's wrong:** Some wrong-answer explanations restate the choice text before stating why the option is wrong. The UI already shows the full choice text above the explanation, so this creates a redundant, hard-to-read block.
 
-**Why it matters:** Learners see the choice text twice — once in the choice display, once at the start of the explanation. The `QUESTION-FORMAT-SPEC.md` already prohibits this pattern (see §5, "Wrong-answer explanation format rules"), but older questions predate the rule.
+**Why it matters:** Learners see the choice text twice — once in the choice display, once at the start of the explanation. The consolidated `SCHEMA.md` now prohibits this pattern in the active authoring contract, but older questions predate the rule.
 
 **What to do:** Audit all `**Why other answers are wrong:**` sections. Remove any prefix that restates the choice text (whether full text or abbreviated label). Start directly with the reasoning.
 
@@ -116,7 +116,7 @@ valuable teaching content until the content layer is complete.
 1. Ensure the `**Why other answers are wrong:**` section exists
 2. Ensure every incorrect choice has a bullet with an explanation
 3. Each explanation should teach a concept, not just say "this is incorrect"
-4. Follow the format rules in `QUESTION-FORMAT-SPEC.md` §5
+4. Follow the active format rules in `SCHEMA.md`
 
 ### Scale
 

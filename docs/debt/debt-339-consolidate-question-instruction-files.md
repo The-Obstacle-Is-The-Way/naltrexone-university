@@ -2,17 +2,32 @@
 
 **Priority:** P2
 **Created:** 2026-03-25
-**Updated:** 2026-03-25 (audit corrections applied)
-**Status:** Open
+**Updated:** 2026-03-25 (local consolidation executed; external sync pending)
+**Status:** Open — local consolidation is complete in this repo; next step is syncing the consolidated files to external `addiction-final-2026`
 **Source:** DEBT-338 consolidation section, extracted into standalone debt doc
 **Scope:** `content/drafts/questions/*.md` instruction files (synced to external `addiction-final-2026` repo)
 **Prerequisite for:** DEBT-338 Phase 2 (YAML frontmatter migration)
 
 ---
 
-## Problem
+## Current State
 
-There are **8 instruction files** in `content/drafts/questions/` that tell agents how to generate and format questions. These files are manually copied to the external `addiction-final-2026` repo. They have significant overlap and fragmentation:
+**Local execution complete (2026-03-25):**
+- `SCHEMA.md` now absorbs the active content that previously lived in `QUESTION-FORMAT-SPEC.md`, `TAG-TAXONOMY.md`, and `META.MD` Part 2.
+- `PLAN.md` now carries the current inventory/integrity snapshot that previously lived in `META.MD` Part 1.
+- `NOTES.md` now carries the archival bootstrap material from `META.MD`.
+- `CLAUDE.md` and `AGENTS.md` now act as true quick-starts that point agents to `SCHEMA.md` instead of duplicating spec/taxonomy/checklist content.
+- `QUESTION-FORMAT-SPEC.md`, `TAG-TAXONOMY.md`, and `META.MD` have been removed from this repo after absorption.
+
+**Remaining work:**
+- Sync the consolidated files to external `addiction-final-2026`
+- Remove the absorbed legacy files there after destination content is verified
+
+---
+
+## Problem (Pre-Consolidation Snapshot)
+
+Before local execution, there were **8 instruction files** in `content/drafts/questions/` that told agents how to generate and format questions. These files were manually copied to the external `addiction-final-2026` repo. They had significant overlap and fragmentation:
 
 | File | Lines | Purpose | Problem |
 |------|-------|---------|---------|
@@ -25,7 +40,7 @@ There are **8 instruction files** in `content/drafts/questions/` that tell agent
 | `SCHEMA.md` | 351 | Authoring schema, checklist, special cases | Heavily overlaps `QUESTION-FORMAT-SPEC.md` and still points agents to other files for active quality guidance |
 | `TAG-TAXONOMY.md` | 199 | Canonical tag tables, migration rules, runtime taxonomy rationale | Should be absorbed into `SCHEMA.md` or archived explicitly; otherwise taxonomy rationale and migration maps risk drifting from the active schema |
 
-**An agent must read 4+ files** just to understand the question format. Quality rules (DEBT-338 ordering, one-bullet-per-choice, no-choice-text-prefix) are scattered across at least 4 files and must be kept manually in sync. This drift risk directly contributed to the formatting inconsistencies that caused DEBT-338.
+**An agent previously had to read 4+ files** just to understand the question format. Quality rules (DEBT-338 ordering, one-bullet-per-choice, no-choice-text-prefix) were scattered across at least 4 files and had to be kept manually in sync. That drift risk directly contributed to the formatting inconsistencies that caused DEBT-338.
 
 ---
 
@@ -131,7 +146,7 @@ DEBT-338 has a "Content Instruction File Consolidation" section that describes t
 
 **Sequencing (updated):**
 1. ~~Phase 1: Strict parser validation~~ — done (2026-03-24)
-2. **DEBT-339: Consolidate instruction files** ← DO THIS NOW, before transplanting to external repo
+2. ~~DEBT-339 local consolidation in this repo~~ — done (2026-03-25)
 3. Transplant consolidated docs to external `addiction-final-2026` repo
 4. Fix 24 corrupted files (external repo) — guided by the consolidated docs
 5. Phase 2: YAML frontmatter migration (both repos)
@@ -155,15 +170,16 @@ When consolidating, also ensure these are clearly documented (from DEBT-338 find
 
 ## Acceptance Criteria
 
-- [ ] `SCHEMA.md` absorbs the active content of `QUESTION-FORMAT-SPEC.md`: current-format example, frontmatter contract, markdown body contract, answer/shuffling notes, tag flow summary, validation rejection table, commands, and author checklist
-- [ ] `SCHEMA.md` absorbs the active content of `TAG-TAXONOMY.md`: canonical tag tables, migration maps, taxonomy rationale/display order, and content-gap priorities
-- [ ] `SCHEMA.md` absorbs the still-active authoring guidance from `META.MD` Part 2: NBME quality principles, distractor rules, explanation standards, quality self-check, and any examples that remain useful for active authoring
-- [ ] `PLAN.md` becomes the single current inventory/progress tracker: total counts, source-level counts, per-chapter completion, known no-question exceptions, and fast-check commands if they are treated as current operational status
-- [ ] `NOTES.md` retains historical audits and ongoing queues: Prescriber's relevance audit, DSM-5 conversion audit, stabilization history, parser-corruption audit, and rewrite queues
-- [ ] If any section of `META.MD`, `QUESTION-FORMAT-SPEC.md`, or `TAG-TAXONOMY.md` is not moved into `SCHEMA.md`, `PLAN.md`, or `NOTES.md`, it is explicitly archived rather than silently dropped
-- [ ] `QUESTION-FORMAT-SPEC.md`, `TAG-TAXONOMY.md`, and `META.MD` are removed or archived intentionally in both repos only after their destination content is verified
-- [ ] `CLAUDE.md` and `AGENTS.md` share the same required reading order, workflow, special-case filters, and high-level rules; differences are limited to interface-specific framing rather than duplicated taxonomy/spec content
-- [ ] `SCHEMA.md` includes both a complete current-format example and a clear Phase 2 target-format example
+- [x] `SCHEMA.md` absorbs the active content of `QUESTION-FORMAT-SPEC.md`: current-format example, frontmatter contract, markdown body contract, answer/shuffling notes, tag flow summary, validation rejection table, commands, and author checklist
+- [x] `SCHEMA.md` absorbs the active content of `TAG-TAXONOMY.md`: canonical tag tables, migration maps, taxonomy rationale/display order, and content-gap priorities
+- [x] `SCHEMA.md` absorbs the still-active authoring guidance from `META.MD` Part 2: NBME quality principles, distractor rules, explanation standards, quality self-check, and archival examples are either omitted deliberately from the active spec or preserved in `NOTES.md`
+- [x] `PLAN.md` becomes the single current inventory/progress tracker: total counts, source-level counts, per-chapter completion, known no-question exceptions, and fast-check commands
+- [x] `NOTES.md` retains historical audits and ongoing queues: Prescriber's relevance audit, DSM-5 conversion audit, stabilization history, parser-corruption audit, rewrite queues, and archival bootstrap context
+- [x] Any section of `META.MD`, `QUESTION-FORMAT-SPEC.md`, or `TAG-TAXONOMY.md` not moved into `SCHEMA.md` or `PLAN.md` is explicitly preserved in `NOTES.md` rather than silently dropped
+- [x] `QUESTION-FORMAT-SPEC.md`, `TAG-TAXONOMY.md`, and `META.MD` are removed intentionally in this repo after their destination content is verified
+- [x] `CLAUDE.md` and `AGENTS.md` now share the same reading path and high-level rules while delegating the full spec/checklist to `SCHEMA.md`
+- [x] `SCHEMA.md` includes both a complete current-format example and a clear Phase 2 target-format example
+- [x] An agent can generate a correctly formatted question by reading only `CLAUDE.md` (or `AGENTS.md`) plus `SCHEMA.md`; `NOTES.md` and `PLAN.md` are optional reference, not required reading
+- [x] No information was lost during local consolidation (verified against the "What Must NOT Be Lost" table above)
 - [ ] Consolidated files are synced to the external `addiction-final-2026` repo
-- [ ] An agent can generate a correctly formatted question by reading only `CLAUDE.md` (or `AGENTS.md`) plus `SCHEMA.md`; `NOTES.md` and `PLAN.md` are optional reference, not required reading
-- [ ] No information was lost during consolidation (verified against the "What Must NOT Be Lost" table above)
+- [ ] Absorbed legacy files are removed or archived in the external repo only after the destination content is verified there

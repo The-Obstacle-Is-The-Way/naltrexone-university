@@ -9,6 +9,11 @@
 - Quality stabilization: 01-Screening, 02-Alcohol, 03-Cannabis
 - DSM-5 terminology: 01-10 (all questions)
 
+**Active authoring source of truth:** `SCHEMA.md`
+**Quick-starts:** `CLAUDE.md` and `AGENTS.md`
+
+This file is archival/reference material: historical audits, rewrite queues, parser-corruption file lists, and bootstrap context that should not live in the active authoring spec.
+
 ---
 
 ## Prescriber's Guide: Addiction Relevance Audit (Feb 19, 2026)
@@ -264,7 +269,7 @@ Facilitation (TSF) for alcohol use disorder?
 - C) 35 studies with 15,000 participants
 - D) 50 studies with 25,000 participants
 ```
-**GRADE: CUT** - This is the exact example of a bad question in META.MD. No physician needs to know this.
+**GRADE: CUT** - This is the exact kind of bad question captured in the archived bootstrap guidance below. No physician needs to know this.
 
 ```markdown
 qid: pourmand-2023-002
@@ -860,3 +865,251 @@ The combined-label `palis-2022-002` file above is also the only current case wit
 1. **Content fixes (external `addiction-final-2026` repo):** Fix the 24 affected draft source files per the patterns above, then re-run `pnpm content:import:drafts` and `pnpm db:seed`
 2. **Parser hardening (this repo):** DEBT-338 Phase 1 — add strict validation so these patterns throw errors instead of silently corrupting data
 3. **Long-term (both repos):** DEBT-338 Phase 2 — move per-choice explanations into structured YAML choice data, then retire markdown parsing for per-choice feedback
+
+---
+
+## Archived Bootstrap Prompt from META.MD (Reference Only)
+
+> **Moved here during DEBT-339 consolidation (2026-03-25).**
+> This section is archival context only. It is **not** the active authoring contract.
+> For current generation rules, use `CLAUDE.md` + `SCHEMA.md` (or `AGENTS.md` + `SCHEMA.md`).
+
+### Historical Context
+
+I'm building NTX University, a subscription question bank for addiction psychiatry and addiction medicine board preparation. I'm a double board-certified psychiatrist (General and Addiction Psychiatry, fellowship at Mount Sinai Beth Israel 2024). I've generated questions from source papers organized by chapter. I need you to do two things: (1) audit my existing questions for quality, and (2) create an agent skill file (historically a standalone skill doc, now superseded by `AGENTS.md` + `CLAUDE.md`) that enforces NBME-quality question writing standards for all future AI-generated questions.
+
+### Historical Audit Prompt
+
+#### Part 1: Audit Existing Questions
+
+Scan all questions in my `/questions` directory and create a `NOTES.md` file documenting:
+
+##### A. Pattern Analysis
+
+- What percentage are **pure recall** vs **application of knowledge**?
+- How many test trivial facts (raw statistics, sample sizes, publication dates) vs clinical decision-making?
+- Are distractors homogeneous and clinically plausible, or are they lazy numerical variations / obviously wrong?
+- Do stems follow clinical vignette structure, or are they naked factual questions?
+- Can the question be answered by covering the options (the "cover-the-options" test)?
+
+##### B. Common Failure Modes
+
+Flag every question that has ANY of these problems:
+
+1. **Trivia testing**: tests raw numbers from studies rather than clinical conclusions or implications
+2. **Lazy distractors**: options that are just numerical variations of the correct answer
+3. **Non-homogeneous options**: distractors that are not in the same category as the correct answer
+4. **No clinical context**: questions that lack any patient scenario or clinical decision-making task
+5. **Unfocused lead-in**: vague prompts instead of specific clinical tasks
+6. **Correct answer stands out**: the right answer is longer, more detailed, or more qualified than distractors
+7. **Grammatical cues**: stem language tips off the correct answer
+8. **Negative phrasing**: questions using `EXCEPT`, `NOT`, or similar constructions
+9. **Recall-only questions** that could be converted to application with a vignette
+10. **Thin explanations**: explanations that do not teach the underlying concept
+
+##### C. Quality Tiers
+
+Categorize every question as:
+
+- **GOLD**: Ready to ship
+- **SILVER**: Decent concept but needs rework
+- **BRONZE**: Fundamentally flawed but salvageable
+- **CUT**: Delete entirely
+
+##### D. Chapter-by-Chapter Summary
+
+For each chapter directory, provide:
+
+- Total question count
+- Breakdown by quality tier
+- Most common failure mode
+- Specific examples of the worst questions
+- Specific examples of the best questions
+
+##### E. Overall Statistics
+
+- Total questions audited
+- Distribution across quality tiers
+- Top 5 most common failure modes
+- Estimated rework effort
+
+#### Part 2: Historical Question-Generation Guidance
+
+This was the historical bootstrap prompt used before the quick-start + consolidated schema model existed.
+
+##### Question Philosophy
+
+- **NEVER test recall of isolated facts.** Every question must test application of knowledge in a clinical context.
+- Focus on common and important clinical problems.
+- Every question should teach something.
+- Target the level of a physician sitting for ABPN Addiction Psychiatry boards or ABAM Addiction Medicine boards.
+
+##### Stem / Vignette Structure
+
+Every question should, when relevant, include:
+
+1. Patient demographics
+2. Setting
+3. Chief complaint
+4. History of present illness
+5. Relevant history
+6. Examination / findings
+7. Lead-in question
+
+##### Lead-In Rules
+
+- Must end with a question mark
+- Must be answerable without seeing the options
+- Must ask a specific clinical task
+- Avoid vague prompts like "Which of the following is true?"
+
+##### Distractor Rules
+
+- Target 4 options
+- Keep options homogeneous
+- Make distractors clinically plausible
+- Avoid obvious length cues
+- Avoid absurd options and pure number variations
+
+##### What to Test
+
+- Pharmacology
+- Clinical decision-making
+- Diagnosis
+- Evidence-based practice with clinical implications
+- Safety
+- Special populations
+
+##### What Never to Test
+
+- Raw study statistics
+- Publication dates or author names
+- Journal trivia
+- Number of studies in a meta-analysis
+- Exact diagnostic criteria lists as trivia
+- Historical facts without clinical relevance
+
+##### Explanation Structure
+
+Historically expected:
+
+1. Why the correct answer is correct
+2. Why each distractor is wrong
+3. Clinical pearl
+4. Key concept
+
+##### Explanation Anti-Patterns
+
+- "A is incorrect because it underestimates the number"
+- "This answer is wrong"
+- Generic dismissals without teaching content
+- Explanations shorter than the question stem
+- Restating the full answer text before the explanation
+
+##### Historical Formatting Template (Archival Only)
+
+> **Do not use this as the active parser contract.**
+> This template predates DEBT-338 ordering rules and the current consolidated schema.
+
+```markdown
+## Question
+[Clinical vignette with patient demographics, presentation, relevant history, and findings]
+
+[Focused lead-in question ending with a question mark]
+
+## Choices
+- A) [Option]
+- B) [Option]
+- C) [Option]
+- D) [Option]
+
+## Correct Answer
+[Letter]
+
+## Explanation
+[Why correct answer is correct - clinical reasoning and evidence]
+
+**Why other answers are wrong:**
+- **A) [Option]:** [Specific educational reason]
+- **B) [Option]:** [Specific educational reason]
+- **C) [Option]:** [Specific educational reason]
+
+**Clinical Pearl:** [One high-yield teaching point]
+
+**Key Concept:** [What principle this question tests]
+
+## Metadata
+- Difficulty: [Easy/Medium/Hard]
+- Category: [Pharmacology/Diagnosis/Management/Mechanism/Evidence-Based Practice]
+- Source: [Author et al., Year - Brief description]
+- Chapter: [Chapter number and name]
+```
+
+##### Historical Good Example (Reference Only)
+
+```markdown
+## Question
+A 34-year-old woman with opioid use disorder presents to the clinic requesting treatment with buprenorphine. She reports using intravenous fentanyl daily for the past 8 months. Her last use was 6 hours ago. She appears uncomfortable, with dilated pupils, rhinorrhea, piloerection, and a COWS score of 14. You prescribe sublingual buprenorphine/naloxone 4mg/1mg.
+
+Within 30 minutes of taking the medication, she develops severe abdominal cramping, profuse diarrhea, diffuse body aches, and her COWS score increases to 32.
+
+Which of the following best explains this patient's worsening symptoms?
+
+## Choices
+- A) Naloxone-mediated antagonism at mu-opioid receptors from the sublingual formulation
+- B) Buprenorphine displacement of a higher-affinity agonist from mu-opioid receptors
+- C) Buprenorphine's partial agonist activity providing insufficient mu-opioid receptor activation relative to her tolerance
+- D) An allergic reaction to the buprenorphine/naloxone sublingual formulation
+
+## Correct Answer
+C
+
+## Explanation
+This patient is experiencing precipitated withdrawal. Buprenorphine is a partial mu-opioid agonist with very high binding affinity. When administered to a patient with high opioid tolerance (especially to fentanyl, which has high intrinsic efficacy at the mu receptor), buprenorphine rapidly displaces the full agonist and replaces it with partial agonist activity. The net effect is a sudden, dramatic reduction in mu-opioid receptor activation - equivalent to abrupt dose reduction - triggering severe withdrawal.
+
+This is particularly problematic with fentanyl because fentanyl's lipophilicity means it persists in tissues, and even at a COWS of 14, significant receptor occupancy by fentanyl may remain. Current guidelines increasingly recommend micro-dosing (low-dose buprenorphine initiation) strategies for patients transitioning from fentanyl.
+
+**Why other answers are wrong:**
+- **A) Naloxone-mediated antagonism:** The naloxone component in sublingual buprenorphine/naloxone has negligible bioavailability (~3-5%) when taken sublingually. It is included as an abuse deterrent for IV misuse, not as a clinically active component in sublingual administration. This is a common misconception.
+- **B) Displacement of a higher-affinity agonist:** This reverses the mechanism. Buprenorphine has HIGHER binding affinity than fentanyl. It is buprenorphine that displaces fentanyl, not the other way around. The issue is that buprenorphine's intrinsic activity (partial agonism) is lower despite its higher affinity.
+- **D) Allergic reaction:** The symptom constellation (cramping, diarrhea, body aches, elevated COWS) is classic opioid withdrawal, not an allergic reaction. Allergic reactions would present with urticaria, angioedema, bronchospasm, or anaphylaxis.
+
+**Clinical Pearl:** The distinction between binding affinity and intrinsic activity is critical for understanding precipitated withdrawal. Buprenorphine wins the competition for the receptor (high affinity) but activates it less (partial agonism), creating a net reduction in opioid effect in tolerant patients.
+
+**Key Concept:** Precipitated withdrawal from buprenorphine induction - partial agonist displacement of full agonist at the mu-opioid receptor, particularly relevant in the fentanyl era.
+
+## Metadata
+- Difficulty: Medium
+- Category: Pharmacology/Management
+- Source: Clinical pharmacology of buprenorphine; SAMHSA TIP 63 guidelines
+- Chapter: 04-opioids
+```
+
+##### Historical Bad Example (Reference Only)
+
+```markdown
+## Question
+According to the 2020 Cochrane review by Kelly et al., how many studies and participants were included in the systematic review of AA and 12-Step Facilitation (TSF) for alcohol use disorder?
+
+## Choices
+- A) 15 studies with 5,000 participants
+- B) 27 studies with 10,565 participants
+- C) 35 studies with 15,000 participants
+- D) 50 studies with 25,000 participants
+
+## WHY THIS IS BAD:
+- Tests pure recall of trivia
+- No clinical vignette or context
+- Distractors are lazy numerical variations
+- No clinical decision-making involved
+- No physician would ever need to recall this number
+- Explanation just says "the other numbers are wrong"
+- A better question from this source would test what the Cochrane review found and how it should change patient counseling
+```
+
+### Historical Instructions
+
+1. First, scan all markdown files in the `/questions` directory tree.
+2. Create `NOTES.md` with the full audit.
+3. Create or update agent instruction files for question generation.
+4. Provide a summary of findings and recommended next steps.

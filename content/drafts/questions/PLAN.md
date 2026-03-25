@@ -4,13 +4,51 @@
 
 **Note:** One additional folder contains a correction notice (no questions): `09-therapy/2024-cooperman-more-trial-correction/`.
 
-**Last Updated:** February 18, 2026
+**Last Updated:** March 25, 2026
 
 **Status:**
 - Generation: 480/480 questions COMPLETE (all 40 papers)
 - Audit: Chapters 01-03 audited, Chapters 04-10 not yet audited
 - Stabilization: Chapters 01-03 COMPLETE (all flagged questions fixed)
 - Quality: ~85% GOLD, ~15% SILVER, ~0% BRONZE/CUT
+
+---
+
+## Current Inventory & Integrity Snapshot
+
+### Inventory
+
+| Scope | Count |
+|-------|-------|
+| Total questions in draft files | 948 |
+| `article-based-pathway/` | 480 |
+| `asam-guidelines/` | 108 |
+| `personal-papers/` | 132 |
+| `50-studies-every-psychiatrist-should-know/` | 48 |
+| `cochrane/` | 24 |
+| `therapy/` | 12 |
+| `prescribers-guide/` | 144 |
+
+### Integrity Checks
+
+- No missing question sets for folders expected to have `recall.md` and `vignettes.md`
+- All non-Prescriber's sources follow the 6 recall + 6 vignette structure
+- Prescriber's Guide medications are recall-only by design: 36 medication folders x 4 recall questions
+- Global QID uniqueness snapshot: 948 unique QIDs, no duplicates found
+- Known exception: `content/drafts/questions/article-based-pathway/09-therapy/2024-cooperman-more-trial-correction/` is a correction-note folder with no questions by design
+- Known exception: `content/drafts/questions/prescribers-guide/stahls-prescribers-guide.md` and `content/drafts/questions/prescribers-guide/stahls-chunked/` are source-only full-book conversion references
+
+### Fast Checks
+
+```bash
+# Structural validation from the app repo root
+pnpm content:import:drafts -- --dry-run
+
+# Focused validation after editing a single source family
+pnpm content:import:drafts -- --dry-run
+```
+
+There is currently no separate dedicated question-validator script in this repo.
 
 ---
 

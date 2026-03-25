@@ -133,7 +133,7 @@ The 24 affected files need formatting fixes in the `addiction-final-2026` extern
 1. **23 files**: Move `**Clinical Pearl:**` paragraph ABOVE the `**Why other answers are wrong:**` heading
 2. **1 file** (`palis-2022`): Split `- A, B, D)` combined bullet into three individual bullets: `- A)`, `- B)`, `- D)`
 
-Content instruction files (`QUESTION-FORMAT-SPEC.md`, `SCHEMA.md`, `CLAUDE.md`, `AGENTS.md`) have been updated with explicit ordering rules to prevent recurrence.
+The consolidated instruction stack in this repo (`SCHEMA.md`, `CLAUDE.md`, `AGENTS.md`, `PLAN.md`, `NOTES.md`) now documents the ordering rules that prevent recurrence. The external repo still needs the synced copies.
 
 See [NOTES.md](../../content/drafts/questions/NOTES.md) in the content drafts directory for the full affected file list with line numbers.
 
@@ -217,9 +217,11 @@ This is the structurally correct end-state for this codebase: per-choice feedbac
 
 This consolidation track is now also tracked explicitly as [DEBT-339](./debt-339-consolidate-question-instruction-files.md).
 
-### The Problem
+**Status:** Local consolidation complete in this repo (2026-03-25). External repo sync remains pending.
 
-The content instruction files in `content/drafts/questions/` are copied to the external `addiction-final-2026` repo where agents generate and edit questions. There are currently **8 files**, and they have significant overlap and fragmentation:
+### The Problem (Pre-DEBT-339 Local Consolidation Snapshot)
+
+Before DEBT-339 was executed in this repo, the content instruction files in `content/drafts/questions/` were copied to the external `addiction-final-2026` repo as **8 separate files** with significant overlap and fragmentation:
 
 | File | Purpose | Problem |
 |------|---------|---------|
@@ -232,7 +234,7 @@ The content instruction files in `content/drafts/questions/` are copied to the e
 | `SCHEMA.md` | YAML format, tags, quality checklist | Overlaps heavily with QUESTION-FORMAT-SPEC.md |
 | `TAG-TAXONOMY.md` | Canonical tag tables | Could be a section of SCHEMA.md |
 
-An agent working on questions has to read 4+ files just to understand the format. Quality rules are scattered across at least 4 files (`AGENTS.md`, `CLAUDE.md`, `SCHEMA.md`, and `QUESTION-FORMAT-SPEC.md`) and must be kept manually in sync. This is unsustainable, increases drift risk, and likely contributed to the formatting inconsistencies behind DEBT-338.
+An agent working on questions had to read 4+ files just to understand the format. Quality rules were scattered across at least 4 files (`AGENTS.md`, `CLAUDE.md`, `SCHEMA.md`, and `QUESTION-FORMAT-SPEC.md`) and had to be kept manually in sync. That setup was unsustainable, increased drift risk, and likely contributed to the formatting inconsistencies behind DEBT-338.
 
 ### Two-Repo Workflow
 
@@ -269,31 +271,32 @@ Phase 2 changes the question format in a major way. If we update 8 fragmented fi
 ### Sequencing
 
 1. ~~**Phase 1** (this repo): Strict parser validation~~ — done (2026-03-24)
-2. **Consolidate instruction files** ([DEBT-339](./debt-339-consolidate-question-instruction-files.md)): Reduce 8 → 5 files, ensure single source of truth — do this BEFORE transplanting docs to the external repo so agents get clean, focused documentation
+2. ~~**Consolidate instruction files** ([DEBT-339](./debt-339-consolidate-question-instruction-files.md))~~ — done locally in this repo (2026-03-25)
 3. **Transplant consolidated docs** to external `addiction-final-2026` repo
 4. **Fix 24 corrupted files** (external repo): Content alignment using current format, guided by the consolidated docs
 5. **Phase 2** (both repos): Add `explanation` to YAML frontmatter, update consolidated docs, migrate content
 
 Tracks 1 and 2 can be developed in parallel, but the strict-validation code should not be merged / enforced against a still-corrupted imported corpus unless the team is intentionally ready for `pnpm db:seed` to fail until the 24 content fixes are re-imported.
 
-### Current State After Phase 1
+### Current State After Phase 1 + Local DEBT-339 Execution
 
 As of this update:
 
 1. **Phase 1 is done in this repo.** The seed parser now fails fast instead of silently corrupting malformed wrong-answer sections.
-2. **The immediate next operational step is external content repair.** Fix the 24 affected draft files in `addiction-final-2026`, then re-import them here.
-3. **Do not expect a full corpus re-seed to succeed until that external content repair is complete.** That is now an intentional fail-fast guard, not a regression.
-4. **After the corpus is clean, consolidate the instruction files before changing the authoring format.**
-5. **After consolidation, execute Phase 2** so per-choice explanations live in structured YAML instead of markdown prose.
+2. **Local instruction-file consolidation is done in this repo.** The active reading path is now `CLAUDE.md` (or `AGENTS.md`) + `SCHEMA.md`, with `PLAN.md` and `NOTES.md` as optional references.
+3. **The immediate next operational step is syncing those consolidated docs to the external repo.**
+4. **Then fix the 24 affected draft files in `addiction-final-2026`, then re-import them here.**
+5. **Do not expect a full corpus re-seed to succeed until that external content repair is complete.** That is now an intentional fail-fast guard, not a regression.
+6. **After the corpus is clean, execute Phase 2** so per-choice explanations live in structured YAML instead of markdown prose.
 
 ### What To Do Next
 
 If this Phase 1 PR is merged, the recommended next queue is:
 
-1. External repo: fix the 23 clinical-pearl ordering files and the 1 combined-label file
-2. External repo + this repo: sync the corrected instruction docs and re-import the repaired content
-3. This repo: verify `pnpm db:seed` succeeds against the repaired imported corpus
-4. Both repos: consolidate instruction files (`QUESTION-FORMAT-SPEC.md` + `TAG-TAXONOMY.md` into `SCHEMA.md`, rationalize `META.MD`)
+1. External repo: sync the consolidated docs from this repo
+2. External repo: fix the 23 clinical-pearl ordering files and the 1 combined-label file
+3. External repo + this repo: re-import the repaired content
+4. This repo: verify `pnpm db:seed` succeeds against the repaired imported corpus
 5. Both repos: execute Phase 2 YAML migration and retire markdown parsing for per-choice explanations
 
 No additional parser-architecture work is the recommended next move before step 1 unless a newly discovered malformed-content pattern requires another fail-fast validator.
@@ -320,12 +323,12 @@ No additional parser-architecture work is the recommended next move before step 
 
 ### Instruction File Consolidation (Before Phase 2)
 
-- [ ] QUESTION-FORMAT-SPEC.md absorbed into SCHEMA.md (pipeline behavior, format rules, commands)
-- [ ] TAG-TAXONOMY.md absorbed into SCHEMA.md (canonical tag tables + migration maps + remaining useful content-gap guidance)
-- [ ] Useful current META.MD content is redistributed deliberately: active quality guidance into SCHEMA.md, inventory/progress context into PLAN.md or NOTES.md, archival bootstrap content archived or clearly marked as non-authoring reference
-- [ ] CLAUDE.md and AGENTS.md updated to reference consolidated SCHEMA.md; no duplicated quality rules
+- [x] QUESTION-FORMAT-SPEC.md absorbed into SCHEMA.md (pipeline behavior, format rules, commands)
+- [x] TAG-TAXONOMY.md absorbed into SCHEMA.md (canonical tag tables + migration maps + remaining useful content-gap guidance)
+- [x] Useful current META.MD content is redistributed deliberately: active quality guidance into SCHEMA.md, inventory/progress context into PLAN.md or NOTES.md, archival bootstrap content archived or clearly marked as non-authoring reference
+- [x] CLAUDE.md and AGENTS.md updated to reference consolidated SCHEMA.md; no duplicated quality rules
+- [x] Agents can generate correct questions by reading only CLAUDE.md (or AGENTS.md) + SCHEMA.md
 - [ ] Consolidated files synced to external `addiction-final-2026` repo
-- [ ] Agents can generate correct questions by reading only CLAUDE.md (or AGENTS.md) + SCHEMA.md
 
 ### Phase 2 (YAML Frontmatter Migration)
 
