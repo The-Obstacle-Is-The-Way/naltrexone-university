@@ -2,7 +2,8 @@
 
 **Priority:** P1
 **Created:** 2026-03-24
-**Updated:** 2026-03-24 (Phase 1 strict validation implemented and verified)
+**Updated:** 2026-03-25 (Phase 1 strict validation implemented; next actions clarified)
+**Status:** Open — Phase 1 is implemented in this repo; external content alignment, instruction-file consolidation, and Phase 2 migration remain open
 **Source:** Codebase-wide audit after DEBT-335 / adjacent to [DEBT-336](./debt-336-content-markdown-quality-pass.md)
 **Scope:** `scripts/seed-helpers.ts` parser validation, content format alignment in external `addiction-final-2026` repo, long-term parser architecture
 
@@ -272,6 +273,28 @@ Phase 2 changes the question format in a major way. If we update 8 fragmented fi
 
 Tracks 1 and 2 can be developed in parallel, but the strict-validation code should not be merged / enforced against a still-corrupted imported corpus unless the team is intentionally ready for `pnpm db:seed` to fail until the 24 content fixes are re-imported.
 
+### Current State After Phase 1
+
+As of this update:
+
+1. **Phase 1 is done in this repo.** The seed parser now fails fast instead of silently corrupting malformed wrong-answer sections.
+2. **The immediate next operational step is external content repair.** Fix the 24 affected draft files in `addiction-final-2026`, then re-import them here.
+3. **Do not expect a full corpus re-seed to succeed until that external content repair is complete.** That is now an intentional fail-fast guard, not a regression.
+4. **After the corpus is clean, consolidate the instruction files before changing the authoring format.**
+5. **After consolidation, execute Phase 2** so per-choice explanations live in structured YAML instead of markdown prose.
+
+### What To Do Next
+
+If this Phase 1 PR is merged, the recommended next queue is:
+
+1. External repo: fix the 23 clinical-pearl ordering files and the 1 combined-label file
+2. External repo + this repo: sync the corrected instruction docs and re-import the repaired content
+3. This repo: verify `pnpm db:seed` succeeds against the repaired imported corpus
+4. Both repos: consolidate instruction files (`QUESTION-FORMAT-SPEC.md` + `TAG-TAXONOMY.md` into `SCHEMA.md`, rationalize `META.MD`)
+5. Both repos: execute Phase 2 YAML migration and retire markdown parsing for per-choice explanations
+
+No additional parser-architecture work is the recommended next move before step 1 unless a newly discovered malformed-content pattern requires another fail-fast validator.
+
 ---
 
 ## Acceptance Criteria
@@ -313,6 +336,16 @@ Tracks 1 and 2 can be developed in parallel, but the strict-validation code shou
 - [ ] `**Why other answers are wrong:**` markdown section no longer required by any pipeline stage
 - [ ] Migrated content is re-imported and `pnpm db:seed` succeeds against the full corpus
 - [ ] All existing tests pass; new tests cover YAML-sourced explanations
+
+### Debt Closure / Exit Condition
+
+DEBT-338 should remain open until all of the following are true:
+
+- [ ] The 24 known corrupted files are fixed in the external repo and re-imported here
+- [ ] `pnpm db:seed` succeeds against the full imported corpus with Phase 1 validation enabled
+- [ ] Instruction-file consolidation is complete in both repos
+- [ ] Per-choice explanations are stored in structured YAML authoring data and carried through import/seed
+- [ ] Markdown parsing is no longer required for per-choice wrong-answer explanations
 
 ---
 
