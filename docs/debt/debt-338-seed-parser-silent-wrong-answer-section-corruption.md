@@ -146,7 +146,7 @@ Follow TDD. Tighten `parseChoiceExplanations()` so malformed wrong-answer sectio
 - Any bullet-like line with a label outside A–E is an error
 - Any duplicate parsed label is an error
 - Any recognized choice bullet whose body is blank / whitespace-only is an error
-- If the subsection heading exists with non-empty content but zero valid bullets survive parsing, throw
+- If the subsection heading exists but zero valid bullets survive parsing, throw (including literally blank wrong-answer subsections where the heading is followed only by blank lines / EOF)
 - Combined-label patterns (comma-separated) are an error with an actionable message
 - Numbered-list items used in place of `- A)` bullets are an error
 - After the first valid bullet, only blank lines, valid continuation paragraphs, additional valid bullets, and the terminal `### Reference` heading are allowed
@@ -278,7 +278,7 @@ Tracks 1 and 2 can be developed in parallel, but the strict-validation code shou
 
 ### Phase 1 (Strict Validation — Implemented 2026-03-24)
 
-- [x] `scripts/seed-helpers.test.ts` has regression coverage for: stray non-bullet text, invalid labels (F–Z), duplicate labels, combined-label bullets, heading-with-no-valid-bullets, clinical-pearl-after-bullets
+- [x] `scripts/seed-helpers.test.ts` has regression coverage for: stray non-bullet text, invalid labels (F–Z), duplicate labels, combined-label bullets, heading-with-no-valid-bullets (including heading-only blank sections), clinical-pearl-after-bullets
 - [x] `scripts/seed-helpers.test.ts` also covers: top-level numbered lists, heading-like lines inside a bullet body, `### Reference` inside a bullet body, inline markdown inside a bullet body, and CRLF input
 - [x] `scripts/seed-helpers.test.ts` covers recognized bullets with blank / whitespace-only bodies
 - [x] `scripts/seed.test.ts` verifies `parseSeedQuestionFile()` fails fast on malformed wrong-answer sections

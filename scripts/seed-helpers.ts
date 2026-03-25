@@ -213,10 +213,12 @@ export function parseChoiceExplanations(explanationMd: string): {
 
   commitCurrent();
 
-  if (!sawValidBullet && sawNonEmptySectionContent) {
+  if (!sawValidBullet) {
     throw createWrongAnswerValidationError(
-      'wrong-answer section contains content but no valid choice bullets',
-      firstNonEmptySectionLine ?? '',
+      sawNonEmptySectionContent
+        ? 'wrong-answer section contains content but no valid choice bullets'
+        : 'wrong-answer section contains no valid choice bullets',
+      firstNonEmptySectionLine ?? lines[headingIndex] ?? '',
     );
   }
 

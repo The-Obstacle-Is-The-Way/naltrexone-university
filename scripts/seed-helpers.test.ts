@@ -342,6 +342,23 @@ describe('parseChoiceExplanations strict validation', () => {
     expect(message).toContain('### Reference');
   });
 
+  it('throws when the heading is present but only blank lines follow', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '**Why other answers are wrong:**',
+      '',
+      '',
+    ].join('\n');
+
+    const message = getErrorMessage(() =>
+      parseChoiceExplanations(explanationMd),
+    );
+
+    expect(message).toContain('no valid choice bullets');
+    expect(message).toContain('**Why other answers are wrong:**');
+  });
+
   it('throws on numbered lists inside the wrong-answer section', () => {
     const explanationMd = [
       'General rationale paragraph.',
