@@ -23,7 +23,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-338](./debt-338-seed-parser-silent-wrong-answer-section-corruption.md) | Seed parser silently accepts malformed `Why other answers are wrong` sections — **24 files confirmed corrupted** (23 clinical pearl contamination, 1 combined-label drop); Phase 1 strict validation is implemented, next is external content repair, then instruction-file consolidation, then YAML choice-explanation migration | P1 | — |
 
-**Next Debt ID:** DEBT-339
+| [DEBT-339](./debt-339-consolidate-question-instruction-files.md) | Consolidate 8 question instruction files → 5 (absorb QUESTION-FORMAT-SPEC.md + TAG-TAXONOMY.md into SCHEMA.md, redistribute META.MD); prerequisite for DEBT-338 Phase 2 YAML migration | P2 | — |
+
+**Next Debt ID:** DEBT-340
 
 ---
 
