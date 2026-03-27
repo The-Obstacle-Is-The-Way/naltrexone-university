@@ -2,28 +2,30 @@
 
 **Priority:** P1
 **Created:** 2026-03-24
-**Updated:** 2026-03-27 (Phase 1 done, content alignment done, consolidation done; Phase 2 design decisions locked — only implementation remains)
-**Status:** Open — only Phase 2 (YAML frontmatter migration) remains; all other work is complete
+**Updated:** 2026-03-27 (post-Phase-1 audit: historical state clarified, Phase 2 contract tightened, cross-doc status reconciled)
+**Status:** Open — only Phase 2 (YAML frontmatter migration) remains; Phase 1 hardening, instruction-file consolidation, external repo sync, and 24-file content repair are complete
 **Source:** Codebase-wide audit after DEBT-335 / adjacent to [DEBT-336](./debt-336-content-markdown-quality-pass.md)
-**Scope:** `scripts/seed-helpers.ts` parser validation, content format alignment in external `addiction-final-2026` repo, long-term parser architecture
+**Scope:** legacy seed-parser hardening, content format alignment in external `addiction-final-2026` repo, and Phase 2 migration across draft schemas, draft import, MDX schemas, and seed parsing
 
 ---
 
-## Problem
+## Historical Problem / Remaining Architectural Debt
 
-`parseChoiceExplanations()` in `scripts/seed-helpers.ts` does line-by-line regex parsing of the `**Why other answers are wrong:**` section. Its fundamental logic is:
+Before Phase 1 hardening and the 2026-03-27 content repair, `parseChoiceExplanations()` in `scripts/seed-helpers.ts` did line-by-line regex parsing of the `**Why other answers are wrong:**` section with silent append/drop behavior. Its fundamental logic was:
 
 1. If a line matches `CHOICE_BULLET_PATTERN` → start a new choice
 2. If a line doesn't match and a bullet is open → **silently append to that bullet's body**
 3. If a line doesn't match and no bullet is open → **silently drop the line**
 
-This means any non-bullet content inside the wrong-answer section is either silently eaten by whatever choice happens to be "open," or silently dropped. There is no concept of "this line doesn't belong here — error."
+That meant any non-bullet content inside the wrong-answer section was either silently eaten by whatever choice happened to be "open," or silently dropped. There was no concept of "this line doesn't belong here — error."
 
-**This is not hypothetical. It is corrupting live data in the database right now.**
+**This was not hypothetical. Before the 2026-03-27 repair, it corrupted live data in the database.**
+
+Phase 1 fixed the silent-corruption behavior by failing fast, and the 24 malformed files were repaired and re-seeded. The remaining debt is architectural: per-choice explanations are still stored as prose that must be parsed out of markdown instead of being authored as structured data.
 
 ---
 
-## Verified Live Corruption
+## Historical Verified Live Corruption
 
 ### Pattern 1: Clinical Pearl Contamination (23 files)
 
@@ -51,7 +53,7 @@ The parser produces: choice C explanation = `"S2BI did not have superior specifi
 | nelson-2022 | nelson-2022-001, -003, -004, -005, -006, -007, -008, -011, -012 |
 | white-2020 | white-2020-004, -012 |
 
-All are in `content/questions/imported/article-based-pathway/`. The same ordering issue exists in the corresponding draft source files in the external `addiction-final-2026` repo.
+All were in `content/questions/imported/article-based-pathway/`. The same ordering issue existed in the corresponding draft source files in the external `addiction-final-2026` repo and was fixed there on 2026-03-27.
 
 ### Pattern 2: Combined-Label Bullet Drop (1 file)
 
@@ -96,7 +98,7 @@ This matches single-letter labels A–E with one or more delimiters from `).:`  
 - Labels without a delimiter (e.g., `- A ` with no `)`, `.`, or `:`)
 - Numbered lists like `1. A is wrong` (silently dropped unless a valid bullet is already open)
 
-### The Append-or-Drop Logic (`scripts/seed-helpers.ts:75-101`)
+### The Pre-Phase-1 Append-or-Drop Logic (historical)
 
 ```
 for (const [offset, line] of lines.slice(headingIndex + 1).entries()) {
@@ -114,7 +116,7 @@ Line 100: if a bullet IS open, non-matching content is silently appended to that
 
 Neither case produces an error. Neither case distinguishes "legitimate multi-line continuation" from "content that shouldn't be here."
 
-### The Validation Gap (`scripts/seed/question-parser.ts:57-63`)
+### The Historical Validation Gap in `buildSeedRepFromParsed()`
 
 `buildSeedRepFromParsed()` checks that parsed labels exist in frontmatter choices, but does NOT check:
 - Whether any content was silently dropped during parsing
@@ -124,22 +126,22 @@ Neither case produces an error. Neither case distinguishes "legitimate multi-lin
 
 ---
 
-## Two-Track Fix Required
+## Two-Track Fix Plan
 
-### Track 1: Content Alignment (External Repo)
+### Track 1: Content Alignment (External Repo) — Complete 2026-03-27
 
-The 24 affected files need formatting fixes in the `addiction-final-2026` external repo, then re-import. These are content-level fixes, not parser changes:
+The 24 affected files required formatting fixes in the `addiction-final-2026` external repo, then re-import. These were content-level fixes, not parser changes:
 
 1. **23 files**: Move `**Clinical Pearl:**` paragraph ABOVE the `**Why other answers are wrong:**` heading
 2. **1 file** (`palis-2022`): Split `- A, B, D)` combined bullet into three individual bullets: `- A)`, `- B)`, `- D)`
 
-The consolidated instruction stack in this repo (`SCHEMA.md`, `CLAUDE.md`, `AGENTS.md`, `PLAN.md`, `NOTES.md`) now documents the ordering rules that prevent recurrence. The external repo still needs the synced copies.
+The consolidated instruction stack in this repo (`SCHEMA.md`, `CLAUDE.md`, `AGENTS.md`, `PLAN.md`, `NOTES.md`) now documents the ordering rules that prevent recurrence. The external repo has the synced copies as of 2026-03-27.
 
 See [NOTES.md](../../content/drafts/questions/NOTES.md) in the content drafts directory for the full affected file list with line numbers.
 
 ### Track 2: Parser Hardening (This Repo)
 
-**Phase 1 — Strict Validation (near-term)**
+**Phase 1 — Strict Validation (implemented 2026-03-24)**
 
 Follow TDD. Tighten `parseChoiceExplanations()` so malformed wrong-answer sections throw instead of silently degrading:
 
@@ -185,7 +187,7 @@ The correct answer's "explanation" is the general explanation paragraph + clinic
 - Correct answer → explained by general explanation + clinical pearl (markdown body)
 - Wrong answers → explained by per-choice `explanation` field (YAML frontmatter)
 
-Validation rule: if `correct: true`, `explanation` must be absent. If `correct: false`, `explanation` is required (optional during migration, required after).
+Validation rule: if `correct: true`, `explanation` must be absent. If `correct: false`, `explanation` is required in the Phase 2 target state. During migration, missing wrong-choice `explanation` remains valid only for legacy-format questions that still use markdown wrong-answer bullets.
 
 ### Current vs Phase 2 Format
 
@@ -249,15 +251,80 @@ Per-choice feedback lives with the choice definition in structured data instead 
 
 **Why not AST parsing?** An AST parser (remark/unified) is a better way to guess at structured data in markdown. YAML frontmatter means you don't have to guess at all. gray-matter (already used) parses it, Zod (already used) validates it. The parser gets **simpler**, not more complex.
 
+### Phase 2 Draft Authoring Format
+
+The draft authoring source must move too. The new-format draft contract is:
+
+- `choices[]` lives in YAML frontmatter
+- `answer` is removed for migrated questions
+- `## Choices` is removed for migrated questions
+- `## Explanation` keeps only general explanation prose, clinical pearl, and `### Reference`
+
+**Phase 2 draft format (new authoring source-of-truth):**
+```markdown
+---
+qid: white-2020-001
+type: recall
+difficulty: medium
+substances: [alcohol]
+topics: [screening-diagnosis]
+treatments: [naltrexone]
+diagnoses: [alcohol-use-disorder]
+source: white-2020
+choices:
+  - label: A
+    text: 2 or more points
+    correct: false
+    explanation: A score of >=2 is too sensitive and creates excessive false positives.
+  - label: B
+    text: 3 or more points
+    correct: true
+  - label: C
+    text: 4 or more points
+    correct: false
+    explanation: A score of >=4 is the male cutoff and misses at-risk female drinkers.
+  - label: D
+    text: 5 or more points
+    correct: false
+    explanation: A score of >=5 misses most at-risk drinkers regardless of sex.
+---
+
+## Question
+
+A 52-year-old woman presents for a routine visit. She reports drinking wine
+"a few times a week." Her physician decides to administer the AUDIT-C.
+
+What is the recommended AUDIT-C cutoff score for identifying unhealthy alcohol
+use in women?
+
+## Explanation
+
+The AUDIT-C uses sex-specific cutoffs: >=3 for women and >=4 for men.
+
+**Clinical pearl:** The AUDIT-C is the most validated brief screening tool in
+primary care.
+
+### Reference
+
+White AM, Castle IP, Hingson RW, Powell PA. ...
+```
+
 ### Phase 2 Implementation Scope
 
-1. Add `explanation` field to the imported MDX `ChoiceFrontmatterSchema` — required on wrong choices, forbidden on correct choice (optional on all during migration)
-2. Redesign the **draft-side** schema (currently `DraftFrontmatterSchema` in `scripts/draft-question-import.ts`) so draft files also use structured `choices[]` YAML objects (`label`, `text`, `correct`, `explanation`)
-3. Update `parseDraftQuestionBlock()` / `convertDraftQuestionToMdx()` / `scripts/import-draft-questions.ts` to support both the legacy draft format (`answer` + `## Choices` + markdown wrong-answer section) and the new structured draft format during migration
-4. Read `explanation` directly from frontmatter choices in `buildSeedRepFromParsed()` when present; fall back to the Phase 1 markdown parser when absent
-5. After the migration is complete, `parseChoiceExplanations()` simplifies to: extract general explanation + reference only (no more per-choice parsing)
-6. The `**Why other answers are wrong:**` section becomes unnecessary in both repos once all content is migrated
-7. Update authoring docs (`SCHEMA.md`, `CLAUDE.md`, `AGENTS.md`) and re-import / re-seed
+1. Extend the imported MDX `ChoiceFrontmatterSchema` with `explanation` and validate at the content-schema boundary: `correct: true` forbids `explanation`; `correct: false` requires `explanation` for new-format questions
+2. Redesign the **draft-side** schema (currently `DraftFrontmatterSchema` in `scripts/draft-question-import.ts`) so migrated draft files use structured `choices[]` YAML objects (`label`, `text`, `correct`, `explanation`) instead of `answer` + `## Choices`
+3. Support **two whole-question formats** during migration:
+   - Legacy question: `answer` + `## Choices` + markdown wrong-answer bullets
+   - New-format question: `choices[]` in frontmatter, no `answer`, no `## Choices`, no markdown wrong-answer bullets
+4. Reject hybrid questions during migration. A single question must not mix old and new sources of truth (for example `answer` plus `choices[]`, or YAML per-choice explanations plus a markdown `**Why other answers are wrong:**` subsection)
+5. Update `parseDraftQuestionBlock()` / `convertDraftQuestionToMdx()` / `scripts/import-draft-questions.ts` to parse and emit both whole-question formats during migration
+6. Update `buildSeedRepFromParsed()` to branch on question format:
+   - New-format MDX: read wrong-choice `explanation` directly from frontmatter, and still split `generalExplanation` from `referenceMd`
+   - Legacy MDX: continue using `parseChoiceExplanations()` for per-choice data
+7. Preserve or deliberately replace the current draft splitter contract. Today `splitDraftQuestionsFile()` requires `qid:` to be the first frontmatter key after `---`; Phase 2 must either keep that authoring rule or harden the splitter
+8. After the corpus migration is complete, `parseChoiceExplanations()` simplifies to: extract general explanation + reference only (no more per-choice parsing)
+9. The `**Why other answers are wrong:**` section becomes unnecessary in both repos once all content is migrated
+10. Update authoring docs (`SCHEMA.md`, `CLAUDE.md`, `AGENTS.md`), sync them to the external repo, then re-import / re-seed
 
 **Multiline explanations** work fine with YAML block scalars:
 ```yaml
@@ -267,15 +334,15 @@ Per-choice feedback lives with the choice definition in structured data instead 
       and equivalent accuracy favor the shorter instruments.
 ```
 
-**Phase 2 can be incremental.** Support both formats during migration: if `explanation` is present in frontmatter, use it; if not, fall back to the Phase 1 markdown parser. On the draft side, that means `parseDraftQuestionBlock()` and `convertDraftQuestionToMdx()` must temporarily support both the legacy `answer` + `## Choices` format and the new structured choice format. This allows gradual migration without a flag day.
+**Phase 2 can be incremental at the question level.** Support both legacy questions and new-format questions during migration, but do **not** allow a single question to mix the two representations. That avoids dual-source drift and makes validation decidable. On the draft side, `parseDraftQuestionBlock()` and `convertDraftQuestionToMdx()` must temporarily support both whole-question formats until the corpus is fully migrated.
 
 ---
 
 ## Content Instruction File Consolidation (Before Phase 2)
 
-This consolidation track is now also tracked explicitly as [DEBT-339](./debt-339-consolidate-question-instruction-files.md).
+This consolidation track is now also tracked explicitly as [DEBT-339](../_archive/debt/debt-339-consolidate-question-instruction-files.md).
 
-**Status:** Local consolidation complete in this repo (2026-03-25). External repo sync remains pending.
+**Status:** Consolidation is complete in both repos (local 2026-03-25, external sync 2026-03-27).
 
 ### The Problem (Pre-DEBT-339 Local Consolidation Snapshot)
 
@@ -329,7 +396,7 @@ Phase 2 changes the question format in a major way. If we update 8 fragmented fi
 ### Sequencing
 
 1. ~~**Phase 1** (this repo): Strict parser validation~~ — done (2026-03-24)
-2. ~~**Consolidate instruction files** ([DEBT-339](./debt-339-consolidate-question-instruction-files.md))~~ — done (2026-03-25)
+2. ~~**Consolidate instruction files** ([DEBT-339](../_archive/debt/debt-339-consolidate-question-instruction-files.md))~~ — done (2026-03-25)
 3. ~~**Transplant consolidated docs** to external `addiction-final-2026` repo~~ — done (2026-03-27)
 4. ~~**Fix 24 corrupted files** (external repo → re-import → re-seed)~~ — done (2026-03-27): all 24 files fixed, re-imported (`pnpm content:import:drafts -- --status published`), and re-seeded (`pnpm db:seed`) with zero errors. 948 questions pass strict validation. 24 updated in DB, 924 unchanged.
 5. **Phase 2** (both repos): Add `explanation` to YAML frontmatter, update consolidated docs, migrate content
@@ -343,13 +410,13 @@ Phase 2 changes the question format in a major way. If we update 8 fragmented fi
 
 ### What To Do Next
 
-If this Phase 1 PR is merged, the recommended next queue is:
+Recommended next queue from the current state:
 
-1. ~~External repo: sync the consolidated docs from this repo~~ — done (2026-03-27)
-2. ~~External repo: fix the 23 clinical-pearl ordering files and the 1 combined-label file~~ — done (2026-03-27)
-3. ~~External repo + this repo: re-import the repaired content~~ — done (2026-03-27)
-4. ~~This repo: verify `pnpm db:seed` succeeds against the repaired imported corpus~~ — done (2026-03-27, 948 pass, 24 updated, 924 unchanged)
-5. Both repos: execute Phase 2 YAML migration and retire markdown parsing for per-choice explanations
+1. Finalize the Phase 2 contract in this doc and the consolidated authoring docs
+2. Implement dual whole-question support in the draft importer and seed parser
+3. Add migration-path tests for legacy questions, new-format questions, and invalid hybrid questions
+4. Migrate the external corpus from legacy markdown wrong-answer bullets to structured YAML `choices[].explanation`
+5. Re-import, re-seed, and then remove legacy markdown per-choice parsing
 
 **Everything except Phase 2 is complete.** Phase 2 is a future structural migration and is not urgent.
 
@@ -386,24 +453,27 @@ If this Phase 1 PR is merged, the recommended next queue is:
 
 **Design decisions (locked 2026-03-27):** (1) Change draft authoring source too, not just imported MDX. (2) Post-migration markdown body keeps general explanation + clinical pearl + reference only. (3) Only wrong choices get `explanation`; correct answer is explained by the general explanation in the markdown body.
 
-- [ ] Imported MDX `ChoiceFrontmatterSchema` accepts `explanation` field — required on wrong choices (`correct: false`), forbidden on correct choice (`correct: true`); optional on all during migration
-- [ ] Draft-side schema (`DraftFrontmatterSchema`) redesigned so draft files use structured `choices[]` YAML objects with `explanation` on wrong choices
-- [ ] `parseDraftQuestionBlock()` / `convertDraftQuestionToMdx()` support both the legacy draft format and the new structured draft format during migration
-- [ ] `buildSeedRepFromParsed()` reads `explanation` from frontmatter when present, falls back to markdown parser when absent
-- [ ] `parseChoiceExplanations()` no longer needed for per-choice data once all content is migrated — simplifies to extracting general explanation + reference only
-- [ ] Import pipeline carries `explanation` through draft → MDX conversion
+- [ ] Imported MDX `ChoiceFrontmatterSchema` accepts `explanation` for new-format questions, forbids it on `correct: true` choices, and requires it on `correct: false` choices
+- [ ] Draft-side schema supports both whole-question formats during migration: legacy (`answer` + `## Choices`) and new-format (`choices[]` in frontmatter, no `answer`, no `## Choices`)
+- [ ] New-format draft example is documented in `SCHEMA.md` and shows that migrated questions remove both `answer` and `## Choices`
+- [ ] `parseDraftQuestionBlock()` / `convertDraftQuestionToMdx()` support both whole-question formats during migration and reject invalid hybrid questions
+- [ ] `buildSeedRepFromParsed()` reads per-choice `explanation` from frontmatter for new-format questions and uses markdown parsing only for legacy questions
+- [ ] General explanation and `referenceMd` still parse correctly for new-format questions even though `**Why other answers are wrong:**` is gone
+- [ ] `parseChoiceExplanations()` no longer handles per-choice data once all content is migrated — it only extracts general explanation + reference for legacy cleanup / final simplification
+- [ ] Import pipeline carries `explanation` through draft → MDX conversion for new-format questions
+- [ ] The draft splitter contract is explicit: either `qid:` remains first after `---` or `splitDraftQuestionsFile()` is hardened so richer frontmatter ordering cannot break imports
 - [ ] All 948+ question files migrated in external repo: per-choice explanations in YAML, `**Why other answers are wrong:**` section removed from markdown body
 - [ ] Post-migration markdown body contains only: general explanation, clinical pearl, `### Reference`
 - [ ] Migrated content is re-imported and `pnpm db:seed` succeeds against the full corpus
-- [ ] All existing tests pass; new tests cover YAML-sourced explanations and the correct-choice-has-no-explanation validation
+- [ ] All existing tests pass; new tests cover legacy questions, new-format questions, invalid hybrid questions, YAML-sourced explanations, reference extraction without a wrong-answer heading, and the correct-choice-has-no-explanation validation
 
 ### Debt Closure / Exit Condition
 
 DEBT-338 should remain open until all of the following are true:
 
-- [ ] The 24 known corrupted files are fixed in the external repo and re-imported here
-- [ ] `pnpm db:seed` succeeds against the full imported corpus with Phase 1 validation enabled
-- [ ] Instruction-file consolidation is complete in both repos
+- [x] The 24 known corrupted files are fixed in the external repo and re-imported here
+- [x] `pnpm db:seed` succeeds against the full imported corpus with Phase 1 validation enabled
+- [x] Instruction-file consolidation is complete in both repos
 - [ ] Per-choice explanations are stored in structured YAML authoring data and carried through import/seed
 - [ ] Markdown parsing is no longer required for per-choice wrong-answer explanations
 

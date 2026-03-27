@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-25
+**Last Updated:** 2026-03-27
 
 ---
 
@@ -21,8 +21,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-336](./debt-336-content-markdown-quality-pass.md) | Content markdown quality pass (C1–C4) — blank lines, redundant prefixes, missing explanations; executed in external `addiction-final-2026` repo then re-imported | P3 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
-| [DEBT-338](./debt-338-seed-parser-silent-wrong-answer-section-corruption.md) | Seed parser silently accepts malformed `Why other answers are wrong` sections — **24 files confirmed corrupted** (23 clinical pearl contamination, 1 combined-label drop); Phase 1 strict validation and local instruction-file consolidation are complete, next is external repo doc sync + content repair, then YAML choice-explanation migration | P1 | — |
-| [DEBT-339](./debt-339-consolidate-question-instruction-files.md) | Consolidate 8 question instruction files → 5 — local consolidation is complete in this repo (`SCHEMA.md` absorbed QUESTION-FORMAT-SPEC/TAG-TAXONOMY; `META.MD` redistributed into `SCHEMA.md`/`PLAN.md`/`NOTES.md`); next step is syncing the consolidated files to external `addiction-final-2026` | P2 | — |
+| [DEBT-338](./debt-338-seed-parser-silent-wrong-answer-section-corruption.md) | Historical silent-corruption bug is fixed (Phase 1 hardening, 24-file repair, consolidation, and external sync complete); remaining work is Phase 2: migrate per-choice explanations from markdown parsing to structured YAML in both repos | P1 | — |
 
 **Next Debt ID:** DEBT-340
 
@@ -33,6 +32,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
 | [DEBT-335](../_archive/debt/debt-335-remove-all-or-nothing-wrong-answer-guard.md) | Remove all-or-nothing wrong-answer display guard — `Feedback` now shows available wrong-answer explanations even when sibling choices are null/blank, with targeted regression coverage and synced authoring docs | P2 | 2026-03-24 | — |
+| [DEBT-339](../_archive/debt/debt-339-consolidate-question-instruction-files.md) | Consolidate 8 question instruction files → 5 — `SCHEMA.md` absorbed QUESTION-FORMAT-SPEC/TAG-TAXONOMY, `META.MD` was redistributed into `SCHEMA.md`/`PLAN.md`/`NOTES.md`, and the consolidated survivor files were synced to external `addiction-final-2026` | P2 | 2026-03-27 | — |
 | [DEBT-329](../_archive/debt/debt-329-navigator-colorblind-accessibility.md) | Colorblind-accessible review navigator badges — shared `ReviewCorrectnessBadge` (✓/✗ shape cues), DRY `getReviewVariant`/`getReviewStatusLabel` utilities, `ring-1 ring-border` light-mode fix, stable `data-testid` selectors | P3 | 2026-03-23 | [PR #249](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/249) |
 | [DEBT-318](../_archive/debt/debt-318-tutor-bookmark-before-answer.md) | Bookmark visible before feedback in tutor mode and quick practice — tutor/quick bookmark now renders only when inline feedback is actually visible, including the `isCorrect === null` edge case | P3 | 2026-03-23 | [PR #248](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/248) |
 | [DEBT-334](../_archive/debt/debt-334-practice-session-bootstrap-timeout-guard.md) | Practice-session summary bootstrap timeout guard — wrapped bootstrap `getPracticeSessionSummary` in `withTimeout(...)` so hung requests no longer pin the page in `loading` forever | P3 | 2026-03-22 | [PR #247](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/247) |

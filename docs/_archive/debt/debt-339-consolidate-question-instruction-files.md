@@ -19,9 +19,11 @@
 - `CLAUDE.md` and `AGENTS.md` now act as true quick-starts that point agents to `SCHEMA.md` instead of duplicating spec/taxonomy/checklist content.
 - `QUESTION-FORMAT-SPEC.md`, `TAG-TAXONOMY.md`, and `META.MD` have been removed from this repo after absorption.
 
-**Remaining work:**
-- Sync the consolidated files to external `addiction-final-2026`
-- Remove the absorbed legacy files there after destination content is verified
+**External sync complete (2026-03-27):**
+- Consolidated survivor files were copied to external `addiction-final-2026`
+- Absorbed legacy files there were removed after destination content was verified
+
+**Remaining work:** None. DEBT-339 is resolved.
 
 ---
 
@@ -142,13 +144,13 @@ During consolidation, verify these are preserved somewhere:
 
 ## Relationship to DEBT-338
 
-DEBT-338 has a "Content Instruction File Consolidation" section that describes this same plan. After DEBT-339 is resolved, that section of DEBT-338 can be marked done and cross-referenced here.
+DEBT-338 has a "Content Instruction File Consolidation" section that describes this same plan. That section is now marked done there and cross-references this archived debt doc.
 
-**Sequencing (updated):**
+**Sequencing (historical):**
 1. ~~Phase 1: Strict parser validation~~ — done (2026-03-24)
 2. ~~DEBT-339 local consolidation in this repo~~ — done (2026-03-25)
-3. Transplant consolidated docs to external `addiction-final-2026` repo
-4. Fix 24 corrupted files (external repo) — guided by the consolidated docs
+3. ~~Transplant consolidated docs to external `addiction-final-2026` repo~~ — done (2026-03-27)
+4. ~~Fix 24 corrupted files (external repo) — guided by the consolidated docs~~ — done (2026-03-27)
 5. Phase 2: YAML frontmatter migration (both repos)
 
 Consolidation should happen BEFORE Phase 2 because Phase 2 changes the question format. Updating 8 fragmented files for the new format will introduce inconsistencies. Consolidate first, then update the consolidated docs once.
@@ -181,5 +183,5 @@ When consolidating, also ensure these are clearly documented (from DEBT-338 find
 - [x] `SCHEMA.md` includes both a complete current-format example and a clear Phase 2 target-format example
 - [x] An agent can generate a correctly formatted question by reading only `CLAUDE.md` (or `AGENTS.md`) plus `SCHEMA.md`; `NOTES.md` and `PLAN.md` are optional reference, not required reading
 - [x] No information was lost during local consolidation (verified against the "What Must NOT Be Lost" table above)
-- [ ] Consolidated files are synced to the external `addiction-final-2026` repo
-- [ ] Absorbed legacy files are removed or archived in the external repo only after the destination content is verified there
+- [x] Consolidated files are synced to the external `addiction-final-2026` repo
+- [x] Absorbed legacy files are removed or archived in the external repo only after the destination content is verified there
