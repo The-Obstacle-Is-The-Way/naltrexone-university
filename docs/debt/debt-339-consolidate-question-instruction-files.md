@@ -2,8 +2,8 @@
 
 **Priority:** P2
 **Created:** 2026-03-25
-**Updated:** 2026-03-25 (local consolidation executed; external sync pending)
-**Status:** Open — local consolidation is complete in this repo; next step is syncing the consolidated files to external `addiction-final-2026`
+**Updated:** 2026-03-27 (consolidation complete in both repos)
+**Status:** Resolved — local consolidation done (2026-03-25), external sync done (2026-03-27)
 **Source:** DEBT-338 consolidation section, extracted into standalone debt doc
 **Scope:** `content/drafts/questions/*.md` instruction files (synced to external `addiction-final-2026` repo)
 **Prerequisite for:** DEBT-338 Phase 2 (YAML frontmatter migration)

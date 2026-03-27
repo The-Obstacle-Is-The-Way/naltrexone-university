@@ -2,8 +2,8 @@
 
 **Priority:** P1
 **Created:** 2026-03-24
-**Updated:** 2026-03-25 (Phase 1 strict validation implemented; next actions clarified)
-**Status:** Open — Phase 1 is implemented in this repo; external content alignment, instruction-file consolidation, and Phase 2 migration remain open
+**Updated:** 2026-03-27 (Phase 1 done, content alignment done, consolidation done; only Phase 2 YAML migration remains)
+**Status:** Open — only Phase 2 (YAML frontmatter migration) remains; all other work is complete
 **Source:** Codebase-wide audit after DEBT-335 / adjacent to [DEBT-336](./debt-336-content-markdown-quality-pass.md)
 **Scope:** `scripts/seed-helpers.ts` parser validation, content format alignment in external `addiction-final-2026` repo, long-term parser architecture
 
@@ -271,35 +271,29 @@ Phase 2 changes the question format in a major way. If we update 8 fragmented fi
 ### Sequencing
 
 1. ~~**Phase 1** (this repo): Strict parser validation~~ — done (2026-03-24)
-2. ~~**Consolidate instruction files** ([DEBT-339](./debt-339-consolidate-question-instruction-files.md))~~ — done locally in this repo (2026-03-25)
-3. **Transplant consolidated docs** to external `addiction-final-2026` repo
-4. **Fix 24 corrupted files** (external repo): Content alignment using current format, guided by the consolidated docs
+2. ~~**Consolidate instruction files** ([DEBT-339](./debt-339-consolidate-question-instruction-files.md))~~ — done (2026-03-25)
+3. ~~**Transplant consolidated docs** to external `addiction-final-2026` repo~~ — done (2026-03-27)
+4. ~~**Fix 24 corrupted files** (external repo → re-import → re-seed)~~ — done (2026-03-27): all 24 files fixed, re-imported (`pnpm content:import:drafts -- --status published`), and re-seeded (`pnpm db:seed`) with zero errors. 948 questions pass strict validation. 24 updated in DB, 924 unchanged.
 5. **Phase 2** (both repos): Add `explanation` to YAML frontmatter, update consolidated docs, migrate content
 
-Tracks 1 and 2 can be developed in parallel, but the strict-validation code should not be merged / enforced against a still-corrupted imported corpus unless the team is intentionally ready for `pnpm db:seed` to fail until the 24 content fixes are re-imported.
+### Current State (2026-03-27)
 
-### Current State After Phase 1 + Local DEBT-339 Execution
-
-As of this update:
-
-1. **Phase 1 is done in this repo.** The seed parser now fails fast instead of silently corrupting malformed wrong-answer sections.
-2. **Local instruction-file consolidation is done in this repo.** The active reading path is now `CLAUDE.md` (or `AGENTS.md`) + `SCHEMA.md`, with `PLAN.md` and `NOTES.md` as optional references.
-3. **The immediate next operational step is syncing those consolidated docs to the external repo.**
-4. **Then fix the 24 affected draft files in `addiction-final-2026`, then re-import them here.**
-5. **Do not expect a full corpus re-seed to succeed until that external content repair is complete.** That is now an intentional fail-fast guard, not a regression.
-6. **After the corpus is clean, execute Phase 2** so per-choice explanations live in structured YAML instead of markdown prose.
+1. **Phase 1 is done.** The seed parser fails fast on malformed wrong-answer sections.
+2. **Instruction-file consolidation is done.** Reading path: `CLAUDE.md` + `SCHEMA.md`.
+3. **Content alignment is done.** All 24 corrupted files fixed in external repo, re-imported, re-seeded. The strict parser accepts all 948 questions.
+4. **The only remaining work is Phase 2:** Move per-choice explanations from markdown body into YAML frontmatter `explanation` field. This is a future structural change, not urgent.
 
 ### What To Do Next
 
 If this Phase 1 PR is merged, the recommended next queue is:
 
-1. External repo: sync the consolidated docs from this repo
-2. External repo: fix the 23 clinical-pearl ordering files and the 1 combined-label file
-3. External repo + this repo: re-import the repaired content
-4. This repo: verify `pnpm db:seed` succeeds against the repaired imported corpus
+1. ~~External repo: sync the consolidated docs from this repo~~ — done (2026-03-27)
+2. ~~External repo: fix the 23 clinical-pearl ordering files and the 1 combined-label file~~ — done (2026-03-27)
+3. ~~External repo + this repo: re-import the repaired content~~ — done (2026-03-27)
+4. ~~This repo: verify `pnpm db:seed` succeeds against the repaired imported corpus~~ — done (2026-03-27, 948 pass, 24 updated, 924 unchanged)
 5. Both repos: execute Phase 2 YAML migration and retire markdown parsing for per-choice explanations
 
-No additional parser-architecture work is the recommended next move before step 1 unless a newly discovered malformed-content pattern requires another fail-fast validator.
+**Everything except Phase 2 is complete.** Phase 2 is a future structural migration and is not urgent.
 
 ---
 
@@ -319,7 +313,7 @@ No additional parser-architecture work is the recommended next move before step 
 - [x] Verified against real corrupted files: `levy-2023-006.mdx` and `palis-2022-002.mdx` both throw with actionable slugged errors
 - [x] Corpus-wide parse of all 948 imported MDX files fails on exactly 24 files (23 clinical pearl + 1 combined label), matching DEBT-338 findings
 - [x] Content instruction files updated with explicit ordering rules (done 2026-03-24)
-- [ ] Content alignment in external repo is complete (24 files fixed, re-imported, re-seeded) — pending external repo work
+- [x] Content alignment in external repo is complete (24 files fixed, re-imported, re-seeded — 2026-03-27, 948 questions pass strict validation)
 
 ### Instruction File Consolidation (Before Phase 2)
 
@@ -328,7 +322,7 @@ No additional parser-architecture work is the recommended next move before step 
 - [x] Useful current META.MD content is redistributed deliberately: active quality guidance into SCHEMA.md, inventory/progress context into PLAN.md or NOTES.md, archival bootstrap content archived or clearly marked as non-authoring reference
 - [x] CLAUDE.md and AGENTS.md updated to reference consolidated SCHEMA.md; no duplicated quality rules
 - [x] Agents can generate correct questions by reading only CLAUDE.md (or AGENTS.md) + SCHEMA.md
-- [ ] Consolidated files synced to external `addiction-final-2026` repo
+- [x] Consolidated files synced to external `addiction-final-2026` repo (2026-03-27)
 
 ### Phase 2 (YAML Frontmatter Migration)
 
