@@ -2,7 +2,7 @@
 
 **Priority:** P1
 **Created:** 2026-03-24
-**Updated:** 2026-03-27 (Phase 1 done, content alignment done, consolidation done; only Phase 2 YAML migration remains)
+**Updated:** 2026-03-27 (Phase 1 done, content alignment done, consolidation done; Phase 2 design decisions locked — only implementation remains)
 **Status:** Open — only Phase 2 (YAML frontmatter migration) remains; all other work is complete
 **Source:** Codebase-wide audit after DEBT-335 / adjacent to [DEBT-336](./debt-336-content-markdown-quality-pass.md)
 **Scope:** `scripts/seed-helpers.ts` parser validation, content format alignment in external `addiction-final-2026` repo, long-term parser architecture
@@ -166,16 +166,53 @@ The correct fix is to put structured data where structured data belongs: in YAML
 
 The imported MDX format already has three of four choice fields in frontmatter (`label`, `text`, `correct`). The missing fourth field is `explanation`. The external **draft** format does **not** currently have structured choices in YAML at all; it still uses `answer` in frontmatter plus a `## Choices` markdown section. That means the Phase 2 end-state requires changing the draft authoring contract too, not just the seed parser.
 
+### Design Decisions (Locked 2026-03-27)
+
+**Decision 1: Change the authoring source too, not just the imported side.**
+
+If we only add `explanation` to the imported MDX YAML and keep the external draft repo using markdown bullets, we just move the fragile regex parsing from the seeder to the importer. The root cause stays alive. Fix it at the source: draft files in the external repo also adopt structured `choices[]` YAML objects with `explanation` fields.
+
+**Decision 2: Post-migration markdown body keeps general explanation + clinical pearl + reference only.**
+
+Today the `## Explanation` section contains everything mashed together: general explanation, clinical pearl, per-choice wrong-answer bullets, and reference. After migration:
+- **Stays in markdown body:** General explanation paragraph, clinical pearl, `### Reference` — these are prose, not structured data
+- **Moves to YAML frontmatter:** Per-choice wrong-answer explanations — these are structured data keyed to a specific choice label
+- **Goes away entirely:** The `**Why other answers are wrong:**` heading and its bullet list
+
+**Decision 3: Only wrong choices get `explanation`. The correct answer does not.**
+
+The correct answer's "explanation" is the general explanation paragraph + clinical pearl in the markdown body. That's what the UI displays under "Correct Answer." Adding an optional `explanation` to the correct choice would create inconsistency (some questions have it, some don't) with no clear UI purpose — it would compete with the general explanation. The data model is clean as-is:
+- Correct answer → explained by general explanation + clinical pearl (markdown body)
+- Wrong answers → explained by per-choice `explanation` field (YAML frontmatter)
+
+Validation rule: if `correct: true`, `explanation` must be absent. If `correct: false`, `explanation` is required (optional during migration, required after).
+
+### Current vs Phase 2 Format
+
 **Current imported MDX format (structured data in markdown — fragile):**
 ```yaml
 choices:
   - label: "A"
     text: "TAPS is preferred because..."
     correct: false
+  - label: "D"
+    text: "Shorter tools are recommended..."
+    correct: true
 ```
 ```markdown
+## Explanation
+
+The TAPS contains more questions and takes longer to administer...
+
+**Clinical pearl:** The S2BI showed higher rates of substance use disclosure...
+
 **Why other answers are wrong:**
 - A) The extra questions in TAPS did not improve performance...
+- B) While BSTAD had excellent sensitivity for some substances...
+- C) S2BI did not have superior specificity...
+
+### Reference
+Levy S, Brogna M, et al. ...
 ```
 
 **Phase 2 format (structured data in YAML — no parsing ambiguity):**
@@ -185,21 +222,42 @@ choices:
     text: "TAPS is preferred because..."
     correct: false
     explanation: "The extra questions in TAPS did not improve performance; simplicity is preferred in busy clinical settings."
+  - label: "B"
+    text: "BSTAD is preferred..."
+    correct: false
+    explanation: "While BSTAD had excellent sensitivity for some substances, no single tool was recommended over others based on psychometric properties alone."
+  - label: "C"
+    text: "S2BI is preferred..."
+    correct: false
+    explanation: "S2BI did not have superior specificity; the recommendation was based on efficiency and equivalent performance across shorter tools."
+  - label: "D"
+    text: "Shorter tools are recommended..."
+    correct: true
+```
+```markdown
+## Explanation
+
+The TAPS contains more questions and takes longer to administer...
+
+**Clinical pearl:** The S2BI showed higher rates of substance use disclosure...
+
+### Reference
+Levy S, Brogna M, et al. ...
 ```
 
-This is the structurally correct end-state for this codebase: per-choice feedback lives with the choice definition in structured data instead of being reverse-parsed from prose.
+Per-choice feedback lives with the choice definition in structured data instead of being reverse-parsed from prose. The `**Why other answers are wrong:**` section is gone — that information now lives in YAML where it can't get corrupted by the parser.
 
 **Why not AST parsing?** An AST parser (remark/unified) is a better way to guess at structured data in markdown. YAML frontmatter means you don't have to guess at all. gray-matter (already used) parses it, Zod (already used) validates it. The parser gets **simpler**, not more complex.
 
-**Phase 2 implementation scope:**
-1. Add optional `explanation` field to the imported MDX `QuestionFrontmatterSchema`
-2. Redesign the **draft-side** schema (currently local `DraftFrontmatterSchema` in `scripts/draft-question-import.ts`) so structured per-choice explanations can exist at the authoring source
-3. Preferred end-state: draft files also adopt structured `choices[]` YAML objects (`label`, `text`, `correct`, `explanation`) so the authoring source and imported MDX format align
-4. Update `parseDraftQuestionBlock()` / `convertDraftQuestionToMdx()` / `scripts/import-draft-questions.ts` to support both the legacy draft format (`answer` + `## Choices` + markdown wrong-answer section) and the new structured draft format during migration
-5. Read `explanation` directly from frontmatter choices in `buildSeedRepFromParsed()` when present; fall back to the Phase 1 markdown parser when absent
-6. After the migration is complete, `parseChoiceExplanations()` simplifies to: extract general explanation + reference only
-7. The `**Why other answers are wrong:**` section becomes unnecessary in both repos once all content is migrated
-8. Update authoring docs and agent instructions, then re-import and re-seed
+### Phase 2 Implementation Scope
+
+1. Add `explanation` field to the imported MDX `ChoiceFrontmatterSchema` — required on wrong choices, forbidden on correct choice (optional on all during migration)
+2. Redesign the **draft-side** schema (currently `DraftFrontmatterSchema` in `scripts/draft-question-import.ts`) so draft files also use structured `choices[]` YAML objects (`label`, `text`, `correct`, `explanation`)
+3. Update `parseDraftQuestionBlock()` / `convertDraftQuestionToMdx()` / `scripts/import-draft-questions.ts` to support both the legacy draft format (`answer` + `## Choices` + markdown wrong-answer section) and the new structured draft format during migration
+4. Read `explanation` directly from frontmatter choices in `buildSeedRepFromParsed()` when present; fall back to the Phase 1 markdown parser when absent
+5. After the migration is complete, `parseChoiceExplanations()` simplifies to: extract general explanation + reference only (no more per-choice parsing)
+6. The `**Why other answers are wrong:**` section becomes unnecessary in both repos once all content is migrated
+7. Update authoring docs (`SCHEMA.md`, `CLAUDE.md`, `AGENTS.md`) and re-import / re-seed
 
 **Multiline explanations** work fine with YAML block scalars:
 ```yaml
@@ -326,16 +384,18 @@ If this Phase 1 PR is merged, the recommended next queue is:
 
 ### Phase 2 (YAML Frontmatter Migration)
 
-- [ ] Imported MDX `QuestionFrontmatterSchema` accepts optional `explanation` field on each choice
-- [ ] Draft-side schema is redesigned so per-choice explanations exist in structured authoring data instead of markdown prose
+**Design decisions (locked 2026-03-27):** (1) Change draft authoring source too, not just imported MDX. (2) Post-migration markdown body keeps general explanation + clinical pearl + reference only. (3) Only wrong choices get `explanation`; correct answer is explained by the general explanation in the markdown body.
+
+- [ ] Imported MDX `ChoiceFrontmatterSchema` accepts `explanation` field — required on wrong choices (`correct: false`), forbidden on correct choice (`correct: true`); optional on all during migration
+- [ ] Draft-side schema (`DraftFrontmatterSchema`) redesigned so draft files use structured `choices[]` YAML objects with `explanation` on wrong choices
 - [ ] `parseDraftQuestionBlock()` / `convertDraftQuestionToMdx()` support both the legacy draft format and the new structured draft format during migration
 - [ ] `buildSeedRepFromParsed()` reads `explanation` from frontmatter when present, falls back to markdown parser when absent
-- [ ] `parseChoiceExplanations()` no longer needed for per-choice data once all content is migrated
+- [ ] `parseChoiceExplanations()` no longer needed for per-choice data once all content is migrated — simplifies to extracting general explanation + reference only
 - [ ] Import pipeline carries `explanation` through draft → MDX conversion
-- [ ] All 948+ question files migrated to YAML `explanation` field in external repo
-- [ ] `**Why other answers are wrong:**` markdown section no longer required by any pipeline stage
+- [ ] All 948+ question files migrated in external repo: per-choice explanations in YAML, `**Why other answers are wrong:**` section removed from markdown body
+- [ ] Post-migration markdown body contains only: general explanation, clinical pearl, `### Reference`
 - [ ] Migrated content is re-imported and `pnpm db:seed` succeeds against the full corpus
-- [ ] All existing tests pass; new tests cover YAML-sourced explanations
+- [ ] All existing tests pass; new tests cover YAML-sourced explanations and the correct-choice-has-no-explanation validation
 
 ### Debt Closure / Exit Condition
 
