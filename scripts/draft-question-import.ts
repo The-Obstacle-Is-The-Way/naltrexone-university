@@ -218,29 +218,52 @@ function parseChoicesBlock(raw: string): ParsedMarkdownChoice[] {
 export function parseDraftQuestionBlock(block: string): DraftQuestion {
   const { data, content } = matter(block);
   const frontmatter = DraftFrontmatterSchema.parse(data);
+  const isNewFormat = 'choices' in frontmatter;
 
   const normalized = content
     .replace(/\r\n?/g, '\n')
     .split('\n')
     .map((line) => line.replace(/[ \t]+$/g, ''));
 
-  const stemMd = extractBetweenHeadings(
-    normalized,
-    ['## Question', '## Stem'],
-    '## Choices',
-  );
-  const rawChoicesBlock = extractBetweenHeadings(
-    normalized,
-    ['## Choices'],
-    '## Explanation',
-  );
   const explanationMd = extractAfterHeading(normalized, '## Explanation');
+  let stemMd: string;
+  let choices: DraftChoice[];
 
-  const choices = parseChoicesBlock(rawChoicesBlock).map((choice) => ({
-    ...choice,
-    correct:
-      'answer' in frontmatter ? choice.label === frontmatter.answer : false,
-  }));
+  if (isNewFormat) {
+    const hasChoicesHeading = normalized.some(
+      (line) => line.trim() === '## Choices',
+    );
+    if (hasChoicesHeading) {
+      throw new Error('New-format question must not have ## Choices heading');
+    }
+
+    stemMd = extractBetweenHeadings(
+      normalized,
+      ['## Question', '## Stem'],
+      '## Explanation',
+    );
+    choices = frontmatter.choices.map((choice) => ({
+      label: choice.label as DraftChoice['label'],
+      text: choice.text,
+      correct: choice.correct,
+      ...(choice.explanation ? { explanation: choice.explanation } : {}),
+    }));
+  } else {
+    stemMd = extractBetweenHeadings(
+      normalized,
+      ['## Question', '## Stem'],
+      '## Choices',
+    );
+    const rawChoicesBlock = extractBetweenHeadings(
+      normalized,
+      ['## Choices'],
+      '## Explanation',
+    );
+    choices = parseChoicesBlock(rawChoicesBlock).map((choice) => ({
+      ...choice,
+      correct: choice.label === frontmatter.answer,
+    }));
+  }
 
   return {
     frontmatter,

@@ -538,4 +538,147 @@ describe('draft question import', () => {
 
     expect(() => parseDraftQuestionBlock(block)).toThrow(/explanation/i);
   });
+
+  it('parses new-format blocks without a ## Choices heading', () => {
+    const block = [
+      '---',
+      'qid: demo-014',
+      'type: recall',
+      'difficulty: easy',
+      'substances: [alcohol]',
+      'topics: [screening-diagnosis]',
+      'source: demo-source',
+      'choices:',
+      '  - label: A',
+      '    text: "Wrong"',
+      '    correct: false',
+      '    explanation: "Because A is wrong."',
+      '  - label: B',
+      '    text: "Right"',
+      '    correct: true',
+      '---',
+      '',
+      '## Question',
+      '',
+      'What is the correct answer?',
+      '',
+      '## Explanation',
+      '',
+      'Because it is correct.',
+      '',
+      '### Reference',
+      '',
+      'A concise citation.',
+      '',
+      '---',
+    ].join('\n');
+
+    const draft = parseDraftQuestionBlock(block);
+
+    expect(draft.stemMd).toBe('What is the correct answer?');
+    expect(draft.explanationMd).toBe(
+      [
+        'Because it is correct.',
+        '',
+        '### Reference',
+        '',
+        'A concise citation.',
+      ].join('\n'),
+    );
+    expect(draft.choices).toEqual([
+      {
+        label: 'A',
+        text: 'Wrong',
+        correct: false,
+        explanation: 'Because A is wrong.',
+      },
+      {
+        label: 'B',
+        text: 'Right',
+        correct: true,
+      },
+    ]);
+  });
+
+  it('rejects new-format blocks that still include a ## Choices heading', () => {
+    const block = [
+      '---',
+      'qid: demo-015',
+      'type: recall',
+      'difficulty: easy',
+      'substances: [alcohol]',
+      'topics: [screening-diagnosis]',
+      'source: demo-source',
+      'choices:',
+      '  - label: A',
+      '    text: "Wrong"',
+      '    correct: false',
+      '    explanation: "Because A is wrong."',
+      '  - label: B',
+      '    text: "Right"',
+      '    correct: true',
+      '---',
+      '',
+      '## Question',
+      '',
+      'What is the correct answer?',
+      '',
+      '## Choices',
+      '',
+      '- A) Wrong',
+      '- B) Right',
+      '',
+      '## Explanation',
+      '',
+      'Because it is correct.',
+      '',
+      '---',
+    ].join('\n');
+
+    expect(() => parseDraftQuestionBlock(block)).toThrow(/## Choices/i);
+  });
+
+  it('continues parsing legacy blocks with markdown choices', () => {
+    const block = [
+      '---',
+      'qid: demo-016',
+      'type: recall',
+      'difficulty: easy',
+      'substances: [alcohol]',
+      'topics: [screening-diagnosis]',
+      'source: demo-source',
+      'answer: B',
+      '---',
+      '',
+      '## Question',
+      '',
+      'What is the correct answer?',
+      '',
+      '## Choices',
+      '',
+      '- A) Wrong',
+      '- B) Right',
+      '',
+      '## Explanation',
+      '',
+      'Because it is correct.',
+      '',
+      '---',
+    ].join('\n');
+
+    const draft = parseDraftQuestionBlock(block);
+
+    expect(draft.choices).toEqual([
+      {
+        label: 'A',
+        text: 'Wrong',
+        correct: false,
+      },
+      {
+        label: 'B',
+        text: 'Right',
+        correct: true,
+      },
+    ]);
+  });
 });
