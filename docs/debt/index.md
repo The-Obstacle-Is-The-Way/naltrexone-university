@@ -22,8 +22,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-336](./debt-336-content-markdown-quality-pass.md) | Content markdown quality pass (C1–C4) — blank lines, redundant prefixes, missing explanations; executed in external `addiction-final-2026` repo then re-imported | P3 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-338](./debt-338-seed-parser-silent-wrong-answer-section-corruption.md) | Historical silent-corruption bug is fixed (Phase 1 hardening, 24-file repair, consolidation, and external sync complete); remaining work is Phase 2: migrate per-choice explanations from markdown parsing to structured YAML in both repos. **Implementation spec:** [debt-338-phase2-implementation-spec.md](./debt-338-phase2-implementation-spec.md) | P1 | — |
+| [DEBT-340](./debt-340-clerk-v7-nextjs-upgrade.md) | Clerk v7 (Core 3) + Next.js 16.2 upgrade — `@clerk/upgrade` CLI already applied; codebase was v7-ready (1 import path change); enables Client Trust credential-stuffing protection | P2 | — |
 
-**Next Debt ID:** DEBT-340
+**Next Debt ID:** DEBT-341
 
 ---
 

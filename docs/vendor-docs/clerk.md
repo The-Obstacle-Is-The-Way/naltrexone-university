@@ -1,12 +1,12 @@
 # Clerk Vendor Documentation
 
-**Package:** `@clerk/nextjs` ^6.38.1
+**Package:** `@clerk/nextjs` ^7.0.7
 **API Version:** `2024-10-01`
 **Dashboard:** https://dashboard.clerk.com
 **Docs:** https://clerk.com/docs
 **Changelog:** https://clerk.com/changelog
 
-**Package version note:** Reconciled against `package.json` on 2026-03-17.
+**Package version note:** Reconciled against `package.json` on 2026-03-28. Upgraded from v6 (Core 2) to v7 (Core 3) via `@clerk/upgrade` CLI.
 Clerk API-version tracking remains vendor-managed rather than pinned in local
 runtime code.
 
