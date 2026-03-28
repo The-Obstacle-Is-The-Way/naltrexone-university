@@ -49,6 +49,36 @@ function createWrongAnswerValidationError(
   return new Error(`${description}: '${offendingLine}'`);
 }
 
+export function parseExplanationAndReference(explanationMd: string): {
+  generalExplanation: string;
+  referenceMd: string | null;
+} {
+  const normalized = explanationMd.replace(/\r\n?/g, '\n');
+  const lines = normalized.split('\n');
+  const referenceHeadingIndex = lines.findIndex((line) =>
+    REFERENCE_HEADING_PATTERN.test(line),
+  );
+
+  if (referenceHeadingIndex === -1) {
+    return {
+      generalExplanation: canonicalizeMarkdown(explanationMd),
+      referenceMd: null,
+    };
+  }
+
+  const generalExplanation = canonicalizeMarkdown(
+    lines.slice(0, referenceHeadingIndex).join('\n'),
+  );
+  const referenceValue = canonicalizeMarkdown(
+    lines.slice(referenceHeadingIndex + 1).join('\n'),
+  );
+
+  return {
+    generalExplanation,
+    referenceMd: referenceValue.length > 0 ? referenceValue : null,
+  };
+}
+
 export function parseChoiceExplanations(explanationMd: string): {
   generalExplanation: string;
   perChoice: Map<string, string>;
