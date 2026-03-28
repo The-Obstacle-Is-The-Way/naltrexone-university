@@ -15,11 +15,11 @@ Implemented on `docs/debt-340-341-post-migration-tightening`.
 
 Completed:
 
-- Removed the legacy draft import path from [draft-question-import.ts](/Users/ray/Desktop/github/naltrexone-university-3/scripts/draft-question-import.ts): `LegacyDraftFrontmatterSchema`, the legacy/new-format `z.union(...)`, `ParsedMarkdownChoice`, `parseChoicesBlock()`, and the legacy `answer` / `## Choices` branch in `parseDraftQuestionBlock()`
-- Removed the legacy seed wrong-answer parser from [seed-helpers.ts](/Users/ray/Desktop/github/naltrexone-university-3/scripts/seed-helpers.ts): `parseChoiceExplanations()`, its regex helpers, and `createWrongAnswerValidationError()`
-- Removed the legacy seed branch from [question-parser.ts](/Users/ray/Desktop/github/naltrexone-university-3/scripts/seed/question-parser.ts) so `buildSeedRepFromParsed()` now has a single YAML-backed path
-- Tightened [schemas.ts](/Users/ray/Desktop/github/naltrexone-university-3/lib/content/schemas.ts) so `QuestionFrontmatterSchema.superRefine()` now rejects `correct: false` choices without `explanation`, while still forbidding explanations on `correct: true`
-- Deleted legacy-only test coverage from [seed-helpers.test.ts](/Users/ray/Desktop/github/naltrexone-university-3/scripts/seed-helpers.test.ts), [seed.test.ts](/Users/ray/Desktop/github/naltrexone-university-3/scripts/seed.test.ts), and [draft-question-import.test.ts](/Users/ray/Desktop/github/naltrexone-university-3/scripts/draft-question-import.test.ts), while preserving all new-format coverage
+- Removed the legacy draft import path from `scripts/draft-question-import.ts`: `LegacyDraftFrontmatterSchema`, the legacy/new-format `z.union(...)`, `ParsedMarkdownChoice`, `parseChoicesBlock()`, and the legacy `answer` / `## Choices` branch in `parseDraftQuestionBlock()`
+- Removed the legacy seed wrong-answer parser from `scripts/seed-helpers.ts`: `parseChoiceExplanations()`, its regex helpers, and `createWrongAnswerValidationError()`
+- Removed the legacy seed branch from `scripts/seed/question-parser.ts` so `buildSeedRepFromParsed()` now has a single YAML-backed path
+- Tightened `lib/content/schemas.ts` so `QuestionFrontmatterSchema.superRefine()` now rejects `correct: false` choices without `explanation`, while still forbidding explanations on `correct: true`
+- Deleted legacy-only test coverage from `scripts/seed-helpers.test.ts`, `scripts/seed.test.ts`, and `scripts/draft-question-import.test.ts`, while preserving all new-format coverage
 
 What intentionally stays:
 
