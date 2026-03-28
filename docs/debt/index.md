@@ -20,7 +20,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-336](./debt-336-content-markdown-quality-pass.md) | Content markdown quality pass (C1–C4) — blank lines, redundant prefixes, missing explanations; executed in external `addiction-final-2026` repo then re-imported | P3 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
-| [DEBT-342](./debt-342-idempotency-backward-compat-guard.md) | Idempotency backward-compat guard — replace `completedAt \|\| resultJson` OR-guard with simple `completedAt` check; zero legacy rows exist | P4 | — |
 
 **Next Debt ID:** DEBT-343
 
@@ -30,6 +29,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-342](./debt-342-idempotency-backward-compat-guard.md) | Idempotency backward-compat guard cleanup — removed the `completedAt \|\| resultJson` replay fallback, made `completedAt` the sole completion marker, and updated the targeted unit contract | P4 | 2026-03-28 | — |
 | [DEBT-275](../_archive/debt/debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — decomposed into DEBT-335/336/337; all children tracked | P3 | 2026-03-24 | — |
 | [DEBT-338](../_archive/debt/debt-338-seed-parser-silent-wrong-answer-section-corruption.md) | Seed parser silent corruption — Phase 1 hardening + 24-file repair + Phase 2 YAML migration all complete (PR #254). Legacy path cleanup in [DEBT-341](./debt-341-post-migration-legacy-path-removal.md). | P1 | 2026-03-28 | [PR #254](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/254) |
 | [DEBT-340](../_archive/debt/debt-340-clerk-v7-nextjs-upgrade.md) | Clerk v7 (Core 3) + Next.js 16.2.1 upgrade — `@clerk/themes` → `@clerk/ui`, dead `getAuth` removed, vendor docs corrected; enables Client Trust credential-stuffing protection | P2 | 2026-03-28 | [PR #255](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/255) |

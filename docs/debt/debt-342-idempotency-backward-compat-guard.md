@@ -2,7 +2,7 @@
 
 **Priority:** P4
 **Created:** 2026-03-28
-**Status:** Open
+**Status:** Resolved
 **Scope:** `src/adapters/shared/with-idempotency.ts`
 
 ---
@@ -40,6 +40,14 @@ if (existing.completedAt !== null) {
 ```
 
 Remove the backward-compatibility comment.
+
+---
+
+## Resolution
+
+- Removed the backward-compatibility comment and changed `src/adapters/shared/with-idempotency.ts` so cached replays are gated only by `existing.completedAt !== null`.
+- Replaced the synthetic legacy-fallback unit coverage in `src/adapters/shared/with-idempotency.test.ts` with a contract test that confirms cached payloads without `completedAt` are no longer replayed.
+- Verified the full pre-PR gate on 2026-03-28: `pnpm typecheck`, `pnpm lint`, `pnpm test --run`, `pnpm test:browser`, `pnpm test:integration`, and `pnpm build`. Integration required bringing up the local test database, applying migrations, and seeding content first.
 
 ---
 

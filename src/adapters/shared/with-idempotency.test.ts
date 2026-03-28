@@ -63,7 +63,7 @@ describe('withIdempotency', () => {
     expect(parseResult).toHaveBeenCalledTimes(1);
   });
 
-  it('replays legacy cached payloads when completedAt is missing', async () => {
+  it('does not replay cached payloads when completedAt is missing', async () => {
     class LegacyCompletedAtRepo extends FakeIdempotencyKeyRepository {
       override async find(userId: string, action: string, key: string) {
         const existing = await super.find(userId, action, key);
@@ -84,11 +84,18 @@ describe('withIdempotency', () => {
       key: '11111111-1111-1111-1111-111111111112',
       now,
       logger,
+      pollIntervalMs: 1,
+      maxWaitMs: 5,
       execute,
     } as const;
 
     await expect(withIdempotency(input)).resolves.toEqual({ ok: true });
-    await expect(withIdempotency(input)).resolves.toEqual({ ok: true });
+    await expect(withIdempotency(input)).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: expect.stringContaining(
+        'Request timed out waiting for idempotency key',
+      ),
+    });
     expect(execute).toHaveBeenCalledTimes(1);
   });
 
