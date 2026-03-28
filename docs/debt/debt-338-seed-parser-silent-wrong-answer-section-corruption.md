@@ -2,7 +2,7 @@
 
 **Priority:** P1
 **Created:** 2026-03-24
-**Updated:** 2026-03-27 (post-Phase-1 audit: historical state clarified, Phase 2 contract tightened, cross-doc status reconciled)
+**Updated:** 2026-03-28 (post-Phase-2 spec audit: cross-repo contract aligned, enforcement boundaries clarified)
 **Status:** Open — only Phase 2 (YAML frontmatter migration) remains; Phase 1 hardening, instruction-file consolidation, external repo sync, and 24-file content repair are complete
 **Source:** Codebase-wide audit after DEBT-335 / adjacent to [DEBT-336](./debt-336-content-markdown-quality-pass.md)
 **Scope:** legacy seed-parser hardening, content format alignment in external `addiction-final-2026` repo, and Phase 2 migration across draft schemas, draft import, MDX schemas, and seed parsing
@@ -170,81 +170,121 @@ The imported MDX format already has three of four choice fields in frontmatter (
 
 ### Design Decisions (Locked 2026-03-27)
 
-**Decision 1: Change the authoring source too, not just the imported side.**
+These five decisions are the canonical Phase 2 contract and must match the app-repo implementation spec plus the external-repo migration spec.
 
-If we only add `explanation` to the imported MDX YAML and keep the external draft repo using markdown bullets, we just move the fragile regex parsing from the seeder to the importer. The root cause stays alive. Fix it at the source: draft files in the external repo also adopt structured `choices[]` YAML objects with `explanation` fields.
+1. **Change the authoring source too.** Draft files in the external repo also use structured `choices[]` YAML with `explanation`.
+2. **Post-migration markdown body keeps only prose.** General explanation + clinical pearl + `### Reference`. The `**Why other answers are wrong:**` heading and bullets go away.
+3. **Only wrong choices get `explanation`.** Correct choice NEVER gets it. Validation: `correct: true` + `explanation` present = reject.
+4. **No hybrid questions.** A question is either fully legacy format or fully new format. Mixing the two is rejected.
+5. **`qid:` stays first.** The draft file splitter (`splitDraftQuestionsFile()`) depends on `---\nqid:` as the block delimiter unless that splitter is deliberately hardened.
 
-**Decision 2: Post-migration markdown body keeps general explanation + clinical pearl + reference only.**
-
-Today the `## Explanation` section contains everything mashed together: general explanation, clinical pearl, per-choice wrong-answer bullets, and reference. After migration:
-- **Stays in markdown body:** General explanation paragraph, clinical pearl, `### Reference` — these are prose, not structured data
-- **Moves to YAML frontmatter:** Per-choice wrong-answer explanations — these are structured data keyed to a specific choice label
-- **Goes away entirely:** The `**Why other answers are wrong:**` heading and its bullet list
-
-**Decision 3: Only wrong choices get `explanation`. The correct answer does not.**
-
-The correct answer's "explanation" is the general explanation paragraph + clinical pearl in the markdown body. That's what the UI displays under "Correct Answer." Adding an optional `explanation` to the correct choice would create inconsistency (some questions have it, some don't) with no clear UI purpose — it would compete with the general explanation. The data model is clean as-is:
-- Correct answer → explained by general explanation + clinical pearl (markdown body)
-- Wrong answers → explained by per-choice `explanation` field (YAML frontmatter)
-
-Validation rule: if `correct: true`, `explanation` must be absent. If `correct: false`, `explanation` is required in the Phase 2 target state. During migration, missing wrong-choice `explanation` remains valid only for legacy-format questions that still use markdown wrong-answer bullets.
+Decision 3 still implies different enforcement points during migration:
+- Draft-side new-format questions can require `explanation` on every wrong choice immediately, because the draft parser knows whether the question is legacy or new-format.
+- Imported MDX cannot require that at the bare `ChoiceFrontmatterSchema` boundary until legacy MDX is gone, because the schema alone cannot distinguish legacy MDX from new-format MDX during migration.
+- The stronger "all wrong choices in a new-format question must have `explanation`" rule therefore lives at the whole-question parsing boundary until post-migration tightening removes the legacy path.
 
 ### Current vs Phase 2 Format
 
 **Current imported MDX format (structured data in markdown — fragile):**
 ```yaml
+---
+slug: "palis-2022-001"
+difficulty: "easy"
+status: "published"
+tags:
+  - slug: "opioids"
+    name: "Opioids"
+    kind: "substance"
+  - slug: "stimulants"
+    name: "Stimulants"
+    kind: "substance"
+  - slug: "epidemiology-prevention"
+    name: "Epidemiology & Prevention"
+    kind: "topic"
 choices:
   - label: "A"
-    text: "TAPS is preferred because..."
+    text: "Concurrent use decreases fatal overdose risk..."
+    correct: false
+  - label: "B"
+    text: "Concurrent use approximately doubles the hazard..."
+    correct: true
+  - label: "C"
+    text: "Concurrent use has no effect..."
     correct: false
   - label: "D"
-    text: "Shorter tools are recommended..."
-    correct: true
+    text: "Concurrent use only increases risk if injection..."
+    correct: false
+---
+
+## Stem
+
+According to Palis et al. (2022), how does concurrent use of opioids and stimulants affect the risk of fatal overdose?
 ```
 ```markdown
 ## Explanation
 
-The TAPS contains more questions and takes longer to administer...
+Palis et al. (2022) found that concurrent users had more than twice the hazard of fatal overdose...
 
-**Clinical pearl:** The S2BI showed higher rates of substance use disclosure...
+**Clinical pearl:** The belief that stimulants can prevent opioid overdose is false and dangerous.
 
 **Why other answers are wrong:**
-- A) The extra questions in TAPS did not improve performance...
-- B) While BSTAD had excellent sensitivity for some substances...
-- C) S2BI did not have superior specificity...
+- A) This is a dangerous misconception; stimulants do NOT protect against opioid overdose
+- C) The hazard was significantly elevated, not unchanged
+- D) The study found elevated risk overall, not limited to injection-only use
 
 ### Reference
-Levy S, Brogna M, et al. ...
+
+Palis H, Xavier C, Dobrer S, et al. Concurrent use of opioids and stimulants and risk of fatal overdose: a cohort study. BMC Public Health. 2022;22:2084.
 ```
 
 **Phase 2 format (structured data in YAML — no parsing ambiguity):**
 ```yaml
+---
+slug: "palis-2022-001"
+difficulty: "easy"
+status: "published"
+tags:
+  - slug: "opioids"
+    name: "Opioids"
+    kind: "substance"
+  - slug: "stimulants"
+    name: "Stimulants"
+    kind: "substance"
+  - slug: "epidemiology-prevention"
+    name: "Epidemiology & Prevention"
+    kind: "topic"
 choices:
   - label: "A"
-    text: "TAPS is preferred because..."
+    text: "Concurrent use decreases fatal overdose risk..."
     correct: false
-    explanation: "The extra questions in TAPS did not improve performance; simplicity is preferred in busy clinical settings."
+    explanation: "This is a dangerous misconception; stimulants do NOT protect against opioid overdose."
   - label: "B"
-    text: "BSTAD is preferred..."
-    correct: false
-    explanation: "While BSTAD had excellent sensitivity for some substances, no single tool was recommended over others based on psychometric properties alone."
-  - label: "C"
-    text: "S2BI is preferred..."
-    correct: false
-    explanation: "S2BI did not have superior specificity; the recommendation was based on efficiency and equivalent performance across shorter tools."
-  - label: "D"
-    text: "Shorter tools are recommended..."
+    text: "Concurrent use approximately doubles the hazard..."
     correct: true
+  - label: "C"
+    text: "Concurrent use has no effect..."
+    correct: false
+    explanation: "The hazard was significantly elevated, not unchanged."
+  - label: "D"
+    text: "Concurrent use only increases risk if injection..."
+    correct: false
+    explanation: "The study found elevated risk overall, not limited to injection-only use."
+---
+
+## Stem
+
+According to Palis et al. (2022), how does concurrent use of opioids and stimulants affect the risk of fatal overdose?
 ```
 ```markdown
 ## Explanation
 
-The TAPS contains more questions and takes longer to administer...
+Palis et al. (2022) found that concurrent users had more than twice the hazard of fatal overdose...
 
-**Clinical pearl:** The S2BI showed higher rates of substance use disclosure...
+**Clinical pearl:** The belief that stimulants can prevent opioid overdose is false and dangerous.
 
 ### Reference
-Levy S, Brogna M, et al. ...
+
+Palis H, Xavier C, Dobrer S, et al. Concurrent use of opioids and stimulants and risk of fatal overdose: a cohort study. BMC Public Health. 2022;22:2084.
 ```
 
 Per-choice feedback lives with the choice definition in structured data instead of being reverse-parsed from prose. The `**Why other answers are wrong:**` section is gone — that information now lives in YAML where it can't get corrupted by the parser.
@@ -263,55 +303,48 @@ The draft authoring source must move too. The new-format draft contract is:
 **Phase 2 draft format (new authoring source-of-truth):**
 ```markdown
 ---
-qid: white-2020-001
+qid: palis-2022-001
 type: recall
-difficulty: medium
-substances: [alcohol]
-topics: [screening-diagnosis]
-treatments: [naltrexone]
-diagnoses: [alcohol-use-disorder]
-source: white-2020
+difficulty: easy
+substances: [opioids, stimulants]
+topics: [epidemiology-prevention]
+source: palis-2022
 choices:
   - label: A
-    text: 2 or more points
+    text: "Concurrent use decreases fatal overdose risk because stimulants counteract opioid respiratory depression"
     correct: false
-    explanation: A score of >=2 is too sensitive and creates excessive false positives.
+    explanation: "This is a dangerous misconception; stimulants do NOT protect against opioid overdose."
   - label: B
-    text: 3 or more points
+    text: "Concurrent use approximately doubles the hazard of fatal overdose compared to opioid use alone"
     correct: true
   - label: C
-    text: 4 or more points
+    text: "Concurrent use has no effect on fatal overdose risk"
     correct: false
-    explanation: A score of >=4 is the male cutoff and misses at-risk female drinkers.
+    explanation: "The hazard was significantly elevated, not unchanged."
   - label: D
-    text: 5 or more points
+    text: "Concurrent use only increases risk if injection is the route of administration"
     correct: false
-    explanation: A score of >=5 misses most at-risk drinkers regardless of sex.
+    explanation: "The study found elevated risk for the concurrent-use group overall and does not report that the increased hazard is limited to injection-only use."
 ---
 
 ## Question
 
-A 52-year-old woman presents for a routine visit. She reports drinking wine
-"a few times a week." Her physician decides to administer the AUDIT-C.
-
-What is the recommended AUDIT-C cutoff score for identifying unhealthy alcohol
-use in women?
+According to Palis et al. (2022), how does concurrent use of opioids and stimulants affect the risk of fatal overdose compared to using opioids only?
 
 ## Explanation
 
-The AUDIT-C uses sex-specific cutoffs: >=3 for women and >=4 for men.
+Palis et al. (2022) found that "people who used both opioids and stimulants had more than twice the hazard of fatal overdose (HR: 2.02, 95% CI: 1.47-2.78, p<0.001) compared to people who used opioids only." This finding directly contradicts the dangerous misperception that stimulants protect against opioid overdose.
 
-**Clinical pearl:** The AUDIT-C is the most validated brief screening tool in
-primary care.
+**Clinical pearl:** The belief that stimulants can prevent opioid overdose by counteracting respiratory depression is false and dangerous. Clinicians should actively address this misconception with patients.
 
 ### Reference
 
-White AM, Castle IP, Hingson RW, Powell PA. ...
+Palis H, Xavier C, Dobrer S, et al. Concurrent use of opioids and stimulants and risk of fatal overdose: a cohort study. BMC Public Health. 2022;22:2084.
 ```
 
 ### Phase 2 Implementation Scope
 
-1. Extend the imported MDX `ChoiceFrontmatterSchema` with `explanation` and validate at the content-schema boundary: `correct: true` forbids `explanation`; `correct: false` requires `explanation` for new-format questions
+1. Extend the imported MDX `ChoiceFrontmatterSchema` with optional `explanation` and validate at the content-schema boundary that `correct: true` forbids `explanation`
 2. Redesign the **draft-side** schema (currently `DraftFrontmatterSchema` in `scripts/draft-question-import.ts`) so migrated draft files use structured `choices[]` YAML objects (`label`, `text`, `correct`, `explanation`) instead of `answer` + `## Choices`
 3. Support **two whole-question formats** during migration:
    - Legacy question: `answer` + `## Choices` + markdown wrong-answer bullets
@@ -321,6 +354,7 @@ White AM, Castle IP, Hingson RW, Powell PA. ...
 6. Update `buildSeedRepFromParsed()` to branch on question format:
    - New-format MDX: read wrong-choice `explanation` directly from frontmatter, and still split `generalExplanation` from `referenceMd`
    - Legacy MDX: continue using `parseChoiceExplanations()` for per-choice data
+   - Enforce "all wrong choices have `explanation`" at this whole-question boundary for new-format MDX until legacy MDX is retired
 7. Preserve or deliberately replace the current draft splitter contract. Today `splitDraftQuestionsFile()` requires `qid:` to be the first frontmatter key after `---`; Phase 2 must either keep that authoring rule or harden the splitter
 8. After the corpus migration is complete, `parseChoiceExplanations()` simplifies to: extract general explanation + reference only (no more per-choice parsing)
 9. The `**Why other answers are wrong:**` section becomes unnecessary in both repos once all content is migrated
@@ -335,6 +369,8 @@ White AM, Castle IP, Hingson RW, Powell PA. ...
 ```
 
 **Phase 2 can be incremental at the question level.** Support both legacy questions and new-format questions during migration, but do **not** allow a single question to mix the two representations. That avoids dual-source drift and makes validation decidable. On the draft side, `parseDraftQuestionBlock()` and `convertDraftQuestionToMdx()` must temporarily support both whole-question formats until the corpus is fully migrated.
+
+**Current external corpus note (verified 2026-03-28):** the external draft repo currently has 170 `recall.md` / `vignettes.md` files and 948 question blocks. All 948 legacy questions currently have `## Choices`, `**Why other answers are wrong:**`, and three wrong-answer bullets matching the three wrong choices. That means the migration script should fail if a wrong choice lacks a matching explanation bullet; silent omission is no longer the right behavior for the live corpus.
 
 ---
 
@@ -413,10 +449,12 @@ Phase 2 changes the question format in a major way. If we update 8 fragmented fi
 Recommended next queue from the current state:
 
 1. Finalize the Phase 2 contract in this doc and the consolidated authoring docs
-2. Implement dual whole-question support in the draft importer and seed parser
+2. Implement app-repo pipeline changes first: MDX schema updates, reference splitting, dual-format draft import, and new-format seed parsing
 3. Add migration-path tests for legacy questions, new-format questions, and invalid hybrid questions
-4. Migrate the external corpus from legacy markdown wrong-answer bullets to structured YAML `choices[].explanation`
-5. Re-import, re-seed, and then remove legacy markdown per-choice parsing
+4. Build and dry-run the external migration script against the legacy draft corpus
+5. Apply the external corpus migration from markdown wrong-answer bullets to structured YAML `choices[].explanation`
+6. Copy migrated drafts back into this repo, run `pnpm content:import:drafts -- --status published --dry-run`, then `pnpm content:import:drafts -- --status published` and `pnpm db:seed`
+7. Remove legacy markdown per-choice parsing only after the full corpus is migrated and verified
 
 **Everything except Phase 2 is complete.** Phase 2 is a future structural migration and is not urgent.
 
@@ -451,13 +489,14 @@ Recommended next queue from the current state:
 
 ### Phase 2 (YAML Frontmatter Migration)
 
-**Design decisions (locked 2026-03-27):** (1) Change draft authoring source too, not just imported MDX. (2) Post-migration markdown body keeps general explanation + clinical pearl + reference only. (3) Only wrong choices get `explanation`; correct answer is explained by the general explanation in the markdown body.
+**Design decisions (locked 2026-03-27):** (1) Change the authoring source too. (2) Post-migration markdown body keeps only prose. (3) Only wrong choices get `explanation`. (4) No hybrid questions. (5) `qid:` stays first unless the splitter is deliberately hardened.
 
-- [ ] Imported MDX `ChoiceFrontmatterSchema` accepts `explanation` for new-format questions, forbids it on `correct: true` choices, and requires it on `correct: false` choices
+- [ ] Imported MDX `ChoiceFrontmatterSchema` accepts optional `explanation` and forbids it on `correct: true` choices
 - [ ] Draft-side schema supports both whole-question formats during migration: legacy (`answer` + `## Choices`) and new-format (`choices[]` in frontmatter, no `answer`, no `## Choices`)
 - [ ] New-format draft example is documented in `SCHEMA.md` and shows that migrated questions remove both `answer` and `## Choices`
 - [ ] `parseDraftQuestionBlock()` / `convertDraftQuestionToMdx()` support both whole-question formats during migration and reject invalid hybrid questions
 - [ ] `buildSeedRepFromParsed()` reads per-choice `explanation` from frontmatter for new-format questions and uses markdown parsing only for legacy questions
+- [ ] `buildSeedRepFromParsed()` rejects new-format questions whose wrong choices are missing `explanation`
 - [ ] General explanation and `referenceMd` still parse correctly for new-format questions even though `**Why other answers are wrong:**` is gone
 - [ ] `parseChoiceExplanations()` no longer handles per-choice data once all content is migrated — it only extracts general explanation + reference for legacy cleanup / final simplification
 - [ ] Import pipeline carries `explanation` through draft → MDX conversion for new-format questions

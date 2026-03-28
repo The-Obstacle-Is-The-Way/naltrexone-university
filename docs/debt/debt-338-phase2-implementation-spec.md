@@ -26,8 +26,8 @@ These are final. Do not revisit.
 1. **Change the authoring source too.** Draft files in the external repo also use structured `choices[]` YAML with `explanation`.
 2. **Post-migration markdown body keeps only prose.** General explanation + clinical pearl + `### Reference`. The `**Why other answers are wrong:**` heading and bullets go away.
 3. **Only wrong choices get `explanation`.** Correct choice NEVER gets it. Validation: `correct: true` + `explanation` present = reject.
-4. **No hybrid questions.** A question is either fully legacy format or fully new format. Mixing the two (e.g., YAML explanations plus markdown wrong-answer bullets) is rejected.
-5. **`qid:` stays first.** The draft file splitter (`splitDraftQuestionsFile()`) depends on `---\nqid:` as the block delimiter. Phase 2 frontmatter must keep `qid:` as the first key.
+4. **No hybrid questions.** A question is either fully legacy format or fully new format. Mixing the two is rejected.
+5. **`qid:` stays first.** The draft file splitter (`splitDraftQuestionsFile()`) depends on `---\nqid:` as the block delimiter unless that splitter is deliberately hardened.
 
 ---
 
@@ -44,6 +44,12 @@ tags:
   - slug: "opioids"
     name: "Opioids"
     kind: "substance"
+  - slug: "stimulants"
+    name: "Stimulants"
+    kind: "substance"
+  - slug: "epidemiology-prevention"
+    name: "Epidemiology & Prevention"
+    kind: "topic"
 choices:
   - label: "A"
     text: "Concurrent use decreases fatal overdose risk..."
@@ -90,6 +96,12 @@ tags:
   - slug: "opioids"
     name: "Opioids"
     kind: "substance"
+  - slug: "stimulants"
+    name: "Stimulants"
+    kind: "substance"
+  - slug: "epidemiology-prevention"
+    name: "Epidemiology & Prevention"
+    kind: "topic"
 choices:
   - label: "A"
     text: "Concurrent use decreases fatal overdose risk..."
@@ -125,6 +137,51 @@ Palis H, Xavier C, Dobrer S, et al. Concurrent use of opioids and stimulants and
 
 **Differences:** `explanation` field on each wrong choice in YAML. No `**Why other answers are wrong:**` section in markdown body. Correct choice (B) has no `explanation`.
 
+### Draft Question Block — Phase 2
+
+This is the canonical external-repo authoring example and must stay in sync with DEBT-02 and the DEBT-338 parent doc:
+
+```markdown
+---
+qid: palis-2022-001
+type: recall
+difficulty: easy
+substances: [opioids, stimulants]
+topics: [epidemiology-prevention]
+source: palis-2022
+choices:
+  - label: A
+    text: "Concurrent use decreases fatal overdose risk because stimulants counteract opioid respiratory depression"
+    correct: false
+    explanation: "This is a dangerous misconception; stimulants do NOT protect against opioid overdose."
+  - label: B
+    text: "Concurrent use approximately doubles the hazard of fatal overdose compared to opioid use alone"
+    correct: true
+  - label: C
+    text: "Concurrent use has no effect on fatal overdose risk"
+    correct: false
+    explanation: "The hazard was significantly elevated, not unchanged."
+  - label: D
+    text: "Concurrent use only increases risk if injection is the route of administration"
+    correct: false
+    explanation: "The study found elevated risk for the concurrent-use group overall and does not report that the increased hazard is limited to injection-only use."
+---
+
+## Question
+
+According to Palis et al. (2022), how does concurrent use of opioids and stimulants affect the risk of fatal overdose compared to using opioids only?
+
+## Explanation
+
+Palis et al. (2022) found that "people who used both opioids and stimulants had more than twice the hazard of fatal overdose (HR: 2.02, 95% CI: 1.47-2.78, p<0.001) compared to people who used opioids only." This finding directly contradicts the dangerous misperception that stimulants protect against opioid overdose.
+
+**Clinical pearl:** The belief that stimulants can prevent opioid overdose by counteracting respiratory depression is false and dangerous. Clinicians should actively address this misconception with patients.
+
+### Reference
+
+Palis H, Xavier C, Dobrer S, et al. Concurrent use of opioids and stimulants and risk of fatal overdose: a cohort study. BMC Public Health. 2022;22:2084.
+```
+
 ---
 
 ## Step-by-Step Code Changes
@@ -148,9 +205,9 @@ export const ChoiceFrontmatterSchema = z
 
 **Add to `QuestionFrontmatterSchema` superRefine** (lines 62-120): If any choice has `correct: true` AND `explanation` is defined, add a validation issue. This enforces Decision 3.
 
-During migration, `correct: false` without `explanation` remains valid. After full migration is complete, this can be tightened to require `explanation` on all wrong choices.
+During migration, `correct: false` without `explanation` remains schema-valid because the imported MDX schema alone cannot distinguish legacy MDX from new-format MDX. The stronger rule — "all wrong choices in a new-format question must have `explanation`" — must be enforced at the whole-question parsing boundary in `buildSeedRepFromParsed()`. After full migration is complete and legacy MDX is gone, `ChoiceFrontmatterSchema` can be tightened to require `explanation` on all wrong choices.
 
-**Tests to write** (create `lib/content/schemas.test.ts` if it doesn't exist):
+**Tests to write** (extend the existing `lib/content/schemas.test.ts`):
 - `correct: true` + `explanation` present → validation fails
 - `correct: false` + `explanation` present → validation passes
 - `correct: false` without `explanation` → validation passes (legacy compat)
@@ -214,7 +271,8 @@ const hasYamlExplanations = parsed.frontmatter.choices.some(
 **New-format path** (when `hasYamlExplanations` is true):
 1. Call `parseExplanationAndReference(parsed.explanationMd)` instead of `parseChoiceExplanations()`
 2. Read `explanation` directly from `frontmatter.choices[i].explanation`
-3. Validate: markdown body does NOT contain `**Why other answers are wrong:**` (use `WRONG_ANSWERS_HEADING_PATTERN`). If it does, throw — this is a hybrid question.
+3. Validate: markdown body does NOT contain `**Why other answers are wrong:**`. Reuse the same regex semantics as `WRONG_ANSWERS_HEADING_PATTERN`, but do not duplicate the literal pattern in multiple files — extract a shared helper/constant from `seed-helpers.ts` (or equivalent) so hybrid detection cannot drift.
+4. Validate: every `correct: false` choice in this new-format path has `explanation`, and every `correct: true` choice does not. This rule lives here because `QuestionFrontmatterSchema` alone cannot distinguish legacy MDX from new-format MDX during migration.
 
 ```typescript
 choices: sortedChoices.map((choice, index) => ({
@@ -232,6 +290,7 @@ choices: sortedChoices.map((choice, index) => ({
 - New-format MDX fixture → `explanation_md` comes from YAML, `reference_md` extracted from body
 - Legacy MDX fixture → still works identically via `parseChoiceExplanations()`
 - Hybrid: YAML `explanation` present AND `**Why other answers are wrong:**` in body → throws
+- New-format MDX with a wrong choice missing `explanation` → throws
 - New-format question where correct choice has no explanation → `explanation_md` is `null` for correct choice
 
 **New fixture file:** `tests/fixtures/seed/new-format-example.mdx` — a complete Phase 2 MDX file with `explanation` on wrong choices, no wrong-answer section in body.
@@ -276,11 +335,12 @@ With superRefine validation:
 - `correct: false` choices MUST have `explanation` (in new-format, this is required — unlike the MDX schema which allows it to be absent for legacy compat)
 - Unique labels
 
-**Update `DraftChoice` type** (line 39):
+**Update `DraftChoice` type** (line 39) to the normalized shape returned by `parseDraftQuestionBlock()`:
 ```typescript
 export type DraftChoice = {
   label: 'A' | 'B' | 'C' | 'D' | 'E';
   text: string;
+  correct: boolean;
   explanation?: string;
 };
 ```
@@ -326,7 +386,10 @@ if (isNewFormat) {
 } else {
   stemMd = extractBetweenHeadings(normalized, ['## Question', '## Stem'], '## Choices');
   rawChoicesBlock = extractBetweenHeadings(normalized, ['## Choices'], '## Explanation');
-  choices = parseChoicesBlock(rawChoicesBlock);
+  choices = parseChoicesBlock(rawChoicesBlock).map((choice) => ({
+    ...choice,
+    correct: choice.label === frontmatter.answer,
+  }));
 }
 ```
 
@@ -350,12 +413,12 @@ choices: draft.choices.map((c) => ({
 })),
 ```
 
-**New-format path:** `correct` comes from the choice itself, `explanation` from the choice:
+**New-format path:** `convertDraftQuestionToMdx()` should consume the normalized `DraftChoice` shape, so it does not need to branch on legacy vs new-format correctness:
 ```typescript
 choices: draft.choices.map((c) => ({
   label: c.label,
   text: c.text,
-  correct: isNewFormat ? c.correct : c.label === answerLabel,
+  correct: c.correct,
   ...(c.explanation ? { explanation: c.explanation } : {}),
 })),
 ```
@@ -411,7 +474,7 @@ Once the full corpus is migrated and no legacy-format questions remain:
 2. Remove the legacy branch from `buildSeedRepFromParsed()`
 3. Remove the legacy branch from `parseDraftQuestionBlock()` and `convertDraftQuestionToMdx()`
 4. Simplify or remove `parseChoiceExplanations()` — only `parseExplanationAndReference()` is needed
-5. Remove `answer` from `DraftFrontmatterSchema`
+5. Remove legacy `answer` support from `DraftFrontmatterSchema`
 6. Remove `parseChoicesBlock()`
 
 This is a separate cleanup task, not part of the Phase 2 implementation.
@@ -428,6 +491,6 @@ After implementation, all of these must pass:
 - [ ] `pnpm test:browser` — passes
 - [ ] `pnpm test:integration` — passes
 - [ ] `pnpm build` — passes
-- [ ] `pnpm content:import:drafts -- --dry-run` — 948 questions, zero errors (after content migration)
-- [ ] `pnpm db:seed` — all questions seeded correctly
+- [ ] `pnpm content:import:drafts -- --status published --dry-run` — 948 questions, zero errors (after content migration)
+- [ ] `pnpm db:seed` — succeeds against the migrated corpus (exact inserted/updated/skipped counts vary by database state)
 - [ ] Spot-check in UI: wrong-answer explanations display correctly on feedback cards
