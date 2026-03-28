@@ -104,6 +104,14 @@ export const QuestionFrontmatterSchema = z
           path: ['choices', index, 'explanation'],
         });
       }
+
+      if (!choice.correct && choice.explanation === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'wrong choices must include explanation',
+          path: ['choices', index, 'explanation'],
+        });
+      }
     }
 
     const tagSlugSet = new Set(val.tags.map((t) => t.slug));

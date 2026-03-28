@@ -199,7 +199,7 @@ describe('QuestionFrontmatterSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('accepts a wrong choice without explanation for legacy compatibility', () => {
+  it('rejects a wrong choice without explanation', () => {
     const result = QuestionFrontmatterSchema.safeParse({
       ...baseQuestionFrontmatter,
       choices: [
@@ -216,7 +216,7 @@ describe('QuestionFrontmatterSchema', () => {
       ],
     });
 
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
   });
 
   it('accepts a correct choice without explanation', () => {

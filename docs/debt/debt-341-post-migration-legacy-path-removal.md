@@ -63,9 +63,9 @@ The dual-format code paths remain. They are dead code: reachable only by inputs 
 
 | Item | Line | Change |
 |------|------|--------|
-| `explanation: ChoiceExplanationSchema.optional()` | 23 | Remove `.optional()` — wrong choices must always have `explanation` |
+| `explanation: ChoiceExplanationSchema.optional()` | 23 | Keep the field structurally optional, but tighten `QuestionFrontmatterSchema.superRefine()` so `correct: false` without `explanation` is rejected. |
 
-**Also add:** superRefine validation that `correct: false` choices without `explanation` are rejected (currently only `correct: true` with `explanation` is rejected).
+**Why keep `.optional()`:** the choice-level object still has to allow `correct: true` choices with no `explanation` key. The invariant belongs in `QuestionFrontmatterSchema.superRefine()`: `correct: true` + `explanation` is rejected, and `correct: false` without `explanation` is also rejected.
 
 ### 5. Test fixtures and test suites
 
