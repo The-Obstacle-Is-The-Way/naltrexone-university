@@ -1,6 +1,6 @@
 'use client';
 
-import { dark, shadcn } from '@clerk/themes';
+import { dark, shadcn } from '@clerk/ui/themes';
 import dynamic from 'next/dynamic';
 import { useTheme } from 'next-themes';
 import { useMemo } from 'react';

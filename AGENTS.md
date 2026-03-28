@@ -476,10 +476,9 @@ const fakeDb = {
 };
 const repo = new DrizzleUserRepository(fakeDb);
 
-// ✅ OK - External SDK with hooks you can't inject
+// ✅ OK - External SDK surface you can't inject
 vi.mock('@clerk/nextjs', () => ({
-  SignedIn: ({ children }) => <>{children}</>,
-  useUser: () => ({ user: { id: 'test' } }),
+  UserButton: () => <div data-testid="user-button" />,
 }));
 
 // ✅ OK - Next.js internals

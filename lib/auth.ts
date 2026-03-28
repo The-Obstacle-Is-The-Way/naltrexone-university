@@ -1,5 +1,5 @@
 import 'server-only';
-import { auth, currentUser } from '@clerk/nextjs/server';
+import { currentUser } from '@clerk/nextjs/server';
 import { ApplicationError } from '@/src/application/errors';
 import { createContainer } from './container';
 
@@ -12,13 +12,6 @@ export async function getClerkUserOrThrow() {
     throw new ApplicationError('UNAUTHENTICATED', 'User not authenticated');
   }
   return user;
-}
-
-/**
- * Get the Clerk auth session. Use for checking authentication state.
- */
-export async function getAuth() {
-  return auth();
 }
 
 /**

@@ -1,12 +1,12 @@
 # Clerk Vendor Documentation
 
-**Package:** `@clerk/nextjs` ^6.38.1
+**Package:** `@clerk/nextjs` ^7.0.7
 **API Version:** `2024-10-01`
 **Dashboard:** https://dashboard.clerk.com
 **Docs:** https://clerk.com/docs
 **Changelog:** https://clerk.com/changelog
 
-**Package version note:** Reconciled against `package.json` on 2026-03-17.
+**Package version note:** Reconciled against `package.json` on 2026-03-28. Upgraded from v6 (Core 2) to v7 (Core 3) via `@clerk/upgrade` CLI.
 Clerk API-version tracking remains vendor-managed rather than pinned in local
 runtime code.
 
@@ -31,7 +31,9 @@ Clerk uses date-based API versioning. Specify via:
 | Field | Used In | Notes |
 |-------|---------|-------|
 | `id` | Auth gateway, user sync | Clerk user ID (`user_xxx`) |
-| `primaryEmailAddress.emailAddress` | User sync | Email for notifications |
+| `primaryEmailAddressId` | Auth gateway | Matched against `emailAddresses[].id` to find primary email |
+| `emailAddresses[]` | Auth gateway | Array of `{ id, emailAddress }` — fallback to `[0]` if no primary |
+| `updatedAt` / `updated_at` | Auth gateway | Used as `observedAt` for user upsert staleness tracking |
 | `publicMetadata` | Not used | Could store app-specific data |
 | `privateMetadata` | Not used | Server-only metadata |
 
@@ -39,8 +41,7 @@ Clerk uses date-based API versioning. Specify via:
 
 | Field | Used In | Notes |
 |-------|---------|-------|
-| `userId` | All auth checks | Current user ID |
-| `sessionClaims` | Auth gateway | Custom claims from JWT |
+| `userId` | All auth checks (via `auth()`) | Current user ID |
 
 ---
 
@@ -81,15 +82,12 @@ We generate CSP headers via **Clerk middleware**, not `next.config.ts`.
 
 In `proxy.ts`, we pass `contentSecurityPolicy` options to `clerkMiddleware()` so Clerk emits a Clerk + Stripe compatible CSP header, and we merge in app-specific directives (e.g., `base-uri`, `frame-ancestors`, `object-src`, expanded `img-src`).
 
-We currently run in **non-strict** mode (no per-request nonce) because our app wraps Clerk in a **client-only** provider (`components/providers.tsx` uses `next/dynamic` with `ssr: false`).
+We run in **strict report-only** mode (`{ strict: true, reportOnly: true }`) with per-request nonce plumbing:
+- `proxy.ts` sets `strict: true` + `reportOnly: true` in `clerkMiddleware()` CSP config
+- `app/layout.tsx` reads the nonce via `headers()` and passes it to `<Providers nonce={nonce}>`
+- Sentry CSP reporting is wired via `reportTo` and `report-uri` when the endpoint is configured
 
-### Strict / Nonce Mode (Optional)
-
-Clerk supports a stricter mode (`contentSecurityPolicy: { strict: true }`) that adds a per-request nonce via the `X-Nonce` header.
-
-If enabling strict CSP in an App Router setup, Clerk requires using the App Router `ClerkProvider` with the `dynamic` prop so the server-generated nonce can flow to client components.
-
-If enabling strict CSP, ensure the app is compatible with nonce-based script loading and follow Clerk + Next.js CSP documentation closely before shipping.
+**Current posture:** Strict CSP is active but in **report-only** mode — violations are reported to the configured reporting endpoint (Sentry when enabled), but not blocked. See DEBT-332 for the decision on whether to move to enforcing mode.
 
 ### Server Components
 
@@ -104,15 +102,7 @@ export default async function Page() {
 
 ### Client Components
 
-```typescript
-'use client';
-import { useUser, useAuth } from '@clerk/nextjs';
-
-function Component() {
-  const { user } = useUser();
-  const { userId, isLoaded } = useAuth();
-}
-```
+We use Clerk's prebuilt components (`<SignIn />`, `<SignUp />`, `<UserButton />`) and do **not** use `useUser()`, `useAuth()`, or other Clerk client hooks directly. `SignIn` and `SignUp` are loaded via `next/dynamic(..., { ssr: false })`; `UserButton` is imported inside the async `AuthNav` server component and rendered there.
 
 ---
 
@@ -150,6 +140,7 @@ const [user] = await res.json();
 **Webhook secret:** `CLERK_WEBHOOK_SIGNING_SECRET` env var
 
 **Signature verification:** Uses `@clerk/nextjs/webhooks` `verifyWebhook()` function.
+Because `app/api/webhooks/clerk/route.ts` always calls `verifyWebhook()`, any environment that receives real Clerk webhook deliveries needs a real `CLERK_WEBHOOK_SIGNING_SECRET`, regardless of hosting platform. `lib/env.ts` only hard-fails a missing secret on Vercel production deploys; other environments may omit it only when webhook delivery is intentionally not exercised there.
 
 ---
 
@@ -169,11 +160,10 @@ For sign-ins matching a SAML connection, API now returns `needs_first_factor` st
 
 | Variable | Purpose | Required |
 |----------|---------|----------|
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Client-side auth | Yes |
-| `CLERK_SECRET_KEY` | Server-side auth | Yes |
-| `CLERK_WEBHOOK_SIGNING_SECRET` | Webhook verification | Yes |
-| `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | Custom sign-in route | Optional |
-| `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | Custom sign-up route | Optional |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Client-side auth | Yes unless `NEXT_PUBLIC_SKIP_CLERK=true` |
+| `CLERK_SECRET_KEY` | Server-side auth + Backend API | Yes unless `NEXT_PUBLIC_SKIP_CLERK=true` |
+| `CLERK_WEBHOOK_SIGNING_SECRET` | Webhook verification | Required in any environment where `/api/webhooks/clerk` receives Clerk webhooks |
+| `NEXT_PUBLIC_SKIP_CLERK` | Local/CI bypass for Clerk middleware + provider validation | Optional; must be false/absent in production |
 
 ---
 
