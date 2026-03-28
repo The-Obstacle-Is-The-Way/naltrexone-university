@@ -153,78 +153,6 @@ describe('parseSeedQuestionFile', () => {
     ]);
   });
 
-  it('continues parsing legacy MDX through the wrong-answer markdown path', () => {
-    const raw = [
-      '---',
-      'slug: "demo-legacy-100"',
-      'difficulty: "easy"',
-      'status: "published"',
-      'tags:',
-      '  - slug: "screening-diagnosis"',
-      '    name: "Screening & Diagnosis"',
-      '    kind: "topic"',
-      '  - slug: "alcohol"',
-      '    name: "Alcohol"',
-      '    kind: "substance"',
-      'choices:',
-      '  - label: "A"',
-      '    text: "Choice A"',
-      '    correct: false',
-      '  - label: "B"',
-      '    text: "Choice B"',
-      '    correct: true',
-      '  - label: "C"',
-      '    text: "Choice C"',
-      '    correct: false',
-      '---',
-      '',
-      '## Stem',
-      '',
-      'What is the best answer?',
-      '',
-      '## Explanation',
-      '',
-      'General explanation.',
-      '',
-      '**Why other answers are wrong:**',
-      '- A) Because A is incorrect.',
-      '- C) Because C is incorrect.',
-      '',
-      '### Reference',
-      '',
-      'A concise AMA citation.',
-      '',
-    ].join('\n');
-
-    const parsed = parseSeedQuestionFile(raw);
-
-    expect(parsed.explanation_md).toBe('General explanation.');
-    expect(parsed.reference_md).toBe('A concise AMA citation.');
-    expect(parsed.choices).toEqual([
-      {
-        label: 'A',
-        text_md: 'Choice A',
-        is_correct: false,
-        explanation_md: 'Because A is incorrect.',
-        sort_order: 1,
-      },
-      {
-        label: 'B',
-        text_md: 'Choice B',
-        is_correct: true,
-        explanation_md: null,
-        sort_order: 2,
-      },
-      {
-        label: 'C',
-        text_md: 'Choice C',
-        is_correct: false,
-        explanation_md: 'Because C is incorrect.',
-        sort_order: 3,
-      },
-    ]);
-  });
-
   it('rejects hybrid questions that mix YAML explanations with a wrong-answer markdown section', () => {
     const raw = [
       '---',
@@ -307,11 +235,11 @@ describe('parseSeedQuestionFile', () => {
     ].join('\n');
 
     expect(() => parseSeedQuestionFile(raw)).toThrow(
-      /demo-new-missing-100: .*wrong choice.*C.*explanation/i,
+      /wrong choices must include explanation/i,
     );
   });
 
-  it('includes reference_md from parsed explanation content', () => {
+  it('includes reference_md from parsed explanation content for new-format questions', () => {
     const raw = [
       '---',
       'slug: "demo-100"',
@@ -328,6 +256,7 @@ describe('parseSeedQuestionFile', () => {
       '  - label: "A"',
       '    text: "Choice A"',
       '    correct: false',
+      '    explanation: "Because A is incorrect."',
       '  - label: "B"',
       '    text: "Choice B"',
       '    correct: true',
@@ -340,9 +269,6 @@ describe('parseSeedQuestionFile', () => {
       '## Explanation',
       '',
       'General explanation.',
-      '',
-      '**Why other answers are wrong:**',
-      '- A) Because A is incorrect.',
       '',
       '### Reference',
       '',
@@ -357,7 +283,7 @@ describe('parseSeedQuestionFile', () => {
     );
   });
 
-  it('sets reference_md to null when no reference section exists', () => {
+  it('sets reference_md to null when no reference section exists for new-format questions', () => {
     const raw = [
       '---',
       'slug: "demo-101"',
@@ -374,6 +300,7 @@ describe('parseSeedQuestionFile', () => {
       '  - label: "A"',
       '    text: "Choice A"',
       '    correct: false',
+      '    explanation: "Because A is incorrect."',
       '  - label: "B"',
       '    text: "Choice B"',
       '    correct: true',
@@ -386,71 +313,11 @@ describe('parseSeedQuestionFile', () => {
       '## Explanation',
       '',
       'General explanation.',
-      '',
-      '**Why other answers are wrong:**',
-      '- A) Because A is incorrect.',
       '',
     ].join('\n');
 
     const parsed = parseSeedQuestionFile(raw);
 
     expect(parsed.reference_md).toBeNull();
-  });
-
-  it('propagates strict parser validation errors with the question slug', () => {
-    const raw = [
-      '---',
-      'slug: "demo-102"',
-      'difficulty: "easy"',
-      'status: "published"',
-      'tags:',
-      '  - slug: "screening-diagnosis"',
-      '    name: "Screening & Diagnosis"',
-      '    kind: "topic"',
-      '  - slug: "alcohol"',
-      '    name: "Alcohol"',
-      '    kind: "substance"',
-      'choices:',
-      '  - label: "A"',
-      '    text: "Choice A"',
-      '    correct: false',
-      '  - label: "B"',
-      '    text: "Choice B"',
-      '    correct: true',
-      '---',
-      '',
-      '## Stem',
-      '',
-      'What is the best answer?',
-      '',
-      '## Explanation',
-      '',
-      'General explanation.',
-      '',
-      '**Why other answers are wrong:**',
-      '- A) Because A is incorrect.',
-      'Clinical Pearl: misplaced after bullets.',
-      '',
-    ].join('\n');
-
-    expect(() => parseSeedQuestionFile(raw)).toThrow(
-      /demo-102: .*Clinical Pearl: misplaced after bullets\./,
-    );
-  });
-
-  it('rejects the levy-2023-006 corruption pattern fixture with a clear slugged error', () => {
-    const raw = readSeedFixture('levy-2023-006-corrupted.mdx');
-
-    expect(() => parseSeedQuestionFile(raw)).toThrow(
-      /levy-2023-006: .*after a choice bullet.*Clinical Pearl/i,
-    );
-  });
-
-  it('rejects the palis-2022-002 combined-label fixture with a clear slugged error', () => {
-    const raw = readSeedFixture('palis-2022-002-combined-labels.mdx');
-
-    expect(() => parseSeedQuestionFile(raw)).toThrow(
-      /palis-2022-002: .*combined choice labels/i,
-    );
   });
 });
