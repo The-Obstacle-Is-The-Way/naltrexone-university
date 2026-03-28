@@ -403,4 +403,139 @@ describe('draft question import', () => {
 
     expect(() => parseDraftQuestionBlock(block)).toThrow(/topic/i);
   });
+
+  it('rejects draft blocks that include both answer and choices in frontmatter', () => {
+    const block = [
+      '---',
+      'qid: demo-010',
+      'type: recall',
+      'difficulty: easy',
+      'substances: [alcohol]',
+      'topics: [screening-diagnosis]',
+      'source: demo-source',
+      'answer: A',
+      'choices:',
+      '  - label: A',
+      '    text: "Correct"',
+      '    correct: true',
+      '  - label: B',
+      '    text: "Incorrect"',
+      '    correct: false',
+      '    explanation: "Because B is wrong."',
+      '---',
+      '',
+      '## Question',
+      '',
+      'Question?',
+      '',
+      '## Choices',
+      '',
+      '- A) Correct',
+      '- B) Incorrect',
+      '',
+      '## Explanation',
+      '',
+      'Because.',
+      '',
+      '---',
+    ].join('\n');
+
+    expect(() => parseDraftQuestionBlock(block)).toThrow();
+  });
+
+  it('rejects draft blocks that define neither answer nor choices in frontmatter', () => {
+    const block = [
+      '---',
+      'qid: demo-011',
+      'type: recall',
+      'difficulty: easy',
+      'substances: [alcohol]',
+      'topics: [screening-diagnosis]',
+      'source: demo-source',
+      '---',
+      '',
+      '## Question',
+      '',
+      'Question?',
+      '',
+      '## Choices',
+      '',
+      '- A) Correct',
+      '- B) Incorrect',
+      '',
+      '## Explanation',
+      '',
+      'Because.',
+      '',
+      '---',
+    ].join('\n');
+
+    expect(() => parseDraftQuestionBlock(block)).toThrow();
+  });
+
+  it('rejects new-format frontmatter when the correct choice includes explanation', () => {
+    const block = [
+      '---',
+      'qid: demo-012',
+      'type: recall',
+      'difficulty: easy',
+      'substances: [alcohol]',
+      'topics: [screening-diagnosis]',
+      'source: demo-source',
+      'choices:',
+      '  - label: A',
+      '    text: "Correct"',
+      '    correct: true',
+      '    explanation: "This should not be here."',
+      '  - label: B',
+      '    text: "Incorrect"',
+      '    correct: false',
+      '    explanation: "Because B is wrong."',
+      '---',
+      '',
+      '## Question',
+      '',
+      'Question?',
+      '',
+      '## Explanation',
+      '',
+      'Because.',
+      '',
+      '---',
+    ].join('\n');
+
+    expect(() => parseDraftQuestionBlock(block)).toThrow(/correct/i);
+  });
+
+  it('rejects new-format frontmatter when a wrong choice is missing explanation', () => {
+    const block = [
+      '---',
+      'qid: demo-013',
+      'type: recall',
+      'difficulty: easy',
+      'substances: [alcohol]',
+      'topics: [screening-diagnosis]',
+      'source: demo-source',
+      'choices:',
+      '  - label: A',
+      '    text: "Correct"',
+      '    correct: true',
+      '  - label: B',
+      '    text: "Incorrect"',
+      '    correct: false',
+      '---',
+      '',
+      '## Question',
+      '',
+      'Question?',
+      '',
+      '## Explanation',
+      '',
+      'Because.',
+      '',
+      '---',
+    ].join('\n');
+
+    expect(() => parseDraftQuestionBlock(block)).toThrow(/explanation/i);
+  });
 });
