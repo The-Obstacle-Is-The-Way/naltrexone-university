@@ -21,10 +21,11 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-336](./debt-336-content-markdown-quality-pass.md) | Content markdown quality pass (C1–C4) — blank lines, redundant prefixes, missing explanations; executed in external `addiction-final-2026` repo then re-imported | P3 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
-| [DEBT-338](./debt-338-seed-parser-silent-wrong-answer-section-corruption.md) | Historical silent-corruption bug is fixed (Phase 1 hardening, 24-file repair, consolidation, and external sync complete); remaining work is Phase 2: migrate per-choice explanations from markdown parsing to structured YAML in both repos. **Implementation spec:** [debt-338-phase2-implementation-spec.md](./debt-338-phase2-implementation-spec.md) | P1 | — |
 | [DEBT-340](./debt-340-clerk-v7-nextjs-upgrade.md) | Clerk v7 (Core 3) + Next.js 16.2.1 upgrade — `@clerk/themes` → `@clerk/ui`, dead `getAuth` removed, vendor docs corrected; enables Client Trust credential-stuffing protection | P2 | — |
+| [DEBT-341](./debt-341-post-migration-legacy-path-removal.md) | Post-migration legacy path removal — delete dual-format code paths, `parseChoiceExplanations()`, legacy schema union, and legacy-only tests now that all 948 questions are new-format YAML | P2 | — |
+| [DEBT-342](./debt-342-idempotency-backward-compat-guard.md) | Idempotency backward-compat guard — replace `completedAt \|\| resultJson` OR-guard with simple `completedAt` check; zero legacy rows exist | P4 | — |
 
-**Next Debt ID:** DEBT-341
+**Next Debt ID:** DEBT-343
 
 ---
 
@@ -32,6 +33,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-338](./debt-338-seed-parser-silent-wrong-answer-section-corruption.md) | Seed parser silent corruption — Phase 1 hardening + 24-file repair + Phase 2 YAML migration all complete (PR #254). Legacy path cleanup in [DEBT-341](./debt-341-post-migration-legacy-path-removal.md). | P1 | 2026-03-28 | [PR #254](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/254) |
 | [DEBT-335](../_archive/debt/debt-335-remove-all-or-nothing-wrong-answer-guard.md) | Remove all-or-nothing wrong-answer display guard — `Feedback` now shows available wrong-answer explanations even when sibling choices are null/blank, with targeted regression coverage and synced authoring docs | P2 | 2026-03-24 | — |
 | [DEBT-339](../_archive/debt/debt-339-consolidate-question-instruction-files.md) | Consolidate 8 question instruction files → 5 — `SCHEMA.md` absorbed QUESTION-FORMAT-SPEC/TAG-TAXONOMY, `META.MD` was redistributed into `SCHEMA.md`/`PLAN.md`/`NOTES.md`, and the consolidated survivor files were synced to external `addiction-final-2026` | P2 | 2026-03-27 | — |
 | [DEBT-329](../_archive/debt/debt-329-navigator-colorblind-accessibility.md) | Colorblind-accessible review navigator badges — shared `ReviewCorrectnessBadge` (✓/✗ shape cues), DRY `getReviewVariant`/`getReviewStatusLabel` utilities, `ring-1 ring-border` light-mode fix, stable `data-testid` selectors | P3 | 2026-03-23 | [PR #249](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/249) |

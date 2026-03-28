@@ -2,8 +2,8 @@
 
 **Priority:** P1
 **Created:** 2026-03-24
-**Updated:** 2026-03-28 (post-Phase-2 spec audit: cross-repo contract aligned, enforcement boundaries clarified)
-**Status:** Open — only Phase 2 (YAML frontmatter migration) remains; Phase 1 hardening, instruction-file consolidation, external repo sync, and 24-file content repair are complete
+**Updated:** 2026-03-28 (Phase 2 implemented and merged — PR #254)
+**Status:** Resolved — Phase 1 hardening, 24-file content repair, instruction-file consolidation, external repo sync, and Phase 2 YAML frontmatter migration are all complete. Post-migration legacy path cleanup tracked separately in [DEBT-341](./debt-341-post-migration-legacy-path-removal.md).
 **Source:** Codebase-wide audit after DEBT-335 / adjacent to [DEBT-336](./debt-336-content-markdown-quality-pass.md)
 **Scope:** legacy seed-parser hardening, content format alignment in external `addiction-final-2026` repo, and Phase 2 migration across draft schemas, draft import, MDX schemas, and seed parsing
 
