@@ -8,7 +8,7 @@
 
 ## Problem
 
-Two dependency upgrades are pending:
+This branch completes two dependency upgrades that were pending:
 
 1. **`@clerk/nextjs` v6 → v7 (Core 3)** — Clerk's dashboard shows a "Client Trust Status" update requiring Core 3. The v6 package is one major version behind; staying on v6 blocks Clerk security features (Client Trust) and will accumulate drift over time.
 2. **`next` 16.1.6 → 16.2.1** — Minor version bump with no breaking changes; brings ~87% faster dev startup and ~25-60% faster SSR rendering.

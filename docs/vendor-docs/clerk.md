@@ -159,11 +159,10 @@ For sign-ins matching a SAML connection, API now returns `needs_first_factor` st
 
 | Variable | Purpose | Required |
 |----------|---------|----------|
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Client-side auth | Yes |
-| `CLERK_SECRET_KEY` | Server-side auth | Yes |
-| `CLERK_WEBHOOK_SIGNING_SECRET` | Webhook verification | Yes |
-| `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | Custom sign-in route | Optional |
-| `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | Custom sign-up route | Optional |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Client-side auth | Yes unless `NEXT_PUBLIC_SKIP_CLERK=true` |
+| `CLERK_SECRET_KEY` | Server-side auth + Backend API | Yes unless `NEXT_PUBLIC_SKIP_CLERK=true` |
+| `CLERK_WEBHOOK_SIGNING_SECRET` | Webhook verification | Required on Vercel production deploys when Clerk is enabled |
+| `NEXT_PUBLIC_SKIP_CLERK` | Local/CI bypass for Clerk middleware + provider validation | Optional; must be false/absent in production |
 
 ---
 

@@ -38,7 +38,7 @@ tracked vendor setting rather than a local code constant.
 | Vendor | Doc | Critical Fields | Known Issues |
 |--------|-----|-----------------|--------------|
 | [Stripe](./stripe.md) | Payment processing | `subscription.items.data[].current_period_end` | BUG-045 |
-| [Clerk](./clerk.md) | Authentication | `userId`, `sessionClaims` | None |
+| [Clerk](./clerk.md) | Authentication | `userId`, `primaryEmailAddressId`, `emailAddresses[]`, `updatedAt/updated_at` | None |
 | [Postgres](./postgres.md) | Database | Connection pooling | None |
 
 ---
