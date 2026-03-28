@@ -332,12 +332,17 @@ describe('parseSeedQuestionFile', () => {
     expect(parsed.reference_md).toBeNull();
   });
 
-  it('parses all tracked placeholder seed files with the Phase 2 schema', () => {
+  it('finds tracked placeholder seed files', () => {
     const placeholders = readPlaceholderSeedFiles();
 
     expect(placeholders.length).toBeGreaterThan(0);
-    for (const placeholder of placeholders) {
-      expect(() => parseSeedQuestionFile(placeholder.raw)).not.toThrow();
-    }
+  });
+
+  it.each(
+    readPlaceholderSeedFiles(),
+  )('parses tracked placeholder seed file $fileName with the Phase 2 schema', ({
+    raw,
+  }) => {
+    expect(() => parseSeedQuestionFile(raw)).not.toThrow();
   });
 });
