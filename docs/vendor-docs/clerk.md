@@ -85,9 +85,9 @@ In `proxy.ts`, we pass `contentSecurityPolicy` options to `clerkMiddleware()` so
 We run in **strict report-only** mode (`{ strict: true, reportOnly: true }`) with per-request nonce plumbing:
 - `proxy.ts` sets `strict: true` + `reportOnly: true` in `clerkMiddleware()` CSP config
 - `app/layout.tsx` reads the nonce via `headers()` and passes it to `<Providers nonce={nonce}>`
-- Sentry CSP reporting is wired via `reportTo` when the endpoint is configured
+- Sentry CSP reporting is wired via `reportTo` and `report-uri` when the endpoint is configured
 
-**Current posture:** Strict CSP is active but in **report-only** mode — violations are reported (to Sentry) but not blocked. See DEBT-332 for the decision on whether to move to enforcing mode.
+**Current posture:** Strict CSP is active but in **report-only** mode — violations are reported to the configured reporting endpoint (Sentry when enabled), but not blocked. See DEBT-332 for the decision on whether to move to enforcing mode.
 
 ### Server Components
 
@@ -102,7 +102,7 @@ export default async function Page() {
 
 ### Client Components
 
-We use Clerk's prebuilt components (`<SignIn />`, `<SignUp />`, `<UserButton />`) exclusively via dynamic imports with `ssr: false`. We do **not** use `useUser()`, `useAuth()`, or other Clerk client hooks directly.
+We use Clerk's prebuilt components (`<SignIn />`, `<SignUp />`, `<UserButton />`) and do **not** use `useUser()`, `useAuth()`, or other Clerk client hooks directly. `SignIn` and `SignUp` are loaded via `next/dynamic(..., { ssr: false })`; `UserButton` is imported inside the async `AuthNav` server component and rendered there.
 
 ---
 
@@ -140,6 +140,7 @@ const [user] = await res.json();
 **Webhook secret:** `CLERK_WEBHOOK_SIGNING_SECRET` env var
 
 **Signature verification:** Uses `@clerk/nextjs/webhooks` `verifyWebhook()` function.
+Because `app/api/webhooks/clerk/route.ts` always calls `verifyWebhook()`, any environment that receives real Clerk webhook deliveries needs a real `CLERK_WEBHOOK_SIGNING_SECRET`, regardless of hosting platform. `lib/env.ts` only hard-fails a missing secret on Vercel production deploys; other environments may omit it only when webhook delivery is intentionally not exercised there.
 
 ---
 
@@ -161,7 +162,7 @@ For sign-ins matching a SAML connection, API now returns `needs_first_factor` st
 |----------|---------|----------|
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Client-side auth | Yes unless `NEXT_PUBLIC_SKIP_CLERK=true` |
 | `CLERK_SECRET_KEY` | Server-side auth + Backend API | Yes unless `NEXT_PUBLIC_SKIP_CLERK=true` |
-| `CLERK_WEBHOOK_SIGNING_SECRET` | Webhook verification | Required on Vercel production deploys when Clerk is enabled |
+| `CLERK_WEBHOOK_SIGNING_SECRET` | Webhook verification | Required in any environment where `/api/webhooks/clerk` receives Clerk webhooks |
 | `NEXT_PUBLIC_SKIP_CLERK` | Local/CI bypass for Clerk middleware + provider validation | Optional; must be false/absent in production |
 
 ---
