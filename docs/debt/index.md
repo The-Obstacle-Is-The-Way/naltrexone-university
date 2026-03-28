@@ -21,7 +21,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-336](./debt-336-content-markdown-quality-pass.md) | Content markdown quality pass (C1–C4) — blank lines, redundant prefixes, missing explanations; executed in external `addiction-final-2026` repo then re-imported | P3 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
-| [DEBT-338](./debt-338-seed-parser-silent-wrong-answer-section-corruption.md) | Historical silent-corruption bug is fixed (Phase 1 hardening, 24-file repair, consolidation, and external sync complete); remaining work is Phase 2: migrate per-choice explanations from markdown parsing to structured YAML in both repos | P1 | — |
+| [DEBT-338](./debt-338-seed-parser-silent-wrong-answer-section-corruption.md) | Historical silent-corruption bug is fixed (Phase 1 hardening, 24-file repair, consolidation, and external sync complete); remaining work is Phase 2: migrate per-choice explanations from markdown parsing to structured YAML in both repos. **Implementation spec:** [debt-338-phase2-implementation-spec.md](./debt-338-phase2-implementation-spec.md) | P1 | — |
 
 **Next Debt ID:** DEBT-340
 
