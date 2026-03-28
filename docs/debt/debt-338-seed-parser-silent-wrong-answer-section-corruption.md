@@ -443,15 +443,15 @@ Phase 2 changes the question format in a major way. If we update 8 fragmented fi
 2. **Instruction-file consolidation is done.** Reading path: `CLAUDE.md` + `SCHEMA.md`.
 3. **Content alignment is done.** All 24 corrupted files were fixed in the external repo, re-imported, and re-seeded. The strict parser accepts all 948 questions.
 4. **Phase 2 is done.** Per-choice wrong-answer explanations now live in YAML frontmatter in both repos, and the markdown `**Why other answers are wrong:**` section is gone from the live corpus.
-5. **Only post-migration cleanup remains, and it is separate debt.** The legacy compatibility code paths that still exist for safety are tracked in [DEBT-340](./debt-340-post-migration-legacy-path-removal.md).
+5. **Only post-migration cleanup remains, and it is separate debt.** The legacy compatibility code paths that still exist for safety are tracked in [DEBT-341](./debt-341-post-migration-legacy-path-removal.md).
 
 ### What To Do Next
 
 DEBT-338 itself is resolved. The follow-up queue is:
 
-1. Execute [DEBT-340](./debt-340-post-migration-legacy-path-removal.md) to remove the now-dead legacy parser / dual-format compatibility paths
-2. Run the full verification gate again after DEBT-340 cleanup (`pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build`)
-3. Keep unrelated cleanup separate (for example [DEBT-341](./debt-341-idempotency-backward-compat-guard.md))
+1. Execute [DEBT-341](./debt-341-post-migration-legacy-path-removal.md) to remove the now-dead legacy parser / dual-format compatibility paths
+2. Run the full verification gate again after DEBT-341 cleanup (`pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build`)
+3. Keep unrelated cleanup separate (for example [DEBT-342](./debt-342-idempotency-backward-compat-guard.md))
 
 ---
 
@@ -493,7 +493,7 @@ DEBT-338 itself is resolved. The follow-up queue is:
 - [x] `buildSeedRepFromParsed()` reads per-choice `explanation` from frontmatter for new-format questions and uses markdown parsing only for legacy questions
 - [x] `buildSeedRepFromParsed()` rejects new-format questions whose wrong choices are missing `explanation`
 - [x] General explanation and `referenceMd` still parse correctly for new-format questions even though `**Why other answers are wrong:**` is gone
-- [x] Legacy-path deletion was intentionally split out into [DEBT-340](./debt-340-post-migration-legacy-path-removal.md) instead of being bundled into DEBT-338 closure
+- [x] Legacy-path deletion was intentionally split out into [DEBT-341](./debt-341-post-migration-legacy-path-removal.md) instead of being bundled into DEBT-338 closure
 - [x] Import pipeline carries `explanation` through draft → MDX conversion for new-format questions
 - [x] The draft splitter contract is explicit: either `qid:` remains first after `---` or `splitDraftQuestionsFile()` is hardened so richer frontmatter ordering cannot break imports
 - [x] All 948+ question files migrated in external repo: per-choice explanations in YAML, `**Why other answers are wrong:**` section removed from markdown body
@@ -509,7 +509,7 @@ DEBT-338 should remain open until all of the following are true:
 - [x] `pnpm db:seed` succeeds against the full imported corpus with Phase 1 validation enabled
 - [x] Instruction-file consolidation is complete in both repos
 - [x] Per-choice explanations are stored in structured YAML authoring data and carried through import/seed
-- [x] Markdown parsing is no longer required for per-choice wrong-answer explanations in the live corpus; only cleanup of the dormant legacy path remains in [DEBT-340](./debt-340-post-migration-legacy-path-removal.md)
+- [x] Markdown parsing is no longer required for per-choice wrong-answer explanations in the live corpus; only cleanup of the dormant legacy path remains in [DEBT-341](./debt-341-post-migration-legacy-path-removal.md)
 
 ---
 
