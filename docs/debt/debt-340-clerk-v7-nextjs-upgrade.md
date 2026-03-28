@@ -1,4 +1,4 @@
-# DEBT-340: Clerk v7 (Core 3) + Next.js 16.2 Upgrade
+# DEBT-340: Clerk v7 (Core 3) + Next.js 16.2.1 Upgrade
 
 **Priority:** P2
 **Created:** 2026-03-28
@@ -98,9 +98,11 @@ The `@clerk/upgrade` CLI already applied all changes on branch `debt-340-clerk-v
 
 1. **Verify the automated changes** — review the diff in `package.json`, `components/providers.tsx`, and `pnpm-lock.yaml`
 2. **Run the full pre-PR gate:**
+
    ```bash
    pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
    ```
+
 3. **Local smoke test** — `pnpm dev`, sign in, navigate protected routes, verify Clerk components render correctly
 4. **If all green** — commit and open PR
 
