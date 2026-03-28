@@ -14,8 +14,8 @@ DEBT-338 Phase 2 migrated all 948 questions from legacy markdown-prose format to
 
 The dual-format code paths remain. They are dead code: reachable only by inputs that no longer exist. Keeping them:
 
-- Adds ~300 lines of parse logic nobody exercises in production
-- Maintains ~140 tests that validate behavior against a defunct format
+- Adds ~260 lines of dual-format parse / compat logic nobody exercises against the current corpus
+- Maintains roughly 40–50 explicitly legacy-focused tests plus shared fixtures/assertions tied to a defunct format
 - Forces every future reader to understand two code paths instead of one
 - Leaves the `explanation` field `.optional()` in schema instead of enforcing the invariant that wrong choices always have explanations
 
@@ -71,10 +71,10 @@ The dual-format code paths remain. They are dead code: reachable only by inputs 
 
 | File | What to remove |
 |------|----------------|
-| `scripts/draft-question-import.test.ts` | ~13 legacy fixtures using `answer:` field; 2 explicit legacy-path tests |
-| `scripts/seed-helpers.test.ts` | Entire `parseChoiceExplanations` describe block (~130 tests) |
-| `scripts/seed.test.ts` | Legacy-format test case(s) |
-| `lib/content/schemas.test.ts` | "accepts correct: false without explanation" test (will now fail by design) |
+| `scripts/draft-question-import.test.ts` | Multiple legacy `answer:` fixtures plus the explicit legacy parser / conversion assertions |
+| `scripts/seed-helpers.test.ts` | Entire `parseChoiceExplanations` coverage surface (~31 tests) |
+| `scripts/seed.test.ts` | Legacy-MDX regression coverage and corruption fixtures that only protect the legacy parser path |
+| `lib/content/schemas.test.ts` | Legacy-compat assertion that a wrong choice may omit `explanation` (will fail by design after tightening) |
 
 ---
 
@@ -95,7 +95,7 @@ The dual-format code paths remain. They are dead code: reachable only by inputs 
 **Risk: Low.** This is almost entirely deletion plus one schema tightening.
 
 - All 948 production questions are new-format (verified by successful seed with zero legacy-path hits)
-- No external consumers of the removed functions
+- No additional runtime consumers of the removed functions; remaining references are tests/docs
 - The schema tightening makes an existing runtime invariant into a compile-time guarantee
 - Test removal matches code removal 1:1
 
@@ -120,4 +120,4 @@ Plus:
 
 ## Estimated Effort
 
-Small. This is primarily deletion (~300 lines of code, ~140 tests) plus one schema field change. No new logic needed.
+Small. This is primarily deletion (~260 lines of code and roughly 40–50 explicitly legacy-focused tests, plus a handful of shared fixtures/assertions) plus one schema field change. No new logic needed.

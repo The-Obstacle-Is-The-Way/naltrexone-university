@@ -188,9 +188,9 @@ Palis H, Xavier C, Dobrer S, et al. Concurrent use of opioids and stimulants and
 
 ### Step 1: Extend `ChoiceFrontmatterSchema`
 
-**File:** `lib/content/schemas.ts` (lines 12-18)
+**File:** `lib/content/schemas.ts` (implemented at lines 18-25; `QuestionFrontmatterSchema` `superRefine` guard at lines 81-107)
 
-**Current:**
+**Pre-Phase-2 shape:**
 ```typescript
 export const ChoiceFrontmatterSchema = z
   .object({
@@ -203,7 +203,7 @@ export const ChoiceFrontmatterSchema = z
 
 **Change:** Add `explanation: z.string().min(1).optional()` to the object. The schema stays `.strict()` — adding the field to the schema definition makes `.strict()` accept it.
 
-**Add to `QuestionFrontmatterSchema` superRefine** (lines 62-120): If any choice has `correct: true` AND `explanation` is defined, add a validation issue. This enforces Decision 3.
+**Add to `QuestionFrontmatterSchema` superRefine:** If any choice has `correct: true` AND `explanation` is defined, add a validation issue. This enforces Decision 3.
 
 During migration, `correct: false` without `explanation` remains schema-valid because the imported MDX schema alone cannot distinguish legacy MDX from new-format MDX. The stronger rule — "all wrong choices in a new-format question must have `explanation`" — must be enforced at the whole-question parsing boundary in `buildSeedRepFromParsed()`. After full migration is complete and legacy MDX is gone, `ChoiceFrontmatterSchema` can be tightened to require `explanation` on all wrong choices.
 
@@ -219,7 +219,7 @@ During migration, `correct: false` without `explanation` remains schema-valid be
 
 **File:** `scripts/seed-helpers.ts`
 
-**Why this is needed (critical bug):** `parseChoiceExplanations()` only extracts `### Reference` when the `**Why other answers are wrong:**` heading exists. Specifically, lines 63-68:
+**Why this is needed (critical bug):** the legacy no-heading return path in `parseChoiceExplanations()` only extracts `### Reference` when the `**Why other answers are wrong:**` heading exists. In the current file, that historical bug path is still visible at lines 109-114:
 
 ```typescript
 if (headingIndex === -1) {
@@ -258,7 +258,7 @@ Logic:
 
 ### Step 3: Update `buildSeedRepFromParsed()`
 
-**File:** `scripts/seed/question-parser.ts` (lines 44-94)
+**File:** `scripts/seed/question-parser.ts` (implemented at lines 48-136)
 
 **Format detection:** Check whether any choice in `parsed.frontmatter.choices` has an `explanation` field:
 
@@ -299,9 +299,9 @@ choices: sortedChoices.map((choice, index) => ({
 
 ### Step 4: Dual-format `DraftFrontmatterSchema`
 
-**File:** `scripts/draft-question-import.ts` (lines 23-35)
+**File:** `scripts/draft-question-import.ts` (implemented union/schema path at lines 29-98; `DraftChoice` at lines 102-107)
 
-**Current schema** requires `answer: z.string().regex(/^[A-E]$/)` and has no `choices` field.
+**Pre-Phase-2 legacy schema** required `answer: z.string().regex(/^[A-E]$/)` and had no `choices` field.
 
 **Create two schema paths.** Detection logic:
 - If `data.answer` exists and `data.choices` does not → legacy format
@@ -335,7 +335,7 @@ With superRefine validation:
 - `correct: false` choices MUST have `explanation` (in new-format, this is required — unlike the MDX schema which allows it to be absent for legacy compat)
 - Unique labels
 
-**Update `DraftChoice` type** (line 39) to the normalized shape returned by `parseDraftQuestionBlock()`:
+**Update `DraftChoice` type** to the normalized shape returned by `parseDraftQuestionBlock()`:
 ```typescript
 export type DraftChoice = {
   label: 'A' | 'B' | 'C' | 'D' | 'E';
@@ -357,9 +357,9 @@ export type DraftChoice = {
 
 ### Step 5: Update `parseDraftQuestionBlock()` for dual-format parsing
 
-**File:** `scripts/draft-question-import.ts` (lines 157-186)
+**File:** `scripts/draft-question-import.ts` (implemented at lines 224-280)
 
-**Current logic:**
+**Pre-Phase-2 legacy logic:**
 1. Parse frontmatter
 2. Extract stem between `## Question`/`## Stem` and `## Choices`
 3. Extract choices block between `## Choices` and `## Explanation`
@@ -402,9 +402,9 @@ if (isNewFormat) {
 
 ### Step 6: Update `convertDraftQuestionToMdx()` to emit `explanation`
 
-**File:** `scripts/draft-question-import.ts` (lines 200-296)
+**File:** `scripts/draft-question-import.ts` (implemented at lines 294-393)
 
-**Current choice mapping** (lines 255-259):
+**Implemented choice mapping** (lines 348-353):
 ```typescript
 choices: draft.choices.map((c) => ({
   label: c.label,
@@ -423,7 +423,7 @@ choices: draft.choices.map((c) => ({
 })),
 ```
 
-**YAML emission** (lines 277-282) — add explanation line:
+**YAML emission** (lines 371-378) — add explanation line:
 ```typescript
 for (const choice of mdxFrontmatter.choices) {
   lines.push(`  - label: ${yamlQuotedString(choice.label)}`);
@@ -483,14 +483,14 @@ This is a separate cleanup task, not part of the Phase 2 implementation.
 
 ## Verification Checklist
 
-After implementation, all of these must pass:
+Implementation landed under PR #254. The verification evidence for that rollout is:
 
-- [ ] `pnpm typecheck` — passes
-- [ ] `pnpm lint` — passes
-- [ ] `pnpm test --run` — all unit tests pass including new dual-format tests
-- [ ] `pnpm test:browser` — passes
-- [ ] `pnpm test:integration` — passes
-- [ ] `pnpm build` — passes
-- [ ] `pnpm content:import:drafts -- --status published --dry-run` — 948 questions, zero errors (after content migration)
-- [ ] `pnpm db:seed` — succeeds against the migrated corpus (exact inserted/updated/skipped counts vary by database state)
-- [ ] Spot-check in UI: wrong-answer explanations display correctly on feedback cards
+- [x] `pnpm typecheck` — passed
+- [x] `pnpm lint` — passed
+- [x] `pnpm test --run` — passed with the new dual-format tests
+- [x] `pnpm test:browser` — passed
+- [x] `pnpm test:integration` — passed
+- [x] `pnpm build` — passed
+- [x] `pnpm content:import:drafts -- --status published --dry-run` — passed against the migrated corpus
+- [x] `pnpm db:seed` — succeeded against the migrated corpus (exact inserted/updated/skipped counts vary by database state)
+- [x] UI contract preserved: wrong-answer explanations still display correctly on feedback cards because `choices.explanation_md` continues to flow through the existing feedback surfaces

@@ -22,7 +22,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-336](./debt-336-content-markdown-quality-pass.md) | Content markdown quality pass (C1–C4) — blank lines, redundant prefixes, missing explanations; executed in external `addiction-final-2026` repo then re-imported | P3 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-340](./debt-340-clerk-v7-nextjs-upgrade.md) | Clerk v7 (Core 3) + Next.js 16.2.1 upgrade — `@clerk/themes` → `@clerk/ui`, dead `getAuth` removed, vendor docs corrected; enables Client Trust credential-stuffing protection | P2 | — |
-| [DEBT-341](./debt-341-post-migration-legacy-path-removal.md) | Post-migration legacy path removal — delete dual-format code paths, `parseChoiceExplanations()`, legacy schema union, and legacy-only tests now that all 948 questions are new-format YAML | P2 | — |
+| [DEBT-341](./debt-341-post-migration-legacy-path-removal.md) | Post-migration legacy path removal — delete dual-format code paths, `parseChoiceExplanations()`, the legacy schema union, and the remaining legacy-focused tests now that all 948 questions are new-format YAML | P2 | — |
 | [DEBT-342](./debt-342-idempotency-backward-compat-guard.md) | Idempotency backward-compat guard — replace `completedAt \|\| resultJson` OR-guard with simple `completedAt` check; zero legacy rows exist | P4 | — |
 
 **Next Debt ID:** DEBT-343
@@ -408,7 +408,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | ID | Title | Now | Reason |
 |----|-------|-----|--------|
 | DEBT-209 | Practice Session Starter Missing Question Counts Per Tag | [BS-015](../_archive/brainstorming/bs-015-practice-starter-available-count-display.md) | Problem is real but solution scope unclear — display only vs input constraint; needs design pass |
-| DEBT-207 | No Warning When Practice Session Has Fewer Questions Than Requested | [BS-014](../brainstorming/bs-014-practice-starter-question-count-ux.md) | Problem is real but proposed fix (post-creation toast) needs UX design work; related to DEBT-209 |
+| DEBT-207 | No Warning When Practice Session Has Fewer Questions Than Requested | [BS-014](../_archive/brainstorming/bs-014-practice-starter-question-count-ux.md) | Problem is real but proposed fix (post-creation toast) needs UX design work; related to DEBT-209 |
 
 ### Invalidated (False Positives)
 
