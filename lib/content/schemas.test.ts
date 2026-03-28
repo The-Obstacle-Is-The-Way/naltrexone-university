@@ -178,6 +178,27 @@ describe('QuestionFrontmatterSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('rejects whitespace-only explanation on a wrong choice', () => {
+    const result = QuestionFrontmatterSchema.safeParse({
+      ...baseQuestionFrontmatter,
+      choices: [
+        {
+          label: 'A',
+          text: 'Incorrect choice',
+          correct: false,
+          explanation: '   ',
+        },
+        {
+          label: 'B',
+          text: 'Correct choice',
+          correct: true,
+        },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it('accepts a wrong choice without explanation for legacy compatibility', () => {
     const result = QuestionFrontmatterSchema.safeParse({
       ...baseQuestionFrontmatter,

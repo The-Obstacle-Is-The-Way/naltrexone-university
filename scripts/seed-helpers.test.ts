@@ -651,4 +651,25 @@ describe('parseExplanationAndReference', () => {
     );
     expect(parsed.referenceMd).toBe('A concise AMA citation.');
   });
+
+  it('rejects additional section headings after the reference section begins', () => {
+    const explanationMd = [
+      'General rationale paragraph.',
+      '',
+      '### Reference',
+      '',
+      'A concise AMA citation.',
+      '',
+      '### Notes',
+      '',
+      'This should not be accepted.',
+    ].join('\n');
+
+    const message = getErrorMessage(() =>
+      parseExplanationAndReference(explanationMd),
+    );
+
+    expect(message).toContain('reference section must be terminal');
+    expect(message).toContain('### Notes');
+  });
 });

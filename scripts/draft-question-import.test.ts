@@ -539,6 +539,39 @@ describe('draft question import', () => {
     expect(() => parseDraftQuestionBlock(block)).toThrow(/explanation/i);
   });
 
+  it('rejects new-format frontmatter when a wrong choice explanation is whitespace-only', () => {
+    const block = [
+      '---',
+      'qid: demo-013b',
+      'type: recall',
+      'difficulty: easy',
+      'substances: [alcohol]',
+      'topics: [screening-diagnosis]',
+      'source: demo-source',
+      'choices:',
+      '  - label: A',
+      '    text: "Correct"',
+      '    correct: true',
+      '  - label: B',
+      '    text: "Incorrect"',
+      '    correct: false',
+      '    explanation: "   "',
+      '---',
+      '',
+      '## Question',
+      '',
+      'Question?',
+      '',
+      '## Explanation',
+      '',
+      'Because.',
+      '',
+      '---',
+    ].join('\n');
+
+    expect(() => parseDraftQuestionBlock(block)).toThrow(/explanation/i);
+  });
+
   it('parses new-format blocks without a ## Choices heading', () => {
     const block = [
       '---',

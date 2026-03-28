@@ -8,13 +8,19 @@ import {
 const CANONICAL_TOPIC_SLUG_SET = new Set<string>(CANONICAL_TOPIC_SLUGS);
 const CANONICAL_SUBSTANCE_SLUG_SET = new Set<string>(CANONICAL_SUBSTANCE_SLUGS);
 const CANONICAL_TREATMENT_SLUG_SET = new Set<string>(CANONICAL_TREATMENT_SLUGS);
+const ChoiceExplanationSchema = z
+  .string()
+  .min(1)
+  .refine((value) => value.trim().length > 0, {
+    message: 'explanation must not be blank',
+  });
 
 export const ChoiceFrontmatterSchema = z
   .object({
     label: z.string().regex(/^[A-E]$/, 'label must be A-E'),
     text: z.string().min(1),
     correct: z.boolean(),
-    explanation: z.string().min(1).optional(),
+    explanation: ChoiceExplanationSchema.optional(),
   })
   .strict();
 

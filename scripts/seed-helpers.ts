@@ -66,6 +66,15 @@ export function parseExplanationAndReference(explanationMd: string): {
     };
   }
 
+  const unexpectedHeadingAfterReference = lines
+    .slice(referenceHeadingIndex + 1)
+    .find((line) => SECTION_HEADING_PATTERN.test(line));
+  if (unexpectedHeadingAfterReference) {
+    throw new Error(
+      `reference section must be terminal; unexpected heading after ### Reference: '${unexpectedHeadingAfterReference}'`,
+    );
+  }
+
   const generalExplanation = canonicalizeMarkdown(
     lines.slice(0, referenceHeadingIndex).join('\n'),
   );

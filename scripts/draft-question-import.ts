@@ -19,6 +19,12 @@ const DraftTagSlugSchema = z
 const DraftSubstanceSlugSchema = z.enum(CANONICAL_SUBSTANCE_SLUGS);
 const DraftTopicSlugSchema = z.enum(CANONICAL_TOPIC_SLUGS);
 const DraftTreatmentSlugSchema = z.enum(CANONICAL_TREATMENT_SLUGS);
+const DraftExplanationSchema = z
+  .string()
+  .min(1)
+  .refine((value) => value.trim().length > 0, {
+    message: 'explanation must not be blank',
+  });
 
 const DraftFrontmatterBaseSchema = z.object({
   qid: z.string().min(1),
@@ -36,7 +42,7 @@ const DraftYamlChoiceSchema = z
     label: z.string().regex(/^[A-E]$/, 'label must be A-E'),
     text: z.string().min(1),
     correct: z.boolean(),
-    explanation: z.string().min(1).optional(),
+    explanation: DraftExplanationSchema.optional(),
   })
   .strict();
 
