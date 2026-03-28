@@ -6,10 +6,10 @@ Generate board-style questions for Addiction Psychiatry certification (NTX Unive
 
 Read these in order:
 
-1. `AGENTS.md` — quick-start for agent sessions
-2. `SCHEMA.md` — complete active authoring contract, taxonomy, validation rules, and canonical quality checklist
-3. `PLAN.md` — inventory/progress tracker when current status matters
-4. `NOTES.md` — optional reference for historical audits, DEBT-338 corruption files, or Prescriber's rewrite queue
+1. `AGENTS.md` - quick-start for agent sessions
+2. `SCHEMA.md` - complete active authoring contract, taxonomy, validation rules, and canonical quality checklist
+3. `PLAN.md` - inventory/progress tracker when current status matters
+4. `NOTES.md` - optional reference for historical audits, DEBT-338 corruption files, or Prescriber's rewrite queue
 
 If this file conflicts with `SCHEMA.md`, follow `SCHEMA.md`.
 
@@ -29,14 +29,14 @@ Prescriber's Guide exception: 4 recall questions per medication, no vignettes.
 
 ### Critical Rules
 
-1. Use the **current** draft format from `SCHEMA.md`, not the future Phase 2 YAML `choices[]` format.
-2. Keep `answer` in frontmatter; do not mark the correct choice in the body.
-3. Use canonical taxonomy slugs from `SCHEMA.md`.
-4. Test clinical application, not sample sizes, p-values, or publication trivia.
-5. Lead-ins must pass the cover-the-options test.
-6. `**Clinical pearl:**` must appear before `**Why other answers are wrong:**`.
-7. Use one wrong-answer bullet per wrong choice. No combined labels.
-8. Wrong-answer bullet bodies must stay plain paragraph text only.
+1. Use **Phase 2 format**: structured `choices[]` in YAML frontmatter. No `answer:` field, no `## Choices` section, no `**Why other answers are wrong:**` in the body.
+2. Mark exactly one choice `correct: true` (no `explanation`). All others `correct: false` with a double-quoted `explanation`.
+3. Always double-quote `text` and `explanation` values in YAML.
+4. Use canonical frontmatter key order: `qid, type, difficulty, substances, topics, treatments, diagnoses, source, choices`.
+5. Use canonical taxonomy slugs from `SCHEMA.md`.
+6. Test clinical application, not sample sizes, p-values, or publication trivia.
+7. Lead-ins must pass the cover-the-options test.
+8. Include a `**Clinical pearl:**` in the explanation (recommended for all new questions).
 9. End the explanation with `### Reference`.
 10. Run the **single canonical checklist in `SCHEMA.md`** before saving.
 
@@ -45,7 +45,7 @@ Prescriber's Guide exception: 4 recall questions per medication, no vignettes.
 ```text
 1. Read the source markdown
 2. Identify clinically relevant concepts
-3. Draft questions in the current SCHEMA.md format
+3. Draft questions in Phase 2 format (structured choices[] in YAML)
 4. Run the SCHEMA.md checklist
 5. Save to recall.md / vignettes.md (or recall.md only for Prescriber's Guide)
 6. Update PLAN.md if you advanced tracked progress

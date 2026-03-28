@@ -1,16 +1,16 @@
 # NTX University Question Bank Schema
 
-**Purpose:** Single source of truth for active question authoring in `content/drafts/questions/`.
+**Purpose:** Single source of truth for active question authoring in this repo's `questions/` tree, mirrored to `content/drafts/questions/` in the app repo.
 
-**Version:** 1.13
-**Last Updated:** March 25, 2026
+**Version:** 2.0
+**Last Updated:** March 28, 2026
 **Status:** Active consolidated spec
 
 **Read This With:**
-- `CLAUDE.md` or `AGENTS.md` — quick-start workflow for the agent you are using
-- `PLAN.md` — current inventory, integrity snapshot, and progress tracking
-- `NOTES.md` — historical audits, parser-corruption file list, Prescriber's rewrite queue, archival reference material
-- `docs/debt/debt-338-seed-parser-silent-wrong-answer-section-corruption.md` — parser hardening + Phase 2 roadmap
+- `CLAUDE.md` or `AGENTS.md` -- quick-start workflow for the agent you are using
+- `PLAN.md` -- current inventory, integrity snapshot, and progress tracking
+- `NOTES.md` -- historical audits, parser-corruption file list, Prescriber's rewrite queue, archival reference material
+- `docs/debt/debt-338-seed-parser-silent-wrong-answer-section-corruption.md` -- parser hardening + Phase 2 roadmap
 
 ---
 
@@ -18,6 +18,7 @@
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.0 | 2026-03-28 | Phase 2 is now the current authoring format. Structured `choices[]` YAML replaces `answer`, `## Choices`, and `**Why other answers are wrong:**`. Frontmatter key order canonicalized. Always double-quote `text` and `explanation` values. |
 | 1.13 | 2026-03-25 | Consolidated `QUESTION-FORMAT-SPEC.md`, `TAG-TAXONOMY.md`, and active `META.MD` guidance into one active authoring spec; this file now owns the current-format contract, taxonomy, pipeline behavior, validation rules, and canonical quality checklist. |
 | 1.12 | 2026-03-24 | Added an explicit parser-safety rule that wrong-answer bullet bodies must stay plain-paragraph text only (no nested lists/headings/other indentation-sensitive markdown). |
 | 1.11 | 2026-03-24 | Split wrong-answer explanation guidance into an explicit authoring rule plus runtime fallback note so the checklist no longer conflates content expectations with UI behavior. |
@@ -41,7 +42,7 @@
 3. Use `PLAN.md` only when you need current inventory/progress context.
 4. Use `NOTES.md` only when you need historical audit context, the 24-file parser-corruption list, or the Prescriber's rewrite queue.
 
-**Important:** This file documents the **current authoring format**. The future Phase 2 YAML `choices[].explanation` format is documented later as a target state only. Do not author new questions in that future format until DEBT-338 Phase 2 is explicitly implemented in both repos.
+**Important:** As of 2026-03-28 (DEBT-02 migration), Phase 2 structured `choices[]` YAML is the current authoring format. All 948 existing questions have been migrated. Author all new questions in this format.
 
 ---
 
@@ -89,9 +90,9 @@ This is a correction-note source folder. It intentionally has no generated quest
 
 ---
 
-## Current Authoring Contract
+## Current Authoring Contract (Phase 2)
 
-### Complete Current-Format Example
+### Complete Example
 
 ```markdown
 ---
@@ -103,7 +104,22 @@ topics: [screening-diagnosis]
 treatments: [naltrexone]
 diagnoses: [alcohol-use-disorder]
 source: white-2020
-answer: B
+choices:
+  - label: A
+    text: "2 or more points"
+    correct: false
+    explanation: "A score of >=2 is too sensitive, leading to excessive false positives in clinical practice and unnecessary follow-up."
+  - label: B
+    text: "3 or more points"
+    correct: true
+  - label: C
+    text: "4 or more points"
+    correct: false
+    explanation: "A score of >=4 is the male cutoff. Using it for women misses at-risk female drinkers who metabolize alcohol differently."
+  - label: D
+    text: "5 or more points"
+    correct: false
+    explanation: "A score of >=5 would miss the majority of at-risk drinkers regardless of sex."
 ---
 
 ## Question
@@ -114,13 +130,6 @@ wine "a few times a week." Her physician decides to administer the AUDIT-C.
 What is the recommended AUDIT-C cutoff score for identifying unhealthy
 alcohol use in women?
 
-## Choices
-
-- A) 2 or more points
-- B) 3 or more points
-- C) 4 or more points
-- D) 5 or more points
-
 ## Explanation
 
 The AUDIT-C uses sex-specific cutoffs: >=3 for women and >=4 for men.
@@ -129,14 +138,6 @@ doses due to lower body water content and reduced gastric ADH activity.
 
 **Clinical pearl:** The AUDIT-C is the most validated brief screening tool
 in primary care, taking under 1 minute to administer.
-
-**Why other answers are wrong:**
-- A) A score of >=2 is too sensitive, leading to excessive false positives
-  in clinical practice and unnecessary follow-up.
-- C) A score of >=4 is the male cutoff. Using it for women misses
-  at-risk female drinkers who metabolize alcohol differently.
-- D) A score of >=5 would miss the majority of at-risk drinkers
-  regardless of sex.
 
 ### Reference
 
@@ -157,7 +158,18 @@ explore changes in alcohol-related mortality in the United States, 1999 to
 | `substances` | string[] | At least one canonical substance slug | `[alcohol]` |
 | `topics` | string[] | At least one canonical topic slug | `[screening-diagnosis]` |
 | `source` | string | Non-empty source identifier | `white-2020` |
-| `answer` | enum | Correct answer letter: `A`, `B`, `C`, `D`, or `E` | `B` |
+| `choices` | object[] | 2-5 choice objects (see below) | see example |
+
+#### Choice Object Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `label` | enum | `A`, `B`, `C`, `D`, or `E` |
+| `text` | string | Choice text, always double-quoted |
+| `correct` | boolean | `true` for exactly one choice, `false` for all others |
+| `explanation` | string | Wrong-answer explanation, always double-quoted. Present on wrong choices only. Never on the correct choice. |
+
+**YAML quoting rule:** Always double-quote `text` and `explanation` values. No exceptions. The corpus contains colons, embedded quotes, and `#` characters that break unquoted YAML.
 
 #### Recommended Fields
 
@@ -170,12 +182,33 @@ explore changes in alcohol-related mortality in the United States, 1999 to
 
 **When to include `diagnoses`:** When the question tests a specific DSM-5 / ICD diagnosis. Diagnosis tags are stored in the database but are not exposed in the current practice filter UI.
 
+#### Canonical Frontmatter Key Order
+
+All frontmatter must use this key order:
+
+```yaml
+qid:
+type:
+difficulty:
+substances:
+topics:
+treatments:    # only if present
+diagnoses:     # only if present
+source:
+choices:
+```
+
+`qid` must always be the first key. The splitter depends on `---\nqid:` as the block delimiter.
+
 #### Strict Frontmatter Rules
 
 - The importer uses `DraftFrontmatterSchema.strict()`. Unknown YAML keys are rejected.
 - `treatments` and `diagnoses` default to `[]` when omitted.
 - `qid` and `source` must be non-empty strings.
-- During draft -> MDX conversion, `qid` is re-validated against the output `slug` regex, so non-kebab-case QIDs fail.
+- During draft to MDX conversion, `qid` is re-validated against the output `slug` regex, so non-kebab-case QIDs fail.
+- Exactly one choice must have `correct: true`.
+- A correct choice must NOT have an `explanation` field.
+- Every wrong choice must have a non-empty `explanation`.
 
 #### QID Policy
 
@@ -198,11 +231,12 @@ Rules:
 
 ### Markdown Body Contract
 
-The current draft body uses three required sections:
+The draft body uses two required sections:
 
 1. `## Question`
-2. `## Choices`
-3. `## Explanation`
+2. `## Explanation`
+
+There is no `## Choices` section. Choice data (text, correctness, and per-choice wrong-answer explanations) lives in the YAML `choices[]` frontmatter.
 
 #### Multi-Question File Rule
 
@@ -218,36 +252,17 @@ Rules:
 - Supports normal markdown.
 - Lead-in must end with a question mark.
 - Should pass the cover-the-options test.
-- Vignettes should follow clinical order: demographics -> history -> exam/findings -> studies/labs -> treatment context -> question.
-
-#### `## Choices`
-
-Use a bullet list with 2-5 options. Standard authoring target is 4 choices.
-
-```markdown
-## Choices
-
-- A) First choice text
-- B) Second choice text
-- C) Third choice text
-- D) Fourth choice text
-```
-
-Rules:
-- Labels must be uppercase `A`-`E`.
-- Valid delimiters are `)`, `.`, or `:`.
-- The correct answer is set only in YAML `answer`, not by marking a choice in the body.
-- Label sequence is strongly preferred even though the parser is not using sequence as the primary validity check.
-- All choices should be homogeneous and plausible.
-- Do not use "all of the above" or "none of the above".
+- Vignettes should follow clinical order: demographics, history, exam/findings, studies/labs, treatment context, question.
 
 #### `## Explanation`
 
-This section has three parts in strict order:
+This section has two or three parts:
 
 1. General explanation of why the correct answer is right
-2. `**Clinical pearl:**`
-3. `**Why other answers are wrong:**` with one bullet per wrong choice
+2. `**Clinical pearl:**` (recommended but optional; 100 existing questions lack one)
+3. `### Reference`
+
+Per-choice wrong-answer explanations are in the YAML `choices[].explanation` fields, not in the markdown body.
 
 ```markdown
 ## Explanation
@@ -257,32 +272,12 @@ or clinical reasoning.
 
 **Clinical pearl:** Practical takeaway for real-world patient care.
 
-**Why other answers are wrong:**
-- A) Explain the misconception or error in reasoning.
-- C) Teach why choice C is wrong.
-- D) Correct the clinical misunderstanding behind D.
-
 ### Reference
 
 AMA-format citation.
 ```
 
-#### Wrong-Answer Section Rules (Current Strict Contract)
-
-These rules reflect the current strict parser validation implemented under DEBT-338 Phase 1:
-
-- `**Clinical pearl:**` must appear **before** `**Why other answers are wrong:**`.
-- Use **exactly one bullet per wrong choice**. Never combine labels like `- A, B, D)`.
-- Every wrong-answer bullet must have a **non-blank body**.
-- Bullet labels must be `A`-`E` only.
-- Do not put any non-empty stray text before the first valid wrong-answer bullet.
-- Do not use numbered lists (`1.` / `1)`).
-- Do not put heading-style lines inside the wrong-answer subsection. The only allowed terminating heading is an exact `### Reference`.
-- Do not put any non-bullet text after the last bullet except blank lines and the terminal `### Reference` heading.
-- Bullet bodies must stay **plain paragraph text with optional inline emphasis only**. Do not use nested lists, numbered sublists, blockquotes, code blocks, or indentation-sensitive markdown inside a wrong-answer bullet.
-- Do **not** prefix the wrong-answer explanation with the choice text (full text or short label before a colon). Start directly with the reasoning.
-
-**Runtime behavior note:** If a wrong-answer explanation is missing or blank in the stored content, the UI omits only that choice's explanation and still renders the wrong-answer section for choices that have content. That runtime fallback does **not** relax the authoring standard; every wrong answer should still have a real explanation.
+**Do not include** `**Why other answers are wrong:**` or per-choice bullets in the body. That data belongs in the YAML frontmatter.
 
 #### `### Reference`
 
@@ -294,21 +289,17 @@ Rules:
 - Same `source` usually means the same citation text across all questions from that source.
 - For Prescriber's Guide questions, cite the textbook edition.
 
-### Answer Field and Choice Shuffling
+### Choice and Answer Handling
 
-`answer` in frontmatter is the sole source of truth for which authored choice is correct:
-
-```yaml
-answer: B
-```
+The correct answer is identified by `correct: true` on exactly one choice in the YAML `choices[]` array.
 
 Pipeline behavior:
-- Draft authoring keeps choices unmarked in `## Choices`.
-- During draft -> MDX conversion, the matching choice becomes `correct: true`.
-- In the database, choices store `is_correct: boolean`.
+- Draft authoring puts all choice data (label, text, correctness, wrong-answer explanations) in YAML frontmatter.
+- During draft to MDX conversion, `choices[]` is carried through directly.
+- In the database, choices store `is_correct: boolean` and `explanation_md`.
 - In the UI, choices are shuffled deterministically per `(userId, questionId)`.
 
-**Authoring implication:** Put the correct answer at whichever letter you specify in `answer`; the system handles the rest.
+**Authoring implication:** Mark exactly one choice as `correct: true`. All other choices get `correct: false` plus an `explanation`.
 
 ---
 
@@ -318,7 +309,7 @@ Pipeline behavior:
 
 ### Topic (13 values)
 
-Display order on the Practice page: **Topic -> Substance -> Treatment**
+Display order on the Practice page: **Topic, Substance, Treatment**
 
 | # | Slug | Display Name |
 |---|------|--------------|
@@ -379,11 +370,11 @@ No canonical list. Use kebab-case (for example `alcohol-use-disorder`, `opioid-u
 
 ### Migration Maps
 
-#### Exam Section -> Topic
+#### Exam Section to Topic
 
 | Old Exam Section | New Topic |
 |------------------|-----------|
-| Co-occurring & Medical Complications | Split: psychiatric comorbidity -> `co-occurring-disorders`, medical consequences -> `medical-complications` |
+| Co-occurring & Medical Complications | Split: psychiatric comorbidity maps to `co-occurring-disorders`, medical consequences map to `medical-complications` |
 | Epidemiology & Prevention | `epidemiology-prevention` |
 | Ethics, Legal & Policy | `ethics-legal` |
 | General | `general` |
@@ -392,7 +383,7 @@ No canonical list. Use kebab-case (for example `alcohol-use-disorder`, `opioid-u
 | Screening & Diagnosis | `screening-diagnosis` |
 | Treatment & Pharmacotherapy | `treatment-pharmacotherapy` |
 
-#### Old Topic -> New Topic
+#### Old Topic to New Topic
 
 | Old Topic Slug | New Topic Slug |
 |----------------|----------------|
@@ -414,13 +405,13 @@ No canonical list. Use kebab-case (for example `alcohol-use-disorder`, `opioid-u
 | `treatment` | `treatment-pharmacotherapy` |
 | `withdrawal` | `withdrawal-management` |
 
-#### Old Substance -> New Substance
+#### Old Substance to New Substance
 
 - All 10 prior published values carry over unchanged.
 - `inhalants` was added as a canonical value.
 - `caffeine` was dropped from the draft taxonomy because it is not a supported runtime filter value here.
 
-#### Old Treatment -> New Treatment
+#### Old Treatment to New Treatment
 
 | Old Treatment Slug | New Treatment Slug |
 |--------------------|--------------------|
@@ -439,7 +430,7 @@ These tags are expected to remain thin and should be treated as content-generati
 
 ### Runtime / UI Notes
 
-- The runtime filter UI intentionally shows **Topic -> Substance -> Treatment** only.
+- The runtime filter UI intentionally shows **Topic, Substance, Treatment** only.
 - `diagnosis` tags are stored in the database but intentionally hidden from the current practice filter UI.
 - "Leave empty to include all" behavior remains unchanged.
 
@@ -449,7 +440,7 @@ The canonical taxonomy migration is already implemented:
 
 - Content was migrated off legacy domain tags and non-canonical topic slugs.
 - Import and seed code enforce canonical topic / substance / treatment values.
-- Runtime filters already use Topic -> Substance -> Treatment.
+- Runtime filters already use Topic, Substance, Treatment.
 - Historical cleanup artifacts like the old domain-tag migration script are retired.
 
 ---
@@ -489,13 +480,13 @@ content/questions/imported/
 # Validate drafts without writing files
 pnpm content:import:drafts -- --dry-run
 
-# Import drafts -> MDX (draft status)
+# Import drafts to MDX (draft status)
 pnpm content:import:drafts
 
-# Import drafts -> MDX (published status)
+# Import drafts to MDX (published status)
 pnpm content:import:drafts -- --status published
 
-# Seed MDX -> database
+# Seed MDX to database
 pnpm db:seed
 
 # Include placeholders while seeding
@@ -505,14 +496,14 @@ SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed
 pnpm content:import:drafts -- --status published && pnpm db:seed
 ```
 
-There is currently **no separate dedicated question-validator script** in this repo. `pnpm content:import:drafts -- --dry-run` is the current structural validation path.
+This repo does include local helper scripts (for example [validate_questions.py](/Users/ray/Desktop/github/addiction-final-2026/scripts/validate_questions.py)), but `pnpm content:import:drafts -- --dry-run` in the app repo remains the canonical structural validation path.
 
 ### Tag / Answer Flow Summary
 
-- `answer: B` in draft frontmatter becomes `correct: true` on the matching MDX choice.
+- `choices[]` in draft frontmatter carries `correct: true/false` and `explanation` directly into the MDX output.
 - Draft tag slugs are expanded into `{ slug, name, kind }` objects during import.
 - The seed step validates canonical tag kinds/slugs and writes tags plus `question_tags` relations.
-- Per-choice explanations are currently extracted from markdown under `**Why other answers are wrong:**`.
+- Per-choice explanations are read from YAML `choices[].explanation` (no markdown parsing needed).
 
 ### Validation Rejection Table
 
@@ -529,28 +520,22 @@ Your draft will be rejected if any of these fail:
 | `qid` missing or empty | Import schema | `String must contain at least 1 character` |
 | `qid` not kebab-case | Output MDX schema | Regex failure on `slug` |
 | `source` missing or empty | Import schema | `String must contain at least 1 character` |
-| `answer` not `A`-`E` | Import schema | `Invalid enum value` |
 | `type` not `recall` / `vignette` | Import schema | `Invalid enum value` |
 | `difficulty` not `easy` / `medium` / `hard` | Import schema | `Invalid enum value` |
 | `diagnoses` contains non-kebab-case slug | Import schema | `tag slugs must be kebab-case` |
-| Missing required headings / bad heading order | Import parser | `Missing required heading` / `Invalid heading order` |
-| Fewer than 2 parsed choices | Import parser | `Choices parsing failed: expected at least 2 choices` |
-| No matching choice for `answer` | Output MDX schema | `choices must contain exactly 1 correct=true` |
+| Missing `choices` or fewer than 2 choices | Import schema | `Array must contain at least 2 element(s)` |
+| No choice with `correct: true` | Import schema | `choices must contain exactly 1 correct=true` |
+| Correct choice has `explanation` | Import schema | `correct choice must not have explanation` |
+| Wrong choice missing `explanation` | Import schema | `wrong choice must have explanation` |
 | Duplicate choice labels | Output MDX schema | `choice labels must be unique` |
 | More than 5 choices | Output MDX schema | `Array must contain at most 5 element(s)` |
+| Missing required headings / bad heading order | Import parser | `Missing required heading` / `Invalid heading order` |
 | Duplicate tag slugs in one question | Output MDX schema | `tag slugs must be unique` |
 | Missing topic or substance tags in MDX | Output MDX schema / seed validation | `at least one topic tag is required` / `at least one substance tag is required` |
 | `domain` tag kind present in MDX | Seed script | `... has domain tag ... which is not allowed` |
-| Wrong-answer explanation references unknown choice label | Seed script | `Explanation references choice label` |
-| Wrong-answer subsection violates DEBT-338 strict validation | Seed script | slugged fail-fast error pointing at the offending line |
+### Historical Seed Debt (Resolved)
 
-### Current Known Seed Debt
-
-DEBT-338 found **24 currently corrupted imported files**:
-- 23 clinical-pearl-after-bullets contaminations
-- 1 combined-label wrong-answer bullet
-
-The full file list and draft line numbers live in `NOTES.md`. Use that file for repair work in the external repo. Do not re-document the full list elsewhere.
+DEBT-338 found 24 corrupted imported files caused by regex parsing of wrong-answer sections. These were fixed in DEBT-01 and the regex parsing was eliminated by DEBT-02 (Phase 2 migration). The full historical file list lives in `NOTES.md`.
 
 ---
 
@@ -635,9 +620,8 @@ If a source paper matters, teach the **clinical implication**, not the paper's t
 Do not:
 - Say only "this is incorrect"
 - Say only "this overestimates / underestimates the value"
-- Restate the full choice text before the explanation
+- Restate the full choice text before the wrong-answer explanation
 - Write explanations shorter than the stem unless the concept is extremely simple
-- Put the clinical pearl after the wrong-answer bullets
 
 ### Difficulty Calibration
 
@@ -662,35 +646,44 @@ Even recall items should stay clinically meaningful and avoid raw fact regurgita
 
 Use this checklist before saving or transplanting question files:
 
-- [ ] Current format is being used (do **not** author Phase 2 structured `choices[]` yet)
-- [ ] Each question has the required frontmatter keys: `qid`, `type`, `difficulty`, `substances`, `topics`, `source`, `answer`
+**Frontmatter:**
+- [ ] Phase 2 format: structured `choices[]` in YAML (no `answer:`, no `## Choices`, no `**Why other answers are wrong:**`)
+- [ ] Frontmatter key order: `qid, type, difficulty, substances, topics, treatments, diagnoses, source, choices`
 - [ ] `qid` is globally unique and follows the source-based naming policy
 - [ ] `substances` and `topics` use canonical slugs and array syntax
 - [ ] `treatments` is included when a specific medication is discussed by name
 - [ ] `diagnoses`, if used, are kebab-case
 - [ ] File is named `recall.md` or `vignettes.md` so the importer will discover it
-- [ ] `## Question`, `## Choices`, and `## Explanation` are present
-- [ ] Lead-in ends with `?` and passes the cover-the-options test
+
+**Choices:**
+- [ ] Exactly one choice has `correct: true`, all others `correct: false`
+- [ ] Correct choice has NO `explanation` field
+- [ ] Every wrong choice has a non-empty `explanation`
+- [ ] `text` and `explanation` values are always double-quoted
+- [ ] Wrong-answer explanations do not prefix with any form of the choice text
 - [ ] Choices are homogeneous, plausible, and free of obvious length cues
 - [ ] No "all of the above" / "none of the above"
+
+**Body:**
+- [ ] `## Question` and `## Explanation` are present (no `## Choices`)
+- [ ] Lead-in ends with `?` and passes the cover-the-options test
 - [ ] Explanation teaches the concept, not just the answer key
-- [ ] `**Clinical pearl:**` appears before `**Why other answers are wrong:**`
-- [ ] There is exactly one wrong-answer bullet per wrong choice
-- [ ] Wrong-answer bullet bodies are plain paragraph text only
-- [ ] Wrong-answer explanations do not prefix with any form of the choice text
-- [ ] Every wrong answer has a non-blank explanation
-- [ ] Nothing appears between the last wrong-answer bullet and `### Reference` except blank lines
+- [ ] `**Clinical pearl:**` is present (recommended for all new questions)
 - [ ] `### Reference` is present at the end of the explanation with an AMA-format citation
+- [ ] No `**Why other answers are wrong:**` in the body (that data is in YAML)
+
+**General:**
 - [ ] Question tests clinical concepts, not study trivia/statistics
 - [ ] Prescriber's Guide questions have an explicit addiction-psychiatry hook
 - [ ] `pnpm content:import:drafts -- --dry-run` passes in the app repo
 
 ---
 
-## Unsupported / Future YAML Fields
+## Unsupported / Retired YAML Fields
 
-These keys are **not currently supported** by the importer and will be rejected if added now:
+These keys are **not supported** by the importer and will be rejected:
 
+- `answer` (retired in Phase 2; replaced by `choices[].correct`)
 - `evidence`
 - `certainty`
 - `citation`
@@ -700,65 +693,15 @@ Current citation source of truth remains the `### Reference` subsection in `## E
 
 ---
 
-## Phase 2 Target Format (DEBT-338 Future State)
+## Migration History
 
-**Status:** Target only. Do not author new questions in this format yet.
+### Phase 2 (DEBT-02, 2026-03-28)
 
-The long-term goal is to move per-choice explanations out of freeform markdown and into structured choice data.
+Migrated all 948 questions from legacy format to structured `choices[]` YAML. Changes:
+- `answer: B` replaced by `correct: true` on the matching choice
+- `## Choices` section removed from markdown body (choice data now in YAML)
+- `**Why other answers are wrong:**` section removed from markdown body (per-choice explanations now in YAML `explanation` fields)
+- Frontmatter key order canonicalized across all 170 files
+- All `text` and `explanation` values double-quoted
 
-### Future Target Example
-
-```markdown
----
-qid: white-2020-001
-type: recall
-difficulty: medium
-substances: [alcohol]
-topics: [screening-diagnosis]
-source: white-2020
-choices:
-  - label: A
-    text: 2 or more points
-    correct: false
-    explanation: A score of >=2 is too sensitive for the validated female cutoff.
-  - label: B
-    text: 3 or more points
-    correct: true
-  - label: C
-    text: 4 or more points
-    correct: false
-    explanation: A score of >=4 is the male cutoff and misses at-risk women.
-  - label: D
-    text: 5 or more points
-    correct: false
-    explanation: A score of >=5 misses too many at-risk drinkers.
----
-
-## Question
-
-A 52-year-old woman presents for a routine visit. She reports drinking
-wine "a few times a week." Her physician decides to administer the AUDIT-C.
-
-What is the recommended AUDIT-C cutoff score for identifying unhealthy
-alcohol use in women?
-
-## Explanation
-
-The AUDIT-C uses sex-specific cutoffs: >=3 for women and >=4 for men.
-
-**Clinical pearl:** The AUDIT-C is the most validated brief screening tool
-in primary care.
-
-### Reference
-
-White AM, Castle IP, Hingson RW, Powell PA. Using death certificates to
-explore changes in alcohol-related mortality in the United States, 1999 to
-2017. Alcohol Clin Exp Res. 2020;44(1):178-187.
-```
-
-Phase 2 implications:
-- `choices[]` becomes structured authoring data, not just imported MDX output.
-- `## Choices` and `**Why other answers are wrong:**` become unnecessary.
-- `parseChoiceExplanations()` can retire from per-choice parsing and keep only general explanation + reference extraction.
-
-Until that migration is implemented, author against the **current** contract documented above.
+The legacy format (with `answer`, `## Choices`, and wrong-answer bullets in the body) is no longer used. See `docs/debt/DEBT-02-phase2-yaml-frontmatter-migration.md` for the full spec.

@@ -81,8 +81,8 @@ Each medication needs individual review to decide per-question disposition (keep
 - QID uniqueness: 948 unique qids (no duplicates found)
 - All non-prescribers sources follow 6 recall + 6 vignette questions per source
 - Prescribers guide medications are recall-only by design: 36 medications x 4 recall questions (no vignettes)
-- Known exception: `content/drafts/questions/article-based-pathway/09-therapy/2024-cooperman-more-trial-correction/` is a correction notice folder (no questions by design)
-- Known exception: `content/drafts/questions/prescribers-guide/stahls-prescribers-guide.md` and `content/drafts/questions/prescribers-guide/stahls-chunked/` are full-book conversion sources (no questions by design)
+- Known exception: `questions/article-based-pathway/09-therapy/2024-cooperman-more-trial-correction/` is a correction notice folder (no questions by design)
+- Known exception: `questions/prescribers-guide/stahls-prescribers-guide.md` and `questions/prescribers-guide/stahls-chunked/` are full-book conversion sources (no questions by design)
 - Validator (current): `pnpm content:import:drafts -- --dry-run` from app repo root (structural import/schema checks)
 
 ---
@@ -669,8 +669,8 @@ What was the sample size and what percentage...?
 | Category | Count | Effort |
 |----------|-------|--------|
 | CUT (delete entirely) | 7 | Minimal |
-| Major rewrite (BRONZE → GOLD) | 15 | High (new vignettes, new concepts) |
-| Minor revision (SILVER → GOLD) | 34 | Medium (add vignettes, improve explanations) |
+| Major rewrite (BRONZE to GOLD) | 15 | High (new vignettes, new concepts) |
+| Minor revision (SILVER to GOLD) | 34 | Medium (add vignettes, improve explanations) |
 | Ready to ship (GOLD) | 88 | None |
 
 **Total effort:** 56 questions need revision (39% of bank)
@@ -827,7 +827,7 @@ All in `content/questions/imported/article-based-pathway/`.
 
 ### Pattern 2: Combined-Label Bullet (1 file)
 
-`palis-2022-002` uses `- A, B, D) While descriptive, these are not the specific term cited in the literature` to explain three wrong answers in one bullet. The parser regex cannot match combined labels — the entire line is silently dropped. All three choices show no wrong-answer explanation.
+`palis-2022-002` uses `- A, B, D) While descriptive, these are not the specific term cited in the literature` to explain three wrong answers in one bullet. The parser regex cannot match combined labels, so the entire line is silently dropped. All three choices show no wrong-answer explanation.
 
 **Fix:** Split into three individual bullets:
 
@@ -860,11 +860,11 @@ The combined-label `palis-2022-002` file above is also the only current case wit
 - Inline markdown inside a bullet body is preserved, but indentation-sensitive nested markdown is flattened because continuation lines are `trimStart()`ed
 - Windows line endings are normalized before parsing and are not part of the corruption problem
 
-### Required Actions
+### Historical Resolution
 
-1. **Content fixes (external `addiction-final-2026` repo):** Fix the 24 affected draft source files per the patterns above, then re-run `pnpm content:import:drafts` and `pnpm db:seed`
-2. **Parser hardening (this repo):** DEBT-338 Phase 1 — add strict validation so these patterns throw errors instead of silently corrupting data
-3. **Long-term (both repos):** DEBT-338 Phase 2 — move per-choice explanations into structured YAML choice data, then retire markdown parsing for per-choice feedback
+1. **Content fixes (external `addiction-final-2026` repo):** Completed in DEBT-01 for the 24 affected draft source files.
+2. **Parser hardening (app repo, DEBT-338 Phase 1):** Completed. These malformed patterns now fail fast instead of silently corrupting data.
+3. **Structured-choice migration (both repos, DEBT-02 / DEBT-338 Phase 2):** Completed on 2026-03-28. Per-choice explanations now live in YAML `choices[].explanation`, and markdown wrong-answer parsing is retired for current authoring.
 
 ---
 
