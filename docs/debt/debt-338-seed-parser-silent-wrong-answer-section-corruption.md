@@ -2,8 +2,8 @@
 
 **Priority:** P1
 **Created:** 2026-03-24
-**Updated:** 2026-03-28 (post-Phase-2 spec audit: cross-repo contract aligned, enforcement boundaries clarified)
-**Status:** Open — only Phase 2 (YAML frontmatter migration) remains; Phase 1 hardening, instruction-file consolidation, external repo sync, and 24-file content repair are complete
+**Updated:** 2026-03-28 (Phase 2 implemented and merged — PR #254)
+**Status:** Resolved — Phase 1 hardening, 24-file content repair, instruction-file consolidation, external repo sync, and Phase 2 YAML frontmatter migration are all complete. Post-migration legacy path cleanup tracked separately in [DEBT-341](./debt-341-post-migration-legacy-path-removal.md).
 **Source:** Codebase-wide audit after DEBT-335 / adjacent to [DEBT-336](./debt-336-content-markdown-quality-pass.md)
 **Scope:** legacy seed-parser hardening, content format alignment in external `addiction-final-2026` repo, and Phase 2 migration across draft schemas, draft import, MDX schemas, and seed parsing
 
@@ -21,7 +21,7 @@ That meant any non-bullet content inside the wrong-answer section was either sil
 
 **This was not hypothetical. Before the 2026-03-27 repair, it corrupted live data in the database.**
 
-Phase 1 fixed the silent-corruption behavior by failing fast, and the 24 malformed files were repaired and re-seeded. The remaining debt is architectural: per-choice explanations are still stored as prose that must be parsed out of markdown instead of being authored as structured data.
+Phase 1 fixed the silent-corruption behavior by failing fast, and the 24 malformed files were repaired and re-seeded. At that point, the remaining debt was architectural: per-choice explanations were still stored as prose that had to be parsed out of markdown instead of being authored as structured data. Phase 2 later resolved that by moving them into YAML frontmatter.
 
 ---
 
@@ -160,7 +160,7 @@ Error messages must include enough context (slug, line content) for content auth
 
 Well-formed partial coverage (some choices have explanations, some don't) remains valid per DEBT-336.
 
-**Phase 2 — Move Per-Choice Explanations to YAML Frontmatter (long-term)**
+**Phase 2 — Move Per-Choice Explanations to YAML Frontmatter (implemented 2026-03-28 in PR #254)**
 
 The root cause of DEBT-338 is architectural: per-choice explanations are **structured data** (keyed to a specific choice label) stored in **unstructured markdown** (freeform text parsed by regex). No amount of regex hardening or AST parsing eliminates this fundamental mismatch — you're always heuristically extracting structure from prose.
 
@@ -437,26 +437,21 @@ Phase 2 changes the question format in a major way. If we update 8 fragmented fi
 4. ~~**Fix 24 corrupted files** (external repo → re-import → re-seed)~~ — done (2026-03-27): all 24 files fixed, re-imported (`pnpm content:import:drafts -- --status published`), and re-seeded (`pnpm db:seed`) with zero errors. 948 questions pass strict validation. 24 updated in DB, 924 unchanged.
 5. **Phase 2** (both repos): Add `explanation` to YAML frontmatter, update consolidated docs, migrate content
 
-### Current State (2026-03-27)
+### Resolution Snapshot (2026-03-28)
 
 1. **Phase 1 is done.** The seed parser fails fast on malformed wrong-answer sections.
 2. **Instruction-file consolidation is done.** Reading path: `CLAUDE.md` + `SCHEMA.md`.
-3. **Content alignment is done.** All 24 corrupted files fixed in external repo, re-imported, re-seeded. The strict parser accepts all 948 questions.
-4. **The only remaining work is Phase 2:** Move per-choice explanations from markdown body into YAML frontmatter `explanation` field. This is a future structural change, not urgent.
+3. **Content alignment is done.** All 24 corrupted files were fixed in the external repo, re-imported, and re-seeded. The strict parser accepts all 948 questions.
+4. **Phase 2 is done.** Per-choice wrong-answer explanations now live in YAML frontmatter in both repos, and the markdown `**Why other answers are wrong:**` section is gone from the live corpus.
+5. **Only post-migration cleanup remains, and it is separate debt.** The legacy compatibility code paths that still exist for safety are tracked in [DEBT-341](./debt-341-post-migration-legacy-path-removal.md).
 
 ### What To Do Next
 
-Recommended next queue from the current state:
+DEBT-338 itself is resolved. The follow-up queue is:
 
-1. Finalize the Phase 2 contract in this doc and the consolidated authoring docs
-2. Implement app-repo pipeline changes first: MDX schema updates, reference splitting, dual-format draft import, and new-format seed parsing
-3. Add migration-path tests for legacy questions, new-format questions, and invalid hybrid questions
-4. Build and dry-run the external migration script against the legacy draft corpus
-5. Apply the external corpus migration from markdown wrong-answer bullets to structured YAML `choices[].explanation`
-6. Copy migrated drafts back into this repo, run `pnpm content:import:drafts -- --status published --dry-run`, then `pnpm content:import:drafts -- --status published` and `pnpm db:seed`
-7. Remove legacy markdown per-choice parsing only after the full corpus is migrated and verified
-
-**Everything except Phase 2 is complete.** Phase 2 is a future structural migration and is not urgent.
+1. Execute [DEBT-341](./debt-341-post-migration-legacy-path-removal.md) to remove the now-dead legacy parser / dual-format compatibility paths
+2. Run the full verification gate again after DEBT-341 cleanup (`pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build`)
+3. Keep unrelated cleanup separate (for example [DEBT-342](./debt-342-idempotency-backward-compat-guard.md))
 
 ---
 
@@ -491,20 +486,20 @@ Recommended next queue from the current state:
 
 **Design decisions (locked 2026-03-27):** (1) Change the authoring source too. (2) Post-migration markdown body keeps only prose. (3) Only wrong choices get `explanation`. (4) No hybrid questions. (5) `qid:` stays first unless the splitter is deliberately hardened.
 
-- [ ] Imported MDX `ChoiceFrontmatterSchema` accepts optional `explanation` and forbids it on `correct: true` choices
-- [ ] Draft-side schema supports both whole-question formats during migration: legacy (`answer` + `## Choices`) and new-format (`choices[]` in frontmatter, no `answer`, no `## Choices`)
-- [ ] New-format draft example is documented in `SCHEMA.md` and shows that migrated questions remove both `answer` and `## Choices`
-- [ ] `parseDraftQuestionBlock()` / `convertDraftQuestionToMdx()` support both whole-question formats during migration and reject invalid hybrid questions
-- [ ] `buildSeedRepFromParsed()` reads per-choice `explanation` from frontmatter for new-format questions and uses markdown parsing only for legacy questions
-- [ ] `buildSeedRepFromParsed()` rejects new-format questions whose wrong choices are missing `explanation`
-- [ ] General explanation and `referenceMd` still parse correctly for new-format questions even though `**Why other answers are wrong:**` is gone
-- [ ] `parseChoiceExplanations()` no longer handles per-choice data once all content is migrated — it only extracts general explanation + reference for legacy cleanup / final simplification
-- [ ] Import pipeline carries `explanation` through draft → MDX conversion for new-format questions
-- [ ] The draft splitter contract is explicit: either `qid:` remains first after `---` or `splitDraftQuestionsFile()` is hardened so richer frontmatter ordering cannot break imports
-- [ ] All 948+ question files migrated in external repo: per-choice explanations in YAML, `**Why other answers are wrong:**` section removed from markdown body
-- [ ] Post-migration markdown body contains only: general explanation, clinical pearl, `### Reference`
-- [ ] Migrated content is re-imported and `pnpm db:seed` succeeds against the full corpus
-- [ ] All existing tests pass; new tests cover legacy questions, new-format questions, invalid hybrid questions, YAML-sourced explanations, reference extraction without a wrong-answer heading, and the correct-choice-has-no-explanation validation
+- [x] Imported MDX `ChoiceFrontmatterSchema` accepts optional `explanation` and forbids it on `correct: true` choices
+- [x] Draft-side schema supports both whole-question formats during migration: legacy (`answer` + `## Choices`) and new-format (`choices[]` in frontmatter, no `answer`, no `## Choices`)
+- [x] New-format draft example is documented in `SCHEMA.md` and shows that migrated questions remove both `answer` and `## Choices`
+- [x] `parseDraftQuestionBlock()` / `convertDraftQuestionToMdx()` support both whole-question formats during migration and reject invalid hybrid questions
+- [x] `buildSeedRepFromParsed()` reads per-choice `explanation` from frontmatter for new-format questions and uses markdown parsing only for legacy questions
+- [x] `buildSeedRepFromParsed()` rejects new-format questions whose wrong choices are missing `explanation`
+- [x] General explanation and `referenceMd` still parse correctly for new-format questions even though `**Why other answers are wrong:**` is gone
+- [x] Legacy-path deletion was intentionally split out into [DEBT-341](./debt-341-post-migration-legacy-path-removal.md) instead of being bundled into DEBT-338 closure
+- [x] Import pipeline carries `explanation` through draft → MDX conversion for new-format questions
+- [x] The draft splitter contract is explicit: either `qid:` remains first after `---` or `splitDraftQuestionsFile()` is hardened so richer frontmatter ordering cannot break imports
+- [x] All 948+ question files migrated in external repo: per-choice explanations in YAML, `**Why other answers are wrong:**` section removed from markdown body
+- [x] Post-migration markdown body contains only: general explanation, clinical pearl, `### Reference`
+- [x] Migrated content is re-imported and `pnpm db:seed` succeeds against the full corpus
+- [x] All existing tests pass; new tests cover legacy questions, new-format questions, invalid hybrid questions, YAML-sourced explanations, reference extraction without a wrong-answer heading, and the correct-choice-has-no-explanation validation
 
 ### Debt Closure / Exit Condition
 
@@ -513,8 +508,8 @@ DEBT-338 should remain open until all of the following are true:
 - [x] The 24 known corrupted files are fixed in the external repo and re-imported here
 - [x] `pnpm db:seed` succeeds against the full imported corpus with Phase 1 validation enabled
 - [x] Instruction-file consolidation is complete in both repos
-- [ ] Per-choice explanations are stored in structured YAML authoring data and carried through import/seed
-- [ ] Markdown parsing is no longer required for per-choice wrong-answer explanations
+- [x] Per-choice explanations are stored in structured YAML authoring data and carried through import/seed
+- [x] Markdown parsing is no longer required for per-choice wrong-answer explanations in the live corpus; only cleanup of the dormant legacy path remains in [DEBT-341](./debt-341-post-migration-legacy-path-removal.md)
 
 ---
 

@@ -46,11 +46,7 @@ const DraftYamlChoiceSchema = z
   })
   .strict();
 
-const LegacyDraftFrontmatterSchema = DraftFrontmatterBaseSchema.extend({
-  answer: z.string().regex(/^[A-E]$/, 'answer must be A-E'),
-}).strict();
-
-const NewFormatDraftFrontmatterSchema = DraftFrontmatterBaseSchema.extend({
+const DraftFrontmatterSchema = DraftFrontmatterBaseSchema.extend({
   choices: z.array(DraftYamlChoiceSchema).min(2).max(5),
 })
   .strict()
@@ -92,11 +88,6 @@ const NewFormatDraftFrontmatterSchema = DraftFrontmatterBaseSchema.extend({
     }
   });
 
-const DraftFrontmatterSchema = z.union([
-  LegacyDraftFrontmatterSchema,
-  NewFormatDraftFrontmatterSchema,
-]);
-
 type DraftFrontmatter = z.infer<typeof DraftFrontmatterSchema>;
 
 export type DraftChoice = {
@@ -112,8 +103,6 @@ export type DraftQuestion = {
   explanationMd: string;
   choices: DraftChoice[];
 };
-
-type ParsedMarkdownChoice = Pick<DraftChoice, 'label' | 'text'>;
 
 export function splitDraftQuestionsFile(raw: string): string[] {
   const normalized = raw.replace(/\r\n?/g, '\n');
@@ -188,88 +177,34 @@ function extractAfterHeading(lines: string[], heading: string): string {
   return canonicalizeMarkdown(remainder.join('\n'));
 }
 
-function parseChoicesBlock(raw: string): ParsedMarkdownChoice[] {
-  const lines = raw.replace(/\r\n?/g, '\n').split('\n');
-
-  const choices: ParsedMarkdownChoice[] = [];
-  let current: ParsedMarkdownChoice | null = null;
-
-  for (const line of lines) {
-    const trimmed = line.trimEnd();
-    if (!trimmed.trim()) {
-      continue;
-    }
-
-    const startMatch = trimmed.match(/^-+\s*([A-E])[).:]\s*(.*)$/);
-    if (startMatch) {
-      const label = startMatch[1] as DraftChoice['label'];
-      const text = startMatch[2] ?? '';
-      current = { label, text: text.trim() };
-      choices.push(current);
-      continue;
-    }
-
-    if (current && /^\s+/.test(line)) {
-      current.text = `${current.text} ${trimmed.trim()}`.trim();
-    }
-  }
-
-  if (choices.length < 2) {
-    throw new Error('Choices parsing failed: expected at least 2 choices');
-  }
-
-  return choices;
-}
-
 export function parseDraftQuestionBlock(block: string): DraftQuestion {
   const { data, content } = matter(block);
   const frontmatter = DraftFrontmatterSchema.parse(data);
-  const isNewFormat = 'choices' in frontmatter;
 
   const normalized = content
     .replace(/\r\n?/g, '\n')
     .split('\n')
     .map((line) => line.replace(/[ \t]+$/g, ''));
 
-  const explanationMd = extractAfterHeading(normalized, '## Explanation');
-  let stemMd: string;
-  let choices: DraftChoice[];
-
-  if (isNewFormat) {
-    const hasChoicesHeading = normalized.some(
-      (line) => line.trim() === '## Choices',
-    );
-    if (hasChoicesHeading) {
-      throw new Error('New-format question must not have ## Choices heading');
-    }
-
-    stemMd = extractBetweenHeadings(
-      normalized,
-      ['## Question', '## Stem'],
-      '## Explanation',
-    );
-    choices = frontmatter.choices.map((choice) => ({
-      label: choice.label as DraftChoice['label'],
-      text: choice.text,
-      correct: choice.correct,
-      ...(choice.explanation ? { explanation: choice.explanation } : {}),
-    }));
-  } else {
-    stemMd = extractBetweenHeadings(
-      normalized,
-      ['## Question', '## Stem'],
-      '## Choices',
-    );
-    const rawChoicesBlock = extractBetweenHeadings(
-      normalized,
-      ['## Choices'],
-      '## Explanation',
-    );
-    choices = parseChoicesBlock(rawChoicesBlock).map((choice) => ({
-      ...choice,
-      correct: choice.label === frontmatter.answer,
-    }));
+  const hasChoicesHeading = normalized.some(
+    (line) => line.trim() === '## Choices',
+  );
+  if (hasChoicesHeading) {
+    throw new Error('New-format question must not include ## Choices heading');
   }
+
+  const explanationMd = extractAfterHeading(normalized, '## Explanation');
+  const stemMd = extractBetweenHeadings(
+    normalized,
+    ['## Question', '## Stem'],
+    '## Explanation',
+  );
+  const choices = frontmatter.choices.map((choice) => ({
+    label: choice.label as DraftChoice['label'],
+    text: choice.text,
+    correct: choice.correct,
+    ...(choice.explanation ? { explanation: choice.explanation } : {}),
+  }));
 
   return {
     frontmatter,
