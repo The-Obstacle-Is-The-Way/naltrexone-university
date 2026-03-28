@@ -4,7 +4,7 @@
 
 **Note:** One additional folder contains a correction notice (no questions): `09-therapy/2024-cooperman-more-trial-correction/`.
 
-**Last Updated:** March 25, 2026
+**Last Updated:** March 28, 2026
 
 **Status:**
 - Generation: 480/480 questions COMPLETE (all 40 papers)
@@ -35,8 +35,8 @@
 - All non-Prescriber's sources follow the 6 recall + 6 vignette structure
 - Prescriber's Guide medications are recall-only by design: 36 medication folders x 4 recall questions
 - Global QID uniqueness snapshot: 948 unique QIDs, no duplicates found
-- Known exception: `content/drafts/questions/article-based-pathway/09-therapy/2024-cooperman-more-trial-correction/` is a correction-note folder with no questions by design
-- Known exception: `content/drafts/questions/prescribers-guide/stahls-prescribers-guide.md` and `content/drafts/questions/prescribers-guide/stahls-chunked/` are source-only full-book conversion references
+- Known exception: `questions/article-based-pathway/09-therapy/2024-cooperman-more-trial-correction/` is a correction-note folder with no questions by design
+- Known exception: `questions/prescribers-guide/stahls-prescribers-guide.md` and `questions/prescribers-guide/stahls-chunked/` are source-only full-book conversion references
 
 ### Fast Checks
 
@@ -48,7 +48,7 @@ pnpm content:import:drafts -- --dry-run
 pnpm content:import:drafts -- --dry-run
 ```
 
-There is currently no separate dedicated question-validator script in this repo.
+This repo does include local helper scripts such as `validate_questions.py`, but `pnpm content:import:drafts -- --dry-run` in the app repo remains the canonical structural validation path.
 
 ---
 

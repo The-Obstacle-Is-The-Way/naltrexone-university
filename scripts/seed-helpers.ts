@@ -49,6 +49,52 @@ function createWrongAnswerValidationError(
   return new Error(`${description}: '${offendingLine}'`);
 }
 
+export function parseExplanationAndReference(explanationMd: string): {
+  generalExplanation: string;
+  referenceMd: string | null;
+} {
+  const normalized = explanationMd.replace(/\r\n?/g, '\n');
+  const lines = normalized.split('\n');
+  const referenceHeadingIndex = lines.findIndex((line) =>
+    REFERENCE_HEADING_PATTERN.test(line),
+  );
+
+  if (referenceHeadingIndex === -1) {
+    return {
+      generalExplanation: canonicalizeMarkdown(explanationMd),
+      referenceMd: null,
+    };
+  }
+
+  const unexpectedHeadingAfterReference = lines
+    .slice(referenceHeadingIndex + 1)
+    .find((line) => SECTION_HEADING_PATTERN.test(line));
+  if (unexpectedHeadingAfterReference) {
+    throw new Error(
+      `reference section must be terminal; unexpected heading after ### Reference: '${unexpectedHeadingAfterReference}'`,
+    );
+  }
+
+  const generalExplanation = canonicalizeMarkdown(
+    lines.slice(0, referenceHeadingIndex).join('\n'),
+  );
+  const referenceValue = canonicalizeMarkdown(
+    lines.slice(referenceHeadingIndex + 1).join('\n'),
+  );
+
+  return {
+    generalExplanation,
+    referenceMd: referenceValue.length > 0 ? referenceValue : null,
+  };
+}
+
+export function containsWrongAnswersHeading(explanationMd: string): boolean {
+  const normalized = explanationMd.replace(/\r\n?/g, '\n');
+  return normalized
+    .split('\n')
+    .some((line) => WRONG_ANSWERS_HEADING_PATTERN.test(line));
+}
+
 export function parseChoiceExplanations(explanationMd: string): {
   generalExplanation: string;
   perChoice: Map<string, string>;

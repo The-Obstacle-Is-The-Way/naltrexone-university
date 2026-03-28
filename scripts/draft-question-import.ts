@@ -19,26 +19,91 @@ const DraftTagSlugSchema = z
 const DraftSubstanceSlugSchema = z.enum(CANONICAL_SUBSTANCE_SLUGS);
 const DraftTopicSlugSchema = z.enum(CANONICAL_TOPIC_SLUGS);
 const DraftTreatmentSlugSchema = z.enum(CANONICAL_TREATMENT_SLUGS);
+const DraftExplanationSchema = z
+  .string()
+  .min(1)
+  .refine((value) => value.trim().length > 0, {
+    message: 'explanation must not be blank',
+  });
 
-const DraftFrontmatterSchema = z
+const DraftFrontmatterBaseSchema = z.object({
+  qid: z.string().min(1),
+  type: z.enum(['recall', 'vignette']),
+  difficulty: z.enum(['easy', 'medium', 'hard']),
+  substances: z.array(DraftSubstanceSlugSchema).min(1),
+  topics: z.array(DraftTopicSlugSchema).min(1),
+  treatments: z.array(DraftTreatmentSlugSchema).default([]),
+  diagnoses: z.array(DraftTagSlugSchema).default([]),
+  source: z.string().min(1),
+});
+
+const DraftYamlChoiceSchema = z
   .object({
-    qid: z.string().min(1),
-    type: z.enum(['recall', 'vignette']),
-    difficulty: z.enum(['easy', 'medium', 'hard']),
-    substances: z.array(DraftSubstanceSlugSchema).min(1),
-    topics: z.array(DraftTopicSlugSchema).min(1),
-    treatments: z.array(DraftTreatmentSlugSchema).default([]),
-    diagnoses: z.array(DraftTagSlugSchema).default([]),
-    source: z.string().min(1),
-    answer: z.string().regex(/^[A-E]$/, 'answer must be A-E'),
+    label: z.string().regex(/^[A-E]$/, 'label must be A-E'),
+    text: z.string().min(1),
+    correct: z.boolean(),
+    explanation: DraftExplanationSchema.optional(),
   })
   .strict();
+
+const LegacyDraftFrontmatterSchema = DraftFrontmatterBaseSchema.extend({
+  answer: z.string().regex(/^[A-E]$/, 'answer must be A-E'),
+}).strict();
+
+const NewFormatDraftFrontmatterSchema = DraftFrontmatterBaseSchema.extend({
+  choices: z.array(DraftYamlChoiceSchema).min(2).max(5),
+})
+  .strict()
+  .superRefine((val, ctx) => {
+    const correctCount = val.choices.filter((choice) => choice.correct).length;
+    if (correctCount !== 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'choices must contain exactly 1 correct=true',
+        path: ['choices'],
+      });
+    }
+
+    const labelSet = new Set(val.choices.map((choice) => choice.label));
+    if (labelSet.size !== val.choices.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'choice labels must be unique',
+        path: ['choices'],
+      });
+    }
+
+    for (const [index, choice] of val.choices.entries()) {
+      if (choice.correct && choice.explanation !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'correct choices must not include explanation',
+          path: ['choices', index, 'explanation'],
+        });
+      }
+
+      if (!choice.correct && choice.explanation === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'wrong choices must include explanation',
+          path: ['choices', index, 'explanation'],
+        });
+      }
+    }
+  });
+
+const DraftFrontmatterSchema = z.union([
+  LegacyDraftFrontmatterSchema,
+  NewFormatDraftFrontmatterSchema,
+]);
 
 type DraftFrontmatter = z.infer<typeof DraftFrontmatterSchema>;
 
 export type DraftChoice = {
   label: 'A' | 'B' | 'C' | 'D' | 'E';
   text: string;
+  correct: boolean;
+  explanation?: string;
 };
 
 export type DraftQuestion = {
@@ -47,6 +112,8 @@ export type DraftQuestion = {
   explanationMd: string;
   choices: DraftChoice[];
 };
+
+type ParsedMarkdownChoice = Pick<DraftChoice, 'label' | 'text'>;
 
 export function splitDraftQuestionsFile(raw: string): string[] {
   const normalized = raw.replace(/\r\n?/g, '\n');
@@ -121,11 +188,11 @@ function extractAfterHeading(lines: string[], heading: string): string {
   return canonicalizeMarkdown(remainder.join('\n'));
 }
 
-function parseChoicesBlock(raw: string): DraftChoice[] {
+function parseChoicesBlock(raw: string): ParsedMarkdownChoice[] {
   const lines = raw.replace(/\r\n?/g, '\n').split('\n');
 
-  const choices: DraftChoice[] = [];
-  let current: DraftChoice | null = null;
+  const choices: ParsedMarkdownChoice[] = [];
+  let current: ParsedMarkdownChoice | null = null;
 
   for (const line of lines) {
     const trimmed = line.trimEnd();
@@ -157,25 +224,52 @@ function parseChoicesBlock(raw: string): DraftChoice[] {
 export function parseDraftQuestionBlock(block: string): DraftQuestion {
   const { data, content } = matter(block);
   const frontmatter = DraftFrontmatterSchema.parse(data);
+  const isNewFormat = 'choices' in frontmatter;
 
   const normalized = content
     .replace(/\r\n?/g, '\n')
     .split('\n')
     .map((line) => line.replace(/[ \t]+$/g, ''));
 
-  const stemMd = extractBetweenHeadings(
-    normalized,
-    ['## Question', '## Stem'],
-    '## Choices',
-  );
-  const rawChoicesBlock = extractBetweenHeadings(
-    normalized,
-    ['## Choices'],
-    '## Explanation',
-  );
   const explanationMd = extractAfterHeading(normalized, '## Explanation');
+  let stemMd: string;
+  let choices: DraftChoice[];
 
-  const choices = parseChoicesBlock(rawChoicesBlock);
+  if (isNewFormat) {
+    const hasChoicesHeading = normalized.some(
+      (line) => line.trim() === '## Choices',
+    );
+    if (hasChoicesHeading) {
+      throw new Error('New-format question must not have ## Choices heading');
+    }
+
+    stemMd = extractBetweenHeadings(
+      normalized,
+      ['## Question', '## Stem'],
+      '## Explanation',
+    );
+    choices = frontmatter.choices.map((choice) => ({
+      label: choice.label as DraftChoice['label'],
+      text: choice.text,
+      correct: choice.correct,
+      ...(choice.explanation ? { explanation: choice.explanation } : {}),
+    }));
+  } else {
+    stemMd = extractBetweenHeadings(
+      normalized,
+      ['## Question', '## Stem'],
+      '## Choices',
+    );
+    const rawChoicesBlock = extractBetweenHeadings(
+      normalized,
+      ['## Choices'],
+      '## Explanation',
+    );
+    choices = parseChoicesBlock(rawChoicesBlock).map((choice) => ({
+      ...choice,
+      correct: choice.label === frontmatter.answer,
+    }));
+  }
 
   return {
     frontmatter,
@@ -246,7 +340,6 @@ export function convertDraftQuestionToMdx(input: {
     uniqueTags.set(`${tag.kind}:${tag.slug}`, tag);
   }
 
-  const answerLabel = draft.frontmatter.answer as DraftChoice['label'];
   const mdxFrontmatter = {
     slug: draft.frontmatter.qid,
     difficulty: draft.frontmatter.difficulty,
@@ -255,7 +348,8 @@ export function convertDraftQuestionToMdx(input: {
     choices: draft.choices.map((c) => ({
       label: c.label,
       text: c.text,
-      correct: c.label === answerLabel,
+      correct: c.correct,
+      ...(c.explanation ? { explanation: c.explanation } : {}),
     })),
   };
 
@@ -279,6 +373,9 @@ export function convertDraftQuestionToMdx(input: {
     lines.push(`  - label: ${yamlQuotedString(choice.label)}`);
     lines.push(`    text: ${yamlQuotedString(choice.text)}`);
     lines.push(`    correct: ${choice.correct ? 'true' : 'false'}`);
+    if (choice.explanation) {
+      lines.push(`    explanation: ${yamlQuotedString(choice.explanation)}`);
+    }
   }
 
   lines.push('---');

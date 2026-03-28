@@ -8,12 +8,19 @@ import {
 const CANONICAL_TOPIC_SLUG_SET = new Set<string>(CANONICAL_TOPIC_SLUGS);
 const CANONICAL_SUBSTANCE_SLUG_SET = new Set<string>(CANONICAL_SUBSTANCE_SLUGS);
 const CANONICAL_TREATMENT_SLUG_SET = new Set<string>(CANONICAL_TREATMENT_SLUGS);
+const ChoiceExplanationSchema = z
+  .string()
+  .min(1)
+  .refine((value) => value.trim().length > 0, {
+    message: 'explanation must not be blank',
+  });
 
 export const ChoiceFrontmatterSchema = z
   .object({
     label: z.string().regex(/^[A-E]$/, 'label must be A-E'),
     text: z.string().min(1),
     correct: z.boolean(),
+    explanation: ChoiceExplanationSchema.optional(),
   })
   .strict();
 
@@ -87,6 +94,16 @@ export const QuestionFrontmatterSchema = z
         message: 'choice labels must be unique',
         path: ['choices'],
       });
+    }
+
+    for (const [index, choice] of val.choices.entries()) {
+      if (choice.correct && choice.explanation !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'correct choices must not include explanation',
+          path: ['choices', index, 'explanation'],
+        });
+      }
     }
 
     const tagSlugSet = new Set(val.tags.map((t) => t.slug));

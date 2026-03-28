@@ -14,7 +14,11 @@ import {
   FullQuestionSchema,
   QuestionFrontmatterSchema,
 } from '../../lib/content/schemas';
-import { parseChoiceExplanations } from '../seed-helpers';
+import {
+  containsWrongAnswersHeading,
+  parseChoiceExplanations,
+  parseExplanationAndReference,
+} from '../seed-helpers';
 
 export type SeedTag = {
   slug: string;
@@ -44,16 +48,9 @@ export type SeedQuestionRep = {
 function buildSeedRepFromParsed(full: unknown): SeedQuestionRep {
   const parsed = FullQuestionSchema.parse(full);
   const slug = parsed.frontmatter.slug;
-
-  let parsedExplanations: ReturnType<typeof parseChoiceExplanations>;
-  try {
-    parsedExplanations = parseChoiceExplanations(parsed.explanationMd);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`${slug}: ${message}`);
-  }
-
-  const generalExplanation = parsedExplanations.generalExplanation;
+  const hasYamlExplanations = parsed.frontmatter.choices.some(
+    (choice) => choice.explanation !== undefined,
+  );
 
   const sortedTags = [...parsed.frontmatter.tags].sort((a, b) =>
     a.slug.localeCompare(b.slug),
@@ -61,13 +58,56 @@ function buildSeedRepFromParsed(full: unknown): SeedQuestionRep {
   const sortedChoices = [...parsed.frontmatter.choices].sort((a, b) =>
     a.label.localeCompare(b.label),
   );
-  const validLabels = new Set(sortedChoices.map((choice) => choice.label));
+  let generalExplanation: string;
+  let referenceMd: string | null;
+  let choiceExplanationLookup: ReadonlyMap<string, string> = new Map();
 
-  for (const label of parsedExplanations.perChoice.keys()) {
-    if (!validLabels.has(label)) {
+  if (hasYamlExplanations) {
+    if (containsWrongAnswersHeading(parsed.explanationMd)) {
       throw new Error(
-        `Explanation references choice label "${label}" that is not present in choices for slug "${parsed.frontmatter.slug}"`,
+        `${slug}: new-format question must not include **Why other answers are wrong:** markdown section`,
       );
+    }
+
+    const parsedExplanationBody = parseExplanationAndReference(
+      parsed.explanationMd,
+    );
+    generalExplanation = parsedExplanationBody.generalExplanation;
+    referenceMd = parsedExplanationBody.referenceMd;
+
+    for (const choice of sortedChoices) {
+      if (choice.correct && choice.explanation !== undefined) {
+        throw new Error(
+          `${slug}: new-format question must not include explanation for correct choice ${choice.label}`,
+        );
+      }
+
+      if (!choice.correct && choice.explanation === undefined) {
+        throw new Error(
+          `${slug}: new-format question has wrong choice ${choice.label} missing explanation`,
+        );
+      }
+    }
+  } else {
+    let parsedExplanations: ReturnType<typeof parseChoiceExplanations>;
+    try {
+      parsedExplanations = parseChoiceExplanations(parsed.explanationMd);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`${slug}: ${message}`);
+    }
+
+    generalExplanation = parsedExplanations.generalExplanation;
+    referenceMd = parsedExplanations.referenceMd;
+    choiceExplanationLookup = parsedExplanations.perChoice;
+
+    const validLabels = new Set(sortedChoices.map((choice) => choice.label));
+    for (const label of parsedExplanations.perChoice.keys()) {
+      if (!validLabels.has(label)) {
+        throw new Error(
+          `Explanation references choice label "${label}" that is not present in choices for slug "${parsed.frontmatter.slug}"`,
+        );
+      }
     }
   }
 
@@ -75,7 +115,7 @@ function buildSeedRepFromParsed(full: unknown): SeedQuestionRep {
     slug: parsed.frontmatter.slug,
     stem_md: canonicalizeMarkdown(parsed.stemMd),
     explanation_md: generalExplanation,
-    reference_md: parsedExplanations.referenceMd,
+    reference_md: referenceMd,
     difficulty: parsed.frontmatter.difficulty,
     status: parsed.frontmatter.status,
     tags: sortedTags.map((tag) => ({
@@ -87,7 +127,9 @@ function buildSeedRepFromParsed(full: unknown): SeedQuestionRep {
       label: choice.label,
       text_md: canonicalizeMarkdown(choice.text),
       is_correct: choice.correct,
-      explanation_md: parsedExplanations.perChoice.get(choice.label) ?? null,
+      explanation_md: hasYamlExplanations
+        ? (choice.explanation ?? null)
+        : (choiceExplanationLookup.get(choice.label) ?? null),
       sort_order: index + 1,
     })),
   };
