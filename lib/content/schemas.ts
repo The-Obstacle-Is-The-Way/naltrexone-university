@@ -14,6 +14,7 @@ export const ChoiceFrontmatterSchema = z
     label: z.string().regex(/^[A-E]$/, 'label must be A-E'),
     text: z.string().min(1),
     correct: z.boolean(),
+    explanation: z.string().min(1).optional(),
   })
   .strict();
 
@@ -87,6 +88,16 @@ export const QuestionFrontmatterSchema = z
         message: 'choice labels must be unique',
         path: ['choices'],
       });
+    }
+
+    for (const [index, choice] of val.choices.entries()) {
+      if (choice.correct && choice.explanation !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'correct choices must not include explanation',
+          path: ['choices', index, 'explanation'],
+        });
+      }
     }
 
     const tagSlugSet = new Set(val.tags.map((t) => t.slug));
