@@ -31,7 +31,9 @@ Clerk uses date-based API versioning. Specify via:
 | Field | Used In | Notes |
 |-------|---------|-------|
 | `id` | Auth gateway, user sync | Clerk user ID (`user_xxx`) |
-| `primaryEmailAddress.emailAddress` | User sync | Email for notifications |
+| `primaryEmailAddressId` | Auth gateway | Matched against `emailAddresses[].id` to find primary email |
+| `emailAddresses[]` | Auth gateway | Array of `{ id, emailAddress }` — fallback to `[0]` if no primary |
+| `updatedAt` / `updated_at` | Auth gateway | Used as `observedAt` for user upsert staleness tracking |
 | `publicMetadata` | Not used | Could store app-specific data |
 | `privateMetadata` | Not used | Server-only metadata |
 
@@ -39,8 +41,7 @@ Clerk uses date-based API versioning. Specify via:
 
 | Field | Used In | Notes |
 |-------|---------|-------|
-| `userId` | All auth checks | Current user ID |
-| `sessionClaims` | Auth gateway | Custom claims from JWT |
+| `userId` | All auth checks (via `auth()`) | Current user ID |
 
 ---
 
@@ -81,15 +82,12 @@ We generate CSP headers via **Clerk middleware**, not `next.config.ts`.
 
 In `proxy.ts`, we pass `contentSecurityPolicy` options to `clerkMiddleware()` so Clerk emits a Clerk + Stripe compatible CSP header, and we merge in app-specific directives (e.g., `base-uri`, `frame-ancestors`, `object-src`, expanded `img-src`).
 
-We currently run in **non-strict** mode (no per-request nonce) because our app wraps Clerk in a **client-only** provider (`components/providers.tsx` uses `next/dynamic` with `ssr: false`).
+We run in **strict report-only** mode (`{ strict: true, reportOnly: true }`) with per-request nonce plumbing:
+- `proxy.ts` sets `strict: true` + `reportOnly: true` in `clerkMiddleware()` CSP config
+- `app/layout.tsx` reads the nonce via `headers()` and passes it to `<Providers nonce={nonce}>`
+- Sentry CSP reporting is wired via `reportTo` when the endpoint is configured
 
-### Strict / Nonce Mode (Optional)
-
-Clerk supports a stricter mode (`contentSecurityPolicy: { strict: true }`) that adds a per-request nonce via the `X-Nonce` header.
-
-If enabling strict CSP in an App Router setup, Clerk requires using the App Router `ClerkProvider` with the `dynamic` prop so the server-generated nonce can flow to client components.
-
-If enabling strict CSP, ensure the app is compatible with nonce-based script loading and follow Clerk + Next.js CSP documentation closely before shipping.
+**Current posture:** Strict CSP is active but in **report-only** mode — violations are reported (to Sentry) but not blocked. See DEBT-332 for the decision on whether to move to enforcing mode.
 
 ### Server Components
 
@@ -104,15 +102,7 @@ export default async function Page() {
 
 ### Client Components
 
-```typescript
-'use client';
-import { useUser, useAuth } from '@clerk/nextjs';
-
-function Component() {
-  const { user } = useUser();
-  const { userId, isLoaded } = useAuth();
-}
-```
+We use Clerk's prebuilt components (`<SignIn />`, `<SignUp />`, `<UserButton />`) exclusively via dynamic imports with `ssr: false`. We do **not** use `useUser()`, `useAuth()`, or other Clerk client hooks directly.
 
 ---
 

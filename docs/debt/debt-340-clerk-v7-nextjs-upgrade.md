@@ -2,7 +2,7 @@
 
 **Priority:** P2
 **Created:** 2026-03-28
-**Status:** Spec complete, ready for implementation
+**Status:** Implemented — Clerk v7 upgrade + Next.js 16.2.1 bump complete
 
 ---
 
@@ -11,7 +11,7 @@
 Two dependency upgrades are pending:
 
 1. **`@clerk/nextjs` v6 → v7 (Core 3)** — Clerk's dashboard shows a "Client Trust Status" update requiring Core 3. The v6 package is one major version behind; staying on v6 blocks Clerk security features (Client Trust) and will accumulate drift over time.
-2. **`next` 16.1.6 → 16.2.x** — Minor version bump with no breaking changes; brings ~87% faster dev startup and ~25-60% faster SSR rendering.
+2. **`next` 16.1.6 → 16.2.1** — Minor version bump with no breaking changes; brings ~87% faster dev startup and ~25-60% faster SSR rendering.
 
 ## Investigation Summary
 
@@ -24,9 +24,11 @@ The CLI was run on branch `debt-340-clerk-v7-nextjs-upgrade` and performed:
 | Change | File | Detail |
 |--------|------|--------|
 | Package bump | `package.json` | `@clerk/nextjs` `^6.38.1` → `^7.0.7` |
-| Package swap | `package.json` | `@clerk/themes` removed, `@clerk/ui` `^1.2.4` added |
-| Theme import | `components/providers.tsx` | `from '@clerk/themes'` → `from "@clerk/ui/themes"` |
-| Lockfile | `pnpm-lock.yaml` | Regenerated (~3100 lines changed) |
+| Package swap | `package.json` | `@clerk/themes` removed, `@clerk/ui` `^1.2.4` added (larger transitive dep surface than `@clerk/themes` — lockfile churn reflects this) |
+| Theme import | `components/providers.tsx` | `from '@clerk/themes'` → `from '@clerk/ui/themes'` |
+| Dead code removal | `lib/auth.ts` | Removed unused `getAuth()` export and dead `auth` import |
+| Vendor docs | `docs/vendor-docs/clerk.md`, `index.md` | Version updated to ^7.0.7, reconciliation date to 2026-03-28 |
+| Lockfile | `pnpm-lock.yaml` | Regenerated (~3100 lines changed, partly due to `@clerk/ui` transitive deps) |
 
 **13 codemods ran — only 1 modified a file** (`transform-themes-to-ui-themes`). The other 12 found zero applicable code, confirming the codebase was already v7-pattern-compliant:
 
@@ -102,16 +104,7 @@ The `@clerk/upgrade` CLI already applied all changes on branch `debt-340-clerk-v
 3. **Local smoke test** — `pnpm dev`, sign in, navigate protected routes, verify Clerk components render correctly
 4. **If all green** — commit and open PR
 
-### Phase 2: Next.js 16.2.x (same PR or follow-up)
-
-1. **Bump Next.js:**
-   ```bash
-   pnpm update next
-   ```
-2. **Run the full pre-PR gate** (same as above)
-3. **No code changes expected** — 16.1 → 16.2 has zero breaking changes
-
-### Phase 3: Post-deploy (Clerk dashboard)
+### Phase 2: Post-deploy (Clerk dashboard)
 
 1. **Click "Update"** on the Client Trust Status feature in the Clerk production dashboard
 2. This enables automatic credential-stuffing protection for password sign-ins from new devices
@@ -135,7 +128,7 @@ If issues arise in production:
 | `@clerk/testing` incompatibility with v7 | Very Low | Medium | E2E tests in pre-PR gate will catch this |
 | Next.js 16.2 regression | Very Low | Low | No breaking changes; pre-PR gate covers it |
 
-**Overall risk: Low.** The codebase was already v7-pattern-compliant. The upgrade is essentially a version bump + one import path change.
+**Overall risk: Low.** The codebase was already v7-pattern-compliant. The source-level changes are minimal (one import path, one dead export removal), though the `@clerk/themes` → `@clerk/ui` swap brings a larger transitive dependency surface. All 2232 unit tests + 206 browser tests + production build pass.
 
 ---
 

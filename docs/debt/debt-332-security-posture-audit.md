@@ -153,7 +153,7 @@ What that means for this repo:
 
 One important Clerk-doc nuance: the prose requirement list is internally inconsistent with Clerk's documented **default configuration**, shipped source, and emitted runtime header. The prose says `script-src` should include the FAPI host and `https://challenges.cloudflare.com`, but Clerk's default-mode directive list, the current source, and the actual emitted header do **not** add those hosts to `script-src`. In practice, default mode relies on the broad `https:` / `http:` scheme sources instead.
 
-Cross-checking the installed `@clerk/nextjs` **6.38.1** runtime confirms the current automatic default includes a broad `script-src` containing `'unsafe-inline'`, `https:`, `http:`, Stripe JS hosts, and Google Maps. It also includes Clerk telemetry, `api.stripe.com`, Google Maps, and `images.clerkstage.dev` (a hardcoded staging domain — see gotcha #4 below) in `connect-src`. This is broader than our application needs. Runtime verification confirms that:
+Cross-checking the installed `@clerk/nextjs` **6.38.1** runtime *(historical baseline — upgraded to 7.0.7 in DEBT-340)* confirms the automatic default at that time included a broad `script-src` containing `'unsafe-inline'`, `https:`, `http:`, Stripe JS hosts, and Google Maps. It also includes Clerk telemetry, `api.stripe.com`, Google Maps, and `images.clerkstage.dev` (a hardcoded staging domain — see gotcha #4 below) in `connect-src`. This is broader than our application needs. Runtime verification confirms that:
 
 - `'unsafe-eval'` is present only in development (absent from both local prod build and deployed production)
 - the broader `https:` / `http:` script allowances remain in production
@@ -294,8 +294,8 @@ Decision (2026-03-21): Target Clerk strict mode. Accept dynamic-rendering tradeo
 - Sentry Security Policy Reporting (JavaScript): <https://docs.sentry.io/platforms/javascript/security-policy-reporting/>
 - Sentry client key API (DSN / security header endpoints): <https://docs.sentry.io/api/projects/retrieve-a-client-key/>
 - Next.js CSP guide (App Router): <https://nextjs.org/docs/app/guides/content-security-policy>
-- **Local runtime verification:** `curl -sSI` against `/`, `/pricing`, `/sign-in`, `/app/dashboard`, `/api/health`, and `/api/stripe/webhook` on 2026-03-21 under both `pnpm dev` and `pnpm start` with `@clerk/nextjs` 6.38.1
-- **Installed package cross-checks:** `@clerk/nextjs` 6.38.1 source/types and `next-themes` 0.4.6 source/types were inspected locally to verify `reportOnly`, `reportTo`, default CSP directives, and `nonce` support
+- **Local runtime verification:** `curl -sSI` against `/`, `/pricing`, `/sign-in`, `/app/dashboard`, `/api/health`, and `/api/stripe/webhook` on 2026-03-21 under both `pnpm dev` and `pnpm start` with `@clerk/nextjs` 6.38.1 *(historical baseline — upgraded to 7.0.7 in DEBT-340)*
+- **Installed package cross-checks:** `@clerk/nextjs` 6.38.1 source/types *(historical — now 7.0.7)* and `next-themes` 0.4.6 source/types were inspected locally to verify `reportOnly`, `reportTo`, default CSP directives, and `nonce` support
 - **Deployed production verification:** Chrome browser agent and direct `curl -sSI` captured response headers from `https://addictionboards.com/` and `https://addictionboards.com/pricing` on 2026-03-21 — confirmed they match the doc block exactly and match local prod build except for the Clerk FAPI host (`clerk.addictionboards.com`)
 
 ### Repo Files Relevant to This Audit
