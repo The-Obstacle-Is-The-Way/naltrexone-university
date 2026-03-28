@@ -79,6 +79,13 @@ export function parseExplanationAndReference(explanationMd: string): {
   };
 }
 
+export function containsWrongAnswersHeading(explanationMd: string): boolean {
+  const normalized = explanationMd.replace(/\r\n?/g, '\n');
+  return normalized
+    .split('\n')
+    .some((line) => WRONG_ANSWERS_HEADING_PATTERN.test(line));
+}
+
 export function parseChoiceExplanations(explanationMd: string): {
   generalExplanation: string;
   perChoice: Map<string, string>;
