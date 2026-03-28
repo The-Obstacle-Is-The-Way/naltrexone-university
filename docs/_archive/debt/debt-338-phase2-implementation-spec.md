@@ -3,7 +3,7 @@
 **Parent:** [DEBT-338](./debt-338-seed-parser-silent-wrong-answer-section-corruption.md)
 **Repo:** `naltrexone-university-3`
 **Created:** 2026-03-28
-**Status:** Implemented — merged in PR #254 (2026-03-28). Post-migration cleanup tracked in [DEBT-341](./debt-341-post-migration-legacy-path-removal.md).
+**Status:** Implemented — merged in PR #254 (2026-03-28). Post-migration cleanup tracked in [DEBT-341](../../debt/debt-341-post-migration-legacy-path-removal.md).
 
 ---
 
