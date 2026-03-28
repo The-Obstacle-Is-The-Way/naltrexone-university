@@ -681,4 +681,189 @@ describe('draft question import', () => {
       },
     ]);
   });
+
+  it('emits explanation only on wrong choices for new-format draft conversion', () => {
+    const block = [
+      '---',
+      'qid: demo-017',
+      'type: recall',
+      'difficulty: easy',
+      'substances: [alcohol]',
+      'topics: [screening-diagnosis]',
+      'source: demo-source',
+      'choices:',
+      '  - label: A',
+      '    text: "Wrong"',
+      '    correct: false',
+      '    explanation: "Because A is wrong."',
+      '  - label: B',
+      '    text: "Right"',
+      '    correct: true',
+      '---',
+      '',
+      '## Question',
+      '',
+      'What is the correct answer?',
+      '',
+      '## Explanation',
+      '',
+      'Because it is correct.',
+      '',
+      '---',
+    ].join('\n');
+
+    const draft = parseDraftQuestionBlock(block);
+    const mdx = convertDraftQuestionToMdx({
+      draft,
+      status: 'published',
+    });
+
+    const { data } = matter(mdx);
+    const frontmatter = QuestionFrontmatterSchema.parse(data);
+
+    expect(frontmatter.choices).toEqual([
+      {
+        label: 'A',
+        text: 'Wrong',
+        correct: false,
+        explanation: 'Because A is wrong.',
+      },
+      {
+        label: 'B',
+        text: 'Right',
+        correct: true,
+      },
+    ]);
+  });
+
+  it('does not emit explanation fields for legacy draft conversion', () => {
+    const block = [
+      '---',
+      'qid: demo-018',
+      'type: recall',
+      'difficulty: easy',
+      'substances: [alcohol]',
+      'topics: [screening-diagnosis]',
+      'source: demo-source',
+      'answer: B',
+      '---',
+      '',
+      '## Question',
+      '',
+      'What is the correct answer?',
+      '',
+      '## Choices',
+      '',
+      '- A) Wrong',
+      '- B) Right',
+      '',
+      '## Explanation',
+      '',
+      'Because it is correct.',
+      '',
+      '---',
+    ].join('\n');
+
+    const draft = parseDraftQuestionBlock(block);
+    const mdx = convertDraftQuestionToMdx({
+      draft,
+      status: 'published',
+    });
+
+    const { data } = matter(mdx);
+    const frontmatter = QuestionFrontmatterSchema.parse(data);
+
+    expect(frontmatter.choices).toEqual([
+      {
+        label: 'A',
+        text: 'Wrong',
+        correct: false,
+      },
+      {
+        label: 'B',
+        text: 'Right',
+        correct: true,
+      },
+    ]);
+  });
+
+  it('round-trips a new-format draft into schema-valid MDX frontmatter', () => {
+    const block = [
+      '---',
+      'qid: demo-019',
+      'type: recall',
+      'difficulty: medium',
+      'substances: [alcohol]',
+      'topics: [treatment-pharmacotherapy]',
+      'source: demo-source',
+      'choices:',
+      '  - label: A',
+      '    text: "Wrong"',
+      '    correct: false',
+      '    explanation: "Because A is wrong."',
+      '  - label: B',
+      '    text: "Right"',
+      '    correct: true',
+      '  - label: C',
+      '    text: "Also wrong"',
+      '    correct: false',
+      '    explanation: "Because C is wrong."',
+      '---',
+      '',
+      '## Question',
+      '',
+      'What is the correct answer?',
+      '',
+      '## Explanation',
+      '',
+      'Because it is correct.',
+      '',
+      '### Reference',
+      '',
+      'A concise citation.',
+      '',
+      '---',
+    ].join('\n');
+
+    const draft = parseDraftQuestionBlock(block);
+    const mdx = convertDraftQuestionToMdx({
+      draft,
+      status: 'draft',
+    });
+
+    const { data, content } = matter(mdx);
+    const frontmatter = QuestionFrontmatterSchema.parse(data);
+    const { stemMd, explanationMd } = parseMdxQuestionBody(content);
+
+    expect(frontmatter.choices).toEqual([
+      {
+        label: 'A',
+        text: 'Wrong',
+        correct: false,
+        explanation: 'Because A is wrong.',
+      },
+      {
+        label: 'B',
+        text: 'Right',
+        correct: true,
+      },
+      {
+        label: 'C',
+        text: 'Also wrong',
+        correct: false,
+        explanation: 'Because C is wrong.',
+      },
+    ]);
+    expect(stemMd).toBe('What is the correct answer?');
+    expect(explanationMd).toBe(
+      [
+        'Because it is correct.',
+        '',
+        '### Reference',
+        '',
+        'A concise citation.',
+      ].join('\n'),
+    );
+    FullQuestionSchema.parse({ frontmatter, stemMd, explanationMd });
+  });
 });

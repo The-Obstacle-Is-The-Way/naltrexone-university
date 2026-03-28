@@ -343,6 +343,7 @@ export function convertDraftQuestionToMdx(input: {
       label: c.label,
       text: c.text,
       correct: c.correct,
+      ...(c.explanation ? { explanation: c.explanation } : {}),
     })),
   };
 
@@ -366,6 +367,9 @@ export function convertDraftQuestionToMdx(input: {
     lines.push(`  - label: ${yamlQuotedString(choice.label)}`);
     lines.push(`    text: ${yamlQuotedString(choice.text)}`);
     lines.push(`    correct: ${choice.correct ? 'true' : 'false'}`);
+    if (choice.explanation) {
+      lines.push(`    explanation: ${yamlQuotedString(choice.explanation)}`);
+    }
   }
 
   lines.push('---');
