@@ -142,9 +142,7 @@ export async function withIdempotency<T>(input: {
       throw new ApplicationError(existing.error.code, existing.error.message);
     }
 
-    // Backward compatibility: legacy rows may predate completedAt and still
-    // have a non-null cached payload.
-    if (existing.completedAt !== null || existing.resultJson !== null) {
+    if (existing.completedAt !== null) {
       if (!input.parseResult) {
         return existing.resultJson as T;
       }
