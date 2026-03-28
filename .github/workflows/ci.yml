@@ -91,8 +91,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          violations="$(rg "test\.skip\(" tests/e2e/*.spec.ts -n \
-            | rg -v "test\.skip\(!hasClerkCredentials, 'Missing Clerk E2E credentials'\);" \
+          violations="$(grep -nH "test\.skip(" tests/e2e/*.spec.ts \
+            | grep -v "test\.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');" \
             || true)"
 
           if [ -n "$violations" ]; then

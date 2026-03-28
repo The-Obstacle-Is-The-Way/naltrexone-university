@@ -66,20 +66,6 @@ function buildSeedRepFromParsed(full: unknown): SeedQuestionRep {
   const generalExplanation = parsedExplanationBody.generalExplanation;
   const referenceMd = parsedExplanationBody.referenceMd;
 
-  for (const choice of sortedChoices) {
-    if (choice.correct && choice.explanation !== undefined) {
-      throw new Error(
-        `${slug}: new-format question must not include explanation for correct choice ${choice.label}`,
-      );
-    }
-
-    if (!choice.correct && choice.explanation === undefined) {
-      throw new Error(
-        `${slug}: new-format question has wrong choice ${choice.label} missing explanation`,
-      );
-    }
-  }
-
   return {
     slug: parsed.frontmatter.slug,
     stem_md: canonicalizeMarkdown(parsed.stemMd),

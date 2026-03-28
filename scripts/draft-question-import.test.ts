@@ -511,6 +511,26 @@ describe('draft question import', () => {
     ]);
   });
 
+  it('rejects new-format blocks that still include a ## Choices heading in the body', () => {
+    const block = buildDraftBlock({
+      qid: 'demo-014b',
+      choices: [
+        {
+          label: 'A',
+          text: 'Wrong',
+          correct: false,
+          explanation: 'Because A is wrong.',
+        },
+        { label: 'B', text: 'Right', correct: true },
+      ],
+      stem: 'What is the correct answer?',
+      explanation: 'Because it is correct.',
+      extraBodyLines: ['## Choices', '', '- A) Wrong', '- B) Right'],
+    });
+
+    expect(() => parseDraftQuestionBlock(block)).toThrow(/## Choices/i);
+  });
+
   it('rejects legacy blocks that still use answer frontmatter and markdown choices', () => {
     const block = [
       '---',

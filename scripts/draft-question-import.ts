@@ -186,6 +186,13 @@ export function parseDraftQuestionBlock(block: string): DraftQuestion {
     .split('\n')
     .map((line) => line.replace(/[ \t]+$/g, ''));
 
+  const hasChoicesHeading = normalized.some(
+    (line) => line.trim() === '## Choices',
+  );
+  if (hasChoicesHeading) {
+    throw new Error('New-format question must not include ## Choices heading');
+  }
+
   const explanationMd = extractAfterHeading(normalized, '## Explanation');
   const stemMd = extractBetweenHeadings(
     normalized,

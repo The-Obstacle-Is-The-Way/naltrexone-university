@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseSeedQuestionFile } from './seed/question-parser';
@@ -9,6 +9,17 @@ function readSeedFixture(fileName: string): string {
     path.join(process.cwd(), 'tests/fixtures/seed', fileName),
     'utf8',
   );
+}
+
+function readPlaceholderSeedFiles(): Array<{ fileName: string; raw: string }> {
+  const dir = path.join(process.cwd(), 'content/questions/placeholder');
+  return readdirSync(dir)
+    .filter((entry) => entry.endsWith('.mdx'))
+    .sort()
+    .map((fileName) => ({
+      fileName,
+      raw: readFileSync(path.join(dir, fileName), 'utf8'),
+    }));
 }
 
 describe('validateSeedQuestionTags', () => {
@@ -319,5 +330,14 @@ describe('parseSeedQuestionFile', () => {
     const parsed = parseSeedQuestionFile(raw);
 
     expect(parsed.reference_md).toBeNull();
+  });
+
+  it('parses all tracked placeholder seed files with the Phase 2 schema', () => {
+    const placeholders = readPlaceholderSeedFiles();
+
+    expect(placeholders.length).toBeGreaterThan(0);
+    for (const placeholder of placeholders) {
+      expect(() => parseSeedQuestionFile(placeholder.raw)).not.toThrow();
+    }
   });
 });
