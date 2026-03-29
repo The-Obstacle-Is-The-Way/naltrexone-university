@@ -3,31 +3,39 @@
 **Date:** 2026-03-05
 **Triggered by:** Visual review of DEBT-279 dark mode after `dark:border-foreground/40` was applied uniformly to all surfaces — dashboard, choice buttons, session rows, bookmark cards, etc. The result is technically WCAG compliant but aesthetically heavy: "boxes inside boxes."
 **Scope:** Explore whether dark-mode borders should be tiered by element role (interactive vs. container vs. structural) instead of applied uniformly.
-**Related:** [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md), [BS-042](../_archive/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md), [BS-043](../_archive/brainstorming/bs-043-question-flow-typography-and-feedback-visual-unification.md), [Pattern Registry](../frontend/pattern-registry.md), [Contrast Policy](../frontend/contrast-policy.md)
+**Related:** [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md), [BS-042](../_archive/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md), [BS-043](../_archive/brainstorming/bs-043-question-flow-typography-and-feedback-visual-unification.md), [Pattern Registry](../frontend/pattern-registry.md), [Contrast Policy](../frontend/contrast-policy.md), [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md), [DEBT-307](../_archive/debt/debt-307-bookmarks-row-visual-unification.md), [DEBT-313](../_archive/debt/debt-313-choice-button-dark-surface-and-badge-visibility.md)
 
-**Status:** Active — partially implemented through narrower follow-ups (`DEBT-280`, `DEBT-301`, `DEBT-302`), but the broader cross-surface tiering question remains unresolved and is not archiveable yet.
+**Status:** Active — still not archiveable, but no longer a repo-wide "everything has the same bright dark border" problem. Later follow-ups resolved major slices of the original complaint (`DEBT-280`, `DEBT-289`, `DEBT-301`, `DEBT-302`, `DEBT-307`, `DEBT-312/313/314`). The remaining open question is narrower: which read-only containers and subordinate inner separators, if any, still deserve a softer dark-mode treatment.
 
 ---
 
 ## The Problem
 
-DEBT-279 correctly identified that dark-mode borders at `border-border/60` (~1.1:1 contrast) were invisible and failed WCAG SC 1.4.11. The fix applied `dark:border-foreground/40` (~3.5:1) broadly across the application. Every card, row, button, input, filter chip, session entry, and container now has a visible white-ish border in dark mode.
+DEBT-279 correctly identified that dark-mode borders at `border-border/60` (~1.1:1 contrast) were invisible and failed WCAG SC 1.4.11. The initial remediation applied `dark:border-foreground/40` (~3.5:1) broadly across the application.
 
-The result is compliant but visually heavy. The subtle, floating dark-mode aesthetic is replaced by a grid of outlined rectangles. Key observations from the current state:
+That "uniform bright dark border everywhere" picture is no longer fully current. Since this doc was created, later PRs have already peeled that treatment back across multiple slices:
 
-### What looks too heavy
+- **Choice buttons / shared tab switch container**: `DEBT-280` (PR #175), later refined by `DEBT-312/313/314` (PR #216)
+- **Dashboard nested rows and badge pills**: `DEBT-289` (PR #185)
+- **History rows and breakdown separators**: `DEBT-301` (PR #197) and `DEBT-302` (PR #198)
+- **Bookmarks rows**: `DEBT-307` (PR #206)
+- **Practice filter containers**: `DEBT-290` and related chip follow-ups (`DEBT-291`, `DEBT-294`, `DEBT-295`, `DEBT-309`)
 
-- **Dashboard stat cards**: Read-only info panels with bright borders. The content (large numbers, labels) already defines the card visually.
-- **Session rows (history page)**: Each row is a fully-bordered rectangle, creating a wall of cages. A subtle divider or spacing would communicate separation without the visual weight.
-- **Bookmark cards**: Content-dense cards that speak for themselves — the border adds noise.
-- **Boxes-inside-boxes effect**: Dashboard has bordered cards inside a bordered content area. The nesting of borders compounds the visual heaviness.
+So the current question is no longer "should everything be tiered?" It is "which remaining containers and subordinate borders are still too heavy, now that many formerly-problematic rows and controls have already been settled?"
+
+Key observations from the current state:
+
+### What still plausibly looks too heavy
+
+- **Dashboard stat cards / summary cards**: Read-only info panels still use the default bordered `Card` shell. The content already defines the panel strongly.
+- **Feedback inner cards**: Wrong-answer explanation cards and the Reference separator still use stronger dark borders inside an already bordered question-feedback surface.
+- **Certain subordinate borders**: Toast/info shells and other non-primary container strokes may still read louder than necessary.
 
 ### What looks appropriate
 
-- **Choice buttons**: Interactive elements where the border communicates the clickable area. These genuinely need visible boundaries.
-- **Tab switches / filter chips**: Interactive controls that need delineation.
-- **Action buttons**: Interactive, need clear boundaries.
-- **Selected state differentiation**: The stepped fills (8/15/20) work well for conveying state hierarchy.
+- **Choice buttons**: Interactive elements where the border communicates the clickable area. These need a required boundary.
+- **Filter chips / inputs / selects / outline buttons**: Interactive controls where the border still carries a WCAG-relevant role.
+- **Decorative vs required-boundary split in policy**: `contrast-policy.md` and `pattern-registry.md` now explicitly classify some borders as decorative and others as required, which means part of the original thesis has already been adopted.
 
 ### The light-mode screenshot observation
 
@@ -138,60 +146,52 @@ This creates a very faint outline glow without a hard border edge. Many premium 
 
 ---
 
-## Affected Surfaces (Inventory — Needs Rigorous Per-Element Review)
+## Resolved Since Creation
 
-This is a preliminary list. Each item needs individual scrutiny across all views before deciding on treatment:
+These surfaces were part of the original complaint, but no longer belong in the active unresolved inventory:
+
+- **History rows**: now tonal-fill, not bordered cards (`DEBT-301`, `DEBT-302`)
+- **Bookmark rows/cards**: now tonal-fill rows with a separate Remove control (`DEBT-307`)
+- **Dashboard nested rows / badge pills**: now borderless tonal fill and fill-only pills (`DEBT-289`)
+- **Choice-button rest-state heaviness**: resolved, then further refined (`DEBT-280`, `DEBT-312`, `DEBT-313`)
+- **Shared tab-switch container border**: explicitly classified as decorative and reverted from the stronger dark override (`DEBT-280`)
+
+## Remaining Open Inventory
+
+These are the surfaces that still justify keeping this doc active:
 
 ### Dashboard (`app/(app)/app/dashboard/page.tsx`)
 - 4 stat cards (Total answered, Overall accuracy, etc.)
 - Current streak card
 - Ready to practice CTA card
-- Recent sessions section with session rows
-- Recent activity section with question items
 
-### History (`app/(app)/app/history/components/history-sessions-tab.tsx`)
-- Session rows (each fully bordered)
-- Tab switch (Sessions/Questions)
-- Filter chips (All/Tutor/Exam)
-- "View breakdown" buttons within rows
+### Question flow (`components/question/feedback.tsx`)
+- Wrong-answer explanation cards
+- Reference top divider
 
-### Bookmarks (`app/(app)/app/bookmarks/page.tsx`)
-- Bookmark cards with Review/Remove buttons
+### Shared primitives / shared surfaces (`components/ui/`)
+- Notification provider toast shells
+- Any future read-only or decorative inner containers that currently inherit a stronger dark border by default
 
-### Practice (`app/(app)/app/practice/components/practice-session-starter.tsx`)
-- Tag filter rows
-- Session configuration card
-
-### Question flow (`components/question/`)
-- Choice buttons (interactive — keep strong)
-- Feedback cards (semantic borders — keep as-is)
-- Outer question card (structural — keep)
-
-### Shared primitives (`components/ui/`)
-- Button (outline variant)
-- Input
-- Select
-- Filter chip
-- Tab switch styles
-- Notification provider (toast borders)
+### Deliberately settled, not currently open
+- Choice buttons
+- Filter chips
+- Inputs
+- Selects
+- Outline buttons
+- Tab switch container
 
 ---
 
 ## Open Questions
 
-1. **Is the tiering model the right framing?** Or should we think about this differently — e.g., "primary surface" vs. "secondary surface" vs. "interactive control"?
+1. **Should read-only dashboard cards keep the default bordered `Card` shell in dark mode?** Or should they adopt a softer container treatment while preserving the structural outer edge elsewhere?
 
-2. **How much WCAG SC 1.4.11 flexibility do we actually have?** The "required to identify" clause gives wiggle room, but we should document our interpretation explicitly in contrast-policy.md if we adopt selective compliance.
+2. **Are feedback inner cards and reference dividers truly required boundaries?** Or are they subordinate content separators that could be demoted now that the parent feedback surface already provides containment?
 
-3. **Should we just get used to it?** Genuine question. The current state IS compliant and functional. The aesthetic concern is real but subjective. Sometimes "good enough" is the right call when there are higher-priority items.
+3. **Do we need a dedicated softer dark container token?** Or is this better handled as a small number of surface-specific decisions rather than a new global token tier?
 
-4. **One element at a time or systematic?** This could be tackled as a systematic token-tier refactor, or as a surface-by-surface evaluation. The latter is more work but might yield better results since each surface has different needs.
-
-5. **Does this interact with BS-043 (typography unification)?** If we're going to touch the question flow for typography, should the border refinement happen in the same pass?
-
-6. **What about the selected-state gray concern?** The light-mode screenshot shows that the selected choice button (gray highlight) doesn't strongly differentiate from unselected in light mode. Is this related, or a separate issue?
-
-7. **Is `dark:bg-foreground/8` on choice buttons redundant now that borders are visible?** With `dark:border-foreground/40` clearly delineating each button, the subtle gray fill (`dark:bg-foreground/8`) may be adding visual noise rather than value. The fill was part of the stepped hierarchy (8% rest → 15% hover → 20% selected), but if borders already communicate the button boundary, the resting fill might be unnecessary — removing it would let the buttons sit flush against the card background, with the fill only appearing on hover/select as progressive disclosure. Needs visual comparison.
+4. **Is the remaining aesthetic concern worth the churn?** The big "boxes inside boxes" regressions are mostly gone. The remaining candidates are lower-severity polish, not broad compliance fallout.
 
 ---
 
@@ -203,3 +203,4 @@ This is a preliminary list. Each item needs individual scrutiny across all views
 | 2026-03-05 | Marked as open for debate | Requires rigorous element-by-element review across all views. No changes to code until the approach is validated visually. |
 | 2026-03-11 | Kept active after audit | The History and choice-button slices were extracted and resolved via narrower follow-ups (`DEBT-280`, `DEBT-301`, `DEBT-302`), but the broader app-wide tiering question still remains across surfaces like bookmarks, feedback cards, inputs/selects, and other dark-mode containers. |
 | 2026-03-13 | Chrome visual audit flagged FilterChip dark rest border parity | `dark:border-foreground/40` is 5% weaker than light `border-foreground/45`, compounding the dark-mode hover problem. Relevant to T1 interactive tier — if rest borders are ever revisited, consider aligning dark to 45% to match light. Noted via [BS-050](../_archive/brainstorming/bs-050-practice-chip-hover-affordance.md) visual audit. |
+| 2026-03-29 | Refreshed scope after implementation inventory | Major parts of the original concern were already consumed by later PRs (dashboard rows, History, bookmarks rows, choice-button refinements, tab-switch policy). This doc remains active, but now tracks the narrower residual question around read-only cards and subordinate inner borders rather than the earlier broad app-wide inventory. |

@@ -1,15 +1,19 @@
-# BS-059: Practice Session Action Bar — Button Arrangement and Grouping
+# BS-059: Session Review Question Page Action Bar — Button Arrangement and Grouping
 
 **Date:** 2026-03-21
-**Triggered by:** DEBT-330 investigation revealed the same bookmark-between-nav-controls problem exists on the practice session surface (`question-page-client.tsx:371-470`), but with more buttons and more state combinations making it harder to reason about in isolation.
-**Scope:** Audit the practice session action bar's button arrangement across all states (pre-submit, post-submit, review mode, session nav present/absent) and determine if the button grouping needs the same kind of fix as DEBT-330 (post-exam review surface).
+**Triggered by:** DEBT-330 investigation revealed the same bookmark-between-nav-controls problem exists on the question review / session review bottom action bar (`question-page-client.tsx:371-470`), but with more buttons and more state combinations making it harder to reason about in isolation.
+**Scope:** Audit the question review / session review bottom action bar's arrangement across all states (pre-submit, post-submit, review mode, session nav present/absent) and determine if the button grouping needs the same kind of fix as DEBT-330 (post-exam review surface).
 **Related:** [DEBT-330 (resolved)](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md), [BS-052](./bs-052-bookmark-icon-toggle-replacement.md), [BS-019 (archived)](../_archive/brainstorming/bs-019-action-bar-label-and-ordering-consistency.md)
+
+**Status:** Active — still unresolved on `question-page-client.tsx`. Post-exam review was fixed by DEBT-330 (PR #241), and the active tutor practice bar already renders `Previous / Next / Bookmark` after feedback, but the question review / session review surface still keeps bookmark between reattempt/previous controls and next/back controls.
 
 ---
 
 ## The Problem
 
-The practice session action bar at `question-page-client.tsx:371-470` renders up to 6 different buttons depending on state. The combinations are:
+The bottom action bar at `question-page-client.tsx:371-470` renders up to 6 different buttons depending on state. This is the review/question page surface reached from History, Bookmarks, Dashboard, Summary, or session navigation. The active tutor practice surface is related context, but not the current unresolved layout problem.
+
+The combinations are:
 
 ### Button inventory
 
@@ -72,6 +76,11 @@ DEBT-330 is narrowly scoped: the post-exam review action bar has exactly 3 butto
 
 This surface has 6 possible buttons across multiple states. The fix isn't just "move Bookmark" — it's potentially rethinking how buttons are grouped across the entire bar. That's a design exploration, not a debt paydown.
 
+### What is already resolved elsewhere
+
+- **Post-exam review**: DEBT-330 shipped navigation-first ordering with trailing Bookmark (PR #241)
+- **Active tutor practice bar**: the live `PracticeView` action bar already renders `Previous / Next / Bookmark` after feedback instead of sandwiching bookmark between the nav controls
+
 ## Severity Assessment
 
 **Low-medium.** The bar works. Users can find and press all the buttons. The confusion is subtle:
@@ -106,3 +115,4 @@ This is polish, not broken functionality.
 | 2026-03-21 | Created BS-059 | DEBT-330 investigation surfaced that the practice session action bar has the same bookmark placement issue plus additional complexity from more buttons and state combinations. Needs its own exploration separate from the narrowly-scoped DEBT-330 fix. |
 | 2026-03-21 | Not blocking DEBT-330 | The post-exam review fix can land independently. This doc captures the broader question for future work. |
 | 2026-03-21 | DEBT-330 resolved independently | Post-exam review now ships navigation-first ordering with trailing Bookmark, so this doc now represents a follow-up consistency exploration rather than a dependency blocker. |
+| 2026-03-29 | Tightened scope to the live unresolved surface | The active tutor practice bar is no longer the primary issue. The still-open layout problem is the question review / session review bottom action bar in `question-page-client.tsx`, which continues to render bookmark between reattempt/previous controls and next/back controls. |

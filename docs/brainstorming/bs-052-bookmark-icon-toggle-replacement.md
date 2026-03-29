@@ -2,8 +2,10 @@
 
 **Date:** 2026-03-13
 **Triggered by:** User observation that the "Remove" pill on the Bookmarks page and the "Bookmark" / "Remove bookmark" pills in the Practice action bar feel heavy and text-forward for what is conceptually a simple toggle. The industry-standard pattern — a filled bookmark icon when bookmarked, an empty/outlined bookmark icon when not — would be more compact, more immediately recognizable, and more visually elegant.
-**Scope:** Explore replacing text-based bookmark controls across the app with a toggle bookmark icon (filled ↔ outlined), starting with the Bookmarks page Remove pill and extending to the Practice action bar.
+**Scope:** Explore replacing text-based bookmark controls across the app with a toggle bookmark icon (filled ↔ outlined), starting with the Bookmarks page Remove pill and extending to the practice and review action bars.
 **Related:** [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) (bookmark pill hover pattern), [BS-049 (archived)](../_archive/brainstorming/bs-049-bookmarks-card-visual-unification.md) (bookmark card unification), [DEBT-307 (archived)](../_archive/debt/debt-307-bookmarks-row-visual-unification.md) (bookmark row visual unification)
+
+**Status:** Active — no icon-toggle UI has shipped. Later bookmark work changed surface timing and placement (`BS-053`, `DEBT-318`), but production still uses text pills for bookmark add/remove actions and the Bookmarks page still uses the AlertDialog-backed Remove pill.
 
 ---
 
@@ -11,12 +13,13 @@
 
 ### Current state: text pills everywhere
 
-Bookmarking in the app is entirely text-based:
+Bookmarking in the app is still text-based on every surfaced add/remove control:
 
 | Surface | Current Control | Label |
 |---------|----------------|-------|
 | **Bookmarks page** (each row) | `Button variant="outline" rounded-full` | "Remove" |
-| **Practice action bar** (bottom of question) | `Button variant="outline" rounded-full` | "Bookmark" or "Remove bookmark" |
+| **Tutor / Quick Practice action bar** | `Button variant="outline" rounded-full` | "Bookmark" or "Remove bookmark" |
+| **Question review / session review action bar** | `Button variant="outline" rounded-full` | "Bookmark" or "Remove bookmark" |
 
 Both use outline pill buttons with text labels. This works functionally but has drawbacks:
 
@@ -74,6 +77,15 @@ With an icon toggle, the confirmation dialog becomes optional, but the reversibi
 - Loading → disabled state
 
 The icon version would render the same states visually (outlined vs filled) with the same `onToggleBookmark()` handler.
+
+### Question review / session review action bar — also text-based today
+
+`question-page-client.tsx` renders the same text bookmark pill in review mode once bookmark state hydrates:
+- Not bookmarked → "Bookmark"
+- Bookmarked → "Remove bookmark"
+- Loading/saving → disabled state
+
+This means the eventual icon-toggle rollout is broader than just Bookmarks page + active practice. The review page now carries the same text-pill pattern.
 
 ### Available icons
 
@@ -230,10 +242,10 @@ When the bookmark state toggles:
 - Update redirect/toast flow or replace it with a local state transition
 - Narrowest surface area, but not behavior-free because the current list removes the item entirely
 
-### Phase 2: Practice action bar
+### Phase 2: Practice + review action bars
 - Replace "Bookmark" / "Remove bookmark" text pills with `BookmarkToggle`
 - Keep existing toggle logic and toast notifications
-- Higher cross-cutting impact — touches quick practice, session practice, and action bar layout
+- Higher cross-cutting impact — touches quick practice, tutor session practice, question review, and session-review action bar layout
 
 ### Phase 3 (optional): Corner-positioned bookmark icon on question surfaces
 - Add a small bookmark icon in the top-right corner of applicable question surfaces (for example history rows/cards or bookmark rows)
@@ -257,7 +269,7 @@ When the bookmark state toggles:
 
 5. **Does this affect the `FilterChip` component at all?** No — bookmark toggle is a separate interaction pattern from filter chip selection. But both will exist as pill-shaped controls, so visual consistency matters.
 
-6. **Should the Practice action bar bookmark be icon-only or icon+label?** Icon-only is compact but requires the user to know what the icon means. Icon+label ("Bookmark" with icon) is safer for discoverability but less compact. The bookmarks page can get away with icon-only because context is clear (it's a bookmarks list). The practice action bar may benefit from icon+short label on first encounter.
+6. **Should the action-bar bookmark be icon-only or icon+label?** Icon-only is compact but requires the user to know what the icon means. Icon+label ("Bookmark" with icon) is safer for discoverability but less compact. The bookmarks page can get away with icon-only because context is clear (it's a bookmarks list). Practice and review action bars may benefit from icon+short label on first encounter.
 
 ---
 
@@ -268,3 +280,4 @@ When the bookmark state toggles:
 | 2026-03-13 | Created BS-052 | Text pills for bookmark toggle are verbose and don't leverage universal bookmark iconography. The filled/unfilled bookmark icon pattern is a well-understood interaction across all major platforms. |
 | 2026-03-13 | Proposed phased rollout (bookmarks page first) | Narrowest initial surface area, though still behaviorally significant because removing from the list is not instantly reversible |
 | 2026-03-13 | No code changes yet | Brainstorming only — needs design decisions on icon color, undo behavior, and phasing before implementation |
+| 2026-03-29 | Refreshed current-state inventory | Production still uses text pills on the Bookmarks page, tutor/quick-practice action bar, and review/session-review action bar. Later bookmark work changed timing and placement, but did not land the icon-toggle UI proposed here. |

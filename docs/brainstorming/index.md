@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-24
+**Last Updated:** 2026-03-29
 
 ---
 
@@ -27,9 +27,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 | ID | Title | Status | Related Spec |
 |----|-------|--------|--------------|
-| [BS-044](./bs-044-dark-mode-border-weight-tiering.md) | Dark Mode Border Weight Tiering — broad cross-surface tiering remains open after narrower choice-button and History slices were resolved via `DEBT-280`, `DEBT-301`, and `DEBT-302` | Active | [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
-| [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) | Bookmark Icon Toggle — replace "Remove" text pill and "Bookmark"/"Remove bookmark" action bar pills with filled/unfilled bookmark icon (Lucide `Bookmark` with `fill-current` toggle); phased rollout starting with Bookmarks page | Active | [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) |
-| [BS-059](./bs-059-practice-session-action-bar-button-arrangement.md) | Practice session action bar has up to 6 buttons (Previous, Submit, Try Again, Bookmark, Next, Back to...) with no visual grouping — same bookmark-between-nav issue as DEBT-330 plus additional state complexity | Active | [DEBT-330](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md) |
+| [BS-044](./bs-044-dark-mode-border-weight-tiering.md) | Dark Mode Border Weight Tiering — major slices were already consumed by later PRs (`DEBT-280`, `DEBT-289`, `DEBT-301`, `DEBT-302`, `DEBT-307`, `DEBT-312/313/314`); remaining open question is whether read-only cards and subordinate inner borders still need softer dark-mode treatment | Active | [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
+| [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) | Bookmark Icon Toggle — no icon-toggle UI has shipped; production still uses text bookmark pills on the Bookmarks page, tutor/quick-practice action bar, and review/session-review action bar | Active | [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) |
+| [BS-059](./bs-059-practice-session-action-bar-button-arrangement.md) | Session-review question-page action bar still has up to 6 buttons (Previous, Submit, Try Again, Bookmark, Next, Back to...) with no visual grouping — same bookmark-between-nav issue as DEBT-330, but on `question-page-client.tsx`, not the already-cleaner active tutor practice bar | Active | [DEBT-330](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md) |
 **Next Brainstorming ID:** BS-061
 
 ---
