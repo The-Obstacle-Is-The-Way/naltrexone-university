@@ -10,8 +10,10 @@ Read these in order:
 2. `SCHEMA.md` - complete active authoring contract, taxonomy, validation rules, and canonical quality checklist
 3. `PLAN.md` - inventory/progress tracker when current status matters
 4. `NOTES.md` - optional reference for historical audits, DEBT-338 corruption files, or Prescriber's rewrite queue
+5. `../.agents/skills/generate-questions/SKILL.md` - NBME standards, anti-patterns, rewrite workflow
+6. `../docs/content-debt/CDEBT-02-question-quality-anti-patterns.md` - anti-pattern registry with real examples
 
-If this file conflicts with `SCHEMA.md`, follow `SCHEMA.md`.
+If this file conflicts with `SCHEMA.md`, follow `SCHEMA.md` for format/schema rules. Follow the generate-questions skill for item-writing quality and rewrite workflow. Use CDEBT-02 when judging whether a question construction pattern is acceptable.
 
 ---
 
@@ -39,17 +41,36 @@ Prescriber's Guide exception: 4 recall questions per medication, no vignettes.
 8. Include a `**Clinical pearl:**` in the explanation (recommended for all new questions).
 9. End the explanation with `### Reference`.
 10. Run the **single canonical checklist in `SCHEMA.md`** before saving.
+11. If the source cannot support clean, clinically useful, nonduplicate items, flag it instead of padding with trivia.
+12. Use patient characteristics only when they change the reasoning.
+13. Wrong-answer explanations must start with reasoning, not repeated choice text.
+14. Preserve markdown rendering: blank line before a standalone lead-in question, blank line before `**Clinical pearl:**`.
+
+### Quality Gates (from CDEBT-02 audit)
+
+Every question must pass these tests before it ships:
+
+- **"Hasn't read the paper" test:** Could a well-trained addiction psychiatrist who hasn't read the specific source paper answer this? If no, the question tests reading comprehension, not clinical knowledge. Rewrite it.
+- **Single-best-answer test:** Would content experts agree that one option is clearly the most correct answer? If no, the item is ambiguous. Rewrite it.
+- **No source name-dropping:** No author names, trial names, or paper references in stems. Named clinical standards (DSM-5, ASAM, NIAAA) are OK.
+- **No methodology testing:** No RCT counts, heterogeneity values, study design names, exclusion criteria, ITT vs complete-case.
+- **No parameter-guessing distractors:** If all four options are just different numbers, the question tests memory, not understanding.
+- **No demographic filler:** Race/ethnicity, country of origin, legal status, housing status, occupation, and similar details must earn their keep.
+- **No quota-padding:** 12 per paper is a target, not a license to force duplicates, trivia, or source-locked garbage.
+
+For the full anti-pattern registry with real examples, see `docs/content-debt/CDEBT-02-question-quality-anti-patterns.md`. For the rewrite workflow, see the generate-questions skill.
 
 ### Workflow
 
 ```text
 1. Read the source markdown
 2. Identify clinically relevant concepts
-3. Draft questions in Phase 2 format (structured choices[] in YAML)
-4. Run the SCHEMA.md checklist
-5. Save to recall.md / vignettes.md (or recall.md only for Prescriber's Guide)
-6. Update PLAN.md if you advanced tracked progress
-7. Validate in the app repo with: pnpm content:import:drafts -- --dry-run
+3. If the source cannot support clean, nonduplicate, clinically useful items, stop and flag it
+4. Draft questions in Phase 2 format (structured choices[] in YAML)
+5. Run the SCHEMA.md checklist
+6. Save to recall.md / vignettes.md (or recall.md only for Prescriber's Guide)
+7. Update PLAN.md if you advanced tracked progress
+8. Validate in the app repo with: pnpm content:import:drafts -- --dry-run
 ```
 
 ---
@@ -60,6 +81,8 @@ Prescriber's Guide exception: 4 recall questions per medication, no vignettes.
 - Use plausible, homogeneous distractors that represent real misconceptions.
 - Teach in the explanation; do not merely restate the answer key.
 - If a question starts feeling like generic psychopharmacology, re-anchor it to addiction practice.
+- Keep patient characteristics purposeful, not decorative.
+- When the paper is weak, stop before you manufacture trivia.
 
 ---
 

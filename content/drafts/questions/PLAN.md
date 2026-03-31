@@ -48,7 +48,7 @@ pnpm content:import:drafts -- --dry-run
 pnpm content:import:drafts -- --dry-run
 ```
 
-This repo does include local helper scripts such as `validate_questions.py`, but `pnpm content:import:drafts -- --dry-run` in the app repo remains the canonical structural validation path.
+This repo does include local helper scripts such as [validate_questions.py](/Users/ray/Desktop/github/addiction-final-2026/scripts/validate_questions.py), but `pnpm content:import:drafts -- --dry-run` in the app repo remains the canonical structural validation path.
 
 ---
 

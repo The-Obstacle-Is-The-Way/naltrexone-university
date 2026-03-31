@@ -496,7 +496,7 @@ SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed
 pnpm content:import:drafts -- --status published && pnpm db:seed
 ```
 
-This repo does include local helper scripts (for example `validate_questions.py`), but `pnpm content:import:drafts -- --dry-run` in the app repo remains the canonical structural validation path.
+This repo does include local helper scripts (for example [validate_questions.py](/Users/ray/Desktop/github/addiction-final-2026/scripts/validate_questions.py)), but `pnpm content:import:drafts -- --dry-run` in the app repo remains the canonical structural validation path.
 
 ### Tag / Answer Flow Summary
 
@@ -533,7 +533,6 @@ Your draft will be rejected if any of these fail:
 | Duplicate tag slugs in one question | Output MDX schema | `tag slugs must be unique` |
 | Missing topic or substance tags in MDX | Output MDX schema / seed validation | `at least one topic tag is required` / `at least one substance tag is required` |
 | `domain` tag kind present in MDX | Seed script | `... has domain tag ... which is not allowed` |
-
 ### Historical Seed Debt (Resolved)
 
 DEBT-338 found 24 corrupted imported files caused by regex parsing of wrong-answer sections. These were fixed in DEBT-01 and the regex parsing was eliminated by DEBT-02 (Phase 2 migration). The full historical file list lives in `NOTES.md`.
