@@ -97,25 +97,19 @@ git rm scripts/tag-census.ts
 
 ### Phase 3: Add Corpus Seeding Script (New)
 
-Create `scripts/seed-all-environments.sh` to replace the manual multi-step process:
+Create `scripts/seed-all-environments.sh` to replace the manual multi-step process and explicitly handle local + Vercel targets without committing secrets:
 
 ```bash
 #!/bin/bash
 set -euo pipefail
 
-# 1. Clear stale imported files
-rm -rf content/questions/imported/*
-
-# 2. Import drafts as published
-pnpm content:import:drafts -- --status published
-
-# 3. Seed dev/preview (uses DATABASE_URL from .env.local)
-pnpm db:seed
-
-# 4. Seed production (pulls URL from Vercel at runtime — no secrets committed)
-PROD_DB=$(npx vercel env pull /dev/stdout --environment=production 2>/dev/null \
-  | grep DATABASE_URL | cut -d'"' -f2)
-DATABASE_URL="$PROD_DB" pnpm db:seed
+# 1. Pull Vercel Development / Preview / Production env files into mktemp
+# 2. Read DATABASE_URL from .env.local plus the temp env files
+# 3. Deduplicate identical URLs so a shared non-production DB is seeded once
+# 4. Refuse to proceed if production matches any non-production URL
+# 5. Dry-run import in published mode
+# 6. Rebuild content/questions/imported/
+# 7. Seed each unique DATABASE_URL with explicit env override
 ```
 
 Wire to package.json: `"db:seed:all": "bash scripts/seed-all-environments.sh"`

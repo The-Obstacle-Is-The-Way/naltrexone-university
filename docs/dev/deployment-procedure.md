@@ -86,6 +86,8 @@ If you are using Neon, fetch the connection string for the intended branch first
 
 **Caution:** Always double-check which database/branch you're targeting. Running migrations or seeds against the wrong environment can corrupt data. Production operations should be done deliberately and verified immediately.
 
+**Optional helper:** `pnpm db:seed:all -- --plan` pulls Vercel Development, Preview, and Production env files into a temp directory, compares them with local `.env.local`, and shows the unique seed targets without writing data. `pnpm db:seed:all` then imports drafts as published and seeds each unique `DATABASE_URL` once. It does **not** run migrations; keep using `pnpm db:migrate` separately when schema changes are involved.
+
 ---
 
 ## 5. Pre-Deployment Checklist
