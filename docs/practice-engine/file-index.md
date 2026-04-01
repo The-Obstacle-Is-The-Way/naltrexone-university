@@ -181,13 +181,10 @@ scripts/
   seed-helpers.ts
   import-draft-questions.ts
   draft-question-import.ts
-  migrate-tag-taxonomy.ts
-  tag-census.ts
+  seed-all-environments.sh
   seed/
     file-reader.ts, placeholder-archiver.ts,
     question-parser.ts, question-syncer.ts, tag-manager.ts
-  migrate-tag-taxonomy/
-    tag-migration-logic.ts, tag-taxonomy-mappers.ts, tag-parsers.ts, types.ts
 ```
 
 Other repo utilities (for example shell helpers or repo-health scripts) are intentionally omitted here when they are not part of the practice/content runtime path.
