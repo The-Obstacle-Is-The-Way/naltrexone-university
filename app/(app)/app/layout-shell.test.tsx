@@ -79,6 +79,37 @@ describe('app/(app)/app/layout (shell)', () => {
     expect(html).not.toContain('payment failed');
   });
 
+  it('starts auth nav before entitlement resolves', async () => {
+    let resolveEntitledAppUser:
+      | ((value: { subscriptionStatus: 'active' }) => void)
+      | undefined;
+    const enforceEntitledAppUserFn = vi.fn(
+      () =>
+        new Promise<{ subscriptionStatus: 'active' }>((resolve) => {
+          resolveEntitledAppUser = resolve;
+        }),
+    );
+    const authNavFn = vi.fn(async () => <div>AuthNav</div>);
+
+    const renderPromise = renderAppLayout({
+      children: <div>Child content</div>,
+      enforceEntitledAppUserFn,
+      authNavFn,
+      mobileNav: <div>MobileNav</div>,
+    });
+
+    expect(enforceEntitledAppUserFn).toHaveBeenCalledTimes(1);
+    expect(authNavFn).toHaveBeenCalledTimes(1);
+
+    resolveEntitledAppUser?.({ subscriptionStatus: 'active' });
+
+    const element = await renderPromise;
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('AuthNav');
+    expect(html).toContain('Child content');
+  });
+
   it('renders payment-failed banner for pastDue subscribers', async () => {
     const enforceEntitledAppUserFn = vi.fn(async () => ({
       subscriptionStatus: 'pastDue' as const,
