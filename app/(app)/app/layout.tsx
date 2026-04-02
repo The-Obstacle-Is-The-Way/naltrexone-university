@@ -140,8 +140,10 @@ export async function renderAppLayout(input: {
     input.authNavFn ?? (() => AuthNav({ showPrimaryLink: false }));
   const mobileNav = input.mobileNav ?? <MobileNav />;
 
-  const { subscriptionStatus } = await enforceEntitledAppUserFn();
-  const authNav = await authNavFn();
+  const [{ subscriptionStatus }, authNav] = await Promise.all([
+    enforceEntitledAppUserFn(),
+    authNavFn(),
+  ]);
   const banner =
     subscriptionStatus === 'pastDue' ? <PastDueBanner /> : undefined;
 

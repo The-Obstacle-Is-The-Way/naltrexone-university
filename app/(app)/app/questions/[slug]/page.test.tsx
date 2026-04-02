@@ -19,6 +19,41 @@ beforeAll(async () => {
   QuestionView = module.QuestionView;
 });
 
+function createTrackedThenable<T>(value: T) {
+  const thenSpy = vi.fn();
+  const thenFn = <TResult1 = T, TResult2 = never>(
+    onFulfilled?:
+      | ((value: T) => TResult1 | PromiseLike<TResult1>)
+      | null
+      | undefined,
+    onRejected?:
+      | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
+      | null
+      | undefined,
+  ) => {
+    thenSpy();
+    return Promise.resolve(value).then(onFulfilled, onRejected);
+  };
+
+  const proxy = new Proxy(
+    {},
+    {
+      get(target, prop, receiver) {
+        if (prop === 'then') {
+          return thenFn;
+        }
+
+        return Reflect.get(target, prop, receiver);
+      },
+    },
+  );
+
+  return {
+    thenable: proxy as PromiseLike<T>,
+    thenSpy,
+  };
+}
+
 function toGetQuestionBySlugOutput(
   question: ReturnType<typeof createQuestion>,
 ) {
@@ -44,6 +79,44 @@ describe('app/(app)/app/questions/[slug]', () => {
 
     expect(element).toMatchObject({
       props: { slug: 'q-1' },
+    });
+  });
+
+  it('starts searchParams before params resolves', async () => {
+    let releaseParams: (() => void) | undefined;
+    const params = new Promise<{ slug: string }>((resolve) => {
+      releaseParams = () => resolve({ slug: 'q-1' });
+    });
+    const { thenable: searchParams, thenSpy } = createTrackedThenable({
+      from: 'history',
+    });
+
+    const pagePromise = QuestionPage({
+      params,
+      searchParams: searchParams as unknown as Promise<{
+        from?: string | string[];
+        mode?: string | string[];
+        sessionId?: string | string[];
+        attemptId?: string | string[];
+        historyHref?: string | string[];
+        historySeq?: string | string[];
+        historyIndex?: string | string[];
+      }>,
+    });
+
+    await Promise.resolve();
+
+    expect(thenSpy).toHaveBeenCalledTimes(1);
+
+    releaseParams?.();
+
+    const element = await pagePromise;
+
+    expect(element).toMatchObject({
+      props: {
+        slug: 'q-1',
+        from: 'history',
+      },
     });
   });
 
