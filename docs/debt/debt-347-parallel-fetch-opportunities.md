@@ -1,40 +1,38 @@
-# DEBT-347: Parallel Fetch Opportunities in App Layout and Billing Page
+# DEBT-347: Parallel Fetch Opportunities in Layout, Pricing, and Billing
 
 **Priority:** P4
 **Created:** 2026-04-02
 **Source:** Performance investigation prompted by production codebase comparison
-**Related:** [app/(app)/app/layout.tsx](../../app/(app)/app/layout.tsx), [app/(app)/app/billing/page.tsx](../../app/(app)/app/billing/page.tsx)
+**Related:** [app/(app)/app/layout.tsx](../../app/(app)/app/layout.tsx), [app/pricing/page.tsx](../../app/pricing/page.tsx), [app/(app)/app/billing/page.tsx](../../app/(app)/app/billing/page.tsx)
 
 ---
 
 ## Context
 
-The dashboard and history pages already use `Promise.all` for independent data fetches (good). Two other pages have sequential awaits that could be parallelized for a small latency win.
+The dashboard, history questions tab, and marketing home page already use `Promise.all` for independent work. A few other server components still await independent work sequentially.
 
-These are minor optimizations — not correctness issues — but they're trivially easy to fix.
+These are minor optimizations, not correctness issues, but they are cheap wins.
 
 ---
 
 ## Finding 1: App Layout — Sequential `enforceEntitledAppUser` + `authNav`
 
-### File: `app/(app)/app/layout.tsx` (lines 143-144)
+### File: `app/(app)/app/layout.tsx`
 
 ```typescript
-// CURRENT — sequential
-const { subscriptionStatus } = await enforceEntitledAppUserFn();  // Line 143
-const authNav = await authNavFn();                                // Line 144
+// CURRENT
+const { subscriptionStatus } = await enforceEntitledAppUserFn();
+const authNav = await authNavFn();
 ```
 
-These two operations are **independent**:
-- `enforceEntitledAppUserFn()` checks auth + subscription
-- `authNavFn()` renders the Clerk auth navigation component
+These two operations are independent:
 
-Neither depends on the other's result (the `subscriptionStatus` is used only for the banner below, not by `authNav`).
+- `enforceEntitledAppUserFn()` checks auth + entitlement
+- `authNavFn()` renders the auth nav
 
 ### Fix
 
 ```typescript
-// AFTER — parallel
 const [{ subscriptionStatus }, authNav] = await Promise.all([
   enforceEntitledAppUserFn(),
   authNavFn(),
@@ -43,26 +41,54 @@ const [{ subscriptionStatus }, authNav] = await Promise.all([
 
 ### Impact
 
-This runs on **every single page load** within the app shell. Even a 50ms saving compounds across all users.
+This runs on every app-shell render, so even a modest savings compounds.
 
 ---
 
-## Finding 2: Billing Page — Sequential `loadBillingData` + `searchParams`
+## Finding 2: Pricing Page — Sequential `loadPricingData`, `searchParams`, and `AuthNav`
 
-### File: `app/(app)/app/billing/page.tsx` (lines 164-165)
+### File: `app/pricing/page.tsx`
 
 ```typescript
-// CURRENT — sequential
-const { subscription } = await loadBillingData(props?.deps);  // Line 164
-const resolvedSearchParams = await props?.searchParams;        // Line 165
+// CURRENT
+const pricingData = await loadPricingData(deps);
+const resolvedSearchParams = await searchParams;
+const authNav = await resolvedAuthNavFn();
 ```
 
-These are independent — `searchParams` is a Next.js promise that resolves to URL query parameters, unrelated to billing data.
+At the await boundary these are independent.
 
 ### Fix
 
 ```typescript
-// AFTER — parallel
+const [pricingData, resolvedSearchParams, authNav] = await Promise.all([
+  loadPricingData(deps),
+  searchParams,
+  resolvedAuthNavFn(),
+]);
+```
+
+### Impact
+
+Still small, but pricing is a public entry point, so minor latency improvements matter more here than on lower-traffic internal pages.
+
+---
+
+## Finding 3: Billing Page — Sequential `loadBillingData` + `searchParams`
+
+### File: `app/(app)/app/billing/page.tsx`
+
+```typescript
+// CURRENT
+const { subscription } = await loadBillingData(props?.deps);
+const resolvedSearchParams = await props?.searchParams;
+```
+
+These are independent.
+
+### Fix
+
+```typescript
 const [{ subscription }, resolvedSearchParams] = await Promise.all([
   loadBillingData(props?.deps),
   props?.searchParams ?? Promise.resolve(undefined),
@@ -71,7 +97,7 @@ const [{ subscription }, resolvedSearchParams] = await Promise.all([
 
 ### Impact
 
-Small — billing page is visited infrequently. But it's a one-line change.
+Small. Billing is lower traffic than the shell or pricing page, but the fix is trivial.
 
 ---
 
@@ -81,29 +107,39 @@ Small — billing page is visited infrequently. But it's a one-line change.
 |------|---------|--------|
 | Dashboard (`app/(app)/app/dashboard/page.tsx:260-263`) | `Promise.all([getUserStats, getSessionHistory])` | Already optimized |
 | History Questions tab (`app/(app)/app/history/page.tsx:85-96`) | `Promise.all([getAttemptedQuestions, getTags])` | Already optimized |
+| Marketing home (`components/marketing/marketing-home.tsx:277-280`) | `Promise.all([authNav, getStartedCta])` | Already optimized |
 
 ---
 
-## What Can't Be Parallelized (Data Dependencies)
+## Lower-Signal Follow-Ons
 
-These sequential patterns are **correct** — each step depends on the previous one:
+These are real but smaller:
+
+- [`app/(app)/app/practice/[sessionId]/page.tsx`](../../app/(app)/app/practice/[sessionId]/page.tsx) awaits `params` and `searchParams` sequentially
+- [`app/(app)/app/questions/[slug]/page.tsx`](../../app/(app)/app/questions/[slug]/page.tsx) does the same
+- [`app/(app)/app/bookmarks/page.tsx`](../../app/(app)/app/bookmarks/page.tsx) has minor await-order cleanup potential
+
+These are worth batching only after the higher-value shell/pricing/billing cases above.
+
+---
+
+## What Can't Be Parallelized
+
+These sequential chains are still correct:
 
 | Location | Chain | Why Sequential |
 |----------|-------|---------------|
-| `requireEntitledUserId()` | `requireUser()` → `checkEntitlement(user.id)` | Entitlement check needs `user.id` |
-| `loadBillingData()` | `getDeps()` → `requireUser()` → `findByUserId(user.id)` | Each step depends on prior result |
-| Billing controller | `requireUser()` → `rateLimiter.limit(user.id)` | Rate limit key includes `user.id` |
-
-No action needed on these.
-
----
+| `requireEntitledUserId()` | `requireUser()` -> `checkEntitlement(user.id)` | Entitlement needs `user.id` |
+| `loadBillingData()` | `requireUser()` -> `findByUserId(user.id)` | Subscription lookup needs `user.id` |
+| Billing/practice action paths | `requireUser()` -> rate limit by `user.id` | Rate-limit key depends on `user.id` |
 
 ## Scope
 
-- Two files, two one-line changes
+- Three files
+- Small await-order changes only
 - No domain/application layer changes
-- No test changes needed (behavior unchanged)
+- No behavior changes
 
 ## Estimated Effort
 
-~30 minutes including testing the pages manually.
+~30-45 minutes including manual verification.
