@@ -1,12 +1,47 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { loadBillingData } from '@/app/(app)/app/billing/page';
 import {
   FakeAuthGateway,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
 import { createSubscription, createUser } from '@/src/domain/test-helpers';
+
+function createTrackedThenable<T>(value: T) {
+  const thenSpy = vi.fn();
+  const thenFn = <TResult1 = T, TResult2 = never>(
+    onFulfilled?:
+      | ((value: T) => TResult1 | PromiseLike<TResult1>)
+      | null
+      | undefined,
+    onRejected?:
+      | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
+      | null
+      | undefined,
+  ) => {
+    thenSpy();
+    return Promise.resolve(value).then(onFulfilled, onRejected);
+  };
+
+  const proxy = new Proxy(
+    {},
+    {
+      get(target, prop, receiver) {
+        if (prop === 'then') {
+          return thenFn;
+        }
+
+        return Reflect.get(target, prop, receiver);
+      },
+    },
+  );
+
+  return {
+    thenable: proxy as PromiseLike<T>,
+    thenSpy,
+  };
+}
 
 describe('app/(app)/app/billing/page', () => {
   describe('loadBillingData', () => {
@@ -59,6 +94,47 @@ describe('app/(app)/app/billing/page', () => {
         deps: { authGateway, subscriptionRepository },
         searchParams: Promise.resolve({ error: 'portal_failed' }),
       });
+      const html = renderToStaticMarkup(element);
+
+      expect(html).toContain('open the billing portal. Please try again.');
+      expect(html).toContain('Manage in Stripe');
+    });
+
+    it('starts searchParams before billing data resolves', async () => {
+      const BillingPage = (await import('@/app/(app)/app/billing/page'))
+        .default;
+      const user = createUser({ id: 'user_1' });
+      let releaseUser: (() => void) | undefined;
+
+      const authGateway = new FakeAuthGateway(user);
+      const requireUserSpy = vi
+        .spyOn(authGateway, 'requireUser')
+        .mockImplementation(
+          () =>
+            new Promise((resolve) => {
+              releaseUser = () => resolve(user);
+            }),
+        );
+      const subscriptionRepository = new FakeSubscriptionRepository([
+        createSubscription({ userId: user.id }),
+      ]);
+      const { thenable: searchParams, thenSpy } = createTrackedThenable({
+        error: 'portal_failed',
+      });
+
+      const pagePromise = BillingPage({
+        deps: { authGateway, subscriptionRepository },
+        searchParams: searchParams as Promise<{ error?: string | string[] }>,
+      });
+
+      await Promise.resolve();
+
+      expect(requireUserSpy).toHaveBeenCalledTimes(1);
+      expect(thenSpy).toHaveBeenCalledTimes(1);
+
+      releaseUser?.();
+
+      const element = await pagePromise;
       const html = renderToStaticMarkup(element);
 
       expect(html).toContain('open the billing portal. Please try again.');

@@ -161,8 +161,10 @@ export type BillingPageProps = {
 };
 
 export default async function BillingPage(props?: BillingPageProps) {
-  const { subscription } = await loadBillingData(props?.deps);
-  const resolvedSearchParams = await props?.searchParams;
+  const [{ subscription }, resolvedSearchParams] = await Promise.all([
+    loadBillingData(props?.deps),
+    props?.searchParams,
+  ]);
   const banner = getBillingBanner(
     parseBillingErrorCode(resolvedSearchParams?.error),
   );
