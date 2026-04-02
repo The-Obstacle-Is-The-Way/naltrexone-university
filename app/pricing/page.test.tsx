@@ -43,8 +43,12 @@ beforeAll(async () => {
   SubscribeButton = pricingClientModule.SubscribeButton;
 });
 
-function createTrackedThenable<T>(value: T) {
+function createTrackedThenable<T>() {
   const thenSpy = vi.fn();
+  let resolveValue: ((value: T) => void) | undefined;
+  const source = new Promise<T>((resolve) => {
+    resolveValue = resolve;
+  });
   const thenFn = <TResult1 = T, TResult2 = never>(
     onFulfilled?:
       | ((value: T) => TResult1 | PromiseLike<TResult1>)
@@ -56,7 +60,7 @@ function createTrackedThenable<T>(value: T) {
       | undefined,
   ) => {
     thenSpy();
-    return Promise.resolve(value).then(onFulfilled, onRejected);
+    return source.then(onFulfilled, onRejected);
   };
 
   const proxy = new Proxy(
@@ -75,6 +79,9 @@ function createTrackedThenable<T>(value: T) {
   return {
     thenable: proxy as PromiseLike<T>,
     thenSpy,
+    resolve: (value: T) => {
+      resolveValue?.(value);
+    },
   };
 }
 
@@ -727,7 +734,11 @@ describe('app/pricing', () => {
       isEntitled: false,
       reason: 'subscription_required',
     });
-    const { thenable: searchParams, thenSpy } = createTrackedThenable({});
+    const {
+      thenable: searchParams,
+      thenSpy,
+      resolve: resolveSearchParams,
+    } = createTrackedThenable<Record<string, never>>();
     const authNavFn = vi.fn(async () => <div>AuthNav</div>);
 
     const pagePromise = PricingPage({
@@ -739,12 +750,13 @@ describe('app/pricing', () => {
       },
     });
 
-    await Promise.resolve();
-
-    expect(authNavFn).toHaveBeenCalledTimes(1);
-    expect(thenSpy).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => {
+      expect(authNavFn).toHaveBeenCalledTimes(1);
+      expect(thenSpy).toHaveBeenCalledTimes(1);
+    });
 
     resolveCurrentUser?.(null);
+    resolveSearchParams({});
 
     const element = await pagePromise;
     const html = renderToStaticMarkup(element);
