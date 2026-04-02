@@ -187,7 +187,7 @@ The migration defined by this doc is complete.
 - [x] `caffeine` removed from canonical draft taxonomy
 - [x] Legacy migration-only scripts retired
 - [x] Pipeline docs updated
-- [x] Coverage reports generated via `scripts/tag-census.ts`
+- [x] Coverage reports generated via `scripts/tag-census.ts` (script removed in DEBT-343; reports preserved in `docs/content/reports/`)
 
 ---
 
