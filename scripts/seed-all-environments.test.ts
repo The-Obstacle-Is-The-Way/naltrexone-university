@@ -107,6 +107,25 @@ function createTempRepo(): {
   return { repoDir, logFile, scriptPath };
 }
 
+/**
+ * Build a hermetic env for the subprocess. We spread process.env for
+ * basics (HOME, TMPDIR, SHELL, etc.) but explicitly strip DATABASE_URL
+ * so the test is isolated from CI runners or local .env that set it.
+ */
+function hermeticEnv(
+  repoDir: string,
+  logFile: string,
+  overrides: Record<string, string> = {},
+): NodeJS.ProcessEnv {
+  const { DATABASE_URL: _, ...cleanEnv } = process.env;
+  return {
+    ...cleanEnv,
+    LOG_FILE: logFile,
+    PATH: `${path.join(repoDir, 'bin')}:${cleanEnv.PATH ?? ''}`,
+    ...overrides,
+  };
+}
+
 describe('seed-all-environments.sh', () => {
   const tempDirs: string[] = [];
 
@@ -120,15 +139,9 @@ describe('seed-all-environments.sh', () => {
     const { repoDir, logFile, scriptPath } = createTempRepo();
     tempDirs.push(repoDir);
 
-    const env = {
-      ...process.env,
-      LOG_FILE: logFile,
-      PATH: `${path.join(repoDir, 'bin')}:${process.env.PATH ?? ''}`,
-    };
-
     const output = execFileSync('bash', [scriptPath], {
       cwd: repoDir,
-      env,
+      env: hermeticEnv(repoDir, logFile),
       encoding: 'utf8',
     });
 
@@ -155,13 +168,10 @@ describe('seed-all-environments.sh', () => {
 
     const result = spawnSync('bash', [scriptPath], {
       cwd: repoDir,
-      env: {
-        ...process.env,
-        LOG_FILE: logFile,
-        PATH: `${path.join(repoDir, 'bin')}:${process.env.PATH ?? ''}`,
+      env: hermeticEnv(repoDir, logFile, {
         FAKE_PRODUCTION_DATABASE_URL:
           'postgresql://prod-user:pw@dev-host/shared_nonprod',
-      },
+      }),
       encoding: 'utf8',
     });
 
