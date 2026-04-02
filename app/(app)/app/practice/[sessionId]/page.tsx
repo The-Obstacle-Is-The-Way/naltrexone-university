@@ -21,8 +21,10 @@ export default async function PracticeSessionPage({
   params: Promise<{ sessionId: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { sessionId } = await params;
-  const resolvedSearchParams = await searchParams;
+  const [{ sessionId }, resolvedSearchParams] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   return (
     <PracticeSessionPageClient
       sessionId={sessionId}

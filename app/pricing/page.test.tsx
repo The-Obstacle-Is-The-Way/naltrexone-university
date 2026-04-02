@@ -731,7 +731,7 @@ describe('app/pricing', () => {
     const authNavFn = vi.fn(async () => <div>AuthNav</div>);
 
     const pagePromise = PricingPage({
-      searchParams: searchParams as Promise<Record<string, never>>,
+      searchParams: searchParams as unknown as Promise<Record<string, never>>,
       authNavFn,
       deps: {
         authGateway,

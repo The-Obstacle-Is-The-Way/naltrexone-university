@@ -124,7 +124,9 @@ describe('app/(app)/app/billing/page', () => {
 
       const pagePromise = BillingPage({
         deps: { authGateway, subscriptionRepository },
-        searchParams: searchParams as Promise<{ error?: string | string[] }>,
+        searchParams: searchParams as unknown as Promise<{
+          error?: string | string[];
+        }>,
       });
 
       await Promise.resolve();

@@ -27,6 +27,41 @@ function getClassTokens(className: string): Set<string> {
   return new Set(className.split(/\s+/).filter(Boolean));
 }
 
+function createTrackedThenable<T>(value: T) {
+  const thenSpy = vi.fn();
+  const thenFn = <TResult1 = T, TResult2 = never>(
+    onFulfilled?:
+      | ((value: T) => TResult1 | PromiseLike<TResult1>)
+      | null
+      | undefined,
+    onRejected?:
+      | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
+      | null
+      | undefined,
+  ) => {
+    thenSpy();
+    return Promise.resolve(value).then(onFulfilled, onRejected);
+  };
+
+  const proxy = new Proxy(
+    {},
+    {
+      get(target, prop, receiver) {
+        if (prop === 'then') {
+          return thenFn;
+        }
+
+        return Reflect.get(target, prop, receiver);
+      },
+    },
+  );
+
+  return {
+    thenable: proxy as PromiseLike<T>,
+    thenSpy,
+  };
+}
+
 describe('app/(app)/app/practice/[sessionId]', () => {
   it('unwraps async params before rendering the client page', async () => {
     const element = await PracticeSessionPage({
@@ -35,6 +70,38 @@ describe('app/(app)/app/practice/[sessionId]', () => {
 
     expect(element).toMatchObject({
       props: { sessionId: 'session-1' },
+    });
+  });
+
+  it('starts searchParams before params resolves', async () => {
+    let releaseParams: (() => void) | undefined;
+    const params = new Promise<{ sessionId: string }>((resolve) => {
+      releaseParams = () => resolve({ sessionId: 'session-1' });
+    });
+    const { thenable: searchParams, thenSpy } = createTrackedThenable({
+      toast: 'saved',
+    });
+
+    const pagePromise = PracticeSessionPage({
+      params,
+      searchParams: searchParams as unknown as Promise<
+        Record<string, string | string[] | undefined>
+      >,
+    });
+
+    await Promise.resolve();
+
+    expect(thenSpy).toHaveBeenCalledTimes(1);
+
+    releaseParams?.();
+
+    const element = await pagePromise;
+
+    expect(element).toMatchObject({
+      props: {
+        sessionId: 'session-1',
+        toast: 'saved',
+      },
     });
   });
 

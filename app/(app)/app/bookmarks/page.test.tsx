@@ -70,6 +70,33 @@ beforeAll(async () => {
 });
 
 describe('app/(app)/app/bookmarks', () => {
+  it('starts bookmark loading before searchParams resolves', async () => {
+    let releaseSearchParams:
+      | ((value: {
+          error?: string | string[];
+          toast?: string | string[];
+        }) => void)
+      | undefined;
+    const getBookmarksFn = createGetBookmarksFn();
+    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
+
+    const pagePromise = BookmarksPage({
+      searchParams: new Promise((resolve) => {
+        releaseSearchParams = resolve;
+      }),
+    });
+
+    expect(getBookmarksFn).toHaveBeenCalledTimes(1);
+
+    releaseSearchParams?.({});
+
+    const element = await pagePromise;
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('Bookmarks');
+    expect(html).toContain('Stem for q1');
+  });
+
   it('renders a truncated stem preview as the card title instead of raw slug text', () => {
     const longStem =
       'A very long stem that should be truncated in the card title for readability in bookmarks lists.';

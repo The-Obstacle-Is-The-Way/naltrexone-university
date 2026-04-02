@@ -22,7 +22,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-344](./debt-344-request-scoped-caching.md) | Request-scoped auth/entitlement dedup plus static question/tag read caching — shared chrome and server-render controllers repeat the same user/subscription work; published content remains uncached across requests | P2 | — |
 | [DEBT-345](./debt-345-circuit-breaker-external-services.md) | Circuit breaker for Stripe API — retry with backoff exists but no circuit breaker; sustained outage causes cascading slow failures instead of fast-failing | P3 | — |
 | [DEBT-346](./debt-346-lazy-stripe-sdk-initialization.md) | Lazy Stripe SDK initialization — eagerly imported in container for all routes including non-billing pages; convert to lazy factory matching existing Clerk pattern | P3 | — |
-| [DEBT-347](./debt-347-parallel-fetch-opportunities.md) | Parallel fetch opportunities — layout, pricing, and billing still have small sequential await waterfalls for independent work | P4 | — |
 | [DEBT-348](./debt-348-cache-components-public-marketing-shell.md) | Cache Components for public marketing shell — home and pricing are mostly static but currently block on auth-aware server work; split static shell from dynamic user chrome | P3 | — |
 
 **Next Debt ID:** DEBT-349
@@ -34,6 +33,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
 | [DEBT-343](./debt-343-scripts-cleanup.md) | Scripts directory cleanup — removed stale one-offs (`migrate-tag-taxonomy.*`, `tag-census.ts`, `ralph-loop.sh`, `docs/_ralphwiggum/`), added `seed-all-environments.sh` with dedup, production safety guard, and `--plan` mode | P3 | 2026-04-02 | — |
+| [DEBT-347](../_archive/debt/debt-347-parallel-fetch-opportunities.md) | Parallel fetch opportunities — resolved the remaining page-level await waterfalls in layout, pricing, billing, plus the trivial practice/question/bookmarks follow-ons, with targeted regression tests | P4 | 2026-04-02 | — |
 | [DEBT-336](../_archive/debt/debt-336-content-markdown-quality-pass.md) | Content markdown quality pass (C1–C4) — C1/C2/C4 resolved by Phase 2 YAML migration (DEBT-338); C3 (122 cosmetic restatements) investigated and tabled as acceptable | P3 | 2026-03-29 | — |
 | [DEBT-342](../_archive/debt/debt-342-idempotency-backward-compat-guard.md) | Idempotency backward-compat guard cleanup — removed the `completedAt \|\| resultJson` replay fallback, made `completedAt` the sole completion marker, and updated the targeted unit contract | P4 | 2026-03-28 | — |
 | [DEBT-275](../_archive/debt/debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — decomposed into DEBT-335/336/337; all children tracked | P3 | 2026-03-24 | — |

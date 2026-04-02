@@ -241,13 +241,14 @@ export function createBookmarksPage(deps?: {
       [key: string]: string | string[] | undefined;
     }>;
   }) {
-    const searchParams = await props?.searchParams;
+    const [searchParams, result] = await Promise.all([
+      props?.searchParams,
+      getBookmarksFn({}),
+    ]);
     const errorMessage = getRemoveBookmarkErrorMessage(
       parseRemoveBookmarkErrorCode(searchParams?.error),
     );
     const toast = searchParams?.toast;
-
-    const result = await getBookmarksFn({});
     if (!result.ok) return renderBookmarks(result);
 
     if (!errorMessage) {

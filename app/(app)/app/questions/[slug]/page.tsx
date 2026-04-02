@@ -29,8 +29,10 @@ export default async function QuestionPage({
     historyIndex?: string | string[];
   }>;
 }) {
-  const { slug } = await params;
-  const resolvedSearchParams = await searchParams;
+  const [{ slug }, resolvedSearchParams] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const from = normalizeSearchParam(resolvedSearchParams?.from);
   const mode = normalizeSearchParam(resolvedSearchParams?.mode);
   const sessionId = normalizeSearchParam(resolvedSearchParams?.sessionId);

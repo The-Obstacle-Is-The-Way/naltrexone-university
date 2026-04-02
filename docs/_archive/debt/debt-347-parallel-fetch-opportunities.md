@@ -2,8 +2,9 @@
 
 **Priority:** P4
 **Created:** 2026-04-02
+**Resolved:** 2026-04-02
 **Source:** Performance investigation prompted by production codebase comparison
-**Related:** [app/(app)/app/layout.tsx](../../app/(app)/app/layout.tsx), [app/pricing/page.tsx](../../app/pricing/page.tsx), [app/(app)/app/billing/page.tsx](../../app/(app)/app/billing/page.tsx)
+**Related:** [app/(app)/app/layout.tsx](../../../app/(app)/app/layout.tsx), [app/pricing/page.tsx](../../../app/pricing/page.tsx), [app/(app)/app/billing/page.tsx](../../../app/(app)/app/billing/page.tsx)
 
 ---
 
@@ -91,7 +92,7 @@ These are independent.
 ```typescript
 const [{ subscription }, resolvedSearchParams] = await Promise.all([
   loadBillingData(props?.deps),
-  props?.searchParams ?? Promise.resolve(undefined),
+  props?.searchParams,
 ]);
 ```
 
@@ -115,9 +116,9 @@ Small. Billing is lower traffic than the shell or pricing page, but the fix is t
 
 These are real but smaller:
 
-- [`app/(app)/app/practice/[sessionId]/page.tsx`](../../app/(app)/app/practice/[sessionId]/page.tsx) awaits `params` and `searchParams` sequentially
-- [`app/(app)/app/questions/[slug]/page.tsx`](../../app/(app)/app/questions/[slug]/page.tsx) does the same
-- [`app/(app)/app/bookmarks/page.tsx`](../../app/(app)/app/bookmarks/page.tsx) has minor await-order cleanup potential
+- [`app/(app)/app/practice/[sessionId]/page.tsx`](../../../app/(app)/app/practice/[sessionId]/page.tsx) awaits `params` and `searchParams` sequentially
+- [`app/(app)/app/questions/[slug]/page.tsx`](../../../app/(app)/app/questions/[slug]/page.tsx) does the same
+- [`app/(app)/app/bookmarks/page.tsx`](../../../app/(app)/app/bookmarks/page.tsx) has minor await-order cleanup potential
 
 These are worth batching only after the higher-value shell/pricing/billing cases above.
 
@@ -143,3 +144,28 @@ These sequential chains are still correct:
 ## Estimated Effort
 
 ~30-45 minutes including manual verification.
+
+## Resolution (2026-04-02)
+
+Completed:
+
+- `app/(app)/app/layout.tsx` now batches `enforceEntitledAppUserFn()` and `authNavFn()`
+- `app/pricing/page.tsx` now batches `loadPricingData(deps)`, `searchParams`, and `resolvedAuthNavFn()`
+- `app/(app)/app/billing/page.tsx` now batches `loadBillingData(props?.deps)` and `props?.searchParams`
+- `app/(app)/app/practice/[sessionId]/page.tsx` now batches `params` and `searchParams`
+- `app/(app)/app/questions/[slug]/page.tsx` now batches `params` and `searchParams`
+- `app/(app)/app/bookmarks/page.tsx` now batches `searchParams` and `getBookmarksFn({})`
+- Added focused regression coverage in `app/(app)/app/layout-shell.test.tsx`
+- Added focused regression coverage in `app/pricing/page.test.tsx`
+- Added focused regression coverage in `app/(app)/app/billing/page.test.tsx`
+- Added focused regression coverage in `app/(app)/app/practice/[sessionId]/page.test.tsx`
+- Added focused regression coverage in `app/(app)/app/questions/[slug]/page.test.tsx`
+- Added focused regression coverage in `app/(app)/app/bookmarks/page.test.tsx`
+
+Verification passed on 2026-04-02:
+
+- `pnpm typecheck`
+- `pnpm lint`
+- `pnpm test --run`
+- `pnpm test:browser`
+- `pnpm build`
