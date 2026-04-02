@@ -43,6 +43,41 @@ beforeAll(async () => {
   SubscribeButton = pricingClientModule.SubscribeButton;
 });
 
+function createTrackedThenable<T>(value: T) {
+  const thenSpy = vi.fn();
+  const thenFn = <TResult1 = T, TResult2 = never>(
+    onFulfilled?:
+      | ((value: T) => TResult1 | PromiseLike<TResult1>)
+      | null
+      | undefined,
+    onRejected?:
+      | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
+      | null
+      | undefined,
+  ) => {
+    thenSpy();
+    return Promise.resolve(value).then(onFulfilled, onRejected);
+  };
+
+  const proxy = new Proxy(
+    {},
+    {
+      get(target, prop, receiver) {
+        if (prop === 'then') {
+          return thenFn;
+        }
+
+        return Reflect.get(target, prop, receiver);
+      },
+    },
+  );
+
+  return {
+    thenable: proxy as PromiseLike<T>,
+    thenSpy,
+  };
+}
+
 describe('app/pricing', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -672,6 +707,50 @@ describe('app/pricing', () => {
 
     expect(html).toContain('Pricing');
     expect(html).toContain('Subscribe Monthly');
+  });
+
+  it('starts searchParams and auth nav before pricing data resolves', async () => {
+    let resolveCurrentUser:
+      | ((value: Awaited<ReturnType<AuthGateway['getCurrentUser']>>) => void)
+      | undefined;
+    const authGateway = new FakeAuthGateway(null);
+    vi.spyOn(authGateway, 'getCurrentUser').mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCurrentUser = resolve;
+        }),
+    );
+    const checkEntitlementUseCase = new FakeUseCase<
+      CheckEntitlementInput,
+      CheckEntitlementOutput
+    >({
+      isEntitled: false,
+      reason: 'subscription_required',
+    });
+    const { thenable: searchParams, thenSpy } = createTrackedThenable({});
+    const authNavFn = vi.fn(async () => <div>AuthNav</div>);
+
+    const pagePromise = PricingPage({
+      searchParams: searchParams as Promise<Record<string, never>>,
+      authNavFn,
+      deps: {
+        authGateway,
+        checkEntitlementUseCase,
+      },
+    });
+
+    await Promise.resolve();
+
+    expect(authNavFn).toHaveBeenCalledTimes(1);
+    expect(thenSpy).toHaveBeenCalledTimes(1);
+
+    resolveCurrentUser?.(null);
+
+    const element = await pagePromise;
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('Pricing');
+    expect(html).toContain('AuthNav');
   });
 
   it('renders exactly one main landmark through the full pricing page', async () => {

@@ -135,8 +135,12 @@ export default async function PricingPage({
   deps?: PricingPageDeps;
   authNavFn?: () => Promise<ReactNode>;
 }) {
-  const pricingData = await loadPricingData(deps);
-  const resolvedSearchParams = await searchParams;
+  const resolvedAuthNavFn = authNavFn ?? (() => AuthNav());
+  const [pricingData, resolvedSearchParams, authNav] = await Promise.all([
+    loadPricingData(deps),
+    searchParams,
+    resolvedAuthNavFn(),
+  ]);
   const reason = normalizeSearchParam(resolvedSearchParams.reason);
   const effectiveReason = reason ?? pricingData.reason ?? undefined;
   const banner = getPricingBanner({
@@ -147,9 +151,6 @@ export default async function PricingPage({
   const showManageBillingAction =
     effectiveReason === 'manage_billing' ||
     effectiveReason === 'payment_processing';
-
-  const resolvedAuthNavFn = authNavFn ?? (() => AuthNav());
-  const authNav = await resolvedAuthNavFn();
 
   return (
     <MarketingLayout authNav={authNav} featuresHref={`${ROUTES.HOME}#features`}>
