@@ -19,7 +19,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
-| [DEBT-343](./debt-343-scripts-cleanup.md) | Scripts directory cleanup — remove stale one-offs (`migrate-tag-taxonomy.*`, `tag-census.ts`, `ralph-loop.sh`, `docs/_ralphwiggum/`), add `seed-all-environments.sh` | P3 | — |
 
 **Next Debt ID:** DEBT-344
 
@@ -29,6 +28,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-343](./debt-343-scripts-cleanup.md) | Scripts directory cleanup — removed stale one-offs (`migrate-tag-taxonomy.*`, `tag-census.ts`, `ralph-loop.sh`, `docs/_ralphwiggum/`), added `seed-all-environments.sh` with dedup, production safety guard, and `--plan` mode | P3 | 2026-04-02 | — |
 | [DEBT-336](../_archive/debt/debt-336-content-markdown-quality-pass.md) | Content markdown quality pass (C1–C4) — C1/C2/C4 resolved by Phase 2 YAML migration (DEBT-338); C3 (122 cosmetic restatements) investigated and tabled as acceptable | P3 | 2026-03-29 | — |
 | [DEBT-342](../_archive/debt/debt-342-idempotency-backward-compat-guard.md) | Idempotency backward-compat guard cleanup — removed the `completedAt \|\| resultJson` replay fallback, made `completedAt` the sole completion marker, and updated the targeted unit contract | P4 | 2026-03-28 | — |
 | [DEBT-275](../_archive/debt/debt-275-bs033-residual-open-items.md) | BS-033 Residual Open Items — decomposed into DEBT-335/336/337; all children tracked | P3 | 2026-03-24 | — |

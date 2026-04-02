@@ -2,7 +2,7 @@
 
 **Priority:** P3
 **Created:** 2026-04-01
-**Status:** Open
+**Status:** Resolved (2026-04-02)
 **Audited by:** Independent agent audit (2026-04-01) — verified imports, git history, CI usage, and test suites for every file. 65/65 tests passing across all script test files.
 
 ---
