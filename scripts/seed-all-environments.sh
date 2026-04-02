@@ -98,8 +98,8 @@ add_target() {
   key="$(database_target_key "$url")"
 
   for index in "${!TARGET_KEYS[@]}"; do
-    if [ "${TARGET_KEYS[$index]}" = "$key" ]; then
-      TARGET_LABELS[$index]="${TARGET_LABELS[$index]}, $label"
+    if [ "${TARGET_KEYS[index]}" = "$key" ]; then
+      TARGET_LABELS[index]="${TARGET_LABELS[index]}, $label"
       return
     fi
   done

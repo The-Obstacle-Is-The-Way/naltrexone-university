@@ -128,7 +128,7 @@ Archive docs (`docs/_archive/`) can keep their historical references.
 
 ## Post-Cleanup Scripts Directory
 
-```
+```text
 scripts/
 ├── seed/                          # Seed modules (active)
 │   ├── file-reader.ts
