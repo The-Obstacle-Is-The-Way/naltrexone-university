@@ -6,25 +6,14 @@ import type {
   AuthCheckDeps,
   AuthDepsContainer,
 } from '@/lib/auth-deps-container';
-import {
-  createDepsResolver,
-  type LoadContainerFn,
-  loadAppContainer,
-} from '@/lib/controller-helpers';
+import { getRequestAuthState } from '@/lib/auth-request-cache';
+import type { LoadContainerFn } from '@/lib/controller-helpers';
 import { ROUTES } from '@/lib/routes';
 
 export type AuthNavDeps = AuthCheckDeps;
 type UserButtonAppearance = NonNullable<
   ComponentProps<typeof ClerkUserButton>['appearance']
 >;
-
-const getDeps = createDepsResolver<AuthNavDeps, AuthDepsContainer>(
-  (container) => ({
-    authGateway: container.createAuthGateway(),
-    checkEntitlementUseCase: container.createCheckEntitlementUseCase(),
-  }),
-  loadAppContainer,
-);
 
 /**
  * Auth-aware navigation component.
@@ -58,18 +47,14 @@ export async function AuthNav({
     return unauthenticatedNav;
   }
 
-  const d = await getDeps(deps, options);
-  const user = await d.authGateway.getCurrentUser();
+  const authState = await getRequestAuthState({ deps, options });
 
-  if (!user) {
+  if (!authState.user) {
     return unauthenticatedNav;
   }
 
-  const entitlement = await d.checkEntitlementUseCase.execute({
-    userId: user.id,
-  });
   const primaryLink =
-    entitlement.isEntitled && showPrimaryLink
+    authState.entitlement.isEntitled && showPrimaryLink
       ? { href: ROUTES.APP_DASHBOARD, label: 'Dashboard' }
       : null;
   const userButtonAppearance = {

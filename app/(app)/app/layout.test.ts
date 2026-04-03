@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
+import { FakeAuthGateway } from '@/src/application/test-helpers/fakes';
 import { enforceEntitledAppUser } from './layout';
 
 type UserLike = {
@@ -22,6 +24,27 @@ describe('app/(app)/app/layout', () => {
   it('forces dynamic rendering to avoid build-time prerendering auth-gated routes', async () => {
     const mod = await import('./layout');
     expect((mod as Record<string, unknown>).dynamic).toBe('force-dynamic');
+  });
+
+  it('throws UNAUTHENTICATED when no user is signed in', async () => {
+    const authGateway = new FakeAuthGateway(null);
+    const checkEntitlementUseCase = {
+      execute: vi.fn(async () => ({
+        isEntitled: false,
+        reason: 'subscription_required' as const,
+      })),
+    };
+
+    await expect(
+      enforceEntitledAppUser({
+        authGateway,
+        checkEntitlementUseCase,
+      }),
+    ).rejects.toEqual(
+      new ApplicationError('UNAUTHENTICATED', 'User not authenticated'),
+    );
+
+    expect(checkEntitlementUseCase.execute).not.toHaveBeenCalled();
   });
 
   it('scenario 6: redirects non-entitled users away from app routes', async () => {

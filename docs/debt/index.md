@@ -19,7 +19,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
-| [DEBT-344](./debt-344-request-scoped-caching.md) | Request-scoped auth/entitlement dedup plus static question/tag read caching — shared chrome and server-render controllers repeat the same user/subscription work; published content remains uncached across requests | P2 | — |
+| [DEBT-344](./debt-344-request-scoped-caching.md) | Static question/tag read caching follow-up after request-scoped auth/entitlement dedup — Finding 1 is resolved; Finding 2 remains for published-content caching | P2 | — |
 | [DEBT-345](./debt-345-circuit-breaker-external-services.md) | Circuit breaker for Stripe API — retry with backoff exists but no circuit breaker; sustained outage causes cascading slow failures instead of fast-failing | P3 | — |
 | [DEBT-348](./debt-348-cache-components-public-marketing-shell.md) | Cache Components for public marketing shell — home and pricing are mostly static but currently block on auth-aware server work; split static shell from dynamic user chrome | P3 | — |
 

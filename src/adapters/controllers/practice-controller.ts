@@ -149,8 +149,8 @@ const getDeps = createDepsResolver<
 export const startPracticeSession = createAction({
   schema: StartPracticeSessionInputSchema,
   getDeps,
-  execute: async (input, d) => {
-    const userId = await requireEntitledUserId(d);
+  execute: async (input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
 
     const { mode, count, tagSlugs, difficulties, statuses, idempotencyKey } =
       input;
@@ -197,8 +197,8 @@ export const startPracticeSession = createAction({
 export const countAvailableQuestions = createAction({
   schema: CountAvailableQuestionsInputSchema,
   getDeps,
-  execute: async (input, d) => {
-    const userId = await requireEntitledUserId(d);
+  execute: async (input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
 
     const output = await d.countAvailableQuestionsUseCase.execute({
       userId,
@@ -214,8 +214,8 @@ export const countAvailableQuestions = createAction({
 export const getIncompletePracticeSession = createAction({
   schema: EmptyInputSchema,
   getDeps,
-  execute: async (_input, d) => {
-    const userId = await requireEntitledUserId(d);
+  execute: async (_input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
     const output = await d.getIncompletePracticeSessionUseCase.execute({
       userId,
     });
@@ -226,8 +226,8 @@ export const getIncompletePracticeSession = createAction({
 export const getCompletedSessionQuestionsWithFeedback = createAction({
   schema: GetCompletedSessionQuestionsWithFeedbackInputSchema,
   getDeps,
-  execute: async (input, d) => {
-    const userId = await requireEntitledUserId(d);
+  execute: async (input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
     return d.getCompletedSessionQuestionsWithFeedbackUseCase.execute({
       userId,
       sessionId: input.sessionId,
@@ -238,8 +238,8 @@ export const getCompletedSessionQuestionsWithFeedback = createAction({
 export const endPracticeSession = createAction({
   schema: EndPracticeSessionInputSchema,
   getDeps,
-  execute: async (input, d) => {
-    const userId = await requireEntitledUserId(d);
+  execute: async (input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
 
     const { sessionId, idempotencyKey } = input;
 
@@ -270,8 +270,8 @@ export const endPracticeSession = createAction({
 export const finalizeExamAnswers = createAction({
   schema: FinalizeExamAnswersInputSchema,
   getDeps,
-  execute: async (input, d) => {
-    const userId = await requireEntitledUserId(d);
+  execute: async (input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
 
     const { sessionId, idempotencyKey } = input;
 
@@ -304,8 +304,8 @@ export const finalizeExamAnswers = createAction({
 export const getPracticeSessionReview = createAction({
   schema: GetPracticeSessionReviewInputSchema,
   getDeps,
-  execute: async (input, d) => {
-    const userId = await requireEntitledUserId(d);
+  execute: async (input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
     return d.getPracticeSessionReviewUseCase.execute({
       userId,
       sessionId: input.sessionId,
@@ -316,8 +316,8 @@ export const getPracticeSessionReview = createAction({
 export const saveExamDraftAnswer = createAction({
   schema: SaveExamDraftAnswerInputSchema,
   getDeps,
-  execute: async (input, d) => {
-    const userId = await requireEntitledUserId(d);
+  execute: async (input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
 
     return SaveExamDraftAnswerOutputSchema.parse(
       await d.saveExamDraftAnswerUseCase.execute({
@@ -334,8 +334,8 @@ export const saveExamDraftAnswer = createAction({
 export const getPracticeSessionSummary = createAction({
   schema: GetPracticeSessionSummaryInputSchema,
   getDeps,
-  execute: async (input, d) => {
-    const userId = await requireEntitledUserId(d);
+  execute: async (input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
     return PracticeSessionSummaryOutputSchema.parse(
       await d.getPracticeSessionSummaryUseCase.execute({
         userId,
@@ -348,8 +348,8 @@ export const getPracticeSessionSummary = createAction({
 export const getSessionHistory = createAction({
   schema: GetSessionHistoryInputSchema,
   getDeps,
-  execute: async (input, d) => {
-    const userId = await requireEntitledUserId(d);
+  execute: async (input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
     return d.getSessionHistoryUseCase.execute({
       userId,
       limit: input.limit,
@@ -362,8 +362,8 @@ export const getSessionHistory = createAction({
 export const setPracticeSessionQuestionMark = createAction({
   schema: SetPracticeSessionQuestionMarkInputSchema,
   getDeps,
-  execute: async (input, d) => {
-    const userId = await requireEntitledUserId(d);
+  execute: async (input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
 
     const { sessionId, questionId, markedForReview, idempotencyKey } = input;
 

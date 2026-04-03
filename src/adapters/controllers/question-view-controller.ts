@@ -76,8 +76,8 @@ function safeLog(
 export const getQuestionBySlug = createAction({
   schema: GetQuestionBySlugInputSchema,
   getDeps,
-  execute: async (input, d) => {
-    const userId = await requireEntitledUserId(d);
+  execute: async (input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
 
     const question = await d.questionRepository.findPublishedBySlug(input.slug);
     if (!question) {
@@ -118,8 +118,8 @@ const GetPreviousAttemptInputSchema = z
 export const getPreviousAttempt = createAction({
   schema: GetPreviousAttemptInputSchema,
   getDeps,
-  execute: async (input, d) => {
-    const userId = await requireEntitledUserId(d);
+  execute: async (input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
     try {
       const output = await d.getPreviousAttemptUseCase.execute({
         userId,

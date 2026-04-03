@@ -2,6 +2,7 @@
 
 **Priority:** P2
 **Created:** 2026-04-02
+**Status:** Partially resolved on 2026-04-02
 **Source:** Performance investigation prompted by production codebase comparison
 **Related:** [ADR-010 Caching Strategy](../adr/adr-010-caching-strategy.md), [SPEC-016 Observability](../specs/spec-016-observability.md)
 
@@ -9,13 +10,15 @@
 
 ## Context
 
-ADR-010 permits framework-layer caching for published question content and tag lists, while forbidding stale subscription/entitlement data across requests. The repo currently has **no explicit `cache`, `use cache`, `unstable_cache`, `cacheTag`, or `updateTag` usage checked in**.
+ADR-010 permits framework-layer caching for published question content and tag lists, while forbidding stale subscription/entitlement data across requests. As of 2026-04-02, the repo now has a single explicit framework-layer `React.cache` usage in [`lib/auth-request-cache.ts`](../../lib/auth-request-cache.ts) for request-scoped auth/entitlement dedup only. Cross-request question/tag caching remains unimplemented.
 
 The biggest confirmed waste today is not "every request always hits subscriptions twice" in the abstract. It is **repeated auth + entitlement work inside the same server render**, plus repeated cross-request reads of immutable question/tag data.
 
 ---
 
 ## Finding 1: Repeated Auth + Entitlement Work Within One Render
+
+**Status:** Resolved on 2026-04-02
 
 ### The Problem
 
@@ -39,7 +42,7 @@ Confirmed duplicate paths today:
 - Duplicate Clerk user resolution is happening alongside the duplicate subscription lookup
 - This is especially wasteful on shared chrome (`AuthNav`, CTA, pricing gate) because the code paths are logically asking the same question
 
-### Proposed Fix
+### Resolution
 
 Introduce shared request-scoped helpers at the framework layer and have layout/components/controllers reuse them:
 
@@ -64,15 +67,23 @@ export const getRequestAuthState = cache(async () => {
 });
 ```
 
-Use the same cached helper from app layout, `AuthNav`, `GetStartedCta`, pricing-page loaders, and controller helpers that run during server rendering.
+This is now implemented in [`lib/auth-request-cache.ts`](../../lib/auth-request-cache.ts) and reused by:
+
+- [`app/(app)/app/layout.tsx`](../../app/(app)/app/layout.tsx) `enforceEntitledAppUser()`
+- [`components/auth-nav.tsx`](../../components/auth-nav.tsx) `AuthNav()`
+- [`components/get-started-cta.tsx`](../../components/get-started-cta.tsx) `GetStartedCta()`
+- [`app/pricing/page.tsx`](../../app/pricing/page.tsx) `loadPricingData()`
+- [`src/adapters/controllers/require-entitled-user-id.ts`](../../src/adapters/controllers/require-entitled-user-id.ts) `requireEntitledUserId()`
 
 Important: the cached helper must own dependency resolution internally or close over a stable request-local dependency object. Passing fresh gateway/use-case instances as cache arguments would defeat memoization because `createContainer()` currently returns new object identities.
 
-**ADR-010 compliance:** this deduplicates only inside the current render/request. Separate POST server-action requests still re-check entitlement fresh, which preserves webhook-driven subscription updates.
+**ADR-010 compliance:** this deduplicates only inside the current render/request. Separate POST server-action requests still re-check entitlement fresh, which preserves webhook-driven subscription updates. Injected test deps and custom `loadContainer` overrides intentionally bypass the cache so tests continue to exercise the exact supplied seam. [`lib/auth-request-cache.test.ts`](../../lib/auth-request-cache.test.ts) verifies both behaviors: same-render dedup and fresh re-checks on a new render.
 
 ---
 
 ## Finding 2: Published Question + Tag Reads Are Still Uncached Across Requests
+
+**Status:** Remaining work
 
 ### The Problem
 
@@ -124,9 +135,9 @@ For a single-region Vercel deployment with a ~500-question bank, that is a later
 
 ## Implementation Order
 
-1. Shared request-scoped auth/entitlement helper reused by layout, marketing chrome, and server-render controllers
-2. Request-scoped dedup for published question/tag reads where repeated within one render
-3. Cross-request caching for published questions/tags only if the remaining query volume justifies the added invalidation work
+1. Completed: shared request-scoped auth/entitlement helper reused by layout, marketing chrome, pricing, and server-render controllers
+2. Remaining: request-scoped dedup for published question/tag reads where repeated within one render
+3. Remaining: cross-request caching for published questions/tags only if the remaining query volume justifies the added invalidation work
 
 ## Scope
 
@@ -135,6 +146,6 @@ For a single-region Vercel deployment with a ~500-question bank, that is a later
 - No Redis
 - No relaxation of subscription freshness guarantees
 
-## Estimated Effort
+## Remaining Effort
 
-~2-6 hours depending on whether the work stops at request-scoped dedup or also introduces cross-request caching for published questions/tags.
+~1-4 hours depending on whether the follow-up stops at request-scoped dedup or also introduces cross-request caching for published questions/tags.

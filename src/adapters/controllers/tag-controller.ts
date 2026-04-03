@@ -41,8 +41,8 @@ const getDeps = createDepsResolver<TagControllerDeps, TagControllerContainer>(
 export const getTags = createAction({
   schema: GetTagsInputSchema,
   getDeps,
-  execute: async (_input, d) => {
-    await requireEntitledUserId(d);
+  execute: async (_input, d, meta) => {
+    await requireEntitledUserId(d, meta);
 
     const tags = await d.tagRepository.listAll();
     return {

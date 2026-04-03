@@ -35,8 +35,8 @@ const getDeps = createDepsResolver<
 export const getUserStats = createAction({
   schema: GetUserStatsInputSchema,
   getDeps,
-  execute: async (_input, d) => {
-    const userId = await requireEntitledUserId(d);
+  execute: async (_input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
     return d.getUserStatsUseCase.execute({ userId });
   },
 });
