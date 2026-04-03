@@ -1,8 +1,12 @@
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  type ApplicationErrorCode,
+} from '@/src/application/errors';
 
 export type CircuitBreakerOptions = {
   failureThreshold: number;
   resetTimeoutMs: number;
+  openErrorCode: ApplicationErrorCode;
   openErrorMessage?: string;
 };
 
@@ -110,7 +114,7 @@ export class CircuitBreaker {
 
   private throwCircuitOpenError(): never {
     throw new ApplicationError(
-      'STRIPE_ERROR',
+      this.options.openErrorCode,
       this.options.openErrorMessage ?? DEFAULT_OPEN_CIRCUIT_MESSAGE,
     );
   }

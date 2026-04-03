@@ -20,6 +20,7 @@ describe('CircuitBreaker', () => {
         new CircuitBreaker({
           failureThreshold: 0,
           resetTimeoutMs: 60_000,
+          openErrorCode: 'STRIPE_ERROR',
         }),
     ).toThrow('CircuitBreaker: failureThreshold must be a positive integer');
   });
@@ -30,14 +31,43 @@ describe('CircuitBreaker', () => {
         new CircuitBreaker({
           failureThreshold: 1,
           resetTimeoutMs: -1,
+          openErrorCode: 'STRIPE_ERROR',
         }),
     ).toThrow('CircuitBreaker: resetTimeoutMs must be a non-negative number');
+  });
+
+  it('uses the configured error code when the circuit is open', async () => {
+    const breaker = new CircuitBreaker(
+      {
+        failureThreshold: 1,
+        resetTimeoutMs: 60_000,
+        openErrorCode: 'INTERNAL_ERROR',
+      },
+      () => 0,
+    );
+
+    await expect(
+      breaker.execute(async () => {
+        throw new Error('upstream failure');
+      }),
+    ).rejects.toThrow('upstream failure');
+
+    await expect(breaker.execute(async () => 'ok')).rejects.toEqual(
+      expect.objectContaining({
+        code: 'INTERNAL_ERROR',
+        message: 'Service temporarily unavailable',
+      }),
+    );
   });
 
   it('stays closed while failures remain below the threshold', async () => {
     let nowMs = 0;
     const breaker = new CircuitBreaker(
-      { failureThreshold: 3, resetTimeoutMs: 60_000 },
+      {
+        failureThreshold: 3,
+        resetTimeoutMs: 60_000,
+        openErrorCode: 'STRIPE_ERROR',
+      },
       () => nowMs,
     );
 
@@ -67,7 +97,11 @@ describe('CircuitBreaker', () => {
   it('opens once failures reach the threshold', async () => {
     let nowMs = 0;
     const breaker = new CircuitBreaker(
-      { failureThreshold: 2, resetTimeoutMs: 60_000 },
+      {
+        failureThreshold: 2,
+        resetTimeoutMs: 60_000,
+        openErrorCode: 'STRIPE_ERROR',
+      },
       () => nowMs,
     );
 
@@ -99,7 +133,11 @@ describe('CircuitBreaker', () => {
   it('fast-fails while the circuit is open', async () => {
     const nowMs = 0;
     const breaker = new CircuitBreaker(
-      { failureThreshold: 1, resetTimeoutMs: 60_000 },
+      {
+        failureThreshold: 1,
+        resetTimeoutMs: 60_000,
+        openErrorCode: 'STRIPE_ERROR',
+      },
       () => nowMs,
     );
 
@@ -129,7 +167,11 @@ describe('CircuitBreaker', () => {
   it('transitions to half-open after the reset timeout and closes on a successful probe', async () => {
     let nowMs = 0;
     const breaker = new CircuitBreaker(
-      { failureThreshold: 1, resetTimeoutMs: 60_000 },
+      {
+        failureThreshold: 1,
+        resetTimeoutMs: 60_000,
+        openErrorCode: 'STRIPE_ERROR',
+      },
       () => nowMs,
     );
 
@@ -153,7 +195,11 @@ describe('CircuitBreaker', () => {
   it('re-opens when the half-open probe fails', async () => {
     let nowMs = 0;
     const breaker = new CircuitBreaker(
-      { failureThreshold: 1, resetTimeoutMs: 60_000 },
+      {
+        failureThreshold: 1,
+        resetTimeoutMs: 60_000,
+        openErrorCode: 'STRIPE_ERROR',
+      },
       () => nowMs,
     );
 
@@ -191,7 +237,11 @@ describe('CircuitBreaker', () => {
   it('allows only one half-open probe while the probe is in flight', async () => {
     let nowMs = 0;
     const breaker = new CircuitBreaker(
-      { failureThreshold: 1, resetTimeoutMs: 60_000 },
+      {
+        failureThreshold: 1,
+        resetTimeoutMs: 60_000,
+        openErrorCode: 'STRIPE_ERROR',
+      },
       () => nowMs,
     );
 

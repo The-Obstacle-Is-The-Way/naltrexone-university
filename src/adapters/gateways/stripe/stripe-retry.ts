@@ -5,11 +5,13 @@ import type { Logger } from '@/src/application/ports/logger';
 
 const STRIPE_CIRCUIT_FAILURE_THRESHOLD = 5;
 const STRIPE_CIRCUIT_RESET_TIMEOUT_MS = 60_000;
+const STRIPE_OPEN_CIRCUIT_ERROR_CODE = 'STRIPE_ERROR';
 const STRIPE_OPEN_CIRCUIT_MESSAGE = 'Stripe temporarily unavailable';
 
 const stripeCircuitBreaker = new CircuitBreaker({
   failureThreshold: STRIPE_CIRCUIT_FAILURE_THRESHOLD,
   resetTimeoutMs: STRIPE_CIRCUIT_RESET_TIMEOUT_MS,
+  openErrorCode: STRIPE_OPEN_CIRCUIT_ERROR_CODE,
   openErrorMessage: STRIPE_OPEN_CIRCUIT_MESSAGE,
 });
 
