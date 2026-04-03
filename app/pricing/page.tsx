@@ -130,8 +130,6 @@ async function DeferredPricingView({
   searchParams: Promise<PricingSearchParams>;
   deps?: PricingPageDeps;
 }) {
-  await Promise.resolve();
-
   const [pricingData, resolvedSearchParams] = await Promise.all([
     loadPricingData(deps),
     searchParams,

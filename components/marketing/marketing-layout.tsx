@@ -11,6 +11,9 @@ export type MarketingLayoutProps = {
   children: ReactNode;
 };
 
+const marketingNavLinkClass =
+  'rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
+
 async function DeferredAuthNav() {
   return AuthNav();
 }
@@ -24,8 +27,6 @@ async function MarketingHeaderPrimaryNav({
 
   const brandLinkClass =
     'rounded-md text-base font-bold font-heading whitespace-nowrap text-foreground transition-colors hover:text-foreground/80 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
-  const navLinkClass =
-    'rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
 
   return (
     <div className="flex items-center gap-6">
@@ -36,10 +37,10 @@ async function MarketingHeaderPrimaryNav({
         aria-label="Marketing navigation (desktop)"
         className="hidden items-center gap-4 text-sm sm:flex"
       >
-        <Link href={featuresHref} className={navLinkClass}>
+        <Link href={featuresHref} className={marketingNavLinkClass}>
           Features
         </Link>
-        <Link href={ROUTES.PRICING} className={navLinkClass}>
+        <Link href={ROUTES.PRICING} className={marketingNavLinkClass}>
           Pricing
         </Link>
       </nav>
@@ -54,18 +55,15 @@ async function MarketingHeaderMobileNav({
 }) {
   'use cache';
 
-  const navLinkClass =
-    'rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
-
   return (
     <nav
       aria-label="Marketing navigation (mobile)"
       className="mt-3 flex items-center gap-4 text-sm sm:hidden"
     >
-      <Link href={featuresHref} className={navLinkClass}>
+      <Link href={featuresHref} className={marketingNavLinkClass}>
         Features
       </Link>
-      <Link href={ROUTES.PRICING} className={navLinkClass}>
+      <Link href={ROUTES.PRICING} className={marketingNavLinkClass}>
         Pricing
       </Link>
     </nav>
@@ -74,9 +72,6 @@ async function MarketingHeaderMobileNav({
 
 async function MarketingFooter({ featuresHref }: { featuresHref: string }) {
   'use cache';
-
-  const navLinkClass =
-    'rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
 
   return (
     <footer className="border-t border-border">
@@ -93,10 +88,10 @@ async function MarketingFooter({ featuresHref }: { featuresHref: string }) {
           <div>
             <p className="text-sm font-semibold text-foreground">Product</p>
             <div className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
-              <Link href={featuresHref} className={navLinkClass}>
+              <Link href={featuresHref} className={marketingNavLinkClass}>
                 Features
               </Link>
-              <Link href={ROUTES.PRICING} className={navLinkClass}>
+              <Link href={ROUTES.PRICING} className={marketingNavLinkClass}>
                 Pricing
               </Link>
             </div>
@@ -104,10 +99,10 @@ async function MarketingFooter({ featuresHref }: { featuresHref: string }) {
           <div>
             <p className="text-sm font-semibold text-foreground">Account</p>
             <div className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
-              <Link href={ROUTES.SIGN_IN} className={navLinkClass}>
+              <Link href={ROUTES.SIGN_IN} className={marketingNavLinkClass}>
                 Sign in
               </Link>
-              <Link href={ROUTES.SIGN_UP} className={navLinkClass}>
+              <Link href={ROUTES.SIGN_UP} className={marketingNavLinkClass}>
                 Sign up
               </Link>
             </div>
