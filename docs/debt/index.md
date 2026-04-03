@@ -32,7 +32,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
-| [DEBT-343](./debt-343-scripts-cleanup.md) | Scripts directory cleanup — removed stale one-offs (`migrate-tag-taxonomy.*`, `tag-census.ts`, `ralph-loop.sh`, `docs/_ralphwiggum/`), added `seed-all-environments.sh` with dedup, production safety guard, and `--plan` mode | P3 | 2026-04-02 | — |
+| [DEBT-343](../_archive/debt/debt-343-scripts-cleanup.md) | Scripts directory cleanup — removed stale one-offs (`migrate-tag-taxonomy.*`, `tag-census.ts`, `ralph-loop.sh`, `docs/_ralphwiggum/`), added `seed-all-environments.sh` with dedup, production safety guard, and `--plan` mode | P3 | 2026-04-02 | — |
 | [DEBT-347](../_archive/debt/debt-347-parallel-fetch-opportunities.md) | Parallel fetch opportunities — resolved the remaining page-level await waterfalls in layout, pricing, billing, plus the trivial practice/question/bookmarks follow-ons, with targeted regression tests | P4 | 2026-04-02 | — |
 | [DEBT-336](../_archive/debt/debt-336-content-markdown-quality-pass.md) | Content markdown quality pass (C1–C4) — C1/C2/C4 resolved by Phase 2 YAML migration (DEBT-338); C3 (122 cosmetic restatements) investigated and tabled as acceptable | P3 | 2026-03-29 | — |
 | [DEBT-342](../_archive/debt/debt-342-idempotency-backward-compat-guard.md) | Idempotency backward-compat guard cleanup — removed the `completedAt \|\| resultJson` replay fallback, made `completedAt` the sole completion marker, and updated the targeted unit contract | P4 | 2026-03-28 | — |
