@@ -49,23 +49,97 @@ function createCountingAuthDeps() {
   };
 }
 
-function runReactServerScript(script: string) {
-  const output = execFileSync(
-    'pnpm',
-    ['exec', 'tsx', '--conditions', 'react-server', '-e', script],
-    {
-      cwd: process.cwd(),
-      encoding: 'utf8',
-    },
-  );
+function normalizeExecOutput(output: unknown): string | null {
+  if (typeof output === 'string') {
+    return output.trim();
+  }
 
-  return JSON.parse(output) as {
-    getCurrentUserCallCount: number;
-    executeCallCount: number;
-  };
+  if (Buffer.isBuffer(output)) {
+    return output.toString('utf8').trim();
+  }
+
+  return null;
+}
+
+function runReactServerScript(script: string) {
+  let output: string;
+
+  try {
+    output = execFileSync(
+      'pnpm',
+      ['exec', 'tsx', '--conditions', 'react-server', '-e', script],
+      {
+        cwd: process.cwd(),
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      },
+    );
+  } catch (error) {
+    const stdout = normalizeExecOutput(
+      (error as { stdout?: unknown } | undefined)?.stdout,
+    );
+    const stderr = normalizeExecOutput(
+      (error as { stderr?: unknown } | undefined)?.stderr,
+    );
+    const message = [
+      'React server script failed.',
+      stderr ? `stderr:\n${stderr}` : null,
+      stdout ? `stdout:\n${stdout}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+
+    throw new Error(message, {
+      cause: error instanceof Error ? error : undefined,
+    });
+  }
+
+  try {
+    return JSON.parse(output) as {
+      getCurrentUserCallCount: number;
+      executeCallCount: number;
+    };
+  } catch (error) {
+    throw new Error(
+      `React server script returned invalid JSON.\n\nstdout:\n${output.trim()}`,
+      {
+        cause: error instanceof Error ? error : undefined,
+      },
+    );
+  }
 }
 
 describe('auth-request-cache', () => {
+  it('surfaces subprocess stderr when the react server script fails', () => {
+    expect(() =>
+      runReactServerScript(`
+console.error('subprocess boom');
+process.exit(1);
+`),
+    ).toThrowError(/React server script failed\./);
+
+    expect(() =>
+      runReactServerScript(`
+console.error('subprocess boom');
+process.exit(1);
+`),
+    ).toThrowError(/subprocess boom/);
+  });
+
+  it('surfaces stdout when the react server script returns invalid json', () => {
+    expect(() =>
+      runReactServerScript(`
+console.log('not json');
+`),
+    ).toThrowError(/React server script returned invalid JSON\./);
+
+    expect(() =>
+      runReactServerScript(`
+console.log('not json');
+`),
+    ).toThrowError(/not json/);
+  });
+
   it('bypasses the cache when deps are injected directly', async () => {
     const deps = createCountingAuthDeps();
 
