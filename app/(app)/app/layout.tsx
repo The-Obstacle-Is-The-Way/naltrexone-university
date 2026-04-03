@@ -31,18 +31,20 @@ export async function enforceEntitledAppUser(
   deps?: AppLayoutDeps,
   redirectFn: (url: string) => never = redirect,
 ): Promise<EntitledAppUser> {
-  const { user, entitlement } = await getRequestAuthState({ deps });
+  const authState = await getRequestAuthState({ deps });
 
-  if (!user) {
+  if (!authState.user) {
     throw new ApplicationError('UNAUTHENTICATED', 'User not authenticated');
   }
 
-  if (!entitlement.isEntitled) {
-    const reason = entitlement.reason ?? 'subscription_required';
+  if (!authState.entitlement.isEntitled) {
+    const reason = authState.entitlement.reason ?? 'subscription_required';
     redirectFn(`${ROUTES.PRICING}?reason=${reason}`);
   }
 
-  return { subscriptionStatus: entitlement.subscriptionStatus ?? null };
+  return {
+    subscriptionStatus: authState.entitlement.subscriptionStatus ?? null,
+  };
 }
 
 export type AppLayoutShellProps = {

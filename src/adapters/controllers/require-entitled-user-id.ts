@@ -11,15 +11,15 @@ export async function requireEntitledUserId(deps: {
   authGateway: AuthGateway;
   checkEntitlementUseCase: CheckEntitlementUseCase;
 }): Promise<string> {
-  const { user, entitlement } = await getRequestAuthState({ deps });
+  const authState = await getRequestAuthState({ deps });
 
-  if (!user) {
+  if (!authState.user) {
     throw new ApplicationError('UNAUTHENTICATED', 'User not authenticated');
   }
 
-  if (!entitlement.isEntitled) {
+  if (!authState.entitlement.isEntitled) {
     throw new ApplicationError('UNSUBSCRIBED', 'Subscription required');
   }
 
-  return user.id;
+  return authState.user.id;
 }

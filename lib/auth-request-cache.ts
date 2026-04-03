@@ -12,10 +12,15 @@ import {
 import type { CheckEntitlementOutput } from '@/src/application/use-cases/check-entitlement';
 import type { User } from '@/src/domain/entities';
 
-export type RequestAuthState = {
-  user: User | null;
-  entitlement: CheckEntitlementOutput | null;
-};
+export type RequestAuthState =
+  | {
+      user: null;
+      entitlement: null;
+    }
+  | {
+      user: User;
+      entitlement: CheckEntitlementOutput;
+    };
 
 type RequestAuthStateOptions = {
   loadContainer?: LoadContainerFn<AuthDepsContainer>;

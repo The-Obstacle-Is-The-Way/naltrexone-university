@@ -47,14 +47,14 @@ export async function AuthNav({
     return unauthenticatedNav;
   }
 
-  const { user, entitlement } = await getRequestAuthState({ deps, options });
+  const authState = await getRequestAuthState({ deps, options });
 
-  if (!user) {
+  if (!authState.user) {
     return unauthenticatedNav;
   }
 
   const primaryLink =
-    entitlement?.isEntitled && showPrimaryLink
+    authState.entitlement.isEntitled && showPrimaryLink
       ? { href: ROUTES.APP_DASHBOARD, label: 'Dashboard' }
       : null;
   const userButtonAppearance = {

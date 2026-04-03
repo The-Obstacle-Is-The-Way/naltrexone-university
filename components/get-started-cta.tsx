@@ -28,8 +28,8 @@ export async function GetStartedCta({
     );
   }
 
-  const { user, entitlement } = await getRequestAuthState({ deps, options });
-  if (!user) {
+  const authState = await getRequestAuthState({ deps, options });
+  if (!authState.user) {
     return (
       <Button asChild className={ctaClassName}>
         <Link href={ROUTES.PRICING}>Get Started</Link>
@@ -37,8 +37,12 @@ export async function GetStartedCta({
     );
   }
 
-  const href = entitlement.isEntitled ? ROUTES.APP_DASHBOARD : ROUTES.PRICING;
-  const label = entitlement.isEntitled ? 'Go to Dashboard' : 'Get Started';
+  const href = authState.entitlement.isEntitled
+    ? ROUTES.APP_DASHBOARD
+    : ROUTES.PRICING;
+  const label = authState.entitlement.isEntitled
+    ? 'Go to Dashboard'
+    : 'Get Started';
 
   return (
     <Button asChild className={ctaClassName}>

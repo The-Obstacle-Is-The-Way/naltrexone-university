@@ -38,8 +38,8 @@ export async function loadPricingData(deps?: PricingPageDeps): Promise<{
   isEntitled: boolean;
   reason: NonEntitledReason | null;
 }> {
-  const { user, entitlement } = await getRequestAuthState({ deps });
-  if (!user) {
+  const authState = await getRequestAuthState({ deps });
+  if (!authState.user) {
     return {
       isEntitled: false,
       reason: 'subscription_required',
@@ -47,8 +47,8 @@ export async function loadPricingData(deps?: PricingPageDeps): Promise<{
   }
 
   return {
-    isEntitled: entitlement.isEntitled,
-    reason: entitlement.reason ?? null,
+    isEntitled: authState.entitlement.isEntitled,
+    reason: authState.entitlement.reason ?? null,
   };
 }
 
