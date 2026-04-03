@@ -1,6 +1,12 @@
+import { CircuitBreaker } from '@/src/adapters/shared/circuit-breaker';
 import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
 import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
 import type { Logger } from '@/src/application/ports/logger';
+
+const stripeCircuitBreaker = new CircuitBreaker({
+  failureThreshold: 5,
+  resetTimeoutMs: 60_000,
+});
 
 function toStripeErrorContext(error: unknown): Record<string, unknown> {
   if (error instanceof Error) {
@@ -27,20 +33,22 @@ export function callStripeWithRetry<T>({
   fn: () => Promise<T>;
   logger: Logger;
 }): Promise<T> {
-  return retry(fn, {
-    ...DEFAULT_RETRY_OPTIONS,
-    shouldRetry: isTransientExternalError,
-    onRetry: ({ attempt, maxAttempts, delayMs, error }) => {
-      logger.warn(
-        {
-          operation,
-          attempt,
-          maxAttempts,
-          delayMs,
-          error: toStripeErrorContext(error),
-        },
-        'Retrying Stripe API call',
-      );
-    },
-  });
+  return stripeCircuitBreaker.execute(() =>
+    retry(fn, {
+      ...DEFAULT_RETRY_OPTIONS,
+      shouldRetry: isTransientExternalError,
+      onRetry: ({ attempt, maxAttempts, delayMs, error }) => {
+        logger.warn(
+          {
+            operation,
+            attempt,
+            maxAttempts,
+            delayMs,
+            error: toStripeErrorContext(error),
+          },
+          'Retrying Stripe API call',
+        );
+      },
+    }),
+  );
 }
