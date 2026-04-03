@@ -1,6 +1,7 @@
-import { isAlreadyCanceledError } from '@/src/adapters/gateways/stripe';
-import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
-import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
+import {
+  callStripeWithRetry,
+  isAlreadyCanceledError,
+} from '@/src/adapters/gateways/stripe';
 import type { Logger } from '@/src/application/ports/logger';
 
 type StripeSubscriptionLike = {
@@ -44,13 +45,14 @@ export async function cancelStripeCustomerSubscriptions(
     }
 
     try {
-      await retry(
-        () =>
+      await callStripeWithRetry({
+        operation: 'subscriptions.cancel',
+        fn: () =>
           stripe.subscriptions.cancel(subscription.id, {
             idempotencyKey: `cancel_subscription:${subscription.id}`,
           }),
-        { ...DEFAULT_RETRY_OPTIONS, shouldRetry: isTransientExternalError },
-      );
+        logger,
+      });
     } catch (error) {
       if (isAlreadyCanceledError(error)) {
         logger.info(
