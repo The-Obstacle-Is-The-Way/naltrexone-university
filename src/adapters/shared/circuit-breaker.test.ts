@@ -1,17 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { CircuitBreaker } from './circuit-breaker';
-
-function createDeferred<T>() {
-  let resolve!: (value: T | PromiseLike<T>) => void;
-  let reject!: (reason?: unknown) => void;
-
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-
-  return { promise, resolve, reject };
-}
 
 describe('CircuitBreaker', () => {
   it('throws when failureThreshold is not a positive integer', () => {
