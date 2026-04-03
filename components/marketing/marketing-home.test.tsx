@@ -137,6 +137,51 @@ describe('components/marketing/marketing-home', () => {
     expect(html).toContain('CTA');
   });
 
+  it('renderMarketingHome uses static fallbacks when no overrides are provided', async () => {
+    const element = await renderMarketingHome();
+    const html = renderToStaticMarkup(element);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const header = doc.querySelector('header');
+    const heroSection = doc.querySelector('section[aria-label="Hero"]');
+
+    expect(
+      header?.querySelector('a[href="/sign-in"]')?.textContent?.trim(),
+    ).toBe('Sign in');
+    expect(
+      heroSection?.querySelector('a[href="/pricing"]')?.textContent?.trim(),
+    ).toBe('Get Started');
+  });
+
+  it('renderMarketingHome preserves the primary CTA when auth nav falls back', async () => {
+    const getStartedCtaFn = vi.fn(async () => <div>CTA</div>);
+
+    const element = await renderMarketingHome({ getStartedCtaFn });
+    const html = renderToStaticMarkup(element);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const header = doc.querySelector('header');
+
+    expect(getStartedCtaFn).toHaveBeenCalledTimes(1);
+    expect(html).toContain('CTA');
+    expect(
+      header?.querySelector('a[href="/sign-in"]')?.textContent?.trim(),
+    ).toBe('Sign in');
+  });
+
+  it('renderMarketingHome preserves the auth nav when the CTA falls back', async () => {
+    const authNavFn = vi.fn(async () => <div>AuthNav</div>);
+
+    const element = await renderMarketingHome({ authNavFn });
+    const html = renderToStaticMarkup(element);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const heroSection = doc.querySelector('section[aria-label="Hero"]');
+
+    expect(authNavFn).toHaveBeenCalledTimes(1);
+    expect(html).toContain('AuthNav');
+    expect(
+      heroSection?.querySelector('a[href="/pricing"]')?.textContent?.trim(),
+    ).toBe('Get Started');
+  });
+
   it('labels all major landing sections with aria-label', async () => {
     const doc = await renderDoc();
     const sectionLabels = Array.from(doc.querySelectorAll('section')).map(

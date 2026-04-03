@@ -1,13 +1,28 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import {
   hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
-import { selectChoiceByLabel } from './helpers/question';
+import {
+  selectChoiceByLabel,
+  waitForQuestionLoadingToFinish,
+} from './helpers/question';
 import { parseQuestionProgressCount } from './helpers/question-progress';
 import { runE2EUserStateReset } from './helpers/reset-e2e-user-state';
 import { startSession } from './helpers/session';
 import { ensureSubscribed } from './helpers/subscription';
+
+function getVisibleQuestionNavigator(page: Page) {
+  return page.locator('nav[aria-label="Question navigator"]:visible');
+}
+
+async function getCurrentNavigatorButtonText(page: Page) {
+  const currentButton = getVisibleQuestionNavigator(page).locator(
+    '[aria-current="step"]',
+  );
+  await expect(currentButton).toHaveCount(1, { timeout: 15_000 });
+  return currentButton.textContent();
+}
 
 test.describe('session review navigation (SPEC-027)', () => {
   // Multi-page audit flows can exceed the default timeout due to sequential navigation and assertions in CI.
@@ -83,16 +98,19 @@ test.describe('session review navigation (SPEC-027)', () => {
     await expect(page).toHaveURL(/mode=review/);
 
     // Wait for question content to load
-    await expect(page.getByText(/Loading question/i)).toBeHidden({
-      timeout: 15_000,
-    });
+    await waitForQuestionLoadingToFinish(page);
 
     // SPEC-028: ReviewQuestionNavigator grid
-    const navigatorCard = page.locator('[data-slot="card"]', {
-      hasText: 'Question navigator',
-    });
-    const navigatorHeading = page.getByText('Question navigator');
+    const navigatorCard =
+      getVisibleQuestionNavigator(page).locator('[data-slot="card"]');
+    const navigatorHeading = getVisibleQuestionNavigator(page).getByRole(
+      'heading',
+      { name: 'Question navigator' },
+    );
     await expect(navigatorHeading).toBeVisible({ timeout: 15_000 });
+    await expect(getVisibleQuestionNavigator(page)).toHaveCount(1, {
+      timeout: 15_000,
+    });
 
     const reviewProgressIndicator = page.getByText(/^Question 1 of \d+\b/);
     await expect(reviewProgressIndicator).toBeVisible({ timeout: 15_000 });
@@ -152,9 +170,7 @@ test.describe('session review navigation (SPEC-027)', () => {
         url.searchParams.get('mode') === 'review',
       { timeout: 15_000 },
     );
-    await expect(page.getByText(/Loading question/i)).toBeHidden({
-      timeout: 15_000,
-    });
+    await waitForQuestionLoadingToFinish(page);
 
     // Verify "Previous" link is present on question 2
     await expect(page.getByRole('link', { name: 'Previous' })).toBeVisible({
@@ -175,9 +191,8 @@ test.describe('session review navigation (SPEC-027)', () => {
     });
 
     // SPEC-028: jump navigation via ReviewQuestionNavigator
-    const navigatorCurrentTextOnSecondQuestion = await navigatorCard
-      .locator('[aria-current="step"]')
-      .textContent();
+    const navigatorCurrentTextOnSecondQuestion =
+      await getCurrentNavigatorButtonText(page);
     expect(navigatorCurrentTextOnSecondQuestion).not.toBeNull();
     expect(navigatorCurrentTextOnSecondQuestion?.trim()).not.toBe(
       navigatorCurrentTextOnFirstQuestion?.trim(),
@@ -198,16 +213,17 @@ test.describe('session review navigation (SPEC-027)', () => {
         url.searchParams.get('mode') === 'review',
       { timeout: 15_000 },
     );
-    await expect(page.getByText(/Loading question/i)).toBeHidden({
-      timeout: 15_000,
-    });
-    await expect(page.getByText('Question navigator')).toBeVisible({
+    await waitForQuestionLoadingToFinish(page);
+    await expect(
+      getVisibleQuestionNavigator(page).getByRole('heading', {
+        name: 'Question navigator',
+      }),
+    ).toBeVisible({
       timeout: 15_000,
     });
 
-    const navigatorCurrentTextAfterJump = await navigatorCard
-      .locator('[aria-current="step"]')
-      .textContent();
+    const navigatorCurrentTextAfterJump =
+      await getCurrentNavigatorButtonText(page);
     expect(navigatorCurrentTextAfterJump).not.toBeNull();
     expect(navigatorCurrentTextAfterJump?.trim()).toBe(
       navigatorCurrentTextOnFirstQuestion?.trim(),
@@ -265,9 +281,7 @@ test.describe('session review navigation (SPEC-027)', () => {
     await expect(page).toHaveURL(/mode=review/);
 
     // Wait for question content to load
-    await expect(page.getByText(/Loading question/i)).toBeHidden({
-      timeout: 15_000,
-    });
+    await waitForQuestionLoadingToFinish(page);
 
     // Verify back link uses the canonical sessions history href (tab + pagination)
     const backLink = page
@@ -351,9 +365,7 @@ test.describe('session review navigation (SPEC-027)', () => {
     await expect(page).toHaveURL(/mode=review/);
 
     // Wait for question content to load
-    await expect(page.getByText(/Loading question/i)).toBeHidden({
-      timeout: 15_000,
-    });
+    await waitForQuestionLoadingToFinish(page);
 
     // BUG-152: standalone review has NO Question Navigator
     await expect(page.getByText('Question navigator')).toBeHidden({

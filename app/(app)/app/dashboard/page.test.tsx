@@ -1,13 +1,15 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
 
 let DashboardView: typeof import('./page').DashboardView;
+let DashboardPage: typeof import('./page').default;
 let renderDashboard: typeof import('./page').renderDashboard;
 
 beforeAll(async () => {
   const pageModule = await import('./page');
+  DashboardPage = pageModule.default;
   DashboardView = pageModule.DashboardView;
   renderDashboard = pageModule.renderDashboard;
 });
@@ -25,6 +27,10 @@ function getClassTokens(className: string): Set<string> {
 }
 
 describe('app/(app)/app/dashboard', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('renders page subtitle with explicit text-base sizing', () => {
     const html = renderToStaticMarkup(
       <DashboardView
@@ -482,6 +488,58 @@ describe('app/(app)/app/dashboard', () => {
     expect(html).toContain('Unable to load stats.');
     expect(html).toContain('Internal error');
     expect(html).toContain('Go to Practice');
+  });
+
+  it('DashboardPage waits for the request boundary before rendering controller output', async () => {
+    const requestBoundaryModule = await import(
+      '@/app/(app)/app/request-boundary'
+    );
+    const statsControllerModule = await import(
+      '@/src/adapters/controllers/stats-controller'
+    );
+    const practiceControllerModule = await import(
+      '@/src/adapters/controllers/practice-controller'
+    );
+
+    const awaitRequestBoundarySpy = vi
+      .spyOn(requestBoundaryModule, 'awaitRequestBoundary')
+      .mockResolvedValue(undefined);
+    const getUserStatsSpy = vi
+      .spyOn(statsControllerModule, 'getUserStats')
+      .mockResolvedValue({
+        ok: true,
+        data: {
+          totalAnswered: 0,
+          accuracyOverall: 0,
+          answeredLast7Days: 0,
+          accuracyLast7Days: 0,
+          currentStreakDays: 0,
+          recentActivity: [],
+        },
+      });
+    const getSessionHistorySpy = vi
+      .spyOn(practiceControllerModule, 'getSessionHistory')
+      .mockResolvedValue({
+        ok: true,
+        data: {
+          rows: [],
+          total: 0,
+          limit: 3,
+          offset: 0,
+        },
+      });
+
+    const element = await DashboardPage();
+    const html = renderToStaticMarkup(element);
+
+    expect(awaitRequestBoundarySpy).toHaveBeenCalledTimes(1);
+    expect(getUserStatsSpy).toHaveBeenCalledWith({});
+    expect(getSessionHistorySpy).toHaveBeenCalledWith({
+      limit: 3,
+      offset: 0,
+    });
+    expect(html).toContain('Dashboard');
+    expect(html).toContain('No completed sessions yet.');
   });
 
   it('uses borderless tonal fill elevation for dashboard activity/session rows', () => {

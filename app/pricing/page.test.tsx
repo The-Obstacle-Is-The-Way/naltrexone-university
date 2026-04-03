@@ -716,6 +716,32 @@ describe('app/pricing', () => {
     expect(html).toContain('Subscribe Monthly');
   });
 
+  it('renders injected pricing state with the static auth fallback when authNavFn is omitted', async () => {
+    const element = await PricingPage({
+      searchParams: Promise.resolve({}),
+      deps: {
+        authGateway: {
+          getCurrentUser: async () => null,
+          requireUser: async () => {
+            throw new Error('not used');
+          },
+        },
+        checkEntitlementUseCase: {
+          execute: async () => ({ isEntitled: false }),
+        },
+      },
+    });
+    const html = renderToStaticMarkup(element);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const header = doc.querySelector('header');
+
+    expect(html).toContain('Pricing');
+    expect(html).toContain('Subscribe Monthly');
+    expect(
+      header?.querySelector('a[href="/sign-in"]')?.textContent?.trim(),
+    ).toBe('Sign in');
+  });
+
   it('renders a neutral pricing skeleton fallback without awaiting search params', async () => {
     const { thenable: searchParams } =
       createTrackedThenable<Record<string, never>>();
