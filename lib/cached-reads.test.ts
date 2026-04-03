@@ -13,7 +13,7 @@ function normalizeExecOutput(output: unknown): string | null {
   return null;
 }
 
-function runReactServerScript(script: string) {
+function runReactServerScript<T>(script: string): T {
   let output: string;
 
   try {
@@ -47,7 +47,7 @@ function runReactServerScript(script: string) {
   }
 
   try {
-    return JSON.parse(output) as Record<string, number>;
+    return JSON.parse(output) as T;
   } catch (error) {
     throw new Error(
       `React server script returned invalid JSON.\n\nstdout:\n${output.trim()}`,
@@ -177,6 +177,88 @@ console.log(
 
     expect(result).toEqual({
       findPublishedByIdCallCount: 2,
+    });
+  });
+
+  it('normalizes published question batch reads while preserving caller order', () => {
+    const result = runReactServerScript<{
+      findPublishedByIdsCallCount: number;
+      findPublishedByIdsCalls: string[][];
+      firstResultIds: string[];
+      secondResultIds: string[];
+    }>(`
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const React = require('react');
+const { renderToReadableStream } = require('next/dist/compiled/react-server-dom-webpack/server.node');
+const { createRequestCachedQuestionRepository } = require('./lib/cached-reads.ts');
+const { FakeQuestionRepository } = require('./src/application/test-helpers/fakes/fake-question-repository.ts');
+const { createQuestion } = require('./src/domain/test-helpers/index.ts');
+
+class CountingQuestionRepository extends FakeQuestionRepository {
+  findPublishedByIdsCallCount = 0;
+
+  async findPublishedByIds(ids) {
+    this.findPublishedByIdsCallCount++;
+    return super.findPublishedByIds(ids);
+  }
+}
+
+async function drain(stream) {
+  const reader = stream.getReader();
+  while (true) {
+    const { done } = await reader.read();
+    if (done) break;
+  }
+}
+
+const rawRepository = new CountingQuestionRepository([
+  createQuestion({ id: 'a', slug: 'question-a' }),
+  createQuestion({ id: 'b', slug: 'question-b' }),
+]);
+const repository = createRequestCachedQuestionRepository(rawRepository);
+
+let firstResultIds = [];
+let secondResultIds = [];
+
+async function FirstCaller() {
+  const questions = await repository.findPublishedByIds(['b', 'a', 'a']);
+  firstResultIds = questions.map((question) => question.id);
+  return React.createElement('div', null, firstResultIds.join(','));
+}
+
+async function SecondCaller() {
+  const questions = await repository.findPublishedByIds(['a', 'b']);
+  secondResultIds = questions.map((question) => question.id);
+  return React.createElement('div', null, secondResultIds.join(','));
+}
+
+async function App() {
+  return React.createElement(
+    React.Fragment,
+    null,
+    React.createElement(FirstCaller),
+    React.createElement(SecondCaller),
+  );
+}
+
+await drain(await renderToReadableStream(React.createElement(App), null));
+console.log(
+  JSON.stringify({
+    findPublishedByIdsCallCount: rawRepository.findPublishedByIdsCallCount,
+    findPublishedByIdsCalls: rawRepository.findPublishedByIdsCalls,
+    firstResultIds,
+    secondResultIds,
+  }),
+);
+`);
+
+    expect(result).toEqual({
+      findPublishedByIdsCallCount: 1,
+      findPublishedByIdsCalls: [['a', 'b']],
+      firstResultIds: ['b', 'a', 'a'],
+      secondResultIds: ['a', 'b'],
     });
   });
 
