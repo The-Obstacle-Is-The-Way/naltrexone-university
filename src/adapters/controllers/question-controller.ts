@@ -192,8 +192,8 @@ const getDeps = createDepsResolver<
 export const getNextQuestion = createAction({
   schema: GetNextQuestionInputSchema,
   getDeps,
-  execute: async (input, d) => {
-    const userId = await requireEntitledUserId(d);
+  execute: async (input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
 
     if (typeof input.sessionId === 'string') {
       return d.getNextQuestionUseCase.execute({
@@ -214,8 +214,8 @@ export const getNextQuestion = createAction({
 export const submitAnswer = createAction({
   schema: SubmitAnswerInputSchema,
   getDeps,
-  execute: async (input, d) => {
-    const userId = await requireEntitledUserId(d);
+  execute: async (input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
 
     const {
       questionId,

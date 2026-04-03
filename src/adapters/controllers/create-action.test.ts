@@ -56,7 +56,56 @@ describe('createAction', () => {
     } satisfies ActionResult<{ message: string }>);
 
     expect(getDeps).toHaveBeenCalledWith(deps, undefined);
-    expect(execute).toHaveBeenCalledWith({ name: 'hi' }, deps);
+    expect(execute).toHaveBeenCalledWith({ name: 'hi' }, deps, {
+      depsSource: 'injected',
+    });
+  });
+
+  it('passes default_container depsSource when loading deps from the default resolver', async () => {
+    const getDeps = vi.fn(async () => ({ value: 'container-deps' }));
+    const execute = vi.fn(async () => ({ ok: true }) as const);
+
+    const action = createAction({
+      schema: z.object({}).strict(),
+      getDeps,
+      execute,
+    });
+
+    await action({});
+
+    expect(getDeps).toHaveBeenCalledWith(undefined, undefined);
+    expect(execute).toHaveBeenCalledWith(
+      {},
+      { value: 'container-deps' },
+      { depsSource: 'default_container' },
+    );
+  });
+
+  it('passes custom_container depsSource when using a loadContainer override', async () => {
+    const getDeps = vi.fn(async () => ({ value: 'custom-container-deps' }));
+    const execute = vi.fn(async () => ({ ok: true }) as const);
+    const logger = new FakeLogger();
+
+    const action = createAction({
+      schema: z.object({}).strict(),
+      getDeps,
+      execute,
+    });
+
+    await action({}, undefined, {
+      loadContainer: async () => ({}) as never,
+      logger,
+    });
+
+    expect(getDeps).toHaveBeenCalledWith(
+      undefined,
+      expect.objectContaining({ loadContainer: expect.any(Function), logger }),
+    );
+    expect(execute).toHaveBeenCalledWith(
+      {},
+      { value: 'custom-container-deps' },
+      { depsSource: 'custom_container' },
+    );
   });
 
   it('maps ApplicationError via handleError', async () => {

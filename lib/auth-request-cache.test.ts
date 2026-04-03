@@ -1,5 +1,53 @@
 import { execFileSync } from 'node:child_process';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { getRequestAuthState } from '@/lib/auth-request-cache';
+import {
+  FakeAuthGateway,
+  FakeSubscriptionRepository,
+} from '@/src/application/test-helpers/fakes';
+import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
+import { createSubscription, createUser } from '@/src/domain/test-helpers';
+
+class CountingAuthGateway extends FakeAuthGateway {
+  getCurrentUserCallCount = 0;
+
+  override async getCurrentUser() {
+    this.getCurrentUserCallCount++;
+    return super.getCurrentUser();
+  }
+}
+
+class CountingCheckEntitlementUseCase extends CheckEntitlementUseCase {
+  executeCallCount = 0;
+
+  override async execute(
+    input: Parameters<CheckEntitlementUseCase['execute']>[0],
+  ) {
+    this.executeCallCount++;
+    return super.execute(input);
+  }
+}
+
+function createCountingAuthDeps() {
+  const user = createUser({ id: 'user_1' });
+  const authGateway = new CountingAuthGateway(user);
+  const subscriptionRepository = new FakeSubscriptionRepository([
+    createSubscription({
+      userId: user.id,
+      status: 'active',
+      currentPeriodEnd: new Date('2026-12-31T00:00:00Z'),
+    }),
+  ]);
+  const checkEntitlementUseCase = new CountingCheckEntitlementUseCase(
+    subscriptionRepository,
+    () => new Date('2026-02-01T00:00:00Z'),
+  );
+
+  return {
+    authGateway,
+    checkEntitlementUseCase,
+  };
+}
 
 function runReactServerScript(script: string) {
   const output = execFileSync(
@@ -18,6 +66,33 @@ function runReactServerScript(script: string) {
 }
 
 describe('auth-request-cache', () => {
+  it('bypasses the cache when deps are injected directly', async () => {
+    const deps = createCountingAuthDeps();
+
+    const first = await getRequestAuthState({ deps });
+    const second = await getRequestAuthState({ deps });
+
+    expect(first).toEqual(second);
+    expect(deps.authGateway.getCurrentUserCallCount).toBe(2);
+    expect(deps.checkEntitlementUseCase.executeCallCount).toBe(2);
+  });
+
+  it('bypasses the cache when a custom container loader is provided', async () => {
+    const deps = createCountingAuthDeps();
+    const loadContainer = vi.fn(async () => ({
+      createAuthGateway: () => deps.authGateway,
+      createCheckEntitlementUseCase: () => deps.checkEntitlementUseCase,
+    }));
+
+    const first = await getRequestAuthState({ options: { loadContainer } });
+    const second = await getRequestAuthState({ options: { loadContainer } });
+
+    expect(first).toEqual(second);
+    expect(loadContainer).toHaveBeenCalledTimes(2);
+    expect(deps.authGateway.getCurrentUserCallCount).toBe(2);
+    expect(deps.checkEntitlementUseCase.executeCallCount).toBe(2);
+  });
+
   it('deduplicates auth and entitlement work within a single server render', () => {
     const result = runReactServerScript(`
 import { createRequire } from 'node:module';

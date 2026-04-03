@@ -73,8 +73,8 @@ const getDeps = createDepsResolver<
 export const toggleBookmark = createAction({
   schema: ToggleBookmarkInputSchema,
   getDeps,
-  execute: async (input, d) => {
-    const userId = await requireEntitledUserId(d);
+  execute: async (input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
 
     const { questionId, idempotencyKey } = input;
 
@@ -116,8 +116,8 @@ export const toggleBookmark = createAction({
 export const getBookmarks = createAction({
   schema: GetBookmarksInputSchema,
   getDeps,
-  execute: async (_input, d) => {
-    const userId = await requireEntitledUserId(d);
+  execute: async (_input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
     return d.getBookmarksUseCase.execute({ userId });
   },
 });

@@ -9,6 +9,15 @@ export type ActionOptions<TContainer> = {
   logger?: Logger;
 };
 
+export type DepsResolutionSource =
+  | 'injected'
+  | 'default_container'
+  | 'custom_container';
+
+export type ActionExecutionMeta = {
+  depsSource: DepsResolutionSource;
+};
+
 export type GetDepsFn<TDeps, TContainer> = (
   deps?: TDeps,
   options?: ActionOptions<TContainer>,
@@ -22,7 +31,11 @@ export function createAction<
 >(config: {
   schema: ZodType<TInput, ZodTypeDef, unknown>;
   getDeps: GetDepsFn<TDeps, TContainer>;
-  execute: (input: TInput, deps: TDeps) => Promise<TOutput>;
+  execute: (
+    input: TInput,
+    deps: TDeps,
+    meta: ActionExecutionMeta,
+  ) => Promise<TOutput>;
 }): (
   input: unknown,
   deps?: TDeps,
@@ -39,7 +52,14 @@ export function createAction<
 
     try {
       const d = await config.getDeps(deps, options);
-      const output = await config.execute(parsed.data, d);
+      const depsSource: DepsResolutionSource = deps
+        ? 'injected'
+        : options?.loadContainer
+          ? 'custom_container'
+          : 'default_container';
+      const output = await config.execute(parsed.data, d, {
+        depsSource,
+      });
       return ok(output);
     } catch (error) {
       return handleError(

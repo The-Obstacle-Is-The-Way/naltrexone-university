@@ -56,8 +56,8 @@ const getDeps = createDepsResolver<
 export const getAttemptedQuestions = createAction({
   schema: GetAttemptedQuestionsInputSchema,
   getDeps,
-  execute: async (input, d) => {
-    const userId = await requireEntitledUserId(d);
+  execute: async (input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
     return d.getAttemptedQuestionsUseCase.execute({
       userId,
       limit: input.limit,

@@ -77,7 +77,7 @@ This is now implemented in [`lib/auth-request-cache.ts`](../../lib/auth-request-
 
 Important: the cached helper must own dependency resolution internally or close over a stable request-local dependency object. Passing fresh gateway/use-case instances as cache arguments would defeat memoization because `createContainer()` currently returns new object identities.
 
-**ADR-010 compliance:** this deduplicates only inside the current render/request. Separate POST server-action requests still re-check entitlement fresh, which preserves webhook-driven subscription updates. [`lib/auth-request-cache.test.ts`](../../lib/auth-request-cache.test.ts) verifies both behaviors: same-render dedup and fresh re-checks on a new render.
+**ADR-010 compliance:** this deduplicates only inside the current render/request. Separate POST server-action requests still re-check entitlement fresh, which preserves webhook-driven subscription updates. Injected test deps and custom `loadContainer` overrides intentionally bypass the cache so tests continue to exercise the exact supplied seam. [`lib/auth-request-cache.test.ts`](../../lib/auth-request-cache.test.ts) verifies both behaviors: same-render dedup and fresh re-checks on a new render.
 
 ---
 

@@ -71,6 +71,8 @@ export async function getRequestAuthState(input?: {
   }
 
   if (input?.options?.loadContainer) {
+    // Custom container loaders are a test seam, not the production path.
+    // Skip the cache so those callers always observe the exact injected loader.
     const deps = await getAuthCheckDeps(undefined, input.options);
     return loadRequestAuthState(deps);
   }
