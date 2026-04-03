@@ -5,7 +5,9 @@ import { AppDesktopNav } from '@/components/app-desktop-nav';
 import { AuthNav } from '@/components/auth-nav';
 import { MobileNav } from '@/components/mobile-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { getRequestAuthState } from '@/lib/auth-request-cache';
 import { ROUTES } from '@/lib/routes';
+import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
 import type { SubscriptionStatus } from '@/src/domain/value-objects';
@@ -21,18 +23,6 @@ export type AppLayoutDeps = {
   checkEntitlementUseCase: CheckEntitlementUseCase;
 };
 
-async function getDeps(deps?: AppLayoutDeps): Promise<AppLayoutDeps> {
-  if (deps) return deps;
-
-  const { createContainer } = await import('@/lib/container');
-  const container = createContainer();
-
-  return {
-    authGateway: container.createAuthGateway(),
-    checkEntitlementUseCase: container.createCheckEntitlementUseCase(),
-  };
-}
-
 export type EntitledAppUser = {
   subscriptionStatus: SubscriptionStatus | null;
 };
@@ -41,12 +31,11 @@ export async function enforceEntitledAppUser(
   deps?: AppLayoutDeps,
   redirectFn: (url: string) => never = redirect,
 ): Promise<EntitledAppUser> {
-  const d = await getDeps(deps);
-  const user = await d.authGateway.requireUser();
+  const { user, entitlement } = await getRequestAuthState({ deps });
 
-  const entitlement = await d.checkEntitlementUseCase.execute({
-    userId: user.id,
-  });
+  if (!user) {
+    throw new ApplicationError('UNAUTHENTICATED', 'User not authenticated');
+  }
 
   if (!entitlement.isEntitled) {
     const reason = entitlement.reason ?? 'subscription_required';
