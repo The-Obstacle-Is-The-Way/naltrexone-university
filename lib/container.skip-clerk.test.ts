@@ -61,7 +61,8 @@ describe('container (skip clerk)', () => {
           } as unknown as typeof import('./env').env,
           logger:
             new FakeLogger() as unknown as typeof import('./logger').logger,
-          stripe: {} as unknown as typeof import('./stripe').stripe,
+          getStripe: () =>
+            ({}) as unknown as ReturnType<typeof import('./stripe').getStripe>,
           now: () => new Date('2026-02-01T00:00:00Z'),
         },
       });
@@ -110,7 +111,8 @@ describe('container (skip clerk)', () => {
           } as unknown as typeof import('./env').env,
           logger:
             new FakeLogger() as unknown as typeof import('./logger').logger,
-          stripe: {} as unknown as typeof import('./stripe').stripe,
+          getStripe: () =>
+            ({}) as unknown as ReturnType<typeof import('./stripe').getStripe>,
           now: () => new Date('2026-02-01T00:00:00Z'),
         },
       });

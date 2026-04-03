@@ -79,7 +79,8 @@ describe('container factories', () => {
           NEXT_PUBLIC_APP_URL: 'https://app.example.com',
         } as unknown as typeof import('./env').env,
         logger: new FakeLogger() as unknown as typeof import('./logger').logger,
-        stripe: {} as unknown as typeof import('./stripe').stripe,
+        getStripe: () =>
+          ({}) as unknown as ReturnType<typeof import('./stripe').getStripe>,
         now: () => new Date('2026-02-01T00:00:00Z'),
       },
     });
@@ -143,7 +144,8 @@ describe('container factories', () => {
           NEXT_PUBLIC_APP_URL: 'https://app.example.com',
         } as unknown as typeof import('./env').env,
         logger: new FakeLogger() as unknown as typeof import('./logger').logger,
-        stripe: {} as unknown as typeof import('./stripe').stripe,
+        getStripe: () =>
+          ({}) as unknown as ReturnType<typeof import('./stripe').getStripe>,
         now: () => new Date('2026-02-01T00:00:00Z'),
       },
     });
@@ -365,7 +367,8 @@ describe('container factories', () => {
           NEXT_PUBLIC_APP_URL: 'https://app.example.com',
         } as unknown as typeof import('./env').env,
         logger: new FakeLogger() as unknown as typeof import('./logger').logger,
-        stripe: {} as unknown as typeof import('./stripe').stripe,
+        getStripe: () =>
+          ({}) as unknown as ReturnType<typeof import('./stripe').getStripe>,
         now: () => new Date('2026-02-01T00:00:00Z'),
       },
     });
@@ -379,6 +382,35 @@ describe('container factories', () => {
     ).toBe(
       (subscriptionRepository as unknown as { priceIds: unknown }).priceIds,
     );
+  });
+
+  it('uses the injected getStripe override when creating the payment gateway', () => {
+    const stripeClient = {} as unknown as ReturnType<
+      typeof import('./stripe').getStripe
+    >;
+    const getStripe = vi.fn(() => stripeClient);
+
+    const container = createContainer({
+      primitives: {
+        db: {} as unknown as DrizzleDb,
+        env: {
+          NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
+          NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
+          STRIPE_WEBHOOK_SECRET: 'whsec',
+          NEXT_PUBLIC_APP_URL: 'https://app.example.com',
+        } as unknown as typeof import('./env').env,
+        logger: new FakeLogger() as unknown as typeof import('./logger').logger,
+        getStripe,
+        now: () => new Date('2026-02-01T00:00:00Z'),
+      },
+    });
+
+    const paymentGateway = container.createPaymentGateway();
+
+    expect(getStripe).toHaveBeenCalledTimes(1);
+    expect(
+      (paymentGateway as unknown as { deps: { stripe: unknown } }).deps.stripe,
+    ).toBe(stripeClient);
   });
 
   it('uses repository factories inside createStripeWebhookDeps transactions', async () => {
@@ -422,7 +454,8 @@ describe('container factories', () => {
           NEXT_PUBLIC_APP_URL: 'https://app.example.com',
         } as unknown as typeof import('./env').env,
         logger: new FakeLogger() as unknown as typeof import('./logger').logger,
-        stripe: {} as unknown as typeof import('./stripe').stripe,
+        getStripe: () =>
+          ({}) as unknown as ReturnType<typeof import('./stripe').getStripe>,
         now: () => new Date('2026-02-01T00:00:00Z'),
       },
       repositories: {

@@ -91,6 +91,6 @@ export type CheckoutSuccessContainerLike = {
 
 export type CheckoutSuccessModuleLoaders = {
   loadContainer: () => Promise<{ createContainer: () => unknown }>;
-  loadStripe: () => Promise<{ stripe: StripeClientLike }>;
+  loadStripe: () => Promise<{ getStripe: () => StripeClientLike }>;
   loadClerkServer: () => Promise<{ auth: () => Promise<ClerkAuthLike> }>;
 };

@@ -2,14 +2,15 @@
 
 **Priority:** P3
 **Created:** 2026-04-02
+**Status:** Resolved (2026-04-02)
 **Source:** Performance investigation prompted by production codebase comparison
-**Related:** [lib/container.ts](../../lib/container.ts), [lib/container/gateways.ts](../../lib/container/gateways.ts), [lib/container/types.ts](../../lib/container/types.ts), [lib/stripe.ts](../../lib/stripe.ts)
+**Related:** [lib/container.ts](../../../lib/container.ts), [lib/container/gateways.ts](../../../lib/container/gateways.ts), [lib/container/types.ts](../../../lib/container/types.ts), [lib/stripe.ts](../../../lib/stripe.ts)
 
 ---
 
 ## Context
 
-The composition root eagerly imports [`lib/stripe.ts`](../../lib/stripe.ts), which instantiates the Stripe SDK at module load time. [`lib/container.ts`](../../lib/container.ts) then stores that instance in `ContainerPrimitives`, and [`lib/container/gateways.ts`](../../lib/container/gateways.ts) threads it into Stripe gateway factories.
+The composition root eagerly imports [`lib/stripe.ts`](../../../lib/stripe.ts), which instantiates the Stripe SDK at module load time. [`lib/container.ts`](../../../lib/container.ts) then stores that instance in `ContainerPrimitives`, and [`lib/container/gateways.ts`](../../../lib/container/gateways.ts) threads it into Stripe gateway factories.
 
 This means **every route that imports the container** pays Stripe SDK initialization cost, even when the route never touches billing.
 
@@ -126,8 +127,8 @@ Stripe should match that laziness.
 ## Scope
 
 - `lib/stripe.ts`
-- `lib/container.ts` and [`lib/container/types.ts`](../../lib/container/types.ts)
-- [`lib/container/gateways.ts`](../../lib/container/gateways.ts)
+- `lib/container.ts` and [`lib/container/types.ts`](../../../lib/container/types.ts)
+- [`lib/container/gateways.ts`](../../../lib/container/gateways.ts)
 - Small Stripe gateway wiring adjustments if needed
 - No domain/application layer changes
 
