@@ -3,9 +3,14 @@ import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
 import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
 import type { Logger } from '@/src/application/ports/logger';
 
+const STRIPE_CIRCUIT_FAILURE_THRESHOLD = 5;
+const STRIPE_CIRCUIT_RESET_TIMEOUT_MS = 60_000;
+const STRIPE_OPEN_CIRCUIT_MESSAGE = 'Stripe temporarily unavailable';
+
 const stripeCircuitBreaker = new CircuitBreaker({
-  failureThreshold: 5,
-  resetTimeoutMs: 60_000,
+  failureThreshold: STRIPE_CIRCUIT_FAILURE_THRESHOLD,
+  resetTimeoutMs: STRIPE_CIRCUIT_RESET_TIMEOUT_MS,
+  openErrorMessage: STRIPE_OPEN_CIRCUIT_MESSAGE,
 });
 
 function toStripeErrorContext(error: unknown): Record<string, unknown> {

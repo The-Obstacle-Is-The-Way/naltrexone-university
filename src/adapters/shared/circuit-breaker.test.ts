@@ -14,6 +14,26 @@ function createDeferred<T>() {
 }
 
 describe('CircuitBreaker', () => {
+  it('throws when failureThreshold is not a positive integer', () => {
+    expect(
+      () =>
+        new CircuitBreaker({
+          failureThreshold: 0,
+          resetTimeoutMs: 60_000,
+        }),
+    ).toThrow('CircuitBreaker: failureThreshold must be a positive integer');
+  });
+
+  it('throws when resetTimeoutMs is negative', () => {
+    expect(
+      () =>
+        new CircuitBreaker({
+          failureThreshold: 1,
+          resetTimeoutMs: -1,
+        }),
+    ).toThrow('CircuitBreaker: resetTimeoutMs must be a non-negative number');
+  });
+
   it('stays closed while failures remain below the threshold', async () => {
     let nowMs = 0;
     const breaker = new CircuitBreaker(
@@ -71,7 +91,7 @@ describe('CircuitBreaker', () => {
     await expect(breaker.execute(blockedFn)).rejects.toEqual(
       expect.objectContaining({
         code: 'STRIPE_ERROR',
-        message: 'Stripe temporarily unavailable',
+        message: 'Service temporarily unavailable',
       }),
     );
   });
@@ -99,7 +119,7 @@ describe('CircuitBreaker', () => {
     ).rejects.toEqual(
       expect.objectContaining({
         code: 'STRIPE_ERROR',
-        message: 'Stripe temporarily unavailable',
+        message: 'Service temporarily unavailable',
       }),
     );
 
@@ -161,7 +181,7 @@ describe('CircuitBreaker', () => {
     ).rejects.toEqual(
       expect.objectContaining({
         code: 'STRIPE_ERROR',
-        message: 'Stripe temporarily unavailable',
+        message: 'Service temporarily unavailable',
       }),
     );
 
@@ -196,7 +216,7 @@ describe('CircuitBreaker', () => {
     ).rejects.toEqual(
       expect.objectContaining({
         code: 'STRIPE_ERROR',
-        message: 'Stripe temporarily unavailable',
+        message: 'Service temporarily unavailable',
       }),
     );
 

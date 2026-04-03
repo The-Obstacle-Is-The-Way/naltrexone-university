@@ -3,11 +3,12 @@ import { ApplicationError } from '@/src/application/errors';
 export type CircuitBreakerOptions = {
   failureThreshold: number;
   resetTimeoutMs: number;
+  openErrorMessage?: string;
 };
 
 type CircuitBreakerState = 'closed' | 'open' | 'half-open';
 
-const OPEN_CIRCUIT_MESSAGE = 'Stripe temporarily unavailable';
+const DEFAULT_OPEN_CIRCUIT_MESSAGE = 'Service temporarily unavailable';
 
 export class CircuitBreaker {
   private consecutiveFailures = 0;
@@ -108,6 +109,9 @@ export class CircuitBreaker {
   }
 
   private throwCircuitOpenError(): never {
-    throw new ApplicationError('STRIPE_ERROR', OPEN_CIRCUIT_MESSAGE);
+    throw new ApplicationError(
+      'STRIPE_ERROR',
+      this.options.openErrorMessage ?? DEFAULT_OPEN_CIRCUIT_MESSAGE,
+    );
   }
 }
