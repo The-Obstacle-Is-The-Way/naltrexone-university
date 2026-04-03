@@ -1,7 +1,9 @@
 # DEBT-348: Cache Components for Public Marketing Shell
 
+**Status:** Resolved
 **Priority:** P3
 **Created:** 2026-04-02
+**Resolved:** 2026-04-03
 **Source:** Broader Next.js 16 / Vercel performance audit
 **Related:** [ADR-010 Caching Strategy](../adr/adr-010-caching-strategy.md), [next.config.ts](../../next.config.ts), [app/page.tsx](../../app/page.tsx), [app/pricing/page.tsx](../../app/pricing/page.tsx), [components/marketing/marketing-home.tsx](../../components/marketing/marketing-home.tsx), [components/marketing/marketing-layout.tsx](../../components/marketing/marketing-layout.tsx)
 
@@ -88,3 +90,11 @@ This is specifically about separating the public shell from the personalized chr
 ## Estimated Effort
 
 ~4-6 hours including verification of signed-out and signed-in behavior on home and pricing pages.
+
+## Resolution
+
+Resolved on 2026-04-03 by enabling `cacheComponents`, moving the shared
+marketing layout and home shell behind `'use cache'`, and rendering auth and
+pricing personalization inside deferred `Suspense` islands with static
+marketing fallbacks. Per-request auth and entitlement reads remain uncached and
+continue to flow through `lib/auth-request-cache.ts`.

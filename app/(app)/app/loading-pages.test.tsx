@@ -3,6 +3,12 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 describe('App route loading UIs', () => {
+  it('renders app layout loading UI', async () => {
+    const Loading = (await import('./loading')).default;
+    const html = renderToStaticMarkup(<Loading />);
+    expect(html).toContain('Loading app');
+  });
+
   it('renders dashboard loading UI', async () => {
     const Loading = (await import('./dashboard/loading')).default;
     const html = renderToStaticMarkup(<Loading />);

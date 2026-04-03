@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import type { ReactNode } from 'react';
+import { type ReactNode, Suspense } from 'react';
 import { manageBillingAction } from '@/app/pricing/manage-billing-actions';
 import { SubscribeButton } from '@/app/pricing/pricing-client';
 import { PricingView } from '@/app/pricing/pricing-view';
@@ -8,7 +8,6 @@ import {
   subscribeMonthlyAction,
 } from '@/app/pricing/subscribe-actions';
 import type { PricingBanner } from '@/app/pricing/types';
-import { AuthNav } from '@/components/auth-nav';
 import { MarketingLayout } from '@/components/marketing/marketing-layout';
 import { getRequestAuthState } from '@/lib/auth-request-cache';
 import { ROUTES } from '@/lib/routes';
@@ -110,20 +109,32 @@ export function getPricingBanner(
   return null;
 }
 
-export default async function PricingPage({
+async function StaticPricingView() {
+  'use cache';
+
+  return (
+    <PricingView
+      isEntitled={false}
+      banner={null}
+      subscribeMonthlyAction={subscribeMonthlyAction}
+      subscribeAnnualAction={subscribeAnnualAction}
+      SubscribeButtonComponent={SubscribeButton}
+    />
+  );
+}
+
+async function DeferredPricingView({
   searchParams,
   deps,
-  authNavFn,
 }: {
   searchParams: Promise<PricingSearchParams>;
   deps?: PricingPageDeps;
-  authNavFn?: () => Promise<ReactNode>;
 }) {
-  const resolvedAuthNavFn = authNavFn ?? (() => AuthNav());
-  const [pricingData, resolvedSearchParams, authNav] = await Promise.all([
+  await Promise.resolve();
+
+  const [pricingData, resolvedSearchParams] = await Promise.all([
     loadPricingData(deps),
     searchParams,
-    resolvedAuthNavFn(),
   ]);
   const reason = normalizeSearchParam(resolvedSearchParams.reason);
   const effectiveReason = reason ?? pricingData.reason ?? undefined;
@@ -137,7 +148,52 @@ export default async function PricingPage({
     effectiveReason === 'payment_processing';
 
   return (
-    <MarketingLayout authNav={authNav} featuresHref={`${ROUTES.HOME}#features`}>
+    <PricingView
+      isEntitled={pricingData.isEntitled}
+      banner={banner}
+      manageBillingAction={
+        showManageBillingAction ? manageBillingAction : undefined
+      }
+      subscribeMonthlyAction={subscribeMonthlyAction}
+      subscribeAnnualAction={subscribeAnnualAction}
+      SubscribeButtonComponent={SubscribeButton}
+    />
+  );
+}
+
+async function renderInjectedPricingPage(input: {
+  searchParams: Promise<PricingSearchParams>;
+  deps?: PricingPageDeps;
+  authNavFn?: () => ReactNode | Promise<ReactNode>;
+}) {
+  const resolvedAuthNavFn =
+    input.authNavFn ??
+    (async () => {
+      const { MarketingAuthNavFallback } = await import(
+        '@/components/marketing/marketing-layout'
+      );
+      return <MarketingAuthNavFallback />;
+    });
+  const [pricingData, resolvedSearchParams, authNavSlot] = await Promise.all([
+    loadPricingData(input.deps),
+    input.searchParams,
+    resolvedAuthNavFn(),
+  ]);
+  const reason = normalizeSearchParam(resolvedSearchParams.reason);
+  const effectiveReason = reason ?? pricingData.reason ?? undefined;
+  const banner = getPricingBanner({
+    ...resolvedSearchParams,
+    reason: effectiveReason,
+  });
+
+  const showManageBillingAction =
+    effectiveReason === 'manage_billing' ||
+    effectiveReason === 'payment_processing';
+
+  return MarketingLayout({
+    authNavSlot,
+    featuresHref: `${ROUTES.HOME}#features`,
+    children: (
       <PricingView
         isEntitled={pricingData.isEntitled}
         banner={banner}
@@ -148,6 +204,31 @@ export default async function PricingPage({
         subscribeAnnualAction={subscribeAnnualAction}
         SubscribeButtonComponent={SubscribeButton}
       />
-    </MarketingLayout>
-  );
+    ),
+  });
+}
+
+export default async function PricingPage({
+  searchParams,
+  deps,
+  authNavFn,
+}: {
+  searchParams: Promise<PricingSearchParams>;
+  deps?: PricingPageDeps;
+  authNavFn?: () => ReactNode | Promise<ReactNode>;
+}) {
+  if (deps || authNavFn) {
+    return renderInjectedPricingPage({ searchParams, deps, authNavFn });
+  }
+
+  const pricingFallback = await StaticPricingView();
+
+  return MarketingLayout({
+    featuresHref: `${ROUTES.HOME}#features`,
+    children: (
+      <Suspense fallback={pricingFallback}>
+        <DeferredPricingView searchParams={searchParams} />
+      </Suspense>
+    ),
+  });
 }

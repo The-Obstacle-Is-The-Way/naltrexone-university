@@ -697,7 +697,7 @@ describe('app/pricing', () => {
   it('renders PricingPage when deps are injected', async () => {
     const element = await PricingPage({
       searchParams: Promise.resolve({}),
-      authNavFn: async () => <div>AuthNav</div>,
+      authNavFn: () => <div>AuthNav</div>,
       deps: {
         authGateway: {
           getCurrentUser: async () => null,
@@ -716,59 +716,29 @@ describe('app/pricing', () => {
     expect(html).toContain('Subscribe Monthly');
   });
 
-  it('starts searchParams and auth nav before pricing data resolves', async () => {
-    let resolveCurrentUser:
-      | ((value: Awaited<ReturnType<AuthGateway['getCurrentUser']>>) => void)
-      | undefined;
-    const authGateway = new FakeAuthGateway(null);
-    vi.spyOn(authGateway, 'getCurrentUser').mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          resolveCurrentUser = resolve;
-        }),
-    );
-    const checkEntitlementUseCase = new FakeUseCase<
-      CheckEntitlementInput,
-      CheckEntitlementOutput
-    >({
-      isEntitled: false,
-      reason: 'subscription_required',
-    });
-    const {
-      thenable: searchParams,
-      thenSpy,
-      resolve: resolveSearchParams,
-    } = createTrackedThenable<Record<string, never>>();
-    const authNavFn = vi.fn(async () => <div>AuthNav</div>);
+  it('renders the cached pricing shell fallback without awaiting search params', async () => {
+    const { thenable: searchParams } =
+      createTrackedThenable<Record<string, never>>();
 
     const pagePromise = PricingPage({
       searchParams: searchParams as unknown as Promise<Record<string, never>>,
-      authNavFn,
-      deps: {
-        authGateway,
-        checkEntitlementUseCase,
-      },
     });
-
-    await vi.waitFor(() => {
-      expect(authNavFn).toHaveBeenCalledTimes(1);
-      expect(thenSpy).toHaveBeenCalledTimes(1);
-    });
-
-    resolveCurrentUser?.(null);
-    resolveSearchParams({});
 
     const element = await pagePromise;
     const html = renderToStaticMarkup(element);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
 
     expect(html).toContain('Pricing');
-    expect(html).toContain('AuthNav');
+    expect(html).toContain('Subscribe Monthly');
+    expect(
+      doc.querySelector('header a[href="/sign-in"]')?.textContent?.trim(),
+    ).toBe('Sign in');
   });
 
   it('renders exactly one main landmark through the full pricing page', async () => {
     const element = await PricingPage({
       searchParams: Promise.resolve({}),
-      authNavFn: async () => <div>AuthNav</div>,
+      authNavFn: () => <div>AuthNav</div>,
       deps: {
         authGateway: {
           getCurrentUser: async () => null,
@@ -793,7 +763,7 @@ describe('app/pricing', () => {
   it('renders manage billing guidance when entitlement reason is manage_billing', async () => {
     const element = await PricingPage({
       searchParams: Promise.resolve({}),
-      authNavFn: async () => <div>AuthNav</div>,
+      authNavFn: () => <div>AuthNav</div>,
       deps: {
         authGateway: {
           getCurrentUser: async () => ({
@@ -832,7 +802,7 @@ describe('app/pricing', () => {
       searchParams: Promise.resolve({
         reason: ['manage_billing', 'subscription_required'],
       }),
-      authNavFn: async () => <div>AuthNav</div>,
+      authNavFn: () => <div>AuthNav</div>,
       deps: {
         authGateway: new FakeAuthGateway(null),
         checkEntitlementUseCase,

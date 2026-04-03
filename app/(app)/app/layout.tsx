@@ -11,9 +11,8 @@ import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
 import type { SubscriptionStatus } from '@/src/domain/value-objects';
+import { awaitRequestBoundary } from './request-boundary';
 
-// Auth-gated routes must be dynamic to avoid build-time prerendering.
-export const dynamic = 'force-dynamic';
 // Shared layout executes auth/entitlement checks on every app route request.
 // Explicitly cap server-rendered work to avoid Vercel Fluid Compute defaults.
 export const maxDuration = 30;
@@ -150,5 +149,6 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
+  await awaitRequestBoundary();
   return renderAppLayout({ children });
 }

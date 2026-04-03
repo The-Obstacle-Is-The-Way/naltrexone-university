@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { awaitRequestBoundary } from '@/app/(app)/app/request-boundary';
 import { normalizeSearchParam } from '@/lib/search-params';
 import PracticeSessionPageClient, {
   isQuestionBookmarked,
@@ -21,9 +22,15 @@ export default async function PracticeSessionPage({
   params: Promise<{ sessionId: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const requestBoundary = awaitRequestBoundary();
+  const paramsPromise = Promise.resolve(params);
+  const searchParamsPromise = Promise.resolve(searchParams);
+
+  await requestBoundary;
+
   const [{ sessionId }, resolvedSearchParams] = await Promise.all([
-    params,
-    searchParams,
+    paramsPromise,
+    searchParamsPromise,
   ]);
   return (
     <PracticeSessionPageClient

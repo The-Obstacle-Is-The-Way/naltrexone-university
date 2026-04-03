@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 vi.mock('next/headers', () => ({
   headers: async () => new Headers({ 'x-nonce': 'nonce-123' }),
@@ -50,11 +50,18 @@ vi.mock('@/components/theme-provider', () => ({
 }));
 
 describe('app/layout', () => {
-  it('adds data-scroll-behavior on the html element', async () => {
-    const RootLayout = (await import('@/app/layout')).default;
+  let RootLayout: typeof import('@/app/layout').default;
+  let NonceBoundProviders: typeof import('@/app/layout').NonceBoundProviders;
 
+  beforeAll(async () => {
+    const module = await import('@/app/layout');
+    RootLayout = module.default;
+    NonceBoundProviders = module.NonceBoundProviders;
+  });
+
+  it('adds data-scroll-behavior on the html element', () => {
     const html = renderToStaticMarkup(
-      await RootLayout({
+      RootLayout({
         children: <div>Child content</div>,
       }),
     );
@@ -62,14 +69,21 @@ describe('app/layout', () => {
     expect(html).toContain('data-scroll-behavior="smooth"');
     expect(html).toContain('data-testid="theme-provider"');
     expect(html).toContain('data-testid="providers"');
+  });
+
+  it('passes the request nonce through the nonce-bound provider shell', async () => {
+    const html = renderToStaticMarkup(
+      await NonceBoundProviders({
+        children: <div>Child content</div>,
+      }),
+    );
+
     expect(html).toContain('data-nonce="nonce-123"');
   });
 
-  it('does not nest a root main landmark around route-level content', async () => {
-    const RootLayout = (await import('@/app/layout')).default;
-
+  it('does not nest a root main landmark around route-level content', () => {
     const html = renderToStaticMarkup(
-      await RootLayout({
+      RootLayout({
         children: <main id="main-content">Route content</main>,
       }),
     );

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { awaitRequestBoundary } from '@/app/(app)/app/request-boundary';
 import { normalizeSearchParam } from '@/lib/search-params';
 import QuestionPageClient, {
   QuestionView,
@@ -29,9 +30,15 @@ export default async function QuestionPage({
     historyIndex?: string | string[];
   }>;
 }) {
+  const requestBoundary = awaitRequestBoundary();
+  const paramsPromise = Promise.resolve(params);
+  const searchParamsPromise = Promise.resolve(searchParams);
+
+  await requestBoundary;
+
   const [{ slug }, resolvedSearchParams] = await Promise.all([
-    params,
-    searchParams,
+    paramsPromise,
+    searchParamsPromise,
   ]);
   const from = normalizeSearchParam(resolvedSearchParams?.from);
   const mode = normalizeSearchParam(resolvedSearchParams?.mode);

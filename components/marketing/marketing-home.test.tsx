@@ -3,6 +3,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { PRICING_DATA } from '@/lib/pricing-data';
 
+vi.mock('server-only', () => ({}));
+
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
@@ -20,70 +22,88 @@ beforeAll(async () => {
 });
 
 describe('components/marketing/marketing-home', () => {
-  function renderDoc() {
-    const html = renderToStaticMarkup(
-      <MarketingHomeShell
-        authNav={<div>AuthNav</div>}
-        primaryCta={<a href="/pricing">Get Started</a>}
-      />,
-    );
+  async function renderDoc() {
+    const element = await MarketingHomeShell({
+      authNavSlot: <div>AuthNav</div>,
+      primaryCtaSlot: <a href="/pricing">Get Started</a>,
+    });
+    const html = renderToStaticMarkup(element);
     return new DOMParser().parseFromString(html, 'text/html');
+  }
+
+  async function renderShell(
+    props?: Parameters<typeof MarketingHomeShell>[0],
+  ): Promise<string> {
+    const element = await MarketingHomeShell(props ?? {});
+    return renderToStaticMarkup(element);
   }
 
   function getClassTokens(className: string): Set<string> {
     return new Set(className.split(/\s+/).filter(Boolean));
   }
 
-  it('renders shared pricing values', () => {
-    const html = renderToStaticMarkup(
-      <MarketingHomeShell
-        authNav={<div>AuthNav</div>}
-        primaryCta={<a href="/pricing">Get Started</a>}
-      />,
-    );
+  it('renders shared pricing values', async () => {
+    const html = await renderShell({
+      authNavSlot: <div>AuthNav</div>,
+      primaryCtaSlot: <a href="/pricing">Get Started</a>,
+    });
 
     expect(html).toContain(PRICING_DATA.monthly.price);
     expect(html).toContain(PRICING_DATA.annual.price);
     expect(html).toContain(PRICING_DATA.annual.savings);
   });
 
-  it('renders injected auth nav content', () => {
-    const html = renderDoc().documentElement.innerHTML;
+  it('renders injected auth nav content', async () => {
+    const html = (await renderDoc()).documentElement.innerHTML;
 
     expect(html).toContain('AuthNav');
   });
 
-  it('renders injected primary CTA link and feature anchor', () => {
-    const html = renderDoc().documentElement.innerHTML;
+  it('renders static fallbacks when auth-driven slots are unresolved', async () => {
+    const html = await renderShell();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const header = doc.querySelector('header');
+    const heroSection = doc.querySelector('section[aria-label="Hero"]');
+
+    expect(
+      header?.querySelector('a[href="/sign-in"]')?.textContent?.trim(),
+    ).toBe('Sign in');
+    expect(
+      heroSection?.querySelector('a[href="/pricing"]')?.textContent?.trim(),
+    ).toBe('Get Started');
+  });
+
+  it('renders injected primary CTA link and feature anchor', async () => {
+    const html = (await renderDoc()).documentElement.innerHTML;
 
     expect(html).toContain('Get Started');
     expect(html).toContain('href="/pricing"');
     expect(html).toContain('href="#features"');
   });
 
-  it('renders hero heading copy', () => {
-    const html = renderDoc().documentElement.innerHTML;
+  it('renders hero heading copy', async () => {
+    const html = (await renderDoc()).documentElement.innerHTML;
 
     expect(html).toContain('Addiction Boards');
     expect(html).toContain('Master Your');
     expect(html).toContain('Board Exams.');
   });
 
-  it('renders impact statistics copy', () => {
-    const html = renderDoc().documentElement.innerHTML;
+  it('renders impact statistics copy', async () => {
+    const html = (await renderDoc()).documentElement.innerHTML;
 
     expect(html).toContain('500+');
     expect(html).toContain('Board-Style Questions');
   });
 
-  it('renders get-started section copy', () => {
-    const html = renderDoc().documentElement.innerHTML;
+  it('renders get-started section copy', async () => {
+    const html = (await renderDoc()).documentElement.innerHTML;
 
     expect(html).toContain('Ready to start studying?');
   });
 
-  it('renders standard marketing lede with explicit text-base sizing', () => {
-    const doc = renderDoc();
+  it('renders standard marketing lede with explicit text-base sizing', async () => {
+    const doc = await renderDoc();
     const lede = Array.from(doc.querySelectorAll('p')).find((element) =>
       element.textContent?.includes(
         'Clean workflows, zero fluff. Stay in the question loop and learn from every attempt.',
@@ -96,8 +116,8 @@ describe('components/marketing/marketing-home', () => {
     expect(ledeClassTokens.has('text-muted-foreground')).toBe(true);
   });
 
-  it('renders exactly one main landmark through MarketingHomeShell', () => {
-    const doc = renderDoc();
+  it('renders exactly one main landmark through MarketingHomeShell', async () => {
+    const doc = await renderDoc();
     const mainLandmarks = doc.querySelectorAll('main');
 
     expect(mainLandmarks).toHaveLength(1);
@@ -117,8 +137,8 @@ describe('components/marketing/marketing-home', () => {
     expect(html).toContain('CTA');
   });
 
-  it('labels all major landing sections with aria-label', () => {
-    const doc = renderDoc();
+  it('labels all major landing sections with aria-label', async () => {
+    const doc = await renderDoc();
     const sectionLabels = Array.from(doc.querySelectorAll('section')).map(
       (section) => section.getAttribute('aria-label'),
     );
@@ -132,8 +152,8 @@ describe('components/marketing/marketing-home', () => {
     ]);
   });
 
-  it('uses outline variant for marketing pills without custom hover overrides', () => {
-    const doc = renderDoc();
+  it('uses outline variant for marketing pills without custom hover overrides', async () => {
+    const doc = await renderDoc();
     const pricingLink = Array.from(doc.querySelectorAll('a')).find(
       (link) => link.textContent?.trim() === 'View pricing',
     );
@@ -154,8 +174,8 @@ describe('components/marketing/marketing-home', () => {
     }
   });
 
-  it('uses outline monthly CTA and default annual CTA in pricing cards', () => {
-    const doc = renderDoc();
+  it('uses outline monthly CTA and default annual CTA in pricing cards', async () => {
+    const doc = await renderDoc();
     const pricingSection = doc.querySelector('section[aria-label="Pricing"]');
     const ctas = Array.from(
       pricingSection?.querySelectorAll('a[href="/pricing"]') ?? [],
@@ -178,8 +198,8 @@ describe('components/marketing/marketing-home', () => {
     expect(annualCtaClass).not.toContain('text-background');
   });
 
-  it('marks MetallicCtaButton with a div debt-exception wrapper', () => {
-    const doc = renderDoc();
+  it('marks MetallicCtaButton with a div debt-exception wrapper', async () => {
+    const doc = await renderDoc();
     const exceptionWrapper = doc.querySelector('[data-debt-exception="D-15"]');
     const metallicCta = exceptionWrapper?.querySelector('a[href="/pricing"]');
 
@@ -189,8 +209,8 @@ describe('components/marketing/marketing-home', () => {
     expect(metallicCta).not.toBeNull();
   });
 
-  it('uses consistent "Sign in" casing in CTA', () => {
-    const doc = renderDoc();
+  it('uses consistent "Sign in" casing in CTA', async () => {
+    const doc = await renderDoc();
     const ctaLink = Array.from(doc.querySelectorAll('a')).find(
       (link) =>
         (link.textContent ?? '').trim() === 'Sign in' &&
@@ -205,8 +225,8 @@ describe('components/marketing/marketing-home', () => {
     ).toBe(false);
   });
 
-  it('exposes the hero heading with accessible name "Master Your Board Exams."', () => {
-    const doc = renderDoc();
+  it('exposes the hero heading with accessible name "Master Your Board Exams."', async () => {
+    const doc = await renderDoc();
     const heading = doc.querySelector('h1');
 
     expect(heading).not.toBeNull();

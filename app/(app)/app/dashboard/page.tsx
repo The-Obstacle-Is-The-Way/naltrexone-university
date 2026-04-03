@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { awaitRequestBoundary } from '@/app/(app)/app/request-boundary';
 import { ErrorCard } from '@/components/error-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -257,9 +258,13 @@ export function DashboardView({
 }
 
 export default async function DashboardPage() {
+  await awaitRequestBoundary();
+  const statsPromise = getUserStats({});
+  const sessionHistoryPromise = getSessionHistory({ limit: 3, offset: 0 });
+
   const [statsResult, sessionHistoryResult] = await Promise.all([
-    getUserStats({}),
-    getSessionHistory({ limit: 3, offset: 0 }),
+    statsPromise,
+    sessionHistoryPromise,
   ]);
 
   return renderDashboard({
