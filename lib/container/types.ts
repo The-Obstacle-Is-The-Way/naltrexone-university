@@ -53,13 +53,13 @@ import type {
 } from '@/src/application/use-cases';
 import type { env } from '../env';
 import type { logger } from '../logger';
-import type { stripe } from '../stripe';
+import type { getStripe } from '../stripe';
 
 export type ContainerPrimitives = {
   db: DrizzleDb;
   env: typeof env;
   logger: typeof logger;
-  stripe: typeof stripe;
+  getStripe: typeof getStripe;
   now: () => Date;
 };
 

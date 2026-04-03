@@ -14,7 +14,7 @@ import { createUseCaseFactories } from './container/use-cases';
 import { db } from './db';
 import { env } from './env';
 import { logger } from './logger';
-import { stripe } from './stripe';
+import { getStripe } from './stripe';
 
 export type {
   ContainerOverrides,
@@ -38,7 +38,7 @@ export function createContainerPrimitives(
     db,
     env,
     logger,
-    stripe,
+    getStripe,
     now: () => new Date(),
     ...overrides,
   } as const;
@@ -106,6 +106,9 @@ export function createContainer(overrides: ContainerOverrides = {}) {
 
   return {
     ...primitives,
+    get stripe() {
+      return primitives.getStripe();
+    },
     primitives,
     ...repositories,
     ...gateways,

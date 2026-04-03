@@ -17,7 +17,7 @@ export async function getCheckoutSuccessDeps(
   if (deps) return deps;
 
   const { createContainer } = await loaders.loadContainer();
-  const { stripe } = await loaders.loadStripe();
+  const { getStripe } = await loaders.loadStripe();
   const { auth } = await loaders.loadClerkServer();
 
   const container = createContainer() as CheckoutSuccessContainerLike;
@@ -26,7 +26,7 @@ export async function getCheckoutSuccessDeps(
     authGateway: container.createAuthGateway(),
     getClerkAuth: auth,
     logger: container.logger,
-    stripe,
+    stripe: getStripe(),
     priceIds: {
       monthly: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,
       annual: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL,

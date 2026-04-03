@@ -386,7 +386,7 @@ describe('getCheckoutSuccessDeps', () => {
         createContainer: () => fakeContainer,
       }),
       loadStripe: async () => ({
-        stripe: {
+        getStripe: () => ({
           checkout: {
             sessions: {
               retrieve: async () => ({
@@ -400,7 +400,7 @@ describe('getCheckoutSuccessDeps', () => {
               id: 'sub_1',
             }),
           },
-        },
+        }),
       }),
       loadClerkServer: async () => ({
         auth: async () => ({
