@@ -5,23 +5,12 @@ import type {
   AuthCheckDeps,
   AuthDepsContainer,
 } from '@/lib/auth-deps-container';
-import {
-  createDepsResolver,
-  type LoadContainerFn,
-  loadAppContainer,
-} from '@/lib/controller-helpers';
+import { getRequestAuthState } from '@/lib/auth-request-cache';
+import type { LoadContainerFn } from '@/lib/controller-helpers';
 import { ROUTES } from '@/lib/routes';
 
 export type GetStartedCtaDeps = AuthCheckDeps;
 const ctaClassName = 'rounded-full px-8 py-3 text-base';
-
-const getDeps = createDepsResolver<GetStartedCtaDeps, AuthDepsContainer>(
-  (container) => ({
-    authGateway: container.createAuthGateway(),
-    checkEntitlementUseCase: container.createCheckEntitlementUseCase(),
-  }),
-  loadAppContainer,
-);
 
 export async function GetStartedCta({
   deps,
@@ -39,8 +28,7 @@ export async function GetStartedCta({
     );
   }
 
-  const d = await getDeps(deps, options);
-  const user = await d.authGateway.getCurrentUser();
+  const { user, entitlement } = await getRequestAuthState({ deps, options });
   if (!user) {
     return (
       <Button asChild className={ctaClassName}>
@@ -48,10 +36,6 @@ export async function GetStartedCta({
       </Button>
     );
   }
-
-  const entitlement = await d.checkEntitlementUseCase.execute({
-    userId: user.id,
-  });
 
   const href = entitlement.isEntitled ? ROUTES.APP_DASHBOARD : ROUTES.PRICING;
   const label = entitlement.isEntitled ? 'Go to Dashboard' : 'Get Started';
