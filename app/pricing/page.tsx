@@ -10,6 +10,7 @@ import {
 import type { PricingBanner } from '@/app/pricing/types';
 import { AuthNav } from '@/components/auth-nav';
 import { MarketingLayout } from '@/components/marketing/marketing-layout';
+import { getRequestAuthState } from '@/lib/auth-request-cache';
 import { ROUTES } from '@/lib/routes';
 import { normalizeSearchParam } from '@/lib/search-params';
 import type { AuthGateway } from '@/src/application/ports/gateways';
@@ -33,34 +34,17 @@ export type PricingPageDeps = {
   checkEntitlementUseCase: CheckEntitlementUseCase;
 };
 
-async function getDeps(deps?: PricingPageDeps): Promise<PricingPageDeps> {
-  if (deps) return deps;
-
-  const { createContainer } = await import('@/lib/container');
-  const container = createContainer();
-
-  return {
-    authGateway: container.createAuthGateway(),
-    checkEntitlementUseCase: container.createCheckEntitlementUseCase(),
-  };
-}
-
 export async function loadPricingData(deps?: PricingPageDeps): Promise<{
   isEntitled: boolean;
   reason: NonEntitledReason | null;
 }> {
-  const d = await getDeps(deps);
-  const user = await d.authGateway.getCurrentUser();
+  const { user, entitlement } = await getRequestAuthState({ deps });
   if (!user) {
     return {
       isEntitled: false,
       reason: 'subscription_required',
     };
   }
-
-  const entitlement = await d.checkEntitlementUseCase.execute({
-    userId: user.id,
-  });
 
   return {
     isEntitled: entitlement.isEntitled,
