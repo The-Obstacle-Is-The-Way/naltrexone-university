@@ -3,6 +3,7 @@ import { type ReactNode, Suspense } from 'react';
 import { manageBillingAction } from '@/app/pricing/manage-billing-actions';
 import { SubscribeButton } from '@/app/pricing/pricing-client';
 import { PricingView } from '@/app/pricing/pricing-view';
+import { PricingViewSkeleton } from '@/app/pricing/pricing-view-skeleton';
 import {
   subscribeAnnualAction,
   subscribeMonthlyAction,
@@ -109,20 +110,6 @@ export function getPricingBanner(
   return null;
 }
 
-async function StaticPricingView() {
-  'use cache';
-
-  return (
-    <PricingView
-      isEntitled={false}
-      banner={null}
-      subscribeMonthlyAction={subscribeMonthlyAction}
-      subscribeAnnualAction={subscribeAnnualAction}
-      SubscribeButtonComponent={SubscribeButton}
-    />
-  );
-}
-
 async function DeferredPricingView({
   searchParams,
   deps,
@@ -219,7 +206,7 @@ export default async function PricingPage({
     return renderInjectedPricingPage({ searchParams, deps, authNavFn });
   }
 
-  const pricingFallback = await StaticPricingView();
+  const pricingFallback = await PricingViewSkeleton();
 
   return MarketingLayout({
     featuresHref: `${ROUTES.HOME}#features`,

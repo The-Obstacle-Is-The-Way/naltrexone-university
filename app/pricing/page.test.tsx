@@ -716,7 +716,7 @@ describe('app/pricing', () => {
     expect(html).toContain('Subscribe Monthly');
   });
 
-  it('renders the cached pricing shell fallback without awaiting search params', async () => {
+  it('renders a neutral pricing skeleton fallback without awaiting search params', async () => {
     const { thenable: searchParams } =
       createTrackedThenable<Record<string, never>>();
 
@@ -727,9 +727,20 @@ describe('app/pricing', () => {
     const element = await pagePromise;
     const html = renderToStaticMarkup(element);
     const doc = new DOMParser().parseFromString(html, 'text/html');
+    const pricingFallback = doc.querySelector(
+      '[data-testid="pricing-loading-root"]',
+    );
 
     expect(html).toContain('Pricing');
-    expect(html).toContain('Subscribe Monthly');
+    expect(html).toContain(PRICING_DATA.monthly.name);
+    expect(html).toContain(PRICING_DATA.annual.name);
+    expect(pricingFallback).not.toBeNull();
+    expect(pricingFallback?.getAttribute('aria-busy')).toBe('true');
+    expect(pricingFallback?.querySelector('form')).toBeNull();
+    expect(pricingFallback?.querySelector('button[type="submit"]')).toBeNull();
+    expect(html).not.toContain('Subscribe Monthly');
+    expect(html).not.toContain('Subscribe Annual');
+    expect(html).not.toContain('Manage Billing');
     expect(
       doc.querySelector('header a[href="/sign-in"]')?.textContent?.trim(),
     ).toBe('Sign in');

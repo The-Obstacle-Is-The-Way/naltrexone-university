@@ -96,5 +96,8 @@ This is specifically about separating the public shell from the personalized chr
 Resolved on 2026-04-03 by enabling `cacheComponents`, moving the shared
 marketing layout and home shell behind `'use cache'`, and rendering auth and
 pricing personalization inside deferred `Suspense` islands with static
-marketing fallbacks. Per-request auth and entitlement reads remain uncached and
-continue to flow through `lib/auth-request-cache.ts`.
+marketing fallbacks. The pricing shell now renders neutral cached plan content
+with non-actionable loading placeholders until entitlement resolves, so
+subscribed users do not briefly see checkout controls. Per-request auth and
+entitlement reads remain uncached and continue to flow through
+`lib/auth-request-cache.ts`.
