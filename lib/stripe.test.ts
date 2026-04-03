@@ -7,14 +7,14 @@ import {
 const ORIGINAL_ENV = snapshotProcessEnv();
 
 function setSharedTestEnv() {
-  process.env.DATABASE_URL ??=
+  process.env.DATABASE_URL =
     'postgresql://user:pass@localhost:5432/addiction_boards_test';
-  process.env.STRIPE_SECRET_KEY ??= 'sk_test_dummy';
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ??= 'pk_test_dummy';
-  process.env.STRIPE_WEBHOOK_SECRET ??= 'whsec_dummy';
-  process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY ??= 'price_dummy_monthly';
-  process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL ??= 'price_dummy_annual';
-  process.env.NEXT_PUBLIC_APP_URL ??= 'http://localhost:3000';
+  process.env.STRIPE_SECRET_KEY = 'sk_test_dummy';
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = 'pk_test_dummy';
+  process.env.STRIPE_WEBHOOK_SECRET = 'whsec_dummy';
+  process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY = 'price_dummy_monthly';
+  process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL = 'price_dummy_annual';
+  process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
   process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
 }
 
