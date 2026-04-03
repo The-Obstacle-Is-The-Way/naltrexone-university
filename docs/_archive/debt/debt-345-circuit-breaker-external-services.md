@@ -2,6 +2,7 @@
 
 **Priority:** P3
 **Created:** 2026-04-02
+**Status:** Resolved (2026-04-03)
 **Source:** Performance investigation prompted by production codebase comparison
 **Related:** [ADR-018 Resilience Patterns](../adr/adr-018-resilience-patterns.md), [src/adapters/shared/retry.ts](../../src/adapters/shared/retry.ts), [src/adapters/gateways/stripe/stripe-retry.ts](../../src/adapters/gateways/stripe/stripe-retry.ts), [SPEC-017 Rate Limiting](../specs/spec-017-rate-limiting.md)
 
