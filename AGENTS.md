@@ -133,9 +133,11 @@ The pre-push git hook only runs `pnpm typecheck && pnpm test --run`. That is NOT
 ### The Rule
 
 **Before every `git push`, run:**
+
 ```bash
 pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
 ```
+
 
 This is not optional. This is not "before opening a PR." This is **before every push**, including follow-up fix commits. Every single time.
 

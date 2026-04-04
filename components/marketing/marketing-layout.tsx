@@ -15,7 +15,7 @@ const marketingNavLinkClass =
   'rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
 
 async function DeferredAuthNav() {
-  return AuthNav();
+  return <AuthNav />;
 }
 
 async function MarketingHeaderPrimaryNav({
