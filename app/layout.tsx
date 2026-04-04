@@ -37,14 +37,32 @@ export function RootProvidersShell({
       enableSystem
       nonce={nonce}
     >
+      <RootContentShell>
+        <Providers nonce={nonce}>{children}</Providers>
+      </RootContentShell>
+    </ThemeProvider>
+  );
+}
+
+function RootContentShell({ children }: { children: React.ReactNode }) {
+  return (
+    <>
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
       >
         Skip to content
       </a>
-      <Providers nonce={nonce}>{children}</Providers>
-    </ThemeProvider>
+      {children}
+    </>
+  );
+}
+
+function RootFallbackShell({ children }: { children: React.ReactNode }) {
+  return (
+    <RootContentShell>
+      <Suspense fallback={null}>{children}</Suspense>
+    </RootContentShell>
   );
 }
 
@@ -71,9 +89,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-[100dvh]">
-        <Suspense
-          fallback={<RootProvidersShell>{children}</RootProvidersShell>}
-        >
+        {/* next-themes injects a server script, so the prerender fallback must
+            avoid provider shells until the request nonce is available. */}
+        <Suspense fallback={<RootFallbackShell>{children}</RootFallbackShell>}>
           <NonceBoundProviders>{children}</NonceBoundProviders>
         </Suspense>
       </body>

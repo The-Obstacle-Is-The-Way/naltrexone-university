@@ -67,8 +67,19 @@ describe('app/layout', () => {
     );
 
     expect(html).toContain('data-scroll-behavior="smooth"');
-    expect(html).toContain('data-testid="theme-provider"');
-    expect(html).toContain('data-testid="providers"');
+    expect(html).toContain('Skip to content');
+    expect(html).toContain('Child content');
+  });
+
+  it('keeps the suspense fallback free of nonce-sensitive providers', () => {
+    const html = renderToStaticMarkup(
+      RootLayout({
+        children: <div>Child content</div>,
+      }),
+    );
+
+    expect(html).not.toContain('data-testid="theme-provider"');
+    expect(html).not.toContain('data-testid="providers"');
   });
 
   it('passes the request nonce through the nonce-bound provider shell', async () => {
