@@ -70,14 +70,11 @@ async function MarketingHeaderMobileNav({
   );
 }
 
-async function MarketingFooter({
-  featuresHref,
-  currentYear,
-}: {
-  featuresHref: string;
-  currentYear: string;
-}) {
+async function MarketingFooter({ featuresHref }: { featuresHref: string }) {
   'use cache';
+
+  // Current-time reads must stay inside a cached fragment for static prerenders.
+  const currentYear = new Date().toISOString().slice(0, 4);
 
   return (
     <footer className="border-t border-border">
@@ -137,11 +134,10 @@ export async function MarketingLayout({
   featuresHref,
   children,
 }: MarketingLayoutProps) {
-  const currentYear = new Date().toISOString().slice(0, 4);
   const [primaryNav, mobileNav, footer] = await Promise.all([
     MarketingHeaderPrimaryNav({ featuresHref }),
     MarketingHeaderMobileNav({ featuresHref }),
-    MarketingFooter({ featuresHref, currentYear }),
+    MarketingFooter({ featuresHref }),
   ]);
 
   return (
