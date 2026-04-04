@@ -69,6 +69,9 @@ function Probe() {
   );
 }
 
+// flushDeferredSettlement yields long enough for deferred promise handlers and
+// the resulting React state updates to flush. If this ever flakes, replace the
+// heuristic with a condition-based wait or increase the timeout deliberately.
 async function flushDeferredSettlement(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 10));
 }
