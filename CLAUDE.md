@@ -82,12 +82,16 @@ pnpm db:test:up && DATABASE_URL="postgresql://postgres:postgres@localhost:5434/a
 - **CI seeds with `SEED_INCLUDE_PLACEHOLDERS=true`** — plain `pnpm db:seed` is enough locally, but the flag gives exact CI seed parity
 - Only needed for `pnpm test:integration`. Unit/browser/build tests don't touch the DB.
 
-### Pre-PR Gate (CI Parity)
+### ⚠️ Full Quality Gate (BEFORE EVERY PUSH — not just PRs)
+
+**Run this before EVERY `git push`. The pre-push hook is NOT sufficient.**
 
 ```bash
 # Ensure test DB is running first (see above or AGENTS.md "Running Integration Tests Locally")
 pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
 ```
+
+`pnpm build` catches prerender errors, `'use cache'` violations, and static generation failures that unit tests and typecheck CANNOT detect. Skipping it causes CI failures. See AGENTS.md "Verify EVERY Change Before Pushing" for the full rule.
 
 ### Safety
 
