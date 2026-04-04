@@ -70,7 +70,13 @@ async function MarketingHeaderMobileNav({
   );
 }
 
-async function MarketingFooter({ featuresHref }: { featuresHref: string }) {
+async function MarketingFooter({
+  featuresHref,
+  currentYear,
+}: {
+  featuresHref: string;
+  currentYear: string;
+}) {
   'use cache';
 
   return (
@@ -109,7 +115,7 @@ async function MarketingFooter({ featuresHref }: { featuresHref: string }) {
           </div>
         </div>
         <div className="mt-8 border-t border-border pt-8 text-sm text-muted-foreground">
-          <p>&copy; {new Date().toISOString().slice(0, 4)} Addiction Boards</p>
+          <p>&copy; {currentYear} Addiction Boards</p>
         </div>
       </div>
     </footer>
@@ -131,10 +137,11 @@ export async function MarketingLayout({
   featuresHref,
   children,
 }: MarketingLayoutProps) {
+  const currentYear = new Date().toISOString().slice(0, 4);
   const [primaryNav, mobileNav, footer] = await Promise.all([
     MarketingHeaderPrimaryNav({ featuresHref }),
     MarketingHeaderMobileNav({ featuresHref }),
-    MarketingFooter({ featuresHref }),
+    MarketingFooter({ featuresHref, currentYear }),
   ]);
 
   return (
