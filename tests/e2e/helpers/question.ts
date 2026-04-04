@@ -1,5 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 
+const QUESTION_LOADING_LABEL = 'Loading question';
+
 export class SeededQuestionMissingError extends Error {
   constructor(slug: string) {
     super(`Seeded question '${slug}' not found — update seeds or tests`);
@@ -48,6 +50,16 @@ export async function selectChoiceByLabel(
   await expect(choiceRadio).toBeChecked();
 }
 
+function getQuestionLoadingIndicator(page: Page) {
+  return page.getByText(QUESTION_LOADING_LABEL, { exact: true });
+}
+
+export async function waitForQuestionLoadingToFinish(page: Page) {
+  await expect(getQuestionLoadingIndicator(page)).toBeHidden({
+    timeout: 15_000,
+  });
+}
+
 export async function assertQuestionSlugExists(
   page: Page,
   slug: string,
@@ -74,9 +86,7 @@ export async function submitQuestionForOutcome(
   for (const label of labels) {
     await page.goto(`/app/questions/${slug}`);
     await expect(page.getByRole('heading', { name: 'Question' })).toBeVisible();
-    await expect(page.getByText(/Loading question/i)).toBeHidden({
-      timeout: 15_000,
-    });
+    await waitForQuestionLoadingToFinish(page);
 
     await selectChoiceByLabel(page, label);
     await page.getByRole('button', { name: 'Submit' }).click();

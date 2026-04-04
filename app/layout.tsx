@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Instrument_Sans, Manrope, Plus_Jakarta_Sans } from 'next/font/google';
 import { headers } from 'next/headers';
+import { Suspense } from 'react';
 import { Providers } from '@/components/providers';
 import { ThemeProvider } from '@/components/theme-provider';
 
@@ -22,13 +23,64 @@ const instrumentSans = Instrument_Sans({
   variable: '--font-instrument-sans',
 });
 
-export default async function RootLayout({
+export function RootProvidersShell({
+  children,
+  nonce,
+}: {
+  children: React.ReactNode;
+  nonce?: string;
+}) {
+  return (
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      nonce={nonce}
+    >
+      <RootContentShell>
+        <Providers nonce={nonce}>{children}</Providers>
+      </RootContentShell>
+    </ThemeProvider>
+  );
+}
+
+function RootContentShell({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+      >
+        Skip to content
+      </a>
+      {children}
+    </>
+  );
+}
+
+function RootFallbackShell({ children }: { children: React.ReactNode }) {
+  return (
+    <RootContentShell>
+      <Suspense fallback={null}>{children}</Suspense>
+    </RootContentShell>
+  );
+}
+
+export async function NonceBoundProviders({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const nonce = (await headers()).get('x-nonce') ?? undefined;
 
+  return <RootProvidersShell nonce={nonce}>{children}</RootProvidersShell>;
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="en"
@@ -37,20 +89,11 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-[100dvh]">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          nonce={nonce}
-        >
-          <a
-            href="#main-content"
-            className="sr-only focus:not-sr-only focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-          >
-            Skip to content
-          </a>
-          <Providers nonce={nonce}>{children}</Providers>
-        </ThemeProvider>
+        {/* next-themes injects a server script, so the prerender fallback must
+            avoid provider shells until the request nonce is available. */}
+        <Suspense fallback={<RootFallbackShell>{children}</RootFallbackShell>}>
+          <NonceBoundProviders>{children}</NonceBoundProviders>
+        </Suspense>
       </body>
     </html>
   );

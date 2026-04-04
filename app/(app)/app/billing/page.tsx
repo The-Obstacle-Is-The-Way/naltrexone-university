@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { ManageBillingButton } from '@/app/(app)/app/billing/billing-client';
 import { manageBillingAction } from '@/app/(app)/app/billing/manage-billing-actions';
+import { awaitRequestBoundary } from '@/app/(app)/app/request-boundary';
 import { ErrorCard } from '@/components/error-card';
 import { Card } from '@/components/ui/card';
 import { normalizeSearchParam } from '@/lib/search-params';
@@ -161,9 +162,15 @@ export type BillingPageProps = {
 };
 
 export default async function BillingPage(props?: BillingPageProps) {
+  const requestBoundary = awaitRequestBoundary();
+  const billingDataPromise = loadBillingData(props?.deps);
+  const searchParamsPromise = Promise.resolve(props?.searchParams);
+
+  await requestBoundary;
+
   const [{ subscription }, resolvedSearchParams] = await Promise.all([
-    loadBillingData(props?.deps),
-    props?.searchParams,
+    billingDataPromise,
+    searchParamsPromise,
   ]);
   const banner = getBillingBanner(
     parseBillingErrorCode(resolvedSearchParams?.error),

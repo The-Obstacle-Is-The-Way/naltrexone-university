@@ -21,9 +21,10 @@ function createUser(): UserLike {
 }
 
 describe('app/(app)/app/layout', () => {
-  it('forces dynamic rendering to avoid build-time prerendering auth-gated routes', async () => {
+  it('uses maxDuration without exporting incompatible dynamic route config', async () => {
     const mod = await import('./layout');
-    expect((mod as Record<string, unknown>).dynamic).toBe('force-dynamic');
+    expect((mod as Record<string, unknown>).dynamic).toBeUndefined();
+    expect((mod as Record<string, unknown>).maxDuration).toBe(30);
   });
 
   it('throws UNAUTHENTICATED when no user is signed in', async () => {

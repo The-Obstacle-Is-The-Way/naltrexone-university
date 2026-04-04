@@ -16,8 +16,6 @@ import {
 } from '@/src/adapters/shared/http-status';
 import { CRON_RECONCILE_STRIPE_SUBSCRIPTIONS_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 const ROUTE = '/api/cron/reconcile-stripe-subscriptions';

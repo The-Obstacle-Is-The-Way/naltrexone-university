@@ -274,9 +274,11 @@ describe('theme token regression', () => {
   });
 
   it('does not apply non-interactive hover tokens to marketing feature cards', async () => {
-    const html = renderToStaticMarkup(
-      <MarketingHomeShell authNav={<div />} primaryCta={<div />} />,
-    );
+    const element = await MarketingHomeShell({
+      authNavSlot: <div />,
+      primaryCtaSlot: <div />,
+    });
+    const html = renderToStaticMarkup(element);
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const featureTitles = [
       'High-Yield Explanations',

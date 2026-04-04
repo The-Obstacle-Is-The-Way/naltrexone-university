@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { awaitRequestBoundary } from '@/app/(app)/app/request-boundary';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
   type GetSessionHistoryOutput,
@@ -68,7 +69,12 @@ export function createHistoryPage(deps?: {
   }: {
     searchParams: Promise<HistorySearchParams>;
   }) {
-    const params = await searchParams;
+    const requestBoundary = awaitRequestBoundary();
+    const searchParamsPromise = Promise.resolve(searchParams);
+
+    await requestBoundary;
+
+    const params = await searchParamsPromise;
     const activeTab = parseHistoryTab(params.tab);
     const limit = parseLimit(params.limit);
     const offset = parseNonNegativeInt(params.offset, 0);

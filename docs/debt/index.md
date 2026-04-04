@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-03
+**Last Updated:** 2026-04-04
 
 ---
 
@@ -19,7 +19,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
-| [DEBT-348](./debt-348-cache-components-public-marketing-shell.md) | Cache Components for public marketing shell — home and pricing are mostly static but currently block on auth-aware server work; split static shell from dynamic user chrome | P3 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
 
 **Next Debt ID:** DEBT-350
@@ -30,6 +29,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-348](../_archive/debt/debt-348-cache-components-public-marketing-shell.md) | Cache Components for public marketing shell — enabled `cacheComponents`, split static marketing shell from dynamic auth/entitlement islands behind Suspense with neutral skeleton fallbacks | P3 | 2026-04-04 | [PR #264](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/264) |
 | [DEBT-345](../_archive/debt/debt-345-circuit-breaker-external-services.md) | Circuit breaker for Stripe API — in-memory `CircuitBreaker` class wrapping `callStripeWithRetry`, with full state-machine coverage; auxiliary paths routed through same breaker | P3 | 2026-04-03 | [PR #263](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/263) |
 | [DEBT-344](../_archive/debt/debt-344-request-scoped-caching.md) | Request-scoped auth/question/tag read dedup — shipped framework-layer `React.cache` for auth state, published question reads, and tag lists; optional Tier 2 split to [DEBT-349](./debt-349-cross-request-published-content-caching.md) | P2 | 2026-04-03 | — |
 | [DEBT-343](../_archive/debt/debt-343-scripts-cleanup.md) | Scripts directory cleanup — removed stale one-offs (`migrate-tag-taxonomy.*`, `tag-census.ts`, `ralph-loop.sh`, `docs/_ralphwiggum/`), added `seed-all-environments.sh` with dedup, production safety guard, and `--plan` mode | P3 | 2026-04-02 | — |

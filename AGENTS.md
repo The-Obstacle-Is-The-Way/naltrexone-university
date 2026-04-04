@@ -124,6 +124,38 @@ See Robert C. Martin (Uncle Bob) - Clean Code, Clean Architecture, TDD principle
 
 ---
 
+## ⚠️ MANDATORY: Verify EVERY Change Before Pushing
+
+**Run the full quality gate before EVERY push. NO EXCEPTIONS.**
+
+The pre-push git hook only runs `pnpm typecheck && pnpm test --run`. That is NOT sufficient. Many regressions (build-time prerender errors, browser test failures, integration bugs) are only caught by the full gate. If you push without running the build, you WILL break CI.
+
+### The Rule
+
+**Before every `git push`, run:**
+
+```bash
+pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
+```
+
+
+This is not optional. This is not "before opening a PR." This is **before every push**, including follow-up fix commits. Every single time.
+
+### Why This Matters
+
+- `pnpm test --run` does NOT catch Next.js prerender errors — only `pnpm build` does
+- `pnpm typecheck` does NOT catch runtime `'use cache'` violations — only `pnpm build` does
+- Pushing without `pnpm build` has caused repeated CI failures that waste human review time
+- The pre-push hook is intentionally lightweight for speed — **you** are responsible for the full gate
+
+### Red Flags (STOP if any apply)
+
+- Thinking "the pre-push hook passed, so it's fine" → **WRONG, run the full gate**
+- Thinking "this is just a small fix, doesn't need a build" → **WRONG, small fixes cause big regressions**
+- Thinking "I'll push now and fix CI later" → **STOP, that's the exact problem**
+
+---
+
 ## Project Overview
 
 **Addiction Boards** (Naltrexone University) is a subscription-based SaaS question bank for Addiction Psychiatry and Addiction Medicine board exam preparation. Users subscribe ($29/mo or $199/yr), practice questions in tutor/exam modes, and track progress.
@@ -145,7 +177,7 @@ Git hooks are installed automatically on `pnpm install` (via the `prepare` scrip
 
 - `pre-commit`: runs staged-file checks via `lint-staged` + Biome auto-fix
 - `pre-push`: runs `pnpm typecheck && pnpm test --run`
-- `pre-push` is intentionally fast and does **not** run browser/integration/build checks. Agents must run the full pre-PR gate manually.
+- `pre-push` is intentionally fast and does **not** run browser/integration/build checks. **The hook passing does NOT mean your code is safe to push.** You MUST run the full quality gate yourself — see "Verify EVERY Change Before Pushing" above.
 
 ## Non-Interactive Safety (No Vim / No Pagers)
 

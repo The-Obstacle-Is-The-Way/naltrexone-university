@@ -11,11 +11,15 @@
 - Link spec/ADR updates in `docs/`
 - Add screenshots/GIFs for UI changes
 
-**Before opening a PR:**
+**Before EVERY `git push` (not just PRs):**
+
 ```bash
 # Ensure test DB is running first (see AGENTS.md "Running Integration Tests Locally")
 pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
 ```
+
+
+The pre-push git hook only runs typecheck + unit tests. It does NOT run `pnpm build`. You MUST run the full gate yourself — `pnpm build` catches prerender errors that nothing else catches.
 
 ## CodeRabbit Review (MANDATORY)
 

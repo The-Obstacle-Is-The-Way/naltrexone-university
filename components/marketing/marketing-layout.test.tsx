@@ -21,6 +21,8 @@ vi.mock('@/components/theme-toggle', () => ({
   ThemeToggle: () => <span data-testid="theme-toggle" />,
 }));
 
+vi.mock('server-only', () => ({}));
+
 type MarketingLayoutModule =
   typeof import('@/components/marketing/marketing-layout');
 let MarketingLayout: MarketingLayoutModule['MarketingLayout'];
@@ -41,18 +43,25 @@ function restoreTimeZone(originalTimeZone: string | undefined) {
 }
 
 describe('MarketingLayout', () => {
-  it('renders the footer copyright year from UTC, not the local runtime year', () => {
+  async function renderLayout(
+    props?: Partial<Omit<Parameters<typeof MarketingLayout>[0], 'children'>>,
+  ) {
+    const element = await MarketingLayout({
+      featuresHref: '/#features',
+      children: <div>Content</div>,
+      ...props,
+    });
+    return renderToStaticMarkup(element);
+  }
+
+  it('renders the footer copyright year from UTC, not the local runtime year', async () => {
     const originalTimeZone = process.env.TZ;
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-01-01T00:30:00.000Z'));
     process.env.TZ = 'America/New_York';
 
     try {
-      const html = renderToStaticMarkup(
-        <MarketingLayout authNav={<div>Auth</div>} featuresHref="/#features">
-          <div>Content</div>
-        </MarketingLayout>,
-      );
+      const html = await renderLayout({ authNavSlot: <div>Auth</div> });
       const doc = new DOMParser().parseFromString(html, 'text/html');
       const footer = doc.querySelector('footer');
 
@@ -63,12 +72,8 @@ describe('MarketingLayout', () => {
     }
   });
 
-  it('renders a single focusable main landmark', () => {
-    const html = renderToStaticMarkup(
-      <MarketingLayout authNav={<div>Auth</div>} featuresHref="/#features">
-        <div>Content</div>
-      </MarketingLayout>,
-    );
+  it('renders a single focusable main landmark', async () => {
+    const html = await renderLayout({ authNavSlot: <div>Auth</div> });
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const mainLandmarks = doc.querySelectorAll('main');
 
@@ -77,12 +82,8 @@ describe('MarketingLayout', () => {
     expect(mainLandmarks[0]?.getAttribute('tabindex')).toBe('-1');
   });
 
-  it('uses sentence case auth labels in the footer', () => {
-    const html = renderToStaticMarkup(
-      <MarketingLayout authNav={<div>Auth</div>} featuresHref="/#features">
-        <div>Content</div>
-      </MarketingLayout>,
-    );
+  it('uses sentence case auth labels in the footer', async () => {
+    const html = await renderLayout({ authNavSlot: <div>Auth</div> });
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const footer = doc.querySelector('footer');
     const signInLink = footer?.querySelector(`a[href="${ROUTES.SIGN_IN}"]`);
@@ -92,12 +93,8 @@ describe('MarketingLayout', () => {
     expect(signUpLink?.textContent?.trim()).toBe('Sign up');
   });
 
-  it('applies the stronger header brand treatment to the brand link', () => {
-    const html = renderToStaticMarkup(
-      <MarketingLayout authNav={<div>Auth</div>} featuresHref="/#features">
-        <div>Content</div>
-      </MarketingLayout>,
-    );
+  it('applies the stronger header brand treatment to the brand link', async () => {
+    const html = await renderLayout({ authNavSlot: <div>Auth</div> });
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const brandLink = doc.querySelector(`header a[href="${ROUTES.HOME}"]`);
 
@@ -118,12 +115,8 @@ describe('MarketingLayout', () => {
     expect(classTokens).toContain('whitespace-nowrap');
   });
 
-  it('keeps the marketing desktop nav on sm:flex', () => {
-    const html = renderToStaticMarkup(
-      <MarketingLayout authNav={<div>Auth</div>} featuresHref="/#features">
-        <div>Content</div>
-      </MarketingLayout>,
-    );
+  it('keeps the marketing desktop nav on sm:flex', async () => {
+    const html = await renderLayout({ authNavSlot: <div>Auth</div> });
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const desktopNav = doc.querySelector(
       'nav[aria-label="Marketing navigation (desktop)"]',
@@ -141,12 +134,8 @@ describe('MarketingLayout', () => {
     expect(classTokens).not.toContain('md:flex');
   });
 
-  it('applies the stronger footer brand treatment', () => {
-    const html = renderToStaticMarkup(
-      <MarketingLayout authNav={<div>Auth</div>} featuresHref="/#features">
-        <div>Content</div>
-      </MarketingLayout>,
-    );
+  it('applies the stronger footer brand treatment', async () => {
+    const html = await renderLayout({ authNavSlot: <div>Auth</div> });
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const footerBrand = Array.from(doc.querySelectorAll('footer p')).find(
       (element) => element.textContent?.trim() === 'Addiction Boards',
@@ -165,12 +154,8 @@ describe('MarketingLayout', () => {
     expect(classTokens).toContain('text-foreground');
   });
 
-  it('renders a mobile marketing nav so Features/Pricing are reachable', () => {
-    const html = renderToStaticMarkup(
-      <MarketingLayout authNav={<div>Auth</div>} featuresHref="/#features">
-        <div>Content</div>
-      </MarketingLayout>,
-    );
+  it('renders a mobile marketing nav so Features/Pricing are reachable', async () => {
+    const html = await renderLayout({ authNavSlot: <div>Auth</div> });
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const mobileNav = doc.querySelector(
@@ -188,13 +173,20 @@ describe('MarketingLayout', () => {
     ).not.toBeNull();
   });
 
-  it('includes ThemeToggle in the header action area', () => {
-    const html = renderToStaticMarkup(
-      <MarketingLayout authNav={<div>Auth</div>} featuresHref="/#features">
-        <div>Content</div>
-      </MarketingLayout>,
-    );
+  it('includes ThemeToggle in the header action area', async () => {
+    const html = await renderLayout({ authNavSlot: <div>Auth</div> });
 
     expect(html).toContain('data-testid="theme-toggle"');
+  });
+
+  it('renders a static sign-in fallback when auth nav is deferred', async () => {
+    const html = await renderLayout();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const header = doc.querySelector('header');
+
+    expect(
+      header?.querySelector('a[href="/sign-in"]')?.textContent?.trim(),
+    ).toBe('Sign in');
+    expect(header?.querySelector('[data-testid="user-button"]')).toBeNull();
   });
 });

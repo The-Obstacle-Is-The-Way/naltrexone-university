@@ -70,7 +70,7 @@ beforeAll(async () => {
 });
 
 describe('app/(app)/app/bookmarks', () => {
-  it('starts bookmark loading before searchParams resolves', async () => {
+  it('waits for searchParams before loading bookmarks behind the request boundary', async () => {
     let releaseSearchParams:
       | ((value: {
           error?: string | string[];
@@ -86,13 +86,14 @@ describe('app/(app)/app/bookmarks', () => {
       }),
     });
 
-    expect(getBookmarksFn).toHaveBeenCalledTimes(1);
+    expect(getBookmarksFn).not.toHaveBeenCalled();
 
     releaseSearchParams?.({});
 
     const element = await pagePromise;
     const html = renderToStaticMarkup(element);
 
+    expect(getBookmarksFn).toHaveBeenCalledTimes(1);
     expect(html).toContain('Bookmarks');
     expect(html).toContain('Stem for q1');
   });

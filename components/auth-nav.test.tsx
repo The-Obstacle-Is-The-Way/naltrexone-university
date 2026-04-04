@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import type { ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MarketingLayout } from '@/components/marketing/marketing-layout';
@@ -36,6 +37,16 @@ function getLinksByHrefAndLabel(
   ).filter((link) => (link.textContent ?? '').trim() === input.label);
 }
 
+async function renderMarketingLayout(authNavSlot: ReactNode) {
+  const element = await MarketingLayout({
+    authNavSlot,
+    featuresHref: '#features',
+    children: <div>Child content</div>,
+  });
+
+  return renderToStaticMarkup(element);
+}
+
 describe('AuthNav', () => {
   afterEach(() => {
     restoreProcessEnv(ORIGINAL_ENV);
@@ -52,11 +63,7 @@ describe('AuthNav', () => {
     const { AuthNav } = await import('./auth-nav');
 
     const element = await AuthNav({ deps: undefined });
-    const html = renderToStaticMarkup(
-      <MarketingLayout authNav={element} featuresHref="#features">
-        <div>Child content</div>
-      </MarketingLayout>,
-    );
+    const html = await renderMarketingLayout(element);
 
     const header = getHeader(html);
     const pricingLinks = getLinksByHrefAndLabel(header, {
@@ -88,11 +95,7 @@ describe('AuthNav', () => {
       deps: { authGateway, checkEntitlementUseCase },
     });
 
-    const html = renderToStaticMarkup(
-      <MarketingLayout authNav={authNav} featuresHref="#features">
-        <div>Child content</div>
-      </MarketingLayout>,
-    );
+    const html = await renderMarketingLayout(authNav);
 
     const header = getHeader(html);
     const featuresLinks = getLinksByHrefAndLabel(header, {
@@ -127,11 +130,7 @@ describe('AuthNav', () => {
     const authNav = await AuthNav({
       deps: { authGateway, checkEntitlementUseCase },
     });
-    const html = renderToStaticMarkup(
-      <MarketingLayout authNav={authNav} featuresHref="#features">
-        <div>Child content</div>
-      </MarketingLayout>,
-    );
+    const html = await renderMarketingLayout(authNav);
     const header = getHeader(html);
     const signInLink = header.querySelector('a[href="/sign-in"]');
     const signInButton = signInLink?.closest('[data-slot="button"]');
@@ -236,11 +235,7 @@ describe('AuthNav', () => {
       deps: { authGateway, checkEntitlementUseCase },
     });
 
-    const html = renderToStaticMarkup(
-      <MarketingLayout authNav={authNav} featuresHref="#features">
-        <div>Child content</div>
-      </MarketingLayout>,
-    );
+    const html = await renderMarketingLayout(authNav);
 
     const header = getHeader(html);
     const pricingLinks = getLinksByHrefAndLabel(header, {
@@ -292,11 +287,7 @@ describe('AuthNav', () => {
       deps: { authGateway, checkEntitlementUseCase },
       showPrimaryLink: false,
     });
-    const html = renderToStaticMarkup(
-      <MarketingLayout authNav={authNav} featuresHref="#features">
-        <div>Child content</div>
-      </MarketingLayout>,
-    );
+    const html = await renderMarketingLayout(authNav);
     const header = getHeader(html);
     const userButton = header.querySelector('[data-testid="user-button"]');
     const triggerClasses =
@@ -325,11 +316,7 @@ describe('AuthNav', () => {
       deps: { authGateway, checkEntitlementUseCase },
     });
 
-    const html = renderToStaticMarkup(
-      <MarketingLayout authNav={authNav} featuresHref="#features">
-        <div>Child content</div>
-      </MarketingLayout>,
-    );
+    const html = await renderMarketingLayout(authNav);
 
     const header = getHeader(html);
     const pricingLinks = getLinksByHrefAndLabel(header, {

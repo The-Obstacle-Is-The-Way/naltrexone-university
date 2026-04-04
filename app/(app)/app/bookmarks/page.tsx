@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { awaitRequestBoundary } from '@/app/(app)/app/request-boundary';
 import { ErrorCard } from '@/components/error-card';
 import {
   AlertDialog,
@@ -241,9 +242,13 @@ export function createBookmarksPage(deps?: {
       [key: string]: string | string[] | undefined;
     }>;
   }) {
+    const searchParamsPromise = Promise.resolve(props?.searchParams);
+    await awaitRequestBoundary();
+    const bookmarksPromise = getBookmarksFn({});
+
     const [searchParams, result] = await Promise.all([
-      props?.searchParams,
-      getBookmarksFn({}),
+      searchParamsPromise,
+      bookmarksPromise,
     ]);
     const errorMessage = getRemoveBookmarkErrorMessage(
       parseRemoveBookmarkErrorCode(searchParams?.error),
