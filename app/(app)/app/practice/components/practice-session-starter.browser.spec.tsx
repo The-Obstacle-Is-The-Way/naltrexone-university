@@ -126,6 +126,31 @@ test('shows loading state for session start', async () => {
     .toBeDisabled();
 });
 
+test('disables session configuration controls while session start is loading', async () => {
+  const { screen } = await renderStarter({
+    sessionStartStatus: 'loading',
+  });
+
+  await screen.getByText('Substance', { exact: true }).click();
+
+  await expect
+    .element(screen.getByRole('button', { name: 'Tutor' }))
+    .toBeDisabled();
+  await expect
+    .element(screen.getByRole('button', { name: 'Exam' }))
+    .toBeDisabled();
+  await expect.element(screen.getByRole('spinbutton')).toBeDisabled();
+  await expect
+    .element(screen.getByRole('button', { name: 'Unanswered' }))
+    .toBeDisabled();
+  await expect
+    .element(screen.getByRole('button', { name: 'Easy' }))
+    .toBeDisabled();
+  await expect
+    .element(screen.getByRole('button', { name: 'Opioids' }))
+    .toBeDisabled();
+});
+
 test('disables start when no questions match the selected filters', async () => {
   const { screen } = await renderStarter({
     availableTags: [],
