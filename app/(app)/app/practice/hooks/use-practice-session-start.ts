@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { reportClientError } from '@/lib/report-client-error';
 import { startPracticeSession } from '@/src/adapters/controllers/practice-controller';
 import { navigateTo } from '../client-navigation';
@@ -50,15 +50,19 @@ export function usePracticeSessionStart(
   const [sessionCountInputValue, setSessionCountInputValue] = useState(
     String(DEFAULT_SESSION_COUNT),
   );
-  const [startSessionIdempotencyKey, setStartSessionIdempotencyKey] = useState(
-    () => crypto.randomUUID(),
-  );
+  const [startSessionIdempotencyKey, setStartSessionIdempotencyKeyState] =
+    useState(() => crypto.randomUUID());
+  const startSessionIdempotencyKeyRef = useRef(startSessionIdempotencyKey);
   const [sessionStartStatus, setSessionStartStatus] = useState<
     'idle' | 'loading' | 'error'
   >('idle');
   const [sessionStartError, setSessionStartError] = useState<string | null>(
     null,
   );
+  const setStartSessionIdempotencyKey = useCallback((key: string) => {
+    startSessionIdempotencyKeyRef.current = key;
+    setStartSessionIdempotencyKeyState(key);
+  }, []);
 
   const onSessionModeChange = useMemo(
     () =>
@@ -67,7 +71,7 @@ export function usePracticeSessionStart(
         setIdempotencyKey: setStartSessionIdempotencyKey,
         createIdempotencyKey: () => crypto.randomUUID(),
       }) satisfies PracticeSessionStarterProps['onSessionModeChange'],
-    [],
+    [setStartSessionIdempotencyKey],
   );
 
   const onSessionCountChange = useMemo(
@@ -78,7 +82,7 @@ export function usePracticeSessionStart(
         setIdempotencyKey: setStartSessionIdempotencyKey,
         createIdempotencyKey: () => crypto.randomUUID(),
       }),
-    [],
+    [setStartSessionIdempotencyKey],
   );
 
   const onSessionCountBlur = useMemo(
@@ -97,7 +101,7 @@ export function usePracticeSessionStart(
         setIdempotencyKey: setStartSessionIdempotencyKey,
         createIdempotencyKey: () => crypto.randomUUID(),
       }) satisfies PracticeSessionStarterProps['onToggleTag'],
-    [],
+    [setStartSessionIdempotencyKey],
   );
 
   const onDifficultyChange = useMemo(
@@ -107,7 +111,7 @@ export function usePracticeSessionStart(
         setIdempotencyKey: setStartSessionIdempotencyKey,
         createIdempotencyKey: () => crypto.randomUUID(),
       }) satisfies PracticeSessionStarterProps['onDifficultyChange'],
-    [],
+    [setStartSessionIdempotencyKey],
   );
 
   const onStatusChange = useMemo(
@@ -117,7 +121,7 @@ export function usePracticeSessionStart(
         setIdempotencyKey: setStartSessionIdempotencyKey,
         createIdempotencyKey: () => crypto.randomUUID(),
       }) satisfies PracticeSessionStarterProps['onStatusChange'],
-    [],
+    [setStartSessionIdempotencyKey],
   );
 
   const onStartSession = useMemo(
@@ -127,6 +131,7 @@ export function usePracticeSessionStart(
         sessionCount,
         filters,
         idempotencyKey: startSessionIdempotencyKey,
+        getLatestIdempotencyKey: () => startSessionIdempotencyKeyRef.current,
         createIdempotencyKey: () => crypto.randomUUID(),
         setIdempotencyKey: setStartSessionIdempotencyKey,
         startPracticeSessionFn: startPracticeSession,
@@ -147,6 +152,7 @@ export function usePracticeSessionStart(
       sessionCount,
       startSessionIdempotencyKey,
       input.isMounted,
+      setStartSessionIdempotencyKey,
     ],
   );
 

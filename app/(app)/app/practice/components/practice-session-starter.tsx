@@ -90,6 +90,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
   const isStartDisabled =
     props.sessionStartStatus === 'loading' ||
     (props.availableCountStatus === 'idle' && props.availableCount === 0);
+  const areConfigControlsDisabled = props.sessionStartStatus === 'loading';
 
   const tagsByKind = useMemo(() => {
     const map = new Map<string, TagRow[]>();
@@ -129,6 +130,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
               ]}
               value={props.sessionMode}
               onChange={props.onSessionModeChange}
+              disabled={areConfigControlsDisabled}
               ariaLabelledBy={segmentedControlLabelIds.mode}
             />
           </div>
@@ -152,6 +154,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
                 }
                 onChange={props.onSessionCountChange}
                 onBlur={props.onSessionCountBlur}
+                disabled={areConfigControlsDisabled}
               />
             </div>
           </div>
@@ -173,6 +176,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
             onChange={(value) =>
               props.onStatusChange(value as QuestionProgressStatus)
             }
+            disabled={areConfigControlsDisabled}
             ariaLabelledBy={segmentedControlLabelIds.status}
           />
         </div>
@@ -201,6 +205,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
 
               props.onDifficultyChange(value as QuestionDifficulty);
             }}
+            disabled={areConfigControlsDisabled}
             ariaLabelledBy={segmentedControlLabelIds.difficulty}
           />
         </div>
@@ -252,6 +257,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
                             label={tag.name}
                             selected={selectedTagSlugs.has(tag.slug)}
                             onClick={() => props.onToggleTag(tag.slug)}
+                            disabled={areConfigControlsDisabled}
                           />
                         ))}
                       </fieldset>

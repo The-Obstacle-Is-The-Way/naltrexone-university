@@ -59,6 +59,7 @@ export async function startSession(input: {
   sessionCount: number;
   filters: PracticeFilters;
   idempotencyKey: string;
+  getLatestIdempotencyKey?: () => string;
   createIdempotencyKey: () => string;
   setIdempotencyKey: (key: string) => void;
   startPracticeSessionFn: (
@@ -71,6 +72,9 @@ export async function startSession(input: {
   isMounted?: () => boolean;
 }): Promise<void> {
   const isMounted = input.isMounted ?? (() => true);
+  const isLatestRequest = () =>
+    (input.getLatestIdempotencyKey?.() ?? input.idempotencyKey) ===
+    input.idempotencyKey;
 
   input.setSessionStartStatus('loading');
   input.setSessionStartError(null);
@@ -91,6 +95,7 @@ export async function startSession(input: {
       SESSION_START_TIMEOUT_MS,
     );
   } catch (error) {
+    if (!isLatestRequest()) return;
     try {
       input.reportError?.(error, { action: 'startSession' });
     } catch {
@@ -103,6 +108,7 @@ export async function startSession(input: {
     return;
   }
   if (!isMounted()) return;
+  if (!isLatestRequest()) return;
 
   if (!res.ok) {
     input.setSessionStartStatus('error');
