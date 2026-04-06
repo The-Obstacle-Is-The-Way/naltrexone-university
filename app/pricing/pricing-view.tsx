@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { ComponentType, ReactNode } from 'react';
-import { IdempotencyKeyField } from '@/app/pricing/pricing-client';
 import type { PricingBanner } from '@/app/pricing/types';
+import { IdempotencyKeyField } from '@/components/idempotency-key-field';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PRICING_DATA } from '@/lib/pricing-data';
