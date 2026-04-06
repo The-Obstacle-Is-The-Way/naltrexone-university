@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { manageBillingAction } from '@/app/(app)/app/billing/manage-billing-actions';
 import { ROUTES } from '@/lib/routes';
 import { err, ok } from '@/src/adapters/controllers/action-result';
@@ -54,6 +54,28 @@ describe('app/(app)/app/billing/manage-billing-actions', () => {
       }),
     ).rejects.toMatchObject({
       message: `redirect:${ROUTES.SIGN_UP}`,
+    });
+  });
+
+  it('passes idempotencyKey from form data to the portal controller', async () => {
+    const createPortalSessionFn = vi.fn(async () =>
+      ok({ url: 'https://stripe.test/portal' }),
+    );
+    const redirectFn = createRedirectFn();
+    const formData = new FormData();
+    formData.set('idempotencyKey', '11111111-1111-1111-1111-111111111111');
+
+    await expect(
+      manageBillingAction(formData, {
+        createPortalSessionFn,
+        redirectFn,
+      }),
+    ).rejects.toMatchObject({
+      message: 'redirect:https://stripe.test/portal',
+    });
+
+    expect(createPortalSessionFn).toHaveBeenCalledWith({
+      idempotencyKey: '11111111-1111-1111-1111-111111111111',
     });
   });
 });

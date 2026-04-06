@@ -58,6 +58,7 @@ export function PricingView({
             <div className="ml-4 flex items-center gap-3">
               {manageBillingAction ? (
                 <form action={manageBillingAction}>
+                  <IdempotencyKeyField />
                   <Button
                     type="submit"
                     variant="outline"
@@ -106,6 +107,7 @@ export function PricingView({
             </p>
             <div className="mt-6">
               <form action={manageBillingAction}>
+                <IdempotencyKeyField />
                 <Button type="submit" className="rounded-full">
                   Manage Billing
                 </Button>

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { ManageBillingButton } from '@/app/(app)/app/billing/billing-client';
 import { manageBillingAction } from '@/app/(app)/app/billing/manage-billing-actions';
 import { awaitRequestBoundary } from '@/app/(app)/app/request-boundary';
+import { IdempotencyKeyField } from '@/app/pricing/pricing-client';
 import { ErrorCard } from '@/components/error-card';
 import { Card } from '@/components/ui/card';
 import { normalizeSearchParam } from '@/lib/search-params';
@@ -83,6 +84,7 @@ export function BillingContent(props: BillingContentProps) {
 
         {subscription ? (
           <form action={props.manageBillingAction}>
+            <IdempotencyKeyField />
             <ManageBillingButton />
           </form>
         ) : null}

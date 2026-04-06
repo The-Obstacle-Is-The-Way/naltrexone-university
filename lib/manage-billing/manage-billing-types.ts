@@ -3,8 +3,12 @@ import type { Logger } from '@/src/application/ports/logger';
 
 export type RedirectFn = (url: string) => never;
 
+export type CreatePortalSessionInput = {
+  idempotencyKey?: string;
+};
+
 export type CreatePortalSessionFn = (
-  input: Record<string, never>,
+  input: CreatePortalSessionInput,
 ) => Promise<ActionResult<{ url: string }>>;
 
 export type ManageBillingLogger = Pick<Logger, 'error'>;
