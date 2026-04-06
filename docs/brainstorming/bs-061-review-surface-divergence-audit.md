@@ -2,20 +2,22 @@
 
 **Date:** 2026-04-06
 **Triggered by:** User walkthrough of the exam flow end-to-end. After submitting an exam, clicking "Review your answers" from the Session Summary leads to a different review experience than the pre-submit review flow, and both differ from the History page's review. The user described it as "sloppified" — subtly different button arrangements, bookmark placement, navigation options, and page headers across three surfaces that should feel like the same experience.
-**Scope:** Audit all question-review surfaces, catalog their divergences, assess whether a page/surface registry would prevent future drift, and determine which inconsistencies are bugs vs intentional context differences.
+**Scope:** Audit the exam-flow review surfaces — from pre-submit review through post-exam review, session summary, and the summary "Review your answers" handoff — and catalog where the experience breaks consistency.
 **Related:** [BS-059](./bs-059-practice-session-action-bar-button-arrangement.md) (action bar button arrangement on question-page-client), [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) (bookmark icon toggle), [DEBT-330 (archived)](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md) (post-exam review bookmark placement, resolved), [BS-019 (archived)](../_archive/brainstorming/bs-019-action-bar-label-and-ordering-consistency.md) (action bar label consistency, resolved), [BS-006 (archived)](../_archive/brainstorming/bs-006-review-consistency-audit.md) (earlier review consistency audit, resolved)
+
+**Boundary with BS-059:** BS-059 owns the standalone `question-page-client.tsx` action bar layout question (button count, grouping, bookmark placement). Fixes to `question-page-client.tsx`'s action bar should be tracked in BS-059. BS-061 owns the cross-surface exam-flow divergence: why `PostExamReviewView` and `question-page-client.tsx` feel different when the user transitions from post-exam review to summary review.
 
 ---
 
 ## The Problem
 
-There are **three distinct question-review experiences** in the app. A user who completes an exam encounters two of them within 30 seconds of each other. All three show the same kind of content (a question with answer choices, feedback, and a reference), but their chrome — action bars, navigation, headers, and bookmark placement — diverge in ways that feel accidental rather than intentional.
+There are **three distinct question-review experiences** relevant to this audit. A user who completes an exam encounters two of them within 30 seconds of each other. All three show the same kind of content (a question with answer choices, feedback, and a reference), but their chrome — action bars, navigation, headers, and bookmark placement — diverge in ways that feel accidental rather than intentional.
 
-### Surface 1: Post-Exam Review (pre-submit → review, and post-submit "Review your answers")
+### Surface 1: Post-Exam Review (immediately after final submit, before Session Summary)
 
 **Route:** `/app/practice/[sessionId]` (stages: `post-exam-review`)
 **Component:** `post-exam-review-view.tsx`
-**Entry point:** After clicking "Finish exam" during exam mode, or clicking "Review your answers" on the Session Summary
+**Entry point:** After clicking "Finish exam" during exam mode
 
 **Layout:**
 ```
@@ -41,13 +43,14 @@ There are **three distinct question-review experiences** in the app. A user who 
 
 **Route:** `/app/questions/[slug]?from=summary&mode=review&sessionId=...`
 **Component:** `question-page-client.tsx`
-**Entry point:** Clicking "Review your answers" on the Session Summary → clicking a question in the breakdown list, OR sometimes the "Review your answers" button itself
+**Entry point:** Clicking "Review your answers" on the Session Summary, or clicking a question in the summary breakdown list
 
 **Layout:**
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │ "Question" heading                                               │
-│ "Reviewing a question from your session."                        │
+│ "Reviewing a question from your session summary."                │
+│ top utility link: Back to Summary                                │
 │ [Question Navigator: color-coded pills at top]                   │
 │ "Question X of Y"                                                │
 │                                                                  │
@@ -59,10 +62,11 @@ There are **three distinct question-review experiences** in the app. A user who 
 
 **Key traits:**
 - **Bookmark is sandwiched between Previous and Next** (the BS-059 / DEBT-330 problem, unresolved here)
-- "Back to Summary" is a ghost link in the action bar (not in the header)
+- Has both a top "Back to Summary" utility link and a bottom ghost "Back to Summary" action-bar link
 - Uses a different navigator component (`ReviewQuestionNavigator` from `review-question-navigator.tsx`)
-- Page heading says "Question" with subtitle "Reviewing a question from your session."
+- Page heading says "Question" with subtitle "Reviewing a question from your session summary."
 - Different overall page wrapper and component tree
+- The layout shown above is the review-mode-with-session-nav state; the `question-page-client.tsx` action bar is stateful and can also render `Submit`, `Try Again` / `Practice Again`, and spacer spans in other states
 
 ### Surface 3: History → Review
 
@@ -90,6 +94,19 @@ There are **three distinct question-review experiences** in the app. A user who 
 - Same `ReviewQuestionNavigator` at top
 - Same "Question" heading
 
+## Out-of-Scope Surfaces (Future Work)
+
+BS-061 focuses on the exam flow:
+
+`ExamReviewView` → `PostExamReviewView` → `SessionSummaryView` → summary review on `question-page-client.tsx`
+
+The following origins also route into `question-page-client.tsx` and therefore inherit some of the same standalone-surface divergences, but they are separate future work rather than the primary focus of this doc:
+
+- Bookmarks review (`bookmarks/page.tsx`)
+- Dashboard recent sessions review (`dashboard/page.tsx`)
+- Dashboard recent activity review (`dashboard/page.tsx`)
+- Generic practice origin (`question-page-client.tsx`)
+
 ---
 
 ## The Divergences (What the User Sees)
@@ -110,18 +127,18 @@ There are **three distinct question-review experiences** in the app. A user who 
 
 | Surface | Back link | Location |
 |---------|-----------|----------|
-| Post-exam review | "View Summary" | Header (top of page) |
-| Summary review | "Back to Summary" | Ghost link in action bar (bottom) |
+| Post-exam review | "View Summary" | Header utility button only |
+| Summary review | "Back to Summary" | Header utility link plus bottom ghost action-bar link |
 | History review | "Back to History" | Ghost link in action bar (bottom) |
 
-**Why it matters:** Different mental models for how to exit. On one surface you look up, on others you look down.
+**Why it matters:** Exit affordances shift between header-only, duplicated header+action-bar, and action-bar-only patterns. The user has to relearn where the escape hatch lives even though the underlying task is the same.
 
 ### D3: Page heading and framing
 
 | Surface | Heading | Subtitle |
 |---------|---------|----------|
 | Post-exam review | (none — integrated into session flow) | Score indicator at top |
-| Summary review | "Question" | "Reviewing a question from your session." |
+| Summary review | "Question" | "Reviewing a question from your session summary." |
 | History review | "Question" | "Reviewing a question from your history." |
 
 **Why it matters:** Post-exam review feels like a continuation of the exam. Summary/History review feels like a standalone page with a different information hierarchy.
@@ -144,6 +161,15 @@ The pre-submit review page (`exam-review-view.tsx`) lists each question with an 
 
 Each question on the Review & Submit page shows "Not marked" if the user didn't mark it for review. This creates visual noise — the absence of a mark should be the default state (no label needed). A positive indicator when marked (e.g., a badge or icon) with no indicator when not marked would be cleaner.
 
+### D7: Focus-ring artifact on Post-Exam Review load
+
+The user reported a transient "barrier" / box appearing when review pages load. This is likely the focus-visible ring on `PostExamReviewView`, not a random device artifact:
+
+- `useEffect` calls `panelRef.current?.focus({ focusVisible: true })` on every reviewed-question change
+- The review panel section has `focus-visible:ring-ring/50 focus-visible:ring-[3px]`
+
+This is not a cross-surface divergence like D1-D4, but it is a real visual artifact the user noticed during the exam flow and should be tracked alongside the broader cleanup.
+
 ---
 
 ## Root Cause Analysis
@@ -160,7 +186,9 @@ These two components evolved separately because they serve different entry point
 
 - `PostExamReviewView` is tightly coupled to the session orchestrator's in-memory state
 - `question-page-client.tsx` is a standalone page that must work without session context
-- Unifying them would require either making the question page work within the session orchestrator, or extracting a shared review layout component that both can use
+- The session route uses a one-way stage machine (`use-practice-session-review-stage.ts`). When `onViewSummary()` runs, it promotes the pending summary and explicitly clears the post-exam review state (`setPostExamReview(null)`, `setPostExamReviewCurrentQuestionId(null)`, `setPostExamReviewLoadState({ status: 'idle' })`)
+- Because that post-exam review state is deliberately discarded when the user enters the summary stage, the orchestrator cannot currently re-enter post-exam review from the summary without rebuilding that state
+- Unifying them would require either making the question page work within the session orchestrator, or changing the stage machine so summary review can stay in-session instead of routing to `question-page-client.tsx`
 
 ---
 
@@ -230,7 +258,7 @@ Long-term: extract the question-review rendering (question card + feedback + nav
 
 ### Direction E: Fix the Review & Submit page affordances (D5, D6)
 
-- Make question rows on the Review & Submit page clickable (whole-row link wrapping the card content), removing the "Open question" button
+- Make question rows on the Review & Submit page a whole-card clickable target (via the existing `onOpenQuestion` callback), removing the "Open question" button
 - Replace "Not marked" with no indicator; show a "Marked" badge/icon only when marked
 
 **Effort:** Small — isolated to `exam-review-view.tsx`.
@@ -240,10 +268,11 @@ Long-term: extract the question-review rendering (question card + feedback + nav
 ## Suggested Sequencing
 
 1. **Direction E** (Review & Submit affordances) — quick win, fixes D5 and D6
-2. **Direction A** (action bar unification via BS-059) — fixes D1, the most jarring divergence
-3. **Direction B or C** (shared action bar or session flow continuity) — fixes D2 and D3
-4. **Surface map section in pattern registry** — prevents future drift
-5. **Direction D** (full unification) — only if the divergence keeps recurring after A+B/C
+2. **Direction C** (session-flow continuity) — first real decision point: should Session Summary "Review your answers" stay in the session orchestrator or intentionally jump to `question-page-client.tsx`?
+3. **Direction A** (action bar unification via BS-059) — if Direction C is rejected as too complex given the one-way stage machine, this is the next obvious polish fix for D1; if Direction C lands, A becomes follow-up cleanup for the standalone surface
+4. **Direction B** (shared action bar) — only after C vs A is resolved, if D2 and D3 still justify shared extraction
+5. **Surface map section in pattern registry** — prevents future drift
+6. **Direction D** (full unification) — only if the divergence keeps recurring after the narrower fixes above
 
 ---
 
@@ -266,5 +295,6 @@ Long-term: extract the question-review rendering (question card + feedback + nav
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-04-06 | Created BS-061 | User walkthrough revealed three divergent review surfaces with inconsistent bookmark placement, "back" link location, page headers, and component trees. The divergence is noticeable when navigating between them in the normal exam flow. |
-| 2026-04-06 | Scope is broader than BS-059 | BS-059 focuses narrowly on the `question-page-client.tsx` action bar button count/grouping. BS-061 covers the cross-surface divergence holistically, including the Review & Submit page affordances, the page heading/framing differences, and the structural question of why two separate component trees exist. |
+| 2026-04-06 | Scope is distinct from BS-059 | BS-059 focuses on the standalone `question-page-client.tsx` action bar layout. BS-061 focuses on the exam-flow divergence: why post-exam review, session summary, and summary review do not feel like one continuous experience. |
 | 2026-04-06 | Recommended against a standalone surface registry | A lightweight surface map as a section in the existing pattern registry is sufficient. A separate document would create maintenance burden. |
+| 2026-04-06 | Adversarial review applied | Fixed factual errors (subtitle text, back-link placement, Direction E wording), sharpened scope to exam flow, added focus-ring finding, deepened root cause with stage-machine detail, clarified BS-059 boundary, and resequenced Directions to prioritize C (session-flow continuity) as the key decision point. |
