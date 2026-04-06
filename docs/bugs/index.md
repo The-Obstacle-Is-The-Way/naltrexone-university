@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-03
+**Last Updated:** 2026-04-06
 
 ---
 
@@ -15,13 +15,17 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 **Next Bug ID:** BUG-234
 
+**Latest archival (2026-04-06):**
+- BUG-231 verified fixed (PR #266): `removeBookmarkAction` now parses `idempotencyKey` from FormData and forwards it to `toggleBookmark`; form includes `<IdempotencyKeyField />`. Archived to `docs/_archive/bugs/`.
+- BUG-233 verified fixed (PR #265): `startSession(...)` now uses `startSessionIdempotencyKeyRef` to drop stale responses after config changes; config controls disabled during loading. Archived to `docs/_archive/bugs/`.
+
 **Manual report (2026-04-03) — server-action idempotency + stale start sweep:**
 
 - BUG-231 filed: bookmarks remove form action still bypasses bookmark-toggle idempotency, so duplicate submits can re-add the bookmark and redirect with `remove_failed`.
 - BUG-232 filed: pricing and app billing manage-billing server actions still drop portal-session idempotency at the UI boundary, so duplicate submits create fresh Stripe portal sessions.
 - BUG-233 filed: practice session start allows stale in-flight completions to navigate or error after the user changes the visible session configuration.
 
-**Latest archival (2026-03-23):**
+**Previous archival (2026-03-23):**
 - BUG-230 verified fixed (PR #246): `loadPostExamReview(...)` now uses a monotonic `latestPostExamReviewRequestIdRef` to drop stale retry responses, preventing out-of-order settlement from overwriting newer state. Archived to `docs/_archive/bugs/`.
 
 **Manual report (2026-03-21) — follow-up bug sweep:**
@@ -109,9 +113,9 @@ Active open bugs are listed below.
 
 | Bug | Priority | Summary |
 |-----|----------|---------|
-| [BUG-233](./bug-233-practice-session-start-stale-response-after-config-change.md) | P3 | Practice session start can still commit a stale success or stale error after the user changes mode, count, or filters during loading |
 | [BUG-232](./bug-232-manage-billing-actions-drop-portal-idempotency.md) | P4 | Manage Billing UI server actions still discard portal-session idempotency keys, so duplicate submits create fresh Stripe portal sessions |
-| [BUG-231](./bug-231-remove-bookmark-action-missing-idempotency.md) | P4 | Bookmarks remove form action still bypasses idempotency, so duplicate submits can re-add the bookmark and surface `remove_failed` |
+| ~~BUG-233~~ | P3 | ~~Practice session start commits stale response after config changes~~ — **Resolved 2026-04-04 (PR #265).** `startSession(...)` now uses `startSessionIdempotencyKeyRef` to drop stale responses; config controls disabled during loading. [Archived](../_archive/bugs/bug-233-practice-session-start-stale-response-after-config-change.md). |
+| ~~BUG-231~~ | P4 | ~~Bookmarks remove form action bypasses idempotency~~ — **Resolved 2026-04-06 (PR #266).** `removeBookmarkAction` now forwards `idempotencyKey` from `<IdempotencyKeyField />`. [Archived](../_archive/bugs/bug-231-remove-bookmark-action-missing-idempotency.md). |
 | ~~BUG-230~~ | P3 | ~~Post-exam review retry path has no request-sequencing guard~~ — **Resolved 2026-03-21 (PR #246).** `loadPostExamReview(...)` now uses `latestPostExamReviewRequestIdRef` to drop stale responses. [Archived](../_archive/bugs/bug-230-post-exam-review-retry-race.md). |
 | ~~BUG-229~~ | P4 | ~~Marketing footer copyright year used local runtime time instead of UTC~~ — **Resolved 2026-03-21.** Footer now derives the year from a UTC ISO string. [Archived](../_archive/bugs/bug-229-marketing-footer-year-uses-local-time.md). |
 | ~~BUG-228~~ | P2 | ~~Browser-side Sentry requests blocked by CSP~~ — **Resolved 2026-03-18.** `parseSentryIngestOrigin()` adds DSN origin to `connect-src`. [Archived](../_archive/bugs/bug-228-client-sentry-ingest-blocked-by-csp.md). |
