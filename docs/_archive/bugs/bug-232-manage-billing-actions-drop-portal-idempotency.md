@@ -1,6 +1,6 @@
 # BUG-232: Manage Billing Form Actions Still Drop Portal Idempotency Keys
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P4
 **Date:** 2026-04-03
 **Confirmed:** 2026-04-03
@@ -58,7 +58,8 @@ Tracer-bullet path:
 
 - [x] Code-level tracer-bullet verified on 2026-04-03.
 - [x] Existing manage-billing tests only cover redirect behavior; they do not assert forwarded input or replay safety.
-- [ ] Add regression coverage for form-data forwarding and same-key replay.
+- [x] Regression coverage added for form-data forwarding and key threading at core, action, and UI layers (PR #267).
+- [x] `IdempotencyKeyField` extracted to `components/idempotency-key-field.tsx` as shared component (PR #267).
 - [ ] Manual replay against a local or test Stripe environment.
 
 ## Related
