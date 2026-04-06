@@ -30,13 +30,17 @@ function getDeps(
 }
 
 export async function manageBillingAction(
-  _formData: FormData,
+  formData: FormData,
   deps?: Partial<ManageBillingActionDeps>,
 ): Promise<void> {
   const d = getDeps(deps);
+  const rawKey = formData.get('idempotencyKey');
+  const idempotencyKey = typeof rawKey === 'string' ? rawKey : undefined;
+
   return runManageBillingAction({
     createPortalSessionFn: d.createPortalSessionFn,
     redirectFn: d.redirectFn,
     logger: d.logger,
+    idempotencyKey,
   });
 }

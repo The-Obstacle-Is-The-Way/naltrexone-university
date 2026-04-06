@@ -41,6 +41,29 @@ describe('manage-billing-core', () => {
     });
   });
 
+  it('forwards idempotencyKey to portal session creation when provided', async () => {
+    const createPortalSessionFn = vi.fn(async () =>
+      ok({ url: 'https://stripe.test/portal' }),
+    );
+
+    const action = async () =>
+      runManageBillingAction({
+        createPortalSessionFn,
+        redirectFn,
+        redirects: {
+          failure: '/app/billing?error=portal_failed',
+        },
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      });
+
+    await expect(action()).rejects.toMatchObject({
+      url: 'https://stripe.test/portal',
+    });
+    expect(createPortalSessionFn).toHaveBeenCalledWith({
+      idempotencyKey: '11111111-1111-1111-1111-111111111111',
+    });
+  });
+
   it('redirects to configured unauthenticated route when portal session creation returns UNAUTHENTICATED', async () => {
     const action = async () =>
       runManageBillingAction({

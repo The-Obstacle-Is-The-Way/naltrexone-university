@@ -10,6 +10,7 @@ export async function runManageBillingAction(deps: {
   createPortalSessionFn: CreatePortalSessionFn;
   redirectFn: RedirectFn;
   logger?: ManageBillingLogger;
+  idempotencyKey?: string;
 }): Promise<void> {
   return runManageBillingActionCore({
     ...deps,

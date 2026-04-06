@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { awaitRequestBoundary } from '@/app/(app)/app/request-boundary';
-import { IdempotencyKeyField } from '@/app/pricing/pricing-client';
 import { ErrorCard } from '@/components/error-card';
+import { IdempotencyKeyField } from '@/components/idempotency-key-field';
 import {
   AlertDialog,
   AlertDialogAction,

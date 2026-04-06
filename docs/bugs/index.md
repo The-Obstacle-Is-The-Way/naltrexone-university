@@ -16,6 +16,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 **Next Bug ID:** BUG-234
 
 **Latest archival (2026-04-06):**
+- BUG-232 verified fixed (PR #267): `CreatePortalSessionFn` widened to accept `idempotencyKey`, threaded through core/actions/UI; `IdempotencyKeyField` extracted to `components/idempotency-key-field.tsx` as shared component. Archived to `docs/_archive/bugs/`.
 - BUG-231 verified fixed (PR #266): `removeBookmarkAction` now parses `idempotencyKey` from FormData and forwards it to `toggleBookmark`; form includes `<IdempotencyKeyField />`. Archived to `docs/_archive/bugs/`.
 - BUG-233 verified fixed (PR #265): `startSession(...)` now uses `startSessionIdempotencyKeyRef` to drop stale responses after config changes; config controls disabled during loading. Archived to `docs/_archive/bugs/`.
 

@@ -22,10 +22,13 @@ export async function runManageBillingAction(deps: {
   redirectFn: RedirectFn;
   redirects: ManageBillingRedirects;
   logger?: ManageBillingLogger;
+  idempotencyKey?: string;
 }): Promise<void> {
   let result: Awaited<ReturnType<CreatePortalSessionFn>>;
   try {
-    result = await deps.createPortalSessionFn({});
+    result = await deps.createPortalSessionFn({
+      idempotencyKey: deps.idempotencyKey,
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorContext = {
