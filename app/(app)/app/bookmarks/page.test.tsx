@@ -7,8 +7,23 @@ import {
   err,
   ok,
 } from '@/src/adapters/controllers/action-result';
-import type { GetBookmarksOutput } from '@/src/adapters/controllers/bookmark-controller';
+import type {
+  BookmarkControllerDeps,
+  GetBookmarksOutput,
+} from '@/src/adapters/controllers/bookmark-controller';
 import { getStemPreview } from '@/src/adapters/shared/stem-preview';
+import {
+  FakeAuthGateway,
+  FakeGetBookmarksUseCase,
+  FakeIdempotencyKeyRepository,
+  FakeLogger,
+  FakeRateLimiter,
+  FakeSubscriptionRepository,
+  FakeToggleBookmarkUseCase,
+} from '@/src/application/test-helpers/fakes';
+import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
+import type { User } from '@/src/domain/entities';
+import { createSubscription, createUser } from '@/src/domain/test-helpers';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -54,19 +69,74 @@ function createGetBookmarksFn(
   return vi.fn(async () => result);
 }
 
+type BookmarkActionControllerDeps = BookmarkControllerDeps & {
+  toggleBookmarkUseCase: FakeToggleBookmarkUseCase;
+};
+
+function createBookmarkActionControllerDeps(overrides?: {
+  user?: User | null;
+  isEntitled?: boolean;
+  toggleBookmarkOutput?: { bookmarked: boolean };
+}): BookmarkActionControllerDeps {
+  const user =
+    overrides?.user === undefined
+      ? createUser({
+          id: 'user_1',
+          email: 'user@example.com',
+          createdAt: new Date('2026-02-01T00:00:00Z'),
+          updatedAt: new Date('2026-02-01T00:00:00Z'),
+        })
+      : overrides.user;
+  const now = new Date('2026-02-01T00:00:00Z');
+
+  const subscriptionRepository = new FakeSubscriptionRepository(
+    overrides?.isEntitled === false
+      ? []
+      : [
+          createSubscription({
+            userId: user?.id ?? 'user_1',
+            status: 'active',
+            currentPeriodEnd: new Date('2026-12-31T00:00:00Z'),
+          }),
+        ],
+  );
+
+  return {
+    authGateway: new FakeAuthGateway(user),
+    logger: new FakeLogger(),
+    rateLimiter: new FakeRateLimiter(),
+    idempotencyKeyRepository: new FakeIdempotencyKeyRepository(() => now),
+    checkEntitlementUseCase: new CheckEntitlementUseCase(
+      subscriptionRepository,
+      () => now,
+    ),
+    toggleBookmarkUseCase: new FakeToggleBookmarkUseCase(
+      overrides?.toggleBookmarkOutput ?? { bookmarked: false },
+    ),
+    getBookmarksUseCase: new FakeGetBookmarksUseCase({ rows: [] }),
+    now: () => now,
+  };
+}
+
 let BookmarksView: typeof import('./page').BookmarksView;
 let createBookmarksPage: typeof import('./page').createBookmarksPage;
 let renderBookmarks: typeof import('./page').renderBookmarks;
 let removeBookmarkAction: typeof import('./bookmarks-actions').removeBookmarkAction;
+let toggleBookmark: typeof import('@/src/adapters/controllers/bookmark-controller').toggleBookmark;
 
 beforeAll(async () => {
-  const pageModule = await import('./page');
-  const actionsModule = await import('./bookmarks-actions');
+  const [pageModule, actionsModule, bookmarkControllerModule] =
+    await Promise.all([
+      import('./page'),
+      import('./bookmarks-actions'),
+      import('@/src/adapters/controllers/bookmark-controller'),
+    ]);
 
   BookmarksView = pageModule.BookmarksView;
   createBookmarksPage = pageModule.createBookmarksPage;
   renderBookmarks = pageModule.renderBookmarks;
   removeBookmarkAction = actionsModule.removeBookmarkAction;
+  toggleBookmark = bookmarkControllerModule.toggleBookmark;
 });
 
 describe('app/(app)/app/bookmarks', () => {
@@ -237,6 +307,26 @@ describe('app/(app)/app/bookmarks', () => {
     expect(removeButtonTokens.has('rounded-full')).toBe(true);
   });
 
+  it('renders an idempotency key field in the remove-bookmark form', () => {
+    const html = renderToStaticMarkup(
+      <BookmarksView rows={[createAvailableBookmarkRow()]} />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const removeForm = doc.querySelector('form#remove-bookmark-q_1');
+    const questionIdField = removeForm?.querySelector(
+      'input[name="questionId"][type="hidden"]',
+    );
+    const idempotencyKeyField = removeForm?.querySelector(
+      'input[name="idempotencyKey"][type="hidden"]',
+    );
+
+    expect(questionIdField?.getAttribute('value')).toBe('q_1');
+    expect(idempotencyKeyField).not.toBeNull();
+    expect(idempotencyKeyField?.getAttribute('value')).toMatch(
+      /^[0-9a-f-]{36}$/,
+    );
+  });
+
   it('renders empty state when no bookmarks exist', () => {
     const html = renderToStaticMarkup(<BookmarksView rows={[]} />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -331,6 +421,69 @@ describe('app/(app)/app/bookmarks', () => {
 
     expect(toggleBookmarkFn).toHaveBeenCalledWith({ questionId: 'q_1' });
     expect(revalidatePathFn).toHaveBeenCalledWith(ROUTES.APP_BOOKMARKS);
+  });
+
+  it('passes idempotencyKey from the form data to toggleBookmarkFn', async () => {
+    const toggleBookmarkFn = vi.fn(async () => ok({ bookmarked: false }));
+
+    const formData = new FormData();
+    formData.set('questionId', 'q_1');
+    formData.set('idempotencyKey', '11111111-1111-1111-1111-111111111111');
+
+    await expect(
+      removeBookmarkAction(formData, {
+        toggleBookmarkFn,
+        revalidatePathFn: vi.fn(),
+        redirectFn: (url: string): never => {
+          throw new Error(`redirect:${url}`);
+        },
+      }),
+    ).rejects.toMatchObject({
+      message: `redirect:${ROUTES.APP_BOOKMARKS}?toast=bookmark_removed`,
+    });
+
+    expect(toggleBookmarkFn).toHaveBeenCalledWith({
+      questionId: 'q_1',
+      idempotencyKey: '11111111-1111-1111-1111-111111111111',
+    });
+  });
+
+  it('replays the original removal result when duplicate submissions reuse the same idempotency key', async () => {
+    const deps = createBookmarkActionControllerDeps({
+      toggleBookmarkOutput: { bookmarked: false },
+    });
+    const revalidatePathFn = vi.fn();
+    const questionId = '11111111-1111-1111-1111-111111111111';
+    const idempotencyKey = '22222222-2222-2222-2222-222222222222';
+
+    async function submitRemoval() {
+      const formData = new FormData();
+      formData.set('questionId', questionId);
+      formData.set('idempotencyKey', idempotencyKey);
+
+      return removeBookmarkAction(formData, {
+        toggleBookmarkFn: (input) => toggleBookmark(input, deps),
+        revalidatePathFn,
+        redirectFn: (url: string): never => {
+          throw new Error(`redirect:${url}`);
+        },
+      });
+    }
+
+    await expect(submitRemoval()).rejects.toMatchObject({
+      message: `redirect:${ROUTES.APP_BOOKMARKS}?toast=bookmark_removed`,
+    });
+    await expect(submitRemoval()).rejects.toMatchObject({
+      message: `redirect:${ROUTES.APP_BOOKMARKS}?toast=bookmark_removed`,
+    });
+
+    expect(deps.toggleBookmarkUseCase.inputs).toEqual([
+      {
+        userId: 'user_1',
+        questionId,
+      },
+    ]);
+    expect(revalidatePathFn).toHaveBeenCalledTimes(2);
   });
 
   it('redirects when removeBookmarkAction is missing questionId', async () => {

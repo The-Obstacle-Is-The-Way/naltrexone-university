@@ -22,7 +22,10 @@ export async function removeBookmarkAction(
     return redirectFn(`${ROUTES.APP_BOOKMARKS}?error=missing_question_id`);
   }
 
-  const result = await toggleBookmarkFn({ questionId });
+  const rawKey = formData.get('idempotencyKey');
+  const idempotencyKey = typeof rawKey === 'string' ? rawKey : undefined;
+
+  const result = await toggleBookmarkFn({ questionId, idempotencyKey });
   if (!result.ok) {
     return redirectFn(`${ROUTES.APP_BOOKMARKS}?error=toggle_failed`);
   }
