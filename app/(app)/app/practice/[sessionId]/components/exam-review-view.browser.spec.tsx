@@ -1,4 +1,5 @@
 import { expect, test, vi } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ExamReviewView, QuestionNavigator } from './exam-review-view';
@@ -160,7 +161,9 @@ test('opens a review question and finalizes the exam', async () => {
     .element(screen.getByText('Marked', { exact: true }))
     .toBeVisible();
   await screen
-    .getByRole('button', { name: 'Open question 1: A long stem for q1' })
+    .getByRole('button', {
+      name: /Open question 1\..*A long stem for q1.*Answered.*Marked for review.*Incorrect/i,
+    })
     .click();
   expect(onOpenQuestion).toHaveBeenCalledWith('q1');
 
@@ -271,7 +274,7 @@ test('omits unanswered warning when all exam questions are answered', async () =
     .not.toBeInTheDocument();
 });
 
-test('omits the stem preview in the open question aria-label when stem is empty', async () => {
+test('keeps empty-stem rows discoverable by accessible name', async () => {
   const onOpenQuestion = vi.fn();
   const onFinalizeReview = vi.fn(async () => undefined);
 
@@ -303,6 +306,68 @@ test('omits the stem preview in the open question aria-label when stem is empty'
     />,
   );
 
-  await screen.getByRole('button', { name: 'Open question 1' }).click();
+  await screen
+    .getByRole('button', { name: /Open question 1\..*Unanswered/i })
+    .click();
   expect(onOpenQuestion).toHaveBeenCalledWith('q1');
+});
+
+test('supports keyboard activation for available review rows and leaves unavailable rows non-interactive', async () => {
+  const onOpenQuestion = vi.fn();
+
+  const screen = await render(
+    <ExamReviewView
+      review={{
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [
+          {
+            questionId: 'q1',
+            slug: 'q-1',
+            order: 1,
+            isAvailable: true,
+            stemMd: 'Keyboard target stem',
+            difficulty: 'easy',
+            isAnswered: true,
+            isCorrect: true,
+            markedForReview: false,
+          },
+          {
+            questionId: 'q2',
+            order: 2,
+            isAvailable: false,
+            isAnswered: false,
+            isCorrect: null,
+            markedForReview: false,
+          },
+        ],
+      }}
+      isPending={false}
+      onOpenQuestion={onOpenQuestion}
+      onFinalizeReview={async () => undefined}
+    />,
+  );
+
+  const availableRowButton = screen.getByRole('button', {
+    name: /Open question 1\..*Keyboard target stem.*Answered.*Correct/i,
+  });
+
+  await userEvent.tab();
+  await expect.element(availableRowButton).toHaveFocus();
+
+  await userEvent.keyboard('{Enter}');
+  await userEvent.keyboard(' ');
+
+  expect(onOpenQuestion).toHaveBeenCalledTimes(2);
+  expect(onOpenQuestion).toHaveBeenNthCalledWith(1, 'q1');
+  expect(onOpenQuestion).toHaveBeenNthCalledWith(2, 'q1');
+  await expect
+    .element(screen.getByText('[Question no longer available]'))
+    .toBeVisible();
+  await expect
+    .element(screen.getByRole('button', { name: /Open question 2\b/i }))
+    .not.toBeInTheDocument();
 });
