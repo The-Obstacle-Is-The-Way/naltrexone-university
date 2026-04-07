@@ -35,7 +35,7 @@ There are **three distinct question-review experiences** relevant to this audit.
 - Previous / Next on the left, Bookmark on the far right (`sm:ml-auto`)
 - "Finish review" replaces "Next" on the last question
 - Question navigator at top with color-coded correctness pills
-- Header includes "View Summary" link
+- Header includes a "View Summary" ghost button (`onViewSummary`), which performs an in-memory state transition rather than a route navigation
 - No "Back to Summary" in the action bar — it's in the header instead
 - Bookmark placement matches DEBT-330 resolution (navigation-first, trailing bookmark)
 
@@ -151,7 +151,7 @@ The following origins also route into `question-page-client.tsx` and therefore i
 | Summary review | `QuestionView` (in `question-page-client.tsx`) | `ReviewQuestionNavigator` (from `review-question-navigator.tsx`) |
 | History review | `QuestionView` (same) | `ReviewQuestionNavigator` (same) |
 
-Two separate navigator components with similar but not identical behavior. Two separate page components with similar but not identical layouts. This is the structural root of the visual divergence.
+Two separate navigator components with similar but not identical behavior. The difference is not just cosmetic: `QuestionNavigator` is callback-based and navigates within in-memory session state, while `ReviewQuestionNavigator` is `Link`-based and navigates by route transitions. They also annotate different secondary states (`markedForReview` vs `wasRetried`). Two separate page components with similar but not identical layouts. This is the structural root of the visual divergence.
 
 ### D5: "Review & Submit" page — "Open question" button redundancy
 
