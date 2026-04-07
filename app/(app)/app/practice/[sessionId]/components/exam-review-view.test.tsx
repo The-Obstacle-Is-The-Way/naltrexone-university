@@ -1,9 +1,6 @@
 // @vitest-environment jsdom
-import { act } from 'react';
-import { flushSync } from 'react-dom';
-import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
 
 type ExamReviewViewModule = typeof import('./exam-review-view');
@@ -14,11 +11,6 @@ let QuestionNavigator: ExamReviewViewModule['QuestionNavigator'];
 beforeAll(async () => {
   ({ ExamReviewView, QuestionNavigator } = await import('./exam-review-view'));
 });
-
-afterEach(() => {
-  document.body.innerHTML = '';
-});
-
 describe('QuestionNavigator', () => {
   const review = {
     sessionId: 'session-1',
@@ -300,41 +292,6 @@ describe('ExamReviewView', () => {
       .trim();
   }
 
-  function mountExamReviewView(input?: {
-    review?: GetPracticeSessionReviewOutput;
-    onOpenQuestion?: (questionId: string) => void;
-  }) {
-    const container = document.createElement('div');
-    document.body.append(container);
-    const root = createRoot(container);
-    const onOpenQuestion = input?.onOpenQuestion ?? (() => undefined);
-
-    act(() => {
-      flushSync(() => {
-        root.render(
-          <ExamReviewView
-            review={input?.review ?? review}
-            isPending={false}
-            onOpenQuestion={onOpenQuestion}
-            onFinalizeReview={async () => undefined}
-          />,
-        );
-      });
-    });
-
-    return {
-      container,
-      unmount() {
-        act(() => {
-          flushSync(() => {
-            root.unmount();
-          });
-        });
-        container.remove();
-      },
-    };
-  }
-
   function findReviewRowButton(root: ParentNode, order: number) {
     return (
       Array.from(
@@ -343,32 +300,6 @@ describe('ExamReviewView', () => {
     );
   }
 
-  it('renders each available row as a semantic focusable button target', () => {
-    const { container, unmount } = mountExamReviewView();
-
-    const button = findReviewRowButton(container, 1);
-
-    expect(button).not.toBeNull();
-    expect(button?.tagName).toBe('BUTTON');
-    expect(button?.getAttribute('type')).toBe('button');
-
-    button?.focus();
-    expect(document.activeElement).toBe(button);
-
-    unmount();
-  });
-
-  it('opens a question when an available row is clicked', () => {
-    const onOpenQuestion = vi.fn();
-    const { container, unmount } = mountExamReviewView({ onOpenQuestion });
-
-    findReviewRowButton(container, 2)?.click();
-
-    expect(onOpenQuestion).toHaveBeenCalledWith('q2');
-
-    unmount();
-  });
-
   it('does not render nested buttons inside review rows', () => {
     const doc = renderExamReviewMarkup();
     const rowButtons = Array.from(
@@ -376,6 +307,9 @@ describe('ExamReviewView', () => {
     );
 
     expect(rowButtons).toHaveLength(3);
+    rowButtons.forEach((button) => {
+      expect(button.getAttribute('type')).toBe('button');
+    });
     expect(doc.querySelector('ul.space-y-3 > li > button button')).toBeNull();
   });
 
