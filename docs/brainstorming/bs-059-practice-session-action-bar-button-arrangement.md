@@ -3,9 +3,11 @@
 **Date:** 2026-03-21
 **Triggered by:** DEBT-330 investigation revealed the same bookmark-between-nav-controls problem exists on the question review / session review bottom action bar (`question-page-client.tsx:371-470`), but with more buttons and more state combinations making it harder to reason about in isolation.
 **Scope:** Audit the question review / session review bottom action bar's arrangement across all states (pre-submit, post-submit, review mode, session nav present/absent) and determine if the button grouping needs the same kind of fix as DEBT-330 (post-exam review surface).
-**Related:** [DEBT-330 (resolved)](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md), [BS-052](./bs-052-bookmark-icon-toggle-replacement.md), [BS-019 (archived)](../_archive/brainstorming/bs-019-action-bar-label-and-ordering-consistency.md)
+**Related:** [BS-061](./bs-061-review-surface-divergence-audit.md), [DEBT-330 (resolved)](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md), [BS-052](./bs-052-bookmark-icon-toggle-replacement.md), [BS-019 (archived)](../_archive/brainstorming/bs-019-action-bar-label-and-ordering-consistency.md)
 
 **Status:** Active — still unresolved on `question-page-client.tsx`. Post-exam review was fixed by DEBT-330 (PR #241), and the active tutor practice bar already renders `Previous / Next / Bookmark` after feedback, but the question review / session review surface still keeps bookmark between reattempt/previous controls and next/back controls.
+
+**Boundary update (2026-04-07):** Direction C from BS-061 is now promoted into [DEBT-350](../debt/debt-350-exam-results-session-continuity.md) and no longer depends on this doc. BS-059 remains active because the standalone `question-page-client.tsx` action-bar contract across its multiple states is still broader than the now-decided exam-flow continuity work.
 
 ---
 
@@ -116,3 +118,4 @@ This is polish, not broken functionality.
 | 2026-03-21 | Not blocking DEBT-330 | The post-exam review fix can land independently. This doc captures the broader question for future work. |
 | 2026-03-21 | DEBT-330 resolved independently | Post-exam review now ships navigation-first ordering with trailing Bookmark, so this doc now represents a follow-up consistency exploration rather than a dependency blocker. |
 | 2026-03-29 | Tightened scope to the live unresolved surface | The active tutor practice bar is no longer the primary issue. The still-open layout problem is the question review / session review bottom action bar in `question-page-client.tsx`, which continues to render bookmark between reattempt/previous controls and next/back controls. |
+| 2026-04-07 | Remains brainstorming, not debt | Direction C exam-flow continuity is now tracked in DEBT-350. BS-059 stays active because the standalone `question-page-client.tsx` action-bar contract still needs a final multi-state decision before promotion. |

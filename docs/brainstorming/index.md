@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-29
+**Last Updated:** 2026-04-07
 
 ---
 
@@ -29,8 +29,9 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 |----|-------|--------|--------------|
 | [BS-044](./bs-044-dark-mode-border-weight-tiering.md) | Dark Mode Border Weight Tiering — major slices were already consumed by later PRs (`DEBT-280`, `DEBT-289`, `DEBT-301`, `DEBT-302`, `DEBT-307`, `DEBT-312/313/314`); remaining open question is whether read-only cards and subordinate inner borders still need softer dark-mode treatment | Active | [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
 | [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) | Bookmark Icon Toggle — no icon-toggle UI has shipped; production still uses text bookmark pills on the Bookmarks page, tutor/quick-practice action bar, and review/session-review action bar | Active | [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) |
-| [BS-059](./bs-059-practice-session-action-bar-button-arrangement.md) | Session-review question-page action bar still has up to 6 buttons (Previous, Submit, Try Again, Bookmark, Next, Back to...) with no visual grouping — same bookmark-between-nav issue as DEBT-330, but on `question-page-client.tsx`, not the already-cleaner active tutor practice bar | Active | [DEBT-330](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md) |
-**Next Brainstorming ID:** BS-061
+| [BS-059](./bs-059-practice-session-action-bar-button-arrangement.md) | Standalone `question-page-client.tsx` action bar still has unresolved multi-state grouping questions; Direction C continuity work was split out, so this doc now owns only the still-undecided standalone layout contract | Active | [DEBT-330](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md) |
+| [BS-061](./bs-061-review-surface-divergence-audit.md) | Exam-flow review divergence audit; rationale and boundary doc for the now-promoted implementation trackers [DEBT-350](../debt/debt-350-exam-results-session-continuity.md), [DEBT-351](../debt/debt-351-exam-review-submit-affordance-cleanup.md), and [DEBT-352](../debt/debt-352-post-exam-review-focus-ring-flash.md). Direction A remains in BS-059. | Active | [DEBT-350](../debt/debt-350-exam-results-session-continuity.md), [DEBT-351](../debt/debt-351-exam-review-submit-affordance-cleanup.md), [DEBT-352](../debt/debt-352-post-exam-review-focus-ring-flash.md) |
+**Next Brainstorming ID:** BS-062
 
 ---
 
