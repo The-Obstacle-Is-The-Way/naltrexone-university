@@ -74,6 +74,8 @@ There are **three distinct question-review experiences** relevant to this audit.
 **Component:** `question-page-client.tsx` (same component as Surface 2, different origin)
 **Entry point:** History page → clicking a session → clicking a question
 
+**Why it's included here:** History review is comparison context, not part of the primary exam flow. It is included because it uses the same standalone `question-page-client.tsx` review surface, which makes the shared divergence easier to see.
+
 **Layout:**
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -244,11 +246,12 @@ Create a single `ReviewActionBar` component used by both `PostExamReviewView` an
 
 **Effort:** Medium — requires abstracting the action bar from two different component trees.
 
-### Direction C: Make "Review your answers" from Session Summary stay in the session flow
+### Direction C: Make "Review your answers" from Session Summary stay in the session flow (DECIDED)
 
-Instead of navigating to `/app/questions/[slug]?from=summary`, keep the user in the `PostExamReviewView` component. The Session Summary's "Review your answers" button would return to the post-exam review stage instead of opening the question-page-client.
+Instead of navigating to `/app/questions/[slug]?from=summary`, keep the user in the `PostExamReviewView` component. The Session Summary's "Review your answers" button returns to the post-exam review stage instead of opening the question-page-client. The stage machine modification is straightforward: either preserve `postExamReview` state when entering summary (don't null it in `onViewSummary`), or re-fetch it via `loadPostExamReview` on re-entry. This is 5 lines of state management, not a rewrite.
 
-**Effort:** Medium — requires the session orchestrator to support re-entering the review stage from the summary stage.
+**Effort:** Small-medium — modify `onViewSummary` to preserve/restore state, add a "back to review" handler on SessionSummaryView, wire the button.
+**Fixes:** D1, D2, D3, D4 for the entire exam flow in one move.
 
 ### Direction D: Full unification — single review renderer
 
@@ -265,28 +268,28 @@ Long-term: extract the question-review rendering (question card + feedback + nav
 
 ---
 
-## Suggested Sequencing
+## Implementation Plan
 
 1. **Direction E** (Review & Submit affordances) — quick win, fixes D5 and D6
-2. **Direction C** (session-flow continuity) — first real decision point: should Session Summary "Review your answers" stay in the session orchestrator or intentionally jump to `question-page-client.tsx`?
-3. **Direction A** (action bar unification via BS-059) — if Direction C is rejected as too complex given the one-way stage machine, this is the next obvious polish fix for D1; if Direction C lands, A becomes follow-up cleanup for the standalone surface
-4. **Direction B** (shared action bar) — only after C vs A is resolved, if D2 and D3 still justify shared extraction
-5. **Surface map section in pattern registry** — prevents future drift
-6. **Direction D** (full unification) — only if the divergence keeps recurring after the narrower fixes above
+2. **Direction C** (session-flow continuity) — decided: "Review your answers" stays in the session orchestrator. The stage machine modification is straightforward: either preserve `postExamReview` state when entering summary (don't clear it in `onViewSummary`), or re-fetch it via `loadPostExamReview` on re-entry. This eliminates D1, D2, D3, and D4 for the exam flow in one move.
+3. **Direction A** (action bar unification via BS-059) — follow-up cleanup for the standalone `question-page-client.tsx` surface. This fixes D1 for History, Bookmarks, Dashboard, and all other non-exam origins that still route through the standalone page. Not blocked by Direction C.
+4. **Direction D7 fix** — change `panelRef.current?.focus({ focusVisible: true })` to `.focus()` (or suppress the visible ring) so the focus-ring flash disappears.
+5. **Surface map section in pattern registry** — prevents future drift across all surfaces.
+6. **Direction B** (shared action bar) and **Direction D** (full unification) are deprioritized. Direction C makes B unnecessary for the exam flow, and D is only worth revisiting if non-exam origins continue to drift after A lands.
 
 ---
 
-## Open Questions
+## Decided Questions
 
-1. **Should "Review your answers" from Session Summary navigate to the question-page-client (current) or stay in the session orchestrator (Direction C)?** Direction C is more seamless but couples the summary to the session flow.
+1. **Should "Review your answers" stay in the session orchestrator?** Yes. Direction C is the right answer. Ejecting the user to a different page mid-session violates spatial consistency. The stage machine change is small (preserve or re-fetch post-exam review state).
 
-2. **Should the two `QuestionNavigator` components be merged?** They serve similar roles but have different data sources and slightly different rendering (retry dots, marked-for-review dots). A shared component with configuration props could work.
+2. **Should the two `QuestionNavigator` components be merged?** No. They serve architecturally different purposes (callback-based in-memory nav vs Link-based route nav). Merging would create a component with too many conditional branches. They should stay separate, each correct for its context.
 
-3. **Is Direction D worth the refactor cost?** The divergence has been noticed multiple times (BS-006, BS-018, BS-019, BS-059, now BS-061). Each time, a targeted fix resolves one piece but the surfaces continue to drift. A structural unification might be the only way to prevent recurrence.
+## Remaining Open Questions
 
-4. **Should the "Back to..." link always be in the action bar, always in the header, or configurable?** Consistency matters more than which choice is made.
+1. **Stage machine implementation detail:** Preserve existing state in `onViewSummary` (simpler, but holds memory) vs re-fetch via `loadPostExamReview` on re-entry (cleaner, but adds a network round-trip)? Decide during implementation.
 
-5. **How does BS-052 (bookmark icon toggle) interact?** If bookmark becomes an icon, its visual weight changes and the placement question becomes less critical. Should BS-052 land first?
+2. **How does BS-052 (bookmark icon toggle) interact?** If bookmark becomes an icon, its visual weight changes. BS-052 can land before or after BS-061 — they're independent.
 
 ---
 
@@ -298,3 +301,4 @@ Long-term: extract the question-review rendering (question card + feedback + nav
 | 2026-04-06 | Scope is distinct from BS-059 | BS-059 focuses on the standalone `question-page-client.tsx` action bar layout. BS-061 focuses on the exam-flow divergence: why post-exam review, session summary, and summary review do not feel like one continuous experience. |
 | 2026-04-06 | Recommended against a standalone surface registry | A lightweight surface map as a section in the existing pattern registry is sufficient. A separate document would create maintenance burden. |
 | 2026-04-06 | Adversarial review applied | Fixed factual errors (subtitle text, back-link placement, Direction E wording), sharpened scope to exam flow, added focus-ring finding, deepened root cause with stage-machine detail, clarified BS-059 boundary, and resequenced Directions to prioritize C (session-flow continuity) as the key decision point. |
+| 2026-04-07 | Direction C decided, no hedging | "Review your answers" from Session Summary will stay in the session orchestrator. The stage machine change is straightforward (5 lines of state to preserve or re-fetch). Ejecting the user to a different page mid-session violates UX first principles. Navigator merge rejected — architecturally different components should stay separate. Sequencing converted from "suggested" to "implementation plan." |
