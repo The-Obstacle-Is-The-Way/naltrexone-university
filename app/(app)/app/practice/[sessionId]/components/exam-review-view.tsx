@@ -180,6 +180,21 @@ export function ExamReviewView({
             row.isAvailable && row.stemMd.trim()
               ? `Open question ${row.order}: ${getStemPreview(row.stemMd, 60)}`
               : `Open question ${row.order}`;
+          const rowContent = (
+            <div className="space-y-1">
+              <div className="text-sm font-medium text-foreground">
+                {row.order}. {stemPreview}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {metadataItems.map((item, index) => (
+                  <Fragment key={`${row.questionId}-${item}`}>
+                    {index > 0 ? <span className="mx-2">•</span> : null}
+                    <span>{item}</span>
+                  </Fragment>
+                ))}
+              </div>
+            </div>
+          );
 
           return (
             <li key={row.questionId}>
@@ -187,41 +202,17 @@ export function ExamReviewView({
                 <button
                   type="button"
                   className={cn(
-                    'bg-card text-card-foreground flex w-full flex-col gap-3 rounded-2xl border p-4 text-left shadow-sm transition-colors',
+                    'bg-card text-card-foreground block w-full rounded-2xl border p-4 text-left shadow-sm transition-colors',
                     'hover:bg-muted/20 focus-visible:border-ring focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]',
                   )}
                   aria-label={openQuestionLabel}
                   onClick={() => onOpenQuestion(row.questionId)}
                 >
-                  <div className="space-y-1">
-                    <div className="text-sm font-medium text-foreground">
-                      {row.order}. {stemPreview}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {metadataItems.map((item, index) => (
-                        <Fragment key={`${row.questionId}-${item}`}>
-                          {index > 0 ? <span className="mx-2">•</span> : null}
-                          <span>{item}</span>
-                        </Fragment>
-                      ))}
-                    </div>
-                  </div>
+                  {rowContent}
                 </button>
               ) : (
                 <Card className="gap-0 rounded-2xl p-4 shadow-sm">
-                  <div className="space-y-1">
-                    <div className="text-sm font-medium text-foreground">
-                      {row.order}. {stemPreview}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {metadataItems.map((item, index) => (
-                        <Fragment key={`${row.questionId}-${item}`}>
-                          {index > 0 ? <span className="mx-2">•</span> : null}
-                          <span>{item}</span>
-                        </Fragment>
-                      ))}
-                    </div>
-                  </div>
+                  {rowContent}
                 </Card>
               )}
             </li>

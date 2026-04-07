@@ -20,7 +20,9 @@ There are **three distinct question-review experiences** relevant to this audit.
 **Entry point:** After clicking "Finish exam" during exam mode
 
 **Layout:**
-```
+
+```text
+
 ┌──────────────────────────────────────────────────────────────────┐
 │ [Question Navigator: color-coded pills at top]                   │
 │ "Question X of Y"                                                │
@@ -29,6 +31,7 @@ There are **three distinct question-review experiences** relevant to this audit.
 │                                                                  │
 │ [ Previous ]  [ Next / Finish review ]              [ Bookmark ] │
 └──────────────────────────────────────────────────────────────────┘
+
 ```
 
 **Key traits:**
@@ -46,7 +49,9 @@ There are **three distinct question-review experiences** relevant to this audit.
 **Entry point:** Clicking "Review your answers" on the Session Summary, or clicking a question in the summary breakdown list
 
 **Layout:**
-```
+
+```text
+
 ┌──────────────────────────────────────────────────────────────────┐
 │ "Question" heading                                               │
 │ "Reviewing a question from your session summary."                │
@@ -58,6 +63,7 @@ There are **three distinct question-review experiences** relevant to this audit.
 │                                                                  │
 │ [ Previous ]  [ Bookmark ]  [ Next ]      Back to Summary        │
 └──────────────────────────────────────────────────────────────────┘
+
 ```
 
 **Key traits:**
@@ -77,7 +83,9 @@ There are **three distinct question-review experiences** relevant to this audit.
 **Why it's included here:** History review is comparison context, not part of the primary exam flow. It is included because it uses the same standalone `question-page-client.tsx` review surface, which makes the shared divergence easier to see.
 
 **Layout:**
-```
+
+```text
+
 ┌──────────────────────────────────────────────────────────────────┐
 │ "Question" heading                                               │
 │ "Reviewing a question from your history."                        │
@@ -88,6 +96,7 @@ There are **three distinct question-review experiences** relevant to this audit.
 │                                                                  │
 │ [ Previous ]  [ Bookmark ]  [ Next ]      Back to History        │
 └──────────────────────────────────────────────────────────────────┘
+
 ```
 
 **Key traits:**
