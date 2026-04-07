@@ -1,7 +1,23 @@
 // @vitest-environment jsdom
+import { act } from 'react';
+import { flushSync } from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
+
+type ExamReviewViewModule = typeof import('./exam-review-view');
+
+let ExamReviewView: ExamReviewViewModule['ExamReviewView'];
+let QuestionNavigator: ExamReviewViewModule['QuestionNavigator'];
+
+beforeAll(async () => {
+  ({ ExamReviewView, QuestionNavigator } = await import('./exam-review-view'));
+});
+
+afterEach(() => {
+  document.body.innerHTML = '';
+});
 
 describe('QuestionNavigator', () => {
   const review = {
@@ -66,13 +82,12 @@ describe('QuestionNavigator', () => {
     return el?.querySelector('[data-testid="question-nav-marked-dot"]') ?? null;
   }
 
-  async function renderNavigator(input?: {
+  function renderNavigator(input?: {
     review?: GetPracticeSessionReviewOutput;
     currentQuestionId?: string | null;
     controlledPanelId?: string;
     mode?: 'exam' | 'review';
   }) {
-    const { QuestionNavigator } = await import('./exam-review-view');
     const controlledPanelId =
       input?.controlledPanelId ?? 'practice-question-panel';
     const html = renderToStaticMarkup(
@@ -88,30 +103,30 @@ describe('QuestionNavigator', () => {
     return { doc };
   }
 
-  it('exposes a navigation landmark with an accessible label', async () => {
-    const { doc } = await renderNavigator();
+  it('exposes a navigation landmark with an accessible label', () => {
+    const { doc } = renderNavigator();
 
     expect(
       doc.querySelector('nav[aria-label="Question navigator"]'),
     ).not.toBeNull();
   });
 
-  it('sets aria-current="step" on the current question button', async () => {
-    const { doc } = await renderNavigator();
+  it('sets aria-current="step" on the current question button', () => {
+    const { doc } = renderNavigator();
     const el = findByAriaLabel(doc, 'Question 2: Current, Answered');
 
     expect(el?.getAttribute('aria-current')).toBe('step');
   });
 
-  it('does not set aria-current on non-current questions', async () => {
-    const { doc } = await renderNavigator();
+  it('does not set aria-current on non-current questions', () => {
+    const { doc } = renderNavigator();
     const el = findByAriaLabel(doc, 'Question 1: Answered');
 
     expect(el?.getAttribute('aria-current')).toBeNull();
   });
 
-  it('wires each navigator button to the controlled question panel with aria-controls', async () => {
-    const { doc } = await renderNavigator();
+  it('wires each navigator button to the controlled question panel with aria-controls', () => {
+    const { doc } = renderNavigator();
     const buttons = Array.from(
       doc.querySelectorAll('button[aria-label^="Question "]'),
     );
@@ -124,8 +139,8 @@ describe('QuestionNavigator', () => {
     });
   });
 
-  it('uses correctness styling in review mode', async () => {
-    const { doc } = await renderNavigator({
+  it('uses correctness styling in review mode', () => {
+    const { doc } = renderNavigator({
       currentQuestionId: 'q3',
       mode: 'review',
     });
@@ -141,8 +156,8 @@ describe('QuestionNavigator', () => {
     expect(getClassList(unanswered)).toContain('border');
   });
 
-  it('does not render correctness badges in exam mode', async () => {
-    const { doc } = await renderNavigator({ mode: 'exam' });
+  it('does not render correctness badges in exam mode', () => {
+    const { doc } = renderNavigator({ mode: 'exam' });
 
     const buttons = Array.from(
       doc.querySelectorAll('button[aria-label^="Question "]'),
@@ -154,8 +169,8 @@ describe('QuestionNavigator', () => {
     }
   });
 
-  it('renders check and x overflow badges only for answered review buttons', async () => {
-    const { doc } = await renderNavigator({
+  it('renders check and x overflow badges only for answered review buttons', () => {
+    const { doc } = renderNavigator({
       currentQuestionId: 'q3',
       mode: 'review',
     });
@@ -183,8 +198,8 @@ describe('QuestionNavigator', () => {
     expect(unanswered?.querySelector('svg')).toBeNull();
   });
 
-  it('renders both the review dot and bottom-right check badge for marked correct review buttons', async () => {
-    const { doc } = await renderNavigator({
+  it('renders both the review dot and bottom-right check badge for marked correct review buttons', () => {
+    const { doc } = renderNavigator({
       review: {
         ...review,
         markedCount: 1,
@@ -207,5 +222,185 @@ describe('QuestionNavigator', () => {
     expect(getClassList(badge?.querySelector('svg') ?? null)).toContain(
       'text-success',
     );
+  });
+});
+
+describe('ExamReviewView', () => {
+  const review = {
+    sessionId: 'session-1',
+    mode: 'exam',
+    totalCount: 4,
+    answeredCount: 2,
+    markedCount: 1,
+    rows: [
+      {
+        isAvailable: true,
+        questionId: 'q1',
+        slug: 'q-1',
+        stemMd: 'Marked answered question',
+        difficulty: 'easy',
+        order: 1,
+        isAnswered: true,
+        isCorrect: true,
+        markedForReview: true,
+      },
+      {
+        isAvailable: true,
+        questionId: 'q2',
+        slug: 'q-2',
+        stemMd: 'Unmarked answered question',
+        difficulty: 'medium',
+        order: 2,
+        isAnswered: true,
+        isCorrect: false,
+        markedForReview: false,
+      },
+      {
+        isAvailable: true,
+        questionId: 'q3',
+        slug: 'q-3',
+        stemMd: 'Unmarked unanswered question',
+        difficulty: 'hard',
+        order: 3,
+        isAnswered: false,
+        isCorrect: null,
+        markedForReview: false,
+      },
+      {
+        isAvailable: false,
+        questionId: 'q4',
+        order: 4,
+        isAnswered: false,
+        isCorrect: null,
+        markedForReview: false,
+      },
+    ],
+  } as const satisfies GetPracticeSessionReviewOutput;
+
+  function renderExamReviewMarkup(input?: {
+    review?: GetPracticeSessionReviewOutput;
+  }) {
+    const html = renderToStaticMarkup(
+      <ExamReviewView
+        review={input?.review ?? review}
+        isPending={false}
+        onOpenQuestion={() => undefined}
+        onFinalizeReview={async () => undefined}
+      />,
+    );
+
+    return new DOMParser().parseFromString(html, 'text/html');
+  }
+
+  function getReviewRowMetadata(row: Element | undefined) {
+    return row
+      ?.querySelector('.text-xs.text-muted-foreground')
+      ?.textContent?.replace(/\s*•\s*/g, ' • ')
+      ?.replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function mountExamReviewView(input?: {
+    review?: GetPracticeSessionReviewOutput;
+    onOpenQuestion?: (questionId: string) => void;
+  }) {
+    const container = document.createElement('div');
+    document.body.append(container);
+    const root = createRoot(container);
+    const onOpenQuestion = input?.onOpenQuestion ?? (() => undefined);
+
+    act(() => {
+      flushSync(() => {
+        root.render(
+          <ExamReviewView
+            review={input?.review ?? review}
+            isPending={false}
+            onOpenQuestion={onOpenQuestion}
+            onFinalizeReview={async () => undefined}
+          />,
+        );
+      });
+    });
+
+    return {
+      container,
+      unmount() {
+        act(() => {
+          flushSync(() => {
+            root.unmount();
+          });
+        });
+        container.remove();
+      },
+    };
+  }
+
+  function findReviewRowButton(root: ParentNode, order: number) {
+    return root.querySelector(
+      `button[aria-label^="Open question ${order}:"]`,
+    ) as HTMLButtonElement | null;
+  }
+
+  it('renders each available row as a semantic focusable button target', () => {
+    const { container, unmount } = mountExamReviewView();
+
+    const button = findReviewRowButton(container, 1);
+
+    expect(button).not.toBeNull();
+    expect(button?.tagName).toBe('BUTTON');
+    expect(button?.getAttribute('type')).toBe('button');
+
+    button?.focus();
+    expect(document.activeElement).toBe(button);
+
+    unmount();
+  });
+
+  it('opens a question when an available row is clicked', () => {
+    const onOpenQuestion = vi.fn();
+    const { container, unmount } = mountExamReviewView({ onOpenQuestion });
+
+    findReviewRowButton(container, 2)?.click();
+
+    expect(onOpenQuestion).toHaveBeenCalledWith('q2');
+
+    unmount();
+  });
+
+  it('does not render a nested visible Open question button inside review rows', () => {
+    const doc = renderExamReviewMarkup();
+
+    expect(doc.body.textContent).not.toContain('Open question');
+  });
+
+  it('does not render Not marked text for unmarked rows', () => {
+    const doc = renderExamReviewMarkup();
+
+    expect(doc.body.textContent).not.toContain('Not marked');
+  });
+
+  it('renders Marked for review text only for marked rows', () => {
+    const doc = renderExamReviewMarkup();
+
+    expect(doc.body.textContent).toContain('Marked for review');
+    expect(doc.body.textContent?.match(/Marked for review/g)).toHaveLength(1);
+  });
+
+  it('collapses metadata separators when the marked state is absent', () => {
+    const doc = renderExamReviewMarkup();
+    const rows = Array.from(doc.querySelectorAll('ul.space-y-3 > li'));
+
+    expect(getReviewRowMetadata(rows[0])).toBe(
+      'Answered • Marked for review • Correct',
+    );
+    expect(getReviewRowMetadata(rows[1])).toBe('Answered • Incorrect');
+    expect(getReviewRowMetadata(rows[2])).toBe('Unanswered');
+  });
+
+  it('keeps unavailable rows non-interactive', () => {
+    const doc = renderExamReviewMarkup();
+
+    expect(findReviewRowButton(doc, 4)).toBeNull();
+    expect(doc.body.textContent).toContain('[Question no longer available]');
   });
 });

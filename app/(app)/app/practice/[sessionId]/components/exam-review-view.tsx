@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { Fragment, useRef } from 'react';
 import {
   fireAndForget,
   logUnhandledAsyncError,
@@ -165,53 +165,68 @@ export function ExamReviewView({
       </div>
 
       <ul className="space-y-3">
-        {review.rows.map((row) => (
-          <li key={row.questionId}>
-            <Card className="gap-0 rounded-2xl p-4 shadow-sm">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="space-y-1">
-                  <div className="text-sm font-medium text-foreground">
-                    {row.isAvailable
-                      ? `${row.order}. ${getStemPreview(row.stemMd, 96)}`
-                      : `${row.order}. [Question no longer available]`}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {row.isAnswered ? 'Answered' : 'Unanswered'}
-                    <span className="mx-2">•</span>
-                    <span>
-                      {row.markedForReview ? 'Marked for review' : 'Not marked'}
-                    </span>
-                    {row.isAnswered && row.isCorrect !== null ? (
-                      <>
-                        <span className="mx-2">•</span>
-                        <span>{row.isCorrect ? 'Correct' : 'Incorrect'}</span>
-                      </>
-                    ) : null}
-                  </div>
-                </div>
+        {review.rows.map((row) => {
+          const metadataItems = [
+            row.isAnswered ? 'Answered' : 'Unanswered',
+            ...(row.markedForReview ? ['Marked for review'] : []),
+            ...(row.isAnswered && row.isCorrect !== null
+              ? [row.isCorrect ? 'Correct' : 'Incorrect']
+              : []),
+          ];
+          const stemPreview = row.isAvailable
+            ? getStemPreview(row.stemMd, 96)
+            : '[Question no longer available]';
+          const openQuestionLabel =
+            row.isAvailable && row.stemMd.trim()
+              ? `Open question ${row.order}: ${getStemPreview(row.stemMd, 60)}`
+              : `Open question ${row.order}`;
 
-                {row.isAvailable ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="rounded-full"
-                    aria-label={
-                      row.stemMd.trim()
-                        ? `Open question ${row.order}: ${getStemPreview(
-                            row.stemMd,
-                            60,
-                          )}`
-                        : `Open question ${row.order}`
-                    }
-                    onClick={() => onOpenQuestion(row.questionId)}
-                  >
-                    Open question
-                  </Button>
-                ) : null}
-              </div>
-            </Card>
-          </li>
-        ))}
+          return (
+            <li key={row.questionId}>
+              {row.isAvailable ? (
+                <button
+                  type="button"
+                  className={cn(
+                    'bg-card text-card-foreground flex w-full flex-col gap-3 rounded-2xl border p-4 text-left shadow-sm transition-colors',
+                    'hover:bg-muted/20 focus-visible:border-ring focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+                  )}
+                  aria-label={openQuestionLabel}
+                  onClick={() => onOpenQuestion(row.questionId)}
+                >
+                  <div className="space-y-1">
+                    <div className="text-sm font-medium text-foreground">
+                      {row.order}. {stemPreview}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {metadataItems.map((item, index) => (
+                        <Fragment key={`${row.questionId}-${item}`}>
+                          {index > 0 ? <span className="mx-2">•</span> : null}
+                          <span>{item}</span>
+                        </Fragment>
+                      ))}
+                    </div>
+                  </div>
+                </button>
+              ) : (
+                <Card className="gap-0 rounded-2xl p-4 shadow-sm">
+                  <div className="space-y-1">
+                    <div className="text-sm font-medium text-foreground">
+                      {row.order}. {stemPreview}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {metadataItems.map((item, index) => (
+                        <Fragment key={`${row.questionId}-${item}`}>
+                          {index > 0 ? <span className="mx-2">•</span> : null}
+                          <span>{item}</span>
+                        </Fragment>
+                      ))}
+                    </div>
+                  </div>
+                </Card>
+              )}
+            </li>
+          );
+        })}
       </ul>
 
       <div className="flex flex-col gap-3 sm:flex-row">
