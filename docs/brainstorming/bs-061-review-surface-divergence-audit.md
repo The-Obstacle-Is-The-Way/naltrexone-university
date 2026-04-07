@@ -291,6 +291,9 @@ This avoids the current hidden trap where `rows[0]` can be unavailable and the r
 **Session Summary primary CTA**
 
 - `Review your answers` is an in-session state transition, not a route link
+- The current `SessionSummaryView` `firstReviewableSlug` + `<Link>` implementation is a migration point, not the target contract
+- After Direction C, the primary CTA becomes a `Button` that calls the session substage transition
+- CTA visibility should be gated by whether completed-feedback review is available now or can be hydrated in-session, not by whether an available-row `slug` exists
 - If completed-feedback data is already present, reopen `PostExamReviewView` immediately
 - If completed-feedback data is missing because the session route was refreshed or revisited later, lazy-load `getCompletedSessionQuestionsWithFeedback`, then enter `post_exam_review`
 - CTA entry reuses the persisted cursor when possible; otherwise it falls back via the resolution rules above
