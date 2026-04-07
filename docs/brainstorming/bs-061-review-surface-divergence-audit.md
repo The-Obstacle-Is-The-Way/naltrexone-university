@@ -17,7 +17,7 @@ There are **three distinct question-review experiences** relevant to this audit.
 
 **Route:** `/app/practice/[sessionId]` (stages: `post-exam-review`)
 **Component:** `post-exam-review-view.tsx`
-**Entry point:** After clicking "Finish exam" during exam mode
+**Entry point:** After confirming final submit on `ExamReviewView` ("Review & Submit")
 
 **Layout:**
 

@@ -161,7 +161,9 @@ test('opens a review question and finalizes the exam', async () => {
     .element(screen.getByText('Marked', { exact: true }))
     .toBeVisible();
   await screen
-    .getByRole('button', { name: 'Open question 1: A long stem for q1' })
+    .getByRole('button', {
+      name: /Open question 1\..*A long stem for q1.*Answered.*Marked for review.*Incorrect/i,
+    })
     .click();
   expect(onOpenQuestion).toHaveBeenCalledWith('q1');
 
@@ -272,7 +274,7 @@ test('omits unanswered warning when all exam questions are answered', async () =
     .not.toBeInTheDocument();
 });
 
-test('omits the stem preview in the open question aria-label when stem is empty', async () => {
+test('keeps empty-stem rows discoverable by accessible name', async () => {
   const onOpenQuestion = vi.fn();
   const onFinalizeReview = vi.fn(async () => undefined);
 
@@ -304,7 +306,9 @@ test('omits the stem preview in the open question aria-label when stem is empty'
     />,
   );
 
-  await screen.getByRole('button', { name: 'Open question 1' }).click();
+  await screen
+    .getByRole('button', { name: /Open question 1\..*Unanswered/i })
+    .click();
   expect(onOpenQuestion).toHaveBeenCalledWith('q1');
 });
 
@@ -348,7 +352,7 @@ test('supports keyboard activation for available review rows and leaves unavaila
   );
 
   const availableRowButton = screen.getByRole('button', {
-    name: 'Open question 1: Keyboard target stem',
+    name: /Open question 1\..*Keyboard target stem.*Answered.*Correct/i,
   });
 
   await userEvent.tab();
@@ -364,6 +368,6 @@ test('supports keyboard activation for available review rows and leaves unavaila
     .element(screen.getByText('[Question no longer available]'))
     .toBeVisible();
   await expect
-    .element(screen.getByText('Open question 2'))
+    .element(screen.getByRole('button', { name: /Open question 2\b/i }))
     .not.toBeInTheDocument();
 });

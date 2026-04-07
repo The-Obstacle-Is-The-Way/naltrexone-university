@@ -336,9 +336,11 @@ describe('ExamReviewView', () => {
   }
 
   function findReviewRowButton(root: ParentNode, order: number) {
-    return root.querySelector(
-      `button[aria-label^="Open question ${order}:"]`,
-    ) as HTMLButtonElement | null;
+    return (
+      Array.from(
+        root.querySelectorAll<HTMLButtonElement>('ul.space-y-3 > li > button'),
+      ).find((button) => button.textContent?.includes(`${order}. `)) ?? null
+    );
   }
 
   it('renders each available row as a semantic focusable button target', () => {
@@ -367,10 +369,24 @@ describe('ExamReviewView', () => {
     unmount();
   });
 
-  it('does not render a nested visible Open question button inside review rows', () => {
+  it('does not render nested buttons inside review rows', () => {
     const doc = renderExamReviewMarkup();
+    const rowButtons = Array.from(
+      doc.querySelectorAll('ul.space-y-3 > li > button'),
+    );
 
-    expect(doc.body.textContent).not.toContain('Open question');
+    expect(rowButtons).toHaveLength(3);
+    expect(doc.querySelector('ul.space-y-3 > li > button button')).toBeNull();
+  });
+
+  it('keeps the row action discoverable without overriding the visible row state', () => {
+    const doc = renderExamReviewMarkup();
+    const button = findReviewRowButton(doc, 1);
+
+    expect(button?.getAttribute('aria-label')).toBeNull();
+    expect(button?.textContent).toContain('Open question');
+    expect(button?.textContent).toContain('Marked for review');
+    expect(button?.textContent).toContain('Correct');
   });
 
   it('does not render Not marked text for unmarked rows', () => {

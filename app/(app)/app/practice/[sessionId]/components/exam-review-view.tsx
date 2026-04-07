@@ -176,10 +176,6 @@ export function ExamReviewView({
           const stemPreview = row.isAvailable
             ? getStemPreview(row.stemMd, 96)
             : '[Question no longer available]';
-          const openQuestionLabel =
-            row.isAvailable && row.stemMd.trim()
-              ? `Open question ${row.order}: ${getStemPreview(row.stemMd, 60)}`
-              : `Open question ${row.order}`;
           const rowContent = (
             <div className="space-y-1">
               <div className="text-sm font-medium text-foreground">
@@ -205,9 +201,9 @@ export function ExamReviewView({
                     'bg-card text-card-foreground block w-full rounded-2xl border p-4 text-left shadow-sm transition-colors',
                     'hover:bg-muted/20 focus-visible:border-ring focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]',
                   )}
-                  aria-label={openQuestionLabel}
                   onClick={() => onOpenQuestion(row.questionId)}
                 >
+                  <span className="sr-only">Open question </span>
                   {rowContent}
                 </button>
               ) : (
