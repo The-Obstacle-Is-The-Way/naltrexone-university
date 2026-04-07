@@ -3,7 +3,7 @@
 **Date:** 2026-04-06
 **Triggered by:** User walkthrough of the exam flow end-to-end. After submitting an exam, clicking "Review your answers" from the Session Summary leads to a different review experience than the pre-submit review flow, and both differ from the History page's review. The user described it as "sloppified" — subtly different button arrangements, bookmark placement, navigation options, and page headers across three surfaces that should feel like the same experience.
 **Scope:** Audit the exam-flow review surfaces — from pre-submit review through post-exam review, session summary, and the summary "Review your answers" handoff — and catalog where the experience breaks consistency.
-**Related:** [BS-059](./bs-059-practice-session-action-bar-button-arrangement.md) (action bar button arrangement on question-page-client), [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) (bookmark icon toggle), [DEBT-330 (archived)](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md) (post-exam review bookmark placement, resolved), [BS-019 (archived)](../_archive/brainstorming/bs-019-action-bar-label-and-ordering-consistency.md) (action bar label consistency, resolved), [BS-006 (archived)](../_archive/brainstorming/bs-006-review-consistency-audit.md) (earlier review consistency audit, resolved)
+**Related:** [BS-059](./bs-059-practice-session-action-bar-button-arrangement.md) (standalone question-page action bar), [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) (bookmark icon toggle), [DEBT-350](../debt/debt-350-exam-results-session-continuity.md) (session-orchestrator continuity), [DEBT-351](../debt/debt-351-exam-review-submit-affordance-cleanup.md) (Review & Submit row affordance cleanup), [DEBT-352](../debt/debt-352-post-exam-review-focus-ring-flash.md) (post-exam focus-ring flash), [DEBT-330 (archived)](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md) (post-exam review bookmark placement, resolved), [BS-019 (archived)](../_archive/brainstorming/bs-019-action-bar-label-and-ordering-consistency.md) (action bar label consistency, resolved), [BS-006 (archived)](../_archive/brainstorming/bs-006-review-consistency-audit.md) (earlier review consistency audit, resolved)
 
 **Boundary with BS-059:** BS-059 owns the standalone `question-page-client.tsx` action bar layout question (button count, grouping, bookmark placement). Fixes to `question-page-client.tsx`'s action bar should be tracked in BS-059. BS-061 owns the cross-surface exam-flow divergence: why `PostExamReviewView` and `question-page-client.tsx` feel different when the user transitions from post-exam review to summary review.
 
@@ -212,6 +212,13 @@ The lightweight surface map is no longer optional.
 
 This keeps the registry lightweight while still making cross-surface drift auditable.
 
+## Implementation Tracking
+
+- [DEBT-350](../debt/debt-350-exam-results-session-continuity.md) owns Direction C as one inseparable change set: results-substage state, summary CTA re-entry, and summary breakdown callback mode.
+- [DEBT-351](../debt/debt-351-exam-review-submit-affordance-cleanup.md) owns Direction E.
+- [DEBT-352](../debt/debt-352-post-exam-review-focus-ring-flash.md) owns D7.
+- Direction A remains in [BS-059](./bs-059-practice-session-action-bar-button-arrangement.md). It is not promoted here because the standalone `question-page-client.tsx` action-bar contract across its multiple states is still broader than the now-locked BS-061 exam-flow scope.
+
 ---
 
 ## Decided Directions
@@ -405,3 +412,4 @@ There is no fallback branch in this sequence. Direction C is the exam-flow decis
 | 2026-04-06 | Adversarial review applied | Fixed factual errors (subtitle text, back-link placement, Direction E wording), sharpened scope to exam flow, added focus-ring finding, deepened root cause with stage-machine detail, clarified BS-059 boundary, and resequenced Directions to prioritize C (session-flow continuity) as the key decision point. |
 | 2026-04-07 | Direction C decided, no hedging | "Review your answers" from Session Summary will stay in the session orchestrator. Ejecting the user to a different page mid-session violates UX first principles. Navigator merge rejected — architecturally different components should stay separate. Sequencing converted from "suggested" to "implementation plan." |
 | 2026-04-07 | Implementation contract hardened | Removed remaining fallback language, replaced "5 lines" hand-waving with an explicit exam-results substage contract, specified cursor resolution and summary callback behavior, documented refresh/rehydration limits, locked Direction E accessibility semantics, and defined the surface-map maintenance rule. |
+| 2026-04-07 | Implementation tracking decomposed into debt docs | Direction C promoted to DEBT-350, Direction E promoted to DEBT-351, and D7 promoted to DEBT-352. Direction A intentionally remains in BS-059 until the standalone `question-page-client.tsx` action-bar contract is settled. |
