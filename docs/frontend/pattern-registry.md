@@ -1,6 +1,6 @@
 # Pattern Registry
 
-**Last Updated:** 2026-03-17
+**Last Updated:** 2026-04-07
 **Status:** Canonical — all UI changes MUST conform to this registry
 
 Single source of truth for every visual pattern in the app. If a pattern isn't here, don't invent one — add it here first, get approval, then implement.
@@ -23,6 +23,23 @@ Single source of truth for every visual pattern in the app. If a pattern isn't h
 5. **Any new/changed pattern MUST meet contrast targets** (or explicitly document a temporary exception). See `docs/frontend/contrast-policy.md`.
 
 Every pattern has an **ID** (e.g., `I-1`, `L-2`) for easy cross-referencing in code reviews, specs, and debt tickets.
+
+---
+
+## Review Surface Map
+
+Lightweight map of the review-related surfaces that matter for routing and chrome consistency. This is intentionally smaller than a full page registry.
+
+**Maintenance rule:** update this table in the same PR whenever a review surface is added, removed, or changes its route/origin, primary renderer, navigator family, or exit model.
+
+| Surface | Route / Origin | Primary Renderer | Navigator Family | Exit Model | Owner Doc |
+|---------|----------------|------------------|------------------|------------|-----------|
+| Review & Submit | `/app/practice/[sessionId]` before final exam submit | `ExamReviewView` | None | In-session submit to post-exam review | [BS-061](../brainstorming/bs-061-review-surface-divergence-audit.md) |
+| Post-Exam Review | `/app/practice/[sessionId]` after exam finalization | `PostExamReviewView` | `QuestionNavigator` (callback / in-memory) | In-session `View Summary` / `Finish review` | [BS-061](../brainstorming/bs-061-review-surface-divergence-audit.md) |
+| Session Summary | `/app/practice/[sessionId]` after session completion | `SessionSummaryView` | None | Route exits to Practice / History; `Review your answers` currently routes into summary-origin standalone review (tracked in [BS-061](../brainstorming/bs-061-review-surface-divergence-audit.md)) | [BS-061](../brainstorming/bs-061-review-surface-divergence-audit.md) |
+| Standalone Review — summary origin | `/app/questions/[slug]?from=summary&mode=review&sessionId=...` | `QuestionView` in `question-page-client.tsx` | `ReviewQuestionNavigator` (`Link` / route) | Route back to practice-session summary | [BS-061](../brainstorming/bs-061-review-surface-divergence-audit.md), [BS-059](../brainstorming/bs-059-practice-session-action-bar-button-arrangement.md) |
+| Standalone Review — history origin | `/app/questions/[slug]?from=history&mode=review&sessionId=...` | `QuestionView` in `question-page-client.tsx` | `ReviewQuestionNavigator` (`Link` / route) | Route back to History | [BS-059](../brainstorming/bs-059-practice-session-action-bar-button-arrangement.md) |
+| Standalone Review — dashboard / bookmarks / practice origins | `/app/questions/[slug]?from=dashboard\|bookmarks\|practice...` | `QuestionView` in `question-page-client.tsx` | `ReviewQuestionNavigator` (`Link` / route) | Route back to origin-specific page | [BS-059](../brainstorming/bs-059-practice-session-action-bar-button-arrangement.md) |
 
 ---
 

@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-04
+**Last Updated:** 2026-04-07
 
 ---
 
@@ -20,8 +20,11 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
+| [DEBT-350](./debt-350-exam-results-session-continuity.md) | Exam results continuity — keep Session Summary review re-entry inside `/app/practice/[sessionId]` with an explicit results substage, preserved review payload, callback-driven CTA, and summary breakdown callback mode | P2 | — |
+| [DEBT-351](./debt-351-exam-review-submit-affordance-cleanup.md) | Review & Submit affordance cleanup — make available rows whole-card semantic buttons, remove nested `Open question`, and drop default `Not marked` noise | P3 | — |
+| [DEBT-352](./debt-352-post-exam-review-focus-ring-flash.md) | Post-exam review focus-ring flash — remove forced `focusVisible: true` while preserving panel focus transfer and keyboard/screen-reader affordance | P3 | — |
 
-**Next Debt ID:** DEBT-350
+**Next Debt ID:** DEBT-353
 
 ---
 
