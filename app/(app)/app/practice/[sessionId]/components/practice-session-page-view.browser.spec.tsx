@@ -191,6 +191,83 @@ test('renders callback-driven Review your answers button for exam-mode session s
     .not.toBeInTheDocument();
 });
 
+test('keeps exam summaries on the in-session review contract when the substage prop is omitted', async () => {
+  const onReenterPostExamReview = vi.fn();
+  const screen = await render(
+    <PracticeSessionPageView
+      summary={{
+        sessionId: 'session-1',
+        endedAt: '2026-02-07T00:00:00.000Z',
+        mode: 'exam',
+        questionCount: 2,
+        totals: {
+          answered: 2,
+          correct: 1,
+          accuracy: 0.5,
+          durationSeconds: 120,
+        },
+      }}
+      postExamSummary={{
+        sessionId: 'session-1',
+        endedAt: '2026-02-07T00:00:00.000Z',
+        mode: 'exam',
+        questionCount: 2,
+        totals: {
+          answered: 2,
+          correct: 1,
+          accuracy: 0.5,
+          durationSeconds: 120,
+        },
+      }}
+      summaryReview={createReviewResponse({
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 2,
+        markedCount: 0,
+        rows: [
+          createReviewRow({
+            questionId: 'q1',
+            slug: 'q-1',
+            stemMd: 'Stem 1',
+            order: 1,
+            isAnswered: true,
+            isCorrect: false,
+          }),
+        ],
+      })}
+      summaryReviewLoadState={{ status: 'ready' }}
+      postExamReviewLoadState={{ status: 'idle' }}
+      sessionInfo={null}
+      loadState={{ status: 'ready' }}
+      question={null}
+      selectedChoiceId={null}
+      isAnswered={false}
+      submitResult={null}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      canSubmit={false}
+      onEndSession={() => undefined}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={() => undefined}
+      onReenterPostExamReview={onReenterPostExamReview}
+    />,
+  );
+
+  await expect
+    .element(screen.getByRole('button', { name: 'Review your answers' }))
+    .toBeVisible();
+  await expect
+    .element(screen.getByRole('link', { name: 'Review your answers' }))
+    .not.toBeInTheDocument();
+
+  await screen.getByRole('button', { name: 'Review your answers' }).click();
+  expect(onReenterPostExamReview).toHaveBeenCalledTimes(1);
+});
+
 test('clicking Review your answers re-enters post-exam review without route ejection', async () => {
   const screen = await renderExamResultsContinuityHarness();
 

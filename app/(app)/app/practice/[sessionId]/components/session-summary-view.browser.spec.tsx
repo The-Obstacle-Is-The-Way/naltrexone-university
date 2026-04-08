@@ -295,6 +295,7 @@ test('renders callback-driven exam review controls as buttons and disables the C
   await expect
     .element(screen.getByRole('button', { name: /Stem for q1/i }))
     .toBeDisabled();
+  await expect.element(screen.getByText('Loading review...')).toBeVisible();
   await expect
     .element(screen.getByRole('link', { name: 'Review your answers' }))
     .not.toBeInTheDocument();

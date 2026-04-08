@@ -119,6 +119,11 @@ export function SessionSummaryView({
           {reviewEntryErrorMessage}
         </div>
       ) : null}
+      {isReviewLoading ? (
+        <output className="text-sm text-muted-foreground" aria-live="polite">
+          Loading review...
+        </output>
+      ) : null}
 
       <div className="flex flex-col gap-3 sm:flex-row">
         {hasInSessionReviewAction ? (

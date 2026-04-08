@@ -67,6 +67,9 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
   const review = props.review ?? null;
   const postExamSummary = props.postExamSummary ?? null;
   const examResultsSubstage = props.examResultsSubstage ?? null;
+  const shouldRenderExamSummary =
+    props.summary?.mode === 'exam' &&
+    examResultsSubstage !== 'post_exam_review';
   const postExamReview = props.postExamReview ?? null;
   const postExamReviewLoadState = props.postExamReviewLoadState ?? {
     status: 'idle',
@@ -131,10 +134,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
     props.onNextQuestion();
   }, [nextQuestionId, onNavigateQuestion, props.onNextQuestion]);
 
-  if (
-    examResultsSubstage === 'session_summary' &&
-    props.summary?.mode === 'exam'
-  ) {
+  if (shouldRenderExamSummary && props.summary) {
     return (
       <SessionSummaryView
         summary={props.summary}
@@ -212,7 +212,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
     }
   }
 
-  if (props.summary) {
+  if (props.summary && props.summary.mode !== 'exam') {
     return (
       <SessionSummaryView
         summary={props.summary}

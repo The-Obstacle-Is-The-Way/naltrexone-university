@@ -455,6 +455,7 @@ describe('SessionSummaryView', () => {
     );
 
     expect(reviewButton?.hasAttribute('disabled')).toBe(true);
+    expect(doc.body.textContent).toContain('Loading review...');
   });
 
   it('renders breakdown rows as buttons when summary callback mode is provided', () => {
