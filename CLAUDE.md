@@ -94,6 +94,7 @@ pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test
 If local Clerk/Stripe auth env is available, also run E2E after the build:
 
 ```bash
+lsof -ti:3000 | xargs kill -9 2>/dev/null
 pnpm test:e2e
 ```
 

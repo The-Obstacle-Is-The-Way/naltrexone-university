@@ -485,6 +485,104 @@ test('renders post-exam review with score banner, feedback, and a summary exit',
   expect(onViewSummary).toHaveBeenCalledTimes(1);
 });
 
+test('renders a loading state while post-exam review is hydrating inside the session route', async () => {
+  const screen = await render(
+    <PracticeSessionPageView
+      summary={null}
+      postExamSummary={{
+        sessionId: 'session-1',
+        endedAt: '2026-02-07T00:20:00.000Z',
+        mode: 'exam',
+        questionCount: 2,
+        totals: {
+          answered: 2,
+          correct: 1,
+          accuracy: 0.5,
+          durationSeconds: 120,
+        },
+      }}
+      examResultsSubstage="post_exam_review"
+      postExamReviewLoadState={{ status: 'loading' }}
+      sessionInfo={null}
+      loadState={{ status: 'ready' }}
+      question={null}
+      selectedChoiceId={null}
+      isAnswered={false}
+      submitResult={null}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      canSubmit={false}
+      onEndSession={() => undefined}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={() => undefined}
+    />,
+  );
+
+  await expect.element(screen.getByText('Loading review...')).toBeVisible();
+  await expect
+    .element(screen.getByRole('heading', { name: 'Session Summary' }))
+    .not.toBeInTheDocument();
+});
+
+test('renders retry and summary actions when post-exam review hydration fails', async () => {
+  const onRetryPostExamReview = vi.fn();
+  const onViewSummary = vi.fn();
+  const screen = await render(
+    <PracticeSessionPageView
+      summary={null}
+      postExamSummary={{
+        sessionId: 'session-1',
+        endedAt: '2026-02-07T00:20:00.000Z',
+        mode: 'exam',
+        questionCount: 2,
+        totals: {
+          answered: 2,
+          correct: 1,
+          accuracy: 0.5,
+          durationSeconds: 120,
+        },
+      }}
+      examResultsSubstage="post_exam_review"
+      postExamReviewLoadState={{
+        status: 'error',
+        message: 'Review hydration failed',
+      }}
+      sessionInfo={null}
+      loadState={{ status: 'ready' }}
+      question={null}
+      selectedChoiceId={null}
+      isAnswered={false}
+      submitResult={null}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      canSubmit={false}
+      onEndSession={() => undefined}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={() => undefined}
+      onRetryPostExamReview={onRetryPostExamReview}
+      onViewSummary={onViewSummary}
+    />,
+  );
+
+  await expect
+    .element(screen.getByText('Review hydration failed'))
+    .toBeVisible();
+
+  await screen.getByRole('button', { name: 'Retry review' }).click();
+  expect(onRetryPostExamReview).toHaveBeenCalledTimes(1);
+
+  await screen.getByRole('button', { name: 'View Summary' }).click();
+  expect(onViewSummary).toHaveBeenCalledTimes(1);
+});
+
 test('falls back to onEndSession when onFinalizeReview is omitted in the review stage', async () => {
   const onEndSession = vi.fn();
 

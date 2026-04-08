@@ -560,12 +560,14 @@ Integration tests run against a real Postgres instance. In CI, a service contain
 - Add screenshots/GIFs for UI changes
 
 **Before opening a PR, run:**
+
 ```bash
 # Ensure test DB is running for integration tests (see "Running Integration Tests Locally")
 pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
 ```
 
 If local auth/billing E2E env is available, also run:
+
 ```bash
 lsof -ti:3000 | xargs kill -9 2>/dev/null
 pnpm test:e2e

@@ -710,6 +710,66 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     expect(harness.result.current.examResultsSubstage).toBe('post_exam_review');
   });
 
+  it('does not start a duplicate post-exam review load while summary re-entry hydration is already in flight', async () => {
+    const reviewLoad =
+      createDeferred<
+        ActionResult<GetCompletedSessionQuestionsWithFeedbackOutput>
+      >();
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 2,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+    getCompletedSessionQuestionsWithFeedbackMock.mockImplementation(
+      async () => reviewLoad.promise,
+    );
+
+    const input = createInput('exam');
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStage(input),
+    );
+
+    harness.result.current.setSummary({
+      sessionId: 'session-1',
+      endedAt: '2026-02-07T00:20:00.000Z',
+      mode: 'exam',
+      questionCount: 2,
+      totals: {
+        answered: 2,
+        correct: 1,
+        accuracy: 0.5,
+        durationSeconds: 120,
+      },
+    });
+
+    await expect
+      .poll(() => harness.result.current.examResultsSubstage)
+      .toBe('session_summary');
+
+    harness.result.current.onReenterPostExamReview();
+    await expect
+      .poll(() => harness.result.current.postExamReviewLoadState.status)
+      .toBe('loading');
+    expect(getCompletedSessionQuestionsWithFeedbackMock).toHaveBeenCalledTimes(
+      1,
+    );
+
+    harness.result.current.onReenterPostExamReview();
+    expect(getCompletedSessionQuestionsWithFeedbackMock).toHaveBeenCalledTimes(
+      1,
+    );
+
+    reviewLoad.resolve(ok(createPostExamReview('q2')));
+    await expect
+      .poll(() => harness.result.current.postExamReviewLoadState.status)
+      .toBe('ready');
+  });
+
   it('preserves the deferred exam summary when post-exam review loading fails so retry and summary recovery still work', async () => {
     finalizeExamAnswersMock.mockResolvedValue(
       ok({
