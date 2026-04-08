@@ -91,6 +91,14 @@ pnpm db:test:up && DATABASE_URL="postgresql://postgres:postgres@localhost:5434/a
 pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
 ```
 
+If local Clerk/Stripe auth env is available, also run E2E after the build:
+
+```bash
+pnpm test:e2e
+```
+
+CI enforces E2E on every PR. Skipping it locally when env is available risks copy/assertion mismatches that only surface in CI (e.g., stale E2E text after a component copy change).
+
 `pnpm build` catches prerender errors, `'use cache'` violations, and static generation failures that unit tests and typecheck CANNOT detect. Skipping it causes CI failures. See AGENTS.md "Verify EVERY Change Before Pushing" for the full rule.
 
 ### Safety
