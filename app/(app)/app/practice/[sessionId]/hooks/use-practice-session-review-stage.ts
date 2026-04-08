@@ -42,7 +42,7 @@ const POST_EXAM_REVIEW_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 
 export type ExamResultsSubstage = 'post_exam_review' | 'session_summary';
 
-function resolvePostExamReviewCurrentQuestionId(
+export function resolvePostExamReviewCurrentQuestionId(
   review: GetCompletedSessionQuestionsWithFeedbackOutput,
   input: {
     requestedQuestionId?: string | null;
