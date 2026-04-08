@@ -103,7 +103,7 @@ lsof -ti:3000 | xargs kill -9 2>/dev/null
 pnpm test:e2e
 ```
 
-CI enforces E2E on every PR. Skipping it locally when that authenticated billing E2E environment is available risks copy/assertion mismatches that only surface in CI (e.g., stale E2E text after a component copy change).
+CI enforces E2E on pushes and same-repo PRs. Skipping it locally when that authenticated billing E2E environment is available risks copy/assertion mismatches that only surface in CI (e.g., stale E2E text after a component copy change).
 
 `pnpm build` catches prerender errors, `'use cache'` violations, and static generation failures that unit tests and typecheck CANNOT detect. Skipping it causes CI failures. See AGENTS.md "Verify EVERY Change Before Pushing" for the full rule.
 
