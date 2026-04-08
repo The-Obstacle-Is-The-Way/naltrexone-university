@@ -14,10 +14,18 @@ export function SessionSummaryView({
   summary,
   review,
   reviewLoadState,
+  onReviewAnswers,
+  onOpenReviewQuestion,
+  isReviewLoading = false,
+  reviewEntryErrorMessage = null,
 }: {
   summary: EndPracticeSessionOutput;
   review?: GetPracticeSessionReviewOutput | null;
   reviewLoadState?: LoadState;
+  onReviewAnswers?: () => void;
+  onOpenReviewQuestion?: (questionId: string) => void;
+  isReviewLoading?: boolean;
+  reviewEntryErrorMessage?: string | null;
 }) {
   const summaryReview = review ?? null;
   const summaryReviewLoadState = reviewLoadState ?? { status: 'idle' };
@@ -30,7 +38,10 @@ export function SessionSummaryView({
     summary.mode === 'exam'
       ? (summaryReview?.rows.find((row) => row.isAvailable)?.slug ?? null)
       : null;
-  const hasPrimaryFollowUp = firstReviewableSlug !== null;
+  const hasInSessionReviewAction =
+    summary.mode === 'exam' && typeof onReviewAnswers === 'function';
+  const hasPrimaryFollowUp =
+    hasInSessionReviewAction || firstReviewableSlug !== null;
 
   return (
     <div className="space-y-6">
@@ -96,13 +107,30 @@ export function SessionSummaryView({
               rows={summaryReview.rows}
               from="summary"
               sessionId={summary.sessionId}
+              onOpenQuestion={onOpenReviewQuestion}
+              isQuestionActionPending={isReviewLoading}
             />
           </div>
         ) : null}
       </Card>
 
+      {reviewEntryErrorMessage ? (
+        <div className="text-sm text-destructive" role="alert">
+          {reviewEntryErrorMessage}
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-3 sm:flex-row">
-        {firstReviewableSlug ? (
+        {hasInSessionReviewAction ? (
+          <Button
+            type="button"
+            className="rounded-full"
+            onClick={onReviewAnswers}
+            disabled={isReviewLoading}
+          >
+            Review your answers
+          </Button>
+        ) : firstReviewableSlug ? (
           <Button asChild className="rounded-full">
             <Link
               href={toQuestionRoute(firstReviewableSlug, {

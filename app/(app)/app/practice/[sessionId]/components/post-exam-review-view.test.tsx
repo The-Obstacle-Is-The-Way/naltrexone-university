@@ -238,4 +238,15 @@ describe('PostExamReviewView', () => {
 
     expect(doc.querySelector('button[aria-pressed]')).toBeNull();
   });
+
+  it('uses bidirectional helper copy that does not imply a one-way summary handoff', () => {
+    const doc = renderView();
+
+    expect(doc.body.textContent).toContain(
+      'Review each question with detailed feedback.',
+    );
+    expect(doc.body.textContent).not.toContain(
+      'before moving to your session summary',
+    );
+  });
 });

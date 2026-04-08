@@ -37,6 +37,10 @@ function renderActionButtons(actions: readonly ProbeAction[]) {
 function getActiveView(
   output: ReturnType<typeof usePracticeSessionPageController>,
 ) {
+  if (output.examResultsSubstage === 'session_summary') return 'summary';
+  if (output.examResultsSubstage === 'post_exam_review') {
+    return 'post-exam-review';
+  }
   if (output.summary) return 'summary';
   if (output.postExamReview) return 'post-exam-review';
   if (output.review) return 'review';

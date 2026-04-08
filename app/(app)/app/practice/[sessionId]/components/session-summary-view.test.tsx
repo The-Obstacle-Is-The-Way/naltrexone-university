@@ -382,4 +382,129 @@ describe('SessionSummaryView', () => {
       '/app/questions/q-1?from=summary&mode=review&sessionId=session-1',
     );
   });
+
+  it('renders Review your answers as a button when callback re-entry is provided', () => {
+    const html = renderToStaticMarkup(
+      <SessionSummaryView
+        summary={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          questionCount: 2,
+          endedAt: '2026-02-07T00:00:00.000Z',
+          totals: {
+            answered: 2,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 120,
+          },
+        }}
+        review={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          totalCount: 2,
+          answeredCount: 2,
+          markedCount: 0,
+          rows: [
+            {
+              isAvailable: false,
+              questionId: 'q1',
+              order: 1,
+              isAnswered: true,
+              isCorrect: false,
+              markedForReview: false,
+            },
+          ],
+        }}
+        reviewLoadState={{ status: 'ready' }}
+        onReviewAnswers={() => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const reviewButton = Array.from(doc.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Review your answers',
+    );
+
+    expect(reviewButton).not.toBeNull();
+    expect(doc.querySelector('a[href*="/app/questions/"]')).toBeNull();
+  });
+
+  it('disables the callback-driven review CTA while post-exam review is hydrating', () => {
+    const html = renderToStaticMarkup(
+      <SessionSummaryView
+        summary={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          questionCount: 2,
+          endedAt: '2026-02-07T00:00:00.000Z',
+          totals: {
+            answered: 2,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 120,
+          },
+        }}
+        review={null}
+        reviewLoadState={{ status: 'idle' }}
+        onReviewAnswers={() => undefined}
+        isReviewLoading={true}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const reviewButton = Array.from(doc.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Review your answers',
+    );
+
+    expect(reviewButton?.hasAttribute('disabled')).toBe(true);
+  });
+
+  it('renders breakdown rows as buttons when summary callback mode is provided', () => {
+    const html = renderToStaticMarkup(
+      <SessionSummaryView
+        summary={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          questionCount: 2,
+          endedAt: '2026-02-07T00:00:00.000Z',
+          totals: {
+            answered: 2,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 120,
+          },
+        }}
+        review={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          totalCount: 2,
+          answeredCount: 2,
+          markedCount: 0,
+          rows: [
+            {
+              isAvailable: true,
+              questionId: 'q1',
+              slug: 'q-1',
+              stemMd: 'Stem for q1',
+              difficulty: 'easy',
+              order: 1,
+              isAnswered: true,
+              isCorrect: true,
+              markedForReview: false,
+            },
+          ],
+        }}
+        reviewLoadState={{ status: 'ready' }}
+        onOpenReviewQuestion={() => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const breakdownButton = Array.from(doc.querySelectorAll('button')).find(
+      (button) => button.textContent?.includes('Stem for q1'),
+    );
+    const breakdownLink = Array.from(doc.querySelectorAll('a')).find((link) =>
+      link.textContent?.includes('Stem for q1'),
+    );
+
+    expect(breakdownButton).not.toBeNull();
+    expect(breakdownLink).toBeUndefined();
+  });
 });

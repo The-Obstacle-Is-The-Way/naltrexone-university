@@ -66,8 +66,7 @@ export function PostExamReviewView({
               {scoreLabel}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Review each question with feedback before moving to your session
-              summary.
+              Review each question with detailed feedback.
             </p>
           </div>
           <Button

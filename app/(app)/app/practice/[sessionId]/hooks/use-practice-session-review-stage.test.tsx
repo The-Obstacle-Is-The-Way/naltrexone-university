@@ -60,6 +60,7 @@ describe('usePracticeSessionReviewStage', () => {
     expect(output.summary).toBeNull();
     expect(typeof output.setSummary).toBe('function');
     expect(output.postExamSummary).toBeNull();
+    expect(output.examResultsSubstage).toBeNull();
     expect(output.postExamReview).toBeNull();
     expect(output.postExamReviewLoadState).toEqual({ status: 'idle' });
     expect(output.postExamReviewCurrentQuestionId).toBeNull();
@@ -74,6 +75,7 @@ describe('usePracticeSessionReviewStage', () => {
     expect(typeof output.onEndSession).toBe('function');
     expect(typeof output.onOpenReviewQuestion).toBe('function');
     expect(typeof output.onNavigatePostExamReviewQuestion).toBe('function');
+    expect(typeof output.onReenterPostExamReview).toBe('function');
     expect(typeof output.onRetryPostExamReview).toBe('function');
     expect(typeof output.onViewSummary).toBe('function');
     expect(typeof output.onFinalizeReview).toBe('function');

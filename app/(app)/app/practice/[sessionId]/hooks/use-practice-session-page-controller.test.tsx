@@ -27,6 +27,7 @@ describe('usePracticeSessionPageController', () => {
     expect(output.bookmarkMessageVersion).toBe(0);
     expect(output.canSubmit).toBe(false);
     expect(output.summary).toBeNull();
+    expect(output.examResultsSubstage).toBeNull();
     expect(output.summaryReview).toBeNull();
     expect(output.summaryReviewLoadState).toEqual({ status: 'idle' });
     expect(output.review).toBeNull();
@@ -43,6 +44,7 @@ describe('usePracticeSessionPageController', () => {
     expect(typeof output.onNextQuestion).toBe('function');
     expect(typeof output.onNavigateQuestion).toBe('function');
     expect(typeof output.onOpenReviewQuestion).toBe('function');
+    expect(typeof output.onReenterPostExamReview).toBe('function');
     expect(typeof output.onFinalizeReview).toBe('function');
   });
 });

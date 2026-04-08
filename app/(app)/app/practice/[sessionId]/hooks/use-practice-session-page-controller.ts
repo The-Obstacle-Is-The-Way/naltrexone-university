@@ -171,6 +171,7 @@ export function usePracticeSessionPageController(
   return {
     summary: reviewStage.summary,
     postExamSummary: reviewStage.postExamSummary,
+    examResultsSubstage: reviewStage.examResultsSubstage,
     postExamReview: reviewStage.postExamReview,
     postExamReviewLoadState: reviewStage.postExamReviewLoadState,
     postExamReviewCurrentQuestionId:
@@ -209,6 +210,7 @@ export function usePracticeSessionPageController(
     onOpenReviewQuestion: reviewStage.onOpenReviewQuestion,
     onNavigatePostExamReviewQuestion:
       reviewStage.onNavigatePostExamReviewQuestion,
+    onReenterPostExamReview: reviewStage.onReenterPostExamReview,
     onViewSummary: reviewStage.onViewSummary,
     onFinalizeReview: reviewStage.onFinalizeReview,
   };

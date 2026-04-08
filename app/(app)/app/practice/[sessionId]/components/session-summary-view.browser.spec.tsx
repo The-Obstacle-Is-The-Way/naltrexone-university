@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
 import { SessionSummaryView } from './session-summary-view';
@@ -235,4 +235,125 @@ test('renders exactly 2 tutor actions', async () => {
   await expect
     .element(screen.getByRole('link', { name: 'Start another session' }))
     .not.toBeInTheDocument();
+});
+
+test('renders callback-driven exam review controls as buttons and disables the CTA while hydrating', async () => {
+  const onReviewAnswers = vi.fn();
+  const onOpenReviewQuestion = vi.fn();
+  const screen = await render(
+    <SessionSummaryView
+      summary={{
+        sessionId: 'session-1',
+        endedAt: '2026-02-07T00:00:00.000Z',
+        mode: 'exam',
+        questionCount: 2,
+        totals: {
+          answered: 2,
+          correct: 1,
+          accuracy: 0.5,
+          durationSeconds: 30,
+        },
+      }}
+      review={{
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 2,
+        markedCount: 0,
+        rows: [
+          {
+            questionId: 'q1',
+            slug: 'q-1',
+            order: 1,
+            isAvailable: true,
+            stemMd: 'Stem for q1',
+            difficulty: 'easy',
+            isAnswered: true,
+            isCorrect: true,
+            markedForReview: false,
+          },
+          {
+            questionId: 'q2',
+            order: 2,
+            isAvailable: false,
+            isAnswered: false,
+            isCorrect: null,
+            markedForReview: false,
+          },
+        ],
+      }}
+      reviewLoadState={{ status: 'ready' }}
+      onReviewAnswers={onReviewAnswers}
+      onOpenReviewQuestion={onOpenReviewQuestion}
+      isReviewLoading={true}
+    />,
+  );
+
+  await expect
+    .element(screen.getByRole('button', { name: 'Review your answers' }))
+    .toBeDisabled();
+  await expect
+    .element(screen.getByRole('button', { name: /Stem for q1/i }))
+    .toBeDisabled();
+  await expect
+    .element(screen.getByRole('link', { name: 'Review your answers' }))
+    .not.toBeInTheDocument();
+});
+
+test('uses in-session callbacks for exam summary review re-entry when provided', async () => {
+  const onReviewAnswers = vi.fn();
+  const onOpenReviewQuestion = vi.fn();
+  const screen = await render(
+    <SessionSummaryView
+      summary={{
+        sessionId: 'session-1',
+        endedAt: '2026-02-07T00:00:00.000Z',
+        mode: 'exam',
+        questionCount: 2,
+        totals: {
+          answered: 2,
+          correct: 1,
+          accuracy: 0.5,
+          durationSeconds: 30,
+        },
+      }}
+      review={{
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 2,
+        markedCount: 0,
+        rows: [
+          {
+            questionId: 'q1',
+            slug: 'q-1',
+            order: 1,
+            isAvailable: true,
+            stemMd: 'Stem for q1',
+            difficulty: 'easy',
+            isAnswered: true,
+            isCorrect: true,
+            markedForReview: false,
+          },
+          {
+            questionId: 'q2',
+            order: 2,
+            isAvailable: false,
+            isAnswered: false,
+            isCorrect: null,
+            markedForReview: false,
+          },
+        ],
+      }}
+      reviewLoadState={{ status: 'ready' }}
+      onReviewAnswers={onReviewAnswers}
+      onOpenReviewQuestion={onOpenReviewQuestion}
+    />,
+  );
+
+  await screen.getByRole('button', { name: 'Review your answers' }).click();
+  expect(onReviewAnswers).toHaveBeenCalledTimes(1);
+
+  await screen.getByRole('button', { name: /Stem for q1/i }).click();
+  expect(onOpenReviewQuestion).toHaveBeenCalledWith('q1');
 });
