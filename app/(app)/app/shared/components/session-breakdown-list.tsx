@@ -10,11 +10,15 @@ export function SessionBreakdownList({
   from = 'practice',
   sessionId,
   historyHref,
+  onOpenQuestion,
+  isQuestionActionPending = false,
 }: {
   rows: PracticeSessionReviewRow[];
   from?: QuestionOrigin;
   sessionId?: string;
   historyHref?: string;
+  onOpenQuestion?: (questionId: string) => void;
+  isQuestionActionPending?: boolean;
 }) {
   if (rows.length === 0) {
     return (
@@ -31,7 +35,19 @@ export function SessionBreakdownList({
           key={row.questionId}
           className="flex items-center gap-2 py-2 text-sm"
         >
-          {row.isAvailable ? (
+          {row.isAvailable && onOpenQuestion ? (
+            <button
+              type="button"
+              className="-mx-2 flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 text-left font-medium text-foreground transition-colors hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50"
+              disabled={isQuestionActionPending}
+              onClick={() => onOpenQuestion(row.questionId)}
+            >
+              <span className="shrink-0">{row.order}.</span>
+              <span className="truncate">
+                {getStemPreview(row.stemMd, STEM_PREVIEW_LENGTH)}
+              </span>
+            </button>
+          ) : row.isAvailable ? (
             <Link
               href={toQuestionRoute(row.slug, {
                 from,

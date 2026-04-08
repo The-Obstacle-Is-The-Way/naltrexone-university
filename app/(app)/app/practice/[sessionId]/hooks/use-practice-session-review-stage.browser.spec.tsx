@@ -57,36 +57,67 @@ function createInput(sessionMode: 'tutor' | 'exam') {
   };
 }
 
+function createPostExamReviewRow(input: {
+  questionId: string;
+  order?: number;
+  isAvailable?: boolean;
+}): GetCompletedSessionQuestionsWithFeedbackOutput['rows'][number] {
+  if (input.isAvailable === false) {
+    return {
+      isAvailable: false,
+      questionId: input.questionId,
+      order: input.order ?? 1,
+      isAnswered: true,
+      isCorrect: false,
+      markedForReview: false,
+    };
+  }
+
+  return {
+    isAvailable: true,
+    questionId: input.questionId,
+    slug: `${input.questionId}-slug`,
+    stemMd: `Stem for ${input.questionId}`,
+    difficulty: 'easy',
+    order: input.order ?? 1,
+    isAnswered: true,
+    isCorrect: true,
+    markedForReview: false,
+    choices: [
+      { id: `${input.questionId}-choice-1`, label: 'A', textMd: 'Choice A' },
+    ],
+    selectedChoiceId: `${input.questionId}-choice-1`,
+    correctChoiceId: `${input.questionId}-choice-1`,
+    explanationMd: `Explanation for ${input.questionId}`,
+    referenceMd: null,
+    choiceExplanations: [],
+  };
+}
+
 function createPostExamReview(
-  questionId: string,
+  ...rows: Array<
+    string | GetCompletedSessionQuestionsWithFeedbackOutput['rows'][number]
+  >
 ): GetCompletedSessionQuestionsWithFeedbackOutput {
+  const reviewRows =
+    rows.length > 0
+      ? rows.map((row, index) =>
+          typeof row === 'string'
+            ? createPostExamReviewRow({
+                questionId: row,
+                order: index + 1,
+              })
+            : row,
+        )
+      : [createPostExamReviewRow({ questionId: 'q1' })];
+
   return {
     sessionId: 'session-1',
     mode: 'exam',
-    totalCount: 1,
-    answeredCount: 1,
-    markedCount: 0,
-    rows: [
-      {
-        isAvailable: true,
-        questionId,
-        slug: `${questionId}-slug`,
-        stemMd: `Stem for ${questionId}`,
-        difficulty: 'easy',
-        order: 1,
-        isAnswered: true,
-        isCorrect: true,
-        markedForReview: false,
-        choices: [
-          { id: `${questionId}-choice-1`, label: 'A', textMd: 'Choice A' },
-        ],
-        selectedChoiceId: `${questionId}-choice-1`,
-        correctChoiceId: `${questionId}-choice-1`,
-        explanationMd: `Explanation for ${questionId}`,
-        referenceMd: null,
-        choiceExplanations: [],
-      },
-    ],
+    totalCount: reviewRows.length,
+    answeredCount: reviewRows.filter((row) => row.isAnswered).length,
+    markedCount: reviewRows.filter((row) => row.markedForReview).length,
+    rows: reviewRows,
   };
 }
 
@@ -384,7 +415,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     expect(harness.result.current.postExamReviewCurrentQuestionId).toBe('q1');
   });
 
-  it('promotes the deferred exam summary after post-exam review is dismissed', async () => {
+  it('switches to session summary without clearing completed feedback or the current reviewed question', async () => {
     finalizeExamAnswersMock.mockResolvedValue(
       ok({
         sessionId: 'session-1',
@@ -410,32 +441,12 @@ describe('usePracticeSessionReviewStage (browser)', () => {
       }),
     );
     getCompletedSessionQuestionsWithFeedbackMock.mockResolvedValue(
-      ok({
-        sessionId: 'session-1',
-        mode: 'exam',
-        totalCount: 1,
-        answeredCount: 1,
-        markedCount: 0,
-        rows: [
-          {
-            isAvailable: true,
-            questionId: 'q1',
-            slug: 'q-1',
-            stemMd: 'Stem 1',
-            difficulty: 'easy',
-            order: 1,
-            isAnswered: true,
-            isCorrect: true,
-            markedForReview: false,
-            choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
-            selectedChoiceId: 'c1',
-            correctChoiceId: 'c1',
-            explanationMd: 'Because A is correct.',
-            referenceMd: null,
-            choiceExplanations: [],
-          },
-        ],
-      }),
+      ok(
+        createPostExamReview(
+          createPostExamReviewRow({ questionId: 'q1', order: 1 }),
+          createPostExamReviewRow({ questionId: 'q2', order: 2 }),
+        ),
+      ),
     );
 
     const input = createInput('exam');
@@ -447,6 +458,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     await expect
       .poll(() => harness.result.current.postExamReviewLoadState.status)
       .toBe('ready');
+    harness.result.current.onNavigatePostExamReviewQuestion('q2');
 
     harness.result.current.onViewSummary();
 
@@ -456,8 +468,306 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     await expect
       .poll(() => harness.result.current.summaryReviewLoadState.status)
       .toBe('ready');
-    expect(harness.result.current.postExamReview).toBeNull();
-    expect(harness.result.current.postExamReviewCurrentQuestionId).toBeNull();
+    expect(harness.result.current.examResultsSubstage).toBe('session_summary');
+    expect(harness.result.current.postExamReview?.sessionId).toBe('session-1');
+    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe('q2');
+  });
+
+  it('re-enters post-exam review without a question id by preserving the current reviewed question', async () => {
+    finalizeExamAnswersMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        endedAt: '2026-02-07T00:20:00.000Z',
+        mode: 'exam',
+        questionCount: 2,
+        totals: {
+          answered: 2,
+          correct: 1,
+          accuracy: 0.5,
+          durationSeconds: 120,
+        },
+      }),
+    );
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+    getCompletedSessionQuestionsWithFeedbackMock.mockResolvedValue(
+      ok(
+        createPostExamReview(
+          createPostExamReviewRow({ questionId: 'q1', order: 1 }),
+          createPostExamReviewRow({ questionId: 'q2', order: 2 }),
+        ),
+      ),
+    );
+
+    const input = createInput('exam');
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStage(input),
+    );
+
+    await harness.result.current.onFinalizeReview();
+    await expect
+      .poll(() => harness.result.current.postExamReviewLoadState.status)
+      .toBe('ready');
+    harness.result.current.onNavigatePostExamReviewQuestion('q2');
+    harness.result.current.onViewSummary();
+
+    await expect
+      .poll(() => harness.result.current.examResultsSubstage)
+      .toBe('session_summary');
+
+    harness.result.current.onReenterPostExamReview();
+
+    await expect
+      .poll(() => harness.result.current.examResultsSubstage)
+      .toBe('post_exam_review');
+    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe('q2');
+    expect(getCompletedSessionQuestionsWithFeedbackMock).toHaveBeenCalledTimes(
+      1,
+    );
+  });
+
+  it('re-enters post-exam review on the specifically requested summary question', async () => {
+    finalizeExamAnswersMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        endedAt: '2026-02-07T00:20:00.000Z',
+        mode: 'exam',
+        questionCount: 2,
+        totals: {
+          answered: 2,
+          correct: 1,
+          accuracy: 0.5,
+          durationSeconds: 120,
+        },
+      }),
+    );
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+    getCompletedSessionQuestionsWithFeedbackMock.mockResolvedValue(
+      ok(
+        createPostExamReview(
+          createPostExamReviewRow({ questionId: 'q1', order: 1 }),
+          createPostExamReviewRow({ questionId: 'q2', order: 2 }),
+        ),
+      ),
+    );
+
+    const input = createInput('exam');
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStage(input),
+    );
+
+    await harness.result.current.onFinalizeReview();
+    await expect
+      .poll(() => harness.result.current.postExamReviewLoadState.status)
+      .toBe('ready');
+    harness.result.current.onViewSummary();
+
+    await expect
+      .poll(() => harness.result.current.examResultsSubstage)
+      .toBe('session_summary');
+
+    harness.result.current.onReenterPostExamReview('q2');
+
+    await expect
+      .poll(() => harness.result.current.examResultsSubstage)
+      .toBe('post_exam_review');
+    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe('q2');
+  });
+
+  it('falls back to the first available reviewed question when the persisted question is unavailable', async () => {
+    finalizeExamAnswersMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        endedAt: '2026-02-07T00:20:00.000Z',
+        mode: 'exam',
+        questionCount: 2,
+        totals: {
+          answered: 2,
+          correct: 1,
+          accuracy: 0.5,
+          durationSeconds: 120,
+        },
+      }),
+    );
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+    getCompletedSessionQuestionsWithFeedbackMock.mockResolvedValue(
+      ok(
+        createPostExamReview(
+          createPostExamReviewRow({
+            questionId: 'q1',
+            order: 1,
+            isAvailable: false,
+          }),
+          createPostExamReviewRow({ questionId: 'q2', order: 2 }),
+        ),
+      ),
+    );
+
+    const input = createInput('exam');
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStage(input),
+    );
+
+    await harness.result.current.onFinalizeReview();
+    await expect
+      .poll(() => harness.result.current.postExamReviewLoadState.status)
+      .toBe('ready');
+    harness.result.current.onNavigatePostExamReviewQuestion('q1');
+    harness.result.current.onViewSummary();
+
+    await expect
+      .poll(() => harness.result.current.examResultsSubstage)
+      .toBe('session_summary');
+
+    harness.result.current.onReenterPostExamReview();
+
+    await expect
+      .poll(() => harness.result.current.postExamReviewCurrentQuestionId)
+      .toBe('q2');
+  });
+
+  it('lazy-hydrates completed feedback when summary re-entry has no preserved post-exam review payload', async () => {
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 2,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+    getCompletedSessionQuestionsWithFeedbackMock.mockResolvedValue(
+      ok(
+        createPostExamReview(
+          createPostExamReviewRow({
+            questionId: 'q1',
+            order: 1,
+            isAvailable: false,
+          }),
+          createPostExamReviewRow({ questionId: 'q2', order: 2 }),
+        ),
+      ),
+    );
+
+    const input = createInput('exam');
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStage(input),
+    );
+
+    harness.result.current.setSummary({
+      sessionId: 'session-1',
+      endedAt: '2026-02-07T00:20:00.000Z',
+      mode: 'exam',
+      questionCount: 2,
+      totals: {
+        answered: 2,
+        correct: 1,
+        accuracy: 0.5,
+        durationSeconds: 120,
+      },
+    });
+
+    await expect
+      .poll(() => harness.result.current.examResultsSubstage)
+      .toBe('session_summary');
+
+    harness.result.current.onReenterPostExamReview();
+
+    await expect
+      .poll(() => harness.result.current.postExamReviewLoadState.status)
+      .toBe('ready');
+    expect(getCompletedSessionQuestionsWithFeedbackMock).toHaveBeenCalledTimes(
+      1,
+    );
+    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe('q2');
+    expect(harness.result.current.examResultsSubstage).toBe('post_exam_review');
+  });
+
+  it('does not start a duplicate post-exam review load while summary re-entry hydration is already in flight', async () => {
+    const reviewLoad =
+      createDeferred<
+        ActionResult<GetCompletedSessionQuestionsWithFeedbackOutput>
+      >();
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: 'session-1',
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 2,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+    getCompletedSessionQuestionsWithFeedbackMock.mockImplementation(
+      async () => reviewLoad.promise,
+    );
+
+    const input = createInput('exam');
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStage(input),
+    );
+
+    harness.result.current.setSummary({
+      sessionId: 'session-1',
+      endedAt: '2026-02-07T00:20:00.000Z',
+      mode: 'exam',
+      questionCount: 2,
+      totals: {
+        answered: 2,
+        correct: 1,
+        accuracy: 0.5,
+        durationSeconds: 120,
+      },
+    });
+
+    await expect
+      .poll(() => harness.result.current.examResultsSubstage)
+      .toBe('session_summary');
+
+    harness.result.current.onReenterPostExamReview();
+    await expect
+      .poll(() => harness.result.current.postExamReviewLoadState.status)
+      .toBe('loading');
+    expect(getCompletedSessionQuestionsWithFeedbackMock).toHaveBeenCalledTimes(
+      1,
+    );
+
+    harness.result.current.onReenterPostExamReview();
+    expect(getCompletedSessionQuestionsWithFeedbackMock).toHaveBeenCalledTimes(
+      1,
+    );
+
+    reviewLoad.resolve(ok(createPostExamReview('q2')));
+    await expect
+      .poll(() => harness.result.current.postExamReviewLoadState.status)
+      .toBe('ready');
   });
 
   it('preserves the deferred exam summary when post-exam review loading fails so retry and summary recovery still work', async () => {

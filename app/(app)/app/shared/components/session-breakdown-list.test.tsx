@@ -49,7 +49,13 @@ function getClassTokens(className: string): Set<string> {
 
 async function renderList(
   rows: PracticeSessionReviewRow[],
-  props?: { from?: QuestionOrigin; sessionId?: string; historyHref?: string },
+  props?: {
+    from?: QuestionOrigin;
+    sessionId?: string;
+    historyHref?: string;
+    onOpenQuestion?: (questionId: string) => void;
+    isQuestionActionPending?: boolean;
+  },
 ) {
   return renderToStaticMarkup(<SessionBreakdownList rows={rows} {...props} />);
 }
@@ -114,6 +120,38 @@ describe('SessionBreakdownList', () => {
     expect(html).toContain('[Question no longer available]');
     const doc = new DOMParser().parseFromString(html, 'text/html');
     expect(doc.querySelectorAll('a')).toHaveLength(0);
+  });
+
+  it('renders available rows as buttons instead of links when callback mode is provided', async () => {
+    const html = await renderList([availableRow], {
+      onOpenQuestion: () => undefined,
+    });
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    expect(doc.querySelectorAll('a')).toHaveLength(0);
+    expect(doc.querySelectorAll('button')).toHaveLength(1);
+    expect(doc.querySelector('button')?.textContent).toContain('A short stem');
+  });
+
+  it('disables callback-mode buttons while a summary review action is pending', async () => {
+    const html = await renderList([availableRow], {
+      onOpenQuestion: () => undefined,
+      isQuestionActionPending: true,
+    });
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    expect(doc.querySelector('button')?.hasAttribute('disabled')).toBe(true);
+  });
+
+  it('keeps unavailable rows static even when callback mode is provided', async () => {
+    const html = await renderList([unavailableRow], {
+      onOpenQuestion: () => undefined,
+    });
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    expect(doc.querySelectorAll('a')).toHaveLength(0);
+    expect(doc.querySelectorAll('button')).toHaveLength(0);
+    expect(html).toContain('[Question no longer available]');
   });
 
   it('renders correct/incorrect/unanswered status labels', async () => {

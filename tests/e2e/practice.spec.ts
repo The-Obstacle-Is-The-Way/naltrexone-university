@@ -106,9 +106,7 @@ test.describe('practice', () => {
       page.getByRole('heading', { name: /^Score: \d+% \(\d\/1\)$/ }),
     ).toBeVisible({ timeout: 30_000 });
     await expect(
-      page.getByText(
-        'Review each question with feedback before moving to your session summary.',
-      ),
+      page.getByText('Review each question with detailed feedback.'),
     ).toBeVisible();
     await expect(page.getByText(/^(Correct|Incorrect)$/).first()).toBeVisible();
 

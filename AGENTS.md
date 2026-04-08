@@ -138,6 +138,17 @@ The pre-push git hook only runs `pnpm typecheck && pnpm test --run`. That is NOT
 pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
 ```
 
+**If the local authenticated billing E2E environment is available, also run before every `git push`:**
+
+That means the full Playwright prereqs documented in `docs/dev/testing-infrastructure.md#environment-variables-for-e2e` are present (typically via `.env.local`): `DATABASE_URL`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `E2E_CLERK_USER_USERNAME`, `E2E_CLERK_USER_PASSWORD`, `STRIPE_SECRET_KEY`, and `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`.
+
+```bash
+# Quick file check when you rely on .env.local:
+rg '^(DATABASE_URL|CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME|E2E_CLERK_USER_PASSWORD|STRIPE_SECRET_KEY|NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY)=' .env.local
+
+lsof -ti:3000 | xargs kill -9 2>/dev/null
+pnpm test:e2e
+```
 
 This is not optional. This is not "before opening a PR." This is **before every push**, including follow-up fix commits. Every single time.
 
@@ -145,6 +156,7 @@ This is not optional. This is not "before opening a PR." This is **before every 
 
 - `pnpm test --run` does NOT catch Next.js prerender errors — only `pnpm build` does
 - `pnpm typecheck` does NOT catch runtime `'use cache'` violations — only `pnpm build` does
+- Same-repo PR CI runs `pnpm test:e2e`; if the local authenticated billing E2E environment is available, skipping it means you are deferring failures to CI
 - Pushing without `pnpm build` has caused repeated CI failures that waste human review time
 - The pre-push hook is intentionally lightweight for speed — **you** are responsible for the full gate
 
@@ -553,9 +565,22 @@ Integration tests run against a real Postgres instance. In CI, a service contain
 - Add screenshots/GIFs for UI changes
 
 **Before opening a PR, run:**
+
 ```bash
 # Ensure test DB is running for integration tests (see "Running Integration Tests Locally")
 pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
+```
+
+If the local authenticated billing E2E environment is available, also run:
+
+That means the full Playwright prereqs documented in `docs/dev/testing-infrastructure.md#environment-variables-for-e2e` are present (typically via `.env.local`): `DATABASE_URL`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `E2E_CLERK_USER_USERNAME`, `E2E_CLERK_USER_PASSWORD`, `STRIPE_SECRET_KEY`, and `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`.
+
+```bash
+# Quick file check when you rely on .env.local:
+rg '^(DATABASE_URL|CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME|E2E_CLERK_USER_PASSWORD|STRIPE_SECRET_KEY|NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY)=' .env.local
+
+lsof -ti:3000 | xargs kill -9 2>/dev/null
+pnpm test:e2e
 ```
 
 ---

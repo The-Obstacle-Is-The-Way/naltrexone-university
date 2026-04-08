@@ -40,6 +40,39 @@ type FinalizeExamAnswersActionInput = SessionIdInput & {
 
 const POST_EXAM_REVIEW_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 
+export type ExamResultsSubstage = 'post_exam_review' | 'session_summary';
+
+export function resolvePostExamReviewCurrentQuestionId(
+  review: GetCompletedSessionQuestionsWithFeedbackOutput,
+  input: {
+    requestedQuestionId?: string | null;
+    persistedQuestionId?: string | null;
+  },
+): string | null {
+  const requestedQuestionId = input.requestedQuestionId ?? null;
+  const persistedQuestionId = input.persistedQuestionId ?? null;
+
+  if (requestedQuestionId) {
+    const requestedRow = review.rows.find(
+      (row) => row.questionId === requestedQuestionId && row.isAvailable,
+    );
+    if (requestedRow) return requestedRow.questionId;
+  }
+
+  if (persistedQuestionId) {
+    const persistedRow = review.rows.find(
+      (row) => row.questionId === persistedQuestionId && row.isAvailable,
+    );
+    if (persistedRow) return persistedRow.questionId;
+  }
+
+  return (
+    review.rows.find((row) => row.isAvailable)?.questionId ??
+    review.rows[0]?.questionId ??
+    null
+  );
+}
+
 export type UsePracticeSessionReviewStageInput = {
   sessionId: string;
   isMounted: () => boolean;
@@ -73,6 +106,7 @@ export type UsePracticeSessionReviewStageOutput = {
   summary: EndPracticeSessionOutput | null;
   setSummary: Dispatch<SetStateAction<EndPracticeSessionOutput | null>>;
   postExamSummary: EndPracticeSessionOutput | null;
+  examResultsSubstage: ExamResultsSubstage | null;
   postExamReview: GetCompletedSessionQuestionsWithFeedbackOutput | null;
   postExamReviewLoadState: LoadState;
   postExamReviewCurrentQuestionId: string | null;
@@ -89,6 +123,7 @@ export type UsePracticeSessionReviewStageOutput = {
   onRetryNavigator: () => void;
   onOpenReviewQuestion: (questionId: string) => void;
   onNavigatePostExamReviewQuestion: (questionId: string) => void;
+  onReenterPostExamReview: (questionId?: string) => void;
   onRetryPostExamReview: () => void;
   onViewSummary: () => void;
   onFinalizeReview: () => Promise<void>;
@@ -97,9 +132,13 @@ export type UsePracticeSessionReviewStageOutput = {
 export function usePracticeSessionReviewStage(
   input: UsePracticeSessionReviewStageInput,
 ): UsePracticeSessionReviewStageOutput {
-  const [summary, setSummary] = useState<EndPracticeSessionOutput | null>(null);
+  const [summary, setSummaryState] = useState<EndPracticeSessionOutput | null>(
+    null,
+  );
   const [pendingExamSummary, setPendingExamSummary] =
     useState<EndPracticeSessionOutput | null>(null);
+  const [examResultsSubstage, setExamResultsSubstage] =
+    useState<ExamResultsSubstage | null>(null);
   const [postExamReview, setPostExamReview] =
     useState<GetCompletedSessionQuestionsWithFeedbackOutput | null>(null);
   const [postExamReviewLoadState, setPostExamReviewLoadState] =
@@ -109,9 +148,28 @@ export function usePracticeSessionReviewStage(
   const [postExamReviewCurrentQuestionId, setPostExamReviewCurrentQuestionId] =
     useState<string | null>(null);
   const [navigatorReloadCount, setNavigatorReloadCount] = useState(0);
+  const summaryRef = useRef<EndPracticeSessionOutput | null>(null);
   const latestPostExamReviewRequestIdRef = useRef(0);
   const endSessionIdempotencyKeyRef = useRef(crypto.randomUUID());
   const finalizeExamIdempotencyKeyRef = useRef(crypto.randomUUID());
+  summaryRef.current = summary;
+  const setSummary = useCallback<
+    Dispatch<SetStateAction<EndPracticeSessionOutput | null>>
+  >((nextSummary) => {
+    const resolvedSummary =
+      typeof nextSummary === 'function'
+        ? nextSummary(summaryRef.current)
+        : nextSummary;
+
+    setSummaryState(resolvedSummary);
+
+    if (resolvedSummary?.mode === 'exam') {
+      setExamResultsSubstage('session_summary');
+      return;
+    }
+
+    setExamResultsSubstage(null);
+  }, []);
 
   const endTutorSession = useCallback(
     () =>
@@ -135,6 +193,7 @@ export function usePracticeSessionReviewStage(
       input.resetQuestionState,
       input.sessionId,
       input.setLoadState,
+      setSummary,
     ],
   );
 
@@ -160,6 +219,7 @@ export function usePracticeSessionReviewStage(
       input.resetQuestionState,
       input.sessionId,
       input.setLoadState,
+      setSummary,
     ],
   );
 
@@ -210,14 +270,19 @@ export function usePracticeSessionReviewStage(
   });
 
   const loadPostExamReview = useCallback(
-    async (nextSummary: EndPracticeSessionOutput | null): Promise<void> => {
+    async (
+      nextSummary: EndPracticeSessionOutput | null,
+      options?: {
+        requestedQuestionId?: string | null;
+        persistedQuestionId?: string | null;
+        nextSubstageOnSuccess?: ExamResultsSubstage | null;
+      },
+    ): Promise<void> => {
       if (!nextSummary) return;
 
       latestPostExamReviewRequestIdRef.current += 1;
       const requestId = latestPostExamReviewRequestIdRef.current;
       setPendingExamSummary(nextSummary);
-      setPostExamReview(null);
-      setPostExamReviewCurrentQuestionId(null);
       setPostExamReviewLoadState({ status: 'loading' });
 
       let result: Awaited<
@@ -256,9 +321,15 @@ export function usePracticeSessionReviewStage(
 
       setPostExamReview(result.data);
       setPostExamReviewCurrentQuestionId(
-        result.data.rows[0]?.questionId ?? null,
+        resolvePostExamReviewCurrentQuestionId(result.data, {
+          requestedQuestionId: options?.requestedQuestionId ?? null,
+          persistedQuestionId: options?.persistedQuestionId ?? null,
+        }),
       );
       setPostExamReviewLoadState({ status: 'ready' });
+      if (options?.nextSubstageOnSuccess) {
+        setExamResultsSubstage(options.nextSubstageOnSuccess);
+      }
     },
     [
       input.getCompletedSessionQuestionsWithFeedbackFn,
@@ -326,18 +397,60 @@ export function usePracticeSessionReviewStage(
   }, []);
 
   const onRetryPostExamReview = useCallback(() => {
-    void loadPostExamReview(pendingExamSummary);
-  }, [loadPostExamReview, pendingExamSummary]);
+    void loadPostExamReview(pendingExamSummary ?? summary, {
+      persistedQuestionId: postExamReviewCurrentQuestionId,
+      nextSubstageOnSuccess: 'post_exam_review',
+    });
+  }, [
+    loadPostExamReview,
+    pendingExamSummary,
+    postExamReviewCurrentQuestionId,
+    summary,
+  ]);
 
   const onViewSummary = useCallback(() => {
-    if (!pendingExamSummary) return;
+    const nextSummary = pendingExamSummary ?? summary;
+    if (!nextSummary) return;
 
-    setSummary(pendingExamSummary);
-    setPendingExamSummary(null);
-    setPostExamReview(null);
-    setPostExamReviewCurrentQuestionId(null);
-    setPostExamReviewLoadState({ status: 'idle' });
-  }, [pendingExamSummary]);
+    setPendingExamSummary(nextSummary);
+    setSummary(nextSummary);
+    setExamResultsSubstage('session_summary');
+  }, [pendingExamSummary, setSummary, summary]);
+
+  const onReenterPostExamReview = useCallback(
+    (questionId?: string) => {
+      const nextSummary = pendingExamSummary ?? summary;
+      if (!nextSummary) return;
+
+      if (postExamReview) {
+        setPendingExamSummary(nextSummary);
+        setPostExamReviewCurrentQuestionId(
+          resolvePostExamReviewCurrentQuestionId(postExamReview, {
+            requestedQuestionId: questionId ?? null,
+            persistedQuestionId: postExamReviewCurrentQuestionId,
+          }),
+        );
+        setExamResultsSubstage('post_exam_review');
+        return;
+      }
+
+      if (postExamReviewLoadState.status === 'loading') return;
+
+      void loadPostExamReview(nextSummary, {
+        requestedQuestionId: questionId ?? null,
+        persistedQuestionId: postExamReviewCurrentQuestionId,
+        nextSubstageOnSuccess: 'post_exam_review',
+      });
+    },
+    [
+      loadPostExamReview,
+      pendingExamSummary,
+      postExamReview,
+      postExamReviewCurrentQuestionId,
+      postExamReviewLoadState.status,
+      summary,
+    ],
+  );
 
   const onFinalizeReview = useCallback(async (): Promise<void> => {
     if (input.sessionMode !== 'exam') {
@@ -349,7 +462,10 @@ export function usePracticeSessionReviewStage(
     if (!finalizedSummary) return;
 
     reviewStage.setReview(null);
-    await loadPostExamReview(finalizedSummary);
+    setExamResultsSubstage('post_exam_review');
+    await loadPostExamReview(finalizedSummary, {
+      nextSubstageOnSuccess: 'post_exam_review',
+    });
   }, [
     finalizeExamSessionForPostReview,
     input.isMounted,
@@ -362,6 +478,7 @@ export function usePracticeSessionReviewStage(
     summary,
     setSummary,
     postExamSummary: pendingExamSummary,
+    examResultsSubstage,
     postExamReview,
     postExamReviewLoadState,
     postExamReviewCurrentQuestionId,
@@ -378,6 +495,7 @@ export function usePracticeSessionReviewStage(
     onRetryNavigator,
     onOpenReviewQuestion: reviewStage.onOpenReviewQuestion,
     onNavigatePostExamReviewQuestion,
+    onReenterPostExamReview,
     onRetryPostExamReview,
     onViewSummary,
     onFinalizeReview,

@@ -91,6 +91,20 @@ pnpm db:test:up && DATABASE_URL="postgresql://postgres:postgres@localhost:5434/a
 pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
 ```
 
+If the local authenticated billing E2E environment is available, also run E2E after the build:
+
+That means the full Playwright prereqs documented in `docs/dev/testing-infrastructure.md#environment-variables-for-e2e` are present (typically via `.env.local`): `DATABASE_URL`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `E2E_CLERK_USER_USERNAME`, `E2E_CLERK_USER_PASSWORD`, `STRIPE_SECRET_KEY`, and `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`.
+
+```bash
+# Quick file check when you rely on .env.local:
+rg '^(DATABASE_URL|CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME|E2E_CLERK_USER_PASSWORD|STRIPE_SECRET_KEY|NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY)=' .env.local
+
+lsof -ti:3000 | xargs kill -9 2>/dev/null
+pnpm test:e2e
+```
+
+CI enforces E2E on pushes and same-repo PRs. Skipping it locally when that authenticated billing E2E environment is available risks copy/assertion mismatches that only surface in CI (e.g., stale E2E text after a component copy change).
+
 `pnpm build` catches prerender errors, `'use cache'` violations, and static generation failures that unit tests and typecheck CANNOT detect. Skipping it causes CI failures. See AGENTS.md "Verify EVERY Change Before Pushing" for the full rule.
 
 ### Safety

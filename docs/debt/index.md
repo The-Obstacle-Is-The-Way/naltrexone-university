@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-07
+**Last Updated:** 2026-04-08
 
 ---
 
@@ -23,8 +23,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-350](./debt-350-exam-results-session-continuity.md) | Exam results continuity — keep Session Summary review re-entry inside `/app/practice/[sessionId]` with an explicit results substage, preserved review payload, callback-driven CTA, and summary breakdown callback mode | P2 | — |
 | [DEBT-351](./debt-351-exam-review-submit-affordance-cleanup.md) | Review & Submit affordance cleanup — make available rows whole-card semantic buttons, remove nested `Open question`, and drop default `Not marked` noise | P3 | — |
 | [DEBT-352](./debt-352-post-exam-review-focus-ring-flash.md) | Post-exam review focus-ring flash — remove forced `focusVisible: true` while preserving panel focus transfer and keyboard/screen-reader affordance | P3 | — |
+| [DEBT-353](./debt-353-practice-session-results-orchestrator-decomposition.md) | Practice session results orchestrator decomposition — split DEBT-350 continuity logic out of the 500+ line review-stage hook and large page-view branch tree without changing shipped behavior | P3 | — |
 
-**Next Debt ID:** DEBT-353
+**Next Debt ID:** DEBT-354
 
 ---
 
