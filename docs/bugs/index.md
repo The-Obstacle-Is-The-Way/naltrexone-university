@@ -18,6 +18,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 **Manual report (2026-04-09) — Sentry preview auth triage:**
 
 - BUG-234 filed: authenticated preview app-shell renders can throw Clerk's missing-provider invariant because `AuthNav` reached `UserButton` on the server before the client-owned provider path was live.
+- BUG-234 fix is included in PR #271 and remains active in this register until merge verification archives it.
 
 **Latest archival (2026-04-06):**
 - BUG-232 verified fixed (PR #267): `CreatePortalSessionFn` widened to accept `idempotencyKey`, threaded through core/actions/UI; `IdempotencyKeyField` extracted to `components/idempotency-key-field.tsx` as shared component. Archived to `docs/_archive/bugs/`.
@@ -112,13 +113,13 @@ Bug reports document issues discovered in the codebase along with their root cau
 - BUG-165 and BUG-166 verified fixed (PRs #146, #147), archived to `docs/_archive/bugs/`.
 - BUG-160 through BUG-164 verified fixed, merged (PR #144), and archived to `docs/_archive/bugs/`.
 
-## Open Bugs
+## Active Bugs
 
-Active open bugs are listed below.
+Confirmed bugs that are not yet archived are listed below. Items may still be unfixed or may have a fix on an open branch pending merge verification.
 
 | Bug | Priority | Summary |
 |-----|----------|---------|
-| [BUG-234](./bug-234-auth-nav-user-button-missing-clerk-provider.md) | P3 | Authenticated preview app-shell renders can throw `UserButton can only be used within the <ClerkProvider /> component` because `AuthNav` reached the Clerk surface on the server before the client-owned provider path was live |
+| [BUG-234](./bug-234-auth-nav-user-button-missing-clerk-provider.md) | P3 | Authenticated preview app-shell renders can throw `UserButton can only be used within the <ClerkProvider /> component` because `AuthNav` reached the Clerk surface on the server before the client-owned provider path was live. Fix is in PR #271 pending merge verification. |
 
 ## Audit #18 — Server-Action Idempotency + Stale Start Sweep (2026-04-03)
 
