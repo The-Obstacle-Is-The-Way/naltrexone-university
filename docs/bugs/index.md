@@ -15,12 +15,10 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 **Next Bug ID:** BUG-235
 
-**Manual report (2026-04-09) — Sentry preview auth triage:**
+**Latest archival (2026-04-09):**
+- BUG-234 verified fixed (PR #271): `AuthUserButton` client wrapper isolates Clerk `UserButton` from the server render path; `AuthNav` no longer reaches across the provider boundary. Archived to `docs/_archive/bugs/`.
 
-- BUG-234 filed: authenticated preview app-shell renders can throw Clerk's missing-provider invariant because `AuthNav` reached `UserButton` on the server before the client-owned provider path was live.
-- BUG-234 fix is included in PR #271 and remains active in this register until merge verification archives it.
-
-**Latest archival (2026-04-06):**
+**Previous archival (2026-04-06):**
 - BUG-232 verified fixed (PR #267): `CreatePortalSessionFn` widened to accept `idempotencyKey`, threaded through core/actions/UI; `IdempotencyKeyField` extracted to `components/idempotency-key-field.tsx` as shared component. Archived to `docs/_archive/bugs/`.
 - BUG-231 verified fixed (PR #266): `removeBookmarkAction` now parses `idempotencyKey` from FormData and forwards it to `toggleBookmark`; form includes `<IdempotencyKeyField />`. Archived to `docs/_archive/bugs/`.
 - BUG-233 verified fixed (PR #265): `startSession(...)` now uses `startSessionIdempotencyKeyRef` to drop stale responses after config changes; config controls disabled during loading. Archived to `docs/_archive/bugs/`.
@@ -119,7 +117,7 @@ Confirmed bugs that are not yet archived are listed below. Items may still be un
 
 | Bug | Priority | Summary |
 |-----|----------|---------|
-| [BUG-234](./bug-234-auth-nav-user-button-missing-clerk-provider.md) | P3 | Authenticated preview app-shell renders can throw `UserButton can only be used within the <ClerkProvider /> component` because `AuthNav` reached the Clerk surface on the server before the client-owned provider path was live. Fix is in PR #271 pending merge verification. |
+| — | — | No active bugs. |
 
 ## Audit #18 — Server-Action Idempotency + Stale Start Sweep (2026-04-03)
 

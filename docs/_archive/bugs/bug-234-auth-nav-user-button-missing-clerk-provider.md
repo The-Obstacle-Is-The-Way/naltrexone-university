@@ -1,6 +1,6 @@
 # BUG-234: AuthNav Can Render Clerk UserButton Without an Active ClerkProvider
 
-## Status: Actionable
+## Status: Resolved (PR #271, merged 2026-04-09)
 
 ## Severity: Low
 
