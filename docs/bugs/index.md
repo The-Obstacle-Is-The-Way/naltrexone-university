@@ -118,7 +118,7 @@ Active open bugs are listed below.
 
 | Bug | Priority | Summary |
 |-----|----------|---------|
-| [BUG-234](./bug-234-auth-nav-user-button-missing-clerk-provider.md) | P4 | Authenticated preview app-shell renders can throw `UserButton can only be used within the <ClerkProvider /> component` because `AuthNav` reached the Clerk surface on the server before the client-owned provider path was live |
+| [BUG-234](./bug-234-auth-nav-user-button-missing-clerk-provider.md) | P3 | Authenticated preview app-shell renders can throw `UserButton can only be used within the <ClerkProvider /> component` because `AuthNav` reached the Clerk surface on the server before the client-owned provider path was live |
 | [BUG-232](./bug-232-manage-billing-actions-drop-portal-idempotency.md) | P4 | Manage Billing UI server actions still discard portal-session idempotency keys, so duplicate submits create fresh Stripe portal sessions |
 | ~~BUG-233~~ | P3 | ~~Practice session start commits stale response after config changes~~ — **Resolved 2026-04-04 (PR #265).** `startSession(...)` now uses `startSessionIdempotencyKeyRef` to drop stale responses; config controls disabled during loading. [Archived](../_archive/bugs/bug-233-practice-session-start-stale-response-after-config-change.md). |
 | ~~BUG-231~~ | P4 | ~~Bookmarks remove form action bypasses idempotency~~ — **Resolved 2026-04-06 (PR #266).** `removeBookmarkAction` now forwards `idempotencyKey` from `<IdempotencyKeyField />`. [Archived](../_archive/bugs/bug-231-remove-bookmark-action-missing-idempotency.md). |
