@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-08
+**Last Updated:** 2026-04-09
 
 ---
 
@@ -21,13 +21,11 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
 | [DEBT-352](./debt-352-post-exam-review-focus-ring-flash.md) | Post-exam review focus-ring flash — remove forced `focusVisible: true` while preserving panel focus transfer and keyboard/screen-reader affordance | P3 | — |
-| [DEBT-353](./debt-353-practice-session-results-orchestrator-decomposition.md) | Practice session results orchestrator decomposition — split DEBT-350 continuity logic out of the 500+ line review-stage hook and large page-view branch tree without changing shipped behavior | P3 | — |
 | [DEBT-354](./debt-354-god-file-and-clean-code-audit.md) | God-file and clean-code audit — app-layer debt is concentrated in the question/practice surface; domain/application boundaries remain clean; follow-up tickets opened for coupling, duplication, and test-discipline drift | P2 | — |
 | [DEBT-355](./debt-355-cross-feature-question-flow-coupling.md) | Cross-feature question-flow coupling — standalone question review imports practice-feature internals for generic flow logic; move shared orchestration to a neutral boundary | P2 | — |
 | [DEBT-356](./debt-356-duplicate-question-surface-renderers.md) | Duplicate question-surface renderers — `QuestionView` and `PracticeView` now duplicate too much question-card/feedback/action-shell composition and should share a thinner common surface layer | P3 | — |
 | [DEBT-357](./debt-357-test-double-discipline-drift.md) | Test double discipline drift — some render/adapter tests have slid back to ad hoc inline doubles despite existing repo-standard fakes and fake use-case helpers | P3 | — |
-
-**Next Debt ID:** DEBT-358
+**Next Debt ID:** DEBT-359
 
 ---
 
@@ -35,6 +33,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-358](../_archive/debt/debt-358-exam-review-question-navigation-stranded.md) | Exam review question navigation stranded — clicking a question from Review & Submit disables the navigator because `isInReviewStage` stays `true`, stranding the student on one question | P2 | 2026-04-09 | [PR #270](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/270) |
+| [DEBT-353](../_archive/debt/debt-353-practice-session-results-orchestrator-decomposition.md) | Practice session results orchestrator decomposition — split DEBT-350 continuity logic out of the 500+ line review-stage hook and large page-view branch tree without changing shipped behavior | P3 | 2026-04-09 | [PR #270](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/270) |
 | [DEBT-350](../_archive/debt/debt-350-exam-results-session-continuity.md) | Exam results continuity — keep Session Summary review re-entry inside `/app/practice/[sessionId]` with an explicit results substage, preserved review payload, callback-driven CTA, and summary breakdown callback mode | P2 | 2026-04-08 | [PR #269](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/269) |
 | [DEBT-351](../_archive/debt/debt-351-exam-review-submit-affordance-cleanup.md) | Review & Submit affordance cleanup — make available rows whole-card semantic buttons, remove nested `Open question`, and drop default `Not marked` noise | P3 | 2026-04-07 | [PR #268](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/268) |
 | [DEBT-348](../_archive/debt/debt-348-cache-components-public-marketing-shell.md) | Cache Components for public marketing shell — enabled `cacheComponents`, split static marketing shell from dynamic auth/entitlement islands behind Suspense with neutral skeleton fallbacks | P3 | 2026-04-04 | [PR #264](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/264) |

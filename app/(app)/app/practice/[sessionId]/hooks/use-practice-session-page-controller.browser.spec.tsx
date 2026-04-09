@@ -35,6 +35,7 @@ let PracticeSessionPageControllerNavigationProbe: typeof import('./practice-sess
 let PracticeSessionPageControllerReviewProbe: typeof import('./practice-session-page-controller.browser.probes').PracticeSessionPageControllerReviewProbe;
 let PracticeSessionPageControllerSummaryProbe: typeof import('./practice-session-page-controller.browser.probes').PracticeSessionPageControllerSummaryProbe;
 let PracticeSessionPageControllerSubmitDuringReviewProbe: typeof import('./practice-session-page-controller.browser.probes').PracticeSessionPageControllerSubmitDuringReviewProbe;
+let PracticeSessionPageControllerViewProbe: typeof import('./practice-session-page-controller.browser.probes').PracticeSessionPageControllerViewProbe;
 
 const {
   getNextQuestionMock,
@@ -70,6 +71,8 @@ beforeAll(async () => {
     probes.PracticeSessionPageControllerSummaryProbe;
   PracticeSessionPageControllerSubmitDuringReviewProbe =
     probes.PracticeSessionPageControllerSubmitDuringReviewProbe;
+  PracticeSessionPageControllerViewProbe =
+    probes.PracticeSessionPageControllerViewProbe;
 });
 
 const EMPTY_BOOKMARKS_RESULT = ok({ rows: [] });
@@ -92,6 +95,116 @@ function mockBookmarksAndReview(
 ) {
   getBookmarksMock.mockResolvedValue(EMPTY_BOOKMARKS_RESULT);
   getPracticeSessionReviewMock.mockResolvedValue(ok(review));
+}
+
+function mockExamReviewNavigationSession() {
+  getPracticeSessionSummaryMock.mockResolvedValue(
+    errorResult('CONFLICT', 'Practice session has not ended'),
+  );
+  mockBookmarksAndReview(
+    createReviewResponse({
+      mode: 'exam',
+      totalCount: 3,
+      answeredCount: 3,
+      markedCount: 0,
+      rows: [
+        createReviewRow({
+          questionId: 'question-1',
+          order: 1,
+          isAnswered: true,
+        }),
+        createReviewRow({
+          questionId: 'question-2',
+          order: 2,
+          isAnswered: true,
+        }),
+        createReviewRow({
+          questionId: 'question-3',
+          order: 3,
+          isAnswered: true,
+        }),
+      ],
+    }),
+  );
+  getNextQuestionMock.mockImplementation(async (input) => {
+    if (
+      typeof input === 'object' &&
+      input &&
+      'questionId' in input &&
+      typeof input.questionId === 'string'
+    ) {
+      const questionId = input.questionId;
+      const questionIndex =
+        questionId === 'question-1'
+          ? 0
+          : questionId === 'question-2'
+            ? 1
+            : questionId === 'question-3'
+              ? 2
+              : null;
+
+      if (questionIndex === null) {
+        throw new Error(`Unexpected questionId: ${questionId}`);
+      }
+
+      return ok(
+        createQuestionResponse({
+          questionId,
+          stemMd: `Stem ${questionId}`,
+          choices: [CHOICE_1, CHOICE_2, CHOICE_3],
+          session: {
+            mode: 'exam',
+            index: questionIndex,
+            total: 3,
+            isMarkedForReview: false,
+          },
+        }),
+      );
+    }
+
+    if (
+      typeof input === 'object' &&
+      input &&
+      'fromIndex' in input &&
+      typeof input.fromIndex === 'number'
+    ) {
+      return ok(null);
+    }
+
+    return ok(
+      createQuestionResponse({
+        questionId: 'question-3',
+        stemMd: 'Stem question-3',
+        choices: [CHOICE_1, CHOICE_2, CHOICE_3],
+        session: {
+          mode: 'exam',
+          index: 2,
+          total: 3,
+          isMarkedForReview: false,
+        },
+      }),
+    );
+  });
+}
+
+async function openExamReviewQuestion(
+  screen: Awaited<ReturnType<typeof render>>,
+) {
+  await expect
+    .element(screen.getByTestId('question-id'))
+    .toHaveTextContent('question-3');
+  await screen.getByRole('button', { name: 'Finish exam' }).click();
+  await expect
+    .element(screen.getByRole('heading', { name: 'Review & Submit' }))
+    .toBeVisible();
+  await screen
+    .getByRole('button', {
+      name: /Open question 2\..*Question 2.*Answered/i,
+    })
+    .click();
+  await expect
+    .element(screen.getByTestId('question-id'))
+    .toHaveTextContent('question-2');
 }
 
 function errorResult(
@@ -479,6 +592,70 @@ describe('usePracticeSessionPageController (browser)', () => {
     await expect
       .element(screen.getByTestId('summary-session-id'))
       .toHaveTextContent('session-1');
+  });
+
+  it('restores the navigator when opening an exam question from Review & Submit', async () => {
+    mockExamReviewNavigationSession();
+
+    const screen = await render(<PracticeSessionPageControllerViewProbe />);
+
+    await openExamReviewQuestion(screen);
+
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('question');
+    await expect
+      .element(screen.getByTestId('navigator-load-status'))
+      .toHaveTextContent('ready');
+    await expect
+      .element(screen.getByTestId('navigator-question-count'))
+      .toHaveTextContent('3');
+    await expect.element(screen.getByText('Question navigator')).toBeVisible();
+    await expect
+      .element(screen.getByRole('button', { name: 'Previous' }))
+      .toBeEnabled();
+    await expect
+      .element(screen.getByRole('button', { name: 'Next' }))
+      .toBeEnabled();
+  });
+
+  it('navigates to adjacent exam questions after returning from Review & Submit', async () => {
+    mockExamReviewNavigationSession();
+
+    const screen = await render(<PracticeSessionPageControllerViewProbe />);
+
+    await openExamReviewQuestion(screen);
+
+    await screen.getByRole('button', { name: 'Previous' }).click();
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent('question-1');
+
+    await screen.getByRole('button', { name: 'Next' }).click();
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent('question-2');
+  });
+
+  it('returns to Review & Submit after navigating back out of a reopened exam question', async () => {
+    mockExamReviewNavigationSession();
+
+    const screen = await render(<PracticeSessionPageControllerViewProbe />);
+
+    await openExamReviewQuestion(screen);
+
+    await screen.getByRole('button', { name: 'Next' }).click();
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent('question-3');
+
+    await screen.getByRole('button', { name: 'Finish exam' }).click();
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('review');
+    await expect
+      .element(screen.getByRole('heading', { name: 'Review & Submit' }))
+      .toBeVisible();
   });
 
   it('recovers a summary when ending an active tutor session returns CONFLICT', async () => {
@@ -1323,50 +1500,29 @@ describe('usePracticeSessionPageController (browser)', () => {
       isAnswered: true,
       isCorrect: true,
     });
-    getPracticeSessionReviewMock
-      .mockResolvedValueOnce(
-        ok(
-          createReviewResponse({
-            mode: 'exam',
-            totalCount: 1,
-            answeredCount: 0,
-            markedCount: 0,
-            rows: [unansweredRow],
-          }),
-        ),
-      )
-      .mockResolvedValueOnce(
-        ok(
-          createReviewResponse({
-            mode: 'exam',
-            totalCount: 1,
-            answeredCount: 0,
-            markedCount: 0,
-            rows: [unansweredRow],
-          }),
-        ),
-      )
-      .mockResolvedValueOnce(
-        ok(
-          createReviewResponse({
-            mode: 'exam',
-            totalCount: 1,
-            answeredCount: 1,
-            markedCount: 0,
-            rows: [answeredRow],
-          }),
-        ),
-      );
-    submitAnswerMock.mockResolvedValue(
-      ok({
+    let hasAnsweredReviewQuestion = false;
+    getPracticeSessionReviewMock.mockImplementation(async () =>
+      ok(
+        createReviewResponse({
+          mode: 'exam',
+          totalCount: 1,
+          answeredCount: hasAnsweredReviewQuestion ? 1 : 0,
+          markedCount: 0,
+          rows: [hasAnsweredReviewQuestion ? answeredRow : unansweredRow],
+        }),
+      ),
+    );
+    submitAnswerMock.mockImplementation(async () => {
+      hasAnsweredReviewQuestion = true;
+      return ok({
         attemptId: 'attempt-1',
         isCorrect: true,
         correctChoiceId: null,
         explanationMd: null,
         referenceMd: null,
         choiceExplanations: [],
-      }),
-    );
+      });
+    });
 
     const screen = await render(<PracticeSessionPageControllerReviewProbe />);
 

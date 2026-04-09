@@ -53,6 +53,7 @@ function createTempRepo(): {
     [
       '#!/bin/sh',
       'set -eu',
+      /* biome-ignore lint/suspicious/noTemplateCurlyInString: Hermetic shell fixture intentionally uses POSIX parameter expansion. */
       'printf "pnpm:%s|DATABASE_URL=%s\\n" "$*" "${DATABASE_URL-}" >> "$LOG_FILE"',
       'exit 0',
       '',
@@ -73,6 +74,7 @@ function createTempRepo(): {
       'environment=""',
       'for arg in "$@"; do',
       '  case "$arg" in',
+      /* biome-ignore lint/suspicious/noTemplateCurlyInString: Hermetic shell fixture intentionally uses POSIX parameter expansion. */
       '    --environment=*) environment="${arg#--environment=}" ;;',
       '  esac',
       'done',
@@ -86,6 +88,7 @@ function createTempRepo(): {
       '    app_url="https://preview.example.vercel.app"',
       '    ;;',
       '  production)',
+      /* biome-ignore lint/suspicious/noTemplateCurlyInString: Hermetic shell fixture intentionally uses POSIX parameter expansion. */
       '    db_url="${FAKE_PRODUCTION_DATABASE_URL:-postgresql://prod-user:pw@prod-host/proddb}"',
       '    app_url="https://addictionboards.com"',
       '    ;;',
