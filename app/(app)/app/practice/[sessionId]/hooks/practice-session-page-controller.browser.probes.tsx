@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { PracticeSessionPageView } from '../components/practice-session-page-view';
 import { usePracticeSessionPageController } from './use-practice-session-page-controller';
 
 type HookStateValue = string | number | boolean | null | undefined;
@@ -321,6 +322,28 @@ export function PracticeSessionPageControllerSummaryProbe() {
           onClick: () => output.onTryAgain(),
         },
       ])}
+    </>
+  );
+}
+
+export function PracticeSessionPageControllerViewProbe() {
+  const output = usePracticeSessionPageController('session-1');
+
+  return (
+    <>
+      {renderHookState([
+        { testId: 'active-view', value: getActiveView(output) },
+        { testId: 'question-id', value: output.question?.questionId },
+        {
+          testId: 'navigator-load-status',
+          value: output.navigatorLoadState?.status ?? '',
+        },
+        {
+          testId: 'navigator-question-count',
+          value: output.navigator?.rows.length ?? null,
+        },
+      ])}
+      <PracticeSessionPageView {...output} />
     </>
   );
 }

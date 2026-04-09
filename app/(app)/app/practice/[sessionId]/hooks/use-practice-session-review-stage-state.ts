@@ -138,7 +138,7 @@ export function usePracticeSessionReviewStageState(
     (questionId: string): void => {
       setReview(null);
       setReviewLoadState({ status: 'idle' });
-      setIsInReviewStage(true);
+      setIsInReviewStage(false);
       input.loadSpecificQuestion(questionId);
     },
     [input.loadSpecificQuestion],

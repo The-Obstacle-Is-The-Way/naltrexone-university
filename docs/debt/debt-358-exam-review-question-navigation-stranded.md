@@ -50,7 +50,7 @@ if (input.summary || input.isInReviewStage || !input.sessionInfo) {
 }
 ```
 
-With the navigator set to `null`, `findAdjacentAvailableQuestionId` returns `null` for both directions. The "Next" button falls through to `onNextQuestion()` which asks the server for the sequentially next question — but since all exam questions are already answered, the server returns `null`, producing "No more questions found."
+With the navigator set to `null`, [`findAdjacentAvailableQuestionId`](../../app/(app)/app/practice/[sessionId]/components/practice-session-question-navigation.ts) returns `null` for both directions. `PracticeSessionPageView` then falls back to `onNextQuestion()` which asks the server for the sequentially next question — but since all exam questions are already answered, the server returns `null`, producing "No more questions found."
 
 ### Why the "Previous" button does nothing
 
@@ -60,11 +60,25 @@ With the navigator set to `null`, `findAdjacentAvailableQuestionId` returns `nul
 
 `setIsInReviewStage(true)` without a corresponding reset has been present since the original FE-002 hook extraction (commit `c7745686`). DEBT-350 and DEBT-353 did not introduce or change this behavior.
 
+## Audit Notes
+
+- `setIsInReviewStage` is only mutated inside `usePracticeSessionReviewStageState`. The full state machine is:
+  - initial state: `false`
+  - exam review load success: `true`
+  - non-exam review load success: `false`
+  - open a review question: currently `true` (this is the bug)
+  - finalize review: `false`
+- `onNavigateQuestion` in [`use-practice-session-question-flow.ts`](../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts) does call `saveCurrentExamDraft()` before loading the requested question, but when invoked from Review & Submit there is no active question, so `saveCurrentExamDraft()` returns `true` immediately. The navigation request is not being blocked by draft-save failure.
+- Resetting `isInReviewStage` to `false` when leaving Review & Submit should not break the "Finish exam" path. `onEndSession` still routes exam-mode questions back through review because it checks `sessionMode === 'exam'` independently of `isInReviewStage`.
+- DEBT-350 post-exam review continuity is not coupled to this flag. That flow is controlled by `examResultsSubstage`, `postExamReview`, and related post-exam state.
+
 ## Current Code References
 
 - [`use-practice-session-review-stage-state.ts:137-145`](../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage-state.ts) — `onOpenReviewQuestion` sets `isInReviewStage = true` without reset
 - [`practice-session-page-logic.ts:247-265`](../../app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts) — `createNavigatorEffect` disables navigator when `isInReviewStage` is true
-- [`practice-session-page-view.tsx:72-92`](../../app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx) — `findAdjacentAvailableQuestionId` returns null when navigator is null; Next button falls through to sequential load
+- [`practice-session-question-navigation.ts:4-24`](../../app/(app)/app/practice/[sessionId]/components/practice-session-question-navigation.ts) — `findAdjacentAvailableQuestionId` returns null when navigator is null
+- [`practice-session-page-view.tsx:73-89`](../../app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx) — the resolved Next action falls through to sequential load when no adjacent navigator target exists
+- [`use-practice-session-question-flow.ts:252-269`](../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts) — `onNavigateQuestion` saves the current exam draft before loading the requested question, but that save short-circuits to `true` when no active exam question exists
 - [`practice-view.tsx:406-408`](../../app/(app)/app/practice/components/practice-view.tsx) — "No more questions found" rendered when `question === null`
 
 ## Likely Fix Direction

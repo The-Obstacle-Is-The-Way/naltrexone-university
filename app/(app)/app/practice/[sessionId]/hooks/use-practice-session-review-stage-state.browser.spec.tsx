@@ -235,7 +235,7 @@ describe('usePracticeSessionReviewStageState (browser)', () => {
     });
   });
 
-  it('opens a specific review question', async () => {
+  it('opens a specific review question and exits review stage', async () => {
     const input = createInput('exam');
     const harness = await renderHook(() =>
       usePracticeSessionReviewStageState(input),
@@ -243,7 +243,7 @@ describe('usePracticeSessionReviewStageState (browser)', () => {
 
     harness.result.current.onOpenReviewQuestion('q1');
 
-    await expect.poll(() => harness.result.current.isInReviewStage).toBe(true);
+    await expect.poll(() => harness.result.current.isInReviewStage).toBe(false);
     expect(vi.mocked(input.loadSpecificQuestion)).toHaveBeenCalledWith('q1');
   });
 
