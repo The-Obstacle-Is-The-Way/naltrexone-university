@@ -13,15 +13,14 @@ import type { NextQuestion } from '@/src/application/use-cases/get-next-question
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import type { LoadState } from '../../practice-page-logic';
-import type { ExamResultsSubstage } from '../hooks/use-practice-session-review-stage';
 import { ExamReviewView, QuestionNavigator } from './exam-review-view';
-import { PostExamReviewView } from './post-exam-review-view';
+import { renderPracticeSessionExamResults } from './practice-session-exam-results-renderer';
+import { findAdjacentAvailableQuestionId } from './practice-session-question-navigation';
 import { SessionSummaryView } from './session-summary-view';
-
 export type PracticeSessionPageViewProps = {
   summary: EndPracticeSessionOutput | null;
   postExamSummary?: EndPracticeSessionOutput | null;
-  examResultsSubstage?: ExamResultsSubstage | null;
+  examResultsSubstage?: 'post_exam_review' | 'session_summary' | null;
   postExamReview?: GetCompletedSessionQuestionsWithFeedbackOutput | null;
   postExamReviewLoadState?: LoadState;
   postExamReviewCurrentQuestionId?: string | null;
@@ -65,163 +64,60 @@ export type PracticeSessionPageViewProps = {
 
 export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
   const review = props.review ?? null;
-  const postExamSummary = props.postExamSummary ?? null;
-  const examResultsSubstage = props.examResultsSubstage ?? null;
-  const shouldRenderExamSummary =
-    props.summary?.mode === 'exam' &&
-    examResultsSubstage !== 'post_exam_review';
-  const postExamReview = props.postExamReview ?? null;
-  const postExamReviewLoadState = props.postExamReviewLoadState ?? {
-    status: 'idle',
-  };
   const reviewLoadState = props.reviewLoadState ?? { status: 'idle' };
-  const summaryReview = props.summaryReview ?? null;
-  const summaryReviewLoadState = props.summaryReviewLoadState ?? {
-    status: 'idle',
-  };
   const navigator = props.navigator ?? null;
   const navigatorLoadState = props.navigatorLoadState ?? { status: 'idle' };
   const currentQuestionId = props.question?.questionId ?? null;
   const questionPanelId = useId();
-  const onNavigateQuestion = props.onNavigateQuestion;
-
-  const previousQuestionId = useMemo(() => {
-    if (!navigator || !currentQuestionId) return null;
-    const currentIdx = navigator.rows.findIndex(
-      (r) => r.questionId === currentQuestionId,
-    );
-    if (currentIdx <= 0) return null;
-
-    for (let i = currentIdx - 1; i >= 0; i -= 1) {
-      const row = navigator.rows[i];
-      if (!row) continue;
-      if (!row.isAvailable) continue;
-      return row.questionId;
-    }
-
-    return null;
-  }, [navigator, currentQuestionId]);
-
-  const nextQuestionId = useMemo(() => {
-    if (!navigator || !currentQuestionId) return null;
-    const currentIdx = navigator.rows.findIndex(
-      (r) => r.questionId === currentQuestionId,
-    );
-    if (currentIdx < 0 || currentIdx >= navigator.rows.length - 1) return null;
-
-    for (let i = currentIdx + 1; i < navigator.rows.length; i += 1) {
-      const row = navigator.rows[i];
-      if (!row) continue;
-      if (!row.isAvailable) continue;
-      return row.questionId;
-    }
-
-    return null;
-  }, [navigator, currentQuestionId]);
-
+  const previousQuestionId = useMemo(
+    () => findAdjacentAvailableQuestionId(navigator, currentQuestionId, -1),
+    [currentQuestionId, navigator],
+  );
+  const nextQuestionId = useMemo(
+    () => findAdjacentAvailableQuestionId(navigator, currentQuestionId, 1),
+    [currentQuestionId, navigator],
+  );
   const onPreviousQuestion = useCallback(() => {
-    if (previousQuestionId && onNavigateQuestion) {
-      onNavigateQuestion(previousQuestionId);
+    if (previousQuestionId && props.onNavigateQuestion) {
+      props.onNavigateQuestion(previousQuestionId);
     }
-  }, [previousQuestionId, onNavigateQuestion]);
+  }, [previousQuestionId, props.onNavigateQuestion]);
 
   const onNextQuestionResolved = useCallback(() => {
-    if (nextQuestionId && onNavigateQuestion) {
-      onNavigateQuestion(nextQuestionId);
+    if (nextQuestionId && props.onNavigateQuestion) {
+      props.onNavigateQuestion(nextQuestionId);
       return;
     }
-
     props.onNextQuestion();
-  }, [nextQuestionId, onNavigateQuestion, props.onNextQuestion]);
-
-  if (shouldRenderExamSummary && props.summary) {
-    return (
-      <SessionSummaryView
-        summary={props.summary}
-        review={summaryReview}
-        reviewLoadState={summaryReviewLoadState}
-        onReviewAnswers={
-          props.onReenterPostExamReview
-            ? () => props.onReenterPostExamReview?.()
-            : undefined
-        }
-        onOpenReviewQuestion={props.onReenterPostExamReview}
-        isReviewLoading={postExamReviewLoadState.status === 'loading'}
-        reviewEntryErrorMessage={
-          postExamReviewLoadState.status === 'error'
-            ? postExamReviewLoadState.message
-            : null
-        }
-      />
-    );
-  }
-
-  if (examResultsSubstage === 'post_exam_review') {
-    if (postExamReviewLoadState.status === 'loading' && postExamSummary) {
-      return (
-        <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
-          <output aria-live="polite">Loading review...</output>
-        </Card>
-      );
-    }
-
-    if (postExamReviewLoadState.status === 'error' && postExamSummary) {
-      return (
-        <div className="space-y-4">
-          <ErrorCard>{postExamReviewLoadState.message}</ErrorCard>
-          <div className="flex flex-wrap gap-3">
-            {props.onRetryPostExamReview ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={props.onRetryPostExamReview}
-              >
-                Retry review
-              </Button>
-            ) : null}
-            {props.onViewSummary ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={props.onViewSummary}
-              >
-                View Summary
-              </Button>
-            ) : null}
-          </div>
-        </div>
-      );
-    }
-
-    if (postExamSummary && postExamReview) {
-      return (
-        <PostExamReviewView
-          summary={postExamSummary}
-          review={postExamReview}
-          currentQuestionId={props.postExamReviewCurrentQuestionId ?? null}
-          controlledPanelId={questionPanelId}
-          bookmarkStatus={props.bookmarkStatus}
-          isBookmarked={props.isBookmarked}
-          onToggleBookmark={props.onToggleBookmark}
-          onNavigateQuestion={
-            props.onNavigatePostExamReviewQuestion ?? (() => undefined)
-          }
-          onViewSummary={props.onViewSummary ?? (() => undefined)}
-        />
-      );
-    }
-  }
-
+  }, [nextQuestionId, props.onNavigateQuestion, props.onNextQuestion]);
+  const examResults = renderPracticeSessionExamResults({
+    summary: props.summary,
+    postExamSummary: props.postExamSummary,
+    examResultsSubstage: props.examResultsSubstage,
+    postExamReview: props.postExamReview,
+    postExamReviewLoadState: props.postExamReviewLoadState,
+    postExamReviewCurrentQuestionId: props.postExamReviewCurrentQuestionId,
+    summaryReview: props.summaryReview,
+    summaryReviewLoadState: props.summaryReviewLoadState,
+    questionPanelId,
+    bookmarkStatus: props.bookmarkStatus,
+    isBookmarked: props.isBookmarked,
+    onToggleBookmark: props.onToggleBookmark,
+    onRetryPostExamReview: props.onRetryPostExamReview,
+    onNavigatePostExamReviewQuestion: props.onNavigatePostExamReviewQuestion,
+    onReenterPostExamReview: props.onReenterPostExamReview,
+    onViewSummary: props.onViewSummary,
+  });
+  if (examResults) return examResults;
   if (props.summary && props.summary.mode !== 'exam') {
     return (
       <SessionSummaryView
         summary={props.summary}
-        review={summaryReview}
-        reviewLoadState={summaryReviewLoadState}
+        review={props.summaryReview ?? null}
+        reviewLoadState={props.summaryReviewLoadState ?? { status: 'idle' }}
       />
     );
   }
-
   if (reviewLoadState.status === 'loading' && !review) {
     return (
       <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
@@ -229,7 +125,6 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       </Card>
     );
   }
-
   if (reviewLoadState.status === 'error' && !review) {
     return (
       <div className="space-y-4">
@@ -259,14 +154,12 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       </div>
     );
   }
-
   if (review) {
     const onFinalizeReview =
       props.onFinalizeReview ??
       (async () => {
         props.onEndSession();
       });
-
     return (
       <ExamReviewView
         review={review}
@@ -276,18 +169,15 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       />
     );
   }
-
   const mode = props.sessionInfo?.mode ?? 'tutor';
   const title = mode === 'exam' ? 'Exam Session' : 'Tutor Session';
-  const progress = props.sessionInfo
-    ? `Question ${props.sessionInfo.index + 1} of ${props.sessionInfo.total}`
-    : null;
   const modeHint =
     mode === 'exam'
       ? 'Explanations shown after you submit the exam.'
       : 'Explanations shown after each answer.';
-  const description = progress ? `${progress} — ${modeHint}` : modeHint;
-
+  const description = props.sessionInfo
+    ? `Question ${props.sessionInfo.index + 1} of ${props.sessionInfo.total} — ${modeHint}`
+    : modeHint;
   return (
     <PracticeView
       title={title}
@@ -297,7 +187,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
         navigator && props.onNavigateQuestion ? (
           <QuestionNavigator
             review={navigator}
-            currentQuestionId={props.question?.questionId ?? null}
+            currentQuestionId={currentQuestionId}
             controlledPanelId={questionPanelId}
             onNavigateQuestion={props.onNavigateQuestion}
           />
