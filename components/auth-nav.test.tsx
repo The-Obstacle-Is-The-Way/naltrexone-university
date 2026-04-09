@@ -183,8 +183,8 @@ describe('AuthNav', () => {
 
   it('scenario 3: authenticated entitled app pages do not duplicate the Dashboard link', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
-    vi.doMock('@clerk/nextjs', () => ({
-      UserButton: () => <div data-testid="user-button" />,
+    vi.doMock('./auth-user-button', () => ({
+      AuthUserButton: () => <div data-testid="user-button" />,
     }));
 
     const { AuthNav } = await import('./auth-nav');
@@ -219,8 +219,8 @@ describe('AuthNav', () => {
 
   it('scenario 4: authenticated entitled marketing pages keep a single Dashboard escape hatch', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
-    vi.doMock('@clerk/nextjs', () => ({
-      UserButton: () => <div data-testid="user-button" />,
+    vi.doMock('./auth-user-button', () => ({
+      AuthUserButton: () => <div data-testid="user-button" />,
     }));
 
     const { AuthNav } = await import('./auth-nav');
@@ -255,7 +255,7 @@ describe('AuthNav', () => {
 
   it('passes 44px minimum trigger sizing to Clerk UserButton appearance', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
-    const userButtonMock = vi.fn(
+    const authUserButtonMock = vi.fn(
       (props: {
         appearance?: {
           elements?: {
@@ -271,8 +271,8 @@ describe('AuthNav', () => {
         />
       ),
     );
-    vi.doMock('@clerk/nextjs', () => ({
-      UserButton: userButtonMock,
+    vi.doMock('./auth-user-button', () => ({
+      AuthUserButton: authUserButtonMock,
     }));
 
     const { AuthNav } = await import('./auth-nav');
@@ -300,8 +300,8 @@ describe('AuthNav', () => {
 
   it('scenario 5: authenticated non-entitled marketing pages do not duplicate the Pricing link', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
-    vi.doMock('@clerk/nextjs', () => ({
-      UserButton: () => <div data-testid="user-button" />,
+    vi.doMock('./auth-user-button', () => ({
+      AuthUserButton: () => <div data-testid="user-button" />,
     }));
 
     const { AuthNav } = await import('./auth-nav');
@@ -336,8 +336,8 @@ describe('AuthNav', () => {
 
   it('scenario 6: authenticated non-entitled pricing page does not duplicate the Pricing link', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
-    vi.doMock('@clerk/nextjs', () => ({
-      UserButton: () => <div data-testid="user-button" />,
+    vi.doMock('./auth-user-button', () => ({
+      AuthUserButton: () => <div data-testid="user-button" />,
     }));
 
     const { AuthNav } = await import('./auth-nav');

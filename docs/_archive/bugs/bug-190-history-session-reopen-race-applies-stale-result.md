@@ -26,9 +26,9 @@ Expected behavior:
 ## Root Cause
 
 Tracer-bullet path:
-1. Hook stores stale token as `latestReviewSessionId` in [use-history-sessions.ts](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/history/hooks/use-history-sessions.ts:34).
-2. Reopen assigns the same token value (`sessionId`) in [use-history-sessions.ts](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/history/hooks/use-history-sessions.ts:49).
-3. Both old and new requests for the same session pass the equality check in [use-history-sessions.ts](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/history/hooks/use-history-sessions.ts:62) and [use-history-sessions.ts](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/history/hooks/use-history-sessions.ts:70).
+1. Hook stores stale token as `latestReviewSessionId` in [use-history-sessions.ts](../../../app/(app)/app/history/hooks/use-history-sessions.ts#L34).
+2. Reopen assigns the same token value (`sessionId`) in [use-history-sessions.ts](../../../app/(app)/app/history/hooks/use-history-sessions.ts#L49).
+3. Both old and new requests for the same session pass the equality check in [use-history-sessions.ts](../../../app/(app)/app/history/hooks/use-history-sessions.ts#L62) and [use-history-sessions.ts](../../../app/(app)/app/history/hooks/use-history-sessions.ts#L70).
 4. Because the token is not per-request, stale same-session responses are not reliably discarded.
 
 ## Fix

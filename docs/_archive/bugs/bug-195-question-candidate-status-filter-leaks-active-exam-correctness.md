@@ -26,8 +26,8 @@ Expected behavior:
 ## Root Cause
 
 Tracer-bullet path:
-1. `latestAttemptRowsSubquery` at [drizzle-question-repository.ts:176-190](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-question-repository.ts:176) selects from `attempts` with only a `userId` filter — no join on `practiceSessions`, no active-exam exclusion.
-2. `buildStatusCondition('incorrect', ...)` at [drizzle-question-repository.ts:209-222](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-question-repository.ts:209) uses the vulnerable subquery to filter for `isCorrect = false`.
+1. `latestAttemptRowsSubquery` at [drizzle-question-repository.ts:176-190](../../../src/adapters/repositories/drizzle-question-repository.ts#L176) selects from `attempts` with only a `userId` filter — no join on `practiceSessions`, no active-exam exclusion.
+2. `buildStatusCondition('incorrect', ...)` at [drizzle-question-repository.ts:209-222](../../../src/adapters/repositories/drizzle-question-repository.ts#L209) uses the vulnerable subquery to filter for `isCorrect = false`.
 3. Reachable from `countPublishedCandidateIds` (line 158) via `CountAvailableQuestionsUseCase`, from `listPublishedCandidateIds` (line 136) via `StartPracticeSessionUseCase` and `GetNextQuestionUseCase.executeForFilters`.
 
 Contrast with `listRecentByUserId` in `drizzle-attempt-repository.ts:364` which correctly applies the 3-way active-exam exclusion predicate.
@@ -51,6 +51,6 @@ Implemented in `DrizzleQuestionRepository`:
 
 ## Related
 
-- Policy: [exam-answer-secrecy-policy.md](/Users/ray/Desktop/github/naltrexone-university-1/docs/practice-engine/exam-answer-secrecy-policy.md)
+- Policy: [exam-answer-secrecy-policy.md](../../practice-engine/exam-answer-secrecy-policy.md)
 - BUG-187 and BUG-192 cover the same predicate gap in other repository methods.
 - This is an inference-based leak (count delta reveals correctness), not a direct exposure.

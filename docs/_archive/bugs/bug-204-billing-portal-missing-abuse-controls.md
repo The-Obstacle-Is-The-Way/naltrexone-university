@@ -34,13 +34,13 @@ Expected behavior:
 ## Root Cause
 
 Tracer-bullet path:
-1. Both server-action entry points call the same portal creator at [app/pricing/manage-billing-actions.ts#L32](/Users/ray/Desktop/github/naltrexone-university/app/pricing/manage-billing-actions.ts#L32) and [app/(app)/app/billing/manage-billing-actions.ts#L32](/Users/ray/Desktop/github/naltrexone-university/app/(app)/app/billing/manage-billing-actions.ts#L32).
-2. The controller only accepts an empty object at [src/adapters/controllers/billing-controller.ts#L33](/Users/ray/Desktop/github/naltrexone-university/src/adapters/controllers/billing-controller.ts#L33).
-3. Unlike checkout, the portal path at [src/adapters/controllers/billing-controller.ts#L145](/Users/ray/Desktop/github/naltrexone-university/src/adapters/controllers/billing-controller.ts#L145) has no `rateLimiter.limit(...)` call and no `withIdempotency(...)` wrapper.
-4. The application port already supports `idempotencyKey?: string` at [src/application/ports/billing.ts#L4](/Users/ray/Desktop/github/naltrexone-university/src/application/ports/billing.ts#L4).
-5. The use case would forward an idempotency key if present at [src/application/use-cases/create-portal-session.ts#L32](/Users/ray/Desktop/github/naltrexone-university/src/application/use-cases/create-portal-session.ts#L32), but the current controller makes that impossible.
-6. The Stripe gateway always executes `billingPortal.sessions.create(...)` at [src/adapters/gateways/stripe/stripe-portal.ts#L32](/Users/ray/Desktop/github/naltrexone-university/src/adapters/gateways/stripe/stripe-portal.ts#L32).
-7. For comparison, checkout has both rate limiting and idempotency at [src/adapters/controllers/billing-controller.ts#L97](/Users/ray/Desktop/github/naltrexone-university/src/adapters/controllers/billing-controller.ts#L97) and [src/adapters/controllers/billing-controller.ts#L129](/Users/ray/Desktop/github/naltrexone-university/src/adapters/controllers/billing-controller.ts#L129).
+1. Both server-action entry points call the same portal creator at [app/pricing/manage-billing-actions.ts#L32](../../../app/pricing/manage-billing-actions.ts#L32) and [app/(app)/app/billing/manage-billing-actions.ts#L32](../../../app/(app)/app/billing/manage-billing-actions.ts#L32).
+2. The controller only accepts an empty object at [src/adapters/controllers/billing-controller.ts#L33](../../../src/adapters/controllers/billing-controller.ts#L33).
+3. Unlike checkout, the portal path at [src/adapters/controllers/billing-controller.ts#L145](../../../src/adapters/controllers/billing-controller.ts#L145) has no `rateLimiter.limit(...)` call and no `withIdempotency(...)` wrapper.
+4. The application port already supports `idempotencyKey?: string` at [src/application/ports/billing.ts#L4](../../../src/application/ports/billing.ts#L4).
+5. The use case would forward an idempotency key if present at [src/application/use-cases/create-portal-session.ts#L32](../../../src/application/use-cases/create-portal-session.ts#L32), but the current controller makes that impossible.
+6. The Stripe gateway always executes `billingPortal.sessions.create(...)` at [src/adapters/gateways/stripe/stripe-portal.ts#L32](../../../src/adapters/gateways/stripe/stripe-portal.ts#L32).
+7. For comparison, checkout has both rate limiting and idempotency at [src/adapters/controllers/billing-controller.ts#L97](../../../src/adapters/controllers/billing-controller.ts#L97) and [src/adapters/controllers/billing-controller.ts#L129](../../../src/adapters/controllers/billing-controller.ts#L129).
 
 ## Recommended Fix
 
@@ -52,11 +52,11 @@ Tracer-bullet path:
 ## Verification
 
 - [x] Code-level tracer-bullet verified on 2026-03-10.
-- [x] Existing controller tests confirm the current behavior but do not cover abuse controls: [src/adapters/controllers/billing-controller.test.ts#L204](/Users/ray/Desktop/github/naltrexone-university/src/adapters/controllers/billing-controller.test.ts#L204).
+- [x] Existing controller tests confirm the current behavior but do not cover abuse controls: [src/adapters/controllers/billing-controller.test.ts#L204](../../../src/adapters/controllers/billing-controller.test.ts#L204).
 - [x] Targeted verification run passed: `pnpm test --run lib/env.test.ts app/api/webhooks/clerk/route.test.ts src/adapters/controllers/billing-controller.test.ts`.
 - [ ] Manual replay harness executed against a live environment.
 
 ## Related
 
-- The rate-limiting policy is documented generally in [docs/adr/adr-016-rate-limiting.md](/Users/ray/Desktop/github/naltrexone-university/docs/adr/adr-016-rate-limiting.md).
-- The portal server action contract lives at [docs/specs/master_spec.md#L911](/Users/ray/Desktop/github/naltrexone-university/docs/specs/master_spec.md#L911).
+- The rate-limiting policy is documented generally in [docs/adr/adr-016-rate-limiting.md](../../adr/adr-016-rate-limiting.md).
+- The portal server action contract lives at [docs/specs/master_spec.md#L911](../../specs/master_spec.md#L911).

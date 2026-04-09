@@ -27,7 +27,7 @@ Expected behavior:
 ## Root Cause
 
 Tracer-bullet path:
-1. Use case computes explanation visibility at [submit-answer.ts:255-260](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/submit-answer.ts:255): `const shouldShowExplanation = !session || sessionShouldShowExplanation(session)`.
+1. Use case computes explanation visibility at [submit-answer.ts:255-260](../../../src/application/use-cases/submit-answer.ts#L255): `const shouldShowExplanation = !session || sessionShouldShowExplanation(session)`.
 2. Explanations, correctChoiceId, and choiceExplanations are correctly gated at lines 257-260.
 3. Line 264: `isCorrect: grade.isCorrect` — returned unconditionally, NOT gated by `shouldShowExplanation`.
 
@@ -59,6 +59,6 @@ Commits:
 
 ## Related
 
-- Policy: [exam-answer-secrecy-policy.md](/Users/ray/Desktop/github/naltrexone-university-1/docs/practice-engine/exam-answer-secrecy-policy.md) — lists `isCorrect shown to user` as forbidden during active exams.
+- Policy: [exam-answer-secrecy-policy.md](../../practice-engine/exam-answer-secrecy-policy.md) — lists `isCorrect shown to user` as forbidden during active exams.
 - BUG-191 covers the same gap in `GetNextQuestion`.
 - Current UI mitigates impact: practice session exam flow doesn't render submit feedback.

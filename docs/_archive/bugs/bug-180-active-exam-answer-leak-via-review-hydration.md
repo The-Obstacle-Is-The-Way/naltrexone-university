@@ -39,13 +39,13 @@ Executable verification performed on 2026-03-02:
 ## Root Cause
 
 Tracer-bullet path:
-1. [use-question-page-controller.ts](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/questions/[slug]/use-question-page-controller.ts:321) calls `loadPreviousAttempt` in review mode.
-2. Review links can provide `sessionId` (session review), `attemptId` (Dashboard at [dashboard/page.tsx](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/dashboard/page.tsx:230)), or neither (History/Bookmarks standalone review at [history-questions-tab.tsx](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/history/components/history-questions-tab.tsx:452)).
-3. [question-page-logic.ts](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/questions/[slug]/question-page-logic.ts:331) calls `getPreviousAttempt` with whichever identifiers are present.
-4. [question-view-controller.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/controllers/question-view-controller.ts:124) forwards to use case.
-5. [get-previous-attempt.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-previous-attempt.ts:83) selects attempt by `attemptId`, `sessionId + questionId`, or latest-by-question.
-6. If attempt exists, code returns full answer key at [get-previous-attempt.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-previous-attempt.ts:169) without checking whether the attempt belongs to an active exam session.
-7. The only `endedAt` guard exists in the unanswered `sessionId` branch at [get-previous-attempt.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-previous-attempt.ts:104), so answered attempts in active exam sessions bypass gating regardless of identifier path.
+1. [use-question-page-controller.ts](../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L321) calls `loadPreviousAttempt` in review mode.
+2. Review links can provide `sessionId` (session review), `attemptId` (Dashboard at [dashboard/page.tsx](../../../app/(app)/app/dashboard/page.tsx#L230)), or neither (History/Bookmarks standalone review at [history-questions-tab.tsx](../../../app/(app)/app/history/components/history-questions-tab.tsx#L452)).
+3. [question-page-logic.ts](../../../app/(app)/app/questions/[slug]/question-page-logic.ts#L331) calls `getPreviousAttempt` with whichever identifiers are present.
+4. [question-view-controller.ts](../../../src/adapters/controllers/question-view-controller.ts#L124) forwards to use case.
+5. [get-previous-attempt.ts](../../../src/application/use-cases/get-previous-attempt.ts#L83) selects attempt by `attemptId`, `sessionId + questionId`, or latest-by-question.
+6. If attempt exists, code returns full answer key at [get-previous-attempt.ts](../../../src/application/use-cases/get-previous-attempt.ts#L169) without checking whether the attempt belongs to an active exam session.
+7. The only `endedAt` guard exists in the unanswered `sessionId` branch at [get-previous-attempt.ts](../../../src/application/use-cases/get-previous-attempt.ts#L104), so answered attempts in active exam sessions bypass gating regardless of identifier path.
 
 ---
 
@@ -55,7 +55,7 @@ Fixed.
 
 ### Red — failing tests added first
 
-Added regression tests in [get-previous-attempt.test.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-previous-attempt.test.ts:176) and [get-previous-attempt.test.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-previous-attempt.test.ts:235):
+Added regression tests in [get-previous-attempt.test.ts](../../../src/application/use-cases/get-previous-attempt.test.ts#L176) and [get-previous-attempt.test.ts](../../../src/application/use-cases/get-previous-attempt.test.ts#L235):
 
 ```typescript
 it('returns null when attemptId belongs to an active exam session', async () => {
@@ -75,7 +75,7 @@ These tests failed before the guard existed and now pass.
 
 ### Green — minimum code change
 
-Added active-exam guard in [get-previous-attempt.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-previous-attempt.ts:149):
+Added active-exam guard in [get-previous-attempt.ts](../../../src/application/use-cases/get-previous-attempt.ts#L149):
 
 ```typescript
 if (attempt.practiceSessionId) {

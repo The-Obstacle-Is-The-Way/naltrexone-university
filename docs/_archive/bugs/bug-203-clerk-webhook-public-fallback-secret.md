@@ -21,7 +21,7 @@ There is no `signingSecret` argument, and no use of `env.CLERK_WEBHOOK_SIGNING_S
 
 ### `@clerk/nextjs` forwards to `@clerk/backend`
 
-Installed runtime at [node_modules/.pnpm/@clerk+nextjs@6.37.1_next@16.1.6_@babel+core@7.29.0_@opentelemetry+api@1.9.0_@playwrigh_6efdc9384cdd89288039aac9aa09ecc4/node_modules/@clerk/nextjs/dist/cjs/webhooks.js#L31](/Users/ray/Desktop/github/naltrexone-university/node_modules/.pnpm/@clerk+nextjs@6.37.1_next@16.1.6_@babel+core@7.29.0_@opentelemetry+api@1.9.0_@playwrigh_6efdc9384cdd89288039aac9aa09ecc4/node_modules/@clerk/nextjs/dist/cjs/webhooks.js#L31):
+Installed runtime at [node_modules/.pnpm/@clerk+nextjs@6.37.1_next@16.1.6_@babel+core@7.29.0_@opentelemetry+api@1.9.0_@playwrigh_6efdc9384cdd89288039aac9aa09ecc4/node_modules/@clerk/nextjs/dist/cjs/webhooks.js#L31](../../../node_modules/.pnpm/@clerk+nextjs@6.37.1_next@16.1.6_@babel+core@7.29.0_@opentelemetry+api@1.9.0_@playwrigh_6efdc9384cdd89288039aac9aa09ecc4/node_modules/@clerk/nextjs/dist/cjs/webhooks.js#L31):
 
 ```typescript
 async function verifyWebhook(request, options) {
@@ -31,7 +31,7 @@ async function verifyWebhook(request, options) {
 
 ### `@clerk/backend` reads `process.env`, not our `env` object
 
-Installed runtime at [node_modules/.pnpm/@clerk+backend@2.30.1_react-dom@19.2.4_react@19.2.4__react@19.2.4/node_modules/@clerk/backend/dist/webhooks.js#L62](/Users/ray/Desktop/github/naltrexone-university/node_modules/.pnpm/@clerk+backend@2.30.1_react-dom@19.2.4_react@19.2.4__react@19.2.4/node_modules/@clerk/backend/dist/webhooks.js#L62):
+Installed runtime at [node_modules/.pnpm/@clerk+backend@2.30.1_react-dom@19.2.4_react@19.2.4__react@19.2.4/node_modules/@clerk/backend/dist/webhooks.js#L62](../../../node_modules/.pnpm/@clerk+backend@2.30.1_react-dom@19.2.4_react@19.2.4__react@19.2.4/node_modules/@clerk/backend/dist/webhooks.js#L62):
 
 ```typescript
 const secret =
@@ -57,13 +57,13 @@ but that assignment only affects the exported `env` value, not `process.env`.
 
 Repository-wide search found only one non-test reference outside `lib/env.ts`:
 
-- [lib/logger.ts#L40](/Users/ray/Desktop/github/naltrexone-university/lib/logger.ts#L40) — string path for redaction config
+- [lib/logger.ts#L40](../../../lib/logger.ts#L40) — string path for redaction config
 
 There is no production path that passes `env.CLERK_WEBHOOK_SIGNING_SECRET` into Clerk's verifier.
 
 ### The route fails closed when the real env var is missing
 
-The handler catches verification failure at [app/api/webhooks/clerk/handler.ts#L87](/Users/ray/Desktop/github/naltrexone-university/app/api/webhooks/clerk/handler.ts#L87) and returns `400`:
+The handler catches verification failure at [app/api/webhooks/clerk/handler.ts#L87](../../../app/api/webhooks/clerk/handler.ts#L87) and returns `400`:
 
 ```typescript
 event = await verifyWebhook(req);

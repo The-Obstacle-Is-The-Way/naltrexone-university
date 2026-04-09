@@ -36,11 +36,11 @@ Executable verification performed on 2026-03-02:
 ## Root Cause
 
 Tracer-bullet path:
-1. Dashboard loads stats via [dashboard/page.tsx](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/dashboard/page.tsx:260) calling `getUserStats`.
-2. Stats use case fetches recent attempts at [get-user-stats.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-user-stats.ts:94).
-3. Repository query for recent attempts filters only by user at [drizzle-attempt-repository.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-attempt-repository.ts:361), with no `endedAt` exclusion for active exam sessions (join occurs at [drizzle-attempt-repository.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-attempt-repository.ts:357)).
-4. Use case maps `isCorrect` straight into output at [get-user-stats.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-user-stats.ts:126).
-5. Dashboard renders `Correct` / `Incorrect` from that field at [dashboard/page.tsx](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/dashboard/page.tsx:202) and [dashboard/page.tsx](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/dashboard/page.tsx:243), and deep-links with `attemptId` at [dashboard/page.tsx](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/dashboard/page.tsx:230).
+1. Dashboard loads stats via [dashboard/page.tsx](../../../app/(app)/app/dashboard/page.tsx#L260) calling `getUserStats`.
+2. Stats use case fetches recent attempts at [get-user-stats.ts](../../../src/application/use-cases/get-user-stats.ts#L94).
+3. Repository query for recent attempts filters only by user at [drizzle-attempt-repository.ts](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L361), with no `endedAt` exclusion for active exam sessions (join occurs at [drizzle-attempt-repository.ts](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L357)).
+4. Use case maps `isCorrect` straight into output at [get-user-stats.ts](../../../src/application/use-cases/get-user-stats.ts#L126).
+5. Dashboard renders `Correct` / `Incorrect` from that field at [dashboard/page.tsx](../../../app/(app)/app/dashboard/page.tsx#L202) and [dashboard/page.tsx](../../../app/(app)/app/dashboard/page.tsx#L243), and deep-links with `attemptId` at [dashboard/page.tsx](../../../app/(app)/app/dashboard/page.tsx#L230).
 
 ---
 
@@ -50,7 +50,7 @@ Fixed.
 
 ### Red — failing test added first
 
-Added regression test in [drizzle-attempt-repository.test.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-attempt-repository.test.ts:588):
+Added regression test in [drizzle-attempt-repository.test.ts](../../../src/adapters/repositories/drizzle-attempt-repository.test.ts#L588):
 
 ```typescript
 it('excludes attempts from active exam sessions in listRecentByUserId', async () => {
@@ -68,7 +68,7 @@ The test now verifies the query includes the secrecy filter columns and passes w
 
 ### Green — minimum code change
 
-Added active-exam exclusion predicate in [drizzle-attempt-repository.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-attempt-repository.ts:364):
+Added active-exam exclusion predicate in [drizzle-attempt-repository.ts](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L364):
 
 ```typescript
 .where(

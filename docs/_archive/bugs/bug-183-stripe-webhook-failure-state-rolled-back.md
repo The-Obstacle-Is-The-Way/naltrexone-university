@@ -34,10 +34,10 @@ Executable verification performed on 2026-03-02:
 ## Root Cause
 
 Tracer-bullet path:
-1. Webhook processing runs inside a transaction callback at [stripe-webhook-controller.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/controllers/stripe-webhook-controller.ts:67).
-2. Transaction wiring uses Drizzle `db.transaction(...)` at [controllers.ts](/Users/ray/Desktop/github/naltrexone-university-1/lib/container/controllers.ts:24), which rolls back on callback rejection.
+1. Webhook processing runs inside a transaction callback at [stripe-webhook-controller.ts](../../../src/adapters/controllers/stripe-webhook-controller.ts#L67).
+2. Transaction wiring uses Drizzle `db.transaction(...)` at [controllers.ts](../../../lib/container/controllers.ts#L24), which rolls back on callback rejection.
 3. Pre-fix behavior rejected the callback after failure marking, so claim/mark updates were rolled back together.
-4. Spec requires durable failed-event state (`error` persisted, `processedAt` null) at [master_spec.md](/Users/ray/Desktop/github/naltrexone-university-1/docs/specs/master_spec.md:734).
+4. Spec requires durable failed-event state (`error` persisted, `processedAt` null) at [master_spec.md](../../specs/master_spec.md#L734).
 
 ---
 
@@ -47,7 +47,7 @@ Fixed.
 
 ### Red — failing test added first
 
-Added rollback-aware regression in [stripe-webhook-controller.test.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/controllers/stripe-webhook-controller.test.ts:393):
+Added rollback-aware regression in [stripe-webhook-controller.test.ts](../../../src/adapters/controllers/stripe-webhook-controller.test.ts#L393):
 
 - `it('persists failure state even when the transaction would rollback on throw', ...)`
 
@@ -55,11 +55,11 @@ This test uses a rollback-capable transaction harness and failed before the tran
 
 ### Green — minimum code change
 
-Restructured transaction outcome handling in [stripe-webhook-controller.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/controllers/stripe-webhook-controller.ts:30):
+Restructured transaction outcome handling in [stripe-webhook-controller.ts](../../../src/adapters/controllers/stripe-webhook-controller.ts#L30):
 
 - Added `StripeWebhookTxResult = { ok: true } | { ok: false; error: unknown }`.
-- Inside transaction callback, failures call `markFailed(...)` and `return { ok: false, error }` at [stripe-webhook-controller.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/controllers/stripe-webhook-controller.ts:112).
-- Outside transaction, controller rethrows if `!txResult.ok` at [stripe-webhook-controller.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/controllers/stripe-webhook-controller.ts:118).
+- Inside transaction callback, failures call `markFailed(...)` and `return { ok: false, error }` at [stripe-webhook-controller.ts](../../../src/adapters/controllers/stripe-webhook-controller.ts#L112).
+- Outside transaction, controller rethrows if `!txResult.ok` at [stripe-webhook-controller.ts](../../../src/adapters/controllers/stripe-webhook-controller.ts#L118).
 
 This ensures the transaction callback resolves (commit path) after `markFailed`, then preserves external 500 behavior by throwing after commit.
 
@@ -67,10 +67,10 @@ This ensures the transaction callback resolves (commit path) after `markFailed`,
 
 Hardened rollback harness ergonomics by using fake repository state APIs instead of internal map access:
 
-- [fake-stripe-event-repository.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/test-helpers/fakes/fake-stripe-event-repository.ts)
-- [fake-subscription-repository.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/test-helpers/fakes/fake-subscription-repository.ts)
-- [fake-stripe-customer-repository.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/test-helpers/fakes/fake-stripe-customer-repository.ts)
-- [fakes.test.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/test-helpers/fakes.test.ts)
+- [fake-stripe-event-repository.ts](../../../src/application/test-helpers/fakes/fake-stripe-event-repository.ts)
+- [fake-subscription-repository.ts](../../../src/application/test-helpers/fakes/fake-subscription-repository.ts)
+- [fake-stripe-customer-repository.ts](../../../src/application/test-helpers/fakes/fake-stripe-customer-repository.ts)
+- [fakes.test.ts](../../../src/application/test-helpers/fakes.test.ts)
 
 ---
 

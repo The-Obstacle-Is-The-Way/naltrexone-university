@@ -25,10 +25,10 @@ Expected behavior:
 ## Root Cause
 
 Tracer-bullet path:
-1. Stats use case computes aggregate counts from `count*` methods in [get-user-stats.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-user-stats.ts:89) through [get-user-stats.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-user-stats.ts:93).
-2. Repository count methods are implemented by `countWhere` over `attempts` only (no `practice_sessions` join/exclusion) in [drizzle-attempt-repository.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-attempt-repository.ts:300) through [drizzle-attempt-repository.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-attempt-repository.ts:337).
-3. `listRecentByUserId` already excludes active exam attempts in [drizzle-attempt-repository.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-attempt-repository.ts:364), but aggregate count queries do not.
-4. Dashboard renders those aggregate values directly in [dashboard/page.tsx](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/dashboard/page.tsx:66) through [dashboard/page.tsx](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/dashboard/page.tsx:87).
+1. Stats use case computes aggregate counts from `count*` methods in [get-user-stats.ts](../../../src/application/use-cases/get-user-stats.ts#L89) through [get-user-stats.ts](../../../src/application/use-cases/get-user-stats.ts#L93).
+2. Repository count methods are implemented by `countWhere` over `attempts` only (no `practice_sessions` join/exclusion) in [drizzle-attempt-repository.ts](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L300) through [drizzle-attempt-repository.ts](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L337).
+3. `listRecentByUserId` already excludes active exam attempts in [drizzle-attempt-repository.ts](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L364), but aggregate count queries do not.
+4. Dashboard renders those aggregate values directly in [dashboard/page.tsx](../../../app/(app)/app/dashboard/page.tsx#L66) through [dashboard/page.tsx](../../../app/(app)/app/dashboard/page.tsx#L87).
 
 ## Fix
 
@@ -38,8 +38,8 @@ Implemented in `bug-fix-186-187-188`:
 - Reused the same helper in `listRecentByUserId` to keep the predicate centralized and eliminate drift between count and recent-activity paths.
 
 Code changes:
-- [drizzle-attempt-repository.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-attempt-repository.ts)
-- [drizzle-attempt-repository.test.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-attempt-repository.test.ts)
+- [drizzle-attempt-repository.ts](../../../src/adapters/repositories/drizzle-attempt-repository.ts)
+- [drizzle-attempt-repository.test.ts](../../../src/adapters/repositories/drizzle-attempt-repository.test.ts)
 
 ## Verification Notes (Audit #11)
 
@@ -56,6 +56,6 @@ The inconsistency is undeniable: `listRecentByUserId` (line 364) has the three-w
 
 ## Related
 
-- Policy: [exam-answer-secrecy-policy.md](/Users/ray/Desktop/github/naltrexone-university-1/docs/practice-engine/exam-answer-secrecy-policy.md)
+- Policy: [exam-answer-secrecy-policy.md](../../practice-engine/exam-answer-secrecy-policy.md)
 - Related prior fix: BUG-185 (recent-activity projection)
 - BUG-192 covers the same gap for the History page attempted-questions surface

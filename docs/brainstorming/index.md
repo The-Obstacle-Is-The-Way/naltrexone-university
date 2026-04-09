@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-07
+**Last Updated:** 2026-04-09
 
 ---
 
@@ -31,7 +31,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) | Bookmark Icon Toggle — no icon-toggle UI has shipped; production still uses text bookmark pills on the Bookmarks page, tutor/quick-practice action bar, and review/session-review action bar | Active | [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) |
 | [BS-059](./bs-059-practice-session-action-bar-button-arrangement.md) | Standalone `question-page-client.tsx` action bar still has unresolved multi-state grouping questions; Direction C continuity work was split out, so this doc now owns only the still-undecided standalone layout contract | Active | [DEBT-330](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md) |
 | [BS-061](./bs-061-review-surface-divergence-audit.md) | Exam-flow review divergence audit; rationale and boundary doc for the now-promoted implementation trackers [DEBT-350](../debt/debt-350-exam-results-session-continuity.md), [DEBT-351](../debt/debt-351-exam-review-submit-affordance-cleanup.md), and [DEBT-352](../debt/debt-352-post-exam-review-focus-ring-flash.md). Direction A remains in BS-059. | Active | [DEBT-350](../debt/debt-350-exam-results-session-continuity.md), [DEBT-351](../debt/debt-351-exam-review-submit-affordance-cleanup.md), [DEBT-352](../debt/debt-352-post-exam-review-focus-ring-flash.md) |
-**Next Brainstorming ID:** BS-062
+**Next Brainstorming ID:** BS-063
 
 ---
 
@@ -39,6 +39,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 | ID | Title | Outcome |
 |----|-------|---------|
+| [BS-062](../_archive/brainstorming/bs-062-sentry-seven-issue-triage-2026-04-09.md) | Sentry Seven-Issue Triage — report-only CSP telemetry vs real Clerk render bug | Completed 2026-04-09. Live Sentry/API/code re-triage separated 5 monitor-only CSP issues, 1 in-app-browser quirk, and 1 real preview Clerk-provider bug promoted to [BUG-234](../bugs/bug-234-auth-nav-user-button-missing-clerk-provider.md). |
 | [BS-060](../_archive/brainstorming/bs-060-sentry-error-triage-and-environment-hygiene.md) | Sentry Error Triage and Environment Hygiene — alert rule scoped to production, localhost filter enabled, preview-only Vercel Toolbar CSP support and `sentry_environment` tagging added | Implemented 2026-03-24 in PR #250. Post-deploy verification tracked in GitHub issue #251. |
 | [BS-058](../_archive/brainstorming/bs-058-exam-post-submit-flow-reorder.md) | Exam Post-Submit Flow Reorder — summary-first post-submit exam flow created a "summary sandwich" and delayed question-level learning behind an extra click | Implemented 2026-03-19 in PR #236. Core post-exam review stage shipped; residual post-ship follow-ups are tracked separately in DEBT-325, DEBT-326, and DEBT-329. |
 | [BS-057](../_archive/brainstorming/bs-057-agent-browser-clerk-auth-reliability.md) | Agent-Browser Clerk Auth Reliability | Resolved 2026-03-18. Known limitation permanently documented in `docs/tooling/agent-browser.md`. `--profile` is the verified working path. |

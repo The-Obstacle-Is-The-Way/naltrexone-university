@@ -26,7 +26,7 @@ Expected behavior:
 ## Root Cause
 
 Tracer-bullet path:
-1. `loadReview` is defined at [use-practice-session-review-stage-state.ts:50-97](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage-state.ts:50) — no semaphore, no request-sequence guard.
+1. `loadReview` is defined at [use-practice-session-review-stage-state.ts:50-97](../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage-state.ts#L50) — no semaphore, no request-sequence guard.
 2. Called from `onEndSession` at line 122 (`void loadReview()`) and `onRetryReview` at line 129 (`void loadReview()`).
 3. Both callers fire-and-forget with `void` — no way to prevent concurrent calls.
 4. For non-exam mode (line 77-83), `loadReview` calls `input.finalizeSession()` — duplicate calls fire this twice.

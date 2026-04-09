@@ -27,11 +27,11 @@ Expected behavior:
 ## Root Cause
 
 Tracer-bullet path:
-1. Review stage is loaded while the exam is still active in [use-practice-session-review-stage-state.ts](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage-state.ts:116).
-2. `GetPracticeSessionReviewUseCase` projects `state.latestIsCorrect` into output rows without an active-exam redaction gate in [get-practice-session-review.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-practice-session-review.ts:110) and [get-practice-session-review.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-practice-session-review.ts:127).
-3. Exam review UI renders `Correct` / `Incorrect` when `row.isCorrect !== null` in [exam-review-view.tsx](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:156).
-4. Question review session-navigation also consumes `row.isCorrect` in [use-question-page-controller.ts](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/questions/[slug]/use-question-page-controller.ts:252).
-5. Navigator then maps that into destructive/success variants and status labels in [review-question-navigator.tsx](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/questions/[slug]/components/review-question-navigator.tsx:48) and [review-question-navigator.tsx](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/questions/[slug]/components/review-question-navigator.tsx:49).
+1. Review stage is loaded while the exam is still active in [use-practice-session-review-stage-state.ts](../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage-state.ts#L116).
+2. `GetPracticeSessionReviewUseCase` projects `state.latestIsCorrect` into output rows without an active-exam redaction gate in [get-practice-session-review.ts](../../../src/application/use-cases/get-practice-session-review.ts#L110) and [get-practice-session-review.ts](../../../src/application/use-cases/get-practice-session-review.ts#L127).
+3. Exam review UI renders `Correct` / `Incorrect` when `row.isCorrect !== null` in [exam-review-view.tsx](../../../app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx#L156).
+4. Question review session-navigation also consumes `row.isCorrect` in [use-question-page-controller.ts](../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L252).
+5. Navigator then maps that into destructive/success variants and status labels in [review-question-navigator.tsx](../../../app/(app)/app/questions/[slug]/components/review-question-navigator.tsx#L48) and [review-question-navigator.tsx](../../../app/(app)/app/questions/[slug]/components/review-question-navigator.tsx#L49).
 
 ## Verification Notes (Audit #11)
 
@@ -50,8 +50,8 @@ Implemented in `bug-fix-186-187-188`:
 - UI code was left unchanged; projection-level redaction automatically forces neutral rendering.
 
 Code changes:
-- [get-practice-session-review.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-practice-session-review.ts)
-- [get-practice-session-review.test.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-practice-session-review.test.ts)
+- [get-practice-session-review.ts](../../../src/application/use-cases/get-practice-session-review.ts)
+- [get-practice-session-review.test.ts](../../../src/application/use-cases/get-practice-session-review.test.ts)
 
 ## Verification
 
@@ -62,6 +62,6 @@ Code changes:
 
 ## Related
 
-- Policy: [exam-answer-secrecy-policy.md](/Users/ray/Desktop/github/naltrexone-university-1/docs/practice-engine/exam-answer-secrecy-policy.md)
+- Policy: [exam-answer-secrecy-policy.md](../../practice-engine/exam-answer-secrecy-policy.md)
 - Related prior fixes: BUG-180, BUG-181, BUG-185
 - Same pattern: BUG-191 (GetNextQuestion), BUG-192 (History page), BUG-193 (SubmitAnswer)
