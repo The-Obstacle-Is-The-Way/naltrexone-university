@@ -119,12 +119,6 @@ Active open bugs are listed below.
 | Bug | Priority | Summary |
 |-----|----------|---------|
 | [BUG-234](./bug-234-auth-nav-user-button-missing-clerk-provider.md) | P3 | Authenticated preview app-shell renders can throw `UserButton can only be used within the <ClerkProvider /> component` because `AuthNav` reached the Clerk surface on the server before the client-owned provider path was live |
-| [BUG-232](./bug-232-manage-billing-actions-drop-portal-idempotency.md) | P4 | Manage Billing UI server actions still discard portal-session idempotency keys, so duplicate submits create fresh Stripe portal sessions |
-| ~~BUG-233~~ | P3 | ~~Practice session start commits stale response after config changes~~ — **Resolved 2026-04-04 (PR #265).** `startSession(...)` now uses `startSessionIdempotencyKeyRef` to drop stale responses; config controls disabled during loading. [Archived](../_archive/bugs/bug-233-practice-session-start-stale-response-after-config-change.md). |
-| ~~BUG-231~~ | P4 | ~~Bookmarks remove form action bypasses idempotency~~ — **Resolved 2026-04-06 (PR #266).** `removeBookmarkAction` now forwards `idempotencyKey` from `<IdempotencyKeyField />`. [Archived](../_archive/bugs/bug-231-remove-bookmark-action-missing-idempotency.md). |
-| ~~BUG-230~~ | P3 | ~~Post-exam review retry path has no request-sequencing guard~~ — **Resolved 2026-03-21 (PR #246).** `loadPostExamReview(...)` now uses `latestPostExamReviewRequestIdRef` to drop stale responses. [Archived](../_archive/bugs/bug-230-post-exam-review-retry-race.md). |
-| ~~BUG-229~~ | P4 | ~~Marketing footer copyright year used local runtime time instead of UTC~~ — **Resolved 2026-03-21.** Footer now derives the year from a UTC ISO string. [Archived](../_archive/bugs/bug-229-marketing-footer-year-uses-local-time.md). |
-| ~~BUG-228~~ | P2 | ~~Browser-side Sentry requests blocked by CSP~~ — **Resolved 2026-03-18.** `parseSentryIngestOrigin()` adds DSN origin to `connect-src`. [Archived](../_archive/bugs/bug-228-client-sentry-ingest-blocked-by-csp.md). |
 
 ## Audit #18 — Server-Action Idempotency + Stale Start Sweep (2026-04-03)
 
