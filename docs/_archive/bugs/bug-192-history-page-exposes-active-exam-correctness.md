@@ -26,11 +26,11 @@ Expected behavior:
 ## Root Cause
 
 Tracer-bullet path:
-1. History page calls `GetAttemptedQuestionsUseCase` at [get-attempted-questions.ts:65](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-attempted-questions.ts:65).
-2. Use case returns `isCorrect: attempted.isCorrect` unconditionally at [get-attempted-questions.ts:107](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-attempted-questions.ts:107) and [get-attempted-questions.ts:119](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-attempted-questions.ts:119).
-3. Repository `listAttemptedQuestionsByUserId` at [drizzle-attempt-repository.ts:393-447](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-attempt-repository.ts:393) has no active-exam exclusion predicate.
-4. Repository `countAttemptedQuestionsByUserId` at [drizzle-attempt-repository.ts:449-480](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-attempt-repository.ts:449) similarly lacks the predicate.
-5. Contrast with `listRecentByUserId` at [drizzle-attempt-repository.ts:364-371](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-attempt-repository.ts:364) which correctly applies: `isNull(practiceSessions.id) OR ne(mode, 'exam') OR isNotNull(endedAt)`.
+1. History page calls `GetAttemptedQuestionsUseCase` at [get-attempted-questions.ts:65](../../../src/application/use-cases/get-attempted-questions.ts#L65).
+2. Use case returns `isCorrect: attempted.isCorrect` unconditionally at [get-attempted-questions.ts:107](../../../src/application/use-cases/get-attempted-questions.ts#L107) and [get-attempted-questions.ts:119](../../../src/application/use-cases/get-attempted-questions.ts#L119).
+3. Repository `listAttemptedQuestionsByUserId` at [drizzle-attempt-repository.ts:393-447](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L393) has no active-exam exclusion predicate.
+4. Repository `countAttemptedQuestionsByUserId` at [drizzle-attempt-repository.ts:449-480](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L449) similarly lacks the predicate.
+5. Contrast with `listRecentByUserId` at [drizzle-attempt-repository.ts:364-371](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L364) which correctly applies: `isNull(practiceSessions.id) OR ne(mode, 'exam') OR isNotNull(endedAt)`.
 
 ## Fix
 
@@ -46,6 +46,6 @@ Commit: `c1aea641 Fix BUG-192: Exclude active exam attempts from history page qu
 
 ## Related
 
-- Policy: [exam-answer-secrecy-policy.md](/Users/ray/Desktop/github/naltrexone-university-1/docs/practice-engine/exam-answer-secrecy-policy.md)
+- Policy: [exam-answer-secrecy-policy.md](../../practice-engine/exam-answer-secrecy-policy.md)
 - BUG-187 covers the same gap for dashboard aggregate counts.
 - BUG-185 (fixed) established the `listRecentByUserId` predicate pattern.

@@ -496,7 +496,7 @@ SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed
 pnpm content:import:drafts -- --status published && pnpm db:seed
 ```
 
-This repo does include local helper scripts (for example [validate_questions.py](/Users/ray/Desktop/github/addiction-final-2026/scripts/validate_questions.py)), but `pnpm content:import:drafts -- --dry-run` in the app repo remains the canonical structural validation path.
+This repo does include local helper scripts (for example `validate_questions.py` in the separate content repo), but `pnpm content:import:drafts -- --dry-run` in the app repo remains the canonical structural validation path.
 
 ### Tag / Answer Flow Summary
 

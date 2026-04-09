@@ -65,5 +65,5 @@ Tracer-bullet path at filing time (pre-fix):
 
 ## Related
 
-- [docs/_archive/bugs/bug-120-reconciliation-missing-authoritative-conflict-strategy.md](/Users/ray/Desktop/github/naltrexone-university/docs/_archive/bugs/bug-120-reconciliation-missing-authoritative-conflict-strategy.md) fixed a separate reconciliation correctness gap in the same job.
-- [docs/_archive/debt/debt-155-stripe-legacy-duplicate-subscriptions-reconciliation.md](/Users/ray/Desktop/github/naltrexone-university/docs/_archive/debt/debt-155-stripe-legacy-duplicate-subscriptions-reconciliation.md) documents the duplicate-subscription cleanup effort this job is supposed to perform safely.
+- [docs/_archive/bugs/bug-120-reconciliation-missing-authoritative-conflict-strategy.md](./bug-120-reconciliation-missing-authoritative-conflict-strategy.md) fixed a separate reconciliation correctness gap in the same job.
+- [docs/_archive/debt/debt-155-stripe-legacy-duplicate-subscriptions-reconciliation.md](../debt/debt-155-stripe-legacy-duplicate-subscriptions-reconciliation.md) documents the duplicate-subscription cleanup effort this job is supposed to perform safely.

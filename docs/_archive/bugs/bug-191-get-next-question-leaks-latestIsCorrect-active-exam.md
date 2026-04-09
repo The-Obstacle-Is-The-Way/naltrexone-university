@@ -27,7 +27,7 @@ Expected behavior:
 ## Root Cause
 
 Tracer-bullet path:
-1. Use case builds session output at [get-next-question.ts:220-230](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/get-next-question.ts:220).
+1. Use case builds session output at [get-next-question.ts:220-230](../../../src/application/use-cases/get-next-question.ts#L220).
 2. Line 227: `latestIsCorrect: targetState.latestIsCorrect` — emitted unconditionally.
 3. Lines 208-212: Only `previousSubmission` is gated behind tutor mode (`const isTutor = session.mode === 'tutor'`).
 4. `latestIsCorrect` has no equivalent gate.
@@ -54,6 +54,6 @@ latestIsCorrect: showCorrectness ? targetState.latestIsCorrect : null,
 
 ## Related
 
-- Policy: [exam-answer-secrecy-policy.md](/Users/ray/Desktop/github/naltrexone-university-1/docs/practice-engine/exam-answer-secrecy-policy.md)
+- Policy: [exam-answer-secrecy-policy.md](../../practice-engine/exam-answer-secrecy-policy.md)
 - Same pattern as BUG-186 (review projection) but on a different surface (getNextQuestion).
 - Prior fix: BUG-180 (getPreviousAttempt gating) established the guard pattern.

@@ -33,9 +33,9 @@ Expected behavior:
 ## Root Cause
 
 Tracer-bullet path:
-1. `attempts.insert(...)` at [submit-answer.ts:182](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/submit-answer.ts:182) — first write, no transaction.
-2. `sessions.recordQuestionAnswer(...)` at [submit-answer.ts:210](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/submit-answer.ts:210) — second write, can fail independently.
-3. Rollback via `attempts.deleteById(...)` at [submit-answer.ts:220](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/submit-answer.ts:220) — best-effort, can itself fail.
+1. `attempts.insert(...)` at [submit-answer.ts:182](../../../src/application/use-cases/submit-answer.ts#L182) — first write, no transaction.
+2. `sessions.recordQuestionAnswer(...)` at [submit-answer.ts:210](../../../src/application/use-cases/submit-answer.ts#L210) — second write, can fail independently.
+3. Rollback via `attempts.deleteById(...)` at [submit-answer.ts:220](../../../src/application/use-cases/submit-answer.ts#L220) — best-effort, can itself fail.
 4. If `deleteById` returns false (line 224): throws `INTERNAL_ERROR`. Attempt is orphaned.
 5. If `deleteById` throws (line 230): logs error and re-throws. Attempt is orphaned.
 

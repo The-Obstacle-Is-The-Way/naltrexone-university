@@ -28,11 +28,11 @@ Expected behavior:
 ## Root Cause
 
 Tracer-bullet path:
-1. Controller loads by slug through `createLoadQuestionAction` in [use-question-page-controller.ts](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/questions/[slug]/use-question-page-controller.ts:121), triggered by [use-question-page-controller.ts](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/questions/[slug]/use-question-page-controller.ts:141).
-2. `loadQuestion` in [question-page-logic.ts](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/questions/[slug]/question-page-logic.ts:96) commits results without a request-sequence/token guard (only mounted-check).
-3. Previous-attempt hydration effect in [use-question-page-controller.ts](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/questions/[slug]/use-question-page-controller.ts:306) calls [question-page-logic.ts](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/questions/[slug]/question-page-logic.ts:281) with no stale-request token.
-4. Submit action is created from live `question` state in [use-question-page-controller.ts](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/questions/[slug]/use-question-page-controller.ts:374), but submit commit in [question-page-logic.ts](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/questions/[slug]/question-page-logic.ts:257) is not slug-scoped.
-5. Navigation links remain active while submit is pending in [question-page-client.tsx](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/questions/[slug]/question-page-client.tsx:348) and [question-page-client.tsx](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/questions/[slug]/question-page-client.tsx:398), increasing race likelihood.
+1. Controller loads by slug through `createLoadQuestionAction` in [use-question-page-controller.ts](../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L121), triggered by [use-question-page-controller.ts](../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L141).
+2. `loadQuestion` in [question-page-logic.ts](../../../app/(app)/app/questions/[slug]/question-page-logic.ts#L96) commits results without a request-sequence/token guard (only mounted-check).
+3. Previous-attempt hydration effect in [use-question-page-controller.ts](../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L306) calls [question-page-logic.ts](../../../app/(app)/app/questions/[slug]/question-page-logic.ts#L281) with no stale-request token.
+4. Submit action is created from live `question` state in [use-question-page-controller.ts](../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L374), but submit commit in [question-page-logic.ts](../../../app/(app)/app/questions/[slug]/question-page-logic.ts#L257) is not slug-scoped.
+5. Navigation links remain active while submit is pending in [question-page-client.tsx](../../../app/(app)/app/questions/[slug]/question-page-client.tsx#L348) and [question-page-client.tsx](../../../app/(app)/app/questions/[slug]/question-page-client.tsx#L398), increasing race likelihood.
 
 ## Fix
 

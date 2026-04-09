@@ -26,11 +26,11 @@ Expected behavior:
 ## Root Cause
 
 Tracer-bullet path:
-1. Persisted contract allows optional `questionStates` in [schema.ts](/Users/ray/Desktop/github/naltrexone-university-1/db/schema.ts:91).
-2. Parser normalizes missing `questionStates` into a full array in [practice-session-params.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/practice-session-params.ts:94) through [practice-session-params.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/practice-session-params.ts:118).
-3. CAS update compares DB `params_json` to normalized `expectedParamsJson` in [practice-session-question-state-updater.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/practice-session-question-state-updater.ts:60) and [practice-session-question-state-updater.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/practice-session-question-state-updater.ts:71).
+1. Persisted contract allows optional `questionStates` in [schema.ts](../../../db/schema.ts#L91).
+2. Parser normalizes missing `questionStates` into a full array in [practice-session-params.ts](../../../src/adapters/repositories/practice-session-params.ts#L94) through [practice-session-params.ts](../../../src/adapters/repositories/practice-session-params.ts#L118).
+3. CAS update compares DB `params_json` to normalized `expectedParamsJson` in [practice-session-question-state-updater.ts](../../../src/adapters/repositories/practice-session-question-state-updater.ts#L60) and [practice-session-question-state-updater.ts](../../../src/adapters/repositories/practice-session-question-state-updater.ts#L71).
 4. A row without `questionStates` will not equal normalized JSON that includes it, so each CAS attempt misses and retries.
-5. After retry exhaustion, updater throws `INTERNAL_ERROR` in [practice-session-question-state-updater.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/practice-session-question-state-updater.ts:89), surfacing through submit flow after rollback path in [submit-answer.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/submit-answer.ts:208).
+5. After retry exhaustion, updater throws `INTERNAL_ERROR` in [practice-session-question-state-updater.ts](../../../src/adapters/repositories/practice-session-question-state-updater.ts#L89), surfacing through submit flow after rollback path in [submit-answer.ts](../../../src/application/use-cases/submit-answer.ts#L208).
 
 ## Fix
 
@@ -40,9 +40,9 @@ Implemented in `bug-fix-186-187-188`:
 - This preserves legacy-row compatibility while keeping normalized domain behavior for mutation output.
 
 Code changes:
-- [practice-session-question-state-updater.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/practice-session-question-state-updater.ts)
-- [drizzle-practice-session-repository.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-practice-session-repository.ts)
-- [drizzle-practice-session-repository.test.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/repositories/drizzle-practice-session-repository.test.ts)
+- [practice-session-question-state-updater.ts](../../../src/adapters/repositories/practice-session-question-state-updater.ts)
+- [drizzle-practice-session-repository.ts](../../../src/adapters/repositories/drizzle-practice-session-repository.ts)
+- [drizzle-practice-session-repository.test.ts](../../../src/adapters/repositories/drizzle-practice-session-repository.test.ts)
 
 ## Verification Notes (Audit #11)
 

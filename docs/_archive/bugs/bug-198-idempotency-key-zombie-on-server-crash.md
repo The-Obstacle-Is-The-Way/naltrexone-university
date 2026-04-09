@@ -29,12 +29,12 @@ Expected behavior:
 ## Root Cause
 
 Tracer-bullet path:
-1. `claim()` at [with-idempotency.ts:71-76](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/shared/with-idempotency.ts:71) — key inserted with `expiresAt = now + 24h`, `completedAt = null`, `resultJson = null`, `errorCode = null`.
-2. `execute()` at [with-idempotency.ts:80](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/shared/with-idempotency.ts:80) — server crashes here.
-3. `storeResult()` at [with-idempotency.ts:81-86](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/shared/with-idempotency.ts:81) — never reached.
-4. `storeError()` at [with-idempotency.ts:89-95](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/shared/with-idempotency.ts:89) — never reached.
-5. Retry enters poll loop at [with-idempotency.ts:120-155](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/shared/with-idempotency.ts:120) — key exists, no result, no error, not expired → loops until timeout.
-6. `pruneExpiredBefore` at [with-idempotency.ts:56-68](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/shared/with-idempotency.ts:56) — only prunes expired keys, not zombies.
+1. `claim()` at [with-idempotency.ts:71-76](../../../src/adapters/shared/with-idempotency.ts#L71) — key inserted with `expiresAt = now + 24h`, `completedAt = null`, `resultJson = null`, `errorCode = null`.
+2. `execute()` at [with-idempotency.ts:80](../../../src/adapters/shared/with-idempotency.ts#L80) — server crashes here.
+3. `storeResult()` at [with-idempotency.ts:81-86](../../../src/adapters/shared/with-idempotency.ts#L81) — never reached.
+4. `storeError()` at [with-idempotency.ts:89-95](../../../src/adapters/shared/with-idempotency.ts#L89) — never reached.
+5. Retry enters poll loop at [with-idempotency.ts:120-155](../../../src/adapters/shared/with-idempotency.ts#L120) — key exists, no result, no error, not expired → loops until timeout.
+6. `pruneExpiredBefore` at [with-idempotency.ts:56-68](../../../src/adapters/shared/with-idempotency.ts#L56) — only prunes expired keys, not zombies.
 7. `claim()` reclaim path in `drizzle-idempotency-key-repository.ts:49-69` — only reclaims when `lt(expiresAt, now())`. A 24-hour TTL key is not expired, so reclaim fails.
 
 ## Fix

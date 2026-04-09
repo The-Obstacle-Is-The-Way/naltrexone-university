@@ -37,12 +37,12 @@ Executable verification performed on 2026-03-02:
 ## Root Cause
 
 Tracer-bullet path:
-1. Client retry provenance is built as `session_review` in [use-question-page-controller.ts](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/questions/[slug]/use-question-page-controller.ts:405).
-2. Submit pipeline forwards retry fields in [question-page-logic.ts](/Users/ray/Desktop/github/naltrexone-university-1/app/(app)/app/questions/[slug]/question-page-logic.ts:223).
-3. Controller forwards to use case in [question-controller.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/adapters/controllers/question-controller.ts:243).
-4. Use case validates session ownership/membership for `retrySessionId` in [submit-answer.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/submit-answer.ts:112) but does not enforce `retrySession.endedAt !== null`.
-5. The same request omits `sessionId`, so `session` stays `null` at [submit-answer.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/submit-answer.ts:147).
-6. Explanation gating computes `shouldShowExplanation = !session || ...` at [submit-answer.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/submit-answer.ts:249), revealing answer content.
+1. Client retry provenance is built as `session_review` in [use-question-page-controller.ts](../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L405).
+2. Submit pipeline forwards retry fields in [question-page-logic.ts](../../../app/(app)/app/questions/[slug]/question-page-logic.ts#L223).
+3. Controller forwards to use case in [question-controller.ts](../../../src/adapters/controllers/question-controller.ts#L243).
+4. Use case validates session ownership/membership for `retrySessionId` in [submit-answer.ts](../../../src/application/use-cases/submit-answer.ts#L112) but does not enforce `retrySession.endedAt !== null`.
+5. The same request omits `sessionId`, so `session` stays `null` at [submit-answer.ts](../../../src/application/use-cases/submit-answer.ts#L147).
+6. Explanation gating computes `shouldShowExplanation = !session || ...` at [submit-answer.ts](../../../src/application/use-cases/submit-answer.ts#L249), revealing answer content.
 
 ---
 
@@ -52,7 +52,7 @@ Fixed.
 
 ### Red — failing tests added first
 
-Added regression tests in [submit-answer.test.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/submit-answer.test.ts:360) and [submit-answer.test.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/submit-answer.test.ts:404):
+Added regression tests in [submit-answer.test.ts](../../../src/application/use-cases/submit-answer.test.ts#L360) and [submit-answer.test.ts](../../../src/application/use-cases/submit-answer.test.ts#L404):
 
 ```typescript
 it('rejects session_review retry when retrySessionId points to an active exam', async () => {
@@ -66,7 +66,7 @@ The exam regression failed before the guard existed and now passes. The companio
 
 ### Green — minimum code change
 
-Added active-session rejection guard in [submit-answer.ts](/Users/ray/Desktop/github/naltrexone-university-1/src/application/use-cases/submit-answer.ts:126):
+Added active-session rejection guard in [submit-answer.ts](../../../src/application/use-cases/submit-answer.ts#L126):
 
 ```typescript
 if (retrySession.endedAt === null) {
