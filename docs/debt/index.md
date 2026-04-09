@@ -25,8 +25,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-355](./debt-355-cross-feature-question-flow-coupling.md) | Cross-feature question-flow coupling — standalone question review imports practice-feature internals for generic flow logic; move shared orchestration to a neutral boundary | P2 | — |
 | [DEBT-356](./debt-356-duplicate-question-surface-renderers.md) | Duplicate question-surface renderers — `QuestionView` and `PracticeView` now duplicate too much question-card/feedback/action-shell composition and should share a thinner common surface layer | P3 | — |
 | [DEBT-357](./debt-357-test-double-discipline-drift.md) | Test double discipline drift — some render/adapter tests have slid back to ad hoc inline doubles despite existing repo-standard fakes and fake use-case helpers | P3 | — |
+| [DEBT-358](./debt-358-exam-review-question-navigation-stranded.md) | Exam review question navigation stranded — clicking a question from Review & Submit disables the navigator because `isInReviewStage` stays `true`, stranding the student on one question | P2 | — |
 
-**Next Debt ID:** DEBT-358
+**Next Debt ID:** DEBT-359
 
 ---
 
