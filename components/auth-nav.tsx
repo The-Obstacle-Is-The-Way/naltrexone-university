@@ -1,6 +1,6 @@
-import type { UserButton as ClerkUserButton } from '@clerk/nextjs';
 import Link from 'next/link';
-import type { ComponentProps } from 'react';
+import type { AuthUserButtonProps } from '@/components/auth-user-button';
+import { AuthUserButton } from '@/components/auth-user-button';
 import { Button } from '@/components/ui/button';
 import type {
   AuthCheckDeps,
@@ -11,9 +11,7 @@ import type { LoadContainerFn } from '@/lib/controller-helpers';
 import { ROUTES } from '@/lib/routes';
 
 export type AuthNavDeps = AuthCheckDeps;
-type UserButtonAppearance = NonNullable<
-  ComponentProps<typeof ClerkUserButton>['appearance']
->;
+type UserButtonAppearance = NonNullable<AuthUserButtonProps['appearance']>;
 
 /**
  * Auth-aware navigation component.
@@ -63,8 +61,6 @@ export async function AuthNav({
     },
   } satisfies UserButtonAppearance;
 
-  const { UserButton } = await import('@clerk/nextjs');
-
   return (
     <div className="flex items-center space-x-4">
       {primaryLink ? (
@@ -75,9 +71,7 @@ export async function AuthNav({
           {primaryLink.label}
         </Link>
       ) : null}
-      <div className="flex min-h-[44px] min-w-[44px] items-center justify-center">
-        <UserButton appearance={userButtonAppearance} />
-      </div>
+      <AuthUserButton appearance={userButtonAppearance} />
     </div>
   );
 }
