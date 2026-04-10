@@ -7,11 +7,9 @@ import {
   submitAnswerForQuestion,
 } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
-import {
-  maybeSaveDraftBeforeNavigation,
-  runTransitionedAsyncAction,
-} from '@/app/(app)/app/practice/shared/question-flow-actions';
+import { maybeSaveDraftBeforeNavigation } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import { useQuestionFlowCore } from '@/app/(app)/app/practice/shared/use-question-flow-core';
+import { runTransitionedAsyncAction } from '@/app/(app)/app/shared/transitioned-async-action';
 import { reportClientError } from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { SaveExamDraftAnswerOutput } from '@/src/adapters/controllers/practice-controller';

@@ -1,7 +1,7 @@
 import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
-} from '@/app/(app)/app/practice/practice-logic';
+} from '@/app/(app)/app/shared/error-message-helpers';
 import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
 import {
   STANDARD_MUTATION_TIMEOUT_MS,
@@ -133,33 +133,6 @@ export function createTransitionedLoadAction(input: {
       void input.run();
     });
   };
-}
-
-export function runTransitionedAsyncAction(input: {
-  startTransition: (fn: () => void) => void;
-  run: () => Promise<void>;
-  onUnhandledError?: (error: unknown) => void;
-}): Promise<void> {
-  return new Promise((resolve) => {
-    input.startTransition(async () => {
-      try {
-        await input.run();
-      } catch (error) {
-        // The caller owns error state; this prevents unhandled rejections.
-        try {
-          input.onUnhandledError?.(error);
-        } catch {
-          // Reporter failures must not mask the original error.
-        }
-        console.error(
-          'runTransitionedAsyncAction: unhandled error in run()',
-          error,
-        );
-      } finally {
-        resolve();
-      }
-    });
-  });
 }
 
 export async function maybeSaveDraftBeforeNavigation<

@@ -3,9 +3,9 @@ import { TimeoutError } from '@/lib/with-timeout';
 import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
-} from './practice-logic';
+} from './error-message-helpers';
 
-describe('practice-logic', () => {
+describe('shared/error-message-helpers', () => {
   describe('getActionResultErrorMessage', () => {
     it('returns a helpful message for error ActionResult', () => {
       expect(
