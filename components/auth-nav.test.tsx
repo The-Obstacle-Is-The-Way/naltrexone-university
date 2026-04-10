@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MarketingLayout } from '@/components/marketing/marketing-layout';
 import { FakeAuthGateway } from '@/src/application/test-helpers/fakes/fake-gateways';
+import { FakeCheckEntitlementUseCase } from '@/src/application/test-helpers/fakes/fake-use-cases';
 import { createUser } from '@/src/domain/test-helpers/factories';
 import {
   restoreProcessEnv,
@@ -82,12 +83,10 @@ describe('AuthNav', () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
 
     const authGateway = new FakeAuthGateway(null);
-    // Required by AuthNavDeps type but never reached — unauthenticated path returns early.
-    const checkEntitlementUseCase = {
-      execute: vi.fn(async () => {
-        throw new Error('Should not be called for unauthenticated user');
-      }),
-    };
+    const checkEntitlementUseCase = new FakeCheckEntitlementUseCase(
+      { isEntitled: false },
+      new Error('Should not be called for unauthenticated user'),
+    );
 
     const { AuthNav } = await import('./auth-nav');
 
@@ -119,11 +118,10 @@ describe('AuthNav', () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
 
     const authGateway = new FakeAuthGateway(null);
-    const checkEntitlementUseCase = {
-      execute: vi.fn(async () => {
-        throw new Error('Should not be called for unauthenticated user');
-      }),
-    };
+    const checkEntitlementUseCase = new FakeCheckEntitlementUseCase(
+      { isEntitled: false },
+      new Error('Should not be called for unauthenticated user'),
+    );
 
     const { AuthNav } = await import('./auth-nav');
 
@@ -144,12 +142,10 @@ describe('AuthNav', () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
 
     const authGateway = new FakeAuthGateway(null);
-    // Required by AuthNavDeps type but never reached — unauthenticated path returns early.
-    const checkEntitlementUseCase = {
-      execute: vi.fn(async () => {
-        throw new Error('Should not be called for unauthenticated user');
-      }),
-    };
+    const checkEntitlementUseCase = new FakeCheckEntitlementUseCase(
+      { isEntitled: false },
+      new Error('Should not be called for unauthenticated user'),
+    );
 
     const { AuthNav } = await import('./auth-nav');
     const PricingPage = (await import('@/app/pricing/page')).default;
@@ -192,9 +188,9 @@ describe('AuthNav', () => {
 
     const user = createUser({ id: 'user_1' });
     const authGateway = new FakeAuthGateway(user);
-    const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: true })),
-    };
+    const checkEntitlementUseCase = new FakeCheckEntitlementUseCase({
+      isEntitled: true,
+    });
 
     const authNav = await AuthNav({
       deps: { authGateway, checkEntitlementUseCase },
@@ -227,9 +223,9 @@ describe('AuthNav', () => {
 
     const user = createUser({ id: 'user_1' });
     const authGateway = new FakeAuthGateway(user);
-    const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: true })),
-    };
+    const checkEntitlementUseCase = new FakeCheckEntitlementUseCase({
+      isEntitled: true,
+    });
 
     const authNav = await AuthNav({
       deps: { authGateway, checkEntitlementUseCase },
@@ -279,9 +275,9 @@ describe('AuthNav', () => {
 
     const user = createUser({ id: 'user_1' });
     const authGateway = new FakeAuthGateway(user);
-    const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: false })),
-    };
+    const checkEntitlementUseCase = new FakeCheckEntitlementUseCase({
+      isEntitled: false,
+    });
 
     const authNav = await AuthNav({
       deps: { authGateway, checkEntitlementUseCase },
@@ -308,9 +304,9 @@ describe('AuthNav', () => {
 
     const user = createUser({ id: 'user_1' });
     const authGateway = new FakeAuthGateway(user);
-    const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: false })),
-    };
+    const checkEntitlementUseCase = new FakeCheckEntitlementUseCase({
+      isEntitled: false,
+    });
 
     const authNav = await AuthNav({
       deps: { authGateway, checkEntitlementUseCase },
@@ -345,9 +341,9 @@ describe('AuthNav', () => {
 
     const user = createUser({ id: 'user_1' });
     const authGateway = new FakeAuthGateway(user);
-    const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: false })),
-    };
+    const checkEntitlementUseCase = new FakeCheckEntitlementUseCase({
+      isEntitled: false,
+    });
 
     const element = await PricingPage({
       searchParams: Promise.resolve({}),

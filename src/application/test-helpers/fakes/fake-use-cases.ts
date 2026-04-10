@@ -92,3 +92,7 @@ export class FakeSetPracticeSessionQuestionMarkUseCase extends FakeUseCase<
   U.SetPracticeSessionQuestionMarkInput,
   U.SetPracticeSessionQuestionMarkOutput
 > {}
+export class FakeCheckEntitlementUseCase extends FakeUseCase<
+  U.CheckEntitlementInput,
+  U.CheckEntitlementOutput
+> {}
