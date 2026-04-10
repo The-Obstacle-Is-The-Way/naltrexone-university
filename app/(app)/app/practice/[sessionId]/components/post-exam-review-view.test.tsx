@@ -93,6 +93,13 @@ describe('PostExamReviewView', () => {
     expect(className).toContain('focus-visible:ring-[3px]');
   });
 
+  it('keeps the review panel programmatically focusable with tabIndex -1', () => {
+    const doc = renderView();
+    const panel = doc.querySelector('#practice-question-panel');
+
+    expect(panel?.getAttribute('tabindex')).toBe('-1');
+  });
+
   it('renders a warning banner for unanswered questions', () => {
     const doc = renderView();
     const banner = Array.from(doc.querySelectorAll('[role="status"]')).find(

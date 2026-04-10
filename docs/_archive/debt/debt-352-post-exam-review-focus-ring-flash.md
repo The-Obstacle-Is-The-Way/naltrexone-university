@@ -2,8 +2,13 @@
 
 **Priority:** P3
 **Created:** 2026-04-07
-**Source:** [BS-061 Review Surface Divergence Audit](../brainstorming/bs-061-review-surface-divergence-audit.md)
-**Related:** [DEBT-326](../_archive/debt/debt-326-post-exam-review-focus-management.md), [post-exam-review-view.tsx](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx)
+**Status:** Resolved (PR #274)
+**Source:** [BS-061 Review Surface Divergence Audit](../../brainstorming/bs-061-review-surface-divergence-audit.md)
+**Related:** [DEBT-326](./debt-326-post-exam-review-focus-management.md), [post-exam-review-view.tsx](../../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx)
+
+## Resolution
+
+Removed `{ focusVisible: true }` from the programmatic `focus()` call in `PostExamReviewView`, so the browser applies `:focus-visible` only when its own heuristics determine it's appropriate (keyboard/screen-reader input). All focus management infrastructure preserved: `useEffect` + `panelRef`, `tabIndex={-1}`, `focus-visible:ring-*` classes, `aria-label`. Added unit test for `tabIndex={-1}`. Browser spec confirming focus transfer passes unchanged. One line of production code changed.
 
 ---
 
@@ -27,9 +32,9 @@ The underlying focus handoff is correct. The forced visible-ring behavior is not
 
 ## Current Code References
 
-- [post-exam-review-view.tsx](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx)
-- [post-exam-review-view.test.tsx](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.test.tsx)
-- [post-exam-review-view.browser.spec.tsx](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.browser.spec.tsx)
+- [post-exam-review-view.tsx](../../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx)
+- [post-exam-review-view.test.tsx](../../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.test.tsx)
+- [post-exam-review-view.browser.spec.tsx](../../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.browser.spec.tsx)
 
 ## Exact Decided Behavior
 
@@ -42,7 +47,7 @@ This debt removes the forced visible ring. It does not remove focus transfer.
 
 ## Implementation Notes
 
-- This is a refinement of [DEBT-326](../_archive/debt/debt-326-post-exam-review-focus-management.md), not a reversal of it.
+- This is a refinement of [DEBT-326](./debt-326-post-exam-review-focus-management.md), not a reversal of it.
 - Pointer users should no longer see the forced ring on mount or question changes.
 - Keyboard users must still be able to perceive where focus lands.
 
