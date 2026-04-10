@@ -1,7 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { runTransitionedAsyncAction } from './transitioned-async-action';
 
 describe('shared/transitioned-async-action', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('resolves transitioned async action after completion', async () => {
     let transitioned = false;
 
@@ -35,8 +39,6 @@ describe('shared/transitioned-async-action', () => {
       'runTransitionedAsyncAction: unhandled error in run()',
       expect.any(Error),
     );
-
-    consoleSpy.mockRestore();
   });
 
   it('invokes onUnhandledError when run() throws and still resolves', async () => {
@@ -61,8 +63,6 @@ describe('shared/transitioned-async-action', () => {
       'runTransitionedAsyncAction: unhandled error in run()',
       error,
     );
-
-    consoleSpy.mockRestore();
   });
 
   it('still logs the original error and resolves when onUnhandledError throws', async () => {
@@ -89,8 +89,6 @@ describe('shared/transitioned-async-action', () => {
       'runTransitionedAsyncAction: unhandled error in run()',
       error,
     );
-
-    consoleSpy.mockRestore();
   });
 
   it('waits for an async onUnhandledError before resolving', async () => {
@@ -140,8 +138,6 @@ describe('shared/transitioned-async-action', () => {
       'runTransitionedAsyncAction: unhandled error in run()',
       error,
     );
-
-    consoleSpy.mockRestore();
   });
 
   it('still logs the original error and resolves when async onUnhandledError rejects', async () => {
@@ -168,7 +164,5 @@ describe('shared/transitioned-async-action', () => {
       'runTransitionedAsyncAction: unhandled error in run()',
       error,
     );
-
-    consoleSpy.mockRestore();
   });
 });
