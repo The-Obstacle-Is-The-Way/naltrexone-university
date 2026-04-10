@@ -1,7 +1,7 @@
 export function runTransitionedAsyncAction(input: {
   startTransition: (fn: () => void) => void;
   run: () => Promise<void>;
-  onUnhandledError?: (error: unknown) => void;
+  onUnhandledError?: (error: unknown) => void | Promise<void>;
 }): Promise<void> {
   return new Promise((resolve) => {
     input.startTransition(async () => {
@@ -10,7 +10,7 @@ export function runTransitionedAsyncAction(input: {
       } catch (error) {
         // The caller owns error state; this prevents unhandled rejections.
         try {
-          input.onUnhandledError?.(error);
+          await input.onUnhandledError?.(error);
         } catch {
           // Reporter failures must not mask the original error.
         }

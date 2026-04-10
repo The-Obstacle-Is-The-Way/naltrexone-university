@@ -92,4 +92,83 @@ describe('shared/transitioned-async-action', () => {
 
     consoleSpy.mockRestore();
   });
+
+  it('waits for an async onUnhandledError before resolving', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const error = new Error('boom');
+    const reporter = (() => {
+      let resolveReporter: (() => void) | undefined;
+      const promise = new Promise<void>((resolve) => {
+        resolveReporter = resolve;
+      });
+
+      if (!resolveReporter) {
+        throw new Error('Expected async reporter resolver to be assigned');
+      }
+
+      return {
+        promise,
+        resolve: resolveReporter,
+      };
+    })();
+    let resolved = false;
+
+    const promise = runTransitionedAsyncAction({
+      startTransition: (fn) => {
+        fn();
+      },
+      run: async () => {
+        throw error;
+      },
+      onUnhandledError: async (receivedError) => {
+        expect(receivedError).toBe(error);
+        await reporter.promise;
+      },
+    }).then(() => {
+      resolved = true;
+    });
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+
+    expect(resolved).toBe(false);
+
+    reporter.resolve();
+    await expect(promise).resolves.toBeUndefined();
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'runTransitionedAsyncAction: unhandled error in run()',
+      error,
+    );
+
+    consoleSpy.mockRestore();
+  });
+
+  it('still logs the original error and resolves when async onUnhandledError rejects', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const error = new Error('boom');
+    const onUnhandledError = vi.fn(async () => {
+      throw new Error('reporter failed');
+    });
+
+    const promise = runTransitionedAsyncAction({
+      startTransition: (fn) => {
+        fn();
+      },
+      run: async () => {
+        throw error;
+      },
+      onUnhandledError,
+    });
+
+    await expect(promise).resolves.toBeUndefined();
+
+    expect(onUnhandledError).toHaveBeenCalledWith(error);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'runTransitionedAsyncAction: unhandled error in run()',
+      error,
+    );
+
+    consoleSpy.mockRestore();
+  });
 });
