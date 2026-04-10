@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { AuthGateway } from '@/src/application/ports/gateways';
+import { FakeAuthGateway } from '@/src/application/test-helpers/fakes/fake-gateways';
+import { FakeCheckEntitlementUseCase } from '@/src/application/test-helpers/fakes/fake-use-cases';
+import { createUser } from '@/src/domain/test-helpers/factories';
 import {
   restoreProcessEnv,
   snapshotProcessEnv,
@@ -23,21 +25,10 @@ describe('GetStartedCta', () => {
   it('links to /pricing when user is not entitled', async () => {
     const { GetStartedCta } = await import('@/components/get-started-cta');
 
-    const authGateway: AuthGateway = {
-      getCurrentUser: vi.fn(async () => ({
-        id: 'user_1',
-        email: 'user@example.com',
-        createdAt: new Date('2026-02-01T00:00:00Z'),
-        updatedAt: new Date('2026-02-01T00:00:00Z'),
-      })),
-      requireUser: vi.fn(async () => {
-        throw new Error('not used');
-      }),
-    };
-
-    const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: false })),
-    };
+    const authGateway = new FakeAuthGateway(createUser());
+    const checkEntitlementUseCase = new FakeCheckEntitlementUseCase({
+      isEntitled: false,
+    });
 
     const element = await GetStartedCta({
       deps: { authGateway, checkEntitlementUseCase },
@@ -52,16 +43,10 @@ describe('GetStartedCta', () => {
   it('links to /pricing when unauthenticated', async () => {
     const { GetStartedCta } = await import('@/components/get-started-cta');
 
-    const authGateway: AuthGateway = {
-      getCurrentUser: vi.fn(async () => null),
-      requireUser: vi.fn(async () => {
-        throw new Error('not used');
-      }),
-    };
-
-    const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: true })),
-    };
+    const authGateway = new FakeAuthGateway(null);
+    const checkEntitlementUseCase = new FakeCheckEntitlementUseCase({
+      isEntitled: true,
+    });
 
     const element = await GetStartedCta({
       deps: { authGateway, checkEntitlementUseCase },
@@ -71,27 +56,16 @@ describe('GetStartedCta', () => {
     expect(html).toContain('data-slot="button"');
     expect(html).toContain('href="/pricing"');
     expect(html).toContain('Get Started');
-    expect(checkEntitlementUseCase.execute).not.toHaveBeenCalled();
+    expect(checkEntitlementUseCase.inputs).toHaveLength(0);
   });
 
   it('links to /app/dashboard when user is entitled', async () => {
     const { GetStartedCta } = await import('@/components/get-started-cta');
 
-    const authGateway: AuthGateway = {
-      getCurrentUser: vi.fn(async () => ({
-        id: 'user_1',
-        email: 'user@example.com',
-        createdAt: new Date('2026-02-01T00:00:00Z'),
-        updatedAt: new Date('2026-02-01T00:00:00Z'),
-      })),
-      requireUser: vi.fn(async () => {
-        throw new Error('not used');
-      }),
-    };
-
-    const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: true })),
-    };
+    const authGateway = new FakeAuthGateway(createUser());
+    const checkEntitlementUseCase = new FakeCheckEntitlementUseCase({
+      isEntitled: true,
+    });
 
     const element = await GetStartedCta({
       deps: { authGateway, checkEntitlementUseCase },
@@ -122,20 +96,9 @@ describe('GetStartedCta', () => {
     const element = await GetStartedCta({
       options: {
         loadContainer: async () => ({
-          createAuthGateway: () => ({
-            getCurrentUser: async () => ({
-              id: 'user_1',
-              email: 'user@example.com',
-              createdAt: new Date('2026-02-01T00:00:00Z'),
-              updatedAt: new Date('2026-02-01T00:00:00Z'),
-            }),
-            requireUser: async () => {
-              throw new Error('not used');
-            },
-          }),
-          createCheckEntitlementUseCase: () => ({
-            execute: async () => ({ isEntitled: false }),
-          }),
+          createAuthGateway: () => new FakeAuthGateway(createUser()),
+          createCheckEntitlementUseCase: () =>
+            new FakeCheckEntitlementUseCase({ isEntitled: false }),
         }),
       },
     });

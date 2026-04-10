@@ -17,6 +17,7 @@ export { FakeStripeEventRepository } from './fake-stripe-event-repository';
 export { FakeSubscriptionRepository } from './fake-subscription-repository';
 export { FakeTagRepository } from './fake-tag-repository';
 export {
+  FakeCheckEntitlementUseCase,
   FakeCountAvailableQuestionsUseCase,
   FakeCreateCheckoutSessionUseCase,
   FakeCreatePortalSessionUseCase,

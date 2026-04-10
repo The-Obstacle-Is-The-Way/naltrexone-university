@@ -1,56 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
-import type { UserRepository } from '@/src/application/ports/repositories';
+import { FakeUserRepository } from '@/src/application/test-helpers/fakes';
 import { ClerkAuthGateway } from './clerk-auth-gateway';
-
-function createFakeUserRepository(): UserRepository & {
-  _calls: {
-    upsertByClerkId: Array<{
-      clerkId: string;
-      email: string;
-      observedAt: Date | null;
-    }>;
-  };
-} {
-  const calls: {
-    upsertByClerkId: Array<{
-      clerkId: string;
-      email: string;
-      observedAt: Date | null;
-    }>;
-  } = { upsertByClerkId: [] };
-  const baseUser = {
-    id: 'user_1',
-    createdAt: new Date('2026-02-01T00:00:00Z'),
-    updatedAt: new Date('2026-02-01T00:00:00Z'),
-  };
-
-  return {
-    _calls: calls,
-    findByClerkId: async () => null,
-    lockByClerkId: async () => null,
-    upsertByClerkId: async (clerkId, email, options) => {
-      calls.upsertByClerkId.push({
-        clerkId,
-        email,
-        observedAt: options?.observedAt ?? null,
-      });
-      return {
-        id: baseUser.id,
-        email,
-        createdAt: baseUser.createdAt,
-        updatedAt: baseUser.updatedAt,
-      };
-    },
-    deleteByClerkId: async () => false,
-  };
-}
 
 describe('ClerkAuthGateway', () => {
   const clerkUpdatedAt = new Date('2026-02-02T00:00:00Z');
 
   it('returns null from getCurrentUser when unauthenticated', async () => {
-    const userRepository = createFakeUserRepository();
+    const userRepository = new FakeUserRepository();
 
     const gateway = new ClerkAuthGateway({
       userRepository,
@@ -58,11 +15,11 @@ describe('ClerkAuthGateway', () => {
     });
 
     await expect(gateway.getCurrentUser()).resolves.toBeNull();
-    expect(userRepository._calls.upsertByClerkId).toHaveLength(0);
+    expect(await userRepository.findByClerkId('clerk_1')).toBeNull();
   });
 
   it('throws UNAUTHENTICATED from requireUser when unauthenticated', async () => {
-    const userRepository = createFakeUserRepository();
+    const userRepository = new FakeUserRepository();
 
     const gateway = new ClerkAuthGateway({
       userRepository,
@@ -78,7 +35,7 @@ describe('ClerkAuthGateway', () => {
   });
 
   it('throws INTERNAL_ERROR when the Clerk user has no email addresses', async () => {
-    const userRepository = createFakeUserRepository();
+    const userRepository = new FakeUserRepository();
 
     const gateway = new ClerkAuthGateway({
       userRepository,
@@ -91,11 +48,11 @@ describe('ClerkAuthGateway', () => {
     await expect(gateway.requireUser()).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',
     });
-    expect(userRepository._calls.upsertByClerkId).toHaveLength(0);
+    expect(await userRepository.findByClerkId('clerk_1')).toBeNull();
   });
 
   it('uses the primary email address when available', async () => {
-    const userRepository = createFakeUserRepository();
+    const userRepository = new FakeUserRepository();
 
     const gateway = new ClerkAuthGateway({
       userRepository,
@@ -111,19 +68,16 @@ describe('ClerkAuthGateway', () => {
     });
 
     const user = await gateway.requireUser();
+    const storedUser = await userRepository.findByClerkId('clerk_1');
 
     expect(user.email).toBe('primary@example.com');
-    expect(userRepository._calls.upsertByClerkId).toEqual([
-      {
-        clerkId: 'clerk_1',
-        email: 'primary@example.com',
-        observedAt: clerkUpdatedAt,
-      },
-    ]);
+    expect(storedUser).not.toBeNull();
+    expect(storedUser?.email).toBe('primary@example.com');
+    expect(storedUser?.updatedAt).toEqual(clerkUpdatedAt);
   });
 
   it('uses first email when no primary is set', async () => {
-    const userRepository = createFakeUserRepository();
+    const userRepository = new FakeUserRepository();
 
     const gateway = new ClerkAuthGateway({
       userRepository,
@@ -139,19 +93,16 @@ describe('ClerkAuthGateway', () => {
     });
 
     const user = await gateway.requireUser();
+    const storedUser = await userRepository.findByClerkId('clerk_1');
 
     expect(user.email).toBe('first@example.com');
-    expect(userRepository._calls.upsertByClerkId).toEqual([
-      {
-        clerkId: 'clerk_1',
-        email: 'first@example.com',
-        observedAt: clerkUpdatedAt,
-      },
-    ]);
+    expect(storedUser).not.toBeNull();
+    expect(storedUser?.email).toBe('first@example.com');
+    expect(storedUser?.updatedAt).toEqual(clerkUpdatedAt);
   });
 
   it('returns the user from the repository', async () => {
-    const userRepository = createFakeUserRepository();
+    const userRepository = new FakeUserRepository();
 
     const gateway = new ClerkAuthGateway({
       userRepository,
@@ -165,15 +116,15 @@ describe('ClerkAuthGateway', () => {
     const user = await gateway.getCurrentUser();
 
     expect(user).toEqual({
-      id: 'user_1',
+      id: 'user-1',
       email: 'user@example.com',
-      createdAt: new Date('2026-02-01T00:00:00Z'),
-      updatedAt: new Date('2026-02-01T00:00:00Z'),
+      createdAt: clerkUpdatedAt,
+      updatedAt: clerkUpdatedAt,
     });
   });
 
   it('accepts Date updatedAt values from Clerk payloads', async () => {
-    const userRepository = createFakeUserRepository();
+    const userRepository = new FakeUserRepository();
     const observedAt = new Date('2026-02-02T01:23:45.000Z');
 
     const gateway = new ClerkAuthGateway({
@@ -188,17 +139,14 @@ describe('ClerkAuthGateway', () => {
     await expect(gateway.requireUser()).resolves.toMatchObject({
       email: 'user@example.com',
     });
-    expect(userRepository._calls.upsertByClerkId).toEqual([
-      {
-        clerkId: 'clerk_1',
-        email: 'user@example.com',
-        observedAt,
-      },
-    ]);
+    const storedUser = await userRepository.findByClerkId('clerk_1');
+    expect(storedUser).not.toBeNull();
+    expect(storedUser?.email).toBe('user@example.com');
+    expect(storedUser?.updatedAt).toEqual(observedAt);
   });
 
   it('throws INTERNAL_ERROR when Clerk updatedAt is missing', async () => {
-    const userRepository = createFakeUserRepository();
+    const userRepository = new FakeUserRepository();
 
     const gateway = new ClerkAuthGateway({
       userRepository,
@@ -212,11 +160,11 @@ describe('ClerkAuthGateway', () => {
       code: 'INTERNAL_ERROR',
       message: 'Clerk user updatedAt is required',
     });
-    expect(userRepository._calls.upsertByClerkId).toHaveLength(0);
+    expect(await userRepository.findByClerkId('clerk_1')).toBeNull();
   });
 
   it('propagates repository errors', async () => {
-    const userRepository = createFakeUserRepository();
+    const userRepository = new FakeUserRepository();
     userRepository.upsertByClerkId = async () => {
       throw new ApplicationError('CONFLICT', 'User conflict');
     };
@@ -236,7 +184,7 @@ describe('ClerkAuthGateway', () => {
   });
 
   it('retries transient errors from getClerkUser', async () => {
-    const userRepository = createFakeUserRepository();
+    const userRepository = new FakeUserRepository();
 
     const getClerkUser = vi
       .fn()
