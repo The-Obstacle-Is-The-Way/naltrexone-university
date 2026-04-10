@@ -2,8 +2,13 @@
 
 **Priority:** P3
 **Created:** 2026-04-07
-**Source:** [BS-061 Review Surface Divergence Audit](../brainstorming/bs-061-review-surface-divergence-audit.md)
-**Related:** [DEBT-326](../_archive/debt/debt-326-post-exam-review-focus-management.md), [post-exam-review-view.tsx](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx)
+**Status:** Resolved (PR #274)
+**Source:** [BS-061 Review Surface Divergence Audit](../../brainstorming/bs-061-review-surface-divergence-audit.md)
+**Related:** [DEBT-326](./debt-326-post-exam-review-focus-management.md), [post-exam-review-view.tsx](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx)
+
+## Resolution
+
+Removed `{ focusVisible: true }` from the programmatic `focus()` call in `PostExamReviewView`, so the browser applies `:focus-visible` only when its own heuristics determine it's appropriate (keyboard/screen-reader input). All focus management infrastructure preserved: `useEffect` + `panelRef`, `tabIndex={-1}`, `focus-visible:ring-*` classes, `aria-label`. Added unit test for `tabIndex={-1}`. Browser spec confirming focus transfer passes unchanged. One line of production code changed.
 
 ---
 
