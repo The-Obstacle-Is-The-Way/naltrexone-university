@@ -2,8 +2,13 @@
 
 **Priority:** P2
 **Created:** 2026-04-08
-**Source:** Follow-up from [DEBT-354](./debt-354-god-file-and-clean-code-audit.md)
-**Related:** [question-page-logic.ts](../../app/(app)/app/questions/[slug]/question-page-logic.ts), [practice-logic.ts](../../app/(app)/app/practice/practice-logic.ts), [question-flow-actions.ts](../../app/(app)/app/practice/shared/question-flow-actions.ts), [practice-session-page-logic.ts](../../app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts)
+**Status:** Resolved (PR #272, merged 2026-04-10)
+**Source:** Follow-up from [DEBT-354](../debt/debt-354-god-file-and-clean-code-audit.md)
+**Related:** [question-page-logic.ts](../../app/(app)/app/questions/[slug]/question-page-logic.ts), [question-flow-actions.ts](../../app/(app)/app/practice/shared/question-flow-actions.ts), [practice-session-page-logic.ts](../../app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts)
+
+### Resolution
+
+Extracted `getActionResultErrorMessage`, `getThrownErrorMessage`, and `runTransitionedAsyncAction` from `practice/` to `app/(app)/app/shared/error-message-helpers.ts` and `app/(app)/app/shared/transitioned-async-action.ts`. Deleted `practice-logic.ts` entirely. Updated all 15 consumers. Zero cross-feature imports remain from `questions/` or `history/` into `practice/`.
 
 ---
 
