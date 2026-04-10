@@ -2,8 +2,13 @@
 
 **Priority:** P3
 **Created:** 2026-04-08
+**Status:** Resolved (PR #273, merged 2026-04-10)
 **Source:** Follow-up from [DEBT-354](./debt-354-god-file-and-clean-code-audit.md)
-**Related:** [docs/dev/react-vitest-testing.md](../dev/react-vitest-testing.md), [clerk-auth-gateway.test.ts](../../src/adapters/gateways/clerk-auth-gateway.test.ts), [get-started-cta.test.tsx](../../components/get-started-cta.test.tsx), [auth-nav.test.tsx](../../components/auth-nav.test.tsx)
+**Related:** [docs/dev/react-vitest-testing.md](../../dev/react-vitest-testing.md), [clerk-auth-gateway.test.ts](../../src/adapters/gateways/clerk-auth-gateway.test.ts), [get-started-cta.test.tsx](../../components/get-started-cta.test.tsx), [auth-nav.test.tsx](../../components/auth-nav.test.tsx)
+
+### Resolution
+
+Added `FakeCheckEntitlementUseCase` to `src/application/test-helpers/fakes/fake-use-cases.ts`. Replaced the 42-line inline `createFakeUserRepository()` in `clerk-auth-gateway.test.ts` with `FakeUserRepository` and converted interaction assertions (`_calls`) to behavioral assertions (`findByClerkId`). Replaced all inline `AuthGateway` and entitlement use-case stubs in `get-started-cta.test.tsx` and `auth-nav.test.tsx` with `FakeAuthGateway`, `FakeCheckEntitlementUseCase`, and `createUser()`. Zero production code changed. Net −88 lines.
 
 ---
 

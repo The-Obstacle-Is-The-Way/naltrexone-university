@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-10
+**Last Updated:** 2026-04-10 (DEBT-357 resolved)
 
 ---
 
@@ -22,7 +22,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
 | [DEBT-352](./debt-352-post-exam-review-focus-ring-flash.md) | Post-exam review focus-ring flash — remove forced `focusVisible: true` while preserving panel focus transfer and keyboard/screen-reader affordance | P3 | — |
 | [DEBT-356](./debt-356-duplicate-question-surface-renderers.md) | Duplicate question-surface renderers — `QuestionView` and `PracticeView` now duplicate too much question-card/feedback/action-shell composition and should share a thinner common surface layer | P3 | — |
-| [DEBT-357](./debt-357-test-double-discipline-drift.md) | Test double discipline drift — some render/adapter tests have slid back to ad hoc inline doubles despite existing repo-standard fakes and fake use-case helpers | P3 | — |
 **Next Debt ID:** DEBT-359
 
 ---
@@ -31,6 +30,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-357](../_archive/debt/debt-357-test-double-discipline-drift.md) | Test double discipline drift — consolidated drifted inline doubles onto repo-standard fakes (`FakeUserRepository`, `FakeAuthGateway`, `FakeCheckEntitlementUseCase`) in three test files | P3 | 2026-04-10 | [PR #273](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/273) |
 | [DEBT-355](../_archive/debt/debt-355-cross-feature-question-flow-coupling.md) | Cross-feature question-flow coupling — extracted shared error-message and async-action helpers from `practice/` to neutral `shared/` boundary | P2 | 2026-04-10 | [PR #272](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/272) |
 | [DEBT-354](../_archive/debt/debt-354-god-file-and-clean-code-audit.md) | God-file and clean-code audit — audit complete; child tickets DEBT-355/356/357 opened for coupling, duplication, and test-discipline drift | P2 | 2026-04-09 | [PR #271](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/271) |
 | [DEBT-358](../_archive/debt/debt-358-exam-review-question-navigation-stranded.md) | Exam review question navigation stranded — clicking a question from Review & Submit disables the navigator because `isInReviewStage` stays `true`, stranding the student on one question | P2 | 2026-04-09 | [PR #270](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/270) |
