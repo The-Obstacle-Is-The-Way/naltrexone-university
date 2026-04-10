@@ -4,7 +4,7 @@ import { usePracticeQuestionBookmarks } from '@/app/(app)/app/practice/hooks/use
 import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
-} from '@/app/(app)/app/practice/practice-logic';
+} from '@/app/(app)/app/shared/error-message-helpers';
 import { STANDARD_READ_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import { reportClientError } from '@/lib/report-client-error';
 import { useIsMounted } from '@/lib/use-is-mounted';

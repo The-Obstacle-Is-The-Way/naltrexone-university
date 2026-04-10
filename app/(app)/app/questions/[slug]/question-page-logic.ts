@@ -1,13 +1,13 @@
 import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
-} from '@/app/(app)/app/practice/practice-logic';
-import { runTransitionedAsyncAction } from '@/app/(app)/app/practice/shared/question-flow-actions';
+} from '@/app/(app)/app/shared/error-message-helpers';
 import type { AsyncLoadState } from '@/app/(app)/app/shared/load-state';
 import {
   STANDARD_MUTATION_TIMEOUT_MS,
   STANDARD_READ_TIMEOUT_MS,
 } from '@/app/(app)/app/shared/timeout-tiers';
+import { runTransitionedAsyncAction } from '@/app/(app)/app/shared/transitioned-async-action';
 import { reportClientError } from '@/lib/report-client-error';
 import type { QuestionMode, QuestionOrigin } from '@/lib/routes';
 import { withTimeout } from '@/lib/with-timeout';

@@ -2,11 +2,11 @@
 
 import type { Dispatch, SetStateAction } from 'react';
 import { useCallback, useRef, useState } from 'react';
+import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
-} from '@/app/(app)/app/practice/practice-logic';
-import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
+} from '@/app/(app)/app/shared/error-message-helpers';
 import { STANDARD_READ_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import {
   reportClientError,

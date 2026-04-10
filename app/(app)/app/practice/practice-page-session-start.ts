@@ -1,8 +1,8 @@
+import type { PracticeFilters } from '@/app/(app)/app/practice/practice-page-types';
 import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
-} from '@/app/(app)/app/practice/practice-logic';
-import type { PracticeFilters } from '@/app/(app)/app/practice/practice-page-types';
+} from '@/app/(app)/app/shared/error-message-helpers';
 import { STANDARD_MUTATION_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import { toPracticeSessionRoute } from '@/lib/routes';
 import { withTimeout } from '@/lib/with-timeout';

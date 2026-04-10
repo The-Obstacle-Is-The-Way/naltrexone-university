@@ -1,13 +1,13 @@
-import {
-  getActionResultErrorMessage,
-  getThrownErrorMessage,
-} from '@/app/(app)/app/practice/practice-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import {
   createTransitionedLoadAction,
   runLoadQuestionFlow,
   runSubmitAnswerFlow,
 } from '@/app/(app)/app/practice/shared/question-flow-actions';
+import {
+  getActionResultErrorMessage,
+  getThrownErrorMessage,
+} from '@/app/(app)/app/shared/error-message-helpers';
 import {
   STANDARD_MUTATION_TIMEOUT_MS,
   STANDARD_READ_TIMEOUT_MS,

@@ -1,7 +1,7 @@
 import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
-} from '@/app/(app)/app/practice/practice-logic';
+} from '@/app/(app)/app/shared/error-message-helpers';
 import {
   STANDARD_MUTATION_TIMEOUT_MS,
   STANDARD_READ_TIMEOUT_MS,

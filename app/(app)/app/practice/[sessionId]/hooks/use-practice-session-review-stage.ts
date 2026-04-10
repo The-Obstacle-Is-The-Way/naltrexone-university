@@ -10,8 +10,8 @@ import { usePracticeSessionNavigator } from '@/app/(app)/app/practice/[sessionId
 import { usePracticeSessionReviewStageState } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage-state';
 import { usePracticeSessionSummaryReview } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-summary-review';
 import { endSession } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
-import { getThrownErrorMessage } from '@/app/(app)/app/practice/practice-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
+import { getThrownErrorMessage } from '@/app/(app)/app/shared/error-message-helpers';
 import { reportClientError } from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {

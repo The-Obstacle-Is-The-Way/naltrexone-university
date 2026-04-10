@@ -5,8 +5,8 @@ import {
   type PracticeFilters,
   submitAnswerForQuestion,
 } from '@/app/(app)/app/practice/practice-page-logic';
-import { runTransitionedAsyncAction } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import { useQuestionFlowCore } from '@/app/(app)/app/practice/shared/use-question-flow-core';
+import { runTransitionedAsyncAction } from '@/app/(app)/app/shared/transitioned-async-action';
 import { reportClientError } from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';

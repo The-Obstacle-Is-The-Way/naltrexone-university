@@ -4,7 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
-} from '@/app/(app)/app/practice/practice-logic';
+} from '@/app/(app)/app/shared/error-message-helpers';
 import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
 import { STANDARD_READ_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import {
