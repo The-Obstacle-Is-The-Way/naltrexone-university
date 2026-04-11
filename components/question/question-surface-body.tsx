@@ -2,15 +2,11 @@
 
 import type { ReactNode, RefObject } from 'react';
 import { Feedback, type FeedbackProps } from './feedback';
-import { QuestionCard } from './question-card';
+import { QuestionCard, type QuestionCardChoice } from './question-card';
 
 type QuestionSurfaceBodyQuestion = {
   stemMd: string;
-  choices: ReadonlyArray<{
-    id: string;
-    label: string;
-    textMd: string;
-  }>;
+  choices: ReadonlyArray<QuestionCardChoice>;
 };
 
 export type QuestionSurfaceBodyProps = {
