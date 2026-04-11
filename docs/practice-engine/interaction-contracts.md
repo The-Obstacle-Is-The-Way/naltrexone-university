@@ -4,7 +4,7 @@
 > **Scope:** Click-by-click UI contracts for tutor and exam modes — buttons, persistence, locking, navigation, and post-session flows
 > **Related:** [Practice Modes](./practice-modes.md) (lifecycle/data), [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md) (decisions)
 > **Status:** Current implementation. Historical BS-055 rationale remains, but the contracts below now describe shipped behavior; follow-up deltas are tracked separately in debt docs where noted.
-> **Last Updated:** 2026-03-19
+> **Last Updated:** 2026-04-11
 
 ---
 
@@ -255,20 +255,54 @@ The post-exam review stage shows:
 - Last reviewed question swaps the forward CTA to `Finish review`
 - No reattempt action
 
-### Summary → Question review
+### Summary ↔ Post-exam review re-entry loop
 
-The terminal exam summary still exposes:
-- `Review your answers`
-- Clickable breakdown rows
-- `Back to Practice`
-- `View in History` as a demoted secondary action
+> **Updated 2026-04-11.** DEBT-350 (resolved 2026-04-08) changed summary-launched review from route-based (`/app/questions/[slug]?from=summary`) to in-session callback re-entry. The user never leaves `/app/practice/[sessionId]`. This section replaces the prior route-based description.
 
-Summary-launched review uses a summary-aware origin:
-- Route shape: `/app/questions/[slug]?from=summary&mode=review&sessionId=...`
-- The question review page resolves its return path back to the session summary, not History
+The terminal exam summary exposes:
+- `Review your answers` — re-enters `PostExamReviewView` in-session via `onReenterPostExamReview()`
+- Clickable breakdown rows — re-enters at a specific question via `onReenterPostExamReview(questionId)`
+- `Back to Practice` — route exit to `/app/practice`
+- `View in History` — demoted route exit to `/app/history`
 
-### Question review page
+**State machine:**
 
+```text
+post_exam_review ↔ session_summary (bidirectional, in-session)
+```
+
+Both substages render within the same `/app/practice/[sessionId]` orchestrator. Transitions are state toggles (`setExamResultsSubstage`), not route navigations. The user can cycle between summary and review indefinitely.
+
+**Cursor semantics:**
+
+| Entry type | Cursor behavior | Rationale |
+|------------|----------------|-----------|
+| Initial (after exam submit) | First available question (Q1) | Fresh review pass — user has never seen feedback |
+| Re-entry via "Review Answers" button | Reset to first available question (Q1) | Fresh pass intent — user wants to re-read from the top |
+| Re-entry via breakdown row click | Land on the clicked question | Targeted intent — user has a specific question in mind |
+| Re-entry after page refresh | First available question (lazy-hydrate, no persisted cursor) | Graceful recovery — cached payload lost, re-fetch from server |
+
+> **Note (2026-04-11):** The current implementation preserves cursor on untargeted re-entry (persists last-viewed question). This produces UX artifacts documented in [BS-063](../brainstorming/bs-063-exam-review-reentry-state-confusion.md). The contract above defines the *intended* behavior; implementation should be updated to match.
+
+**Load behavior:**
+
+- On initial entry: `enterPostExamReview()` fetches `GetCompletedSessionQuestionsWithFeedbackOutput` from the server
+- On re-entry (payload cached): reuse the in-memory `postExamReview` payload without re-fetching. The feedback data is immutable within a session — answers are finalized, so no stale-data risk
+- On re-entry (payload missing, e.g., page refresh): lazy-hydrate via `loadPostExamReview()` with the same fetch
+- Duplicate rapid re-entries: deduplicated via `latestPostExamReviewRequestIdRef` — only the latest in-flight request is honored
+
+**Button labels:**
+
+| Context | Last-question CTA | Header button |
+|---------|-------------------|---------------|
+| Initial post-exam review | "Finish review" | "View Summary" |
+| Re-entry from summary | "Back to Summary" | "Back to Summary" |
+
+> **Note (2026-04-11):** The current implementation uses "Finish review" and "View Summary" regardless of context. The contract above defines the *intended* behavior; implementation should be updated to match per [BS-063](../brainstorming/bs-063-exam-review-reentry-state-confusion.md).
+
+### Question review page (non-exam, standalone)
+
+- Used for History, Bookmarks, and Dashboard origins — NOT for exam session review (which stays in-session per DEBT-350)
 - Color-coded navigator (green = correct, red = incorrect, outline = unanswered)
 - Full feedback content (explanation, clinical pearl, references)
 - Bookmark action available (per BS-053)
