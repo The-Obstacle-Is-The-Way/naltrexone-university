@@ -21,7 +21,10 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
 | [DEBT-359](./debt-359-session-summary-cta-labels.md) | Session Summary CTA label clarity — rename "Back to Practice" → "New Session" and "Review your answers" → "Review Answers" for post-completion context; ships with BS-063 re-entry fixes | P2 | — |
-**Next Debt ID:** DEBT-360
+| [DEBT-360](./debt-360-action-bar-below-fold.md) | Action bar below fold on exam and post-exam review screens — primary buttons (Next, Previous, Finish review, Bookmark) in document flow with no sticky positioning, hidden on reasonable viewports | P2 | — |
+| [DEBT-361](./debt-361-exam-last-question-next-label.md) | Exam last question "Next" label doesn't reflect action — clicking "Next" on Q3/3 enters Review & Submit but label doesn't change; post-exam review correctly uses "Finish review" | P3 | — |
+| [DEBT-362](./debt-362-review-submit-screen-affordances.md) | Review & Submit screen discoverability and accessibility — no explicit back button, question row buttons have generic "Open question" accessible name without question number/stem | P3 | — |
+**Next Debt ID:** DEBT-363
 
 ---
 

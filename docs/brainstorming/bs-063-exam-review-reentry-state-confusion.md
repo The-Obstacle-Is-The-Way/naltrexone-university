@@ -220,3 +220,4 @@ Ship together with "Review your answers" → "Review Answers" and "Back to Pract
 | 2026-04-11 | Cursor reset on untargeted re-entry, preserve on breakdown row click | Untargeted re-entry ("Review Answers" button) is a fresh-pass intent; breakdown row click is a specific-question intent |
 | 2026-04-11 | Context-aware button labels via re-entry flag | "Finish review" → "Back to Summary" on re-entry; same flag for header "View Summary" button |
 | 2026-04-11 | Pair with DEBT-359 for shipping | Label changes across the Summary ↔ Review round-trip should land together for a coherent experience |
+| 2026-04-11 | Browser agent walkthrough surfaced 3 additional debt items | [DEBT-360](../debt/debt-360-action-bar-below-fold.md) (action bar below fold), [DEBT-361](../debt/debt-361-exam-last-question-next-label.md) (last-question "Next" label), [DEBT-362](../debt/debt-362-review-submit-screen-affordances.md) (Review & Submit discoverability/a11y) — all verified against code |
