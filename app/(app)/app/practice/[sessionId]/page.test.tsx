@@ -426,12 +426,10 @@ describe('app/(app)/app/practice/[sessionId]', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const backToPracticeLink = Array.from(doc.querySelectorAll('a')).find(
+    const newSessionLink = Array.from(doc.querySelectorAll('a')).find(
       (link) => link.textContent?.trim() === 'New Session',
     );
-    const tokens = getClassTokens(
-      backToPracticeLink?.getAttribute('class') ?? '',
-    );
+    const tokens = getClassTokens(newSessionLink?.getAttribute('class') ?? '');
 
     expect(tokens.has('bg-primary')).toBe(true);
     expect(tokens.has('border')).toBe(false);

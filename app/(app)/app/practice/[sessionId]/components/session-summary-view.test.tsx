@@ -225,14 +225,14 @@ describe('SessionSummaryView', () => {
       '/app/questions/q-1?from=summary&mode=review&sessionId=session-1',
     );
 
-    const backToPracticeLink = Array.from(doc.querySelectorAll('a')).find(
+    const newSessionLink = Array.from(doc.querySelectorAll('a')).find(
       (link) => link.textContent?.trim() === 'New Session',
     );
-    const backToPracticeTokens = getClassTokens(
-      backToPracticeLink?.getAttribute('class') ?? '',
+    const newSessionTokens = getClassTokens(
+      newSessionLink?.getAttribute('class') ?? '',
     );
-    expect(backToPracticeTokens.has('border')).toBe(true);
-    expect(backToPracticeTokens.has('bg-background')).toBe(true);
+    expect(newSessionTokens.has('border')).toBe(true);
+    expect(newSessionTokens.has('bg-background')).toBe(true);
 
     const historyLink = Array.from(doc.querySelectorAll('a')).find(
       (link) => link.textContent?.trim() === 'View in History',
@@ -322,14 +322,12 @@ describe('SessionSummaryView', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const backToPracticeLink = Array.from(doc.querySelectorAll('a')).find(
+    const newSessionLink = Array.from(doc.querySelectorAll('a')).find(
       (link) => link.textContent?.trim() === 'New Session',
     );
-    const tokens = getClassTokens(
-      backToPracticeLink?.getAttribute('class') ?? '',
-    );
+    const tokens = getClassTokens(newSessionLink?.getAttribute('class') ?? '');
 
-    expect(backToPracticeLink).not.toBeNull();
+    expect(newSessionLink).not.toBeNull();
     expect(tokens.has('bg-primary')).toBe(true);
     expect(tokens.has('text-primary-foreground')).toBe(true);
     expect(tokens.has('border')).toBe(false);
