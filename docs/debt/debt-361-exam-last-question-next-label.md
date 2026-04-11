@@ -1,88 +1,106 @@
-# DEBT-361: Exam Last Question "Next" Label Doesn't Reflect Action
+# DEBT-361: Exam Last Question `Next` Label Does Not Match The Action
 
 **Priority:** P3
 **Created:** 2026-04-11
 **Status:** Open
-**Affected surface:** PracticeView exam action bar (`app/(app)/app/practice/components/practice-view.tsx`)
-**Verified by:** Claude-in-Chrome browser agent walkthrough (2026-04-11) + code trace
+**Affected surface:** Exam action bar in `app/(app)/app/practice/components/practice-view.tsx`
+**Verified by:** Browser walkthrough on 2026-04-11 plus code trace
 
 ---
 
 ## Problem
 
-On the last question of an exam (e.g., Q3 of 3), the middle button still says "Next" even though clicking it enters the Review & Submit stage, not the next question. The action changes but the label doesn't.
+On the last exam question, the middle button still says `Next` even though clicking it enters the Review & Submit stage instead of opening another question.
 
-### Code trace
-
-**File:** `app/(app)/app/practice/components/practice-view.tsx`
-
-The `ExamActionBar` component (lines 192-255) determines the click handler based on position:
-
-```typescript
-// Lines 202-205
-const onMiddleAction =
-  props.isLastSessionQuestion && props.onEndSession
-    ? props.onEndSession        // ← Review & Submit on last question
-    : props.onNextQuestion;      // ← Next question otherwise
-```
-
-But the label is hardcoded (line 238):
-
-```tsx
-<Button onClick={onMiddleAction}>
-  Next                           // ← Always "Next", even on last question
-</Button>
-```
-
-There IS an `aria-describedby` hint for screen readers ("Opens review and submit") at lines 234-236, which shows the team was aware of the semantic mismatch but only addressed it for assistive technology, not visually.
-
-### Contrast with post-exam review
-
-`PostExamReviewView` (`post-exam-review-view.tsx:154-170`) correctly swaps "Next" for "Finish review" on the last question. The exam-taking flow should follow the same pattern.
-
-### Interaction contracts
-
-The contracts (`interaction-contracts.md:118-124`) currently specify:
-
-> Position 2 is the sequential progression control: `Next` on every question. On the last question, clicking `Next` enters the review stage.
-
-This was a deliberate design choice. The rationale: "Finish exam" lives in the header as a persistent escape hatch, so the middle button can stay "Next" as a consistent sequential control. The last-question "Next" is the natural flow into review, distinct from the emergency "Finish exam" escape.
-
-**This is defensible but creates cognitive friction.** The user sees "Next" and expects another question. When it instead transitions to a completely different screen (Review & Submit), the mismatch is jarring — especially since the post-exam review demonstrates the correct pattern.
+That is a real product mismatch, even though it is currently implemented intentionally.
 
 ---
 
-## Proposed fix
+## Code Trace
 
-Change the label on the last question to "Review & Submit" or "Review answers":
+The behavior lives in [practice-view.tsx](/Users/ray/Desktop/github/naltrexone-university-3/app/(app)/app/practice/components/practice-view.tsx:192).
 
-```typescript
-<Button onClick={onMiddleAction}>
+`ExamActionBar` computes the action like this:
+
+```ts
+const onMiddleAction =
+  props.isLastSessionQuestion && props.onEndSession
+    ? props.onEndSession
+    : props.onNextQuestion;
+```
+
+But the visible label is still hardcoded:
+
+```tsx
+<Button ...>
+  Next
+</Button>
+```
+
+There is an accessibility hint for the last-question case:
+
+```ts
+const nextActionDescription =
+  props.isLastSessionQuestion && props.onEndSession
+    ? 'Opens review and submit.'
+    : null;
+```
+
+So the current implementation already acknowledges the semantic mismatch for assistive technology while leaving the visual label unchanged.
+
+---
+
+## Contract Status
+
+This is currently aligned with the shipped contract in [interaction-contracts.md](../practice-engine/interaction-contracts.md): the last exam question still uses `Next`, and that click enters the review stage.
+
+That means this debt item is not a "doc says one thing, code does another" bug. It is a product/UI debt item against the current contract.
+
+---
+
+## Contrast Surface
+
+[PostExamReviewView](/Users/ray/Desktop/github/naltrexone-university-3/app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx:154) already swaps the last forward CTA from `Next` to `Finish review`.
+
+That contrast makes the exam-taking label feel weaker: one flow names the terminal action, the other one does not.
+
+---
+
+## Proposed Fix
+
+Change the last-question label to a terminal-stage label such as `Review & Submit`:
+
+```tsx
+<Button ...>
   {props.isLastSessionQuestion && props.onEndSession
     ? 'Review & Submit'
     : 'Next'}
 </Button>
 ```
 
-Update the interaction contracts to reflect the label change and remove the `aria-describedby` hint (no longer needed if the label is self-describing).
+Notes:
+
+- `Review & Submit` is the cleanest match to the destination screen heading.
+- `Review answers` would be less precise because the next screen is still pre-submit.
+- The existing `aria-describedby` hint can stay or be removed; the visible-label change is the important part.
 
 ---
 
-## Files affected
+## Files Affected
 
 | File | Change |
 |------|--------|
-| `app/(app)/app/practice/components/practice-view.tsx:238` | Conditional label on last question |
-| `docs/practice-engine/interaction-contracts.md` | Update contract for last-question label |
-| `app/(app)/app/practice/components/practice-view.test.tsx` | Update label assertions |
-| `app/(app)/app/practice/components/practice-view.browser.spec.tsx` | Update label assertions if any |
+| `app/(app)/app/practice/components/practice-view.tsx` | Conditional last-question label |
+| `app/(app)/app/practice/components/practice-view.test.tsx` | Update string assertions |
+| `app/(app)/app/practice/components/practice-view.browser.spec.tsx` | Update browser assertions if the last-question CTA text is asserted |
+| `docs/practice-engine/interaction-contracts.md` | Update the current contract if this ships |
 
 ---
 
-## Decision log
+## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-04-11 | Verified: label hardcoded as "Next" on all questions including last | Browser agent walkthrough + code trace at practice-view.tsx:238 |
-| 2026-04-11 | Noted existing contract specified "Next" on all questions deliberately | interaction-contracts.md:118-124; escape hatch is in header |
-| 2026-04-11 | Recommend changing label to "Review & Submit" on last question | Aligns with post-exam review pattern; eliminates cognitive friction |
+| 2026-04-11 | Confirmed the behavior is current-by-design, not a code/doc mismatch | The current contract still specifies `Next` on the last exam question. |
+| 2026-04-11 | Kept severity at P3 | This is cognitive friction in a primary flow, but the user is not blocked. |
+| 2026-04-11 | Recommended `Review & Submit` as the leading copy option | It matches the actual destination screen and avoids implying the exam is already submitted. |

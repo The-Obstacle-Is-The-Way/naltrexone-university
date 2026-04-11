@@ -251,19 +251,19 @@ The post-exam review stage shows:
 - Correctness-colored navigator (green/red/outline)
 - Full question feedback inline
 - Top-right `View Summary` escape hatch
-- Bottom bar focused on movement/utility: `Previous`, `Bookmark`, `Next`
+- Bottom bar in DOM order: `Previous` (when available), `Next` / `Finish review`, then `Bookmark` when the current question is available. On `sm+`, the bookmark button is pushed to the right with `sm:ml-auto`
 - Last reviewed question swaps the forward CTA to `Finish review`
 - No reattempt action
 
 ### Summary ↔ Post-exam review re-entry loop
 
-> **Updated 2026-04-11.** DEBT-350 (resolved 2026-04-08) changed summary-launched review from route-based (`/app/questions/[slug]?from=summary`) to in-session callback re-entry. The user never leaves `/app/practice/[sessionId]`. This section replaces the prior route-based description.
-
-The terminal exam summary exposes:
-- `Review your answers` — re-enters `PostExamReviewView` in-session via `onReenterPostExamReview()`
-- Clickable breakdown rows — re-enters at a specific question via `onReenterPostExamReview(questionId)`
+For the routed exam-results flow inside `/app/practice/[sessionId]`, the terminal summary exposes:
+- `Review your answers` — re-enters `PostExamReviewView` in-session via `onReenterPostExamReview()` because `renderPracticeSessionExamResults()` passes `onReviewAnswers`
+- Clickable breakdown rows — re-enter at a specific question via `onReenterPostExamReview(questionId)`
 - `Back to Practice` — route exit to `/app/practice`
-- `View in History` — demoted route exit to `/app/history`
+- `View in History` — route exit to `/app/history`
+
+`SessionSummaryView` still retains a fallback link-based branch when it is rendered without `onReviewAnswers` but does have a reviewable slug. That fallback links to `/app/questions/[slug]?from=summary&mode=review&sessionId=...`. The practice-session orchestrator does not use that fallback.
 
 **State machine:**
 
@@ -278,31 +278,31 @@ Both substages render within the same `/app/practice/[sessionId]` orchestrator. 
 | Entry type | Cursor behavior | Rationale |
 |------------|----------------|-----------|
 | Initial (after exam submit) | First available question (Q1) | Fresh review pass — user has never seen feedback |
-| Re-entry via "Review Answers" button | Reset to first available question (Q1) | Fresh pass intent — user wants to re-read from the top |
-| Re-entry via breakdown row click | Land on the clicked question | Targeted intent — user has a specific question in mind |
-| Re-entry after page refresh | First available question (lazy-hydrate, no persisted cursor) | Graceful recovery — cached payload lost, re-fetch from server |
-
-> **Note (2026-04-11):** The current implementation preserves cursor on untargeted re-entry (persists last-viewed question). This produces UX artifacts documented in [BS-063](../brainstorming/bs-063-exam-review-reentry-state-confusion.md). The contract above defines the *intended* behavior; implementation should be updated to match.
+| Re-entry via `Review your answers` button | Reuses the last viewed available question when `postExamReviewCurrentQuestionId` is still valid; otherwise falls back to the first available question | `onReenterPostExamReview()` always passes `persistedQuestionId: postExamReviewCurrentQuestionId` on untargeted re-entry |
+| Re-entry via breakdown row click | Lands on the clicked question when available; otherwise falls back to the last viewed available question, then the first available question | `resolvePostExamReviewCurrentQuestionId()` prefers `requestedQuestionId`, then `persistedQuestionId` |
+| Re-entry after page refresh / cold start | First available question after the payload is fetched | The in-memory cursor is gone, so no persisted question ID exists |
 
 **Load behavior:**
 
 - On initial entry: `enterPostExamReview()` fetches `GetCompletedSessionQuestionsWithFeedbackOutput` from the server
-- On re-entry (payload cached): reuse the in-memory `postExamReview` payload without re-fetching. The feedback data is immutable within a session — answers are finalized, so no stale-data risk
+- On re-entry (payload cached): reuse the in-memory `postExamReview` payload without re-fetching. Answers are already finalized, so there is no expected stale-data risk from additional in-session user actions
 - On re-entry (payload missing, e.g., page refresh): lazy-hydrate via `loadPostExamReview()` with the same fetch
-- Duplicate rapid re-entries: deduplicated via `latestPostExamReviewRequestIdRef` — only the latest in-flight request is honored
+- Overlapping fetches are race-guarded by `latestPostExamReviewRequestIdRef` — only the latest response is allowed to update state
 
 **Button labels:**
 
 | Context | Last-question CTA | Header button |
 |---------|-------------------|---------------|
-| Initial post-exam review | "Finish review" | "View Summary" |
-| Re-entry from summary | "Back to Summary" | "Back to Summary" |
+| Initial post-exam review | `Finish review` | `View Summary` |
+| Re-entry from summary | `Finish review` | `View Summary` |
 
-> **Note (2026-04-11):** The current implementation uses "Finish review" and "View Summary" regardless of context. The contract above defines the *intended* behavior; implementation should be updated to match per [BS-063](../brainstorming/bs-063-exam-review-reentry-state-confusion.md).
+The current implementation does not distinguish label copy by entry source. Possible product changes are discussed in [BS-063](../brainstorming/bs-063-exam-review-reentry-state-confusion.md) and [DEBT-359](../debt/debt-359-session-summary-cta-labels.md).
 
 ### Question review page (non-exam, standalone)
 
-- Used for History, Bookmarks, and Dashboard origins — NOT for exam session review (which stays in-session per DEBT-350)
+- Used primarily for History, Bookmarks, and Dashboard origins
+- Also used by the fallback summary-link branch when `SessionSummaryView` is rendered without in-session re-entry callbacks
+- The main `/app/practice/[sessionId]` exam results flow does **not** use this route; it stays in-session per DEBT-350
 - Color-coded navigator (green = correct, red = incorrect, outline = unanswered)
 - Full feedback content (explanation, clinical pearl, references)
 - Bookmark action available (per BS-053)

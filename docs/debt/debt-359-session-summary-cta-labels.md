@@ -4,90 +4,108 @@
 **Created:** 2026-04-11
 **Status:** Open
 **Affected surface:** Session Summary (`app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx`)
-**Related:** [BS-063](../brainstorming/bs-063-exam-review-reentry-state-confusion.md) — ship together with cursor reset and re-entry label fixes for a coherent Summary ↔ Review round-trip
+**Related:** [BS-063](../brainstorming/bs-063-exam-review-reentry-state-confusion.md)
 
 ---
 
 ## Problem
 
-The Session Summary CTA labels are ambiguous or unnecessarily verbose:
+The terminal Session Summary screen uses labels that are accurate from a routing perspective but weaker from a product-intent perspective:
 
-### 1. "Back to Practice" is directionally confusing
+### 1. `Back to Practice` is directionally correct but post-completion ambiguous
 
-The user just *finished* a practice session. "Back to" implies returning to an interrupted activity, but nothing was interrupted — the session completed. The destination is `/app/practice` (the session setup page), which means the user's *actual* intent when clicking this button is to start a new session.
-
-"Back to Practice" raises a natural question: *back to what?* Back to the session I just finished? Back to a list? Back to the setup page? The label communicates navigation direction ("back") instead of user intent ("do another one").
+The button routes to `/app/practice`, which is the setup page for starting another session. On a completed summary surface, `Back to Practice` emphasizes direction (`back`) instead of the likely user goal (`start another session`).
 
 **Current label:** `Back to Practice`
 **Recommended label:** `New Session`
 
 Alternatives considered:
-- "Practice Again" — warm but slightly misleading; the button goes to the config page, not directly into a new session
-- "Start New Session" — accurate but 3 words where 2 suffice
-- "Exit" — too generic, doesn't hint at what comes next
 
-"New Session" wins because:
-- 2 words, action-oriented
-- Communicates intent, not direction
-- Accurate — clicking takes you to the page where you configure and start a new session
+- `Practice Again`: friendly, but it implies an immediate restart rather than a return to setup
+- `Start New Session`: accurate, but longer
+- `Exit`: too generic
 
-### 2. "Review your answers" is unnecessarily wordy
+### 2. `Review your answers` is longer than it needs to be
 
-"Your" adds no information. The user knows whose answers they are.
+`your` does not carry useful information here.
 
 **Current label:** `Review your answers`
 **Recommended label:** `Review Answers`
 
 ---
 
+## Verified Current Implementation
+
+The current strings live only in [session-summary-view.tsx](/Users/ray/Desktop/github/naltrexone-university-3/app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx:128):
+
+- `Review your answers`: lines 136 and 147
+- `Back to Practice`: line 156
+- `View in History`: line 159
+
+The surrounding orchestrator components do not own those strings:
+
+- [practice-session-exam-results-renderer.tsx](/Users/ray/Desktop/github/naltrexone-university-3/app/(app)/app/practice/[sessionId]/components/practice-session-exam-results-renderer.tsx:50) only decides whether `SessionSummaryView` is rendered and whether re-entry uses a callback.
+- [practice-session-page-view.tsx](/Users/ray/Desktop/github/naltrexone-university-3/app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:93) only threads those props through.
+
+---
+
 ## Scope
 
-### Files requiring label changes
+This debt item is scoped to the completed Session Summary surface only.
+
+### Source file requiring the label change
 
 | File | Change |
 |------|--------|
-| `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx:136,147,156` | Update button labels |
+| `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` | Rename the two summary CTAs |
 
-### Files requiring test updates
+### Tests that currently assert these labels
 
-| File | Reason |
-|------|--------|
-| `app/(app)/app/practice/[sessionId]/components/session-summary-view.test.tsx` | Label assertions |
-| `app/(app)/app/practice/[sessionId]/components/session-summary-view.browser.spec.tsx` | Label assertions |
-| `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.browser.spec.tsx` | `Review your answers` button/link assertions |
-| `app/(app)/app/practice/[sessionId]/components/practice-session-exam-results-renderer.test.tsx` | `Review your answers` label assertion |
-| `app/(app)/app/practice/[sessionId]/page.test.tsx` | Both label assertions |
-| `app/(app)/app/practice/quick/quick-practice-client.test.tsx` | `Back to Practice` assertion |
-| `app/(app)/app/practice/quick/error.test.tsx` | `Back to Practice` assertion |
-| `app/(app)/app/practice/quick/error.tsx` | `Back to Practice` label in error links |
-| `app/(app)/app/practice/quick/quick-practice-client.tsx:76` | `Back to Practice` label in backLink prop |
-| `app/(app)/app/practice/quick/page.test.tsx` | `Back to Practice` assertion |
-| `app/(app)/app/practice/[sessionId]/error.tsx` | `Back to Practice` label in error links |
-| `app/(app)/app/practice/[sessionId]/error.test.tsx` | `Back to Practice` assertion |
-| `app/(app)/app/questions/[slug]/question-page-client.tsx:117,135` | `Back to Practice` in backLabel |
-| `app/(app)/app/questions/[slug]/question-page-client.test.tsx:277` | `Back to Practice` assertion |
-| `tests/e2e/practice.spec.ts` | E2E assertion on `View in History` (unchanged, but verify no `Back to Practice` assertions) |
+| File | Why it needs updates |
+|------|----------------------|
+| `app/(app)/app/practice/[sessionId]/components/session-summary-view.test.tsx` | Static markup assertions for both labels |
+| `app/(app)/app/practice/[sessionId]/components/session-summary-view.browser.spec.tsx` | Browser assertions for link/button names and CTA variants |
+| `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.browser.spec.tsx` | Orchestrator-level assertions for the callback-driven `Review your answers` button |
+| `app/(app)/app/practice/[sessionId]/components/practice-session-exam-results-renderer.test.tsx` | Summary-branch assertion for `Review your answers` |
+| `app/(app)/app/practice/[sessionId]/page.test.tsx` | End-to-end page rendering assertions for both summary labels |
 
-### Documentation updates
+### Documentation that would need copy updates if this ships
 
-Interaction contracts and architecture docs reference the old labels:
-- `docs/practice-engine/interaction-contracts.md`
-- `docs/practice-engine/question-rendering-architecture.md`
+| File | Why |
+|------|-----|
+| `docs/practice-engine/interaction-contracts.md` | Describes the current summary CTA copy |
+| `docs/practice-engine/question-rendering-architecture.md` | Still lists the current summary CTA copy in the architecture reference |
+| `docs/brainstorming/bs-063-exam-review-reentry-state-confusion.md` | Discusses the Summary <-> Review loop in the current labels |
 
 ---
 
-## Additional note: "Back to Practice" in other surfaces
+## Out of Scope
 
-The `Back to Practice` label also appears in the Quick Practice flow and question review pages (not just Session Summary). Renaming it to `New Session` on the Session Summary makes sense, but the other surfaces use "Back to Practice" in a different context — navigating away from an in-progress view back to the practice setup page. In those contexts, "Back to Practice" may still be appropriate since you *are* going back. This debt ticket scopes to the **Session Summary** surface only, where the session is already complete.
+This debt item does **not** imply a repo-wide rename of every `Back to Practice` string.
 
-If the broader rename is desired, it should be a separate sweep after evaluating each surface's context.
+Other surfaces still use that label in a different context:
+
+- Quick Practice back links
+- Session-level error states
+- Standalone question review origins without `sessionId`
+
+Those are navigational return links, not terminal session-summary CTAs. They should be evaluated separately.
 
 ---
 
-## Decision log
+## Feasibility Notes
+
+- The implementation change is trivial: it is a string-only edit in one component.
+- The real work is the test sweep and doc-copy sweep listed above.
+- No routing logic changes are required; the destination remains `/app/practice`.
+
+---
+
+## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-04-11 | Rename "Back to Practice" → "New Session" on Session Summary | "Back to" is directionally confusing post-completion; "New Session" communicates intent |
-| 2026-04-11 | Rename "Review your answers" → "Review Answers" | Remove unnecessary possessive; tighter label |
-| 2026-04-11 | Scope to Session Summary only | Other surfaces use "Back to Practice" in a navigational context where "back" is semantically correct |
+| 2026-04-11 | Keep the debt scoped to Session Summary only | Other `Back to Practice` labels live in materially different contexts. |
+| 2026-04-11 | Recommend `New Session` over `Start New Session` | Shorter and still accurate for a CTA that routes to session setup. |
+| 2026-04-11 | Recommend `Review Answers` over `Review your answers` | Tighter copy with no loss of meaning. |
+| 2026-04-11 | Corrected the downstream file list | The earlier draft incorrectly swept in unrelated quick-practice and standalone-review surfaces. |

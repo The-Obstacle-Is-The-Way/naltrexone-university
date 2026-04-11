@@ -1,92 +1,110 @@
-# DEBT-362: Review & Submit Screen Discoverability and Accessibility
+# DEBT-362: Review & Submit Screen Return Affordance Gap
 
 **Priority:** P3
 **Created:** 2026-04-11
 **Status:** Open
-**Affected surface:** ExamReviewView (`app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx`)
-**Verified by:** Claude-in-Chrome browser agent walkthrough (2026-04-11) + code trace
+**Affected surface:** `ExamReviewView` (`app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx`)
+**Verified by:** Browser walkthrough on 2026-04-11 plus code trace
 
 ---
 
 ## Problem
 
-The Review & Submit screen has two discoverability/accessibility gaps:
+`ExamReviewView` gives the user a clear `Submit exam` action, but it does not provide an equally explicit "continue reviewing" action outside the clickable question rows.
 
-### Issue A: No explicit "Go back" button
+The current screen is not a dead end:
 
-**File:** `exam-review-view.tsx:219-268`
+- each available row is a real `<button>`
+- the rows have hover and focus styles
+- the submit confirmation dialog includes `Keep reviewing`
 
-The bottom action area contains only "Submit exam" (line 222-224). There is no "Back," "Return to exam," or "Keep reviewing" button. The only way to navigate back to a specific question is to click one of the question rows in the list above.
-
-While the question rows are clickable (via `onOpenQuestion` callback), their interactive nature isn't strongly afforded — they look like information rows. A user who doesn't realize the rows are clickable may feel trapped on the Review & Submit screen with no way back except submitting.
-
-**Mitigating factor:** The submit confirmation dialog (triggered by "Submit exam") does include a "Keep reviewing" button that dismisses the dialog without submitting. So users who click submit prematurely can escape. But this is a workaround, not a primary affordance.
-
-### Issue B: Question row buttons have generic accessible names
-
-**File:** `exam-review-view.tsx:198-206`
-
-Each question row renders as a `<button>` with an `sr-only` span reading "Open question" (line 206). The question number, stem preview, and status metadata are NOT included in the button's accessible name.
-
-```tsx
-<button>
-  <span className="sr-only">Open question </span>
-  {rowContent}  {/* visual-only: question #, stem, status — not in accessible name */}
-</button>
-```
-
-A screen reader would announce "Open question, button" three times in a row with no way to distinguish which question is which.
-
-**Contrast:** The `QuestionNavigator` component in the same file (line 97) correctly uses `aria-label={`Question ${row.order}: ${statusParts.join(', ')}`}` — including question number and all status. The question rows should follow the same pattern.
+But the primary return path is still implicit. A user has to infer that the question list itself is the way back into question editing.
 
 ---
 
-## Proposed fixes
+## Verified Current Implementation
 
-### Fix A: Add explicit "Go back" affordance
+In [exam-review-view.tsx](/Users/ray/Desktop/github/naltrexone-university-3/app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:167):
 
-Add a "Back to exam" or "Continue reviewing" button alongside "Submit exam":
+- every available question row renders as a `<button>` that calls `onOpenQuestion(row.questionId)`
+- the footer renders only `Submit exam`
+- the confirm dialog exposes `Keep reviewing` as a cancel action
 
-```tsx
-<div className="flex flex-wrap gap-3">
-  <Button variant="outline" onClick={onOpenQuestion(lastViewedQuestionId)}>
-    Continue reviewing
-  </Button>
-  <Button onClick={onSubmitExam}>
-    Submit exam
-  </Button>
-</div>
-```
+The earlier draft of this debt doc overstated the accessibility issue. The row buttons are **not unnamed**:
 
-Alternatively, add a visual cue to the question rows (e.g., hover state, cursor pointer, right chevron) to make their interactive nature more obvious.
+- the visible row text sits inside the button
+- the `sr-only` prefix adds `Open question`
+- there is no `aria-hidden` on the row content
 
-### Fix B: Descriptive accessible names on question rows
-
-```tsx
-<button
-  aria-label={`Open Question ${row.order}: ${stemPreview}. ${row.isAnswered ? 'Answered' : 'Unanswered'}${row.isMarkedForReview ? ', Marked for review' : ''}`}
->
-  {rowContent}
-</button>
-```
+So this is not a WCAG 4.1.2 "button with no accessible name" failure. The gap is primarily discoverability and affordance.
 
 ---
 
-## Files affected
+## What Still Feels Weak
+
+### 1. No dedicated return CTA
+
+The footer presents the irreversible action (`Submit exam`) without a sibling action that explicitly says "keep reviewing" or "return to questions."
+
+### 2. The list itself carries the burden of explanation
+
+The question rows are interactive, but the screen does not tell the user that selecting a row is how they return to a question. The affordance depends on pattern recognition.
+
+---
+
+## Proposed Fixes
+
+### Option A: Add explicit instructional copy
+
+The lowest-risk fix is to add helper text above the list, for example:
+
+```tsx
+<p className="text-sm text-muted-foreground">
+  Select a question below to continue reviewing before you submit.
+</p>
+```
+
+This is feasible with the current component shape and keeps the screen simple.
+
+### Option B: Strengthen row affordance
+
+Add a stronger interaction cue to each row, such as:
+
+- trailing chevron/icon
+- `Continue reviewing` microcopy
+- clearer hover treatment
+
+Again, this is feasible without changing parent props.
+
+### Option C: Add an explicit footer button only if the target is defined
+
+If the product wants a real footer CTA such as `Continue reviewing`, the parent needs to define what it opens:
+
+- last viewed question
+- first unanswered question
+- first marked question
+- first question
+
+`ExamReviewView` does not currently receive that target, so the earlier sketch that assumed `lastViewedQuestionId` was not directly implementable.
+
+---
+
+## Files Affected
 
 | File | Change |
 |------|--------|
-| `exam-review-view.tsx:219-268` | Add "Continue reviewing" button |
-| `exam-review-view.tsx:198-206` | Add descriptive `aria-label` to question row buttons |
-| `exam-review-view.test.tsx` | Update assertions for new button and aria-labels |
-| `exam-review-view.browser.spec.tsx` | Update assertions if any |
+| `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx` | Add explicit helper copy and/or stronger row affordance |
+| `app/(app)/app/practice/[sessionId]/components/exam-review-view.test.tsx` | Update markup assertions if helper text or new cues are added |
+| `app/(app)/app/practice/[sessionId]/components/exam-review-view.browser.spec.tsx` | Update browser assertions if the visible guidance changes |
+
+No `aria-label` remediation is required for correctness based on the current code.
 
 ---
 
-## Decision log
+## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-04-11 | Verified: no back button on Review & Submit | Browser agent walkthrough + code trace at exam-review-view.tsx:219-268 |
-| 2026-04-11 | Verified: generic "Open question" sr-only label | Code trace at exam-review-view.tsx:206; contrast with navigator aria-label at line 97 |
-| 2026-04-11 | Rated P3 | Functional workarounds exist (rows are clickable, submit dialog has "Keep reviewing"); accessibility gap is real but limited to screen reader navigation |
+| 2026-04-11 | Corrected the accessibility claim | The question-row buttons already expose accessible text through their button content. |
+| 2026-04-11 | Reframed the debt as discoverability/affordance, not missing accessible names | That matches the actual code and the observed UX issue. |
+| 2026-04-11 | Kept severity at P3 | The user is not blocked, but the current screen makes the return path more implicit than it needs to be. |
