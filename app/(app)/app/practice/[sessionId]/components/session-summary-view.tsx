@@ -133,7 +133,7 @@ export function SessionSummaryView({
             onClick={onReviewAnswers}
             disabled={isReviewLoading}
           >
-            Review your answers
+            Review Answers
           </Button>
         ) : firstReviewableSlug ? (
           <Button asChild className="rounded-full">
@@ -144,7 +144,7 @@ export function SessionSummaryView({
                 sessionId: summary.sessionId,
               })}
             >
-              Review your answers
+              Review Answers
             </Link>
           </Button>
         ) : null}
@@ -153,7 +153,7 @@ export function SessionSummaryView({
           className="rounded-full"
           variant={hasPrimaryFollowUp ? 'outline' : 'default'}
         >
-          <Link href={ROUTES.APP_PRACTICE}>Back to Practice</Link>
+          <Link href={ROUTES.APP_PRACTICE}>New Session</Link>
         </Button>
         <Button asChild variant="ghost" className="rounded-full">
           <Link href={ROUTES.APP_HISTORY}>View in History</Link>

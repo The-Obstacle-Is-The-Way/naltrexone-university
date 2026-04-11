@@ -118,7 +118,7 @@ describe('renderPracticeSessionExamResults', () => {
     );
 
     expect(doc?.body.textContent).toContain('Session Summary');
-    expect(buttonLabels).toContain('Review your answers');
+    expect(buttonLabels).toContain('Review Answers');
   });
 
   it('renders the in-session loading surface while post-exam review is hydrating', () => {

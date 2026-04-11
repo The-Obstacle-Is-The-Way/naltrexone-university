@@ -23,7 +23,7 @@ This document is the single source of truth for understanding the **current ship
 | B | **Exam Mode** (active session) | `/app/practice/[sessionId]` | Practice landing → Start session (exam) |
 | C | **Exam Review Stage** (pre-submit review) | `/app/practice/[sessionId]` (same URL, different view) | Exam mode → click `Finish exam` in the header, or click `Next` on the last question |
 | D | **Post-Exam Review Stage** (post-submit, in-session) | `/app/practice/[sessionId]` (same URL, different view) | Exam Review Stage → `Submit exam` → confirm |
-| E | **Ended Session Review** (post-session) | `/app/questions/[slug]?from=summary|history&mode=review&sessionId=...` | Session Summary → `Review your answers` / breakdown link, or History → Sessions tab → View breakdown → click question |
+| E | **Ended Session Review** (post-session) | `/app/questions/[slug]?from=summary|history&mode=review&sessionId=...` | Session Summary → `Review Answers` / breakdown link, or History → Sessions tab → View breakdown → click question |
 | F | **History Individual Review** (standalone) | `/app/questions/[slug]?from=history&mode=review` | History → Questions tab → Review |
 | G | **Quick Practice** (ad-hoc, no session) | `/app/practice/quick` | Practice → Quick Practice |
 
@@ -85,7 +85,7 @@ Action bars are **not abstracted** — each context renders its own buttons inli
 | Practice answering UI (active sessions + quick practice) | `app/(app)/app/practice/components/practice-view.tsx` | Previous (session only), Submit (non-exam only), Next, Bookmark (non-exam only), Mark for review (exam only) |
 | Exam Review Stage | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:186-235` | Submit exam (with AlertDialog confirmation) |
 | Post-Exam Review Stage | `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx` | Previous, Bookmark, Next / Finish review, View Summary |
-| Session Summary | `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` | Review your answers (exam only, when reviewable questions exist), Back to Practice, View in History |
+| Session Summary | `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` | Review Answers (exam only, when reviewable questions exist), New Session, View in History |
 | Question page (all review origins) | `app/(app)/app/questions/[slug]/question-page-client.tsx` | Previous/Next (session review only), Submit (pre-answer), conditional Try Again / Practice Again (non-exam review only), Bookmark (review mode after bookmark hydration), Back link |
 
 ### 3.5 Back Links
@@ -201,7 +201,7 @@ PracticeSessionPageView
 
 ```
 Entry:     /app/history?tab=sessions → "View breakdown" → click question link
-           or Session Summary → "Review your answers" / breakdown link
+           or Session Summary → "Review Answers" / breakdown link
 Route:     /app/questions/[slug]?from=summary|history&mode=review&sessionId={uuid}&historyHref={encoded}
 Server:    app/(app)/app/questions/[slug]/page.tsx
 Client:    app/(app)/app/questions/[slug]/question-page-client.tsx → QuestionView

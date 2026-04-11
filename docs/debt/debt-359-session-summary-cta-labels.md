@@ -2,7 +2,7 @@
 
 **Priority:** P2
 **Created:** 2026-04-11
-**Status:** Open
+**Status:** Resolved (2026-04-11)
 **Affected surface:** Session Summary (`app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx`)
 **Related:** [BS-063](../brainstorming/bs-063-exam-review-reentry-state-confusion.md)
 

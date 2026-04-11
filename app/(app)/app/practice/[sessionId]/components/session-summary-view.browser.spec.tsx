@@ -61,10 +61,10 @@ test('renders summary totals and per-question breakdown', async () => {
     .element(screen.getByRole('link', { name: 'View in History' }))
     .toHaveAttribute('href', ROUTES.APP_HISTORY);
   await expect
-    .element(screen.getByRole('link', { name: 'Back to Practice' }))
+    .element(screen.getByRole('link', { name: 'New Session' }))
     .toHaveAttribute('href', ROUTES.APP_PRACTICE);
   await expect
-    .element(screen.getByRole('link', { name: 'Review your answers' }))
+    .element(screen.getByRole('link', { name: 'Review Answers' }))
     .toHaveAttribute(
       'href',
       toQuestionRoute('q-1', {
@@ -130,7 +130,7 @@ test('omits the removed practice-missed CTA when all exam answers are correct', 
     .not.toBeInTheDocument();
 });
 
-test('uses Back to Practice as the primary CTA when no reviewable slug exists', async () => {
+test('uses New Session as the primary CTA when no reviewable slug exists', async () => {
   const screen = await render(
     <SessionSummaryView
       summary={{
@@ -167,10 +167,10 @@ test('uses Back to Practice as the primary CTA when no reviewable slug exists', 
   );
 
   await expect
-    .element(screen.getByRole('link', { name: 'Review your answers' }))
+    .element(screen.getByRole('link', { name: 'Review Answers' }))
     .not.toBeInTheDocument();
   await expect
-    .element(screen.getByRole('link', { name: 'Back to Practice' }))
+    .element(screen.getByRole('link', { name: 'New Session' }))
     .toHaveClass(/bg-primary/);
   await expect
     .element(screen.getByRole('link', { name: 'Practice missed questions' }))
@@ -221,13 +221,13 @@ test('renders exactly 2 tutor actions', async () => {
   );
 
   await expect
-    .element(screen.getByRole('link', { name: 'Back to Practice' }))
+    .element(screen.getByRole('link', { name: 'New Session' }))
     .toBeVisible();
   await expect
     .element(screen.getByRole('link', { name: 'View in History' }))
     .toBeVisible();
   await expect
-    .element(screen.getByRole('link', { name: 'Review your answers' }))
+    .element(screen.getByRole('link', { name: 'Review Answers' }))
     .not.toBeInTheDocument();
   await expect
     .element(screen.getByRole('link', { name: 'Back to Dashboard' }))
@@ -290,14 +290,14 @@ test('renders callback-driven exam review controls as buttons and disables the C
   );
 
   await expect
-    .element(screen.getByRole('button', { name: 'Review your answers' }))
+    .element(screen.getByRole('button', { name: 'Review Answers' }))
     .toBeDisabled();
   await expect
     .element(screen.getByRole('button', { name: /Stem for q1/i }))
     .toBeDisabled();
   await expect.element(screen.getByText('Loading review...')).toBeVisible();
   await expect
-    .element(screen.getByRole('link', { name: 'Review your answers' }))
+    .element(screen.getByRole('link', { name: 'Review Answers' }))
     .not.toBeInTheDocument();
 });
 
@@ -352,7 +352,7 @@ test('uses in-session callbacks for exam summary review re-entry when provided',
     />,
   );
 
-  await screen.getByRole('button', { name: 'Review your answers' }).click();
+  await screen.getByRole('button', { name: 'Review Answers' }).click();
   expect(onReviewAnswers).toHaveBeenCalledTimes(1);
 
   await screen.getByRole('button', { name: /Stem for q1/i }).click();
