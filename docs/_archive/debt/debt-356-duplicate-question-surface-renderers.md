@@ -2,8 +2,13 @@
 
 **Priority:** P3
 **Created:** 2026-04-08
-**Source:** Follow-up from [DEBT-354](./debt-354-god-file-and-clean-code-audit.md)
-**Related:** [question-page-client.tsx](../../app/(app)/app/questions/[slug]/question-page-client.tsx), [practice-view.tsx](../../app/(app)/app/practice/components/practice-view.tsx), [practice-session-page-view.tsx](../../app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx), [BS-058](../_archive/brainstorming/bs-058-exam-post-submit-flow-reorder.md)
+**Status:** Resolved (PR #275)
+**Source:** Follow-up from [DEBT-354](../debt/debt-354-god-file-and-clean-code-audit.md)
+**Related:** [question-page-client.tsx](../../../app/(app)/app/questions/[slug]/question-page-client.tsx), [practice-view.tsx](../../../app/(app)/app/practice/components/practice-view.tsx), [practice-session-page-view.tsx](../../../app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx), [BS-058](../brainstorming/bs-058-exam-post-submit-flow-reorder.md)
+
+## Resolution
+
+Extracted a shared [`QuestionSurfaceBody`](../../../components/question/question-surface-body.tsx) that owns question-card and feedback composition for both `QuestionView` and `PracticeView`, including feedback-only states. The two surface wrappers now stay focused on their context-specific headings, loading/error states, unanswered banner wiring, action bars, and session/origin behavior while question-surface rendering changes land in one shared path.
 
 ---
 
@@ -12,8 +17,8 @@
 The repo now maintains two large, partially overlapping question-surface
 renderers:
 
-1. `QuestionView` inside [`question-page-client.tsx`](../../app/(app)/app/questions/[slug]/question-page-client.tsx)
-2. `PracticeView` inside [`practice-view.tsx`](../../app/(app)/app/practice/components/practice-view.tsx)
+1. `QuestionView` inside [`question-page-client.tsx`](../../../app/(app)/app/questions/[slug]/question-page-client.tsx)
+2. `PracticeView` inside [`practice-view.tsx`](../../../app/(app)/app/practice/components/practice-view.tsx)
 
 Both compose the same core presentation pieces:
 

@@ -3,8 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useId, useRef } from 'react';
 import { ErrorCard } from '@/components/error-card';
-import { Feedback } from '@/components/question/feedback';
-import { QuestionCard } from '@/components/question/question-card';
+import { QuestionSurfaceBody } from '@/components/question/question-surface-body';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useNotification } from '@/components/ui/notification-provider';
@@ -421,14 +420,9 @@ export function PracticeView(props: PracticeViewProps) {
         </Card>
       ) : null}
 
-      {props.question ? (
-        <QuestionCard
-          stemMd={props.question.stemMd}
-          choices={props.question.choices.map((c) => ({
-            id: c.id,
-            label: c.label,
-            textMd: c.textMd,
-          }))}
+      {props.question || feedbackResult ? (
+        <QuestionSurfaceBody
+          question={props.question}
           selectedChoiceId={props.selectedChoiceId}
           correctChoiceId={correctChoiceId}
           disabled={
@@ -437,19 +431,9 @@ export function PracticeView(props: PracticeViewProps) {
             isAnswerLocked
           }
           onSelectChoice={props.onSelectChoice}
+          feedback={feedbackResult}
+          feedbackRef={feedbackRef}
         />
-      ) : null}
-
-      {feedbackResult ? (
-        <div ref={feedbackRef}>
-          <Feedback
-            isCorrect={feedbackResult.isCorrect}
-            explanationMd={feedbackResult.explanationMd}
-            referenceMd={feedbackResult.referenceMd ?? null}
-            choiceExplanations={feedbackResult.choiceExplanations}
-            selectedChoiceId={props.selectedChoiceId}
-          />
-        </div>
       ) : null}
 
       {props.question ? (

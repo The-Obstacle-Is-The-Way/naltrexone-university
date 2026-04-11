@@ -4,8 +4,7 @@ import Link from 'next/link';
 import { useMemo } from 'react';
 import { ReviewQuestionNavigator } from '@/app/(app)/app/questions/[slug]/components/review-question-navigator';
 import { ErrorCard } from '@/components/error-card';
-import { Feedback } from '@/components/question/feedback';
-import { QuestionCard } from '@/components/question/question-card';
+import { QuestionSurfaceBody } from '@/components/question/question-surface-body';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -217,6 +216,32 @@ export function QuestionView(props: QuestionViewProps) {
   const isBookmarkHydrated = props.isBookmarkHydrated ?? false;
   const isBookmarked = props.isBookmarked ?? false;
   const onToggleBookmark = props.onToggleBookmark ?? (() => undefined);
+  const questionSurfaceQuestion =
+    props.question && !props.isLoadingPreviousAttempt && !isReviewHydrationError
+      ? props.question
+      : null;
+  const questionSurfaceFeedback =
+    (props.submitResult || sessionUnansweredReveal) &&
+    !props.isLoadingPreviousAttempt
+      ? {
+          isCorrect: props.submitResult?.isCorrect ?? false,
+          isUnanswered: isSessionReviewUnansweredReveal,
+          explanationMd:
+            props.submitResult?.explanationMd ??
+            sessionUnansweredReveal?.explanationMd ??
+            null,
+          referenceMd:
+            props.submitResult?.referenceMd ??
+            sessionUnansweredReveal?.referenceMd ??
+            null,
+          choiceExplanations:
+            props.submitResult?.choiceExplanations ??
+            sessionUnansweredReveal?.choiceExplanations ??
+            [],
+        }
+      : null;
+  const shouldRenderQuestionSurface =
+    questionSurfaceQuestion !== null || questionSurfaceFeedback !== null;
 
   return (
     <div className="space-y-6">
@@ -312,59 +337,29 @@ export function QuestionView(props: QuestionViewProps) {
         </Card>
       ) : null}
 
-      {props.question &&
-      !props.isLoadingPreviousAttempt &&
-      !isReviewHydrationError ? (
-        <>
-          {isSessionReviewUnansweredReveal ? (
-            <Card
-              className="gap-0 rounded-2xl border-warning/50 bg-warning/5 p-4 text-sm text-foreground shadow-sm"
-              role="status"
-            >
-              You did not answer this question during this session.
-            </Card>
-          ) : null}
-          <QuestionCard
-            stemMd={props.question.stemMd}
-            choices={props.question.choices.map((c) => ({
-              id: c.id,
-              label: c.label,
-              textMd: c.textMd,
-            }))}
-            selectedChoiceId={props.selectedChoiceId}
-            correctChoiceId={correctChoiceId}
-            disabled={
-              props.isPending ||
-              props.loadState.status === 'loading' ||
-              props.submitResult !== null ||
-              isSessionReviewUnansweredReveal
-            }
-            onSelectChoice={props.onSelectChoice}
-          />
-        </>
-      ) : null}
-
-      {(props.submitResult || sessionUnansweredReveal) &&
-      !props.isLoadingPreviousAttempt ? (
-        <Feedback
-          isCorrect={props.submitResult?.isCorrect ?? false}
-          isUnanswered={isSessionReviewUnansweredReveal}
-          explanationMd={
-            props.submitResult?.explanationMd ??
-            sessionUnansweredReveal?.explanationMd ??
-            null
-          }
-          referenceMd={
-            props.submitResult?.referenceMd ??
-            sessionUnansweredReveal?.referenceMd ??
-            null
-          }
-          choiceExplanations={
-            props.submitResult?.choiceExplanations ??
-            sessionUnansweredReveal?.choiceExplanations ??
-            []
-          }
+      {shouldRenderQuestionSurface ? (
+        <QuestionSurfaceBody
+          question={questionSurfaceQuestion}
           selectedChoiceId={props.selectedChoiceId}
+          correctChoiceId={correctChoiceId}
+          disabled={
+            props.isPending ||
+            props.loadState.status === 'loading' ||
+            props.submitResult !== null ||
+            isSessionReviewUnansweredReveal
+          }
+          onSelectChoice={props.onSelectChoice}
+          feedback={questionSurfaceFeedback}
+          beforeQuestionCard={
+            isSessionReviewUnansweredReveal ? (
+              <Card
+                className="gap-0 rounded-2xl border-warning/50 bg-warning/5 p-4 text-sm text-foreground shadow-sm"
+                role="status"
+              >
+                You did not answer this question during this session.
+              </Card>
+            ) : null
+          }
         />
       ) : null}
 

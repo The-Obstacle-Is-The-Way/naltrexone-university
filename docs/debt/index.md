@@ -20,7 +20,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
-| [DEBT-356](./debt-356-duplicate-question-surface-renderers.md) | Duplicate question-surface renderers — `QuestionView` and `PracticeView` now duplicate too much question-card/feedback/action-shell composition and should share a thinner common surface layer | P3 | — |
 **Next Debt ID:** DEBT-359
 
 ---
@@ -29,6 +28,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-356](../_archive/debt/debt-356-duplicate-question-surface-renderers.md) | Duplicate question-surface renderers — extracted shared `QuestionSurfaceBody` so `QuestionView` and `PracticeView` now share one question-card/feedback composition path while keeping surface-specific wrappers thin | P3 | 2026-04-10 | [PR #275](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/275) |
 | [DEBT-352](../_archive/debt/debt-352-post-exam-review-focus-ring-flash.md) | Post-exam review focus-ring flash — removed forced `focusVisible: true` from programmatic focus while preserving panel focus transfer and keyboard/screen-reader affordance | P3 | 2026-04-10 | [PR #274](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/274) |
 | [DEBT-357](../_archive/debt/debt-357-test-double-discipline-drift.md) | Test double discipline drift — consolidated drifted inline doubles onto repo-standard fakes (`FakeUserRepository`, `FakeAuthGateway`, `FakeCheckEntitlementUseCase`) in three test files | P3 | 2026-04-10 | [PR #273](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/273) |
 | [DEBT-355](../_archive/debt/debt-355-cross-feature-question-flow-coupling.md) | Cross-feature question-flow coupling — extracted shared error-message and async-action helpers from `practice/` to neutral `shared/` boundary | P2 | 2026-04-10 | [PR #272](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/272) |
