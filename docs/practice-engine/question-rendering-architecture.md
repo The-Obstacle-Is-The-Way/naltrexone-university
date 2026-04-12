@@ -21,7 +21,7 @@ This document is the single source of truth for understanding the **current ship
 |---|---------|---------------|-------------|
 | A | **Tutor Mode** (active session) | `/app/practice/[sessionId]` | Practice landing → Start session (tutor) |
 | B | **Exam Mode** (active session) | `/app/practice/[sessionId]` | Practice landing → Start session (exam) |
-| C | **Exam Review Stage** (pre-submit review) | `/app/practice/[sessionId]` (same URL, different view) | Exam mode → click `Finish exam` in the header, or click `Next` on the last question |
+| C | **Exam Review Stage** (pre-submit review) | `/app/practice/[sessionId]` (same URL, different view) | Exam mode → click `Finish exam` in the header, or click `Review & Submit` on the last question |
 | D | **Post-Exam Review Stage** (post-submit, in-session) | `/app/practice/[sessionId]` (same URL, different view) | Exam Review Stage → `Submit exam` → confirm |
 | E | **Ended Session Review** (post-session) | `/app/questions/[slug]?from=(summary|history)&mode=review&sessionId=...` | Session Summary → `Review Answers` / breakdown link, or History → Sessions tab → View breakdown → click question |
 | F | **History Individual Review** (standalone) | `/app/questions/[slug]?from=history&mode=review` | History → Questions tab → Review |
@@ -167,7 +167,7 @@ Same component tree as Tutor, differentiated by `sessionInfo.mode === 'exam'`:
 
 When the user clicks `Finish exam` (top-right) in exam mode, or clicks `Review & Submit` on the last question, `PracticeSessionPageView` loads review data and switches to `ExamReviewView`:
 
-```
+```text
 PracticeSessionPageView (app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:157 — if (review) → ExamReviewView)
   └─ ExamReviewView
        ├─ Header: "Review & Submit"

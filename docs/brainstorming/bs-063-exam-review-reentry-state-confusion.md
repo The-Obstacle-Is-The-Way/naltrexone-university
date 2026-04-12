@@ -25,7 +25,7 @@ Tutor mode still goes through `usePracticeSessionReviewStageState()`, but its `o
 ```text
 1. Practice setup -> pick Exam
 2. Question flow -> answer questions with no feedback during the run
-3. Click "Finish exam" or click "Next" on the last question
+3. Click "Finish exam" or click "Review & Submit" on the last question
 4. Review & Submit (ExamReviewView)
 5. Click "Submit exam"
 6. Post-exam review (PostExamReviewView) -> initial entry lands on Q1
