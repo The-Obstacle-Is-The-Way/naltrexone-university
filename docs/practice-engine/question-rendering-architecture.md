@@ -54,8 +54,8 @@ These three components are the **core question UI**, shared across all contexts:
 | `disabled` | `false` until submitted (also `true` during pending/loading) | `false` until submitted (also `true` during pending/loading) | Locked while hydrated review state is showing, then re-enabled after `Try Again` / `Answer as new` resets local review state |
 | `onSelectChoice` | Interactive | Interactive | Review pages become interactive only after the user enters a retry/new-answer path |
 
-Feedback is conditionally rendered by the parent:
-- **Tutor active:** `{submitResult && !isExamMode ? <Feedback ... /> : null}` (`app/(app)/app/practice/components/practice-view.tsx:239`)
+Feedback is conditionally derived by the parent before being passed into `QuestionSurfaceBody`:
+- **Tutor active:** `feedbackResult = !isExamMode && hasBooleanCorrectness(props.submitResult) ? props.submitResult : null` (`app/(app)/app/practice/components/practice-view.tsx:285-288`)
 - **Exam active:** Hidden (feedback deferred until review)
 - **Review modes:** `{submitResult ? <Feedback ... /> : null}` (`app/(app)/app/questions/[slug]/question-page-client.tsx:209`)
 
@@ -154,21 +154,21 @@ PracticeSessionPage (server)
 Same component tree as Tutor, differentiated by `sessionInfo.mode === 'exam'`:
 
 **Differences from Tutor:**
-- `correctChoiceId` forced to `null` (`app/(app)/app/practice/components/practice-view.tsx:90-92`) — no green/red highlighting during exam
-- Feedback hidden: `{submitResult && !isExamMode ? ... : null}` (`app/(app)/app/practice/components/practice-view.tsx:239`)
-- No per-question `Submit` button. The active exam footer is `[Previous] [Next] [Mark for review]`, with `Next` also acting as the last-question transition into the review stage.
+- `correctChoiceId` forced to `null` (`app/(app)/app/practice/components/practice-view.tsx:277-279`) — no green/red highlighting during exam
+- Feedback hidden: `feedbackResult` is gated behind `!isExamMode` (`app/(app)/app/practice/components/practice-view.tsx:285-288`)
+- No per-question `Submit` button. The active exam footer is `[Previous] [Next] [Mark for review]` on non-terminal questions and `[Previous] [Review & Submit] [Mark for review]` on the last question.
 - Draft answer state is persisted on navigation boundaries and when entering the review stage
-- "Mark for review" button visible (`app/(app)/app/practice/components/practice-view.tsx:277-288`)
+- "Mark for review" button visible (`app/(app)/app/practice/components/practice-view.tsx:243-252`)
 - Header action changes from "End session" to "Finish exam" (triggers exam review stage)
-- Last exam question keeps the bottom-bar `Next` label; that click still routes through `onEndSession` to enter the review stage
+- Last exam question swaps the bottom-bar label to `Review & Submit`; that click still routes through `onEndSession` to enter the review stage
 - QuestionNavigator does **not** reveal correctness in exam mode (answered buttons are labeled "Answered", not "Correct/Incorrect")
 
 ### Context C: Exam Review Stage
 
-When the user clicks `Finish exam` (top-right) in exam mode, or clicks `Next` on the last question, `PracticeSessionPageView` loads review data and switches to `ExamReviewView`:
+When the user clicks `Finish exam` (top-right) in exam mode, or clicks `Review & Submit` on the last question, `PracticeSessionPageView` loads review data and switches to `ExamReviewView`:
 
 ```
-PracticeSessionPageView (app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:111 — if (review) → ExamReviewView)
+PracticeSessionPageView (app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:157 — if (review) → ExamReviewView)
   └─ ExamReviewView
        ├─ Header: "Review & Submit"
        ├─ Stats cards: Answered / Unanswered / Marked
@@ -526,7 +526,7 @@ The bottom action bar is implemented inline in 4 different places. A future spec
 |------|--------|
 | 2026-03-19 | Implemented DEBT-324: removed misleading `Practice missed questions` CTA from exam Session Summary. The BS-058 post-exam review already provides full question-level feedback before the terminal summary. |
 | 2026-03-19 | Implemented BS-058: exam finalization now enters an in-session post-exam review stage with score banner + inline feedback, Session Summary gained `Practice missed questions`, summary-origin review remains `from=summary`, and exam-session review suppresses per-question reattempt actions. |
-| 2026-03-18 | Implemented DEBT-322: removed the exam Q1 spacer, renamed the exam header exit to `Finish exam`, renamed the review heading to `Review & Submit`, and kept the footer label `Next` on the last question while preserving review-stage routing. |
+| 2026-03-18 | Implemented DEBT-322: removed the exam Q1 spacer, renamed the exam header exit to `Finish exam`, and renamed the review heading to `Review & Submit`. DEBT-361 later updated the last-question footer label from `Next` to `Review & Submit` while preserving review-stage routing. |
 | 2026-03-17 | Accuracy pass: documented the then-current completed-session review entry points, corrected bookmark availability in review mode, removed stale top-right back-link claims for history review, and fixed related spec-link labels. |
 | 2026-03-02 | Linked canonical Exam Answer Secrecy Policy for cross-context correctness/explanation exposure rules. |
 | 2026-03-01 | Closed DEBT-266 and DEBT-267: documented server telemetry events, accepted visit-scoped retry-marker policy, and synced previous-attempt mixed-id contract hardening. |

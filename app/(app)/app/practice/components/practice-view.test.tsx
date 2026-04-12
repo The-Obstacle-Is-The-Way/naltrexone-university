@@ -819,7 +819,7 @@ describe('PracticeView', () => {
     expect(nextButton?.className).toContain('bg-primary');
   });
 
-  it('renders Next in the bottom bar on the last exam question before submission', () => {
+  it('renders Review & Submit in the bottom bar on the last exam question before submission', () => {
     const question = createQuestionProps();
     const selectedChoice = question.choices[0];
     if (!selectedChoice) {
@@ -863,10 +863,10 @@ describe('PracticeView', () => {
       (button) => (button.textContent ?? '').trim(),
     );
 
-    expect(labels).toEqual(['Previous', 'Next', 'Mark for review']);
+    expect(labels).toEqual(['Previous', 'Review & Submit', 'Mark for review']);
   });
 
-  it('describes the last-question Next action for assistive tech', () => {
+  it('describes the last-question Review & Submit action for assistive tech', () => {
     const question = createQuestionProps();
 
     const html = renderToStaticMarkup(
@@ -901,7 +901,7 @@ describe('PracticeView', () => {
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const nextButton = Array.from(doc.querySelectorAll('button')).find(
-      (button) => button.textContent?.trim() === 'Next',
+      (button) => button.textContent?.trim() === 'Review & Submit',
     );
     const descriptionId = nextButton?.getAttribute('aria-describedby');
     const description = descriptionId

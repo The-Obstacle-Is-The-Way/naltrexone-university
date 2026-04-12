@@ -444,7 +444,7 @@ test('calls onPreviousQuestion when clicked', async () => {
   expect(onPreviousQuestion).toHaveBeenCalledTimes(1);
 });
 
-test('calls onEndSession from the bottom-bar Next button on the last exam question', async () => {
+test('calls onEndSession from the bottom-bar Review & Submit button on the last exam question', async () => {
   const onEndSession = vi.fn();
 
   const screen = await render(
@@ -494,6 +494,6 @@ test('calls onEndSession from the bottom-bar Next button on the last exam questi
     />,
   );
 
-  await screen.getByRole('button', { name: 'Next' }).click();
+  await screen.getByRole('button', { name: 'Review & Submit' }).click();
   expect(onEndSession).toHaveBeenCalledTimes(1);
 });

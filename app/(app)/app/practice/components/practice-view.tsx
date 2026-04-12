@@ -235,7 +235,9 @@ function ExamActionBar(props: ExamActionBarProps) {
           nextActionDescription ? nextActionDescriptionId : undefined
         }
       >
-        Next
+        {props.isLastSessionQuestion && props.onEndSession
+          ? 'Review & Submit'
+          : 'Next'}
       </Button>
 
       {props.onToggleMarkForReview ? (

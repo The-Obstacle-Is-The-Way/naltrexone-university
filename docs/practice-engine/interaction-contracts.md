@@ -107,7 +107,7 @@ Question displayed
 
 **Last question:**
 ```text
-[ Previous ]  [ Next ]  [ Mark for review ]
+[ Previous ]  [ Review & Submit ]  [ Mark for review ]
 ```
 
 **Header (every question):**
@@ -117,7 +117,7 @@ Question displayed
 
 **Contract rules:**
 - Previous always occupies position 1 when available. On Q1, slot 1 is empty; there is no spacer.
-- Position 2 is the sequential progression control: `Next` on every question. On the last question, clicking `Next` enters the review stage.
+- Position 2 is the sequential progression control: `Next` on non-terminal questions. On the last question, the label changes to `Review & Submit` and clicking it enters the review stage.
 - `Mark for review` always occupies position 3.
 - `Finish exam` lives in the header as a persistent escape hatch — accessible from any question.
 - Next is always enabled. No selection = skip (navigate without saving). Selection exists = save draft and advance.
@@ -132,7 +132,7 @@ This is the BS-055-selected model for mutable exam answers: draft state while th
 | Trigger | What it catches |
 |---------|-----------------|
 | **Navigation boundary** (Next, Previous, navigator jump) | User moves on — save current selection |
-| **Review stage entry** (`Finish exam` header or last-question `Next`) | User wants to review — save current question first |
+| **Review stage entry** (`Finish exam` header or last-question `Review & Submit`) | User wants to review — save current question first |
 | **Periodic autosave** (every 30-60 seconds, future enhancement) | User sits on one question for a long time, then crashes |
 | **`visibilitychange` / `beforeunload`** (future enhancement) | Tab switch, browser close |
 
@@ -321,7 +321,7 @@ Both modes share rendering components but must have separate action contracts. T
 | `QuestionCard` | Yes — renders stem + choices | Exam allows re-selection on revisit; tutor locks after submit |
 | `ChoiceButton` | Yes — renders individual choice | State variants differ (exam: selected/unselected only; tutor: selected/correct/incorrect) |
 | `QuestionNavigator` | Exam only | N/A for tutor |
-| `PracticeView` action bar | Shared component | **Must branch explicitly.** Tutor: Submit/Next/Bookmark. Exam: Previous/Next/Mark-for-review. Do not evolve as a single conditional matrix. |
+| `PracticeView` action bar | Shared component | **Must branch explicitly.** Tutor: Submit/Next/Bookmark. Exam: Previous/Next-or-Review-&-Submit/Mark-for-review. Do not evolve as a single conditional matrix. |
 | `question-flow-actions.ts` | Shared load logic | **Must branch on save.** Tutor: one-shot `submitAnswer`. Exam: draft-save on navigation boundary. |
 | Review stage | Exam only | N/A for tutor |
 | Feedback display | Shared rendering | Timing gated by mode (immediate vs deferred) |
