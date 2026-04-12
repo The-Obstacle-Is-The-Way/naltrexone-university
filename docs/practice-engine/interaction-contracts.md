@@ -234,7 +234,7 @@ Quick Practice matches its contract. No changes needed (AF-5 safe — Next is hi
 After a tutor session ends, the user sees a summary page with:
 - Stats cards (answered, correct, accuracy, duration)
 - Per-question breakdown
-- CTAs: "Back to Practice" and "View in History"
+- CTAs: "New Session" and "View in History"
 
 After an exam is submitted, the flow is now:
 
@@ -258,9 +258,9 @@ The post-exam review stage shows:
 ### Summary ↔ Post-exam review re-entry loop
 
 For the routed exam-results flow inside `/app/practice/[sessionId]`, the terminal summary exposes:
-- `Review your answers` — re-enters `PostExamReviewView` in-session via `onReenterPostExamReview()` because `renderPracticeSessionExamResults()` passes `onReviewAnswers`
+- `Review Answers` — re-enters `PostExamReviewView` in-session via `onReenterPostExamReview()` because `renderPracticeSessionExamResults()` passes `onReviewAnswers`
 - Clickable breakdown rows — re-enter at a specific question via `onReenterPostExamReview(questionId)`
-- `Back to Practice` — route exit to `/app/practice`
+- `New Session` — route exit to `/app/practice`
 - `View in History` — route exit to `/app/history`
 
 `SessionSummaryView` still retains a fallback link-based branch when it is rendered without `onReviewAnswers` but does have a reviewable slug. That fallback links to `/app/questions/[slug]?from=summary&mode=review&sessionId=...`. The practice-session orchestrator does not use that fallback.
@@ -278,7 +278,7 @@ Both substages render within the same `/app/practice/[sessionId]` orchestrator. 
 | Entry type | Cursor behavior | Rationale |
 |------------|----------------|-----------|
 | Initial (after exam submit) | First available question (Q1) | Fresh review pass — user has never seen feedback |
-| Re-entry via `Review your answers` button | Reuses the last viewed available question when `postExamReviewCurrentQuestionId` is still valid; otherwise falls back to the first available question | `onReenterPostExamReview()` always passes `persistedQuestionId: postExamReviewCurrentQuestionId` on untargeted re-entry |
+| Re-entry via `Review Answers` button | Reuses the last viewed available question when `postExamReviewCurrentQuestionId` is still valid; otherwise falls back to the first available question | `onReenterPostExamReview()` always passes `persistedQuestionId: postExamReviewCurrentQuestionId` on untargeted re-entry |
 | Re-entry via breakdown row click | Lands on the clicked question when available; otherwise falls back to the last viewed available question, then the first available question | `resolvePostExamReviewCurrentQuestionId()` prefers `requestedQuestionId`, then `persistedQuestionId` |
 | Re-entry after page refresh / cold start | First available question after the payload is fetched | The in-memory cursor is gone, so no persisted question ID exists |
 

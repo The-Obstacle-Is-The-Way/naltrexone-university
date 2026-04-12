@@ -149,7 +149,7 @@ describe('SessionSummaryView', () => {
     const actionLinks = Array.from(doc.querySelectorAll('a')).filter((link) => {
       const text = link.textContent?.trim();
       return (
-        text === 'Back to Practice' ||
+        text === 'New Session' ||
         text === 'View in History' ||
         text === 'Back to Dashboard' ||
         text === 'Start another session'
@@ -157,7 +157,7 @@ describe('SessionSummaryView', () => {
     });
 
     expect(actionLinks.map((link) => link.textContent?.trim())).toEqual([
-      'Back to Practice',
+      'New Session',
       'View in History',
     ]);
   });
@@ -204,8 +204,8 @@ describe('SessionSummaryView', () => {
     const actionLinks = Array.from(doc.querySelectorAll('a')).filter((link) => {
       const text = link.textContent?.trim();
       return (
-        text === 'Review your answers' ||
-        text === 'Back to Practice' ||
+        text === 'Review Answers' ||
+        text === 'New Session' ||
         text === 'View in History' ||
         text === 'Back to Dashboard' ||
         text === 'Start another session'
@@ -213,26 +213,26 @@ describe('SessionSummaryView', () => {
     });
 
     expect(actionLinks.map((link) => link.textContent?.trim())).toEqual([
-      'Review your answers',
-      'Back to Practice',
+      'Review Answers',
+      'New Session',
       'View in History',
     ]);
 
     const reviewLink = Array.from(doc.querySelectorAll('a')).find(
-      (link) => link.textContent?.trim() === 'Review your answers',
+      (link) => link.textContent?.trim() === 'Review Answers',
     );
     expect(reviewLink?.getAttribute('href')).toBe(
       '/app/questions/q-1?from=summary&mode=review&sessionId=session-1',
     );
 
-    const backToPracticeLink = Array.from(doc.querySelectorAll('a')).find(
-      (link) => link.textContent?.trim() === 'Back to Practice',
+    const newSessionLink = Array.from(doc.querySelectorAll('a')).find(
+      (link) => link.textContent?.trim() === 'New Session',
     );
-    const backToPracticeTokens = getClassTokens(
-      backToPracticeLink?.getAttribute('class') ?? '',
+    const newSessionTokens = getClassTokens(
+      newSessionLink?.getAttribute('class') ?? '',
     );
-    expect(backToPracticeTokens.has('border')).toBe(true);
-    expect(backToPracticeTokens.has('bg-background')).toBe(true);
+    expect(newSessionTokens.has('border')).toBe(true);
+    expect(newSessionTokens.has('bg-background')).toBe(true);
 
     const historyLink = Array.from(doc.querySelectorAll('a')).find(
       (link) => link.textContent?.trim() === 'View in History',
@@ -286,7 +286,7 @@ describe('SessionSummaryView', () => {
     expect(html).not.toContain('Practice missed questions');
   });
 
-  it('uses a default Back to Practice button when no reviewable slug exists', () => {
+  it('uses a default New Session button when no reviewable slug exists', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
@@ -322,14 +322,12 @@ describe('SessionSummaryView', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const backToPracticeLink = Array.from(doc.querySelectorAll('a')).find(
-      (link) => link.textContent?.trim() === 'Back to Practice',
+    const newSessionLink = Array.from(doc.querySelectorAll('a')).find(
+      (link) => link.textContent?.trim() === 'New Session',
     );
-    const tokens = getClassTokens(
-      backToPracticeLink?.getAttribute('class') ?? '',
-    );
+    const tokens = getClassTokens(newSessionLink?.getAttribute('class') ?? '');
 
-    expect(backToPracticeLink).not.toBeNull();
+    expect(newSessionLink).not.toBeNull();
     expect(tokens.has('bg-primary')).toBe(true);
     expect(tokens.has('text-primary-foreground')).toBe(true);
     expect(tokens.has('border')).toBe(false);
@@ -383,7 +381,7 @@ describe('SessionSummaryView', () => {
     );
   });
 
-  it('renders Review your answers as a button when callback re-entry is provided', () => {
+  it('renders Review Answers as a button when callback re-entry is provided', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
@@ -421,7 +419,7 @@ describe('SessionSummaryView', () => {
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const reviewButton = Array.from(doc.querySelectorAll('button')).find(
-      (button) => button.textContent?.trim() === 'Review your answers',
+      (button) => button.textContent?.trim() === 'Review Answers',
     );
 
     expect(reviewButton).not.toBeNull();
@@ -451,7 +449,7 @@ describe('SessionSummaryView', () => {
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const reviewButton = Array.from(doc.querySelectorAll('button')).find(
-      (button) => button.textContent?.trim() === 'Review your answers',
+      (button) => button.textContent?.trim() === 'Review Answers',
     );
 
     expect(reviewButton?.hasAttribute('disabled')).toBe(true);

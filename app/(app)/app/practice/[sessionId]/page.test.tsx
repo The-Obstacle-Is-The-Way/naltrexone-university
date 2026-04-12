@@ -147,7 +147,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain('Question breakdown');
     expect(html).toContain('View in History');
     expect(html).toContain('href="/app/history"');
-    expect(html).toContain('Back to Practice');
+    expect(html).toContain('New Session');
     expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
     expect(html).not.toContain('Back to Dashboard');
     expect(html).not.toContain('Start another session');
@@ -258,8 +258,8 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     const actionLinks = Array.from(doc.querySelectorAll('a')).filter((link) => {
       const text = link.textContent?.trim();
       return (
-        text === 'Review your answers' ||
-        text === 'Back to Practice' ||
+        text === 'Review Answers' ||
+        text === 'New Session' ||
         text === 'View in History' ||
         text === 'Back to Dashboard' ||
         text === 'Start another session'
@@ -267,11 +267,11 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     });
 
     expect(actionLinks.map((link) => link.textContent?.trim())).toEqual([
-      'Review your answers',
-      'Back to Practice',
+      'Review Answers',
+      'New Session',
       'View in History',
     ]);
-    expect(html).toContain('Review your answers');
+    expect(html).toContain('Review Answers');
     expect(html).toContain(
       'href="/app/questions/q-1?from=summary&amp;mode=review&amp;sessionId=session-1"',
     );
@@ -279,7 +279,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).not.toContain('href="/app/practice/quick?status=incorrect"');
   });
 
-  it('does not render a Review your answers CTA for tutor summaries', async () => {
+  it('does not render a Review Answers CTA for tutor summaries', async () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
@@ -318,10 +318,10 @@ describe('app/(app)/app/practice/[sessionId]', () => {
       />,
     );
 
-    expect(html).not.toContain('Review your answers');
+    expect(html).not.toContain('Review Answers');
   });
 
-  it('does not render a Review your answers CTA while summary review is unavailable', async () => {
+  it('does not render a Review Answers CTA while summary review is unavailable', async () => {
     const loadingHtml = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
@@ -340,10 +340,10 @@ describe('app/(app)/app/practice/[sessionId]', () => {
       />,
     );
 
-    expect(loadingHtml).not.toContain('Review your answers');
+    expect(loadingHtml).not.toContain('Review Answers');
   });
 
-  it('does not render a Review your answers CTA when no reviewable slug exists', async () => {
+  it('does not render a Review Answers CTA when no reviewable slug exists', async () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
@@ -387,10 +387,10 @@ describe('app/(app)/app/practice/[sessionId]', () => {
       />,
     );
 
-    expect(html).not.toContain('Review your answers');
+    expect(html).not.toContain('Review Answers');
   });
 
-  it('uses a primary Back to Practice CTA when no reviewable slug exists', async () => {
+  it('uses a primary New Session CTA when no reviewable slug exists', async () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
@@ -426,12 +426,10 @@ describe('app/(app)/app/practice/[sessionId]', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const backToPracticeLink = Array.from(doc.querySelectorAll('a')).find(
-      (link) => link.textContent?.trim() === 'Back to Practice',
+    const newSessionLink = Array.from(doc.querySelectorAll('a')).find(
+      (link) => link.textContent?.trim() === 'New Session',
     );
-    const tokens = getClassTokens(
-      backToPracticeLink?.getAttribute('class') ?? '',
-    );
+    const tokens = getClassTokens(newSessionLink?.getAttribute('class') ?? '');
 
     expect(tokens.has('bg-primary')).toBe(true);
     expect(tokens.has('border')).toBe(false);
@@ -481,7 +479,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
 
     expect(errorHtml).toContain('Review failed');
     expect(errorHtml).toContain('role="alert"');
-    expect(errorHtml).not.toContain('Review your answers');
+    expect(errorHtml).not.toContain('Review Answers');
   });
 
   it('renders the session summary branch in PracticeSessionPageView', async () => {

@@ -179,15 +179,15 @@ test('renders session summary branch when summary is present', async () => {
   await expect.element(screen.getByText('80%')).toBeVisible();
 });
 
-test('renders callback-driven Review your answers button for exam-mode session summaries in the orchestrator', async () => {
+test('renders callback-driven Review Answers button for exam-mode session summaries in the orchestrator', async () => {
   const screen = await renderExamResultsContinuityHarness();
 
   await expect.element(screen.getByText('Session Summary')).toBeVisible();
   await expect
-    .element(screen.getByRole('button', { name: 'Review your answers' }))
+    .element(screen.getByRole('button', { name: 'Review Answers' }))
     .toBeVisible();
   await expect
-    .element(screen.getByRole('link', { name: 'Review your answers' }))
+    .element(screen.getByRole('link', { name: 'Review Answers' }))
     .not.toBeInTheDocument();
 });
 
@@ -258,20 +258,20 @@ test('keeps exam summaries on the in-session review contract when the substage p
   );
 
   await expect
-    .element(screen.getByRole('button', { name: 'Review your answers' }))
+    .element(screen.getByRole('button', { name: 'Review Answers' }))
     .toBeVisible();
   await expect
-    .element(screen.getByRole('link', { name: 'Review your answers' }))
+    .element(screen.getByRole('link', { name: 'Review Answers' }))
     .not.toBeInTheDocument();
 
-  await screen.getByRole('button', { name: 'Review your answers' }).click();
+  await screen.getByRole('button', { name: 'Review Answers' }).click();
   expect(onReenterPostExamReview).toHaveBeenCalledTimes(1);
 });
 
-test('clicking Review your answers re-enters post-exam review without route ejection', async () => {
+test('clicking Review Answers re-enters post-exam review without route ejection', async () => {
   const screen = await renderExamResultsContinuityHarness();
 
-  await screen.getByRole('button', { name: 'Review your answers' }).click();
+  await screen.getByRole('button', { name: 'Review Answers' }).click();
 
   await expect.element(screen.getByText('Score: 50% (1/2)')).toBeVisible();
   await expect.element(screen.getByText('Explanation 1')).toBeVisible();
