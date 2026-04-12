@@ -15,7 +15,7 @@
 1. Practice setup -> pick Tutor
 2. Question flow -> answer each question -> feedback appears immediately
 3. End session
-4. Session Summary -> [Back to Practice] [View in History]
+4. Session Summary -> [New Session] [View in History]
 ```
 
 Tutor mode still goes through `usePracticeSessionReviewStageState()`, but its `onEndSession()` branch finalizes immediately when `sessionMode !== 'exam'` and `isInReviewStage === false`. There is no review-stage loop.
@@ -25,13 +25,13 @@ Tutor mode still goes through `usePracticeSessionReviewStageState()`, but its `o
 ```text
 1. Practice setup -> pick Exam
 2. Question flow -> answer questions with no feedback during the run
-3. Click "Finish exam" or click "Next" on the last question
+3. Click "Finish exam" or click "Review & Submit" on the last question
 4. Review & Submit (ExamReviewView)
 5. Click "Submit exam"
 6. Post-exam review (PostExamReviewView) -> initial entry lands on Q1
 7. Click "View Summary" or "Finish review"
 8. Session Summary
-9. Click "Review your answers"
+9. Click "Review Answers"
 10. Post-exam review again
 ```
 
@@ -170,7 +170,7 @@ Section 5 of [interaction-contracts.md](../practice-engine/interaction-contracts
 
 ### Fix 2: Reset untargeted re-entry only if product wants a fresh pass
 
-If the product decision is "Review your answers" should always restart at Q1, the change belongs in both `onReenterPostExamReview()` branches:
+If the product decision is "`Review Answers` should always restart at Q1", the change belongs in both `onReenterPostExamReview()` branches:
 
 - Cached payload branch
 - Fetch-on-demand branch
@@ -190,12 +190,12 @@ type PostExamReviewEntrySource =
 
 Store that alongside the substage and pass it through `renderPracticeSessionExamResults()` into `PostExamReviewView`. That makes label changes intentional instead of inferred from cursor position.
 
-### Fix 4: Ship alongside DEBT-359 if labels change
+### Fix 4: Keep any re-entry copy changes aligned with DEBT-359
 
 If the product decides on:
 
-- `Review your answers` -> `Review Answers`
-- `Back to Practice` -> `New Session`
+- `Review Answers`
+- `New Session`
 - `Finish review` -> `Back to Summary` on re-entry
 
 those copy changes should ship as one coherent post-exam-flow pass.

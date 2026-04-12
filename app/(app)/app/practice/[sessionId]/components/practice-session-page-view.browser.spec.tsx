@@ -1089,7 +1089,7 @@ test('renders Previous when navigator is missing but sessionInfo indicates a pri
   await expect.element(previousButton).toBeDisabled();
 });
 
-test('routes the last exam-question footer Next button through onEndSession instead of onNextQuestion', async () => {
+test('routes the last exam-question footer Review & Submit button through onEndSession instead of onNextQuestion', async () => {
   const onEndSession = vi.fn();
   const onNextQuestion = vi.fn();
 
@@ -1149,7 +1149,7 @@ test('routes the last exam-question footer Next button through onEndSession inst
     />,
   );
 
-  await screen.getByRole('button', { name: 'Next' }).click();
+  await screen.getByRole('button', { name: 'Review & Submit' }).click();
   expect(onEndSession).toHaveBeenCalledTimes(1);
   expect(onNextQuestion).not.toHaveBeenCalled();
 });

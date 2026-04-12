@@ -83,15 +83,20 @@ test.describe('practice', () => {
     await expect(
       page.getByText('Correct Answer', { exact: true }),
     ).not.toBeVisible();
-    await expect(page.getByRole('button', { name: 'Submit' })).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'Submit', exact: true }),
+    ).toHaveCount(0);
     await expect(
       page.getByRole('button', { name: 'Mark for review' }),
     ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Review & Submit' }),
+    ).toBeVisible();
 
-    // Click "Next" on the last question to enter exam review view
+    // Click "Review & Submit" on the last question to enter exam review view
     await page
       .getByTestId('bottom-action-bar')
-      .getByRole('button', { name: 'Next' })
+      .getByRole('button', { name: 'Review & Submit' })
       .click();
 
     // Wait for exam review to load with the "Submit exam" button

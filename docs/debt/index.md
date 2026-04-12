@@ -21,7 +21,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
 | [DEBT-360](./debt-360-action-bar-below-fold.md) | Action bar below fold on exam and post-exam review screens — primary buttons (Next, Previous, Finish review, Bookmark) in document flow with no sticky positioning, hidden on reasonable viewports | P2 | — |
-| [DEBT-361](./debt-361-exam-last-question-next-label.md) | Exam last question "Next" label doesn't reflect action — clicking "Next" on Q3/3 enters Review & Submit but label doesn't change; post-exam review correctly uses "Finish review" | P3 | — |
 | [DEBT-362](./debt-362-review-submit-screen-affordances.md) | Review & Submit screen discoverability and accessibility — no explicit back button, question row buttons have generic "Open question" accessible name without question number/stem | P3 | — |
 **Next Debt ID:** DEBT-363
 
@@ -31,6 +30,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-361](../_archive/debt/debt-361-exam-last-question-next-label.md) | Exam last question label — renamed the `ExamActionBar` middle button from `Next` to `Review & Submit` on the last exam question, preserving the existing `onEndSession` routing and `aria-describedby` hint | P3 | 2026-04-12 | [PR #277](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/277) |
 | [DEBT-359](../_archive/debt/debt-359-session-summary-cta-labels.md) | Session Summary CTA label clarity — renamed "Back to Practice" → "New Session" and "Review your answers" → "Review Answers" on the completed Session Summary surface | P2 | 2026-04-11 | [PR #276](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/276) |
 | [DEBT-356](../_archive/debt/debt-356-duplicate-question-surface-renderers.md) | Duplicate question-surface renderers — extracted shared `QuestionSurfaceBody` so `QuestionView` and `PracticeView` now share one question-card/feedback composition path while keeping surface-specific wrappers thin | P3 | 2026-04-10 | [PR #275](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/275) |
 | [DEBT-352](../_archive/debt/debt-352-post-exam-review-focus-ring-flash.md) | Post-exam review focus-ring flash — removed forced `focusVisible: true` from programmatic focus while preserving panel focus transfer and keyboard/screen-reader affordance | P3 | 2026-04-10 | [PR #274](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/274) |
