@@ -23,7 +23,7 @@ This document is the single source of truth for understanding the **current ship
 | B | **Exam Mode** (active session) | `/app/practice/[sessionId]` | Practice landing → Start session (exam) |
 | C | **Exam Review Stage** (pre-submit review) | `/app/practice/[sessionId]` (same URL, different view) | Exam mode → click `Finish exam` in the header, or click `Next` on the last question |
 | D | **Post-Exam Review Stage** (post-submit, in-session) | `/app/practice/[sessionId]` (same URL, different view) | Exam Review Stage → `Submit exam` → confirm |
-| E | **Ended Session Review** (post-session) | `/app/questions/[slug]?from=summary|history&mode=review&sessionId=...` | Session Summary → `Review Answers` / breakdown link, or History → Sessions tab → View breakdown → click question |
+| E | **Ended Session Review** (post-session) | `/app/questions/[slug]?from=(summary|history)&mode=review&sessionId=...` | Session Summary → `Review Answers` / breakdown link, or History → Sessions tab → View breakdown → click question |
 | F | **History Individual Review** (standalone) | `/app/questions/[slug]?from=history&mode=review` | History → Questions tab → Review |
 | G | **Quick Practice** (ad-hoc, no session) | `/app/practice/quick` | Practice → Quick Practice |
 
@@ -202,7 +202,7 @@ PracticeSessionPageView
 ```
 Entry:     /app/history?tab=sessions → "View breakdown" → click question link
            or Session Summary → "Review Answers" / breakdown link
-Route:     /app/questions/[slug]?from=summary|history&mode=review&sessionId={uuid}&historyHref={encoded}
+Route:     /app/questions/[slug]?from=(summary|history)&mode=review&sessionId={uuid}&historyHref={encoded}
 Server:    app/(app)/app/questions/[slug]/page.tsx
 Client:    app/(app)/app/questions/[slug]/question-page-client.tsx → QuestionView
 Controller: app/(app)/app/questions/[slug]/use-question-page-controller.ts
