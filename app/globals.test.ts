@@ -124,15 +124,6 @@ function getRequiredTokenValue(block: string, tokenName: string): string {
 describe('globals.css light-mode tokens (DEBT-263)', () => {
   const rootBlock = extractBlock(css, ':root');
 
-  it('defines the shared app shell viewport offset token once at the root layer', () => {
-    const appShellDefaultChromeHeight = getRequiredTokenValue(
-      rootBlock,
-      'app-shell-default-chrome-height',
-    );
-
-    expect(appShellDefaultChromeHeight).toBe('8rem');
-  });
-
   it('returns pinned success token pair and enforces AA contrast when theme is light', () => {
     const success = getRequiredTokenValue(rootBlock, 'success');
     const successForeground = getRequiredTokenValue(

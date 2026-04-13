@@ -15,7 +15,7 @@ Both exam-taking and post-exam review place their primary action bars at the end
 
 ### Surface 1: Exam question-taking
 
-**File:** [practice-view.tsx](/Users/ray/Desktop/github/naltrexone-university-3/app/(app)/app/practice/components/practice-view.tsx:439)
+**File:** [practice-view.tsx](../../../app/(app)/app/practice/components/practice-view.tsx)
 
 The bottom action bar is rendered as:
 
@@ -29,7 +29,7 @@ It sits after `QuestionSurfaceBody` inside a top-level `space-y-6` stack. There 
 
 ### Surface 2: Post-exam review
 
-**File:** [post-exam-review-view.tsx](/Users/ray/Desktop/github/naltrexone-university-3/app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx:142)
+**File:** [post-exam-review-view.tsx](../../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx)
 
 The review footer uses the same document-flow pattern:
 
@@ -58,7 +58,7 @@ Contributing factors:
 
 - `QuestionSurfaceBody` and `Feedback` can become tall
 - the review page stacks several cards before the footer
-- the app shell adds `py-8` on the shared `<main>` container in [app layout](/Users/ray/Desktop/github/naltrexone-university-3/app/(app)/app/layout.tsx:83), which slightly increases the total scroll distance
+- the app shell adds `py-8` on the shared `<main>` container in [app layout](../../../app/(app)/app/layout.tsx), which slightly increases the total scroll distance
 
 The earlier version of this debt doc overstated the visual gap as a `space-y-6` problem. The actual DOM gap is small; the discoverability problem comes from footer placement relative to the viewport.
 
@@ -98,7 +98,7 @@ DEBT-360 shipped as a hybrid of Option A and Option B:
 
 - shared [`StickyActionBarLayout`](../../../app/(app)/app/practice/components/sticky-action-bar.tsx) provides a viewport-bounded shell plus a scrollable content region
 - shared [`StickyActionBar`](../../../app/(app)/app/practice/components/sticky-action-bar.tsx) provides the sticky footer chrome (`sticky bottom-0`, border, backdrop blur, safe-area padding)
-- shared [`app/globals.css`](../../../app/globals.css) now defines `--app-shell-default-chrome-height: 8rem` once at the root token layer; shared [`AppLayoutShell`](../../../app/(app)/app/layout.tsx) publishes `--app-shell-chrome-height` on `<main>` from that token, and [`sticky-action-bar.tsx`](../../../app/(app)/app/practice/components/sticky-action-bar.tsx) falls back to the same root token when the shell-scoped variable is absent
+- shared [`AppLayoutShell`](../../../app/(app)/app/layout.tsx) now uses a flex-column `min-h-screen` shell with the banner and header above a `flex-1` `<main>` region, so [`StickyActionBarLayout`](../../../app/(app)/app/practice/components/sticky-action-bar.tsx) can fill the remaining viewport without top-chrome math
 - [`PracticeView`](../../../app/(app)/app/practice/components/practice-view.tsx) and [`PostExamReviewView`](../../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx) both render their existing footer controls through that shared shell
 
 This shipped approach keeps the footer visible without introducing a `fixed` overlay, while avoiding the failure mode of a pure end-of-document sticky wrapper that still remains below the fold until the user scrolls to it.

@@ -52,17 +52,47 @@ describe('app/(app)/app/layout (shell)', () => {
     expect(html).toContain('AuthNav');
     expect(html).toContain('MobileNav');
     expect(html).toContain('Child content');
-    expect(html).toContain('min-h-screen bg-background');
+    expect(html).toContain('flex h-dvh min-h-screen flex-col bg-background');
     expect(html).not.toContain('min-h-screen bg-muted');
     expect(html).toContain('<main id="main-content"');
-    const mainElement = main as HTMLElement;
-    expect(
-      mainElement.style.getPropertyValue('--app-shell-chrome-height'),
-    ).toBe('var(--app-shell-default-chrome-height)');
+    const mainClassTokens = (main.getAttribute('class') ?? '')
+      .split(/\s+/)
+      .filter(Boolean);
     expect(brandClassTokens).toContain('font-heading');
     expect(brandClassTokens).toContain('font-bold');
     expect(brandClassTokens).toContain('text-base');
     expect(brandClassTokens).toContain('whitespace-nowrap');
+    expect(mainClassTokens).toContain('flex');
+    expect(mainClassTokens).toContain('flex-1');
+    expect(mainClassTokens).toContain('flex-col');
+    expect(mainClassTokens).toContain('min-h-0');
+    expect(mainClassTokens).toContain('w-full');
+  });
+
+  it('keeps banner, header, and main in one flex column shell', async () => {
+    const html = renderToStaticMarkup(
+      <AppLayoutShell
+        authNav={<div>AuthNav</div>}
+        mobileNav={<div>MobileNav</div>}
+        banner={<div data-testid="app-banner">Banner</div>}
+      >
+        <div>Child content</div>
+      </AppLayoutShell>,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const shell = doc.body.firstElementChild;
+    const main = doc.querySelector('main#main-content');
+
+    expect(shell).not.toBeNull();
+    expect(main).not.toBeNull();
+    expect(shell?.children[0]?.getAttribute('data-testid')).toBe('app-banner');
+    expect(shell?.children[1]?.tagName).toBe('HEADER');
+    expect(shell?.children[2]?.tagName).toBe('MAIN');
+    expect(shell?.className).toContain('h-dvh');
+    expect(shell?.className).toContain('flex-col');
+    expect(main?.className).toContain('flex-1');
+    expect(main?.className).toContain('min-h-0');
   });
 
   it('renders AppLayout via renderAppLayout with injected deps', async () => {

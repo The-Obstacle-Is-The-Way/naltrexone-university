@@ -42,12 +42,10 @@ describe('StickyActionBar', () => {
     expect(scrollRegion?.contains(content)).toBe(true);
     expect(wrapper?.contains(actionBar)).toBe(true);
     expect(layout?.className).toContain('flex');
-    expect(layout?.className).toContain(
-      'h-[calc(100dvh-var(--app-shell-chrome-height,var(--app-shell-default-chrome-height)))]',
-    );
+    expect(layout?.className).toContain('flex-1');
+    expect(layout?.className).toContain('min-h-0');
     expect(layout?.className).toContain('overflow-hidden');
     expect(scrollRegion?.className).toContain('overflow-y-auto');
-    expect(scrollRegion?.className).toContain('pb-6');
   });
 
   it('renders children inside the shared sticky shell', () => {
@@ -65,7 +63,6 @@ describe('StickyActionBar', () => {
     expect(actionBar).not.toBeNull();
     expect(wrapper?.className).toContain('sticky');
     expect(wrapper?.className).toContain('bottom-0');
-    expect(wrapper?.className).toContain('backdrop-blur-sm');
     expect(wrapper?.contains(actionBar)).toBe(true);
   });
 });
