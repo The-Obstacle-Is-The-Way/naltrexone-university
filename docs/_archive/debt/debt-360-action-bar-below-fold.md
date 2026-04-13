@@ -98,7 +98,7 @@ DEBT-360 shipped as a hybrid of Option A and Option B:
 
 - shared [`StickyActionBarLayout`](../../../app/(app)/app/practice/components/sticky-action-bar.tsx) provides a viewport-bounded shell plus a scrollable content region
 - shared [`StickyActionBar`](../../../app/(app)/app/practice/components/sticky-action-bar.tsx) provides the sticky footer chrome (`sticky bottom-0`, border, backdrop blur, safe-area padding)
-- shared [`AppLayoutShell`](../../../app/(app)/app/layout.tsx) now uses a flex-column `min-h-screen` shell with the banner and header above a `flex-1` `<main>` region, so [`StickyActionBarLayout`](../../../app/(app)/app/practice/components/sticky-action-bar.tsx) can fill the remaining viewport without top-chrome math
+- shared [`AppLayoutShell`](../../../app/(app)/app/layout.tsx) now uses a full-height flex shell (`h-dvh` + `min-h-screen`) with the banner and header above a `flex-1 min-h-0` `<main>` region, so [`StickyActionBarLayout`](../../../app/(app)/app/practice/components/sticky-action-bar.tsx) can fill the remaining viewport without top-chrome math
 - [`PracticeView`](../../../app/(app)/app/practice/components/practice-view.tsx) and [`PostExamReviewView`](../../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx) both render their existing footer controls through that shared shell
 
 This shipped approach keeps the footer visible without introducing a `fixed` overlay, while avoiding the failure mode of a pure end-of-document sticky wrapper that still remains below the fold until the user scrolls to it.
@@ -110,7 +110,7 @@ This shipped approach keeps the footer visible without introducing a `fixed` ove
 | File | Change |
 |------|--------|
 | `app/(app)/app/practice/components/sticky-action-bar.tsx` | Shared sticky footer + viewport shell for practice/review surfaces |
-| `app/(app)/app/layout.tsx` | Publishes the app-shell viewport offset CSS variable consumed by the shared sticky shell |
+| `app/(app)/app/layout.tsx` | Uses a full-height flex shell (`h-dvh` + `min-h-screen`) with a `flex-1 min-h-0` main region so the shared sticky shell stays viewport-bounded without a viewport-offset CSS variable |
 | `app/(app)/app/practice/components/practice-view.tsx` | Route active-session footer through the shared shell |
 | `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx` | Route the post-exam review footer through the shared shell |
 | `app/(app)/app/practice/components/sticky-action-bar.test.tsx` | Shared sticky footer contract test |

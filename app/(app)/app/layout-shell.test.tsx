@@ -28,9 +28,14 @@ describe('app/(app)/app/layout (shell)', () => {
       </AppLayoutShell>,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
+    const shell = doc.body.firstElementChild;
     const brandLink = doc.querySelector('header a[href="/app/dashboard"]');
     const main = doc.querySelector('main#main-content');
 
+    expect(shell).not.toBeNull();
+    if (!shell) {
+      throw new Error('Expected app shell root element to exist');
+    }
     expect(brandLink).not.toBeNull();
     if (!brandLink) {
       throw new Error('Expected app header brand link to exist');
@@ -39,6 +44,9 @@ describe('app/(app)/app/layout (shell)', () => {
     if (!main) {
       throw new Error('Expected app main shell to exist');
     }
+    const shellClassTokens = (shell.getAttribute('class') ?? '')
+      .split(/\s+/)
+      .filter(Boolean);
     const brandClassTokens = (brandLink.getAttribute('class') ?? '')
       .split(/\s+/)
       .filter(Boolean);
@@ -52,9 +60,13 @@ describe('app/(app)/app/layout (shell)', () => {
     expect(html).toContain('AuthNav');
     expect(html).toContain('MobileNav');
     expect(html).toContain('Child content');
-    expect(html).toContain('flex h-dvh min-h-screen flex-col bg-background');
-    expect(html).not.toContain('min-h-screen bg-muted');
     expect(html).toContain('<main id="main-content"');
+    expect(shellClassTokens).toContain('flex');
+    expect(shellClassTokens).toContain('h-dvh');
+    expect(shellClassTokens).toContain('min-h-screen');
+    expect(shellClassTokens).toContain('flex-col');
+    expect(shellClassTokens).toContain('bg-background');
+    expect(shellClassTokens).not.toContain('bg-muted');
     const mainClassTokens = (main.getAttribute('class') ?? '')
       .split(/\s+/)
       .filter(Boolean);
