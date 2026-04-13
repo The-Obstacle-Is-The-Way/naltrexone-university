@@ -55,9 +55,10 @@ describe('app/(app)/app/layout (shell)', () => {
     expect(html).toContain('min-h-screen bg-background');
     expect(html).not.toContain('min-h-screen bg-muted');
     expect(html).toContain('<main id="main-content"');
-    expect(main.getAttribute('style')).toContain(
-      '--app-shell-chrome-height:8rem',
-    );
+    const mainElement = main as HTMLElement;
+    expect(
+      mainElement.style.getPropertyValue('--app-shell-chrome-height'),
+    ).toBe('8rem');
     expect(brandClassTokens).toContain('font-heading');
     expect(brandClassTokens).toContain('font-bold');
     expect(brandClassTokens).toContain('text-base');
