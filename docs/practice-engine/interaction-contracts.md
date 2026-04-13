@@ -297,7 +297,7 @@ Both substages render within the same `/app/practice/[sessionId]` orchestrator. 
 | Initial post-exam review | `Finish review` | `View Summary` |
 | Re-entry from summary | `Finish review` | `View Summary` |
 
-The current implementation does not distinguish label copy by entry source. Possible product changes are discussed in [BS-063](../brainstorming/bs-063-exam-review-reentry-state-confusion.md) and [DEBT-359](../debt/debt-359-session-summary-cta-labels.md).
+The current implementation does not distinguish label copy by entry source. Possible product changes are discussed in [BS-063](../brainstorming/bs-063-exam-review-reentry-state-confusion.md) and [DEBT-359](../_archive/debt/debt-359-session-summary-cta-labels.md).
 
 ### Question review page (non-exam, standalone)
 

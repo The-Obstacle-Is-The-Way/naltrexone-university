@@ -158,7 +158,7 @@ That is not automatically a design failure, but it does mean cursor semantics an
 
 - The flow is functionally recoverable, but it is easy to misread.
 - The same screen appears to behave differently depending on where the user left it.
-- This compounds with [DEBT-359](../debt/debt-359-session-summary-cta-labels.md): ambiguous summary CTAs plus sticky cursor semantics make the whole post-exam flow feel less intentional than it is.
+- This compounds with [DEBT-359](../_archive/debt/debt-359-session-summary-cta-labels.md): ambiguous summary CTAs plus sticky cursor semantics make the whole post-exam flow feel less intentional than it is.
 
 ---
 
