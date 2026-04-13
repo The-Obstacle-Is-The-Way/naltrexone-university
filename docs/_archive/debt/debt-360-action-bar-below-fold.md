@@ -3,7 +3,7 @@
 **Priority:** P2
 **Created:** 2026-04-11
 **Status:** Resolved
-**Resolved:** 2026-04-12 (PR pending)
+**Resolved:** 2026-04-12 via [PR #278](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/278)
 **Affected surfaces:** PracticeView (exam questions), PostExamReviewView (post-exam review)
 **Verified by:** Browser walkthrough on 2026-04-11 at a 1280x1100 viewport, then traced against the current source
 
