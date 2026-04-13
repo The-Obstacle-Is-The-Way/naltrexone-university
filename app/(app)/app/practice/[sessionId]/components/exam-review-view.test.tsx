@@ -218,6 +218,8 @@ describe('QuestionNavigator', () => {
 });
 
 describe('ExamReviewView', () => {
+  const reviewInstructionText =
+    'Select a question below to keep reviewing before you submit.';
   const review = {
     sessionId: 'session-1',
     mode: 'exam',
@@ -300,6 +302,18 @@ describe('ExamReviewView', () => {
     );
   }
 
+  function findReviewInstructionParagraph(doc: Document) {
+    return Array.from(doc.querySelectorAll('p')).find(
+      (paragraph) => paragraph.textContent?.trim() === reviewInstructionText,
+    );
+  }
+
+  function findReviewRowChevron(row: ParentNode | null) {
+    return (
+      row?.querySelector('[data-testid="exam-review-row-chevron"]') ?? null
+    );
+  }
+
   it('does not render nested buttons inside review rows', () => {
     const doc = renderExamReviewMarkup();
     const rowButtons = Array.from(
@@ -313,6 +327,23 @@ describe('ExamReviewView', () => {
     expect(doc.querySelector('ul.space-y-3 > li > button button')).toBeNull();
   });
 
+  it('renders an instructional paragraph above the review list', () => {
+    const doc = renderExamReviewMarkup();
+    const instruction = findReviewInstructionParagraph(doc);
+    const list = doc.querySelector('ul');
+
+    expect(instruction?.tagName).toBe('P');
+    expect(instruction?.getAttribute('aria-hidden')).toBeNull();
+    expect(
+      Boolean(
+        instruction &&
+          list &&
+          instruction.compareDocumentPosition(list) &
+            Node.DOCUMENT_POSITION_FOLLOWING,
+      ),
+    ).toBe(true);
+  });
+
   it('keeps the row action discoverable without overriding the visible row state', () => {
     const doc = renderExamReviewMarkup();
     const button = findReviewRowButton(doc, 1);
@@ -321,6 +352,35 @@ describe('ExamReviewView', () => {
     expect(button?.textContent).toContain('Open question');
     expect(button?.textContent).toContain('Marked for review');
     expect(button?.textContent).toContain('Correct');
+  });
+
+  it('renders decorative chevrons only on available review rows', () => {
+    const doc = renderExamReviewMarkup();
+    const availableButtons = Array.from(
+      doc.querySelectorAll('ul.space-y-3 > li > button'),
+    );
+    const unavailableCard = doc.querySelector('ul.space-y-3 > li:last-child');
+
+    expect(availableButtons).toHaveLength(3);
+    availableButtons.forEach((button) => {
+      expect(findReviewRowChevron(button)?.getAttribute('aria-hidden')).toBe(
+        'true',
+      );
+    });
+    expect(findReviewRowChevron(unavailableCard ?? doc)).toBeNull();
+  });
+
+  it('keeps chevrons decorative without changing the row button naming model', () => {
+    const doc = renderExamReviewMarkup();
+    const button = findReviewRowButton(doc, 1);
+
+    expect(button?.getAttribute('aria-label')).toBeNull();
+    expect(button?.querySelector('.sr-only')?.textContent).toBe(
+      'Open question ',
+    );
+    expect(findReviewRowChevron(button)?.getAttribute('aria-hidden')).toBe(
+      'true',
+    );
   });
 
   it('does not render Not marked text for unmarked rows', () => {
@@ -352,5 +412,15 @@ describe('ExamReviewView', () => {
 
     expect(findReviewRowButton(doc, 4)).toBeNull();
     expect(doc.body.textContent).toContain('[Question no longer available]');
+  });
+
+  it('keeps submit exam as the only pre-dialog footer action', () => {
+    const doc = renderExamReviewMarkup();
+    const footerButtons = Array.from(
+      doc.querySelectorAll('div.flex.flex-col.gap-3.sm\\:flex-row > button'),
+    );
+
+    expect(footerButtons).toHaveLength(1);
+    expect(footerButtons[0]?.textContent?.trim()).toBe('Submit exam');
   });
 });

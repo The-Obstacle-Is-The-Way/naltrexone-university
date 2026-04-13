@@ -1,5 +1,6 @@
 'use client';
 
+import { ChevronRightIcon } from 'lucide-react';
 import { Fragment, useRef } from 'react';
 import {
   fireAndForget,
@@ -164,6 +165,10 @@ export function ExamReviewView({
         </Card>
       </div>
 
+      <p className="text-sm text-muted-foreground">
+        Select a question below to keep reviewing before you submit.
+      </p>
+
       <ul className="space-y-3">
         {review.rows.map((row) => {
           const metadataItems = [
@@ -177,18 +182,29 @@ export function ExamReviewView({
             ? getStemPreview(row.stemMd, 96)
             : '[Question no longer available]';
           const rowContent = (
-            <div className="space-y-1">
-              <div className="text-sm font-medium text-foreground">
-                {row.order}. {stemPreview}
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 space-y-1">
+                <div className="text-sm font-medium text-foreground">
+                  {row.order}. {stemPreview}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {metadataItems.map((item, index) => (
+                    <Fragment key={`${row.questionId}-${item}`}>
+                      {index > 0 ? <span className="mx-2">•</span> : null}
+                      <span>{item}</span>
+                    </Fragment>
+                  ))}
+                </div>
               </div>
-              <div className="text-xs text-muted-foreground">
-                {metadataItems.map((item, index) => (
-                  <Fragment key={`${row.questionId}-${item}`}>
-                    {index > 0 ? <span className="mx-2">•</span> : null}
-                    <span>{item}</span>
-                  </Fragment>
-                ))}
-              </div>
+              {row.isAvailable ? (
+                <span
+                  aria-hidden="true"
+                  data-testid="exam-review-row-chevron"
+                  className="shrink-0 text-muted-foreground/60"
+                >
+                  <ChevronRightIcon className="size-4" />
+                </span>
+              ) : null}
             </div>
           );
 
