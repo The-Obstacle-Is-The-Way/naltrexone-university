@@ -52,40 +52,20 @@ The question rows are interactive, but the screen does not tell the user that se
 
 ---
 
-## Proposed Fixes
+## Decision
 
-### Option A: Add explicit instructional copy
+DEBT-362 will ship as Option A plus a light-touch Option B. Add one short instructional sentence above the question list telling the student that selecting a row is how they continue reviewing before they submit, and add a subtle trailing chevron to each available row. The chevron earns its place because the interactive row buttons and the non-interactive unavailable cards in [exam-review-view.tsx](/Users/ray/Desktop/github/naltrexone-university-3/app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:197) currently render with nearly identical card treatment; the chevron is not decoration, it disambiguates "this opens a question" from "this is a display-only card" at a glance.
 
-The lowest-risk fix is to add helper text above the list, for example:
+Option C is rejected, but for product-design reasons rather than architecture. A generic `Continue reviewing` footer button is semantically ambiguous because it does not tell the student which question will open, and any implicit default would surprise some users. It would also compete visually with `Submit exam` at the exact checkpoint moment. Public references from UWorld, ARDMS, and AMBOSS show that comparable exam-review surfaces can expose explicit review shortcuts, so the earlier "real board-exam platforms keep the footer to a single action" rationale was unsupported and is removed.
 
-```tsx
-<p className="text-sm text-muted-foreground">
-  Select a question below to continue reviewing before you submit.
-</p>
-```
+- Add one short instructional sentence above the list. Exact wording is an implementation detail, but it must tell the student that selecting a row is how they keep reviewing before submitting.
+- Add a subtle trailing chevron icon only on available rows. The chevron must be decorative, `aria-hidden="true"`, and must not change the computed accessible name of the row button.
+- Do not add visible per-row `Continue reviewing` microcopy.
+- Do not add new `aria-label` overrides or `aria-describedby` attributes on the row buttons. Keep the existing `sr-only` `Open question ` prefix.
 
-This is feasible with the current component shape and keeps the screen simple.
+## Future Escalation
 
-### Option B: Strengthen row affordance
-
-Add a stronger interaction cue to each row, such as:
-
-- trailing chevron/icon
-- `Continue reviewing` microcopy
-- clearer hover treatment
-
-Again, this is feasible without changing parent props.
-
-### Option C: Add an explicit footer button only if the target is defined
-
-If the product wants a real footer CTA such as `Continue reviewing`, the parent needs to define what it opens:
-
-- last viewed question
-- first unanswered question
-- first marked question
-- first question
-
-`ExamReviewView` does not currently receive that target, so the earlier sketch that assumed `lastViewedQuestionId` was not directly implementable.
+If Option A plus the light-touch chevron proves insufficient in practice, the correct escalation path is targeted shortcuts above the list, for example `Review unanswered` and `Review marked`, rather than a generic footer `Continue reviewing` button. That better matches exam-platform precedent because each shortcut has an unambiguous target and avoids competing with `Submit exam` in the footer. It is not part of the current fix because it requires product-policy decisions about which shortcuts to expose, in what order, and how empty states behave, and the current fix should ship small; if this is ever picked up, it should be tracked as a new debt item with its own ID rather than an amendment to DEBT-362.
 
 ---
 
@@ -108,3 +88,6 @@ No `aria-label` remediation is required for correctness based on the current cod
 | 2026-04-11 | Corrected the accessibility claim | The question-row buttons already expose accessible text through their button content. |
 | 2026-04-11 | Reframed the debt as discoverability/affordance, not missing accessible names | That matches the actual code and the observed UX issue. |
 | 2026-04-11 | Kept severity at P3 | The user is not blocked, but the current screen makes the return path more implicit than it needs to be. |
+| 2026-04-13 | Locked decision on Option A + light Option B | Add explicit helper copy plus a subtle decorative chevron to make the return path explicit without changing flow or accessible names. |
+| 2026-04-13 | Rejected Option C for semantic ambiguity and footer competition, not prop plumbing or false platform-precedent claims | A generic continue-reviewing footer action has an unclear target and would compete with Submit exam at the checkpoint moment. |
+| 2026-04-13 | Recorded targeted-shortcuts as future escalation path, not part of this fix | Targeted shortcuts are the right escalation if this ships and still underperforms, but they require separate product-policy decisions and should get their own debt item. |
