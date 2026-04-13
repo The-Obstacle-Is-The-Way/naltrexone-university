@@ -485,7 +485,7 @@ DEBT-360 extracted the shared viewport-aware footer shell into `app/(app)/app/pr
 
 - `StickyActionBarLayout` now provides the shared viewport-bounded shell + scrollable content region for `PracticeView` and `PostExamReviewView`
 - `StickyActionBar` now provides the shared sticky footer chrome (border, backdrop blur, safe-area padding)
-- `AppLayoutShell` publishes `--app-shell-chrome-height` on `<main>` as the primary source for the shared sticky shell's viewport offset, while `sticky-action-bar.tsx` keeps `8rem` as an internal fallback when that shell variable is absent
+- `app/globals.css` defines `--app-shell-default-chrome-height: 8rem` once at the root token layer, `AppLayoutShell` publishes `--app-shell-chrome-height` on `<main>` from that token, and `sticky-action-bar.tsx` falls back to the same root token when the shell-scoped variable is absent
 - The button sets remain intentionally context-specific inside each caller
 
 The remaining inline action bars on the question-review route are still separate because their button matrix and navigation model differ from the active practice/post-exam surfaces.

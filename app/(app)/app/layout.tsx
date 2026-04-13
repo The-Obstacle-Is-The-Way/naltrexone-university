@@ -22,9 +22,8 @@ export type AppLayoutDeps = {
   checkEntitlementUseCase: CheckEntitlementUseCase;
 };
 
-const APP_SHELL_CHROME_HEIGHT = '8rem';
 const appShellViewportOffsetStyle = {
-  '--app-shell-chrome-height': APP_SHELL_CHROME_HEIGHT,
+  '--app-shell-chrome-height': 'var(--app-shell-default-chrome-height)',
 } as CSSProperties;
 
 export type EntitledAppUser = {

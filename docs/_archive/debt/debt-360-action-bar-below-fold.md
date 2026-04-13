@@ -98,7 +98,7 @@ DEBT-360 shipped as a hybrid of Option A and Option B:
 
 - shared [`StickyActionBarLayout`](../../../app/(app)/app/practice/components/sticky-action-bar.tsx) provides a viewport-bounded shell plus a scrollable content region
 - shared [`StickyActionBar`](../../../app/(app)/app/practice/components/sticky-action-bar.tsx) provides the sticky footer chrome (`sticky bottom-0`, border, backdrop blur, safe-area padding)
-- shared [`AppLayoutShell`](../../../app/(app)/app/layout.tsx) now publishes `--app-shell-chrome-height` on `<main>` as the primary viewport-offset source, while [`sticky-action-bar.tsx`](../../../app/(app)/app/practice/components/sticky-action-bar.tsx) keeps `8rem` as an internal fallback when that shell variable is absent
+- shared [`app/globals.css`](../../../app/globals.css) now defines `--app-shell-default-chrome-height: 8rem` once at the root token layer; shared [`AppLayoutShell`](../../../app/(app)/app/layout.tsx) publishes `--app-shell-chrome-height` on `<main>` from that token, and [`sticky-action-bar.tsx`](../../../app/(app)/app/practice/components/sticky-action-bar.tsx) falls back to the same root token when the shell-scoped variable is absent
 - [`PracticeView`](../../../app/(app)/app/practice/components/practice-view.tsx) and [`PostExamReviewView`](../../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx) both render their existing footer controls through that shared shell
 
 This shipped approach keeps the footer visible without introducing a `fixed` overlay, while avoiding the failure mode of a pure end-of-document sticky wrapper that still remains below the fold until the user scrolls to it.

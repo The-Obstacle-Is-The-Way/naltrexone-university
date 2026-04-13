@@ -58,7 +58,7 @@ describe('app/(app)/app/layout (shell)', () => {
     const mainElement = main as HTMLElement;
     expect(
       mainElement.style.getPropertyValue('--app-shell-chrome-height'),
-    ).toBe('8rem');
+    ).toBe('var(--app-shell-default-chrome-height)');
     expect(brandClassTokens).toContain('font-heading');
     expect(brandClassTokens).toContain('font-bold');
     expect(brandClassTokens).toContain('text-base');

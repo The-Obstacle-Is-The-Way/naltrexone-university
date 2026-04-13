@@ -43,7 +43,7 @@ describe('StickyActionBar', () => {
     expect(wrapper?.contains(actionBar)).toBe(true);
     expect(layout?.className).toContain('flex');
     expect(layout?.className).toContain(
-      'h-[calc(100dvh-var(--app-shell-chrome-height,8rem))]',
+      'h-[calc(100dvh-var(--app-shell-chrome-height,var(--app-shell-default-chrome-height)))]',
     );
     expect(layout?.className).toContain('overflow-hidden');
     expect(scrollRegion?.className).toContain('overflow-y-auto');

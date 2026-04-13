@@ -87,6 +87,7 @@
 
 @layer base {
   :root {
+    --app-shell-default-chrome-height: 8rem;
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
