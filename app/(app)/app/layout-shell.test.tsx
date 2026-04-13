@@ -28,12 +28,25 @@ describe('app/(app)/app/layout (shell)', () => {
       </AppLayoutShell>,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
+    const shell = doc.body.firstElementChild;
     const brandLink = doc.querySelector('header a[href="/app/dashboard"]');
+    const main = doc.querySelector('main#main-content');
 
+    expect(shell).not.toBeNull();
+    if (!shell) {
+      throw new Error('Expected app shell root element to exist');
+    }
     expect(brandLink).not.toBeNull();
     if (!brandLink) {
       throw new Error('Expected app header brand link to exist');
     }
+    expect(main).not.toBeNull();
+    if (!main) {
+      throw new Error('Expected app main shell to exist');
+    }
+    const shellClassTokens = (shell.getAttribute('class') ?? '')
+      .split(/\s+/)
+      .filter(Boolean);
     const brandClassTokens = (brandLink.getAttribute('class') ?? '')
       .split(/\s+/)
       .filter(Boolean);
@@ -47,13 +60,51 @@ describe('app/(app)/app/layout (shell)', () => {
     expect(html).toContain('AuthNav');
     expect(html).toContain('MobileNav');
     expect(html).toContain('Child content');
-    expect(html).toContain('min-h-screen bg-background');
-    expect(html).not.toContain('min-h-screen bg-muted');
     expect(html).toContain('<main id="main-content"');
+    expect(shellClassTokens).toContain('flex');
+    expect(shellClassTokens).toContain('h-dvh');
+    expect(shellClassTokens).toContain('min-h-screen');
+    expect(shellClassTokens).toContain('flex-col');
+    expect(shellClassTokens).toContain('bg-background');
+    expect(shellClassTokens).not.toContain('bg-muted');
+    const mainClassTokens = (main.getAttribute('class') ?? '')
+      .split(/\s+/)
+      .filter(Boolean);
     expect(brandClassTokens).toContain('font-heading');
     expect(brandClassTokens).toContain('font-bold');
     expect(brandClassTokens).toContain('text-base');
     expect(brandClassTokens).toContain('whitespace-nowrap');
+    expect(mainClassTokens).toContain('flex');
+    expect(mainClassTokens).toContain('flex-1');
+    expect(mainClassTokens).toContain('flex-col');
+    expect(mainClassTokens).toContain('min-h-0');
+    expect(mainClassTokens).toContain('w-full');
+  });
+
+  it('keeps banner, header, and main in one flex column shell', async () => {
+    const html = renderToStaticMarkup(
+      <AppLayoutShell
+        authNav={<div>AuthNav</div>}
+        mobileNav={<div>MobileNav</div>}
+        banner={<div data-testid="app-banner">Banner</div>}
+      >
+        <div>Child content</div>
+      </AppLayoutShell>,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const shell = doc.body.firstElementChild;
+    const main = doc.querySelector('main#main-content');
+
+    expect(shell).not.toBeNull();
+    expect(main).not.toBeNull();
+    expect(shell?.children[0]?.getAttribute('data-testid')).toBe('app-banner');
+    expect(shell?.children[1]?.tagName).toBe('HEADER');
+    expect(shell?.children[2]?.tagName).toBe('MAIN');
+    expect(shell?.className).toContain('h-dvh');
+    expect(shell?.className).toContain('flex-col');
+    expect(main?.className).toContain('flex-1');
+    expect(main?.className).toContain('min-h-0');
   });
 
   it('renders AppLayout via renderAppLayout with injected deps', async () => {

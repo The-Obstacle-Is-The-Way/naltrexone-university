@@ -4,7 +4,7 @@
 > **Scope:** Click-by-click UI contracts for tutor and exam modes — buttons, persistence, locking, navigation, and post-session flows
 > **Related:** [Practice Modes](./practice-modes.md) (lifecycle/data), [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md) (decisions)
 > **Status:** Current implementation. Historical BS-055 rationale remains, but the contracts below now describe shipped behavior; follow-up deltas are tracked separately in debt docs where noted.
-> **Last Updated:** 2026-04-11
+> **Last Updated:** 2026-04-12
 
 ---
 
@@ -251,6 +251,7 @@ The post-exam review stage shows:
 - Correctness-colored navigator (green/red/outline)
 - Full question feedback inline
 - Top-right `View Summary` escape hatch
+- Shared sticky footer shell across `PracticeView` and `PostExamReviewView`: viewport-bounded layout, scrollable content region, sticky bottom action bar with safe-area padding, and an app-shell-provided viewport offset
 - Bottom bar in DOM order: `Previous` (when available), `Next` / `Finish review`, then `Bookmark` when the current question is available. On `sm+`, the bookmark button is pushed to the right with `sm:ml-auto`
 - Last reviewed question swaps the forward CTA to `Finish review`
 - No reattempt action
@@ -296,7 +297,7 @@ Both substages render within the same `/app/practice/[sessionId]` orchestrator. 
 | Initial post-exam review | `Finish review` | `View Summary` |
 | Re-entry from summary | `Finish review` | `View Summary` |
 
-The current implementation does not distinguish label copy by entry source. Possible product changes are discussed in [BS-063](../brainstorming/bs-063-exam-review-reentry-state-confusion.md) and [DEBT-359](../debt/debt-359-session-summary-cta-labels.md).
+The current implementation does not distinguish label copy by entry source. Possible product changes are discussed in [BS-063](../brainstorming/bs-063-exam-review-reentry-state-confusion.md) and [DEBT-359](../_archive/debt/debt-359-session-summary-cta-labels.md).
 
 ### Question review page (non-exam, standalone)
 
@@ -321,7 +322,8 @@ Both modes share rendering components but must have separate action contracts. T
 | `QuestionCard` | Yes — renders stem + choices | Exam allows re-selection on revisit; tutor locks after submit |
 | `ChoiceButton` | Yes — renders individual choice | State variants differ (exam: selected/unselected only; tutor: selected/correct/incorrect) |
 | `QuestionNavigator` | Exam only | N/A for tutor |
-| `PracticeView` action bar | Shared component | **Must branch explicitly.** Tutor: Submit/Next/Bookmark. Exam: Previous/Next-or-Review-&-Submit/Mark-for-review. Do not evolve as a single conditional matrix. |
+| `PracticeView` action bar | Shared `StickyActionBarLayout` + mode-specific button renderers | **Must branch explicitly.** Tutor: Submit/Next/Bookmark. Exam: Previous/Next-or-Review-&-Submit/Mark-for-review. Do not evolve as a single conditional matrix. |
+| `PostExamReviewView` footer shell | Shared `StickyActionBarLayout` + `StickyActionBar` | Keeps the post-exam sequential review controls visible while long inline feedback scrolls above the footer. |
 | `question-flow-actions.ts` | Shared load logic | **Must branch on save.** Tutor: one-shot `submitAnswer`. Exam: draft-save on navigation boundary. |
 | Review stage | Exam only | N/A for tutor |
 | Feedback display | Shared rendering | Timing gated by mode (immediate vs deferred) |

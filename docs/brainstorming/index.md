@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-11
+**Last Updated:** 2026-04-12
 
 ---
 
@@ -30,8 +30,8 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-044](./bs-044-dark-mode-border-weight-tiering.md) | Dark Mode Border Weight Tiering — major slices were already consumed by later PRs (`DEBT-280`, `DEBT-289`, `DEBT-301`, `DEBT-302`, `DEBT-307`, `DEBT-312/313/314`); remaining open question is whether read-only cards and subordinate inner borders still need softer dark-mode treatment | Active | [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
 | [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) | Bookmark Icon Toggle — no icon-toggle UI has shipped; production still uses text bookmark pills on the Bookmarks page, tutor/quick-practice action bar, and review/session-review action bar | Active | [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) |
 | [BS-059](./bs-059-practice-session-action-bar-button-arrangement.md) | Standalone `question-page-client.tsx` action bar still has unresolved multi-state grouping questions; Direction C continuity work was split out, so this doc now owns only the still-undecided standalone layout contract | Active | [DEBT-330](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md) |
-| [BS-061](./bs-061-review-surface-divergence-audit.md) | Exam-flow review divergence audit; rationale and boundary doc for the now-promoted implementation trackers [DEBT-350](../debt/debt-350-exam-results-session-continuity.md), [DEBT-351](../debt/debt-351-exam-review-submit-affordance-cleanup.md), and [DEBT-352](../debt/debt-352-post-exam-review-focus-ring-flash.md). Direction A remains in BS-059. | Active | [DEBT-350](../debt/debt-350-exam-results-session-continuity.md), [DEBT-351](../debt/debt-351-exam-review-submit-affordance-cleanup.md), [DEBT-352](../debt/debt-352-post-exam-review-focus-ring-flash.md) |
-| [BS-063](./bs-063-exam-review-reentry-state-confusion.md) | Exam review re-entry state confusion — re-entering post-exam review from Session Summary lands on last question with stale "Finish review" label instead of resetting to Q1 for a fresh review pass; cursor preservation strategy doesn't match user intent | Active | [DEBT-359](../debt/debt-359-session-summary-cta-labels.md) |
+| [BS-061](./bs-061-review-surface-divergence-audit.md) | Exam-flow review divergence audit; rationale and boundary doc for the now-promoted implementation trackers [DEBT-350](../_archive/debt/debt-350-exam-results-session-continuity.md), [DEBT-351](../_archive/debt/debt-351-exam-review-submit-affordance-cleanup.md), and [DEBT-352](../_archive/debt/debt-352-post-exam-review-focus-ring-flash.md). Direction A remains in BS-059. | Active | [DEBT-350](../_archive/debt/debt-350-exam-results-session-continuity.md), [DEBT-351](../_archive/debt/debt-351-exam-review-submit-affordance-cleanup.md), [DEBT-352](../_archive/debt/debt-352-post-exam-review-focus-ring-flash.md) |
+| [BS-063](./bs-063-exam-review-reentry-state-confusion.md) | Exam review re-entry state confusion — untargeted post-exam review re-entry from Session Summary reuses the last viewed available question, so the same review surface can reopen with different visible button states and feel less intentional than a fresh Q1 review pass | Active | [DEBT-359](../_archive/debt/debt-359-session-summary-cta-labels.md) |
 **Next Brainstorming ID:** BS-064
 
 ---

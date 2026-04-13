@@ -76,15 +76,18 @@ Feedback is conditionally derived by the parent before being passed into `Questi
 
 Sequential navigation renders as inline `<Link>` elements in the question page bottom action bar. It only appears when `sessionNavigation` is non-null (requires `sessionId` in URL).
 
-### 3.4 Action Bars (Inline, Not Shared)
+### 3.4 Action Bars (Shared Shell, Context-Specific Buttons)
 
-Action bars are **not abstracted** — each context renders its own buttons inline:
+Action bars use a **mixed model**:
+
+- active practice and post-exam review share `StickyActionBarLayout` / `StickyActionBar` as the footer shell
+- each context still renders its own buttons inline inside that shell
 
 | Context | File:Lines | Buttons |
 |---------|-----------|---------|
-| Practice answering UI (active sessions + quick practice) | `app/(app)/app/practice/components/practice-view.tsx` | Previous (session only), Submit (non-exam only), Next, Bookmark (non-exam only), Mark for review (exam only) |
+| Practice answering UI (active sessions + quick practice) | `app/(app)/app/practice/components/practice-view.tsx` | Previous (session only), Submit (non-exam only), Next / Review & Submit (exam last question), Bookmark (non-exam only), Mark for review (exam only) |
 | Exam Review Stage | `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:186-235` | Submit exam (with AlertDialog confirmation) |
-| Post-Exam Review Stage | `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx` | Previous, Bookmark, Next / Finish review, View Summary |
+| Post-Exam Review Stage | `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx` | Previous, Next / Finish review, Bookmark |
 | Session Summary | `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` | Review Answers (exam only, when reviewable questions exist), New Session, View in History |
 | Question page (all review origins) | `app/(app)/app/questions/[slug]/question-page-client.tsx` | Previous/Next (session review only), Submit (pre-answer), conditional Try Again / Practice Again (non-exam review only), Bookmark (review mode after bookmark hydration), Back link |
 
@@ -190,7 +193,7 @@ PracticeSessionPageView
        ├─ QuestionCard (shared)
        ├─ Feedback (shared)
        ├─ Top-right: [View Summary]
-       └─ Bottom bar: [Previous] [Bookmark] [Next / Finish review]
+       └─ Bottom bar: [Previous] [Next / Finish review] [Bookmark]
 ```
 
 **Navigation model:** This is a sequential in-session review. It is ephemeral: if the user reloads or reopens a completed session URL later, the page boots to the terminal Summary instead of recreating this stage.
@@ -444,6 +447,7 @@ The codebase has two navigators that look similar but serve different contexts:
 | `components/question/choice-button.tsx` | `ChoiceButton` | Individual answer choice (all contexts) |
 | `components/question/feedback.tsx` | `Feedback` | Correct/incorrect + explanation (all contexts) |
 | `components/error-card.tsx` | `ErrorCard` | Error display (all contexts) |
+| `app/(app)/app/practice/components/sticky-action-bar.tsx` | `StickyActionBar`, `StickyActionBarLayout` | Shared sticky practice/review footer shell |
 
 ### Hooks & State Management
 
@@ -478,9 +482,16 @@ The codebase has two navigators that look similar but serve different contexts:
 **Status:** Resolved in SPEC-030.
 **Implementation:** Tutor revisit state restores from `session.previousSubmission` in `NextQuestion`, hydrated into `submitResult` by `useQuestionFlowCore`.
 
-### 10.2 Potential Unification: Action Bars
+### 10.2 Shared Sticky Footer Shell (Resolved)
 
-The bottom action bar is implemented inline in 4 different places. A future spec could extract a shared `QuestionActionBar` component that takes mode/context props. Currently low priority — each context has different enough buttons that unification may add complexity without reducing bugs.
+DEBT-360 extracted the shared viewport-aware footer shell into `app/(app)/app/practice/components/sticky-action-bar.tsx`.
+
+- `StickyActionBarLayout` now provides the shared viewport-bounded shell + scrollable content region for `PracticeView` and `PostExamReviewView`
+- `StickyActionBar` now provides the shared sticky footer chrome (border, backdrop blur, safe-area padding)
+- `AppLayoutShell` now uses a flex-column `min-h-screen` shell with the banner and header above a `flex-1` `<main>` region, so `StickyActionBarLayout` fills the remaining viewport without hardcoded top-chrome offsets
+- The button sets remain intentionally context-specific inside each caller
+
+The remaining inline action bars on the question-review route are still separate because their button matrix and navigation model differ from the active practice/post-exam surfaces.
 
 ### 10.3 Navigator Convergence
 

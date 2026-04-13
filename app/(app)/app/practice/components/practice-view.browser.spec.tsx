@@ -4,6 +4,14 @@ import { render } from 'vitest-browser-react';
 import { NotificationProvider } from '@/components/ui/notification-provider';
 import { PracticeView } from './practice-view';
 
+function createTallMarkdown(label: string, paragraphCount: number) {
+  return Array.from(
+    { length: paragraphCount },
+    (_, index) =>
+      `${label} paragraph ${index + 1}. ${'Detailed supporting content '.repeat(14)}`,
+  ).join('\n\n');
+}
+
 function ExamPracticeViewHarness(input: {
   onNextQuestion: () => void;
   onToggleMarkForReview: () => void;
@@ -109,6 +117,146 @@ test('supports exam controls and question interactions', async () => {
 
   await screen.getByRole('button', { name: 'Next' }).click();
   expect(onNextQuestion).toHaveBeenCalledTimes(1);
+});
+
+test('renders the shared sticky action-bar markers for exam questions', async () => {
+  const screen = await render(
+    <PracticeView
+      sessionInfo={{
+        sessionId: 'session-1',
+        mode: 'exam',
+        index: 0,
+        total: 2,
+        isMarkedForReview: false,
+      }}
+      loadState={{ status: 'ready' }}
+      question={{
+        questionId: 'question-1',
+        slug: 'question-1',
+        stemMd: createTallMarkdown('Exam stem', 36),
+        difficulty: 'easy',
+        choices: Array.from({ length: 6 }, (_, index) => ({
+          id: `choice_${index + 1}`,
+          label: String.fromCharCode(65 + index),
+          textMd: `Option ${index + 1}`,
+          sortOrder: index + 1,
+        })),
+        session: null,
+      }}
+      selectedChoiceId={null}
+      isAnswered={false}
+      submitResult={null}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      isMarkingForReview={false}
+      canSubmit={false}
+      onEndSession={() => undefined}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onToggleMarkForReview={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={() => undefined}
+    />,
+  );
+
+  await expect
+    .element(screen.getByTestId('sticky-action-bar-layout'))
+    .toBeInTheDocument();
+  await expect
+    .element(screen.getByTestId('sticky-action-bar-scroll-region'))
+    .toBeInTheDocument();
+  await expect
+    .element(screen.getByTestId('sticky-action-bar'))
+    .toBeInTheDocument();
+  await expect
+    .element(screen.getByTestId('bottom-action-bar'))
+    .toBeInTheDocument();
+  await expect
+    .element(screen.getByRole('button', { name: 'Next' }))
+    .toBeVisible();
+  await expect
+    .element(screen.getByRole('button', { name: 'Mark for review' }))
+    .toBeVisible();
+});
+
+test('renders the shared sticky action-bar markers after tutor feedback renders', async () => {
+  const screen = await render(
+    <PracticeView
+      loadState={{ status: 'ready' }}
+      question={{
+        questionId: 'question-1',
+        slug: 'question-1',
+        stemMd: createTallMarkdown('Tutor stem', 18),
+        difficulty: 'easy',
+        choices: [
+          { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
+          { id: 'choice_b', label: 'B', textMd: 'Option B', sortOrder: 2 },
+        ],
+        session: null,
+      }}
+      selectedChoiceId="choice_a"
+      isAnswered={true}
+      submitResult={{
+        attemptId: 'attempt-1',
+        isCorrect: false,
+        correctChoiceId: 'choice_b',
+        explanationMd: createTallMarkdown('Tutor explanation', 24),
+        referenceMd: createTallMarkdown('Tutor reference', 8),
+        choiceExplanations: [
+          {
+            choiceId: 'choice_a',
+            displayLabel: 'A',
+            textMd: 'Option A',
+            isCorrect: false,
+            explanationMd: createTallMarkdown('Choice A explanation', 8),
+          },
+          {
+            choiceId: 'choice_b',
+            displayLabel: 'B',
+            textMd: 'Option B',
+            isCorrect: true,
+            explanationMd: createTallMarkdown('Choice B explanation', 8),
+          },
+        ],
+      }}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      canSubmit={false}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={() => undefined}
+      onPreviousQuestion={() => undefined}
+      hasPreviousQuestion={true}
+      hasNextQuestion={true}
+    />,
+  );
+
+  await expect
+    .element(screen.getByTestId('sticky-action-bar-layout'))
+    .toBeInTheDocument();
+  await expect
+    .element(screen.getByTestId('sticky-action-bar-scroll-region'))
+    .toBeInTheDocument();
+  await expect
+    .element(screen.getByTestId('sticky-action-bar'))
+    .toBeInTheDocument();
+  await expect
+    .element(screen.getByTestId('bottom-action-bar'))
+    .toBeInTheDocument();
+  await expect
+    .element(screen.getByRole('button', { name: 'Previous' }))
+    .toBeVisible();
+  await expect
+    .element(screen.getByRole('button', { name: 'Next' }))
+    .toBeVisible();
+  await expect
+    .element(screen.getByRole('button', { name: 'Bookmark' }))
+    .toBeVisible();
 });
 
 test('disables mutation controls while internal question loading is in progress', async () => {

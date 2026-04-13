@@ -60,7 +60,7 @@ export function AppLayoutShell({
   banner,
 }: AppLayoutShellProps) {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex h-dvh min-h-screen flex-col bg-background">
       {banner}
       <header className="relative border-b border-border bg-background">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
@@ -83,7 +83,7 @@ export function AppLayoutShell({
       <main
         id="main-content"
         tabIndex={-1}
-        className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"
+        className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col px-4 py-8 sm:px-6 lg:px-8"
       >
         <Suspense
           fallback={

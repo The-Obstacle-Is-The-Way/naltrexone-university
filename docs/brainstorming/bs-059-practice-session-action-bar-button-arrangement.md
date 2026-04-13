@@ -7,7 +7,7 @@
 
 **Status:** Active — still unresolved on `question-page-client.tsx`. Post-exam review was fixed by DEBT-330 (PR #241), and the active tutor practice bar already renders `Previous / Next / Bookmark` after feedback, but the question review / session review surface still keeps bookmark between reattempt/previous controls and next/back controls.
 
-**Boundary update (2026-04-07):** Direction C from BS-061 is now promoted into [DEBT-350](../debt/debt-350-exam-results-session-continuity.md) and no longer depends on this doc. BS-059 remains active because the standalone `question-page-client.tsx` action-bar contract across its multiple states is still broader than the now-decided exam-flow continuity work.
+**Boundary update (2026-04-07):** Direction C from BS-061 is now promoted into [DEBT-350](../_archive/debt/debt-350-exam-results-session-continuity.md) and no longer depends on this doc. BS-059 remains active because the standalone `question-page-client.tsx` action-bar contract across its multiple states is still broader than the now-decided exam-flow continuity work.
 
 ---
 
