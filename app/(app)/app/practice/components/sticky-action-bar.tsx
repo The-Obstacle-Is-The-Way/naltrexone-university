@@ -1,5 +1,3 @@
-'use client';
-
 type StickyActionBarProps = {
   children: React.ReactNode;
 };
