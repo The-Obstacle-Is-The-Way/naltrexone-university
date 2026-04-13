@@ -2,7 +2,8 @@
 
 **Priority:** P2
 **Created:** 2026-04-11
-**Status:** Open
+**Status:** Resolved
+**Resolved:** 2026-04-12 (PR pending)
 **Affected surfaces:** PracticeView (exam questions), PostExamReviewView (post-exam review)
 **Verified by:** Browser walkthrough on 2026-04-11 at a 1280x1100 viewport, then traced against the current source
 
@@ -91,16 +92,30 @@ Whichever option wins, the exam-taking surface and post-exam review surface shou
 
 ---
 
+## Shipped Resolution
+
+DEBT-360 shipped as a hybrid of Option A and Option B:
+
+- shared [`StickyActionBarLayout`](../../../app/(app)/app/practice/components/sticky-action-bar.tsx) provides a viewport-bounded shell plus a scrollable content region
+- shared [`StickyActionBar`](../../../app/(app)/app/practice/components/sticky-action-bar.tsx) provides the sticky footer chrome (`sticky bottom-0`, border, backdrop blur, safe-area padding)
+- [`PracticeView`](../../../app/(app)/app/practice/components/practice-view.tsx) and [`PostExamReviewView`](../../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx) both render their existing footer controls through that shared shell
+
+This shipped approach keeps the footer visible without introducing a `fixed` overlay, while avoiding the failure mode of a pure end-of-document sticky wrapper that still remains below the fold until the user scrolls to it.
+
+---
+
 ## Files Affected
 
 | File | Change |
 |------|--------|
-| `app/(app)/app/practice/components/practice-view.tsx` | Update the active-session action bar layout |
-| `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx` | Update the post-exam review footer layout |
+| `app/(app)/app/practice/components/sticky-action-bar.tsx` | Shared sticky footer + viewport shell for practice/review surfaces |
+| `app/(app)/app/practice/components/practice-view.tsx` | Route active-session footer through the shared shell |
+| `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx` | Route the post-exam review footer through the shared shell |
+| `app/(app)/app/practice/components/sticky-action-bar.test.tsx` | Shared sticky footer contract test |
 | `app/(app)/app/practice/components/practice-view.browser.spec.tsx` | Add or update visibility assertions for the footer controls |
 | `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.browser.spec.tsx` | Add or update visibility assertions for the footer controls |
 
-Unit tests for button presence may not need changes unless the wrapper structure or test IDs move.
+The targeted sweep also verified that downstream `PracticeSessionPageView` browser coverage still passes with the shared shell in place.
 
 ---
 
@@ -111,3 +126,4 @@ Unit tests for button presence may not need changes unless the wrapper structure
 | 2026-04-11 | Grouped exam-taking and post-exam review under one debt item | Both surfaces share the same footer-placement problem. |
 | 2026-04-11 | Corrected the root-cause description | The issue is document-flow footer placement, not a large `space-y-6` gap. |
 | 2026-04-11 | Kept severity at P2 | The primary navigation controls are discoverability-critical in a core flow. |
+| 2026-04-12 | Shipped a hybrid shared-shell solution instead of a pure end-of-document sticky wrapper | Pure `sticky bottom-0` on a footer that still rendered after the full content stack did not keep the controls visible. A viewport-bounded scroll region plus shared sticky footer solved the real problem without resorting to `fixed`. |

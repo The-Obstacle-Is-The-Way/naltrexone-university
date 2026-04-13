@@ -444,6 +444,7 @@ The codebase has two navigators that look similar but serve different contexts:
 | `components/question/choice-button.tsx` | `ChoiceButton` | Individual answer choice (all contexts) |
 | `components/question/feedback.tsx` | `Feedback` | Correct/incorrect + explanation (all contexts) |
 | `components/error-card.tsx` | `ErrorCard` | Error display (all contexts) |
+| `app/(app)/app/practice/components/sticky-action-bar.tsx` | `StickyActionBar`, `StickyActionBarLayout` | Shared sticky practice/review footer shell |
 
 ### Hooks & State Management
 
@@ -478,9 +479,15 @@ The codebase has two navigators that look similar but serve different contexts:
 **Status:** Resolved in SPEC-030.
 **Implementation:** Tutor revisit state restores from `session.previousSubmission` in `NextQuestion`, hydrated into `submitResult` by `useQuestionFlowCore`.
 
-### 10.2 Potential Unification: Action Bars
+### 10.2 Shared Sticky Footer Shell (Resolved)
 
-The bottom action bar is implemented inline in 4 different places. A future spec could extract a shared `QuestionActionBar` component that takes mode/context props. Currently low priority — each context has different enough buttons that unification may add complexity without reducing bugs.
+DEBT-360 extracted the shared viewport-aware footer shell into `app/(app)/app/practice/components/sticky-action-bar.tsx`.
+
+- `StickyActionBarLayout` now provides the shared viewport-bounded shell + scrollable content region for `PracticeView` and `PostExamReviewView`
+- `StickyActionBar` now provides the shared sticky footer chrome (border, backdrop blur, safe-area padding)
+- The button sets remain intentionally context-specific inside each caller
+
+The remaining inline action bars on the question-review route are still separate because their button matrix and navigation model differ from the active practice/post-exam surfaces.
 
 ### 10.3 Navigator Convergence
 
