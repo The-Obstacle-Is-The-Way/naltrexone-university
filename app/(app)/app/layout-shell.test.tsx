@@ -29,10 +29,15 @@ describe('app/(app)/app/layout (shell)', () => {
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const brandLink = doc.querySelector('header a[href="/app/dashboard"]');
+    const main = doc.querySelector('main#main-content');
 
     expect(brandLink).not.toBeNull();
     if (!brandLink) {
       throw new Error('Expected app header brand link to exist');
+    }
+    expect(main).not.toBeNull();
+    if (!main) {
+      throw new Error('Expected app main shell to exist');
     }
     const brandClassTokens = (brandLink.getAttribute('class') ?? '')
       .split(/\s+/)
@@ -50,6 +55,9 @@ describe('app/(app)/app/layout (shell)', () => {
     expect(html).toContain('min-h-screen bg-background');
     expect(html).not.toContain('min-h-screen bg-muted');
     expect(html).toContain('<main id="main-content"');
+    expect(main.getAttribute('style')).toContain(
+      '--app-shell-chrome-height:8rem',
+    );
     expect(brandClassTokens).toContain('font-heading');
     expect(brandClassTokens).toContain('font-bold');
     expect(brandClassTokens).toContain('text-base');

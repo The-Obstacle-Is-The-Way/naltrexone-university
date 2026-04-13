@@ -3,9 +3,6 @@ import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { NotificationProvider } from '@/components/ui/notification-provider';
 import { PracticeView } from './practice-view';
-import { installStickyActionBarBrowserStyles } from './sticky-action-bar.browser-test-styles';
-
-installStickyActionBarBrowserStyles();
 
 function createTallMarkdown(label: string, paragraphCount: number) {
   return Array.from(
@@ -13,19 +10,6 @@ function createTallMarkdown(label: string, paragraphCount: number) {
     (_, index) =>
       `${label} paragraph ${index + 1}. ${'Detailed supporting content '.repeat(14)}`,
   ).join('\n\n');
-}
-
-function expectElementBottomInViewport(selector: string) {
-  return vi.waitFor(() => {
-    const element = document.querySelector<HTMLElement>(selector);
-    expect(element).not.toBeNull();
-    const rect = element?.getBoundingClientRect();
-    expect(rect).toBeDefined();
-    expect(rect?.bottom ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(
-      window.innerHeight,
-    );
-    expect(rect?.top ?? Number.NEGATIVE_INFINITY).toBeGreaterThanOrEqual(0);
-  });
 }
 
 function ExamPracticeViewHarness(input: {
@@ -135,7 +119,7 @@ test('supports exam controls and question interactions', async () => {
   expect(onNextQuestion).toHaveBeenCalledTimes(1);
 });
 
-test('keeps the exam action bar in the viewport on a tall question and exposes the sticky wrapper marker', async () => {
+test('renders the shared sticky action-bar markers for exam questions', async () => {
   const screen = await render(
     <PracticeView
       sessionInfo={{
@@ -178,6 +162,12 @@ test('keeps the exam action bar in the viewport on a tall question and exposes t
   );
 
   await expect
+    .element(screen.getByTestId('sticky-action-bar-layout'))
+    .toBeInTheDocument();
+  await expect
+    .element(screen.getByTestId('sticky-action-bar-scroll-region'))
+    .toBeInTheDocument();
+  await expect
     .element(screen.getByTestId('sticky-action-bar'))
     .toBeInTheDocument();
   await expect
@@ -189,11 +179,9 @@ test('keeps the exam action bar in the viewport on a tall question and exposes t
   await expect
     .element(screen.getByRole('button', { name: 'Mark for review' }))
     .toBeVisible();
-
-  await expectElementBottomInViewport('[data-testid="bottom-action-bar"]');
 });
 
-test('keeps the tutor action bar in the viewport after tall feedback renders', async () => {
+test('renders the shared sticky action-bar markers after tutor feedback renders', async () => {
   const screen = await render(
     <PracticeView
       loadState={{ status: 'ready' }}
@@ -249,6 +237,18 @@ test('keeps the tutor action bar in the viewport after tall feedback renders', a
   );
 
   await expect
+    .element(screen.getByTestId('sticky-action-bar-layout'))
+    .toBeInTheDocument();
+  await expect
+    .element(screen.getByTestId('sticky-action-bar-scroll-region'))
+    .toBeInTheDocument();
+  await expect
+    .element(screen.getByTestId('sticky-action-bar'))
+    .toBeInTheDocument();
+  await expect
+    .element(screen.getByTestId('bottom-action-bar'))
+    .toBeInTheDocument();
+  await expect
     .element(screen.getByRole('button', { name: 'Previous' }))
     .toBeVisible();
   await expect
@@ -257,8 +257,6 @@ test('keeps the tutor action bar in the viewport after tall feedback renders', a
   await expect
     .element(screen.getByRole('button', { name: 'Bookmark' }))
     .toBeVisible();
-
-  await expectElementBottomInViewport('[data-testid="bottom-action-bar"]');
 });
 
 test('disables mutation controls while internal question loading is in progress', async () => {

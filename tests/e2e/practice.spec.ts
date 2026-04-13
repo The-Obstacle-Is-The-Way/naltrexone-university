@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import {
   hasClerkCredentials,
   signInWithClerkPassword,
@@ -7,6 +7,55 @@ import { selectChoiceByLabel } from './helpers/question';
 import { runE2EUserStateReset } from './helpers/reset-e2e-user-state';
 import { startSession } from './helpers/session';
 import { ensureSubscribed } from './helpers/subscription';
+
+async function appendTallScrollRegionContent(
+  page: Page,
+  fillerId: string,
+): Promise<void> {
+  const metrics = await page.evaluate(
+    ({ fillerId }) => {
+      const scrollRegion = document.querySelector(
+        '[data-testid="sticky-action-bar-scroll-region"]',
+      );
+      if (!(scrollRegion instanceof HTMLElement)) {
+        throw new Error('Expected sticky action bar scroll region to exist');
+      }
+
+      document.getElementById(fillerId)?.remove();
+
+      const filler = document.createElement('div');
+      filler.id = fillerId;
+      filler.setAttribute('aria-hidden', 'true');
+      filler.style.height = '1600px';
+      scrollRegion.appendChild(filler);
+
+      return {
+        clientHeight: scrollRegion.clientHeight,
+        scrollHeight: scrollRegion.scrollHeight,
+      };
+    },
+    { fillerId },
+  );
+
+  expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
+}
+
+async function expectBottomActionBarInViewport(page: Page): Promise<void> {
+  const actionBar = page.getByTestId('bottom-action-bar');
+  await expect(actionBar).toBeVisible();
+
+  const box = await actionBar.boundingBox();
+  const viewport = page.viewportSize();
+
+  expect(box).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  if (!box || !viewport) {
+    throw new Error('Expected bottom action bar bounds and viewport size');
+  }
+
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
+}
 
 test.describe('practice', () => {
   // Authenticated E2E flows include Clerk sign-in and seeded subscription setup; allow CI headroom.
@@ -70,6 +119,27 @@ test.describe('practice', () => {
     await expect(page.getByText(/^(Correct|Incorrect)$/)).toBeVisible();
   });
 
+  test('keeps the tutor action bar visible when feedback content grows', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await signInWithClerkPassword(page);
+    await ensureSubscribed(page);
+
+    await startSession(page, 'tutor', 2);
+
+    await selectChoiceByLabel(page, 'A');
+    await page.getByRole('button', { name: 'Submit' }).click();
+    await expect(page.getByText(/^(Correct|Incorrect)$/).first()).toBeVisible({
+      timeout: 10_000,
+    });
+
+    await appendTallScrollRegionContent(page, 'tutor-sticky-action-bar-filler');
+    await expectBottomActionBarInViewport(page);
+    await expect(page.getByRole('button', { name: 'Next' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Bookmark' })).toBeVisible();
+  });
+
   test('exam mode completes session without showing explanation', async ({
     page,
   }) => {
@@ -121,5 +191,44 @@ test.describe('practice', () => {
     await expect(
       page.getByRole('heading', { name: 'Session Summary' }),
     ).toBeVisible({ timeout: 30_000 });
+  });
+
+  test('keeps the exam and post-exam review action bars visible when content grows', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await signInWithClerkPassword(page);
+    await ensureSubscribed(page);
+
+    await startSession(page, 'exam');
+    await appendTallScrollRegionContent(page, 'exam-sticky-action-bar-filler');
+    await expectBottomActionBarInViewport(page);
+    await expect(
+      page.getByRole('button', { name: 'Review & Submit' }),
+    ).toBeVisible();
+
+    await page
+      .getByTestId('bottom-action-bar')
+      .getByRole('button', { name: 'Review & Submit' })
+      .click();
+
+    const submitExamButton = page.getByRole('button', { name: 'Submit exam' });
+    await expect(submitExamButton).toBeVisible({ timeout: 15_000 });
+    await submitExamButton.click();
+    await page.getByRole('button', { name: 'Confirm submit' }).click();
+
+    await expect(
+      page.getByText('Review each question with detailed feedback.'),
+    ).toBeVisible({ timeout: 30_000 });
+
+    await appendTallScrollRegionContent(
+      page,
+      'post-exam-sticky-action-bar-filler',
+    );
+    await expectBottomActionBarInViewport(page);
+    await expect(
+      page.getByRole('button', { name: 'Finish review' }),
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Bookmark' })).toBeVisible();
   });
 });

@@ -251,7 +251,7 @@ The post-exam review stage shows:
 - Correctness-colored navigator (green/red/outline)
 - Full question feedback inline
 - Top-right `View Summary` escape hatch
-- Shared sticky footer shell across `PracticeView` and `PostExamReviewView`: viewport-bounded layout, scrollable content region, and sticky bottom action bar with safe-area padding
+- Shared sticky footer shell across `PracticeView` and `PostExamReviewView`: viewport-bounded layout, scrollable content region, sticky bottom action bar with safe-area padding, and an app-shell-provided viewport offset
 - Bottom bar in DOM order: `Previous` (when available), `Next` / `Finish review`, then `Bookmark` when the current question is available. On `sm+`, the bookmark button is pushed to the right with `sm:ml-auto`
 - Last reviewed question swaps the forward CTA to `Finish review`
 - No reattempt action

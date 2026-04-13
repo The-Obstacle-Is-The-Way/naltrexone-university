@@ -41,6 +41,13 @@ describe('StickyActionBar', () => {
     expect(layout?.contains(wrapper)).toBe(true);
     expect(scrollRegion?.contains(content)).toBe(true);
     expect(wrapper?.contains(actionBar)).toBe(true);
+    expect(layout?.className).toContain('flex');
+    expect(layout?.className).toContain(
+      'h-[calc(100dvh-var(--app-shell-chrome-height,8rem))]',
+    );
+    expect(layout?.className).toContain('overflow-hidden');
+    expect(scrollRegion?.className).toContain('overflow-y-auto');
+    expect(scrollRegion?.className).toContain('pb-6');
   });
 
   it('renders children inside the shared sticky shell', () => {

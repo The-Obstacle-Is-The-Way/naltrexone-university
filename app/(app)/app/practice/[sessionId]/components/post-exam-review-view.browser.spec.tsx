@@ -1,14 +1,11 @@
 import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
-import { installStickyActionBarBrowserStyles } from '../../components/sticky-action-bar.browser-test-styles';
 import { PostExamReviewView } from './post-exam-review-view';
 import {
   createReview,
   createReviewRow,
   createSummary,
 } from './post-exam-review-view.fixtures';
-
-installStickyActionBarBrowserStyles();
 
 const summary = createSummary({
   questionCount: 2,
@@ -71,7 +68,7 @@ test('focuses the review panel on mount and after question navigation rerenders'
     .toHaveFocus();
 });
 
-test('keeps the post-exam review action bar in the viewport on tall feedback', async () => {
+test('renders the shared sticky action-bar markers on tall post-exam review content', async () => {
   const tallReview = createReview([
     createReviewRow({
       stemMd: createTallMarkdown('Review stem', 18),
@@ -124,6 +121,12 @@ test('keeps the post-exam review action bar in the viewport on tall feedback', a
   );
 
   await expect
+    .element(screen.getByTestId('sticky-action-bar-layout'))
+    .toBeInTheDocument();
+  await expect
+    .element(screen.getByTestId('sticky-action-bar-scroll-region'))
+    .toBeInTheDocument();
+  await expect
     .element(screen.getByTestId('sticky-action-bar'))
     .toBeInTheDocument();
   await expect
@@ -132,12 +135,4 @@ test('keeps the post-exam review action bar in the viewport on tall feedback', a
   await expect
     .element(screen.getByRole('button', { name: 'Next' }))
     .toBeVisible();
-
-  const actionBar = document.querySelector<HTMLElement>(
-    '[data-testid="bottom-action-bar"]',
-  );
-  expect(actionBar).not.toBeNull();
-  expect(actionBar?.getBoundingClientRect().bottom).toBeLessThanOrEqual(
-    window.innerHeight,
-  );
 });

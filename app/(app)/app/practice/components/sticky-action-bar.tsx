@@ -15,7 +15,7 @@ export function StickyActionBarLayout({
 }: StickyActionBarLayoutProps) {
   return (
     <div
-      className="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden"
+      className="flex h-[calc(100dvh-var(--app-shell-chrome-height,8rem))] flex-col overflow-hidden"
       data-testid="sticky-action-bar-layout"
     >
       <div

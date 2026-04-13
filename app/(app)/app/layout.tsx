@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Suspense } from 'react';
+import { type CSSProperties, Suspense } from 'react';
 import { AppDesktopNav } from '@/components/app-desktop-nav';
 import { AuthNav } from '@/components/auth-nav';
 import { MobileNav } from '@/components/mobile-nav';
@@ -21,6 +21,11 @@ export type AppLayoutDeps = {
   authGateway: AuthGateway;
   checkEntitlementUseCase: CheckEntitlementUseCase;
 };
+
+const APP_SHELL_CHROME_HEIGHT = '8rem';
+const appShellViewportOffsetStyle = {
+  '--app-shell-chrome-height': APP_SHELL_CHROME_HEIGHT,
+} as CSSProperties;
 
 export type EntitledAppUser = {
   subscriptionStatus: SubscriptionStatus | null;
@@ -84,6 +89,7 @@ export function AppLayoutShell({
         id="main-content"
         tabIndex={-1}
         className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"
+        style={appShellViewportOffsetStyle}
       >
         <Suspense
           fallback={
