@@ -20,7 +20,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
-| [DEBT-362](./debt-362-review-submit-screen-affordances.md) | Review & Submit screen discoverability and accessibility — no explicit back button, question row buttons have generic "Open question" accessible name without question number/stem | P3 | — |
 **Next Debt ID:** DEBT-363
 
 ---
@@ -29,6 +28,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-362](../_archive/debt/debt-362-review-submit-screen-affordances.md) | Review & Submit return affordance — explicit instructional sentence above the row list plus a decorative trailing chevron on available rows | P3 | 2026-04-13 | [PR #279](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/279) |
 | [DEBT-360](../_archive/debt/debt-360-action-bar-below-fold.md) | Sticky action bar primitive shared by `PracticeView` and `PostExamReviewView`, using a viewport-bounded shell, scrollable content region, and safe-area footer treatment so primary controls stay visible on long questions/feedback | P2 | 2026-04-13 | [PR #278](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/278) |
 | [DEBT-361](../_archive/debt/debt-361-exam-last-question-next-label.md) | Exam last question label — renamed the `ExamActionBar` middle button from `Next` to `Review & Submit` on the last exam question, preserving the existing `onEndSession` routing and `aria-describedby` hint | P3 | 2026-04-12 | [PR #277](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/277) |
 | [DEBT-359](../_archive/debt/debt-359-session-summary-cta-labels.md) | Session Summary CTA label clarity — renamed "Back to Practice" → "New Session" and "Review your answers" → "Review Answers" on the completed Session Summary surface | P2 | 2026-04-11 | [PR #276](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/276) |

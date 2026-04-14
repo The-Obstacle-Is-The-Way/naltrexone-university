@@ -2,7 +2,8 @@
 
 **Priority:** P3
 **Created:** 2026-04-11
-**Status:** Open
+**Status:** Resolved
+**Resolved:** 2026-04-13 via [PR #279](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/279)
 **Affected surface:** `ExamReviewView` (`app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx`)
 **Verified by:** Browser walkthrough on 2026-04-11 plus code trace
 
@@ -91,3 +92,4 @@ No `aria-label` remediation is required for correctness based on the current cod
 | 2026-04-13 | Locked decision on Option A + light Option B | Add explicit helper copy plus a subtle decorative chevron to make the return path explicit without changing flow or accessible names. |
 | 2026-04-13 | Rejected Option C for semantic ambiguity and footer competition, not prop plumbing or false platform-precedent claims | A generic continue-reviewing footer action has an unclear target and would compete with Submit exam at the checkpoint moment. |
 | 2026-04-13 | Recorded targeted-shortcuts as future escalation path, not part of this fix | Targeted shortcuts are the right escalation if this ships and still underperforms, but they require separate product-policy decisions and should get their own debt item. |
+| 2026-04-13 | Shipped Option A + light Option B per the locked decision | Added one helper sentence above the list plus decorative trailing chevrons on available rows, preserving the existing row accessible names and single submit footer action. |
