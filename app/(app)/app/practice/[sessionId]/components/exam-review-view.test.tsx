@@ -287,7 +287,12 @@ describe('ExamReviewView', () => {
   }
 
   function getReviewRows(root: ParentNode) {
-    return Array.from(root.querySelectorAll('li'));
+    const reviewList = root.querySelector('ul');
+    return reviewList
+      ? Array.from(reviewList.children).filter(
+          (child): child is HTMLLIElement => child.tagName === 'LI',
+        )
+      : [];
   }
 
   function getReviewRowButtons(root: ParentNode) {
@@ -327,6 +332,14 @@ describe('ExamReviewView', () => {
   function findReviewInstructionParagraph(doc: Document) {
     return Array.from(doc.querySelectorAll('p')).find(
       (paragraph) => paragraph.textContent?.trim() === reviewInstructionText,
+    );
+  }
+
+  function findButtonByExactText(root: ParentNode, text: string) {
+    return (
+      Array.from(root.querySelectorAll<HTMLButtonElement>('button')).find(
+        (button) => button.textContent?.trim() === text,
+      ) ?? null
     );
   }
 
@@ -434,9 +447,12 @@ describe('ExamReviewView', () => {
 
   it('keeps submit exam as the only pre-dialog footer action', () => {
     const doc = renderExamReviewMarkup();
-    const footerButtons = Array.from(doc.querySelectorAll('button')).filter(
-      (button) => button.textContent?.trim() === 'Submit exam',
-    );
+    const submitButton = findButtonByExactText(doc, 'Submit exam');
+    const footerButtons = submitButton?.parentElement
+      ? Array.from(submitButton.parentElement.children).filter(
+          (child): child is HTMLButtonElement => child.tagName === 'BUTTON',
+        )
+      : [];
 
     expect(footerButtons).toHaveLength(1);
     expect(footerButtons[0]?.textContent?.trim()).toBe('Submit exam');
