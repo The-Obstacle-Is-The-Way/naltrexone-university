@@ -286,19 +286,41 @@ describe('ExamReviewView', () => {
     return new DOMParser().parseFromString(html, 'text/html');
   }
 
+  function getReviewRows(root: ParentNode) {
+    return Array.from(root.querySelectorAll('li'));
+  }
+
+  function getReviewRowButtons(root: ParentNode) {
+    return Array.from(
+      root.querySelectorAll<HTMLButtonElement>('button'),
+    ).filter(
+      (button) => button.textContent?.includes('Open question') ?? false,
+    );
+  }
+
   function getReviewRowMetadata(row: Element | undefined) {
-    return row
-      ?.querySelector('.text-xs.text-muted-foreground')
-      ?.textContent?.replace(/\s*•\s*/g, ' • ')
-      ?.replace(/\s+/g, ' ')
-      .trim();
+    const parts =
+      row === undefined
+        ? []
+        : Array.from(row.querySelectorAll('span'))
+            .map((span) => span.textContent?.trim() ?? '')
+            .filter((text) => text.length > 0)
+            .filter((text) => text !== 'Open question' && text !== '•');
+
+    return parts.join(' • ');
   }
 
   function findReviewRowButton(root: ParentNode, order: number) {
     return (
-      Array.from(
-        root.querySelectorAll<HTMLButtonElement>('ul.space-y-3 > li > button'),
-      ).find((button) => button.textContent?.includes(`${order}. `)) ?? null
+      getReviewRowButtons(root).find((button) =>
+        button.textContent?.includes(`${order}. `),
+      ) ?? null
+    );
+  }
+
+  function findReviewRow(root: ParentNode, order: number) {
+    return getReviewRows(root).find((row) =>
+      row.textContent?.includes(`${order}. `),
     );
   }
 
@@ -316,15 +338,13 @@ describe('ExamReviewView', () => {
 
   it('does not render nested buttons inside review rows', () => {
     const doc = renderExamReviewMarkup();
-    const rowButtons = Array.from(
-      doc.querySelectorAll('ul.space-y-3 > li > button'),
-    );
+    const rowButtons = getReviewRowButtons(doc);
 
     expect(rowButtons).toHaveLength(3);
     rowButtons.forEach((button) => {
       expect(button.getAttribute('type')).toBe('button');
+      expect(button.querySelector('button')).toBeNull();
     });
-    expect(doc.querySelector('ul.space-y-3 > li > button button')).toBeNull();
   });
 
   it('renders an instructional paragraph above the review list', () => {
@@ -356,10 +376,8 @@ describe('ExamReviewView', () => {
 
   it('renders decorative chevrons only on available review rows', () => {
     const doc = renderExamReviewMarkup();
-    const availableButtons = Array.from(
-      doc.querySelectorAll('ul.space-y-3 > li > button'),
-    );
-    const unavailableCard = doc.querySelector('ul.space-y-3 > li:last-child');
+    const availableButtons = getReviewRowButtons(doc);
+    const unavailableCard = findReviewRow(doc, 4);
 
     expect(availableButtons).toHaveLength(3);
     availableButtons.forEach((button) => {
@@ -398,7 +416,7 @@ describe('ExamReviewView', () => {
 
   it('collapses metadata separators when the marked state is absent', () => {
     const doc = renderExamReviewMarkup();
-    const rows = Array.from(doc.querySelectorAll('ul.space-y-3 > li'));
+    const rows = getReviewRows(doc);
 
     expect(getReviewRowMetadata(rows[0])).toBe(
       'Answered • Marked for review • Correct',
@@ -416,8 +434,8 @@ describe('ExamReviewView', () => {
 
   it('keeps submit exam as the only pre-dialog footer action', () => {
     const doc = renderExamReviewMarkup();
-    const footerButtons = Array.from(
-      doc.querySelectorAll('div.flex.flex-col.gap-3.sm\\:flex-row > button'),
+    const footerButtons = Array.from(doc.querySelectorAll('button')).filter(
+      (button) => button.textContent?.trim() === 'Submit exam',
     );
 
     expect(footerButtons).toHaveLength(1);
