@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-13
+**Last Updated:** 2026-04-14
 
 ---
 
@@ -20,7 +20,8 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
-**Next Debt ID:** DEBT-363
+| [DEBT-363](./debt-363-exam-shell-scroll-model-and-dual-cta.md) | Exam shell scroll model + dual-CTA disambiguation — decision doc reassessing the DEBT-360 bounded-scroll shell and the `Finish exam` / `Review & Submit` label collision | P2 | — |
+**Next Debt ID:** DEBT-364
 
 ---
 
