@@ -185,67 +185,49 @@ The USMLE-style Q-bank platforms (UWorld, AMBOSS, Kaplan) are the closest compar
 
 ---
 
-## Concern 1 — Options for the scroll shell
+## Concern 1 — Decision (locked 2026-04-15)
 
-### Option 1A — Whole-page scroll + in-flow `position: sticky` footer
+**Decision: revert to the pre-DEBT-360 document-flow pattern.**
 
-- Replace the bounded `StickyActionBarLayout` shell with normal document-flow content on the stages that currently use it.
-- Render the action bar in flow, after the content stack, with `position: sticky; bottom: 0`.
-- The page becomes a top-down scroll surface, but the footer remains part of normal document flow.
+Concrete shape of the shipped change:
 
-**Pros:** Restores whole-page scroll and removes the inner scroll box entirely. If the footer reaches the viewport, `sticky` can keep it pinned while the user continues scrolling nearby content.
+- Remove the `StickyActionBarLayout` wrapper from `PracticeView` and `PostExamReviewView`.
+- Render the action bar as a plain `<div>` at the end of the content stack, inside the existing `space-y-6` (or equivalent) layout.
+- No `position: sticky`, no `position: fixed`, no bounded inner-scroll region.
+- The whole page scrolls top-down under the existing `AppLayoutShell`. `SessionSummaryView` already demonstrates this works under the current shell, so `app/(app)/app/layout.tsx` does not need to change unless implementation evidence proves otherwise.
+- The global header stays pinned (unchanged from today). The bottom bar is *not* pinned — it sits at the natural end of content.
 
-**Cons:** This does **not** keep the footer always visible on long content. An end-of-document sticky footer still starts below the fold until the user scrolls near it. That means 1A likely does **not** satisfy the user's stated preference or DEBT-360's original goal of keeping controls persistently visible.
+This is effectively a targeted revert of DEBT-360's shell choice on the affected stages. `ExamReviewView` is already plain document flow and does not change.
 
-### Option 1B — Whole-page scroll + `position: fixed` footer + main padding
+### Why this option and not always-visible (fixed) footer
 
-- Replace the bounded `StickyActionBarLayout` pattern with normal document-flow content for `PracticeView` and `PostExamReviewView`.
-- Keep the current `AppLayoutShell` unless implementation evidence proves a shell-level change is required; `SessionSummaryView` already demonstrates plain document-flow behavior under the same app shell.
-- Render the action bar as `position: fixed; bottom: 0; left: 0; right: 0`.
-- Reserve bottom space in the affected content region so the last line is never occluded.
+Three independent analyses (an inline product-design review, an independent code-audit agent, and an independent Chrome-based design-review agent) converged on the same verdict: the "always-visible bottom bar" framing is an overreach for this interaction. Exam mode is a read-then-decide task. The user reads the stem, reads the answer choices, makes a decision, and then acts. The natural end of reading is the natural location for the decision. Pinning the bar to the viewport bottom solves an interruption problem (early exit, mid-read navigation) that is an edge case relative to the common case.
 
-**Pros:** Footer is *always* anchored to viewport bottom regardless of content length — solves DEBT-360's original concern definitively, without an inner scroll box. This is the most predictable behavior and best matches "it should always just be at the bottom" from the user verbatim.
+Key reasons:
 
-**Cons:** `fixed` is less flexible than `sticky` (ignores ancestor stacking contexts, can fight with modals/dialogs). Mobile safe-area inset handling needs to be re-validated. The bottom-space reservation is also not trivial because the action bars wrap and stack differently by mode and breakpoint, so the footer does not have one stable height.
+1. **Double-pinned chrome compresses content.** The app already pins the global header at the top. Pinning the footer as well puts two fixed edges on the viewport and compresses the usable content region, especially at short desktop heights (≤700px) and on mobile where button bars tend to wrap and stack. Removing the inner scroll box is necessary; also unpinning the bottom edge is what actually reclaims content breathing room.
+2. **Reading flow matches end-of-content placement.** For a read-then-decide task, the user's eye ends at the bottom of the content naturally. Always-visible is a benefit only for interrupt intents (bail early, skip, jump), which are edge cases relative to walk-through-and-decide.
+3. **Exam-prep domain convention is end-of-content navigation, not persistent pinning.** Platforms designed around the same task shape commonly place the primary forward action at the natural end of the content rather than in persistent chrome. This is not a cargo-cult imitation; it matches the cognitive sequence of the task.
+4. **Reversibility favors shipping this first.** If this turns out to feel wrong in practice, promoting the bar to `position: fixed` with a padding reservation is an additive, contained change. Shipping a fixed footer first and walking it back later is harder because footer-height reservation, safe-area insets, modal/overlay interactions, and test expectations all have to be unwound.
 
-**Adjacency to verify during implementation:**
+### Paths deliberately not taken
 
-- Scroll-reset behavior on question navigation must be verified explicitly. Do **not** assume the current bounded shell resets scroll "for free" — the scroll region is a stable DOM node, and whatever current reset behavior exists is coming from question-mount side effects, not from the shell contract itself.
-- Focus restoration on question navigation must be re-validated so Next/Previous still land the user at the right heading/panel boundary under whole-page scroll.
-- `PostExamReviewView`'s current focus effect (`panelRef.current?.focus()`) needs to be checked against the new scroll model so focus movement does not produce disorienting page jumps.
-- The fixed footer must align to the app shell's max-width and horizontal padding so it does not span edge-to-edge while content stays centered.
-- The footer-height reservation must handle dynamic heights across exam mode, tutor mode, and post-submit review at mobile and desktop breakpoints.
-- Browser back/forward scroll restoration needs verification because whole-page scroll changes how the browser remembers position.
-- The affected browser specs and E2E tests need updates because the current test contracts assume `sticky-action-bar-layout` / `sticky-action-bar-scroll-region` markers and viewport-bounded geometry.
+- **Whole-page scroll + `position: fixed` footer.** Preserves always-visible at the cost of double-pinned chrome. Rejected on the reading-flow and chrome-compression arguments above. Kept in mind as the cheap-to-reach fallback if implementation testing shows "always visible" matters more than this analysis expects.
+- **CSS Grid shell (`grid-template-rows: minmax(0,1fr) auto`).** Technically viable and avoids some flex/overflow footguns, but still preserves a bounded-shell interaction model rather than the top-down page scroll the user asked for. Rejected for this cycle.
+- **Hybrid (whole-page scroll except for very tall content).** Two scroll modes is worse than either mode alone. Over-engineered.
+- **Status quo (current bounded shell).** Does not resolve the user-observed "claustrophobic peephole" feel. Explicitly rejected.
 
-### Option 1C — Keep current bounded shell (status quo)
+### Implementation adjacency list (load-bearing)
 
-- No code change.
-- Document the current behavior as intentional in the decision log.
+These items are not optional verifications — they are required work that belongs in the implementation PR:
 
-**Pros:** Zero risk. Proven to work. No regression surface.
-
-**Cons:** The "cut off" / "claustrophobic" feeling persists. This is the option that loses the user's trust in the shell.
-
-### Option 1D — Hybrid: whole-page scroll *except* for tall content
-
-- Whole-page scroll at the shell level (remove `h-dvh` and `overflow-hidden`).
-- Apply bounded-scroll only when content exceeds some threshold (e.g., feedback block taller than 2× viewport).
-
-**Pros:** Best of both worlds on paper.
-
-**Cons:** Almost certainly over-engineered. Two scroll modes is confusing. Skip unless 1A/1B both fail verification.
-
-### Supplemental Option 1E — CSS Grid shell (`grid-template-rows: minmax(0,1fr) auto`)
-
-- Keep the affected stages in a bounded shell, but replace the current flex/overflow implementation with a grid shell such as `grid-template-rows: minmax(0, 1fr) auto`.
-- Let the content row own scrolling and let the footer row stay structurally separate at the bottom of the shell.
-
-**Pros:** Technically viable. It avoids some of the flex/min-height/overflow footguns that motivated the DEBT-360 follow-up commits and can make the shell easier to reason about.
-
-**Cons:** It still preserves a bounded-shell interaction model rather than the user's stated top-down page scroll preference. So it is worth documenting for completeness, but it is probably not the direction the user is asking for.
-
-**Current assessment on Concern 1:** 1A is now documented accurately and is likely too weak for the stated goal; 1B remains the most direct whole-page-scroll path to verify; 1E is a technically credible bounded-shell alternative if the team decides to preserve that interaction model.
+- **Scroll-reset behavior on question navigation.** Do **not** assume the current bounded shell resets scroll "for free" — the scroll region is a stable DOM node, and whatever current reset behavior exists is coming from question-mount side effects, not from the shell contract itself. Under whole-page scroll, the question-change handler must explicitly reset `window.scrollTo({ top: 0 })` (or scroll the question panel into view) on Next/Previous navigation.
+- **Focus restoration on question navigation** must be re-validated so Next/Previous still land the user at the right heading/panel boundary under whole-page scroll.
+- **`PostExamReviewView`'s current focus effect** (`panelRef.current?.focus()`) must be checked against the new scroll model so focus movement does not produce disorienting page jumps.
+- **Browser back/forward scroll restoration** must be verified because whole-page scroll changes how the browser remembers position.
+- **Short-content cosmetic check.** On a very short exam question that fits in the viewport with room to spare, the footer will land in the middle of the viewport, not at the bottom edge. Expected outcome: this reads as "this question is short," not "the layout is broken." If the floating-bar effect looks bad in practice, the fix is spacing/min-height polish on the content region, not a return to pinning.
+- **Affected browser specs and E2E tests** must be updated because the current test contracts assert the `sticky-action-bar-layout` / `sticky-action-bar-scroll-region` markers and viewport-bounded geometry.
+- **Tutor mode long-feedback case** must be manually walked after the change. If scroll-to-bottom-to-click-Next feels like a real regression on long feedback blocks (as opposed to the natural completion of reading), the mode-specific fallback is to apply a different shell to tutor mode alone. Do **not** pre-emptively build the mode-split before testing the unified change.
 
 ---
 
