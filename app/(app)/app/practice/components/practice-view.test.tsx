@@ -736,6 +736,7 @@ describe('PracticeView', () => {
       throw new Error('Expected question panel and action bar');
     }
 
+    expect(questionPanel.textContent).toContain(question.stemMd);
     expect(
       questionPanel.compareDocumentPosition(actionBar) &
         Node.DOCUMENT_POSITION_FOLLOWING,

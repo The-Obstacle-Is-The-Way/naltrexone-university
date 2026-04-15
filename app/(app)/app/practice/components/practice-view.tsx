@@ -400,7 +400,7 @@ export function PracticeView(props: PracticeViewProps) {
         id={props.questionPanelId}
         ref={props.questionAreaRef}
         tabIndex={-1}
-        className="outline-none"
+        className="space-y-6 outline-none focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
       >
         {props.loadState.status === 'error' ? (
           <ErrorCard>
@@ -425,58 +425,58 @@ export function PracticeView(props: PracticeViewProps) {
             <output aria-live="polite">Loading question…</output>
           </Card>
         ) : null}
+
+        {props.bookmarkStatus === 'error' ? (
+          <ErrorCard>
+            <div>Bookmarks unavailable.</div>
+            {props.onRetryBookmarks ? (
+              <div className="mt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={props.onRetryBookmarks}
+                >
+                  Retry bookmarks
+                </Button>
+              </div>
+            ) : null}
+          </ErrorCard>
+        ) : null}
+
+        {props.loadState.status === 'ready' && props.question === null ? (
+          <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
+            <div>No more questions found.</div>
+            {props.onEndSession ? (
+              <div className="mt-4">
+                <Button
+                  type="button"
+                  className="rounded-full"
+                  disabled={props.isPending}
+                  onClick={props.onEndSession}
+                >
+                  {endSessionLabel}
+                </Button>
+              </div>
+            ) : null}
+          </Card>
+        ) : null}
+
+        {props.question || feedbackResult ? (
+          <QuestionSurfaceBody
+            question={props.question}
+            selectedChoiceId={props.selectedChoiceId}
+            correctChoiceId={correctChoiceId}
+            disabled={
+              props.isPending ||
+              props.loadState.status === 'loading' ||
+              isAnswerLocked
+            }
+            onSelectChoice={props.onSelectChoice}
+            feedback={feedbackResult}
+            feedbackRef={feedbackRef}
+          />
+        ) : null}
       </div>
-
-      {props.bookmarkStatus === 'error' ? (
-        <ErrorCard>
-          <div>Bookmarks unavailable.</div>
-          {props.onRetryBookmarks ? (
-            <div className="mt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={props.onRetryBookmarks}
-              >
-                Retry bookmarks
-              </Button>
-            </div>
-          ) : null}
-        </ErrorCard>
-      ) : null}
-
-      {props.loadState.status === 'ready' && props.question === null ? (
-        <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
-          <div>No more questions found.</div>
-          {props.onEndSession ? (
-            <div className="mt-4">
-              <Button
-                type="button"
-                className="rounded-full"
-                disabled={props.isPending}
-                onClick={props.onEndSession}
-              >
-                {endSessionLabel}
-              </Button>
-            </div>
-          ) : null}
-        </Card>
-      ) : null}
-
-      {props.question || feedbackResult ? (
-        <QuestionSurfaceBody
-          question={props.question}
-          selectedChoiceId={props.selectedChoiceId}
-          correctChoiceId={correctChoiceId}
-          disabled={
-            props.isPending ||
-            props.loadState.status === 'loading' ||
-            isAnswerLocked
-          }
-          onSelectChoice={props.onSelectChoice}
-          feedback={feedbackResult}
-          feedbackRef={feedbackRef}
-        />
-      ) : null}
 
       {actionBar}
     </div>

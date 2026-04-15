@@ -62,21 +62,23 @@ test('focuses the review panel on mount and scrolls it into view after navigatio
     .spyOn(Element.prototype, 'scrollIntoView')
     .mockImplementation(() => undefined);
 
-  const screen = await render(<InteractiveReviewHarness />);
+  try {
+    const screen = await render(<InteractiveReviewHarness />);
 
-  await expect
-    .element(screen.getByRole('region', { name: 'Question 1 of 2' }))
-    .toHaveFocus();
-  expect(scrollIntoViewSpy).not.toHaveBeenCalled();
+    await expect
+      .element(screen.getByRole('region', { name: 'Question 1 of 2' }))
+      .toHaveFocus();
+    expect(scrollIntoViewSpy).not.toHaveBeenCalled();
 
-  await screen.getByRole('button', { name: 'Next' }).click();
+    await screen.getByRole('button', { name: 'Next' }).click();
 
-  await expect
-    .element(screen.getByRole('region', { name: 'Question 2 of 2' }))
-    .toHaveFocus();
-  expect(scrollIntoViewSpy).toHaveBeenCalled();
-
-  scrollIntoViewSpy.mockRestore();
+    await expect
+      .element(screen.getByRole('region', { name: 'Question 2 of 2' }))
+      .toHaveFocus();
+    expect(scrollIntoViewSpy).toHaveBeenCalled();
+  } finally {
+    scrollIntoViewSpy.mockRestore();
+  }
 });
 
 test('renders the post-exam review bottom action bar without sticky shell markers', async () => {

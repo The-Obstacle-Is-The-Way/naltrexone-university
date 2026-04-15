@@ -802,33 +802,35 @@ test('scrolls the question panel into view and restores focus after next and pre
     .spyOn(Element.prototype, 'scrollIntoView')
     .mockImplementation(() => undefined);
 
-  const screen = await renderQuestionNavigationHarness();
+  try {
+    const screen = await renderQuestionNavigationHarness();
 
-  const getQuestionPanel = () =>
-    document.querySelector<HTMLElement>('div[tabindex="-1"]');
+    const getQuestionPanel = () =>
+      document.querySelector<HTMLElement>('div[tabindex="-1"]');
 
-  await expect.element(screen.getByText('Stem 1')).toBeVisible();
-  expect(scrollIntoViewSpy).not.toHaveBeenCalled();
+    await expect.element(screen.getByText('Stem 1')).toBeVisible();
+    expect(scrollIntoViewSpy).not.toHaveBeenCalled();
 
-  await screen.getByRole('button', { name: 'Next' }).click();
+    await screen.getByRole('button', { name: 'Next' }).click();
 
-  await expect.element(screen.getByText('Stem 2')).toBeVisible();
-  await vi.waitFor(() => {
-    expect(getQuestionPanel()).toBe(document.activeElement);
-  });
-  expect(scrollIntoViewSpy).toHaveBeenCalled();
+    await expect.element(screen.getByText('Stem 2')).toBeVisible();
+    await vi.waitFor(() => {
+      expect(getQuestionPanel()).toBe(document.activeElement);
+    });
+    expect(scrollIntoViewSpy).toHaveBeenCalled();
 
-  scrollIntoViewSpy.mockClear();
+    scrollIntoViewSpy.mockClear();
 
-  await screen.getByRole('button', { name: 'Previous' }).click();
+    await screen.getByRole('button', { name: 'Previous' }).click();
 
-  await expect.element(screen.getByText('Stem 1')).toBeVisible();
-  await vi.waitFor(() => {
-    expect(getQuestionPanel()).toBe(document.activeElement);
-  });
-  expect(scrollIntoViewSpy).toHaveBeenCalled();
-
-  scrollIntoViewSpy.mockRestore();
+    await expect.element(screen.getByText('Stem 1')).toBeVisible();
+    await vi.waitFor(() => {
+      expect(getQuestionPanel()).toBe(document.activeElement);
+    });
+    expect(scrollIntoViewSpy).toHaveBeenCalled();
+  } finally {
+    scrollIntoViewSpy.mockRestore();
+  }
 });
 
 test('renders Finish exam in the active exam-question header', async () => {

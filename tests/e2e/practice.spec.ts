@@ -71,7 +71,9 @@ async function expectBottomActionBarBelowFold(page: Page): Promise<void> {
 
 async function scrollPageToBottom(page: Page): Promise<void> {
   await page.evaluate(() => {
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'auto' });
+    const scrollingElement =
+      document.scrollingElement || document.documentElement;
+    window.scrollTo({ top: scrollingElement.scrollHeight, behavior: 'auto' });
   });
 
   await expect
@@ -82,6 +84,12 @@ async function scrollPageToBottom(page: Page): Promise<void> {
 async function expectFocusedLocatorInViewport(locator: Locator): Promise<void> {
   await expect(locator).toBeFocused();
   await expect(locator).toBeInViewport();
+}
+
+function getActiveQuestionPanel(page: Page): Locator {
+  return page.locator('div[tabindex="-1"]').filter({
+    has: page.getByRole('group', { name: 'Answer choices' }),
+  });
 }
 
 test.describe('practice', () => {
@@ -241,18 +249,14 @@ test.describe('practice', () => {
     await scrollPageToBottom(page);
     await page.getByRole('button', { name: 'Next' }).click();
 
-    await expectFocusedLocatorInViewport(
-      page.locator('div[tabindex="-1"]').first(),
-    );
+    await expectFocusedLocatorInViewport(getActiveQuestionPanel(page));
     await expect(page.getByText('Question 2 of 2')).toBeVisible();
 
     await appendTallPageContentBeforeActionBar(page, 'exam-question-filler');
     await scrollPageToBottom(page);
     await page.getByRole('button', { name: 'Previous' }).click();
 
-    await expectFocusedLocatorInViewport(
-      page.locator('div[tabindex="-1"]').first(),
-    );
+    await expectFocusedLocatorInViewport(getActiveQuestionPanel(page));
     await expect(page.getByText('Question 1 of 2')).toBeVisible();
   });
 
@@ -282,7 +286,7 @@ test.describe('practice', () => {
     await expect(
       page.getByRole('heading', { name: 'Exam Session' }),
     ).toBeVisible({ timeout: 30_000 });
-    await expect(page.locator('div[tabindex="-1"]').first()).toBeInViewport();
+    await expect(getActiveQuestionPanel(page)).toBeInViewport();
     await expect(page.getByText('Question 1 of 2')).toBeVisible();
   });
 
