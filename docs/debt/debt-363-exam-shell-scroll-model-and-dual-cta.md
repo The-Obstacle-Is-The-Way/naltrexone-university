@@ -31,6 +31,23 @@ The exam (and tutor, and post-exam review) shell uses a viewport-bounded inner-s
 
 This is not inadvertent slop — this is the shipped resolution of **DEBT-360**. See the architecture audit below.
 
+**Measured evidence (independent design review, 2026-04-14):** An independent design-critique pass measured the content-to-visible-scroll-area ratio across the exam flow:
+
+- **Desktop (1280×800):** post-exam review content is ~1653px crammed into a ~537px scroll region — a **3:1** ratio.
+- **Short desktop (1280×600):** the question navigator for a 20-question session consumes the *entire* visible scroll area. The question stem is not visible without scrolling.
+- **Mobile (390×844):** post-exam review content is ~5365px in a ~417px scroll region — a **12.87:1** ratio. Dense medical review content becomes a peephole read.
+
+The numbers make the user's "cut off" reaction unarguable. This is not acclimation friction; this is a measurable viewport-compression problem on mobile and short-desktop viewports.
+
+**Cross-screen inconsistency (second finding from the same review):** the scroll model is not uniform across the exam flow:
+
+- Exam question view: bounded inner scroll
+- Post-exam review: bounded inner scroll
+- Review & Submit (the three-card list): fits in one viewport, no scroll exercised
+- Session Summary: **uses normal body scroll** (not routed through `StickyActionBarLayout`)
+
+A user's scroll muscle memory breaks as they move from last-question → review-submit → post-exam review → session summary. This is an argument for unification regardless of which scroll model wins — the current mix is incoherent.
+
 ### Concern 2 — Two buttons, one action, on the last exam question
 
 On the last question of an exam, the user sees **both** of these simultaneously:
@@ -174,6 +191,8 @@ The USMLE-style Q-bank platforms (UWorld, AMBOSS, Kaplan) are the closest compar
 
 **Cons:** `fixed` is less flexible than `sticky` (ignores ancestor stacking contexts, can fight with modals/dialogs). Requires the bottom-padding reservation. Mobile safe-area inset handling needs to be re-validated.
 
+**Adjacency to verify during implementation:** when switching to whole-page scroll, the question-change handler must explicitly reset window scroll to `(0, 0)` on every Next/Previous navigation. The current bounded-scroll shell effectively resets this "for free" because each question mounts a fresh inner scroll container. Under whole-page scroll, a user who scrolls to the bottom of a long Q1 and clicks Next would land on Q2 already scrolled past the stem. This is not a reason to reject 1B — it's a two-line `window.scrollTo({ top: 0 })` or `element.scrollIntoView()` in the question-change effect — but it MUST be in the implementation checklist.
+
 ### Option 1C — Keep current bounded shell (status quo)
 
 - No code change.
@@ -272,12 +291,35 @@ DEBT-362 shipped yesterday (the chevron affordance on the exam-review three-card
 
 ---
 
+## Future concerns deliberately out of scope
+
+An independent design-critique pass surfaced several adjacent UX concerns. They were evaluated and deliberately kept out of DEBT-363 to prevent scope creep. They should become their own debt items when picked up — do **not** bundle any of them into the DEBT-363 implementation PR.
+
+### Deferred to separate debt items (real, non-overlapping)
+
+- **Navigation guard during active exam sessions.** The global site nav (Dashboard, Practice, History, Bookmarks, Billing) remains active during an exam, which means a misclick can abandon an in-progress session. Serious exam-prep platforms either hide the nav during an active block or intercept navigation with a confirmation dialog. Session state is already persisted via DEBT-321's save-draft path, so the risk is "lost place," not "lost data" — still worth guarding. **Separate debt item.**
+- **"Mark for review" lacks visible confirmation feedback.** Clicking the control produces no toast, no animation, and no immediate state change on the question navigator pill. The user cannot confirm the action registered without navigating away and back. Verify current behavior first (the navigator may be carrying state that isn't reflected in the pill styling), then a separate debt item if confirmed.
+
+### Dissolved or partially dissolved by the DEBT-363 fix
+
+- **"Question navigator dominates short viewports on large question sets."** For sessions with 20+ questions, the pill grid consumes most of the available scroll area. Under Option 1B (whole-page scroll), the navigator just becomes part of the natural page scroll and stops competing for a bounded viewport slice. The remaining piece — whether the navigator should collapse into a compact indicator for very large sets — is a separate design question that only makes sense to evaluate *after* the scroll-shell fix lands.
+
+### Rejected as either out of scope or contradicting the user's stated preference
+
+- **"Pin the question title, progress indicator, and navigator into a fixed header zone above the scroll content."** This is a three-zone layout (fixed header + scroll content + fixed footer). It directly contradicts the user's request for "simple top-down scroll from top to bottom" — it would trade one kind of viewport bounding for another. Rejected.
+- **"Insert a disabled Previous button on Question 1 for spatial consistency."** Pedantry at the cost of accessibility noise. Rejected.
+- **Keyboard shortcuts (A/B/C/D answer selection, arrow-key nav, Enter to submit).** Feature addition, not debt cleanup. Out of scope for a debt cycle.
+- **Feature requests for two-panel layouts, in-question highlighting/annotation, NBME-style timed blocks, per-question time tracking, and submit-dialog unanswered/marked counts.** All legitimate feature ideas; none of them are *debt*. Route through product planning, not the debt register.
+
+---
+
 ## Decision log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-04-14 | Opened DEBT-363 as a decision doc, not a locked spec | Two concerns surfaced from visual review of the DEBT-362 ship; root causes include a probable misdiagnosis in DEBT-360 and a label collision introduced by DEBT-322 + subsequent footer changes. Decision before code per the documented collaboration preference. |
 | 2026-04-14 | Grouped Concern 1 (scroll shell) and Concern 2 (dual CTA) into one debt item | Both live in `practice-view.tsx`, both are exam-footer-related, and both will be touched by the same file in the same PR. Splitting creates unnecessary bookkeeping. |
+| 2026-04-14 | Incorporated independent design-critique findings from a Chrome-agent walkthrough | Added measured viewport ratios (3:1 desktop, 12.87:1 mobile), cross-screen scroll-model inconsistency as a second argument for the fix, and a scroll-reset-on-navigation adjacency note on Option 1B. Kept DEBT-363 scoped tight; non-overlapping findings routed to "Future concerns deliberately out of scope." |
 
 ---
 
