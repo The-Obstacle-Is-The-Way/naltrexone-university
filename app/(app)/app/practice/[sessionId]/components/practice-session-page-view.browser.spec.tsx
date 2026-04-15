@@ -141,6 +141,79 @@ function renderExamResultsContinuityHarness() {
   return render(<Harness />);
 }
 
+function renderQuestionNavigationHarness() {
+  function Harness() {
+    const [questionIndex, setQuestionIndex] = useState(0);
+
+    const questionId = questionIndex === 0 ? 'q1' : 'q2';
+    const stem = questionIndex === 0 ? 'Stem 1' : 'Stem 2';
+
+    return (
+      <PracticeSessionPageView
+        summary={null}
+        review={null}
+        navigator={createReviewResponse({
+          mode: 'exam',
+          totalCount: 2,
+          answeredCount: 0,
+          markedCount: 0,
+          rows: [
+            createReviewRow({
+              questionId: 'q1',
+              slug: 'q-1',
+              order: 1,
+              isAnswered: false,
+              isCorrect: null,
+            }),
+            createReviewRow({
+              questionId: 'q2',
+              slug: 'q-2',
+              order: 2,
+              isAnswered: false,
+              isCorrect: null,
+            }),
+          ],
+        })}
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: questionIndex,
+          total: 2,
+          isMarkedForReview: false,
+        }}
+        loadState={{ status: 'ready' }}
+        question={createNextQuestion({
+          questionId,
+          slug: questionId,
+          stemMd: stem,
+          difficulty: 'easy',
+        })}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onEndSession={() => undefined}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onToggleMarkForReview={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() =>
+          setQuestionIndex((current) => Math.min(current + 1, 1))
+        }
+        onNavigateQuestion={(nextQuestionId) =>
+          setQuestionIndex(nextQuestionId === 'q1' ? 0 : 1)
+        }
+      />
+    );
+  }
+
+  return render(<Harness />);
+}
+
 test('renders session summary branch when summary is present', async () => {
   const screen = await render(
     <PracticeSessionPageView
@@ -722,6 +795,40 @@ test('renders active question branch with navigator and navigation callback', as
   await expect.element(screen.getByText('Question navigator')).toBeVisible();
   await screen.getByRole('button', { name: 'Question 2: Unanswered' }).click();
   expect(onNavigateQuestion).toHaveBeenCalledWith('q2');
+});
+
+test('scrolls the question panel into view and restores focus after next and previous navigation', async () => {
+  const scrollIntoViewSpy = vi
+    .spyOn(Element.prototype, 'scrollIntoView')
+    .mockImplementation(() => undefined);
+
+  const screen = await renderQuestionNavigationHarness();
+
+  const getQuestionPanel = () =>
+    document.querySelector<HTMLElement>('div[tabindex="-1"]');
+
+  await expect.element(screen.getByText('Stem 1')).toBeVisible();
+  expect(scrollIntoViewSpy).not.toHaveBeenCalled();
+
+  await screen.getByRole('button', { name: 'Next' }).click();
+
+  await expect.element(screen.getByText('Stem 2')).toBeVisible();
+  await vi.waitFor(() => {
+    expect(getQuestionPanel()).toBe(document.activeElement);
+  });
+  expect(scrollIntoViewSpy).toHaveBeenCalled();
+
+  scrollIntoViewSpy.mockClear();
+
+  await screen.getByRole('button', { name: 'Previous' }).click();
+
+  await expect.element(screen.getByText('Stem 1')).toBeVisible();
+  await vi.waitFor(() => {
+    expect(getQuestionPanel()).toBe(document.activeElement);
+  });
+  expect(scrollIntoViewSpy).toHaveBeenCalled();
+
+  scrollIntoViewSpy.mockRestore();
 });
 
 test('renders Finish exam in the active exam-question header', async () => {

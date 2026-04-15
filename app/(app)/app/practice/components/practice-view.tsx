@@ -12,7 +12,6 @@ import { headerActionLinkClasses } from '@/lib/shared-styles';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import type { LoadState } from '../practice-page-logic';
-import { StickyActionBarLayout } from './sticky-action-bar';
 
 export type PracticeViewProps = {
   title?: string;
@@ -314,174 +313,172 @@ export function PracticeView(props: PracticeViewProps) {
     feedbackRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [feedbackResult]);
 
+  const actionBar = props.question ? (
+    <div
+      className="flex flex-wrap items-center gap-3"
+      data-testid="bottom-action-bar"
+    >
+      {isExamMode ? (
+        <ExamActionBar
+          canNavigatePrevious={props.canNavigatePrevious}
+          hasPreviousQuestion={props.hasPreviousQuestion}
+          isLastSessionQuestion={isLastSessionQuestion}
+          isMarkedForReview={isMarkedForReview}
+          isMarkingForReview={props.isMarkingForReview}
+          isPending={props.isPending}
+          loadState={props.loadState}
+          onEndSession={props.onEndSession}
+          onNextQuestion={props.onNextQuestion}
+          onPreviousQuestion={props.onPreviousQuestion}
+          onToggleMarkForReview={props.onToggleMarkForReview}
+        />
+      ) : (
+        <TutorActionBar
+          bookmarkStatus={props.bookmarkStatus}
+          canSubmit={props.canSubmit}
+          canNavigatePrevious={props.canNavigatePrevious}
+          hasNextQuestion={props.hasNextQuestion}
+          hasPreviousQuestion={props.hasPreviousQuestion}
+          isBookmarked={props.isBookmarked}
+          isPending={props.isPending}
+          isSubmittingAnswer={isSubmittingAnswer}
+          loadState={props.loadState}
+          onNextQuestion={props.onNextQuestion}
+          onPreviousQuestion={props.onPreviousQuestion}
+          onSubmit={props.onSubmit}
+          onToggleBookmark={props.onToggleBookmark}
+          submitResult={props.submitResult}
+        />
+      )}
+    </div>
+  ) : null;
+
   return (
-    <StickyActionBarLayout
-      actionBar={
-        props.question ? (
-          <div
-            className="flex flex-wrap items-center gap-3"
-            data-testid="bottom-action-bar"
-          >
-            {isExamMode ? (
-              <ExamActionBar
-                canNavigatePrevious={props.canNavigatePrevious}
-                hasPreviousQuestion={props.hasPreviousQuestion}
-                isLastSessionQuestion={isLastSessionQuestion}
-                isMarkedForReview={isMarkedForReview}
-                isMarkingForReview={props.isMarkingForReview}
-                isPending={props.isPending}
-                loadState={props.loadState}
-                onEndSession={props.onEndSession}
-                onNextQuestion={props.onNextQuestion}
-                onPreviousQuestion={props.onPreviousQuestion}
-                onToggleMarkForReview={props.onToggleMarkForReview}
-              />
+    <div className="space-y-6">
+      {props.topContent}
+      <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
+              {title}
+            </h1>
+            <p
+              className="mt-1 text-base text-muted-foreground"
+              aria-live="polite"
+            >
+              {description}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            {props.onEndSession ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-full"
+                disabled={
+                  props.isPending || props.loadState.status === 'loading'
+                }
+                onClick={props.onEndSession}
+              >
+                {endSessionLabel}
+              </Button>
             ) : (
-              <TutorActionBar
-                bookmarkStatus={props.bookmarkStatus}
-                canSubmit={props.canSubmit}
-                canNavigatePrevious={props.canNavigatePrevious}
-                hasNextQuestion={props.hasNextQuestion}
-                hasPreviousQuestion={props.hasPreviousQuestion}
-                isBookmarked={props.isBookmarked}
-                isPending={props.isPending}
-                isSubmittingAnswer={isSubmittingAnswer}
-                loadState={props.loadState}
-                onNextQuestion={props.onNextQuestion}
-                onPreviousQuestion={props.onPreviousQuestion}
-                onSubmit={props.onSubmit}
-                onToggleBookmark={props.onToggleBookmark}
-                submitResult={props.submitResult}
-              />
+              <Button
+                asChild
+                variant="link"
+                className={headerActionLinkClasses}
+              >
+                <Link href={backLink.href}>{backLink.label}</Link>
+              </Button>
             )}
           </div>
-        ) : null
-      }
-    >
-      <div className="space-y-6">
-        {props.topContent}
-        <div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
-                {title}
-              </h1>
-              <p
-                className="mt-1 text-base text-muted-foreground"
-                aria-live="polite"
-              >
-                {description}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              {props.onEndSession ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="rounded-full"
-                  disabled={
-                    props.isPending || props.loadState.status === 'loading'
-                  }
-                  onClick={props.onEndSession}
-                >
-                  {endSessionLabel}
-                </Button>
-              ) : (
-                <Button
-                  asChild
-                  variant="link"
-                  className={headerActionLinkClasses}
-                >
-                  <Link href={backLink.href}>{backLink.label}</Link>
-                </Button>
-              )}
-            </div>
-          </div>
-          {props.belowHeadingContent}
         </div>
+        {props.belowHeadingContent}
+      </div>
 
-        <div
-          id={props.questionPanelId}
-          ref={props.questionAreaRef}
-          tabIndex={-1}
-          className="outline-none"
-        >
-          {props.loadState.status === 'error' ? (
-            <ErrorCard>
-              <div>{props.loadState.message}</div>
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={props.onTryAgain}
-                >
-                  Try again
-                </Button>
-                <Button asChild variant="outline">
-                  <Link href={ROUTES.APP_DASHBOARD}>Return to dashboard</Link>
-                </Button>
-              </div>
-            </ErrorCard>
-          ) : null}
-
-          {props.loadState.status === 'loading' ? (
-            <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
-              <output aria-live="polite">Loading question…</output>
-            </Card>
-          ) : null}
-        </div>
-
-        {props.bookmarkStatus === 'error' ? (
+      <div
+        id={props.questionPanelId}
+        ref={props.questionAreaRef}
+        tabIndex={-1}
+        className="outline-none"
+      >
+        {props.loadState.status === 'error' ? (
           <ErrorCard>
-            <div>Bookmarks unavailable.</div>
-            {props.onRetryBookmarks ? (
-              <div className="mt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={props.onRetryBookmarks}
-                >
-                  Retry bookmarks
-                </Button>
-              </div>
-            ) : null}
+            <div>{props.loadState.message}</div>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={props.onTryAgain}
+              >
+                Try again
+              </Button>
+              <Button asChild variant="outline">
+                <Link href={ROUTES.APP_DASHBOARD}>Return to dashboard</Link>
+              </Button>
+            </div>
           </ErrorCard>
         ) : null}
 
-        {props.loadState.status === 'ready' && props.question === null ? (
+        {props.loadState.status === 'loading' ? (
           <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
-            <div>No more questions found.</div>
-            {props.onEndSession ? (
-              <div className="mt-4">
-                <Button
-                  type="button"
-                  className="rounded-full"
-                  disabled={props.isPending}
-                  onClick={props.onEndSession}
-                >
-                  {endSessionLabel}
-                </Button>
-              </div>
-            ) : null}
+            <output aria-live="polite">Loading question…</output>
           </Card>
         ) : null}
-
-        {props.question || feedbackResult ? (
-          <QuestionSurfaceBody
-            question={props.question}
-            selectedChoiceId={props.selectedChoiceId}
-            correctChoiceId={correctChoiceId}
-            disabled={
-              props.isPending ||
-              props.loadState.status === 'loading' ||
-              isAnswerLocked
-            }
-            onSelectChoice={props.onSelectChoice}
-            feedback={feedbackResult}
-            feedbackRef={feedbackRef}
-          />
-        ) : null}
       </div>
-    </StickyActionBarLayout>
+
+      {props.bookmarkStatus === 'error' ? (
+        <ErrorCard>
+          <div>Bookmarks unavailable.</div>
+          {props.onRetryBookmarks ? (
+            <div className="mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={props.onRetryBookmarks}
+              >
+                Retry bookmarks
+              </Button>
+            </div>
+          ) : null}
+        </ErrorCard>
+      ) : null}
+
+      {props.loadState.status === 'ready' && props.question === null ? (
+        <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
+          <div>No more questions found.</div>
+          {props.onEndSession ? (
+            <div className="mt-4">
+              <Button
+                type="button"
+                className="rounded-full"
+                disabled={props.isPending}
+                onClick={props.onEndSession}
+              >
+                {endSessionLabel}
+              </Button>
+            </div>
+          ) : null}
+        </Card>
+      ) : null}
+
+      {props.question || feedbackResult ? (
+        <QuestionSurfaceBody
+          question={props.question}
+          selectedChoiceId={props.selectedChoiceId}
+          correctChoiceId={correctChoiceId}
+          disabled={
+            props.isPending ||
+            props.loadState.status === 'loading' ||
+            isAnswerLocked
+          }
+          onSelectChoice={props.onSelectChoice}
+          feedback={feedbackResult}
+          feedbackRef={feedbackRef}
+        />
+      ) : null}
+
+      {actionBar}
+    </div>
   );
 }

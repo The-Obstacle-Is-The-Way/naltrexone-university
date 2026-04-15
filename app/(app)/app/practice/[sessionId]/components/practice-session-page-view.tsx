@@ -1,4 +1,4 @@
-import { useCallback, useId, useMemo } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef } from 'react';
 import { PracticeView } from '@/app/(app)/app/practice/components/practice-view';
 import {
   fireAndForget,
@@ -62,6 +62,16 @@ export type PracticeSessionPageViewProps = {
   onFinalizeReview?: () => Promise<void>;
 };
 
+function focusElementWithoutScroll(element: HTMLElement | null) {
+  if (!element) return;
+
+  try {
+    element.focus({ preventScroll: true });
+  } catch {
+    element.focus();
+  }
+}
+
 export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
   const review = props.review ?? null;
   const reviewLoadState = props.reviewLoadState ?? { status: 'idle' };
@@ -69,6 +79,9 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
   const navigatorLoadState = props.navigatorLoadState ?? { status: 'idle' };
   const currentQuestionId = props.question?.questionId ?? null;
   const questionPanelId = useId();
+  const questionAreaRef = useRef<HTMLDivElement | null>(null);
+  const shouldRestoreQuestionPanelRef = useRef(false);
+  const lastQuestionIdRef = useRef<string | null>(currentQuestionId);
   const previousQuestionId = useMemo(
     () => findAdjacentAvailableQuestionId(navigator, currentQuestionId, -1),
     [currentQuestionId, navigator],
@@ -77,19 +90,51 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
     () => findAdjacentAvailableQuestionId(navigator, currentQuestionId, 1),
     [currentQuestionId, navigator],
   );
+  const restoreQuestionPanel = useCallback(() => {
+    const panel = questionAreaRef.current;
+    if (!panel) return;
+
+    focusElementWithoutScroll(panel);
+    panel.scrollIntoView({ block: 'start' });
+  }, []);
+  const navigateToQuestion = useCallback(
+    (questionId: string) => {
+      if (!props.onNavigateQuestion) return;
+
+      shouldRestoreQuestionPanelRef.current = true;
+      props.onNavigateQuestion(questionId);
+    },
+    [props.onNavigateQuestion],
+  );
   const onPreviousQuestion = useCallback(() => {
-    if (previousQuestionId && props.onNavigateQuestion) {
-      props.onNavigateQuestion(previousQuestionId);
-    }
-  }, [previousQuestionId, props.onNavigateQuestion]);
+    if (!previousQuestionId) return;
+
+    navigateToQuestion(previousQuestionId);
+  }, [navigateToQuestion, previousQuestionId]);
 
   const onNextQuestionResolved = useCallback(() => {
+    shouldRestoreQuestionPanelRef.current = true;
+
     if (nextQuestionId && props.onNavigateQuestion) {
       props.onNavigateQuestion(nextQuestionId);
       return;
     }
     props.onNextQuestion();
   }, [nextQuestionId, props.onNavigateQuestion, props.onNextQuestion]);
+  useEffect(() => {
+    if (!currentQuestionId) return;
+
+    const shouldRestoreQuestionPanel =
+      shouldRestoreQuestionPanelRef.current &&
+      lastQuestionIdRef.current !== currentQuestionId;
+
+    lastQuestionIdRef.current = currentQuestionId;
+
+    if (!shouldRestoreQuestionPanel) return;
+
+    shouldRestoreQuestionPanelRef.current = false;
+    restoreQuestionPanel();
+  }, [currentQuestionId, restoreQuestionPanel]);
   const examResults = renderPracticeSessionExamResults({
     summary: props.summary,
     postExamSummary: props.postExamSummary,
@@ -183,13 +228,14 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       title={title}
       description={description}
       questionPanelId={questionPanelId}
+      questionAreaRef={questionAreaRef}
       topContent={
         navigator && props.onNavigateQuestion ? (
           <QuestionNavigator
             review={navigator}
             currentQuestionId={currentQuestionId}
             controlledPanelId={questionPanelId}
-            onNavigateQuestion={props.onNavigateQuestion}
+            onNavigateQuestion={navigateToQuestion}
           />
         ) : navigatorLoadState.status === 'error' ? (
           <ErrorCard className="p-4">

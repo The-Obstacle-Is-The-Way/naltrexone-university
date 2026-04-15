@@ -687,6 +687,61 @@ describe('PracticeView', () => {
     expect(labels).toEqual(['Previous', 'Next', 'Bookmark']);
   });
 
+  it('renders the bottom action bar in the document-flow content stack without sticky shell markers', () => {
+    const question = createQuestionProps();
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 0,
+          total: 2,
+          isMarkedForReview: false,
+        }}
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onEndSession={() => undefined}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onToggleMarkForReview={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
+    const questionPanel = doc.querySelector('div[tabindex="-1"]');
+
+    expect(
+      doc.querySelector('[data-testid="sticky-action-bar-layout"]'),
+    ).toBeNull();
+    expect(
+      doc.querySelector('[data-testid="sticky-action-bar-scroll-region"]'),
+    ).toBeNull();
+    expect(doc.querySelector('[data-testid="sticky-action-bar"]')).toBeNull();
+    expect(actionBar).not.toBeNull();
+    expect(actionBar?.parentElement?.className).toContain('space-y-6');
+
+    if (!actionBar || !questionPanel) {
+      throw new Error('Expected question panel and action bar');
+    }
+
+    expect(
+      questionPanel.compareDocumentPosition(actionBar) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
   it('renders exam action bar with Next and Mark for review and no Submit on the first question', () => {
     const question = createQuestionProps();
     const selectedChoice = question.choices[0];
