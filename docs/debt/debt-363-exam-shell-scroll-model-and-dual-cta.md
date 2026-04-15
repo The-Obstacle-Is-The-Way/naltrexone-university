@@ -12,9 +12,10 @@ related: DEBT-322, DEBT-360, DEBT-361, DEBT-362
 # DEBT-363: Exam shell scroll model + dual-CTA disambiguation
 
 **Priority:** P2
-**Status:** Open — **decision doc, not a locked spec**
+**Status:** Partially decided — Concern 1 locked, Concern 2 still open
 **Created:** 2026-04-14
-**Affected surfaces:** PracticeView (exam + tutor), PostExamReviewView, ExamReviewView
+**Affected surfaces:** PracticeView (exam + tutor), PostExamReviewView
+**Adjacent unchanged stage:** ExamReviewView
 **Discovered via:** Visual walkthrough at 1280×1100 on 2026-04-14 during the DEBT-362 post-merge verification
 
 ---
@@ -185,7 +186,7 @@ The USMLE-style Q-bank platforms (UWorld, AMBOSS, Kaplan) are the closest compar
 
 ---
 
-## Concern 1 — Decision (locked 2026-04-15)
+## Concern 1 — Decision (locked 2026-04-15; implementation-ready)
 
 **Decision: revert to the pre-DEBT-360 document-flow pattern.**
 
@@ -207,8 +208,10 @@ Key reasons:
 
 1. **Double-pinned chrome compresses content.** The app already pins the global header at the top. Pinning the footer as well puts two fixed edges on the viewport and compresses the usable content region, especially at short desktop heights (≤700px) and on mobile where button bars tend to wrap and stack. Removing the inner scroll box is necessary; also unpinning the bottom edge is what actually reclaims content breathing room.
 2. **Reading flow matches end-of-content placement.** For a read-then-decide task, the user's eye ends at the bottom of the content naturally. Always-visible is a benefit only for interrupt intents (bail early, skip, jump), which are edge cases relative to walk-through-and-decide.
-3. **Exam-prep domain convention is end-of-content navigation, not persistent pinning.** Platforms designed around the same task shape commonly place the primary forward action at the natural end of the content rather than in persistent chrome. This is not a cargo-cult imitation; it matches the cognitive sequence of the task.
+3. **Board-exam precedent does not create a requirement for persistent bottom pinning.** Comparable exam-prep products solve the same read-then-decide task without making a fixed bottom bar the defining requirement. The point to borrow is the task shape, not any one vendor's literal chrome.
 4. **Reversibility favors shipping this first.** If this turns out to feel wrong in practice, promoting the bar to `position: fixed` with a padding reservation is an additive, contained change. Shipping a fixed footer first and walking it back later is harder because footer-height reservation, safe-area insets, modal/overlay interactions, and test expectations all have to be unwound.
+
+The strongest case for a fixed footer is predictable access for interrupt actions and consistent motor memory. That argument was considered and rejected for this cycle because those are secondary intents, the app already has persistent top chrome, and the primary product goal here is to give the reading surface its space back.
 
 ### Paths deliberately not taken
 
@@ -216,6 +219,13 @@ Key reasons:
 - **CSS Grid shell (`grid-template-rows: minmax(0,1fr) auto`).** Technically viable and avoids some flex/overflow footguns, but still preserves a bounded-shell interaction model rather than the top-down page scroll the user asked for. Rejected for this cycle.
 - **Hybrid (whole-page scroll except for very tall content).** Two scroll modes is worse than either mode alone. Over-engineered.
 - **Status quo (current bounded shell).** Does not resolve the user-observed "claustrophobic peephole" feel. Explicitly rejected.
+
+### Implementation scope
+
+- **`PracticeView`** should stop rendering `StickyActionBarLayout` and instead render its action bar in normal document flow at the end of the question content.
+- **`PostExamReviewView`** should make the same shell change so post-submit review follows the same top-down page-scroll model.
+- **`ExamReviewView`**, **`SessionSummaryView`**, and **`app/(app)/app/layout.tsx`** should remain unchanged unless implementation evidence proves a broader shell change is actually required.
+- **`StickyActionBarLayout`** and its tests should be deleted or narrowed only if they become unused after migrating both current consumers.
 
 ### Implementation adjacency list (load-bearing)
 
@@ -322,16 +332,15 @@ DEBT-362 shipped yesterday (the chevron affordance on the exam-review three-card
 
 ---
 
-## Open decisions (for user sign-off)
+## Remaining open decisions
 
 | # | Decision | Status |
 |---|----------|--------|
-| 1 | Which scroll-shell option? (1A / 1B / 1C / 1D / 1E) | **Open** |
-| 2 | Which dual-CTA option? (2A / 2B / 2C / 2D / 2E) | **Open** |
-| 3 | Does the DEBT-360 decision log need a correction note, or do we leave the archive untouched and let DEBT-363 carry the correction? | **Open** |
-| 4 | Is Concern 1 priority P2 (ship soon) or P3 (tolerate)? Concern 2 is clearly P2. | **Open** |
+| 1 | Which dual-CTA option? (2A / 2B / 2C / 2D / 2E) | **Open** |
+| 2 | Does the DEBT-360 decision log need a correction note, or do we leave the archive untouched and let DEBT-363 carry the correction? | **Open** |
+| 3 | Does Concern 2 ship in the same PR as the scroll-shell change, or stay split? | **Open** |
 
-**No implementation until these are resolved.** The doc is a decision artifact; a second pass will lock choices, a third pass will spec the implementation.
+**Concern 1 is now implementation-ready.** Concern 2 remains in decision state. Do not block the scroll-shell implementation on a final dual-CTA decision unless the team explicitly wants both changes bundled.
 
 ---
 
@@ -346,7 +355,7 @@ An independent design-critique pass surfaced several adjacent UX concerns. They 
 
 ### Dissolved or partially dissolved by the DEBT-363 fix
 
-- **"Question navigator dominates short viewports on large question sets."** For sessions with 20+ questions, the pill grid consumes most of the available scroll area. Under Option 1B (whole-page scroll), the navigator just becomes part of the natural page scroll and stops competing for a bounded viewport slice. The remaining piece — whether the navigator should collapse into a compact indicator for very large sets — is a separate design question that only makes sense to evaluate *after* the scroll-shell fix lands.
+- **"Question navigator dominates short viewports on large question sets."** For sessions with 20+ questions, the pill grid consumes most of the available scroll area. Under the chosen whole-page document-flow change, the navigator just becomes part of the natural page scroll and stops competing for a bounded viewport slice. The remaining piece — whether the navigator should collapse into a compact indicator for very large sets — is a separate design question that only makes sense to evaluate *after* the scroll-shell fix lands.
 
 ### Rejected as either out of scope or contradicting the user's stated preference
 
@@ -365,6 +374,7 @@ An independent design-critique pass surfaced several adjacent UX concerns. They 
 | 2026-04-14 | Grouped Concern 1 (scroll shell) and Concern 2 (dual CTA) into one debt item | Both live in `practice-view.tsx`, both are exam-footer-related, and both will be touched by the same file in the same PR. Splitting creates unnecessary bookkeeping. |
 | 2026-04-14 | Incorporated independent design-critique findings from a Chrome-agent walkthrough | Added measured viewport ratios (3:1 desktop, 12.87:1 mobile), cross-screen scroll-model inconsistency as a second argument for the fix, and a scroll-reset-on-navigation adjacency note on Option 1B. Kept DEBT-363 scoped tight; non-overlapping findings routed to "Future concerns deliberately out of scope." |
 | 2026-04-15 | Corrected DEBT-363 after an independent code audit | Fixed the stale `practice-view.tsx:233` citation, narrowed the scroll-shell claim so it no longer mis-scopes `ExamReviewView`, replaced the unsupportable DEBT-360 misdiagnosis assertion with an evidence-bounded correction, and rewrote the dual-CTA section around the actual shared `onEndSession` semantics. |
+| 2026-04-15 | Locked Concern 1 to the pre-DEBT-360 document-flow footer pattern | Product-design review converged on plain document flow as the better first move: reclaim bottom-edge breathing room, match the read-then-decide interaction, and preserve the cheaper 1A→1B fallback path. Kept the rationale at the first-principles level rather than encoding unverified pixel arithmetic or vendor-specific claims. |
 
 ---
 
