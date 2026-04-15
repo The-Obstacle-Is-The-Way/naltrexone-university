@@ -6,7 +6,7 @@ priority: P2
 created: 2026-04-14
 area: practice / exam
 supersedes_decision_from: DEBT-360
-related: DEBT-322, DEBT-360, DEBT-362
+related: DEBT-322, DEBT-360, DEBT-361, DEBT-362
 ---
 
 # DEBT-363: Exam shell scroll model + dual-CTA disambiguation
@@ -55,10 +55,12 @@ On the last question of an exam, the user sees **both** of these simultaneously:
 - **Top-right header button:** `Finish exam` — always visible on every exam question
 - **Bottom footer button:** `Review & Submit` — only on the last question, replacing `Next`
 
-Both call the exact same handler (`onEndSession`). Source:
+Both resolve to the exact same `onEndSession` path and both navigate to the same intermediate destination: the pre-submit `Review & Submit` screen (`ExamReviewView`). The exam is not actually submitted from the question screen; submission happens later inside `ExamReviewView` through `onFinalizeReview` with a confirmation dialog. Source:
 - `app/(app)/app/practice/components/practice-view.tsx:385` — header button click → `props.onEndSession`
-- `app/(app)/app/practice/components/practice-view.tsx:233` — `Review & Submit` click → `onEndSession` (when `isLastSessionQuestion && onEndSession`)
+- `app/(app)/app/practice/components/practice-view.tsx:203` — `onMiddleAction` resolves to `props.onEndSession` on the last question
+- `app/(app)/app/practice/components/practice-view.tsx:234` — footer `Review & Submit` button click → `onMiddleAction`
 - `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:224` — `endSessionLabel={mode === 'exam' ? 'Finish exam' : 'End session'}`
+- `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:236-279` — actual exam submission path via `Submit exam` → confirmation dialog → `onFinalizeReview`
 
 User reaction:
 
@@ -69,6 +71,24 @@ That reaction is exactly the failure mode research warns about (see "Research: d
 ---
 
 ## Architecture audit — where did the scroll-shell come from?
+
+### Stage map (current code)
+
+Before evaluating Concern 1 or Concern 2, the current exam flow needs to be separated into four distinct stages. They do **not** all share the same layout shell:
+
+1. **Active question-taking** — `PracticeSessionPageView` renders `PracticeView`, which wraps the active question stage in `StickyActionBarLayout`.
+   - `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:182`
+   - `app/(app)/app/practice/components/practice-view.tsx:318`
+2. **Pre-submit `Review & Submit` screen** — `PracticeSessionPageView` renders `ExamReviewView` in plain document flow. This stage does **not** use `StickyActionBarLayout`.
+   - `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:157`
+   - `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:136`
+3. **Post-submit review** — the exam-results renderer renders `PostExamReviewView`, which does use `StickyActionBarLayout`.
+   - `app/(app)/app/practice/[sessionId]/components/practice-session-exam-results-renderer.tsx:112`
+   - `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx:61`
+4. **Session summary** — `SessionSummaryView` is plain document flow, not `StickyActionBarLayout`.
+   - `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:114`
+   - `app/(app)/app/practice/[sessionId]/components/practice-session-exam-results-renderer.tsx:51`
+   - `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx:46`
 
 ### Timeline (git history)
 
@@ -94,8 +114,8 @@ Everything above the `Resolve DEBT-356` baseline is DEBT-360-era work.
    </div>
    ```
    - `h-dvh` forces the root to exactly the dynamic viewport height.
-   - `<main>` is `flex-1 min-h-0` — takes remaining space, does not grow past viewport.
-   - **This means the whole app shell is viewport-bounded. The document body cannot scroll.**
+   - `<main>` is `flex-1 min-h-0` — a bounded flex region that lets child layouts consume the remaining viewport height.
+   - **This matters because `StickyActionBarLayout` can fill that remaining space. It does not, by itself, prove that every stage in the app is inner-scrolling.** `SessionSummaryView` already demonstrates plain document-flow behavior under the same `AppLayoutShell`.
 
 2. **`StickyActionBarLayout`** — `app/(app)/app/practice/components/sticky-action-bar.tsx:10`
    ```
@@ -104,11 +124,11 @@ Everything above the `Resolve DEBT-356` baseline is DEBT-360-era work.
      {actionBar ? <StickyActionBar>{actionBar}</StickyActionBar> : null}
    </div>
    ```
-   - Outer wrapper: `overflow-hidden` — creates a new scroll context.
+   - Outer wrapper: `overflow-hidden` — clips overflow and caps the shell to the bounded flex height.
    - Inner content region: `overflow-y-auto` — this is the inner scroll box the user is reacting to.
-   - Sticky footer: sibling of inner scroll region, anchored by the outer `overflow-hidden` parent.
+   - Sticky footer: sibling of the inner scroll region, anchored within that bounded shell.
 
-**Net effect:** scrolling a long question or a long feedback block scrolls the inner region only. The header, app chrome, and sticky footer never move. The user sees what looks like "a window within a window" — which is exactly the visual they're objecting to.
+**Net effect on the stages that use it:** scrolling a long question or a long feedback block scrolls the inner region only. The header, app chrome, and sticky footer never move. The user sees what looks like "a window within a window" — which is exactly the visual they're objecting to.
 
 ### The DEBT-360 decision-log claim
 
@@ -116,18 +136,15 @@ Everything above the `Resolve DEBT-356` baseline is DEBT-360-era work.
 
 > "Shipped a hybrid shared-shell solution instead of a pure end-of-document sticky wrapper — Pure `sticky bottom-0` on a footer that still rendered after the full content stack did not keep the controls visible."
 
-**This claim should be revisited.** Web research on the `position: sticky` failure modes (see "Research: sticky vs fixed" below) identifies **`overflow: hidden` on an ancestor** as the #1 reason `sticky bottom-0` silently fails. It is entirely plausible that the DEBT-360 trial attempt had a containing `overflow: hidden` (or was placed inside a `flex-1 min-h-0` parent without the page being tall enough to scroll) and misdiagnosed the result as "sticky doesn't work."
-
-In other words: the shipped shell may have been solving a problem *created by its own earlier iteration* rather than an inherent sticky limitation.
+**This claim should be revisited, but carefully.** The recorded rationale in the DEBT-360 archive is incomplete — no commit or PR comment documents what the pure-sticky attempt actually looked like or which specific CSS rule blocked it. Revisiting the decision is warranted, but this doc should not assert `overflow: hidden` was the cause without evidence.
 
 ### Does this permeate other surfaces?
 
-Yes. Both `PracticeView` (tutor + exam) and `PostExamReviewView` and `ExamReviewView` route their footers through `StickyActionBarLayout`. The bounded-scroll visual affects:
+Yes, but not every exam-flow stage. `PracticeView` (tutor + exam) and `PostExamReviewView` route their footers through `StickyActionBarLayout`. `ExamReviewView` does not. The bounded-scroll visual affects:
 
 - tutor mode question-taking
 - exam mode question-taking
-- the post-exam review screen (the three-card review we just shipped in DEBT-362)
-- the post-exam full review view
+- the post-submit review screen
 
 ---
 
@@ -137,7 +154,7 @@ Yes. Both `PracticeView` (tutor + exam) and `PostExamReviewView` and `ExamReview
 
 From CSS-Tricks, Polypane, and BrowserStack write-ups on `position: sticky` failure modes: any ancestor with `overflow: hidden`, `overflow: auto`, or `overflow: scroll` creates a new scroll context, and `sticky` sticks *within that ancestor* rather than the viewport. Fix: use `overflow: clip` instead of `overflow: hidden`, or remove overflow from the ancestor entirely. A sticky element also needs the parent to be tall enough to actually scroll before it will engage.
 
-This is consistent with the DEBT-360 trial-and-error history and gives us a concrete technical answer: **`sticky bottom-0` on a document-flow footer will work as long as we don't `overflow: hidden` its ancestors.**
+This is one concrete failure mode to verify if a new sticky-based shell is prototyped. It does **not** prove that DEBT-360 failed for this reason, and it does **not** change the separate limitation that an end-of-document sticky footer can still begin below the fold on long content.
 
 ### UX guidance
 
@@ -170,28 +187,36 @@ The USMLE-style Q-bank platforms (UWorld, AMBOSS, Kaplan) are the closest compar
 
 ## Concern 1 — Options for the scroll shell
 
-### Option 1A — Whole-page scroll + `position: sticky` footer (revert DEBT-360 architecture)
+### Option 1A — Whole-page scroll + in-flow `position: sticky` footer
 
-- Remove `h-dvh` / `flex-1 min-h-0` / `overflow-hidden` from `AppLayoutShell` and `StickyActionBarLayout`.
-- Let `<main>` grow naturally with its content. The body becomes the scroll container.
-- Render the action bar as a direct child of the page content with `position: sticky; bottom: 0`.
-- Works on long content (footer anchors to viewport bottom while scrolling). On short content, footer sits at the natural bottom of content — which may be mid-viewport.
+- Replace the bounded `StickyActionBarLayout` shell with normal document-flow content on the stages that currently use it.
+- Render the action bar in flow, after the content stack, with `position: sticky; bottom: 0`.
+- The page becomes a top-down scroll surface, but the footer remains part of normal document flow.
 
-**Pros:** Matches the user's mental model ("simple top-down scroll"). Eliminates the inner-scroll box. The research-identified root cause (`overflow: hidden` ancestor) is fixed by construction.
+**Pros:** Restores whole-page scroll and removes the inner scroll box entirely. If the footer reaches the viewport, `sticky` can keep it pinned while the user continues scrolling nearby content.
 
-**Cons:** On short content (e.g., a 2-line exam stem), the footer may sit mid-viewport rather than anchored to the bottom — which is the exact failure mode DEBT-360 cited. Needs verification on the shortest-possible question to confirm the concern was real.
+**Cons:** This does **not** keep the footer always visible on long content. An end-of-document sticky footer still starts below the fold until the user scrolls near it. That means 1A likely does **not** satisfy the user's stated preference or DEBT-360's original goal of keeping controls persistently visible.
 
 ### Option 1B — Whole-page scroll + `position: fixed` footer + main padding
 
-- Same shell changes as 1A (remove `h-dvh`, remove `overflow-hidden`, let body scroll).
-- Action bar becomes `position: fixed; bottom: 0; left: 0; right: 0`.
-- Add `padding-bottom: var(--exam-footer-height)` to the content region so the last line is never occluded.
+- Replace the bounded `StickyActionBarLayout` pattern with normal document-flow content for `PracticeView` and `PostExamReviewView`.
+- Keep the current `AppLayoutShell` unless implementation evidence proves a shell-level change is required; `SessionSummaryView` already demonstrates plain document-flow behavior under the same app shell.
+- Render the action bar as `position: fixed; bottom: 0; left: 0; right: 0`.
+- Reserve bottom space in the affected content region so the last line is never occluded.
 
 **Pros:** Footer is *always* anchored to viewport bottom regardless of content length — solves DEBT-360's original concern definitively, without an inner scroll box. This is the most predictable behavior and best matches "it should always just be at the bottom" from the user verbatim.
 
-**Cons:** `fixed` is less flexible than `sticky` (ignores ancestor stacking contexts, can fight with modals/dialogs). Requires the bottom-padding reservation. Mobile safe-area inset handling needs to be re-validated.
+**Cons:** `fixed` is less flexible than `sticky` (ignores ancestor stacking contexts, can fight with modals/dialogs). Mobile safe-area inset handling needs to be re-validated. The bottom-space reservation is also not trivial because the action bars wrap and stack differently by mode and breakpoint, so the footer does not have one stable height.
 
-**Adjacency to verify during implementation:** when switching to whole-page scroll, the question-change handler must explicitly reset window scroll to `(0, 0)` on every Next/Previous navigation. The current bounded-scroll shell effectively resets this "for free" because each question mounts a fresh inner scroll container. Under whole-page scroll, a user who scrolls to the bottom of a long Q1 and clicks Next would land on Q2 already scrolled past the stem. This is not a reason to reject 1B — it's a two-line `window.scrollTo({ top: 0 })` or `element.scrollIntoView()` in the question-change effect — but it MUST be in the implementation checklist.
+**Adjacency to verify during implementation:**
+
+- Scroll-reset behavior on question navigation must be verified explicitly. Do **not** assume the current bounded shell resets scroll "for free" — the scroll region is a stable DOM node, and whatever current reset behavior exists is coming from question-mount side effects, not from the shell contract itself.
+- Focus restoration on question navigation must be re-validated so Next/Previous still land the user at the right heading/panel boundary under whole-page scroll.
+- `PostExamReviewView`'s current focus effect (`panelRef.current?.focus()`) needs to be checked against the new scroll model so focus movement does not produce disorienting page jumps.
+- The fixed footer must align to the app shell's max-width and horizontal padding so it does not span edge-to-edge while content stays centered.
+- The footer-height reservation must handle dynamic heights across exam mode, tutor mode, and post-submit review at mobile and desktop breakpoints.
+- Browser back/forward scroll restoration needs verification because whole-page scroll changes how the browser remembers position.
+- The affected browser specs and E2E tests need updates because the current test contracts assume `sticky-action-bar-layout` / `sticky-action-bar-scroll-region` markers and viewport-bounded geometry.
 
 ### Option 1C — Keep current bounded shell (status quo)
 
@@ -211,54 +236,87 @@ The USMLE-style Q-bank platforms (UWorld, AMBOSS, Kaplan) are the closest compar
 
 **Cons:** Almost certainly over-engineered. Two scroll modes is confusing. Skip unless 1A/1B both fail verification.
 
-**Recommendation on Concern 1:** **Option 1B** (whole-page scroll + fixed footer + padding). It is the only option that (a) gives the user the top-down scroll they want, (b) keeps the footer always visible which was DEBT-360's real goal, (c) does not depend on content being tall enough for `sticky` to engage. The padding reservation is trivial; mobile safe-area handling we already solved in `StickyActionBar`.
+### Supplemental Option 1E — CSS Grid shell (`grid-template-rows: minmax(0,1fr) auto`)
+
+- Keep the affected stages in a bounded shell, but replace the current flex/overflow implementation with a grid shell such as `grid-template-rows: minmax(0, 1fr) auto`.
+- Let the content row own scrolling and let the footer row stay structurally separate at the bottom of the shell.
+
+**Pros:** Technically viable. It avoids some of the flex/min-height/overflow footguns that motivated the DEBT-360 follow-up commits and can make the shell easier to reason about.
+
+**Cons:** It still preserves a bounded-shell interaction model rather than the user's stated top-down page scroll preference. So it is worth documenting for completeness, but it is probably not the direction the user is asking for.
+
+**Current assessment on Concern 1:** 1A is now documented accurately and is likely too weak for the stated goal; 1B remains the most direct whole-page-scroll path to verify; 1E is a technically credible bounded-shell alternative if the team decides to preserve that interaction model.
 
 ---
 
 ## Concern 2 — Options for the dual-CTA disambiguation
+
+### What the current dual-CTA semantics actually are
+
+The current collision is not "two different actions with confusing copy." It is "two differently labeled controls that both resolve to the same `onEndSession` handler and go to the same `ExamReviewView` stage." The actual final submission happens later in `ExamReviewView` via `Submit exam` → confirmation dialog → `onFinalizeReview`.
+
+That means any option that wants the header button to mean something materially different from the footer button requires a **new behavior path**, not just a rename.
 
 ### Option 2A — Drop the header `Finish exam` button entirely
 
 - Remove the top-right `Finish exam` button in exam mode.
 - The only way to end an exam is to walk Previous/Next to the last question and hit `Review & Submit`, or to reach the question navigator directly.
 
-**Pros:** One unambiguous completion path. Matches the cleanest interpretation of board-exam convention (natural-completion only).
+**Behavior change:** No. This is a visibility/layout change only.
+
+**Pros:** One unambiguous visible path into `ExamReviewView`. It eliminates the label collision without changing downstream review/submit behavior.
 
 **Cons:** No early exit. A student who wants to bail after question 3 of 50 has to scroll through the remaining questions or go back to the dashboard. That's hostile.
 
-### Option 2B — Differentiate by label + visual hierarchy (recommended)
+### Option 2B — Keep both controls, but give the header a real early-exit behavior
 
-- **Keep both buttons.** They represent two legitimate different intents:
-  - Header button = **early exit** (student wants to stop now, submit what they have)
-  - Footer button = **natural completion** (student has walked through all questions and is done)
-- Rename the header button to telegraph the early-exit intent: **`Exit exam`** or **`Finish early`**. Do *not* call it `Finish exam` — that reads as synonymous with `Review & Submit`.
-- Keep the footer button as `Review & Submit` (primary, filled).
-- Demote the header button visually: `variant="outline"` or `variant="ghost"`, smaller weight, not primary color. It should read as "escape hatch," not "main action."
+- Keep the footer button as the natural path into `ExamReviewView`.
+- Change the header button so it no longer calls the existing `onEndSession` review-stage path.
+- Introduce a **new** handler for the header control that truly ends/submits the exam early, likely behind a confirmation dialog.
+- Rename and visually demote the header control to match the new semantics (`Exit exam`, `Finish early`, or similar).
 
-**Pros:** Preserves early-exit. Eliminates label collision. Matches the research finding that duplicate CTAs are fine when they're visually differentiated and labeled to signal different intents.
+**Behavior change:** Yes. This is not a copy-only fix.
 
-**Cons:** Two controls is still more cognitive load than one. Label must be well-chosen.
+**Pros:** This is the only honest way to keep both controls while making them represent different intents.
 
-### Option 2C — Keep header, drop footer `Review & Submit` affordance
+**Cons:** Requires a new controller path, new confirmation semantics, and a product decision about whether early exit bypasses the review screen or partially reuses it.
 
-- Remove the `Review & Submit` footer swap on the last question.
-- Footer just shows Previous / Mark for review on the last question.
-- The only completion button is the header `Finish exam`.
+### Option 2C — Drop the footer label swap
 
-**Pros:** Single completion CTA.
+- Keep the existing routing exactly as it is today: the last-question middle button still resolves to `onEndSession`.
+- Change the footer copy back so the middle button remains `Next` on every question, including the last question.
 
-**Cons:** Removes the natural-completion moment from the end of the exam flow. User reaches the last question and the footer gives them nothing — they have to look up and right to find the completion button. Worst of both worlds.
+**Behavior change:** No. This is a copy change only.
+
+**Pros:** Restores one consistent footer label across the active exam stage and removes one source of visible divergence.
+
+**Cons:** It reintroduces the DEBT-361 problem: the last-question footer label no longer matches the destination screen heading or the user's sense that they are leaving the question flow.
 
 ### Option 2D — Context-swap (header hides on last question)
 
 - Header `Finish exam` is present on questions 1 through N-1, then hides on question N when the footer shows `Review & Submit`.
-- Only one completion affordance visible at a time.
+- Only one completion affordance is visible at a time, but both still route to the same `onEndSession` review-stage path.
 
-**Pros:** Single CTA at each point in the flow.
+**Behavior change:** No. This is a visibility/layout change only.
+
+**Pros:** Reduces visible CTA duplication without inventing a new early-exit behavior.
 
 **Cons:** The header button appearing/disappearing as you navigate feels janky. Student on question N-1 reaches for the header button, then on question N it's gone and there's a different button in a different place. Spatial consistency is valuable during timed exams.
 
-**Recommendation on Concern 2:** **Option 2B** (rename + visually demote the header to `Exit exam` / `Finish early`, keep `Review & Submit` as the primary footer CTA on the last question). It's the option that takes the research seriously — research says duplicate CTAs are fine *as long as* they read as different intents, and 2B is the only option that makes that true.
+### Supplemental Option 2E — Merge the visible CTA and move early-exit behind secondary chrome
+
+- Keep one visible primary path into `ExamReviewView`.
+- Move the secondary "end now" affordance into a header overflow menu, or into a confirmation dialog launched from the header button, so the user is not presented with two competing visible CTAs on the question screen.
+- If that secondary path still routes to `ExamReviewView`, this is mostly a placement/copy cleanup.
+- If that secondary path is meant to truly bypass the review screen, it becomes the same kind of behavior change described in 2B and needs a new handler.
+
+**Behavior change:** Maybe. Copy/placement only if it still routes to `ExamReviewView`; real behavior change if it becomes a true early-exit path.
+
+**Pros:** Preserves a single visible primary CTA while still allowing an escape hatch to exist in secondary chrome.
+
+**Cons:** Adds another chrome pattern (overflow or confirm-driven secondary path) and still requires product clarity on whether the secondary path is semantically distinct or just visually tucked away.
+
+**Current assessment on Concern 2:** the repo facts narrow the decision space. 2A, 2C, and 2D are presentation/copy changes around one shared behavior path. 2B only makes sense if the team wants a true early-exit behavior and is willing to introduce a new handler. 2E is the cleanest "single visible CTA" option if the team wants to preserve an escape hatch without two competing visible buttons.
 
 ---
 
@@ -266,15 +324,19 @@ The USMLE-style Q-bank platforms (UWorld, AMBOSS, Kaplan) are the closest compar
 
 ### DEBT-322 (archived)
 
-DEBT-322 renamed `Review answers` → `Finish exam`. Reading its decision log, the rename was a quality-of-copy decision made without the footer-CTA context — at that time the footer did not yet show `Review & Submit` on the last question. So DEBT-322's rename was correct for its context but the subsequent footer change introduced the collision we're now documenting.
+DEBT-322 renamed the header copy from `Review answers` → `Finish exam`. Reading its decision log, that was a quality-of-copy decision made before the last-question footer label changed.
+
+### DEBT-361 (archived)
+
+DEBT-361 introduced `Review & Submit` as the last-question footer label while preserving the existing `onEndSession` routing. Neither DEBT-322 nor DEBT-361 considered that both the header and footer controls would resolve to the same `onEndSession` handler and the same `ExamReviewView` destination. That unexamined overlap is the source of the current collision.
 
 ### DEBT-360 (archived)
 
-DEBT-360's shipped resolution is the source of Concern 1. The technical claim that "pure sticky didn't keep controls visible" appears to have been misdiagnosed — the actual failure mode was almost certainly an `overflow: hidden` or insufficient-height ancestor, per the CSS research above. Revisiting that decision is not "changing our minds" — it's correcting a diagnosis with better information. The DEBT-360 archive doc should be cross-linked from this doc but not modified; the history is part of the trail.
+DEBT-360's shipped resolution is the source of Concern 1. The technical claim that "pure sticky didn't keep controls visible" is still part of the archive trail, but the supporting evidence is incomplete. Revisiting that decision is warranted, but the correction should live here rather than by rewriting the archive doc.
 
 ### DEBT-362 (archived)
 
-DEBT-362 shipped yesterday (the chevron affordance on the exam-review three-card list). The scroll-shell affects that surface too — the review rows also live inside the bounded-scroll region. Concern 1's fix will apply to the review screen by construction. No separate work needed.
+DEBT-362 shipped yesterday (the chevron affordance on the exam-review three-card list). That surface is `ExamReviewView`, which is plain document flow and does **not** live inside `StickyActionBarLayout`. Concern 1 therefore does **not** apply to DEBT-362's surface by construction; any future change to that stage would need to be a separate explicit decision.
 
 ---
 
@@ -282,8 +344,8 @@ DEBT-362 shipped yesterday (the chevron affordance on the exam-review three-card
 
 | # | Decision | Status |
 |---|----------|--------|
-| 1 | Which scroll-shell option? (1A / 1B / 1C / 1D) | **Open** |
-| 2 | Which dual-CTA option? (2A / 2B / 2C / 2D) | **Open** |
+| 1 | Which scroll-shell option? (1A / 1B / 1C / 1D / 1E) | **Open** |
+| 2 | Which dual-CTA option? (2A / 2B / 2C / 2D / 2E) | **Open** |
 | 3 | Does the DEBT-360 decision log need a correction note, or do we leave the archive untouched and let DEBT-363 carry the correction? | **Open** |
 | 4 | Is Concern 1 priority P2 (ship soon) or P3 (tolerate)? Concern 2 is clearly P2. | **Open** |
 
@@ -320,6 +382,7 @@ An independent design-critique pass surfaced several adjacent UX concerns. They 
 | 2026-04-14 | Opened DEBT-363 as a decision doc, not a locked spec | Two concerns surfaced from visual review of the DEBT-362 ship; root causes include a probable misdiagnosis in DEBT-360 and a label collision introduced by DEBT-322 + subsequent footer changes. Decision before code per the documented collaboration preference. |
 | 2026-04-14 | Grouped Concern 1 (scroll shell) and Concern 2 (dual CTA) into one debt item | Both live in `practice-view.tsx`, both are exam-footer-related, and both will be touched by the same file in the same PR. Splitting creates unnecessary bookkeeping. |
 | 2026-04-14 | Incorporated independent design-critique findings from a Chrome-agent walkthrough | Added measured viewport ratios (3:1 desktop, 12.87:1 mobile), cross-screen scroll-model inconsistency as a second argument for the fix, and a scroll-reset-on-navigation adjacency note on Option 1B. Kept DEBT-363 scoped tight; non-overlapping findings routed to "Future concerns deliberately out of scope." |
+| 2026-04-15 | Corrected DEBT-363 after an independent code audit | Fixed the stale `practice-view.tsx:233` citation, narrowed the scroll-shell claim so it no longer mis-scopes `ExamReviewView`, replaced the unsupportable DEBT-360 misdiagnosis assertion with an evidence-bounded correction, and rewrote the dual-CTA section around the actual shared `onEndSession` semantics. |
 
 ---
 
