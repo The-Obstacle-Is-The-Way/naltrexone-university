@@ -14,6 +14,7 @@ import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import type { LoadState } from '../../practice-page-logic';
 import { ExamReviewView, QuestionNavigator } from './exam-review-view';
+import { focusElementWithoutScroll } from './focus-element-without-scroll';
 import { renderPracticeSessionExamResults } from './practice-session-exam-results-renderer';
 import { findAdjacentAvailableQuestionId } from './practice-session-question-navigation';
 import { SessionSummaryView } from './session-summary-view';
@@ -61,16 +62,6 @@ export type PracticeSessionPageViewProps = {
   onViewSummary?: () => void;
   onFinalizeReview?: () => Promise<void>;
 };
-
-function focusElementWithoutScroll(element: HTMLElement | null) {
-  if (!element) return;
-
-  try {
-    element.focus({ preventScroll: true });
-  } catch {
-    element.focus();
-  }
-}
 
 export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
   const review = props.review ?? null;

@@ -10,6 +10,7 @@ import type {
   GetCompletedSessionQuestionsWithFeedbackOutput,
 } from '@/src/adapters/controllers/practice-controller';
 import { QuestionNavigator } from './exam-review-view';
+import { focusElementWithoutScroll } from './focus-element-without-scroll';
 
 type PostExamReviewViewProps = {
   summary: EndPracticeSessionOutput;
@@ -22,16 +23,6 @@ type PostExamReviewViewProps = {
   onNavigateQuestion: (questionId: string) => void;
   onViewSummary: () => void;
 };
-
-function focusElementWithoutScroll(element: HTMLElement | null) {
-  if (!element) return;
-
-  try {
-    element.focus({ preventScroll: true });
-  } catch {
-    element.focus();
-  }
-}
 
 export function PostExamReviewView({
   summary,
