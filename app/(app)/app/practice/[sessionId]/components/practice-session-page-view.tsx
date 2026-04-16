@@ -112,6 +112,10 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
     }
     props.onNextQuestion();
   }, [nextQuestionId, props.onNavigateQuestion, props.onNextQuestion]);
+  const onTryAgainResolved = useCallback(() => {
+    shouldRestoreQuestionPanelRef.current = true;
+    props.onTryAgain();
+  }, [props.onTryAgain]);
   useEffect(() => {
     if (!shouldRestoreQuestionPanelRef.current) {
       lastQuestionIdRef.current = currentQuestionId;
@@ -262,7 +266,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       canSubmit={props.canSubmit}
       endSessionLabel={mode === 'exam' ? 'Finish exam' : 'End session'}
       onEndSession={props.onEndSession}
-      onTryAgain={props.onTryAgain}
+      onTryAgain={onTryAgainResolved}
       onRetryBookmarks={props.onRetryBookmarks}
       onToggleBookmark={props.onToggleBookmark}
       onToggleMarkForReview={props.onToggleMarkForReview}

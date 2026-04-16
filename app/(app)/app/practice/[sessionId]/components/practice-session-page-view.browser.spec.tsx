@@ -1009,6 +1009,85 @@ test('restores the question panel when navigation fails before the question id c
   }
 });
 
+test('restores the question panel when retrying from an in-panel load error', async () => {
+  const scrollIntoViewSpy = vi
+    .spyOn(Element.prototype, 'scrollIntoView')
+    .mockImplementation(() => undefined);
+
+  try {
+    function Harness() {
+      const [loadState, setLoadState] = useState<
+        { status: 'error'; message: string } | { status: 'loading' }
+      >({
+        status: 'error',
+        message: 'Failed to reload the question.',
+      });
+      const question = createNextQuestion({
+        questionId: 'q1',
+        slug: 'q1',
+        stemMd: 'Stem 1',
+        difficulty: 'easy',
+      });
+
+      const handleTryAgain = useCallback(() => {
+        setLoadState({ status: 'loading' });
+      }, []);
+
+      return (
+        <PracticeSessionPageView
+          summary={null}
+          review={null}
+          navigator={examQuestionNavigator}
+          sessionInfo={{
+            sessionId: 'session-1',
+            mode: 'exam',
+            index: 0,
+            total: 2,
+            isMarkedForReview: false,
+          }}
+          loadState={loadState}
+          question={question}
+          selectedChoiceId={null}
+          isAnswered={false}
+          submitResult={null}
+          isPending={false}
+          bookmarkStatus="idle"
+          isBookmarked={false}
+          canSubmit={false}
+          onEndSession={noop}
+          onTryAgain={handleTryAgain}
+          onToggleBookmark={noop}
+          onToggleMarkForReview={noop}
+          onSelectChoice={noop}
+          onSubmit={noop}
+          onNextQuestion={noop}
+        />
+      );
+    }
+
+    const screen = await render(<Harness />);
+    const getQuestionPanel = () =>
+      document.querySelector<HTMLElement>('section[aria-labelledby]');
+
+    await expect
+      .element(screen.getByText('Failed to reload the question.'))
+      .toBeVisible();
+    scrollIntoViewSpy.mockClear();
+
+    await screen.getByRole('button', { name: 'Try again' }).click();
+
+    await expect.element(screen.getByText('Loading question…')).toBeVisible();
+    await vi.waitFor(() => {
+      expect(getQuestionPanel()).toBe(document.activeElement);
+    });
+    expect(scrollIntoViewSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ block: 'start' }),
+    );
+  } finally {
+    scrollIntoViewSpy.mockRestore();
+  }
+});
+
 test('renders Finish exam in the active exam-question header', async () => {
   const screen = await render(
     <PracticeSessionPageView

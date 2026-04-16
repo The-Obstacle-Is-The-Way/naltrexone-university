@@ -322,7 +322,7 @@ Both modes share rendering components but must have separate action contracts. T
 | `QuestionCard` | Yes — renders stem + choices | Exam allows re-selection on revisit; tutor locks after submit |
 | `ChoiceButton` | Yes — renders individual choice | State variants differ (exam: selected/unselected only; tutor: selected/correct/incorrect) |
 | `QuestionNavigator` | Exam only | N/A for tutor |
-| `PracticeView` action bar | Shared document-flow placement + mode-specific button renderers | **Must branch explicitly.** Tutor: Submit/Next/Bookmark. Exam: Previous/Next-or-Review-&-Submit/Mark-for-review. Do not evolve as a single conditional matrix. |
+| `PracticeView` action bar | Shared document-flow placement + mode-specific button renderers | **Must branch explicitly.** Tutor session: Previous/Submit/Next/Bookmark before feedback, then Previous/Next/Bookmark after feedback; quick practice omits Previous. Exam: Previous/Next-or-Review-&-Submit/Mark-for-review. Do not evolve as a single conditional matrix. |
 | `PostExamReviewView` footer shell | Shared document-flow placement pattern | Keeps the post-exam sequential review controls at the end of the review content while the whole page scrolls naturally. |
 | `question-flow-actions.ts` | Shared load logic | **Must branch on save.** Tutor: one-shot `submitAnswer`. Exam: draft-save on navigation boundary. |
 | Review stage | Exam only | N/A for tutor |

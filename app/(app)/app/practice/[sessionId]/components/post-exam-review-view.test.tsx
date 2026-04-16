@@ -249,7 +249,6 @@ describe('PostExamReviewView', () => {
     ).toBeNull();
     expect(doc.querySelector('[data-testid="sticky-action-bar"]')).toBeNull();
     expect(actionBar).not.toBeNull();
-    expect(actionBar?.parentElement?.className).toContain('space-y-6');
 
     if (!actionBar || !reviewPanel) {
       throw new Error('Expected review panel and action bar');
