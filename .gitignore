@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Claude Code runtime state (local-only; committed rules/skills live alongside)
+.claude/*.lock
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
