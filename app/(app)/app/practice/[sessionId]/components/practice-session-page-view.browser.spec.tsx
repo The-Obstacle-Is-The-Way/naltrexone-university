@@ -173,7 +173,17 @@ function renderQuestionNavigationHarness() {
       setQuestionIndex((current) => Math.min(current + 1, 1));
     }, []);
     const handleNavigateQuestion = useCallback((nextQuestionId: string) => {
-      setQuestionIndex(nextQuestionId === 'q1' ? 0 : 1);
+      if (nextQuestionId === 'q1') {
+        setQuestionIndex(0);
+        return;
+      }
+
+      if (nextQuestionId === 'q2') {
+        setQuestionIndex(1);
+        return;
+      }
+
+      throw new Error(`Unexpected question id: ${nextQuestionId}`);
     }, []);
 
     const questionId = questionIndex === 0 ? 'q1' : 'q2';
