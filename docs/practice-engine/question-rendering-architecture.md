@@ -78,10 +78,11 @@ Sequential navigation renders as inline `<Link>` elements in the question page b
 
 ### 3.4 Action Bars (Document Flow, Context-Specific Buttons)
 
-Action bars use a **mixed model**:
-
-- active practice and post-exam review render their action bars inline in normal document flow at the end of the content stack
-- each context still renders its own buttons inline; only the shell behavior is shared conceptually
+Keep action bars rendered inline per context in normal document flow. Do **not**
+create a universal/shared action-bar shell here: active practice, exam review,
+post-exam review, session summary, and question-page review all own different
+button sets, so forcing them through one shared shell adds complexity without a
+behavioral payoff.
 
 | Context | File:Lines | Buttons |
 |---------|-----------|---------|

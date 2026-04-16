@@ -37,7 +37,7 @@ export type PracticeViewProps = {
   canSubmit: boolean;
   endSessionLabel?: string;
   questionPanelId?: string;
-  questionAreaRef?: React.RefObject<HTMLDivElement | null>;
+  questionAreaRef?: React.RefObject<HTMLElement | null>;
   onEndSession?: () => void;
   onRetryBookmarks?: () => void;
   onTryAgain: () => void;
@@ -263,6 +263,9 @@ export function PracticeView(props: PracticeViewProps) {
   const isMarkedForReview = !!sessionInfo?.isMarkedForReview;
   const title = props.title ?? 'Practice';
   const description = props.description ?? 'Answer one question at a time.';
+  const titleId = useId();
+  const descriptionId = useId();
+  const questionPanelLabelledBy = props.description ? descriptionId : titleId;
   const endSessionLabel = props.endSessionLabel ?? 'End session';
   const backLink = props.backLink ?? {
     href: ROUTES.APP_DASHBOARD,
@@ -359,10 +362,14 @@ export function PracticeView(props: PracticeViewProps) {
       <div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
+            <h1
+              id={titleId}
+              className="text-2xl font-bold font-heading tracking-tight text-foreground"
+            >
               {title}
             </h1>
             <p
+              id={descriptionId}
               className="mt-1 text-base text-muted-foreground"
               aria-live="polite"
             >
@@ -396,9 +403,10 @@ export function PracticeView(props: PracticeViewProps) {
         {props.belowHeadingContent}
       </div>
 
-      <div
+      <section
         id={props.questionPanelId}
         ref={props.questionAreaRef}
+        aria-labelledby={questionPanelLabelledBy}
         tabIndex={-1}
         className="space-y-6 outline-none focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
       >
@@ -476,7 +484,7 @@ export function PracticeView(props: PracticeViewProps) {
             feedbackRef={feedbackRef}
           />
         ) : null}
-      </div>
+      </section>
 
       {actionBar}
     </div>

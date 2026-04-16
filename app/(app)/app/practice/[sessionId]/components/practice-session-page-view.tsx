@@ -79,7 +79,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
   const navigatorLoadState = props.navigatorLoadState ?? { status: 'idle' };
   const currentQuestionId = props.question?.questionId ?? null;
   const questionPanelId = useId();
-  const questionAreaRef = useRef<HTMLDivElement | null>(null);
+  const questionAreaRef = useRef<HTMLElement | null>(null);
   const shouldRestoreQuestionPanelRef = useRef(false);
   const lastQuestionIdRef = useRef<string | null>(currentQuestionId);
   const previousQuestionId = useMemo(
@@ -122,19 +122,21 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
     props.onNextQuestion();
   }, [nextQuestionId, props.onNavigateQuestion, props.onNextQuestion]);
   useEffect(() => {
-    if (!currentQuestionId) return;
+    if (!shouldRestoreQuestionPanelRef.current) {
+      lastQuestionIdRef.current = currentQuestionId;
+      return;
+    }
 
-    const shouldRestoreQuestionPanel =
-      shouldRestoreQuestionPanelRef.current &&
-      lastQuestionIdRef.current !== currentQuestionId;
+    const questionChanged = lastQuestionIdRef.current !== currentQuestionId;
+    const navigationStateVisible = props.loadState.status !== 'ready';
 
     lastQuestionIdRef.current = currentQuestionId;
 
-    if (!shouldRestoreQuestionPanel) return;
+    if (!questionChanged && !navigationStateVisible) return;
 
     shouldRestoreQuestionPanelRef.current = false;
     restoreQuestionPanel();
-  }, [currentQuestionId, restoreQuestionPanel]);
+  }, [currentQuestionId, props.loadState.status, restoreQuestionPanel]);
   const examResults = renderPracticeSessionExamResults({
     summary: props.summary,
     postExamSummary: props.postExamSummary,

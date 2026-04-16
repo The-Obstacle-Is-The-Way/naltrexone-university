@@ -822,7 +822,7 @@ test('scrolls the question panel into view and restores focus after next and pre
     const screen = await renderQuestionNavigationHarness();
 
     const getQuestionPanel = () =>
-      document.querySelector<HTMLElement>('div[tabindex="-1"]');
+      document.querySelector<HTMLElement>('[tabindex="-1"]');
 
     await expect.element(screen.getByText('Stem 1')).toBeVisible();
     expect(scrollIntoViewSpy).not.toHaveBeenCalled();
@@ -840,6 +840,158 @@ test('scrolls the question panel into view and restores focus after next and pre
     await screen.getByRole('button', { name: 'Previous' }).click();
 
     await expect.element(screen.getByText('Stem 1')).toBeVisible();
+    await vi.waitFor(() => {
+      expect(getQuestionPanel()).toBe(document.activeElement);
+    });
+    expect(scrollIntoViewSpy).toHaveBeenCalled();
+  } finally {
+    scrollIntoViewSpy.mockRestore();
+  }
+});
+
+test('restores the question panel when next-question navigation enters loading before the question id changes', async () => {
+  const scrollIntoViewSpy = vi
+    .spyOn(Element.prototype, 'scrollIntoView')
+    .mockImplementation(() => undefined);
+
+  try {
+    function Harness() {
+      const [loadState, setLoadState] = useState<{
+        status: 'ready' | 'loading';
+      }>({ status: 'ready' });
+      const [question, setQuestion] = useState<ReturnType<
+        typeof createNextQuestion
+      > | null>(
+        createNextQuestion({
+          questionId: 'q1',
+          slug: 'q1',
+          stemMd: 'Stem 1',
+          difficulty: 'easy',
+        }),
+      );
+
+      const handleNavigateQuestion = useCallback(() => {
+        setQuestion(null);
+        setLoadState({ status: 'loading' });
+      }, []);
+
+      return (
+        <PracticeSessionPageView
+          summary={null}
+          review={null}
+          navigator={examQuestionNavigator}
+          sessionInfo={{
+            sessionId: 'session-1',
+            mode: 'exam',
+            index: 0,
+            total: 2,
+            isMarkedForReview: false,
+          }}
+          loadState={loadState}
+          question={question}
+          selectedChoiceId={null}
+          isAnswered={false}
+          submitResult={null}
+          isPending={false}
+          bookmarkStatus="idle"
+          isBookmarked={false}
+          canSubmit={false}
+          onEndSession={noop}
+          onTryAgain={noop}
+          onToggleBookmark={noop}
+          onToggleMarkForReview={noop}
+          onSelectChoice={noop}
+          onSubmit={noop}
+          onNextQuestion={noop}
+          onNavigateQuestion={handleNavigateQuestion}
+        />
+      );
+    }
+
+    const screen = await render(<Harness />);
+    const getQuestionPanel = () =>
+      document.querySelector<HTMLElement>('[tabindex="-1"]');
+
+    await expect.element(screen.getByText('Stem 1')).toBeVisible();
+    await screen.getByRole('button', { name: 'Next' }).click();
+
+    await expect.element(screen.getByText('Loading question…')).toBeVisible();
+    await vi.waitFor(() => {
+      expect(getQuestionPanel()).toBe(document.activeElement);
+    });
+    expect(scrollIntoViewSpy).toHaveBeenCalled();
+  } finally {
+    scrollIntoViewSpy.mockRestore();
+  }
+});
+
+test('restores the question panel when navigation fails before the question id changes', async () => {
+  const scrollIntoViewSpy = vi
+    .spyOn(Element.prototype, 'scrollIntoView')
+    .mockImplementation(() => undefined);
+
+  try {
+    function Harness() {
+      const [loadState, setLoadState] = useState<
+        { status: 'ready' } | { status: 'error'; message: string }
+      >({ status: 'ready' });
+      const question = createNextQuestion({
+        questionId: 'q1',
+        slug: 'q1',
+        stemMd: 'Stem 1',
+        difficulty: 'easy',
+      });
+
+      const handleNavigateQuestion = useCallback(() => {
+        setLoadState({
+          status: 'error',
+          message: 'Failed to load the next question.',
+        });
+      }, []);
+
+      return (
+        <PracticeSessionPageView
+          summary={null}
+          review={null}
+          navigator={examQuestionNavigator}
+          sessionInfo={{
+            sessionId: 'session-1',
+            mode: 'exam',
+            index: 0,
+            total: 2,
+            isMarkedForReview: false,
+          }}
+          loadState={loadState}
+          question={question}
+          selectedChoiceId={null}
+          isAnswered={false}
+          submitResult={null}
+          isPending={false}
+          bookmarkStatus="idle"
+          isBookmarked={false}
+          canSubmit={false}
+          onEndSession={noop}
+          onTryAgain={noop}
+          onToggleBookmark={noop}
+          onToggleMarkForReview={noop}
+          onSelectChoice={noop}
+          onSubmit={noop}
+          onNextQuestion={noop}
+          onNavigateQuestion={handleNavigateQuestion}
+        />
+      );
+    }
+
+    const screen = await render(<Harness />);
+    const getQuestionPanel = () =>
+      document.querySelector<HTMLElement>('[tabindex="-1"]');
+
+    await expect.element(screen.getByText('Stem 1')).toBeVisible();
+    await screen.getByRole('button', { name: 'Next' }).click();
+
+    await expect
+      .element(screen.getByText('Failed to load the next question.'))
+      .toBeVisible();
     await vi.waitFor(() => {
       expect(getQuestionPanel()).toBe(document.activeElement);
     });
