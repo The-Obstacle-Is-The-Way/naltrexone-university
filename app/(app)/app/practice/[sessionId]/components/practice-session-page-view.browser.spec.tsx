@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
@@ -7,6 +7,31 @@ import {
   createReviewRow,
 } from '../hooks/practice-session-page-controller.browser.fixtures';
 import { PracticeSessionPageView } from './practice-session-page-view';
+
+const noop = () => undefined;
+
+const examQuestionNavigator = createReviewResponse({
+  mode: 'exam',
+  totalCount: 2,
+  answeredCount: 0,
+  markedCount: 0,
+  rows: [
+    createReviewRow({
+      questionId: 'q1',
+      slug: 'q-1',
+      order: 1,
+      isAnswered: false,
+      isCorrect: null,
+    }),
+    createReviewRow({
+      questionId: 'q2',
+      slug: 'q-2',
+      order: 2,
+      isAnswered: false,
+      isCorrect: null,
+    }),
+  ],
+});
 
 function renderExamResultsContinuityHarness() {
   const summary = {
@@ -144,6 +169,12 @@ function renderExamResultsContinuityHarness() {
 function renderQuestionNavigationHarness() {
   function Harness() {
     const [questionIndex, setQuestionIndex] = useState(0);
+    const handleNextQuestion = useCallback(() => {
+      setQuestionIndex((current) => Math.min(current + 1, 1));
+    }, []);
+    const handleNavigateQuestion = useCallback((nextQuestionId: string) => {
+      setQuestionIndex(nextQuestionId === 'q1' ? 0 : 1);
+    }, []);
 
     const questionId = questionIndex === 0 ? 'q1' : 'q2';
     const stem = questionIndex === 0 ? 'Stem 1' : 'Stem 2';
@@ -152,28 +183,7 @@ function renderQuestionNavigationHarness() {
       <PracticeSessionPageView
         summary={null}
         review={null}
-        navigator={createReviewResponse({
-          mode: 'exam',
-          totalCount: 2,
-          answeredCount: 0,
-          markedCount: 0,
-          rows: [
-            createReviewRow({
-              questionId: 'q1',
-              slug: 'q-1',
-              order: 1,
-              isAnswered: false,
-              isCorrect: null,
-            }),
-            createReviewRow({
-              questionId: 'q2',
-              slug: 'q-2',
-              order: 2,
-              isAnswered: false,
-              isCorrect: null,
-            }),
-          ],
-        })}
+        navigator={examQuestionNavigator}
         sessionInfo={{
           sessionId: 'session-1',
           mode: 'exam',
@@ -195,18 +205,14 @@ function renderQuestionNavigationHarness() {
         bookmarkStatus="idle"
         isBookmarked={false}
         canSubmit={false}
-        onEndSession={() => undefined}
-        onTryAgain={() => undefined}
-        onToggleBookmark={() => undefined}
-        onToggleMarkForReview={() => undefined}
-        onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
-        onNextQuestion={() =>
-          setQuestionIndex((current) => Math.min(current + 1, 1))
-        }
-        onNavigateQuestion={(nextQuestionId) =>
-          setQuestionIndex(nextQuestionId === 'q1' ? 0 : 1)
-        }
+        onEndSession={noop}
+        onTryAgain={noop}
+        onToggleBookmark={noop}
+        onToggleMarkForReview={noop}
+        onSelectChoice={noop}
+        onSubmit={noop}
+        onNextQuestion={handleNextQuestion}
+        onNavigateQuestion={handleNavigateQuestion}
       />
     );
   }

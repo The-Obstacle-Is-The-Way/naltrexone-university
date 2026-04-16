@@ -1,7 +1,7 @@
 ---
 id: DEBT-363
 title: Exam shell scroll model + dual-CTA disambiguation
-status: Open (decision doc)
+status: Open (Concern 2 pending; Concern 1 shipped)
 priority: P2
 created: 2026-04-14
 area: practice / exam
@@ -12,7 +12,7 @@ related: DEBT-322, DEBT-360, DEBT-361, DEBT-362
 # DEBT-363: Exam shell scroll model + dual-CTA disambiguation
 
 **Priority:** P2
-**Status:** Partially decided — Concern 1 locked, Concern 2 still open
+**Status:** Open — Concern 1 shipped in PR #280; Concern 2 still open
 **Created:** 2026-04-14
 **Affected surfaces:** PracticeView (exam + tutor), PostExamReviewView
 **Adjacent unchanged stage:** ExamReviewView
