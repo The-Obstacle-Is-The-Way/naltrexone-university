@@ -93,9 +93,7 @@ async function expectFocusedLocatorInViewport(locator: Locator): Promise<void> {
 }
 
 function getActiveQuestionPanel(page: Page): Locator {
-  return page.locator('section[aria-labelledby]').filter({
-    has: page.getByRole('group', { name: 'Answer choices' }),
-  });
+  return page.getByTestId('active-question-panel');
 }
 
 test.describe('practice', () => {

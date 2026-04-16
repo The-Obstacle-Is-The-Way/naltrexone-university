@@ -1356,6 +1356,9 @@ describe('PracticeView', () => {
 
     expect(questionPanel).not.toBeNull();
     expect(questionPanel?.getAttribute('id')).toBe('practice-question-panel');
+    expect(questionPanel?.getAttribute('data-testid')).toBe(
+      'active-question-panel',
+    );
   });
 });
 

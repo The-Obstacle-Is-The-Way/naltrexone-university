@@ -406,6 +406,7 @@ export function PracticeView(props: PracticeViewProps) {
       <section
         id={props.questionPanelId}
         ref={props.questionAreaRef}
+        data-testid="active-question-panel"
         aria-labelledby={questionPanelLabelledBy}
         tabIndex={-1}
         className="space-y-6 outline-none focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
