@@ -4,7 +4,7 @@
 > **Scope:** Click-by-click UI contracts for tutor and exam modes — buttons, persistence, locking, navigation, and post-session flows
 > **Related:** [Practice Modes](./practice-modes.md) (lifecycle/data), [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md) (decisions)
 > **Status:** Current implementation. Historical BS-055 rationale remains, but the contracts below now describe shipped behavior; follow-up deltas are tracked separately in debt docs where noted.
-> **Last Updated:** 2026-04-15
+> **Last Updated:** 2026-04-16
 
 ---
 
@@ -39,14 +39,14 @@ Question displayed
 
 ### Action bar layout
 
-**Before submit (answer selected):**
+**Before submit (answer selected, question 2+):**
 ```text
-[ Submit ]  [ Next (outline) ]  [ Bookmark ]
+[ Previous ]  [ Submit ]  [ Next (outline) ]  [ Bookmark ]
 ```
 
-**After submit (feedback visible):**
+**After submit (feedback visible, question 2+):**
 ```text
-[ spacer ]  [ Next (default) ]  [ Bookmark ]
+[ Previous ]  [ Next (default) ]  [ Bookmark ]
 ```
 
 **Q1 (no Previous):**
@@ -55,10 +55,10 @@ Question displayed
 ```
 
 **Contract rules:**
-- Submit occupies position 1. Hidden after feedback is revealed (becomes spacer).
-- Next occupies position 2. Always visible when there are more questions. Variant changes from outline → default after submit to signal "advance."
-- Bookmark occupies position 3.
-- Previous is hidden in tutor mode (linear progression only).
+- Previous occupies position 1 when available. On Q1 it is omitted; there is no spacer.
+- Submit occupies position 2 before feedback is revealed. Hidden after feedback is revealed.
+- Next occupies position 3. It is visible before and after submit when there are more questions. Variant changes from outline → default after submit to signal "advance."
+- Bookmark occupies the trailing slot.
 
 ### Persistence
 
