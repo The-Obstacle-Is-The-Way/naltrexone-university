@@ -120,7 +120,7 @@ describe('PracticeView', () => {
     const below = doc.querySelector('[data-testid="below-heading-content"]');
     expect(below?.textContent).toBe('Below');
 
-    const questionArea = doc.querySelector('[tabindex="-1"]');
+    const questionArea = doc.querySelector('section[aria-labelledby]');
     expect(questionArea).not.toBeNull();
 
     if (!heading) throw new Error('Expected heading');
@@ -761,7 +761,7 @@ describe('PracticeView', () => {
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
-    const questionPanel = doc.querySelector('[tabindex="-1"]');
+    const questionPanel = doc.querySelector('section[aria-labelledby]');
 
     expect(
       doc.querySelector('[data-testid="sticky-action-bar-layout"]'),
@@ -1352,7 +1352,7 @@ describe('PracticeView', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const questionPanel = doc.querySelector('[tabindex="-1"]');
+    const questionPanel = doc.querySelector('section[aria-labelledby]');
 
     expect(questionPanel).not.toBeNull();
     expect(questionPanel?.getAttribute('id')).toBe('practice-question-panel');

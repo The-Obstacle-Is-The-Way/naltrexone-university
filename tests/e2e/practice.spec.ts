@@ -70,15 +70,21 @@ async function expectBottomActionBarBelowFold(page: Page): Promise<void> {
 }
 
 async function scrollPageToBottom(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    const scrollingElement =
-      document.scrollingElement || document.documentElement;
-    window.scrollTo({ top: scrollingElement.scrollHeight, behavior: 'auto' });
-  });
-
   await expect
-    .poll(() => page.evaluate(() => Math.round(window.scrollY)))
-    .toBeGreaterThan(0);
+    .poll(() =>
+      page.evaluate(() => {
+        const scrollingElement =
+          document.scrollingElement || document.documentElement;
+        window.scrollTo({
+          top: scrollingElement.scrollHeight,
+          behavior: 'auto',
+        });
+        return Math.round(
+          scrollingElement.scrollHeight - (window.scrollY + window.innerHeight),
+        );
+      }),
+    )
+    .toBeLessThanOrEqual(2);
 }
 
 async function expectFocusedLocatorInViewport(locator: Locator): Promise<void> {
@@ -176,8 +182,8 @@ test.describe('practice', () => {
     );
     await expectBottomActionBarBelowFold(page);
 
-    await page.getByRole('button', { name: 'Next' }).scrollIntoViewIfNeeded();
-    await expect(page.getByRole('button', { name: 'Next' })).toBeVisible();
+    await scrollPageToBottom(page);
+    await expect(page.getByRole('button', { name: 'Next' })).toBeInViewport();
     await expect(page.getByRole('button', { name: 'Bookmark' })).toBeVisible();
   });
 

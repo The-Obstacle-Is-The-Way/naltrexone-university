@@ -822,7 +822,7 @@ test('scrolls the question panel into view and restores focus after next and pre
     const screen = await renderQuestionNavigationHarness();
 
     const getQuestionPanel = () =>
-      document.querySelector<HTMLElement>('[tabindex="-1"]');
+      document.querySelector<HTMLElement>('section[aria-labelledby]');
 
     await expect.element(screen.getByText('Stem 1')).toBeVisible();
     expect(scrollIntoViewSpy).not.toHaveBeenCalled();
@@ -833,7 +833,9 @@ test('scrolls the question panel into view and restores focus after next and pre
     await vi.waitFor(() => {
       expect(getQuestionPanel()).toBe(document.activeElement);
     });
-    expect(scrollIntoViewSpy).toHaveBeenCalled();
+    expect(scrollIntoViewSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ block: 'start' }),
+    );
 
     scrollIntoViewSpy.mockClear();
 
@@ -843,7 +845,9 @@ test('scrolls the question panel into view and restores focus after next and pre
     await vi.waitFor(() => {
       expect(getQuestionPanel()).toBe(document.activeElement);
     });
-    expect(scrollIntoViewSpy).toHaveBeenCalled();
+    expect(scrollIntoViewSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ block: 'start' }),
+    );
   } finally {
     scrollIntoViewSpy.mockRestore();
   }
@@ -910,7 +914,7 @@ test('restores the question panel when next-question navigation enters loading b
 
     const screen = await render(<Harness />);
     const getQuestionPanel = () =>
-      document.querySelector<HTMLElement>('[tabindex="-1"]');
+      document.querySelector<HTMLElement>('section[aria-labelledby]');
 
     await expect.element(screen.getByText('Stem 1')).toBeVisible();
     await screen.getByRole('button', { name: 'Next' }).click();
@@ -919,7 +923,9 @@ test('restores the question panel when next-question navigation enters loading b
     await vi.waitFor(() => {
       expect(getQuestionPanel()).toBe(document.activeElement);
     });
-    expect(scrollIntoViewSpy).toHaveBeenCalled();
+    expect(scrollIntoViewSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ block: 'start' }),
+    );
   } finally {
     scrollIntoViewSpy.mockRestore();
   }
@@ -984,7 +990,7 @@ test('restores the question panel when navigation fails before the question id c
 
     const screen = await render(<Harness />);
     const getQuestionPanel = () =>
-      document.querySelector<HTMLElement>('[tabindex="-1"]');
+      document.querySelector<HTMLElement>('section[aria-labelledby]');
 
     await expect.element(screen.getByText('Stem 1')).toBeVisible();
     await screen.getByRole('button', { name: 'Next' }).click();
@@ -995,7 +1001,9 @@ test('restores the question panel when navigation fails before the question id c
     await vi.waitFor(() => {
       expect(getQuestionPanel()).toBe(document.activeElement);
     });
-    expect(scrollIntoViewSpy).toHaveBeenCalled();
+    expect(scrollIntoViewSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ block: 'start' }),
+    );
   } finally {
     scrollIntoViewSpy.mockRestore();
   }
