@@ -1,7 +1,7 @@
 ---
 id: DEBT-365
 title: Exam flow affordance and label consistency pass
-status: Open (multi-concern, decisions locked 2026-04-17; 3 ship-now, 1 verify-first, 2 deferred, 1 verification item)
+status: Open (multi-concern, decisions locked 2026-04-17 and refined after Codex review; 2 ship-now code changes, 1 verification-resolved no-op, 1 documented intentional asymmetry, 2 deferred, 1 verification item)
 priority: P2
 created: 2026-04-17
 area: practice / exam / post-exam review / session summary
@@ -12,7 +12,7 @@ discovered_via: Independent Chrome-agent UX audit on 2026-04-17 (exam mode, 3 qu
 # DEBT-365: Exam flow affordance and label consistency pass
 
 **Priority:** P2
-**Status:** Open — no implementation started. Six concerns captured; decisions needed before implementation.
+**Status:** Open — decisions are locked. Three concerns are implementation-ready now; Concern 4 verification is complete and narrows to affordance weight rather than missing interactivity.
 **Created:** 2026-04-17
 **Affected surfaces:** `PracticeView` (exam mode), `ExamReviewView`, `PostExamReviewView`, `SessionSummaryView`
 **Adjacent unchanged surface:** tutor mode (out of scope for this pass)
@@ -44,8 +44,8 @@ Each concern has an independent decision and can ship in its own PR if that is t
 - **Active exam header (all Qs):** `Finish exam`
 
 Sources:
-- `app/(app)/app/practice/components/practice-view.tsx:234` — footer last-question label
-- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:224` — `endSessionLabel` derivation
+- `app/(app)/app/practice/components/practice-view.tsx:239` — footer last-question label
+- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:267` — `endSessionLabel` derivation
 - `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx:178-186` — `Finish review` fallback when no `nextRow`
 
 **Why it feels wrong.** A student walking through the four stages sees "Review & Submit" when finishing the active exam, "Submit exam" on the pre-submit screen, and "Finish review" on the post-exam review. Three different verbs for three different "you're done with this stage" moments. Each verb was chosen locally and correctly for its own stage; together they read as lack of a voice.
@@ -103,24 +103,31 @@ DEBT-330 (archived, 2026-03-21) explicitly grouped `Previous` and `Next/Finish r
 
 **Leaning:** 3A immediately, 3C as a follow-up cleanup if the pattern sticks.
 
-### Concern 4 — Session Summary question rows mimic the tappable Review & Submit rows but are not interactive
+### Concern 4 — Session Summary question rows under-signal that they are interactive
 
-**Observation.** Two adjacent stages present question-row lists with almost identical visual structure:
+**Observation.** Two adjacent stages present question-row lists with related but not identical affordances:
 
 - **Review & Submit (Stage 2):** each row is a clickable semantic button with a right-chevron, navigating to that question. DEBT-351 + DEBT-362 established this pattern.
-- **Session Summary (Stage 4):** each row shows a correctness chip (`Incorrect`/`Correct`) but has no chevron, no hover state, and is not clickable. Plain text + chip.
+- **Session Summary (Stage 4):** each available row is already interactive today, but through `SessionBreakdownList`'s inline button/link branch with hover/focus states and no trailing chevron.
 
-The visual similarity is a trap. A student who just learned "rows-with-questions are tappable" on the Review & Submit screen will reasonably try to click a Session Summary row and get nothing.
+The visual similarity is still a trap, but for a narrower reason than the audit reported. A student who just learned "rows-with-questions are tappable" on the Review & Submit screen will find that Session Summary rows *do* open targeted review, but they do so with materially weaker affordance weight than the whole-card + chevron Stage 2 pattern.
 
-**Historical context.** DEBT-316 (2026-03-16) added a breakdown row CTA to Session Summary. Whether those rows are currently routed through a clickable element needs to be verified in `session-summary-view.tsx` — the audit says no, the history says yes. Either the implementation regressed, or the audit is describing a different component. Implementation must verify first before deciding.
+**Historical context.** DEBT-316 (2026-03-16) added a breakdown row CTA to Session Summary, and the current branch confirms it did not regress:
+
+- `app/(app)/app/practice/[sessionId]/components/practice-session-exam-results-renderer.tsx:52-63` — summary route passes `onOpenReviewQuestion={input.onReenterPostExamReview}`
+- `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx:104-112` — `SessionSummaryView` forwards that callback into `SessionBreakdownList`
+- `app/(app)/app/shared/components/session-breakdown-list.tsx:38-49` — available summary rows render as `<button>` when `onOpenQuestion` exists
+- `app/(app)/app/shared/components/session-breakdown-list.tsx:41-43` — summary rows already have hover/focus states, but no trailing chevron / whole-card treatment
+
+The audit misread current behavior. The remaining question is affordance weight, not whether the targeted-review path exists.
 
 **Options.**
 
-- **4A — Make Session Summary rows clickable with the same chevron treatment**, routing to post-exam review targeted at the clicked row (this is exactly what `onReenterPostExamReview(questionId)` already supports as the targeted branch). Pros: consistent affordance, uses an existing code path. Cons: if product intentionally made them non-interactive, this undoes that.
+- **4A — Keep the current targeted-review path but add the same chevron/whole-row affordance** so the existing interactivity is obvious. Pros: consistent affordance, uses the already-wired code path. Cons: adds visual weight to a terminal summary surface that may intentionally want to feel calmer than Stage 2.
 - **4B — Visually differentiate Session Summary rows** so they don't read as clickable — e.g., remove the card-style chrome, use a plainer list layout, or make the chips large enough to be the focal point. Pros: prevents the affordance trap. Cons: may feel like a downgrade in visual weight.
-- **4C — Verify first, then decide.** The audit description ("plain text, no chevron, no hover affordance") suggests the current state is already 4B-ish. If so, the fix may be "stop making the rows card-like" rather than "add a chevron." Depends on what the current DOM actually renders.
+- **4C — Verification complete; interactivity is not the problem.** Any follow-up should be re-scoped as affordance-weight polish, not as a broken or missing targeted-review path.
 
-**Leaning:** 4C (verify first, pick 4A or 4B based on evidence).
+**Leaning:** 4C (verification complete; re-scope before implementation).
 
 ### Concern 5 — Summary ↔ post-exam review round-trip weight asymmetry
 
@@ -143,7 +150,7 @@ Sources:
 - **5B — Demote `Review Answers` on the Session Summary to match `View Summary`'s ghost weight.** Unlikely — the summary is the terminal screen and `Review Answers` is its primary affordance.
 - **5C — Rework the top-right placement convention across both stages.** Either both have a top-right chrome CTA or neither does. Ties into Concern 6.
 
-**Leaning:** 5A with the button moved to the footer, combined with Concern 6's top-right treatment.
+**Refined decision (2026-04-17, after independent Codex review):** Promote the visual weight of `View Summary` **in the existing top-right position** — switch from ghost/text-link to `variant="outline"` (or similar) so it reads as a proper button, not a header afterthought. **Do NOT move it into the footer.** After PR #280, both `PracticeView` and `PostExamReviewView` render in plain document flow, which means the `bottom-action-bar` can land below the fold on long feedback content (asserted by `expectBottomActionBarBelowFold` in `tests/e2e/practice.spec.ts:56-70` and exercised in `tests/e2e/practice.spec.ts:305-344`). Moving the escape-to-summary CTA below the fold would trade a visual-weight problem for a discoverability problem, and a more serious one — on a dense explanation block, the student now has to scroll past everything to go back to summary. Keeping `View Summary` pinned at the top of the review card preserves always-visible exit regardless of content length, which is the real requirement.
 
 ### Concern 6 — Top-right chrome used inconsistently across post-exam stages
 
@@ -157,7 +164,7 @@ Related to Concern 5 — if `View Summary` moves to the post-exam review footer 
 - **6B — Add a symmetric top-right CTA to Session Summary** (e.g., `Review Answers` as a header affordance in addition to the bottom primary button). Adds visual redundancy; DEBT-363 Concern 2 just argued against redundant CTAs in the active exam, so this would be inconsistent with that decision.
 - **6C — Keep current asymmetry and document it as intentional.** Hard to justify without a reason.
 
-**Leaning:** 6A (drop top-right from both, everything moves to the footer), combined with Concern 5's Option 5A.
+**Refined decision (2026-04-17, after independent Codex review):** **Option 6C — keep the asymmetry; it is intentional given task-shape differences.** The two stages are peer substages of the same state machine, but their tasks are not symmetric: post-exam review is a long-form read with dense feedback that needs a top-of-content escape hatch that does not require scrolling; Session Summary is a short terminal screen where the primary affordance is correctly bottom-anchored. Different task shapes justify different chrome. Combined with Concern 5's refinement, `View Summary` stays top-right (promoted weight), Session Summary keeps no top-right CTA, and the asymmetry is documented as deliberate rather than drift.
 
 ### Verification Item — Post-exam review Next/Previous scroll-reset
 
@@ -190,9 +197,9 @@ Do not file the scroll-reset as a shipped concern until verified. The Chrome age
 ## Implementation scope (if all concerns ship together)
 
 - `app/(app)/app/practice/components/practice-view.tsx` — active exam footer grouping (Concern 3A)
-- `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx` — move `View Summary` from top-right to footer (Concern 5A), remove top-right card header CTA (Concern 6A)
-- `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` — verify row interactivity (Concern 4C); no top-right change (Concern 6A)
-- `app/(app)/app/practice/[sessionId]/components/practice-view.tsx` label (Concern 2A rename)
+- `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx` — promote `View Summary` visual weight in place (top-right of the review summary card, switch from ghost to outline style). Do NOT relocate to footer (Concern 5 refined decision). Concern 6 keeps the current asymmetric top-right chrome intentionally (6C refined decision).
+- `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx` / `app/(app)/app/shared/components/session-breakdown-list.tsx` — no change required on the current branch. Rows are already interactive and route through the targeted `onReenterPostExamReview(questionId)` path. If product re-opens Concern 4 as an affordance-weight change (e.g., adding a chevron or clearer hover state), the change is localized to `SessionBreakdownList`.
+- `app/(app)/app/practice/components/practice-view.tsx` label (Concern 2A rename, if product re-opens the deferred naming work)
 - Shared exam-flow footer layout contract (Concern 3C, optional follow-up)
 - `docs/practice-engine/interaction-contracts.md` — update label references and footer layout description
 - Browser specs + E2E: re-assert the new label/layout contracts
@@ -238,7 +245,7 @@ Cursor semantics for Summary ↔ review re-entry. Independent of DEBT-365 but to
 **P2** — visual consistency and affordance clarity in a primary flow.
 
 - No data loss, no broken navigation.
-- Real user-trust erosion when a student sees three different verbs for similar actions, or clicks a Session Summary row and nothing happens.
+- Real user-trust erosion when a student sees three different verbs for similar actions, or misses that Session Summary rows are already clickable because Stage 4's affordance is materially weaker than Stage 2's whole-card + chevron pattern.
 - Compounds with DEBT-363 and DEBT-364 — together they make the exam flow feel less intentional than it is.
 - Not P1 (no blocker). Not P3 (more than cosmetic — affects perceived competence of the product).
 
@@ -251,12 +258,12 @@ Cursor semantics for Summary ↔ review re-entry. Independent of DEBT-365 but to
 | 1 | Concern 1 verb unification | 1A / 1B / 1C | **Locked 2026-04-17 → 1C (defer).** Once DEBT-363 Concern 2A drops `Finish exam` header, remaining verbs (`Review & Submit`, `Submit exam`, `Finish review`) each describe a distinct destination. That is not inconsistency — that is information. |
 | 2 | Concern 2 `Mark for review` vs `Bookmark` | 2A / 2B / 2C / 2D | **Deferred 2026-04-17 — re-open as P3 follow-up.** Different actions (session-flag vs permanent-save) that happen to share a footer slot. Fixing correctly requires product call on naming + iconography. Latent confusion, not blocking; parked. |
 | 3 | Concern 3 footer grouping | 3A / 3C | **Locked 2026-04-17 → 3A (apply DEBT-330 grouping to active exam footer).** Right-align `Mark for review` in the active exam footer so it matches the post-exam review pattern (`[Prev][Next] ... [metadata]`). 3C (unified layout contract) is a follow-up cleanup, not part of this cycle. |
-| 4 | Concern 4 Session Summary rows | 4A / 4B / 4C | **Locked 2026-04-17 → 4C first, then 4A if verification confirms non-interactive rows.** Manual walk of current Session Summary DOM must confirm rows are non-interactive before implementing 4A (clickable rows with chevron + route through `onReenterPostExamReview(questionId)` targeted path). |
-| 5 | Concern 5 View Summary weight | 5A / 5B | **Locked 2026-04-17 → 5A (promote and move `View Summary` to footer).** Replace the top-right ghost-style text link with a footer button (outline style, grouped with `Previous`/`Next`/`Bookmark`). Summary ↔ Review loop is two-way and should feel two-way. |
-| 6 | Concern 6 top-right chrome | 6A / 6B / 6C | **Locked 2026-04-17 → 6A (drop top-right CTA from both stages).** Auto-resolves from Concern 5A: once `View Summary` moves to the footer, the post-exam review top-right is empty. Session Summary already has no top-right CTA. Both stages consistent by construction. |
+| 4 | Concern 4 Session Summary rows | 4A / 4B / 4C | **Locked 2026-04-17 → 4C completed.** Verification on the current branch shows the rows are already interactive via `SessionBreakdownList` and the targeted `onReenterPostExamReview(questionId)` path. 4A no longer applies as written; any follow-up should be re-scoped as affordance-weight polish, not as missing interactivity. |
+| 5 | Concern 5 View Summary weight | 5A / 5B | **Locked 2026-04-17 → 5A refined (promote weight in place, keep top-right).** Switch `View Summary` from ghost/text-link to `variant="outline"` so it reads as a proper button. Do NOT move to the footer — post-exam review renders in document flow after PR #280, and the bottom action bar can land below the fold on long feedback (enforced by `expectBottomActionBarBelowFold` in E2E). Keeping the escape-to-summary affordance top-right preserves always-visible exit regardless of content length. Refinement driven by independent Codex review on 2026-04-17. |
+| 6 | Concern 6 top-right chrome | 6A / 6B / 6C | **Locked 2026-04-17 → 6C (keep current asymmetry as intentional).** Post-exam review needs a top-of-content escape because its content is long and document-flow; Session Summary does not because its primary CTA is correctly bottom-anchored on a short terminal screen. Different task shapes justify different chrome. Originally leaning 6A; refined to 6C after Codex review surfaced that dropping the top-right `View Summary` would break the always-visible exit guarantee on long post-exam content. |
 | 7 | Verification item — scroll reset | file new concern if reproducible | **Open — needs manual verification.** PR #280 shipped the fix with E2E coverage; audit observation may be a viewport artifact. Manual walk of the dev deployment must confirm before filing as DEBT-365 Concern 7. If working: no debt. If broken: file with a failing E2E test. |
 
-**Concern status:** 3 concerns ship-now (3A, 5A, 6A), 1 verify-first then ship (4A after 4C verification), 1 deferred (2), 1 auto-resolved (1 via DEBT-363 Concern 2A), 1 verification-only (7 — no debt unless reproducible).
+**Concern status:** 3 concerns ship-now (3A, 5A, 6A), 2 deferred (1 and 2), 1 verification-resolved (4), 1 verification-only (7 — no debt unless reproducible).
 
 ---
 
@@ -267,7 +274,9 @@ Cursor semantics for Summary ↔ review re-entry. Independent of DEBT-365 but to
 | 2026-04-17 | Opened DEBT-365 after independent Chrome-agent UX audit | Six audit findings fell outside DEBT-363 and DEBT-364 coverage. Bundling as multi-concern debt because all six live in the same exam-flow affordance space and share implementation surface. |
 | 2026-04-17 | Decomposed findings into 6 concerns + 1 verification item | Each has an independent decision. Bundling is for analysis, not delivery. |
 | 2026-04-17 | Flagged scroll-reset as verification-first | PR #280 already shipped the fix and E2E covers it; the audit observation may be a viewport artifact. No new debt until confirmed. |
-| 2026-04-17 | Locked Concerns 1, 3, 5, 6; deferred 2; verify-first 4; verification-only 7 | Product-design pass after independent Chrome-agent UX audit. Decisions favor: shipping the obvious consistency wins (3A, 5A, 6A), deferring the ambiguous semantic work (`Mark for review` vs `Bookmark` needs product naming call), auto-resolving Concern 1 via DEBT-363 Concern 2A, and requiring verification before filing the scroll-reset as shipped debt (Concern 7). Keeps scope tight and avoids pre-emptive churn. |
+| 2026-04-17 | Verified Concern 4 against the current branch | `SessionSummaryView` still routes available rows through `SessionBreakdownList`, which renders interactive button rows when `onOpenQuestion` is supplied. The audit misread the current state; the remaining question is affordance weight, not missing interactivity. |
+| 2026-04-17 | Refined Concerns 5 and 6 after independent Codex review | Codex flagged that moving `View Summary` into the document-flow footer (original 5A / 6A) would push the escape-to-summary affordance below the fold on long post-exam review content, trading one problem for a worse one. Refined: Concern 5 → promote weight in the existing top-right position (outline style); Concern 6 → keep current top-right asymmetry as intentional given task-shape differences. Always-visible exit beats chrome symmetry. |
+| 2026-04-17 | Locked Concerns 1, 3, 5, 6; deferred 2; verify-first 4; verification-only 7 | Product-design pass after independent Chrome-agent UX audit. Decisions favor: shipping the obvious consistency wins (3A, 5A, 6A), deferring the ambiguous semantic work (`Mark for review` vs `Bookmark` needs product naming call), deferring Concern 1 until DEBT-363 Concern 2A lands, and requiring verification before filing the scroll-reset as shipped debt (Concern 7). Keeps scope tight and avoids pre-emptive churn. |
 
 ---
 

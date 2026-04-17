@@ -6,13 +6,13 @@ priority: P2
 created: 2026-04-17
 area: practice / exam / post-exam review
 promoted_from: docs/brainstorming/bs-063-exam-review-reentry-state-confusion.md
-related: DEBT-350, DEBT-359, DEBT-316, DEBT-326, DEBT-363
+related: DEBT-350, DEBT-359, DEBT-316, DEBT-326, DEBT-363, DEBT-365
 ---
 
 # DEBT-364: Post-exam review re-entry cursor persistence
 
 **Priority:** P2
-**Status:** Open — no implementation started
+**Status:** Open — decision-locked and implementation-ready; no implementation started
 **Created:** 2026-04-17
 **Affected surface:** `PostExamReviewView` (re-entry from Session Summary via `Review Answers`)
 **Adjacent unchanged surfaces:** `ExamReviewView` (pre-submit), initial post-submit entry (still lands on Q1)
@@ -183,7 +183,7 @@ The current behavior is defensible as "resume where you left off" — it just is
 Concrete shape of the change:
 
 - In `onReenterPostExamReview(questionId?)`, when `questionId` is not supplied, pass `persistedQuestionId: null` (or simply do not pass it) so `resolvePostExamReviewCurrentQuestionId` falls through to "first available row."
-- Keep the targeted path unchanged: clicking a specific breakdown row in the summary should still land on that row.
+- Keep the targeted path unchanged: clicking a specific breakdown row in the summary should still land on that row. That path is already wired today through `renderPracticeSessionExamResults()` → `SessionSummaryView` → `SessionBreakdownList` (`app/(app)/app/practice/[sessionId]/components/practice-session-exam-results-renderer.tsx:52-63`, `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx:104-112`, `app/(app)/app/shared/components/session-breakdown-list.tsx:38-49`).
 - No change to `PostExamReviewView` labels.
 - No change to `onViewSummary()` — leaving review to go see the summary does not need to reset the cursor; only the re-entry path does.
 

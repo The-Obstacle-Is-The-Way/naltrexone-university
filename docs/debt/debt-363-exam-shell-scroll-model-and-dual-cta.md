@@ -6,13 +6,13 @@ priority: P2
 created: 2026-04-14
 area: practice / exam
 supersedes_decision_from: DEBT-360
-related: DEBT-322, DEBT-360, DEBT-361, DEBT-362
+related: DEBT-322, DEBT-360, DEBT-361, DEBT-362, DEBT-364, DEBT-365
 ---
 
 # DEBT-363: Exam shell scroll model + dual-CTA disambiguation
 
 **Priority:** P2
-**Status:** Open — Concern 1 shipped in PR #280; Concern 2 still open
+**Status:** Open — Concern 1 shipped in PR #280; Concern 2 is decision-locked and implementation-ready
 **Created:** 2026-04-14
 **Affected surfaces:** PracticeView (exam + tutor), PostExamReviewView
 **Adjacent unchanged stage:** ExamReviewView
@@ -26,11 +26,11 @@ Two concerns were raised in the same walkthrough. They landed on different sympt
 
 ### Concern 1 — The shell feels "cut off" / "claustrophobic"
 
-The exam (and tutor, and post-exam review) shell uses a viewport-bounded inner-scroll region. The body of the page does **not** scroll top-down. Instead, the sticky action bar anchors to the bottom of the viewport and content scrolls *inside* a bounded region above it. From the user's perspective:
+Before PR #280, the exam (and tutor, and post-exam review) shell used a viewport-bounded inner-scroll region. The body of the page did **not** scroll top-down. Instead, the sticky action bar anchored to the bottom of the viewport and content scrolled *inside* a bounded region above it. From the user's perspective:
 
 > "It sequesters you into the window and it's really annoying. I'd rather just have a simple scroll of the whole window from top down."
 
-This is not inadvertent slop — this is the shipped resolution of **DEBT-360**. See the architecture audit below.
+This was not inadvertent slop — it was the shipped resolution of **DEBT-360** until PR #280 reverted the shell back to document flow. On the current branch, both `PracticeView` and `PostExamReviewView` render their `bottom-action-bar` directly in the content stack (`app/(app)/app/practice/components/practice-view.tsx:319-356`, `app/(app)/app/practice/components/practice-view.tsx:490`, `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx:155-200`), and the E2E contract now asserts the sticky-shell markers are absent (`tests/e2e/practice.spec.ts:46-50`).
 
 **Measured evidence (independent design review, 2026-04-14):** An independent design-critique pass measured the content-to-visible-scroll-area ratio across the exam flow:
 
@@ -40,7 +40,7 @@ This is not inadvertent slop — this is the shipped resolution of **DEBT-360**.
 
 The numbers make the user's "cut off" reaction unarguable. This is not acclimation friction; this is a measurable viewport-compression problem on mobile and short-desktop viewports.
 
-**Cross-screen inconsistency (second finding from the same review):** the scroll model is not uniform across the exam flow:
+**Cross-screen inconsistency (second finding from the same review):** before PR #280, the scroll model was not uniform across the exam flow:
 
 - Exam question view: bounded inner scroll
 - Post-exam review: bounded inner scroll
@@ -57,11 +57,11 @@ On the last question of an exam, the user sees **both** of these simultaneously:
 - **Bottom footer button:** `Review & Submit` — only on the last question, replacing `Next`
 
 Both resolve to the exact same `onEndSession` path and both navigate to the same intermediate destination: the pre-submit `Review & Submit` screen (`ExamReviewView`). The exam is not actually submitted from the question screen; submission happens later inside `ExamReviewView` through `onFinalizeReview` with a confirmation dialog. Source:
-- `app/(app)/app/practice/components/practice-view.tsx:385` — header button click → `props.onEndSession`
+- `app/(app)/app/practice/components/practice-view.tsx:381-388` — header button click → `props.onEndSession`
 - `app/(app)/app/practice/components/practice-view.tsx:203` — `onMiddleAction` resolves to `props.onEndSession` on the last question
-- `app/(app)/app/practice/components/practice-view.tsx:234` — footer `Review & Submit` button click → `onMiddleAction`
-- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:224` — `endSessionLabel={mode === 'exam' ? 'Finish exam' : 'End session'}`
-- `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:236-279` — actual exam submission path via `Submit exam` → confirmation dialog → `onFinalizeReview`
+- `app/(app)/app/practice/components/practice-view.tsx:229-240` — footer `Review & Submit` button click → `onMiddleAction`
+- `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:267` — `endSessionLabel={mode === 'exam' ? 'Finish exam' : 'End session'}`
+- `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:235-279` — actual exam submission path via `Submit exam` → confirmation dialog → `onFinalizeReview`
 
 User reaction:
 
@@ -73,23 +73,23 @@ That reaction is exactly the failure mode research warns about (see "Research: d
 
 ## Architecture audit — where did the scroll-shell come from?
 
-### Stage map (current code)
+### Stage map (current code after PR #280)
 
-Before evaluating Concern 1 or Concern 2, the current exam flow needs to be separated into four distinct stages. They do **not** all share the same layout shell:
+Before evaluating Concern 1 or Concern 2, the current exam flow needs to be separated into four distinct stages. On the current branch, they now all render in plain document flow:
 
-1. **Active question-taking** — `PracticeSessionPageView` renders `PracticeView`, which wraps the active question stage in `StickyActionBarLayout`.
-   - `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:182`
-   - `app/(app)/app/practice/components/practice-view.tsx:318`
-2. **Pre-submit `Review & Submit` screen** — `PracticeSessionPageView` renders `ExamReviewView` in plain document flow. This stage does **not** use `StickyActionBarLayout`.
-   - `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:157`
-   - `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:136`
-3. **Post-submit review** — the exam-results renderer renders `PostExamReviewView`, which does use `StickyActionBarLayout`.
-   - `app/(app)/app/practice/[sessionId]/components/practice-session-exam-results-renderer.tsx:112`
-   - `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx:61`
-4. **Session summary** — `SessionSummaryView` is plain document flow, not `StickyActionBarLayout`.
-   - `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:114`
-   - `app/(app)/app/practice/[sessionId]/components/practice-session-exam-results-renderer.tsx:51`
-   - `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx:46`
+1. **Active question-taking** — `PracticeSessionPageView` renders `PracticeView` in plain document flow; the bottom action bar is a plain sibling after the question section.
+   - `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:223-282`
+   - `app/(app)/app/practice/components/practice-view.tsx:319-356`
+   - `app/(app)/app/practice/components/practice-view.tsx:490`
+2. **Pre-submit `Review & Submit` screen** — `PracticeSessionPageView` renders `ExamReviewView` in plain document flow.
+   - `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:154-212`
+   - `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:136-285`
+3. **Post-submit review** — the exam-results renderer renders `PostExamReviewView` in plain document flow; its bottom action bar is a normal `<div>` at the end of the review content.
+   - `app/(app)/app/practice/[sessionId]/components/practice-session-exam-results-renderer.tsx:112-125`
+   - `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx:72-200`
+4. **Session summary** — `SessionSummaryView` remains plain document flow.
+   - `app/(app)/app/practice/[sessionId]/components/practice-session-exam-results-renderer.tsx:50-69`
+   - `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx:46-161`
 
 ### Timeline (git history)
 
@@ -115,21 +115,26 @@ Everything above the `Resolve DEBT-356` baseline is DEBT-360-era work.
    </div>
    ```
    - `h-dvh` forces the root to exactly the dynamic viewport height.
-   - `<main>` is `flex-1 min-h-0` — a bounded flex region that lets child layouts consume the remaining viewport height.
-   - **This matters because `StickyActionBarLayout` can fill that remaining space. It does not, by itself, prove that every stage in the app is inner-scrolling.** `SessionSummaryView` already demonstrates plain document-flow behavior under the same `AppLayoutShell`.
+   - `<main>` is `flex-1 min-h-0` — a bounded flex region for app content, while the page itself remains the scroll container under the current document-flow exam surfaces.
 
-2. **`StickyActionBarLayout`** — `app/(app)/app/practice/components/sticky-action-bar.tsx:10`
+2. **Document-flow action bars** — `PracticeView` and `PostExamReviewView` now render `data-testid="bottom-action-bar"` directly in the content stack rather than through a shared sticky wrapper.
    ```
-   <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-     <div className="min-h-0 flex-1 overflow-y-auto pb-6">{children}</div>
-     {actionBar ? <StickyActionBar>{actionBar}</StickyActionBar> : null}
-   </div>
+   <section ...>…</section>
+   {actionBar}
    ```
-   - Outer wrapper: `overflow-hidden` — clips overflow and caps the shell to the bounded flex height.
-   - Inner content region: `overflow-y-auto` — this is the inner scroll box the user is reacting to.
-   - Sticky footer: sibling of the inner scroll region, anchored within that bounded shell.
+   and
+   ```
+   {currentRow ? <section ...>…</section> : ...}
+   <div data-testid="bottom-action-bar">…</div>
+   ```
+   - `app/(app)/app/practice/components/practice-view.tsx:406-490`
+   - `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx:104-200`
+   - Browser/E2E tests assert `sticky-action-bar-layout`, `sticky-action-bar-scroll-region`, and `sticky-action-bar` are absent:
+     - `app/(app)/app/practice/components/practice-view.browser.spec.tsx:164-181`
+     - `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.browser.spec.tsx:136-150`
+     - `tests/e2e/practice.spec.ts:46-50`
 
-**Net effect on the stages that use it:** scrolling a long question or a long feedback block scrolls the inner region only. The header, app chrome, and sticky footer never move. The user sees what looks like "a window within a window" — which is exactly the visual they're objecting to.
+**Net effect on the current branch:** scrolling happens in document flow. The header remains pinned via `AppLayoutShell`; the bottom action bar sits at the natural end of the content stack.
 
 ### The DEBT-360 decision-log claim
 
@@ -141,11 +146,7 @@ Everything above the `Resolve DEBT-356` baseline is DEBT-360-era work.
 
 ### Does this permeate other surfaces?
 
-Yes, but not every exam-flow stage. `PracticeView` (tutor + exam) and `PostExamReviewView` route their footers through `StickyActionBarLayout`. `ExamReviewView` does not. The bounded-scroll visual affects:
-
-- tutor mode question-taking
-- exam mode question-taking
-- the post-submit review screen
+Not on the current branch. `PracticeView`, `ExamReviewView`, `PostExamReviewView`, and `SessionSummaryView` all render in document flow now. Historically, before PR #280, the bounded-scroll visual affected tutor mode question-taking, exam mode question-taking, and the post-submit review screen.
 
 ---
 
@@ -186,7 +187,7 @@ The USMLE-style Q-bank platforms (UWorld, AMBOSS, Kaplan) are the closest compar
 
 ---
 
-## Concern 1 — Decision (locked 2026-04-15; implementation-ready)
+## Concern 1 — Decision (locked 2026-04-15; shipped in PR #280)
 
 **Decision: revert to the pre-DEBT-360 document-flow pattern.**
 
@@ -220,24 +221,18 @@ The strongest case for a fixed footer is predictable access for interrupt action
 - **Hybrid (whole-page scroll except for very tall content).** Two scroll modes is worse than either mode alone. Over-engineered.
 - **Status quo (current bounded shell).** Does not resolve the user-observed "claustrophobic peephole" feel. Explicitly rejected.
 
-### Implementation scope
+### Shipped scope (PR #280)
 
-- **`PracticeView`** should stop rendering `StickyActionBarLayout` and instead render its action bar in normal document flow at the end of the question content.
-- **`PostExamReviewView`** should make the same shell change so post-submit review follows the same top-down page-scroll model.
-- **`ExamReviewView`**, **`SessionSummaryView`**, and **`app/(app)/app/layout.tsx`** should remain unchanged unless implementation evidence proves a broader shell change is actually required.
-- **`StickyActionBarLayout`** and its tests should be deleted or narrowed only if they become unused after migrating both current consumers.
+- **`PracticeView`** no longer renders `StickyActionBarLayout`; its action bar now sits in normal document flow at the end of the question content.
+- **`PostExamReviewView`** made the same shell change so post-submit review follows the same top-down page-scroll model.
+- **`ExamReviewView`**, **`SessionSummaryView`**, and **`app/(app)/app/layout.tsx`** stayed unchanged.
+- The shared sticky-shell primitive was deleted, and browser/E2E coverage now asserts the absence of the old sticky-shell markers.
 
-### Implementation adjacency list (load-bearing)
+### Shipped adjacency work (PR #280)
 
-These items are not optional verifications — they are required work that belongs in the implementation PR:
-
-- **Scroll-reset behavior on question navigation.** Do **not** assume the current bounded shell resets scroll "for free" — the scroll region is a stable DOM node, and whatever current reset behavior exists is coming from question-mount side effects, not from the shell contract itself. Under whole-page scroll, the question-change handler must explicitly reset `window.scrollTo({ top: 0 })` (or scroll the question panel into view) on Next/Previous navigation.
-- **Focus restoration on question navigation** must be re-validated so Next/Previous still land the user at the right heading/panel boundary under whole-page scroll.
-- **`PostExamReviewView`'s current focus effect** (`panelRef.current?.focus()`) must be checked against the new scroll model so focus movement does not produce disorienting page jumps.
-- **Browser back/forward scroll restoration** must be verified because whole-page scroll changes how the browser remembers position.
-- **Short-content cosmetic check.** On a very short exam question that fits in the viewport with room to spare, the footer will land in the middle of the viewport, not at the bottom edge. Expected outcome: this reads as "this question is short," not "the layout is broken." If the floating-bar effect looks bad in practice, the fix is spacing/min-height polish on the content region, not a return to pinning.
-- **Affected browser specs and E2E tests** must be updated because the current test contracts assert the `sticky-action-bar-layout` / `sticky-action-bar-scroll-region` markers and viewport-bounded geometry.
-- **Tutor mode long-feedback case** must be manually walked after the change. If scroll-to-bottom-to-click-Next feels like a real regression on long feedback blocks (as opposed to the natural completion of reading), the mode-specific fallback is to apply a different shell to tutor mode alone. Do **not** pre-emptively build the mode-split before testing the unified change.
+- **Question-navigation scroll/focus restoration** is implemented in `PracticeSessionPageView` (`app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:84-134`) and covered by browser/E2E tests (`app/(app)/app/practice/[sessionId]/components/practice-session-page-view.browser.spec.tsx:817-1093`, `tests/e2e/practice.spec.ts:241-344`).
+- **`PostExamReviewView` focus/scroll restoration** remains gated by `shouldRestorePanelRef` (`app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx:55-70`) and is covered by `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.browser.spec.tsx:60-80`.
+- **Document-flow/no-sticky-shell contracts** are covered in browser/E2E tests (`app/(app)/app/practice/components/practice-view.browser.spec.tsx:164-181`, `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.browser.spec.tsx:136-150`, `tests/e2e/practice.spec.ts:46-50`).
 
 ---
 
