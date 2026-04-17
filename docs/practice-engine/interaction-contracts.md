@@ -4,7 +4,7 @@
 > **Scope:** Click-by-click UI contracts for tutor and exam modes — buttons, persistence, locking, navigation, and post-session flows
 > **Related:** [Practice Modes](./practice-modes.md) (lifecycle/data), [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md) (decisions)
 > **Status:** Current implementation. Historical BS-055 rationale remains, but the contracts below now describe shipped behavior; follow-up deltas are tracked separately in debt docs where noted.
-> **Last Updated:** 2026-04-12
+> **Last Updated:** 2026-04-16
 
 ---
 
@@ -39,26 +39,26 @@ Question displayed
 
 ### Action bar layout
 
-**Before submit (answer selected):**
+**Before submit (answer selected, question 2+):**
 ```text
-[ Submit ]  [ Next (outline) ]  [ Bookmark ]
+[ Previous ]  [ Submit ]  [ Next (outline) ]  [ Bookmark ]
 ```
 
-**After submit (feedback visible):**
+**After submit (feedback visible, question 2+):**
 ```text
-[ spacer ]  [ Next (default) ]  [ Bookmark ]
+[ Previous ]  [ Next (default) ]  [ Bookmark ]
 ```
 
 **Q1 (no Previous):**
 ```text
-[spacer]  [ Submit / Next ]  [ Bookmark ]
+[ Submit / Next ]  [ Bookmark ]
 ```
 
 **Contract rules:**
-- Submit occupies position 1. Hidden after feedback is revealed (becomes spacer).
-- Next occupies position 2. Always visible when there are more questions. Variant changes from outline → default after submit to signal "advance."
-- Bookmark occupies position 3.
-- Previous is hidden in tutor mode (linear progression only).
+- Previous occupies position 1 when available. On Q1 it is omitted; there is no spacer.
+- Submit occupies position 2 before feedback is revealed. Hidden after feedback is revealed.
+- Next occupies position 3. It is visible before and after submit when there are more questions. Variant changes from outline → default after submit to signal "advance."
+- Bookmark occupies the trailing slot.
 
 ### Persistence
 
@@ -251,7 +251,7 @@ The post-exam review stage shows:
 - Correctness-colored navigator (green/red/outline)
 - Full question feedback inline
 - Top-right `View Summary` escape hatch
-- Shared sticky footer shell across `PracticeView` and `PostExamReviewView`: viewport-bounded layout, scrollable content region, sticky bottom action bar with safe-area padding, and an app-shell-provided viewport offset
+- Whole-page document flow across `PracticeView` and `PostExamReviewView`: content scrolls with the page, and the bottom action bar sits at the natural end of the content stack rather than in a sticky viewport shell
 - Bottom bar in DOM order: `Previous` (when available), `Next` / `Finish review`, then `Bookmark` when the current question is available. On `sm+`, the bookmark button is pushed to the right with `sm:ml-auto`
 - Last reviewed question swaps the forward CTA to `Finish review`
 - No reattempt action
@@ -322,8 +322,8 @@ Both modes share rendering components but must have separate action contracts. T
 | `QuestionCard` | Yes — renders stem + choices | Exam allows re-selection on revisit; tutor locks after submit |
 | `ChoiceButton` | Yes — renders individual choice | State variants differ (exam: selected/unselected only; tutor: selected/correct/incorrect) |
 | `QuestionNavigator` | Exam only | N/A for tutor |
-| `PracticeView` action bar | Shared `StickyActionBarLayout` + mode-specific button renderers | **Must branch explicitly.** Tutor: Submit/Next/Bookmark. Exam: Previous/Next-or-Review-&-Submit/Mark-for-review. Do not evolve as a single conditional matrix. |
-| `PostExamReviewView` footer shell | Shared `StickyActionBarLayout` + `StickyActionBar` | Keeps the post-exam sequential review controls visible while long inline feedback scrolls above the footer. |
+| `PracticeView` action bar | Shared document-flow placement + mode-specific button renderers | **Must branch explicitly.** Tutor session: Previous/Submit/Next/Bookmark before feedback, then Previous/Next/Bookmark after feedback; quick practice omits Previous. Exam: Previous/Next-or-Review-&-Submit/Mark-for-review. Do not evolve as a single conditional matrix. |
+| `PostExamReviewView` footer shell | Shared document-flow placement pattern | Keeps the post-exam sequential review controls at the end of the review content while the whole page scrolls naturally. |
 | `question-flow-actions.ts` | Shared load logic | **Must branch on save.** Tutor: one-shot `submitAnswer`. Exam: draft-save on navigation boundary. |
 | Review stage | Exam only | N/A for tutor |
 | Feedback display | Shared rendering | Timing gated by mode (immediate vs deferred) |

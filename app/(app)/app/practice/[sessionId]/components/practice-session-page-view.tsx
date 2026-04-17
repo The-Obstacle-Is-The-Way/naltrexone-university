@@ -1,4 +1,4 @@
-import { useCallback, useId, useMemo } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef } from 'react';
 import { PracticeView } from '@/app/(app)/app/practice/components/practice-view';
 import {
   fireAndForget,
@@ -14,6 +14,7 @@ import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import type { LoadState } from '../../practice-page-logic';
 import { ExamReviewView, QuestionNavigator } from './exam-review-view';
+import { focusElementWithoutScroll } from './focus-element-without-scroll';
 import { renderPracticeSessionExamResults } from './practice-session-exam-results-renderer';
 import { findAdjacentAvailableQuestionId } from './practice-session-question-navigation';
 import { SessionSummaryView } from './session-summary-view';
@@ -69,6 +70,9 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
   const navigatorLoadState = props.navigatorLoadState ?? { status: 'idle' };
   const currentQuestionId = props.question?.questionId ?? null;
   const questionPanelId = useId();
+  const questionAreaRef = useRef<HTMLElement | null>(null);
+  const shouldRestoreQuestionPanelRef = useRef(false);
+  const lastQuestionIdRef = useRef<string | null>(currentQuestionId);
   const previousQuestionId = useMemo(
     () => findAdjacentAvailableQuestionId(navigator, currentQuestionId, -1),
     [currentQuestionId, navigator],
@@ -77,19 +81,57 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
     () => findAdjacentAvailableQuestionId(navigator, currentQuestionId, 1),
     [currentQuestionId, navigator],
   );
+  const restoreQuestionPanel = useCallback(() => {
+    const panel = questionAreaRef.current;
+    if (!panel) return;
+
+    focusElementWithoutScroll(panel);
+    panel.scrollIntoView({ block: 'start' });
+  }, []);
+  const navigateToQuestion = useCallback(
+    (questionId: string) => {
+      if (!props.onNavigateQuestion) return;
+
+      shouldRestoreQuestionPanelRef.current = true;
+      props.onNavigateQuestion(questionId);
+    },
+    [props.onNavigateQuestion],
+  );
   const onPreviousQuestion = useCallback(() => {
-    if (previousQuestionId && props.onNavigateQuestion) {
-      props.onNavigateQuestion(previousQuestionId);
-    }
-  }, [previousQuestionId, props.onNavigateQuestion]);
+    if (!previousQuestionId) return;
+
+    navigateToQuestion(previousQuestionId);
+  }, [navigateToQuestion, previousQuestionId]);
 
   const onNextQuestionResolved = useCallback(() => {
+    shouldRestoreQuestionPanelRef.current = true;
+
     if (nextQuestionId && props.onNavigateQuestion) {
       props.onNavigateQuestion(nextQuestionId);
       return;
     }
     props.onNextQuestion();
   }, [nextQuestionId, props.onNavigateQuestion, props.onNextQuestion]);
+  const onTryAgainResolved = useCallback(() => {
+    shouldRestoreQuestionPanelRef.current = true;
+    props.onTryAgain();
+  }, [props.onTryAgain]);
+  useEffect(() => {
+    if (!shouldRestoreQuestionPanelRef.current) {
+      lastQuestionIdRef.current = currentQuestionId;
+      return;
+    }
+
+    const questionChanged = lastQuestionIdRef.current !== currentQuestionId;
+    const navigationStateVisible = props.loadState.status !== 'ready';
+
+    lastQuestionIdRef.current = currentQuestionId;
+
+    if (!questionChanged && !navigationStateVisible) return;
+
+    shouldRestoreQuestionPanelRef.current = false;
+    restoreQuestionPanel();
+  }, [currentQuestionId, props.loadState.status, restoreQuestionPanel]);
   const examResults = renderPracticeSessionExamResults({
     summary: props.summary,
     postExamSummary: props.postExamSummary,
@@ -183,13 +225,14 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       title={title}
       description={description}
       questionPanelId={questionPanelId}
+      questionAreaRef={questionAreaRef}
       topContent={
         navigator && props.onNavigateQuestion ? (
           <QuestionNavigator
             review={navigator}
             currentQuestionId={currentQuestionId}
             controlledPanelId={questionPanelId}
-            onNavigateQuestion={props.onNavigateQuestion}
+            onNavigateQuestion={navigateToQuestion}
           />
         ) : navigatorLoadState.status === 'error' ? (
           <ErrorCard className="p-4">
@@ -223,7 +266,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       canSubmit={props.canSubmit}
       endSessionLabel={mode === 'exam' ? 'Finish exam' : 'End session'}
       onEndSession={props.onEndSession}
-      onTryAgain={props.onTryAgain}
+      onTryAgain={onTryAgainResolved}
       onRetryBookmarks={props.onRetryBookmarks}
       onToggleBookmark={props.onToggleBookmark}
       onToggleMarkForReview={props.onToggleMarkForReview}

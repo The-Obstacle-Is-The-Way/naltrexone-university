@@ -1,7 +1,7 @@
 # Question Rendering Architecture
 
 > **Type:** Current-Implementation Reference
-> **Last Verified:** 2026-03-19
+> **Last Verified:** 2026-04-15
 > **Scope:** How questions are rendered, navigated, and state-managed across all viewing contexts in the current shipped implementation
 > **Important:** This is **not** the target-state spec for active exam mode. If this document conflicts with [Interaction Contracts](./interaction-contracts.md), [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md), or [DEBT-320](../debt/debt-320-bs055-exam-interaction-model-overhaul.md), those newer documents win for the accepted exam redesign.
 
@@ -76,12 +76,13 @@ Feedback is conditionally derived by the parent before being passed into `Questi
 
 Sequential navigation renders as inline `<Link>` elements in the question page bottom action bar. It only appears when `sessionNavigation` is non-null (requires `sessionId` in URL).
 
-### 3.4 Action Bars (Shared Shell, Context-Specific Buttons)
+### 3.4 Action Bars (Document Flow, Context-Specific Buttons)
 
-Action bars use a **mixed model**:
-
-- active practice and post-exam review share `StickyActionBarLayout` / `StickyActionBar` as the footer shell
-- each context still renders its own buttons inline inside that shell
+Keep action bars rendered inline per context in normal document flow. Do **not**
+create a universal/shared action-bar shell here: active practice, exam review,
+post-exam review, session summary, and question-page review all own different
+button sets, so forcing them through one shared shell adds complexity without a
+behavioral payoff.
 
 | Context | File:Lines | Buttons |
 |---------|-----------|---------|
@@ -447,7 +448,6 @@ The codebase has two navigators that look similar but serve different contexts:
 | `components/question/choice-button.tsx` | `ChoiceButton` | Individual answer choice (all contexts) |
 | `components/question/feedback.tsx` | `Feedback` | Correct/incorrect + explanation (all contexts) |
 | `components/error-card.tsx` | `ErrorCard` | Error display (all contexts) |
-| `app/(app)/app/practice/components/sticky-action-bar.tsx` | `StickyActionBar`, `StickyActionBarLayout` | Shared sticky practice/review footer shell |
 
 ### Hooks & State Management
 
@@ -482,13 +482,14 @@ The codebase has two navigators that look similar but serve different contexts:
 **Status:** Resolved in SPEC-030.
 **Implementation:** Tutor revisit state restores from `session.previousSubmission` in `NextQuestion`, hydrated into `submitResult` by `useQuestionFlowCore`.
 
-### 10.2 Shared Sticky Footer Shell (Resolved)
+### 10.2 Document-Flow Footer Shell (Current)
 
-DEBT-360 extracted the shared viewport-aware footer shell into `app/(app)/app/practice/components/sticky-action-bar.tsx`.
+DEBT-360 temporarily introduced a shared sticky footer shell for `PracticeView` and `PostExamReviewView`, but DEBT-363 removed that primitive after the bounded scroll model proved too constraining.
 
-- `StickyActionBarLayout` now provides the shared viewport-bounded shell + scrollable content region for `PracticeView` and `PostExamReviewView`
-- `StickyActionBar` now provides the shared sticky footer chrome (border, backdrop blur, safe-area padding)
-- `AppLayoutShell` now uses a flex-column `min-h-screen` shell with the banner and header above a `flex-1` `<main>` region, so `StickyActionBarLayout` fills the remaining viewport without hardcoded top-chrome offsets
+- `PracticeView` now renders its action bar directly in normal document flow at the end of the question content stack
+- `PostExamReviewView` now renders its sequential review controls directly in normal document flow at the end of the review content stack
+- `app/(app)/app/practice/components/sticky-action-bar.tsx` was deleted because it no longer had any consumers
+- `AppLayoutShell` remains unchanged; whole-page scroll already works under the existing shell for these stages
 - The button sets remain intentionally context-specific inside each caller
 
 The remaining inline action bars on the question-review route are still separate because their button matrix and navigation model differ from the active practice/post-exam surfaces.

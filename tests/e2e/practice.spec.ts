@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 import {
   hasClerkCredentials,
   signInWithClerkPassword,
@@ -8,17 +8,17 @@ import { runE2EUserStateReset } from './helpers/reset-e2e-user-state';
 import { startSession } from './helpers/session';
 import { ensureSubscribed } from './helpers/subscription';
 
-async function appendTallScrollRegionContent(
+async function appendTallPageContentBeforeActionBar(
   page: Page,
   fillerId: string,
 ): Promise<void> {
   const metrics = await page.evaluate(
     ({ fillerId }) => {
-      const scrollRegion = document.querySelector(
-        '[data-testid="sticky-action-bar-scroll-region"]',
+      const actionBar = document.querySelector(
+        '[data-testid="bottom-action-bar"]',
       );
-      if (!(scrollRegion instanceof HTMLElement)) {
-        throw new Error('Expected sticky action bar scroll region to exist');
+      if (!(actionBar instanceof HTMLElement)) {
+        throw new Error('Expected bottom action bar to exist');
       }
 
       document.getElementById(fillerId)?.remove();
@@ -27,11 +27,16 @@ async function appendTallScrollRegionContent(
       filler.id = fillerId;
       filler.setAttribute('aria-hidden', 'true');
       filler.style.height = '1600px';
-      scrollRegion.appendChild(filler);
+      actionBar.before(filler);
+
+      const scrollingElement = document.scrollingElement;
+      if (!(scrollingElement instanceof HTMLElement)) {
+        throw new Error('Expected a document scrolling element');
+      }
 
       return {
-        clientHeight: scrollRegion.clientHeight,
-        scrollHeight: scrollRegion.scrollHeight,
+        clientHeight: scrollingElement.clientHeight,
+        scrollHeight: scrollingElement.scrollHeight,
       };
     },
     { fillerId },
@@ -40,9 +45,17 @@ async function appendTallScrollRegionContent(
   expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
 }
 
-async function expectBottomActionBarInViewport(page: Page): Promise<void> {
+async function expectNoStickyScrollRegion(page: Page): Promise<void> {
+  await expect(page.getByTestId('sticky-action-bar-layout')).toHaveCount(0);
+  await expect(page.getByTestId('sticky-action-bar-scroll-region')).toHaveCount(
+    0,
+  );
+  await expect(page.getByTestId('sticky-action-bar')).toHaveCount(0);
+}
+
+async function expectBottomActionBarBelowFold(page: Page): Promise<void> {
   const actionBar = page.getByTestId('bottom-action-bar');
-  await expect(actionBar).toBeVisible();
+  await expect(actionBar).toBeAttached();
 
   const box = await actionBar.boundingBox();
   const viewport = page.viewportSize();
@@ -53,8 +66,34 @@ async function expectBottomActionBarInViewport(page: Page): Promise<void> {
     throw new Error('Expected bottom action bar bounds and viewport size');
   }
 
-  expect(box.y).toBeGreaterThanOrEqual(0);
-  expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
+  expect(box.y).toBeGreaterThan(viewport.height);
+}
+
+async function scrollPageToBottom(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const scrollingElement =
+          document.scrollingElement || document.documentElement;
+        window.scrollTo({
+          top: scrollingElement.scrollHeight,
+          behavior: 'auto',
+        });
+        return Math.round(
+          scrollingElement.scrollHeight - (window.scrollY + window.innerHeight),
+        );
+      }),
+    )
+    .toBeLessThanOrEqual(2);
+}
+
+async function expectFocusedLocatorInViewport(locator: Locator): Promise<void> {
+  await expect(locator).toBeFocused();
+  await expect(locator).toBeInViewport();
+}
+
+function getActiveQuestionPanel(page: Page): Locator {
+  return page.getByTestId('active-question-panel');
 }
 
 test.describe('practice', () => {
@@ -119,7 +158,7 @@ test.describe('practice', () => {
     await expect(page.getByText(/^(Correct|Incorrect)$/)).toBeVisible();
   });
 
-  test('keeps the tutor action bar visible when feedback content grows', async ({
+  test('uses whole-page scroll for long tutor feedback content', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 667 });
@@ -134,9 +173,15 @@ test.describe('practice', () => {
       timeout: 10_000,
     });
 
-    await appendTallScrollRegionContent(page, 'tutor-sticky-action-bar-filler');
-    await expectBottomActionBarInViewport(page);
-    await expect(page.getByRole('button', { name: 'Next' })).toBeVisible();
+    await expectNoStickyScrollRegion(page);
+    await appendTallPageContentBeforeActionBar(
+      page,
+      'tutor-document-flow-filler',
+    );
+    await expectBottomActionBarBelowFold(page);
+
+    await scrollPageToBottom(page);
+    await expect(page.getByRole('button', { name: 'Next' })).toBeInViewport();
     await expect(page.getByRole('button', { name: 'Bookmark' })).toBeVisible();
   });
 
@@ -193,16 +238,81 @@ test.describe('practice', () => {
     ).toBeVisible({ timeout: 30_000 });
   });
 
-  test('keeps the exam and post-exam review action bars visible when content grows', async ({
+  test('resets the active question viewport after next and previous navigation', async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 375, height: 667 });
+    await page.setViewportSize({ width: 1280, height: 800 });
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);
 
-    await startSession(page, 'exam');
-    await appendTallScrollRegionContent(page, 'exam-sticky-action-bar-filler');
-    await expectBottomActionBarInViewport(page);
+    await startSession(page, 'exam', 2);
+    await expectNoStickyScrollRegion(page);
+    await appendTallPageContentBeforeActionBar(page, 'exam-question-filler');
+    await expectBottomActionBarBelowFold(page);
+
+    await scrollPageToBottom(page);
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    await expectFocusedLocatorInViewport(getActiveQuestionPanel(page));
+    await expect(page.getByText('Question 2 of 2')).toBeVisible();
+
+    await appendTallPageContentBeforeActionBar(page, 'exam-question-filler');
+    await scrollPageToBottom(page);
+    await page.getByRole('button', { name: 'Previous' }).click();
+
+    await expectFocusedLocatorInViewport(getActiveQuestionPanel(page));
+    await expect(page.getByText('Question 1 of 2')).toBeVisible();
+  });
+
+  test('returns to a sensible question-start position when navigating away and back', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await signInWithClerkPassword(page);
+    await ensureSubscribed(page);
+
+    await startSession(page, 'exam', 2);
+    await appendTallPageContentBeforeActionBar(page, 'history-scroll-filler');
+    await scrollPageToBottom(page);
+
+    const scrollBeforeLeaving = await page.evaluate(() => window.scrollY);
+    expect(scrollBeforeLeaving).toBeGreaterThan(0);
+
+    await page.getByRole('link', { name: 'Dashboard' }).click();
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    await page.goBack();
+    await expect(page).toHaveURL(/\/app\/practice\/[^/]+$/, {
+      timeout: 30_000,
+    });
+    await expect(
+      page.getByRole('heading', { name: 'Exam Session' }),
+    ).toBeVisible({ timeout: 30_000 });
+    const viewport = page.viewportSize();
+    expect(viewport).not.toBeNull();
+    if (!viewport) {
+      throw new Error('Expected viewport dimensions');
+    }
+
+    await expect
+      .poll(() => page.evaluate(() => Math.round(window.scrollY)))
+      .toBeLessThanOrEqual(viewport.height);
+    await expect(page.getByText('Question 1 of 2')).toBeVisible();
+  });
+
+  test('resets the post-exam review viewport after navigating between reviewed questions', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await signInWithClerkPassword(page);
+    await ensureSubscribed(page);
+
+    await startSession(page, 'exam', 2);
+    await selectChoiceByLabel(page, 'A');
+    await page.getByRole('button', { name: 'Next' }).click();
+    await selectChoiceByLabel(page, 'A');
     await expect(
       page.getByRole('button', { name: 'Review & Submit' }),
     ).toBeVisible();
@@ -221,14 +331,15 @@ test.describe('practice', () => {
       page.getByText('Review each question with detailed feedback.'),
     ).toBeVisible({ timeout: 30_000 });
 
-    await appendTallScrollRegionContent(
-      page,
-      'post-exam-sticky-action-bar-filler',
+    await expectNoStickyScrollRegion(page);
+    await appendTallPageContentBeforeActionBar(page, 'post-exam-review-filler');
+    await expectBottomActionBarBelowFold(page);
+
+    await scrollPageToBottom(page);
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    await expectFocusedLocatorInViewport(
+      page.getByRole('region', { name: 'Question 2 of 2' }),
     );
-    await expectBottomActionBarInViewport(page);
-    await expect(
-      page.getByRole('button', { name: 'Finish review' }),
-    ).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Bookmark' })).toBeVisible();
   });
 });

@@ -236,6 +236,30 @@ describe('PostExamReviewView', () => {
     expect(getReviewActionLabels(doc)).toEqual(['Finish review', 'Bookmark']);
   });
 
+  it('renders the review action bar in the document-flow content stack without sticky shell markers', () => {
+    const doc = renderView();
+    const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
+    const reviewPanel = doc.querySelector('#practice-question-panel');
+
+    expect(
+      doc.querySelector('[data-testid="sticky-action-bar-layout"]'),
+    ).toBeNull();
+    expect(
+      doc.querySelector('[data-testid="sticky-action-bar-scroll-region"]'),
+    ).toBeNull();
+    expect(doc.querySelector('[data-testid="sticky-action-bar"]')).toBeNull();
+    expect(actionBar).not.toBeNull();
+
+    if (!actionBar || !reviewPanel) {
+      throw new Error('Expected review panel and action bar');
+    }
+
+    expect(
+      reviewPanel.compareDocumentPosition(actionBar) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
   it('does not render the bookmark toggle for unavailable questions', () => {
     const doc = renderView({
       row: createReviewRow({

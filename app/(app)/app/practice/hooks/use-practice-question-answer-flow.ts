@@ -29,7 +29,7 @@ export type UsePracticeQuestionAnswerFlowOutput = {
   loadState: LoadState;
   isPending: boolean;
   canSubmit: boolean;
-  questionAreaRef: React.RefObject<HTMLDivElement | null>;
+  questionAreaRef: React.RefObject<HTMLElement | null>;
   onTryAgain: () => void;
   onSubmit: () => Promise<void>;
   onSelectChoice: (choiceId: string) => void;
@@ -83,7 +83,7 @@ export function usePracticeQuestionAnswerFlow(
     canSubmit,
     onSelectChoice,
   } = useQuestionFlowCore({ isMounted: input.isMounted });
-  const questionAreaRef = useRef<HTMLDivElement | null>(null);
+  const questionAreaRef = useRef<HTMLElement | null>(null);
   const pendingFocusAfterError = useRef(false);
 
   const onTryAgain = useMemo(

@@ -1,4 +1,5 @@
-import { expect, test } from 'vitest';
+import { useState } from 'react';
+import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { PostExamReviewView } from './post-exam-review-view';
 import {
@@ -38,7 +39,9 @@ function createTallMarkdown(label: string, paragraphCount: number) {
   ).join('\n\n');
 }
 
-function renderView(currentQuestionId: string) {
+function InteractiveReviewHarness() {
+  const [currentQuestionId, setCurrentQuestionId] = useState('question-1');
+
   return (
     <PostExamReviewView
       summary={summary}
@@ -48,27 +51,37 @@ function renderView(currentQuestionId: string) {
       bookmarkStatus="idle"
       isBookmarked={false}
       onToggleBookmark={() => undefined}
-      onNavigateQuestion={() => undefined}
+      onNavigateQuestion={setCurrentQuestionId}
       onViewSummary={() => undefined}
     />
   );
 }
 
-test('focuses the review panel on mount and after question navigation rerenders', async () => {
-  const screen = await render(renderView('question-1'));
+test('focuses the review panel on mount and scrolls it into view after navigation', async () => {
+  const scrollIntoViewSpy = vi
+    .spyOn(Element.prototype, 'scrollIntoView')
+    .mockImplementation(() => undefined);
 
-  await expect
-    .element(screen.getByRole('region', { name: 'Question 1 of 2' }))
-    .toHaveFocus();
+  try {
+    const screen = await render(<InteractiveReviewHarness />);
 
-  await screen.rerender(renderView('question-2'));
+    await expect
+      .element(screen.getByRole('region', { name: 'Question 1 of 2' }))
+      .toHaveFocus();
+    expect(scrollIntoViewSpy).not.toHaveBeenCalled();
 
-  await expect
-    .element(screen.getByRole('region', { name: 'Question 2 of 2' }))
-    .toHaveFocus();
+    await screen.getByRole('button', { name: 'Next' }).click();
+
+    await expect
+      .element(screen.getByRole('region', { name: 'Question 2 of 2' }))
+      .toHaveFocus();
+    expect(scrollIntoViewSpy).toHaveBeenCalled();
+  } finally {
+    scrollIntoViewSpy.mockRestore();
+  }
 });
 
-test('renders the shared sticky action-bar markers on tall post-exam review content', async () => {
+test('renders the post-exam review bottom action bar without sticky shell markers', async () => {
   const tallReview = createReview([
     createReviewRow({
       stemMd: createTallMarkdown('Review stem', 18),
@@ -122,13 +135,13 @@ test('renders the shared sticky action-bar markers on tall post-exam review cont
 
   await expect
     .element(screen.getByTestId('sticky-action-bar-layout'))
-    .toBeInTheDocument();
+    .not.toBeInTheDocument();
   await expect
     .element(screen.getByTestId('sticky-action-bar-scroll-region'))
-    .toBeInTheDocument();
+    .not.toBeInTheDocument();
   await expect
     .element(screen.getByTestId('sticky-action-bar'))
-    .toBeInTheDocument();
+    .not.toBeInTheDocument();
   await expect
     .element(screen.getByTestId('bottom-action-bar'))
     .toBeInTheDocument();

@@ -120,7 +120,7 @@ describe('PracticeView', () => {
     const below = doc.querySelector('[data-testid="below-heading-content"]');
     expect(below?.textContent).toBe('Below');
 
-    const questionArea = doc.querySelector('div[tabindex="-1"]');
+    const questionArea = doc.querySelector('section[aria-labelledby]');
     expect(questionArea).not.toBeNull();
 
     if (!heading) throw new Error('Expected heading');
@@ -201,6 +201,47 @@ describe('PracticeView', () => {
     const progress = doc.querySelector('p[aria-live="polite"]');
     expect(progress).not.toBeNull();
     expect(progress?.textContent).toContain('Question 2 of 10');
+  });
+
+  it('exposes the focused question panel as a labeled region', () => {
+    const question = createNextQuestion({
+      questionId: 'question-1',
+      slug: 'question-1',
+      stemMd: 'Stem',
+      difficulty: 'easy',
+    });
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        title="Exam Session"
+        description="Question 2 of 10 — Explanations shown after you submit the exam."
+        questionPanelId="question-panel"
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const questionPanel = doc.getElementById('question-panel');
+    const progress = doc.querySelector('p[aria-live="polite"]');
+
+    expect(questionPanel).not.toBeNull();
+    expect(progress).not.toBeNull();
+    expect(progress?.id).toBeTruthy();
+    expect(questionPanel?.tagName).toBe('SECTION');
+    expect(questionPanel?.getAttribute('aria-labelledby')).toBe(progress?.id);
   });
 
   it('exposes toggle state via aria-pressed for bookmark button', () => {
@@ -685,6 +726,61 @@ describe('PracticeView', () => {
     );
 
     expect(labels).toEqual(['Previous', 'Next', 'Bookmark']);
+  });
+
+  it('renders the bottom action bar in the document-flow content stack without sticky shell markers', () => {
+    const question = createQuestionProps();
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 0,
+          total: 2,
+          isMarkedForReview: false,
+        }}
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onEndSession={() => undefined}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onToggleMarkForReview={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
+    const questionPanel = doc.querySelector('section[aria-labelledby]');
+
+    expect(
+      doc.querySelector('[data-testid="sticky-action-bar-layout"]'),
+    ).toBeNull();
+    expect(
+      doc.querySelector('[data-testid="sticky-action-bar-scroll-region"]'),
+    ).toBeNull();
+    expect(doc.querySelector('[data-testid="sticky-action-bar"]')).toBeNull();
+    expect(actionBar).not.toBeNull();
+
+    if (!actionBar || !questionPanel) {
+      throw new Error('Expected question panel and action bar');
+    }
+
+    expect(questionPanel.textContent).toContain(question.stemMd);
+    expect(
+      questionPanel.compareDocumentPosition(actionBar) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
   it('renders exam action bar with Next and Mark for review and no Submit on the first question', () => {
@@ -1256,10 +1352,13 @@ describe('PracticeView', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const questionPanel = doc.querySelector('div[tabindex="-1"]');
+    const questionPanel = doc.querySelector('section[aria-labelledby]');
 
     expect(questionPanel).not.toBeNull();
     expect(questionPanel?.getAttribute('id')).toBe('practice-question-panel');
+    expect(questionPanel?.getAttribute('data-testid')).toBe(
+      'active-question-panel',
+    );
   });
 });
 

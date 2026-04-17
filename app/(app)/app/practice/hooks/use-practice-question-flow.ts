@@ -28,7 +28,7 @@ export type UsePracticeQuestionFlowOutput = {
   bookmarkMessageVersion: number;
   canSubmit: boolean;
   isBookmarked: boolean;
-  questionAreaRef: React.RefObject<HTMLDivElement | null>;
+  questionAreaRef: React.RefObject<HTMLElement | null>;
   onTryAgain: () => void;
   onRetryBookmarks: () => void;
   onToggleBookmark: () => Promise<void>;

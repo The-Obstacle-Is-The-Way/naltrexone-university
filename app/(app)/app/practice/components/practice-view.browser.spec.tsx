@@ -119,7 +119,7 @@ test('supports exam controls and question interactions', async () => {
   expect(onNextQuestion).toHaveBeenCalledTimes(1);
 });
 
-test('renders the shared sticky action-bar markers for exam questions', async () => {
+test('renders the exam bottom action bar without sticky shell markers', async () => {
   const screen = await render(
     <PracticeView
       sessionInfo={{
@@ -163,13 +163,13 @@ test('renders the shared sticky action-bar markers for exam questions', async ()
 
   await expect
     .element(screen.getByTestId('sticky-action-bar-layout'))
-    .toBeInTheDocument();
+    .not.toBeInTheDocument();
   await expect
     .element(screen.getByTestId('sticky-action-bar-scroll-region'))
-    .toBeInTheDocument();
+    .not.toBeInTheDocument();
   await expect
     .element(screen.getByTestId('sticky-action-bar'))
-    .toBeInTheDocument();
+    .not.toBeInTheDocument();
   await expect
     .element(screen.getByTestId('bottom-action-bar'))
     .toBeInTheDocument();
@@ -181,7 +181,7 @@ test('renders the shared sticky action-bar markers for exam questions', async ()
     .toBeVisible();
 });
 
-test('renders the shared sticky action-bar markers after tutor feedback renders', async () => {
+test('renders the tutor feedback bottom action bar without sticky shell markers', async () => {
   const screen = await render(
     <PracticeView
       loadState={{ status: 'ready' }}
@@ -238,13 +238,13 @@ test('renders the shared sticky action-bar markers after tutor feedback renders'
 
   await expect
     .element(screen.getByTestId('sticky-action-bar-layout'))
-    .toBeInTheDocument();
+    .not.toBeInTheDocument();
   await expect
     .element(screen.getByTestId('sticky-action-bar-scroll-region'))
-    .toBeInTheDocument();
+    .not.toBeInTheDocument();
   await expect
     .element(screen.getByTestId('sticky-action-bar'))
-    .toBeInTheDocument();
+    .not.toBeInTheDocument();
   await expect
     .element(screen.getByTestId('bottom-action-bar'))
     .toBeInTheDocument();
