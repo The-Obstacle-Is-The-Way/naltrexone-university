@@ -1,7 +1,7 @@
 ---
 id: DEBT-363
 title: Exam shell scroll model + dual-CTA disambiguation
-status: Open (Concern 2 pending; Concern 1 shipped)
+status: Open (Concern 2 decision-locked 2026-04-17, implementation-ready; Concern 1 shipped in PR #280)
 priority: P2
 created: 2026-04-14
 area: practice / exam
@@ -336,11 +336,21 @@ DEBT-362 shipped yesterday (the chevron affordance on the exam-review three-card
 
 | # | Decision | Status |
 |---|----------|--------|
-| 1 | Which dual-CTA option? (2A / 2B / 2C / 2D / 2E) | **Open** |
-| 2 | Does the DEBT-360 decision log need a correction note, or do we leave the archive untouched and let DEBT-363 carry the correction? | **Open** |
-| 3 | Does Concern 2 ship in the same PR as the scroll-shell change, or stay split? | **Open** |
+| 1 | Which dual-CTA option? (2A / 2B / 2C / 2D / 2E) | **Locked 2026-04-17 → Option 2A (drop `Finish exam` header button in exam mode)** |
+| 2 | Does the DEBT-360 decision log need a correction note, or do we leave the archive untouched and let DEBT-363 carry the correction? | **Open — not blocking implementation** |
+| 3 | Does Concern 2 ship in the same PR as the scroll-shell change, or stay split? | **Resolved — Concern 1 already shipped in PR #280; Concern 2 ships independently** |
 
-**Concern 1 is now implementation-ready.** Concern 2 remains in decision state. Do not block the scroll-shell implementation on a final dual-CTA decision unless the team explicitly wants both changes bundled.
+**Concern 1 shipped in PR #280.** Concern 2 is now decision-locked and implementation-ready.
+
+### Concern 2 locked decision — Option 2A (drop `Finish exam` header)
+
+- Remove the top-right `Finish exam` button from exam mode question-taking (`PracticeView`).
+- Keep the footer `Review & Submit` label on the last exam question as the single visible path into `ExamReviewView`.
+- No new handler needed — this is a visibility/layout change only.
+- No early-exit behavior added (Option 2B was explicitly rejected because it would require a new controller path and product decision on whether early exit bypasses the review screen).
+- The global app nav (Dashboard, Practice, Quick Practice, History, Bookmarks, Billing) remains available for students who need to leave mid-exam; a dedicated "abandon exam" affordance is not introduced here.
+
+**Rationale:** Product-design review on 2026-04-17 agreed: two differently-labeled controls that both route to `onEndSession` and land on the same `ExamReviewView` is the worst pattern for dual CTAs (see "Research: dual CTAs" above). Option 2A is the smallest coherent change — it eliminates the collision without inventing a new behavior path, preserves the existing routing, and keeps footer chrome undisturbed.
 
 ---
 
@@ -376,6 +386,7 @@ An independent design-critique pass surfaced several adjacent UX concerns. They 
 | 2026-04-15 | Corrected DEBT-363 after an independent code audit | Fixed the stale `practice-view.tsx:233` citation, narrowed the scroll-shell claim so it no longer mis-scopes `ExamReviewView`, replaced the unsupportable DEBT-360 misdiagnosis assertion with an evidence-bounded correction, and rewrote the dual-CTA section around the actual shared `onEndSession` semantics. |
 | 2026-04-15 | Locked Concern 1 to the pre-DEBT-360 document-flow footer pattern | Product-design review converged on plain document flow as the better first move: reclaim bottom-edge breathing room, match the read-then-decide interaction, and preserve the cheaper 1A→1B fallback path. Kept the rationale at the first-principles level rather than encoding unverified pixel arithmetic or vendor-specific claims. |
 | 2026-04-15 | Shipped Concern 1 in [PR #280](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/280) | Replaced the bounded practice/post-exam shell with document-flow action bars, restored question-start focus/scroll behavior on navigation, updated browser/E2E coverage to the new contract, and deleted the now-unused sticky shell primitive. |
+| 2026-04-17 | Locked Concern 2 → Option 2A (drop `Finish exam` header button) | Independent Chrome-agent UX audit on 2026-04-17 confirmed Finding A (both CTAs visible simultaneously on Q3). Option 2A is smallest coherent change — removes the collision without inventing a new behavior path. No early-exit affordance added; global app nav remains available for mid-exam navigation. |
 
 ---
 

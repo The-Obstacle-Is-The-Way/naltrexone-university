@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-14
+**Last Updated:** 2026-04-17
 
 ---
 
@@ -21,7 +21,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
 | [DEBT-363](./debt-363-exam-shell-scroll-model-and-dual-cta.md) | Exam shell scroll model + dual-CTA disambiguation — decision doc reassessing the DEBT-360 bounded-scroll shell and the `Finish exam` / `Review & Submit` label collision | P2 | — |
-**Next Debt ID:** DEBT-364
+| [DEBT-364](./debt-364-post-exam-review-reentry-cursor-persistence.md) | Post-exam review re-entry cursor persistence — `Review Answers` from Session Summary lands on the last-viewed question, making the `Next` button appear "missing" when re-entry follows a `Finish review` exit | P2 | — |
+| [DEBT-365](./debt-365-exam-flow-affordance-and-label-consistency.md) | Exam flow affordance and label consistency pass — six concerns from an independent UX audit (cross-stage verb inconsistency, `Mark for review` vs `Bookmark` clarity, footer grouping, Session Summary row affordance trap, Summary ↔ review weight asymmetry, top-right chrome inconsistency) + 1 scroll-reset verification item | P2 | — |
+**Next Debt ID:** DEBT-366
 
 ---
 
