@@ -822,7 +822,9 @@ test('scrolls the question panel into view and restores focus after next and pre
     const screen = await renderQuestionNavigationHarness();
 
     const getQuestionPanel = () =>
-      document.querySelector<HTMLElement>('section[aria-labelledby]');
+      document.querySelector<HTMLElement>(
+        '[data-testid="active-question-panel"]',
+      );
 
     await expect.element(screen.getByText('Stem 1')).toBeVisible();
     expect(scrollIntoViewSpy).not.toHaveBeenCalled();
@@ -914,7 +916,9 @@ test('restores the question panel when next-question navigation enters loading b
 
     const screen = await render(<Harness />);
     const getQuestionPanel = () =>
-      document.querySelector<HTMLElement>('section[aria-labelledby]');
+      document.querySelector<HTMLElement>(
+        '[data-testid="active-question-panel"]',
+      );
 
     await expect.element(screen.getByText('Stem 1')).toBeVisible();
     await screen.getByRole('button', { name: 'Next' }).click();
@@ -990,7 +994,9 @@ test('restores the question panel when navigation fails before the question id c
 
     const screen = await render(<Harness />);
     const getQuestionPanel = () =>
-      document.querySelector<HTMLElement>('section[aria-labelledby]');
+      document.querySelector<HTMLElement>(
+        '[data-testid="active-question-panel"]',
+      );
 
     await expect.element(screen.getByText('Stem 1')).toBeVisible();
     await screen.getByRole('button', { name: 'Next' }).click();
@@ -1067,7 +1073,9 @@ test('restores the question panel when retrying from an in-panel load error', as
 
     const screen = await render(<Harness />);
     const getQuestionPanel = () =>
-      document.querySelector<HTMLElement>('section[aria-labelledby]');
+      document.querySelector<HTMLElement>(
+        '[data-testid="active-question-panel"]',
+      );
 
     await expect
       .element(screen.getByText('Failed to reload the question.'))

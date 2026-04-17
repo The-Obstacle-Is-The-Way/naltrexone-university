@@ -51,7 +51,7 @@ Question displayed
 
 **Q1 (no Previous):**
 ```text
-[spacer]  [ Submit / Next ]  [ Bookmark ]
+[ Submit / Next ]  [ Bookmark ]
 ```
 
 **Contract rules:**

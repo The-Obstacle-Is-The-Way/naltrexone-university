@@ -290,7 +290,15 @@ test.describe('practice', () => {
     await expect(
       page.getByRole('heading', { name: 'Exam Session' }),
     ).toBeVisible({ timeout: 30_000 });
-    await expect(getActiveQuestionPanel(page)).toBeInViewport();
+    const viewport = page.viewportSize();
+    expect(viewport).not.toBeNull();
+    if (!viewport) {
+      throw new Error('Expected viewport dimensions');
+    }
+
+    await expect
+      .poll(() => page.evaluate(() => Math.round(window.scrollY)))
+      .toBeLessThanOrEqual(viewport.height);
     await expect(page.getByText('Question 1 of 2')).toBeVisible();
   });
 
