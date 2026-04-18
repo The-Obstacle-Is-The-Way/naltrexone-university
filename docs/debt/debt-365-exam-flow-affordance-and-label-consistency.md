@@ -12,7 +12,7 @@ discovered_via: Independent Chrome-agent UX audit on 2026-04-17 (exam mode, 3 qu
 # DEBT-365: Exam flow affordance and label consistency pass
 
 **Priority:** P2
-**Status:** Open — decisions are locked. Three concerns are implementation-ready now; Concern 4 verification is complete and narrows to affordance weight rather than missing interactivity.
+**Status:** Open — decisions are locked. Two concerns are implementation-ready now; Concern 4 verification is complete and narrows to affordance weight rather than missing interactivity, and Concern 6 is a documented intentional asymmetry with no code change.
 **Created:** 2026-04-17
 **Affected surfaces:** `PracticeView` (exam mode), `ExamReviewView`, `PostExamReviewView`, `SessionSummaryView`
 **Adjacent unchanged surface:** tutor mode (out of scope for this pass)
@@ -263,7 +263,7 @@ Cursor semantics for Summary ↔ review re-entry. Independent of DEBT-365 but to
 | 6 | Concern 6 top-right chrome | 6A / 6B / 6C | **Locked 2026-04-17 → 6C (keep current asymmetry as intentional).** Post-exam review needs a top-of-content escape because its content is long and document-flow; Session Summary does not because its primary CTA is correctly bottom-anchored on a short terminal screen. Different task shapes justify different chrome. Originally leaning 6A; refined to 6C after Codex review surfaced that dropping the top-right `View Summary` would break the always-visible exit guarantee on long post-exam content. |
 | 7 | Verification item — scroll reset | file new concern if reproducible | **Open — needs manual verification.** PR #280 shipped the fix with E2E coverage; audit observation may be a viewport artifact. Manual walk of the dev deployment must confirm before filing as DEBT-365 Concern 7. If working: no debt. If broken: file with a failing E2E test. |
 
-**Concern status:** 3 concerns ship-now (3A, 5A, 6A), 2 deferred (1 and 2), 1 verification-resolved (4), 1 verification-only (7 — no debt unless reproducible).
+**Concern status:** 2 concerns ship-now (3A, 5A refined), 2 deferred (1 and 2), 1 verification-resolved no-op (4), 1 documented intentional asymmetry (6C), 1 verification-only (7 — no debt unless reproducible).
 
 ---
 
@@ -276,7 +276,7 @@ Cursor semantics for Summary ↔ review re-entry. Independent of DEBT-365 but to
 | 2026-04-17 | Flagged scroll-reset as verification-first | PR #280 already shipped the fix and E2E covers it; the audit observation may be a viewport artifact. No new debt until confirmed. |
 | 2026-04-17 | Verified Concern 4 against the current branch | `SessionSummaryView` still routes available rows through `SessionBreakdownList`, which renders interactive button rows when `onOpenQuestion` is supplied. The audit misread the current state; the remaining question is affordance weight, not missing interactivity. |
 | 2026-04-17 | Refined Concerns 5 and 6 after independent Codex review | Codex flagged that moving `View Summary` into the document-flow footer (original 5A / 6A) would push the escape-to-summary affordance below the fold on long post-exam review content, trading one problem for a worse one. Refined: Concern 5 → promote weight in the existing top-right position (outline style); Concern 6 → keep current top-right asymmetry as intentional given task-shape differences. Always-visible exit beats chrome symmetry. |
-| 2026-04-17 | Locked Concerns 1, 3, 5, 6; deferred 2; verify-first 4; verification-only 7 | Product-design pass after independent Chrome-agent UX audit. Decisions favor: shipping the obvious consistency wins (3A, 5A, 6A), deferring the ambiguous semantic work (`Mark for review` vs `Bookmark` needs product naming call), deferring Concern 1 until DEBT-363 Concern 2A lands, and requiring verification before filing the scroll-reset as shipped debt (Concern 7). Keeps scope tight and avoids pre-emptive churn. |
+| 2026-04-17 | Locked Concerns 1, 3, 5, 6; deferred 2; verification-resolved 4; verification-only 7 | Product-design pass after independent Chrome-agent UX audit, later refined after Codex review. Decisions favor: shipping the obvious consistency wins (3A, 5A refined), deferring the ambiguous semantic work (`Mark for review` vs `Bookmark` needs product naming call), deferring Concern 1 until DEBT-363 Concern 2A lands, documenting Concern 6's top-right asymmetry as intentional, and requiring manual reproduction before filing the scroll-reset as shipped debt (Concern 7). Keeps scope tight and avoids pre-emptive churn. |
 
 ---
 
