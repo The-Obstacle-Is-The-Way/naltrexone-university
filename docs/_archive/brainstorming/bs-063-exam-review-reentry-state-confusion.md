@@ -3,8 +3,8 @@
 **Date:** 2026-04-11
 **Triggered by:** User walkthrough of the exam flow end-to-end. After completing an exam, the initial post-exam review and the summary-launched re-entry review can expose different visible button states because they reopen the same review surface at different cursor positions. The user described it as "we're getting crossed here" and suspected the review state machine was mixing states.
 **Scope:** Audit the current Summary <-> Post-exam review loop inside `/app/practice/[sessionId]`, trace the actual cursor/label behavior through the shipped hooks, and document where the current implementation creates product confusion.
-**Related:** [BS-061](./bs-061-review-surface-divergence-audit.md), [DEBT-350](../_archive/debt/debt-350-exam-results-session-continuity.md), [DEBT-359](../_archive/debt/debt-359-session-summary-cta-labels.md), [DEBT-360](../_archive/debt/debt-360-action-bar-below-fold.md), [DEBT-361](../_archive/debt/debt-361-exam-last-question-next-label.md), [DEBT-362](../_archive/debt/debt-362-review-submit-screen-affordances.md)
-**Promoted to:** [DEBT-364](../debt/debt-364-post-exam-review-reentry-cursor-persistence.md) on 2026-04-17
+**Related:** [BS-061](./bs-061-review-surface-divergence-audit.md), [DEBT-350](../debt/debt-350-exam-results-session-continuity.md), [DEBT-359](../debt/debt-359-session-summary-cta-labels.md), [DEBT-360](../debt/debt-360-action-bar-below-fold.md), [DEBT-361](../debt/debt-361-exam-last-question-next-label.md), [DEBT-362](../debt/debt-362-review-submit-screen-affordances.md)
+**Promoted to:** [DEBT-364](../../debt/debt-364-post-exam-review-reentry-cursor-persistence.md) on 2026-04-17
 
 ---
 
@@ -159,7 +159,7 @@ That is not automatically a design failure, but it does mean cursor semantics an
 
 - The flow is functionally recoverable, but it is easy to misread.
 - The same screen appears to behave differently depending on where the user left it.
-- This compounds with [DEBT-359](../_archive/debt/debt-359-session-summary-cta-labels.md): ambiguous summary CTAs plus sticky cursor semantics make the whole post-exam flow feel less intentional than it is.
+- This compounds with [DEBT-359](../debt/debt-359-session-summary-cta-labels.md): ambiguous summary CTAs plus sticky cursor semantics make the whole post-exam flow feel less intentional than it is.
 
 ---
 
@@ -167,7 +167,7 @@ That is not automatically a design failure, but it does mean cursor semantics an
 
 ### Fix 1: Make the contract explicit and keep it current
 
-Section 5 of [interaction-contracts.md](../practice-engine/interaction-contracts.md) now reflects the shipped behavior. Keep that doc current first, then propose product changes as deltas instead of writing intended behavior into the current-implementation contract.
+Section 5 of [interaction-contracts.md](../../practice-engine/interaction-contracts.md) now reflects the shipped behavior. Keep that doc current first, then propose product changes as deltas instead of writing intended behavior into the current-implementation contract.
 
 ### Fix 2: Reset untargeted re-entry only if product wants a fresh pass
 

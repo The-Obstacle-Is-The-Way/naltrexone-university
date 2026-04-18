@@ -75,7 +75,7 @@ This debt item is scoped to the completed Session Summary surface only.
 |------|-----|
 | `docs/practice-engine/interaction-contracts.md` | Describes the current summary CTA copy |
 | `docs/practice-engine/question-rendering-architecture.md` | Still lists the current summary CTA copy in the architecture reference |
-| `docs/brainstorming/bs-063-exam-review-reentry-state-confusion.md` | Discusses the Summary <-> Review loop in the current labels |
+| `docs/_archive/brainstorming/bs-063-exam-review-reentry-state-confusion.md` | Discusses the Summary <-> Review loop in the current labels (archived; promoted to DEBT-364) |
 
 ---
 

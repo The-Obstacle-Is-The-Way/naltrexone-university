@@ -3,7 +3,7 @@
 **Priority:** P3
 **Created:** 2026-04-07
 **Status:** Resolved (PR #274)
-**Source:** [BS-061 Review Surface Divergence Audit](../../brainstorming/bs-061-review-surface-divergence-audit.md)
+**Source:** [BS-061 Review Surface Divergence Audit](../brainstorming/bs-061-review-surface-divergence-audit.md)
 **Related:** [DEBT-326](./debt-326-post-exam-review-focus-management.md), [post-exam-review-view.tsx](../../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx)
 
 ## Resolution

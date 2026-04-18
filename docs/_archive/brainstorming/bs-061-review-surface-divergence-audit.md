@@ -3,7 +3,7 @@
 **Date:** 2026-04-06
 **Triggered by:** User walkthrough of the exam flow end-to-end. After submitting an exam, clicking "Review your answers" from the Session Summary leads to a different review experience than the pre-submit review flow, and both differ from the History page's review. The user described it as "sloppified" — subtly different button arrangements, bookmark placement, navigation options, and page headers across three surfaces that should feel like the same experience.
 **Scope:** Audit the exam-flow review surfaces — from pre-submit review through post-exam review, session summary, and the summary "Review your answers" handoff — and catalog where the experience breaks consistency.
-**Related:** [BS-059](./bs-059-practice-session-action-bar-button-arrangement.md) (standalone question-page action bar), [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) (bookmark icon toggle), [DEBT-350](../_archive/debt/debt-350-exam-results-session-continuity.md) (session-orchestrator continuity), [DEBT-351](../_archive/debt/debt-351-exam-review-submit-affordance-cleanup.md) (Review & Submit row affordance cleanup), [DEBT-352](../_archive/debt/debt-352-post-exam-review-focus-ring-flash.md) (post-exam focus-ring flash), [DEBT-330 (archived)](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md) (post-exam review bookmark placement, resolved), [BS-019 (archived)](../_archive/brainstorming/bs-019-action-bar-label-and-ordering-consistency.md) (action bar label consistency, resolved), [BS-006 (archived)](../_archive/brainstorming/bs-006-review-consistency-audit.md) (earlier review consistency audit, resolved)
+**Related:** [BS-059](../../brainstorming/bs-059-practice-session-action-bar-button-arrangement.md) (standalone question-page action bar), [BS-052](../../brainstorming/bs-052-bookmark-icon-toggle-replacement.md) (bookmark icon toggle), [DEBT-350](../debt/debt-350-exam-results-session-continuity.md) (session-orchestrator continuity), [DEBT-351](../debt/debt-351-exam-review-submit-affordance-cleanup.md) (Review & Submit row affordance cleanup), [DEBT-352](../debt/debt-352-post-exam-review-focus-ring-flash.md) (post-exam focus-ring flash), [DEBT-330 (archived)](../debt/debt-330-review-action-bar-bookmark-placement.md) (post-exam review bookmark placement, resolved), [BS-019 (archived)](./bs-019-action-bar-label-and-ordering-consistency.md) (action bar label consistency, resolved), [BS-006 (archived)](./bs-006-review-consistency-audit.md) (earlier review consistency audit, resolved)
 
 **Boundary with BS-059:** BS-059 owns the standalone `question-page-client.tsx` action bar layout question (button count, grouping, bookmark placement). Fixes to `question-page-client.tsx`'s action bar should be tracked in BS-059. BS-061 owns the cross-surface exam-flow divergence: why `PostExamReviewView` and `question-page-client.tsx` feel different when the user transitions from post-exam review to summary review.
 
@@ -223,10 +223,10 @@ This keeps the registry lightweight while still making cross-surface drift audit
 
 ## Implementation Tracking
 
-- [DEBT-350](../_archive/debt/debt-350-exam-results-session-continuity.md) owns Direction C as one inseparable change set: results-substage state, summary CTA re-entry, and summary breakdown callback mode.
-- [DEBT-351](../_archive/debt/debt-351-exam-review-submit-affordance-cleanup.md) owns Direction E.
-- [DEBT-352](../_archive/debt/debt-352-post-exam-review-focus-ring-flash.md) owns D7.
-- Direction A remains in [BS-059](./bs-059-practice-session-action-bar-button-arrangement.md). It is not promoted here because the standalone `question-page-client.tsx` action-bar contract across its multiple states is still broader than the now-locked BS-061 exam-flow scope.
+- [DEBT-350](../debt/debt-350-exam-results-session-continuity.md) owns Direction C as one inseparable change set: results-substage state, summary CTA re-entry, and summary breakdown callback mode.
+- [DEBT-351](../debt/debt-351-exam-review-submit-affordance-cleanup.md) owns Direction E.
+- [DEBT-352](../debt/debt-352-post-exam-review-focus-ring-flash.md) owns D7.
+- Direction A remains in [BS-059](../../brainstorming/bs-059-practice-session-action-bar-button-arrangement.md). It is not promoted here because the standalone `question-page-client.tsx` action-bar contract across its multiple states is still broader than the now-locked BS-061 exam-flow scope.
 
 ---
 

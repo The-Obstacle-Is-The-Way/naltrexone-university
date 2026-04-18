@@ -5,7 +5,7 @@ status: Open (decision-locked 2026-04-17, implementation-ready)
 priority: P2
 created: 2026-04-17
 area: practice / exam / post-exam review
-promoted_from: docs/brainstorming/bs-063-exam-review-reentry-state-confusion.md
+promoted_from: docs/_archive/brainstorming/bs-063-exam-review-reentry-state-confusion.md
 related: DEBT-350, DEBT-359, DEBT-316, DEBT-326, DEBT-363, DEBT-365
 ---
 
@@ -160,7 +160,7 @@ Clicking a pill calls `onNavigatePostExamReviewQuestion(questionId)` (`use-pract
 
 ## Is it in the user's head?
 
-**No.** The behavior is real, reproducible, and traceable to specific lines of code. It has been shipped since DEBT-350 (2026-04-08) and was documented in `docs/brainstorming/bs-063-exam-review-reentry-state-confusion.md` on 2026-04-11. This debt item promotes that brainstorm to a formal decision doc so it can be scheduled and shipped.
+**No.** The behavior is real, reproducible, and traceable to specific lines of code. It has been shipped since DEBT-350 (2026-04-08) and was documented in `docs/_archive/brainstorming/bs-063-exam-review-reentry-state-confusion.md` on 2026-04-11. This debt item promotes that brainstorm to a formal decision doc so it can be scheduled and shipped.
 
 ---
 
@@ -211,7 +211,7 @@ Yes, this is a behavior change. Users who relied on "resume where I left off" fr
 - `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-exam-results-continuity.test.tsx` — add targeted unit coverage for "untargeted re-entry resets to first available row" and "targeted (with questionId) re-entry still honors the requested row."
 - `tests/e2e/practice.spec.ts` — add an E2E scenario that walks Submit → Finish review → Review Answers and asserts the footer shows `Next` (not `Finish review`) on re-entry, confirming Q1 cursor.
 - `docs/practice-engine/interaction-contracts.md` — section on re-entry behavior needs updating so the shipped contract matches the new Q1-reset semantics.
-- `docs/brainstorming/bs-063-exam-review-reentry-state-confusion.md` — add a pointer to DEBT-364 as the promoted debt item.
+- `docs/_archive/brainstorming/bs-063-exam-review-reentry-state-confusion.md` — add a pointer to DEBT-364 as the promoted debt item.
 
 ---
 
@@ -301,7 +301,7 @@ Concrete implementation shape:
 
 ## Sources consulted
 
-- `docs/brainstorming/bs-063-exam-review-reentry-state-confusion.md` (2026-04-11) — original audit
+- `docs/_archive/brainstorming/bs-063-exam-review-reentry-state-confusion.md` (2026-04-11) — original audit
 - `docs/practice-engine/interaction-contracts.md:282` — shipped re-entry contract
 - `docs/_archive/debt/debt-350-exam-results-session-continuity.md` — origin of the Summary ↔ review loop
 - `docs/_archive/debt/debt-316-exam-post-submit-review-flow.md` — origin of the `Review Answers` CTA
