@@ -473,7 +473,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     expect(harness.result.current.postExamReviewCurrentQuestionId).toBe('q2');
   });
 
-  it('re-enters post-exam review without a question id by preserving the current reviewed question', async () => {
+  it('re-enters post-exam review without a question id at the first available row instead of the current reviewed question', async () => {
     finalizeExamAnswersMock.mockResolvedValue(
       ok({
         sessionId: 'session-1',
@@ -528,7 +528,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     await expect
       .poll(() => harness.result.current.examResultsSubstage)
       .toBe('post_exam_review');
-    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe('q2');
+    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe('q1');
     expect(getCompletedSessionQuestionsWithFeedbackMock).toHaveBeenCalledTimes(
       1,
     );
@@ -591,7 +591,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     expect(harness.result.current.postExamReviewCurrentQuestionId).toBe('q2');
   });
 
-  it('falls back to the first available reviewed question when the persisted question is unavailable', async () => {
+  it('falls back to the first available reviewed question on untargeted re-entry when the current cursor points at an unavailable row', async () => {
     finalizeExamAnswersMock.mockResolvedValue(
       ok({
         sessionId: 'session-1',
@@ -652,7 +652,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
       .toBe('q2');
   });
 
-  it('lazy-hydrates completed feedback when summary re-entry has no preserved post-exam review payload', async () => {
+  it('lazy-hydrates completed feedback to the first available row when summary re-entry has no preserved post-exam review payload', async () => {
     getPracticeSessionReviewMock.mockResolvedValue(
       ok({
         sessionId: 'session-1',

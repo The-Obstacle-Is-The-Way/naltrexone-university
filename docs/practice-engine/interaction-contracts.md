@@ -4,7 +4,7 @@
 > **Scope:** Click-by-click UI contracts for tutor and exam modes — buttons, persistence, locking, navigation, and post-session flows
 > **Related:** [Practice Modes](./practice-modes.md) (lifecycle/data), [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md) (decisions)
 > **Status:** Current implementation. Historical BS-055 rationale remains, but the contracts below now describe shipped behavior; follow-up deltas are tracked separately in debt docs where noted.
-> **Last Updated:** 2026-04-16
+> **Last Updated:** 2026-04-20
 
 ---
 
@@ -278,10 +278,12 @@ Both substages render within the same `/app/practice/[sessionId]` orchestrator. 
 
 | Entry type | Cursor behavior | Rationale |
 |------------|----------------|-----------|
-| Initial (after exam submit) | First available question (Q1) | Fresh review pass — user has never seen feedback |
-| Re-entry via `Review Answers` button | Reuses the last viewed available question when `postExamReviewCurrentQuestionId` is still valid; otherwise falls back to the first available question | `onReenterPostExamReview()` always passes `persistedQuestionId: postExamReviewCurrentQuestionId` on untargeted re-entry |
-| Re-entry via breakdown row click | Lands on the clicked question when available; otherwise falls back to the last viewed available question, then the first available question | `resolvePostExamReviewCurrentQuestionId()` prefers `requestedQuestionId`, then `persistedQuestionId` |
-| Re-entry after page refresh / cold start | First available question after the payload is fetched | The in-memory cursor is gone, so no persisted question ID exists |
+| Initial (after exam submit) | First available question (Q1); if none are available, the first review row | Fresh review pass — user has never seen feedback |
+| Re-entry via `Review Answers` button | First available question; if none are available, the first review row | Untargeted `onReenterPostExamReview()` now clears the persisted cursor so the CTA reopens the review as a fresh pass while the shared resolver keeps the final first-row fallback |
+| Re-entry via breakdown row click | Lands on the clicked question when available; otherwise falls back to the last viewed available question, then the first available question, then the first review row | `resolvePostExamReviewCurrentQuestionId()` prefers `requestedQuestionId`, then `persistedQuestionId` |
+| Re-entry after page refresh / cold start | First available question after the payload is fetched; if none are available, the first review row | The in-memory cursor is gone, so no persisted question ID exists |
+
+The shared cursor resolver order remains: requested available question -> persisted available question -> first available row -> first review row. Untargeted `Review Answers` re-entry changes only by clearing the persisted cursor before resolution.
 
 **Load behavior:**
 
