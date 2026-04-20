@@ -11,6 +11,28 @@ import {
 const { db, sql } = createIntegrationDb();
 const cleanup = createCleanupState();
 
+function createScriptedNow(...timestamps: Date[]) {
+  if (timestamps.length === 0) {
+    return () => {
+      throw new Error('Expected at least one scripted timestamp');
+    };
+  }
+
+  let index = 0;
+
+  return () => {
+    if (index >= timestamps.length) {
+      throw new Error(
+        `Scripted now() exhausted after ${timestamps.length} call(s)`,
+      );
+    }
+
+    const value = timestamps[index];
+    index += 1;
+    return value;
+  };
+}
+
 afterEach(async () => {
   await cleanupAfterEach(db, cleanup);
 });
@@ -20,6 +42,16 @@ afterAll(async () => {
 });
 
 describe('DrizzleUserRepository', () => {
+  it('throws when scripted time is drawn more times than configured', () => {
+    const observedAt = new Date('2026-02-01T00:00:00.000Z');
+    const now = createScriptedNow(observedAt);
+
+    expect(now()).toBe(observedAt);
+    expect(() => now()).toThrowError(
+      'Scripted now() exhausted after 1 call(s)',
+    );
+  });
+
   it('upserts users by clerk id and can find them', async () => {
     const repo = new DrizzleUserRepository(db);
     const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;
@@ -99,7 +131,12 @@ describe('DrizzleUserRepository', () => {
   });
 
   it('updates email when upserting an existing user', async () => {
-    const repo = new DrizzleUserRepository(db);
+    const firstObservedAt = new Date('2026-02-01T00:00:00.000Z');
+    const secondObservedAt = new Date('2026-02-01T00:00:01.000Z');
+    const repo = new DrizzleUserRepository(
+      db,
+      createScriptedNow(firstObservedAt, secondObservedAt),
+    );
     const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;
 
     const first = await repo.upsertByClerkId(
@@ -114,11 +151,18 @@ describe('DrizzleUserRepository', () => {
     expect(second).toMatchObject({
       id: first.id,
       email: secondEmail,
+      createdAt: firstObservedAt,
+      updatedAt: secondObservedAt,
     });
   });
 
   it('updates clerkUserId when a different clerkId arrives for the same email', async () => {
-    const repo = new DrizzleUserRepository(db);
+    const firstObservedAt = new Date('2026-02-01T00:00:00.000Z');
+    const secondObservedAt = new Date('2026-02-01T00:00:01.000Z');
+    const repo = new DrizzleUserRepository(
+      db,
+      createScriptedNow(firstObservedAt, secondObservedAt),
+    );
     const email = `it-${randomUUID()}@example.com`;
     const clerkId1 = `user_${randomUUID().replaceAll('-', '')}`;
     const clerkId2 = `user_${randomUUID().replaceAll('-', '')}`;
@@ -131,6 +175,8 @@ describe('DrizzleUserRepository', () => {
     expect(second).toMatchObject({
       id: first.id,
       email,
+      createdAt: firstObservedAt,
+      updatedAt: secondObservedAt,
     });
 
     await expect(repo.findByClerkId(clerkId2)).resolves.toMatchObject({

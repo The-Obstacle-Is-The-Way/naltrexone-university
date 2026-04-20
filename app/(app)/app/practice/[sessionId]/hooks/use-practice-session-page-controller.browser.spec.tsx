@@ -193,7 +193,7 @@ async function openExamReviewQuestion(
   await expect
     .element(screen.getByTestId('question-id'))
     .toHaveTextContent('question-3');
-  await screen.getByRole('button', { name: 'Finish exam' }).click();
+  await screen.getByRole('button', { name: 'Review & Submit' }).click();
   await expect
     .element(screen.getByRole('heading', { name: 'Review & Submit' }))
     .toBeVisible();
@@ -649,7 +649,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       .element(screen.getByTestId('question-id'))
       .toHaveTextContent('question-3');
 
-    await screen.getByRole('button', { name: 'Finish exam' }).click();
+    await screen.getByRole('button', { name: 'Review & Submit' }).click();
     await expect
       .element(screen.getByTestId('active-view'))
       .toHaveTextContent('review');
