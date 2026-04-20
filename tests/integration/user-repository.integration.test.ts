@@ -11,6 +11,20 @@ import {
 const { db, sql } = createIntegrationDb();
 const cleanup = createCleanupState();
 
+function createScriptedNow(...timestamps: Date[]) {
+  let index = 0;
+
+  return () => {
+    const value = timestamps[Math.min(index, timestamps.length - 1)];
+    if (!value) {
+      throw new Error('Expected at least one scripted timestamp');
+    }
+
+    index += 1;
+    return value;
+  };
+}
+
 afterEach(async () => {
   await cleanupAfterEach(db, cleanup);
 });
@@ -99,7 +113,12 @@ describe('DrizzleUserRepository', () => {
   });
 
   it('updates email when upserting an existing user', async () => {
-    const repo = new DrizzleUserRepository(db);
+    const firstObservedAt = new Date('2026-02-01T00:00:00.000Z');
+    const secondObservedAt = new Date('2026-02-01T00:00:01.000Z');
+    const repo = new DrizzleUserRepository(
+      db,
+      createScriptedNow(firstObservedAt, secondObservedAt),
+    );
     const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;
 
     const first = await repo.upsertByClerkId(
@@ -114,11 +133,18 @@ describe('DrizzleUserRepository', () => {
     expect(second).toMatchObject({
       id: first.id,
       email: secondEmail,
+      createdAt: firstObservedAt,
+      updatedAt: secondObservedAt,
     });
   });
 
   it('updates clerkUserId when a different clerkId arrives for the same email', async () => {
-    const repo = new DrizzleUserRepository(db);
+    const firstObservedAt = new Date('2026-02-01T00:00:00.000Z');
+    const secondObservedAt = new Date('2026-02-01T00:00:01.000Z');
+    const repo = new DrizzleUserRepository(
+      db,
+      createScriptedNow(firstObservedAt, secondObservedAt),
+    );
     const email = `it-${randomUUID()}@example.com`;
     const clerkId1 = `user_${randomUUID().replaceAll('-', '')}`;
     const clerkId2 = `user_${randomUUID().replaceAll('-', '')}`;
@@ -131,6 +157,8 @@ describe('DrizzleUserRepository', () => {
     expect(second).toMatchObject({
       id: first.id,
       email,
+      createdAt: firstObservedAt,
+      updatedAt: secondObservedAt,
     });
 
     await expect(repo.findByClerkId(clerkId2)).resolves.toMatchObject({
