@@ -246,6 +246,77 @@ test.describe('practice', () => {
     ).toBeVisible({ timeout: 30_000 });
   });
 
+  test('reopens post-exam review at the first question when Review Answers is clicked from the session summary', async ({
+    page,
+  }) => {
+    await signInWithClerkPassword(page);
+    await ensureSubscribed(page);
+    await startSession(page, 'exam', 3);
+
+    await selectChoiceByLabel(page, 'A');
+    await page.getByRole('button', { name: 'Next' }).click();
+    await selectChoiceByLabel(page, 'A');
+    await page.getByRole('button', { name: 'Next' }).click();
+    await selectChoiceByLabel(page, 'A');
+    await expect(
+      page.getByRole('button', { name: 'Review & Submit' }),
+    ).toBeVisible();
+
+    await page
+      .getByTestId('bottom-action-bar')
+      .getByRole('button', { name: 'Review & Submit' })
+      .click();
+
+    const submitExamButton = page.getByRole('button', { name: 'Submit exam' });
+    await expect(submitExamButton).toBeVisible({ timeout: 15_000 });
+    await submitExamButton.click();
+    await page.getByRole('button', { name: 'Confirm submit' }).click();
+
+    const getQuestionNavigatorButton = (order: number) =>
+      page
+        .getByRole('navigation', { name: 'Question navigator' })
+        .getByRole('button', {
+          name: new RegExp(`^Question ${order}:`),
+        });
+
+    await expect(page.getByText('Question 1 of 3')).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByRole('button', { name: 'Next' })).toBeVisible();
+    await expect(getQuestionNavigatorButton(1)).toHaveAttribute(
+      'aria-current',
+      'step',
+    );
+
+    await page.getByRole('button', { name: 'Next' }).click();
+    await expect(page.getByText('Question 2 of 3')).toBeVisible();
+    await page.getByRole('button', { name: 'Next' }).click();
+    await expect(page.getByText('Question 3 of 3')).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Finish review' }),
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Next' })).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Finish review' }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Session Summary' }),
+    ).toBeVisible({ timeout: 30_000 });
+
+    await page.getByRole('button', { name: 'Review Answers' }).click();
+
+    await expect(page.getByText('Question 1 of 3')).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByRole('button', { name: 'Next' })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Finish review' }),
+    ).toHaveCount(0);
+    await expect(getQuestionNavigatorButton(1)).toHaveAttribute(
+      'aria-current',
+      'step',
+    );
+  });
+
   test('resets the active question viewport after next and previous navigation', async ({
     page,
   }) => {

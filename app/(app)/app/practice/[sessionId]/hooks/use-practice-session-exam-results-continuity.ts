@@ -199,7 +199,9 @@ export function usePracticeSessionExamResultsContinuity(input: {
         setPostExamReviewCurrentQuestionId(
           resolvePostExamReviewCurrentQuestionId(postExamReview, {
             requestedQuestionId: questionId ?? null,
-            persistedQuestionId: postExamReviewCurrentQuestionId,
+            persistedQuestionId: questionId
+              ? postExamReviewCurrentQuestionId
+              : null,
           }),
         );
         setExamResultsSubstage('post_exam_review');
@@ -208,7 +210,9 @@ export function usePracticeSessionExamResultsContinuity(input: {
       if (postExamReviewLoadState.status === 'loading') return;
       void loadPostExamReview(nextSummary, {
         requestedQuestionId: questionId ?? null,
-        persistedQuestionId: postExamReviewCurrentQuestionId,
+        persistedQuestionId: questionId
+          ? postExamReviewCurrentQuestionId
+          : null,
         nextSubstageOnSuccess: 'post_exam_review',
       });
     },
