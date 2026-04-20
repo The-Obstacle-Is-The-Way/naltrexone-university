@@ -1138,6 +1138,9 @@ test('does not render Finish exam in the active exam-question header', async () 
   await expect
     .element(screen.getByRole('button', { name: 'Finish exam' }))
     .not.toBeInTheDocument();
+  await expect
+    .element(screen.getByRole('button', { name: 'End session' }))
+    .not.toBeInTheDocument();
 });
 
 test('keeps End session in the active tutor-question header', async () => {

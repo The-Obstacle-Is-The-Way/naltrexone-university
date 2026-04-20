@@ -12,14 +12,22 @@ const { db, sql } = createIntegrationDb();
 const cleanup = createCleanupState();
 
 function createScriptedNow(...timestamps: Date[]) {
+  if (timestamps.length === 0) {
+    return () => {
+      throw new Error('Expected at least one scripted timestamp');
+    };
+  }
+
   let index = 0;
 
   return () => {
-    const value = timestamps[Math.min(index, timestamps.length - 1)];
-    if (!value) {
-      throw new Error('Expected at least one scripted timestamp');
+    if (index >= timestamps.length) {
+      throw new Error(
+        `Scripted now() exhausted after ${timestamps.length} call(s)`,
+      );
     }
 
+    const value = timestamps[index];
     index += 1;
     return value;
   };
@@ -34,6 +42,16 @@ afterAll(async () => {
 });
 
 describe('DrizzleUserRepository', () => {
+  it('throws when scripted time is drawn more times than configured', () => {
+    const observedAt = new Date('2026-02-01T00:00:00.000Z');
+    const now = createScriptedNow(observedAt);
+
+    expect(now()).toBe(observedAt);
+    expect(() => now()).toThrowError(
+      'Scripted now() exhausted after 1 call(s)',
+    );
+  });
+
   it('upserts users by clerk id and can find them', async () => {
     const repo = new DrizzleUserRepository(db);
     const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;
