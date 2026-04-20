@@ -278,10 +278,12 @@ Both substages render within the same `/app/practice/[sessionId]` orchestrator. 
 
 | Entry type | Cursor behavior | Rationale |
 |------------|----------------|-----------|
-| Initial (after exam submit) | First available question (Q1) | Fresh review pass — user has never seen feedback |
-| Re-entry via `Review Answers` button | First available question | Untargeted `onReenterPostExamReview()` now clears the persisted cursor so the CTA reopens the review as a fresh pass |
-| Re-entry via breakdown row click | Lands on the clicked question when available; otherwise falls back to the last viewed available question, then the first available question | `resolvePostExamReviewCurrentQuestionId()` prefers `requestedQuestionId`, then `persistedQuestionId` |
-| Re-entry after page refresh / cold start | First available question after the payload is fetched | The in-memory cursor is gone, so no persisted question ID exists |
+| Initial (after exam submit) | First available question (Q1); if none are available, the first review row | Fresh review pass — user has never seen feedback |
+| Re-entry via `Review Answers` button | First available question; if none are available, the first review row | Untargeted `onReenterPostExamReview()` now clears the persisted cursor so the CTA reopens the review as a fresh pass while the shared resolver keeps the final first-row fallback |
+| Re-entry via breakdown row click | Lands on the clicked question when available; otherwise falls back to the last viewed available question, then the first available question, then the first review row | `resolvePostExamReviewCurrentQuestionId()` prefers `requestedQuestionId`, then `persistedQuestionId` |
+| Re-entry after page refresh / cold start | First available question after the payload is fetched; if none are available, the first review row | The in-memory cursor is gone, so no persisted question ID exists |
+
+The shared cursor resolver order remains: requested available question -> persisted available question -> first available row -> first review row. Untargeted `Review Answers` re-entry changes only by clearing the persisted cursor before resolution.
 
 **Load behavior:**
 
