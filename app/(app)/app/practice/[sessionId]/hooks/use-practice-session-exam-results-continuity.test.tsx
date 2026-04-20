@@ -140,13 +140,10 @@ async function renderLiveContinuityHook(input?: {
       return getCurrent();
     },
     async run<T>(callback: () => T | Promise<T>): Promise<T> {
-      let value: T | undefined;
+      let value!: T;
       await act(async () => {
         value = await callback();
       });
-      if (value === undefined) {
-        return undefined as T;
-      }
       return value;
     },
   };
