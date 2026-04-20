@@ -377,7 +377,7 @@ export function PracticeView(props: PracticeViewProps) {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {props.onEndSession ? (
+            {props.onEndSession && !isExamMode ? (
               <Button
                 type="button"
                 variant="outline"
@@ -389,7 +389,7 @@ export function PracticeView(props: PracticeViewProps) {
               >
                 {endSessionLabel}
               </Button>
-            ) : (
+            ) : !props.onEndSession ? (
               <Button
                 asChild
                 variant="link"
@@ -397,7 +397,7 @@ export function PracticeView(props: PracticeViewProps) {
               >
                 <Link href={backLink.href}>{backLink.label}</Link>
               </Button>
-            )}
+            ) : null}
           </div>
         </div>
         {props.belowHeadingContent}

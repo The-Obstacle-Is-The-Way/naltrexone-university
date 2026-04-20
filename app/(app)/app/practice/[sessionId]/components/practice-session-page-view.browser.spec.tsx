@@ -1096,7 +1096,7 @@ test('restores the question panel when retrying from an in-panel load error', as
   }
 });
 
-test('renders Finish exam in the active exam-question header', async () => {
+test('does not render Finish exam in the active exam-question header', async () => {
   const screen = await render(
     <PracticeSessionPageView
       summary={null}
@@ -1137,6 +1137,50 @@ test('renders Finish exam in the active exam-question header', async () => {
 
   await expect
     .element(screen.getByRole('button', { name: 'Finish exam' }))
+    .not.toBeInTheDocument();
+});
+
+test('keeps End session in the active tutor-question header', async () => {
+  const screen = await render(
+    <PracticeSessionPageView
+      summary={null}
+      review={null}
+      navigator={null}
+      sessionInfo={{
+        sessionId: 'session-1',
+        mode: 'tutor',
+        index: 0,
+        total: 2,
+        isMarkedForReview: false,
+      }}
+      loadState={{ status: 'ready' }}
+      question={{
+        questionId: 'q1',
+        slug: 'q-1',
+        stemMd: 'Stem 1',
+        difficulty: 'easy',
+        choices: [{ id: 'c1', label: 'A', textMd: 'Choice A', sortOrder: 1 }],
+        session: null,
+      }}
+      selectedChoiceId={null}
+      isAnswered={false}
+      submitResult={null}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      canSubmit={false}
+      onEndSession={() => undefined}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onToggleMarkForReview={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={() => undefined}
+    />,
+  );
+
+  await expect
+    .element(screen.getByRole('button', { name: 'End session' }))
     .toBeVisible();
 });
 
