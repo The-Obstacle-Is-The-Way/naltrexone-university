@@ -84,7 +84,7 @@ export function PostExamReviewView({
           </div>
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             className="self-start rounded-full sm:self-auto"
             onClick={onViewSummary}
           >

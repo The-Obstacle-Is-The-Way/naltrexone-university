@@ -48,12 +48,21 @@ function Button({
     asChild?: boolean;
   }) {
   const Comp = asChild ? SlotPrimitive.Slot : 'button';
+  const resolvedVariant = variant ?? 'default';
+  const resolvedSize = size ?? 'default';
 
   return (
     <Comp
       data-slot="button"
+      data-variant={resolvedVariant}
       type={asChild ? undefined : 'button'}
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(
+        buttonVariants({
+          variant: resolvedVariant,
+          size: resolvedSize,
+          className,
+        }),
+      )}
       {...props}
     />
   );

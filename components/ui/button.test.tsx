@@ -34,6 +34,12 @@ describe('components/ui/button', () => {
     expect(html).not.toContain('type="button"');
   });
 
+  it('exposes the resolved variant as a stable data attribute', () => {
+    const html = renderToStaticMarkup(<Button variant="outline">Click</Button>);
+
+    expect(html).toContain('data-variant="outline"');
+  });
+
   it('renders success variant classes', () => {
     const html = renderToStaticMarkup(<Button variant="success">Click</Button>);
 

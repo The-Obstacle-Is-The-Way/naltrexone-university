@@ -203,9 +203,11 @@ function ExamActionBar(props: ExamActionBarProps) {
     props.isLastSessionQuestion && props.onEndSession
       ? props.onEndSession
       : props.onNextQuestion;
-
-  return (
-    <>
+  const navigationGroup = (
+    <div
+      className="flex flex-wrap items-center gap-3"
+      data-testid="exam-action-primary-group"
+    >
       {props.onPreviousQuestion ? (
         props.hasPreviousQuestion ? (
           <Button
@@ -239,18 +241,28 @@ function ExamActionBar(props: ExamActionBarProps) {
           ? 'Review & Submit'
           : 'Next'}
       </Button>
+    </div>
+  );
 
+  return (
+    <>
+      {navigationGroup}
       {props.onToggleMarkForReview ? (
-        <Button
-          type="button"
-          variant="outline"
-          className="rounded-full"
-          aria-pressed={props.isMarkedForReview}
-          disabled={props.isMarkingForReview || isNavigationDisabled}
-          onClick={props.onToggleMarkForReview}
+        <div
+          className="flex flex-wrap items-center gap-3 sm:ml-auto"
+          data-testid="exam-action-secondary-group"
         >
-          {props.isMarkedForReview ? 'Unmark review' : 'Mark for review'}
-        </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-full"
+            aria-pressed={props.isMarkedForReview}
+            disabled={props.isMarkingForReview || isNavigationDisabled}
+            onClick={props.onToggleMarkForReview}
+          >
+            {props.isMarkedForReview ? 'Unmark review' : 'Mark for review'}
+          </Button>
+        </div>
       ) : null}
     </>
   );
