@@ -215,9 +215,11 @@ Each concern can ship independently. Bundling is a delivery choice.
 ## Relationship to prior work
 
 ### DEBT-322 (archived)
+
 Renamed header copy from `Review answers` → `Finish exam`. That historical decision later fed into the Concern 1 / Concern 2 analysis and was superseded in exam mode by DEBT-363 Concern 2A, which removed the header CTA entirely.
 
 ### DEBT-330 (archived)
+
 Set the post-exam review footer grouping (`[Prev][Next/Finish] ... [Bookmark]`). Concern 3A ships the same grouping pattern onto the active exam footer.
 
 ### DEBT-351 / DEBT-362 (archived)
