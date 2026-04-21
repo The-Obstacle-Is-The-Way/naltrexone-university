@@ -4,7 +4,7 @@
 **Triggered by:** User walkthrough of the exam flow end-to-end. After completing an exam, the initial post-exam review and the summary-launched re-entry review can expose different visible button states because they reopen the same review surface at different cursor positions. The user described it as "we're getting crossed here" and suspected the review state machine was mixing states.
 **Scope:** Audit the current Summary <-> Post-exam review loop inside `/app/practice/[sessionId]`, trace the actual cursor/label behavior through the shipped hooks, and document where the current implementation creates product confusion.
 **Related:** [BS-061](./bs-061-review-surface-divergence-audit.md), [DEBT-350](../debt/debt-350-exam-results-session-continuity.md), [DEBT-359](../debt/debt-359-session-summary-cta-labels.md), [DEBT-360](../debt/debt-360-action-bar-below-fold.md), [DEBT-361](../debt/debt-361-exam-last-question-next-label.md), [DEBT-362](../debt/debt-362-review-submit-screen-affordances.md)
-**Promoted to:** [DEBT-364](../../debt/debt-364-post-exam-review-reentry-cursor-persistence.md) on 2026-04-17
+**Promoted to:** [DEBT-364](../debt/debt-364-post-exam-review-reentry-cursor-persistence.md) on 2026-04-17 (resolved 2026-04-21 via PR #282)
 
 ---
 

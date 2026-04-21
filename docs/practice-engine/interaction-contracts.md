@@ -299,7 +299,7 @@ The shared cursor resolver order remains: requested available question -> persis
 | Initial post-exam review | `Finish review` | `View Summary` |
 | Re-entry from summary | `Finish review` | `View Summary` |
 
-The current implementation does not distinguish label copy by entry source. Possible product changes are discussed in [BS-063 (archived)](../_archive/brainstorming/bs-063-exam-review-reentry-state-confusion.md), which was promoted to [DEBT-364](../debt/debt-364-post-exam-review-reentry-cursor-persistence.md), and [DEBT-359](../_archive/debt/debt-359-session-summary-cta-labels.md).
+The current implementation does not distinguish label copy by entry source. Possible product changes are discussed in [BS-063 (archived)](../_archive/brainstorming/bs-063-exam-review-reentry-state-confusion.md), which was promoted to [DEBT-364](../_archive/debt/debt-364-post-exam-review-reentry-cursor-persistence.md), and [DEBT-359](../_archive/debt/debt-359-session-summary-cta-labels.md).
 
 ### Question review page (non-exam, standalone)
 

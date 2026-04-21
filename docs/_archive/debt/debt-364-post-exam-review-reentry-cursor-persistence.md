@@ -1,7 +1,7 @@
 ---
 id: DEBT-364
 title: Post-exam review re-entry cursor persistence — "missing Next button" after Review Answers
-status: Open (decision-locked 2026-04-17, implementation-ready)
+status: Resolved 2026-04-21 (shipped in PR #282)
 priority: P2
 created: 2026-04-17
 area: practice / exam / post-exam review
@@ -12,7 +12,7 @@ related: DEBT-350, DEBT-359, DEBT-316, DEBT-326, DEBT-363, DEBT-365
 # DEBT-364: Post-exam review re-entry cursor persistence
 
 **Priority:** P2
-**Status:** Open — decision-locked and implementation-ready; no implementation started
+**Status:** Resolved 2026-04-21 — shipped in [PR #282](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/282)
 **Created:** 2026-04-17
 **Affected surface:** `PostExamReviewView` (re-entry from Session Summary via `Review Answers`)
 **Adjacent unchanged surfaces:** `ExamReviewView` (pre-submit), initial post-submit entry (still lands on Q1)
@@ -272,6 +272,7 @@ Unrelated. DEBT-363 is about `Finish exam` + `Review & Submit` dual CTAs during 
 | 2026-04-17 | Promoted BS-063 to DEBT-364 | Decision warranted a formal debt item so it shows up in the register and stops getting lost in `docs/brainstorming/`. |
 | 2026-04-17 | Leaning "reset to Q1 on untargeted re-entry" | CTA wording (`Review Answers`) sells a fresh pass; preserving cursor contradicts that promise. Targeted breakdown-row re-entry keeps `requestedQuestionId` semantics. Decision not yet locked — see "Open decisions." |
 | 2026-04-17 | **Locked: reset cursor to first available row on untargeted re-entry** | Independent Chrome-agent UX audit on 2026-04-17 confirmed Finding B (re-entry lands on last-viewed question, Next appears missing). Reset is the smallest fix that matches the CTA's promise. Ship independently from DEBT-363 Concern 2 with both hook-unit and E2E coverage. |
+| 2026-04-21 | Shipped in [PR #282](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/282) | `use-practice-session-exam-results-continuity` now clears the persisted cursor on untargeted re-entry in both cached-payload and fetch-on-demand branches, so the resolver falls through to "first available row" via the existing invariant. Targeted breakdown-row re-entry (`onReenterPostExamReview(questionId)`) is unchanged. Coverage: unit resolver boundary tests, browser fixtures for the 2×2 (cached/fetch × targeted/untargeted) matrix, and a full E2E walkthrough. Interaction contracts doc updated with the new re-entry semantics. DEBT-364 fully resolved. |
 
 ---
 

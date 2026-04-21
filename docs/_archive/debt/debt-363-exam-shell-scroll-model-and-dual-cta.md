@@ -1,7 +1,7 @@
 ---
 id: DEBT-363
 title: Exam shell scroll model + dual-CTA disambiguation
-status: Open (Concern 2 decision-locked 2026-04-17, implementation-ready; Concern 1 shipped in PR #280)
+status: Resolved 2026-04-20 (Concern 1 shipped in PR #280; Concern 2 shipped in PR #281)
 priority: P2
 created: 2026-04-14
 area: practice / exam
@@ -12,7 +12,7 @@ related: DEBT-322, DEBT-360, DEBT-361, DEBT-362, DEBT-364, DEBT-365
 # DEBT-363: Exam shell scroll model + dual-CTA disambiguation
 
 **Priority:** P2
-**Status:** Open — Concern 1 shipped in PR #280; Concern 2 is decision-locked and implementation-ready
+**Status:** Resolved 2026-04-20 — Concern 1 shipped in PR #280; Concern 2 shipped in PR #281
 **Created:** 2026-04-14
 **Affected surfaces:** PracticeView (exam + tutor), PostExamReviewView
 **Adjacent unchanged stage:** ExamReviewView
@@ -382,6 +382,7 @@ An independent design-critique pass surfaced several adjacent UX concerns. They 
 | 2026-04-15 | Locked Concern 1 to the pre-DEBT-360 document-flow footer pattern | Product-design review converged on plain document flow as the better first move: reclaim bottom-edge breathing room, match the read-then-decide interaction, and preserve the cheaper 1A→1B fallback path. Kept the rationale at the first-principles level rather than encoding unverified pixel arithmetic or vendor-specific claims. |
 | 2026-04-15 | Shipped Concern 1 in [PR #280](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/280) | Replaced the bounded practice/post-exam shell with document-flow action bars, restored question-start focus/scroll behavior on navigation, updated browser/E2E coverage to the new contract, and deleted the now-unused sticky shell primitive. |
 | 2026-04-17 | Locked Concern 2 → Option 2A (drop `Finish exam` header button) | Independent Chrome-agent UX audit on 2026-04-17 confirmed Finding A (both CTAs visible simultaneously on Q3). Option 2A is smallest coherent change — removes the collision without inventing a new behavior path. No early-exit affordance added; global app nav remains available for mid-exam navigation. |
+| 2026-04-20 | Shipped Concern 2 in [PR #281](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/281) | Gated the `Finish exam` header button behind `!isExamMode` in `practice-view.tsx` so exam mode now renders only the footer `Review & Submit` CTA. Tutor/quick-practice `End session` header remains unchanged. DEBT-363 fully resolved. |
 
 ---
 

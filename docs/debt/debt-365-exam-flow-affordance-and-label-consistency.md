@@ -232,11 +232,11 @@ Made Review & Submit rows whole-card semantic buttons with a trailing chevron. C
 ### DEBT-359 (archived)
 Renamed `Back to Practice` → `New Session` and `Review your answers` → `Review Answers` on the Session Summary. Concern 5 depends on `Review Answers` being the stable primary CTA name.
 
-### DEBT-363 (open)
-Concern 1 of DEBT-363 shipped; Concern 2 (dual CTA) still open and affects Concern 1 of DEBT-365.
+### DEBT-363 (resolved 2026-04-20)
+Both concerns shipped: Concern 1 (document-flow shell, PR #280) and Concern 2A (drop `Finish exam` header in exam mode, PR #281). DEBT-365 Concern 1 (cross-stage verb unification) is now free to revisit now that the `Finish exam` label is gone.
 
-### DEBT-364 (open)
-Cursor semantics for Summary ↔ review re-entry. Independent of DEBT-365 but touches the same user-facing loop.
+### DEBT-364 (resolved 2026-04-21)
+Cursor-persistence fix shipped in PR #282. Untargeted Summary → Review Answers re-entry now resets to the first available row. DEBT-365 does not touch cursor mechanics; this relationship is historical only.
 
 ---
 
@@ -283,8 +283,8 @@ Cursor semantics for Summary ↔ review re-entry. Independent of DEBT-365 but to
 ## Sources consulted
 
 - Independent Chrome-agent UX audit of the exam flow, 2026-04-17 (3-question exam mode walk, desktop viewport)
-- `docs/debt/debt-363-exam-shell-scroll-model-and-dual-cta.md`
-- `docs/debt/debt-364-post-exam-review-reentry-cursor-persistence.md`
+- `docs/_archive/debt/debt-363-exam-shell-scroll-model-and-dual-cta.md` (resolved 2026-04-20)
+- `docs/_archive/debt/debt-364-post-exam-review-reentry-cursor-persistence.md` (resolved 2026-04-21)
 - `docs/_archive/debt/debt-330-review-action-bar-bookmark-placement.md`
 - `docs/_archive/debt/debt-322-exam-action-bar-ux-polish.md`
 - `docs/_archive/debt/debt-351-exam-review-submit-affordance-cleanup.md`
