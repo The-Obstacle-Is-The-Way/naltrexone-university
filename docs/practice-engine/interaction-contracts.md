@@ -103,18 +103,21 @@ Question displayed
 **Any non-last question:**
 ```text
 [ Previous ]  [ Next ]  ...  [ Mark for review ]
+<---- primary group ---->     <- secondary group ->
 ```
 
 **Last question:**
 
 ```text
 [ Previous ]  [ Review & Submit ]  ...  [ Mark for review ]
+<------- primary group ------->     <- secondary group ->
 ```
 
 **Contract rules:**
+- `...` denotes the visual separation between the primary navigation group and the secondary group. It does not represent hidden controls or an intermediate slot.
 - Previous occupies position 1 inside the primary navigation group when available. On Q1, that group contains only the forward control; there is no spacer.
 - Position 2 inside the primary navigation group is the sequential progression control: `Next` on non-terminal questions. On the last question, the label changes to `Review & Submit` and clicking it enters the review stage.
-- `Mark for review` lives in a trailing metadata group rather than inside the primary navigation cluster. On `sm+`, that group is pushed away from the navigation controls to mirror the post-exam review footer.
+- `Mark for review` lives in a trailing secondary group rather than inside the primary navigation cluster. On `sm+`, that group is pushed away from the navigation controls to mirror the post-exam review footer.
 - There is no persistent header-level exam-exit CTA in the shipped exam flow.
 - Next is always enabled. No selection = skip (navigate without saving). Selection exists = save draft and advance.
 - **No Submit button in the action bar.** The only submit is `Submit exam` inside the review stage.
