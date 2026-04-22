@@ -280,4 +280,13 @@ describe('PostExamReviewView', () => {
       'before moving to your session summary',
     );
   });
+
+  it('renders View Summary as an outline button in the review header', () => {
+    const doc = renderView();
+    const viewSummaryButton = Array.from(doc.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'View Summary',
+    );
+
+    expect(viewSummaryButton?.getAttribute('data-variant')).toBe('outline');
+  });
 });

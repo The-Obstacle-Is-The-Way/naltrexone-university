@@ -4,7 +4,7 @@
 > **Scope:** Click-by-click UI contracts for tutor and exam modes — buttons, persistence, locking, navigation, and post-session flows
 > **Related:** [Practice Modes](./practice-modes.md) (lifecycle/data), [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md) (decisions)
 > **Status:** Current implementation. Historical BS-055 rationale remains, but the contracts below now describe shipped behavior; follow-up deltas are tracked separately in debt docs where noted.
-> **Last Updated:** 2026-04-20
+> **Last Updated:** 2026-04-21
 
 ---
 
@@ -90,7 +90,7 @@ Paper exam. Select answers, navigate freely, change your mind, hand it in when d
 ```text
 Question displayed
   → User may select a choice (local draft, highlighted)
-  → User clicks Next / Previous / navigator button / Finish exam
+  → User clicks Next / Previous / navigator button / Review & Submit
   → Leaving the question persists the current selection as a draft (if one exists)
   → User may revisit any question and change the draft answer freely
   → Review stage shows answered / unanswered / marked counts
@@ -102,24 +102,23 @@ Question displayed
 
 **Any non-last question:**
 ```text
-[ Previous ]  [ Next ]  [ Mark for review ]
+[ Previous ]  [ Next ]  ...  [ Mark for review ]
+<---- primary group ---->     <- secondary group ->
 ```
 
 **Last question:**
-```text
-[ Previous ]  [ Review & Submit ]  [ Mark for review ]
-```
 
-**Header (every question):**
 ```text
-                                          [ Finish exam ]
+[ Previous ]  [ Review & Submit ]  ...  [ Mark for review ]
+<------- primary group ------->     <- secondary group ->
 ```
 
 **Contract rules:**
-- Previous always occupies position 1 when available. On Q1, slot 1 is empty; there is no spacer.
-- Position 2 is the sequential progression control: `Next` on non-terminal questions. On the last question, the label changes to `Review & Submit` and clicking it enters the review stage.
-- `Mark for review` always occupies position 3.
-- `Finish exam` lives in the header as a persistent escape hatch — accessible from any question.
+- `...` denotes the visual separation between the primary navigation group and the secondary group. It does not represent hidden controls or an intermediate slot.
+- Previous occupies position 1 inside the primary navigation group when available. On Q1, that group contains only the forward control; there is no spacer.
+- Position 2 inside the primary navigation group is the sequential progression control: `Next` on non-terminal questions. On the last question, the label changes to `Review & Submit` and clicking it enters the review stage.
+- `Mark for review` lives in a trailing secondary group rather than inside the primary navigation cluster. On `sm+`, that group is pushed away from the navigation controls to mirror the post-exam review footer.
+- There is no persistent header-level exam-exit CTA in the shipped exam flow.
 - Next is always enabled. No selection = skip (navigate without saving). Selection exists = save draft and advance.
 - **No Submit button in the action bar.** The only submit is `Submit exam` inside the review stage.
 
@@ -132,7 +131,7 @@ This is the BS-055-selected model for mutable exam answers: draft state while th
 | Trigger | What it catches |
 |---------|-----------------|
 | **Navigation boundary** (Next, Previous, navigator jump) | User moves on — save current selection |
-| **Review stage entry** (`Finish exam` header or last-question `Review & Submit`) | User wants to review — save current question first |
+| **Review stage entry** (last-question `Review & Submit`) | User wants to review — save current question first |
 | **Periodic autosave** (every 30-60 seconds, future enhancement) | User sits on one question for a long time, then crashes |
 | **`visibilitychange` / `beforeunload`** (future enhancement) | Tab switch, browser close |
 
@@ -250,7 +249,7 @@ The post-exam review stage shows:
 - Score banner (`Score: X% (correct/total)`)
 - Correctness-colored navigator (green/red/outline)
 - Full question feedback inline
-- Top-right `View Summary` escape hatch
+- Top-right outline `View Summary` escape hatch
 - Whole-page document flow across `PracticeView` and `PostExamReviewView`: content scrolls with the page, and the bottom action bar sits at the natural end of the content stack rather than in a sticky viewport shell
 - Bottom bar in DOM order: `Previous` (when available), `Next` / `Finish review`, then `Bookmark` when the current question is available. On `sm+`, the bookmark button is pushed to the right with `sm:ml-auto`
 - Last reviewed question swaps the forward CTA to `Finish review`

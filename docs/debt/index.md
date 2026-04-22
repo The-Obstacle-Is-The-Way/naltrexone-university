@@ -20,7 +20,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
-| [DEBT-365](./debt-365-exam-flow-affordance-and-label-consistency.md) | Exam flow affordance and label consistency pass — six concerns from an independent UX audit (cross-stage verb inconsistency, `Mark for review` vs `Bookmark` clarity, footer grouping, Session Summary row affordance trap, Summary ↔ review weight asymmetry, top-right chrome inconsistency) + 1 scroll-reset verification item | P2 | — |
+| [DEBT-365](./debt-365-exam-flow-affordance-and-label-consistency.md) | Exam flow affordance and label consistency pass — only Concern 2 remains active as a deferred product naming/iconography call for `Mark for review` vs `Bookmark`; Concerns 1, 3, 4, 5, 6, and 7 are resolved | P3 | — |
 **Next Debt ID:** DEBT-366
 
 ---

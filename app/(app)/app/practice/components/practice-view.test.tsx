@@ -867,7 +867,7 @@ describe('PracticeView', () => {
 
     expect(submitButton).not.toBeUndefined();
     expect(nextButton).not.toBeUndefined();
-    expect(nextButton?.className).toContain('border bg-background');
+    expect(nextButton?.getAttribute('data-variant')).toBe('outline');
   });
 
   it('hides Submit and promotes Next to primary after submission', () => {
@@ -960,6 +960,61 @@ describe('PracticeView', () => {
     );
 
     expect(labels).toEqual(['Previous', 'Review & Submit', 'Mark for review']);
+  });
+
+  it('groups active-exam navigation separately from the mark-for-review affordance', () => {
+    const question = createQuestionProps();
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 1,
+          total: 3,
+          isMarkedForReview: false,
+        }}
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        isMarkingForReview={false}
+        canSubmit={false}
+        onEndSession={() => undefined}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onToggleMarkForReview={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+        onPreviousQuestion={() => undefined}
+        hasPreviousQuestion={true}
+        hasNextQuestion={true}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const primaryGroup = doc.querySelector(
+      '[data-testid="exam-action-primary-group"]',
+    );
+    const secondaryGroup = doc.querySelector(
+      '[data-testid="exam-action-secondary-group"]',
+    );
+
+    expect(
+      Array.from(primaryGroup?.querySelectorAll('button') ?? []).map((button) =>
+        button.textContent?.trim(),
+      ),
+    ).toEqual(['Previous', 'Next']);
+    expect(
+      Array.from(secondaryGroup?.querySelectorAll('button') ?? []).map(
+        (button) => button.textContent?.trim(),
+      ),
+    ).toEqual(['Mark for review']);
   });
 
   it('describes the last-question Review & Submit action for assistive tech', () => {
