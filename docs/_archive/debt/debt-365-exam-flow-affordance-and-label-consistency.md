@@ -1,7 +1,7 @@
 ---
 id: DEBT-365
 title: Exam flow affordance and label consistency pass
-status: Open (Concern 2 deferred only; 3A + 5A shipped 2026-04-21; Concerns 1, 4, 6, and 7 resolved)
+status: Resolved 2026-04-23 (all concerns closed; Concern 2 closed as intentional-by-design after end-to-end product walkthrough)
 priority: P3
 created: 2026-04-17
 area: practice / exam / post-exam review / session summary
@@ -12,7 +12,7 @@ discovered_via: Independent Chrome-agent UX audit on 2026-04-17 (exam mode, 3 qu
 # DEBT-365: Exam flow affordance and label consistency pass
 
 **Priority:** P3
-**Status:** Open — only Concern 2 remains active, deferred pending a product naming call. Concern 3A and 5A refined shipped on 2026-04-21; Concerns 1, 4, 6, and 7 are resolved.
+**Status:** Resolved 2026-04-23 — Concern 2 closed as intentional-by-design after the end-to-end product walkthrough confirmed the stage itself disambiguates `Mark for review` (exam-only session flag) from `Bookmark` (post-submit persistence); the two controls no longer share a surface. Concern 3A and 5A refined shipped on 2026-04-21; Concerns 1, 4, 6, and 7 resolved earlier.
 **Created:** 2026-04-17
 **Affected surfaces:** `PracticeView` (exam mode), `ExamReviewView`, `PostExamReviewView`, `SessionSummaryView`
 **Adjacent unchanged surface:** tutor mode (out of scope for this pass)
@@ -81,6 +81,8 @@ These are different actions. The problem is not that they share a label — the 
 - **2D — Leave labels, add microcopy.** Tooltip or `aria-describedby` hint on each button explaining the scope. Pros: cheap. Cons: microcopy is rarely read; this is a bandaid.
 
 **Leaning:** 2A + 2C (rename + surface state). Requires product confirmation on the verb.
+
+**Resolution (2026-04-23).** Closed as intentional-by-design. End-to-end product walkthrough on 2026-04-23 confirmed the two controls never co-exist on the same surface: `Mark for review` only appears in exam mode (`practice-view.tsx`), and `Bookmark` only appears on post-submit reflection surfaces (`post-exam-review-view.tsx`, tutor/quick practice, `/app/questions/[slug]`). The stage itself is the disambiguator — exam = perform / session-scoped, post-exam = reflect / persistent — so renaming either verb would weaken canonical product vocabulary (`Bookmark` matches the global Bookmarks nav in `components/app-nav-items.ts`) without adding clarity. `Mark for review` also remains the standard exam-software term; options 2A/2B/2C/2D were rejected as over-engineering. See also `docs/frontend/bookmark-surface-policy.md` "Mark for Review vs Bookmark" for the canonical split.
 
 ### Concern 3 — Button order and grouping discipline across exam-flow footers
 
@@ -238,11 +240,7 @@ Cursor-persistence fix shipped in PR #282. Untargeted Summary → Review Answers
 
 ## Severity rationale
 
-**P3** — the only remaining work is a deferred naming/iconography call around `Mark for review` vs `Bookmark`.
-
-- No data loss, no broken navigation, and the shipped footer-grouping / `View Summary` weight issues are resolved.
-- The remaining concern is latent semantic confusion between a session-scoped flag and a persistent bookmark.
-- Product naming and iconography need to be decided together; that is follow-up polish, not a blocker.
+**P3 — fully resolved 2026-04-23.** All seven concerns closed. No data loss, no broken navigation, footer-grouping / `View Summary` weight shipped, and the `Mark for review` vs `Bookmark` concern closed as intentional-by-design after a product walkthrough confirmed the stage is the disambiguator and the two controls never co-occupy a surface.
 
 ---
 
@@ -251,14 +249,14 @@ Cursor-persistence fix shipped in PR #282. Untargeted Summary → Review Answers
 | # | Concern | Decision | Status |
 |---|---------|----------|--------|
 | 1 | Concern 1 verb unification | 1A / 1B / 1C | **Resolved 2026-04-20.** Unblocked by DEBT-363 Concern 2A / [PR #281](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/281). Remaining verbs (`Review & Submit`, `Submit exam`, `Finish review`) each describe a distinct destination, so no further change is needed. |
-| 2 | Concern 2 `Mark for review` vs `Bookmark` | 2A / 2B / 2C / 2D | **Deferred 2026-04-17 — re-open as P3 follow-up.** Different actions (session-flag vs permanent-save) that happen to share a footer slot. Fixing correctly requires product call on naming + iconography. Latent confusion, not blocking; parked. |
+| 2 | Concern 2 `Mark for review` vs `Bookmark` | 2A / 2B / 2C / 2D | **Closed 2026-04-23 as intentional-by-design.** End-to-end product walkthrough confirmed the two controls never share a surface — exam mode owns `Mark for review` (session flag), post-submit reflection surfaces own `Bookmark` (persistent). The stage is the disambiguator; renaming either verb would weaken canonical product vocabulary. |
 | 3 | Concern 3 footer grouping | 3A / 3C | **Shipped 2026-04-21 → 3A.** The active exam footer now right-aligns `Mark for review` in a trailing metadata group so it matches the DEBT-330 post-exam review pattern. 3C remains an optional cleanup follow-up. |
 | 4 | Concern 4 Session Summary rows | 4A / 4B / 4C | **Resolved 2026-04-17 → 4C.** Verification showed the rows were already interactive through `SessionBreakdownList` and targeted `onReenterPostExamReview(questionId)`. Any future work is affordance-weight polish, not a missing path. |
 | 5 | Concern 5 View Summary weight | 5A / 5B | **Shipped 2026-04-21 → 5A refined.** `View Summary` is promoted in place to an outline button in the existing top-right header position. It stays out of the footer so the escape hatch remains visible even when long feedback pushes the bottom action bar below the fold. |
 | 6 | Concern 6 top-right chrome | 6A / 6B / 6C | **Resolved 2026-04-21 as a shipped no-op → 6C.** The top-right asymmetry is intentional: post-exam review needs an always-visible escape hatch at the top of long-form content, while Session Summary does not. |
 | 7 | Concern 7 scroll reset verification | file new concern if reproducible | **Resolved 2026-04-21.** Dev-head browser verification confirmed that post-exam review question navigation restores the viewport to the top of the focused panel, so no DEBT-366 was filed. |
 
-**Concern status:** 1 deferred (2), 2 shipped (3A, 5A refined), 4 resolved/no-op (1, 4, 6, 7).
+**Concern status:** 2 shipped (3A, 5A refined), 5 resolved/no-op (1, 2, 4, 6, 7).
 
 ---
 
@@ -275,6 +273,7 @@ Cursor-persistence fix shipped in PR #282. Untargeted Summary → Review Answers
 | 2026-04-20 | Closed Concern 1 without new code after PR #281 | DEBT-363 Concern 2A removed the `Finish exam` header, leaving `Review & Submit`, `Submit exam`, and `Finish review` as three distinct destination labels rather than inconsistent duplicates. |
 | 2026-04-21 | Shipped Concern 3A and Concern 5A refined | `PracticeView` now groups primary navigation separately from `Mark for review`, and `PostExamReviewView` promotes the existing top-right `View Summary` control from ghost to outline without moving it into the below-the-fold footer. |
 | 2026-04-21 | Closed Concern 7 after dev-head verification | Local Chromium verification confirmed that post-exam review `Next`/`Previous` navigation scrolls the focused panel back into view, matching the existing E2E contract. |
+| 2026-04-23 | Closed Concern 2 as intentional-by-design; DEBT-365 fully resolved | End-to-end product walkthrough (exam → Review & Submit → post-exam review → Session Summary) confirmed `Mark for review` and `Bookmark` never share a surface in the shipped flow. Exam mode owns session-scoped `Mark for review`; post-submit reflection surfaces own persistent `Bookmark`. The stage is the disambiguator, which matches the Guiding Principle in `docs/frontend/bookmark-surface-policy.md`. Renaming options (2A/2B) rejected because `Bookmark` is canonical product vocabulary (matches the global Bookmarks nav), `Mark for review` is standard exam-software terminology, and state-surfacing (2C) / microcopy (2D) would add complexity without addressing an observed user problem. No code change required. |
 
 ---
 

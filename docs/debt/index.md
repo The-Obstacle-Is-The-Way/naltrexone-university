@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-21
+**Last Updated:** 2026-04-23
 
 ---
 
@@ -20,7 +20,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
-| [DEBT-365](./debt-365-exam-flow-affordance-and-label-consistency.md) | Exam flow affordance and label consistency pass — only Concern 2 remains active as a deferred product naming/iconography call for `Mark for review` vs `Bookmark`; Concerns 1, 3, 4, 5, 6, and 7 are resolved | P3 | — |
+
 **Next Debt ID:** DEBT-366
 
 ---
@@ -29,6 +29,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-365](../_archive/debt/debt-365-exam-flow-affordance-and-label-consistency.md) | Exam flow affordance and label consistency pass — Concern 3A footer grouping and Concern 5A `View Summary` outline shipped in [PR #283](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/283); Concerns 1, 4, 6, 7 resolved earlier; Concern 2 (`Mark for review` vs `Bookmark`) closed 2026-04-23 as intentional-by-design because the two controls never share a surface in the shipped flow | P3 | 2026-04-23 | [PR #283](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/283) |
 | [DEBT-364](../_archive/debt/debt-364-post-exam-review-reentry-cursor-persistence.md) | Post-exam review re-entry cursor persistence — untargeted `Review Answers` from Session Summary now resets to the first available row so `Next` is visible; targeted breakdown-row re-entry is unchanged | P2 | 2026-04-21 | [PR #282](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/282) |
 | [DEBT-363](../_archive/debt/debt-363-exam-shell-scroll-model-and-dual-cta.md) | Exam shell scroll model + dual-CTA disambiguation — Concern 1 reverted the DEBT-360 bounded-scroll shell to document-flow action bars (PR #280); Concern 2 dropped the `Finish exam` header button in exam mode so the footer `Review & Submit` is the single primary CTA (PR #281) | P2 | 2026-04-20 | [PR #280](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/280), [PR #281](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/281) |
 | [DEBT-362](../_archive/debt/debt-362-review-submit-screen-affordances.md) | Review & Submit return affordance — explicit instructional sentence above the row list plus a decorative trailing chevron on available rows | P3 | 2026-04-13 | [PR #279](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/279) |
