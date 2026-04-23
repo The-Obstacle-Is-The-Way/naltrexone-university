@@ -3,9 +3,9 @@
 **Date:** 2026-03-13
 **Triggered by:** User observation that the "Remove" pill on the Bookmarks page and the "Bookmark" / "Remove bookmark" pills in the Practice action bar feel heavy and text-forward for what is conceptually a simple toggle. The industry-standard pattern — a filled bookmark icon when bookmarked, an empty/outlined bookmark icon when not — would be more compact, more immediately recognizable, and more visually elegant.
 **Scope:** Explore replacing text-based bookmark controls across the app with a toggle bookmark icon (filled ↔ outlined), starting with the Bookmarks page Remove pill and extending to the practice and review action bars.
-**Related:** [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) (bookmark pill hover pattern), [BS-049 (archived)](../_archive/brainstorming/bs-049-bookmarks-card-visual-unification.md) (bookmark card unification), [DEBT-307 (archived)](../_archive/debt/debt-307-bookmarks-row-visual-unification.md) (bookmark row visual unification)
+**Related:** [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) (bookmark pill hover pattern), [BS-049 (archived)](../_archive/brainstorming/bs-049-bookmarks-card-visual-unification.md) (bookmark card unification), [DEBT-307 (archived)](../_archive/debt/debt-307-bookmarks-row-visual-unification.md) (bookmark row visual unification), [DEBT-365 (archived)](../_archive/debt/debt-365-exam-flow-affordance-and-label-consistency.md) (bookmark vs mark-for-review semantic split), [Bookmark Surface Policy](../frontend/bookmark-surface-policy.md)
 
-**Status:** Active — no icon-toggle UI has shipped. Later bookmark work changed surface timing and placement (`BS-053`, `DEBT-318`), but production still uses text pills for bookmark add/remove actions and the Bookmarks page still uses the AlertDialog-backed Remove pill.
+**Status:** Active — no icon-toggle UI has shipped. Later bookmark work changed surface timing and placement (`BS-053`, `DEBT-318`, `DEBT-365`), but production still uses text pills for bookmark add/remove actions and the Bookmarks page still uses the AlertDialog-backed Remove pill.
 
 ---
 
@@ -19,9 +19,10 @@ Bookmarking in the app is still text-based on every surfaced add/remove control:
 |---------|----------------|-------|
 | **Bookmarks page** (each row) | `Button variant="outline" rounded-full` | "Remove" |
 | **Tutor / Quick Practice action bar** | `Button variant="outline" rounded-full` | "Bookmark" or "Remove bookmark" |
+| **Post-exam review action bar** | `Button variant="outline" rounded-full` | "Bookmark" or "Remove bookmark" |
 | **Question review / session review action bar** | `Button variant="outline" rounded-full` | "Bookmark" or "Remove bookmark" |
 
-Both use outline pill buttons with text labels. This works functionally but has drawbacks:
+These surfaces use outline pill buttons with text labels. This works functionally but has drawbacks:
 
 1. **Takes up horizontal space** — "Remove bookmark" is a wide pill, especially on mobile
 2. **Doesn't leverage universal iconography** — users instantly recognize the bookmark icon shape (the flag/ribbon) across every browser, every app, every platform
@@ -86,6 +87,15 @@ The icon version would render the same states visually (outlined vs filled) with
 - Loading/saving → disabled state
 
 This means the eventual icon-toggle rollout is broader than just Bookmarks page + active practice. The review page now carries the same text-pill pattern.
+
+### Post-exam review action bar — now explicitly in scope
+
+`post-exam-review-view.tsx` also renders the same text bookmark pill after `Submit exam`:
+- Not bookmarked -> "Bookmark"
+- Bookmarked -> "Remove bookmark"
+- Loading -> disabled state
+
+DEBT-365 closed the `Mark for review` vs `Bookmark` naming concern as intentional-by-design: active exam mode owns `Mark for review`, and feedback/review surfaces own `Bookmark`. Any future icon-toggle replacement must preserve that semantic split. This doc is about rendering the bookmark action more compactly; it should not reintroduce bookmark controls into active exam mode or blur the mark-for-review behavior.
 
 ### Available icons
 
@@ -245,7 +255,7 @@ When the bookmark state toggles:
 ### Phase 2: Practice + review action bars
 - Replace "Bookmark" / "Remove bookmark" text pills with `BookmarkToggle`
 - Keep existing toggle logic and toast notifications
-- Higher cross-cutting impact — touches quick practice, tutor session practice, question review, and session-review action bar layout
+- Higher cross-cutting impact — touches quick practice, tutor session practice, post-exam review, question review, and session-review action bar layout
 
 ### Phase 3 (optional): Corner-positioned bookmark icon on question surfaces
 - Add a small bookmark icon in the top-right corner of applicable question surfaces (for example history rows/cards or bookmark rows)
@@ -281,3 +291,4 @@ When the bookmark state toggles:
 | 2026-03-13 | Proposed phased rollout (bookmarks page first) | Narrowest initial surface area, though still behaviorally significant because removing from the list is not instantly reversible |
 | 2026-03-13 | No code changes yet | Brainstorming only — needs design decisions on icon color, undo behavior, and phasing before implementation |
 | 2026-03-29 | Refreshed current-state inventory | Production still uses text pills on the Bookmarks page, tutor/quick-practice action bar, and review/session-review action bar. Later bookmark work changed timing and placement, but did not land the icon-toggle UI proposed here. |
+| 2026-04-23 | Synced with DEBT-365 closure | Post-exam review is now explicitly listed as a bookmark text-pill surface. DEBT-365 established that `Bookmark` remains canonical product vocabulary and must stay separate from exam-only `Mark for review`; this brainstorm remains active only for visual treatment, not semantics. |
