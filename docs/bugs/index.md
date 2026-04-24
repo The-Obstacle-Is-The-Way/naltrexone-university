@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-09
+**Last Updated:** 2026-04-24
 
 ---
 
@@ -13,7 +13,12 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-235
+**Next Bug ID:** BUG-238
+
+**Latest manual report (2026-04-24) — active-exam visibility regression sweep:**
+- BUG-237 filed: `submitAnswer` still accepts active exam sessions and writes final attempt/session-answer state before `Submit exam`.
+- BUG-235 filed: attempted-question History ranks active-exam attempts before applying the visibility guard, so a prior visible attempt for the same question can disappear during an active exam.
+- BUG-236 filed: dashboard `Current streak` still reads unfiltered attempt timestamps and can include active-exam attempts before exam end.
 
 **Latest archival (2026-04-09):**
 - BUG-234 verified fixed (PR #271): `AuthUserButton` client wrapper isolates Clerk `UserButton` from the server render path; `AuthNav` no longer reaches across the provider boundary. Archived to `docs/_archive/bugs/`.
@@ -117,7 +122,35 @@ Confirmed bugs that are not yet archived are listed below. Items may still be un
 
 | Bug | Priority | Summary |
 |-----|----------|---------|
-| — | — | No active bugs. |
+| [BUG-237](./bug-237-submit-answer-allows-active-exam-session-writes.md) | P2 | `submitAnswer` can write final attempts for active exam sessions, bypassing the draft/finalize contract |
+| [BUG-235](./bug-235-attempted-question-history-drops-latest-visible-attempt.md) | P3 | Attempted-question History can hide a prior visible attempt when the same question has a newer active-exam attempt |
+| [BUG-236](./bug-236-dashboard-current-streak-includes-active-exam-attempts.md) | P3 | Dashboard current streak can include active-exam attempt timestamps before the exam is ended |
+
+## Audit #19 — Active-Exam Visibility Regression Sweep (2026-04-24)
+
+Focused follow-up sweep across exam-answer secrecy, History projections, dashboard stats, and adjacent repository query families. The goal was to find only code-trace-confirmed regressions that survived the earlier BUG-180..198 active-exam cleanup batch.
+
+**Methodology:**
+- Read representative adapter tests/source first to match current repo patterns before filing anything.
+- Cross-checked active debt, practice-engine policy docs, and archived active-exam bug reports before filing new IDs.
+- Traced active exam writes through `submitAnswer`, `saveExamDraftAnswer`, and `finalizeExamAnswers`.
+- Traced dashboard stats from page render through `GetUserStatsUseCase` into `AttemptStatsReader` repository methods.
+- Traced History attempted-question list/count semantics through latest-attempt ranking, active-exam visibility filtering, and question-progress repository comparison code.
+- Searched mutation, billing, review, bookmark, webhook, cron, search-param, and markdown-rendering boundaries for P0-P4 bugs; filed only confirmed app behavior issues.
+
+**3 new bugs filed (BUG-235..237):**
+
+| Bug | Family | Priority | Summary |
+|-----|--------|----------|---------|
+| [BUG-237](./bug-237-submit-answer-allows-active-exam-session-writes.md) | Practice / active-exam write boundary | P2 | `submitAnswer` accepts active exam sessions and can persist final attempts before exam submission |
+| [BUG-235](./bug-235-attempted-question-history-drops-latest-visible-attempt.md) | History / active-exam visibility | P3 | Attempted-question History ranks before filtering active-exam attempts, so older visible attempts can disappear |
+| [BUG-236](./bug-236-dashboard-current-streak-includes-active-exam-attempts.md) | Dashboard / active-exam visibility | P3 | Current streak uses unfiltered `answeredAt` rows and can count active-exam attempts |
+
+**Surfaces confirmed clean or intentionally deferred:**
+- Dashboard aggregate counts and recent activity still use the shared active-exam visibility predicate from the BUG-187 fix.
+- History attempted-question list/count still exclude active-exam attempts directly; BUG-235 is the narrower latest-visible fallback gap, not a renewed correctness leak.
+- Post-exam review, bookmark vocabulary, and `Bookmark` vs `Mark for review` surface policy remain aligned with the DEBT-365 closeout.
+- Active debt items DEBT-332, DEBT-337, and DEBT-349 remain debt/optimization concerns rather than open bug reports.
 
 ## Audit #18 — Server-Action Idempotency + Stale Start Sweep (2026-04-03)
 
