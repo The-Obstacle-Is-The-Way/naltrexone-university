@@ -178,6 +178,13 @@ export class SubmitAnswerUseCase {
       );
     }
 
+    if (session && session.mode === 'exam' && session.endedAt === null) {
+      throw new ApplicationError(
+        'VALIDATION_ERROR',
+        'Per-question submit is not available in exam mode',
+      );
+    }
+
     if (session && session.endedAt !== null) {
       throw new ApplicationError('CONFLICT', 'Practice session already ended');
     }

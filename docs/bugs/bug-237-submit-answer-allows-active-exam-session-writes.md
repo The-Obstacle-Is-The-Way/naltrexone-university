@@ -1,6 +1,6 @@
 # BUG-237: submitAnswer Allows Final Attempt Writes During Active Exam Sessions
 
-**Status:** Open
+**Status:** Fixed (pending PR)
 **Priority:** P2
 **Date:** 2026-04-24
 
@@ -60,15 +60,15 @@ After the use-case guard lands, update the exam-answer secrecy policy's `SubmitA
 
 ## Verification
 
-- [ ] Add a `SubmitAnswerUseCase` unit test (Vitest, in-memory fakes only — `FakePracticeSessionRepository`, `FakeAttemptRepository`, `FakeQuestionRepository`, `FakeLogger`) proving active exam sessions throw `ApplicationError` with code `VALIDATION_ERROR` BEFORE any `attempts` row is inserted and BEFORE `recordQuestionAnswer(...)` is called. Assert via fake call counts / state, not via mocks.
-- [ ] Add a `SubmitAnswerUseCase` unit test proving tutor-mode session submissions still succeed.
-- [ ] Add a `SubmitAnswerUseCase` unit test proving standalone (no `sessionId`) submissions still succeed.
-- [ ] Add a `SubmitAnswerUseCase` unit test proving ENDED exam sessions still reject with `CONFLICT` (existing guard preserved — guarantees ordering didn't regress).
-- [ ] Add a `SubmitAnswerUseCase` unit test proving ENDED tutor sessions still reject with `CONFLICT` (existing guard preserved).
-- [ ] Add controller-level coverage for `submitAnswer({ sessionId })` against an active exam — confirm it surfaces the use-case error (the guard lives in the use case, not the controller, so no separate controller branch should be added).
-- [ ] Add an integration regression test (`tests/integration/`) using a real Postgres test DB proving an active-exam `submitAnswer` call does NOT create an `attempts` row and does NOT mutate `practice_sessions.params_json` `latest*` fields.
-- [ ] Add an integration regression test proving the BUG-237 → finalize collision is closed: an active-exam `submitAnswer` is rejected, the user then drafts the same question through `saveExamDraftAnswer`, and `finalizeExamAnswers` succeeds without unique-index violation on `attempts_session_question_uq`.
-- [ ] Run the full gate before pushing: `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build` (per `.claude/rules/git-workflow.md` — pre-push hook is insufficient).
+- [x] Add a `SubmitAnswerUseCase` unit test (Vitest, in-memory fakes only — `FakePracticeSessionRepository`, `FakeAttemptRepository`, `FakeQuestionRepository`, `FakeLogger`) proving active exam sessions throw `ApplicationError` with code `VALIDATION_ERROR` BEFORE any `attempts` row is inserted and BEFORE `recordQuestionAnswer(...)` is called. Assert via fake call counts / state, not via mocks. Evidence: `src/application/use-cases/submit-answer.test.ts` → `rejects active exam sessions before inserting an attempt or recording an answer`; red failed with old redacted-success payload, then passed after the use-case guard.
+- [x] Add a `SubmitAnswerUseCase` unit test proving tutor-mode session submissions still succeed. Evidence: `src/application/use-cases/submit-answer.test.ts` → `updates the persisted tutor session question state with the latest answer`.
+- [x] Add a `SubmitAnswerUseCase` unit test proving standalone (no `sessionId`) submissions still succeed. Evidence: `src/application/use-cases/submit-answer.test.ts` → `inserts an attempt and returns explanation for standalone submissions`.
+- [x] Add a `SubmitAnswerUseCase` unit test proving ENDED exam sessions still reject with `CONFLICT` (existing guard preserved — guarantees ordering didn't regress). Evidence: `src/application/use-cases/submit-answer.test.ts` → `throws CONFLICT when submitting to an ended exam session`.
+- [x] Add a `SubmitAnswerUseCase` unit test proving ENDED tutor sessions still reject with `CONFLICT` (existing guard preserved). Evidence: `src/application/use-cases/submit-answer.test.ts` → `throws CONFLICT when submitting to an ended tutor session`.
+- [x] Add controller-level coverage for `submitAnswer({ sessionId })` against an active exam — confirm it surfaces the use-case error (the guard lives in the use case, not the controller, so no separate controller branch should be added). Evidence: `src/adapters/controllers/question-controller.test.ts` → `surfaces the use-case error when submitAnswer targets an active exam session`.
+- [x] Add an integration regression test (`tests/integration/`) using a real Postgres test DB proving an active-exam `submitAnswer` call does NOT create an `attempts` row and does NOT mutate `practice_sessions.params_json` `latest*` fields. Evidence: `tests/integration/controllers.integration.test.ts` → `BUG-237 rejects active-exam submitAnswer without attempt or latest-state writes`.
+- [x] Add an integration regression test proving the BUG-237 → finalize collision is closed: an active-exam `submitAnswer` is rejected, the user then drafts the same question through `saveExamDraftAnswer`, and `finalizeExamAnswers` succeeds without unique-index violation on `attempts_session_question_uq`. Evidence: `tests/integration/controllers.integration.test.ts` → `BUG-237 keeps draft finalization from colliding with a prior active-exam submitAnswer`.
+- [x] Run the full gate before pushing: `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build` (per `.claude/rules/git-workflow.md` — pre-push hook is insufficient). Evidence: full gate passed on 2026-04-24 with `pnpm test --run` (282 files, 2330 tests), `pnpm test:browser` (36 files, 241 tests), `pnpm test:integration` (13 files, 83 tests), and `pnpm build` completed successfully.
 
 ## Related
 

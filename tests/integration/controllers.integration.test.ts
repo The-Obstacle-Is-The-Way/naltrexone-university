@@ -32,9 +32,11 @@ import {
   FakePaymentGateway,
   FakeRateLimiter,
 } from '@/src/application/test-helpers/fakes';
+import { FinalizeExamAnswersUseCase } from '@/src/application/use-cases/finalize-exam-answers';
 import { GetAttemptedQuestionsUseCase } from '@/src/application/use-cases/get-attempted-questions';
 import { GetNextQuestionUseCase } from '@/src/application/use-cases/get-next-question';
 import { GetUserStatsUseCase } from '@/src/application/use-cases/get-user-stats';
+import { SaveExamDraftAnswerUseCase } from '@/src/application/use-cases/save-exam-draft-answer';
 import { SubmitAnswerUseCase } from '@/src/application/use-cases/submit-answer';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -334,7 +336,7 @@ describe('question controllers (integration)', () => {
     });
   });
 
-  it('redacts isCorrect in submitAnswer responses for active exam sessions', async () => {
+  it('BUG-237 rejects active-exam submitAnswer without attempt or latest-state writes', async () => {
     const user = await createUser();
     const question = await createQuestion({
       slug: `it-submit-exam-${randomUUID()}`,
@@ -404,16 +406,132 @@ describe('question controllers (integration)', () => {
       deps,
     );
 
-    expect(result).toMatchObject({
-      ok: true,
-      data: {
-        isCorrect: null,
-        correctChoiceId: null,
-        explanationMd: null,
-        referenceMd: null,
-        choiceExplanations: [],
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Per-question submit is not available in exam mode',
       },
     });
+
+    await expect(
+      attempts.findBySessionIdAndQuestionId(session.id, user.id, question.id),
+    ).resolves.toBeNull();
+
+    const [sessionRow] = await db
+      .select({ paramsJson: schema.practiceSessions.paramsJson })
+      .from(schema.practiceSessions)
+      .where(eq(schema.practiceSessions.id, session.id));
+    expect(sessionRow?.paramsJson).toMatchObject({
+      questionStates: [
+        expect.objectContaining({
+          questionId: question.id,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        }),
+      ],
+    });
+  });
+
+  it('BUG-237 keeps draft finalization from colliding with a prior active-exam submitAnswer', async () => {
+    const user = await createUser();
+    const question = await createQuestion({
+      slug: `it-submit-exam-finalize-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    const questions = new DrizzleQuestionRepository(db);
+    const attempts = new DrizzleAttemptRepository(db);
+    const sessions = new DrizzlePracticeSessionRepository(db, () => new Date());
+    const logger = new FakeLogger();
+
+    const submitAnswerUseCase = new SubmitAnswerUseCase(
+      questions,
+      attempts,
+      sessions,
+      logger,
+      async (fn) =>
+        db.transaction(async (tx) =>
+          fn({
+            attempts: new DrizzleAttemptRepository(tx),
+            sessions: new DrizzlePracticeSessionRepository(
+              tx,
+              () => new Date(),
+            ),
+          }),
+        ),
+    );
+    const saveExamDraftAnswerUseCase = new SaveExamDraftAnswerUseCase(
+      questions,
+      sessions,
+    );
+    const finalizeExamAnswersUseCase = new FinalizeExamAnswersUseCase(
+      questions,
+      attempts,
+      sessions,
+      async (fn) =>
+        db.transaction(async (tx) =>
+          fn({
+            questions: new DrizzleQuestionRepository(tx),
+            attempts: new DrizzleAttemptRepository(tx),
+            sessions: new DrizzlePracticeSessionRepository(
+              tx,
+              () => new Date(),
+            ),
+          }),
+        ),
+    );
+
+    const session = await sessions.create({
+      userId: user.id,
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+
+    await expect(
+      submitAnswerUseCase.execute({
+        userId: user.id,
+        questionId: question.id,
+        choiceId: question.correctChoiceId,
+        sessionId: session.id,
+      }),
+    ).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+      message: 'Per-question submit is not available in exam mode',
+    });
+
+    await saveExamDraftAnswerUseCase.execute({
+      userId: user.id,
+      sessionId: session.id,
+      questionId: question.id,
+      selectedChoiceId: question.correctChoiceId,
+      cumulativeMs: 30_000,
+    });
+
+    await expect(
+      finalizeExamAnswersUseCase.execute({
+        userId: user.id,
+        sessionId: session.id,
+      }),
+    ).resolves.toMatchObject({
+      sessionId: session.id,
+      mode: 'exam',
+      totals: {
+        answered: 1,
+        correct: 1,
+      },
+    });
+
+    await expect(
+      attempts.findBySessionId(session.id, user.id),
+    ).resolves.toHaveLength(1);
   });
 
   it('rolls back the attempt insert when recordQuestionAnswer fails inside a transaction', async () => {
@@ -431,7 +549,7 @@ describe('question controllers (integration)', () => {
 
     const session = await sessions.create({
       userId: user.id,
-      mode: 'exam',
+      mode: 'tutor',
       paramsJson: {
         count: 1,
         tagSlugs: [],
