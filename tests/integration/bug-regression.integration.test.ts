@@ -745,8 +745,11 @@ describe('BUG-238: Exam draft cumulativeMs is bounded', () => {
     const state = row?.paramsJson.questionStates?.find(
       (questionState) => questionState.questionId === question.id,
     );
-    expect(state?.draftSelectedChoiceId ?? null).toBeNull();
-    expect(state?.draftCumulativeMs ?? 0).toBe(0);
+    expect(state).toMatchObject({
+      questionId: question.id,
+      draftSelectedChoiceId: null,
+      draftCumulativeMs: 0,
+    });
   });
 
   it('caps legacy oversized draftCumulativeMs during finalization without overflowing attempts.time_spent_seconds', async () => {

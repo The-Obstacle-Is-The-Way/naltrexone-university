@@ -1,6 +1,6 @@
 # BUG-238: Active Exam Draft Save Allows Unbounded cumulativeMs
 
-**Status:** In Progress
+**Status:** Open
 **Priority:** P3
 **Date:** 2026-04-25
 **Confirmed:** 2026-04-25

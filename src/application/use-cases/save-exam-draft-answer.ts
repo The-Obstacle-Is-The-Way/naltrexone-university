@@ -4,6 +4,7 @@ import type {
   QuestionRepository,
 } from '@/src/application/ports/repositories';
 import type { PracticeSessionQuestionState } from '@/src/domain/entities';
+import { MS_PER_SECOND } from '@/src/domain/services';
 import { SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS } from './submit-answer';
 
 export type SaveExamDraftAnswerInput = {
@@ -17,7 +18,7 @@ export type SaveExamDraftAnswerInput = {
 export type SaveExamDraftAnswerOutput = PracticeSessionQuestionState;
 
 export const SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS =
-  SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS * 1000;
+  SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS * MS_PER_SECOND;
 
 export class SaveExamDraftAnswerUseCase {
   constructor(
