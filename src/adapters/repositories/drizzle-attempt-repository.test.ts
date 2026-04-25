@@ -81,6 +81,7 @@ function createDbMock() {
   });
 
   const whereGroupBy = vi.fn(() => ({ groupBy, as: latestRowsAs }));
+  const leftJoinLatestAttemptRows = vi.fn(() => ({ where: whereGroupBy }));
 
   const offset = vi.fn(() => finalQueryExecute());
   const limit = vi.fn(() => ({ offset }));
@@ -134,6 +135,12 @@ function createDbMock() {
       };
     }
 
+    if ('attemptRank' in fields) {
+      return {
+        from: vi.fn(() => ({ leftJoin: leftJoinLatestAttemptRows })),
+      };
+    }
+
     if (Object.keys(fields).length === 1 && 'answeredAt' in fields) {
       return {
         from: vi.fn(() => ({ leftJoin: leftJoinAnsweredAt })),
@@ -166,6 +173,7 @@ function createDbMock() {
       groupByAs,
       groupByExecute,
       recentQueryExecute,
+      leftJoinLatestAttemptRows,
       answeredAtQueryExecute,
       innerJoin,
       leftJoinFinal,
@@ -806,6 +814,8 @@ describe('DrizzleAttemptRepository', () => {
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
       await repo.listAttemptedQuestionsByUserId('user_1', 20, 0);
 
+      expect(db._mocks.leftJoinLatestAttemptRows).toHaveBeenCalledTimes(1);
+      expect(db._mocks.whereGroupBy).toHaveBeenCalledTimes(1);
       expect(db._mocks.whereFinal).toHaveBeenCalledTimes(1);
     });
   });
@@ -856,6 +866,8 @@ describe('DrizzleAttemptRepository', () => {
         repo.countAttemptedQuestionsByUserId('user_1'),
       ).resolves.toBe(3);
 
+      expect(db._mocks.leftJoinLatestAttemptRows).toHaveBeenCalledTimes(1);
+      expect(db._mocks.whereGroupBy).toHaveBeenCalledTimes(1);
       expect(db._mocks.countWhere).toHaveBeenCalledTimes(1);
     });
   });

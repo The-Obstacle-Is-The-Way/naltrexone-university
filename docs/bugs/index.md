@@ -123,7 +123,7 @@ Confirmed bugs that are not yet archived are listed below. Items may still be un
 | Bug | Priority | Summary |
 |-----|----------|---------|
 | [BUG-237](./bug-237-submit-answer-allows-active-exam-session-writes.md) | P2 | Fix in PR #284: active-exam `submitAnswer` is rejected before attempt/session-answer writes; archive after merge verification |
-| [BUG-235](./bug-235-attempted-question-history-drops-latest-visible-attempt.md) | P3 | Attempted-question History can hide a prior visible attempt when the same question has a newer active-exam attempt |
+| [BUG-235](./bug-235-attempted-question-history-drops-latest-visible-attempt.md) | P3 | Fix on branch: History latest-attempt ranking now filters active-exam attempts before rank selection; archive after merge verification |
 | [BUG-236](./bug-236-dashboard-current-streak-includes-active-exam-attempts.md) | P3 | Fix on branch: dashboard streak timestamp reader now applies active-exam visibility; archive after merge verification |
 
 ## Audit #19 — Active-Exam Visibility Regression Sweep (2026-04-24)

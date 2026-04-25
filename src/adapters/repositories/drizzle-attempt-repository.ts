@@ -79,7 +79,13 @@ export class DrizzleAttemptRepository implements AttemptRepository {
         }).as('attempt_rank'),
       })
       .from(attempts)
-      .where(eq(attempts.userId, userId))
+      .leftJoin(
+        practiceSessions,
+        eq(attempts.practiceSessionId, practiceSessions.id),
+      )
+      .where(
+        and(eq(attempts.userId, userId), this.activeExamVisibilityCondition()),
+      )
       .as('latest_attempt_rows');
   }
 
@@ -89,10 +95,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     >,
     filters?: AttemptedQuestionsFilters,
   ): SQL[] {
-    const conditions: SQL[] = [
-      eq(latestAttemptRows.attemptRank, 1),
-      this.activeExamVisibilityCondition(),
-    ];
+    const conditions: SQL[] = [eq(latestAttemptRows.attemptRank, 1)];
 
     const resultFilter = filters?.result ?? null;
     if (resultFilter === 'correct') {
