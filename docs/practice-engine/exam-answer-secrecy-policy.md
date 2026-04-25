@@ -2,8 +2,8 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Canonical policy for when correctness/explanations may be exposed
-> **Last Verified:** 2026-03-17
-> **Status:** Enforced. BUG-180/181/185 and BUG-186/187/191/192/193/195 are archived as fixed; this document remains the regression contract.
+> **Last Updated:** 2026-04-24
+> **Status:** Enforced. BUG-180/181/185 and BUG-186/187/191/192/193/195 are archived as fixed; BUG-237 now rejects active-exam `SubmitAnswer` at the use-case boundary. This document remains the regression contract.
 
 ---
 
@@ -62,7 +62,7 @@ All previously open drift bugs have been resolved and archived:
 
 | Layer | Responsibility |
 |------|----------------|
-| **Application use cases** | Gate correctness payloads for active exams across `GetPreviousAttempt`, `GetPracticeSessionReview`, `GetNextQuestion`, and `SubmitAnswer` |
+| **Application use cases** | Gate correctness payloads for active exams across `GetPreviousAttempt`, `GetPracticeSessionReview`, and `GetNextQuestion`; reject active-exam `SubmitAnswer` before attempt/session-answer writes |
 | **Repository projections** | Exclude or redact active-exam correctness fields in user-facing aggregates (`GetUserStats`, attempted-question history feeds) |
 | **Controllers** | Preserve strict input contracts; do not allow alternate identifier paths to bypass application gates |
 | **Frontend rendering** | Never infer correctness from partial data; render only neutral state in active exam contexts |
@@ -89,12 +89,12 @@ Use this guard consistently at all answer-key disclosure points. Do not duplicat
 
 ## 6. Current Enforcement Status
 
-These code paths were re-verified on 2026-03-17:
+These code paths are current as of 2026-04-24:
 
 - `GetPreviousAttempt` returns `null` for active-exam attempts and only reveals `session_unanswered` answers after the exam session has ended.
 - `GetPracticeSessionReview` redacts per-question `isCorrect` while an exam session is still active.
 - `GetNextQuestion` redacts `session.latestIsCorrect` for active exams and only hydrates `previousSubmission` for answered tutor-session questions.
-- `SubmitAnswer` returns `isCorrect: null`, `correctChoiceId: null`, `explanationMd: null`, `referenceMd: null`, and an empty `choiceExplanations` array for active exam submits.
+- `SubmitAnswer` rejects active exam sessions with `VALIDATION_ERROR` before inserting an `attempts` row or calling `recordQuestionAnswer(...)`; active exam answers must use `SaveExamDraftAnswer` before `FinalizeExamAnswers` creates final attempts. See [BUG-237](../bugs/bug-237-submit-answer-allows-active-exam-session-writes.md).
 - `DrizzleQuestionRepository` excludes active-exam attempts from status-filter and user-history correctness projections via `activeExamVisibilityCondition()`.
 
 ---
@@ -104,13 +104,13 @@ These code paths were re-verified on 2026-03-17:
 Every change that touches review hydration, retry, stats projections, or exam rendering must keep these tests green:
 
 1. `GetPreviousAttempt` blocks active-exam leaks for all identifier paths:
-- `sessionId`
-- `attemptId`
-- latest-by-question (no ids)
+   - `sessionId`
+   - `attemptId`
+   - latest-by-question (no ids)
 
 2. `GetPracticeSessionReview` must not surface per-question `isCorrect` while session is active exam.
 
-3. `SubmitAnswer` must not return `isCorrect` for active exam submits.
+3. `SubmitAnswer` must reject active exam submits before attempt/session-answer writes.
 
 4. `GetNextQuestion` must not return `latestIsCorrect` for active exam sessions.
 

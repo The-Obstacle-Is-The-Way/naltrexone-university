@@ -751,7 +751,7 @@ describe('SubmitAnswerUseCase', () => {
     ).toEqual(shuffled.map((choice) => choice.explanationMd));
   });
 
-  it('inserts an attempt and returns explanation when not in an exam session', async () => {
+  it('inserts an attempt and returns explanation for standalone submissions', async () => {
     const userId = 'user-1';
 
     const questionId = 'q1';
@@ -1039,7 +1039,7 @@ describe('SubmitAnswerUseCase', () => {
     expect(attempts.getAll()[0]?.isCorrect).toBe(false);
   });
 
-  it('returns null explanation for active exam session', async () => {
+  it('rejects active exam sessions before inserting an attempt or recording an answer', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';
 
@@ -1084,21 +1084,37 @@ describe('SubmitAnswerUseCase', () => {
       passthroughTransaction(attempts, sessions),
     );
 
-    const result = await useCase.execute({
-      userId,
-      questionId,
-      choiceId: 'c2',
-      sessionId,
-    });
+    await expect(
+      useCase.execute({
+        userId,
+        questionId,
+        choiceId: 'c2',
+        sessionId,
+      }),
+    ).rejects.toEqual(
+      new ApplicationError(
+        'VALIDATION_ERROR',
+        'Per-question submit is not available in exam mode',
+      ),
+    );
 
-    expect(result.isCorrect).toBeNull();
-    expect(result.correctChoiceId).toBeNull();
-    expect(result.explanationMd).toBeNull();
-    expect(result.referenceMd).toBeNull();
-    expect(result.choiceExplanations).toEqual([]);
+    expect(attempts.getAll()).toEqual([]);
+    const unchanged = await sessions.findByIdAndUserId(sessionId, userId);
+    expect(unchanged?.questionStates).toEqual([
+      {
+        questionId,
+        markedForReview: false,
+        latestSelectedChoiceId: null,
+        latestIsCorrect: null,
+        latestAnsweredAt: null,
+        draftSelectedChoiceId: 'c1',
+        draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
+        draftCumulativeMs: 12_000,
+      },
+    ]);
   });
 
-  it('updates the persisted session question state with the latest answer', async () => {
+  it('updates the persisted tutor session question state with the latest answer', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';
     const questionId = 'q1';
@@ -1115,7 +1131,7 @@ describe('SubmitAnswerUseCase', () => {
     const session = createPracticeSession({
       id: sessionId,
       userId,
-      mode: 'exam',
+      mode: 'tutor',
       endedAt: null,
       questionIds: [questionId],
     });
@@ -1169,7 +1185,7 @@ describe('SubmitAnswerUseCase', () => {
     const session = createPracticeSession({
       id: sessionId,
       userId,
-      mode: 'exam',
+      mode: 'tutor',
       endedAt: null,
       questionIds: [questionId],
     });
@@ -1216,7 +1232,7 @@ describe('SubmitAnswerUseCase', () => {
     const session = createPracticeSession({
       id: sessionId,
       userId,
-      mode: 'exam',
+      mode: 'tutor',
       endedAt: null,
       questionIds: [questionId],
     });
@@ -1253,7 +1269,7 @@ describe('SubmitAnswerUseCase', () => {
     expect(attempts.getAll()).toEqual([]);
   });
 
-  it('throws CONFLICT when submitting to an ended session', async () => {
+  it('throws CONFLICT when submitting to an ended exam session', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';
 
@@ -1272,6 +1288,50 @@ describe('SubmitAnswerUseCase', () => {
       id: sessionId,
       userId,
       mode: 'exam',
+      endedAt: new Date('2026-01-31T00:00:00Z'),
+      questionIds: [questionId],
+    });
+
+    const attempts = new FakeAttemptRepository();
+    const useCase = new SubmitAnswerUseCase(
+      new FakeQuestionRepository([question]),
+      attempts,
+      new FakePracticeSessionRepository([session]),
+      new FakeLogger(),
+    );
+
+    await expect(
+      useCase.execute({
+        userId,
+        questionId,
+        choiceId: 'c2',
+        sessionId,
+      }),
+    ).rejects.toEqual(
+      new ApplicationError('CONFLICT', 'Practice session already ended'),
+    );
+
+    expect(attempts.getAll()).toEqual([]);
+  });
+
+  it('throws CONFLICT when submitting to an ended tutor session', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+    const questionId = 'q1';
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      explanationMd: 'Because.',
+      choices: [
+        createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+        createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+      ],
+    });
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'tutor',
       endedAt: new Date('2026-01-31T00:00:00Z'),
       questionIds: [questionId],
     });

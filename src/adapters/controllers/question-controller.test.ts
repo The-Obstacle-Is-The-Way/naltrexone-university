@@ -6,19 +6,32 @@ import type {
   RateLimiter,
 } from '@/src/application/ports/gateways';
 import {
+  FakeAttemptRepository,
   FakeAuthGateway,
   FakeGetNextQuestionUseCase,
   FakeIdempotencyKeyRepository,
   FakeLogger,
+  FakePracticeSessionRepository,
+  FakeQuestionRepository,
   FakeRateLimiter,
   FakeSubmitAnswerUseCase,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
 import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
 import type { GetNextQuestionOutput } from '@/src/application/use-cases/get-next-question';
-import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+import {
+  type SubmitAnswerOutput,
+  SubmitAnswerUseCase,
+  type SubmitAnswerWriteTransaction,
+} from '@/src/application/use-cases/submit-answer';
 import { DAY_MS } from '@/src/domain/services/statistics';
-import { createSubscription, createUser } from '@/src/domain/test-helpers';
+import {
+  createChoice,
+  createPracticeSession,
+  createQuestion,
+  createSubscription,
+  createUser,
+} from '@/src/domain/test-helpers';
 import {
   getNextQuestion,
   type QuestionControllerDeps,
@@ -29,6 +42,13 @@ type QuestionControllerTestDeps = QuestionControllerDeps & {
   getNextQuestionUseCase: FakeGetNextQuestionUseCase;
   submitAnswerUseCase: FakeSubmitAnswerUseCase;
 };
+
+function passthroughSubmitTransaction(
+  attempts: FakeAttemptRepository,
+  sessions: FakePracticeSessionRepository,
+): SubmitAnswerWriteTransaction {
+  return async (fn) => fn({ attempts, sessions });
+}
 
 function createDeps(overrides?: {
   now?: Date;
@@ -479,6 +499,64 @@ describe('question-controller', () => {
           explanationMd: null,
           referenceMd: null,
           choiceExplanations: [],
+        },
+      });
+    });
+
+    it('surfaces the use-case error when submitAnswer targets an active exam session', async () => {
+      const questionId = '11111111-1111-1111-1111-111111111111';
+      const choiceId = '22222222-2222-2222-2222-222222222222';
+      const sessionId = '33333333-3333-3333-3333-333333333333';
+      const question = createQuestion({
+        id: questionId,
+        status: 'published',
+        choices: [
+          createChoice({
+            id: '44444444-4444-4444-4444-444444444444',
+            questionId,
+            label: 'A',
+            isCorrect: false,
+          }),
+          createChoice({
+            id: choiceId,
+            questionId,
+            label: 'B',
+            isCorrect: true,
+          }),
+        ],
+      });
+      const attempts = new FakeAttemptRepository();
+      const sessions = new FakePracticeSessionRepository([
+        createPracticeSession({
+          id: sessionId,
+          userId: 'user_1',
+          mode: 'exam',
+          endedAt: null,
+          questionIds: [questionId],
+        }),
+      ]);
+      const baseDeps = createDeps();
+      const deps: QuestionControllerDeps = {
+        ...baseDeps,
+        submitAnswerUseCase: new SubmitAnswerUseCase(
+          new FakeQuestionRepository([question]),
+          attempts,
+          sessions,
+          new FakeLogger(),
+          passthroughSubmitTransaction(attempts, sessions),
+        ),
+      };
+
+      const result = await submitAnswer(
+        { questionId, choiceId, sessionId },
+        deps,
+      );
+
+      expect(result).toEqual({
+        ok: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Per-question submit is not available in exam mode',
         },
       });
     });
