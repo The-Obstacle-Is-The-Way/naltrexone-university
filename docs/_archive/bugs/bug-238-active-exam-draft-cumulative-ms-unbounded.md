@@ -1,11 +1,11 @@
 # BUG-238: Active Exam Draft Save Allows Unbounded cumulativeMs
 
-**Status:** Open
+**Status:** Resolved (PR #287, merged 2026-04-25)
 **Priority:** P3
 **Date:** 2026-04-25
 **Confirmed:** 2026-04-25
 **Component:** Practice / Exam Drafts / Validation
-**Resolution State:** Fixed on branch `fix-bug-238-exam-draft-cumulative-ms-bound`; pending PR review, merge verification, and archival.
+**Resolution State:** Fixed in PR #287, merged to dev `ee1f801e` and main on 2026-04-25.
 
 ---
 

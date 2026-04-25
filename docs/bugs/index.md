@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-25 (post-archive bug-hunt follow-up)
+**Last Updated:** 2026-04-25 (BUG-238 archival)
 
 ---
 
@@ -14,6 +14,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 3. **Knowledge Base** — Help future developers understand past issues
 
 **Next Bug ID:** BUG-240
+
+**Latest archival (2026-04-25) — BUG-238 active-exam draft timing bound:**
+- BUG-238 verified fixed (PR #287, merged dev `ee1f801e`): `saveExamDraftAnswer` now rejects oversized `cumulativeMs` at the controller boundary, clamps non-controller use-case calls, and caps legacy oversized drafts during exam finalization. Archived to `docs/_archive/bugs/`.
 
 **Latest manual report (2026-04-25) — post-archive active-exam follow-up:**
 - BUG-238 filed: active-exam `saveExamDraftAnswer` accepts unbounded `cumulativeMs`, which can persist impossible draft timing and later make `finalizeExamAnswers` write or compute invalid `timeSpentSeconds`.
@@ -131,7 +134,6 @@ Confirmed bugs that are not yet archived are listed below. Items may still be un
 
 | Bug | Priority | Summary |
 |-----|----------|---------|
-| [BUG-238](./bug-238-active-exam-draft-cumulative-ms-unbounded.md) | P3 | Active-exam draft saves accept unbounded `cumulativeMs`; oversized persisted draft timing can corrupt final attempt duration or make `Submit exam` fail during finalization |
 | [BUG-239](./bug-239-active-exam-latest-attempt-readers-drop-visible-fallback.md) | P4 | Remaining implicit latest-attempt readers select raw active-exam rows before visibility filtering, hiding older visible attempts in standalone review hydration and quick-practice recency ordering |
 
 ## Audit #20 — Post-Archive Active-Exam Follow-Up (2026-04-25)
@@ -149,7 +151,7 @@ Focused follow-up after the BUG-235/236/237 archival pass. The goal was to confi
 
 | Bug | Family | Priority | Summary |
 |-----|--------|----------|---------|
-| [BUG-238](./bug-238-active-exam-draft-cumulative-ms-unbounded.md) | Practice / active-exam draft validation | P3 | `saveExamDraftAnswer` accepts unbounded `cumulativeMs`, letting malformed draft timing reach finalization |
+| [BUG-238](../_archive/bugs/bug-238-active-exam-draft-cumulative-ms-unbounded.md) | Practice / active-exam draft validation | P3 | `saveExamDraftAnswer` accepted unbounded `cumulativeMs`, letting malformed draft timing reach finalization |
 | [BUG-239](./bug-239-active-exam-latest-attempt-readers-drop-visible-fallback.md) | Practice / active-exam reader fallback | P4 | Remaining implicit latest-attempt readers can hide older visible attempts behind newer active-exam rows |
 
 **Surfaces confirmed clean or intentionally deferred:**
