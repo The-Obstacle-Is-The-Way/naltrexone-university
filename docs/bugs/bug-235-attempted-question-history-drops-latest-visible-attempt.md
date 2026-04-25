@@ -3,6 +3,7 @@
 **Status:** Open
 **Priority:** P3
 **Date:** 2026-04-24
+**Resolution State:** Fixed on branch `fix-bug-235-history-latest-visible-fallback`; pending PR review, merge verification, and archival.
 
 ---
 
@@ -87,15 +88,15 @@ The unit-test mock infrastructure for `latestAttemptRowsSubquery` in `src/adapte
 
 ## Verification
 
-- [ ] **Regression — older standalone + newer active-exam:** Add an integration test that creates a standalone visible attempt for question Q, then a newer active-exam attempt for the same Q, and asserts `listAttemptedQuestionsByUserId` returns the question with the **older** standalone attempt's `answeredAt` and `isCorrect`. The active-exam timestamp must NOT appear.
-- [ ] **Regression — older tutor + newer active-exam:** Same scenario with a tutor-mode session for the older attempt. Same assertion shape.
-- [ ] **Regression — older ended-exam + newer active-exam:** Same scenario with an ended-exam-mode session for the older attempt. Same assertion shape.
-- [ ] **Count parity:** In each of the three regression scenarios above, assert `countAttemptedQuestionsByUserId` returns the same count as the list length. List/count must never disagree.
-- [ ] **BUG-192 sibling case preserved (no fallback exists):** Add an integration test that creates ONLY an active-exam attempt for question Q (no prior visible attempt), and asserts the question is **excluded** from list and count while the exam is active. This proves the original BUG-192 behavior is preserved when there is genuinely nothing to fall back to.
-- [ ] **Post-exam-end recovery:** After ending the active exam in any of the regression scenarios, the active-exam attempt becomes the latest visible attempt — the question's `answeredAt` and `isCorrect` in the list now reflect the post-exam attempt, not the older visible one.
-- [ ] **Filter interactions don't regress:** Spot-check that `result: 'correct' | 'incorrect'`, `source: 'adhoc' | 'tutor' | 'exam'`, `difficulty`, and `tagSlug` filters still produce the same results for non-active-exam fixtures as before the fix. The existing BUG-192 integration test in `tests/integration/bug-regression.integration.test.ts` must continue to pass unchanged.
-- [ ] **Existing unit tests pass with mock-shape update:** `src/adapters/repositories/drizzle-attempt-repository.test.ts` `listAttemptedQuestionsByUserId` and `countAttemptedQuestionsByUserId` describe-blocks must continue to pass. Update the mock chain shape (insert a `leftJoin` step before `where`) without changing test intent.
-- [ ] Run the full pre-push gate: `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build` (per `.claude/rules/git-workflow.md` — pre-push hook is insufficient).
+- [x] **Regression — older standalone + newer active-exam:** Added integration coverage proving `listAttemptedQuestionsByUserId(...)` falls back to the older standalone row's `answeredAt` and `isCorrect` while the newer active-exam row is hidden. Evidence: `tests/integration/bug-regression.integration.test.ts` → `BUG-235: Attempted-question history keeps latest visible fallback` → `falls back to an older standalone attempt when a newer active-exam attempt is hidden`. Red failed with `[]`; green passed after `latestAttemptRowsSubquery(...)` filtered before ranking.
+- [x] **Regression — older tutor + newer active-exam:** Added integration coverage proving the latest visible tutor-mode row remains selected while a newer active-exam row is hidden. Evidence: `tests/integration/bug-regression.integration.test.ts` → `falls back to an older tutor attempt when a newer active-exam attempt is hidden`. Red failed with `[]`; green passed after the subquery shape matched `DrizzleQuestionRepository`.
+- [x] **Regression — older ended-exam + newer active-exam:** Added integration coverage proving the latest visible ended-exam row remains selected while a newer active-exam row is hidden. Evidence: `tests/integration/bug-regression.integration.test.ts` → `falls back to an older ended-exam attempt when a newer active-exam attempt is hidden`. Red failed with `[]`; green passed after the subquery applied `activeExamVisibilityCondition()` before `row_number()`.
+- [x] **Count parity:** Each BUG-235 regression scenario asserts `countAttemptedQuestionsByUserId(...)` equals the returned list length, so list/count semantics stay paired across standalone, tutor, and ended-exam fallback cases.
+- [x] **BUG-192 sibling case preserved (no fallback exists):** Added integration coverage for a question with only an active-exam attempt: list returns `[]` and count returns `0` while the exam is active, then the question appears after exam end. Evidence: `tests/integration/bug-regression.integration.test.ts` → `continues to hide an active-exam attempt when no visible fallback exists`.
+- [x] **Post-exam-end recovery:** The standalone fallback scenario ends the active exam and re-queries History, proving the formerly hidden active-exam attempt becomes the latest visible row with its newer `answeredAt` and `isCorrect`. The no-fallback sibling test also verifies post-exam recovery from zero visible rows to one visible row.
+- [x] **Filter interactions don't regress:** Existing attempted-question filter integration coverage remains unchanged and is included in the full integration gate: `tests/integration/session-attempt-repository.integration.test.ts` covers result, source, difficulty, tagSlug, combined filters, and deterministic latest-attempt tie-breaks; `tests/integration/bug-regression.integration.test.ts` keeps the BUG-192 active-exam exclusion case green.
+- [x] **Existing unit tests pass with mock-shape update:** `src/adapters/repositories/drizzle-attempt-repository.test.ts` now models the `latestAttemptRowsSubquery(...)` chain as `.from().leftJoin().where().as()` and asserts the new latest-row left join is used for both list and count paths. Evidence: `pnpm test --run src/adapters/repositories/drizzle-attempt-repository.test.ts` passed with 29 tests.
+- [x] Run the full pre-push gate: `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build` (per `.claude/rules/git-workflow.md` — pre-push hook is insufficient). Evidence: full pre-push gate passed locally on 2026-04-25 after the code and documentation updates.
 
 ## Related
 
