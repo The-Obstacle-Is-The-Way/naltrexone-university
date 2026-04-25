@@ -1,3 +1,4 @@
+import { SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS } from '@/src/application/use-cases/save-exam-draft-answer';
 import { SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS } from '@/src/application/use-cases/submit-answer';
 
 /**
@@ -17,6 +18,9 @@ export const MAX_PAGINATION_OFFSET = 10_000;
 
 /** Max time allowed for a single question attempt (seconds). */
 export const MAX_TIME_SPENT_SECONDS = SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS;
+
+/** Max cumulative time allowed for an active-exam draft answer (ms). */
+export const MAX_DRAFT_CUMULATIVE_MS = SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS;
 
 /**
  * Practice session parameter limits.

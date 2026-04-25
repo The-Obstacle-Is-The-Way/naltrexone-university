@@ -1,10 +1,11 @@
 # BUG-238: Active Exam Draft Save Allows Unbounded cumulativeMs
 
-**Status:** Open
+**Status:** In Progress
 **Priority:** P3
 **Date:** 2026-04-25
 **Confirmed:** 2026-04-25
 **Component:** Practice / Exam Drafts / Validation
+**Resolution State:** Fixed on branch `fix-bug-238-exam-draft-cumulative-ms-bound`; pending PR review, merge verification, and archival.
 
 ---
 
@@ -57,11 +58,16 @@ Keep the invariant close to both ingress and finalization:
 
 - [x] Code-level tracer-bullet verified on 2026-04-25.
 - [x] Existing `submitAnswer` path confirmed to have a 24-hour controller cap and use-case clamp.
-- [ ] Unit test: `saveExamDraftAnswer` rejects or clamps `cumulativeMs > MAX_TIME_SPENT_SECONDS * 1000`.
-- [ ] Controller test: `saveExamDraftAnswer` returns `VALIDATION_ERROR` for oversized `cumulativeMs`.
-- [ ] Unit test: `finalizeExamAnswers` caps legacy oversized `draftCumulativeMs` before writing `timeSpentSeconds`.
-- [ ] Integration test: oversized persisted draft does not cause `Submit exam` / `finalizeExamAnswers` to fail with a raw DB integer error.
-- [ ] Full gate after fix: `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build`.
+- [x] Unit test: `saveExamDraftAnswer` rejects or clamps `cumulativeMs > MAX_TIME_SPENT_SECONDS * 1000`.
+  - Evidence: `src/application/use-cases/save-exam-draft-answer.test.ts` covers over-bound clamping, in-bound preservation, and negative/NaN normalization.
+- [x] Controller test: `saveExamDraftAnswer` returns `VALIDATION_ERROR` for oversized `cumulativeMs`.
+  - Evidence: `src/adapters/controllers/practice-controller.test.ts` covers schema rejection and no use-case execution.
+- [x] Unit test: `finalizeExamAnswers` caps legacy oversized `draftCumulativeMs` before writing `timeSpentSeconds`.
+  - Evidence: `src/application/use-cases/finalize-exam-answers.test.ts` covers a `Number.MAX_SAFE_INTEGER` legacy draft and asserts `86_400` seconds.
+- [x] Integration test: oversized persisted draft does not cause `Submit exam` / `finalizeExamAnswers` to fail with a raw DB integer error.
+  - Evidence: `tests/integration/bug-regression.integration.test.ts` covers controller ingress rejection without persistence and legacy finalize capping against real Postgres.
+- [x] Full gate after fix: `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build`.
+  - Evidence: passed locally on 2026-04-25.
 
 ## Related
 

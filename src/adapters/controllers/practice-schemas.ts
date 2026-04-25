@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  MAX_DRAFT_CUMULATIVE_MS,
   MAX_PAGINATION_LIMIT,
   MAX_PAGINATION_OFFSET,
   MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS,
@@ -57,7 +58,7 @@ export const SaveExamDraftAnswerInputSchema = z
     sessionId: zUuid,
     questionId: zUuid,
     selectedChoiceId: zUuid,
-    cumulativeMs: z.number().int().min(0),
+    cumulativeMs: z.number().int().min(0).max(MAX_DRAFT_CUMULATIVE_MS),
   })
   .strict();
 

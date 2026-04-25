@@ -9,7 +9,10 @@ import {
   createPracticeSession,
   createQuestion,
 } from '@/src/domain/test-helpers';
-import { SaveExamDraftAnswerUseCase } from './save-exam-draft-answer';
+import {
+  SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS,
+  SaveExamDraftAnswerUseCase,
+} from './save-exam-draft-answer';
 
 describe('SaveExamDraftAnswerUseCase', () => {
   it('saves a draft answer for an active exam session without changing latest answer fields', async () => {
@@ -105,6 +108,110 @@ describe('SaveExamDraftAnswerUseCase', () => {
       draftCumulativeMs: 30_000,
       draftSavedAt: expect.any(Date),
     });
+  });
+
+  it('clamps cumulativeMs at SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS when input exceeds the bound', async () => {
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q1'],
+      }),
+    ]);
+    const questions = new FakeQuestionRepository([
+      createQuestion({
+        id: 'q1',
+        choices: [
+          createChoice({ id: 'choice-1', questionId: 'q1', label: 'A' }),
+          createChoice({ id: 'choice-2', questionId: 'q1', label: 'B' }),
+        ],
+      }),
+    ]);
+    const useCase = new SaveExamDraftAnswerUseCase(questions, sessions);
+
+    await useCase.execute({
+      userId: 'user-1',
+      sessionId: 'session-1',
+      questionId: 'q1',
+      selectedChoiceId: 'choice-1',
+      cumulativeMs: SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS + 1,
+    });
+
+    const persisted = await sessions.findByIdAndUserId('session-1', 'user-1');
+    expect(persisted?.questionStates[0]?.draftCumulativeMs).toBe(
+      SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS,
+    );
+  });
+
+  it('accepts cumulativeMs values within the bound unchanged', async () => {
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q1'],
+      }),
+    ]);
+    const questions = new FakeQuestionRepository([
+      createQuestion({
+        id: 'q1',
+        choices: [
+          createChoice({ id: 'choice-1', questionId: 'q1', label: 'A' }),
+          createChoice({ id: 'choice-2', questionId: 'q1', label: 'B' }),
+        ],
+      }),
+    ]);
+    const useCase = new SaveExamDraftAnswerUseCase(questions, sessions);
+
+    await useCase.execute({
+      userId: 'user-1',
+      sessionId: 'session-1',
+      questionId: 'q1',
+      selectedChoiceId: 'choice-1',
+      cumulativeMs: 5_000,
+    });
+
+    const persisted = await sessions.findByIdAndUserId('session-1', 'user-1');
+    expect(persisted?.questionStates[0]?.draftCumulativeMs).toBe(5_000);
+  });
+
+  it.each([
+    ['negative', -1],
+    ['NaN', Number.NaN as unknown as number],
+  ])('treats %s cumulativeMs as 0', async (_caseName, cumulativeMs) => {
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q1'],
+      }),
+    ]);
+    const questions = new FakeQuestionRepository([
+      createQuestion({
+        id: 'q1',
+        choices: [
+          createChoice({ id: 'choice-1', questionId: 'q1', label: 'A' }),
+          createChoice({ id: 'choice-2', questionId: 'q1', label: 'B' }),
+        ],
+      }),
+    ]);
+    const useCase = new SaveExamDraftAnswerUseCase(questions, sessions);
+
+    await useCase.execute({
+      userId: 'user-1',
+      sessionId: 'session-1',
+      questionId: 'q1',
+      selectedChoiceId: 'choice-1',
+      cumulativeMs,
+    });
+
+    const persisted = await sessions.findByIdAndUserId('session-1', 'user-1');
+    expect(persisted?.questionStates[0]?.draftSelectedChoiceId).toBe(
+      'choice-1',
+    );
+    expect(persisted?.questionStates[0]?.draftCumulativeMs).toBe(0);
   });
 
   it('rejects tutor sessions', async () => {

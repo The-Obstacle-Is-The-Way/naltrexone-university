@@ -15,6 +15,7 @@ import {
   type FinalizeExamAnswersWriteTransaction,
 } from './finalize-exam-answers';
 import { projectPracticeSessionSummary } from './practice-session-summary';
+import { SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS } from './save-exam-draft-answer';
 
 function passthroughTransaction(
   questions: FakeQuestionRepository,
@@ -224,6 +225,64 @@ describe('FinalizeExamAnswersUseCase', () => {
         },
       ],
     });
+  });
+
+  it('caps legacy oversized draftCumulativeMs before writing timeSpentSeconds', async () => {
+    const questions = new FakeQuestionRepository([
+      createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong'),
+    ]);
+    const attempts = new FakeAttemptRepository();
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q1'],
+        startedAt: new Date('2026-03-17T12:00:00.000Z'),
+        questionStates: [
+          {
+            questionId: 'q1',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+            draftSelectedChoiceId: 'q1-correct',
+            draftSavedAt: new Date('2026-03-17T12:05:00.000Z'),
+            draftCumulativeMs: Number.MAX_SAFE_INTEGER,
+          },
+        ],
+      }),
+    ]);
+    const useCase = new FinalizeExamAnswersUseCase(
+      questions,
+      attempts,
+      sessions,
+      passthroughTransaction(questions, attempts, sessions),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+      }),
+    ).resolves.toMatchObject({
+      sessionId: 'session-1',
+      mode: 'exam',
+      totals: {
+        answered: 1,
+        correct: 1,
+      },
+    });
+
+    await expect(
+      attempts.findBySessionId('session-1', 'user-1'),
+    ).resolves.toMatchObject([
+      {
+        questionId: 'q1',
+        selectedChoiceId: 'q1-correct',
+        timeSpentSeconds: SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS / 1000,
+      },
+    ]);
   });
 
   it('returns the shared practice-session summary projection', async () => {

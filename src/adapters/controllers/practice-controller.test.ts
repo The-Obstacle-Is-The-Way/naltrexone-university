@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { MAX_PAGINATION_OFFSET } from '@/src/adapters/shared/validation-limits';
+import {
+  MAX_DRAFT_CUMULATIVE_MS,
+  MAX_PAGINATION_OFFSET,
+} from '@/src/adapters/shared/validation-limits';
 import { ApplicationError } from '@/src/application/errors';
 import type { RateLimiter } from '@/src/application/ports/gateways';
 import {
@@ -791,6 +794,31 @@ describe('practice-controller', () => {
             sessionId: expect.any(Array),
             questionId: expect.any(Array),
             selectedChoiceId: expect.any(Array),
+            cumulativeMs: expect.any(Array),
+          },
+        },
+      });
+      expect(deps.saveExamDraftAnswerUseCase.inputs).toEqual([]);
+    });
+
+    it('returns VALIDATION_ERROR when cumulativeMs exceeds the draft maximum', async () => {
+      const deps = createDeps();
+
+      const result = await saveExamDraftAnswer(
+        {
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          questionId: '22222222-2222-2222-2222-222222222222',
+          selectedChoiceId: '33333333-3333-3333-3333-333333333333',
+          cumulativeMs: MAX_DRAFT_CUMULATIVE_MS + 1,
+        },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          fieldErrors: {
             cumulativeMs: expect.any(Array),
           },
         },
