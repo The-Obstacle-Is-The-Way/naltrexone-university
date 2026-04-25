@@ -10,6 +10,7 @@ import {
   type PracticeSessionSummary,
   projectPracticeSessionSummary,
 } from './practice-session-summary';
+import { SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS } from './save-exam-draft-answer';
 
 export type FinalizeExamAnswersInput = {
   userId: string;
@@ -100,13 +101,17 @@ export class FinalizeExamAnswersUseCase {
         }
 
         const grade = gradeAnswer(question, selectedChoiceId);
+        const cappedCumulativeMs = Math.min(
+          state.draftCumulativeMs,
+          SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS,
+        );
         const attempt = await tx.attempts.insert({
           userId: input.userId,
           questionId: state.questionId,
           practiceSessionId: activeSession.id,
           selectedChoiceId,
           isCorrect: grade.isCorrect,
-          timeSpentSeconds: Math.floor(state.draftCumulativeMs / 1000),
+          timeSpentSeconds: Math.floor(cappedCumulativeMs / 1000),
         });
 
         await tx.sessions.finalizeDraftAnswer({

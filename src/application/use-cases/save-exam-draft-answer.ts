@@ -4,6 +4,8 @@ import type {
   QuestionRepository,
 } from '@/src/application/ports/repositories';
 import type { PracticeSessionQuestionState } from '@/src/domain/entities';
+import { MS_PER_SECOND } from '@/src/domain/services';
+import { SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS } from './submit-answer';
 
 export type SaveExamDraftAnswerInput = {
   userId: string;
@@ -14,6 +16,9 @@ export type SaveExamDraftAnswerInput = {
 };
 
 export type SaveExamDraftAnswerOutput = PracticeSessionQuestionState;
+
+export const SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS =
+  SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS * MS_PER_SECOND;
 
 export class SaveExamDraftAnswerUseCase {
   constructor(
@@ -61,12 +66,21 @@ export class SaveExamDraftAnswerUseCase {
       );
     }
 
+    const rawCumulativeMs = input.cumulativeMs;
+    const cumulativeMs =
+      typeof rawCumulativeMs === 'number' && Number.isFinite(rawCumulativeMs)
+        ? Math.min(
+            SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS,
+            Math.max(0, rawCumulativeMs),
+          )
+        : 0;
+
     return this.sessions.saveDraftAnswer({
       sessionId: input.sessionId,
       userId: input.userId,
       questionId: input.questionId,
       selectedChoiceId: input.selectedChoiceId,
-      cumulativeMs: input.cumulativeMs,
+      cumulativeMs,
     });
   }
 }
