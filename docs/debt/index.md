@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-23
+**Last Updated:** 2026-04-25
 
 ---
 
@@ -20,8 +20,14 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
+| [DEBT-366](./debt-366-active-exam-visibility-predicate-duplication.md) | Active-exam visibility predicate is duplicated as identical 14-line private methods on `DrizzleAttemptRepository` (53-66) and `DrizzleQuestionRepository` (39-52); extract to `shared/active-exam-visibility.ts` so the BUG-235/236/237 policy has one source of truth | P3 | — |
+| [DEBT-367](./debt-367-fake-attempt-repository-missing-active-exam-visibility.md) | `FakeAttemptRepository` does not apply `activeExamVisibilityCondition()` in any of 8 read methods that the real repo filters; unit tests against the fake silently pass scenarios real Postgres would reject, masking future regressions of the BUG-235/236/237 trilogy | P2 | — |
+| [DEBT-368](./debt-368-browser-spec-vi-mock-missing-spy-true.md) | Multiple `*.browser.spec.tsx` files factory-mock internal controllers without `{ spy: true }`, replacing every export instead of preserving real ones; violates the documented browser-mode mocking rule and creates silent coupling to the controller surface | P3 | — |
+| [DEBT-369](./debt-369-feedback-test-brittle-presentational-token-assertions.md) | `components/question/Feedback.test.tsx` asserts pure presentational Tailwind tokens (`text-sm`, `p-4`, `border-destructive/20`, etc.) across ~50 sites, violating the testing rule against utility-class assertions for non-behavioral styles | P3 | — |
+| [DEBT-370](./debt-370-oversized-test-files-without-enforced-size-rule.md) | 10+ test files exceed 1,400 LOC (worst: 2,086) bundling multiple concerns; production-side max is 572 LOC, and `biome.json` has no enforced max-lines guardrail for tests despite DEBT-234 archival | P3 | — |
+| [DEBT-371](./debt-371-idempotency-wrapper-boilerplate-across-controllers.md) | `withIdempotency()` is invoked at 8 call sites across 4 controllers with the same ~13-line "if no key, execute; else wrap with deps + schema parse" boilerplate; ripe for an `executeIdempotent()` helper saving ~80 LOC with zero behavior change | P3 | — |
 
-**Next Debt ID:** DEBT-366
+**Next Debt ID:** DEBT-372
 
 ---
 
