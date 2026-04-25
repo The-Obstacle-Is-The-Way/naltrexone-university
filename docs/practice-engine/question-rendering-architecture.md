@@ -1,9 +1,9 @@
 # Question Rendering Architecture
 
 > **Type:** Current-Implementation Reference
-> **Last Verified:** 2026-04-15
+> **Last Verified:** 2026-04-25
 > **Scope:** How questions are rendered, navigated, and state-managed across all viewing contexts in the current shipped implementation
-> **Important:** This is **not** the target-state spec for active exam mode. If this document conflicts with [Interaction Contracts](./interaction-contracts.md), [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md), or [DEBT-320](../debt/debt-320-bs055-exam-interaction-model-overhaul.md), those newer documents win for the accepted exam redesign.
+> **Important:** [Interaction Contracts](./interaction-contracts.md) remains the canonical click-by-click UI contract when surface details conflict.
 
 ---
 
@@ -11,7 +11,7 @@
 
 Questions appear in **7 distinct viewing contexts** across the application (plus multiple “origin” variants on the question page). Each context shares the same core display components (`QuestionCard`, `ChoiceButton`, `Feedback`) but differs in navigation chrome, action bars, state management, and data sources.
 
-This document is the single source of truth for understanding the **current shipped behavior**. It intentionally includes exam-mode details that BS-055 has since marked for replacement.
+This document describes the **current shipped behavior** and links to the interaction-contract SSOT for click-level details.
 
 ---
 
@@ -21,7 +21,7 @@ This document is the single source of truth for understanding the **current ship
 |---|---------|---------------|-------------|
 | A | **Tutor Mode** (active session) | `/app/practice/[sessionId]` | Practice landing → Start session (tutor) |
 | B | **Exam Mode** (active session) | `/app/practice/[sessionId]` | Practice landing → Start session (exam) |
-| C | **Exam Review Stage** (pre-submit review) | `/app/practice/[sessionId]` (same URL, different view) | Exam mode → click `Finish exam` in the header, or click `Review & Submit` on the last question |
+| C | **Exam Review Stage** (pre-submit review) | `/app/practice/[sessionId]` (same URL, different view) | Exam mode → click `Review & Submit` on the last question |
 | D | **Post-Exam Review Stage** (post-submit, in-session) | `/app/practice/[sessionId]` (same URL, different view) | Exam Review Stage → `Submit exam` → confirm |
 | E | **Ended Session Review** (post-session) | `/app/questions/[slug]?from=(summary|history)&mode=review&sessionId=...` | Session Summary → `Review Answers` / breakdown link, or History → Sessions tab → View breakdown → click question |
 | F | **History Individual Review** (standalone) | `/app/questions/[slug]?from=history&mode=review` | History → Questions tab → Review |
@@ -51,7 +51,7 @@ These three components are the **core question UI**, shared across all contexts:
 | Prop | Tutor (active) | Exam (active) | Review (all) |
 |------|---------------|---------------|--------------|
 | `correctChoiceId` | Set after submit | `null` (hidden) | Set from attempt data |
-| `disabled` | `false` until submitted (also `true` during pending/loading) | `false` until submitted (also `true` during pending/loading) | Locked while hydrated review state is showing, then re-enabled after `Try Again` / `Answer as new` resets local review state |
+| `disabled` | `false` until submitted (also `true` during pending/loading) | `false` while selecting a mutable draft (also `true` during pending/loading) | Locked while hydrated review state is showing, then re-enabled after `Try Again` / `Answer as new` resets local review state |
 | `onSelectChoice` | Interactive | Interactive | Review pages become interactive only after the user enters a retry/new-answer path |
 
 Feedback is conditionally derived by the parent before being passed into `QuestionSurfaceBody`:
@@ -163,13 +163,12 @@ Same component tree as Tutor, differentiated by `sessionInfo.mode === 'exam'`:
 - No per-question `Submit` button. The active exam footer is `[Previous] [Next] [Mark for review]` on non-terminal questions and `[Previous] [Review & Submit] [Mark for review]` on the last question.
 - Draft answer state is persisted on navigation boundaries and when entering the review stage
 - "Mark for review" button visible (`app/(app)/app/practice/components/practice-view.tsx:243-252`)
-- Header action changes from "End session" to "Finish exam" (triggers exam review stage)
-- Last exam question swaps the bottom-bar label to `Review & Submit`; that click still routes through `onEndSession` to enter the review stage
+- Last exam question swaps the bottom-bar label to `Review & Submit`; that click saves any pending draft and enters the exam review stage
 - QuestionNavigator does **not** reveal correctness in exam mode (answered buttons are labeled "Answered", not "Correct/Incorrect")
 
 ### Context C: Exam Review Stage
 
-When the user clicks `Finish exam` (top-right) in exam mode, or clicks `Review & Submit` on the last question, `PracticeSessionPageView` loads review data and switches to `ExamReviewView`:
+When the user clicks `Review & Submit` on the last question, `PracticeSessionPageView` loads review data and switches to `ExamReviewView`:
 
 ```text
 PracticeSessionPageView (app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:157 — if (review) → ExamReviewView)
@@ -300,7 +299,7 @@ QuickPracticePage (server)
 | Sequential nav (X of Y) | In description | In description | No | Yes | Yes (inline row) | No | No |
 | Mark for review | No | Yes | View only | No | No | No | No |
 | Bookmark button | Yes | No | No | Yes | Yes (after review bookmark hydration) | Yes (after review bookmark hydration) | Yes |
-| Top-right control | End session | Finish exam | None | View Summary | Origin-specific back link | None | Back to Practice |
+| Top-right control | End session | None | None | View Summary | Origin-specific back link | None | Back to Practice |
 
 Dashboard and bookmarks standalone review variants reuse the same question-page state machine as Context E, but keep their origin-specific top-right back link because `origin !== 'history'`.
 
@@ -536,6 +535,7 @@ The remaining inline action bars on the question-review route are still separate
 
 | Date | Change |
 |------|--------|
+| 2026-04-25 | Synced active exam details after DEBT-363 and audit-#19: header `Finish exam` is no longer a shipped exam exit, active exam uses draft-save/finalize, and `Review & Submit` is the single pre-submit review entry. |
 | 2026-03-19 | Implemented DEBT-324: removed misleading `Practice missed questions` CTA from exam Session Summary. The BS-058 post-exam review already provides full question-level feedback before the terminal summary. |
 | 2026-03-19 | Implemented BS-058: exam finalization now enters an in-session post-exam review stage with score banner + inline feedback, Session Summary gained `Practice missed questions`, summary-origin review remains `from=summary`, and exam-session review suppresses per-question reattempt actions. |
 | 2026-03-18 | Implemented DEBT-322: removed the exam Q1 spacer, renamed the exam header exit to `Finish exam`, and renamed the review heading to `Review & Submit`. DEBT-361 later updated the last-question footer label from `Next` to `Review & Submit` while preserving review-stage routing. |

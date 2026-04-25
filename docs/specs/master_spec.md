@@ -1071,9 +1071,10 @@ export const SubmitAnswerInputSchema = z.object({
 ```ts
 export type SubmitAnswerOutput = {
   attemptId: string;
-  isCorrect: boolean;
-  correctChoiceId: string;
-  explanationMd: string | null; // null if session mode is 'exam' and session not ended
+  isCorrect: boolean | null;
+  correctChoiceId: string | null;
+  explanationMd: string | null;
+  referenceMd: string | null;
   choiceExplanations: Array<{
     choiceId: string;
     displayLabel: 'A' | 'B' | 'C' | 'D' | 'E';
@@ -1090,6 +1091,7 @@ export type SubmitAnswerOutput = {
 * `UNSUBSCRIBED`
 * `VALIDATION_ERROR`
 * `NOT_FOUND` if question or choice not found / mismatch
+* `CONFLICT` if a session-backed submit targets an already-ended session or conflicts with an existing session answer
 * `RATE_LIMITED` if answer submit limit is exceeded
 * `INTERNAL_ERROR`
 
@@ -1098,8 +1100,14 @@ export type SubmitAnswerOutput = {
 1. Enforce per-user rate limit: max 120 submissions per 60s window.
 2. Validate question exists and `status='published'`.
 3. Validate the choice exists and belongs to the question.
-4. Determine correct choice for question (query `choices` where `question_id` and `is_correct=true`).
-5. Insert `attempts` row:
+4. If `sessionId` is provided:
+   * Load the session for the current user.
+   * Reject missing sessions with `NOT_FOUND`.
+   * Reject questions outside the session with `NOT_FOUND`.
+   * Reject active exam sessions with `VALIDATION_ERROR` (`Per-question submit is not available in exam mode`). Active exam answers use `saveExamDraftAnswer` while in progress and `finalizeExamAnswers` on `Submit exam`.
+   * Reject ended sessions with `CONFLICT`.
+5. Determine correct choice for question (query `choices` where `question_id` and `is_correct=true`).
+6. Insert `attempts` row:
 
    * `user_id`
    * `question_id`
@@ -1107,21 +1115,13 @@ export type SubmitAnswerOutput = {
    * `selected_choice_id = choiceId`
    * `is_correct = (choiceId === correctChoiceId)`
    * `time_spent_seconds` from validated input (defaults to 0 when omitted)
-6. If `sessionId` is provided and session is active (`ended_at IS NULL`), persist latest per-question session state:
+7. If `sessionId` is provided for an active tutor session, persist latest per-question session state:
 
    * `latestSelectedChoiceId = choiceId`
    * `latestIsCorrect = isCorrect`
    * `latestAnsweredAt = attempts.answered_at`
-7. Determine whether explanation is returned:
-
-   * If `sessionId` is provided AND session.mode === 'exam' AND session.ended_at IS NULL: `explanationMd = null`
-   * Else: `explanationMd = questions.explanation_md`
-8. Determine `choiceExplanations`:
-
-   * If explanation is hidden (active exam session), return `[]`.
-   * Else return explanations for displayed shuffled choices with stable display labels (`A`..`E`).
-9. Return result including `correctChoiceId` always.
-10. If `idempotencyKey` is provided, wrap execution with application-level idempotency (`action='question:submitAnswer'`) to prevent duplicate attempt writes on retries.
+8. Return grading result, `referenceMd`, and explanations for displayed shuffled choices with stable display labels (`A`..`E`). Active exam sessions are not a valid `submitAnswer` caller, so the active-exam redaction path is expressed as rejection rather than hidden feedback.
+9. If `idempotencyKey` is provided, wrap execution with application-level idempotency (`action='question:submitAnswer'`) to prevent duplicate attempt writes on retries.
 
 ---
 
@@ -1852,7 +1852,7 @@ export type GetPreviousAttemptOutput =
 3. Resolve the prior result source in this order:
    * `attemptId` provided: load that exact attempt via `AttemptSingleQuestionReader.findByIdAndUserId`.
    * Else `sessionId` provided: load the attempt for that session/question pair via `AttemptSingleQuestionReader.findBySessionIdAndQuestionId`.
-   * Else: load the user's most recent attempt for the question via `AttemptSingleQuestionReader.findLatestByUserAndQuestion`.
+   * Else: load the user's most recent visible attempt for the question via `AttemptSingleQuestionReader.findLatestByUserAndQuestion`; active-exam attempts must not hide older visible attempts in this implicit path.
 4. If no attempt is found and `sessionId` is absent (or `attemptId` was used), return `null`.
 5. If no attempt is found and `sessionId` is present:
    * Load the session via `PracticeSessionRepository.findByIdAndUserId`.
@@ -1863,7 +1863,7 @@ export type GetPreviousAttemptOutput =
    * Build `choiceExplanations` using `buildShuffledChoiceViews(question, userId)` for consistent display labels.
    * Return `{ kind: 'session_unanswered', correctChoiceId, explanationMd, referenceMd, choiceExplanations }`.
 6. If an attempt is found but its `questionId` does not equal the requested `questionId`, log a warning and throw `NOT_FOUND`.
-7. If the resolved attempt belongs to an active exam session, return `null` so the answer key is not revealed before the session ends.
+7. If the resolved attempt belongs to an active exam session through an exact identifier path (`attemptId` or active `sessionId`), return `null` so the answer key is not revealed before the session ends. The implicit latest-by-question path should already have selected only visible attempts; BUG-239 tracks the remaining implementation gap.
 8. Load the published question referenced by the attempt.
 9. If the question is missing (orphaned attempt), log a warning and return `null`.
 10. Find the correct choice; if none exists, throw `INTERNAL_ERROR`.

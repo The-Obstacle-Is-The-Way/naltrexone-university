@@ -1,7 +1,7 @@
 # Practice Engine
 
 > **Type:** Canonical Reference Document (Living)
-> **Last Verified:** 2026-03-19 (BS-058/post-BS-058 doc accuracy audit)
+> **Last Verified:** 2026-04-25 (post-audit-#19 bug-hunt sync)
 > **Scope:** Everything related to practicing questions — the core product feature
 
 ---
@@ -34,7 +34,8 @@ The Practice Engine is the core feature of Naltrexone University. It's the syste
 │                      Controllers (adapters/)                        │
 │  question-controller    — getNextQuestion, submitAnswer             │
 │  question-view-controller — getQuestionBySlug, getPreviousAttempt    │
-│  practice-controller    — start/count/end, review, history, mark    │
+│  practice-controller    — start/count/end/finalize, draft, review   │
+│                           history, mark                             │
 │  bookmark-controller    — toggle, list                              │
 │  tag-controller         — getTags                                   │
 │  review-controller      — getAttemptedQuestions                     │
@@ -45,6 +46,7 @@ The Practice Engine is the core feature of Naltrexone University. It's the syste
 │                      Use Cases (application/)                       │
 │  GetNextQuestion         StartPracticeSession                       │
 │  SubmitAnswer            EndPracticeSession                         │
+│  SaveExamDraftAnswer     FinalizeExamAnswers                        │
 │  GetPreviousAttempt      GetPracticeSessionReview                   │
 │  ToggleBookmark          GetIncompletePracticeSession                │
 │  GetBookmarks            SetPracticeSessionQuestionMark              │
@@ -98,7 +100,7 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 
 ## 3.1 Canonical Policy Registry
 
-These documents define cross-layer invariants or accepted target contracts. If other docs conflict, these win until updated. When a canonical doc describes a target state rather than current code, it says so explicitly:
+These documents define cross-layer invariants and current shipped contracts. If other docs conflict, these win until updated. When a canonical doc describes a target state rather than current code, it says so explicitly:
 
 | Policy | Canonical Doc | Applies To |
 |--------|----------------|------------|
@@ -142,8 +144,9 @@ These documents define cross-layer invariants or accepted target contracts. If o
 
 ## 5. Changelog
 
-| Date | Change |
-|------|--------|
+| Date | Area | Change |
+|------|------|--------|
+| 2026-04-25 | Post-audit-#19 sync | BUG-235/236/237 archived, BUG-238/239 filed, and practice-engine docs updated from target-state exam wording to the shipped draft-save/finalize contract. |
 | 2026-03-19 | BS-058/post-BS-058 accuracy audit sync | Updated interaction-contract references from target-state wording to current shipped-contract wording and synced the summary-review origin note to `from=summary`. |
 | 2026-03-17 | Added Interaction Contracts document as the canonical target-state UI contract for tutor, exam, and quick practice. Synced `practice-modes.md` and policy-registry wording so current implementation vs accepted target state is explicit. |
 | 2026-03-17 | Accuracy refresh after code-truth audit: removed stale “active exam-secrecy drift” language, aligned current-state and coverage docs with the archived BUG-186 through BUG-198 family, corrected question-page/action-bar behavior, updated hook/file inventories, and synced Session Summary review routes to current `from=summary` behavior. |

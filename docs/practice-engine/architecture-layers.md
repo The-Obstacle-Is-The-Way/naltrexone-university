@@ -2,8 +2,8 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Clean Architecture layers — Domain, Application, Adapters
-> **Last Verified:** 2026-03-17
-> **Current-vs-target note:** This document describes the current layer boundaries and shipped use cases. For the accepted target-state redesign of active exam mode, see [Interaction Contracts](./interaction-contracts.md), [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md), and [DEBT-320](../debt/debt-320-bs055-exam-interaction-model-overhaul.md).
+> **Last Verified:** 2026-04-25
+> **Status:** Current shipped layer boundaries and use cases. Active exam mode uses draft-save plus finalization; see [Interaction Contracts](./interaction-contracts.md) for the UI contract.
 
 ---
 
@@ -19,7 +19,7 @@ All entities are pure TypeScript type aliases with no runtime behavior. They liv
 | `Choice` | `id`, `questionId`, `label` (A–E), `textMd`, `isCorrect`, `explanationMd`, `sortOrder` | One answer choice; `explanationMd` is per-choice (beyond question-level explanation) |
 | `Attempt` | `id`, `userId`, `questionId`, `practiceSessionId` (nullable), `selectedChoiceId`, `isCorrect`, `timeSpentSeconds`, `retryOfAttemptId` (nullable), `retryOrigin` (nullable), `retrySessionId` (nullable), `answeredAt` | A single answer submission with optional retry provenance lineage |
 | `PracticeSession` | `id`, `userId`, `mode`, `questionIds[]`, `questionStates[]`, `tagFilters[]`, `difficultyFilters[]`, `startedAt`, `endedAt` (nullable) | A structured practice session (tutor or exam) |
-| `PracticeSessionQuestionState` | `questionId`, `markedForReview`, `latestSelectedChoiceId` (nullable), `latestIsCorrect` (nullable), `latestAnsweredAt` (nullable) | Current shipped per-question state within a session. Target-state exam redesign adds explicit draft fields rather than repurposing `latest*`. |
+| `PracticeSessionQuestionState` | `questionId`, `markedForReview`, `latestSelectedChoiceId` (nullable), `latestIsCorrect` (nullable), `latestAnsweredAt` (nullable), `draftSelectedChoiceId` (nullable), `draftSavedAt` (nullable), `draftCumulativeMs` | Per-question state within a session. Tutor writes finalized `latest*` state on submit; active exam writes mutable `draft*` state until `FinalizeExamAnswers` materializes final attempts and `latest*` state. |
 | `Bookmark` | `userId`, `questionId`, `createdAt` | A user-saved question |
 | `Tag` | `id`, `slug`, `name`, `kind` | A categorization label (topic, substance, treatment, diagnosis) |
 
@@ -77,11 +77,11 @@ All use cases follow the pattern: constructor injection of port interfaces, sing
 | Use Case | Input | Output | Error Codes |
 |----------|-------|--------|-------------|
 | `GetNextQuestion` | `{ userId, sessionId, questionId?, fromIndex? }` or `{ userId, filters }` | `NextQuestion` (stem, choices without `isCorrect`, session info) or `null` | `NOT_FOUND`, `VALIDATION_ERROR` |
-| `SubmitAnswer` | `{ userId, questionId, choiceId, sessionId?, timeSpentSeconds?, retryOfAttemptId?, retryOrigin?, retrySessionId? }` | `{ attemptId, isCorrect: boolean \| null, correctChoiceId: string \| null, explanationMd: string \| null, referenceMd: string \| null, choiceExplanations[] }` | `NOT_FOUND`, `CONFLICT`, `INTERNAL_ERROR`, `VALIDATION_ERROR` |
+| `SubmitAnswer` | `{ userId, questionId, choiceId, sessionId?, timeSpentSeconds?, retryOfAttemptId?, retryOrigin?, retrySessionId? }` | `{ attemptId, isCorrect: boolean \| null, correctChoiceId: string \| null, explanationMd: string \| null, referenceMd: string \| null, choiceExplanations[] }` | `NOT_FOUND`, `CONFLICT`, `INTERNAL_ERROR`, `VALIDATION_ERROR`; active exam sessions are rejected |
+| `SaveExamDraftAnswer` | `{ userId, sessionId, questionId, selectedChoiceId, cumulativeMs }` | Updated `PracticeSessionQuestionState` draft fields | `NOT_FOUND`, `VALIDATION_ERROR`, `CONFLICT` |
+| `FinalizeExamAnswers` | `{ userId, sessionId }` | `PracticeSessionSummary` | `NOT_FOUND`, `VALIDATION_ERROR`, `CONFLICT`, `INTERNAL_ERROR` |
 
 Answer-key exposure in active exam contexts is governed by the [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md).
-
-**Target-state note:** the accepted exam redesign adds `SaveExamDraftAnswer` and `FinalizeExamAnswers` as new exam-only use cases. They are intentionally not listed here yet because they are not implemented in the current source.
 
 #### Practice Sessions
 
@@ -122,7 +122,7 @@ Ports define what the application layer needs from the outside world. The actual
 - `AttemptSingleQuestionReader` — most recent attempt for a specific question (review mode)
 - `AttemptMostRecentAnsweredAtReader` — for question selection ordering
 
-Other ports: `QuestionRepository` (5 methods), `PracticeSessionRepository` (7 methods with CAS concurrency), `BookmarkRepository` (4 methods), `TagRepository` (1 method).
+Other ports: `QuestionRepository` (5 methods), `PracticeSessionRepository` (9 methods with CAS concurrency), `BookmarkRepository` (4 methods), `TagRepository` (1 method).
 
 ### 2.3 Test Coverage
 
@@ -138,7 +138,7 @@ Every practice-engine use case has a colocated test file. All tests use fakes fr
 |-----------|---------------|---------|-------------|
 | `DrizzleQuestionRepository` | `QuestionRepository` | 5 | Relational loading with `with:` clause; tag-filtered candidate query uses `INNER JOIN + GROUP BY` |
 | `DrizzleAttemptRepository` | `AttemptRepository` (composite) | 14 | `row_number()` window function selects latest attempt per question (attempted-question summaries); partial unique index `(practiceSessionId, questionId)` prevents duplicate session answers |
-| `DrizzlePracticeSessionRepository` | `PracticeSessionRepository` | 7 | Optimistic concurrency (CAS) with 3 retries for `recordQuestionAnswer` and `setQuestionMarkedForReview`; Zod validation on `paramsJson` read/write |
+| `DrizzlePracticeSessionRepository` | `PracticeSessionRepository` | 9 | Optimistic concurrency (CAS) with 3 retries for `recordQuestionAnswer`, `saveDraftAnswer`, `finalizeDraftAnswer`, and `setQuestionMarkedForReview`; Zod validation on `paramsJson` read/write |
 | `DrizzleBookmarkRepository` | `BookmarkRepository` | 4 | `ON CONFLICT DO NOTHING` for idempotent add |
 | `DrizzleTagRepository` | `TagRepository` | 1 | `SELECT DISTINCT` with join to published questions only |
 
@@ -154,7 +154,7 @@ Every practice-related server action:
 |-----------|---------|-------------|-----------|
 | `question-controller` | `getNextQuestion`, `submitAnswer` | submitAnswer: yes | submitAnswer: yes |
 | `question-view-controller` | `getQuestionBySlug`, `getPreviousAttempt` | no | no |
-| `practice-controller` | `startPracticeSession`, `countAvailableQuestions`, `getIncompletePracticeSession`, `endPracticeSession`, `getPracticeSessionReview`, `getSessionHistory`, `setPracticeSessionQuestionMark` | startPracticeSession: yes | start/end/mark: yes |
+| `practice-controller` | `startPracticeSession`, `countAvailableQuestions`, `getIncompletePracticeSession`, `endPracticeSession`, `finalizeExamAnswers`, `saveExamDraftAnswer`, `getPracticeSessionReview`, `getSessionHistory`, `setPracticeSessionQuestionMark` | startPracticeSession: yes | start/end/finalize/mark: yes |
 | `bookmark-controller` | `toggleBookmark`, `getBookmarks` | toggleBookmark: yes | toggleBookmark: yes |
 | `tag-controller` | `getTags` | no | no |
 | `review-controller` | `getAttemptedQuestions` | no | no |

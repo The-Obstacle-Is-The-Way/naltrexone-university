@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-25 (post-merge archival of audit-#19 trilogy)
+**Last Updated:** 2026-04-25 (post-archive bug-hunt follow-up)
 
 ---
 
@@ -13,7 +13,11 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-238
+**Next Bug ID:** BUG-240
+
+**Latest manual report (2026-04-25) — post-archive active-exam follow-up:**
+- BUG-238 filed: active-exam `saveExamDraftAnswer` accepts unbounded `cumulativeMs`, which can persist impossible draft timing and later make `finalizeExamAnswers` write or compute invalid `timeSpentSeconds`.
+- BUG-239 filed: two implicit latest-attempt readers still select raw active-exam attempts before applying visibility semantics, so older visible attempts can be hidden behind a newer active-exam row.
 
 **Latest archival (2026-04-25) — audit-#19 active-exam visibility trilogy resolved:**
 - BUG-237 verified fixed (PR #284, merged dev `c71c5deb`): `SubmitAnswerUseCase` now rejects active-exam sessions with `VALIDATION_ERROR` before any `attempts` insert or `recordQuestionAnswer(...)` write. Archived to `docs/_archive/bugs/`.
@@ -125,7 +129,34 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 Confirmed bugs that are not yet archived are listed below. Items may still be unfixed or may have a fix on an open branch pending merge verification.
 
-_None. The audit-#19 active-exam visibility trilogy (BUG-235/236/237) was archived 2026-04-25._
+| Bug | Priority | Summary |
+|-----|----------|---------|
+| [BUG-238](./bug-238-active-exam-draft-cumulative-ms-unbounded.md) | P3 | Active-exam draft saves accept unbounded `cumulativeMs`; oversized persisted draft timing can corrupt final attempt duration or make `Submit exam` fail during finalization |
+| [BUG-239](./bug-239-active-exam-latest-attempt-readers-drop-visible-fallback.md) | P4 | Remaining implicit latest-attempt readers select raw active-exam rows before visibility filtering, hiding older visible attempts in standalone review hydration and quick-practice recency ordering |
+
+## Audit #20 — Post-Archive Active-Exam Follow-Up (2026-04-25)
+
+Focused follow-up after the BUG-235/236/237 archival pass. The goal was to confirm the archive/register state, repair stale SSOT links, and continue the active-exam regression search from first principles without reopening already-fixed audit-#19 issues.
+
+**Methodology:**
+- Verified `docs/bugs/` had no stale active BUG-235/236/237 copies and the archived docs existed under `docs/_archive/bugs/`.
+- Traced active-exam draft writes from controller schema through `SaveExamDraftAnswerUseCase`, session params persistence, and `FinalizeExamAnswersUseCase`.
+- Traced remaining attempt "latest" readers that were not covered by BUG-235 or BUG-236.
+- Cross-checked the old `endPracticeSession` concern against current review-stage wiring and browser coverage; treated it as intentional abandon-session behavior, not a bug.
+- Spot-checked webhook, cron, idempotency, and active-exam visibility boundaries for P0-P4 issues; filed only code-trace-confirmed behavior bugs.
+
+**2 new bugs filed (BUG-238..239):**
+
+| Bug | Family | Priority | Summary |
+|-----|--------|----------|---------|
+| [BUG-238](./bug-238-active-exam-draft-cumulative-ms-unbounded.md) | Practice / active-exam draft validation | P3 | `saveExamDraftAnswer` accepts unbounded `cumulativeMs`, letting malformed draft timing reach finalization |
+| [BUG-239](./bug-239-active-exam-latest-attempt-readers-drop-visible-fallback.md) | Practice / active-exam reader fallback | P4 | Remaining implicit latest-attempt readers can hide older visible attempts behind newer active-exam rows |
+
+**Surfaces confirmed clean or intentionally deferred:**
+- Audit-#19 archive state is correct: BUG-235/236/237 are archived and the active bug register no longer lists them.
+- The review-stage `Submit exam` path correctly calls `finalizeExamAnswers`; the older `endPracticeSession` action remains valid for tutor sessions and abandoning incomplete sessions.
+- BUG-237 prevents new active-exam `attempts` rows through the normal `submitAnswer` path; BUG-239 is defense-in-depth for historical rows and future callers.
+- Stripe webhook, Clerk webhook, cron auth, and idempotency transaction seams did not produce a confirmed new bug in this pass.
 
 ## Audit #19 — Active-Exam Visibility Regression Sweep (2026-04-24)
 
@@ -143,9 +174,9 @@ Focused follow-up sweep across exam-answer secrecy, History projections, dashboa
 
 | Bug | Family | Priority | Summary |
 |-----|--------|----------|---------|
-| [BUG-237](./bug-237-submit-answer-allows-active-exam-session-writes.md) | Practice / active-exam write boundary | P2 | `submitAnswer` accepts active exam sessions and can persist final attempts before exam submission |
-| [BUG-235](./bug-235-attempted-question-history-drops-latest-visible-attempt.md) | History / active-exam visibility | P3 | Attempted-question History ranks before filtering active-exam attempts, so older visible attempts can disappear |
-| [BUG-236](./bug-236-dashboard-current-streak-includes-active-exam-attempts.md) | Dashboard / active-exam visibility | P3 | Current streak uses unfiltered `answeredAt` rows and can count active-exam attempts |
+| [BUG-237](../_archive/bugs/bug-237-submit-answer-allows-active-exam-session-writes.md) | Practice / active-exam write boundary | P2 | `submitAnswer` accepts active exam sessions and can persist final attempts before exam submission |
+| [BUG-235](../_archive/bugs/bug-235-attempted-question-history-drops-latest-visible-attempt.md) | History / active-exam visibility | P3 | Attempted-question History ranks before filtering active-exam attempts, so older visible attempts can disappear |
+| [BUG-236](../_archive/bugs/bug-236-dashboard-current-streak-includes-active-exam-attempts.md) | Dashboard / active-exam visibility | P3 | Current streak uses unfiltered `answeredAt` rows and can count active-exam attempts |
 
 **Surfaces confirmed clean or intentionally deferred:**
 - Dashboard aggregate counts and recent activity still use the shared active-exam visibility predicate from the BUG-187 fix.
