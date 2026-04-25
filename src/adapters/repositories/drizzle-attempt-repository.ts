@@ -402,11 +402,21 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     userId: string,
     since: Date,
   ): Promise<readonly Date[]> {
-    const rows = await this.db.query.attempts.findMany({
-      columns: { answeredAt: true },
-      where: and(eq(attempts.userId, userId), gte(attempts.answeredAt, since)),
-      orderBy: desc(attempts.answeredAt),
-    });
+    const rows = await this.db
+      .select({ answeredAt: attempts.answeredAt })
+      .from(attempts)
+      .leftJoin(
+        practiceSessions,
+        eq(attempts.practiceSessionId, practiceSessions.id),
+      )
+      .where(
+        and(
+          eq(attempts.userId, userId),
+          gte(attempts.answeredAt, since),
+          this.activeExamVisibilityCondition(),
+        ),
+      )
+      .orderBy(desc(attempts.answeredAt));
 
     return rows.map((row) => row.answeredAt);
   }
