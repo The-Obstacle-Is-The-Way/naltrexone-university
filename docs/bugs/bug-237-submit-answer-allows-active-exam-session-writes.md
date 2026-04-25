@@ -1,8 +1,9 @@
 # BUG-237: submitAnswer Allows Final Attempt Writes During Active Exam Sessions
 
-**Status:** Fixed (pending PR)
+**Status:** Open
 **Priority:** P2
 **Date:** 2026-04-24
+**Resolution State:** Fixed in PR #284; pending merge verification and archival.
 
 ---
 

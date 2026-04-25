@@ -104,9 +104,9 @@ These code paths are current as of 2026-04-24:
 Every change that touches review hydration, retry, stats projections, or exam rendering must keep these tests green:
 
 1. `GetPreviousAttempt` blocks active-exam leaks for all identifier paths:
-- `sessionId`
-- `attemptId`
-- latest-by-question (no ids)
+   - `sessionId`
+   - `attemptId`
+   - latest-by-question (no ids)
 
 2. `GetPracticeSessionReview` must not surface per-question `isCorrect` while session is active exam.
 
