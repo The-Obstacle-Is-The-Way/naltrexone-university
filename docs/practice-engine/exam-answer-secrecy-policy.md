@@ -2,8 +2,8 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Canonical policy for when correctness/explanations may be exposed
-> **Last Updated:** 2026-04-24
-> **Status:** Enforced. BUG-180/181/185 and BUG-186/187/191/192/193/195 are archived as fixed; BUG-237 now rejects active-exam `SubmitAnswer` at the use-case boundary. This document remains the regression contract.
+> **Last Updated:** 2026-04-25
+> **Status:** Enforced. BUG-180/181/185 and BUG-186/187/191/192/193/195 are archived as fixed; BUG-237 now rejects active-exam `SubmitAnswer` at the use-case boundary; BUG-236 aligns dashboard streak timestamps with the repository visibility predicate. This document remains the regression contract.
 
 ---
 
@@ -89,12 +89,13 @@ Use this guard consistently at all answer-key disclosure points. Do not duplicat
 
 ## 6. Current Enforcement Status
 
-These code paths are current as of 2026-04-24:
+These code paths are current as of 2026-04-25:
 
 - `GetPreviousAttempt` returns `null` for active-exam attempts and only reveals `session_unanswered` answers after the exam session has ended.
 - `GetPracticeSessionReview` redacts per-question `isCorrect` while an exam session is still active.
 - `GetNextQuestion` redacts `session.latestIsCorrect` for active exams and only hydrates `previousSubmission` for answered tutor-session questions.
 - `SubmitAnswer` rejects active exam sessions with `VALIDATION_ERROR` before inserting an `attempts` row or calling `recordQuestionAnswer(...)`; active exam answers must use `SaveExamDraftAnswer` before `FinalizeExamAnswers` creates final attempts. See [BUG-237](../bugs/bug-237-submit-answer-allows-active-exam-session-writes.md).
+- `DrizzleAttemptRepository` applies `activeExamVisibilityCondition()` to dashboard aggregate counts, recent activity, and `listAnsweredAtByUserIdSince(...)` streak timestamps; active-exam attempts are excluded until the session ends while tutor, ended-exam, and standalone attempts remain visible. See [BUG-236](../bugs/bug-236-dashboard-current-streak-includes-active-exam-attempts.md).
 - `DrizzleQuestionRepository` excludes active-exam attempts from status-filter and user-history correctness projections via `activeExamVisibilityCondition()`.
 
 ---
@@ -114,7 +115,7 @@ Every change that touches review hydration, retry, stats projections, or exam re
 
 4. `GetNextQuestion` must not return `latestIsCorrect` for active exam sessions.
 
-5. Dashboard/stats projection does not expose correctness for active-exam attempts.
+5. Dashboard/stats projections exclude active-exam attempts from counts, recent activity, and streak timestamp inputs.
 
 6. History attempted-questions projection does not expose correctness for active-exam attempts.
 

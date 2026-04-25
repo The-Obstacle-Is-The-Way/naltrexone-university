@@ -3,6 +3,7 @@
 **Status:** Open
 **Priority:** P3
 **Date:** 2026-04-24
+**Resolution State:** Fixed on branch `fix-bug-236-dashboard-streak-active-exam`; pending PR review, merge verification, and archival.
 
 ---
 
@@ -57,11 +58,11 @@ Do NOT modify any other repository methods. Do NOT modify the `AttemptStatsReade
 
 ## Verification
 
-- [ ] Add a `DrizzleAttemptRepository` integration test (`tests/integration/`, real Postgres test DB) for `listAnsweredAtByUserIdSince(...)` covering all four visibility cases: (1) active-exam-mode session attempt is **excluded**, (2) ended-exam-mode session attempt is **included**, (3) tutor-mode session attempt (any state) is **included**, (4) standalone attempt (`practiceSessionId IS NULL`) is **included**.
-- [ ] Add an integration test proving the returned ordering remains `answeredAt DESC` with at least three timestamps, including ones across the visibility boundary.
-- [ ] Verify the existing `GetUserStatsUseCase` unit tests still pass unchanged (the fake is not being modified, so existing fake-driven streak tests must continue to pass).
-- [ ] Verify the existing dashboard accuracy / count / recent-activity integration tests still pass — none of them touch this method, but the regression suite must stay green.
-- [ ] Run the full pre-push gate: `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build` (per `.claude/rules/git-workflow.md` — pre-push hook is insufficient).
+- [x] Add a `DrizzleAttemptRepository` integration test (`tests/integration/`, real Postgres test DB) for `listAnsweredAtByUserIdSince(...)` covering all four visibility cases: (1) active-exam-mode session attempt is **excluded**, (2) ended-exam-mode session attempt is **included**, (3) tutor-mode session attempt (any state) is **included**, (4) standalone attempt (`practiceSessionId IS NULL`) is **included**. Evidence: `tests/integration/bug-regression.integration.test.ts` → `BUG-236: Dashboard streak timestamps exclude active-exam attempts` → `filters active exam attempts while preserving ended exam, tutor, and standalone timestamps`. Red failed because the active-exam timestamp was returned; green passed after `listAnsweredAtByUserIdSince(...)` applied `activeExamVisibilityCondition()`.
+- [x] Add an integration test proving the returned ordering remains `answeredAt DESC` with at least three timestamps, including ones across the visibility boundary. Evidence: `tests/integration/bug-regression.integration.test.ts` → `BUG-236: Dashboard streak timestamps exclude active-exam attempts` → `keeps answeredAt descending order after filtering hidden active-exam rows`. Red failed because the hidden active-exam row appeared first; green passed with only visible timestamps ordered newest to oldest.
+- [x] Verify the existing `GetUserStatsUseCase` unit tests still pass unchanged (the fake is not being modified, so existing fake-driven streak tests must continue to pass). Evidence: `pnpm test --run` in the full gate includes the unchanged `src/application/use-cases/get-user-stats.test.ts` suite.
+- [x] Verify the existing dashboard accuracy / count / recent-activity integration tests still pass — none of them touch this method, but the regression suite must stay green. Evidence: `pnpm test:integration` in the full gate includes the existing BUG-187 dashboard count and recent-activity integration coverage plus the new BUG-236 regression tests.
+- [x] Run the full pre-push gate: `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build` (per `.claude/rules/git-workflow.md` — pre-push hook is insufficient). Evidence: full pre-push gate passed locally on 2026-04-25 after the code and documentation updates.
 
 ## Related
 

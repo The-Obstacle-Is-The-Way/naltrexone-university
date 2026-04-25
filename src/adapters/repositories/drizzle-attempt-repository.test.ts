@@ -41,6 +41,9 @@ function createDbMock() {
       }>
     > => [],
   );
+  const answeredAtQueryExecute = vi.fn(
+    async (): Promise<Array<{ answeredAt: Date }>> => [],
+  );
   const finalQueryExecute = vi.fn(
     async (): Promise<
       Array<{
@@ -92,6 +95,9 @@ function createDbMock() {
   const recentOrderBy = vi.fn(() => ({ limit: recentLimit }));
   const recentWhere = vi.fn(() => ({ orderBy: recentOrderBy }));
   const leftJoinRecent = vi.fn(() => ({ where: recentWhere }));
+  const answeredAtOrderBy = vi.fn(() => answeredAtQueryExecute());
+  const answeredAtWhere = vi.fn(() => ({ orderBy: answeredAtOrderBy }));
+  const leftJoinAnsweredAt = vi.fn(() => ({ where: answeredAtWhere }));
   const innerJoin = vi.fn(() => ({ where: whereFinal }));
 
   const from = vi.fn((table: unknown) => {
@@ -128,6 +134,12 @@ function createDbMock() {
       };
     }
 
+    if (Object.keys(fields).length === 1 && 'answeredAt' in fields) {
+      return {
+        from: vi.fn(() => ({ leftJoin: leftJoinAnsweredAt })),
+      };
+    }
+
     return { from };
   });
 
@@ -154,12 +166,16 @@ function createDbMock() {
       groupByAs,
       groupByExecute,
       recentQueryExecute,
+      answeredAtQueryExecute,
       innerJoin,
       leftJoinFinal,
       leftJoinRecent,
+      leftJoinAnsweredAt,
       recentWhere,
       recentOrderBy,
       recentLimit,
+      answeredAtWhere,
+      answeredAtOrderBy,
       whereFinal,
       orderBy,
       limit,
@@ -612,7 +628,7 @@ describe('DrizzleAttemptRepository', () => {
     it('returns answeredAt values from the database', async () => {
       const db = createDbMock();
       const answeredAt = new Date('2026-02-02T00:00:00Z');
-      db._mocks.queryFindMany.mockResolvedValue([{ answeredAt }]);
+      db._mocks.answeredAtQueryExecute.mockResolvedValue([{ answeredAt }]);
 
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
@@ -622,6 +638,8 @@ describe('DrizzleAttemptRepository', () => {
           new Date('2026-02-01T00:00:00Z'),
         ),
       ).resolves.toEqual([answeredAt]);
+      expect(db._mocks.leftJoinAnsweredAt).toHaveBeenCalledTimes(1);
+      expect(db._mocks.answeredAtWhere).toHaveBeenCalledTimes(1);
     });
   });
 
