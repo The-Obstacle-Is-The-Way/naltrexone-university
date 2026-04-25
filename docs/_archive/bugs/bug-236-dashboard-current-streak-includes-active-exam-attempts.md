@@ -1,9 +1,9 @@
 # BUG-236: Dashboard Current Streak Includes Active-Exam Attempts
 
-**Status:** Open
+**Status:** Resolved (PR #285, merged 2026-04-25)
 **Priority:** P3
 **Date:** 2026-04-24
-**Resolution State:** Fixed on branch `fix-bug-236-dashboard-streak-active-exam`; pending PR review, merge verification, and archival.
+**Resolution State:** Fixed in PR #285, merged to dev `dded5033` and main on 2026-04-25.
 
 ---
 

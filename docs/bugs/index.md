@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-25
+**Last Updated:** 2026-04-25 (post-merge archival of audit-#19 trilogy)
 
 ---
 
@@ -15,12 +15,17 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 **Next Bug ID:** BUG-238
 
-**Latest manual report (2026-04-24) — active-exam visibility regression sweep:**
+**Latest archival (2026-04-25) — audit-#19 active-exam visibility trilogy resolved:**
+- BUG-237 verified fixed (PR #284, merged dev `c71c5deb`): `SubmitAnswerUseCase` now rejects active-exam sessions with `VALIDATION_ERROR` before any `attempts` insert or `recordQuestionAnswer(...)` write. Archived to `docs/_archive/bugs/`.
+- BUG-236 verified fixed (PR #285, merged dev `dded5033`): `DrizzleAttemptRepository.listAnsweredAtByUserIdSince(...)` now joins `practice_sessions` and applies `activeExamVisibilityCondition()` so dashboard streak inputs match counts and recent activity. Archived to `docs/_archive/bugs/`.
+- BUG-235 verified fixed (PR #286, merged dev `8fe7c74e`): `DrizzleAttemptRepository.latestAttemptRowsSubquery(...)` now filters active-exam attempts before `row_number()` ranking, preserving older visible attempts as the History latest-visible row. Archived to `docs/_archive/bugs/`.
+
+**Manual report (2026-04-24) — active-exam visibility regression sweep:**
 - BUG-237 filed: `submitAnswer` still accepts active exam sessions and writes final attempt/session-answer state before `Submit exam`.
 - BUG-235 filed: attempted-question History ranks active-exam attempts before applying the visibility guard, so a prior visible attempt for the same question can disappear during an active exam.
 - BUG-236 filed: dashboard `Current streak` still reads unfiltered attempt timestamps and can include active-exam attempts before exam end.
 
-**Latest archival (2026-04-09):**
+**Previous archival (2026-04-09):**
 - BUG-234 verified fixed (PR #271): `AuthUserButton` client wrapper isolates Clerk `UserButton` from the server render path; `AuthNav` no longer reaches across the provider boundary. Archived to `docs/_archive/bugs/`.
 
 **Previous archival (2026-04-06):**
@@ -120,11 +125,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 Confirmed bugs that are not yet archived are listed below. Items may still be unfixed or may have a fix on an open branch pending merge verification.
 
-| Bug | Priority | Summary |
-|-----|----------|---------|
-| [BUG-237](./bug-237-submit-answer-allows-active-exam-session-writes.md) | P2 | Fix in PR #284: active-exam `submitAnswer` is rejected before attempt/session-answer writes; archive after merge verification |
-| [BUG-235](./bug-235-attempted-question-history-drops-latest-visible-attempt.md) | P3 | Fix on branch: History latest-attempt ranking now filters active-exam attempts before rank selection; archive after merge verification |
-| [BUG-236](./bug-236-dashboard-current-streak-includes-active-exam-attempts.md) | P3 | Fix on branch: dashboard streak timestamp reader now applies active-exam visibility; archive after merge verification |
+_None. The audit-#19 active-exam visibility trilogy (BUG-235/236/237) was archived 2026-04-25._
 
 ## Audit #19 — Active-Exam Visibility Regression Sweep (2026-04-24)
 

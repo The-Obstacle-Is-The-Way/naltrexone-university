@@ -1,9 +1,9 @@
 # BUG-235: Attempted-Question History Drops Prior Visible Attempt During Active Exam
 
-**Status:** Open
+**Status:** Resolved (PR #286, merged 2026-04-25)
 **Priority:** P3
 **Date:** 2026-04-24
-**Resolution State:** Fixed on branch `fix-bug-235-history-latest-visible-fallback`; pending PR review, merge verification, and archival.
+**Resolution State:** Fixed in PR #286, merged to dev `8fe7c74e` and main on 2026-04-25.
 
 ---
 
