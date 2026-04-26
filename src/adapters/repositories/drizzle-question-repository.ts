@@ -4,9 +4,6 @@ import {
   desc,
   eq,
   inArray,
-  isNotNull,
-  isNull,
-  ne,
   notInArray,
   or,
   type SQL,
@@ -31,25 +28,11 @@ import {
   type QuestionProgressStatus,
 } from '@/src/domain/value-objects';
 import type { DrizzleDb } from '../shared/database-types';
+import { getActiveExamVisibilityCondition } from './shared/active-exam-visibility';
 import { latestAttemptRankSql } from './shared/latest-attempt-rank-sql';
 
 export class DrizzleQuestionRepository implements QuestionRepository {
   constructor(private readonly db: DrizzleDb) {}
-
-  private activeExamVisibilityCondition(): SQL {
-    const condition = or(
-      isNull(practiceSessions.id),
-      ne(practiceSessions.mode, 'exam'),
-      isNotNull(practiceSessions.endedAt),
-    );
-    if (!condition) {
-      throw new ApplicationError(
-        'INTERNAL_ERROR',
-        'Active exam visibility condition unexpectedly missing',
-      );
-    }
-    return condition;
-  }
 
   private buildPublishedCandidateWhere(filters: QuestionFilters): {
     hasTagFilter: boolean;
@@ -209,7 +192,7 @@ export class DrizzleQuestionRepository implements QuestionRepository {
         eq(attempts.practiceSessionId, practiceSessions.id),
       )
       .where(
-        and(eq(attempts.userId, userId), this.activeExamVisibilityCondition()),
+        and(eq(attempts.userId, userId), getActiveExamVisibilityCondition()),
       )
       .as('latest_attempt_rows');
   }
@@ -236,7 +219,7 @@ export class DrizzleQuestionRepository implements QuestionRepository {
             .where(
               and(
                 eq(attempts.userId, userId),
-                this.activeExamVisibilityCondition(),
+                getActiveExamVisibilityCondition(),
               ),
             ),
         );
