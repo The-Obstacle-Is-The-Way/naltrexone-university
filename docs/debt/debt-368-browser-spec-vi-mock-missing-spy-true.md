@@ -5,6 +5,8 @@
 **Source:** Test suite quality audit, 2026-04-25
 **Related:** [.claude/rules/testing-browser.md](../../.claude/rules/testing-browser.md), [.claude/rules/testing.md](../../.claude/rules/testing.md)
 
+**Audit verified:** 2026-04-25 against `0ec1b1fd`.
+
 ---
 
 ## Context
@@ -27,7 +29,12 @@ Several browser specs violate this rule today by using factory-form `vi.mock(pat
 - `app/(app)/app/history/hooks/use-history-sessions.browser.spec.tsx:16`
 - `app/(app)/app/questions/[slug]/use-question-page-controller.browser.spec.tsx:30-43`
 
-The audit found ~21 instances across `app/` browser specs. Exact final count depends on what counts as "internal application code" vs documented external-SDK exceptions (`@clerk/nextjs`, `next/navigation`, `next/link`, `server-only`).
+Fresh audit count on 2026-04-25:
+
+- The broad internal-module grep from the verification checklist returns **26 factory mocks** in `*.browser.spec.tsx` files:
+  `rg -n "vi\.mock\(['\"]@/(src|app|components|lib)/" --glob '**/*.browser.spec.tsx' | rg -v '\{\s*spy:\s*true\s*\}'`
+- Of those, **17 are controller-module factory mocks** under `@/src/adapters/controllers/...`, which is the specific pattern covered by `.claude/rules/testing-browser.md`.
+- The remaining internal mocks are mostly `@/lib/report-client-error` plus one `@/components/ui/notification-provider` mock. Those still match the broad grep, but the documented `{ spy: true }` exception is specifically for sealed browser-mode controller modules.
 
 ## Why This Is Debt
 

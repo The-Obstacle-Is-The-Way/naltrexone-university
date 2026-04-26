@@ -3,7 +3,9 @@
 **Priority:** P3
 **Created:** 2026-04-25
 **Source:** Production complexity audit, 2026-04-25
-**Related:** [withIdempotency helper](../../src/adapters/controllers/shared/with-idempotency.ts), [SPEC-005 Idempotency Strategy](../specs/spec-005-idempotency.md) (or applicable spec doc)
+**Related:** [withIdempotency helper](../../src/adapters/shared/with-idempotency.ts), [Master Spec — Idempotency](../specs/master_spec.md)
+
+**Audit verified:** 2026-04-25 against `0ec1b1fd`.
 
 ---
 
@@ -60,7 +62,7 @@ Add a controller-side helper:
 ```typescript
 // src/adapters/controllers/shared/execute-idempotent.ts
 import type { ZodSchema } from 'zod';
-import { withIdempotency } from './with-idempotency';
+import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
 import type { ControllerDeps } from '...'; // existing deps type
 
 export async function executeIdempotent<TOutput>({
@@ -111,7 +113,7 @@ Roughly a -80 LOC net change across the 4 controllers, with no behavior change.
 
 - Do NOT also fold rate-limiting into the helper. Rate-limit guards live at action-specific points (e.g., `startPracticeSession` rate-limits before the idempotency wrap, while `endPracticeSession` does not) and conflating them would lose that flexibility.
 - Do NOT introduce a "smart" generic that auto-detects the `action` string from the caller's enclosing context. That kind of magic is harder to reason about than the explicit string.
-- Do NOT relocate `withIdempotency()` itself. The new helper composes it; both stay in `src/adapters/controllers/shared/`.
+- Do NOT relocate `withIdempotency()` itself. It currently lives in `src/adapters/shared/with-idempotency.ts`; the new controller-side helper composes it.
 
 ## Why P3
 

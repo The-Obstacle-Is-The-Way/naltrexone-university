@@ -5,6 +5,8 @@
 **Source:** Test suite quality audit, 2026-04-25
 **Related:** [DEBT-234 (archived) — Add max-lines lint rule](../_archive/debt/debt-234-add-max-lines-lint-rule.md), [DEBT-139 (archived) — Production files exceed size guardrail](../_archive/debt/debt-139-production-files-exceed-size-guardrail.md), [DEBT-354 (archived) — God-file and clean-code audit](../_archive/debt/debt-354-god-file-and-clean-code-audit.md), [DEBT-369](./debt-369-feedback-test-brittle-presentational-token-assertions.md)
 
+**Audit verified:** 2026-04-25 against `0ec1b1fd`.
+
 ---
 
 ## Context
@@ -18,7 +20,7 @@ After the DEBT-354 god-file audit (2026-04-09) split the worst production-side o
 | 1,842 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.browser.spec.tsx` |
 | 1,837 | `app/(app)/app/questions/[slug]/use-question-page-controller.browser.spec.tsx` |
 | 1,756 | `app/(app)/app/practice/practice-page-logic.test.ts` |
-| 1,667 | `src/adapters/controllers/practice-controller.test.ts` |
+| 1,730 | `src/adapters/controllers/practice-controller.test.ts` |
 | 1,625 | `src/application/use-cases/submit-answer.test.ts` |
 | 1,473 | `app/(app)/app/practice/components/practice-view.test.tsx` |
 | 1,468 | `src/application/use-cases/get-next-question.test.ts` |
