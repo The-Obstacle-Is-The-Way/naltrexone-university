@@ -19,11 +19,13 @@ export function getActiveExamVisibilityCondition(): SQL {
     ne(practiceSessions.mode, 'exam'),
     isNotNull(practiceSessions.endedAt),
   );
+  /* v8 ignore start -- Drizzle returns SQL for concrete predicates; guard preserves the prior defensive shape. */
   if (!condition) {
     throw new ApplicationError(
       'INTERNAL_ERROR',
       'Active exam visibility condition unexpectedly missing',
     );
   }
+  /* v8 ignore stop */
   return condition;
 }
