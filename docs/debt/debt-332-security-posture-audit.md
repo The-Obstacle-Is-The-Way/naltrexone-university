@@ -5,6 +5,8 @@
 **Source:** Deep security audit prompted by Delve/Supabase public-bucket incident
 **Related:** [ADR-009 Security Hardening](../adr/adr-009-security-hardening.md), [SPEC-017 Rate Limiting](../specs/spec-017-rate-limiting.md), [next.config.ts](../../next.config.ts), [proxy.ts](../../proxy.ts)
 
+**Audit verified:** 2026-04-25 against `0ec1b1fd`.
+
 ---
 
 ## Context
@@ -19,7 +21,7 @@ A third-party compliance company (Delve) was exposed for having a publicly acces
 - **Item 1 Phase 0-2 implemented:** the current runtime target is **Clerk strict mode in report-only**. `proxy.ts` now uses Clerk `strict: true` with `reportOnly: true`, wires `report-uri` plus Clerk `reportTo`/`Reporting-Endpoints` to Sentry's Security Header endpoint, and keeps enforcing mode disabled.
 - **Nonce plumbing is in place:** `app/layout.tsx` reads `x-nonce` from `next/headers`, `components/providers.tsx` passes `dynamic` plus `nonce` into `ClerkProvider`, and `components/theme-provider.tsx` forwards the nonce to `next-themes`.
 - **Local runtime verification passed:** on `2026-03-21`, `pnpm build && pnpm start` confirmed `Content-Security-Policy-Report-Only`, `Reporting-Endpoints`, and `x-nonce` are emitted, and a same-response capture confirmed the rendered HTML nonce matches the response `x-nonce` header.
-- **Remaining work:** deploy-phase validation and any move from report-only to enforcing mode remain separate follow-up work.
+- **Remaining work:** billing redirect validation before enforcing mode, plus an explicit decision to enable enforcing CSP or accept the residual report-only posture, remain separate follow-up work.
 
 ---
 
