@@ -47,7 +47,7 @@ For each file >1,500 LOC, identify the natural concern boundaries (skim the `des
 
 - `practice-session-page-view.browser.spec.tsx` (2086) → split by phase: init/load, answer/feedback, review-stage, mark-for-review, submit/finalize.
 - `Feedback.test.tsx` (1874) → split by feedback variant: correct-card, incorrect-card, fallback rendering, accessibility. **Pair with [DEBT-369](./debt-369-feedback-test-brittle-presentational-token-assertions.md)** — clean up the brittle token assertions *before* splitting so the split files don't ship the existing pattern repo-wide.
-- `practice-controller.test.ts` (1667) → split by action group: session lifecycle (start/end/finalize), answer reads, mark/bookmark.
+- `practice-controller.test.ts` (1730) → split by action group: session lifecycle (start/end/finalize), answer reads, mark/bookmark.
 - `submit-answer.test.ts` (1625) → split by mode-shape: tutor / exam / standalone / retry.
 - `get-next-question.test.ts` (1468) → split by call shape: explicit-questionId path, navigation path, fallback path.
 
