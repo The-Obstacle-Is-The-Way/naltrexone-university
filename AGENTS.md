@@ -630,18 +630,22 @@ This is a **blocking requirement**. Violating this rule wastes human time fixing
 4. **Address every issue** before merging:
    - Valid issue → fix it, push, wait for re-review
    - False positive → reply explaining why (for the record)
-5. **Only merge after** CodeRabbit has reviewed AND feedback is addressed
+5. **If CodeRabbit reports a rate limit, STOP.** Do not merge based on a prior partial review, a green CodeRabbit status context, or inline acknowledgements. Wait for the full cooldown shown in the rate-limit message, then explicitly request or wait for a fresh CodeRabbit review on the latest PR head commit.
+6. **Only merge after** CodeRabbit has completed a non-rate-limited review of the latest PR head AND all feedback is addressed
 
 ### Why This Matters
 
 - CodeRabbit catches bugs, security issues, and architectural problems
 - Premature merges bypass this safety net and create rework
 - The 1-2 minute wait prevents hours of debugging later
+- A rate-limit warning means CodeRabbit may not have reviewed the latest commit completely; acknowledgements or status checks do not substitute for a fresh post-cooldown review
 
 ### Red Flags (STOP if any apply)
 
 - PR was just created seconds ago → **WAIT**
 - No `coderabbitai[bot]` comment visible → **WAIT**
+- CodeRabbit posted `Rate limit exceeded` at any point on the PR after the latest review cycle began → **WAIT THE FULL COOLDOWN, REQUEST/WAIT FOR FRESH REVIEW, THEN RECHECK**
+- CodeRabbit status is green but the latest visible review was rate-limited or predates the newest commit → **DO NOT MERGE**
 - Thinking "I'll merge now and fix later" → **STOP, that's wrong**
 - Thinking "This is just docs, doesn't need review" → **WRONG, everything needs review**
 
@@ -651,8 +655,10 @@ This is a **blocking requirement**. Violating this rule wastes human time fixing
 # List comments on a PR
 gh pr view <PR_NUMBER> --comments
 
-# Look for coderabbitai[bot] in the output
-# If not present, DO NOT MERGE
+# Look for coderabbitai[bot] in the output.
+# If not present, DO NOT MERGE.
+# If a rate-limit warning is present, DO NOT MERGE until after the cooldown
+# and a fresh CodeRabbit review has landed on the latest PR head commit.
 ```
 
 ## Documentation

@@ -111,6 +111,7 @@ CI enforces E2E on pushes and same-repo PRs. Skipping it locally when that authe
 
 - **Never delete uncommitted work** — `git stash` and ask
 - **CodeRabbit review required** before every merge — wait for `coderabbitai[bot]`
+- **CodeRabbit rate limit = hard stop** — if CodeRabbit posts `Rate limit exceeded`, wait the full cooldown and require a fresh CodeRabbit review on the latest PR head before merge; green status contexts or inline acknowledgements are not enough
 - **Non-interactive only** — `git --no-pager`, `git commit -m "..."`, never `-s` with pnpm
 
 ### Browser Visual Verification
