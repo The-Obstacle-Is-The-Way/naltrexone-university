@@ -4,7 +4,7 @@
 **Created:** 2026-04-25
 **Source:** Post-merge audit after the BUG-235/236/237 trilogy (2026-04-25)
 **Related:** [BUG-235](../_archive/bugs/bug-235-attempted-question-history-drops-latest-visible-attempt.md), [BUG-236](../_archive/bugs/bug-236-dashboard-current-streak-includes-active-exam-attempts.md), [BUG-237](../_archive/bugs/bug-237-submit-answer-allows-active-exam-session-writes.md), [exam-answer-secrecy-policy.md](../practice-engine/exam-answer-secrecy-policy.md)
-**Resolution State:** Fix on branch `debt-366-shared-active-exam-visibility`; pending PR review, merge verification, and archival.
+**Resolution State:** Fixed in PR #289, merged to dev `146a7b4c` and main on 2026-04-26.
 
 ---
 
