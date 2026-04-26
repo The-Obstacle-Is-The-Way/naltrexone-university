@@ -5,7 +5,7 @@ import type {
   QuestionRepository,
 } from '@/src/application/ports/repositories';
 import { fetchQuestionsById } from '@/src/application/shared/fetch-questions-by-id';
-import { gradeAnswer } from '@/src/domain/services';
+import { gradeAnswer, MS_PER_SECOND } from '@/src/domain/services';
 import {
   type PracticeSessionSummary,
   projectPracticeSessionSummary,
@@ -111,7 +111,7 @@ export class FinalizeExamAnswersUseCase {
           practiceSessionId: activeSession.id,
           selectedChoiceId,
           isCorrect: grade.isCorrect,
-          timeSpentSeconds: Math.floor(cappedCumulativeMs / 1000),
+          timeSpentSeconds: Math.floor(cappedCumulativeMs / MS_PER_SECOND),
         });
 
         await tx.sessions.finalizeDraftAnswer({

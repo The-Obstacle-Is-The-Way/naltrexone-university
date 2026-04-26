@@ -826,6 +826,41 @@ describe('practice-controller', () => {
       expect(deps.saveExamDraftAnswerUseCase.inputs).toEqual([]);
     });
 
+    it('accepts cumulativeMs at the draft maximum boundary', async () => {
+      const saveDraftOutput = {
+        questionId: '22222222-2222-2222-2222-222222222222',
+        markedForReview: false,
+        latestSelectedChoiceId: null,
+        latestIsCorrect: null,
+        latestAnsweredAt: null,
+        draftSelectedChoiceId: '33333333-3333-3333-3333-333333333333',
+        draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
+        draftCumulativeMs: MAX_DRAFT_CUMULATIVE_MS,
+      } as const;
+      const deps = createDeps({ saveDraftOutput });
+
+      const result = await saveExamDraftAnswer(
+        {
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          questionId: '22222222-2222-2222-2222-222222222222',
+          selectedChoiceId: '33333333-3333-3333-3333-333333333333',
+          cumulativeMs: MAX_DRAFT_CUMULATIVE_MS,
+        },
+        deps,
+      );
+
+      expect(result).toEqual({ ok: true, data: saveDraftOutput });
+      expect(deps.saveExamDraftAnswerUseCase.inputs).toEqual([
+        {
+          userId: 'user_1',
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          questionId: '22222222-2222-2222-2222-222222222222',
+          selectedChoiceId: '33333333-3333-3333-3333-333333333333',
+          cumulativeMs: MAX_DRAFT_CUMULATIVE_MS,
+        },
+      ]);
+    });
+
     it('returns UNAUTHENTICATED when unauthenticated', async () => {
       const deps = createDeps({ user: null });
 

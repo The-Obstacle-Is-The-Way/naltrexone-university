@@ -5,6 +5,7 @@ import {
   FakePracticeSessionRepository,
   FakeQuestionRepository,
 } from '@/src/application/test-helpers/fakes';
+import { MS_PER_SECOND } from '@/src/domain/services';
 import {
   createChoice,
   createPracticeSession,
@@ -280,7 +281,7 @@ describe('FinalizeExamAnswersUseCase', () => {
       {
         questionId: 'q1',
         selectedChoiceId: 'q1-correct',
-        timeSpentSeconds: SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS / 1000,
+        timeSpentSeconds: SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS / MS_PER_SECOND,
       },
     ]);
   });

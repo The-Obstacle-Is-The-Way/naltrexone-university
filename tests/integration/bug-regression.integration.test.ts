@@ -34,6 +34,7 @@ import {
   SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS,
   SaveExamDraftAnswerUseCase,
 } from '@/src/application/use-cases/save-exam-draft-answer';
+import { MS_PER_SECOND } from '@/src/domain/services';
 import {
   createUser as createDomainUser,
   createSubscription,
@@ -813,7 +814,7 @@ describe('BUG-238: Exam draft cumulativeMs is bounded', () => {
     );
     expect(rows).toHaveLength(1);
     expect(rows[0]?.timeSpentSeconds).toBe(
-      SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS / 1000,
+      SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS / MS_PER_SECOND,
     );
   });
 });
