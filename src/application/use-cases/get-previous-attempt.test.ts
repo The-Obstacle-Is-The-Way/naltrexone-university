@@ -1155,7 +1155,7 @@ describe('GetPreviousAttemptUseCase', () => {
     expect(result?.choiceExplanations).toEqual(expected);
   });
 
-  it('returns the older visible attempt supplied by the implicit latest reader', async () => {
+  it("wraps the implicit-latest repository result as kind: 'attempt' with ISO answeredAt", async () => {
     const userId = 'user-1';
     const questionId = 'q1';
     const answeredAt = new Date('2026-04-25T12:00:00.000Z');

@@ -52,18 +52,7 @@ function createDbMock() {
   const findLatestLimit = vi.fn(
     async (): Promise<
       Array<{
-        id: string;
-        userId: string;
-        questionId: string;
-        practiceSessionId: string | null;
-        selectedChoiceId: string | null;
-        isCorrect: boolean;
-        timeSpentSeconds: number;
-        retryOfAttemptId?: string | null;
-        retryOrigin?: null;
-        retrySessionId?: string | null;
-        answeredAt: Date;
-        attempts?: {
+        attempts: {
           id: string;
           userId: string;
           questionId: string;
@@ -652,7 +641,6 @@ describe('DrizzleAttemptRepository', () => {
       };
       db._mocks.findLatestLimit.mockResolvedValue([
         {
-          ...attemptRow,
           attempts: attemptRow,
         },
       ]);
