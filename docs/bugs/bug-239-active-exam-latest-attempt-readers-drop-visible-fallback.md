@@ -3,6 +3,7 @@
 **Status:** Open
 **Priority:** P4
 **Date:** 2026-04-25
+**Resolution State:** Fix on branch `fix-bug-239-active-exam-readers`; pending PR review, merge verification, and archival.
 **Confirmed:** 2026-04-25
 **Component:** Practice / Review Hydration / Question Selection
 
@@ -57,11 +58,11 @@ Apply active-exam visibility before latest-row selection in the remaining implic
 
 - [x] Code-level tracer-bullet verified on 2026-04-25.
 - [x] Confirmed BUG-235 fixed attempted-question History by filtering active-exam rows before latest-attempt ranking.
-- [ ] Integration test: `findLatestByUserAndQuestion(...)` returns an older standalone/tutor/ended-exam attempt when a newer active-exam attempt is hidden.
-- [ ] Integration test: `findLatestByUserAndQuestion(...)` returns `null` when only an active-exam attempt exists, then returns that attempt after the exam ends.
-- [ ] Integration test: `findMostRecentAnsweredAtByQuestionIds(...)` ignores active-exam timestamps while preserving older visible timestamps.
-- [ ] Use-case/controller regression: standalone review hydration shows the older visible attempt instead of `no_prior_attempt` in the fallback case.
-- [ ] Full gate after fix: `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build`.
+- [x] Integration test: `findLatestByUserAndQuestion(...)` returns an older standalone/tutor/ended-exam attempt when a newer active-exam attempt is hidden.
+- [x] Integration test: `findLatestByUserAndQuestion(...)` returns `null` when only an active-exam attempt exists, then returns that attempt after the exam ends.
+- [x] Integration test: `findMostRecentAnsweredAtByQuestionIds(...)` ignores active-exam timestamps while preserving older visible timestamps.
+- [x] Use-case/controller regression: standalone review hydration shows the older visible attempt instead of `no_prior_attempt` in the fallback case.
+- [x] Full gate after fix: `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build`.
 
 ## Related
 

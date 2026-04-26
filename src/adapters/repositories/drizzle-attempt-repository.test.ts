@@ -1,5 +1,10 @@
+import { eq } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
-import { ATTEMPTS_SESSION_QUESTION_UQ } from '@/db/schema';
+import {
+  ATTEMPTS_SESSION_QUESTION_UQ,
+  attempts,
+  practiceSessions,
+} from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import { DrizzleAttemptRepository } from './drizzle-attempt-repository';
 
@@ -43,6 +48,36 @@ function createDbMock() {
   );
   const answeredAtQueryExecute = vi.fn(
     async (): Promise<Array<{ answeredAt: Date }>> => [],
+  );
+  const findLatestLimit = vi.fn(
+    async (): Promise<
+      Array<{
+        id: string;
+        userId: string;
+        questionId: string;
+        practiceSessionId: string | null;
+        selectedChoiceId: string | null;
+        isCorrect: boolean;
+        timeSpentSeconds: number;
+        retryOfAttemptId?: string | null;
+        retryOrigin?: null;
+        retrySessionId?: string | null;
+        answeredAt: Date;
+        attempts?: {
+          id: string;
+          userId: string;
+          questionId: string;
+          practiceSessionId: string | null;
+          selectedChoiceId: string | null;
+          isCorrect: boolean;
+          timeSpentSeconds: number;
+          retryOfAttemptId?: string | null;
+          retryOrigin?: null;
+          retrySessionId?: string | null;
+          answeredAt: Date;
+        };
+      }>
+    > => [],
   );
   const finalQueryExecute = vi.fn(
     async (): Promise<
@@ -99,6 +134,14 @@ function createDbMock() {
   const answeredAtOrderBy = vi.fn(() => answeredAtQueryExecute());
   const answeredAtWhere = vi.fn(() => ({ orderBy: answeredAtOrderBy }));
   const leftJoinAnsweredAt = vi.fn(() => ({ where: answeredAtWhere }));
+  const findLatestOrderBy = vi.fn(() => ({ limit: findLatestLimit }));
+  const findLatestWhere = vi.fn(() => ({ orderBy: findLatestOrderBy }));
+  const leftJoinFindLatest = vi.fn(() => ({ where: findLatestWhere }));
+  const findLatestFrom = vi.fn(() => ({
+    leftJoin: leftJoinFindLatest,
+    where: findLatestWhere,
+  }));
+  const leftJoinFindMostRecent = vi.fn(() => ({ where: whereGroupBy }));
   const innerJoin = vi.fn(() => ({ where: whereFinal }));
 
   const from = vi.fn((table: unknown) => {
@@ -128,7 +171,11 @@ function createDbMock() {
     };
   });
 
-  const select = vi.fn((fields: Record<string, unknown>) => {
+  const select = vi.fn((fields?: Record<string, unknown>) => {
+    if (fields === undefined) {
+      return { from: findLatestFrom };
+    }
+
     if ('count' in fields) {
       return {
         from: countFrom,
@@ -144,6 +191,19 @@ function createDbMock() {
     if (Object.keys(fields).length === 1 && 'answeredAt' in fields) {
       return {
         from: vi.fn(() => ({ leftJoin: leftJoinAnsweredAt })),
+      };
+    }
+
+    if (
+      Object.keys(fields).length === 2 &&
+      'questionId' in fields &&
+      'answeredAt' in fields
+    ) {
+      return {
+        from: vi.fn(() => ({
+          leftJoin: leftJoinFindMostRecent,
+          where: whereGroupBy,
+        })),
       };
     }
 
@@ -179,6 +239,12 @@ function createDbMock() {
       leftJoinFinal,
       leftJoinRecent,
       leftJoinAnsweredAt,
+      findLatestFrom,
+      leftJoinFindLatest,
+      findLatestWhere,
+      findLatestOrderBy,
+      findLatestLimit,
+      leftJoinFindMostRecent,
       recentWhere,
       recentOrderBy,
       recentLimit,
@@ -544,6 +610,69 @@ describe('DrizzleAttemptRepository', () => {
       await expect(
         repo.findMostRecentAnsweredAtByQuestionIds('user_1', ['q1', 'q2']),
       ).resolves.toEqual([{ questionId: 'q1', answeredAt }]);
+    });
+
+    it('left-joins practice sessions before aggregating latest answeredAt values', async () => {
+      const db = createDbMock();
+      const answeredAt = new Date('2026-02-01T00:00:00Z');
+      db._mocks.groupByExecute.mockResolvedValue([
+        { questionId: 'q1', answeredAt },
+      ]);
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.findMostRecentAnsweredAtByQuestionIds('user_1', ['q1']),
+      ).resolves.toEqual([{ questionId: 'q1', answeredAt }]);
+
+      expect(db._mocks.leftJoinFindMostRecent).toHaveBeenCalledTimes(1);
+      expect(db._mocks.leftJoinFindMostRecent).toHaveBeenCalledWith(
+        practiceSessions,
+        eq(attempts.practiceSessionId, practiceSessions.id),
+      );
+    });
+  });
+
+  describe('findLatestByUserAndQuestion', () => {
+    it('left-joins practice sessions before selecting the latest attempt', async () => {
+      const db = createDbMock();
+      const answeredAt = new Date('2026-02-01T00:00:00Z');
+      const attemptRow = {
+        id: 'attempt_1',
+        userId: 'user_1',
+        questionId: 'question_1',
+        practiceSessionId: null,
+        selectedChoiceId: 'choice_1',
+        isCorrect: true,
+        timeSpentSeconds: 42,
+        retryOfAttemptId: null,
+        retryOrigin: null,
+        retrySessionId: null,
+        answeredAt,
+      };
+      db._mocks.findLatestLimit.mockResolvedValue([
+        {
+          ...attemptRow,
+          attempts: attemptRow,
+        },
+      ]);
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.findLatestByUserAndQuestion('user_1', 'question_1'),
+      ).resolves.toMatchObject({
+        id: 'attempt_1',
+        userId: 'user_1',
+        questionId: 'question_1',
+        answeredAt,
+      });
+
+      expect(db._mocks.leftJoinFindLatest).toHaveBeenCalledTimes(1);
+      expect(db._mocks.leftJoinFindLatest).toHaveBeenCalledWith(
+        practiceSessions,
+        eq(attempts.practiceSessionId, practiceSessions.id),
+      );
     });
   });
 

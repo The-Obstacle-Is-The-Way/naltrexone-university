@@ -3,7 +3,7 @@
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Canonical policy for when correctness/explanations may be exposed
 > **Last Updated:** 2026-04-26
-> **Status:** Enforced. BUG-180/181/185 and BUG-186/187/191/192/193/195 are archived as fixed; BUG-237 rejects active-exam `SubmitAnswer` at the use-case boundary; BUG-236 aligns dashboard streak timestamps with the repository visibility predicate; BUG-235 aligns History latest-visible-attempt fallback semantics. BUG-239 tracks a lower-severity remaining implicit latest-reader fallback gap that does not expose correctness. This document remains the regression contract.
+> **Status:** Enforced. BUG-180/181/185 and BUG-186/187/191/192/193/195 are archived as fixed; BUG-237 rejects active-exam `SubmitAnswer` at the use-case boundary; BUG-236 aligns dashboard streak timestamps with the repository visibility predicate; BUG-235 aligns History latest-visible-attempt fallback semantics; BUG-239 aligns the remaining implicit latest-attempt readers. This document remains the regression contract.
 
 ---
 
@@ -99,8 +99,8 @@ These code paths are current as of 2026-04-26:
 - Repository attempt visibility is centralized in `getActiveExamVisibilityCondition()` at `src/adapters/repositories/shared/active-exam-visibility.ts`; both `DrizzleAttemptRepository` and `DrizzleQuestionRepository` use that helper so active-exam attempts stay hidden while tutor, ended-exam, and standalone attempts remain visible. See [DEBT-366](../debt/debt-366-active-exam-visibility-predicate-duplication.md).
 - `DrizzleAttemptRepository` applies the shared active-exam visibility predicate to dashboard aggregate counts, recent activity, and `listAnsweredAtByUserIdSince(...)` streak timestamps; active-exam attempts are excluded until the session ends while tutor, ended-exam, and standalone attempts remain visible. See [BUG-236](../_archive/bugs/bug-236-dashboard-current-streak-includes-active-exam-attempts.md).
 - `DrizzleAttemptRepository` also applies the shared active-exam visibility predicate inside the attempted-question latest-attempt subquery before `row_number()` ranking, so History excludes active-exam attempts without dropping older visible attempts for the same question. See [BUG-235](../_archive/bugs/bug-235-attempted-question-history-drops-latest-visible-attempt.md).
+- Implicit latest-attempt readers (`findLatestByUserAndQuestion(...)`, `findMostRecentAnsweredAtByQuestionIds(...)`) apply active-exam visibility before row selection / aggregation, so older visible attempts surface as the fallback when a newer active-exam attempt would be hidden. See [BUG-239](../bugs/bug-239-active-exam-latest-attempt-readers-drop-visible-fallback.md).
 - `DrizzleQuestionRepository` excludes active-exam attempts from status-filter and user-history correctness projections via the shared active-exam visibility predicate.
-- Open follow-up: [BUG-239](../bugs/bug-239-active-exam-latest-attempt-readers-drop-visible-fallback.md) tracks two remaining implicit/latest readers that avoid correctness exposure but can hide an older visible attempt behind a newer active-exam row.
 
 ---
 
@@ -123,7 +123,7 @@ Every change that touches review hydration, retry, stats projections, or exam re
 
 6. History attempted-questions projection excludes active-exam attempts at the subquery level, preserving older visible attempts as the latest visible row when present.
 
-7. Implicit/latest attempt readers either select the latest visible row or return `null` without exposing correctness when only active-exam rows exist. BUG-239 tracks the remaining fallback gap.
+7. Implicit/latest attempt readers either select the latest visible row or return `null` without exposing correctness when only active-exam rows exist.
 
 8. UI-level review paths do not render correctness badges from active-exam attempts.
 
