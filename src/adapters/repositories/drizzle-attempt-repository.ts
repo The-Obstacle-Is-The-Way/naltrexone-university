@@ -5,11 +5,8 @@ import {
   eq,
   gte,
   inArray,
-  isNotNull,
   isNull,
   max,
-  ne,
-  or,
   type SQL,
   sql,
 } from 'drizzle-orm';
@@ -38,6 +35,7 @@ import {
   getPostgresConstraintName,
   isPostgresUniqueViolation,
 } from './postgres-errors';
+import { getActiveExamVisibilityCondition } from './shared/active-exam-visibility';
 import { latestAttemptRankSql } from './shared/latest-attempt-rank-sql';
 
 const SESSION_ATTEMPT_READ_LIMIT = 500;
@@ -49,21 +47,6 @@ const SESSION_ATTEMPT_READ_LIMIT = 500;
 // Reviewed in DEBT-224 audit (2026-02-18).
 export class DrizzleAttemptRepository implements AttemptRepository {
   constructor(private readonly db: DrizzleDb) {}
-
-  private activeExamVisibilityCondition(): SQL {
-    const condition = or(
-      isNull(practiceSessions.id),
-      ne(practiceSessions.mode, 'exam'),
-      isNotNull(practiceSessions.endedAt),
-    );
-    if (!condition) {
-      throw new ApplicationError(
-        'INTERNAL_ERROR',
-        'Active exam visibility condition unexpectedly missing',
-      );
-    }
-    return condition;
-  }
 
   private latestAttemptRowsSubquery(userId: string) {
     return this.db
@@ -84,7 +67,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
         eq(attempts.practiceSessionId, practiceSessions.id),
       )
       .where(
-        and(eq(attempts.userId, userId), this.activeExamVisibilityCondition()),
+        and(eq(attempts.userId, userId), getActiveExamVisibilityCondition()),
       )
       .as('latest_attempt_rows');
   }
@@ -329,7 +312,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
   ): Promise<number> {
     const where = and(
       eq(attempts.userId, userId),
-      this.activeExamVisibilityCondition(),
+      getActiveExamVisibilityCondition(),
       ...conditions,
     );
 
@@ -393,7 +376,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
         eq(attempts.practiceSessionId, practiceSessions.id),
       )
       .where(
-        and(eq(attempts.userId, userId), this.activeExamVisibilityCondition()),
+        and(eq(attempts.userId, userId), getActiveExamVisibilityCondition()),
       )
       .orderBy(desc(attempts.answeredAt), desc(attempts.id))
       .limit(limit);
@@ -416,7 +399,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
         and(
           eq(attempts.userId, userId),
           gte(attempts.answeredAt, since),
-          this.activeExamVisibilityCondition(),
+          getActiveExamVisibilityCondition(),
         ),
       )
       .orderBy(desc(attempts.answeredAt));
