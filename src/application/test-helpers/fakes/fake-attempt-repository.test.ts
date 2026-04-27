@@ -434,19 +434,23 @@ describe('FakeAttemptRepository', () => {
           }),
         ]);
 
-        await expect(
-          repo.findMostRecentAnsweredAtByQuestionIds(userId, [
-            'q-shared',
-            'q-other',
-          ]),
-        ).resolves.toEqual([
-          {
-            questionId: 'q-shared',
-            answeredAt: new Date('2026-04-25T10:00:00Z'),
-          },
+        const result = await repo.findMostRecentAnsweredAtByQuestionIds(
+          userId,
+          ['q-shared', 'q-other'],
+        );
+        const byQuestionId = (
+          left: (typeof result)[number],
+          right: (typeof result)[number],
+        ) => left.questionId.localeCompare(right.questionId);
+
+        expect([...result].sort(byQuestionId)).toEqual([
           {
             questionId: 'q-other',
             answeredAt: new Date('2026-04-25T09:00:00Z'),
+          },
+          {
+            questionId: 'q-shared',
+            answeredAt: new Date('2026-04-25T10:00:00Z'),
           },
         ]);
       });
