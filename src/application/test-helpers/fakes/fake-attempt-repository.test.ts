@@ -97,8 +97,30 @@ function standaloneSeed(
   });
 }
 
+function legacyExamSeed(
+  overrides: Partial<VisibilitySeedAttempt> = {},
+): VisibilitySeedAttempt {
+  const attempt = activeExamSeed({
+    id: 'attempt-legacy-exam',
+    questionId: 'q-legacy-exam',
+    ...overrides,
+  });
+  delete attempt.sessionEndedAt;
+  return attempt;
+}
+
 describe('FakeAttemptRepository', () => {
   describe('active-exam visibility fidelity', () => {
+    it('keeps legacy exam-shaped seeds visible when sessionEndedAt is omitted', async () => {
+      const attempt = legacyExamSeed();
+      const repo = new FakeAttemptRepository([attempt]);
+
+      await expect(repo.countByUserId(userId)).resolves.toBe(1);
+      await expect(
+        repo.findLatestByUserAndQuestion(userId, attempt.questionId),
+      ).resolves.toMatchObject({ id: attempt.id });
+    });
+
     describe.each([
       {
         name: 'countByUserId',
