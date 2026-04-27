@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-25 (BUG-238 archival)
+**Last Updated:** 2026-04-27 (BUG-239 archival — active bug register is empty)
 
 ---
 
@@ -130,11 +130,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Active Bugs
 
-Confirmed bugs that are not yet archived are listed below. Items may still be unfixed or may have a fix on an open branch pending merge verification.
-
-| Bug | Priority | Summary |
-|-----|----------|---------|
-| [BUG-239](./bug-239-active-exam-latest-attempt-readers-drop-visible-fallback.md) | P4 | Remaining implicit latest-attempt readers select raw active-exam rows before visibility filtering, hiding older visible attempts in standalone review hydration and quick-practice recency ordering |
+_None. BUG-239 was archived 2026-04-27 (PR #290), closing out the audit-#19 / audit-#20 active-exam visibility series. The active bug register is empty for the first time since the audit-#19 sweep opened on 2026-04-24._
 
 ## Audit #20 — Post-Archive Active-Exam Follow-Up (2026-04-25)
 
@@ -152,7 +148,7 @@ Focused follow-up after the BUG-235/236/237 archival pass. The goal was to confi
 | Bug | Family | Priority | Summary |
 |-----|--------|----------|---------|
 | [BUG-238](../_archive/bugs/bug-238-active-exam-draft-cumulative-ms-unbounded.md) | Practice / active-exam draft validation | P3 | `saveExamDraftAnswer` accepted unbounded `cumulativeMs`, letting malformed draft timing reach finalization |
-| [BUG-239](./bug-239-active-exam-latest-attempt-readers-drop-visible-fallback.md) | Practice / active-exam reader fallback | P4 | Remaining implicit latest-attempt readers can hide older visible attempts behind newer active-exam rows |
+| [BUG-239](../_archive/bugs/bug-239-active-exam-latest-attempt-readers-drop-visible-fallback.md) | Practice / active-exam reader fallback | P4 | Remaining implicit latest-attempt readers can hide older visible attempts behind newer active-exam rows |
 
 **Surfaces confirmed clean or intentionally deferred:**
 - Audit-#19 archive state is correct: BUG-235/236/237 are archived and the active bug register no longer lists them.

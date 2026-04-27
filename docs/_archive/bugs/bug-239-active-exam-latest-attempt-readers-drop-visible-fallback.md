@@ -1,9 +1,9 @@
 # BUG-239: Active-Exam Latest-Attempt Readers Drop Older Visible Attempts
 
-**Status:** Open
+**Status:** Resolved (PR #290, merged 2026-04-27)
 **Priority:** P4
 **Date:** 2026-04-25
-**Resolution State:** Fix on branch `fix-bug-239-active-exam-readers`; pending PR review, merge verification, and archival.
+**Resolution State:** Fixed in PR #290, merged to dev `0bb0bbba` and main on 2026-04-27.
 **Confirmed:** 2026-04-25
 **Component:** Practice / Review Hydration / Question Selection
 
