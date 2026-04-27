@@ -5,11 +5,13 @@
 **Source:** Test suite quality audit, 2026-04-25
 **Related:** [.claude/rules/testing.md](../../.claude/rules/testing.md) — "Avoid asserting full space-delimited class strings for purely presentational styles"
 
+**Audit verified:** 2026-04-27 against `87284372`.
+
 ---
 
 ## Context
 
-`components/question/Feedback.test.tsx` (1,874 LOC) is heavy on direct Tailwind-utility-class assertions, many of which test pure presentation rather than behavior. Concentrated in lines ~410–650, examples include:
+`components/question/Feedback.test.tsx` (1,874 LOC) is heavy on direct Tailwind-utility-class assertions, many of which test pure presentation rather than behavior. A fresh grep on 2026-04-27 found **70** direct assertions using the same reproducible command as the verification checklist: `rg -n "(toContain|\\.has)\\(['\\\"](text-sm|text-base|p-[0-9]|mt-[0-9]|gap-[0-9]|bg-.*\\/[0-9]+|border-.*\\/[0-9]+)['\\\"]" components/question/Feedback.test.tsx | wc -l`. The densest cluster remains lines ~410–650, with additional instances later in the file. Examples include:
 
 - Line 421-425:
   ```typescript
@@ -44,7 +46,7 @@ The volume in this one file has also spawned a private DOM-helper kit (`getClass
 
 ## Remediation
 
-Triage the ~50 affected assertions in `Feedback.test.tsx`:
+Triage the ~70 affected assertions in `Feedback.test.tsx`:
 
 1. **Keep** assertions where the class encodes a behavioral guarantee:
    - Card semantic role: assert `class.includes('border-destructive')` (without the `/20` suffix) so the test fails if the card is no longer destructive-colored. Tighten to the family, not the exact opacity.

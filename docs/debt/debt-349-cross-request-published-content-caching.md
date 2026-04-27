@@ -5,6 +5,8 @@
 **Source:** Follow-up split from DEBT-344 after Tier 1 request-scoped dedup shipped
 **Related:** [ADR-010 Caching Strategy](../adr/adr-010-caching-strategy.md), [DEBT-344 Request-Scoped Auth/Entitlement Dedup + Static Read Caching](../_archive/debt/debt-344-request-scoped-caching.md)
 
+**Audit verified:** 2026-04-27 against `87284372`.
+
 ---
 
 ## Context
