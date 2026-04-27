@@ -31,7 +31,7 @@ Several browser specs violate this rule today by using factory-form `vi.mock(pat
 
 Fresh audit count on 2026-04-27:
 
-- The broad internal-module grep from the verification checklist returns **26 internal `vi.mock` calls without `{ spy: true }`** in `*.browser.spec.tsx` files:
+- The broad internal-module grep from the verification checklist returns **26 internal `vi.mock` calls without `{ spy: true }`** in `*.browser.spec.tsx` files. This line-oriented grep only catches `{ spy: true }` when the exception appears on the same line as `vi.mock(...)`; if formatting changes, use a multiline-aware PCRE/AST scan for the `vi.mock` call plus the `{ spy: true }` exception:
   `rg -n "vi\.mock\(['\"]@/(src|app|components|lib)/" --glob '**/*.browser.spec.tsx' | rg -v '\{\s*spy:\s*true\s*\}'`
 - Of those, **17 are controller-module factory mocks** under `@/src/adapters/controllers/...`, which is the specific pattern covered by `.claude/rules/testing-browser.md`.
 - The remaining internal mocks are mostly `@/lib/report-client-error` plus one `@/components/ui/notification-provider` mock. Those still match the broad grep, but the documented `{ spy: true }` exception is specifically for sealed browser-mode controller modules.

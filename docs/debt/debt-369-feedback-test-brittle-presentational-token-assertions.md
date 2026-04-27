@@ -11,7 +11,7 @@
 
 ## Context
 
-`components/question/Feedback.test.tsx` (1,874 LOC) is heavy on direct Tailwind-utility-class assertions, many of which test pure presentation rather than behavior. A fresh grep on 2026-04-27 found 70 direct assertions matching the presentational-token pattern `(toContain|.has)('text-sm' | 'text-base' | spacing tokens | exact opacity tokens)`. The densest cluster remains lines ~410–650, with additional instances later in the file. Examples include:
+`components/question/Feedback.test.tsx` (1,874 LOC) is heavy on direct Tailwind-utility-class assertions, many of which test pure presentation rather than behavior. A fresh grep on 2026-04-27 found **70** direct assertions using the same reproducible command as the verification checklist: `rg -n "(toContain|\\.has)\\(['\\\"](text-sm|text-base|p-[0-9]|mt-[0-9]|gap-[0-9]|bg-.*\\/[0-9]+|border-.*\\/[0-9]+)['\\\"]" components/question/Feedback.test.tsx | wc -l`. The densest cluster remains lines ~410–650, with additional instances later in the file. Examples include:
 
 - Line 421-425:
   ```typescript

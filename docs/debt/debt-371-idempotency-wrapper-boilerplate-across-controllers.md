@@ -61,7 +61,7 @@ Add a controller-side helper:
 
 ```typescript
 // src/adapters/controllers/shared/execute-idempotent.ts
-import type { ZodSchema } from 'zod';
+import type { ZodType, ZodTypeDef } from 'zod';
 import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
 import type { Logger } from '@/src/application/ports/logger';
 import type { IdempotencyKeyRepository } from '@/src/application/ports/repositories';
@@ -84,7 +84,7 @@ export async function executeIdempotent<TOutput>({
   userId: string;
   idempotencyKey: string | null | undefined;
   action: string;
-  outputSchema: ZodSchema<TOutput>;
+  outputSchema: ZodType<TOutput, ZodTypeDef, unknown>;
   execute: () => Promise<TOutput>;
 }): Promise<TOutput> {
   if (!idempotencyKey) return execute();

@@ -251,9 +251,9 @@ But the earlier "NOT in `next.config.ts`" wording was too absolute. Next.js offi
 For this application, the technically accurate recommendation is:
 
 1. **Keep the corrected CSP model current.**
-   - Do not claim there is no CSP.
-   - Do not claim public routes receive no CSP.
-   - Do not claim the historical default-mode allowlist is the current report-only strict-mode policy.
+   - Avoid implying there is no CSP.
+   - Avoid implying public routes receive no CSP.
+   - Avoid presenting the historical default-mode allowlist as the current report-only strict-mode policy.
 
 2. **Keep `proxy.ts` as the current CSP ownership point.**
    - That aligns with Clerk automatic CSP and any future nonce-based rollout.
@@ -300,6 +300,7 @@ Decision (2026-03-21): Target Clerk strict mode. Accept dynamic-rendering tradeo
 - **Local runtime verification:** `curl -sSI` against `/`, `/pricing`, `/sign-in`, `/app/dashboard`, `/api/health`, and `/api/stripe/webhook` on 2026-03-21 under both `pnpm dev` and `pnpm start` with `@clerk/nextjs` 6.38.1 *(historical baseline — upgraded to 7.0.7 in DEBT-340)*
 - **Installed package cross-checks:** `@clerk/nextjs` 6.38.1 source/types *(historical — now 7.0.7)* and `next-themes` 0.4.6 source/types were inspected locally to verify `reportOnly`, `reportTo`, default CSP directives, and `nonce` support
 - **Deployed production verification:** Chrome browser agent and direct `curl -sSI` captured response headers from `https://addictionboards.com/` and `https://addictionboards.com/pricing` on 2026-03-21 — confirmed they match the doc block exactly and match local prod build except for the Clerk FAPI host (`clerk.addictionboards.com`)
+- **2026-04-27 runtime header capture:** `curl -sSI` against production and the PR preview confirmed `Content-Security-Policy-Report-Only` contains `script-src` with a per-response `'nonce-...'` token plus `'strict-dynamic'`, `report-uri https://o4508933259198464.ingest.us.sentry.io/api/4510829539164160/security/?...&sentry_environment=production|preview`, and `report-to csp-endpoint`. The response includes `Reporting-Endpoints: csp-endpoint="https://o4508933259198464.ingest.us.sentry.io/api/4510829539164160/security/?...&sentry_environment=production|preview"`. No legacy `Report-To` header was observed. This maps to Clerk's `reportOnly` + `reportTo` options plus the explicit `report-uri` directive.
 
 ### Repo Files Relevant to This Audit
 
@@ -394,7 +395,7 @@ If a competent security auditor reviewed this codebase:
 
 ## Recommended Execution Order
 
-1. **Billing redirect verification** — Exercise Subscribe and Manage Billing in report-only mode and inspect for `form-action 'self'` violation reports.
+1. **Billing redirect verification** — Exercise Subscribe and Manage Billing in report-only mode and inspect for `form-action 'self'` violation reports. Pass means zero CSP report-only violations — specifically no `form-action 'self'` reports — observed in Sentry's Security Header endpoint during a full browser exercise of both flows.
 2. **Final CSP posture decision** — Either promote Clerk strict CSP from report-only to enforcing, or explicitly record the accepted residual risk of staying report-only.
 3. **Optional compatibility hardening** — Add legacy `Report-To` only if the team wants to match Sentry's widest reporting compatibility recommendation beyond Clerk's current `reportTo` / `Reporting-Endpoints` support.
 4. **Item 3** — No action; re-evaluate RLS only if architecture changes.
