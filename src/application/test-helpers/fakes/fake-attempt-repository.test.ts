@@ -5,9 +5,7 @@ import { FakeAttemptRepository } from './fake-attempt-repository';
 type SeedAttempt = NonNullable<
   ConstructorParameters<typeof FakeAttemptRepository>[0]
 >[number];
-type VisibilitySeedAttempt = SeedAttempt & {
-  sessionEndedAt?: Date | null;
-};
+type VisibilitySeedAttempt = SeedAttempt;
 
 const userId = 'user-1';
 const hiddenActiveExamAt = new Date('2026-04-25T12:00:00Z');
