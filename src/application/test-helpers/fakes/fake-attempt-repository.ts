@@ -16,6 +16,7 @@ import type {
 type InMemoryAttempt = Attempt & {
   practiceSessionId: string | null;
   sessionMode?: 'tutor' | 'exam' | null;
+  sessionEndedAt?: Date | null;
 };
 
 export class FakeAttemptRepository implements AttemptRepository {
@@ -79,6 +80,7 @@ export class FakeAttemptRepository implements AttemptRepository {
       retryOrigin: input.retryOrigin ?? null,
       retrySessionId: input.retrySessionId ?? null,
       answeredAt: new Date(),
+      sessionEndedAt: null,
     };
     this.attempts = [...this.attempts, attempt];
     return attempt;
@@ -126,7 +128,10 @@ export class FakeAttemptRepository implements AttemptRepository {
     questionId: string,
   ): Promise<Attempt | null> {
     const matching = this.attempts.filter(
-      (a) => a.userId === userId && a.questionId === questionId,
+      (a) =>
+        a.userId === userId &&
+        a.questionId === questionId &&
+        !this.isHiddenByActiveExam(a),
     );
     if (matching.length === 0) return null;
 
@@ -165,17 +170,24 @@ export class FakeAttemptRepository implements AttemptRepository {
   }
 
   async countByUserId(userId: string): Promise<number> {
-    return this.attempts.filter((a) => a.userId === userId).length;
+    return this.attempts.filter(
+      (a) => a.userId === userId && !this.isHiddenByActiveExam(a),
+    ).length;
   }
 
   async countCorrectByUserId(userId: string): Promise<number> {
-    return this.attempts.filter((a) => a.userId === userId && a.isCorrect)
-      .length;
+    return this.attempts.filter(
+      (a) =>
+        a.userId === userId && a.isCorrect && !this.isHiddenByActiveExam(a),
+    ).length;
   }
 
   async countByUserIdSince(userId: string, since: Date): Promise<number> {
     return this.attempts.filter(
-      (a) => a.userId === userId && a.answeredAt >= since,
+      (a) =>
+        a.userId === userId &&
+        a.answeredAt >= since &&
+        !this.isHiddenByActiveExam(a),
     ).length;
   }
 
@@ -184,7 +196,11 @@ export class FakeAttemptRepository implements AttemptRepository {
     since: Date,
   ): Promise<number> {
     return this.attempts.filter(
-      (a) => a.userId === userId && a.answeredAt >= since && a.isCorrect,
+      (a) =>
+        a.userId === userId &&
+        a.answeredAt >= since &&
+        a.isCorrect &&
+        !this.isHiddenByActiveExam(a),
     ).length;
   }
 
@@ -193,7 +209,7 @@ export class FakeAttemptRepository implements AttemptRepository {
     limit: number,
   ): Promise<readonly (Attempt & { sessionMode: 'tutor' | 'exam' | null })[]> {
     return this.attempts
-      .filter((a) => a.userId === userId)
+      .filter((a) => a.userId === userId && !this.isHiddenByActiveExam(a))
       .slice()
       .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime())
       .slice(0, limit)
@@ -208,7 +224,12 @@ export class FakeAttemptRepository implements AttemptRepository {
     since: Date,
   ): Promise<readonly Date[]> {
     return this.attempts
-      .filter((a) => a.userId === userId && a.answeredAt >= since)
+      .filter(
+        (a) =>
+          a.userId === userId &&
+          a.answeredAt >= since &&
+          !this.isHiddenByActiveExam(a),
+      )
       .slice()
       .sort((a, b) => b.answeredAt.getTime() - a.answeredAt.getTime())
       .map((a) => a.answeredAt);
@@ -246,6 +267,7 @@ export class FakeAttemptRepository implements AttemptRepository {
     const mostRecentByQuestionId = new Map<string, InMemoryAttempt>();
     for (const attempt of this.attempts) {
       if (attempt.userId !== userId) continue;
+      if (this.isHiddenByActiveExam(attempt)) continue;
       const existing = mostRecentByQuestionId.get(attempt.questionId);
       if (!existing || this.isLaterAttempt(attempt, existing)) {
         mostRecentByQuestionId.set(attempt.questionId, attempt);
@@ -355,6 +377,7 @@ export class FakeAttemptRepository implements AttemptRepository {
     for (const attempt of this.attempts) {
       if (attempt.userId !== userId) continue;
       if (!questionIdSet.has(attempt.questionId)) continue;
+      if (this.isHiddenByActiveExam(attempt)) continue;
 
       const current = mostRecentByQuestionId.get(attempt.questionId);
       if (!current || attempt.answeredAt > current) {
@@ -372,6 +395,14 @@ export class FakeAttemptRepository implements AttemptRepository {
 
   getAll(): readonly InMemoryAttempt[] {
     return this.attempts;
+  }
+
+  private isHiddenByActiveExam(attempt: InMemoryAttempt): boolean {
+    return (
+      attempt.practiceSessionId !== null &&
+      attempt.sessionMode === 'exam' &&
+      attempt.sessionEndedAt === null
+    );
   }
 
   private isLaterAttempt(
