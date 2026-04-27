@@ -5,7 +5,7 @@
 **Source:** Test suite quality audit, 2026-04-25
 **Related:** [.claude/rules/testing-browser.md](../../.claude/rules/testing-browser.md), [.claude/rules/testing.md](../../.claude/rules/testing.md)
 
-**Audit verified:** 2026-04-25 against `0ec1b1fd`.
+**Audit verified:** 2026-04-27 against `87284372`.
 
 ---
 
@@ -29,7 +29,7 @@ Several browser specs violate this rule today by using factory-form `vi.mock(pat
 - `app/(app)/app/history/hooks/use-history-sessions.browser.spec.tsx:16`
 - `app/(app)/app/questions/[slug]/use-question-page-controller.browser.spec.tsx:30-43`
 
-Fresh audit count on 2026-04-25:
+Fresh audit count on 2026-04-27:
 
 - The broad internal-module grep from the verification checklist returns **26 internal `vi.mock` calls without `{ spy: true }`** in `*.browser.spec.tsx` files:
   `rg -n "vi\.mock\(['\"]@/(src|app|components|lib)/" --glob '**/*.browser.spec.tsx' | rg -v '\{\s*spy:\s*true\s*\}'`

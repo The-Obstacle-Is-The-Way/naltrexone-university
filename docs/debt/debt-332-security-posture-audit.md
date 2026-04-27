@@ -5,7 +5,7 @@
 **Source:** Deep security audit prompted by Delve/Supabase public-bucket incident
 **Related:** [ADR-009 Security Hardening](../adr/adr-009-security-hardening.md), [SPEC-017 Rate Limiting](../specs/spec-017-rate-limiting.md), [next.config.ts](../../next.config.ts), [proxy.ts](../../proxy.ts)
 
-**Audit verified:** 2026-04-25 against `0ec1b1fd`.
+**Audit verified:** 2026-04-27 against `87284372`.
 
 ---
 
@@ -52,13 +52,15 @@ next.config.ts headers:     ✅ X-Content-Type-Options, Referrer-Policy, X-Frame
 
 proxy.ts Clerk middleware:   ✅ Automatic Clerk CSP is enabled
                             ✅ Public routes still traverse middleware
-                            ✅ Clerk injects default-src/script-src/style-src
-                            ⚠️ Effective policy is broader than our app needs
+                            ✅ Strict mode is enabled in report-only (`strict: true`, `reportOnly: true`)
+                            ✅ `report-uri`, `report-to`, `Reporting-Endpoints`, and `x-nonce` are wired
+                            ❌ Enforcing CSP is not enabled yet
+                            ⚠️ Before enforcing, billing redirects still need browser verification for `form-action 'self'`
 ```
 
-### Captured CSP Headers (Ground Truth)
+### Historical Captured CSP Headers (Pre-Strict Baseline)
 
-Verification was performed on **2026-03-21** across three environments:
+The broad default-mode header below is retained as historical baseline evidence for why strict mode was chosen. Current code no longer targets this default-mode shape; `proxy.ts` now sets Clerk `strict: true` and `reportOnly: true`, which removes the broad `http:` / `https:` script sources in the emitted report-only policy. Verification for the baseline was performed on **2026-03-21** across three environments:
 
 1. **Local dev:** `pnpm dev`, captured via `curl -sSI`
 2. **Local production build:** `pnpm build && pnpm start`, captured via `curl -sSI`
@@ -67,7 +69,6 @@ Verification was performed on **2026-03-21** across three environments:
 Local dev/prod verification covered:
 
 - public pages such as `/` and `/pricing`
-- auth pages such as `/sign-in`
 - protected-route responses such as `/app/dashboard` (404 protect-rewrite in dev, 307 redirect in prod when signed out)
 - API routes such as `/api/health` and `/api/stripe/webhook`
 
@@ -121,7 +122,7 @@ content-security-policy:
   worker-src        'self' blob:
 ```
 
-**What this tells us:**
+**What this baseline told us:**
 
 | Directive | Observation | Concern |
 |---|---|---|
@@ -132,7 +133,7 @@ content-security-policy:
 | `connect-src` | Includes `images.clerkstage.dev` | **Verified as a Clerk SDK hardcoded default** — present in all environments including deployed production. See "Clerk SDK `images.clerkstage.dev` Finding" below |
 | `frame-src` | Includes Stripe JS hosts and hooks | We don't embed Stripe iframes — unnecessary from Clerk defaults |
 
-**The `https: http:` in `script-src` is the critical finding.** This makes the CSP effectively a no-op for script injection prevention, because any origin qualifies. This is what Clerk strict mode eliminates by switching to nonce + `'strict-dynamic'`.
+**The historical `https: http:` in `script-src` was the critical finding.** It made the default-mode CSP effectively a no-op for script injection prevention, because any origin qualified. The current report-only strict-mode path eliminates that specific script-source issue by switching to nonce + `'strict-dynamic'`; the remaining active debt is whether to promote the policy to enforcing mode after billing-flow verification, or explicitly accept report-only as the residual posture.
 
 ### Verified Findings (Official Docs + Local Runtime)
 
@@ -249,22 +250,22 @@ But the earlier "NOT in `next.config.ts`" wording was too absolute. Next.js offi
 
 For this application, the technically accurate recommendation is:
 
-1. **Fix the documentation first.**
-   - Stop claiming there is no CSP.
-   - Stop claiming public routes receive no CSP.
-   - Stop claiming the exact synthetic allowlist shown earlier is the policy browsers actually receive.
+1. **Keep the corrected CSP model current.**
+   - Do not claim there is no CSP.
+   - Do not claim public routes receive no CSP.
+   - Do not claim the historical default-mode allowlist is the current report-only strict-mode policy.
 
 2. **Keep `proxy.ts` as the current CSP ownership point.**
    - That aligns with Clerk automatic CSP and any future nonce-based rollout.
 
-3. **Use Clerk's built-in report-only support if we want a low-risk visibility phase.**
+3. **Continue using Clerk's built-in report-only support until final verification is complete.**
    - The installed Clerk SDK now exposes `reportOnly?: boolean` and `reportTo?: string` on `contentSecurityPolicy`.
    - Clerk's `reportTo` support covers the CSP `report-to` directive plus `Reporting-Endpoints`, but not the legacy `Report-To` header.
-   - For compatibility, add `report-uri` and, if we want to match Sentry's full recommendation, set `Report-To` manually alongside Clerk's `reportTo` support.
+   - `report-uri` is already wired. If we want to match Sentry's full recommendation, set legacy `Report-To` manually alongside Clerk's `reportTo` support.
 
-4. **If we want a materially stronger CSP, plan a strict-mode rollout rather than a hand-written additive allowlist.**
+4. **If we want a materially stronger enforced CSP, finish the strict-mode rollout rather than a hand-written additive allowlist.**
    - Strict mode removes Clerk's broad `http:` / `https:` script allowances and gives us nonce-based protection.
-   - But it requires provider / theme nonce work and dynamic-rendering tradeoff acceptance.
+   - Provider / theme nonce work is already in place; the remaining decision is whether to promote to enforcing mode after billing-flow verification.
 
 5. **If we want a truly minimal exact policy, Clerk automatic CSP is the wrong abstraction.**
    - We would need to own the CSP header manually and explicitly include only the sources justified by our actual stack.
@@ -393,12 +394,10 @@ If a competent security auditor reviewed this codebase:
 
 ## Recommended Execution Order
 
-1. **Item 2** — Drop `timestamp` from health endpoint (5-minute fix, zero risk)
-2. **Item 1 Phase 0** — Accept the corrected CSP model in this doc and record the desired ownership path: keep Clerk automatic CSP, move to Clerk strict mode, or own CSP manually
-3. **Item 1 Phase 1** — If we want visibility first, enable Clerk `reportOnly` / `reportTo` in `proxy.ts` and add `report-uri` pointing to Sentry's Security Header endpoint
-4. **Item 1 Phase 2** — If we want a stronger CSP, refactor `ClerkProvider` / `next-themes` for nonce support and run a strict-mode report-only rollout
-5. **Item 1 Phase 3** — Promote the chosen policy to enforcing mode only after auth flows, theme initialization, Sentry reporting, and billing redirects are verified
-6. **Item 3** — No action; re-evaluate if architecture changes
+1. **Billing redirect verification** — Exercise Subscribe and Manage Billing in report-only mode and inspect for `form-action 'self'` violation reports.
+2. **Final CSP posture decision** — Either promote Clerk strict CSP from report-only to enforcing, or explicitly record the accepted residual risk of staying report-only.
+3. **Optional compatibility hardening** — Add legacy `Report-To` only if the team wants to match Sentry's widest reporting compatibility recommendation beyond Clerk's current `reportTo` / `Reporting-Endpoints` support.
+4. **Item 3** — No action; re-evaluate RLS only if architecture changes.
 
 ---
 

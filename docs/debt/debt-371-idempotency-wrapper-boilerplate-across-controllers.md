@@ -5,7 +5,7 @@
 **Source:** Production complexity audit, 2026-04-25
 **Related:** [withIdempotency helper](../../src/adapters/shared/with-idempotency.ts), [Master Spec — Idempotency](../specs/master_spec.md)
 
-**Audit verified:** 2026-04-25 against `0ec1b1fd`.
+**Audit verified:** 2026-04-27 against `87284372`.
 
 ---
 
@@ -63,7 +63,14 @@ Add a controller-side helper:
 // src/adapters/controllers/shared/execute-idempotent.ts
 import type { ZodSchema } from 'zod';
 import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
-import type { ControllerDeps } from '...'; // existing deps type
+import type { Logger } from '@/src/application/ports/logger';
+import type { IdempotencyKeyRepository } from '@/src/application/ports/repositories';
+
+type IdempotentControllerDeps = {
+  idempotencyKeyRepository: IdempotencyKeyRepository;
+  logger: Logger;
+  now: () => Date;
+};
 
 export async function executeIdempotent<TOutput>({
   d,
@@ -73,7 +80,7 @@ export async function executeIdempotent<TOutput>({
   outputSchema,
   execute,
 }: {
-  d: ControllerDeps;
+  d: IdempotentControllerDeps;
   userId: string;
   idempotencyKey: string | null | undefined;
   action: string;
@@ -93,6 +100,8 @@ export async function executeIdempotent<TOutput>({
   });
 }
 ```
+
+The helper should depend on the structural subset shared by the affected controller dependency types (`idempotencyKeyRepository`, `logger`, `now`). There is no repo-wide `ControllerDeps` type today; introducing one would be broader than this debt item requires.
 
 Then each call site shrinks to:
 
