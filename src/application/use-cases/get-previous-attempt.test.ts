@@ -1155,6 +1155,55 @@ describe('GetPreviousAttemptUseCase', () => {
     expect(result?.choiceExplanations).toEqual(expected);
   });
 
+  it("wraps the implicit-latest repository result as kind: 'attempt' with ISO answeredAt", async () => {
+    const userId = 'user-1';
+    const questionId = 'q1';
+    const answeredAt = new Date('2026-04-25T12:00:00.000Z');
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      explanationMd: 'Visible explanation',
+      choices: [
+        createChoice({
+          id: 'c1',
+          questionId,
+          label: 'A',
+          isCorrect: false,
+        }),
+        createChoice({
+          id: 'c2',
+          questionId,
+          label: 'B',
+          isCorrect: true,
+        }),
+      ],
+    });
+    const useCase = new GetPreviousAttemptUseCase(
+      new FakeAttemptRepository([
+        createAttempt({
+          id: 'attempt-visible',
+          userId,
+          questionId,
+          selectedChoiceId: 'c1',
+          isCorrect: false,
+          answeredAt,
+        }),
+      ]),
+      new FakeQuestionRepository([question]),
+      new FakeLogger(),
+    );
+
+    await expect(
+      useCase.execute({ userId, questionId }),
+    ).resolves.toMatchObject({
+      kind: 'attempt',
+      attemptId: 'attempt-visible',
+      selectedChoiceId: 'c1',
+      isCorrect: false,
+      answeredAt: answeredAt.toISOString(),
+    });
+  });
+
   it('propagates repository failures', async () => {
     class FailingAttemptRepository extends FakeAttemptRepository {
       async findLatestByUserAndQuestion(): Promise<never> {

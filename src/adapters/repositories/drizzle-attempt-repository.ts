@@ -262,15 +262,23 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     const [row] = await this.db
       .select()
       .from(attempts)
+      .leftJoin(
+        practiceSessions,
+        eq(attempts.practiceSessionId, practiceSessions.id),
+      )
       .where(
-        and(eq(attempts.userId, userId), eq(attempts.questionId, questionId)),
+        and(
+          eq(attempts.userId, userId),
+          eq(attempts.questionId, questionId),
+          getActiveExamVisibilityCondition(),
+        ),
       )
       .orderBy(desc(attempts.answeredAt), desc(attempts.id))
       .limit(1);
 
     if (!row) return null;
 
-    return toAttemptDomain(row);
+    return toAttemptDomain(row.attempts);
   }
 
   async findByIdAndUserId(
@@ -508,10 +516,15 @@ export class DrizzleAttemptRepository implements AttemptRepository {
         answeredAt: max(attempts.answeredAt).as('answered_at'),
       })
       .from(attempts)
+      .leftJoin(
+        practiceSessions,
+        eq(attempts.practiceSessionId, practiceSessions.id),
+      )
       .where(
         and(
           eq(attempts.userId, userId),
           inArray(attempts.questionId, [...questionIds]),
+          getActiveExamVisibilityCondition(),
         ),
       )
       .groupBy(attempts.questionId);
