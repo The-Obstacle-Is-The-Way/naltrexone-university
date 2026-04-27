@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-27
+**Last Updated:** 2026-04-27 (DEBT-367 archival)
 
 ---
 
@@ -20,7 +20,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is billing-flow `form-action` verification plus enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
-| [DEBT-367](./debt-367-fake-attempt-repository-missing-active-exam-visibility.md) | `FakeAttemptRepository` does not apply the shared active-exam visibility predicate in any of 10 read methods that the real repo filters; unit tests against the fake silently pass scenarios real Postgres would reject, masking future regressions of the BUG-235/236/237/239 visibility sweep | P2 | — |
 | [DEBT-368](./debt-368-browser-spec-vi-mock-missing-spy-true.md) | Multiple `*.browser.spec.tsx` files factory-mock internal controllers without `{ spy: true }`, replacing every export instead of preserving real ones; violates the documented browser-mode mocking rule and creates silent coupling to the controller surface | P3 | — |
 | [DEBT-369](./debt-369-feedback-test-brittle-presentational-token-assertions.md) | `components/question/Feedback.test.tsx` asserts pure presentational Tailwind tokens (`text-sm`, `p-4`, `border-destructive/20`, etc.) across ~70 sites, violating the testing rule against utility-class assertions for non-behavioral styles | P3 | — |
 | [DEBT-370](./debt-370-oversized-test-files-without-enforced-size-rule.md) | 11 test files exceed 1,400 LOC (worst: 2,086; newest entrant: `tests/integration/bug-regression.integration.test.ts` at 1,784) bundling multiple concerns; `biome.json` has no enforced max-lines guardrail for tests despite DEBT-234 archival | P3 | — |
@@ -34,6 +33,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-367](../_archive/debt/debt-367-fake-attempt-repository-missing-active-exam-visibility.md) | `FakeAttemptRepository` now mirrors the shared active-exam visibility predicate in all 10 sister read methods via a private `isHiddenByActiveExam` helper; unit tests against the fake match real Postgres behavior, closing the silent-regression vector for the BUG-235/236/237/239 visibility sweep | P2 | 2026-04-27 | [PR #292](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/292) |
 | [DEBT-366](../_archive/debt/debt-366-active-exam-visibility-predicate-duplication.md) | Active-exam visibility predicate consolidated into shared `getActiveExamVisibilityCondition()` at `src/adapters/repositories/shared/active-exam-visibility.ts`; both `DrizzleAttemptRepository` and `DrizzleQuestionRepository` now import the shared helper. Pure deduplication, zero behavior change, zero test files modified | P3 | 2026-04-26 | [PR #289](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/289) |
 | [DEBT-365](../_archive/debt/debt-365-exam-flow-affordance-and-label-consistency.md) | Exam flow affordance and label consistency pass — Concern 3A footer grouping and Concern 5A `View Summary` outline shipped in [PR #283](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/283); Concerns 1, 4, 6, 7 resolved earlier; Concern 2 (`Mark for review` vs `Bookmark`) closed 2026-04-23 as intentional-by-design because the two controls never share a surface in the shipped flow | P3 | 2026-04-23 | [PR #283](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/283) |
 | [DEBT-364](../_archive/debt/debt-364-post-exam-review-reentry-cursor-persistence.md) | Post-exam review re-entry cursor persistence — untargeted `Review Answers` from Session Summary now resets to the first available row so `Next` is visible; targeted breakdown-row re-entry is unchanged | P2 | 2026-04-21 | [PR #282](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/282) |

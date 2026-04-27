@@ -4,7 +4,7 @@
 **Created:** 2026-04-25
 **Source:** Identified as out-of-scope in the BUG-236 doc; resurfaced in the 2026-04-25 post-merge audit
 **Related:** [BUG-235](../_archive/bugs/bug-235-attempted-question-history-drops-latest-visible-attempt.md), [BUG-236](../_archive/bugs/bug-236-dashboard-current-streak-includes-active-exam-attempts.md), [BUG-237](../_archive/bugs/bug-237-submit-answer-allows-active-exam-session-writes.md), [BUG-239](../_archive/bugs/bug-239-active-exam-latest-attempt-readers-drop-visible-fallback.md), [exam-answer-secrecy-policy.md](../practice-engine/exam-answer-secrecy-policy.md)
-**Resolution State:** Fix on branch `debt-367-fake-visibility-fidelity`; PR #292 pending review and merge.
+**Resolution State:** Fixed in PR #292, merged to dev `c1dcc2b6` and main on 2026-04-27.
 
 **Audit verified:** 2026-04-27 against `87284372`.
 
