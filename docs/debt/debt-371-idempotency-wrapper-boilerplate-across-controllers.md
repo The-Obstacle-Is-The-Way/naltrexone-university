@@ -2,7 +2,7 @@
 
 **Priority:** P3
 **Created:** 2026-04-25
-**Resolution State:** Fix on branch `debt-371-execute-idempotent-helper`; PR pending.
+**Resolution State:** Fix on branch `debt-371-execute-idempotent-helper`; PR #293.
 **Source:** Production complexity audit, 2026-04-25
 **Related:** [withIdempotency helper](../../src/adapters/shared/with-idempotency.ts), [Master Spec — Idempotency](../specs/master_spec.md)
 
