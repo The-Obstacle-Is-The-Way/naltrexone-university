@@ -56,6 +56,7 @@ For each affected `*.browser.spec.tsx` file:
 1. Replace `vi.mock(path, () => ({...}))` with `vi.mock(path, { spy: true })`.
 2. Replace top-of-file `vi.hoisted(() => ({ fooMock: vi.fn() }))` + `vi.mock(...)` factory pairs with per-test `vi.mocked(controllerModule.foo).mockResolvedValue(...)` setup against an `import * as controllerModule from '@/...'`.
 3. Drop the now-unused hoisted mock variables.
+4. Keep browser Vitest `optimizeDeps.include` aligned with any real server-side dependencies pulled into the browser graph by `{ spy: true }` imports, so coverage runs do not trigger Vite dependency reloads mid-suite.
 
 Do this file-by-file as the touched tests are otherwise edited; no need for a single sweep.
 
@@ -74,3 +75,4 @@ The current tests pass. The cost is hidden coupling and refactor-friction risk t
 - [x] Each migrated file passes `pnpm test:browser` for that file.
 - [x] A grep `vi\.mock\(['"](@/(src|app|components|lib)/[^'"]+)['"]` in `**/*.browser.spec.tsx` returns zero hits without `{ spy: true }` (excluding documented external-SDK exceptions): 26 → 0 on 2026-04-28.
 - [x] No regression in `pnpm test:browser` overall pass count: 241 → 241 on 2026-04-28.
+- [x] `pnpm test:browser:coverage` passes from a cold Vite cache after browser Vitest dependency pre-optimization was updated for the real modules now imported by spy-based mocks.
