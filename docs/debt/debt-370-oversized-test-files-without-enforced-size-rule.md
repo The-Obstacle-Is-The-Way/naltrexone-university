@@ -3,7 +3,7 @@
 **Priority:** P3
 **Created:** 2026-04-25
 **Source:** Test suite quality audit, 2026-04-25
-**Related:** [DEBT-234 (archived) — Add max-lines lint rule](../_archive/debt/debt-234-add-max-lines-lint-rule.md), [DEBT-139 (archived) — Production files exceed size guardrail](../_archive/debt/debt-139-production-files-exceed-size-guardrail.md), [DEBT-354 (archived) — God-file and clean-code audit](../_archive/debt/debt-354-god-file-and-clean-code-audit.md), [DEBT-369](./debt-369-feedback-test-brittle-presentational-token-assertions.md)
+**Related:** [DEBT-234 (archived) — Add max-lines lint rule](../_archive/debt/debt-234-add-max-lines-lint-rule.md), [DEBT-139 (archived) — Production files exceed size guardrail](../_archive/debt/debt-139-production-files-exceed-size-guardrail.md), [DEBT-354 (archived) — God-file and clean-code audit](../_archive/debt/debt-354-god-file-and-clean-code-audit.md), [DEBT-369 (archived)](../_archive/debt/debt-369-feedback-test-brittle-presentational-token-assertions.md)
 
 **Audit verified:** 2026-04-27 against `87284372`.
 
@@ -16,10 +16,10 @@ After the DEBT-354 god-file audit (2026-04-09) split the worst production-side o
 | LOC | File |
 |----:|------|
 | 2,086 | `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.browser.spec.tsx` |
-| 1,874 | `components/question/Feedback.test.tsx` |
+| 1,210 | `components/question/Feedback.test.tsx` |
 | 1,842 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.browser.spec.tsx` |
 | 1,837 | `app/(app)/app/questions/[slug]/use-question-page-controller.browser.spec.tsx` |
-| 1,784 | `tests/integration/bug-regression.integration.test.ts` |
+| 1,784 | `tests/integration/bug-regression.integration.test.ts` (pre-Phase 1 baseline; split in PR #295) |
 | 1,756 | `app/(app)/app/practice/practice-page-logic.test.ts` |
 | 1,730 | `src/adapters/controllers/practice-controller.test.ts` |
 | 1,625 | `src/application/use-cases/submit-answer.test.ts` |
@@ -27,7 +27,7 @@ After the DEBT-354 god-file audit (2026-04-09) split the worst production-side o
 | 1,468 | `src/application/use-cases/get-next-question.test.ts` |
 | 1,401 | `src/adapters/repositories/drizzle-practice-session-repository.test.ts` |
 
-The largest app/src/components production file remains 572 LOC (`history-questions-tab.tsx`) — about a quarter of the largest test file. `db/schema.ts` is larger at 639 LOC, but it is infrastructure schema rather than feature logic. `biome.json` does not enforce a `max-lines` style rule today. DEBT-234 was archived as resolved but no enforcement landed.
+The `Feedback.test.tsx` row reflects the post-DEBT-369 cleanup in PR #294; it remains in this context table to preserve the before/after trail for the multi-PR DEBT-370 campaign. The `bug-regression.integration.test.ts` row is the pre-Phase 1 baseline for PR #295, which replaces that monolith with focused siblings for active-exam projections, active-exam latest-attempt fallback, exam-draft bounds, and historical CAS coverage. The largest app/src/components production file remains 572 LOC (`history-questions-tab.tsx`) — about a quarter of the largest test file. `db/schema.ts` is larger at 639 LOC, but it is infrastructure schema rather than feature logic. `biome.json` does not enforce a `max-lines` style rule today. DEBT-234 was archived as resolved but no enforcement landed.
 
 ## Why This Is Debt
 
@@ -47,7 +47,7 @@ Two-track approach:
 For each file >1,500 LOC, identify the natural concern boundaries (skim the `describe` blocks) and split into peer files that share a colocated `*-test-helpers.ts`. Examples:
 
 - `practice-session-page-view.browser.spec.tsx` (2086) → split by phase: init/load, answer/feedback, review-stage, mark-for-review, submit/finalize.
-- `Feedback.test.tsx` (1874) → split by feedback variant: correct-card, incorrect-card, fallback rendering, accessibility. **Pair with [DEBT-369](./debt-369-feedback-test-brittle-presentational-token-assertions.md)** — clean up the brittle token assertions *before* splitting so the split files don't ship the existing pattern repo-wide.
+- `Feedback.test.tsx` (1210 after DEBT-369) → split by feedback variant: correct-card, incorrect-card, fallback rendering, accessibility. **Pairing with [DEBT-369](../_archive/debt/debt-369-feedback-test-brittle-presentational-token-assertions.md) is complete** — the brittle token assertions were cleaned up before any future split so the split files don't ship the old pattern repo-wide.
 - `bug-regression.integration.test.ts` (1784) → split by regression family: active-exam visibility, exam draft cumulative bounds, security/auth regressions, and older historical bug groups.
 - `practice-controller.test.ts` (1730) → split by action group: session lifecycle (start/end/finalize), answer reads, mark/bookmark.
 - `submit-answer.test.ts` (1625) → split by mode-shape: tutor / exam / standalone / retry.
