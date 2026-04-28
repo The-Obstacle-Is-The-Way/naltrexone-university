@@ -190,6 +190,8 @@ describe('usePracticeSessionControls (browser)', () => {
     endPracticeSession.mockResolvedValue(
       ok({
         sessionId,
+        mode: 'tutor',
+        questionCount: 10,
         endedAt: '2026-02-08T01:00:00.000Z',
         totals: {
           answered: 2,

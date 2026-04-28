@@ -203,6 +203,7 @@ describe('useQuestionPageController (browser)', () => {
     getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-2',
         isCorrect: true,
@@ -250,6 +251,7 @@ describe('useQuestionPageController (browser)', () => {
       createDeferred<
         ActionResult<{
           kind: 'attempt';
+          sessionMode: 'tutor' | 'exam' | null;
           attemptId: string;
           selectedChoiceId: string;
           isCorrect: boolean;
@@ -274,6 +276,7 @@ describe('useQuestionPageController (browser)', () => {
     deferred.resolve(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-2',
         isCorrect: true,
@@ -309,6 +312,7 @@ describe('useQuestionPageController (browser)', () => {
       createDeferred<
         ActionResult<{
           kind: 'attempt';
+          sessionMode: 'tutor' | 'exam' | null;
           attemptId: string;
           selectedChoiceId: string;
           isCorrect: boolean;
@@ -374,6 +378,7 @@ describe('useQuestionPageController (browser)', () => {
     deferred.resolve(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-2',
         isCorrect: true,
@@ -430,6 +435,7 @@ describe('useQuestionPageController (browser)', () => {
     getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId,
         selectedChoiceId: 'choice-2',
         isCorrect: true,
@@ -583,6 +589,7 @@ describe('useQuestionPageController (browser)', () => {
     getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-1',
         isCorrect: true,
@@ -635,6 +642,7 @@ describe('useQuestionPageController (browser)', () => {
     getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-1',
         isCorrect: true,
@@ -697,6 +705,7 @@ describe('useQuestionPageController (browser)', () => {
     getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-1',
         isCorrect: true,
@@ -746,6 +755,7 @@ describe('useQuestionPageController (browser)', () => {
     getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-1',
         isCorrect: true,
@@ -793,6 +803,7 @@ describe('useQuestionPageController (browser)', () => {
     getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-1',
         isCorrect: true,
@@ -1334,6 +1345,7 @@ describe('useQuestionPageController (browser)', () => {
       createDeferred<
         ActionResult<{
           kind: 'attempt';
+          sessionMode: 'tutor' | 'exam' | null;
           attemptId: string;
           selectedChoiceId: string;
           isCorrect: boolean;
@@ -1348,6 +1360,7 @@ describe('useQuestionPageController (browser)', () => {
       createDeferred<
         ActionResult<{
           kind: 'attempt';
+          sessionMode: 'tutor' | 'exam' | null;
           attemptId: string;
           selectedChoiceId: string;
           isCorrect: boolean;
@@ -1391,6 +1404,7 @@ describe('useQuestionPageController (browser)', () => {
     deferredSecond.resolve(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-q2',
         selectedChoiceId: 'choice-1',
         isCorrect: true,
@@ -1411,6 +1425,7 @@ describe('useQuestionPageController (browser)', () => {
     deferredFirst.resolve(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-q1-stale',
         selectedChoiceId: 'choice-2',
         isCorrect: false,
@@ -1450,6 +1465,7 @@ describe('useQuestionPageController (browser)', () => {
       createDeferred<
         ActionResult<{
           kind: 'attempt';
+          sessionMode: 'tutor' | 'exam' | null;
           attemptId: string;
           selectedChoiceId: string;
           isCorrect: boolean;
@@ -1496,6 +1512,7 @@ describe('useQuestionPageController (browser)', () => {
     deferredPrevious.resolve(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-q1-stale',
         selectedChoiceId: 'choice-1',
         isCorrect: true,
@@ -1631,6 +1648,7 @@ describe('useQuestionPageController (browser)', () => {
     getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-2',
         isCorrect: true,
@@ -1733,6 +1751,7 @@ describe('useQuestionPageController (browser)', () => {
     getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'session_unanswered',
+        sessionMode: null,
         correctChoiceId: 'choice-2',
         explanationMd: null,
         referenceMd: null,

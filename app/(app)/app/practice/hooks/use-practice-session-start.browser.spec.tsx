@@ -91,7 +91,7 @@ afterEach(() => {
 test('rotates the session start idempotency key when changing status', async () => {
   startPracticeSession.mockResolvedValue({
     ok: true,
-    data: { sessionId: 'session_1' },
+    data: { sessionId: 'session_1', requestedCount: 20, actualCount: 20 },
   });
 
   const screen = await render(<Probe />);

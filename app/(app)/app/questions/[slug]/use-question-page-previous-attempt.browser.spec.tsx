@@ -121,6 +121,7 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
     getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-2',
         isCorrect: true,
@@ -154,6 +155,7 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
       createDeferred<
         ActionResult<{
           kind: 'attempt';
+          sessionMode: 'tutor' | 'exam' | null;
           attemptId: string;
           selectedChoiceId: string;
           isCorrect: boolean;
@@ -216,6 +218,7 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
     deferred.resolve(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-2',
         isCorrect: true,
@@ -234,6 +237,7 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
       createDeferred<
         ActionResult<{
           kind: 'attempt';
+          sessionMode: 'tutor' | 'exam' | null;
           attemptId: string;
           selectedChoiceId: string;
           isCorrect: boolean;
@@ -264,6 +268,7 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
     deferred.resolve(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-2',
         isCorrect: true,
