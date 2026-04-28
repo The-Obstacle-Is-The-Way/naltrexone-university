@@ -5,7 +5,7 @@
 **Source:** Test suite quality audit, 2026-04-25
 **Related:** [.claude/rules/testing-browser.md](../../.claude/rules/testing-browser.md), [.claude/rules/testing.md](../../.claude/rules/testing.md)
 
-**Resolution State:** Fix on branch `debt-368-browser-spec-vi-mock-spy-true-sweep`; PR pending.
+**Resolution State:** Fix on branch `debt-368-browser-spec-vi-mock-spy-true-sweep`, PR #296.
 
 **Audit verified:** 2026-04-27 against `87284372`.
 
