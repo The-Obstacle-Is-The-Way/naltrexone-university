@@ -1,21 +1,21 @@
-import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
-import { expect, test, vi } from 'vitest';
+import { beforeEach, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import * as notificationProvider from '@/components/ui/notification-provider';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import { PracticeView } from './practice-view';
 
-const { notifyMock } = vi.hoisted(() => ({
-  notifyMock: vi.fn(),
-}));
+const notifySpy = vi.fn();
 
-vi.mock('@/components/ui/notification-provider', () => ({
-  NotificationProvider: ({ children }: { children: ReactNode }) => children,
-  useNotification: () => ({
-    notify: notifyMock,
+vi.mock('@/components/ui/notification-provider', { spy: true });
+
+beforeEach(() => {
+  notifySpy.mockReset();
+  vi.mocked(notificationProvider.useNotification).mockReturnValue({
+    notify: notifySpy,
     dismiss: vi.fn(),
-  }),
-}));
+  });
+});
 
 function createBaseProps() {
   const question = createNextQuestion({
@@ -43,7 +43,6 @@ function createBaseProps() {
 }
 
 test('emits error-tone notification when bookmark feedback arrives in error state', async () => {
-  notifyMock.mockReset();
   const baseProps = createBaseProps();
 
   await render(
@@ -55,15 +54,14 @@ test('emits error-tone notification when bookmark feedback arrives in error stat
     />,
   );
 
-  await expect.poll(() => notifyMock.mock.calls.length).toBe(1);
-  expect(notifyMock).toHaveBeenCalledWith({
+  await expect.poll(() => notifySpy.mock.calls.length).toBe(1);
+  expect(notifySpy).toHaveBeenCalledWith({
     message: 'Failed to save bookmark. Please try again.',
     tone: 'error',
   });
 });
 
 test('emits success-tone notification when bookmark feedback arrives in non-error state', async () => {
-  notifyMock.mockReset();
   const baseProps = createBaseProps();
 
   await render(
@@ -75,15 +73,14 @@ test('emits success-tone notification when bookmark feedback arrives in non-erro
     />,
   );
 
-  await expect.poll(() => notifyMock.mock.calls.length).toBe(1);
-  expect(notifyMock).toHaveBeenCalledWith({
+  await expect.poll(() => notifySpy.mock.calls.length).toBe(1);
+  expect(notifySpy).toHaveBeenCalledWith({
     message: 'Question bookmarked.',
     tone: 'success',
   });
 });
 
 test('does not emit duplicate notifications when bookmark status changes without a new message version', async () => {
-  notifyMock.mockReset();
   const baseProps = createBaseProps();
 
   function Harness() {
@@ -107,9 +104,9 @@ test('does not emit duplicate notifications when bookmark status changes without
   }
 
   const screen = await render(<Harness />);
-  await expect.poll(() => notifyMock.mock.calls.length).toBe(1);
+  await expect.poll(() => notifySpy.mock.calls.length).toBe(1);
   await expect
     .element(screen.getByTestId('bookmark-status'))
     .toHaveTextContent('idle');
-  expect(notifyMock.mock.calls.length).toBe(1);
+  expect(notifySpy.mock.calls.length).toBe(1);
 });
