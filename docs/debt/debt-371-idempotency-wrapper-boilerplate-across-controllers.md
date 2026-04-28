@@ -2,6 +2,7 @@
 
 **Priority:** P3
 **Created:** 2026-04-25
+**Resolution State:** Fix on branch `debt-371-execute-idempotent-helper`; PR pending.
 **Source:** Production complexity audit, 2026-04-25
 **Related:** [withIdempotency helper](../../src/adapters/shared/with-idempotency.ts), [Master Spec — Idempotency](../specs/master_spec.md)
 
@@ -130,6 +131,8 @@ The current code is correct and tested. The win is pure readability + DRY. Take 
 
 ## Verification
 
-- All existing controller tests pass unchanged. The helper is a transparent wrapper — there is no new behavior to test beyond what `withIdempotency()` already covers.
-- The 8 call sites listed above each shrink by ~10 lines.
-- `pnpm typecheck && pnpm lint && pnpm test --run`.
+- [x] New helper contract tests cover null/undefined no-key fast paths, keyed delegation, duplicate-key cached return, and cached-result schema parsing: `src/adapters/controllers/shared/execute-idempotent.test.ts`.
+- [x] Existing controller tests pass unchanged: `practice-controller.test.ts`, `bookmark-controller.test.ts`, `question-controller.test.ts`, and `billing-controller.test.ts`.
+- [x] The 8 controller call sites listed above now use `executeIdempotent(...)`; the only remaining `withIdempotency(...)` under `src/adapters/controllers/` is inside the helper.
+- [x] Full pre-push gate passed: `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build`.
+- [x] Local authenticated E2E passed because the environment was present: `pnpm test:e2e` (34/34).

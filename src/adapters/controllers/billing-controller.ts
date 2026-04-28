@@ -7,7 +7,6 @@ import {
   CHECKOUT_SESSION_RATE_LIMIT,
   PORTAL_SESSION_RATE_LIMIT,
 } from '@/src/adapters/shared/rate-limits';
-import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   AuthGateway,
@@ -22,6 +21,7 @@ import type {
   CreatePortalSessionOutput,
 } from '@/src/application/use-cases';
 import { createAction } from './create-action';
+import { executeIdempotent } from './shared/execute-idempotent';
 
 const zSubscriptionPlan = z.enum(['monthly', 'annual']);
 const zIdempotencyKey = z.string().uuid();
@@ -135,18 +135,12 @@ export const createCheckoutSession = createAction({
       );
     }
 
-    if (!idempotencyKey) {
-      return createNewSession();
-    }
-
-    return withIdempotency({
-      repo: d.idempotencyKeyRepository,
-      logger: d.logger,
+    return executeIdempotent({
+      d,
       userId: user.id,
       action: 'billing:createCheckoutSession',
-      key: idempotencyKey,
-      now: d.now,
-      parseResult: (value) => CreateCheckoutSessionOutputSchema.parse(value),
+      idempotencyKey,
+      outputSchema: CreateCheckoutSessionOutputSchema,
       execute: createNewSession,
     });
   },
@@ -185,18 +179,12 @@ export const createPortalSession = createAction({
       return CreatePortalSessionOutputSchema.parse(result);
     }
 
-    if (!idempotencyKey) {
-      return createNewSession();
-    }
-
-    return withIdempotency({
-      repo: d.idempotencyKeyRepository,
-      logger: d.logger,
+    return executeIdempotent({
+      d,
       userId: user.id,
       action: 'billing:createPortalSession',
-      key: idempotencyKey,
-      now: d.now,
-      parseResult: (value) => CreatePortalSessionOutputSchema.parse(value),
+      idempotencyKey,
+      outputSchema: CreatePortalSessionOutputSchema,
       execute: createNewSession,
     });
   },

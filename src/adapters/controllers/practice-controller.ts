@@ -2,7 +2,6 @@
 
 import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
 import { START_PRACTICE_SESSION_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
-import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   AuthGateway,
@@ -58,6 +57,7 @@ import {
 } from './practice-schemas';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
+import { executeIdempotent } from './shared/execute-idempotent';
 
 export type {
   CountAvailableQuestionsOutput,
@@ -177,18 +177,12 @@ export const startPracticeSession = createAction({
       });
     }
 
-    if (!idempotencyKey) {
-      return createNewSession();
-    }
-
-    return withIdempotency({
-      repo: d.idempotencyKeyRepository,
-      logger: d.logger,
+    return executeIdempotent({
+      d,
       userId,
       action: 'practice:startPracticeSession',
-      key: idempotencyKey,
-      now: d.now,
-      parseResult: (value) => StartPracticeSessionOutputSchema.parse(value),
+      idempotencyKey,
+      outputSchema: StartPracticeSessionOutputSchema,
       execute: createNewSession,
     });
   },
@@ -243,26 +237,17 @@ export const endPracticeSession = createAction({
 
     const { sessionId, idempotencyKey } = input;
 
-    async function endSession(): Promise<EndPracticeSessionOutput> {
-      return d.endPracticeSessionUseCase.execute({
-        userId,
-        sessionId,
-      });
-    }
-
-    if (!idempotencyKey) {
-      return endSession();
-    }
-
-    return withIdempotency({
-      repo: d.idempotencyKeyRepository,
-      logger: d.logger,
+    return executeIdempotent({
+      d,
       userId,
       action: 'practice:endPracticeSession',
-      key: idempotencyKey,
-      now: d.now,
-      parseResult: (value) => EndPracticeSessionOutputSchema.parse(value),
-      execute: endSession,
+      idempotencyKey,
+      outputSchema: EndPracticeSessionOutputSchema,
+      execute: () =>
+        d.endPracticeSessionUseCase.execute({
+          userId,
+          sessionId,
+        }),
     });
   },
 });
@@ -284,18 +269,12 @@ export const finalizeExamAnswers = createAction({
       );
     }
 
-    if (!idempotencyKey) {
-      return finalizeExam();
-    }
-
-    return withIdempotency({
-      repo: d.idempotencyKeyRepository,
-      logger: d.logger,
+    return executeIdempotent({
+      d,
       userId,
       action: 'practice:finalizeExamAnswers',
-      key: idempotencyKey,
-      now: d.now,
-      parseResult: (value) => FinalizeExamAnswersOutputSchema.parse(value),
+      idempotencyKey,
+      outputSchema: FinalizeExamAnswersOutputSchema,
       execute: finalizeExam,
     });
   },
@@ -367,29 +346,19 @@ export const setPracticeSessionQuestionMark = createAction({
 
     const { sessionId, questionId, markedForReview, idempotencyKey } = input;
 
-    async function setMark(): Promise<SetPracticeSessionQuestionMarkOutput> {
-      return d.setPracticeSessionQuestionMarkUseCase.execute({
-        userId,
-        sessionId,
-        questionId,
-        markedForReview,
-      });
-    }
-
-    if (!idempotencyKey) {
-      return setMark();
-    }
-
-    return withIdempotency({
-      repo: d.idempotencyKeyRepository,
-      logger: d.logger,
+    return executeIdempotent({
+      d,
       userId,
       action: 'practice:setPracticeSessionQuestionMark',
-      key: idempotencyKey,
-      now: d.now,
-      parseResult: (value) =>
-        SetPracticeSessionQuestionMarkOutputSchema.parse(value),
-      execute: setMark,
+      idempotencyKey,
+      outputSchema: SetPracticeSessionQuestionMarkOutputSchema,
+      execute: () =>
+        d.setPracticeSessionQuestionMarkUseCase.execute({
+          userId,
+          sessionId,
+          questionId,
+          markedForReview,
+        }),
     });
   },
 });
