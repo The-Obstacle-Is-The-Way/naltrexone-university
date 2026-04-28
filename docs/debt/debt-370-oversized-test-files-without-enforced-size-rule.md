@@ -19,7 +19,7 @@ After the DEBT-354 god-file audit (2026-04-09) split the worst production-side o
 | 1,210 | `components/question/Feedback.test.tsx` |
 | 1,842 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.browser.spec.tsx` |
 | 1,837 | `app/(app)/app/questions/[slug]/use-question-page-controller.browser.spec.tsx` |
-| 1,784 | `tests/integration/bug-regression.integration.test.ts` |
+| 1,784 | `tests/integration/bug-regression.integration.test.ts` (pre-Phase 1 baseline; split in PR #295) |
 | 1,756 | `app/(app)/app/practice/practice-page-logic.test.ts` |
 | 1,730 | `src/adapters/controllers/practice-controller.test.ts` |
 | 1,625 | `src/application/use-cases/submit-answer.test.ts` |
@@ -27,7 +27,7 @@ After the DEBT-354 god-file audit (2026-04-09) split the worst production-side o
 | 1,468 | `src/application/use-cases/get-next-question.test.ts` |
 | 1,401 | `src/adapters/repositories/drizzle-practice-session-repository.test.ts` |
 
-The `Feedback.test.tsx` row reflects the post-DEBT-369 cleanup in PR #294; it remains in this context table to preserve the before/after trail for the multi-PR DEBT-370 campaign. The largest app/src/components production file remains 572 LOC (`history-questions-tab.tsx`) — about a quarter of the largest test file. `db/schema.ts` is larger at 639 LOC, but it is infrastructure schema rather than feature logic. `biome.json` does not enforce a `max-lines` style rule today. DEBT-234 was archived as resolved but no enforcement landed.
+The `Feedback.test.tsx` row reflects the post-DEBT-369 cleanup in PR #294; it remains in this context table to preserve the before/after trail for the multi-PR DEBT-370 campaign. The `bug-regression.integration.test.ts` row is the pre-Phase 1 baseline for PR #295, which replaces that monolith with focused siblings for active-exam projections, active-exam latest-attempt fallback, exam-draft bounds, and historical CAS coverage. The largest app/src/components production file remains 572 LOC (`history-questions-tab.tsx`) — about a quarter of the largest test file. `db/schema.ts` is larger at 639 LOC, but it is infrastructure schema rather than feature logic. `biome.json` does not enforce a `max-lines` style rule today. DEBT-234 was archived as resolved but no enforcement landed.
 
 ## Why This Is Debt
 
