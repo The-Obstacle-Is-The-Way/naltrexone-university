@@ -8,7 +8,6 @@ import {
   MAX_PRACTICE_SESSION_TAG_FILTERS,
   MAX_TIME_SPENT_SECONDS,
 } from '@/src/adapters/shared/validation-limits';
-import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
 import {
   zDifficulty,
   zQuestionProgressStatus,
@@ -37,6 +36,7 @@ import {
 import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
+import { executeIdempotent } from './shared/execute-idempotent';
 
 const QuestionFiltersSchema = z
   .object({
@@ -252,18 +252,12 @@ export const submitAnswer = createAction({
       });
     }
 
-    if (!idempotencyKey) {
-      return submitOnce();
-    }
-
-    return withIdempotency({
-      repo: d.idempotencyKeyRepository,
-      logger: d.logger,
+    return executeIdempotent({
+      d,
       userId,
       action: 'question:submitAnswer',
-      key: idempotencyKey,
-      now: d.now,
-      parseResult: (value) => SubmitAnswerOutputSchema.parse(value),
+      idempotencyKey,
+      outputSchema: SubmitAnswerOutputSchema,
       execute: submitOnce,
     });
   },

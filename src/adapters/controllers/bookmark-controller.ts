@@ -3,7 +3,6 @@
 import { z } from 'zod';
 import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
 import { BOOKMARK_MUTATION_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
-import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
 import { zUuid } from '@/src/adapters/shared/zod-schemas';
 import { ApplicationError } from '@/src/application/errors';
 import type {
@@ -23,6 +22,7 @@ import type {
 import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
+import { executeIdempotent } from './shared/execute-idempotent';
 
 const ToggleBookmarkInputSchema = z
   .object({
@@ -96,18 +96,12 @@ export const toggleBookmark = createAction({
       });
     }
 
-    if (!idempotencyKey) {
-      return toggle();
-    }
-
-    return withIdempotency({
-      repo: d.idempotencyKeyRepository,
-      logger: d.logger,
+    return executeIdempotent({
+      d,
       userId,
       action: 'bookmark:toggleBookmark',
-      key: idempotencyKey,
-      now: d.now,
-      parseResult: (value) => ToggleBookmarkOutputSchema.parse(value),
+      idempotencyKey,
+      outputSchema: ToggleBookmarkOutputSchema,
       execute: toggle,
     });
   },
