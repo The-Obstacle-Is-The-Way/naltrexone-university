@@ -9,6 +9,13 @@
 
 ---
 
+## Phase Status
+
+- **Phase 1 (PR #295, 2026-04-28):** `tests/integration/bug-regression.integration.test.ts` (1,784 LOC) split into 4 cohesive siblings — `bug-regression-active-exam-projections.integration.test.ts` (524), `bug-regression-active-exam-latest-attempt-fallback.integration.test.ts` (845), `bug-regression-exam-draft-bounds.integration.test.ts` (284), `bug-regression-historical.integration.test.ts` (149) — sharing a co-located `bug-regression-test-helpers.ts` (22). Zero behavior change; 24 `it()` cases preserved; full gate green.
+- **Remaining (Phase 2-N):** 9 test files still >1,400 LOC (the table below excluding the now-split `bug-regression.integration.test.ts` and the post-DEBT-369 `Feedback.test.tsx` at 1,210). Track B Biome `max-lines` warn rule deferred until Track A is complete to avoid noise-flooding existing oversized files.
+
+---
+
 ## Context
 
 After the DEBT-354 god-file audit (2026-04-09) split the worst production-side offenders, the size hot spots are now overwhelmingly **test** files. As of 2026-04-27:
@@ -48,7 +55,7 @@ For each file >1,500 LOC, identify the natural concern boundaries (skim the `des
 
 - `practice-session-page-view.browser.spec.tsx` (2086) → split by phase: init/load, answer/feedback, review-stage, mark-for-review, submit/finalize.
 - `Feedback.test.tsx` (1210 after DEBT-369) → split by feedback variant: correct-card, incorrect-card, fallback rendering, accessibility. **Pairing with [DEBT-369](../_archive/debt/debt-369-feedback-test-brittle-presentational-token-assertions.md) is complete** — the brittle token assertions were cleaned up before any future split so the split files don't ship the old pattern repo-wide.
-- `bug-regression.integration.test.ts` (1784) → split by regression family: active-exam visibility, exam draft cumulative bounds, security/auth regressions, and older historical bug groups.
+- `bug-regression.integration.test.ts` (1784) → **Phase 1 shipped in PR #295** — split by regression family into `bug-regression-active-exam-projections.integration.test.ts`, `bug-regression-active-exam-latest-attempt-fallback.integration.test.ts`, `bug-regression-exam-draft-bounds.integration.test.ts`, `bug-regression-historical.integration.test.ts`, sharing `bug-regression-test-helpers.ts`.
 - `practice-controller.test.ts` (1730) → split by action group: session lifecycle (start/end/finalize), answer reads, mark/bookmark.
 - `submit-answer.test.ts` (1625) → split by mode-shape: tutor / exam / standalone / retry.
 - `get-next-question.test.ts` (1468) → split by call shape: explicit-questionId path, navigation path, fallback path.

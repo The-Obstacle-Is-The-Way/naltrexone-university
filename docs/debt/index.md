@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-28 (DEBT-369 archival)
+**Last Updated:** 2026-04-28 (DEBT-370 Phase 1 shipped)
 
 ---
 
@@ -21,7 +21,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
 | [DEBT-368](./debt-368-browser-spec-vi-mock-missing-spy-true.md) | Multiple `*.browser.spec.tsx` files factory-mock internal controllers without `{ spy: true }`, replacing every export instead of preserving real ones; violates the documented browser-mode mocking rule and creates silent coupling to the controller surface | P3 | — |
-| [DEBT-370](./debt-370-oversized-test-files-without-enforced-size-rule.md) | 10 test files exceed 1,400 LOC (worst: 2,086; newest entrant: `tests/integration/bug-regression.integration.test.ts` at 1,784) bundling multiple concerns; `biome.json` has no enforced max-lines guardrail for tests despite DEBT-234 archival | P3 | — |
+| [DEBT-370](./debt-370-oversized-test-files-without-enforced-size-rule.md) | Phase 1 shipped in PR #295 (2026-04-28) — `bug-regression.integration.test.ts` (1,784) split into 4 cohesive siblings, all <1,200 LOC. 9 test files still >1,400 LOC (worst: 2,086 `practice-session-page-view.browser.spec.tsx`); Track B Biome `max-lines` guardrail still pending | P3 | — |
 
 **Next Debt ID:** DEBT-372
 
