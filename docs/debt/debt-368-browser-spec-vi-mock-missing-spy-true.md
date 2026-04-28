@@ -5,6 +5,8 @@
 **Source:** Test suite quality audit, 2026-04-25
 **Related:** [.claude/rules/testing-browser.md](../../.claude/rules/testing-browser.md), [.claude/rules/testing.md](../../.claude/rules/testing.md)
 
+**Resolution State:** Fix on branch `debt-368-browser-spec-vi-mock-spy-true-sweep`; PR pending.
+
 **Audit verified:** 2026-04-27 against `87284372`.
 
 ---
@@ -69,6 +71,6 @@ The current tests pass. The cost is hidden coupling and refactor-friction risk t
 
 ## Verification
 
-- Each migrated file passes `pnpm test:browser` for that file.
-- A grep `vi\.mock\(['"](@/(src|app|components|lib)/[^'"]+)['"]` in `**/*.browser.spec.tsx` returns zero hits without `{ spy: true }` (excluding documented external-SDK exceptions).
-- No regression in `pnpm test:browser` overall pass count.
+- [x] Each migrated file passes `pnpm test:browser` for that file.
+- [x] A grep `vi\.mock\(['"](@/(src|app|components|lib)/[^'"]+)['"]` in `**/*.browser.spec.tsx` returns zero hits without `{ spy: true }` (excluding documented external-SDK exceptions): 26 → 0 on 2026-04-28.
+- [x] No regression in `pnpm test:browser` overall pass count: 241 → 241 on 2026-04-28.

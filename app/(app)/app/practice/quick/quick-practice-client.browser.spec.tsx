@@ -23,9 +23,8 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
 vi.mock('@/src/adapters/controllers/question-controller', { spy: true });
-vi.mock('@/app/(app)/app/practice/hooks/use-quick-practice-status-counts', {
-  spy: true,
-});
+// biome-ignore format: keep `{ spy: true }` on this line for the DEBT-368 verification grep.
+vi.mock('@/app/(app)/app/practice/hooks/use-quick-practice-status-counts', { spy: true });
 
 const getBookmarks = vi.mocked(bookmarkController.getBookmarks);
 const getNextQuestion = vi.mocked(questionController.getNextQuestion);
