@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-28 (DEBT-371 archival)
+**Last Updated:** 2026-04-28 (DEBT-369 archival)
 
 ---
 
@@ -21,8 +21,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
 | [DEBT-368](./debt-368-browser-spec-vi-mock-missing-spy-true.md) | Multiple `*.browser.spec.tsx` files factory-mock internal controllers without `{ spy: true }`, replacing every export instead of preserving real ones; violates the documented browser-mode mocking rule and creates silent coupling to the controller surface | P3 | — |
-| [DEBT-369](./debt-369-feedback-test-brittle-presentational-token-assertions.md) | `components/question/Feedback.test.tsx` asserts pure presentational Tailwind tokens (`text-sm`, `p-4`, `border-destructive/20`, etc.) across ~70 sites, violating the testing rule against utility-class assertions for non-behavioral styles | P3 | — |
-| [DEBT-370](./debt-370-oversized-test-files-without-enforced-size-rule.md) | 11 test files exceed 1,400 LOC (worst: 2,086; newest entrant: `tests/integration/bug-regression.integration.test.ts` at 1,784) bundling multiple concerns; `biome.json` has no enforced max-lines guardrail for tests despite DEBT-234 archival | P3 | — |
+| [DEBT-370](./debt-370-oversized-test-files-without-enforced-size-rule.md) | 10 test files exceed 1,400 LOC (worst: 2,086; newest entrant: `tests/integration/bug-regression.integration.test.ts` at 1,784) bundling multiple concerns; `biome.json` has no enforced max-lines guardrail for tests despite DEBT-234 archival | P3 | — |
 
 **Next Debt ID:** DEBT-372
 
@@ -32,6 +31,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-369](../_archive/debt/debt-369-feedback-test-brittle-presentational-token-assertions.md) | `Feedback.test.tsx` brittle presentational-token assertions cleaned up: Tailwind token grep `70 -> 0`, file size `1,874 -> 1,210` LOC, 36 test cases preserved, no helper promotion or file split | P3 | 2026-04-28 | [PR #294](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/294) |
 | [DEBT-371](../_archive/debt/debt-371-idempotency-wrapper-boilerplate-across-controllers.md) | `withIdempotency()` boilerplate at 8 call sites across 4 controllers consolidated into `executeIdempotent()` at `src/adapters/controllers/shared/execute-idempotent.ts` — structural deps subset, Zod-typed output schema, deep module per Ousterhout. Pure refactor, net -185 LOC, zero test files modified, zero CR inline comments | P3 | 2026-04-28 | [PR #293](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/293) |
 | [DEBT-367](../_archive/debt/debt-367-fake-attempt-repository-missing-active-exam-visibility.md) | `FakeAttemptRepository` now mirrors the shared active-exam visibility predicate in all 10 sister read methods via a private `isHiddenByActiveExam` helper; unit tests against the fake match real Postgres behavior, closing the silent-regression vector for the BUG-235/236/237/239 visibility sweep | P2 | 2026-04-27 | [PR #292](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/292) |
 | [DEBT-366](../_archive/debt/debt-366-active-exam-visibility-predicate-duplication.md) | Active-exam visibility predicate consolidated into shared `getActiveExamVisibilityCondition()` at `src/adapters/repositories/shared/active-exam-visibility.ts`; both `DrizzleAttemptRepository` and `DrizzleQuestionRepository` now import the shared helper. Pure deduplication, zero behavior change, zero test files modified | P3 | 2026-04-26 | [PR #289](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/289) |
