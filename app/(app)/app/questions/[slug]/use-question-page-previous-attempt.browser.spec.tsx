@@ -1,29 +1,28 @@
 import { useState } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import type {
   LoadState,
   SessionUnansweredReveal,
 } from '@/app/(app)/app/questions/[slug]/question-page-logic';
+import * as reportClientError from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
+import * as questionViewController from '@/src/adapters/controllers/question-view-controller';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { useQuestionPagePreviousAttempt } from './use-question-page-previous-attempt';
 
-const { getPreviousAttemptMock, reportClientErrorMock } = vi.hoisted(() => ({
-  getPreviousAttemptMock: vi.fn(),
-  reportClientErrorMock: vi.fn(),
-}));
+vi.hoisted(() => {
+  Object.assign(globalThis, { process: { env: { NODE_ENV: 'test' } } });
+});
 
-vi.mock('@/src/adapters/controllers/question-view-controller', () => ({
-  getPreviousAttempt: getPreviousAttemptMock,
-}));
+vi.mock('@/src/adapters/controllers/question-view-controller', { spy: true });
+vi.mock('@/lib/report-client-error', { spy: true });
 
-vi.mock('@/lib/report-client-error', () => ({
-  reportClientError: reportClientErrorMock,
-}));
+const getPreviousAttempt = vi.mocked(questionViewController.getPreviousAttempt);
+const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
 
 const defaultQuestion: GetQuestionBySlugOutput = {
   questionId: 'question-1',
@@ -110,13 +109,16 @@ function Probe({
 }
 
 describe('useQuestionPagePreviousAttempt (browser)', () => {
+  beforeEach(() => {
+    reportClientErrorSpy.mockImplementation(() => undefined);
+  });
+
   afterEach(() => {
-    getPreviousAttemptMock.mockReset();
-    reportClientErrorMock.mockReset();
+    vi.resetAllMocks();
   });
 
   it('loads previous attempt and pre-populates state in review mode', async () => {
-    getPreviousAttemptMock.mockResolvedValue(
+    getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
         attemptId: 'attempt-1',
@@ -142,7 +144,7 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
       .element(screen.getByTestId('review-hydration-state'))
       .toHaveTextContent('attempt');
 
-    expect(getPreviousAttemptMock).toHaveBeenCalledWith({
+    expect(getPreviousAttempt).toHaveBeenCalledWith({
       questionId: 'question-1',
     });
   });
@@ -162,7 +164,7 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
           answeredAt: string;
         }>
       >();
-    getPreviousAttemptMock.mockReturnValue(deferred.promise);
+    getPreviousAttempt.mockReturnValue(deferred.promise);
 
     const reviewSnapshots: Array<{
       mode?: 'review' | null;
@@ -242,7 +244,7 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
           answeredAt: string;
         }>
       >();
-    getPreviousAttemptMock.mockReturnValue(deferred.promise);
+    getPreviousAttempt.mockReturnValue(deferred.promise);
 
     const screen = await render(<Probe mode="review" />);
 

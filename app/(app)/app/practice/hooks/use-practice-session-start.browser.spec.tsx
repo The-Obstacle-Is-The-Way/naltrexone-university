@@ -1,26 +1,29 @@
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import * as reportClientError from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { StartPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
+import * as practiceController from '@/src/adapters/controllers/practice-controller';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeSessionStart } from './use-practice-session-start';
 
-const { startPracticeSessionMock, navigateToMock, reportClientErrorMock } =
-  vi.hoisted(() => ({
-    startPracticeSessionMock: vi.fn(),
-    navigateToMock: vi.fn(),
-    reportClientErrorMock: vi.fn(),
-  }));
-
-vi.mock('@/src/adapters/controllers/practice-controller', () => ({
-  startPracticeSession: startPracticeSessionMock,
+const { navigateToMock } = vi.hoisted(() => ({
+  navigateToMock: vi.fn(),
 }));
 
-vi.mock('@/lib/report-client-error', () => ({
-  reportClientError: reportClientErrorMock,
-  shouldReportClientError: () => true,
-}));
+vi.hoisted(() => {
+  Object.assign(globalThis, { process: { env: { NODE_ENV: 'test' } } });
+});
+
+vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
+vi.mock('@/lib/report-client-error', { spy: true });
+
+const startPracticeSession = vi.mocked(practiceController.startPracticeSession);
+const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
+const shouldReportClientErrorSpy = vi.mocked(
+  reportClientError.shouldReportClientError,
+);
 
 vi.mock('../client-navigation', () => ({
   navigateTo: navigateToMock,
@@ -76,14 +79,17 @@ async function flushDeferredSettlement(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 10));
 }
 
+beforeEach(() => {
+  reportClientErrorSpy.mockImplementation(() => undefined);
+  shouldReportClientErrorSpy.mockReturnValue(true);
+});
+
 afterEach(() => {
-  startPracticeSessionMock.mockReset();
-  navigateToMock.mockReset();
-  reportClientErrorMock.mockReset();
+  vi.resetAllMocks();
 });
 
 test('rotates the session start idempotency key when changing status', async () => {
-  startPracticeSessionMock.mockResolvedValue({
+  startPracticeSession.mockResolvedValue({
     ok: true,
     data: { sessionId: 'session_1' },
   });
@@ -91,10 +97,8 @@ test('rotates the session start idempotency key when changing status', async () 
   const screen = await render(<Probe />);
 
   await screen.getByTestId('start').click();
-  await expect.poll(() => startPracticeSessionMock.mock.calls.length).toBe(1);
-  const firstKey = getIdempotencyKey(
-    startPracticeSessionMock.mock.calls[0]?.[0],
-  );
+  await expect.poll(() => startPracticeSession.mock.calls.length).toBe(1);
+  const firstKey = getIdempotencyKey(startPracticeSession.mock.calls[0]?.[0]);
 
   await screen.getByTestId('set-incorrect').click();
   await expect
@@ -102,24 +106,22 @@ test('rotates the session start idempotency key when changing status', async () 
     .toHaveTextContent('incorrect');
 
   await screen.getByTestId('start').click();
-  await expect.poll(() => startPracticeSessionMock.mock.calls.length).toBe(2);
-  const secondKey = getIdempotencyKey(
-    startPracticeSessionMock.mock.calls[1]?.[0],
-  );
+  await expect.poll(() => startPracticeSession.mock.calls.length).toBe(2);
+  const secondKey = getIdempotencyKey(startPracticeSession.mock.calls[1]?.[0]);
 
   expect(secondKey).not.toBe(firstKey);
 });
 
 test('reports thrown session start failures', async () => {
   const error = new Error('Network down');
-  startPracticeSessionMock.mockRejectedValue(error);
+  startPracticeSession.mockRejectedValue(error);
 
   const screen = await render(<Probe />);
 
   await screen.getByTestId('start').click();
 
-  await expect.poll(() => reportClientErrorMock.mock.calls.length).toBe(1);
-  expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
+  await expect.poll(() => reportClientErrorSpy.mock.calls.length).toBe(1);
+  expect(reportClientErrorSpy).toHaveBeenCalledWith(error, {
     component: 'UsePracticeSessionStart',
     action: 'startSession',
   });
@@ -127,7 +129,7 @@ test('reports thrown session start failures', async () => {
 
 test('ignores stale successful session starts after config changes mid-flight', async () => {
   const deferred = createDeferred<ActionResult<StartPracticeSessionOutput>>();
-  startPracticeSessionMock.mockReturnValue(deferred.promise);
+  startPracticeSession.mockReturnValue(deferred.promise);
 
   const screen = await render(<Probe />);
 
@@ -158,7 +160,7 @@ test('ignores stale successful session starts after config changes mid-flight', 
 
 test('ignores stale thrown session start failures after config changes mid-flight', async () => {
   const deferred = createDeferred<ActionResult<StartPracticeSessionOutput>>();
-  startPracticeSessionMock.mockReturnValue(deferred.promise);
+  startPracticeSession.mockReturnValue(deferred.promise);
 
   const screen = await render(<Probe />);
 
@@ -177,7 +179,7 @@ test('ignores stale thrown session start failures after config changes mid-fligh
   await flushDeferredSettlement();
 
   expect(navigateToMock).not.toHaveBeenCalled();
-  expect(reportClientErrorMock).not.toHaveBeenCalled();
+  expect(reportClientErrorSpy).not.toHaveBeenCalled();
   await expect
     .element(screen.getByTestId('session-start-status'))
     .toHaveTextContent('loading');

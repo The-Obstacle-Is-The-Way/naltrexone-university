@@ -1,30 +1,34 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import * as reportClientError from '@/lib/report-client-error';
+import * as bookmarkController from '@/src/adapters/controllers/bookmark-controller';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import type { GetBookmarksOutput } from '@/src/application/ports/bookmarks';
 import { ok } from '@/tests/test-helpers/ok';
 import { useQuestionPageBookmarks } from './use-question-page-bookmarks';
 
-const { getBookmarksMock, toggleBookmarkMock, reportClientErrorMock } =
-  vi.hoisted(() => ({
-    getBookmarksMock: vi.fn(),
-    toggleBookmarkMock: vi.fn(),
-    reportClientErrorMock: vi.fn(),
-  }));
+vi.hoisted(() => {
+  Object.assign(globalThis, { process: { env: { NODE_ENV: 'test' } } });
+});
 
-vi.mock('@/src/adapters/controllers/bookmark-controller', () => ({
-  getBookmarks: getBookmarksMock,
-  toggleBookmark: toggleBookmarkMock,
-}));
+vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
+vi.mock('@/lib/report-client-error', { spy: true });
 
-vi.mock('@/lib/report-client-error', () => ({
-  reportClientError: reportClientErrorMock,
-  shouldReportClientError: (error: unknown) =>
+const getBookmarks = vi.mocked(bookmarkController.getBookmarks);
+const toggleBookmark = vi.mocked(bookmarkController.toggleBookmark);
+const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
+const shouldReportClientErrorSpy = vi.mocked(
+  reportClientError.shouldReportClientError,
+);
+
+function shouldReportInternalErrorsOnly(error: unknown): boolean {
+  return (
     typeof error === 'object' &&
     error !== null &&
     'code' in error &&
-    (error as { code?: string }).code === 'INTERNAL_ERROR',
-}));
+    (error as { code?: string }).code === 'INTERNAL_ERROR'
+  );
+}
 
 function createQuestion(): GetQuestionBySlugOutput {
   return {
@@ -77,18 +81,20 @@ describe('useQuestionPageBookmarks (browser)', () => {
   });
 
   beforeEach(() => {
-    getBookmarksMock.mockResolvedValue(emptyBookmarksResult);
-    toggleBookmarkMock.mockResolvedValue(ok({ bookmarked: false }));
+    getBookmarks.mockResolvedValue(emptyBookmarksResult);
+    toggleBookmark.mockResolvedValue(ok({ bookmarked: false }));
+    reportClientErrorSpy.mockImplementation(() => undefined);
+    shouldReportClientErrorSpy.mockImplementation(
+      shouldReportInternalErrorsOnly,
+    );
   });
 
   afterEach(() => {
-    getBookmarksMock.mockReset();
-    toggleBookmarkMock.mockReset();
-    reportClientErrorMock.mockReset();
+    vi.resetAllMocks();
   });
 
   it('loads bookmark state for the current review question', async () => {
-    getBookmarksMock.mockResolvedValue(
+    getBookmarks.mockResolvedValue(
       ok({
         rows: [
           {
@@ -117,7 +123,7 @@ describe('useQuestionPageBookmarks (browser)', () => {
   });
 
   it('toggles bookmark state for the current review question', async () => {
-    toggleBookmarkMock.mockResolvedValue(ok({ bookmarked: true }));
+    toggleBookmark.mockResolvedValue(ok({ bookmarked: true }));
 
     const screen = await render(<Probe />);
 
@@ -130,8 +136,8 @@ describe('useQuestionPageBookmarks (browser)', () => {
 
     await screen.getByTestId('trigger-toggle-bookmark').click();
 
-    await expect.poll(() => toggleBookmarkMock.mock.calls.length).toBe(1);
-    expect(toggleBookmarkMock).toHaveBeenCalledWith({
+    await expect.poll(() => toggleBookmark.mock.calls.length).toBe(1);
+    expect(toggleBookmark).toHaveBeenCalledWith({
       questionId: 'question-1',
       idempotencyKey: expect.any(String),
     });
