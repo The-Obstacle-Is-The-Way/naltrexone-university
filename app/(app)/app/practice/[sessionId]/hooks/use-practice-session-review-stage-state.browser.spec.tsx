@@ -1,18 +1,11 @@
-import {
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
 import * as reportClientError from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetPracticeSessionReviewOutput } from '@/src/adapters/controllers/practice-controller';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
+import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
 import {
   type UsePracticeSessionReviewStageStateInput,
   usePracticeSessionReviewStageState,
@@ -26,11 +19,8 @@ const getPracticeSessionReviewMock =
 vi.mock('@/lib/report-client-error', { spy: true });
 
 const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
-const shouldReportClientErrorSpy = vi.mocked(
-  reportClientError.shouldReportClientError,
-);
 
-let shouldReportClientErrorActual: typeof reportClientError.shouldReportClientError;
+installReportClientErrorMocks(reportClientError);
 
 type ReviewLoadResult = {
   ok: true;
@@ -53,21 +43,6 @@ function createInput(
 }
 
 describe('usePracticeSessionReviewStageState (browser)', () => {
-  beforeAll(async () => {
-    shouldReportClientErrorActual = (
-      await vi.importActual<typeof import('@/lib/report-client-error')>(
-        '@/lib/report-client-error',
-      )
-    ).shouldReportClientError;
-  });
-
-  beforeEach(() => {
-    reportClientErrorSpy.mockImplementation(() => undefined);
-    shouldReportClientErrorSpy.mockImplementation(
-      shouldReportClientErrorActual,
-    );
-  });
-
   afterEach(() => {
     vi.resetAllMocks();
   });

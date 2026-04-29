@@ -1,13 +1,5 @@
 import { useState } from 'react';
-import {
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import * as reportClientError from '@/lib/report-client-error';
 import type { QuestionOrigin } from '@/lib/routes';
@@ -20,6 +12,7 @@ import type { GetBookmarksOutput } from '@/src/application/ports/bookmarks';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
+import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
 import { useQuestionPageController } from './use-question-page-controller';
 
 vi.mock('@/src/adapters/controllers/question-view-controller', { spy: true });
@@ -37,11 +30,8 @@ const getPracticeSessionReview = vi.mocked(
 const getBookmarks = vi.mocked(bookmarkController.getBookmarks);
 const toggleBookmark = vi.mocked(bookmarkController.toggleBookmark);
 const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
-const shouldReportClientErrorSpy = vi.mocked(
-  reportClientError.shouldReportClientError,
-);
 
-let shouldReportClientErrorActual: typeof reportClientError.shouldReportClientError;
+installReportClientErrorMocks(reportClientError);
 
 function Probe({
   slug = 'q-1',
@@ -170,21 +160,9 @@ describe('useQuestionPageController (browser)', () => {
     rows: [],
   });
 
-  beforeAll(async () => {
-    shouldReportClientErrorActual = (
-      await vi.importActual<typeof import('@/lib/report-client-error')>(
-        '@/lib/report-client-error',
-      )
-    ).shouldReportClientError;
-  });
-
   beforeEach(() => {
     getBookmarks.mockResolvedValue(emptyBookmarksResult);
     toggleBookmark.mockResolvedValue(ok({ bookmarked: false }));
-    reportClientErrorSpy.mockImplementation(() => undefined);
-    shouldReportClientErrorSpy.mockImplementation(
-      shouldReportClientErrorActual,
-    );
   });
 
   afterEach(() => {

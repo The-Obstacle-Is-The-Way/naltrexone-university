@@ -1,18 +1,11 @@
-import {
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import * as reportClientError from '@/lib/report-client-error';
 import * as bookmarkController from '@/src/adapters/controllers/bookmark-controller';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import type { GetBookmarksOutput } from '@/src/application/ports/bookmarks';
 import { ok } from '@/tests/test-helpers/ok';
+import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
 import { useQuestionPageBookmarks } from './use-question-page-bookmarks';
 
 vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
@@ -20,12 +13,8 @@ vi.mock('@/lib/report-client-error', { spy: true });
 
 const getBookmarks = vi.mocked(bookmarkController.getBookmarks);
 const toggleBookmark = vi.mocked(bookmarkController.toggleBookmark);
-const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
-const shouldReportClientErrorSpy = vi.mocked(
-  reportClientError.shouldReportClientError,
-);
 
-let shouldReportClientErrorActual: typeof reportClientError.shouldReportClientError;
+installReportClientErrorMocks(reportClientError);
 
 function createQuestion(): GetQuestionBySlugOutput {
   return {
@@ -77,21 +66,9 @@ describe('useQuestionPageBookmarks (browser)', () => {
     rows: [],
   });
 
-  beforeAll(async () => {
-    shouldReportClientErrorActual = (
-      await vi.importActual<typeof import('@/lib/report-client-error')>(
-        '@/lib/report-client-error',
-      )
-    ).shouldReportClientError;
-  });
-
   beforeEach(() => {
     getBookmarks.mockResolvedValue(emptyBookmarksResult);
     toggleBookmark.mockResolvedValue(ok({ bookmarked: false }));
-    reportClientErrorSpy.mockImplementation(() => undefined);
-    shouldReportClientErrorSpy.mockImplementation(
-      shouldReportClientErrorActual,
-    );
   });
 
   afterEach(() => {

@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import * as reportClientError from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
@@ -6,6 +6,7 @@ import type { StartPracticeSessionOutput } from '@/src/adapters/controllers/prac
 import * as practiceController from '@/src/adapters/controllers/practice-controller';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
+import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
 import { usePracticeSessionStart } from './use-practice-session-start';
 
 const { navigateToMock } = vi.hoisted(() => ({
@@ -17,11 +18,8 @@ vi.mock('@/lib/report-client-error', { spy: true });
 
 const startPracticeSession = vi.mocked(practiceController.startPracticeSession);
 const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
-const shouldReportClientErrorSpy = vi.mocked(
-  reportClientError.shouldReportClientError,
-);
 
-let shouldReportClientErrorActual: typeof reportClientError.shouldReportClientError;
+installReportClientErrorMocks(reportClientError);
 
 vi.mock('../client-navigation', () => ({
   navigateTo: navigateToMock,
@@ -76,19 +74,6 @@ function Probe() {
 async function flushDeferredSettlement(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 10));
 }
-
-beforeAll(async () => {
-  shouldReportClientErrorActual = (
-    await vi.importActual<typeof import('@/lib/report-client-error')>(
-      '@/lib/report-client-error',
-    )
-  ).shouldReportClientError;
-});
-
-beforeEach(() => {
-  reportClientErrorSpy.mockImplementation(() => undefined);
-  shouldReportClientErrorSpy.mockImplementation(shouldReportClientErrorActual);
-});
 
 afterEach(() => {
   vi.resetAllMocks();
