@@ -11,10 +11,6 @@ import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeQuestionFlow } from './use-practice-question-flow';
 
-vi.hoisted(() => {
-  Object.assign(globalThis, { process: { env: { NODE_ENV: 'test' } } });
-});
-
 vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
 vi.mock('@/src/adapters/controllers/question-controller', { spy: true });
 

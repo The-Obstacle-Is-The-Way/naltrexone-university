@@ -7,10 +7,6 @@ import type { GetBookmarksOutput } from '@/src/application/ports/bookmarks';
 import { ok } from '@/tests/test-helpers/ok';
 import { useQuestionPageBookmarks } from './use-question-page-bookmarks';
 
-vi.hoisted(() => {
-  Object.assign(globalThis, { process: { env: { NODE_ENV: 'test' } } });
-});
-
 vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
 vi.mock('@/lib/report-client-error', { spy: true });
 

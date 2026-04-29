@@ -6,10 +6,6 @@ import * as tagController from '@/src/adapters/controllers/tag-controller';
 import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeSessionControls } from './use-practice-session-controls';
 
-vi.hoisted(() => {
-  Object.assign(globalThis, { process: { env: { NODE_ENV: 'test' } } });
-});
-
 vi.mock('@/src/adapters/controllers/tag-controller', { spy: true });
 vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
 vi.mock('@/lib/report-client-error', { spy: true });

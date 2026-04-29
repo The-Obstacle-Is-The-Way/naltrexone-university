@@ -7,10 +7,6 @@ import * as practiceController from '@/src/adapters/controllers/practice-control
 import { ok } from '@/tests/test-helpers/ok';
 import { useQuestionPageSessionNavigation } from './use-question-page-session-navigation';
 
-vi.hoisted(() => {
-  Object.assign(globalThis, { process: { env: { NODE_ENV: 'test' } } });
-});
-
 vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
 vi.mock('@/lib/report-client-error', { spy: true });
 

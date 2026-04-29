@@ -12,10 +12,6 @@ const { navigateToMock } = vi.hoisted(() => ({
   navigateToMock: vi.fn(),
 }));
 
-vi.hoisted(() => {
-  Object.assign(globalThis, { process: { env: { NODE_ENV: 'test' } } });
-});
-
 vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
 vi.mock('@/lib/report-client-error', { spy: true });
 

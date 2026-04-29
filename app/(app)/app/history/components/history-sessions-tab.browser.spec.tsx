@@ -12,10 +12,6 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
 }));
 
-vi.hoisted(() => {
-  Object.assign(globalThis, { process: { env: { NODE_ENV: 'test' } } });
-});
-
 vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
 
 const getPracticeSessionReview = vi.mocked(

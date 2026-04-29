@@ -14,10 +14,6 @@ import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { useQuestionPagePreviousAttempt } from './use-question-page-previous-attempt';
 
-vi.hoisted(() => {
-  Object.assign(globalThis, { process: { env: { NODE_ENV: 'test' } } });
-});
-
 vi.mock('@/src/adapters/controllers/question-view-controller', { spy: true });
 vi.mock('@/lib/report-client-error', { spy: true });
 

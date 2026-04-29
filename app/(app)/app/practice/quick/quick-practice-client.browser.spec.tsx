@@ -12,10 +12,6 @@ const { pushMock, useSearchParamsMock } = vi.hoisted(() => ({
   useSearchParamsMock: vi.fn(),
 }));
 
-vi.hoisted(() => {
-  Object.assign(globalThis, { process: { env: { NODE_ENV: 'test' } } });
-});
-
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
   useSearchParams: () => useSearchParamsMock(),

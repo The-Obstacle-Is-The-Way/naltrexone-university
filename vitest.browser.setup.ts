@@ -3,9 +3,24 @@ import { createElement } from 'react';
 import { vi } from 'vitest';
 import 'vitest-browser-react';
 
-// Browser-mode tests do not expose Node's `process` global. Mock the external
-// Sentry SDK so client-safe wrappers can import without pulling Next router
-// internals into the browser test runtime.
+type BrowserProcess = {
+  env?: Record<string, string | undefined>;
+} & Record<string, unknown>;
+
+const browserGlobal = globalThis as typeof globalThis & {
+  process?: BrowserProcess;
+};
+
+browserGlobal.process = {
+  ...browserGlobal.process,
+  env: {
+    ...browserGlobal.process?.env,
+    NODE_ENV: 'test',
+  },
+};
+
+// Mock the external Sentry SDK so client-safe wrappers can import without
+// pulling Next router internals into the browser test runtime.
 vi.mock('@sentry/nextjs', () => ({
   captureException: vi.fn(),
 }));

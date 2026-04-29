@@ -6,10 +6,6 @@ import { createNextQuestion } from '@/src/application/test-helpers/create-next-q
 import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeQuestionBookmarks } from './use-practice-question-bookmarks';
 
-vi.hoisted(() => {
-  Object.assign(globalThis, { process: { env: { NODE_ENV: 'test' } } });
-});
-
 vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
 
 const getBookmarks = vi.mocked(bookmarkController.getBookmarks);

@@ -8,10 +8,6 @@ import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { useHistorySessions } from './use-history-sessions';
 
-vi.hoisted(() => {
-  Object.assign(globalThis, { process: { env: { NODE_ENV: 'test' } } });
-});
-
 vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
 vi.mock('@/lib/report-client-error', { spy: true });
 
