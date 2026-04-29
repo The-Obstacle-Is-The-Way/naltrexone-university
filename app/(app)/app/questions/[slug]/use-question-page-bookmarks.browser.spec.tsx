@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { render } from 'vitest-browser-react';
 import * as reportClientError from '@/lib/report-client-error';
 import * as bookmarkController from '@/src/adapters/controllers/bookmark-controller';
@@ -17,25 +25,7 @@ const shouldReportClientErrorSpy = vi.mocked(
   reportClientError.shouldReportClientError,
 );
 
-const expectedBusinessErrorCodes = new Set([
-  'VALIDATION_ERROR',
-  'UNAUTHENTICATED',
-  'UNSUBSCRIBED',
-  'RATE_LIMITED',
-]);
-
-function shouldReportLikeProduction(error: unknown): boolean {
-  if (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    typeof (error as { code?: unknown }).code === 'string'
-  ) {
-    return !expectedBusinessErrorCodes.has((error as { code: string }).code);
-  }
-
-  return true;
-}
+let shouldReportClientErrorActual: typeof reportClientError.shouldReportClientError;
 
 function createQuestion(): GetQuestionBySlugOutput {
   return {
@@ -87,11 +77,21 @@ describe('useQuestionPageBookmarks (browser)', () => {
     rows: [],
   });
 
+  beforeAll(async () => {
+    shouldReportClientErrorActual = (
+      await vi.importActual<typeof import('@/lib/report-client-error')>(
+        '@/lib/report-client-error',
+      )
+    ).shouldReportClientError;
+  });
+
   beforeEach(() => {
     getBookmarks.mockResolvedValue(emptyBookmarksResult);
     toggleBookmark.mockResolvedValue(ok({ bookmarked: false }));
     reportClientErrorSpy.mockImplementation(() => undefined);
-    shouldReportClientErrorSpy.mockImplementation(shouldReportLikeProduction);
+    shouldReportClientErrorSpy.mockImplementation(
+      shouldReportClientErrorActual,
+    );
   });
 
   afterEach(() => {

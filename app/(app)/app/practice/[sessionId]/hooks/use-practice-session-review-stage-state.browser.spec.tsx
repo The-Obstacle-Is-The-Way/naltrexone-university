@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { renderHook } from 'vitest-browser-react';
 import * as reportClientError from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
@@ -22,25 +30,7 @@ const shouldReportClientErrorSpy = vi.mocked(
   reportClientError.shouldReportClientError,
 );
 
-const expectedBusinessErrorCodes = new Set([
-  'VALIDATION_ERROR',
-  'UNAUTHENTICATED',
-  'UNSUBSCRIBED',
-  'RATE_LIMITED',
-]);
-
-function shouldReportLikeProduction(error: unknown): boolean {
-  if (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    typeof (error as { code?: unknown }).code === 'string'
-  ) {
-    return !expectedBusinessErrorCodes.has((error as { code: string }).code);
-  }
-
-  return true;
-}
+let shouldReportClientErrorActual: typeof reportClientError.shouldReportClientError;
 
 type ReviewLoadResult = {
   ok: true;
@@ -63,9 +53,19 @@ function createInput(
 }
 
 describe('usePracticeSessionReviewStageState (browser)', () => {
+  beforeAll(async () => {
+    shouldReportClientErrorActual = (
+      await vi.importActual<typeof import('@/lib/report-client-error')>(
+        '@/lib/report-client-error',
+      )
+    ).shouldReportClientError;
+  });
+
   beforeEach(() => {
     reportClientErrorSpy.mockImplementation(() => undefined);
-    shouldReportClientErrorSpy.mockImplementation(shouldReportLikeProduction);
+    shouldReportClientErrorSpy.mockImplementation(
+      shouldReportClientErrorActual,
+    );
   });
 
   afterEach(() => {

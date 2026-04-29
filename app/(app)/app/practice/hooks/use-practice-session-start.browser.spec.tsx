@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import * as reportClientError from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
@@ -20,6 +20,8 @@ const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
 const shouldReportClientErrorSpy = vi.mocked(
   reportClientError.shouldReportClientError,
 );
+
+let shouldReportClientErrorActual: typeof reportClientError.shouldReportClientError;
 
 vi.mock('../client-navigation', () => ({
   navigateTo: navigateToMock,
@@ -75,9 +77,17 @@ async function flushDeferredSettlement(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 10));
 }
 
+beforeAll(async () => {
+  shouldReportClientErrorActual = (
+    await vi.importActual<typeof import('@/lib/report-client-error')>(
+      '@/lib/report-client-error',
+    )
+  ).shouldReportClientError;
+});
+
 beforeEach(() => {
   reportClientErrorSpy.mockImplementation(() => undefined);
-  shouldReportClientErrorSpy.mockReturnValue(true);
+  shouldReportClientErrorSpy.mockImplementation(shouldReportClientErrorActual);
 });
 
 afterEach(() => {

@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { render } from 'vitest-browser-react';
 import * as reportClientError from '@/lib/report-client-error';
 import * as practiceController from '@/src/adapters/controllers/practice-controller';
@@ -22,6 +30,8 @@ const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
 const shouldReportClientErrorSpy = vi.mocked(
   reportClientError.shouldReportClientError,
 );
+
+let shouldReportClientErrorActual: typeof reportClientError.shouldReportClientError;
 
 function PracticeSessionControlsHookProbe() {
   const output = usePracticeSessionControls();
@@ -64,9 +74,19 @@ function PracticeSessionControlsHookProbe() {
 }
 
 describe('usePracticeSessionControls (browser)', () => {
+  beforeAll(async () => {
+    shouldReportClientErrorActual = (
+      await vi.importActual<typeof import('@/lib/report-client-error')>(
+        '@/lib/report-client-error',
+      )
+    ).shouldReportClientError;
+  });
+
   beforeEach(() => {
     reportClientErrorSpy.mockImplementation(() => undefined);
-    shouldReportClientErrorSpy.mockReturnValue(true);
+    shouldReportClientErrorSpy.mockImplementation(
+      shouldReportClientErrorActual,
+    );
   });
 
   afterEach(() => {
