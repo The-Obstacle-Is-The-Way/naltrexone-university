@@ -18,13 +18,24 @@ const shouldReportClientErrorSpy = vi.mocked(
   reportClientError.shouldReportClientError,
 );
 
-function shouldReportInternalErrorsOnly(error: unknown): boolean {
-  return (
+const expectedBusinessErrorCodes = new Set([
+  'VALIDATION_ERROR',
+  'UNAUTHENTICATED',
+  'UNSUBSCRIBED',
+  'RATE_LIMITED',
+]);
+
+function shouldReportLikeProduction(error: unknown): boolean {
+  if (
     typeof error === 'object' &&
     error !== null &&
     'code' in error &&
-    (error as { code?: string }).code === 'INTERNAL_ERROR'
-  );
+    typeof (error as { code?: unknown }).code === 'string'
+  ) {
+    return !expectedBusinessErrorCodes.has((error as { code: string }).code);
+  }
+
+  return true;
 }
 
 function Probe({
@@ -78,9 +89,7 @@ function Probe({
 describe('useQuestionPageSessionNavigation (browser)', () => {
   beforeEach(() => {
     reportClientErrorSpy.mockImplementation(() => undefined);
-    shouldReportClientErrorSpy.mockImplementation(
-      shouldReportInternalErrorsOnly,
-    );
+    shouldReportClientErrorSpy.mockImplementation(shouldReportLikeProduction);
   });
 
   afterEach(() => {
