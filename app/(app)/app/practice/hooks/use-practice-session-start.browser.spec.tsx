@@ -1,4 +1,4 @@
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import * as reportClientError from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
@@ -7,23 +7,18 @@ import * as practiceController from '@/src/adapters/controllers/practice-control
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
+import * as clientNavigation from '../client-navigation';
 import { usePracticeSessionStart } from './use-practice-session-start';
-
-const { navigateToMock } = vi.hoisted(() => ({
-  navigateToMock: vi.fn(),
-}));
 
 vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
 vi.mock('@/lib/report-client-error', { spy: true });
+vi.mock('../client-navigation', { spy: true });
 
 const startPracticeSession = vi.mocked(practiceController.startPracticeSession);
 const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
+const navigateToSpy = vi.mocked(clientNavigation.navigateTo);
 
 installReportClientErrorMocks(reportClientError);
-
-vi.mock('../client-navigation', () => ({
-  navigateTo: navigateToMock,
-}));
 
 function getIdempotencyKey(input: unknown): string {
   if (!input || typeof input !== 'object') {
@@ -74,6 +69,10 @@ function Probe() {
 async function flushDeferredSettlement(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 10));
 }
+
+beforeEach(() => {
+  navigateToSpy.mockImplementation(() => undefined);
+});
 
 afterEach(() => {
   vi.resetAllMocks();
@@ -143,7 +142,7 @@ test('ignores stale successful session starts after config changes mid-flight', 
   });
   await flushDeferredSettlement();
 
-  expect(navigateToMock).not.toHaveBeenCalled();
+  expect(navigateToSpy).not.toHaveBeenCalled();
   await expect
     .element(screen.getByTestId('session-start-error'))
     .toHaveTextContent('');
@@ -169,7 +168,7 @@ test('ignores stale thrown session start failures after config changes mid-fligh
   await expect(deferred.promise).rejects.toThrow('Stale failure');
   await flushDeferredSettlement();
 
-  expect(navigateToMock).not.toHaveBeenCalled();
+  expect(navigateToSpy).not.toHaveBeenCalled();
   expect(reportClientErrorSpy).not.toHaveBeenCalled();
   await expect
     .element(screen.getByTestId('session-start-status'))
