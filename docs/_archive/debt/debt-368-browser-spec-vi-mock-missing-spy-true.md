@@ -5,9 +5,23 @@
 **Source:** Test suite quality audit, 2026-04-25
 **Related:** [.claude/rules/testing-browser.md](../../.claude/rules/testing-browser.md), [.claude/rules/testing.md](../../.claude/rules/testing.md)
 
-**Resolution State:** Fix on branch `debt-368-browser-spec-vi-mock-spy-true-sweep`, PR #296.
+**Status:** Resolved 2026-04-29 ([PR #296](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/296)).
 
 **Audit verified:** 2026-04-27 against `87284372`.
+
+---
+
+## Resolution
+
+Shipped in PR #296 (merge commit `300aa0a6`, 2026-04-29) across 11 commits. Final state:
+
+- **Internal browser-spec `vi.mock` without `{ spy: true }`: 26 → 0** (doc verification grep) and **27 → 0** (broader grep covering relative-path internal imports too — included the `client-navigation` follow-up). Confirmed by `rg -n "vi\.mock\(['\"](@/(src|app|components|lib)/[^'\"]+|\.\.?/[^'\"]+)['\"]" --glob '**/*.browser.spec.tsx' | rg -v '\{\s*spy:\s*true\s*\}'` → 0.
+- **13 browser specs migrated** to `vi.mock(path, { spy: true })` + `import * as` + `vi.mocked(...)` pattern; per-test stubs replace top-of-file hoisted-mock factories. Hoisted mock variables removed.
+- **Production-fidelity fix on `shouldReportClientError`** (CR Major-severity nit): instead of mocking the predicate to a narrow `INTERNAL_ERROR`-only filter, specs now load the real predicate via `vi.importActual` and forward it into the spy via `mockImplementation`. Tests now drift *with* production rather than against it.
+- **Shared helper extracted**: `tests/test-helpers/report-client-error-mocks.ts` (28 LOC) exporting `installReportClientErrorMocks(reportClientError)`. Replaces the duplicated `vi.importActual`-and-wire boilerplate across 7 specs (`use-history-sessions`, `use-practice-session-review-stage-state`, `use-practice-session-controls`, `use-practice-session-start`, `use-question-page-bookmarks`, `use-question-page-controller`, `use-question-page-session-navigation`). Meets the testing rule's "extract on ≥3 sibling test files" bar.
+- **Vitest browser pre-optimization** (`vitest.browser.config.ts`, `vitest.browser.setup.ts`): `optimizeDeps.include` updated for the real server-side dependencies that spy mocks now pull into the browser graph; centralized browser `process.env` shim. Coverage runs no longer trigger Vite dependency reloads mid-suite on cold cache.
+- **No regression**: `pnpm test:browser` 241/241, `pnpm test:browser:coverage` 241/241, `pnpm test --run` 2,397/2,397, `pnpm test:integration` 97/97, `pnpm test:e2e` 34/34.
+- **CodeRabbit latest-head**: "No actionable comments were generated" on range `83a66eae..29046a8d`. Three earlier `CHANGES_REQUESTED` reviews on prior commits were addressed in subsequent commits; final-head review carried zero actionable items.
 
 ---
 
