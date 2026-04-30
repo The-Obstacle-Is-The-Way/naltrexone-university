@@ -164,6 +164,9 @@ describe('useQuestionPageController (browser)', () => {
     await expect
       .element(screen.getByTestId('is-bookmarked'))
       .toHaveTextContent('false');
+    await expect
+      .element(screen.getByTestId('is-bookmark-hydrated'))
+      .toHaveTextContent('true');
 
     await screen.getByTestId('trigger-toggle-bookmark').click();
 
@@ -284,6 +287,9 @@ describe('useQuestionPageController (browser)', () => {
     await expect
       .element(screen.getByTestId('question-slug'))
       .toHaveTextContent('q-1');
+    await expect
+      .element(screen.getByTestId('is-bookmark-hydrated'))
+      .toHaveTextContent('true');
 
     await screen.getByTestId('trigger-toggle-bookmark').click();
 
@@ -301,6 +307,9 @@ describe('useQuestionPageController (browser)', () => {
     await expect
       .element(screen.getByTestId('question-slug'))
       .toHaveTextContent('q-2');
+    await expect
+      .element(screen.getByTestId('is-bookmark-hydrated'))
+      .toHaveTextContent('true');
 
     await screen.getByTestId('trigger-toggle-bookmark').click();
 
