@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { MAX_PAGINATION_OFFSET } from '@/src/adapters/shared/validation-limits';
 import { ApplicationError } from '@/src/application/errors';

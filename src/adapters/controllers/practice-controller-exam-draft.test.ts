@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { MAX_DRAFT_CUMULATIVE_MS } from '@/src/adapters/shared/validation-limits';
 import { saveExamDraftAnswer } from './practice-controller';

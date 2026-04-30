@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import { FakeRateLimiter } from '@/src/application/test-helpers/fakes';
