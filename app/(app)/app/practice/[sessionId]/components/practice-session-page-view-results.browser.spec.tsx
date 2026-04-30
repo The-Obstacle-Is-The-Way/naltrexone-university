@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import {
@@ -99,6 +99,19 @@ function renderExamResultsContinuityHarness() {
     const [currentQuestionId, setCurrentQuestionId] = useState<string | null>(
       'q1',
     );
+    const handleViewSummary = useCallback(() => {
+      setSubstage('session_summary');
+    }, []);
+    const handleReenterPostExamReview = useCallback((questionId?: string) => {
+      if (questionId) setCurrentQuestionId(questionId);
+      setSubstage('post_exam_review');
+    }, []);
+    const handleNavigatePostExamReviewQuestion = useCallback(
+      (questionId: string) => {
+        setCurrentQuestionId(questionId);
+      },
+      [],
+    );
 
     return (
       <PracticeSessionPageView
@@ -126,14 +139,9 @@ function renderExamResultsContinuityHarness() {
         onSelectChoice={noop}
         onSubmit={noop}
         onNextQuestion={noop}
-        onViewSummary={() => setSubstage('session_summary')}
-        onReenterPostExamReview={(questionId) => {
-          if (questionId) setCurrentQuestionId(questionId);
-          setSubstage('post_exam_review');
-        }}
-        onNavigatePostExamReviewQuestion={(questionId) =>
-          setCurrentQuestionId(questionId)
-        }
+        onViewSummary={handleViewSummary}
+        onReenterPostExamReview={handleReenterPostExamReview}
+        onNavigatePostExamReviewQuestion={handleNavigatePostExamReviewQuestion}
       />
     );
   }
