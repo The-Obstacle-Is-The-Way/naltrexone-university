@@ -12,7 +12,11 @@
 ## Phase Status
 
 - **Phase 1 (PR #295, 2026-04-28):** `tests/integration/bug-regression.integration.test.ts` (1,784 LOC) split into 4 cohesive siblings — `bug-regression-active-exam-projections.integration.test.ts` (524), `bug-regression-active-exam-latest-attempt-fallback.integration.test.ts` (845), `bug-regression-exam-draft-bounds.integration.test.ts` (284), `bug-regression-historical.integration.test.ts` (149) — sharing a co-located `bug-regression-test-helpers.ts` (22). Zero behavior change; 24 `it()` cases preserved; full gate green.
-- **Remaining (Phase 2-N):** 9 test files still >1,400 LOC (the table below excluding the now-split `bug-regression.integration.test.ts` and the post-DEBT-369 `Feedback.test.tsx` at 1,210). Track B Biome `max-lines` warn rule deferred until Track A is complete to avoid noise-flooding existing oversized files.
+- **Phase 2 (PR #297, 2026-04-30):** Top 3 browser specs split into 14 cohesive siblings + 3 colocated helpers, sharing the same cohort-by-domain pattern as Phase 1. Zero behavior change; 77 `test()` cases preserved exactly (31+24+22 → 77 across 14 files). All post-split files <800 LOC (largest 706); average ~5.5 tests per file. CR latest-head APPROVED on `7ddc4613`.
+  - `practice-session-page-view.browser.spec.tsx` (2,086) → 5 siblings: `-results` (301), `-review-stage` (423), `-active-question` (309), `-focus-restoration` (380), `-question-navigation` (706); helper `practice-session-page-view-test-helpers.ts` (1 LOC, 5 callers — `noop`).
+  - `use-practice-session-page-controller.browser.spec.tsx` (1,842) → 4 siblings: `-init-load` (388), `-answer-flow` (596), `-review-stage` (409), `-bookmark-mark` (297); helper `use-practice-session-page-controller-test-helpers.ts` (251 LOC, 4 callers).
+  - `use-question-page-controller.browser.spec.tsx` (1,817) → 5 siblings: `-bookmarks` (326), `-retry-reveal` (241), `-review-hydration` (292), `-session-navigation` (506), `-stale-responses` (376); helper `use-question-page-controller-test-helpers.tsx` (172 LOC, 5 callers).
+- **Remaining (Phase 3-4):** 6 test files still >1,400 LOC: `practice-page-logic.test.ts` (1,756), `practice-controller.test.ts` (1,730), `submit-answer.test.ts` (1,625), `practice-view.test.tsx` (1,473), `get-next-question.test.ts` (1,468), `drizzle-practice-session-repository.test.ts` (1,401). Plus `Feedback.test.tsx` (1,210) as bonus if Phase 4 has bandwidth. Track B Biome `max-lines` warn rule still deferred until Track A is complete.
 
 ---
 

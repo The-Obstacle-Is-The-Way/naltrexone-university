@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-29 (DEBT-368 resolved)
+**Last Updated:** 2026-04-30 (DEBT-370 Phase 2 shipped)
 
 ---
 
@@ -20,7 +20,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is billing-flow `form-action` verification plus enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
-| [DEBT-370](./debt-370-oversized-test-files-without-enforced-size-rule.md) | Phase 1 shipped in PR #295 (2026-04-28) — `bug-regression.integration.test.ts` (1,784) split into 4 cohesive siblings, all <1,200 LOC. 9 test files still >1,400 LOC (worst: 2,086 `practice-session-page-view.browser.spec.tsx`); Track B Biome `max-lines` guardrail still pending | P3 | — |
+| [DEBT-370](./debt-370-oversized-test-files-without-enforced-size-rule.md) | Phase 1 (PR #295) and Phase 2 (PR #297) shipped — top 4 oversized test files (1 integration + 3 browser specs) decomposed into 18 cohesive siblings + 4 helpers; all post-split files <850 LOC, 101 cases preserved exactly. 6 test files still >1,400 LOC (worst: 1,756 `practice-page-logic.test.ts`); Phase 3 covers use-case + controller layer, Phase 4 covers remaining + Track B Biome `max-lines` guardrail | P3 | — |
 
 **Next Debt ID:** DEBT-372
 
