@@ -8,7 +8,18 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
-    include: ['server-only', 'zod', 'pino'],
+    include: [
+      '@clerk/nextjs/server',
+      '@sentry/nextjs',
+      'drizzle-orm',
+      'drizzle-orm/pg-core',
+      'drizzle-orm/postgres-js',
+      'pino',
+      'postgres',
+      'server-only',
+      'stripe',
+      'zod',
+    ],
   },
   test: {
     testTimeout: 15_000,

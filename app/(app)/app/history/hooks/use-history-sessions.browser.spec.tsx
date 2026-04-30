@@ -1,30 +1,23 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import * as reportClientError from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import * as practiceController from '@/src/adapters/controllers/practice-controller';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
+import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
 import { useHistorySessions } from './use-history-sessions';
 
-const { getPracticeSessionReviewMock, reportClientErrorMock } = vi.hoisted(
-  () => ({
-    getPracticeSessionReviewMock: vi.fn(),
-    reportClientErrorMock: vi.fn(),
-  }),
+vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
+vi.mock('@/lib/report-client-error', { spy: true });
+
+const getPracticeSessionReview = vi.mocked(
+  practiceController.getPracticeSessionReview,
 );
+const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
 
-vi.mock('@/src/adapters/controllers/practice-controller', () => ({
-  getPracticeSessionReview: getPracticeSessionReviewMock,
-}));
-
-vi.mock('@/lib/report-client-error', () => ({
-  reportClientError: reportClientErrorMock,
-  shouldReportClientError: (error: unknown) =>
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as { code?: string }).code === 'INTERNAL_ERROR',
-}));
+installReportClientErrorMocks(reportClientError);
 
 function makeReviewOutput(sessionId: string): GetPracticeSessionReviewOutput {
   return {
@@ -85,13 +78,11 @@ function Probe() {
 
 describe('useHistorySessions (browser)', () => {
   afterEach(() => {
-    vi.restoreAllMocks();
-    getPracticeSessionReviewMock.mockReset();
-    reportClientErrorMock.mockReset();
+    vi.resetAllMocks();
   });
 
   it('opens a session and transitions to ready on success', async () => {
-    getPracticeSessionReviewMock.mockResolvedValue(ok(makeReviewOutput('s1')));
+    getPracticeSessionReview.mockResolvedValue(ok(makeReviewOutput('s1')));
 
     const screen = await render(<Probe />);
 
@@ -113,7 +104,7 @@ describe('useHistorySessions (browser)', () => {
   });
 
   it('toggles the same session off on second click', async () => {
-    getPracticeSessionReviewMock.mockResolvedValue(ok(makeReviewOutput('s1')));
+    getPracticeSessionReview.mockResolvedValue(ok(makeReviewOutput('s1')));
 
     const screen = await render(<Probe />);
 
@@ -140,7 +131,7 @@ describe('useHistorySessions (browser)', () => {
       ok: false,
       error: { code: 'INTERNAL_ERROR', message: 'Review load failed' },
     };
-    getPracticeSessionReviewMock.mockResolvedValue(errorResult);
+    getPracticeSessionReview.mockResolvedValue(errorResult);
 
     const screen = await render(<Probe />);
 
@@ -152,7 +143,7 @@ describe('useHistorySessions (browser)', () => {
     await expect
       .element(screen.getByTestId('error-message'))
       .toHaveTextContent('Review load failed');
-    expect(reportClientErrorMock).toHaveBeenCalledWith(errorResult.error, {
+    expect(reportClientErrorSpy).toHaveBeenCalledWith(errorResult.error, {
       component: 'UseHistorySessions',
       action: 'openSession',
     });
@@ -160,7 +151,7 @@ describe('useHistorySessions (browser)', () => {
 
   it('transitions to error state when the controller throws', async () => {
     const error = new Error('Network failure');
-    getPracticeSessionReviewMock.mockRejectedValue(error);
+    getPracticeSessionReview.mockRejectedValue(error);
 
     const screen = await render(<Probe />);
 
@@ -172,7 +163,7 @@ describe('useHistorySessions (browser)', () => {
     await expect
       .element(screen.getByTestId('error-message'))
       .toHaveTextContent('Network failure');
-    expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
+    expect(reportClientErrorSpy).toHaveBeenCalledWith(error, {
       component: 'UseHistorySessions',
       action: 'openSession',
     });
@@ -184,7 +175,7 @@ describe('useHistorySessions (browser)', () => {
     const deferredB =
       createDeferred<ActionResult<GetPracticeSessionReviewOutput>>();
 
-    getPracticeSessionReviewMock
+    getPracticeSessionReview
       .mockReturnValueOnce(deferredA.promise)
       .mockReturnValueOnce(deferredB.promise);
 
@@ -236,7 +227,7 @@ describe('useHistorySessions (browser)', () => {
     const deferred2 =
       createDeferred<ActionResult<GetPracticeSessionReviewOutput>>();
 
-    getPracticeSessionReviewMock
+    getPracticeSessionReview
       .mockReturnValueOnce(deferred1.promise)
       .mockReturnValueOnce(deferred2.promise);
 

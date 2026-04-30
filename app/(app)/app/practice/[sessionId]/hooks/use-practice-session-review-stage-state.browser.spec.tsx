@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
+import * as reportClientError from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetPracticeSessionReviewOutput } from '@/src/adapters/controllers/practice-controller';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
+import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
 import {
   type UsePracticeSessionReviewStageStateInput,
   usePracticeSessionReviewStageState,
@@ -13,18 +15,12 @@ const getPracticeSessionReviewMock =
   vi.fn<
     (input: unknown) => Promise<ActionResult<GetPracticeSessionReviewOutput>>
   >();
-const { reportClientErrorMock } = vi.hoisted(() => ({
-  reportClientErrorMock: vi.fn(),
-}));
 
-vi.mock('@/lib/report-client-error', () => ({
-  reportClientError: reportClientErrorMock,
-  shouldReportClientError: (error: unknown) =>
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as { code?: string }).code === 'INTERNAL_ERROR',
-}));
+vi.mock('@/lib/report-client-error', { spy: true });
+
+const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
+
+installReportClientErrorMocks(reportClientError);
 
 type ReviewLoadResult = {
   ok: true;
@@ -48,9 +44,7 @@ function createInput(
 
 describe('usePracticeSessionReviewStageState (browser)', () => {
   afterEach(() => {
-    vi.restoreAllMocks();
-    getPracticeSessionReviewMock.mockReset();
-    reportClientErrorMock.mockReset();
+    vi.resetAllMocks();
   });
 
   it('finalizes tutor sessions without attempting to load exam review', async () => {
@@ -152,7 +146,7 @@ describe('usePracticeSessionReviewStageState (browser)', () => {
       status: 'error',
       message: 'Finalize failed',
     });
-    expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
+    expect(reportClientErrorSpy).toHaveBeenCalledWith(error, {
       component: 'UsePracticeSessionReviewStageState',
       action: 'finalizeSession',
     });
@@ -207,7 +201,7 @@ describe('usePracticeSessionReviewStageState (browser)', () => {
       status: 'error',
       message: 'Review load failed',
     });
-    expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
+    expect(reportClientErrorSpy).toHaveBeenCalledWith(error, {
       component: 'UsePracticeSessionReviewStageState',
       action: 'loadReview',
     });

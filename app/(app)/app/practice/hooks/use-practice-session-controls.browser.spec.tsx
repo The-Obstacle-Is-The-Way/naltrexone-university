@@ -1,39 +1,27 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import * as reportClientError from '@/lib/report-client-error';
+import * as practiceController from '@/src/adapters/controllers/practice-controller';
+import * as tagController from '@/src/adapters/controllers/tag-controller';
 import { ok } from '@/tests/test-helpers/ok';
+import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
 import { usePracticeSessionControls } from './use-practice-session-controls';
 
-const {
-  getTagsMock,
-  startPracticeSessionMock,
-  countAvailableQuestionsMock,
-  endPracticeSessionMock,
-  getIncompletePracticeSessionMock,
-  reportClientErrorMock,
-} = vi.hoisted(() => ({
-  getTagsMock: vi.fn(),
-  startPracticeSessionMock: vi.fn(),
-  countAvailableQuestionsMock: vi.fn(),
-  endPracticeSessionMock: vi.fn(),
-  getIncompletePracticeSessionMock: vi.fn(),
-  reportClientErrorMock: vi.fn(),
-}));
+vi.mock('@/src/adapters/controllers/tag-controller', { spy: true });
+vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
+vi.mock('@/lib/report-client-error', { spy: true });
 
-vi.mock('@/src/adapters/controllers/tag-controller', () => ({
-  getTags: getTagsMock,
-}));
+const getTags = vi.mocked(tagController.getTags);
+const countAvailableQuestions = vi.mocked(
+  practiceController.countAvailableQuestions,
+);
+const endPracticeSession = vi.mocked(practiceController.endPracticeSession);
+const getIncompletePracticeSession = vi.mocked(
+  practiceController.getIncompletePracticeSession,
+);
+const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
 
-vi.mock('@/src/adapters/controllers/practice-controller', () => ({
-  startPracticeSession: startPracticeSessionMock,
-  countAvailableQuestions: countAvailableQuestionsMock,
-  endPracticeSession: endPracticeSessionMock,
-  getIncompletePracticeSession: getIncompletePracticeSessionMock,
-}));
-
-vi.mock('@/lib/report-client-error', () => ({
-  reportClientError: reportClientErrorMock,
-  shouldReportClientError: () => true,
-}));
+installReportClientErrorMocks(reportClientError);
 
 function PracticeSessionControlsHookProbe() {
   const output = usePracticeSessionControls();
@@ -77,12 +65,11 @@ function PracticeSessionControlsHookProbe() {
 
 describe('usePracticeSessionControls (browser)', () => {
   afterEach(() => {
-    vi.restoreAllMocks();
-    reportClientErrorMock.mockReset();
+    vi.resetAllMocks();
   });
 
   it('loads control data and applies user selections', async () => {
-    getTagsMock.mockResolvedValue(
+    getTags.mockResolvedValue(
       ok({
         rows: [
           {
@@ -94,8 +81,8 @@ describe('usePracticeSessionControls (browser)', () => {
         ],
       }),
     );
-    getIncompletePracticeSessionMock.mockResolvedValue(ok(null));
-    countAvailableQuestionsMock.mockResolvedValue(ok({ count: 42 }));
+    getIncompletePracticeSession.mockResolvedValue(ok(null));
+    countAvailableQuestions.mockResolvedValue(ok({ count: 42 }));
 
     const screen = await render(<PracticeSessionControlsHookProbe />);
 
@@ -127,9 +114,9 @@ describe('usePracticeSessionControls (browser)', () => {
   });
 
   it('ignores unsupported session mode changes', async () => {
-    getTagsMock.mockResolvedValue(ok({ rows: [] }));
-    getIncompletePracticeSessionMock.mockResolvedValue(ok(null));
-    countAvailableQuestionsMock.mockResolvedValue(ok({ count: 0 }));
+    getTags.mockResolvedValue(ok({ rows: [] }));
+    getIncompletePracticeSession.mockResolvedValue(ok(null));
+    countAvailableQuestions.mockResolvedValue(ok({ count: 0 }));
 
     const screen = await render(<PracticeSessionControlsHookProbe />);
 
@@ -145,16 +132,16 @@ describe('usePracticeSessionControls (browser)', () => {
   it('sets tag load status to error when getTags throws', async () => {
     const error = new Error('Tag service unavailable');
 
-    getTagsMock.mockRejectedValue(error);
-    getIncompletePracticeSessionMock.mockResolvedValue(ok(null));
-    countAvailableQuestionsMock.mockResolvedValue(ok({ count: 0 }));
+    getTags.mockRejectedValue(error);
+    getIncompletePracticeSession.mockResolvedValue(ok(null));
+    countAvailableQuestions.mockResolvedValue(ok({ count: 0 }));
 
     const screen = await render(<PracticeSessionControlsHookProbe />);
 
     await expect
       .element(screen.getByTestId('tag-load-status'))
       .toHaveTextContent('error');
-    expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
+    expect(reportClientErrorSpy).toHaveBeenCalledWith(error, {
       component: 'UsePracticeSessionTags',
       action: 'loadTags',
     });
@@ -163,16 +150,16 @@ describe('usePracticeSessionControls (browser)', () => {
   it('sets available count status to error when countAvailableQuestions throws', async () => {
     const error = new Error('Count service unavailable');
 
-    getTagsMock.mockResolvedValue(ok({ rows: [] }));
-    getIncompletePracticeSessionMock.mockResolvedValue(ok(null));
-    countAvailableQuestionsMock.mockRejectedValue(error);
+    getTags.mockResolvedValue(ok({ rows: [] }));
+    getIncompletePracticeSession.mockResolvedValue(ok(null));
+    countAvailableQuestions.mockRejectedValue(error);
 
     const screen = await render(<PracticeSessionControlsHookProbe />);
 
     await expect
       .element(screen.getByTestId('available-count-status'))
       .toHaveTextContent('error');
-    expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
+    expect(reportClientErrorSpy).toHaveBeenCalledWith(error, {
       component: 'UsePracticeAvailableQuestionsCount',
       action: 'loadAvailableCount',
     });
@@ -181,8 +168,8 @@ describe('usePracticeSessionControls (browser)', () => {
   it('passes session id as idempotency key when abandoning an incomplete session', async () => {
     const sessionId = '11111111-1111-1111-1111-111111111111';
 
-    getTagsMock.mockResolvedValue(ok({ rows: [] }));
-    getIncompletePracticeSessionMock.mockResolvedValue(
+    getTags.mockResolvedValue(ok({ rows: [] }));
+    getIncompletePracticeSession.mockResolvedValue(
       ok({
         sessionId,
         mode: 'tutor',
@@ -191,9 +178,11 @@ describe('usePracticeSessionControls (browser)', () => {
         startedAt: '2026-02-08T00:00:00.000Z',
       }),
     );
-    endPracticeSessionMock.mockResolvedValue(
+    endPracticeSession.mockResolvedValue(
       ok({
         sessionId,
+        mode: 'tutor',
+        questionCount: 10,
         endedAt: '2026-02-08T01:00:00.000Z',
         totals: {
           answered: 2,
@@ -203,7 +192,7 @@ describe('usePracticeSessionControls (browser)', () => {
         },
       }),
     );
-    countAvailableQuestionsMock.mockResolvedValue(ok({ count: 0 }));
+    countAvailableQuestions.mockResolvedValue(ok({ count: 0 }));
 
     const screen = await render(<PracticeSessionControlsHookProbe />);
 
@@ -215,7 +204,7 @@ describe('usePracticeSessionControls (browser)', () => {
       .getByRole('button', { name: 'abandon-incomplete-session' })
       .click();
 
-    expect(endPracticeSessionMock).toHaveBeenCalledWith({
+    expect(endPracticeSession).toHaveBeenCalledWith({
       sessionId,
       idempotencyKey: sessionId,
     });

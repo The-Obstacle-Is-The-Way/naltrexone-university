@@ -1,19 +1,15 @@
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import * as bookmarkController from '@/src/adapters/controllers/bookmark-controller';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeQuestionBookmarks } from './use-practice-question-bookmarks';
 
-const { getBookmarksMock, toggleBookmarkMock } = vi.hoisted(() => ({
-  getBookmarksMock: vi.fn(),
-  toggleBookmarkMock: vi.fn(),
-}));
+vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
 
-vi.mock('@/src/adapters/controllers/bookmark-controller', () => ({
-  getBookmarks: getBookmarksMock,
-  toggleBookmark: toggleBookmarkMock,
-}));
+const getBookmarks = vi.mocked(bookmarkController.getBookmarks);
+const toggleBookmark = vi.mocked(bookmarkController.toggleBookmark);
 
 function PracticeQuestionBookmarksProbe() {
   const [question, setQuestion] = useState(
@@ -53,17 +49,16 @@ function PracticeQuestionBookmarksProbe() {
 
 describe('usePracticeQuestionBookmarks (browser)', () => {
   beforeEach(() => {
-    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
-    toggleBookmarkMock.mockResolvedValue(ok({ bookmarked: false }));
+    getBookmarks.mockResolvedValue(ok({ rows: [] }));
+    toggleBookmark.mockResolvedValue(ok({ bookmarked: false }));
   });
 
   afterEach(() => {
-    getBookmarksMock.mockReset();
-    toggleBookmarkMock.mockReset();
+    vi.resetAllMocks();
   });
 
   it('uses a different bookmark idempotency key after moving to a different practice question following a failed toggle', async () => {
-    toggleBookmarkMock
+    toggleBookmark
       .mockResolvedValueOnce({
         ok: false,
         error: { code: 'INTERNAL_ERROR', message: 'Boom' },
@@ -78,8 +73,8 @@ describe('usePracticeQuestionBookmarks (browser)', () => {
 
     await screen.getByRole('button', { name: 'toggle-bookmark' }).click();
 
-    await expect.poll(() => toggleBookmarkMock.mock.calls.length).toBe(1);
-    const firstInput = toggleBookmarkMock.mock.calls[0]?.[0] as {
+    await expect.poll(() => toggleBookmark.mock.calls.length).toBe(1);
+    const firstInput = toggleBookmark.mock.calls[0]?.[0] as {
       idempotencyKey: string;
       questionId: string;
     };
@@ -95,8 +90,8 @@ describe('usePracticeQuestionBookmarks (browser)', () => {
 
     await screen.getByRole('button', { name: 'toggle-bookmark' }).click();
 
-    await expect.poll(() => toggleBookmarkMock.mock.calls.length).toBe(2);
-    const secondInput = toggleBookmarkMock.mock.calls[1]?.[0] as {
+    await expect.poll(() => toggleBookmark.mock.calls.length).toBe(2);
+    const secondInput = toggleBookmark.mock.calls[1]?.[0] as {
       idempotencyKey: string;
       questionId: string;
     };

@@ -1,29 +1,21 @@
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import * as reportClientError from '@/lib/report-client-error';
 import type { QuestionOrigin } from '@/lib/routes';
+import * as practiceController from '@/src/adapters/controllers/practice-controller';
 import { ok } from '@/tests/test-helpers/ok';
+import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
 import { useQuestionPageSessionNavigation } from './use-question-page-session-navigation';
 
-const { getPracticeSessionReviewMock, reportClientErrorMock } = vi.hoisted(
-  () => ({
-    getPracticeSessionReviewMock: vi.fn(),
-    reportClientErrorMock: vi.fn(),
-  }),
+vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
+vi.mock('@/lib/report-client-error', { spy: true });
+
+const getPracticeSessionReview = vi.mocked(
+  practiceController.getPracticeSessionReview,
 );
 
-vi.mock('@/src/adapters/controllers/practice-controller', () => ({
-  getPracticeSessionReview: getPracticeSessionReviewMock,
-}));
-
-vi.mock('@/lib/report-client-error', () => ({
-  reportClientError: reportClientErrorMock,
-  shouldReportClientError: (error: unknown) =>
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as { code?: string }).code === 'INTERNAL_ERROR',
-}));
+installReportClientErrorMocks(reportClientError);
 
 function Probe({
   slug = 'q-1',
@@ -75,14 +67,13 @@ function Probe({
 
 describe('useQuestionPageSessionNavigation (browser)', () => {
   afterEach(() => {
-    getPracticeSessionReviewMock.mockReset();
-    reportClientErrorMock.mockReset();
+    vi.resetAllMocks();
   });
 
   it('fetches session review and marks the current question as retried', async () => {
     const sessionId = '00000000-0000-4000-8000-000000000001';
 
-    getPracticeSessionReviewMock.mockResolvedValue(
+    getPracticeSessionReview.mockResolvedValue(
       ok({
         sessionId,
         mode: 'exam',
@@ -135,7 +126,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
   it('reuses cached session questions when slug changes within the same session', async () => {
     const sessionId = '00000000-0000-4000-8000-000000000002';
 
-    getPracticeSessionReviewMock.mockResolvedValue(
+    getPracticeSessionReview.mockResolvedValue(
       ok({
         sessionId,
         mode: 'exam',
@@ -191,17 +182,13 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
     await expect
       .element(screen.getByTestId('session-nav-index'))
       .toHaveTextContent('0');
-    await expect
-      .poll(() => getPracticeSessionReviewMock.mock.calls.length)
-      .toBe(1);
+    await expect.poll(() => getPracticeSessionReview.mock.calls.length).toBe(1);
 
     await screen.getByTestId('set-slug-q-2').click();
 
     await expect
       .element(screen.getByTestId('session-nav-index'))
       .toHaveTextContent('1');
-    await expect
-      .poll(() => getPracticeSessionReviewMock.mock.calls.length)
-      .toBe(1);
+    await expect.poll(() => getPracticeSessionReview.mock.calls.length).toBe(1);
   });
 });

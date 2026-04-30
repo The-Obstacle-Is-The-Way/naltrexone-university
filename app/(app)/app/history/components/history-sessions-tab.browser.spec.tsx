@@ -1,20 +1,22 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import * as practiceController from '@/src/adapters/controllers/practice-controller';
 import { ok } from '@/tests/test-helpers/ok';
 import { HistorySessionsTab } from './history-sessions-tab';
 
-const { pushMock, getPracticeSessionReviewMock } = vi.hoisted(() => ({
+const { pushMock } = vi.hoisted(() => ({
   pushMock: vi.fn(),
-  getPracticeSessionReviewMock: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
 }));
 
-vi.mock('@/src/adapters/controllers/practice-controller', () => ({
-  getPracticeSessionReview: getPracticeSessionReviewMock,
-}));
+vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
+
+const getPracticeSessionReview = vi.mocked(
+  practiceController.getPracticeSessionReview,
+);
 
 function getBreakdownToggle(sessionId: string) {
   const toggle = document.querySelector(
@@ -30,9 +32,7 @@ function getBreakdownToggle(sessionId: string) {
 
 describe('HistorySessionsTab (browser)', () => {
   afterEach(() => {
-    vi.restoreAllMocks();
-    pushMock.mockReset();
-    getPracticeSessionReviewMock.mockReset();
+    vi.resetAllMocks();
   });
 
   it('clicking a session row outside nested controls navigates to review', async () => {
@@ -108,7 +108,7 @@ describe('HistorySessionsTab (browser)', () => {
   });
 
   it('clicking the disclosure button loads and renders breakdown rows', async () => {
-    getPracticeSessionReviewMock.mockResolvedValue(
+    getPracticeSessionReview.mockResolvedValue(
       ok({
         sessionId: 'session-1',
         mode: 'exam',
@@ -162,7 +162,7 @@ describe('HistorySessionsTab (browser)', () => {
 
     await breakdownToggle.click();
 
-    expect(getPracticeSessionReviewMock).toHaveBeenCalledWith({
+    expect(getPracticeSessionReview).toHaveBeenCalledWith({
       sessionId: 'session-1',
     });
 
@@ -170,7 +170,7 @@ describe('HistorySessionsTab (browser)', () => {
   });
 
   it('does not navigate when clicking blank space inside the expanded breakdown region', async () => {
-    getPracticeSessionReviewMock.mockResolvedValue(
+    getPracticeSessionReview.mockResolvedValue(
       ok({
         sessionId: 'session-1',
         mode: 'exam',
@@ -232,7 +232,7 @@ describe('HistorySessionsTab (browser)', () => {
   });
 
   it('does not render a redundant Review session action in the expanded breakdown panel', async () => {
-    getPracticeSessionReviewMock.mockResolvedValue(
+    getPracticeSessionReview.mockResolvedValue(
       ok({
         sessionId: 'session-1',
         mode: 'exam',
@@ -290,7 +290,7 @@ describe('HistorySessionsTab (browser)', () => {
   });
 
   it('wires disclosure accessibility attributes and region semantics on expand', async () => {
-    getPracticeSessionReviewMock.mockResolvedValue(
+    getPracticeSessionReview.mockResolvedValue(
       ok({
         sessionId: 'session-1',
         mode: 'exam',
@@ -370,7 +370,7 @@ describe('HistorySessionsTab (browser)', () => {
   });
 
   it('threads canonical historyHref into breakdown question links', async () => {
-    getPracticeSessionReviewMock.mockResolvedValue(
+    getPracticeSessionReview.mockResolvedValue(
       ok({
         sessionId: 'session-1',
         mode: 'exam',
@@ -428,7 +428,7 @@ describe('HistorySessionsTab (browser)', () => {
   });
 
   it('clicking the expanded disclosure button collapses the selected session', async () => {
-    getPracticeSessionReviewMock.mockResolvedValue(
+    getPracticeSessionReview.mockResolvedValue(
       ok({
         sessionId: 'session-1',
         mode: 'exam',
@@ -486,7 +486,7 @@ describe('HistorySessionsTab (browser)', () => {
   });
 
   it('clicking a different session collapses the previous breakdown', async () => {
-    getPracticeSessionReviewMock.mockImplementation(async (input) => {
+    getPracticeSessionReview.mockImplementation(async (input) => {
       const sessionId = (input as { sessionId: string }).sessionId;
       if (sessionId === 'session-1') {
         return ok({

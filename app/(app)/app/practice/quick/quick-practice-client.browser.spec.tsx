@@ -1,25 +1,15 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import * as quickPracticeStatusCounts from '@/app/(app)/app/practice/hooks/use-quick-practice-status-counts';
 import { ROUTES } from '@/lib/routes';
+import * as bookmarkController from '@/src/adapters/controllers/bookmark-controller';
+import * as questionController from '@/src/adapters/controllers/question-controller';
 import { ok } from '@/tests/test-helpers/ok';
 import QuickPracticeClient from './quick-practice-client';
 
-const {
-  pushMock,
-  useSearchParamsMock,
-  getNextQuestionMock,
-  submitAnswerMock,
-  getBookmarksMock,
-  toggleBookmarkMock,
-  useQuickPracticeStatusCountsMock,
-} = vi.hoisted(() => ({
+const { pushMock, useSearchParamsMock } = vi.hoisted(() => ({
   pushMock: vi.fn(),
   useSearchParamsMock: vi.fn(),
-  getNextQuestionMock: vi.fn(),
-  submitAnswerMock: vi.fn(),
-  getBookmarksMock: vi.fn(),
-  toggleBookmarkMock: vi.fn(),
-  useQuickPracticeStatusCountsMock: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -27,38 +17,26 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => useSearchParamsMock(),
 }));
 
-vi.mock('@/src/adapters/controllers/bookmark-controller', () => ({
-  getBookmarks: getBookmarksMock,
-  toggleBookmark: toggleBookmarkMock,
-}));
+vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
+vi.mock('@/src/adapters/controllers/question-controller', { spy: true });
+// biome-ignore format: keep `{ spy: true }` on this line for the DEBT-368 verification grep.
+vi.mock('@/app/(app)/app/practice/hooks/use-quick-practice-status-counts', { spy: true });
 
-vi.mock('@/src/adapters/controllers/question-controller', () => ({
-  getNextQuestion: getNextQuestionMock,
-  submitAnswer: submitAnswerMock,
-}));
-
-vi.mock(
-  '@/app/(app)/app/practice/hooks/use-quick-practice-status-counts',
-  () => ({
-    useQuickPracticeStatusCounts: useQuickPracticeStatusCountsMock,
-  }),
+const getBookmarks = vi.mocked(bookmarkController.getBookmarks);
+const getNextQuestion = vi.mocked(questionController.getNextQuestion);
+const useQuickPracticeStatusCounts = vi.mocked(
+  quickPracticeStatusCounts.useQuickPracticeStatusCounts,
 );
 
 afterEach(() => {
-  pushMock.mockReset();
-  useSearchParamsMock.mockReset();
-  getNextQuestionMock.mockReset();
-  submitAnswerMock.mockReset();
-  getBookmarksMock.mockReset();
-  toggleBookmarkMock.mockReset();
-  useQuickPracticeStatusCountsMock.mockReset();
+  vi.resetAllMocks();
 });
 
 test('pushes a new status query param without scrolling', async () => {
   useSearchParamsMock.mockReturnValue(new URLSearchParams(''));
-  getNextQuestionMock.mockResolvedValue(ok(null));
-  getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
-  useQuickPracticeStatusCountsMock.mockReturnValue({
+  getNextQuestion.mockResolvedValue(ok(null));
+  getBookmarks.mockResolvedValue(ok({ rows: [] }));
+  useQuickPracticeStatusCounts.mockReturnValue({
     unanswered: null,
     incorrect: null,
     bookmarked: null,
@@ -76,9 +54,9 @@ test('pushes a new status query param without scrolling', async () => {
 
 test('removes the status query param without scrolling when toggling off', async () => {
   useSearchParamsMock.mockReturnValue(new URLSearchParams('status=incorrect'));
-  getNextQuestionMock.mockResolvedValue(ok(null));
-  getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
-  useQuickPracticeStatusCountsMock.mockReturnValue({
+  getNextQuestion.mockResolvedValue(ok(null));
+  getBookmarks.mockResolvedValue(ok({ rows: [] }));
+  useQuickPracticeStatusCounts.mockReturnValue({
     unanswered: null,
     incorrect: null,
     bookmarked: null,

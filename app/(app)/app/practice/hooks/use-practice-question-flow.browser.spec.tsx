@@ -3,33 +3,21 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import type { PracticeFilters } from '@/app/(app)/app/practice/practice-page-logic';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import * as bookmarkController from '@/src/adapters/controllers/bookmark-controller';
+import * as questionController from '@/src/adapters/controllers/question-controller';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeQuestionFlow } from './use-practice-question-flow';
 
-const {
-  getBookmarksMock,
-  toggleBookmarkMock,
-  getNextQuestionMock,
-  submitAnswerMock,
-} = vi.hoisted(() => ({
-  getBookmarksMock: vi.fn(),
-  toggleBookmarkMock: vi.fn(),
-  getNextQuestionMock: vi.fn(),
-  submitAnswerMock: vi.fn(),
-}));
+vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
+vi.mock('@/src/adapters/controllers/question-controller', { spy: true });
 
-vi.mock('@/src/adapters/controllers/bookmark-controller', () => ({
-  getBookmarks: getBookmarksMock,
-  toggleBookmark: toggleBookmarkMock,
-}));
-
-vi.mock('@/src/adapters/controllers/question-controller', () => ({
-  getNextQuestion: getNextQuestionMock,
-  submitAnswer: submitAnswerMock,
-}));
+const getBookmarks = vi.mocked(bookmarkController.getBookmarks);
+const toggleBookmark = vi.mocked(bookmarkController.toggleBookmark);
+const getNextQuestion = vi.mocked(questionController.getNextQuestion);
+const submitAnswer = vi.mocked(questionController.submitAnswer);
 
 const TEST_FILTERS = {
   tagSlugs: [],
@@ -96,11 +84,11 @@ function PracticeQuestionFlowSubmitProbe() {
 
 describe('usePracticeQuestionFlow (browser)', () => {
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.resetAllMocks();
   });
 
   it('loads question data and transitions to ready state', async () => {
-    getNextQuestionMock.mockResolvedValue(
+    getNextQuestion.mockResolvedValue(
       ok(
         createNextQuestion({
           slug: 'question-1',
@@ -108,7 +96,7 @@ describe('usePracticeQuestionFlow (browser)', () => {
         }),
       ),
     );
-    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
+    getBookmarks.mockResolvedValue(ok({ rows: [] }));
 
     const screen = await render(<PracticeQuestionFlowHookProbe />);
 
@@ -127,8 +115,8 @@ describe('usePracticeQuestionFlow (browser)', () => {
   });
 
   it('transitions to error state when question loading throws', async () => {
-    getNextQuestionMock.mockRejectedValue(new Error('Network down'));
-    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
+    getNextQuestion.mockRejectedValue(new Error('Network down'));
+    getBookmarks.mockResolvedValue(ok({ rows: [] }));
 
     const screen = await render(<PracticeQuestionFlowHookProbe />);
 
@@ -141,7 +129,7 @@ describe('usePracticeQuestionFlow (browser)', () => {
   });
 
   it('emits bookmark feedback for repeated identical success messages', async () => {
-    getNextQuestionMock.mockResolvedValue(
+    getNextQuestion.mockResolvedValue(
       ok(
         createNextQuestion({
           slug: 'question-1',
@@ -149,8 +137,8 @@ describe('usePracticeQuestionFlow (browser)', () => {
         }),
       ),
     );
-    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
-    toggleBookmarkMock.mockResolvedValue(ok({ bookmarked: true }));
+    getBookmarks.mockResolvedValue(ok({ rows: [] }));
+    toggleBookmark.mockResolvedValue(ok({ bookmarked: true }));
 
     const screen = await render(<PracticeQuestionFlowBookmarkProbe />);
 
@@ -172,9 +160,9 @@ describe('usePracticeQuestionFlow (browser)', () => {
   it('uses transition pending state for answer submit without switching to loading status', async () => {
     const deferred = createDeferred<ActionResult<SubmitAnswerOutput>>();
 
-    getNextQuestionMock.mockResolvedValue(ok(createNextQuestion()));
-    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
-    submitAnswerMock.mockImplementation(async () => deferred.promise);
+    getNextQuestion.mockResolvedValue(ok(createNextQuestion()));
+    getBookmarks.mockResolvedValue(ok({ rows: [] }));
+    submitAnswer.mockImplementation(async () => deferred.promise);
 
     const screen = await render(<PracticeQuestionFlowSubmitProbe />);
 

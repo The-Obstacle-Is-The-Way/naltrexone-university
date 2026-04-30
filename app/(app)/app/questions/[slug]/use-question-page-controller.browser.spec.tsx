@@ -1,58 +1,37 @@
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import * as reportClientError from '@/lib/report-client-error';
 import type { QuestionOrigin } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import * as bookmarkController from '@/src/adapters/controllers/bookmark-controller';
+import * as practiceController from '@/src/adapters/controllers/practice-controller';
+import * as questionController from '@/src/adapters/controllers/question-controller';
+import * as questionViewController from '@/src/adapters/controllers/question-view-controller';
 import type { GetBookmarksOutput } from '@/src/application/ports/bookmarks';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
+import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
 import { useQuestionPageController } from './use-question-page-controller';
 
-const {
-  getQuestionBySlugMock,
-  getPreviousAttemptMock,
-  submitAnswerMock,
-  getPracticeSessionReviewMock,
-  getBookmarksMock,
-  toggleBookmarkMock,
-  reportClientErrorMock,
-} = vi.hoisted(() => ({
-  getQuestionBySlugMock: vi.fn(),
-  getPreviousAttemptMock: vi.fn(),
-  submitAnswerMock: vi.fn(),
-  getPracticeSessionReviewMock: vi.fn(),
-  getBookmarksMock: vi.fn(),
-  toggleBookmarkMock: vi.fn(),
-  reportClientErrorMock: vi.fn(),
-}));
+vi.mock('@/src/adapters/controllers/question-view-controller', { spy: true });
+vi.mock('@/src/adapters/controllers/question-controller', { spy: true });
+vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
+vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
+vi.mock('@/lib/report-client-error', { spy: true });
 
-vi.mock('@/src/adapters/controllers/question-view-controller', () => ({
-  getQuestionBySlug: getQuestionBySlugMock,
-  getPreviousAttempt: getPreviousAttemptMock,
-}));
+const getQuestionBySlug = vi.mocked(questionViewController.getQuestionBySlug);
+const getPreviousAttempt = vi.mocked(questionViewController.getPreviousAttempt);
+const submitAnswer = vi.mocked(questionController.submitAnswer);
+const getPracticeSessionReview = vi.mocked(
+  practiceController.getPracticeSessionReview,
+);
+const getBookmarks = vi.mocked(bookmarkController.getBookmarks);
+const toggleBookmark = vi.mocked(bookmarkController.toggleBookmark);
+const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
 
-vi.mock('@/src/adapters/controllers/question-controller', () => ({
-  submitAnswer: submitAnswerMock,
-}));
-
-vi.mock('@/src/adapters/controllers/practice-controller', () => ({
-  getPracticeSessionReview: getPracticeSessionReviewMock,
-}));
-
-vi.mock('@/src/adapters/controllers/bookmark-controller', () => ({
-  getBookmarks: getBookmarksMock,
-  toggleBookmark: toggleBookmarkMock,
-}));
-
-vi.mock('@/lib/report-client-error', () => ({
-  reportClientError: reportClientErrorMock,
-  shouldReportClientError: (error: unknown) =>
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as { code?: string }).code === 'INTERNAL_ERROR',
-}));
+installReportClientErrorMocks(reportClientError);
 
 function Probe({
   slug = 'q-1',
@@ -182,22 +161,16 @@ describe('useQuestionPageController (browser)', () => {
   });
 
   beforeEach(() => {
-    getBookmarksMock.mockResolvedValue(emptyBookmarksResult);
-    toggleBookmarkMock.mockResolvedValue(ok({ bookmarked: false }));
+    getBookmarks.mockResolvedValue(emptyBookmarksResult);
+    toggleBookmark.mockResolvedValue(ok({ bookmarked: false }));
   });
 
   afterEach(() => {
-    getQuestionBySlugMock.mockReset();
-    getPreviousAttemptMock.mockReset();
-    submitAnswerMock.mockReset();
-    getPracticeSessionReviewMock.mockReset();
-    getBookmarksMock.mockReset();
-    toggleBookmarkMock.mockReset();
-    reportClientErrorMock.mockReset();
+    vi.resetAllMocks();
   });
 
   it('loads previous attempt and pre-populates state in review mode', async () => {
-    getQuestionBySlugMock.mockResolvedValue(
+    getQuestionBySlug.mockResolvedValue(
       ok({
         questionId: 'question-1',
         slug: 'q-1',
@@ -210,9 +183,10 @@ describe('useQuestionPageController (browser)', () => {
       }),
     );
 
-    getPreviousAttemptMock.mockResolvedValue(
+    getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-2',
         isCorrect: true,
@@ -237,13 +211,13 @@ describe('useQuestionPageController (browser)', () => {
       .element(screen.getByTestId('attempt-id'))
       .toHaveTextContent('attempt-1');
 
-    expect(getPreviousAttemptMock).toHaveBeenCalledWith({
+    expect(getPreviousAttempt).toHaveBeenCalledWith({
       questionId: 'question-1',
     });
   });
 
   it('starts in loading-review state and clears it when previous attempt resolves', async () => {
-    getQuestionBySlugMock.mockResolvedValue(
+    getQuestionBySlug.mockResolvedValue(
       ok({
         questionId: 'question-1',
         slug: 'q-1',
@@ -260,6 +234,7 @@ describe('useQuestionPageController (browser)', () => {
       createDeferred<
         ActionResult<{
           kind: 'attempt';
+          sessionMode: 'tutor' | 'exam' | null;
           attemptId: string;
           selectedChoiceId: string;
           isCorrect: boolean;
@@ -270,7 +245,7 @@ describe('useQuestionPageController (browser)', () => {
           answeredAt: string;
         }>
       >();
-    getPreviousAttemptMock.mockReturnValue(deferred.promise);
+    getPreviousAttempt.mockReturnValue(deferred.promise);
 
     const screen = await render(<Probe mode="review" />);
 
@@ -284,6 +259,7 @@ describe('useQuestionPageController (browser)', () => {
     deferred.resolve(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-2',
         isCorrect: true,
@@ -302,7 +278,7 @@ describe('useQuestionPageController (browser)', () => {
   });
 
   it('shows review loading state on the first render after mode changes to review', async () => {
-    getQuestionBySlugMock.mockResolvedValue(
+    getQuestionBySlug.mockResolvedValue(
       ok({
         questionId: 'question-1',
         slug: 'q-1',
@@ -319,6 +295,7 @@ describe('useQuestionPageController (browser)', () => {
       createDeferred<
         ActionResult<{
           kind: 'attempt';
+          sessionMode: 'tutor' | 'exam' | null;
           attemptId: string;
           selectedChoiceId: string;
           isCorrect: boolean;
@@ -329,7 +306,7 @@ describe('useQuestionPageController (browser)', () => {
           answeredAt: string;
         }>
       >();
-    getPreviousAttemptMock.mockReturnValue(deferred.promise);
+    getPreviousAttempt.mockReturnValue(deferred.promise);
 
     const reviewSnapshots: Array<{
       mode?: 'review' | null;
@@ -384,6 +361,7 @@ describe('useQuestionPageController (browser)', () => {
     deferred.resolve(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-2',
         isCorrect: true,
@@ -401,7 +379,7 @@ describe('useQuestionPageController (browser)', () => {
     const attemptId = '00000000-0000-4000-8000-000000000003';
     const sessionId = '00000000-0000-4000-8000-000000000004';
 
-    getQuestionBySlugMock.mockResolvedValue(
+    getQuestionBySlug.mockResolvedValue(
       ok({
         questionId: 'question-1',
         slug: 'q-1',
@@ -414,7 +392,7 @@ describe('useQuestionPageController (browser)', () => {
       }),
     );
 
-    getPracticeSessionReviewMock.mockResolvedValue(
+    getPracticeSessionReview.mockResolvedValue(
       ok({
         sessionId,
         mode: 'exam',
@@ -437,9 +415,10 @@ describe('useQuestionPageController (browser)', () => {
       }),
     );
 
-    getPreviousAttemptMock.mockResolvedValue(
+    getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId,
         selectedChoiceId: 'choice-2',
         isCorrect: true,
@@ -459,7 +438,7 @@ describe('useQuestionPageController (browser)', () => {
       .element(screen.getByTestId('load-status'))
       .toHaveTextContent('ready');
 
-    expect(getPreviousAttemptMock).toHaveBeenCalledWith({
+    expect(getPreviousAttempt).toHaveBeenCalledWith({
       questionId: 'question-1',
       sessionId,
     });
@@ -468,7 +447,7 @@ describe('useQuestionPageController (browser)', () => {
   it('fetches the session review when sessionId is provided', async () => {
     const sessionId = '00000000-0000-4000-8000-000000000001';
 
-    getQuestionBySlugMock.mockResolvedValue(
+    getQuestionBySlug.mockResolvedValue(
       ok({
         questionId: 'question-1',
         slug: 'q-1',
@@ -481,7 +460,7 @@ describe('useQuestionPageController (browser)', () => {
       }),
     );
 
-    getPracticeSessionReviewMock.mockResolvedValue(
+    getPracticeSessionReview.mockResolvedValue(
       ok({
         sessionId,
         mode: 'exam',
@@ -521,7 +500,7 @@ describe('useQuestionPageController (browser)', () => {
       .element(screen.getByTestId('load-status'))
       .toHaveTextContent('ready');
 
-    expect(getPracticeSessionReviewMock).toHaveBeenCalledWith({ sessionId });
+    expect(getPracticeSessionReview).toHaveBeenCalledWith({ sessionId });
 
     await expect
       .element(screen.getByTestId('session-nav-total'))
@@ -538,7 +517,7 @@ describe('useQuestionPageController (browser)', () => {
   });
 
   it('builds navigation from history sequence when sessionId is absent', async () => {
-    getQuestionBySlugMock.mockResolvedValue(
+    getQuestionBySlug.mockResolvedValue(
       ok({
         questionId: 'question-2',
         slug: 'q-2',
@@ -565,7 +544,7 @@ describe('useQuestionPageController (browser)', () => {
       .element(screen.getByTestId('load-status'))
       .toHaveTextContent('ready');
 
-    expect(getPracticeSessionReviewMock).not.toHaveBeenCalled();
+    expect(getPracticeSessionReview).not.toHaveBeenCalled();
     await expect
       .element(screen.getByTestId('session-nav-total'))
       .toHaveTextContent('2');
@@ -581,7 +560,7 @@ describe('useQuestionPageController (browser)', () => {
   });
 
   it('loads bookmark state for the current review question', async () => {
-    getQuestionBySlugMock.mockResolvedValue(
+    getQuestionBySlug.mockResolvedValue(
       ok({
         questionId: 'question-1',
         slug: 'q-1',
@@ -590,9 +569,10 @@ describe('useQuestionPageController (browser)', () => {
         choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
       }),
     );
-    getPreviousAttemptMock.mockResolvedValue(
+    getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-1',
         isCorrect: true,
@@ -603,7 +583,7 @@ describe('useQuestionPageController (browser)', () => {
         answeredAt: '2026-02-01T00:00:00.000Z',
       }),
     );
-    getBookmarksMock.mockResolvedValue(
+    getBookmarks.mockResolvedValue(
       ok({
         rows: [
           {
@@ -629,11 +609,11 @@ describe('useQuestionPageController (browser)', () => {
     await expect
       .element(screen.getByTestId('is-bookmark-hydrated'))
       .toHaveTextContent('true');
-    expect(getBookmarksMock).toHaveBeenCalledWith({});
+    expect(getBookmarks).toHaveBeenCalledWith({});
   });
 
   it('keeps bookmark state unhydrated until the bookmark lookup resolves', async () => {
-    getQuestionBySlugMock.mockResolvedValue(
+    getQuestionBySlug.mockResolvedValue(
       ok({
         questionId: 'question-1',
         slug: 'q-1',
@@ -642,9 +622,10 @@ describe('useQuestionPageController (browser)', () => {
         choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
       }),
     );
-    getPreviousAttemptMock.mockResolvedValue(
+    getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-1',
         isCorrect: true,
@@ -656,7 +637,7 @@ describe('useQuestionPageController (browser)', () => {
       }),
     );
     const deferred = createDeferred<ActionResult<GetBookmarksOutput>>();
-    getBookmarksMock.mockReturnValue(deferred.promise);
+    getBookmarks.mockReturnValue(deferred.promise);
 
     const screen = await render(<Probe mode="review" />);
 
@@ -695,7 +676,7 @@ describe('useQuestionPageController (browser)', () => {
   });
 
   it('toggles bookmark state for the current review question', async () => {
-    getQuestionBySlugMock.mockResolvedValue(
+    getQuestionBySlug.mockResolvedValue(
       ok({
         questionId: 'question-1',
         slug: 'q-1',
@@ -704,9 +685,10 @@ describe('useQuestionPageController (browser)', () => {
         choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
       }),
     );
-    getPreviousAttemptMock.mockResolvedValue(
+    getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-1',
         isCorrect: true,
@@ -717,7 +699,7 @@ describe('useQuestionPageController (browser)', () => {
         answeredAt: '2026-02-01T00:00:00.000Z',
       }),
     );
-    toggleBookmarkMock.mockResolvedValue(ok({ bookmarked: true }));
+    toggleBookmark.mockResolvedValue(ok({ bookmarked: true }));
 
     const screen = await render(<Probe mode="review" />);
 
@@ -727,8 +709,8 @@ describe('useQuestionPageController (browser)', () => {
 
     await screen.getByTestId('trigger-toggle-bookmark').click();
 
-    await expect.poll(() => toggleBookmarkMock.mock.calls.length).toBe(1);
-    expect(toggleBookmarkMock).toHaveBeenCalledWith({
+    await expect.poll(() => toggleBookmark.mock.calls.length).toBe(1);
+    expect(toggleBookmark).toHaveBeenCalledWith({
       questionId: 'question-1',
       idempotencyKey: expect.any(String),
     });
@@ -744,7 +726,7 @@ describe('useQuestionPageController (browser)', () => {
   });
 
   it('reports saving state while a bookmark toggle is in flight', async () => {
-    getQuestionBySlugMock.mockResolvedValue(
+    getQuestionBySlug.mockResolvedValue(
       ok({
         questionId: 'question-1',
         slug: 'q-1',
@@ -753,9 +735,10 @@ describe('useQuestionPageController (browser)', () => {
         choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
       }),
     );
-    getPreviousAttemptMock.mockResolvedValue(
+    getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-1',
         isCorrect: true,
@@ -767,7 +750,7 @@ describe('useQuestionPageController (browser)', () => {
       }),
     );
     const deferred = createDeferred<ActionResult<{ bookmarked: boolean }>>();
-    toggleBookmarkMock.mockReturnValue(deferred.promise);
+    toggleBookmark.mockReturnValue(deferred.promise);
 
     const screen = await render(<Probe mode="review" />);
 
@@ -790,7 +773,7 @@ describe('useQuestionPageController (browser)', () => {
   });
 
   it('uses a different bookmark idempotency key after moving to a different review question following a failed toggle', async () => {
-    getQuestionBySlugMock.mockImplementation(async (input: unknown) => {
+    getQuestionBySlug.mockImplementation(async (input: unknown) => {
       const slug = (input as { slug: string }).slug;
       return ok({
         questionId: `question-${slug}`,
@@ -800,9 +783,10 @@ describe('useQuestionPageController (browser)', () => {
         choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
       });
     });
-    getPreviousAttemptMock.mockResolvedValue(
+    getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-1',
         isCorrect: true,
@@ -813,7 +797,7 @@ describe('useQuestionPageController (browser)', () => {
         answeredAt: '2026-02-01T00:00:00.000Z',
       }),
     );
-    toggleBookmarkMock
+    toggleBookmark
       .mockResolvedValueOnce({
         ok: false,
         error: { code: 'INTERNAL_ERROR', message: 'Boom' },
@@ -845,8 +829,8 @@ describe('useQuestionPageController (browser)', () => {
 
     await screen.getByTestId('trigger-toggle-bookmark').click();
 
-    await expect.poll(() => toggleBookmarkMock.mock.calls.length).toBe(1);
-    const firstInput = toggleBookmarkMock.mock.calls[0]?.[0] as {
+    await expect.poll(() => toggleBookmark.mock.calls.length).toBe(1);
+    const firstInput = toggleBookmark.mock.calls[0]?.[0] as {
       idempotencyKey: string;
       questionId: string;
     };
@@ -862,8 +846,8 @@ describe('useQuestionPageController (browser)', () => {
 
     await screen.getByTestId('trigger-toggle-bookmark').click();
 
-    await expect.poll(() => toggleBookmarkMock.mock.calls.length).toBe(2);
-    const secondInput = toggleBookmarkMock.mock.calls[1]?.[0] as {
+    await expect.poll(() => toggleBookmark.mock.calls.length).toBe(2);
+    const secondInput = toggleBookmark.mock.calls[1]?.[0] as {
       idempotencyKey: string;
       questionId: string;
     };
@@ -874,7 +858,7 @@ describe('useQuestionPageController (browser)', () => {
   });
 
   it('does not refetch the session review when slug changes within the same session', async () => {
-    getQuestionBySlugMock.mockImplementation(async (input: unknown) => {
+    getQuestionBySlug.mockImplementation(async (input: unknown) => {
       const slug = (input as { slug: string }).slug;
       return ok({
         questionId: `question-${slug}`,
@@ -889,7 +873,7 @@ describe('useQuestionPageController (browser)', () => {
     });
 
     const sessionId = '00000000-0000-4000-8000-000000000009';
-    getPracticeSessionReviewMock.mockResolvedValue(
+    getPracticeSessionReview.mockResolvedValue(
       ok({
         sessionId,
         mode: 'exam',
@@ -942,9 +926,7 @@ describe('useQuestionPageController (browser)', () => {
 
     const screen = await render(<Wrapper />);
 
-    await expect
-      .poll(() => getPracticeSessionReviewMock.mock.calls.length)
-      .toBe(1);
+    await expect.poll(() => getPracticeSessionReview.mock.calls.length).toBe(1);
     await expect
       .element(screen.getByTestId('session-nav-index'))
       .toHaveTextContent('0');
@@ -954,13 +936,11 @@ describe('useQuestionPageController (browser)', () => {
     await expect
       .element(screen.getByTestId('session-nav-index'))
       .toHaveTextContent('1');
-    await expect
-      .poll(() => getPracticeSessionReviewMock.mock.calls.length)
-      .toBe(1);
+    await expect.poll(() => getPracticeSessionReview.mock.calls.length).toBe(1);
   });
 
   it('clears session navigation when sessionId is removed', async () => {
-    getQuestionBySlugMock.mockImplementation(async (input: unknown) => {
+    getQuestionBySlug.mockImplementation(async (input: unknown) => {
       const slug = (input as { slug: string }).slug;
       return ok({
         questionId: `question-${slug}`,
@@ -975,7 +955,7 @@ describe('useQuestionPageController (browser)', () => {
     });
 
     const sessionId = '00000000-0000-4000-8000-000000000005';
-    getPracticeSessionReviewMock.mockResolvedValue(
+    getPracticeSessionReview.mockResolvedValue(
       ok({
         sessionId,
         mode: 'exam',
@@ -1045,7 +1025,7 @@ describe('useQuestionPageController (browser)', () => {
   });
 
   it('clears session navigation when session review fails', async () => {
-    getQuestionBySlugMock.mockImplementation(async (input: unknown) => {
+    getQuestionBySlug.mockImplementation(async (input: unknown) => {
       const slug = (input as { slug: string }).slug;
       return ok({
         questionId: `question-${slug}`,
@@ -1062,7 +1042,7 @@ describe('useQuestionPageController (browser)', () => {
     const sessionId1 = '00000000-0000-4000-8000-000000000007';
     const sessionId2 = '00000000-0000-4000-8000-000000000008';
 
-    getPracticeSessionReviewMock
+    getPracticeSessionReview
       .mockResolvedValueOnce(
         ok({
           sessionId: sessionId1,
@@ -1126,10 +1106,8 @@ describe('useQuestionPageController (browser)', () => {
 
     await screen.getByTestId('set-session-2').click();
 
-    await expect
-      .poll(() => getPracticeSessionReviewMock.mock.calls.length)
-      .toBe(2);
-    expect(getPracticeSessionReviewMock.mock.calls[1]?.[0]).toEqual({
+    await expect.poll(() => getPracticeSessionReview.mock.calls.length).toBe(2);
+    expect(getPracticeSessionReview.mock.calls[1]?.[0]).toEqual({
       sessionId: sessionId2,
     });
 
@@ -1139,7 +1117,7 @@ describe('useQuestionPageController (browser)', () => {
     await expect
       .element(screen.getByTestId('session-nav-index'))
       .toHaveTextContent(/^$/);
-    expect(reportClientErrorMock).toHaveBeenCalledWith(
+    expect(reportClientErrorSpy).toHaveBeenCalledWith(
       { code: 'INTERNAL_ERROR', message: 'Boom' },
       {
         component: 'UseQuestionPageController',
@@ -1149,7 +1127,7 @@ describe('useQuestionPageController (browser)', () => {
   });
 
   it('discards stale session review response when slug changes mid-flight', async () => {
-    getQuestionBySlugMock.mockImplementation(async (input: unknown) => {
+    getQuestionBySlug.mockImplementation(async (input: unknown) => {
       const slug = (input as { slug: string }).slug;
       return ok({
         questionId: `question-${slug}`,
@@ -1206,7 +1184,7 @@ describe('useQuestionPageController (browser)', () => {
     const deferred2 =
       createDeferred<ActionResult<GetPracticeSessionReviewOutput>>();
 
-    getPracticeSessionReviewMock
+    getPracticeSessionReview
       .mockReturnValueOnce(deferred1.promise)
       .mockReturnValueOnce(deferred2.promise);
 
@@ -1229,15 +1207,11 @@ describe('useQuestionPageController (browser)', () => {
 
     const screen = await render(<Wrapper />);
 
-    await expect
-      .poll(() => getPracticeSessionReviewMock.mock.calls.length)
-      .toBe(1);
+    await expect.poll(() => getPracticeSessionReview.mock.calls.length).toBe(1);
 
     await screen.getByTestId('set-slug-q-2').click();
 
-    await expect
-      .poll(() => getPracticeSessionReviewMock.mock.calls.length)
-      .toBe(2);
+    await expect.poll(() => getPracticeSessionReview.mock.calls.length).toBe(2);
 
     // Resolve the second request first (newer)
     deferred2.resolve(ok(reviewOutputNew));
@@ -1278,7 +1252,7 @@ describe('useQuestionPageController (browser)', () => {
         }>
       >();
 
-    getQuestionBySlugMock
+    getQuestionBySlug
       .mockReturnValueOnce(deferredFirst.promise)
       .mockReturnValueOnce(deferredSecond.promise);
 
@@ -1301,11 +1275,11 @@ describe('useQuestionPageController (browser)', () => {
 
     const screen = await render(<Wrapper />);
 
-    await expect.poll(() => getQuestionBySlugMock.mock.calls.length).toBe(1);
+    await expect.poll(() => getQuestionBySlug.mock.calls.length).toBe(1);
 
     await screen.getByTestId('set-slug-q-2').click();
 
-    await expect.poll(() => getQuestionBySlugMock.mock.calls.length).toBe(2);
+    await expect.poll(() => getQuestionBySlug.mock.calls.length).toBe(2);
 
     deferredSecond.resolve(
       ok({
@@ -1336,7 +1310,7 @@ describe('useQuestionPageController (browser)', () => {
   });
 
   it('discards stale previous-attempt hydration when slug changes mid-flight', async () => {
-    getQuestionBySlugMock.mockImplementation(async (input: unknown) => {
+    getQuestionBySlug.mockImplementation(async (input: unknown) => {
       const slug = (input as { slug: string }).slug;
       return ok({
         questionId: `question-${slug}`,
@@ -1354,6 +1328,7 @@ describe('useQuestionPageController (browser)', () => {
       createDeferred<
         ActionResult<{
           kind: 'attempt';
+          sessionMode: 'tutor' | 'exam' | null;
           attemptId: string;
           selectedChoiceId: string;
           isCorrect: boolean;
@@ -1368,6 +1343,7 @@ describe('useQuestionPageController (browser)', () => {
       createDeferred<
         ActionResult<{
           kind: 'attempt';
+          sessionMode: 'tutor' | 'exam' | null;
           attemptId: string;
           selectedChoiceId: string;
           isCorrect: boolean;
@@ -1379,7 +1355,7 @@ describe('useQuestionPageController (browser)', () => {
         }>
       >();
 
-    getPreviousAttemptMock
+    getPreviousAttempt
       .mockReturnValueOnce(deferredFirst.promise)
       .mockReturnValueOnce(deferredSecond.promise);
 
@@ -1402,15 +1378,16 @@ describe('useQuestionPageController (browser)', () => {
 
     const screen = await render(<Wrapper />);
 
-    await expect.poll(() => getPreviousAttemptMock.mock.calls.length).toBe(1);
+    await expect.poll(() => getPreviousAttempt.mock.calls.length).toBe(1);
 
     await screen.getByTestId('set-slug-q-2').click();
 
-    await expect.poll(() => getPreviousAttemptMock.mock.calls.length).toBe(2);
+    await expect.poll(() => getPreviousAttempt.mock.calls.length).toBe(2);
 
     deferredSecond.resolve(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-q2',
         selectedChoiceId: 'choice-1',
         isCorrect: true,
@@ -1431,6 +1408,7 @@ describe('useQuestionPageController (browser)', () => {
     deferredFirst.resolve(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-q1-stale',
         selectedChoiceId: 'choice-2',
         isCorrect: false,
@@ -1451,7 +1429,7 @@ describe('useQuestionPageController (browser)', () => {
   });
 
   it('clears previous-attempt loading when stale hydration is invalidated by a failed question reload', async () => {
-    getQuestionBySlugMock
+    getQuestionBySlug
       .mockResolvedValueOnce(
         ok({
           questionId: 'question-q-1',
@@ -1470,6 +1448,7 @@ describe('useQuestionPageController (browser)', () => {
       createDeferred<
         ActionResult<{
           kind: 'attempt';
+          sessionMode: 'tutor' | 'exam' | null;
           attemptId: string;
           selectedChoiceId: string;
           isCorrect: boolean;
@@ -1480,7 +1459,7 @@ describe('useQuestionPageController (browser)', () => {
           answeredAt: string;
         }>
       >();
-    getPreviousAttemptMock.mockReturnValueOnce(deferredPrevious.promise);
+    getPreviousAttempt.mockReturnValueOnce(deferredPrevious.promise);
 
     function Wrapper() {
       const [slug, setSlug] = useState('q-1');
@@ -1516,6 +1495,7 @@ describe('useQuestionPageController (browser)', () => {
     deferredPrevious.resolve(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-q1-stale',
         selectedChoiceId: 'choice-1',
         isCorrect: true,
@@ -1534,7 +1514,7 @@ describe('useQuestionPageController (browser)', () => {
   });
 
   it('discards stale submit response when slug changes mid-flight', async () => {
-    getQuestionBySlugMock.mockImplementation(async (input: unknown) => {
+    getQuestionBySlug.mockImplementation(async (input: unknown) => {
       const slug = (input as { slug: string }).slug;
       return ok({
         questionId: `question-${slug}`,
@@ -1556,7 +1536,7 @@ describe('useQuestionPageController (browser)', () => {
           choiceExplanations: [];
         }>
       >();
-    submitAnswerMock.mockReturnValueOnce(deferredSubmit.promise);
+    submitAnswer.mockReturnValueOnce(deferredSubmit.promise);
 
     function Wrapper() {
       const [slug, setSlug] = useState('q-1');
@@ -1583,7 +1563,7 @@ describe('useQuestionPageController (browser)', () => {
 
     await screen.getByTestId('select-choice-1').click();
     await screen.getByTestId('trigger-submit').click();
-    await expect.poll(() => submitAnswerMock.mock.calls.length).toBe(1);
+    await expect.poll(() => submitAnswer.mock.calls.length).toBe(1);
 
     await screen.getByTestId('set-slug-q-2').click();
     await expect
@@ -1612,7 +1592,7 @@ describe('useQuestionPageController (browser)', () => {
   it('supports inline retry in session review and submits standalone provenance payload', async () => {
     const sessionId = '00000000-0000-4000-8000-000000000010';
 
-    getQuestionBySlugMock.mockResolvedValue(
+    getQuestionBySlug.mockResolvedValue(
       ok({
         questionId: 'question-1',
         slug: 'q-1',
@@ -1625,7 +1605,7 @@ describe('useQuestionPageController (browser)', () => {
       }),
     );
 
-    getPracticeSessionReviewMock.mockResolvedValue(
+    getPracticeSessionReview.mockResolvedValue(
       ok({
         sessionId,
         mode: 'exam',
@@ -1648,9 +1628,10 @@ describe('useQuestionPageController (browser)', () => {
       }),
     );
 
-    getPreviousAttemptMock.mockResolvedValue(
+    getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
+        sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-2',
         isCorrect: true,
@@ -1662,7 +1643,7 @@ describe('useQuestionPageController (browser)', () => {
       }),
     );
 
-    submitAnswerMock.mockResolvedValue(
+    submitAnswer.mockResolvedValue(
       ok({
         attemptId: 'attempt-2',
         isCorrect: true,
@@ -1697,9 +1678,9 @@ describe('useQuestionPageController (browser)', () => {
     await screen.getByTestId('trigger-submit').click();
 
     await expect
-      .poll(() => submitAnswerMock.mock.calls.length)
+      .poll(() => submitAnswer.mock.calls.length)
       .toBeGreaterThanOrEqual(1);
-    expect(submitAnswerMock.mock.calls[0]?.[0]).toMatchObject({
+    expect(submitAnswer.mock.calls[0]?.[0]).toMatchObject({
       questionId: 'question-1',
       choiceId: 'choice-1',
       retryOfAttemptId: 'attempt-1',
@@ -1714,7 +1695,7 @@ describe('useQuestionPageController (browser)', () => {
   it('maps kind=session_unanswered to reveal state and clears selected choice/result', async () => {
     const sessionId = '00000000-0000-4000-8000-000000000011';
 
-    getQuestionBySlugMock.mockResolvedValue(
+    getQuestionBySlug.mockResolvedValue(
       ok({
         questionId: 'question-1',
         slug: 'q-1',
@@ -1727,7 +1708,7 @@ describe('useQuestionPageController (browser)', () => {
       }),
     );
 
-    getPracticeSessionReviewMock.mockResolvedValue(
+    getPracticeSessionReview.mockResolvedValue(
       ok({
         sessionId,
         mode: 'exam',
@@ -1750,9 +1731,10 @@ describe('useQuestionPageController (browser)', () => {
       }),
     );
 
-    getPreviousAttemptMock.mockResolvedValue(
+    getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'session_unanswered',
+        sessionMode: null,
         correctChoiceId: 'choice-2',
         explanationMd: null,
         referenceMd: null,
@@ -1777,7 +1759,7 @@ describe('useQuestionPageController (browser)', () => {
   });
 
   it('requires explicit answer-as-new action after hydration error before submitting', async () => {
-    getQuestionBySlugMock.mockResolvedValue(
+    getQuestionBySlug.mockResolvedValue(
       ok({
         questionId: 'question-1',
         slug: 'q-1',
@@ -1790,12 +1772,12 @@ describe('useQuestionPageController (browser)', () => {
       }),
     );
 
-    getPreviousAttemptMock.mockResolvedValue({
+    getPreviousAttempt.mockResolvedValue({
       ok: false,
       error: { code: 'INTERNAL_ERROR', message: 'Boom' },
     });
 
-    submitAnswerMock.mockResolvedValue(
+    submitAnswer.mockResolvedValue(
       ok({
         attemptId: 'attempt-3',
         isCorrect: true,
@@ -1821,16 +1803,14 @@ describe('useQuestionPageController (browser)', () => {
     await screen.getByTestId('trigger-submit').click();
 
     await expect
-      .poll(() => submitAnswerMock.mock.calls.length)
+      .poll(() => submitAnswer.mock.calls.length)
       .toBeGreaterThanOrEqual(1);
-    expect(submitAnswerMock.mock.calls[0]?.[0]).toMatchObject({
+    expect(submitAnswer.mock.calls[0]?.[0]).toMatchObject({
       questionId: 'question-1',
       choiceId: 'choice-1',
     });
-    expect(submitAnswerMock.mock.calls[0]?.[0]).not.toHaveProperty(
-      'retryOrigin',
-    );
-    expect(submitAnswerMock.mock.calls[0]?.[0]).not.toHaveProperty(
+    expect(submitAnswer.mock.calls[0]?.[0]).not.toHaveProperty('retryOrigin');
+    expect(submitAnswer.mock.calls[0]?.[0]).not.toHaveProperty(
       'retryOfAttemptId',
     );
   });
