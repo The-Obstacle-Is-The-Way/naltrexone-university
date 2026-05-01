@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-05-01 (DEBT-372 resolved)
+**Last Updated:** 2026-05-01 (DEBT-374 opened)
 
 ---
 
@@ -21,8 +21,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
 | [DEBT-373](./debt-373-post-exam-review-score-banner-uses-app-h1-pattern-instead-of-stat-number-pattern.md) | Post-exam review entry banner crams `Score: 33% (1/3)` into one `<h1>` using the app-page-heading pattern (`text-2xl font-bold font-heading tracking-tight`) when typography-policy.md prescribes the stat-number pattern (`text-3xl font-bold font-display`) for percentages and counts — Session Summary and Dashboard already use the stat pattern; this banner is the only stat-bearing surface in the practice/exam flow that diverges. Recommend dropping the `Score:` label, splitting the count to the description line as `"X of Y correct"`, and using the canonical stat-number type | P3 | — |
+| [DEBT-374](./debt-374-session-summary-view-in-history-button-is-redundant-cruft.md) | Session Summary action bar exposes a tertiary ghost-variant `View in History` button (`session-summary-view.tsx:158-160`) that duplicates the persistent top-nav `History` link, imposing Hick's-Law cost on a terminal recap screen and routing users from a high-attention moment to a currently low-value destination. Recommend Option A: remove the button outright; History remains accessible via the always-visible top nav | P3 | — |
 
-**Next Debt ID:** DEBT-374
+**Next Debt ID:** DEBT-375
 
 ---
 

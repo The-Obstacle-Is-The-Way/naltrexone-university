@@ -149,6 +149,34 @@ function renderExamResultsContinuityHarness() {
   return render(<Harness />);
 }
 
+async function expectPostExamReviewScoreBanner(
+  screen: Awaited<ReturnType<typeof renderExamResultsContinuityHarness>>,
+) {
+  await expect
+    .element(screen.getByRole('heading', { level: 1, name: 'Exam complete' }))
+    .toBeVisible();
+  const scoreBanner = screen
+    .getByText('Exam complete')
+    .element()
+    .closest('[data-slot="card"]');
+  const scoreStat = Array.from(scoreBanner?.querySelectorAll('div') ?? []).find(
+    (element) => element.textContent?.trim() === '50%',
+  );
+  const scoreDescription = Array.from(
+    scoreBanner?.querySelectorAll('p') ?? [],
+  ).find((element) => element.textContent?.includes('1 of 2 correct'));
+
+  if (!(scoreStat instanceof HTMLElement)) {
+    throw new Error('Expected score-banner stat number');
+  }
+
+  expect(scoreStat.matches('h1,h2,h3,h4,h5,h6')).toBe(false);
+  expect(scoreDescription?.tagName).toBe('P');
+  expect(scoreDescription?.textContent).toContain(
+    '1 of 2 correct · Review each question with detailed feedback.',
+  );
+}
+
 test('renders session summary branch when summary is present', async () => {
   const screen = await render(
     <PracticeSessionPageView
@@ -281,7 +309,7 @@ test('clicking Review Answers re-enters post-exam review without route ejection'
 
   await screen.getByRole('button', { name: 'Review Answers' }).click();
 
-  await expect.element(screen.getByText('Score: 50% (1/2)')).toBeVisible();
+  await expectPostExamReviewScoreBanner(screen);
   await expect.element(screen.getByText('Explanation 1')).toBeVisible();
   await expect
     .element(screen.getByRole('heading', { name: 'Session Summary' }))
@@ -293,7 +321,7 @@ test('clicking a summary breakdown row opens the exact reviewed question in post
 
   await screen.getByRole('button', { name: /Stem 2/i }).click();
 
-  await expect.element(screen.getByText('Score: 50% (1/2)')).toBeVisible();
+  await expectPostExamReviewScoreBanner(screen);
   await expect.element(screen.getByText('Explanation 2')).toBeVisible();
   await expect
     .element(screen.getByRole('region', { name: 'Question 2 of 2' }))
