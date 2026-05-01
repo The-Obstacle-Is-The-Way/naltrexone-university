@@ -2,10 +2,28 @@
 
 **Priority:** P3
 **Created:** 2026-05-01
-**Source:** Manual UX walkthrough of post-exam Session Summary surface, 2026-05-01 (paired observation alongside [DEBT-372](../_archive/debt/debt-372-post-exam-review-summary-button-label-divergence.md) and [DEBT-373](../_archive/debt/debt-373-post-exam-review-score-banner-uses-app-h1-pattern-instead-of-stat-number-pattern.md), filed during the same review pass)
-**Related:** [DEBT-359 Session Summary CTA labels (archived)](../_archive/debt/debt-359-session-summary-cta-labels.md), [DEBT-372 Post-exam review summary button label divergence (archived)](../_archive/debt/debt-372-post-exam-review-summary-button-label-divergence.md), [Frontend Standards](../frontend/standards.md), [Pattern Registry](../frontend/pattern-registry.md)
+**Status:** Resolved 2026-05-01 ([PR #302](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/302)).
+**Source:** Manual UX walkthrough of post-exam Session Summary surface, 2026-05-01 (paired observation alongside [DEBT-372](./debt-372-post-exam-review-summary-button-label-divergence.md) and [DEBT-373](./debt-373-post-exam-review-score-banner-uses-app-h1-pattern-instead-of-stat-number-pattern.md), filed during the same review pass)
+**Related:** [DEBT-359 Session Summary CTA labels (archived)](./debt-359-session-summary-cta-labels.md), [DEBT-372 Post-exam review summary button label divergence (archived)](./debt-372-post-exam-review-summary-button-label-divergence.md), [Frontend Standards](../../frontend/standards.md), [Pattern Registry](../../frontend/pattern-registry.md)
 
 **Audit verified:** 2026-05-01 against `fa8c130e`.
+
+---
+
+## Resolution
+
+Shipped Option A in PR #302 (merge commit `0a465b44`, 2026-05-01). The Session Summary action bar now renders only the two primary post-session actions: `Review Answers` and `New Session`. The redundant ghost-variant `View in History` Button block was deleted from `app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx`; `Review Answers`, `New Session`, the action-bar wrapper (`flex flex-col gap-3 sm:flex-row`), `ROUTES.APP_HISTORY`, the History page, and the persistent top-nav `History` link were unchanged.
+
+Test cleanup removed stale `View in History` assertions from the four affected files: `session-summary-view.test.tsx`, `session-summary-view.browser.spec.tsx`, `page.test.tsx`, and `tests/e2e/practice.spec.ts`. The paired filter/list expectations stayed internally consistent, the deleted ghost-link class-token assertion was removed, and one browser test title was updated because the tutor summary now has only the surviving `New Session` action. No snapshot rewrites, new mocks, new tests, or shared action-bar abstractions were introduced.
+
+Verification and review state:
+
+- `rg -n "View in History" app/ components/ src/ lib/ tests/` returned zero hits after the change.
+- `components/app-nav-items.ts:12` remained unchanged and still exposes `{ href: ROUTES.APP_HISTORY, label: 'History' }`.
+- Production-server visual check on a 3-question exam flow confirmed the Session Summary action bar has exactly two children (`Review Answers`, `New Session`) in the unchanged wrapper and that top-nav `History` still links to `/app/history`.
+- Local full gate green: DB up/migrate/seed, `pnpm typecheck`, `pnpm lint` (19 expected warn-only `nursery/noExcessiveLinesPerFile` warnings on legacy oversized tests), `pnpm test --run` 302/302 files / 2,397 tests, `pnpm test:browser` 47/47 files / 241 tests, `pnpm test:integration` 16/16 files / 97 tests, `pnpm build`, and `pnpm test:e2e` 34/34.
+- CI green on PR #302: test, Vercel, CodeRabbit, and Codecov patch all passed; merge state was `CLEAN`.
+- CodeRabbit latest-head review on `246c0725` approved. Its only suggestion was an optional negative `View in History` assertion; this was rejected because DEBT-374's SSOT required zero `View in History` hits in production/test scope, and reintroducing the literal in a test would violate that contract.
 
 ---
 
