@@ -1,0 +1,350 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { PRACTICE_SESSIONS_USER_INCOMPLETE_UQ } from '@/db/schema';
+import { ApplicationError } from '@/src/application/errors';
+import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
+import { restoreDrizzlePracticeSessionRepositoryTestMocks } from './drizzle-practice-session-repository-test-helpers';
+
+describe('DrizzlePracticeSessionRepository session writes', () => {
+  afterEach(restoreDrizzlePracticeSessionRepositoryTestMocks);
+
+  it('creates a practice session and returns a mapped PracticeSession', async () => {
+    const startedAt = new Date('2026-02-01T00:00:00.000Z');
+    const returningRow = {
+      id: 'session_1',
+      userId: 'user_1',
+      mode: 'exam',
+      paramsJson: {},
+      startedAt,
+      endedAt: null,
+    };
+
+    const insertValues = vi.fn(() => ({
+      returning: async () => [returningRow],
+    }));
+
+    const db = {
+      insert: () => ({
+        values: insertValues,
+      }),
+      query: {
+        practiceSessions: {
+          findFirst: async () => null,
+        },
+      },
+      update: () => {
+        throw new Error('unexpected update');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    const paramsJson = {
+      count: 2,
+      tagSlugs: [],
+      difficulties: ['easy', 'hard'],
+      questionIds: ['q1', 'q2'],
+    };
+
+    await expect(
+      repo.create({ userId: 'user_1', mode: 'exam', paramsJson }),
+    ).resolves.toMatchObject({
+      id: 'session_1',
+      userId: 'user_1',
+      mode: 'exam',
+      questionIds: ['q1', 'q2'],
+      tagFilters: [],
+      difficultyFilters: ['easy', 'hard'],
+      startedAt,
+      endedAt: null,
+    });
+
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'user_1', mode: 'exam' }),
+    );
+  });
+
+  it('maps unique incomplete-session constraint violations to CONFLICT', async () => {
+    const insertValues = vi.fn(() => ({
+      returning: async () => {
+        throw {
+          code: '23505',
+          constraint: PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,
+        };
+      },
+    }));
+
+    const db = {
+      insert: () => ({
+        values: insertValues,
+      }),
+      query: {
+        practiceSessions: {
+          findFirst: async () => null,
+        },
+      },
+      update: () => {
+        throw new Error('unexpected update');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    const paramsJson = {
+      count: 2,
+      tagSlugs: [],
+      difficulties: ['easy'],
+      questionIds: ['q1', 'q2'],
+    };
+
+    const promise = repo.create({ userId: 'user_1', mode: 'exam', paramsJson });
+
+    await expect(promise).rejects.toEqual(
+      new ApplicationError(
+        'CONFLICT',
+        'You already have an incomplete practice session. Resume or abandon it before starting a new one.',
+      ),
+    );
+  });
+
+  it('wraps unexpected insert failures in INTERNAL_ERROR with cause', async () => {
+    const cause = new Error('db offline');
+    const insertValues = vi.fn(() => ({
+      returning: async () => {
+        throw cause;
+      },
+    }));
+
+    const db = {
+      insert: () => ({
+        values: insertValues,
+      }),
+      query: {
+        practiceSessions: {
+          findFirst: async () => null,
+        },
+      },
+      update: () => {
+        throw new Error('unexpected update');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    const promise = repo.create({
+      userId: 'user_1',
+      mode: 'exam',
+      paramsJson: {
+        count: 2,
+        tagSlugs: [],
+        difficulties: ['easy'],
+        questionIds: ['q1', 'q2'],
+      },
+    });
+
+    await expect(promise).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'Failed to create practice session',
+    });
+    const error = await promise.catch((caughtError: unknown) => caughtError);
+
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect((error as Error).cause).toBe(cause);
+  });
+
+  it('returns VALIDATION_ERROR when create() is called with invalid paramsJson', async () => {
+    const db = {
+      query: {
+        practiceSessions: {
+          findFirst: async () => null,
+        },
+      },
+      insert: () => {
+        throw new Error('unexpected insert');
+      },
+      update: () => {
+        throw new Error('unexpected update');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(
+      repo.create({
+        userId: 'user_1',
+        mode: 'tutor',
+        paramsJson: {
+          count: 0,
+          tagSlugs: [],
+          difficulties: [],
+          questionIds: [],
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
+  it('throws INTERNAL_ERROR when create() does not return an inserted row', async () => {
+    const db = {
+      insert: () => ({
+        values: () => ({
+          returning: async () => [],
+        }),
+      }),
+      query: {
+        practiceSessions: {
+          findFirst: async () => null,
+        },
+      },
+      update: () => {
+        throw new Error('unexpected update');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    const paramsJson = {
+      count: 2,
+      tagSlugs: [],
+      difficulties: ['easy'],
+      questionIds: ['q1', 'q2'],
+    };
+
+    await expect(
+      repo.create({ userId: 'user_1', mode: 'tutor', paramsJson }),
+    ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+  });
+
+  it('ends an active practice session', async () => {
+    const now = new Date('2026-02-01T01:02:03.000Z');
+    const nowFn = vi.fn(() => now);
+
+    const row = {
+      id: 'session_1',
+      userId: 'user_1',
+      mode: 'tutor',
+      paramsJson: {
+        count: 2,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: ['q1', 'q2'],
+      },
+      startedAt: new Date('2026-02-01T00:00:00.000Z'),
+      endedAt: null,
+    } as const;
+
+    const updateReturning = vi.fn(async () => [
+      {
+        ...row,
+        endedAt: now,
+        paramsJson: {
+          ...row.paramsJson,
+          questionStates: [
+            {
+              questionId: 'q1',
+              markedForReview: false,
+              latestSelectedChoiceId: 'choice_1',
+              latestIsCorrect: true,
+              latestAnsweredAt: '2026-02-01T00:00:01.000Z',
+            },
+          ],
+        },
+      },
+    ]);
+    const updateWhere = vi.fn(() => ({ returning: updateReturning }));
+    const updateSet = vi.fn(() => ({ where: updateWhere }));
+    const update = vi.fn(() => ({ set: updateSet }));
+
+    const db = {
+      query: {
+        practiceSessions: {
+          findFirst: async () => row,
+        },
+      },
+      update,
+      insert: () => {
+        throw new Error('unexpected insert');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(
+      db as unknown as RepoDb,
+      nowFn,
+    );
+
+    const ended = await repo.end('session_1', 'user_1');
+    expect(ended).toMatchObject({ id: 'session_1', endedAt: now });
+    expect(ended.questionStates).toHaveLength(2);
+    expect(
+      ended.questionStates.find((state) => state.questionId === 'q1'),
+    ).toMatchObject({
+      questionId: 'q1',
+      markedForReview: false,
+      latestSelectedChoiceId: 'choice_1',
+      latestIsCorrect: true,
+    });
+    expect(
+      ended.questionStates.find((state) => state.questionId === 'q1')
+        ?.latestAnsweredAt,
+    ).toEqual(new Date('2026-02-01T00:00:01.000Z'));
+    expect(nowFn).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws CONFLICT when the practice session is already ended', async () => {
+    const row = {
+      id: 'session_1',
+      userId: 'user_1',
+      mode: 'tutor',
+      paramsJson: {
+        count: 2,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: ['q1', 'q2'],
+      },
+      startedAt: new Date('2026-02-01T00:00:00.000Z'),
+      endedAt: new Date('2026-02-01T00:01:00.000Z'),
+    } as const;
+
+    const db = {
+      query: {
+        practiceSessions: {
+          findFirst: async () => row,
+        },
+      },
+      insert: () => {
+        throw new Error('unexpected insert');
+      },
+      update: () => {
+        throw new Error('unexpected update');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(repo.end('session_1', 'user_1')).rejects.toBeInstanceOf(
+      ApplicationError,
+    );
+    await expect(repo.end('session_1', 'user_1')).rejects.toMatchObject({
+      code: 'CONFLICT',
+    });
+  });
+});
