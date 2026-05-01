@@ -5,7 +5,31 @@
 **Source:** Manual UX walkthrough of post-exam review surface, 2026-05-01
 **Related:** [DEBT-365 Exam flow affordance and label consistency (archived)](../_archive/debt/debt-365-exam-flow-affordance-and-label-consistency.md), [DEBT-359 Session Summary CTA labels (archived)](../_archive/debt/debt-359-session-summary-cta-labels.md), [Frontend Standards](../frontend/standards.md), [Pattern Registry](../frontend/pattern-registry.md)
 
+**Status:** Resolved 2026-05-01 ([PR #300](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/300)).
+
 **Audit verified:** 2026-05-01 against `63a3fa5a`.
+
+---
+
+## Resolution
+
+Shipped Option A in PR #300 (merge commit `d1e314ed`, 2026-05-01). One-line production change at `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx:184`: the bottom terminal button label changed from `Finish review` to `View Summary`. The top-of-card persistent button, the `onViewSummary` handler, the `nextRow === null` render gate, and all surrounding JSX/styling are unchanged. The post-exam review surface now uses one consistent `View Summary` label across all summary-navigation affordances (top-of-card persistent button, bottom terminal button on the last question, hydration-error fallback in `practice-session-exam-results-renderer.tsx`).
+
+Test selector strategy for the intentional duplicate-label rendering on the final review question:
+
+- `post-exam-review-view.test.tsx` — refactored `getReviewActionLabels` helper to scope queries by `[data-testid="bottom-action-bar"]` instead of filtering by hardcoded label list (more robust than a string find-and-replace would have been). Added `expect(...).toHaveLength(1)` for the score-banner-region View Summary button as a contract.
+- `practice-session-page-view-review-stage.browser.spec.tsx` — score-banner click target scoped via `screen.getByText('Exam complete').element().closest('[data-slot="card"]')`. Hydration-error single-button query left unchanged.
+- `practice-session-exam-results-renderer.test.tsx` — replaced weak `textContent.toContain('View Summary')` substring check with `expect(viewSummaryButtons).toHaveLength(2)`, locking in the intentional duplicate-button shape as a test contract.
+- `tests/e2e/practice.spec.ts` — top click scoped to `[data-slot="card"]` filtered by `Exam complete`; bottom terminal click and the negative re-entry assertion scoped via `getByTestId('bottom-action-bar')`. No `.first()` / `.nth()` selector shortcuts.
+
+Verification:
+
+- Local full gate green: typecheck, lint (19 expected nursery/noExcessiveLinesPerFile warnings on legacy oversized test files outside DEBT-370 scope, zero new), `pnpm test --run` 302/302 files / 2,396 tests, `pnpm test:browser` 47/47 files / 241 tests, `pnpm test:integration` 16/16 files / 97 tests, `pnpm build`, `pnpm test:e2e` 34/34.
+- CI green on `5337a5d8`: test, CodeRabbit, Vercel, codecov/patch all SUCCESS.
+- CodeRabbit explicit `APPROVED` on `5337a5d8` ("No actionable comments were generated") covering range `21b7dd3f..5337a5d8`.
+- Zero stale `Finish review` references repo-wide.
+
+UX caveat preserved (not blocking): Option A produces two same-label `View Summary` buttons on the final review question (top persistent + bottom terminal). The duplicate is intentional and locked in as a test contract. If product subsequently decides the bottom terminal CTA should feel more like stage completion than alternate navigation, Option C from this doc (top → `Exit Review`, bottom stays `Finish review`) remains the honest alternative for a future copy ticket.
 
 ---
 
