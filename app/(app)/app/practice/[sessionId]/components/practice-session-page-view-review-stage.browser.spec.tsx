@@ -192,7 +192,19 @@ test('renders post-exam review with score banner, feedback, and a summary exit',
   await screen.getByRole('button', { name: 'Next' }).click();
   expect(onNavigatePostExamReviewQuestion).toHaveBeenCalledWith('q2');
 
-  await screen.getByRole('button', { name: 'View Summary' }).click();
+  const scoreBanner = screen
+    .getByText('Exam complete')
+    .element()
+    .closest('[data-slot="card"]');
+  const viewSummaryButton = Array.from(
+    scoreBanner?.querySelectorAll('button') ?? [],
+  ).find((button) => button.textContent?.trim() === 'View Summary');
+
+  if (!(viewSummaryButton instanceof HTMLButtonElement)) {
+    throw new Error('Expected score-banner View Summary button');
+  }
+
+  viewSummaryButton.click();
   expect(onViewSummary).toHaveBeenCalledTimes(1);
 });
 

@@ -181,7 +181,7 @@ export function PostExamReviewView({
             className="rounded-full"
             onClick={onViewSummary}
           >
-            Finish review
+            View Summary
           </Button>
         )}
 

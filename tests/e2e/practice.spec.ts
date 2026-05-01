@@ -238,7 +238,11 @@ test.describe('practice', () => {
     ).toBeVisible();
     await expect(page.getByText(/^(Correct|Incorrect)$/).first()).toBeVisible();
 
-    await page.getByRole('button', { name: 'View Summary' }).click();
+    await page
+      .locator('[data-slot="card"]')
+      .filter({ hasText: 'Exam complete' })
+      .getByRole('button', { name: 'View Summary' })
+      .click();
 
     // Wait for the terminal session summary to appear
     await expect(
@@ -292,12 +296,13 @@ test.describe('practice', () => {
     await expect(page.getByText('Question 2 of 3')).toBeVisible();
     await page.getByRole('button', { name: 'Next' }).click();
     await expect(page.getByText('Question 3 of 3')).toBeVisible();
+    const bottomActionBar = page.getByTestId('bottom-action-bar');
     await expect(
-      page.getByRole('button', { name: 'Finish review' }),
+      bottomActionBar.getByRole('button', { name: 'View Summary' }),
     ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Next' })).toHaveCount(0);
 
-    await page.getByRole('button', { name: 'Finish review' }).click();
+    await bottomActionBar.getByRole('button', { name: 'View Summary' }).click();
     await expect(
       page.getByRole('heading', { name: 'Session Summary' }),
     ).toBeVisible({ timeout: 30_000 });
@@ -309,7 +314,9 @@ test.describe('practice', () => {
     });
     await expect(page.getByRole('button', { name: 'Next' })).toBeVisible();
     await expect(
-      page.getByRole('button', { name: 'Finish review' }),
+      page
+        .getByTestId('bottom-action-bar')
+        .getByRole('button', { name: 'View Summary' }),
     ).toHaveCount(0);
     await expect(getQuestionNavigatorButton(1)).toHaveAttribute(
       'aria-current',
