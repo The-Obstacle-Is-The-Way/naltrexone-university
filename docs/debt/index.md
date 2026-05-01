@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-05-01 (DEBT-370 resolved)
+**Last Updated:** 2026-05-01 (DEBT-372 + DEBT-373 opened)
 
 ---
 
@@ -20,8 +20,10 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is billing-flow `form-action` verification plus enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
+| [DEBT-372](./debt-372-post-exam-review-summary-button-label-divergence.md) | Post-exam review surface has two buttons (`View Summary` top, `Finish review` bottom-on-last-question) calling the same `onViewSummary` handler with the same destination — terminology divergence imposes "are these the same?" cognitive friction; recommend unifying on `View Summary` (preserves DEBT-365's deliberate outline copy and avoids `Finish review` lying on questions 1 through N−1) | P3 | — |
+| [DEBT-373](./debt-373-post-exam-review-score-banner-uses-app-h1-pattern-instead-of-stat-number-pattern.md) | Post-exam review entry banner crams `Score: 33% (1/3)` into one `<h1>` using the app-page-heading pattern (`text-2xl font-bold font-heading tracking-tight`) when typography-policy.md prescribes the stat-number pattern (`text-3xl font-bold font-display`) for percentages and counts — Session Summary and Dashboard already use the stat pattern; this banner is the only stat-bearing surface in the practice/exam flow that diverges. Recommend dropping the `Score:` label, splitting the count to the description line as `"X of Y correct"`, and using the canonical stat-number type | P3 | — |
 
-**Next Debt ID:** DEBT-372
+**Next Debt ID:** DEBT-374
 
 ---
 
