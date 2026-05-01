@@ -174,7 +174,10 @@ describe('renderPracticeSessionExamResults', () => {
 
     expect(doc?.body.textContent).toContain('Score: 0% (0/1)');
     expect(doc?.body.textContent).toContain('Explanation for review.');
-    expect(doc?.body.textContent).toContain('View Summary');
+    const viewSummaryButtons = Array.from(
+      doc?.querySelectorAll('button') ?? [],
+    ).filter((button) => button.textContent?.trim() === 'View Summary');
+    expect(viewSummaryButtons).toHaveLength(2);
   });
 
   it('returns null when no exam-results surface is active', () => {

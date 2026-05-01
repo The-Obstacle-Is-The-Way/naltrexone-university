@@ -56,17 +56,15 @@ function renderView(input?: {
 }
 
 function getReviewActionLabels(doc: Document) {
-  return Array.from(doc.querySelectorAll('button'))
-    .filter((button) => {
-      const label = button.textContent?.trim();
-      return (
-        label === 'Previous' ||
-        label === 'Next' ||
-        label === 'Finish review' ||
-        button.hasAttribute('aria-pressed')
-      );
-    })
-    .map((button) => button.textContent?.trim());
+  const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
+
+  if (!actionBar) {
+    throw new Error('Expected bottom action bar');
+  }
+
+  return Array.from(actionBar.querySelectorAll('button')).map((button) =>
+    button.textContent?.trim(),
+  );
 }
 
 describe('PostExamReviewView', () => {
@@ -204,7 +202,7 @@ describe('PostExamReviewView', () => {
     expect(getReviewActionLabels(doc)).toEqual(['Next', 'Bookmark']);
   });
 
-  it('renders the last-question action bar with finish review before bookmark', () => {
+  it('renders the last-question action bar with view summary before bookmark', () => {
     const rows = [
       createReviewRow({
         questionId: 'question-1',
@@ -225,15 +223,15 @@ describe('PostExamReviewView', () => {
 
     expect(getReviewActionLabels(doc)).toEqual([
       'Previous',
-      'Finish review',
+      'View Summary',
       'Bookmark',
     ]);
   });
 
-  it('renders the single-question action bar with finish review before bookmark', () => {
+  it('renders the single-question action bar with view summary before bookmark', () => {
     const doc = renderView();
 
-    expect(getReviewActionLabels(doc)).toEqual(['Finish review', 'Bookmark']);
+    expect(getReviewActionLabels(doc)).toEqual(['View Summary', 'Bookmark']);
   });
 
   it('renders the review action bar in the document-flow content stack without sticky shell markers', () => {
@@ -283,9 +281,18 @@ describe('PostExamReviewView', () => {
 
   it('renders View Summary as an outline button in the review header', () => {
     const doc = renderView();
-    const viewSummaryButton = Array.from(doc.querySelectorAll('button')).find(
-      (button) => button.textContent?.trim() === 'View Summary',
-    );
+    const scoreBanner = Array.from(
+      doc.querySelectorAll('[data-slot="card"]'),
+    ).find((card) => card.textContent?.includes('Exam complete'));
+    const viewSummaryButton = Array.from(
+      scoreBanner?.querySelectorAll('button') ?? [],
+    ).find((button) => button.textContent?.trim() === 'View Summary');
+
+    expect(
+      Array.from(scoreBanner?.querySelectorAll('button') ?? []).filter(
+        (button) => button.textContent?.trim() === 'View Summary',
+      ),
+    ).toHaveLength(1);
 
     expect(viewSummaryButton?.getAttribute('data-variant')).toBe('outline');
   });
