@@ -138,9 +138,6 @@ test.describe('practice', () => {
     await expect(
       page.getByRole('heading', { name: 'Session Summary' }),
     ).toBeVisible();
-    await expect(
-      page.getByRole('link', { name: 'View in History' }),
-    ).toHaveAttribute('href', '/app/history');
   });
 
   test('quick practice submit shows correctness feedback', async ({ page }) => {

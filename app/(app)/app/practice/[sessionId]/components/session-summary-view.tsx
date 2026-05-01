@@ -155,9 +155,6 @@ export function SessionSummaryView({
         >
           <Link href={ROUTES.APP_PRACTICE}>New Session</Link>
         </Button>
-        <Button asChild variant="ghost" className="rounded-full">
-          <Link href={ROUTES.APP_HISTORY}>View in History</Link>
-        </Button>
       </div>
     </div>
   );

@@ -145,8 +145,6 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain('Duration');
     expect(html).toContain('2m 3s');
     expect(html).toContain('Question breakdown');
-    expect(html).toContain('View in History');
-    expect(html).toContain('href="/app/history"');
     expect(html).toContain('New Session');
     expect(html).toContain(`href="${ROUTES.APP_PRACTICE}"`);
     expect(html).not.toContain('Back to Dashboard');
@@ -260,7 +258,6 @@ describe('app/(app)/app/practice/[sessionId]', () => {
       return (
         text === 'Review Answers' ||
         text === 'New Session' ||
-        text === 'View in History' ||
         text === 'Back to Dashboard' ||
         text === 'Start another session'
       );
@@ -269,7 +266,6 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(actionLinks.map((link) => link.textContent?.trim())).toEqual([
       'Review Answers',
       'New Session',
-      'View in History',
     ]);
     expect(html).toContain('Review Answers');
     expect(html).toContain(
