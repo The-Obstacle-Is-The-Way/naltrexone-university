@@ -16,6 +16,7 @@ The Session Summary surface (`app/(app)/app/practice/[sessionId]/components/sess
 1. **Review Answers** — filled primary `Button` (lines 130-149).
 2. **New Session** — outline or default-variant `Button` (lines 151-157).
 3. **View in History** — ghost-variant `Button` at lines 158-160:
+
    ```tsx
    <Button asChild variant="ghost" className="rounded-full">
      <Link href={ROUTES.APP_HISTORY}>View in History</Link>
@@ -24,7 +25,7 @@ The Session Summary surface (`app/(app)/app/practice/[sessionId]/components/sess
 
 `ghost` is the `Button` component's most-recessed variant (text-only, no border, no fill). The visual hierarchy already encodes "this is the lowest-priority action on the surface."
 
-The persistent app top-nav (`app/(app)/app/_components/...` nav surface) already exposes `History` as a first-class navigation item one click away from every authenticated screen. Removing the bottom-of-Session-Summary `View in History` button does not hide the History page; it removes a redundant access path.
+The persistent app nav already exposes `History` as a first-class navigation item one click away from every authenticated screen via `components/app-nav-items.ts:12`, consumed by the desktop and mobile nav surfaces. Removing the bottom-of-Session-Summary `View in History` button does not hide the History page; it removes a redundant access path.
 
 ## Why This Is Debt
 
@@ -70,10 +71,10 @@ Ship **Option A**. The two buttons that survive (`Review Answers`, `New Session`
 - **Do NOT modify the top nav** (the persistent `History` link in the app shell stays exactly as-is; it is the surviving path).
 - **Do NOT modify the History page itself.** Any History-page-value-proposition rework is out of scope (see Options B / C).
 - **Do NOT modify `ROUTES.APP_HISTORY`.** The route constant continues to exist; only the Session Summary call site is removed.
-- **Do NOT bundle this with DEBT-373.** DEBT-373 is the post-exam review entry banner typography pass on `post-exam-review-view.tsx`. DEBT-374 is the Session Summary action bar on `session-summary-view.tsx`. Different files, different concerns. Each ships in its own focused PR with its own CR thread.
+- **Do NOT bundle the DEBT-374 implementation with DEBT-373.** DEBT-373 is the post-exam review entry banner typography pass on `post-exam-review-view.tsx`. DEBT-374 is the Session Summary action bar on `session-summary-view.tsx`. Different files, different concerns. The DEBT-374 code change should ship in its own focused PR with its own CR thread.
 - **Do NOT remove the `Button asChild variant="ghost"` styling pattern from anywhere else in the codebase.** Other call sites of the ghost variant are governed by their own design context and remain valid.
 - **Test cleanup is in scope.** Existing assertions on `View in History` in:
-  - `app/(app)/app/practice/[sessionId]/components/session-summary-view.test.tsx` (4 occurrences across 2 tests)
+  - `app/(app)/app/practice/[sessionId]/components/session-summary-view.test.tsx` (5 occurrences across 2 tests)
   - `app/(app)/app/practice/[sessionId]/components/session-summary-view.browser.spec.tsx` (2 occurrences)
   - `app/(app)/app/practice/[sessionId]/page.test.tsx` (3 occurrences)
   - `tests/e2e/practice.spec.ts` (1 occurrence at line 142)
