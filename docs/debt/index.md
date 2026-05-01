@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-30 (DEBT-370 Phase 3 shipped)
+**Last Updated:** 2026-05-01 (DEBT-370 resolved)
 
 ---
 
@@ -20,7 +20,6 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is billing-flow `form-action` verification plus enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
-| [DEBT-370](./debt-370-oversized-test-files-without-enforced-size-rule.md) | Phases 1-3 shipped (PRs #295/#297/#298) — top 7 oversized test files decomposed into 29 cohesive siblings + 7 helpers; all post-split files <800 LOC, 236 cases preserved exactly across all phases. 3 test files still >1,400 LOC (`practice-page-logic.test.ts` 1,756, `practice-view.test.tsx` 1,473, `drizzle-practice-session-repository.test.ts` 1,401); Phase 4 covers remaining splits + Track B Biome `max-lines` guardrail in a single closing PR | P3 | — |
 
 **Next Debt ID:** DEBT-372
 
@@ -30,6 +29,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | Resolved | GitHub Issue |
 |----|-------|----------|----------|--------------|
+| [DEBT-370](../_archive/debt/debt-370-oversized-test-files-without-enforced-size-rule.md) | Oversized test files campaign closed across 4 sequenced PRs — 10 originals split into 43 cohesive siblings + 9 helpers, 360 `it()` cases preserved (-1 SPEC-020 self-referential source-size guard, documented). All 43 post-split files <800 LOC (largest 706). Track B shipped warn-only Biome `nursery/noExcessiveLinesPerFile` rule scoped to `**/*.test.{ts,tsx}` + `**/*.browser.spec.tsx` at 800 LOC; 19 legacy warnings on pre-existing oversized files outside audit scope, 0 warnings on Phase 1-4 post-split files. CR clean across all phases; explicit APPROVED on Phase 4 latest head | P3 | 2026-05-01 | [PR #295](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/295), [PR #297](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/297), [PR #298](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/298), [PR #299](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/299) |
 | [DEBT-368](../_archive/debt/debt-368-browser-spec-vi-mock-missing-spy-true.md) | Internal `vi.mock` without `{ spy: true }` in browser specs swept to zero across 13 specs (26→0 doc grep, 27→0 broader grep covering relative imports). Production-fidelity `shouldReportClientError` predicate forwarded via `vi.importActual` instead of narrow filter; shared `installReportClientErrorMocks` helper extracted to `tests/test-helpers/report-client-error-mocks.ts`. CodeRabbit latest-head: "No actionable comments." | P3 | 2026-04-29 | [PR #296](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/296) |
 | [DEBT-369](../_archive/debt/debt-369-feedback-test-brittle-presentational-token-assertions.md) | `Feedback.test.tsx` brittle presentational-token assertions cleaned up: Tailwind token grep `70 -> 0`, file size `1,874 -> 1,210` LOC, 36 test cases preserved, no helper promotion or file split | P3 | 2026-04-28 | [PR #294](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/294) |
 | [DEBT-371](../_archive/debt/debt-371-idempotency-wrapper-boilerplate-across-controllers.md) | `withIdempotency()` boilerplate at 8 call sites across 4 controllers consolidated into `executeIdempotent()` at `src/adapters/controllers/shared/execute-idempotent.ts` — structural deps subset, Zod-typed output schema, deep module per Ousterhout. Pure refactor, net -185 LOC, zero test files modified, zero CR inline comments | P3 | 2026-04-28 | [PR #293](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/293) |
