@@ -150,7 +150,6 @@ describe('SessionSummaryView', () => {
       const text = link.textContent?.trim();
       return (
         text === 'New Session' ||
-        text === 'View in History' ||
         text === 'Back to Dashboard' ||
         text === 'Start another session'
       );
@@ -158,7 +157,6 @@ describe('SessionSummaryView', () => {
 
     expect(actionLinks.map((link) => link.textContent?.trim())).toEqual([
       'New Session',
-      'View in History',
     ]);
   });
 
@@ -206,7 +204,6 @@ describe('SessionSummaryView', () => {
       return (
         text === 'Review Answers' ||
         text === 'New Session' ||
-        text === 'View in History' ||
         text === 'Back to Dashboard' ||
         text === 'Start another session'
       );
@@ -215,7 +212,6 @@ describe('SessionSummaryView', () => {
     expect(actionLinks.map((link) => link.textContent?.trim())).toEqual([
       'Review Answers',
       'New Session',
-      'View in History',
     ]);
 
     const reviewLink = Array.from(doc.querySelectorAll('a')).find(
@@ -233,15 +229,6 @@ describe('SessionSummaryView', () => {
     );
     expect(newSessionTokens.has('border')).toBe(true);
     expect(newSessionTokens.has('bg-background')).toBe(true);
-
-    const historyLink = Array.from(doc.querySelectorAll('a')).find(
-      (link) => link.textContent?.trim() === 'View in History',
-    );
-    const historyLinkTokens = getClassTokens(
-      historyLink?.getAttribute('class') ?? '',
-    );
-    expect(historyLinkTokens.has('hover:bg-accent')).toBe(true);
-    expect(historyLinkTokens.has('border')).toBe(false);
   });
 
   it('omits the removed practice-missed CTA when the exam summary is perfect', () => {

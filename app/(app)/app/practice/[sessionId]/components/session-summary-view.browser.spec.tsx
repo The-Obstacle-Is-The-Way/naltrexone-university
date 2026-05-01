@@ -58,9 +58,6 @@ test('renders summary totals and per-question breakdown', async () => {
     .element(screen.getByText('[Question no longer available]'))
     .toBeVisible();
   await expect
-    .element(screen.getByRole('link', { name: 'View in History' }))
-    .toHaveAttribute('href', ROUTES.APP_HISTORY);
-  await expect
     .element(screen.getByRole('link', { name: 'New Session' }))
     .toHaveAttribute('href', ROUTES.APP_PRACTICE);
   await expect
@@ -200,7 +197,7 @@ test('renders loading and error states for summary review', async () => {
   await expect.element(screen.getByText('Review unavailable.')).toBeVisible();
 });
 
-test('renders exactly 2 tutor actions', async () => {
+test('renders only the New Session action for tutor summaries', async () => {
   const screen = await render(
     <SessionSummaryView
       summary={{
@@ -222,9 +219,6 @@ test('renders exactly 2 tutor actions', async () => {
 
   await expect
     .element(screen.getByRole('link', { name: 'New Session' }))
-    .toBeVisible();
-  await expect
-    .element(screen.getByRole('link', { name: 'View in History' }))
     .toBeVisible();
   await expect
     .element(screen.getByRole('link', { name: 'Review Answers' }))
