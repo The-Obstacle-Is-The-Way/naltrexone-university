@@ -177,7 +177,31 @@ test('renders post-exam review with score banner, feedback, and a summary exit',
     />,
   );
 
-  await expect.element(screen.getByText('Score: 50% (1/2)')).toBeVisible();
+  await expect
+    .element(screen.getByRole('heading', { level: 1, name: 'Exam complete' }))
+    .toBeVisible();
+  const scoreBanner = screen
+    .getByText('Exam complete')
+    .element()
+    .closest('[data-slot="card"]');
+  const scoreStat = Array.from(scoreBanner?.querySelectorAll('div') ?? []).find(
+    (element) => element.textContent?.trim() === '50%',
+  );
+  const scoreDescription = Array.from(
+    scoreBanner?.querySelectorAll('p') ?? [],
+  ).find((element) => element.textContent?.includes('1 of 2 correct'));
+
+  if (!(scoreStat instanceof HTMLElement)) {
+    throw new Error('Expected score-banner stat number');
+  }
+
+  expect(scoreStat.matches('h1,h2,h3,h4,h5,h6')).toBe(false);
+  expect(scoreStat.getAttribute('class')).toContain('text-3xl');
+  expect(scoreStat.getAttribute('class')).toContain('font-display');
+  expect(scoreDescription?.tagName).toBe('P');
+  expect(scoreDescription?.textContent).toContain(
+    '1 of 2 correct · Review each question with detailed feedback.',
+  );
   await expect.element(screen.getByText('Because B is correct.')).toBeVisible();
   await expect
     .element(screen.getByRole('button', { name: 'Question 2: Correct' }))
@@ -192,12 +216,12 @@ test('renders post-exam review with score banner, feedback, and a summary exit',
   await screen.getByRole('button', { name: 'Next' }).click();
   expect(onNavigatePostExamReviewQuestion).toHaveBeenCalledWith('q2');
 
-  const scoreBanner = screen
+  const summaryActionBanner = screen
     .getByText('Exam complete')
     .element()
     .closest('[data-slot="card"]');
   const viewSummaryButton = Array.from(
-    scoreBanner?.querySelectorAll('button') ?? [],
+    summaryActionBanner?.querySelectorAll('button') ?? [],
   ).find((button) => button.textContent?.trim() === 'View Summary');
 
   if (!(viewSummaryButton instanceof HTMLButtonElement)) {

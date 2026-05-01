@@ -96,6 +96,18 @@ function renderBranch(input?: {
   );
 }
 
+function getScoreBanner(doc: Document | null) {
+  const scoreBanner = Array.from(
+    doc?.querySelectorAll('[data-slot="card"]') ?? [],
+  ).find((card) => card.textContent?.includes('Exam complete'));
+
+  if (!(scoreBanner instanceof HTMLElement)) {
+    throw new Error('Expected score banner card');
+  }
+
+  return scoreBanner;
+}
+
 describe('renderPracticeSessionExamResults', () => {
   it('renders the exam summary surface when an exam summary is active', () => {
     const doc = renderBranch({
@@ -172,7 +184,25 @@ describe('renderPracticeSessionExamResults', () => {
       postExamReviewLoadState: { status: 'ready' },
     });
 
-    expect(doc?.body.textContent).toContain('Score: 0% (0/1)');
+    const scoreBanner = getScoreBanner(doc);
+    const statNumber = Array.from(scoreBanner.querySelectorAll('div')).find(
+      (element) => element.textContent?.trim() === '0%',
+    );
+    const description = Array.from(scoreBanner.querySelectorAll('p')).find(
+      (element) => element.textContent?.includes('0 of 1 correct'),
+    );
+
+    expect(scoreBanner.querySelector('h1')?.textContent?.trim()).toBe(
+      'Exam complete',
+    );
+    expect(scoreBanner.querySelectorAll('h1')).toHaveLength(1);
+    expect(statNumber?.matches('h1,h2,h3,h4,h5,h6')).toBe(false);
+    expect(statNumber?.getAttribute('class')).toContain('text-3xl');
+    expect(statNumber?.getAttribute('class')).toContain('font-display');
+    expect(description?.tagName).toBe('P');
+    expect(description?.textContent).toContain(
+      '0 of 1 correct · Review each question with detailed feedback.',
+    );
     expect(doc?.body.textContent).toContain('Explanation for review.');
     const viewSummaryButtons = Array.from(
       doc?.querySelectorAll('button') ?? [],

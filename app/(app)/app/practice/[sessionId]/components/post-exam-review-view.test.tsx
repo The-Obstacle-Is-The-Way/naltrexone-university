@@ -67,6 +67,18 @@ function getReviewActionLabels(doc: Document) {
   );
 }
 
+function getScoreBanner(doc: Document) {
+  const scoreBanner = Array.from(
+    doc.querySelectorAll('[data-slot="card"]'),
+  ).find((card) => card.textContent?.includes('Exam complete'));
+
+  if (!(scoreBanner instanceof HTMLElement)) {
+    throw new Error('Expected score banner card');
+  }
+
+  return scoreBanner;
+}
+
 describe('PostExamReviewView', () => {
   it('gives the review panel an accessible name for screen readers', () => {
     const doc = renderView();
@@ -279,11 +291,60 @@ describe('PostExamReviewView', () => {
     );
   });
 
+  it('renders the exam score as a stat number while preserving the surface heading', () => {
+    const doc = renderView({
+      rows: [
+        createReviewRow({
+          questionId: 'question-1',
+          slug: 'question-1',
+          order: 1,
+          isAnswered: true,
+          isCorrect: true,
+        }),
+        createReviewRow({
+          questionId: 'question-2',
+          slug: 'question-2',
+          order: 2,
+          isAnswered: true,
+          isCorrect: false,
+        }),
+        createReviewRow({
+          questionId: 'question-3',
+          slug: 'question-3',
+          order: 3,
+          isAnswered: false,
+          isCorrect: null,
+        }),
+      ],
+    });
+    const scoreBanner = getScoreBanner(doc);
+    const heading = scoreBanner.querySelector('h1');
+    const statNumber = Array.from(scoreBanner.querySelectorAll('div')).find(
+      (element) => element.textContent?.trim() === '33%',
+    );
+    const description = Array.from(scoreBanner.querySelectorAll('p')).find(
+      (element) => element.textContent?.includes('1 of 3 correct'),
+    );
+
+    expect(heading?.textContent?.trim()).toBe('Exam complete');
+    expect(scoreBanner.querySelectorAll('h1')).toHaveLength(1);
+    expect(statNumber?.tagName).toBe('DIV');
+    expect(statNumber?.getAttribute('class')).toContain('text-3xl');
+    expect(statNumber?.getAttribute('class')).toContain('font-bold');
+    expect(statNumber?.getAttribute('class')).toContain('font-display');
+    expect(statNumber?.getAttribute('class')).toContain('text-foreground');
+    expect(statNumber?.matches('h1,h2,h3,h4,h5,h6')).toBe(false);
+    expect(description?.tagName).toBe('P');
+    expect(description?.textContent).toContain(
+      '1 of 3 correct · Review each question with detailed feedback.',
+    );
+    expect(scoreBanner.textContent).not.toContain('Score:');
+    expect(scoreBanner.textContent).not.toContain('(1/3)');
+  });
+
   it('renders View Summary as an outline button in the review header', () => {
     const doc = renderView();
-    const scoreBanner = Array.from(
-      doc.querySelectorAll('[data-slot="card"]'),
-    ).find((card) => card.textContent?.includes('Exam complete'));
+    const scoreBanner = getScoreBanner(doc);
     const viewSummaryButton = Array.from(
       scoreBanner?.querySelectorAll('button') ?? [],
     ).find((button) => button.textContent?.trim() === 'View Summary');

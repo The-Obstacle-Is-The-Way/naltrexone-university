@@ -230,19 +230,25 @@ test.describe('practice', () => {
     await submitExamButton.click();
     await page.getByRole('button', { name: 'Confirm submit' }).click();
 
+    const scoreBanner = page
+      .locator('[data-slot="card"]')
+      .filter({ hasText: 'Exam complete' });
     await expect(
-      page.getByRole('heading', { name: /^Score: \d+% \(\d\/1\)$/ }),
-    ).toBeVisible({ timeout: 30_000 });
+      scoreBanner.getByRole('heading', {
+        level: 1,
+        name: 'Exam complete',
+      }),
+    ).toHaveCount(1, { timeout: 30_000 });
+    await expect(scoreBanner.getByText(/^\d+%$/)).toBeVisible();
     await expect(
-      page.getByText('Review each question with detailed feedback.'),
+      scoreBanner.locator('p').filter({
+        hasText:
+          /^\d of 1 correct · Review each question with detailed feedback\.$/,
+      }),
     ).toBeVisible();
     await expect(page.getByText(/^(Correct|Incorrect)$/).first()).toBeVisible();
 
-    await page
-      .locator('[data-slot="card"]')
-      .filter({ hasText: 'Exam complete' })
-      .getByRole('button', { name: 'View Summary' })
-      .click();
+    await scoreBanner.getByRole('button', { name: 'View Summary' }).click();
 
     // Wait for the terminal session summary to appear
     await expect(

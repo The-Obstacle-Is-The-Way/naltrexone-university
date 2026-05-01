@@ -51,7 +51,6 @@ export function PostExamReviewView({
       ? (review.rows[currentIndex + 1] ?? null)
       : null;
   const focusedQuestionId = currentRow?.questionId ?? null;
-  const scoreLabel = `Score: ${Math.round(summary.totals.accuracy * 100)}% (${summary.totals.correct}/${summary.questionCount})`;
   const navigateToQuestion = (questionId: string) => {
     shouldRestorePanelRef.current = true;
     onNavigateQuestion(questionId);
@@ -74,12 +73,14 @@ export function PostExamReviewView({
       <Card className="rounded-2xl p-4 shadow-sm">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <div className="text-sm text-muted-foreground">Exam complete</div>
-            <h1 className="mt-1 text-2xl font-bold font-heading tracking-tight text-foreground">
-              {scoreLabel}
+            <h1 className="text-sm font-medium text-muted-foreground">
+              Exam complete
             </h1>
+            <div className="mt-1 text-3xl font-bold font-display text-foreground">
+              {`${Math.round(summary.totals.accuracy * 100)}%`}
+            </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Review each question with detailed feedback.
+              {`${summary.totals.correct} of ${summary.questionCount} correct · Review each question with detailed feedback.`}
             </p>
           </div>
           <Button
