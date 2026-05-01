@@ -2,7 +2,7 @@
 
 **Priority:** P3
 **Created:** 2026-05-01
-**Source:** Manual UX walkthrough of post-exam Session Summary surface, 2026-05-01 (paired observation alongside [DEBT-372](../_archive/debt/debt-372-post-exam-review-summary-button-label-divergence.md) and [DEBT-373](./debt-373-post-exam-review-score-banner-uses-app-h1-pattern-instead-of-stat-number-pattern.md), filed during the same review pass)
+**Source:** Manual UX walkthrough of post-exam Session Summary surface, 2026-05-01 (paired observation alongside [DEBT-372](../_archive/debt/debt-372-post-exam-review-summary-button-label-divergence.md) and [DEBT-373](../_archive/debt/debt-373-post-exam-review-score-banner-uses-app-h1-pattern-instead-of-stat-number-pattern.md), filed during the same review pass)
 **Related:** [DEBT-359 Session Summary CTA labels (archived)](../_archive/debt/debt-359-session-summary-cta-labels.md), [DEBT-372 Post-exam review summary button label divergence (archived)](../_archive/debt/debt-372-post-exam-review-summary-button-label-divergence.md), [Frontend Standards](../frontend/standards.md), [Pattern Registry](../frontend/pattern-registry.md)
 
 **Audit verified:** 2026-05-01 against `fa8c130e`.

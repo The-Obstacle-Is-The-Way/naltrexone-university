@@ -2,10 +2,27 @@
 
 **Priority:** P3
 **Created:** 2026-05-01
+**Status:** Resolved 2026-05-01 ([PR #301](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/301)).
 **Source:** Manual UX walkthrough of post-exam review surface, 2026-05-01 (paired observation with [DEBT-372](./debt-372-post-exam-review-summary-button-label-divergence.md))
-**Related:** [Typography Policy](../frontend/typography-policy.md), [Pattern Registry](../frontend/pattern-registry.md), [Frontend Standards](../frontend/standards.md), [DEBT-372 Post-exam review summary button label divergence](./debt-372-post-exam-review-summary-button-label-divergence.md)
+**Related:** [Typography Policy](../../frontend/typography-policy.md), [Pattern Registry](../../frontend/pattern-registry.md), [Frontend Standards](../../frontend/standards.md), [DEBT-372 Post-exam review summary button label divergence](./debt-372-post-exam-review-summary-button-label-divergence.md)
 
 **Audit verified:** 2026-05-01 against `63a3fa5a`.
+
+---
+
+## Resolution
+
+Shipped Option alpha in PR #301 (merge commit `93eacb33`, 2026-05-01). The post-exam review score banner now renders `Exam complete` as the semantic `<h1>`, the rounded accuracy percentage as a standalone `text-3xl font-bold font-display text-foreground` stat number, and the raw count as natural-language metadata in the description line: `"X of Y correct · Review each question with detailed feedback."`
+
+Production changes were intentionally limited to `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx`: the old `scoreLabel` concatenation and `Score: X% (Y/Z)` app-heading line were removed. The score-banner `Card`, responsive `flex ... sm:flex-row sm:items-start sm:justify-between` layout, top and bottom `View Summary` buttons from DEBT-372, routing handlers, focus restoration, and action bar behavior were unchanged.
+
+Verification and review state:
+
+- Local full gate green: `pnpm typecheck`, `pnpm lint` (19 expected warn-only `nursery/noExcessiveLinesPerFile` warnings on legacy oversized tests), `pnpm test --run` 302/302 files / 2,397 tests, `pnpm test:browser` 47/47 files / 241 tests, `pnpm test:integration` 16/16 files / 97 tests, `pnpm build`, and `pnpm test:e2e` 34/34.
+- Tests updated with region-scoped score-banner assertions across direct component, renderer, browser, and E2E coverage; no snapshot rewrites.
+- A11y preserved: `Exam complete` remains queryable as the single level-1 heading on the post-exam review surface, the percentage is not a heading, and the description remains a paragraph.
+- CodeRabbit latest-head review on `83e29769` approved with no actionable comments. Earlier CodeRabbit feedback to change the semantic heading color from `text-muted-foreground` to `text-foreground` was verified against this doc's SSOT and rejected; CodeRabbit withdrew it and recorded a learning.
+- PR #301 also filed DEBT-374 as documentation only. DEBT-374 implementation remains active and is intentionally not bundled into this resolution.
 
 ---
 
@@ -44,7 +61,7 @@ const scoreLabel = `Score: ${Math.round(summary.totals.accuracy * 100)}% (${summ
 </h1>
 ```
 
-That className uses the app page h1 size from [Typography Policy § Pipeline 1](../frontend/typography-policy.md) (`text-2xl`) plus the heading-font implementation convention used by surfaces like "Quick Practice" or "Dashboard" (`font-bold font-heading tracking-tight`) — page titles. The score line is not a page title; it is a stat. The pattern is wrong for the role.
+That className uses the app page h1 size from [Typography Policy § Pipeline 1](../../frontend/typography-policy.md) (`text-2xl`) plus the heading-font implementation convention used by surfaces like "Quick Practice" or "Dashboard" (`font-bold font-heading tracking-tight`) — page titles. The score line is not a page title; it is a stat. The pattern is wrong for the role.
 
 ## Why This Is Debt
 
