@@ -2,17 +2,34 @@
 
 **Priority:** P2
 **Created:** 2026-05-02
-**Status:** Active
+**Status:** Resolved 2026-05-02 ([PR #303](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/303), merge commit `46ee667f`).
 **Source:** Manual UX walkthrough of tutor session flow, 2026-05-02 (paired Q1 → Q2 → Q3 screenshot review showing last-question footer dead-end forcing scroll-to-header to leave the session)
 **Related:**
 
-- [DEBT-363 Exam shell scroll model and dual-CTA disambiguation](../_archive/debt/debt-363-exam-shell-scroll-model-and-dual-cta.md) — Concern 2 dropped the `Finish exam` header button in exam mode so the footer `Review & Submit` became the single primary CTA. Establishes the precedent for action-bar consolidation; this ticket extends the same idea to tutor mode without removing the tutor header (justified below in First-Principles Framing).
-- [DEBT-365 Exam flow affordance and label consistency](../_archive/debt/debt-365-exam-flow-affordance-and-label-consistency.md) — set the exam-flow footer grouping pattern this ticket parallels. DEBT-365 explicitly kept tutor mode out of scope; DEBT-375 applies the same navigation-primary / metadata-secondary discipline to tutor mode for the first time.
-- [DEBT-372 Post-exam review summary button label divergence](../_archive/debt/debt-372-post-exam-review-summary-button-label-divergence.md) — established `View Summary` as the canonical vocabulary for "go to the Session Summary screen". This ticket adopts that label for the new tutor terminal CTA.
-- [DEBT-360 Action bar below fold](../_archive/debt/debt-360-action-bar-below-fold.md) — provides the historical `[data-testid="bottom-action-bar"]` selector and footer-discoverability context. Its viewport-bounded shell was later reverted by DEBT-363; DEBT-375 renders inside the current document-flow footer.
-- [DEBT-318 Tutor bookmark before answer](../_archive/debt/debt-318-tutor-bookmark-before-answer.md) — established that Bookmark renders only after feedback is visible. This ticket preserves that policy.
+- [DEBT-363 Exam shell scroll model and dual-CTA disambiguation](./debt-363-exam-shell-scroll-model-and-dual-cta.md) — Concern 2 dropped the `Finish exam` header button in exam mode so the footer `Review & Submit` became the single primary CTA. Establishes the precedent for action-bar consolidation; this ticket extends the same idea to tutor mode without removing the tutor header (justified below in First-Principles Framing).
+- [DEBT-365 Exam flow affordance and label consistency](./debt-365-exam-flow-affordance-and-label-consistency.md) — set the exam-flow footer grouping pattern this ticket parallels. DEBT-365 explicitly kept tutor mode out of scope; DEBT-375 applies the same navigation-primary / metadata-secondary discipline to tutor mode for the first time.
+- [DEBT-372 Post-exam review summary button label divergence](./debt-372-post-exam-review-summary-button-label-divergence.md) — established `View Summary` as the canonical vocabulary for "go to the Session Summary screen". This ticket adopts that label for the new tutor terminal CTA.
+- [DEBT-360 Action bar below fold](./debt-360-action-bar-below-fold.md) — provides the historical `[data-testid="bottom-action-bar"]` selector and footer-discoverability context. Its viewport-bounded shell was later reverted by DEBT-363; DEBT-375 renders inside the current document-flow footer.
+- [DEBT-318 Tutor bookmark before answer](./debt-318-tutor-bookmark-before-answer.md) — established that Bookmark renders only after feedback is visible. This ticket preserves that policy.
 
-**Audit verified:** 2026-05-02 against `7d154f96`; second-opinion corrections incorporated below.
+**Audit verified:** 2026-05-02 against `7d154f96` (doc), independently re-verified post-merge against `46ee667f`.
+
+---
+
+## Resolution
+
+Shipped Option α in [PR #303](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/303) (merge commit `46ee667f`, 2026-05-02). The tutor session footer now renders a `View Summary` terminal CTA on the last question instead of the invisible `ActionBarSpacer`, restructured into exam-parallel two-group layout: `tutor-action-primary-group` (`Previous · Submit · Next/View Summary`) and `tutor-action-secondary-group` (`sm:ml-auto`, `Bookmark` only). `View Summary` uses `variant="outline"` pre-submit and `variant="default"` post-submit, mirroring the existing `Next` pattern at `practice-view.tsx:151`. Header `End session` button preserved bit-for-bit on first-principles grounds — tutor's self-paced learning value prop justifies a persistent bail-cheap affordance that exam mode (post DEBT-363 Concern 2) deliberately doesn't have.
+
+Production changes were intentionally limited to `app/(app)/app/practice/components/practice-view.tsx` (+36/-4): `TutorActionBarProps` extended with `'onEndSession'`, `TutorActionBar` body restructured into navigation + secondary group `<div>`s, terminal `ActionBarSpacer` branch replaced with a conditional `View Summary` button (preserving the `ActionBarSpacer` fallback when `onEndSession` is undefined for ad-hoc Quick Practice surfaces), and `onEndSession={props.onEndSession}` passed into `<TutorActionBar />`. Header (lines 391–413), `ExamActionBar` (lines 192–269), `ActionBarSpacer` definition (lines 88–90), `endSessionLabel` plumbing (`practice-session-page-view.tsx:267`), and the outer `bottom-action-bar` wrapper are unchanged.
+
+Verification and review state:
+
+- Local full gate green: `pnpm typecheck`, `pnpm lint` (19 expected warn-only `nursery/noExcessiveLinesPerFile` warnings on legacy oversized tests), `pnpm test --run` 302/302 files / 2,399 tests, `pnpm test:browser` 47/47 files / 242 tests, `pnpm test:integration` 16/16 files / 97 tests, `pnpm build`, and `pnpm test:e2e` 35/35.
+- Tests updated across 5 files plus E2E (`practice-view-navigation.test.tsx`, `practice-view-answer-feedback.test.tsx`, `practice-view.browser.spec.tsx`, `practice-session-page-view-question-navigation.browser.spec.tsx`, `tests/e2e/practice.spec.ts`) with region-scoped queries via the new `data-testid`s; behavioral routing assertion (`onEndSession` called once AND `onNextQuestion` NOT called); variant-state assertions via `data-variant`; fallback coverage when `onEndSession` is undefined; no snapshot rewrites; no `.first()` / `.nth()` shortcuts; no internal `vi.mock()`.
+- A11y preserved: secondary group is an unnamed `<div>` (no a11y noise when empty); `View Summary` is keyboard-reachable; `Bookmark` `aria-pressed` retained.
+- CodeRabbit latest-head review on `653f2da6` returned explicit `APPROVED` with body `"No actionable comments were generated in the recent review."` Zero defended nits; no CR churn.
+- TDD trail caveat: implementation bundled into a single commit (`653f2da6`); the red → green → refactor cycle was followed locally per the executing agent's report but is not preserved in published commit history. Acceptable per `.claude/rules/testing.md` (the TDD mandate requires the cycle, not commit-per-cycle); honest A− self-grade for cadence, A on artifact quality.
+- Independent post-merge verification confirmed surgical production diff (+36/-4 across `practice-view.tsx`), test-routing fidelity, scoped selectors, header preservation, `ExamActionBar` preservation, and zero new regressions in NONE-impact test files. Active register reduces 4 → 3.
 
 ---
 
