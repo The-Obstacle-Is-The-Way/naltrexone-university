@@ -12,6 +12,16 @@ beforeAll(async () => {
   PracticeView = (await import('./practice-view')).PracticeView;
 });
 
+function getButtonLabels(container: Element | null) {
+  if (!container) {
+    throw new Error('Expected action group');
+  }
+
+  return Array.from(container.querySelectorAll('button')).map((button) =>
+    (button.textContent ?? '').trim(),
+  );
+}
+
 describe('PracticeView navigation', () => {
   it('renders a Previous button when onPreviousQuestion is provided', () => {
     const question = createNextQuestion();
@@ -133,7 +143,7 @@ describe('PracticeView navigation', () => {
     expect(html).not.toContain('Next Question');
   });
 
-  it('hides Next when hasNextQuestion is false', () => {
+  it('keeps the last-question slot empty when onEndSession is missing', () => {
     const question = createNextQuestion();
 
     const props: Parameters<typeof PracticeView>[0] = {
@@ -158,11 +168,128 @@ describe('PracticeView navigation', () => {
 
     const html = renderToStaticMarkup(<PracticeView {...props} />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const nextButton = Array.from(doc.querySelectorAll('button')).find(
-      (button) => button.textContent?.includes('Next'),
+    const primaryGroup = doc.querySelector(
+      '[data-testid="tutor-action-primary-group"]',
+    );
+    const secondaryGroup = doc.querySelector(
+      '[data-testid="tutor-action-secondary-group"]',
     );
 
-    expect(nextButton).toBeUndefined();
+    expect(getButtonLabels(primaryGroup)).toEqual(['Previous', 'Submit']);
+    expect(getButtonLabels(secondaryGroup)).toEqual([]);
+    expect(doc.body.textContent).not.toContain('Next');
+    expect(doc.body.textContent).not.toContain('View Summary');
+  });
+
+  it('renders an outline View Summary button in the primary group before final tutor submission', () => {
+    const question = createNextQuestion();
+
+    const props: Parameters<typeof PracticeView>[0] = {
+      sessionInfo: {
+        sessionId: 'session-1',
+        mode: 'tutor',
+        index: 2,
+        total: 3,
+        isMarkedForReview: false,
+      },
+      loadState: { status: 'ready' },
+      question,
+      selectedChoiceId: null,
+      isAnswered: false,
+      submitResult: null,
+      isPending: false,
+      bookmarkStatus: 'idle',
+      isBookmarked: false,
+      canSubmit: false,
+      onEndSession: () => undefined,
+      onTryAgain: () => undefined,
+      onToggleBookmark: () => undefined,
+      onSelectChoice: () => undefined,
+      onSubmit: () => undefined,
+      onNextQuestion: () => undefined,
+      onPreviousQuestion: () => undefined,
+      hasPreviousQuestion: true,
+      hasNextQuestion: false,
+    };
+
+    const html = renderToStaticMarkup(<PracticeView {...props} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const primaryGroup = doc.querySelector(
+      '[data-testid="tutor-action-primary-group"]',
+    );
+    const secondaryGroup = doc.querySelector(
+      '[data-testid="tutor-action-secondary-group"]',
+    );
+    const viewSummaryButton = Array.from(
+      primaryGroup?.querySelectorAll('button') ?? [],
+    ).find((button) => button.textContent?.trim() === 'View Summary');
+
+    expect(getButtonLabels(primaryGroup)).toEqual([
+      'Previous',
+      'Submit',
+      'View Summary',
+    ]);
+    expect(getButtonLabels(secondaryGroup)).toEqual([]);
+    expect(viewSummaryButton?.getAttribute('data-variant')).toBe('outline');
+  });
+
+  it('promotes View Summary after final tutor feedback and keeps Bookmark in the secondary group', () => {
+    const question = createNextQuestion();
+    const selectedChoice = question.choices[0];
+    if (!selectedChoice) {
+      throw new Error('Expected at least one choice');
+    }
+
+    const props: Parameters<typeof PracticeView>[0] = {
+      sessionInfo: {
+        sessionId: 'session-1',
+        mode: 'tutor',
+        index: 2,
+        total: 3,
+        isMarkedForReview: false,
+      },
+      loadState: { status: 'ready' },
+      question,
+      selectedChoiceId: selectedChoice.id,
+      isAnswered: true,
+      submitResult: {
+        attemptId: 'attempt-1',
+        isCorrect: true,
+        correctChoiceId: selectedChoice.id,
+        explanationMd: 'Because.',
+        referenceMd: null,
+        choiceExplanations: [],
+      },
+      isPending: false,
+      bookmarkStatus: 'idle',
+      isBookmarked: false,
+      canSubmit: false,
+      onEndSession: () => undefined,
+      onTryAgain: () => undefined,
+      onToggleBookmark: () => undefined,
+      onSelectChoice: () => undefined,
+      onSubmit: () => undefined,
+      onNextQuestion: () => undefined,
+      onPreviousQuestion: () => undefined,
+      hasPreviousQuestion: true,
+      hasNextQuestion: false,
+    };
+
+    const html = renderToStaticMarkup(<PracticeView {...props} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const primaryGroup = doc.querySelector(
+      '[data-testid="tutor-action-primary-group"]',
+    );
+    const secondaryGroup = doc.querySelector(
+      '[data-testid="tutor-action-secondary-group"]',
+    );
+    const viewSummaryButton = Array.from(
+      primaryGroup?.querySelectorAll('button') ?? [],
+    ).find((button) => button.textContent?.trim() === 'View Summary');
+
+    expect(getButtonLabels(primaryGroup)).toEqual(['Previous', 'View Summary']);
+    expect(getButtonLabels(secondaryGroup)).toEqual(['Bookmark']);
+    expect(viewSummaryButton?.getAttribute('data-variant')).toBe('default');
   });
 
   it('keeps tutor action bar ordering as Previous, Submit, Next before feedback', () => {

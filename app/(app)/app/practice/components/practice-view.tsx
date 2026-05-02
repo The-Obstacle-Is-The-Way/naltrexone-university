@@ -99,6 +99,7 @@ type TutorActionBarProps = Pick<
   | 'isBookmarked'
   | 'isPending'
   | 'loadState'
+  | 'onEndSession'
   | 'onNextQuestion'
   | 'onPreviousQuestion'
   | 'onSubmit'
@@ -113,9 +114,13 @@ function TutorActionBar(props: TutorActionBarProps) {
     props.isPending || props.loadState.status === 'loading';
   const isPreviousDisabled =
     isActionBarDisabled || props.canNavigatePrevious === false;
+  const isLastQuestion = props.hasNextQuestion === false;
 
-  return (
-    <>
+  const navigationGroup = (
+    <div
+      className="flex flex-wrap items-center gap-3"
+      data-testid="tutor-action-primary-group"
+    >
       {props.onPreviousQuestion ? (
         props.hasPreviousQuestion ? (
           <Button
@@ -143,8 +148,20 @@ function TutorActionBar(props: TutorActionBarProps) {
         </Button>
       ) : null}
 
-      {props.hasNextQuestion === false ? (
-        <ActionBarSpacer />
+      {isLastQuestion ? (
+        props.onEndSession ? (
+          <Button
+            type="button"
+            variant={props.submitResult ? 'default' : 'outline'}
+            className="rounded-full"
+            disabled={isActionBarDisabled}
+            onClick={props.onEndSession}
+          >
+            View Summary
+          </Button>
+        ) : (
+          <ActionBarSpacer />
+        )
       ) : (
         <Button
           type="button"
@@ -156,7 +173,14 @@ function TutorActionBar(props: TutorActionBarProps) {
           Next
         </Button>
       )}
+    </div>
+  );
 
+  const secondaryGroup = (
+    <div
+      className="flex flex-wrap items-center gap-3 sm:ml-auto"
+      data-testid="tutor-action-secondary-group"
+    >
       {hasBooleanCorrectness(props.submitResult) ? (
         <Button
           type="button"
@@ -169,6 +193,13 @@ function TutorActionBar(props: TutorActionBarProps) {
           {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
         </Button>
       ) : null}
+    </div>
+  );
+
+  return (
+    <>
+      {navigationGroup}
+      {secondaryGroup}
     </>
   );
 }
@@ -360,6 +391,7 @@ export function PracticeView(props: PracticeViewProps) {
           loadState={props.loadState}
           onNextQuestion={props.onNextQuestion}
           onPreviousQuestion={props.onPreviousQuestion}
+          onEndSession={props.onEndSession}
           onSubmit={props.onSubmit}
           onToggleBookmark={props.onToggleBookmark}
           submitResult={props.submitResult}
