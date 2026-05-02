@@ -7,14 +7,32 @@
 **Related:**
 
 - [DEBT-363 Exam shell scroll model and dual-CTA disambiguation](../_archive/debt/debt-363-exam-shell-scroll-model-and-dual-cta.md) — Concern 2 dropped the `Finish exam` header button in exam mode so the footer `Review & Submit` became the single primary CTA. Establishes the precedent for action-bar consolidation; this ticket extends the same idea to tutor mode without removing the tutor header (justified below in First-Principles Framing).
-- [DEBT-365 Exam flow affordance and label consistency](../_archive/debt/debt-365-exam-flow-affordance-and-label-consistency.md) — set the per-mode action-bar contract this ticket parallels.
+- [DEBT-365 Exam flow affordance and label consistency](../_archive/debt/debt-365-exam-flow-affordance-and-label-consistency.md) — set the exam-flow footer grouping pattern this ticket parallels. DEBT-365 explicitly kept tutor mode out of scope; DEBT-375 applies the same navigation-primary / metadata-secondary discipline to tutor mode for the first time.
 - [DEBT-372 Post-exam review summary button label divergence](../_archive/debt/debt-372-post-exam-review-summary-button-label-divergence.md) — established `View Summary` as the canonical vocabulary for "go to the Session Summary screen". This ticket adopts that label for the new tutor terminal CTA.
-- [DEBT-360 Action bar below fold](../_archive/debt/debt-360-action-bar-below-fold.md) — provides the `[data-testid="bottom-action-bar"]` container and viewport-bounded shell this ticket renders inside.
+- [DEBT-360 Action bar below fold](../_archive/debt/debt-360-action-bar-below-fold.md) — provides the historical `[data-testid="bottom-action-bar"]` selector and footer-discoverability context. Its viewport-bounded shell was later reverted by DEBT-363; DEBT-375 renders inside the current document-flow footer.
 - [DEBT-318 Tutor bookmark before answer](../_archive/debt/debt-318-tutor-bookmark-before-answer.md) — established that Bookmark renders only after feedback is visible. This ticket preserves that policy.
 
-**Audit verified:** _pending_ — to be filled after second-opinion audit pass against the doc's claims.
+**Audit verified:** 2026-05-02 against `7d154f96`; second-opinion corrections incorporated below.
 
 ---
+
+## Audit Notes
+
+Deep source audit on `7d154f96` verified the central bug and implementation path:
+
+- `ActionBarSpacer` is exactly `return <span aria-hidden="true" className="h-9 min-w-24" />;` at `practice-view.tsx:88-90`.
+- `TutorActionBarProps` at `practice-view.tsx:92-109` does not currently include `onEndSession`; the implementation must add it to the existing `Pick<PracticeViewProps, ...>` union.
+- The active tutor footer erases the terminal slot with `hasNextQuestion === false ? <ActionBarSpacer /> : <Button>Next</Button>` at `practice-view.tsx:146-158`.
+- `PracticeSessionPageView` already passes `onEndSession={props.onEndSession}` into `PracticeView` at `practice-session-page-view.tsx:268`; the missing hop is only `PracticeView` → `TutorActionBar`.
+- `PracticeViewProps.onEndSession?: () => void` at `practice-view.tsx:41`, so `onClick={props.onEndSession}` is type-correct after narrowing.
+- DEBT-363 did drop the active exam `Finish exam` header button by gating it behind `!isExamMode`; DEBT-372 did standardize `View Summary` on the post-exam review summary-navigation path; DEBT-318 did establish post-feedback-only tutor Bookmark timing; DEBT-360 is historical context only after DEBT-363 reverted its viewport-bounded shell.
+
+Corrections from the audit are already reflected in this document:
+
+- DEBT-365 is cited as an **exam-flow footer grouping precedent**, not as an existing tutor/per-mode contract.
+- DEBT-360 is cited as **historical bottom-action-bar context**, not as a still-active viewport-bounded shell.
+- The new tutor terminal CTA must preserve the existing `Next` slot's visual hierarchy: `variant={props.submitResult ? 'default' : 'outline'}`. It must **not** become a second primary button beside `Submit` before the user submits the last answer.
+- The out-of-scope question-navigator density citation points to the actual `QuestionNavigator` card at `exam-review-view.tsx:52-57`, invoked from `practice-session-page-view.tsx:229-236`.
 
 ## Context
 
@@ -61,7 +79,7 @@ const actionBar = props.question ? (
 )}
 ```
 
-`ActionBarSpacer` (`practice-view.tsx:88-90`) is an invisible 9-row × 24-col placeholder:
+`ActionBarSpacer` (`practice-view.tsx:88-90`) is an invisible fixed-size placeholder (`h-9`, `min-w-24`):
 
 ```tsx
 function ActionBarSpacer() {
@@ -73,10 +91,10 @@ So on the last tutor question (`hasNextQuestion === false`), the slot where ever
 
 Walked through the screenshot evidence:
 
-- **Q1 of 3, post-submit:** footer shows `Next` (filled, primary) + `Bookmark`. Works.
-- **Q2 of 3, pre-submit (answer selected):** footer shows `Previous` + `Submit` + `Next`. Works.
-- **Q3 of 3, pre-submit (answer selected):** footer shows `Previous` + `Submit`. **`Next` slot is rendered as `ActionBarSpacer` — empty visible row to its right.**
-- **Q3 of 3, post-submit (feedback shown):** footer shows `Previous` + `Bookmark`. **No terminal CTA. The user must scroll up to the header `End session` button to leave the session.**
+- **Q1 of 3, post-submit:** visible footer controls are `Next` (filled, primary) + `Bookmark`. Works.
+- **Q2 of 3, pre-submit (answer selected):** visible footer controls are `Previous` + `Submit` + `Next`. Works.
+- **Q3 of 3, pre-submit (answer selected):** visible footer controls are `Previous` + `Submit`. **`Next` slot is rendered as `ActionBarSpacer` — an empty invisible slot to its right.**
+- **Q3 of 3, post-submit (feedback shown):** visible footer controls are `Previous` + `Bookmark`. **No terminal CTA. The user must scroll up to the header `End session` button to leave the session.**
 
 ### How exam mode handles the same situation
 
@@ -132,7 +150,7 @@ The `!isExamMode` guard means the header button renders **only in tutor mode** (
 - **Functional dead-end on the last tutor question.** The natural completion path of a tutor session — answer Q-last, read the explanation, leave — has no footer affordance. The user must either spot the header `End session` and scroll up or guess that "Bookmark" is somehow related. Every other question has a primary forward button in this slot. This is the kind of UX bug that fails first-time users silently.
 - **Layout asymmetry vs. exam.** Exam shipped a two-group footer (primary navigation left, secondary controls `sm:ml-auto` right). Tutor shipped a single flat row that hugs the left, leaving the right half of the action bar empty pre-submit and squishing Bookmark next to navigation post-submit. Across modes the action bar should follow one structural template even when the per-mode controls differ.
 - **`Bookmark` is mis-grouped with navigation.** Bookmark is a secondary cross-session control (per DEBT-318), not a primary navigation control. It belongs in the right-aligned secondary slot — the tutor analog of exam's `Mark for review` slot — not interleaved with `Previous` / `Next`.
-- **Vocabulary already exists; just not used here.** `View Summary` was standardized in DEBT-372 as the canonical label for "go to Session Summary screen". The post-exam review surface already uses it. Adopting the same label in tutor preserves cross-surface label consistency.
+- **Vocabulary already exists; just not used here.** `View Summary` was standardized in DEBT-372 as the canonical label for "go to Session Summary screen". The post-exam review surface still uses it in both the score-banner card and the final-question footer. Adopting the same label in tutor preserves cross-surface label consistency.
 
 ## First-Principles Framing
 
@@ -145,6 +163,8 @@ The header `End session` button in tutor mode is therefore **not a layout mistak
 
 The actual bug is narrower: the **footer is missing the natural completion CTA** on the last question. Header `End session` ("I'm done early, take me out") and footer `View Summary` ("I've finished the last question, take me to my results") serve different purposes and can coexist. The fix is to add the missing footer CTA, not to relocate the header bail.
 
+This is not a contradiction of DEBT-372. DEBT-372 fixed two post-exam-review controls that were both summary-navigation affordances within the same review stage. In tutor mode, the persistent header `End session` is an always-available escape hatch on Q1 through QN, while the footer `View Summary` exists only in the terminal `Next` slot on Q-last. The two controls call the same handler, but their placement and timing communicate different user intent: bail now vs. finish the question sequence.
+
 ## Options
 
 ### Option α (recommended): Add `View Summary` last-question CTA + adopt exam's two-group footer template; keep header `End session` unchanged
@@ -155,13 +175,15 @@ Production change in `app/(app)/app/practice/components/practice-view.tsx`:
 2. Restructure `TutorActionBar`'s body (lines 117–173) into two sibling groups, mirroring the exam pattern at lines 206–266:
    - **Primary navigation group** wrapped in `<div className="flex flex-wrap items-center gap-3" data-testid="tutor-action-primary-group">` containing `Previous`, `Submit` (when no `submitResult`), and the new `Next`/`View Summary` slot.
    - **Secondary group** wrapped in `<div className="flex flex-wrap items-center gap-3 sm:ml-auto" data-testid="tutor-action-secondary-group">` containing `Bookmark` (preserving the existing `hasBooleanCorrectness(submitResult)` gate from line 160 so post-feedback-only visibility is unchanged).
-3. Replace the `ActionBarSpacer` branch at lines 146–148 with a `View Summary` button when `hasNextQuestion === false` and `onEndSession` is defined:
+   - Render the secondary group as a stable sibling even when `Bookmark` is absent; it may be empty pre-feedback. This adds no accessible noise because the group is an unnamed `div`, and it keeps the footer template stable across tutor states.
+3. Replace the `ActionBarSpacer` branch at lines 146–148 with a `View Summary` button when `hasNextQuestion === false` and `onEndSession` is defined. Preserve the current `Next` slot's variant hierarchy: outline before feedback, default after feedback. This avoids rendering two primary buttons (`Submit` and `View Summary`) side-by-side before the final answer is submitted.
 
 ```tsx
 {props.hasNextQuestion === false ? (
   props.onEndSession ? (
     <Button
       type="button"
+      variant={props.submitResult ? 'default' : 'outline'}
       className="rounded-full"
       disabled={isActionBarDisabled}
       onClick={props.onEndSession}
@@ -176,7 +198,7 @@ Production change in `app/(app)/app/practice/components/practice-view.tsx`:
 )}
 ```
 
-The `props.onEndSession ?` inner ternary preserves the spacer fallback for the legitimate edge case where `PracticeView` is rendered without an `onEndSession` handler (e.g. ad-hoc Quick Practice surfaces). The shipped `practice-session-page-view.tsx` always passes `onEndSession`, so the live tutor-session flow always renders the button.
+The `props.onEndSession ?` inner ternary preserves the spacer fallback for the legitimate edge case where `PracticeView` is rendered without an `onEndSession` handler (for example, ad-hoc Quick Practice). The shipped session route always passes `onEndSession` (`practice-session-page-view.tsx:268`), so the live tutor-session flow always renders the button.
 
 4. Pass the new prop in the `PracticeView` body where `TutorActionBar` is rendered (lines 351–366):
 
@@ -194,14 +216,14 @@ Resulting per-state footer for a 3-question tutor session:
 
 | Question | State | Primary group (left) | Secondary group (right, `sm:ml-auto`) |
 |----------|-------|----------------------|---------------------------------------|
-| Q1 | pre-submit | `Submit · Next` | _empty_ |
-| Q1 | post-submit | `Next` | `Bookmark` |
-| Q2 | pre-submit | `Previous · Submit · Next` | _empty_ |
-| Q2 | post-submit | `Previous · Next` | `Bookmark` |
-| Q3 (last) | pre-submit | `Previous · Submit · View Summary` | _empty_ |
-| Q3 (last) | post-submit | `Previous · View Summary` | `Bookmark` |
+| Q1 | pre-submit | `Submit · Next` (`Next` outline) | _empty_ |
+| Q1 | post-submit | `Next` (default) | `Bookmark` |
+| Q2 | pre-submit | `Previous · Submit · Next` (`Next` outline) | _empty_ |
+| Q2 | post-submit | `Previous · Next` (default) | `Bookmark` |
+| Q3 (last) | pre-submit | `Previous · Submit · View Summary` (`View Summary` outline) | _empty_ |
+| Q3 (last) | post-submit | `Previous · View Summary` (`View Summary` default) | `Bookmark` |
 
-`View Summary` is enabled regardless of submit state, consistent with the existing tutor-mode behavior of allowing `Next` clickability before submit on Q1 / Q2 (a separate, deliberately out-of-scope concern flagged below).
+`View Summary` is enabled regardless of submit state, consistent with the existing tutor-mode behavior of allowing `Next` clickability before submit on Q1 / Q2. It is not visually promoted to the primary/default variant until feedback exists. Whether tutor mode should allow pre-submit forward navigation at all is a separate, deliberately out-of-scope concern flagged below.
 
 ### Option β (rejected): Move `End session` into the footer as a persistent secondary control; drop the header button
 
@@ -217,7 +239,7 @@ Maximum mirror of exam mode but removes tutor's bail-cheap value entirely. Stude
 
 ## Production Diff Spec
 
-Single file: `app/(app)/app/practice/components/practice-view.tsx`. Net additions ~30 LOC, deletions ~5 LOC.
+Single production file: `app/(app)/app/practice/components/practice-view.tsx`. Expected diff is small: extend the tutor props pick, restructure the tutor footer body into two groups, replace the terminal spacer branch with the `View Summary` button, and pass `onEndSession` through. Do not touch any other production file.
 
 1. **`TutorActionBarProps` (lines 92–109):** add `'onEndSession'` to the `Pick<PracticeViewProps, ...>` union.
 2. **`TutorActionBar` body (lines 111–174):** restructure into navigation + secondary groups as specified above. Replace the conditional `ActionBarSpacer` branch with the `View Summary` button (preserving spacer fallback when `onEndSession` is undefined).
@@ -232,18 +254,19 @@ The audit agent should grep these files and verify which assertions need to chan
 
 | File | Likely impact |
 |------|---------------|
-| `app/(app)/app/practice/components/practice-view-navigation.test.tsx` | Tutor navigation tests likely assert Previous/Submit/Next visibility per question position; add `View Summary` visibility on last question, both states. |
-| `app/(app)/app/practice/components/practice-view.browser.spec.tsx` | Broad surface coverage. Likely needs new last-question `View Summary` test plus group-data-testid coverage. |
-| `app/(app)/app/practice/components/practice-view-answer-feedback.test.tsx` | Feedback rendering — verify Bookmark grouping change does not break feedback assertions. |
-| `app/(app)/app/practice/components/practice-view-layout.test.tsx` | Layout-level assertions; possibly affected by the new sibling-div structure. |
-| `app/(app)/app/practice/components/practice-view-exam-actions.test.tsx` | Exam-only; should be unaffected (no exam structural change) — verify no cross-mode assumptions. |
-| `app/(app)/app/practice/[sessionId]/components/practice-session-page-view-active-question.browser.spec.tsx` | Already asserts `End session` header button visibility (lines 133, 137, 177). Header is unchanged so these should still pass; verify. |
-| `app/(app)/app/practice/[sessionId]/components/practice-session-page-view-question-navigation.browser.spec.tsx` | Q→Q navigation tests; likely add a "last tutor question shows View Summary" case. |
-| `app/(app)/app/practice/[sessionId]/components/practice-session-page-view-review-stage.browser.spec.tsx` | Already asserts `End session` button at lines 423, 456 — these are in the review/error stage, not the active-question footer; verify untouched. |
-| `app/(app)/app/practice/[sessionId]/components/practice-session-page-view-results.browser.spec.tsx` | Exam results — verify untouched. |
-| `app/(app)/app/practice/[sessionId]/components/practice-session-page-view-focus-restoration.browser.spec.tsx` | Focus tests across navigation; verify the new last-question button is reachable via expected focus order. |
-| `app/(app)/app/practice/[sessionId]/page.test.tsx` | Static HTML render; line 116 asserts `End session` substring — header is unchanged so this should pass. Add `View Summary` substring assertion if a tutor last-question fixture is exercised. |
-| `tests/e2e/practice.spec.ts` | E2E. If the tutor flow walks Q1 → Q-last, add a `View Summary` button click as the terminal action instead of the header `End session` (or augment, not replace, depending on the existing flow's intent). |
+| `app/(app)/app/practice/components/practice-view-navigation.test.tsx` | **HIGH.** Direct tutor action-bar contract. Update `hides Next when hasNextQuestion is false` to the new fallback split: without `onEndSession`, no `View Summary`; with `onEndSession`, last-question `View Summary` appears. Add pre-submit and post-submit label-order assertions for `Previous · Submit · View Summary` and `Previous · View Summary · Bookmark` (or primary/secondary group scoped equivalents). Assert pre-submit `View Summary` has `data-variant="outline"` and post-submit has `data-variant="default"`. |
+| `app/(app)/app/practice/components/practice-view.browser.spec.tsx` | **MEDIUM/HIGH.** Broad interactive coverage. Add a focused browser test that renders a last tutor question with `onEndSession`, clicks bottom-bar `View Summary`, and verifies `onEndSession` fires. Add group-data-testid visibility/containment coverage for `tutor-action-primary-group` and `tutor-action-secondary-group`. |
+| `app/(app)/app/practice/components/practice-view-answer-feedback.test.tsx` | **MEDIUM.** Existing last-tutor-question fixture at lines 132–177 currently only asserts `Review answers` absence. Update it to assert the post-submit `View Summary` terminal CTA and preserve the negative `Review answers` assertion. |
+| `app/(app)/app/practice/components/practice-view-layout.test.tsx` | **NONE.** No active tutor footer fixture; the empty-state `Finish exam` test is out of scope. Do not churn this file unless the implementation accidentally affects empty-state behavior. |
+| `app/(app)/app/practice/components/practice-view-exam-actions.test.tsx` | **NONE.** Exam-only. Should be unchanged; existing exam grouping and `Review & Submit` contracts are guardrails against accidental regression. |
+| `app/(app)/app/practice/components/practice-view-bookmarks.test.tsx` | **LOW.** Not in the original table, but it verifies post-feedback tutor Bookmark timing from DEBT-318. Usually no change needed; if tests are added for the new secondary group, assert Bookmark remains hidden pre-feedback and remains the only secondary-group button post-feedback. |
+| `app/(app)/app/practice/[sessionId]/components/practice-session-page-view-active-question.browser.spec.tsx` | **LOW.** Active tutor header `End session` assertion only. Header is unchanged; this file should continue to pass untouched. |
+| `app/(app)/app/practice/[sessionId]/components/practice-session-page-view-question-navigation.browser.spec.tsx` | **HIGH.** Existing last-tutor-question test asserts `Next` is absent at lines 386–457. Update/add coverage so the last available tutor question renders bottom-bar `View Summary` when `onEndSession` is wired and clicking it calls `onEndSession` rather than `onNextQuestion`. |
+| `app/(app)/app/practice/[sessionId]/components/practice-session-page-view-review-stage.browser.spec.tsx` | **LOW.** Review/error-stage `End session`, not active tutor footer. Verify untouched. |
+| `app/(app)/app/practice/[sessionId]/components/practice-session-page-view-results.browser.spec.tsx` | **NONE.** Results/post-exam summary surfaces only. Verify untouched. |
+| `app/(app)/app/practice/[sessionId]/components/practice-session-page-view-focus-restoration.browser.spec.tsx` | **NONE.** Exam navigation/focus coverage only. Do not add tutor terminal coverage here unless implementation changes focus restoration semantics (it should not). |
+| `app/(app)/app/practice/[sessionId]/page.test.tsx` | **LOW.** Static shell asserts `End session` at line 116 and has no tutor last-question fixture. Header is unchanged; add no assertion unless a real last-tutor-question fixture already exists or is introduced for another reason. |
+| `tests/e2e/practice.spec.ts` | **MEDIUM.** The first tutor E2E currently ends via the header `End session` after Q1. Preserve that header escape test if desired, but add or adjust a tutor-flow path that walks to Q-last and clicks bottom-bar `View Summary` as the terminal action. The long-feedback tutor scroll test can remain focused on document-flow footer visibility unless it is expanded to cover Q-last. |
 
 Test discipline reminders:
 
@@ -252,6 +275,7 @@ Test discipline reminders:
 - **`vitest-browser-react`** for `*.browser.spec.tsx`. `{ spy: true }` if any controller mocking is needed (see DEBT-368).
 - **Region-scoped queries.** Use `[data-testid="tutor-action-primary-group"]` / `[data-testid="tutor-action-secondary-group"]` / `[data-testid="bottom-action-bar"]` to scope assertions inside the action bar.
 - **Stable selectors.** `getByRole('button', { name: 'View Summary' })` over class-token assertions.
+- **Variant assertions are behavioral here.** It is acceptable to assert `data-variant="outline"` before submit and `data-variant="default"` after submit because `Button` exposes `data-variant` as a stable component contract and this ticket explicitly preserves primary-action hierarchy.
 - No snapshot rewrites. No `.first()` / `.nth()` shortcuts.
 
 ## Verification
@@ -259,6 +283,9 @@ Test discipline reminders:
 Local pre-push gate (must run before push, not just before PR):
 
 ```bash
+pnpm db:test:up
+DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm db:migrate
+SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm db:seed
 pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
 ```
 
@@ -287,16 +314,18 @@ rg "tutor-action-primary-group|tutor-action-secondary-group" -g '*.tsx'
 - **Doc-first cadence.** This doc lands on `dev` first and is reviewed via the audit pass referenced in the god prompt below. Implementation branches off `dev` only after the audit returns clean and the user grades the doc.
 - **Stop before merge.** The implementing agent must STOP after the implementation PR is CR-clean and await explicit user grade before merging. No autonomous merge.
 - **Out of scope (deliberately):**
-  - **Pre-submit `Next` clickability in tutor mode.** The current `TutorActionBar` allows clicking `Next` before submitting on Q1 / Q2 (line 151 renders `Next` regardless of `submitResult` when `hasNextQuestion === true`), letting users skip per-question feedback that is the value prop of tutor mode. Real concern, distinct surface — file as DEBT-376 if the user wants it tracked.
-  - **Question Navigator card vertical density.** The top `QuestionNavigator` card consumes substantial vertical real-estate (`practice-session-page-view.tsx:230-236`). Distinct surface — file as DEBT-377 if the user wants it tracked.
+  - **Pre-submit `Next` clickability in tutor mode.** The current `TutorActionBar` allows clicking `Next` before submitting on Q1 / Q2 (`practice-view.tsx:146-158`; the button is disabled only by loading/pending state, not by `submitResult`). DEBT-375 intentionally preserves that behavior for the new terminal slot by rendering pre-submit `View Summary` as an outline button. Whether tutor mode should force feedback before forward navigation is a real concern, but it is distinct — file as DEBT-376 if the user wants it tracked.
+  - **Question Navigator card vertical density.** The top `QuestionNavigator` card consumes substantial vertical real estate (`exam-review-view.tsx:52-57`, invoked from `practice-session-page-view.tsx:229-236`). Distinct surface — file as DEBT-377 if the user wants it tracked.
   - **`Finish exam` dead-prop label** (`practice-session-page-view.tsx:267`). The exam-mode branch of `endSessionLabel` is unreachable in shipped flow because the header button is `!isExamMode`-gated. Cosmetic cruft, not a bug. Out of scope for DEBT-375; can be cleaned up alongside any future exam-header touch.
   - **Header layout refactor.** The tutor `End session` header button is preserved by design per First-Principles Framing.
 
 ## Acceptance
 
-- Footer renders a primary `View Summary` button on the last tutor question in both pre-submit and post-submit states, calling `onEndSession`.
+- Footer renders a terminal `View Summary` button on the last tutor question in both pre-submit and post-submit states, calling `onEndSession`.
+- Pre-submit `View Summary` uses `variant="outline"` so `Submit` remains the sole primary/default action. Post-submit `View Summary` uses `variant="default"` so the terminal completion action becomes primary after feedback is visible.
 - `TutorActionBar` body splits into two sibling group `<div>`s with `data-testid="tutor-action-primary-group"` and `data-testid="tutor-action-secondary-group"`, mirroring the exam pattern.
 - `Bookmark` is the only member of the secondary group, gated on `hasBooleanCorrectness(submitResult)`.
+- `PracticeView` rendered without `onEndSession` still falls back to `ActionBarSpacer` on the last non-exam question; Quick Practice / ad-hoc surfaces do not grow a dead `View Summary` button.
 - Header `End session` button (`practice-view.tsx:391-413`) is bit-for-bit unchanged.
 - `ExamActionBar` is bit-for-bit unchanged.
 - All affected tests updated with stable, semantic assertions; no snapshot rewrites; no class-token assertions for purely presentational styles.
