@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-05-02 (DEBT-375 resolved)
+**Last Updated:** 2026-05-02 (DEBT-376 filed)
 
 ---
 
@@ -20,8 +20,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is billing-flow `form-action` verification plus enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
+| [DEBT-376](./debt-376-active-exam-finish-exam-label-lies-about-its-action.md) | `practice-session-page-view.tsx:267` passes `endSessionLabel='Finish exam'` for exam mode, but the underlying `onEndSession` (active session) calls `loadReview()` — it navigates to Review & Submit, it does NOT finalize the exam. The label is reachable in `PracticeView`'s empty-state edge case (`loadState === 'ready' && question === null` in exam mode). Trailing-edge stale vocabulary from DEBT-322 D-2's deliberate `'Review answers' → 'Finish exam'` rename, never updated when DEBT-363 Concern 2 (PR #281) dropped the active-exam header button. Recommendation: Option α — one-line rename to `'Review & Submit'` matching DEBT-361's canonical label, plus updates to the 4 test references in 3 files (`practice-view-layout.test.tsx`, `practice-session-page-view-active-question.browser.spec.tsx`, `tests/e2e/practice.spec.ts`) | P3 | — |
 
-**Next Debt ID:** DEBT-376
+**Next Debt ID:** DEBT-377
 
 ---
 
