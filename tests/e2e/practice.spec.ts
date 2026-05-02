@@ -140,6 +140,50 @@ test.describe('practice', () => {
     ).toBeVisible();
   });
 
+  test('subscribed user can finish a tutor session from the last-question footer', async ({
+    page,
+  }) => {
+    await signInWithClerkPassword(page);
+    await ensureSubscribed(page);
+
+    await startSession(page, 'tutor', 3);
+
+    for (const questionNumber of [1, 2] as const) {
+      await expect(
+        page.getByText(`Question ${questionNumber} of 3`),
+      ).toBeVisible();
+      await selectChoiceByLabel(page, 'A');
+      await page.getByRole('button', { name: 'Submit' }).click();
+      await expect(page.getByTestId('verdict-pill')).toBeVisible({
+        timeout: 10_000,
+      });
+      await page
+        .getByTestId('bottom-action-bar')
+        .getByRole('button', { name: 'Next' })
+        .click();
+    }
+
+    await expect(page.getByText('Question 3 of 3')).toBeVisible();
+    await selectChoiceByLabel(page, 'A');
+    await page.getByRole('button', { name: 'Submit' }).click();
+    await expect(page.getByTestId('verdict-pill')).toBeVisible({
+      timeout: 10_000,
+    });
+
+    const bottomActionBar = page.getByTestId('bottom-action-bar');
+    await expect(
+      bottomActionBar.getByRole('button', { name: 'View Summary' }),
+    ).toBeVisible();
+    await expect(
+      bottomActionBar.getByRole('button', { name: 'Next' }),
+    ).toHaveCount(0);
+
+    await bottomActionBar.getByRole('button', { name: 'View Summary' }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Session Summary' }),
+    ).toBeVisible({ timeout: 30_000 });
+  });
+
   test('quick practice submit shows correctness feedback', async ({ page }) => {
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);

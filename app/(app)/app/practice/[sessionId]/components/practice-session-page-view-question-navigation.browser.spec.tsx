@@ -383,7 +383,10 @@ test('hasPreviousQuestion is true when current question is not first', async () 
     .not.toBeDisabled();
 });
 
-test('hasNextQuestion is false when current question is last available', async () => {
+test('routes the last tutor-question footer View Summary button through onEndSession instead of onNextQuestion', async () => {
+  const onEndSession = vi.fn();
+  const onNextQuestion = vi.fn();
+
   const screen = await render(
     <PracticeSessionPageView
       summary={null}
@@ -442,19 +445,24 @@ test('hasNextQuestion is false when current question is last available', async (
       bookmarkStatus="idle"
       isBookmarked={false}
       canSubmit={false}
-      onEndSession={noop}
+      onEndSession={onEndSession}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onSelectChoice={noop}
       onSubmit={noop}
-      onNextQuestion={noop}
+      onNextQuestion={onNextQuestion}
       onNavigateQuestion={noop}
     />,
   );
 
+  const bottomActionBar = screen.getByTestId('bottom-action-bar');
+
   await expect
-    .element(screen.getByRole('button', { name: 'Next' }))
+    .element(bottomActionBar.getByRole('button', { name: 'Next' }))
     .not.toBeInTheDocument();
+  await bottomActionBar.getByRole('button', { name: 'View Summary' }).click();
+  expect(onEndSession).toHaveBeenCalledTimes(1);
+  expect(onNextQuestion).not.toHaveBeenCalled();
 });
 
 test('clicking Next in a completed session navigates to the next available question id', async () => {

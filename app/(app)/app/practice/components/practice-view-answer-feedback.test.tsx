@@ -174,6 +174,7 @@ describe('PracticeView answer feedback', () => {
     );
 
     expect(html).not.toContain('Review answers');
+    expect(html).toContain('View Summary');
   });
 
   it('passes selected choice context to feedback after submit', () => {

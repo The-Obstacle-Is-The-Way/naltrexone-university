@@ -645,3 +645,70 @@ test('calls onEndSession from the bottom-bar Review & Submit button on the last 
   await screen.getByRole('button', { name: 'Review & Submit' }).click();
   expect(onEndSession).toHaveBeenCalledTimes(1);
 });
+
+test('calls onEndSession from the bottom-bar View Summary button on the last tutor question', async () => {
+  const onEndSession = vi.fn();
+  const onNextQuestion = vi.fn();
+
+  const screen = await render(
+    <PracticeView
+      sessionInfo={{
+        sessionId: 'session-1',
+        mode: 'tutor',
+        index: 1,
+        total: 2,
+        isMarkedForReview: false,
+      }}
+      loadState={{ status: 'ready' }}
+      question={{
+        questionId: 'question-2',
+        slug: 'question-2',
+        stemMd: 'What is the next best step?',
+        difficulty: 'easy',
+        choices: [
+          { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
+        ],
+        session: null,
+      }}
+      selectedChoiceId="choice_a"
+      isAnswered={true}
+      submitResult={{
+        attemptId: 'attempt-1',
+        isCorrect: true,
+        correctChoiceId: 'choice_a',
+        explanationMd: 'Because',
+        referenceMd: null,
+        choiceExplanations: [],
+      }}
+      isPending={false}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      canSubmit={false}
+      onEndSession={onEndSession}
+      onTryAgain={() => undefined}
+      onToggleBookmark={() => undefined}
+      onSelectChoice={() => undefined}
+      onSubmit={() => undefined}
+      onNextQuestion={onNextQuestion}
+      onPreviousQuestion={() => undefined}
+      hasPreviousQuestion
+      hasNextQuestion={false}
+    />,
+  );
+
+  const primaryGroup = screen.getByTestId('tutor-action-primary-group');
+  const secondaryGroup = screen.getByTestId('tutor-action-secondary-group');
+
+  await expect.element(primaryGroup).toBeVisible();
+  await expect.element(secondaryGroup).toBeVisible();
+  await expect
+    .element(primaryGroup.getByRole('button', { name: 'View Summary' }))
+    .toBeVisible();
+  await expect
+    .element(secondaryGroup.getByRole('button', { name: 'Bookmark' }))
+    .toBeVisible();
+
+  await primaryGroup.getByRole('button', { name: 'View Summary' }).click();
+  expect(onEndSession).toHaveBeenCalledTimes(1);
+  expect(onNextQuestion).not.toHaveBeenCalled();
+});
