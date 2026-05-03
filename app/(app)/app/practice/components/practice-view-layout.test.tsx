@@ -195,7 +195,7 @@ describe('PracticeView layout', () => {
   it('renders an explicit session action when no more questions remain', () => {
     const html = renderToStaticMarkup(
       <PracticeView
-        endSessionLabel="Finish exam"
+        endSessionLabel="Review & Submit"
         loadState={{ status: 'ready' }}
         question={null}
         selectedChoiceId={null}
@@ -216,7 +216,7 @@ describe('PracticeView layout', () => {
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const endButtons = Array.from(doc.querySelectorAll('button')).filter(
-      (button) => button.textContent?.includes('Finish exam'),
+      (button) => button.textContent?.includes('Review & Submit'),
     );
     expect(endButtons).toHaveLength(2);
   });

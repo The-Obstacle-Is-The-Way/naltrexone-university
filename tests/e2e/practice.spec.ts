@@ -248,9 +248,6 @@ test.describe('practice', () => {
     await expect(
       page.getByRole('button', { name: 'Review & Submit' }),
     ).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Finish exam' })).toHaveCount(
-      0,
-    );
     await expect(
       page
         .getByTestId('bottom-action-bar')

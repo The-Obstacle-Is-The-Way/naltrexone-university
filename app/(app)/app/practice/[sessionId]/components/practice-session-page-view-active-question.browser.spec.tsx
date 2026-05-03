@@ -87,7 +87,7 @@ test('renders active question branch with navigator and navigation callback', as
   expect(onNavigateQuestion).toHaveBeenCalledWith('q2');
 });
 
-test('does not render Finish exam in the active exam-question header', async () => {
+test('does not render Review & Submit in the active exam-question header', async () => {
   const screen = await render(
     <PracticeSessionPageView
       summary={null}
@@ -127,7 +127,7 @@ test('does not render Finish exam in the active exam-question header', async () 
   );
 
   await expect
-    .element(screen.getByRole('button', { name: 'Finish exam' }))
+    .element(screen.getByRole('button', { name: 'Review & Submit' }))
     .not.toBeInTheDocument();
   await expect
     .element(screen.getByRole('button', { name: 'End session' }))
