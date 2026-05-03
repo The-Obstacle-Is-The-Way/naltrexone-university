@@ -264,7 +264,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       bookmarkMessage={props.bookmarkMessage}
       bookmarkMessageVersion={props.bookmarkMessageVersion}
       canSubmit={props.canSubmit}
-      endSessionLabel={mode === 'exam' ? 'Finish exam' : 'End session'}
+      endSessionLabel={mode === 'exam' ? 'Review & Submit' : 'End session'}
       onEndSession={props.onEndSession}
       onTryAgain={onTryAgainResolved}
       onRetryBookmarks={props.onRetryBookmarks}
