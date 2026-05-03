@@ -10,6 +10,8 @@
 
 **Audit verdict #2 (2026-05-03, SHA `b3813de9` → V1 redirect):** Recommendation pivoted from font-weight tweak to a chrome-and-shape fix after visual exploration in Claude Design surfaced V1 ("Borderless tonal + rounded-md") as the actual answer. Diagnosis evolved through three iterations — font-weight → font-size → chrome density — and landed on **the chip's per-chip border and `rounded-full` shape** as the dominant levers, with text dimming as a supporting de-emphasis. Recommendation is now Option α = V1.
 
+**Audit verdict #3 (2026-05-03, SHA `30c1c679`):** Refined after V1 source/design-system audit. Corrected the exact production diff to remove the stale border-color focus token (`focus-visible:border-ring`) when the `border` utility is removed, replaced the inaccurate "remove FilterChip from required-boundaries" instruction with the actual Contrast Policy update (rewrite the existing supplementary-fill row), added the missing Standards hover-pattern and Pattern Registry summary-table sync, recorded computed V1 text/fill contrast ratios, and made the light-mode fill fallback an explicit visual-QA decision rule.
+
 ---
 
 ## TL;DR
@@ -18,7 +20,7 @@ The chips in the "Start a session" card visually dominate the form because of th
 
 The fix is three coordinated changes to `components/ui/filter-chip.tsx`:
 
-1. **Drop the per-chip border.** Identification via fill + cursor + hover + focus + `aria-pressed` (same model as dashboard rows / I-1 tonal-fill variant).
+1. **Drop the per-chip border.** Identification via fill + cursor + hover + focus ring + `aria-pressed` (same model as dashboard rows / I-1 tonal-fill variant).
 2. **Square the corners.** `rounded-full` → `rounded-md` to match the rest of the card's shape vocabulary.
 3. **Dim the unselected text.** `text-foreground` → `text-foreground/80`, with `hover:text-foreground` restoring full strength on hover. Selected chips keep full-strength `text-primary-foreground` on `bg-primary`.
 
@@ -65,9 +67,9 @@ Three of the four columns differ between SegmentedControl and the current Filter
 ### Historical context — how we got here
 
 - **DEBT-290** (2026-03-09) — gave the disclosure containers `bg-foreground/5` tonal fill. Helped surface depth.
-- **DEBT-291** (2026-03-09) — restored AA on chip border in light mode (`border-foreground/45`). Strengthened chip outline. **V1 removes this border entirely; this debt's premise (chip border IS the SC 1.4.11 required boundary) gets reclassified — fill becomes supplementary boundary, identification rests on text + cursor + hover + focus + `aria-pressed`, mirroring the dashboard rows pattern (I-1).**
+- **DEBT-291** (2026-03-09) — restored AA on chip border in light mode (`border-foreground/45`). Strengthened chip outline. **V1 removes this border entirely; this debt's premise (chip border IS the SC 1.4.11 required boundary) gets reclassified — the fill remains a supplementary tonal cue, while identification rests on text + cursor + hover + focus ring + `aria-pressed`, mirroring the dashboard rows pattern (I-1).**
 - **DEBT-292** (2026-03-09) — added the disclosure chevron and moved padding/focus structure onto the clickable `<summary>`. Strengthened disclosure affordance. Untouched by V1.
-- **DEBT-294** (2026-03-09) — added `bg-foreground/[0.07]` rest fill to chips. **V1 keeps this fill.**
+- **DEBT-294** (2026-03-09) — added `bg-foreground/[0.07]` rest fill to chips. **V1 keeps this fill; its role expands from "depth on top of a required border" to the chip's tonal surface cue, while the component remains identified by text + cursor + hover + focus ring + `aria-pressed`.**
 - **DEBT-295** (2026-03-09) — promoted unselected chip text from `text-foreground/60` to full `text-foreground` to fix unselected-text contrast. **V1 dims to `text-foreground/80` (still well above AA at this fill); restores full `text-foreground` on hover. This is a *dim*, not a *revert* — `/80` sits halfway between DEBT-295's full `/100` and the pre-DEBT-295 `/60`, recovering the hierarchy delta without re-creating the original contrast complaint.**
 - **DEBT-296** (2026-03-09) — swapped summary metadata hierarchy. Untouched by V1.
 - **DEBT-297** (2026-03-10) — made "Start a session" a real `<h2>` with `text-base font-semibold`. Untouched by V1.
@@ -86,7 +88,7 @@ The applicable principles for V1 (the doc uses these as design principles, not d
 4. **Match chrome to importance.** Filter chips for tag selection are *secondary metadata* UI. They should not have more chrome than primary controls (the SegmentedControls). After V1, they have *less* chrome — appropriate for their role.
 5. **Function-form alignment.** Pills (`rounded-full`) read as **tags** — decorative metadata badges. Rectangular rounded buttons read as **toggle controls** — what filter chips functionally are. The shape change isn't cosmetic; it's correcting a function-form mismatch.
 
-External design-system precedents that already follow this approach for filter chips: Material Design 3 "tonal filter chip" (rounded-corner rectangle, no border in tonal variant), shadcn `Badge` primitive (rounded-md default), Linear filter pills (borderless), Notion database tag chips (borderless tinted).
+External precedent is directional, not load-bearing: Material Design 3's tonal chip family, Linear-style dense filters, and Notion-style database tags all demonstrate that dense filter controls can remain tappable without every unselected item carrying its own stroked edge. The local source of truth is still this repo's existing `rounded-md` control vocabulary (`SegmentedControl`, form controls, and Button defaults).
 
 ---
 
@@ -118,13 +120,12 @@ Brand-level question, not CSS-level. Out of scope; revisit only through a delibe
 
 ## Design system impact
 
-V1 touches the system in three places that need synchronized updates:
+V1 touches four design-system docs that need synchronized updates:
 
-1. **Pattern Registry I-4 (FilterChip).** Rewrite the rest/hover/selected token tables. The current entry classifies the chip border as the SC 1.4.11 required boundary at ~3.40:1 — V1 changes that classification: the chip becomes a borderless tonal surface in the I-1 family (dashboard nested rows), with identification via text + cursor + hover + focus + `aria-pressed` rather than a stroked edge.
-2. **Standards.md "Border Radius" table.** Currently lists `Chips / pills | rounded-full`. V1 changes this to `Chips / filter chips | rounded-md`, with a footnote that filter chips are functionally toggle controls (matching SegmentedControl shape vocabulary), distinct from decorative tag/badge pills which may continue using `rounded-full` if introduced later.
+1. **Pattern Registry I-4 (FilterChip).** Rewrite the rest/hover/selected token tables and the Part 9 summary row. The current entry classifies the chip border as the SC 1.4.11 required boundary at ~3.40:1 — V1 changes that classification: the chip becomes a borderless tonal-fill surface analogous to the I-1 dashboard nested-row model, with identification via text + cursor + hover + focus ring + `aria-pressed` rather than a stroked edge.
+2. **Standards.md "Border Radius" table + hover-pattern table.** Currently lists `Chips / pills | rounded-full` and says filter chips use `hover:bg-foreground/[0.12] hover:border-foreground/60`. V1 changes these to `Filter chips | rounded-md` and `hover:bg-foreground/[0.12] hover:text-foreground`, with a footnote that filter chips are functionally toggle controls (matching SegmentedControl shape vocabulary), distinct from decorative tag/badge pills which may continue using `rounded-full` if introduced later.
 3. **Pages/practice.md FilterChip table.** Update shipped state to V1 tokens. Sync line-number anchors against the post-implementation `practice-session-starter.tsx`.
-
-The Contrast Policy (§2 "Classified required boundaries") does NOT need a new entry — it needs to **remove** the FilterChip required-boundary classification (since the border, which was the boundary, is gone) and the existing "Classified supplementary fills" table (§2) gains a new row for the FilterChip rest fill, mirroring the dashboard rows entry.
+4. **Contrast Policy supplementary-fill row.** The Contrast Policy already lists FilterChip under §2 "Classified supplementary fills"; it does **not** have a separate FilterChip row under "Classified required boundaries" to delete. Rewrite the existing "Practice filter chips rest fill (I-4 variant)" row so it no longer says the border carries the required-boundary role, updates `text-foreground` to `text-foreground/80` with the computed AA ratios, and describes the borderless identification model.
 
 ---
 
@@ -143,7 +144,7 @@ All three bars are met.
 
 ### Option α — V1: Borderless + rounded-md + dimmed text (recommended)
 
-**Change scope:** `components/ui/filter-chip.tsx` (production), `components/ui/filter-chip.test.tsx` (token assertions), `docs/frontend/pattern-registry.md` (I-4 rewrite), `docs/frontend/standards.md` ("Border Radius" table row), `docs/frontend/contrast-policy.md` (boundary reclassification), `docs/frontend/pages/practice.md` (FilterChip table sync).
+**Change scope:** `components/ui/filter-chip.tsx` (production), `components/ui/filter-chip.test.tsx` (token assertions), `docs/frontend/pattern-registry.md` (I-4 rewrite + Part 9 summary row), `docs/frontend/standards.md` ("Border Radius" table row + hover-pattern table row), `docs/frontend/contrast-policy.md` (FilterChip supplementary-fill row reclassification), `docs/frontend/pages/practice.md` (FilterChip table sync).
 
 **The exact production diff:**
 
@@ -151,7 +152,8 @@ All three bars are met.
   // FilterChip — components/ui/filter-chip.tsx (current)
 - 'inline-flex cursor-pointer items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
 + 'inline-flex cursor-pointer items-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-  'outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+- 'outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
++ 'outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]',
   'disabled:pointer-events-none disabled:opacity-50',
   selected
 -   ? 'border-primary bg-primary text-primary-foreground'
@@ -162,6 +164,7 @@ All three bars are met.
 
 What changed:
 - **Shared base loses `border` and `rounded-full`.** Adds `rounded-md`. (The `border` utility was setting `border-width: 1px`; without it, no border renders at all.)
+- **Focus styling loses `focus-visible:border-ring`.** With no rendered border width, the border-color focus token is stale/no-op. The visible focus ring remains via `focus-visible:ring-ring/50 focus-visible:ring-[3px]`.
 - **Selected loses `border-primary`.** That class was redundant on `bg-primary` anyway (same color); now removed cleanly.
 - **Unselected loses all four border-related classes** (`border-foreground/45`, `hover:border-foreground/60`, `dark:border-foreground/40`, `dark:hover:border-foreground/70`).
 - **Unselected text color drops** from `text-foreground` to `text-foreground/80`. Hover restores full `text-foreground`.
@@ -173,7 +176,7 @@ What stays the same:
 - `bg-foreground/[0.07]` rest fill — unchanged
 - `hover:bg-foreground/[0.12]` hover fill — unchanged
 - `cursor-pointer` — unchanged
-- Focus ring — unchanged
+- Focus-visible ring — unchanged (`focus-visible:ring-ring/50 focus-visible:ring-[3px]`)
 - `aria-pressed`, disabled handling — unchanged
 
 **Why this option:**
@@ -188,7 +191,7 @@ What stays the same:
 - S1-S5 (stat prominence, disclosure asymmetry, row hang, palette, heading bump) — explicitly out of scope.
 
 **What this might surface:**
-- After dropping the border, the disclosure container fill (`bg-foreground/5`) and the chip rest fill (`bg-foreground/[0.07]`) provide a 2-percentage-point delta. In dark mode that's roughly a 1-pt lightness step — perceptible but subtle. If visual QA shows the chip rest doesn't read as a tappable surface clearly enough without the border, the fallback is to bump the chip rest fill to `bg-foreground/[0.10]` while keeping the rest of V1 intact. This is a one-line tweak, not a redesign.
+- After dropping the border, the disclosure container fill (`bg-foreground/5`) and the chip rest fill (`bg-foreground/[0.07]`) provide a 2-percentage-point foreground-opacity delta. Computed against current tokens: dark parent `#1d1d1d` → chip `#2c2c2c` is ~1.21:1; light parent `#f2f3f3` → chip `#e1e3e4` is ~1.16:1. This is intentionally supplementary, not a required 3:1 boundary. The text remains comfortably AA: `text-foreground/80` resolves to ~8.18:1 in dark mode and ~9.67:1 in light mode against the chip fill. Do **not** preemptively bump the fill; only fall back to `bg-foreground/[0.10]` if light-mode visual QA shows borderless chips collapsing into the disclosure container.
 
 ### Option α-extended — α + stat number + heading bump (medium)
 
@@ -225,19 +228,22 @@ Cross-surface label hierarchy audit, color personality audit, etc. Out of scope;
 
 When α (V1) is implemented:
 
-1. **`components/ui/filter-chip.tsx`** matches the exact production diff above. The shared base contains `rounded-md` (not `rounded-full`) and does NOT contain the `border` utility class. Selected variant: `bg-primary text-primary-foreground` (no `border-primary`). Unselected variant: `bg-foreground/[0.07] text-foreground/80 hover:bg-foreground/[0.12] hover:text-foreground` (no border classes at all).
+1. **`components/ui/filter-chip.tsx`** matches the exact production diff above. The shared base contains `rounded-md` (not `rounded-full`) and does NOT contain the `border` utility class. Focus styling keeps `focus-visible:ring-ring/50 focus-visible:ring-[3px]` and removes stale `focus-visible:border-ring`. Selected variant: `bg-primary text-primary-foreground` (no `border-primary`). Unselected variant: `bg-foreground/[0.07] text-foreground/80 hover:bg-foreground/[0.12] hover:text-foreground` (no border classes at all).
 2. **`components/ui/filter-chip.test.tsx`** updated:
-   - **Unselected styling test (`:42-68`)**: assert `rounded-md` present, `rounded-full` absent, `border-foreground/45` absent, `dark:border-foreground/40` absent, `text-foreground/80` present, `text-foreground` absent (the bare `text-foreground` token), `hover:text-foreground` present, `hover:border-foreground/60` absent, `dark:hover:border-foreground/70` absent. Existing `bg-foreground/[0.07]`, `hover:bg-foreground/[0.12]`, `cursor-pointer` assertions remain unchanged.
-   - **Selected styling test (`:33-40`)**: add `rounded-md` present, `rounded-full` absent, `border-primary` absent assertions. Existing `bg-primary`, `aria-pressed="true"` assertions unchanged.
+   - **Unselected styling test (`:42-68`)**: assert `rounded-md` present, `rounded-full` absent, base `border` absent, `focus-visible:border-ring` absent, `focus-visible:ring-ring/50` present, `focus-visible:ring-[3px]` present, `border-foreground/45` absent, `dark:border-foreground/40` absent, `text-foreground/80` present, `text-foreground` absent (the bare `text-foreground` token), `hover:text-foreground` present, `hover:border-foreground/60` absent, `dark:hover:border-foreground/70` absent. Existing `bg-foreground/[0.07]`, `hover:bg-foreground/[0.12]`, `cursor-pointer` assertions remain unchanged.
+   - **Selected styling test (`:33-40`)**: add `rounded-md` present, `rounded-full` absent, base `border` absent, `focus-visible:border-ring` absent, `border-primary` absent assertions. Existing `bg-primary`, `aria-pressed="true"` assertions unchanged.
    - **`text-sm font-medium` still present on both branches** (text size and weight do not change in V1).
 3. **`docs/frontend/pattern-registry.md` I-4 entry** rewritten:
-   - Shared base loses `border` and `rounded-full`; gains `rounded-md`.
+   - Shared base loses `border`, `rounded-full`, and `focus-visible:border-ring`; gains `rounded-md`.
    - Selected variant loses `border-primary`.
    - Unselected variant loses all border tokens; gains `text-foreground/80` and `hover:text-foreground`.
-   - Design rationale paragraph rewritten to reflect: "FilterChip moves to the I-1 borderless tonal-fill family. Identification rests on text + fill + cursor + hover + focus + `aria-pressed`, not on a stroked edge. Shape unified to `rounded-md` to match SegmentedControl items and Button defaults — filter chips are functionally toggle controls, not decorative pills."
+   - Design rationale paragraph rewritten to reflect: "FilterChip moves to the I-1 borderless tonal-fill family. Identification rests on text + fill + cursor + hover + focus ring + `aria-pressed`, not on a stroked edge. Shape unified to `rounded-md` to match SegmentedControl items and Button defaults — filter chips are functionally toggle controls, not decorative pills."
    - Add a single sentence linking back to DEBT-377 explaining the V1 redirect from font-weight to chrome.
-4. **`docs/frontend/standards.md` "Border Radius" table**: the row currently reading `Chips / pills | rounded-full` becomes `Filter chips | rounded-md` (or equivalent prose distinguishing functional toggle chips from any future decorative tag pills). Confirm there are no remaining production consumers of `rounded-full` chip styling outside this debt's scope.
-5. **`docs/frontend/contrast-policy.md`**: remove the FilterChip required-boundary classification from §2 "Classified required boundaries" (the border that *was* the boundary is gone). Add a row to "Classified supplementary fills" for the FilterChip rest fill, mirroring the dashboard nested rows entry — `bg-foreground/[0.07]` rest, `hover:bg-foreground/[0.12]` hover, identification via text + cursor + hover + focus + `aria-pressed`.
+   - Part 9 summary row for `I-4 | Filter Chip` updated to hover `hover:bg-foreground/[0.12] hover:text-foreground`, radius `rounded-md`, boundary `borderless tonal fill`.
+4. **`docs/frontend/standards.md`**:
+   - "Border Radius" table: the row currently reading `Chips / pills | rounded-full` becomes `Filter chips | rounded-md` (or equivalent prose distinguishing functional toggle chips from any future decorative tag pills). Confirm there are no remaining production consumers of `rounded-full` chip styling outside this debt's scope.
+   - "Interactive row/card hover" table: replace the filter-chip sentence `hover:bg-foreground/[0.12] hover:border-foreground/60` with `hover:bg-foreground/[0.12] hover:text-foreground` and note that the rest state is borderless tonal fill.
+5. **`docs/frontend/contrast-policy.md`**: rewrite the existing §2 "Classified supplementary fills" row for "Practice filter chips rest fill (I-4 variant)" rather than adding/removing a row elsewhere. New row: `bg-foreground/[0.07] text-foreground/80` rest, `hover:bg-foreground/[0.12] hover:text-foreground` hover, fill ratio ~1.21:1 dark / ~1.16:1 light vs the tonal parent, text ratio ~8.18:1 dark / ~9.67:1 light, identification via text + cursor + hover fill/text lift + focus ring + `aria-pressed`.
 6. **`docs/frontend/pages/practice.md` FilterChip table** synced to V1 tokens, plus a single sentence in the practice variant section noting the rounded-md change. Source-line anchors against `practice-session-starter.tsx` confirmed current at implementation SHA.
 7. **No production behavior change**: chips are still keyboard accessible, `aria-pressed` still flips on click, focus ring still appears, disabled state still pointer-events-none + opacity-50, hover still produces a perceptible state change.
 8. **All gates green** locally and in CI: `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build`. E2E if local Clerk + Stripe billing env is available.
@@ -246,7 +252,7 @@ When α (V1) is implemented:
    - (b) Selected chips clearly heavier than unselected chips (the bg-primary pop should now read louder against dimmer unselected siblings);
    - (c) Chip shape matches SegmentedControl shape (`rounded-md`);
    - (d) Hover state still produces a visible change (fill ramp + text strengthening);
-   - (e) Light mode chip rest still reads as a tappable surface despite the lower-contrast tonal fill — fall back to the `bg-foreground/[0.10]` rest-fill bump if not.
+   - (e) Light mode chip rest still reads as a tappable surface despite the lower-contrast tonal fill. Fall back to the `bg-foreground/[0.10]` rest-fill bump only if the borderless `/[0.07]` chip fill visually collapses into the `bg-foreground/5` disclosure container in screenshots or manual QA.
 
 ---
 
@@ -314,7 +320,7 @@ If V1 surfaces a regression, revert the single hunk in `filter-chip.tsx`, the co
 - DEBT-290 (filter container tonal fill): `docs/_archive/debt/debt-290-practice-filter-tonal-fill-elevation.md`
 - **DEBT-291 (chip light-mode border AA)**: `docs/_archive/debt/debt-291-filter-chip-light-mode-border-contrast.md` — V1 removes the border this debt strengthened; reclassified accordingly.
 - DEBT-292 (disclosure indicator): `docs/_archive/debt/debt-292-filter-section-disclosure-indicator.md`
-- **DEBT-294 (chip rest fill depth + cursor)**: `docs/_archive/debt/debt-294-filter-chip-fill-depth-and-cursor.md` — V1 keeps this fill; its role expands from supplementary to primary boundary cue (in concert with cursor + hover + focus).
+- **DEBT-294 (chip rest fill depth + cursor)**: `docs/_archive/debt/debt-294-filter-chip-fill-depth-and-cursor.md` — V1 keeps this fill; its role expands from a depth cue beside a required border to the chip's tonal surface cue, while identification still comes from text + cursor + hover + focus ring.
 - **DEBT-295 (chip unselected text weight)**: `docs/_archive/debt/debt-295-filter-chip-unselected-text-weight.md` — V1 dims to `/80` (not a revert to `/60`); hover restores full strength.
 - DEBT-296 (summary text hierarchy swap): `docs/_archive/debt/debt-296-filter-section-summary-hierarchy-swap.md`
 - DEBT-297 (starter card heading polish): `docs/_archive/debt/debt-297-practice-starter-ui-polish.md`
@@ -323,9 +329,8 @@ If V1 surfaces a regression, revert the single hunk in `filter-chip.tsx`, the co
 
 ### External
 - *Refactoring UI* by Adam Wathan & Steve Schoger — applicable principles (paraphrased): borders add noise, depth via background contrast, small consistent shape vocabulary, de-emphasize unselected so selected pops, match chrome to importance.
-- Material Design 3 — "Filter chip" component (rounded-corner rectangle, tonal/borderless variant available).
-- shadcn/ui — `Badge` primitive uses `rounded-md` default; `Button` uses `rounded-md` default.
-- Linear, Notion — borderless tinted filter pill precedents in dense filter UIs.
+- Material Design 3 / Linear / Notion — directional precedent for dense filter/tag controls that rely on tonal fills and state contrast rather than per-item strokes. These are visual references only; repo-local tokens remain the implementation authority.
+- shadcn/ui / local component vocabulary — local `Button`, `Input`, `Select`, and `SegmentedControl` defaults use `rounded-md`; DEBT-377 aligns functional filter chips with that control shape rather than treating them as decorative pills.
 
 ### Visual exploration source
 - Claude Design canvas "Practice chip hierarchy" (2026-05-03) — V1 rendering against current state confirmed the chrome-and-shape diagnosis as the right axis after font-weight and font-size were ruled out via mechanical verification.
@@ -340,4 +345,4 @@ If V1 surfaces a regression, revert the single hunk in `filter-chip.tsx`, the co
 4. **Selected fill unchanged** (`bg-primary`). Selected/unselected delta widens because unselected gets quieter; selected pop stays exactly as it was.
 5. **Do not change SegmentedControl.** Its current shape (`rounded-md`) and behavior are exactly what we're aligning chips to.
 6. **Do not bump section labels or card heading in α.** Section labels at `text-sm font-medium text-foreground` already read heavier than dimmed chip text. If after V1 the form still reads flat at the *heading* level, revisit α-extended as a follow-up.
-7. **Light-mode contingency.** If `bg-foreground/[0.07]` proves insufficient as the chip rest surface in light mode without a border, bump to `bg-foreground/[0.10]` as a one-line follow-up. Do not silently substitute other tokens during implementation; if a fallback is needed, escalate.
+7. **Light-mode contingency.** Computed text contrast clears AA with room (`text-foreground/80` is ~8.18:1 dark / ~9.67:1 light against the V1 chip fill). Fill contrast is intentionally low and supplementary (~1.21:1 dark / ~1.16:1 light vs the tonal parent). Keep `bg-foreground/[0.07]` by default; bump to `bg-foreground/[0.10]` only if light-mode screenshots or manual QA show the borderless chip rest surface no longer reads as tappable. Do not silently substitute other tokens during implementation; if the fallback is needed, call it out in the PR.
