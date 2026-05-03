@@ -2,17 +2,42 @@
 
 **Priority:** P3
 **Created:** 2026-05-02
-**Status:** Active
+**Status:** Resolved 2026-05-03 ([PR #304](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/304), merge commit `001281c7`).
 **Source:** Adversarial second-opinion review during DEBT-375 cleanup, 2026-05-02. Earlier in the same conversation I dismissed `practice-session-page-view.tsx:267` twice — first as "out-of-scope cosmetic cruft" inside the DEBT-375 doc, then as "verifiable dead code" during a follow-up cleanup discussion. A second-opinion agent pushed back, and a deeper excavation found that the line is not dead and the label is semantically incorrect: the button promises a final action (`Finish exam`) but the click handler actually navigates to a different stage (`loadReview()`).
 **Related:**
 
-- [DEBT-322 Exam action bar UX polish](../_archive/debt/debt-322-exam-action-bar-ux-polish.md) — D-2 introduced `'Finish exam'` as the rename target for the active-exam header button on 2026-03-18. Historical origin of the current label.
-- [DEBT-363 Exam shell scroll model and dual-CTA disambiguation](../_archive/debt/debt-363-exam-shell-scroll-model-and-dual-cta.md) — Concern 2 (PR #281) dropped the active-exam header button by gating with `!isExamMode`. The header was the primary consumer of `endSessionLabel`, but the label conditional in the page-view was not updated. This is the moment the current bug was created.
-- [DEBT-361 Exam last question Next label](../_archive/debt/debt-361-exam-last-question-next-label.md) — established `Review & Submit` as the canonical label for the action that loads the review/submit stage in active exam mode. DEBT-376 brings the empty-state edge-case label into alignment with this vocabulary.
-- [DEBT-365 Exam flow affordance and label consistency](../_archive/debt/debt-365-exam-flow-affordance-and-label-consistency.md) — earlier exam-flow vocabulary unification pass; explicitly kept tutor mode out of scope. DEBT-376 closes the trailing edge-case vocabulary divergence inside exam mode that DEBT-365 did not catch.
-- [DEBT-375 Tutor session action bar terminal CTA](../_archive/debt/debt-375-tutor-session-action-bar-no-terminal-cta-on-last-question.md) — flagged this label conditional as out-of-scope cosmetic cruft. This doc retracts that characterization after deeper investigation; the line is not cosmetic, it is wrong.
+- [DEBT-322 Exam action bar UX polish](./debt-322-exam-action-bar-ux-polish.md) — D-2 introduced `'Finish exam'` as the rename target for the active-exam header button on 2026-03-18. Historical origin of the current label.
+- [DEBT-363 Exam shell scroll model and dual-CTA disambiguation](./debt-363-exam-shell-scroll-model-and-dual-cta.md) — Concern 2 (PR #281) dropped the active-exam header button by gating with `!isExamMode`. The header was the primary consumer of `endSessionLabel`, but the label conditional in the page-view was not updated. This is the moment the current bug was created.
+- [DEBT-361 Exam last question Next label](./debt-361-exam-last-question-next-label.md) — established `Review & Submit` as the canonical label for the action that loads the review/submit stage in active exam mode. DEBT-376 brings the empty-state edge-case label into alignment with this vocabulary.
+- [DEBT-365 Exam flow affordance and label consistency](./debt-365-exam-flow-affordance-and-label-consistency.md) — earlier exam-flow vocabulary unification pass; explicitly kept tutor mode out of scope. DEBT-376 closes the trailing edge-case vocabulary divergence inside exam mode that DEBT-365 did not catch.
+- [DEBT-375 Tutor session action bar terminal CTA](./debt-375-tutor-session-action-bar-no-terminal-cta-on-last-question.md) — flagged this label conditional as out-of-scope cosmetic cruft. This doc retracts that characterization after deeper investigation; the line is not cosmetic, it is wrong.
 
-**Audit verified:** 2026-05-02 against `origin/dev` head `22f55e7c`. The handler chain was confirmed from source: active-exam `onEndSession` saves any current exam draft, calls the inner review-stage `onEndSession`, and loads the Review & Submit stage via `loadReview()`; it does not finalize the exam. This document was corrected after audit for archived-doc links, finalization citations, historical framing, and exact test-impact counts.
+**Audit verified:** 2026-05-02 against `origin/dev` head `22f55e7c` (doc); corrections applied in `109878a4`. Independently re-verified post-merge against `001281c7`.
+
+---
+
+## Resolution
+
+Shipped Option α in [PR #304](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/304) (merge commit `001281c7`, 2026-05-03). The active-exam `endSessionLabel` is now `'Review & Submit'` (was `'Finish exam'`), matching DEBT-361's canonical vocabulary for the action that loads the review/submit stage. The button surfaced by `PracticeView`'s empty-state edge case in exam mode now tells the truth about what clicking it does: `onEndSession` in active-exam mode calls `loadReview()`, navigating to the Review & Submit stage rather than finalizing the exam.
+
+Production change is exactly one line at `practice-session-page-view.tsx:267`:
+
+```diff
+- endSessionLabel={mode === 'exam' ? 'Finish exam' : 'End session'}
++ endSessionLabel={mode === 'exam' ? 'Review & Submit' : 'End session'}
+```
+
+Test updates renamed two references in `practice-view-layout.test.tsx` (lines 198 fixture and 219 filter), two references in `practice-session-page-view-active-question.browser.spec.tsx` (line 90 test name and line 130 asserted button name), and deleted one obsolete `'Finish exam'` count-0 assertion at `tests/e2e/practice.spec.ts:251` (the existing scoped bottom-action-bar `Review & Submit` count assertion remains as the durable regression guard). Header (`practice-view.tsx:423-444`), `ExamActionBar` (192-269 with `Review & Submit` at 271-273), `TutorActionBar` (111-205), `ActionBarSpacer` (88-90), the empty-state branch JSX (497-510), and the `endSessionLabel` default in `practice-view.tsx:312` are unchanged.
+
+Verification and review state:
+
+- Local full gate green: `pnpm typecheck`, `pnpm lint` (19 expected warn-only `nursery/noExcessiveLinesPerFile` warnings on legacy oversized tests), `pnpm test --run` 302/302 files / 2,399 tests, `pnpm test:browser` 47/47 files / 242 tests, `pnpm test:integration` 16/16 files / 97 tests, `pnpm build`, and `pnpm test:e2e` 35/35.
+- Layout test invariant correctly preserved: `expect(endButtons).toHaveLength(2)` at line 221 stays at 2 because the test passes no exam `sessionInfo`, so both the header consumer and the empty-state consumer display the new label string.
+- Browser-spec fixture preserved as mid-exam (`sessionInfo.index: 0, total: 2`) so the global absence assertion has no collision with the bottom-bar `Review & Submit` last-question CTA. No header scoping needed.
+- E2E deletion is clean: 3-line block removed without leaving orphan `await` or trailing-comma artifacts; the existing scoped bottom-action-bar `Review & Submit` count assertion remains as the durable regression guard.
+- CodeRabbit latest-head review on `e62ba9e8` returned explicit `APPROVED` with body `"No actionable comments were generated in the recent review."` Zero defended nits; no CR churn.
+- TDD trail caveat: the targeted unit/browser/E2E checks did not go red because the test surfaces inject the label directly (layout test), assert absence in the header where the label is gated off (browser spec), and delete an assertion (E2E). Adding a fixture for the empty-state edge case would require constructing a near-unreachable state and was not required by the spec. The grep contract (`rg "Finish exam" app/ src/ tests/` returns zero hits) is the actual end-to-end regression guard. Honest TDD A− self-grade for cadence; A on artifact quality.
+- Independent post-merge verification confirmed surgical production diff (+1/-1 in `practice-session-page-view.tsx`), test invariants preserved (`toHaveLength(2)`, mid-exam fixture, clean E2E deletion), zero `Finish exam` hits anywhere in `app/ src/ tests/`, CR latest-head explicit APPROVED, and no defended nits. Active register reduces 4 → 3.
 
 ---
 
