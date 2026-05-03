@@ -343,19 +343,22 @@ hover:border-foreground/55 hover:bg-foreground/[0.06] dark:hover:border-foregrou
 Toggle-style filter for tags, modes, difficulty levels.
 
 **Unselected:**
-```
+
+```text
 bg-foreground/[0.07] text-foreground/80 hover:bg-foreground/[0.12] hover:text-foreground
 ```
 
 **Selected:**
-```
+
+```text
 bg-primary text-primary-foreground
 ```
 
 **Shared base:**
-```
+
+```text
 inline-flex cursor-pointer items-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors
-outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
+focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 disabled:pointer-events-none disabled:opacity-50
 ```
 

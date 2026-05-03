@@ -147,7 +147,7 @@ Toggle-style filter button. Uses `aria-pressed` for selected state. DEBT-377 cha
 | State | Classes |
 |-------|---------|
 | **Base** | `inline-flex cursor-pointer items-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors` |
-| **Focus** | `outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]` |
+| **Focus** | `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]` |
 | **Disabled** | `disabled:pointer-events-none disabled:opacity-50` |
 | **Unselected** | `bg-foreground/[0.07] text-foreground/80 hover:bg-foreground/[0.12] hover:text-foreground` |
 | **Selected** | `bg-primary text-primary-foreground` |

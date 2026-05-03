@@ -44,6 +44,8 @@ describe('FilterChip', () => {
     expect(classTokens.has('rounded-full')).toBe(false);
     expect(classTokens.has('border')).toBe(false);
     expect(classTokens.has('focus-visible:border-ring')).toBe(false);
+    expect(classTokens.has('focus-visible:outline-none')).toBe(true);
+    expect(classTokens.has('outline-none')).toBe(false);
     expect(classTokens.has('border-primary')).toBe(false);
     expect(classTokens.has('text-sm')).toBe(true);
     expect(classTokens.has('font-medium')).toBe(true);
@@ -64,6 +66,8 @@ describe('FilterChip', () => {
     expect(classTokens.has('rounded-full')).toBe(false);
     expect(classTokens.has('border')).toBe(false);
     expect(classTokens.has('focus-visible:border-ring')).toBe(false);
+    expect(classTokens.has('focus-visible:outline-none')).toBe(true);
+    expect(classTokens.has('outline-none')).toBe(false);
     expect(classTokens.has('focus-visible:ring-ring/50')).toBe(true);
     expect(classTokens.has('focus-visible:ring-[3px]')).toBe(true);
     expect(classTokens.has('text-sm')).toBe(true);
