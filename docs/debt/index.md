@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-05-03 (DEBT-377 filed)
+**Last Updated:** 2026-05-03 (DEBT-377 spec refined)
 
 ---
 
@@ -17,7 +17,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 
 | ID | Title | Priority | GitHub Issue |
 |----|-------|----------|--------------|
-| [DEBT-377](./debt-377-practice-starter-chip-emphasis-and-hierarchy.md) | Practice starter chip emphasis inversion — `FilterChip` unselected text shares `text-sm font-medium text-foreground` with section labels (`Mode`, `Topic`, etc.), and the chip's border + fill + pill shape pushes its perceived weight *above* the labels that introduce it. Recommended Option α: drop unselected chip weight to `font-normal`, keep selected `font-medium`, leave DEBT-291/294/295/309 boundary/fill/contrast/hover wins intact. Stat prominence, disclosure label asymmetry, heading bump, and grayscale palette explicitly out of scope | P3 | — |
+| [DEBT-377](./debt-377-practice-starter-chip-emphasis-and-hierarchy.md) | Practice starter chip emphasis inversion — `FilterChip` unselected text shares `text-sm font-medium text-foreground` with section labels (`Mode`, `Topic`, etc.), and the chip's border + fill + pill shape pushes its perceived weight *above* the labels that introduce it. Audit-refined Option α: drop unselected chip weight to `font-normal`, keep selected `font-medium`, leave DEBT-291/294/295/309 boundary/fill/contrast/hover wins intact, and sync Pattern Registry + practice page docs. Stat prominence, disclosure label asymmetry, heading bump, chip-row reflow, and grayscale palette explicitly out of scope pending separate evidence | P3 | — |
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is billing-flow `form-action` verification plus enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
