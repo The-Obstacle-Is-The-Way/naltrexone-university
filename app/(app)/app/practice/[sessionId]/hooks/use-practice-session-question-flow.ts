@@ -79,7 +79,7 @@ export function usePracticeSessionQuestionFlow(
     isLatestRequest,
     isMounted,
     canSubmit,
-    onSelectChoice,
+    onSelectChoice: selectChoice,
   } = useQuestionFlowCore({ isMounted: input.isMounted });
 
   const [sessionInfo, setSessionInfo] = useState<NextQuestion['session']>(null);
@@ -329,52 +329,71 @@ export function usePracticeSessionQuestionFlow(
     startTransition,
   ]);
 
-  const onSubmit = useCallback((): Promise<SubmitAnswerOutput | null> => {
-    // `onSuccess` is invoked synchronously within submitAnswerForQuestion before the promise resolves,
-    // ensuring `captured` is populated before `.then(() => captured)` runs.
-    let captured: SubmitAnswerOutput | null = null;
+  const commitChoice = useCallback(
+    (choiceId: string | null): Promise<SubmitAnswerOutput | null> => {
+      // `onSuccess` is invoked synchronously within submitAnswerForQuestion before the promise resolves,
+      // ensuring `captured` is populated before `.then(() => captured)` runs.
+      let captured: SubmitAnswerOutput | null = null;
 
-    return runTransitionedAsyncAction({
+      return runTransitionedAsyncAction({
+        startTransition,
+        run: () =>
+          submitAnswerForQuestion({
+            sessionId: input.sessionId,
+            question,
+            selectedChoiceId: choiceId,
+            questionLoadedAtMs: questionLoadedAt,
+            submitIdempotencyKey,
+            submitAnswerFn: input.submitAnswerFn,
+            nowMs: Date.now,
+            setLoadState,
+            setSubmitResult,
+            onSuccess: (result) => {
+              captured = result;
+            },
+            createRequestSequenceId,
+            isLatestRequest,
+            isMounted,
+          }),
+        onUnhandledError: (error) => {
+          reportClientError(error, {
+            component: 'UsePracticeSessionQuestionFlow',
+            action: 'submitAnswer',
+          });
+        },
+      }).then(() => captured);
+    },
+    [
+      createRequestSequenceId,
+      input.sessionId,
+      input.submitAnswerFn,
+      isLatestRequest,
+      isMounted,
+      question,
+      questionLoadedAt,
+      submitIdempotencyKey,
+      setLoadState,
+      setSubmitResult,
       startTransition,
-      run: () =>
-        submitAnswerForQuestion({
-          sessionId: input.sessionId,
-          question,
-          selectedChoiceId,
-          questionLoadedAtMs: questionLoadedAt,
-          submitIdempotencyKey,
-          submitAnswerFn: input.submitAnswerFn,
-          nowMs: Date.now,
-          setLoadState,
-          setSubmitResult,
-          onSuccess: (result) => {
-            captured = result;
-          },
-          createRequestSequenceId,
-          isLatestRequest,
-          isMounted,
-        }),
-      onUnhandledError: (error) => {
-        reportClientError(error, {
-          component: 'UsePracticeSessionQuestionFlow',
-          action: 'submitAnswer',
-        });
-      },
-    }).then(() => captured);
-  }, [
-    createRequestSequenceId,
-    input.sessionId,
-    input.submitAnswerFn,
-    isLatestRequest,
-    isMounted,
-    question,
-    questionLoadedAt,
-    selectedChoiceId,
-    submitIdempotencyKey,
-    setLoadState,
-    setSubmitResult,
-    startTransition,
-  ]);
+    ],
+  );
+
+  const onSubmit = useCallback((): Promise<SubmitAnswerOutput | null> => {
+    return commitChoice(selectedChoiceId);
+  }, [commitChoice, selectedChoiceId]);
+
+  const onSelectChoice = useCallback(
+    (choiceId: string): void => {
+      if (isPending) return;
+
+      const changed = selectChoice(choiceId);
+      if (!changed) return;
+      if (sessionMode === 'exam') return;
+
+      void commitChoice(choiceId);
+    },
+    [commitChoice, isPending, selectChoice, sessionMode],
+  );
 
   return {
     sessionInfo,
