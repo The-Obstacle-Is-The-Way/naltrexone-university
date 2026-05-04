@@ -170,7 +170,11 @@ function TutorActionBar(props: TutorActionBarProps) {
         variant="outline"
         className="rounded-full"
         aria-pressed={props.isBookmarked}
-        disabled={props.bookmarkStatus === 'loading' || isActionBarDisabled}
+        disabled={
+          props.bookmarkStatus === 'loading' ||
+          props.bookmarkStatus === 'error' ||
+          isActionBarDisabled
+        }
         onClick={props.onToggleBookmark}
       >
         {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}

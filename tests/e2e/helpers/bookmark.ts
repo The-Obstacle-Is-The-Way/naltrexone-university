@@ -3,6 +3,7 @@ import { expect, type Page } from '@playwright/test';
 const QUICK_PRACTICE_BASE = '/app/practice/quick';
 const BOOKMARKS_PAGE_URL = '/app/bookmarks';
 const QUESTION_BUTTON_VISIBILITY_TIMEOUT_MS = 2_000;
+const QUICK_PRACTICE_ANSWER_CHOICES_TIMEOUT_MS = 15_000;
 const BOOKMARKS_PAGE_STATE_TIMEOUT_MS = 10_000;
 const PAGE_NAVIGATION_TIMEOUT_MS = 60_000;
 const BOOKMARKS_PAGE_ERROR_RETRY_COUNT = 3;
@@ -44,8 +45,14 @@ async function hasQuickPracticeQuestion(page: Page): Promise<boolean> {
 
   try {
     await Promise.race([
-      answerChoices.waitFor({ state: 'visible', timeout: 15_000 }),
-      noMoreQuestionsText.waitFor({ state: 'visible', timeout: 15_000 }),
+      answerChoices.waitFor({
+        state: 'visible',
+        timeout: QUICK_PRACTICE_ANSWER_CHOICES_TIMEOUT_MS,
+      }),
+      noMoreQuestionsText.waitFor({
+        state: 'visible',
+        timeout: QUICK_PRACTICE_ANSWER_CHOICES_TIMEOUT_MS,
+      }),
     ]);
   } catch {
     // Fall through to the explicit visibility check below.
@@ -71,7 +78,7 @@ export async function openQuickPracticeQuestion(page: Page): Promise<void> {
   }
 
   await expect(page.getByRole('group', { name: 'Answer choices' })).toBeVisible(
-    { timeout: 15_000 },
+    { timeout: QUICK_PRACTICE_ANSWER_CHOICES_TIMEOUT_MS },
   );
 }
 
