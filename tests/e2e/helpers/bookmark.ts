@@ -35,8 +35,8 @@ function requireBookmarkableQuestionState(
 }
 
 async function hasQuickPracticeQuestion(page: Page): Promise<boolean> {
-  const nextQuestionButton = page.getByRole('button', {
-    name: 'Next',
+  const answerChoices = page.getByRole('group', {
+    name: 'Answer choices',
   });
   const noMoreQuestionsText = page.getByText('No more questions found.', {
     exact: true,
@@ -44,17 +44,14 @@ async function hasQuickPracticeQuestion(page: Page): Promise<boolean> {
 
   try {
     await Promise.race([
-      nextQuestionButton.first().waitFor({ state: 'visible', timeout: 15_000 }),
+      answerChoices.waitFor({ state: 'visible', timeout: 15_000 }),
       noMoreQuestionsText.waitFor({ state: 'visible', timeout: 15_000 }),
     ]);
   } catch {
     // Fall through to the explicit visibility check below.
   }
 
-  return nextQuestionButton
-    .first()
-    .isVisible()
-    .catch(() => false);
+  return answerChoices.isVisible().catch(() => false);
 }
 
 export async function openQuickPracticeQuestion(page: Page): Promise<void> {
@@ -73,9 +70,9 @@ export async function openQuickPracticeQuestion(page: Page): Promise<void> {
     }
   }
 
-  await expect(page.getByRole('button', { name: 'Next' }).first()).toBeVisible({
-    timeout: 15_000,
-  });
+  await expect(page.getByRole('group', { name: 'Answer choices' })).toBeVisible(
+    { timeout: 15_000 },
+  );
 }
 
 export async function ensureBookmarkedQuestion(page: Page): Promise<void> {

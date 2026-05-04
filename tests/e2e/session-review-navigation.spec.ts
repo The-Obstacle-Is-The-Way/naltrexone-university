@@ -61,8 +61,12 @@ test.describe('session review navigation (SPEC-027)', () => {
       timeout: 10_000,
     });
 
-    // End session
-    await page.getByRole('button', { name: 'End session' }).click();
+    // End session from the tutor footer; the header bail button has the same label.
+    const footerEndSessionButton = page
+      .getByTestId('tutor-action-primary-group')
+      .getByRole('button', { name: 'End session' });
+    await expect(footerEndSessionButton).toBeEnabled({ timeout: 10_000 });
+    await footerEndSessionButton.click();
     await expect(
       page.getByRole('heading', { name: 'Session Summary' }),
     ).toBeVisible({ timeout: 15_000 });

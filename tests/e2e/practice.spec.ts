@@ -133,7 +133,11 @@ test.describe('practice', () => {
       page.getByText('Explanation not available.', { exact: true }),
     ).toHaveCount(0);
 
-    await page.getByRole('button', { name: 'End session' }).click();
+    const footerEndSessionButton = page
+      .getByTestId('tutor-action-primary-group')
+      .getByRole('button', { name: 'End session' });
+    await expect(footerEndSessionButton).toBeEnabled({ timeout: 10_000 });
+    await footerEndSessionButton.click();
     await expect(
       page.getByRole('heading', { name: 'Session Summary' }),
     ).toBeVisible();
