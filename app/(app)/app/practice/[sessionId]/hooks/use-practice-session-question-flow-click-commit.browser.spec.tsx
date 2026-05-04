@@ -160,6 +160,47 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
     await expect.poll(() => harness.result.current.isPending).toBe(false);
   });
 
+  it('does not programmatically submit while a tutor choice commit is pending', async () => {
+    const submitDeferred = createDeferred<ActionResult<SubmitAnswerOutput>>();
+    const getNextQuestionFn = vi
+      .fn<(input: unknown) => Promise<ActionResult<NextQuestion | null>>>()
+      .mockResolvedValue(ok(createSessionQuestion('tutor')));
+    const submitAnswerFn = vi
+      .fn<(input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>>()
+      .mockImplementation(async () => submitDeferred.promise);
+    const saveExamDraftAnswerFn =
+      vi.fn<
+        (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
+      >();
+
+    const harness = await renderHook(() =>
+      usePracticeSessionQuestionFlow({
+        sessionId: 'session-1',
+        isMounted: () => true,
+        getNextQuestionFn,
+        submitAnswerFn,
+        saveExamDraftAnswerFn,
+      }),
+    );
+
+    await expect
+      .poll(() => harness.result.current.question?.questionId)
+      .toBe('q_1');
+
+    harness.result.current.onSelectChoice('choice_1');
+
+    await expect.poll(() => submitAnswerFn.mock.calls.length).toBe(1);
+    await expect.poll(() => harness.result.current.isPending).toBe(true);
+
+    await harness.result.current.onSubmit();
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(submitAnswerFn).toHaveBeenCalledTimes(1);
+
+    submitDeferred.resolve(ok(createSubmitOutput('choice_1')));
+    await expect.poll(() => harness.result.current.isPending).toBe(false);
+  });
+
   it('does not commit a tutor choice after submitResult locks the question', async () => {
     const getNextQuestionFn = vi
       .fn<(input: unknown) => Promise<ActionResult<NextQuestion | null>>>()

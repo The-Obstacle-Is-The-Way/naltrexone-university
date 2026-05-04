@@ -177,8 +177,9 @@ export function usePracticeQuestionAnswerFlow(
   );
 
   const onSubmit = useCallback(() => {
+    if (isPending) return Promise.resolve();
     return commitChoice(selectedChoiceId);
-  }, [commitChoice, selectedChoiceId]);
+  }, [commitChoice, isPending, selectedChoiceId]);
 
   const onSelectChoice = useCallback(
     (choiceId: string) => {

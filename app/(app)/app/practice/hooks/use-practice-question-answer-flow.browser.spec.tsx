@@ -268,6 +268,52 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
       .toHaveTextContent('false');
   });
 
+  it('does not programmatically submit while a choice commit is pending', async () => {
+    const submitDeferred = createDeferred<ActionResult<SubmitAnswerOutput>>();
+
+    getNextQuestionMock.mockResolvedValue(
+      ok(
+        createNextQuestion({
+          choices: [
+            { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
+            { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+          ],
+        }),
+      ),
+    );
+    submitAnswerMock.mockImplementation(async () => submitDeferred.promise);
+
+    const screen = await render(<PracticeQuestionAnswerFlowProbe />);
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+
+    await screen
+      .getByRole('button', { name: 'select-choice-1', exact: true })
+      .click();
+    await expect
+      .element(screen.getByTestId('is-pending'))
+      .toHaveTextContent('true');
+    await expect.poll(() => submitAnswerMock.mock.calls.length).toBe(1);
+
+    await screen.getByRole('button', { name: 'submit-answer' }).click();
+
+    expect(submitAnswerMock).toHaveBeenCalledTimes(1);
+    submitDeferred.resolve(
+      ok({
+        attemptId: 'attempt-1',
+        isCorrect: true,
+        correctChoiceId: 'choice_1',
+        explanationMd: null,
+        referenceMd: null,
+        choiceExplanations: [],
+      } satisfies SubmitAnswerOutput),
+    );
+    await expect
+      .element(screen.getByTestId('is-pending'))
+      .toHaveTextContent('false');
+  });
+
   it('does not commit when a previous submit result has locked the question', async () => {
     getNextQuestionMock.mockResolvedValue(
       ok(

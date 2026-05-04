@@ -195,7 +195,7 @@ Exam mode keeps its existing footer contract in this debt. The exam right-slot p
 
 ### Choice Click Semantics
 
-**Sources:** `use-question-flow-core.ts:252-264`, `use-practice-question-answer-flow.ts:183-192`, `use-practice-session-question-flow.ts:385-395`
+**Sources:** `useQuestionFlowCore` → `onSelectChoice` callback, `usePracticeQuestionAnswerFlow` → wrapped `onSelectChoice` callback, `usePracticeSessionQuestionFlow` → session-aware `onSelectChoice` callback
 
 `useQuestionFlowCore.onSelectChoice` is mode-agnostic and returns whether a selection actually changed. Quick Practice / ad-hoc practice wraps that return value and immediately commits the explicit clicked `choiceId`. Active tutor sessions do the same, while active exam sessions stop after selection so answers remain draft-only until Review & Submit / exam finalization.
 

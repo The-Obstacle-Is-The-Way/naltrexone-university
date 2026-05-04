@@ -379,8 +379,9 @@ export function usePracticeSessionQuestionFlow(
   );
 
   const onSubmit = useCallback((): Promise<SubmitAnswerOutput | null> => {
+    if (isPending) return Promise.resolve(null);
     return commitChoice(selectedChoiceId);
-  }, [commitChoice, selectedChoiceId]);
+  }, [commitChoice, isPending, selectedChoiceId]);
 
   const onSelectChoice = useCallback(
     (choiceId: string): void => {

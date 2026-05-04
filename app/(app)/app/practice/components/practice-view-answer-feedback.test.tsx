@@ -84,7 +84,9 @@ describe('PracticeView answer feedback', () => {
       doc.querySelectorAll('input[type="radio"]'),
     );
 
-    expect(actionBar?.querySelectorAll('button')).toHaveLength(0);
+    expect(
+      Array.from(actionBar?.querySelectorAll('button') ?? []),
+    ).toHaveLength(0);
     expect(actionBar?.textContent).not.toContain('Submit');
     expect(actionBar?.textContent).not.toContain('Next');
     expect(choiceInputs.every((input) => !input.hasAttribute('disabled'))).toBe(
