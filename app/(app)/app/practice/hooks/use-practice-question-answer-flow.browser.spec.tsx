@@ -183,7 +183,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     );
   });
 
-  it('uses the explicit clicked choice when two selections happen in the same event', async () => {
+  it('does not double-commit when two selections happen in the same event', async () => {
     getNextQuestionMock.mockResolvedValue(
       ok(
         createNextQuestion({
@@ -194,16 +194,8 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
         }),
       ),
     );
-    submitAnswerMock.mockResolvedValue(
-      ok({
-        attemptId: 'attempt-1',
-        isCorrect: true,
-        correctChoiceId: 'choice_2',
-        explanationMd: null,
-        referenceMd: null,
-        choiceExplanations: [],
-      } satisfies SubmitAnswerOutput),
-    );
+    const submitDeferred = createDeferred<ActionResult<SubmitAnswerOutput>>();
+    submitAnswerMock.mockImplementation(async () => submitDeferred.promise);
 
     const screen = await render(<PracticeQuestionAnswerFlowProbe />);
     await expect
@@ -214,12 +206,28 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
       .getByRole('button', { name: 'select-choice-1-then-2' })
       .click();
 
-    await expect.poll(() => submitAnswerMock.mock.calls.length).toBe(2);
-    expect(submitAnswerMock.mock.calls.at(-1)?.[0]).toEqual(
+    await expect.poll(() => submitAnswerMock.mock.calls.length).toBe(1);
+    await expect
+      .element(screen.getByTestId('selected-choice-id'))
+      .toHaveTextContent('choice_1');
+    expect(submitAnswerMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        choiceId: 'choice_2',
+        choiceId: 'choice_1',
       }),
     );
+    submitDeferred.resolve(
+      ok({
+        attemptId: 'attempt-1',
+        isCorrect: true,
+        correctChoiceId: 'choice_1',
+        explanationMd: null,
+        referenceMd: null,
+        choiceExplanations: [],
+      } satisfies SubmitAnswerOutput),
+    );
+    await expect
+      .element(screen.getByTestId('is-pending'))
+      .toHaveTextContent('false');
   });
 
   it('does not double-commit while a choice commit is pending', async () => {

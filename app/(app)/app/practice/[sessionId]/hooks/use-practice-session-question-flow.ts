@@ -89,6 +89,7 @@ export function usePracticeSessionQuestionFlow(
   >(new Map());
   const currentExamDraftEnteredAtRef = useRef<number | null>(null);
   const currentExamDraftCumulativeMsRef = useRef(0);
+  const commitInFlightRef = useRef(false);
 
   const applySessionInfo = useCallback<
     UsePracticeSessionQuestionFlowOutput['applySessionInfo']
@@ -331,10 +332,13 @@ export function usePracticeSessionQuestionFlow(
 
   const commitChoice = useCallback(
     (choiceId: string | null): Promise<SubmitAnswerOutput | null> => {
+      if (commitInFlightRef.current) return Promise.resolve(null);
+
       // `onSuccess` is invoked synchronously within submitAnswerForQuestion before the promise resolves,
       // ensuring `captured` is populated before `.then(() => captured)` runs.
       let captured: SubmitAnswerOutput | null = null;
 
+      commitInFlightRef.current = true;
       return runTransitionedAsyncAction({
         startTransition,
         run: () =>
@@ -361,7 +365,11 @@ export function usePracticeSessionQuestionFlow(
             action: 'submitAnswer',
           });
         },
-      }).then(() => captured);
+      })
+        .then(() => captured)
+        .finally(() => {
+          commitInFlightRef.current = false;
+        });
     },
     [
       createRequestSequenceId,
@@ -379,13 +387,13 @@ export function usePracticeSessionQuestionFlow(
   );
 
   const onSubmit = useCallback((): Promise<SubmitAnswerOutput | null> => {
-    if (isPending) return Promise.resolve(null);
+    if (isPending || commitInFlightRef.current) return Promise.resolve(null);
     return commitChoice(selectedChoiceId);
   }, [commitChoice, isPending, selectedChoiceId]);
 
   const onSelectChoice = useCallback(
     (choiceId: string): void => {
-      if (isPending) return;
+      if (isPending || commitInFlightRef.current) return;
 
       const changed = selectChoice(choiceId);
       if (!changed) return;

@@ -85,6 +85,7 @@ export function usePracticeQuestionAnswerFlow(
   } = useQuestionFlowCore({ isMounted: input.isMounted });
   const questionAreaRef = useRef<HTMLElement | null>(null);
   const pendingFocusAfterError = useRef(false);
+  const commitInFlightRef = useRef(false);
 
   const onTryAgain = useMemo(
     () =>
@@ -138,6 +139,9 @@ export function usePracticeQuestionAnswerFlow(
 
   const commitChoice = useCallback(
     (choiceId: string | null) => {
+      if (commitInFlightRef.current) return Promise.resolve();
+
+      commitInFlightRef.current = true;
       return runTransitionedAsyncAction({
         startTransition,
         run: () =>
@@ -160,6 +164,8 @@ export function usePracticeQuestionAnswerFlow(
             action: 'submitAnswer',
           });
         },
+      }).finally(() => {
+        commitInFlightRef.current = false;
       });
     },
     [
@@ -177,13 +183,13 @@ export function usePracticeQuestionAnswerFlow(
   );
 
   const onSubmit = useCallback(() => {
-    if (isPending) return Promise.resolve();
+    if (isPending || commitInFlightRef.current) return Promise.resolve();
     return commitChoice(selectedChoiceId);
   }, [commitChoice, isPending, selectedChoiceId]);
 
   const onSelectChoice = useCallback(
     (choiceId: string) => {
-      if (isPending) return;
+      if (isPending || commitInFlightRef.current) return;
 
       const changed = selectChoice(choiceId);
       if (!changed) return;
