@@ -13,7 +13,7 @@ beforeAll(async () => {
 });
 
 describe('PracticeView answer feedback', () => {
-  it('renders submit pending copy without rendering question-loading text', () => {
+  it('does not render question-loading text while an answer commit is pending', () => {
     const question = createNextQuestion({
       questionId: 'question-1',
       slug: 'question-1',
@@ -46,15 +46,23 @@ describe('PracticeView answer feedback', () => {
       />,
     );
 
-    expect(html).toContain('Submitting…');
+    expect(html).not.toContain('Submit');
+    expect(html).not.toContain('Submitting…');
     expect(html).not.toContain('Loading question');
   });
 
-  it('keeps Submit visible and Next outlined before submission', () => {
+  it('keeps the first-question tutor footer empty before any commit', () => {
     const question = createNextQuestion();
 
     const html = renderToStaticMarkup(
       <PracticeView
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'tutor',
+          index: 0,
+          total: 3,
+          isMarkedForReview: false,
+        }}
         loadState={{ status: 'ready' }}
         question={question}
         selectedChoiceId={null}
@@ -69,22 +77,68 @@ describe('PracticeView answer feedback', () => {
         onSelectChoice={() => undefined}
         onSubmit={() => undefined}
         onNextQuestion={() => undefined}
+        onPreviousQuestion={() => undefined}
+        hasPreviousQuestion={false}
+        hasNextQuestion={true}
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const submitButton = Array.from(doc.querySelectorAll('button')).find(
-      (button) => button.textContent?.trim() === 'Submit',
-    );
-    const nextButton = Array.from(doc.querySelectorAll('button')).find(
-      (button) => button.textContent?.trim() === 'Next',
+    const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
+    const choiceInputs = Array.from(
+      doc.querySelectorAll('input[type="radio"]'),
     );
 
-    expect(submitButton).not.toBeUndefined();
-    expect(nextButton).not.toBeUndefined();
-    expect(nextButton?.getAttribute('data-variant')).toBe('outline');
+    expect(actionBar?.querySelectorAll('button')).toHaveLength(0);
+    expect(actionBar?.textContent).not.toContain('Submit');
+    expect(actionBar?.textContent).not.toContain('Next');
+    expect(choiceInputs.every((input) => !input.hasAttribute('disabled'))).toBe(
+      true,
+    );
   });
 
-  it('hides Submit and promotes Next to primary after submission', () => {
+  it('keeps the middle-question tutor footer to Previous before any commit', () => {
+    const question = createNextQuestion();
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'tutor',
+          index: 1,
+          total: 3,
+          isMarkedForReview: false,
+        }}
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        canSubmit={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onNextQuestion={() => undefined}
+        onPreviousQuestion={() => undefined}
+        hasPreviousQuestion={true}
+        hasNextQuestion={true}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
+    const labels = Array.from(actionBar?.querySelectorAll('button') ?? []).map(
+      (button) => button.textContent?.trim(),
+    );
+
+    expect(labels).toEqual(['Previous']);
+    expect(actionBar?.textContent).not.toContain('Submit');
+    expect(actionBar?.textContent).not.toContain('Next');
+  });
+
+  it('renders Next as primary action after an answer commits', () => {
     const question = createQuestionProps();
     const selectedChoice = question.choices[0];
     if (!selectedChoice) {
@@ -126,10 +180,10 @@ describe('PracticeView answer feedback', () => {
 
     expect(submitButton).toBeUndefined();
     expect(nextButton).not.toBeUndefined();
-    expect(nextButton?.className).toContain('bg-primary');
+    expect(nextButton?.getAttribute('data-variant')).toBe('default');
   });
 
-  it('does not render Review answers for tutor mode after submit', () => {
+  it('does not render Review answers for tutor mode after answer commit', () => {
     const question = createQuestionProps();
     const selectedChoice = question.choices[0];
     if (!selectedChoice) {
@@ -174,7 +228,8 @@ describe('PracticeView answer feedback', () => {
     );
 
     expect(html).not.toContain('Review answers');
-    expect(html).toContain('View Summary');
+    expect(html).not.toContain('View Summary');
+    expect(html).toContain('End session');
   });
 
   it('passes selected choice context to feedback after submit', () => {
