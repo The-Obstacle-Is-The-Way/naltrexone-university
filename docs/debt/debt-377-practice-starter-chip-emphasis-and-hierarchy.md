@@ -153,7 +153,7 @@ All three bars are met.
 - 'inline-flex cursor-pointer items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
 + 'inline-flex cursor-pointer items-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
 - 'outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
-+ 'outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]',
++ 'focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]',
   'disabled:pointer-events-none disabled:opacity-50',
   selected
 -   ? 'border-primary bg-primary text-primary-foreground'
@@ -164,7 +164,7 @@ All three bars are met.
 
 What changed:
 - **Shared base loses `border` and `rounded-full`.** Adds `rounded-md`. (The `border` utility was setting `border-width: 1px`; without it, no border renders at all.)
-- **Focus styling loses `focus-visible:border-ring`.** With no rendered border width, the border-color focus token is stale/no-op. The visible focus ring remains via `focus-visible:ring-ring/50 focus-visible:ring-[3px]`.
+- **Focus styling loses `focus-visible:border-ring`.** With no rendered border width, the border-color focus token is stale/no-op. The visible focus ring remains via `focus-visible:ring-ring/50 focus-visible:ring-[3px]`, and `outline-none` is scoped to `focus-visible:outline-none` so native outlines are not broadly suppressed outside the keyboard-focus state.
 - **Selected loses `border-primary`.** That class was redundant on `bg-primary` anyway (same color); now removed cleanly.
 - **Unselected loses all four border-related classes** (`border-foreground/45`, `hover:border-foreground/60`, `dark:border-foreground/40`, `dark:hover:border-foreground/70`).
 - **Unselected text color drops** from `text-foreground` to `text-foreground/80`. Hover restores full `text-foreground`.
@@ -228,13 +228,13 @@ Cross-surface label hierarchy audit, color personality audit, etc. Out of scope;
 
 When α (V1) is implemented:
 
-1. **`components/ui/filter-chip.tsx`** matches the exact production diff above. The shared base contains `rounded-md` (not `rounded-full`) and does NOT contain the `border` utility class. Focus styling keeps `focus-visible:ring-ring/50 focus-visible:ring-[3px]` and removes stale `focus-visible:border-ring`. Selected variant: `bg-primary text-primary-foreground` (no `border-primary`). Unselected variant: `bg-foreground/[0.07] text-foreground/80 hover:bg-foreground/[0.12] hover:text-foreground` (no border classes at all).
+1. **`components/ui/filter-chip.tsx`** matches the exact production diff above. The shared base contains `rounded-md` (not `rounded-full`) and does NOT contain the `border` utility class. Focus styling keeps `focus-visible:ring-ring/50 focus-visible:ring-[3px]`, removes stale `focus-visible:border-ring`, and uses `focus-visible:outline-none` rather than broad `outline-none`. Selected variant: `bg-primary text-primary-foreground` (no `border-primary`). Unselected variant: `bg-foreground/[0.07] text-foreground/80 hover:bg-foreground/[0.12] hover:text-foreground` (no border classes at all).
 2. **`components/ui/filter-chip.test.tsx`** updated:
-   - **Unselected styling test (`:42-68`)**: assert `rounded-md` present, `rounded-full` absent, base `border` absent, `focus-visible:border-ring` absent, `focus-visible:ring-ring/50` present, `focus-visible:ring-[3px]` present, `border-foreground/45` absent, `dark:border-foreground/40` absent, `text-foreground/80` present, `text-foreground` absent (the bare `text-foreground` token), `hover:text-foreground` present, `hover:border-foreground/60` absent, `dark:hover:border-foreground/70` absent. Existing `bg-foreground/[0.07]`, `hover:bg-foreground/[0.12]`, `cursor-pointer` assertions remain unchanged.
-   - **Selected styling test (`:33-40`)**: add `rounded-md` present, `rounded-full` absent, base `border` absent, `focus-visible:border-ring` absent, `border-primary` absent assertions. Existing `bg-primary`, `aria-pressed="true"` assertions unchanged.
+   - **Unselected styling test (`:42-68`)**: assert `rounded-md` present, `rounded-full` absent, base `border` absent, `focus-visible:border-ring` absent, `focus-visible:outline-none` present, broad `outline-none` absent, `focus-visible:ring-ring/50` present, `focus-visible:ring-[3px]` present, `border-foreground/45` absent, `dark:border-foreground/40` absent, `text-foreground/80` present, `text-foreground` absent (the bare `text-foreground` token), `hover:text-foreground` present, `hover:border-foreground/60` absent, `dark:hover:border-foreground/70` absent. Existing `bg-foreground/[0.07]`, `hover:bg-foreground/[0.12]`, `cursor-pointer` assertions remain unchanged.
+   - **Selected styling test (`:33-40`)**: add `rounded-md` present, `rounded-full` absent, base `border` absent, `focus-visible:border-ring` absent, `focus-visible:outline-none` present, broad `outline-none` absent, `border-primary` absent assertions. Existing `bg-primary`, `aria-pressed="true"` assertions unchanged.
    - **`text-sm font-medium` still present on both branches** (text size and weight do not change in V1).
 3. **`docs/frontend/pattern-registry.md` I-4 entry** rewritten:
-   - Shared base loses `border`, `rounded-full`, and `focus-visible:border-ring`; gains `rounded-md`.
+   - Shared base loses `border`, `rounded-full`, `focus-visible:border-ring`, and broad `outline-none`; gains `rounded-md` and `focus-visible:outline-none`.
    - Selected variant loses `border-primary`.
    - Unselected variant loses all border tokens; gains `text-foreground/80` and `hover:text-foreground`.
    - Design rationale paragraph rewritten to reflect: "FilterChip moves to the I-1 borderless tonal-fill family. Identification rests on text + fill + cursor + hover + focus ring + `aria-pressed`, not on a stroked edge. Shape unified to `rounded-md` to match SegmentedControl items and Button defaults — filter chips are functionally toggle controls, not decorative pills."

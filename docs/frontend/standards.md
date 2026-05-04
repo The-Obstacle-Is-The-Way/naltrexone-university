@@ -367,7 +367,7 @@ Hover opacity is context-dependent. Use the Pattern Registry (`Part 1.2`, `I-1` 
 |---------|-------------------|
 | Inside card surface (muted-scale row) | `transition-colors hover:bg-muted/40` |
 | On page background (muted-scale row) | `transition-colors hover:bg-muted/50` |
-| Tonal row / direct-action target | Use the component-specific Pattern Registry entry. Dashboard-style in-card tonal rows use `hover:bg-foreground/[0.08]`; standalone tonal rows use `hover:bg-foreground/[0.12]`; choice buttons use `hover:bg-foreground/[0.06] hover:border-foreground/55` in light mode and `dark:hover:bg-foreground/[0.05] dark:hover:border-foreground/50` on the unselected branch; filter chips use `hover:bg-foreground/[0.12] hover:border-foreground/60`. |
+| Tonal row / direct-action target | Use the component-specific Pattern Registry entry. Dashboard-style in-card tonal rows use `hover:bg-foreground/[0.08]`; standalone tonal rows use `hover:bg-foreground/[0.12]`; choice buttons use `hover:bg-foreground/[0.06] hover:border-foreground/55` in light mode and `dark:hover:bg-foreground/[0.05] dark:hover:border-foreground/50` on the unselected branch; filter chips use a borderless tonal-fill rest state with `hover:bg-foreground/[0.12] hover:text-foreground`. |
 
 Rules:
 - Use the pattern's neutral fill scale. `muted` is for muted-scale rows/containers; `foreground` is for tonal-row families and direct-action surfaces whose registry entry calls for a foreground ramp.
@@ -387,7 +387,7 @@ Rules:
 | Loading skeletons | `rounded-2xl` (MUST match the cards they replace) |
 | Toasts | `rounded-xl` |
 | Inputs | `rounded-md` (Input default) |
-| Chips / pills | `rounded-full` |
+| Filter chips | `rounded-md` — functional toggle chips match the app's rectangular control vocabulary; decorative tag/badge pills may use `rounded-full` if introduced separately |
 
 ---
 
@@ -559,7 +559,7 @@ After error recovery ("Try again"), focus SHOULD move to the result (the new con
 |-----------|------------------------|--------|
 | `Button` (default) | 36px (`h-9`) | Accepted |
 | `SegmentedControl` button | ~36px (`py-2`) | Accepted |
-| `FilterChip` button | ~34px (`py-1.5` + border) | Accepted |
+| `FilterChip` button | ~32px (`py-1.5`, borderless) | Accepted |
 
 **Rationale:** This is a desktop-first educational application. Bumping shared components to 44px has a wide blast radius (every page with buttons, chips, or segmented controls changes) for marginal mobile ergonomics gain. The current sizes provide adequate tap targets for the app's primary usage context.
 

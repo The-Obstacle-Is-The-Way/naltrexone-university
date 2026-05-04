@@ -343,26 +343,29 @@ hover:border-foreground/55 hover:bg-foreground/[0.06] dark:hover:border-foregrou
 Toggle-style filter for tags, modes, difficulty levels.
 
 **Unselected:**
-```
-border-foreground/45 bg-foreground/[0.07] text-foreground hover:bg-foreground/[0.12] hover:border-foreground/60 dark:border-foreground/40 dark:hover:border-foreground/70
+
+```text
+bg-foreground/[0.07] text-foreground/80 hover:bg-foreground/[0.12] hover:text-foreground
 ```
 
 **Selected:**
-```
-border-primary bg-primary text-primary-foreground
+
+```text
+bg-primary text-primary-foreground
 ```
 
 **Shared base:**
-```
-inline-flex cursor-pointer items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors
-outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]
+
+```text
+inline-flex cursor-pointer items-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors
+focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 disabled:pointer-events-none disabled:opacity-50
 ```
 
 **Source:** `components/ui/filter-chip.tsx`
 
-**Design rationale:** Unselected chips keep their border as the required boundary, but now add a subtle rest fill (`bg-foreground/[0.07]`) so they read as interactive toggle surfaces instead of transparent labels floating on the parent tonal container. On the practice tonal-fill parent (`bg-foreground/5`), `border-foreground/45` clears SC 1.4.11 in light mode, `dark:border-foreground/40` preserves the compliant dark-mode override, `text-foreground` restores primary interactive-label hierarchy while raising text contrast well above AA, `hover:bg-foreground/[0.12]` keeps the hover ramp on the same monotonic foreground scale, `hover:border-foreground/60 dark:hover:border-foreground/70` adds a clearer edge-level hover cue for dense chip groups, and `cursor-pointer` restores the expected browser affordance for a clickable button.
-**Status:** Implemented in `components/ui/filter-chip.tsx` (DEBT-290, DEBT-291, DEBT-294, DEBT-295, DEBT-309).
+**Design rationale:** FilterChip moves to the I-1 borderless tonal-fill family. Identification rests on text + fill + cursor + hover + focus ring + `aria-pressed`, not on a stroked edge. Shape unified to `rounded-md` to match SegmentedControl items and Button defaults — filter chips are functionally toggle controls, not decorative pills. DEBT-377 redirected this pattern from a font-weight tweak to a chrome fix after visual review showed the per-chip border and `rounded-full` shape were the actual hierarchy problem.
+**Status:** Implemented in `components/ui/filter-chip.tsx` (DEBT-290, DEBT-291, DEBT-294, DEBT-295, DEBT-309, DEBT-377).
 
 ### I-5: Segmented Control Item
 
@@ -1381,7 +1384,7 @@ Compact lookup for code reviews and implementation.
 | I-1 | Row in Card | `hover:bg-foreground/[0.08]` | `rounded-xl` | tonal-fill variant omits border |
 | I-2 | Standalone Row | `hover:bg-foreground/[0.12]` | `rounded-2xl` | tonal-fill variant omits border |
 | I-3 | Choice Button | `hover:bg-foreground/[0.06] hover:border-foreground/55` (+ `dark:hover:bg-foreground/[0.05] dark:hover:border-foreground/50`) | `rounded-xl` | `border-foreground/50 dark:border-foreground/40` |
-| I-4 | Filter Chip | `hover:bg-foreground/[0.12]` (+ `hover:border-foreground/60 dark:hover:border-foreground/70`) | `rounded-full` | `border-foreground/45 dark:border-foreground/40` |
+| I-4 | Filter Chip | `hover:bg-foreground/[0.12] hover:text-foreground` | `rounded-md` | borderless tonal fill |
 | I-5 | Tab Switch Item | `hover:bg-muted/50` | `rounded-md` | Container uses `border-border` |
 | I-6 | Icon Toggle | `hover:text-foreground` | — | — |
 | L-1 | Nav Link | `hover:text-foreground` | `rounded-md` | — |

@@ -71,38 +71,38 @@ The lower stack is not mutually exclusive:
 
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
-| Container | `<Card>` | S-1 | `practice-session-starter.tsx:100` | `gap-0 rounded-2xl border-border p-6`, id=`practice-session-starter` |
-| Heading | `<h2>` | — | `:102` | `text-base font-semibold text-foreground` — "Start a session" |
-| Description | `<div>` | — | `:105` | `text-sm text-muted-foreground` — mode explanation |
+| Container | `<Card>` | S-1 | `practice-session-starter.tsx:106` | `gap-0 rounded-2xl border-border p-6` |
+| Heading | `<h2>` | — | `:108` | `text-base font-semibold text-foreground` — "Start a session" |
+| Description | `<div>` | — | `:111` | `text-sm text-muted-foreground` — mode explanation |
 
 #### Mode Selector
 
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
-| Label | `<div>` | — | `:114` | `text-sm font-medium text-foreground` — "Mode" |
-| Control | `<SegmentedControl>` | I-5 | `:115` | Options: Tutor, Exam. Uses shared `tabSwitchContainerClasses` |
+| Label | `<div>` | — | `:122` | `text-sm font-medium text-foreground` — "Mode" |
+| Control | `<SegmentedControl>` | I-5 | `:126` | Options: Tutor, Exam. Uses shared `tabSwitchContainerClasses` |
 
 #### Questions Input
 
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
-| Label | `<label>` | — | `:127` | `text-sm font-medium text-foreground` — "Questions", `htmlFor="session-count-input"` |
+| Label | `<label>` | — | `:141` | `text-sm font-medium text-foreground` — "Questions", `htmlFor={sessionCountInputId}` |
 | Control shell | `compactControlShellClasses` | I-5 container family | `control-shell-styles.ts` | Shared compact shell: `inline-flex rounded-lg border border-border bg-muted p-1` |
-| Input | `<Input>` | — | `practice-session-starter.tsx` | `type="number"`, `w-16 rounded-md border-0 bg-transparent dark:bg-transparent px-4 py-2 text-center text-sm font-medium shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`, min=`SESSION_COUNT_MIN`, max=`SESSION_COUNT_MAX`, value renders from the raw string state and clamps back to the canonical numeric count on blur |
+| Input | `<Input>` | — | `practice-session-starter.tsx:146` | `type="number"`, `w-16 rounded-md border-0 bg-transparent dark:bg-transparent px-4 py-2 text-center text-sm font-medium shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`, min=`SESSION_COUNT_MIN`, max=`SESSION_COUNT_MAX`, value renders from the raw string state and clamps back to the canonical numeric count on blur |
 
 #### Status Selector
 
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
-| Label | `<div>` | — | `:147` | `text-sm font-medium text-foreground` — "Status" |
-| Control | `<SegmentedControl>` | I-5 | `:149` | Options: Unanswered, Incorrect, Bookmarked |
+| Label | `<div>` | — | `:166` | `text-sm font-medium text-foreground` — "Status" |
+| Control | `<SegmentedControl>` | I-5 | `:170` | Options: Unanswered, Incorrect, Bookmarked |
 
 #### Difficulty Selector
 
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
-| Label | `<div>` | — | `:164` | `text-sm font-medium text-foreground` — "Difficulty" |
-| Control | `<SegmentedControl>` | I-5 | `:166` | Options: All, Easy, Medium, Hard |
+| Label | `<div>` | — | `:187` | `text-sm font-medium text-foreground` — "Difficulty" |
+| Control | `<SegmentedControl>` | I-5 | `:191` | Options: All, Easy, Medium, Hard |
 
 #### Tag Filter Sections (Topic / Substance / Treatment)
 
@@ -110,31 +110,31 @@ Three collapsible `<details>` elements, one per tag kind. Only rendered when `ta
 
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
-| Container | `<details>` | S-2 (practice variant, tonal fill) | `:209–242` | `group rounded-xl bg-foreground/5` |
-| Summary header | `<summary>` | — | `:213` | `flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium text-foreground transition-colors [&::-webkit-details-marker]:hidden` + focus ring |
-| Section label | `<span>` | — | `:214` | "Topic" / "Substance" / "Treatment" |
-| Summary right cluster | `<span>` | — | `:215` | `flex items-center gap-2` — groups conditional summary metadata + chevron |
-| Summary metadata | `<span>` | — | `:216` | `text-xs font-normal text-foreground/60` — `All included by default` when `selectedCount === 0`, otherwise `{N} selected` |
-| Disclosure chevron | `<ChevronDown>` | — | `:221` | `size-4 text-foreground/60 transition-transform group-open:rotate-180` |
-| Expanded content wrapper | `<div>` | — | `:224` | `px-4 pb-3` — keeps body spacing after summary owns the clickable padding |
-| Chip fieldset | `<fieldset>` | — | `:225` | `flex flex-wrap gap-2 border-0 p-0 m-0`, `aria-label={label}` |
-| Filter chips | `<FilterChip>` | I-4 | `:230` | Multi-select toggle buttons (see below) |
-| Footer count | `<div>` | — | `:238` | `text-xs text-foreground/60` — `({N} selected)` below the chip group |
+| Container | `<details>` | S-2 (practice variant, tonal fill) | `:234–268` | `group rounded-xl bg-foreground/5` |
+| Summary header | `<summary>` | — | `:238` | `flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm font-medium text-foreground transition-colors [&::-webkit-details-marker]:hidden` + focus ring |
+| Section label | `<span>` | — | `:239` | "Topic" / "Substance" / "Treatment" |
+| Summary right cluster | `<span>` | — | `:240` | `flex items-center gap-2` — groups conditional summary metadata + chevron |
+| Summary metadata | `<span>` | — | `:241` | `text-xs font-normal text-foreground/60` — `All included by default` when `selectedCount === 0`, otherwise `{N} selected` |
+| Disclosure chevron | `<ChevronDown>` | — | `:246` | `size-4 text-foreground/60 transition-transform group-open:rotate-180` |
+| Expanded content wrapper | `<div>` | — | `:249` | `px-4 pb-3` — keeps body spacing after summary owns the clickable padding |
+| Chip fieldset | `<fieldset>` | — | `:250` | `flex flex-wrap gap-2 border-0 p-0 m-0`, `aria-label={label}` |
+| Filter chips | `<FilterChip>` | I-4 | `:255` | Multi-select toggle buttons (see below) |
+| Footer count | `<div>` | — | `:264` | `text-xs text-foreground/60` — `({N} selected)` below the chip group |
 
 #### Tag Loading/Error States
 
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
-| Loading | `<output>` | — | `:191` | `text-sm text-muted-foreground`, `aria-live="polite"` — "Loading tags…" |
-| Error | `<div role="alert">` | — | `:196` | `text-sm text-destructive` — "Tags unavailable." |
+| Loading | `<output>` | — | `:214` | `text-sm text-muted-foreground`, `aria-live="polite"` — "Loading tags…" |
+| Error | `<div role="alert">` | — | `:219` | `text-sm text-destructive` — "Tags unavailable." |
 
 #### Footer (Availability + Start)
 
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
-| Availability message | `<output>` | — | `:247` | `text-sm text-muted-foreground sm:mr-auto`, `aria-live="polite"` — "825 questions available." |
-| Start button | `<Button>` | — | `:254` | `rounded-full`, disabled when no questions match or session starting |
-| Start error | `<div role="alert">` | — | `:267` | `text-sm text-destructive` — session start error message |
+| Availability message | `<output>` | — | `:277` | `text-sm text-muted-foreground sm:mr-auto`, `aria-live="polite"` — "825 questions available." |
+| Start button | `<Button>` | — | `:283` | `rounded-full`, disabled when no questions match or session starting |
+| Start error | `<div role="alert">` | — | `:296` | `text-sm text-destructive` — session start error message |
 
 ---
 
@@ -142,15 +142,15 @@ Three collapsible `<details>` elements, one per tag kind. Only rendered when `ta
 
 ### FilterChip (`components/ui/filter-chip.tsx`)
 
-Toggle-style pill button. Uses `aria-pressed` for selected state.
+Toggle-style filter button. Uses `aria-pressed` for selected state. DEBT-377 changed this control from decorative pill geometry to `rounded-md` so filter chips match the rectangular control vocabulary used by SegmentedControl and form controls.
 
 | State | Classes |
 |-------|---------|
-| **Base** | `inline-flex cursor-pointer items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors` |
-| **Focus** | `outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]` |
+| **Base** | `inline-flex cursor-pointer items-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors` |
+| **Focus** | `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]` |
 | **Disabled** | `disabled:pointer-events-none disabled:opacity-50` |
-| **Unselected** | `border-foreground/45 bg-foreground/[0.07] text-foreground hover:bg-foreground/[0.12] hover:border-foreground/60 dark:border-foreground/40 dark:hover:border-foreground/70` |
-| **Selected** | `border-primary bg-primary text-primary-foreground` |
+| **Unselected** | `bg-foreground/[0.07] text-foreground/80 hover:bg-foreground/[0.12] hover:text-foreground` |
+| **Selected** | `bg-primary text-primary-foreground` |
 
 ### SegmentedControl (`components/ui/segmented-control.tsx`)
 
@@ -189,8 +189,8 @@ bg-background (Layer 0 — page)
        ├─ Compact control shell bg-muted + border-border (Layer 2 — Questions count)
        │    └─ Input bg-transparent (inherits shell surface)
        └─ <details> bg-foreground/5 (Layer 2 — tag filter containers)
-            └─ FilterChip bg-foreground/[0.07] + border                 ← Layer 3 rest
-            └─ FilterChip bg-primary (selected)                           ← Layer 3+, high contrast
+            └─ FilterChip bg-foreground/[0.07] borderless tonal fill       ← Layer 3 rest
+            └─ FilterChip bg-primary (selected)                            ← Layer 3+, high contrast
 ```
 
 ---
@@ -246,13 +246,11 @@ type PracticeFilters = {
 
 | State | Token | Computed (dark) | Contrast vs parent | Notes |
 |-------|-------|----------------|-------------------|-------|
-| Unselected border | `border-foreground/45` + `dark:border-foreground/40` | #707070 (dark override) | ~3.40:1 vs current `bg-foreground/5` parent (`#1D1D1D`) | Passes 3:1 in dark mode; light-mode base token is `border-foreground/45` |
-| Unselected fill | `bg-foreground/[0.07]` | ~#2C2C2C on the current `bg-foreground/5` parent | ~1.21:1 vs parent | Adds rest-state surface depth without replacing the border as the required boundary |
-| Unselected text | `text-foreground` | #EDEDED | ~11.93:1 vs chip fill | Full-weight interactive label hierarchy with ample AA margin |
-| Unselected hover | `hover:bg-foreground/[0.12] dark:hover:border-foreground/70` | ~#363636 on the current `bg-foreground/5` parent | — | Foreground-based hover ramp stays monotonic above the 7% rest fill, while the dark hover border brightens distinctly; light mode adds `hover:border-foreground/60` |
+| Unselected fill | `bg-foreground/[0.07]` | ~#2C2C2C on the current `bg-foreground/5` parent | ~1.21:1 vs parent | Borderless tonal-fill surface; identification comes from text, cursor, hover fill/text lift, focus ring, and `aria-pressed` |
+| Unselected text | `text-foreground/80` | ~#C6C6C6 | ~8.18:1 vs chip fill | Dimmed rest text lets unselected chips recede while remaining well above AA |
+| Unselected hover | `hover:bg-foreground/[0.12] hover:text-foreground` | ~#363636 on the current `bg-foreground/5` parent | — | Foreground-based hover ramp stays monotonic above the 7% rest fill; text restores full foreground on interaction |
 | Selected fill | `bg-primary` | #EDEDED | — | High contrast |
 | Selected text | `text-primary-foreground` | #090909 | ~17:1 vs primary | AA pass |
-| Selected border | `border-primary` | #EDEDED | — | Matches fill |
 
 ### Filter Container (`<details>`)
 
@@ -277,9 +275,10 @@ Resolved on 2026-03-09 and later refined by [DEBT-291](../../_archive/debt/debt-
 | Element | Shipped state | Effect |
 |---------|---------------|--------|
 | Filter container (`<details>`) | `bg-foreground/5` (no border) | Border removed, tonal fill defines the nested surface |
-| FilterChip unselected fill | `bg-foreground/[0.07]` | Adds rest-state depth above the tonal parent without replacing the border as the required boundary |
-| FilterChip unselected text | `text-foreground` | Promotes chip labels to primary interactive hierarchy while raising contrast to ~11.93:1 dark / ~15.54:1 light |
-| FilterChip unselected hover | `hover:bg-foreground/[0.12]` + `hover:border-foreground/60` + `dark:hover:border-foreground/70` | Monotonic foreground-based hover ramp above the 7% rest fill plus a clearer edge-level hover cue |
+| FilterChip base shape | `rounded-md` | Aligns functional filter toggles with SegmentedControl and form-control shape vocabulary |
+| FilterChip unselected fill | `bg-foreground/[0.07]` | Borderless tonal-fill rest surface above the tonal parent; fill is supplementary, not a required boundary |
+| FilterChip unselected text | `text-foreground/80` | Lets unselected chip labels recede while keeping normal text contrast at ~8.18:1 dark / ~9.67:1 light |
+| FilterChip unselected hover | `hover:bg-foreground/[0.12]` + `hover:text-foreground` | Monotonic foreground-based hover ramp above the 7% rest fill plus text-strength lift on interaction |
 | Filter summary metadata text | `text-foreground/60` | Keeps zero-state outcome copy / nonzero summary counts secondary but AA-compliant on `bg-foreground/5` |
 | Filter footer count text | `text-foreground/60` | Keeps expanded-state `({N} selected)` subordinate without falling below AA on the tonal parent |
 | FilterChip base cursor | `cursor-pointer` | Restores the expected browser affordance for clickable chips |

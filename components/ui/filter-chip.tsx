@@ -20,12 +20,12 @@ export function FilterChip({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'inline-flex cursor-pointer items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
-        'outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+        'inline-flex cursor-pointer items-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+        'focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]',
         'disabled:pointer-events-none disabled:opacity-50',
         selected
-          ? 'border-primary bg-primary text-primary-foreground'
-          : 'border-foreground/45 bg-foreground/[0.07] text-foreground hover:bg-foreground/[0.12] hover:border-foreground/60 dark:border-foreground/40 dark:hover:border-foreground/70',
+          ? 'bg-primary text-primary-foreground'
+          : 'bg-foreground/[0.07] text-foreground/80 hover:bg-foreground/[0.12] hover:text-foreground',
       )}
     >
       {label}
