@@ -252,6 +252,39 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
     expect(submitAnswerFn).toHaveBeenCalledTimes(1);
   });
 
+  it('does not programmatically submit before a tutor choice is selected', async () => {
+    const getNextQuestionFn = vi
+      .fn<(input: unknown) => Promise<ActionResult<NextQuestion | null>>>()
+      .mockResolvedValue(ok(createSessionQuestion('tutor')));
+    const submitAnswerFn = vi
+      .fn<(input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>>()
+      .mockResolvedValue(ok(createSubmitOutput('choice_1')));
+    const saveExamDraftAnswerFn =
+      vi.fn<
+        (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
+      >();
+
+    const harness = await renderHook(() =>
+      usePracticeSessionQuestionFlow({
+        sessionId: 'session-1',
+        isMounted: () => true,
+        getNextQuestionFn,
+        submitAnswerFn,
+        saveExamDraftAnswerFn,
+      }),
+    );
+
+    await expect
+      .poll(() => harness.result.current.question?.questionId)
+      .toBe('q_1');
+    await expect.poll(() => harness.result.current.canSubmit).toBe(false);
+
+    const result = await harness.result.current.onSubmit();
+
+    expect(result).toBeNull();
+    expect(submitAnswerFn).not.toHaveBeenCalled();
+  });
+
   it('does not commit a tutor choice after submitResult locks the question', async () => {
     const getNextQuestionFn = vi
       .fn<(input: unknown) => Promise<ActionResult<NextQuestion | null>>>()

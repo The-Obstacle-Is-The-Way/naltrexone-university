@@ -19,6 +19,19 @@ const TEST_FILTERS = {
   status: 'unanswered',
 } satisfies PracticeFilters;
 
+function createSubmitOutput(
+  correctChoiceId: string = 'choice_1',
+): SubmitAnswerOutput {
+  return {
+    attemptId: 'attempt-1',
+    isCorrect: true,
+    correctChoiceId,
+    explanationMd: null,
+    referenceMd: null,
+    choiceExplanations: [],
+  };
+}
+
 function PracticeQuestionAnswerFlowProbe() {
   const output = usePracticeQuestionAnswerFlow({
     filters: TEST_FILTERS,
@@ -330,6 +343,26 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
         choiceExplanations: [],
       } satisfies SubmitAnswerOutput),
     );
+    await expect
+      .element(screen.getByTestId('is-pending'))
+      .toHaveTextContent('false');
+  });
+
+  it('does not programmatically submit before a choice is selected', async () => {
+    getNextQuestionMock.mockResolvedValue(ok(createNextQuestion()));
+    submitAnswerMock.mockResolvedValue(ok(createSubmitOutput()));
+
+    const screen = await render(<PracticeQuestionAnswerFlowProbe />);
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+    await expect
+      .element(screen.getByTestId('can-submit'))
+      .toHaveTextContent('false');
+
+    await screen.getByRole('button', { name: 'submit-answer' }).click();
+
+    expect(submitAnswerMock).not.toHaveBeenCalled();
     await expect
       .element(screen.getByTestId('is-pending'))
       .toHaveTextContent('false');
