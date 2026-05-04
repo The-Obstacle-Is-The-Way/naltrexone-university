@@ -81,7 +81,7 @@ export function usePracticeQuestionAnswerFlow(
     isLatestRequest,
     isMounted,
     canSubmit,
-    onSelectChoice,
+    onSelectChoice: selectChoice,
   } = useQuestionFlowCore({ isMounted: input.isMounted });
   const questionAreaRef = useRef<HTMLElement | null>(null);
   const pendingFocusAfterError = useRef(false);
@@ -136,43 +136,61 @@ export function usePracticeQuestionAnswerFlow(
     }
   }, [loadState.status]);
 
-  const onSubmit = useCallback(() => {
-    return runTransitionedAsyncAction({
+  const commitChoice = useCallback(
+    (choiceId: string | null) => {
+      return runTransitionedAsyncAction({
+        startTransition,
+        run: () =>
+          submitAnswerForQuestion({
+            question,
+            selectedChoiceId: choiceId,
+            questionLoadedAtMs: questionLoadedAt,
+            submitIdempotencyKey,
+            submitAnswerFn: input.submitAnswerFn,
+            nowMs: Date.now,
+            setLoadState,
+            setSubmitResult,
+            createRequestSequenceId,
+            isLatestRequest,
+            isMounted,
+          }),
+        onUnhandledError: (error) => {
+          reportClientError(error, {
+            component: 'UsePracticeQuestionAnswerFlow',
+            action: 'submitAnswer',
+          });
+        },
+      });
+    },
+    [
+      createRequestSequenceId,
+      input.submitAnswerFn,
+      isLatestRequest,
+      isMounted,
+      question,
+      questionLoadedAt,
+      submitIdempotencyKey,
+      setLoadState,
+      setSubmitResult,
       startTransition,
-      run: () =>
-        submitAnswerForQuestion({
-          question,
-          selectedChoiceId,
-          questionLoadedAtMs: questionLoadedAt,
-          submitIdempotencyKey,
-          submitAnswerFn: input.submitAnswerFn,
-          nowMs: Date.now,
-          setLoadState,
-          setSubmitResult,
-          createRequestSequenceId,
-          isLatestRequest,
-          isMounted,
-        }),
-      onUnhandledError: (error) => {
-        reportClientError(error, {
-          component: 'UsePracticeQuestionAnswerFlow',
-          action: 'submitAnswer',
-        });
-      },
-    });
-  }, [
-    createRequestSequenceId,
-    input.submitAnswerFn,
-    isLatestRequest,
-    isMounted,
-    question,
-    questionLoadedAt,
-    selectedChoiceId,
-    submitIdempotencyKey,
-    setLoadState,
-    setSubmitResult,
-    startTransition,
-  ]);
+    ],
+  );
+
+  const onSubmit = useCallback(() => {
+    return commitChoice(selectedChoiceId);
+  }, [commitChoice, selectedChoiceId]);
+
+  const onSelectChoice = useCallback(
+    (choiceId: string) => {
+      if (isPending) return;
+
+      const changed = selectChoice(choiceId);
+      if (!changed) return;
+
+      void commitChoice(choiceId);
+    },
+    [commitChoice, isPending, selectChoice],
+  );
 
   return {
     question,

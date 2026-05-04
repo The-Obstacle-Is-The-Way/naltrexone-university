@@ -43,6 +43,18 @@ function PracticeQuestionAnswerFlowProbe() {
       <button type="button" onClick={() => output.onSelectChoice('choice_1')}>
         select-choice-1
       </button>
+      <button type="button" onClick={() => output.onSelectChoice('choice_2')}>
+        select-choice-2
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          output.onSelectChoice('choice_1');
+          output.onSelectChoice('choice_2');
+        }}
+      >
+        select-choice-1-then-2
+      </button>
       <button type="button" onClick={() => void output.onSubmit()}>
         submit-answer
       </button>
@@ -86,7 +98,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
       .toHaveTextContent('Network down');
   });
 
-  it('supports selecting, submitting, and fetching the next question', async () => {
+  it('supports selecting, committing, and fetching the next question', async () => {
     const submitDeferred = createDeferred<ActionResult<SubmitAnswerOutput>>();
 
     getNextQuestionMock
@@ -100,16 +112,12 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
       .element(screen.getByTestId('load-status'))
       .toHaveTextContent('ready');
 
-    await screen.getByRole('button', { name: 'select-choice-1' }).click();
+    await screen
+      .getByRole('button', { name: 'select-choice-1', exact: true })
+      .click();
     await expect
       .element(screen.getByTestId('selected-choice-id'))
       .toHaveTextContent('choice_1');
-    await expect
-      .element(screen.getByTestId('can-submit'))
-      .toHaveTextContent('true');
-
-    await screen.getByRole('button', { name: 'submit-answer' }).click();
-
     await expect
       .element(screen.getByTestId('is-pending'))
       .toHaveTextContent('true');
@@ -136,5 +144,167 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     await expect
       .element(screen.getByTestId('question-id'))
       .toHaveTextContent('q_2');
+  });
+
+  it('commits the clicked choice without waiting for selectedChoiceId to re-render', async () => {
+    getNextQuestionMock.mockResolvedValue(
+      ok(
+        createNextQuestion({
+          choices: [
+            { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
+            { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+          ],
+        }),
+      ),
+    );
+    submitAnswerMock.mockResolvedValue(
+      ok({
+        attemptId: 'attempt-1',
+        isCorrect: true,
+        correctChoiceId: 'choice_2',
+        explanationMd: null,
+        referenceMd: null,
+        choiceExplanations: [],
+      } satisfies SubmitAnswerOutput),
+    );
+
+    const screen = await render(<PracticeQuestionAnswerFlowProbe />);
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+
+    await screen.getByRole('button', { name: 'select-choice-2' }).click();
+
+    await expect.poll(() => submitAnswerMock.mock.calls.length).toBe(1);
+    expect(submitAnswerMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        choiceId: 'choice_2',
+      }),
+    );
+  });
+
+  it('uses the explicit clicked choice when two selections happen in the same event', async () => {
+    getNextQuestionMock.mockResolvedValue(
+      ok(
+        createNextQuestion({
+          choices: [
+            { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
+            { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+          ],
+        }),
+      ),
+    );
+    submitAnswerMock.mockResolvedValue(
+      ok({
+        attemptId: 'attempt-1',
+        isCorrect: true,
+        correctChoiceId: 'choice_2',
+        explanationMd: null,
+        referenceMd: null,
+        choiceExplanations: [],
+      } satisfies SubmitAnswerOutput),
+    );
+
+    const screen = await render(<PracticeQuestionAnswerFlowProbe />);
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+
+    await screen
+      .getByRole('button', { name: 'select-choice-1-then-2' })
+      .click();
+
+    await expect.poll(() => submitAnswerMock.mock.calls.length).toBe(2);
+    expect(submitAnswerMock.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({
+        choiceId: 'choice_2',
+      }),
+    );
+  });
+
+  it('does not double-commit while a choice commit is pending', async () => {
+    const submitDeferred = createDeferred<ActionResult<SubmitAnswerOutput>>();
+
+    getNextQuestionMock.mockResolvedValue(
+      ok(
+        createNextQuestion({
+          choices: [
+            { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
+            { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+          ],
+        }),
+      ),
+    );
+    submitAnswerMock.mockImplementation(async () => submitDeferred.promise);
+
+    const screen = await render(<PracticeQuestionAnswerFlowProbe />);
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+
+    await screen
+      .getByRole('button', { name: 'select-choice-1', exact: true })
+      .click();
+    await expect
+      .element(screen.getByTestId('is-pending'))
+      .toHaveTextContent('true');
+    await expect.poll(() => submitAnswerMock.mock.calls.length).toBe(1);
+
+    await screen.getByRole('button', { name: 'select-choice-2' }).click();
+
+    expect(submitAnswerMock).toHaveBeenCalledTimes(1);
+    submitDeferred.resolve(
+      ok({
+        attemptId: 'attempt-1',
+        isCorrect: true,
+        correctChoiceId: 'choice_1',
+        explanationMd: null,
+        referenceMd: null,
+        choiceExplanations: [],
+      } satisfies SubmitAnswerOutput),
+    );
+    await expect
+      .element(screen.getByTestId('is-pending'))
+      .toHaveTextContent('false');
+  });
+
+  it('does not commit when a previous submit result has locked the question', async () => {
+    getNextQuestionMock.mockResolvedValue(
+      ok(
+        createNextQuestion({
+          choices: [
+            { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
+            { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+          ],
+        }),
+      ),
+    );
+    submitAnswerMock.mockResolvedValue(
+      ok({
+        attemptId: 'attempt-1',
+        isCorrect: true,
+        correctChoiceId: 'choice_1',
+        explanationMd: null,
+        referenceMd: null,
+        choiceExplanations: [],
+      } satisfies SubmitAnswerOutput),
+    );
+
+    const screen = await render(<PracticeQuestionAnswerFlowProbe />);
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+
+    await screen
+      .getByRole('button', { name: 'select-choice-1', exact: true })
+      .click();
+    await expect.poll(() => submitAnswerMock.mock.calls.length).toBe(1);
+    await expect
+      .element(screen.getByTestId('selected-choice-id'))
+      .toHaveTextContent('choice_1');
+
+    await screen.getByRole('button', { name: 'select-choice-2' }).click();
+
+    expect(submitAnswerMock).toHaveBeenCalledTimes(1);
   });
 });
