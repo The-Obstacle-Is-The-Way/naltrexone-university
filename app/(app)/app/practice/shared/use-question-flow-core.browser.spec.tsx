@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { useQuestionFlowCore } from '@/app/(app)/app/practice/shared/use-question-flow-core';
@@ -5,6 +6,9 @@ import { createNextQuestion } from '@/src/application/test-helpers/create-next-q
 
 function QuestionFlowCoreProbe() {
   const core = useQuestionFlowCore({ isMounted: () => true });
+  const [lastSelectResult, setLastSelectResult] = useState<boolean | null>(
+    null,
+  );
 
   return (
     <>
@@ -30,6 +34,9 @@ function QuestionFlowCoreProbe() {
       </div>
       <div data-testid="submit-result-choice-explanations-first-label">
         {core.submitResult?.choiceExplanations[0]?.displayLabel ?? ''}
+      </div>
+      <div data-testid="last-select-result">
+        {lastSelectResult === null ? '' : String(lastSelectResult)}
       </div>
       <button
         type="button"
@@ -145,7 +152,10 @@ function QuestionFlowCoreProbe() {
       >
         load-active-exam-no-draft
       </button>
-      <button type="button" onClick={() => core.onSelectChoice('choice_1')}>
+      <button
+        type="button"
+        onClick={() => setLastSelectResult(core.onSelectChoice('choice_1'))}
+      >
         select-choice-1
       </button>
       <button type="button" onClick={() => core.setIsAnswered(true)}>
@@ -165,6 +175,22 @@ function QuestionFlowCoreProbe() {
         }
       >
         set-submit-result
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          core.setSubmitResult({
+            attemptId: 'attempt_1',
+            isCorrect: false,
+            correctChoiceId: 'choice_1',
+            explanationMd: 'Explanation',
+            referenceMd: null,
+            choiceExplanations: [],
+          });
+          core.setIsAnswered(false);
+        }}
+      >
+        set-result-only
       </button>
       <button
         type="button"
@@ -238,6 +264,61 @@ test('clears derived selection state when the current question becomes null', as
   await expect
     .element(screen.getByTestId('selected-choice-id'))
     .toHaveTextContent('');
+});
+
+test('returns true from onSelectChoice when selection changes', async () => {
+  const screen = await render(<QuestionFlowCoreProbe />);
+
+  await screen
+    .getByRole('button', { name: 'load-no-session', exact: true })
+    .click();
+  await screen
+    .getByRole('button', { name: 'select-choice-1', exact: true })
+    .click();
+
+  await expect
+    .element(screen.getByTestId('selected-choice-id'))
+    .toHaveTextContent('choice_1');
+  await expect
+    .element(screen.getByTestId('last-select-result'))
+    .toHaveTextContent('true');
+});
+
+test('returns false from onSelectChoice when selection is blocked', async () => {
+  const screen = await render(<QuestionFlowCoreProbe />);
+
+  await screen
+    .getByRole('button', { name: 'select-choice-1', exact: true })
+    .click();
+  await expect
+    .element(screen.getByTestId('last-select-result'))
+    .toHaveTextContent('false');
+
+  await screen
+    .getByRole('button', { name: 'load-no-session', exact: true })
+    .click();
+  await screen.getByRole('button', { name: 'mark-answered' }).click();
+  await screen
+    .getByRole('button', { name: 'select-choice-1', exact: true })
+    .click();
+  await expect
+    .element(screen.getByTestId('last-select-result'))
+    .toHaveTextContent('false');
+
+  await screen.getByRole('button', { name: 'load-no-session-q2' }).click();
+  await screen.getByRole('button', { name: 'set-result-only' }).click();
+  await screen
+    .getByRole('button', { name: 'select-choice-1', exact: true })
+    .click();
+  await expect
+    .element(screen.getByTestId('is-answered'))
+    .toHaveTextContent('false');
+  await expect
+    .element(screen.getByTestId('has-submit-result'))
+    .toHaveTextContent('true');
+  await expect
+    .element(screen.getByTestId('last-select-result'))
+    .toHaveTextContent('false');
 });
 
 test('restores exam draft selections without locking the answer', async () => {
