@@ -29,6 +29,10 @@ export type UsePracticeSessionQuestionFlowInput = {
   ) => Promise<ActionResult<SaveExamDraftAnswerOutput>>;
 };
 
+type SubmitOptions = {
+  allowExamCommit?: boolean;
+};
+
 export type UsePracticeSessionQuestionFlowOutput = {
   sessionInfo: NextQuestion['session'];
   sessionMode: 'tutor' | 'exam' | null;
@@ -51,7 +55,7 @@ export type UsePracticeSessionQuestionFlowOutput = {
   onNextQuestion: () => void;
   onNavigateQuestion: (questionId: string) => void;
   onSelectChoice: (choiceId: string) => void;
-  onSubmit: () => Promise<SubmitAnswerOutput | null>;
+  onSubmit: (options?: SubmitOptions) => Promise<SubmitAnswerOutput | null>;
   saveCurrentExamDraft: () => Promise<boolean>;
 };
 
@@ -386,18 +390,24 @@ export function usePracticeSessionQuestionFlow(
     ],
   );
 
-  const onSubmit = useCallback((): Promise<SubmitAnswerOutput | null> => {
-    if (isPending || !canSubmit || question?.session?.mode === 'exam') {
-      return Promise.resolve(null);
-    }
-    return commitChoice(selectedChoiceId);
-  }, [
-    canSubmit,
-    commitChoice,
-    isPending,
-    question?.session?.mode,
-    selectedChoiceId,
-  ]);
+  const onSubmit = useCallback(
+    (options: SubmitOptions = {}): Promise<SubmitAnswerOutput | null> => {
+      const shouldBlockExamCommit =
+        question?.session?.mode === 'exam' && options.allowExamCommit !== true;
+
+      if (isPending || !canSubmit || shouldBlockExamCommit) {
+        return Promise.resolve(null);
+      }
+      return commitChoice(selectedChoiceId);
+    },
+    [
+      canSubmit,
+      commitChoice,
+      isPending,
+      question?.session?.mode,
+      selectedChoiceId,
+    ],
+  );
 
   const onSelectChoice = useCallback(
     (choiceId: string): void => {

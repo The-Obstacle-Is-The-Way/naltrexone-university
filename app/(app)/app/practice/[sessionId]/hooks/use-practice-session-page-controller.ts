@@ -157,8 +157,10 @@ export function usePracticeSessionPageController(
     questionFlow.onTryAgain();
   }, [bootstrapSessionSummary, questionFlow.onTryAgain, shouldRetryBootstrap]);
   const onSubmit = useCallback((): void => {
-    void questionFlow.onSubmit();
-  }, [questionFlow.onSubmit]);
+    void questionFlow.onSubmit({
+      allowExamCommit: reviewStage.isReviewQuestionActive,
+    });
+  }, [questionFlow.onSubmit, reviewStage.isReviewQuestionActive]);
 
   const { isMarkingForReview, onToggleMarkForReview } =
     usePracticeSessionMarkForReview({

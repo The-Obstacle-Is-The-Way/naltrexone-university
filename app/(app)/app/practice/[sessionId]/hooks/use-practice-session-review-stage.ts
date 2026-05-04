@@ -255,6 +255,7 @@ export function usePracticeSessionReviewStage(
     navigator,
     navigatorLoadState,
     isInReviewStage: reviewStage.isInReviewStage,
+    isReviewQuestionActive: reviewStage.isReviewQuestionActive,
     onEndSession,
     onRetryReview: reviewStage.onRetryReview,
     onRetryNavigator,
