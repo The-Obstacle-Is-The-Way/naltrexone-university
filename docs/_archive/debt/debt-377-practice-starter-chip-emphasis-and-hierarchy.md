@@ -1,10 +1,41 @@
 # DEBT-377 — Practice starter: chip chrome dominance + shape mismatch
 
-**Status:** Open — implementation spec, awaiting audit + grade
+**Status:** Resolved 2026-05-03 (PR #305, merge commit `e1362612`)
 **Severity:** P3 (cosmetic / hierarchy polish; observed friction, no functional break)
-**Owner:** TBD
+**Owner:** Resolved
 **Filed:** 2026-05-03
 **Surface:** `app/(app)/app/practice` — `PracticeSessionStarter` ("Start a session" card)
+
+---
+
+## Resolution
+
+Shipped via [PR #305](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/305) at merge commit `e1362612` (2026-05-04T01:29:34Z).
+
+**Production diff matched the spec exactly,** with one CodeRabbit-caught improvement folded in beyond the original spec: the focus suppression was scoped from broad `outline-none` to `focus-visible:outline-none` so native browser outlines remain in non-keyboard-focus states. Test contracts assert both directions (positive `focus-visible:outline-none` present, negative bare `outline-none` absent) so a regression in either direction trips the test.
+
+**Files shipped:**
+- `components/ui/filter-chip.tsx` — chrome change (drop `border` + `rounded-full` + `border-foreground/45` + `dark:border-foreground/40` + `border-primary` + `focus-visible:border-ring`; add `rounded-md` + `focus-visible:outline-none`; unselected text `text-foreground` → `text-foreground/80`; add `hover:text-foreground`)
+- `components/ui/filter-chip.test.tsx` — 24 token assertions on unselected, 9 on selected, all positive/negative pairs in place
+- `docs/frontend/pattern-registry.md` — I-4 entry rewritten + Part 9 summary row updated
+- `docs/frontend/standards.md` — "Border Radius" row + "Interactive row/card hover" row + Touch-targets row updated
+- `docs/frontend/contrast-policy.md` — supplementary-fill row rewritten with new tokens and computed ratios
+- `docs/frontend/pages/practice.md` — FilterChip table, Surface Hierarchy diagram, Dark Mode Tokens table, Practice Filter Resolution History table all synced; source-line anchors brought current
+
+**Gates green at merge:**
+- typecheck passed
+- lint passed (19 expected legacy nursery warnings only)
+- unit: 302 files / 2399 tests passed
+- browser: 47 files / 242 tests passed
+- integration: 16 files / 97 tests passed
+- build passed
+- e2e: 35/35 passed
+
+**CodeRabbit:** explicit APPROVED on latest head (`201a0309`), zero defended nits after the focus-visible scoping fix.
+
+**Light-mode fill fallback:** not needed. Default `bg-foreground/[0.07]` shipped; `/[0.10]` fallback was a documented contingency that visual QA did not trigger.
+
+**Audit verdict #4 (2026-05-04, post-merge `e1362612`):** Code/test/doc deliverables verified post-implementation against the V1 spec. Cross-archive references updated; index moved DEBT-377 from Active to Resolved. One non-code reporting issue surfaced during grading: the implementing agent's stop-report listed `debt-377-dark-hover.png` and `debt-377-dark.png` as separate artifacts, but the two files have identical MD5s. Acceptance Criterion 9(d) said "capture a hover state screenshot if practical" — so a missing one isn't a hard fail, but the duplicate naming is dishonest reporting and was noted in grading. The actual code, tests, and design-system docs are sound; this affects only how the agent reported its work, not what was implemented.
 
 **Audit verdict #1 (2026-05-03, SHA `39961e03`):** Refined after source/design-system audit. Corrected the FilterChip test-impact description, added adjacent prior-debt context (DEBT-292 / DEBT-296 / DEBT-297 / DEBT-298), tightened the design-system reassurance, resolved open design questions inline.
 
