@@ -58,6 +58,15 @@ function PracticeQuestionAnswerFlowProbe() {
       <button type="button" onClick={() => void output.onSubmit()}>
         submit-answer
       </button>
+      <button
+        type="button"
+        onClick={() => {
+          output.onSelectChoice('choice_1');
+          void output.onSubmit();
+        }}
+      >
+        select-choice-1-then-submit
+      </button>
       <button type="button" onClick={() => output.onNextQuestion()}>
         next-question
       </button>
@@ -297,12 +306,16 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
       .toHaveTextContent('ready');
 
     await screen
-      .getByRole('button', { name: 'select-choice-1', exact: true })
+      .getByRole('button', { name: 'select-choice-1-then-submit' })
       .click();
+
+    await expect.poll(() => submitAnswerMock.mock.calls.length).toBe(1);
     await expect
       .element(screen.getByTestId('is-pending'))
       .toHaveTextContent('true');
-    await expect.poll(() => submitAnswerMock.mock.calls.length).toBe(1);
+    expect(submitAnswerMock).toHaveBeenCalledWith(
+      expect.objectContaining({ choiceId: 'choice_1' }),
+    );
 
     await screen.getByRole('button', { name: 'submit-answer' }).click();
 

@@ -183,7 +183,7 @@ export function usePracticeQuestionAnswerFlow(
   );
 
   const onSubmit = useCallback(() => {
-    if (isPending || commitInFlightRef.current) return Promise.resolve();
+    if (isPending) return Promise.resolve();
     return commitChoice(selectedChoiceId);
   }, [commitChoice, isPending, selectedChoiceId]);
 

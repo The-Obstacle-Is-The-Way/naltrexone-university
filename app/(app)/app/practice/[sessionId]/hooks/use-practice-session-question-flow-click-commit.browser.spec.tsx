@@ -232,11 +232,21 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     harness.result.current.onSelectChoice('choice_1');
 
+    await harness.result.current.onSubmit();
+
     await expect.poll(() => submitAnswerFn.mock.calls.length).toBe(1);
     await expect.poll(() => harness.result.current.isPending).toBe(true);
+    expect(submitAnswerFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: 'session-1',
+        questionId: 'q_1',
+        choiceId: 'choice_1',
+      }),
+    );
 
     await harness.result.current.onSubmit();
 
+    expect(submitAnswerFn).toHaveBeenCalledTimes(1);
     submitDeferred.resolve(ok(createSubmitOutput('choice_1')));
     await expect.poll(() => harness.result.current.isPending).toBe(false);
     expect(submitAnswerFn).toHaveBeenCalledTimes(1);
