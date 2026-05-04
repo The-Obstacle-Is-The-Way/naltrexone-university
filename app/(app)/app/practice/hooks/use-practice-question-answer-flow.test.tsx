@@ -51,4 +51,35 @@ describe('usePracticeQuestionAnswerFlow', () => {
     expect(typeof output.onSelectChoice).toBe('function');
     expect(typeof output.onNextQuestion).toBe('function');
   });
+
+  it('does not programmatically submit when no choice can be submitted', async () => {
+    const submitAnswerFn = vi.fn(async () => ({
+      ok: true as const,
+      data: {
+        attemptId: 'attempt-1',
+        isCorrect: false,
+        correctChoiceId: 'choice-1',
+        explanationMd: null,
+        referenceMd: null,
+        choiceExplanations: [],
+      },
+    }));
+
+    const output = renderHook(() =>
+      usePracticeQuestionAnswerFlow({
+        filters: TEST_FILTERS,
+        isMounted: () => true,
+        getNextQuestionFn: vi.fn(async () => ({
+          ok: true as const,
+          data: null,
+        })),
+        submitAnswerFn,
+      }),
+    );
+
+    await output.onSubmit();
+
+    expect(output.canSubmit).toBe(false);
+    expect(submitAnswerFn).not.toHaveBeenCalled();
+  });
 });
