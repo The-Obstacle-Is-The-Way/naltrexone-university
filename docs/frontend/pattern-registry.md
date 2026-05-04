@@ -546,7 +546,8 @@ All standalone action buttons in the app use `rounded-full`:
 | In-card header link | `link` + `headerActionLinkClasses` | "View all", "Clear filters" |
 | Destructive confirmation | `destructive` | AlertDialog "Remove bookmark" action |
 | Success indicator (navigator) | `success` + `rounded-full` | Correct question dot in navigator |
-| End/abandon session | `outline` + `rounded-full` | "End session", "End exam" |
+| Header bail / abandon session | `outline` + `rounded-full` | Header "End session"; future exam abandon actions |
+| Tutor terminal session action | `default` + `rounded-full` | Footer "End session" on the last tutor question after feedback |
 | Error recovery | `outline` (no `rounded-full`) | "Try again", "Return to dashboard" |
 
 **End session usage:** In tutor sessions, `End session` is always present in the header as the bail-cheap exit and also appears as the filled footer terminal CTA on the last question after feedback has rendered. The duplicate same-label Q3 state is intentional; both buttons call `onEndSession` (DEBT-378). Exam mode still does not expose a header bail button.

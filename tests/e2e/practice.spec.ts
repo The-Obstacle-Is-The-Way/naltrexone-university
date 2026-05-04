@@ -181,7 +181,11 @@ test.describe('practice', () => {
       bottomActionBar.getByRole('button', { name: 'Next' }),
     ).toHaveCount(0);
 
-    await bottomActionBar.getByRole('button', { name: 'End session' }).click();
+    const footerEndSessionButton = bottomActionBar.getByRole('button', {
+      name: 'End session',
+    });
+    await expect(footerEndSessionButton).toBeEnabled({ timeout: 10_000 });
+    await footerEndSessionButton.click();
     await expect(
       page.getByRole('heading', { name: 'Session Summary' }),
     ).toBeVisible({ timeout: 30_000 });

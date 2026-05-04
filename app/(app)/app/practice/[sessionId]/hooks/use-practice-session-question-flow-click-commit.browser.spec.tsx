@@ -359,4 +359,54 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     expect(submitAnswerFn).toHaveBeenCalledTimes(1);
   });
+
+  it('surfaces submit errors and keeps session programmatic retry single-flight', async () => {
+    const submitError = new Error('Session submit exploded');
+    const getNextQuestionFn = vi
+      .fn<(input: unknown) => Promise<ActionResult<NextQuestion | null>>>()
+      .mockResolvedValue(ok(createSessionQuestion('tutor')));
+    const submitAnswerFn = vi
+      .fn<(input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>>()
+      .mockRejectedValueOnce(submitError)
+      .mockResolvedValueOnce(ok(createSubmitOutput('choice_2')));
+    const saveExamDraftAnswerFn =
+      vi.fn<
+        (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
+      >();
+
+    const harness = await renderHook(() =>
+      usePracticeSessionQuestionFlow({
+        sessionId: 'session-1',
+        isMounted: () => true,
+        getNextQuestionFn,
+        submitAnswerFn,
+        saveExamDraftAnswerFn,
+      }),
+    );
+
+    await expect
+      .poll(() => harness.result.current.question?.questionId)
+      .toBe('q_1');
+
+    harness.result.current.onSelectChoice('choice_1');
+
+    await expect
+      .poll(() => harness.result.current.loadState.status)
+      .toBe('error');
+    await expect.poll(() => harness.result.current.isPending).toBe(false);
+
+    const firstRetry = harness.result.current.onSubmit();
+    const secondRetry = harness.result.current.onSubmit();
+
+    await expect.poll(() => submitAnswerFn.mock.calls.length).toBe(2);
+    await expect(firstRetry).resolves.toEqual(createSubmitOutput('choice_2'));
+    await expect(secondRetry).resolves.toBeNull();
+    expect(submitAnswerFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        sessionId: 'session-1',
+        questionId: 'q_1',
+        choiceId: 'choice_1',
+      }),
+    );
+  });
 });

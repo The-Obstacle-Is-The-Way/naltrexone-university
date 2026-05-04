@@ -1,17 +1,27 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import type { PracticeFilters } from '@/app/(app)/app/practice/practice-page-logic';
+import * as reportClientError from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
+import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
 import { usePracticeQuestionAnswerFlow } from './use-practice-question-answer-flow';
 
-const { getNextQuestionMock, submitAnswerMock } = vi.hoisted(() => ({
-  getNextQuestionMock: vi.fn(),
-  submitAnswerMock: vi.fn(),
-}));
+vi.mock('@/lib/report-client-error', { spy: true });
+
+const { getNextQuestionMock, isMountedMock, submitAnswerMock } = vi.hoisted(
+  () => ({
+    getNextQuestionMock: vi.fn(),
+    isMountedMock: vi.fn(),
+    submitAnswerMock: vi.fn(),
+  }),
+);
+const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
+
+installReportClientErrorMocks(reportClientError);
 
 const TEST_FILTERS = {
   tagSlugs: [],
@@ -35,7 +45,7 @@ function createSubmitOutput(
 function PracticeQuestionAnswerFlowProbe() {
   const output = usePracticeQuestionAnswerFlow({
     filters: TEST_FILTERS,
-    isMounted: () => true,
+    isMounted: isMountedMock,
     getNextQuestionFn: getNextQuestionMock,
     submitAnswerFn: submitAnswerMock,
   });
@@ -74,6 +84,15 @@ function PracticeQuestionAnswerFlowProbe() {
       <button
         type="button"
         onClick={() => {
+          void output.onSubmit();
+          void output.onSubmit();
+        }}
+      >
+        submit-answer-twice
+      </button>
+      <button
+        type="button"
+        onClick={() => {
           output.onSelectChoice('choice_1');
           void output.onSubmit();
         }}
@@ -88,8 +107,13 @@ function PracticeQuestionAnswerFlowProbe() {
 }
 
 describe('usePracticeQuestionAnswerFlow (browser)', () => {
+  beforeEach(() => {
+    isMountedMock.mockImplementation(() => true);
+  });
+
   afterEach(() => {
     getNextQuestionMock.mockReset();
+    isMountedMock.mockReset();
     submitAnswerMock.mockReset();
     vi.restoreAllMocks();
   });
@@ -330,7 +354,9 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
       expect.objectContaining({ choiceId: 'choice_1' }),
     );
 
-    await screen.getByRole('button', { name: 'submit-answer' }).click();
+    await screen
+      .getByRole('button', { name: 'submit-answer', exact: true })
+      .click();
 
     expect(submitAnswerMock).toHaveBeenCalledTimes(1);
     submitDeferred.resolve(
@@ -360,7 +386,9 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
       .element(screen.getByTestId('can-submit'))
       .toHaveTextContent('false');
 
-    await screen.getByRole('button', { name: 'submit-answer' }).click();
+    await screen
+      .getByRole('button', { name: 'submit-answer', exact: true })
+      .click();
 
     expect(submitAnswerMock).not.toHaveBeenCalled();
     await expect
@@ -440,8 +468,87 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
       .element(screen.getByTestId('can-submit'))
       .toHaveTextContent('false');
 
-    await screen.getByRole('button', { name: 'submit-answer' }).click();
+    await screen
+      .getByRole('button', { name: 'submit-answer', exact: true })
+      .click();
 
     expect(submitAnswerMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('surfaces submit errors and keeps programmatic retry single-flight', async () => {
+    const submitError = new Error('Submit exploded');
+
+    getNextQuestionMock.mockResolvedValue(
+      ok(
+        createNextQuestion({
+          choices: [
+            { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
+            { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+          ],
+        }),
+      ),
+    );
+    submitAnswerMock
+      .mockRejectedValueOnce(submitError)
+      .mockResolvedValueOnce(ok(createSubmitOutput('choice_2')));
+
+    const screen = await render(<PracticeQuestionAnswerFlowProbe />);
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+
+    await screen
+      .getByRole('button', { name: 'select-choice-1', exact: true })
+      .click();
+
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('error');
+    await expect
+      .element(screen.getByTestId('error-message'))
+      .toHaveTextContent('Submit exploded');
+    await expect
+      .element(screen.getByTestId('is-pending'))
+      .toHaveTextContent('false');
+
+    await screen.getByRole('button', { name: 'submit-answer-twice' }).click();
+
+    await expect.poll(() => submitAnswerMock.mock.calls.length).toBe(2);
+    expect(submitAnswerMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ choiceId: 'choice_1' }),
+    );
+  });
+
+  it('reports unexpected submit orchestration errors', async () => {
+    const submitError = new Error('Submit rejected');
+    const unhandledError = new Error('isMounted exploded');
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+
+    getNextQuestionMock.mockResolvedValue(ok(createNextQuestion()));
+    submitAnswerMock.mockRejectedValueOnce(submitError);
+
+    const screen = await render(<PracticeQuestionAnswerFlowProbe />);
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+
+    isMountedMock.mockImplementation(() => {
+      throw unhandledError;
+    });
+    await screen
+      .getByRole('button', { name: 'select-choice-1', exact: true })
+      .click();
+
+    await expect.poll(() => reportClientErrorSpy.mock.calls.length).toBe(1);
+    expect(reportClientErrorSpy).toHaveBeenCalledWith(unhandledError, {
+      component: 'UsePracticeQuestionAnswerFlow',
+      action: 'submitAnswer',
+    });
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'runTransitionedAsyncAction: unhandled error in run()',
+      unhandledError,
+    );
   });
 });

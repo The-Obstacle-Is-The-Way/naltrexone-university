@@ -80,15 +80,16 @@ describe('PracticeView answer feedback', () => {
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
+    if (!actionBar) {
+      throw new Error('Expected bottom action bar to render');
+    }
     const choiceInputs = Array.from(
       doc.querySelectorAll('input[type="radio"]'),
     );
 
-    expect(
-      Array.from(actionBar?.querySelectorAll('button') ?? []),
-    ).toHaveLength(0);
-    expect(actionBar?.textContent).not.toContain('Submit');
-    expect(actionBar?.textContent).not.toContain('Next');
+    expect(Array.from(actionBar.querySelectorAll('button'))).toHaveLength(0);
+    expect(actionBar.textContent).not.toContain('Submit');
+    expect(actionBar.textContent).not.toContain('Next');
     expect(choiceInputs.every((input) => !input.hasAttribute('disabled'))).toBe(
       true,
     );
@@ -125,13 +126,16 @@ describe('PracticeView answer feedback', () => {
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
-    const labels = Array.from(actionBar?.querySelectorAll('button') ?? []).map(
+    if (!actionBar) {
+      throw new Error('Expected bottom action bar to render');
+    }
+    const labels = Array.from(actionBar.querySelectorAll('button')).map(
       (button) => button.textContent?.trim(),
     );
 
     expect(labels).toEqual(['Previous']);
-    expect(actionBar?.textContent).not.toContain('Submit');
-    expect(actionBar?.textContent).not.toContain('Next');
+    expect(actionBar.textContent).not.toContain('Submit');
+    expect(actionBar.textContent).not.toContain('Next');
   });
 
   it('renders Next as primary action after an answer commits', () => {

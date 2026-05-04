@@ -57,6 +57,7 @@ describe('usePracticeSessionQuestionFlow', () => {
     const output = renderHook(() =>
       usePracticeSessionQuestionFlow({
         sessionId: 'session-1',
+        autoload: false,
         isMounted: () => true,
         getNextQuestionFn: vi.fn(),
         submitAnswerFn,
