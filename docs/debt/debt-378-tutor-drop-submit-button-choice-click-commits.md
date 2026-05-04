@@ -5,7 +5,7 @@
 **Source:** Manual UX walkthrough of tutor session (Q1, Q2, Q3 of a 3-question session) on 2026-05-04, follow-up first-principles design pass with Claude Design variants V1/V2/V3, and final V4 redesign converged after weighing friction-vs-deliberation trade-offs against board-prep convention and learning-app UX literature
 **Related:** [DEBT-375 Tutor session action bar — no terminal CTA on last question (archived)](../_archive/debt/debt-375-tutor-session-action-bar-no-terminal-cta-on-last-question.md), [DEBT-372 Post-exam review summary button label divergence (archived)](../_archive/debt/debt-372-post-exam-review-summary-button-label-divergence.md), [DEBT-365 Exam flow affordance and label consistency (archived)](../_archive/debt/debt-365-exam-flow-affordance-and-label-consistency.md), [DEBT-363 Exam shell scroll model and dual-CTA disambiguation (archived)](../_archive/debt/debt-363-exam-shell-scroll-model-and-dual-cta.md), [DEBT-379 Exam action bar — promote primary CTA to right slot](./debt-379-exam-action-bar-promote-primary-cta-to-right-slot.md), [Pattern Registry](../frontend/pattern-registry.md), [Frontend Standards](../frontend/standards.md), [Practice Page Docs](../frontend/pages/practice.md)
 
-**Status:** Open. Doc-first; no code change yet. This document supersedes the original DEBT-378 scoping (label-only "End session vs View Summary" unification), which has been subsumed by the broader click-to-commit redesign.
+**Status:** Open. Audit-refined 2026-05-04 against `e44b8380`; no code change yet. This document supersedes the original DEBT-378 scoping (label-only "End session vs View Summary" unification), which has been subsumed by the broader click-to-commit redesign.
 
 ---
 
@@ -53,10 +53,10 @@ The friction, by contrast, is paid every question, every session, by every user.
 
 ### Convention check: what does the broader UX literature say?
 
-Web search (2026-05-04) on learning-app UX patterns surfaced two relevant findings:
+UX literature and product-pattern review (2026-05-04) surfaced two relevant findings. Treat these as supporting context, not the load-bearing proof; the load-bearing evidence is the user-observed two-click tutor friction above.
 
-1. Click-to-commit is the dominant pattern in modern educational apps (Quizlet, Brilliant, Khan Academy practice, etc.). Two-step submit is more associated with form submission than with quiz interactions, and carries form-submission friction baggage.
-2. The literal label "Submit" is independently flagged as vague and form-flavored in learning contexts — it doesn't tell the learner *what* they're submitting *to* or *what happens next*. This is one of the most-criticized button labels in instructional UX.
+1. Click-to-commit is common in learning-app quiz interactions. Two-step submit is more associated with form submission than with rapid practice flows, and carries form-submission friction baggage.
+2. The literal label "Submit" is independently flagged as vague and form-flavored in learning contexts — it doesn't tell the learner *what* they're submitting *to* or *what happens next*. This supports removing the tutor-only `Submit` button once the choice card itself becomes the commit surface.
 
 Sources: [kaiserkreativ.co — Better Alternatives to the "Submit" Button](https://www.kaiserkreativ.co/elearning-design-boost/better-alternatives-to-the-submit-button), [Web Designer Depot — Friction in User Engagement](https://webdesignerdepot.com/are-we-over-simplifying-ux-the-role-of-friction-in-user-engagement/).
 
@@ -118,30 +118,36 @@ Submit click chain (separate, today):
 2. → `usePracticeQuestionAnswerFlow.onSubmit` (`use-practice-question-answer-flow.ts:139-175`)
 3. → `runSubmitAnswerFlow()` (`shared/question-flow-actions.ts`) → controller → use case
 
-After refactor, the chains merge **in tutor mode only**:
+After refactor, the chains merge **in non-exam learning flows only**:
 1. `ChoiceButton` onChange fires
 2. → `QuestionCard` `onClick={() => onSelectChoice(choice.id)}`
-3. → `useQuestionFlowCore.onSelectChoice()` — sets `selectedChoiceId` AND, in tutor mode, immediately invokes the submit flow
-4. → `submitAnswerForQuestion()` runs to completion → `submitResult` populates → feedback renders
+3. → a wrapper-level `onSelectChoice(choice.id)` selects the choice and, for tutor / Quick Practice, immediately invokes the submit flow with that same `choiceId`
+4. → `submitAnswerForQuestion({ selectedChoiceId: choiceId, ... })` runs to completion → `submitResult` populates → feedback renders
 
-The mode-specific branching lives at `useQuestionFlowCore.onSelectChoice()` because that's the single owner of the selection-vs-commit semantic. The choice button itself stays mode-agnostic (it just reports clicks). Exam mode `onSelectChoice` continues to do select-only.
+The mode-specific branching does **not** live inside `useQuestionFlowCore`. Audit against `e44b8380` found that `UseQuestionFlowCoreInput` only accepts `isMounted` (`use-question-flow-core.ts:21-23`), while the submit path needs question, selected choice, idempotency key, loaded timestamp, submit function, request sequencing, and load/result setters. Pushing all of that into the core hook would make the shared selection primitive own submission orchestration and would create a broad architectural merge point.
 
-This places the click-to-commit invariant at the right architectural layer: the **flow hook** that already orchestrates submission is the same module that gets the new wiring. The shared primitive (`ChoiceButton`) and the shared composite (`QuestionCard`) stay intact. No prop drilling of mode flags into the primitives.
+The correct layer is the **flow wrapper hook that already owns submission dependencies**:
+
+- Active session path: `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` wraps the shared selection result. If `sessionMode === 'exam'`, choice click remains select-only. If `sessionMode !== 'exam'`, the same click commits by passing the clicked `choiceId` explicitly into the session `submitAnswerForQuestion` path.
+- Ad-hoc / Quick Practice path: `app/(app)/app/practice/hooks/use-practice-question-answer-flow.ts` wraps the shared selection result and always commits the clicked `choiceId` because Quick Practice has no exam mode.
+- Shared selection core: `app/(app)/app/practice/shared/use-question-flow-core.ts` remains mode-agnostic. It may change `onSelectChoice` from `void` to `boolean` so wrappers know whether selection actually changed. It must not import or call `runSubmitAnswerFlow`.
+
+Do **not** call the existing no-argument `onSubmit()` immediately after `setSelectedChoiceId(choiceId)`. React state updates are async, so that path can read the previous `selectedChoiceId`. The commit path must pass the clicked `choiceId` explicitly to `submitAnswerForQuestion`.
 
 ### State machine simplification
 
 The following derived state and props become dead weight in tutor scope and can be removed:
 
-- `canSubmit` (computed at `practice-page-logic.ts:34-47`, threaded through `practice-view.tsx:37, 100, 109, 144, 384`) — gates the Submit button. After refactor, the Submit button is gone. The same conditions are still relevant (must have a selected choice, must not be already-answered, must not be loading) but they now gate the choice-button click via the existing `isAnswerLocked` derivation at `practice-view.tsx:322-326`.
-- `isSubmittingAnswer` (computed at `practice-view.tsx:326-330`) — drives the `'Submitting…'` button label. After refactor, no Submit button label exists. The pending state is still relevant (it must lock the choice cards during the network roundtrip to prevent double-commit), but it's already covered by `isAnswerLocked`'s `props.isPending` clause.
+- `canSubmit` at the `PracticeView` / `TutorActionBar` UI boundary — gates only the Submit button. After refactor, no footer Submit button exists. `canSubmitAnswer()` itself (`practice-page-logic.ts:34-47`) can remain as a hook-level readiness helper if the wrapper submit path still uses it; it is not exam-specific.
+- `isSubmittingAnswer` (computed at `practice-view.tsx:326-330`) — drives the `'Submitting…'` button label. After refactor, no Submit button label exists. The pending state is still relevant (it must lock the choice cards during the network roundtrip to prevent double-commit), but it is already applied through the choice-card disabled expression at `practice-view.tsx:522-526`.
 - `'Submitting…'` literal — gone from production code.
-- Pre-feedback outline `Next` button (`practice-view.tsx:166-174`) — gone. Skip-without-committing is no longer possible; the question navigator pills are the only non-sequential navigation affordance, which is sufficient.
+- Pre-feedback outline `Next` button (`practice-view.tsx:166-174`) — gone. In active tutor sessions, skip-without-committing moves to the question navigator pills. In Quick Practice, there is no skip path before answering because the surface is ad-hoc and single-question.
 
-`canSubmit` and `isSubmittingAnswer` remain meaningful in **exam scope** (exam still has Submit-equivalent semantics around the Review & Submit button on Q3, and `isPending` matters for navigation pacing). The refactor scopes the removal to tutor only.
+The current `PracticeViewProps` includes `canSubmit` and `onSubmit` at `practice-view.tsx:37,47`; those props are UI Submit plumbing and should be removed from `PracticeView` / `PracticeSessionPageView` / `QuickPracticeClient`. Hook/controller outputs may keep `canSubmit` / `onSubmit` as programmatic compatibility for probes and internal submit-path tests during this debt; do not rename or purge hook-level submit identifiers in the same pass.
 
 ### Loading and double-commit protection
 
-Today's `isAnswerLocked` derivation already disables all four choice buttons when `props.isAnswered || props.submitResult !== null`, plus the `props.isPending || props.loadState.status === 'loading'` clause prevents clicks during the submit roundtrip. This guard is at `practice-view.tsx:322-326` and `QuestionCard` propagates the disabled state to all four `ChoiceButton`s.
+Today's `isAnswerLocked` derivation disables all four choice buttons when `props.isAnswered || props.submitResult !== null` (`practice-view.tsx:322`). The separate choice-card disabled expression adds `props.isPending || props.loadState.status === 'loading'` at `practice-view.tsx:522-526`, preventing clicks during the submit roundtrip. `QuestionCard` propagates the disabled state to all four `ChoiceButton`s.
 
 After refactor, the same guard prevents double-commit: the moment a choice click triggers the submit flow, `isPending` flips true, all four choice buttons go disabled, no second click can race. When the response lands, `submitResult` populates, feedback renders, choice buttons stay disabled (locked to committed state). No new race condition introduced.
 
@@ -149,7 +155,7 @@ The visual-loading window (between click and feedback render) is short. We do no
 
 ### Keyboard interactions
 
-`ChoiceButton` uses a native `<input type="radio">` wrapped in a `<label>`. Space and Enter on the focused radio fire `onChange`, which calls the same `onClick` prop the mouse path uses. After refactor, keyboard commit is automatic — no special handling needed.
+`ChoiceButton` uses a native `<input type="radio">` wrapped in a `<label>`. Pointer activation and Space on a focused radio fire `onChange`, which calls the same `onClick` prop the mouse path uses. Enter is not guaranteed to activate a native radio across browsers, so do not add an Enter-commit test unless the implementation adds explicit `onKeyDown` handling.
 
 Focus management after commit: out of scope; current behavior preserved.
 
@@ -174,66 +180,114 @@ Key changes:
 
 **Lines 326-330 (`isSubmittingAnswer` derivation):** delete.
 
-**Lines 380-410 (TutorActionBar invocation in the parent JSX):** drop `canSubmit`, `onSubmit`, `isSubmittingAnswer` from the spread.
+**Lines 16-53 (`PracticeViewProps`):** remove `canSubmit` and `onSubmit`. After Submit removal those props are no longer read by `PracticeView`; keeping them on the view contract would preserve dead UI plumbing.
 
-**Lines 300-340 (`PracticeView` function — choice click handling):** verify that the existing `onSelectChoice` prop is the one that gets the new commit semantic. The wiring change happens inside `useQuestionFlowCore` (next file), not here.
+**Lines 380-410 (TutorActionBar invocation in the parent JSX):** drop `canSubmit`, `onSubmit`, `isSubmittingAnswer` from the prop block.
+
+**Lines 300-340 (`PracticeView` function — choice click handling):** `PracticeView` continues to pass `props.onSelectChoice` into `QuestionSurfaceBody`. The commit semantic is already encoded before the prop reaches the view.
 
 ### File 2: `app/(app)/app/practice/shared/use-question-flow-core.ts`
 
-**Lines 252-264 (`onSelectChoice` callback):** add a tutor-mode branch that, after `selectChoiceIfAllowed` succeeds, immediately invokes the submit flow. The hook needs awareness of mode (`isExamMode`); if not currently in scope, lift it from caller props.
+**Lines 31-57 (`UseQuestionFlowCoreOutput`) and 252-264 (`onSelectChoice` callback):** keep the core hook mode-agnostic. Change `onSelectChoice` to return `boolean`:
 
 ```ts
 const onSelectChoice = useCallback(
-  (choiceId: string) => {
-    if (!question) return;
+  (choiceId: string): boolean => {
+    if (!question) return false;
     const changed = selectChoiceIfAllowed(
       { isAnswered, submitResult },
       setSelectedChoiceId,
       choiceId,
     );
-    if (!changed) return;
-    if (!isExamMode) {
-      // Tutor mode: choice click commits immediately
-      runSubmitAnswerFlow({ choiceId });
-    }
+    return changed;
   },
-  [isAnswered, question, submitResult, setSelectedChoiceId, isExamMode, runSubmitAnswerFlow],
+  [isAnswered, question, submitResult, setSelectedChoiceId],
 );
 ```
 
-The exact name and wiring of `runSubmitAnswerFlow` here depends on what `useQuestionFlowCore` already has access to. If submission today goes through a separate hook (`usePracticeQuestionAnswerFlow`), the cleanest move is to colocate the flow into `useQuestionFlowCore` or to thread the submit handler in via props.
-
-This is the single most architecturally meaningful change in the refactor. Implementation should preserve the current testability of the flow — the submit invocation must be observable in tests via the existing fakes (`FakeAttemptRepository`, etc.).
+Do not add `isExamMode`, `runSubmitAnswerFlow`, controller dependencies, or submit callbacks to this hook.
 
 ### File 3: `app/(app)/app/practice/practice-page-logic.ts`
 
-**Lines 34-47 (`canSubmitAnswer`):** retain — exam mode still uses it. No change.
+**Lines 34-47 (`canSubmitAnswer`):** retain if still used by the wrapper submit path or hook tests. It is not an exam-mode helper; it is a generic submit-readiness helper.
 
 **Lines 113-150 (`submitAnswerForQuestion`):** retain — the submit flow itself doesn't change, only its trigger. No change.
 
 ### File 4: `app/(app)/app/practice/hooks/use-practice-question-answer-flow.ts`
 
-**Lines 139-175 (`onSubmit` callback):** the callback is no longer wired to a Submit button JSX, but the underlying flow stays. Determine whether the hook is still consumed elsewhere (e.g., exam mode might use it through a different code path); if not, the hook can be retired or absorbed into `useQuestionFlowCore`. Audit needed.
+Ad-hoc / Quick Practice path. This hook currently consumes `useQuestionFlowCore` at `use-practice-question-answer-flow.ts:85` and defines `onSubmit` at `:139-175`.
 
-### File 5: `components/question/choice-button.tsx` and `components/question/question-card.tsx`
+Add a `commitChoice(choiceId: string)` helper that calls `submitAnswerForQuestion` with `selectedChoiceId: choiceId` instead of reading the selected choice from React state after `setSelectedChoiceId`.
+
+Wrap the core selection callback:
+
+```ts
+const onSelectChoice = useCallback(
+  (choiceId: string) => {
+    const changed = selectChoice(choiceId);
+    if (!changed) return;
+    void commitChoice(choiceId);
+  },
+  [commitChoice, selectChoice],
+);
+```
+
+The existing no-argument `onSubmit` may remain on the hook output as programmatic compatibility and may call `commitChoice(selectedChoiceId)` internally. It is no longer wired to `PracticeView` UI.
+
+### File 5: `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts`
+
+Active session path. This hook currently returns core `onSelectChoice` unchanged at `use-practice-session-question-flow.ts:396` and defines session `onSubmit` at `:332-377`.
+
+Add a `commitChoice(choiceId: string)` helper that calls the session `submitAnswerForQuestion` with `selectedChoiceId: choiceId`.
+
+Wrap selection with mode branching:
+
+```ts
+const onSelectChoice = useCallback(
+  (choiceId: string) => {
+    const changed = selectChoice(choiceId);
+    if (!changed) return;
+    if (sessionMode === 'exam') return;
+    void commitChoice(choiceId);
+  },
+  [commitChoice, selectChoice, sessionMode],
+);
+```
+
+Exam mode must remain select-only. Tutor mode commits immediately. The existing no-argument `onSubmit` may remain on the hook output for programmatic compatibility and may call `commitChoice(selectedChoiceId)` internally.
+
+### File 6: `components/question/choice-button.tsx` and `components/question/question-card.tsx`
 
 **No JSX or behavior change.** The primitive stays mode-agnostic. The `onClick` prop continues to thread up to `onSelectChoice`, which is the layer where mode-specific behavior diverges.
 
-### File 6: `app/(app)/app/practice/quick-practice/quick-practice-client.tsx`
+### File 7: `app/(app)/app/practice/hooks/use-practice-question-flow.ts`
 
-If this surface uses tutor-mode practice flow, the same `canSubmit`/`isSubmittingAnswer` props that are removed from `TutorActionBar` must also be removed from this caller. Verify and update. If quick-practice has its own action bar that doesn't share the tutor footer, leave alone.
+Wrapper for ad-hoc / Quick Practice. It composes `usePracticeQuestionAnswerFlow` at `use-practice-question-flow.ts:47-52` and returns the merged answer/bookmark output at `:59-62`.
+
+No UI-specific change is required here unless TypeScript forces the wrapper output type to narrow after `PracticeViewProps` drops `canSubmit` / `onSubmit`. If the hook keeps those output fields for programmatic compatibility, this wrapper can keep forwarding them.
+
+### File 8: `app/(app)/app/practice/quick/quick-practice-client.tsx`
+
+Quick Practice calls `usePracticeQuestionFlow` at `quick-practice-client.tsx:65-67` and passes `canSubmit` / `onSubmit` into `PracticeView` at `:113,120-122`. Because Quick Practice shares `PracticeView` and has no separate action bar, it is in scope. Drop those UI props; click-to-commit comes from the ad-hoc answer-flow wrapper underneath `usePracticeQuestionFlow`.
+
+### File 9: `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx`
+
+Drop `canSubmit` / `onSubmit` from `PracticeSessionPageViewProps` (`practice-session-page-view.tsx:46,56`) and from the `PracticeView` prop block (`:266,274`) because `PracticeViewProps` removes them. The controller may continue returning `canSubmit` / `onSubmit`; JSX spread in `practice-session-page-client.tsx:35` tolerates extra controller output properties, and hook/controller tests may still exercise the programmatic submit callback.
 
 ### Summary of production changes
 
 | File | Lines (approx) | Change type |
 |------|----------------|-------------|
-| `practice-view.tsx` | 112-205, 326-330, 380-410, 92-110 | Major restructure of TutorActionBar; prop set narrowed; derived state pruned |
-| `use-question-flow-core.ts` | 252-264 | Add tutor-mode commit-on-select branch; add `isExamMode` awareness |
-| `use-practice-question-answer-flow.ts` | 139-175 | Audit — possibly retire if no longer consumed by JSX |
-| `quick-practice-client.tsx` | (varies) | Drop dead props if applicable |
+| `practice-view.tsx` | 16-53, 92-205, 326-330, 380-410 | Major restructure of TutorActionBar; UI Submit prop path removed; derived state pruned |
+| `use-question-flow-core.ts` | 31-57, 252-264 | Keep selection core mode-agnostic; make `onSelectChoice` return `boolean` |
+| `use-practice-question-answer-flow.ts` | 85, 139-175 | Add explicit-choice commit wrapper for ad-hoc / Quick Practice |
+| `use-practice-session-question-flow.ts` | 332-397 | Add explicit-choice commit wrapper; tutor commits, exam remains select-only |
+| `use-practice-question-flow.ts` | 47-62 | Keep wrapper shape unless output type narrowing is forced |
+| `quick/quick-practice-client.tsx` | 113, 120-122 | Drop dead UI props |
+| `practice-session-page-view.tsx` | 46, 56, 266, 274 | Drop UI props from view contract and `PracticeView` invocation |
 | Total | ~150-250 lines touched | Net negative LOC (deletion-heavy) |
 
-Choice button primitive, QuestionCard composite, controller layer, repository layer, use-case layer: **zero changes**. The refactor is scoped to the orchestration hook and the action bar.
+Choice button primitive, QuestionCard composite, controller layer, repository layer, use-case layer: **zero behavior changes**. The refactor is scoped to wrapper hooks and the action bar. Controller output may retain programmatic `onSubmit` compatibility; do not rename or purge controller output unless implementation proves it is trivial and all probes are updated.
 
 ---
 
@@ -241,12 +295,15 @@ Choice button primitive, QuestionCard composite, controller layer, repository la
 
 This is a substantial test-suite refactor. Every tutor test that follows the pattern "click answer → click Submit → assert feedback" compresses to "click answer → assert feedback." Every test that asserts `'Submit'`, `'Submitting…'`, `canSubmit`, or pre-feedback Next button must update.
 
+Audit note at `e44b8380`: this is broader than the first draft suggested. A grep for `Submit` / `canSubmit` / `onSubmit` finds direct references in `practice-view` unit/browser tests, session-page view tests, page shell tests, Quick Practice tests, E2E helper code, and multiple E2E specs. The implementation prompt must produce exact edit blocks from fresh grep output; do not assume only the files below change.
+
 ### Unit tests (Vitest, jsdom)
 
 **`practice-view-navigation.test.tsx`:**
-- Line 178 — assertion for empty Q3 terminal slot when `onEndSession` missing — **KEEP** (still valid post-refactor; spacer behavior unchanged)
-- Line 227-230 — `'renders an outline View Summary button in the primary group before final tutor submission'` — **REWRITE**: pre-feedback Q3 footer has no terminal CTA; the test should assert the primary group contains only `[Previous]` (or no Previous on Q1)
-- Line 334 — `'keeps tutor action bar ordering as Previous, Submit, Next before feedback'` — **DELETE** entirely; replace with a new test asserting pre-feedback Q2 primary group is `['Previous']` only
+- Lines 178-181 — current "no `onEndSession` on last tutor question" assertion expects `['Previous', 'Submit']` plus no `Next` / `View Summary` — **REWRITE** to expect `['Previous']` only, with no `Next`, no `Submit`, and no `End session` because there is no terminal handler
+- Lines 184-234 — `'renders an outline View Summary button in the primary group before final tutor submission'` — **REWRITE**: pre-feedback Q3 footer has no terminal CTA; the test should assert the primary group contains only `['Previous']`
+- Lines 236-293 — `'promotes View Summary after final tutor feedback and keeps Bookmark in the secondary group'` — **REWRITE** to `End session`: primary group `['Previous', 'End session']`, secondary group `['Bookmark']`, `End session` `data-variant="default"`
+- Lines 295-335 — `'keeps tutor action bar ordering as Previous, Submit, Next before feedback'` — **DELETE** entirely; replace with a new test asserting pre-feedback Q2 primary group is `['Previous']` only
 - Add new tests:
   - Pre-feedback Q1: primary group renders no buttons
   - Pre-feedback Q2: primary group renders `['Previous']`
@@ -257,31 +314,39 @@ This is a substantial test-suite refactor. Every tutor test that follows the pat
   - Negative assertion: pre-feedback footer never contains a button labeled `'Next'` in tutor scope (only post-feedback)
 
 **`practice-view-answer-feedback.test.tsx`:**
-- Line 49 — `'renders submit pending copy without rendering question-loading text'` — **DELETE** (no `'Submitting…'` state exists post-refactor); preserve the question-loading-text portion as a separate assertion if not redundant
-- Line 76 — `'keeps Submit visible and Next outlined before submission'` — **DELETE**; add `'choice cards are clickable and the footer is empty/Previous-only before any commit'`
-- Line 78-84 — `nextButton` not undefined, `data-variant="outline"` — **DELETE**
-- Line 120-127 — `'hides Submit and promotes Next to primary after submission'` — **REWRITE** as `'renders Next as primary action after answer commits'` (Submit is no longer in the picture, but the post-feedback assertion stays)
+- Lines 16-51 — `'renders submit pending copy without rendering question-loading text'` — **DELETE** (no `'Submitting…'` state exists post-refactor); preserve the question-loading-text portion as a separate assertion if not redundant
+- Lines 53-85 — `'keeps Submit visible and Next outlined before submission'` — **DELETE**; add `'choice cards are clickable and the footer is empty/Previous-only before any commit'`
+- Lines 75-84 — `submitButton` present plus `nextButton` outline assertions — **DELETE**
+- Lines 87-130 — `'hides Submit and promotes Next to primary after submission'` — **REWRITE** as `'renders Next as primary action after answer commits'` (Submit is no longer in the picture, but the post-feedback assertion stays)
 - Add new tests:
   - Click on a choice button triggers the submit flow (assert via fake repository: an attempt was recorded)
   - Click during `isPending` does not double-commit (assert single attempt recorded after rapid double-click)
   - Click on a locked choice (post-feedback) does nothing
-  - Keyboard Space/Enter on a focused choice radio commits the answer
+  - Keyboard Space on a focused choice radio commits the answer. Do not assert Enter unless explicit Enter handling is added.
 
 **`practice-view-layout.test.tsx`:**
-- Update any layout structure assertions that reference Submit's position. Most layout tests check group boundaries via `data-testid`; those stay valid.
+- Update render fixtures because `PracticeViewProps` drops `canSubmit` / `onSubmit`.
 - Audit `toHaveLength(N)` assertions on action bar children — counts shrink in pre-feedback states.
 
-**`practice-view-exam-actions.test.tsx`:** **NO CHANGE FROM THIS DEBT.** Exam mode is not affected. (DEBT-379 has its own test diff.)
+**Other `PracticeView` colocated tests:**
+- `practice-view-bookmarks.test.tsx` — mostly bookmark behavior, but render fixtures pass `canSubmit` / `onSubmit`; update props.
+- `practice-view-exam-actions.test.tsx` — exam behavior stays unchanged, but render fixtures pass `canSubmit` / `onSubmit`; update props only. Do not change exam assertions for this debt.
+
+**Page shell tests:**
+- `app/(app)/app/practice/page.test.tsx` — static PracticeView mock fixtures pass `canSubmit` / `onSubmit`; update.
+- `app/(app)/app/practice/[sessionId]/page.test.tsx` — static PracticeSessionPageView / PracticeView fixtures pass `canSubmit` / `onSubmit`; update. The existing assertion that contains `'Submitting…'` must be deleted or rewritten because that literal leaves production.
 
 ### Browser specs (Vitest browser mode, Chromium)
 
 **`practice-view.browser.spec.tsx`:**
 - Line 91-120 — exam controls test, asserts no Submit button in exam — **KEEP** (still valid; exam never had Submit, still doesn't)
-- Line 184-260 — tutor feedback rendering test — **RESTRUCTURE**: today's flow clicks Submit. New flow asserts feedback renders directly after the choice click.
+- Line 184-260 — tutor feedback bottom-bar static render — **KEEP SHAPE / UPDATE PROPS**: this test directly renders a post-feedback fixture and does not click Submit. It should still assert `Previous`, `Next`, and `Bookmark` after feedback; remove `canSubmit` / `onSubmit` fixture props.
+- Lines 262-355 — pending/disabled mutation controls — **REWRITE** tutor half: no Submit button exists to disable; assert choice cards are disabled during pending and exam Mark-for-review behavior remains unchanged.
+- Lines 649-714 — tutor last-question `View Summary` routing — **REWRITE** to `End session` and preserve the "calls `onEndSession`, not `onNextQuestion`" behavioral assertion.
 - Add: tutor Q3 last-question routing test — clicking the footer `End session` calls `onEndSession`; clicking the header `End session` calls the same handler.
 
 **`practice-view-notification.browser.spec.tsx`:**
-- Audit any Submit-button-related fixtures. The notification spec likely scopes around bookmark/feedback flows; minor cleanup expected.
+- Search for Submit-related fixtures and update any active tutor / Quick Practice cases. Do not change bookmark/feedback notification assertions unless they depend on removed props.
 
 **`practice-session-page-view-active-question.browser.spec.tsx`:**
 - Tests asserting header `End session` persistence across questions — **KEEP** (header behavior unchanged).
@@ -289,6 +354,11 @@ This is a substantial test-suite refactor. Every tutor test that follows the pat
 
 **`practice-session-page-view-question-navigation.browser.spec.tsx`:**
 - Lines 386-457 — last tutor question navigation test asserting `View Summary` calls `onEndSession` not `onNextQuestion` — **REWRITE** with the `End session` literal in the assertion.
+
+**Hook browser/unit tests:**
+- `use-question-flow-core.browser.spec.tsx` — add assertions that `onSelectChoice` returns `true` only when selection changed and `false` when blocked by missing question, answered state, or existing submit result.
+- `use-practice-question-answer-flow.browser.spec.tsx` — rewrite select-then-submit path so choice click commits in ad-hoc practice; keep a programmatic `onSubmit` compatibility assertion only if the hook still exposes it.
+- `use-practice-session-question-flow.test.tsx` and related session controller probes — update expected output shape if `canSubmit` / `onSubmit` is no longer surfaced to the view; keep hook-level compatibility tests if those callbacks remain.
 
 ### Integration tests
 
@@ -302,17 +372,23 @@ This is a substantial test-suite refactor. Every tutor test that follows the pat
 - Add: assertion that on Q3, the footer `End session` and the header `End session` are both present and both clickable; clicking either ends the session (either is a valid path; no preference required).
 - Estimated diff: ~30-50 line changes, mostly deletion of Submit click steps.
 
+Other E2E files with current `Submit` clicks at `e44b8380`:
+- `tests/e2e/review-mode-audit.spec.ts` — contains tutor/quick practice Submit interactions and no-Submit assertions for review surfaces. Rewrite only the active tutor/quick Submit clicks; preserve review-surface no-Submit assertions.
+- `tests/e2e/session-review-navigation.spec.ts` — active tutor Submit clicks become choice-click commits.
+- `tests/e2e/subscribe-and-practice.spec.ts` — first-practice Submit click becomes choice-click commit.
+- `tests/e2e/helpers/question.ts` — shared helper must stop clicking Submit for tutor/quick practice, or expose mode-specific helpers so exam/review flows keep their current semantics.
+
 ### Test count summary
 
 | Test type | Files affected | Assertions changed (estimate) |
 |-----------|----------------|-------------------------------|
-| Unit | 3-4 | 25-40 |
-| Browser | 3-4 | 15-25 |
+| Unit | 5-7 | 35-55 |
+| Browser | 5-7 | 20-35 |
 | Integration | 0 | 0 |
-| E2E | 1 | 8-15 |
-| **Total** | **7-9 files** | **~50-80 assertions** |
+| E2E | 4-5 | 15-30 |
+| **Total** | **12-18 files** | **~70-120 assertions** |
 
-A pre-implementation audit pass should produce an exact list with file:line citations so the implementation god prompt has precise edit blocks.
+The implementation prompt should refresh grep output and produce exact file:line edit blocks before coding.
 
 ---
 
@@ -320,7 +396,7 @@ A pre-implementation audit pass should produce an exact list with file:line cita
 
 ### `docs/frontend/pattern-registry.md`
 
-- **I-3 (Choice Button) entry:** add a "Behavior" subsection. Today's entry covers visual states; add: "In tutor mode, the choice click commits the answer (invokes the submit flow). In exam mode, the choice click selects without committing (commit deferred to session end). The primitive is mode-agnostic; mode-specific behavior is wired at `useQuestionFlowCore.onSelectChoice`."
+- **I-3 (Choice Button) entry:** add a "Behavior" subsection. Today's entry covers visual states; add: "In tutor mode and Quick Practice, the choice click commits the answer (invokes the submit flow). In exam mode, the choice click selects without committing (commit deferred to session end). The primitive and `useQuestionFlowCore` remain mode-agnostic; mode-specific behavior is wired in `usePracticeQuestionAnswerFlow` and `usePracticeSessionQuestionFlow`."
 - **End session entry:** add "Used in tutor mode header (always present) and tutor mode footer terminal CTA on the last question (intentional same-label duplicate; both wired to `onEndSession`)."
 - **Pre-feedback Next pattern:** if a registry entry exists for this affordance, mark deprecated and remove from tutor scope.
 - **Submit button:** if a registry entry exists for the tutor Submit button, mark removed.
@@ -328,7 +404,7 @@ A pre-implementation audit pass should produce an exact list with file:line cita
 ### `docs/frontend/standards.md`
 
 - **Action bar / Button placement table:** update tutor row(s) to reflect new structure (no Submit, `[Previous][Next/End session]` cluster left, `[Bookmark]` `sm:ml-auto` right).
-- **Primary CTA position section:** add "In tutor mode, the choice cards themselves act as the primary action pre-feedback; the footer carries only navigation. In exam mode, the footer right slot carries the primary CTA (per DEBT-379, queued)."
+- **Primary CTA position section:** add "In tutor mode and Quick Practice, the choice cards themselves act as the primary action pre-feedback; the footer carries only backward navigation before feedback and sequential navigation after feedback. Exam right-slot CTA promotion is separate DEBT-379 and must not be described as shipped until that debt lands."
 
 ### `docs/frontend/pages/practice.md`
 
@@ -350,7 +426,9 @@ No content change; DEBT-375's first-principles framing (header `End session` for
 
 ### Skip-without-answering on Q1/Q2
 
-Today, pre-feedback `Next` lets users advance without selecting an answer. After refactor, this affordance is removed. Skip is still possible via the question navigator pills at the top of the practice surface (clicking pill 2 jumps to Q2 from Q1, etc.), which is the architectural source of truth for non-sequential navigation. The question navigator pills are visible across all states (pre-feedback, post-feedback, Q1, Q2, Q3) and provide the same affordance.
+Today, pre-feedback `Next` lets users advance without selecting an answer. After refactor, this affordance is removed from active tutor sessions. Skip is still possible in active sessions via the question navigator pills at the top of the practice surface (clicking pill 2 jumps to Q2 from Q1, etc.), which is the architectural source of truth for non-sequential navigation. The navigator buttons render from `QuestionNavigator` and are disabled only when `row.isAvailable` is false (`exam-review-view.tsx:88-99`); current-question pills remain clickable but carry `aria-current="step"`.
+
+Quick Practice has no question navigator. That is acceptable because Quick Practice is an ad-hoc single-question flow: the forward path is click answer → feedback → Next.
 
 The product question is whether removing the footer pre-feedback Next is a regression for users who relied on it as their primary skip path. Two arguments against the regression framing:
 
@@ -378,7 +456,7 @@ After refactor: no uncommitted state exists. The first interaction with a choice
 - `<input type="radio">` semantics are preserved. Screen readers continue to announce "radio button, X of 4" on focus.
 - Live region announcements when feedback renders: today's behavior is preserved (the feedback panel uses `aria-live` per existing pattern; no change).
 - Focus management after commit: today's behavior is preserved (focus stays where the user clicked; feedback panel scrolls into view if below fold).
-- Keyboard support: Space/Enter on a focused choice commits in tutor mode (the same `onChange → onClick → onSelectChoice` chain that mouse uses). No special handling required.
+- Keyboard support: Space on a focused choice commits in tutor mode through the native radio `onChange → onClick → onSelectChoice` chain. Enter is not guaranteed for native radios; do not claim or test Enter unless explicit key handling is added.
 - The `aria-describedby` annotation that DEBT-361 added for exam Q3 last-question semantic clarity is independent of this debt.
 
 ### Telemetry
@@ -397,14 +475,14 @@ If profiling reveals a perceptible click-to-feedback gap, follow-up debt can add
 
 | Risk | Mitigation |
 |------|------------|
-| Users on board-prep apps muscle-memoried to two-step submit experience tutor as "too fast" / "rushing" | Ship behind a soft launch — instrument session abandonment rate post-refactor and revert if it spikes. The cost of being wrong is recoverable with a re-revert (test work in opposite direction). |
+| Users on board-prep apps muscle-memoried to two-step submit experience tutor as "too fast" / "rushing" | Ship normally with visual/manual QA and watch support/user feedback. Do not add new telemetry in this debt; if existing answer-submit telemetry exists, re-home it to the choice-click commit path. |
 | Misclick wrong answer with no undo | Accepted by user. Documented in this doc. Mitigation is the explanation panel — misclicks become "learn from why I was wrong" moments. |
-| Test-suite drift during implementation (refactoring 50-80 assertions across 7-9 files is a real surface) | The implementation god prompt should be explicit per-file with exact edit blocks; the audit pass before implementation should produce exact file:line citations. CR will catch residual drift. |
-| `useQuestionFlowCore` mode-awareness wiring breaks exam mode by accident | Branch must be `if (!isExamMode)` not `if (isTutorMode)` — fail-safe defaults to existing exam behavior. Add a test asserting exam-mode choice click does NOT commit. |
+| Test-suite drift during implementation (refactoring ~70-120 assertions across 12-18 files is a real surface) | The implementation prompt should be explicit per-file with exact edit blocks generated from fresh grep output. CR will catch residual drift. |
+| Wrapper-hook mode branching breaks exam mode by accident | Branch in `usePracticeSessionQuestionFlow` must be `if (sessionMode === 'exam') return` after selection succeeds. Add a test asserting exam-mode choice click does NOT commit. |
 | Skip-without-answering removal frustrates users who used pre-feedback Next as their primary forward affordance | Question navigator pills provide the same function; if user signal post-launch shows friction, follow-up debt for an explicit Skip button. |
-| `useQuestionFlowCore` and `usePracticeQuestionAnswerFlow` may have non-obvious coupling that complicates the wiring | Audit pass before implementation must verify that either (a) the submit flow is callable from `useQuestionFlowCore` directly, or (b) the submit handler can be threaded in via props/closure. The architecture allows either; pick the cleaner one based on what the audit finds. |
+| Stale selected-choice state if implementation calls no-arg `onSubmit()` right after selection | Never do that. Commit helpers must accept `choiceId` explicitly and pass it as `selectedChoiceId` to `submitAnswerForQuestion`. |
 | Pre-feedback empty footer on Q1 looks "broken" to users | Empty primary group container should not render a zero-child flex row (suppress the wrapper when empty). Visual QA must confirm the page reads as intentional, not broken. |
-| Quick-practice surface or other tutor consumers breaks because they share `TutorActionBar` props | Audit `TutorActionBar` consumers exhaustively before changing the prop shape. If quick-practice uses different props, scope this debt to the active-session surface only. |
+| Quick Practice breaks because it shares `PracticeView` but has no question navigator | Quick Practice is explicitly in scope. Its ad-hoc wrapper hook must click-commit, and its pre-feedback footer intentionally has no Submit/Next. |
 
 ---
 
@@ -420,11 +498,15 @@ Production:
   - Q3 footer terminal CTA literal is `'End session'` (not `'View Summary'`)
   - Empty primary-group container suppressed when no buttons render
 - `app/(app)/app/practice/shared/use-question-flow-core.ts`:
-  - `onSelectChoice` invokes the submit flow when in tutor mode
-  - `isExamMode` is wired in
-  - Exam-mode `onSelectChoice` behavior unchanged (no commit on click)
+  - `onSelectChoice` remains mode-agnostic and does not import/call submit logic
+  - `onSelectChoice` returns `true` only when selection changed and `false` when selection was blocked
+- `app/(app)/app/practice/hooks/use-practice-question-answer-flow.ts`:
+  - Ad-hoc / Quick Practice choice click commits by passing the clicked `choiceId` explicitly into `submitAnswerForQuestion`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts`:
+  - Tutor-mode choice click commits by passing the clicked `choiceId` explicitly into the session submit path
+  - Exam-mode choice click remains select-only and does not call submit
 - Choice button primitive (`components/question/choice-button.tsx`) and QuestionCard composite: zero changes
-- Quick-practice client: drops any dead props that resulted from the action-bar prop narrowing
+- `PracticeViewProps`, `PracticeSessionPageViewProps`, and `QuickPracticeClient`: drop `canSubmit` / `onSubmit` UI props
 - Repository, controller, use-case layers: zero changes
 
 Tests:
@@ -433,7 +515,7 @@ Tests:
 - New tests added:
   - Tutor: clicking a choice commits the answer (assert via fake)
   - Tutor: clicking during `isPending` does not double-commit
-  - Tutor: keyboard Space/Enter on focused choice commits
+  - Tutor: keyboard Space on focused choice commits; Enter only if explicit Enter handling is added
   - Tutor: pre-feedback Q1 primary group has no children
   - Tutor: pre-feedback Q2 primary group is `['Previous']`
   - Tutor: pre-feedback Q3 primary group is `['Previous']`
@@ -461,7 +543,7 @@ Quality gates:
 
 - Local full gate green (typecheck, lint, unit, browser, integration, build, E2E)
 - CodeRabbit explicit `APPROVED` on the latest head
-- Zero stale `'Submit'` / `'Submitting…'` / `'View Summary'` references in tutor scope
+- Zero stale `'Submit'` / `'Submitting…'` / `'View Summary'` UI literals in tutor scope. Hook/controller identifiers named `onSubmit`, `submitResult`, or `submitAnswerForQuestion` may remain if they still describe the internal persistence action.
 - Visual QA on tutor Q1/Q2/Q3 pre/post-feedback states (six screens) with screenshots attached to PR
 
 ---
@@ -475,24 +557,24 @@ Quality gates:
 - **Telemetry instrumentation** — verify and re-home the existing Submit-click event if any; do not add new events as part of this debt.
 - **Touch-target hit-area review** — assumed adequate per existing I-3 padding. If misclick rates are high post-launch, file separately.
 - **Renaming `submitResult` / `onSubmit` etc. internally** — the variable names retain their current spelling for diff size and audit clarity. A future rename pass could align identifiers to the new "commit on select" semantic if desired; out of scope here.
-- **`usePracticeQuestionAnswerFlow` consolidation into `useQuestionFlowCore`** — if the audit finds these hooks can be unified cleanly post-refactor, that's a P3 follow-up; out of scope here unless trivial.
+- **`usePracticeQuestionAnswerFlow` consolidation into `useQuestionFlowCore`** — out of scope. This debt deliberately keeps `useQuestionFlowCore` mode-agnostic and performs commit orchestration in wrapper hooks.
 
 ---
 
-## Open Questions for Audit
+## Implementation Verification Checklist
 
-1. Where exactly should the tutor-mode commit-on-select branch live — inside `useQuestionFlowCore.onSelectChoice` (option A), or in a thin wrapper hook that consumes both `useQuestionFlowCore` and `usePracticeQuestionAnswerFlow` (option B)? The audit should pick based on what produces the smallest test surface.
+1. Confirm the explicit-choice wrapper shape: `useQuestionFlowCore.onSelectChoice` returns `boolean`; `usePracticeQuestionAnswerFlow` and `usePracticeSessionQuestionFlow` call `commitChoice(choiceId)` only when that return value is `true`.
 
-2. Does any current consumer of `usePracticeQuestionAnswerFlow.onSubmit` outside `practice-view.tsx` exist? (e.g., quick-practice, embedded preview, admin tooling). Audit must enumerate.
+2. Preserve hook/controller compatibility unless removal is trivial: `PracticeView` UI stops receiving `canSubmit` / `onSubmit`, but hook/controller outputs may keep them for probes and direct tests. Do not rename `submitResult` / `onSubmit` in this debt.
 
-3. Is there a Submit-related telemetry event today that needs re-homing? Audit must search the controller layer for `track*` / analytics emissions tied to the submit-answer flow.
+3. Search for Submit-related telemetry before coding. At `e44b8380`, a broad static grep did not find an obvious UI-layer analytics event tied to Submit; re-home any real event discovered during implementation to the choice-click commit path.
 
-4. Does the question navigator pill row remain fully clickable in all tutor states pre-refactor? If yes, it carries the skip semantic post-refactor without code change. If a state disables pills (e.g., during loading), audit must surface so we can decide whether the disable should remain.
+4. Preserve question navigator clickability in active tutor states. Current code disables only unavailable rows; preserve that unless a test proves a loading/pending state needs temporary disablement.
 
-5. Should we add a 200ms perceptual buffer between choice click and feedback render to feel less abrupt, or is the existing async flow's natural latency sufficient? Recommend: do not add artificial delay; ship and measure.
+5. Do not add an artificial delay between choice click and feedback render. Ship the natural async transition; add a progress treatment only in a follow-up if visual QA shows a perceptible gap.
 
-6. Confirm `ChoiceButton`'s `<input type="radio">` semantics are preserved when click commits — specifically that `aria-checked` remains accurate and screen-reader users understand the state transition.
+6. Confirm `ChoiceButton`'s `<input type="radio">` semantics are preserved when click commits — specifically that checked state remains accurate and screen-reader users get either current feedback live-region behavior or an equivalent pending/feedback announcement.
 
-7. Should `canSubmit` and `isSubmittingAnswer` be removed from `practice-page-logic.ts` entirely, or kept for exam-mode use? Audit must verify usage.
+7. Verify no active tutor or Quick Practice UI still renders `Submit`, `Submitting…`, pre-feedback footer `Next`, or footer `View Summary` after implementation. Use grep plus role-based tests.
 
-8. Is there value in renaming `submitResult` to something like `feedbackResult` to match the new mental model? (Likely no — out of scope per scope discipline — but flag for future cleanup.)
+8. Do not rename `submitResult` to `feedbackResult` in this debt. If the new mental model makes the old name painful after implementation, file a separate cleanup.

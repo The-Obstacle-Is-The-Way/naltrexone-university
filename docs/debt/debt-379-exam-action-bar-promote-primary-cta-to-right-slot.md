@@ -2,10 +2,10 @@
 
 **Priority:** P3 (layout-only refactor in a single component; behavior unchanged)
 **Created:** 2026-05-04
-**Source:** Same UX walkthrough that produced DEBT-378 (Claude Design V3 variant pass on 2026-05-04). The user's first-principles reading: the right-edge slot should hold the "act-now" CTA in both modes, mirroring modern web convention. Today's exam footer puts `Next` / `Review & Submit` in the left navigation cluster with `Mark for review` pushed right via `sm:ml-auto`.
-**Related:** [DEBT-378 Tutor — drop Submit button (choice click commits)](./debt-378-tutor-drop-submit-button-choice-click-commits.md), [DEBT-365 Exam flow affordance and label consistency (archived)](../_archive/debt/debt-365-exam-flow-affordance-and-label-consistency.md), [DEBT-363 Exam shell scroll model and dual-CTA disambiguation (archived)](../_archive/debt/debt-363-exam-shell-scroll-model-and-dual-cta.md), [DEBT-361 Exam last-question Next label (archived)](../_archive/debt/debt-361-exam-last-question-next-label.md), [DEBT-330 Action bar grouping (Navigation-primary / Metadata-secondary)](../_archive/debt/debt-330-action-bar-grouping.md), [Pattern Registry](../frontend/pattern-registry.md), [Frontend Standards](../frontend/standards.md), [Practice Page Docs](../frontend/pages/practice.md)
+**Source:** Same UX walkthrough that produced DEBT-378 (Claude Design V3 variant pass on 2026-05-04). The user's first-principles reading: exam's terminal / forward CTA should own the footer's far-right eye-anchor, while `Mark for review` should remain available but move out of the footer's primary-action slot. Today's exam footer puts `Next` / `Review & Submit` in the left navigation cluster with `Mark for review` pushed right via `sm:ml-auto`.
+**Related:** [DEBT-378 Tutor — drop Submit button (choice click commits)](./debt-378-tutor-drop-submit-button-choice-click-commits.md), [DEBT-365 Exam flow affordance and label consistency (archived)](../_archive/debt/debt-365-exam-flow-affordance-and-label-consistency.md), [DEBT-363 Exam shell scroll model and dual-CTA disambiguation (archived)](../_archive/debt/debt-363-exam-shell-scroll-model-and-dual-cta.md), [DEBT-361 Exam last-question Next label (archived)](../_archive/debt/debt-361-exam-last-question-next-label.md), [DEBT-330 Post-exam review action bar bookmark placement (archived)](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md), [Pattern Registry](../frontend/pattern-registry.md), [Frontend Standards](../frontend/standards.md), [Practice Page Docs](../frontend/pages/practice.md)
 
-**Status:** Open. Doc-first; no code change yet. Sequenced after DEBT-378 to keep one debt per shipping cycle.
+**Status:** Open. Audit-refined 2026-05-04 against `e44b8380`; no code change yet. Sequenced after DEBT-378 to keep one debt per shipping cycle. DEBT-379 should be re-graded visually after DEBT-378 lands because DEBT-378 already restores tutor/exam footer harmony.
 
 ---
 
@@ -21,11 +21,11 @@ Today's exam footer (`app/(app)/app/practice/components/practice-view.tsx:223-30
 
 `Next` / `Review & Submit` sits at the inside-right of the navigation cluster. `Mark for review` is pushed to the screen's right edge via `sm:ml-auto`.
 
-Mark for review is a **metadata** action ("flag this question for me to revisit during review-and-submit"). It's not a primary CTA. It's not a navigation control. It's a per-question annotation. Its current right-edge position was decided by DEBT-330 (Navigation-primary / Metadata-secondary) and reaffirmed by DEBT-365 Concern 3A. The decision was correct in isolation: nav and metadata are conceptually distinct, so they shouldn't visually mingle.
+Mark for review is a **metadata** action ("flag this question for me to revisit during review-and-submit"). It's not a primary CTA. It's not a navigation control. It's a per-question annotation. Its current right-edge position was shipped by DEBT-365 Concern 3A after borrowing DEBT-330's post-exam review grouping principle: navigation clustered left, metadata separated right. The decision was correct in isolation: nav and metadata are conceptually distinct, so they shouldn't visually mingle.
 
 The unresolved question is: **which slot should the user's eye go to for the primary "act now" action?**
 
-Modern web convention says far-right. Refactoring UI says the primary action belongs at the end of the row because Western reading flow ends there and the eye lands on the action at completion of the read. Apple HIG, Material 3, and most production form/dialog design follow this. Today's exam footer puts the metadata at the right edge and the primary action one slot inside — which is exactly inverse to that convention.
+Modern form/dialog convention often puts the primary action at the end of the row. Refactoring UI's hierarchy guidance supports making the intended next action visually easier to find than secondary metadata. This is supporting rationale, not measured user-error proof: we do not currently have analytics showing students click Mark for review when they meant Next. The concrete evidence is the user's design walkthrough and visual discomfort with the right-edge metadata slot in the active exam footer.
 
 The user's instinct in the V3 design pass was correct: the right slot should hold the "act now" CTA. The question this debt resolves is **what to do with Mark for review** when the right slot is reclaimed for the primary CTA, given the constraint that Mark for review must remain accessible on every exam question, including Q3.
 
@@ -35,11 +35,9 @@ The user's instinct in the V3 design pass was correct: the right slot should hol
 
 ### The right slot anchors the eye
 
-In a footer with a left cluster and a right slot, users learn that the right slot is "the action to perform after reviewing." They develop a fast scanning pattern: read the screen, glance bottom-right, click. When the right slot holds metadata (Mark for review) instead of the primary CTA (Next, Review & Submit), users either:
-1. Click the wrong button (Mark for review when they meant Next) and are confused
-2. Slow down and visually parse the entire footer to find the primary action
+In a footer with a left cluster and a right slot, the right slot can become the "action after reviewing" eye-anchor. When the right slot holds metadata (Mark for review) instead of the primary CTA (Next, Review & Submit), the layout asks the user to parse the whole row instead of following a simple end-of-row action pattern. That is the design concern this debt evaluates.
 
-Either outcome is friction. The slot affordance pattern is one of the cheapest reads-per-second wins available, and we're spending it on metadata instead of action.
+This is a hierarchy concern, not a proven behavioral bug. Keep the scope narrow: if the visual grade after DEBT-378 says exam still feels right with metadata right, this debt can be deferred without contradicting any shipped behavior.
 
 ### Cross-mode harmony
 
@@ -57,7 +55,7 @@ Today, Mark for review is right-edge because that's where the metadata-secondary
 2. **Header rail (icon button or short-label button)** — Mark for review moves out of the footer entirely and into the question header (above or beside the question stem). Frees the footer to be just navigation + primary CTA. Risk: discoverability — users may not look up to flag a question.
 3. **Inline with the question stem** — Mark for review becomes an icon button anchored to the question card itself, similar to a bookmark icon on an article. Closest to the question content. Risk: visual clutter on the question card.
 
-This debt does not yet pick between these. Three variants follow in the Options section. The audit pass and Claude Design canvas should weigh in.
+Three variants follow in the Options section. This document recommends Option B after the audit corrections below; implementation should not reopen the option set unless post-DEBT-378 visual grading rejects the header-rail direction.
 
 ### Mark for review is preserved on every question, including Q3
 
@@ -83,7 +81,7 @@ Layout: `flex` with three slots. Previous on the left edge. Mark for review push
 - Smallest production diff: only the order/spacing of the secondary group changes.
 
 **Cons:**
-- Two right-side affordances visually compete. Mark for review is outline, primary CTA is filled, so the hierarchy reads — but the gap between them must be generous (likely `ml-6` or larger).
+- Two right-side affordances visually compete. Mark for review is outline, primary CTA is filled, so the hierarchy reads — but the gap between them must be generous (`ml-6` or larger if this fallback is ever chosen).
 - Misclick risk on touch devices is real: Mark for review and Primary CTA are adjacent.
 - Q1 has only one button (Next) but the footer must still left-justify Mark for review, so the empty Previous slot is felt as a layout gap. May or may not need a placeholder.
 
@@ -108,7 +106,7 @@ The exam header rail today has no buttons (DEBT-363 dropped the `Finish exam` he
 - Parallels tutor's header rail which holds `End session` (and may eventually hold Bookmark per future debt).
 
 **Cons:**
-- Discoverability: users have to look up to flag a question. Eye-tracking research generally shows users dwell more on primary content than on header chrome; the affordance may be missed.
+- Discoverability: users have to look up to flag a question. The affordance may be less noticeable than a footer button because it moves out of the repeated action bar.
 - Shipping a new button in the exam header is a slightly larger footprint than relocating in-footer.
 - If users have learned the current right-edge Mark for review position, the change is a re-learn cost. (Counter: most users haven't learned it; the app is young.)
 
@@ -139,13 +137,13 @@ Icon button affixed to the question card itself, similar to a bookmark icon on a
 
 ### Recommendation
 
-**Option B (header rail).** Reasons:
+**Option B (header rail), pending post-DEBT-378 visual grade.** Reasons:
 
 1. The exam header rail is currently empty — adding Mark for review fills a slot that has no other use.
 2. Conceptually correct — metadata about the question lives adjacent to the question, not adjacent to navigation.
 3. Parallels tutor's header rail; reduces cross-mode visual variance at the header level (both modes have a single-affordance header rail with mode-appropriate actions: tutor has `End session`, exam has `Mark for review`).
 4. Discoverability concern is real but addressable with a short-label button (`Mark for review` text, not just an icon) and clear visual prominence.
-5. Smallest cognitive load on the footer: footer becomes pure navigation + primary CTA, the simplest possible structure.
+5. Smallest cognitive load on the footer: footer becomes Previous on the left and the forward/terminal CTA on the right.
 
 Option A (three-slot footer) is the safe-default if header-rail discoverability concerns prove decisive. Option C (icon on card) is the most ambitious; reject for this debt because it pushes the change into the QuestionCard composite, which is shared with tutor and would expand scope.
 
@@ -155,9 +153,9 @@ Option A (three-slot footer) is the safe-default if header-rail discoverability 
 
 ### Exam footer — final spec
 
-| Question position | Primary group (left cluster) | Right slot (`sm:ml-auto`) |
-|-------------------|------------------------------|---------------------------|
-| Q1 | _empty_ | `[Next]` filled |
+| Question position | Left group | Right CTA group (`sm:ml-auto`) |
+|-------------------|------------|---------------------------------|
+| Q1 | _suppressed_ | `[Next]` filled |
 | Q2 | `[Previous]` outline | `[Next]` filled |
 | Q3 | `[Previous]` outline | `[Review & Submit]` filled |
 
@@ -165,19 +163,22 @@ Mark for review moves out of the footer entirely.
 
 ### Exam header rail — final spec
 
-A new button rendered on every exam question, positioned in the header rail at the right side (mirroring tutor's `End session` placement at `practice-view.tsx:424-435`):
+A new button rendered on every exam question, positioned in the header rail at the right side (mirroring tutor's `End session` placement at `practice-view.tsx:424-435`). Add a stable selector to the header-action rail, e.g. `data-testid="question-header-actions"`, so tests can scope header-vs-footer assertions without class-token or position queries.
 
 ```tsx
+const isHeaderActionDisabled =
+  props.isPending || props.loadState.status === 'loading';
+
 {props.onToggleMarkForReview && isExamMode ? (
   <Button
     type="button"
     variant="outline"
     className="rounded-full"
-    aria-pressed={props.isMarkedForReview}
+    aria-pressed={isMarkedForReview}
     disabled={props.isMarkingForReview || isHeaderActionDisabled}
     onClick={props.onToggleMarkForReview}
   >
-    Mark for review
+    {isMarkedForReview ? 'Unmark review' : 'Mark for review'}
   </Button>
 ) : null}
 ```
@@ -193,7 +194,7 @@ The DEBT-361 annotation that connects the Q3 `Review & Submit` button to a hidde
 - Mark for review toggle behavior unchanged (calls `onToggleMarkForReview`, optimistic UI, etc.).
 - `isMarkedForReview` state unchanged — same source, same semantics.
 - The `aria-pressed` toggle state moves to the header button.
-- Keyboard navigation order: tab order through the page should reach Mark for review at a sensible position (probably right after the navigator pills, before the question stem). Audit must confirm tab order is sensible after the move.
+- Keyboard navigation order: tab order through the page should reach Mark for review after the navigator pills and before the question stem. Implementation must verify the natural DOM order after the move.
 
 ---
 
@@ -207,30 +208,31 @@ Removals:
 - Lines 281-296 — entire secondary group containing Mark for review
 
 Changes:
-- Lines 237-275 — restructure primary group:
-  - Move Previous to the bare left edge (no change in semantic, but layout simplifies).
-  - Move Next / Review & Submit to a separate right slot via `sm:ml-auto` (or a flex-grow spacer between Previous and the primary CTA).
+- Lines 237-275 — split left Previous group from right CTA group:
+  - Render `Previous` in the left group only when it exists. Suppress the left group entirely on Q1 instead of rendering an empty flex row.
+  - Render Next / Review & Submit in a separate right CTA group with `sm:ml-auto`.
   - Maintain the `isLastSessionQuestion` branching for Next ↔ Review & Submit label flip and the `aria-describedby` link.
 - Update `data-testid` attributes:
-  - `exam-action-primary-group` may be repurposed to hold only Previous (or split into `exam-action-previous` and `exam-action-primary` testids if cleaner).
+  - Keep `exam-action-primary-group` for the left Previous group when rendered.
+  - Add `exam-action-cta-group` for the right CTA group.
   - `exam-action-secondary-group` testid is deleted (no secondary group in the footer anymore).
 
 **Header rail JSX (lines ~400-435):** add a new exam-mode Mark for review button.
 
-Today line 424-435 is the tutor-only `End session` block. Add a sibling exam-only `Mark for review` block alongside it, gated by `isExamMode && props.onToggleMarkForReview`. The header layout already has flex space for additional buttons.
+Today line 424-435 is the tutor-only `End session` block. Add a sibling exam-only `Mark for review` / `Unmark review` block alongside it, gated by `isExamMode && props.onToggleMarkForReview`. The header layout already has flex space for a single right-side button in each mode. Add `data-testid="question-header-actions"` to the rail wrapper for scoped assertions.
 
 **Props:**
-- `ExamActionBarProps` (lines 207-221) — drops `isMarkingForReview`, `isMarkedForReview`, `onToggleMarkForReview` (these move to the header rail's prop set).
-- `PracticeView` props at the top of the file gain (or already have) `isMarkingForReview`, `isMarkedForReview`, `onToggleMarkForReview` at the top level — confirm via audit.
-- The header rail JSX needs access to the same Mark for review props the footer used to. Likely already accessible via the parent prop set; audit to confirm.
+- `ExamActionBarProps` (lines 207-221) — drops `isMarkingForReview`, `isMarkedForReview`, `onToggleMarkForReview`.
+- `PracticeViewProps` already has `isMarkingForReview?: boolean` and `onToggleMarkForReview?: () => void` at `practice-view.tsx:34,45`.
+- `isMarkedForReview` is not a top-level prop; it is derived from `sessionInfo` at `practice-view.tsx:306` and should be reused by the header button.
 
 ### File 2: parent components / page views that pass props to `PracticeView`
 
-Audit for any caller that threads Mark-for-review props specifically to the `ExamActionBar`. After the refactor, those props go to the page-level header rail instead. The shape of `PracticeView`'s top-level props likely doesn't change, but the internal threading does.
+Check for any caller that threads Mark-for-review props specifically to `ExamActionBar`. After the refactor, those props go to the page-level header rail instead. `PracticeViewProps` already has the required top-level `isMarkingForReview` and `onToggleMarkForReview`; the internal threading changes, not the external prop contract.
 
 Files to verify:
 - `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx`
-- `app/(app)/app/practice/quick-practice/quick-practice-client.tsx` (if it has an exam mode entry)
+- `app/(app)/app/practice/quick/quick-practice-client.tsx` has no exam mode entry and no Mark-for-review flow; verify it remains untouched.
 
 ### Summary of production changes
 
@@ -257,17 +259,18 @@ Choice button, QuestionCard, controllers, repositories, use cases: zero changes.
 
 Add new tests:
 - Header rail in exam mode renders `Mark for review` on Q1, Q2, Q3.
+- Header rail in exam mode renders `Unmark review` when `sessionInfo.isMarkedForReview === true`.
 - Header rail in tutor mode does NOT render `Mark for review` (tutor doesn't have this flow).
 - Header rail in tutor mode continues to render `End session` (regression guard).
 - Footer in exam mode does NOT render `Mark for review` (negative assertion).
 - Mark for review `aria-pressed` toggles correctly when clicked from the header position.
-- Mark for review disabled state respects `isMarkingForReview` and `isHeaderActionDisabled`.
-- Q3 primary CTA in exam footer is right-aligned (assert via `data-testid` or position assertion).
+- Mark for review disabled state respects `isMarkingForReview`, `props.isPending`, and `loadState.status === 'loading'`.
+- Q3 primary CTA lives in `data-testid="exam-action-cta-group"` and preserves `data-variant="default"`.
 
 **`practice-view-layout.test.tsx`:**
 
 - Audit for any layout structure assertions referencing `exam-action-secondary-group` — update to reflect the absence of that group post-refactor.
-- Layout assertions on the question header rail — update to expect a second button (Mark for review) alongside the existing `End session` block in exam mode.
+- Layout assertions on the question header rail — update to expect a single exam-mode Mark/Unmark button in `data-testid="question-header-actions"`. Do not assert it appears alongside `End session`; exam mode has no header `End session`.
 
 ### Browser specs
 
@@ -275,6 +278,7 @@ Add new tests:
 
 - Tests asserting Mark for review click behavior in the exam footer — **MOVE** the click target to the header rail.
 - Lines 595-648 (Review & Submit click in exam Q3) — verify the click still works after the right-slot move; selector may change but behavior is identical.
+- Lines 91-120 / 122-182 / 262-355 may need selector updates because Mark for review no longer lives in `bottom-action-bar`.
 
 ### Integration tests
 
@@ -284,17 +288,17 @@ None expected. `Mark for review` toggling goes through the use-case layer, which
 
 **`tests/e2e/practice.spec.ts`:**
 
-- Exam walkthrough: any step that clicks `Mark for review` from a footer position must update to click it from the header position. Estimated 2-4 line changes.
+- Exam walkthrough: any step that clicks or scopes `Mark for review` to `bottom-action-bar` must update to the header rail. Current global visibility assertions may still pass, but add at least one scoped assertion proving `bottom-action-bar` no longer contains Mark for review and `question-header-actions` does.
 
 ### Test count summary
 
 | Test type | Files affected | Assertions changed (estimate) |
 |-----------|----------------|-------------------------------|
-| Unit | 2 | 15-25 |
-| Browser | 1-2 | 5-10 |
+| Unit | 2 | 18-30 |
+| Browser | 1-2 | 8-15 |
 | Integration | 0 | 0 |
-| E2E | 1 | 2-4 |
-| **Total** | **4-5 files** | **~20-40 assertions** |
+| E2E | 1 | 4-8 |
+| **Total** | **4-5 files** | **~30-50 assertions** |
 
 Smaller surface than DEBT-378.
 
@@ -310,17 +314,17 @@ Smaller surface than DEBT-378.
 
 ### `docs/frontend/standards.md`
 
-- **Action bar / Button placement table:** exam row(s) updated. Right slot is the primary CTA across both modes (tutor post-feedback and exam always).
-- **Primary CTA position section:** consolidate the rule: "In exam mode, the right slot of the footer holds the primary action. In tutor mode post-feedback, the right slot holds the primary navigation/terminal CTA. The right slot is the eye-anchor for 'act now' across the app."
+- **Action bar / Button placement table:** exam row(s) updated. Do not generalize this to tutor; DEBT-378 keeps tutor post-feedback navigation clustered left with Bookmark right.
+- **Primary CTA position section:** add the exam-specific rule: "In active exam mode, the footer right CTA group holds the forward/terminal action (`Next` / `Review & Submit`), while `Mark for review` lives in the question header rail. Tutor mode remains governed by DEBT-378: choice cards are the primary pre-feedback action, and post-feedback navigation remains left-clustered."
 
 ### `docs/frontend/pages/practice.md`
 
 - **Action Bar subsection:** rewrite the exam table to reflect the new structure (Previous left, primary CTA right, Mark for review in header).
 - **Header Rail subsection (new):** if not already present, add. Document tutor's `End session` and exam's `Mark for review`.
 
-### `docs/_archive/debt/debt-330-...md` and `docs/_archive/debt/debt-365-...md`
+### Archived debt docs
 
-Both docs articulated the Navigation-primary / Metadata-secondary footer split. After this refactor, that split lives partially in the header (metadata) and partially in the footer (navigation + primary CTA). Add a forward-pointer note: "Updated by DEBT-379 — Mark for review migrated to the header rail; primary CTA promoted to footer right slot."
+Do not edit archived DEBT-330 / DEBT-365 during implementation. Capture the historical change in this DEBT-379 resolution section after merge, and update current frontend docs (`pattern-registry.md`, `standards.md`, `pages/practice.md`) as the living source of truth.
 
 ---
 
@@ -328,7 +332,7 @@ Both docs articulated the Navigation-primary / Metadata-secondary footer split. 
 
 ### Tab order after Mark for review moves to header
 
-After the move, the keyboard tab order should be: navigator pills → header rail Mark for review → question stem → choice buttons → footer Previous → footer primary CTA. Audit must verify this is the natural DOM order or wire it explicitly with `tabIndex` adjustments.
+After the move, the keyboard tab order should be: navigator pills → header rail Mark for review → question stem → choice buttons → footer Previous → footer primary CTA. Verify this is the natural DOM order; avoid positive `tabIndex` unless there is no semantic alternative.
 
 ### Mobile responsive
 
@@ -357,10 +361,10 @@ The hidden span containing `"Opens review and submit."` must travel with the Q3 
 | Risk | Mitigation |
 |------|------------|
 | Header rail discoverability — users may not find Mark for review in the header | Use a labeled button (`Mark for review` text, not icon-only). Visual QA on six exam states. Track click-through rate post-launch via existing telemetry; if rate drops vs pre-refactor baseline, file follow-up. |
-| Mobile layout crowding in header rail at small viewports | Visual QA at breakpoints (sm/md/lg). If crowding emerges, fall back to a label-with-icon or icon-only treatment scoped to small viewports. |
+| Mobile layout crowding in header rail at small viewports | Visual QA at breakpoints (sm/md/lg). If crowding emerges, stop and report; do not silently switch to icon-only because that changes discoverability and test expectations. |
 | Keyboard tab order regression | Audit explicitly. The natural DOM order should put header before question stem before footer; verify and adjust if needed. |
-| Test refactor drift across 4-5 files (~20-40 assertions) | Implementation god prompt should produce exact edit blocks per file. CR will catch residual drift. |
-| Q1 footer with empty primary group visually feels broken | Suppress the empty `data-testid="exam-action-primary-group"` wrapper when no buttons render, or leave it as an empty flex slot — visual QA decides. |
+| Test refactor drift across 4-5 files (~30-50 assertions) | Implementation god prompt should produce exact edit blocks per file. CR will catch residual drift. |
+| Q1 footer with empty primary group visually feels broken | Suppress the empty `data-testid="exam-action-primary-group"` wrapper when no Previous button renders; only `exam-action-cta-group` should render on Q1. |
 | `aria-describedby` linkage breaks during JSX restructure | Both the hidden span and the button stay in `ExamActionBar`. The `id` constant is local to the component. Restructure preserves linkage by keeping them in the same render tree. |
 
 ---
@@ -372,11 +376,15 @@ Production:
 - `app/(app)/app/practice/components/practice-view.tsx`:
   - `ExamActionBar` no longer renders a secondary group containing Mark for review.
   - Primary CTA (Next / Review & Submit) is rendered in a `sm:ml-auto` right slot.
+  - Right CTA group has stable selector `data-testid="exam-action-cta-group"`.
+  - Q1 suppresses the empty `exam-action-primary-group`; Q2/Q3 render it with `Previous`.
   - Q3 primary CTA's `aria-describedby` link to its hidden description span is preserved.
   - Header rail JSX gains an exam-mode-only Mark for review button (gated on `isExamMode && props.onToggleMarkForReview`).
+  - Header action rail has stable selector `data-testid="question-header-actions"`.
 - Tutor mode footer and tutor mode header: zero changes (DEBT-378 handles tutor; DEBT-379 leaves it alone).
 - `aria-pressed` on the Mark for review button correctly reflects `isMarkedForReview`.
-- Disabled state on the Mark for review button respects existing pending/loading clauses.
+- Mark button label preserves current behavior: `Mark for review` when false, `Unmark review` when true.
+- Disabled state on the Mark for review button respects `isMarkingForReview`, `props.isPending`, and `loadState.status === 'loading'`.
 
 Tests:
 
@@ -390,6 +398,7 @@ Tests:
   - Q3 primary CTA's `aria-describedby` link still resolves to a span containing `"Opens review and submit."`
   - Exam Q1 footer right slot is `[Next]` filled.
   - Exam Q3 footer right slot is `[Review & Submit]` filled.
+  - Exam marked state renders `Unmark review` in the header and `aria-pressed="true"`.
 - E2E `tests/e2e/practice.spec.ts` exam flow updated to click Mark for review from the header position.
 
 Docs:
@@ -404,7 +413,7 @@ Quality gates:
 
 - Local full gate green (typecheck, lint, unit, browser, integration, build, E2E).
 - CodeRabbit explicit `APPROVED`.
-- Visual QA on six exam states (Q1, Q2, Q3 × pre/post — though exam doesn't have post-feedback states; confirm) with screenshots attached to PR.
+- Visual QA on active exam states: Q1, Q2, Q3 desktop and mobile; include marked and unmarked header states. There is no active-exam post-feedback state.
 
 ---
 
@@ -420,18 +429,18 @@ Quality gates:
 
 ---
 
-## Open Questions for Audit
+## Implementation Verification Checklist
 
-1. Confirm the exam header rail is currently empty (DEBT-363 dropped the `Finish exam` button). If any other content lives there, the Mark for review placement may need revision.
+1. Confirm the exam header rail is currently empty for routed exam sessions. `practice-view.tsx:424-444` renders tutor `End session` when `!isExamMode`; exam mode with `onEndSession` renders no header button today.
 
-2. Is `Mark for review` toggling sometimes-pending (i.e., does `isMarkingForReview` flip true between click and server confirmation)? If yes, the header rail button must show a pending visual; audit the existing behavior and preserve it.
+2. Preserve existing Mark-for-review pending behavior. If `isMarkingForReview` flips true between click and server confirmation, the moved header button must disable exactly as the footer button did.
 
 3. Verify `aria-describedby` on the Q3 primary CTA continues to resolve correctly after JSX restructure. Use a unit test that asserts the linked span's text content.
 
-4. If the exam header rail gains Mark for review, should the post-exam review surface also gain a Mark for review (or read-only equivalent)? Currently Mark for review is set during exam taking and consumed during Review & Submit. The post-exam review surface displays the marked state but doesn't toggle. Confirm scope boundary — this debt does not touch post-exam review.
+4. Do not add Mark for review to post-exam review. Mark for review is set during exam taking and consumed during Review & Submit; post-exam review surfaces remain out of scope.
 
-5. Does any consumer of `ExamActionBarProps` or the parent `PracticeView` props assume the secondary group exists? Audit prop flow comprehensively.
+5. Confirm no consumer of `ExamActionBarProps` or the parent `PracticeView` props assumes `exam-action-secondary-group` exists after the move. Update tests to use `exam-action-cta-group` / `question-header-actions`.
 
-6. Should we also explicitly suppress the empty primary group container in the footer when only the right slot has content (Q1)? Or is an empty flex left edge fine? Visual QA decides.
+6. Suppress the empty primary group container in the footer when only the right slot has content (Q1).
 
-7. Is there value in moving Bookmark (post-feedback in tutor, per DEBT-378's spec) to the tutor header rail to perfectly mirror exam's header rail in shape? This is explicitly out of scope of this debt — but flag for future consideration if cross-mode header-rail unification becomes a priority.
+7. Do not move Bookmark to the tutor header rail. DEBT-378 keeps Bookmark in the tutor post-feedback secondary group; header-rail unification is a separate future product decision.
