@@ -22,10 +22,8 @@ test.describe('subscribe and practice', () => {
 
     await openQuickPracticeQuestion(page);
 
-    // Select first choice and submit
+    // Select first choice; tutor/quick practice commits on click.
     await selectChoiceByLabel(page, 'A');
-
-    await page.getByRole('button', { name: 'Submit' }).click();
 
     const verdictPill = page.getByText(/^(Correct|Incorrect)$/).first();
     await expect(verdictPill).toBeVisible();

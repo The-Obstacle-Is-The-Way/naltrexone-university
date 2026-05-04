@@ -117,7 +117,6 @@ test.describe('practice', () => {
     await startSession(page, 'tutor');
 
     await selectChoiceByLabel(page, 'A');
-    await page.getByRole('button', { name: 'Submit' }).click();
 
     const verdictPill = page.getByText(/^(Correct|Incorrect)$/).first();
     await expect(verdictPill).toBeVisible();
@@ -153,7 +152,6 @@ test.describe('practice', () => {
         page.getByText(`Question ${questionNumber} of 3`),
       ).toBeVisible();
       await selectChoiceByLabel(page, 'A');
-      await page.getByRole('button', { name: 'Submit' }).click();
       await expect(page.getByTestId('verdict-pill')).toBeVisible({
         timeout: 10_000,
       });
@@ -165,20 +163,21 @@ test.describe('practice', () => {
 
     await expect(page.getByText('Question 3 of 3')).toBeVisible();
     await selectChoiceByLabel(page, 'A');
-    await page.getByRole('button', { name: 'Submit' }).click();
     await expect(page.getByTestId('verdict-pill')).toBeVisible({
       timeout: 10_000,
     });
 
     const bottomActionBar = page.getByTestId('bottom-action-bar');
+    const endSessionButtons = page.getByRole('button', { name: 'End session' });
+    await expect(endSessionButtons).toHaveCount(2);
     await expect(
-      bottomActionBar.getByRole('button', { name: 'View Summary' }),
+      bottomActionBar.getByRole('button', { name: 'End session' }),
     ).toBeVisible();
     await expect(
       bottomActionBar.getByRole('button', { name: 'Next' }),
     ).toHaveCount(0);
 
-    await bottomActionBar.getByRole('button', { name: 'View Summary' }).click();
+    await bottomActionBar.getByRole('button', { name: 'End session' }).click();
     await expect(
       page.getByRole('heading', { name: 'Session Summary' }),
     ).toBeVisible({ timeout: 30_000 });
@@ -194,7 +193,6 @@ test.describe('practice', () => {
     ).toBeVisible();
 
     await selectChoiceByLabel(page, 'A');
-    await page.getByRole('button', { name: 'Submit' }).click();
 
     await expect(page.getByText(/^(Correct|Incorrect)$/)).toBeVisible();
   });
@@ -209,7 +207,6 @@ test.describe('practice', () => {
     await startSession(page, 'tutor', 2);
 
     await selectChoiceByLabel(page, 'A');
-    await page.getByRole('button', { name: 'Submit' }).click();
     await expect(page.getByText(/^(Correct|Incorrect)$/).first()).toBeVisible({
       timeout: 10_000,
     });

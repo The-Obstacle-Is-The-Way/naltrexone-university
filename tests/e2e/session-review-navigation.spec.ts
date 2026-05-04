@@ -44,9 +44,8 @@ test.describe('session review navigation (SPEC-027)', () => {
       timeout: 15_000,
     });
 
-    // Answer question 1: select choice + submit + next
+    // Answer question 1: select choice commits in tutor mode, then navigate next
     await selectChoiceByLabel(page, 'A');
-    await page.getByRole('button', { name: 'Submit' }).click();
     await expect(page.getByText(/Correct|Incorrect/).first()).toBeVisible({
       timeout: 10_000,
     });
@@ -56,9 +55,8 @@ test.describe('session review navigation (SPEC-027)', () => {
     await expect(activeSessionNextButton).toBeEnabled({ timeout: 10_000 });
     await activeSessionNextButton.click();
 
-    // Answer question 2: select choice + submit
+    // Answer question 2: select choice commits in tutor mode
     await selectChoiceByLabel(page, 'A');
-    await page.getByRole('button', { name: 'Submit' }).click();
     await expect(page.getByText(/Correct|Incorrect/).first()).toBeVisible({
       timeout: 10_000,
     });

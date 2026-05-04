@@ -207,7 +207,6 @@ test.describe('review mode audit', () => {
     )?.trim();
     expect(selectedChoiceText).toBeTruthy();
 
-    await page.getByRole('button', { name: 'Submit' }).click();
     await expect(page.getByText(/Correct|Incorrect/).first()).toBeVisible({
       timeout: 10_000,
     });
@@ -249,7 +248,6 @@ test.describe('review mode audit', () => {
 
     await startSession(page, 'tutor', 1);
     await selectChoiceByLabel(page, 'A');
-    await page.getByRole('button', { name: 'Submit' }).click();
     await expectFeedbackVisible(page);
 
     await page.getByRole('button', { name: 'End session' }).click();
