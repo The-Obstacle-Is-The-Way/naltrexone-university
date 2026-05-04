@@ -288,4 +288,42 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     expect(submitAnswerFn).toHaveBeenCalledTimes(1);
   });
+
+  it('does not programmatically resubmit after submitResult locks the tutor question', async () => {
+    const getNextQuestionFn = vi
+      .fn<(input: unknown) => Promise<ActionResult<NextQuestion | null>>>()
+      .mockResolvedValue(ok(createSessionQuestion('tutor')));
+    const submitAnswerFn = vi
+      .fn<(input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>>()
+      .mockResolvedValue(ok(createSubmitOutput('choice_1')));
+    const saveExamDraftAnswerFn =
+      vi.fn<
+        (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
+      >();
+
+    const harness = await renderHook(() =>
+      usePracticeSessionQuestionFlow({
+        sessionId: 'session-1',
+        isMounted: () => true,
+        getNextQuestionFn,
+        submitAnswerFn,
+        saveExamDraftAnswerFn,
+      }),
+    );
+
+    await expect
+      .poll(() => harness.result.current.question?.questionId)
+      .toBe('q_1');
+
+    harness.result.current.onSelectChoice('choice_1');
+    await expect.poll(() => submitAnswerFn.mock.calls.length).toBe(1);
+    await expect
+      .poll(() => harness.result.current.submitResult?.correctChoiceId ?? null)
+      .toBe('choice_1');
+    await expect.poll(() => harness.result.current.canSubmit).toBe(false);
+
+    await harness.result.current.onSubmit();
+
+    expect(submitAnswerFn).toHaveBeenCalledTimes(1);
+  });
 });

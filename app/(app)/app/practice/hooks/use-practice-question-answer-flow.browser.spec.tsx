@@ -369,8 +369,45 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     await expect
       .element(screen.getByTestId('selected-choice-id'))
       .toHaveTextContent('choice_1');
+    await expect
+      .element(screen.getByTestId('is-pending'))
+      .toHaveTextContent('false');
 
     await screen.getByRole('button', { name: 'select-choice-2' }).click();
+
+    expect(submitAnswerMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not programmatically resubmit after submitResult locks the question', async () => {
+    getNextQuestionMock.mockResolvedValue(ok(createNextQuestion()));
+    submitAnswerMock.mockResolvedValue(
+      ok({
+        attemptId: 'attempt-1',
+        isCorrect: true,
+        correctChoiceId: 'choice_1',
+        explanationMd: null,
+        referenceMd: null,
+        choiceExplanations: [],
+      } satisfies SubmitAnswerOutput),
+    );
+
+    const screen = await render(<PracticeQuestionAnswerFlowProbe />);
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+
+    await screen
+      .getByRole('button', { name: 'select-choice-1', exact: true })
+      .click();
+    await expect.poll(() => submitAnswerMock.mock.calls.length).toBe(1);
+    await expect
+      .element(screen.getByTestId('is-pending'))
+      .toHaveTextContent('false');
+    await expect
+      .element(screen.getByTestId('can-submit'))
+      .toHaveTextContent('false');
+
+    await screen.getByRole('button', { name: 'submit-answer' }).click();
 
     expect(submitAnswerMock).toHaveBeenCalledTimes(1);
   });
