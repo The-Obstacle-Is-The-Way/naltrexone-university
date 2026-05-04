@@ -318,8 +318,12 @@ describe('PracticeView navigation', () => {
     const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
 
     expect(getButtonLabels(primaryGroup)).toEqual([]);
-    expect(actionBar?.textContent).not.toContain('Submit');
-    expect(actionBar?.textContent).not.toContain('Next');
+    expect(actionBar).not.toBeNull();
+    if (!actionBar) {
+      throw new Error('Expected bottom action bar');
+    }
+    expect(actionBar.textContent).not.toContain('Submit');
+    expect(actionBar.textContent).not.toContain('Next');
   });
 
   it('keeps the middle tutor question footer to Previous before feedback', () => {
@@ -510,11 +514,21 @@ describe('PracticeView navigation', () => {
 
     const html = renderToStaticMarkup(<PracticeView {...props} />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const endSessionButtons = Array.from(doc.querySelectorAll('button')).filter(
-      (button) => button.textContent?.trim() === 'End session',
+    const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
+    const footerEndSessionButtons = Array.from(
+      actionBar?.querySelectorAll('button') ?? [],
+    ).filter((button) => button.textContent?.trim() === 'End session');
+    const headerEndSessionButtons = Array.from(
+      doc.querySelectorAll('button'),
+    ).filter(
+      (button) =>
+        button.textContent?.trim() === 'End session' &&
+        !actionBar?.contains(button),
     );
 
-    expect(endSessionButtons).toHaveLength(2);
+    expect(actionBar).not.toBeNull();
+    expect(headerEndSessionButtons).toHaveLength(1);
+    expect(footerEndSessionButtons).toHaveLength(1);
   });
 
   it('renders the bottom action bar in the document-flow content stack without sticky shell markers', () => {
