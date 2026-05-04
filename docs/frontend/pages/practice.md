@@ -2,7 +2,7 @@
 
 **Page:** `/app/practice`
 **Source:** `app/(app)/app/practice/page.tsx` (server) → `practice-page-client.tsx` (client)
-**Last Updated:** 2026-03-17
+**Last Updated:** 2026-05-04
 
 ---
 
@@ -175,6 +175,31 @@ The Questions control now uses the shared compact shell instead of a standalone 
 | Width | `w-16` |
 | Spinner hiding | `[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none` |
 | Focus | `focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]` |
+
+---
+
+## Active Session Action Bar
+
+**Source:** `app/(app)/app/practice/components/practice-view.tsx:102-174` (`TutorActionBar`), `:339-374` (mode switch into tutor/exam action bars)
+
+Tutor mode uses click-to-commit answer choices. The footer therefore no longer owns the answer submission action.
+
+| State | Tutor footer left cluster | Tutor footer right cluster | Notes |
+|-------|---------------------------|----------------------------|-------|
+| Q1 pre-feedback | none | none | Empty primary group is suppressed; the choice card is the only primary action. |
+| Q2/Q3 pre-feedback | `Previous` | none | No `Submit`, no `Submitting…`, no pre-feedback `Next`, no footer `View Summary`. |
+| Q1/Q2 post-feedback | `Previous` when available + filled `Next` | `Bookmark` (`sm:ml-auto`) | Feedback unlocks sequential navigation. |
+| Q3 post-feedback | `Previous` + filled `End session` | `Bookmark` (`sm:ml-auto`) | Header `End session` stays visible; the same-label header + footer terminal duplicate is intentional and both call `onEndSession`. |
+
+Exam mode keeps its existing footer contract in this debt. The exam right-slot primary CTA promotion is tracked separately by DEBT-379 and is not part of the DEBT-378 shipped state.
+
+### Choice Click Semantics
+
+**Sources:** `use-question-flow-core.ts:252-264`, `use-practice-question-answer-flow.ts:183-192`, `use-practice-session-question-flow.ts:385-395`
+
+`useQuestionFlowCore.onSelectChoice` is mode-agnostic and returns whether a selection actually changed. Quick Practice / ad-hoc practice wraps that return value and immediately commits the explicit clicked `choiceId`. Active tutor sessions do the same, while active exam sessions stop after selection so answers remain draft-only until Review & Submit / exam finalization.
+
+This preserves the shared choice-button primitive while making the orchestration honest by mode: tutor teaches immediately; exam defers correctness until the exam is submitted.
 
 ---
 

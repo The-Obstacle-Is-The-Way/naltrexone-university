@@ -1,6 +1,6 @@
 # Pattern Registry
 
-**Last Updated:** 2026-04-07
+**Last Updated:** 2026-05-04
 **Status:** Canonical — all UI changes MUST conform to this registry
 
 Single source of truth for every visual pattern in the app. If a pattern isn't here, don't invent one — add it here first, get approval, then implement.
@@ -338,6 +338,8 @@ hover:border-foreground/55 hover:bg-foreground/[0.06] dark:hover:border-foregrou
 
 **Design rationale:** Choice buttons are rendered inside `QuestionCard` (`bg-card`) and follow in-card row hierarchy, not standalone page-surface hierarchy. The row is also the direct-action control, so unlike borderless tonal rows it still needs a clearly compliant boundary per [Contrast Policy §3.2](./contrast-policy.md). In light mode, the older `border-border/60 bg-muted/20` recipe was too quiet on white card surfaces; `border-foreground/50 bg-background/50` keeps the required boundary strong while restoring a clean white rest surface. In dark mode, `dark:bg-background/50` intentionally recesses the row beneath the card's 7% surface to about 5.25% lightness, mirroring the crisp feedback-card treatment instead of reviving the muddy DEBT-312 gray veil. Hover and selected fills switch to foreground-based replacements that are evaluated directly against `bg-card`, not layered on top of the recessed rest fill: dark mode steps `5.25 -> 11.3 -> 17.3`, while light mode stays clean at rest and lifts to subtle foreground tints for hover and selected. Keep the hover border/fill tokens on the unselected branch only so selected neutral rows do not regress when hovered.
 
+**Behavior:** In tutor mode and Quick Practice, clicking a choice commits the answer immediately by invoking the submit flow. In exam mode, clicking a choice only selects/drafts the answer; final commit remains deferred to Review & Submit / exam finalization. The `ChoiceButton` primitive and `useQuestionFlowCore` stay mode-agnostic; mode-specific commit wiring lives in `usePracticeQuestionAnswerFlow` and `usePracticeSessionQuestionFlow` (DEBT-378).
+
 ### I-4: Filter Chip
 
 Toggle-style filter for tags, modes, difficulty levels.
@@ -546,6 +548,10 @@ All standalone action buttons in the app use `rounded-full`:
 | Success indicator (navigator) | `success` + `rounded-full` | Correct question dot in navigator |
 | End/abandon session | `outline` + `rounded-full` | "End session", "End exam" |
 | Error recovery | `outline` (no `rounded-full`) | "Try again", "Return to dashboard" |
+
+**End session usage:** In tutor sessions, `End session` is always present in the header as the bail-cheap exit and also appears as the filled footer terminal CTA on the last question after feedback has rendered. The duplicate same-label Q3 state is intentional; both buttons call `onEndSession` (DEBT-378). Exam mode still does not expose a header bail button.
+
+**Removed tutor affordances:** Active tutor sessions no longer render a footer `Submit`, `Submitting…`, pre-feedback `Next`, or footer `View Summary`. Before feedback, the choice cards are the primary action; skip-without-answering is handled by the question navigator in active sessions.
 
 ### Dark Mode Behavior (built into button.tsx)
 

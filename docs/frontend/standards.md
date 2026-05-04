@@ -1,6 +1,6 @@
 # Frontend Standards
 
-**Last Updated:** 2026-03-17
+**Last Updated:** 2026-05-04
 
 Canonical reference for all frontend patterns, component usage, accessibility, and styling conventions. Every UI change MUST be consistent with this document. If a pattern isn't documented here, don't invent one — add it here first.
 
@@ -101,6 +101,20 @@ Canonical reference for all frontend patterns, component usage, accessibility, a
 **Sizes:** `default` (h-9), `sm` (h-8), `lg` (h-10), `icon` (size-9)
 
 **Disabled styling standard:** `disabled:pointer-events-none disabled:opacity-50` — all interactive elements MUST use `opacity-50`, never `opacity-60`.
+
+### Practice action bars
+
+Active practice action bars use mode-specific semantics:
+
+| Mode/state | Left cluster | Right cluster | Notes |
+|------------|--------------|---------------|-------|
+| Tutor / Quick Practice, pre-feedback Q1 | none | none | The choice cards are the primary action; click commits immediately. Do not render a placeholder primary group. |
+| Tutor, pre-feedback Q2+ | `Previous` only | none | No footer `Submit`, `Submitting…`, or pre-feedback `Next`. Non-sequential skip is via the question navigator in active sessions. |
+| Tutor / Quick Practice, post-feedback non-terminal | `Previous` when available + filled `Next` | `Bookmark` with `sm:ml-auto` when feedback exists | `Next` appears only after feedback has rendered. |
+| Tutor, post-feedback terminal | `Previous` + filled `End session` | `Bookmark` with `sm:ml-auto` | Header `End session` remains visible too; the duplicate same-label Q3 terminal state is intentional. |
+| Exam active session | Existing exam footer contract | Existing exam footer contract | Exam right-slot primary CTA promotion is deferred to DEBT-379 and must not be documented as shipped until that debt lands. |
+
+In tutor mode and Quick Practice, the choice cards themselves act as the primary action pre-feedback. The footer carries only backward navigation before feedback and sequential/terminal navigation after feedback.
 
 ### Card
 
