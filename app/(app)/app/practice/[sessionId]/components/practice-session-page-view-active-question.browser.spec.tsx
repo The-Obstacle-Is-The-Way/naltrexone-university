@@ -62,13 +62,11 @@ test('renders active question branch with navigator and navigation callback', as
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={noop}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onToggleMarkForReview={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={noop}
       onNavigateQuestion={onNavigateQuestion}
     />,
@@ -115,13 +113,11 @@ test('does not render Review & Submit in the active exam-question header', async
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={noop}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onToggleMarkForReview={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={noop}
     />,
   );
@@ -162,13 +158,11 @@ test('keeps End session in the active tutor-question header', async () => {
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={noop}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onToggleMarkForReview={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={noop}
     />,
   );
@@ -236,13 +230,11 @@ test('wires navigator aria-controls to an existing question panel id', async () 
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={noop}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onToggleMarkForReview={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={noop}
       onNavigateQuestion={noop}
     />,
@@ -290,13 +282,11 @@ test('renders navigator error with retry action', async () => {
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={noop}
       onRetryNavigator={onRetryNavigator}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={noop}
     />,
   );

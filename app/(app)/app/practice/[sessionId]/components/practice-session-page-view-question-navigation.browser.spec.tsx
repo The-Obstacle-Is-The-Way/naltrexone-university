@@ -66,12 +66,10 @@ test('renders Previous button in the session answering branch', async () => {
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={noop}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={noop}
       onNavigateQuestion={noop}
     />,
@@ -140,12 +138,10 @@ test('hasPreviousQuestion is false when current question is first in navigator',
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={noop}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={noop}
       onNavigateQuestion={noop}
     />,
@@ -184,12 +180,10 @@ test('hasPreviousQuestion is false on the first question when navigator is missi
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={noop}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={noop}
       onNavigateQuestion={noop}
     />,
@@ -228,12 +222,10 @@ test('renders Previous when navigator is missing but sessionInfo indicates a pri
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={noop}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={noop}
       onNavigateQuestion={noop}
     />,
@@ -292,13 +284,11 @@ test('routes the last exam-question footer Review & Submit button through onEndS
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={onEndSession}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onToggleMarkForReview={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={onNextQuestion}
       onNavigateQuestion={noop}
     />,
@@ -367,12 +357,10 @@ test('hasPreviousQuestion is true when current question is not first', async () 
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={noop}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={noop}
       onNavigateQuestion={noop}
     />,
@@ -383,7 +371,7 @@ test('hasPreviousQuestion is true when current question is not first', async () 
     .not.toBeDisabled();
 });
 
-test('routes the last tutor-question footer View Summary button through onEndSession instead of onNextQuestion', async () => {
+test('routes the last tutor-question footer End session button through onEndSession instead of onNextQuestion', async () => {
   const onEndSession = vi.fn();
   const onNextQuestion = vi.fn();
 
@@ -395,7 +383,7 @@ test('routes the last tutor-question footer View Summary button through onEndSes
         sessionId: 'session-1',
         mode: 'tutor',
         totalCount: 2,
-        answeredCount: 0,
+        answeredCount: 2,
         markedCount: 0,
         rows: [
           {
@@ -405,8 +393,8 @@ test('routes the last tutor-question footer View Summary button through onEndSes
             isAvailable: true,
             stemMd: 'Stem 1',
             difficulty: 'easy',
-            isAnswered: false,
-            isCorrect: null,
+            isAnswered: true,
+            isCorrect: true,
             markedForReview: false,
           },
           {
@@ -416,8 +404,8 @@ test('routes the last tutor-question footer View Summary button through onEndSes
             isAvailable: true,
             stemMd: 'Stem 2',
             difficulty: 'medium',
-            isAnswered: false,
-            isCorrect: null,
+            isAnswered: true,
+            isCorrect: true,
             markedForReview: false,
           },
         ],
@@ -438,18 +426,23 @@ test('routes the last tutor-question footer View Summary button through onEndSes
         choices: [{ id: 'c1', label: 'A', textMd: 'Choice A', sortOrder: 1 }],
         session: null,
       }}
-      selectedChoiceId={null}
-      isAnswered={false}
-      submitResult={null}
+      selectedChoiceId="c1"
+      isAnswered={true}
+      submitResult={{
+        attemptId: 'attempt-1',
+        isCorrect: true,
+        correctChoiceId: 'c1',
+        explanationMd: 'Because',
+        referenceMd: null,
+        choiceExplanations: [],
+      }}
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={onEndSession}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={onNextQuestion}
       onNavigateQuestion={noop}
     />,
@@ -460,7 +453,7 @@ test('routes the last tutor-question footer View Summary button through onEndSes
   await expect
     .element(bottomActionBar.getByRole('button', { name: 'Next' }))
     .not.toBeInTheDocument();
-  await bottomActionBar.getByRole('button', { name: 'View Summary' }).click();
+  await bottomActionBar.getByRole('button', { name: 'End session' }).click();
   expect(onEndSession).toHaveBeenCalledTimes(1);
   expect(onNextQuestion).not.toHaveBeenCalled();
 });
@@ -539,12 +532,10 @@ test('clicking Next in a completed session navigates to the next available quest
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={noop}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={onNextQuestion}
       onNavigateQuestion={onNavigateQuestion}
     />,
@@ -623,12 +614,10 @@ test('clicking Next falls back to onNextQuestion when id-based navigation is una
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={noop}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={onNextQuestion}
     />,
   );
@@ -698,12 +687,10 @@ test("clicking Previous calls onNavigateQuestion with the previous question's ID
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={noop}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={noop}
       onNavigateQuestion={onNavigateQuestion}
     />,

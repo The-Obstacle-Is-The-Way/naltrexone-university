@@ -43,7 +43,6 @@ export type PracticeSessionPageViewProps = {
   isMarkingForReview?: boolean;
   bookmarkMessage?: string | null;
   bookmarkMessageVersion?: number;
-  canSubmit: boolean;
   onEndSession: () => void;
   onRetryReview?: () => void;
   onRetryPostExamReview?: () => void;
@@ -53,7 +52,6 @@ export type PracticeSessionPageViewProps = {
   onToggleBookmark: () => void;
   onToggleMarkForReview?: () => void;
   onSelectChoice: (choiceId: string) => void;
-  onSubmit: () => void;
   onNextQuestion: () => void;
   onNavigateQuestion?: (questionId: string) => void;
   onOpenReviewQuestion?: (questionId: string) => void;
@@ -263,7 +261,6 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       isMarkingForReview={props.isMarkingForReview}
       bookmarkMessage={props.bookmarkMessage}
       bookmarkMessageVersion={props.bookmarkMessageVersion}
-      canSubmit={props.canSubmit}
       endSessionLabel={mode === 'exam' ? 'Review & Submit' : 'End session'}
       onEndSession={props.onEndSession}
       onTryAgain={onTryAgainResolved}
@@ -271,7 +268,6 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       onToggleBookmark={props.onToggleBookmark}
       onToggleMarkForReview={props.onToggleMarkForReview}
       onSelectChoice={props.onSelectChoice}
-      onSubmit={props.onSubmit}
       onNextQuestion={onNextQuestionResolved}
       onPreviousQuestion={
         props.onNavigateQuestion ? onPreviousQuestion : undefined

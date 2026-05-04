@@ -46,13 +46,11 @@ function ExamPracticeViewHarness(input: {
       bookmarkStatus="idle"
       isBookmarked={false}
       isMarkingForReview={false}
-      canSubmit={selectedChoiceId !== null}
       onEndSession={() => undefined}
       onTryAgain={() => undefined}
       onToggleBookmark={() => undefined}
       onToggleMarkForReview={input.onToggleMarkForReview}
       onSelectChoice={setSelectedChoiceId}
-      onSubmit={() => undefined}
       onNextQuestion={input.onNextQuestion}
     />
   );
@@ -71,11 +69,9 @@ test('renders error state and retries when requested', async () => {
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onTryAgain={onTryAgain}
       onToggleBookmark={() => undefined}
       onSelectChoice={() => undefined}
-      onSubmit={() => undefined}
       onNextQuestion={() => undefined}
     />,
   );
@@ -150,13 +146,11 @@ test('renders the exam bottom action bar without sticky shell markers', async ()
       bookmarkStatus="idle"
       isBookmarked={false}
       isMarkingForReview={false}
-      canSubmit={false}
       onEndSession={() => undefined}
       onTryAgain={() => undefined}
       onToggleBookmark={() => undefined}
       onToggleMarkForReview={() => undefined}
       onSelectChoice={() => undefined}
-      onSubmit={() => undefined}
       onNextQuestion={() => undefined}
     />,
   );
@@ -224,11 +218,9 @@ test('renders the tutor feedback bottom action bar without sticky shell markers'
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onTryAgain={() => undefined}
       onToggleBookmark={() => undefined}
       onSelectChoice={() => undefined}
-      onSubmit={() => undefined}
       onNextQuestion={() => undefined}
       onPreviousQuestion={() => undefined}
       hasPreviousQuestion={true}
@@ -284,18 +276,16 @@ test('disables mutation controls while internal question loading is in progress'
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={true}
       onTryAgain={() => undefined}
       onToggleBookmark={() => undefined}
       onSelectChoice={() => undefined}
-      onSubmit={() => undefined}
       onNextQuestion={() => undefined}
     />,
   );
 
   await expect
     .element(tutorScreen.getByRole('button', { name: 'Submit' }))
-    .toBeDisabled();
+    .not.toBeInTheDocument();
   await expect
     .element(tutorScreen.getByRole('button', { name: 'Bookmark' }))
     .not.toBeInTheDocument();
@@ -335,13 +325,11 @@ test('disables mutation controls while internal question loading is in progress'
       bookmarkStatus="idle"
       isBookmarked={false}
       isMarkingForReview={false}
-      canSubmit={true}
       onEndSession={() => undefined}
       onTryAgain={() => undefined}
       onToggleBookmark={() => undefined}
       onToggleMarkForReview={() => undefined}
       onSelectChoice={() => undefined}
-      onSubmit={() => undefined}
       onNextQuestion={() => undefined}
     />,
   );
@@ -389,13 +377,11 @@ test('disables choice selection after a submit in exam mode', async () => {
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={() => undefined}
       onTryAgain={() => undefined}
       onToggleBookmark={() => undefined}
       onToggleMarkForReview={() => undefined}
       onSelectChoice={() => undefined}
-      onSubmit={() => undefined}
       onNextQuestion={() => undefined}
     />,
   );
@@ -440,11 +426,9 @@ test('scrolls feedback into view when a submit result is present', async () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );
@@ -499,12 +483,10 @@ test('does not scroll feedback in exam mode', async () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onToggleMarkForReview={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );
@@ -539,11 +521,9 @@ test('renders bookmark feedback in shared toast region', async () => {
         isBookmarked
         bookmarkMessage="Question bookmarked."
         bookmarkMessageVersion={1}
-        canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />
     </NotificationProvider>,
@@ -577,11 +557,9 @@ test('calls onPreviousQuestion when clicked', async () => {
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onTryAgain={() => undefined}
       onToggleBookmark={() => undefined}
       onSelectChoice={() => undefined}
-      onSubmit={() => undefined}
       onNextQuestion={() => undefined}
       onPreviousQuestion={onPreviousQuestion}
       hasPreviousQuestion
@@ -628,13 +606,11 @@ test('calls onEndSession from the bottom-bar Review & Submit button on the last 
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={onEndSession}
       onTryAgain={() => undefined}
       onToggleBookmark={() => undefined}
       onToggleMarkForReview={() => undefined}
       onSelectChoice={() => undefined}
-      onSubmit={() => undefined}
       onNextQuestion={() => undefined}
       onPreviousQuestion={() => undefined}
       hasPreviousQuestion
@@ -646,7 +622,7 @@ test('calls onEndSession from the bottom-bar Review & Submit button on the last 
   expect(onEndSession).toHaveBeenCalledTimes(1);
 });
 
-test('calls onEndSession from the bottom-bar View Summary button on the last tutor question', async () => {
+test('calls onEndSession from the bottom-bar End session button on the last tutor question', async () => {
   const onEndSession = vi.fn();
   const onNextQuestion = vi.fn();
 
@@ -683,12 +659,10 @@ test('calls onEndSession from the bottom-bar View Summary button on the last tut
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={onEndSession}
       onTryAgain={() => undefined}
       onToggleBookmark={() => undefined}
       onSelectChoice={() => undefined}
-      onSubmit={() => undefined}
       onNextQuestion={onNextQuestion}
       onPreviousQuestion={() => undefined}
       hasPreviousQuestion
@@ -702,13 +676,13 @@ test('calls onEndSession from the bottom-bar View Summary button on the last tut
   await expect.element(primaryGroup).toBeVisible();
   await expect.element(secondaryGroup).toBeVisible();
   await expect
-    .element(primaryGroup.getByRole('button', { name: 'View Summary' }))
+    .element(primaryGroup.getByRole('button', { name: 'End session' }))
     .toBeVisible();
   await expect
     .element(secondaryGroup.getByRole('button', { name: 'Bookmark' }))
     .toBeVisible();
 
-  await primaryGroup.getByRole('button', { name: 'View Summary' }).click();
+  await primaryGroup.getByRole('button', { name: 'End session' }).click();
   expect(onEndSession).toHaveBeenCalledTimes(1);
   expect(onNextQuestion).not.toHaveBeenCalled();
 });

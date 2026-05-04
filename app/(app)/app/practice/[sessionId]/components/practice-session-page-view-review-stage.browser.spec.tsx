@@ -40,12 +40,10 @@ test('renders exam review branch and triggers review actions', async () => {
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={noop}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={noop}
       onOpenReviewQuestion={onOpenReviewQuestion}
       onFinalizeReview={onFinalizeReview}
@@ -165,12 +163,10 @@ test('renders post-exam review with score banner, feedback, and a summary exit',
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={noop}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={noop}
       onNavigatePostExamReviewQuestion={onNavigatePostExamReviewQuestion}
       onViewSummary={onViewSummary}
@@ -259,12 +255,10 @@ test('renders a loading state while post-exam review is hydrating inside the ses
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={noop}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={noop}
     />,
   );
@@ -307,12 +301,10 @@ test('renders retry and summary actions when post-exam review hydration fails', 
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={noop}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={noop}
       onRetryPostExamReview={onRetryPostExamReview}
       onViewSummary={onViewSummary}
@@ -366,12 +358,10 @@ test('falls back to onEndSession when onFinalizeReview is omitted in the review 
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={onEndSession}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={noop}
     />,
   );
@@ -405,13 +395,11 @@ test('renders review error actions with retry and end session escape hatch', asy
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={onEndSession}
       onRetryReview={onRetryReview}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={noop}
     />,
   );
@@ -442,13 +430,11 @@ test('calls onFinalizeReview instead of onEndSession when both are provided', as
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={onEndSession}
       onFinalizeReview={onFinalizeReview}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={noop}
     />,
   );

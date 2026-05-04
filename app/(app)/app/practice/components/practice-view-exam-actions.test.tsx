@@ -36,12 +36,10 @@ describe('PracticeView exam actions', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onToggleMarkForReview={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
         onPreviousQuestion={() => undefined}
         hasPreviousQuestion={false}
@@ -88,13 +86,11 @@ describe('PracticeView exam actions', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onEndSession={() => undefined}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onToggleMarkForReview={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
         onPreviousQuestion={() => undefined}
         hasPreviousQuestion={true}
@@ -133,13 +129,11 @@ describe('PracticeView exam actions', () => {
         bookmarkStatus="idle"
         isBookmarked={false}
         isMarkingForReview={false}
-        canSubmit={false}
         onEndSession={() => undefined}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onToggleMarkForReview={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
         onPreviousQuestion={() => undefined}
         hasPreviousQuestion={true}
@@ -187,13 +181,11 @@ describe('PracticeView exam actions', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onEndSession={() => undefined}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onToggleMarkForReview={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
         onPreviousQuestion={() => undefined}
         hasPreviousQuestion={true}
@@ -232,13 +224,11 @@ describe('PracticeView exam actions', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onEndSession={() => undefined}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onToggleMarkForReview={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
         onPreviousQuestion={() => undefined}
         hasPreviousQuestion={false}
@@ -278,13 +268,11 @@ describe('PracticeView exam actions', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onEndSession={() => undefined}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onToggleMarkForReview={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
         onPreviousQuestion={() => undefined}
         hasPreviousQuestion={true}
@@ -319,12 +307,10 @@ describe('PracticeView exam actions', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onToggleMarkForReview={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
         onPreviousQuestion={() => undefined}
         hasPreviousQuestion={true}
@@ -349,12 +335,10 @@ describe('PracticeView exam actions', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onToggleMarkForReview={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
         onPreviousQuestion={() => undefined}
         hasPreviousQuestion={true}

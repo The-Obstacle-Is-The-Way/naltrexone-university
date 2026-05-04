@@ -80,13 +80,11 @@ function renderQuestionNavigationHarness() {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onEndSession={noop}
         onTryAgain={noop}
         onToggleBookmark={noop}
         onToggleMarkForReview={noop}
         onSelectChoice={noop}
-        onSubmit={noop}
         onNextQuestion={handleNextQuestion}
         onNavigateQuestion={handleNavigateQuestion}
       />
@@ -184,13 +182,11 @@ test('restores the question panel when next-question navigation enters loading b
           isPending={false}
           bookmarkStatus="idle"
           isBookmarked={false}
-          canSubmit={false}
           onEndSession={noop}
           onTryAgain={noop}
           onToggleBookmark={noop}
           onToggleMarkForReview={noop}
           onSelectChoice={noop}
-          onSubmit={noop}
           onNextQuestion={noop}
           onNavigateQuestion={handleNavigateQuestion}
         />
@@ -262,13 +258,11 @@ test('restores the question panel when navigation fails before the question id c
           isPending={false}
           bookmarkStatus="idle"
           isBookmarked={false}
-          canSubmit={false}
           onEndSession={noop}
           onTryAgain={noop}
           onToggleBookmark={noop}
           onToggleMarkForReview={noop}
           onSelectChoice={noop}
-          onSubmit={noop}
           onNextQuestion={noop}
           onNavigateQuestion={handleNavigateQuestion}
         />
@@ -342,13 +336,11 @@ test('restores the question panel when retrying from an in-panel load error', as
           isPending={false}
           bookmarkStatus="idle"
           isBookmarked={false}
-          canSubmit={false}
           onEndSession={noop}
           onTryAgain={handleTryAgain}
           onToggleBookmark={noop}
           onToggleMarkForReview={noop}
           onSelectChoice={noop}
-          onSubmit={noop}
           onNextQuestion={noop}
         />
       );

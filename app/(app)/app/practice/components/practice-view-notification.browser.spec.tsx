@@ -33,11 +33,9 @@ function createBaseProps() {
     submitResult: null,
     isPending: false,
     isBookmarked: true,
-    canSubmit: false,
     onTryAgain: () => undefined,
     onToggleBookmark: () => undefined,
     onSelectChoice: () => undefined,
-    onSubmit: () => undefined,
     onNextQuestion: () => undefined,
   };
 }

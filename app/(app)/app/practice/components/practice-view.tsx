@@ -34,7 +34,6 @@ export type PracticeViewProps = {
   isMarkingForReview?: boolean;
   bookmarkMessage?: string | null;
   bookmarkMessageVersion?: number;
-  canSubmit: boolean;
   endSessionLabel?: string;
   questionPanelId?: string;
   questionAreaRef?: React.RefObject<HTMLElement | null>;
@@ -44,7 +43,6 @@ export type PracticeViewProps = {
   onToggleBookmark: () => void;
   onToggleMarkForReview?: () => void;
   onSelectChoice: (choiceId: string) => void;
-  onSubmit: () => void;
   onNextQuestion: () => void;
   onPreviousQuestion?: () => void;
   hasPreviousQuestion?: boolean;

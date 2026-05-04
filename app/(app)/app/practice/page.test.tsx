@@ -60,11 +60,9 @@ describe('app/(app)/app/practice', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );
@@ -84,11 +82,9 @@ describe('app/(app)/app/practice', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );
@@ -111,11 +107,9 @@ describe('app/(app)/app/practice', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );
@@ -155,11 +149,9 @@ describe('app/(app)/app/practice', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked
-        canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );
@@ -200,13 +192,11 @@ describe('app/(app)/app/practice', () => {
         bookmarkStatus="idle"
         isBookmarked={false}
         isMarkingForReview={false}
-        canSubmit={false}
         onEndSession={() => undefined}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onToggleMarkForReview={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );
@@ -232,11 +222,9 @@ describe('app/(app)/app/practice', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );
@@ -268,12 +256,10 @@ describe('app/(app)/app/practice', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onEndSession={() => undefined}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );
@@ -307,12 +293,10 @@ describe('app/(app)/app/practice', () => {
         isPending={false}
         bookmarkStatus="error"
         isBookmarked={false}
-        canSubmit={false}
         onRetryBookmarks={() => undefined}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );
@@ -332,12 +316,10 @@ describe('app/(app)/app/practice', () => {
         isPending={false}
         bookmarkStatus="error"
         isBookmarked={false}
-        canSubmit={false}
         onRetryBookmarks={() => undefined}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );
@@ -359,12 +341,10 @@ describe('app/(app)/app/practice', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onEndSession={() => undefined}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );

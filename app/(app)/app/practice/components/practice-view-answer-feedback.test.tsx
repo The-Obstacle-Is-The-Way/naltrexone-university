@@ -37,11 +37,9 @@ describe('PracticeView answer feedback', () => {
         isPending
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );
@@ -71,11 +69,9 @@ describe('PracticeView answer feedback', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
         onPreviousQuestion={() => undefined}
         hasPreviousQuestion={false}
@@ -116,11 +112,9 @@ describe('PracticeView answer feedback', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
         onPreviousQuestion={() => undefined}
         hasPreviousQuestion={true}
@@ -162,11 +156,9 @@ describe('PracticeView answer feedback', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );
@@ -214,12 +206,10 @@ describe('PracticeView answer feedback', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onEndSession={() => undefined}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
         onPreviousQuestion={() => undefined}
         hasPreviousQuestion={true}
@@ -272,11 +262,9 @@ describe('PracticeView answer feedback', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );
@@ -316,11 +304,9 @@ describe('PracticeView answer feedback', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );

@@ -506,10 +506,6 @@ describe('usePracticeSessionPageController (browser)', () => {
     await expect
       .element(screen.getByTestId('selected-choice-id'))
       .toHaveTextContent('choice_1');
-    await expect
-      .element(screen.getByTestId('can-submit'))
-      .toHaveTextContent('true');
-    await screen.getByRole('button', { name: 'submit-answer' }).click();
 
     await expect
       .element(screen.getByTestId('has-submit-result'))
