@@ -382,8 +382,7 @@ test.describe('review mode audit', () => {
     const feedbackCard = getFeedbackCard(page);
     await expect(feedbackCard).toBeVisible({ timeout: 10_000 });
 
-    const verdictPill = feedbackCard.getByText(/^(Correct|Incorrect)$/).first();
-    await expect(verdictPill).toBeVisible();
+    const verdictPill = await expectVerdictPillVisible(feedbackCard);
     if ((await verdictPill.textContent())?.trim() === 'Incorrect') {
       await expect(
         feedbackCard.getByText('Correct Answer', { exact: true }),

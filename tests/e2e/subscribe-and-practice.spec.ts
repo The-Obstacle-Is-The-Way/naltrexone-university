@@ -4,7 +4,10 @@ import {
   hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
-import { selectChoiceByLabel } from './helpers/question';
+import {
+  expectVerdictPillVisible,
+  selectChoiceByLabel,
+} from './helpers/question';
 import { runE2EUserStateReset } from './helpers/reset-e2e-user-state';
 import { ensureSubscribed } from './helpers/subscription';
 
@@ -25,8 +28,7 @@ test.describe('subscribe and practice', () => {
     // Select first choice; tutor/quick practice commits on click.
     await selectChoiceByLabel(page, 'A');
 
-    const verdictPill = page.getByText(/^(Correct|Incorrect)$/).first();
-    await expect(verdictPill).toBeVisible({ timeout: 10_000 });
+    const verdictPill = await expectVerdictPillVisible(page);
     if ((await verdictPill.textContent())?.trim() === 'Incorrect') {
       await expect(
         page.getByText('Correct Answer', { exact: true }),

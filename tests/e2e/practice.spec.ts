@@ -3,7 +3,10 @@ import {
   hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
-import { selectChoiceByLabel } from './helpers/question';
+import {
+  expectVerdictPillVisible,
+  selectChoiceByLabel,
+} from './helpers/question';
 import { runE2EUserStateReset } from './helpers/reset-e2e-user-state';
 import { startSession } from './helpers/session';
 import { ensureSubscribed } from './helpers/subscription';
@@ -118,8 +121,7 @@ test.describe('practice', () => {
 
     await selectChoiceByLabel(page, 'A');
 
-    const verdictPill = page.getByText(/^(Correct|Incorrect)$/).first();
-    await expect(verdictPill).toBeVisible();
+    const verdictPill = await expectVerdictPillVisible(page);
     if ((await verdictPill.textContent())?.trim() === 'Incorrect') {
       await expect(
         page.getByText('Correct Answer', { exact: true }),
@@ -156,9 +158,7 @@ test.describe('practice', () => {
         page.getByText(`Question ${questionNumber} of 3`),
       ).toBeVisible();
       await selectChoiceByLabel(page, 'A');
-      await expect(page.getByTestId('verdict-pill')).toBeVisible({
-        timeout: 10_000,
-      });
+      await expectVerdictPillVisible(page);
       await page
         .getByTestId('bottom-action-bar')
         .getByRole('button', { name: 'Next' })
@@ -167,9 +167,7 @@ test.describe('practice', () => {
 
     await expect(page.getByText('Question 3 of 3')).toBeVisible();
     await selectChoiceByLabel(page, 'A');
-    await expect(page.getByTestId('verdict-pill')).toBeVisible({
-      timeout: 10_000,
-    });
+    await expectVerdictPillVisible(page);
 
     const bottomActionBar = page.getByTestId('bottom-action-bar');
     const endSessionButtons = page.getByRole('button', { name: 'End session' });
@@ -202,7 +200,7 @@ test.describe('practice', () => {
 
     await selectChoiceByLabel(page, 'A');
 
-    await expect(page.getByText(/^(Correct|Incorrect)$/)).toBeVisible();
+    await expectVerdictPillVisible(page);
   });
 
   test('uses whole-page scroll for long tutor feedback content', async ({
@@ -215,9 +213,7 @@ test.describe('practice', () => {
     await startSession(page, 'tutor', 2);
 
     await selectChoiceByLabel(page, 'A');
-    await expect(page.getByText(/^(Correct|Incorrect)$/).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expectVerdictPillVisible(page);
 
     await expectNoStickyScrollRegion(page);
     await appendTallPageContentBeforeActionBar(
@@ -289,7 +285,7 @@ test.describe('practice', () => {
           /^\d of 1 correct · Review each question with detailed feedback\.$/,
       }),
     ).toBeVisible();
-    await expect(page.getByText(/^(Correct|Incorrect)$/).first()).toBeVisible();
+    await expectVerdictPillVisible(page);
 
     await scoreBanner.getByRole('button', { name: 'View Summary' }).click();
 

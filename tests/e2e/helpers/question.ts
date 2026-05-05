@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 const QUESTION_LOADING_LABEL = 'Loading question';
 
@@ -50,10 +50,13 @@ export async function selectChoiceByLabel(
   await expect(choiceRadio).toBeChecked();
 }
 
-export async function expectVerdictPillVisible(page: Page): Promise<void> {
-  const verdictPill = page.getByTestId('verdict-pill').first();
+export async function expectVerdictPillVisible(
+  target: Page | Locator,
+): Promise<Locator> {
+  const verdictPill = target.getByTestId('verdict-pill').first();
   await expect(verdictPill).toBeVisible({ timeout: 10_000 });
   await expect(verdictPill).toHaveText(/^(Correct|Incorrect)$/);
+  return verdictPill;
 }
 
 function getQuestionLoadingIndicator(page: Page) {

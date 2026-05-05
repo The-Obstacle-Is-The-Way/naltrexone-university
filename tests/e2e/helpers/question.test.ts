@@ -64,10 +64,11 @@ describe('expectVerdictPillVisible', () => {
       getByTestId: vi.fn(() => verdictPill),
     };
 
-    await expectVerdictPillVisible(page as never);
+    const actualVerdictPill = await expectVerdictPillVisible(page as never);
 
     expect(page.getByTestId).toHaveBeenCalledWith('verdict-pill');
     expect(verdictPill.first).toHaveBeenCalledTimes(1);
+    expect(actualVerdictPill).toBe(verdictPill);
     expect(playwrightExpectCalls.toBeVisible).toHaveBeenCalledWith(
       verdictPill,
       {
