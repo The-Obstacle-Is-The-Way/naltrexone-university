@@ -5,13 +5,15 @@
 **Source:** Same UX walkthrough that produced DEBT-378 (Claude Design V3 variant pass on 2026-05-04). The user's first-principles reading: exam's terminal / forward CTA should own the footer's far-right eye-anchor, while `Mark for review` should remain available but move out of the footer's primary-action slot. Today's exam footer puts `Next` / `Review & Submit` in the left navigation cluster with `Mark for review` pushed right via `sm:ml-auto`.
 **Related:** [DEBT-378 Tutor — drop Submit button (choice click commits) (archived)](../_archive/debt/debt-378-tutor-drop-submit-button-choice-click-commits.md), [DEBT-365 Exam flow affordance and label consistency (archived)](../_archive/debt/debt-365-exam-flow-affordance-and-label-consistency.md), [DEBT-363 Exam shell scroll model and dual-CTA disambiguation (archived)](../_archive/debt/debt-363-exam-shell-scroll-model-and-dual-cta.md), [DEBT-361 Exam last-question Next label (archived)](../_archive/debt/debt-361-exam-last-question-next-label.md), [DEBT-330 Post-exam review action bar bookmark placement (archived)](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md), [Pattern Registry](../frontend/pattern-registry.md), [Frontend Standards](../frontend/standards.md), [Practice Page Docs](../frontend/pages/practice.md)
 
-**Status:** Open. Audit-refined 2026-05-04 against `e44b8380`; no code change yet. Sequenced after DEBT-378 to keep one debt per shipping cycle. DEBT-379 should be re-graded visually after DEBT-378 lands because DEBT-378 already restores tutor/exam footer harmony.
+**Status:** Open. Audit-refined 2026-05-04 against `e44b8380`; audit-corrected 2026-05-05 against `524c856e` after DEBT-378 landed. No production code change yet. Sequenced after DEBT-378 to keep one debt per shipping cycle. DEBT-379 should be re-graded visually after DEBT-378 lands because DEBT-378 already restores tutor/exam footer harmony.
+
+**Audit correction note (2026-05-05):** Current code has no header-rail assertions in `practice-view-layout.test.tsx`, and `docs/frontend/pattern-registry.md` has no dedicated exam action-bar or header-rail entries. Those tasks are **adds**, not updates. Existing deferred DEBT-379 rows in `docs/frontend/standards.md` and `docs/frontend/pages/practice.md` are updates.
 
 ---
 
 ## Context
 
-Today's exam footer (`app/(app)/app/practice/components/practice-view.tsx:223-300`, `ExamActionBar`):
+Today's exam footer (`app/(app)/app/practice/components/practice-view.tsx:209-285`, `ExamActionBar`):
 
 | Question | Primary group (left, `data-testid="exam-action-primary-group"`) | Secondary group (right, `sm:ml-auto`, `data-testid="exam-action-secondary-group"`) |
 |----------|------------------------------------------------------------|----------------------------------------------------------------------------------|
@@ -163,7 +165,7 @@ Mark for review moves out of the footer entirely.
 
 ### Exam header rail — final spec
 
-A new button rendered on every exam question, positioned in the header rail at the right side (mirroring tutor's `End session` placement at `practice-view.tsx:424-435`). Add a stable selector to the header-action rail, e.g. `data-testid="question-header-actions"`, so tests can scope header-vs-footer assertions without class-token or position queries.
+A new button rendered on every exam question, positioned in the header rail at the right side (mirroring tutor's `End session` placement at `practice-view.tsx:402-413`). Add a stable selector to the header-action rail, e.g. `data-testid="question-header-actions"`, so tests can scope header-vs-footer assertions without class-token or position queries.
 
 ```tsx
 const isHeaderActionDisabled =
@@ -202,13 +204,13 @@ The DEBT-361 annotation that connects the Q3 `Review & Submit` button to a hidde
 
 ### File 1: `app/(app)/app/practice/components/practice-view.tsx`
 
-**`ExamActionBar` (lines 223-300):** restructure.
+**`ExamActionBar` (lines 209-285):** restructure.
 
 Removals:
-- Lines 281-296 — entire secondary group containing Mark for review
+- Lines 267-283 — entire secondary group containing Mark for review
 
 Changes:
-- Lines 237-275 — split left Previous group from right CTA group:
+- Lines 223-260 — split left Previous group from right CTA group:
   - Render `Previous` in the left group only when it exists. Suppress the left group entirely on Q1 instead of rendering an empty flex row.
   - Render Next / Review & Submit in a separate right CTA group with `sm:ml-auto`.
   - Maintain the `isLastSessionQuestion` branching for Next ↔ Review & Submit label flip and the `aria-describedby` link.
@@ -217,14 +219,14 @@ Changes:
   - Add `exam-action-cta-group` for the right CTA group.
   - `exam-action-secondary-group` testid is deleted (no secondary group in the footer anymore).
 
-**Header rail JSX (lines ~400-435):** add a new exam-mode Mark for review button.
+**Header rail JSX (lines ~385-423):** add a new exam-mode Mark for review button.
 
-Today line 424-435 is the tutor-only `End session` block. Add a sibling exam-only `Mark for review` / `Unmark review` block alongside it, gated by `isExamMode && props.onToggleMarkForReview`. The header layout already has flex space for a single right-side button in each mode. Add `data-testid="question-header-actions"` to the rail wrapper for scoped assertions.
+Today lines 401-423 contain the header action rail: tutor mode renders `End session` at lines 402-413 when `props.onEndSession && !isExamMode`, and the fallback back link renders only when `!props.onEndSession`. Exam mode with `onEndSession` renders no header button today. Add a sibling exam-only `Mark for review` / `Unmark review` block in that rail, gated by `isExamMode && props.onToggleMarkForReview`. The header layout already has flex space for a single right-side button in each mode. Add `data-testid="question-header-actions"` to the rail wrapper for scoped assertions.
 
 **Props:**
-- `ExamActionBarProps` (lines 207-221) — drops `isMarkingForReview`, `isMarkedForReview`, `onToggleMarkForReview`.
-- `PracticeViewProps` already has `isMarkingForReview?: boolean` and `onToggleMarkForReview?: () => void` at `practice-view.tsx:34,45`.
-- `isMarkedForReview` is not a top-level prop; it is derived from `sessionInfo` at `practice-view.tsx:306` and should be reused by the header button.
+- `ExamActionBarProps` (lines 193-207) — drops `isMarkingForReview`, `isMarkedForReview`, `onToggleMarkForReview`.
+- `PracticeViewProps` already has `isMarkingForReview?: boolean` and `onToggleMarkForReview?: () => void` at `practice-view.tsx:34,44`.
+- `isMarkedForReview` is not a top-level prop; it is derived from `sessionInfo` at `practice-view.tsx:292` and should be reused by the header button.
 
 ### File 2: parent components / page views that pass props to `PracticeView`
 
@@ -238,8 +240,8 @@ Files to verify:
 
 | File | Lines (approx) | Change type |
 |------|----------------|-------------|
-| `practice-view.tsx` ExamActionBar | 223-300 | Restructure: drop secondary group, promote primary CTA to right slot |
-| `practice-view.tsx` header rail | ~400-435 | Add exam-mode Mark for review button alongside tutor `End session` |
+| `practice-view.tsx` ExamActionBar | 209-285 | Restructure: drop secondary group, promote primary CTA to right slot |
+| `practice-view.tsx` header rail | ~385-423 | Add exam-mode Mark for review button alongside tutor `End session` |
 | Total | ~80-120 lines touched | Net flat or small positive (header gains > footer loses) |
 
 Choice button, QuestionCard, controllers, repositories, use cases: zero changes.
@@ -252,10 +254,13 @@ Choice button, QuestionCard, controllers, repositories, use cases: zero changes.
 
 **`practice-view-exam-actions.test.tsx`:**
 
-- Lines 15-66 — Q1 exam action bar, asserts `['Next', 'Mark for review']` — **REWRITE**: Q1 footer asserts `['Next']` only; new test asserts header Mark for review exists.
-- Lines 68-113 — Q3 exam action bar, asserts `['Previous', 'Review & Submit', 'Mark for review']` — **REWRITE**: Q3 footer asserts `['Previous', 'Review & Submit']`; new test asserts header Mark for review exists on Q3.
-- Lines 115-168 — primary/secondary group separation — **REWRITE**: assert footer has no secondary group; assert header rail has the Mark for review button.
-- Lines 170-214 — `aria-describedby` Q3 annotation — **KEEP** (annotation travels with the button to its new right-slot position; test should still pass with possible selector updates).
+- Lines 15-64 — Q1 exam action bar, asserts `['Next', 'Mark for review']` — **REWRITE**: Q1 footer asserts `['Next']` only; new test asserts header Mark for review exists.
+- Lines 66-109 — Q3 exam action bar, asserts `['Previous', 'Review & Submit', 'Mark for review']` — **REWRITE**: Q3 footer asserts `['Previous', 'Review & Submit']`; new test asserts header Mark for review exists on Q3.
+- Lines 111-162 — primary/secondary group separation — **REWRITE**: assert footer has no secondary group; assert header rail has the Mark for review button.
+- Lines 164-206 — `aria-describedby` Q3 annotation — **KEEP** (annotation travels with the button to its new right-slot position; test should still pass with possible selector updates).
+- Lines 208-249 — non-final exam question with `hasNextQuestion=false`, asserts `['Next', 'Mark for review']` — **REWRITE**: footer asserts `['Next']`; header asserts Mark for review exists.
+- Lines 251-284 — no Submit in exam mode — **KEEP**.
+- Lines 286-376 — draft-selection label stability, asserts footer `['Previous', 'Next', 'Mark for review']` — **REWRITE**: footer asserts `['Previous', 'Next']` for both states; header assertions cover Mark for review.
 
 Add new tests:
 - Header rail in exam mode renders `Mark for review` on Q1, Q2, Q3.
@@ -269,16 +274,19 @@ Add new tests:
 
 **`practice-view-layout.test.tsx`:**
 
-- Audit for any layout structure assertions referencing `exam-action-secondary-group` — update to reflect the absence of that group post-refactor.
-- Layout assertions on the question header rail — update to expect a single exam-mode Mark/Unmark button in `data-testid="question-header-actions"`. Do not assert it appears alongside `End session`; exam mode has no header `End session`.
+- Current file has no `exam-action-secondary-group`, `question-header-actions`, `Mark for review`, or header-rail assertions at `524c856e`.
+- **ADD** focused layout assertions that the header action rail exposes `data-testid="question-header-actions"` and contains a single exam-mode Mark/Unmark button. Do not assert it appears alongside `End session`; exam mode has no header `End session`.
+- Preserve the existing page layout assertions (top content, below-heading content, aria-live, question-panel wiring, terminal session action rendering).
 
 ### Browser specs
 
 **`practice-view.browser.spec.tsx`:**
 
 - Tests asserting Mark for review click behavior in the exam footer — **MOVE** the click target to the header rail.
-- Lines 595-648 (Review & Submit click in exam Q3) — verify the click still works after the right-slot move; selector may change but behavior is identical.
-- Lines 91-120 / 122-182 / 262-355 may need selector updates because Mark for review no longer lives in `bottom-action-bar`.
+- Lines 87-116 — Mark for review click behavior — move the click target to the header rail.
+- Lines 118-176 — exam bottom action bar currently asserts global Mark for review visibility — update to prove the footer has no Mark button and the header rail has it.
+- Lines 254-343 — loading disabled state for Mark for review — move the assertion to the header rail.
+- Lines 573-623 — Review & Submit click in exam Q3 — verify the click still works after the right-slot move; selector should scope to `exam-action-cta-group` or the bottom action bar's CTA group.
 
 ### Integration tests
 
@@ -308,9 +316,9 @@ Smaller surface than DEBT-378.
 
 ### `docs/frontend/pattern-registry.md`
 
-- **Exam action bar entry** (search for E-something or look in the action-bar section): update structure to reflect the right-slot promotion.
-- **Mark for review entry:** if registered, update placement note.
-- **Header rail / persistent header pattern:** update to include exam-mode Mark for review alongside tutor-mode `End session`.
+- **ADD** a dedicated active exam action-bar entry. No dedicated exam action-bar entry exists at `524c856e`; do not just append a sentence to an unrelated table row. The new entry must document Previous in the left group, `Next` / `Review & Submit` in `data-testid="exam-action-cta-group"` with `sm:ml-auto`, and no footer Mark-for-review button.
+- **ADD** a dedicated question header rail / persistent header action entry. No dedicated header-rail pattern exists at `524c856e`; the only related references are the Button Variant Usage Guide around lines 539-553 and the generic responsive note around line 1225. The new entry must document tutor-mode `End session` and exam-mode `Mark for review` as mode-specific single-button header rail actions.
+- **Mark for review entry:** if one is created during this work, document that active-exam placement is the question header rail, not the footer.
 
 ### `docs/frontend/standards.md`
 
@@ -403,7 +411,7 @@ Tests:
 
 Docs:
 
-- Pattern Registry exam action bar / header rail entries updated.
+- Pattern Registry exam action bar / header rail entries added.
 - Standards.md primary-CTA-position consolidation rule documented.
 - pages/practice.md exam Action Bar subsection rewritten.
 - This DEBT-379 doc moves to `_archive/debt/` with Resolution section.
@@ -431,7 +439,7 @@ Quality gates:
 
 ## Implementation Verification Checklist
 
-1. Confirm the exam header rail is currently empty for routed exam sessions. `practice-view.tsx:424-444` renders tutor `End session` when `!isExamMode`; exam mode with `onEndSession` renders no header button today.
+1. Confirm the exam header rail is currently empty for routed exam sessions. `practice-view.tsx:401-423` renders tutor `End session` when `props.onEndSession && !isExamMode`; exam mode with `onEndSession` renders no header button today.
 
 2. Preserve existing Mark-for-review pending behavior. If `isMarkingForReview` flips true between click and server confirmation, the moved header button must disable exactly as the footer button did.
 
