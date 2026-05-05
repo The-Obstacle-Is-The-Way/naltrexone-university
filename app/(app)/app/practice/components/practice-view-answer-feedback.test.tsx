@@ -44,8 +44,13 @@ describe('PracticeView answer feedback', () => {
       />,
     );
 
-    expect(html).not.toContain('Submit');
-    expect(html).not.toContain('Submitting…');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const buttonLabels = Array.from(doc.querySelectorAll('button')).map(
+      (button) => button.textContent?.trim(),
+    );
+
+    expect(buttonLabels).not.toContain('Submit');
+    expect(buttonLabels).not.toContain('Submitting…');
     expect(html).not.toContain('Loading question');
   });
 

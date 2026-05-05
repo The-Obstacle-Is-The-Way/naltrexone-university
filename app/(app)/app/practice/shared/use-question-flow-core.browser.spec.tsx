@@ -179,6 +179,7 @@ function QuestionFlowCoreProbe() {
       <button
         type="button"
         onClick={() => {
+          // Contrived probe state: isolate the submitResult guard from the isAnswered guard.
           core.setSubmitResult({
             attemptId: 'attempt_1',
             isCorrect: false,

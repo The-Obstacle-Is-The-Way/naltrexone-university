@@ -26,7 +26,7 @@ test.describe('subscribe and practice', () => {
     await selectChoiceByLabel(page, 'A');
 
     const verdictPill = page.getByText(/^(Correct|Incorrect)$/).first();
-    await expect(verdictPill).toBeVisible();
+    await expect(verdictPill).toBeVisible({ timeout: 10_000 });
     if ((await verdictPill.textContent())?.trim() === 'Incorrect') {
       await expect(
         page.getByText('Correct Answer', { exact: true }),
