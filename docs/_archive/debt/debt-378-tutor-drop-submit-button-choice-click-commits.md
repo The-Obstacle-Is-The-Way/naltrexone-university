@@ -3,9 +3,45 @@
 **Priority:** P2 (significant behavior change with broad test surface)
 **Created:** 2026-05-04
 **Source:** Manual UX walkthrough of tutor session (Q1, Q2, Q3 of a 3-question session) on 2026-05-04, follow-up first-principles design pass with Claude Design variants V1/V2/V3, and final V4 redesign converged after weighing friction-vs-deliberation trade-offs against board-prep convention and learning-app UX literature
-**Related:** [DEBT-375 Tutor session action bar — no terminal CTA on last question (archived)](../_archive/debt/debt-375-tutor-session-action-bar-no-terminal-cta-on-last-question.md), [DEBT-372 Post-exam review summary button label divergence (archived)](../_archive/debt/debt-372-post-exam-review-summary-button-label-divergence.md), [DEBT-365 Exam flow affordance and label consistency (archived)](../_archive/debt/debt-365-exam-flow-affordance-and-label-consistency.md), [DEBT-363 Exam shell scroll model and dual-CTA disambiguation (archived)](../_archive/debt/debt-363-exam-shell-scroll-model-and-dual-cta.md), [DEBT-379 Exam action bar — promote primary CTA to right slot](./debt-379-exam-action-bar-promote-primary-cta-to-right-slot.md), [Pattern Registry](../frontend/pattern-registry.md), [Frontend Standards](../frontend/standards.md), [Practice Page Docs](../frontend/pages/practice.md)
+**Related:** [DEBT-375 Tutor session action bar — no terminal CTA on last question (archived)](./debt-375-tutor-session-action-bar-no-terminal-cta-on-last-question.md), [DEBT-372 Post-exam review summary button label divergence (archived)](./debt-372-post-exam-review-summary-button-label-divergence.md), [DEBT-365 Exam flow affordance and label consistency (archived)](./debt-365-exam-flow-affordance-and-label-consistency.md), [DEBT-363 Exam shell scroll model and dual-CTA disambiguation (archived)](./debt-363-exam-shell-scroll-model-and-dual-cta.md), [DEBT-379 Exam action bar — promote primary CTA to right slot](../../debt/debt-379-exam-action-bar-promote-primary-cta-to-right-slot.md), [Pattern Registry](../../frontend/pattern-registry.md), [Frontend Standards](../../frontend/standards.md), [Practice Page Docs](../../frontend/pages/practice.md)
 
-**Status:** Open. Audit-refined 2026-05-04 against `e44b8380`; no code change yet. This document supersedes the original DEBT-378 scoping (label-only "End session vs View Summary" unification), which has been subsumed by the broader click-to-commit redesign.
+**Status:** Resolved 2026-05-05 (PR #306, merge commit `b3c4f5eb`).
+
+---
+
+## Resolution
+
+Shipped via [PR #306](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/306) at merge commit `b3c4f5eb` (2026-05-05T19:14:33Z).
+
+**Production behavior matches the spec footer matrix.** Tutor footer is empty pre-feedback on Q1, `[Previous]` outline pre-feedback on Q2/Q3, `[Next]` filled post-feedback on Q1, `[Previous, Next]` post-feedback on Q2, and `[Previous, End session]` post-feedback on Q3 — with `[Bookmark]` `sm:ml-auto` in the secondary slot post-feedback. Header `End session` persists across all three questions, producing the intentional Q3 same-label duplicate documented in the spec.
+
+**Architectural seam landed where the spec called for it.** `useQuestionFlowCore` stays mode-agnostic; commit branching lives in the wrapper hooks (`use-practice-question-answer-flow.ts`, `use-practice-session-question-flow.ts`) which own submit dependencies. Choice click in tutor mode commits immediately via `commitChoice(choiceId)` with the choice ID passed explicitly to close the React stale-state trap. A synchronous `commitInFlightRef` latch in both wrappers prevents double-commit under rapid double-clicks. Exam mode preserves select-only semantics via `question?.session?.mode === 'exam'` (corrected from a `sessionMode` mutable-state drift bug caught in CR review and fixed before merge). `onSubmit` retained on both wrapper hooks for compatibility callers (e.g. `usePracticeSessionPageController`'s `PracticeSessionPageControllerOutput`), gated on `isPending || !canSubmit` so programmatic callers can't bypass the click-to-commit contract.
+
+**Files shipped:**
+- `app/(app)/app/practice/components/practice-view.tsx` — TutorActionBar rewritten around `hasPreviousAction` / `hasNextAction` / `hasEndSessionAction` guards; pre-feedback Submit button removed; outline `Next` skip-without-committing branch removed (skip path moves to question navigator pills); footer wrapper conditionally suppressed when no children
+- `app/(app)/app/practice/hooks/use-practice-question-answer-flow.ts` — wrapper-level `commitChoice` with `commitInFlightRef` latch; `onSelectChoice` triggers commit immediately; `onSubmit` preserved for compatibility, gated on `isPending || !canSubmit`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` — same architectural shape as the quick-practice wrapper; exam-mode branch keeps select-only via `question?.session?.mode === 'exam'`
+- `app/(app)/app/practice/shared/use-question-flow-core.ts` — mode-agnostic; `onSelectChoice` returns `boolean` (selection-changed) so wrappers can decide whether to commit
+- `app/(app)/app/practice/quick/quick-practice-client.tsx` — Submit removed, click-to-commit wired through
+- Browser specs covering double-commit prevention, in-flight commit gating, and the `!canSubmit` programmatic-submit guard from a real loaded state (`use-practice-question-answer-flow.browser.spec.tsx`, `use-practice-session-question-flow-click-commit.browser.spec.tsx`)
+- Component tests covering the full footer matrix (Q1/Q2/Q3 × pre/post-feedback) and the Q3 intentional `End session` header+footer duplicate (`practice-view-navigation.test.tsx`)
+- E2E updates for tutor click-to-commit selectors and verdict-pill anchored matches (`tests/e2e/practice.spec.ts`, `tests/e2e/session-review-navigation.spec.ts`, `tests/e2e/helpers/question.ts`)
+- Doc syncs: `docs/frontend/pages/practice.md`, `docs/frontend/pattern-registry.md`, `docs/frontend/standards.md`
+
+**Gates green at merge (head `1e2e0f73`):**
+- typecheck passed
+- lint passed
+- unit: 302 files / 2407 tests passed
+- browser (Chromium): 48 files / 265 tests passed
+- integration: 16 files / 97 tests passed
+- build passed
+- e2e: 35/35 passed
+
+**CodeRabbit:** explicit APPROVED on latest head (`1e2e0f73`) at 2026-05-05T18:45:01Z. CR posted multiple review rounds across the implementation lifecycle. Defended rejections with citations: (1) export of `PracticeSessionPageControllerOutput` declined as YAGNI — zero callers; (2) `waitForNextUpdate` mechanism declined as architecturally wrong for the project's synchronous `renderHook` helper, replaced with explicit precondition assertions and an honest test name; (3) "hide `Previous` after feedback on non-terminal tutor questions" declined with spec citation — the request directly contradicted the DEBT-378 footer matrix (lines 96-98 of the original spec) and would have broken the existing covering test at `practice-view-navigation.test.tsx:369-418`. Accepted: (a) `expect(primaryGroup).toBeNull()` to close the empty-vs-absent suppression false-positive trap; (b) `expect(choiceInputs.length).toBeGreaterThan(0)` before the empty-list `.every()` assertion; (c) anchored `/^(Correct|Incorrect)$/` regex for verdict-pill waits; (d) commit-flow exam-mode drift fix using stable `question?.session?.mode` instead of mutable `sessionMode`. Latest-head CR-clean: zero unresolved review threads (0 / 34).
+
+**Audit verdict (2026-05-04, pre-implementation):** First-draft DEBT-378 had ~16 load-bearing accuracy errors caught by GPT/Codex review (wrong architectural seam citing `useQuestionFlowCore` deps it lacks, hardcoded vs toggling Mark-for-review label, wrong `isAnswerLocked` clause count, hallucinated `isHeaderActionDisabled`, undercounted test blast radius by ~60%, etc.). Revisions verified mechanically against actual code at every cited file:line before implementation began. Memory `feedback_verify_doc_citations_mechanically.md` captures the rule going forward.
+
+**Spec evolution:** This document supersedes the original DEBT-378 scoping (label-only "End session vs View Summary" unification), which was subsumed by the broader click-to-commit redesign after the V4 design pass converged on dropping Submit entirely.
 
 ---
 
