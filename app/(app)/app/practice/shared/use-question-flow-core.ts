@@ -53,7 +53,7 @@ export type UseQuestionFlowCoreOutput = {
   isLatestRequest: (requestId: number) => boolean;
   isMounted: () => boolean;
   canSubmit: boolean;
-  onSelectChoice: (choiceId: string) => void;
+  onSelectChoice: (choiceId: string) => boolean;
 };
 
 export function useQuestionFlowCore(
@@ -250,15 +250,15 @@ export function useQuestionFlowCore(
   );
 
   const onSelectChoice = useCallback(
-    (choiceId: string) => {
-      if (!question) return;
+    (choiceId: string): boolean => {
+      if (!question) return false;
 
       const changed = selectChoiceIfAllowed(
         { isAnswered, submitResult },
         setSelectedChoiceId,
         choiceId,
       );
-      if (!changed) return;
+      return changed;
     },
     [isAnswered, question, submitResult, setSelectedChoiceId],
   );

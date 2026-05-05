@@ -40,4 +40,35 @@ describe('usePracticeSessionQuestionFlow', () => {
     expect(typeof output.resetQuestionState).toBe('function');
     expect(typeof output.saveCurrentExamDraft).toBe('function');
   });
+
+  it('does not programmatically submit when no session choice can be submitted', async () => {
+    const submitAnswerFn = vi.fn(async () => ({
+      ok: true as const,
+      data: {
+        attemptId: 'attempt-1',
+        isCorrect: false,
+        correctChoiceId: 'choice-1',
+        explanationMd: null,
+        referenceMd: null,
+        choiceExplanations: [],
+      },
+    }));
+
+    const output = renderHook(() =>
+      usePracticeSessionQuestionFlow({
+        sessionId: 'session-1',
+        autoload: false,
+        isMounted: () => true,
+        getNextQuestionFn: vi.fn(),
+        submitAnswerFn,
+        saveExamDraftAnswerFn: vi.fn(),
+      }),
+    );
+
+    const result = await output.onSubmit();
+
+    expect(result).toBeNull();
+    expect(output.canSubmit).toBe(false);
+    expect(submitAnswerFn).not.toHaveBeenCalled();
+  });
 });

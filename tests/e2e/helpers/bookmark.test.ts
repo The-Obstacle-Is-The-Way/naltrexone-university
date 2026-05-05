@@ -237,6 +237,16 @@ function createFakeInteractivePage(options: {
         );
       }
 
+      if (role === 'group' && name === 'Answer choices') {
+        return getOrCreateLocator('group:Answer choices', () =>
+          createVisibilityLocator(
+            () =>
+              currentRoute.startsWith('/app/practice/quick') &&
+              getCurrentQuickState() !== 'exhausted',
+          ),
+        );
+      }
+
       if (role !== 'button') {
         throw new Error(`Unexpected role locator: ${role}`);
       }
@@ -560,7 +570,7 @@ describe('bookmark helper flow control', () => {
     expect(nextButton.click).not.toHaveBeenCalled();
   });
 
-  it('throws before clicking Next when the question never reaches a stable state', async () => {
+  it('throws without advancing when the question never reaches a stable state', async () => {
     const { page } = createFakeInteractivePage({
       unansweredStates: ['loading'],
     });

@@ -4,6 +4,7 @@ import {
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
 import {
+  expectVerdictPillVisible,
   selectChoiceByLabel,
   waitForQuestionLoadingToFinish,
 } from './helpers/question';
@@ -44,27 +45,25 @@ test.describe('session review navigation (SPEC-027)', () => {
       timeout: 15_000,
     });
 
-    // Answer question 1: select choice + submit + next
+    // Answer question 1: select choice commits in tutor mode, then navigate next
     await selectChoiceByLabel(page, 'A');
-    await page.getByRole('button', { name: 'Submit' }).click();
-    await expect(page.getByText(/Correct|Incorrect/).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expectVerdictPillVisible(page);
     const activeSessionNextButton = page.getByRole('button', {
       name: 'Next',
     });
     await expect(activeSessionNextButton).toBeEnabled({ timeout: 10_000 });
     await activeSessionNextButton.click();
 
-    // Answer question 2: select choice + submit
+    // Answer question 2: select choice commits in tutor mode
     await selectChoiceByLabel(page, 'A');
-    await page.getByRole('button', { name: 'Submit' }).click();
-    await expect(page.getByText(/Correct|Incorrect/).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expectVerdictPillVisible(page);
 
-    // End session
-    await page.getByRole('button', { name: 'End session' }).click();
+    // End session from the tutor footer; the header bail button has the same label.
+    const footerEndSessionButton = page
+      .getByTestId('tutor-action-primary-group')
+      .getByRole('button', { name: 'End session' });
+    await expect(footerEndSessionButton).toBeEnabled({ timeout: 10_000 });
+    await footerEndSessionButton.click();
     await expect(
       page.getByRole('heading', { name: 'Session Summary' }),
     ).toBeVisible({ timeout: 15_000 });

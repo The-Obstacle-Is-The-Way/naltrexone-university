@@ -37,11 +37,9 @@ describe('PracticeView bookmarks', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={true}
-        canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );
@@ -72,12 +70,10 @@ describe('PracticeView bookmarks', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onToggleMarkForReview={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );
@@ -104,12 +100,10 @@ describe('PracticeView bookmarks', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onToggleMarkForReview={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );
@@ -149,17 +143,64 @@ describe('PracticeView bookmarks', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onToggleMarkForReview={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );
 
     expect(html).toContain('>Bookmark<');
+  });
+
+  it('disables the tutor bookmark button when bookmarks are unavailable', () => {
+    const question = createQuestionProps();
+    const selectedChoice = question.choices[0];
+    if (!selectedChoice) {
+      throw new Error('Expected at least one choice');
+    }
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'tutor',
+          index: 0,
+          total: 10,
+          isMarkedForReview: false,
+        }}
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={selectedChoice.id}
+        isAnswered={true}
+        submitResult={{
+          attemptId: 'attempt-1',
+          isCorrect: true,
+          correctChoiceId: selectedChoice.id,
+          explanationMd: 'Because.',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+        isPending={false}
+        bookmarkStatus="error"
+        isBookmarked={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onToggleMarkForReview={() => undefined}
+        onSelectChoice={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const bookmarkButton = Array.from(doc.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Bookmark',
+    );
+
+    expect(bookmarkButton).not.toBeNull();
+    expect(bookmarkButton?.hasAttribute('disabled')).toBe(true);
+    expect(html).toContain('Bookmarks unavailable.');
   });
 
   it('does not render the bookmark button in quick practice on unanswered questions', () => {
@@ -173,11 +214,9 @@ describe('PracticeView bookmarks', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );
@@ -209,11 +248,9 @@ describe('PracticeView bookmarks', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );

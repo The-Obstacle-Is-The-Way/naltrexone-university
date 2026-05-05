@@ -110,16 +110,12 @@ export default function QuickPracticeClient() {
       isMarkingForReview={false}
       bookmarkMessage={questionFlow.bookmarkMessage}
       bookmarkMessageVersion={questionFlow.bookmarkMessageVersion}
-      canSubmit={questionFlow.canSubmit}
       onTryAgain={questionFlow.onTryAgain}
       onRetryBookmarks={questionFlow.onRetryBookmarks}
       onToggleBookmark={() => {
         fireAndForget(questionFlow.onToggleBookmark(), logUnhandledAsyncError);
       }}
       onSelectChoice={questionFlow.onSelectChoice}
-      onSubmit={() => {
-        fireAndForget(questionFlow.onSubmit(), logUnhandledAsyncError);
-      }}
       onNextQuestion={questionFlow.onNextQuestion}
     />
   );

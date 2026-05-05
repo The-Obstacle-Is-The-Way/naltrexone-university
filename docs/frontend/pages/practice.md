@@ -2,7 +2,7 @@
 
 **Page:** `/app/practice`
 **Source:** `app/(app)/app/practice/page.tsx` (server) → `practice-page-client.tsx` (client)
-**Last Updated:** 2026-03-17
+**Last Updated:** 2026-05-04
 
 ---
 
@@ -175,6 +175,32 @@ The Questions control now uses the shared compact shell instead of a standalone 
 | Width | `w-16` |
 | Spinner hiding | `[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none` |
 | Focus | `focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]` |
+
+---
+
+## Active Session Action Bar
+
+**Source:** `TutorActionBar` and the `PracticeView` mode switch in `app/(app)/app/practice/components/practice-view.tsx`
+
+Tutor mode uses click-to-commit answer choices. The footer therefore no longer owns the answer submission action.
+Tutor footer shape is derived from `hasPreviousQuestion` / `hasNextQuestion`; the first/middle/last wording below describes position, not a fixed three-question session.
+
+| State | Tutor footer left cluster | Tutor footer right cluster | Notes |
+|-------|---------------------------|----------------------------|-------|
+| First question pre-feedback (`!hasPreviousQuestion`) | none | none | Empty primary group is suppressed; the choice card is the only primary action. |
+| Middle/last question pre-feedback (`hasPreviousQuestion`) | `Previous` | none | No `Submit`, no `Submitting…`, no pre-feedback `Next`, no footer `View Summary`. |
+| First/middle question post-feedback (`hasNextQuestion`) | `Previous` when available + filled `Next` | `Bookmark` (`sm:ml-auto`) | Feedback unlocks sequential navigation. |
+| Last question post-feedback (`!hasNextQuestion`) | `Previous` when available + filled `End session` | `Bookmark` (`sm:ml-auto`) | Header `End session` stays visible; the same-label header + footer terminal duplicate is intentional and both call `onEndSession`. |
+
+Exam mode keeps its existing footer contract in this debt. The exam right-slot primary CTA promotion is tracked separately by DEBT-379 and is not part of the DEBT-378 shipped state.
+
+### Choice Click Semantics
+
+**Sources:** `useQuestionFlowCore` → `onSelectChoice` callback, `usePracticeQuestionAnswerFlow` → wrapped `onSelectChoice` callback, `usePracticeSessionQuestionFlow` → session-aware `onSelectChoice` callback
+
+`useQuestionFlowCore.onSelectChoice` is mode-agnostic and returns whether a selection actually changed. Quick Practice / ad-hoc practice wraps that return value and immediately commits the explicit clicked `choiceId`. Active tutor sessions do the same, while active exam sessions stop after selection so answers remain draft-only until Review & Submit / exam finalization.
+
+This preserves the shared choice-button primitive while making the orchestration honest by mode: tutor teaches immediately; exam defers correctness until the exam is submitted.
 
 ---
 

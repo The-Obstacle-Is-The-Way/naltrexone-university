@@ -502,12 +502,10 @@ describe('app/(app)/app/practice/[sessionId]', () => {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onEndSession={() => undefined}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );
@@ -543,12 +541,10 @@ describe('app/(app)/app/practice/[sessionId]', () => {
         bookmarkStatus="idle"
         isBookmarked={false}
         bookmarkMessage="Question bookmarked."
-        canSubmit={false}
         onEndSession={() => undefined}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );
@@ -591,13 +587,11 @@ describe('app/(app)/app/practice/[sessionId]', () => {
         bookmarkStatus="idle"
         isBookmarked={false}
         isMarkingForReview={false}
-        canSubmit={false}
         onEndSession={() => undefined}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onToggleMarkForReview={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
         onOpenReviewQuestion={() => undefined}
         onFinalizeReview={async () => undefined}
@@ -645,13 +639,11 @@ describe('app/(app)/app/practice/[sessionId]', () => {
         bookmarkStatus="idle"
         isBookmarked={false}
         isMarkingForReview={false}
-        canSubmit={false}
         onEndSession={() => undefined}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onToggleMarkForReview={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
         onOpenReviewQuestion={() => undefined}
         onFinalizeReview={async () => undefined}
@@ -678,13 +670,11 @@ describe('app/(app)/app/practice/[sessionId]', () => {
         bookmarkStatus="idle"
         isBookmarked={false}
         isMarkingForReview={false}
-        canSubmit={false}
         onEndSession={() => undefined}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onToggleMarkForReview={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
       />,
     );
@@ -760,13 +750,11 @@ describe('app/(app)/app/practice/[sessionId]', () => {
         bookmarkStatus="idle"
         isBookmarked={false}
         isMarkingForReview={false}
-        canSubmit={false}
         onEndSession={() => undefined}
         onTryAgain={() => undefined}
         onToggleBookmark={() => undefined}
         onToggleMarkForReview={() => undefined}
         onSelectChoice={() => undefined}
-        onSubmit={() => undefined}
         onNextQuestion={() => undefined}
         onNavigateQuestion={() => undefined}
       />,

@@ -37,6 +37,7 @@ export type UsePracticeSessionReviewStageStateOutput = {
   setReview: Dispatch<SetStateAction<GetPracticeSessionReviewOutput | null>>;
   reviewLoadState: LoadState;
   isInReviewStage: boolean;
+  isReviewQuestionActive: boolean;
   onEndSession: () => void;
   onRetryReview: () => void;
   onOpenReviewQuestion: (questionId: string) => void;
@@ -53,6 +54,7 @@ export function usePracticeSessionReviewStageState(
     status: 'idle',
   });
   const [isInReviewStage, setIsInReviewStage] = useState(false);
+  const [isReviewQuestionActive, setIsReviewQuestionActive] = useState(false);
   const isLoadingReviewRef = useRef(false);
   const finalizeSessionSafely = useCallback((): void => {
     void input.finalizeSession().catch((error) => {
@@ -112,6 +114,7 @@ export function usePracticeSessionReviewStageState(
         setReview(null);
         setReviewLoadState({ status: 'idle' });
         setIsInReviewStage(false);
+        setIsReviewQuestionActive(false);
         input.setSessionMode(res.data.mode);
         finalizeSessionSafely();
         return;
@@ -120,6 +123,7 @@ export function usePracticeSessionReviewStageState(
       setReview(res.data);
       setReviewLoadState({ status: 'ready' });
       setIsInReviewStage(true);
+      setIsReviewQuestionActive(false);
       input.setSessionMode(res.data.mode);
       input.resetQuestionState();
     } finally {
@@ -139,6 +143,7 @@ export function usePracticeSessionReviewStageState(
       setReview(null);
       setReviewLoadState({ status: 'idle' });
       setIsInReviewStage(false);
+      setIsReviewQuestionActive(true);
       input.loadSpecificQuestion(questionId);
     },
     [input.loadSpecificQuestion],
@@ -148,6 +153,7 @@ export function usePracticeSessionReviewStageState(
     setReview(null);
     setReviewLoadState({ status: 'idle' });
     setIsInReviewStage(false);
+    setIsReviewQuestionActive(false);
     return input.finalizeSession();
   }, [input.finalizeSession]);
 
@@ -172,6 +178,7 @@ export function usePracticeSessionReviewStageState(
     setReview,
     reviewLoadState,
     isInReviewStage,
+    isReviewQuestionActive,
     onEndSession,
     onRetryReview,
     onOpenReviewQuestion,

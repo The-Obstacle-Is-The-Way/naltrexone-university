@@ -34,7 +34,6 @@ export type PracticeViewProps = {
   isMarkingForReview?: boolean;
   bookmarkMessage?: string | null;
   bookmarkMessageVersion?: number;
-  canSubmit: boolean;
   endSessionLabel?: string;
   questionPanelId?: string;
   questionAreaRef?: React.RefObject<HTMLElement | null>;
@@ -44,7 +43,6 @@ export type PracticeViewProps = {
   onToggleBookmark: () => void;
   onToggleMarkForReview?: () => void;
   onSelectChoice: (choiceId: string) => void;
-  onSubmit: () => void;
   onNextQuestion: () => void;
   onPreviousQuestion?: () => void;
   hasPreviousQuestion?: boolean;
@@ -85,14 +83,9 @@ function hasBooleanCorrectness(
   return submitResult !== null && typeof submitResult.isCorrect === 'boolean';
 }
 
-function ActionBarSpacer() {
-  return <span aria-hidden="true" className="h-9 min-w-24" />;
-}
-
 type TutorActionBarProps = Pick<
   PracticeViewProps,
   | 'bookmarkStatus'
-  | 'canSubmit'
   | 'hasNextQuestion'
   | 'hasPreviousQuestion'
   | 'canNavigatePrevious'
@@ -102,12 +95,9 @@ type TutorActionBarProps = Pick<
   | 'onEndSession'
   | 'onNextQuestion'
   | 'onPreviousQuestion'
-  | 'onSubmit'
   | 'onToggleBookmark'
   | 'submitResult'
-> & {
-  isSubmittingAnswer: boolean;
-};
+>;
 
 function TutorActionBar(props: TutorActionBarProps) {
   const isActionBarDisabled =
@@ -115,86 +105,82 @@ function TutorActionBar(props: TutorActionBarProps) {
   const isPreviousDisabled =
     isActionBarDisabled || props.canNavigatePrevious === false;
   const isLastQuestion = props.hasNextQuestion === false;
+  const hasPreviousAction = !!(
+    props.onPreviousQuestion && props.hasPreviousQuestion
+  );
+  const hasNextAction = !isLastQuestion && props.submitResult !== null;
+  const hasEndSessionAction = !!(
+    isLastQuestion &&
+    props.submitResult !== null &&
+    props.onEndSession
+  );
+  const hasPrimaryActions =
+    hasPreviousAction || hasNextAction || hasEndSessionAction;
 
-  const navigationGroup = (
+  const navigationGroup = hasPrimaryActions ? (
     <div
       className="flex flex-wrap items-center gap-3"
       data-testid="tutor-action-primary-group"
     >
-      {props.onPreviousQuestion ? (
-        props.hasPreviousQuestion ? (
-          <Button
-            type="button"
-            variant="outline"
-            className="rounded-full"
-            disabled={isPreviousDisabled}
-            onClick={props.onPreviousQuestion}
-          >
-            Previous
-          </Button>
-        ) : (
-          <ActionBarSpacer />
-        )
-      ) : null}
-
-      {!props.submitResult ? (
+      {hasPreviousAction ? (
         <Button
           type="button"
+          variant="outline"
           className="rounded-full"
-          disabled={!props.canSubmit || isActionBarDisabled}
-          onClick={props.onSubmit}
+          disabled={isPreviousDisabled}
+          onClick={props.onPreviousQuestion}
         >
-          {props.isSubmittingAnswer ? 'Submitting…' : 'Submit'}
+          Previous
         </Button>
       ) : null}
 
-      {isLastQuestion ? (
-        props.onEndSession ? (
-          <Button
-            type="button"
-            variant={props.submitResult ? 'default' : 'outline'}
-            className="rounded-full"
-            disabled={isActionBarDisabled}
-            onClick={props.onEndSession}
-          >
-            View Summary
-          </Button>
-        ) : (
-          <ActionBarSpacer />
-        )
-      ) : (
+      {hasEndSessionAction ? (
         <Button
           type="button"
-          variant={props.submitResult ? 'default' : 'outline'}
+          variant="default"
+          className="rounded-full"
+          disabled={isActionBarDisabled}
+          onClick={props.onEndSession}
+        >
+          End session
+        </Button>
+      ) : null}
+
+      {hasNextAction ? (
+        <Button
+          type="button"
+          variant="default"
           className="rounded-full"
           disabled={isActionBarDisabled}
           onClick={props.onNextQuestion}
         >
           Next
         </Button>
-      )}
+      ) : null}
     </div>
-  );
+  ) : null;
 
-  const secondaryGroup = (
+  const secondaryGroup = hasBooleanCorrectness(props.submitResult) ? (
     <div
       className="flex flex-wrap items-center gap-3 sm:ml-auto"
       data-testid="tutor-action-secondary-group"
     >
-      {hasBooleanCorrectness(props.submitResult) ? (
-        <Button
-          type="button"
-          variant="outline"
-          className="rounded-full"
-          aria-pressed={props.isBookmarked}
-          disabled={props.bookmarkStatus === 'loading' || isActionBarDisabled}
-          onClick={props.onToggleBookmark}
-        >
-          {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
-        </Button>
-      ) : null}
+      <Button
+        type="button"
+        variant="outline"
+        className="rounded-full"
+        aria-pressed={props.isBookmarked}
+        disabled={
+          props.bookmarkStatus === 'loading' ||
+          props.bookmarkStatus === 'error' ||
+          isActionBarDisabled
+        }
+        onClick={props.onToggleBookmark}
+      >
+        {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
+      </Button>
     </div>
-  );
+  ) : null;
 
   return (
     <>
@@ -323,11 +309,6 @@ export function PracticeView(props: PracticeViewProps) {
   const correctChoiceId = isExamMode
     ? null
     : (props.submitResult?.correctChoiceId ?? null);
-  const isSubmittingAnswer =
-    props.isPending &&
-    props.loadState.status === 'ready' &&
-    props.question !== null &&
-    props.submitResult === null;
   const feedbackResult =
     !isExamMode && hasBooleanCorrectness(props.submitResult)
       ? props.submitResult
@@ -381,18 +362,15 @@ export function PracticeView(props: PracticeViewProps) {
       ) : (
         <TutorActionBar
           bookmarkStatus={props.bookmarkStatus}
-          canSubmit={props.canSubmit}
           canNavigatePrevious={props.canNavigatePrevious}
           hasNextQuestion={props.hasNextQuestion}
           hasPreviousQuestion={props.hasPreviousQuestion}
           isBookmarked={props.isBookmarked}
           isPending={props.isPending}
-          isSubmittingAnswer={isSubmittingAnswer}
           loadState={props.loadState}
           onNextQuestion={props.onNextQuestion}
           onPreviousQuestion={props.onPreviousQuestion}
           onEndSession={props.onEndSession}
-          onSubmit={props.onSubmit}
           onToggleBookmark={props.onToggleBookmark}
           submitResult={props.submitResult}
         />

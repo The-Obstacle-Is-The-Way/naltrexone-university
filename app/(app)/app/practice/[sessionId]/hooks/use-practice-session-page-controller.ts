@@ -28,9 +28,14 @@ import { usePracticeSessionReviewStage } from './use-practice-session-review-sta
 
 const BOOTSTRAP_SUMMARY_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 
+type PracticeSessionPageControllerOutput = PracticeSessionPageViewProps & {
+  canSubmit: boolean;
+  onSubmit: () => void;
+};
+
 export function usePracticeSessionPageController(
   sessionId: string,
-): PracticeSessionPageViewProps {
+): PracticeSessionPageControllerOutput {
   const isMounted = useIsMounted();
   const bootstrapRequestIdRef = useRef(0);
   const [shouldRetryBootstrap, setShouldRetryBootstrap] = useState(false);
@@ -152,8 +157,10 @@ export function usePracticeSessionPageController(
     questionFlow.onTryAgain();
   }, [bootstrapSessionSummary, questionFlow.onTryAgain, shouldRetryBootstrap]);
   const onSubmit = useCallback((): void => {
-    void questionFlow.onSubmit();
-  }, [questionFlow.onSubmit]);
+    void questionFlow.onSubmit({
+      allowExamCommit: reviewStage.isReviewQuestionActive,
+    });
+  }, [questionFlow.onSubmit, reviewStage.isReviewQuestionActive]);
 
   const { isMarkingForReview, onToggleMarkForReview } =
     usePracticeSessionMarkForReview({

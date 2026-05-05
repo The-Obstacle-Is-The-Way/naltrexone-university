@@ -132,12 +132,10 @@ function renderExamResultsContinuityHarness() {
         isPending={false}
         bookmarkStatus="idle"
         isBookmarked={false}
-        canSubmit={false}
         onEndSession={noop}
         onTryAgain={noop}
         onToggleBookmark={noop}
         onSelectChoice={noop}
-        onSubmit={noop}
         onNextQuestion={noop}
         onViewSummary={handleViewSummary}
         onReenterPostExamReview={handleReenterPostExamReview}
@@ -201,12 +199,10 @@ test('renders session summary branch when summary is present', async () => {
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={noop}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={noop}
     />,
   );
@@ -282,12 +278,10 @@ test('keeps exam summaries on the in-session review contract when the substage p
       isPending={false}
       bookmarkStatus="idle"
       isBookmarked={false}
-      canSubmit={false}
       onEndSession={noop}
       onTryAgain={noop}
       onToggleBookmark={noop}
       onSelectChoice={noop}
-      onSubmit={noop}
       onNextQuestion={noop}
       onReenterPostExamReview={onReenterPostExamReview}
     />,

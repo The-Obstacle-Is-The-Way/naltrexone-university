@@ -5,6 +5,7 @@ import {
 } from './helpers/clerk-auth';
 import {
   assertQuestionSlugExists,
+  expectVerdictPillVisible,
   selectChoiceByLabel,
   submitQuestionForOutcome,
 } from './helpers/question';
@@ -18,7 +19,7 @@ const INCORRECT_SLUG = 'placeholder-02-buprenorphine-induction-timing';
 
 function getFeedbackCard(page: Page) {
   return page.locator('[role="status"]').filter({
-    hasText: /^(Correct|Incorrect)/,
+    has: page.getByTestId('verdict-pill'),
   });
 }
 
@@ -207,12 +208,13 @@ test.describe('review mode audit', () => {
     )?.trim();
     expect(selectedChoiceText).toBeTruthy();
 
-    await page.getByRole('button', { name: 'Submit' }).click();
-    await expect(page.getByText(/Correct|Incorrect/).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expectVerdictPillVisible(page);
 
-    await page.getByRole('button', { name: 'End session' }).click();
+    const footerEndSessionButton = page
+      .getByTestId('tutor-action-primary-group')
+      .getByRole('button', { name: 'End session' });
+    await expect(footerEndSessionButton).toBeEnabled({ timeout: 10_000 });
+    await footerEndSessionButton.click();
     await expect(
       page.getByRole('heading', { name: 'Session Summary' }),
     ).toBeVisible({ timeout: 15_000 });
@@ -249,10 +251,13 @@ test.describe('review mode audit', () => {
 
     await startSession(page, 'tutor', 1);
     await selectChoiceByLabel(page, 'A');
-    await page.getByRole('button', { name: 'Submit' }).click();
     await expectFeedbackVisible(page);
 
-    await page.getByRole('button', { name: 'End session' }).click();
+    const footerEndSessionButton = page
+      .getByTestId('tutor-action-primary-group')
+      .getByRole('button', { name: 'End session' });
+    await expect(footerEndSessionButton).toBeEnabled({ timeout: 10_000 });
+    await footerEndSessionButton.click();
     await expect(
       page.getByRole('heading', { name: 'Session Summary' }),
     ).toBeVisible({ timeout: 15_000 });
@@ -377,8 +382,7 @@ test.describe('review mode audit', () => {
     const feedbackCard = getFeedbackCard(page);
     await expect(feedbackCard).toBeVisible({ timeout: 10_000 });
 
-    const verdictPill = feedbackCard.getByText(/^(Correct|Incorrect)$/).first();
-    await expect(verdictPill).toBeVisible();
+    const verdictPill = await expectVerdictPillVisible(feedbackCard);
     if ((await verdictPill.textContent())?.trim() === 'Incorrect') {
       await expect(
         feedbackCard.getByText('Correct Answer', { exact: true }),
