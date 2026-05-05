@@ -453,6 +453,9 @@ test('routes the last tutor-question footer End session button through onEndSess
   await expect
     .element(bottomActionBar.getByRole('button', { name: 'Next' }))
     .not.toBeInTheDocument();
+  await expect
+    .element(bottomActionBar.getByRole('button', { name: 'Previous' }))
+    .toBeVisible();
   await bottomActionBar.getByRole('button', { name: 'End session' }).click();
   expect(onEndSession).toHaveBeenCalledTimes(1);
   expect(onNextQuestion).not.toHaveBeenCalled();

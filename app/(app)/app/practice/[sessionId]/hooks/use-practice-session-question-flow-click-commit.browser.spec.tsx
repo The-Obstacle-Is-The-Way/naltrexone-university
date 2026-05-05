@@ -118,6 +118,42 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
     expect(submitAnswerFn).not.toHaveBeenCalled();
   });
 
+  it('uses the loaded question mode to block exam click commits when sessionMode drifts', async () => {
+    const getNextQuestionFn = vi
+      .fn<(input: unknown) => Promise<ActionResult<NextQuestion | null>>>()
+      .mockResolvedValue(ok(createSessionQuestion('exam')));
+    const submitAnswerFn =
+      vi.fn<(input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>>();
+    const saveExamDraftAnswerFn =
+      vi.fn<
+        (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
+      >();
+
+    const harness = await renderHook(() =>
+      usePracticeSessionQuestionFlow({
+        sessionId: 'session-1',
+        isMounted: () => true,
+        getNextQuestionFn,
+        submitAnswerFn,
+        saveExamDraftAnswerFn,
+      }),
+    );
+
+    await expect
+      .poll(() => harness.result.current.question?.questionId)
+      .toBe('q_1');
+
+    harness.result.current.setSessionMode('tutor');
+    await expect.poll(() => harness.result.current.sessionMode).toBe('tutor');
+
+    harness.result.current.onSelectChoice('choice_2');
+
+    await expect
+      .poll(() => harness.result.current.selectedChoiceId)
+      .toBe('choice_2');
+    expect(submitAnswerFn).not.toHaveBeenCalled();
+  });
+
   it('does not programmatically submit an exam choice before review finalization', async () => {
     const getNextQuestionFn = vi
       .fn<(input: unknown) => Promise<ActionResult<NextQuestion | null>>>()
@@ -154,6 +190,52 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     expect(result).toBeNull();
     expect(submitAnswerFn).not.toHaveBeenCalled();
+  });
+
+  it('programmatically submits an exam choice when review finalization allows the commit', async () => {
+    const getNextQuestionFn = vi
+      .fn<(input: unknown) => Promise<ActionResult<NextQuestion | null>>>()
+      .mockResolvedValue(ok(createSessionQuestion('exam')));
+    const submitAnswerFn = vi
+      .fn<(input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>>()
+      .mockResolvedValue(ok(createSubmitOutput('choice_2')));
+    const saveExamDraftAnswerFn =
+      vi.fn<
+        (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
+      >();
+
+    const harness = await renderHook(() =>
+      usePracticeSessionQuestionFlow({
+        sessionId: 'session-1',
+        isMounted: () => true,
+        getNextQuestionFn,
+        submitAnswerFn,
+        saveExamDraftAnswerFn,
+      }),
+    );
+
+    await expect
+      .poll(() => harness.result.current.question?.questionId)
+      .toBe('q_1');
+
+    harness.result.current.onSelectChoice('choice_2');
+    await expect
+      .poll(() => harness.result.current.selectedChoiceId)
+      .toBe('choice_2');
+
+    const result = await harness.result.current.onSubmit({
+      allowExamCommit: true,
+    });
+
+    expect(result).toEqual(createSubmitOutput('choice_2'));
+    expect(submitAnswerFn).toHaveBeenCalledTimes(1);
+    expect(submitAnswerFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: 'session-1',
+        questionId: 'q_1',
+        choiceId: 'choice_2',
+      }),
+    );
   });
 
   it('does not double-commit tutor choices selected in the same task', async () => {

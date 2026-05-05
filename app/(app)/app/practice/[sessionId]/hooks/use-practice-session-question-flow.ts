@@ -415,11 +415,11 @@ export function usePracticeSessionQuestionFlow(
 
       const changed = selectChoice(choiceId);
       if (!changed) return;
-      if (sessionMode === 'exam') return;
+      if (question?.session?.mode === 'exam') return;
 
       void commitChoice(choiceId);
     },
-    [commitChoice, isPending, selectChoice, sessionMode],
+    [commitChoice, isPending, question?.session?.mode, selectChoice],
   );
 
   return {
