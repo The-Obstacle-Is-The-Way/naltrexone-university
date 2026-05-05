@@ -52,7 +52,7 @@ describe('usePracticeQuestionAnswerFlow', () => {
     expect(typeof output.onNextQuestion).toBe('function');
   });
 
-  it('does not programmatically submit when no choice can be submitted', async () => {
+  it('guards programmatic onSubmit while still in the initial idle state', async () => {
     const submitAnswerFn = vi.fn(async () => ({
       ok: true as const,
       data: {
@@ -77,9 +77,15 @@ describe('usePracticeQuestionAnswerFlow', () => {
       }),
     );
 
+    // Pin the schedule we are testing: synchronous renderHook does not run
+    // useEffect, so autoload never fires and these preconditions are stable.
+    expect(output.loadState).toEqual({ status: 'idle' });
+    expect(output.question).toBeNull();
+    expect(output.isPending).toBe(false);
+    expect(output.canSubmit).toBe(false);
+
     await output.onSubmit();
 
-    expect(output.canSubmit).toBe(false);
     expect(submitAnswerFn).not.toHaveBeenCalled();
   });
 });

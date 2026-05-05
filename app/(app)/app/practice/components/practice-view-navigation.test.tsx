@@ -317,6 +317,7 @@ describe('PracticeView navigation', () => {
     );
     const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
 
+    expect(primaryGroup).toBeNull();
     expect(getButtonLabels(primaryGroup)).toEqual([]);
     expect(actionBar).not.toBeNull();
     if (!actionBar) {
