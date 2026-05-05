@@ -5,6 +5,7 @@ import {
 } from './helpers/clerk-auth';
 import {
   assertQuestionSlugExists,
+  expectVerdictPillVisible,
   selectChoiceByLabel,
   submitQuestionForOutcome,
 } from './helpers/question';
@@ -18,7 +19,7 @@ const INCORRECT_SLUG = 'placeholder-02-buprenorphine-induction-timing';
 
 function getFeedbackCard(page: Page) {
   return page.locator('[role="status"]').filter({
-    hasText: /^(Correct|Incorrect)/,
+    has: page.getByTestId('verdict-pill'),
   });
 }
 
@@ -207,9 +208,7 @@ test.describe('review mode audit', () => {
     )?.trim();
     expect(selectedChoiceText).toBeTruthy();
 
-    await expect(page.getByText(/Correct|Incorrect/).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expectVerdictPillVisible(page);
 
     const footerEndSessionButton = page
       .getByTestId('tutor-action-primary-group')

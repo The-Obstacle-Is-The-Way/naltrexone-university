@@ -50,6 +50,12 @@ export async function selectChoiceByLabel(
   await expect(choiceRadio).toBeChecked();
 }
 
+export async function expectVerdictPillVisible(page: Page): Promise<void> {
+  const verdictPill = page.getByTestId('verdict-pill').first();
+  await expect(verdictPill).toBeVisible({ timeout: 10_000 });
+  await expect(verdictPill).toHaveText(/^(Correct|Incorrect)$/);
+}
+
 function getQuestionLoadingIndicator(page: Page) {
   return page.getByText(QUESTION_LOADING_LABEL, { exact: true });
 }
@@ -90,9 +96,7 @@ export async function submitQuestionForOutcome(
 
     await selectChoiceByLabel(page, label);
     await page.getByRole('button', { name: 'Submit' }).click();
-    await expect(page.getByText(/Correct|Incorrect/).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expectVerdictPillVisible(page);
 
     const matchedOutcome = await page
       .getByText(outcome, { exact: true })

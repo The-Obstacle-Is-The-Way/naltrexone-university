@@ -92,6 +92,7 @@ describe('PracticeView answer feedback', () => {
       doc.querySelectorAll('input[type="radio"]'),
     );
 
+    expect(choiceInputs.length).toBeGreaterThan(0);
     expect(Array.from(actionBar.querySelectorAll('button'))).toHaveLength(0);
     expect(actionBar.textContent).not.toContain('Submit');
     expect(actionBar.textContent).not.toContain('Next');

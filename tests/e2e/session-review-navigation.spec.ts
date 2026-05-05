@@ -4,6 +4,7 @@ import {
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
 import {
+  expectVerdictPillVisible,
   selectChoiceByLabel,
   waitForQuestionLoadingToFinish,
 } from './helpers/question';
@@ -46,9 +47,7 @@ test.describe('session review navigation (SPEC-027)', () => {
 
     // Answer question 1: select choice commits in tutor mode, then navigate next
     await selectChoiceByLabel(page, 'A');
-    await expect(page.getByText(/Correct|Incorrect/).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expectVerdictPillVisible(page);
     const activeSessionNextButton = page.getByRole('button', {
       name: 'Next',
     });
@@ -57,9 +56,7 @@ test.describe('session review navigation (SPEC-027)', () => {
 
     // Answer question 2: select choice commits in tutor mode
     await selectChoiceByLabel(page, 'A');
-    await expect(page.getByText(/Correct|Incorrect/).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expectVerdictPillVisible(page);
 
     // End session from the tutor footer; the header bail button has the same label.
     const footerEndSessionButton = page
