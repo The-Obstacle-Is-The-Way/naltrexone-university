@@ -78,7 +78,7 @@ Once Submit is removed, the tutor footer naturally collapses to `[Previous][Next
 
 ### Cross-surface vocabulary settles at "End session"
 
-With Submit gone, the Q3 terminal CTA in the tutor footer becomes the only label that needs choosing. Aligned with the persistent header `End session` (which DEBT-375 preserved on first-principles grounds for tutor's bail-cheap value), the footer terminal becomes `End session` as well. This produces an intentional same-label duplicate on Q3 — exactly the pattern DEBT-372 already established as acceptable on the post-exam review surface (two `View Summary` buttons on the final reviewed question), so the precedent is set.
+With Submit gone, the Q3 terminal CTA in the tutor footer becomes the only label that needs choosing. Aligned with the persistent header `End session` (which DEBT-375 preserved on first-principles grounds for tutor's low-friction exit value), the footer terminal becomes `End session` as well. This produces an intentional same-label duplicate on Q3 — exactly the pattern DEBT-372 already established as acceptable on the post-exam review surface (two `View Summary` buttons on the final reviewed question), so the precedent is set.
 
 The cross-surface vocabulary rule becomes:
 - Active session (tutor or exam): `End session` for any CTA that ends the active session, regardless of whether it's a header bail or footer natural-completion
@@ -418,7 +418,7 @@ No changes expected. Choice button (I-3) contrast targets are independent of cli
 
 ### `docs/_archive/debt/debt-375-...md`
 
-No content change; DEBT-375's first-principles framing (header `End session` for tutor's bail-cheap value) is preserved by this refactor. The header continues to render across all three questions; the footer terminal CTA on Q3 simply joins it with the same label.
+No content change; DEBT-375's first-principles framing (header `End session` for tutor's low-friction exit value) is preserved by this refactor. The header continues to render across all three questions; the footer terminal CTA on Q3 simply joins it with the same label.
 
 ---
 

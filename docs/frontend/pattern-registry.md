@@ -550,7 +550,7 @@ All standalone action buttons in the app use `rounded-full`:
 | Tutor terminal session action | `default` + `rounded-full` | Footer "End session" on the last tutor question after feedback |
 | Error recovery | `outline` (no `rounded-full`) | "Try again", "Return to dashboard" |
 
-**End session usage:** In tutor sessions, `End session` is always present in the header as the bail-cheap exit and also appears as the filled footer terminal CTA on the last question after feedback has rendered. The duplicate same-label Q3 state is intentional; both buttons call `onEndSession` (DEBT-378). Exam mode still does not expose a header bail button.
+**End session usage:** In tutor sessions, `End session` is always present in the header as the low-friction exit and also appears as the filled footer terminal CTA on the last question after feedback has rendered. The duplicate same-label Q3 state is intentional; both buttons call `onEndSession` (DEBT-378). Exam mode still does not expose a header bail button.
 
 **Removed tutor affordances:** Active tutor sessions no longer render a footer `Submit`, `Submitting…`, pre-feedback `Next`, or footer `View Summary`. Before feedback, the choice cards are the primary action; skip-without-answering is handled by the question navigator in active sessions.
 
