@@ -3,11 +3,56 @@
 **Priority:** P3 (layout-only refactor in a single component; behavior unchanged)
 **Created:** 2026-05-04
 **Source:** Same UX walkthrough that produced DEBT-378 (Claude Design V3 variant pass on 2026-05-04). The user's first-principles reading: exam's terminal / forward CTA should own the footer's far-right eye-anchor, while `Mark for review` should remain available but move out of the footer's primary-action slot. At discovery, the exam footer put `Next` / `Review & Submit` in the left navigation cluster with `Mark for review` pushed right via `sm:ml-auto`.
-**Related:** [DEBT-378 Tutor — drop Submit button (choice click commits) (archived)](../_archive/debt/debt-378-tutor-drop-submit-button-choice-click-commits.md), [DEBT-365 Exam flow affordance and label consistency (archived)](../_archive/debt/debt-365-exam-flow-affordance-and-label-consistency.md), [DEBT-363 Exam shell scroll model and dual-CTA disambiguation (archived)](../_archive/debt/debt-363-exam-shell-scroll-model-and-dual-cta.md), [DEBT-361 Exam last-question Next label (archived)](../_archive/debt/debt-361-exam-last-question-next-label.md), [DEBT-330 Post-exam review action bar bookmark placement (archived)](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md), [Pattern Registry](../frontend/pattern-registry.md), [Frontend Standards](../frontend/standards.md), [Practice Page Docs](../frontend/pages/practice.md)
+**Related:** [DEBT-378 Tutor — drop Submit button (choice click commits) (archived)](./debt-378-tutor-drop-submit-button-choice-click-commits.md), [DEBT-365 Exam flow affordance and label consistency (archived)](./debt-365-exam-flow-affordance-and-label-consistency.md), [DEBT-363 Exam shell scroll model and dual-CTA disambiguation (archived)](./debt-363-exam-shell-scroll-model-and-dual-cta.md), [DEBT-361 Exam last-question Next label (archived)](./debt-361-exam-last-question-next-label.md), [DEBT-330 Post-exam review action bar bookmark placement (archived)](./debt-330-review-action-bar-bookmark-placement.md), [Pattern Registry](../../frontend/pattern-registry.md), [Frontend Standards](../../frontend/standards.md), [Practice Page Docs](../../frontend/pages/practice.md)
 
-**Status:** Open. Audit-refined 2026-05-04 against `e44b8380`; audit-corrected 2026-05-05 against `524c856e` after DEBT-378 landed. Implementation is in PR #307 against `dev`; final archive and Resolution text wait for the post-merge archive commit so the actual merge SHA can be cited. Visual re-grade evidence is captured under `artifacts/debt-379-visuals/`.
+**Status:** Resolved 2026-05-06 (PR #307, merge commit `57ca8ff7`).
 
-**Audit correction note (2026-05-05):** Current code has no header-rail assertions in `practice-view-layout.test.tsx`, and `docs/frontend/pattern-registry.md` has no dedicated exam action-bar or header-rail entries. Those tasks are **adds**, not updates. Existing deferred DEBT-379 rows in `docs/frontend/standards.md` and `docs/frontend/pages/practice.md` are updates.
+**Audit correction note (2026-05-05):** Pre-implementation, `practice-view-layout.test.tsx` had no header-rail assertions and `docs/frontend/pattern-registry.md` had no dedicated exam action-bar or header-rail entries. Those tasks were **adds**, not updates. Deferred DEBT-379 rows in `docs/frontend/standards.md` and `docs/frontend/pages/practice.md` were updates. The shipped PR honored both treatments.
+
+---
+
+## Resolution
+
+**PR:** [#307](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/307) — merge commit `57ca8ff7` into `dev`, fast-forwarded to `main` on 2026-05-06.
+
+**Behavior shipped (matches the spec footer + header matrix):**
+
+| Question | Footer left (`exam-action-primary-group`) | Footer right (`exam-action-cta-group`, `sm:ml-auto`) | Header rail (`question-header-actions`) |
+|----------|--------------------------------------------|-------------------------------------------------------|------------------------------------------|
+| Q1 | _suppressed_ | filled `[Next]` | outline `[Mark for review]` / `[Unmark review]` toggle |
+| Q2 | outline `[Previous]` | filled `[Next]` | outline toggle |
+| Q3 | outline `[Previous]` | filled `[Review & Submit]` (preserves DEBT-361 `aria-describedby` "Opens review and submit.") | outline toggle |
+
+Tutor mode footer + header are byte-identical to DEBT-378's shipped state; explicit regression tests in `practice-view-exam-actions.test.tsx` enforce that.
+
+**Architectural seam:**
+- `ExamActionBar` (`app/(app)/app/practice/components/practice-view.tsx`) restructured into a left `Previous` group (suppressed when empty) and a right CTA group with stable `data-testid="exam-action-cta-group"`. The DEBT-361 hidden description span travels with the Q3 CTA inside the right group.
+- `ExamActionBarProps` no longer threads `isMarkingForReview`, `isMarkedForReview`, or `onToggleMarkForReview`; those flow to the header rail at the parent level instead.
+- Header action rail wrapped in `data-testid="question-header-actions"`. Tutor `End session` block untouched; exam-only `Mark for review` / `Unmark review` toggle added alongside it, gated on `isExamMode && props.onToggleMarkForReview`. Disabled state: `isMarkingForReview || isPending || loadState.status === 'loading'`.
+- Header back-link fallback gating widened to `(!isExamMode && !props.onEndSession) || (isExamMode && !props.onToggleMarkForReview)` so the page-level back link still renders if exam mode is wired without a Mark-for-review handler. Closes a defensive corner case CodeRabbit flagged on the first review pass.
+
+**Files shipped (9, +547 / -386 vs `dev`):**
+- `app/(app)/app/practice/components/practice-view.tsx`
+- `app/(app)/app/practice/components/practice-view-exam-actions.test.tsx`
+- `app/(app)/app/practice/components/practice-view-layout.test.tsx`
+- `app/(app)/app/practice/components/practice-view.browser.spec.tsx`
+- `tests/e2e/practice.spec.ts`
+- `docs/frontend/pattern-registry.md` — new dedicated `Active Exam Action Bar` and `Header Rail / Persistent Header Actions` entries
+- `docs/frontend/standards.md` — exam matrix flipped from deferred to shipped; right-slot rule documented
+- `docs/frontend/pages/practice.md` — exam Action Bar table rewritten; new Header Rail subsection
+- `docs/debt/debt-379-exam-action-bar-promote-primary-cta-to-right-slot.md` (this file, now archived)
+
+**Quality gates green at merge:**
+- Local: typecheck, lint, 2417 unit tests, 265 browser tests, 97 integration tests, build, 35/35 E2E.
+- Remote: CI `test` (7m39s), CodeRabbit, Vercel, codecov/patch.
+
+**Visual evidence:** 12 screenshots + `report.json` captured under `artifacts/debt-379-visuals/` covering desktop + mobile × Q1/Q2/Q3 × marked/unmarked, plus tab-order and `aria-pressed` verification. The artifacts directory is gitignored.
+
+**CodeRabbit review:** explicit `APPROVED` at 2026-05-06T12:50:55Z on commit `be3db040` after one round of feedback. Two actionable comments raised on the first head (`cd55a91b`):
+- Header back-link gating in exam mode without a Mark-for-review handler — **accepted**, fixed via the widened ternary plus a focused regression test in `practice-view-layout.test.tsx`.
+- In-PR Resolution / merge-SHA stamping on this spec doc — **defended reject**: the merge SHA didn't exist yet at PR time, and the established archive ritual (DEBT-378's `524c856e`, DEBT-365, DEBT-330) records the Resolution in a separate post-merge commit on `main`. CR's fresh review on the new HEAD explicitly accepted the workflow.
+
+CodeRabbit also asked for Pattern Registry / standards.md / pages/practice.md / `practice-view-layout.test.tsx` follow-ups; those were already in this PR's diff, defended-rejected with file-path citations in the PR thread.
 
 ---
 
