@@ -2,10 +2,10 @@
 
 **Priority:** P3 (layout-only refactor in a single component; behavior unchanged)
 **Created:** 2026-05-04
-**Source:** Same UX walkthrough that produced DEBT-378 (Claude Design V3 variant pass on 2026-05-04). The user's first-principles reading: exam's terminal / forward CTA should own the footer's far-right eye-anchor, while `Mark for review` should remain available but move out of the footer's primary-action slot. Today's exam footer puts `Next` / `Review & Submit` in the left navigation cluster with `Mark for review` pushed right via `sm:ml-auto`.
+**Source:** Same UX walkthrough that produced DEBT-378 (Claude Design V3 variant pass on 2026-05-04). The user's first-principles reading: exam's terminal / forward CTA should own the footer's far-right eye-anchor, while `Mark for review` should remain available but move out of the footer's primary-action slot. At discovery, the exam footer put `Next` / `Review & Submit` in the left navigation cluster with `Mark for review` pushed right via `sm:ml-auto`.
 **Related:** [DEBT-378 Tutor — drop Submit button (choice click commits) (archived)](../_archive/debt/debt-378-tutor-drop-submit-button-choice-click-commits.md), [DEBT-365 Exam flow affordance and label consistency (archived)](../_archive/debt/debt-365-exam-flow-affordance-and-label-consistency.md), [DEBT-363 Exam shell scroll model and dual-CTA disambiguation (archived)](../_archive/debt/debt-363-exam-shell-scroll-model-and-dual-cta.md), [DEBT-361 Exam last-question Next label (archived)](../_archive/debt/debt-361-exam-last-question-next-label.md), [DEBT-330 Post-exam review action bar bookmark placement (archived)](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md), [Pattern Registry](../frontend/pattern-registry.md), [Frontend Standards](../frontend/standards.md), [Practice Page Docs](../frontend/pages/practice.md)
 
-**Status:** Open. Audit-refined 2026-05-04 against `e44b8380`; audit-corrected 2026-05-05 against `524c856e` after DEBT-378 landed. No production code change yet. Sequenced after DEBT-378 to keep one debt per shipping cycle. DEBT-379 should be re-graded visually after DEBT-378 lands because DEBT-378 already restores tutor/exam footer harmony.
+**Status:** Open. Audit-refined 2026-05-04 against `e44b8380`; audit-corrected 2026-05-05 against `524c856e` after DEBT-378 landed. Implementation is in PR #307 against `dev`; final archive and Resolution text wait for the post-merge archive commit so the actual merge SHA can be cited. Visual re-grade evidence is captured under `artifacts/debt-379-visuals/`.
 
 **Audit correction note (2026-05-05):** Current code has no header-rail assertions in `practice-view-layout.test.tsx`, and `docs/frontend/pattern-registry.md` has no dedicated exam action-bar or header-rail entries. Those tasks are **adds**, not updates. Existing deferred DEBT-379 rows in `docs/frontend/standards.md` and `docs/frontend/pages/practice.md` are updates.
 
@@ -13,7 +13,7 @@
 
 ## Context
 
-Today's exam footer (`app/(app)/app/practice/components/practice-view.tsx:209-285`, `ExamActionBar`):
+Pre-implementation exam footer (`app/(app)/app/practice/components/practice-view.tsx:209-285`, `ExamActionBar`):
 
 | Question | Primary group (left, `data-testid="exam-action-primary-group"`) | Secondary group (right, `sm:ml-auto`, `data-testid="exam-action-secondary-group"`) |
 |----------|------------------------------------------------------------|----------------------------------------------------------------------------------|
@@ -21,7 +21,7 @@ Today's exam footer (`app/(app)/app/practice/components/practice-view.tsx:209-28
 | Q2 | `[Previous]` outline, `[Next]` filled | `[Mark for review]` outline |
 | Q3 | `[Previous]` outline, `[Review & Submit]` filled | `[Mark for review]` outline |
 
-`Next` / `Review & Submit` sits at the inside-right of the navigation cluster. `Mark for review` is pushed to the screen's right edge via `sm:ml-auto`.
+`Next` / `Review & Submit` sat at the inside-right of the navigation cluster. `Mark for review` was pushed to the screen's right edge via `sm:ml-auto`.
 
 Mark for review is a **metadata** action ("flag this question for me to revisit during review-and-submit"). It's not a primary CTA. It's not a navigation control. It's a per-question annotation. Its current right-edge position was shipped by DEBT-365 Concern 3A after borrowing DEBT-330's post-exam review grouping principle: navigation clustered left, metadata separated right. The decision was correct in isolation: nav and metadata are conceptually distinct, so they shouldn't visually mingle.
 
@@ -439,7 +439,7 @@ Quality gates:
 
 ## Implementation Verification Checklist
 
-1. Confirm the exam header rail is currently empty for routed exam sessions. `practice-view.tsx:401-423` renders tutor `End session` when `props.onEndSession && !isExamMode`; exam mode with `onEndSession` renders no header button today.
+1. Baseline confirmed before implementation: routed exam sessions had an empty header rail because `practice-view.tsx:401-423` rendered tutor `End session` only when `props.onEndSession && !isExamMode`; exam mode with `onEndSession` rendered no header button. The shipped refactor fills that rail with `Mark for review` / `Unmark review` when available, and falls back to the back link when no mode-specific header action exists.
 
 2. Preserve existing Mark-for-review pending behavior. If `isMarkingForReview` flips true between click and server confirmation, the moved header button must disable exactly as the footer button did.
 

@@ -412,8 +412,8 @@ export function PracticeView(props: PracticeViewProps) {
               >
                 {endSessionLabel}
               </Button>
-            ) : !props.onEndSession &&
-              !(isExamMode && props.onToggleMarkForReview) ? (
+            ) : (!isExamMode && !props.onEndSession) ||
+              (isExamMode && !props.onToggleMarkForReview) ? (
               <Button
                 asChild
                 variant="link"
