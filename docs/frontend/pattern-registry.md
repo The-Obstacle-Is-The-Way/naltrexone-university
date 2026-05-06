@@ -1,6 +1,6 @@
 # Pattern Registry
 
-**Last Updated:** 2026-05-04
+**Last Updated:** 2026-05-06
 **Status:** Canonical — all UI changes MUST conform to this registry
 
 Single source of truth for every visual pattern in the app. If a pattern isn't here, don't invent one — add it here first, get approval, then implement.
@@ -550,7 +550,33 @@ All standalone action buttons in the app use `rounded-full`:
 | Tutor terminal session action | `default` + `rounded-full` | Footer "End session" on the last tutor question after feedback |
 | Error recovery | `outline` (no `rounded-full`) | "Try again", "Return to dashboard" |
 
-**End session usage:** In tutor sessions, `End session` is always present in the header as the low-friction exit and also appears as the filled footer terminal CTA on the last question after feedback has rendered. The duplicate same-label Q3 state is intentional; both buttons call `onEndSession` (DEBT-378). Exam mode still does not expose a header bail button.
+**End session usage:** In tutor sessions, `End session` is always present in the header as the low-friction exit and also appears as the filled footer terminal CTA on the last question after feedback has rendered. The duplicate same-label Q3 state is intentional; both buttons call `onEndSession` (DEBT-378). Exam mode does not expose a header bail button; its header rail owns only the Mark-for-review toggle.
+
+### Active Exam Action Bar
+
+**Source:** `ExamActionBar` in `app/(app)/app/practice/components/practice-view.tsx`
+
+Active exam sessions defer correctness until `Review & Submit`, so the footer is navigation-only. The primary exam CTA must own the right slot.
+
+| Session position | Left group | Right CTA group | Notes |
+|------------------|------------|-----------------|-------|
+| First question | none | filled `Next` in `data-testid="exam-action-cta-group"` | Suppress empty `exam-action-primary-group`; do not render Mark for review in the footer. |
+| Middle question | outline `Previous` in `data-testid="exam-action-primary-group"` | filled `Next` in `data-testid="exam-action-cta-group"` with `sm:ml-auto` | Draft selections do not change footer labels. |
+| Final question | outline `Previous` in `data-testid="exam-action-primary-group"` | filled `Review & Submit` in `data-testid="exam-action-cta-group"` with `sm:ml-auto` | Preserve the `aria-describedby` text: `Opens review and submit.` |
+
+`data-testid="exam-action-secondary-group"` is intentionally absent after DEBT-379; there is no footer secondary group in active exam mode.
+
+### Header Rail / Persistent Header Actions
+
+**Source:** header action rail in `PracticeView` (`data-testid="question-header-actions"`)
+
+The page header action rail holds one mode-specific persistent action:
+
+| Mode | Header action | Notes |
+|------|---------------|-------|
+| Tutor / Quick Practice | outline `End session` when `onEndSession` is provided | This is the low-friction exit and remains independent of the tutor footer terminal CTA. |
+| Exam | outline `Mark for review` / `Unmark review` when `onToggleMarkForReview` is provided | Uses `aria-pressed`, disables while marking, while pending, or while the next question is loading. |
+| No session action | header action link | Falls back to the page-level back link when no session action is available. |
 
 **Removed tutor affordances:** Active tutor sessions no longer render a footer `Submit`, `Submitting…`, pre-feedback `Next`, or footer `View Summary`. Before feedback, the choice cards are the primary action; skip-without-answering is handled by the question navigator in active sessions.
 

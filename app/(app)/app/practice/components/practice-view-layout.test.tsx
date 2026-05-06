@@ -209,6 +209,114 @@ describe('PracticeView layout', () => {
     expect(endButtons).toHaveLength(2);
   });
 
+  it('renders a scoped exam header action rail before the question area', () => {
+    const question = createNextQuestion({
+      questionId: 'question-1',
+      slug: 'question-1',
+      stemMd: 'Stem',
+      difficulty: 'easy',
+    });
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        title="Exam Session"
+        description="Question 1 of 3 — Explanations shown after you submit the exam."
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 0,
+          total: 3,
+          isMarkedForReview: false,
+        }}
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        onEndSession={() => undefined}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onToggleMarkForReview={() => undefined}
+        onSelectChoice={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const headerActions = doc.querySelector(
+      '[data-testid="question-header-actions"]',
+    );
+    const questionPanel = doc.querySelector(
+      '[data-testid="active-question-panel"]',
+    );
+
+    expect(headerActions).not.toBeNull();
+    expect(
+      Array.from(headerActions?.querySelectorAll('button') ?? []).map(
+        (button) => button.textContent?.trim(),
+      ),
+    ).toEqual(['Mark for review']);
+    expect(headerActions?.textContent).not.toContain('End session');
+
+    if (!headerActions) throw new Error('Expected header actions');
+    if (!questionPanel) throw new Error('Expected question panel');
+
+    const position = headerActions.compareDocumentPosition(questionPanel);
+    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
+  it('renders the fallback back link when exam mode has no mark-for-review action', () => {
+    const question = createNextQuestion({
+      questionId: 'question-1',
+      slug: 'question-1',
+      stemMd: 'Stem',
+      difficulty: 'easy',
+    });
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        title="Exam Session"
+        description="Question 1 of 3 — Explanations shown after you submit the exam."
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          index: 0,
+          total: 3,
+          isMarkedForReview: false,
+        }}
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        onEndSession={() => undefined}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const headerActions = doc.querySelector(
+      '[data-testid="question-header-actions"]',
+    );
+    const backLink = headerActions?.querySelector('a');
+
+    expect(headerActions).not.toBeNull();
+    expect(headerActions?.querySelectorAll('button')).toHaveLength(0);
+    expect(backLink?.textContent).toBe('Back to Dashboard');
+    expect(backLink?.getAttribute('href')).toBe(ROUTES.APP_DASHBOARD);
+  });
+
   it('renders a question panel id for navigator aria-controls wiring', () => {
     const html = renderToStaticMarkup(
       <PracticeView

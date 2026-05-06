@@ -2,7 +2,7 @@
 
 **Page:** `/app/practice`
 **Source:** `app/(app)/app/practice/page.tsx` (server) → `practice-page-client.tsx` (client)
-**Last Updated:** 2026-05-04
+**Last Updated:** 2026-05-06
 
 ---
 
@@ -192,7 +192,21 @@ Tutor footer shape is derived from `hasPreviousQuestion` / `hasNextQuestion`; th
 | First/middle question post-feedback (`hasNextQuestion`) | `Previous` when available + filled `Next` | `Bookmark` (`sm:ml-auto`) | Feedback unlocks sequential navigation. |
 | Last question post-feedback (`!hasNextQuestion`) | `Previous` when available + filled `End session` | `Bookmark` (`sm:ml-auto`) | Header `End session` stays visible; the same-label header + footer terminal duplicate is intentional and both call `onEndSession`. |
 
-Exam mode keeps its existing footer contract in this debt. The exam right-slot primary CTA promotion is tracked separately by DEBT-379 and is not part of the DEBT-378 shipped state.
+Exam mode keeps answers draft-only until exam review/finalization. Its active footer places the primary CTA in the right slot:
+
+| State | Exam footer left cluster | Exam footer right cluster | Notes |
+|-------|--------------------------|---------------------------|-------|
+| First question | none | filled `Next` in `data-testid="exam-action-cta-group"` | Empty primary group is suppressed. |
+| Middle question | `Previous` in `data-testid="exam-action-primary-group"` | filled `Next` in `data-testid="exam-action-cta-group"` with `sm:ml-auto` | Draft selections do not change footer labels. |
+| Last question | `Previous` in `data-testid="exam-action-primary-group"` | filled `Review & Submit` in `data-testid="exam-action-cta-group"` with `sm:ml-auto` | Keeps the hidden `Opens review and submit.` description for assistive tech. |
+
+Exam footers do not render `Mark for review`; that toggle belongs to the header rail.
+
+### Header Rail
+
+**Source:** `PracticeView` header action rail (`data-testid="question-header-actions"`)
+
+Tutor mode renders the persistent outline `End session` action in the header whenever `onEndSession` is available. Exam mode renders the persistent outline `Mark for review` / `Unmark review` toggle in the same rail whenever `onToggleMarkForReview` is available, with `aria-pressed` reflecting review state and disabled state following mark-in-flight, pending, and question-loading states.
 
 ### Choice Click Semantics
 
