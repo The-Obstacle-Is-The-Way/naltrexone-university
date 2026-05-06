@@ -95,7 +95,8 @@ test('supports exam controls and question interactions', async () => {
     />,
   );
 
-  await screen.getByRole('button', { name: 'Mark for review' }).click();
+  const headerActions = screen.getByTestId('question-header-actions');
+  await headerActions.getByRole('button', { name: 'Mark for review' }).click();
   expect(onToggleMarkForReview).toHaveBeenCalledTimes(1);
 
   await expect
@@ -168,10 +169,25 @@ test('renders the exam bottom action bar without sticky shell markers', async ()
     .element(screen.getByTestId('bottom-action-bar'))
     .toBeInTheDocument();
   await expect
-    .element(screen.getByRole('button', { name: 'Next' }))
+    .element(
+      screen
+        .getByTestId('bottom-action-bar')
+        .getByRole('button', { name: 'Next' }),
+    )
     .toBeVisible();
   await expect
-    .element(screen.getByRole('button', { name: 'Mark for review' }))
+    .element(
+      screen
+        .getByTestId('bottom-action-bar')
+        .getByRole('button', { name: 'Mark for review' }),
+    )
+    .not.toBeInTheDocument();
+  await expect
+    .element(
+      screen
+        .getByTestId('question-header-actions')
+        .getByRole('button', { name: 'Mark for review' }),
+    )
     .toBeVisible();
 });
 
@@ -335,7 +351,11 @@ test('disables mutation controls while internal question loading is in progress'
   );
 
   await expect
-    .element(examScreen.getByRole('button', { name: 'Mark for review' }))
+    .element(
+      examScreen
+        .getByTestId('question-header-actions')
+        .getByRole('button', { name: 'Mark for review' }),
+    )
     .toBeDisabled();
   await expect
     .element(examScreen.getByRole('radio', { name: 'Exam Option A' }))
@@ -618,7 +638,10 @@ test('calls onEndSession from the bottom-bar Review & Submit button on the last 
     />,
   );
 
-  await screen.getByRole('button', { name: 'Review & Submit' }).click();
+  await screen
+    .getByTestId('exam-action-cta-group')
+    .getByRole('button', { name: 'Review & Submit' })
+    .click();
   expect(onEndSession).toHaveBeenCalledTimes(1);
 });
 

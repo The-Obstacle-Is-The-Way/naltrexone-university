@@ -243,9 +243,15 @@ test.describe('practice', () => {
     await expect(
       page.getByRole('button', { name: 'Submit', exact: true }),
     ).toHaveCount(0);
+    const questionHeaderActions = page.getByTestId('question-header-actions');
     await expect(
-      page.getByRole('button', { name: 'Mark for review' }),
+      questionHeaderActions.getByRole('button', { name: 'Mark for review' }),
     ).toBeVisible();
+    await expect(
+      page
+        .getByTestId('bottom-action-bar')
+        .getByRole('button', { name: 'Mark for review' }),
+    ).toHaveCount(0);
     await expect(
       page.getByRole('button', { name: 'Review & Submit' }),
     ).toBeVisible();

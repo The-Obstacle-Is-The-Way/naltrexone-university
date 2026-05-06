@@ -194,16 +194,13 @@ type ExamActionBarProps = Pick<
   PracticeViewProps,
   | 'hasPreviousQuestion'
   | 'canNavigatePrevious'
-  | 'isMarkingForReview'
   | 'isPending'
   | 'loadState'
   | 'onEndSession'
   | 'onNextQuestion'
   | 'onPreviousQuestion'
-  | 'onToggleMarkForReview'
 > & {
   isLastSessionQuestion: boolean;
-  isMarkedForReview: boolean;
 };
 
 function ExamActionBar(props: ExamActionBarProps) {
@@ -220,25 +217,29 @@ function ExamActionBar(props: ExamActionBarProps) {
     props.isLastSessionQuestion && props.onEndSession
       ? props.onEndSession
       : props.onNextQuestion;
-  const navigationGroup = (
-    <div
-      className="flex flex-wrap items-center gap-3"
-      data-testid="exam-action-primary-group"
-    >
-      {props.onPreviousQuestion ? (
-        props.hasPreviousQuestion ? (
-          <Button
-            type="button"
-            variant="outline"
-            className="rounded-full"
-            disabled={isPreviousDisabled}
-            onClick={props.onPreviousQuestion}
-          >
-            Previous
-          </Button>
-        ) : null
-      ) : null}
+  const navigationGroup =
+    props.onPreviousQuestion && props.hasPreviousQuestion ? (
+      <div
+        className="flex flex-wrap items-center gap-3"
+        data-testid="exam-action-primary-group"
+      >
+        <Button
+          type="button"
+          variant="outline"
+          className="rounded-full"
+          disabled={isPreviousDisabled}
+          onClick={props.onPreviousQuestion}
+        >
+          Previous
+        </Button>
+      </div>
+    ) : null;
 
+  const ctaGroup = (
+    <div
+      className="flex flex-wrap items-center gap-3 sm:ml-auto"
+      data-testid="exam-action-cta-group"
+    >
       {nextActionDescription ? (
         <span id={nextActionDescriptionId} className="sr-only">
           {nextActionDescription}
@@ -264,23 +265,7 @@ function ExamActionBar(props: ExamActionBarProps) {
   return (
     <>
       {navigationGroup}
-      {props.onToggleMarkForReview ? (
-        <div
-          className="flex flex-wrap items-center gap-3 sm:ml-auto"
-          data-testid="exam-action-secondary-group"
-        >
-          <Button
-            type="button"
-            variant="outline"
-            className="rounded-full"
-            aria-pressed={props.isMarkedForReview}
-            disabled={props.isMarkingForReview || isNavigationDisabled}
-            onClick={props.onToggleMarkForReview}
-          >
-            {props.isMarkedForReview ? 'Unmark review' : 'Mark for review'}
-          </Button>
-        </div>
-      ) : null}
+      {ctaGroup}
     </>
   );
 }
@@ -350,14 +335,11 @@ export function PracticeView(props: PracticeViewProps) {
           canNavigatePrevious={props.canNavigatePrevious}
           hasPreviousQuestion={props.hasPreviousQuestion}
           isLastSessionQuestion={isLastSessionQuestion}
-          isMarkedForReview={isMarkedForReview}
-          isMarkingForReview={props.isMarkingForReview}
           isPending={props.isPending}
           loadState={props.loadState}
           onEndSession={props.onEndSession}
           onNextQuestion={props.onNextQuestion}
           onPreviousQuestion={props.onPreviousQuestion}
-          onToggleMarkForReview={props.onToggleMarkForReview}
         />
       ) : (
         <TutorActionBar
@@ -398,7 +380,26 @@ export function PracticeView(props: PracticeViewProps) {
               {description}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div
+            className="flex items-center gap-3"
+            data-testid="question-header-actions"
+          >
+            {isExamMode && props.onToggleMarkForReview ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-full"
+                aria-pressed={isMarkedForReview}
+                disabled={
+                  props.isMarkingForReview ||
+                  props.isPending ||
+                  props.loadState.status === 'loading'
+                }
+                onClick={props.onToggleMarkForReview}
+              >
+                {isMarkedForReview ? 'Unmark review' : 'Mark for review'}
+              </Button>
+            ) : null}
             {props.onEndSession && !isExamMode ? (
               <Button
                 type="button"
@@ -411,7 +412,8 @@ export function PracticeView(props: PracticeViewProps) {
               >
                 {endSessionLabel}
               </Button>
-            ) : !props.onEndSession ? (
+            ) : !props.onEndSession &&
+              !(isExamMode && props.onToggleMarkForReview) ? (
               <Button
                 asChild
                 variant="link"
