@@ -639,7 +639,7 @@ test('calls onEndSession from the bottom-bar Review & Submit button on the last 
   );
 
   await screen
-    .getByTestId('exam-action-cta-group')
+    .getByTestId('exam-action-primary-group')
     .getByRole('button', { name: 'Review & Submit' })
     .click();
   expect(onEndSession).toHaveBeenCalledTimes(1);

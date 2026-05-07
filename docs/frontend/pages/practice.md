@@ -192,13 +192,13 @@ Tutor footer shape is derived from `hasPreviousQuestion` / `hasNextQuestion`; th
 | First/middle question post-feedback (`hasNextQuestion`) | `Previous` when available + filled `Next` | `Bookmark` (`sm:ml-auto`) | Feedback unlocks sequential navigation. |
 | Last question post-feedback (`!hasNextQuestion`) | `Previous` when available + filled `End session` | `Bookmark` (`sm:ml-auto`) | Header `End session` stays visible; the same-label header + footer terminal duplicate is intentional and both call `onEndSession`. |
 
-Exam mode keeps answers draft-only until exam review/finalization. Its active footer places the primary CTA in the right slot:
+Exam mode keeps answers draft-only until exam review/finalization. Its active footer keeps sequential navigation in a single left cluster:
 
 | State | Exam footer left cluster | Exam footer right cluster | Notes |
 |-------|--------------------------|---------------------------|-------|
-| First question | none | filled `Next` in `data-testid="exam-action-cta-group"` | Empty primary group is suppressed. |
-| Middle question | `Previous` in `data-testid="exam-action-primary-group"` | filled `Next` in `data-testid="exam-action-cta-group"` with `sm:ml-auto` | Draft selections do not change footer labels. |
-| Last question | `Previous` in `data-testid="exam-action-primary-group"` | filled `Review & Submit` in `data-testid="exam-action-cta-group"` with `sm:ml-auto` | Keeps the hidden `Opens review and submit.` description for assistive tech. |
+| First question | filled `Next` in `data-testid="exam-action-primary-group"` | none | No empty Previous placeholder. |
+| Middle question | `Previous` + filled `Next` in `data-testid="exam-action-primary-group"` | none | Draft selections do not change footer labels. |
+| Last question | `Previous` + filled `Review & Submit` in `data-testid="exam-action-primary-group"` | none | Keeps the hidden `Opens review and submit.` description for assistive tech. |
 
 Exam footers do not render `Mark for review`; that toggle belongs to the header rail.
 

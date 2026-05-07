@@ -112,13 +112,13 @@ Active practice action bars use mode-specific semantics:
 | Tutor, middle/last question pre-feedback (`hasPreviousQuestion`) | `Previous` only | none | No footer `Submit`, `Submitting…`, or pre-feedback `Next`. Non-sequential skip is via the question navigator in active sessions. |
 | Tutor / Quick Practice, post-feedback non-terminal (`hasNextQuestion`) | `Previous` when available + filled `Next` | `Bookmark` with `sm:ml-auto` when feedback exists | `Next` appears only after feedback has rendered. |
 | Tutor, post-feedback terminal (`!hasNextQuestion`) | `Previous` + filled `End session` | `Bookmark` with `sm:ml-auto` | Header `End session` remains visible too; the duplicate same-label terminal state is intentional. |
-| Exam active session, first question | none | filled `Next` in `exam-action-cta-group` | Suppress empty `exam-action-primary-group`; Mark for review lives in the header rail. |
-| Exam active session, middle question | `Previous` only | filled `Next` in `exam-action-cta-group` with `sm:ml-auto` | Draft selections do not change footer labels. |
-| Exam active session, final question | `Previous` only | filled `Review & Submit` in `exam-action-cta-group` with `sm:ml-auto` | Preserve the hidden `Opens review and submit.` description for assistive tech. |
+| Exam active session, first question | filled `Next` in `exam-action-primary-group` | none | No empty Previous placeholder; Mark for review lives in the header rail. |
+| Exam active session, middle question | `Previous` + filled `Next` in `exam-action-primary-group` | none | Draft selections do not change footer labels. |
+| Exam active session, final question | `Previous` + filled `Review & Submit` in `exam-action-primary-group` | none | Preserve the hidden `Opens review and submit.` description for assistive tech. |
 
 In tutor mode and Quick Practice, the choice cards themselves act as the primary action pre-feedback. The footer carries only backward navigation before feedback and sequential/terminal navigation after feedback.
 
-In exam mode, the primary CTA always sits in the footer right slot. The footer never contains `Mark for review`; the header action rail owns the Mark/Unmark toggle with `aria-pressed` state.
+In exam mode, the footer renders a single left cluster containing Previous when applicable and the forward / terminal CTA (`Next` / `Review & Submit`). The footer never contains `Mark for review`; the header action rail owns the Mark/Unmark toggle with `aria-pressed` state.
 
 ### Card
 

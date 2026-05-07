@@ -120,40 +120,45 @@ function createCorrectSubmitResult(
 }
 
 describe('PracticeView exam actions', () => {
-  it('renders first-question exam footer with only the right-slot Next CTA', () => {
+  it('renders first-question exam footer with only the Next CTA in the unified left cluster', () => {
     const html = renderExamView({ index: 0, total: 3 });
     const doc = parse(html);
     const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
     const primaryGroup = doc.querySelector(
       '[data-testid="exam-action-primary-group"]',
     );
-    const ctaGroup = doc.querySelector('[data-testid="exam-action-cta-group"]');
 
     expect(actionBar).not.toBeNull();
-    expect(primaryGroup).toBeNull();
-    expect(getButtonLabels(ctaGroup)).toEqual(['Next']);
+    expect(getButtonLabels(primaryGroup)).toEqual(['Next']);
     expect(getButtonLabels(actionBar)).toEqual(['Next']);
     expect(actionBar?.textContent).not.toContain('Mark for review');
+    expect(
+      doc.querySelector('[data-testid="exam-action-cta-group"]'),
+    ).toBeNull();
     expect(html).not.toContain('>Submit<');
     expect(html).not.toContain('>Previous<');
   });
 
-  it('renders final-question exam footer with Previous left and Review & Submit right', () => {
+  it('renders final-question exam footer with Previous and Review & Submit in the unified left cluster', () => {
     const html = renderExamView({ index: 2, total: 3 });
     const doc = parse(html);
     const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
     const primaryGroup = doc.querySelector(
       '[data-testid="exam-action-primary-group"]',
     );
-    const ctaGroup = doc.querySelector('[data-testid="exam-action-cta-group"]');
 
-    expect(getButtonLabels(primaryGroup)).toEqual(['Previous']);
-    expect(getButtonLabels(ctaGroup)).toEqual(['Review & Submit']);
+    expect(getButtonLabels(primaryGroup)).toEqual([
+      'Previous',
+      'Review & Submit',
+    ]);
     expect(getButtonLabels(actionBar)).toEqual(['Previous', 'Review & Submit']);
     expect(actionBar?.textContent).not.toContain('Mark for review');
+    expect(
+      doc.querySelector('[data-testid="exam-action-cta-group"]'),
+    ).toBeNull();
   });
 
-  it('groups active-exam Previous separately from the right-slot CTA and removes the secondary footer group', () => {
+  it('groups active-exam Previous and Next together and removes right-side footer groups', () => {
     const html = renderExamView({ index: 1, total: 3 });
     const doc = parse(html);
     const primaryGroup = doc.querySelector(
@@ -167,18 +172,25 @@ describe('PracticeView exam actions', () => {
       '[data-testid="question-header-actions"]',
     );
 
-    expect(getButtonLabels(primaryGroup)).toEqual(['Previous']);
-    expect(getButtonLabels(ctaGroup)).toEqual(['Next']);
+    expect(getButtonLabels(primaryGroup)).toEqual(['Previous', 'Next']);
+    expect(ctaGroup).toBeNull();
     expect(secondaryGroup).toBeNull();
+    expect(
+      doc.querySelector(
+        '[data-testid="bottom-action-bar"] [class*="sm:ml-auto"]',
+      ),
+    ).toBeNull();
     expect(getButtonLabels(headerActions)).toEqual(['Mark for review']);
   });
 
   it('describes the last-question Review & Submit action for assistive tech', () => {
     const html = renderExamView({ index: 1, total: 2 });
     const doc = parse(html);
-    const ctaGroup = doc.querySelector('[data-testid="exam-action-cta-group"]');
+    const primaryGroup = doc.querySelector(
+      '[data-testid="exam-action-primary-group"]',
+    );
     const nextButton = Array.from(
-      ctaGroup?.querySelectorAll('button') ?? [],
+      primaryGroup?.querySelectorAll('button') ?? [],
     ).find((button) => button.textContent?.trim() === 'Review & Submit');
     const descriptionId = nextButton?.getAttribute('aria-describedby');
     const description = descriptionId
@@ -197,11 +209,16 @@ describe('PracticeView exam actions', () => {
     });
     const doc = parse(html);
     const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
-    const ctaGroup = doc.querySelector('[data-testid="exam-action-cta-group"]');
+    const primaryGroup = doc.querySelector(
+      '[data-testid="exam-action-primary-group"]',
+    );
 
-    expect(getButtonLabels(ctaGroup)).toEqual(['Next']);
+    expect(getButtonLabels(primaryGroup)).toEqual(['Next']);
     expect(getButtonLabels(actionBar)).toEqual(['Next']);
     expect(actionBar?.textContent).not.toContain('Mark for review');
+    expect(
+      doc.querySelector('[data-testid="exam-action-cta-group"]'),
+    ).toBeNull();
     expect(html).not.toContain('Review answers');
   });
 

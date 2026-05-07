@@ -556,15 +556,15 @@ All standalone action buttons in the app use `rounded-full`:
 
 **Source:** `ExamActionBar` in `app/(app)/app/practice/components/practice-view.tsx`
 
-Active exam sessions defer correctness until `Review & Submit`, so the footer is navigation-only. The primary exam CTA must own the right slot.
+Active exam sessions defer correctness until `Review & Submit`, so the footer is navigation-only. Previous and the forward / terminal CTA stay together in one left cluster to mirror tutor-mode navigation.
 
-| Session position | Left group | Right CTA group | Notes |
-|------------------|------------|-----------------|-------|
-| First question | none | filled `Next` in `data-testid="exam-action-cta-group"` | Suppress empty `exam-action-primary-group`; do not render Mark for review in the footer. |
-| Middle question | outline `Previous` in `data-testid="exam-action-primary-group"` | filled `Next` in `data-testid="exam-action-cta-group"` with `sm:ml-auto` | Draft selections do not change footer labels. |
-| Final question | outline `Previous` in `data-testid="exam-action-primary-group"` | filled `Review & Submit` in `data-testid="exam-action-cta-group"` with `sm:ml-auto` | Preserve the `aria-describedby` text: `Opens review and submit.` |
+| Session position | Left group | Right group | Notes |
+|------------------|------------|-------------|-------|
+| First question | filled `Next` in `data-testid="exam-action-primary-group"` | none | No empty Previous placeholder; do not render Mark for review in the footer. |
+| Middle question | outline `Previous` + filled `Next` in `data-testid="exam-action-primary-group"` | none | Draft selections do not change footer labels. |
+| Final question | outline `Previous` + filled `Review & Submit` in `data-testid="exam-action-primary-group"` | none | Preserve the `aria-describedby` text: `Opens review and submit.` |
 
-`data-testid="exam-action-secondary-group"` is intentionally absent after DEBT-379; there is no footer secondary group in active exam mode.
+All active exam footer buttons live in `data-testid="exam-action-primary-group"`; there is no footer right group. `data-testid="exam-action-cta-group"` and `data-testid="exam-action-secondary-group"` are intentionally absent after DEBT-380. Mark for review continues to live in the question header rail.
 
 ### Header Rail / Persistent Header Actions
 
