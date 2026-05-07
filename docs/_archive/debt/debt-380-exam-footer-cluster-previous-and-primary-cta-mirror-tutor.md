@@ -3,9 +3,50 @@
 **Priority:** P3 (layout-only refactor in a single component; behavior unchanged)
 **Created:** 2026-05-07
 **Source:** Visual grading walkthrough on 2026-05-07 after DEBT-378 + DEBT-379 shipped to `main` at `578dffb8`. Side-by-side comparison of tutor mode post-feedback (`[Previous, Next]` clustered left, `[Bookmark]` right via `sm:ml-auto`) and exam mode (`[Previous]` alone left, `[Next]` / `[Review & Submit]` orphaned right via `sm:ml-auto`). User's first-principles read: tutor's clustered-nav pattern is the better cross-mode shape; exam's split nav reads as a broken pair across a wide gap. DEBT-379 promoted exam's primary CTA to the right slot under "right slot owns the eye-anchor" theory, but DEBT-379's own spec admitted the rationale was unmeasured (*"supporting rationale, not measured user-error proof"*). With both modes now shipped and visually graded, the unmeasured argument loses to the measured cross-mode disharmony.
-**Related:** [DEBT-379 Exam action bar — primary CTA to right slot, Mark for review to header (archived, partially superseded by this debt)](../_archive/debt/debt-379-exam-action-bar-promote-primary-cta-to-right-slot.md), [DEBT-378 Tutor — drop Submit button (choice click commits) (archived)](../_archive/debt/debt-378-tutor-drop-submit-button-choice-click-commits.md), [DEBT-365 Exam flow affordance and label consistency (archived)](../_archive/debt/debt-365-exam-flow-affordance-and-label-consistency.md), [DEBT-361 Exam last-question Next label (archived)](../_archive/debt/debt-361-exam-last-question-next-label.md), [DEBT-330 Post-exam review action bar bookmark placement (archived)](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md), [Pattern Registry](../frontend/pattern-registry.md), [Frontend Standards](../frontend/standards.md), [Practice Page Docs](../frontend/pages/practice.md)
+**Related:** [DEBT-379 Exam action bar — primary CTA to right slot, Mark for review to header (archived, partially superseded by this debt)](./debt-379-exam-action-bar-promote-primary-cta-to-right-slot.md), [DEBT-378 Tutor — drop Submit button (choice click commits) (archived)](./debt-378-tutor-drop-submit-button-choice-click-commits.md), [DEBT-365 Exam flow affordance and label consistency (archived)](./debt-365-exam-flow-affordance-and-label-consistency.md), [DEBT-361 Exam last-question Next label (archived)](./debt-361-exam-last-question-next-label.md), [DEBT-330 Post-exam review action bar bookmark placement (archived)](./debt-330-review-action-bar-bookmark-placement.md), [Pattern Registry](../../frontend/pattern-registry.md), [Frontend Standards](../../frontend/standards.md), [Practice Page Docs](../../frontend/pages/practice.md)
 
-**Status:** Open. No production code change yet. This debt **partially supersedes DEBT-379**: it reverts DEBT-379's footer right-slot promotion of the exam primary CTA while preserving DEBT-379's header-rail relocation of `Mark for review`. The supersession is intentional and design-driven, not a mistake — DEBT-379's right-slot promotion was a defensible call against pre-shipped state, but post-ship visual grading vs. tutor mode showed that cross-mode harmony beats the unmeasured eye-anchor argument.
+**Status:** Resolved 2026-05-07 (PR #308, merge commit `b5be11ba`).
+
+---
+
+## Resolution
+
+**PR:** [#308](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/308) — merge commit `b5be11ba` into `main` on 2026-05-07.
+
+**Behavior shipped (matches the accepted Option A matrix):**
+
+| Question | Footer left (`exam-action-primary-group`) | Footer right | Header rail (`question-header-actions`) |
+|----------|--------------------------------------------|--------------|------------------------------------------|
+| Q1 | filled `[Next]` | _none_ | outline `[Mark for review]` / `[Unmark review]` toggle |
+| Q2 | outline `[Previous]`, filled `[Next]` | _none_ | outline toggle |
+| Q3 | outline `[Previous]`, filled `[Review & Submit]` with DEBT-361 `aria-describedby` "Opens review and submit." | _none_ | outline toggle |
+
+This intentionally partially supersedes DEBT-379: DEBT-379's header-rail relocation of `Mark for review` stays canonical, while DEBT-379's footer right-slot promotion of `Next` / `Review & Submit` is reverted. Exam and tutor now share the same clustered-navigation grammar: previous/forward actions sit together in the left footer cluster, while non-navigation metadata lives elsewhere.
+
+**Architectural seam:**
+- `ExamActionBar` (`app/(app)/app/practice/components/practice-view.tsx`) now renders a single `exam-action-primary-group` containing `Previous` when applicable plus the forward/terminal CTA.
+- `exam-action-cta-group` and exam-footer `sm:ml-auto` right-slot placement were removed.
+- The Q3 hidden description span remains co-located with `Review & Submit`, preserving the `aria-describedby` contract.
+- `TutorActionBar`, Quick Practice, and the DEBT-379 header rail were left unchanged.
+- `vitest.browser.config.ts` gained `setDefaultResultOrder('ipv4first')` after local verification exposed a Vitest Browser startup hang when `localhost` resolved to a broken `::1` loopback before tests imported.
+
+**Files shipped (9, +439 / -52 vs pre-PR `main`):**
+- `app/(app)/app/practice/components/practice-view.tsx`
+- `app/(app)/app/practice/components/practice-view-exam-actions.test.tsx`
+- `app/(app)/app/practice/components/practice-view.browser.spec.tsx`
+- `docs/debt/debt-380-exam-footer-cluster-previous-and-primary-cta-mirror-tutor.md` (this file, now archived)
+- `docs/debt/index.md`
+- `docs/frontend/pages/practice.md`
+- `docs/frontend/pattern-registry.md`
+- `docs/frontend/standards.md`
+- `vitest.browser.config.ts`
+
+**Quality gates green at merge:**
+- Local: typecheck, lint (19 pre-existing oversized-test warnings only), 2417 unit tests, 265 browser tests, 97 integration tests, build, 35/35 E2E.
+- Pre-push hook on latest head: typecheck and 2417 unit tests.
+- Remote: CI `test` (44m42s), Vercel, CodeRabbit, codecov/patch.
+
+**CodeRabbit review:** Initial review found one actionable minor docs issue: the Q1/Q2/Q3 fenced block needed a language identifier for markdownlint MD040. Accepted and fixed with `text`. CodeRabbit resolved the inline thread and approved latest head `f5ea966d` at 2026-05-07T15:24:59Z. LanguageTool "testid" spelling/style notes were non-actionable and left alone.
 
 ---
 
