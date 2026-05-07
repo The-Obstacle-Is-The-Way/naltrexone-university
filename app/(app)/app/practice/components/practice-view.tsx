@@ -217,12 +217,12 @@ function ExamActionBar(props: ExamActionBarProps) {
     props.isLastSessionQuestion && props.onEndSession
       ? props.onEndSession
       : props.onNextQuestion;
-  const navigationGroup =
-    props.onPreviousQuestion && props.hasPreviousQuestion ? (
-      <div
-        className="flex flex-wrap items-center gap-3"
-        data-testid="exam-action-primary-group"
-      >
+  const navigationGroup = (
+    <div
+      className="flex flex-wrap items-center gap-3"
+      data-testid="exam-action-primary-group"
+    >
+      {props.onPreviousQuestion && props.hasPreviousQuestion ? (
         <Button
           type="button"
           variant="outline"
@@ -232,14 +232,8 @@ function ExamActionBar(props: ExamActionBarProps) {
         >
           Previous
         </Button>
-      </div>
-    ) : null;
+      ) : null}
 
-  const ctaGroup = (
-    <div
-      className="flex flex-wrap items-center gap-3 sm:ml-auto"
-      data-testid="exam-action-cta-group"
-    >
       {nextActionDescription ? (
         <span id={nextActionDescriptionId} className="sr-only">
           {nextActionDescription}
@@ -262,12 +256,7 @@ function ExamActionBar(props: ExamActionBarProps) {
     </div>
   );
 
-  return (
-    <>
-      {navigationGroup}
-      {ctaGroup}
-    </>
-  );
+  return navigationGroup;
 }
 
 export function PracticeView(props: PracticeViewProps) {

@@ -1,7 +1,12 @@
+import { setDefaultResultOrder } from 'node:dns';
 import path from 'node:path';
 import react from '@vitejs/plugin-react';
 import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
+
+// Vitest Browser opens Chromium against a localhost Vite server. Prefer IPv4 so
+// environments with a broken ::1 loopback do not hang before tests import.
+setDefaultResultOrder('ipv4first');
 
 (process.env as Record<string, string | undefined>).NODE_ENV = 'test';
 

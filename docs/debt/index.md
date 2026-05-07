@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-05-06 (DEBT-379 resolved)
+**Last Updated:** 2026-05-07 (DEBT-380 opened)
 
 ---
 
@@ -20,8 +20,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is billing-flow `form-action` verification plus enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
+| [DEBT-380](./debt-380-exam-footer-cluster-previous-and-primary-cta-mirror-tutor.md) | Cluster exam footer Previous + primary CTA (`Next` / `Review & Submit`) into a single left group, mirroring tutor's `tutor-action-primary-group` pattern. Partially supersedes DEBT-379: keeps DEBT-379's header-rail relocation of `Mark for review`, reverts DEBT-379's right-slot promotion of the primary CTA. Cross-mode disharmony was the trigger — tutor clusters `[Previous, Next]` together, exam splits them via `sm:ml-auto`. DEBT-379's eye-anchor rationale was explicitly unmeasured per its own spec. After DEBT-380, both modes have the same footer shape: single left cluster + optional metadata right (Bookmark in tutor post-feedback; nothing in exam since Mark for review lives in the header rail). Estimated ~30-50 production LOC, ~10-20 assertions across 2-3 files | P3 | — |
 
-**Next Debt ID:** DEBT-380
+**Next Debt ID:** DEBT-381
 
 ---
 
