@@ -65,7 +65,7 @@ Q3's `Review & Submit` button has a hidden description span linked via `aria-des
 
 ### Option A — Single left cluster, no right group (recommended)
 
-```
+```text
 Q1: [Next filled]
 Q2: [Previous outline] [Next filled]
 Q3: [Previous outline] [Review & Submit filled]
