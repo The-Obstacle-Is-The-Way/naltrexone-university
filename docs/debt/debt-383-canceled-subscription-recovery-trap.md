@@ -2,7 +2,7 @@
 
 **Priority:** P1 (authenticated canceled subscribers can be trapped away from both `/app/*` and normal re-subscribe plans)
 **Created:** 2026-05-13
-**Status:** Open — root cause confirmed from Stripe retention policy + runtime diagnostics; no production code change yet
+**Status:** Open — root cause confirmed; implementation in this PR; rollout pending merge
 **Owner:** Billing / entitlement
 **Related:** [DEBT-310 (archived)](../_archive/debt/debt-310-stripe-stale-price-id-in-production-db.md), [DEBT-155 (archived)](../_archive/debt/debt-155-stripe-legacy-duplicate-subscriptions-reconciliation.md), [DEBT-332](./debt-332-security-posture-audit.md)
 
@@ -14,9 +14,9 @@ The original DEBT-383 draft claimed this was Stripe/webhook state drift. That wa
 
 Live read-only diagnostics on 2026-05-13 show the affected test-mode account is blocked because the Stripe subscription is actually canceled:
 
-- DB row for `jj@novamindnyc.com`: `stripe_subscriptions.status = 'canceled'`, `cancel_at_period_end = false`, `current_period_end = 2026-06-06T21:22:44Z`, `updated_at = 2026-05-07T21:51:04Z`.
-- Stripe subscription `sub_1SxwUEKItmaHAwgUESbx3reB`: `status = 'canceled'`, `canceled_at = 2026-05-07T21:50:59Z`, `ended_at = 2026-05-07T21:50:59Z`, `cancellation_details.reason = 'cancellation_requested'`.
-- Stripe metadata and price mapping are correct: `metadata.user_id` matches the local user UUID and the price matches `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`.
+- DB row for the affected test account: `stripe_subscriptions.status = 'canceled'`, `cancel_at_period_end = false`, `current_period_end = 2026-06-06T21:22:44Z`, `updated_at = 2026-05-07T21:51:04Z`.
+- Stripe subscription `sub_***`: `status = 'canceled'`, `canceled_at = 2026-05-07T21:50:59Z`, `ended_at = 2026-05-07T21:50:59Z`, `cancellation_details.reason = 'cancellation_requested'`.
+- Stripe metadata and price mapping are correct: `metadata.user_id` matches the masked local user id and the price matches `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`.
 - The local `customer.subscription.deleted` webhook event processed successfully at `2026-05-07T21:51:04Z`; there is no failed Stripe event evidence for this user.
 - Stripe Dashboard reports the event **Source = Automatic**. The subscription was created `2026-02-06T21:22:44Z` and canceled `2026-05-07T21:50:59Z` — 90.02 days later.
 
@@ -65,14 +65,14 @@ Diagnostics were run read-only from local `.env.local` against the configured Ne
 
 ### App database
 
-For `jj@novamindnyc.com`:
+For the affected test account:
 
 ```text
-user_id: 401079b0-5346-4d91-8b68-03675d769e60
-stripe_customer_id: cus_TvnxIbgBSEEqp6
-stripe_subscription_id: sub_1SxwUEKItmaHAwgUESbx3reB
+user_id: user_***
+stripe_customer_id: cus_***
+stripe_subscription_id: sub_***
 db_status: canceled
-db_price_id: price_1SxuYAKItmaHAwgUWaePv0AC
+db_price_id: price_*** (configured monthly price)
 db_current_period_end: 2026-06-06T21:22:44.000Z
 db_cancel_at_period_end: false
 db_updated_at: 2026-05-07T21:51:04.421Z
@@ -81,7 +81,7 @@ db_price_matches_monthly: true
 
 ### Stripe API
 
-For `sub_1SxwUEKItmaHAwgUESbx3reB`:
+For `sub_***`:
 
 ```text
 status: canceled
@@ -90,7 +90,7 @@ canceled_at: 2026-05-07T21:50:59.000Z
 ended_at: 2026-05-07T21:50:59.000Z
 current_period_end: 2026-06-06T21:22:44.000Z
 cancellation_details.reason: cancellation_requested
-metadata_user_id: 401079b0-5346-4d91-8b68-03675d769e60
+metadata_user_id: user_***
 price_matches_monthly: true
 ```
 
@@ -99,7 +99,7 @@ price_matches_monthly: true
 The relevant Stripe event was automatic and successfully processed:
 
 ```text
-evt_1TUZotKItmaHAwgUVUp6QeIL
+evt_***
 type: customer.subscription.deleted
 Stripe Dashboard source: Automatic
 Stripe event created: 2026-05-07T21:50:59.000Z
@@ -147,7 +147,7 @@ The entitlement function is defensible. The recovery UX is not.
 |---|---|---|
 | Stripe changed test mode behavior | **Ruled out** | Stripe and DB agree on `canceled`; invoices are historical. |
 | Vercel/Stripe webhook secret mismatch | **Ruled out for this incident** | `customer.subscription.deleted` processed successfully with empty `error`. Later Stripe events also processed. |
-| Missing `subscription.metadata.user_id` | **Ruled out** | Stripe subscription metadata contains the correct local UUID. |
+| Missing `subscription.metadata.user_id` | **Ruled out** | Stripe subscription metadata contains the matching local user id. |
 | Price ID drift | **Ruled out** | DB and Stripe price match configured monthly price. |
 | Wrong DB | **Ruled out for local diagnostics** | The DB row matches the Stripe customer/subscription shown by the configured test account. |
 | Browser cache/session bug | **Ruled out** | Server-side entitlement computes from DB state on request; clearing the browser cannot turn a canceled Stripe subscription active. |
@@ -164,7 +164,7 @@ The earlier actor analysis considered Customer Portal clicks, Dashboard clicks, 
 Stripe's own source of truth is decisive:
 
 - The event source is `Automatic` in Stripe Dashboard.
-- No `DELETE /v1/subscriptions/...` request exists in the account API logs for `sub_1SxwUEKItmaHAwgUESbx3reB`.
+- No `DELETE /v1/subscriptions/...` request exists in the account API logs for `sub_***`.
 - The subscription was canceled almost exactly 90 days after creation.
 - Stripe documents this behavior for test/sandbox subscriptions and says the resulting state/event are the same as explicit cancellation: `status: canceled` plus `customer.subscription.deleted`.
 
@@ -184,8 +184,8 @@ This also explains the otherwise misleading `cancellation_details.reason = 'canc
 
 The preferred path is to ship DEBT-383 and resubscribe through the app UI. Use this manual Stripe Dashboard path only if dogfood access is needed before the fix lands:
 
-1. In Stripe test mode, create a new active monthly subscription for `cus_TvnxIbgBSEEqp6` using the configured monthly price.
-2. Ensure the new subscription metadata includes `user_id = 401079b0-5346-4d91-8b68-03675d769e60`.
+1. In Stripe test mode, create a new active monthly subscription for `cus_***` using the configured monthly price.
+2. Ensure the new subscription metadata includes `user_id = user_***`.
 3. Let the webhook update the DB, or re-send the `customer.subscription.created` / `customer.subscription.updated` event.
 4. Mark the new test subscription **excluded from auto-cancellation** in Stripe Dashboard (`Actions` menu on the subscription).
 5. Verify DB `stripe_subscriptions.status = 'active'`, `cancel_at_period_end = false`, and `current_period_end > now()`.

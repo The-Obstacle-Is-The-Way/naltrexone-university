@@ -18,7 +18,7 @@
 | Placement of credibility line | **Option A** — directly under the hero badge, between `marketing-home.tsx:75-77` (badge) and `marketing-home.tsx:78-83` (h1) |
 | Phrasing | **Option A1 (unnamed)** — `Authored by a practicing psychiatrist — double board-certified in Addiction Psychiatry and General Psychiatry. Grounded in primary literature with citations.` |
 | Board nomenclature | `General Psychiatry` (formal ABPN, not "General Adult Psychiatry") |
-| Author name on hero | **Not included.** User is considering a legal first-name change; locking a specific name onto a public marketing surface now would create future work and a potential credibility hiccup if a buyer cross-references ABPN/NPI/LinkedIn later. The unnamed phrasing keeps roughly 80% of the credibility lift (working, double-board-certified, exact subspecialty) without committing to a name spelling. Upgrade path to a named variant later is a one-line edit. |
+| Author name on hero | **Not included.** A public name line requires a separate privacy and naming decision. The unnamed phrasing keeps the core credibility lift (practicing, double-board-certified, exact subspecialty) without committing repo-tracked copy to a specific public identity. Upgrade path to a named variant later is a small text edit. |
 | Optional AJA 2023 publication line | **Not included** in this debt item. |
 
 No copy decisions remain open. Implementation is blocked until DEBT-383 lands and the 948-count evidence is made reproducible in the repo or replaced with a newly verified tracked source count. `3 Study Modes` is in scope for this debt item.
@@ -39,9 +39,9 @@ The literature/citations sentence is intentionally explicit. The seven source-di
 
 This is intentionally a minimum-viable copy refresh, not a redesign. Visual layout, hero composition, pricing card structure, and section ordering are out of scope. Only `<span>` / `<p>` text and the `impactStats` array values change.
 
-> **Author identification (for this doc only, not for the landing page).** The product is authored and maintained by Dr. John H. Jung, MD, MS — currently practicing as an outpatient telehealth psychiatrist (TimelyCare, since 2/2023), double board-certified by the **American Board of Psychiatry and Neurology (ABPN)** in **General Psychiatry** (certified 9/2023) and **Addiction Psychiatry** (certified 10/2024), addiction psychiatry fellowship-trained at **Mount Sinai Beth Israel**. The public landing-page copy in this debt item deliberately uses unnamed phrasing — see the Decisions table for rationale. A future debt item can promote the unnamed line to a named variant as a one-line edit if/when the user decides to do so.
+**Author identification (private context only, not for the landing page).** The product is authored and maintained by the project clinician; the full profile belongs in a private artifact. The public landing-page copy in this debt item deliberately uses unnamed phrasing — see the Decisions table for rationale. A future debt item can promote the unnamed line to a named variant only after a separate privacy and naming decision.
 
-> **Nomenclature note.** The user described the credential verbally as "general psychiatrist adult." The ABPN's actual board name is **General Psychiatry** — adult is the default scope of that board (child & adolescent is a separate subspecialty). The locked copy uses the formal ABPN phrasing.
+**Nomenclature note.** The user described the credential verbally as "general psychiatrist adult." The formal public-copy phrase is **General Psychiatry** — adult is the default scope of that board (child & adolescent is a separate subspecialty).
 
 ---
 
@@ -175,10 +175,10 @@ Variants considered (the user locked **A1** — the other variants are not selec
 
 **Named (not selected — deferred):**
 
-- **A3 (not selected):** `Authored by Dr. John H. Jung, MD — a working psychiatrist, double board-certified in Addiction Psychiatry and General Psychiatry.`
-- **A4 (not selected):** `Authored by Dr. John H. Jung, MD — a working psychiatrist, board-certified by the ABPN in Addiction Psychiatry and General Psychiatry, fellowship-trained at Mount Sinai Beth Israel.`
+- **A3 (not selected):** `Authored by [named clinician], MD — a working psychiatrist, double board-certified in Addiction Psychiatry and General Psychiatry.`
+- **A4 (not selected):** `Authored by [named clinician], MD — a working psychiatrist, board-certified in Addiction Psychiatry and General Psychiatry, fellowship-trained at a recognized addiction psychiatry program.`
 
-**Why A1 over A3/A4.** The user is considering a legal first-name change, so locking a specific name onto a public marketing surface now would (a) generate future copy/asset rework, and (b) create a minor cross-referencing inconsistency between the landing page and external registries (ABPN, NPI, LinkedIn) during the transition. A1 captures ~80% of the credibility lift available from naming (working, double board-certified, exact subspecialty) without committing to a name spelling. The upgrade path from A1 → A3 (or to a Raymond-prefixed variant) is a one-line text change when the user is ready.
+**Why A1 over A3/A4.** A public name line requires a separate privacy and naming decision. A1 captures most of the credibility lift available from naming (working, double board-certified, exact subspecialty) without committing repo-tracked copy to a specific public identity. The upgrade path from A1 to a named variant is a small text change when the user is ready.
 
 #### Option B (considered, not selected) — small "About the author" section between features and pricing
 
@@ -215,43 +215,40 @@ None. See the **Decisions** table at the top of this document for the locked ans
 
 ---
 
-## CV-Driven Credibility Inventory
+## Private Credibility Inventory
 
-The user supplied a full CV. The following is an explicit accounting of what was considered and what was chosen for inclusion, so the user can see the editorial logic and override any of it.
+The user supplied a private credibility profile. This repo-tracked doc records editorial categories and decisions only; raw profile details belong in a private artifact.
 
 ### Included in proposed copy
 
-| CV element | Why included |
+| Profile element | Why included |
 |------------|--------------|
-| Name: Dr. John H. Jung, MD, MS | Required for any "named" credibility line; verifiable, ownable. |
-| ABPN General Psychiatry (cert. 9/2023) | Core credential, directly relevant to the product audience (psychiatry boards). |
-| ABPN Addiction Psychiatry (cert. 10/2024) | Core credential, exactly the subspecialty this product targets. |
-| Current outpatient telehealth practice (TimelyCare, 2/2023 – Current) | Supports the verifiable "working psychiatrist" claim. Active, not retired/academic-only. |
-| Mount Sinai Beth Israel addiction psychiatry fellowship (7/2023 – 6/2024) | Recognizable program. Strongest single non-verbal credibility lever on the page (Option A4 only). |
+| Practicing psychiatrist status | Supports the verifiable "practicing psychiatrist" claim without naming an employer. |
+| General Psychiatry board certification | Core credential, directly relevant to the product audience. |
+| Addiction Psychiatry board certification | Core credential, exactly the subspecialty this product targets. |
+| Primary-literature source pathway | Supports the "Grounded in primary literature with citations" sentence. |
 
 ### Considered and excluded (clutter risk)
 
-| CV element | Why excluded |
+| Profile element | Why excluded |
 |------------|--------------|
-| 4 active state medical licenses (NY, VA, FL, TX) | Sounds like overkill on a study-product landing page; reads as defensive credential-stacking rather than relevant signal. |
-| Prior positions: Realization Center, Advanced Recovery Systems, Ohio Clinical Trials | "Currently practicing" is the load-bearing claim; listing prior employers adds line length, not signal. |
-| Peer-reviewed publication (American Journal on Addictions, 2023, Silver Tsunami / motivational interviewing) | Genuinely strong academic signal, but listing publications on a marketing landing page risks looking like a textbook ad. Flagged as optional Option A4-extension if the user wants it. |
-| Grand Rounds and AAAP poster presentations | Same reason as above. Belongs on a separate `/about` page if one is ever built. |
-| Teaching experience (Mount Sinai, Larkin, OSU) | Strong CV signal, weak landing-page signal. Would clutter without earning trust users do not already have. |
-| QI projects (Larkin practical-guide, OSU opioid pilot) | Internal-improvement work; not legible to a buyer in 1 second. |
-| Education history (UCLA → U Cincinnati → OSU → Larkin → Mount Sinai) | Full pedigree belongs on a bio page, not a hero. |
-| PRITE high score, Henry Nasrallah Award, Samuel J. Roessler Fund, Academic Scholarship | Insider awards; meaningless to a buyer skimming the page. |
-| Clinical research as sub-investigator (Janssen esketamine, Purdue nalmefene) | Sub-investigator role; risks looking inflated relative to the actual contribution. |
-| Volunteer free-clinic work | Sympathetic but not on-axis for product credibility. |
-| Photography / weight lifting hobbies | Not relevant; risks "corny" framing the user explicitly wants to avoid. |
-| Address, phone, DEA active | Not appropriate for a public marketing surface. |
+| State license list | Reads as defensive credential-stacking rather than relevant signal. |
+| Prior employer list | "Practicing psychiatrist" is the load-bearing claim; listing employers adds line length, not signal. |
+| Peer-reviewed publication detail | Strong academic signal, but listing publication details on a marketing landing page risks looking like a textbook ad. |
+| Presentation and teaching history | Belongs on a separate `/about` page if one is ever built. |
+| Quality-improvement work | Not legible to a buyer in 1 second. |
+| Education history | Full pedigree belongs on a bio page, not a hero. |
+| Awards and scholarships | Insider awards; weak signal to a buyer skimming the page. |
+| Clinical research details | Risks looking inflated relative to the actual contribution. |
+| Volunteer work and hobbies | Not on-axis for product credibility. |
+| Direct contact and license-control details | Not appropriate for a repo-tracked or public marketing surface. |
 
 ### Deferred add-ons (not in this debt item)
 
 If the user later wants a slightly larger credibility footprint without leaving the homepage, the next two highest-signal additions would be:
 
-- **Mount Sinai Beth Israel fellowship** (Option A4 already includes this).
-- **Peer-reviewed publication line** — e.g. as a tiny secondary line under Option A: `Published in The American Journal on Addictions (2023).` This is the single most decision-relevant CV item not already in Option A3/A4.
+- **Recognized fellowship line** (Option A4 category).
+- **Peer-reviewed publication line** — as a tiny secondary line under Option A. This is the single most decision-relevant profile item not already in Option A3/A4.
 
 Neither of these are in the locked diff. They are listed here so the user can opt in explicitly later.
 
