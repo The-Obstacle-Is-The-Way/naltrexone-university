@@ -85,6 +85,35 @@ function createTrackedThenable<T>() {
   };
 }
 
+const pricingTestUser = {
+  id: 'user_1',
+  email: 'user@example.com',
+  createdAt: new Date('2026-02-01T00:00:00Z'),
+  updatedAt: new Date('2026-02-01T00:00:00Z'),
+};
+
+async function renderPricingPageWithEntitlementReason(
+  reason: Exclude<CheckEntitlementOutput['reason'], null | undefined>,
+) {
+  const checkEntitlementUseCase = new FakeUseCase<
+    CheckEntitlementInput,
+    CheckEntitlementOutput
+  >({
+    isEntitled: false,
+    reason,
+  });
+  const element = await PricingPage({
+    searchParams: Promise.resolve({}),
+    authNavFn: () => <div>AuthNav</div>,
+    deps: {
+      authGateway: new FakeAuthGateway(pricingTestUser),
+      checkEntitlementUseCase,
+    },
+  });
+
+  return renderToStaticMarkup(element);
+}
+
 describe('app/pricing', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -355,6 +384,16 @@ describe('app/pricing', () => {
       tone: 'info',
       message: 'Subscription found. Manage billing to resolve payment issues.',
     });
+  });
+
+  it('renders subscription_canceled banner copy when reason=subscription_canceled', async () => {
+    expect(getPricingBanner({ reason: 'subscription_canceled' })).toMatchObject(
+      {
+        tone: 'info',
+        message:
+          'Your subscription is inactive. Choose a plan to restart access.',
+      },
+    );
   });
 
   it('builds the payment-processing banner when reason=payment_processing', async () => {
@@ -797,31 +836,30 @@ describe('app/pricing', () => {
     expect(mainLandmarks[0]?.getAttribute('tabindex')).toBe('-1');
   });
 
-  it('renders manage billing guidance when entitlement reason is manage_billing', async () => {
-    const element = await PricingPage({
-      searchParams: Promise.resolve({}),
-      authNavFn: () => <div>AuthNav</div>,
-      deps: {
-        authGateway: {
-          getCurrentUser: async () => ({
-            id: 'user_1',
-            email: 'user@example.com',
-            createdAt: new Date('2026-02-01T00:00:00Z'),
-            updatedAt: new Date('2026-02-01T00:00:00Z'),
-          }),
-          requireUser: async () => {
-            throw new Error('not used');
-          },
-        },
-        checkEntitlementUseCase: {
-          execute: async () => ({
-            isEntitled: false,
-            reason: 'manage_billing' as const,
-          }),
-        },
-      },
-    });
-    const html = renderToStaticMarkup(element);
+  it('does NOT pass manageBillingAction when reason=subscription_canceled', async () => {
+    const html = await renderPricingPageWithEntitlementReason(
+      'subscription_canceled',
+    );
+
+    expect(html).toContain(
+      'Your subscription is inactive. Choose a plan to restart access.',
+    );
+    expect(html).toContain('Subscribe Monthly');
+    expect(html).toContain('Subscribe Annual');
+    expect(html).not.toContain('Subscription needs attention');
+    expect(html).not.toContain('Manage Billing');
+  });
+
+  it('continues to pass manageBillingAction when reason=manage_billing', async () => {
+    const html = await renderPricingPageWithEntitlementReason('manage_billing');
+
+    expect(html).toContain('Manage Billing');
+    expect(html).not.toContain('Subscribe Monthly');
+  });
+
+  it('continues to pass manageBillingAction when reason=payment_processing', async () => {
+    const html =
+      await renderPricingPageWithEntitlementReason('payment_processing');
 
     expect(html).toContain('Manage Billing');
     expect(html).not.toContain('Subscribe Monthly');

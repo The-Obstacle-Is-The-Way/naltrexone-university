@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-05-07 (DEBT-380 archived after PR #308 merge)
+**Last Updated:** 2026-05-13 (DEBT-383 implementation + CodeRabbit doc hardening)
 
 ---
 
@@ -20,8 +20,11 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-332](./debt-332-security-posture-audit.md) | Security posture audit — Clerk strict CSP report-only is deployed and verified in production/dev, no RLS (accepted architecture decision); remaining work is billing-flow `form-action` verification plus enforcing mode or explicitly accepting the residual report-only posture | P2 | — |
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
+| [DEBT-381](./debt-381-question-content-typography-audit-and-preference-path.md) | Question content typography audit — Quick Practice, Tutor, and Exam are already unified at the Typography Policy Medium content tier. Do not globally shrink question text; if needed later, add a user-selectable Markdown/content-size preference while leaving UI chrome unchanged. | P3 | — |
+| [DEBT-382](./debt-382-landing-page-content-refresh-question-count-and-author-credibility.md) | Landing page content refresh — update stale question-count/study-mode/author-credibility copy after DEBT-383 lands. `900+` remains the locked direction, but implementation must first preserve portable evidence for the local 948-question imported-content count or replace it with a tracked source count. | P3 | — |
+| [DEBT-383](./debt-383-canceled-subscription-recovery-trap.md) | Canceled subscription recovery trap — authenticated users with terminal canceled subscriptions can be trapped in a `manage_billing` loop and blocked from re-subscribing. Open blocking item for DEBT-382: split canceled recovery into `subscription_canceled`, show restart plans, and align checkout eligibility so terminal rows can create Checkout sessions. | P1 | — |
 
-**Next Debt ID:** DEBT-381
+**Next Debt ID:** DEBT-384
 
 ---
 

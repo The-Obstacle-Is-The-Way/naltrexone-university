@@ -33,8 +33,22 @@ export const EntitledStatuses: readonly SubscriptionStatus[] = [
 ];
 
 /**
+ * Statuses that represent an in-flight or recoverable subscription and should
+ * block starting a duplicate Checkout flow while their billing period is still
+ * current.
+ */
+export const BlockingCheckoutSubscriptionStatuses: readonly SubscriptionStatus[] =
+  ['active', 'inTrial', 'pastDue', 'unpaid', 'paymentProcessing', 'paused'];
+
+/**
  * Check if a status grants entitlement.
  */
 export function isEntitledStatus(status: SubscriptionStatus): boolean {
   return EntitledStatuses.includes(status);
+}
+
+export function isBlockingCheckoutSubscriptionStatus(
+  status: SubscriptionStatus,
+): boolean {
+  return BlockingCheckoutSubscriptionStatuses.includes(status);
 }
