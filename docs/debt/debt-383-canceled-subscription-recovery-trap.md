@@ -220,11 +220,11 @@ Implementation shape:
 
 Why this is the right cut:
 
-- It preserves the strict entitlement rule: `canceled` does not grant access.
-- It gives canceled users a way back into the product.
-- It avoids telling a canceled user they have a payment issue.
-- It does not require Stripe read-path calls inside entitlement checks.
-- It keeps the duplicate-subscription protection from BUG-101/BUG-052 for non-terminal states while removing the accidental terminal-row dead end.
+- Preserves the strict entitlement rule: `canceled` does not grant access.
+- Gives canceled users a way back into the product.
+- Avoids telling a canceled user they have a payment issue.
+- Does not require Stripe read-path calls inside entitlement checks.
+- Keeps the duplicate-subscription protection from BUG-101/BUG-052 for non-terminal states while removing the accidental terminal-row dead end.
 
 ### Option B — Not Recommended Without Product Decision
 

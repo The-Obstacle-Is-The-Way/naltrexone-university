@@ -30,9 +30,9 @@ The right future path, if the font still feels large to some users, is a **user-
 
 ## Visual Evidence
 
-Screenshots and computed CSS metrics were captured through the real Playwright E2E auth/setup path at `1920x1080`, dark theme:
+Screenshots and computed CSS metrics were captured through the real Playwright E2E auth/setup path at `1920x1080`, dark theme.
 
-`/Users/ray/Desktop/practice-typography-audit-screenshots-2026-05-08T15-19-42-495Z`
+The original capture bundle was generated outside the repository as `practice-typography-audit-screenshots-2026-05-08T15-19-42-495Z`. If this evidence needs to become portable, save a sanitized copy under `docs/debt/artifacts/debt-381/`.
 
 Files:
 

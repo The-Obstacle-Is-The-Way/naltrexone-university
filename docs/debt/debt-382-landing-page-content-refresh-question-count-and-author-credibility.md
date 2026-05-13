@@ -2,10 +2,10 @@
 
 **Priority:** P3
 **Created:** 2026-05-12
-**Source:** User-reported gap on the marketing landing page: the headline question count (`500+`) understates the actual content library (948 source `.mdx` question files imported into `content/questions/imported/` across 7 source pathways as of 2026-05-12), the `2 Study Modes` stat omits Quick Practice as a distinct practice surface, and there is no mention anywhere on the public marketing surface of the product being authored by a practicing, double board-certified psychiatrist.
+**Source:** User-reported gap on the marketing landing page: the headline question count (`500+`) understates the actual content library, the `2 Study Modes` stat omits Quick Practice as a distinct practice surface, and there is no mention anywhere on the public marketing surface of the product being authored by a practicing, double board-certified psychiatrist. The 948-question count came from the local authoring workspace's imported-content corpus under `content/questions/imported/`; those files are not currently tracked in git, so DEBT-382 implementation must make the count evidence portable before changing the public numeric claim.
 **Related:** [Frontend Standards](../frontend/standards.md), [DEBT-378](../_archive/debt/debt-378-tutor-drop-submit-button-choice-click-commits.md), [DEBT-379](../_archive/debt/debt-379-exam-action-bar-promote-primary-cta-to-right-slot.md), [DEBT-380](../_archive/debt/debt-380-exam-footer-cluster-previous-and-primary-cta-mirror-tutor.md), [DEBT-381](./debt-381-question-content-typography-audit-and-preference-path.md)
 
-**Status:** Active — decisions locked, ready for implementation
+**Status:** Active — decisions locked; paused behind DEBT-383 and requires portable content-count evidence before implementation
 
 ---
 
@@ -13,7 +13,7 @@
 
 | Question | Decision |
 |----------|----------|
-| Number to publish | `900+` |
+| Number to publish | `900+`, contingent on preserving portable evidence for the 948 local imported-content count before implementation |
 | Study modes stat | Update `impactStats[1].value` from `2` to `3`; keep label `Study Modes` |
 | Placement of credibility line | **Option A** — directly under the hero badge, between `marketing-home.tsx:75-77` (badge) and `marketing-home.tsx:78-83` (h1) |
 | Phrasing | **Option A1 (unnamed)** — `Authored by a practicing psychiatrist — double board-certified in Addiction Psychiatry and General Psychiatry. Grounded in primary literature with citations.` |
@@ -21,7 +21,7 @@
 | Author name on hero | **Not included.** User is considering a legal first-name change; locking a specific name onto a public marketing surface now would create future work and a potential credibility hiccup if a buyer cross-references ABPN/NPI/LinkedIn later. The unnamed phrasing keeps roughly 80% of the credibility lift (working, double-board-certified, exact subspecialty) without committing to a name spelling. Upgrade path to a named variant later is a one-line edit. |
 | Optional AJA 2023 publication line | **Not included** in this debt item. |
 
-No remaining open questions block implementation. `3 Study Modes` is in scope for this debt item.
+No copy decisions remain open. Implementation is blocked until DEBT-383 lands and the 948-count evidence is made reproducible in the repo or replaced with a newly verified tracked source count. `3 Study Modes` is in scope for this debt item.
 
 ---
 
@@ -29,13 +29,13 @@ No remaining open questions block implementation. `3 Study Modes` is in scope fo
 
 Three concrete edits to the public marketing landing page (`/`):
 
-1. **Replace the stale "500+ Board-Style Questions" stat** with an honest, conservative number that reflects the current library size. Locked copy: **`900+`**. Backed by 948 `.mdx` source question files in `content/questions/imported/` on the current `dev` branch. Rounding down to `900+` avoids drift between marketing copy and the live published count and gives headroom before the next required refresh.
+1. **Replace the stale "500+ Board-Style Questions" stat** with an honest, conservative number that reflects the current library size. Locked copy: **`900+`**. This direction was backed by a local authoring-workspace count of 948 `.mdx` source question files in `content/questions/imported/`; because that imported corpus is not tracked in git, the implementation PR must first preserve a repo-portable count artifact or re-verify the count against a tracked source of truth. Rounding down to `900+` avoids drift between marketing copy and the live published count and gives headroom before the next required refresh.
 2. **Replace the stale `2 Study Modes` stat** with **`3`** while keeping the `Study Modes` label. The product exposes three distinct surfaces: Tutor mode, Exam mode, and Quick Practice mode (`app/(app)/app/practice/quick/quick-practice-client.tsx`).
 3. **Add a single, restrained, _unnamed_ author-credibility line** that surfaces the differentiator without theatrics. Locked public copy:
    > _Authored by a practicing psychiatrist — double board-certified in Addiction Psychiatry and General Psychiatry. Grounded in primary literature with citations._
    No headshot. No testimonial-style bordered card. No name. No MD/DO/credential alphabet soup. Two sentences, one location.
 
-The literature/citations sentence is intentionally explicit. The seven source-directory names under `content/questions/imported/` (`50-studies-every-psychiatrist-should-know`, `article-based-pathway`, `asam-guidelines`, `cochrane`, `personal-papers`, `prescribers-guide`, `therapy`) evidence the primary-literature backbone, and the existing Features copy already implicitly claims "detailed rationales and references" at `components/marketing/marketing-home.tsx:30`. The new line makes that claim visible and load-bearing. The user considered and rejected softer phrases like "clinical nuance" and "clinically oriented" because they are subjective or already implied.
+The literature/citations sentence is intentionally explicit. The seven source-directory names from the local imported-content corpus (`50-studies-every-psychiatrist-should-know`, `article-based-pathway`, `asam-guidelines`, `cochrane`, `personal-papers`, `prescribers-guide`, `therapy`) evidence the primary-literature backbone, and the existing Features copy already implicitly claims "detailed rationales and references" at `components/marketing/marketing-home.tsx:30`. The new line makes that claim visible and load-bearing. The user considered and rejected softer phrases like "clinical nuance" and "clinically oriented" because they are subjective or already implied.
 
 This is intentionally a minimum-viable copy refresh, not a redesign. Visual layout, hero composition, pricing card structure, and section ordering are out of scope. Only `<span>` / `<p>` text and the `impactStats` array values change.
 
@@ -60,7 +60,7 @@ const impactStats = [
 ];
 ```
 
-The `500+` value is the only one of the four stats that is a hard, falsifiable, content-volume claim. The library has nearly doubled since that string was written; current source-of-truth count is **948 `.mdx` question files** in `content/questions/imported/` across:
+The `500+` value is the only one of the four stats that is a hard, falsifiable, content-volume claim. The local authoring workspace's imported-content corpus counted **948 `.mdx` question files** under `content/questions/imported/` across:
 
 - `50-studies-every-psychiatrist-should-know/` — 48
 - `article-based-pathway/` — 480
@@ -71,6 +71,8 @@ The `500+` value is the only one of the four stats that is a hard, falsifiable, 
 - `therapy/` — 12
 
 This is concrete user harm: a prospective buyer landing on the public homepage today is being told the library is roughly half its actual size. That is both unfair to the product and a credibility risk if a buyer later notices the discrepancy in-app.
+
+> **Portability caveat.** `content/questions/imported/` is not currently tracked in git, so a fresh GitHub/CI checkout cannot mechanically reproduce the 948 count. Before implementing the `900+` public stat, add a repo-relative count artifact or re-run the count against a tracked source of truth and update this doc if the verified number changes.
 
 ### Stale study-mode claim
 
@@ -132,7 +134,7 @@ Rationale for `900+` over `948` or `1000`:
 
 - `948` exposes a precise integer that will be wrong the moment a single question is added or retired. `900+` is honest, conservative, and ages well.
 - `1000` rounds up past the verified source-file count. Avoid.
-- `900+` is the user's pre-audit instinct and is supported by the verified source count.
+- `900+` is the user's pre-audit instinct and is supported by the local imported-content count once that evidence is made portable.
 
 ### Change 2 — Update `impactStats[1]` (study modes)
 
@@ -288,7 +290,7 @@ When the follow-up implementation PR ships:
 
 Before merging the implementation PR:
 
-- [ ] Mechanical recount of `find content/questions/imported -name "*.mdx" | wc -l` re-confirms the source library size still supports the published number.
+- [ ] Mechanical recount from a repo-portable artifact or tracked source re-confirms the source library size still supports the published number.
 - [ ] No regressions in `components/marketing/marketing-home.test.tsx` or `components/marketing/marketing-layout.test.tsx`.
 - [ ] CodeRabbit review on the implementation PR passes per `feedback_grade_before_merge`.
 - [ ] Index updated when this debt item is closed (move to Resolved table, set Resolved date).
