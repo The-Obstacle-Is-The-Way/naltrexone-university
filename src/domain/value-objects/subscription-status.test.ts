@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   AllSubscriptionStatuses,
   EntitledStatuses,
+  isBlockingCheckoutSubscriptionStatus,
   isEntitledStatus,
   isValidSubscriptionStatus,
 } from './subscription-status';
@@ -58,6 +59,24 @@ describe('SubscriptionStatus', () => {
   describe('EntitledStatuses', () => {
     it('contains exactly active, inTrial, and pastDue', () => {
       expect(EntitledStatuses).toEqual(['active', 'inTrial', 'pastDue']);
+    });
+  });
+
+  describe('isBlockingCheckoutSubscriptionStatus', () => {
+    it('returns true for active and recoverable statuses', () => {
+      expect(isBlockingCheckoutSubscriptionStatus('active')).toBe(true);
+      expect(isBlockingCheckoutSubscriptionStatus('inTrial')).toBe(true);
+      expect(isBlockingCheckoutSubscriptionStatus('pastDue')).toBe(true);
+      expect(isBlockingCheckoutSubscriptionStatus('unpaid')).toBe(true);
+      expect(isBlockingCheckoutSubscriptionStatus('paymentProcessing')).toBe(
+        true,
+      );
+      expect(isBlockingCheckoutSubscriptionStatus('paused')).toBe(true);
+    });
+
+    it('returns false for terminal statuses', () => {
+      expect(isBlockingCheckoutSubscriptionStatus('canceled')).toBe(false);
+      expect(isBlockingCheckoutSubscriptionStatus('paymentFailed')).toBe(false);
     });
   });
 });

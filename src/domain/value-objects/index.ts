@@ -35,7 +35,9 @@ export {
 } from './subscription-plan';
 export {
   AllSubscriptionStatuses,
+  BlockingCheckoutSubscriptionStatuses,
   EntitledStatuses,
+  isBlockingCheckoutSubscriptionStatus,
   isEntitledStatus,
   isValidSubscriptionStatus,
   type SubscriptionStatus,

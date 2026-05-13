@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { createSubscription } from '@/src/domain/test-helpers';
+import type { SubscriptionStatus } from '@/src/domain/value-objects';
 import { ApplicationError } from '../errors';
 import {
   FakeLogger,
@@ -86,7 +87,168 @@ class EmptyAfterConflictStripeCustomerRepository extends FakeStripeCustomerRepos
   }
 }
 
+const defaultCheckoutInput = {
+  userId: 'user-1',
+  clerkUserId: 'clerk-1',
+  email: 'user@example.com',
+  plan: 'monthly' as const,
+  successUrl:
+    'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
+  cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
+};
+
+function createPaymentGateway() {
+  return new FakePaymentGateway({
+    externalCustomerId: 'cus_new',
+    checkoutUrl: 'https://stripe/checkout',
+    portalUrl: 'https://stripe/portal',
+    webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
+  });
+}
+
+async function createUseCaseWithExistingCustomer(input: {
+  status?: SubscriptionStatus;
+  currentPeriodEnd?: Date;
+}) {
+  const paymentGateway = createPaymentGateway();
+  const stripeCustomers = new FakeStripeCustomerRepository();
+  await stripeCustomers.insert('user-1', 'cus_existing');
+
+  const subscriptions =
+    input.status && input.currentPeriodEnd
+      ? new FakeSubscriptionRepository([
+          createSubscription({
+            userId: 'user-1',
+            status: input.status,
+            currentPeriodEnd: input.currentPeriodEnd,
+          }),
+        ])
+      : new FakeSubscriptionRepository();
+
+  return {
+    paymentGateway,
+    useCase: new CreateCheckoutSessionUseCase(
+      stripeCustomers,
+      subscriptions,
+      paymentGateway,
+      new FakeLogger(),
+      () => new Date('2026-02-01T00:00:00Z'),
+    ),
+  };
+}
+
 describe('CreateCheckoutSessionUseCase', () => {
+  it('allows checkout when local row is canceled even with future currentPeriodEnd', async () => {
+    const { paymentGateway, useCase } = await createUseCaseWithExistingCustomer(
+      {
+        status: 'canceled',
+        currentPeriodEnd: new Date('2026-03-01T00:00:00Z'),
+      },
+    );
+
+    await expect(useCase.execute(defaultCheckoutInput)).resolves.toEqual({
+      url: 'https://stripe/checkout',
+    });
+
+    expect(paymentGateway.checkoutInputs).toEqual([
+      {
+        userId: 'user-1',
+        externalCustomerId: 'cus_existing',
+        plan: 'monthly',
+        successUrl:
+          'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
+        cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
+      },
+    ]);
+  });
+
+  it('allows checkout when local row is paymentFailed even with future currentPeriodEnd', async () => {
+    const { paymentGateway, useCase } = await createUseCaseWithExistingCustomer(
+      {
+        status: 'paymentFailed',
+        currentPeriodEnd: new Date('2026-03-01T00:00:00Z'),
+      },
+    );
+
+    await expect(useCase.execute(defaultCheckoutInput)).resolves.toEqual({
+      url: 'https://stripe/checkout',
+    });
+
+    expect(paymentGateway.checkoutInputs).toHaveLength(1);
+  });
+
+  it('continues to block checkout when local row is active with future currentPeriodEnd', async () => {
+    const { paymentGateway, useCase } = await createUseCaseWithExistingCustomer(
+      {
+        status: 'active',
+        currentPeriodEnd: new Date('2026-03-01T00:00:00Z'),
+      },
+    );
+
+    await expect(useCase.execute(defaultCheckoutInput)).rejects.toMatchObject({
+      code: 'ALREADY_SUBSCRIBED',
+    });
+
+    expect(paymentGateway.checkoutInputs).toEqual([]);
+  });
+
+  it('continues to block checkout when local row is pastDue with future currentPeriodEnd', async () => {
+    const { paymentGateway, useCase } = await createUseCaseWithExistingCustomer(
+      {
+        status: 'pastDue',
+        currentPeriodEnd: new Date('2026-03-01T00:00:00Z'),
+      },
+    );
+
+    await expect(useCase.execute(defaultCheckoutInput)).rejects.toMatchObject({
+      code: 'ALREADY_SUBSCRIBED',
+    });
+
+    expect(paymentGateway.checkoutInputs).toEqual([]);
+  });
+
+  it('continues to block checkout when local row is paused with future currentPeriodEnd', async () => {
+    const { paymentGateway, useCase } = await createUseCaseWithExistingCustomer(
+      {
+        status: 'paused',
+        currentPeriodEnd: new Date('2026-03-01T00:00:00Z'),
+      },
+    );
+
+    await expect(useCase.execute(defaultCheckoutInput)).rejects.toMatchObject({
+      code: 'ALREADY_SUBSCRIBED',
+    });
+
+    expect(paymentGateway.checkoutInputs).toEqual([]);
+  });
+
+  it('continues to allow checkout when no subscription row exists', async () => {
+    const { paymentGateway, useCase } = await createUseCaseWithExistingCustomer(
+      {},
+    );
+
+    await expect(useCase.execute(defaultCheckoutInput)).resolves.toEqual({
+      url: 'https://stripe/checkout',
+    });
+
+    expect(paymentGateway.checkoutInputs).toHaveLength(1);
+  });
+
+  it('continues to allow checkout when currentPeriodEnd is in the past', async () => {
+    const { paymentGateway, useCase } = await createUseCaseWithExistingCustomer(
+      {
+        status: 'active',
+        currentPeriodEnd: new Date('2026-01-01T00:00:00Z'),
+      },
+    );
+
+    await expect(useCase.execute(defaultCheckoutInput)).resolves.toEqual({
+      url: 'https://stripe/checkout',
+    });
+
+    expect(paymentGateway.checkoutInputs).toHaveLength(1);
+  });
+
   it('returns ALREADY_SUBSCRIBED when a subscription is still current', async () => {
     const paymentGateway = new FakePaymentGateway({
       externalCustomerId: 'cus_new',

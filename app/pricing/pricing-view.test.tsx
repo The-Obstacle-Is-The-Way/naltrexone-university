@@ -10,6 +10,28 @@ beforeAll(async () => {
 });
 
 describe('app/pricing/pricing-view', () => {
+  it('renders plan grid when user is not entitled and manageBillingAction is undefined', () => {
+    const banner: PricingBanner = {
+      tone: 'info',
+      message:
+        'Your subscription is inactive. Choose a plan to restart access.',
+    };
+
+    const html = renderToStaticMarkup(
+      <PricingView
+        isEntitled={false}
+        banner={banner}
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+
+    expect(html).toContain('Subscribe Monthly');
+    expect(html).toContain('Subscribe Annual');
+    expect(html).not.toContain('Subscription needs attention');
+    expect(html).not.toContain('Manage Billing');
+  });
+
   it('renders idempotency fields for manage billing forms', () => {
     const banner: PricingBanner = {
       tone: 'error',

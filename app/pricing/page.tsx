@@ -99,6 +99,14 @@ export function getPricingBanner(
     };
   }
 
+  if (reason === 'subscription_canceled') {
+    return {
+      tone: 'info',
+      message:
+        'Your subscription is inactive. Choose a plan to restart access.',
+    };
+  }
+
   if (reason === 'payment_processing') {
     return {
       tone: 'info',

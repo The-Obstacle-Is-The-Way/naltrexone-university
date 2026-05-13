@@ -77,7 +77,7 @@ describe('CheckEntitlementUseCase', () => {
     });
   });
 
-  it('returns manage_billing for non-entitled current subscriptions', async () => {
+  it('returns subscription_canceled for canceled current subscriptions', async () => {
     const sub = createSubscription({
       userId: 'user-1',
       status: 'canceled',
@@ -91,7 +91,7 @@ describe('CheckEntitlementUseCase', () => {
     const result = await useCase.execute({ userId: 'user-1' });
     expect(result).toEqual({
       isEntitled: false,
-      reason: 'manage_billing',
+      reason: 'subscription_canceled',
       subscriptionStatus: 'canceled',
       hasActiveSubscriptionPeriod: true,
     });

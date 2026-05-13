@@ -80,6 +80,18 @@ describe('determineNonEntitledReason', () => {
     );
   });
 
+  it('returns subscription_canceled when canceled with future period', () => {
+    expect(determineNonEntitledReason('canceled', true)).toBe(
+      'subscription_canceled',
+    );
+  });
+
+  it('returns subscription_required when canceled with ended period', () => {
+    expect(determineNonEntitledReason('canceled', false)).toBe(
+      'subscription_required',
+    );
+  });
+
   it('returns payment_processing for paymentProcessing with active period', () => {
     expect(determineNonEntitledReason('paymentProcessing', true)).toBe(
       'payment_processing',
@@ -92,7 +104,11 @@ describe('determineNonEntitledReason', () => {
     );
   });
 
-  it('returns manage_billing for other non-entitled statuses with active period', () => {
-    expect(determineNonEntitledReason('canceled', true)).toBe('manage_billing');
+  it('keeps manage_billing for unpaid with future period', () => {
+    expect(determineNonEntitledReason('unpaid', true)).toBe('manage_billing');
+  });
+
+  it('keeps manage_billing for paused with future period', () => {
+    expect(determineNonEntitledReason('paused', true)).toBe('manage_billing');
   });
 });

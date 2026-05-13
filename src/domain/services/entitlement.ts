@@ -3,6 +3,7 @@ import { isEntitledStatus, type SubscriptionStatus } from '../value-objects';
 
 export type NonEntitledReason =
   | 'subscription_required'
+  | 'subscription_canceled'
   | 'payment_processing'
   | 'manage_billing';
 
@@ -24,6 +25,7 @@ export function determineNonEntitledReason(
   hasActiveSubscriptionPeriod: boolean,
 ): NonEntitledReason {
   if (!hasActiveSubscriptionPeriod) return 'subscription_required';
+  if (status === 'canceled') return 'subscription_canceled';
   if (status === 'paymentProcessing') return 'payment_processing';
   if (status === 'paymentFailed') return 'subscription_required';
   return 'manage_billing';

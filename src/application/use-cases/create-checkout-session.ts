@@ -1,3 +1,4 @@
+import { isBlockingCheckoutSubscriptionStatus } from '@/src/domain/value-objects';
 import { ApplicationError, isApplicationError } from '../errors';
 import type { PaymentGateway } from '../ports/gateways';
 import type { Logger } from '../ports/logger';
@@ -108,7 +109,11 @@ export class CreateCheckoutSessionUseCase {
     input: CreateCheckoutSessionInput,
   ): Promise<CreateCheckoutSessionOutput> {
     const subscription = await this.subscriptions.findByUserId(input.userId);
-    if (subscription && subscription.currentPeriodEnd > this.now()) {
+    if (
+      subscription &&
+      subscription.currentPeriodEnd > this.now() &&
+      isBlockingCheckoutSubscriptionStatus(subscription.status)
+    ) {
       throw new ApplicationError(
         'ALREADY_SUBSCRIBED',
         'Subscription already exists for this user',
