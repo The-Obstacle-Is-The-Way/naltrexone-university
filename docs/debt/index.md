@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-05-13 (DEBT-382 added for landing page content refresh — question count and unnamed author-credibility line)
+**Last Updated:** 2026-05-13 (DEBT-382 spec hardened after audit pass)
 
 ---
 
@@ -21,7 +21,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
 | [DEBT-381](./debt-381-question-content-typography-audit-and-preference-path.md) | Question content typography audit — Quick Practice, Tutor, and Exam are already unified at the Typography Policy Medium content tier: stems, choices, and feedback explanations compute to `16px / 24px`. Do not globally shrink question text to match dense starter controls; if smaller/larger reading density is needed, implement a user-selectable Markdown/content-size preference only, defaulting to current Medium and leaving hardcoded UI chrome unchanged. | P3 | — |
-| [DEBT-382](./debt-382-landing-page-content-refresh-question-count-and-author-credibility.md) | Landing page content refresh — replace stale `500+ Board-Style Questions` stat (`components/marketing/marketing-home.tsx:19`) with `900+` (backed by 948 `.mdx` source files in `content/questions/imported/`), and add a single restrained unnamed author-credibility line directly under the hero badge: _"Authored by a practicing psychiatrist — double board-certified in Addiction Psychiatry and General Psychiatry."_ Author name deliberately not surfaced in this iteration (deferred pending user's potential legal first-name change). Two text edits, no layout changes; visual redesign, A/B testing, SEO meta updates, named-variant upgrade, and the `2 Study Modes` stat refresh are out of scope. | P3 | — |
+| [DEBT-382](./debt-382-landing-page-content-refresh-question-count-and-author-credibility.md) | Landing page content refresh — replace stale `500+ Board-Style Questions` stat (`components/marketing/marketing-home.tsx:19`) with `900+` (backed by 948 `.mdx` source files in `content/questions/imported/`), update `2 Study Modes` to `3 Study Modes` to count Tutor, Exam, and Quick Practice, and add a single restrained unnamed author-credibility line directly under the hero badge: _"Authored by a practicing psychiatrist — double board-certified in Addiction Psychiatry and General Psychiatry. Grounded in primary literature with citations."_ Author name deliberately not surfaced in this iteration (deferred pending user's potential legal first-name change). Three text edits, no layout changes; the literature/citations claim is backed by the imported source pathways and existing detailed-rationales/references copy. Visual redesign, A/B testing, SEO meta updates, named-variant upgrade, and optional AJA publication copy are out of scope. | P3 | — |
 
 **Next Debt ID:** DEBT-383
 
