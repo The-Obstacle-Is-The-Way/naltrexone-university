@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-05-13 (DEBT-383 resolved + archived after PR #309 merge; DEBT-382 unblocked)
+**Last Updated:** 2026-05-13 (DEBT-384 final hardening pass complete; H3 confirmed with broader scope — TWO empty-metadata subscriptions, recent phantom source, plus latent invoice-schema-drift bug surfaced)
 
 ---
 
@@ -22,8 +22,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
 | [DEBT-381](./debt-381-question-content-typography-audit-and-preference-path.md) | Question content typography audit — Quick Practice, Tutor, and Exam are already unified at the Typography Policy Medium content tier. Do not globally shrink question text; if needed later, add a user-selectable Markdown/content-size preference while leaving UI chrome unchanged. | P3 | — |
 | [DEBT-382](./debt-382-landing-page-content-refresh-question-count-and-author-credibility.md) | Landing page content refresh — update stale question-count/study-mode/author-credibility copy. `900+` remains the locked direction, but implementation must first preserve portable evidence for the local 948-question imported-content count or replace it with a tracked source count. | P3 | — |
+| [DEBT-384](./debt-384-stripe-webhook-error-rate-investigation.md) | Stripe webhook delivery error-rate investigation — **H3 confirmed empirically via Stripe CLI + independent adversarial audit on 2026-05-13.** One webhook endpoint per mode (test + live, both enabled) on the unified Stripe account. Live endpoint exists at `https://addictionboards.com/api/stripe/webhook`; 1 live customer and 0 live subscriptions. The observed test-mode failures are driven by **TWO empty-metadata subscriptions** on the e2e-test customer: one canceled subscription (90.004 days after creation = exact Stripe sandbox auto-retention match, not manual as initial pass claimed) and one active subscription created today. `customer.subscription.updated/deleted` state changes on these fail with HTTP 500 from `stripe-subscription-normalizer.ts:27-42`; future state changes on the active subscription will keep failing until cleanup or code hardening. Customer metadata is correct; subscription metadata is missing, so the source is a subscription-creation path, not customer creation. **Audit also surfaced a separate latent bug**: invoice-event payload schema drift — current Stripe API places subscription ref at `data.object.parent.subscription_details.subscription` but our schema reads root-level `subscription`, causing silent no-op on invoice events (currently masked by parallel `customer.subscription.updated` events). **Recommended fix tiers:** T1 delete both bad subs (no code); T2 find and fix the phantom-creation source (suspected E2E/direct fixture path); T3 webhook-controller-level skip on STRIPE_ERROR for missing metadata — NOT a global normalizer change because `reconcile-stripe-subscriptions.ts:91,152` also calls the normalizer and a global change would shift reconcile semantics from fail-closed to log-and-skip. Existing `stripe-subscription-normalizer.test.ts:66-81` explicitly asserts the throw. Config gap: neither endpoint subscribes to `customer.subscription.created`. Separate ticket worth opening for the invoice schema drift. | P2 (deferred until T1+T2 cleanup; T3 optional) | — |
 
-**Next Debt ID:** DEBT-384
+**Next Debt ID:** DEBT-385
 
 ---
 
