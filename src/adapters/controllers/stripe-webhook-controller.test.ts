@@ -1,8 +1,4 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-  processStripeWebhook,
-  type StripeWebhookDeps,
-} from '@/src/adapters/controllers/stripe-webhook-controller';
 import { ApplicationError } from '@/src/application/errors';
 import {
   FakeLogger,
@@ -11,6 +7,10 @@ import {
   FakeStripeEventRepository,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
+import {
+  processStripeWebhook,
+  type StripeWebhookDeps,
+} from './stripe-webhook-controller';
 
 class FailingStripeEventRepository extends FakeStripeEventRepository {
   async pruneProcessedBefore(_cutoff: Date, _limit: number): Promise<number> {
