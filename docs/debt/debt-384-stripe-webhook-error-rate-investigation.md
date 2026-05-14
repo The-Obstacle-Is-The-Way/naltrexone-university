@@ -184,7 +184,7 @@ For an invoice event with the current API version, `subscription` is `null` at t
 
 Practical impact as of the 2026-05-13 investigation is masked by parallel `customer.subscription.updated` events (which use the subscription-event branch at `stripe-webhook-processor.ts:107-138` and read the subscription correctly). The user's recovery subscription state in our DB is correct because the subscription-event branch handled the state change. This was filed as [DEBT-385](./debt-385-stripe-invoice-event-subscription-ref-schema-drift.md), not implemented in DEBT-384. But:
 
-- Any invoice-event-only state transition (e.g., a payment-flow change that fires invoice.* but not customer.subscription.*) would be silently dropped.
+- Any invoice-event-only state transition (e.g., a payment-flow change that fires `invoice.*` but not `customer.subscription.*`) would be silently dropped.
 - The `customer.subscription.created` events we currently don't subscribe to would have masked even more invoice-event handling.
 - This is a real defect, currently latent. Separate from the H3 metadata issue but worth tracking — likely worth its own ticket.
 
@@ -298,7 +298,7 @@ The dashboard aggregate percentages are *consistent* with this hypothesis but no
 
 ### H4 — Stale price ID — **NOT OBSERVED**
 
-The failing subscription's price ID was inspected and matches the configured monthly price (`NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`). Given H3 is sufficient to explain the failure (normalizer throws on missing metadata *before* reaching the price-ID check at lines 78-84), stale price ID is not the cause of the observed failures. Could still be an issue for other future events, but it is not present here.
+The failing subscription's price ID was inspected and matches the configured monthly price (`NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`). Given H3 is sufficient to explain the failure (normalizer throws on missing metadata *before* reaching the price-ID check at lines 78-84), stale price ID is not the cause of the observed failures. It could still be an issue for other future events, but it is not present here.
 
 ### H5 — Burst rate-limit — **NOT OBSERVED**
 
