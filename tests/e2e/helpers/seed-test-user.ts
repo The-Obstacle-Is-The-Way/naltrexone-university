@@ -46,6 +46,7 @@ export async function seedTestSubscription(): Promise<void> {
       sql,
       stripe,
       userId,
+      clerkUserId,
       email,
     );
 
@@ -106,6 +107,7 @@ async function ensureStripeCustomer(
   sql: postgres.Sql,
   stripe: Stripe,
   userId: string,
+  clerkUserId: string,
   email: string,
 ): Promise<string> {
   // Check DB first
@@ -121,7 +123,13 @@ async function ensureStripeCustomer(
   if (customers.data.length > 0) {
     stripeCustomerId = customers.data[0].id;
   } else {
-    const customer = await stripe.customers.create({ email });
+    const customer = await stripe.customers.create({
+      email,
+      metadata: {
+        user_id: userId,
+        clerk_user_id: clerkUserId,
+      },
+    });
     stripeCustomerId = customer.id;
   }
 
@@ -191,6 +199,14 @@ async function ensureActiveSubscription(
   let currentPeriodEnd: Date;
 
   if (activeSub) {
+    if (activeSub.metadata?.user_id !== userId) {
+      await stripe.subscriptions.update(activeSub.id, {
+        metadata: {
+          ...(activeSub.metadata ?? {}),
+          user_id: userId,
+        },
+      });
+    }
     subscriptionId = activeSub.id;
     currentPeriodEnd = new Date(
       activeSub.items.data[0].current_period_end * 1000,
@@ -199,6 +215,9 @@ async function ensureActiveSubscription(
     const subscription = await stripe.subscriptions.create({
       customer: stripeCustomerId,
       items: [{ price: priceId }],
+      metadata: {
+        user_id: userId,
+      },
     });
     subscriptionId = subscription.id;
     currentPeriodEnd = new Date(

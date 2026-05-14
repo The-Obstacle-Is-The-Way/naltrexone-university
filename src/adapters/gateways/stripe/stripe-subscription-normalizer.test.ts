@@ -74,7 +74,14 @@ describe('normalizeStripeSubscriptionUpdate', () => {
         priceIds,
         logger,
       }),
-    ).toThrow(expect.objectContaining({ code: 'STRIPE_ERROR' }));
+    ).toThrow(
+      expect.objectContaining({
+        code: 'STRIPE_ERROR',
+        fieldErrors: {
+          'metadata.user_id': ['required'],
+        },
+      }),
+    );
 
     expect(logger.errorCalls).toHaveLength(1);
     expect(logger.errorCalls[0]).toMatchObject({

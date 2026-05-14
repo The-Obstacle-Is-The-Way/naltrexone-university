@@ -4,7 +4,7 @@
 **Created:** 2026-05-13
 **Source:** Surfaced during the DEBT-383 dogfood incident triage. The Stripe Workbench webhook view showed an aggregate ~46% error rate on at least one configured webhook destination. DEBT-383 isolated the user-facing recovery-trap bug, but the underlying webhook error rate was not investigated and is potentially independent of that fix.
 **Related:** [DEBT-383 archived](../_archive/debt/debt-383-canceled-subscription-recovery-trap.md), [DEBT-345 circuit breaker](../_archive/debt/debt-345-circuit-breaker-external-services.md), [BUG-183 webhook rollback](../bugs/) (historical), [ADR-XXX webhook idempotency] *(if present)*
-**Status:** Active — empirical CLI inspection completed 2026-05-13; independent adversarial audit corrected multiple overclaims. **Primary root cause confirmed (H3); broader empirical scope than initial draft assumed; fix path is more conservative than initial draft proposed.**
+**Status:** Active — empirical CLI inspection completed 2026-05-13; independent adversarial audit corrected multiple overclaims. **Primary root cause confirmed (H3). T2 source fix and T3 webhook-specific hardening implemented on branch `debt-384-webhook-metadata-resilience`; T1 Stripe Dashboard cleanup and endpoint config remain pending user/ops actions.**
 
 ---
 
@@ -13,6 +13,7 @@
 - **Initial draft (earlier 2026-05-13):** Investigation framework written without live data (CLI session key was expired). Hypotheses ranked from code review alone.
 - **Empirical pass (2026-05-13):** Re-paired CLI to test environment, confirmed H3 with one bad subscription. Doc updated with empirical claims.
 - **Adversarial audit pass (2026-05-13, this revision):** Independent audit caught 7 material errors in the empirical pass; this revision corrects them and adds a new finding (invoice payload schema drift) that the audit flagged and independent verification confirmed.
+- **Implementation pass (2026-05-14):** Confirmed the active phantom source in `tests/e2e/helpers/seed-test-user.ts`: the E2E helper directly called `stripe.subscriptions.create` without subscription metadata. Fixed the helper to create E2E customers/subscriptions with the metadata contract the webhook normalizer requires, and to repair reused active E2E subscriptions that are missing `metadata.user_id`. Added webhook-controller-only skip behavior for missing subscription metadata. Invoice schema drift moved to [DEBT-385](./debt-385-stripe-invoice-event-subscription-ref-schema-drift.md).
 
 Confirmed errors in earlier passes (all corrected below):
 
@@ -103,7 +104,7 @@ So this is not a "missing customer metadata" problem. The customer metadata is c
 - Stripe Dashboard "Create test data"
 - A `stripe trigger` CLI run during dev
 
-The fact that a *new* one was generated today (`sub_1TWexXKItmaHAwgUKd4owOaY`) means this is **recent**, not purely historical. Whatever created it needs to be traced before assuming a one-time cleanup is durable.
+The fact that a *new* one was generated today (`sub_1TWexXKItmaHAwgUKd4owOaY`) means this is **recent**, not purely historical. Implementation pass result: the source is `tests/e2e/helpers/seed-test-user.ts`, which global E2E setup calls before tests. It directly created Stripe subscriptions without `metadata.user_id`; this branch fixes that source.
 
 ### Failed-delivery events from the canceled phantom
 
@@ -150,7 +151,7 @@ balance.available                    × 1
 
 Healthy mix of expected event types, dominated by invoice/payment flow.
 
-### Invoice payload schema drift (NEW finding from audit-prompted independent check)
+### Invoice payload schema drift (moved to DEBT-385)
 
 Retrieved an actual `invoice.payment_succeeded` event payload via `stripe events list --type 'invoice.payment_succeeded' --limit 1`. The current Stripe API version (`2026-01-28.clover` on retrieved events) puts the subscription reference at:
 
@@ -179,7 +180,7 @@ export const stripeCheckoutSessionSchema = z
 
 For an invoice event with the current API version, `subscription` is `null` at the root. `getSubscriptionUpdateForSubscriptionRefEvent` at `stripe-webhook-processor.ts:13-49` therefore returns `undefined`. The handler returns 200 with no subscription update — **silent no-op**.
 
-Practical impact today is masked by parallel `customer.subscription.updated` events (which use the subscription-event branch at `stripe-webhook-processor.ts:107-138` and read the subscription correctly). The user's recovery subscription state in our DB is correct because the subscription-event branch handled the state change. But:
+Practical impact today is masked by parallel `customer.subscription.updated` events (which use the subscription-event branch at `stripe-webhook-processor.ts:107-138` and read the subscription correctly). The user's recovery subscription state in our DB is correct because the subscription-event branch handled the state change. This was filed as [DEBT-385](./debt-385-stripe-invoice-event-subscription-ref-schema-drift.md), not implemented in DEBT-384. But:
 
 - Any invoice-event-only state transition (e.g., a payment-flow change that fires invoice.* but not customer.subscription.*) would be silently dropped.
 - The `customer.subscription.created` events we currently don't subscribe to would have masked even more invoice-event handling.
@@ -258,7 +259,7 @@ Pattern: **steady defensive hardening, no recent commit that broke webhook deliv
 
 ### 8. Test coverage for the error paths
 
-`app/api/stripe/webhook/route.test.ts` covers: missing signature 400, success 200, signature failure 400, payload failure 400, rate-limited 429, rate-limiter-down 503, generic 500. `src/adapters/controllers/stripe-webhook-controller.test.ts` (11 cases) covers idempotent claim/lock semantics, stale-customer mapping, prune retention, transaction rollback. `src/adapters/gateways/stripe-payment-gateway.test.ts` (33 cases) covers normalization for every whitelisted event type, missing-metadata throws, invalid-payload throws, and signature verification failures.
+`app/api/stripe/webhook/route.test.ts` covers: missing signature 400, success 200, signature failure 400, payload failure 400, rate-limited 429, rate-limiter-down 503, generic 500. `src/adapters/controllers/stripe-webhook-controller.test.ts` now covers idempotent claim/lock semantics, stale-customer mapping, prune retention, transaction rollback, webhook-only missing-metadata skip, and unrelated Stripe-error propagation. `src/adapters/gateways/stripe-payment-gateway.test.ts` covers normalization for every whitelisted event type, missing-metadata throws, invalid-payload throws, and signature verification failures.
 
 **Implication:** The code error paths are well-tested. The observed dashboard error rate is much more likely an *environmental/data-shape* problem (out-of-band subscriptions missing metadata) than an untested code defect in the handler boundary.
 
@@ -278,24 +279,20 @@ If the signing secret were drifted, every event would 400 with `INVALID_WEBHOOK_
 
 ### H3 — Subscriptions missing `metadata.user_id` — **CONFIRMED (primary root cause)**
 
-Empirically verified by retrieving the two pending-delivery events. Both reference `sub_1SzJcRKItmaHAwgUvAMv6MLb`, which has `metadata: {}`. The audit also surfaced a second, ACTIVE subscription `sub_1TWexXKItmaHAwgUKd4owOaY` (created today, same customer) with the same empty-metadata state — the phantom source is recent, not purely historical. Every `customer.subscription.*` state-change event for these subscriptions returns 500 from `src/adapters/gateways/stripe/stripe-subscription-normalizer.ts:27-42`.
+Empirically verified by retrieving the two pending-delivery events. Both reference `sub_1SzJcRKItmaHAwgUvAMv6MLb`, which has `metadata: {}`. The audit also surfaced a second, ACTIVE subscription `sub_1TWexXKItmaHAwgUKd4owOaY` (created today, same customer) with the same empty-metadata state — the phantom source is recent, not purely historical. Every `customer.subscription.*` state-change event for these subscriptions returned 500 from `src/adapters/gateways/stripe/stripe-subscription-normalizer.ts:27-42` before the T3 controller hardening.
 
 **Correction from initial draft:** The cancellation_details.reason field on `sub_1SzJcR...` is `cancellation_requested`, but the 90.004-day delta between created (Unix 1770740215, 2026-02-10) and canceled_at (Unix 1778516583, 2026-05-11) is an exact match for Stripe's 90-day test/sandbox auto-retention policy. This is the same pattern DEBT-383 identified (`Source: Automatic`, 90.02-day delta). The reason field alone cannot distinguish a manual cancel from an auto-retention sweep.
 
-**Correction from initial draft:** The customer (`cus_TxDC4CL6IjuC3f`) itself has CORRECT metadata (`clerk_user_id`, `user_id`), so the failure is not missing customer metadata. The SUBSCRIPTIONS on that customer were created via some path that doesn't propagate metadata to the subscription level. Candidates: E2E test setup hitting Stripe API directly, fixture seeder, `stripe trigger` CLI runs, dashboard "Create test data". Identifying the exact origin is a separate follow-up.
+**Correction from initial draft:** The customer (`cus_TxDC4CL6IjuC3f`) itself has CORRECT metadata (`clerk_user_id`, `user_id`), so the failure is not missing customer metadata. The SUBSCRIPTIONS on that customer were created by `tests/e2e/helpers/seed-test-user.ts`, which hit Stripe's API directly and omitted subscription-level metadata. That origin is now fixed in code on branch `debt-384-webhook-metadata-resilience`.
 
 The dashboard aggregate percentages are *consistent* with this hypothesis but not directly proven by CLI alone — per-attempt response codes were captured via Stripe Dashboard Workbench (not CLI-accessible) and confirmed as 500s with body `{"error":"Webhook processing failed"}`.
 
 **Fix options (audit-corrected — initial draft was too casual about implementation risk):**
 
-- **Tier 1 — Stripe cleanup (no code change):** Delete `sub_1SzJcRKItmaHAwgUvAMv6MLb` (already canceled, retry queue draining) and `sub_1TWexXKItmaHAwgUKd4owOaY` (active, will generate failures on future subscription state changes) from the Stripe Dashboard. Also audit and delete any future out-of-band subscriptions on `cus_TxDC4CL6IjuC3f` or other customers. **This is the only safe immediate action.**
-- **Tier 2 — Stop the phantom factory at the source:** Trace whatever process creates subscriptions on `cus_TxDC4CL6IjuC3f` without metadata. Suspected surfaces include the E2E test suite, fixtures, dashboard-created test data, and CLI-triggered fixtures. Either route it through our Checkout flow (which sets metadata correctly) or add `metadata.user_id` to whatever direct-API call the setup uses. This is the durable fix.
-- **Tier 3 — Defensive normalizer change (NOT a casual change):** A "log-and-skip" change in `normalizeStripeSubscriptionUpdate` would also require:
-  - Updating `src/adapters/gateways/stripe/stripe-subscription-normalizer.test.ts:66-81`, which explicitly asserts the throw and the message `'Stripe subscription metadata.user_id is required'`. The throw is intentional contract today.
-  - Auditing `src/adapters/jobs/reconcile-stripe-subscriptions.ts:91, 152`, which ALSO calls `retrieveAndNormalizeStripeSubscription` for reconcile-loop processing. A global "skip on missing metadata" would change reconcile semantics from fail-closed to log-and-skip — potentially safe but needs deliberate decision.
-  - Considering a customer-metadata fallback: when subscription metadata is empty but the customer's metadata has `user_id`, optionally fall through to the customer's value. More resilient but masks subscription-creation bugs.
-  - **Safer design:** webhook-specific skip path (controller-level, not normalizer-level) so reconcile remains fail-closed. The webhook controller catches the metadata `STRIPE_ERROR` and returns 200 with a `metadata_missing` log line, while the normalizer's behavior in the reconcile context is unchanged.
-- **Recommended ordering:** Tier 1 NOW (closes the bleeding). Tier 2 in a follow-up workstream (durable fix). Tier 3 only if Tier 2 cannot be delivered quickly, designed as a webhook-specific skip with explicit test updates.
+- **Tier 1 — Stripe cleanup (no code change, still pending):** Delete `sub_1SzJcRKItmaHAwgUvAMv6MLb` (already canceled, retry queue draining) and `sub_1TWexXKItmaHAwgUKd4owOaY` (active, will generate failures on future subscription state changes) from the Stripe Dashboard. Also audit and delete any future out-of-band subscriptions on `cus_TxDC4CL6IjuC3f` or other customers. This remains a user/ops action because the PR must not mutate Stripe state.
+- **Tier 2 — Stop the phantom factory at the source (implemented in code):** `tests/e2e/helpers/seed-test-user.ts` was the source. It now creates E2E Stripe customers with `{ user_id, clerk_user_id }` metadata, creates direct-API subscriptions with `metadata.user_id`, and repairs reused active E2E subscriptions that are missing `metadata.user_id`, matching the webhook normalizer contract.
+- **Tier 3 — Webhook-controller-level skip (implemented in code):** The normalizer still throws on missing `metadata.user_id`, preserving its contract for reconcile. The thrown `ApplicationError('STRIPE_ERROR', ...)` now carries a typed `fieldErrors` marker (`metadata.user_id: ['required']`), and `processStripeWebhook` catches only that marker at the webhook-controller boundary, logs `metadata_missing`, returns 200, and does not claim/mark a `stripe_events` row. Unrelated Stripe errors still propagate as 500.
+- **Rejected global normalizer change:** No global "log-and-skip" in `normalizeStripeSubscriptionUpdate`; that would change `src/adapters/jobs/reconcile-stripe-subscriptions.ts:91,152` from fail-closed to silent skip. A new reconcile test verifies missing metadata remains a row-level failure.
 
 ### H4 — Stale price ID — **NOT OBSERVED**
 
@@ -314,11 +311,11 @@ No 500s clustered on subscriptions with VALID metadata, so H3 explains the obser
 - Invoice events return 200 with `subscriptionUpdate: undefined` — silent no-op
 - Practical impact today is masked because `customer.subscription.updated` events fire in parallel for the same state changes
 
-**Status:** real defect, not currently visible as 4xx/5xx, deserves its own ticket. Not the H3 root cause but worth flagging here so it doesn't get lost.
+**Status:** real defect, not currently visible as 4xx/5xx. Filed as [DEBT-385](./debt-385-stripe-invoice-event-subscription-ref-schema-drift.md). Not the H3 root cause.
 
 **Initial draft test-count claims were wrong (audit-corrected):**
 - `app/api/stripe/webhook/route.test.ts`: **8** test cases (initial draft said 7 — close enough; not material)
-- `src/adapters/controllers/stripe-webhook-controller.test.ts`: **11** test cases (initial draft said 12)
+- `src/adapters/controllers/stripe-webhook-controller.test.ts`: **13** test cases after DEBT-384 implementation (initial draft said 12)
 - `src/adapters/gateways/stripe-payment-gateway.test.ts`: **33** test cases (initial draft said ~38)
 
 Test coverage is still substantial across all three files; the corrected counts don't change the "code coverage is broad" claim, but the numbers were misstated.
@@ -327,11 +324,10 @@ Test coverage is still substantial across all three files; the corrected counts 
 
 ## Remaining Data Needed
 
-Dashboard data has now landed from Stripe **Workbench → Webhooks** for the test endpoint. Remaining useful data before implementation:
+Dashboard data has now landed from Stripe **Workbench → Webhooks** for the test endpoint. Remaining useful operational data:
 
 1. **Endpoint signing secret recency** — when was each endpoint's signing secret last rotated, and does it match the deployed `STRIPE_WEBHOOK_SECRET` value (don't paste the value; check by date/last-four). CLI cannot retrieve webhook signing secrets after endpoint creation.
-2. **Phantom-subscription source** — which workflow created `sub_1TWexXKItmaHAwgUKd4owOaY` today without subscription metadata. Candidate surfaces are E2E setup, fixture scripts, dashboard-created test data, and CLI-triggered fixtures.
-3. **Live endpoint smoke check before launch** — live endpoint exists and is enabled, but currently has zero live subscriptions. Before paid launch, send a controlled real Checkout flow and verify webhook delivery end-to-end.
+2. **Live endpoint smoke check before launch** — live endpoint exists and is enabled, but currently has zero live subscriptions. Before paid launch, send a controlled real Checkout flow and verify webhook delivery end-to-end.
 
 ---
 
@@ -379,25 +375,21 @@ stripe trigger customer.subscription.created
 
 Failures dominated by 500s on missing metadata? **Yes — confirmed.** Caveats: dashboard-attempt response codes confirmed visually via Workbench (CLI cannot enumerate them); two distinct subscriptions affected, not one; the customer metadata is complete but the subscriptions are out-of-band.
 
-→ **Immediate path:** delete `sub_1SzJcRKItmaHAwgUvAMv6MLb` (canceled, retry queue draining) AND `sub_1TWexXKItmaHAwgUKd4owOaY` (active, will generate failures on future subscription state changes) from Stripe Dashboard. Both belong to `cus_TxDC4CL6IjuC3f` (e2e-test@addictionboards.com). After deletion, the dashboard error rate drops as no new failures accumulate and historical failed attempts age out. No code change. **Tier 1 fix.**
+→ **Immediate path:** delete `sub_1SzJcRKItmaHAwgUvAMv6MLb` (canceled, retry queue draining) AND `sub_1TWexXKItmaHAwgUKd4owOaY` (active, will generate failures on future subscription state changes) from Stripe Dashboard. Both belong to `cus_TxDC4CL6IjuC3f` (e2e-test@addictionboards.com). After deletion, the dashboard error rate drops as no new failures accumulate and historical failed attempts age out. No code change. **Tier 1 user/ops action remains pending.**
 
-→ **Source-of-phantoms path:** trace whatever process is creating subscriptions on the e2e-test customer without setting metadata. Suspected surfaces include E2E setup, fixtures, dashboard-created test data, and CLI-triggered fixtures. Route it through our Checkout flow (which sets metadata correctly) OR add `metadata.user_id` to the direct-API call. **Tier 2 fix.** Without this, deleting the existing phantoms is only temporary.
+→ **Source-of-phantoms path:** confirmed source is E2E global setup via `tests/e2e/helpers/seed-test-user.ts`. **Tier 2 code fix implemented** by adding metadata to the direct API customer/subscription creation path and repairing reused active E2E subscriptions that are missing `metadata.user_id`. Without T1 cleanup, old canceled bad Stripe objects remain, but new and reused active E2E direct subscriptions should carry metadata.
 
-→ **Defense-in-depth path (only if Tier 2 cannot be delivered quickly):** Webhook-controller-level skip on `STRIPE_ERROR` from missing metadata — return 200 with structured `metadata_missing` log, leave `normalizeStripeSubscriptionUpdate` unchanged so the reconcile cron's fail-closed behavior is preserved. Keep `stripe-subscription-normalizer.test.ts:66-81` green; add controller/gateway coverage for the webhook-only catch path instead. **Tier 3 fix, NOT a casual change.**
+→ **Defense-in-depth path:** **Tier 3 code fix implemented** as webhook-controller-level skip keyed by typed `ApplicationError.fieldErrors`, not message text. `normalizeStripeSubscriptionUpdate` still throws, and reconcile remains fail-closed.
 
 ---
 
 ## Recommended next steps (audit-corrected)
 
 1. **Now (no code change, Tier 1):** In Stripe Dashboard → Customers → find `cus_TxDC4CL6IjuC3f` (e2e-test@addictionboards.com) → delete **both** its subscriptions: `sub_1SzJcRKItmaHAwgUvAMv6MLb` (canceled) and `sub_1TWexXKItmaHAwgUKd4owOaY` (active). Optionally delete the customer entirely if the E2E suite can re-create on next run. The dashboard error rate should drop as new state changes stop generating failures and historical failed attempts age out.
-2. **Soon (Tier 2):** Investigate and fix the source of empty-metadata subscriptions. Likely paths to check:
-   - `tests/e2e/` setup files that hit Stripe API directly
-   - Any fixture seeder under `scripts/` or `db/`
-   - CI workflows that use `stripe trigger` or other commands
-   - Whoever owns the e2e-test customer should know how its subscriptions get created
-3. **Tier 3 (optional):** Webhook-controller-level skip for `STRIPE_ERROR` whose message is `Stripe subscription metadata.user_id is required`. TDD-style. Note: the existing normalizer test `stripe-subscription-normalizer.test.ts:66-81` asserts the throw; a controller-level handler that catches and re-returns 200 keeps the normalizer test green. Estimate: ~45 min including the new controller test, reconcile sanity check, code review, merge.
+2. **Code fix (Tier 2/Tier 3):** Implemented on branch `debt-384-webhook-metadata-resilience`. New E2E-seeded subscriptions carry metadata; missing-metadata webhook deliveries now 200-skip with structured warning instead of retrying as 500s.
+3. **Verification after deploy:** Resend the two stuck events from Stripe Workbench or CLI after the PR deploys. They should receive 200 responses and stop retrying. Do this only after user approval; this PR itself does not mutate Stripe state.
 4. **Config tightening (independent):** Add `customer.subscription.created` to both endpoints' `enabled_events` lists. Dashboard config change. Eliminates the dead-code path in our handler.
-5. **Separate ticket worth opening:** the invoice-event schema drift (`data.object.subscription` → `data.object.parent.subscription_details.subscription`). Latent silent-noop on invoice events. Currently masked by parallel subscription-events. Real defect.
+5. **Separate ticket filed:** [DEBT-385](./debt-385-stripe-invoice-event-subscription-ref-schema-drift.md) covers invoice-event schema drift (`data.object.subscription` → `data.object.parent.subscription_details.subscription`).
 
 ---
 
@@ -406,13 +398,13 @@ Failures dominated by 500s on missing metadata? **Yes — confirmed.** Caveats: 
 - DEBT-382 (landing page content refresh) — independent workstream, unblocked.
 - Any DEBT-381 typography preference work — independent.
 
-DEBT-384 should be treated as a separate triage that runs in parallel with whatever the next active workstream is. Dashboard data now confirms the observed failures are test-mode HTTP 500s from missing subscription metadata. The priority remains **P2**: there are zero live subscriptions today, but the active empty-metadata test subscription proves the failure can recur unless the phantom source is fixed.
+DEBT-384 should be treated as a separate triage that runs in parallel with whatever the next active workstream is. Dashboard data confirms the observed failures are test-mode HTTP 500s from missing subscription metadata. The priority remains **P2**: there are zero live subscriptions today, the code source is fixed, but T1 Stripe cleanup and endpoint config are still pending.
 
 ---
 
 ## Next concrete step
 
 1. **Stripe Dashboard cleanup** — Delete BOTH bad subscriptions: `sub_1SzJcRKItmaHAwgUvAMv6MLb` (canceled, retry queue draining) and `sub_1TWexXKItmaHAwgUKd4owOaY` (active, will fail on future state changes). Both on customer `cus_TxDC4CL6IjuC3f` (e2e-test@addictionboards.com). Verify by re-running `stripe events list --limit 100` after 24 hours — `pending_webhooks > 0` should drop to zero or near-zero.
-2. **Find and fix the source** — A new empty-metadata subscription was created TODAY (`sub_1TWexXKItmaHAwgUKd4owOaY`, Unix 1778687071 ≈ 2026-05-13 13:44 UTC). Treat the phantom source as active until proven otherwise. Find where it creates subscriptions without metadata and fix at the source. Without this, every cleanup is temporary.
-3. **Decide on defense-in-depth** — Only if step 2 cannot land quickly: implement a webhook-controller-level skip on missing-metadata STRIPE_ERROR (not a global normalizer change — that would break reconcile semantics and the existing normalizer test). Webhook-only behavior change.
-4. **Open separate ticket** — Invoice payload schema drift bug. Currently latent (masked by parallel `customer.subscription.updated` events) but real.
+2. **Deploy code fix** — Merge the DEBT-384 implementation PR after full gate and CodeRabbit review. This closes the E2E phantom factory and changes missing-metadata webhook retries into controller-level skip/200 responses.
+3. **Endpoint config** — Add `customer.subscription.created` to both webhook endpoints.
+4. **Track DEBT-385** — Invoice payload schema drift remains active and separate.

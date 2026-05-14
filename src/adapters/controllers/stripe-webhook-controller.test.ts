@@ -3,6 +3,7 @@ import {
   processStripeWebhook,
   type StripeWebhookDeps,
 } from '@/src/adapters/controllers/stripe-webhook-controller';
+import { ApplicationError } from '@/src/application/errors';
 import {
   FakeLogger,
   FakePaymentGateway,
@@ -20,6 +21,24 @@ class FailingStripeEventRepository extends FakeStripeEventRepository {
 class FailingSubscriptionRepository extends FakeSubscriptionRepository {
   async upsert(): Promise<void> {
     throw new Error('boom');
+  }
+}
+
+class ThrowingPaymentGateway extends FakePaymentGateway {
+  constructor(private readonly error: unknown) {
+    super({
+      externalCustomerId: 'cus_test',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_unused',
+        type: 'customer.subscription.updated',
+      },
+    });
+  }
+
+  async processWebhookEvent(): Promise<never> {
+    throw this.error;
   }
 }
 
@@ -111,6 +130,57 @@ function createRollbackAwareDeps(overrides: {
 }
 
 describe('processStripeWebhook', () => {
+  it('skips subscription webhooks that are missing metadata.user_id', async () => {
+    const paymentGateway = new ThrowingPaymentGateway(
+      new ApplicationError(
+        'STRIPE_ERROR',
+        'Stripe subscription metadata.user_id is required',
+        {
+          'metadata.user_id': ['required'],
+        },
+      ),
+    );
+
+    const { deps, stripeEvents, logger } = createDeps({ paymentGateway });
+
+    await expect(
+      processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
+    ).resolves.toBeUndefined();
+
+    expect(stripeEvents.snapshot()).toEqual([]);
+    expect(logger.warnCalls).toContainEqual({
+      context: expect.objectContaining({
+        reason: 'metadata_missing',
+        code: 'STRIPE_ERROR',
+        fieldErrors: {
+          'metadata.user_id': ['required'],
+        },
+      }),
+      msg: 'Skipping Stripe subscription webhook with missing metadata.user_id',
+    });
+  });
+
+  it('continues to throw unrelated Stripe processing errors', async () => {
+    const paymentGateway = new ThrowingPaymentGateway(
+      new ApplicationError(
+        'STRIPE_ERROR',
+        'Stripe subscription price id does not match a configured plan',
+      ),
+    );
+
+    const { deps, stripeEvents, logger } = createDeps({ paymentGateway });
+
+    await expect(
+      processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
+    ).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+      message: 'Stripe subscription price id does not match a configured plan',
+    });
+
+    expect(stripeEvents.snapshot()).toEqual([]);
+    expect(logger.warnCalls).toEqual([]);
+  });
+
   it('claims, processes, and marks subscription events idempotently', async () => {
     const paymentGateway = new FakePaymentGateway({
       externalCustomerId: 'cus_test',

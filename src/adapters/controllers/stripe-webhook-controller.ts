@@ -1,3 +1,4 @@
+import { isMissingStripeSubscriptionUserIdError } from '@/src/adapters/gateways/stripe/stripe-subscription-normalizer';
 import { STACK_TRACE_LIMIT } from '@/src/adapters/shared/error-logging-constants';
 import { isApplicationError } from '@/src/application/errors';
 import type { PaymentGateway } from '@/src/application/ports/gateways';
@@ -60,10 +61,27 @@ export async function processStripeWebhook(
   deps: StripeWebhookDeps,
   input: StripeWebhookInput,
 ): Promise<void> {
-  const event = await deps.paymentGateway.processWebhookEvent(
-    input.rawBody,
-    input.signature,
-  );
+  let event: Awaited<ReturnType<PaymentGateway['processWebhookEvent']>>;
+  try {
+    event = await deps.paymentGateway.processWebhookEvent(
+      input.rawBody,
+      input.signature,
+    );
+  } catch (error) {
+    if (isMissingStripeSubscriptionUserIdError(error)) {
+      deps.logger.warn(
+        {
+          reason: 'metadata_missing',
+          code: error.code,
+          fieldErrors: error.fieldErrors,
+        },
+        'Skipping Stripe subscription webhook with missing metadata.user_id',
+      );
+      return;
+    }
+
+    throw error;
+  }
 
   const txResult = await deps.transaction(
     async ({
