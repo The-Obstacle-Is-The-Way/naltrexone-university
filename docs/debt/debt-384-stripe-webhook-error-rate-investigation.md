@@ -3,7 +3,7 @@
 **Priority:** P2
 **Created:** 2026-05-13
 **Source:** Surfaced during the DEBT-383 dogfood incident triage. The Stripe Workbench webhook view showed an aggregate ~46% error rate on at least one configured webhook destination. DEBT-383 isolated the user-facing recovery-trap bug, but the underlying webhook error rate was not investigated and is potentially independent of that fix.
-**Related:** [DEBT-383 archived](../_archive/debt/debt-383-canceled-subscription-recovery-trap.md), [DEBT-345 circuit breaker](../_archive/debt/debt-345-circuit-breaker-external-services.md), [BUG-183 webhook rollback](../bugs/) (historical), [ADR-XXX webhook idempotency] *(if present)*
+**Related:** [DEBT-383 archived](../_archive/debt/debt-383-canceled-subscription-recovery-trap.md), [DEBT-345 circuit breaker](../_archive/debt/debt-345-circuit-breaker-external-services.md), [BUG-183 webhook rollback](../bugs/) (historical)
 **Status:** Active — empirical CLI inspection completed 2026-05-13; independent adversarial audit corrected multiple overclaims. **Primary root cause confirmed (H3). T2 source fix and T3 webhook-specific hardening implemented in [PR #310](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/310) on branch `debt-384-webhook-metadata-resilience`; T1 Stripe Dashboard cleanup and endpoint config remain pending user/ops actions.**
 
 ---
@@ -19,7 +19,7 @@ Confirmed errors in earlier passes (all corrected below):
 
 1. The "two separate Stripe accounts" framing in the initial draft was wrong — `acct_STALE_SANDBOX_REDACTED` "New business sandbox" in CLI config is stale config from before Stripe's test-mode/sandbox consolidation, not a current second environment. There is exactly **one** test environment.
 2. "Manual cancellation" claim was wrong — 90.004-day delta between created/canceled timestamps matches Stripe's 90-day test/sandbox auto-retention pattern exactly; `cancellation_requested` reason is set even on auto-retention sweeps (same as DEBT-383).
-3. "Only one empty-metadata subscription" was wrong — there are TWO, and the second is ACTIVE and was created TODAY.
+3. "Only one empty-metadata subscription" was wrong — there are TWO, and the second is ACTIVE and was created on 2026-05-13.
 4. "No live-mode webhook endpoint exists" was wrong — live endpoint exists at `https://addictionboards.com/api/stripe/webhook`.
 5. "No production billing customers" was wrong — 1 live customer exists (the user's own).
 6. Test counts (controller, gateway) were off by 1 and 5 respectively.
@@ -80,7 +80,7 @@ stripe subscriptions list --live --status all --limit 100
 # → 0 live subscriptions
 ```
 
-Live endpoint is therefore unused for subscription traffic today (one live customer, zero live subscriptions). Future production launch will route paying customers through this endpoint; any bug that affects the test endpoint can affect live too.
+Live endpoint is therefore unused for subscription traffic as of 2026-05-13 (one live customer, zero live subscriptions). Future production launch will route paying customers through this endpoint; any bug that affects the test endpoint can affect live too.
 
 ### Subscriptions with empty `metadata.user_id` (audit-corrected: TWO, not one)
 
@@ -89,7 +89,7 @@ Live endpoint is therefore unused for subscription traffic today (one live custo
 | Subscription | Status | Customer | Created | Notes |
 |---|---|---|---|---|
 | `sub_E2E_CANCELED_MISSING_METADATA` | **canceled** | `cus_E2E_REDACTED` | 2026-02-10 | Canceled 2026-05-11 — 90.004 days after creation = exact match for Stripe's 90-day sandbox auto-retention pattern. Generated the 6 failed deliveries on 5/10–5/11. |
-| `sub_E2E_ACTIVE_MISSING_METADATA` | **active** | `cus_E2E_REDACTED` | **2026-05-13 (today)** | Newly created today on the same e2e-test customer. Currently active. Will generate its own webhook failures on future subscribed `customer.subscription.updated/deleted` state changes until either deleted or our webhook path is made defensive. |
+| `sub_E2E_ACTIVE_MISSING_METADATA` | **active** | `cus_E2E_REDACTED` | 2026-05-13 | Created on 2026-05-13 on the same e2e-test customer. Currently active. Will generate its own webhook failures on future subscribed `customer.subscription.updated/deleted` state changes until either deleted or our webhook path is made defensive. |
 
 Both subscriptions belong to the same customer (`cus_E2E_REDACTED`). Critical detail: **the customer itself has correct metadata** —
 
@@ -106,7 +106,7 @@ So this is not a "missing customer metadata" problem. The customer metadata is c
 - Stripe Dashboard "Create test data"
 - A `stripe trigger` CLI run during dev
 
-The fact that a *new* one was generated today (`sub_E2E_ACTIVE_MISSING_METADATA`) means this is **recent**, not purely historical. Implementation pass result: the source is `tests/e2e/helpers/seed-test-user.ts`, which global E2E setup calls before tests. It directly created Stripe subscriptions without `metadata.user_id`; this branch fixes that source.
+The fact that a *new* one was generated on 2026-05-13 (`sub_E2E_ACTIVE_MISSING_METADATA`) means this is **recent**, not purely historical. Implementation pass result: the source is `tests/e2e/helpers/seed-test-user.ts`, which global E2E setup calls before tests. It directly created Stripe subscriptions without `metadata.user_id`; this branch fixes that source.
 
 ### Failed-delivery events from the canceled phantom
 
@@ -182,7 +182,7 @@ export const stripeCheckoutSessionSchema = z
 
 For an invoice event with the current API version, `subscription` is `null` at the root. `getSubscriptionUpdateForSubscriptionRefEvent` at `stripe-webhook-processor.ts:13-49` therefore returns `undefined`. The handler returns 200 with no subscription update — **silent no-op**.
 
-Practical impact today is masked by parallel `customer.subscription.updated` events (which use the subscription-event branch at `stripe-webhook-processor.ts:107-138` and read the subscription correctly). The user's recovery subscription state in our DB is correct because the subscription-event branch handled the state change. This was filed as [DEBT-385](./debt-385-stripe-invoice-event-subscription-ref-schema-drift.md), not implemented in DEBT-384. But:
+Practical impact as of the 2026-05-13 investigation is masked by parallel `customer.subscription.updated` events (which use the subscription-event branch at `stripe-webhook-processor.ts:107-138` and read the subscription correctly). The user's recovery subscription state in our DB is correct because the subscription-event branch handled the state change. This was filed as [DEBT-385](./debt-385-stripe-invoice-event-subscription-ref-schema-drift.md), not implemented in DEBT-384. But:
 
 - Any invoice-event-only state transition (e.g., a payment-flow change that fires invoice.* but not customer.subscription.*) would be silently dropped.
 - The `customer.subscription.created` events we currently don't subscribe to would have masked even more invoice-event handling.
@@ -232,7 +232,7 @@ The subscription normalizer (`stripe-subscription-normalizer.ts`) hard-requires:
 - A status that maps via `isValidStripeSubscriptionStatus` (lines 64-70)
 - A price ID that resolves via `getSubscriptionPlanFromPriceId` (lines 78-84)
 
-**Implication:** A subscription created outside the subscription-metadata-aware Checkout path will not carry `metadata.user_id`, so any `customer.subscription.*` webhook event referencing it returns 500 today. Out-of-band test subscriptions are a known recurring source of this error in active development environments.
+**Implication:** Before T3 hardening, a subscription created outside the subscription-metadata-aware Checkout path would not carry `metadata.user_id`, so any `customer.subscription.*` webhook event referencing it returned 500. Out-of-band test subscriptions are a known recurring source of this error in active development environments.
 
 ### 5. Idempotency and event store
 
@@ -275,13 +275,13 @@ Pattern: **steady defensive hardening, no recent commit that broke webhook deliv
 
 ### H2 — `STRIPE_WEBHOOK_SECRET` drift — **UNLIKELY**
 
-If the signing secret were drifted, every event would 400 with `INVALID_WEBHOOK_SIGNATURE`. We observe `pending_webhooks=0` on the vast majority of events including recent ones from the DEBT-383 recovery test today — those clearly delivered successfully, so signature verification is working. The drift would have to be partial/intermittent, which is hard to engineer.
+If the signing secret were drifted, every event would 400 with `INVALID_WEBHOOK_SIGNATURE`. We observe `pending_webhooks=0` on the vast majority of events including recent ones from the 2026-05-13 DEBT-383 recovery test — those clearly delivered successfully, so signature verification is working. The drift would have to be partial/intermittent, which is hard to engineer.
 
 - **Status:** Unlikely root cause but not fully ruled out. To fully refute, retrieve the endpoint signing secret prefix from `stripe webhook_endpoints retrieve` and compare against the deployed `STRIPE_WEBHOOK_SECRET` last-four. The signing secret is not returned on retrieve (Stripe only returns it on create), so this requires the dashboard.
 
 ### H3 — Subscriptions missing `metadata.user_id` — **CONFIRMED (primary root cause)**
 
-Empirically verified by retrieving the two pending-delivery events. Both reference `sub_E2E_CANCELED_MISSING_METADATA`, which has `metadata: {}`. The audit also surfaced a second, ACTIVE subscription `sub_E2E_ACTIVE_MISSING_METADATA` (created today, same customer) with the same empty-metadata state — the phantom source is recent, not purely historical. Every `customer.subscription.*` state-change event for these subscriptions returned 500 from `src/adapters/gateways/stripe/stripe-subscription-normalizer.ts:41-59` before the T3 controller hardening.
+Empirically verified by retrieving the two pending-delivery events. Both reference `sub_E2E_CANCELED_MISSING_METADATA`, which has `metadata: {}`. The audit also surfaced a second, ACTIVE subscription `sub_E2E_ACTIVE_MISSING_METADATA` (created 2026-05-13, same customer) with the same empty-metadata state — the phantom source is recent, not purely historical. Every `customer.subscription.*` state-change event for these subscriptions returned 500 from `src/adapters/gateways/stripe/stripe-subscription-normalizer.ts:41-59` before the T3 controller hardening.
 
 **Correction from initial draft:** The cancellation_details.reason field on `sub_E2E_CANCELED_MISSING_METADATA` is `cancellation_requested`, but the 90.004-day delta between created (Unix 1770740215, 2026-02-10) and canceled_at (Unix 1778516583, 2026-05-11) is an exact match for Stripe's 90-day test/sandbox auto-retention policy. This is the same pattern DEBT-383 identified (`Source: Automatic`, 90.02-day delta). The reason field alone cannot distinguish a manual cancel from an auto-retention sweep.
 
@@ -311,7 +311,7 @@ No 500s clustered on subscriptions with VALID metadata, so H3 explains the obser
 - `src/adapters/gateways/stripe/stripe-webhook-schemas.ts:25-32` reads `data.object.subscription` (root level)
 - Current Stripe API version places it at `data.object.parent.subscription_details.subscription`
 - Invoice events return 200 with `subscriptionUpdate: undefined` — silent no-op
-- Practical impact today is masked because `customer.subscription.updated` events fire in parallel for the same state changes
+- Practical impact as of the 2026-05-13 investigation is masked because `customer.subscription.updated` events fire in parallel for the same state changes
 
 **Status:** real defect, not currently visible as 4xx/5xx. Filed as [DEBT-385](./debt-385-stripe-invoice-event-subscription-ref-schema-drift.md). Not the H3 root cause.
 
@@ -371,7 +371,7 @@ stripe trigger customer.subscription.created
 
 - Use `--live` explicitly for live-mode CLI reads; confirm carefully which mode you're in before running any state-changing command.
 - `stripe trigger` creates real test events in whichever mode you're authenticated to. Do not run in live mode without explicit need.
-- A live-mode webhook endpoint exists, but there are zero live subscriptions today. DEBT-384's observed failures are test-mode only.
+- A live-mode webhook endpoint exists, but there are zero live subscriptions as of 2026-05-13. DEBT-384's observed failures are test-mode only.
 
 ---
 
@@ -402,7 +402,7 @@ Failures dominated by 500s on missing metadata? **Yes — confirmed.** Caveats: 
 - DEBT-382 (landing page content refresh) — independent workstream, unblocked.
 - Any DEBT-381 typography preference work — independent.
 
-DEBT-384 should be treated as a separate triage that runs in parallel with whatever the next active workstream is. Dashboard data confirms the observed failures are test-mode HTTP 500s from missing subscription metadata. The priority remains **P2**: there are zero live subscriptions today, the code source is fixed, but T1 Stripe cleanup and endpoint config are still pending.
+DEBT-384 should be treated as a separate triage that runs in parallel with whatever the next active workstream is. Dashboard data confirms the observed failures are test-mode HTTP 500s from missing subscription metadata. The priority remains **P2**: there are zero live subscriptions as of 2026-05-13, the code source is fixed, but T1 Stripe cleanup and endpoint config are still pending.
 
 ---
 
