@@ -199,9 +199,9 @@ The handler returns exactly five distinct HTTP response codes:
 | Code | Trigger | Source |
 |------|---------|--------|
 | `400` | Missing `stripe-signature` header | `handler.ts:36-42` |
-| `429` | Per-IP rate limit exhausted (`STRIPE_WEBHOOK_RATE_LIMIT` = 1000 req/min) | `handler.ts:54-66`, limit constant `src/adapters/shared/rate-limits.ts:12-15` |
-| `503` | Rate-limiter dependency itself throws (DB unavailable, etc.) | `handler.ts:67-73` |
-| `400` | `ApplicationError` with code `INVALID_WEBHOOK_SIGNATURE` or `INVALID_WEBHOOK_PAYLOAD` | `handler.ts:85-95` |
+| `429` | Per-IP rate limit exhausted (`STRIPE_WEBHOOK_RATE_LIMIT` = 1000 req/min) | `handler.ts:54-65`, limit constant `src/adapters/shared/rate-limits.ts:12-15` |
+| `503` | Rate-limiter dependency itself throws (DB unavailable, etc.) | `handler.ts:67-72` |
+| `400` | `ApplicationError` with code `INVALID_WEBHOOK_SIGNATURE` or `INVALID_WEBHOOK_PAYLOAD` | `handler.ts:85-94` |
 | `500` | Any other throw inside `processStripeWebhook` (DB error, Stripe retrieve error, normalizer error) | `handler.ts:97-101` |
 | `200` | Success | `handler.ts:83` |
 
@@ -220,23 +220,23 @@ The processor handles two distinct paths:
 - **Checkout/invoice events** (`stripe-webhook-processor.ts:89-105`): `checkout.session.completed`, `checkout.session.expired`, `invoice.payment_failed`, `invoice.payment_succeeded`, `invoice.payment_action_required`. The code attempts to extract a root-level subscription reference from the event payload, retrieves the subscription when a reference exists, then normalizes it. Current invoice payloads expose the subscription under `parent.subscription_details.subscription`, so invoice events can silently return no `subscriptionUpdate` (see "Invoice payload schema drift").
 - **Subscription events** (`stripe-webhook-processor.ts:107-138`): the eight types listed in `stripe-webhook-schemas.ts:45-54` (`customer.subscription.created`, `.updated`, `.deleted`, `.paused`, `.resumed`, `.trial_will_end`, `.pending_update_applied`, `.pending_update_expired`).
 
-**Any other event type returns early with no `subscriptionUpdate` and is marked processed** (`stripe-webhook-processor.ts:107-109`, `stripe-webhook-controller.ts:91-110`). That is a 2xx response — unknown event types are NOT a source of 4xx/5xx errors. (Verified: unknown types take the early-return branch, mark the event processed, and the controller returns ok.)
+**Any other event type returns early with no `subscriptionUpdate` and is marked processed** (`stripe-webhook-processor.ts:107-109`, `stripe-webhook-controller.ts:92-129`). That is a 2xx response — unknown event types are NOT a source of 4xx/5xx errors. (Verified: unknown types take the early-return branch, mark the event processed, and the controller returns ok.)
 
 ### 4. Required event payload fields
 
 The subscription normalizer (`stripe-subscription-normalizer.ts`) hard-requires:
 
-- `subscription.metadata.user_id` (line 27-42) — throws `STRIPE_ERROR` (→ handler 500) if missing
-- A status that maps via `isValidStripeSubscriptionStatus` (line 48-53)
-- A price ID that resolves via `getSubscriptionPlanFromPriceId` (line 61-67)
+- `subscription.metadata.user_id` (lines 41-59) — throws `STRIPE_ERROR` (→ handler 500) if missing
+- A status that maps via `isValidStripeSubscriptionStatus` (lines 64-70)
+- A price ID that resolves via `getSubscriptionPlanFromPriceId` (lines 78-84)
 
 **Implication:** A subscription created outside the subscription-metadata-aware Checkout path will not carry `metadata.user_id`, so any `customer.subscription.*` webhook event referencing it returns 500 today. Out-of-band test subscriptions are a known recurring source of this error in active development environments.
 
 ### 5. Idempotency and event store
 
-Every event is claimed via `stripeEvents.claim(eventId, type)` (`stripe-webhook-controller.ts:74`) and processed inside a transaction. If the same event ID is delivered twice (Stripe retries) and the first attempt succeeded, the second returns 200 early (lines 75-89). If the first attempt FAILED, `stripeEvents.markFailed` writes the error (line 113) and the throw propagates — Stripe will retry. Persistent failures here loop forever until Stripe's own delivery-attempt cap kicks in.
+Every event is claimed via `stripeEvents.claim(eventId, type)` (`stripe-webhook-controller.ts:92`) and processed inside a transaction. If the same event ID is delivered twice (Stripe retries) and the first attempt succeeded, the second returns 200 early (lines 93-107). If the first attempt FAILED, `stripeEvents.markFailed` writes the error (line 131) and the throw propagates — Stripe will retry. Persistent failures here loop forever until Stripe's own delivery-attempt cap kicks in.
 
-The `stripeEvents` table is pruned best-effort after every successful event (lines 126-143, 90-day retention).
+The `stripeEvents` table is pruned best-effort after every successful event (lines 141-153, 90-day retention).
 
 ### 6. Rate limit: 1000 req/min per IP
 
@@ -279,7 +279,7 @@ If the signing secret were drifted, every event would 400 with `INVALID_WEBHOOK_
 
 ### H3 — Subscriptions missing `metadata.user_id` — **CONFIRMED (primary root cause)**
 
-Empirically verified by retrieving the two pending-delivery events. Both reference `sub_1SzJcRKItmaHAwgUvAMv6MLb`, which has `metadata: {}`. The audit also surfaced a second, ACTIVE subscription `sub_1TWexXKItmaHAwgUKd4owOaY` (created today, same customer) with the same empty-metadata state — the phantom source is recent, not purely historical. Every `customer.subscription.*` state-change event for these subscriptions returned 500 from `src/adapters/gateways/stripe/stripe-subscription-normalizer.ts:27-42` before the T3 controller hardening.
+Empirically verified by retrieving the two pending-delivery events. Both reference `sub_1SzJcRKItmaHAwgUvAMv6MLb`, which has `metadata: {}`. The audit also surfaced a second, ACTIVE subscription `sub_1TWexXKItmaHAwgUKd4owOaY` (created today, same customer) with the same empty-metadata state — the phantom source is recent, not purely historical. Every `customer.subscription.*` state-change event for these subscriptions returned 500 from `src/adapters/gateways/stripe/stripe-subscription-normalizer.ts:41-59` before the T3 controller hardening.
 
 **Correction from initial draft:** The cancellation_details.reason field on `sub_1SzJcR...` is `cancellation_requested`, but the 90.004-day delta between created (Unix 1770740215, 2026-02-10) and canceled_at (Unix 1778516583, 2026-05-11) is an exact match for Stripe's 90-day test/sandbox auto-retention policy. This is the same pattern DEBT-383 identified (`Source: Automatic`, 90.02-day delta). The reason field alone cannot distinguish a manual cancel from an auto-retention sweep.
 
