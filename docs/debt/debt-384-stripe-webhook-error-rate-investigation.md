@@ -4,7 +4,7 @@
 **Created:** 2026-05-13
 **Source:** Surfaced during the DEBT-383 dogfood incident triage. The Stripe Workbench webhook view showed an aggregate ~46% error rate on at least one configured webhook destination. DEBT-383 isolated the user-facing recovery-trap bug, but the underlying webhook error rate was not investigated and is potentially independent of that fix.
 **Related:** [DEBT-383 archived](../_archive/debt/debt-383-canceled-subscription-recovery-trap.md), [DEBT-345 circuit breaker](../_archive/debt/debt-345-circuit-breaker-external-services.md), [BUG-183 webhook rollback](../bugs/) (historical), [ADR-XXX webhook idempotency] *(if present)*
-**Status:** Active — empirical CLI inspection completed 2026-05-13; independent adversarial audit corrected multiple overclaims. **Primary root cause confirmed (H3). T2 source fix and T3 webhook-specific hardening implemented on branch `debt-384-webhook-metadata-resilience`; T1 Stripe Dashboard cleanup and endpoint config remain pending user/ops actions.**
+**Status:** Active — empirical CLI inspection completed 2026-05-13; independent adversarial audit corrected multiple overclaims. **Primary root cause confirmed (H3). T2 source fix and T3 webhook-specific hardening implemented in [PR #310](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/310) on branch `debt-384-webhook-metadata-resilience`; T1 Stripe Dashboard cleanup and endpoint config remain pending user/ops actions.**
 
 ---
 
@@ -13,7 +13,7 @@
 - **Initial draft (earlier 2026-05-13):** Investigation framework written without live data (CLI session key was expired). Hypotheses ranked from code review alone.
 - **Empirical pass (2026-05-13):** Re-paired CLI to test environment, confirmed H3 with one bad subscription. Doc updated with empirical claims.
 - **Adversarial audit pass (2026-05-13, this revision):** Independent audit caught 7 material errors in the empirical pass; this revision corrects them and adds a new finding (invoice payload schema drift) that the audit flagged and independent verification confirmed.
-- **Implementation pass (2026-05-14):** Confirmed the active phantom source in `tests/e2e/helpers/seed-test-user.ts`: the E2E helper directly called `stripe.subscriptions.create` without subscription metadata. Fixed the helper to create E2E customers/subscriptions with the metadata contract the webhook normalizer requires, and to repair reused active E2E subscriptions that are missing `metadata.user_id`. Added webhook-controller-only skip behavior for missing subscription metadata. Invoice schema drift moved to [DEBT-385](./debt-385-stripe-invoice-event-subscription-ref-schema-drift.md).
+- **Implementation pass (2026-05-14, [PR #310](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/310)):** Confirmed the active phantom source in `tests/e2e/helpers/seed-test-user.ts`: the E2E helper directly called `stripe.subscriptions.create` without subscription metadata. Fixed the helper to create E2E customers/subscriptions with the metadata contract the webhook normalizer requires, and to repair reused active E2E subscriptions that are missing `metadata.user_id`. Added webhook-controller-only skip behavior for missing subscription metadata. Invoice schema drift moved to [DEBT-385](./debt-385-stripe-invoice-event-subscription-ref-schema-drift.md).
 
 Confirmed errors in earlier passes (all corrected below):
 
@@ -386,7 +386,7 @@ Failures dominated by 500s on missing metadata? **Yes — confirmed.** Caveats: 
 ## Recommended next steps (audit-corrected)
 
 1. **Now (no code change, Tier 1):** In Stripe Dashboard → Customers → find `cus_TxDC4CL6IjuC3f` (e2e-test@addictionboards.com) → delete **both** its subscriptions: `sub_1SzJcRKItmaHAwgUvAMv6MLb` (canceled) and `sub_1TWexXKItmaHAwgUKd4owOaY` (active). Optionally delete the customer entirely if the E2E suite can re-create on next run. The dashboard error rate should drop as new state changes stop generating failures and historical failed attempts age out.
-2. **Code fix (Tier 2/Tier 3):** Implemented on branch `debt-384-webhook-metadata-resilience`. New E2E-seeded subscriptions carry metadata; missing-metadata webhook deliveries now 200-skip with structured warning instead of retrying as 500s.
+2. **Code fix (Tier 2/Tier 3):** Implemented in [PR #310](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/310) on branch `debt-384-webhook-metadata-resilience`. New E2E-seeded subscriptions carry metadata; missing-metadata webhook deliveries now 200-skip with structured warning instead of retrying as 500s.
 3. **Verification after deploy:** Resend the two stuck events from Stripe Workbench or CLI after the PR deploys. They should receive 200 responses and stop retrying. Do this only after user approval; this PR itself does not mutate Stripe state.
 4. **Config tightening (independent):** Add `customer.subscription.created` to both endpoints' `enabled_events` lists. Dashboard config change. Eliminates the dead-code path in our handler.
 5. **Separate ticket filed:** [DEBT-385](./debt-385-stripe-invoice-event-subscription-ref-schema-drift.md) covers invoice-event schema drift (`data.object.subscription` → `data.object.parent.subscription_details.subscription`).
