@@ -29,7 +29,9 @@ describe('seedTestSubscription', () => {
   let postgresMock: ReturnType<typeof vi.fn>;
   let customersList: ReturnType<typeof vi.fn>;
   let customersCreate: ReturnType<typeof vi.fn>;
+  let customersRetrieve: ReturnType<typeof vi.fn>;
   let subscriptionsList: ReturnType<typeof vi.fn>;
+  let subscriptionsCancel: ReturnType<typeof vi.fn>;
   let subscriptionsCreate: ReturnType<typeof vi.fn>;
   let subscriptionsUpdate: ReturnType<typeof vi.fn>;
 
@@ -50,6 +52,10 @@ describe('seedTestSubscription', () => {
 
     customersCreate = vi.fn(async () => ({ id: 'cus_123' }));
     customersList = vi.fn(async () => ({ data: [] }));
+    customersRetrieve = vi.fn(async () => ({
+      id: 'cus_123',
+      invoice_settings: {},
+    }));
     subscriptionsCreate = vi.fn(async () => ({
       id: 'sub_123',
       items: {
@@ -61,15 +67,13 @@ describe('seedTestSubscription', () => {
       },
     }));
     subscriptionsList = vi.fn(async () => ({ data: [] }));
+    subscriptionsCancel = vi.fn(async () => ({}));
     subscriptionsUpdate = vi.fn(async () => ({}));
     const stripeClient = {
       customers: {
         list: customersList,
         create: customersCreate,
-        retrieve: vi.fn(async () => ({
-          id: 'cus_123',
-          invoice_settings: {},
-        })),
+        retrieve: customersRetrieve,
         update: vi.fn(async () => ({})),
       },
       paymentMethods: {
@@ -77,7 +81,7 @@ describe('seedTestSubscription', () => {
       },
       subscriptions: {
         list: subscriptionsList,
-        cancel: vi.fn(async () => ({})),
+        cancel: subscriptionsCancel,
         create: subscriptionsCreate,
         update: subscriptionsUpdate,
       },
@@ -114,6 +118,30 @@ describe('seedTestSubscription', () => {
     expect(postgresMock).not.toHaveBeenCalled();
   });
 
+  it('falls back to local-dev owner only when Stripe credentials are dummy', async () => {
+    vi.stubEnv('STRIPE_SECRET_KEY', 'sk_test_dummy');
+    vi.stubEnv('E2E_STRIPE_OWNER', '');
+
+    await expect(seedTestSubscription()).resolves.toBeUndefined();
+
+    expect(customersCreate).toHaveBeenCalledWith({
+      email: 'e2e-test@addictionboards.com',
+      metadata: {
+        user_id: 'user_123',
+        clerk_user_id: 'clerk_user_123',
+        e2e_owner: 'local-dev',
+      },
+    });
+    expect(subscriptionsCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: {
+          user_id: 'user_123',
+          e2e_owner: 'local-dev',
+        },
+      }),
+    );
+  });
+
   it('creates E2E Stripe customer and subscription with owner-scoped metadata', async () => {
     await expect(seedTestSubscription()).resolves.toBeUndefined();
 
@@ -133,6 +161,38 @@ describe('seedTestSubscription', () => {
         e2e_owner: 'github-ci',
       },
     });
+  });
+
+  it('reuses an owner-scoped DB-mapped customer and returns early when local subscription is still active', async () => {
+    postgresMock.mockReturnValueOnce(
+      createSqlClient([
+        [{ id: 'user_123' }],
+        [{ stripe_customer_id: 'cus_existing' }],
+        [
+          {
+            stripe_subscription_id: 'sub_existing',
+            status: 'active',
+            current_period_end: '2999-01-01T00:00:00.000Z',
+          },
+        ],
+      ]),
+    );
+    customersRetrieve.mockResolvedValueOnce({
+      id: 'cus_existing',
+      metadata: {
+        user_id: 'user_123',
+        clerk_user_id: 'clerk_user_123',
+        e2e_owner: 'github-ci',
+      },
+      invoice_settings: {},
+    });
+
+    await expect(seedTestSubscription()).resolves.toBeUndefined();
+
+    expect(customersRetrieve).toHaveBeenCalledWith('cus_existing');
+    expect(customersList).not.toHaveBeenCalled();
+    expect(subscriptionsList).not.toHaveBeenCalled();
+    expect(subscriptionsCreate).not.toHaveBeenCalled();
   });
 
   it('does not reuse a Stripe customer found by email when its metadata.e2e_owner differs from current owner', async () => {
@@ -195,6 +255,67 @@ describe('seedTestSubscription', () => {
         e2e_owner: 'github-ci',
       },
     });
+  });
+
+  it('cancels non-active subscriptions only when they match the current owner', async () => {
+    customersList.mockResolvedValueOnce({
+      data: [
+        {
+          id: 'cus_current_owner',
+          metadata: {
+            user_id: 'user_123',
+            clerk_user_id: 'clerk_user_123',
+            e2e_owner: 'github-ci',
+          },
+        },
+      ],
+    });
+    subscriptionsList.mockResolvedValueOnce({
+      data: [
+        {
+          id: 'sub_canceled_current_owner',
+          status: 'canceled',
+          metadata: {
+            user_id: 'user_123',
+            e2e_owner: 'github-ci',
+          },
+          items: {
+            data: [
+              {
+                current_period_end: 1_700_000_000,
+              },
+            ],
+          },
+        },
+        {
+          id: 'sub_canceled_other_owner',
+          status: 'canceled',
+          metadata: {
+            user_id: 'other_user',
+            e2e_owner: 'local-dev',
+          },
+          items: {
+            data: [
+              {
+                current_period_end: 1_700_000_000,
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    await expect(seedTestSubscription()).resolves.toBeUndefined();
+
+    expect(subscriptionsCancel).toHaveBeenCalledTimes(1);
+    expect(subscriptionsCancel).toHaveBeenCalledWith(
+      'sub_canceled_current_owner',
+    );
+    expect(subscriptionsCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customer: 'cus_current_owner',
+      }),
+    );
   });
 
   it('does not patch metadata.user_id on an active subscription whose metadata.e2e_owner differs from current owner', async () => {
