@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD } from '@/src/adapters/shared/stripe-subscription-errors';
 import { ApplicationError } from '@/src/application/errors';
 import {
   FakeLogger,
@@ -157,6 +158,36 @@ describe('processStripeWebhook', () => {
         },
       }),
       msg: 'Skipping Stripe subscription webhook with missing metadata.user_id',
+    });
+  });
+
+  it('skips subscription webhooks whose e2e owner differs from this webhook owner', async () => {
+    const paymentGateway = new ThrowingPaymentGateway(
+      new ApplicationError(
+        'STRIPE_ERROR',
+        'Stripe subscription metadata.e2e_owner does not match this webhook owner',
+        {
+          [STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD]: ['mismatch'],
+        },
+      ),
+    );
+
+    const { deps, stripeEvents, logger } = createDeps({ paymentGateway });
+
+    await expect(
+      processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
+    ).resolves.toBeUndefined();
+
+    expect(stripeEvents.snapshot()).toEqual([]);
+    expect(logger.warnCalls).toContainEqual({
+      context: expect.objectContaining({
+        reason: 'e2e_owner_mismatch',
+        code: 'STRIPE_ERROR',
+        fieldErrors: {
+          [STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD]: ['mismatch'],
+        },
+      }),
+      msg: 'Skipping Stripe subscription webhook from a different E2E owner',
     });
   });
 
