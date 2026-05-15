@@ -3,8 +3,8 @@
 **Priority:** P2
 **Created:** 2026-05-14
 **Source:** Filed from DEBT-384 after live Stripe payload inspection found invoice events no longer expose the subscription reference at the root field our schema reads.
-**Related:** [DEBT-384](./debt-384-stripe-webhook-error-rate-investigation.md)
-**Status:** Active — documented only. Do not implement as part of DEBT-384.
+**Related:** [DEBT-384](../_archive/debt/debt-384-stripe-webhook-error-rate-investigation.md)
+**Status:** Active — documented only. DEBT-384 has shipped and been archived; this remains a separate follow-up.
 
 ---
 

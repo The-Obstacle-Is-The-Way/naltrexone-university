@@ -5,7 +5,7 @@
 **Source:** User-reported gap on the marketing landing page: the headline question count (`500+`) understates the actual content library, the `2 Study Modes` stat omits Quick Practice as a distinct practice surface, and there is no mention anywhere on the public marketing surface of the product being authored by a practicing, double board-certified psychiatrist. The 948-question count came from the local authoring workspace's imported-content corpus under `content/questions/imported/`; those files are not currently tracked in git, so DEBT-382 implementation must make the count evidence portable before changing the public numeric claim.
 **Related:** [Frontend Standards](../frontend/standards.md), [DEBT-378](../_archive/debt/debt-378-tutor-drop-submit-button-choice-click-commits.md), [DEBT-379](../_archive/debt/debt-379-exam-action-bar-promote-primary-cta-to-right-slot.md), [DEBT-380](../_archive/debt/debt-380-exam-footer-cluster-previous-and-primary-cta-mirror-tutor.md), [DEBT-381](./debt-381-question-content-typography-audit-and-preference-path.md)
 
-**Status:** Active — decisions locked; paused behind DEBT-383 and requires portable content-count evidence before implementation
+**Status:** Active — decisions locked; DEBT-383 dependency resolved; requires portable content-count evidence before implementation
 
 ---
 
@@ -21,7 +21,7 @@
 | Author name on hero | **Not included.** A public name line requires a separate privacy and naming decision. The unnamed phrasing keeps the core credibility lift (practicing, double-board-certified, exact subspecialty) without committing repo-tracked copy to a specific public identity. Upgrade path to a named variant later is a small text edit. |
 | Optional AJA 2023 publication line | **Not included** in this debt item. |
 
-No copy decisions remain open. Implementation is blocked until DEBT-383 lands and the 948-count evidence is made reproducible in the repo or replaced with a newly verified tracked source count. `3 Study Modes` is in scope for this debt item.
+No copy decisions remain open. DEBT-383 has landed; implementation is now blocked only until the 948-count evidence is made reproducible in the repo or replaced with a newly verified tracked source count. `3 Study Modes` is in scope for this debt item.
 
 ---
 

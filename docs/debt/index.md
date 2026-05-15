@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-05-15 (DEBT-384 resolved + archived after PR #310 merge; DEBT-385 remains open for invoice schema drift)
+**Last Updated:** 2026-05-15 (post-PR #310 debt-register audit: DEBT-384 remains archived, DEBT-382 unblocked from DEBT-383, DEBT-385 remains open for invoice schema drift)
 
 ---
 
