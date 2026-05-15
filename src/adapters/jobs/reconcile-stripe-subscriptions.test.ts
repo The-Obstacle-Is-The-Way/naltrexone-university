@@ -451,6 +451,34 @@ describe('reconcileStripeSubscriptions', () => {
     });
   });
 
+  it('keeps reconciliation fail-closed when Stripe subscription metadata.user_id is missing', async () => {
+    const missingMetadataSubscription = createUserSubscriptionFixture(
+      'sub_missing_metadata',
+    );
+    missingMetadataSubscription.metadata = {};
+    const stripe = createStripeFromFixtures({
+      fixtures: [{ fixture: missingMetadataSubscription }],
+    });
+    const scenario = createSingleRowScenario({
+      stripe,
+      subscriptionId: 'sub_missing_metadata',
+    });
+
+    const result = await scenario.run();
+
+    expectSingleFailure(result, {
+      stripeSubscriptionId: 'sub_missing_metadata',
+      error: 'Stripe subscription metadata.user_id is required',
+    });
+    expect(scenario.logger.errorCalls).toContainEqual({
+      context: expect.objectContaining({
+        stripeSubscriptionId: 'sub_missing_metadata',
+        error: 'Stripe subscription metadata.user_id is required',
+      }),
+      msg: 'Stripe subscription reconciliation failed',
+    });
+  });
+
   it('fails loudly when the local subscription list contains holes (internal invariant)', async () => {
     const sparseRows = new Array<LocalSubscriptionRow>(1);
     const stripe = createStripeStub({

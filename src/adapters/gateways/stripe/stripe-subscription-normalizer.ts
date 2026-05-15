@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import { getSubscriptionPlanFromPriceId } from '@/src/adapters/config/stripe-prices';
+import { STRIPE_SUBSCRIPTION_METADATA_USER_ID_FIELD } from '@/src/adapters/shared/stripe-subscription-errors';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
 import type { WebhookEventResult } from '@/src/application/ports/gateways';
@@ -38,6 +39,9 @@ export function normalizeStripeSubscriptionUpdate(input: {
     throw new ApplicationError(
       'STRIPE_ERROR',
       'Stripe subscription metadata.user_id is required',
+      {
+        [STRIPE_SUBSCRIPTION_METADATA_USER_ID_FIELD]: ['required'],
+      },
     );
   }
 
