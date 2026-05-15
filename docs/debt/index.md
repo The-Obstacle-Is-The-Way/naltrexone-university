@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-05-15 (DEBT-386 filed for E2E Stripe customer ownership drift after post-DEBT-384 webhook retry investigation)
+**Last Updated:** 2026-05-15 (DEBT-386 implementation branch adds owner-scoped E2E Stripe seeding and explicit owner-mismatch webhook skip; PR review pending)
 
 ---
 
@@ -23,7 +23,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-381](./debt-381-question-content-typography-audit-and-preference-path.md) | Question content typography audit — Quick Practice, Tutor, and Exam are already unified at the Typography Policy Medium content tier. Do not globally shrink question text; if needed later, add a user-selectable Markdown/content-size preference while leaving UI chrome unchanged. | P3 | — |
 | [DEBT-382](./debt-382-landing-page-content-refresh-question-count-and-author-credibility.md) | Landing page content refresh — update stale question-count/study-mode/author-credibility copy. `900+` remains the locked direction, but implementation must first preserve portable evidence for the local 948-question imported-content count or replace it with a tracked source count. | P3 | — |
 | [DEBT-385](./debt-385-stripe-invoice-event-subscription-ref-schema-drift.md) | Stripe invoice event subscription-reference schema drift — current Stripe invoice payloads expose the subscription at `data.object.parent.subscription_details.subscription`, while our schema reads root-level `data.object.subscription`. Invoice events therefore 200 with no subscription update, currently masked by parallel `customer.subscription.updated` events. Filed from DEBT-384; not implemented in that PR. | P2 | — |
-| [DEBT-386](./debt-386-e2e-stripe-customer-ownership-drift-webhook-500s.md) | E2E Stripe customer ownership drift — after DEBT-384, current undelivered test-mode webhook retries are no longer missing metadata. They are `customer.subscription.updated` events with `metadata.user_id` present, failing because shared E2E Stripe customer/subscription state is rebound across independent DB-local user IDs and the dev webhook correctly rejects `Stripe customer id is already mapped to a different user`. | P2 | — |
+| [DEBT-386](./debt-386-e2e-stripe-customer-ownership-drift-webhook-500s.md) | E2E Stripe customer ownership drift — implementation branch adds explicit E2E Stripe owner scoping (`E2E_STRIPE_OWNER`) for seeded customers/subscriptions, adds `STRIPE_WEBHOOK_E2E_OWNER` owner-mismatch skip at the webhook boundary only, and keeps reconciliation fail-closed. Still active until PR review/merge and post-merge Stripe Dashboard ops (`customer.subscription.created` endpoint config + retry verification). | P2 | — |
 
 **Next Debt ID:** DEBT-387
 

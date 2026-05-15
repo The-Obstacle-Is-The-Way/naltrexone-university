@@ -115,6 +115,7 @@ CLERK_SECRET_KEY=sk_test_...
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 E2E_CLERK_USER_USERNAME=test@example.com
 E2E_CLERK_USER_PASSWORD=your-password
+E2E_STRIPE_OWNER=local-dev
 STRIPE_SECRET_KEY=sk_test_...
 NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY=price_...
 ```
@@ -137,15 +138,15 @@ The setup project currently runs three steps, in this order:
    - Stripe monthly price-ID validity
 2. `seedTestSubscription()` idempotently ensures:
    - the E2E user exists in `users`
-   - a Stripe customer exists and is mirrored in `stripe_customers`
-   - an active subscription exists and is mirrored in `stripe_subscriptions`
+   - a Stripe customer exists for the current `E2E_STRIPE_OWNER` and is mirrored in `stripe_customers`
+   - an active owner-scoped subscription exists and is mirrored in `stripe_subscriptions`
 3. `runE2EUserStateReset()` clears mutable user state and reseeds a deterministic baseline
 
 `seedTestSubscription()` ensures:
 
 1. The test user exists in the `users` table (matched by email, Clerk user ID resolved via Clerk API)
-2. A Stripe customer exists (checked in DB, then Stripe API, created if needed) and is mirrored in `stripe_customers`
-3. An active subscription exists (using `pm_card_visa` test payment method) and is mirrored in `stripe_subscriptions`
+2. A Stripe customer exists for `metadata.e2e_owner === E2E_STRIPE_OWNER` (checked in DB, then Stripe API, created if needed) and is mirrored in `stripe_customers`
+3. An active owner-scoped subscription exists (using `pm_card_visa` test payment method) and is mirrored in `stripe_subscriptions`
 
 `global.setup.ts` also seeds a deterministic baseline for the shared authenticated E2E user once per suite run. That suite-level reset is not enough for mutating specs on its own: any spec that writes sessions, attempts, or bookmarks should call `runE2EUserStateReset()` in `beforeEach` so every test starts from the same baseline rather than inheriting artifacts from earlier files or retries.
 
@@ -335,6 +336,7 @@ E2E runs in CI via Playwright (see `.github/workflows/ci.yml`):
   env:
     E2E_CLERK_USER_USERNAME: ${{ secrets.E2E_CLERK_USER_USERNAME }}
     E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
+    E2E_STRIPE_OWNER: github-ci
 ```
 
 ### Required Secrets
@@ -343,6 +345,7 @@ E2E runs in CI via Playwright (see `.github/workflows/ci.yml`):
 | ------ | ------- |
 | `E2E_CLERK_USER_USERNAME` | Test Clerk account username (email) |
 | `E2E_CLERK_USER_PASSWORD` | Test Clerk account password |
+| `E2E_STRIPE_OWNER` | Stripe test customer/subscription owner namespace (`github-ci` in CI; `local-dev` or a developer-specific value locally) |
 | `CLERK_SECRET_KEY` | Clerk API key (used to resolve Clerk user ID during seeding) |
 | `STRIPE_SECRET_KEY` | Stripe API key (used to create test subscriptions during seeding) |
 | `DATABASE_URL` | Postgres connection string (used for direct DB writes during seeding) |
