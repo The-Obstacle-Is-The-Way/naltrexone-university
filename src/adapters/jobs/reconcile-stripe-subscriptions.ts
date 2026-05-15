@@ -97,6 +97,7 @@ export async function reconcileStripeSubscriptions(
             },
             priceIds: deps.priceIds,
             logger: deps.logger,
+            webhookE2EOwner: deps.webhookE2EOwner,
           });
 
         if (localSubscriptionUpdate.userId !== row.userId) {
@@ -158,6 +159,7 @@ export async function reconcileStripeSubscriptions(
             },
             priceIds: deps.priceIds,
             logger: deps.logger,
+            webhookE2EOwner: deps.webhookE2EOwner,
           });
 
           if (blockingUpdate.userId !== row.userId) {

@@ -1,7 +1,10 @@
 import type { z } from 'zod';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import { getSubscriptionPlanFromPriceId } from '@/src/adapters/config/stripe-prices';
-import { STRIPE_SUBSCRIPTION_METADATA_USER_ID_FIELD } from '@/src/adapters/shared/stripe-subscription-errors';
+import {
+  STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD,
+  STRIPE_SUBSCRIPTION_METADATA_USER_ID_FIELD,
+} from '@/src/adapters/shared/stripe-subscription-errors';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
 import type { WebhookEventResult } from '@/src/application/ports/gateways';
@@ -23,6 +26,7 @@ export function normalizeStripeSubscriptionUpdate(input: {
   type: string;
   priceIds: StripePriceIds;
   logger: Logger;
+  webhookE2EOwner?: string;
 }): NonNullable<WebhookEventResult['subscriptionUpdate']> {
   const { subscription } = input;
   const userId = subscription.metadata?.user_id;
@@ -41,6 +45,21 @@ export function normalizeStripeSubscriptionUpdate(input: {
       'Stripe subscription metadata.user_id is required',
       {
         [STRIPE_SUBSCRIPTION_METADATA_USER_ID_FIELD]: ['required'],
+      },
+    );
+  }
+
+  const eventE2EOwner = subscription.metadata?.e2e_owner;
+  if (
+    input.webhookE2EOwner &&
+    eventE2EOwner &&
+    eventE2EOwner !== input.webhookE2EOwner
+  ) {
+    throw new ApplicationError(
+      'STRIPE_ERROR',
+      'Stripe subscription metadata.e2e_owner does not match this webhook owner',
+      {
+        [STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD]: ['mismatch'],
       },
     );
   }
@@ -87,6 +106,7 @@ export async function retrieveAndNormalizeStripeSubscription(input: {
   event: { id: string; type: string };
   priceIds: StripePriceIds;
   logger: Logger;
+  webhookE2EOwner?: string;
 }): Promise<NonNullable<WebhookEventResult['subscriptionUpdate']>> {
   const stripeSubscriptionId =
     typeof input.subscriptionRef === 'string'
@@ -131,5 +151,6 @@ export async function retrieveAndNormalizeStripeSubscription(input: {
     type: input.event.type,
     priceIds: input.priceIds,
     logger: input.logger,
+    webhookE2EOwner: input.webhookE2EOwner,
   });
 }

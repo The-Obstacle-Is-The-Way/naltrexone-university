@@ -104,6 +104,7 @@ function createUserSubscriptionFixture(
     status: input.status,
     currentPeriodEnd: input.currentPeriodEnd,
     priceId: input.priceId,
+    e2eOwner: input.e2eOwner,
   });
 }
 
