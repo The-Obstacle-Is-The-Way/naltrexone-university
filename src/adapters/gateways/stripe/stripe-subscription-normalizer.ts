@@ -1,8 +1,9 @@
 import type { z } from 'zod';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import { getSubscriptionPlanFromPriceId } from '@/src/adapters/config/stripe-prices';
+import { STRIPE_SUBSCRIPTION_METADATA_USER_ID_FIELD } from '@/src/adapters/shared/stripe-subscription-errors';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
-import { ApplicationError, isApplicationError } from '@/src/application/errors';
+import { ApplicationError } from '@/src/application/errors';
 import type { WebhookEventResult } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 import { MS_PER_SECOND } from '@/src/domain/services';
@@ -15,20 +16,6 @@ import {
   type StripeSubscriptionRef,
   stripeSubscriptionSchema,
 } from './stripe-webhook-schemas';
-
-export const STRIPE_SUBSCRIPTION_METADATA_USER_ID_FIELD = 'metadata.user_id';
-
-export function isMissingStripeSubscriptionUserIdError(
-  error: unknown,
-): error is ApplicationError {
-  return (
-    isApplicationError(error) &&
-    error.code === 'STRIPE_ERROR' &&
-    error.fieldErrors?.[STRIPE_SUBSCRIPTION_METADATA_USER_ID_FIELD]?.includes(
-      'required',
-    ) === true
-  );
-}
 
 export function normalizeStripeSubscriptionUpdate(input: {
   subscription: z.infer<typeof stripeSubscriptionSchema>;

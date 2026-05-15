@@ -1,5 +1,5 @@
-import { isMissingStripeSubscriptionUserIdError } from '@/src/adapters/gateways/stripe/stripe-subscription-normalizer';
 import { STACK_TRACE_LIMIT } from '@/src/adapters/shared/error-logging-constants';
+import { isMissingStripeSubscriptionUserIdError } from '@/src/adapters/shared/stripe-subscription-errors';
 import { isApplicationError } from '@/src/application/errors';
 import type { PaymentGateway } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
