@@ -24,6 +24,17 @@ function createSqlClient(results: unknown[]) {
   });
 }
 
+function createStripeList<T>(firstPage: T[], allPages = firstPage) {
+  return {
+    data: firstPage,
+    async *[Symbol.asyncIterator]() {
+      for (const item of allPages) {
+        yield item;
+      }
+    },
+  };
+}
+
 describe('seedTestSubscription', () => {
   let seedTestSubscription: SeedTestSubscription;
   let postgresMock: ReturnType<typeof vi.fn>;
@@ -51,7 +62,7 @@ describe('seedTestSubscription', () => {
     }));
 
     customersCreate = vi.fn(async () => ({ id: 'cus_123' }));
-    customersList = vi.fn(async () => ({ data: [] }));
+    customersList = vi.fn(() => createStripeList([]));
     customersRetrieve = vi.fn(async () => ({
       id: 'cus_123',
       invoice_settings: {},
@@ -66,7 +77,7 @@ describe('seedTestSubscription', () => {
         ],
       },
     }));
-    subscriptionsList = vi.fn(async () => ({ data: [] }));
+    subscriptionsList = vi.fn(() => createStripeList([]));
     subscriptionsCancel = vi.fn(async () => ({}));
     subscriptionsUpdate = vi.fn(async () => ({}));
     const stripeClient = {
@@ -229,8 +240,8 @@ describe('seedTestSubscription', () => {
       },
       invoice_settings: {},
     });
-    customersList.mockResolvedValueOnce({
-      data: [
+    customersList.mockReturnValueOnce(
+      createStripeList([
         {
           id: 'cus_current_owner',
           metadata: {
@@ -239,8 +250,8 @@ describe('seedTestSubscription', () => {
             e2e_owner: 'github-ci',
           },
         },
-      ],
-    });
+      ]),
+    );
 
     await expect(seedTestSubscription()).resolves.toBeUndefined();
 
@@ -264,8 +275,8 @@ describe('seedTestSubscription', () => {
   });
 
   it('does not reuse a Stripe customer found by email when its metadata.e2e_owner differs from current owner', async () => {
-    customersList.mockResolvedValueOnce({
-      data: [
+    customersList.mockReturnValueOnce(
+      createStripeList([
         {
           id: 'cus_other_owner',
           metadata: {
@@ -274,8 +285,8 @@ describe('seedTestSubscription', () => {
             e2e_owner: 'local-dev',
           },
         },
-      ],
-    });
+      ]),
+    );
 
     await expect(seedTestSubscription()).resolves.toBeUndefined();
 
@@ -295,8 +306,8 @@ describe('seedTestSubscription', () => {
   });
 
   it('creates a new owner-scoped customer when none match the current owner', async () => {
-    customersList.mockResolvedValueOnce({
-      data: [
+    customersList.mockReturnValueOnce(
+      createStripeList([
         {
           id: 'cus_without_owner',
           metadata: {
@@ -310,8 +321,8 @@ describe('seedTestSubscription', () => {
             e2e_owner: 'local-dev',
           },
         },
-      ],
-    });
+      ]),
+    );
 
     await expect(seedTestSubscription()).resolves.toBeUndefined();
 
@@ -326,8 +337,8 @@ describe('seedTestSubscription', () => {
   });
 
   it('cancels non-active subscriptions only when they match the current owner', async () => {
-    customersList.mockResolvedValueOnce({
-      data: [
+    customersList.mockReturnValueOnce(
+      createStripeList([
         {
           id: 'cus_current_owner',
           metadata: {
@@ -336,10 +347,10 @@ describe('seedTestSubscription', () => {
             e2e_owner: 'github-ci',
           },
         },
-      ],
-    });
-    subscriptionsList.mockResolvedValueOnce({
-      data: [
+      ]),
+    );
+    subscriptionsList.mockReturnValueOnce(
+      createStripeList([
         {
           id: 'sub_canceled_current_owner',
           status: 'canceled',
@@ -370,8 +381,8 @@ describe('seedTestSubscription', () => {
             ],
           },
         },
-      ],
-    });
+      ]),
+    );
 
     await expect(seedTestSubscription()).resolves.toBeUndefined();
 
@@ -387,8 +398,8 @@ describe('seedTestSubscription', () => {
   });
 
   it('does not patch metadata.user_id on an active subscription whose metadata.e2e_owner differs from current owner', async () => {
-    customersList.mockResolvedValueOnce({
-      data: [
+    customersList.mockReturnValueOnce(
+      createStripeList([
         {
           id: 'cus_current_owner',
           metadata: {
@@ -397,10 +408,10 @@ describe('seedTestSubscription', () => {
             e2e_owner: 'github-ci',
           },
         },
-      ],
-    });
-    subscriptionsList.mockResolvedValueOnce({
-      data: [
+      ]),
+    );
+    subscriptionsList.mockReturnValueOnce(
+      createStripeList([
         {
           id: 'sub_other_owner',
           status: 'active',
@@ -416,8 +427,8 @@ describe('seedTestSubscription', () => {
             ],
           },
         },
-      ],
-    });
+      ]),
+    );
 
     await expect(seedTestSubscription()).resolves.toBeUndefined();
 
@@ -433,8 +444,8 @@ describe('seedTestSubscription', () => {
   });
 
   it('reuses a same-owner active subscription and patches its user_id when DB-local user differs', async () => {
-    customersList.mockResolvedValueOnce({
-      data: [
+    customersList.mockReturnValueOnce(
+      createStripeList([
         {
           id: 'cus_current_owner',
           metadata: {
@@ -443,10 +454,10 @@ describe('seedTestSubscription', () => {
             e2e_owner: 'github-ci',
           },
         },
-      ],
-    });
-    subscriptionsList.mockResolvedValueOnce({
-      data: [
+      ]),
+    );
+    subscriptionsList.mockReturnValueOnce(
+      createStripeList([
         {
           id: 'sub_existing',
           status: 'active',
@@ -462,8 +473,8 @@ describe('seedTestSubscription', () => {
             ],
           },
         },
-      ],
-    });
+      ]),
+    );
 
     await expect(seedTestSubscription()).resolves.toBeUndefined();
 
@@ -474,5 +485,99 @@ describe('seedTestSubscription', () => {
         e2e_owner: 'github-ci',
       },
     });
+  });
+
+  it('finds an owner-scoped customer beyond the first Stripe list page', async () => {
+    const firstPageCustomer = {
+      id: 'cus_other_owner',
+      metadata: {
+        user_id: 'other_user',
+        clerk_user_id: 'other_clerk',
+        e2e_owner: 'local-dev',
+      },
+    };
+    const secondPageCustomer = {
+      id: 'cus_second_page_current_owner',
+      metadata: {
+        user_id: 'user_123',
+        clerk_user_id: 'clerk_user_123',
+        e2e_owner: 'github-ci',
+      },
+    };
+    customersList.mockReturnValueOnce(
+      createStripeList(
+        [firstPageCustomer],
+        [firstPageCustomer, secondPageCustomer],
+      ),
+    );
+
+    await expect(seedTestSubscription()).resolves.toBeUndefined();
+
+    expect(customersCreate).not.toHaveBeenCalled();
+    expect(subscriptionsList).toHaveBeenCalledWith({
+      customer: 'cus_second_page_current_owner',
+      limit: 100,
+    });
+    expect(subscriptionsCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customer: 'cus_second_page_current_owner',
+      }),
+    );
+  });
+
+  it('reuses an active owner-scoped subscription beyond the first Stripe list page', async () => {
+    const firstPageSubscription = {
+      id: 'sub_first_page_other_owner',
+      status: 'active',
+      metadata: {
+        user_id: 'other_user',
+        e2e_owner: 'local-dev',
+      },
+      items: {
+        data: [
+          {
+            current_period_end: 1_800_000_000,
+          },
+        ],
+      },
+    };
+    const secondPageSubscription = {
+      id: 'sub_second_page_current_owner',
+      status: 'active',
+      metadata: {
+        user_id: 'user_123',
+        e2e_owner: 'github-ci',
+      },
+      items: {
+        data: [
+          {
+            current_period_end: 1_800_000_000,
+          },
+        ],
+      },
+    };
+    customersList.mockReturnValueOnce(
+      createStripeList([
+        {
+          id: 'cus_current_owner',
+          metadata: {
+            user_id: 'user_123',
+            clerk_user_id: 'clerk_user_123',
+            e2e_owner: 'github-ci',
+          },
+        },
+      ]),
+    );
+    subscriptionsList.mockReturnValueOnce(
+      createStripeList(
+        [firstPageSubscription],
+        [firstPageSubscription, secondPageSubscription],
+      ),
+    );
+
+    await expect(seedTestSubscription()).resolves.toBeUndefined();
+
+    expect(subscriptionsCreate).not.toHaveBeenCalled();
+    expect(subscriptionsUpdate).not.toHaveBeenCalled();
   });
 });

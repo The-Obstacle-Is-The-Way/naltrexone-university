@@ -2,7 +2,7 @@ import postgres from 'postgres';
 import Stripe from 'stripe';
 
 const DEFAULT_LOCAL_E2E_STRIPE_OWNER = 'local-dev';
-const STRIPE_LIST_LIMIT = 100;
+const STRIPE_PAGE_SIZE = 100;
 
 type StripeCustomerSeedResult = {
   stripeCustomerId: string;
@@ -99,6 +99,40 @@ function hasE2EOwner(
   return metadata?.e2e_owner === e2eStripeOwner;
 }
 
+async function findOwnerMatchedStripeCustomer(
+  stripe: Stripe,
+  email: string,
+  e2eStripeOwner: string,
+): Promise<Stripe.Customer | undefined> {
+  for await (const customer of stripe.customers.list({
+    email,
+    limit: STRIPE_PAGE_SIZE,
+  })) {
+    if (hasE2EOwner(customer.metadata, e2eStripeOwner)) {
+      return customer;
+    }
+  }
+}
+
+async function listOwnerMatchedStripeSubscriptions(
+  stripe: Stripe,
+  stripeCustomerId: string,
+  e2eStripeOwner: string,
+): Promise<Stripe.Subscription[]> {
+  const ownerMatchedSubscriptions: Stripe.Subscription[] = [];
+
+  for await (const subscription of stripe.subscriptions.list({
+    customer: stripeCustomerId,
+    limit: STRIPE_PAGE_SIZE,
+  })) {
+    if (hasE2EOwner(subscription.metadata, e2eStripeOwner)) {
+      ownerMatchedSubscriptions.push(subscription);
+    }
+  }
+
+  return ownerMatchedSubscriptions;
+}
+
 // ── Clerk ────────────────────────────────────────────────────────────────
 
 async function resolveClerkUserId(
@@ -167,13 +201,11 @@ async function ensureStripeCustomer(
   }
 
   // Check Stripe (may exist from a previous run not mirrored in DB)
-  const customers = await stripe.customers.list({
-    email,
-    limit: STRIPE_LIST_LIMIT,
-  });
   let stripeCustomerId: string;
-  const ownerMatchedCustomer = customers.data.find((customer) =>
-    hasE2EOwner(customer.metadata, e2eStripeOwner),
+  const ownerMatchedCustomer = await findOwnerMatchedStripeCustomer(
+    stripe,
+    email,
+    e2eStripeOwner,
   );
 
   if (ownerMatchedCustomer) {
@@ -246,12 +278,10 @@ async function ensureActiveSubscription(
   }
 
   // Cancel any non-active subscriptions on this customer to avoid conflicts
-  const subs = await stripe.subscriptions.list({
-    customer: stripeCustomerId,
-    limit: STRIPE_LIST_LIMIT,
-  });
-  const ownerMatchedSubscriptions = subs.data.filter((subscription) =>
-    hasE2EOwner(subscription.metadata, e2eStripeOwner),
+  const ownerMatchedSubscriptions = await listOwnerMatchedStripeSubscriptions(
+    stripe,
+    stripeCustomerId,
+    e2eStripeOwner,
   );
   for (const sub of ownerMatchedSubscriptions) {
     if (sub.status !== 'active') {
