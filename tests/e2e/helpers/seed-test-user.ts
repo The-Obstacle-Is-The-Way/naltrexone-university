@@ -4,6 +4,11 @@ import Stripe from 'stripe';
 const DEFAULT_LOCAL_E2E_STRIPE_OWNER = 'local-dev';
 const STRIPE_LIST_LIMIT = 100;
 
+type StripeCustomerSeedResult = {
+  stripeCustomerId: string;
+  canTrustLocalSubscriptionRow: boolean;
+};
+
 /**
  * Idempotent seed function that ensures the E2E test user has:
  * 1. A row in the `users` table
@@ -46,7 +51,7 @@ export async function seedTestSubscription(): Promise<void> {
     const userId = await ensureDbUser(sql, clerkUserId, email);
 
     // ── 3. Ensure Stripe customer + DB mirror ─────────────────────────
-    const stripeCustomerId = await ensureStripeCustomer(
+    const stripeCustomer = await ensureStripeCustomer(
       sql,
       stripe,
       userId,
@@ -60,9 +65,10 @@ export async function seedTestSubscription(): Promise<void> {
       sql,
       stripe,
       userId,
-      stripeCustomerId,
+      stripeCustomer.stripeCustomerId,
       priceId,
       e2eStripeOwner,
+      stripeCustomer.canTrustLocalSubscriptionRow,
     );
   } finally {
     await sql.end();
@@ -140,7 +146,7 @@ async function ensureStripeCustomer(
   clerkUserId: string,
   email: string,
   e2eStripeOwner: string,
-): Promise<string> {
+): Promise<StripeCustomerSeedResult> {
   // Check DB first
   const [existing] = await sql`
     SELECT stripe_customer_id FROM stripe_customers WHERE user_id = ${userId}
@@ -153,7 +159,10 @@ async function ensureStripeCustomer(
       !('deleted' in existingCustomer && existingCustomer.deleted) &&
       hasE2EOwner(existingCustomer.metadata, e2eStripeOwner)
     ) {
-      return existing.stripe_customer_id as string;
+      return {
+        stripeCustomerId: existing.stripe_customer_id as string,
+        canTrustLocalSubscriptionRow: true,
+      };
     }
   }
 
@@ -189,7 +198,10 @@ async function ensureStripeCustomer(
       SET stripe_customer_id = EXCLUDED.stripe_customer_id
   `;
 
-  return stripeCustomerId;
+  return {
+    stripeCustomerId,
+    canTrustLocalSubscriptionRow: false,
+  };
 }
 
 // ── Stripe subscription ──────────────────────────────────────────────────
@@ -201,6 +213,7 @@ async function ensureActiveSubscription(
   stripeCustomerId: string,
   priceId: string,
   e2eStripeOwner: string,
+  canTrustLocalSubscriptionRow: boolean,
 ): Promise<void> {
   // Check if we already have an active subscription with time remaining
   const [existing] = await sql`
@@ -210,6 +223,7 @@ async function ensureActiveSubscription(
   `;
 
   if (
+    canTrustLocalSubscriptionRow &&
     existing &&
     existing.status === 'active' &&
     new Date(existing.current_period_end as string) > new Date()

@@ -195,6 +195,74 @@ describe('seedTestSubscription', () => {
     expect(subscriptionsCreate).not.toHaveBeenCalled();
   });
 
+  it('reconciles Stripe when the DB customer is remapped even if a local subscription row is active', async () => {
+    postgresMock.mockReturnValueOnce(
+      createSqlClient([
+        [{ id: 'user_123' }],
+        [{ stripe_customer_id: 'cus_other_owner' }],
+        [],
+        [
+          {
+            stripe_subscription_id: 'sub_stale_local',
+            status: 'active',
+            current_period_end: '2999-01-01T00:00:00.000Z',
+          },
+        ],
+        [],
+      ]),
+    );
+    customersRetrieve.mockResolvedValueOnce({
+      id: 'cus_other_owner',
+      metadata: {
+        user_id: 'other_user',
+        clerk_user_id: 'other_clerk',
+        e2e_owner: 'local-dev',
+      },
+      invoice_settings: {},
+    });
+    customersRetrieve.mockResolvedValueOnce({
+      id: 'cus_current_owner',
+      metadata: {
+        user_id: 'user_123',
+        clerk_user_id: 'clerk_user_123',
+        e2e_owner: 'github-ci',
+      },
+      invoice_settings: {},
+    });
+    customersList.mockResolvedValueOnce({
+      data: [
+        {
+          id: 'cus_current_owner',
+          metadata: {
+            user_id: 'user_123',
+            clerk_user_id: 'clerk_user_123',
+            e2e_owner: 'github-ci',
+          },
+        },
+      ],
+    });
+
+    await expect(seedTestSubscription()).resolves.toBeUndefined();
+
+    expect(customersRetrieve).toHaveBeenCalledWith('cus_other_owner');
+    expect(customersList).toHaveBeenCalledWith({
+      email: 'e2e-test@addictionboards.com',
+      limit: 100,
+    });
+    expect(subscriptionsList).toHaveBeenCalledWith({
+      customer: 'cus_current_owner',
+      limit: 100,
+    });
+    expect(subscriptionsCreate).toHaveBeenCalledWith({
+      customer: 'cus_current_owner',
+      items: [{ price: 'price_monthly' }],
+      metadata: {
+        user_id: 'user_123',
+        e2e_owner: 'github-ci',
+      },
+    });
+  });
+
   it('does not reuse a Stripe customer found by email when its metadata.e2e_owner differs from current owner', async () => {
     customersList.mockResolvedValueOnce({
       data: [
