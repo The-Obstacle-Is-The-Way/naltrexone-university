@@ -136,6 +136,23 @@ describe('normalizeStripeSubscriptionUpdate', () => {
     ).not.toThrow();
   });
 
+  it('does not throw when webhook owner matches event e2e_owner metadata', () => {
+    const logger = new FakeLogger();
+
+    const result = normalizeStripeSubscriptionUpdate({
+      subscription: createSubscriptionFixture({
+        e2eOwner: 'vercel-dev-preview',
+      }),
+      eventId: 'evt_1',
+      type: 'customer.subscription.updated',
+      priceIds,
+      logger,
+      webhookE2EOwner: 'vercel-dev-preview',
+    });
+
+    expect(result.userId).toBe('user_1');
+  });
+
   it('does not throw when webhook owner is configured but event has no e2e_owner metadata', () => {
     const logger = new FakeLogger();
 
