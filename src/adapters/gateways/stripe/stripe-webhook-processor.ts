@@ -15,6 +15,7 @@ async function getSubscriptionUpdateForSubscriptionRefEvent(input: {
   event: ReturnType<StripeClient['webhooks']['constructEvent']>;
   priceIds: StripePriceIds;
   logger: Logger;
+  webhookE2EOwner?: string;
 }): Promise<WebhookEventResult['subscriptionUpdate'] | undefined> {
   const parsedPayload = stripeEventWithSubscriptionRefSchema.safeParse(
     input.event.data.object,
@@ -45,6 +46,7 @@ async function getSubscriptionUpdateForSubscriptionRefEvent(input: {
     event: input.event,
     priceIds: input.priceIds,
     logger: input.logger,
+    webhookE2EOwner: input.webhookE2EOwner,
   });
 }
 
@@ -55,6 +57,7 @@ export async function processStripeWebhookEvent({
   signature,
   priceIds,
   logger,
+  webhookE2EOwner,
 }: {
   stripe: StripeClient;
   webhookSecret: string;
@@ -62,6 +65,7 @@ export async function processStripeWebhookEvent({
   signature: string;
   priceIds: StripePriceIds;
   logger: Logger;
+  webhookE2EOwner?: string;
 }): Promise<WebhookEventResult> {
   let event: ReturnType<StripeClient['webhooks']['constructEvent']>;
   try {
@@ -99,6 +103,7 @@ export async function processStripeWebhookEvent({
         event,
         priceIds,
         logger,
+        webhookE2EOwner,
       });
 
     return subscriptionUpdate ? { ...result, subscriptionUpdate } : result;
@@ -133,6 +138,7 @@ export async function processStripeWebhookEvent({
     event,
     priceIds,
     logger,
+    webhookE2EOwner,
   });
 
   return { ...result, subscriptionUpdate };

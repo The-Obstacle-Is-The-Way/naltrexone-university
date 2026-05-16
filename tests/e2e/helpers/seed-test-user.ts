@@ -1,6 +1,14 @@
 import postgres from 'postgres';
 import Stripe from 'stripe';
 
+const DEFAULT_LOCAL_E2E_STRIPE_OWNER = 'local-dev';
+const STRIPE_PAGE_SIZE = 100;
+
+type StripeCustomerSeedResult = {
+  stripeCustomerId: string;
+  canTrustLocalSubscriptionRow: boolean;
+};
+
 /**
  * Idempotent seed function that ensures the E2E test user has:
  * 1. A row in the `users` table
@@ -15,6 +23,7 @@ export async function seedTestSubscription(): Promise<void> {
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
   const clerkSecretKey = process.env.CLERK_SECRET_KEY;
   const email = process.env.E2E_CLERK_USER_USERNAME;
+  const e2eStripeOwner = resolveE2EStripeOwner(stripeSecretKey);
   const priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY;
 
   if (
@@ -42,12 +51,13 @@ export async function seedTestSubscription(): Promise<void> {
     const userId = await ensureDbUser(sql, clerkUserId, email);
 
     // ── 3. Ensure Stripe customer + DB mirror ─────────────────────────
-    const stripeCustomerId = await ensureStripeCustomer(
+    const stripeCustomer = await ensureStripeCustomer(
       sql,
       stripe,
       userId,
       clerkUserId,
       email,
+      e2eStripeOwner,
     );
 
     // ── 4. Ensure active subscription + DB mirror ─────────────────────
@@ -55,12 +65,72 @@ export async function seedTestSubscription(): Promise<void> {
       sql,
       stripe,
       userId,
-      stripeCustomerId,
+      stripeCustomer.stripeCustomerId,
       priceId,
+      e2eStripeOwner,
+      stripeCustomer.canTrustLocalSubscriptionRow,
     );
   } finally {
     await sql.end();
   }
+}
+
+function isDummyStripeSecretKey(stripeSecretKey: string): boolean {
+  return stripeSecretKey === 'sk_test_dummy';
+}
+
+function resolveE2EStripeOwner(stripeSecretKey: string | undefined): string {
+  const configuredOwner = process.env.E2E_STRIPE_OWNER?.trim();
+  if (configuredOwner) return configuredOwner;
+
+  if (stripeSecretKey && !isDummyStripeSecretKey(stripeSecretKey)) {
+    throw new Error(
+      'E2E_STRIPE_OWNER is required when STRIPE_SECRET_KEY is real',
+    );
+  }
+
+  return DEFAULT_LOCAL_E2E_STRIPE_OWNER;
+}
+
+function hasE2EOwner(
+  metadata: Stripe.Metadata | null | undefined,
+  e2eStripeOwner: string,
+): boolean {
+  return metadata?.e2e_owner === e2eStripeOwner;
+}
+
+async function findOwnerMatchedStripeCustomer(
+  stripe: Stripe,
+  email: string,
+  e2eStripeOwner: string,
+): Promise<Stripe.Customer | undefined> {
+  for await (const customer of stripe.customers.list({
+    email,
+    limit: STRIPE_PAGE_SIZE,
+  })) {
+    if (hasE2EOwner(customer.metadata, e2eStripeOwner)) {
+      return customer;
+    }
+  }
+}
+
+async function listOwnerMatchedStripeSubscriptions(
+  stripe: Stripe,
+  stripeCustomerId: string,
+  e2eStripeOwner: string,
+): Promise<Stripe.Subscription[]> {
+  const ownerMatchedSubscriptions: Stripe.Subscription[] = [];
+
+  for await (const subscription of stripe.subscriptions.list({
+    customer: stripeCustomerId,
+    limit: STRIPE_PAGE_SIZE,
+  })) {
+    if (hasE2EOwner(subscription.metadata, e2eStripeOwner)) {
+      ownerMatchedSubscriptions.push(subscription);
+    }
+  }
+
+  return ownerMatchedSubscriptions;
 }
 
 // ── Clerk ────────────────────────────────────────────────────────────────
@@ -109,25 +179,44 @@ async function ensureStripeCustomer(
   userId: string,
   clerkUserId: string,
   email: string,
-): Promise<string> {
+  e2eStripeOwner: string,
+): Promise<StripeCustomerSeedResult> {
   // Check DB first
   const [existing] = await sql`
     SELECT stripe_customer_id FROM stripe_customers WHERE user_id = ${userId}
   `;
-  if (existing) return existing.stripe_customer_id as string;
+  if (existing) {
+    const existingCustomer = await stripe.customers.retrieve(
+      existing.stripe_customer_id as string,
+    );
+    if (
+      !('deleted' in existingCustomer && existingCustomer.deleted) &&
+      hasE2EOwner(existingCustomer.metadata, e2eStripeOwner)
+    ) {
+      return {
+        stripeCustomerId: existing.stripe_customer_id as string,
+        canTrustLocalSubscriptionRow: true,
+      };
+    }
+  }
 
   // Check Stripe (may exist from a previous run not mirrored in DB)
-  const customers = await stripe.customers.list({ email, limit: 1 });
   let stripeCustomerId: string;
+  const ownerMatchedCustomer = await findOwnerMatchedStripeCustomer(
+    stripe,
+    email,
+    e2eStripeOwner,
+  );
 
-  if (customers.data.length > 0) {
-    stripeCustomerId = customers.data[0].id;
+  if (ownerMatchedCustomer) {
+    stripeCustomerId = ownerMatchedCustomer.id;
   } else {
     const customer = await stripe.customers.create({
       email,
       metadata: {
         user_id: userId,
         clerk_user_id: clerkUserId,
+        e2e_owner: e2eStripeOwner,
       },
     });
     stripeCustomerId = customer.id;
@@ -141,7 +230,10 @@ async function ensureStripeCustomer(
       SET stripe_customer_id = EXCLUDED.stripe_customer_id
   `;
 
-  return stripeCustomerId;
+  return {
+    stripeCustomerId,
+    canTrustLocalSubscriptionRow: false,
+  };
 }
 
 // ── Stripe subscription ──────────────────────────────────────────────────
@@ -152,6 +244,8 @@ async function ensureActiveSubscription(
   userId: string,
   stripeCustomerId: string,
   priceId: string,
+  e2eStripeOwner: string,
+  canTrustLocalSubscriptionRow: boolean,
 ): Promise<void> {
   // Check if we already have an active subscription with time remaining
   const [existing] = await sql`
@@ -161,6 +255,7 @@ async function ensureActiveSubscription(
   `;
 
   if (
+    canTrustLocalSubscriptionRow &&
     existing &&
     existing.status === 'active' &&
     new Date(existing.current_period_end as string) > new Date()
@@ -183,18 +278,21 @@ async function ensureActiveSubscription(
   }
 
   // Cancel any non-active subscriptions on this customer to avoid conflicts
-  const subs = await stripe.subscriptions.list({
-    customer: stripeCustomerId,
-    limit: 100,
-  });
-  for (const sub of subs.data) {
+  const ownerMatchedSubscriptions = await listOwnerMatchedStripeSubscriptions(
+    stripe,
+    stripeCustomerId,
+    e2eStripeOwner,
+  );
+  for (const sub of ownerMatchedSubscriptions) {
     if (sub.status !== 'active') {
       await stripe.subscriptions.cancel(sub.id);
     }
   }
 
   // If there's an active sub in Stripe already, reuse it
-  const activeSub = subs.data.find((s) => s.status === 'active');
+  const activeSub = ownerMatchedSubscriptions.find(
+    (s) => s.status === 'active',
+  );
   let subscriptionId: string;
   let currentPeriodEnd: Date;
 
@@ -204,6 +302,7 @@ async function ensureActiveSubscription(
         metadata: {
           ...(activeSub.metadata ?? {}),
           user_id: userId,
+          e2e_owner: e2eStripeOwner,
         },
       });
     }
@@ -217,6 +316,7 @@ async function ensureActiveSubscription(
       items: [{ price: priceId }],
       metadata: {
         user_id: userId,
+        e2e_owner: e2eStripeOwner,
       },
     });
     subscriptionId = subscription.id;

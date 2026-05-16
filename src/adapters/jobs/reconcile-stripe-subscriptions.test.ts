@@ -45,6 +45,7 @@ type ReconciliationTestScenarioInput = {
   subscriptions?: FakeSubscriptionRepository;
   logger?: FakeLogger;
   transaction?: ReconciliationDeps['transaction'];
+  webhookE2EOwner?: string;
 };
 
 function createSubscriptionFixture(input: {
@@ -54,6 +55,7 @@ function createSubscriptionFixture(input: {
   status?: StripeSubscriptionStatus;
   currentPeriodEnd?: number;
   priceId?: string;
+  e2eOwner?: string;
 }): StripeSubscriptionFixture {
   const subscriptionEvent = loadJsonFixture<{
     data: { object: StripeSubscriptionFixture };
@@ -65,7 +67,11 @@ function createSubscriptionFixture(input: {
     id: input.id,
     customer: input.customerId ?? 'cus_123',
     status: input.status ?? 'active',
-    metadata: { ...(base.metadata ?? {}), user_id: input.userId },
+    metadata: {
+      ...(base.metadata ?? {}),
+      user_id: input.userId,
+      ...(input.e2eOwner ? { e2e_owner: input.e2eOwner } : {}),
+    },
     items: {
       ...base.items,
       data: [
@@ -98,6 +104,7 @@ function createUserSubscriptionFixture(
     status: input.status,
     currentPeriodEnd: input.currentPeriodEnd,
     priceId: input.priceId,
+    e2eOwner: input.e2eOwner,
   });
 }
 
@@ -200,6 +207,7 @@ function createReconciliationTestScenario(
         stripe,
         priceIds: { monthly: 'price_m', annual: 'price_a' },
         logger,
+        webhookE2EOwner: input.webhookE2EOwner,
         listLocalSubscriptions,
         transaction,
       },
@@ -474,6 +482,39 @@ describe('reconcileStripeSubscriptions', () => {
       context: expect.objectContaining({
         stripeSubscriptionId: 'sub_missing_metadata',
         error: 'Stripe subscription metadata.user_id is required',
+      }),
+      msg: 'Stripe subscription reconciliation failed',
+    });
+  });
+
+  it('keeps reconciliation fail-closed when Stripe subscription e2e owner differs from configured owner', async () => {
+    const ownerMismatchSubscription = createUserSubscriptionFixture(
+      'sub_owner_mismatch',
+      {
+        e2eOwner: 'github-ci',
+      },
+    );
+    const stripe = createStripeFromFixtures({
+      fixtures: [{ fixture: ownerMismatchSubscription }],
+    });
+    const scenario = createReconciliationTestScenario({
+      stripe,
+      localSubscriptions: [row('user_1', 'sub_owner_mismatch')],
+      webhookE2EOwner: 'vercel-dev-preview',
+    });
+
+    const result = await scenario.run();
+
+    expectSingleFailure(result, {
+      stripeSubscriptionId: 'sub_owner_mismatch',
+      error:
+        'Stripe subscription metadata.e2e_owner does not match this webhook owner',
+    });
+    expect(scenario.logger.errorCalls).toContainEqual({
+      context: expect.objectContaining({
+        stripeSubscriptionId: 'sub_owner_mismatch',
+        error:
+          'Stripe subscription metadata.e2e_owner does not match this webhook owner',
       }),
       msg: 'Stripe subscription reconciliation failed',
     });

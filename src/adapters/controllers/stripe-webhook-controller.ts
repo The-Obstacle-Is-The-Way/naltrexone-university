@@ -1,5 +1,8 @@
 import { STACK_TRACE_LIMIT } from '@/src/adapters/shared/error-logging-constants';
-import { isMissingStripeSubscriptionUserIdError } from '@/src/adapters/shared/stripe-subscription-errors';
+import {
+  isE2EOwnerMismatchEvent,
+  isMissingStripeSubscriptionUserIdError,
+} from '@/src/adapters/shared/stripe-subscription-errors';
 import { isApplicationError } from '@/src/application/errors';
 import type { PaymentGateway } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
@@ -76,6 +79,18 @@ export async function processStripeWebhook(
           fieldErrors: error.fieldErrors,
         },
         'Skipping Stripe subscription webhook with missing metadata.user_id',
+      );
+      return;
+    }
+
+    if (isE2EOwnerMismatchEvent(error)) {
+      deps.logger.warn(
+        {
+          reason: 'e2e_owner_mismatch',
+          code: error.code,
+          fieldErrors: error.fieldErrors,
+        },
+        'Skipping Stripe subscription webhook from a different E2E owner',
       );
       return;
     }

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
+import { STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD } from '@/src/adapters/shared/stripe-subscription-errors';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import {
@@ -15,12 +16,16 @@ const priceIds: StripePriceIds = {
 function createSubscriptionFixture(overrides?: {
   status?: string;
   userId?: string | null;
+  e2eOwner?: string;
   priceId?: string;
 }) {
   const metadata: Record<string, string> | undefined =
     overrides?.userId === null
       ? undefined
-      : { user_id: overrides?.userId ?? 'user_1' };
+      : {
+          user_id: overrides?.userId ?? 'user_1',
+          ...(overrides?.e2eOwner ? { e2e_owner: overrides.e2eOwner } : {}),
+        };
 
   return {
     id: 'sub_123',
@@ -93,6 +98,74 @@ describe('normalizeStripeSubscriptionUpdate', () => {
         stripeCustomerId: 'cus_123',
       },
     });
+  });
+
+  it('throws STRIPE_ERROR when subscription e2e_owner differs from configured webhook owner', () => {
+    const logger = new FakeLogger();
+
+    expect(() =>
+      normalizeStripeSubscriptionUpdate({
+        subscription: createSubscriptionFixture({ e2eOwner: 'github-ci' }),
+        eventId: 'evt_1',
+        type: 'customer.subscription.updated',
+        priceIds,
+        logger,
+        webhookE2EOwner: 'vercel-dev-preview',
+      }),
+    ).toThrow(
+      expect.objectContaining({
+        code: 'STRIPE_ERROR',
+        fieldErrors: {
+          [STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD]: ['mismatch'],
+        },
+      }),
+    );
+  });
+
+  it('does not throw for e2e_owner metadata when webhook owner is unset', () => {
+    const logger = new FakeLogger();
+
+    expect(() =>
+      normalizeStripeSubscriptionUpdate({
+        subscription: createSubscriptionFixture({ e2eOwner: 'github-ci' }),
+        eventId: 'evt_1',
+        type: 'customer.subscription.updated',
+        priceIds,
+        logger,
+      }),
+    ).not.toThrow();
+  });
+
+  it('does not throw when webhook owner matches event e2e_owner metadata', () => {
+    const logger = new FakeLogger();
+
+    const result = normalizeStripeSubscriptionUpdate({
+      subscription: createSubscriptionFixture({
+        e2eOwner: 'vercel-dev-preview',
+      }),
+      eventId: 'evt_1',
+      type: 'customer.subscription.updated',
+      priceIds,
+      logger,
+      webhookE2EOwner: 'vercel-dev-preview',
+    });
+
+    expect(result.userId).toBe('user_1');
+  });
+
+  it('does not throw when webhook owner is configured but event has no e2e_owner metadata', () => {
+    const logger = new FakeLogger();
+
+    expect(() =>
+      normalizeStripeSubscriptionUpdate({
+        subscription: createSubscriptionFixture(),
+        eventId: 'evt_1',
+        type: 'customer.subscription.updated',
+        priceIds,
+        logger,
+        webhookE2EOwner: 'vercel-dev-preview',
+      }),
+    ).not.toThrow();
   });
 
   it('throws STRIPE_ERROR when subscription status is invalid', () => {

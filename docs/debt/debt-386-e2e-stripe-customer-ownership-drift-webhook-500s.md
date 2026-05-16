@@ -4,7 +4,7 @@
 **Created:** 2026-05-15
 **Source:** Follow-up investigation after DEBT-384 was merged, archived, and the debt register was synchronized. Stripe still showed undelivered test-mode webhook events after PR #310, but the payloads no longer matched the missing-`metadata.user_id` failure that DEBT-384 fixed.
 **Related:** [DEBT-384 archived](../_archive/debt/debt-384-stripe-webhook-error-rate-investigation.md), [DEBT-385 invoice schema drift](./debt-385-stripe-invoice-event-subscription-ref-schema-drift.md), [DEBT-293 E2E shared state](../_archive/debt/debt-293-e2e-shared-state-structural-flakiness.md), [DEBT-306 Stripe customer search/create race](../_archive/debt/debt-306-stripe-customer-search-create-race.md)
-**Status:** Active - documented only. No code fix has been attempted. Live mode has zero currently undelivered events as of the 2026-05-15 snapshot below; the active failure is on the shared Stripe test-mode endpoint used by the dev preview.
+**Status:** Active - implementation branch in progress. The code-fixable T2/T3 work is implemented on `debt-386-e2e-stripe-owner-scoping` and awaits PR review/merge; post-merge Stripe Dashboard ops remain pending. Live mode has zero currently undelivered events as of the 2026-05-15 snapshot below; the active failure is on the shared Stripe test-mode endpoint used by the dev preview.
 
 ---
 
@@ -23,6 +23,19 @@ The confirmed source is cross-environment ownership drift in the E2E Stripe seed
 This is not a production payment incident today, but it keeps the test webhook retry queue noisy, keeps the Stripe dashboard error rate scary, and can mask future real webhook failures.
 
 All raw Stripe IDs, internal user UUIDs, and emails in this doc are redacted to stable aliases. Use the verification commands below to retrieve live values when implementing.
+
+---
+
+## Implementation Status
+
+Branch `debt-386-e2e-stripe-owner-scoping` implements the code portion of this debt:
+
+- T2: `tests/e2e/helpers/seed-test-user.ts` now requires `E2E_STRIPE_OWNER` when real Stripe credentials are used, stamps `e2e_owner` metadata on E2E-created customers/subscriptions, filters customer reuse by owner, filters active subscription reuse by owner, and preserves same-owner `metadata.user_id` repair without mutating other-owner subscriptions.
+- T3: `src/adapters/gateways/stripe/stripe-subscription-normalizer.ts` now stamps a typed `STRIPE_ERROR` field marker for explicit `metadata.e2e_owner` mismatch when `STRIPE_WEBHOOK_E2E_OWNER` is configured. `src/adapters/controllers/stripe-webhook-controller.ts` catches only that marker, logs `reason: 'e2e_owner_mismatch'`, returns 200 without claiming the event, and leaves all other Stripe errors fail-closed.
+- Reconcile safety: `src/adapters/jobs/reconcile-stripe-subscriptions.ts` receives the same optional owner configuration and records a row failure rather than skipping when a configured owner mismatch is encountered.
+- Configuration: `.env.example` documents `E2E_STRIPE_OWNER` and `STRIPE_WEBHOOK_E2E_OWNER`; `.github/workflows/ci.yml` sets CI E2E ownership to `github-ci`; `lib/env.ts` accepts optional `STRIPE_WEBHOOK_E2E_OWNER`; `lib/container/gateways.ts` threads it through constructor injection.
+
+This doc should remain active until the PR is merged and the post-merge ops checklist below is completed or explicitly deferred.
 
 ---
 
@@ -453,13 +466,12 @@ Expected after a correct fix:
 
 ---
 
-## Open Questions Before Implementation
+## Decisions Applied During Implementation
 
-1. What owner value should the deployed dev-preview webhook accept?
-2. Should local developer E2E runs use a developer-specific owner value, or should they avoid real Stripe writes by default?
-3. Should CI use a stable owner (`github-ci`) or a per-run owner? Stable owner limits Stripe object growth; per-run owner maximizes isolation but requires cleanup.
-4. Should `E2E_STRIPE_OWNER` be mandatory whenever `STRIPE_SECRET_KEY` is real and `pnpm test:e2e` runs?
-5. Should endpoint config (`customer.subscription.created`) be completed as a manual ops step alongside this work or tracked separately?
+1. Deployed dev-preview webhook owner: `STRIPE_WEBHOOK_E2E_OWNER=vercel-dev-preview`.
+2. CI E2E owner: `E2E_STRIPE_OWNER=github-ci`.
+3. Local developer owner default: `local-dev` only when Stripe credentials are dummy; real Stripe credentials require an explicit `E2E_STRIPE_OWNER`.
+4. `customer.subscription.created` endpoint config remains out of scope for code and stays in the post-merge ops checklist.
 
 ---
 
