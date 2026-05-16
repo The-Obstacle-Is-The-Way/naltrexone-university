@@ -165,6 +165,7 @@ jobs:
           require_non_empty NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY
           require_non_empty E2E_CLERK_USER_USERNAME
           require_non_empty E2E_CLERK_USER_PASSWORD
+          require_non_empty E2E_STRIPE_OWNER
 
           require_not_dummy CLERK_SECRET_KEY sk_test_dummy
           require_not_dummy NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY pk_test_dummy
