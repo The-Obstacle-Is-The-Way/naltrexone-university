@@ -392,7 +392,7 @@ Failures dominated by 500s on missing metadata? **Yes — confirmed.** Caveats: 
 1. **Now (no code change, Tier 1):** In Stripe Dashboard → Customers → find `cus_E2E_REDACTED` (E2E test user) → delete **both** its subscriptions: `sub_E2E_CANCELED_MISSING_METADATA` (canceled) and `sub_E2E_ACTIVE_MISSING_METADATA` (active). Optionally delete the customer entirely if the E2E suite can re-create on next run. The dashboard error rate should drop as new state changes stop generating failures and historical failed attempts age out.
 2. **Code fix (Tier 2/Tier 3):** Implemented in [PR #310](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/310) on branch `debt-384-webhook-metadata-resilience`. New E2E-seeded subscriptions carry metadata; missing-metadata webhook deliveries now 200-skip with structured warning instead of retrying as 500s.
 3. **Verification after deploy:** Resend the two stuck events from Stripe Workbench or CLI after the PR deploys. They should receive 200 responses and stop retrying. Do this only after user approval; this PR itself does not mutate Stripe state.
-4. **Config tightening (independent):** Add `customer.subscription.created` to both endpoints' `enabled_events` lists. Dashboard config change. Eliminates the dead-code path in our handler.
+4. **Config tightening (independent):** Add `customer.subscription.created` to endpoint `enabled_events` lists. Test-mode endpoint config was completed on 2026-05-18; live endpoint config remains pending because the local live CLI key can verify live state but cannot update webhook endpoints. This eliminates the dead-code path in our handler when fully complete.
 5. **Separate ticket filed:** [DEBT-385](./debt-385-stripe-invoice-event-subscription-ref-schema-drift.md) covers invoice-event schema drift (`data.object.subscription` → `data.object.parent.subscription_details.subscription`).
 
 ---
@@ -410,5 +410,5 @@ DEBT-384 should be treated as a separate triage that runs in parallel with whate
 
 1. **Stripe Dashboard cleanup** — Delete BOTH bad subscriptions: `sub_E2E_CANCELED_MISSING_METADATA` (canceled, retry queue draining) and `sub_E2E_ACTIVE_MISSING_METADATA` (active, will fail on future state changes). Both on customer `cus_E2E_REDACTED` (E2E test user). Verify by re-running `stripe events list --limit 100` after 24 hours — `pending_webhooks > 0` should drop to zero or near-zero.
 2. **Deploy code fix** — Merge the DEBT-384 implementation PR after full gate and CodeRabbit review. This closes the E2E phantom factory and changes missing-metadata webhook retries into controller-level skip/200 responses.
-3. **Endpoint config** — Add `customer.subscription.created` to both webhook endpoints.
+3. **Endpoint config** — Add `customer.subscription.created` to the live webhook endpoint. The test-mode endpoint was updated on 2026-05-18.
 4. **Track DEBT-385** — Invoice payload schema drift remains active and separate.
