@@ -6,6 +6,8 @@
 **Related:** [DEBT-384](../_archive/debt/debt-384-stripe-webhook-error-rate-investigation.md)
 **Status:** Active — documented only. DEBT-384 has shipped and been archived; this remains a separate follow-up.
 
+**Origin:** The app is pinned to Stripe API version `2026-01-28.clover` at `lib/stripe.ts:22`. The value changed from `2025-04-30.basil` to Clover in commit `d9f3cbe4` (`Fix Stripe API version for updated stripe SDK`) on 2026-01-31, and commit `84b4c0463` only moved that already-Clover pin into lazy initialization. Current Clover invoice events expose the subscription reference at `data.object.parent.subscription_details.subscription`, so this schema drift has been possible since the Clover pin.
+
 ---
 
 ## Confirmed Finding
@@ -17,7 +19,7 @@ data.object.subscription: null
 data.object.parent.subscription_details.subscription: "sub_..."
 ```
 
-The current schema at `src/adapters/gateways/stripe/stripe-webhook-schemas.ts:25-32` only reads root-level `subscription` via `stripeCheckoutSessionSchema`, which is also aliased as `stripeEventWithSubscriptionRefSchema` at line 34. `getSubscriptionUpdateForSubscriptionRefEvent` in `src/adapters/gateways/stripe/stripe-webhook-processor.ts:13-49` receives no root-level reference for these invoice events, so it returns `undefined`. The webhook controller then marks the event processed and returns 200 with no subscription update.
+The current schema at `src/adapters/gateways/stripe/stripe-webhook-schemas.ts:25-32` only reads root-level `subscription` via `stripeCheckoutSessionSchema`, which is also aliased as `stripeEventWithSubscriptionRefSchema` at line 34. `getSubscriptionUpdateForSubscriptionRefEvent` in `src/adapters/gateways/stripe/stripe-webhook-processor.ts:13-51` receives no root-level reference for these invoice events, so it returns `undefined`. The webhook controller then marks the event processed and returns 200 with no subscription update.
 
 That is a silent no-op, not a delivery failure.
 
@@ -45,7 +47,7 @@ Expected test surfaces:
 
 - `src/adapters/gateways/stripe/stripe-webhook-processor.test.ts`
 - `src/adapters/gateways/stripe-payment-gateway.test.ts`
-- `src/adapters/gateways/stripe/stripe-webhook-schemas.ts`
+- `src/adapters/gateways/stripe/stripe-webhook-schemas.test.ts` (new)
 
 Use a real fixture shape matching the observed Stripe payload. Avoid hard-coding behavior to a single event ID.
 
