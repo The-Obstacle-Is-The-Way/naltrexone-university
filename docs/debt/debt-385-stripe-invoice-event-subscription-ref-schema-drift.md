@@ -19,7 +19,7 @@ data.object.subscription: null
 data.object.parent.subscription_details.subscription: "sub_..."
 ```
 
-The current schema at `src/adapters/gateways/stripe/stripe-webhook-schemas.ts:25-32` only reads root-level `subscription` via `stripeCheckoutSessionSchema`, which is also aliased as `stripeEventWithSubscriptionRefSchema` at line 34. `getSubscriptionUpdateForSubscriptionRefEvent` in `src/adapters/gateways/stripe/stripe-webhook-processor.ts:13-51` receives no root-level reference for these invoice events, so it returns `undefined`. The webhook controller then marks the event processed and returns 200 with no subscription update.
+Before this debt was fixed, the subscription-reference schema only read root-level `subscription` via `stripeCheckoutSessionSchema`, and `stripeEventWithSubscriptionRefSchema` was a direct alias of that root-only schema. `getSubscriptionUpdateForSubscriptionRefEvent` received no root-level reference for these invoice events, so it returned `undefined`. The webhook controller then marked the event processed and returned 200 with no subscription update.
 
 That is a silent no-op, not a delivery failure.
 
