@@ -4,7 +4,7 @@
 **Created:** 2026-05-14
 **Source:** Filed from DEBT-384 after live Stripe payload inspection found invoice events no longer expose the subscription reference at the root field our schema reads.
 **Related:** [DEBT-384](../_archive/debt/debt-384-stripe-webhook-error-rate-investigation.md)
-**Status:** Active — documented only. DEBT-384 has shipped and been archived; this remains a separate follow-up.
+**Status:** Active — implementation in PR #312, pending user grade and merge. DEBT-384 has shipped and been archived; this remains a separate follow-up.
 
 **Origin:** The app is pinned to Stripe API version `2026-01-28.clover` at `lib/stripe.ts:22`. The value changed from `2025-04-30.basil` to Clover in commit `d9f3cbe4` (`Fix Stripe API version for updated stripe SDK`) on 2026-01-31, and commit `84b4c0463` only moved that already-Clover pin into lazy initialization. Current Clover invoice events expose the subscription reference at `data.object.parent.subscription_details.subscription`, so this schema drift has been possible since the Clover pin.
 
@@ -19,17 +19,17 @@ data.object.subscription: null
 data.object.parent.subscription_details.subscription: "sub_..."
 ```
 
-Before this debt was fixed, the subscription-reference schema only read root-level `subscription` via `stripeCheckoutSessionSchema`, and `stripeEventWithSubscriptionRefSchema` was a direct alias of that root-only schema. `getSubscriptionUpdateForSubscriptionRefEvent` received no root-level reference for these invoice events, so it returned `undefined`. The webhook controller then marked the event processed and returned 200 with no subscription update.
+At the time this debt was filed, the subscription-reference schema only read root-level `subscription` via `stripeCheckoutSessionSchema`, and `stripeEventWithSubscriptionRefSchema` was a direct alias of that root-only schema. `getSubscriptionUpdateForSubscriptionRefEvent` received no root-level reference for these invoice events, so it returned `undefined`. The webhook controller then marked the event processed and returned 200 with no subscription update.
 
-That is a silent no-op, not a delivery failure.
+That was a silent no-op, not a delivery failure.
 
 ---
 
 ## Why This Is Debt
 
-The current behavior is masked because Stripe usually emits parallel `customer.subscription.updated` events for the same billing-cycle state changes, and that subscription-event path retrieves and normalizes the subscription correctly. If Stripe emits an invoice-event-only transition, or if endpoint configuration misses the parallel subscription event, the app can silently miss a subscription state update while still returning 200 to Stripe.
+The pre-fix behavior was masked because Stripe usually emits parallel `customer.subscription.updated` events for the same billing-cycle state changes, and that subscription-event path retrieves and normalizes the subscription correctly. If Stripe emits an invoice-event-only transition, or if endpoint configuration misses the parallel subscription event, the app could silently miss a subscription state update while still returning 200 to Stripe.
 
-This is separate from DEBT-384's missing subscription metadata failure. DEBT-384 returns 500 on `customer.subscription.*` events for out-of-band subscriptions. DEBT-385 returns 200 on invoice events while doing nothing because the subscription reference is not found.
+This is separate from DEBT-384's missing subscription metadata failure. DEBT-384 returned 500 on `customer.subscription.*` events for out-of-band subscriptions. Before this fix, DEBT-385 returned 200 on invoice events while doing nothing because the subscription reference was not found.
 
 ---
 
