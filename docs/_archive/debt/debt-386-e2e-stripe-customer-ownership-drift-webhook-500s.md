@@ -4,7 +4,7 @@
 **Created:** 2026-05-15
 **Source:** Follow-up investigation after DEBT-384 was merged, archived, and the debt register was synchronized. Stripe still showed undelivered test-mode webhook events after PR #310, but the payloads no longer matched the missing-`metadata.user_id` failure that DEBT-384 fixed.
 **Related:** [DEBT-384 archived](./debt-384-stripe-webhook-error-rate-investigation.md), [DEBT-385 invoice schema drift](../../debt/debt-385-stripe-invoice-event-subscription-ref-schema-drift.md), [DEBT-293 E2E shared state](./debt-293-e2e-shared-state-structural-flakiness.md), [DEBT-306 Stripe customer search/create race](./debt-306-stripe-customer-search-create-race.md)
-**Status:** Resolved - PR #311 shipped the code-fixable T2/T3 work and this doc was archived on 2026-05-16. Post-merge ops verification on 2026-05-18 confirmed the dev-preview Vercel owner env var is applied and redeployed, the test-mode Stripe endpoint now includes `customer.subscription.created`, and the live endpoint still needs that event added by an operator with live webhook-endpoint write permission. Live mode has zero currently undelivered events as of the 2026-05-18 snapshot; remaining undelivered events are historical test-mode deliveries.
+**Status:** Resolved - PR #311 shipped the code-fixable T2/T3 work and this doc was archived on 2026-05-16. Post-merge ops verification on 2026-05-19 confirmed the dev-preview Vercel owner env var is applied and redeployed, both test-mode and live Stripe endpoints include `customer.subscription.created`, and live mode has zero currently undelivered events. Remaining test-mode undelivered events are historical pre-fix deliveries; no post-fix event accumulation is observed.
 
 ---
 
@@ -35,12 +35,12 @@ PR #311 implemented and merged the code portion of this debt:
 - Reconcile safety: `src/adapters/jobs/reconcile-stripe-subscriptions.ts` receives the same optional owner configuration and records a row failure rather than skipping when a configured owner mismatch is encountered.
 - Configuration: `.env.example` documents `E2E_STRIPE_OWNER` and `STRIPE_WEBHOOK_E2E_OWNER`; `.github/workflows/ci.yml` sets CI E2E ownership to `github-ci`; `lib/env.ts` accepts optional `STRIPE_WEBHOOK_E2E_OWNER`; `lib/container/gateways.ts` threads it through constructor injection.
 
-Post-merge ops status as of 2026-05-18:
+Post-merge ops status as of 2026-05-19:
 
 - `STRIPE_WEBHOOK_E2E_OWNER=vercel-dev-preview` is applied as a branch-scoped Vercel Preview `(dev)` env var, and the dev-preview alias points at redeployed deployment `dpl_GLTDzFV1SPbbfLMvQ5gapiGFkkDn`.
 - The test-mode Stripe webhook endpoint `we_1T19r0KItmaHAwgUrGSpxvdZ` now includes `customer.subscription.created`.
-- The live Stripe webhook endpoint `we_1SxtpVKItmaHAwgU3SXpQPEB` still omits `customer.subscription.created`. The local Stripe CLI can verify live state but cannot update it because the configured live key is read-only for webhook endpoint writes.
-- `stripe events list --live --delivery-success=false --limit 100` returned zero live undelivered events on 2026-05-18. Test mode still shows historical undelivered events, newest observed `created_iso` 2026-05-16T16:46:46Z, with no evidence yet of new post-redeploy accumulation.
+- The live Stripe webhook endpoint `we_1SxtpVKItmaHAwgU3SXpQPEB` now includes `customer.subscription.created`.
+- `stripe events list --live --delivery-success=false --limit 100` returned zero live undelivered events on 2026-05-19. Test mode still shows historical pre-fix undelivered events, newest observed `created_iso` 2026-05-16T16:46:46Z, with no post-fix accumulation.
 
 ---
 
@@ -102,7 +102,7 @@ api_version: 2026-01-28.clover
 enabled_events: same five events as test mode
 ```
 
-Both endpoints still omit `customer.subscription.created`. That is a real config gap, but it is not the cause of the HTTP 500s described here.
+At this 2026-05-15 snapshot, both endpoints omitted `customer.subscription.created`. That was a real config gap, but it was not the cause of the HTTP 500s described here. Post-merge ops later closed the gap: test mode was updated on 2026-05-18, and live mode was updated on 2026-05-19.
 
 ### Undelivered events
 
@@ -427,7 +427,7 @@ After the code fix is deployed:
 
 3. Consider deleting stale test-mode E2E customers/subscriptions only after the new owner model exists. Cleanup without the code fix is temporary.
 
-4. Add `customer.subscription.created` to the live webhook endpoint event list. The test-mode endpoint was updated on 2026-05-18; the live endpoint still requires an operator with live webhook-endpoint write permission. This remains a separate Stripe Dashboard/API config step and should not be treated as the root cause of this debt.
+4. Confirm endpoint event-list parity. As of 2026-05-19, both test-mode and live webhook endpoints include `customer.subscription.created`. This config step was separate from the root cause of this debt and is now complete.
 
 ---
 
@@ -476,7 +476,7 @@ Expected after a correct fix:
 1. Deployed dev-preview webhook owner: `STRIPE_WEBHOOK_E2E_OWNER=vercel-dev-preview`.
 2. CI E2E owner: `E2E_STRIPE_OWNER=github-ci`.
 3. Local developer owner default: `local-dev` only when Stripe credentials are dummy; real Stripe credentials require an explicit `E2E_STRIPE_OWNER`.
-4. `customer.subscription.created` endpoint config remains out of scope for code. Test-mode endpoint config was completed on 2026-05-18; live endpoint config remains in the post-merge ops checklist because the local live CLI key is read-only for webhook endpoint updates.
+4. `customer.subscription.created` endpoint config remained out of scope for code. Test-mode endpoint config was completed on 2026-05-18, and live endpoint config was completed on 2026-05-19 via Stripe Dashboard/operator action.
 
 ---
 
