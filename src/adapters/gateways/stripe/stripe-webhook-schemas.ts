@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+const stripeSubscriptionRefSchema = z.union([
+  z.string(),
+  z.object({ id: z.string() }).passthrough(),
+]);
+
 export const stripeSubscriptionItemSchema = z
   .object({
     current_period_end: z.number(),
@@ -24,23 +29,47 @@ export const stripeSubscriptionSchema = z
 
 export const stripeCheckoutSessionSchema = z
   .object({
-    subscription: z
-      .union([z.string(), z.object({ id: z.string() }).passthrough()])
+    subscription: stripeSubscriptionRefSchema.nullable().optional(),
+  })
+  .passthrough();
+
+const stripeInvoiceSubscriptionRefSchema = z
+  .object({
+    parent: z
+      .object({
+        subscription_details: z
+          .object({
+            subscription: stripeSubscriptionRefSchema.nullable().optional(),
+          })
+          .passthrough()
+          .optional(),
+      })
+      .passthrough()
       .nullable()
       .optional(),
   })
   .passthrough();
 
-export const stripeEventWithSubscriptionRefSchema = stripeCheckoutSessionSchema;
+// Clover invoice events moved the subscription ref under parent; keep root
+// support for Checkout Session payloads and older compatible invoice shapes.
+export const stripeEventWithSubscriptionRefSchema =
+  stripeCheckoutSessionSchema.merge(stripeInvoiceSubscriptionRefSchema);
 
 export type StripeEventWithSubscriptionRef = z.infer<
-  typeof stripeCheckoutSessionSchema
+  typeof stripeEventWithSubscriptionRefSchema
 >;
 
-export type StripeSubscriptionRef = Exclude<
-  StripeEventWithSubscriptionRef['subscription'],
-  null | undefined
->;
+export type StripeSubscriptionRef = z.infer<typeof stripeSubscriptionRefSchema>;
+
+export function extractSubscriptionRef(
+  payload: StripeEventWithSubscriptionRef,
+): StripeSubscriptionRef | null {
+  return (
+    payload.parent?.subscription_details?.subscription ??
+    payload.subscription ??
+    null
+  );
+}
 
 export const subscriptionEventTypes = new Set([
   'customer.subscription.created',

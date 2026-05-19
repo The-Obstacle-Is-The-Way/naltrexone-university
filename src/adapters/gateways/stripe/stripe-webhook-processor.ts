@@ -5,6 +5,7 @@ import type { WebhookEventResult } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 import { retrieveAndNormalizeStripeSubscription } from './stripe-subscription-normalizer';
 import {
+  extractSubscriptionRef,
   stripeEventWithSubscriptionRefSchema,
   stripeSubscriptionSchema,
   subscriptionEventTypes,
@@ -37,7 +38,7 @@ async function getSubscriptionUpdateForSubscriptionRefEvent(input: {
   }
 
   const payload = parsedPayload.data;
-  const subscriptionRef = payload.subscription;
+  const subscriptionRef = extractSubscriptionRef(payload);
   if (!subscriptionRef) return undefined;
 
   return retrieveAndNormalizeStripeSubscription({
