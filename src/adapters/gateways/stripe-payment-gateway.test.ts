@@ -697,6 +697,55 @@ describe('StripePaymentGateway', () => {
     expect(subscriptionsRetrieve).toHaveBeenCalledWith(subscription.id);
   });
 
+  it('normalizes invoice.payment_succeeded events with a nested Clover subscription reference', async () => {
+    const subscriptionEvent = loadJsonFixture<{
+      data: { object: { id: string } };
+    }>('stripe/customer.subscription.updated.json');
+    const subscription = subscriptionEvent.data.object;
+
+    const constructedEvent = {
+      id: 'evt_invoice_success_nested_1',
+      type: 'invoice.payment_succeeded',
+      data: {
+        object: {
+          id: 'in_test_REDACTED',
+          object: 'invoice',
+          subscription: null,
+          parent: {
+            type: 'subscription_details',
+            subscription_details: {
+              subscription: subscription.id,
+            },
+          },
+        },
+      },
+    };
+    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
+      withSubscriptions: true,
+    });
+    constructEvent.mockReturnValue(constructedEvent);
+    subscriptionsRetrieve.mockResolvedValue(subscription);
+    const gateway = createGateway(stripe);
+
+    await expect(
+      gateway.processWebhookEvent('raw_body', 'sig_1'),
+    ).resolves.toEqual({
+      eventId: 'evt_invoice_success_nested_1',
+      type: 'invoice.payment_succeeded',
+      subscriptionUpdate: {
+        userId: 'user_1',
+        externalCustomerId: 'cus_123',
+        externalSubscriptionId: 'sub_123',
+        plan: 'monthly',
+        status: 'active',
+        currentPeriodEnd: new Date(1_700_000_000 * 1000),
+        cancelAtPeriodEnd: false,
+      },
+    });
+
+    expect(subscriptionsRetrieve).toHaveBeenCalledWith(subscription.id);
+  });
+
   it('throws INVALID_WEBHOOK_PAYLOAD when invoice.payment_failed payload shape is invalid', async () => {
     const constructedEvent = {
       id: 'evt_bad_invoice_payload',
