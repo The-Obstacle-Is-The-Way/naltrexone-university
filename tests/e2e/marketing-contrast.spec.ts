@@ -154,7 +154,7 @@ test.describe('marketing contrast', () => {
 
     const heroSpan = page
       .locator('h1 span')
-      .filter({ hasText: 'Master Your' })
+      .filter({ hasText: 'Master the' })
       .first();
     await expect(heroSpan).toBeVisible();
 

@@ -16,8 +16,8 @@ export type MarketingHomeShellProps = {
 };
 
 const impactStats = [
-  { value: '500+', label: 'Board-Style Questions' },
-  { value: '2', label: 'Study Modes' },
+  { value: '900+', label: 'Board-Style Questions' },
+  { value: '3', label: 'Study Modes' },
   { value: 'Instant', label: 'Explanations' },
   { value: '100%', label: 'Mobile Responsive' },
 ];
@@ -75,16 +75,19 @@ async function MarketingHeroCopy() {
       <p className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
         Board prep, built for outcomes
       </p>
+      <p className="mx-auto mt-4 max-w-4xl text-balance text-lg text-muted-foreground leading-relaxed md:text-xl">
+        Authored by a practicing, double board-certified addiction psychiatrist.
+        Grounded in primary literature with citations.
+      </p>
       <h1 className="mt-6 font-display text-5xl font-bold tracking-tight md:text-7xl">
-        <span className="block text-foreground">Master Your</span>{' '}
+        <span className="block text-foreground">Master the</span>{' '}
         <span className="bg-gradient-to-r from-muted-foreground via-foreground to-muted-foreground bg-clip-text text-transparent">
-          Board Exams.
+          Addiction Boards.
         </span>
       </h1>
       <p className="mx-auto mt-6 max-w-2xl text-balance text-lg text-muted-foreground leading-relaxed md:text-xl">
         High-yield questions with detailed explanations for Addiction Psychiatry
-        and Addiction Medicine. Practice with confidence and track your
-        progress.
+        and Medicine. Practice with confidence and track your progress.
       </p>
     </>
   );
