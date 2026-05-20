@@ -40,6 +40,20 @@ describe('stripeEventWithSubscriptionRefSchema', () => {
     expect(extractSubscriptionRef(parsed)).toBe(LEGACY_ROOT_SUBSCRIPTION_REF);
   });
 
+  it('extracts an expanded object-shaped subscription reference', () => {
+    const expandedSubscriptionRef = {
+      id: 'sub_test_REDACTED_expanded',
+      status: 'active',
+    };
+    const parsed = stripeEventWithSubscriptionRefSchema.parse({
+      id: 'cs_test_REDACTED',
+      object: 'checkout.session',
+      subscription: expandedSubscriptionRef,
+    });
+
+    expect(extractSubscriptionRef(parsed)).toEqual(expandedSubscriptionRef);
+  });
+
   it('returns null when neither root nor nested subscription reference exists', () => {
     const parsed = stripeEventWithSubscriptionRefSchema.parse({
       id: 'in_test_REDACTED',
