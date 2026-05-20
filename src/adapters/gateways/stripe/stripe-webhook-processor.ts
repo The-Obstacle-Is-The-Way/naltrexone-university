@@ -1,15 +1,15 @@
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
-import type { StripeClient } from '@/src/adapters/shared/stripe-types';
-import { ApplicationError } from '@/src/application/errors';
-import type { WebhookEventResult } from '@/src/application/ports/gateways';
-import type { Logger } from '@/src/application/ports/logger';
-import { retrieveAndNormalizeStripeSubscription } from './stripe-subscription-normalizer';
+import { retrieveAndNormalizeStripeSubscription } from '@/src/adapters/gateways/stripe/stripe-subscription-normalizer';
 import {
   extractSubscriptionRef,
   stripeEventWithSubscriptionRefSchema,
   stripeSubscriptionSchema,
   subscriptionEventTypes,
-} from './stripe-webhook-schemas';
+} from '@/src/adapters/gateways/stripe/stripe-webhook-schemas';
+import type { StripeClient } from '@/src/adapters/shared/stripe-types';
+import { ApplicationError } from '@/src/application/errors';
+import type { WebhookEventResult } from '@/src/application/ports/gateways';
+import type { Logger } from '@/src/application/ports/logger';
 
 async function getSubscriptionUpdateForSubscriptionRefEvent(input: {
   stripe: StripeClient;
