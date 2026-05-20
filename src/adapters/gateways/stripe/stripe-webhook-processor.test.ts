@@ -199,6 +199,180 @@ describe('processStripeWebhookEvent', () => {
     expect(stripe.subscriptions?.retrieve).toHaveBeenCalledWith('sub_123');
   });
 
+  it('retrieves and includes subscriptionUpdate for invoice.payment_succeeded events with a nested Clover subscription reference', async () => {
+    const logger = new FakeLogger();
+    const stripe = createStripeClient({
+      eventFactory: () => ({
+        id: 'evt_invoice_success_nested',
+        type: 'invoice.payment_succeeded',
+        data: {
+          object: {
+            id: 'in_test_REDACTED',
+            object: 'invoice',
+            subscription: null,
+            parent: {
+              type: 'subscription_details',
+              subscription_details: {
+                subscription: 'sub_test_REDACTED_nested_success',
+              },
+            },
+          },
+        },
+      }),
+    });
+
+    const result = await processStripeWebhookEvent({
+      stripe,
+      webhookSecret: 'whsec_test',
+      rawBody: '{}',
+      signature: 'sig_test',
+      priceIds,
+      logger,
+    });
+
+    expect(result).toEqual({
+      eventId: 'evt_invoice_success_nested',
+      type: 'invoice.payment_succeeded',
+      subscriptionUpdate: {
+        userId: 'user_1',
+        externalCustomerId: 'cus_123',
+        externalSubscriptionId: 'sub_123',
+        plan: 'monthly',
+        status: 'active',
+        currentPeriodEnd: new Date(1_800_000_000 * 1000),
+        cancelAtPeriodEnd: false,
+      },
+    });
+    expect(stripe.subscriptions?.retrieve).toHaveBeenCalledWith(
+      'sub_test_REDACTED_nested_success',
+    );
+  });
+
+  it('retrieves and includes subscriptionUpdate for invoice.payment_failed events with a nested Clover subscription reference', async () => {
+    const logger = new FakeLogger();
+    const stripe = createStripeClient({
+      eventFactory: () => ({
+        id: 'evt_invoice_failed_nested',
+        type: 'invoice.payment_failed',
+        data: {
+          object: {
+            id: 'in_test_REDACTED',
+            object: 'invoice',
+            subscription: null,
+            parent: {
+              type: 'subscription_details',
+              subscription_details: {
+                subscription: 'sub_test_REDACTED_nested_failed',
+              },
+            },
+          },
+        },
+      }),
+    });
+
+    const result = await processStripeWebhookEvent({
+      stripe,
+      webhookSecret: 'whsec_test',
+      rawBody: '{}',
+      signature: 'sig_test',
+      priceIds,
+      logger,
+    });
+
+    expect(result).toEqual({
+      eventId: 'evt_invoice_failed_nested',
+      type: 'invoice.payment_failed',
+      subscriptionUpdate: {
+        userId: 'user_1',
+        externalCustomerId: 'cus_123',
+        externalSubscriptionId: 'sub_123',
+        plan: 'monthly',
+        status: 'active',
+        currentPeriodEnd: new Date(1_800_000_000 * 1000),
+        cancelAtPeriodEnd: false,
+      },
+    });
+    expect(stripe.subscriptions?.retrieve).toHaveBeenCalledWith(
+      'sub_test_REDACTED_nested_failed',
+    );
+  });
+
+  it('prefers nested invoice subscription references over legacy root references when both are present', async () => {
+    const logger = new FakeLogger();
+    const stripe = createStripeClient({
+      eventFactory: () => ({
+        id: 'evt_invoice_both_refs',
+        type: 'invoice.payment_succeeded',
+        data: {
+          object: {
+            id: 'in_test_REDACTED',
+            object: 'invoice',
+            subscription: 'sub_test_REDACTED_legacy_root',
+            parent: {
+              type: 'subscription_details',
+              subscription_details: {
+                subscription: 'sub_test_REDACTED_clover_nested',
+              },
+            },
+          },
+        },
+      }),
+    });
+
+    await processStripeWebhookEvent({
+      stripe,
+      webhookSecret: 'whsec_test',
+      rawBody: '{}',
+      signature: 'sig_test',
+      priceIds,
+      logger,
+    });
+
+    // Current Clover invoice payloads put the authoritative subscription
+    // reference in parent.subscription_details; root is legacy fallback only.
+    expect(stripe.subscriptions?.retrieve).toHaveBeenCalledWith(
+      'sub_test_REDACTED_clover_nested',
+    );
+  });
+
+  it('returns base result for invoice events when no subscription reference exists', async () => {
+    const logger = new FakeLogger();
+    const stripe = createStripeClient({
+      eventFactory: () => ({
+        id: 'evt_invoice_no_ref',
+        type: 'invoice.payment_succeeded',
+        data: {
+          object: {
+            id: 'in_test_REDACTED',
+            object: 'invoice',
+            subscription: null,
+            parent: {
+              type: 'subscription_details',
+              subscription_details: {
+                subscription: null,
+              },
+            },
+          },
+        },
+      }),
+    });
+
+    await expect(
+      processStripeWebhookEvent({
+        stripe,
+        webhookSecret: 'whsec_test',
+        rawBody: '{}',
+        signature: 'sig_test',
+        priceIds,
+        logger,
+      }),
+    ).resolves.toEqual({
+      eventId: 'evt_invoice_no_ref',
+      type: 'invoice.payment_succeeded',
+    });
+    expect(stripe.subscriptions?.retrieve).not.toHaveBeenCalled();
+  });
+
   it('normalizes and includes subscriptionUpdate for customer.subscription.updated events', async () => {
     const logger = new FakeLogger();
     const subscription = createSubscriptionFixture();
