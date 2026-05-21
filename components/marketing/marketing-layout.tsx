@@ -79,7 +79,7 @@ async function MarketingFooter({ featuresHref }: { featuresHref: string }) {
   return (
     <footer className="border-t border-border">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid gap-8 md:grid-cols-3">
+        <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           <div>
             <p className="font-bold font-heading text-foreground">
               Addiction Boards
@@ -88,27 +88,19 @@ async function MarketingFooter({ featuresHref }: { featuresHref: string }) {
               Board exam preparation for addiction medicine professionals.
             </p>
           </div>
-          <div>
-            <p className="text-sm font-semibold text-foreground">Product</p>
-            <div className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
-              <Link href={featuresHref} className={marketingNavLinkClass}>
-                Features
-              </Link>
-              <Link href={ROUTES.PRICING} className={marketingNavLinkClass}>
-                Pricing
-              </Link>
-            </div>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-foreground">Account</p>
-            <div className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
-              <Link href={ROUTES.SIGN_IN} className={marketingNavLinkClass}>
-                Sign in
-              </Link>
-              <Link href={ROUTES.SIGN_UP} className={marketingNavLinkClass}>
-                Sign up
-              </Link>
-            </div>
+          <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground md:justify-end">
+            <Link href={featuresHref} className={marketingNavLinkClass}>
+              Features
+            </Link>
+            <Link href={ROUTES.PRICING} className={marketingNavLinkClass}>
+              Pricing
+            </Link>
+            <Link href={ROUTES.SIGN_IN} className={marketingNavLinkClass}>
+              Sign in
+            </Link>
+            <Link href={ROUTES.SIGN_UP} className={marketingNavLinkClass}>
+              Sign up
+            </Link>
           </div>
         </div>
         <div className="mt-8 border-t border-border pt-8 text-sm text-muted-foreground">
