@@ -282,7 +282,7 @@ describe('theme token regression', () => {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const featureTitles = [
       'High-Yield Explanations',
-      'Tutor + Exam Modes',
+      'Three Study Modes',
       'Smart Bookmarking',
       'Progress Dashboard',
     ];

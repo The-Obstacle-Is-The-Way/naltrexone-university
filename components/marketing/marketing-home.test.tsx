@@ -105,6 +105,16 @@ describe('components/marketing/marketing-home', () => {
     expect(html).toContain('Study Modes');
   });
 
+  it('renders the three study modes feature card copy', async () => {
+    const html = (await renderDoc()).documentElement.innerHTML;
+
+    expect(html).toContain('Three Study Modes');
+    expect(html).toContain(
+      'Tutor gives immediate feedback, Exam mode simulates real test conditions, and Quick Practice serves one question at a time.',
+    );
+    expect(html).not.toContain('Tutor + Exam Modes');
+  });
+
   it('renders tightened hero subtitle copy', async () => {
     const html = (await renderDoc()).documentElement.innerHTML;
 
