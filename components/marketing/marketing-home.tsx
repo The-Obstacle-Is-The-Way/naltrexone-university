@@ -32,9 +32,9 @@ const features = [
   },
   {
     icon: Zap,
-    title: 'Tutor + Exam Modes',
+    title: 'Three Study Modes',
     description:
-      'Tutor shows feedback immediately. Exam mode simulates real test conditions.',
+      'Tutor gives immediate feedback, Exam mode simulates real test conditions, and Quick Practice serves one question at a time.',
     wide: false,
   },
   {
