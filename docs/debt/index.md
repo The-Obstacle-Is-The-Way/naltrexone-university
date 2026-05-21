@@ -21,6 +21,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
 | [DEBT-381](./debt-381-question-content-typography-audit-and-preference-path.md) | Question content typography audit — Quick Practice, Tutor, and Exam are already unified at the Typography Policy Medium content tier. Do not globally shrink question text; if needed later, add a user-selectable Markdown/content-size preference while leaving UI chrome unchanged. | P3 | — |
+| [DEBT-387](./debt-387-features-card-understates-study-modes.md) | Features card understates study modes — after DEBT-382/PR #313 raised the stat to `3 Study Modes`, the Features section card still names only two (`Tutor + Exam Modes` at `marketing-home.tsx:35`), omitting Quick Practice. User-visible contradiction on `/`; copy-only fix to one Features array entry, pending a wording decision (enumerate three modes vs. state "three study modes"). | P3 | — |
 
 **Next Debt ID:** DEBT-388
 
