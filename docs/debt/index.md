@@ -21,8 +21,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
 | [DEBT-381](./debt-381-question-content-typography-audit-and-preference-path.md) | Question content typography audit — Quick Practice, Tutor, and Exam are already unified at the Typography Policy Medium content tier. Do not globally shrink question text; if needed later, add a user-selectable Markdown/content-size preference while leaving UI chrome unchanged. | P3 | — |
+| [DEBT-388](./debt-388-hero-credibility-line-concision-and-reposition.md) | Hero credibility line polish — drop `practicing` (→ `Authored by a double board-certified addiction psychiatrist. Grounded in primary literature with citations.`), move the line from between the pill and h1 to **below** the Get Started / View pricing CTAs, and tune hero wrapping (credibility line + subtitle) for sentence-aligned desktop breaks with no hard `<br>`. Copy + placement + wrapping only; wording/position locked, wrapping is a visual-tune. | P3 | — |
 
-**Next Debt ID:** DEBT-388
+**Next Debt ID:** DEBT-389
 
 ---
 
