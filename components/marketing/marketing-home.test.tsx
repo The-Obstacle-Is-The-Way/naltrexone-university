@@ -86,10 +86,44 @@ describe('components/marketing/marketing-home', () => {
 
     expect(html).toContain('Addiction Boards');
     expect(html).toContain(
-      'Authored by a practicing, double board-certified addiction psychiatrist. Grounded in primary literature with citations.',
+      'Authored by a double board-certified addiction psychiatrist. Grounded in primary literature with citations.',
+    );
+    expect(html).not.toContain(
+      'Authored by a practicing, double board-certified addiction psychiatrist.',
     );
     expect(html).toContain('Master the');
     expect(html).toContain('Addiction Boards.');
+  });
+
+  it('renders hero content in the intended decision sequence', async () => {
+    const doc = await renderDoc();
+    const heroSection = doc.querySelector('section[aria-label="Hero"]');
+    const heroText = (heroSection?.textContent ?? '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const pillIndex = heroText.indexOf('Board prep, built for outcomes');
+    const headingIndex = heroText.indexOf('Master the Addiction Boards.');
+    const subtitleIndex = heroText.indexOf(
+      'High-yield questions with detailed explanations for Addiction Psychiatry and Medicine. Practice with confidence and track your progress.',
+    );
+    const getStartedIndex = heroText.indexOf('Get Started');
+    const viewPricingIndex = heroText.indexOf('View pricing');
+    const credibilityIndex = heroText.indexOf(
+      'Authored by a double board-certified addiction psychiatrist. Grounded in primary literature with citations.',
+    );
+
+    expect(heroSection).not.toBeNull();
+    expect(pillIndex).toBeGreaterThanOrEqual(0);
+    expect(headingIndex).toBeGreaterThanOrEqual(0);
+    expect(subtitleIndex).toBeGreaterThanOrEqual(0);
+    expect(getStartedIndex).toBeGreaterThanOrEqual(0);
+    expect(viewPricingIndex).toBeGreaterThanOrEqual(0);
+    expect(credibilityIndex).toBeGreaterThanOrEqual(0);
+    expect(pillIndex).toBeLessThan(headingIndex);
+    expect(headingIndex).toBeLessThan(subtitleIndex);
+    expect(subtitleIndex).toBeLessThan(getStartedIndex);
+    expect(getStartedIndex).toBeLessThan(viewPricingIndex);
+    expect(viewPricingIndex).toBeLessThan(credibilityIndex);
   });
 
   it('renders impact statistics copy', async () => {

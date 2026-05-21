@@ -31,7 +31,7 @@ This is the visual-polish tail of the landing-page thread, deferred from DEBT-38
 
 ---
 
-## Current State (verified 2026-05-21 against `debt-388-hero-credibility-line` @ `77e48b5e`)
+## Current State (re-verified 2026-05-21 against `debt-388-hero-credibility-line` @ `84b37666`)
 
 | File | Lines | Element | Current |
 |------|-------|---------|---------|
@@ -86,4 +86,4 @@ The credibility line is rendered inside the cached `MarketingHeroCopy` fragment 
 
 ## Implementation Constraints
 
-Per repo memory rules: `feedback_docs_before_code` (review this before code), strict TDD (update the render test first, red, then move/edit), `feedback_full_gate_before_push`, and `feedback_verify_doc_citations_mechanically` (citations verified against `debt-388-hero-credibility-line` @ `77e48b5e` on 2026-05-21; re-verify if the PR opens more than a few commits later).
+Per repo memory rules: `feedback_docs_before_code` (review this before code), strict TDD (update the render test first, red, then move/edit), `feedback_full_gate_before_push`, and `feedback_verify_doc_citations_mechanically` (citations re-verified against `debt-388-hero-credibility-line` @ `84b37666` on 2026-05-21; re-verify if the PR opens more than a few commits later).
