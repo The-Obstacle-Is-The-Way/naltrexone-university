@@ -93,6 +93,33 @@ describe('MarketingLayout', () => {
     expect(signUpLink?.textContent?.trim()).toBe('Sign up');
   });
 
+  it('renders footer links in a single untitled group', async () => {
+    const html = await renderLayout({ authNavSlot: <div>Auth</div> });
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const footer = doc.querySelector('footer');
+
+    expect(footer).not.toBeNull();
+    if (!footer) {
+      throw new Error('Expected marketing footer to exist');
+    }
+
+    const footerLinks = [
+      { href: '/#features', label: 'Features' },
+      { href: ROUTES.PRICING, label: 'Pricing' },
+      { href: ROUTES.SIGN_IN, label: 'Sign in' },
+      { href: ROUTES.SIGN_UP, label: 'Sign up' },
+    ].map(({ href, label }) => {
+      const link = footer.querySelector<HTMLAnchorElement>(`a[href="${href}"]`);
+      expect(link?.textContent?.trim()).toBe(label);
+      return link;
+    });
+
+    const linkGroups = new Set(footerLinks.map((link) => link?.parentElement));
+    expect(linkGroups.size).toBe(1);
+    expect(footer.textContent).not.toContain('Product');
+    expect(footer.textContent).not.toContain('Account');
+  });
+
   it('applies the stronger header brand treatment to the brand link', async () => {
     const html = await renderLayout({ authNavSlot: <div>Auth</div> });
     const doc = new DOMParser().parseFromString(html, 'text/html');
