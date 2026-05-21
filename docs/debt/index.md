@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-05-21 (DEBT-382 resolved and archived — PR #313 shipped the landing-page copy refresh: `900+` Board-Style Questions, `3 Study Modes`, the unnamed credibility line, hero h1 `Master the Addiction Boards.`, and the tightened subtitle. The `900+` claim is backed by tracked authoring docs recording 948 draft questions (`content/drafts/questions/PLAN.md`, `NOTES.md`). main and dev synced at `09f934c3`. Follow-up DEBT-387 filed for the Features-card vs `3 Study Modes` copy mismatch.)
+**Last Updated:** 2026-05-21 (DEBT-387 tightened to implementation-ready status: locked the Features-card copy to `Three Study Modes` plus a one-sentence Tutor/Exam/Quick Practice description, added the `components/theme-token-regression.test.tsx` update surface, and removed the wording-decision blocker. DEBT-382 remains archived after PR #313.)
 
 ---
 
@@ -21,7 +21,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
 | [DEBT-381](./debt-381-question-content-typography-audit-and-preference-path.md) | Question content typography audit — Quick Practice, Tutor, and Exam are already unified at the Typography Policy Medium content tier. Do not globally shrink question text; if needed later, add a user-selectable Markdown/content-size preference while leaving UI chrome unchanged. | P3 | — |
-| [DEBT-387](./debt-387-features-card-understates-study-modes.md) | Features card understates study modes — after DEBT-382/PR #313 raised the stat to `3 Study Modes`, the Features section card still names only two (`Tutor + Exam Modes` at `marketing-home.tsx:35`), omitting Quick Practice. User-visible contradiction on `/`; copy-only fix to one Features array entry, pending a wording decision (enumerate three modes vs. state "three study modes"). | P3 | — |
+| [DEBT-387](./debt-387-features-card-understates-study-modes.md) | Features card understates study modes — after DEBT-382/PR #313 raised the stat to `3 Study Modes`, the Features section card still names only two (`Tutor + Exam Modes` at `marketing-home.tsx:35`), omitting Quick Practice. User-visible contradiction on `/`; implementation-ready copy-only fix to one Features array entry: title `Three Study Modes`, description enumerating Tutor, Exam, and Quick Practice. | P3 | — |
 
 **Next Debt ID:** DEBT-388
 

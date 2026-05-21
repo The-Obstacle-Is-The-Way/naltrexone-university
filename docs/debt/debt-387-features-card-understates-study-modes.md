@@ -5,7 +5,7 @@
 **Source:** Spun out of [DEBT-382](../_archive/debt/debt-382-landing-page-content-refresh-question-count-and-author-credibility.md) / PR #313. That ticket updated the impact-stat row from `2` to `3 Study Modes` (Tutor, Exam, and Quick Practice are three real, separately-routed surfaces) but explicitly held the Features array out of scope to keep the diff text-only. The result is a self-contradiction now live on `/`: the stat row claims **3** study modes, while the Features section card a few sections down still names exactly **two** (`Tutor + Exam Modes`).
 **Related:** [DEBT-382](../_archive/debt/debt-382-landing-page-content-refresh-question-count-and-author-credibility.md) (parent), [Frontend Standards](../frontend/standards.md)
 
-**Status:** Active — requires a copy decision (see Open Questions); copy-only change once the wording is chosen.
+**Status:** Active — implementation-ready; exact copy locked below.
 
 ---
 
@@ -17,7 +17,7 @@ The harm is observable today (post-PR #313), which satisfies the `feedback_no_sp
 
 ---
 
-## Current State (verified 2026-05-21 against `main` @ `c12533c8`)
+## Current State (verified 2026-05-21 against `main` @ `e877b9f9`)
 
 | File | Line | Element | Current copy |
 |------|------|---------|--------------|
@@ -32,12 +32,19 @@ The stat value is correct and stays. The inconsistency is entirely in the Featur
 
 ## Proposed Change (one card, copy-only)
 
-Bring the Features card into agreement with the `3 Study Modes` stat. Two candidate directions — the exact wording is a user copy decision, not locked here:
+Bring the Features card into agreement with the `3 Study Modes` stat by changing only the second Features array entry:
 
-- **Option A — name all three:** title `Tutor, Exam & Quick Practice`; extend the description with a Quick Practice clause, e.g. `Tutor shows feedback immediately, Exam mode simulates real test conditions, and Quick Practice serves one question at a time.`
-- **Option B — count, don't enumerate:** title `Three study modes`; description names the three surfaces in one sentence.
+```ts
+{
+  icon: Zap,
+  title: 'Three Study Modes',
+  description:
+    'Tutor gives immediate feedback, Exam mode simulates real test conditions, and Quick Practice serves one question at a time.',
+  wide: false,
+}
+```
 
-Either way the change is confined to the single Features array entry at `marketing-home.tsx:35-38`. The card's icon (`Zap`) and `wide` flag are unchanged.
+This uses the same title-case style as the surrounding card titles, keeps the `Zap` icon and `wide: false` flag unchanged, preserves the existing Tutor/Exam meaning, and adds Quick Practice using the product's own route description (`Answer one question at a time.`).
 
 ---
 
@@ -52,8 +59,7 @@ Either way the change is confined to the single Features array entry at `marketi
 
 ## Open Questions For The User
 
-1. Option A (enumerate the three modes) or Option B (state "three study modes")?
-2. If Option A, confirm the exact title and description wording.
+None. Copy is locked in the Proposed Change section.
 
 ---
 
@@ -62,9 +68,11 @@ Either way the change is confined to the single Features array entry at `marketi
 When the implementation PR ships:
 
 - [ ] The Features card and the `3 Study Modes` stat agree — the card names or counts three modes including Quick Practice.
-- [ ] Change is confined to the single Features array entry; no other copy or layout changes.
-- [ ] `components/marketing/marketing-home.test.tsx` updated to assert the new card copy (raw `expect(html).toContain(...)` pattern) and to confirm the old `Tutor + Exam Modes`-only string no longer matches.
-- [ ] `pnpm test --run` and `pnpm build` pass.
+- [ ] Change is confined to the single Features array entry; no other production copy or layout changes.
+- [ ] `components/marketing/marketing-home.test.tsx` updated test-first to assert `Three Study Modes`, the locked description, and that the old `Tutor + Exam Modes` title no longer renders.
+- [ ] `components/theme-token-regression.test.tsx:283-288` updated because its `featureTitles` fixture currently includes `Tutor + Exam Modes`; the test should continue to assert the same non-hover-token behavior for the renamed card.
+- [ ] Full quality gate passes before push: `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build`.
+- [ ] If the authenticated E2E environment is available, `E2E_STRIPE_OWNER=local-dev pnpm test:e2e` passes.
 - [ ] Visual verification on `localhost:3000/` in light and dark themes, no layout shift.
 
 ---
@@ -73,6 +81,7 @@ When the implementation PR ships:
 
 Per repo memory rules:
 
-- `feedback_docs_before_code`: pick the wording (Open Questions) before any code change.
+- `feedback_docs_before_code`: this doc is now the wording source of truth; do not reopen copy during implementation unless the user explicitly changes it.
+- Strict TDD: write/update the marketing render test and the token-regression fixture first, verify the red failure against current copy, then make the single production copy edit.
 - `feedback_full_gate_before_push`: run the full quality gate before push.
-- `feedback_verify_doc_citations_mechanically`: citations above were verified against `main` @ `c12533c8` on 2026-05-21; re-verify if the implementation PR opens more than a few commits later.
+- `feedback_verify_doc_citations_mechanically`: citations above were verified against `main` @ `e877b9f9` on 2026-05-21; re-verify if the implementation PR opens more than a few commits later.
