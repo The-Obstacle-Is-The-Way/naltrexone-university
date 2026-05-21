@@ -85,15 +85,35 @@ describe('components/marketing/marketing-home', () => {
     const html = (await renderDoc()).documentElement.innerHTML;
 
     expect(html).toContain('Addiction Boards');
-    expect(html).toContain('Master Your');
-    expect(html).toContain('Board Exams.');
+    expect(html).toContain(
+      'Authored by a practicing, double board-certified addiction psychiatrist. Grounded in primary literature with citations.',
+    );
+    expect(html).toContain('Master the');
+    expect(html).toContain('Addiction Boards.');
   });
 
   it('renders impact statistics copy', async () => {
+    const doc = await renderDoc();
+    const html = doc.documentElement.innerHTML;
+    const studyModesValue = doc.querySelector(
+      '[data-testid="impact-stat-study-modes-value"]',
+    );
+
+    expect(html).toContain('900+');
+    expect(html).toContain('Board-Style Questions');
+    expect(studyModesValue?.textContent?.trim()).toBe('3');
+    expect(html).toContain('Study Modes');
+  });
+
+  it('renders tightened hero subtitle copy', async () => {
     const html = (await renderDoc()).documentElement.innerHTML;
 
-    expect(html).toContain('500+');
-    expect(html).toContain('Board-Style Questions');
+    expect(html).toContain(
+      'High-yield questions with detailed explanations for Addiction Psychiatry and Medicine. Practice with confidence and track your progress.',
+    );
+    expect(html).not.toContain(
+      'High-yield questions with detailed explanations for Addiction Psychiatry and Addiction Medicine.',
+    );
   });
 
   it('renders get-started section copy', async () => {
@@ -270,7 +290,7 @@ describe('components/marketing/marketing-home', () => {
     ).toBe(false);
   });
 
-  it('exposes the hero heading with accessible name "Master Your Board Exams."', async () => {
+  it('exposes the hero heading with accessible name "Master the Addiction Boards."', async () => {
     const doc = await renderDoc();
     const heading = doc.querySelector('h1');
 
@@ -279,6 +299,6 @@ describe('components/marketing/marketing-home', () => {
     const accessibleName = (heading?.textContent ?? '')
       .replace(/\s+/g, ' ')
       .trim();
-    expect(accessibleName).toBe('Master Your Board Exams.');
+    expect(accessibleName).toBe('Master the Addiction Boards.');
   });
 });
