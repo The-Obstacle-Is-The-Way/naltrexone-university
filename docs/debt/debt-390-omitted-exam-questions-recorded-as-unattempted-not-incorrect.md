@@ -213,7 +213,7 @@ That diverges from the stated exam behavior: omitted exam items should be scored
 
 ---
 
-## Decided Remediation Direction (implementation spec still required)
+## Decided Remediation Direction (implemented by SPEC-040)
 
 This debt note is the diagnosis and decided direction. It is **not** the TDD implementation spec; the actual build is captured in [SPEC-040](../specs/spec-040-omitted-exam-answer-scoring.md) and is out of scope for this document.
 
@@ -230,16 +230,18 @@ A session-state-only fix is insufficient. Marking `latestIsCorrect = false` with
 
 ### Must-Change List
 
-- `db/schema.ts` and generated migration: make `attempts.selected_choice_id` nullable, add `is_omitted`, add the XOR/incorrect CHECK, keep the session/question unique index (`db/schema.ts:474-478`), and include an independent backfill migration.
+- `db/schema.ts` and generated migration: make `attempts.selected_choice_id` nullable, add `is_omitted`, add the selected-vs-omitted and omitted-implies-incorrect CHECK constraints, keep the session/question unique index (`db/schema.ts:474-478`), and include an independent backfill migration.
 - `src/domain/entities/attempt.ts`: replace `selectedChoiceId: string` (`attempt.ts:36-47`) with an answer-outcome value object while keeping `isCorrect`.
 - `src/application/ports/attempt-repository.ts`: widen `AttemptInsertInput.selectedChoiceId` (`attempt-repository.ts:12-22`) into the same selected-vs-omitted input shape.
 - `src/adapters/repositories/attempt-row-mappers.ts`: replace `requireSelectedChoiceId(...)` (`attempt-row-mappers.ts:19-32`) with invariant-aware outcome mapping.
 - `src/adapters/repositories/drizzle-attempt-repository.ts` and `src/application/test-helpers/fakes/fake-attempt-repository.ts`: insert/read omitted outcomes and preserve the existing `isCorrect`-based filters/counters.
+- `src/application/ports/practice-session-repository.ts`, `src/adapters/repositories/drizzle-practice-session-repository.ts`, and `src/application/test-helpers/fakes/fake-practice-session-repository.ts`: add an omitted-finalization path for review-facing session state, because the current finalize/record methods require `selectedChoiceId: string`.
+- `src/application/use-cases/submit-answer.ts`: keep selected-answer behavior unchanged, but update the attempt insert call site to pass the selected-outcome shape after `AttemptInsertInput` changes.
 - `src/application/use-cases/finalize-exam-answers.ts`: iterate all session question states, grade selected drafts, materialize omitted rows directly as incorrect, update review-facing session state, and end the session in the existing transaction.
 - Review output DTOs/UI that render selected answers: `GetPracticeSessionReviewUseCase`, `GetCompletedSessionQuestionsWithFeedbackUseCase`, `GetPreviousAttemptUseCase`, `QuestionView`/`QuestionSurfaceBody`, `PostExamReviewView`, `Feedback`, `SessionBreakdownList`, and review navigator/badge copy where omitted status must be distinguishable from active unanswered.
 - Tests/fakes for the above. Follow the repo TDD/fakes rules in the downstream implementation spec; do not encode those tests in this diagnosis doc.
 
-Notably, these do **not** need omission-specific scoring branches once omitted rows store `isCorrect=false`: `GetAttemptedQuestionsUseCase`, `DrizzleQuestionRepository` correct/incorrect status filters, `GetUserStatsUseCase` counts/accuracy, dashboard recent activity correctness labels, and attempted-question history result filters.
+Notably, these do **not** need omission-specific scoring branches once omitted rows store `isCorrect=false`: `GetAttemptedQuestionsUseCase`, `DrizzleQuestionRepository` correct/incorrect status filters, `GetUserStatsUseCase` counts/accuracy, dashboard recent activity correctness labels, attempted-question history result filters, and `GetNextQuestionUseCase` recency selection.
 
 ### Historical Data
 
