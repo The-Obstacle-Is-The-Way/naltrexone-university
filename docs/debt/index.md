@@ -21,8 +21,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
 | [DEBT-381](./debt-381-question-content-typography-audit-and-preference-path.md) | Question content typography audit — Quick Practice, Tutor, and Exam are already unified at the Typography Policy Medium content tier. Do not globally shrink question text; if needed later, add a user-selectable Markdown/content-size preference while leaving UI chrome unchanged. | P3 | — |
+| [DEBT-390](./debt-390-omitted-exam-questions-recorded-as-unattempted-not-incorrect.md) | Omitted exam questions are recorded as *unattempted*, not *incorrect* — accuracy % already counts blanks against the total denominator (`practice-session-summary.ts:46`), but `finalize-exam-answers.ts:86-88` drops undrafted questions so they create no `attempts` row and surface as "unattempted" in review/history/status-filters. `attempts.selected_choice_id` is `NOT NULL` (`db/schema.ts:437-439`), so representing an omitted-incorrect answer needs a domain + schema change. **Prerequisite for [SPEC-039](../specs/spec-039-exam-mode-timer.md)** (timer auto-submit hits this path). | P2 | — |
 
-**Next Debt ID:** DEBT-390
+**Next Debt ID:** DEBT-391
 
 ---
 
