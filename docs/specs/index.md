@@ -21,6 +21,7 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-016](./spec-016-observability.md) | Observability (Logging, Error Tracking) | Implemented (DEBT-286 resolved) | Infrastructure |
 | [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Implemented (MVP complete) | Infrastructure |
 | [SPEC-039](./spec-039-exam-mode-timer.md) | Exam Mode Timer (whole-block countdown, auto-submit) | Proposed | Feature |
+| [SPEC-040](./spec-040-omitted-exam-answer-scoring.md) | Omitted Exam Answer Scoring (DEBT-390 fix; blocks SPEC-039) | Proposed | Feature |
 
 **Master Spec split parts (readability):**
 
@@ -29,7 +30,7 @@ Implementation specifications provide detailed technical guidance for building e
 - [Master Spec — Part 3](./master_spec_part3.md) — Content Pipeline, Directory Structure, Vertical Slices
 - [Master Spec — Part 4](./master_spec_part4.md) — Testing, Security, Env Vars, Deployment
 
-**Next Spec ID:** SPEC-040
+**Next Spec ID:** SPEC-041
 
 ## Archived Specs
 
