@@ -244,6 +244,7 @@ Visual: a compact `MM:SS` with a low-key label ("Time left"). In the final stret
 Strict TDD, **fakes over mocks** (`src/application/test-helpers/fakes/`). Layering:
 
 ### Domain — `src/domain/services/exam-timer.test.ts` (unit, plain Vitest)
+
 - `computeExamAllotmentSeconds`: exam with N questions → `N × 72`; tutor → `null`.
 - `computeExamDeadline`: exam → `startedAt + allotment`; tutor → `null`.
 - `remainingExamSeconds`: counts down; clamps at 0; tutor → `Infinity`.
@@ -251,25 +252,30 @@ Strict TDD, **fakes over mocks** (`src/application/test-helpers/fakes/`). Layeri
 - Constant guard: `EXAM_SECONDS_PER_QUESTION === 72` (locks the decision against accidental edits).
 
 ### Application — use-case unit tests with fakes
+
 - `GetNextQuestionUseCase`: exam payload includes `deadlineAt = startedAt + N×72s` (ISO); tutor payload `deadlineAt: null`. Use `FakePracticeSessionRepository` + injected `now`.
 - `SaveExamDraftAnswerUseCase`: rejects with `CONFLICT 'Exam time has expired'` when the injected `now` is past the deadline; succeeds before it. (Construct a fake session whose `startedAt` makes it expired relative to the injected clock.)
 - Expired active access: an expired open exam does not serve another active question; it routes to the same finalize path and the session ends.
 - SPEC-040 interaction: finalizing an exam with no persisted draft/latest answer records an omitted incorrect attempt. This is already covered by `src/application/use-cases/finalize-exam-answers.test.ts:76-246`; timer tests should assert reuse of the path, not duplicate omitted-scoring logic.
 
 ### Adapter / controller
+
 - `getNextQuestion` returns `deadlineAt` on active exam session payloads and `null` for tutor session payloads.
 - `saveExamDraftAnswer` action surfaces the expired `CONFLICT` as an error `ActionResult`.
 
 ### Browser — `*.browser.spec.tsx` (`vitest-browser-react`, `pnpm test:browser`)
+
 - `use-exam-timer.browser.spec.tsx`: countdown decrements; `onExpire` fires once at zero; latched fire when "returning" past the deadline (simulate by advancing the deadline into the past); tutor (`deadlineAt: null`) returns null and never fires.
 - `ExamTimer` component: renders `MM:SS`; milestone `aria-live` announcements at thresholds; warning token applied in final stretch; reduced-motion path asserts no animation class.
 - Controller-level: on expiry, the finalize handler is invoked once even if a final draft-save attempt is rejected as expired; manual Review & Submit at/after expiry also proceeds to finalization instead of getting stuck on the draft-save error. Use existing controller probes/fakes (`practice-session-page-controller.browser.*`). **Per DEBT-323, do not rely on `click @ref` for primary/toggle buttons**; drive via the hook/controller probe surface as the existing controller browser specs do.
 
 ### Integration — `tests/integration/*.integration.test.ts` (real Postgres)
+
 - Start exam → advance injected clock past deadline → `saveExamDraftAnswer` rejected → finalize records omitted rows as incorrect and ends session through the SPEC-040 path.
 - Reload simulation: re-fetch `getNextQuestion` for the same session → identical `deadlineAt` derived from persisted `started_at`.
 
 ### E2E — optional smoke (`tests/e2e/*.spec.ts`)
+
 - No mandatory E2E is required for SPEC-039 because the authority, races, and scoring are covered at lower layers. If an E2E smoke is added, introduce an explicit test-only timing seam; do not wait for the real 72-second allotment and do not monkey-patch constants from the test.
 
 ---
