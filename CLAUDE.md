@@ -100,13 +100,16 @@ That means the full Playwright prereqs documented in `docs/dev/testing-infrastru
 rg '^(DATABASE_URL|CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME|E2E_CLERK_USER_PASSWORD|E2E_STRIPE_OWNER|STRIPE_SECRET_KEY|NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY)=' .env.local
 
 # If the current branch includes new db/migrations since the target DB was last updated,
-# first confirm .env.local is non-production, then migrate that target:
-node -e "require('dotenv').config({ path: '.env.local' }); const u = new URL(process.env.DATABASE_URL); console.log(u.hostname)"
-env -u DATABASE_URL pnpm db:migrate
+# first confirm .env.local is non-production, then migrate that exact target:
+LOCAL_E2E_DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env.local' }); const url = process.env.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
+node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$LOCAL_E2E_DATABASE_URL"
+DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm db:migrate
 
 lsof -ti:3000 | xargs kill -9 2>/dev/null
 pnpm test:e2e
 ```
+
+Never run E2E migrations by relying on implicit `.env.local` resolution alone. Verify the host, then prefix the migration command with the exact `DATABASE_URL` you intend to mutate.
 
 CI enforces E2E on pushes and same-repo PRs. Skipping it locally when that authenticated billing E2E environment is available risks copy/assertion mismatches that only surface in CI (e.g., stale E2E text after a component copy change).
 

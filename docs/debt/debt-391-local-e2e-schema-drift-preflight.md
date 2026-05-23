@@ -3,7 +3,7 @@
 **Priority:** P2
 **Created:** 2026-05-23
 **Source:** Local authenticated E2E failed after SPEC-040 because the Neon `dev` branch behind `.env.local` had not been migrated to migrations `0017`/`0018`.
-**Related:** [Deployment Environments](../dev/deployment-environments.md), [Deployment Procedure](../dev/deployment-procedure.md), [Testing Infrastructure](../dev/testing-infrastructure.md), [SPEC-040](../specs/spec-040-omitted-exam-answer-scoring.md), [DEBT-390](./debt-390-omitted-exam-questions-recorded-as-unattempted-not-incorrect.md)
+**Related:** [Deployment Environments](../dev/deployment-environments.md), [Deployment Procedure](../dev/deployment-procedure.md), [Testing Infrastructure](../dev/testing-infrastructure.md), [SPEC-040](../specs/spec-040-omitted-exam-answer-scoring.md), [DEBT-390](../_archive/debt/debt-390-omitted-exam-questions-recorded-as-unattempted-not-incorrect.md)
 
 **Status:** Active
 
@@ -50,7 +50,7 @@ The preflight should:
 E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATIONS
 The database used by .env.local is behind the repo migration journal.
 Missing migrations: 0017_flaky_ser_duncan, 0018_backfill-omitted-exam-attempts.
-Confirm this is the intended non-production database, then run: env -u DATABASE_URL pnpm db:migrate
+Confirm this is the intended non-production database, then run: DATABASE_URL="<verified target>" pnpm db:migrate
 ```
 
 This belongs in the E2E preflight path before `seedTestSubscription()` because `tests/e2e/global.setup.ts:7-11` currently calls the credential health check before seeding and user-state reset. The check should be independently unit-tested alongside `tests/e2e/helpers/credential-health-check.test.ts`.

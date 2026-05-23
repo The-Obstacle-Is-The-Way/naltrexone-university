@@ -4,7 +4,7 @@
 > Write tests FIRST. Red → Green → Refactor. No implementation without a failing test.
 > Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
 
-**Status:** Proposed
+**Status:** Implemented (PR #317; shipped to `dev` in merge `3d8a292e`)
 **Layer:** Feature (touches Domain, Application, Adapters, App)
 **Date:** 2026-05-22
 
@@ -12,28 +12,28 @@
 
 ## Overview
 
-This spec implements the fix diagnosed in [DEBT-390](../debt/debt-390-omitted-exam-questions-recorded-as-unattempted-not-incorrect.md): when an exam is finalized, questions with no draft and no latest answer are silently dropped instead of being recorded as incorrect. Today `FinalizeExamAnswersUseCase` only writes `attempts` rows for drafted states (`src/application/use-cases/finalize-exam-answers.ts:86-88`), so omitted questions leave no attempt row and stay terminal `null` in session state. The session accuracy percentage already counts them against the denominator, but every attempt-backed consumer (incorrect-question history, status filters, dashboard stats) is blind to them.
+This spec implemented the fix diagnosed in [DEBT-390](../_archive/debt/debt-390-omitted-exam-questions-recorded-as-unattempted-not-incorrect.md): before PR #317, when an exam was finalized, questions with no draft and no latest answer were silently dropped instead of being recorded as incorrect. At diagnosis time, `FinalizeExamAnswersUseCase` only wrote `attempts` rows for drafted states, so omitted questions left no attempt row and stayed terminal `null` in session state. The session accuracy percentage already counted them against the denominator, but every attempt-backed consumer (incorrect-question history, status filters, dashboard stats) was blind to them.
 
 This spec makes the omission a **first-class scored outcome**: a real `attempts` row with no selected choice, marked omitted, scored incorrect. Once such rows exist, the existing `isCorrect`-keyed consumers work unchanged; only choice-rendering code needs updating.
 
-DEBT-390 is the diagnosis and the source of truth for the decided direction. This spec is the executable plan. Read DEBT-390 first.
+DEBT-390 is the archived diagnosis and source of truth for the decided direction. This spec was the executable implementation plan.
 
 ## Relationship to Other Specs
 
-- **Blocks [SPEC-039](./spec-039-exam-mode-timer.md).** The timer's auto-submit-on-expiry routes through `FinalizeExamAnswersUseCase`. SPEC-039 must not ship until omitted scoring is correct, or every timed-out exam under-records blanks exactly as manual submit does today.
+- **Prerequisite for [SPEC-039](./spec-039-exam-mode-timer.md), now satisfied.** The timer's auto-submit-on-expiry routes through `FinalizeExamAnswersUseCase`. SPEC-039 shipped after omitted scoring was corrected, so timed-out exams reuse the same all-question finalize path as manual submit.
 - **Interacts with SPEC-034** (Review Mode Read-Only & Try-Again scoping). After this fix an omitted exam question has a session-scoped attempt, so the `kind: 'session_unanswered'` fallback in `src/application/use-cases/get-previous-attempt.ts:99-137` is no longer the path for omitted rows — review reads the omitted-outcome attempt instead.
 
 ## Requirements
 
 ### Functional
 
-1. Finalizing an exam (manual submit or, later, SPEC-039 timer expiry) MUST process **every** question in the session, not just drafted ones.
+1. Finalizing an exam (manual submit or SPEC-039 timer expiry) MUST process **every** question in the session, not just drafted ones.
 2. A question with a persisted draft continues to grade the selected choice exactly as today.
 3. A question with neither a draft nor a latest selected answer MUST produce an attempt row with: no selected choice, `isOmitted: true`, `isCorrect: false`, and `timeSpentSeconds` derived from any persisted server-side time (`0` when none exists).
 4. Omitted attempts MUST be visible to all attempt-backed consumers once the session ends (incorrect-question history, Quick Practice `incorrect` status filter, dashboard totals/accuracy, recent activity, streaks).
 5. The `unanswered` status filter MUST stop classifying an omitted (now attempted) exam question as unanswered.
 6. Session/post-exam review MUST display omitted questions as **incorrect with "no answer selected"**, distinguishable from an active (not-yet-finalized) unanswered question.
-7. Historical exams finalized before this ships MUST be reconciled by an idempotent backfill so identical exams score identically regardless of submission date (DEBT-390 "Historical Data").
+7. Historical exams finalized before PR #317 MUST be reconciled by an idempotent backfill so identical exams score identically regardless of submission date (DEBT-390 "Historical Data").
 8. Non-exam semantics are unchanged: no omitted attempts for Quick Practice abandonment, and no automatic incorrect attempts for tutor early-end blanks.
 
 ### Non-Functional
@@ -145,7 +145,7 @@ Layered, in dependency order. Each is Red before the corresponding Design item i
 
 ## Related
 
-- [DEBT-390](../debt/debt-390-omitted-exam-questions-recorded-as-unattempted-not-incorrect.md) — diagnosis & decided direction (source of truth)
-- [SPEC-039](./spec-039-exam-mode-timer.md) — exam-mode timer (blocked on this)
+- [DEBT-390](../_archive/debt/debt-390-omitted-exam-questions-recorded-as-unattempted-not-incorrect.md) — diagnosis & decided direction (source of truth)
+- [SPEC-039](./spec-039-exam-mode-timer.md) — exam-mode timer (sequenced after this)
 - [SPEC-013](../_archive/specs/spec-013-practice-sessions.md), [SPEC-020](../_archive/specs/spec-020-practice-engine-completion.md), [SPEC-034](../_archive/specs/spec-034-review-mode-readonly-and-try-again-scoping.md)
 - [Practice Engine](../practice-engine/index.md)

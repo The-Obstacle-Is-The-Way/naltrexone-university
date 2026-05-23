@@ -92,11 +92,14 @@ If you are using Neon, fetch the connection string for the intended branch first
 For local authenticated E2E after pulling code with new migrations, migrate the `.env.local` target before running the suite. Confirm the host without printing credentials, then run Drizzle against `.env.local` deliberately:
 
 ```bash
-node -e "require('dotenv').config({ path: '.env.local' }); const u = new URL(process.env.DATABASE_URL); console.log(u.hostname)"
-env -u DATABASE_URL pnpm db:migrate
+LOCAL_E2E_DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env.local' }); const url = process.env.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
+node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$LOCAL_E2E_DATABASE_URL"
+DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm db:migrate
 lsof -ti:3000 | xargs kill -9 2>/dev/null
 pnpm test:e2e
 ```
+
+Do not rely on implicit `.env.local` resolution for migration commands. Verify the host, then prefix `pnpm db:migrate` with the exact `DATABASE_URL` you intend to mutate.
 
 This is separate from `pnpm test:integration`, which uses the Docker Postgres database and has its own migration/seed setup.
 

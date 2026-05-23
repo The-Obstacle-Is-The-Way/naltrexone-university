@@ -124,6 +124,7 @@ export class GetPracticeSessionReviewUseCase {
       const state = existingState ?? createDefaultQuestionState(questionId);
       const isAnswered = getReviewSelectedChoiceId(session, state) !== null;
       const isOmitted =
+        session.mode === 'exam' &&
         session.endedAt !== null &&
         state.latestSelectedChoiceId === null &&
         state.latestIsCorrect === false &&

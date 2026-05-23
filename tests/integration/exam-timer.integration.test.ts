@@ -7,6 +7,10 @@ import { FinalizeExamAnswersUseCase } from '@/src/application/use-cases/finalize
 import { GetNextQuestionUseCase } from '@/src/application/use-cases/get-next-question';
 import { SaveExamDraftAnswerUseCase } from '@/src/application/use-cases/save-exam-draft-answer';
 import {
+  EXAM_SECONDS_PER_QUESTION,
+  MS_PER_SECOND,
+} from '@/src/domain/services/time-constants';
+import {
   cleanupAfterEach,
   closeConnection,
   createCleanupState,
@@ -17,6 +21,9 @@ import {
 
 const { db, sql } = createIntegrationDb();
 const cleanup = createCleanupState();
+const TWO_QUESTION_EXAM_COUNT = 2;
+const TWO_QUESTION_EXAM_DURATION_MS =
+  TWO_QUESTION_EXAM_COUNT * EXAM_SECONDS_PER_QUESTION * MS_PER_SECOND;
 
 afterEach(async () => {
   await cleanupAfterEach(db, cleanup);
@@ -71,14 +78,14 @@ describe('exam timer integration', () => {
       userId: user.id,
       mode: 'exam',
       paramsJson: {
-        count: 2,
+        count: TWO_QUESTION_EXAM_COUNT,
         tagSlugs: [],
         difficulties: [],
         questionIds: [firstQuestion.id, secondQuestion.id],
       },
     });
 
-    now = new Date(session.startedAt.getTime() + 144_000);
+    now = new Date(session.startedAt.getTime() + TWO_QUESTION_EXAM_DURATION_MS);
     await expect(
       saveDraft.execute({
         userId: user.id,
@@ -151,7 +158,7 @@ describe('exam timer integration', () => {
       userId: user.id,
       mode: 'exam',
       paramsJson: {
-        count: 2,
+        count: TWO_QUESTION_EXAM_COUNT,
         tagSlugs: [],
         difficulties: [],
         questionIds: [firstQuestion.id, secondQuestion.id],
@@ -159,7 +166,7 @@ describe('exam timer integration', () => {
     });
 
     const expectedDeadline = new Date(
-      session.startedAt.getTime() + 144_000,
+      session.startedAt.getTime() + TWO_QUESTION_EXAM_DURATION_MS,
     ).toISOString();
 
     now = new Date(session.startedAt.getTime() + 30_000);

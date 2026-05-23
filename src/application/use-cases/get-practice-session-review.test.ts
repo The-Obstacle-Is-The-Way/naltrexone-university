@@ -270,6 +270,58 @@ describe('GetPracticeSessionReviewUseCase', () => {
     );
   });
 
+  it('does not mark ended tutor terminal-null question states as omitted exam rows', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'tutor',
+      endedAt: new Date('2026-02-06T00:20:00Z'),
+      questionIds: ['q1'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: false,
+          latestAnsweredAt: new Date('2026-02-06T00:10:00Z'),
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 0,
+        },
+      ],
+    });
+
+    const useCase = new GetPracticeSessionReviewUseCase(
+      new FakePracticeSessionRepository([session]),
+      new FakeQuestionRepository([
+        createQuestion({
+          id: 'q1',
+          slug: 'q-1',
+          stemMd: 'Stem for q1',
+          difficulty: 'easy',
+        }),
+      ]),
+      new FakeLogger(),
+    );
+
+    await expect(useCase.execute({ userId, sessionId })).resolves.toMatchObject(
+      {
+        answeredCount: 0,
+        rows: [
+          {
+            questionId: 'q1',
+            isAnswered: false,
+            isCorrect: false,
+            isOmitted: false,
+          },
+        ],
+      },
+    );
+  });
+
   it('falls back to latestSelectedChoiceId for legacy active exam sessions with no draft', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';

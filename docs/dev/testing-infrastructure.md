@@ -127,10 +127,14 @@ Individual spec files still use `test.skip(!hasClerkCredentials, ...)`, but that
 Local E2E uses the database in `.env.local`, not the Docker database used by `pnpm test:integration`. After pulling code with new Drizzle migrations, migrate the `.env.local` target before running E2E:
 
 ```bash
-node -e "require('dotenv').config({ path: '.env.local' }); const u = new URL(process.env.DATABASE_URL); console.log(u.hostname)"
-env -u DATABASE_URL pnpm db:migrate
+LOCAL_E2E_DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env.local' }); const url = process.env.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
+node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$LOCAL_E2E_DATABASE_URL"
+DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm db:migrate
+lsof -ti:3000 | xargs kill -9 2>/dev/null
 pnpm test:e2e
 ```
+
+Do not rely on implicit `.env.local` resolution for migration commands. Verify the host, then prefix `pnpm db:migrate` with the exact `DATABASE_URL` you intend to mutate.
 
 The current preflight checks connectivity and selected schema contracts, but it does not compare the target database against the full Drizzle migration journal. See [DEBT-391](../debt/debt-391-local-e2e-schema-drift-preflight.md).
 

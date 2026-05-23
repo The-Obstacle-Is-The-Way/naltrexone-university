@@ -245,6 +245,54 @@ describe('FinalizeExamAnswersUseCase', () => {
     });
   });
 
+  it('does not treat a malformed empty draft choice id as an omitted answer', async () => {
+    const questions = new FakeQuestionRepository([
+      createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong'),
+    ]);
+    const attempts = new FakeAttemptRepository();
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q1'],
+        startedAt: new Date('2026-03-17T12:00:00.000Z'),
+        questionStates: [
+          {
+            questionId: 'q1',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+            draftSelectedChoiceId: '',
+            draftSavedAt: new Date('2026-03-17T12:05:00.000Z'),
+            draftCumulativeMs: 30_000,
+          },
+        ],
+      }),
+    ]);
+    const useCase = new FinalizeExamAnswersUseCase(
+      questions,
+      attempts,
+      sessions,
+      passthroughTransaction(questions, attempts, sessions),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+      }),
+    ).rejects.toMatchObject({
+      name: 'DomainError',
+      code: 'INVALID_CHOICE',
+    });
+
+    await expect(
+      attempts.findBySessionId('session-1', 'user-1'),
+    ).resolves.toEqual([]);
+  });
+
   it('caps legacy oversized draftCumulativeMs before writing timeSpentSeconds', async () => {
     const questions = new FakeQuestionRepository([
       createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong'),

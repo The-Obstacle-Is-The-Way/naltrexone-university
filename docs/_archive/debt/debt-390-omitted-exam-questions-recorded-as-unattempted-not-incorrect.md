@@ -2,10 +2,16 @@
 
 **Priority:** P2
 **Created:** 2026-05-22
-**Source:** Investigation for [SPEC-039](../specs/spec-039-exam-mode-timer.md) (exam-mode timer). While mapping the exam finalize path to design auto-submit-on-expiry, the per-question scoring record was found to drop unanswered questions instead of scoring them as incorrect. User confirmed the intended behavior — "unanswered should read as incorrect, consistent with a real exam" — for both manual finalize and timer expiry.
-**Related:** [SPEC-039 (Exam Mode Timer)](../specs/spec-039-exam-mode-timer.md) (depends on this), [SPEC-013 (Practice Sessions)](../_archive/specs/spec-013-practice-sessions.md), [SPEC-020 (Practice Engine Completion)](../_archive/specs/spec-020-practice-engine-completion.md), [Practice Engine](../practice-engine/index.md)
+**Source:** Investigation for [SPEC-039](../../specs/spec-039-exam-mode-timer.md) (exam-mode timer). While mapping the exam finalize path to design auto-submit-on-expiry, the per-question scoring record was found to drop unanswered questions instead of scoring them as incorrect. User confirmed the intended behavior — "unanswered should read as incorrect, consistent with a real exam" — for both manual finalize and timer expiry.
+**Related:** [SPEC-039 (Exam Mode Timer)](../../specs/spec-039-exam-mode-timer.md), [SPEC-040 (Omitted Exam Answer Scoring)](../../specs/spec-040-omitted-exam-answer-scoring.md), [SPEC-013 (Practice Sessions)](../specs/spec-013-practice-sessions.md), [SPEC-020 (Practice Engine Completion)](../specs/spec-020-practice-engine-completion.md), [Practice Engine](../../practice-engine/index.md)
 
-**Status:** Active
+**Status:** Resolved 2026-05-23 by [SPEC-040](../../specs/spec-040-omitted-exam-answer-scoring.md) / [PR #317](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/317). [SPEC-039](../../specs/spec-039-exam-mode-timer.md) then reused the same finalize path for timer expiry in [PR #319](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/319).
+
+---
+
+## Resolution Note
+
+This archived document preserves the diagnosis and decided remediation from before the SPEC-040 implementation. The current code no longer has the diagnosed gap: `src/application/use-cases/finalize-exam-answers.ts` iterates every exam question state, writes omitted attempts with `isCorrect=false`, and `db/schema.ts` now models `attempts.selected_choice_id` as nullable with `attempts.is_omitted` plus CHECK constraints. See [SPEC-040](../../specs/spec-040-omitted-exam-answer-scoring.md) and [PR #317](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/317).
 
 ---
 
@@ -215,7 +221,7 @@ That diverges from the stated exam behavior: omitted exam items should be scored
 
 ## Decided Remediation Direction (implemented by SPEC-040)
 
-This debt note is the diagnosis and decided direction. It is **not** the TDD implementation spec; the actual build is captured in [SPEC-040](../specs/spec-040-omitted-exam-answer-scoring.md) and is out of scope for this document.
+This debt note is the diagnosis and decided direction. It is **not** the TDD implementation spec; the actual build is captured in [SPEC-040](../../specs/spec-040-omitted-exam-answer-scoring.md) and is out of scope for this document.
 
 Required shape of the correct fix:
 

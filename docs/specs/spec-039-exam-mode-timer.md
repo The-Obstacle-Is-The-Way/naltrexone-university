@@ -4,7 +4,7 @@
 > Write tests FIRST. Red → Green → Refactor. No implementation without a failing test.
 > Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
 
-**Status:** Proposed
+**Status:** Implemented (PR #319; shipped to `dev` in merge `e8d99106`)
 **Layer:** Feature
 **Date:** 2026-05-22
 
@@ -32,7 +32,7 @@ The timer is **server-authoritative**: the cutoff is derived from the session's 
 
 ### Shipped prerequisite
 
-**[SPEC-040](./spec-040-omitted-exam-answer-scoring.md) / [DEBT-390](../debt/debt-390-omitted-exam-questions-recorded-as-unattempted-not-incorrect.md) has shipped in merge `3d8a292e`.** SPEC-039 remains sequenced after that work, but the blocker is now satisfied. Auto-submit on expiry must call the existing `FinalizeExamAnswersUseCase`, not a timer-specific scoring path. That use case now iterates all session question states (`src/application/use-cases/finalize-exam-answers.ts:95`), materializes omitted outcomes with `omittedOutcome()` (`src/application/use-cases/finalize-exam-answers.ts:105`), stores `isCorrect: false` (`src/application/use-cases/finalize-exam-answers.ts:111`), promotes review-facing session state (`src/application/use-cases/finalize-exam-answers.ts:115-122`), grades selected drafts through `gradeAnswer` only (`src/application/use-cases/finalize-exam-answers.ts:131-139`), and ends the session in the same transaction (`src/application/use-cases/finalize-exam-answers.ts:152`).
+**[SPEC-040](./spec-040-omitted-exam-answer-scoring.md) / [DEBT-390](../_archive/debt/debt-390-omitted-exam-questions-recorded-as-unattempted-not-incorrect.md) shipped in merge `3d8a292e`.** SPEC-039 was sequenced after that work, and the blocker is now satisfied. Auto-submit on expiry must call the existing `FinalizeExamAnswersUseCase`, not a timer-specific scoring path. That use case now iterates all session question states (`src/application/use-cases/finalize-exam-answers.ts:95`), materializes omitted outcomes with `omittedOutcome()` (`src/application/use-cases/finalize-exam-answers.ts:105`), stores `isCorrect: false` (`src/application/use-cases/finalize-exam-answers.ts:111`), promotes review-facing session state (`src/application/use-cases/finalize-exam-answers.ts:115-122`), grades selected drafts through `gradeAnswer` only (`src/application/use-cases/finalize-exam-answers.ts:131-139`), and ends the session in the same transaction (`src/application/use-cases/finalize-exam-answers.ts:152`).
 
 The timer therefore owns countdown, deadline enforcement, and triggering finalization. Omitted-answer representation, scoring, backfill, and review rendering are already owned by SPEC-040.
 
@@ -82,7 +82,7 @@ export const EXAM_SECONDS_PER_QUESTION = 72;
 
 ### Architecture summary
 
-```
+```text
 Domain (pure)
   time-constants.ts            EXAM_SECONDS_PER_QUESTION = 72              [NEW const]
   services/exam-timer.ts       computeExamAllotmentSeconds(session)       [NEW]
@@ -297,7 +297,7 @@ Strict TDD, **fakes over mocks** (`src/application/test-helpers/fakes/`). Layeri
 
 ## Related
 
-- **[SPEC-040](./spec-040-omitted-exam-answer-scoring.md)** / **[DEBT-390](../debt/debt-390-omitted-exam-questions-recorded-as-unattempted-not-incorrect.md)** — shipped prerequisite: omitted exam questions are materialized as incorrect attempts before auto-submit ships.
+- **[SPEC-040](./spec-040-omitted-exam-answer-scoring.md)** / **[DEBT-390](../_archive/debt/debt-390-omitted-exam-questions-recorded-as-unattempted-not-incorrect.md)** — shipped prerequisite: omitted exam questions are materialized as incorrect attempts before timer auto-submit runs.
 - [SPEC-013 (Practice Sessions)](../_archive/specs/spec-013-practice-sessions.md), [SPEC-020 (Practice Engine Completion)](../_archive/specs/spec-020-practice-engine-completion.md) — the practice/exam engine this builds on.
 - [Practice Engine](../practice-engine/index.md) — canonical reference for the core feature.
 - ABPM Addiction Medicine exam content: <https://www.theabpm.org/become-certified/exam-content/>

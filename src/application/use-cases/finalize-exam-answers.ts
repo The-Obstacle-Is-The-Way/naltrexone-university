@@ -99,7 +99,7 @@ export class FinalizeExamAnswersUseCase {
         );
         const timeSpentSeconds = Math.floor(cappedCumulativeMs / MS_PER_SECOND);
         const selectedChoiceId = state.draftSelectedChoiceId;
-        if (!selectedChoiceId) {
+        if (selectedChoiceId === null) {
           if (state.latestSelectedChoiceId !== null) continue;
 
           const outcome = omittedOutcome();
