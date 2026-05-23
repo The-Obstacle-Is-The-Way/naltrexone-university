@@ -32,6 +32,9 @@ type TestDepsOverrides = {
   attempts?: ConstructorParameters<typeof FakeAttemptRepository>[0];
   sessions?: ConstructorParameters<typeof FakePracticeSessionRepository>[0];
   now?: () => Date;
+  expiredExamFinalizer?: {
+    execute: (input: { userId: string; sessionId: string }) => Promise<unknown>;
+  };
 };
 
 export function createTestDeps(overrides: TestDepsOverrides = {}) {
@@ -45,6 +48,7 @@ export function createTestDeps(overrides: TestDepsOverrides = {}) {
     attemptRepo,
     sessionRepo,
     overrides.now,
+    overrides.expiredExamFinalizer,
   );
 
   return { questionRepo, attemptRepo, sessionRepo, getNextQuestion };

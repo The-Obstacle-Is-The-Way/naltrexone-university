@@ -124,6 +124,16 @@ These can be provided via `.env.local` (loaded by `playwright.config.ts`) or CI 
 
 Individual spec files still use `test.skip(!hasClerkCredentials, ...)`, but that guard does **not** replace suite setup: `global.setup.ts` runs a preflight and seed/reset pass before the Chromium project starts. Missing or invalid credentials therefore fail the suite fast instead of silently skipping it.
 
+Local E2E uses the database in `.env.local`, not the Docker database used by `pnpm test:integration`. After pulling code with new Drizzle migrations, migrate the `.env.local` target before running E2E:
+
+```bash
+node -e "require('dotenv').config({ path: '.env.local' }); const u = new URL(process.env.DATABASE_URL); console.log(u.hostname)"
+env -u DATABASE_URL pnpm db:migrate
+pnpm test:e2e
+```
+
+The current preflight checks connectivity and selected schema contracts, but it does not compare the target database against the full Drizzle migration journal. See [DEBT-391](../debt/debt-391-local-e2e-schema-drift-preflight.md).
+
 ### Test Data Seeding
 
 Subscription data is seeded via the Stripe API and direct DB writes in `global.setup.ts` — **no Stripe UI automation**.

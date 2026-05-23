@@ -62,6 +62,9 @@ describe('PracticeView answer feedback', () => {
         sessionInfo={{
           sessionId: 'session-1',
           mode: 'tutor',
+
+          deadlineAt: null,
+
           index: 0,
           total: 3,
           isMarkedForReview: false,
@@ -109,6 +112,9 @@ describe('PracticeView answer feedback', () => {
         sessionInfo={{
           sessionId: 'session-1',
           mode: 'tutor',
+
+          deadlineAt: null,
+
           index: 1,
           total: 3,
           isMarkedForReview: false,
@@ -199,6 +205,9 @@ describe('PracticeView answer feedback', () => {
         sessionInfo={{
           sessionId: 'session-1',
           mode: 'tutor',
+
+          deadlineAt: null,
+
           index: 1,
           total: 2,
           isMarkedForReview: false,

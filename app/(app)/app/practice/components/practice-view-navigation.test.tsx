@@ -184,6 +184,9 @@ describe('PracticeView navigation', () => {
       sessionInfo: {
         sessionId: 'session-1',
         mode: 'tutor',
+
+        deadlineAt: null,
+
         index: 2,
         total: 3,
         isMarkedForReview: false,
@@ -234,6 +237,9 @@ describe('PracticeView navigation', () => {
       sessionInfo: {
         sessionId: 'session-1',
         mode: 'tutor',
+
+        deadlineAt: null,
+
         index: 2,
         total: 3,
         isMarkedForReview: false,
@@ -289,6 +295,9 @@ describe('PracticeView navigation', () => {
       sessionInfo: {
         sessionId: 'session-1',
         mode: 'tutor',
+
+        deadlineAt: null,
+
         index: 0,
         total: 3,
         isMarkedForReview: false,
@@ -334,6 +343,9 @@ describe('PracticeView navigation', () => {
       sessionInfo: {
         sessionId: 'session-1',
         mode: 'tutor',
+
+        deadlineAt: null,
+
         index: 1,
         total: 3,
         isMarkedForReview: false,
@@ -377,6 +389,9 @@ describe('PracticeView navigation', () => {
       sessionInfo: {
         sessionId: 'session-1',
         mode: 'tutor',
+
+        deadlineAt: null,
+
         index: 1,
         total: 3,
         isMarkedForReview: false,
@@ -428,6 +443,9 @@ describe('PracticeView navigation', () => {
       sessionInfo: {
         sessionId: 'session-1',
         mode: 'tutor',
+
+        deadlineAt: null,
+
         index: 0,
         total: 3,
         isMarkedForReview: false,
@@ -484,6 +502,9 @@ describe('PracticeView navigation', () => {
       sessionInfo: {
         sessionId: 'session-1',
         mode: 'tutor',
+
+        deadlineAt: null,
+
         index: 2,
         total: 3,
         isMarkedForReview: false,
@@ -540,6 +561,9 @@ describe('PracticeView navigation', () => {
         sessionInfo={{
           sessionId: 'session-1',
           mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
           index: 0,
           total: 2,
           isMarkedForReview: false,

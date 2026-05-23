@@ -165,6 +165,9 @@ describe('app/(app)/app/practice', () => {
         sessionInfo={{
           sessionId: 'session-1',
           mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
           index: 0,
           total: 10,
           isMarkedForReview: true,
@@ -238,6 +241,9 @@ describe('app/(app)/app/practice', () => {
         sessionInfo={{
           sessionId: 'session-1',
           mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
           index: 0,
           total: 10,
         }}

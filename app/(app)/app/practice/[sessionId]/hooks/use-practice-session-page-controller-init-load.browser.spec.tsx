@@ -124,6 +124,9 @@ describe('usePracticeSessionPageController (browser)', () => {
           questionId: 'question-1',
           session: {
             mode: 'tutor',
+
+            deadlineAt: null,
+
             index: 0,
             total: 2,
             isMarkedForReview: false,
@@ -188,6 +191,9 @@ describe('usePracticeSessionPageController (browser)', () => {
           questionId: 'question-1',
           session: {
             mode: 'tutor',
+
+            deadlineAt: null,
+
             index: 0,
             total: 2,
             isMarkedForReview: false,
@@ -243,6 +249,9 @@ describe('usePracticeSessionPageController (browser)', () => {
           questionId: 'question-1',
           session: {
             mode: 'tutor',
+
+            deadlineAt: null,
+
             index: 0,
             total: 2,
             isMarkedForReview: false,
@@ -309,6 +318,9 @@ describe('usePracticeSessionPageController (browser)', () => {
             questionId: 'question-1',
             session: {
               mode: 'tutor',
+
+              deadlineAt: null,
+
               index: 0,
               total: 2,
               isMarkedForReview: false,

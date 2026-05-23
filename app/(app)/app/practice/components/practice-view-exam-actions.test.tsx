@@ -40,6 +40,7 @@ function renderExamView(
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'exam',
+        deadlineAt: '2099-05-22T12:02:24.000Z',
         index: input.index ?? 0,
         total: input.total ?? 3,
         isMarkedForReview: input.isMarkedForReview ?? false,
@@ -78,6 +79,9 @@ function renderTutorView(
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'tutor',
+
+        deadlineAt: null,
+
         index: 1,
         total: 3,
         isMarkedForReview: false,

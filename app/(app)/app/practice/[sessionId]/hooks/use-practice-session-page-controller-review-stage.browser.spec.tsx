@@ -45,6 +45,9 @@ describe('usePracticeSessionPageController (browser)', () => {
           choices: [CHOICE_1, CHOICE_2, CHOICE_3],
           session: {
             mode: 'exam',
+
+            deadlineAt: '2099-05-22T12:02:24.000Z',
+
             index: 0,
             total: 2,
             isMarkedForReview: false,
@@ -233,6 +236,9 @@ describe('usePracticeSessionPageController (browser)', () => {
         session: {
           sessionId: 'session-1',
           mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
           index: 0,
           total: 1,
           isMarkedForReview: false,
@@ -332,6 +338,9 @@ describe('usePracticeSessionPageController (browser)', () => {
           session: {
             sessionId: 'session-1',
             mode: 'exam',
+
+            deadlineAt: '2099-05-22T12:02:24.000Z',
+
             index: 0,
             total: 2,
             isMarkedForReview: false,
@@ -348,6 +357,9 @@ describe('usePracticeSessionPageController (browser)', () => {
           session: {
             sessionId: 'session-1',
             mode: 'exam',
+
+            deadlineAt: '2099-05-22T12:02:24.000Z',
+
             index: 1,
             total: 2,
             isMarkedForReview: false,

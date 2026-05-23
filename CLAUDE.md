@@ -93,11 +93,16 @@ pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test
 
 If the local authenticated billing E2E environment is available, also run E2E after the build:
 
-That means the full Playwright prereqs documented in `docs/dev/testing-infrastructure.md#environment-variables-for-e2e` are present (typically via `.env.local`): `DATABASE_URL`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `E2E_CLERK_USER_USERNAME`, `E2E_CLERK_USER_PASSWORD`, `STRIPE_SECRET_KEY`, and `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`.
+That means the full Playwright prereqs documented in `docs/dev/testing-infrastructure.md#environment-variables-for-e2e` are present (typically via `.env.local`): `DATABASE_URL`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `E2E_CLERK_USER_USERNAME`, `E2E_CLERK_USER_PASSWORD`, `E2E_STRIPE_OWNER`, `STRIPE_SECRET_KEY`, and `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`.
 
 ```bash
 # Quick file check when you rely on .env.local:
-rg '^(DATABASE_URL|CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME|E2E_CLERK_USER_PASSWORD|STRIPE_SECRET_KEY|NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY)=' .env.local
+rg '^(DATABASE_URL|CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME|E2E_CLERK_USER_PASSWORD|E2E_STRIPE_OWNER|STRIPE_SECRET_KEY|NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY)=' .env.local
+
+# If the current branch includes new db/migrations since the target DB was last updated,
+# first confirm .env.local is non-production, then migrate that target:
+node -e "require('dotenv').config({ path: '.env.local' }); const u = new URL(process.env.DATABASE_URL); console.log(u.hostname)"
+env -u DATABASE_URL pnpm db:migrate
 
 lsof -ti:3000 | xargs kill -9 2>/dev/null
 pnpm test:e2e
