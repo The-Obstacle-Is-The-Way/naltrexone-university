@@ -12,6 +12,7 @@ import {
   createPracticeSession,
   createQuestion,
 } from '@/src/domain/test-helpers';
+import { omittedOutcome } from '@/src/domain/value-objects';
 import { GetPreviousAttemptUseCase } from './get-previous-attempt';
 
 describe('GetPreviousAttemptUseCase', () => {
@@ -1199,6 +1200,55 @@ describe('GetPreviousAttemptUseCase', () => {
       kind: 'attempt',
       attemptId: 'attempt-visible',
       selectedChoiceId: 'c1',
+      isCorrect: false,
+      answeredAt: answeredAt.toISOString(),
+    });
+  });
+
+  it('wraps an omitted attempt with null selectedChoiceId and isOmitted=true', async () => {
+    const userId = 'user-1';
+    const questionId = 'q1';
+    const answeredAt = new Date('2026-04-25T12:00:00.000Z');
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      choices: [
+        createChoice({
+          id: 'c1',
+          questionId,
+          label: 'A',
+          isCorrect: false,
+        }),
+        createChoice({
+          id: 'c2',
+          questionId,
+          label: 'B',
+          isCorrect: true,
+        }),
+      ],
+    });
+    const useCase = new GetPreviousAttemptUseCase(
+      new FakeAttemptRepository([
+        createAttempt({
+          id: 'attempt-omitted',
+          userId,
+          questionId,
+          outcome: omittedOutcome(),
+          isCorrect: false,
+          answeredAt,
+        }),
+      ]),
+      new FakeQuestionRepository([question]),
+      new FakeLogger(),
+    );
+
+    await expect(
+      useCase.execute({ userId, questionId }),
+    ).resolves.toMatchObject({
+      kind: 'attempt',
+      attemptId: 'attempt-omitted',
+      selectedChoiceId: null,
+      isOmitted: true,
       isCorrect: false,
       answeredAt: answeredAt.toISOString(),
     });

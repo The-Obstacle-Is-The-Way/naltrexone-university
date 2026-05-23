@@ -59,7 +59,7 @@ describe('database migrations', () => {
     }
   });
 
-  it('requires attempts.selected_choice_id (NOT NULL)', async () => {
+  it('allows attempts.selected_choice_id to be nullable for omitted attempts', async () => {
     const rows = await sql<{ is_nullable: string }[]>`
       select is_nullable
       from information_schema.columns
@@ -67,7 +67,28 @@ describe('database migrations', () => {
         and table_name = 'attempts'
         and column_name = 'selected_choice_id'
     `;
-    expect(rows[0]?.is_nullable).toBe('NO');
+    expect(rows[0]?.is_nullable).toBe('YES');
+  });
+
+  it('creates omitted-attempt CHECK constraints', async () => {
+    const rows = await sql<{ conname: string; def: string }[]>`
+      select c.conname, pg_get_constraintdef(c.oid) as def
+      from pg_constraint c
+      join pg_class t on c.conrelid = t.oid
+      where t.relname = 'attempts'
+        and c.conname in (
+          'attempts_selected_choice_or_omitted_chk',
+          'attempts_omitted_incorrect_chk'
+        )
+    `;
+
+    const byName = new Map(rows.map((row) => [row.conname, row.def]));
+    expect(byName.get('attempts_selected_choice_or_omitted_chk')).toContain(
+      '(selected_choice_id IS NOT NULL) <> is_omitted',
+    );
+    expect(byName.get('attempts_omitted_incorrect_chk')).toContain(
+      '(NOT is_omitted) OR (is_correct = false)',
+    );
   });
 
   it('restricts deleting choices referenced by attempts', async () => {

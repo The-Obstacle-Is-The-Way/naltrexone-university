@@ -4,6 +4,7 @@ import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
 import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-attempt-repository';
 import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/drizzle-practice-session-repository';
+import { answeredOutcome, omittedOutcome } from '@/src/domain/value-objects';
 import {
   cleanupAfterEach,
   closeConnection,
@@ -54,7 +55,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: userA.id,
       questionId: question.id,
       practiceSessionId: session.id,
-      selectedChoiceId: question.correctChoiceId,
+      outcome: answeredOutcome(question.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 10,
     });
@@ -70,6 +71,145 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userB.id,
     );
     expect(attemptsForB).toHaveLength(0);
+  });
+
+  it('inserts and reads omitted attempts as incorrect scored outcomes', async () => {
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-q-omitted-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const sessionRepo = new DrizzlePracticeSessionRepository(db);
+    const attemptRepo = new DrizzleAttemptRepository(db);
+    const session = await sessionRepo.create({
+      userId: user.id,
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+
+    const attempt = await attemptRepo.insert({
+      userId: user.id,
+      questionId: question.id,
+      practiceSessionId: session.id,
+      outcome: omittedOutcome(),
+      isCorrect: false,
+      timeSpentSeconds: 0,
+    });
+
+    expect(attempt).toMatchObject({
+      userId: user.id,
+      questionId: question.id,
+      practiceSessionId: session.id,
+      outcome: { kind: 'omitted' },
+      isCorrect: false,
+      timeSpentSeconds: 0,
+    });
+
+    const [raw] = await db
+      .select({
+        selectedChoiceId: schema.attempts.selectedChoiceId,
+        isOmitted: schema.attempts.isOmitted,
+        isCorrect: schema.attempts.isCorrect,
+      })
+      .from(schema.attempts)
+      .where(eq(schema.attempts.id, attempt.id));
+    expect(raw).toEqual({
+      selectedChoiceId: null,
+      isOmitted: true,
+      isCorrect: false,
+    });
+
+    await sessionRepo.end(session.id, user.id);
+
+    await expect(
+      attemptRepo.findBySessionIdAndQuestionId(
+        session.id,
+        user.id,
+        question.id,
+      ),
+    ).resolves.toMatchObject({
+      id: attempt.id,
+      outcome: { kind: 'omitted' },
+      isCorrect: false,
+    });
+    await expect(attemptRepo.countByUserId(user.id)).resolves.toBe(1);
+    await expect(attemptRepo.countCorrectByUserId(user.id)).resolves.toBe(0);
+    await expect(
+      attemptRepo.findMostRecentAnsweredAtByQuestionIds(user.id, [question.id]),
+    ).resolves.toHaveLength(1);
+  });
+
+  it('rejects illegal omitted-answer shapes at the database boundary', async () => {
+    const user = await createUser(db, cleanup);
+    const qOmittedWithChoice = await createQuestion(db, cleanup, {
+      slug: `it-q-omitted-with-choice-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const qOmittedCorrect = await createQuestion(db, cleanup, {
+      slug: `it-q-omitted-correct-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const qAnsweredWithoutChoice = await createQuestion(db, cleanup, {
+      slug: `it-q-answered-without-choice-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    await expect(
+      db.insert(schema.attempts).values({
+        userId: user.id,
+        questionId: qOmittedWithChoice.id,
+        practiceSessionId: null,
+        selectedChoiceId: qOmittedWithChoice.correctChoiceId,
+        isOmitted: true,
+        isCorrect: false,
+        timeSpentSeconds: 0,
+      }),
+    ).rejects.toMatchObject({
+      cause: {
+        code: '23514',
+      },
+    });
+
+    await expect(
+      db.insert(schema.attempts).values({
+        userId: user.id,
+        questionId: qOmittedCorrect.id,
+        practiceSessionId: null,
+        selectedChoiceId: null,
+        isOmitted: true,
+        isCorrect: true,
+        timeSpentSeconds: 0,
+      }),
+    ).rejects.toMatchObject({
+      cause: {
+        code: '23514',
+      },
+    });
+
+    await expect(
+      db.insert(schema.attempts).values({
+        userId: user.id,
+        questionId: qAnsweredWithoutChoice.id,
+        practiceSessionId: null,
+        selectedChoiceId: null,
+        isOmitted: false,
+        isCorrect: false,
+        timeSpentSeconds: 0,
+      }),
+    ).rejects.toMatchObject({
+      cause: {
+        code: '23514',
+      },
+    });
   });
 
   it('returns null from findLatestByUserAndQuestion when no attempts exist', async () => {
@@ -110,7 +250,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: user.id,
       questionId: question.id,
       practiceSessionId: null,
-      selectedChoiceId: incorrectChoiceId,
+      outcome: answeredOutcome(incorrectChoiceId),
       isCorrect: false,
       timeSpentSeconds: 1,
     });
@@ -119,7 +259,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: user.id,
       questionId: question.id,
       practiceSessionId: null,
-      selectedChoiceId: question.correctChoiceId,
+      outcome: answeredOutcome(question.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 1,
     });
@@ -142,7 +282,10 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       id: second.id,
       userId: user.id,
       questionId: question.id,
-      selectedChoiceId: question.correctChoiceId,
+      outcome: {
+        kind: 'answered',
+        selectedChoiceId: question.correctChoiceId,
+      },
       isCorrect: true,
     });
   });
@@ -204,7 +347,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: user.id,
       questionId: question.id,
       practiceSessionId: null,
-      selectedChoiceId: question.correctChoiceId,
+      outcome: answeredOutcome(question.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 1,
     });
@@ -215,7 +358,10 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       id: attempt.id,
       userId: user.id,
       questionId: question.id,
-      selectedChoiceId: question.correctChoiceId,
+      outcome: {
+        kind: 'answered',
+        selectedChoiceId: question.correctChoiceId,
+      },
       isCorrect: true,
     });
   });
@@ -234,7 +380,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: userA.id,
       questionId: question.id,
       practiceSessionId: null,
-      selectedChoiceId: question.correctChoiceId,
+      outcome: answeredOutcome(question.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 1,
     });
@@ -278,7 +424,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: user.id,
       questionId: question.id,
       practiceSessionId: session.id,
-      selectedChoiceId: question.correctChoiceId,
+      outcome: answeredOutcome(question.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 1,
     });
@@ -326,7 +472,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: user.id,
       questionId: q1.id,
       practiceSessionId: session.id,
-      selectedChoiceId: q1.correctChoiceId,
+      outcome: answeredOutcome(q1.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 1,
     });
@@ -362,7 +508,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: userA.id,
       questionId: question.id,
       practiceSessionId: session.id,
-      selectedChoiceId: question.correctChoiceId,
+      outcome: answeredOutcome(question.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 1,
     });
@@ -407,7 +553,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: user.id,
       questionId: question.id,
       practiceSessionId: null,
-      selectedChoiceId: question.correctChoiceId,
+      outcome: answeredOutcome(question.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 1,
     });
@@ -469,7 +615,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: user.id,
       questionId: q1.id,
       practiceSessionId: null,
-      selectedChoiceId: q1.correctChoiceId,
+      outcome: answeredOutcome(q1.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 1,
     });
@@ -478,7 +624,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: user.id,
       questionId: q1.id,
       practiceSessionId: null,
-      selectedChoiceId: q1.correctChoiceId,
+      outcome: answeredOutcome(q1.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 1,
     });
@@ -487,7 +633,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: user.id,
       questionId: q2.id,
       practiceSessionId: null,
-      selectedChoiceId: q2.correctChoiceId,
+      outcome: answeredOutcome(q2.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 1,
     });
@@ -542,7 +688,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: user.id,
       questionId: q1.id,
       practiceSessionId: null,
-      selectedChoiceId: q1.correctChoiceId,
+      outcome: answeredOutcome(q1.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 1,
     });
@@ -551,7 +697,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: user.id,
       questionId: q1.id,
       practiceSessionId: null,
-      selectedChoiceId: q1.incorrectChoiceId,
+      outcome: answeredOutcome(q1.incorrectChoiceId),
       isCorrect: false,
       timeSpentSeconds: 1,
     });
@@ -560,7 +706,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: user.id,
       questionId: q2.id,
       practiceSessionId: null,
-      selectedChoiceId: q2.incorrectChoiceId,
+      outcome: answeredOutcome(q2.incorrectChoiceId),
       isCorrect: false,
       timeSpentSeconds: 1,
     });
@@ -569,7 +715,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: user.id,
       questionId: q2.id,
       practiceSessionId: null,
-      selectedChoiceId: q2.correctChoiceId,
+      outcome: answeredOutcome(q2.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 1,
     });
@@ -655,7 +801,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: user.id,
       questionId: qEasy.id,
       practiceSessionId: null,
-      selectedChoiceId: qEasy.correctChoiceId,
+      outcome: answeredOutcome(qEasy.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 1,
     });
@@ -664,7 +810,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: user.id,
       questionId: qHardA.id,
       practiceSessionId: null,
-      selectedChoiceId: qHardA.correctChoiceId,
+      outcome: answeredOutcome(qHardA.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 1,
     });
@@ -673,7 +819,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: user.id,
       questionId: qHardB.id,
       practiceSessionId: null,
-      selectedChoiceId: qHardB.correctChoiceId,
+      outcome: answeredOutcome(qHardB.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 1,
     });
@@ -750,7 +896,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: user.id,
       questionId: qOther.id,
       practiceSessionId: null,
-      selectedChoiceId: qOther.correctChoiceId,
+      outcome: answeredOutcome(qOther.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 1,
     });
@@ -758,7 +904,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: user.id,
       questionId: qPharmA.id,
       practiceSessionId: null,
-      selectedChoiceId: qPharmA.correctChoiceId,
+      outcome: answeredOutcome(qPharmA.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 1,
     });
@@ -766,7 +912,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: user.id,
       questionId: qPharmB.id,
       practiceSessionId: null,
-      selectedChoiceId: qPharmB.correctChoiceId,
+      outcome: answeredOutcome(qPharmB.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 1,
     });
@@ -831,7 +977,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: user.id,
       questionId: qHardIncorrect.id,
       practiceSessionId: null,
-      selectedChoiceId: qHardIncorrect.incorrectChoiceId,
+      outcome: answeredOutcome(qHardIncorrect.incorrectChoiceId),
       isCorrect: false,
       timeSpentSeconds: 1,
     });
@@ -840,7 +986,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: user.id,
       questionId: qHardCorrect.id,
       practiceSessionId: null,
-      selectedChoiceId: qHardCorrect.correctChoiceId,
+      outcome: answeredOutcome(qHardCorrect.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 1,
     });
@@ -849,7 +995,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       userId: user.id,
       questionId: qEasyIncorrect.id,
       practiceSessionId: null,
-      selectedChoiceId: qEasyIncorrect.incorrectChoiceId,
+      outcome: answeredOutcome(qEasyIncorrect.incorrectChoiceId),
       isCorrect: false,
       timeSpentSeconds: 1,
     });

@@ -124,7 +124,14 @@ export function PostExamReviewView({
                 disabled
                 onSelectChoice={() => undefined}
               />
-              {!currentRow.isAnswered ? (
+              {currentRow.isOmitted ? (
+                <Card
+                  className="gap-0 rounded-2xl border-destructive/50 bg-destructive/5 p-4 text-sm text-foreground shadow-sm"
+                  role="status"
+                >
+                  No answer selected. This question was scored incorrect.
+                </Card>
+              ) : !currentRow.isAnswered ? (
                 <Card
                   className="gap-0 rounded-2xl border-warning/50 bg-warning/5 p-4 text-sm text-foreground shadow-sm"
                   role="status"
@@ -134,7 +141,8 @@ export function PostExamReviewView({
               ) : null}
               <Feedback
                 isCorrect={currentRow.isCorrect === true}
-                isUnanswered={!currentRow.isAnswered}
+                isOmitted={currentRow.isOmitted}
+                isUnanswered={!currentRow.isAnswered && !currentRow.isOmitted}
                 explanationMd={currentRow.explanationMd}
                 referenceMd={currentRow.referenceMd}
                 choiceExplanations={currentRow.choiceExplanations}

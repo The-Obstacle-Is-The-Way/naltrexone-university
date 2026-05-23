@@ -73,7 +73,7 @@ describe('FinalizeExamAnswersUseCase', () => {
     void new FinalizeExamAnswersUseCase(questions, attempts, sessions);
   });
 
-  it('finalizes drafted exam answers into attempts and leaves unanswered questions untouched', async () => {
+  it('finalizes drafted answers and records omitted exam questions as incorrect attempts', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-17T12:30:00.000Z'));
 
@@ -165,21 +165,38 @@ describe('FinalizeExamAnswersUseCase', () => {
     ).resolves.toMatchObject([
       {
         questionId: 'q1',
-        selectedChoiceId: 'q1-correct',
+        outcome: {
+          kind: 'answered',
+          selectedChoiceId: 'q1-correct',
+        },
         isCorrect: true,
         timeSpentSeconds: 30,
       },
       {
         questionId: 'q2',
-        selectedChoiceId: 'q2-wrong',
+        outcome: {
+          kind: 'answered',
+          selectedChoiceId: 'q2-wrong',
+        },
         isCorrect: false,
         timeSpentSeconds: 20,
       },
       {
         questionId: 'q3',
-        selectedChoiceId: 'q3-correct',
+        outcome: {
+          kind: 'answered',
+          selectedChoiceId: 'q3-correct',
+        },
         isCorrect: true,
         timeSpentSeconds: 50,
+      },
+      {
+        questionId: 'q4',
+        outcome: {
+          kind: 'omitted',
+        },
+        isCorrect: false,
+        timeSpentSeconds: 0,
       },
     ]);
 
@@ -218,8 +235,8 @@ describe('FinalizeExamAnswersUseCase', () => {
         {
           questionId: 'q4',
           latestSelectedChoiceId: null,
-          latestIsCorrect: null,
-          latestAnsweredAt: null,
+          latestIsCorrect: false,
+          latestAnsweredAt: expect.any(Date),
           draftSelectedChoiceId: null,
           draftSavedAt: null,
           draftCumulativeMs: 0,
@@ -280,7 +297,10 @@ describe('FinalizeExamAnswersUseCase', () => {
     ).resolves.toMatchObject([
       {
         questionId: 'q1',
-        selectedChoiceId: 'q1-correct',
+        outcome: {
+          kind: 'answered',
+          selectedChoiceId: 'q1-correct',
+        },
         timeSpentSeconds: SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS / MS_PER_SECOND,
       },
     ]);

@@ -29,6 +29,7 @@ function isIncorrectChoiceWithExplanation(
 
 export type FeedbackProps = {
   isCorrect: boolean;
+  isOmitted?: boolean;
   isUnanswered?: boolean;
   explanationMd: string | null;
   referenceMd?: string | null;
@@ -147,6 +148,7 @@ function WrongAnswerSection({ choices }: WrongAnswerSectionProps) {
 
 export function Feedback({
   isCorrect,
+  isOmitted = false,
   isUnanswered = false,
   explanationMd,
   referenceMd,
@@ -207,8 +209,14 @@ export function Feedback({
         </>
       ) : (
         <>
+          {isOmitted ? (
+            <div className="mt-6 rounded-xl border border-destructive bg-destructive/5 p-4 text-base text-foreground">
+              No answer selected.
+            </div>
+          ) : null}
+
           {userChoice ? (
-            <div className="mt-6">
+            <div className={isOmitted ? 'mt-4' : 'mt-6'}>
               <div className="rounded-xl border border-destructive bg-destructive/5 p-4">
                 <div className="flex items-start gap-3">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-destructive bg-destructive/15 text-xs font-semibold leading-none text-destructive">

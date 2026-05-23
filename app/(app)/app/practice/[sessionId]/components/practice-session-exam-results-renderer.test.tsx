@@ -52,6 +52,7 @@ function createSummaryReviewRow(
     order: 1,
     isAnswered: true,
     isCorrect: false,
+    isOmitted: false,
     markedForReview: false,
     ...overrides,
   };

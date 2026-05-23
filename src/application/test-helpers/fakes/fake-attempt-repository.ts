@@ -12,6 +12,11 @@ import type {
   AttemptRetryOrigin,
   Question,
 } from '@/src/domain/entities';
+import { createAttempt } from '@/src/domain/entities/attempt';
+import {
+  type AnswerOutcome,
+  isOmittedOutcome,
+} from '@/src/domain/value-objects';
 
 type InMemoryAttempt = Attempt & {
   practiceSessionId: string | null;
@@ -45,7 +50,7 @@ export class FakeAttemptRepository implements AttemptRepository {
     userId: string;
     questionId: string;
     practiceSessionId: string | null;
-    selectedChoiceId: string;
+    outcome: AnswerOutcome;
     isCorrect: boolean;
     timeSpentSeconds: number;
     retryOfAttemptId?: string | null;
@@ -67,23 +72,33 @@ export class FakeAttemptRepository implements AttemptRepository {
       }
     }
 
-    const attempt: InMemoryAttempt = {
+    if (isOmittedOutcome(input.outcome) && input.isCorrect) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Omitted attempts must be incorrect',
+      );
+    }
+
+    const attempt: InMemoryAttempt = createAttempt({
       id: `attempt-${this.nextId++}`,
       userId: input.userId,
       questionId: input.questionId,
       practiceSessionId: input.practiceSessionId,
-      sessionMode: null,
-      selectedChoiceId: input.selectedChoiceId,
+      outcome: input.outcome,
       isCorrect: input.isCorrect,
       timeSpentSeconds: input.timeSpentSeconds,
       retryOfAttemptId: input.retryOfAttemptId ?? null,
       retryOrigin: input.retryOrigin ?? null,
       retrySessionId: input.retrySessionId ?? null,
       answeredAt: new Date(),
+    });
+    const storedAttempt = {
+      ...attempt,
+      sessionMode: null,
       sessionEndedAt: null,
     };
-    this.attempts = [...this.attempts, attempt];
-    return attempt;
+    this.attempts = [...this.attempts, storedAttempt];
+    return storedAttempt;
   }
 
   async deleteById(id: string, userId: string): Promise<boolean> {

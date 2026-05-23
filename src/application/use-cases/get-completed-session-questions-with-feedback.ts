@@ -11,6 +11,10 @@ import {
   buildShuffledChoiceViews,
   type ChoiceExplanation,
 } from '@/src/application/shared/shuffled-choice-views';
+import {
+  isOmittedOutcome,
+  selectedChoiceIdOrNull,
+} from '@/src/domain/value-objects';
 
 export type CompletedSessionQuestionChoice = {
   id: string;
@@ -27,6 +31,7 @@ export type AvailableCompletedSessionQuestionWithFeedbackRow = {
   order: number;
   isAnswered: boolean;
   isCorrect: boolean | null;
+  isOmitted: boolean;
   markedForReview: boolean;
   choices: CompletedSessionQuestionChoice[];
   selectedChoiceId: string | null;
@@ -42,6 +47,7 @@ export type UnavailableCompletedSessionQuestionWithFeedbackRow = {
   order: number;
   isAnswered: boolean;
   isCorrect: boolean | null;
+  isOmitted: boolean;
   markedForReview: boolean;
 };
 
@@ -68,6 +74,7 @@ type ReviewSeed = {
   order: number;
   isAnswered: boolean;
   isCorrect: boolean | null;
+  isOmitted: boolean;
   markedForReview: boolean;
   selectedChoiceId: string | null;
 };
@@ -130,10 +137,11 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
         );
       }
 
-      const selectedChoiceId =
-        attemptByQuestionId.get(questionId)?.selectedChoiceId ??
-        state?.latestSelectedChoiceId ??
-        null;
+      const attempt = attemptByQuestionId.get(questionId);
+      const selectedChoiceId = attempt
+        ? selectedChoiceIdOrNull(attempt.outcome)
+        : (state?.latestSelectedChoiceId ?? null);
+      const isOmitted = attempt ? isOmittedOutcome(attempt.outcome) : false;
       const isAnswered = selectedChoiceId !== null;
       if (isAnswered) answeredCount += 1;
 
@@ -141,10 +149,8 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
         questionId,
         order: i + 1,
         isAnswered,
-        isCorrect:
-          attemptByQuestionId.get(questionId)?.isCorrect ??
-          state?.latestIsCorrect ??
-          null,
+        isCorrect: attempt?.isCorrect ?? state?.latestIsCorrect ?? null,
+        isOmitted,
         markedForReview: state?.markedForReview ?? false,
         selectedChoiceId,
       });
@@ -178,6 +184,7 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
           order: row.order,
           isAnswered: row.isAnswered,
           isCorrect: row.isCorrect,
+          isOmitted: row.isOmitted,
           markedForReview: row.markedForReview,
           choices: shuffledChoices.map((choice) => ({
             id: choice.choiceId,
@@ -203,6 +210,7 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
         order: row.order,
         isAnswered: row.isAnswered,
         isCorrect: row.isCorrect,
+        isOmitted: row.isOmitted,
         markedForReview: row.markedForReview,
       }),
       logger: this.logger,

@@ -7,6 +7,7 @@ import {
   createSubmitSelectedAnswerAction,
   type LoadState,
   normalizeReviewIdentifiers,
+  type QuestionPageSubmitResult,
   type RetryProvenance,
   type ReviewHydrationState,
   reattemptQuestion,
@@ -22,7 +23,6 @@ import {
   type GetQuestionBySlugOutput,
   getQuestionBySlug,
 } from '@/src/adapters/controllers/question-view-controller';
-import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import type { AttemptRetryOrigin } from '@/src/domain/entities';
 import {
   type QuestionPageBookmarkStatus,
@@ -59,7 +59,7 @@ export type UseQuestionPageControllerOutput = {
   loadState: LoadState;
   question: GetQuestionBySlugOutput | null;
   selectedChoiceId: string | null;
-  submitResult: SubmitAnswerOutput | null;
+  submitResult: QuestionPageSubmitResult | null;
   isLoadingPreviousAttempt: boolean;
   reviewHydrationState: ReviewHydrationState | null;
   reviewSessionMode: 'tutor' | 'exam' | null;
@@ -85,9 +85,8 @@ export function useQuestionPageController(
     null,
   );
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
-  const [submitResult, setSubmitResult] = useState<SubmitAnswerOutput | null>(
-    null,
-  );
+  const [submitResult, setSubmitResult] =
+    useState<QuestionPageSubmitResult | null>(null);
   const [sessionUnansweredReveal, setSessionUnansweredReveal] =
     useState<SessionUnansweredReveal | null>(null);
   const [questionLoadedAt, setQuestionLoadedAt] = useState<number | null>(null);

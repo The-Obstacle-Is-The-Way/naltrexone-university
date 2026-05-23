@@ -72,7 +72,7 @@ export function SessionBreakdownList({
               </span>
             </span>
           )}
-          {row.isAnswered ? (
+          {row.isAnswered || row.isOmitted ? (
             row.isCorrect === true ? (
               <span className="ml-auto shrink-0 text-success">Correct</span>
             ) : row.isCorrect === false ? (

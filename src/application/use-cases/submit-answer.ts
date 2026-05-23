@@ -10,6 +10,7 @@ import {
   SECONDS_PER_DAY,
   shouldShowExplanation as sessionShouldShowExplanation,
 } from '@/src/domain/services';
+import { answeredOutcome } from '@/src/domain/value-objects';
 import { ApplicationError } from '../errors';
 import type {
   AttemptSingleQuestionReader,
@@ -202,7 +203,7 @@ export class SubmitAnswerUseCase {
       userId: input.userId,
       questionId: question.id,
       practiceSessionId: session ? session.id : null,
-      selectedChoiceId: input.choiceId,
+      outcome: answeredOutcome(input.choiceId),
       isCorrect: grade.isCorrect,
       timeSpentSeconds,
       retryOfAttemptId,

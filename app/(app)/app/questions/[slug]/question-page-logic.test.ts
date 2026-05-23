@@ -8,6 +8,7 @@ vi.mock('@/lib/report-client-error', () => ({
   reportClientError: reportClientErrorMock,
 }));
 
+import type { QuestionPageSubmitResult } from '@/app/(app)/app/questions/[slug]/question-page-logic';
 import {
   canSubmitQuestionAnswer,
   createLoadQuestionAction,
@@ -493,6 +494,7 @@ describe('question-page-logic', () => {
             attemptId: 'attempt_1',
             sessionMode: 'exam',
             selectedChoiceId: 'choice_1',
+            isOmitted: false,
             isCorrect: false,
             correctChoiceId: 'choice_2',
             explanationMd: 'Explanation',
@@ -510,12 +512,13 @@ describe('question-page-logic', () => {
       expect(setSelectedChoiceId).toHaveBeenCalledWith('choice_1');
       expect(setSubmitResult).toHaveBeenCalledWith({
         attemptId: 'attempt_1',
+        isOmitted: false,
         isCorrect: false,
         correctChoiceId: 'choice_2',
         explanationMd: 'Explanation',
         referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
         choiceExplanations: [],
-      } satisfies SubmitAnswerOutput);
+      } satisfies QuestionPageSubmitResult);
       expect(setReviewHydrationState).toHaveBeenCalledWith('attempt');
     });
 
@@ -645,6 +648,7 @@ describe('question-page-logic', () => {
           attemptId: 'attempt_1',
           sessionMode: null,
           selectedChoiceId: 'choice_1',
+          isOmitted: false,
           isCorrect: true,
           correctChoiceId: 'choice_1',
           explanationMd: 'Explanation',
@@ -744,6 +748,7 @@ describe('question-page-logic', () => {
             attemptId: 'attempt_1',
             sessionMode: null,
             selectedChoiceId: 'choice_1',
+            isOmitted: false,
             isCorrect: true,
             correctChoiceId: 'choice_1',
             explanationMd: 'Explanation',

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import { createPracticeSession } from '@/src/domain/test-helpers';
+import { omittedOutcome } from '@/src/domain/value-objects';
 import { FakePracticeSessionRepository } from './fake-practice-session-repository';
 
 describe('FakePracticeSessionRepository', () => {
@@ -136,6 +137,50 @@ describe('FakePracticeSessionRepository', () => {
       draftSelectedChoiceId: 'choice-1',
       draftSavedAt: new Date('2099-02-01T00:00:00.000Z'),
       draftCumulativeMs: 25_000,
+    });
+  });
+
+  it('finalizes an omitted answer as incorrect review state', async () => {
+    const answeredAt = new Date('2026-03-17T12:30:00.000Z');
+    const repo = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q1'],
+        questionStates: [
+          {
+            questionId: 'q1',
+            markedForReview: true,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+            draftSelectedChoiceId: null,
+            draftSavedAt: null,
+            draftCumulativeMs: 0,
+          },
+        ],
+      }),
+    ]);
+
+    await expect(
+      repo.finalizeDraftAnswer({
+        sessionId: 'session-1',
+        userId: 'user-1',
+        questionId: 'q1',
+        outcome: omittedOutcome(),
+        isCorrect: false,
+        answeredAt,
+      }),
+    ).resolves.toEqual({
+      questionId: 'q1',
+      markedForReview: true,
+      latestSelectedChoiceId: null,
+      latestIsCorrect: false,
+      latestAnsweredAt: answeredAt,
+      draftSelectedChoiceId: null,
+      draftSavedAt: null,
+      draftCumulativeMs: 0,
     });
   });
 });

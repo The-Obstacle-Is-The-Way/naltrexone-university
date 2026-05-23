@@ -3,6 +3,7 @@
 import { desc, relations, sql } from 'drizzle-orm';
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -434,9 +435,10 @@ export const attempts = pgTable(
         onDelete: 'set null',
       },
     ),
-    selectedChoiceId: uuid('selected_choice_id')
-      .notNull()
-      .references(() => choices.id, { onDelete: 'restrict' }),
+    selectedChoiceId: uuid('selected_choice_id').references(() => choices.id, {
+      onDelete: 'restrict',
+    }),
+    isOmitted: boolean('is_omitted').notNull().default(false),
     isCorrect: boolean('is_correct').notNull(),
     timeSpentSeconds: integer('time_spent_seconds').notNull().default(0),
     retryOfAttemptId: uuid('retry_of_attempt_id'),
@@ -476,6 +478,14 @@ export const attempts = pgTable(
     sessionQuestionUq: uniqueIndex(ATTEMPTS_SESSION_QUESTION_UQ)
       .on(t.practiceSessionId, t.questionId)
       .where(sql`practice_session_id IS NOT NULL`),
+    selectedChoiceOrOmittedCheck: check(
+      'attempts_selected_choice_or_omitted_chk',
+      sql`(${t.selectedChoiceId} IS NOT NULL) <> ${t.isOmitted}`,
+    ),
+    omittedIncorrectCheck: check(
+      'attempts_omitted_incorrect_chk',
+      sql`NOT ${t.isOmitted} OR ${t.isCorrect} = false`,
+    ),
   }),
 );
 

@@ -1,6 +1,10 @@
 /**
  * Attempt entity - a user's answer to a question.
  */
+
+import { DomainError } from '../errors';
+import type { AnswerOutcome } from '../value-objects';
+
 export const AllAttemptRetryOrigins = [
   'history',
   'dashboard',
@@ -38,7 +42,7 @@ export type Attempt = {
   readonly userId: string;
   readonly questionId: string;
   readonly practiceSessionId: string | null;
-  readonly selectedChoiceId: string;
+  readonly outcome: AnswerOutcome;
   readonly isCorrect: boolean;
   readonly timeSpentSeconds: number;
   readonly retryOfAttemptId: string | null;
@@ -46,3 +50,14 @@ export type Attempt = {
   readonly retrySessionId: string | null;
   readonly answeredAt: Date;
 };
+
+export function createAttempt(input: Attempt): Attempt {
+  if (input.outcome.kind === 'omitted' && input.isCorrect) {
+    throw new DomainError(
+      'INVALID_ATTEMPT',
+      'Omitted attempts must be incorrect',
+    );
+  }
+
+  return input;
+}

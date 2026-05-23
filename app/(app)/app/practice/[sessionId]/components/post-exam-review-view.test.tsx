@@ -130,6 +130,28 @@ describe('PostExamReviewView', () => {
     expect(doc.querySelector('[data-testid="verdict-pill"]')).toBeNull();
   });
 
+  it('renders omitted questions as incorrect with no answer selected', () => {
+    const doc = renderView({
+      row: createReviewRow({
+        isAnswered: false,
+        isCorrect: false,
+        isOmitted: true,
+        selectedChoiceId: null,
+      }),
+    });
+
+    expect(
+      doc.querySelector('[data-testid="verdict-pill"]')?.textContent?.trim(),
+    ).toBe('Incorrect');
+    expect(doc.body.textContent).toContain('No answer selected.');
+    expect(doc.body.textContent).toContain(
+      'This question was scored incorrect.',
+    );
+    expect(doc.body.textContent).not.toContain(
+      'You did not answer this question during this session.',
+    );
+  });
+
   it('still renders the incorrect verdict pill for answered incorrect questions', () => {
     const doc = renderView({
       row: createReviewRow({

@@ -25,6 +25,7 @@ export type AvailablePracticeSessionReviewRow = {
   order: number; // 1-based
   isAnswered: boolean;
   isCorrect: boolean | null;
+  isOmitted: boolean;
   markedForReview: boolean;
 };
 
@@ -34,6 +35,7 @@ export type UnavailablePracticeSessionReviewRow = {
   order: number; // 1-based
   isAnswered: boolean;
   isCorrect: boolean | null;
+  isOmitted: boolean;
   markedForReview: boolean;
 };
 
@@ -97,6 +99,7 @@ export class GetPracticeSessionReviewUseCase {
       order: number;
       isAnswered: boolean;
       isCorrect: boolean | null;
+      isOmitted: boolean;
       markedForReview: boolean;
     };
 
@@ -120,6 +123,11 @@ export class GetPracticeSessionReviewUseCase {
 
       const state = existingState ?? createDefaultQuestionState(questionId);
       const isAnswered = getReviewSelectedChoiceId(session, state) !== null;
+      const isOmitted =
+        session.endedAt !== null &&
+        state.latestSelectedChoiceId === null &&
+        state.latestIsCorrect === false &&
+        state.latestAnsweredAt !== null;
       if (isAnswered) answeredCount += 1;
 
       reviewSeeds.push({
@@ -127,6 +135,7 @@ export class GetPracticeSessionReviewUseCase {
         order: i + 1,
         isAnswered,
         isCorrect: shouldShowCorrectness ? state.latestIsCorrect : null,
+        isOmitted,
         markedForReview: state.markedForReview,
       });
     }
@@ -144,6 +153,7 @@ export class GetPracticeSessionReviewUseCase {
         order: row.order,
         isAnswered: row.isAnswered,
         isCorrect: row.isCorrect,
+        isOmitted: row.isOmitted,
         markedForReview: row.markedForReview,
       }),
       unavailable: (row): PracticeSessionReviewRow => ({
@@ -152,6 +162,7 @@ export class GetPracticeSessionReviewUseCase {
         order: row.order,
         isAnswered: row.isAnswered,
         isCorrect: row.isCorrect,
+        isOmitted: row.isOmitted,
         markedForReview: row.markedForReview,
       }),
       logger: this.logger,

@@ -17,6 +17,7 @@ const availableRow: PracticeSessionReviewRow = {
   order: 1,
   isAnswered: true,
   isCorrect: false,
+  isOmitted: false,
   markedForReview: false,
 };
 
@@ -34,6 +35,7 @@ const unavailableRow: PracticeSessionReviewRow = {
   order: 2,
   isAnswered: false,
   isCorrect: null,
+  isOmitted: false,
   markedForReview: false,
 };
 
@@ -193,6 +195,20 @@ describe('SessionBreakdownList', () => {
     );
     expect(unansweredLabelTokens.has('text-muted-foreground')).toBe(true);
     expect(unansweredLabelTokens.has('text-muted-foreground/60')).toBe(false);
+  });
+
+  it('renders omitted rows as incorrect instead of unanswered', async () => {
+    const html = await renderList([
+      {
+        ...availableRow,
+        isAnswered: false,
+        isCorrect: false,
+        isOmitted: true,
+      },
+    ]);
+
+    expect(html).toContain('Incorrect');
+    expect(html).not.toContain('Unanswered');
   });
 
   it('supports configurable origin query parameters for question routes', async () => {

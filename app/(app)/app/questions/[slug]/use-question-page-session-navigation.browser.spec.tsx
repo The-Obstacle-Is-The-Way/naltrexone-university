@@ -90,6 +90,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
             order: 1,
             isAnswered: true,
             isCorrect: true,
+            isOmitted: false,
             markedForReview: false,
           },
           {
@@ -101,6 +102,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
             order: 2,
             isAnswered: true,
             isCorrect: false,
+            isOmitted: false,
             markedForReview: false,
           },
         ],
@@ -143,6 +145,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
             order: 1,
             isAnswered: true,
             isCorrect: true,
+            isOmitted: false,
             markedForReview: false,
           },
           {
@@ -154,6 +157,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
             order: 2,
             isAnswered: true,
             isCorrect: false,
+            isOmitted: false,
             markedForReview: false,
           },
         ],
