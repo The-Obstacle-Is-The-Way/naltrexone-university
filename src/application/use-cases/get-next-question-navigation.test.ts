@@ -336,6 +336,35 @@ describe('GetNextQuestionUseCase', () => {
     ]);
   });
 
+  it('throws INTERNAL_ERROR when an expired active exam has no finalizer configured', async () => {
+    const q1 = createSingleChoiceQuestion('q1', 'c1');
+
+    const session = createPracticeSession({
+      mode: 'exam',
+      questionIds: ['q1'],
+      questionStates: [createQuestionState('q1')],
+      startedAt: new Date('2026-05-22T12:00:00.000Z'),
+    });
+
+    const { getNextQuestion } = createTestDeps({
+      questions: [q1],
+      sessions: [session],
+      now: () => new Date('2026-05-22T12:01:12.000Z'),
+    });
+
+    await expect(
+      getNextQuestion.execute({
+        userId: USER_ID,
+        sessionId: SESSION_ID,
+      }),
+    ).rejects.toEqual(
+      new ApplicationError(
+        'INTERNAL_ERROR',
+        'Expired exam finalizer is not configured',
+      ),
+    );
+  });
+
   it('throws NOT_FOUND when next session question is not published', async () => {
     const questionId = 'q1';
 
