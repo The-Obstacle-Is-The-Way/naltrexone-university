@@ -73,7 +73,7 @@ describe('FinalizeExamAnswersUseCase', () => {
     void new FinalizeExamAnswersUseCase(questions, attempts, sessions);
   });
 
-  it('finalizes drafted exam answers into attempts and leaves unanswered questions untouched', async () => {
+  it('finalizes drafted answers and records omitted exam questions as incorrect attempts', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-17T12:30:00.000Z'));
 
@@ -165,21 +165,38 @@ describe('FinalizeExamAnswersUseCase', () => {
     ).resolves.toMatchObject([
       {
         questionId: 'q1',
-        selectedChoiceId: 'q1-correct',
+        outcome: {
+          kind: 'answered',
+          selectedChoiceId: 'q1-correct',
+        },
         isCorrect: true,
         timeSpentSeconds: 30,
       },
       {
         questionId: 'q2',
-        selectedChoiceId: 'q2-wrong',
+        outcome: {
+          kind: 'answered',
+          selectedChoiceId: 'q2-wrong',
+        },
         isCorrect: false,
         timeSpentSeconds: 20,
       },
       {
         questionId: 'q3',
-        selectedChoiceId: 'q3-correct',
+        outcome: {
+          kind: 'answered',
+          selectedChoiceId: 'q3-correct',
+        },
         isCorrect: true,
         timeSpentSeconds: 50,
+      },
+      {
+        questionId: 'q4',
+        outcome: {
+          kind: 'omitted',
+        },
+        isCorrect: false,
+        timeSpentSeconds: 0,
       },
     ]);
 
@@ -218,14 +235,62 @@ describe('FinalizeExamAnswersUseCase', () => {
         {
           questionId: 'q4',
           latestSelectedChoiceId: null,
-          latestIsCorrect: null,
-          latestAnsweredAt: null,
+          latestIsCorrect: false,
+          latestAnsweredAt: expect.any(Date),
           draftSelectedChoiceId: null,
           draftSavedAt: null,
           draftCumulativeMs: 0,
         },
       ],
     });
+  });
+
+  it('does not treat a malformed empty draft choice id as an omitted answer', async () => {
+    const questions = new FakeQuestionRepository([
+      createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong'),
+    ]);
+    const attempts = new FakeAttemptRepository();
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q1'],
+        startedAt: new Date('2026-03-17T12:00:00.000Z'),
+        questionStates: [
+          {
+            questionId: 'q1',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+            draftSelectedChoiceId: '',
+            draftSavedAt: new Date('2026-03-17T12:05:00.000Z'),
+            draftCumulativeMs: 30_000,
+          },
+        ],
+      }),
+    ]);
+    const useCase = new FinalizeExamAnswersUseCase(
+      questions,
+      attempts,
+      sessions,
+      passthroughTransaction(questions, attempts, sessions),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+      }),
+    ).rejects.toMatchObject({
+      name: 'DomainError',
+      code: 'INVALID_CHOICE',
+    });
+
+    await expect(
+      attempts.findBySessionId('session-1', 'user-1'),
+    ).resolves.toEqual([]);
   });
 
   it('caps legacy oversized draftCumulativeMs before writing timeSpentSeconds', async () => {
@@ -280,7 +345,10 @@ describe('FinalizeExamAnswersUseCase', () => {
     ).resolves.toMatchObject([
       {
         questionId: 'q1',
-        selectedChoiceId: 'q1-correct',
+        outcome: {
+          kind: 'answered',
+          selectedChoiceId: 'q1-correct',
+        },
         timeSpentSeconds: SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS / MS_PER_SECOND,
       },
     ]);

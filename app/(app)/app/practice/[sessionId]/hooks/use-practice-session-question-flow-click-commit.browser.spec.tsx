@@ -21,6 +21,7 @@ function createSessionQuestion(
     session: {
       sessionId: 'session-1',
       mode,
+      deadlineAt: mode === 'exam' ? '2099-05-22T12:02:24.000Z' : null,
       index: 0,
       total: 2,
       isMarkedForReview: false,

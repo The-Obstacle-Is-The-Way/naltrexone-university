@@ -4,7 +4,7 @@ import type {
   QuestionRepository,
 } from '@/src/application/ports/repositories';
 import type { PracticeSessionQuestionState } from '@/src/domain/entities';
-import { MS_PER_SECOND } from '@/src/domain/services';
+import { isExamExpired, MS_PER_SECOND } from '@/src/domain/services';
 import { SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS } from './submit-answer';
 
 export type SaveExamDraftAnswerInput = {
@@ -24,6 +24,7 @@ export class SaveExamDraftAnswerUseCase {
   constructor(
     private readonly questions: QuestionRepository,
     private readonly sessions: PracticeSessionRepository,
+    private readonly now: () => Date = () => new Date(),
   ) {}
 
   async execute(
@@ -49,6 +50,10 @@ export class SaveExamDraftAnswerUseCase {
         'CONFLICT',
         'Cannot modify a completed session',
       );
+    }
+
+    if (isExamExpired(session, this.now())) {
+      throw new ApplicationError('CONFLICT', 'Exam time has expired');
     }
 
     const question = await this.questions.findPublishedById(input.questionId);

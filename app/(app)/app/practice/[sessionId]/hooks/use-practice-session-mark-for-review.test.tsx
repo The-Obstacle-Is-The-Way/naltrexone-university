@@ -66,6 +66,7 @@ describe('usePracticeSessionMarkForReview', () => {
     const sessionInfo = {
       sessionId: 'session-1',
       mode: 'exam' as const,
+      deadlineAt: '2099-05-22T12:02:24.000Z',
       index: 0,
       total: 10,
       isMarkedForReview: false,
@@ -127,6 +128,9 @@ describe('usePracticeSessionMarkForReview', () => {
         sessionInfo: {
           sessionId: 'session-1',
           mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
           index: 0,
           total: 10,
           isMarkedForReview: false,
@@ -170,6 +174,9 @@ describe('usePracticeSessionMarkForReview', () => {
         sessionInfo: {
           sessionId: 'session-1',
           mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
           index: 0,
           total: 10,
           isMarkedForReview: false,
@@ -214,6 +221,9 @@ describe('usePracticeSessionMarkForReview', () => {
           sessionInfo: {
             sessionId: 'session-1',
             mode: 'exam',
+
+            deadlineAt: '2099-05-22T12:02:24.000Z',
+
             index: 0,
             total: 10,
             isMarkedForReview: false,

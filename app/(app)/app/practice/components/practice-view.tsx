@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { useEffect, useId, useRef } from 'react';
 import { ErrorCard } from '@/components/error-card';
 import { QuestionSurfaceBody } from '@/components/question/question-surface-body';
@@ -22,6 +23,7 @@ export type PracticeViewProps = {
   };
   topContent?: React.ReactNode;
   belowHeadingContent?: React.ReactNode;
+  examTimer?: ReactNode;
   sessionInfo?: NextQuestion['session'];
   loadState: LoadState;
   question: NextQuestion | null;
@@ -373,6 +375,7 @@ export function PracticeView(props: PracticeViewProps) {
             className="flex items-center gap-3"
             data-testid="question-header-actions"
           >
+            {isExamMode ? props.examTimer : null}
             {isExamMode && props.onToggleMarkForReview ? (
               <Button
                 type="button"

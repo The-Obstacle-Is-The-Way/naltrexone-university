@@ -34,6 +34,7 @@ function renderExamResultsContinuityHarness() {
         order: 1,
         isAnswered: true,
         isCorrect: false,
+        isOmitted: false,
       }),
       createReviewRow({
         questionId: 'q2',
@@ -42,6 +43,7 @@ function renderExamResultsContinuityHarness() {
         order: 2,
         isAnswered: true,
         isCorrect: true,
+        isOmitted: false,
       }),
     ],
   });
@@ -61,6 +63,7 @@ function renderExamResultsContinuityHarness() {
         order: 1,
         isAnswered: true,
         isCorrect: false,
+        isOmitted: false,
         markedForReview: false,
         choices: [
           { id: 'q1-choice-1', label: 'A', textMd: 'Choice A' },
@@ -81,6 +84,7 @@ function renderExamResultsContinuityHarness() {
         order: 2,
         isAnswered: true,
         isCorrect: true,
+        isOmitted: false,
         markedForReview: false,
         choices: [{ id: 'q2-choice-1', label: 'A', textMd: 'Choice C' }],
         selectedChoiceId: 'q2-choice-1',
@@ -264,6 +268,7 @@ test('keeps exam summaries on the in-session review contract when the substage p
             order: 1,
             isAnswered: true,
             isCorrect: false,
+            isOmitted: false,
           }),
         ],
       })}

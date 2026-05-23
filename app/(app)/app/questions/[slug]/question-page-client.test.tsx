@@ -488,6 +488,63 @@ describe('QuestionView', () => {
     expect(html).not.toContain('Your answer');
   });
 
+  it('renders omitted review attempts as incorrect with no selected answer', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        loadState={{ status: 'ready' }}
+        question={{
+          questionId: 'question-1',
+          slug: 'question-1',
+          stemMd: 'Question stem',
+          difficulty: 'easy',
+          choices: [
+            { id: 'choice-a', label: 'A', textMd: 'Choice A text' },
+            { id: 'choice-b', label: 'B', textMd: 'Choice B text' },
+          ],
+        }}
+        selectedChoiceId={null}
+        submitResult={{
+          attemptId: 'attempt_1',
+          isOmitted: true,
+          isCorrect: false,
+          correctChoiceId: 'choice-b',
+          explanationMd: 'Overall explanation',
+          referenceMd: null,
+          choiceExplanations: [
+            {
+              choiceId: 'choice-a',
+              displayLabel: 'A',
+              textMd: 'Choice A text',
+              isCorrect: false,
+              explanationMd: 'A explanation',
+            },
+            {
+              choiceId: 'choice-b',
+              displayLabel: 'B',
+              textMd: 'Choice B text',
+              isCorrect: true,
+              explanationMd: 'B explanation',
+            },
+          ],
+        }}
+        sessionNavigation={null}
+        canSubmit={false}
+        isPending={false}
+        mode="review"
+        origin="history"
+        onTryAgain={() => undefined}
+        onSelectChoice={() => undefined}
+        onSubmit={() => undefined}
+        onReattempt={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Incorrect');
+    expect(html).toContain('No answer selected.');
+    expect(html).toContain('Correct Answer');
+    expect(html).not.toContain('Your answer');
+  });
+
   it('shows Practice Again for any correct standalone review', () => {
     const html = renderToStaticMarkup(
       <QuestionView

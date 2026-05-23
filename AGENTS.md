@@ -140,15 +140,23 @@ pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test
 
 **If the local authenticated billing E2E environment is available, also run before every `git push`:**
 
-That means the full Playwright prereqs documented in `docs/dev/testing-infrastructure.md#environment-variables-for-e2e` are present (typically via `.env.local`): `DATABASE_URL`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `E2E_CLERK_USER_USERNAME`, `E2E_CLERK_USER_PASSWORD`, `STRIPE_SECRET_KEY`, and `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`.
+That means the full Playwright prereqs documented in `docs/dev/testing-infrastructure.md#environment-variables-for-e2e` are present (typically via `.env.local`): `DATABASE_URL`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `E2E_CLERK_USER_USERNAME`, `E2E_CLERK_USER_PASSWORD`, `E2E_STRIPE_OWNER`, `STRIPE_SECRET_KEY`, and `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`.
 
 ```bash
 # Quick file check when you rely on .env.local:
-rg '^(DATABASE_URL|CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME|E2E_CLERK_USER_PASSWORD|STRIPE_SECRET_KEY|NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY)=' .env.local
+rg '^(DATABASE_URL|CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME|E2E_CLERK_USER_PASSWORD|E2E_STRIPE_OWNER|STRIPE_SECRET_KEY|NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY)=' .env.local
+
+# If the current branch includes new db/migrations since the target DB was last updated,
+# first confirm .env.local is non-production, then migrate that exact target:
+LOCAL_E2E_DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env.local' }); const url = process.env.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
+node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$LOCAL_E2E_DATABASE_URL"
+DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm db:migrate
 
 lsof -ti:3000 | xargs kill -9 2>/dev/null
 pnpm test:e2e
 ```
+
+Never run E2E migrations by relying on implicit `.env.local` resolution alone. Verify the host, then prefix the migration command with the exact `DATABASE_URL` you intend to mutate.
 
 This is not optional. This is not "before opening a PR." This is **before every push**, including follow-up fix commits. Every single time.
 
@@ -573,15 +581,23 @@ pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test
 
 If the local authenticated billing E2E environment is available, also run:
 
-That means the full Playwright prereqs documented in `docs/dev/testing-infrastructure.md#environment-variables-for-e2e` are present (typically via `.env.local`): `DATABASE_URL`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `E2E_CLERK_USER_USERNAME`, `E2E_CLERK_USER_PASSWORD`, `STRIPE_SECRET_KEY`, and `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`.
+That means the full Playwright prereqs documented in `docs/dev/testing-infrastructure.md#environment-variables-for-e2e` are present (typically via `.env.local`): `DATABASE_URL`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `E2E_CLERK_USER_USERNAME`, `E2E_CLERK_USER_PASSWORD`, `E2E_STRIPE_OWNER`, `STRIPE_SECRET_KEY`, and `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`.
 
 ```bash
 # Quick file check when you rely on .env.local:
-rg '^(DATABASE_URL|CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME|E2E_CLERK_USER_PASSWORD|STRIPE_SECRET_KEY|NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY)=' .env.local
+rg '^(DATABASE_URL|CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME|E2E_CLERK_USER_PASSWORD|E2E_STRIPE_OWNER|STRIPE_SECRET_KEY|NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY)=' .env.local
+
+# If the current branch includes new db/migrations since the target DB was last updated,
+# first confirm .env.local is non-production, then migrate that exact target:
+LOCAL_E2E_DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env.local' }); const url = process.env.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
+node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$LOCAL_E2E_DATABASE_URL"
+DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm db:migrate
 
 lsof -ti:3000 | xargs kill -9 2>/dev/null
 pnpm test:e2e
 ```
+
+Never run E2E migrations by relying on implicit `.env.local` resolution alone. Verify the host, then prefix the migration command with the exact `DATABASE_URL` you intend to mutate.
 
 ---
 

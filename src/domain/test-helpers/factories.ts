@@ -11,6 +11,7 @@ import type { Tag } from '../entities/tag';
 import type { User } from '../entities/user';
 import { DAY_MS } from '../services';
 import type {
+  AnswerOutcome,
   ChoiceLabel,
   PracticeMode,
   QuestionDifficulty,
@@ -19,6 +20,7 @@ import type {
   SubscriptionStatus,
   TagKind,
 } from '../value-objects';
+import { answeredOutcome } from '../value-objects';
 
 export function createUser(overrides: Partial<User> = {}): User {
   const now = new Date();
@@ -34,7 +36,11 @@ export function createUser(overrides: Partial<User> = {}): User {
 type AttemptSessionMode = PracticeMode | null;
 
 export function createAttempt(
-  overrides: Partial<Attempt> & { sessionMode?: AttemptSessionMode } = {},
+  overrides: Partial<Omit<Attempt, 'outcome'>> & {
+    outcome?: AnswerOutcome;
+    selectedChoiceId?: string;
+    sessionMode?: AttemptSessionMode;
+  } = {},
 ): Attempt & { sessionMode?: AttemptSessionMode } {
   const now = new Date();
   const questionId = overrides.questionId ?? 'question-1';
@@ -44,7 +50,9 @@ export function createAttempt(
     userId: overrides.userId ?? 'user-1',
     questionId,
     practiceSessionId: overrides.practiceSessionId ?? null,
-    selectedChoiceId: overrides.selectedChoiceId ?? 'choice-1',
+    outcome:
+      overrides.outcome ??
+      answeredOutcome(overrides.selectedChoiceId ?? 'choice-1'),
     isCorrect: overrides.isCorrect ?? false,
     timeSpentSeconds: overrides.timeSpentSeconds ?? 0,
     retryOfAttemptId: overrides.retryOfAttemptId ?? null,

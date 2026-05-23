@@ -3,12 +3,12 @@ import { DomainError, isDomainError } from './domain-errors';
 
 describe('DomainError', () => {
   it('captures code and message', () => {
-    const error = new DomainError('INVALID_QUESTION', 'Invalid question');
+    const error = new DomainError('INVALID_ATTEMPT', 'Invalid attempt');
 
     expect(error.name).toBe('DomainError');
     expect(error._tag).toBe('DomainError');
-    expect(error.code).toBe('INVALID_QUESTION');
-    expect(error.message).toBe('Invalid question');
+    expect(error.code).toBe('INVALID_ATTEMPT');
+    expect(error.message).toBe('Invalid attempt');
   });
 });
 

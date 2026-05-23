@@ -33,6 +33,7 @@ export function createReviewRow(overrides?: Partial<ReviewRow>): ReviewRow {
     order: 1,
     isAnswered: false,
     isCorrect: null,
+    isOmitted: false,
     markedForReview: false,
     choices: [
       { id: 'choice-a', label: 'A', textMd: 'Choice A' },

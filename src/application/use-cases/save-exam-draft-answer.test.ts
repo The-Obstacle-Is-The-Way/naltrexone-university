@@ -270,6 +270,73 @@ describe('SaveExamDraftAnswerUseCase', () => {
     );
   });
 
+  it('rejects draft saves after the server-derived exam deadline', async () => {
+    const useCase = new SaveExamDraftAnswerUseCase(
+      new FakeQuestionRepository([]),
+      new FakePracticeSessionRepository([
+        createPracticeSession({
+          id: 'session-1',
+          userId: 'user-1',
+          mode: 'exam',
+          questionIds: ['q1'],
+          startedAt: new Date('2026-05-22T12:00:00.000Z'),
+        }),
+      ]),
+      () => new Date('2026-05-22T12:01:12.000Z'),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+        questionId: 'q1',
+        selectedChoiceId: 'choice-1',
+        cumulativeMs: 5_000,
+      }),
+    ).rejects.toEqual(
+      new ApplicationError('CONFLICT', 'Exam time has expired'),
+    );
+  });
+
+  it('allows draft saves before the server-derived exam deadline', async () => {
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q1'],
+        startedAt: new Date('2026-05-22T12:00:00.000Z'),
+      }),
+    ]);
+    const questions = new FakeQuestionRepository([
+      createQuestion({
+        id: 'q1',
+        choices: [
+          createChoice({ id: 'choice-1', questionId: 'q1', label: 'A' }),
+          createChoice({ id: 'choice-2', questionId: 'q1', label: 'B' }),
+        ],
+      }),
+    ]);
+    const useCase = new SaveExamDraftAnswerUseCase(
+      questions,
+      sessions,
+      () => new Date('2026-05-22T12:01:11.999Z'),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+        questionId: 'q1',
+        selectedChoiceId: 'choice-1',
+        cumulativeMs: 5_000,
+      }),
+    ).resolves.toMatchObject({
+      questionId: 'q1',
+      draftSelectedChoiceId: 'choice-1',
+    });
+  });
+
   it('rejects missing sessions', async () => {
     const useCase = new SaveExamDraftAnswerUseCase(
       new FakeQuestionRepository([]),

@@ -6,6 +6,7 @@ import type {
 } from '@/src/application/ports/repositories';
 import { fetchQuestionsById } from '@/src/application/shared/fetch-questions-by-id';
 import { gradeAnswer, MS_PER_SECOND } from '@/src/domain/services';
+import { answeredOutcome, omittedOutcome } from '@/src/domain/value-objects';
 import {
   type PracticeSessionSummary,
   projectPracticeSessionSummary,
@@ -91,9 +92,36 @@ export class FinalizeExamAnswersUseCase {
         draftedStates.map((state) => state.questionId),
       );
 
-      for (const state of draftedStates) {
+      for (const state of activeSession.questionStates) {
+        const cappedCumulativeMs = Math.min(
+          state.draftCumulativeMs,
+          SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS,
+        );
+        const timeSpentSeconds = Math.floor(cappedCumulativeMs / MS_PER_SECOND);
         const selectedChoiceId = state.draftSelectedChoiceId;
-        if (!selectedChoiceId) continue;
+        if (selectedChoiceId === null) {
+          if (state.latestSelectedChoiceId !== null) continue;
+
+          const outcome = omittedOutcome();
+          const attempt = await tx.attempts.insert({
+            userId: input.userId,
+            questionId: state.questionId,
+            practiceSessionId: activeSession.id,
+            outcome,
+            isCorrect: false,
+            timeSpentSeconds,
+          });
+
+          await tx.sessions.finalizeDraftAnswer({
+            sessionId: input.sessionId,
+            userId: input.userId,
+            questionId: state.questionId,
+            outcome,
+            isCorrect: false,
+            answeredAt: attempt.answeredAt,
+          });
+          continue;
+        }
 
         const question = questionsById.get(state.questionId);
         if (!question) {
@@ -101,24 +129,21 @@ export class FinalizeExamAnswersUseCase {
         }
 
         const grade = gradeAnswer(question, selectedChoiceId);
-        const cappedCumulativeMs = Math.min(
-          state.draftCumulativeMs,
-          SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS,
-        );
+        const outcome = answeredOutcome(selectedChoiceId);
         const attempt = await tx.attempts.insert({
           userId: input.userId,
           questionId: state.questionId,
           practiceSessionId: activeSession.id,
-          selectedChoiceId,
+          outcome,
           isCorrect: grade.isCorrect,
-          timeSpentSeconds: Math.floor(cappedCumulativeMs / MS_PER_SECOND),
+          timeSpentSeconds,
         });
 
         await tx.sessions.finalizeDraftAnswer({
           sessionId: input.sessionId,
           userId: input.userId,
           questionId: state.questionId,
-          selectedChoiceId,
+          outcome,
           isCorrect: grade.isCorrect,
           answeredAt: attempt.answeredAt,
         });

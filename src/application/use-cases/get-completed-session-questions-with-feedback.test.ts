@@ -12,6 +12,7 @@ import {
   createPracticeSession,
   createQuestion,
 } from '@/src/domain/test-helpers';
+import { omittedOutcome } from '@/src/domain/value-objects';
 import { GetCompletedSessionQuestionsWithFeedbackUseCase } from './get-completed-session-questions-with-feedback';
 
 describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
@@ -162,6 +163,7 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
       order: 2,
       isAnswered: false,
       isCorrect: null,
+      isOmitted: false,
       markedForReview: true,
       selectedChoiceId: null,
       correctChoiceId: 'q2-choice-a',
@@ -215,6 +217,86 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
     expect(error).toMatchObject({
       code: 'CONFLICT',
     });
+  });
+
+  it('returns omitted attempts as incorrect feedback rows without a selected choice', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+    const question = createQuestion({
+      id: 'q1',
+      slug: 'q-1',
+      stemMd: 'Stem for q1',
+      difficulty: 'easy',
+      explanationMd: 'Overall explanation',
+      choices: [
+        createChoice({
+          id: 'q1-choice-a',
+          questionId: 'q1',
+          label: 'A',
+          textMd: 'Q1 choice A',
+          isCorrect: false,
+          sortOrder: 1,
+        }),
+        createChoice({
+          id: 'q1-choice-b',
+          questionId: 'q1',
+          label: 'B',
+          textMd: 'Q1 choice B',
+          isCorrect: true,
+          sortOrder: 2,
+        }),
+      ],
+    });
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'exam',
+      endedAt: new Date('2026-03-19T12:00:00Z'),
+      questionIds: ['q1'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: false,
+          latestAnsweredAt: new Date('2026-03-19T11:58:00Z'),
+        },
+      ],
+    });
+    const attempts = new FakeAttemptRepository([
+      createAttempt({
+        id: 'attempt-omitted',
+        userId,
+        questionId: 'q1',
+        practiceSessionId: sessionId,
+        outcome: omittedOutcome(),
+        isCorrect: false,
+        answeredAt: new Date('2026-03-19T11:58:00Z'),
+      }),
+    ]);
+
+    const useCase = new GetCompletedSessionQuestionsWithFeedbackUseCase(
+      new FakePracticeSessionRepository([session]),
+      new FakeQuestionRepository([question]),
+      attempts,
+      new FakeLogger(),
+    );
+
+    await expect(useCase.execute({ userId, sessionId })).resolves.toMatchObject(
+      {
+        answeredCount: 0,
+        rows: [
+          {
+            isAvailable: true,
+            questionId: 'q1',
+            isAnswered: false,
+            isCorrect: false,
+            isOmitted: true,
+            selectedChoiceId: null,
+          },
+        ],
+      },
+    );
   });
 
   it('returns an unavailable row when a completed session references a missing question', async () => {
@@ -286,6 +368,7 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
       order: 2,
       isAnswered: false,
       isCorrect: null,
+      isOmitted: false,
       markedForReview: true,
     });
   });

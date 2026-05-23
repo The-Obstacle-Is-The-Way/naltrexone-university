@@ -29,6 +29,11 @@ import type {
   RecentAttempt,
 } from '@/src/application/ports/repositories';
 import type { Attempt, AttemptRetryOrigin } from '@/src/domain/entities';
+import {
+  type AnswerOutcome,
+  isOmittedOutcome,
+  selectedChoiceIdOrNull,
+} from '@/src/domain/value-objects';
 import type { DrizzleDb } from '../shared/database-types';
 import { toAttemptDomain, toRecentAttempt } from './attempt-row-mappers';
 import {
@@ -163,7 +168,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     userId: string;
     questionId: string;
     practiceSessionId: string | null;
-    selectedChoiceId: string;
+    outcome: AnswerOutcome;
     isCorrect: boolean;
     timeSpentSeconds: number;
     retryOfAttemptId?: string | null;
@@ -178,7 +183,8 @@ export class DrizzleAttemptRepository implements AttemptRepository {
           userId: input.userId,
           questionId: input.questionId,
           practiceSessionId: input.practiceSessionId,
-          selectedChoiceId: input.selectedChoiceId,
+          selectedChoiceId: selectedChoiceIdOrNull(input.outcome),
+          isOmitted: isOmittedOutcome(input.outcome),
           isCorrect: input.isCorrect,
           timeSpentSeconds: input.timeSpentSeconds,
           retryOfAttemptId: input.retryOfAttemptId ?? null,
@@ -370,6 +376,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
         questionId: attempts.questionId,
         practiceSessionId: attempts.practiceSessionId,
         selectedChoiceId: attempts.selectedChoiceId,
+        isOmitted: attempts.isOmitted,
         isCorrect: attempts.isCorrect,
         timeSpentSeconds: attempts.timeSpentSeconds,
         retryOfAttemptId: attempts.retryOfAttemptId,

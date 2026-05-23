@@ -692,6 +692,9 @@ describe('question-flow-actions', () => {
         session: {
           sessionId: 'session_1',
           mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
           index: 0,
           total: 2,
           draftSelectedChoiceId: 'choice_1',
@@ -749,6 +752,9 @@ describe('question-flow-actions', () => {
         session: {
           sessionId: 'session_1',
           mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
           index: 0,
           total: 2,
           draftSelectedChoiceId: 'choice_1',
@@ -798,6 +804,9 @@ describe('question-flow-actions', () => {
         session: {
           sessionId: 'session_1',
           mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
           index: 0,
           total: 2,
           draftSelectedChoiceId: 'choice_1',
@@ -835,6 +844,9 @@ describe('question-flow-actions', () => {
         session: {
           sessionId: 'session_1',
           mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
           index: 0,
           total: 2,
         },
@@ -875,6 +887,9 @@ describe('question-flow-actions', () => {
         session: {
           sessionId: 'session_1',
           mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
           index: 0,
           total: 2,
         },

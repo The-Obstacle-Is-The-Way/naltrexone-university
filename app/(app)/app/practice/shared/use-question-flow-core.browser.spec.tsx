@@ -69,6 +69,9 @@ function QuestionFlowCoreProbe() {
               session: {
                 sessionId: 'session_1',
                 mode: 'tutor',
+
+                deadlineAt: null,
+
                 index: 0,
                 total: 1,
                 latestSelectedChoiceId: 'choice_2',
@@ -115,6 +118,9 @@ function QuestionFlowCoreProbe() {
               session: {
                 sessionId: 'session_1',
                 mode: 'exam',
+
+                deadlineAt: '2099-05-22T12:02:24.000Z',
+
                 index: 0,
                 total: 1,
                 draftSelectedChoiceId: 'choice_2',
@@ -140,6 +146,9 @@ function QuestionFlowCoreProbe() {
               session: {
                 sessionId: 'session_1',
                 mode: 'exam',
+
+                deadlineAt: '2099-05-22T12:02:24.000Z',
+
                 index: 0,
                 total: 1,
                 draftSelectedChoiceId: null,

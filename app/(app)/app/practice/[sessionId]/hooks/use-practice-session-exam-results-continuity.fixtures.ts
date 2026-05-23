@@ -33,6 +33,7 @@ export function createPostExamReviewRow(input: {
       order: input.order,
       isAnswered: true,
       isCorrect: false,
+      isOmitted: false,
       markedForReview: false,
     };
   }
@@ -46,6 +47,7 @@ export function createPostExamReviewRow(input: {
     order: input.order,
     isAnswered: true,
     isCorrect: true,
+    isOmitted: false,
     markedForReview: false,
     choices: [
       { id: `${input.questionId}-choice-1`, label: 'A', textMd: 'Choice A' },

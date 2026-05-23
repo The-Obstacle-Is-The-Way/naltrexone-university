@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { answeredOutcome, omittedOutcome } from '@/src/domain/value-objects';
 import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
 import { restoreDrizzlePracticeSessionRepositoryTestMocks } from './drizzle-practice-session-repository-test-helpers';
 
@@ -261,7 +262,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
         sessionId: 'session_1',
         userId: 'user_1',
         questionId: 'q1',
-        selectedChoiceId: 'draft-choice',
+        outcome: answeredOutcome('draft-choice'),
         isCorrect: true,
         answeredAt,
       }),
@@ -295,6 +296,94 @@ describe('DrizzlePracticeSessionRepository question state', () => {
             latestSelectedChoiceId: null,
             latestIsCorrect: null,
             latestAnsweredAt: null,
+            draftSelectedChoiceId: null,
+            draftSavedAt: null,
+            draftCumulativeMs: 0,
+          },
+        ],
+      }),
+    });
+  });
+
+  it('finalizes an omitted answer state for session review', async () => {
+    const row = {
+      id: 'session_1',
+      userId: 'user_1',
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: ['easy'],
+        questionIds: ['q1'],
+        questionStates: [
+          {
+            questionId: 'q1',
+            markedForReview: true,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+            draftSelectedChoiceId: null,
+            draftSavedAt: null,
+            draftCumulativeMs: 0,
+          },
+        ],
+      },
+      startedAt: new Date('2026-02-01T00:00:00.000Z'),
+      endedAt: null,
+    } as const;
+
+    const updateReturning = vi.fn(async () => [{ id: 'session_1' }]);
+    const updateWhere = vi.fn(() => ({ returning: updateReturning }));
+    const updateSet = vi.fn(() => ({ where: updateWhere }));
+    const update = vi.fn(() => ({ set: updateSet }));
+
+    const db = {
+      query: {
+        practiceSessions: {
+          findFirst: vi.fn(async () => row),
+        },
+      },
+      update,
+      insert: () => {
+        throw new Error('unexpected insert');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+    const answeredAt = new Date('2026-02-01T00:10:00.000Z');
+
+    await expect(
+      repo.finalizeDraftAnswer({
+        sessionId: 'session_1',
+        userId: 'user_1',
+        questionId: 'q1',
+        outcome: omittedOutcome(),
+        isCorrect: false,
+        answeredAt,
+      }),
+    ).resolves.toEqual({
+      questionId: 'q1',
+      markedForReview: true,
+      latestSelectedChoiceId: null,
+      latestIsCorrect: false,
+      latestAnsweredAt: answeredAt,
+      draftSelectedChoiceId: null,
+      draftSavedAt: null,
+      draftCumulativeMs: 0,
+    });
+
+    expect(updateSet).toHaveBeenCalledWith({
+      paramsJson: expect.objectContaining({
+        questionStates: [
+          {
+            questionId: 'q1',
+            markedForReview: true,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: false,
+            latestAnsweredAt: answeredAt.toISOString(),
             draftSelectedChoiceId: null,
             draftSavedAt: null,
             draftCumulativeMs: 0,

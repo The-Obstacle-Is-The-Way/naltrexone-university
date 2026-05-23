@@ -34,6 +34,20 @@ export function createUseCaseFactories(input: {
   gateways: GatewayFactories;
 }): UseCaseFactories {
   const { primitives, repositories, gateways } = input;
+  const createFinalizeExamAnswersUseCase = () =>
+    new FinalizeExamAnswersUseCase(
+      repositories.createQuestionRepository(),
+      repositories.createAttemptRepository(),
+      repositories.createPracticeSessionRepository(),
+      async (fn) =>
+        primitives.db.transaction(async (tx) =>
+          fn({
+            questions: repositories.createQuestionRepository(tx),
+            attempts: repositories.createAttemptRepository(tx),
+            sessions: repositories.createPracticeSessionRepository(tx),
+          }),
+        ),
+    );
 
   return {
     createCheckEntitlementUseCase: () =>
@@ -62,24 +76,12 @@ export function createUseCaseFactories(input: {
       new EndPracticeSessionUseCase(
         repositories.createPracticeSessionRepository(),
       ),
-    createFinalizeExamAnswersUseCase: () =>
-      new FinalizeExamAnswersUseCase(
-        repositories.createQuestionRepository(),
-        repositories.createAttemptRepository(),
-        repositories.createPracticeSessionRepository(),
-        async (fn) =>
-          primitives.db.transaction(async (tx) =>
-            fn({
-              questions: repositories.createQuestionRepository(tx),
-              attempts: repositories.createAttemptRepository(tx),
-              sessions: repositories.createPracticeSessionRepository(tx),
-            }),
-          ),
-      ),
+    createFinalizeExamAnswersUseCase,
     createSaveExamDraftAnswerUseCase: () =>
       new SaveExamDraftAnswerUseCase(
         repositories.createQuestionRepository(),
         repositories.createPracticeSessionRepository(),
+        primitives.now,
       ),
     createGetNextQuestionUseCase: () =>
       new GetNextQuestionUseCase(
@@ -87,6 +89,9 @@ export function createUseCaseFactories(input: {
         repositories.createAttemptRepository(),
         repositories.createPracticeSessionRepository(),
         primitives.now,
+        {
+          execute: (input) => createFinalizeExamAnswersUseCase().execute(input),
+        },
       ),
     createGetPreviousAttemptUseCase: () =>
       new GetPreviousAttemptUseCase(

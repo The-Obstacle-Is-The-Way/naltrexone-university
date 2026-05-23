@@ -116,6 +116,7 @@ describe('useQuestionPageController (browser)', () => {
           sessionMode: 'tutor' | 'exam' | null;
           attemptId: string;
           selectedChoiceId: string;
+          isOmitted: boolean;
           isCorrect: boolean;
           correctChoiceId: string;
           explanationMd: string | null;
@@ -131,6 +132,7 @@ describe('useQuestionPageController (browser)', () => {
           sessionMode: 'tutor' | 'exam' | null;
           attemptId: string;
           selectedChoiceId: string;
+          isOmitted: boolean;
           isCorrect: boolean;
           correctChoiceId: string;
           explanationMd: string | null;
@@ -175,6 +177,7 @@ describe('useQuestionPageController (browser)', () => {
         sessionMode: null,
         attemptId: 'attempt-q2',
         selectedChoiceId: 'choice-1',
+        isOmitted: false,
         isCorrect: true,
         correctChoiceId: 'choice-1',
         explanationMd: 'Because q2',
@@ -196,6 +199,7 @@ describe('useQuestionPageController (browser)', () => {
         sessionMode: null,
         attemptId: 'attempt-q1-stale',
         selectedChoiceId: 'choice-2',
+        isOmitted: false,
         isCorrect: false,
         correctChoiceId: 'choice-1',
         explanationMd: 'Because q1',
@@ -236,6 +240,7 @@ describe('useQuestionPageController (browser)', () => {
           sessionMode: 'tutor' | 'exam' | null;
           attemptId: string;
           selectedChoiceId: string;
+          isOmitted: boolean;
           isCorrect: boolean;
           correctChoiceId: string;
           explanationMd: string | null;
@@ -283,6 +288,7 @@ describe('useQuestionPageController (browser)', () => {
         sessionMode: null,
         attemptId: 'attempt-q1-stale',
         selectedChoiceId: 'choice-1',
+        isOmitted: false,
         isCorrect: true,
         correctChoiceId: 'choice-1',
         explanationMd: 'Because q1',

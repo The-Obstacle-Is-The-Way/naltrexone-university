@@ -9,7 +9,11 @@ import type {
   PracticeSession,
   PracticeSessionQuestionState,
 } from '@/src/domain/entities';
-import type { PracticeMode } from '@/src/domain/value-objects';
+import {
+  type AnswerOutcome,
+  type PracticeMode,
+  selectedChoiceIdOrNull,
+} from '@/src/domain/value-objects';
 import type { DrizzleDb } from '../shared/database-types';
 import {
   getPostgresConstraintName,
@@ -268,7 +272,7 @@ export class DrizzlePracticeSessionRepository
     sessionId: string;
     userId: string;
     questionId: string;
-    selectedChoiceId: string;
+    outcome: AnswerOutcome;
     isCorrect: boolean;
     answeredAt: Date;
   }): Promise<PracticeSessionQuestionState> {
@@ -280,7 +284,7 @@ export class DrizzlePracticeSessionRepository
       questionId: input.questionId,
       updateFn: (current) => ({
         ...current,
-        latestSelectedChoiceId: input.selectedChoiceId,
+        latestSelectedChoiceId: selectedChoiceIdOrNull(input.outcome),
         latestIsCorrect: input.isCorrect,
         latestAnsweredAt: input.answeredAt,
         draftSelectedChoiceId: null,

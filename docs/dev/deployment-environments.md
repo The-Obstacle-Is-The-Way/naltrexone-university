@@ -1,6 +1,6 @@
 # Deployment Environments: Source of Truth
 
-**Last Reviewed (code/docs):** 2026-03-17
+**Last Reviewed (code/docs):** 2026-05-23
 
 This document is the repo-backed source of truth for environment scoping and the operator checklist around Clerk, Stripe, Postgres/Neon, and Vercel.
 
@@ -20,6 +20,16 @@ It intentionally avoids hard-coding private dashboard values that the repo canno
 ### Core isolation rule
 
 Production, Preview, and local development must never share the same live database or live billing/auth keys.
+
+### Current Vercel/Neon Branch Contract
+
+The current Vercel + Neon setup uses one Neon project with isolated database branches:
+
+- Vercel **Production** targets the Neon `main` branch.
+- Vercel **Preview** and **Development** target the Neon `dev` branch.
+- Local `.env.local` should be pulled from or kept equivalent to the Vercel Development environment, so local app runtime and authenticated local E2E also target the Neon `dev` branch.
+
+Do not hard-code branch hostnames, account ids, passwords, or connection strings in the repo. Verify those values through the Vercel Storage dashboard, Vercel environment variables, or a local redacted host check before running migrations.
 
 ---
 
@@ -116,7 +126,22 @@ DATABASE_URL="<preview-or-dev-connection-string>" pnpm db:migrate
 DATABASE_URL="<production-connection-string>" pnpm db:migrate
 ```
 
+For local authenticated E2E, the target database is the `DATABASE_URL` in `.env.local`. Confirm that it is a non-production Neon branch first, then run migrations against that file's target:
+
+```bash
+# Prints only the host, not the password.
+LOCAL_E2E_DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env.local' }); const url = process.env.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
+node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$LOCAL_E2E_DATABASE_URL"
+
+# Migrate only the target you just verified.
+DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm db:migrate
+```
+
+Do not run migrations by relying on implicit `.env.local` resolution. Every database mutation should pass an explicit `DATABASE_URL` for the intended target.
+
 Historical example: PR #169 added `claimed_at` to `idempotency_keys`; the code deployed before the non-production database was migrated, which broke write paths until `pnpm db:migrate` was run.
+
+Historical example: SPEC-040 added `attempts.is_omitted` plus two CHECK constraints in migrations `0017` and `0018`; local E2E answer-submission flows failed with "Failed to insert attempt" until the Neon `dev` branch was migrated.
 
 ### Clerk Development Mode Can Re-Authenticate After Stripe Checkout
 

@@ -120,6 +120,7 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
         sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-2',
+        isOmitted: false,
         isCorrect: true,
         correctChoiceId: 'choice-2',
         explanationMd: 'Because.',
@@ -154,6 +155,7 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
           sessionMode: 'tutor' | 'exam' | null;
           attemptId: string;
           selectedChoiceId: string;
+          isOmitted: boolean;
           isCorrect: boolean;
           correctChoiceId: string;
           explanationMd: string | null;
@@ -217,6 +219,7 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
         sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-2',
+        isOmitted: false,
         isCorrect: true,
         correctChoiceId: 'choice-2',
         explanationMd: 'Because.',
@@ -236,6 +239,7 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
           sessionMode: 'tutor' | 'exam' | null;
           attemptId: string;
           selectedChoiceId: string;
+          isOmitted: boolean;
           isCorrect: boolean;
           correctChoiceId: string;
           explanationMd: string | null;
@@ -267,6 +271,7 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
         sessionMode: null,
         attemptId: 'attempt-1',
         selectedChoiceId: 'choice-2',
+        isOmitted: false,
         isCorrect: true,
         correctChoiceId: 'choice-2',
         explanationMd: 'Because.',

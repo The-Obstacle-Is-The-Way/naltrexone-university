@@ -27,6 +27,7 @@ describe('findAdjacentAvailableQuestionId', () => {
         difficulty: 'easy',
         isAnswered: true,
         isCorrect: true,
+        isOmitted: false,
         markedForReview: false,
       },
       {
@@ -35,6 +36,7 @@ describe('findAdjacentAvailableQuestionId', () => {
         isAvailable: false,
         isAnswered: false,
         isCorrect: null,
+        isOmitted: false,
         markedForReview: false,
       },
       {
@@ -46,6 +48,7 @@ describe('findAdjacentAvailableQuestionId', () => {
         difficulty: 'medium',
         isAnswered: false,
         isCorrect: null,
+        isOmitted: false,
         markedForReview: false,
       },
     ]);
@@ -64,6 +67,7 @@ describe('findAdjacentAvailableQuestionId', () => {
         difficulty: 'easy',
         isAnswered: true,
         isCorrect: true,
+        isOmitted: false,
         markedForReview: false,
       },
     ]);

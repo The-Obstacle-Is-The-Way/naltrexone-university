@@ -45,6 +45,9 @@ describe('usePracticeSessionPageController (browser)', () => {
           choices: [CHOICE_1, CHOICE_2, CHOICE_3],
           session: {
             mode: 'exam',
+
+            deadlineAt: '2099-05-22T12:02:24.000Z',
+
             index: 0,
             total: 2,
             isMarkedForReview: false,
@@ -94,6 +97,7 @@ describe('usePracticeSessionPageController (browser)', () => {
             order: 1,
             isAnswered: true,
             isCorrect: true,
+            isOmitted: false,
             markedForReview: false,
             choices: [{ id: 'choice_1', label: 'A', textMd: 'Choice A' }],
             selectedChoiceId: 'choice_1',
@@ -111,6 +115,7 @@ describe('usePracticeSessionPageController (browser)', () => {
             order: 2,
             isAnswered: false,
             isCorrect: false,
+            isOmitted: true,
             markedForReview: false,
             choices: [{ id: 'choice_2', label: 'A', textMd: 'Choice B' }],
             selectedChoiceId: null,
@@ -231,6 +236,9 @@ describe('usePracticeSessionPageController (browser)', () => {
         session: {
           sessionId: 'session-1',
           mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
           index: 0,
           total: 1,
           isMarkedForReview: false,
@@ -330,6 +338,9 @@ describe('usePracticeSessionPageController (browser)', () => {
           session: {
             sessionId: 'session-1',
             mode: 'exam',
+
+            deadlineAt: '2099-05-22T12:02:24.000Z',
+
             index: 0,
             total: 2,
             isMarkedForReview: false,
@@ -346,6 +357,9 @@ describe('usePracticeSessionPageController (browser)', () => {
           session: {
             sessionId: 'session-1',
             mode: 'exam',
+
+            deadlineAt: '2099-05-22T12:02:24.000Z',
+
             index: 1,
             total: 2,
             isMarkedForReview: false,

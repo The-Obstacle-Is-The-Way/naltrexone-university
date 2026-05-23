@@ -69,6 +69,7 @@ function createPostExamReviewRow(input: {
       order: input.order ?? 1,
       isAnswered: true,
       isCorrect: false,
+      isOmitted: false,
       markedForReview: false,
     };
   }
@@ -82,6 +83,7 @@ function createPostExamReviewRow(input: {
     order: input.order ?? 1,
     isAnswered: true,
     isCorrect: true,
+    isOmitted: false,
     markedForReview: false,
     choices: [
       { id: `${input.questionId}-choice-1`, label: 'A', textMd: 'Choice A' },
@@ -227,6 +229,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
             order: 1,
             isAnswered: true,
             isCorrect: true,
+            isOmitted: false,
             markedForReview: false,
           },
           {
@@ -238,6 +241,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
             order: 2,
             isAnswered: false,
             isCorrect: null,
+            isOmitted: false,
             markedForReview: false,
           },
         ],
@@ -248,6 +252,9 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     input.sessionInfo = {
       sessionId: 'session-1',
       mode: 'exam',
+
+      deadlineAt: '2099-05-22T12:02:24.000Z',
+
       index: 0,
       total: 2,
       isMarkedForReview: false,
@@ -368,6 +375,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
             order: 1,
             isAnswered: true,
             isCorrect: false,
+            isOmitted: false,
             markedForReview: false,
             choices: [
               { id: 'c1', label: 'A', textMd: 'Choice A' },
@@ -388,6 +396,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
             order: 2,
             isAnswered: true,
             isCorrect: true,
+            isOmitted: false,
             markedForReview: false,
             choices: [{ id: 'c3', label: 'A', textMd: 'Choice A' }],
             selectedChoiceId: 'c3',
@@ -814,6 +823,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
               order: 1,
               isAnswered: true,
               isCorrect: false,
+              isOmitted: false,
               markedForReview: false,
               choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
               selectedChoiceId: 'c1',

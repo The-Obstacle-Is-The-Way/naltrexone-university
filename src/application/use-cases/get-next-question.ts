@@ -1,7 +1,9 @@
 import type { Question } from '@/src/domain/entities';
 import {
+  computeExamDeadline,
   createDefaultQuestionState,
   createSeed,
+  isExamExpired,
   selectNextQuestionId,
   shouldShowExplanation,
   shuffleWithSeed,
@@ -48,6 +50,7 @@ export type NextQuestion = {
     mode: PracticeMode;
     index: number; // 0-based index within session
     total: number;
+    deadlineAt: string | null;
     isMarkedForReview?: boolean;
     latestSelectedChoiceId?: string | null;
     latestIsCorrect?: boolean | null;
@@ -74,6 +77,10 @@ export type GetNextQuestionInput =
 
 export type GetNextQuestionOutput = NextQuestion | null;
 
+export type ExpiredExamFinalizer = {
+  execute: (input: { userId: string; sessionId: string }) => Promise<unknown>;
+};
+
 function getSessionSelectedChoiceId(
   session: {
     mode: PracticeMode;
@@ -95,6 +102,7 @@ export class GetNextQuestionUseCase {
     private readonly attempts: AttemptMostRecentAnsweredAtReader,
     private readonly sessions: PracticeSessionRepository,
     private readonly now: () => Date = () => new Date(),
+    private readonly expiredExamFinalizer?: ExpiredExamFinalizer,
   ) {}
 
   async execute(input: GetNextQuestionInput): Promise<GetNextQuestionOutput> {
@@ -166,6 +174,16 @@ export class GetNextQuestionUseCase {
     }
     if (session.endedAt) {
       throw new ApplicationError('CONFLICT', 'Practice session already ended');
+    }
+    if (isExamExpired(session, this.now())) {
+      if (!this.expiredExamFinalizer) {
+        throw new ApplicationError(
+          'INTERNAL_ERROR',
+          'Expired exam finalizer is not configured',
+        );
+      }
+      await this.expiredExamFinalizer.execute({ userId, sessionId });
+      return null;
     }
 
     const stateByQuestionId = new Map(
@@ -247,6 +265,7 @@ export class GetNextQuestionUseCase {
         mode: session.mode,
         index: targetIndex,
         total: session.questionIds.length,
+        deadlineAt: computeExamDeadline(session)?.toISOString() ?? null,
         isMarkedForReview: targetState.markedForReview,
         latestSelectedChoiceId: targetState.latestSelectedChoiceId,
         latestIsCorrect: showCorrectness ? targetState.latestIsCorrect : null,

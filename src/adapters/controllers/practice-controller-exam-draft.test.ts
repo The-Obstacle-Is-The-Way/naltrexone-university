@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_DRAFT_CUMULATIVE_MS } from '@/src/adapters/shared/validation-limits';
+import { ApplicationError } from '@/src/application/errors';
 import { saveExamDraftAnswer } from './practice-controller';
 import { createDeps } from './practice-controller-test-helpers';
 
@@ -167,6 +168,30 @@ describe('practice-controller', () => {
           cumulativeMs: 50_000,
         },
       ]);
+    });
+
+    it('surfaces expired exam draft saves as a CONFLICT ActionResult', async () => {
+      const deps = createDeps({
+        saveDraftThrows: new ApplicationError(
+          'CONFLICT',
+          'Exam time has expired',
+        ),
+      });
+
+      const result = await saveExamDraftAnswer(
+        {
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          questionId: '22222222-2222-2222-2222-222222222222',
+          selectedChoiceId: '33333333-3333-3333-3333-333333333333',
+          cumulativeMs: 50_000,
+        },
+        deps,
+      );
+
+      expect(result).toEqual({
+        ok: false,
+        error: { code: 'CONFLICT', message: 'Exam time has expired' },
+      });
     });
 
     it('returns VALIDATION_ERROR when the saved draft payload is malformed', async () => {

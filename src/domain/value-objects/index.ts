@@ -1,4 +1,11 @@
 export {
+  type AnswerOutcome,
+  answeredOutcome,
+  isOmittedOutcome,
+  omittedOutcome,
+  selectedChoiceIdOrNull,
+} from './answer-outcome';
+export {
   AllChoiceLabels,
   type ChoiceLabel,
   isValidChoiceLabel,

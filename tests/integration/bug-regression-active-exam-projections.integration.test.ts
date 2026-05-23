@@ -5,6 +5,7 @@ import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/dr
 import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-question-repository';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { GetPracticeSessionReviewUseCase } from '@/src/application/use-cases/get-practice-session-review';
+import { answeredOutcome } from '@/src/domain/value-objects';
 import {
   cleanup,
   createQuestion,
@@ -159,7 +160,7 @@ describe('BUG-187: Dashboard counts exclude active-exam attempts', () => {
       userId: user.id,
       questionId: q1.id,
       practiceSessionId: examSession.id,
-      selectedChoiceId: q1.correctChoiceId,
+      outcome: answeredOutcome(q1.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 5,
     });
@@ -169,7 +170,7 @@ describe('BUG-187: Dashboard counts exclude active-exam attempts', () => {
       userId: user.id,
       questionId: q2.id,
       practiceSessionId: null,
-      selectedChoiceId: q2.correctChoiceId,
+      outcome: answeredOutcome(q2.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 5,
     });
@@ -231,7 +232,7 @@ describe('BUG-187: Dashboard counts exclude active-exam attempts', () => {
       userId: user.id,
       questionId: q1.id,
       practiceSessionId: examSession.id,
-      selectedChoiceId: q1.correctChoiceId,
+      outcome: answeredOutcome(q1.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 5,
     });
@@ -240,7 +241,7 @@ describe('BUG-187: Dashboard counts exclude active-exam attempts', () => {
       userId: user.id,
       questionId: q2.id,
       practiceSessionId: null,
-      selectedChoiceId: q2.correctChoiceId,
+      outcome: answeredOutcome(q2.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 5,
     });
@@ -284,7 +285,7 @@ describe('BUG-187: Dashboard counts exclude active-exam attempts', () => {
       userId: user.id,
       questionId: question.id,
       practiceSessionId: tutorSession.id,
-      selectedChoiceId: question.correctChoiceId,
+      outcome: answeredOutcome(question.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 5,
     });
@@ -331,7 +332,7 @@ describe('BUG-192: Attempted-question history excludes active-exam attempts', ()
       userId: user.id,
       questionId: qExam.id,
       practiceSessionId: examSession.id,
-      selectedChoiceId: qExam.correctChoiceId,
+      outcome: answeredOutcome(qExam.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 5,
     });
@@ -340,7 +341,7 @@ describe('BUG-192: Attempted-question history excludes active-exam attempts', ()
       userId: user.id,
       questionId: qAdhoc.id,
       practiceSessionId: null,
-      selectedChoiceId: qAdhoc.correctChoiceId,
+      outcome: answeredOutcome(qAdhoc.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 5,
     });
@@ -430,7 +431,7 @@ describe('BUG-195: Question candidate status filters exclude active-exam attempt
       userId: user.id,
       questionId: qExamIncorrect.id,
       practiceSessionId: examSession.id,
-      selectedChoiceId: qExamIncorrect.incorrectChoiceId,
+      outcome: answeredOutcome(qExamIncorrect.incorrectChoiceId),
       isCorrect: false,
       timeSpentSeconds: 0,
     });
@@ -438,7 +439,7 @@ describe('BUG-195: Question candidate status filters exclude active-exam attempt
       userId: user.id,
       questionId: qAdhocIncorrect.id,
       practiceSessionId: null,
-      selectedChoiceId: qAdhocIncorrect.incorrectChoiceId,
+      outcome: answeredOutcome(qAdhocIncorrect.incorrectChoiceId),
       isCorrect: false,
       timeSpentSeconds: 0,
     });
@@ -446,7 +447,7 @@ describe('BUG-195: Question candidate status filters exclude active-exam attempt
       userId: user.id,
       questionId: qAdhocCorrect.id,
       practiceSessionId: null,
-      selectedChoiceId: qAdhocCorrect.correctChoiceId,
+      outcome: answeredOutcome(qAdhocCorrect.correctChoiceId),
       isCorrect: true,
       timeSpentSeconds: 0,
     });

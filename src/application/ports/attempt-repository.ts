@@ -1,5 +1,6 @@
 import type { Attempt, AttemptRetryOrigin } from '@/src/domain/entities';
 import type {
+  AnswerOutcome,
   PracticeMode,
   QuestionDifficulty,
 } from '@/src/domain/value-objects';
@@ -13,7 +14,7 @@ export type AttemptInsertInput = {
   userId: string;
   questionId: string;
   practiceSessionId: string | null;
-  selectedChoiceId: string;
+  outcome: AnswerOutcome;
   isCorrect: boolean;
   timeSpentSeconds: number;
   retryOfAttemptId?: string | null;
