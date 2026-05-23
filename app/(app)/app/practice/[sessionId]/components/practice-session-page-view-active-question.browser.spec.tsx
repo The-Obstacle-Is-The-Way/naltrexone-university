@@ -45,6 +45,9 @@ test('renders active question branch with navigator and navigation callback', as
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'exam',
+
+        deadlineAt: '2099-05-22T12:02:24.000Z',
+
         index: 0,
         total: 2,
         isMarkedForReview: false,
@@ -96,6 +99,9 @@ test('does not render Review & Submit in the active exam-question header', async
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'exam',
+
+        deadlineAt: '2099-05-22T12:02:24.000Z',
+
         index: 0,
         total: 2,
         isMarkedForReview: false,
@@ -141,6 +147,9 @@ test('keeps End session in the active tutor-question header', async () => {
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'tutor',
+
+        deadlineAt: null,
+
         index: 0,
         total: 2,
         isMarkedForReview: false,
@@ -215,6 +224,9 @@ test('wires navigator aria-controls to an existing question panel id', async () 
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'exam',
+
+        deadlineAt: '2099-05-22T12:02:24.000Z',
+
         index: 0,
         total: 2,
         isMarkedForReview: false,
@@ -274,6 +286,9 @@ test('renders navigator error with retry action', async () => {
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'exam',
+
+        deadlineAt: '2099-05-22T12:02:24.000Z',
+
         index: 0,
         total: 2,
         isMarkedForReview: false,

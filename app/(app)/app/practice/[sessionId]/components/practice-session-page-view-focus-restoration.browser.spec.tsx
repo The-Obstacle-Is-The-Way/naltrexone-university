@@ -63,6 +63,7 @@ function renderQuestionNavigationHarness() {
         sessionInfo={{
           sessionId: 'session-1',
           mode: 'exam',
+          deadlineAt: '2099-05-22T12:02:24.000Z',
           index: questionIndex,
           total: 2,
           isMarkedForReview: false,
@@ -170,6 +171,9 @@ test('restores the question panel when next-question navigation enters loading b
           sessionInfo={{
             sessionId: 'session-1',
             mode: 'exam',
+
+            deadlineAt: '2099-05-22T12:02:24.000Z',
+
             index: 0,
             total: 2,
             isMarkedForReview: false,
@@ -246,6 +250,9 @@ test('restores the question panel when navigation fails before the question id c
           sessionInfo={{
             sessionId: 'session-1',
             mode: 'exam',
+
+            deadlineAt: '2099-05-22T12:02:24.000Z',
+
             index: 0,
             total: 2,
             isMarkedForReview: false,
@@ -324,6 +331,9 @@ test('restores the question panel when retrying from an in-panel load error', as
           sessionInfo={{
             sessionId: 'session-1',
             mode: 'exam',
+
+            deadlineAt: '2099-05-22T12:02:24.000Z',
+
             index: 0,
             total: 2,
             isMarkedForReview: false,

@@ -735,6 +735,9 @@ describe('app/(app)/app/practice/[sessionId]', () => {
         sessionInfo={{
           sessionId: 'session-1',
           mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
           index: 0,
           total: 2,
           isMarkedForReview: false,

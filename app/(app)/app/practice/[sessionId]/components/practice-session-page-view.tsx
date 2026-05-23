@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useId, useMemo, useRef } from 'react';
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+} from 'react';
 import { PracticeView } from '@/app/(app)/app/practice/components/practice-view';
 import {
   fireAndForget,
@@ -31,6 +38,7 @@ export type PracticeSessionPageViewProps = {
   reviewLoadState?: LoadState;
   navigator?: GetPracticeSessionReviewOutput | null;
   navigatorLoadState?: LoadState;
+  examTimer?: ReactNode;
   sessionInfo: NextQuestion['session'];
   loadState: LoadState;
   question: NextQuestion | null;
@@ -250,6 +258,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
         ) : undefined
       }
       sessionInfo={props.sessionInfo}
+      examTimer={props.examTimer}
       loadState={props.loadState}
       question={props.question}
       selectedChoiceId={props.selectedChoiceId}

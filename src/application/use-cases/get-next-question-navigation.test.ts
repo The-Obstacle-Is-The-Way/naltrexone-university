@@ -43,6 +43,9 @@ describe('GetNextQuestionUseCase', () => {
     expect(result?.session).toEqual({
       sessionId: SESSION_ID,
       mode: 'tutor',
+
+      deadlineAt: null,
+
       index: 1,
       total: 2,
       isMarkedForReview: false,
@@ -76,6 +79,9 @@ describe('GetNextQuestionUseCase', () => {
     expect(result?.session).toMatchObject({
       sessionId: SESSION_ID,
       mode: 'tutor',
+
+      deadlineAt: null,
+
       index: 1,
       total: 2,
     });
@@ -181,6 +187,9 @@ describe('GetNextQuestionUseCase', () => {
     expect(result?.session).toMatchObject({
       sessionId: SESSION_ID,
       mode: 'tutor',
+
+      deadlineAt: null,
+
       index: 1,
       total: 3,
     });
@@ -255,12 +264,76 @@ describe('GetNextQuestionUseCase', () => {
     expect(result?.session).toEqual({
       sessionId: SESSION_ID,
       mode: 'tutor',
+
+      deadlineAt: null,
+
       index: 0,
       total: 3,
       isMarkedForReview: false,
       latestSelectedChoiceId: null,
       latestIsCorrect: null,
     });
+  });
+
+  it('includes the server-derived exam deadline on active exam session payloads', async () => {
+    const q1 = createSingleChoiceQuestion('q1', 'c1');
+    const q2 = createSingleChoiceQuestion('q2', 'c2');
+
+    const session = createPracticeSession({
+      mode: 'exam',
+      questionIds: ['q1', 'q2'],
+      questionStates: [createQuestionState('q1'), createQuestionState('q2')],
+      startedAt: new Date('2026-05-22T12:00:00.000Z'),
+    });
+
+    const { getNextQuestion } = createTestDeps({
+      questions: [q1, q2],
+      sessions: [session],
+      now: () => new Date('2026-05-22T12:00:30.000Z'),
+    });
+
+    const result = await getNextQuestion.execute({
+      userId: USER_ID,
+      sessionId: SESSION_ID,
+    });
+
+    expect(result?.session).toMatchObject({
+      mode: 'exam',
+      deadlineAt: '2026-05-22T12:02:24.000Z',
+    });
+  });
+
+  it('finalizes an expired active exam instead of serving another question', async () => {
+    const q1 = createSingleChoiceQuestion('q1', 'c1');
+    const finalizerInputs: Array<{ userId: string; sessionId: string }> = [];
+
+    const session = createPracticeSession({
+      mode: 'exam',
+      questionIds: ['q1'],
+      questionStates: [createQuestionState('q1')],
+      startedAt: new Date('2026-05-22T12:00:00.000Z'),
+    });
+
+    const { getNextQuestion } = createTestDeps({
+      questions: [q1],
+      sessions: [session],
+      now: () => new Date('2026-05-22T12:01:12.000Z'),
+      expiredExamFinalizer: {
+        execute: async (input) => {
+          finalizerInputs.push(input);
+        },
+      },
+    });
+
+    await expect(
+      getNextQuestion.execute({
+        userId: USER_ID,
+        sessionId: SESSION_ID,
+      }),
+    ).resolves.toBeNull();
+    expect(finalizerInputs).toEqual([
+      { userId: USER_ID, sessionId: SESSION_ID },
+    ]);
   });
 
   it('throws NOT_FOUND when next session question is not published', async () => {

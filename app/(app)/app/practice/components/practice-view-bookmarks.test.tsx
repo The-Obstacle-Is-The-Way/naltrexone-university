@@ -58,6 +58,9 @@ describe('PracticeView bookmarks', () => {
         sessionInfo={{
           sessionId: 'session-1',
           mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
           index: 0,
           total: 10,
           isMarkedForReview: false,
@@ -88,6 +91,9 @@ describe('PracticeView bookmarks', () => {
         sessionInfo={{
           sessionId: 'session-1',
           mode: 'tutor',
+
+          deadlineAt: null,
+
           index: 0,
           total: 10,
           isMarkedForReview: false,
@@ -124,6 +130,9 @@ describe('PracticeView bookmarks', () => {
         sessionInfo={{
           sessionId: 'session-1',
           mode: 'tutor',
+
+          deadlineAt: null,
+
           index: 0,
           total: 10,
           isMarkedForReview: false,
@@ -166,6 +175,9 @@ describe('PracticeView bookmarks', () => {
         sessionInfo={{
           sessionId: 'session-1',
           mode: 'tutor',
+
+          deadlineAt: null,
+
           index: 0,
           total: 10,
           isMarkedForReview: false,

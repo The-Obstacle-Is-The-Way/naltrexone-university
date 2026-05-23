@@ -53,6 +53,9 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
         sessionInfo: {
           sessionId: 'session-1',
           mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
           index: 0,
           total: 10,
           isMarkedForReview: false,
@@ -98,6 +101,9 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
       (sessionUpdater as (prev: unknown) => unknown)({
         sessionId: 'session-1',
         mode: 'exam',
+
+        deadlineAt: '2099-05-22T12:02:24.000Z',
+
         index: 0,
         total: 10,
         isMarkedForReview: false,
@@ -105,6 +111,9 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
     ).toEqual({
       sessionId: 'session-1',
       mode: 'exam',
+
+      deadlineAt: '2099-05-22T12:02:24.000Z',
+
       index: 0,
       total: 10,
       isMarkedForReview: true,
@@ -155,6 +164,9 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
         sessionInfo: {
           sessionId: 'session-1',
           mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
           index: 0,
           total: 10,
           isMarkedForReview: false,

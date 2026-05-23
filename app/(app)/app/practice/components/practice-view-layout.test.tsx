@@ -224,6 +224,9 @@ describe('PracticeView layout', () => {
         sessionInfo={{
           sessionId: 'session-1',
           mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
           index: 0,
           total: 3,
           isMarkedForReview: false,
@@ -270,6 +273,83 @@ describe('PracticeView layout', () => {
     );
   });
 
+  it('renders the exam timer only in the exam header action rail', () => {
+    const question = createNextQuestion({
+      questionId: 'question-1',
+      slug: 'question-1',
+      stemMd: 'Stem',
+      difficulty: 'easy',
+    });
+
+    const examHtml = renderToStaticMarkup(
+      <PracticeView
+        title="Exam Session"
+        description="Question 1 of 3 — Explanations shown after you submit the exam."
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'exam',
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+          index: 0,
+          total: 3,
+          isMarkedForReview: false,
+        }}
+        examTimer={<span data-testid="exam-timer-probe">12:34</span>}
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        onEndSession={() => undefined}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onToggleMarkForReview={() => undefined}
+        onSelectChoice={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    const tutorHtml = renderToStaticMarkup(
+      <PracticeView
+        title="Tutor Session"
+        description="Question 1 of 3 — Explanations shown after each answer."
+        sessionInfo={{
+          sessionId: 'session-1',
+          mode: 'tutor',
+          deadlineAt: null,
+          index: 0,
+          total: 3,
+          isMarkedForReview: false,
+        }}
+        examTimer={<span data-testid="exam-timer-probe">12:34</span>}
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={null}
+        isAnswered={false}
+        submitResult={null}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        onEndSession={() => undefined}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onToggleMarkForReview={() => undefined}
+        onSelectChoice={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(examHtml, 'text/html');
+    expect(
+      doc
+        .querySelector('[data-testid="question-header-actions"]')
+        ?.querySelector('[data-testid="exam-timer-probe"]')?.textContent,
+    ).toBe('12:34');
+    expect(tutorHtml).not.toContain('exam-timer-probe');
+  });
+
   it('renders the fallback back link when exam mode has no mark-for-review action', () => {
     const question = createNextQuestion({
       questionId: 'question-1',
@@ -285,6 +365,9 @@ describe('PracticeView layout', () => {
         sessionInfo={{
           sessionId: 'session-1',
           mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
           index: 0,
           total: 3,
           isMarkedForReview: false,

@@ -1,5 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { usePracticeSessionQuestionFlow } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow';
+import { ExamTimer } from '@/app/(app)/app/practice/components/exam-timer';
 import { usePracticeQuestionBookmarks } from '@/app/(app)/app/practice/hooks/use-practice-question-bookmarks';
 import {
   getActionResultErrorMessage,
@@ -23,6 +31,7 @@ import {
   submitAnswer,
 } from '@/src/adapters/controllers/question-controller';
 import type { PracticeSessionPageViewProps } from '../components/practice-session-page-view';
+import { useExamTimer } from './use-exam-timer';
 import { usePracticeSessionMarkForReview } from './use-practice-session-mark-for-review';
 import { usePracticeSessionReviewStage } from './use-practice-session-review-stage';
 
@@ -38,6 +47,7 @@ export function usePracticeSessionPageController(
 ): PracticeSessionPageControllerOutput {
   const isMounted = useIsMounted();
   const bootstrapRequestIdRef = useRef(0);
+  const expiryFinalizeInFlightRef = useRef(false);
   const [shouldRetryBootstrap, setShouldRetryBootstrap] = useState(false);
 
   const questionFlow = usePracticeSessionQuestionFlow({
@@ -85,6 +95,50 @@ export function usePracticeSessionPageController(
     question: currentPostExamBookmarkQuestion ?? questionFlow.question,
     isMounted,
   });
+
+  const finalizeExpiredExam = useCallback(() => {
+    if (expiryFinalizeInFlightRef.current) return;
+    expiryFinalizeInFlightRef.current = true;
+
+    void (async () => {
+      try {
+        await questionFlow.saveCurrentExamDraft();
+      } catch (error) {
+        if (isMounted()) {
+          reportClientError(error, {
+            component: 'UsePracticeSessionPageController',
+            action: 'saveCurrentExamDraftOnTimerExpire',
+          });
+        }
+      }
+
+      if (!isMounted()) return;
+      await reviewStage.finalizeExamSession();
+    })();
+  }, [
+    isMounted,
+    questionFlow.saveCurrentExamDraft,
+    reviewStage.finalizeExamSession,
+  ]);
+
+  const isTimerActive =
+    questionFlow.sessionMode === 'exam' &&
+    typeof questionFlow.sessionInfo?.deadlineAt === 'string' &&
+    !reviewStage.summary &&
+    !reviewStage.review &&
+    !reviewStage.postExamSummary &&
+    !reviewStage.postExamReview;
+  const timerState = useExamTimer({
+    deadlineAt: questionFlow.sessionInfo?.deadlineAt ?? null,
+    isExamActive: isTimerActive,
+    onExpire: finalizeExpiredExam,
+  });
+  const examTimer = timerState
+    ? createElement(ExamTimer, {
+        remainingSeconds: timerState.remainingSeconds,
+        isExpired: timerState.isExpired,
+      })
+    : undefined;
 
   const bootstrapSessionSummary = useCallback(() => {
     const requestId = bootstrapRequestIdRef.current + 1;
@@ -189,6 +243,7 @@ export function usePracticeSessionPageController(
     reviewLoadState: reviewStage.reviewLoadState,
     navigator: reviewStage.navigator,
     navigatorLoadState: reviewStage.navigatorLoadState,
+    examTimer,
     sessionInfo: questionFlow.sessionInfo,
     loadState: questionFlow.loadState,
     question: questionFlow.question,

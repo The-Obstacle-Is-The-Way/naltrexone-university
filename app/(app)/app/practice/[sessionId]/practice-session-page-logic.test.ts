@@ -99,6 +99,9 @@ describe('practice-session-page-logic', () => {
             session: {
               sessionId: 'session-1',
               mode: 'tutor',
+
+              deadlineAt: null,
+
               index: 1,
               total: 2,
             },
@@ -113,6 +116,9 @@ describe('practice-session-page-logic', () => {
             session: {
               sessionId: 'session-1',
               mode: 'tutor',
+
+              deadlineAt: null,
+
               index: 0,
               total: 2,
             },
@@ -148,6 +154,9 @@ describe('practice-session-page-logic', () => {
               session: {
                 sessionId: 'session-1',
                 mode: 'tutor',
+
+                deadlineAt: null,
+
                 index: 0,
                 total: 2,
               },
@@ -900,6 +909,9 @@ describe('practice-session-page-logic effects', () => {
         sessionInfo: {
           sessionId: 'session-1',
           mode: 'tutor',
+
+          deadlineAt: null,
+
           index: 0,
           total: 2,
         },
@@ -930,6 +942,9 @@ describe('practice-session-page-logic effects', () => {
         sessionInfo: {
           sessionId: 'session-1',
           mode: 'tutor',
+
+          deadlineAt: null,
+
           index: 0,
           total: 2,
         },
@@ -964,6 +979,9 @@ describe('practice-session-page-logic effects', () => {
         sessionInfo: {
           sessionId: 'session-1',
           mode: 'tutor',
+
+          deadlineAt: null,
+
           index: 0,
           total: 2,
         },
@@ -996,6 +1014,9 @@ describe('practice-session-page-logic effects', () => {
         sessionInfo: {
           sessionId: 'session-1',
           mode: 'tutor',
+
+          deadlineAt: null,
+
           index: 0,
           total: 2,
         },

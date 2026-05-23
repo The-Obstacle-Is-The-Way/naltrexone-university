@@ -129,6 +129,7 @@ export function mockExamReviewNavigationSession() {
           choices: [CHOICE_1, CHOICE_2, CHOICE_3],
           session: {
             mode: 'exam',
+            deadlineAt: '2099-05-22T12:02:24.000Z',
             index: questionIndex,
             total: 3,
             isMarkedForReview: false,
@@ -153,6 +154,9 @@ export function mockExamReviewNavigationSession() {
         choices: [CHOICE_1, CHOICE_2, CHOICE_3],
         session: {
           mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
           index: 2,
           total: 3,
           isMarkedForReview: false,

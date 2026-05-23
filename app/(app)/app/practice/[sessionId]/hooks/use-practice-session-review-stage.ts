@@ -198,7 +198,19 @@ export function usePracticeSessionReviewStage(
       try {
         if (input.sessionMode === 'exam') {
           const saved = await input.saveCurrentExamDraft();
-          if (!saved) return;
+          if (!saved) {
+            const deadlineAt = input.sessionInfo?.deadlineAt ?? null;
+            const deadlineMs =
+              deadlineAt === null
+                ? Number.POSITIVE_INFINITY
+                : Date.parse(deadlineAt);
+            const isExpired =
+              Number.isFinite(deadlineMs) && Date.now() >= deadlineMs;
+            if (isExpired) {
+              await finalizeExamSession();
+            }
+            return;
+          }
         }
       } catch (error) {
         if (!input.isMounted()) return;
@@ -217,8 +229,10 @@ export function usePracticeSessionReviewStage(
   }, [
     input.isMounted,
     input.saveCurrentExamDraft,
+    input.sessionInfo?.deadlineAt,
     input.sessionMode,
     input.setLoadState,
+    finalizeExamSession,
     reviewStage.onEndSession,
   ]);
   const onFinalizeReview = useCallback(async (): Promise<void> => {
@@ -256,6 +270,7 @@ export function usePracticeSessionReviewStage(
     navigatorLoadState,
     isInReviewStage: reviewStage.isInReviewStage,
     isReviewQuestionActive: reviewStage.isReviewQuestionActive,
+    finalizeExamSession,
     onEndSession,
     onRetryReview: reviewStage.onRetryReview,
     onRetryNavigator,

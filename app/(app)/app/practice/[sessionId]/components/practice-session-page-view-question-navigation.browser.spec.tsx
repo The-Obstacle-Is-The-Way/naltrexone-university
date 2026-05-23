@@ -49,6 +49,9 @@ test('renders Previous button in the session answering branch', async () => {
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'tutor',
+
+        deadlineAt: null,
+
         index: 1,
         total: 2,
         isMarkedForReview: false,
@@ -123,6 +126,9 @@ test('hasPreviousQuestion is false when current question is first in navigator',
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'tutor',
+
+        deadlineAt: null,
+
         index: 0,
         total: 2,
         isMarkedForReview: false,
@@ -165,6 +171,9 @@ test('hasPreviousQuestion is false on the first question when navigator is missi
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'tutor',
+
+        deadlineAt: null,
+
         index: 0,
         total: 2,
         isMarkedForReview: false,
@@ -207,6 +216,9 @@ test('renders Previous when navigator is missing but sessionInfo indicates a pri
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'tutor',
+
+        deadlineAt: null,
+
         index: 1,
         total: 2,
         isMarkedForReview: false,
@@ -271,6 +283,9 @@ test('routes the last exam-question footer Review & Submit button through onEndS
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'exam',
+
+        deadlineAt: '2099-05-22T12:02:24.000Z',
+
         index: 1,
         total: 2,
         isMarkedForReview: false,
@@ -344,6 +359,9 @@ test('hasPreviousQuestion is true when current question is not first', async () 
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'tutor',
+
+        deadlineAt: null,
+
         index: 1,
         total: 2,
         isMarkedForReview: false,
@@ -421,6 +439,9 @@ test('routes the last tutor-question footer End session button through onEndSess
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'tutor',
+
+        deadlineAt: null,
+
         index: 1,
         total: 2,
         isMarkedForReview: false,
@@ -512,6 +533,9 @@ test('clicking Next in a completed session navigates to the next available quest
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'tutor',
+
+        deadlineAt: null,
+
         index: 1,
         total: 4,
         isMarkedForReview: false,
@@ -523,6 +547,9 @@ test('clicking Next in a completed session navigates to the next available quest
         session: {
           sessionId: 'session-1',
           mode: 'tutor',
+
+          deadlineAt: null,
+
           index: 1,
           total: 4,
           isMarkedForReview: false,
@@ -594,6 +621,9 @@ test('clicking Next falls back to onNextQuestion when id-based navigation is una
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'tutor',
+
+        deadlineAt: null,
+
         index: 0,
         total: 3,
         isMarkedForReview: false,
@@ -605,6 +635,9 @@ test('clicking Next falls back to onNextQuestion when id-based navigation is una
         session: {
           sessionId: 'session-1',
           mode: 'tutor',
+
+          deadlineAt: null,
+
           index: 0,
           total: 3,
           isMarkedForReview: false,
@@ -681,6 +714,9 @@ test("clicking Previous calls onNavigateQuestion with the previous question's ID
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'tutor',
+
+        deadlineAt: null,
+
         index: 1,
         total: 2,
         isMarkedForReview: false,

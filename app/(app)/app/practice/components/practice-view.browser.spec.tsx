@@ -23,6 +23,9 @@ function ExamPracticeViewHarness(input: {
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'exam',
+
+        deadlineAt: '2099-05-22T12:02:24.000Z',
+
         index: 0,
         total: 10,
         isMarkedForReview: false,
@@ -122,6 +125,9 @@ test('renders the exam bottom action bar without sticky shell markers', async ()
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'exam',
+
+        deadlineAt: '2099-05-22T12:02:24.000Z',
+
         index: 0,
         total: 2,
         isMarkedForReview: false,
@@ -314,6 +320,9 @@ test('disables mutation controls while internal question loading is in progress'
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'exam',
+
+        deadlineAt: '2099-05-22T12:02:24.000Z',
+
         index: 0,
         total: 10,
         isMarkedForReview: false,
@@ -368,6 +377,9 @@ test('disables choice selection after a submit in exam mode', async () => {
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'exam',
+
+        deadlineAt: '2099-05-22T12:02:24.000Z',
+
         index: 0,
         total: 10,
         isMarkedForReview: false,
@@ -475,6 +487,9 @@ test('does not scroll feedback in exam mode', async () => {
         sessionInfo={{
           sessionId: 'session-1',
           mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
           index: 0,
           total: 10,
           isMarkedForReview: false,
@@ -598,6 +613,9 @@ test('calls onEndSession from the bottom-bar Review & Submit button on the last 
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'exam',
+
+        deadlineAt: '2099-05-22T12:02:24.000Z',
+
         index: 1,
         total: 2,
         isMarkedForReview: false,
@@ -654,6 +672,9 @@ test('calls onEndSession from the bottom-bar End session button on the last tuto
       sessionInfo={{
         sessionId: 'session-1',
         mode: 'tutor',
+
+        deadlineAt: null,
+
         index: 1,
         total: 2,
         isMarkedForReview: false,

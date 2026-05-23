@@ -25,6 +25,7 @@ type PreviousSubmissionFixture = {
 type QuestionSessionFixture = {
   sessionId?: string;
   mode: PracticeMode;
+  deadlineAt?: string | null;
   index: number;
   total: number;
   isMarkedForReview: boolean;
@@ -90,6 +91,9 @@ export function createQuestionResponse(input: QuestionFixtureInput) {
     session: {
       sessionId: input.session.sessionId ?? 'session-1',
       mode: input.session.mode,
+      deadlineAt:
+        input.session.deadlineAt ??
+        (input.session.mode === 'exam' ? '2099-05-22T12:02:24.000Z' : null),
       index: input.session.index,
       total: input.session.total,
       isMarkedForReview: input.session.isMarkedForReview,
