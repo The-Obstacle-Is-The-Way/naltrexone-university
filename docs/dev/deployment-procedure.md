@@ -1,7 +1,7 @@
 # Deployment Procedure
 
 > **Parent:** [Deployment Environments](./deployment-environments.md)
-> **Last Updated:** 2026-03-17
+> **Last Updated:** 2026-05-23
 
 ---
 
@@ -71,9 +71,10 @@ DATABASE_URL="<target>" pnpm db:seed
 
 | Environment | How to Connect | DATABASE_URL Source |
 |-------------|---------------|---------------------|
-| **Local** | Direct (already in `.env.local`) | `.env.local` |
-| **Preview / shared non-production** | Use your provider CLI/dashboard to fetch the non-production connection string | Provider secret manager / CLI output |
-| **Production** | Use your provider CLI/dashboard to fetch the production connection string | Provider secret manager / CLI output |
+| **Local app / local E2E** | Direct (already in `.env.local`) | `.env.local`, expected to match Vercel Development and the Neon `dev` branch |
+| **Preview / shared non-production** | Use your provider CLI/dashboard to fetch the non-production connection string | Vercel Preview/Development env vars, currently the Neon `dev` branch |
+| **Production** | Use your provider CLI/dashboard to fetch the production connection string | Vercel Production env vars, currently the Neon `main` branch |
+| **Local integration tests** | Docker Postgres on `localhost:5434` | `.env.test` or explicit `DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test` |
 
 Example for preview/production:
 
@@ -87,6 +88,17 @@ If you are using Neon, fetch the connection string for the intended branch first
 **Caution:** Always double-check which database/branch you're targeting. Running migrations or seeds against the wrong environment can corrupt data. Production operations should be done deliberately and verified immediately.
 
 **Optional helper:** `pnpm db:seed:all -- --plan` pulls Vercel Development, Preview, and Production env files into a temp directory, compares them with local `.env.local`, and shows the unique seed targets without writing data. `pnpm db:seed:all` then imports drafts as published and seeds each unique `DATABASE_URL` once. It does **not** run migrations; keep using `pnpm db:migrate` separately when schema changes are involved.
+
+For local authenticated E2E after pulling code with new migrations, migrate the `.env.local` target before running the suite. Confirm the host without printing credentials, then run Drizzle against `.env.local` deliberately:
+
+```bash
+node -e "require('dotenv').config({ path: '.env.local' }); const u = new URL(process.env.DATABASE_URL); console.log(u.hostname)"
+env -u DATABASE_URL pnpm db:migrate
+lsof -ti:3000 | xargs kill -9 2>/dev/null
+pnpm test:e2e
+```
+
+This is separate from `pnpm test:integration`, which uses the Docker Postgres database and has its own migration/seed setup.
 
 ---
 
