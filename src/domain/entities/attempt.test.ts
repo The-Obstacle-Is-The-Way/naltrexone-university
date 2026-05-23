@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DomainError } from '../errors';
+import { createAttempt as createAttemptFixture } from '../test-helpers';
 import { answeredOutcome, omittedOutcome } from '../value-objects';
 import {
   AllAttemptRetryOrigins,
@@ -115,19 +116,15 @@ describe('Attempt entity provenance', () => {
 describe('Attempt entity outcome invariant', () => {
   it('accepts answered attempts with their selected outcome', () => {
     expect(
-      createAttempt({
-        id: 'attempt-1',
-        userId: 'user-1',
-        questionId: 'question-1',
-        practiceSessionId: null,
-        outcome: answeredOutcome('choice-1'),
-        isCorrect: true,
-        timeSpentSeconds: 12,
-        retryOfAttemptId: null,
-        retryOrigin: null,
-        retrySessionId: null,
-        answeredAt: new Date('2026-03-17T12:00:00.000Z'),
-      }),
+      createAttempt(
+        createAttemptFixture({
+          id: 'attempt-1',
+          outcome: answeredOutcome('choice-1'),
+          isCorrect: true,
+          timeSpentSeconds: 12,
+          answeredAt: new Date('2026-03-17T12:00:00.000Z'),
+        }),
+      ),
     ).toMatchObject({
       outcome: {
         kind: 'answered',
@@ -139,19 +136,14 @@ describe('Attempt entity outcome invariant', () => {
 
   it('rejects omitted attempts marked correct', () => {
     const act = () =>
-      createAttempt({
-        id: 'attempt-1',
-        userId: 'user-1',
-        questionId: 'question-1',
-        practiceSessionId: null,
-        outcome: omittedOutcome(),
-        isCorrect: true,
-        timeSpentSeconds: 0,
-        retryOfAttemptId: null,
-        retryOrigin: null,
-        retrySessionId: null,
-        answeredAt: new Date('2026-03-17T12:00:00.000Z'),
-      });
+      createAttempt(
+        createAttemptFixture({
+          id: 'attempt-1',
+          outcome: omittedOutcome(),
+          isCorrect: true,
+          answeredAt: new Date('2026-03-17T12:00:00.000Z'),
+        }),
+      );
 
     expect(act).toThrow(DomainError);
     expect(act).toThrow('Omitted attempts must be incorrect');

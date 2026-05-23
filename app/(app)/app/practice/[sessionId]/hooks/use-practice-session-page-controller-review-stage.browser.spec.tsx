@@ -112,7 +112,7 @@ describe('usePracticeSessionPageController (browser)', () => {
             order: 2,
             isAnswered: false,
             isCorrect: false,
-            isOmitted: false,
+            isOmitted: true,
             markedForReview: false,
             choices: [{ id: 'choice_2', label: 'A', textMd: 'Choice B' }],
             selectedChoiceId: null,

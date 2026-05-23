@@ -3,6 +3,7 @@ import { createQuestion, createTag } from '@/src/domain/test-helpers';
 import {
   type AnswerOutcome,
   answeredOutcome,
+  omittedOutcome,
 } from '@/src/domain/value-objects';
 import { FakeAttemptRepository } from './fake-attempt-repository';
 
@@ -119,6 +120,21 @@ function legacyExamSeed(
 }
 
 describe('FakeAttemptRepository', () => {
+  it('rejects omitted attempts marked correct', async () => {
+    const repo = new FakeAttemptRepository();
+
+    await expect(
+      repo.insert({
+        userId,
+        questionId: 'q-omitted',
+        practiceSessionId: 'session-omitted',
+        outcome: omittedOutcome(),
+        isCorrect: true,
+        timeSpentSeconds: 0,
+      }),
+    ).rejects.toThrow('Omitted attempts must be incorrect');
+  });
+
   describe('active-exam visibility fidelity', () => {
     it('keeps legacy exam-shaped seeds visible when sessionEndedAt is omitted', async () => {
       const attempt = legacyExamSeed();

@@ -19,6 +19,14 @@ async function insertAttemptAt(input: {
   isCorrect?: boolean;
   answeredAt: Date;
 }) {
+  const hasSelectedChoiceId = input.selectedChoiceId !== undefined;
+  const hasOutcome = input.outcome !== undefined;
+  if (hasSelectedChoiceId === hasOutcome) {
+    throw new Error(
+      'insertAttemptAt requires exactly one of selectedChoiceId or outcome',
+    );
+  }
+
   await db.insert(schema.attempts).values({
     userId: input.userId,
     questionId: input.questionId,
