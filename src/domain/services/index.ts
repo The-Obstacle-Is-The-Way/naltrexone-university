@@ -3,6 +3,12 @@ export {
   isEntitled,
   type NonEntitledReason,
 } from './entitlement';
+export {
+  computeExamAllotmentSeconds,
+  computeExamDeadline,
+  isExamExpired,
+  remainingExamSeconds,
+} from './exam-timer';
 export { type GradeResult, gradeAnswer } from './grading';
 export {
   type AttemptHistory,
@@ -26,4 +32,9 @@ export {
   computeStreak,
   filterAttemptsInWindow,
 } from './statistics';
-export { DAY_MS, MS_PER_SECOND, SECONDS_PER_DAY } from './time-constants';
+export {
+  DAY_MS,
+  EXAM_SECONDS_PER_QUESTION,
+  MS_PER_SECOND,
+  SECONDS_PER_DAY,
+} from './time-constants';
