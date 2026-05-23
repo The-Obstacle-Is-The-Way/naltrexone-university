@@ -51,6 +51,7 @@ type ReviewRowFixtureInput = {
   isAvailable?: boolean;
   isAnswered?: boolean;
   isCorrect?: boolean | null;
+  isOmitted?: boolean;
   markedForReview?: boolean;
 };
 
@@ -115,6 +116,7 @@ export function createReviewRow(input: ReviewRowFixtureInput) {
     difficulty: input.difficulty ?? 'easy',
     isAnswered: input.isAnswered ?? false,
     isCorrect: input.isCorrect ?? null,
+    isOmitted: input.isOmitted ?? false,
     markedForReview: input.markedForReview ?? false,
   };
 }

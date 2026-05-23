@@ -6,6 +6,7 @@ import {
   practiceSessions,
 } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
+import { answeredOutcome, omittedOutcome } from '@/src/domain/value-objects';
 import { DrizzleAttemptRepository } from './drizzle-attempt-repository';
 
 type RepoDb = ConstructorParameters<typeof DrizzleAttemptRepository>[0];
@@ -39,6 +40,7 @@ function createDbMock() {
         questionId: string;
         practiceSessionId: string | null;
         selectedChoiceId: string | null;
+        isOmitted: boolean;
         isCorrect: boolean;
         timeSpentSeconds: number;
         answeredAt: Date;
@@ -58,6 +60,7 @@ function createDbMock() {
           questionId: string;
           practiceSessionId: string | null;
           selectedChoiceId: string | null;
+          isOmitted: boolean;
           isCorrect: boolean;
           timeSpentSeconds: number;
           retryOfAttemptId?: string | null;
@@ -260,6 +263,7 @@ describe('DrizzleAttemptRepository', () => {
           questionId: 'question_1',
           practiceSessionId: 'session_1',
           selectedChoiceId: 'choice_1',
+          isOmitted: false,
           isCorrect: true,
           timeSpentSeconds: 42,
           answeredAt,
@@ -273,7 +277,7 @@ describe('DrizzleAttemptRepository', () => {
           userId: 'user_1',
           questionId: 'question_1',
           practiceSessionId: 'session_1',
-          selectedChoiceId: 'choice_1',
+          outcome: answeredOutcome('choice_1'),
           isCorrect: true,
           timeSpentSeconds: 42,
         }),
@@ -282,7 +286,10 @@ describe('DrizzleAttemptRepository', () => {
         userId: 'user_1',
         questionId: 'question_1',
         practiceSessionId: 'session_1',
-        selectedChoiceId: 'choice_1',
+        outcome: {
+          kind: 'answered',
+          selectedChoiceId: 'choice_1',
+        },
         isCorrect: true,
         timeSpentSeconds: 42,
         retryOfAttemptId: null,
@@ -296,8 +303,56 @@ describe('DrizzleAttemptRepository', () => {
         questionId: 'question_1',
         practiceSessionId: 'session_1',
         selectedChoiceId: 'choice_1',
+        isOmitted: false,
         isCorrect: true,
         timeSpentSeconds: 42,
+        retryOfAttemptId: null,
+        retryOrigin: null,
+        retrySessionId: null,
+      });
+    });
+
+    it('returns an inserted omitted attempt', async () => {
+      const db = createDbMock();
+      const answeredAt = new Date('2026-02-01T00:00:00Z');
+      db._mocks.insertReturning.mockResolvedValue([
+        {
+          id: 'attempt_1',
+          userId: 'user_1',
+          questionId: 'question_1',
+          practiceSessionId: 'session_1',
+          selectedChoiceId: null,
+          isOmitted: true,
+          isCorrect: false,
+          timeSpentSeconds: 0,
+          answeredAt,
+        },
+      ]);
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.insert({
+          userId: 'user_1',
+          questionId: 'question_1',
+          practiceSessionId: 'session_1',
+          outcome: omittedOutcome(),
+          isCorrect: false,
+          timeSpentSeconds: 0,
+        }),
+      ).resolves.toMatchObject({
+        outcome: { kind: 'omitted' },
+        isCorrect: false,
+      });
+
+      expect(db._mocks.insertValues).toHaveBeenCalledWith({
+        userId: 'user_1',
+        questionId: 'question_1',
+        practiceSessionId: 'session_1',
+        selectedChoiceId: null,
+        isOmitted: true,
+        isCorrect: false,
+        timeSpentSeconds: 0,
         retryOfAttemptId: null,
         retryOrigin: null,
         retrySessionId: null,
@@ -314,7 +369,7 @@ describe('DrizzleAttemptRepository', () => {
         userId: 'user_1',
         questionId: 'question_1',
         practiceSessionId: null,
-        selectedChoiceId: 'choice_1',
+        outcome: answeredOutcome('choice_1'),
         isCorrect: true,
         timeSpentSeconds: 10,
       });
@@ -344,7 +399,7 @@ describe('DrizzleAttemptRepository', () => {
         userId: 'user_1',
         questionId: 'question_1',
         practiceSessionId: null,
-        selectedChoiceId: 'choice_1',
+        outcome: answeredOutcome('choice_1'),
         isCorrect: false,
         timeSpentSeconds: 5,
       });
@@ -366,7 +421,7 @@ describe('DrizzleAttemptRepository', () => {
         userId: 'user_1',
         questionId: 'question_1',
         practiceSessionId: 'session_1',
-        selectedChoiceId: 'choice_1',
+        outcome: answeredOutcome('choice_1'),
         isCorrect: true,
         timeSpentSeconds: 12,
       });
@@ -393,7 +448,7 @@ describe('DrizzleAttemptRepository', () => {
         userId: 'user_1',
         questionId: 'question_1',
         practiceSessionId: 'session_1',
-        selectedChoiceId: 'choice_1',
+        outcome: answeredOutcome('choice_1'),
         isCorrect: true,
         timeSpentSeconds: 12,
       });
@@ -419,7 +474,7 @@ describe('DrizzleAttemptRepository', () => {
         userId: 'user_1',
         questionId: 'question_1',
         practiceSessionId: null,
-        selectedChoiceId: 'choice_1',
+        outcome: answeredOutcome('choice_1'),
         isCorrect: true,
         timeSpentSeconds: 12,
       });
@@ -446,6 +501,7 @@ describe('DrizzleAttemptRepository', () => {
           questionId: 'question_1',
           practiceSessionId: null,
           selectedChoiceId: 'choice_1',
+          isOmitted: false,
           isCorrect: true,
           timeSpentSeconds: 12,
           answeredAt,
@@ -462,7 +518,10 @@ describe('DrizzleAttemptRepository', () => {
           userId: 'user_1',
           questionId: 'question_1',
           practiceSessionId: null,
-          selectedChoiceId: 'choice_1',
+          outcome: {
+            kind: 'answered',
+            selectedChoiceId: 'choice_1',
+          },
           isCorrect: true,
           timeSpentSeconds: 12,
           retryOfAttemptId: null,
@@ -536,6 +595,7 @@ describe('DrizzleAttemptRepository', () => {
           questionId: 'question_1',
           practiceSessionId: 'session_1',
           selectedChoiceId: 'choice_1',
+          isOmitted: false,
           isCorrect: false,
           timeSpentSeconds: 9,
           answeredAt,
@@ -552,7 +612,10 @@ describe('DrizzleAttemptRepository', () => {
           userId: 'user_1',
           questionId: 'question_1',
           practiceSessionId: 'session_1',
-          selectedChoiceId: 'choice_1',
+          outcome: {
+            kind: 'answered',
+            selectedChoiceId: 'choice_1',
+          },
           isCorrect: false,
           timeSpentSeconds: 9,
           retryOfAttemptId: null,
@@ -632,6 +695,7 @@ describe('DrizzleAttemptRepository', () => {
         questionId: 'question_1',
         practiceSessionId: null,
         selectedChoiceId: 'choice_1',
+        isOmitted: false,
         isCorrect: true,
         timeSpentSeconds: 42,
         retryOfAttemptId: null,
@@ -711,6 +775,7 @@ describe('DrizzleAttemptRepository', () => {
           questionId: 'question_1',
           practiceSessionId: null,
           selectedChoiceId: 'choice_1',
+          isOmitted: false,
           isCorrect: true,
           timeSpentSeconds: 12,
           answeredAt,
@@ -726,7 +791,10 @@ describe('DrizzleAttemptRepository', () => {
           userId: 'user_1',
           questionId: 'question_1',
           practiceSessionId: null,
-          selectedChoiceId: 'choice_1',
+          outcome: {
+            kind: 'answered',
+            selectedChoiceId: 'choice_1',
+          },
           isCorrect: true,
           timeSpentSeconds: 12,
           retryOfAttemptId: null,

@@ -331,7 +331,10 @@ describe('question controllers (integration)', () => {
     expect(inserted[0]).toMatchObject({
       userId: user.id,
       questionId: question.id,
-      selectedChoiceId: question.correctChoiceId,
+      outcome: {
+        kind: 'answered',
+        selectedChoiceId: question.correctChoiceId,
+      },
       isCorrect: true,
     });
   });
@@ -441,6 +444,11 @@ describe('question controllers (integration)', () => {
       status: 'published',
       difficulty: 'easy',
     });
+    const omittedQuestion = await createQuestion({
+      slug: `it-submit-exam-omitted-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
 
     const questions = new DrizzleQuestionRepository(db);
     const attempts = new DrizzleAttemptRepository(db);
@@ -488,10 +496,10 @@ describe('question controllers (integration)', () => {
       userId: user.id,
       mode: 'exam',
       paramsJson: {
-        count: 1,
+        count: 2,
         tagSlugs: [],
         difficulties: [],
-        questionIds: [question.id],
+        questionIds: [question.id, omittedQuestion.id],
       },
     });
 
@@ -529,9 +537,26 @@ describe('question controllers (integration)', () => {
       },
     });
 
-    await expect(
-      attempts.findBySessionId(session.id, user.id),
-    ).resolves.toHaveLength(1);
+    const sessionAttempts = await attempts.findBySessionId(session.id, user.id);
+    expect(sessionAttempts).toHaveLength(2);
+    expect(sessionAttempts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          questionId: question.id,
+          outcome: {
+            kind: 'answered',
+            selectedChoiceId: question.correctChoiceId,
+          },
+          isCorrect: true,
+        }),
+        expect.objectContaining({
+          questionId: omittedQuestion.id,
+          outcome: { kind: 'omitted' },
+          isCorrect: false,
+          timeSpentSeconds: 0,
+        }),
+      ]),
+    );
   });
 
   it('rolls back the attempt insert when recordQuestionAnswer fails inside a transaction', async () => {
@@ -625,6 +650,12 @@ describe('stats controller (integration)', () => {
       status: 'published',
       difficulty: 'easy',
     });
+    const slugC = `it-stats-omitted-${randomUUID()}`;
+    const questionC = await createQuestion({
+      slug: slugC,
+      status: 'published',
+      difficulty: 'easy',
+    });
 
     const now = new Date('2026-02-10T12:00:00.000Z');
 
@@ -656,6 +687,16 @@ describe('stats controller (integration)', () => {
         timeSpentSeconds: 10,
         answeredAt: new Date('2026-02-10T11:00:00.000Z'),
       },
+      {
+        userId: user.id,
+        questionId: questionC.id,
+        practiceSessionId: null,
+        selectedChoiceId: null,
+        isOmitted: true,
+        isCorrect: false,
+        timeSpentSeconds: 0,
+        answeredAt: new Date('2026-02-10T10:00:00.000Z'),
+      },
     ]);
 
     const authGateway = createAuthGateway(user);
@@ -679,10 +720,10 @@ describe('stats controller (integration)', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
-    expect(result.data.totalAnswered).toBe(3);
-    expect(result.data.accuracyOverall).toBeCloseTo(2 / 3);
-    expect(result.data.answeredLast7Days).toBe(2);
-    expect(result.data.accuracyLast7Days).toBeCloseTo(1 / 2);
+    expect(result.data.totalAnswered).toBe(4);
+    expect(result.data.accuracyOverall).toBeCloseTo(2 / 4);
+    expect(result.data.answeredLast7Days).toBe(3);
+    expect(result.data.accuracyLast7Days).toBeCloseTo(1 / 3);
     expect(result.data.currentStreakDays).toBe(2);
     expect(result.data.recentActivity[0]).toMatchObject({
       isAvailable: true,
@@ -693,6 +734,14 @@ describe('stats controller (integration)', () => {
       row.isAvailable ? [row.slug] : [],
     );
     expect(slugs).toContain(slugB);
+    expect(slugs).toContain(slugC);
+    expect(result.data.recentActivity).toContainEqual(
+      expect.objectContaining({
+        isAvailable: true,
+        slug: slugC,
+        isCorrect: false,
+      }),
+    );
   });
 });
 

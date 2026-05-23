@@ -28,6 +28,7 @@ describe('QuestionNavigator', () => {
         order: 1,
         isAnswered: true,
         isCorrect: true,
+        isOmitted: false,
         markedForReview: false,
       },
       {
@@ -39,6 +40,7 @@ describe('QuestionNavigator', () => {
         order: 2,
         isAnswered: true,
         isCorrect: false,
+        isOmitted: false,
         markedForReview: false,
       },
       {
@@ -47,6 +49,7 @@ describe('QuestionNavigator', () => {
         order: 3,
         isAnswered: false,
         isCorrect: null,
+        isOmitted: false,
         markedForReview: false,
       },
     ],
@@ -236,6 +239,7 @@ describe('ExamReviewView', () => {
         order: 1,
         isAnswered: true,
         isCorrect: true,
+        isOmitted: false,
         markedForReview: true,
       },
       {
@@ -247,6 +251,7 @@ describe('ExamReviewView', () => {
         order: 2,
         isAnswered: true,
         isCorrect: false,
+        isOmitted: false,
         markedForReview: false,
       },
       {
@@ -258,6 +263,7 @@ describe('ExamReviewView', () => {
         order: 3,
         isAnswered: false,
         isCorrect: null,
+        isOmitted: false,
         markedForReview: false,
       },
       {
@@ -266,6 +272,7 @@ describe('ExamReviewView', () => {
         order: 4,
         isAnswered: false,
         isCorrect: null,
+        isOmitted: false,
         markedForReview: false,
       },
     ],

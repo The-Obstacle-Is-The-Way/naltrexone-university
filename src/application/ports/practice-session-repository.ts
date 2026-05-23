@@ -2,7 +2,7 @@ import type {
   PracticeSession,
   PracticeSessionQuestionState,
 } from '@/src/domain/entities';
-import type { PracticeMode } from '@/src/domain/value-objects';
+import type { AnswerOutcome, PracticeMode } from '@/src/domain/value-objects';
 
 export type CompletedPracticeSessionPage = {
   rows: readonly PracticeSession[];
@@ -37,7 +37,7 @@ export interface PracticeSessionRepository {
     sessionId: string;
     userId: string;
     questionId: string;
-    selectedChoiceId: string;
+    outcome: AnswerOutcome;
     isCorrect: boolean;
     answeredAt: Date;
   }): Promise<PracticeSessionQuestionState>;

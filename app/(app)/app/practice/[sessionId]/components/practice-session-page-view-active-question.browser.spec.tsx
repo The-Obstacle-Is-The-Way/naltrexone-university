@@ -25,6 +25,7 @@ test('renders active question branch with navigator and navigation callback', as
             difficulty: 'easy',
             isAnswered: true,
             isCorrect: true,
+            isOmitted: false,
             markedForReview: false,
           },
           {
@@ -36,6 +37,7 @@ test('renders active question branch with navigator and navigation callback', as
             difficulty: 'medium',
             isAnswered: false,
             isCorrect: null,
+            isOmitted: false,
             markedForReview: false,
           },
         ],
@@ -193,6 +195,7 @@ test('wires navigator aria-controls to an existing question panel id', async () 
             difficulty: 'easy',
             isAnswered: true,
             isCorrect: true,
+            isOmitted: false,
             markedForReview: false,
           },
           {
@@ -204,6 +207,7 @@ test('wires navigator aria-controls to an existing question panel id', async () 
             difficulty: 'medium',
             isAnswered: false,
             isCorrect: null,
+            isOmitted: false,
             markedForReview: false,
           },
         ],

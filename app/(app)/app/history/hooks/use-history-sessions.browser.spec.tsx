@@ -36,6 +36,7 @@ function makeReviewOutput(sessionId: string): GetPracticeSessionReviewOutput {
         difficulty: 'easy',
         isAnswered: true,
         isCorrect: false,
+        isOmitted: false,
         markedForReview: false,
       },
     ],

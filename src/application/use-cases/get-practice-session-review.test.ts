@@ -95,6 +95,7 @@ describe('GetPracticeSessionReviewUseCase', () => {
             order: 1,
             isAnswered: true,
             isCorrect: false,
+            isOmitted: false,
             markedForReview: true,
           },
           {
@@ -106,6 +107,7 @@ describe('GetPracticeSessionReviewUseCase', () => {
             order: 2,
             isAnswered: false,
             isCorrect: null,
+            isOmitted: false,
             markedForReview: false,
           },
         ],
@@ -194,19 +196,74 @@ describe('GetPracticeSessionReviewUseCase', () => {
             questionId: 'q1',
             isAnswered: true,
             isCorrect: null,
+            isOmitted: false,
             markedForReview: false,
           },
           {
             questionId: 'q2',
             isAnswered: true,
             isCorrect: null,
+            isOmitted: false,
             markedForReview: true,
           },
           {
             questionId: 'q3',
             isAnswered: false,
             isCorrect: null,
+            isOmitted: false,
             markedForReview: false,
+          },
+        ],
+      },
+    );
+  });
+
+  it('marks ended exam terminal-null question states as omitted incorrect rows', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'exam',
+      endedAt: new Date('2026-02-06T00:10:00Z'),
+      questionIds: ['q1'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: false,
+          latestAnsweredAt: new Date('2026-02-06T00:10:00Z'),
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 0,
+        },
+      ],
+    });
+
+    const useCase = new GetPracticeSessionReviewUseCase(
+      new FakePracticeSessionRepository([session]),
+      new FakeQuestionRepository([
+        createQuestion({
+          id: 'q1',
+          slug: 'q-1',
+          stemMd: 'Stem for q1',
+          difficulty: 'easy',
+        }),
+      ]),
+      new FakeLogger(),
+    );
+
+    await expect(useCase.execute({ userId, sessionId })).resolves.toMatchObject(
+      {
+        answeredCount: 0,
+        rows: [
+          {
+            questionId: 'q1',
+            isAnswered: false,
+            isCorrect: false,
+            isOmitted: true,
           },
         ],
       },
@@ -436,6 +493,7 @@ describe('GetPracticeSessionReviewUseCase', () => {
             order: 1,
             isAnswered: true,
             isCorrect: true,
+            isOmitted: false,
             markedForReview: true,
           },
           {
@@ -445,6 +503,7 @@ describe('GetPracticeSessionReviewUseCase', () => {
             order: 2,
             isAnswered: false,
             isCorrect: null,
+            isOmitted: false,
             markedForReview: false,
           },
         ],

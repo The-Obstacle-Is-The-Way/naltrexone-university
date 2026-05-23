@@ -15,9 +15,9 @@ import {
   toQuestionRoute,
 } from '@/lib/routes';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
-import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import type {
   LoadState,
+  QuestionPageSubmitResult,
   ReviewHydrationState,
   SessionNavigation,
   SessionUnansweredReveal,
@@ -148,7 +148,7 @@ export type QuestionViewProps = {
   loadState: LoadState;
   question: GetQuestionBySlugOutput | null;
   selectedChoiceId: string | null;
-  submitResult: SubmitAnswerOutput | null;
+  submitResult: QuestionPageSubmitResult | null;
   isLoadingPreviousAttempt?: boolean;
   reviewHydrationState?: ReviewHydrationState | null;
   sessionUnansweredReveal?: SessionUnansweredReveal | null;
@@ -225,7 +225,10 @@ export function QuestionView(props: QuestionViewProps) {
     !props.isLoadingPreviousAttempt
       ? {
           isCorrect: props.submitResult?.isCorrect ?? false,
-          isUnanswered: isSessionReviewUnansweredReveal,
+          isOmitted: props.submitResult?.isOmitted ?? false,
+          isUnanswered:
+            isSessionReviewUnansweredReveal &&
+            !(props.submitResult?.isOmitted ?? false),
           explanationMd:
             props.submitResult?.explanationMd ??
             sessionUnansweredReveal?.explanationMd ??

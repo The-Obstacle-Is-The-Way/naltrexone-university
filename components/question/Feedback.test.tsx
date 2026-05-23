@@ -1128,6 +1128,27 @@ describe('Feedback', () => {
     expect(html).toContain('First option');
   });
 
+  it('renders omitted attempts as incorrect with no selected answer', () => {
+    const html = renderToStaticMarkup(
+      <Feedback
+        isCorrect={false}
+        isOmitted={true}
+        explanationMd="General explanation."
+        selectedChoiceId={null}
+        choiceExplanations={choicesWithCorrectBConfirmed}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    expect(doc.querySelector('[data-testid="verdict-pill"]')?.textContent).toBe(
+      'Incorrect',
+    );
+    expect(html).toContain('No answer selected.');
+    expect(html).toContain('Correct Answer');
+    expect(html).not.toContain('Your answer');
+  });
+
   it('falls back gracefully when selectedChoiceId is unknown in incorrect flow', () => {
     const html = renderToStaticMarkup(
       <Feedback

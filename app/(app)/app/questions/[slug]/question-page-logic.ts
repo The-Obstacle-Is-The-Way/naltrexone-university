@@ -24,6 +24,10 @@ const PREVIOUS_ATTEMPT_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 
 export type LoadState = AsyncLoadState;
 
+export type QuestionPageSubmitResult = SubmitAnswerOutput & {
+  isOmitted?: boolean;
+};
+
 export type SessionNavigation = {
   questions: ReadonlyArray<{
     slug: string;
@@ -332,7 +336,7 @@ export async function loadPreviousAttempt(input: {
     input: unknown,
   ) => Promise<ActionResult<GetPreviousAttemptOutput | null>>;
   setSelectedChoiceId: (choiceId: string | null) => void;
-  setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  setSubmitResult: (result: QuestionPageSubmitResult | null) => void;
   setReviewSessionMode?: (mode: 'tutor' | 'exam' | null) => void;
   setSessionUnansweredReveal?: (reveal: SessionUnansweredReveal | null) => void;
   setReviewHydrationState?: (state: ReviewHydrationState) => void;
@@ -414,6 +418,7 @@ export async function loadPreviousAttempt(input: {
   input.setSelectedChoiceId(data.selectedChoiceId);
   input.setSubmitResult({
     attemptId: data.attemptId,
+    isOmitted: data.isOmitted,
     isCorrect: data.isCorrect,
     correctChoiceId: data.correctChoiceId,
     explanationMd: data.explanationMd,

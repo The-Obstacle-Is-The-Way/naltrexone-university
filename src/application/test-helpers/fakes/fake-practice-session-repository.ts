@@ -2,9 +2,11 @@ import { ApplicationError } from '@/src/application/errors';
 import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
 import type { PracticeSession } from '@/src/domain/entities';
 import type {
+  AnswerOutcome,
   PracticeMode,
   QuestionDifficulty,
 } from '@/src/domain/value-objects';
+import { selectedChoiceIdOrNull } from '@/src/domain/value-objects';
 
 export class FakePracticeSessionRepository
   implements PracticeSessionRepository
@@ -267,7 +269,7 @@ export class FakePracticeSessionRepository
     sessionId: string;
     userId: string;
     questionId: string;
-    selectedChoiceId: string;
+    outcome: AnswerOutcome;
     isCorrect: boolean;
     answeredAt: Date;
   }): Promise<PracticeSession['questionStates'][number]> {
@@ -281,7 +283,7 @@ export class FakePracticeSessionRepository
         if (state.questionId !== input.questionId) return state;
         updatedState = {
           ...state,
-          latestSelectedChoiceId: input.selectedChoiceId,
+          latestSelectedChoiceId: selectedChoiceIdOrNull(input.outcome),
           latestIsCorrect: input.isCorrect,
           latestAnsweredAt: input.answeredAt,
           draftSelectedChoiceId: null,

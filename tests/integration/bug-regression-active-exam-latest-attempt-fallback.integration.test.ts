@@ -14,7 +14,8 @@ async function insertAttemptAt(input: {
   userId: string;
   questionId: string;
   practiceSessionId: string | null;
-  selectedChoiceId: string;
+  selectedChoiceId?: string;
+  outcome?: { kind: 'answered'; selectedChoiceId: string };
   isCorrect?: boolean;
   answeredAt: Date;
 }) {
@@ -22,7 +23,7 @@ async function insertAttemptAt(input: {
     userId: input.userId,
     questionId: input.questionId,
     practiceSessionId: input.practiceSessionId,
-    selectedChoiceId: input.selectedChoiceId,
+    selectedChoiceId: input.selectedChoiceId ?? input.outcome?.selectedChoiceId,
     isCorrect: input.isCorrect ?? true,
     timeSpentSeconds: 5,
     answeredAt: input.answeredAt,
@@ -573,7 +574,10 @@ describe('BUG-239: Latest-attempt readers apply active-exam visibility', () => {
       userId: user.id,
       questionId: question.id,
       practiceSessionId: null,
-      selectedChoiceId: question.incorrectChoiceId,
+      outcome: {
+        kind: 'answered',
+        selectedChoiceId: question.incorrectChoiceId,
+      },
       isCorrect: false,
       answeredAt: olderVisibleAt,
     });
@@ -596,7 +600,10 @@ describe('BUG-239: Latest-attempt readers apply active-exam visibility', () => {
     ).resolves.toMatchObject({
       questionId: question.id,
       practiceSessionId: null,
-      selectedChoiceId: question.incorrectChoiceId,
+      outcome: {
+        kind: 'answered',
+        selectedChoiceId: question.incorrectChoiceId,
+      },
       isCorrect: false,
       answeredAt: olderVisibleAt,
     });
@@ -623,7 +630,10 @@ describe('BUG-239: Latest-attempt readers apply active-exam visibility', () => {
       userId: user.id,
       questionId: question.id,
       practiceSessionId: tutorSession.id,
-      selectedChoiceId: question.incorrectChoiceId,
+      outcome: {
+        kind: 'answered',
+        selectedChoiceId: question.incorrectChoiceId,
+      },
       isCorrect: false,
       answeredAt: olderVisibleAt,
     });
@@ -646,7 +656,10 @@ describe('BUG-239: Latest-attempt readers apply active-exam visibility', () => {
     ).resolves.toMatchObject({
       questionId: question.id,
       practiceSessionId: tutorSession.id,
-      selectedChoiceId: question.incorrectChoiceId,
+      outcome: {
+        kind: 'answered',
+        selectedChoiceId: question.incorrectChoiceId,
+      },
       isCorrect: false,
       answeredAt: olderVisibleAt,
     });
@@ -673,7 +686,10 @@ describe('BUG-239: Latest-attempt readers apply active-exam visibility', () => {
       userId: user.id,
       questionId: question.id,
       practiceSessionId: endedExamSession.id,
-      selectedChoiceId: question.incorrectChoiceId,
+      outcome: {
+        kind: 'answered',
+        selectedChoiceId: question.incorrectChoiceId,
+      },
       isCorrect: false,
       answeredAt: olderVisibleAt,
     });
@@ -696,7 +712,10 @@ describe('BUG-239: Latest-attempt readers apply active-exam visibility', () => {
     ).resolves.toMatchObject({
       questionId: question.id,
       practiceSessionId: endedExamSession.id,
-      selectedChoiceId: question.incorrectChoiceId,
+      outcome: {
+        kind: 'answered',
+        selectedChoiceId: question.incorrectChoiceId,
+      },
       isCorrect: false,
       answeredAt: olderVisibleAt,
     });
@@ -727,7 +746,10 @@ describe('BUG-239: Latest-attempt readers apply active-exam visibility', () => {
       userId: user.id,
       questionId: question.id,
       practiceSessionId: activeExamSession.id,
-      selectedChoiceId: question.correctChoiceId,
+      outcome: {
+        kind: 'answered',
+        selectedChoiceId: question.correctChoiceId,
+      },
       isCorrect: true,
       answeredAt: activeExamAt,
     });
@@ -743,7 +765,10 @@ describe('BUG-239: Latest-attempt readers apply active-exam visibility', () => {
     ).resolves.toMatchObject({
       questionId: question.id,
       practiceSessionId: activeExamSession.id,
-      selectedChoiceId: question.correctChoiceId,
+      outcome: {
+        kind: 'answered',
+        selectedChoiceId: question.correctChoiceId,
+      },
       isCorrect: true,
       answeredAt: activeExamAt,
     });

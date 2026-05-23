@@ -175,6 +175,7 @@ describe('practice-controller', () => {
               order: 1,
               isAnswered: true,
               isCorrect: false,
+              isOmitted: false,
               markedForReview: true,
             },
           ],
@@ -290,6 +291,7 @@ describe('practice-controller', () => {
               order: 1,
               isAnswered: true,
               isCorrect: false,
+              isOmitted: false,
               markedForReview: false,
               choices: [
                 {

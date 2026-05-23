@@ -1,11 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { createQuestion, createTag } from '@/src/domain/test-helpers';
+import {
+  type AnswerOutcome,
+  answeredOutcome,
+} from '@/src/domain/value-objects';
 import { FakeAttemptRepository } from './fake-attempt-repository';
 
 type SeedAttempt = NonNullable<
   ConstructorParameters<typeof FakeAttemptRepository>[0]
 >[number];
 type VisibilitySeedAttempt = SeedAttempt;
+type VisibilitySeedAttemptOverrides = Partial<Omit<SeedAttempt, 'outcome'>> & {
+  outcome?: AnswerOutcome;
+  selectedChoiceId?: string;
+};
 
 const userId = 'user-1';
 const hiddenActiveExamAt = new Date('2026-04-25T12:00:00Z');
@@ -14,26 +22,29 @@ const visibleTutorAt = new Date('2026-04-25T10:00:00Z');
 const visibleStandaloneAt = new Date('2026-04-25T09:00:00Z');
 
 function makeAttempt(
-  overrides: Partial<VisibilitySeedAttempt> = {},
+  overrides: VisibilitySeedAttemptOverrides = {},
 ): VisibilitySeedAttempt {
+  const { selectedChoiceId, ...attemptOverrides } = overrides;
+
   return {
     id: 'attempt-1',
     userId,
     questionId: 'q-1',
     practiceSessionId: null,
-    selectedChoiceId: 'c-1',
+    outcome:
+      attemptOverrides.outcome ?? answeredOutcome(selectedChoiceId ?? 'c-1'),
     isCorrect: true,
     timeSpentSeconds: 0,
     retryOfAttemptId: null,
     retryOrigin: null,
     retrySessionId: null,
     answeredAt: new Date('2026-02-01T00:00:00Z'),
-    ...overrides,
+    ...attemptOverrides,
   };
 }
 
 function activeExamSeed(
-  overrides: Partial<VisibilitySeedAttempt> = {},
+  overrides: VisibilitySeedAttemptOverrides = {},
 ): VisibilitySeedAttempt {
   return makeAttempt({
     id: 'attempt-active-exam',
@@ -49,7 +60,7 @@ function activeExamSeed(
 }
 
 function endedExamSeed(
-  overrides: Partial<VisibilitySeedAttempt> = {},
+  overrides: VisibilitySeedAttemptOverrides = {},
 ): VisibilitySeedAttempt {
   return activeExamSeed({
     id: 'attempt-ended-exam',
@@ -64,7 +75,7 @@ function endedExamSeed(
 }
 
 function tutorSeed(
-  overrides: Partial<VisibilitySeedAttempt> = {},
+  overrides: VisibilitySeedAttemptOverrides = {},
 ): VisibilitySeedAttempt {
   return activeExamSeed({
     id: 'attempt-tutor',
@@ -80,7 +91,7 @@ function tutorSeed(
 }
 
 function standaloneSeed(
-  overrides: Partial<VisibilitySeedAttempt> = {},
+  overrides: VisibilitySeedAttemptOverrides = {},
 ): VisibilitySeedAttempt {
   return activeExamSeed({
     id: 'attempt-standalone',
@@ -96,7 +107,7 @@ function standaloneSeed(
 }
 
 function legacyExamSeed(
-  overrides: Partial<VisibilitySeedAttempt> = {},
+  overrides: VisibilitySeedAttemptOverrides = {},
 ): VisibilitySeedAttempt {
   const attempt = activeExamSeed({
     id: 'attempt-legacy-exam',

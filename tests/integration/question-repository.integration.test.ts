@@ -256,6 +256,75 @@ describe('DrizzleQuestionRepository', () => {
       expect(result).toEqual([qLatestIncorrect.id]);
     });
 
+    it('treats omitted attempts as incorrect and not unanswered', async () => {
+      const user = await createUser(db, cleanup);
+      const tag = await createTag(db, cleanup, {
+        slug: `it-omitted-status-tag-${randomUUID()}`,
+        kind: 'topic',
+      });
+
+      const qOmitted = await createQuestion(db, cleanup, {
+        slug: `it-omitted-status-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        tagIds: [tag.id],
+      });
+      const qNeverAnswered = await createQuestion(db, cleanup, {
+        slug: `it-never-status-${randomUUID()}`,
+        status: 'published',
+        difficulty: 'easy',
+        createdAt: new Date('2026-01-02T00:00:00.000Z'),
+        tagIds: [tag.id],
+      });
+
+      await db.insert(schema.attempts).values({
+        userId: user.id,
+        questionId: qOmitted.id,
+        practiceSessionId: null,
+        selectedChoiceId: null,
+        isOmitted: true,
+        isCorrect: false,
+        timeSpentSeconds: 0,
+        answeredAt: new Date('2026-02-01T00:00:00.000Z'),
+      });
+
+      const repo = new DrizzleQuestionRepository(db);
+      await expect(
+        repo.listPublishedCandidateIds({
+          tagSlugs: [tag.slug],
+          difficulties: [],
+          statuses: ['unanswered'],
+          userId: user.id,
+        }),
+      ).resolves.toEqual([qNeverAnswered.id]);
+      await expect(
+        repo.countPublishedCandidateIds({
+          tagSlugs: [tag.slug],
+          difficulties: [],
+          statuses: ['unanswered'],
+          userId: user.id,
+        }),
+      ).resolves.toBe(1);
+
+      await expect(
+        repo.listPublishedCandidateIds({
+          tagSlugs: [tag.slug],
+          difficulties: [],
+          statuses: ['incorrect'],
+          userId: user.id,
+        }),
+      ).resolves.toEqual([qOmitted.id]);
+      await expect(
+        repo.countPublishedCandidateIds({
+          tagSlugs: [tag.slug],
+          difficulties: [],
+          statuses: ['incorrect'],
+          userId: user.id,
+        }),
+      ).resolves.toBe(1);
+    });
+
     it('returns only bookmarked questions when status=bookmarked', async () => {
       const user = await createUser(db, cleanup);
 

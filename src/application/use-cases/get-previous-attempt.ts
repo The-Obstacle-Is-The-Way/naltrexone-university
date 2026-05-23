@@ -4,7 +4,11 @@ import type {
   QuestionRepository,
 } from '@/src/application/ports/repositories';
 import type { Question } from '@/src/domain/entities';
-import type { PracticeMode } from '@/src/domain/value-objects';
+import {
+  isOmittedOutcome,
+  type PracticeMode,
+  selectedChoiceIdOrNull,
+} from '@/src/domain/value-objects';
 import { ApplicationError } from '../errors';
 import type { AttemptSingleQuestionReader } from '../ports/attempt-repository';
 import {
@@ -23,7 +27,8 @@ export type AttemptPreviousAttemptOutput = {
   kind: 'attempt';
   sessionMode: PracticeMode | null;
   attemptId: string;
-  selectedChoiceId: string;
+  selectedChoiceId: string | null;
+  isOmitted: boolean;
   isCorrect: boolean;
   correctChoiceId: string;
   explanationMd: string | null;
@@ -187,7 +192,8 @@ export class GetPreviousAttemptUseCase {
         kind: 'attempt',
         sessionMode,
         attemptId: attempt.id,
-        selectedChoiceId: attempt.selectedChoiceId,
+        selectedChoiceId: selectedChoiceIdOrNull(attempt.outcome),
+        isOmitted: isOmittedOutcome(attempt.outcome),
         isCorrect: attempt.isCorrect,
         correctChoiceId: correctChoice.id,
         explanationMd: question.explanationMd,
@@ -221,7 +227,8 @@ export class GetPreviousAttemptUseCase {
       kind: 'attempt',
       sessionMode: null,
       attemptId: attempt.id,
-      selectedChoiceId: attempt.selectedChoiceId,
+      selectedChoiceId: selectedChoiceIdOrNull(attempt.outcome),
+      isOmitted: isOmittedOutcome(attempt.outcome),
       isCorrect: attempt.isCorrect,
       correctChoiceId: correctChoice.id,
       explanationMd: question.explanationMd,
