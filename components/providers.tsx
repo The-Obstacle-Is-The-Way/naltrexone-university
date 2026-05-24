@@ -17,8 +17,8 @@ const CLERK_APPEARANCE_DARK = {
   variables: {
     colorBackground: '#121212',
     colorPrimary: '#e4e4e7',
-    colorText: '#ededed',
-    colorTextSecondary: '#737373',
+    colorForeground: '#ededed',
+    colorMutedForeground: '#737373',
     borderRadius: '0.75rem',
   },
 } as const;
@@ -28,8 +28,8 @@ const CLERK_APPEARANCE_LIGHT = {
   variables: {
     colorBackground: '#ffffff',
     colorPrimary: '#111827',
-    colorText: '#09090b',
-    colorTextSecondary: '#71717a',
+    colorForeground: '#09090b',
+    colorMutedForeground: '#71717a',
     borderRadius: '0.75rem',
   },
 } as const;

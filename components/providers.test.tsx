@@ -85,4 +85,54 @@ describe('Providers', () => {
     expect(html).toContain('data-dynamic="true"');
     expect(html).toContain('data-nonce="nonce-123"');
   });
+
+  it('passes Clerk UI appearance variables using current foreground token names', async () => {
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+
+    vi.doMock('next-themes', () => ({
+      useTheme: () => ({ resolvedTheme: 'dark' }),
+    }));
+    vi.doMock('@clerk/nextjs', () => {
+      throw new Error('Publishable key not valid.');
+    });
+    vi.doMock('next/dynamic', () => ({
+      default: () =>
+        function MockClerkProvider({
+          appearance,
+          children,
+        }: {
+          appearance?: {
+            variables?: Record<string, string | undefined>;
+          };
+          children: ReactNode;
+        }) {
+          const variables = appearance?.variables ?? {};
+
+          return (
+            <div
+              data-testid="clerk-provider"
+              data-color-foreground={variables.colorForeground}
+              data-color-muted-foreground={variables.colorMutedForeground}
+              data-color-text={variables.colorText}
+              data-color-text-secondary={variables.colorTextSecondary}
+            >
+              {children}
+            </div>
+          );
+        },
+    }));
+
+    const { Providers } = await import('@/components/providers');
+
+    const html = renderToStaticMarkup(
+      <Providers>
+        <div>child</div>
+      </Providers>,
+    );
+
+    expect(html).toContain('data-color-foreground="#ededed"');
+    expect(html).toContain('data-color-muted-foreground="#737373"');
+    expect(html).not.toContain('data-color-text=');
+    expect(html).not.toContain('data-color-text-secondary=');
+  });
 });
