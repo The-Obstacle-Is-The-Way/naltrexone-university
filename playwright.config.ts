@@ -3,8 +3,8 @@ import { config } from 'dotenv';
 
 // Prefer `.env.local` for developer-specific secrets, with `.env` as a fallback.
 // Never override explicitly provided environment variables.
-config({ path: '.env.local' });
-config({ path: '.env' });
+config({ path: '.env.local', override: false, quiet: true });
+config({ path: '.env', override: false, quiet: true });
 
 const baseURL = process.env.NEXT_PUBLIC_APP_URL || 'http://127.0.0.1:3000';
 

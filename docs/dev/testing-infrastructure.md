@@ -127,7 +127,7 @@ Individual spec files still use `test.skip(!hasClerkCredentials, ...)`, but that
 Local E2E uses the database in `.env.local`, not the Docker database used by `pnpm test:integration`. After pulling code with new Drizzle migrations, migrate the `.env.local` target before running E2E:
 
 ```bash
-LOCAL_E2E_DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env.local' }); const url = process.env.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
+LOCAL_E2E_DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env.local', quiet: true }); const url = process.env.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
 node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$LOCAL_E2E_DATABASE_URL"
 DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm db:migrate
 lsof -ti:3000 | xargs kill -9 2>/dev/null
@@ -252,8 +252,8 @@ import { config } from 'dotenv';
 import { chromium } from '@playwright/test';
 
 async function main() {
-  config({ path: '.env.local' });
-  config({ path: '.env' });
+  config({ path: '.env.local', quiet: true });
+  config({ path: '.env', quiet: true });
 
   const baseURL = process.env.NEXT_PUBLIC_APP_URL || 'http://127.0.0.1:3000';
   const username = process.env.E2E_CLERK_USER_USERNAME;

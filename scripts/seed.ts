@@ -8,8 +8,8 @@ import { readSeedQuestionFiles } from './seed/file-reader';
 import { archivePlaceholderQuestions } from './seed/placeholder-archiver';
 import { syncQuestionsFromFiles } from './seed/question-syncer';
 
-dotenv.config({ path: '.env.local' });
-dotenv.config({ path: '.env' });
+dotenv.config({ path: '.env.local', quiet: true });
+dotenv.config({ path: '.env', quiet: true });
 
 export async function runSeed(): Promise<void> {
   const databaseUrl = process.env.DATABASE_URL;
