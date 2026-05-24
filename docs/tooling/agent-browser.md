@@ -68,7 +68,7 @@ set -a && source .env.local && set +a
 Or via Node (shell-safe):
 
 ```bash
-EMAIL=$(node -e "require('dotenv').config({path:'.env.local'});require('dotenv').config({path:'.env'});process.stdout.write(process.env.E2E_CLERK_USER_USERNAME||'')")
+EMAIL=$(node -e "require('dotenv').config({path:'.env.local', quiet:true});require('dotenv').config({path:'.env', quiet:true});process.stdout.write(process.env.E2E_CLERK_USER_USERNAME||'')")
 ```
 
 ---
