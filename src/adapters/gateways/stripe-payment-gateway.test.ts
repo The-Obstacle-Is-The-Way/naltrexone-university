@@ -408,7 +408,7 @@ describe('StripePaymentGateway', () => {
     expect(sessionsRetrieve).toHaveBeenCalledWith('cs_existing', {
       expand: ['line_items'],
     });
-    expect(sessionsExpire).toHaveBeenCalledWith('cs_existing', {
+    expect(sessionsExpire).toHaveBeenCalledWith('cs_existing', undefined, {
       idempotencyKey: 'expire_checkout_session:cs_existing',
     });
     expect(sessionsCreate).toHaveBeenCalledWith(
@@ -453,7 +453,7 @@ describe('StripePaymentGateway', () => {
     expect(sessionsRetrieve).toHaveBeenCalledWith('cs_existing', {
       expand: ['line_items'],
     });
-    expect(sessionsExpire).toHaveBeenCalledWith('cs_existing', {
+    expect(sessionsExpire).toHaveBeenCalledWith('cs_existing', undefined, {
       idempotencyKey: 'expire_checkout_session:cs_existing',
     });
     expect(sessionsCreate).toHaveBeenCalledTimes(1);

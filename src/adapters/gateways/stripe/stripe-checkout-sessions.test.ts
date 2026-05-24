@@ -468,7 +468,7 @@ describe('createStripeCheckoutSession', () => {
       }),
     ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
 
-    expect(sessionsExpire).toHaveBeenCalledWith('cs_open', {
+    expect(sessionsExpire).toHaveBeenCalledWith('cs_open', undefined, {
       idempotencyKey: 'expire_checkout_session:cs_open',
     });
     expect(sessionsCreate).toHaveBeenCalledTimes(1);
@@ -529,7 +529,7 @@ describe('createStripeCheckoutSession', () => {
       }),
     ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
 
-    expect(sessionsExpire).toHaveBeenCalledWith('cs_open', {
+    expect(sessionsExpire).toHaveBeenCalledWith('cs_open', undefined, {
       idempotencyKey: 'expire_checkout_session:cs_open',
     });
     expect(sessionsCreate).toHaveBeenCalledTimes(1);
@@ -647,7 +647,7 @@ describe('createStripeCheckoutSession', () => {
     ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
 
     expect(sessionsRetrieve).toHaveBeenCalledTimes(1);
-    expect(sessionsExpire).toHaveBeenCalledWith('cs_open', {
+    expect(sessionsExpire).toHaveBeenCalledWith('cs_open', undefined, {
       idempotencyKey: 'expire_checkout_session:cs_open',
     });
     expect(sessionsCreate).toHaveBeenCalledTimes(1);
@@ -674,7 +674,7 @@ describe('createStripeCheckoutSession', () => {
     ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
 
     expect(sessionsRetrieve).toHaveBeenCalledTimes(1);
-    expect(sessionsExpire).toHaveBeenCalledWith('cs_open', {
+    expect(sessionsExpire).toHaveBeenCalledWith('cs_open', undefined, {
       idempotencyKey: 'expire_checkout_session:cs_open',
     });
     expect(sessionsCreate).toHaveBeenCalledTimes(1);

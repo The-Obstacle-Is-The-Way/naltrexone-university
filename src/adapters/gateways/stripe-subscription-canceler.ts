@@ -17,7 +17,8 @@ type StripeSubscriptionsClient = {
   }) => AsyncIterable<StripeSubscriptionLike>;
   cancel: (
     subscriptionId: string,
-    input: { idempotencyKey: string },
+    input: undefined,
+    options: { idempotencyKey: string },
   ) => Promise<unknown>;
 };
 
@@ -48,7 +49,7 @@ export async function cancelStripeCustomerSubscriptions(
       await callStripeWithRetry({
         operation: 'subscriptions.cancel',
         fn: () =>
-          stripe.subscriptions.cancel(subscription.id, {
+          stripe.subscriptions.cancel(subscription.id, undefined, {
             idempotencyKey: `cancel_subscription:${subscription.id}`,
           }),
         logger,

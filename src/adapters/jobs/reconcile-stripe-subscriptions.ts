@@ -242,7 +242,7 @@ export async function reconcileStripeSubscriptions(
                 await callStripeWithRetry({
                   operation: 'subscriptions.cancel',
                   fn: () =>
-                    cancelSubscription(duplicateId, {
+                    cancelSubscription(duplicateId, undefined, {
                       idempotencyKey: `reconcile_duplicate_subscription:${duplicateId}`,
                     }),
                   logger: deps.logger,

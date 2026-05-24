@@ -246,7 +246,7 @@ export async function createStripeCheckoutSession({
         await callStripeWithRetry({
           operation: 'checkout.sessions.expire',
           fn: () =>
-            stripe.checkout.sessions.expire(existingSession.id, {
+            stripe.checkout.sessions.expire(existingSession.id, undefined, {
               idempotencyKey: `expire_checkout_session:${existingSession.id}`,
             }),
           logger,

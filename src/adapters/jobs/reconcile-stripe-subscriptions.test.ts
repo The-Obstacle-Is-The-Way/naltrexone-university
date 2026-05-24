@@ -777,12 +777,18 @@ describe('reconcileStripeSubscriptions', () => {
       failures: [],
     });
     expect(stripe.subscriptions.cancel).toHaveBeenCalledTimes(2);
-    expect(stripe.subscriptions.cancel).toHaveBeenNthCalledWith(1, 'sub_keep', {
-      idempotencyKey: 'reconcile_duplicate_subscription:sub_keep',
-    });
+    expect(stripe.subscriptions.cancel).toHaveBeenNthCalledWith(
+      1,
+      'sub_keep',
+      undefined,
+      {
+        idempotencyKey: 'reconcile_duplicate_subscription:sub_keep',
+      },
+    );
     expect(stripe.subscriptions.cancel).toHaveBeenNthCalledWith(
       2,
       'sub_dup_1',
+      undefined,
       { idempotencyKey: 'reconcile_duplicate_subscription:sub_dup_1' },
     );
     await expect(
@@ -854,12 +860,18 @@ describe('reconcileStripeSubscriptions', () => {
       failures: [],
     });
     expect(stripe.subscriptions.cancel).toHaveBeenCalledTimes(2);
-    expect(stripe.subscriptions.cancel).toHaveBeenNthCalledWith(1, 'sub_keep', {
-      idempotencyKey: 'reconcile_duplicate_subscription:sub_keep',
-    });
+    expect(stripe.subscriptions.cancel).toHaveBeenNthCalledWith(
+      1,
+      'sub_keep',
+      undefined,
+      {
+        idempotencyKey: 'reconcile_duplicate_subscription:sub_keep',
+      },
+    );
     expect(stripe.subscriptions.cancel).toHaveBeenNthCalledWith(
       2,
       'sub_dup_1',
+      undefined,
       { idempotencyKey: 'reconcile_duplicate_subscription:sub_dup_1' },
     );
     expect(scenario.logger.infoCalls).toEqual([
@@ -1085,9 +1097,13 @@ describe('reconcileStripeSubscriptions', () => {
       failures: [],
     });
     expect(stripe.subscriptions.cancel).toHaveBeenCalledTimes(1);
-    expect(stripe.subscriptions.cancel).toHaveBeenCalledWith('sub_local', {
-      idempotencyKey: 'reconcile_duplicate_subscription:sub_local',
-    });
+    expect(stripe.subscriptions.cancel).toHaveBeenCalledWith(
+      'sub_local',
+      undefined,
+      {
+        idempotencyKey: 'reconcile_duplicate_subscription:sub_local',
+      },
+    );
     await expect(
       scenario.subscriptions.findByUserId('user_1'),
     ).resolves.toMatchObject({
@@ -1134,9 +1150,13 @@ describe('reconcileStripeSubscriptions', () => {
       failures: [],
     });
     expect(stripe.subscriptions.cancel).toHaveBeenCalledTimes(1);
-    expect(stripe.subscriptions.cancel).toHaveBeenCalledWith('sub_z', {
-      idempotencyKey: 'reconcile_duplicate_subscription:sub_z',
-    });
+    expect(stripe.subscriptions.cancel).toHaveBeenCalledWith(
+      'sub_z',
+      undefined,
+      {
+        idempotencyKey: 'reconcile_duplicate_subscription:sub_z',
+      },
+    );
     await expect(
       scenario.subscriptions.findByExternalSubscriptionId('sub_a'),
     ).resolves.toMatchObject({
@@ -1221,9 +1241,13 @@ describe('reconcileStripeSubscriptions', () => {
       stripeSubscriptionId: local.id,
       error: 'cancel failed',
     });
-    expect(stripe.subscriptions.cancel).toHaveBeenCalledWith('sub_local', {
-      idempotencyKey: 'reconcile_duplicate_subscription:sub_local',
-    });
+    expect(stripe.subscriptions.cancel).toHaveBeenCalledWith(
+      'sub_local',
+      undefined,
+      {
+        idempotencyKey: 'reconcile_duplicate_subscription:sub_local',
+      },
+    );
     await expect(
       scenario.subscriptions.findByExternalSubscriptionId('sub_better'),
     ).resolves.toMatchObject({
