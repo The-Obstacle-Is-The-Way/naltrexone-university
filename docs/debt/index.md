@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-05-23 (DEBT-390 resolved by SPEC-040/SPEC-039 and archived; DEBT-391 added for local E2E schema-drift preflight after the SPEC-040 `attempts.is_omitted` migration drifted behind the Neon `dev` branch and local authenticated E2E failed with generic attempt-insert errors.)
+**Last Updated:** 2026-05-23 (DEBT-390 resolved by SPEC-040/SPEC-039 and archived; DEBT-391 added for local E2E schema-drift preflight; DEBT-392 added for dependency hygiene across security advisories, Actions runtime drift, lockfile health, automation, runtime alignment, and license baseline.)
 
 ---
 
@@ -22,8 +22,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
 | [DEBT-381](./debt-381-question-content-typography-audit-and-preference-path.md) | Question content typography audit — Quick Practice, Tutor, and Exam are already unified at the Typography Policy Medium content tier. Do not globally shrink question text; if needed later, add a user-selectable Markdown/content-size preference while leaving UI chrome unchanged. | P3 | — |
 | [DEBT-391](./debt-391-local-e2e-schema-drift-preflight.md) | Local authenticated E2E can run against a stale `.env.local` Neon branch because the current preflight checks only database connectivity and one historical idempotency schema contract, not the full Drizzle migration journal. Add a full migration-journal/schema-drift preflight so local E2E fails fast with a targeted migration instruction instead of surfacing generic write-path errors mid-suite. | P2 | — |
+| [DEBT-392](./debt-392-dependency-hygiene-audit.md) | Dependency hygiene audit — separates production security, Actions runtime drift, lockfile/automation hygiene, runtime alignment, major upgrades, and cleanup; tracks 49 `pnpm audit` advisories, Node 20 Actions transition, failing `pnpm dedupe --check`, stale `packageManager` pin, missing Dependabot/Renovate, and missing license baseline. | P2 | — |
 
-**Next Debt ID:** DEBT-392
+**Next Debt ID:** DEBT-393
 
 ---
 
