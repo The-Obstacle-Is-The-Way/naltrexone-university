@@ -26,6 +26,17 @@ function getClassTokens(className: string): Set<string> {
   return new Set(className.split(/\s+/).filter(Boolean));
 }
 
+function findAnchorByHref(
+  doc: Document,
+  href: string,
+): HTMLAnchorElement | null {
+  return (
+    Array.from(doc.querySelectorAll('a')).find(
+      (anchor) => anchor.getAttribute('href') === href,
+    ) ?? null
+  );
+}
+
 describe('app/(app)/app/dashboard', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -200,21 +211,23 @@ describe('app/(app)/app/dashboard', () => {
     expect(html).toContain('Stem for correct');
     expect(html).toContain('Stem for incorrect');
     expect(
-      doc.querySelector(
-        `a[href="${toQuestionRoute('q-correct', {
+      findAnchorByHref(
+        doc,
+        toQuestionRoute('q-correct', {
           from: 'dashboard',
           mode: 'review',
           attemptId: 'attempt_1',
-        })}"]`,
+        }),
       ),
     ).not.toBeNull();
     expect(
-      doc.querySelector(
-        `a[href="${toQuestionRoute('q-incorrect', {
+      findAnchorByHref(
+        doc,
+        toQuestionRoute('q-incorrect', {
           from: 'dashboard',
           mode: 'review',
           attemptId: 'attempt_2',
-        })}"]`,
+        }),
       ),
     ).not.toBeNull();
     expect(html).toContain('Easy');
@@ -289,12 +302,13 @@ describe('app/(app)/app/dashboard', () => {
     const doc = new DOMParser().parseFromString(html, 'text/html');
 
     expect(
-      doc.querySelector(
-        `a[href="${toQuestionRoute('q-correct', {
+      findAnchorByHref(
+        doc,
+        toQuestionRoute('q-correct', {
           from: 'dashboard',
           mode: 'review',
           sessionId: 'session_1',
-        })}"]`,
+        }),
       ),
     ).not.toBeNull();
   });
@@ -600,19 +614,21 @@ describe('app/(app)/app/dashboard', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const sessionRow = doc.querySelector(
-      `a[href="${toQuestionRoute('q-correct', {
+    const sessionRow = findAnchorByHref(
+      doc,
+      toQuestionRoute('q-correct', {
         from: 'dashboard',
         mode: 'review',
         sessionId: 'session_1',
-      })}"]`,
+      }),
     );
-    const availableActivityRow = doc.querySelector(
-      `a[href="${toQuestionRoute('q-correct', {
+    const availableActivityRow = findAnchorByHref(
+      doc,
+      toQuestionRoute('q-correct', {
         from: 'dashboard',
         mode: 'review',
         attemptId: 'attempt_1',
-      })}"]`,
+      }),
     );
     const unavailableActivityCard = Array.from(
       doc.querySelectorAll('li > div'),
