@@ -71,7 +71,7 @@ describe('getStripe', () => {
     expect(first).toMatchObject({
       apiKey: 'sk_test_dummy',
       options: {
-        apiVersion: '2026-01-28.clover',
+        apiVersion: '2026-04-22.dahlia',
         typescript: true,
       },
     });

@@ -4,14 +4,7 @@ import { env } from '@/lib/env';
 
 let stripeInstance: Stripe | null = null;
 
-type StripeApiVersion = NonNullable<
-  ConstructorParameters<typeof Stripe>[1]
->['apiVersion'];
-
-// stripe-node v22 narrows config typing to the latest API version, while the
-// runtime still accepts older pinned versions. Keep this scoped until the
-// separate Stripe API-version PR advances the pin.
-const STRIPE_API_VERSION = '2026-01-28.clover' as StripeApiVersion;
+const STRIPE_API_VERSION = '2026-04-22.dahlia';
 
 export function getStripe(): Stripe {
   if (stripeInstance) return stripeInstance;
@@ -26,7 +19,7 @@ export function getStripe(): Stripe {
      * - Verifying webhooks + checkout flows in a staging environment
      *
      * Reference: https://stripe.com/docs/upgrades#api-versions
-     * Last reviewed: 2026-01-28
+     * Last reviewed: 2026-05-24
      */
     apiVersion: STRIPE_API_VERSION,
     typescript: true,
