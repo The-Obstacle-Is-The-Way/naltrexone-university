@@ -4,6 +4,15 @@ import { env } from '@/lib/env';
 
 let stripeInstance: Stripe | null = null;
 
+type StripeApiVersion = NonNullable<
+  ConstructorParameters<typeof Stripe>[1]
+>['apiVersion'];
+
+// stripe-node v22 narrows config typing to the latest API version, while the
+// runtime still accepts older pinned versions. Keep this scoped until the
+// separate Stripe API-version PR advances the pin.
+const STRIPE_API_VERSION = '2026-01-28.clover' as StripeApiVersion;
+
 export function getStripe(): Stripe {
   if (stripeInstance) return stripeInstance;
 
@@ -19,7 +28,7 @@ export function getStripe(): Stripe {
      * Reference: https://stripe.com/docs/upgrades#api-versions
      * Last reviewed: 2026-01-28
      */
-    apiVersion: '2026-01-28.clover',
+    apiVersion: STRIPE_API_VERSION,
     typescript: true,
   });
 

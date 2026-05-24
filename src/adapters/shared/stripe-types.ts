@@ -110,6 +110,7 @@ export type StripeClient = {
       ): Promise<StripeCheckoutSessionRetrieved>;
       expire(
         sessionId: string,
+        params?: undefined,
         options?: StripeRequestOptions,
       ): Promise<StripeCheckoutSession>;
     };
@@ -117,6 +118,7 @@ export type StripeClient = {
   subscriptions?: {
     retrieve(
       subscriptionId: string,
+      params?: undefined,
       options?: StripeRequestOptions,
     ): Promise<StripeSubscription>;
     list?(
@@ -125,6 +127,7 @@ export type StripeClient = {
     ): Promise<StripeSubscriptionListResult>;
     cancel?(
       subscriptionId: string,
+      params?: undefined,
       options?: StripeRequestOptions,
     ): Promise<StripeSubscription>;
   };

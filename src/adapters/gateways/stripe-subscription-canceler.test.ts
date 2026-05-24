@@ -33,10 +33,10 @@ describe('cancelStripeCustomerSubscriptions', () => {
       limit: 100,
     });
     expect(cancel).toHaveBeenCalledTimes(2);
-    expect(cancel).toHaveBeenNthCalledWith(1, 'sub_active', {
+    expect(cancel).toHaveBeenNthCalledWith(1, 'sub_active', undefined, {
       idempotencyKey: 'cancel_subscription:sub_active',
     });
-    expect(cancel).toHaveBeenNthCalledWith(2, 'sub_past_due', {
+    expect(cancel).toHaveBeenNthCalledWith(2, 'sub_past_due', undefined, {
       idempotencyKey: 'cancel_subscription:sub_past_due',
     });
   });
@@ -72,10 +72,10 @@ describe('cancelStripeCustomerSubscriptions', () => {
     ).resolves.toBeUndefined();
 
     expect(cancel).toHaveBeenCalledTimes(2);
-    expect(cancel).toHaveBeenNthCalledWith(1, 'sub_missing', {
+    expect(cancel).toHaveBeenNthCalledWith(1, 'sub_missing', undefined, {
       idempotencyKey: 'cancel_subscription:sub_missing',
     });
-    expect(cancel).toHaveBeenNthCalledWith(2, 'sub_active', {
+    expect(cancel).toHaveBeenNthCalledWith(2, 'sub_active', undefined, {
       idempotencyKey: 'cancel_subscription:sub_active',
     });
     expect(logger.infoCalls).toEqual([

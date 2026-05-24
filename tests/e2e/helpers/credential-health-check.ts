@@ -280,7 +280,7 @@ const defaultServices: CredentialHealthCheckServices = {
 
   verifyStripeSecretKey: async (stripe) => {
     try {
-      await stripe.accounts.retrieve();
+      await stripe.accounts.retrieve(null);
     } catch (error) {
       if (error instanceof Stripe.errors.StripeAuthenticationError) {
         throw new CredentialValidationError(
