@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import { QuestionFrontmatterSchema, TagFrontmatterSchema } from './schemas';
 
 const baseQuestionFrontmatter = {
@@ -96,7 +97,7 @@ describe('QuestionFrontmatterSchema', () => {
     if (result.success) {
       throw new Error('Test setup error: expected parse failure');
     }
-    expect(result.error.flatten().fieldErrors.tags).toEqual([
+    expect(z.flattenError(result.error).fieldErrors.tags).toEqual([
       'tag slugs must be unique',
     ]);
   });

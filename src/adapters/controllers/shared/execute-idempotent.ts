@@ -1,4 +1,4 @@
-import type { ZodType, ZodTypeDef } from 'zod';
+import type { ZodType } from 'zod';
 import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
 import type { Logger } from '@/src/application/ports/logger';
 import type { IdempotencyKeyRepository } from '@/src/application/ports/repositories';
@@ -29,7 +29,7 @@ export async function executeIdempotent<TOutput>({
   userId: string;
   idempotencyKey: string | null | undefined;
   action: string;
-  outputSchema: ZodType<TOutput, ZodTypeDef, unknown>;
+  outputSchema: ZodType<TOutput, unknown>;
   execute: () => Promise<TOutput>;
 }): Promise<TOutput> {
   if (!idempotencyKey) return execute();

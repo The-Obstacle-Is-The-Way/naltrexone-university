@@ -93,7 +93,7 @@ function validateEnv(): Env {
   const parsed = envSchema.safeParse(process.env);
 
   if (!parsed.success) {
-    logInvalidEnv(parsed.error.flatten().fieldErrors);
+    logInvalidEnv(z.flattenError(parsed.error).fieldErrors);
     throw new Error('Invalid environment variables');
   }
 

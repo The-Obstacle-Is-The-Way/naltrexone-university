@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import { retrieveAndNormalizeStripeSubscription } from '@/src/adapters/gateways/stripe/stripe-subscription-normalizer';
 import {
@@ -26,7 +27,7 @@ async function getSubscriptionUpdateForSubscriptionRefEvent(input: {
       {
         eventId: input.event.id,
         type: input.event.type,
-        error: parsedPayload.error.flatten(),
+        error: z.flattenError(parsedPayload.error),
       },
       `Invalid Stripe ${input.event.type} webhook payload`,
     );
@@ -122,7 +123,7 @@ export async function processStripeWebhookEvent({
       {
         eventId: event.id,
         type: event.type,
-        error: parsedSubscription.error.flatten(),
+        error: z.flattenError(parsedSubscription.error),
       },
       'Invalid Stripe subscription webhook payload',
     );

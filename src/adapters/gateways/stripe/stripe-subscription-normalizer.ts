@@ -1,4 +1,4 @@
-import type { z } from 'zod';
+import { z } from 'zod';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import { getSubscriptionPlanFromPriceId } from '@/src/adapters/config/stripe-prices';
 import {
@@ -134,7 +134,7 @@ export async function retrieveAndNormalizeStripeSubscription(input: {
         eventId: input.event.id,
         type: input.event.type,
         stripeSubscriptionId,
-        error: parsedSubscription.error.flatten(),
+        error: z.flattenError(parsedSubscription.error),
       },
       `Invalid Stripe subscription payload retrieved from ${input.event.type}`,
     );
