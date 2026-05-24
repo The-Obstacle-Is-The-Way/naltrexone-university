@@ -1,7 +1,7 @@
 {
   "id": "evt_1",
   "object": "event",
-  "api_version": "2026-01-28.clover",
+  "api_version": "2026-04-22.dahlia",
   "created": 1700000000,
   "livemode": false,
   "pending_webhooks": 1,
