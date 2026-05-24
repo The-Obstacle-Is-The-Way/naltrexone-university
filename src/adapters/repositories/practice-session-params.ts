@@ -146,9 +146,9 @@ export function parsePracticeSessionParamsJson(
     if (error instanceof z.ZodError) {
       const cleanedFieldErrors: Record<string, string[]> = {};
       for (const [field, messages] of Object.entries(
-        error.flatten().fieldErrors,
+        z.flattenError(error).fieldErrors,
       )) {
-        if (messages) cleanedFieldErrors[field] = messages;
+        if (Array.isArray(messages)) cleanedFieldErrors[field] = messages;
       }
 
       throw new ApplicationError(

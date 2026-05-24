@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { AllQuestionProgressStatuses } from '@/src/domain/value-objects';
 
-export const zUuid = z.string().uuid();
+export const zUuid = z.guid();
 
 export const zDifficulty = z.enum(['easy', 'medium', 'hard']);
 

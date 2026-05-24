@@ -1,4 +1,4 @@
-import type { ZodType, ZodTypeDef } from 'zod';
+import type { ZodType } from 'zod';
 import type { LoadContainerFn } from '@/lib/controller-helpers';
 import type { Logger } from '@/src/application/ports/logger';
 import type { ActionResult } from './action-result';
@@ -29,7 +29,7 @@ export function createAction<
   TDeps,
   TContainer = unknown,
 >(config: {
-  schema: ZodType<TInput, ZodTypeDef, unknown>;
+  schema: ZodType<TInput, unknown>;
   getDeps: GetDepsFn<TDeps, TContainer>;
   execute: (
     input: TInput,

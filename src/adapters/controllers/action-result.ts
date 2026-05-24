@@ -1,4 +1,4 @@
-import { ZodError } from 'zod';
+import { ZodError, z } from 'zod';
 import { logger } from '@/lib/logger';
 import type { ApplicationErrorCode } from '@/src/application/errors';
 import { isApplicationError } from '@/src/application/errors';
@@ -40,10 +40,10 @@ export function handleError(
   }
 
   if (error instanceof ZodError) {
-    const flat = error.flatten().fieldErrors;
+    const flat = z.flattenError(error).fieldErrors;
     const fieldErrors: Record<string, string[]> = {};
     for (const [key, value] of Object.entries(flat)) {
-      if (value) fieldErrors[key] = value;
+      if (Array.isArray(value)) fieldErrors[key] = value;
     }
     return err('VALIDATION_ERROR', 'Invalid input', fieldErrors);
   }

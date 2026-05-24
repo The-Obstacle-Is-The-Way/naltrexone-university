@@ -7,6 +7,7 @@ import {
   CHECKOUT_SESSION_RATE_LIMIT,
   PORTAL_SESSION_RATE_LIMIT,
 } from '@/src/adapters/shared/rate-limits';
+import { zUuid } from '@/src/adapters/shared/zod-schemas';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   AuthGateway,
@@ -24,7 +25,7 @@ import { createAction } from './create-action';
 import { executeIdempotent } from './shared/execute-idempotent';
 
 const zSubscriptionPlan = z.enum(['monthly', 'annual']);
-const zIdempotencyKey = z.string().uuid();
+const zIdempotencyKey = zUuid;
 
 const CreateCheckoutSessionInputSchema = z
   .object({

@@ -20,7 +20,7 @@ export const stripeSubscriptionSchema = z
     customer: z.string(),
     status: z.string(),
     cancel_at_period_end: z.boolean(),
-    metadata: z.record(z.string()).optional(),
+    metadata: z.record(z.string(), z.string()).optional(),
     items: z.object({
       data: z.array(stripeSubscriptionItemSchema).min(1),
     }),
