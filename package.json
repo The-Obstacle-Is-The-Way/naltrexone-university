@@ -82,7 +82,7 @@
     "@vitest/browser-playwright": "^4.1.7",
     "@vitest/coverage-v8": "^4.1.7",
     "husky": "^9.1.7",
-    "jsdom": "^26.1.0",
+    "jsdom": "^29.1.1",
     "lint-staged": "^17.0.5",
     "tsx": "^4.20.5",
     "vite": "7.3.3",
