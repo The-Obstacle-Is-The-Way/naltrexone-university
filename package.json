@@ -74,7 +74,7 @@
     "@biomejs/biome": "^2.3.13",
     "@clerk/testing": "^2.0.33",
     "@playwright/test": "^1.60.0",
-    "@types/node": "^24.12.4",
+    "@types/node": "^25.9.1",
     "@types/react": "19.2.10",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "^5.2.0",
