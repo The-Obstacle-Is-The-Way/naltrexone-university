@@ -155,5 +155,6 @@ The seed script is fully idempotent. See [Content Pipeline §16: Seed Idempotenc
 ## Related
 
 - [Deployment Environments](./deployment-environments.md) — Env var scoping, Clerk/Stripe/Neon config
+- [License Baseline](./license-baseline.md) — Production dependency license distribution and review-worthy exceptions
 - [Content Pipeline](../practice-engine/content-pipeline.md) — MDX → seed → DB flow
 - [SPEC-033 §14](../_archive/specs/spec-033-tag-taxonomy-migration.md) — Tag taxonomy DB sync procedure
