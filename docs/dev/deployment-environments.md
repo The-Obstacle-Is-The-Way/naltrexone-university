@@ -170,6 +170,7 @@ When changing environment configuration, verify all of the following:
 
 - [deployment-procedure.md](./deployment-procedure.md)
 - [database-rollbacks.md](./database-rollbacks.md)
+- [license-baseline.md](./license-baseline.md)
 - [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md)
 - [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md)
 - [proxy.ts](../../proxy.ts)
