@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeAuthGateway } from '@/src/application/test-helpers/fakes/fake-gateways';
 import { FakeCheckEntitlementUseCase } from '@/src/application/test-helpers/fakes/fake-use-cases';
 import { createUser } from '@/src/domain/test-helpers/factories';
@@ -16,6 +16,10 @@ vi.mock('next/link', () => ({
 const ORIGINAL_ENV = snapshotProcessEnv();
 
 describe('GetStartedCta', () => {
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+  });
+
   afterEach(() => {
     restoreProcessEnv(ORIGINAL_ENV);
     vi.resetModules();
