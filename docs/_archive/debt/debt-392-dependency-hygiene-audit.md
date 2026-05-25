@@ -5,7 +5,7 @@
 **Source:** Periodic dependency hygiene audit after the SPEC-040 / SPEC-039 / DEBT-391 ship to main. The proximate trigger was a Node.js 20 deprecation warning printed by GitHub Actions in the merge CI run for PR #320 (run `26346890442`, job step "Complete job").
 **Related:** [DEBT-391](./debt-391-local-e2e-schema-drift-preflight.md), [DEBT-340 (archived, Clerk v7 + Next.js 16.2.1 upgrade)](../_archive/debt/debt-340-clerk-v7-nextjs-upgrade.md), [DEBT-332 (security posture audit)](./debt-332-security-posture-audit.md)
 
-**Status:** Active
+**Status:** Resolved 2026-05-25 — all six tiers shipped across 14 PRs (#321, #322, #323, #324, #325, #328, #329, #330, #331, #332, #333, #334, #335, #339). Final `pnpm audit`: 0 critical / 0 high / 3 moderate. Dependabot is now live and has begun opening weekly PRs; triage of those open PRs and supply-chain hardening (pnpm 11 + `minimumReleaseAge` / `strictDepBuilds` / `blockExoticSubdeps` / `trustPolicy`) are tracked as separate follow-up debt cycles.
 
 ---
 
