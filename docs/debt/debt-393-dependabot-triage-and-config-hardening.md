@@ -2,8 +2,8 @@
 
 **Priority:** P2 (three Dependabot PRs already open and red on CI; without a triage protocol and a tighter config, the weekly queue will accumulate noise and one of the three carries a real footgun — `@types/node` major-jumping past our Node LTS pin.)
 **Created:** 2026-05-25
-**Source:** Follow-up to [DEBT-392](../_archive/debt/debt-392-dependency-hygiene-audit.md) Tier 6b, which installed Dependabot. The first weekly run on 2026-05-25 opened three PRs (#336, #337, #338); all three are red on `test`, two are footgun-free real updates and one is a hard reject. There is no documented protocol for how we triage these and no `ignore` rule preventing the hard-reject class from recurring weekly.
-**Related:** [DEBT-394](./debt-394-supply-chain-hardening.md) (supply-chain hardening; this doc deliberately leaves `cooldown`/`minimumReleaseAge` policy to DEBT-394 because those settings move together), [DEBT-392](../_archive/debt/debt-392-dependency-hygiene-audit.md) (parent), [DEBT-340 (archived, Clerk v7 + Next.js 16.2.1 upgrade)](../_archive/debt/debt-340-clerk-v7-nextjs-upgrade.md)
+**Source:** Follow-up to [DEBT-392](../_archive/debt/debt-392-dependency-hygiene-audit.md) Tier 6b, which installed Dependabot. The first weekly run on 2026-05-25 opened three PRs (#336, #337, #338); all three are red on `test`, two are legitimate update candidates that need root-cause work and one is a hard reject. There is no documented protocol for how we triage these and no `ignore` rule preventing the hard-reject class from recurring weekly.
+**Related:** [DEBT-394](./debt-394-supply-chain-hardening.md) (supply-chain hardening; this doc sets Dependabot `cooldown.default-days: 7`, which DEBT-394 must keep matched to pnpm `minimumReleaseAge: 10080`), [DEBT-392](../_archive/debt/debt-392-dependency-hygiene-audit.md) (parent), [DEBT-340 (archived, Clerk v7 + Next.js 16.2.1 upgrade)](../_archive/debt/debt-340-clerk-v7-nextjs-upgrade.md)
 
 **Status:** Active
 
@@ -17,7 +17,7 @@ DEBT-392 Tier 6b installed Dependabot with weekly grouped updates and no other p
 - **PR #337**: `chore(deps): bump the npm-minor-and-patch group with 11 updates` — npm minor/patch group (`@tailwindcss/postcss` 4.1.18→4.3.0, `drizzle-kit` 0.31.8→0.31.10, `pino` 10.3.0→10.3.1, `postgres` 3.4.8→3.4.9, `react` 19.2.4→19.2.6, `@types/react` 19.2.10→19.2.15, `react-dom` 19.2.4→19.2.6, `tailwind-merge` 3.4.0→3.6.0, `tailwindcss` 4.1.18→4.3.0, `@biomejs/biome` 2.3.13→2.4.15, `tsx` 4.21.0→4.22.3).
 - **PR #338**: `chore(deps): bump @types/node from 24.12.4 to 25.9.1` — npm group major bump that does not belong here.
 
-All three are failing the `test` job on GitHub Actions. The Vercel preview is green for all three. CodeRabbit was rate-limited during the open window and posted "Review limit reached" instead of a review.
+All three are failing the `test` job on GitHub Actions. The Vercel preview is green for #336 and #337; #338 also fails Vercel because the Node 25 type-surface mismatch breaks the build/typecheck there too. CodeRabbit was rate-limited during the open window and posted "Review limit reached" instead of a review.
 
 The repo currently has:
 
@@ -26,7 +26,7 @@ The repo currently has:
 - `.github/workflows/ci.yml` with `node-version: 24` (set in DEBT-392 Tier 5).
 - No documented triage protocol for Dependabot output.
 
-The footgun is `@types/node` 25 specifically: Node.js follows an odd/even LTS cadence where even majors become LTS the October after their April release (Node 24 LTS through April 2028) and odd majors are never LTS (Node 25 EOL ~June 2026). `@types/node@25.x` describes the Node 25 API surface, so installing it against a Node 24 runtime breaks typecheck — which is exactly what PR #338's CI shows. Without an `ignore` rule, Dependabot will reopen this PR every week until either Node 26 LTS lands (April 2026 release, October 2026 LTS) or we tell it not to.
+The footgun is `@types/node` 25 specifically: Node.js follows an odd/even LTS cadence where even majors become LTS and odd majors are never LTS (Node 24 LTS began 2025-10-28 and is supported through 2028-04-30; Node 25 ends 2026-06-01; Node 26 starts 2026-05-05 and becomes LTS on 2026-10-28 per the Node Release Working Group schedule). `@types/node@25.x` describes the Node 25 API surface, so installing it against a Node 24 runtime breaks typecheck — which is exactly what PR #338's CI shows. Without an `ignore` rule, Dependabot will reopen this PR every week until either Node 26 LTS lands in October 2026 or we tell it not to.
 
 The remaining two PRs are legitimate updates that need real engineering attention, not blind merges:
 
@@ -58,7 +58,7 @@ This is a `@types/node` 25 vs Node 24 runtime mismatch. The fix is not to bump t
 2. Add an `ignore` rule in `.github/dependabot.yml` so Dependabot stops opening `@types/node` major bumps that exceed our active Node LTS major. The rule should also apply to `node` itself if it were ever a direct dep.
 3. When we eventually plan the Node 24 → Node 26 LTS migration (post Oct 2026 LTS landing), we re-bump `@types/node` in the same PR as `engines.node`, `.nvmrc`, and CI `node-version`, exactly as DEBT-392 Tier 5 did for the 22 → 24 transition.
 
-### B. PR #336 `actions/upload-artifact` 6 → 7 — investigate before merging
+### B. PR #336 `actions/upload-artifact` 6 → 7 — rerun/root-cause before merging
 
 **Evidence:**
 
@@ -67,22 +67,22 @@ gh pr view 336 --json title,statusCheckRollup
 gh pr diff 336
 ```
 
-The diff is the trivial `uses:` bump in `.github/workflows/ci.yml`. The release notes (linked from the PR body) call out two real changes: ESM migration of the action package, and a new `archive: false` parameter that allows uploading single files unzipped. Neither requires a change on our side per se, but the `test` failure is real and needs to be diagnosed.
+The diff is the trivial `uses:` bump in `.github/workflows/ci.yml`. The release notes (linked from the PR body) call out two real changes: ESM migration of the action package, and a new `archive: false` parameter that allows uploading single files unzipped. We do not set `archive: false`, so neither release-note change requires a config edit.
 
-Action: investigate the failure (most likely a transient CI issue since the diff is one line and the action runtime change is internal). If the rerun is green and the workflow still uploads `playwright-report/` and `test-results/` artifacts correctly, merge. If the rerun fails reproducibly, close and document why.
+Actual failure from `gh run view 26383965799 --job 77658543993 --log-failed`: the unit suite failed in `components/get-started-cta.test.tsx` (`GetStartedCta > links to /app/dashboard when user is entitled`) because the rendered link was `/pricing`, not `/app/dashboard`. That failure happens before artifact upload and is not evidence that `actions/upload-artifact@v7` broke artifact handling. Action: rerun/rebase and root-cause the app assertion if it reproduces. If the rerun is green and the workflow still uploads `playwright-report/` and `test-results/` artifacts correctly, merge. If it fails reproducibly, fix or close with documentation.
 
 ### C. PR #337 npm minor/patch group of 11 — split or accept Biome lint shift
 
 **Evidence:**
 
-The failure log from `gh run view 26383965799 --job 77658543993 --log-failed`:
+The failure log from `gh run view 26384110717 --job 77658958771 --log-failed`:
 
 ```
 ##[error]Sort these exports.
 ##[error]Process completed with exit code 1.
 ```
 
-This is `@biomejs/biome` 2.4.15 introducing a new lint rule (or tightening an existing one). The other 10 packages in the group are unrelated and almost certainly fine; they're the kind of low-risk minor/patch bumps that benefit from grouping. But Biome's lint-rule shifts are a category of change that should not flow through silently — they touch the entire codebase's style contract.
+The log also reports `biome.json` schema drift (`2.3.13` schema with CLI `2.4.15`), new/expanded `organizeImports` diagnostics, `noArrayIndexKey`, and `useOptionalChain` nursery diagnostics. The Biome 2.4.15 release notes confirm two material inputs: `organizeImports` diagnostics became more precise, and the `useTestHooksInOrder` nursery rule was added. The other 10 packages in the group may be fine, but we cannot prove that while the grouped PR is blocked at Biome's lint gate. Biome's lint-rule/config shifts should not flow through silently — they touch the entire codebase's style contract.
 
 Two options:
 
@@ -157,7 +157,7 @@ Add a short triage protocol to `docs/dev/dependency-update-protocol.md` (new fil
 - **Major version PRs in dev tooling** (Biome, Playwright, Vitest, jsdom): own PR, full gate, expect lint/test brittleness fallout per the DEBT-392 Tier 4 pattern (we already documented the jsdom 29 selector-tightening case there).
 - **CI is red on a Dependabot PR**: never merge regardless of CodeRabbit state. Root-cause the failure. If it's a real regression in the new version, close the PR and document.
 - **CodeRabbit rate-limited**: hard stop, do not merge. Wait for refill, request fresh review. (Established in DEBT-392 Tier 2.)
-- **Supply-chain hygiene**: Dependabot does not vouch for package contents. After this doc lands, DEBT-394 layers on pnpm 11 `minimumReleaseAge` and `strictDepBuilds`, which DO defend against malicious publishes.
+- **Supply-chain hygiene**: Dependabot does not vouch for package contents. After this doc lands, DEBT-394 layers on pnpm `minimumReleaseAge`, `blockExoticSubdeps`, `trustPolicy`, and `strictDepBuilds` / `allowBuilds`, which defend against malicious publishes and unreviewed install scripts.
 
 ---
 
@@ -167,10 +167,8 @@ Add a short triage protocol to `docs/dev/dependency-update-protocol.md` (new fil
 # Confirm the three triage decisions landed
 gh pr list --state all --search "is:pr author:app/dependabot created:>2026-05-25"
 
-# Confirm dependabot.yml is well-formed
-gh api repos/The-Obstacle-Is-The-Way/naltrexone-university/dependabot/secrets  # auth check only
-yq '.updates[].ignore' .github/dependabot.yml
-yq '.updates[].cooldown' .github/dependabot.yml
+# Confirm dependabot.yml is well-formed and has the expected policy keys
+ruby -e 'require "yaml"; updates = YAML.load_file(".github/dependabot.yml")["updates"]; p updates.map { |u| [u["package-ecosystem"], u["ignore"], u["cooldown"], u.dig("groups", "npm-minor-and-patch", "exclude-patterns")] }'
 
 # Confirm @types/node stays pinned to major 24
 jq -r '.devDependencies["@types/node"]' package.json
