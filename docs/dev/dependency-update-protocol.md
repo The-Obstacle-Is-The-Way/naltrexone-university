@@ -1,0 +1,113 @@
+# Dependency Update Protocol
+
+This is the on-call playbook for incoming Dependabot PRs and ad-hoc dependency work. It exists so dependency freshness work follows the same merge discipline as feature work: one concern, verified scope, full local gate, and CodeRabbit on the latest head.
+
+## Default Rules
+
+- Treat every dependency PR as executable code, even when it only changes a manifest or lockfile.
+- Do not merge a red Dependabot PR, regardless of CodeRabbit state.
+- Do not push commits to Dependabot-owned branches. Ask Dependabot to rebase or recreate, or spin a separate repo-owned fix PR.
+- Do not bundle incidental app/test fixes into a dependency PR. Ship the fix first, then rebase the dependency PR.
+- Run the full local gate before pushing any repo-owned dependency or protocol PR:
+
+  ```sh
+  pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
+  ```
+
+- If the authenticated E2E environment is present in `.env.local`, also run `pnpm test:e2e`.
+
+## Group PRs: Minor and Patch Updates
+
+For grouped minor/patch Dependabot PRs:
+
+1. Read the PR body and upstream changelog links for every package in the group.
+2. Confirm the group does not include a known special-case tool. `@biomejs/biome` is intentionally split from the catch-all group because lint-rule shifts can block otherwise-good package updates.
+3. Run the full local gate on the PR head when the change is repo-owned. For Dependabot-owned branches, rely on the hosted gate plus any separate fix PRs required to make the base truthful.
+4. Merge only when GitHub Actions, Vercel, Codecov, and CodeRabbit are clean on the latest head.
+
+If one package in a group causes an unrelated failure, split or defer that package. Do not let a style-tool or test-runner change hold unrelated patch updates hostage.
+
+## Runtime-Contract Majors
+
+Reject isolated major updates that change the runtime contract:
+
+- `@types/node`
+- `node`
+- package-manager/runtime pins such as `engines`, `.nvmrc`, CI `node-version`, or `packageManager`
+
+These changes must ship in a coordinated runtime-alignment PR. The precedent is DEBT-392 Tier 5: Node runtime surfaces were moved together so CI, local development, Vercel, and type definitions agreed.
+
+For example, `@types/node` 25 is not acceptable while the repo targets Node 24. Node type packages describe the runtime API surface; they are not a harmless dev-only freshness bump.
+
+## Dev-Tooling Majors
+
+Major updates in dev tooling get their own PR:
+
+- Biome
+- Playwright
+- Vitest
+- jsdom
+- test environment packages
+
+Expect lint and test brittleness, and treat it as migration work rather than noise. PR #328 (`jsdom` 26 -> 29) is the local precedent: upstream jsdom changed selector/CSS parsing behavior, and the repo had to replace query-string CSS selector assertions with direct `href` attribute assertions in `app/(app)/app/dashboard/page.test.tsx`.
+
+The rule is not "avoid dev-tooling majors." The rule is "isolate them so their fallout is reviewable."
+
+## Red CI on Dependabot PRs
+
+Red CI is a stop sign.
+
+1. Read the failing job log.
+2. Decide whether the failure is caused by the dependency, the current base branch, or CI environment policy.
+3. If the base branch is wrong, ship a separate fix PR first.
+4. Ask Dependabot to rebase or recreate after the fix lands.
+5. Re-evaluate the dependency PR only after the hosted gate is clean.
+
+DEBT-393 produced two examples:
+
+- PR #342 fixed a component-test isolation problem surfaced while investigating PR #336.
+- PR #343 fixed the CI policy gap where Dependabot PRs could not access production secrets but the workflow still required E2E credential validation.
+
+Those fixes were intentionally separate from the Dependabot-owned PR. Keep that pattern.
+
+## CodeRabbit Rate Limits
+
+If CodeRabbit posts a rate-limit warning, stop.
+
+- Do not merge on green status checks alone.
+- Wait for the refill window.
+- Request a fresh `@coderabbitai review` on the latest head.
+- Require a substantive non-rate-limited review on that exact head before merging.
+
+An empty state flip or a stale prior review does not satisfy the repo rule.
+
+## Dependabot PRs and Secrets
+
+GitHub does not provide normal repository secrets to Dependabot PR workflows. The CI workflow therefore keeps non-secret checks running while skipping the E2E secret path for `dependabot[bot]` pull requests.
+
+Current anchors:
+
+- `.github/workflows/ci.yml:42-44` sets `NEXT_PUBLIC_SKIP_CLERK` from whether Clerk secrets are available.
+- `.github/workflows/ci.yml:137-140` skips E2E credential validation on Dependabot PRs.
+- `.github/workflows/ci.yml:189-193` skips the E2E smoke run on Dependabot PRs.
+
+This is not a weaker merge bar. It is an honest one: Dependabot PRs still run typecheck, lint, unit, browser, integration, build, Vercel, Codecov, and CodeRabbit. E2E still runs on pushes to `main` and human same-repo PRs where secrets exist.
+
+## Dependabot Config Policy
+
+The current `.github/dependabot.yml` intentionally separates concerns:
+
+- `cooldown.default-days: 7` delays version-update PRs so newly published packages have a maturity window before entering the queue.
+- `versioning-strategy: increase-if-necessary` keeps `package.json` ranges stable when the existing range already admits the update, reducing manifest churn.
+- Group-level `applies-to: version-updates` makes it explicit that routine grouped PRs target freshness, not advisories.
+- Separate `applies-to: security-updates` entries omit cooldown so security advisories are not delayed by the maturity window.
+- `@types/node` semver-major updates are ignored until a deliberate runtime-alignment PR moves the repo to a new active LTS major.
+- `@biomejs/biome` is split from the catch-all npm group so lint contract changes arrive as their own reviewable PR.
+
+These settings do not prove package contents are benign. They only shape Dependabot's queue.
+
+## Supply-Chain Boundary
+
+Dependabot tells us a version exists. It does not vouch for the package contents.
+
+Malicious-publish defenses are tracked in DEBT-394: pnpm `minimumReleaseAge`, `blockExoticSubdeps`, `trustPolicy`, and `strictDepBuilds` / `allowBuilds`. Keep Dependabot `cooldown.default-days: 7` matched to DEBT-394's planned `minimumReleaseAge: 10080` so Dependabot does not open PRs for versions pnpm policy intentionally refuses to install.
