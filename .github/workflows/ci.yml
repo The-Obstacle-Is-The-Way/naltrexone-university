@@ -135,7 +135,9 @@ jobs:
         run: pnpm build
 
       - name: Validate E2E credential inputs
-        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+        # Dependabot PRs do not receive repository secrets, even when their branch
+        # lives in this repository. Keep E2E on for pushes and human same-repo PRs.
+        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
         run: |
           set -euo pipefail
 
@@ -185,7 +187,9 @@ jobs:
           fi
 
       - name: E2E smoke
-        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+        # Dependabot PRs do not receive repository secrets, even when their branch
+        # lives in this repository. Keep E2E on for pushes and human same-repo PRs.
+        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
         run: pnpm test:e2e
 
       - name: Upload Playwright report
