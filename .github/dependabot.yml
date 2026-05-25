@@ -10,15 +10,48 @@ updates:
       time: '09:00'
       timezone: America/New_York
     open-pull-requests-limit: 5
+    versioning-strategy: increase-if-necessary
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: chore(deps)
+    ignore:
+      - dependency-name: '@types/node'
+        update-types:
+          - version-update:semver-major
     groups:
       npm-minor-and-patch:
+        applies-to: version-updates
         patterns:
           - '*'
+        exclude-patterns:
+          - '@biomejs/biome'
         update-types:
           - minor
           - patch
+      biome:
+        applies-to: version-updates
+        patterns:
+          - '@biomejs/biome'
+        update-types:
+          - minor
+          - patch
+          - major
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+      time: '09:00'
+      timezone: America/New_York
+    open-pull-requests-limit: 0
+    commit-message:
+      prefix: chore(deps)
+    groups:
+      npm-security:
+        applies-to: security-updates
+        patterns:
+          - '*'
 
   - package-ecosystem: github-actions
     directory: /
@@ -29,12 +62,30 @@ updates:
       time: '09:00'
       timezone: America/New_York
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: chore(deps)
     groups:
       actions-minor-and-patch:
+        applies-to: version-updates
         patterns:
           - '*'
         update-types:
           - minor
           - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
+      time: '09:00'
+      timezone: America/New_York
+    open-pull-requests-limit: 0
+    commit-message:
+      prefix: chore(deps)
+    groups:
+      actions-security:
+        applies-to: security-updates
+        patterns:
+          - '*'
