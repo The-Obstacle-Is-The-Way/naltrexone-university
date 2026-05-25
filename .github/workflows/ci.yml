@@ -36,12 +36,6 @@ jobs:
       NODE_ENV: test
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/addiction_boards_test
 
-      # DEBT-392 Tier 1: opt JS actions into the Node 24 runtime before
-      # GitHub flips the default (observed runner deadline 2026-06-02;
-      # public changelog deadline 2026-06-16). Lets us surface any
-      # Node-24-incompatible action in our chain before the forced flip.
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-
       # App base URL used by redirects / Playwright baseURL
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
 
@@ -76,13 +70,13 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6.0.8
         with:
-          version: 10.9.0
+          version: 10.33.4
           run_install: false
 
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - name: Install deps
