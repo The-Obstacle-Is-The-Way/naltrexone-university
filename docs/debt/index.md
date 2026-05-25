@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-05-25 (DEBT-392 resolved across 14 PRs and archived; follow-up debt cycles for Dependabot triage and supply-chain hardening tracked separately when filed.)
+**Last Updated:** 2026-05-25 (DEBT-392 resolved across 14 PRs and archived; DEBT-393 added for Dependabot triage and config hardening; DEBT-394 added for supply-chain hardening via pnpm 11 + `minimumReleaseAge` + `strictDepBuilds` + `blockExoticSubdeps` + `trustPolicy`.)
 
 ---
 
@@ -22,8 +22,10 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
 | [DEBT-381](./debt-381-question-content-typography-audit-and-preference-path.md) | Question content typography audit — Quick Practice, Tutor, and Exam are already unified at the Typography Policy Medium content tier. Do not globally shrink question text; if needed later, add a user-selectable Markdown/content-size preference while leaving UI chrome unchanged. | P3 | — |
 | [DEBT-391](./debt-391-local-e2e-schema-drift-preflight.md) | Local authenticated E2E can run against a stale `.env.local` Neon branch because the current preflight checks only database connectivity and one historical idempotency schema contract, not the full Drizzle migration journal. Add a full migration-journal/schema-drift preflight so local E2E fails fast with a targeted migration instruction instead of surfacing generic write-path errors mid-suite. | P2 | — |
+| [DEBT-393](./debt-393-dependabot-triage-and-config-hardening.md) | Dependabot triage and config hardening — first weekly run (2026-05-25) opened PRs #336/#337/#338, two need real engineering and one (`@types/node` major 25) is a hard reject that will recur weekly without an `ignore` rule. Add `ignore` for `@types/node` semver-major beyond active Node LTS, split `@biomejs/biome` out of the catch-all minor/patch group, set `cooldown.default-days: 7`, and document a triage protocol. | P2 | — |
+| [DEBT-394](./debt-394-supply-chain-hardening.md) | Supply-chain hardening via pnpm 11 — current pnpm 10 lacks `minimumReleaseAge` (single highest-leverage defense against TrapDoor-class campaigns; Socket reports median malicious-package detection of ~5 minutes), `blockExoticSubdeps`, `strictDepBuilds`, and `trustPolicy: no-downgrade`. Three single-concern PRs: migrate `pnpm@10.33.4` → `pnpm@11.x`, enumerate native-build `allowBuilds` and enable `strictDepBuilds`, then layer on `minimumReleaseAge: 10080` + `blockExoticSubdeps` + `trustPolicy` and retune Dependabot `cooldown` to match. | P2 | — |
 
-**Next Debt ID:** DEBT-393
+**Next Debt ID:** DEBT-395
 
 ---
 
