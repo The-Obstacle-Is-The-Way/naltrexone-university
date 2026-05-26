@@ -1,1 +1,3 @@
+hook_name=pre-commit
+. "$(dirname "$0")/check-node-version.sh"
 pnpm exec lint-staged
