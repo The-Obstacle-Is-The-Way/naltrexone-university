@@ -14,7 +14,7 @@
 The repo has a documented design system at `docs/frontend/`:
 
 - `standards.md` — semantic tokens (NEVER raw hex), Button component mandate, single canonical focus-ring pattern (`focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`), spacing, typography, dark mode strategy.
-- `pattern-registry.md` — canonical opacity scale (`/20`, `/40`, `/50`, `/60`, `/80` reserved, `/100` reserved), foreground ramp tokens, dark-mode override conventions.
+- `pattern-registry.md` — canonical opacity scale (`/20`, `/40`, `/50`, `/60`, `/80` reserved, `/100` reserved), foreground-ramp tonal-row tokens (`bg-foreground/5`, `bg-foreground/[0.06]`, `bg-foreground/[0.07]`, `bg-foreground/[0.08]`, `bg-foreground/[0.12]`, `dark:hover:bg-foreground/[0.05]` in documented patterns only), and dark-mode override conventions.
 - `contrast-policy.md` — WCAG AA contrast targets.
 - `design-principles.md` — layout composition, navigation zones.
 - `typography-policy.md` — explicit text-size choices (no implicit inheritance).
@@ -28,7 +28,7 @@ These documents are intentional, careful, and authoritative IF READ. The problem
 
 2. **`.claude/rules/frontend.md` is 58 lines** and does not cross-reference `standards.md` or `pattern-registry.md`. It covers routing, shadcn, and error-state patterns, but nothing about tokens, focus rings, opacity scale, or design system discoverability.
 
-3. **No lint rule enforces token usage.** Biome lints code style; it does not block `bg-foreground/[0.06]` arbitrary values vs canonical `/20`, `/40`, `/50`. No `eslint-plugin-tailwindcss-only-allowed-classes` or equivalent is installed.
+3. **No lint rule enforces token usage.** Biome lints code style; it does not distinguish documented foreground-ramp arbitrary opacity values from undocumented one-offs, and it does not block an invalid value such as `hover:bg-foreground/[0.03]` if introduced. No Tailwind-class allowlist rule or equivalent is installed in the current pnpm + Biome + Tailwind v4 toolchain.
 
 4. **`components/theme-token-regression.test.tsx` exists** as the single mentioned enforcement guard, but its coverage is narrow (referenced once in `standards.md` line 69) and it is not part of any documented rule that would tell an agent to extend it when adding a new component.
 
@@ -61,7 +61,7 @@ An agent loaded with this rule has no path to discover the design system.
 Searching the codebase:
 
 - 26 instances of the exact canonical focus-ring string (`focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`) exist in component code. Each is correct, but each is a copy-paste — there is no Tailwind utility `.focus-ring` and no shared constant in `lib/shared-styles.ts`. Any future change to the canonical pattern requires editing 26 places across 19 files. (See DEBT-399 for the proposed fix.)
-- Arbitrary opacity values (`/[0.06]`, `/[0.08]`, `/[0.12]`) appear in component code that bypasses the `pattern-registry.md` § 1.2 scale. (See DEBT-399 for the fix.)
+- Arbitrary foreground opacity values appear in component code, but the audit found that the main production values are documented foreground-ramp patterns in `pattern-registry.md` § 1.2 and the pattern-specific entries (`I-1`, `I-2`, `I-3`, `I-4`, `M-4`). Enforcement must therefore be allowlist-driven: documented values are allowed only in their documented contexts, while undocumented arbitrary values should fail. DEBT-399 covers the concrete existing opacity divergences that are not documented (`hover:bg-muted/20`, `dark:divide-foreground/20`, `dark:border-foreground/10`).
 - `theme-token-regression.test.tsx` exists but its scope is opaque from outside (not referenced in any rule file).
 
 ### D. The "looks right but isn't" amplification loop
@@ -72,7 +72,7 @@ When an agent generates a new component, the most likely behavior is:
 2. Match those patterns in the new code.
 3. Submit for review.
 
-If the surrounding components contain the canonical pattern, the new code is correct. If the surrounding components contain drift (e.g., `bg-foreground/[0.06]`), the new code inherits the drift. AI-generated code therefore amplifies existing drift faster than humans introduce it, because humans occasionally re-read the design docs while agents typically do not.
+If the surrounding components contain the canonical pattern, the new code is correct. If the surrounding components contain drift (e.g., `hover:bg-muted/20` in a context where the registry expects `/40`, `/50`, or a documented foreground-ramp pattern), the new code inherits the drift. AI-generated code therefore amplifies existing drift faster than humans introduce it, because humans occasionally re-read the design docs while agents typically do not.
 
 The result: even with good design docs and good intentions, the codebase drifts toward the median pattern of nearby code rather than toward the documented standard.
 
@@ -96,7 +96,7 @@ The design docs exist. They are reasonable. The gap is that they are TREATED AS 
 1. **Cross-reference from `.claude/rules/frontend.md`** so the design docs get pulled into agent context when frontend work is in progress.
 2. **Add a "For AI Agents" preamble** to `docs/frontend/standards.md` so the doc itself signals it is authoritative when an agent does find it.
 3. **Install an enforcement layer** (lint rule, CI gate, expanded regression test) so violations fail loudly rather than silently passing.
-4. **Extract shared utilities** for the most-duplicated patterns (focus ring) so the design system has a single SOURCE rather than 42 copies.
+4. **Extract shared utilities** for the most-duplicated patterns (focus ring) so the design system has a single SOURCE rather than 26 exact copies across 19 files (33 occurrences if the broader `ring-ring/50` + `ring-[3px]` family is counted).
 
 Each of these is small. The combination is what makes the design system actually a system.
 
@@ -149,7 +149,8 @@ ONLY the canonical opacities from `pattern-registry.md` § 1.2:
 | `/40` | Subtle hover inside cards |
 | `/50` | Standard hover on page background |
 | `/60` | Exception-only emphasized hover (requires design review) |
-| `/[0.06]`, `/[0.08]`, `/[0.12]`, etc. | NEVER USE — arbitrary values bypass the scale |
+| Documented foreground-ramp values (`/5`, `/[0.06]`, `/[0.07]`, `/[0.08]`, `/[0.12]`, `dark:hover:bg-foreground/[0.05]`) | Allowed ONLY in the exact Pattern Registry contexts (`I-1`, `I-2`, `I-3`, `I-4`, `M-4`) |
+| Undocumented arbitrary values (`/[0.03]`, `/[0.10]`, `/[13%]`, etc.) | NEVER USE — add the pattern to the registry first or choose an existing token |
 
 If your use case is not on the scale, add it to `pattern-registry.md`
 with a rationale, THEN implement.
@@ -163,8 +164,9 @@ NEVER use raw hex (`#fff`, `#121212`) or palette colors (`bg-zinc-400`,
 `text-slate-300`).
 
 Enforcement: `components/theme-token-regression.test.tsx` blocks raw
-palette usage. Add new components to this test if they use foreground
-colors or hover effects.
+palette regressions in selected high-risk components. Add new components
+to this test when they expand the design surface and need token/opacity
+coverage.
 
 ### 4. Component-system mandate
 
@@ -234,26 +236,22 @@ mandatory pattern enforcement summary.
 
 Pure doc edit. No code changes. The point is to signal to any agent that does find the doc (even without the `.claude/rules/frontend.md` gateway) that it is binding.
 
-### PR 3 — Enforcement layer: lint rule + expanded regression test
+### PR 3 — Enforcement layer: expanded regression test + optional lint/script gate
 
 Branch: `tools/debt-398-design-system-enforcement`
 
 This PR adds the automated enforcement that makes the documented system actually enforceable. Two artifacts:
 
-1. **Lint rule for arbitrary Tailwind opacity values** — research the right tool. Options:
-   - `eslint-plugin-tailwindcss` rule `no-arbitrary-value` (or similar) configured to disallow `\/\[0\.\d+\]`, `\/\[\d+%\]` patterns.
-   - Biome custom rule (Biome supports custom rules via plugin API as of 2.x).
-   - A bespoke shell script in `.husky/pre-push` that greps for arbitrary opacity patterns in `app/**/*.tsx` and `components/**/*.tsx` and fails if found outside an allowlist.
-   - Pick the option that fits the existing toolchain — Biome is the active linter, so prefer the Biome route if a plugin exists.
-
-2. **Expand `components/theme-token-regression.test.tsx`** to cover:
+1. **Expand `components/theme-token-regression.test.tsx`** (preferred first enforcement layer because Vitest is already in the default gate) to cover:
    - All raw `<button>` usages outside `components/ui/` (fails if a new one is added).
-   - Arbitrary opacity values matching `/\/\[0\.\d+\]/` or `/\/\[\d+%\]/` patterns (fails if a new one is added).
+   - Undocumented arbitrary opacity values. The test must use an allowlist sourced from `pattern-registry.md` so documented foreground-ramp values like `bg-foreground/[0.08]` and `hover:bg-foreground/[0.12]` do not become false positives.
    - Documented in the test file: "Add new components here when extending the design surface."
 
 The test should be runnable as part of the default `pnpm test --run` gate so CI fails on regressions.
 
-If neither lint approach is feasible in one PR, the expanded regression test alone is acceptable as the enforcement layer — file the lint rule as a P3 follow-up.
+2. **Optional lint/script gate** — research whether a current Tailwind/Biome-compatible class allowlist rule exists. Do not install ESLint solely for this repo unless the rule is verified, maintained, and cleaner than the Vitest text-scan approach. A small repo-local script is acceptable if it is simpler and less speculative than adding a new linter stack.
+
+The expanded regression test alone is acceptable as the first enforcement layer if it blocks the documented regression classes and lives in the default `pnpm test --run` gate. File a separate P3 follow-up only if a true lint-layer gap remains after that test exists.
 
 ---
 
@@ -273,7 +271,7 @@ PR 2 done when:
 
 PR 3 done when:
 
-- An automated check exists (lint rule OR expanded regression test OR both) that fails on arbitrary opacity values.
+- An automated check exists (expanded regression test OR lint/script gate OR both) that fails on undocumented arbitrary opacity values while allowlisting documented Pattern Registry foreground-ramp values.
 - An automated check exists that fails on new raw `<button>` outside `components/ui/`.
 - The check is part of the default `pnpm test --run` or `pnpm lint` gate.
 - A test confirms the check actually fails when the violation pattern is introduced (positive negative test).
@@ -284,7 +282,7 @@ PR 3 done when:
 
 - **PR 1 (frontend.md gateway)** — zero risk. Doc-only. Reversion is a single revert.
 - **PR 2 (standards.md preamble)** — zero risk. Doc-only.
-- **PR 3 (enforcement)** — low-to-medium risk. The regression test or lint rule may catch existing violations that were not in the audit. Failure mode is "test was green, now red on existing code." This is a feature (the violations should be visible), but it means PR 3 may need to ship alongside DEBT-399 PR 1 (component-system bypass cleanup) so the existing violations are fixed before the gate goes live. Sequence: ship DEBT-399 first OR mark the known violations as `// TODO(DEBT-399)` exclusions in the regression test temporarily.
+- **PR 3 (enforcement)** — low-to-medium risk. The regression test or lint/script gate may catch existing violations that were not in the audit. Failure mode is "test was green, now red on existing code." This is a feature (the violations should be visible), but it means PR 3 may need to ship after the relevant DEBT-399 cleanup PRs OR mark the known violations as temporary `TODO(DEBT-399)` exclusions in the regression test. The enforcement must not fail on documented Pattern Registry foreground-ramp values.
 
 ---
 
