@@ -1,3 +1,12 @@
 minimumReleaseAge: 10080
 blockExoticSubdeps: true
 trustPolicy: no-downgrade
+strictDepBuilds: true
+allowBuilds:
+  '@clerk/shared': false # postinstall prints telemetry notice and persists telemetryNoticeVersion to local Clerk config.
+  '@sentry/cli': true # installs/verifies the platform sentry-cli binary used by Sentry tooling.
+  bufferutil: false # optional ws peer/native performance addon built by node-gyp-build; ws can fall back.
+  core-js: false # postinstall prints support/funding banner with temp-file dedupe; no build artifact.
+  esbuild: true # validates/prepares platform esbuild binaries used by Vite, tsx, and Drizzle tooling.
+  sharp: true # verifies/builds the native image-processing addon used by Next's image pipeline.
+  utf-8-validate: false # optional ws peer/legacy UTF-8 native addon built by node-gyp-build; Node 24/ws can fall back.
