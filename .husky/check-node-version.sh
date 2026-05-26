@@ -1,3 +1,4 @@
+# shellcheck shell=sh
 # Enforce Node version per .nvmrc - defends against stale global
 # ~/.config/husky/init.sh that loads nvm but never calls `nvm use`.
 # Without this, GUI-triggered hooks or shells that do not pick up
