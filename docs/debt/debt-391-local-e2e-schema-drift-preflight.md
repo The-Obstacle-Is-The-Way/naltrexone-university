@@ -15,7 +15,7 @@ Local authenticated E2E can run against a database that is behind the checked-ou
 
 The current local E2E path loads `.env.local`: `playwright.config.ts:4-7` says it prefers `.env.local` and then `.env`. The global setup always runs before the Chromium project: `tests/e2e/global.setup.ts:7-11` calls `runE2ECredentialHealthCheck()`, `seedTestSubscription()`, `runE2EUserStateReset()`, and `clerkSetup()`.
 
-That preflight catches connectivity and one historical schema contract, but not full migration drift. `tests/e2e/helpers/credential-health-check.ts:141-149` verifies `SELECT 1`, and `credential-health-check.ts:152-181` checks only whether `idempotency_keys.completed_at` exists. There is no comparison between `db/migrations/meta/_journal.json` and `drizzle.__drizzle_migrations`, and no contract check for the current write-path tables.
+That preflight catches connectivity and one historical schema contract, but not full migration drift. `tests/e2e/helpers/credential-health-check.ts:141-149` verifies `SELECT 1`, and `credential-health-check.ts:152-181` checks only whether `idempotency_keys.completed_at` exists. There is no comparison between `db/migrations/meta/_journal.json` and Drizzle's migration ledger table (`drizzle.__drizzle_migrations` by default for Postgres), and no contract check for the current write-path tables.
 
 SPEC-040 made this visible. Migration `db/migrations/0017_flaky_ser_duncan.sql:1-4` makes `attempts.selected_choice_id` nullable, adds `attempts.is_omitted`, and adds the two CHECK constraints. Migration `db/migrations/0018_backfill-omitted-exam-attempts.sql:2-42` backfills omitted-incorrect attempts where no session/question attempt exists. When local `.env.local` targeted the Neon `dev` branch before those migrations had been applied, pages and auth still loaded, but answer-submission E2E paths failed with a generic "Failed to insert attempt" instead of a targeted "this database is behind migrations" error.
 
@@ -43,8 +43,9 @@ The preflight should:
 
 1. Read the expected migration list from `db/migrations/meta/_journal.json`.
 2. Query `drizzle.__drizzle_migrations` on the active `DATABASE_URL`.
-3. Fail fast when the target database is missing migrations present in the repo.
-4. Print a clear, non-secret remediation message, such as:
+3. Compare repo journal entries to ledger rows by `entries[].when` (`db/migrations/meta/_journal.json`) and `created_at` (`drizzle.__drizzle_migrations`). Drizzle's table stores `hash` and `created_at`, not the human-readable `tag`, so map any missing `when` values back to journal `tag` values for the error message.
+4. Fail fast when the target database is missing migrations present in the repo.
+5. Print a clear, non-secret remediation message, such as:
 
 ```text
 E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATIONS

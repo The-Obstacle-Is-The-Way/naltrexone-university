@@ -2,8 +2,8 @@
 
 **Priority:** P1 (the design system documented in `docs/frontend/` exists but is functionally optional — agents and contributors do not auto-load it during code generation, no lint rule blocks the most common violations, and the result is a steady drip of "AI-generated code that looks right but bypasses the documented system." This is the meta-debt that produces DEBT-399 and amplifies the small individual violations into a cumulative aesthetic and maintenance drift.)
 **Created:** 2026-05-26
-**Source:** Deep documentation-gap audit conducted alongside DEBT-394 archival. The audit catalogued every existing doc, identified that `.claude/rules/frontend.md` is 58 lines and does not cross-reference `docs/frontend/standards.md` or `pattern-registry.md`, and traced four recent incidents (PR #342 env leak, PR #328 selector brittleness, PR #350 Zod fixtures, design system drift) back to the same root cause: docs exist as aspiration, agents don't load them, no enforcement layer catches violations.
-**Related:** [.claude/rules/frontend.md](../../.claude/rules/frontend.md) (currently 58 lines, too thin), [docs/frontend/standards.md](../frontend/standards.md), [docs/frontend/pattern-registry.md](../frontend/pattern-registry.md), [docs/frontend/contrast-policy.md](../frontend/contrast-policy.md), [docs/frontend/design-principles.md](../frontend/design-principles.md), [DEBT-399](./debt-399-component-system-bypass-cleanup.md) (the visible symptom this debt addresses at root)
+**Source:** Deep documentation-gap audit conducted alongside DEBT-394 archival. The audit catalogued every existing doc, identified that `.claude/rules/frontend.md` is 58 lines and does not cross-reference `docs/frontend/standards.md` or `pattern-registry.md`, and traced four recent incidents (PR #342 env leak, PR #328 selector brittleness, PR #330 Zod fixture-boundary precedent, design system drift) back to the same root cause: docs exist as aspiration, agents don't load them, no enforcement layer catches violations.
+**Related:** [.claude/rules/frontend.md](../../.claude/rules/frontend.md) (currently 58 lines, too thin), [docs/frontend/standards.md](../frontend/standards.md), [docs/frontend/pattern-registry.md](../frontend/pattern-registry.md), [docs/frontend/contrast-policy.md](../frontend/contrast-policy.md), [docs/frontend/design-principles.md](../frontend/design-principles.md), [docs/frontend/typography-policy.md](../frontend/typography-policy.md), [docs/frontend/bookmark-surface-policy.md](../frontend/bookmark-surface-policy.md), [DEBT-399](./debt-399-component-system-bypass-cleanup.md) (the visible symptom this debt addresses at root)
 
 **Status:** Active
 
@@ -84,7 +84,7 @@ The audit traced four specific recent incidents to documentation gaps. Three are
 |---|---|---|
 | PR #342 env leak | `.claude/rules/testing.md` silent on env isolation | DEBT-395 |
 | PR #328 selector brittleness | `.claude/rules/testing-react19.md` doesn't explain WHY | DEBT-396 |
-| PR #350 fixture drift | No rule on schema-aware fixtures | DEBT-400 |
+| PR #330 Zod fixture-boundary precedent | No rule on schema-aware fixtures | DEBT-400 |
 | Design system drift | `.claude/rules/frontend.md` doesn't gateway to design docs; no enforcement | **DEBT-398 (this doc)** |
 
 ---
@@ -123,6 +123,7 @@ files in `app/**`, `components/**`, or any UI surface:
 - `docs/frontend/contrast-policy.md` — WCAG AA contrast targets
 - `docs/frontend/design-principles.md` — layout composition
 - `docs/frontend/typography-policy.md` — text-size discipline
+- `docs/frontend/bookmark-surface-policy.md` — bookmark appearance decision tree
 
 Mandatory patterns — never diverge:
 
