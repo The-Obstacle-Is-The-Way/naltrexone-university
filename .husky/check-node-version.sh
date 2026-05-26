@@ -6,7 +6,7 @@
 hook_name="${hook_name:-hook}"
 
 if [ -f .nvmrc ]; then
-  raw_required="$(tr -d 'v[:space:]' < .nvmrc)"
+  raw_required="$(sed 's/^[vV]//;s/[[:space:]]//g' < .nvmrc)"
   required_major="$(printf '%s' "$raw_required" | cut -d. -f1)"
 
   case "$required_major" in
