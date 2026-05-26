@@ -176,6 +176,37 @@ This is not optional. This is not "before opening a PR." This is **before every 
 
 ---
 
+## ⚠️ MANDATORY: Design System Discipline (UI Changes)
+
+Before writing or editing ANY UI code in `app/**` or `components/**`, you MUST consult these design-system docs as sources of truth:
+
+- `docs/frontend/standards.md` — semantic tokens (NEVER raw hex), Button component mandate, single canonical focus-ring pattern, spacing, typography, dark mode strategy
+- `docs/frontend/pattern-registry.md` — canonical opacity scale (`/20`, `/40`, `/50`, `/60`), foreground-ramp tonal-row tokens (allowlisted in `I-1`/`I-2`/`I-3`/`I-4`/`M-4`), dark-mode override conventions
+- `docs/frontend/contrast-policy.md` — WCAG AA contrast targets and required-boundary rules
+- `docs/frontend/design-principles.md` — layout composition, navigation zones, action-bar conventions
+- `docs/frontend/typography-policy.md` — explicit text-size choices (no implicit inheritance)
+- `docs/frontend/bookmark-surface-policy.md` — bookmark appearance decision tree
+
+### Mandates (no exceptions without a registry entry + design review)
+
+- **Component-system** (`standards.md` § 2): All interactive click targets MUST use the `<Button>` component. Raw `<button>` is allowed only inside `components/ui/` primitives and app-shell disclosure toggles per Pattern Registry I-6.
+- **Focus ring** (`standards.md` § 3): One canonical pattern — `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`. Never hand-roll variants.
+- **Semantic tokens** (`standards.md` § 1): Never use raw hex (`#fff`, `#121212`) or palette colors (`bg-zinc-400`, `text-slate-300`). Always use semantic tokens (`bg-primary`, `text-foreground`, `border-border`, etc.).
+- **Opacity scale** (`pattern-registry.md` § 1.2): Use only the canonical scale (`/20`, `/40`, `/50`, `/60`) for `bg-muted`/`bg-foreground`-class fills. Documented foreground-ramp arbitrary values are allowed ONLY in their documented Pattern Registry contexts. Undocumented arbitrary values (`/[0.03]`, `/[0.10]`, `/[13%]`) are forbidden — add the pattern to the registry first or choose an existing token.
+- **Dark mode** (`pattern-registry.md` § 1.3): Semantic tokens handle light/dark automatically. Component-specific `dark:` overrides are allowed ONLY when they appear in `pattern-registry.md` or `contrast-policy.md`. Duplicated dark overrides across 2+ components must promote to a shared primitive or `lib/shared-styles.ts` constant.
+
+### Discoverability Rule
+
+If you cannot find a pattern in the design docs above, do NOT invent one. Either (a) add it to `pattern-registry.md` with rationale and design review first, then implement, OR (b) file a debt doc proposing the addition.
+
+### Enforcement Status
+
+The formal enforcement layer (gateway rule file in `.claude/rules/frontend.md`, regression test in `components/theme-token-regression.test.tsx`, optional Vitest scan) ships as DEBT-398. Until that lands, this section IS the enforcement layer — read it, follow it, do not skip it.
+
+See `docs/debt/debt-398-design-system-enforcement-gap.md` for the full debt doc and remediation plan. See `docs/debt/debt-399-component-system-bypass-cleanup.md` for the active cleanup of existing bypass sites (raw `<button>` + focus-ring duplication).
+
+---
+
 ## Project Overview
 
 **Addiction Boards** (Naltrexone University) is a subscription-based SaaS question bank for Addiction Psychiatry and Addiction Medicine board exam preparation. Users subscribe ($29/mo or $199/yr), practice questions in tutor/exam modes, and track progress.

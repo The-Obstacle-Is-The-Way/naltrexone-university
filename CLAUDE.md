@@ -24,7 +24,7 @@ Claude Code loads additional context from `.claude/rules/` based on which files 
 | `testing-browser.md` | `**/*.browser.spec.tsx` | `vitest-browser-react`, controller mocking, stability tips |
 | `architecture.md` | `src/**` | Clean Architecture layers, SOLID, dependency inversion |
 | `domain-layer.md` | `src/domain/**` | Zero-import purity rules |
-| `frontend.md` | `app/**`, `components/**` | Route constants, shadcn, error state patterns |
+| `frontend.md` | `app/**`, `components/**` | Route constants, shadcn, error state patterns. **For design-system rules (tokens, focus rings, opacity scale, dark mode, Button mandate) see `docs/frontend/` — listed under Quick Reference → Design System below.** DEBT-398 ships the formal gateway. |
 | `git-workflow.md` | Any file | Commits, PRs, CodeRabbit, non-interactive safety |
 
 These rules load automatically — no action needed.
@@ -49,6 +49,24 @@ These are the rules that matter most for Claude Code sessions. Full details in `
 - Dependencies point inward only. Domain has ZERO external imports.
 - Constructor injection, composition root at entry points
 - `ApplicationError` with typed codes for all error handling
+
+### Design System (UI changes — read BEFORE editing `app/**` or `components/**`)
+
+- `docs/frontend/standards.md` — semantic tokens, focus rings, spacing, Button mandate, dark mode
+- `docs/frontend/pattern-registry.md` — opacity scale, foreground-ramp tokens, dark-mode overrides
+- `docs/frontend/contrast-policy.md` — WCAG AA contrast targets
+- `docs/frontend/design-principles.md` — layout composition, navigation zones
+- `docs/frontend/typography-policy.md` — explicit text-size choices
+- `docs/frontend/bookmark-surface-policy.md` — bookmark appearance decision tree
+
+**Mandates** (full version in `AGENTS.md` → "MANDATORY: Design System Discipline"):
+- Use `<Button>` for ALL interactive click targets (raw `<button>` only inside `components/ui/` and per Pattern Registry I-6).
+- Single canonical focus ring: `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`.
+- Semantic tokens only — never raw hex or palette colors.
+- Opacity scale: `/20`/`/40`/`/50`/`/60` from `pattern-registry.md` § 1.2; documented foreground-ramp arbitrary values allowed only in their documented Pattern Registry contexts; undocumented arbitrary values forbidden.
+- Never invent UI patterns — add to `pattern-registry.md` first with rationale and design review.
+
+DEBT-398 ships the formal enforcement layer (gateway in `.claude/rules/frontend.md` + expanded `theme-token-regression.test.tsx`). Until then this reference IS the enforcement — follow it.
 
 ### Commands
 
