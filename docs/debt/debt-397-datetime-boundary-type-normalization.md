@@ -1,8 +1,8 @@
 # DEBT-397: Datetime Boundary Type Normalization
 
-**Priority:** P2 (silent data-corruption risk at controller boundary — the same output schema returns `endedAt` as ISO string but `latestAnsweredAt` and `draftSavedAt` as Date objects, which means downstream consumers must handle both shapes or risk runtime `TypeError` / serialization drift. This shipped before, has not produced a visible incident yet, but is exactly the class of bug that surfaces under "client sent us X, we tried to do `.toISOString()` on it" failure modes.)
+**Priority:** P2 (controller-boundary contract drift — `src/adapters/controllers/practice-schemas.ts` uses ISO strings for some action-output datetimes (`endedAt`, `startedAt`) and Date objects for others (`latestAnsweredAt`, `draftSavedAt`). This has not produced a visible incident yet, but downstream code now has to remember per-action datetime shapes instead of relying on one controller-boundary rule.)
 **Created:** 2026-05-26
-**Source:** Deep schema/boundary audit conducted alongside DEBT-394 archival. The audit traced every Zod output schema in `src/adapters/controllers/` and discovered that `SaveExamDraftAnswerOutputSchema` and `GetIncompletePracticeSessionOutputSchema` mix two datetime representations within the same response payload, with no documented rationale and no test enforcing the chosen contract.
+**Source:** Deep schema/boundary audit conducted alongside DEBT-394 archival. The audit traced every Zod datetime validator in `src/adapters/controllers/` and discovered that controller output schemas mix two datetime representations across adjacent action outputs, with no documented rationale and no test enforcing the chosen contract.
 **Related:** [src/adapters/controllers/practice-schemas.ts](../../src/adapters/controllers/practice-schemas.ts), [src/adapters/repositories/practice-session-params.ts](../../src/adapters/repositories/practice-session-params.ts), [DEBT-394 (archived)](../_archive/debt/debt-394-supply-chain-hardening.md)
 
 **Status:** Active
@@ -11,42 +11,42 @@
 
 ## Problem
 
-A controller-boundary output schema MUST have a single, consistent representation for any given primitive type across all its fields. Datetimes are the easiest place to violate this rule because Zod accepts both `z.date()` (instance of Date) and `z.string().datetime()` (ISO 8601 string) as valid validators, and conversions in either direction are silent until a consumer crashes.
+A controller-boundary output surface should have a single, consistent representation for any given primitive type unless the exception is explicit and documented. Datetimes are the easiest place to violate this rule because Zod accepts both `z.date()` (instance of Date) and `z.string().datetime()` (ISO 8601 string) as valid validators, and conversions in either direction are silent until a consumer assumes the wrong shape.
 
-Two output schemas in `src/adapters/controllers/practice-schemas.ts` violate this rule.
+The practice controller output surface currently violates this rule across action outputs in `src/adapters/controllers/practice-schemas.ts`.
 
 ---
 
 ## Findings
 
-### A. `SaveExamDraftAnswerOutputSchema` mixes string + Date datetimes in the same response
+### A. Practice controller output schemas use two datetime representations
 
 Verified at `src/adapters/controllers/practice-schemas.ts`:
 
-| Line | Field | Type | Representation |
-|---|---|---|---|
-| 121 | `endedAt` | `z.string().datetime()` | ISO string |
-| 162 | `latestAnsweredAt` | `z.date().nullable()` | Date object |
-| 164 | `draftSavedAt` | `z.date().nullable()` | Date object |
-| 182 | `startedAt` | `z.string().datetime()` | ISO string |
+| Line | Schema | Field | Type | Representation |
+|---|---|---|---|---|
+| 121 | `EndPracticeSessionOutputSchema` / aliases | `endedAt` | `z.string().datetime()` | ISO string |
+| 162 | `SaveExamDraftAnswerOutputSchema` | `latestAnsweredAt` | `z.date().nullable()` | Date object |
+| 164 | `SaveExamDraftAnswerOutputSchema` | `draftSavedAt` | `z.date().nullable()` | Date object |
+| 182 | `GetIncompletePracticeSessionOutputSchema` | `startedAt` | `z.string().datetime()` | ISO string |
 
-Within `SaveExamDraftAnswerOutputSchema` (and its sibling `GetIncompletePracticeSessionOutputSchema` which composes the same shapes), a single response object will contain:
-- `startedAt` as an ISO string (e.g., `"2026-05-26T14:00:00.000Z"`)
-- `latestAnsweredAt` as a Date instance
-- `draftSavedAt` as a Date instance
-- `endedAt` as an ISO string
+There is **not** a single response object containing all four fields today; the inconsistency is across adjacent controller action outputs. The current surface returns:
+- `startedAt` / `endedAt` as ISO strings (e.g., `"2026-05-26T14:00:00.000Z"`)
+- `latestAnsweredAt` / `draftSavedAt` as Date instances
 
-Downstream code that does `response.latestAnsweredAt.toISOString()` works. The same code on `response.startedAt.toISOString()` throws `TypeError: response.startedAt.toISOString is not a function`. There's nothing in the type or in the schema name that warns a reader of the inconsistency.
+Downstream code that does `response.latestAnsweredAt?.toISOString()` works for the draft-save action but the same assumption on `response.startedAt` or `response.endedAt` fails because those fields are already strings. Conversely, code that expects JSON-native strings must special-case the draft-save action. There's nothing in the type or in the schema name that explains the inconsistency.
 
 ### B. Conversion logic is scattered, no canonical serializer
 
-`src/adapters/repositories/practice-session-params.ts:25, 32` defines input schemas using `z.string().datetime()` and stores JSONB with ISO strings. Lines 86 and 103 do ad-hoc conversion:
+`src/adapters/repositories/practice-session-params.ts:25, 32` defines persisted JSONB schemas using `z.string().datetime()` and stores ISO strings. Lines 82-86 and 99-103 do ad-hoc conversion:
 
 ```typescript
-// Line 86: read path
+// Lines 82-86: read path
+latestAnsweredAt ? new Date(state.latestAnsweredAt) : null
 draftSavedAt ? new Date(state.draftSavedAt) : null
 
-// Line 103: write path
+// Lines 99-103: write path
+latestAnsweredAt ? state.latestAnsweredAt.toISOString() : null
 draftSavedAt ? state.draftSavedAt.toISOString() : null
 ```
 
@@ -58,12 +58,16 @@ A grep of the test suite for `SaveExamDraftAnswerOutputSchema` and `GetIncomplet
 
 ### D. Other output schemas may have the same problem
 
-The audit focused on the two known divergent schemas. A full sweep should:
+The audit sweep found only four datetime validators in `src/adapters/controllers/`, all in `practice-schemas.ts`:
+
+```sh
+rg -n 'z\.date\(|z\.string\(\)\.datetime|datetime\(' src/adapters/controllers --glob '*.ts'
+```
+
+The remediation should still repeat this sweep at implementation time:
 1. List every Zod output schema in `src/adapters/controllers/`.
 2. For each, list every datetime field and its declared type.
 3. Flag any schema where datetime fields use mixed representations.
-
-The audit did not produce that full list — it should be the first step of remediation.
 
 ---
 
@@ -117,8 +121,8 @@ Rationale:
 - Server-action responses are JSON-serialized over the wire and deserialized
   in React clients that do not need Date method APIs.
 - A single representation per primitive type prevents the `latestAnsweredAt`
-  / `startedAt` divergence (DEBT-397) where one field is a Date and the
-  adjacent field is an ISO string.
+  / `startedAt` divergence (DEBT-397) where one action output returns a Date
+  and an adjacent action output returns an ISO string.
 
 Implementation note: use `.toISOString()` on Date values inside the controller
 adapter before returning. Input schemas accepting datetimes from clients
@@ -128,13 +132,13 @@ use-case layer if Date APIs are needed.
 See DEBT-397 for migration history.
 ```
 
-### PR 2 — Migrate `SaveExamDraftAnswerOutputSchema` + `GetIncompletePracticeSessionOutputSchema` to the canonical representation
+### PR 2 — Migrate `SaveExamDraftAnswerOutputSchema` to the canonical representation and verify the output-surface sweep
 
 Branch: `fix/debt-397-output-schema-datetime-normalization`
 
 Assuming Option A (the recommendation):
 
-1. Change `practice-schemas.ts:162` `latestAnsweredAt: z.date().nullable()` → `z.string().datetime().nullable()`.
+1. Change `practice-schemas.ts:162` `latestAnsweredAt: z.date().nullable()` -> `z.string().datetime().nullable()`.
 2. Change `practice-schemas.ts:164` `draftSavedAt: z.date().nullable()` → `z.string().datetime().nullable()`.
 3. Update the controller adapter code that builds these responses — call `.toISOString()` (or `null`) on the Date values from the use case before returning.
 4. Update any consumer code (React components, hooks) that called Date methods on these fields — they now receive strings, so callers either work with the string directly or parse with `new Date(value)` at the call site.

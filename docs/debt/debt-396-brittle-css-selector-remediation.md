@@ -1,6 +1,6 @@
 # DEBT-396: Brittle CSS Selector Remediation
 
-**Priority:** P2 (active bug class — two unfixed sites that will break on the next jsdom major bump, plus a broader anti-pattern that PR #328 already established the fix for. Without a documented rule and an enforcement mechanism, the same pattern will keep getting written.)
+**Priority:** P2 (active bug class — two unfixed query-string href selector sites remain after PR #328 established the fix. They are exposed to the same selector-engine fragility that broke dashboard tests during the jsdom 26→29 bump. Without a documented rule and an enforcement mechanism, the same pattern will keep getting written.)
 **Created:** 2026-05-26
 **Source:** Deep adversarial test-suite audit conducted alongside DEBT-394 archival. Direct precedent is PR #328 (jsdom 26→29 bump) where three tests in `app/(app)/app/dashboard/page.test.tsx` failed because `querySelector('a[href="${ROUTES.APP_HISTORY}?tab=sessions"]')` stopped matching under jsdom 29's tightened CSS attribute-selector parser when the value contained URL-encoded `&` characters. PR #328 introduced a `findAnchorByHref()` helper using `getAttribute('href')` comparison. Two additional sites in the codebase still use the unsafe pattern and were not caught by the original sweep.
 **Related:** [.claude/rules/testing-react19.md](../../.claude/rules/testing-react19.md), [docs/dev/dependency-update-protocol.md](../dev/dependency-update-protocol.md), PR #328
@@ -23,7 +23,7 @@ Array.from(doc.querySelectorAll('a')).find(
 
 This is identical in intent but routes around the selector parser entirely. It tests the actual behavior (the anchor's `href` attribute matches the expected route) rather than the byproduct (does the CSS engine match this selector string).
 
-PR #328 demonstrated this fix and extracted it as `findAnchorByHref()`. The fix worked. **Two sites in the codebase still use the unsafe pattern.** They WILL break on the next jsdom major.
+PR #328 demonstrated this fix and inlined it as `findAnchorByHref()` in `app/(app)/app/dashboard/page.test.tsx`. The fix worked. **Two query-string href sites in the codebase still use the unsafe selector-string pattern.** They should be migrated before the next selector-engine/jsdom churn.
 
 ---
 
@@ -36,20 +36,20 @@ PR #328 demonstrated this fix and extracted it as `findAnchorByHref()`. The fix 
 | `app/(app)/app/dashboard/page.test.tsx` | 355 | `doc.querySelector(\`li a[href="${ROUTES.APP_HISTORY}?tab=sessions"]\`)` | Same bug class as PR #328 |
 | `app/(app)/app/questions/[slug]/question-page-client.test.tsx` | 220 | `doc.querySelector('a[href="/app/history?tab=sessions"]')` | Same bug class as PR #328 |
 
-Both selectors contain `?tab=sessions`. Under jsdom 29 the dashboard case was fixed in PR #328 (because that file got the sweep); the other dashboard occurrence at line 355 and the question-page case were missed because they use different patterns the sweep didn't grep for. Both will break on the next jsdom CSS-parser tightening.
+Both selectors contain `?tab=sessions`. Under jsdom 29 the dashboard cases fixed in PR #328 were migrated to `getAttribute()` comparison; the other dashboard occurrence at line 355 and the question-page case were missed because they use different patterns the sweep didn't grep for. Both are exposed to the same failure mode on future selector-engine tightening.
 
-Verify the sites:
+Verify the sites with a regex that requires the `?` to appear inside the attribute selector brackets (the looser `querySelector\(.*\[href.*\?` form also matches optional chaining after the selector call and produces false positives):
 
 ```sh
-rg -n "querySelector\(.*\[href.*\?" app/ src/ components/ --type ts --type tsx
+rg -n 'querySelector\([^\n]*\[href[^\]]*[?][^\]]*\]' app/ src/ components/ --glob '*.ts' --glob '*.tsx'
 ```
 
 ### B. Broader query-string-in-attribute-selector anti-pattern
 
-A wider grep finds additional `querySelector('[<attr>="...?..."]')` patterns that aren't necessarily for hrefs but carry the same risk:
+A wider grep finds additional attribute selectors. Most are safe because the attribute value has no query-string/special-character payload, but the sweep should classify each match before remediation:
 
 ```sh
-rg -n "querySelector.*\[(href|src|action|data-\w+)=" app/ src/ components/ --type ts --type tsx | rg -v "_archive|node_modules"
+rg -n "querySelector.*\[(href|src|action|data-\w+)=" app/ src/ components/ --glob '*.ts' --glob '*.tsx' | rg -v "_archive|node_modules"
 ```
 
 Audit each. Most are safe (the attribute value contains no special characters). The ones with `?`, `&`, `=`, `#`, encoded entities, or interpolated URL values are at risk and should switch to `getAttribute()` comparison.
@@ -195,6 +195,6 @@ Both PRs are independently revertable.
 
 ## Done When
 
-Both PRs merged to `dev` and synced to `main`. A grep of the codebase for `querySelector.*\[(href|src|action|data-\w+)=.*[?&=#]` returns zero unfixed sites. The shared helper is the single canonical implementation. The rule file documents the WHY. DEBT-396 doc archived to `docs/_archive/debt/` with resolution paragraph.
+Both PRs merged to `dev` and synced to `main`. A grep of the codebase for `querySelector\([^\n]*\[(href|src|action|data-[[:alnum:]_-]+)[^\]]*[?&=#][^\]]*\]` returns zero unfixed sites. The shared helper is the single canonical implementation. The rule file documents the WHY. DEBT-396 doc archived to `docs/_archive/debt/` with resolution paragraph.
 
 A future agent or contributor who writes `querySelector('a[href="/path?x=1"]')` will be flagged at code-review time by either the documented rule (in their loaded context) or by the optional lint/grep hardening if it ships later.
