@@ -211,16 +211,21 @@ This is the single highest-leverage edit in this debt cycle. With it, every futu
 
 ### PR 2 — `docs/frontend/standards.md` "For AI Agents" preamble
 
-Branch: `docs/debt-398-standards-agent-preamble`
+Branch: `feat/debt-398-pr-2-standards-md-agent-preamble`
 
-Add at the top of `docs/frontend/standards.md` (before § 1):
+Add near the top of `docs/frontend/standards.md`, after the existing
+introductory "See also" list and before the horizontal rule / table of
+contents. The preamble must stay before § 1 so agents see the binding
+context before the token rules:
 
 ```markdown
 ## For AI Agents (Claude Code, Cursor, Codex, etc.)
 
-This document is **authoritative** and is loaded into your context via
-`.claude/rules/frontend.md` whenever you edit files in `app/**` or
-`components/**`. Do NOT skip it. Do NOT invent patterns.
+This document is **authoritative**. Claude Code loads the matching
+gateway summary from `.claude/rules/frontend.md` whenever it edits
+files in `app/**` or `components/**`; general agent guidance in
+`AGENTS.md` also points AI coding agents here. Do NOT skip it. Do NOT
+invent patterns.
 
 When making a UI change:
 
@@ -234,9 +239,10 @@ When making a UI change:
    `pattern-registry.md` first** (with rationale and design review),
    THEN implement in code.
 
-Violations are caught at code review and CI. Merging without
-conformance means rework. See `.claude/rules/frontend.md` for the
-mandatory pattern enforcement summary.
+Violations should be caught at code review. DEBT-398 PR 3 ships the
+regression-test enforcement that will make CI catch new violations
+automatically. See `.claude/rules/frontend.md` for the mandatory
+pattern enforcement summary.
 ```
 
 Pure doc edit. No code changes. The point is to signal to any agent that does find the doc (even without the `.claude/rules/frontend.md` gateway) that it is binding.
@@ -272,7 +278,8 @@ PR 2 done when:
 
 - `docs/frontend/standards.md` has the "For AI Agents" preamble at the top.
 - The preamble is explicit that the doc is authoritative.
-- The preamble references `.claude/rules/frontend.md` as the enforcement layer.
+- The preamble references `.claude/rules/frontend.md` as the shipped path-scoped gateway summary.
+- The preamble accurately states that CI enforcement lands in PR 3, not in PR 2.
 
 PR 3 done when:
 
