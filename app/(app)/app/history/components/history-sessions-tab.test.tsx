@@ -367,7 +367,7 @@ describe('HistorySessionsTab', () => {
     expect(html).not.toContain('tabindex="0"');
   });
 
-  it('renders a minimal chevron disclosure button with no button chrome', () => {
+  it('renders a compact Button chevron disclosure with no row chrome', () => {
     const result: SessionHistoryResult = {
       ok: true,
       data: {
@@ -391,9 +391,13 @@ describe('HistorySessionsTab', () => {
 
     expect(toggle).not.toBeNull();
     expect(toggle?.textContent).toBe('');
+    expect(toggle?.getAttribute('data-slot')).toBe('button');
+    expect(toggle?.getAttribute('data-variant')).toBe('ghost');
     expect(toggleClassTokens.has('rounded-full')).toBe(false);
     expect(toggleClassTokens.has('border')).toBe(false);
-    expect(toggleClassTokens.has('ring-focus')).toBe(true);
+    expect(toggleClassTokens.has('focus-visible:border-ring')).toBe(true);
+    expect(toggleClassTokens.has('focus-visible:ring-ring/50')).toBe(true);
+    expect(toggleClassTokens.has('focus-visible:ring-[3px]')).toBe(true);
     expect(icon).not.toBeNull();
     expect(iconClassTokens.has('size-4')).toBe(true);
     expect(iconClassTokens.has('text-foreground/60')).toBe(true);
