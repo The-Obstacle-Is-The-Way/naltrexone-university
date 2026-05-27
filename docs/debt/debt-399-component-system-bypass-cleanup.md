@@ -203,7 +203,7 @@ rg -c "focus-within:ring-ring/50 focus-within:ring-\[3px\]" app/ components/ -g 
 rg -n "focusVisibleRing" app/ components/
 ```
 
-Each command should return ZERO. An unscoped grep over `app/` and `components/` will still find `app/globals.css`, because PR 1 intentionally made that the canonical `@apply` source.
+Each command should return ZERO. A grep without file-type filters over `app/` and `components/` will still find `app/globals.css`, because PR 1 intentionally made that the canonical `@apply` source.
 
 Full local gate including browser tests. The visual output must be equivalent to pre-PR — this is pure refactor. Confirm with `pnpm build`; if Tailwind emits unexpected CSS differences beyond using the already-defined `.ring-focus` / `.ring-focus-within` utilities, stop and investigate before pushing.
 
@@ -258,7 +258,7 @@ PR 1 done when:
 
 PR 2 done when:
 
-- A `.tsx` / `.ts` grep of `app/` and `components/` for the literal canonical focus-ring string returns ZERO sites; an unscoped grep may still find the single canonical source in `app/globals.css`.
+- A `.tsx` / `.ts` grep of `app/` and `components/` for the literal canonical focus-ring string returns ZERO sites; a grep without file-type filters may still find the single canonical source in `app/globals.css`.
 - A `.tsx` / `.ts` grep for `focus-within:ring-ring/50 focus-within:ring-[3px]` returns ZERO sites after `components/question/choice-button.tsx` migrates to `focus-within:border-ring ring-focus-within`.
 - `rg -n "focusVisibleRing" app/ components/` returns ZERO after the local `components/app-desktop-nav.tsx` constant is deleted.
 - The visual output is equivalent to pre-PR (no design regressions).
