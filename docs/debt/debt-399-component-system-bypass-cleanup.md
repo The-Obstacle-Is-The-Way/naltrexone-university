@@ -147,20 +147,25 @@ Add to `app/globals.css`:
   .ring-focus {
     @apply focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px];
   }
+
+  .ring-focus-within {
+    @apply focus-within:outline-none focus-within:ring-ring/50 focus-within:ring-[3px];
+  }
 }
 ```
 
 Then PR 2 can migrate existing call sites to `className="... ring-focus ..."` mechanically.
 
-This PR ONLY adds the `.ring-focus` utility. It does NOT migrate existing sites and does NOT edit `components/theme-token-regression-source-scan.ts` or `components/theme-token-regression.test.tsx`; the DEBT-398 PR 3 enforcement gate covers raw-button and opacity drift, not focus-ring extraction. Existing-site migrations happen in PR 2.
+This PR ONLY adds the `.ring-focus` and `.ring-focus-within` utilities. It does NOT migrate existing sites and does NOT edit `components/theme-token-regression-source-scan.ts` or `components/theme-token-regression.test.tsx`; the DEBT-398 PR 3 enforcement gate covers raw-button and opacity drift, not focus-ring extraction. Existing-site migrations happen in PR 2.
 
-### PR 2 — Migrate the 26 exact inline focus-ring occurrences to the shared utility
+### PR 2 — Migrate the 26 exact focus-visible occurrences plus the 1 focus-within occurrence to shared utilities
 
 Branch: `refactor/debt-399-focus-ring-migration`
 
-Mechanical sweep. For each of the 26 sites across 19 files (run the grep from Finding B for the authoritative list):
+Mechanical sweep. For each of the 26 focus-visible sites across 19 files and the 1 focus-within site in `components/question/choice-button.tsx` (run the grep from Finding B for the authoritative list):
 
 - Replace the literal `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]` with `ring-focus`.
+- Replace the literal `focus-within:outline-none focus-within:ring-ring/50 focus-within:ring-[3px]` with `ring-focus-within`.
 - Delete the local `focusVisibleRing` const in `components/app-desktop-nav.tsx` once the local usages are migrated.
 
 After the sweep:
@@ -170,6 +175,8 @@ rg -c "focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-
 ```
 
 Should return ZERO (or only the chosen single canonical source).
+
+A grep for the focus-within literal should also return ZERO after `components/question/choice-button.tsx` migrates to `ring-focus-within`.
 
 Full local gate including browser tests. The visual output must be byte-identical — this is pure refactor.
 
@@ -218,7 +225,7 @@ This PR is lower priority — visual divergence is small, but the discipline mat
 
 PR 1 done when:
 
-- A Tailwind utility `.ring-focus` exists in `app/globals.css` and applies the exact canonical focus-ring pattern: `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`.
+- Tailwind utilities `.ring-focus` and `.ring-focus-within` exist in `app/globals.css` and apply the exact canonical focus-ring patterns: `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]` and `focus-within:outline-none focus-within:ring-ring/50 focus-within:ring-[3px]`.
 - The existing `.claude/rules/frontend.md` focus-ring mandate still names the canonical pattern; no rule-file update is required until PR 2 starts migrating usage to `.ring-focus`.
 - The unit / browser tests pass with the utility in place but not yet adopted.
 
