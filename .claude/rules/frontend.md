@@ -13,6 +13,98 @@ paths:
 - **Clerk** for auth (`@clerk/nextjs`)
 - **Biome** for lint + format (not ESLint/Prettier)
 
+## Canonical UI Patterns (Standards Enforcement)
+
+ALWAYS refer to these design docs as sources of truth when editing
+files in `app/**`, `components/**`, or any UI surface:
+
+- `docs/frontend/standards.md` — tokens, focus rings, spacing, typography
+- `docs/frontend/pattern-registry.md` — opacity scale, foreground ramps, dark-mode rules
+- `docs/frontend/contrast-policy.md` — WCAG AA contrast targets
+- `docs/frontend/design-principles.md` — layout composition
+- `docs/frontend/typography-policy.md` — text-size discipline
+- `docs/frontend/bookmark-surface-policy.md` — bookmark appearance decision tree
+
+Mandatory patterns — never diverge:
+
+### 1. Focus rings (single canonical pattern)
+
+Use the `<Button>` component (which has the ring built in) OR copy the
+canonical pattern EXACTLY:
+
+    focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
+
+Never hand-roll variants. Never change the ring opacity or width. If
+your interactive element cannot use Button, copy the pattern, then ADD
+the new component to `components/theme-token-regression.test.tsx` in
+the same PR so the regression guard covers it.
+
+### 2. Opacity scale (background + hover)
+
+When using `bg-muted`, `bg-foreground`, or similar layer fills, use
+ONLY the canonical opacities from `pattern-registry.md` § 1.2:
+
+| Opacity | Use |
+|---|---|
+| `/20` | Tint (non-interactive backgrounds inside cards) |
+| `/40` | Subtle hover inside cards |
+| `/50` | Standard hover on page background |
+| `/60` | Exception-only emphasized hover (requires design review) |
+| `/80` | RESERVED — do not use |
+| `/100` | RESERVED for solid fills only — do not use for hover |
+| Documented foreground-ramp values (`/5`, `/[0.06]`, `/[0.07]`, `/[0.08]`, `/[0.12]`, `dark:hover:bg-foreground/[0.05]`) | Allowed ONLY in the exact Pattern Registry contexts (`I-1`, `I-2`, `I-3`, `I-4`, `M-4`) |
+| Undocumented arbitrary values (`/[0.03]`, `/[0.10]`, `/[13%]`, etc.) | NEVER USE — add the pattern to the registry first or choose an existing token |
+
+If your use case is not on the scale, add it to `pattern-registry.md`
+with a rationale, THEN implement.
+
+### 3. Semantic tokens (NEVER raw colors)
+
+Use `bg-primary`, `text-foreground`, `text-muted-foreground`,
+`border-border`, etc.
+
+NEVER use raw hex (`#fff`, `#121212`) or palette colors (`bg-zinc-400`,
+`text-slate-300`) in `.tsx` UI code except documented third-party API
+seams such as Clerk `appearance.variables`.
+
+Enforcement: `components/theme-token-regression.test.tsx` blocks raw
+palette regressions in selected high-risk components. Add new components
+to this test when they expand the design surface and need token/opacity
+coverage.
+
+### 4. Component-system mandate
+
+All interactive click targets MUST use the `<Button>` component
+(standards.md § 2). Raw `<button>` is allowed only inside
+`components/ui/` primitives and app-shell disclosure toggles per
+Pattern Registry I-6.
+
+See DEBT-399 for the active cleanup of existing bypass sites.
+
+### 5. Dark-mode strategy
+
+Semantic tokens handle light/dark automatically. Component-specific
+`dark:` overrides are allowed ONLY when they appear in
+`pattern-registry.md` or `contrast-policy.md`. If the same dark
+override appears in 2+ components, promote it into a shared primitive
+or a constant in `lib/shared-styles.ts`.
+
+---
+
+## Discoverability rule
+
+If you cannot find a pattern documented in the design docs above, do
+not invent one. Either:
+
+(a) Add it to `pattern-registry.md` with rationale and design review,
+    THEN implement.
+
+(b) File a debt doc proposing the addition and link it from
+    `docs/debt/index.md`.
+
+NEVER ship a one-off pattern that diverges from the documented system
+without a corresponding doc entry.
+
 ## Routing
 
 Import routes from `lib/routes.ts` — NEVER hard-code route strings.
