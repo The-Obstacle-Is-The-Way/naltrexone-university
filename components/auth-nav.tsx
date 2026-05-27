@@ -66,7 +66,7 @@ export async function AuthNav({
       {primaryLink ? (
         <Link
           href={primaryLink.href}
-          className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+          className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground ring-focus"
         >
           {primaryLink.label}
         </Link>

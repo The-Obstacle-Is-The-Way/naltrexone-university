@@ -33,7 +33,7 @@ describe('tab-switch-styles', () => {
 
   it('defines the canonical base classes', () => {
     expect(tabSwitchItemBaseClasses).toContain('rounded-md');
-    expect(tabSwitchItemBaseClasses).toContain('focus-visible');
+    expect(tabSwitchItemBaseClasses).toContain('ring-focus');
     expect(tabSwitchItemBaseClasses).toContain('py-2');
   });
 

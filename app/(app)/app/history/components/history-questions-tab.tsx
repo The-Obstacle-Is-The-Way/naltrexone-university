@@ -499,7 +499,7 @@ export function HistoryQuestionsTab({
                 <li key={row.questionId}>
                   <Link
                     href={href}
-                    className="block rounded-2xl bg-foreground/[0.08] p-4 transition-colors hover:bg-foreground/[0.12] focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                    className="block rounded-2xl bg-foreground/[0.08] p-4 transition-colors hover:bg-foreground/[0.12] ring-focus"
                   >
                     <div className="space-y-2">
                       <span className="text-sm font-medium text-foreground">

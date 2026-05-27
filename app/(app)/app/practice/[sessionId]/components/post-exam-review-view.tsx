@@ -107,7 +107,7 @@ export function PostExamReviewView({
           ref={panelRef}
           id={controlledPanelId}
           aria-label={`Question ${currentRow.order} of ${review.totalCount}`}
-          className="space-y-6 outline-none focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+          className="space-y-6 outline-none ring-focus"
           tabIndex={-1}
         >
           <p className="text-sm text-muted-foreground">

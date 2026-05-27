@@ -160,25 +160,52 @@ This PR ONLY adds the `.ring-focus` and `.ring-focus-within` utilities. It does 
 
 ### PR 2 — Migrate the 26 exact focus-visible occurrences plus the 1 focus-within occurrence to shared utilities
 
-Branch: `refactor/debt-399-focus-ring-migration`
+Branch: `feat/debt-399-pr-2-focus-ring-migration`
 
-Mechanical sweep. For each of the 26 focus-visible sites across 19 files and the 1 focus-within site in `components/question/choice-button.tsx` (run the grep from Finding B for the authoritative list):
+Mechanical sweep. The pre-execution audit for this PR re-verified the current ledger after PR 1 landed:
+
+- 26 exact `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]` code occurrences across 19 `.tsx` / `.ts` files.
+- 1 `focus-within` ring-pair occurrence in `components/question/choice-button.tsx`; it is not the exact `.ring-focus-within` source string because it currently preserves `focus-within:border-ring`.
+- 1 local `focusVisibleRing` constant declaration plus 2 local usages in `components/app-desktop-nav.tsx`.
+
+For the 26 focus-visible sites across 19 files (run the grep from Finding B with `--glob "*.tsx" --glob "*.ts"` for the authoritative list):
 
 - Replace the literal `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]` with `ring-focus`.
-- Replace the literal `focus-within:outline-none focus-within:ring-ring/50 focus-within:ring-[3px]` with `ring-focus-within`.
-- Delete the local `focusVisibleRing` const in `components/app-desktop-nav.tsx` once the local usages are migrated.
+- In `components/question/choice-button.tsx`, replace only the literal `focus-within:ring-ring/50 focus-within:ring-[3px]` pair with `ring-focus-within` and keep the existing `focus-within:border-ring` token.
+- In `components/app-desktop-nav.tsx`, replace the two `${focusVisibleRing}` template interpolations with the literal `ring-focus` class and delete the local `focusVisibleRing` constant declaration.
+
+Suggested mechanical commands after reviewing the diff target list:
+
+```sh
+rg -l 'focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-\[3px\]' app/ components/ --glob '*.tsx' --glob '*.ts' |
+  while IFS= read -r file; do
+    perl -0pi -e 's|focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-\[3px\]|ring-focus|g' "$file"
+  done
+perl -0pi -e 's|focus-within:ring-ring/50 focus-within:ring-\[3px\]|ring-focus-within|g' components/question/choice-button.tsx
+```
+
+Then manually clean up `components/app-desktop-nav.tsx` so the active and inactive `Link` className strings contain `ring-focus` directly and the now-unused `focusVisibleRing` constant is gone.
+
+Do **not** migrate the broader-but-not-exact focus-ring family in this PR. Those sites are intentionally out of scope because they are shadcn primitives, current-selection rings, or alternate focus treatments rather than the exact canonical copy-paste:
+
+- `components/ui/button.tsx`
+- `components/ui/input.tsx`
+- `components/ui/select.tsx`
+- `app/(app)/app/questions/[slug]/components/review-question-navigator.tsx`
+- `app/(app)/app/practice/components/practice-session-starter.tsx`
+- `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:94`
 
 After the sweep:
 
 ```sh
 rg -c "focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-\[3px\]" app/ components/ -g "*.tsx" -g "*.ts"
+rg -c "focus-within:ring-ring/50 focus-within:ring-\[3px\]" app/ components/ -g "*.tsx" -g "*.ts"
+rg -n "focusVisibleRing" app/ components/
 ```
 
-Should return ZERO (or only the chosen single canonical source).
+Each command should return ZERO. A grep without file-type filters over `app/` and `components/` will still find `app/globals.css`, because PR 1 intentionally made that the canonical `@apply` source.
 
-A grep for the focus-within literal should also return ZERO after `components/question/choice-button.tsx` migrates to `ring-focus-within`.
-
-Full local gate including browser tests. The visual output must be byte-identical — this is pure refactor.
+Full local gate including browser tests. The visual output must be equivalent to pre-PR — this is pure refactor. Confirm with `pnpm build`; if Tailwind emits unexpected CSS differences beyond using the already-defined `.ring-focus` / `.ring-focus-within` utilities, stop and investigate before pushing.
 
 ### PR 3 — Refactor the raw `<button>` bypasses and resolve the history disclosure toggle
 
@@ -231,8 +258,10 @@ PR 1 done when:
 
 PR 2 done when:
 
-- A grep of `app/` and `components/` for the literal canonical focus-ring string returns ZERO sites (or only the single canonical source).
-- The visual output is byte-identical to pre-PR (no design regressions).
+- A `.tsx` / `.ts` grep of `app/` and `components/` for the literal canonical focus-ring string returns ZERO sites; a grep without file-type filters may still find the single canonical source in `app/globals.css`.
+- A `.tsx` / `.ts` grep for `focus-within:ring-ring/50 focus-within:ring-[3px]` returns ZERO sites after `components/question/choice-button.tsx` migrates to `focus-within:border-ring ring-focus-within`.
+- `rg -n "focusVisibleRing" app/ components/` returns ZERO after the local `components/app-desktop-nav.tsx` constant is deleted.
+- The visual output is equivalent to pre-PR (no design regressions).
 - Full local gate green including `pnpm test:browser`.
 
 PR 3 done when:
@@ -260,6 +289,6 @@ All four PRs independently revertable.
 
 ## Done When
 
-All four PRs merged to `dev` and synced to `main`. The grep for `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-\[3px\]` returns one canonical source (or zero if the Tailwind utility approach). Raw `<button>` count outside `components/ui/` and registry-documented exceptions is zero. Dark-mode opacities align with `pattern-registry.md` § 1.3 or are documented as new registry entries. DEBT-399 doc archived to `docs/_archive/debt/` with resolution paragraph naming all four PRs.
+All four PRs merged to `dev` and synced to `main`. The grep for `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-\[3px\]` returns one canonical source in `app/globals.css`, and a `.tsx` / `.ts` grep of `app/` and `components/` returns zero usage sites. Raw `<button>` count outside `components/ui/` and registry-documented exceptions is zero. Dark-mode opacities align with `pattern-registry.md` § 1.3 or are documented as new registry entries. DEBT-399 doc archived to `docs/_archive/debt/` with resolution paragraph naming all four PRs.
 
 Combined with DEBT-398's enforcement layer, the design system is now both documented AND enforced — future drift gets caught at lint / CI time rather than accumulating until the next manual audit.

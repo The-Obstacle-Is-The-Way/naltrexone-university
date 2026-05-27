@@ -7,9 +7,6 @@ import {
   getActiveAppNavItemHref,
 } from '@/components/app-nav-items';
 
-const focusVisibleRing =
-  'focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
-
 export function AppDesktopNav() {
   const activeHref = getActiveAppNavItemHref(usePathname());
 
@@ -27,8 +24,8 @@ export function AppDesktopNav() {
             aria-current={isActive ? 'page' : undefined}
             className={
               isActive
-                ? `rounded-md whitespace-nowrap text-foreground font-medium ${focusVisibleRing}`
-                : `rounded-md whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground ${focusVisibleRing}`
+                ? 'rounded-md whitespace-nowrap text-foreground font-medium ring-focus'
+                : 'rounded-md whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground ring-focus'
             }
           >
             {item.label}

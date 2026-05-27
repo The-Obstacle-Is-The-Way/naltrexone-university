@@ -38,7 +38,7 @@ export function SessionBreakdownList({
           {row.isAvailable && onOpenQuestion ? (
             <button
               type="button"
-              className="-mx-2 flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 text-left font-medium text-foreground transition-colors hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50"
+              className="-mx-2 flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 text-left font-medium text-foreground transition-colors hover:bg-muted/20 ring-focus disabled:pointer-events-none disabled:opacity-50"
               disabled={isQuestionActionPending}
               onClick={() => onOpenQuestion(row.questionId)}
             >
@@ -55,7 +55,7 @@ export function SessionBreakdownList({
                 sessionId,
                 historyHref,
               })}
-              className="-mx-2 flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 font-medium text-foreground transition-colors hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+              className="-mx-2 flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 font-medium text-foreground transition-colors hover:bg-muted/20 ring-focus"
             >
               <span className="shrink-0">{row.order}.</span>
               <span className="truncate">

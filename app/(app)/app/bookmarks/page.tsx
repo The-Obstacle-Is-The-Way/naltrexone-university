@@ -147,7 +147,7 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
                         <div className="text-sm font-medium text-foreground">
                           <Link
                             href={reviewHref}
-                            className="rounded-sm focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                            className="rounded-sm ring-focus"
                           >
                             {getStemPreview(row.stemMd, 80)}
                           </Link>

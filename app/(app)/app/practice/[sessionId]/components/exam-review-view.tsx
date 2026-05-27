@@ -215,7 +215,7 @@ export function ExamReviewView({
                   type="button"
                   className={cn(
                     'bg-card text-card-foreground block w-full rounded-2xl border p-4 text-left shadow-sm transition-colors',
-                    'hover:bg-muted/20 focus-visible:border-ring focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+                    'hover:bg-muted/20 focus-visible:border-ring ring-focus',
                   )}
                   onClick={() => onOpenQuestion(row.questionId)}
                 >

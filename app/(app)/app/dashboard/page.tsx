@@ -152,7 +152,7 @@ export function DashboardView({
                   <li key={row.sessionId}>
                     <Link
                       href={sessionReviewHref}
-                      className="block rounded-xl bg-foreground/5 p-3 transition-colors hover:bg-foreground/[0.08] focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                      className="block rounded-xl bg-foreground/5 p-3 transition-colors hover:bg-foreground/[0.08] ring-focus"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="inline-flex items-center rounded-full border-0 bg-foreground/[0.06] px-2 py-0.5 text-xs font-medium text-foreground/60">
@@ -230,7 +230,7 @@ export function DashboardView({
                         mode: 'review',
                         attemptId: row.attemptId,
                       })}
-                      className="block rounded-xl bg-foreground/5 p-3 transition-colors hover:bg-foreground/[0.08] focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                      className="block rounded-xl bg-foreground/5 p-3 transition-colors hover:bg-foreground/[0.08] ring-focus"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <span className="min-w-0 flex-1 text-sm font-medium text-foreground">

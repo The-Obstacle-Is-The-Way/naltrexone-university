@@ -425,7 +425,7 @@ export function PracticeView(props: PracticeViewProps) {
         data-testid="active-question-panel"
         aria-labelledby={questionPanelLabelledBy}
         tabIndex={-1}
-        className="space-y-6 outline-none focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+        className="space-y-6 outline-none ring-focus"
       >
         {props.loadState.status === 'error' ? (
           <ErrorCard>

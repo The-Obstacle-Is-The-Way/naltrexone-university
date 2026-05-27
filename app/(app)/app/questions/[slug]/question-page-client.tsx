@@ -260,7 +260,7 @@ export function QuestionView(props: QuestionViewProps) {
         {shouldShowTopBackLink ? (
           <Link
             href={originUi.backHref}
-            className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+            className="rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground ring-focus"
           >
             {originUi.backLabel}
           </Link>

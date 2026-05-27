@@ -94,13 +94,12 @@ describe('PostExamReviewView', () => {
     expect(panel?.tagName).toBe('SECTION');
   });
 
-  it('applies the repo-standard focus-visible ring classes to the review panel', () => {
+  it('applies the repo-standard focus-ring utility to the review panel', () => {
     const doc = renderView();
     const panel = doc.querySelector('#practice-question-panel');
     const className = panel?.getAttribute('class') ?? '';
 
-    expect(className).toContain('focus-visible:ring-ring/50');
-    expect(className).toContain('focus-visible:ring-[3px]');
+    expect(className).toContain('ring-focus');
   });
 
   it('keeps the review panel programmatically focusable with tabIndex -1', () => {
