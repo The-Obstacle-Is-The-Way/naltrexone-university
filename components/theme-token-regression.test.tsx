@@ -12,14 +12,14 @@ import {
   vi,
 } from 'vitest';
 import {
-  restoreProcessEnv,
-  snapshotProcessEnv,
-} from '@/tests/shared/process-env';
-import {
   collectOpacityIssues,
   collectRawButtonIssues,
   readProductionUiSources,
-} from './theme-token-regression-source-scan';
+} from '@/components/theme-token-regression-source-scan';
+import {
+  restoreProcessEnv,
+  snapshotProcessEnv,
+} from '@/tests/shared/process-env';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -213,6 +213,7 @@ describe('theme token regression', () => {
         lines: [
           'export function Example() { return <div className="bg-foreground/[0.03]" />; }',
           'export function Other() { return <div className="bg-muted/[13%]" />; }',
+          'export function Third() { return <div className="bg-muted/30 border-border/30" />; }',
         ],
       },
     ]);
@@ -220,6 +221,8 @@ describe('theme token regression', () => {
     expect(issues).toEqual([
       'components/example-card.tsx:1 undocumented opacity token "bg-foreground/[0.03]" is not in the Pattern Registry allowlist. Add the pattern to docs/frontend/pattern-registry.md before using it.',
       'components/example-card.tsx:2 undocumented opacity token "bg-muted/[13%]" is not in the Pattern Registry allowlist. Add the pattern to docs/frontend/pattern-registry.md before using it.',
+      'components/example-card.tsx:3 undocumented opacity token "bg-muted/30" is not in the Pattern Registry allowlist. Add the pattern to docs/frontend/pattern-registry.md before using it.',
+      'components/example-card.tsx:3 undocumented opacity token "border-border/30" is not in the Pattern Registry allowlist. Add the pattern to docs/frontend/pattern-registry.md before using it.',
     ]);
   });
 

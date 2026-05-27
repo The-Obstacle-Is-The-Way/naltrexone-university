@@ -39,7 +39,7 @@ const OPACITY_TOKEN_PATTERN = /[^\s"'`<>]+\/(?:\[[^\]\s"'`<>]+\]|[0-9]+%?)/g;
 const OPACITY_UTILITY_PATTERN =
   /(?:^|:)(?:bg|text|border|divide|ring|focus:bg|focus-visible:ring|focus-within:ring|aria-invalid:ring|hover:bg|hover:border|hover:text)-/;
 const CONTROLLED_OPACITY_TOKEN_PATTERN =
-  /(?:^|:)(?:bg-muted|hover:bg-muted|divide-border|dark:divide-foreground|border-border|dark:border-foreground|bg-foreground|hover:bg-foreground|dark:hover:bg-foreground|dark:bg-foreground|text-foreground|hover:text-foreground|border-foreground|hover:border-foreground|dark:hover:border-foreground)-/;
+  /(?:^|:)(?:bg-muted|hover:bg-muted|divide-border|dark:divide-foreground|border-border|dark:border-foreground|bg-foreground|hover:bg-foreground|dark:hover:bg-foreground|dark:bg-foreground|text-foreground|hover:text-foreground|border-foreground|hover:border-foreground|dark:hover:border-foreground)\//;
 
 export const RAW_BUTTON_EXEMPTIONS: readonly CountedExemption[] = [
   [
