@@ -80,6 +80,18 @@
 }
 
 @layer utilities {
+  /* Canonical focus-ring primitives per docs/frontend/standards.md § 3.
+     DEBT-399 PR 1 extracts these so the 26 focus-visible + 1 focus-within
+     inline copies have a single shared source. DEBT-399 PR 2 migrates
+     every site to use these utilities. */
+  .ring-focus {
+    @apply focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px];
+  }
+
+  .ring-focus-within {
+    @apply focus-within:outline-none focus-within:ring-ring/50 focus-within:ring-[3px];
+  }
+
   body {
     font-family: "Manrope", Arial, Helvetica, sans-serif;
   }
