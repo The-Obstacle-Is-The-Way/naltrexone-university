@@ -2,7 +2,7 @@
 
 **Priority:** P1 (the design system documented in `docs/frontend/` exists but is functionally optional — agents and contributors do not auto-load it during code generation, no lint rule blocks the most common violations, and the result is a steady drip of "AI-generated code that looks right but bypasses the documented system." This is the meta-debt that produces DEBT-399 and amplifies the small individual violations into a cumulative aesthetic and maintenance drift.)
 **Created:** 2026-05-26
-**Source:** Deep documentation-gap audit conducted alongside DEBT-394 archival. The audit catalogued every existing doc, identified that `.claude/rules/frontend.md` is 58 lines and does not cross-reference `docs/frontend/standards.md` or `pattern-registry.md`, and traced four recent incidents (PR #342 env leak, PR #328 selector brittleness, PR #330 Zod fixture-boundary precedent, design system drift) back to the same root cause: docs exist as aspiration, agents don't load them, no enforcement layer catches violations.
+**Source:** Deep documentation-gap audit conducted alongside DEBT-394 archival, re-verified before PR 1 execution. The audit catalogued every existing doc, confirmed `.claude/rules/frontend.md` is still 58 lines and does not cross-reference `docs/frontend/standards.md` or `pattern-registry.md`, and traced four recent incidents (PR #342 env leak, PR #328 selector brittleness, PR #330 Zod fixture-boundary precedent, design system drift) back to the same root cause: docs exist as aspiration, current `AGENTS.md` / `CLAUDE.md` stopgaps help but path-scoped frontend rules still do not load the design docs, and no enforcement layer catches violations.
 **Related:** [.claude/rules/frontend.md](../../.claude/rules/frontend.md) (currently 58 lines, too thin), [docs/frontend/standards.md](../frontend/standards.md), [docs/frontend/pattern-registry.md](../frontend/pattern-registry.md), [docs/frontend/contrast-policy.md](../frontend/contrast-policy.md), [docs/frontend/design-principles.md](../frontend/design-principles.md), [docs/frontend/typography-policy.md](../frontend/typography-policy.md), [docs/frontend/bookmark-surface-policy.md](../frontend/bookmark-surface-policy.md), [DEBT-399](./debt-399-component-system-bypass-cleanup.md) (the visible symptom this debt addresses at root)
 
 **Status:** Active
@@ -13,18 +13,18 @@
 
 The repo has a documented design system at `docs/frontend/`:
 
-- `standards.md` — semantic tokens (NEVER raw hex), Button component mandate, single canonical focus-ring pattern (`focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`), spacing, typography, dark mode strategy.
+- `standards.md` — semantic tokens (no raw `.tsx` colors except documented third-party API seams), Button component mandate, single canonical focus-ring pattern (`focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`), spacing, typography, dark mode strategy.
 - `pattern-registry.md` — canonical opacity scale (`/20`, `/40`, `/50`, `/60`, `/80` reserved, `/100` reserved), foreground-ramp tonal-row tokens (`bg-foreground/5`, `bg-foreground/[0.06]`, `bg-foreground/[0.07]`, `bg-foreground/[0.08]`, `bg-foreground/[0.12]`, `dark:hover:bg-foreground/[0.05]` in documented patterns only), and dark-mode override conventions.
 - `contrast-policy.md` — WCAG AA contrast targets.
 - `design-principles.md` — layout composition, navigation zones.
 - `typography-policy.md` — explicit text-size choices (no implicit inheritance).
 - `bookmark-surface-policy.md` — bookmark appearance decision tree.
 
-These documents are intentional, careful, and authoritative IF READ. The problem is that NOTHING in the toolchain ensures they get read at code-generation time.
+These documents are intentional, careful, and authoritative IF READ. The branch now has a universal-context stopgap in `AGENTS.md` / `CLAUDE.md`, but the path-scoped frontend rule still does not gateway to these docs and no automated check enforces the full contract. The problem is that the design system is still not treated like loaded, executable frontend policy.
 
 ### Why the documented system is not enforced
 
-1. **Agents load `CLAUDE.md`, `AGENTS.md`, and path-scoped `.claude/rules/*.md` files automatically.** They DO NOT load `docs/frontend/*` automatically. So when an agent generates a new component, the agent is operating with general testing rules, general git workflow, general architecture — but with no design-system context.
+1. **Agents load `CLAUDE.md`, `AGENTS.md`, and path-scoped `.claude/rules/*.md` files automatically.** They DO NOT load `docs/frontend/*` automatically. `AGENTS.md` / `CLAUDE.md` now provide a stopgap design-system pointer, but `.claude/rules/frontend.md` remains the path-scoped rule that activates specifically for UI work and still has no design-doc gateway. So when an agent generates a new component, the agent may have universal design reminders, but not the exact path-scoped frontend policy this repo needs.
 
 2. **`.claude/rules/frontend.md` is 58 lines** and does not cross-reference `standards.md` or `pattern-registry.md`. It covers routing, shadcn, and error-state patterns, but nothing about tokens, focus rings, opacity scale, or design system discoverability.
 
@@ -47,6 +47,7 @@ The current 58-line file covers route constants, shadcn primitive usage, and err
 - Reference `standards.md` (the canonical token + focus-ring + spacing rules).
 - Reference `pattern-registry.md` (the canonical opacity scale + foreground ramp).
 - Reference `contrast-policy.md` (the WCAG AA rules).
+- Reference `design-principles.md`, `typography-policy.md`, or `bookmark-surface-policy.md`.
 - Reference `theme-token-regression.test.tsx` (the existing enforcement test).
 - Mandate "READ docs/frontend/standards.md BEFORE designing a new component."
 
@@ -108,7 +109,7 @@ Ship in three single-concern PRs.
 
 ### PR 1 — `.claude/rules/frontend.md` Gateway expansion
 
-Branch: `docs/debt-398-frontend-rule-gateway`
+Branch: `feat/debt-398-pr-1-frontend-rule-gateway`
 
 Replace the existing thin `.claude/rules/frontend.md` with an expanded version that gateways to the design docs. New sections to add (preserving existing routing / shadcn / error-state content):
 
@@ -150,6 +151,8 @@ ONLY the canonical opacities from `pattern-registry.md` § 1.2:
 | `/40` | Subtle hover inside cards |
 | `/50` | Standard hover on page background |
 | `/60` | Exception-only emphasized hover (requires design review) |
+| `/80` | RESERVED — do not use |
+| `/100` | RESERVED for solid fills only — do not use for hover |
 | Documented foreground-ramp values (`/5`, `/[0.06]`, `/[0.07]`, `/[0.08]`, `/[0.12]`, `dark:hover:bg-foreground/[0.05]`) | Allowed ONLY in the exact Pattern Registry contexts (`I-1`, `I-2`, `I-3`, `I-4`, `M-4`) |
 | Undocumented arbitrary values (`/[0.03]`, `/[0.10]`, `/[13%]`, etc.) | NEVER USE — add the pattern to the registry first or choose an existing token |
 
@@ -162,7 +165,8 @@ Use `bg-primary`, `text-foreground`, `text-muted-foreground`,
 `border-border`, etc.
 
 NEVER use raw hex (`#fff`, `#121212`) or palette colors (`bg-zinc-400`,
-`text-slate-300`).
+`text-slate-300`) in `.tsx` UI code except documented third-party API
+seams such as Clerk `appearance.variables`.
 
 Enforcement: `components/theme-token-regression.test.tsx` blocks raw
 palette regressions in selected high-risk components. Add new components
@@ -260,9 +264,9 @@ The expanded regression test alone is acceptable as the first enforcement layer 
 
 PR 1 done when:
 
-- `.claude/rules/frontend.md` contains the "Canonical UI Patterns" section with cross-references to all five design docs.
-- A grep of the new file finds explicit mentions of `standards.md`, `pattern-registry.md`, `contrast-policy.md`.
-- An agent loading the rule will see the five mandatory patterns.
+- `.claude/rules/frontend.md` contains the "Canonical UI Patterns" section with cross-references to all six canonical design docs.
+- A grep of the new file finds explicit mentions of `standards.md`, `pattern-registry.md`, `contrast-policy.md`, `design-principles.md`, `typography-policy.md`, and `bookmark-surface-policy.md`.
+- The five mandatory pattern sections are present and grep-locatable.
 
 PR 2 done when:
 
