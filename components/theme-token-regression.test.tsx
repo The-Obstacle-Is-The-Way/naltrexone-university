@@ -15,6 +15,11 @@ import {
   restoreProcessEnv,
   snapshotProcessEnv,
 } from '@/tests/shared/process-env';
+import {
+  collectOpacityIssues,
+  collectRawButtonIssues,
+  readProductionUiSources,
+} from './theme-token-regression-source-scan';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -165,6 +170,76 @@ describe('theme token regression', () => {
   afterEach(() => {
     restoreProcessEnv(ORIGINAL_ENV);
     vi.restoreAllMocks();
+  });
+
+  it('blocks new raw button bypasses outside documented exemptions', () => {
+    const issues = collectRawButtonIssues(readProductionUiSources(), {
+      enforceExemptionCounts: true,
+    });
+
+    expect(issues).toEqual([]);
+  });
+
+  it('reports a synthetic raw button bypass with file and line context', () => {
+    const issues = collectRawButtonIssues(
+      [
+        {
+          filePath: 'components/example-cta.tsx',
+          lines: [
+            'export function Example() { return <button type="button" />; }',
+          ],
+        },
+      ],
+      { exemptions: [] },
+    );
+
+    expect(issues).toEqual([
+      'components/example-cta.tsx:1 raw <button> outside components/ui/ is not allowed by DEBT-398 PR 3. Use <Button> or add a documented Pattern Registry exception.',
+    ]);
+  });
+
+  it('blocks undocumented opacity tokens outside documented exemptions', () => {
+    const issues = collectOpacityIssues(readProductionUiSources(), {
+      enforceExemptionCounts: true,
+    });
+
+    expect(issues).toEqual([]);
+  });
+
+  it('reports a synthetic undocumented arbitrary opacity token with file and line context', () => {
+    const issues = collectOpacityIssues([
+      {
+        filePath: 'components/example-card.tsx',
+        lines: [
+          'export function Example() { return <div className="bg-foreground/[0.03]" />; }',
+          'export function Other() { return <div className="bg-muted/[13%]" />; }',
+        ],
+      },
+    ]);
+
+    expect(issues).toEqual([
+      'components/example-card.tsx:1 undocumented opacity token "bg-foreground/[0.03]" is not in the Pattern Registry allowlist. Add the pattern to docs/frontend/pattern-registry.md before using it.',
+      'components/example-card.tsx:2 undocumented opacity token "bg-muted/[13%]" is not in the Pattern Registry allowlist. Add the pattern to docs/frontend/pattern-registry.md before using it.',
+    ]);
+  });
+
+  it('allows documented foreground-ramp examples from Pattern Registry contexts', () => {
+    const issues = collectOpacityIssues([
+      {
+        filePath: 'app/(app)/app/history/components/history-questions-tab.tsx',
+        lines: [
+          'className="block rounded-2xl bg-foreground/[0.08] p-4 transition-colors hover:bg-foreground/[0.12]"',
+        ],
+      },
+      {
+        filePath: 'components/question/choice-button.tsx',
+        lines: [
+          'className="hover:border-foreground/55 hover:bg-foreground/[0.06] dark:hover:border-foreground/50 dark:hover:bg-foreground/[0.05]"',
+        ],
+      },
+    ]);
+
+    expect(issues).toEqual([]);
   });
 
   it('uses semantic CTA classes in GetStartedCta', async () => {
