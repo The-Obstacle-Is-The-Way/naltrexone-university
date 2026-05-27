@@ -1,8 +1,8 @@
 # DEBT-399: Component-System Bypass Cleanup
 
-**Priority:** P2 (concrete violations of the documented "all interactive click targets MUST use `<Button>`" rule from `docs/frontend/standards.md` § 2. Two known production-code raw `<button>` sites reinvent the Button component's focus-ring + disabled-state or hover behavior inline, and one history disclosure button is not covered by the current Pattern Registry I-6 app-shell exception unless the registry is extended. The 26 exact focus-ring copies across 19 files are correct-values-but-copy-paste, which means any future change to the canonical pattern requires editing 19+ files. This is the visible symptom of the meta-debt described in DEBT-398.)
+**Priority:** P2 (concrete violations of the documented "all interactive click targets MUST use `<Button>`" rule from `docs/frontend/standards.md` § 2. Two known production-code raw `<button>` sites still hand-roll Button-equivalent layout, hover, disabled, and focus behavior even after PR 2 migrated them to the shared `.ring-focus` utility, and one history disclosure button is not covered by the current Pattern Registry I-6 app-shell exception unless it migrates to `<Button>`. The 26 exact focus-ring copies across 19 files were correct-values-but-copy-paste before PR 2 extracted them, which meant any future change to the canonical pattern required editing 19+ files. This is the visible symptom of the meta-debt described in DEBT-398.)
 **Created:** 2026-05-26
-**Source:** Deep design-system audit conducted alongside DEBT-394 archival. Verified against the documented rules in `docs/frontend/standards.md` and `docs/frontend/pattern-registry.md`. The audit found three production raw `<button>` sites: two clear Button bypasses with manual focus-ring styling, plus one history disclosure toggle that has the required `aria-label` / `aria-expanded` / `aria-controls` attributes but is not an app-shell I-6 exception today. It also found 26 instances of the exact canonical focus-ring string across 19 files with no shared extraction, or 33 broader instances when counting the Button/Input/Select primitives, alternate ordering with `focus-visible:border-ring`, extra review/practice focus-ring consumers, and the `focus-within` variant.
+**Source:** Deep design-system audit conducted alongside DEBT-394 archival. Verified against the documented rules in `docs/frontend/standards.md` and `docs/frontend/pattern-registry.md`. The audit found three production raw `<button>` sites: two clear Button bypasses with Button-equivalent styling now partially reduced to `.ring-focus`, plus one history disclosure toggle that has the required `aria-label` / `aria-expanded` / `aria-controls` attributes but is not an app-shell I-6 exception today. It also found 26 instances of the exact canonical focus-ring string across 19 files with no shared extraction, or 33 broader instances when counting the Button/Input/Select primitives, alternate ordering with `focus-visible:border-ring`, extra review/practice focus-ring consumers, and the `focus-within` variant.
 **Related:** [docs/frontend/standards.md](../frontend/standards.md) (§ 2 Button mandate, § 3 focus-ring single canonical pattern), [docs/frontend/pattern-registry.md](../frontend/pattern-registry.md) (I-6 disclosure toggle pattern), [components/ui/button.tsx](../../components/ui/button.tsx), [DEBT-398](./debt-398-design-system-enforcement-gap.md) (the root meta-debt that allowed these violations to accumulate)
 
 **Status:** Active
@@ -13,13 +13,13 @@
 
 `docs/frontend/standards.md` § 2 mandates: "All interactive click targets MUST use the `<Button>` component." § 3 mandates: "ONE canonical focus ring pattern: `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`." Pattern Registry I-6 carves out a narrow exception for app-shell disclosure toggles.
 
-The current code violates both rules in two distinct ways:
+The codebase carried this debt in two distinct ways; PR 1 / PR 2 resolved the focus-ring duplication, and PR 3 / PR 4 clean up the remaining raw-button and opacity violations:
 
-1. **Three production raw `<button>` sites need cleanup decisions.** Two are clear Button bypasses with hand-rolled className strings that reinvent Button's focus ring, hover state, and disabled behavior. The history-session disclosure toggle has correct ARIA wiring, but it is not an app-shell control and does not match I-6's exact hover/focus treatment, so it must either migrate to `<Button>` or receive a dedicated Pattern Registry entry.
+1. **Three production raw `<button>` sites need cleanup decisions.** Two are clear Button bypasses with hand-rolled className strings that duplicate Button behavior even after PR 2 reduced the focus-ring copy-paste to `.ring-focus`. The history-session disclosure toggle has correct ARIA wiring, but it is not an app-shell control and does not match I-6's exact hover/focus treatment, so it must migrate to `<Button>` rather than relying on the app-shell exception.
 
-2. **The exact canonical focus-ring string appears 26 times across 19 files** in component code (33 broader instances if you also count related Button/Input/Select primitive classes, alternate ordering with `focus-visible:border-ring`, extra review/practice focus-ring consumers, and the `focus-within` variant in `choice-button.tsx`). Each occurrence is correct (matches the documented pattern), but each is a copy-paste. There is no shared Tailwind utility `.focus-ring`, no constant in `lib/shared-styles.ts`, and no broad extraction (one local `focusVisibleRing` constant exists in `components/app-desktop-nav.tsx:10-11` and is used only within that file). Any future change to the canonical pattern requires editing 19+ files. Each new component that needs focus-ring carries the risk of typo, drift, or subtle variation (`ring-[2px]` instead of `ring-[3px]`, `ring-ring/40` instead of `ring-ring/50`).
+2. **The exact canonical focus-ring string previously appeared 26 times across 19 files** in component code (33 broader instances if you also counted related Button/Input/Select primitive classes, alternate ordering with `focus-visible:border-ring`, extra review/practice focus-ring consumers, and the `focus-within` variant in `choice-button.tsx`). PR 1 shipped the shared `.ring-focus` / `.ring-focus-within` utilities and PR 2 migrated the exact copies, leaving one canonical CSS source in `app/globals.css`. This historical duplication matters because PR 3 must now preserve the shared utility behavior while removing the remaining raw-button bypasses.
 
-The combination means the design system is documented but functionally optional, and the cumulative copy-paste makes future enforcement (DEBT-398) harder than it should be.
+The remaining raw-button and opacity exemptions mean the design system still has known carve-outs even though DEBT-398 now enforces new drift. DEBT-399 removes those carve-outs in scoped PRs.
 
 ---
 
@@ -32,34 +32,34 @@ The combination means the design system is documented but functionally optional,
 Raw `<button type="button">` with className bundle:
 
 ```tsx
-className="-mx-2 flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 text-left font-medium text-foreground transition-colors hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50"
+className="-mx-2 flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 text-left font-medium text-foreground transition-colors hover:bg-muted/20 ring-focus disabled:pointer-events-none disabled:opacity-50"
 ```
 
 This duplicates:
-- Button's focus-ring pattern (documented canonical: `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`)
+- Button's focus-ring behavior (now via the shared `.ring-focus` utility, documented canonical source: `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`)
 - Button's disabled state (documented canonical: `disabled:pointer-events-none disabled:opacity-50`)
 - Button's hover transition (`transition-colors`)
 - A custom hover bg (`hover:bg-muted/20` — note: this opacity is LIGHTER than `pattern-registry.md` § 1.2 § I-2 guidance, which says `/40` for in-card and `/50` for on-page; see Finding C)
 
-The component should use `<Button variant="ghost">` (or a new variant if no existing one fits) with the layout classes preserved.
+The component should use `<Button variant="secondary">` with explicit visual-preservation classes. `ghost` is semantically tempting, but it injects `dark:hover:bg-accent/50`, which would alter the current dark hover and drag PR 4 opacity work into PR 3. `secondary` gives the Button primitive behavior while allowing the existing transparent rest state and `hover:bg-muted/20` to remain pinned until PR 4 resolves the opacity divergence.
 
 **Site 2 (MEDIUM): `app/(app)/app/history/components/history-sessions-tab.tsx:226-235`**
 
-Raw `<button>` for disclosure toggle. The current implementation includes the required accessible disclosure wiring (`aria-label`, `aria-expanded`, and `aria-controls`), but Pattern Registry I-6 only permits raw `<button>` for app-shell disclosure controls when the exact I-6 focus/hover treatment is present. This history-row disclosure is not app shell and does not use I-6's hover treatment, so it is not registry-acceptable solely by I-6. Resolve by either migrating to `<Button variant="ghost" size="icon">` with equivalent layout, or by adding a dedicated history-row disclosure-toggle pattern to `pattern-registry.md` with rationale.
+Raw `<button>` for disclosure toggle. The current implementation includes the required accessible disclosure wiring (`aria-label`, `aria-expanded`, and `aria-controls`), but Pattern Registry I-6 only permits raw `<button>` for app-shell disclosure controls when the exact I-6 focus/hover treatment is present. This history-row disclosure is not app shell and does not use I-6's hover treatment, so it is not registry-acceptable solely by I-6. Migrate it to `<Button variant="ghost" size="icon">` with size/padding overrides that preserve the current compact 24px-ish hit area; do not add a dedicated Pattern Registry entry for a one-off row disclosure.
 
 **Site 3 (MEDIUM): `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:214`**
 
-Raw `<button>` with manual focus ring classes inline. Same shape as Site 1 — duplicates Button internals. Use `<Button>` with appropriate variant.
+Raw `<button>` with `.ring-focus`, `focus-visible:border-ring`, card surface, hover, and transition behavior applied directly. Same cleanup category as Site 1: use `<Button variant="secondary">` with explicit card-surface preservation classes so Button owns the interactive primitive behavior without changing the row's card-like rest state.
 
-### B. 26 instances of the canonical focus-ring string repeated across 19 files
+### B. Focus-ring duplication resolved by PR 1 / PR 2 (historical finding)
 
-Verify with:
+The original audit verified the pre-remediation count with:
 
 ```sh
 rg -c "focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-\[3px\]" app/ components/
 ```
 
-The 19 files (with occurrence counts) per the audit:
+The 19 files (with occurrence counts) per the original audit:
 - `components/mobile-nav.tsx` (3)
 - `components/marketing/marketing-layout.tsx` (2)
 - `app/pricing/pricing-view.tsx` (2)
@@ -82,13 +82,13 @@ The 19 files (with occurrence counts) per the audit:
 
 The broader 33-instance family additionally includes the Button/Input/Select primitives, two extra review/practice focus-ring consumers, one alternate `focus-visible:border-ring` ordering in `exam-review-view.tsx`, and one `focus-within` variant in `components/question/choice-button.tsx`.
 
-Each occurrence is CORRECT (matches the documented pattern), but each is a copy-paste. There is no canonical shared source. The partial extraction in `components/app-desktop-nav.tsx:10-11` (the `focusVisibleRing` constant) is the right shape but the wrong scope — it should be promoted to a shared location.
+Each original occurrence was CORRECT (matched the documented pattern), but each was copy-paste. PR 1 and PR 2 resolved this part of the debt: a `.tsx` / `.ts` grep now returns zero exact canonical focus-ring copies, and `app/globals.css` is the single canonical source for the `@apply` string. The remaining PR 3 work is the raw-button cleanup described in Finding A.
 
 ### C. Hover-opacity divergence from `pattern-registry.md` § 1.2
 
 `app/(app)/app/shared/components/session-breakdown-list.tsx:58` uses `hover:bg-muted/20`. The pattern registry says non-card page-context rows should use `hover:bg-muted/50` or, for tonal rows, `hover:bg-foreground/[0.12]`. The `/20` choice is lighter than the documented scale and was not added to the registry as a new pattern with rationale.
 
-This is fixable in the same PR that addresses Site 1 above — either:
+PR 3 deliberately preserves this token while migrating the raw `<button>` to `<Button>` so the Button migration stays visually bounded. PR 4 resolves the opacity divergence for both this button branch and the adjacent `Link` branch by choosing one of:
 - Adopt the registry pattern (`/50`)
 - Or formally add the `/20` variant to `pattern-registry.md` § 1.2 with rationale (e.g., "list-row inside dashboard breakdown surface uses lighter hover to avoid competing with row content")
 
@@ -115,13 +115,13 @@ These are component-architecture concerns rather than design-system enforcement 
 
 The Button mandate (`standards.md` § 2) exists. The focus-ring canonical pattern (`standards.md` § 3) exists. The opacity scale (`pattern-registry.md` § 1.2) exists. The dark-mode override scale (`pattern-registry.md` § 1.3) exists.
 
-The gap is enforcement, not documentation. An agent or human author can introduce a raw `<button>` with a custom hover opacity and the code review (human OR CodeRabbit) is unlikely to flag it because:
-- The change "looks fine" — colors are tokens, focus is present, transition is smooth.
-- There is no automated rule failing on raw `<button>` outside `components/ui/`.
-- There is no automated rule failing on arbitrary opacity values or off-scale opacities.
-- The reviewer would have to manually compare the className string against `pattern-registry.md` § 1.2 to spot the `/20` divergence.
+The original gap was enforcement, not documentation. Before DEBT-398 PR 3, an agent or human author could introduce a raw `<button>` with a custom hover opacity and code review (human OR CodeRabbit) was unlikely to flag it because:
+- The change "looked fine" — colors were tokens, focus was present, transition was smooth.
+- There was no automated rule failing on raw `<button>` outside `components/ui/`.
+- There was no automated rule failing on arbitrary opacity values or off-scale opacities.
+- The reviewer had to manually compare the className string against `pattern-registry.md` § 1.2 to spot the `/20` divergence.
 
-This debt is one half of the pair: DEBT-398 is the meta-debt (no enforcement); DEBT-399 is the visible symptom (existing violations). Both need to ship for the design system to actually be a system.
+DEBT-398 closed the forward-looking enforcement gap. DEBT-399 removes the existing `TODO(DEBT-399)` exemptions left behind so the enforcement layer can become strict without preserving known slop.
 
 ---
 
@@ -209,32 +209,95 @@ Full local gate including browser tests. The visual output must be equivalent to
 
 ### PR 3 — Refactor the raw `<button>` bypasses and resolve the history disclosure toggle
 
-Branch: `refactor/debt-399-button-component-migration`
+Branch: `feat/debt-399-pr-3-raw-button-migration`
+
+The pre-execution audit for this PR re-verified the current post-PR2 source state:
+
+- `app/(app)/app/shared/components/session-breakdown-list.tsx:39-49` is still a raw `<button>` with `ring-focus`, `hover:bg-muted/20`, disabled classes, and list-row layout.
+- `app/(app)/app/history/components/history-sessions-tab.tsx:226-243` is still a raw disclosure `<button>` with `aria-label`, `aria-expanded`, and `aria-controls`, but it is not app shell and therefore is not covered by Pattern Registry I-6.
+- `app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:214-224` is still a raw card-like `<button>` with `focus-visible:border-ring ring-focus` and `hover:bg-muted/20`.
 
 For each site:
 
-1. **`session-breakdown-list.tsx:39-49`** — replace raw `<button>` with `<Button variant="ghost">` (or a new variant if `ghost` doesn't capture the layout). Preserve layout classes (`-mx-2 flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 text-left font-medium`). Drop the manual focus-ring, disabled, transition classes — Button provides them. Decide the hover opacity:
-   - If `pattern-registry.md` § 1.2 scale matches the design intent: use `/50` or `/40` per registry.
-   - If the divergent `/20` is intentional: ship a parallel small PR to add the variant to `pattern-registry.md` § 1.2 with rationale, then use the new registry-defined value.
+1. **`session-breakdown-list.tsx:39-49`** — import `Button` from `@/components/ui/button` and replace the raw button branch only. Use:
 
-2. **`history-sessions-tab.tsx` disclosure toggle** — the current code already has `aria-label`, `aria-expanded`, and `aria-controls`, but it is not an app-shell I-6 exception and does not use I-6's hover treatment. Either migrate it to a Button-based disclosure control or add a dedicated Pattern Registry entry for this row-disclosure pattern with rationale.
+   ```tsx
+   <Button
+     type="button"
+     variant="secondary"
+     className="-mx-2 flex h-auto min-w-0 flex-1 shrink items-center justify-start gap-2 rounded-md bg-transparent px-2 py-0 text-left font-medium text-foreground shadow-none whitespace-normal hover:bg-muted/20 hover:text-foreground"
+     disabled={isQuestionActionPending}
+     onClick={() => onOpenQuestion(row.questionId)}
+   >
+   ```
 
-3. **`exam-review-view.tsx` raw `<button>`** — migrate to `<Button>` with appropriate variant. Same logic as Site 1.
+   Preserve the existing child `<span>` structure. Do not migrate the adjacent `Link` branch in this PR; it is not a raw `<button>` and its `hover:bg-muted/20` opacity divergence is PR 4 scope. Drop the explicit `ring-focus`, `disabled:pointer-events-none`, `disabled:opacity-50`, and `transition-colors` from this button branch because `Button` supplies the interactive primitive behavior.
 
-For each migrated site, visually verify in browser (light + dark) that the rendered output is functionally equivalent. Use the agent-browser MCP if convenient, or local dev server + manual inspection.
+2. **`history-sessions-tab.tsx:226-243` disclosure toggle** — migrate to Button rather than adding a registry exception. Use:
 
-Full local gate including E2E (these are user-interactive surfaces).
+   ```tsx
+   <Button
+     type="button"
+     variant="ghost"
+     size="icon"
+     className="h-auto w-auto shrink-0 rounded-md p-1 text-foreground/60 hover:bg-transparent hover:text-foreground/60 dark:hover:bg-transparent"
+     aria-label={`${isSelected ? 'Hide' : 'View'} breakdown for ${sessionSummary}`}
+     aria-expanded={isSelected}
+     aria-controls={`breakdown-${row.sessionId}`}
+     onClick={() => {
+       void historySessions.onOpenSession(row.sessionId);
+     }}
+   >
+   ```
 
-### PR 4 — Fix dark-mode opacity divergences (Finding D)
+   Keep the `ChevronDown` with `aria-hidden="true"` and `size-4 transition-transform`; the button-level text color now supplies the icon color. This preserves the compact disclosure control while moving focus/keyboard/disabled semantics to the primitive. Delete no Pattern Registry text in this PR.
+
+3. **`exam-review-view.tsx:214-224` raw `<button>`** — migrate the card-like row to Button. Use the existing import and:
+
+   ```tsx
+   <Button
+     type="button"
+     variant="secondary"
+     className="block h-auto w-full shrink whitespace-normal rounded-2xl border bg-card p-4 text-left font-normal text-card-foreground shadow-sm hover:bg-muted/20 hover:text-card-foreground"
+     onClick={() => onOpenQuestion(row.questionId)}
+   >
+   ```
+
+   Preserve the existing `<span className="sr-only">Open question </span>` and `rowContent` children. `secondary` is used here for the same reason as Site 1: it avoids importing `ghost`'s dark hover background while still letting the call site pin the card surface, border, shadow, and hover token until PR 4 resolves the opacity divergence.
+
+After migrating all three sites, delete the corresponding raw-button TODO exemptions from `components/theme-token-regression-source-scan.ts`:
+
+```ts
+'app/(app)/app/shared/components/session-breakdown-list.tsx'
+'app/(app)/app/history/components/history-sessions-tab.tsx'
+'app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx'
+```
+
+Do not touch the six opacity TODO exemptions in `TEMPORARY_OPACITY_EXEMPTIONS`; those are PR 4 scope.
+
+Run `pnpm test --run components/theme-token-regression.test.tsx` after deleting the raw-button exemptions. Expected result: the test still passes because the only remaining production raw `<button>` outside `components/ui/` is the permanent `components/mobile-nav.tsx` Pattern Registry I-6 app-shell exception.
+
+Visual verification is required because Button base classes can affect sizing, display, whitespace, hover, and focus. Run a local authenticated app session and verify light + dark mode at desktop and mobile widths for:
+
+- History sessions list with a row collapsed and expanded (`history-sessions-tab.tsx` Site 2 plus nested `SessionBreakdownList` Site 1).
+- Exam review question list (`exam-review-view.tsx` Site 3).
+
+Capture before/after screenshots or document manual parity notes in the PR body. Full local gate including E2E is required because these are user-interactive surfaces.
+
+### PR 4 — Fix opacity divergences (Findings C / D)
 
 Branch: `style/debt-399-dark-mode-opacity-alignment`
 
-Two divergent sites:
+Six temporary opacity exemption entries remain after PR 3 removes the raw-button exemptions:
 
+- `session-breakdown-list.tsx` button branch plus adjacent `Link` branch — `hover:bg-muted/20` (expected count 2)
+- `exam-review-view.tsx` row button — `hover:bg-muted/20`
+- `session-breakdown-list.tsx:32` — `divide-border/20`
 - `session-breakdown-list.tsx:32` — `dark:divide-foreground/20`
+- `history-sessions-tab.tsx:253` — `border-border/30`
 - `history-sessions-tab.tsx:253` — `dark:border-foreground/10`
 
-For each: choose to align with `pattern-registry.md` § 1.3 (`/40`, `/60`, or full) OR to add the variant to the registry with rationale. Ship the choice.
+For each: choose to align with `pattern-registry.md` § 1.2 / § 1.3 (`hover:bg-muted/40`, `hover:bg-muted/50`, `/40`, `/60`, or full as applicable) OR add the variant to the registry with rationale. Ship the choice and delete the matching `TEMPORARY_OPACITY_EXEMPTIONS` entries from `components/theme-token-regression-source-scan.ts`.
 
 This PR is lower priority — visual divergence is small, but the discipline matters. If scope pressure, defer this PR and document the divergence in DEBT-399 archive resolution as "left as-is, registry exception accepted."
 
@@ -244,7 +307,7 @@ This PR is lower priority — visual divergence is small, but the discipline mat
 
 - **`feedback.tsx` / `marketing-home.tsx` line-count concerns (Finding E)** — out of scope for this debt. File as a separate debt entry if the maintenance burden ever justifies action; for now they are not blocking design-system enforcement.
 
-- **`theme-token-regression.test.tsx` expansion** — covered by DEBT-398 PR 3. This debt's PRs may need to wait for that enforcement test to land OR file `// TODO(DEBT-399 PRs N)` exclusions in the test temporarily.
+- **`theme-token-regression.test.tsx` expansion** — covered by DEBT-398 PR 3 and now live. DEBT-399 PR 3 deletes the raw-button exemptions; PR 4 deletes the remaining opacity exemptions.
 
 ---
 
@@ -266,13 +329,15 @@ PR 2 done when:
 
 PR 3 done when:
 
-- The two clear raw `<button>` bypasses are migrated to `<Button>`, and the history disclosure toggle is either migrated to `<Button>` or documented as a dedicated Pattern Registry exception.
-- Visual parity verified in light + dark, desktop + mobile.
+- All three raw `<button>` bypasses are migrated to `<Button>` and the three matching `RAW_BUTTON_EXEMPTIONS` TODO entries are removed from `components/theme-token-regression-source-scan.ts`.
+- `pnpm test --run components/theme-token-regression.test.tsx` passes with only the permanent `components/mobile-nav.tsx` raw-button exception remaining.
+- Visual parity verified in light + dark, desktop + mobile for the history sessions row controls and the exam review question list.
 - Full local gate green including E2E.
 
 PR 4 done when:
 
-- The two dark-mode opacity divergences are either aligned to registry or the registry is extended with rationale.
+- The six temporary opacity exemptions are deleted from `components/theme-token-regression-source-scan.ts`.
+- Each former opacity divergence is either aligned to registry or the registry is extended with rationale.
 
 ---
 
