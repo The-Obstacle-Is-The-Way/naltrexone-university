@@ -28,6 +28,11 @@ export type HistorySessionsTabProps = {
   modeFilter?: SessionModeFilter;
 };
 
+// Preserve the prior compact disclosure toggle chrome while using Button.
+// A registry-backed row disclosure variant is separate from DEBT-399 PR 3.
+const sessionDisclosureButtonClasses =
+  'h-auto w-auto shrink-0 rounded-md p-1 hover:bg-transparent dark:hover:bg-transparent';
+
 type SessionSummaryContentProps = {
   mode: 'tutor' | 'exam';
   fractionLabel: string;
@@ -227,7 +232,7 @@ export function HistorySessionsTab({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-auto w-auto shrink-0 rounded-md p-1 hover:bg-transparent dark:hover:bg-transparent"
+                  className={sessionDisclosureButtonClasses}
                   aria-label={`${isSelected ? 'Hide' : 'View'} breakdown for ${sessionSummary}`}
                   aria-expanded={isSelected}
                   aria-controls={`breakdown-${row.sessionId}`}
