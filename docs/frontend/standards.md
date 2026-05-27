@@ -10,6 +10,31 @@ Canonical reference for all frontend patterns, component usage, accessibility, a
 - [Contrast Policy](./contrast-policy.md) — Canonical WCAG AA contrast targets and rules
 - [Bookmark Surface Policy](./bookmark-surface-policy.md) — Where bookmark appears/doesn't and why (decision tree for new surfaces)
 
+## For AI Agents (Claude Code, Cursor, Codex, etc.)
+
+This document is **authoritative**. Claude Code loads the matching
+gateway summary from `.claude/rules/frontend.md` whenever it edits
+files in `app/**` or `components/**`; general agent guidance in
+`AGENTS.md` also points AI coding agents here. Do NOT skip it. Do NOT
+invent patterns.
+
+When making a UI change:
+
+1. **Read this document first.** It is the source of truth for tokens,
+   focus rings, spacing, typography, and component-system mandates.
+2. **Check `pattern-registry.md`** for opacity scales, foreground ramps,
+   dark-mode rules.
+3. **Check `contrast-policy.md`** if your change involves foreground or
+   background pair choices.
+4. **If the pattern you need does not exist here, add it to
+   `pattern-registry.md` first** (with rationale and design review),
+   THEN implement in code.
+
+Violations should be caught at code review. DEBT-398 PR 3 ships the
+regression-test enforcement that will make CI catch new violations
+automatically. See `.claude/rules/frontend.md` for the mandatory
+pattern enforcement summary.
+
 ---
 
 ## Table of Contents
