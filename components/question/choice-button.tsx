@@ -29,7 +29,7 @@ export function ChoiceButton({
   return (
     <label
       className={cn(
-        'block w-full rounded-xl border border-foreground/50 bg-background/50 p-4 text-left shadow-sm transition-colors focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]',
+        'block w-full rounded-xl border border-foreground/50 bg-background/50 p-4 text-left shadow-sm transition-colors focus-within:border-ring ring-focus-within',
         !hasVerdict &&
           !selected &&
           'dark:border-foreground/40 dark:bg-background/50',

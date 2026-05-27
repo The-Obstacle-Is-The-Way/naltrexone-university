@@ -71,7 +71,7 @@ export function PricingView({
               ) : null}
               <Link
                 href={ROUTES.PRICING}
-                className="ml-4 rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                className="ml-4 rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
                 aria-label="Dismiss"
               >
                 ×
@@ -183,7 +183,7 @@ export function PricingView({
         <div className="mt-8 text-center">
           <Link
             href={ROUTES.HOME}
-            className="rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+            className="rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground ring-focus"
           >
             Back to Home
           </Link>

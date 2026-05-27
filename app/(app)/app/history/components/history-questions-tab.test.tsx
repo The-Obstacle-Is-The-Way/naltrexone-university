@@ -166,7 +166,7 @@ describe('HistoryQuestionsTab', () => {
       expect(classTokens).toContain('transition-colors');
       expect(classTokens).toContain('hover:bg-foreground/[0.12]');
       expect(classTokens).not.toContain('hover:bg-foreground/[0.08]');
-      expect(classTokens).toContain('focus-visible:ring-[3px]');
+      expect(classTokens).toContain('ring-focus');
       expect(classTokens).not.toContain('border');
       expect(classTokens).not.toContain('border-border');
       expect(classTokens).not.toContain('shadow-sm');

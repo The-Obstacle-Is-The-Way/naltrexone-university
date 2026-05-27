@@ -301,9 +301,7 @@ describe('app/(app)/app/bookmarks', () => {
     expect(bookmarkRowTokens.has('dark:border-foreground/40')).toBe(false);
     expect(reviewLink).not.toBeUndefined();
     expect(reviewLinkTokens.has('hover:underline')).toBe(false);
-    expect(reviewLinkTokens.has('focus-visible:outline-none')).toBe(true);
-    expect(reviewLinkTokens.has('focus-visible:ring-ring/50')).toBe(true);
-    expect(reviewLinkTokens.has('focus-visible:ring-[3px]')).toBe(true);
+    expect(reviewLinkTokens.has('ring-focus')).toBe(true);
     expect(removeButtonTokens.has('rounded-full')).toBe(true);
   });
 

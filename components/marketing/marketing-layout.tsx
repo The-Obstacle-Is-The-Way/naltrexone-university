@@ -12,7 +12,7 @@ export type MarketingLayoutProps = {
 };
 
 const marketingNavLinkClass =
-  'rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
+  'rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus';
 
 async function DeferredAuthNav() {
   return <AuthNav />;
@@ -26,7 +26,7 @@ async function MarketingHeaderPrimaryNav({
   'use cache';
 
   const brandLinkClass =
-    'rounded-md text-base font-bold font-heading whitespace-nowrap text-foreground transition-colors hover:text-foreground/80 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
+    'rounded-md text-base font-bold font-heading whitespace-nowrap text-foreground transition-colors hover:text-foreground/80 ring-focus';
 
   return (
     <div className="flex items-center gap-6">

@@ -265,8 +265,7 @@ describe('HistorySessionsTab', () => {
     expect(reviewLinkClassTokens.has('rounded-md')).toBe(true);
     expect(reviewLinkClassTokens.has('text-sm')).toBe(true);
     expect(reviewLinkClassTokens.has('text-foreground')).toBe(true);
-    expect(reviewLinkClassTokens.has('focus-visible:ring-[3px]')).toBe(true);
-    expect(reviewLinkClassTokens.has('focus-visible:ring-ring/50')).toBe(true);
+    expect(reviewLinkClassTokens.has('ring-focus')).toBe(true);
     expect(reviewLinkClassTokens.has('hover:underline')).toBe(false);
     expect(reviewLinkClassTokens.has('transition-colors')).toBe(false);
     expect(html).toContain('data-session-summary-content="true"');
@@ -394,8 +393,7 @@ describe('HistorySessionsTab', () => {
     expect(toggle?.textContent).toBe('');
     expect(toggleClassTokens.has('rounded-full')).toBe(false);
     expect(toggleClassTokens.has('border')).toBe(false);
-    expect(toggleClassTokens.has('focus-visible:ring-[3px]')).toBe(true);
-    expect(toggleClassTokens.has('focus-visible:ring-ring/50')).toBe(true);
+    expect(toggleClassTokens.has('ring-focus')).toBe(true);
     expect(icon).not.toBeNull();
     expect(iconClassTokens.has('size-4')).toBe(true);
     expect(iconClassTokens.has('text-foreground/60')).toBe(true);

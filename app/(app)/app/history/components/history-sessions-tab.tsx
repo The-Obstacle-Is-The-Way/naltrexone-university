@@ -202,7 +202,7 @@ export function HistorySessionsTab({
                 {sessionReviewHref ? (
                   <Link
                     href={sessionReviewHref}
-                    className="rounded-md text-sm text-foreground focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                    className="rounded-md text-sm text-foreground ring-focus"
                   >
                     <SessionSummaryContent
                       mode={row.mode}
@@ -225,7 +225,7 @@ export function HistorySessionsTab({
                 )}
                 <button
                   type="button"
-                  className="shrink-0 rounded-md p-1 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                  className="shrink-0 rounded-md p-1 ring-focus"
                   aria-label={`${isSelected ? 'Hide' : 'View'} breakdown for ${sessionSummary}`}
                   aria-expanded={isSelected}
                   aria-controls={`breakdown-${row.sessionId}`}

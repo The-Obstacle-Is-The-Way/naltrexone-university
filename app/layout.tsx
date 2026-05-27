@@ -47,10 +47,7 @@ export function RootProvidersShell({
 function RootContentShell({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-      >
+      <a href="#main-content" className="sr-only focus:not-sr-only ring-focus">
         Skip to content
       </a>
       {children}
