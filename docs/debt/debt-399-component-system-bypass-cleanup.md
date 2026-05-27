@@ -131,13 +131,16 @@ Ship in four single-concern PRs. Order matters: extract the shared utility FIRST
 
 ### PR 1 — Extract the canonical focus-ring as a shared utility
 
-Branch: `feat/debt-399-focus-ring-utility`
+Branch: `feat/debt-399-pr-1-focus-ring-utility`
 
-Two options for the extraction location; pick one based on the repo's existing pattern:
+Use **Option A: Tailwind layer utility**. The pre-execution audit for this PR verified all of:
 
-**Option A: Tailwind layer utility (feasible in this repo because `app/globals.css` already uses `@layer utilities`; verify with the local gate)**
+- `tailwindcss` and `@tailwindcss/postcss` are pinned to `4.3.0`.
+- `app/globals.css` already uses the Tailwind v4 CSS-first entrypoint (`@import "tailwindcss";`) and an existing `@layer utilities` block.
+- The local Tailwind 4.3 compiler accepts `@apply focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]` inside a custom `.ring-focus` utility.
+- `lib/shared-styles.ts` is also a valid constant-export home, but using a CSS utility is the better fit for a visual design-system primitive and keeps PR 2's migration mechanical (`className="... ring-focus ..."`).
 
-Add to `app/globals.css` (or wherever the Tailwind layers are defined):
+Add to `app/globals.css`:
 
 ```css
 @layer utilities {
@@ -147,26 +150,9 @@ Add to `app/globals.css` (or wherever the Tailwind layers are defined):
 }
 ```
 
-Then `className="... ring-focus ..."` everywhere.
+Then PR 2 can migrate existing call sites to `className="... ring-focus ..."` mechanically.
 
-**Option B: Shared constant in `lib/shared-styles.ts`**
-
-If `lib/shared-styles.ts` is the established home (verify against `lib/shared-styles.ts` and `components/app-desktop-nav.tsx:10-11` precedent):
-
-```typescript
-export const focusVisibleRing =
-  'focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
-
-// Variant for focus-within (rare; used by choice-button)
-export const focusWithinRing =
-  'focus-within:outline-none focus-within:ring-ring/50 focus-within:ring-[3px]';
-```
-
-Then `className={cn(focusVisibleRing, ...)}`.
-
-Pick ONE option (recommend Option A if the local Tailwind v4/PostCSS pipeline accepts the custom utility cleanly, otherwise Option B). Document the chosen approach in the PR body.
-
-This PR ONLY adds the utility / constant. Does NOT migrate existing sites. Migrations happen in PR 2.
+This PR ONLY adds the `.ring-focus` utility. It does NOT migrate existing sites and does NOT edit `components/theme-token-regression-source-scan.ts` or `components/theme-token-regression.test.tsx`; the DEBT-398 PR 3 enforcement gate covers raw-button and opacity drift, not focus-ring extraction. Existing-site migrations happen in PR 2.
 
 ### PR 2 — Migrate the 26 exact inline focus-ring occurrences to the shared utility
 
@@ -174,8 +160,8 @@ Branch: `refactor/debt-399-focus-ring-migration`
 
 Mechanical sweep. For each of the 26 sites across 19 files (run the grep from Finding B for the authoritative list):
 
-- Replace the literal `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]` with `ring-focus` (Option A) or `cn(focusVisibleRing, ...)` (Option B).
-- Delete the local `focusVisibleRing` const in `components/app-desktop-nav.tsx` and replace with imports.
+- Replace the literal `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]` with `ring-focus`.
+- Delete the local `focusVisibleRing` const in `components/app-desktop-nav.tsx` once the local usages are migrated.
 
 After the sweep:
 
@@ -232,7 +218,8 @@ This PR is lower priority — visual divergence is small, but the discipline mat
 
 PR 1 done when:
 
-- Either a Tailwind utility `.ring-focus` exists OR a `focusVisibleRing` constant exists in `lib/shared-styles.ts` (chosen approach documented).
+- A Tailwind utility `.ring-focus` exists in `app/globals.css` and applies the exact canonical focus-ring pattern: `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`.
+- The existing `.claude/rules/frontend.md` focus-ring mandate still names the canonical pattern; no rule-file update is required until PR 2 starts migrating usage to `.ring-focus`.
 - The unit / browser tests pass with the utility in place but not yet adopted.
 
 PR 2 done when:
