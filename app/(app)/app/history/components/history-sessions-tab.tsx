@@ -257,7 +257,7 @@ export function HistorySessionsTab({
                   role="region"
                   aria-label="Question breakdown"
                   data-session-breakdown-region="true"
-                  className="mt-3 border-t border-border/30 pt-3 dark:border-foreground/10"
+                  className="mt-3 border-t border-border/40 pt-3 dark:border-foreground/40"
                 >
                   {historySessions.reviewLoadState.status === 'loading' ? (
                     <output

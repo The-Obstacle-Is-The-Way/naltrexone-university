@@ -483,8 +483,8 @@ describe('HistorySessionsTab', () => {
     expect(panelClassTokens.has('mt-3')).toBe(true);
     expect(panelClassTokens.has('pt-3')).toBe(true);
     expect(panelClassTokens.has('border-t')).toBe(true);
-    expect(panelClassTokens.has('border-border/30')).toBe(true);
-    expect(panelClassTokens.has('dark:border-foreground/10')).toBe(true);
+    expect(panelClassTokens.has('border-border/40')).toBe(true);
+    expect(panelClassTokens.has('dark:border-foreground/40')).toBe(true);
     expect(panelClassTokens.has('bg-background')).toBe(false);
     expect(panelClassTokens.has('rounded-lg')).toBe(false);
     expect(toggle?.getAttribute('aria-expanded')).toBe('true');
