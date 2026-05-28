@@ -31,6 +31,10 @@ Use existing fakes from `src/application/test-helpers/fakes/`. NEVER use `vi.moc
 - External SDKs: `@clerk/nextjs`, `next/link`, `server-only`
 - Browser Mode sealed ESM: `vi.mock(path, { spy: true })` for controller modules
 
+## Test Environment Isolation
+
+Tests that mutate `process.env` (module-scope defaults, `vi.stubEnv()`, or direct assignment) MUST snapshot/restore via `tests/shared/process-env.ts`. See **`.claude/rules/test-isolation.md`** for the full rule, cleanup ordering, and examples.
+
 ## Test Quality
 
 1. Test behavior, not implementation

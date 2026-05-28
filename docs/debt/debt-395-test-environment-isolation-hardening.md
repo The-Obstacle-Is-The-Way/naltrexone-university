@@ -187,6 +187,8 @@ The PR 1 proof-of-fix was the full local gate plus shuffled full-suite seeds `1`
 
 Branch: `feat/debt-395-test-isolation-docs`
 
+Status: **implemented on this branch; PR number to be filled during stop-and-grade.**
+
 Decision: **Option A — single source of truth in `.claude/rules/test-isolation.md`, with a pointer from `.claude/rules/testing.md`.**
 
 Rationale:
@@ -317,13 +319,13 @@ Status: **complete in PR #363 at `47b7d376`**.
 
 Consolidated PR 2/3 done when:
 
-- `.claude/rules/test-isolation.md` exists with the frontmatter and rule contract above.
-- `.claude/rules/testing.md` cross-references `test-isolation.md` with a pointer only.
-- `CLAUDE.md` table is updated to list the new rule and its activation scope.
-- No source files or test files change.
-- `pnpm test --run components/theme-token-regression.test.tsx` remains 16/16 green for DEBT-398 PR 3.
-- Full local gate is green before push, even though the PR is doc-only.
-- The DEBT-395 doc marks the consolidated documentation PR complete.
+- [x] `.claude/rules/test-isolation.md` exists with the frontmatter and rule contract above.
+- [x] `.claude/rules/testing.md` cross-references `test-isolation.md` with a pointer only.
+- [x] `CLAUDE.md` table is updated to list the new rule and its activation scope.
+- [x] No source files or test files change.
+- [x] `pnpm test --run components/theme-token-regression.test.tsx` remains 16/16 green for DEBT-398 PR 3.
+- [x] Full local gate is green before push, even though the PR is doc-only.
+- [x] The DEBT-395 doc marks the consolidated documentation PR complete.
 
 Archive PR done when:
 
