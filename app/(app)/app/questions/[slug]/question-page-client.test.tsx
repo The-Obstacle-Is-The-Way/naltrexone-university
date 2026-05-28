@@ -221,6 +221,7 @@ describe('QuestionView', () => {
     const backLink = findAnchorByHref(doc, '/app/history?tab=sessions');
 
     expect(backLink?.textContent?.trim()).toBe('Back to History');
+    expect(findAnchorByHref(doc, '/app/history?tab=questions')).toBeNull();
   });
 
   it('renders an origin-aware back link when origin=bookmarks', () => {
