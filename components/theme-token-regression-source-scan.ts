@@ -50,7 +50,7 @@ export const RAW_BUTTON_EXEMPTIONS: readonly CountedExemption[] = [
 ];
 
 // Add new source-scan allowlist entries only when the Pattern Registry
-// documents the pattern; TODO(DEBT-399) exemptions are temporary and must shrink.
+// documents the pattern; temporary exemptions must shrink over time.
 export const DOCUMENTED_OPACITY_TOKENS = new Set([
   'bg-muted/20',
   'hover:bg-muted/40',
@@ -80,52 +80,11 @@ export const DOCUMENTED_OPACITY_TOKENS = new Set([
   'dark:hover:border-foreground/70',
   'border-border/40',
   'border-border/60',
+  'divide-border/40',
+  'dark:divide-foreground/40',
 ]);
 
-export const TEMPORARY_OPACITY_EXEMPTIONS: readonly OpacityExemption[] = [
-  // TODO(DEBT-399): align session breakdown row hovers to Pattern Registry.
-  [
-    'app/(app)/app/shared/components/session-breakdown-list.tsx',
-    'hover:bg-muted/20',
-    2,
-    'Temporary DEBT-399 hover opacity divergence.',
-  ],
-  // TODO(DEBT-399): align exam review row hover to Pattern Registry.
-  [
-    'app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx',
-    'hover:bg-muted/20',
-    1,
-    'Temporary DEBT-399 hover opacity divergence.',
-  ],
-  // TODO(DEBT-399): align session breakdown divider to Pattern Registry.
-  [
-    'app/(app)/app/shared/components/session-breakdown-list.tsx',
-    'divide-border/20',
-    1,
-    'Temporary DEBT-399 divider opacity divergence.',
-  ],
-  // TODO(DEBT-399): align session breakdown dark divider to Pattern Registry.
-  [
-    'app/(app)/app/shared/components/session-breakdown-list.tsx',
-    'dark:divide-foreground/20',
-    1,
-    'Temporary DEBT-399 dark divider opacity divergence.',
-  ],
-  // TODO(DEBT-399): align history session panel border to Pattern Registry.
-  [
-    'app/(app)/app/history/components/history-sessions-tab.tsx',
-    'border-border/30',
-    1,
-    'Temporary DEBT-399 border opacity divergence.',
-  ],
-  // TODO(DEBT-399): align history session dark panel border to Pattern Registry.
-  [
-    'app/(app)/app/history/components/history-sessions-tab.tsx',
-    'dark:border-foreground/10',
-    1,
-    'Temporary DEBT-399 dark border opacity divergence.',
-  ],
-];
+export const TEMPORARY_OPACITY_EXEMPTIONS: readonly OpacityExemption[] = [];
 
 export function readProductionUiSources(): SourceFile[] {
   return fg

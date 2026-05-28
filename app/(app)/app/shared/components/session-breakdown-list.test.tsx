@@ -248,7 +248,7 @@ describe('SessionBreakdownList', () => {
     expect(link).not.toBeNull();
     const linkTokens = getClassTokens(link?.getAttribute('class') ?? '');
 
-    expect(linkTokens.has('hover:bg-muted/20')).toBe(true);
+    expect(linkTokens.has('hover:bg-muted/50')).toBe(true);
     expect(linkTokens.has('hover:underline')).toBe(false);
   });
 
@@ -269,7 +269,7 @@ describe('SessionBreakdownList', () => {
     const listTokens = getClassTokens(list?.getAttribute('class') ?? '');
 
     expect(listTokens.has('divide-y')).toBe(true);
-    expect(listTokens.has('divide-border/20')).toBe(true);
-    expect(listTokens.has('dark:divide-foreground/20')).toBe(true);
+    expect(listTokens.has('divide-border/40')).toBe(true);
+    expect(listTokens.has('dark:divide-foreground/40')).toBe(true);
   });
 });

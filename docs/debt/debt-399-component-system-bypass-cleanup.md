@@ -86,19 +86,15 @@ Each original occurrence was CORRECT (matched the documented pattern), but each 
 
 ### C. Hover-opacity divergence from `pattern-registry.md` § 1.2
 
-`app/(app)/app/shared/components/session-breakdown-list.tsx:58` uses `hover:bg-muted/20`. The pattern registry says non-card page-context rows should use `hover:bg-muted/50` or, for tonal rows, `hover:bg-foreground/[0.12]`. The `/20` choice is lighter than the documented scale and was not added to the registry as a new pattern with rationale.
+`app/(app)/app/shared/components/session-breakdown-list.tsx:12` and `:65` use `hover:bg-muted/20`. The pattern registry says non-card page-context rows should use `hover:bg-muted/50` or, for tonal rows, `hover:bg-foreground/[0.12]`. The same shared component also renders inside the session-summary card, but the history expanded-row use is directly on the page-background tonal row, and the current class is a muted-scale hover with no foreground-ramp rest fill. PR 4 therefore aligns both session-breakdown hover sites to `hover:bg-muted/50`; do not register `/20`.
 
-PR 3 deliberately preserves this token while migrating the raw `<button>` to `<Button>` so the Button migration stays visually bounded. PR 4 resolves the opacity divergence for both this button branch and the adjacent `Link` branch by choosing one of:
-- Adopt the registry pattern (`/50`)
-- Or formally add the `/20` variant to `pattern-registry.md` § 1.2 with rationale (e.g., "list-row inside dashboard breakdown surface uses lighter hover to avoid competing with row content")
-
-Don't ship a divergence without one of these two actions.
+`app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:41` also uses `hover:bg-muted/20`. That row is inside a `<Card>` (`QuestionNavigator` card at line 58), so PR 4 aligns it to the documented in-card muted-scale hover `hover:bg-muted/40`; do not register `/20`.
 
 ### D. Custom dark-mode opacities scattered without registry entry
 
-`app/(app)/app/shared/components/session-breakdown-list.tsx:32` uses `dark:divide-foreground/20`. `app/(app)/app/history/components/history-sessions-tab.tsx:253` uses `dark:border-foreground/10`. Neither opacity (`/20`, `/10`) is in the nearest documented separator/border contracts: `pattern-registry.md` § 1.3 specifies `border-border`, `border-border/60`, `border-border/40`, and `dark:border-foreground/40`, while M-2 specifies `border-t border-border`, `/60`, or `/40` for content separators.
+`app/(app)/app/shared/components/session-breakdown-list.tsx:38` uses `divide-border/20 dark:divide-foreground/20`. `app/(app)/app/history/components/history-sessions-tab.tsx:260` uses `border-border/30 dark:border-foreground/10`. None of `/20`, `/30`, or `/10` is in the nearest documented separator/border contracts: `pattern-registry.md` § 1.3 specifies `border-border`, `border-border/60`, `border-border/40`, and `dark:border-foreground/40`, while M-2 specifies `border-t border-border`, `/60`, or `/40` for content separators.
 
-These are MEDIUM severity divergences. Either align to the documented scale or formally add the variants to the registry.
+PR 4 aligns these separators to the documented light separator / required dark boundary tier: `divide-border/40 dark:divide-foreground/40` for the list divider, and `border-border/40 dark:border-foreground/40` for the history breakdown panel. Because the regression scan currently allowlists `border-border/40` but not the equivalent `divide-*` utility form, PR 4 must add `divide-border/40` and `dark:divide-foreground/40` to `DOCUMENTED_OPACITY_TOKENS` when deleting the temporary exemptions. Do not register the old `/20`, `/30`, or `/10` values.
 
 ### E. Component file bloat
 
@@ -286,20 +282,26 @@ Capture before/after screenshots or document manual parity notes in the PR body.
 
 ### PR 4 — Fix opacity divergences (Findings C / D)
 
-Branch: `style/debt-399-dark-mode-opacity-alignment`
+Branch: `feat/debt-399-pr-4-dark-mode-opacity-alignment`
 
 Six temporary opacity exemption entries remain after PR 3 removes the raw-button exemptions:
 
-- `session-breakdown-list.tsx` button branch plus adjacent `Link` branch — `hover:bg-muted/20` (expected count 2)
-- `exam-review-view.tsx` row button — `hover:bg-muted/20`
-- `session-breakdown-list.tsx:32` — `divide-border/20`
-- `session-breakdown-list.tsx:32` — `dark:divide-foreground/20`
-- `history-sessions-tab.tsx:253` — `border-border/30`
-- `history-sessions-tab.tsx:253` — `dark:border-foreground/10`
+- `session-breakdown-list.tsx:12` button branch and `:65` adjacent `Link` branch — `hover:bg-muted/20` (expected count 2). ALIGN to `hover:bg-muted/50` per `pattern-registry.md` § 1.2 page-background muted-scale hover guidance.
+- `exam-review-view.tsx:41` row button — `hover:bg-muted/20` (expected count 1). ALIGN to `hover:bg-muted/40` per `pattern-registry.md` § 1.2 in-card muted-scale hover guidance.
+- `session-breakdown-list.tsx:38` — `divide-border/20` (expected count 1). ALIGN to `divide-border/40`, the `divide-y` utility form of the M-2 Light internal separator (`border-border/40`).
+- `session-breakdown-list.tsx:38` — `dark:divide-foreground/20` (expected count 1). ALIGN to `dark:divide-foreground/40`, matching the required dark boundary tier from `pattern-registry.md` § 1.3.
+- `history-sessions-tab.tsx:260` — `border-border/30` (expected count 1). ALIGN to `border-border/40`, the M-2 Light internal separator.
+- `history-sessions-tab.tsx:260` — `dark:border-foreground/10` (expected count 1). ALIGN to `dark:border-foreground/40`, matching the required dark boundary tier from `pattern-registry.md` § 1.3.
 
-For each: choose to align with `pattern-registry.md` § 1.2 / § 1.3 (`hover:bg-muted/40`, `hover:bg-muted/50`, `/40`, `/60`, or full as applicable) OR add the variant to the registry with rationale. Ship the choice and delete the matching `TEMPORARY_OPACITY_EXEMPTIONS` entries from `components/theme-token-regression-source-scan.ts`.
+Execution recipe:
 
-This PR is lower priority — visual divergence is small, but the discipline matters. If scope pressure, defer this PR and document the divergence in DEBT-399 archive resolution as "left as-is, registry exception accepted."
+1. Apply the six ALIGN replacements above. No Pattern Registry edit is needed because the target values come from existing § 1.2 / § 1.3 / M-2 rules.
+2. Update source tests that assert the old tokens:
+   - `app/(app)/app/shared/components/session-breakdown-list.test.tsx` currently expects `hover:bg-muted/20`, `divide-border/20`, and `dark:divide-foreground/20`.
+   - `app/(app)/app/history/components/history-sessions-tab.test.tsx` currently expects `border-border/30` and `dark:border-foreground/10`.
+3. In `components/theme-token-regression-source-scan.ts`, add `divide-border/40` and `dark:divide-foreground/40` to `DOCUMENTED_OPACITY_TOKENS`, then delete all six `TEMPORARY_OPACITY_EXEMPTIONS` entries. `hover:bg-muted/40`, `hover:bg-muted/50`, `border-border/40`, and `dark:border-foreground/40` are already allowlisted.
+4. Run `pnpm test --run components/theme-token-regression.test.tsx`; it should remain 16/16 passing with zero `TODO(DEBT-399)` markers.
+5. Visually verify light + dark and desktop + mobile for session-breakdown rows, the exam-review question list, and the history-sessions expanded panel border. Expected visual change: slightly stronger hover/divider/border contrast, intentionally matching the registry.
 
 ---
 
@@ -337,7 +339,11 @@ PR 3 done when:
 PR 4 done when:
 
 - The six temporary opacity exemptions are deleted from `components/theme-token-regression-source-scan.ts`.
-- Each former opacity divergence is either aligned to registry or the registry is extended with rationale.
+- `rg 'TODO\(DEBT-399\)' components/theme-token-regression-source-scan.ts` returns zero matches.
+- Each former opacity divergence is aligned to the target value documented in PR 4 above; no `/20`, `/30`, or `/10` opacity exception is registered.
+- `DOCUMENTED_OPACITY_TOKENS` includes the `divide-border/40` and `dark:divide-foreground/40` separator utility forms needed by the aligned list divider.
+- `pnpm test --run components/theme-token-regression.test.tsx` passes 16/16.
+- Full local gate green, with visual verification captured for the three affected surfaces in light + dark and desktop + mobile.
 
 ---
 
