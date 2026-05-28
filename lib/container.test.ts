@@ -43,7 +43,7 @@ import {
 import {
   restoreProcessEnv,
   snapshotProcessEnv,
-} from '../tests/shared/process-env';
+} from '@/tests/shared/process-env';
 
 vi.mock('server-only', () => ({}));
 vi.mock('stripe', () => ({

@@ -1,11 +1,11 @@
 # DEBT-401: AuthNav Test Module-Cache Order Dependency
 
-**Priority:** P2 (confirmed hidden unit-test order dependency. The full unit suite passes in declaration order, but `pnpm test --run --sequence.shuffle` can fail before any DEBT-395 fixes land. This blocks using shuffled unit runs as a clean process-env isolation signal until the test is fixed.)
+**Priority:** P2 (confirmed hidden unit-test order dependency. Before PR #362, the full unit suite passed in declaration order, but `pnpm test --run --sequence.shuffle` could fail before any DEBT-395 fixes landed. This blocked using shuffled unit runs as a clean process-env isolation signal until the test was fixed.)
 **Created:** 2026-05-28
 **Source:** DEBT-395 PR 1 pre-execution audit. The required shuffled-order verification exposed a separate `components/auth-nav.test.tsx` module-cache/mock-order dependency with seed `1779972928761`.
-**Related:** [DEBT-395](./debt-395-test-environment-isolation-hardening.md), [components/auth-nav.test.tsx](../../components/auth-nav.test.tsx), [components/marketing/marketing-layout.tsx](../../components/marketing/marketing-layout.tsx), [components/auth-nav.tsx](../../components/auth-nav.tsx)
+**Related:** [DEBT-395](../../debt/debt-395-test-environment-isolation-hardening.md), [components/auth-nav.test.tsx](../../../components/auth-nav.test.tsx), [components/marketing/marketing-layout.tsx](../../../components/marketing/marketing-layout.tsx), [components/auth-nav.tsx](../../../components/auth-nav.tsx)
 
-**Status:** Active
+**Status:** Resolved 2026-05-28 ([PR #362](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/362))
 
 ---
 
@@ -56,16 +56,16 @@ When scenario 4 runs first, `AuthNav` has already been imported indirectly by th
 
 This is the same broad class of test isolation debt as DEBT-395, but the mechanism is module-cache/mock ordering rather than `process.env` leakage.
 
-## Required Remediation
+## Resolution
 
-Single focused test-only PR, or a clearly separated companion commit in the DEBT-395 PR 1 execution branch if that PR must make `pnpm test --run --sequence.shuffle` green.
+[PR #362](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/362) resolved this as a single focused test-only change before DEBT-395 PR 1 execution.
 
-Recommended fix:
+Applied fix:
 
-1. Remove the module-scope `MarketingLayout` import from `components/auth-nav.test.tsx`.
-2. Dynamically import `MarketingLayout` inside `renderMarketingLayout()` after the test has had a chance to call `vi.doMock()` and after module cache reset.
-3. Prefer a `beforeEach` that restores env, calls `vi.resetModules()`, and calls `vi.restoreAllMocks()` so the first shuffled test gets the same clean module-cache state as later tests.
-4. Keep the existing module-scope `ORIGINAL_ENV = snapshotProcessEnv()` pattern.
+1. Removed the module-scope `MarketingLayout` import from `components/auth-nav.test.tsx`.
+2. Dynamically imports `MarketingLayout` inside `renderMarketingLayout()` after each test has had a chance to call `vi.doMock()` and after module cache reset.
+3. Added `beforeEach` cleanup that restores env, calls `vi.resetModules()`, and calls `vi.restoreAllMocks()` so the first shuffled test gets the same clean module-cache state as later tests.
+4. Kept the existing module-scope `ORIGINAL_ENV = snapshotProcessEnv()` pattern.
 
 Concrete shape:
 
@@ -82,7 +82,7 @@ async function renderMarketingLayout(authNavSlot: ReactNode) {
 }
 ```
 
-Then add:
+The resolved test now includes:
 
 ```typescript
 beforeEach(() => {
@@ -92,7 +92,7 @@ beforeEach(() => {
 });
 ```
 
-Keep the existing `afterEach` cleanup, or make `beforeEach` and `afterEach` symmetric if the final code reads cleaner.
+The existing `afterEach` cleanup remains, making first-test setup and post-test cleanup symmetric enough for shuffled execution.
 
 ## Acceptance Criteria
 
@@ -104,4 +104,3 @@ Keep the existing `afterEach` cleanup, or make `beforeEach` and `afterEach` symm
 ## Risk and Reversibility
 
 Risk is low. The fix should only change test import timing and cleanup symmetry. If it exposes a production dependency on module-evaluation order, that is useful signal and should be investigated before merging.
-

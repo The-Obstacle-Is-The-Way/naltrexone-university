@@ -33,7 +33,7 @@ rg -n 'Object\.assign\(process\.env|process\.env\s*=|delete\s+process\.env\.' . 
 
 Read-only integration guard constants such as `const allowNonLocal = process.env.ALLOW_NON_LOCAL_DATABASE_URL === 'true'` are not mutations and are excluded from the remediation catalog.
 
-The required shuffled verification also exposed a separate module-cache/mock-order dependency in `components/auth-nav.test.tsx` with seed `1779972928761`. That failure is not a `process.env` leak, so it is tracked separately as [DEBT-401](./debt-401-auth-nav-test-module-cache-order-dependency.md). Because PR 1's acceptance requires `pnpm test --run --sequence.shuffle` to pass, execution must either fix DEBT-401 as a clearly separated companion commit before claiming PR 1 acceptance, or explicitly revise the PR 1 acceptance criteria before opening the PR.
+The required shuffled verification also exposed a separate module-cache/mock-order dependency in `components/auth-nav.test.tsx` with seed `1779972928761`. That failure was not a `process.env` leak, so it was tracked separately as [DEBT-401](../_archive/debt/debt-401-auth-nav-test-module-cache-order-dependency.md) and resolved by PR #362 before PR 1 execution. Because PR 1's acceptance requires `pnpm test --run --sequence.shuffle` to pass, DEBT-401 had to land first so the shuffled suite could be used as a clean process-env isolation signal.
 
 ## Problem
 
