@@ -70,6 +70,7 @@ const captureContentSecurityPolicyOptions =
 
 describe('proxy middleware', () => {
   afterEach(() => {
+    vi.unstubAllEnvs();
     restoreProcessEnv(ORIGINAL_ENV);
     vi.resetModules();
     vi.restoreAllMocks();

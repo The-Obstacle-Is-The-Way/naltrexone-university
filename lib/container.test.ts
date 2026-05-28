@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { StripeWebhookDeps } from '@/src/adapters/controllers/stripe-webhook-controller';
 import {
   ClerkAuthGateway,
@@ -40,11 +40,17 @@ import {
   SubmitAnswerUseCase,
   ToggleBookmarkUseCase,
 } from '@/src/application/use-cases';
+import {
+  restoreProcessEnv,
+  snapshotProcessEnv,
+} from '@/tests/shared/process-env';
 
 vi.mock('server-only', () => ({}));
 vi.mock('stripe', () => ({
   default: class StripeMock {},
 }));
+
+const ORIGINAL_ENV = snapshotProcessEnv();
 
 process.env.DATABASE_URL ??=
   'postgresql://user:pass@localhost:5432/addiction_boards_test';
@@ -65,6 +71,10 @@ let createContainer: Awaited<ReturnType<typeof loadContainer>>;
 
 beforeAll(async () => {
   createContainer = await loadContainer();
+});
+
+afterAll(() => {
+  restoreProcessEnv(ORIGINAL_ENV);
 });
 
 describe('container factories', () => {

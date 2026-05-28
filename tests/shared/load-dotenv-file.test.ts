@@ -1,10 +1,17 @@
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { loadDotenvFileOrThrow } from './load-dotenv-file';
+import { restoreProcessEnv, snapshotProcessEnv } from './process-env';
+
+const ORIGINAL_ENV = snapshotProcessEnv();
 
 describe('loadDotenvFileOrThrow', () => {
+  afterEach(() => {
+    restoreProcessEnv(ORIGINAL_ENV);
+  });
+
   it('throws when dotenv file cannot be loaded', () => {
     expect(() => loadDotenvFileOrThrow('/path/does/not/exist')).toThrow();
   });
@@ -20,7 +27,6 @@ describe('loadDotenvFileOrThrow', () => {
 
       expect(process.env.TEST_ENV_LOADED).toBe('1');
     } finally {
-      delete process.env.TEST_ENV_LOADED;
       await rm(dir, { recursive: true, force: true });
     }
   });
@@ -36,7 +42,6 @@ describe('loadDotenvFileOrThrow', () => {
 
       expect(process.env.TEST_ENV_LOADED).toBe('1');
     } finally {
-      delete process.env.TEST_ENV_LOADED;
       await rm(dir, { recursive: true, force: true });
     }
   });
