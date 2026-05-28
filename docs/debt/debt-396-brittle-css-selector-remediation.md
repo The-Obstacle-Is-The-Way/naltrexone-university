@@ -20,6 +20,20 @@ Corrections from the original doc:
 - `tests/shared/dom-helpers.ts` does not exist today. `tests/shared/README.md` says suite-agnostic shared helpers belong under `tests/shared/`, which is the canonical home for the extracted helper.
 - A broader `[href]` sweep found 42 href-selector hits in tests. Only the two query-string exact href selectors are in scope. Thirty-nine are known-ok do-not-churn sites, and one substring selector is distinct.
 
+## Execution Update — 2026-05-28
+
+Consolidated PR implementation is complete on branch `feat/debt-396-pr-1-css-selector-helper`; PR number to be filled in during stop-and-grade.
+
+Implemented scope:
+
+- Added `tests/shared/dom-helpers.ts` with `findAnchorByHref(root: ParentNode, href: string): HTMLAnchorElement | null`.
+- Removed the local dashboard `findAnchorByHref()` copy and switched existing dashboard consumers to the shared helper.
+- Migrated the two fragile query-string selector sites listed below.
+- Added the "Anchor href assertions" rule to `.claude/rules/testing-react19.md`.
+- Left the 39 known-ok simple-href sites and the one `href*=` substring site untouched.
+
+Archive remains a separate follow-up after this PR merges.
+
 ---
 
 ## Problem
@@ -226,14 +240,14 @@ Run E2E only if the local authenticated billing E2E environment is present per `
 
 The consolidated PR is done when:
 
-- `tests/shared/dom-helpers.ts` exists and exports `findAnchorByHref(root: ParentNode, href: string): HTMLAnchorElement | null`.
-- No local inline copies of `findAnchorByHref()` remain.
-- `app/(app)/app/dashboard/page.test.tsx:355` no longer uses a query-string CSS attribute selector, and the assertion still targets the session-card fallback link.
-- `app/(app)/app/questions/[slug]/question-page-client.test.tsx:220` no longer uses a query-string CSS attribute selector.
-- The known-ok simple href selectors listed above are not churned.
-- `.claude/rules/testing-react19.md` documents the anchor/href rule, names `@/tests/shared/dom-helpers`, and cites PR #328.
-- The query-string selector guard returns zero hits.
-- Targeted tests, DEBT-398 regression test, and the full local gate are green.
+- [x] `tests/shared/dom-helpers.ts` exists and exports `findAnchorByHref(root: ParentNode, href: string): HTMLAnchorElement | null`.
+- [x] No local inline copies of `findAnchorByHref()` remain.
+- [x] `app/(app)/app/dashboard/page.test.tsx:355` no longer uses a query-string CSS attribute selector, and the assertion still targets the session-card fallback link.
+- [x] `app/(app)/app/questions/[slug]/question-page-client.test.tsx:220` no longer uses a query-string CSS attribute selector.
+- [x] The known-ok simple href selectors listed above are not churned.
+- [x] `.claude/rules/testing-react19.md` documents the anchor/href rule, names `@/tests/shared/dom-helpers`, and cites PR #328.
+- [x] The query-string selector guard returns zero hits.
+- [x] Targeted tests, DEBT-398 regression test, and the full local gate are green.
 
 ---
 
