@@ -35,6 +35,11 @@ type NavigatorReview =
   | GetPracticeSessionReviewOutput
   | GetCompletedSessionQuestionsWithFeedbackOutput;
 
+// Transitional DEBT-399 PR 3 card-row styling. PR 4 owns the /20
+// hover-opacity alignment before this can promote into a Button variant.
+const examReviewRowButtonClasses =
+  'block h-auto w-full shrink whitespace-normal rounded-2xl border bg-card p-4 text-left font-normal text-card-foreground shadow-sm hover:bg-muted/20 hover:text-card-foreground';
+
 export function QuestionNavigator({
   review,
   currentQuestionId,
@@ -211,17 +216,15 @@ export function ExamReviewView({
           return (
             <li key={row.questionId}>
               {row.isAvailable ? (
-                <button
+                <Button
                   type="button"
-                  className={cn(
-                    'bg-card text-card-foreground block w-full rounded-2xl border p-4 text-left shadow-sm transition-colors',
-                    'hover:bg-muted/20 focus-visible:border-ring ring-focus',
-                  )}
+                  variant="secondary"
+                  className={examReviewRowButtonClasses}
                   onClick={() => onOpenQuestion(row.questionId)}
                 >
                   <span className="sr-only">Open question </span>
                   {rowContent}
-                </button>
+                </Button>
               ) : (
                 <Card className="gap-0 rounded-2xl p-4 shadow-sm">
                   {rowContent}

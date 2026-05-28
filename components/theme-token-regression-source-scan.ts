@@ -47,24 +47,6 @@ export const RAW_BUTTON_EXEMPTIONS: readonly CountedExemption[] = [
     1,
     'Pattern Registry I-6 app-shell disclosure toggle exception.',
   ],
-  // TODO(DEBT-399): migrate to Button or add a dedicated registry pattern.
-  [
-    'app/(app)/app/shared/components/session-breakdown-list.tsx',
-    1,
-    'Temporary DEBT-399 raw-button cleanup site.',
-  ],
-  // TODO(DEBT-399): migrate to Button or add a dedicated registry pattern.
-  [
-    'app/(app)/app/history/components/history-sessions-tab.tsx',
-    1,
-    'Temporary DEBT-399 raw-button cleanup site.',
-  ],
-  // TODO(DEBT-399): migrate to Button or add a dedicated registry pattern.
-  [
-    'app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx',
-    1,
-    'Temporary DEBT-399 raw-button cleanup site.',
-  ],
 ];
 
 // Add new source-scan allowlist entries only when the Pattern Registry

@@ -1,9 +1,15 @@
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import { type QuestionOrigin, toQuestionRoute } from '@/lib/routes';
 import { getStemPreview } from '@/src/adapters/shared/stem-preview';
 import type { PracticeSessionReviewRow } from '@/src/application/use-cases';
 
 const STEM_PREVIEW_LENGTH = 80;
+
+// Transitional DEBT-399 PR 3 row styling. PR 4 owns the /20 hover-opacity
+// alignment before this can promote into a semantic Button variant.
+const questionActionButtonClasses =
+  '-mx-2 flex h-auto min-w-0 flex-1 shrink items-center justify-start gap-2 rounded-md bg-transparent px-2 py-0 text-left font-medium text-foreground shadow-none whitespace-normal hover:bg-muted/20 hover:text-foreground';
 
 export function SessionBreakdownList({
   rows,
@@ -36,9 +42,10 @@ export function SessionBreakdownList({
           className="flex items-center gap-2 py-2 text-sm"
         >
           {row.isAvailable && onOpenQuestion ? (
-            <button
+            <Button
               type="button"
-              className="-mx-2 flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 text-left font-medium text-foreground transition-colors hover:bg-muted/20 ring-focus disabled:pointer-events-none disabled:opacity-50"
+              variant="secondary"
+              className={questionActionButtonClasses}
               disabled={isQuestionActionPending}
               onClick={() => onOpenQuestion(row.questionId)}
             >
@@ -46,7 +53,7 @@ export function SessionBreakdownList({
               <span className="truncate">
                 {getStemPreview(row.stemMd, STEM_PREVIEW_LENGTH)}
               </span>
-            </button>
+            </Button>
           ) : row.isAvailable ? (
             <Link
               href={toQuestionRoute(row.slug, {
