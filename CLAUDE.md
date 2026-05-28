@@ -22,6 +22,7 @@ Claude Code loads additional context from `.claude/rules/` based on which files 
 | `testing.md` | Any file | Vitest, TDD, fakes-over-mocks, test locations |
 | `testing-react19.md` | `**/*.test.tsx` | `renderToStaticMarkup`, jsdom directive, deprecated APIs |
 | `testing-browser.md` | `**/*.browser.spec.tsx` | `vitest-browser-react`, controller mocking, stability tips |
+| `test-isolation.md` | `**/*.test.ts(x)`, `**/*.spec.ts(x)`, `tests/**` | process.env snapshot/restore, vi.stubEnv cleanup, combined ordering |
 | `architecture.md` | `src/**` | Clean Architecture layers, SOLID, dependency inversion |
 | `domain-layer.md` | `src/domain/**` | Zero-import purity rules |
 | `frontend.md` | `app/**`, `components/**` | Route constants, shadcn, error state patterns, and the shipped design-system gateway. **For design-system rules (tokens, focus rings, opacity scale, dark mode, Button mandate) see `docs/frontend/` — listed under Quick Reference → Design System below.** |
