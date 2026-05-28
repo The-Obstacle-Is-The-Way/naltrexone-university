@@ -1,6 +1,6 @@
 # DEBT-395: Test Environment Isolation Hardening
 
-**Priority:** P2 (active bug class — same shape as PR #342's pre-existing test-isolation leak. The current high-confidence misses are the module-scope env defaults in `lib/container.test.ts` and the `vi.stubEnv()` cleanup gap in `proxy.test.ts`; a repo-wide grep shows many additional env-mutation sites that must be classified because several are already correctly restored and should not be churned. The fix is mechanical and the rule is already partially implemented in `tests/shared/process-env.ts` but undocumented.)
+**Priority:** P2 (active bug class — same shape as PR #342's pre-existing test-isolation leak. The current high-confidence misses are the module-scope env defaults in `lib/container.test.ts`, the `vi.stubEnv()` cleanup gap in `proxy.test.ts`, and the direct env cleanup gap in `tests/shared/load-dotenv-file.test.ts`; a repo-wide grep shows many additional env-mutation sites that are already correctly restored and should not be churned. The fix is mechanical and the rule is already partially implemented in `tests/shared/process-env.ts` but undocumented.)
 **Created:** 2026-05-26
 **Source:** Deep adversarial test-suite audit conducted alongside DEBT-394 archival. The proximate trigger is PR #342 (`Fix GetStartedCta test env isolation`) where `components/get-started-cta.test.tsx` was leaking `NEXT_PUBLIC_SKIP_CLERK=true` env state into the "entitled user → /app/dashboard" assertion — a pre-existing bug that fired only when Dependabot's secret-less CI ran and exposed the latent ordering dependency. The audit found the same bug class still alive in other test files.
 **Related:** [.claude/rules/testing.md](../../.claude/rules/testing.md) (testing rules; currently silent on env isolation), [docs/dev/testing-infrastructure.md](../dev/testing-infrastructure.md), [DEBT-394 (archived)](../_archive/debt/debt-394-supply-chain-hardening.md)
@@ -8,6 +8,32 @@
 **Status:** Active
 
 ---
+
+## Pre-Execution Audit — 2026-05-28
+
+Audit branch: `feat/debt-395-pr-1-process-env-isolation-leaks`, cut from `dev` at `c8c06066b96252d686af45a1c84e685a532f3311` after `git pull --ff-only origin dev` returned "Already up to date." The earlier PR 1 branch name in this doc (`fix/debt-395-process-env-isolation-leaks`) was stale; use the audit/execution branch above for PR 1.
+
+Current helper contract in `tests/shared/process-env.ts`:
+
+```typescript
+export type ProcessEnvSnapshot = Record<string, string | undefined>;
+export function snapshotProcessEnv(): ProcessEnvSnapshot;
+export function restoreProcessEnv(snapshot: ProcessEnvSnapshot): void;
+```
+
+The canonical pattern remains the one shipped in `components/get-started-cta.test.tsx`: capture `const ORIGINAL_ENV = snapshotProcessEnv()` at module scope, mutate env inside hooks/tests, then call `restoreProcessEnv(ORIGINAL_ENV)` in cleanup before `vi.resetModules()` when modules read env at import time.
+
+Current sweep commands used for this audit:
+
+```sh
+rg -n 'vi\.stubEnv' . --glob '*.test.*' --glob '*.spec.*'
+rg -n 'process\.env\.[A-Z_][A-Z_0-9]*\s*(\?\?=|=)|delete\s+process\.env\.' . --glob '*.test.*' --glob '*.spec.*'
+rg -n 'Object\.assign\(process\.env|process\.env\s*=|delete\s+process\.env\.' . --glob '*.test.*' --glob '*.spec.*'
+```
+
+Read-only integration guard constants such as `const allowNonLocal = process.env.ALLOW_NON_LOCAL_DATABASE_URL === 'true'` are not mutations and are excluded from the remediation catalog.
+
+The required shuffled verification also exposed a separate module-cache/mock-order dependency in `components/auth-nav.test.tsx` with seed `1779972928761`. That failure is not a `process.env` leak, so it is tracked separately as [DEBT-401](./debt-401-auth-nav-test-module-cache-order-dependency.md). Because PR 1's acceptance requires `pnpm test --run --sequence.shuffle` to pass, execution must either fix DEBT-401 as a clearly separated companion commit before claiming PR 1 acceptance, or explicitly revise the PR 1 acceptance criteria before opening the PR.
 
 ## Problem
 
@@ -23,9 +49,9 @@ The repo already has a helper that solves this: `tests/shared/process-env.ts` ex
 
 ## Findings
 
-Two high-confidence bug clusters surfaced during the audit. Each is HIGH-severity because each can fire intermittently under any of: random test ordering, parallel worker assignment, or future test additions to the same file.
+Three high-confidence bug clusters surfaced during the audit. Each is HIGH-severity because each can fire intermittently under any of: random test ordering, parallel worker assignment, or future test additions to the same file.
 
-### A. `lib/container.test.ts:49-56` — module-scope `process.env.X ??= ...` without cleanup
+### A. `lib/container.test.ts:49-57` — module-scope `process.env.X ??= ...` without cleanup
 
 ```typescript
 process.env.DATABASE_URL ??=
@@ -39,10 +65,10 @@ process.env.NEXT_PUBLIC_APP_URL ??= 'http://localhost:3000';
 process.env.NEXT_PUBLIC_SKIP_CLERK ??= 'true';
 ```
 
-Eight environment variables get mutated at module scope. The file does not call `snapshotProcessEnv()` or restore in `afterAll`. Every subsequent test in the worker observes whatever this file left behind. Verify with:
+Eight environment variables get mutated at module scope. The eighth line (`NEXT_PUBLIC_SKIP_CLERK`) currently sits on line 57, so the old `49-56` citation under-counted the block by one line. The file does not call `snapshotProcessEnv()` or restore in `afterAll`. Every subsequent test in the worker observes whatever this file left behind. Verify with:
 
 ```sh
-grep -n 'process\.env\.' lib/container.test.ts
+rg -n 'process\.env\.' lib/container.test.ts
 ```
 
 The `??=` operator only sets if the variable is undefined, which masks the leak under most local conditions but means CI worker scheduling order can produce different observed state across runs.
@@ -83,6 +109,47 @@ A grep of `vi\.stubEnv` across all test files surfaces additional sites. Many al
 
 Either is acceptable; the choice depends on whether the test uses Vitest's stub API (use `vi.unstubAllEnvs`) or direct `process.env` assignment (use snapshot/restore).
 
+### E. `tests/shared/load-dotenv-file.test.ts:17, 23, 33, 39` — direct env mutation with delete-only cleanup
+
+The 2026-05-28 sweep found one additional PR 1 scope item:
+
+```typescript
+delete process.env.TEST_ENV_LOADED;
+// ...
+process.env.TEST_ENV_LOADED = '2';
+// ...
+delete process.env.TEST_ENV_LOADED;
+```
+
+The local `finally` blocks delete `TEST_ENV_LOADED`, but they do not restore a pre-existing value. If a developer, CI worker, or previous suite has `TEST_ENV_LOADED` set before this file runs, this test permanently removes it for the rest of the worker. Fix this with the canonical `snapshotProcessEnv()` / `restoreProcessEnv()` helper and keep the per-test `delete process.env.TEST_ENV_LOADED` only where the arrange step requires the variable to start unset.
+
+### F. 2026-05-28 sweep catalog
+
+PR 1 must fix these HIGH sites:
+
+| File | Current evidence | Required PR 1 action |
+| --- | --- | --- |
+| `lib/container.test.ts` | Lines 49-57 mutate eight env vars at module scope with no `snapshotProcessEnv` / `restoreProcessEnv` cleanup. | Move mutations behind a hook that runs after the snapshot is captured and restore in `afterAll`. |
+| `proxy.test.ts` | `vi.stubEnv()` at lines 119-121, 585-587, 633-635, 663, 667, 686-692, and 710. Suite `afterEach` at lines 72-76 calls `restoreProcessEnv()`, `vi.resetModules()`, and `vi.restoreAllMocks()`, but not `vi.unstubAllEnvs()`. | Add `vi.unstubAllEnvs()` to the existing suite `afterEach`. |
+| `tests/shared/load-dotenv-file.test.ts` | Lines 17, 23, 33, and 39 delete/set `TEST_ENV_LOADED`; cleanup deletes instead of restoring any original value. | Add module-scope snapshot + `afterEach` restore. |
+
+Known-OK reference patterns from the sweep:
+
+| File | Why it is OK |
+| --- | --- |
+| `app/(app)/app/request-boundary.test.ts` | `vi.stubEnv()` is paired with suite `afterEach` `vi.unstubAllEnvs()`. |
+| `lib/logger.test.ts` | `vi.stubEnv()` is paired with suite `afterEach` `vi.unstubAllEnvs()`. |
+| `lib/request-ip.test.ts` | Default and per-test `vi.stubEnv()` calls are paired with suite `afterEach` `vi.unstubAllEnvs()`. |
+| `lib/report-client-error.test.ts` | `vi.stubEnv()` is paired with suite `afterEach` `vi.unstubAllEnvs()`. |
+| `tests/e2e/helpers/seed-test-user.test.ts` | `beforeEach` clears stale stubs, then `afterEach` calls `vi.unstubAllEnvs()`. |
+| `app/pricing/manage-billing-action.test.ts` | Single `vi.stubEnv()` is wrapped in `try/finally` with `vi.unstubAllEnvs()`. This is locally safe; prefer suite `afterEach` if more env-stub tests are added. |
+| `app/pricing/subscribe-actions.test.ts` | Single `vi.stubEnv()` is wrapped in `try/finally` with `vi.unstubAllEnvs()`. This is locally safe; prefer suite `afterEach` if more env-stub tests are added. |
+| `components/get-started-cta.test.tsx` | Canonical PR #342 direct-env pattern: module-scope snapshot, `afterEach` restore, `vi.resetModules()`, `vi.restoreAllMocks()`. |
+| `components/auth-nav.test.tsx`, `components/providers.test.tsx`, `components/theme-token-regression.test.tsx`, `lib/env.test.ts`, `lib/stripe.test.ts`, `lib/container.skip-clerk.test.ts` | Direct `process.env` mutations are covered by `snapshotProcessEnv()` / `restoreProcessEnv()`. |
+| `app/sign-in/[[...sign-in]]/page.test.tsx`, `app/sign-in/[[...sign-in]]/sign-in-page-client.test.tsx`, `app/sign-up/[[...sign-up]]/page.test.tsx` | Single-test files use module-scope snapshot with `afterAll` restore. Safe today; switch to `afterEach` if additional tests with different env states are added. |
+| `components/marketing/marketing-layout.test.tsx` | `TZ` mutation is wrapped in `try/finally` and restores the original value or original absence. |
+| `sentry-config.test.ts` | Direct env mutations are covered by `beforeEach`/`afterEach` process-env object resets. This is non-canonical because it reassigns `process.env`; prefer migrating to `tests/shared/process-env.ts` when touched, but no active leak was found. |
+
 ---
 
 ## Why Existing Docs Were Not Enough
@@ -104,15 +171,66 @@ Ship in three single-concern PRs.
 
 ### PR 1 — Fix the high-confidence env-isolation misses
 
-Branch: `fix/debt-395-process-env-isolation-leaks`
+Branch: `feat/debt-395-pr-1-process-env-isolation-leaks`
 
-Edits, with explicit `afterEach` cleanup:
+Edits, with explicit matching cleanup:
 
-1. **`lib/container.test.ts`** — wrap module-scope env mutations in `beforeAll` + `afterAll` snapshot/restore using `snapshotProcessEnv()` / `restoreProcessEnv()`. Verify with `pnpm test --run lib/container.test.ts` then with `pnpm test --run --sequence.shuffle` to confirm no order dependency.
+1. **`lib/container.test.ts`** — import `snapshotProcessEnv()` / `restoreProcessEnv()` from `@/tests/shared/process-env`; capture `const ORIGINAL_ENV = snapshotProcessEnv()` at module scope; move the eight env-default writes into a helper called from `beforeAll` before `loadContainer()` imports `./container`; restore in `afterAll`.
+
+   Concrete shape:
+
+   ```typescript
+   const ORIGINAL_ENV = snapshotProcessEnv();
+
+   function setSharedTestEnv() {
+     process.env.DATABASE_URL ??=
+       'postgresql://user:pass@localhost:5432/addiction_boards_test';
+     // ... seven more current defaults ...
+   }
+
+   beforeAll(async () => {
+     setSharedTestEnv();
+     createContainer = await loadContainer();
+   });
+
+   afterAll(() => {
+     restoreProcessEnv(ORIGINAL_ENV);
+   });
+   ```
+
+   Verify with `pnpm test --run lib/container.test.ts` then with `pnpm test --run --sequence.shuffle` to confirm no order dependency.
 
 2. **`proxy.test.ts`** — add `vi.unstubAllEnvs()` to the top-level `afterEach` so every `vi.stubEnv()` call in the file (not just the documented ones) gets cleared. Keep the existing `restoreProcessEnv()` call for direct `process.env` mutations and call `vi.unstubAllEnvs()` before restoring the snapshot so the final visible env state comes from `ORIGINAL_ENV`.
 
-3. **Audit-sweep**: run `grep -rn 'vi\.stubEnv\|process\.env\.[A-Z_]* *=' --include='*.test.ts' --include='*.test.tsx'` across `app/`, `src/`, `components/`, `lib/`, `tests/`. For every file with mutation calls, verify the `afterEach` (or `afterAll`) has the matching cleanup. Add cleanup where missing.
+   Concrete shape:
+
+   ```typescript
+   afterEach(() => {
+     vi.unstubAllEnvs();
+     restoreProcessEnv(ORIGINAL_ENV);
+     vi.resetModules();
+     vi.restoreAllMocks();
+   });
+   ```
+
+   This one-line cleanup addition covers the cited `vi.stubEnv()` blocks at current lines 119-121, 585-587, 633-635, 663/667, 686-692, and 710. The local `vi.unstubAllEnvs()` at line 664 becomes redundant after the global cleanup exists, but it is harmless. Leave it in PR 1 unless the execution agent chooses to simplify the mixed-pattern test in the same focused edit.
+
+3. **`tests/shared/load-dotenv-file.test.ts`** — add `snapshotProcessEnv()` / `restoreProcessEnv()` from `./process-env`; capture `const ORIGINAL_ENV = snapshotProcessEnv()` at module scope; restore in `afterEach`. Keep temp directory cleanup in each `finally`; remove delete-only cleanup for `TEST_ENV_LOADED` from `finally` once `afterEach` owns env restoration.
+
+   Concrete shape:
+
+   ```typescript
+   import { afterEach, describe, expect, it } from 'vitest';
+   import { restoreProcessEnv, snapshotProcessEnv } from './process-env';
+
+   const ORIGINAL_ENV = snapshotProcessEnv();
+
+   afterEach(() => {
+     restoreProcessEnv(ORIGINAL_ENV);
+   });
+   ```
+
+4. **Audit-sweep**: re-run the three `rg` commands from the pre-execution audit section across the full repo root, not only `app/ src/ components/ lib/ tests/`, because root-level test files such as `proxy.test.ts` and `sentry-config.test.ts` are otherwise missed. For every file with mutation calls, verify the `afterEach`, `afterAll`, or local `finally` has matching cleanup. Add cleanup where missing.
 
 Full local gate after fixes:
 
@@ -127,6 +245,14 @@ pnpm test --run --sequence.shuffle
 ```
 
 If a shuffled run reveals a new failure, that's a hidden order dependency — surface it as an additional fix in the same PR.
+
+Also keep the DEBT-398 PR 3 regression scan green:
+
+```sh
+pnpm test --run components/theme-token-regression.test.tsx
+```
+
+Expected current signal: 16 tests pass in `components/theme-token-regression.test.tsx`.
 
 ### PR 2 — Document the pattern (no code changes)
 
@@ -227,9 +353,11 @@ PR 1 done when:
 
 - The `lib/container.test.ts` module-scope env defaults are snapshot/restored.
 - Every `vi.stubEnv()` call in `proxy.test.ts` is covered by suite-level `vi.unstubAllEnvs()` plus the existing `restoreProcessEnv()` snapshot restoration.
-- A grep sweep across `app/`, `src/`, `components/`, `lib/`, `tests/` for `vi\.stubEnv|process\.env\.[A-Z_]* *=` returns zero unfixed sites OR each site has a documented justification.
+- `tests/shared/load-dotenv-file.test.ts` restores any pre-existing `TEST_ENV_LOADED` value instead of deleting it permanently.
+- A root-level sweep with the pre-execution audit `rg` commands returns zero unfixed sites OR each site appears in the known-OK catalog above.
 - Full local gate green.
 - `pnpm test --run --sequence.shuffle` passes (no order-dependent failures).
+- `pnpm test --run components/theme-token-regression.test.tsx` remains 16/16 green for DEBT-398 PR 3.
 - Pre-push hook green.
 
 PR 2 done when:
