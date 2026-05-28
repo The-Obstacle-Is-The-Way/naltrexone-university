@@ -201,9 +201,9 @@ If you cannot find a pattern in the design docs above, do NOT invent one. Either
 
 ### Enforcement Status
 
-The formal enforcement layer (gateway rule file in `.claude/rules/frontend.md`, regression test in `components/theme-token-regression.test.tsx`, optional Vitest scan) is tracked by DEBT-398. Until that lands, this section IS the enforcement layer — read it, follow it, do not skip it.
+The formal enforcement layer is live: `.claude/rules/frontend.md` gateways UI work to the design docs, and `components/theme-token-regression.test.tsx` / `components/theme-token-regression-source-scan.ts` fail CI on raw `<button>` drift and undocumented opacity values.
 
-See `docs/debt/debt-398-design-system-enforcement-gap.md` for the full debt doc and remediation plan. See `docs/debt/debt-399-component-system-bypass-cleanup.md` for the active cleanup of existing bypass sites (raw `<button>` + focus-ring duplication).
+See `docs/_archive/debt/debt-398-design-system-enforcement-gap.md` for the completed enforcement arc. See `docs/_archive/debt/debt-399-component-system-bypass-cleanup.md` for the completed cleanup of existing bypass sites; only the documented `components/mobile-nav.tsx` Pattern Registry I-6 app-shell disclosure exception remains.
 
 ---
 

@@ -1,6 +1,6 @@
 # Frontend Standards
 
-**Last Updated:** 2026-05-06
+**Last Updated:** 2026-05-28
 
 Canonical reference for all frontend patterns, component usage, accessibility, and styling conventions. Every UI change MUST be consistent with this document. If a pattern isn't documented here, don't invent one — add it here first.
 
@@ -30,10 +30,9 @@ When making a UI change:
    `pattern-registry.md` first** (with rationale and design review),
    THEN implement in code.
 
-Violations should be caught at code review. DEBT-398 PR 3 ships the
-regression-test enforcement that will make CI catch new violations
-automatically. See `.claude/rules/frontend.md` for the mandatory
-pattern enforcement summary.
+Violations should be caught at code review and by DEBT-398 PR 3's
+regression-test enforcement in CI. See `.claude/rules/frontend.md` for
+the mandatory pattern enforcement summary.
 
 ---
 
