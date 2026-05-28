@@ -1,8 +1,7 @@
 // @vitest-environment jsdom
 import type { ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MarketingLayout } from '@/components/marketing/marketing-layout';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeAuthGateway } from '@/src/application/test-helpers/fakes/fake-gateways';
 import { FakeCheckEntitlementUseCase } from '@/src/application/test-helpers/fakes/fake-use-cases';
 import { createUser } from '@/src/domain/test-helpers/factories';
@@ -39,6 +38,9 @@ function getLinksByHrefAndLabel(
 }
 
 async function renderMarketingLayout(authNavSlot: ReactNode) {
+  const { MarketingLayout } = await import(
+    '@/components/marketing/marketing-layout'
+  );
   const element = await MarketingLayout({
     authNavSlot,
     featuresHref: '#features',
@@ -49,6 +51,12 @@ async function renderMarketingLayout(authNavSlot: ReactNode) {
 }
 
 describe('AuthNav', () => {
+  beforeEach(() => {
+    restoreProcessEnv(ORIGINAL_ENV);
+    vi.resetModules();
+    vi.restoreAllMocks();
+  });
+
   afterEach(() => {
     restoreProcessEnv(ORIGINAL_ENV);
     vi.resetModules();
