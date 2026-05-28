@@ -24,7 +24,7 @@ Claude Code loads additional context from `.claude/rules/` based on which files 
 | `testing-browser.md` | `**/*.browser.spec.tsx` | `vitest-browser-react`, controller mocking, stability tips |
 | `architecture.md` | `src/**` | Clean Architecture layers, SOLID, dependency inversion |
 | `domain-layer.md` | `src/domain/**` | Zero-import purity rules |
-| `frontend.md` | `app/**`, `components/**` | Route constants, shadcn, error state patterns. **For design-system rules (tokens, focus rings, opacity scale, dark mode, Button mandate) see `docs/frontend/` — listed under Quick Reference → Design System below.** DEBT-398 tracks the planned formal gateway. |
+| `frontend.md` | `app/**`, `components/**` | Route constants, shadcn, error state patterns, and the shipped design-system gateway. **For design-system rules (tokens, focus rings, opacity scale, dark mode, Button mandate) see `docs/frontend/` — listed under Quick Reference → Design System below.** |
 | `git-workflow.md` | Any file | Commits, PRs, CodeRabbit, non-interactive safety |
 
 These rules load automatically — no action needed.
@@ -66,7 +66,7 @@ These are the rules that matter most for Claude Code sessions. Full details in `
 - Muted/layer-2 opacity scale: `/20`/`/40`/`/50`/`/60` from `pattern-registry.md` § 1.2; documented foreground-ramp arbitrary values allowed only in their documented Pattern Registry contexts; undocumented arbitrary values forbidden.
 - Never invent UI patterns — add to `pattern-registry.md` first with rationale and design review.
 
-DEBT-398 tracks the formal enforcement layer (gateway in `.claude/rules/frontend.md` + expanded `theme-token-regression.test.tsx`). Until then this reference IS the enforcement — follow it.
+The DEBT-398 enforcement layer is live: `.claude/rules/frontend.md` gateways UI work to the design docs, and `theme-token-regression.test.tsx` / `theme-token-regression-source-scan.ts` fail CI on raw `<button>` drift and undocumented opacity values.
 
 ### Commands
 

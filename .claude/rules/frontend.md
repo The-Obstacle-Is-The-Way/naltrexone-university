@@ -79,7 +79,9 @@ All interactive click targets MUST use the `<Button>` component
 `components/ui/` primitives and app-shell disclosure toggles per
 Pattern Registry I-6.
 
-See DEBT-399 for the active cleanup of existing bypass sites.
+DEBT-399 completed the cleanup of existing bypass sites. Only the
+documented `components/mobile-nav.tsx` Pattern Registry I-6 app-shell
+disclosure exception remains.
 
 ### 5. Dark-mode strategy
 

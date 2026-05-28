@@ -3,9 +3,9 @@
 **Priority:** P2 (concrete violations of the documented "all interactive click targets MUST use `<Button>`" rule from `docs/frontend/standards.md` § 2. Two known production-code raw `<button>` sites still hand-roll Button-equivalent layout, hover, disabled, and focus behavior even after PR 2 migrated them to the shared `.ring-focus` utility, and one history disclosure button is not covered by the current Pattern Registry I-6 app-shell exception unless it migrates to `<Button>`. The 26 exact focus-ring copies across 19 files were correct-values-but-copy-paste before PR 2 extracted them, which meant any future change to the canonical pattern required editing 19+ files. This is the visible symptom of the meta-debt described in DEBT-398.)
 **Created:** 2026-05-26
 **Source:** Deep design-system audit conducted alongside DEBT-394 archival. Verified against the documented rules in `docs/frontend/standards.md` and `docs/frontend/pattern-registry.md`. The audit found three production raw `<button>` sites: two clear Button bypasses with Button-equivalent styling now partially reduced to `.ring-focus`, plus one history disclosure toggle that has the required `aria-label` / `aria-expanded` / `aria-controls` attributes but is not an app-shell I-6 exception today. It also found 26 instances of the exact canonical focus-ring string across 19 files with no shared extraction, or 33 broader instances when counting the Button/Input/Select primitives, alternate ordering with `focus-visible:border-ring`, extra review/practice focus-ring consumers, and the `focus-within` variant.
-**Related:** [docs/frontend/standards.md](../frontend/standards.md) (§ 2 Button mandate, § 3 focus-ring single canonical pattern), [docs/frontend/pattern-registry.md](../frontend/pattern-registry.md) (I-6 disclosure toggle pattern), [components/ui/button.tsx](../../components/ui/button.tsx), [DEBT-398](./debt-398-design-system-enforcement-gap.md) (the root meta-debt that allowed these violations to accumulate)
+**Related:** [docs/frontend/standards.md](../../frontend/standards.md) (§ 2 Button mandate, § 3 focus-ring single canonical pattern), [docs/frontend/pattern-registry.md](../../frontend/pattern-registry.md) (I-6 disclosure toggle pattern), [components/ui/button.tsx](../../../components/ui/button.tsx), [DEBT-398](./debt-398-design-system-enforcement-gap.md) (the root meta-debt that allowed these violations to accumulate)
 
-**Status:** Active
+**Status:** Resolved 2026-05-28 — shipped four PRs: PR 1 (#357) extracted canonical focus-ring as Tailwind `.ring-focus` and `.ring-focus-within` utilities in `app/globals.css`; PR 2 (#358) migrated 27 inline focus-ring sites to the new utilities and deleted the local `focusVisibleRing` constant in `components/app-desktop-nav.tsx`; PR 3 (#359) migrated three raw `<button>` sites to `<Button>` (`session-breakdown-list.tsx` and `exam-review-view.tsx` to `variant="secondary"`; `history-sessions-tab.tsx` disclosure to `variant="ghost" size="icon"`) and removed the three raw-button DEBT-399 exemptions from the regression scan; PR 4 (#360) aligned six dark-mode opacity divergences to Pattern Registry-documented values (`hover:bg-muted/20` -> `/50` page-context and `/40` in-card; `divide-border/20` / `dark:divide-foreground/20` -> `/40`; `border-border/30` / `dark:border-foreground/10` -> `/40`) and removed the final six opacity DEBT-399 exemptions. Zero temporary DEBT-399 markers remain anywhere in the codebase; the permanent `components/mobile-nav.tsx` Pattern Registry I-6 app-shell raw-button exception is the sole remaining allowlist entry, which is a documented design-system rule, not a workaround.
 
 ---
 
@@ -117,7 +117,7 @@ The original gap was enforcement, not documentation. Before DEBT-398 PR 3, an ag
 - There was no automated rule failing on arbitrary opacity values or off-scale opacities.
 - The reviewer had to manually compare the className string against `pattern-registry.md` § 1.2 to spot the `/20` divergence.
 
-DEBT-398 closed the forward-looking enforcement gap. DEBT-399 removes the existing `TODO(DEBT-399)` exemptions left behind so the enforcement layer can become strict without preserving known slop.
+DEBT-398 closed the forward-looking enforcement gap. DEBT-399 removed the temporary exemptions left behind so the enforcement layer can become strict without preserving known slop.
 
 ---
 
@@ -300,7 +300,7 @@ Execution recipe:
    - `app/(app)/app/shared/components/session-breakdown-list.test.tsx` currently expects `hover:bg-muted/20`, `divide-border/20`, and `dark:divide-foreground/20`.
    - `app/(app)/app/history/components/history-sessions-tab.test.tsx` currently expects `border-border/30` and `dark:border-foreground/10`.
 3. In `components/theme-token-regression-source-scan.ts`, add `divide-border/40` and `dark:divide-foreground/40` to `DOCUMENTED_OPACITY_TOKENS`, then delete all six `TEMPORARY_OPACITY_EXEMPTIONS` entries. `hover:bg-muted/40`, `hover:bg-muted/50`, `border-border/40`, and `dark:border-foreground/40` are already allowlisted.
-4. Run `pnpm test --run components/theme-token-regression.test.tsx`; it should remain 16/16 passing with zero `TODO(DEBT-399)` markers.
+4. Run `pnpm test --run components/theme-token-regression.test.tsx`; it should remain 16/16 passing with zero temporary DEBT-399 markers.
 5. Visually verify light + dark and desktop + mobile for session-breakdown rows, the exam-review question list, and the history-sessions expanded panel border. Expected visual change: slightly stronger hover/divider/border contrast, intentionally matching the registry.
 
 ---
