@@ -9,6 +9,20 @@ import type {
   GetSessionHistoryOutput,
 } from '@/src/adapters/controllers/practice-controller';
 
+const {
+  fixtureQuestion1Id,
+  fixtureSession1Id,
+  fixtureSessionExamId,
+  fixtureSessionLongId,
+  fixtureSessionTutorId,
+} = vi.hoisted(() => ({
+  fixtureQuestion1Id: crypto.randomUUID(),
+  fixtureSession1Id: crypto.randomUUID(),
+  fixtureSessionExamId: crypto.randomUUID(),
+  fixtureSessionLongId: crypto.randomUUID(),
+  fixtureSessionTutorId: crypto.randomUUID(),
+}));
+
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
@@ -69,7 +83,7 @@ function makeSessionHistoryRow(
   overrides: Partial<SessionHistoryRow> = {},
 ): SessionHistoryRow {
   return {
-    sessionId: 'session-1',
+    sessionId: fixtureSession1Id,
     mode: 'exam',
     questionCount: 10,
     firstQuestionSlug: 'q-1',
@@ -119,7 +133,7 @@ describe('HistorySessionsTab', () => {
       data: {
         rows: [
           {
-            sessionId: 'session-1',
+            sessionId: fixtureSession1Id,
             mode: 'exam',
             questionCount: 10,
             firstQuestionSlug: 'q-1',
@@ -140,7 +154,7 @@ describe('HistorySessionsTab', () => {
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const breakdownToggle = doc.querySelector(
-      'button[aria-controls="breakdown-session-1"]',
+      `button[aria-controls="breakdown-${fixtureSession1Id}"]`,
     );
 
     expect(html).toContain('Exam');
@@ -157,7 +171,7 @@ describe('HistorySessionsTab', () => {
       data: {
         rows: [
           {
-            sessionId: 'session-1',
+            sessionId: fixtureSession1Id,
             mode: 'exam',
             questionCount: 10,
             firstQuestionSlug: 'q-1',
@@ -229,7 +243,7 @@ describe('HistorySessionsTab', () => {
 
   it('renders the session summary as a primary review link when a first question exists', () => {
     const row = {
-      sessionId: 'session-1',
+      sessionId: fixtureSession1Id,
       mode: 'exam' as const,
       questionCount: 10,
       answered: 10,
@@ -261,7 +275,9 @@ describe('HistorySessionsTab', () => {
 
     expect(reviewLink?.getAttribute('href')).toContain('/app/questions/q-1');
     expect(reviewLink?.getAttribute('href')).toContain('mode=review');
-    expect(reviewLink?.getAttribute('href')).toContain('sessionId=session-1');
+    expect(reviewLink?.getAttribute('href')).toContain(
+      `sessionId=${fixtureSession1Id}`,
+    );
     expect(reviewLinkClassTokens.has('rounded-md')).toBe(true);
     expect(reviewLinkClassTokens.has('text-sm')).toBe(true);
     expect(reviewLinkClassTokens.has('text-foreground')).toBe(true);
@@ -277,7 +293,7 @@ describe('HistorySessionsTab', () => {
       data: {
         rows: [
           {
-            sessionId: 'session-1',
+            sessionId: fixtureSession1Id,
             mode: 'exam',
             questionCount: 10,
             firstQuestionSlug: 'q-1',
@@ -297,7 +313,7 @@ describe('HistorySessionsTab', () => {
 
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const row = findSessionRowById(doc, 'session-1');
+    const row = findSessionRowById(doc, fixtureSession1Id);
     const rowClassTokens = getClassTokens(row?.getAttribute('class') ?? '');
 
     expect(row).toBeDefined();
@@ -326,7 +342,7 @@ describe('HistorySessionsTab', () => {
       data: {
         rows: [
           {
-            sessionId: 'session-1',
+            sessionId: fixtureSession1Id,
             mode: 'exam',
             questionCount: 10,
             firstQuestionSlug: null,
@@ -346,7 +362,7 @@ describe('HistorySessionsTab', () => {
 
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const row = findSessionRowById(doc, 'session-1');
+    const row = findSessionRowById(doc, fixtureSession1Id);
     const rowClassTokens = getClassTokens(row?.getAttribute('class') ?? '');
 
     expect(row).toBeDefined();
@@ -381,7 +397,7 @@ describe('HistorySessionsTab', () => {
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const toggle = doc.querySelector(
-      'button[aria-controls="breakdown-session-1"]',
+      `button[aria-controls="breakdown-${fixtureSession1Id}"]`,
     );
     const icon = toggle?.querySelector('svg');
     const toggleClassTokens = getClassTokens(
@@ -419,12 +435,14 @@ describe('HistorySessionsTab', () => {
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const toggle = doc.querySelector(
-      'button[aria-controls="breakdown-session-1"]',
+      `button[aria-controls="breakdown-${fixtureSession1Id}"]`,
     );
 
     expect(toggle).not.toBeNull();
     expect(toggle?.getAttribute('aria-expanded')).toBe('false');
-    expect(toggle?.getAttribute('aria-controls')).toBe('breakdown-session-1');
+    expect(toggle?.getAttribute('aria-controls')).toBe(
+      `breakdown-${fixtureSession1Id}`,
+    );
     expect(toggle?.getAttribute('aria-label')).toContain(
       'View breakdown for Exam session: 8/10 correct (80%), 20m, Feb 7, 2026',
     );
@@ -432,16 +450,16 @@ describe('HistorySessionsTab', () => {
 
   it('renders expanded breakdown panel as a flat disclosure region', () => {
     mockUseHistorySessionsState = createMockUseHistorySessionsState({
-      selectedSessionId: 'session-1',
+      selectedSessionId: fixtureSession1Id,
       selectedReview: {
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q-1',
+            questionId: fixtureQuestion1Id,
             slug: 'q-1',
             stemMd: 'Stem preview',
             difficulty: 'easy',
@@ -469,9 +487,9 @@ describe('HistorySessionsTab', () => {
 
     const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const panel = doc.getElementById('breakdown-session-1');
+    const panel = doc.getElementById(`breakdown-${fixtureSession1Id}`);
     const toggle = doc.querySelector(
-      'button[aria-controls="breakdown-session-1"]',
+      `button[aria-controls="breakdown-${fixtureSession1Id}"]`,
     );
     const icon = toggle?.querySelector('svg');
     const panelClassTokens = getClassTokens(panel?.getAttribute('class') ?? '');
@@ -496,16 +514,16 @@ describe('HistorySessionsTab', () => {
 
   it('does not render a redundant Review session button inside breakdown content', () => {
     mockUseHistorySessionsState = createMockUseHistorySessionsState({
-      selectedSessionId: 'session-1',
+      selectedSessionId: fixtureSession1Id,
       selectedReview: {
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q-1',
+            questionId: fixtureQuestion1Id,
             slug: 'q-1',
             stemMd: 'Stem preview',
             difficulty: 'easy',
@@ -546,7 +564,7 @@ describe('HistorySessionsTab', () => {
       data: {
         rows: [
           {
-            sessionId: 'session-1',
+            sessionId: fixtureSession1Id,
             mode: 'exam',
             questionCount: 10,
             firstQuestionSlug: null,
@@ -574,7 +592,7 @@ describe('HistorySessionsTab', () => {
       data: {
         rows: [
           {
-            sessionId: 'session-exam',
+            sessionId: fixtureSessionExamId,
             mode: 'exam',
             questionCount: 10,
             firstQuestionSlug: 'q-exam',
@@ -603,7 +621,7 @@ describe('HistorySessionsTab', () => {
       data: {
         rows: [
           {
-            sessionId: 'session-tutor',
+            sessionId: fixtureSessionTutorId,
             mode: 'tutor',
             questionCount: 10,
             firstQuestionSlug: 'q-tutor',
@@ -632,7 +650,7 @@ describe('HistorySessionsTab', () => {
       data: {
         rows: [
           {
-            sessionId: 'session-long',
+            sessionId: fixtureSessionLongId,
             mode: 'exam',
             questionCount: 10,
             firstQuestionSlug: 'q-long',

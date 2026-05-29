@@ -1,5 +1,29 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const {
+  fixtureAttempt1Id,
+  fixtureAttempt1Id2,
+  fixtureAttemptParent1Id,
+  fixtureAttemptRetry1Id,
+  fixtureAttemptRetry2Id,
+  fixtureChoice1Id,
+  fixtureChoice2Id,
+  fixtureQuestion1Id,
+  fixtureSession1Id,
+  fixtureSession1Id2,
+} = vi.hoisted(() => ({
+  fixtureAttempt1Id: crypto.randomUUID(),
+  fixtureAttempt1Id2: crypto.randomUUID(),
+  fixtureAttemptParent1Id: crypto.randomUUID(),
+  fixtureAttemptRetry1Id: crypto.randomUUID(),
+  fixtureAttemptRetry2Id: crypto.randomUUID(),
+  fixtureChoice1Id: crypto.randomUUID(),
+  fixtureChoice2Id: crypto.randomUUID(),
+  fixtureQuestion1Id: crypto.randomUUID(),
+  fixtureSession1Id: crypto.randomUUID(),
+  fixtureSession1Id2: crypto.randomUUID(),
+}));
+
 const { reportClientErrorMock } = vi.hoisted(() => ({
   reportClientErrorMock: vi.fn(),
 }));
@@ -29,7 +53,7 @@ import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
 function createQuestionOutput(): GetQuestionBySlugOutput {
   const question = createQuestion({
-    id: 'q_1',
+    id: fixtureQuestion1Id,
     slug: 'q-1',
     stemMd: '#',
     difficulty: 'easy',
@@ -61,7 +85,7 @@ describe('question-page-logic', () => {
         canSubmitQuestionAnswer({
           loadState: { status: 'loading' },
           question: createQuestionOutput(),
-          selectedChoiceId: 'choice_1',
+          selectedChoiceId: fixtureChoice1Id,
           submitResult: null,
         }),
       ).toBe(false);
@@ -72,7 +96,7 @@ describe('question-page-logic', () => {
         canSubmitQuestionAnswer({
           loadState: { status: 'ready' },
           question: createQuestionOutput(),
-          selectedChoiceId: 'choice_1',
+          selectedChoiceId: fixtureChoice1Id,
           submitResult: null,
         }),
       ).toBe(true);
@@ -83,7 +107,7 @@ describe('question-page-logic', () => {
         canSubmitQuestionAnswer({
           loadState: { status: 'ready' },
           question: null,
-          selectedChoiceId: 'choice_1',
+          selectedChoiceId: fixtureChoice1Id,
           submitResult: null,
         }),
       ).toBe(false);
@@ -105,11 +129,11 @@ describe('question-page-logic', () => {
         canSubmitQuestionAnswer({
           loadState: { status: 'ready' },
           question: createQuestionOutput(),
-          selectedChoiceId: 'choice_1',
+          selectedChoiceId: fixtureChoice1Id,
           submitResult: {
-            attemptId: 'attempt_1',
+            attemptId: fixtureAttempt1Id,
             isCorrect: true,
-            correctChoiceId: 'choice_1',
+            correctChoiceId: fixtureChoice1Id,
             explanationMd: null,
             referenceMd: null,
             choiceExplanations: [],
@@ -123,7 +147,7 @@ describe('question-page-logic', () => {
         canSubmitQuestionAnswer({
           loadState: { status: 'ready' },
           question: createQuestionOutput(),
-          selectedChoiceId: 'choice_1',
+          selectedChoiceId: fixtureChoice1Id,
           submitResult: null,
           mode: 'review',
           sessionId: '00000000-0000-4000-8000-000000000001',
@@ -137,10 +161,10 @@ describe('question-page-logic', () => {
       expect(
         normalizeReviewIdentifiers({
           mode: 'review',
-          attemptId: 'attempt-1',
+          attemptId: fixtureAttempt1Id2,
         }),
       ).toEqual({
-        attemptId: 'attempt-1',
+        attemptId: fixtureAttempt1Id2,
         sessionId: undefined,
         normalized: false,
       });
@@ -150,12 +174,12 @@ describe('question-page-logic', () => {
       expect(
         normalizeReviewIdentifiers({
           mode: 'review',
-          sessionId: 'session-1',
-          attemptId: 'attempt-1',
+          sessionId: fixtureSession1Id2,
+          attemptId: fixtureAttempt1Id2,
         }),
       ).toEqual({
         attemptId: undefined,
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id2,
         normalized: true,
       });
     });
@@ -190,7 +214,7 @@ describe('question-page-logic', () => {
       expect(setQuestionLoadedAt).toHaveBeenCalledWith(null);
 
       expect(setQuestion).toHaveBeenCalledWith(
-        expect.objectContaining({ questionId: 'q_1' }),
+        expect.objectContaining({ questionId: fixtureQuestion1Id }),
       );
       expect(setQuestionLoadedAt).toHaveBeenCalledWith(1234);
       expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith('idem_1');
@@ -400,9 +424,9 @@ describe('question-page-logic', () => {
       const setLoadState = vi.fn();
       const setSubmitResult = vi.fn();
       const submitResult = {
-        attemptId: 'attempt_1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
-        correctChoiceId: 'choice_1',
+        correctChoiceId: fixtureChoice1Id,
         explanationMd: null,
         referenceMd: null,
         choiceExplanations: [],
@@ -411,7 +435,7 @@ describe('question-page-logic', () => {
       const action = createSubmitSelectedAnswerAction({
         startTransition,
         question: createQuestionOutput(),
-        selectedChoiceId: 'choice_1',
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn: async () => ok(submitResult),
@@ -434,9 +458,9 @@ describe('question-page-logic', () => {
       const setSubmitResult = vi.fn();
       const onSuccess = vi.fn();
       const submitResult = {
-        attemptId: 'attempt_1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
-        correctChoiceId: 'choice_1',
+        correctChoiceId: fixtureChoice1Id,
         explanationMd: null,
         referenceMd: null,
         choiceExplanations: [],
@@ -445,7 +469,7 @@ describe('question-page-logic', () => {
       const action = createSubmitSelectedAnswerAction({
         startTransition,
         question: createQuestionOutput(),
-        selectedChoiceId: 'choice_1',
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn: async () => ok(submitResult),
@@ -466,7 +490,7 @@ describe('question-page-logic', () => {
       const getPreviousAttemptFn = vi.fn(async () => ok(null));
 
       await loadPreviousAttempt({
-        questionId: 'q_1',
+        questionId: fixtureQuestion1Id,
         attemptId: '00000000-0000-4000-8000-000000000001',
         sessionId: '00000000-0000-4000-8000-000000000002',
         getPreviousAttemptFn,
@@ -475,7 +499,7 @@ describe('question-page-logic', () => {
       });
 
       expect(getPreviousAttemptFn).toHaveBeenCalledWith({
-        questionId: 'q_1',
+        questionId: fixtureQuestion1Id,
         sessionId: '00000000-0000-4000-8000-000000000002',
       });
     });
@@ -487,16 +511,16 @@ describe('question-page-logic', () => {
       const setReviewHydrationState = vi.fn();
 
       await loadPreviousAttempt({
-        questionId: 'q_1',
+        questionId: fixtureQuestion1Id,
         getPreviousAttemptFn: async () =>
           ok({
             kind: 'attempt',
-            attemptId: 'attempt_1',
+            attemptId: fixtureAttempt1Id,
             sessionMode: 'exam',
-            selectedChoiceId: 'choice_1',
+            selectedChoiceId: fixtureChoice1Id,
             isOmitted: false,
             isCorrect: false,
-            correctChoiceId: 'choice_2',
+            correctChoiceId: fixtureChoice2Id,
             explanationMd: 'Explanation',
             referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
             choiceExplanations: [],
@@ -509,12 +533,12 @@ describe('question-page-logic', () => {
       });
 
       expect(setReviewSessionMode).toHaveBeenCalledWith('exam');
-      expect(setSelectedChoiceId).toHaveBeenCalledWith('choice_1');
+      expect(setSelectedChoiceId).toHaveBeenCalledWith(fixtureChoice1Id);
       expect(setSubmitResult).toHaveBeenCalledWith({
-        attemptId: 'attempt_1',
+        attemptId: fixtureAttempt1Id,
         isOmitted: false,
         isCorrect: false,
-        correctChoiceId: 'choice_2',
+        correctChoiceId: fixtureChoice2Id,
         explanationMd: 'Explanation',
         referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
         choiceExplanations: [],
@@ -529,13 +553,13 @@ describe('question-page-logic', () => {
       const setReviewHydrationState = vi.fn();
 
       await loadPreviousAttempt({
-        questionId: 'q_1',
+        questionId: fixtureQuestion1Id,
         sessionId: '00000000-0000-4000-8000-000000000002',
         getPreviousAttemptFn: async () =>
           ok({
             kind: 'session_unanswered',
             sessionMode: 'tutor',
-            correctChoiceId: 'choice_2',
+            correctChoiceId: fixtureChoice2Id,
             explanationMd: 'Explanation',
             referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
             choiceExplanations: [],
@@ -548,7 +572,7 @@ describe('question-page-logic', () => {
 
       expect(setSessionUnansweredReveal).toHaveBeenLastCalledWith({
         sessionMode: 'tutor',
-        correctChoiceId: 'choice_2',
+        correctChoiceId: fixtureChoice2Id,
         explanationMd: 'Explanation',
         referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
         choiceExplanations: [],
@@ -566,7 +590,7 @@ describe('question-page-logic', () => {
       const setReviewHydrationState = vi.fn();
 
       await loadPreviousAttempt({
-        questionId: 'q_1',
+        questionId: fixtureQuestion1Id,
         getPreviousAttemptFn: async () => ok(null),
         setSelectedChoiceId,
         setSubmitResult,
@@ -584,7 +608,7 @@ describe('question-page-logic', () => {
       const setReviewHydrationState = vi.fn();
 
       await loadPreviousAttempt({
-        questionId: 'q_1',
+        questionId: fixtureQuestion1Id,
         getPreviousAttemptFn: async () =>
           err('INTERNAL_ERROR', 'Internal error'),
         setSelectedChoiceId,
@@ -604,7 +628,7 @@ describe('question-page-logic', () => {
       const error = new Error('Boom');
 
       await loadPreviousAttempt({
-        questionId: 'q_1',
+        questionId: fixtureQuestion1Id,
         getPreviousAttemptFn: async () => {
           throw error;
         },
@@ -632,7 +656,7 @@ describe('question-page-logic', () => {
       const setReviewHydrationState = vi.fn();
 
       const promise = loadPreviousAttempt({
-        questionId: 'q_1',
+        questionId: fixtureQuestion1Id,
         getPreviousAttemptFn: async () => deferred.promise,
         setSelectedChoiceId,
         setSubmitResult,
@@ -645,12 +669,12 @@ describe('question-page-logic', () => {
       deferred.resolve(
         ok({
           kind: 'attempt',
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           sessionMode: null,
-          selectedChoiceId: 'choice_1',
+          selectedChoiceId: fixtureChoice1Id,
           isOmitted: false,
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: 'Explanation',
           referenceMd: null,
           choiceExplanations: [],
@@ -672,7 +696,7 @@ describe('question-page-logic', () => {
       let mounted = true;
 
       const promise = loadPreviousAttempt({
-        questionId: 'q_1',
+        questionId: fixtureQuestion1Id,
         getPreviousAttemptFn: async () => deferred.promise,
         setSelectedChoiceId,
         setSubmitResult,
@@ -696,7 +720,7 @@ describe('question-page-logic', () => {
         const setReviewHydrationState = vi.fn();
 
         const promise = loadPreviousAttempt({
-          questionId: 'q_1',
+          questionId: fixtureQuestion1Id,
           getPreviousAttemptFn: async () => new Promise<never>(() => {}),
           setSelectedChoiceId,
           setSubmitResult,
@@ -724,7 +748,7 @@ describe('question-page-logic', () => {
       const setReviewHydrationState = vi.fn();
 
       await loadPreviousAttempt({
-        questionId: 'q_1',
+        questionId: fixtureQuestion1Id,
         getPreviousAttemptFn: async () => undefined as never,
         setSelectedChoiceId,
         setSubmitResult,
@@ -741,16 +765,16 @@ describe('question-page-logic', () => {
       const setSubmitResult = vi.fn();
 
       await loadPreviousAttempt({
-        questionId: 'q_1',
+        questionId: fixtureQuestion1Id,
         getPreviousAttemptFn: async () =>
           ok({
             kind: 'attempt',
-            attemptId: 'attempt_1',
+            attemptId: fixtureAttempt1Id,
             sessionMode: null,
-            selectedChoiceId: 'choice_1',
+            selectedChoiceId: fixtureChoice1Id,
             isOmitted: false,
             isCorrect: true,
-            correctChoiceId: 'choice_1',
+            correctChoiceId: fixtureChoice1Id,
             explanationMd: 'Explanation',
             referenceMd: null,
             choiceExplanations: [],
@@ -770,9 +794,9 @@ describe('question-page-logic', () => {
     it('does nothing when question is null', async () => {
       const submitAnswerFn = vi.fn(async () =>
         ok({
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: 'Because...',
           referenceMd: null,
           choiceExplanations: [],
@@ -781,7 +805,7 @@ describe('question-page-logic', () => {
 
       await submitSelectedAnswer({
         question: null,
-        selectedChoiceId: 'choice_1',
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn,
@@ -796,9 +820,9 @@ describe('question-page-logic', () => {
     it('submits the selected answer and updates state on success', async () => {
       const submitAnswerFn = vi.fn(async () =>
         ok({
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: 'Because...',
           referenceMd: null,
           choiceExplanations: [],
@@ -810,7 +834,7 @@ describe('question-page-logic', () => {
 
       await submitSelectedAnswer({
         question: createQuestionOutput(),
-        selectedChoiceId: 'choice_1',
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 1000,
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn,
@@ -820,8 +844,8 @@ describe('question-page-logic', () => {
       });
 
       expect(submitAnswerFn).toHaveBeenCalledWith({
-        questionId: 'q_1',
-        choiceId: 'choice_1',
+        questionId: fixtureQuestion1Id,
+        choiceId: fixtureChoice1Id,
         idempotencyKey: 'idem_1',
         timeSpentSeconds: 4,
       });
@@ -834,9 +858,9 @@ describe('question-page-logic', () => {
     it('passes retry provenance through to submit action payload', async () => {
       const submitAnswerFn = vi.fn(async () =>
         ok({
-          attemptId: 'attempt_retry_1',
+          attemptId: fixtureAttemptRetry1Id,
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: 'Because...',
           referenceMd: null,
           choiceExplanations: [],
@@ -845,11 +869,11 @@ describe('question-page-logic', () => {
 
       await submitSelectedAnswer({
         question: createQuestionOutput(),
-        selectedChoiceId: 'choice_1',
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 1000,
         submitIdempotencyKey: 'idem_1',
         retryProvenance: {
-          retryOfAttemptId: 'attempt_parent_1',
+          retryOfAttemptId: fixtureAttemptParent1Id,
           retryOrigin: 'history',
           retrySessionId: null,
         },
@@ -860,11 +884,11 @@ describe('question-page-logic', () => {
       });
 
       expect(submitAnswerFn).toHaveBeenCalledWith({
-        questionId: 'q_1',
-        choiceId: 'choice_1',
+        questionId: fixtureQuestion1Id,
+        choiceId: fixtureChoice1Id,
         idempotencyKey: 'idem_1',
         timeSpentSeconds: 4,
-        retryOfAttemptId: 'attempt_parent_1',
+        retryOfAttemptId: fixtureAttemptParent1Id,
         retryOrigin: 'history',
       });
     });
@@ -872,9 +896,9 @@ describe('question-page-logic', () => {
     it('passes session review provenance without retryOfAttemptId for unanswered reveals', async () => {
       const submitAnswerFn = vi.fn(async () =>
         ok({
-          attemptId: 'attempt_retry_2',
+          attemptId: fixtureAttemptRetry2Id,
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: 'Because...',
           referenceMd: null,
           choiceExplanations: [],
@@ -883,13 +907,13 @@ describe('question-page-logic', () => {
 
       await submitSelectedAnswer({
         question: createQuestionOutput(),
-        selectedChoiceId: 'choice_1',
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 1000,
         submitIdempotencyKey: 'idem_1',
         retryProvenance: {
           retryOfAttemptId: null,
           retryOrigin: 'session_review',
-          retrySessionId: 'session_1',
+          retrySessionId: fixtureSession1Id,
         },
         submitAnswerFn,
         nowMs: () => 5000,
@@ -898,21 +922,21 @@ describe('question-page-logic', () => {
       });
 
       expect(submitAnswerFn).toHaveBeenCalledWith({
-        questionId: 'q_1',
-        choiceId: 'choice_1',
+        questionId: fixtureQuestion1Id,
+        choiceId: fixtureChoice1Id,
         idempotencyKey: 'idem_1',
         timeSpentSeconds: 4,
         retryOrigin: 'session_review',
-        retrySessionId: 'session_1',
+        retrySessionId: fixtureSession1Id,
       });
     });
 
     it('computes timeSpentSeconds when questionLoadedAtMs is 0', async () => {
       const submitAnswerFn = vi.fn(async () =>
         ok({
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: 'Because...',
           referenceMd: null,
           choiceExplanations: [],
@@ -921,7 +945,7 @@ describe('question-page-logic', () => {
 
       await submitSelectedAnswer({
         question: createQuestionOutput(),
-        selectedChoiceId: 'choice_1',
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn,
@@ -938,9 +962,9 @@ describe('question-page-logic', () => {
     it('clamps timeSpentSeconds to 0 when clock goes backwards', async () => {
       const submitAnswerFn = vi.fn(async () =>
         ok({
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: 'Because...',
           referenceMd: null,
           choiceExplanations: [],
@@ -949,7 +973,7 @@ describe('question-page-logic', () => {
 
       await submitSelectedAnswer({
         question: createQuestionOutput(),
-        selectedChoiceId: 'choice_1',
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 5000,
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn,
@@ -971,7 +995,7 @@ describe('question-page-logic', () => {
 
       await submitSelectedAnswer({
         question: createQuestionOutput(),
-        selectedChoiceId: 'choice_1',
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: null,
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn,
@@ -995,7 +1019,7 @@ describe('question-page-logic', () => {
 
       const promise = submitSelectedAnswer({
         question: createQuestionOutput(),
-        selectedChoiceId: 'choice_1',
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn: async () => deferred.promise,
@@ -1009,9 +1033,9 @@ describe('question-page-logic', () => {
       stale = true;
       deferred.resolve(
         ok({
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: 'Because...',
           referenceMd: null,
           choiceExplanations: [],
@@ -1032,7 +1056,7 @@ describe('question-page-logic', () => {
 
       const promise = submitSelectedAnswer({
         question: createQuestionOutput(),
-        selectedChoiceId: 'choice_1',
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn: async () => deferred.promise,
@@ -1045,9 +1069,9 @@ describe('question-page-logic', () => {
       mounted = false;
       deferred.resolve(
         ok({
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: 'Because...',
           referenceMd: null,
           choiceExplanations: [],
@@ -1066,7 +1090,7 @@ describe('question-page-logic', () => {
       await expect(
         submitSelectedAnswer({
           question: createQuestionOutput(),
-          selectedChoiceId: 'choice_1',
+          selectedChoiceId: fixtureChoice1Id,
           questionLoadedAtMs: 0,
           submitIdempotencyKey: 'idem_1',
           submitAnswerFn: async () => {

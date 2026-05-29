@@ -5,6 +5,24 @@ import { toQuestionRoute } from '@/lib/routes';
 import { createChoice, createQuestion } from '@/src/domain/test-helpers';
 import { findAnchorByHref } from '@/tests/shared/dom-helpers';
 
+const {
+  fixtureAttempt1Id,
+  fixtureChoiceAId,
+  fixtureChoiceBId,
+  fixtureQuestion1Id,
+  fixtureQuestion1Id2,
+  fixtureQuestion2Id,
+  fixtureSession123Id,
+} = vi.hoisted(() => ({
+  fixtureAttempt1Id: crypto.randomUUID(),
+  fixtureChoiceAId: crypto.randomUUID(),
+  fixtureChoiceBId: crypto.randomUUID(),
+  fixtureQuestion1Id: crypto.randomUUID(),
+  fixtureQuestion1Id2: crypto.randomUUID(),
+  fixtureQuestion2Id: crypto.randomUUID(),
+  fixtureSession123Id: crypto.randomUUID(),
+}));
+
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
@@ -63,7 +81,7 @@ describe('QuestionView', () => {
       { slug: 'q3', order: 3, isCorrect: null },
     ],
     currentIndex: 1,
-    sessionId: 'session_123',
+    sessionId: fixtureSession123Id,
     from: 'practice',
   } as const;
 
@@ -107,7 +125,7 @@ describe('QuestionView', () => {
         question={null}
         selectedChoiceId={null}
         submitResult={{
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: false,
           correctChoiceId: 'c1',
           explanationMd: 'Explanation',
@@ -176,11 +194,13 @@ describe('QuestionView', () => {
       <QuestionView
         {...createBaseProps()}
         origin="practice"
-        sessionId="session_123"
+        sessionId={fixtureSession123Id}
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const backLink = doc.querySelector('a[href="/app/practice/session_123"]');
+    const backLink = doc.querySelector(
+      `a[href="/app/practice/${fixtureSession123Id}"]`,
+    );
 
     expect(backLink?.textContent?.trim()).toBe('Back to Session');
   });
@@ -190,7 +210,7 @@ describe('QuestionView', () => {
       <QuestionView
         {...createBaseProps()}
         origin="summary"
-        sessionId="session_123"
+        sessionId={fixtureSession123Id}
         sessionNavigation={{
           ...sharedSessionNavigation,
           from: 'summary',
@@ -204,7 +224,9 @@ describe('QuestionView', () => {
 
     expect(summaryLinks).toHaveLength(2);
     for (const link of summaryLinks) {
-      expect(link.getAttribute('href')).toBe('/app/practice/session_123');
+      expect(link.getAttribute('href')).toBe(
+        `/app/practice/${fixtureSession123Id}`,
+      );
     }
     expect(html).toContain('Reviewing a question from your session summary.');
   });
@@ -214,7 +236,7 @@ describe('QuestionView', () => {
       <QuestionView
         {...createBaseProps()}
         origin="history"
-        sessionId="session_123"
+        sessionId={fixtureSession123Id}
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -255,7 +277,7 @@ describe('QuestionView', () => {
         question={null}
         selectedChoiceId={null}
         submitResult={{
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: false,
           correctChoiceId: 'c1',
           explanationMd: 'Explanation',
@@ -287,7 +309,7 @@ describe('QuestionView', () => {
         question={null}
         selectedChoiceId={null}
         submitResult={{
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
           correctChoiceId: 'c1',
           explanationMd: 'Explanation',
@@ -314,7 +336,7 @@ describe('QuestionView', () => {
       <QuestionView
         loadState={{ status: 'ready' }}
         question={{
-          questionId: 'q1',
+          questionId: fixtureQuestion1Id2,
           slug: 'q1',
           stemMd: 'Question stem',
           difficulty: 'easy',
@@ -347,7 +369,7 @@ describe('QuestionView', () => {
       <QuestionView
         loadState={{ status: 'ready' }}
         question={{
-          questionId: 'q1',
+          questionId: fixtureQuestion1Id2,
           slug: 'q1',
           stemMd: 'Question stem',
           difficulty: 'easy',
@@ -376,21 +398,21 @@ describe('QuestionView', () => {
 
   it('renders feedback labels, correct answer details, and selected-answer badge', () => {
     const choiceA = createChoice({
-      id: 'choice-a',
-      questionId: 'question-1',
+      id: fixtureChoiceAId,
+      questionId: fixtureQuestion1Id,
       label: 'A',
       textMd: 'Choice A text',
       sortOrder: 1,
     });
     const choiceB = createChoice({
-      id: 'choice-b',
-      questionId: 'question-1',
+      id: fixtureChoiceBId,
+      questionId: fixtureQuestion1Id,
       label: 'B',
       textMd: 'Choice B text',
       sortOrder: 2,
     });
     const question = createQuestion({
-      id: 'question-1',
+      id: fixtureQuestion1Id,
       slug: 'question-1',
       stemMd: 'Question stem',
       difficulty: 'easy',
@@ -413,7 +435,7 @@ describe('QuestionView', () => {
         }}
         selectedChoiceId={choiceA.id}
         submitResult={{
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: false,
           correctChoiceId: choiceB.id,
           explanationMd: 'Overall explanation',
@@ -495,33 +517,33 @@ describe('QuestionView', () => {
       <QuestionView
         loadState={{ status: 'ready' }}
         question={{
-          questionId: 'question-1',
+          questionId: fixtureQuestion1Id,
           slug: 'question-1',
           stemMd: 'Question stem',
           difficulty: 'easy',
           choices: [
-            { id: 'choice-a', label: 'A', textMd: 'Choice A text' },
-            { id: 'choice-b', label: 'B', textMd: 'Choice B text' },
+            { id: fixtureChoiceAId, label: 'A', textMd: 'Choice A text' },
+            { id: fixtureChoiceBId, label: 'B', textMd: 'Choice B text' },
           ],
         }}
         selectedChoiceId={null}
         submitResult={{
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isOmitted: true,
           isCorrect: false,
-          correctChoiceId: 'choice-b',
+          correctChoiceId: fixtureChoiceBId,
           explanationMd: 'Overall explanation',
           referenceMd: null,
           choiceExplanations: [
             {
-              choiceId: 'choice-a',
+              choiceId: fixtureChoiceAId,
               displayLabel: 'A',
               textMd: 'Choice A text',
               isCorrect: false,
               explanationMd: 'A explanation',
             },
             {
-              choiceId: 'choice-b',
+              choiceId: fixtureChoiceBId,
               displayLabel: 'B',
               textMd: 'Choice B text',
               isCorrect: true,
@@ -554,7 +576,7 @@ describe('QuestionView', () => {
         question={null}
         selectedChoiceId={null}
         submitResult={{
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
           correctChoiceId: 'c1',
           explanationMd: 'Explanation',
@@ -585,7 +607,7 @@ describe('QuestionView', () => {
         question={null}
         selectedChoiceId={null}
         submitResult={{
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
           correctChoiceId: 'c1',
           explanationMd: 'Explanation',
@@ -616,7 +638,7 @@ describe('QuestionView', () => {
         question={null}
         selectedChoiceId={null}
         submitResult={{
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
           correctChoiceId: 'c1',
           explanationMd: 'Explanation',
@@ -647,7 +669,7 @@ describe('QuestionView', () => {
         question={null}
         selectedChoiceId={null}
         submitResult={{
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: false,
           correctChoiceId: 'c1',
           explanationMd: 'Explanation',
@@ -678,7 +700,7 @@ describe('QuestionView', () => {
         question={null}
         selectedChoiceId={null}
         submitResult={{
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
           correctChoiceId: 'c1',
           explanationMd: 'Explanation',
@@ -708,7 +730,7 @@ describe('QuestionView', () => {
         question={null}
         selectedChoiceId={null}
         submitResult={{
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: false,
           correctChoiceId: 'c1',
           explanationMd: 'Explanation',
@@ -751,7 +773,7 @@ describe('QuestionView', () => {
       toQuestionRoute('q1', {
         from: 'practice',
         mode: 'review',
-        sessionId: 'session_123',
+        sessionId: fixtureSession123Id,
       }),
     );
   });
@@ -776,7 +798,7 @@ describe('QuestionView', () => {
       toQuestionRoute('q3', {
         from: 'practice',
         mode: 'review',
-        sessionId: 'session_123',
+        sessionId: fixtureSession123Id,
       }),
     );
   });
@@ -816,10 +838,10 @@ describe('QuestionView', () => {
         {...createBaseProps()}
         mode="review"
         origin="history"
-        sessionId="session_123"
+        sessionId={fixtureSession123Id}
         reviewSessionMode="tutor"
         question={{
-          questionId: 'q2',
+          questionId: fixtureQuestion2Id,
           slug: 'q2',
           stemMd: 'Question stem',
           difficulty: 'easy',
@@ -829,7 +851,7 @@ describe('QuestionView', () => {
         isBookmarkHydrated={true}
         bookmarkStatus="idle"
         submitResult={{
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: false,
           correctChoiceId: 'c1',
           explanationMd: 'Explanation',
@@ -855,10 +877,10 @@ describe('QuestionView', () => {
         {...createBaseProps()}
         mode="review"
         origin="history"
-        sessionId="session_123"
+        sessionId={fixtureSession123Id}
         reviewSessionMode="exam"
         question={{
-          questionId: 'q2',
+          questionId: fixtureQuestion2Id,
           slug: 'q2',
           stemMd: 'Question stem',
           difficulty: 'easy',
@@ -868,7 +890,7 @@ describe('QuestionView', () => {
         isBookmarkHydrated={true}
         bookmarkStatus="idle"
         submitResult={{
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: false,
           correctChoiceId: 'c1',
           explanationMd: 'Explanation',
@@ -894,14 +916,14 @@ describe('QuestionView', () => {
         mode="review"
         origin="history"
         question={{
-          questionId: 'q1',
+          questionId: fixtureQuestion1Id2,
           slug: 'q1',
           stemMd: 'Question stem',
           difficulty: 'easy',
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         submitResult={{
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
           correctChoiceId: 'c1',
           explanationMd: 'Explanation',
@@ -931,14 +953,14 @@ describe('QuestionView', () => {
         mode="review"
         origin="history"
         question={{
-          questionId: 'q1',
+          questionId: fixtureQuestion1Id2,
           slug: 'q1',
           stemMd: 'Question stem',
           difficulty: 'easy',
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         submitResult={{
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
           correctChoiceId: 'c1',
           explanationMd: 'Explanation',
@@ -963,14 +985,14 @@ describe('QuestionView', () => {
         mode="review"
         origin="history"
         question={{
-          questionId: 'q1',
+          questionId: fixtureQuestion1Id2,
           slug: 'q1',
           stemMd: 'Question stem',
           difficulty: 'easy',
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         submitResult={{
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
           correctChoiceId: 'c1',
           explanationMd: 'Explanation',
@@ -1059,7 +1081,7 @@ describe('QuestionView', () => {
             { slug: 'q2', order: 2, isCorrect: true },
           ],
           currentIndex: 0,
-          sessionId: 'session_123',
+          sessionId: fixtureSession123Id,
           from: 'practice',
         }}
       />,
@@ -1081,7 +1103,7 @@ describe('QuestionView', () => {
       toQuestionRoute('q2', {
         from: 'practice',
         mode: 'review',
-        sessionId: 'session_123',
+        sessionId: fixtureSession123Id,
       }),
     );
   });
@@ -1096,7 +1118,7 @@ describe('QuestionView', () => {
             { slug: 'q2', order: 2, isCorrect: true },
           ],
           currentIndex: 1,
-          sessionId: 'session_123',
+          sessionId: fixtureSession123Id,
           from: 'practice',
         }}
       />,
@@ -1118,7 +1140,7 @@ describe('QuestionView', () => {
       toQuestionRoute('q1', {
         from: 'practice',
         mode: 'review',
-        sessionId: 'session_123',
+        sessionId: fixtureSession123Id,
       }),
     );
   });
@@ -1129,7 +1151,7 @@ describe('QuestionView', () => {
         {...createBaseProps()}
         mode="review"
         origin="history"
-        sessionId="session_123"
+        sessionId={fixtureSession123Id}
         sessionNavigation={null}
         submitResult={null}
       />,
@@ -1147,7 +1169,7 @@ describe('QuestionView', () => {
       <QuestionView
         {...createBaseProps()}
         origin="history"
-        sessionId="session_123"
+        sessionId={fixtureSession123Id}
         sessionNavigation={sharedSessionNavigation}
         submitResult={null}
       />,
@@ -1169,10 +1191,10 @@ describe('QuestionView', () => {
         {...createBaseProps()}
         mode="review"
         origin="history"
-        sessionId="session_123"
+        sessionId={fixtureSession123Id}
         reviewSessionMode="tutor"
         question={{
-          questionId: 'q2',
+          questionId: fixtureQuestion2Id,
           slug: 'q2',
           stemMd: 'Question stem',
           difficulty: 'easy',
@@ -1215,10 +1237,10 @@ describe('QuestionView', () => {
         {...createBaseProps()}
         mode="review"
         origin="history"
-        sessionId="session_123"
+        sessionId={fixtureSession123Id}
         reviewSessionMode="exam"
         question={{
-          questionId: 'q2',
+          questionId: fixtureQuestion2Id,
           slug: 'q2',
           stemMd: 'Question stem',
           difficulty: 'easy',
@@ -1257,10 +1279,10 @@ describe('QuestionView', () => {
         {...createBaseProps()}
         mode="review"
         origin="history"
-        sessionId="session_123"
+        sessionId={fixtureSession123Id}
         reviewSessionMode="tutor"
         question={{
-          questionId: 'q2',
+          questionId: fixtureQuestion2Id,
           slug: 'q2',
           stemMd: 'Question stem',
           difficulty: 'easy',

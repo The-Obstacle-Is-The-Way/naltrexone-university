@@ -4,6 +4,28 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import { createQuestionProps } from './practice-view-test-helpers';
 
+const fixtureAttempt1Id = crypto.randomUUID();
+const fixtureSession1Id = crypto.randomUUID();
+const fixtureQuestion1Id = crypto.randomUUID();
+const fixtureChoice1Id = crypto.randomUUID();
+
+function createFixtureNextQuestion(
+  overrides: Parameters<typeof createNextQuestion>[0] = {},
+) {
+  return createNextQuestion({
+    questionId: fixtureQuestion1Id,
+    choices: [
+      {
+        id: fixtureChoice1Id,
+        label: 'A',
+        textMd: 'Choice A',
+        sortOrder: 1,
+      },
+    ],
+    ...overrides,
+  });
+}
+
 type PracticeViewModule = typeof import('./practice-view');
 
 let PracticeView: PracticeViewModule['PracticeView'];
@@ -14,7 +36,7 @@ beforeAll(async () => {
 
 describe('PracticeView bookmarks', () => {
   it('exposes toggle state via aria-pressed for bookmark button', () => {
-    const question = createNextQuestion();
+    const question = createFixtureNextQuestion();
     const selectedChoice = question.choices[0];
     if (!selectedChoice) {
       throw new Error('Expected at least one choice');
@@ -27,7 +49,7 @@ describe('PracticeView bookmarks', () => {
         selectedChoiceId={selectedChoice.id}
         isAnswered={true}
         submitResult={{
-          attemptId: 'attempt-1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
           correctChoiceId: selectedChoice.id,
           explanationMd: 'Because.',
@@ -56,7 +78,7 @@ describe('PracticeView bookmarks', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         sessionInfo={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -89,7 +111,7 @@ describe('PracticeView bookmarks', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         sessionInfo={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'tutor',
 
           deadlineAt: null,
@@ -128,7 +150,7 @@ describe('PracticeView bookmarks', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         sessionInfo={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'tutor',
 
           deadlineAt: null,
@@ -142,7 +164,7 @@ describe('PracticeView bookmarks', () => {
         selectedChoiceId={selectedChoice.id}
         isAnswered={true}
         submitResult={{
-          attemptId: 'attempt-1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
           correctChoiceId: selectedChoice.id,
           explanationMd: 'Because.',
@@ -173,7 +195,7 @@ describe('PracticeView bookmarks', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         sessionInfo={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'tutor',
 
           deadlineAt: null,
@@ -187,7 +209,7 @@ describe('PracticeView bookmarks', () => {
         selectedChoiceId={selectedChoice.id}
         isAnswered={true}
         submitResult={{
-          attemptId: 'attempt-1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
           correctChoiceId: selectedChoice.id,
           explanationMd: 'Because.',
@@ -250,7 +272,7 @@ describe('PracticeView bookmarks', () => {
         selectedChoiceId={selectedChoice.id}
         isAnswered={true}
         submitResult={{
-          attemptId: 'attempt-1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
           correctChoiceId: selectedChoice.id,
           explanationMd: 'Because.',

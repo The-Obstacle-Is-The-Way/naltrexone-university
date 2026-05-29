@@ -3,6 +3,12 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
 
+const fixtureQuestion1Id = crypto.randomUUID();
+const fixtureQuestion2Id = crypto.randomUUID();
+const fixtureQuestion3Id = crypto.randomUUID();
+const fixtureQuestion4Id = crypto.randomUUID();
+const fixtureSession1Id = crypto.randomUUID();
+
 type ExamReviewViewModule = typeof import('./exam-review-view');
 
 let ExamReviewView: ExamReviewViewModule['ExamReviewView'];
@@ -13,7 +19,7 @@ beforeAll(async () => {
 });
 describe('QuestionNavigator', () => {
   const review = {
-    sessionId: 'session-1',
+    sessionId: fixtureSession1Id,
     mode: 'exam',
     totalCount: 3,
     answeredCount: 2,
@@ -21,7 +27,7 @@ describe('QuestionNavigator', () => {
     rows: [
       {
         isAvailable: true,
-        questionId: 'q1',
+        questionId: fixtureQuestion1Id,
         slug: 'q-1',
         stemMd: 'Stem 1',
         difficulty: 'easy',
@@ -33,7 +39,7 @@ describe('QuestionNavigator', () => {
       },
       {
         isAvailable: true,
-        questionId: 'q2',
+        questionId: fixtureQuestion2Id,
         slug: 'q-2',
         stemMd: 'Stem 2',
         difficulty: 'medium',
@@ -45,7 +51,7 @@ describe('QuestionNavigator', () => {
       },
       {
         isAvailable: false,
-        questionId: 'q3',
+        questionId: fixtureQuestion3Id,
         order: 3,
         isAnswered: false,
         isCorrect: null,
@@ -88,7 +94,7 @@ describe('QuestionNavigator', () => {
     const html = renderToStaticMarkup(
       <QuestionNavigator
         review={input?.review ?? review}
-        currentQuestionId={input?.currentQuestionId ?? 'q2'}
+        currentQuestionId={input?.currentQuestionId ?? fixtureQuestion2Id}
         controlledPanelId={controlledPanelId}
         mode={input?.mode}
         onNavigateQuestion={() => undefined}
@@ -136,7 +142,7 @@ describe('QuestionNavigator', () => {
 
   it('uses correctness styling in review mode', () => {
     const { doc } = renderNavigator({
-      currentQuestionId: 'q3',
+      currentQuestionId: fixtureQuestion3Id,
       mode: 'review',
     });
 
@@ -166,7 +172,7 @@ describe('QuestionNavigator', () => {
 
   it('renders check and x overflow badges only for answered review buttons', () => {
     const { doc } = renderNavigator({
-      currentQuestionId: 'q3',
+      currentQuestionId: fixtureQuestion3Id,
       mode: 'review',
     });
 
@@ -199,10 +205,12 @@ describe('QuestionNavigator', () => {
         ...review,
         markedCount: 1,
         rows: review.rows.map((row) =>
-          row.questionId === 'q1' ? { ...row, markedForReview: true } : row,
+          row.questionId === fixtureQuestion1Id
+            ? { ...row, markedForReview: true }
+            : row,
         ),
       },
-      currentQuestionId: 'q3',
+      currentQuestionId: fixtureQuestion3Id,
       mode: 'review',
     });
 
@@ -224,7 +232,7 @@ describe('ExamReviewView', () => {
   const reviewInstructionText =
     'Select a question below to keep reviewing before you submit.';
   const review = {
-    sessionId: 'session-1',
+    sessionId: fixtureSession1Id,
     mode: 'exam',
     totalCount: 4,
     answeredCount: 2,
@@ -232,7 +240,7 @@ describe('ExamReviewView', () => {
     rows: [
       {
         isAvailable: true,
-        questionId: 'q1',
+        questionId: fixtureQuestion1Id,
         slug: 'q-1',
         stemMd: 'Marked answered question',
         difficulty: 'easy',
@@ -244,7 +252,7 @@ describe('ExamReviewView', () => {
       },
       {
         isAvailable: true,
-        questionId: 'q2',
+        questionId: fixtureQuestion2Id,
         slug: 'q-2',
         stemMd: 'Unmarked answered question',
         difficulty: 'medium',
@@ -256,7 +264,7 @@ describe('ExamReviewView', () => {
       },
       {
         isAvailable: true,
-        questionId: 'q3',
+        questionId: fixtureQuestion3Id,
         slug: 'q-3',
         stemMd: 'Unmarked unanswered question',
         difficulty: 'hard',
@@ -268,7 +276,7 @@ describe('ExamReviewView', () => {
       },
       {
         isAvailable: false,
-        questionId: 'q4',
+        questionId: fixtureQuestion4Id,
         order: 4,
         isAnswered: false,
         isCorrect: null,

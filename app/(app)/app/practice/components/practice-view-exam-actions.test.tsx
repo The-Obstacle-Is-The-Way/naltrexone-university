@@ -3,6 +3,9 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createQuestionProps } from './practice-view-test-helpers';
 
+const fixtureAttempt1Id = crypto.randomUUID();
+const fixtureSession1Id = crypto.randomUUID();
+
 type PracticeViewModule = typeof import('./practice-view');
 type PracticeViewProps = Parameters<PracticeViewModule['PracticeView']>[0];
 
@@ -38,7 +41,7 @@ function renderExamView(
   return renderToStaticMarkup(
     <PracticeView
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         deadlineAt: '2099-05-22T12:02:24.000Z',
         index: input.index ?? 0,
@@ -77,7 +80,7 @@ function renderTutorView(
   return renderToStaticMarkup(
     <PracticeView
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
 
         deadlineAt: null,
@@ -114,7 +117,7 @@ function createCorrectSubmitResult(
   if (!choice) throw new Error('Expected at least one choice');
 
   return {
-    attemptId: 'attempt-1',
+    attemptId: fixtureAttempt1Id,
     isCorrect: true,
     correctChoiceId: choice.id,
     explanationMd: 'Because',

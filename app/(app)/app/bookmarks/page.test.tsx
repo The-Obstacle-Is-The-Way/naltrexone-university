@@ -25,6 +25,13 @@ import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entit
 import type { User } from '@/src/domain/entities';
 import { createSubscription, createUser } from '@/src/domain/test-helpers';
 
+const { fixtureQuestion1Id, fixtureQuestionOrphanedId, fixtureUser1Id } =
+  vi.hoisted(() => ({
+    fixtureQuestion1Id: crypto.randomUUID(),
+    fixtureQuestionOrphanedId: crypto.randomUUID(),
+    fixtureUser1Id: crypto.randomUUID(),
+  }));
+
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
@@ -48,7 +55,7 @@ function createAvailableBookmarkRow(
 ): AvailableBookmarkRow {
   return {
     isAvailable: true,
-    questionId: 'q_1',
+    questionId: fixtureQuestion1Id,
     slug: 'q-1',
     stemMd: 'Stem for q1',
     difficulty: 'easy',
@@ -81,7 +88,7 @@ function createBookmarkActionControllerDeps(overrides?: {
   const user =
     overrides?.user === undefined
       ? createUser({
-          id: 'user_1',
+          id: fixtureUser1Id,
           email: 'user@example.com',
           createdAt: new Date('2026-02-01T00:00:00Z'),
           updatedAt: new Date('2026-02-01T00:00:00Z'),
@@ -94,7 +101,7 @@ function createBookmarkActionControllerDeps(overrides?: {
       ? []
       : [
           createSubscription({
-            userId: user?.id ?? 'user_1',
+            userId: user?.id ?? fixtureUser1Id,
             status: 'active',
             currentPeriodEnd: new Date('2026-12-31T00:00:00Z'),
           }),
@@ -177,7 +184,7 @@ describe('app/(app)/app/bookmarks', () => {
         rows={[
           {
             isAvailable: true,
-            questionId: 'q_1',
+            questionId: fixtureQuestion1Id,
             slug: 'q-1',
             stemMd: longStem,
             difficulty: 'easy',
@@ -199,7 +206,7 @@ describe('app/(app)/app/bookmarks', () => {
         rows={[
           {
             isAvailable: true,
-            questionId: 'q_1',
+            questionId: fixtureQuestion1Id,
             slug: 'q-1',
             stemMd,
             difficulty: 'easy',
@@ -222,7 +229,7 @@ describe('app/(app)/app/bookmarks', () => {
         rows={[
           {
             isAvailable: true,
-            questionId: 'q_1',
+            questionId: fixtureQuestion1Id,
             slug: 'q-1',
             stemMd,
             difficulty: 'easy',
@@ -249,7 +256,7 @@ describe('app/(app)/app/bookmarks', () => {
         rows={[
           {
             isAvailable: true,
-            questionId: 'q_1',
+            questionId: fixtureQuestion1Id,
             slug: 'q-1',
             stemMd: 'Stem for q1',
             difficulty: 'easy',
@@ -310,7 +317,9 @@ describe('app/(app)/app/bookmarks', () => {
       <BookmarksView rows={[createAvailableBookmarkRow()]} />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const removeForm = doc.querySelector('form#remove-bookmark-q_1');
+    const removeForm = doc.querySelector(
+      `form#remove-bookmark-${fixtureQuestion1Id}`,
+    );
     const questionIdField = removeForm?.querySelector(
       'input[name="questionId"][type="hidden"]',
     );
@@ -318,7 +327,7 @@ describe('app/(app)/app/bookmarks', () => {
       'input[name="idempotencyKey"][type="hidden"]',
     );
 
-    expect(questionIdField?.getAttribute('value')).toBe('q_1');
+    expect(questionIdField?.getAttribute('value')).toBe(fixtureQuestion1Id);
     expect(idempotencyKeyField).not.toBeNull();
     expect(idempotencyKeyField?.getAttribute('value')).toMatch(
       /^[0-9a-f-]{36}$/,
@@ -349,7 +358,7 @@ describe('app/(app)/app/bookmarks', () => {
         rows={[
           {
             isAvailable: false,
-            questionId: 'q_orphaned',
+            questionId: fixtureQuestionOrphanedId,
             bookmarkedAt: '2026-02-01T00:00:00.000Z',
           },
         ]}
@@ -403,7 +412,7 @@ describe('app/(app)/app/bookmarks', () => {
     const revalidatePathFn = vi.fn();
 
     const formData = new FormData();
-    formData.set('questionId', 'q_1');
+    formData.set('questionId', fixtureQuestion1Id);
 
     await expect(
       removeBookmarkAction(formData, {
@@ -417,7 +426,9 @@ describe('app/(app)/app/bookmarks', () => {
       message: `redirect:${ROUTES.APP_BOOKMARKS}?toast=bookmark_removed`,
     });
 
-    expect(toggleBookmarkFn).toHaveBeenCalledWith({ questionId: 'q_1' });
+    expect(toggleBookmarkFn).toHaveBeenCalledWith({
+      questionId: fixtureQuestion1Id,
+    });
     expect(revalidatePathFn).toHaveBeenCalledWith(ROUTES.APP_BOOKMARKS);
   });
 
@@ -425,7 +436,7 @@ describe('app/(app)/app/bookmarks', () => {
     const toggleBookmarkFn = vi.fn(async () => ok({ bookmarked: false }));
 
     const formData = new FormData();
-    formData.set('questionId', 'q_1');
+    formData.set('questionId', fixtureQuestion1Id);
     formData.set('idempotencyKey', '11111111-1111-1111-1111-111111111111');
 
     await expect(
@@ -441,7 +452,7 @@ describe('app/(app)/app/bookmarks', () => {
     });
 
     expect(toggleBookmarkFn).toHaveBeenCalledWith({
-      questionId: 'q_1',
+      questionId: fixtureQuestion1Id,
       idempotencyKey: '11111111-1111-1111-1111-111111111111',
     });
   });
@@ -477,7 +488,7 @@ describe('app/(app)/app/bookmarks', () => {
 
     expect(deps.toggleBookmarkUseCase.inputs).toEqual([
       {
-        userId: 'user_1',
+        userId: fixtureUser1Id,
         questionId,
       },
     ]);
@@ -515,7 +526,7 @@ describe('app/(app)/app/bookmarks', () => {
 
   it('redirects when removeBookmarkAction cannot toggle bookmark', async () => {
     const formData = new FormData();
-    formData.set('questionId', 'q_1');
+    formData.set('questionId', fixtureQuestion1Id);
 
     await expect(
       removeBookmarkAction(formData, {
@@ -532,7 +543,7 @@ describe('app/(app)/app/bookmarks', () => {
 
   it('redirects when removeBookmarkAction results in bookmarked=true', async () => {
     const formData = new FormData();
-    formData.set('questionId', 'q_1');
+    formData.set('questionId', fixtureQuestion1Id);
 
     await expect(
       removeBookmarkAction(formData, {

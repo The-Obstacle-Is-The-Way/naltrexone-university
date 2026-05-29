@@ -2,6 +2,11 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
+const { fixtureQuestion1Id, fixtureSession1Id } = vi.hoisted(() => ({
+  fixtureQuestion1Id: crypto.randomUUID(),
+  fixtureSession1Id: crypto.randomUUID(),
+}));
+
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
@@ -31,7 +36,7 @@ describe('SessionSummaryView', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'tutor',
           questionCount: 8,
           endedAt: '2026-02-07T00:00:00.000Z',
@@ -58,7 +63,7 @@ describe('SessionSummaryView', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'tutor',
           questionCount: 8,
           endedAt: '2026-02-07T00:00:00.000Z',
@@ -82,7 +87,7 @@ describe('SessionSummaryView', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           questionCount: 10,
           endedAt: '2026-02-07T00:00:00.000Z',
@@ -106,7 +111,7 @@ describe('SessionSummaryView', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'tutor',
           questionCount: 10,
           endedAt: '2026-02-07T00:00:00.000Z',
@@ -130,7 +135,7 @@ describe('SessionSummaryView', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'tutor',
           questionCount: 10,
           endedAt: '2026-02-07T00:00:00.000Z',
@@ -164,7 +169,7 @@ describe('SessionSummaryView', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           questionCount: 2,
           endedAt: '2026-02-07T00:00:00.000Z',
@@ -176,7 +181,7 @@ describe('SessionSummaryView', () => {
           },
         }}
         review={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
@@ -184,7 +189,7 @@ describe('SessionSummaryView', () => {
           rows: [
             {
               isAvailable: true,
-              questionId: 'q1',
+              questionId: fixtureQuestion1Id,
               slug: 'q-1',
               stemMd: 'Stem for q1',
               difficulty: 'easy',
@@ -219,7 +224,7 @@ describe('SessionSummaryView', () => {
       (link) => link.textContent?.trim() === 'Review Answers',
     );
     expect(reviewLink?.getAttribute('href')).toBe(
-      '/app/questions/q-1?from=summary&mode=review&sessionId=session-1',
+      `/app/questions/q-1?from=summary&mode=review&sessionId=${fixtureSession1Id}`,
     );
 
     const newSessionLink = Array.from(doc.querySelectorAll('a')).find(
@@ -236,7 +241,7 @@ describe('SessionSummaryView', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           questionCount: 2,
           endedAt: '2026-02-07T00:00:00.000Z',
@@ -248,7 +253,7 @@ describe('SessionSummaryView', () => {
           },
         }}
         review={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
@@ -256,7 +261,7 @@ describe('SessionSummaryView', () => {
           rows: [
             {
               isAvailable: true,
-              questionId: 'q1',
+              questionId: fixtureQuestion1Id,
               slug: 'q-1',
               stemMd: 'Stem for q1',
               difficulty: 'easy',
@@ -279,7 +284,7 @@ describe('SessionSummaryView', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           questionCount: 2,
           endedAt: '2026-02-07T00:00:00.000Z',
@@ -291,7 +296,7 @@ describe('SessionSummaryView', () => {
           },
         }}
         review={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
@@ -299,7 +304,7 @@ describe('SessionSummaryView', () => {
           rows: [
             {
               isAvailable: false,
-              questionId: 'q1',
+              questionId: fixtureQuestion1Id,
               order: 1,
               isAnswered: true,
               isCorrect: false,
@@ -327,7 +332,7 @@ describe('SessionSummaryView', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           questionCount: 2,
           endedAt: '2026-02-07T00:00:00.000Z',
@@ -339,7 +344,7 @@ describe('SessionSummaryView', () => {
           },
         }}
         review={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
@@ -347,7 +352,7 @@ describe('SessionSummaryView', () => {
           rows: [
             {
               isAvailable: true,
-              questionId: 'q1',
+              questionId: fixtureQuestion1Id,
               slug: 'q-1',
               stemMd: 'Stem for q1',
               difficulty: 'easy',
@@ -368,7 +373,7 @@ describe('SessionSummaryView', () => {
     );
 
     expect(breakdownLink?.getAttribute('href')).toBe(
-      '/app/questions/q-1?from=summary&mode=review&sessionId=session-1',
+      `/app/questions/q-1?from=summary&mode=review&sessionId=${fixtureSession1Id}`,
     );
   });
 
@@ -376,7 +381,7 @@ describe('SessionSummaryView', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           questionCount: 2,
           endedAt: '2026-02-07T00:00:00.000Z',
@@ -388,7 +393,7 @@ describe('SessionSummaryView', () => {
           },
         }}
         review={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
@@ -396,7 +401,7 @@ describe('SessionSummaryView', () => {
           rows: [
             {
               isAvailable: false,
-              questionId: 'q1',
+              questionId: fixtureQuestion1Id,
               order: 1,
               isAnswered: true,
               isCorrect: false,
@@ -422,7 +427,7 @@ describe('SessionSummaryView', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           questionCount: 2,
           endedAt: '2026-02-07T00:00:00.000Z',
@@ -452,7 +457,7 @@ describe('SessionSummaryView', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           questionCount: 2,
           endedAt: '2026-02-07T00:00:00.000Z',
@@ -464,7 +469,7 @@ describe('SessionSummaryView', () => {
           },
         }}
         review={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
@@ -472,7 +477,7 @@ describe('SessionSummaryView', () => {
           rows: [
             {
               isAvailable: true,
-              questionId: 'q1',
+              questionId: fixtureQuestion1Id,
               slug: 'q-1',
               stemMd: 'Stem for q1',
               difficulty: 'easy',

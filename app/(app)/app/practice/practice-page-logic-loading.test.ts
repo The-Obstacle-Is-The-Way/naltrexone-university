@@ -9,6 +9,31 @@ import { createNextQuestion } from '@/src/application/test-helpers/create-next-q
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
+const { fixtureQuestion1Id, fixtureQuestion2Id, fixtureChoice1Id } = vi.hoisted(
+  () => ({
+    fixtureQuestion1Id: crypto.randomUUID(),
+    fixtureQuestion2Id: crypto.randomUUID(),
+    fixtureChoice1Id: crypto.randomUUID(),
+  }),
+);
+
+function createFixtureNextQuestion(
+  overrides: Parameters<typeof createNextQuestion>[0] = {},
+) {
+  return createNextQuestion({
+    questionId: fixtureQuestion1Id,
+    choices: [
+      {
+        id: fixtureChoice1Id,
+        label: 'A',
+        textMd: 'Choice A',
+        sortOrder: 1,
+      },
+    ],
+    ...overrides,
+  });
+}
+
 describe('practice-page-logic loading', () => {
   describe('loadNextQuestion', () => {
     it('ignores stale responses when a newer request finishes first', async () => {
@@ -68,26 +93,28 @@ describe('practice-page-logic loading', () => {
 
       second.resolve(
         ok(
-          createNextQuestion({
-            questionId: 'q_2',
+          createFixtureNextQuestion({
+            questionId: fixtureQuestion2Id,
             slug: 'q-2',
           }),
         ),
       );
       await loadSecond;
 
-      first.resolve(ok(createNextQuestion()));
+      first.resolve(ok(createFixtureNextQuestion()));
       await loadFirst;
 
       expect(setQuestion).toHaveBeenCalledTimes(1);
       expect(setQuestion).toHaveBeenCalledWith(
-        expect.objectContaining({ questionId: 'q_2' }),
+        expect.objectContaining({ questionId: fixtureQuestion2Id }),
       );
       expect(setLoadState.mock.calls.at(-1)?.[0]).toEqual({ status: 'ready' });
     });
 
     it('loads next question and updates loadedAt when a question exists', async () => {
-      const getNextQuestionFn = vi.fn(async () => ok(createNextQuestion()));
+      const getNextQuestionFn = vi.fn(async () =>
+        ok(createFixtureNextQuestion()),
+      );
       const setLoadState = vi.fn();
       const setSelectedChoiceId = vi.fn();
       const setSubmitResult = vi.fn();
@@ -126,7 +153,7 @@ describe('practice-page-logic loading', () => {
       expect(setQuestionLoadedAt).toHaveBeenCalledWith(null);
 
       expect(setQuestion).toHaveBeenCalledWith(
-        expect.objectContaining({ questionId: 'q_1' }),
+        expect.objectContaining({ questionId: fixtureQuestion1Id }),
       );
       expect(setQuestionLoadedAt).toHaveBeenCalledWith(1234);
       expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith('idem_1');
@@ -235,7 +262,7 @@ describe('practice-page-logic loading', () => {
       });
 
       mounted = false;
-      deferred.resolve(ok(createNextQuestion()));
+      deferred.resolve(ok(createFixtureNextQuestion()));
       await promise;
 
       expect(setQuestion).not.toHaveBeenCalled();
@@ -252,7 +279,7 @@ describe('practice-page-logic loading', () => {
 
       const action = createLoadNextQuestionAction({
         startTransition,
-        getNextQuestionFn: async () => ok(createNextQuestion()),
+        getNextQuestionFn: async () => ok(createFixtureNextQuestion()),
         filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
         createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,

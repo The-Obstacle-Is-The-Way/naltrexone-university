@@ -9,6 +9,40 @@ import type { GetAttemptedQuestionsOutput } from '@/src/adapters/controllers/rev
 import type { GetTagsOutput } from '@/src/adapters/controllers/tag-controller';
 import { createHistoryPage } from './page';
 
+const {
+  fixtureQuestion1Id,
+  fixtureQuestionCorrectRecentId,
+  fixtureQuestionEasyId,
+  fixtureQuestionHardId,
+  fixtureQuestionIncorrectOldId,
+  fixtureQuestionIncorrectRecentId,
+  fixtureQuestionMediumId,
+  fixtureQuestionVisibleId,
+  fixtureSession1Id,
+  fixtureTag1Id,
+  fixtureTagDiagnosisId,
+  fixtureTagDomainId,
+  fixtureTagSubstanceId,
+  fixtureTagTopicId,
+  fixtureTagTreatmentId,
+} = vi.hoisted(() => ({
+  fixtureQuestion1Id: crypto.randomUUID(),
+  fixtureQuestionCorrectRecentId: crypto.randomUUID(),
+  fixtureQuestionEasyId: crypto.randomUUID(),
+  fixtureQuestionHardId: crypto.randomUUID(),
+  fixtureQuestionIncorrectOldId: crypto.randomUUID(),
+  fixtureQuestionIncorrectRecentId: crypto.randomUUID(),
+  fixtureQuestionMediumId: crypto.randomUUID(),
+  fixtureQuestionVisibleId: crypto.randomUUID(),
+  fixtureSession1Id: crypto.randomUUID(),
+  fixtureTag1Id: crypto.randomUUID(),
+  fixtureTagDiagnosisId: crypto.randomUUID(),
+  fixtureTagDomainId: crypto.randomUUID(),
+  fixtureTagSubstanceId: crypto.randomUUID(),
+  fixtureTagTopicId: crypto.randomUUID(),
+  fixtureTagTreatmentId: crypto.randomUUID(),
+}));
+
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
@@ -176,7 +210,7 @@ describe('app/(app)/app/history/page', () => {
     const output: GetSessionHistoryOutput = {
       rows: [
         {
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           questionCount: 10,
           firstQuestionSlug: 'q-1',
@@ -211,7 +245,7 @@ describe('app/(app)/app/history/page', () => {
       rows: [
         {
           isAvailable: true,
-          questionId: 'q_1',
+          questionId: fixtureQuestion1Id,
           isCorrect: false,
           sessionId: null,
           sessionMode: null,
@@ -233,7 +267,12 @@ describe('app/(app)/app/history/page', () => {
     const getTagsFn = vi.fn(async (_input: unknown) =>
       ok({
         rows: [
-          { id: 'tag-1', slug: 'opioids', name: 'Opioids', kind: 'topic' },
+          {
+            id: fixtureTag1Id,
+            slug: 'opioids',
+            name: 'Opioids',
+            kind: 'topic',
+          },
         ],
       } satisfies GetTagsOutput),
     );
@@ -268,7 +307,7 @@ describe('app/(app)/app/history/page', () => {
       rows: [
         {
           isAvailable: true,
-          questionId: 'q-visible',
+          questionId: fixtureQuestionVisibleId,
           isCorrect: true,
           sessionId: null,
           sessionMode: null,
@@ -291,31 +330,31 @@ describe('app/(app)/app/history/page', () => {
       ok({
         rows: [
           {
-            id: 'tag-topic',
+            id: fixtureTagTopicId,
             slug: 'screening-diagnosis',
             name: 'Screening & Diagnosis',
             kind: 'topic',
           },
           {
-            id: 'tag-substance',
+            id: fixtureTagSubstanceId,
             slug: 'opioids',
             name: 'Opioids',
             kind: 'substance',
           },
           {
-            id: 'tag-treatment',
+            id: fixtureTagTreatmentId,
             slug: 'naltrexone',
             name: 'Naltrexone',
             kind: 'treatment',
           },
           {
-            id: 'tag-diagnosis',
+            id: fixtureTagDiagnosisId,
             slug: 'opioid-use-disorder',
             name: 'Opioid Use Disorder',
             kind: 'diagnosis',
           },
           {
-            id: 'tag-domain',
+            id: fixtureTagDomainId,
             slug: 'screening-diagnosis-domain',
             name: 'Exam Section Domain',
             kind: 'domain',
@@ -379,7 +418,7 @@ describe('app/(app)/app/history/page', () => {
       rows: [
         {
           isAvailable: true,
-          questionId: 'q-correct-recent',
+          questionId: fixtureQuestionCorrectRecentId,
           isCorrect: true,
           sessionId: null,
           sessionMode: null,
@@ -391,7 +430,7 @@ describe('app/(app)/app/history/page', () => {
         },
         {
           isAvailable: true,
-          questionId: 'q-incorrect-old',
+          questionId: fixtureQuestionIncorrectOldId,
           isCorrect: false,
           sessionId: null,
           sessionMode: null,
@@ -403,7 +442,7 @@ describe('app/(app)/app/history/page', () => {
         },
         {
           isAvailable: true,
-          questionId: 'q-incorrect-recent',
+          questionId: fixtureQuestionIncorrectRecentId,
           isCorrect: false,
           sessionId: null,
           sessionMode: null,
@@ -458,7 +497,7 @@ describe('app/(app)/app/history/page', () => {
       rows: [
         {
           isAvailable: true,
-          questionId: 'q-easy',
+          questionId: fixtureQuestionEasyId,
           isCorrect: true,
           sessionId: null,
           sessionMode: null,
@@ -470,7 +509,7 @@ describe('app/(app)/app/history/page', () => {
         },
         {
           isAvailable: true,
-          questionId: 'q-hard',
+          questionId: fixtureQuestionHardId,
           isCorrect: false,
           sessionId: null,
           sessionMode: null,
@@ -482,7 +521,7 @@ describe('app/(app)/app/history/page', () => {
         },
         {
           isAvailable: true,
-          questionId: 'q-medium',
+          questionId: fixtureQuestionMediumId,
           isCorrect: false,
           sessionId: null,
           sessionMode: null,

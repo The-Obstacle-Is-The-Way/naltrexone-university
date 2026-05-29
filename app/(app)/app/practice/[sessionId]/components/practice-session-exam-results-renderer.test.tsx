@@ -13,6 +13,14 @@ import {
   createSummary,
 } from './post-exam-review-view.fixtures';
 
+const { fixtureChoiceAId, fixtureQuestion1Id, fixtureSession1Id } = vi.hoisted(
+  () => ({
+    fixtureChoiceAId: crypto.randomUUID(),
+    fixtureQuestion1Id: crypto.randomUUID(),
+    fixtureSession1Id: crypto.randomUUID(),
+  }),
+);
+
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
@@ -31,7 +39,7 @@ function createSummaryReview(
   rows: GetPracticeSessionReviewOutput['rows'],
 ): GetPracticeSessionReviewOutput {
   return {
-    sessionId: 'session-1',
+    sessionId: fixtureSession1Id,
     mode: 'exam',
     totalCount: rows.length,
     answeredCount: rows.filter((row) => row.isAnswered).length,
@@ -45,7 +53,7 @@ function createSummaryReviewRow(
 ): GetPracticeSessionReviewOutput['rows'][number] {
   return {
     isAvailable: true,
-    questionId: 'question-1',
+    questionId: fixtureQuestion1Id,
     slug: 'question-1',
     stemMd: 'Question stem',
     difficulty: 'easy',
@@ -77,7 +85,7 @@ function renderBranch(input?: {
     examResultsSubstage: input?.examResultsSubstage ?? null,
     postExamReview: input?.postExamReview ?? null,
     postExamReviewLoadState: input?.postExamReviewLoadState,
-    postExamReviewCurrentQuestionId: 'question-1',
+    postExamReviewCurrentQuestionId: fixtureQuestion1Id,
     summaryReview: input?.summaryReview ?? null,
     summaryReviewLoadState: { status: 'ready' },
     questionPanelId: 'practice-question-panel',
@@ -179,7 +187,7 @@ describe('renderPracticeSessionExamResults', () => {
         createReviewRow({
           isAnswered: true,
           isCorrect: false,
-          selectedChoiceId: 'choice-a',
+          selectedChoiceId: fixtureChoiceAId,
         }),
       ]),
       postExamReviewLoadState: { status: 'ready' },

@@ -8,6 +8,31 @@ import { err, ok } from '@/src/adapters/controllers/action-result';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
+const { fixtureQuestion1Id, fixtureQuestion2Id, fixtureChoice1Id } = vi.hoisted(
+  () => ({
+    fixtureQuestion1Id: crypto.randomUUID(),
+    fixtureQuestion2Id: crypto.randomUUID(),
+    fixtureChoice1Id: crypto.randomUUID(),
+  }),
+);
+
+function createFixtureNextQuestion(
+  overrides: Parameters<typeof createNextQuestion>[0] = {},
+) {
+  return createNextQuestion({
+    questionId: fixtureQuestion1Id,
+    choices: [
+      {
+        id: fixtureChoice1Id,
+        label: 'A',
+        textMd: 'Choice A',
+        sortOrder: 1,
+      },
+    ],
+    ...overrides,
+  });
+}
+
 describe('practice-page-logic bookmarks', () => {
   describe('createBookmarksEffect', () => {
     it('loads bookmarks and updates state on success', async () => {
@@ -17,7 +42,12 @@ describe('practice-page-logic bookmarks', () => {
       const cleanup = createBookmarksEffect({
         bookmarkRetryCount: 0,
         getBookmarksFn: async () =>
-          ok({ rows: [{ questionId: 'q_1' }, { questionId: 'q_2' }] }),
+          ok({
+            rows: [
+              { questionId: fixtureQuestion1Id },
+              { questionId: fixtureQuestion2Id },
+            ],
+          }),
         setBookmarkedQuestionIds,
         setBookmarkStatus,
         setBookmarkRetryCount: vi.fn(),
@@ -27,7 +57,7 @@ describe('practice-page-logic bookmarks', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(setBookmarkedQuestionIds).toHaveBeenCalledWith(
-        new Set(['q_1', 'q_2']),
+        new Set([fixtureQuestion1Id, fixtureQuestion2Id]),
       );
       expect(setBookmarkStatus).toHaveBeenNthCalledWith(1, 'loading');
       expect(setBookmarkStatus).toHaveBeenNthCalledWith(2, 'idle');
@@ -158,7 +188,7 @@ describe('practice-page-logic bookmarks', () => {
       cleanup();
       resolveBookmarks(
         ok({
-          rows: [{ questionId: 'q_1' }],
+          rows: [{ questionId: fixtureQuestion1Id }],
         }),
       );
 
@@ -249,7 +279,7 @@ describe('practice-page-logic bookmarks', () => {
       const toggleBookmarkFn = vi.fn(async () => ok({ bookmarked: true }));
 
       await toggleBookmarkForQuestion({
-        question: createNextQuestion(),
+        question: createFixtureNextQuestion(),
         bookmarkIdempotencyKey: 'idem_1',
         createIdempotencyKey: () => 'idem_2',
         setBookmarkIdempotencyKey,
@@ -260,10 +290,10 @@ describe('practice-page-logic bookmarks', () => {
       });
 
       expect(toggleBookmarkFn).toHaveBeenCalledWith({
-        questionId: 'q_1',
+        questionId: fixtureQuestion1Id,
         idempotencyKey: 'idem_1',
       });
-      expect(ids.has('q_1')).toBe(true);
+      expect(ids.has(fixtureQuestion1Id)).toBe(true);
       expect(onBookmarkToggled).toHaveBeenCalledWith(true);
       expect(setBookmarkIdempotencyKey).toHaveBeenCalledWith('idem_2');
     });
@@ -273,7 +303,7 @@ describe('practice-page-logic bookmarks', () => {
       const onBookmarkToggled = vi.fn();
 
       await toggleBookmarkForQuestion({
-        question: createNextQuestion(),
+        question: createFixtureNextQuestion(),
         toggleBookmarkFn: async () => err('INTERNAL_ERROR', 'Boom'),
         setBookmarkStatus,
         setBookmarkedQuestionIds: vi.fn(),
@@ -285,7 +315,7 @@ describe('practice-page-logic bookmarks', () => {
     });
 
     it('removes the question id when bookmark is removed', async () => {
-      let ids = new Set<string>(['q_1', 'other']);
+      let ids = new Set<string>([fixtureQuestion1Id, 'other']);
 
       const setBookmarkedQuestionIds = vi.fn(
         (next: Set<string> | ((prev: Set<string>) => Set<string>)) => {
@@ -297,14 +327,14 @@ describe('practice-page-logic bookmarks', () => {
       const onBookmarkToggled = vi.fn();
 
       await toggleBookmarkForQuestion({
-        question: createNextQuestion(),
+        question: createFixtureNextQuestion(),
         toggleBookmarkFn: async () => ok({ bookmarked: false }),
         setBookmarkStatus,
         setBookmarkedQuestionIds,
         onBookmarkToggled,
       });
 
-      expect(ids.has('q_1')).toBe(false);
+      expect(ids.has(fixtureQuestion1Id)).toBe(false);
       expect(onBookmarkToggled).toHaveBeenCalledWith(false);
       expect(setBookmarkStatus).toHaveBeenLastCalledWith('idle');
     });
@@ -315,7 +345,7 @@ describe('practice-page-logic bookmarks', () => {
       const onBookmarkError = vi.fn();
 
       await toggleBookmarkForQuestion({
-        question: createNextQuestion(),
+        question: createFixtureNextQuestion(),
         toggleBookmarkFn: async () => {
           throw new Error('Boom');
         },
@@ -340,7 +370,7 @@ describe('practice-page-logic bookmarks', () => {
       const onBookmarkError = vi.fn();
 
       await toggleBookmarkForQuestion({
-        question: createNextQuestion(),
+        question: createFixtureNextQuestion(),
         toggleBookmarkFn: async () => {
           throw error;
         },
@@ -367,7 +397,7 @@ describe('practice-page-logic bookmarks', () => {
 
       await expect(
         toggleBookmarkForQuestion({
-          question: createNextQuestion(),
+          question: createFixtureNextQuestion(),
           toggleBookmarkFn: async () => {
             throw error;
           },
@@ -390,7 +420,7 @@ describe('practice-page-logic bookmarks', () => {
       const onBookmarkError = vi.fn();
 
       await toggleBookmarkForQuestion({
-        question: createNextQuestion(),
+        question: createFixtureNextQuestion(),
         toggleBookmarkFn: async () => err('INTERNAL_ERROR', 'Boom'),
         setBookmarkStatus,
         setBookmarkedQuestionIds: vi.fn(),
@@ -414,7 +444,7 @@ describe('practice-page-logic bookmarks', () => {
       const onBookmarkError = vi.fn();
 
       await toggleBookmarkForQuestion({
-        question: createNextQuestion(),
+        question: createFixtureNextQuestion(),
         toggleBookmarkFn: async () => ({
           ok: false,
           error: structuredError,
@@ -445,7 +475,7 @@ describe('practice-page-logic bookmarks', () => {
       const onBookmarkError = vi.fn();
 
       await toggleBookmarkForQuestion({
-        question: createNextQuestion(),
+        question: createFixtureNextQuestion(),
         toggleBookmarkFn: async () => ({
           ok: false,
           error: structuredError,
@@ -476,7 +506,7 @@ describe('practice-page-logic bookmarks', () => {
 
       await expect(
         toggleBookmarkForQuestion({
-          question: createNextQuestion(),
+          question: createFixtureNextQuestion(),
           toggleBookmarkFn: async () => ({
             ok: false,
             error: structuredError,
@@ -507,7 +537,7 @@ describe('practice-page-logic bookmarks', () => {
       const onBookmarkToggled = vi.fn();
 
       const promise = toggleBookmarkForQuestion({
-        question: createNextQuestion(),
+        question: createFixtureNextQuestion(),
         toggleBookmarkFn: async () => deferred.promise,
         setBookmarkStatus,
         setBookmarkedQuestionIds,
@@ -534,7 +564,7 @@ describe('practice-page-logic bookmarks', () => {
       const onBookmarkError = vi.fn();
 
       const promise = toggleBookmarkForQuestion({
-        question: createNextQuestion(),
+        question: createFixtureNextQuestion(),
         toggleBookmarkFn: async () => deferred.promise,
         setBookmarkStatus,
         setBookmarkedQuestionIds: vi.fn(),
@@ -565,7 +595,7 @@ describe('practice-page-logic bookmarks', () => {
       const onBookmarkError = vi.fn();
 
       const promise = toggleBookmarkForQuestion({
-        question: createNextQuestion(),
+        question: createFixtureNextQuestion(),
         toggleBookmarkFn: async () => deferred.promise,
         setBookmarkStatus,
         setBookmarkedQuestionIds: vi.fn(),

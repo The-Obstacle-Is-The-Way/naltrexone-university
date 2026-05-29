@@ -8,6 +8,12 @@ import {
   createSummary,
 } from './post-exam-review-view.fixtures';
 
+const fixtureChoiceAId = crypto.randomUUID();
+const fixtureChoiceBId = crypto.randomUUID();
+const fixtureQuestion1Id = crypto.randomUUID();
+const fixtureQuestion2Id = crypto.randomUUID();
+const fixtureQuestion3Id = crypto.randomUUID();
+
 type PostExamReviewViewModule = typeof import('./post-exam-review-view');
 type ReviewRow = GetCompletedSessionQuestionsWithFeedbackOutput['rows'][number];
 
@@ -156,7 +162,7 @@ describe('PostExamReviewView', () => {
       row: createReviewRow({
         isAnswered: true,
         isCorrect: false,
-        selectedChoiceId: 'choice-a',
+        selectedChoiceId: fixtureChoiceAId,
       }),
     });
 
@@ -170,7 +176,7 @@ describe('PostExamReviewView', () => {
       row: createReviewRow({
         isAnswered: true,
         isCorrect: true,
-        selectedChoiceId: 'choice-b',
+        selectedChoiceId: fixtureChoiceBId,
       }),
     });
 
@@ -182,17 +188,17 @@ describe('PostExamReviewView', () => {
   it('renders the middle-question action bar in navigation-first DOM order', () => {
     const rows = [
       createReviewRow({
-        questionId: 'question-1',
+        questionId: fixtureQuestion1Id,
         slug: 'question-1',
         order: 1,
       }),
       createReviewRow({
-        questionId: 'question-2',
+        questionId: fixtureQuestion2Id,
         slug: 'question-2',
         order: 2,
       }),
       createReviewRow({
-        questionId: 'question-3',
+        questionId: fixtureQuestion3Id,
         slug: 'question-3',
         order: 3,
       }),
@@ -200,7 +206,7 @@ describe('PostExamReviewView', () => {
 
     const doc = renderView({
       rows,
-      currentQuestionId: 'question-2',
+      currentQuestionId: fixtureQuestion2Id,
     });
 
     expect(getReviewActionLabels(doc)).toEqual([
@@ -216,12 +222,12 @@ describe('PostExamReviewView', () => {
   it('renders the first-question action bar with next before bookmark', () => {
     const rows = [
       createReviewRow({
-        questionId: 'question-1',
+        questionId: fixtureQuestion1Id,
         slug: 'question-1',
         order: 1,
       }),
       createReviewRow({
-        questionId: 'question-2',
+        questionId: fixtureQuestion2Id,
         slug: 'question-2',
         order: 2,
       }),
@@ -229,7 +235,7 @@ describe('PostExamReviewView', () => {
 
     const doc = renderView({
       rows,
-      currentQuestionId: 'question-1',
+      currentQuestionId: fixtureQuestion1Id,
     });
 
     expect(getReviewActionLabels(doc)).toEqual(['Next', 'Bookmark']);
@@ -238,12 +244,12 @@ describe('PostExamReviewView', () => {
   it('renders the last-question action bar with view summary before bookmark', () => {
     const rows = [
       createReviewRow({
-        questionId: 'question-1',
+        questionId: fixtureQuestion1Id,
         slug: 'question-1',
         order: 1,
       }),
       createReviewRow({
-        questionId: 'question-2',
+        questionId: fixtureQuestion2Id,
         slug: 'question-2',
         order: 2,
       }),
@@ -251,7 +257,7 @@ describe('PostExamReviewView', () => {
 
     const doc = renderView({
       rows,
-      currentQuestionId: 'question-2',
+      currentQuestionId: fixtureQuestion2Id,
     });
 
     expect(getReviewActionLabels(doc)).toEqual([
@@ -316,21 +322,21 @@ describe('PostExamReviewView', () => {
     const doc = renderView({
       rows: [
         createReviewRow({
-          questionId: 'question-1',
+          questionId: fixtureQuestion1Id,
           slug: 'question-1',
           order: 1,
           isAnswered: true,
           isCorrect: true,
         }),
         createReviewRow({
-          questionId: 'question-2',
+          questionId: fixtureQuestion2Id,
           slug: 'question-2',
           order: 2,
           isAnswered: true,
           isCorrect: false,
         }),
         createReviewRow({
-          questionId: 'question-3',
+          questionId: fixtureQuestion3Id,
           slug: 'question-3',
           order: 3,
           isAnswered: false,

@@ -10,6 +10,10 @@ import type {
   CheckEntitlementOutput,
 } from '@/src/application/use-cases/check-entitlement';
 
+const { fixtureUser1Id } = vi.hoisted(() => ({
+  fixtureUser1Id: crypto.randomUUID(),
+}));
+
 vi.mock('server-only', () => ({}));
 
 vi.mock('next/link', () => ({
@@ -86,7 +90,7 @@ function createTrackedThenable<T>() {
 }
 
 const pricingTestUser = {
-  id: 'user_1',
+  id: fixtureUser1Id,
   email: 'user@example.com',
   createdAt: new Date('2026-02-01T00:00:00Z'),
   updatedAt: new Date('2026-02-01T00:00:00Z'),
@@ -475,7 +479,7 @@ describe('app/pricing', () => {
   it('loadPricingData returns isEntitled=true when entitled', async () => {
     const authGateway: AuthGateway = {
       getCurrentUser: vi.fn(async () => ({
-        id: 'user_1',
+        id: fixtureUser1Id,
         email: 'user@example.com',
         createdAt: new Date('2026-02-01T00:00:00Z'),
         updatedAt: new Date('2026-02-01T00:00:00Z'),
@@ -497,7 +501,7 @@ describe('app/pricing', () => {
   it('loadPricingData returns reason from entitlement check for non-entitled users', async () => {
     const authGateway: AuthGateway = {
       getCurrentUser: vi.fn(async () => ({
-        id: 'user_1',
+        id: fixtureUser1Id,
         email: 'user@example.com',
         createdAt: new Date('2026-02-01T00:00:00Z'),
         updatedAt: new Date('2026-02-01T00:00:00Z'),

@@ -4,6 +4,28 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import { createQuestionProps } from './practice-view-test-helpers';
 
+const fixtureAttempt1Id = crypto.randomUUID();
+const fixtureSession1Id = crypto.randomUUID();
+const fixtureQuestion1Id = crypto.randomUUID();
+const fixtureChoice1Id = crypto.randomUUID();
+
+function createFixtureNextQuestion(
+  overrides: Parameters<typeof createNextQuestion>[0] = {},
+) {
+  return createNextQuestion({
+    questionId: fixtureQuestion1Id,
+    choices: [
+      {
+        id: fixtureChoice1Id,
+        label: 'A',
+        textMd: 'Choice A',
+        sortOrder: 1,
+      },
+    ],
+    ...overrides,
+  });
+}
+
 type PracticeViewModule = typeof import('./practice-view');
 
 let PracticeView: PracticeViewModule['PracticeView'];
@@ -22,7 +44,7 @@ function getButtonLabels(container: Element | null) {
 
 describe('PracticeView navigation', () => {
   it('renders a Previous button when onPreviousQuestion is provided', () => {
-    const question = createNextQuestion();
+    const question = createFixtureNextQuestion();
 
     const html = renderToStaticMarkup(
       <PracticeView
@@ -47,7 +69,7 @@ describe('PracticeView navigation', () => {
   });
 
   it('disables Previous when canNavigatePrevious is false', () => {
-    const question = createNextQuestion();
+    const question = createFixtureNextQuestion();
 
     const html = renderToStaticMarkup(
       <PracticeView
@@ -79,7 +101,7 @@ describe('PracticeView navigation', () => {
   });
 
   it('hides Previous when hasPreviousQuestion is false', () => {
-    const question = createNextQuestion();
+    const question = createFixtureNextQuestion();
 
     const html = renderToStaticMarkup(
       <PracticeView
@@ -108,7 +130,7 @@ describe('PracticeView navigation', () => {
   });
 
   it('renders "Next" (not "Next Question")', () => {
-    const question = createNextQuestion();
+    const question = createFixtureNextQuestion();
 
     const props: Parameters<typeof PracticeView>[0] = {
       loadState: { status: 'ready' },
@@ -116,9 +138,9 @@ describe('PracticeView navigation', () => {
       selectedChoiceId: null,
       isAnswered: true,
       submitResult: {
-        attemptId: 'attempt-1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
-        correctChoiceId: question.choices[0]?.id ?? 'choice_1',
+        correctChoiceId: question.choices[0]?.id ?? fixtureChoice1Id,
         explanationMd: 'Because.',
         referenceMd: null,
         choiceExplanations: [],
@@ -141,7 +163,7 @@ describe('PracticeView navigation', () => {
   });
 
   it('keeps the pre-feedback last-question footer to Previous when onEndSession is missing', () => {
-    const question = createNextQuestion();
+    const question = createFixtureNextQuestion();
 
     const props: Parameters<typeof PracticeView>[0] = {
       loadState: { status: 'ready' },
@@ -178,11 +200,11 @@ describe('PracticeView navigation', () => {
   });
 
   it('keeps the pre-feedback last tutor question footer to Previous', () => {
-    const question = createNextQuestion();
+    const question = createFixtureNextQuestion();
 
     const props: Parameters<typeof PracticeView>[0] = {
       sessionInfo: {
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
 
         deadlineAt: null,
@@ -227,7 +249,7 @@ describe('PracticeView navigation', () => {
   });
 
   it('renders End session after final tutor feedback and keeps Bookmark in the secondary group', () => {
-    const question = createNextQuestion();
+    const question = createFixtureNextQuestion();
     const selectedChoice = question.choices[0];
     if (!selectedChoice) {
       throw new Error('Expected at least one choice');
@@ -235,7 +257,7 @@ describe('PracticeView navigation', () => {
 
     const props: Parameters<typeof PracticeView>[0] = {
       sessionInfo: {
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
 
         deadlineAt: null,
@@ -249,7 +271,7 @@ describe('PracticeView navigation', () => {
       selectedChoiceId: selectedChoice.id,
       isAnswered: true,
       submitResult: {
-        attemptId: 'attempt-1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
         correctChoiceId: selectedChoice.id,
         explanationMd: 'Because.',
@@ -289,11 +311,11 @@ describe('PracticeView navigation', () => {
   });
 
   it('suppresses the tutor primary group on the first question before feedback', () => {
-    const question = createNextQuestion();
+    const question = createFixtureNextQuestion();
 
     const props: Parameters<typeof PracticeView>[0] = {
       sessionInfo: {
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
 
         deadlineAt: null,
@@ -337,11 +359,11 @@ describe('PracticeView navigation', () => {
   });
 
   it('keeps the middle tutor question footer to Previous before feedback', () => {
-    const question = createNextQuestion();
+    const question = createFixtureNextQuestion();
 
     const props: Parameters<typeof PracticeView>[0] = {
       sessionInfo: {
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
 
         deadlineAt: null,
@@ -379,7 +401,7 @@ describe('PracticeView navigation', () => {
   });
 
   it('keeps tutor action bar ordering as Previous, Next, Bookmark after feedback', () => {
-    const question = createNextQuestion();
+    const question = createFixtureNextQuestion();
     const selectedChoice = question.choices[0];
     if (!selectedChoice) {
       throw new Error('Expected at least one choice');
@@ -387,7 +409,7 @@ describe('PracticeView navigation', () => {
 
     const props: Parameters<typeof PracticeView>[0] = {
       sessionInfo: {
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
 
         deadlineAt: null,
@@ -401,7 +423,7 @@ describe('PracticeView navigation', () => {
       selectedChoiceId: selectedChoice.id,
       isAnswered: true,
       submitResult: {
-        attemptId: 'attempt-1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
         correctChoiceId: selectedChoice.id,
         explanationMd: 'Because.',
@@ -433,7 +455,7 @@ describe('PracticeView navigation', () => {
   });
 
   it('renders Next as the only primary action after first-question tutor feedback', () => {
-    const question = createNextQuestion();
+    const question = createFixtureNextQuestion();
     const selectedChoice = question.choices[0];
     if (!selectedChoice) {
       throw new Error('Expected at least one choice');
@@ -441,7 +463,7 @@ describe('PracticeView navigation', () => {
 
     const props: Parameters<typeof PracticeView>[0] = {
       sessionInfo: {
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
 
         deadlineAt: null,
@@ -455,7 +477,7 @@ describe('PracticeView navigation', () => {
       selectedChoiceId: selectedChoice.id,
       isAnswered: true,
       submitResult: {
-        attemptId: 'attempt-1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
         correctChoiceId: selectedChoice.id,
         explanationMd: 'Because.',
@@ -492,7 +514,7 @@ describe('PracticeView navigation', () => {
   });
 
   it('renders both header and footer End session buttons on final tutor feedback', () => {
-    const question = createNextQuestion();
+    const question = createFixtureNextQuestion();
     const selectedChoice = question.choices[0];
     if (!selectedChoice) {
       throw new Error('Expected at least one choice');
@@ -500,7 +522,7 @@ describe('PracticeView navigation', () => {
 
     const props: Parameters<typeof PracticeView>[0] = {
       sessionInfo: {
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
 
         deadlineAt: null,
@@ -514,7 +536,7 @@ describe('PracticeView navigation', () => {
       selectedChoiceId: selectedChoice.id,
       isAnswered: true,
       submitResult: {
-        attemptId: 'attempt-1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
         correctChoiceId: selectedChoice.id,
         explanationMd: 'Because.',
@@ -559,7 +581,7 @@ describe('PracticeView navigation', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         sessionInfo={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',

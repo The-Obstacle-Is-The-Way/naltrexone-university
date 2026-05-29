@@ -5,6 +5,10 @@ import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
+const { fixtureSession1Id } = vi.hoisted(() => ({
+  fixtureSession1Id: crypto.randomUUID(),
+}));
+
 describe('practice-page-logic session start', () => {
   describe('startSession', () => {
     it('sets error state when controller fails', async () => {
@@ -36,7 +40,11 @@ describe('practice-page-logic session start', () => {
 
     it('navigates to the session route on success without toast params when counts match', async () => {
       const startPracticeSessionFn = vi.fn(async () =>
-        ok({ sessionId: 'session-1', requestedCount: 10, actualCount: 10 }),
+        ok({
+          sessionId: fixtureSession1Id,
+          requestedCount: 10,
+          actualCount: 10,
+        }),
       );
       const navigateTo = vi.fn();
       const setIdempotencyKey = vi.fn();
@@ -67,14 +75,18 @@ describe('practice-page-logic session start', () => {
         statuses: ['unanswered'],
       });
       expect(navigateTo).toHaveBeenCalledWith(
-        toPracticeSessionRoute('session-1'),
+        toPracticeSessionRoute(fixtureSession1Id),
       );
       expect(setIdempotencyKey).not.toHaveBeenCalled();
     });
 
     it('includes requested/actual counts in the session_started toast when fewer questions are available than requested', async () => {
       const startPracticeSessionFn = vi.fn(async () =>
-        ok({ sessionId: 'session-1', requestedCount: 50, actualCount: 30 }),
+        ok({
+          sessionId: fixtureSession1Id,
+          requestedCount: 50,
+          actualCount: 30,
+        }),
       );
       const navigateTo = vi.fn();
 
@@ -92,7 +104,7 @@ describe('practice-page-logic session start', () => {
       });
 
       expect(navigateTo).toHaveBeenCalledWith(
-        `${toPracticeSessionRoute('session-1')}?toast=session_started&requestedCount=50&actualCount=30`,
+        `${toPracticeSessionRoute(fixtureSession1Id)}?toast=session_started&requestedCount=50&actualCount=30`,
       );
     });
 
@@ -232,7 +244,11 @@ describe('practice-page-logic session start', () => {
 
       mounted = false;
       deferred.resolve(
-        ok({ sessionId: 'session-1', requestedCount: 10, actualCount: 10 }),
+        ok({
+          sessionId: fixtureSession1Id,
+          requestedCount: 10,
+          actualCount: 10,
+        }),
       );
       await promise;
 

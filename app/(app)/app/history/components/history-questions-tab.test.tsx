@@ -9,6 +9,36 @@ import { toQuestionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetAttemptedQuestionsOutput } from '@/src/adapters/controllers/review-controller';
 
+const {
+  fixtureQuestion1Id,
+  fixtureQuestion2Id,
+  fixtureQuestionCorrectId,
+  fixtureQuestionEasy1Id,
+  fixtureQuestionEasy2Id,
+  fixtureQuestionEasyId,
+  fixtureQuestionExamId,
+  fixtureQuestionHardId,
+  fixtureQuestionIncorrectId,
+  fixtureQuestionTutorId,
+  fixtureSession1Id,
+  fixtureSessionExamId,
+  fixtureSessionTutorId,
+} = vi.hoisted(() => ({
+  fixtureQuestion1Id: crypto.randomUUID(),
+  fixtureQuestion2Id: crypto.randomUUID(),
+  fixtureQuestionCorrectId: crypto.randomUUID(),
+  fixtureQuestionEasy1Id: crypto.randomUUID(),
+  fixtureQuestionEasy2Id: crypto.randomUUID(),
+  fixtureQuestionEasyId: crypto.randomUUID(),
+  fixtureQuestionExamId: crypto.randomUUID(),
+  fixtureQuestionHardId: crypto.randomUUID(),
+  fixtureQuestionIncorrectId: crypto.randomUUID(),
+  fixtureQuestionTutorId: crypto.randomUUID(),
+  fixtureSession1Id: crypto.randomUUID(),
+  fixtureSessionExamId: crypto.randomUUID(),
+  fixtureSessionTutorId: crypto.randomUUID(),
+}));
+
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
@@ -38,7 +68,7 @@ function createAvailableAttemptedQuestionRow(
 ): AvailableAttemptedQuestionRow {
   return {
     isAvailable: true,
-    questionId: 'q_1',
+    questionId: fixtureQuestion1Id,
     isCorrect: false,
     sessionId: null,
     sessionMode: null,
@@ -58,16 +88,16 @@ describe('HistoryQuestionsTab', () => {
       data: {
         rows: [
           createAvailableAttemptedQuestionRow({
-            questionId: 'q_correct',
+            questionId: fixtureQuestionCorrectId,
             isCorrect: true,
-            sessionId: 'session-1',
+            sessionId: fixtureSession1Id,
             sessionMode: 'exam',
             slug: 'q-correct',
             stemMd: 'Stem for correct',
             tagSlugs: ['opioids'],
           }),
           createAvailableAttemptedQuestionRow({
-            questionId: 'q_incorrect',
+            questionId: fixtureQuestionIncorrectId,
             slug: 'q-incorrect',
             stemMd: 'Stem for incorrect',
             difficulty: 'hard',
@@ -185,7 +215,7 @@ describe('HistoryQuestionsTab', () => {
       data: {
         rows: [
           createAvailableAttemptedQuestionRow({
-            questionId: 'q_incorrect',
+            questionId: fixtureQuestionIncorrectId,
             slug: 'q-incorrect',
             stemMd: 'Stem for incorrect',
             difficulty: 'hard',
@@ -234,15 +264,15 @@ describe('HistoryQuestionsTab', () => {
       data: {
         rows: [
           createAvailableAttemptedQuestionRow({
-            questionId: 'q_tutor',
-            sessionId: 'session-tutor',
+            questionId: fixtureQuestionTutorId,
+            sessionId: fixtureSessionTutorId,
             sessionMode: 'tutor',
             slug: 'q-tutor',
             stemMd: 'Stem for tutor session',
           }),
           createAvailableAttemptedQuestionRow({
-            questionId: 'q_exam',
-            sessionId: 'session-exam',
+            questionId: fixtureQuestionExamId,
+            sessionId: fixtureSessionExamId,
             sessionMode: 'exam',
             slug: 'q-exam',
             stemMd: 'Stem for exam session',
@@ -275,12 +305,12 @@ describe('HistoryQuestionsTab', () => {
       data: {
         rows: [
           createAvailableAttemptedQuestionRow({
-            questionId: 'q_1',
+            questionId: fixtureQuestion1Id,
             slug: 'q-1',
             stemMd: 'Stem for q1',
           }),
           createAvailableAttemptedQuestionRow({
-            questionId: 'q_2',
+            questionId: fixtureQuestion2Id,
             slug: 'q-2',
             stemMd: 'Stem for q2',
             lastAnsweredAt: '2026-02-02T00:00:00.000Z',
@@ -442,13 +472,13 @@ describe('HistoryQuestionsTab', () => {
       data: {
         rows: [
           createAvailableAttemptedQuestionRow({
-            questionId: 'q_easy',
+            questionId: fixtureQuestionEasyId,
             isCorrect: true,
             slug: 'q-easy',
             stemMd: 'Stem for easy',
           }),
           createAvailableAttemptedQuestionRow({
-            questionId: 'q_hard',
+            questionId: fixtureQuestionHardId,
             slug: 'q-hard',
             stemMd: 'Stem for hard',
             difficulty: 'hard',
@@ -474,13 +504,13 @@ describe('HistoryQuestionsTab', () => {
       data: {
         rows: [
           createAvailableAttemptedQuestionRow({
-            questionId: 'q_easy_1',
+            questionId: fixtureQuestionEasy1Id,
             isCorrect: true,
             slug: 'q-easy-1',
             stemMd: 'Stem for easy 1',
           }),
           createAvailableAttemptedQuestionRow({
-            questionId: 'q_easy_2',
+            questionId: fixtureQuestionEasy2Id,
             slug: 'q-easy-2',
             stemMd: 'Stem for easy 2',
             lastAnsweredAt: '2026-02-02T00:00:00.000Z',
@@ -550,10 +580,10 @@ describe('HistoryQuestionsTab', () => {
       data: {
         rows: [
           createAvailableAttemptedQuestionRow({
-            questionId: 'q_1',
+            questionId: fixtureQuestion1Id,
           }),
           createAvailableAttemptedQuestionRow({
-            questionId: 'q_2',
+            questionId: fixtureQuestion2Id,
             slug: 'q-2',
             stemMd: 'Stem for q2',
           }),
@@ -618,9 +648,9 @@ describe('HistoryQuestionsTab', () => {
         rows: [
           {
             isAvailable: false,
-            questionId: 'q_1',
+            questionId: fixtureQuestion1Id,
             isCorrect: true,
-            sessionId: 'session-1',
+            sessionId: fixtureSession1Id,
             sessionMode: 'exam',
             lastAnsweredAt: '2026-02-01T00:00:00.000Z',
           },
@@ -667,13 +697,13 @@ describe('HistoryQuestionsTab', () => {
       data: {
         rows: [
           createAvailableAttemptedQuestionRow({
-            questionId: 'q_correct',
+            questionId: fixtureQuestionCorrectId,
             isCorrect: true,
             slug: 'q-correct',
             stemMd: 'Stem for correct',
           }),
           createAvailableAttemptedQuestionRow({
-            questionId: 'q_incorrect',
+            questionId: fixtureQuestionIncorrectId,
             slug: 'q-incorrect',
             stemMd: 'Stem for incorrect',
           }),

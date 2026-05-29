@@ -5,6 +5,20 @@ import {
   runE2EUserStateReset,
 } from './reset-e2e-user-state';
 
+const {
+  fixtureChoice01CorrectId,
+  fixtureChoice02IncorrectId,
+  fixtureDbUser123Id,
+  fixtureQuestion01Id,
+  fixtureQuestion02Id,
+} = vi.hoisted(() => ({
+  fixtureChoice01CorrectId: crypto.randomUUID(),
+  fixtureChoice02IncorrectId: crypto.randomUUID(),
+  fixtureDbUser123Id: crypto.randomUUID(),
+  fixtureQuestion01Id: crypto.randomUUID(),
+  fixtureQuestion02Id: crypto.randomUUID(),
+}));
+
 type RequiredEnvKey =
   | 'DATABASE_URL'
   | 'CLERK_SECRET_KEY'
@@ -27,18 +41,18 @@ function createServices(
   overrides: Partial<E2EUserStateResetServices> = {},
 ): E2EUserStateResetServices {
   const questionFixtures = {
-    placeholder01Id: 'question_01',
-    placeholder02Id: 'question_02',
+    placeholder01Id: fixtureQuestion01Id,
+    placeholder02Id: fixtureQuestion02Id,
   };
   const choiceFixtures = {
-    placeholder01CorrectChoiceId: 'choice_01_correct',
-    placeholder02IncorrectChoiceId: 'choice_02_incorrect',
+    placeholder01CorrectChoiceId: fixtureChoice01CorrectId,
+    placeholder02IncorrectChoiceId: fixtureChoice02IncorrectId,
   };
 
   return {
     ensurePlaceholderQuestionsPublished: vi.fn(async () => {}),
     resolveClerkUserIdByEmail: vi.fn(async () => 'user_123'),
-    resolveAppUserIdByClerkUserId: vi.fn(async () => 'db_user_123'),
+    resolveAppUserIdByClerkUserId: vi.fn(async () => fixtureDbUser123Id),
     clearUserState: vi.fn(async () => {}),
     resolveRequiredQuestionFixtures: vi.fn(async () => questionFixtures),
     resolveRequiredChoiceFixtures: vi.fn(async () => choiceFixtures),
@@ -73,7 +87,7 @@ describe('runE2EUserStateReset', () => {
     });
     expect(services.clearUserState).toHaveBeenCalledWith({
       databaseUrl: env.DATABASE_URL,
-      userId: 'db_user_123',
+      userId: fixtureDbUser123Id,
     });
     expect(services.resolveRequiredQuestionFixtures).toHaveBeenCalledWith({
       databaseUrl: env.DATABASE_URL,
@@ -81,25 +95,25 @@ describe('runE2EUserStateReset', () => {
     expect(services.resolveRequiredChoiceFixtures).toHaveBeenCalledWith({
       databaseUrl: env.DATABASE_URL,
       questionIds: {
-        placeholder01Id: 'question_01',
-        placeholder02Id: 'question_02',
+        placeholder01Id: fixtureQuestion01Id,
+        placeholder02Id: fixtureQuestion02Id,
       },
     });
     expect(services.seedDeterministicBaseline).toHaveBeenCalledWith({
       databaseUrl: env.DATABASE_URL,
-      userId: 'db_user_123',
+      userId: fixtureDbUser123Id,
       questionFixtures: {
-        placeholder01Id: 'question_01',
-        placeholder02Id: 'question_02',
+        placeholder01Id: fixtureQuestion01Id,
+        placeholder02Id: fixtureQuestion02Id,
       },
       choiceFixtures: {
-        placeholder01CorrectChoiceId: 'choice_01_correct',
-        placeholder02IncorrectChoiceId: 'choice_02_incorrect',
+        placeholder01CorrectChoiceId: fixtureChoice01CorrectId,
+        placeholder02IncorrectChoiceId: fixtureChoice02IncorrectId,
       },
     });
     expect(services.verifyDeterministicBaseline).toHaveBeenCalledWith({
       databaseUrl: env.DATABASE_URL,
-      userId: 'db_user_123',
+      userId: fixtureDbUser123Id,
     });
   });
 
@@ -123,7 +137,7 @@ describe('runE2EUserStateReset', () => {
     const services: E2EUserStateResetServices = {
       ensurePlaceholderQuestionsPublished: async () => {},
       resolveClerkUserIdByEmail: async () => 'user_123',
-      resolveAppUserIdByClerkUserId: async () => 'db_user_123',
+      resolveAppUserIdByClerkUserId: async () => fixtureDbUser123Id,
       clearUserState: async () => {
         callOrder.push('clear');
         state.completedSessions = 0;
@@ -132,12 +146,12 @@ describe('runE2EUserStateReset', () => {
         state.idempotencyKeys = 0;
       },
       resolveRequiredQuestionFixtures: async () => ({
-        placeholder01Id: 'question_01',
-        placeholder02Id: 'question_02',
+        placeholder01Id: fixtureQuestion01Id,
+        placeholder02Id: fixtureQuestion02Id,
       }),
       resolveRequiredChoiceFixtures: async () => ({
-        placeholder01CorrectChoiceId: 'choice_01_correct',
-        placeholder02IncorrectChoiceId: 'choice_02_incorrect',
+        placeholder01CorrectChoiceId: fixtureChoice01CorrectId,
+        placeholder02IncorrectChoiceId: fixtureChoice02IncorrectId,
       }),
       seedDeterministicBaseline: async () => {
         callOrder.push('seed');
@@ -185,18 +199,18 @@ describe('runE2EUserStateReset', () => {
 
   it('accepts Clerk paginated user-list response shape in the default resolver', async () => {
     const env = createEnv();
-    const resolveAppUserIdByClerkUserId = vi.fn(async () => 'db_user_123');
+    const resolveAppUserIdByClerkUserId = vi.fn(async () => fixtureDbUser123Id);
     const services: Partial<E2EUserStateResetServices> = {
       ensurePlaceholderQuestionsPublished: vi.fn(async () => {}),
       resolveAppUserIdByClerkUserId,
       clearUserState: vi.fn(async () => {}),
       resolveRequiredQuestionFixtures: vi.fn(async () => ({
-        placeholder01Id: 'question_01',
-        placeholder02Id: 'question_02',
+        placeholder01Id: fixtureQuestion01Id,
+        placeholder02Id: fixtureQuestion02Id,
       })),
       resolveRequiredChoiceFixtures: vi.fn(async () => ({
-        placeholder01CorrectChoiceId: 'choice_01_correct',
-        placeholder02IncorrectChoiceId: 'choice_02_incorrect',
+        placeholder01CorrectChoiceId: fixtureChoice01CorrectId,
+        placeholder02IncorrectChoiceId: fixtureChoice02IncorrectId,
       })),
       seedDeterministicBaseline: vi.fn(async () => {}),
       verifyDeterministicBaseline: vi.fn(async () => {}),

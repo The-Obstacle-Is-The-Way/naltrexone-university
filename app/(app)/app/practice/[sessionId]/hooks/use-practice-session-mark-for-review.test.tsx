@@ -2,6 +2,14 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const { fixtureChoice1Id, fixtureQuestion1Id, fixtureSession1Id } = vi.hoisted(
+  () => ({
+    fixtureChoice1Id: crypto.randomUUID(),
+    fixtureQuestion1Id: crypto.randomUUID(),
+    fixtureSession1Id: crypto.randomUUID(),
+  }),
+);
+
 const { reportClientErrorMock } = vi.hoisted(() => ({
   reportClientErrorMock: vi.fn(),
 }));
@@ -20,6 +28,23 @@ import { createNextQuestion } from '@/src/application/test-helpers/create-next-q
 import { renderHook } from '@/src/application/test-helpers/render-hook';
 import { usePracticeSessionMarkForReview } from './use-practice-session-mark-for-review';
 
+function createFixtureNextQuestion(
+  overrides: Parameters<typeof createNextQuestion>[0] = {},
+) {
+  return createNextQuestion({
+    questionId: fixtureQuestion1Id,
+    choices: [
+      {
+        id: fixtureChoice1Id,
+        label: 'A',
+        textMd: 'Choice A',
+        sortOrder: 1,
+      },
+    ],
+    ...overrides,
+  });
+}
+
 describe('usePracticeSessionMarkForReview', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -32,14 +57,14 @@ describe('usePracticeSessionMarkForReview', () => {
         question: null,
         sessionMode: null,
         sessionInfo: null,
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         applySessionInfo: () => undefined,
         setLoadState: () => undefined,
         setReview: () => undefined,
         isMounted: () => true,
         setPracticeSessionQuestionMarkFn: vi.fn(async () =>
           ok({
-            questionId: 'q_1',
+            questionId: fixtureQuestion1Id,
             markedForReview: false,
           }),
         ),
@@ -58,13 +83,13 @@ describe('usePracticeSessionMarkForReview', () => {
     const setReview = vi.fn();
     const setPracticeSessionQuestionMarkFn = vi.fn(async () =>
       ok({
-        questionId: 'q_1',
+        questionId: fixtureQuestion1Id,
         markedForReview: true,
       }),
     );
 
     const sessionInfo = {
-      sessionId: 'session-1',
+      sessionId: fixtureSession1Id,
       mode: 'exam' as const,
       deadlineAt: '2099-05-22T12:02:24.000Z',
       index: 0,
@@ -74,10 +99,10 @@ describe('usePracticeSessionMarkForReview', () => {
 
     const output = renderHook(() =>
       usePracticeSessionMarkForReview({
-        question: createNextQuestion(),
+        question: createFixtureNextQuestion(),
         sessionMode: 'exam',
         sessionInfo,
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         applySessionInfo,
         setLoadState,
         setReview,
@@ -89,8 +114,8 @@ describe('usePracticeSessionMarkForReview', () => {
     await output.onToggleMarkForReview();
 
     expect(setPracticeSessionQuestionMarkFn).toHaveBeenCalledWith({
-      sessionId: 'session-1',
-      questionId: 'q_1',
+      sessionId: fixtureSession1Id,
+      questionId: fixtureQuestion1Id,
       markedForReview: true,
       idempotencyKey: expect.any(String),
     });
@@ -123,10 +148,10 @@ describe('usePracticeSessionMarkForReview', () => {
 
     const output = renderHook(() =>
       usePracticeSessionMarkForReview({
-        question: createNextQuestion(),
+        question: createFixtureNextQuestion(),
         sessionMode: 'exam',
         sessionInfo: {
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -135,7 +160,7 @@ describe('usePracticeSessionMarkForReview', () => {
           total: 10,
           isMarkedForReview: false,
         },
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         applySessionInfo,
         setLoadState,
         setReview,
@@ -169,10 +194,10 @@ describe('usePracticeSessionMarkForReview', () => {
 
     const output = renderHook(() =>
       usePracticeSessionMarkForReview({
-        question: createNextQuestion(),
+        question: createFixtureNextQuestion(),
         sessionMode: 'exam',
         sessionInfo: {
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -181,7 +206,7 @@ describe('usePracticeSessionMarkForReview', () => {
           total: 10,
           isMarkedForReview: false,
         },
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         applySessionInfo,
         setLoadState,
         setReview,
@@ -216,10 +241,10 @@ describe('usePracticeSessionMarkForReview', () => {
       const setLoadState = vi.fn();
       const output = renderHook(() =>
         usePracticeSessionMarkForReview({
-          question: createNextQuestion(),
+          question: createFixtureNextQuestion(),
           sessionMode: 'exam',
           sessionInfo: {
-            sessionId: 'session-1',
+            sessionId: fixtureSession1Id,
             mode: 'exam',
 
             deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -228,7 +253,7 @@ describe('usePracticeSessionMarkForReview', () => {
             total: 10,
             isMarkedForReview: false,
           },
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           applySessionInfo: vi.fn(),
           setLoadState,
           setReview: vi.fn(),

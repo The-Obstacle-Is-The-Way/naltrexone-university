@@ -4,6 +4,30 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
 import { findAnchorByHref } from '@/tests/shared/dom-helpers';
 
+const {
+  fixtureAttempt1Id,
+  fixtureAttempt2Id,
+  fixtureAttemptUnavailableCorrectId,
+  fixtureAttemptUnavailableIncorrectId,
+  fixtureQuestionCorrectId,
+  fixtureQuestionIncorrectId,
+  fixtureQuestionOrphaned2Id,
+  fixtureQuestionOrphanedId,
+  fixtureQuestionUnavailableId,
+  fixtureSession1Id,
+} = vi.hoisted(() => ({
+  fixtureAttempt1Id: crypto.randomUUID(),
+  fixtureAttempt2Id: crypto.randomUUID(),
+  fixtureAttemptUnavailableCorrectId: crypto.randomUUID(),
+  fixtureAttemptUnavailableIncorrectId: crypto.randomUUID(),
+  fixtureQuestionCorrectId: crypto.randomUUID(),
+  fixtureQuestionIncorrectId: crypto.randomUUID(),
+  fixtureQuestionOrphaned2Id: crypto.randomUUID(),
+  fixtureQuestionOrphanedId: crypto.randomUUID(),
+  fixtureQuestionUnavailableId: crypto.randomUUID(),
+  fixtureSession1Id: crypto.randomUUID(),
+}));
+
 let DashboardView: typeof import('./page').DashboardView;
 let DashboardPage: typeof import('./page').default;
 let renderDashboard: typeof import('./page').renderDashboard;
@@ -135,9 +159,9 @@ describe('app/(app)/app/dashboard', () => {
           recentActivity: [
             {
               isAvailable: true,
-              attemptId: 'attempt_1',
+              attemptId: fixtureAttempt1Id,
               answeredAt: '2026-02-02T00:00:00.000Z',
-              questionId: 'q_correct',
+              questionId: fixtureQuestionCorrectId,
               sessionId: null,
               sessionMode: null,
               slug: 'q-correct',
@@ -147,9 +171,9 @@ describe('app/(app)/app/dashboard', () => {
             },
             {
               isAvailable: true,
-              attemptId: 'attempt_2',
+              attemptId: fixtureAttempt2Id,
               answeredAt: '2026-02-03T00:00:00.000Z',
-              questionId: 'q_incorrect',
+              questionId: fixtureQuestionIncorrectId,
               sessionId: null,
               sessionMode: null,
               slug: 'q-incorrect',
@@ -164,7 +188,7 @@ describe('app/(app)/app/dashboard', () => {
           data: {
             rows: [
               {
-                sessionId: 'session_1',
+                sessionId: fixtureSession1Id,
                 mode: 'exam',
                 questionCount: 20,
                 firstQuestionSlug: 'q-correct',
@@ -206,7 +230,7 @@ describe('app/(app)/app/dashboard', () => {
         toQuestionRoute('q-correct', {
           from: 'dashboard',
           mode: 'review',
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
         }),
       ),
     ).not.toBeNull();
@@ -216,7 +240,7 @@ describe('app/(app)/app/dashboard', () => {
         toQuestionRoute('q-incorrect', {
           from: 'dashboard',
           mode: 'review',
-          attemptId: 'attempt_2',
+          attemptId: fixtureAttempt2Id,
         }),
       ),
     ).not.toBeNull();
@@ -270,7 +294,7 @@ describe('app/(app)/app/dashboard', () => {
           data: {
             rows: [
               {
-                sessionId: 'session_1',
+                sessionId: fixtureSession1Id,
                 mode: 'exam',
                 questionCount: 20,
                 firstQuestionSlug: 'q-correct',
@@ -297,7 +321,7 @@ describe('app/(app)/app/dashboard', () => {
         toQuestionRoute('q-correct', {
           from: 'dashboard',
           mode: 'review',
-          sessionId: 'session_1',
+          sessionId: fixtureSession1Id,
         }),
       ),
     ).not.toBeNull();
@@ -319,7 +343,7 @@ describe('app/(app)/app/dashboard', () => {
           data: {
             rows: [
               {
-                sessionId: 'session_1',
+                sessionId: fixtureSession1Id,
                 mode: 'exam',
                 questionCount: 20,
                 firstQuestionSlug: null,
@@ -366,7 +390,7 @@ describe('app/(app)/app/dashboard', () => {
           data: {
             rows: [
               {
-                sessionId: 'session_1',
+                sessionId: fixtureSession1Id,
                 mode: 'tutor',
                 questionCount: 5,
                 firstQuestionSlug: 'q-correct',
@@ -402,18 +426,18 @@ describe('app/(app)/app/dashboard', () => {
           recentActivity: [
             {
               isAvailable: false,
-              attemptId: 'attempt_unavailable_incorrect',
+              attemptId: fixtureAttemptUnavailableIncorrectId,
               answeredAt: '2026-02-01T00:00:00.000Z',
-              questionId: 'q_orphaned',
+              questionId: fixtureQuestionOrphanedId,
               sessionId: null,
               sessionMode: null,
               isCorrect: false,
             },
             {
               isAvailable: false,
-              attemptId: 'attempt_unavailable_correct',
+              attemptId: fixtureAttemptUnavailableCorrectId,
               answeredAt: '2026-02-02T00:00:00.000Z',
-              questionId: 'q_orphaned_2',
+              questionId: fixtureQuestionOrphaned2Id,
               sessionId: null,
               sessionMode: null,
               isCorrect: true,
@@ -562,9 +586,9 @@ describe('app/(app)/app/dashboard', () => {
           recentActivity: [
             {
               isAvailable: true,
-              attemptId: 'attempt_1',
+              attemptId: fixtureAttempt1Id,
               answeredAt: '2026-02-02T00:00:00.000Z',
-              questionId: 'q_correct',
+              questionId: fixtureQuestionCorrectId,
               sessionId: null,
               sessionMode: null,
               slug: 'q-correct',
@@ -574,9 +598,9 @@ describe('app/(app)/app/dashboard', () => {
             },
             {
               isAvailable: false,
-              attemptId: 'attempt_2',
+              attemptId: fixtureAttempt2Id,
               answeredAt: '2026-02-03T00:00:00.000Z',
-              questionId: 'q_unavailable',
+              questionId: fixtureQuestionUnavailableId,
               sessionId: null,
               sessionMode: null,
               isCorrect: false,
@@ -588,7 +612,7 @@ describe('app/(app)/app/dashboard', () => {
           data: {
             rows: [
               {
-                sessionId: 'session_1',
+                sessionId: fixtureSession1Id,
                 mode: 'exam',
                 questionCount: 20,
                 firstQuestionSlug: 'q-correct',
@@ -613,7 +637,7 @@ describe('app/(app)/app/dashboard', () => {
       toQuestionRoute('q-correct', {
         from: 'dashboard',
         mode: 'review',
-        sessionId: 'session_1',
+        sessionId: fixtureSession1Id,
       }),
     );
     const availableActivityRow = findAnchorByHref(
@@ -621,7 +645,7 @@ describe('app/(app)/app/dashboard', () => {
       toQuestionRoute('q-correct', {
         from: 'dashboard',
         mode: 'review',
-        attemptId: 'attempt_1',
+        attemptId: fixtureAttempt1Id,
       }),
     );
     const unavailableActivityCard = Array.from(

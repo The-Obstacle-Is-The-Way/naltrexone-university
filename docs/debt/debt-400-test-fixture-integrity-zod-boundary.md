@@ -289,7 +289,7 @@ Status: shipped in PR #368 at `e7f1029a`.
 Branches:
 
 - PR 2a: `feat/debt-400-pr-2-adapter-boundary-fixtures` (controllers/shared/jobs/gateways; shipped in PR #369 at `a98b5922`)
-- PR 2b: `feat/debt-400-pr-2b-repository-fixtures` (repository row fixtures; implemented in the PR 2b branch, pending review/merge)
+- PR 2b: `feat/debt-400-pr-2b-repository-fixtures` (repository row fixtures; shipped in PR #370 at `3b225505`)
 
 Scope:
 
@@ -479,7 +479,7 @@ Breakdown:
 
 | Slice | Candidate lines | Files | Decision |
 |---|---:|---:|---|
-| App/components non-browser tests plus E2E helper unit tests | 699 | 51 | PR 3a, Tier 1 FIX where the fixture models controller/app UUID shape; provider/component-only hits stay. |
+| App/components non-browser tests plus E2E helper unit tests | 700 | 52 | PR 3a, Tier 1 FIX where the fixture models controller/app UUID shape; provider/component-only hits stay. Includes the execution-discovered `tests/e2e/helpers/e2e-reset-shared.test.ts` app-user SQL row fixture. |
 | App/components browser specs | 601 | 40 | PR 3b, Tier 1 FIX where browser fixtures mock controller DTOs or hook controller responses; component-only/provider hits stay. |
 | `src/application/use-cases/**` and `src/application/shared/**` | 579 | 27 | PR 3c, Tier 2 FIX for entity/port fixtures that model Drizzle UUID columns. |
 | `src/application/test-helpers/fakes/*.test.ts` | 142 | 7 | Tier 3 LEAVE. These are fake behavior tests with semantic internal keys; PR 1 already fixed fake-generated defaults. |
@@ -549,6 +549,7 @@ Candidate counts are grep hits, not exact edit counts. One semantic UUID variabl
 | 3a | `components/question/question-surface-body.test.tsx` | 7 | Tier 1 FIX if DTO-shaped, otherwise LEAVE component-token | Choice IDs model question/feedback props; keep selected/correct linkage. |
 | 3a | `components/theme-token-regression.test.tsx` | 2 | LEAVE component/regression fixture | DEBT-398 source-scan fixture strings, not controller/DB boundary. Do not touch in PR 3. |
 | 3a | `tests/e2e/helpers/credential-health-check.test.ts` | 4 | LEAVE provider | Clerk `user_123` from Clerk API response/password verifier; not app `users.id`. |
+| 3a | `tests/e2e/helpers/e2e-reset-shared.test.ts` | 1 | Tier 1 FIX plus LEAVE provider | Mock SQL `users.id` app row fixes; Clerk `clerk_user_*` stays provider-shaped. |
 | 3a | `tests/e2e/helpers/reset-bookmarks-for-e2e-user.default-services.test.ts` | 3 | Tier 1 FIX | Mock SQL `questions.id` rows. |
 | 3a | `tests/e2e/helpers/reset-bookmarks-for-e2e-user.test.ts` | 3 | Tier 1 FIX plus LEAVE provider | App `db_user_123` / question fixtures fix; Clerk `user_123` stays provider-shaped. |
 | 3a | `tests/e2e/helpers/reset-e2e-user-state.test.ts` | 4 | Tier 1 FIX plus LEAVE provider | App `db_user_123`, question, and choice fixtures fix; Clerk `user_123` stays provider-shaped. |
@@ -636,6 +637,7 @@ PR 3 must not ship as one mega-PR. Ship the code sweep as three execution PRs af
    - Branch: `feat/debt-400-pr-3a-app-component-fixtures`
    - Scope: the rows labeled `3a` above.
    - Proof: run the touched files directly, `pnpm test --run app/ components/ tests/e2e/helpers`, PR 1 harness, DEBT-398 scan, shuffled unit suite, full local gate.
+   - Status: implementation complete on the PR 3a branch; PR 3b, PR 3c, PR 4, and archive follow.
 2. **PR 3b - browser fixture sweep**
    - Branch: `feat/debt-400-pr-3b-browser-fixtures`
    - Scope: the rows labeled `3b` above.

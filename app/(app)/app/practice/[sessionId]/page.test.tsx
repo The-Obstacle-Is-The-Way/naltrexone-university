@@ -3,6 +3,24 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { ROUTES } from '@/lib/routes';
 
+const {
+  fixtureChoice1Id,
+  fixtureQuestion0Id,
+  fixtureQuestion1Id,
+  fixtureQuestion1Id2,
+  fixtureQuestion1Id3,
+  fixtureQuestion2Id,
+  fixtureSession1Id,
+} = vi.hoisted(() => ({
+  fixtureChoice1Id: crypto.randomUUID(),
+  fixtureQuestion0Id: crypto.randomUUID(),
+  fixtureQuestion1Id: crypto.randomUUID(),
+  fixtureQuestion1Id2: crypto.randomUUID(),
+  fixtureQuestion1Id3: crypto.randomUUID(),
+  fixtureQuestion2Id: crypto.randomUUID(),
+  fixtureSession1Id: crypto.randomUUID(),
+}));
+
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
@@ -65,18 +83,18 @@ function createTrackedThenable<T>(value: T) {
 describe('app/(app)/app/practice/[sessionId]', () => {
   it('unwraps async params before rendering the client page', async () => {
     const element = await PracticeSessionPage({
-      params: Promise.resolve({ sessionId: 'session-1' }),
+      params: Promise.resolve({ sessionId: fixtureSession1Id }),
     } as never);
 
     expect(element).toMatchObject({
-      props: { sessionId: 'session-1' },
+      props: { sessionId: fixtureSession1Id },
     });
   });
 
   it('starts searchParams before params resolves', async () => {
     let releaseParams: (() => void) | undefined;
     const params = new Promise<{ sessionId: string }>((resolve) => {
-      releaseParams = () => resolve({ sessionId: 'session-1' });
+      releaseParams = () => resolve({ sessionId: fixtureSession1Id });
     });
     const { thenable: searchParams, thenSpy } = createTrackedThenable({
       toast: 'saved',
@@ -99,7 +117,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
 
     expect(element).toMatchObject({
       props: {
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         toast: 'saved',
       },
     });
@@ -107,7 +125,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
 
   it('renders a practice session shell', async () => {
     const element = await PracticeSessionPage({
-      params: Promise.resolve({ sessionId: 'session-1' }),
+      params: Promise.resolve({ sessionId: fixtureSession1Id }),
     } as never);
 
     const html = renderToStaticMarkup(element);
@@ -121,7 +139,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           endedAt: '2026-02-01T00:00:00.000Z',
           mode: 'tutor',
           questionCount: 10,
@@ -155,7 +173,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           endedAt: '2026-02-01T00:00:00.000Z',
           mode: 'exam',
           questionCount: 2,
@@ -167,7 +185,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           },
         }}
         review={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
@@ -175,7 +193,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           rows: [
             {
               isAvailable: true,
-              questionId: 'q1',
+              questionId: fixtureQuestion1Id3,
               slug: 'q-1',
               stemMd: 'Stem for q1',
               difficulty: 'easy',
@@ -187,7 +205,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
             },
             {
               isAvailable: false,
-              questionId: 'q2',
+              questionId: fixtureQuestion2Id,
               order: 2,
               isAnswered: false,
               isCorrect: null,
@@ -203,7 +221,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(html).toContain('Question breakdown');
     expect(html).toContain('Stem for q1');
     expect(html).toContain(
-      'href="/app/questions/q-1?from=summary&amp;mode=review&amp;sessionId=session-1"',
+      `href="/app/questions/q-1?from=summary&amp;mode=review&amp;sessionId=${fixtureSession1Id}"`,
     );
     expect(html).toContain('[Question no longer available]');
   });
@@ -212,7 +230,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           endedAt: '2026-02-01T00:00:00.000Z',
           mode: 'exam',
           questionCount: 2,
@@ -224,7 +242,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           },
         }}
         review={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
@@ -232,7 +250,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           rows: [
             {
               isAvailable: false,
-              questionId: 'q0',
+              questionId: fixtureQuestion0Id,
               order: 1,
               isAnswered: true,
               isCorrect: false,
@@ -241,7 +259,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
             },
             {
               isAvailable: true,
-              questionId: 'q1',
+              questionId: fixtureQuestion1Id3,
               slug: 'q-1',
               stemMd: 'Stem for q1',
               difficulty: 'easy',
@@ -273,7 +291,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     ]);
     expect(html).toContain('Review Answers');
     expect(html).toContain(
-      'href="/app/questions/q-1?from=summary&amp;mode=review&amp;sessionId=session-1"',
+      `href="/app/questions/q-1?from=summary&amp;mode=review&amp;sessionId=${fixtureSession1Id}"`,
     );
     expect(html).not.toContain('Practice missed questions');
     expect(html).not.toContain('href="/app/practice/quick?status=incorrect"');
@@ -283,7 +301,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           endedAt: '2026-02-01T00:00:00.000Z',
           mode: 'tutor',
           questionCount: 2,
@@ -295,7 +313,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           },
         }}
         review={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'tutor',
           totalCount: 2,
           answeredCount: 2,
@@ -303,7 +321,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           rows: [
             {
               isAvailable: true,
-              questionId: 'q1',
+              questionId: fixtureQuestion1Id3,
               slug: 'q-1',
               stemMd: 'Stem for q1',
               difficulty: 'easy',
@@ -326,7 +344,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     const loadingHtml = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           endedAt: '2026-02-01T00:00:00.000Z',
           mode: 'exam',
           questionCount: 2,
@@ -348,7 +366,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           endedAt: '2026-02-01T00:00:00.000Z',
           mode: 'exam',
           questionCount: 2,
@@ -360,7 +378,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           },
         }}
         review={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
@@ -368,7 +386,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           rows: [
             {
               isAvailable: false,
-              questionId: 'q1',
+              questionId: fixtureQuestion1Id3,
               order: 1,
               isAnswered: true,
               isCorrect: false,
@@ -377,7 +395,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
             },
             {
               isAvailable: false,
-              questionId: 'q2',
+              questionId: fixtureQuestion2Id,
               order: 2,
               isAnswered: true,
               isCorrect: true,
@@ -397,7 +415,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           endedAt: '2026-02-01T00:00:00.000Z',
           mode: 'exam',
           questionCount: 2,
@@ -409,7 +427,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           },
         }}
         review={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
@@ -417,7 +435,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           rows: [
             {
               isAvailable: false,
-              questionId: 'q1',
+              questionId: fixtureQuestion1Id3,
               order: 1,
               isAnswered: true,
               isCorrect: false,
@@ -443,7 +461,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     const loadingHtml = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           endedAt: '2026-02-01T00:00:00.000Z',
           mode: 'exam',
           questionCount: 2,
@@ -466,7 +484,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     const errorHtml = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           endedAt: '2026-02-01T00:00:00.000Z',
           mode: 'exam',
           questionCount: 2,
@@ -490,7 +508,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     const html = renderToStaticMarkup(
       <PracticeSessionPageView
         summary={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           endedAt: '2026-02-01T00:00:00.000Z',
           mode: 'tutor',
           questionCount: 10,
@@ -528,13 +546,13 @@ describe('app/(app)/app/practice/[sessionId]', () => {
         sessionInfo={null}
         loadState={{ status: 'ready' }}
         question={{
-          questionId: 'question-1',
+          questionId: fixtureQuestion1Id,
           slug: 'question-1',
           stemMd: 'Stem',
           difficulty: 'easy',
           choices: [
             {
-              id: 'choice-1',
+              id: fixtureChoice1Id,
               label: 'A',
               textMd: 'Choice',
               sortOrder: 1,
@@ -565,7 +583,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
       <PracticeSessionPageView
         summary={null}
         review={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           totalCount: 2,
           answeredCount: 1,
@@ -573,7 +591,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           rows: [
             {
               isAvailable: true,
-              questionId: 'q1',
+              questionId: fixtureQuestion1Id3,
               slug: 'q-1',
               stemMd: 'A long stem for q1',
               difficulty: 'easy',
@@ -618,7 +636,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
       <PracticeSessionPageView
         summary={null}
         review={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           totalCount: 2,
           answeredCount: 1,
@@ -626,7 +644,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           rows: [
             {
               isAvailable: true,
-              questionId: 'q1',
+              questionId: fixtureQuestion1Id3,
               slug: 'q-1',
               stemMd: 'A long stem for q1',
               difficulty: 'easy',
@@ -700,7 +718,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
         review={null}
         reviewLoadState={{ status: 'idle' }}
         navigator={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           totalCount: 2,
           answeredCount: 1,
@@ -708,7 +726,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           rows: [
             {
               isAvailable: true,
-              questionId: 'q1',
+              questionId: fixtureQuestion1Id3,
               slug: 'q-1',
               stemMd: 'Stem for q1',
               difficulty: 'easy',
@@ -720,7 +738,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
             },
             {
               isAvailable: true,
-              questionId: 'q2',
+              questionId: fixtureQuestion2Id,
               slug: 'q-2',
               stemMd: 'Stem for q2',
               difficulty: 'easy',
@@ -733,7 +751,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           ],
         }}
         sessionInfo={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -744,13 +762,13 @@ describe('app/(app)/app/practice/[sessionId]', () => {
         }}
         loadState={{ status: 'ready' }}
         question={{
-          questionId: 'q1',
+          questionId: fixtureQuestion1Id3,
           slug: 'question-1',
           stemMd: 'Stem',
           difficulty: 'easy',
           choices: [
             {
-              id: 'choice-1',
+              id: fixtureChoice1Id,
               label: 'A',
               textMd: 'Choice',
               sortOrder: 1,
@@ -782,7 +800,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
 
   it('normalizes array-valued toast param to first element', async () => {
     const element = await PracticeSessionPage({
-      params: Promise.resolve({ sessionId: 'session-1' }),
+      params: Promise.resolve({ sessionId: fixtureSession1Id }),
       searchParams: Promise.resolve({
         toast: ['session_started', 'ignored'],
       }),
@@ -795,7 +813,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
 
   it('normalizes array-valued requestedCount and actualCount params', async () => {
     const element = await PracticeSessionPage({
-      params: Promise.resolve({ sessionId: 'session-1' }),
+      params: Promise.resolve({ sessionId: fixtureSession1Id }),
       searchParams: Promise.resolve({
         toast: ['session_started'],
         requestedCount: ['20', '10'],
@@ -814,7 +832,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
 
   it('passes scalar toast params unchanged', async () => {
     const element = await PracticeSessionPage({
-      params: Promise.resolve({ sessionId: 'session-1' }),
+      params: Promise.resolve({ sessionId: fixtureSession1Id }),
       searchParams: Promise.resolve({
         toast: 'session_started',
         requestedCount: '20',
@@ -835,17 +853,19 @@ describe('app/(app)/app/practice/[sessionId]', () => {
     expect(
       isQuestionBookmarked(
         {
-          questionId: 'q_1',
+          questionId: fixtureQuestion1Id2,
           slug: 'q-1',
           stemMd: '#',
           difficulty: 'easy',
           choices: [],
           session: null,
         },
-        new Set(['q_1']),
+        new Set([fixtureQuestion1Id2]),
       ),
     ).toBe(true);
 
-    expect(isQuestionBookmarked(null, new Set(['q_1']))).toBe(false);
+    expect(isQuestionBookmarked(null, new Set([fixtureQuestion1Id2]))).toBe(
+      false,
+    );
   });
 });

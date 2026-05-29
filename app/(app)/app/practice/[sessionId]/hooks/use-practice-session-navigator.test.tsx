@@ -4,6 +4,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@/src/application/test-helpers/render-hook';
 import { usePracticeSessionNavigator } from './use-practice-session-navigator';
 
+const { fixtureSession1Id } = vi.hoisted(() => ({
+  fixtureSession1Id: crypto.randomUUID(),
+}));
+
 describe('usePracticeSessionNavigator', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -15,7 +19,7 @@ describe('usePracticeSessionNavigator', () => {
         summary: null,
         isInReviewStage: false,
         sessionInfo: null,
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         questionId: null,
         submitResult: null,
         navigatorReloadCount: 0,

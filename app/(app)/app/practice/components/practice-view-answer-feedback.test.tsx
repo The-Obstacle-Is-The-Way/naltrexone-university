@@ -4,6 +4,28 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import { createQuestionProps } from './practice-view-test-helpers';
 
+const fixtureAttempt1Id = crypto.randomUUID();
+const fixtureQuestion1Id = crypto.randomUUID();
+const fixtureSession1Id = crypto.randomUUID();
+const fixtureChoice1Id = crypto.randomUUID();
+
+function createFixtureNextQuestion(
+  overrides: Parameters<typeof createNextQuestion>[0] = {},
+) {
+  return createNextQuestion({
+    questionId: fixtureQuestion1Id,
+    choices: [
+      {
+        id: fixtureChoice1Id,
+        label: 'A',
+        textMd: 'Choice A',
+        sortOrder: 1,
+      },
+    ],
+    ...overrides,
+  });
+}
+
 type PracticeViewModule = typeof import('./practice-view');
 
 let PracticeView: PracticeViewModule['PracticeView'];
@@ -14,8 +36,8 @@ beforeAll(async () => {
 
 describe('PracticeView answer feedback', () => {
   it('does not render question-loading text while an answer commit is pending', () => {
-    const question = createNextQuestion({
-      questionId: 'question-1',
+    const question = createFixtureNextQuestion({
+      questionId: fixtureQuestion1Id,
       slug: 'question-1',
       stemMd: 'Stem',
       difficulty: 'easy',
@@ -55,12 +77,12 @@ describe('PracticeView answer feedback', () => {
   });
 
   it('keeps the first-question tutor footer empty before any commit', () => {
-    const question = createNextQuestion();
+    const question = createFixtureNextQuestion();
 
     const html = renderToStaticMarkup(
       <PracticeView
         sessionInfo={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'tutor',
 
           deadlineAt: null,
@@ -105,12 +127,12 @@ describe('PracticeView answer feedback', () => {
   });
 
   it('keeps the middle-question tutor footer to Previous before any commit', () => {
-    const question = createNextQuestion();
+    const question = createFixtureNextQuestion();
 
     const html = renderToStaticMarkup(
       <PracticeView
         sessionInfo={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'tutor',
 
           deadlineAt: null,
@@ -164,7 +186,7 @@ describe('PracticeView answer feedback', () => {
         selectedChoiceId={selectedChoice.id}
         isAnswered={true}
         submitResult={{
-          attemptId: 'attempt-1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
           correctChoiceId: selectedChoice.id,
           explanationMd: 'Because.',
@@ -203,7 +225,7 @@ describe('PracticeView answer feedback', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         sessionInfo={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'tutor',
 
           deadlineAt: null,
@@ -217,7 +239,7 @@ describe('PracticeView answer feedback', () => {
         selectedChoiceId={selectedChoice.id}
         isAnswered={true}
         submitResult={{
-          attemptId: 'attempt-1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
           correctChoiceId: selectedChoice.id,
           explanationMd: 'Because.',
@@ -244,7 +266,7 @@ describe('PracticeView answer feedback', () => {
   });
 
   it('passes selected choice context to feedback after submit', () => {
-    const question = createNextQuestion();
+    const question = createFixtureNextQuestion();
     const selectedChoice = question.choices[0];
     if (!selectedChoice) {
       throw new Error('Expected at least one choice');
@@ -258,7 +280,7 @@ describe('PracticeView answer feedback', () => {
         selectedChoiceId={selectedChoice.id}
         isAnswered={true}
         submitResult={{
-          attemptId: 'attempt-1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: false,
           correctChoiceId: secondChoiceId,
           explanationMd: 'Because.',
@@ -302,7 +324,7 @@ describe('PracticeView answer feedback', () => {
   });
 
   it('does not render feedback when submit correctness is unknown', () => {
-    const question = createNextQuestion();
+    const question = createFixtureNextQuestion();
     const selectedChoice = question.choices[0];
     if (!selectedChoice) {
       throw new Error('Expected at least one choice');
@@ -315,7 +337,7 @@ describe('PracticeView answer feedback', () => {
         selectedChoiceId={selectedChoice.id}
         isAnswered={true}
         submitResult={{
-          attemptId: 'attempt-1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: null,
           correctChoiceId: null,
           explanationMd: 'Redacted explanation.',
