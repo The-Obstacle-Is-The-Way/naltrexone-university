@@ -3,25 +3,35 @@ import { answeredOutcome, omittedOutcome } from '@/src/domain/value-objects';
 import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
 import { restoreDrizzlePracticeSessionRepositoryTestMocks } from './drizzle-practice-session-repository-test-helpers';
 
+const sessionId = crypto.randomUUID();
+const userId = crypto.randomUUID();
+const firstQuestionId = crypto.randomUUID();
+const secondQuestionId = crypto.randomUUID();
+const selectedChoiceId = crypto.randomUUID();
+const latestChoiceId = crypto.randomUUID();
+const draftChoiceId = crypto.randomUUID();
+const newerChoiceId = crypto.randomUUID();
+const olderChoiceId = crypto.randomUUID();
+
 describe('DrizzlePracticeSessionRepository question state', () => {
   afterEach(restoreDrizzlePracticeSessionRepositoryTestMocks);
 
   it('records the latest answer state for a session question', async () => {
     const row = {
-      id: 'session_1',
-      userId: 'user_1',
+      id: sessionId,
+      userId: userId,
       mode: 'exam',
       paramsJson: {
         count: 2,
         tagSlugs: [],
         difficulties: ['easy'],
-        questionIds: ['q1', 'q2'],
+        questionIds: [firstQuestionId, secondQuestionId],
       },
       startedAt: new Date('2026-02-01T00:00:00.000Z'),
       endedAt: null,
     } as const;
 
-    const updateReturning = vi.fn(async () => [{ id: 'session_1' }]);
+    const updateReturning = vi.fn(async () => [{ id: sessionId }]);
     const updateWhere = vi.fn(() => ({ returning: updateReturning }));
     const updateSet = vi.fn(() => ({ where: updateWhere }));
     const update = vi.fn(() => ({ set: updateSet }));
@@ -46,17 +56,17 @@ describe('DrizzlePracticeSessionRepository question state', () => {
     const answeredAt = new Date('2026-02-01T00:10:00.000Z');
     await expect(
       repo.recordQuestionAnswer({
-        sessionId: 'session_1',
-        userId: 'user_1',
-        questionId: 'q1',
-        selectedChoiceId: 'choice_1',
+        sessionId: sessionId,
+        userId: userId,
+        questionId: firstQuestionId,
+        selectedChoiceId: selectedChoiceId,
         isCorrect: true,
         answeredAt,
       }),
     ).resolves.toEqual({
-      questionId: 'q1',
+      questionId: firstQuestionId,
       markedForReview: false,
-      latestSelectedChoiceId: 'choice_1',
+      latestSelectedChoiceId: selectedChoiceId,
       latestIsCorrect: true,
       latestAnsweredAt: answeredAt,
       draftSelectedChoiceId: null,
@@ -68,9 +78,9 @@ describe('DrizzlePracticeSessionRepository question state', () => {
       paramsJson: expect.objectContaining({
         questionStates: [
           {
-            questionId: 'q1',
+            questionId: firstQuestionId,
             markedForReview: false,
-            latestSelectedChoiceId: 'choice_1',
+            latestSelectedChoiceId: selectedChoiceId,
             latestIsCorrect: true,
             latestAnsweredAt: answeredAt.toISOString(),
             draftSelectedChoiceId: null,
@@ -78,7 +88,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
             draftCumulativeMs: 0,
           },
           {
-            questionId: 'q2',
+            questionId: secondQuestionId,
             markedForReview: false,
             latestSelectedChoiceId: null,
             latestIsCorrect: null,
@@ -94,19 +104,19 @@ describe('DrizzlePracticeSessionRepository question state', () => {
 
   it('saves a draft answer snapshot for a session question', async () => {
     const row = {
-      id: 'session_1',
-      userId: 'user_1',
+      id: sessionId,
+      userId: userId,
       mode: 'exam',
       paramsJson: {
         count: 2,
         tagSlugs: [],
         difficulties: ['easy'],
-        questionIds: ['q1', 'q2'],
+        questionIds: [firstQuestionId, secondQuestionId],
         questionStates: [
           {
-            questionId: 'q1',
+            questionId: firstQuestionId,
             markedForReview: false,
-            latestSelectedChoiceId: 'latest-choice',
+            latestSelectedChoiceId: latestChoiceId,
             latestIsCorrect: true,
             latestAnsweredAt: '2026-02-01T00:05:00.000Z',
             draftSelectedChoiceId: null,
@@ -114,7 +124,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
             draftCumulativeMs: 0,
           },
           {
-            questionId: 'q2',
+            questionId: secondQuestionId,
             markedForReview: false,
             latestSelectedChoiceId: null,
             latestIsCorrect: null,
@@ -129,7 +139,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
       endedAt: null,
     } as const;
 
-    const updateReturning = vi.fn(async () => [{ id: 'session_1' }]);
+    const updateReturning = vi.fn(async () => [{ id: sessionId }]);
     const updateWhere = vi.fn(() => ({ returning: updateReturning }));
     const updateSet = vi.fn(() => ({ where: updateWhere }));
     const update = vi.fn(() => ({ set: updateSet }));
@@ -153,18 +163,18 @@ describe('DrizzlePracticeSessionRepository question state', () => {
 
     await expect(
       repo.saveDraftAnswer({
-        sessionId: 'session_1',
-        userId: 'user_1',
-        questionId: 'q1',
-        selectedChoiceId: 'draft-choice',
+        sessionId: sessionId,
+        userId: userId,
+        questionId: firstQuestionId,
+        selectedChoiceId: draftChoiceId,
         cumulativeMs: 45_000,
       }),
     ).resolves.toMatchObject({
-      questionId: 'q1',
-      latestSelectedChoiceId: 'latest-choice',
+      questionId: firstQuestionId,
+      latestSelectedChoiceId: latestChoiceId,
       latestIsCorrect: true,
       latestAnsweredAt: new Date('2026-02-01T00:05:00.000Z'),
-      draftSelectedChoiceId: 'draft-choice',
+      draftSelectedChoiceId: draftChoiceId,
       draftSavedAt: expect.any(Date),
       draftCumulativeMs: 45_000,
     });
@@ -173,17 +183,17 @@ describe('DrizzlePracticeSessionRepository question state', () => {
       paramsJson: expect.objectContaining({
         questionStates: [
           {
-            questionId: 'q1',
+            questionId: firstQuestionId,
             markedForReview: false,
-            latestSelectedChoiceId: 'latest-choice',
+            latestSelectedChoiceId: latestChoiceId,
             latestIsCorrect: true,
             latestAnsweredAt: '2026-02-01T00:05:00.000Z',
-            draftSelectedChoiceId: 'draft-choice',
+            draftSelectedChoiceId: draftChoiceId,
             draftSavedAt: expect.any(String),
             draftCumulativeMs: 45_000,
           },
           {
-            questionId: 'q2',
+            questionId: secondQuestionId,
             markedForReview: false,
             latestSelectedChoiceId: null,
             latestIsCorrect: null,
@@ -199,27 +209,27 @@ describe('DrizzlePracticeSessionRepository question state', () => {
 
   it('finalizes a draft answer into latest fields and clears the draft snapshot', async () => {
     const row = {
-      id: 'session_1',
-      userId: 'user_1',
+      id: sessionId,
+      userId: userId,
       mode: 'exam',
       paramsJson: {
         count: 2,
         tagSlugs: [],
         difficulties: ['easy'],
-        questionIds: ['q1', 'q2'],
+        questionIds: [firstQuestionId, secondQuestionId],
         questionStates: [
           {
-            questionId: 'q1',
+            questionId: firstQuestionId,
             markedForReview: false,
             latestSelectedChoiceId: null,
             latestIsCorrect: null,
             latestAnsweredAt: null,
-            draftSelectedChoiceId: 'draft-choice',
+            draftSelectedChoiceId: draftChoiceId,
             draftSavedAt: '2026-02-01T00:05:00.000Z',
             draftCumulativeMs: 45_000,
           },
           {
-            questionId: 'q2',
+            questionId: secondQuestionId,
             markedForReview: false,
             latestSelectedChoiceId: null,
             latestIsCorrect: null,
@@ -234,7 +244,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
       endedAt: null,
     } as const;
 
-    const updateReturning = vi.fn(async () => [{ id: 'session_1' }]);
+    const updateReturning = vi.fn(async () => [{ id: sessionId }]);
     const updateWhere = vi.fn(() => ({ returning: updateReturning }));
     const updateSet = vi.fn(() => ({ where: updateWhere }));
     const update = vi.fn(() => ({ set: updateSet }));
@@ -259,17 +269,17 @@ describe('DrizzlePracticeSessionRepository question state', () => {
 
     await expect(
       repo.finalizeDraftAnswer({
-        sessionId: 'session_1',
-        userId: 'user_1',
-        questionId: 'q1',
-        outcome: answeredOutcome('draft-choice'),
+        sessionId: sessionId,
+        userId: userId,
+        questionId: firstQuestionId,
+        outcome: answeredOutcome(draftChoiceId),
         isCorrect: true,
         answeredAt,
       }),
     ).resolves.toEqual({
-      questionId: 'q1',
+      questionId: firstQuestionId,
       markedForReview: false,
-      latestSelectedChoiceId: 'draft-choice',
+      latestSelectedChoiceId: draftChoiceId,
       latestIsCorrect: true,
       latestAnsweredAt: answeredAt,
       draftSelectedChoiceId: null,
@@ -281,9 +291,9 @@ describe('DrizzlePracticeSessionRepository question state', () => {
       paramsJson: expect.objectContaining({
         questionStates: [
           {
-            questionId: 'q1',
+            questionId: firstQuestionId,
             markedForReview: false,
-            latestSelectedChoiceId: 'draft-choice',
+            latestSelectedChoiceId: draftChoiceId,
             latestIsCorrect: true,
             latestAnsweredAt: answeredAt.toISOString(),
             draftSelectedChoiceId: null,
@@ -291,7 +301,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
             draftCumulativeMs: 0,
           },
           {
-            questionId: 'q2',
+            questionId: secondQuestionId,
             markedForReview: false,
             latestSelectedChoiceId: null,
             latestIsCorrect: null,
@@ -307,17 +317,17 @@ describe('DrizzlePracticeSessionRepository question state', () => {
 
   it('finalizes an omitted answer state for session review', async () => {
     const row = {
-      id: 'session_1',
-      userId: 'user_1',
+      id: sessionId,
+      userId: userId,
       mode: 'exam',
       paramsJson: {
         count: 1,
         tagSlugs: [],
         difficulties: ['easy'],
-        questionIds: ['q1'],
+        questionIds: [firstQuestionId],
         questionStates: [
           {
-            questionId: 'q1',
+            questionId: firstQuestionId,
             markedForReview: true,
             latestSelectedChoiceId: null,
             latestIsCorrect: null,
@@ -332,7 +342,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
       endedAt: null,
     } as const;
 
-    const updateReturning = vi.fn(async () => [{ id: 'session_1' }]);
+    const updateReturning = vi.fn(async () => [{ id: sessionId }]);
     const updateWhere = vi.fn(() => ({ returning: updateReturning }));
     const updateSet = vi.fn(() => ({ where: updateWhere }));
     const update = vi.fn(() => ({ set: updateSet }));
@@ -357,15 +367,15 @@ describe('DrizzlePracticeSessionRepository question state', () => {
 
     await expect(
       repo.finalizeDraftAnswer({
-        sessionId: 'session_1',
-        userId: 'user_1',
-        questionId: 'q1',
+        sessionId: sessionId,
+        userId: userId,
+        questionId: firstQuestionId,
         outcome: omittedOutcome(),
         isCorrect: false,
         answeredAt,
       }),
     ).resolves.toEqual({
-      questionId: 'q1',
+      questionId: firstQuestionId,
       markedForReview: true,
       latestSelectedChoiceId: null,
       latestIsCorrect: false,
@@ -379,7 +389,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
       paramsJson: expect.objectContaining({
         questionStates: [
           {
-            questionId: 'q1',
+            questionId: firstQuestionId,
             markedForReview: true,
             latestSelectedChoiceId: null,
             latestIsCorrect: false,
@@ -395,22 +405,22 @@ describe('DrizzlePracticeSessionRepository question state', () => {
 
   it('ignores stale draft saves when the stored draft snapshot is newer', async () => {
     const row = {
-      id: 'session_1',
-      userId: 'user_1',
+      id: sessionId,
+      userId: userId,
       mode: 'exam',
       paramsJson: {
         count: 1,
         tagSlugs: [],
         difficulties: ['easy'],
-        questionIds: ['q1'],
+        questionIds: [firstQuestionId],
         questionStates: [
           {
-            questionId: 'q1',
+            questionId: firstQuestionId,
             markedForReview: false,
             latestSelectedChoiceId: null,
             latestIsCorrect: null,
             latestAnsweredAt: null,
-            draftSelectedChoiceId: 'newer-choice',
+            draftSelectedChoiceId: newerChoiceId,
             draftSavedAt: '2026-02-01T00:05:00.000Z',
             draftCumulativeMs: 45_000,
           },
@@ -420,7 +430,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
       endedAt: null,
     } as const;
 
-    const updateReturning = vi.fn(async () => [{ id: 'session_1' }]);
+    const updateReturning = vi.fn(async () => [{ id: sessionId }]);
     const updateWhere = vi.fn(() => ({ returning: updateReturning }));
     const updateSet = vi.fn(() => ({ where: updateWhere }));
     const update = vi.fn(() => ({ set: updateSet }));
@@ -447,15 +457,15 @@ describe('DrizzlePracticeSessionRepository question state', () => {
 
     await expect(
       repo.saveDraftAnswer({
-        sessionId: 'session_1',
-        userId: 'user_1',
-        questionId: 'q1',
-        selectedChoiceId: 'older-choice',
+        sessionId: sessionId,
+        userId: userId,
+        questionId: firstQuestionId,
+        selectedChoiceId: olderChoiceId,
         cumulativeMs: 30_000,
       }),
     ).resolves.toMatchObject({
-      questionId: 'q1',
-      draftSelectedChoiceId: 'newer-choice',
+      questionId: firstQuestionId,
+      draftSelectedChoiceId: newerChoiceId,
       draftSavedAt: new Date('2026-02-01T00:05:00.000Z'),
       draftCumulativeMs: 45_000,
     });
@@ -463,14 +473,14 @@ describe('DrizzlePracticeSessionRepository question state', () => {
 
   it('retries question-state update when a concurrent write causes a stale write miss', async () => {
     const row = {
-      id: 'session_1',
-      userId: 'user_1',
+      id: sessionId,
+      userId: userId,
       mode: 'exam',
       paramsJson: {
         count: 2,
         tagSlugs: [],
         difficulties: ['easy'],
-        questionIds: ['q1', 'q2'],
+        questionIds: [firstQuestionId, secondQuestionId],
       },
       startedAt: new Date('2026-02-01T00:00:00.000Z'),
       endedAt: null,
@@ -480,7 +490,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
     const updateReturning = vi
       .fn()
       .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ id: 'session_1' }]);
+      .mockResolvedValueOnce([{ id: sessionId }]);
     const updateWhere = vi.fn(() => ({ returning: updateReturning }));
     const updateSet = vi.fn(() => ({ where: updateWhere }));
     const update = vi.fn(() => ({ set: updateSet }));
@@ -505,16 +515,16 @@ describe('DrizzlePracticeSessionRepository question state', () => {
     const answeredAt = new Date('2026-02-01T00:10:00.000Z');
     await expect(
       repo.recordQuestionAnswer({
-        sessionId: 'session_1',
-        userId: 'user_1',
-        questionId: 'q1',
-        selectedChoiceId: 'choice_1',
+        sessionId: sessionId,
+        userId: userId,
+        questionId: firstQuestionId,
+        selectedChoiceId: selectedChoiceId,
         isCorrect: true,
         answeredAt,
       }),
     ).resolves.toMatchObject({
-      questionId: 'q1',
-      latestSelectedChoiceId: 'choice_1',
+      questionId: firstQuestionId,
+      latestSelectedChoiceId: selectedChoiceId,
       latestIsCorrect: true,
       latestAnsweredAt: answeredAt,
     });
@@ -526,14 +536,14 @@ describe('DrizzlePracticeSessionRepository question state', () => {
 
   it('throws INTERNAL_ERROR when all CAS retries are exhausted', async () => {
     const row = {
-      id: 'session_1',
-      userId: 'user_1',
+      id: sessionId,
+      userId: userId,
       mode: 'exam',
       paramsJson: {
         count: 2,
         tagSlugs: [],
         difficulties: ['easy'],
-        questionIds: ['q1', 'q2'],
+        questionIds: [firstQuestionId, secondQuestionId],
       },
       startedAt: new Date('2026-02-01T00:00:00.000Z'),
       endedAt: null,
@@ -564,10 +574,10 @@ describe('DrizzlePracticeSessionRepository question state', () => {
 
     await expect(
       repo.recordQuestionAnswer({
-        sessionId: 'session_1',
-        userId: 'user_1',
-        questionId: 'q1',
-        selectedChoiceId: 'choice_1',
+        sessionId: sessionId,
+        userId: userId,
+        questionId: firstQuestionId,
+        selectedChoiceId: selectedChoiceId,
         isCorrect: true,
         answeredAt: new Date('2026-02-01T00:10:00.000Z'),
       }),
@@ -579,20 +589,20 @@ describe('DrizzlePracticeSessionRepository question state', () => {
 
   it('updates mark-for-review state for a session question', async () => {
     const row = {
-      id: 'session_1',
-      userId: 'user_1',
+      id: sessionId,
+      userId: userId,
       mode: 'exam',
       paramsJson: {
         count: 2,
         tagSlugs: [],
         difficulties: ['easy'],
-        questionIds: ['q1', 'q2'],
+        questionIds: [firstQuestionId, secondQuestionId],
       },
       startedAt: new Date('2026-02-01T00:00:00.000Z'),
       endedAt: null,
     } as const;
 
-    const updateReturning = vi.fn(async () => [{ id: 'session_1' }]);
+    const updateReturning = vi.fn(async () => [{ id: sessionId }]);
     const updateWhere = vi.fn(() => ({ returning: updateReturning }));
     const updateSet = vi.fn(() => ({ where: updateWhere }));
     const update = vi.fn(() => ({ set: updateSet }));
@@ -616,13 +626,13 @@ describe('DrizzlePracticeSessionRepository question state', () => {
 
     await expect(
       repo.setQuestionMarkedForReview({
-        sessionId: 'session_1',
-        userId: 'user_1',
-        questionId: 'q2',
+        sessionId: sessionId,
+        userId: userId,
+        questionId: secondQuestionId,
         markedForReview: true,
       }),
     ).resolves.toEqual({
-      questionId: 'q2',
+      questionId: secondQuestionId,
       markedForReview: true,
       latestSelectedChoiceId: null,
       latestIsCorrect: null,
@@ -636,7 +646,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
       paramsJson: expect.objectContaining({
         questionStates: [
           {
-            questionId: 'q1',
+            questionId: firstQuestionId,
             markedForReview: false,
             latestSelectedChoiceId: null,
             latestIsCorrect: null,
@@ -646,7 +656,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
             draftCumulativeMs: 0,
           },
           {
-            questionId: 'q2',
+            questionId: secondQuestionId,
             markedForReview: true,
             latestSelectedChoiceId: null,
             latestIsCorrect: null,

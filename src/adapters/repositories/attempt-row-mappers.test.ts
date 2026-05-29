@@ -2,12 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import { toAttemptDomain } from './attempt-row-mappers';
 
+const attemptId = crypto.randomUUID();
+const userId = crypto.randomUUID();
+const questionId = crypto.randomUUID();
+const selectedChoiceId = crypto.randomUUID();
+
 const baseRow = {
-  id: 'attempt-1',
-  userId: 'user-1',
-  questionId: 'question-1',
+  id: attemptId,
+  userId,
+  questionId,
   practiceSessionId: null,
-  selectedChoiceId: 'choice-1',
+  selectedChoiceId,
   isCorrect: true,
   timeSpentSeconds: 12,
   answeredAt: new Date('2026-03-17T12:00:00.000Z'),
@@ -42,7 +47,7 @@ describe('attempt row mappers', () => {
         isOmitted: true,
         isCorrect: false,
       }),
-    ).toThrow('Attempt attempt-1 cannot be omitted with a selected choice');
+    ).toThrow(`Attempt ${attemptId} cannot be omitted with a selected choice`);
   });
 
   it('rejects answered rows without a selected choice', () => {
@@ -52,7 +57,7 @@ describe('attempt row mappers', () => {
         selectedChoiceId: null,
         isOmitted: false,
       }),
-    ).toThrow('Attempt attempt-1 selectedChoiceId must not be null');
+    ).toThrow(`Attempt ${attemptId} selectedChoiceId must not be null`);
   });
 
   it('rejects omitted rows marked correct', () => {
@@ -62,6 +67,6 @@ describe('attempt row mappers', () => {
         selectedChoiceId: null,
         isOmitted: true,
       }),
-    ).toThrow('Attempt attempt-1 cannot be omitted and correct');
+    ).toThrow(`Attempt ${attemptId} cannot be omitted and correct`);
   });
 });

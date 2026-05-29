@@ -4,14 +4,20 @@ import { ApplicationError } from '@/src/application/errors';
 import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
 import { restoreDrizzlePracticeSessionRepositoryTestMocks } from './drizzle-practice-session-repository-test-helpers';
 
+const sessionId = crypto.randomUUID();
+const userId = crypto.randomUUID();
+const firstQuestionId = crypto.randomUUID();
+const secondQuestionId = crypto.randomUUID();
+const selectedChoiceId = crypto.randomUUID();
+
 describe('DrizzlePracticeSessionRepository session writes', () => {
   afterEach(restoreDrizzlePracticeSessionRepositoryTestMocks);
 
   it('creates a practice session and returns a mapped PracticeSession', async () => {
     const startedAt = new Date('2026-02-01T00:00:00.000Z');
     const returningRow = {
-      id: 'session_1',
-      userId: 'user_1',
+      id: sessionId,
+      userId: userId,
       mode: 'exam',
       paramsJson: {},
       startedAt,
@@ -45,16 +51,16 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
       count: 2,
       tagSlugs: [],
       difficulties: ['easy', 'hard'],
-      questionIds: ['q1', 'q2'],
+      questionIds: [firstQuestionId, secondQuestionId],
     };
 
     await expect(
-      repo.create({ userId: 'user_1', mode: 'exam', paramsJson }),
+      repo.create({ userId: userId, mode: 'exam', paramsJson }),
     ).resolves.toMatchObject({
-      id: 'session_1',
-      userId: 'user_1',
+      id: sessionId,
+      userId: userId,
       mode: 'exam',
-      questionIds: ['q1', 'q2'],
+      questionIds: [firstQuestionId, secondQuestionId],
       tagFilters: [],
       difficultyFilters: ['easy', 'hard'],
       startedAt,
@@ -62,7 +68,7 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
     });
 
     expect(insertValues).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: 'user_1', mode: 'exam' }),
+      expect.objectContaining({ userId: userId, mode: 'exam' }),
     );
   });
 
@@ -99,10 +105,10 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
       count: 2,
       tagSlugs: [],
       difficulties: ['easy'],
-      questionIds: ['q1', 'q2'],
+      questionIds: [firstQuestionId, secondQuestionId],
     };
 
-    const promise = repo.create({ userId: 'user_1', mode: 'exam', paramsJson });
+    const promise = repo.create({ userId: userId, mode: 'exam', paramsJson });
 
     await expect(promise).rejects.toEqual(
       new ApplicationError(
@@ -140,13 +146,13 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
     const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
 
     const promise = repo.create({
-      userId: 'user_1',
+      userId: userId,
       mode: 'exam',
       paramsJson: {
         count: 2,
         tagSlugs: [],
         difficulties: ['easy'],
-        questionIds: ['q1', 'q2'],
+        questionIds: [firstQuestionId, secondQuestionId],
       },
     });
 
@@ -182,7 +188,7 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
 
     await expect(
       repo.create({
-        userId: 'user_1',
+        userId: userId,
         mode: 'tutor',
         paramsJson: {
           count: 0,
@@ -220,11 +226,11 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
       count: 2,
       tagSlugs: [],
       difficulties: ['easy'],
-      questionIds: ['q1', 'q2'],
+      questionIds: [firstQuestionId, secondQuestionId],
     };
 
     await expect(
-      repo.create({ userId: 'user_1', mode: 'tutor', paramsJson }),
+      repo.create({ userId: userId, mode: 'tutor', paramsJson }),
     ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
   });
 
@@ -233,14 +239,14 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
     const nowFn = vi.fn(() => now);
 
     const row = {
-      id: 'session_1',
-      userId: 'user_1',
+      id: sessionId,
+      userId: userId,
       mode: 'tutor',
       paramsJson: {
         count: 2,
         tagSlugs: [],
         difficulties: [],
-        questionIds: ['q1', 'q2'],
+        questionIds: [firstQuestionId, secondQuestionId],
       },
       startedAt: new Date('2026-02-01T00:00:00.000Z'),
       endedAt: null,
@@ -254,9 +260,9 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
           ...row.paramsJson,
           questionStates: [
             {
-              questionId: 'q1',
+              questionId: firstQuestionId,
               markedForReview: false,
-              latestSelectedChoiceId: 'choice_1',
+              latestSelectedChoiceId: selectedChoiceId,
               latestIsCorrect: true,
               latestAnsweredAt: '2026-02-01T00:00:01.000Z',
             },
@@ -288,19 +294,21 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
       nowFn,
     );
 
-    const ended = await repo.end('session_1', 'user_1');
-    expect(ended).toMatchObject({ id: 'session_1', endedAt: now });
+    const ended = await repo.end(sessionId, userId);
+    expect(ended).toMatchObject({ id: sessionId, endedAt: now });
     expect(ended.questionStates).toHaveLength(2);
     expect(
-      ended.questionStates.find((state) => state.questionId === 'q1'),
+      ended.questionStates.find(
+        (state) => state.questionId === firstQuestionId,
+      ),
     ).toMatchObject({
-      questionId: 'q1',
+      questionId: firstQuestionId,
       markedForReview: false,
-      latestSelectedChoiceId: 'choice_1',
+      latestSelectedChoiceId: selectedChoiceId,
       latestIsCorrect: true,
     });
     expect(
-      ended.questionStates.find((state) => state.questionId === 'q1')
+      ended.questionStates.find((state) => state.questionId === firstQuestionId)
         ?.latestAnsweredAt,
     ).toEqual(new Date('2026-02-01T00:00:01.000Z'));
     expect(nowFn).toHaveBeenCalledTimes(1);
@@ -308,14 +316,14 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
 
   it('throws CONFLICT when the practice session is already ended', async () => {
     const row = {
-      id: 'session_1',
-      userId: 'user_1',
+      id: sessionId,
+      userId: userId,
       mode: 'tutor',
       paramsJson: {
         count: 2,
         tagSlugs: [],
         difficulties: [],
-        questionIds: ['q1', 'q2'],
+        questionIds: [firstQuestionId, secondQuestionId],
       },
       startedAt: new Date('2026-02-01T00:00:00.000Z'),
       endedAt: new Date('2026-02-01T00:01:00.000Z'),
@@ -340,10 +348,10 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
     >[0];
     const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
 
-    await expect(repo.end('session_1', 'user_1')).rejects.toBeInstanceOf(
+    await expect(repo.end(sessionId, userId)).rejects.toBeInstanceOf(
       ApplicationError,
     );
-    await expect(repo.end('session_1', 'user_1')).rejects.toMatchObject({
+    await expect(repo.end(sessionId, userId)).rejects.toMatchObject({
       code: 'CONFLICT',
     });
   });

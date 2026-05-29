@@ -5,6 +5,9 @@ import { DrizzleSubscriptionRepository } from './drizzle-subscription-repository
 describe('DrizzleSubscriptionRepository', () => {
   type RepoDb = ConstructorParameters<typeof DrizzleSubscriptionRepository>[0];
 
+  const subscriptionRowId = crypto.randomUUID();
+  const userId = crypto.randomUUID();
+
   const createRepo = (
     db: unknown,
     priceIds: { monthly: string; annual: string },
@@ -31,7 +34,7 @@ describe('DrizzleSubscriptionRepository', () => {
 
     const repo = createRepo(db, priceIds);
 
-    await expect(repo.findByUserId('user_1')).resolves.toBeNull();
+    await expect(repo.findByUserId(userId)).resolves.toBeNull();
   });
 
   it('maps Stripe price ids to domain plan when loading subscriptions', async () => {
@@ -42,8 +45,8 @@ describe('DrizzleSubscriptionRepository', () => {
       query: {
         stripeSubscriptions: {
           findFirst: async () => ({
-            id: 'sub_row_1',
-            userId: 'user_1',
+            id: subscriptionRowId,
+            userId: userId,
             stripeSubscriptionId: 'sub_123',
             status: 'active',
             priceId: 'price_monthly',
@@ -66,9 +69,9 @@ describe('DrizzleSubscriptionRepository', () => {
 
     const repo = createRepo(db, priceIds);
 
-    await expect(repo.findByUserId('user_1')).resolves.toMatchObject({
-      id: 'sub_row_1',
-      userId: 'user_1',
+    await expect(repo.findByUserId(userId)).resolves.toMatchObject({
+      id: subscriptionRowId,
+      userId: userId,
       plan: 'monthly',
       status: 'active',
       currentPeriodEnd,
@@ -83,8 +86,8 @@ describe('DrizzleSubscriptionRepository', () => {
       query: {
         stripeSubscriptions: {
           findFirst: async () => ({
-            id: 'sub_row_1',
-            userId: 'user_1',
+            id: subscriptionRowId,
+            userId: userId,
             stripeSubscriptionId: 'sub_123',
             status: 'active',
             priceId: 'price_unknown',
@@ -107,10 +110,10 @@ describe('DrizzleSubscriptionRepository', () => {
 
     const repo = createRepo(db, priceIds);
 
-    await expect(repo.findByUserId('user_1')).rejects.toBeInstanceOf(
+    await expect(repo.findByUserId(userId)).rejects.toBeInstanceOf(
       ApplicationError,
     );
-    await expect(repo.findByUserId('user_1')).rejects.toMatchObject({
+    await expect(repo.findByUserId(userId)).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',
     });
   });
@@ -122,7 +125,7 @@ describe('DrizzleSubscriptionRepository', () => {
     const values = (input: unknown) => ({
       onConflictDoUpdate: async (conflict: unknown) => {
         expect(input).toMatchObject({
-          userId: 'user_1',
+          userId: userId,
           stripeSubscriptionId: 'sub_123',
           status: 'active',
           priceId: 'price_monthly',
@@ -155,7 +158,7 @@ describe('DrizzleSubscriptionRepository', () => {
 
     await expect(
       repo.upsert({
-        userId: 'user_1',
+        userId: userId,
         externalSubscriptionId: 'sub_123',
         plan: 'monthly',
         status: 'active',
@@ -191,7 +194,7 @@ describe('DrizzleSubscriptionRepository', () => {
 
     await expect(
       repo.upsert({
-        userId: 'user_1',
+        userId: userId,
         externalSubscriptionId: 'sub_123',
         plan: 'monthly',
         status: 'active',
@@ -228,7 +231,7 @@ describe('DrizzleSubscriptionRepository', () => {
     let thrown: unknown;
     try {
       await repo.upsert({
-        userId: 'user_1',
+        userId: userId,
         externalSubscriptionId: 'sub_123',
         plan: 'monthly',
         status: 'active',
@@ -274,8 +277,8 @@ describe('DrizzleSubscriptionRepository', () => {
       query: {
         stripeSubscriptions: {
           findFirst: async () => ({
-            id: 'sub_row_1',
-            userId: 'user_1',
+            id: subscriptionRowId,
+            userId: userId,
             stripeSubscriptionId: 'sub_123',
             status: 'active',
             priceId: 'price_annual',
@@ -301,7 +304,7 @@ describe('DrizzleSubscriptionRepository', () => {
     await expect(
       repo.findByExternalSubscriptionId('sub_123'),
     ).resolves.toMatchObject({
-      userId: 'user_1',
+      userId: userId,
       plan: 'annual',
     });
   });
@@ -311,8 +314,8 @@ describe('DrizzleSubscriptionRepository', () => {
       query: {
         stripeSubscriptions: {
           findFirst: async () => ({
-            id: 'sub_row_1',
-            userId: 'user_1',
+            id: subscriptionRowId,
+            userId: userId,
             priceId: 'price_unknown',
             status: 'active',
             currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),

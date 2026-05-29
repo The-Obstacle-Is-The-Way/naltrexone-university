@@ -2,6 +2,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
 import { restoreDrizzlePracticeSessionRepositoryTestMocks } from './drizzle-practice-session-repository-test-helpers';
 
+const sessionId = crypto.randomUUID();
+const alternateSessionId = crypto.randomUUID();
+const userId = crypto.randomUUID();
+const firstQuestionId = crypto.randomUUID();
+const secondQuestionId = crypto.randomUUID();
+const thirdQuestionId = crypto.randomUUID();
+const orphanQuestionId = crypto.randomUUID();
+
 describe('DrizzlePracticeSessionRepository reads', () => {
   afterEach(restoreDrizzlePracticeSessionRepositoryTestMocks);
 
@@ -25,22 +33,20 @@ describe('DrizzlePracticeSessionRepository reads', () => {
     >[0];
     const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
 
-    await expect(
-      repo.findByIdAndUserId('session_1', 'user_1'),
-    ).resolves.toBeNull();
+    await expect(repo.findByIdAndUserId(sessionId, userId)).resolves.toBeNull();
   });
 
   it('returns latest incomplete session for a user', async () => {
     const startedAt = new Date('2026-02-01T00:00:00.000Z');
     const queryFindFirst = vi.fn().mockResolvedValue({
-      id: 'session_2',
-      userId: 'user_1',
+      id: alternateSessionId,
+      userId: userId,
       mode: 'exam',
       paramsJson: {
         count: 3,
         tagSlugs: ['tag-1'],
         difficulties: ['easy'],
-        questionIds: ['q1', 'q2', 'q3'],
+        questionIds: [firstQuestionId, secondQuestionId, thirdQuestionId],
       },
       startedAt,
       endedAt: null,
@@ -65,14 +71,14 @@ describe('DrizzlePracticeSessionRepository reads', () => {
     >[0];
     const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
 
-    await expect(repo.findLatestIncompleteByUserId('user_1')).resolves.toEqual({
-      id: 'session_2',
-      userId: 'user_1',
+    await expect(repo.findLatestIncompleteByUserId(userId)).resolves.toEqual({
+      id: alternateSessionId,
+      userId: userId,
       mode: 'exam',
-      questionIds: ['q1', 'q2', 'q3'],
+      questionIds: [firstQuestionId, secondQuestionId, thirdQuestionId],
       questionStates: [
         {
-          questionId: 'q1',
+          questionId: firstQuestionId,
           markedForReview: false,
           latestSelectedChoiceId: null,
           latestIsCorrect: null,
@@ -82,7 +88,7 @@ describe('DrizzlePracticeSessionRepository reads', () => {
           draftCumulativeMs: 0,
         },
         {
-          questionId: 'q2',
+          questionId: secondQuestionId,
           markedForReview: false,
           latestSelectedChoiceId: null,
           latestIsCorrect: null,
@@ -92,7 +98,7 @@ describe('DrizzlePracticeSessionRepository reads', () => {
           draftCumulativeMs: 0,
         },
         {
-          questionId: 'q3',
+          questionId: thirdQuestionId,
           markedForReview: false,
           latestSelectedChoiceId: null,
           latestIsCorrect: null,
@@ -116,14 +122,14 @@ describe('DrizzlePracticeSessionRepository reads', () => {
     const startedAt = new Date('2026-02-01T23:00:00.000Z');
     const findMany = vi.fn().mockResolvedValue([
       {
-        id: 'session_1',
-        userId: 'user_1',
+        id: sessionId,
+        userId: userId,
         mode: 'exam',
         paramsJson: {
           count: 2,
           tagSlugs: ['tag-1'],
           difficulties: ['easy'],
-          questionIds: ['q1', 'q2'],
+          questionIds: [firstQuestionId, secondQuestionId],
         },
         startedAt,
         endedAt,
@@ -176,16 +182,16 @@ describe('DrizzlePracticeSessionRepository reads', () => {
     >[0];
     const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
 
-    await expect(repo.findCompletedByUserId('user_1', 10, 0)).resolves.toEqual({
+    await expect(repo.findCompletedByUserId(userId, 10, 0)).resolves.toEqual({
       rows: [
         {
-          id: 'session_1',
-          userId: 'user_1',
+          id: sessionId,
+          userId: userId,
           mode: 'exam',
-          questionIds: ['q1', 'q2'],
+          questionIds: [firstQuestionId, secondQuestionId],
           questionStates: [
             {
-              questionId: 'q1',
+              questionId: firstQuestionId,
               markedForReview: false,
               latestSelectedChoiceId: null,
               latestIsCorrect: null,
@@ -195,7 +201,7 @@ describe('DrizzlePracticeSessionRepository reads', () => {
               draftCumulativeMs: 0,
             },
             {
-              questionId: 'q2',
+              questionId: secondQuestionId,
               markedForReview: false,
               latestSelectedChoiceId: null,
               latestIsCorrect: null,
@@ -271,7 +277,7 @@ describe('DrizzlePracticeSessionRepository reads', () => {
     >[0];
     const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
 
-    await expect(repo.findCompletedByUserId('user_1', 0, 0)).resolves.toEqual({
+    await expect(repo.findCompletedByUserId(userId, 0, 0)).resolves.toEqual({
       rows: [],
       total: 3,
     });
@@ -302,22 +308,20 @@ describe('DrizzlePracticeSessionRepository reads', () => {
     >[0];
     const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
 
-    await expect(
-      repo.findLatestIncompleteByUserId('user_1'),
-    ).resolves.toBeNull();
+    await expect(repo.findLatestIncompleteByUserId(userId)).resolves.toBeNull();
   });
 
   it('parses paramsJson and maps the row to a domain PracticeSession', async () => {
     const startedAt = new Date('2026-02-01T00:00:00.000Z');
     const row = {
-      id: 'session_1',
-      userId: 'user_1',
+      id: sessionId,
+      userId: userId,
       mode: 'tutor',
       paramsJson: {
         count: 2,
         tagSlugs: ['tag-1'],
         difficulties: ['easy'],
-        questionIds: ['q1', 'q2'],
+        questionIds: [firstQuestionId, secondQuestionId],
       },
       startedAt,
       endedAt: null,
@@ -342,16 +346,14 @@ describe('DrizzlePracticeSessionRepository reads', () => {
     >[0];
     const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
 
-    await expect(
-      repo.findByIdAndUserId('session_1', 'user_1'),
-    ).resolves.toEqual({
-      id: 'session_1',
-      userId: 'user_1',
+    await expect(repo.findByIdAndUserId(sessionId, userId)).resolves.toEqual({
+      id: sessionId,
+      userId: userId,
       mode: 'tutor',
-      questionIds: ['q1', 'q2'],
+      questionIds: [firstQuestionId, secondQuestionId],
       questionStates: [
         {
-          questionId: 'q1',
+          questionId: firstQuestionId,
           markedForReview: false,
           latestSelectedChoiceId: null,
           latestIsCorrect: null,
@@ -361,7 +363,7 @@ describe('DrizzlePracticeSessionRepository reads', () => {
           draftCumulativeMs: 0,
         },
         {
-          questionId: 'q2',
+          questionId: secondQuestionId,
           markedForReview: false,
           latestSelectedChoiceId: null,
           latestIsCorrect: null,
@@ -380,8 +382,8 @@ describe('DrizzlePracticeSessionRepository reads', () => {
 
   it('returns INTERNAL_ERROR when persisted paramsJson is invalid', async () => {
     const row = {
-      id: 'session_1',
-      userId: 'user_1',
+      id: sessionId,
+      userId: userId,
       mode: 'tutor',
       paramsJson: {
         count: 0,
@@ -413,30 +415,30 @@ describe('DrizzlePracticeSessionRepository reads', () => {
     const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
 
     await expect(
-      repo.findByIdAndUserId('session_1', 'user_1'),
+      repo.findByIdAndUserId(sessionId, userId),
     ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
   });
 
   it('drops orphaned questionStates without calling console.warn', async () => {
     const row = {
-      id: 'session_1',
-      userId: 'user_1',
+      id: sessionId,
+      userId: userId,
       mode: 'tutor',
       paramsJson: {
         count: 1,
         tagSlugs: [],
         difficulties: [],
-        questionIds: ['q1'],
+        questionIds: [firstQuestionId],
         questionStates: [
           {
-            questionId: 'q1',
+            questionId: firstQuestionId,
             markedForReview: false,
             latestSelectedChoiceId: null,
             latestIsCorrect: null,
             latestAnsweredAt: null,
           },
           {
-            questionId: 'q-orphan',
+            questionId: orphanQuestionId,
             markedForReview: true,
             latestSelectedChoiceId: null,
             latestIsCorrect: null,
@@ -471,10 +473,10 @@ describe('DrizzlePracticeSessionRepository reads', () => {
     >[0];
     const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
 
-    const session = await repo.findByIdAndUserId('session_1', 'user_1');
+    const session = await repo.findByIdAndUserId(sessionId, userId);
     expect(session?.questionStates).toEqual([
       {
-        questionId: 'q1',
+        questionId: firstQuestionId,
         markedForReview: false,
         latestSelectedChoiceId: null,
         latestIsCorrect: null,

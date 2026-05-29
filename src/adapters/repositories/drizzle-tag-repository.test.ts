@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DrizzleTagRepository } from './drizzle-tag-repository';
 
+const firstTagId = crypto.randomUUID();
+const secondTagId = crypto.randomUUID();
+
 function createMockDb(rows: readonly Record<string, unknown>[]) {
   const chain = {
     from: vi.fn().mockReturnThis(),
@@ -22,13 +25,13 @@ describe('DrizzleTagRepository', () => {
     it('returns tags mapped to domain entities', async () => {
       const rows = [
         {
-          id: 'tag_1',
+          id: firstTagId,
           slug: 'pharmacology-neuroscience',
           name: 'Pharmacology & Neuroscience',
           kind: 'topic',
         },
         {
-          id: 'tag_2',
+          id: secondTagId,
           slug: 'alcohol',
           name: 'Alcohol',
           kind: 'substance',
@@ -41,13 +44,13 @@ describe('DrizzleTagRepository', () => {
 
       expect(result).toEqual([
         {
-          id: 'tag_1',
+          id: firstTagId,
           slug: 'pharmacology-neuroscience',
           name: 'Pharmacology & Neuroscience',
           kind: 'topic',
         },
         {
-          id: 'tag_2',
+          id: secondTagId,
           slug: 'alcohol',
           name: 'Alcohol',
           kind: 'substance',
@@ -66,7 +69,7 @@ describe('DrizzleTagRepository', () => {
     it('only includes id, slug, name, and kind in returned objects', async () => {
       const rows = [
         {
-          id: 'tag_1',
+          id: firstTagId,
           slug: 'opioid-use-disorder',
           name: 'Opioid Use Disorder',
           kind: 'topic',
@@ -80,7 +83,7 @@ describe('DrizzleTagRepository', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual({
-        id: 'tag_1',
+        id: firstTagId,
         slug: 'opioid-use-disorder',
         name: 'Opioid Use Disorder',
         kind: 'topic',
