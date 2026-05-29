@@ -6,6 +6,9 @@ import {
   toPracticeSessionParamsJson,
 } from './practice-session-params';
 
+const questionId = crypto.randomUUID();
+const draftSelectedChoiceId = crypto.randomUUID();
+
 describe('parsePracticeSessionParamsJson', () => {
   it('defaults missing draft fields for legacy question state payloads', () => {
     const parsed = parsePracticeSessionParamsJson(
@@ -13,10 +16,10 @@ describe('parsePracticeSessionParamsJson', () => {
         count: 1,
         tagSlugs: [],
         difficulties: [],
-        questionIds: ['question-1'],
+        questionIds: [questionId],
         questionStates: [
           {
-            questionId: 'question-1',
+            questionId: questionId,
             markedForReview: false,
             latestSelectedChoiceId: null,
             latestIsCorrect: null,
@@ -29,7 +32,7 @@ describe('parsePracticeSessionParamsJson', () => {
 
     expect(parsed.questionStates).toEqual([
       {
-        questionId: 'question-1',
+        questionId: questionId,
         markedForReview: false,
         latestSelectedChoiceId: null,
         latestIsCorrect: null,
@@ -47,15 +50,15 @@ describe('parsePracticeSessionParamsJson', () => {
         count: 1,
         tagSlugs: ['opioids'],
         difficulties: ['hard'],
-        questionIds: ['question-1'],
+        questionIds: [questionId],
         questionStates: [
           {
-            questionId: 'question-1',
+            questionId: questionId,
             markedForReview: true,
             latestSelectedChoiceId: null,
             latestIsCorrect: null,
             latestAnsweredAt: null,
-            draftSelectedChoiceId: 'choice-3',
+            draftSelectedChoiceId: draftSelectedChoiceId,
             draftSavedAt: '2026-03-17T12:00:00.000Z',
             draftCumulativeMs: 45_000,
           },
@@ -65,7 +68,7 @@ describe('parsePracticeSessionParamsJson', () => {
     );
 
     const domainSession = createPracticeSession({
-      questionIds: ['question-1'],
+      questionIds: [questionId],
       questionStates: toDomainPracticeSessionQuestionStates(parsed),
       tagFilters: ['opioids'],
       difficultyFilters: ['hard'],
@@ -75,15 +78,15 @@ describe('parsePracticeSessionParamsJson', () => {
       count: 1,
       tagSlugs: ['opioids'],
       difficulties: ['hard'],
-      questionIds: ['question-1'],
+      questionIds: [questionId],
       questionStates: [
         {
-          questionId: 'question-1',
+          questionId: questionId,
           markedForReview: true,
           latestSelectedChoiceId: null,
           latestIsCorrect: null,
           latestAnsweredAt: null,
-          draftSelectedChoiceId: 'choice-3',
+          draftSelectedChoiceId: draftSelectedChoiceId,
           draftSavedAt: '2026-03-17T12:00:00.000Z',
           draftCumulativeMs: 45_000,
         },
