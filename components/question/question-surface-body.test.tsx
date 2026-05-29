@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
-const fixtureChoiceAId = crypto.randomUUID();
-const fixtureChoiceBId = crypto.randomUUID();
+const { fixtureChoiceAId, fixtureChoiceBId } = vi.hoisted(() => ({
+  fixtureChoiceAId: crypto.randomUUID(),
+  fixtureChoiceBId: crypto.randomUUID(),
+}));
 
 type QuestionSurfaceBodyModule = typeof import('./question-surface-body');
 

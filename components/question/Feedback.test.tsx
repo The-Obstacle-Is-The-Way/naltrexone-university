@@ -1,11 +1,18 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
-const fixtureChoiceAId = crypto.randomUUID();
-const fixtureChoiceBId = crypto.randomUUID();
-const fixtureChoiceCId = crypto.randomUUID();
-const fixtureChoiceMissingId = crypto.randomUUID();
+const {
+  fixtureChoiceAId,
+  fixtureChoiceBId,
+  fixtureChoiceCId,
+  fixtureChoiceMissingId,
+} = vi.hoisted(() => ({
+  fixtureChoiceAId: crypto.randomUUID(),
+  fixtureChoiceBId: crypto.randomUUID(),
+  fixtureChoiceCId: crypto.randomUUID(),
+  fixtureChoiceMissingId: crypto.randomUUID(),
+}));
 
 let Feedback: typeof import('@/components/question/feedback').Feedback;
 

@@ -1,13 +1,17 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { ROUTES } from '@/lib/routes';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import './practice-view-test-helpers';
 
-const fixtureQuestion1Id = crypto.randomUUID();
-const fixtureSession1Id = crypto.randomUUID();
-const fixtureChoice1Id = crypto.randomUUID();
+const { fixtureQuestion1Id, fixtureSession1Id, fixtureChoice1Id } = vi.hoisted(
+  () => ({
+    fixtureQuestion1Id: crypto.randomUUID(),
+    fixtureSession1Id: crypto.randomUUID(),
+    fixtureChoice1Id: crypto.randomUUID(),
+  }),
+);
 
 function createFixtureNextQuestion(
   overrides: Parameters<typeof createNextQuestion>[0] = {},

@@ -1,11 +1,18 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
 import { findAdjacentAvailableQuestionId } from './practice-session-question-navigation';
 
-const fixtureQuestion1Id = crypto.randomUUID();
-const fixtureQuestion2Id = crypto.randomUUID();
-const fixtureQuestion3Id = crypto.randomUUID();
-const fixtureSession1Id = crypto.randomUUID();
+const {
+  fixtureQuestion1Id,
+  fixtureQuestion2Id,
+  fixtureQuestion3Id,
+  fixtureSession1Id,
+} = vi.hoisted(() => ({
+  fixtureQuestion1Id: crypto.randomUUID(),
+  fixtureQuestion2Id: crypto.randomUUID(),
+  fixtureQuestion3Id: crypto.randomUUID(),
+  fixtureSession1Id: crypto.randomUUID(),
+}));
 
 function createNavigator(
   rows: GetPracticeSessionReviewOutput['rows'],

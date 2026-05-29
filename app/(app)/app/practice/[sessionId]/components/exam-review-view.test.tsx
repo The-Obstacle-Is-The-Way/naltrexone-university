@@ -1,13 +1,21 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
 
-const fixtureQuestion1Id = crypto.randomUUID();
-const fixtureQuestion2Id = crypto.randomUUID();
-const fixtureQuestion3Id = crypto.randomUUID();
-const fixtureQuestion4Id = crypto.randomUUID();
-const fixtureSession1Id = crypto.randomUUID();
+const {
+  fixtureQuestion1Id,
+  fixtureQuestion2Id,
+  fixtureQuestion3Id,
+  fixtureQuestion4Id,
+  fixtureSession1Id,
+} = vi.hoisted(() => ({
+  fixtureQuestion1Id: crypto.randomUUID(),
+  fixtureQuestion2Id: crypto.randomUUID(),
+  fixtureQuestion3Id: crypto.randomUUID(),
+  fixtureQuestion4Id: crypto.randomUUID(),
+  fixtureSession1Id: crypto.randomUUID(),
+}));
 
 type ExamReviewViewModule = typeof import('./exam-review-view');
 

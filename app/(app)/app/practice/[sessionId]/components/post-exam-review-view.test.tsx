@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { GetCompletedSessionQuestionsWithFeedbackOutput } from '@/src/adapters/controllers/practice-controller';
 import {
   createReview,
@@ -8,11 +8,19 @@ import {
   createSummary,
 } from './post-exam-review-view.fixtures';
 
-const fixtureChoiceAId = crypto.randomUUID();
-const fixtureChoiceBId = crypto.randomUUID();
-const fixtureQuestion1Id = crypto.randomUUID();
-const fixtureQuestion2Id = crypto.randomUUID();
-const fixtureQuestion3Id = crypto.randomUUID();
+const {
+  fixtureChoiceAId,
+  fixtureChoiceBId,
+  fixtureQuestion1Id,
+  fixtureQuestion2Id,
+  fixtureQuestion3Id,
+} = vi.hoisted(() => ({
+  fixtureChoiceAId: crypto.randomUUID(),
+  fixtureChoiceBId: crypto.randomUUID(),
+  fixtureQuestion1Id: crypto.randomUUID(),
+  fixtureQuestion2Id: crypto.randomUUID(),
+  fixtureQuestion3Id: crypto.randomUUID(),
+}));
 
 type PostExamReviewViewModule = typeof import('./post-exam-review-view');
 type ReviewRow = GetCompletedSessionQuestionsWithFeedbackOutput['rows'][number];

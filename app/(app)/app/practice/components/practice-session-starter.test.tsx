@@ -1,14 +1,23 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { compactControlShellClasses } from '@/components/ui/control-shell-styles';
 
-const fixtureTag1Id = crypto.randomUUID();
-const fixtureTag2Id = crypto.randomUUID();
-const fixtureTagDiagnosisId = crypto.randomUUID();
-const fixtureTagSubstanceId = crypto.randomUUID();
-const fixtureTagTopicId = crypto.randomUUID();
-const fixtureTagTreatmentId = crypto.randomUUID();
+const {
+  fixtureTag1Id,
+  fixtureTag2Id,
+  fixtureTagDiagnosisId,
+  fixtureTagSubstanceId,
+  fixtureTagTopicId,
+  fixtureTagTreatmentId,
+} = vi.hoisted(() => ({
+  fixtureTag1Id: crypto.randomUUID(),
+  fixtureTag2Id: crypto.randomUUID(),
+  fixtureTagDiagnosisId: crypto.randomUUID(),
+  fixtureTagSubstanceId: crypto.randomUUID(),
+  fixtureTagTopicId: crypto.randomUUID(),
+  fixtureTagTreatmentId: crypto.randomUUID(),
+}));
 
 let PracticeSessionStarter: typeof import('./practice-session-starter')['PracticeSessionStarter'];
 
