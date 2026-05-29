@@ -1,9 +1,9 @@
 # DEBT-400: Test Fixture Integrity (Zod Boundary Class)
 
-**Priority:** P2 (latent bug class — a broad grep currently finds 604 stringly-typed placeholder-ID assignments across 64 files (`q_1`, `session_1`, `attempt_1`, `user_1`, `q_correct`, etc.). Not every hit crosses a controller schema, but many fields either cross `zUuid = z.guid()` boundaries or model database UUID columns. These fixtures silently pass today because most unit/browser tests mock the boundary layer or fake repositories instead of exercising production validators. PR #330's Zod 4 migration had to preserve historical GUID acceptance with `z.guid()`; future validation tightening, integration-test boundary migration, or schema-strictness changes will surface this class again unless fixtures match production shapes.)
+**Priority:** P2 (latent bug class. The current canonical candidate grep finds 2,447 placeholder-ID assignments across 163 test files. This is a candidate set, not a mandate to replace every string: the execution scope is only IDs that cross `zUuid = z.guid()` controller schemas or model Drizzle `uuid()` columns.)
 **Created:** 2026-05-26
-**Source:** Deep schema/boundary integrity audit conducted alongside DEBT-394 archival. Direct precedent is PR #330 (Zod 3 -> 4 migration), which changed the shared controller ID schema from `z.string().uuid()` to Zod 4's `z.guid()` so the repo preserved the previously accepted GUID shape. The audit identified that placeholder IDs are far more widespread than the first pass suggested and are protected mostly by test doubles and mocked controller boundaries.
-**Related:** [src/domain/test-helpers/](../../src/domain/test-helpers/) (factory module — should be the canonical source of ID values), [src/application/test-helpers/fakes/](../../src/application/test-helpers/fakes/) (fakes — should enforce production-shape contracts), [DEBT-394 (archived)](../_archive/debt/debt-394-supply-chain-hardening.md), PR #330 (the Zod 4 precedent incident)
+**Source:** Deep schema/boundary integrity audit conducted alongside DEBT-394 archival; re-audited on 2026-05-28 from `dev` at `f2dc0793`. Direct precedent is PR #330, which bumped Zod from 3 to 4 and deliberately kept historical UUID/GUID behavior by replacing the shared controller ID schema with Zod 4 `z.guid()`.
+**Related:** [src/adapters/shared/zod-schemas.ts](../../src/adapters/shared/zod-schemas.ts), [db/schema.ts](../../db/schema.ts), [src/domain/test-helpers/](../../src/domain/test-helpers/), [src/application/test-helpers/fakes/](../../src/application/test-helpers/fakes/), [docs/dev/dependency-update-protocol.md](../dev/dependency-update-protocol.md), [DEBT-397](./debt-397-datetime-boundary-type-normalization.md), [DEBT-394 (archived)](../_archive/debt/debt-394-supply-chain-hardening.md), PR #330
 
 **Status:** Active
 
@@ -11,258 +11,349 @@
 
 ## Problem
 
-Production controller schemas validate question, session, attempt, selected-choice, retry, and idempotency-key fields with `zUuid = z.guid()` (`src/adapters/shared/zod-schemas.ts:4`). The database also stores primary/foreign keys such as users, questions, attempts, practice sessions, subscriptions, and bookmarks as `uuid` columns (`db/schema.ts`). Test fixtures across multiple test files use stringly-typed placeholders like `q_1`, `session_1`, `attempt_test_xyz`, and `user_1`. These fixtures silently pass today because:
+Production controller schemas validate question, session, attempt, choice, retry, and idempotency-key fields with `zUuid = z.guid()` (`src/adapters/shared/zod-schemas.ts:4`). The database also stores application-owned identifiers as Drizzle `uuid()` columns (`db/schema.ts`). Test fixtures across the repo use stringly-typed placeholders such as `q_1`, `session-1`, `attempt_1`, `choice-a`, and `user_1`.
 
-1. Most unit tests use Fake repositories from `src/application/test-helpers/fakes/` that do not re-validate inputs against the boundary schema.
-2. Most browser tests mock the controller layer entirely, bypassing the Zod validation.
-3. The actual production validators (in `src/adapters/controllers/`) are only exercised by integration tests, which use real database UUIDs.
+Those placeholders are only safe when they are pure test sentinels that never cross a validating boundary and do not model a database UUID column. They are unsafe when they are used as:
 
-This means the fixtures are wrong by contract but appear correct in their immediate test context. The bugs are dormant. They will fire when:
+- controller inputs or mocked controller outputs for fields typed with `zUuid`;
+- repository row fixtures or domain/entity fixtures that model Drizzle `uuid()` columns;
+- default IDs emitted by shared factories or fakes that later feed controller, repository, or integration-boundary tests.
 
-- A future PR migrates a unit test to use the real controller (no longer mocked) — fixture validation will reject the stringly-typed IDs.
-- A future Zod / Drizzle / GraphQL validator tightens — the production schema changes, the test contract drifts further.
-- A future refactor moves validation from the controller to a domain entity or use case — fixtures now cross a validator they didn't before.
-- A future agent or contributor reads the existing fixtures and copies the pattern into a new test that DOES cross a validating boundary, creating a CI failure (the visible kind, not the latent kind).
+The bug class is dormant because many unit/browser tests use fakes or module mocks instead of the real controller/schema boundary. The next validation tightening, real-controller migration, or integration-boundary test can surface the mismatch as a failure far from the fixture that introduced it.
 
-The PR #330 incident already proved the coupling: the Zod 4 migration had to deliberately choose `z.guid()` to preserve the repo's historical GUID acceptance. That avoided a larger fixture cleanup at the time, but it did not make stringly-typed placeholders valid.
+The fix is boundary driven:
 
-The right fix is structural:
-- Fixtures should ALWAYS use real UUIDs (`crypto.randomUUID()`) or values generated by domain factories from `src/domain/test-helpers/`.
-- A documented rule should explicitly forbid stringly-typed ID placeholders in fixtures for fields validated as UUID/GUID at any boundary.
-- The fakes layer should enforce production-shape contracts so unit tests cannot smuggle invalid shapes into faked repositories.
+- Boundary-crossing IDs must be generated with `crypto.randomUUID()` or by a factory/fake that emits UUID-valid values.
+- Pure UI/test sentinels, external provider IDs, slugs, and deliberately-invalid validation test cases stay unchanged.
+- The documented rule must prevent future fixtures from copying invalid placeholder IDs into validated-boundary fields.
+
+---
+
+## Boundary Definition
+
+### Shared Controller Boundary
+
+Confirmed current API:
+
+```typescript
+// src/adapters/shared/zod-schemas.ts
+export const zUuid = z.guid();
+```
+
+Controller fields currently typed with `zUuid`:
+
+| File | Input fields | Output fields |
+|---|---|---|
+| `src/adapters/controllers/billing-controller.ts` | `idempotencyKey` | none |
+| `src/adapters/controllers/bookmark-controller.ts` | `questionId`, `idempotencyKey` | none |
+| `src/adapters/controllers/question-controller.ts` | `sessionId`, `questionId`, `choiceId`, `retryOfAttemptId`, `retrySessionId`, `idempotencyKey` | `attemptId`, `correctChoiceId`, `choiceId` |
+| `src/adapters/controllers/question-view-controller.ts` | `questionId`, `attemptId`, `sessionId` | none in the explicit schema |
+| `src/adapters/controllers/practice-schemas.ts` | `idempotencyKey`, `sessionId`, `questionId`, `selectedChoiceId` | `sessionId`, `questionId`, `latestSelectedChoiceId`, `draftSelectedChoiceId` |
+
+`review-controller.ts`, `stats-controller.ts`, and `tag-controller.ts` currently have no `zUuid` input fields. They still use authenticated `userId` values returned by the auth boundary; those user IDs model `users.id` and therefore must be UUID-shaped when the fixture is an application user row/entity.
+
+### Database UUID Columns
+
+Confirmed current Drizzle `uuid()` columns in `db/schema.ts`:
+
+| Table | UUID columns |
+|---|---|
+| `users` | `id` |
+| `stripe_customers` | `id`, `userId` |
+| `stripe_subscriptions` | `id`, `userId` |
+| `idempotency_keys` | `userId` |
+| `questions` | `id` |
+| `choices` | `id`, `questionId` |
+| `tags` | `id` |
+| `question_tags` | `questionId`, `tagId` |
+| `practice_sessions` | `id`, `userId` |
+| `attempts` | `id`, `userId`, `questionId`, `practiceSessionId`, `selectedChoiceId`, `retryOfAttemptId`, `retrySessionId` |
+| `bookmarks` | `userId`, `questionId` |
+
+Explicit non-targets:
+
+- `stripe_events.id`, `clerk_events.id`, `deleted_clerk_users.clerkUserId`, `pending_stripe_cancellations.eventId`, Stripe `cus_` / `sub_` / `evt_` values, Clerk `user_...` values, and Svix delivery IDs are external-provider string IDs, not Drizzle UUID columns.
+- Slugs such as `question.slug` and tag slugs are semantic strings, not UUIDs.
+- HTML `id`, `data-testid`, React keys, and local branch markers are not in scope unless the same value is also used as one of the boundary fields above.
+
+---
+
+## Canonical Candidate Sweep
+
+Use this exact reproducible grep for the broad placeholder-ID candidate set:
+
+```sh
+rg -n "\b(questionId|sessionId|attemptId|choiceId|selectedChoiceId|correctChoiceId|retryOfAttemptId|retrySessionId|userId|tagId|subscriptionId|idempotencyKey|question_id|session_id|attempt_id|choice_id|selected_choice_id|correct_choice_id|retry_of_attempt_id|retry_session_id|user_id|tag_id|subscription_id|idempotency_key|id)\s*[:=]\s*['\"](q|question|choice|session|attempt|user|tag|subscription|test|mock|fake|other|correct|incorrect|bookmark)[_-][A-Za-z0-9_-]+['\"]" \
+  app/ src/ components/ tests/ \
+  --glob '*.test.ts' --glob '*.test.tsx' --glob '*.spec.ts' --glob '*.spec.tsx' \
+  --glob '!**/_archive/**'
+```
+
+Current result on `f2dc0793`: **2,447 lines across 163 files**.
+
+This replaces the old narrower `604 / 64` count. The old grep only searched `app/ src/ components/`, only camel-case object properties, only five field names, and only underscore-prefixed values. It missed hyphenated placeholders (`session-1`), choice/tag/subscription fields, snake_case SQL-row fixtures (`user_id`), and `tests/**` helper fixtures.
+
+High-count files from the current sweep:
+
+| File | Hits | Why it matters |
+|---|---:|---|
+| `src/application/use-cases/get-previous-attempt.test.ts` | 110 | Entity/port fixtures model attempt/session/question UUID columns |
+| `src/application/test-helpers/fakes/fake-attempt-repository.test.ts` | 106 | Fake-repository fixtures model attempt UUID columns |
+| `app/(app)/app/practice/shared/question-flow-actions.test.ts` | 86 | Mocked controller DTOs contain `zUuid` fields |
+| `src/adapters/repositories/drizzle-attempt-repository.test.ts` | 81 | Repository row fixtures model `attempts` UUID columns |
+| `app/(app)/app/questions/[slug]/question-page-logic.test.ts` | 81 | Mocked controller DTOs contain `zUuid` fields |
+| `app/(app)/app/practice/[sessionId]/practice-session-page-logic.test.ts` | 78 | Mocked controller DTOs contain `zUuid` fields |
+| `src/application/use-cases/get-attempted-questions.test.ts` | 76 | Entity/port fixtures model question/attempt UUID columns |
+| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.browser.spec.tsx` | 63 | Browser fixtures use controller-shaped IDs |
+| `src/application/use-cases/save-exam-draft-answer.test.ts` | 59 | Session/question/choice IDs model UUID columns |
+| `app/(app)/app/practice/components/practice-view.browser.spec.tsx` | 55 | Component/controller-shaped IDs; classify before editing |
+| `app/(app)/app/questions/[slug]/question-page-client.test.tsx` | 44 | Mocked question/review DTOs contain UUID-shaped fields |
+| `src/adapters/repositories/drizzle-practice-session-repository-question-state.test.ts` | 42 | Repository row fixtures model session/question/choice UUID columns |
+| `src/adapters/controllers/question-view-controller.test.ts` | 39 | Real controller tests cross `zUuid` fields |
+| `tests/e2e/helpers/seed-test-user.test.ts` | 28 | Mocked SQL rows use app `users.id` / metadata `user_id` |
+| `app/(marketing)/checkout/success/page.test.ts` | 28 | User/subscription fixtures model app `users.id` |
+
+The execution agent should regenerate the full line list from the command above instead of relying on this table as exhaustive.
 
 ---
 
 ## Findings
 
-### A. Stringly-typed fixture IDs across many test files
+### A. Placeholder IDs are broad, but the cleanup boundary is narrower than the raw count
 
-Verified via broad grep:
+The broad candidate set is now 2,447 lines across 163 files. Many are real boundary-crossing problems, but some are intentionally harmless:
 
-```sh
-rg -n "\b(questionId|sessionId|attemptId|userId|id)\s*:\s*['\"](q|session|attempt|user|test)_" \
-  app/ src/ components/ --glob '*.ts' --glob '*.tsx' | rg -v "_archive|node_modules"
-```
+- a component-only selected-choice token that never leaves the component;
+- a provider-owned external ID such as `cus_123`, `sub_123`, `evt_1`, or a Clerk `user_...` id;
+- an intentionally invalid input in a validation-negative test;
+- a slug or label that happens to look ID-like.
 
-Current result: **604 lines across 64 files**. The cleanup must classify the hits because some `userId` values are fake-domain IDs that do not directly cross a controller input, while question/session/attempt/idempotency fields often do cross `zUuid` or DB-UUID contracts.
+Execution must classify by the Boundary Definition above. This is not a global search-and-replace job.
 
-| File | Lines | Example IDs | Risk |
-|---|---|---|---|
-| `app/(app)/app/practice/shared/question-flow-actions.test.ts` | 59 hits | `questionId: 'q_1'`, `attemptId: 'attempt_1'` | Mocked controller/use-case boundary hides invalid GUID shape |
-| `src/adapters/repositories/drizzle-attempt-repository.test.ts` | 45 hits | `id: 'attempt_1'`, `practiceSessionId: 'session_1'`, `questionId: 'q_correct'` | Mock DB bypasses DB UUID shape via `as unknown as RepoDb` |
-| `src/adapters/repositories/drizzle-practice-session-repository-question-state.test.ts` | 39 hits | `id: 'session_1'`, `userId: 'user_1'`, `questionId: 'q_1'` | Mock DB / JSONB fixtures bypass UUID shape |
-| `app/(app)/app/questions/[slug]/question-page-logic.test.ts` | 32 hits | `questionId: 'q_1'`, `attemptId: 'attempt_1'` | Client/controller fixture drift |
-| `src/adapters/shared/with-idempotency.test.ts` | 31 hits | `userId: 'user_1'`, `idempotencyKey`-adjacent fixtures | Requires classification against `zUuid` idempotency contracts |
-| `app/(app)/app/dashboard/page.test.tsx` | 22 hits | `questionId: 'q_correct'`, `sessionId: 'session_1'`, `attemptId: 'attempt_1'` | Would fail if routed through production controller validation |
-| `app/(app)/app/bookmarks/page.test.tsx` | 10 hits | `questionId: 'q_1'`, `userId: 'user_1'` | Bookmark controller validates `questionId` as `zUuid`; `userId` requires DB-shape classification |
+### B. Some fixtures already use UUID-shaped values, but hardcoded UUIDs are not the preferred pattern
 
-Treat these findings as the starting set; the actual cleanup scope is whatever the grep returns after classification.
-
-### B. Some fixtures use real-UUID-shaped strings but inconsistently
-
-Verify with:
-
-```sh
-rg -n "['\"][0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}['\"]" \
-  app/ src/ --glob '*.ts' --glob '*.tsx'
-```
-
-Some fixtures DO use real UUID-shaped strings (hardcoded literals from `crypto.randomUUID()` output or from real seed data). These pass strict validation but lose readability — `'q_correct'` tells the reader what role the ID plays in the test; `'a3f2c1b4-...'` does not.
-
-The right balance is:
-- Use `crypto.randomUUID()` (NOT a hardcoded UUID literal) generated inside the test, with a local variable name that conveys the role.
-
-Example:
+UUID-shaped literals pass validation, but they are hard to read. Prefer generated values with role-bearing variable names:
 
 ```typescript
-// Bad (stringly-typed; fails validation)
-const correctQuestionId = 'q_correct';
-
-// Bad (hardcoded UUID literal; passes validation but unreadable)
-const correctQuestionId = '550e8400-e29b-41d4-a716-446655440001';
-
-// Good (generated UUID with readable name; passes validation and intent is clear)
 const correctQuestionId = crypto.randomUUID();
+const incorrectQuestionId = crypto.randomUUID();
+const sessionId = crypto.randomUUID();
 ```
 
-### C. Domain factories and fakes do not generate boundary-valid values consistently
+Do not replace a readable placeholder with an opaque hardcoded UUID literal unless the test specifically needs a stable literal for a snapshot or fixture file.
 
-The audit found multiple generator sources that emit non-UUID IDs:
+### C. Domain factories and fakes still generate non-UUID IDs
 
-- `src/application/test-helpers/fakes/fake-attempt-repository.ts:29, 41-44, 83` tracks `nextId` and generates `attempt-${this.nextId++}`.
-- `src/application/test-helpers/fakes/fake-practice-session-repository.ts:192` generates `session-${this.sessions.length + 1}`.
-- `src/application/test-helpers/fakes/fake-user-repository.ts:98` generates `user-${this.nextId++}`.
-- `src/application/test-helpers/fakes/fake-subscription-repository.ts:63` generates `subscription-${this.byUserId.size + 1}`.
-- `src/domain/test-helpers/factories.ts` defaults to `user-1`, `question-1`, `attempt-${questionId}`, `choice-1`, `subscription-1`, and `session-1`.
+Confirmed current drift:
 
-This means the factory/fake layer can itself produce values that fail production validation if those values later cross a controller schema, DB repository, or boundary regression test.
+- `src/domain/test-helpers/factories.ts:28` returns `id: 'user-1'`.
+- `src/domain/test-helpers/factories.ts:49-55` defaults attempt `id`, `userId`, `questionId`, and selected choice values to non-UUID strings.
+- `src/domain/test-helpers/factories.ts:73-74` defaults bookmark `userId` / `questionId` to non-UUID strings.
+- `src/domain/test-helpers/factories.ts:82`, `92-93`, `106`, `131-132`, `161`, and `187-188` default tag, choice, question, subscription, and practice-session IDs to non-UUID strings.
+- `src/application/test-helpers/fakes/fake-attempt-repository.ts:29, 40-44, 82-83` tracks numeric `nextId` and emits `attempt-${n}`.
+- `src/application/test-helpers/fakes/fake-practice-session-repository.ts:192` emits `session-${this.sessions.length + 1}`.
+- `src/application/test-helpers/fakes/fake-user-repository.ts:13, 98` tracks numeric `nextId` and emits `user-${n}`.
+- `src/application/test-helpers/fakes/fake-subscription-repository.ts:63` emits `subscription-${this.byUserId.size + 1}`.
 
-Audit `src/domain/test-helpers/` and `src/application/test-helpers/fakes/` for every factory / fake that generates IDs. Each should produce real UUIDs OR there should be a documented reason for the non-UUID output (e.g., "this is a test-only sentinel value that never crosses a validator").
+These are high-leverage fixes because many tests receive IDs indirectly from the shared factory/fake layer.
 
-### D. The fakes layer does not assert production-shape contracts on inputs
+### D. Fakes are shape-permissive
 
-Most `Fake*Repository` classes accept whatever shape the caller passes. A unit test can call `fakeQuestionRepository.findById('q_1')` and it just works, even though production would reject `'q_1'` as a non-UUID at the controller layer. The fake silently succeeds, the test passes, the fixture is wrong.
+The fake repositories accept string IDs and compare them directly. They do not validate inputs through `zUuid`, and they should not import controller schemas as a broad architectural reflex. Tightening every fake to validate inputs would couple application test helpers to adapter schemas and is a larger design choice.
 
-Two options:
-1. Make every fake validate inputs against the production schema before processing (mirrors production strictness in tests).
-2. Document explicitly that fakes are "shape-permissive" and rely on the controller boundary alone for validation — and FORBID using stringly-typed IDs in fixtures via a lint rule or documented convention.
+For DEBT-400, the selected approach is:
 
-Option 1 is the more rigorous fix but adds friction (every fake imports the schemas). Option 2 is simpler but requires the rule + enforcement.
+1. factories/fakes must generate production-shaped IDs by default;
+2. boundary-crossing fixture inputs must use UUID-valid values;
+3. fakes remain behavior fakes, not schema validators, unless a later evidence-backed debt proves the permissiveness itself is causing false positives.
 
-This debt recommends Option 2 with a strong rule and fixture cleanup. Option 1 is a P3 follow-up if Option 2's enforcement is insufficient.
+This avoids reintroducing archived DEBT-007 as incidental scope.
 
-### E. No documented rule forbids the pattern
+### E. The rule is still undocumented in the right auto-loaded place
 
-`.claude/rules/testing.md` mentions factory functions but does not say "fixtures must use real UUIDs for validated ID fields." `AGENTS.md` does not mention it. `.claude/rules/architecture.md` does not mention it. The PR #330 Zod 4 incident is documented in `docs/dev/dependency-update-protocol.md` Dev-Tooling Majors section, but that doc only loads when on-call engineers triage Dependabot PRs, not when authors write tests.
+`.claude/rules/testing.md` currently says to use factories and links to the process-env isolation rule, but it does not define fixture integrity for validated boundaries. `.claude/rules/fixture-integrity.md` does not exist. `docs/dev/dependency-update-protocol.md` mentions the jsdom PR #328 precedent but does not yet encode a schema-validation-major fixture-audit step for PR #330-style incidents.
 
-This is the same documentation gap pattern as DEBT-395 (env isolation) and DEBT-396 (selector brittleness) — the helper / pattern exists or is implied, but no rule file enforces it at code-generation time.
+This mirrors the SSOT issue already fixed in DEBT-395: the full rule must live in one scoped rule file, and `testing.md` should carry only a pointer.
 
 ---
 
-## Why Existing Docs Were Not Enough
+## Classification
 
-`docs/dev/dependency-update-protocol.md` lines 49-54 mention the Zod 4 incident as a precedent for "validation-schema majors require fixture audit." But this doc is loaded by on-call engineers triaging Dependabot PRs, not by agents authoring new tests.
+### BOUNDARY-CROSSING: Must Fix
 
-`.claude/rules/testing.md` says use factory functions but does not specify that fixtures for validated boundary fields must use real UUIDs. An agent reading the rule would not know to avoid `questionId: 'q_1'`.
+Fix placeholder IDs when a value is assigned to any of these roles:
 
-No rule file or doc explicitly states: "Test fixtures must use the same value shapes that production validators accept. Stringly-typed placeholders are forbidden for ID fields that production validates as UUID/GUID."
+1. Any controller input/output field listed in the Shared Controller Boundary table.
+2. Any fixture object, fake repository state, mocked SQL row, or repository row mapper that models a Drizzle UUID column listed in the Database UUID Columns table.
+3. Any shared factory or fake-generated ID for domain entities that map to those UUID columns.
+4. Any E2E helper test that mocks app database rows with `users.id`, `questions.id`, `choices.id`, `bookmarks.user_id`, or similar UUID columns.
+
+Current target areas:
+
+| Area | Examples from current sweep | Execution treatment |
+|---|---|---|
+| Controller tests | `src/adapters/controllers/question-controller.test.ts`, `question-view-controller.test.ts`, `practice-controller-*.test.ts`, `bookmark-controller.test.ts`, `billing-controller.test.ts` | Use `crypto.randomUUID()` for valid-path IDs. Keep explicit invalid UUID strings only in negative validation tests. |
+| Adapter repository tests | `src/adapters/repositories/drizzle-*.test.ts`, row mapper tests, idempotency tests | Replace UUID-column row fixtures with generated UUIDs or named UUID variables. |
+| App/browser tests mocking controller DTOs | `app/(app)/app/practice/**`, `app/(app)/app/questions/**`, `app/(app)/app/dashboard/page.test.tsx`, `app/(app)/app/history/**`, `app/(app)/app/bookmarks/page.test.tsx` | Replace mocked controller DTO fields with generated UUIDs while preserving readable variable names. |
+| Application use-case tests using entity/port fixtures | `src/application/use-cases/**`, `src/application/shared/**` | Fix entity IDs and repository-returned DTOs that model UUID columns. Preserve pure branch sentinels only when they never model a DB/controller ID. |
+| Shared factories/fakes | `src/domain/test-helpers/factories.ts`, `src/application/test-helpers/fakes/**` | Make generated/default IDs UUID-valid. Update tests that relied on deterministic `attempt-1` / `session-1` sequencing to capture returned IDs instead. |
+| E2E helper tests with mocked DB rows | `tests/e2e/helpers/seed-test-user.test.ts`, `reset-e2e-user-state*.test.ts`, `reset-bookmarks-for-e2e-user*.test.ts` | Treat mocked SQL rows for app UUID columns as boundary-crossing. External Clerk IDs remain strings. |
+
+### HARMLESS / DO NOT CHURN
+
+Leave these alone unless a concrete boundary use is present:
+
+- Clerk/Svix/Stripe provider identifiers: `user_...` when it is a Clerk user id, `cus_...`, `sub_...`, `evt_...`.
+- `stripe_events.id`, `clerk_events.id`, `deleted_clerk_users.clerkUserId`, `pending_stripe_cancellations.eventId`, and other varchar provider/event IDs.
+- Slugs, labels, `data-testid`, HTML ids, CSS selectors, and React-only keys.
+- Pure component-only callback tokens when the component contract is generic string selection and the value is never reused as a controller or DB UUID.
+- Negative validation tests whose whole purpose is proving that non-UUID input is rejected. Those should keep invalid values and name them accordingly (`invalidQuestionId`, etc.).
+- Existing UUID literals where stability is intentional and readability is acceptable; do not churn only for style.
+
+### Fix Shape
+
+Use generated UUIDs with semantic names:
+
+```typescript
+const userId = crypto.randomUUID();
+const sessionId = crypto.randomUUID();
+const questionId = crypto.randomUUID();
+const selectedChoiceId = crypto.randomUUID();
+```
+
+Prefer shared factories once they emit valid defaults:
+
+```typescript
+const question = createQuestion();
+const choice = createChoice({ questionId: question.id });
+```
+
+Do not use opaque hardcoded UUID literals as a blanket replacement. Do not replace harmless external IDs or slugs.
+
+---
+
+## Related-Class Sweep
+
+Phase 5 looked for adjacent, concrete integrity failures:
+
+- Non-UUID Zod boundaries: current non-UUID validators are enums, `z.string().email()`, `z.string().url()`, and datetime schemas. The datetime boundary drift is already tracked as [DEBT-397](./debt-397-datetime-boundary-type-normalization.md). Email/URL/enum invalid values found in tests are negative validation cases, not latent fixture drift.
+- Seed data: the production seed path reads MDX content and inserts rows with database-generated UUID defaults. No evidence was found that `db/seed` or content fixtures insert placeholder UUID primary keys into production tables.
+- Integration tests: no skipped or failing integration test was found whose concrete failure mode is non-UUID fixture validation drift. E2E helper unit tests do mock app UUID rows with placeholder IDs; those are the same DEBT-400 UUID class and stay in this doc.
+
+No separate DEBT-402 is filed from this audit. A new debt file would be speculative.
 
 ---
 
 ## Required Remediation
 
-Ship in four single-concern PRs.
+Ship as split, reviewable PRs. The original four-PR plan is replaced because a 2,447-hit candidate set is too large for one "fixture sweep" PR, and duplicating rule text across `testing.md` and a new rule file would recreate the DEBT-395 documentation drift trap.
 
-### PR 1 — Sweep and fix fixture files (the dirty work)
+### PR 1 — Foundation: factories/fakes plus proof harness
 
-Branch: `fix/debt-400-fixture-uuid-cleanup`
+Branch: `feat/debt-400-pr-1-fixture-uuid-sweep`
 
-Mechanical sweep. For each file from Finding A (and any additional files surfaced by the grep):
+Scope:
 
-1. Replace stringly-typed ID assignments with `crypto.randomUUID()` generated inside a `const` at the top of the test or before the relevant `it()` block.
-2. Use a readable variable name to convey the role:
+- `src/domain/test-helpers/factories.ts`
+- affected `src/domain/test-helpers/*.test.ts`
+- fake repositories that generate IDs internally:
+  - `src/application/test-helpers/fakes/fake-attempt-repository.ts`
+  - `src/application/test-helpers/fakes/fake-practice-session-repository.ts`
+  - `src/application/test-helpers/fakes/fake-user-repository.ts`
+  - `src/application/test-helpers/fakes/fake-subscription-repository.ts`
+- affected fake tests that relied on deterministic placeholder IDs
+- one focused proof test that verifies generated factory/fake IDs pass the actual `zUuid.safeParse()` contract for the UUID-shaped fields they emit
 
-   ```typescript
-   const correctQuestionId = crypto.randomUUID();
-   const incorrectQuestionId = crypto.randomUUID();
-   const sessionId = crypto.randomUUID();
-   ```
+Rules:
 
-3. If the test relies on the literal value of the ID for assertions (e.g., `expect(result.questionId).toBe('q_1')`), refactor the assertion to use the generated variable (`expect(result.questionId).toBe(correctQuestionId)`).
-4. If a domain factory exists (`createQuestion`, etc.), prefer the factory over manual UUID generation — the factory should already produce valid UUIDs internally.
+- Use `crypto.randomUUID()` for generated IDs.
+- Preserve explicit override support.
+- Do not make all fakes import controller schemas or validate every input in this PR.
+- Capture returned IDs in assertions instead of expecting `attempt-1`, `session-1`, etc.
 
-Files to address: every file surfaced by the Finding A grep after classification. Start with the highest-count files listed in Finding A, then sweep the remaining 64-file set. For each hit, decide whether it is:
-- A validated controller/DB UUID field (fix now).
-- A test-only sentinel that never crosses a validator (document inline or move to a named constant).
-- A Clerk/external ID seam where non-UUID shape is intentional (document inline).
+### PR 2 — Adapter boundary fixture sweep
 
-Full local gate green after sweep. If a test now fails because the production validator catches a newly-real bug, that's a discovery — surface it as an additional fix.
+Branch: `feat/debt-400-pr-2-adapter-boundary-fixtures`
 
-### PR 2 — Audit and fix the factories / fakes (Finding C)
+Scope:
 
-Branch: `fix/debt-400-factory-fake-uuid-rigor`
+- `src/adapters/controllers/**/*.test.ts`
+- `src/adapters/repositories/**/*.test.ts`
+- `src/adapters/shared/with-idempotency.test.ts`
+- `src/adapters/jobs/**/*.test.ts`
+- adapter gateway tests only where the field is an app UUID (`userId`), not a provider ID
 
-For each factory in `src/domain/test-helpers/` and each Fake in `src/application/test-helpers/fakes/`:
+Rules:
 
-1. Identify ID-generating logic.
-2. Replace patterns like `attempt-${nextId++}` with `crypto.randomUUID()`.
-3. If the factory deliberately generates non-UUID values (e.g., for testing validation rejection paths), document the exception inline.
+- Valid-path controller tests must use UUID-valid inputs for every `zUuid` field.
+- Repository tests must use UUID-valid values for row fields modeling Drizzle `uuid()` columns.
+- Negative validation tests keep invalid strings but should name them as invalid fixtures.
 
-Verify that no consumer test now fails because it was implicitly relying on the predictable `attempt-1`, `attempt-2` sequence — those consumers should be updated to capture and reference the generated UUIDs.
+Proof:
 
-### PR 3 — Add the documented rule
+- Existing controller validation tests still reject invalid UUIDs.
+- Valid-path controller tests pass with generated UUIDs.
+- Repository tests still pass without widening type assertions.
 
-Branch: `docs/debt-400-fixture-integrity-rule`
+### PR 3 — App, browser, and application fixture sweep
 
-Two edits:
+Branch: `feat/debt-400-pr-3-app-application-fixtures`
 
-**Edit A: `.claude/rules/testing.md`** — add a section after "Test Quality":
+Scope:
+
+- `app/**/*.test.ts`
+- `app/**/*.test.tsx`
+- `app/**/*.browser.spec.tsx`
+- `components/**/*.test.tsx` and `components/**/*.browser.spec.tsx` only when the fixture models a controller/domain UUID, not pure UI tokens
+- `src/application/use-cases/**/*.test.ts`
+- `src/application/shared/**/*.test.ts`
+- `tests/e2e/helpers/**/*.test.ts` for mocked app DB UUID rows
+
+Rules:
+
+- Replace mocked controller DTO IDs and entity/repository fixture IDs with generated UUIDs.
+- Leave component-only tokens and external provider IDs alone.
+- Keep assertions readable by assigning generated IDs to semantic variables.
+
+Proof:
+
+- The canonical grep may still return harmless/external/provider hits. The acceptance gate is that every remaining hit is either harmless by the boundary definition or intentionally invalid and documented by naming/context.
+
+### PR 4 — Fixture-integrity rule docs (SSOT)
+
+Branch: `feat/debt-400-pr-4-fixture-integrity-docs`
+
+Canonical structure: **Option A**.
+
+- Create `.claude/rules/fixture-integrity.md` as the single source of truth.
+- Add only a short pointer section to `.claude/rules/testing.md`; do not duplicate the full rule body.
+- Add the new rule file to the `CLAUDE.md` Path-Scoped Rules table.
+- Update `docs/dev/dependency-update-protocol.md` with a Schema-Validation Majors fixture-audit step citing PR #330.
+- Mark DEBT-400 complete in this doc, but archive it in a separate follow-up archive PR after PR 4 merges.
+
+Recommended frontmatter for the new rule file:
 
 ```markdown
-### Fixture Integrity at Validated Boundaries
-
-Test fixtures for fields that production validates as UUID/GUID
-(question IDs, session IDs, attempt IDs, user IDs, anything passing
-through a `z.uuid()` / `z.guid()` / similar) MUST use real UUIDs.
-
-Generate inside the test:
-
-```typescript
-const correctQuestionId = crypto.randomUUID();
+---
+paths:
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "**/*.spec.ts"
+  - "**/*.spec.tsx"
+  - "tests/**"
+  - "src/domain/test-helpers/**"
+  - "src/application/test-helpers/**"
+---
 ```
 
-Or prefer a domain factory:
+Rule content contract:
 
-```typescript
-import { createQuestion } from '../../src/domain/test-helpers/create-question';
-
-const question = createQuestion(); // factory generates a real UUID internally
-```
-
-Never use stringly-typed placeholders like `'q_1'`, `'session_test'`,
-`'attempt_correct'` for these fields. They pass today only because
-unit tests mock the validating boundary. They fail the moment:
-
-- Production validation tightens (PR #330 Zod 4 incident).
-- A test migrates from mocked controller to real controller.
-- A factory or fake is swapped for production code in a refactor.
-
-See DEBT-400 for the precedent fixture cleanup and the structural fix.
-```
-
-**Edit B: `docs/dev/dependency-update-protocol.md`** — add (or expand) the Schema-Validation Majors section to call out fixture audit as a required step for any validator-package major bump. This complements DEBT-395's similar update and ties the lessons together.
-
-### PR 4 — New rule file `.claude/rules/fixture-integrity.md`
-
-Branch: `docs/debt-400-fixture-integrity-rule-file`
-
-Create a dedicated rule file that activates on test files. Outline:
-
-```markdown
-# Fixture Integrity Rules
-
-Activates for: `**/*.test.ts`, `**/*.test.tsx`, `tests/**`,
-`src/domain/test-helpers/**`, `src/application/test-helpers/**`
-
-## Fixtures Must Match Production Validators
-
-Test fixtures are LIVE DATA, not static test data. They must always
-satisfy the contracts that production code validates.
-
-[Reproduce the rule from testing.md Edit A, with examples.]
-
-## Schema-Validation Major Upgrades
-
-When a validation-schema package (Zod, Drizzle, GraphQL validators,
-ajv, joi) ships a major upgrade:
-
-1. Read the breaking-change notes for tightened validators.
-2. Run the full audit: search fixture files for stringly-typed values
-   in fields validated by the changed validator.
-3. Update fixtures BEFORE merging the major bump.
-4. Confirm `pnpm test --run && pnpm test:integration` pass with the
-   new strictness.
-
-See DEBT-400 precedent (PR #330 Zod 4 migration and `z.guid()` preservation).
-
-## Factories and Fakes
-
-Factories in `src/domain/test-helpers/` and Fakes in
-`src/application/test-helpers/fakes/` MUST generate values that satisfy
-production validators. Use `crypto.randomUUID()` for ID fields.
-Document any deliberate non-UUID generation inline with a rationale.
-
-## Seed Data
-
-Integration test seed data must satisfy the same validators. After a
-schema change, run:
-
-    pnpm db:seed && pnpm test:integration
-
-to surface seed drift before pushing.
-```
-
-Add the new rule file to the `CLAUDE.md` Path-Scoped Rules table.
+1. Fixtures must match production validators at any boundary.
+2. UUID/GUID fields crossing `zUuid` or Drizzle `uuid()` columns must use `crypto.randomUUID()` or UUID-emitting factories.
+3. Provider IDs, slugs, HTML ids, and intentionally invalid validation fixtures are not UUID fixtures.
+4. Factories and fakes must emit production-shaped default IDs.
+5. Schema-validation major upgrades must include a fixture audit before merge; cite PR #330.
+6. Do not churn harmless existing sites for style consistency.
 
 ---
 
@@ -270,49 +361,53 @@ Add the new rule file to the `CLAUDE.md` Path-Scoped Rules table.
 
 PR 1 done when:
 
-- The grep from Finding A returns zero unfixed sites (or only exceptions documented inline).
+- Domain factories emit UUID-valid default IDs for fields that model Drizzle UUID columns.
+- Fake repositories that generate application-owned IDs emit UUID-valid values.
+- Tests no longer assert deterministic fake-generated placeholder IDs.
+- A focused proof test exercises the actual `zUuid.safeParse()` helper against representative generated IDs.
 - Full local gate green.
-- Browser-mode tests green (these are the most likely to catch breakage from UUID changes affecting URL patterns).
 
 PR 2 done when:
 
-- Every factory in `src/domain/test-helpers/` generates real UUIDs for ID fields (or documents the exception).
-- Every Fake in `src/application/test-helpers/fakes/` does the same.
+- Valid-path adapter/controller tests use UUID-valid values for every `zUuid` field.
+- Adapter repository row fixtures use UUID-valid values for every Drizzle `uuid()` column they model.
+- Invalid UUID negative tests remain explicit and intentional.
 - Full local gate green.
 
 PR 3 done when:
 
-- `.claude/rules/testing.md` has the "Fixture Integrity at Validated Boundaries" section.
-- `docs/dev/dependency-update-protocol.md` has (or expands) the Schema-Validation Majors section to include fixture audit.
+- App/browser/application tests no longer use placeholder IDs for mocked controller DTOs or entity/repository fixtures that cross the boundary definition.
+- Remaining canonical-grep hits are harmless/provider IDs, pure UI tokens, slugs, or intentionally invalid validation fixtures.
+- `pnpm test --run --sequence.shuffle` stays green after the sweep.
+- Full local gate green.
 
 PR 4 done when:
 
-- `.claude/rules/fixture-integrity.md` exists with the documented sections.
-- `CLAUDE.md` Path-Scoped Rules table lists it.
+- `.claude/rules/fixture-integrity.md` exists with the SSOT rule.
+- `.claude/rules/testing.md` has only a pointer to the rule, not a duplicated body.
+- `CLAUDE.md` lists the new path-scoped rule.
+- `docs/dev/dependency-update-protocol.md` records the schema-validation-major fixture-audit step.
+- Full local gate green.
+
+Cross-PR sanity:
+
+- `pnpm test --run components/theme-token-regression.test.tsx` remains 16/16.
+- No DEBT-398 design-system scan surfaces are modified.
+- After PR 4 merges, archive DEBT-400 in a separate doc-only archive PR.
 
 ---
 
 ## Risk and Reversibility
 
-- **PR 1 (fixture sweep)** — low risk. Failure mode is "test that previously passed now fails because the new UUID is different on each run." If a test was implicitly relying on the literal `'q_1'` value, it gets caught and refactored. Reversion is straightforward.
-- **PR 2 (factory/fake rigor)** — low-to-medium risk. Tests that captured the predictable `attempt-1` sequence break loudly; refactor to capture the generated value. The migration is mechanical.
-- **PR 3 (testing.md rule)** — zero risk. Doc-only.
-- **PR 4 (new rule file)** — zero risk. Doc-only.
+- **PR 1:** medium risk because factories/fakes are widely reused and some tests intentionally relied on deterministic `attempt-1` / `session-1` sequences. Failures should be loud and local: capture returned IDs instead of asserting generated literals.
+- **PR 2:** medium risk in adapter tests because repository fixtures often mirror SQL rows. Keep changes mechanical and boundary-scoped.
+- **PR 3:** medium risk because app/browser fixture graphs are broad. Split commits by directory and rerun affected tests frequently.
+- **PR 4:** doc-only; low risk.
 
-All four PRs independently revertable.
-
----
-
-## Out of Scope (file separately if pursued)
-
-- **Make Fakes strictly validate inputs** (Finding D Option 1). This is a P3 architectural change — every Fake imports the production schema and validates on every call. Adds friction; bigger PR. File as separate debt if Option 2 (documented rule) proves insufficient.
-
-- **Lint rule for stringly-typed ID literals.** Could be a Biome custom rule or a pre-push grep guard that fails if fixture files contain `id\s*:\s*['"](?!.*-)\w+_\w+['"]` patterns. Defer until the documented rule + manual review proves insufficient.
+All PRs are independently revertible.
 
 ---
 
 ## Done When
 
-All four PRs merged to `dev` and synced to `main`. A grep of fixture files for stringly-typed ID patterns returns zero unfixed sites. Every factory and fake generates real UUIDs (or documents the exception). The new rule file exists. `testing.md` is updated. DEBT-400 doc archived to `docs/_archive/debt/` with resolution paragraph naming all four PRs.
-
-A future agent writing a new test will be reminded by the auto-loaded rule to use `crypto.randomUUID()` or a domain factory, and the PR #330 validation-migration pattern stops recurring on every validator-major bump.
+All four PRs merge to `dev` and sync to `main`; the dedicated fixture-integrity rule is live; `testing.md` points to it without duplicating the body; factories/fakes emit UUID-valid defaults; boundary-crossing fixtures use UUID-valid values; remaining placeholder-ID grep hits are documented harmless classes; full local gate is green; DEBT-400 is archived with a resolution paragraph naming the PRs.
