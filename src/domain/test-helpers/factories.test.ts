@@ -14,8 +14,8 @@ describe('createBookmark', () => {
     const bookmark = createBookmark();
 
     expect(bookmark).toEqual({
-      userId: 'user-1',
-      questionId: 'question-1',
+      userId: expect.any(String),
+      questionId: expect.any(String),
       createdAt: new Date('2026-02-09T12:00:00.000Z'),
     });
   });

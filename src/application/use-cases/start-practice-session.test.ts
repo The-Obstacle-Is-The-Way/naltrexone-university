@@ -138,19 +138,21 @@ describe('StartPracticeSessionUseCase', () => {
     const seed = createSeed(userId, now.getTime());
     const expectedQuestionIds = shuffleWithSeed(candidateIds, seed).slice(0, 2);
 
-    await expect(useCase.execute(input)).resolves.toEqual({
-      sessionId: 'session-1',
+    const result = await useCase.execute(input);
+
+    expect(result).toEqual({
+      sessionId: expect.any(String),
       requestedCount: 2,
       actualCount: 2,
     });
 
     const session = await practiceSessionRepository.findByIdAndUserId(
-      'session-1',
+      result.sessionId,
       userId,
     );
 
     expect(session).toMatchObject({
-      id: 'session-1',
+      id: result.sessionId,
       userId,
       mode: 'exam',
       questionIds: expectedQuestionIds,
@@ -200,16 +202,16 @@ describe('StartPracticeSessionUseCase', () => {
       () => now,
     );
 
-    await expect(
-      useCase.execute({
-        userId,
-        mode: 'tutor',
-        count: 10,
-        tagSlugs: ['opioids'],
-        difficulties: ['easy', 'medium'],
-      }),
-    ).resolves.toEqual({
-      sessionId: 'session-1',
+    const result = await useCase.execute({
+      userId,
+      mode: 'tutor',
+      count: 10,
+      tagSlugs: ['opioids'],
+      difficulties: ['easy', 'medium'],
+    });
+
+    expect(result).toEqual({
+      sessionId: expect.any(String),
       requestedCount: 10,
       actualCount: 2,
     });

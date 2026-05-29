@@ -4,9 +4,9 @@ import {
   shuffleWithSeed,
 } from '@/src/domain/services';
 import {
-  createAttempt,
   createChoice,
-  createPracticeSession,
+  createAttempt as createDomainAttempt,
+  createPracticeSession as createDomainPracticeSession,
   createQuestion,
   createTag,
 } from '@/src/domain/test-helpers';
@@ -57,6 +57,25 @@ export function createTestDeps(overrides: TestDepsOverrides = {}) {
 type QuestionState = ReturnType<
   typeof createPracticeSession
 >['questionStates'][number];
+
+export function createAttempt(
+  overrides: Parameters<typeof createDomainAttempt>[0] = {},
+) {
+  return createDomainAttempt({
+    userId: USER_ID,
+    ...overrides,
+  });
+}
+
+export function createPracticeSession(
+  overrides: Parameters<typeof createDomainPracticeSession>[0] = {},
+) {
+  return createDomainPracticeSession({
+    id: SESSION_ID,
+    userId: USER_ID,
+    ...overrides,
+  });
+}
 
 export function createQuestionState(
   questionId: string,
@@ -202,9 +221,7 @@ export {
   FakePracticeSessionRepository,
   FakeQuestionRepository,
   GetNextQuestionUseCase,
-  createAttempt,
   createChoice,
-  createPracticeSession,
   createQuestion,
   createQuestionSeed,
   createTag,

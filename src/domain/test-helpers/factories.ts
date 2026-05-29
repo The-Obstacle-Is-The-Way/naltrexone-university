@@ -22,10 +22,14 @@ import type {
 } from '../value-objects';
 import { answeredOutcome } from '../value-objects';
 
+function createUuid(): string {
+  return crypto.randomUUID();
+}
+
 export function createUser(overrides: Partial<User> = {}): User {
   const now = new Date();
   return {
-    id: 'user-1',
+    id: createUuid(),
     email: 'user@example.com',
     createdAt: now,
     updatedAt: now,
@@ -43,16 +47,15 @@ export function createAttempt(
   } = {},
 ): Attempt & { sessionMode?: AttemptSessionMode } {
   const now = new Date();
-  const questionId = overrides.questionId ?? 'question-1';
+  const questionId = overrides.questionId ?? createUuid();
+  const selectedChoiceId = overrides.selectedChoiceId ?? createUuid();
 
   const base: Attempt = {
-    id: overrides.id ?? `attempt-${questionId}`,
-    userId: overrides.userId ?? 'user-1',
+    id: overrides.id ?? createUuid(),
+    userId: overrides.userId ?? createUuid(),
     questionId,
     practiceSessionId: overrides.practiceSessionId ?? null,
-    outcome:
-      overrides.outcome ??
-      answeredOutcome(overrides.selectedChoiceId ?? 'choice-1'),
+    outcome: overrides.outcome ?? answeredOutcome(selectedChoiceId),
     isCorrect: overrides.isCorrect ?? false,
     timeSpentSeconds: overrides.timeSpentSeconds ?? 0,
     retryOfAttemptId: overrides.retryOfAttemptId ?? null,
@@ -70,8 +73,8 @@ export function createBookmark(overrides: Partial<Bookmark> = {}): Bookmark {
   const now = new Date();
 
   return {
-    userId: 'user-1',
-    questionId: 'question-1',
+    userId: createUuid(),
+    questionId: createUuid(),
     createdAt: now,
     ...overrides,
   };
@@ -79,7 +82,7 @@ export function createBookmark(overrides: Partial<Bookmark> = {}): Bookmark {
 
 export function createTag(overrides: Partial<Tag> = {}): Tag {
   return {
-    id: 'tag-1',
+    id: createUuid(),
     slug: 'tag-1',
     name: 'Tag 1',
     kind: 'topic' satisfies TagKind,
@@ -89,8 +92,8 @@ export function createTag(overrides: Partial<Tag> = {}): Tag {
 
 export function createChoice(overrides: Partial<Choice> = {}): Choice {
   return {
-    id: 'choice-1',
-    questionId: 'question-1',
+    id: createUuid(),
+    questionId: createUuid(),
     label: 'A' satisfies ChoiceLabel,
     textMd: 'Choice A',
     isCorrect: false,
@@ -103,7 +106,7 @@ export function createChoice(overrides: Partial<Choice> = {}): Choice {
 export function createQuestion(overrides: Partial<Question> = {}): Question {
   const now = new Date();
   const question: Question = {
-    id: 'question-1',
+    id: createUuid(),
     slug: 'question-1',
     stemMd: 'Stem',
     explanationMd: 'Explanation',
@@ -128,8 +131,8 @@ export function createSubscription(
 ): Subscription {
   const now = new Date();
   return {
-    id: 'subscription-1',
-    userId: 'user-1',
+    id: createUuid(),
+    userId: createUuid(),
     plan: 'monthly' satisfies SubscriptionPlan,
     status: 'active' satisfies SubscriptionStatus,
     currentPeriodEnd: new Date(now.getTime() + DAY_MS),
@@ -158,7 +161,7 @@ export function createPracticeSession(
       >)[];
   } = {},
 ): PracticeSession {
-  const questionIds = overrides.questionIds ?? ['question-1'];
+  const questionIds = overrides.questionIds ?? [createUuid()];
   const questionStates =
     overrides.questionStates ??
     questionIds.map((questionId) => ({
@@ -184,8 +187,8 @@ export function createPracticeSession(
     }));
 
   return {
-    id: 'session-1',
-    userId: 'user-1',
+    id: createUuid(),
+    userId: createUuid(),
     mode: 'tutor' satisfies PracticeMode,
     questionIds,
     tagFilters: [],
