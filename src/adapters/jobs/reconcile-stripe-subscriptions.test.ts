@@ -25,6 +25,11 @@ type StripeSubscriptionFixture = {
 
 type LocalSubscriptionRow = { userId: string; stripeSubscriptionId: string };
 
+const primaryUserId = crypto.randomUUID();
+const secondaryUserId = crypto.randomUUID();
+const tertiaryUserId = crypto.randomUUID();
+const otherUserId = crypto.randomUUID();
+
 type ReconciliationInput = Parameters<typeof reconcileStripeSubscriptions>[0];
 type ReconciliationDeps = Parameters<typeof reconcileStripeSubscriptions>[1];
 type StripeStub = {
@@ -99,7 +104,7 @@ function createUserSubscriptionFixture(
 ): StripeSubscriptionFixture {
   return createSubscriptionFixture({
     id,
-    userId: input.userId ?? 'user_1',
+    userId: input.userId ?? primaryUserId,
     customerId: input.customerId,
     status: input.status,
     currentPeriodEnd: input.currentPeriodEnd,
@@ -240,7 +245,9 @@ function createSingleRowScenario(input: {
   return createReconciliationTestScenario({
     stripe: input.stripe,
     stripeCustomers: input.stripeCustomers,
-    localSubscriptions: [row(input.userId ?? 'user_1', input.subscriptionId)],
+    localSubscriptions: [
+      row(input.userId ?? primaryUserId, input.subscriptionId),
+    ],
   });
 }
 
@@ -280,7 +287,7 @@ describe('reconcileStripeSubscriptions', () => {
     }
 
     const rows = Array.from({ length: 12 }, (_, i) => ({
-      userId: `user_${i + 1}`,
+      userId: crypto.randomUUID(),
       stripeSubscriptionId: `sub_${i + 1}`,
     }));
 
@@ -376,11 +383,11 @@ describe('reconcileStripeSubscriptions', () => {
       customerId: 'cus_1',
     });
     const goodSub3 = createUserSubscriptionFixture('sub_3', {
-      userId: 'user_3',
+      userId: tertiaryUserId,
       customerId: 'cus_3',
     });
     const badSub = createUserSubscriptionFixture('sub_2', {
-      userId: 'user_other',
+      userId: otherUserId,
       customerId: 'cus_2',
     });
 
@@ -413,9 +420,9 @@ describe('reconcileStripeSubscriptions', () => {
     const scenario = createReconciliationTestScenario({
       stripe,
       localSubscriptions: [
-        row('user_1', 'sub_1'),
-        row('user_2', 'sub_2'),
-        row('user_3', 'sub_3'),
+        row(primaryUserId, 'sub_1'),
+        row(secondaryUserId, 'sub_2'),
+        row(tertiaryUserId, 'sub_3'),
       ],
     });
 
@@ -430,13 +437,13 @@ describe('reconcileStripeSubscriptions', () => {
     });
 
     await expect(
-      scenario.subscriptions.findByUserId('user_1'),
+      scenario.subscriptions.findByUserId(primaryUserId),
     ).resolves.not.toBeNull();
     await expect(
-      scenario.subscriptions.findByUserId('user_3'),
+      scenario.subscriptions.findByUserId(tertiaryUserId),
     ).resolves.not.toBeNull();
     await expect(
-      scenario.subscriptions.findByUserId('user_2'),
+      scenario.subscriptions.findByUserId(secondaryUserId),
     ).resolves.toBeNull();
     expect(scenario.logger.errorCalls.length).toBeGreaterThan(0);
   });
@@ -499,7 +506,7 @@ describe('reconcileStripeSubscriptions', () => {
     });
     const scenario = createReconciliationTestScenario({
       stripe,
-      localSubscriptions: [row('user_1', 'sub_owner_mismatch')],
+      localSubscriptions: [row(primaryUserId, 'sub_owner_mismatch')],
       webhookE2EOwner: 'vercel-dev-preview',
     });
 
@@ -624,7 +631,7 @@ describe('reconcileStripeSubscriptions', () => {
     await expectDryRunSuccess(scenario);
 
     await expect(
-      scenario.subscriptions.findByUserId('user_1'),
+      scenario.subscriptions.findByUserId(primaryUserId),
     ).resolves.toMatchObject({
       status: 'canceled',
     });
@@ -636,7 +643,7 @@ describe('reconcileStripeSubscriptions', () => {
       status: 'active',
     });
     const blockingMismatch = createUserSubscriptionFixture('sub_blocking', {
-      userId: 'user_other',
+      userId: otherUserId,
       customerId: 'cus_1',
       status: 'active',
     });
@@ -658,10 +665,10 @@ describe('reconcileStripeSubscriptions', () => {
     });
 
     await expect(
-      scenario.subscriptions.findByUserId('user_1'),
+      scenario.subscriptions.findByUserId(primaryUserId),
     ).resolves.toBeNull();
     await expect(
-      scenario.stripeCustomers.findByUserId('user_1'),
+      scenario.stripeCustomers.findByUserId(primaryUserId),
     ).resolves.toBeNull();
   });
 
@@ -725,14 +732,14 @@ describe('reconcileStripeSubscriptions', () => {
     });
 
     await expect(
-      scenario.subscriptions.findByUserId('user_1'),
+      scenario.subscriptions.findByUserId(primaryUserId),
     ).resolves.toMatchObject({
-      userId: 'user_1',
+      userId: primaryUserId,
       status: 'active',
       plan: 'monthly',
     });
     await expect(
-      scenario.stripeCustomers.findByUserId('user_1'),
+      scenario.stripeCustomers.findByUserId(primaryUserId),
     ).resolves.toEqual({
       stripeCustomerId: 'cus_123',
     });
@@ -792,7 +799,7 @@ describe('reconcileStripeSubscriptions', () => {
       { idempotencyKey: 'reconcile_duplicate_subscription:sub_dup_1' },
     );
     await expect(
-      scenario.subscriptions.findByUserId('user_1'),
+      scenario.subscriptions.findByUserId(primaryUserId),
     ).resolves.toMatchObject({
       status: 'pastDue',
       currentPeriodEnd: new Date(1_700_000_200 * 1000),
@@ -800,7 +807,7 @@ describe('reconcileStripeSubscriptions', () => {
     await expect(
       scenario.subscriptions.findByExternalSubscriptionId('sub_dup_2'),
     ).resolves.toMatchObject({
-      userId: 'user_1',
+      userId: primaryUserId,
       status: 'pastDue',
       currentPeriodEnd: new Date(1_700_000_200 * 1000),
     });
@@ -926,7 +933,7 @@ describe('reconcileStripeSubscriptions', () => {
     expect(scenario.logger.warnCalls).toEqual([
       {
         context: {
-          userId: 'user_1',
+          userId: primaryUserId,
           stripeCustomerId: 'cus_123',
           keptSubscriptionId: 'sub_dup_2',
           duplicateSubscriptionIds: ['sub_keep', 'sub_dup_1'],
@@ -983,7 +990,7 @@ describe('reconcileStripeSubscriptions', () => {
     expect(scenario.logger.warnCalls).toEqual([
       {
         context: {
-          userId: 'user_1',
+          userId: primaryUserId,
           stripeCustomerId: 'cus_123',
           keptSubscriptionId: 'sub_dup_2',
           duplicateSubscriptionIds: ['sub_keep', 'sub_dup_1'],
@@ -1050,14 +1057,14 @@ describe('reconcileStripeSubscriptions', () => {
     await expectDryRunSuccess(scenario);
 
     await expect(
-      scenario.subscriptions.findByUserId('user_1'),
+      scenario.subscriptions.findByUserId(primaryUserId),
     ).resolves.toMatchObject({
       status: 'active',
     });
     await expect(
       scenario.subscriptions.findByExternalSubscriptionId(active.id),
     ).resolves.toMatchObject({
-      userId: 'user_1',
+      userId: primaryUserId,
       status: 'active',
     });
     await expect(
@@ -1105,7 +1112,7 @@ describe('reconcileStripeSubscriptions', () => {
       },
     );
     await expect(
-      scenario.subscriptions.findByUserId('user_1'),
+      scenario.subscriptions.findByUserId(primaryUserId),
     ).resolves.toMatchObject({
       status: 'active',
       currentPeriodEnd: new Date(1_800_000_000 * 1000),
@@ -1113,7 +1120,7 @@ describe('reconcileStripeSubscriptions', () => {
     await expect(
       scenario.subscriptions.findByExternalSubscriptionId('sub_better'),
     ).resolves.toMatchObject({
-      userId: 'user_1',
+      userId: primaryUserId,
       status: 'active',
       currentPeriodEnd: new Date(1_800_000_000 * 1000),
     });
@@ -1160,7 +1167,7 @@ describe('reconcileStripeSubscriptions', () => {
     await expect(
       scenario.subscriptions.findByExternalSubscriptionId('sub_a'),
     ).resolves.toMatchObject({
-      userId: 'user_1',
+      userId: primaryUserId,
       status: 'active',
       currentPeriodEnd: new Date(1_800_000_000 * 1000),
     });
@@ -1221,7 +1228,7 @@ describe('reconcileStripeSubscriptions', () => {
 
     const subscriptions = new FakeSubscriptionRepository();
     await subscriptions.upsert({
-      userId: 'user_1',
+      userId: primaryUserId,
       externalSubscriptionId: local.id,
       plan: 'monthly',
       status: 'active',
@@ -1232,7 +1239,7 @@ describe('reconcileStripeSubscriptions', () => {
     const scenario = createReconciliationTestScenario({
       stripe,
       subscriptions,
-      localSubscriptions: [row('user_1', local.id)],
+      localSubscriptions: [row(primaryUserId, local.id)],
     });
 
     const result = await scenario.run({ dryRun: false });
@@ -1251,7 +1258,7 @@ describe('reconcileStripeSubscriptions', () => {
     await expect(
       scenario.subscriptions.findByExternalSubscriptionId('sub_better'),
     ).resolves.toMatchObject({
-      userId: 'user_1',
+      userId: primaryUserId,
       status: 'active',
       currentPeriodEnd: new Date(1_800_000_000 * 1000),
     });
@@ -1276,7 +1283,7 @@ describe('reconcileStripeSubscriptions', () => {
 
     const subscriptions = new FakeSubscriptionRepository();
     await subscriptions.upsert({
-      userId: 'user_1',
+      userId: primaryUserId,
       externalSubscriptionId: local.id,
       plan: 'monthly',
       status: 'active',
@@ -1287,7 +1294,7 @@ describe('reconcileStripeSubscriptions', () => {
     const scenario = createReconciliationTestScenario({
       stripe,
       subscriptions,
-      localSubscriptions: [row('user_1', local.id)],
+      localSubscriptions: [row(primaryUserId, local.id)],
       transaction: async () => {
         throw new Error('db failed');
       },
@@ -1303,7 +1310,7 @@ describe('reconcileStripeSubscriptions', () => {
     await expect(
       scenario.subscriptions.findByExternalSubscriptionId('sub_local'),
     ).resolves.toMatchObject({
-      userId: 'user_1',
+      userId: primaryUserId,
       status: 'active',
       currentPeriodEnd: new Date(1_700_000_000 * 1000),
     });
@@ -1343,7 +1350,7 @@ describe('reconcileStripeSubscriptions', () => {
     await expect(
       scenario.subscriptions.findByExternalSubscriptionId('sub_a'),
     ).resolves.toMatchObject({
-      userId: 'user_1',
+      userId: primaryUserId,
       status: 'active',
     });
     await expect(
@@ -1353,7 +1360,7 @@ describe('reconcileStripeSubscriptions', () => {
 
   it('reports a failure when Stripe subscription metadata user id mismatches', async () => {
     const mismatch = createUserSubscriptionFixture('sub_123', {
-      userId: 'user_other',
+      userId: otherUserId,
     });
     const stripe = createStripeFromFixtures({
       fixtures: [{ fixture: mismatch }],
@@ -1372,10 +1379,10 @@ describe('reconcileStripeSubscriptions', () => {
     });
 
     await expect(
-      scenario.subscriptions.findByUserId('user_1'),
+      scenario.subscriptions.findByUserId(primaryUserId),
     ).resolves.toBeNull();
     await expect(
-      scenario.stripeCustomers.findByUserId('user_1'),
+      scenario.stripeCustomers.findByUserId(primaryUserId),
     ).resolves.toBeNull();
     expect(scenario.logger.errorCalls.length).toBeGreaterThan(0);
   });
@@ -1389,7 +1396,7 @@ describe('reconcileStripeSubscriptions', () => {
     });
 
     const stripeCustomers = new FakeStripeCustomerRepository();
-    await stripeCustomers.insert('user_1', 'cus_old');
+    await stripeCustomers.insert(primaryUserId, 'cus_old');
 
     const scenario = createSingleRowScenario({
       stripe,
@@ -1399,13 +1406,13 @@ describe('reconcileStripeSubscriptions', () => {
     await expectDryRunSuccess(scenario);
 
     await expect(
-      scenario.stripeCustomers.findByUserId('user_1'),
+      scenario.stripeCustomers.findByUserId(primaryUserId),
     ).resolves.toEqual({
       stripeCustomerId: 'cus_new',
     });
 
     await expect(
-      scenario.stripeCustomers.insert('user_2', 'cus_old'),
+      scenario.stripeCustomers.insert(secondaryUserId, 'cus_old'),
     ).resolves.toBeUndefined();
   });
 });

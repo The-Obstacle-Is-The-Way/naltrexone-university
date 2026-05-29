@@ -111,8 +111,9 @@ function createStripeMock(overrides?: {
 }
 
 describe('createStripeCheckoutSession', () => {
+  const appUserId = crypto.randomUUID();
   const input = {
-    userId: 'user_1',
+    userId: appUserId,
     externalCustomerId: 'cus_123',
     plan: 'monthly' as const,
     successUrl: 'https://app/success',
@@ -145,7 +146,7 @@ describe('createStripeCheckoutSession', () => {
     expect(sessionsCreate).toHaveBeenCalledWith(
       expect.any(Object),
       expect.objectContaining({
-        idempotencyKey: 'checkout_session:user_1:monthly',
+        idempotencyKey: `checkout_session:${appUserId}:monthly`,
       }),
     );
   });
@@ -208,14 +209,14 @@ describe('createStripeCheckoutSession', () => {
       1,
       expect.any(Object),
       expect.objectContaining({
-        idempotencyKey: 'checkout_session:user_1:monthly',
+        idempotencyKey: `checkout_session:${appUserId}:monthly`,
       }),
     );
     expect(sessionsCreate).toHaveBeenNthCalledWith(
       2,
       expect.any(Object),
       expect.objectContaining({
-        idempotencyKey: 'checkout_session_recovery:user_1:monthly:cs_expired',
+        idempotencyKey: `checkout_session_recovery:${appUserId}:monthly:cs_expired`,
       }),
     );
   });
@@ -475,7 +476,7 @@ describe('createStripeCheckoutSession', () => {
     expect(sessionsCreate).toHaveBeenCalledWith(
       expect.any(Object),
       expect.objectContaining({
-        idempotencyKey: 'checkout_session:user_1:monthly',
+        idempotencyKey: `checkout_session:${appUserId}:monthly`,
       }),
     );
   });
