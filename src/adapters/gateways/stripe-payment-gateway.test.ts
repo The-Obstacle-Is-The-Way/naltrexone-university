@@ -283,9 +283,7 @@ describe('StripePaymentGateway', () => {
         },
       }),
       expect.objectContaining({
-        idempotencyKey: expect.stringMatching(
-          new RegExp(`^checkout_session:${appUserId}:`),
-        ),
+        idempotencyKey: `checkout_session:${appUserId}:monthly`,
       }),
     );
   });
@@ -437,9 +435,7 @@ describe('StripePaymentGateway', () => {
         line_items: [{ price: 'price_m', quantity: 1 }],
       }),
       expect.objectContaining({
-        idempotencyKey: expect.stringMatching(
-          new RegExp(`^checkout_session:${appUserId}:`),
-        ),
+        idempotencyKey: `checkout_session:${appUserId}:monthly`,
       }),
     );
   });

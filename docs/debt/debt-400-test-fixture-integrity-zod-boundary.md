@@ -375,11 +375,13 @@ PR 2 proof method:
 - Convert valid-path app UUID placeholders to semantic generated IDs, then assert against those variables instead of old literals.
 - Repository tests must keep Drizzle row typing intact; do not use `as any`, widen row types, or relax expectations to hide invalid UUID fixtures.
 - Run the adapter PR 2 slice directly, then the full local gate:
+
   ```sh
   pnpm test --run src/adapters/controllers src/adapters/repositories src/adapters/shared/with-idempotency.test.ts src/adapters/jobs src/adapters/gateways
   pnpm test --run tests/shared/fixture-uuid-integrity.test.ts
   pnpm test --run components/theme-token-regression.test.tsx
   ```
+
 - Acceptance is not "zero placeholder-looking strings in adapters." Provider and invalid buckets above are expected to remain.
 
 Split decision: PR 2 ships as **two PRs** on adapter-layer boundaries. PR 2a uses `feat/debt-400-pr-2-adapter-boundary-fixtures` and covers controllers, `src/adapters/shared/with-idempotency.test.ts`, jobs, and gateways. PR 2b follows on a fresh branch for `src/adapters/repositories/**/*.test.ts`. The table above remains the SSOT for both PRs; PR 2a must not touch repository tests.
