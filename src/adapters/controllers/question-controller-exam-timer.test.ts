@@ -18,14 +18,17 @@ const sessionId = '11111111-1111-1111-1111-111111111111';
 function createActiveQuestion(
   deadlineAt: string | null,
 ): GetNextQuestionOutput {
+  const questionId = crypto.randomUUID();
+  const choiceId = crypto.randomUUID();
+
   return {
-    questionId: 'q_1',
+    questionId,
     slug: 'q-1',
     stemMd: 'Stem',
     difficulty: 'easy',
     choices: [
       {
-        id: 'choice_1',
+        id: choiceId,
         label: 'A',
         textMd: 'Choice',
         sortOrder: 1,
@@ -50,7 +53,7 @@ function createDeps(
   getNextQuestionOutput: GetNextQuestionOutput,
 ): QuestionControllerDeps {
   return {
-    authGateway: new FakeAuthGateway(createUser({ id: 'user_1' })),
+    authGateway: new FakeAuthGateway(createUser()),
     logger: new FakeLogger(),
     rateLimiter: new FakeRateLimiter(),
     idempotencyKeyRepository: new FakeIdempotencyKeyRepository(),

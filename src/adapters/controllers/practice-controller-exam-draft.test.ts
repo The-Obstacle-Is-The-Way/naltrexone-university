@@ -85,7 +85,7 @@ describe('practice-controller', () => {
       expect(result).toEqual({ ok: true, data: saveDraftOutput });
       expect(deps.saveExamDraftAnswerUseCase.inputs).toEqual([
         {
-          userId: 'user_1',
+          userId: deps._fixtures.userId,
           sessionId: '11111111-1111-1111-1111-111111111111',
           questionId: '22222222-2222-2222-2222-222222222222',
           selectedChoiceId: '33333333-3333-3333-3333-333333333333',
@@ -161,7 +161,7 @@ describe('practice-controller', () => {
       expect(result).toEqual({ ok: true, data: saveDraftOutput });
       expect(deps.saveExamDraftAnswerUseCase.inputs).toEqual([
         {
-          userId: 'user_1',
+          userId: deps._fixtures.userId,
           sessionId: '11111111-1111-1111-1111-111111111111',
           questionId: '22222222-2222-2222-2222-222222222222',
           selectedChoiceId: '33333333-3333-3333-3333-333333333333',

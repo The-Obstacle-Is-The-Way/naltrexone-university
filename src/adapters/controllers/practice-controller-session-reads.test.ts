@@ -43,7 +43,7 @@ describe('practice-controller', () => {
 
       expect(result).toEqual({ ok: true, data: null });
       expect(deps.getIncompletePracticeSessionUseCase.inputs).toEqual([
-        { userId: 'user_1' },
+        { userId: deps._fixtures.userId },
       ]);
     });
 
@@ -71,7 +71,7 @@ describe('practice-controller', () => {
         },
       });
       expect(deps.getIncompletePracticeSessionUseCase.inputs).toEqual([
-        { userId: 'user_1' },
+        { userId: deps._fixtures.userId },
       ]);
     });
 
@@ -190,7 +190,7 @@ describe('practice-controller', () => {
         data: { sessionId, markedCount: 1 },
       });
       expect(deps.getPracticeSessionReviewUseCase.inputs).toEqual([
-        { userId: 'user_1', sessionId },
+        { userId: deps._fixtures.userId, sessionId },
       ]);
     });
   });
@@ -270,7 +270,7 @@ describe('practice-controller', () => {
       });
       expect(
         deps.getCompletedSessionQuestionsWithFeedbackUseCase.inputs,
-      ).toEqual([{ userId: 'user_1', sessionId }]);
+      ).toEqual([{ userId: deps._fixtures.userId, sessionId }]);
     });
 
     it('returns completed feedback rows when the use case succeeds', async () => {
@@ -322,7 +322,7 @@ describe('practice-controller', () => {
       });
       expect(
         deps.getCompletedSessionQuestionsWithFeedbackUseCase.inputs,
-      ).toEqual([{ userId: 'user_1', sessionId }]);
+      ).toEqual([{ userId: deps._fixtures.userId, sessionId }]);
     });
   });
 
@@ -410,7 +410,7 @@ describe('practice-controller', () => {
         error: { code: 'NOT_FOUND', message: 'Practice session not found' },
       });
       expect(deps.getPracticeSessionSummaryUseCase.inputs).toEqual([
-        { userId: 'user_1', sessionId },
+        { userId: deps._fixtures.userId, sessionId },
       ]);
     });
 
@@ -433,7 +433,7 @@ describe('practice-controller', () => {
         data: { sessionId, questionCount: 0 },
       });
       expect(deps.getPracticeSessionSummaryUseCase.inputs).toEqual([
-        { userId: 'user_1', sessionId },
+        { userId: deps._fixtures.userId, sessionId },
       ]);
     });
   });
@@ -514,7 +514,7 @@ describe('practice-controller', () => {
         },
       });
       expect(deps.getSessionHistoryUseCase.inputs).toEqual([
-        { userId: 'user_1', limit: 20, offset: 0, mode: null },
+        { userId: deps._fixtures.userId, limit: 20, offset: 0, mode: null },
       ]);
     });
 
@@ -528,7 +528,7 @@ describe('practice-controller', () => {
 
       expect(result).toMatchObject({ ok: true });
       expect(deps.getSessionHistoryUseCase.inputs).toEqual([
-        { userId: 'user_1', limit: 20, offset: 0, mode: 'tutor' },
+        { userId: deps._fixtures.userId, limit: 20, offset: 0, mode: 'tutor' },
       ]);
     });
   });

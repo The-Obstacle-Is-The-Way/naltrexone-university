@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { createStripeCustomer } from './stripe-customers';
 
+const appUserId = crypto.randomUUID();
+
 describe('createStripeCustomer', () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -31,7 +33,7 @@ describe('createStripeCustomer', () => {
       createStripeCustomer({
         stripe,
         input: {
-          userId: 'user_1',
+          userId: appUserId,
           clerkUserId: 'clerk_1',
           email: 'user@example.com',
         },
@@ -40,7 +42,7 @@ describe('createStripeCustomer', () => {
     ).resolves.toEqual({ externalCustomerId: 'cus_123' });
 
     expect(makeRequest).toHaveBeenCalledWith({
-      query: "metadata['user_id']:'user_1'",
+      query: `metadata['user_id']:'${appUserId}'`,
       limit: 2,
     });
     expect(customers.create).not.toHaveBeenCalled();
@@ -86,7 +88,7 @@ describe('createStripeCustomer', () => {
       createStripeCustomer({
         stripe,
         input: {
-          userId: 'user_1',
+          userId: appUserId,
           clerkUserId: 'clerk_1',
           email: 'user@example.com',
         },
@@ -112,7 +114,7 @@ describe('createStripeCustomer', () => {
       createStripeCustomer({
         stripe,
         input: {
-          userId: 'user_1',
+          userId: appUserId,
           clerkUserId: 'clerk_1',
           email: 'user@example.com',
         },
@@ -140,7 +142,7 @@ describe('createStripeCustomer', () => {
       createStripeCustomer({
         stripe,
         input: {
-          userId: 'user_1',
+          userId: appUserId,
           clerkUserId: 'clerk_1',
           email: 'user@example.com',
         },
@@ -166,7 +168,7 @@ describe('createStripeCustomer', () => {
       createStripeCustomer({
         stripe,
         input: {
-          userId: 'user_1',
+          userId: appUserId,
           clerkUserId: 'clerk_1',
           email: 'user@example.com',
         },
@@ -209,7 +211,7 @@ describe('createStripeCustomer', () => {
     const promise = createStripeCustomer({
       stripe,
       input: {
-        userId: 'user_1',
+        userId: appUserId,
         clerkUserId: 'clerk_1',
         email: 'user@example.com',
       },
@@ -231,7 +233,7 @@ describe('createStripeCustomer', () => {
       | undefined;
 
     expect(firstOptions).toMatchObject({
-      idempotencyKey: 'create_stripe_customer:user_1',
+      idempotencyKey: `create_stripe_customer:${appUserId}`,
     });
     expect(secondOptions).toEqual(firstOptions);
   });

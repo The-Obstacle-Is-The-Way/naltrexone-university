@@ -13,6 +13,8 @@ const priceIds: StripePriceIds = {
   annual: 'price_annual',
 };
 
+const appUserId = crypto.randomUUID();
+
 function createSubscriptionFixture(overrides?: {
   status?: string;
   userId?: string | null;
@@ -23,7 +25,7 @@ function createSubscriptionFixture(overrides?: {
     overrides?.userId === null
       ? undefined
       : {
-          user_id: overrides?.userId ?? 'user_1',
+          user_id: overrides?.userId ?? appUserId,
           ...(overrides?.e2eOwner ? { e2e_owner: overrides.e2eOwner } : {}),
         };
 
@@ -58,7 +60,7 @@ describe('normalizeStripeSubscriptionUpdate', () => {
     });
 
     expect(result).toEqual({
-      userId: 'user_1',
+      userId: appUserId,
       externalCustomerId: 'cus_123',
       externalSubscriptionId: 'sub_123',
       plan: 'monthly',
@@ -150,7 +152,7 @@ describe('normalizeStripeSubscriptionUpdate', () => {
       webhookE2EOwner: 'vercel-dev-preview',
     });
 
-    expect(result.userId).toBe('user_1');
+    expect(result.userId).toBe(appUserId);
   });
 
   it('does not throw when webhook owner is configured but event has no e2e_owner metadata', () => {
@@ -226,7 +228,7 @@ describe('retrieveAndNormalizeStripeSubscription', () => {
           customer: 'cus_123',
           status: 'active',
           cancel_at_period_end: false,
-          metadata: { user_id: 'user_1' },
+          metadata: { user_id: appUserId },
           items: { data: [] },
         })),
       },
@@ -266,7 +268,7 @@ describe('retrieveAndNormalizeStripeSubscription', () => {
     });
 
     expect(result).toMatchObject({
-      userId: 'user_1',
+      userId: appUserId,
       externalCustomerId: 'cus_123',
       externalSubscriptionId: 'sub_123',
       plan: 'monthly',

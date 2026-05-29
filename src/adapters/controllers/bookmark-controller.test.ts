@@ -25,6 +25,9 @@ type BookmarkControllerTestDeps = BookmarkControllerDeps & {
   toggleBookmarkUseCase: FakeToggleBookmarkUseCase;
   getBookmarksUseCase: FakeGetBookmarksUseCase;
   rateLimiter: FakeRateLimiter;
+  _fixtures: {
+    userId: string;
+  };
 };
 
 function createDeps(overrides?: {
@@ -39,12 +42,12 @@ function createDeps(overrides?: {
   const user =
     overrides?.user === undefined
       ? createUser({
-          id: 'user_1',
           email: 'user@example.com',
           createdAt: new Date('2026-02-01T00:00:00Z'),
           updatedAt: new Date('2026-02-01T00:00:00Z'),
         })
       : overrides.user;
+  const userId = user?.id ?? crypto.randomUUID();
 
   const now = new Date('2026-02-01T00:00:00Z');
 
@@ -55,7 +58,7 @@ function createDeps(overrides?: {
       ? []
       : [
           createSubscription({
-            userId: user?.id ?? 'user_1',
+            userId,
             status: 'active',
             currentPeriodEnd: new Date('2026-12-31T00:00:00Z'),
           }),
@@ -88,6 +91,9 @@ function createDeps(overrides?: {
     toggleBookmarkUseCase,
     getBookmarksUseCase,
     now: () => now,
+    _fixtures: {
+      userId,
+    },
   };
 }
 
@@ -149,7 +155,7 @@ describe('bookmark-controller', () => {
       expect(result).toEqual({ ok: true, data: { bookmarked: false } });
       expect(deps.toggleBookmarkUseCase.inputs).toEqual([
         {
-          userId: 'user_1',
+          userId: deps._fixtures.userId,
           questionId: '11111111-1111-1111-1111-111111111111',
         },
       ]);
@@ -192,7 +198,7 @@ describe('bookmark-controller', () => {
       expect(deps.toggleBookmarkUseCase.inputs).toEqual([]);
       expect(deps.rateLimiter.inputs).toEqual([
         {
-          key: 'bookmark:toggleBookmark:user_1',
+          key: `bookmark:toggleBookmark:${deps._fixtures.userId}`,
           limit: 60,
           windowMs: 60_000,
         },
@@ -258,12 +264,13 @@ describe('bookmark-controller', () => {
     });
 
     it('returns ok when use case returns bookmarks', async () => {
+      const questionId = crypto.randomUUID();
       const deps = createDeps({
         getBookmarksOutput: {
           rows: [
             {
               isAvailable: true,
-              questionId: 'q1',
+              questionId,
               slug: 'q-1',
               stemMd: 'Stem for q1',
               difficulty: 'easy',
@@ -276,7 +283,9 @@ describe('bookmark-controller', () => {
       const result = await getBookmarks({}, deps);
 
       expect(result.ok).toBe(true);
-      expect(deps.getBookmarksUseCase.inputs).toEqual([{ userId: 'user_1' }]);
+      expect(deps.getBookmarksUseCase.inputs).toEqual([
+        { userId: deps._fixtures.userId },
+      ]);
     });
 
     it('returns error when use case throws ApplicationError', async () => {

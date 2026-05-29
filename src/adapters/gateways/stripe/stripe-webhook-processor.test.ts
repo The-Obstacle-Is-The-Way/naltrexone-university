@@ -9,13 +9,15 @@ const priceIds: StripePriceIds = {
   annual: 'price_annual',
 };
 
+const appUserId = crypto.randomUUID();
+
 function createSubscriptionFixture() {
   return {
     id: 'sub_123',
     customer: 'cus_123',
     status: 'active',
     cancel_at_period_end: false,
-    metadata: { user_id: 'user_1' },
+    metadata: { user_id: appUserId },
     items: {
       data: [
         {
@@ -187,7 +189,7 @@ describe('processStripeWebhookEvent', () => {
       eventId: 'evt_checkout',
       type: 'checkout.session.completed',
       subscriptionUpdate: {
-        userId: 'user_1',
+        userId: appUserId,
         externalCustomerId: 'cus_123',
         externalSubscriptionId: 'sub_123',
         plan: 'monthly',
@@ -234,7 +236,7 @@ describe('processStripeWebhookEvent', () => {
       eventId: 'evt_invoice_success_nested',
       type: 'invoice.payment_succeeded',
       subscriptionUpdate: {
-        userId: 'user_1',
+        userId: appUserId,
         externalCustomerId: 'cus_123',
         externalSubscriptionId: 'sub_123',
         plan: 'monthly',
@@ -283,7 +285,7 @@ describe('processStripeWebhookEvent', () => {
       eventId: 'evt_invoice_failed_nested',
       type: 'invoice.payment_failed',
       subscriptionUpdate: {
-        userId: 'user_1',
+        userId: appUserId,
         externalCustomerId: 'cus_123',
         externalSubscriptionId: 'sub_123',
         plan: 'monthly',
@@ -397,7 +399,7 @@ describe('processStripeWebhookEvent', () => {
       eventId: 'evt_sub_updated',
       type: 'customer.subscription.updated',
       subscriptionUpdate: {
-        userId: 'user_1',
+        userId: appUserId,
         externalCustomerId: 'cus_123',
         externalSubscriptionId: 'sub_123',
         plan: 'monthly',

@@ -10,7 +10,7 @@ import { requireEntitledUserId } from './require-entitled-user-id';
 
 describe('requireEntitledUserId', () => {
   it('returns the user id when the user is entitled', async () => {
-    const user = createUser({ id: 'user_1' });
+    const user = createUser();
 
     const authGateway = new FakeAuthGateway(user);
     const subscriptionRepository = new FakeSubscriptionRepository([
@@ -31,7 +31,7 @@ describe('requireEntitledUserId', () => {
   });
 
   it('throws UNSUBSCRIBED when the user is not entitled', async () => {
-    const user = createUser({ id: 'user_1' });
+    const user = createUser();
 
     const authGateway = new FakeAuthGateway(user);
     const subscriptionRepository = new FakeSubscriptionRepository([]);

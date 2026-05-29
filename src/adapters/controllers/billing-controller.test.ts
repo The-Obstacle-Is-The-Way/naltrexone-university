@@ -28,6 +28,9 @@ type BillingControllerTestDeps = BillingControllerDeps & {
   _calls: {
     clerkCalls: Array<undefined>;
   };
+  _fixtures: {
+    userId: string;
+  };
 };
 
 function createDeps(overrides?: {
@@ -44,12 +47,12 @@ function createDeps(overrides?: {
   const user =
     overrides?.user === undefined
       ? createUser({
-          id: 'user_1',
           email: 'user@example.com',
           createdAt: new Date('2026-02-01T00:00:00Z'),
           updatedAt: new Date('2026-02-01T00:00:00Z'),
         })
       : overrides.user;
+  const userId = user?.id ?? crypto.randomUUID();
 
   const appUrl = overrides?.appUrl ?? 'https://app.example.com';
   const clerkUserId =
@@ -89,6 +92,9 @@ function createDeps(overrides?: {
     now,
     _calls: {
       clerkCalls,
+    },
+    _fixtures: {
+      userId,
     },
   };
 }
@@ -152,7 +158,7 @@ describe('billing-controller', () => {
       });
       expect(deps.createCheckoutSessionUseCase.inputs).toEqual([
         {
-          userId: 'user_1',
+          userId: deps._fixtures.userId,
           clerkUserId: 'clerk_1',
           email: 'user@example.com',
           plan: 'annual',
@@ -255,7 +261,10 @@ describe('billing-controller', () => {
         data: { url: 'https://stripe/portal' },
       });
       expect(deps.createPortalSessionUseCase.inputs).toEqual([
-        { userId: 'user_1', returnUrl: 'https://app.example.com/app/billing' },
+        {
+          userId: deps._fixtures.userId,
+          returnUrl: 'https://app.example.com/app/billing',
+        },
       ]);
     });
 
@@ -274,7 +283,10 @@ describe('billing-controller', () => {
         },
       });
       expect(deps.createPortalSessionUseCase.inputs).toEqual([
-        { userId: 'user_1', returnUrl: 'https://app.example.com/app/billing' },
+        {
+          userId: deps._fixtures.userId,
+          returnUrl: 'https://app.example.com/app/billing',
+        },
       ]);
     });
 
@@ -296,7 +308,7 @@ describe('billing-controller', () => {
       expect(deps.createPortalSessionUseCase.inputs).toHaveLength(1);
       expect(deps.createPortalSessionUseCase.inputs).toEqual([
         {
-          userId: 'user_1',
+          userId: deps._fixtures.userId,
           returnUrl: 'https://app.example.com/app/billing',
           idempotencyKey: '11111111-1111-1111-1111-111111111111',
         },

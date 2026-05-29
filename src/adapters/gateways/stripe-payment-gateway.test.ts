@@ -17,6 +17,7 @@ import { StripePaymentGateway } from './stripe-payment-gateway';
 
 const TEST_WEBHOOK_SECRET = 'whsec_1';
 const TEST_PRICE_IDS = { monthly: 'price_m', annual: 'price_a' } as const;
+const appUserId = crypto.randomUUID();
 
 type StripeWebhookEventFixture<TObject> = {
   id: string;
@@ -24,6 +25,24 @@ type StripeWebhookEventFixture<TObject> = {
   data: { object: TObject };
   [key: string]: unknown;
 };
+
+type StripeSubscriptionFixtureObject = {
+  metadata?: Record<string, string>;
+  [key: string]: unknown;
+};
+
+function withSubscriptionUserId<T extends StripeSubscriptionFixtureObject>(
+  subscription: T,
+  userId = appUserId,
+): T {
+  return {
+    ...subscription,
+    metadata: {
+      ...(subscription.metadata ?? {}),
+      user_id: userId,
+    },
+  };
+}
 
 function createGateway(
   stripe: StripeClient,
@@ -156,7 +175,7 @@ describe('StripePaymentGateway', () => {
 
     await expect(
       gateway.createCustomer({
-        userId: 'user_1',
+        userId: appUserId,
         clerkUserId: 'clerk_1',
         email: 'user@example.com',
       }),
@@ -165,14 +184,14 @@ describe('StripePaymentGateway', () => {
     expect(customersCreate).toHaveBeenCalledWith(
       {
         email: 'user@example.com',
-        metadata: { user_id: 'user_1', clerk_user_id: 'clerk_1' },
+        metadata: { user_id: appUserId, clerk_user_id: 'clerk_1' },
       },
       {
-        idempotencyKey: 'create_stripe_customer:user_1',
+        idempotencyKey: `create_stripe_customer:${appUserId}`,
       },
     );
     expect(customersSearch).toHaveBeenCalledWith({
-      query: "metadata['user_id']:'user_1'",
+      query: `metadata['user_id']:'${appUserId}'`,
       limit: 2,
     });
   });
@@ -185,14 +204,14 @@ describe('StripePaymentGateway', () => {
 
     await expect(
       gateway.createCustomer({
-        userId: 'user_1',
+        userId: appUserId,
         clerkUserId: 'clerk_1',
         email: 'user@example.com',
       }),
     ).resolves.toEqual({ externalCustomerId: 'cus_123' });
 
     expect(customersSearch).toHaveBeenCalledWith({
-      query: "metadata['user_id']:'user_1'",
+      query: `metadata['user_id']:'${appUserId}'`,
       limit: 2,
     });
     expect(customersCreate).toHaveBeenCalledTimes(0);
@@ -210,7 +229,7 @@ describe('StripePaymentGateway', () => {
     await expect(
       gateway.createCustomer(
         {
-          userId: 'user_1',
+          userId: appUserId,
           clerkUserId: 'clerk_1',
           email: 'user@example.com',
         },
@@ -228,7 +247,7 @@ describe('StripePaymentGateway', () => {
 
     await expect(
       gateway.createCustomer({
-        userId: 'user_1',
+        userId: appUserId,
         clerkUserId: 'clerk_1',
         email: 'user@example.com',
       }),
@@ -241,7 +260,7 @@ describe('StripePaymentGateway', () => {
 
     await expect(
       gateway.createCheckoutSession({
-        userId: 'user_1',
+        userId: appUserId,
         externalCustomerId: 'cus_123',
         plan: 'monthly',
         successUrl: 'https://app/success',
@@ -258,13 +277,13 @@ describe('StripePaymentGateway', () => {
         billing_address_collection: 'auto',
         success_url: 'https://app/success',
         cancel_url: 'https://app/cancel',
-        client_reference_id: 'user_1',
+        client_reference_id: appUserId,
         subscription_data: {
-          metadata: { user_id: 'user_1' },
+          metadata: { user_id: appUserId },
         },
       }),
       expect.objectContaining({
-        idempotencyKey: expect.stringMatching(/^checkout_session:user_1:/),
+        idempotencyKey: `checkout_session:${appUserId}:monthly`,
       }),
     );
   });
@@ -287,7 +306,7 @@ describe('StripePaymentGateway', () => {
 
     await expect(
       gateway.createCheckoutSession({
-        userId: 'user_1',
+        userId: appUserId,
         externalCustomerId: 'cus_123',
         plan: 'monthly',
         successUrl: 'https://app/success',
@@ -317,7 +336,7 @@ describe('StripePaymentGateway', () => {
 
     await expect(
       gateway.createCheckoutSession({
-        userId: 'user_1',
+        userId: appUserId,
         externalCustomerId: 'cus_123',
         plan: 'monthly',
         successUrl: 'https://app/success',
@@ -353,7 +372,7 @@ describe('StripePaymentGateway', () => {
 
     await expect(
       gateway.createCheckoutSession({
-        userId: 'user_1',
+        userId: appUserId,
         externalCustomerId: 'cus_123',
         plan: 'annual',
         successUrl: 'https://app/success',
@@ -397,7 +416,7 @@ describe('StripePaymentGateway', () => {
 
     await expect(
       gateway.createCheckoutSession({
-        userId: 'user_1',
+        userId: appUserId,
         externalCustomerId: 'cus_123',
         plan: 'monthly',
         successUrl: 'https://app/success',
@@ -416,7 +435,7 @@ describe('StripePaymentGateway', () => {
         line_items: [{ price: 'price_m', quantity: 1 }],
       }),
       expect.objectContaining({
-        idempotencyKey: expect.stringMatching(/^checkout_session:user_1:/),
+        idempotencyKey: `checkout_session:${appUserId}:monthly`,
       }),
     );
   });
@@ -441,7 +460,7 @@ describe('StripePaymentGateway', () => {
     const gateway = createGateway(stripe, { logger });
 
     const result = await gateway.createCheckoutSession({
-      userId: 'user_1',
+      userId: appUserId,
       externalCustomerId: 'cus_123',
       plan: 'monthly',
       successUrl: 'https://app/success',
@@ -494,7 +513,7 @@ describe('StripePaymentGateway', () => {
 
     await expect(
       gateway.createCheckoutSession({
-        userId: 'user_1',
+        userId: appUserId,
         externalCustomerId: 'cus_123',
         plan: 'monthly',
         successUrl: 'https://app/success',
@@ -513,7 +532,7 @@ describe('StripePaymentGateway', () => {
 
     await expect(
       gateway.createCheckoutSession({
-        userId: 'user_1',
+        userId: appUserId,
         externalCustomerId: 'cus_123',
         plan: 'monthly',
         successUrl: 'https://app/success',
@@ -543,7 +562,7 @@ describe('StripePaymentGateway', () => {
     const event = loadJsonFixture<
       StripeWebhookEventFixture<{ id: string; [key: string]: unknown }>
     >('stripe/customer.subscription.updated.json');
-    const subscription = event.data.object;
+    const subscription = withSubscriptionUserId(event.data.object);
     const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
       withSubscriptions: true,
     });
@@ -557,7 +576,7 @@ describe('StripePaymentGateway', () => {
       eventId: 'evt_1',
       type: 'customer.subscription.updated',
       subscriptionUpdate: {
-        userId: 'user_1',
+        userId: appUserId,
         externalCustomerId: 'cus_123',
         externalSubscriptionId: 'sub_123',
         plan: 'monthly',
@@ -575,7 +594,7 @@ describe('StripePaymentGateway', () => {
     const event = loadJsonFixture<
       StripeWebhookEventFixture<{ id: string; [key: string]: unknown }>
     >('stripe/customer.subscription.updated.json');
-    const subscription = event.data.object;
+    const subscription = withSubscriptionUserId(event.data.object);
     const constructedEvent = {
       ...event,
       id: 'evt_trial_will_end_1',
@@ -585,7 +604,9 @@ describe('StripePaymentGateway', () => {
       withSubscriptions: true,
     });
     constructEvent.mockReturnValue(constructedEvent);
-    subscriptionsRetrieve.mockResolvedValue(event.data.object);
+    subscriptionsRetrieve.mockResolvedValue(
+      withSubscriptionUserId(event.data.object),
+    );
     const gateway = createGateway(stripe);
 
     await expect(
@@ -594,7 +615,7 @@ describe('StripePaymentGateway', () => {
       eventId: 'evt_trial_will_end_1',
       type: 'customer.subscription.trial_will_end',
       subscriptionUpdate: {
-        userId: 'user_1',
+        userId: appUserId,
         externalCustomerId: 'cus_123',
         externalSubscriptionId: 'sub_123',
         plan: 'monthly',
@@ -612,10 +633,10 @@ describe('StripePaymentGateway', () => {
       data: { object: { id: string; status: string; [key: string]: unknown } };
     }>('stripe/customer.subscription.updated.json');
 
-    const subscription = {
+    const subscription = withSubscriptionUserId({
       ...subscriptionEvent.data.object,
       status: 'canceled',
-    };
+    });
 
     const constructedEvent = {
       ...subscriptionEvent,
@@ -638,7 +659,7 @@ describe('StripePaymentGateway', () => {
       eventId: 'evt_deleted_1',
       type: 'customer.subscription.deleted',
       subscriptionUpdate: expect.objectContaining({
-        userId: 'user_1',
+        userId: appUserId,
         externalCustomerId: 'cus_123',
         externalSubscriptionId: 'sub_123',
         plan: 'monthly',
@@ -660,7 +681,7 @@ describe('StripePaymentGateway', () => {
     const subscriptionEvent = loadJsonFixture<{
       data: { object: { id: string } };
     }>('stripe/customer.subscription.updated.json');
-    const subscription = subscriptionEvent.data.object;
+    const subscription = withSubscriptionUserId(subscriptionEvent.data.object);
 
     const constructedEvent = {
       id: eventId,
@@ -684,7 +705,7 @@ describe('StripePaymentGateway', () => {
       eventId,
       type,
       subscriptionUpdate: {
-        userId: 'user_1',
+        userId: appUserId,
         externalCustomerId: 'cus_123',
         externalSubscriptionId: 'sub_123',
         plan: 'monthly',
@@ -701,7 +722,7 @@ describe('StripePaymentGateway', () => {
     const subscriptionEvent = loadJsonFixture<{
       data: { object: { id: string } };
     }>('stripe/customer.subscription.updated.json');
-    const subscription = subscriptionEvent.data.object;
+    const subscription = withSubscriptionUserId(subscriptionEvent.data.object);
 
     const constructedEvent = {
       id: 'evt_invoice_success_nested_1',
@@ -733,7 +754,7 @@ describe('StripePaymentGateway', () => {
       eventId: 'evt_invoice_success_nested_1',
       type: 'invoice.payment_succeeded',
       subscriptionUpdate: {
-        userId: 'user_1',
+        userId: appUserId,
         externalCustomerId: 'cus_123',
         externalSubscriptionId: 'sub_123',
         plan: 'monthly',
@@ -908,7 +929,9 @@ describe('StripePaymentGateway', () => {
       withSubscriptions: true,
     });
     constructEvent.mockReturnValue(event);
-    subscriptionsRetrieve.mockResolvedValue(event.data.object);
+    subscriptionsRetrieve.mockResolvedValue(
+      withSubscriptionUserId(event.data.object),
+    );
     const gateway = createGateway(stripe);
 
     await expect(
@@ -917,7 +940,7 @@ describe('StripePaymentGateway', () => {
       eventId: 'evt_2',
       type: 'customer.subscription.paused',
       subscriptionUpdate: {
-        userId: 'user_2',
+        userId: appUserId,
         externalCustomerId: 'cus_456',
         externalSubscriptionId: 'sub_456',
         plan: 'annual',
@@ -938,7 +961,9 @@ describe('StripePaymentGateway', () => {
       withSubscriptions: true,
     });
     constructEvent.mockReturnValue(event);
-    subscriptionsRetrieve.mockResolvedValue(event.data.object);
+    subscriptionsRetrieve.mockResolvedValue(
+      withSubscriptionUserId(event.data.object),
+    );
     const gateway = createGateway(stripe);
 
     await expect(
@@ -947,7 +972,7 @@ describe('StripePaymentGateway', () => {
       eventId: 'evt_3',
       type: 'customer.subscription.resumed',
       subscriptionUpdate: {
-        userId: 'user_3',
+        userId: appUserId,
         externalCustomerId: 'cus_789',
         externalSubscriptionId: 'sub_789',
         plan: 'monthly',
@@ -968,7 +993,9 @@ describe('StripePaymentGateway', () => {
       withSubscriptions: true,
     });
     constructEvent.mockReturnValue(event);
-    subscriptionsRetrieve.mockResolvedValue(event.data.object);
+    subscriptionsRetrieve.mockResolvedValue(
+      withSubscriptionUserId(event.data.object),
+    );
     const gateway = createGateway(stripe);
 
     await expect(
@@ -977,7 +1004,7 @@ describe('StripePaymentGateway', () => {
       eventId: 'evt_4',
       type: 'customer.subscription.pending_update_applied',
       subscriptionUpdate: {
-        userId: 'user_4',
+        userId: appUserId,
         externalCustomerId: 'cus_901',
         externalSubscriptionId: 'sub_901',
         plan: 'annual',
@@ -998,7 +1025,9 @@ describe('StripePaymentGateway', () => {
       withSubscriptions: true,
     });
     constructEvent.mockReturnValue(event);
-    subscriptionsRetrieve.mockResolvedValue(event.data.object);
+    subscriptionsRetrieve.mockResolvedValue(
+      withSubscriptionUserId(event.data.object),
+    );
     const gateway = createGateway(stripe);
 
     await expect(
@@ -1007,7 +1036,7 @@ describe('StripePaymentGateway', () => {
       eventId: 'evt_5',
       type: 'customer.subscription.pending_update_expired',
       subscriptionUpdate: {
-        userId: 'user_5',
+        userId: appUserId,
         externalCustomerId: 'cus_902',
         externalSubscriptionId: 'sub_902',
         plan: 'monthly',

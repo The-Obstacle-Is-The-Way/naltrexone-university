@@ -16,20 +16,26 @@ import {
   createUser,
 } from '@/src/domain/test-helpers';
 
+type TagControllerTestDeps = TagControllerDeps & {
+  _fixtures: {
+    userId: string;
+  };
+};
+
 function createDeps(overrides?: {
   user?: ReturnType<typeof createUser> | null;
   isEntitled?: boolean;
   tags?: Array<ReturnType<typeof createTag>>;
-}): TagControllerDeps {
+}): TagControllerTestDeps {
   const user =
     overrides?.user === undefined
       ? createUser({
-          id: 'user_1',
           email: 'user@example.com',
           createdAt: new Date('2026-02-01T00:00:00Z'),
           updatedAt: new Date('2026-02-01T00:00:00Z'),
         })
       : overrides.user;
+  const userId = user?.id ?? crypto.randomUUID();
 
   const authGateway = new FakeAuthGateway(user);
 
@@ -38,7 +44,7 @@ function createDeps(overrides?: {
       ? []
       : [
           createSubscription({
-            userId: user?.id ?? 'user_1',
+            userId,
             status: 'active',
             currentPeriodEnd: new Date('2026-12-31T00:00:00Z'),
           }),
@@ -58,6 +64,9 @@ function createDeps(overrides?: {
     checkEntitlementUseCase,
     tagRepository,
     logger: new FakeLogger(),
+    _fixtures: {
+      userId,
+    },
   };
 }
 
@@ -97,16 +106,18 @@ describe('tag-controller', () => {
     });
 
     it('returns tags when entitled', async () => {
+      const opioidTagId = crypto.randomUUID();
+      const alcoholTagId = crypto.randomUUID();
       const deps = createDeps({
         tags: [
           createTag({
-            id: 'tag_1',
+            id: opioidTagId,
             slug: 'opioids',
             name: 'Opioids',
             kind: 'substance',
           }),
           createTag({
-            id: 'tag_2',
+            id: alcoholTagId,
             slug: 'alcohol',
             name: 'Alcohol',
             kind: 'substance',
@@ -121,13 +132,13 @@ describe('tag-controller', () => {
         data: {
           rows: [
             {
-              id: 'tag_1',
+              id: opioidTagId,
               slug: 'opioids',
               name: 'Opioids',
               kind: 'substance',
             },
             {
-              id: 'tag_2',
+              id: alcoholTagId,
               slug: 'alcohol',
               name: 'Alcohol',
               kind: 'substance',

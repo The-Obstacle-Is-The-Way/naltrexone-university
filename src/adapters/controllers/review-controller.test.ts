@@ -18,6 +18,9 @@ import {
 
 type ReviewControllerTestDeps = ReviewControllerDeps & {
   getAttemptedQuestionsUseCase: FakeGetAttemptedQuestionsUseCase;
+  _fixtures: {
+    userId: string;
+  };
 };
 
 function createDeps(overrides?: {
@@ -26,10 +29,8 @@ function createDeps(overrides?: {
   useCaseOutput?: GetAttemptedQuestionsOutput;
   useCaseThrows?: unknown;
 }): ReviewControllerTestDeps {
-  const user =
-    overrides?.user === undefined
-      ? createUser({ id: 'user_1' })
-      : overrides.user;
+  const user = overrides?.user === undefined ? createUser() : overrides.user;
+  const userId = user?.id ?? crypto.randomUUID();
 
   const authGateway = new FakeAuthGateway(user);
 
@@ -38,7 +39,7 @@ function createDeps(overrides?: {
       ? []
       : [
           createSubscription({
-            userId: user?.id ?? 'user_1',
+            userId,
             status: 'active',
             currentPeriodEnd: new Date('2026-12-31T00:00:00Z'),
           }),
@@ -63,6 +64,9 @@ function createDeps(overrides?: {
     authGateway,
     checkEntitlementUseCase,
     getAttemptedQuestionsUseCase,
+    _fixtures: {
+      userId,
+    },
   };
 }
 
@@ -158,7 +162,7 @@ describe('review-controller', () => {
       });
       expect(deps.getAttemptedQuestionsUseCase.inputs).toEqual([
         {
-          userId: 'user_1',
+          userId: deps._fixtures.userId,
           limit: 10,
           offset: 0,
           result: null,
@@ -181,7 +185,7 @@ describe('review-controller', () => {
       expect(result.ok).toBe(true);
       expect(deps.getAttemptedQuestionsUseCase.inputs).toEqual([
         {
-          userId: 'user_1',
+          userId: deps._fixtures.userId,
           limit: 10,
           offset: 0,
           result: 'correct',
@@ -209,7 +213,7 @@ describe('review-controller', () => {
       expect(result.ok).toBe(true);
       expect(deps.getAttemptedQuestionsUseCase.inputs).toEqual([
         {
-          userId: 'user_1',
+          userId: deps._fixtures.userId,
           limit: 10,
           offset: 0,
           result: null,
@@ -232,7 +236,7 @@ describe('review-controller', () => {
       expect(result.ok).toBe(true);
       expect(deps.getAttemptedQuestionsUseCase.inputs).toEqual([
         {
-          userId: 'user_1',
+          userId: deps._fixtures.userId,
           limit: 10,
           offset: 0,
           result: null,

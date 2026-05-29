@@ -14,6 +14,9 @@ import { getUserStats, type StatsControllerDeps } from './stats-controller';
 
 type StatsControllerTestDeps = StatsControllerDeps & {
   getUserStatsUseCase: FakeGetUserStatsUseCase;
+  _fixtures: {
+    userId: string;
+  };
 };
 
 function createDeps(overrides?: {
@@ -22,10 +25,8 @@ function createDeps(overrides?: {
   useCaseOutput?: UserStatsOutput;
   useCaseThrows?: unknown;
 }): StatsControllerTestDeps {
-  const user =
-    overrides?.user === undefined
-      ? createUser({ id: 'user_1' })
-      : overrides.user;
+  const user = overrides?.user === undefined ? createUser() : overrides.user;
+  const userId = user?.id ?? crypto.randomUUID();
 
   const authGateway = new FakeAuthGateway(user);
   const now = () => new Date('2026-02-01T00:00:00Z');
@@ -35,7 +36,7 @@ function createDeps(overrides?: {
       ? []
       : [
           createSubscription({
-            userId: user?.id ?? 'user_1',
+            userId,
             status: 'active',
             currentPeriodEnd: new Date('2026-12-31T00:00:00Z'),
           }),
@@ -63,6 +64,9 @@ function createDeps(overrides?: {
     authGateway,
     checkEntitlementUseCase,
     getUserStatsUseCase,
+    _fixtures: {
+      userId,
+    },
   };
 }
 
@@ -110,7 +114,9 @@ describe('stats-controller', () => {
       const result = await getUserStats({}, deps);
 
       expect(result).toMatchObject({ ok: true });
-      expect(deps.getUserStatsUseCase.inputs).toEqual([{ userId: 'user_1' }]);
+      expect(deps.getUserStatsUseCase.inputs).toEqual([
+        { userId: deps._fixtures.userId },
+      ]);
     });
 
     it('returns INTERNAL_ERROR when use case throws ApplicationError', async () => {

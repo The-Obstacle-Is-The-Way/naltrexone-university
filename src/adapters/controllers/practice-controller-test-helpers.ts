@@ -45,6 +45,9 @@ export type PracticeControllerTestDeps = PracticeControllerDeps & {
   getPracticeSessionSummaryUseCase: FakeGetPracticeSessionSummaryUseCase;
   getSessionHistoryUseCase: FakeGetSessionHistoryUseCase;
   setPracticeSessionQuestionMarkUseCase: FakeSetPracticeSessionQuestionMarkUseCase;
+  _fixtures: {
+    userId: string;
+  };
 };
 
 export function createDeps(overrides?: {
@@ -84,12 +87,12 @@ export function createDeps(overrides?: {
   const user =
     overrides?.user === undefined
       ? createUser({
-          id: 'user_1',
           email: 'user@example.com',
           createdAt: new Date('2026-02-01T00:00:00Z'),
           updatedAt: new Date('2026-02-01T00:00:00Z'),
         })
       : overrides.user;
+  const userId = user?.id ?? crypto.randomUUID();
 
   const now = overrides?.now ?? (() => new Date('2026-02-01T00:00:00Z'));
 
@@ -100,7 +103,7 @@ export function createDeps(overrides?: {
       ? []
       : [
           createSubscription({
-            userId: user?.id ?? 'user_1',
+            userId,
             status: 'active',
             currentPeriodEnd: new Date('2026-12-31T00:00:00Z'),
           }),
@@ -246,5 +249,8 @@ export function createDeps(overrides?: {
     getSessionHistoryUseCase,
     setPracticeSessionQuestionMarkUseCase,
     now,
+    _fixtures: {
+      userId,
+    },
   };
 }

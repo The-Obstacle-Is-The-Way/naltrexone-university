@@ -51,7 +51,7 @@ function findUserIdWithNonCanonicalShuffle(
   // To ensure the tests would fail if the controller returned canonical order, probe
   // multiple userIds until we find one whose shuffle differs from the canonical mapping.
   for (let i = 0; i < 50; i++) {
-    const userId = `user_${i + 1}`;
+    const userId = crypto.randomUUID();
     const shuffledChoices = mapChoicesForOutput(question, userId);
     if (JSON.stringify(shuffledChoices) !== JSON.stringify(canonicalChoices)) {
       return userId;
@@ -95,12 +95,12 @@ function createDeps(overrides?: {
   const user =
     overrides?.user === undefined
       ? createUser({
-          id: 'user_1',
           email: 'user@example.com',
           createdAt: new Date('2026-02-01T00:00:00Z'),
           updatedAt: new Date('2026-02-01T00:00:00Z'),
         })
       : overrides.user;
+  const userId = user?.id ?? crypto.randomUUID();
 
   const authGateway = new FakeAuthGateway(user);
 
@@ -109,7 +109,7 @@ function createDeps(overrides?: {
       ? []
       : [
           createSubscription({
-            userId: user?.id ?? 'user_1',
+            userId,
             status: 'active',
             currentPeriodEnd: new Date('2026-12-31T00:00:00Z'),
           }),
@@ -146,6 +146,9 @@ function createDeps(overrides?: {
     logger,
     questionRepository,
     getPreviousAttemptUseCase,
+    _fixtures: {
+      userId,
+    },
   };
 }
 
@@ -201,23 +204,26 @@ describe('question-view-controller', () => {
     });
 
     it('returns the question with choices when found', async () => {
+      const questionId = crypto.randomUUID();
+      const firstChoiceId = crypto.randomUUID();
+      const secondChoiceId = crypto.randomUUID();
       const question = createQuestion({
-        id: 'question-1',
+        id: questionId,
         slug: 'q-1',
         stemMd: 'Stem for q1',
         difficulty: 'medium',
         choices: [
           createChoice({
-            id: 'choice-1',
-            questionId: 'question-1',
+            id: firstChoiceId,
+            questionId,
             label: 'A',
             textMd: 'Choice A',
             isCorrect: false,
             sortOrder: 1,
           }),
           createChoice({
-            id: 'choice-2',
-            questionId: 'question-1',
+            id: secondChoiceId,
+            questionId,
             label: 'B',
             textMd: 'Choice B',
             isCorrect: true,
@@ -234,7 +240,7 @@ describe('question-view-controller', () => {
       expect(result).toEqual({
         ok: true,
         data: {
-          questionId: 'question-1',
+          questionId,
           slug: 'q-1',
           stemMd: 'Stem for q1',
           difficulty: 'medium',
@@ -244,39 +250,44 @@ describe('question-view-controller', () => {
     });
 
     it('returns shuffled labels consistent with buildShuffledChoiceViews', async () => {
+      const questionId = crypto.randomUUID();
+      const firstChoiceId = crypto.randomUUID();
+      const secondChoiceId = crypto.randomUUID();
+      const thirdChoiceId = crypto.randomUUID();
+      const fourthChoiceId = crypto.randomUUID();
       const question = createQuestion({
-        id: 'question-2',
+        id: questionId,
         slug: 'q-2',
         stemMd: 'Stem for q2',
         difficulty: 'hard',
         choices: [
           createChoice({
-            id: 'choice-a',
-            questionId: 'question-2',
+            id: firstChoiceId,
+            questionId,
             label: 'A',
             textMd: 'Choice A',
             isCorrect: false,
             sortOrder: 1,
           }),
           createChoice({
-            id: 'choice-b',
-            questionId: 'question-2',
+            id: secondChoiceId,
+            questionId,
             label: 'B',
             textMd: 'Choice B',
             isCorrect: false,
             sortOrder: 2,
           }),
           createChoice({
-            id: 'choice-c',
-            questionId: 'question-2',
+            id: thirdChoiceId,
+            questionId,
             label: 'C',
             textMd: 'Choice C',
             isCorrect: true,
             sortOrder: 3,
           }),
           createChoice({
-            id: 'choice-d',
-            questionId: 'question-2',
+            id: fourthChoiceId,
+            questionId,
             label: 'D',
             textMd: 'Choice D',
             isCorrect: false,
@@ -293,7 +304,7 @@ describe('question-view-controller', () => {
       expect(result).toEqual({
         ok: true,
         data: {
-          questionId: 'question-2',
+          questionId,
           slug: 'q-2',
           stemMd: 'Stem for q2',
           difficulty: 'hard',
@@ -403,7 +414,7 @@ describe('question-view-controller', () => {
     });
 
     it('passes attemptId to use case when provided', async () => {
-      const userId = 'user_1';
+      const userId = crypto.randomUUID();
       const questionId = validPreviousAttemptQuestionId;
       const attemptId = '00000000-0000-4000-8000-000000000001';
 
@@ -432,7 +443,7 @@ describe('question-view-controller', () => {
     });
 
     it('passes sessionId to use case when provided', async () => {
-      const userId = 'user_1';
+      const userId = crypto.randomUUID();
       const questionId = validPreviousAttemptQuestionId;
       const sessionId = '00000000-0000-4000-8000-000000000002';
 
@@ -461,8 +472,10 @@ describe('question-view-controller', () => {
     });
 
     it('returns the previous attempt when found', async () => {
-      const userId = 'user_1';
+      const userId = crypto.randomUUID();
       const questionId = validPreviousAttemptQuestionId;
+      const attemptId = crypto.randomUUID();
+      const choiceId = crypto.randomUUID();
       const logger = new FakeLogger();
 
       let receivedInput: {
@@ -477,10 +490,10 @@ describe('question-view-controller', () => {
             receivedInput = input;
             return {
               kind: 'attempt',
-              attemptId: 'attempt_1',
-              selectedChoiceId: 'choice_1',
+              attemptId,
+              selectedChoiceId: choiceId,
               isCorrect: true,
-              correctChoiceId: 'choice_1',
+              correctChoiceId: choiceId,
               explanationMd: 'Explanation',
               choiceExplanations: [],
               answeredAt: '2026-02-01T00:00:00.000Z',
@@ -497,10 +510,10 @@ describe('question-view-controller', () => {
         ok: true,
         data: {
           kind: 'attempt',
-          attemptId: 'attempt_1',
-          selectedChoiceId: 'choice_1',
+          attemptId,
+          selectedChoiceId: choiceId,
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: choiceId,
           explanationMd: 'Explanation',
           choiceExplanations: [],
           answeredAt: '2026-02-01T00:00:00.000Z',
@@ -514,15 +527,17 @@ describe('question-view-controller', () => {
           hasAttemptId: false,
           hasSessionId: false,
           questionId,
-          userId: 'user_1',
+          userId,
         },
         msg: 'Review hydration outcome',
       });
     });
 
     it('returns the previous attempt when hydration telemetry info logging throws', async () => {
-      const userId = 'user_1';
+      const userId = crypto.randomUUID();
       const questionId = validPreviousAttemptQuestionId;
+      const attemptId = crypto.randomUUID();
+      const choiceId = crypto.randomUUID();
       const logger = new ThrowingInfoLogger();
 
       const deps = createDeps({
@@ -530,10 +545,10 @@ describe('question-view-controller', () => {
         getPreviousAttemptUseCase: {
           execute: async () => ({
             kind: 'attempt',
-            attemptId: 'attempt_1',
-            selectedChoiceId: 'choice_1',
+            attemptId,
+            selectedChoiceId: choiceId,
             isCorrect: true,
-            correctChoiceId: 'choice_1',
+            correctChoiceId: choiceId,
             explanationMd: 'Explanation',
             choiceExplanations: [],
             answeredAt: '2026-02-01T00:00:00.000Z',
@@ -548,10 +563,10 @@ describe('question-view-controller', () => {
         ok: true,
         data: {
           kind: 'attempt',
-          attemptId: 'attempt_1',
-          selectedChoiceId: 'choice_1',
+          attemptId,
+          selectedChoiceId: choiceId,
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: choiceId,
           explanationMd: 'Explanation',
           choiceExplanations: [],
           answeredAt: '2026-02-01T00:00:00.000Z',
@@ -583,13 +598,14 @@ describe('question-view-controller', () => {
     });
 
     it('emits session_unanswered hydration telemetry when unanswered session reveal is returned', async () => {
+      const correctChoiceId = crypto.randomUUID();
       const logger = new FakeLogger();
       const deps = createDeps({
         logger,
         getPreviousAttemptUseCase: {
           execute: async () => ({
             kind: 'session_unanswered',
-            correctChoiceId: 'choice_2',
+            correctChoiceId,
             explanationMd: 'Explanation',
             referenceMd: null,
             choiceExplanations: [],
@@ -609,7 +625,7 @@ describe('question-view-controller', () => {
         ok: true,
         data: {
           kind: 'session_unanswered',
-          correctChoiceId: 'choice_2',
+          correctChoiceId,
           explanationMd: 'Explanation',
           referenceMd: null,
           choiceExplanations: [],
@@ -623,7 +639,7 @@ describe('question-view-controller', () => {
           hasAttemptId: false,
           hasSessionId: true,
           questionId: validPreviousAttemptQuestionId,
-          userId: 'user_1',
+          userId: deps._fixtures.userId,
         },
         msg: 'Review hydration outcome',
       });
@@ -652,7 +668,7 @@ describe('question-view-controller', () => {
           hasAttemptId: false,
           hasSessionId: false,
           questionId: validPreviousAttemptQuestionId,
-          userId: 'user_1',
+          userId: deps._fixtures.userId,
         },
         msg: 'Review hydration outcome',
       });
@@ -686,7 +702,7 @@ describe('question-view-controller', () => {
           hasAttemptId: false,
           hasSessionId: false,
           questionId: validPreviousAttemptQuestionId,
-          userId: 'user_1',
+          userId: deps._fixtures.userId,
           errorCode: 'INTERNAL_ERROR',
         },
         msg: 'Review hydration outcome',
