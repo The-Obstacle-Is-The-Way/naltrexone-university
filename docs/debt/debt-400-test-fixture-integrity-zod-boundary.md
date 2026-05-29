@@ -1,8 +1,8 @@
 # DEBT-400: Test Fixture Integrity (Zod Boundary Class)
 
-**Priority:** P2 (latent bug class. After PR 1, the current canonical candidate grep finds 2,438 placeholder-ID assignments across 162 test files. This is a candidate set, not a mandate to replace every string: the execution scope is only IDs that cross `zUuid = z.guid()` controller schemas or model Drizzle `uuid()` columns.)
+**Priority:** P2 (latent bug class. After PR 2a, the current canonical candidate grep finds 2,244 placeholder-ID assignments across 140 test files. This is a candidate set, not a mandate to replace every string: the execution scope is only IDs that cross `zUuid = z.guid()` controller schemas or model Drizzle `uuid()` columns.)
 **Created:** 2026-05-26
-**Source:** Deep schema/boundary integrity audit conducted alongside DEBT-394 archival; re-audited on 2026-05-28 from `dev` at `f2dc0793`, then PR 2 scope re-audited on 2026-05-28 from `dev` at `e7f1029a` after PR 1 merged. Direct precedent is PR #330, which bumped Zod from 3 to 4 and deliberately kept historical UUID/GUID behavior by replacing the shared controller ID schema with Zod 4 `z.guid()`.
+**Source:** Deep schema/boundary integrity audit conducted alongside DEBT-394 archival; re-audited on 2026-05-28 from `dev` at `f2dc0793`, PR 2 scope re-audited on 2026-05-28 from `dev` at `e7f1029a` after PR 1 merged, then repository-slice PR 2b scope re-audited on 2026-05-29 from `dev` at `a98b5922` after PR 2a merged. Direct precedent is PR #330, which bumped Zod from 3 to 4 and deliberately kept historical UUID/GUID behavior by replacing the shared controller ID schema with Zod 4 `z.guid()`.
 **Related:** [src/adapters/shared/zod-schemas.ts](../../src/adapters/shared/zod-schemas.ts), [db/schema.ts](../../db/schema.ts), [src/domain/test-helpers/](../../src/domain/test-helpers/), [src/application/test-helpers/fakes/](../../src/application/test-helpers/fakes/), [docs/dev/dependency-update-protocol.md](../dev/dependency-update-protocol.md), [DEBT-397](./debt-397-datetime-boundary-type-normalization.md), [DEBT-394 (archived)](../_archive/debt/debt-394-supply-chain-hardening.md), PR #330
 
 **Status:** Active
@@ -70,6 +70,21 @@ Confirmed current Drizzle `uuid()` columns in `db/schema.ts`:
 | `attempts` | `id`, `userId`, `questionId`, `practiceSessionId`, `selectedChoiceId`, `retryOfAttemptId`, `retrySessionId` |
 | `bookmarks` | `userId`, `questionId` |
 
+Confirmed current provider/text identifier columns in `db/schema.ts` that are explicitly **not** app UUIDs:
+
+| Table | Provider/text columns |
+|---|---|
+| `users` | `clerkUserId` |
+| `stripe_customers` | `stripeCustomerId` |
+| `stripe_subscriptions` | `stripeSubscriptionId`, `priceId` |
+| `stripe_events` | `id` (Stripe event id), `type`, `error` |
+| `clerk_events` | `id` (Svix delivery id), `type`, `error` |
+| `deleted_clerk_users` | `clerkUserId` |
+| `pending_stripe_cancellations` | `eventId`, `stripeCustomerId` |
+| `rate_limits` | `key` |
+| `idempotency_keys` | `action`, `key`, `errorCode`, `errorMessage` |
+| `questions` / `tags` | `slug`; tag `name` / `kind`; choice `label` |
+
 Explicit non-targets:
 
 - `stripe_events.id`, `clerk_events.id`, `deleted_clerk_users.clerkUserId`, `pending_stripe_cancellations.eventId`, Stripe `cus_` / `sub_` / `evt_` values, Clerk `user_...` values, and Svix delivery IDs are external-provider string IDs, not Drizzle UUID columns.
@@ -89,7 +104,7 @@ rg -n "\b(questionId|sessionId|attemptId|choiceId|selectedChoiceId|correctChoice
   --glob '!**/_archive/**'
 ```
 
-Current result on `e7f1029a` after PR 1: **2,438 lines across 162 files**. The pre-PR1 audit result on `f2dc0793` was **2,447 lines across 163 files**.
+Current result on `a98b5922` after PR 2a: **2,244 lines across 140 files**. The result on `e7f1029a` after PR 1 was **2,438 lines across 162 files**. The pre-PR1 audit result on `f2dc0793` was **2,447 lines across 163 files**.
 
 This replaces the old narrower `604 / 64` count. The old grep only searched `app/ src/ components/`, only camel-case object properties, only five field names, and only underscore-prefixed values. It missed hyphenated placeholders (`session-1`), choice/tag/subscription fields, snake_case SQL-row fixtures (`user_id`), and `tests/**` helper fixtures.
 
@@ -270,7 +285,10 @@ Status: shipped in PR #368 at `e7f1029a`.
 
 ### PR 2 — Adapter boundary fixture sweep
 
-Branch: `feat/debt-400-pr-2-adapter-boundary-fixtures`
+Branches:
+
+- PR 2a: `feat/debt-400-pr-2-adapter-boundary-fixtures` (controllers/shared/jobs/gateways; shipped in PR #369 at `a98b5922`)
+- PR 2b: `feat/debt-400-pr-2b-repository-fixtures` (repository row fixtures)
 
 Scope:
 
@@ -384,7 +402,59 @@ PR 2 proof method:
 
 - Acceptance is not "zero placeholder-looking strings in adapters." Provider and invalid buckets above are expected to remain.
 
-Split decision: PR 2 ships as **two PRs** on adapter-layer boundaries. PR 2a uses `feat/debt-400-pr-2-adapter-boundary-fixtures` and covers controllers, `src/adapters/shared/with-idempotency.test.ts`, jobs, and gateways. PR 2b follows on a fresh branch for `src/adapters/repositories/**/*.test.ts`. The table above remains the SSOT for both PRs; PR 2a must not touch repository tests.
+Split decision: PR 2 ships as **two PRs** on adapter-layer boundaries. PR 2a used `feat/debt-400-pr-2-adapter-boundary-fixtures` and shipped in PR #369 at `a98b5922`, covering controllers, `src/adapters/shared/with-idempotency.test.ts`, jobs, and gateways. PR 2b uses `feat/debt-400-pr-2b-repository-fixtures` for `src/adapters/repositories/**/*.test.ts`. The 2026-05-29 PR 2b table below supersedes the repository rows in the historical 44-row adapter table above.
+
+#### PR 2b pre-execution audit: repository row-fixture target list
+
+Re-audited on 2026-05-29 from `dev` at `a98b5922` after PR 2a merged. The authoritative schema path is `db/schema.ts`; no `src/adapters/db` schema exists. The repository slice resolves to these test files:
+
+- `src/adapters/repositories/attempt-row-mappers.test.ts`
+- `src/adapters/repositories/drizzle-*-repository.test.ts`
+- `src/adapters/repositories/practice-session-params.test.ts`
+- plus non-target repository tests with no fixture IDs: `index.test.ts`, `postgres-errors.test.ts`
+
+Counts below are current candidate occurrences from a repository-slice AST/text audit. They are **not** expected edit counts: one named value such as `const userId = crypto.randomUUID()` may replace multiple repeated literals. The execution target is the `FIX uuid-column` column only.
+
+| File | FIX uuid-column | LEAVE provider/text | LEAVE other / already valid | Execution note |
+|---|---:|---:|---:|---|
+| `src/adapters/repositories/attempt-row-mappers.test.ts` | 4 | 0 | 0 | Base attempt row models `attempts.id`, `userId`, `questionId`, `selectedChoiceId`; update error-message expectations by capturing `baseRow.id`, not by hardcoding the old literal. |
+| `src/adapters/repositories/drizzle-attempt-repository.test.ts` | 136 | 0 | 0 | Near-pure FIX. Replace attempt/user/question/session/choice row mocks, query args, `answeredOutcome(...)` choice IDs, aggregate query result rows, and expected returned IDs with semantic UUID variables. |
+| `src/adapters/repositories/drizzle-bookmark-repository.test.ts` | 27 | 0 | 0 | Near-pure FIX. `bookmarks.userId` / `questionId` appear in query args, insert/delete values, returned rows, and list assertions; capture shared `userId` / `questionId`. |
+| `src/adapters/repositories/drizzle-clerk-event-repository.test.ts` | 0 | 12 | 0 | Provider/Svix event IDs only (`clerk_events.id` is varchar); do not churn. |
+| `src/adapters/repositories/drizzle-deleted-clerk-user-repository.test.ts` | 0 | 8 | 0 | Clerk user IDs populate `deleted_clerk_users.clerkUserId` varchar; do not churn. |
+| `src/adapters/repositories/drizzle-idempotency-key-repository.test.ts` | 0 | 0 | 13 already-valid `userId` UUID literals; idempotency `action` / `key` strings remain text | Corrected from the earlier directional "drizzle-idempotency ~32" concern: current app `userId` fixtures already use UUID-shaped values. PR 2b should not churn this file unless a test fails from nearby changes. |
+| `src/adapters/repositories/drizzle-pending-stripe-cancellation-repository.test.ts` | 0 | 10 | 0 | Stripe/Svix event/customer text columns only; do not churn. |
+| `src/adapters/repositories/drizzle-practice-session-repository-question-state.test.ts` | 102 | 0 | 0 | Near-pure FIX. Includes `practice_sessions.id` / `userId` row mocks, command inputs, `paramsJson.questionIds`, question-state `questionId`, `latestSelectedChoiceId`, `draftSelectedChoiceId`, and selected-choice values. |
+| `src/adapters/repositories/drizzle-practice-session-repository-reads.test.ts` | 53 | 0 | 0 | Near-pure FIX. Includes read query args, returned session rows, `paramsJson.questionIds`, question-state rows, and orphan `questionId` fixtures; tag slugs remain ordinary slugs. |
+| `src/adapters/repositories/drizzle-practice-session-repository-session-writes.test.ts` | 39 | 0 | 0 | Near-pure FIX. Includes create/end query args, returned rows, `paramsJson.questionIds`, question-state `questionId`, and latest choice IDs. |
+| `src/adapters/repositories/drizzle-question-repository.test.ts` | 16 | 0 | slugs unchanged | Fix question/choice/tag UUID row fields, `findPublishedByIds` placeholder IDs, and app `userId` status-filter fixtures. Keep `slug` values, tag names/kinds, and invalid status sentinels unchanged. |
+| `src/adapters/repositories/drizzle-stripe-customer-repository.test.ts` | 9 | 12 | 0 | Surgical mixed file. Fix only app `userId` query/insert args; leave `cus_*` Stripe customer IDs provider-shaped. |
+| `src/adapters/repositories/drizzle-stripe-event-repository.test.ts` | 0 | 22 | 0 | Stripe event IDs only (`stripe_events.id` is varchar); do not churn. |
+| `src/adapters/repositories/drizzle-subscription-repository.test.ts` | 19 | 35 | 0 | Surgical mixed file. Fix `stripe_subscriptions.id` row IDs (`sub_row_1`) and app `userId`; leave `stripeSubscriptionId` (`sub_*`) and `priceId` (`price_*`) as provider/text values. |
+| `src/adapters/repositories/drizzle-tag-repository.test.ts` | 6 | 0 | 0 | Near-pure FIX for `tags.id`; slugs/names/kinds remain text. |
+| `src/adapters/repositories/drizzle-user-repository.test.ts` | 7 | 19 | 0 | Surgical mixed file. Fix app `users.id`; leave `clerkUserId` args/rows (`clerk_*`) provider-shaped. |
+| `src/adapters/repositories/index.test.ts` | 0 | 0 | 0 | Barrel export test; no ID fixtures. |
+| `src/adapters/repositories/postgres-errors.test.ts` | 0 | 0 | 0 | Error-shape test; no ID fixtures. |
+| `src/adapters/repositories/practice-session-params.test.ts` | 10 | 0 | 0 | Fix `questionIds`, question-state `questionId`, and draft choice IDs embedded in practice-session params JSON. |
+
+Repository PR 2b totals: **428 FIX uuid-column candidate occurrences**, **118 LEAVE provider/text occurrences**, and **13 already-valid app UUID literals** in `drizzle-idempotency-key-repository.test.ts`. `idempotency_keys.action` / `key`, slugs, labels, enum-ish status/action strings, and Postgres constraint names are expected text values, not debt.
+
+Row-fixture mechanics and execution rules:
+
+- Most repository tests use object-literal row mocks plus `db as unknown as RepoDb` to stand in for the injected Drizzle client. That DB seam cast is pre-existing and not the DEBT-400 target; PR 2b must not add `as any`, widen row object types, or relax expectations to make invalid fixtures compile.
+- App-entity repository files (`drizzle-attempt`, `drizzle-practice-session-*`, `drizzle-bookmark`, `drizzle-question`, `drizzle-tag`, `attempt-row-mappers`, `practice-session-params`) are near-pure FIX. Prefer small semantic constants per test (`userId`, `sessionId`, `questionId`, `selectedChoiceId`) or local row factories when a value repeats across query args, mocked rows, and assertions.
+- Stripe/Clerk repository files are column-level surgical edits. Fix app UUID columns (`users.id`, `stripe_customers.userId`, `stripe_subscriptions.id`, `stripe_subscriptions.userId`) and leave provider/text columns (`clerkUserId`, `stripeCustomerId`, `stripeSubscriptionId`, `priceId`, event IDs) unchanged.
+- Capture-the-id sites are common: insert-then-expect returned row, query-by-id then assert returned row id, `toThrow('Attempt attempt-1 ...')`, and `toMatchObject([{ questionId: 'q_correct' }])`. The fix is to capture the generated semantic UUID and assert against that variable, not to introduce opaque UUID literals.
+
+PR 2b proof method:
+
+- Run `pnpm test --run src/adapters/repositories` after migration; all repository tests must pass with valid UUIDs in UUID-column fixtures and no new `as any` / row-type widening.
+- Run `pnpm test --run tests/shared/fixture-uuid-integrity.test.ts` to keep PR 1's proof harness green.
+- Run `pnpm test --run components/theme-token-regression.test.tsx` and confirm 16/16 still passes.
+- Full local gate remains required before push. No extra production-schema export or standalone repository-row `safeParse()` harness is recommended; the repository tests already exercise the row mappers and Drizzle adapter behavior, and a harness would either duplicate the schema table manually or expose internals for test-only proof.
+- Acceptance is not "zero placeholder-looking strings in repositories." Provider/text values and the already-valid idempotency UUID literals above are expected to remain.
+
+PR 2b split decision: ship as **one repository PR** on `feat/debt-400-pr-2b-repository-fixtures`. Although the current repository FIX volume is about 428 candidate occurrences, the edits are mechanical, confined to `src/adapters/repositories/**/*.test.ts`, and reviewable with commits split by sub-area: attempt/practice-session bulk first, then question/bookmark/tag/user, then Stripe/Clerk surgical files. Splitting again would create more branch choreography without reducing conceptual scope.
 
 ### PR 3 — App, browser, and application fixture sweep
 
