@@ -189,7 +189,7 @@ export class FakePracticeSessionRepository
       (params.questionStates ?? []).map((state) => [state.questionId, state]),
     );
     const session: PracticeSession = {
-      id: `session-${this.sessions.length + 1}`,
+      id: crypto.randomUUID(),
       userId: input.userId,
       mode: input.mode,
       questionIds: params.questionIds,

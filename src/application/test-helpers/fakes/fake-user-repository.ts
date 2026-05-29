@@ -10,7 +10,6 @@ type StoredUser = { user: User; clerkId: string };
 export class FakeUserRepository implements UserRepository {
   private readonly byClerkId = new Map<string, StoredUser>();
   private readonly byEmail = new Map<string, string>();
-  private nextId = 1;
   private lastObservedAtMs: number | null = null;
 
   async findByClerkId(clerkId: string): Promise<User | null> {
@@ -95,7 +94,7 @@ export class FakeUserRepository implements UserRepository {
 
     const now = observedAt;
     const newUser: User = {
-      id: `user-${this.nextId++}`,
+      id: crypto.randomUUID(),
       email,
       createdAt: now,
       updatedAt: now,

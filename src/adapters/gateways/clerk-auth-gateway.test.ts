@@ -114,9 +114,10 @@ describe('ClerkAuthGateway', () => {
     });
 
     const user = await gateway.getCurrentUser();
+    const storedUser = await userRepository.findByClerkId('clerk_1');
 
-    expect(user).toEqual({
-      id: 'user-1',
+    expect(user).toEqual(storedUser);
+    expect(user).toMatchObject({
       email: 'user@example.com',
       createdAt: clerkUpdatedAt,
       updatedAt: clerkUpdatedAt,

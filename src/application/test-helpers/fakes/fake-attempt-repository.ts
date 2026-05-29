@@ -26,7 +26,6 @@ type InMemoryAttempt = Attempt & {
 
 export class FakeAttemptRepository implements AttemptRepository {
   private attempts: InMemoryAttempt[];
-  private nextId = 1;
   private readonly questionsById: Map<string, Question> | null;
 
   constructor(
@@ -37,13 +36,6 @@ export class FakeAttemptRepository implements AttemptRepository {
     this.questionsById = deps?.questions
       ? new Map(deps.questions.map((q) => [q.id, q]))
       : null;
-    for (const attempt of this.attempts) {
-      const match = /^attempt-(\d+)$/.exec(attempt.id);
-      if (match) {
-        const n = Number(match[1]);
-        if (Number.isFinite(n)) this.nextId = Math.max(this.nextId, n + 1);
-      }
-    }
   }
 
   async insert(input: {
@@ -80,7 +72,7 @@ export class FakeAttemptRepository implements AttemptRepository {
     }
 
     const attempt: InMemoryAttempt = createAttempt({
-      id: `attempt-${this.nextId++}`,
+      id: crypto.randomUUID(),
       userId: input.userId,
       questionId: input.questionId,
       practiceSessionId: input.practiceSessionId,

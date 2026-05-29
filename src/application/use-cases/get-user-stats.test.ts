@@ -11,28 +11,27 @@ import { GetUserStatsUseCase } from './get-user-stats';
 describe('GetUserStatsUseCase', () => {
   it('returns computed stats and recent activity when user has attempts', async () => {
     const now = new Date('2026-02-01T12:00:00Z');
+    const q1Attempt = createAttempt({
+      userId: 'user-1',
+      questionId: 'q1',
+      isCorrect: true,
+      answeredAt: new Date('2026-02-01T11:00:00Z'),
+    });
+    const q2Attempt = createAttempt({
+      userId: 'user-1',
+      questionId: 'q2',
+      isCorrect: false,
+      answeredAt: new Date('2026-01-31T11:00:00Z'),
+    });
+    const q3Attempt = createAttempt({
+      userId: 'user-1',
+      questionId: 'q3',
+      isCorrect: true,
+      answeredAt: new Date('2026-01-20T11:00:00Z'),
+    });
 
     const useCase = new GetUserStatsUseCase(
-      new FakeAttemptRepository([
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q1',
-          isCorrect: true,
-          answeredAt: new Date('2026-02-01T11:00:00Z'),
-        }),
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q2',
-          isCorrect: false,
-          answeredAt: new Date('2026-01-31T11:00:00Z'),
-        }),
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q3',
-          isCorrect: true,
-          answeredAt: new Date('2026-01-20T11:00:00Z'),
-        }),
-      ]),
+      new FakeAttemptRepository([q1Attempt, q2Attempt, q3Attempt]),
       new FakeQuestionRepository([
         createQuestion({
           id: 'q1',
@@ -66,7 +65,7 @@ describe('GetUserStatsUseCase', () => {
       recentActivity: [
         {
           isAvailable: true,
-          attemptId: 'attempt-q1',
+          attemptId: q1Attempt.id,
           answeredAt: '2026-02-01T11:00:00.000Z',
           questionId: 'q1',
           sessionId: null,
@@ -78,7 +77,7 @@ describe('GetUserStatsUseCase', () => {
         },
         {
           isAvailable: true,
-          attemptId: 'attempt-q2',
+          attemptId: q2Attempt.id,
           answeredAt: '2026-01-31T11:00:00.000Z',
           questionId: 'q2',
           sessionId: null,
@@ -90,7 +89,7 @@ describe('GetUserStatsUseCase', () => {
         },
         {
           isAvailable: true,
-          attemptId: 'attempt-q3',
+          attemptId: q3Attempt.id,
           answeredAt: '2026-01-20T11:00:00.000Z',
           questionId: 'q3',
           sessionId: null,

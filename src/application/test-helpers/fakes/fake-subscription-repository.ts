@@ -60,7 +60,7 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
     const now = new Date();
     const existing = this.byUserId.get(input.userId);
     const subscription: Subscription = {
-      id: existing?.id ?? `subscription-${this.byUserId.size + 1}`,
+      id: existing?.id ?? crypto.randomUUID(),
       userId: input.userId,
       plan: input.plan,
       status: input.status,
