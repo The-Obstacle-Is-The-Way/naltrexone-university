@@ -6,6 +6,16 @@ import { DrizzleQuestionRepository } from './drizzle-question-repository';
 
 type RepoDb = ConstructorParameters<typeof DrizzleQuestionRepository>[0];
 
+const questionId = crypto.randomUUID();
+const firstChoiceId = crypto.randomUUID();
+const secondChoiceId = crypto.randomUUID();
+const invalidChoiceId = crypto.randomUUID();
+const tagId = crypto.randomUUID();
+const userId = crypto.randomUUID();
+const requestedFirstQuestionId = crypto.randomUUID();
+const missingQuestionId = crypto.randomUUID();
+const requestedThirdQuestionId = crypto.randomUUID();
+
 type QuestionRow = {
   id: string;
   slug: string;
@@ -19,7 +29,7 @@ type QuestionRow = {
 };
 
 const baseQuestionRow: QuestionRow = {
-  id: 'question_1',
+  id: questionId,
   slug: 'question-1',
   stemMd: 'stem',
   explanationMd: 'explanation',
@@ -66,7 +76,7 @@ function createQuestionRow(
   overrides: Partial<QuestionRow> = {},
   choices = [
     {
-      id: 'choice_1',
+      id: firstChoiceId,
       questionId: baseQuestionRow.id,
       label: 'A',
       textMd: 'Choice A',
@@ -75,7 +85,7 @@ function createQuestionRow(
       sortOrder: 2,
     },
     {
-      id: 'choice_2',
+      id: secondChoiceId,
       questionId: baseQuestionRow.id,
       label: 'B',
       textMd: 'Choice B',
@@ -87,9 +97,9 @@ function createQuestionRow(
   tags = [
     {
       questionId: baseQuestionRow.id,
-      tagId: 'tag_1',
+      tagId: tagId,
       tag: {
-        id: 'tag_1',
+        id: tagId,
         slug: 'addiction',
         name: 'Addiction',
         kind: 'topic',
@@ -136,8 +146,8 @@ describe('DrizzleQuestionRepository', () => {
       const result = await repo.findPublishedById(row.id);
 
       expect(result?.choices.map((c) => c.id)).toEqual([
-        'choice_2',
-        'choice_1',
+        secondChoiceId,
+        firstChoiceId,
       ]);
       expect(result?.choices.map((c) => c.explanationMd)).toEqual([
         'Because B is incorrect.',
@@ -145,7 +155,7 @@ describe('DrizzleQuestionRepository', () => {
       ]);
       expect(result?.tags).toEqual([
         {
-          id: 'tag_1',
+          id: tagId,
           slug: 'addiction',
           name: 'Addiction',
           kind: 'topic',
@@ -157,7 +167,7 @@ describe('DrizzleQuestionRepository', () => {
     it('throws INTERNAL_ERROR when a choice label is invalid', async () => {
       const row = createQuestionRow({}, [
         {
-          id: 'choice_bad',
+          id: invalidChoiceId,
           questionId: baseQuestionRow.id,
           label: 'Z',
           textMd: 'Invalid',
@@ -220,8 +230,14 @@ describe('DrizzleQuestionRepository', () => {
     });
 
     it('returns results ordered by requested ids and filters missing', async () => {
-      const row1 = createQuestionRow({ id: 'q1', slug: 'q1' });
-      const row3 = createQuestionRow({ id: 'q3', slug: 'q3' });
+      const row1 = createQuestionRow({
+        id: requestedFirstQuestionId,
+        slug: requestedFirstQuestionId,
+      });
+      const row3 = createQuestionRow({
+        id: requestedThirdQuestionId,
+        slug: requestedThirdQuestionId,
+      });
       const db = {
         query: {
           questions: {
@@ -232,9 +248,16 @@ describe('DrizzleQuestionRepository', () => {
 
       const repo = new DrizzleQuestionRepository(db as unknown as RepoDb);
 
-      const result = await repo.findPublishedByIds(['q3', 'q2', 'q1']);
+      const result = await repo.findPublishedByIds([
+        requestedThirdQuestionId,
+        missingQuestionId,
+        requestedFirstQuestionId,
+      ]);
 
-      expect(result.map((q) => q.id)).toEqual(['q3', 'q1']);
+      expect(result.map((q) => q.id)).toEqual([
+        requestedThirdQuestionId,
+        requestedFirstQuestionId,
+      ]);
     });
   });
 
@@ -262,7 +285,7 @@ describe('DrizzleQuestionRepository', () => {
         tagSlugs: [],
         difficulties: [],
         statuses: ['unknown' as unknown as QuestionProgressStatus],
-        userId: 'user_1',
+        userId: userId,
       });
 
       await expect(promise).rejects.toBeInstanceOf(ApplicationError);
@@ -297,7 +320,7 @@ describe('DrizzleQuestionRepository', () => {
         tagSlugs: [],
         difficulties: [],
         statuses: ['unknown' as unknown as QuestionProgressStatus],
-        userId: 'user_1',
+        userId: userId,
       });
 
       await expect(promise).rejects.toBeInstanceOf(ApplicationError);
@@ -343,7 +366,7 @@ describe('DrizzleQuestionRepository', () => {
           tagSlugs: [],
           difficulties: [],
           statuses: ['unanswered'],
-          userId: 'user_1',
+          userId: userId,
         }),
       ).resolves.toBe(5);
 
@@ -414,7 +437,7 @@ describe('DrizzleQuestionRepository', () => {
           tagSlugs: [],
           difficulties: [],
           statuses: ['incorrect'],
-          userId: 'user_1',
+          userId: userId,
         }),
       ).resolves.toBe(1);
 

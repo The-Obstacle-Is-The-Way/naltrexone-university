@@ -6,6 +6,9 @@ import { DrizzleBookmarkRepository } from './drizzle-bookmark-repository';
 
 type RepoDb = ConstructorParameters<typeof DrizzleBookmarkRepository>[0];
 
+const userId = crypto.randomUUID();
+const questionId = crypto.randomUUID();
+
 function createDbMock() {
   const queryFindFirst = vi.fn();
   const queryFindMany = vi.fn();
@@ -53,19 +56,19 @@ describe('DrizzleBookmarkRepository', () => {
 
       const repo = new DrizzleBookmarkRepository(db as unknown as RepoDb);
 
-      await expect(repo.exists('user_1', 'question_1')).resolves.toBe(false);
+      await expect(repo.exists(userId, questionId)).resolves.toBe(false);
     });
 
     it('returns true when bookmark exists', async () => {
       const db = createDbMock();
       db._mocks.queryFindFirst.mockResolvedValue({
-        userId: 'user_1',
-        questionId: 'question_1',
+        userId: userId,
+        questionId: questionId,
       });
 
       const repo = new DrizzleBookmarkRepository(db as unknown as RepoDb);
 
-      await expect(repo.exists('user_1', 'question_1')).resolves.toBe(true);
+      await expect(repo.exists(userId, questionId)).resolves.toBe(true);
     });
   });
 
@@ -75,23 +78,23 @@ describe('DrizzleBookmarkRepository', () => {
       const createdAt = new Date('2026-02-01T00:00:00Z');
       db._mocks.insertReturning.mockResolvedValue([
         {
-          userId: 'user_1',
-          questionId: 'question_1',
+          userId: userId,
+          questionId: questionId,
           createdAt,
         },
       ]);
 
       const repo = new DrizzleBookmarkRepository(db as unknown as RepoDb);
 
-      await expect(repo.add('user_1', 'question_1')).resolves.toEqual({
-        userId: 'user_1',
-        questionId: 'question_1',
+      await expect(repo.add(userId, questionId)).resolves.toEqual({
+        userId: userId,
+        questionId: questionId,
         createdAt,
       });
 
       expect(db._mocks.insertValues).toHaveBeenCalledWith({
-        userId: 'user_1',
-        questionId: 'question_1',
+        userId: userId,
+        questionId: questionId,
       });
     });
 
@@ -101,7 +104,7 @@ describe('DrizzleBookmarkRepository', () => {
 
       const repo = new DrizzleBookmarkRepository(db as unknown as RepoDb);
 
-      const promise = repo.add('user_1', 'question_1');
+      const promise = repo.add(userId, questionId);
       await expect(promise).rejects.toBeInstanceOf(ApplicationError);
       await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
     });
@@ -111,11 +114,11 @@ describe('DrizzleBookmarkRepository', () => {
     it('returns true when a bookmark was removed', async () => {
       const db = createDbMock();
       db._mocks.deleteReturning.mockResolvedValue([
-        { userId: 'user_1', questionId: 'question_1' },
+        { userId: userId, questionId: questionId },
       ]);
       const repo = new DrizzleBookmarkRepository(db as unknown as RepoDb);
 
-      await expect(repo.remove('user_1', 'question_1')).resolves.toBe(true);
+      await expect(repo.remove(userId, questionId)).resolves.toBe(true);
       expect(db._mocks.deleteFn).toHaveBeenCalledTimes(1);
       expect(db._mocks.deleteWhere).toHaveBeenCalledTimes(1);
     });
@@ -125,7 +128,7 @@ describe('DrizzleBookmarkRepository', () => {
       db._mocks.deleteReturning.mockResolvedValue([]);
       const repo = new DrizzleBookmarkRepository(db as unknown as RepoDb);
 
-      await expect(repo.remove('user_1', 'question_1')).resolves.toBe(false);
+      await expect(repo.remove(userId, questionId)).resolves.toBe(false);
     });
   });
 
@@ -135,16 +138,16 @@ describe('DrizzleBookmarkRepository', () => {
       const createdAt = new Date('2026-02-01T00:00:00Z');
       db._mocks.queryFindMany.mockResolvedValue([
         {
-          userId: 'user_1',
-          questionId: 'question_1',
+          userId: userId,
+          questionId: questionId,
           createdAt,
         },
       ]);
 
       const repo = new DrizzleBookmarkRepository(db as unknown as RepoDb);
 
-      await expect(repo.listByUserId('user_1')).resolves.toEqual([
-        { userId: 'user_1', questionId: 'question_1', createdAt },
+      await expect(repo.listByUserId(userId)).resolves.toEqual([
+        { userId: userId, questionId: questionId, createdAt },
       ]);
 
       const queryArgs = db._mocks.queryFindMany.mock.calls[0]?.[0];
