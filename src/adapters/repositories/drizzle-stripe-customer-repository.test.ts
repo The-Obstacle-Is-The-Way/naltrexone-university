@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import { DrizzleStripeCustomerRepository } from './drizzle-stripe-customer-repository';
 
+const userId = crypto.randomUUID();
+
 describe('DrizzleStripeCustomerRepository', () => {
   it('returns null from findByUserId when no mapping exists', async () => {
     const db = {
@@ -20,7 +22,7 @@ describe('DrizzleStripeCustomerRepository', () => {
     >[0];
     const repo = new DrizzleStripeCustomerRepository(db as unknown as RepoDb);
 
-    await expect(repo.findByUserId('user_1')).resolves.toBeNull();
+    await expect(repo.findByUserId(userId)).resolves.toBeNull();
   });
 
   it('returns stripeCustomerId from findByUserId when mapping exists', async () => {
@@ -40,7 +42,7 @@ describe('DrizzleStripeCustomerRepository', () => {
     >[0];
     const repo = new DrizzleStripeCustomerRepository(db as unknown as RepoDb);
 
-    await expect(repo.findByUserId('user_1')).resolves.toEqual({
+    await expect(repo.findByUserId(userId)).resolves.toEqual({
       stripeCustomerId: 'cus_123',
     });
   });
@@ -70,7 +72,7 @@ describe('DrizzleStripeCustomerRepository', () => {
     >[0];
     const repo = new DrizzleStripeCustomerRepository(db as unknown as RepoDb);
 
-    await expect(repo.insert('user_1', 'cus_123')).resolves.toBeUndefined();
+    await expect(repo.insert(userId, 'cus_123')).resolves.toBeUndefined();
     expect(queryFindFirst).not.toHaveBeenCalled();
   });
 
@@ -95,7 +97,7 @@ describe('DrizzleStripeCustomerRepository', () => {
     >[0];
     const repo = new DrizzleStripeCustomerRepository(db as unknown as RepoDb);
 
-    await expect(repo.insert('user_1', 'cus_new')).rejects.toMatchObject({
+    await expect(repo.insert(userId, 'cus_new')).rejects.toMatchObject({
       code: 'CONFLICT',
     });
   });
@@ -124,7 +126,7 @@ describe('DrizzleStripeCustomerRepository', () => {
     const repo = new DrizzleStripeCustomerRepository(db as unknown as RepoDb);
 
     await expect(
-      repo.insert('user_1', 'cus_new', { conflictStrategy: 'authoritative' }),
+      repo.insert(userId, 'cus_new', { conflictStrategy: 'authoritative' }),
     ).resolves.toBeUndefined();
   });
 
@@ -149,7 +151,7 @@ describe('DrizzleStripeCustomerRepository', () => {
     >[0];
     const repo = new DrizzleStripeCustomerRepository(db as unknown as RepoDb);
 
-    await expect(repo.insert('user_1', 'cus_123')).rejects.toMatchObject({
+    await expect(repo.insert(userId, 'cus_123')).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',
     });
   });
@@ -177,10 +179,10 @@ describe('DrizzleStripeCustomerRepository', () => {
     >[0];
     const repo = new DrizzleStripeCustomerRepository(db as unknown as RepoDb);
 
-    await expect(repo.insert('user_1', 'cus_123')).rejects.toBeInstanceOf(
+    await expect(repo.insert(userId, 'cus_123')).rejects.toBeInstanceOf(
       ApplicationError,
     );
-    await expect(repo.insert('user_1', 'cus_123')).rejects.toMatchObject({
+    await expect(repo.insert(userId, 'cus_123')).rejects.toMatchObject({
       code: 'CONFLICT',
     });
   });
@@ -208,7 +210,7 @@ describe('DrizzleStripeCustomerRepository', () => {
     >[0];
     const repo = new DrizzleStripeCustomerRepository(db as unknown as RepoDb);
 
-    await expect(repo.insert('user_1', 'cus_123')).rejects.toMatchObject({
+    await expect(repo.insert(userId, 'cus_123')).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',
     });
   });

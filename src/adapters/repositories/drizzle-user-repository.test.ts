@@ -5,6 +5,8 @@ import { ApplicationError } from '@/src/application/errors';
 
 type RepoDb = ConstructorParameters<typeof DrizzleUserRepository>[0];
 
+const userId = crypto.randomUUID();
+
 function createDbMock() {
   const queryFindFirst = vi.fn();
 
@@ -70,7 +72,7 @@ describe('DrizzleUserRepository', () => {
     it('returns the user when found', async () => {
       const db = createDbMock();
       const row = {
-        id: 'user_1',
+        id: userId,
         clerkUserId: 'clerk_1',
         email: 'a@example.com',
         createdAt: new Date('2026-02-01T00:00:00Z'),
@@ -81,7 +83,7 @@ describe('DrizzleUserRepository', () => {
       const repo = new DrizzleUserRepository(db as unknown as RepoDb);
 
       await expect(repo.findByClerkId('clerk_1')).resolves.toEqual({
-        id: 'user_1',
+        id: userId,
         email: 'a@example.com',
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
@@ -108,7 +110,7 @@ describe('DrizzleUserRepository', () => {
 
     it('locks and returns the user when found', async () => {
       const row = {
-        id: 'user_1',
+        id: userId,
         email: 'a@example.com',
         createdAt: new Date('2026-02-01T00:00:00Z'),
         updatedAt: new Date('2026-02-01T00:00:00Z'),
@@ -135,7 +137,7 @@ describe('DrizzleUserRepository', () => {
 
       const db = createDbMock();
       const row = {
-        id: 'user_1',
+        id: userId,
         clerkUserId: 'clerk_1',
         email: 'a@example.com',
         createdAt: now,
@@ -167,7 +169,7 @@ describe('DrizzleUserRepository', () => {
 
       const db = createDbMock();
       const row = {
-        id: 'user_1',
+        id: userId,
         clerkUserId: 'clerk_1',
         email: 'a@example.com',
         createdAt: observedAt,
@@ -231,7 +233,7 @@ describe('DrizzleUserRepository', () => {
       const observedAt = new Date('2026-02-01T00:30:00Z');
       const db = createDbMock();
       const row = {
-        id: 'user_1',
+        id: userId,
         email: 'a@example.com',
         createdAt: new Date('2026-02-01T00:00:00Z'),
         updatedAt: observedAt,
@@ -294,7 +296,7 @@ describe('DrizzleUserRepository', () => {
 
     it('returns true when a user row is deleted', async () => {
       const db = createDbMock();
-      db._mocks.deleteReturning.mockResolvedValue([{ id: 'user_1' }]);
+      db._mocks.deleteReturning.mockResolvedValue([{ id: userId }]);
 
       const repo = new DrizzleUserRepository(db as unknown as RepoDb);
 
