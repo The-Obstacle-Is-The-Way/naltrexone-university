@@ -288,7 +288,7 @@ Status: shipped in PR #368 at `e7f1029a`.
 Branches:
 
 - PR 2a: `feat/debt-400-pr-2-adapter-boundary-fixtures` (controllers/shared/jobs/gateways; shipped in PR #369 at `a98b5922`)
-- PR 2b: `feat/debt-400-pr-2b-repository-fixtures` (repository row fixtures)
+- PR 2b: `feat/debt-400-pr-2b-repository-fixtures` (repository row fixtures; implemented in the PR 2b branch, pending review/merge)
 
 Scope:
 
@@ -455,6 +455,8 @@ PR 2b proof method:
 - Acceptance is not "zero placeholder-looking strings in repositories." Provider/text values and the already-valid idempotency UUID literals above are expected to remain.
 
 PR 2b split decision: ship as **one repository PR** on `feat/debt-400-pr-2b-repository-fixtures`. Although the current repository FIX volume is about 428 candidate occurrences, the edits are mechanical, confined to `src/adapters/repositories/**/*.test.ts`, and reviewable with commits split by sub-area: attempt/practice-session bulk first, then question/bookmark/tag/user, then Stripe/Clerk surgical files. Splitting again would create more branch choreography without reducing conceptual scope.
+
+PR 2b execution status: implemented in the repository-slice PR. The branch migrates only `FIX uuid-column` repository fixtures to UUID-valid values, preserves provider/text identifiers and the already-valid `drizzle-idempotency-key-repository.test.ts`, and leaves PR 3 plus PR 4 as the remaining DEBT-400 work.
 
 ### PR 3 — App, browser, and application fixture sweep
 
