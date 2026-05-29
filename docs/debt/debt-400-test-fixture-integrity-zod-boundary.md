@@ -382,7 +382,7 @@ PR 2 proof method:
   ```
 - Acceptance is not "zero placeholder-looking strings in adapters." Provider and invalid buckets above are expected to remain.
 
-Split recommendation: keep PR 2 as **one adapter-layer PR** on `feat/debt-400-pr-2-adapter-boundary-fixtures`, but execute and review it in sub-area commits (`controllers/shared`, `repositories`, `gateways/jobs`). The change has one reason to change, is test-only, and the table above provides enough do-not-churn guardrails; splitting into more PRs would mostly add coordination overhead unless execution discovers unexpectedly large non-mechanical fallout.
+Split decision: PR 2 ships as **two PRs** on adapter-layer boundaries. PR 2a uses `feat/debt-400-pr-2-adapter-boundary-fixtures` and covers controllers, `src/adapters/shared/with-idempotency.test.ts`, jobs, and gateways. PR 2b follows on a fresh branch for `src/adapters/repositories/**/*.test.ts`. The table above remains the SSOT for both PRs; PR 2a must not touch repository tests.
 
 ### PR 3 — App, browser, and application fixture sweep
 

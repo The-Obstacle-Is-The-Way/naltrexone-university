@@ -41,6 +41,9 @@ import {
 type QuestionControllerTestDeps = QuestionControllerDeps & {
   getNextQuestionUseCase: FakeGetNextQuestionUseCase;
   submitAnswerUseCase: FakeSubmitAnswerUseCase;
+  _fixtures: {
+    userId: string;
+  };
 };
 
 function passthroughSubmitTransaction(
@@ -62,13 +65,14 @@ function createDeps(overrides?: {
   submitAnswerThrows?: unknown;
 }): QuestionControllerTestDeps {
   const user =
-    overrides?.user ??
-    createUser({
-      id: 'user_1',
-      email: 'user@example.com',
-      createdAt: new Date('2026-02-01T00:00:00Z'),
-      updatedAt: new Date('2026-02-01T00:00:00Z'),
-    });
+    overrides?.user === undefined
+      ? createUser({
+          email: 'user@example.com',
+          createdAt: new Date('2026-02-01T00:00:00Z'),
+          updatedAt: new Date('2026-02-01T00:00:00Z'),
+        })
+      : overrides.user;
+  const userId = user?.id ?? crypto.randomUUID();
 
   const now = overrides?.now ?? new Date('2026-02-01T00:00:00Z');
 
@@ -80,7 +84,7 @@ function createDeps(overrides?: {
       ? []
       : [
           createSubscription({
-            userId: user?.id ?? 'user_1',
+            userId,
             status: 'active',
             currentPeriodEnd: new Date('2026-12-31T00:00:00Z'),
           }),
@@ -123,6 +127,9 @@ function createDeps(overrides?: {
     checkEntitlementUseCase,
     getNextQuestionUseCase,
     submitAnswerUseCase,
+    _fixtures: {
+      userId,
+    },
   };
 }
 
@@ -184,7 +191,7 @@ describe('question-controller', () => {
       expect(result).toEqual({ ok: true, data: null });
       expect(deps.getNextQuestionUseCase.inputs).toEqual([
         {
-          userId: 'user_1',
+          userId: deps._fixtures.userId,
           filters: { tagSlugs: [], difficulties: [], statuses: [] },
         },
       ]);
@@ -207,7 +214,7 @@ describe('question-controller', () => {
       expect(result).toEqual({ ok: true, data: null });
       expect(deps.getNextQuestionUseCase.inputs).toEqual([
         {
-          userId: 'user_1',
+          userId: deps._fixtures.userId,
           filters: { tagSlugs: [], difficulties: [], statuses: ['bookmarked'] },
         },
       ]);
@@ -235,15 +242,17 @@ describe('question-controller', () => {
     });
 
     it('returns ok result when sessionId is provided', async () => {
+      const questionId = crypto.randomUUID();
+      const choiceId = crypto.randomUUID();
       const deps = createDeps({
         getNextQuestionOutput: {
-          questionId: 'q_1',
+          questionId,
           slug: 'q-1',
           stemMd: 'Stem',
           difficulty: 'easy',
           choices: [
             {
-              id: 'choice_1',
+              id: choiceId,
               label: 'A',
               textMd: 'Choice',
               sortOrder: 1,
@@ -256,9 +265,9 @@ describe('question-controller', () => {
       const sessionId = '11111111-1111-1111-1111-111111111111';
       const result = await getNextQuestion({ sessionId }, deps);
 
-      expect(result).toMatchObject({ ok: true, data: { questionId: 'q_1' } });
+      expect(result).toMatchObject({ ok: true, data: { questionId } });
       expect(deps.getNextQuestionUseCase.inputs).toEqual([
-        { userId: 'user_1', sessionId },
+        { userId: deps._fixtures.userId, sessionId },
       ]);
     });
 
@@ -271,7 +280,7 @@ describe('question-controller', () => {
 
       expect(result).toEqual({ ok: true, data: null });
       expect(deps.getNextQuestionUseCase.inputs).toEqual([
-        { userId: 'user_1', sessionId, questionId },
+        { userId: deps._fixtures.userId, sessionId, questionId },
       ]);
     });
 
@@ -457,7 +466,7 @@ describe('question-controller', () => {
       });
       expect(deps.submitAnswerUseCase.inputs).toEqual([
         {
-          userId: 'user_1',
+          userId: deps._fixtures.userId,
           questionId: input.questionId,
           choiceId: input.choiceId,
           sessionId: input.sessionId,
@@ -526,16 +535,17 @@ describe('question-controller', () => {
         ],
       });
       const attempts = new FakeAttemptRepository();
+      const baseDeps = createDeps();
+      const userId = baseDeps._fixtures.userId;
       const sessions = new FakePracticeSessionRepository([
         createPracticeSession({
           id: sessionId,
-          userId: 'user_1',
+          userId,
           mode: 'exam',
           endedAt: null,
           questionIds: [questionId],
         }),
       ]);
-      const baseDeps = createDeps();
       const deps: QuestionControllerDeps = {
         ...baseDeps,
         submitAnswerUseCase: new SubmitAnswerUseCase(
@@ -575,7 +585,7 @@ describe('question-controller', () => {
 
       expect(result).toMatchObject({ ok: true });
       expect(deps.submitAnswerUseCase.inputs[0]).toMatchObject({
-        userId: 'user_1',
+        userId: deps._fixtures.userId,
         questionId: input.questionId,
         choiceId: input.choiceId,
         retryOfAttemptId: input.retryOfAttemptId,
@@ -595,7 +605,7 @@ describe('question-controller', () => {
       await submitAnswer(input, deps);
 
       expect(deps.submitAnswerUseCase.inputs[0]).toMatchObject({
-        userId: 'user_1',
+        userId: deps._fixtures.userId,
         questionId: input.questionId,
         choiceId: input.choiceId,
         timeSpentSeconds: 15,
@@ -680,7 +690,7 @@ describe('question-controller', () => {
       );
 
       const record = await deps.idempotencyKeyRepository.find(
-        'user_1',
+        deps._fixtures.userId,
         'question:submitAnswer',
         idempotencyKey,
       );

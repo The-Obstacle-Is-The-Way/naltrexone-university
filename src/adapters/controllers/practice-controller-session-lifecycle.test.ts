@@ -131,7 +131,7 @@ describe('practice-controller', () => {
       });
       expect(deps.startPracticeSessionUseCase.inputs).toEqual([
         {
-          userId: 'user_1',
+          userId: deps._fixtures.userId,
           mode: 'exam',
           count: 2,
           tagSlugs: ['opioids'],
@@ -171,7 +171,7 @@ describe('practice-controller', () => {
       });
       expect(deps.startPracticeSessionUseCase.inputs).toEqual([
         {
-          userId: 'user_1',
+          userId: deps._fixtures.userId,
           mode: 'tutor',
           count: 1,
           tagSlugs: [],
@@ -278,7 +278,7 @@ describe('practice-controller', () => {
 
     it('returns session summary when use case succeeds', async () => {
       const endOutput = {
-        sessionId: 'session_123',
+        sessionId: '22222222-2222-2222-2222-222222222222',
         endedAt: '2026-02-01T00:00:00.000Z',
         mode: 'tutor',
         questionCount: 2,
@@ -299,7 +299,10 @@ describe('practice-controller', () => {
 
       expect(result).toEqual({ ok: true, data: endOutput });
       expect(deps.endPracticeSessionUseCase.inputs).toEqual([
-        { userId: 'user_1', sessionId: '11111111-1111-1111-1111-111111111111' },
+        {
+          userId: deps._fixtures.userId,
+          sessionId: '11111111-1111-1111-1111-111111111111',
+        },
       ]);
     });
 
@@ -405,7 +408,10 @@ describe('practice-controller', () => {
 
       expect(result).toEqual({ ok: true, data: finalizeOutput });
       expect(deps.finalizeExamAnswersUseCase.inputs).toEqual([
-        { userId: 'user_1', sessionId: '11111111-1111-1111-1111-111111111111' },
+        {
+          userId: deps._fixtures.userId,
+          sessionId: '11111111-1111-1111-1111-111111111111',
+        },
       ]);
     });
 
@@ -485,7 +491,7 @@ describe('practice-controller', () => {
     it('returns VALIDATION_ERROR when finalize output is invalid without idempotency', async () => {
       const deps = createDeps({
         finalizeOutput: {
-          sessionId: 'session_123',
+          sessionId: '22222222-2222-2222-2222-222222222222',
           endedAt: '2026-02-01T00:00:00.000Z',
           mode: 'exam',
           questionCount: -1,

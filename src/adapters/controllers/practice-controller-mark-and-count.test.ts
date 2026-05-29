@@ -119,7 +119,7 @@ describe('practice-controller', () => {
       });
       expect(deps.setPracticeSessionQuestionMarkUseCase.inputs).toEqual([
         {
-          userId: 'user_1',
+          userId: deps._fixtures.userId,
           sessionId: input.sessionId,
           questionId: input.questionId,
           markedForReview: false,
@@ -219,7 +219,7 @@ describe('practice-controller', () => {
       });
       expect(deps.countAvailableQuestionsUseCase.inputs).toEqual([
         {
-          userId: 'user_1',
+          userId: deps._fixtures.userId,
           tagSlugs: [],
           difficulties: [],
           statuses: [],
@@ -238,7 +238,7 @@ describe('practice-controller', () => {
       expect(result).toEqual({ ok: true, data: { count: 42 } });
       expect(deps.countAvailableQuestionsUseCase.inputs).toEqual([
         {
-          userId: 'user_1',
+          userId: deps._fixtures.userId,
           tagSlugs: [],
           difficulties: [],
           statuses: ['unanswered'],

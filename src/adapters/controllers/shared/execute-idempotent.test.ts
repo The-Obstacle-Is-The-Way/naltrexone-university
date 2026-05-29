@@ -59,10 +59,11 @@ describe('executeIdempotent', () => {
     const deps = createDeps();
     const execute = vi.fn().mockResolvedValue({ value: 1 });
     const schema = z.object({ value: z.number() });
+    const userId = crypto.randomUUID();
 
     const result = await executeIdempotent({
       d: deps,
-      userId: 'user-1',
+      userId,
       idempotencyKey: null,
       action: 'practice:test',
       outputSchema: schema,
@@ -78,10 +79,11 @@ describe('executeIdempotent', () => {
     const deps = createDeps();
     const execute = vi.fn().mockResolvedValue({ value: 2 });
     const schema = z.object({ value: z.number() });
+    const userId = crypto.randomUUID();
 
     const result = await executeIdempotent({
       d: deps,
-      userId: 'user-1',
+      userId,
       idempotencyKey: undefined,
       action: 'practice:test',
       outputSchema: schema,
@@ -97,11 +99,12 @@ describe('executeIdempotent', () => {
     const deps = createDeps();
     const execute = vi.fn().mockResolvedValue({ value: 'not-a-number' });
     const schema = z.object({ value: z.number() });
+    const userId = crypto.randomUUID();
 
     await expect(
       executeIdempotent({
         d: deps,
-        userId: 'user-1',
+        userId,
         idempotencyKey: null,
         action: 'practice:test',
         outputSchema: schema,
@@ -117,10 +120,11 @@ describe('executeIdempotent', () => {
     const deps = createDeps();
     const execute = vi.fn().mockResolvedValue({ value: 42 });
     const schema = z.object({ value: z.number() });
+    const userId = crypto.randomUUID();
 
     const result = await executeIdempotent({
       d: deps,
-      userId: 'user-1',
+      userId,
       idempotencyKey: '11111111-1111-1111-1111-111111111111',
       action: 'practice:test',
       outputSchema: schema,
@@ -140,9 +144,10 @@ describe('executeIdempotent', () => {
     const deps = createDeps();
     const execute = vi.fn().mockResolvedValue({ value: 100 });
     const schema = z.object({ value: z.number() });
+    const userId = crypto.randomUUID();
     const args = {
       d: deps,
-      userId: 'user-1',
+      userId,
       idempotencyKey: '22222222-2222-2222-2222-222222222222',
       action: 'practice:test',
       outputSchema: schema,
@@ -164,9 +169,10 @@ describe('executeIdempotent', () => {
       .mockResolvedValueOnce({ value: 100 })
       .mockResolvedValueOnce({ value: 200 });
     const schema = z.object({ value: z.number() });
+    const userId = crypto.randomUUID();
     const args = {
       d: deps,
-      userId: 'user-1',
+      userId,
       idempotencyKey: '33333333-3333-3333-3333-333333333333',
       action: 'practice:test',
       outputSchema: schema,

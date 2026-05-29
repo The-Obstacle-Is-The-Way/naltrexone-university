@@ -6,6 +6,8 @@ import {
 } from '@/src/application/test-helpers/fakes';
 import { withIdempotency } from './with-idempotency';
 
+const appUserId = crypto.randomUUID();
+
 describe('withIdempotency', () => {
   it('executes once and returns cached result for subsequent calls', async () => {
     const now = () => new Date();
@@ -15,7 +17,7 @@ describe('withIdempotency', () => {
 
     const input = {
       repo,
-      userId: 'user_1',
+      userId: appUserId,
       action: 'billing:createCheckoutSession',
       key: '11111111-1111-1111-1111-111111111111',
       now,
@@ -48,7 +50,7 @@ describe('withIdempotency', () => {
 
     const input = {
       repo,
-      userId: 'user_1',
+      userId: appUserId,
       action: 'billing:createCheckoutSession',
       key: '11111111-1111-1111-1111-111111111111',
       now,
@@ -79,7 +81,7 @@ describe('withIdempotency', () => {
 
     const input = {
       repo,
-      userId: 'user_1',
+      userId: appUserId,
       action: 'billing:createCheckoutSession',
       key: '11111111-1111-1111-1111-111111111112',
       now,
@@ -120,7 +122,7 @@ describe('withIdempotency', () => {
 
     const base = {
       repo,
-      userId: 'user_1',
+      userId: appUserId,
       action: 'question:submitAnswer',
       key: '22222222-2222-2222-2222-222222222222',
       now,
@@ -149,14 +151,14 @@ describe('withIdempotency', () => {
     const key = '22222222-2222-2222-2222-222222222223';
 
     await repo.claim({
-      userId: 'user_1',
+      userId: appUserId,
       action: 'question:submitAnswer',
       key,
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
 
     await repo.storeResult({
-      userId: 'user_1',
+      userId: appUserId,
       action: 'question:submitAnswer',
       key,
       resultJson: null,
@@ -166,7 +168,7 @@ describe('withIdempotency', () => {
     await expect(
       withIdempotency({
         repo,
-        userId: 'user_1',
+        userId: appUserId,
         action: 'question:submitAnswer',
         key,
         now,
@@ -185,13 +187,13 @@ describe('withIdempotency', () => {
     const key = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
     await repo.claim({
-      userId: 'user_1',
+      userId: appUserId,
       action: 'question:submitAnswer',
       key,
       expiresAt: new Date('2026-02-08T00:00:00.000Z'),
     });
     await repo.storeResult({
-      userId: 'user_1',
+      userId: appUserId,
       action: 'question:submitAnswer',
       key,
       resultJson: null,
@@ -203,7 +205,7 @@ describe('withIdempotency', () => {
     await expect(
       withIdempotency({
         repo,
-        userId: 'user_1',
+        userId: appUserId,
         action: 'question:submitAnswer',
         key,
         now,
@@ -224,13 +226,13 @@ describe('withIdempotency', () => {
     const key = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 
     await repo.claim({
-      userId: 'user_1',
+      userId: appUserId,
       action: 'question:submitAnswer',
       key,
       expiresAt: new Date('2026-02-08T00:00:00.000Z'),
     });
     await repo.storeResult({
-      userId: 'user_1',
+      userId: appUserId,
       action: 'question:submitAnswer',
       key,
       resultJson: null,
@@ -244,7 +246,7 @@ describe('withIdempotency', () => {
 
     const promise = withIdempotency({
       repo,
-      userId: 'user_1',
+      userId: appUserId,
       action: 'question:submitAnswer',
       key,
       now,
@@ -277,7 +279,7 @@ describe('withIdempotency', () => {
 
     const input = {
       repo,
-      userId: 'user_1',
+      userId: appUserId,
       action: 'practice:startPracticeSession',
       key,
       now,
@@ -308,7 +310,7 @@ describe('withIdempotency', () => {
 
     const repo = new FakeIdempotencyKeyRepository(now);
     await repo.claim({
-      userId: 'user_1',
+      userId: appUserId,
       action: 'billing:createCheckoutSession',
       key: '44444444-4444-4444-4444-444444444444',
       expiresAt: new Date('2026-02-08T00:00:00.000Z'),
@@ -320,7 +322,7 @@ describe('withIdempotency', () => {
     await expect(
       withIdempotency({
         repo,
-        userId: 'user_1',
+        userId: appUserId,
         action: 'billing:createCheckoutSession',
         key: '44444444-4444-4444-4444-444444444444',
         now,
@@ -352,7 +354,7 @@ describe('withIdempotency', () => {
     const key = '44444444-4444-4444-4444-444444444446';
 
     await repo.claim({
-      userId: 'user_1',
+      userId: appUserId,
       action: 'billing:createCheckoutSession',
       key,
       expiresAt: new Date('2026-02-08T00:00:00.000Z'),
@@ -365,7 +367,7 @@ describe('withIdempotency', () => {
     await expect(
       withIdempotency({
         repo,
-        userId: 'user_1',
+        userId: appUserId,
         action: 'billing:createCheckoutSession',
         key,
         now,
@@ -382,7 +384,7 @@ describe('withIdempotency', () => {
     await expect(
       withIdempotency({
         repo,
-        userId: 'user_1',
+        userId: appUserId,
         action: 'billing:createCheckoutSession',
         key,
         now,
@@ -407,7 +409,7 @@ describe('withIdempotency', () => {
     const key = '44444444-4444-4444-4444-444444444445';
 
     await repo.claim({
-      userId: 'user_1',
+      userId: appUserId,
       action: 'billing:createCheckoutSession',
       key,
       expiresAt: new Date('2026-02-08T00:00:00.000Z'),
@@ -418,7 +420,7 @@ describe('withIdempotency', () => {
     await expect(
       withIdempotency({
         repo,
-        userId: 'user_1',
+        userId: appUserId,
         action: 'billing:createCheckoutSession',
         key,
         now,
@@ -446,7 +448,7 @@ describe('withIdempotency', () => {
     await expect(
       withIdempotency({
         repo,
-        userId: 'user_1',
+        userId: appUserId,
         action: 'billing:createCheckoutSession',
         key: '55555555-5555-5555-5555-555555555555',
         now,
@@ -473,7 +475,7 @@ describe('withIdempotency', () => {
     await expect(
       withIdempotency({
         repo,
-        userId: 'user_1',
+        userId: appUserId,
         action: 'billing:createCheckoutSession',
         key: '66666666-6666-6666-6666-666666666666',
         now,
@@ -499,7 +501,7 @@ describe('withIdempotency', () => {
     await expect(
       withIdempotency({
         repo,
-        userId: 'user_1',
+        userId: appUserId,
         action: 'billing:createCheckoutSession',
         key: '77777777-7777-7777-7777-777777777777',
         now,
@@ -512,7 +514,7 @@ describe('withIdempotency', () => {
     expect(logger.warnCalls[0]).toMatchObject({
       msg: 'Idempotency prune failed',
       context: {
-        userId: 'user_1',
+        userId: appUserId,
         action: 'billing:createCheckoutSession',
         key: '77777777-7777-7777-7777-777777777777',
         error: 'prune failed',
@@ -529,7 +531,7 @@ describe('withIdempotency', () => {
     await expect(
       withIdempotency({
         repo,
-        userId: 'user_1',
+        userId: appUserId,
         action: 'billing:createCheckoutSession',
         key: '88888888-8888-8888-8888-888888888888',
         now,
@@ -541,7 +543,7 @@ describe('withIdempotency', () => {
     const parseError = new Error('invalid cached result');
     const promise = withIdempotency({
       repo,
-      userId: 'user_1',
+      userId: appUserId,
       action: 'billing:createCheckoutSession',
       key: '88888888-8888-8888-8888-888888888888',
       now,
@@ -581,7 +583,7 @@ describe('withIdempotency', () => {
 
     const input = {
       repo,
-      userId: 'user_1',
+      userId: appUserId,
       action: 'billing:createCheckoutSession',
       key,
       now,
@@ -618,7 +620,7 @@ describe('withIdempotency', () => {
     await expect(
       withIdempotency({
         repo,
-        userId: 'user_1',
+        userId: appUserId,
         action: 'billing:createCheckoutSession',
         key: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
         now,
@@ -631,7 +633,7 @@ describe('withIdempotency', () => {
     expect(logger.errorCalls[0]).toMatchObject({
       msg: 'Failed to persist idempotency error record',
       context: {
-        userId: 'user_1',
+        userId: appUserId,
         action: 'billing:createCheckoutSession',
         key: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
       },
@@ -665,7 +667,7 @@ describe('withIdempotency', () => {
     await expect(
       withIdempotency({
         repo,
-        userId: 'user_1',
+        userId: appUserId,
         action: 'billing:createCheckoutSession',
         key: 'ffffffff-1111-2222-3333-444444444444',
         now,

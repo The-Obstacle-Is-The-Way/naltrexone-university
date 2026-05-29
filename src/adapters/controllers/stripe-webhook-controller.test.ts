@@ -213,6 +213,7 @@ describe('processStripeWebhook', () => {
   });
 
   it('claims, processes, and marks subscription events idempotently', async () => {
+    const userId = crypto.randomUUID();
     const paymentGateway = new FakePaymentGateway({
       externalCustomerId: 'cus_test',
       checkoutUrl: 'https://stripe/checkout',
@@ -221,7 +222,7 @@ describe('processStripeWebhook', () => {
         eventId: 'evt_1',
         type: 'customer.subscription.updated',
         subscriptionUpdate: {
-          userId: 'user_1',
+          userId,
           externalCustomerId: 'cus_123',
           externalSubscriptionId: 'sub_123',
           plan: 'monthly',
@@ -239,15 +240,15 @@ describe('processStripeWebhook', () => {
 
     await processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' });
 
-    await expect(subscriptions.findByUserId('user_1')).resolves.toMatchObject({
-      userId: 'user_1',
+    await expect(subscriptions.findByUserId(userId)).resolves.toMatchObject({
+      userId,
       plan: 'monthly',
       status: 'active',
     });
     await expect(
       subscriptions.findByExternalSubscriptionId('sub_123'),
     ).resolves.toMatchObject({
-      userId: 'user_1',
+      userId,
     });
     expect(insertSpy).toHaveBeenCalledTimes(1);
 
@@ -279,6 +280,7 @@ describe('processStripeWebhook', () => {
   });
 
   it('updates stale stripe customer mappings in webhook context instead of failing', async () => {
+    const userId = crypto.randomUUID();
     const paymentGateway = new FakePaymentGateway({
       externalCustomerId: 'cus_test',
       checkoutUrl: 'https://stripe/checkout',
@@ -287,7 +289,7 @@ describe('processStripeWebhook', () => {
         eventId: 'evt_customer_remap',
         type: 'customer.subscription.updated',
         subscriptionUpdate: {
-          userId: 'user_1',
+          userId,
           externalCustomerId: 'cus_new',
           externalSubscriptionId: 'sub_123',
           plan: 'monthly',
@@ -299,13 +301,13 @@ describe('processStripeWebhook', () => {
     });
 
     const { deps, stripeCustomers } = createDeps({ paymentGateway });
-    await stripeCustomers.insert('user_1', 'cus_old');
+    await stripeCustomers.insert(userId, 'cus_old');
 
     await expect(
       processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
     ).resolves.toBeUndefined();
 
-    await expect(stripeCustomers.findByUserId('user_1')).resolves.toEqual({
+    await expect(stripeCustomers.findByUserId(userId)).resolves.toEqual({
       stripeCustomerId: 'cus_new',
     });
   });
@@ -417,6 +419,7 @@ describe('processStripeWebhook', () => {
   });
 
   it('returns early when the event was already processed', async () => {
+    const userId = crypto.randomUUID();
     const paymentGateway = new FakePaymentGateway({
       externalCustomerId: 'cus_test',
       checkoutUrl: 'https://stripe/checkout',
@@ -425,7 +428,7 @@ describe('processStripeWebhook', () => {
         eventId: 'evt_3',
         type: 'customer.subscription.updated',
         subscriptionUpdate: {
-          userId: 'user_1',
+          userId,
           externalCustomerId: 'cus_123',
           externalSubscriptionId: 'sub_123',
           plan: 'monthly',
@@ -492,6 +495,7 @@ describe('processStripeWebhook', () => {
   });
 
   it('persists failure state even when the transaction would rollback on throw', async () => {
+    const userId = crypto.randomUUID();
     const paymentGateway = new FakePaymentGateway({
       externalCustomerId: 'cus_test',
       checkoutUrl: 'https://stripe/checkout',
@@ -500,7 +504,7 @@ describe('processStripeWebhook', () => {
         eventId: 'evt_rollback_failure_state',
         type: 'customer.subscription.updated',
         subscriptionUpdate: {
-          userId: 'user_1',
+          userId,
           externalCustomerId: 'cus_123',
           externalSubscriptionId: 'sub_123',
           plan: 'monthly',
@@ -530,6 +534,7 @@ describe('processStripeWebhook', () => {
   });
 
   it('marks the event failed when processing throws', async () => {
+    const userId = crypto.randomUUID();
     const paymentGateway = new FakePaymentGateway({
       externalCustomerId: 'cus_test',
       checkoutUrl: 'https://stripe/checkout',
@@ -538,7 +543,7 @@ describe('processStripeWebhook', () => {
         eventId: 'evt_4',
         type: 'customer.subscription.updated',
         subscriptionUpdate: {
-          userId: 'user_1',
+          userId,
           externalCustomerId: 'cus_123',
           externalSubscriptionId: 'sub_123',
           plan: 'monthly',
