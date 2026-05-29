@@ -11,6 +11,20 @@ import { DrizzleAttemptRepository } from './drizzle-attempt-repository';
 
 type RepoDb = ConstructorParameters<typeof DrizzleAttemptRepository>[0];
 
+const attemptId = crypto.randomUUID();
+const userId = crypto.randomUUID();
+const questionId = crypto.randomUUID();
+const sessionId = crypto.randomUUID();
+const alternateSessionId = crypto.randomUUID();
+const selectedChoiceId = crypto.randomUUID();
+const firstQuestionId = crypto.randomUUID();
+const secondQuestionId = crypto.randomUUID();
+const correctQuestionId = crypto.randomUUID();
+const incorrectQuestionId = crypto.randomUUID();
+const adhocQuestionId = crypto.randomUUID();
+const tutorQuestionId = crypto.randomUUID();
+const examQuestionId = crypto.randomUUID();
+
 function createDbMock() {
   const insertReturning = vi.fn();
   const insertValues = vi.fn(() => ({ returning: insertReturning }));
@@ -258,11 +272,11 @@ describe('DrizzleAttemptRepository', () => {
       const answeredAt = new Date('2026-02-01T00:00:00Z');
       db._mocks.insertReturning.mockResolvedValue([
         {
-          id: 'attempt_1',
-          userId: 'user_1',
-          questionId: 'question_1',
-          practiceSessionId: 'session_1',
-          selectedChoiceId: 'choice_1',
+          id: attemptId,
+          userId: userId,
+          questionId: questionId,
+          practiceSessionId: sessionId,
+          selectedChoiceId: selectedChoiceId,
           isOmitted: false,
           isCorrect: true,
           timeSpentSeconds: 42,
@@ -274,21 +288,21 @@ describe('DrizzleAttemptRepository', () => {
 
       await expect(
         repo.insert({
-          userId: 'user_1',
-          questionId: 'question_1',
-          practiceSessionId: 'session_1',
-          outcome: answeredOutcome('choice_1'),
+          userId: userId,
+          questionId: questionId,
+          practiceSessionId: sessionId,
+          outcome: answeredOutcome(selectedChoiceId),
           isCorrect: true,
           timeSpentSeconds: 42,
         }),
       ).resolves.toEqual({
-        id: 'attempt_1',
-        userId: 'user_1',
-        questionId: 'question_1',
-        practiceSessionId: 'session_1',
+        id: attemptId,
+        userId: userId,
+        questionId: questionId,
+        practiceSessionId: sessionId,
         outcome: {
           kind: 'answered',
-          selectedChoiceId: 'choice_1',
+          selectedChoiceId: selectedChoiceId,
         },
         isCorrect: true,
         timeSpentSeconds: 42,
@@ -299,10 +313,10 @@ describe('DrizzleAttemptRepository', () => {
       });
 
       expect(db._mocks.insertValues).toHaveBeenCalledWith({
-        userId: 'user_1',
-        questionId: 'question_1',
-        practiceSessionId: 'session_1',
-        selectedChoiceId: 'choice_1',
+        userId: userId,
+        questionId: questionId,
+        practiceSessionId: sessionId,
+        selectedChoiceId: selectedChoiceId,
         isOmitted: false,
         isCorrect: true,
         timeSpentSeconds: 42,
@@ -317,10 +331,10 @@ describe('DrizzleAttemptRepository', () => {
       const answeredAt = new Date('2026-02-01T00:00:00Z');
       db._mocks.insertReturning.mockResolvedValue([
         {
-          id: 'attempt_1',
-          userId: 'user_1',
-          questionId: 'question_1',
-          practiceSessionId: 'session_1',
+          id: attemptId,
+          userId: userId,
+          questionId: questionId,
+          practiceSessionId: sessionId,
           selectedChoiceId: null,
           isOmitted: true,
           isCorrect: false,
@@ -333,9 +347,9 @@ describe('DrizzleAttemptRepository', () => {
 
       await expect(
         repo.insert({
-          userId: 'user_1',
-          questionId: 'question_1',
-          practiceSessionId: 'session_1',
+          userId: userId,
+          questionId: questionId,
+          practiceSessionId: sessionId,
           outcome: omittedOutcome(),
           isCorrect: false,
           timeSpentSeconds: 0,
@@ -346,9 +360,9 @@ describe('DrizzleAttemptRepository', () => {
       });
 
       expect(db._mocks.insertValues).toHaveBeenCalledWith({
-        userId: 'user_1',
-        questionId: 'question_1',
-        practiceSessionId: 'session_1',
+        userId: userId,
+        questionId: questionId,
+        practiceSessionId: sessionId,
         selectedChoiceId: null,
         isOmitted: true,
         isCorrect: false,
@@ -366,10 +380,10 @@ describe('DrizzleAttemptRepository', () => {
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
       const promise = repo.insert({
-        userId: 'user_1',
-        questionId: 'question_1',
+        userId: userId,
+        questionId: questionId,
         practiceSessionId: null,
-        outcome: answeredOutcome('choice_1'),
+        outcome: answeredOutcome(selectedChoiceId),
         isCorrect: true,
         timeSpentSeconds: 10,
       });
@@ -382,9 +396,9 @@ describe('DrizzleAttemptRepository', () => {
       const db = createDbMock();
       db._mocks.insertReturning.mockResolvedValue([
         {
-          id: 'attempt_1',
-          userId: 'user_1',
-          questionId: 'question_1',
+          id: attemptId,
+          userId: userId,
+          questionId: questionId,
           practiceSessionId: null,
           selectedChoiceId: null,
           isCorrect: false,
@@ -396,10 +410,10 @@ describe('DrizzleAttemptRepository', () => {
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
       const promise = repo.insert({
-        userId: 'user_1',
-        questionId: 'question_1',
+        userId: userId,
+        questionId: questionId,
         practiceSessionId: null,
-        outcome: answeredOutcome('choice_1'),
+        outcome: answeredOutcome(selectedChoiceId),
         isCorrect: false,
         timeSpentSeconds: 5,
       });
@@ -418,10 +432,10 @@ describe('DrizzleAttemptRepository', () => {
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
       const promise = repo.insert({
-        userId: 'user_1',
-        questionId: 'question_1',
-        practiceSessionId: 'session_1',
-        outcome: answeredOutcome('choice_1'),
+        userId: userId,
+        questionId: questionId,
+        practiceSessionId: sessionId,
+        outcome: answeredOutcome(selectedChoiceId),
         isCorrect: true,
         timeSpentSeconds: 12,
       });
@@ -445,10 +459,10 @@ describe('DrizzleAttemptRepository', () => {
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
       const promise = repo.insert({
-        userId: 'user_1',
-        questionId: 'question_1',
-        practiceSessionId: 'session_1',
-        outcome: answeredOutcome('choice_1'),
+        userId: userId,
+        questionId: questionId,
+        practiceSessionId: sessionId,
+        outcome: answeredOutcome(selectedChoiceId),
         isCorrect: true,
         timeSpentSeconds: 12,
       });
@@ -471,10 +485,10 @@ describe('DrizzleAttemptRepository', () => {
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
       const promise = repo.insert({
-        userId: 'user_1',
-        questionId: 'question_1',
+        userId: userId,
+        questionId: questionId,
         practiceSessionId: null,
-        outcome: answeredOutcome('choice_1'),
+        outcome: answeredOutcome(selectedChoiceId),
         isCorrect: true,
         timeSpentSeconds: 12,
       });
@@ -496,11 +510,11 @@ describe('DrizzleAttemptRepository', () => {
       const answeredAt = new Date('2026-02-01T00:00:00Z');
       db._mocks.queryFindMany.mockResolvedValue([
         {
-          id: 'attempt_1',
-          userId: 'user_1',
-          questionId: 'question_1',
+          id: attemptId,
+          userId: userId,
+          questionId: questionId,
           practiceSessionId: null,
-          selectedChoiceId: 'choice_1',
+          selectedChoiceId: selectedChoiceId,
           isOmitted: false,
           isCorrect: true,
           timeSpentSeconds: 12,
@@ -511,16 +525,16 @@ describe('DrizzleAttemptRepository', () => {
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
       await expect(
-        repo.findByUserId('user_1', { limit: 10, offset: 0 }),
+        repo.findByUserId(userId, { limit: 10, offset: 0 }),
       ).resolves.toEqual([
         {
-          id: 'attempt_1',
-          userId: 'user_1',
-          questionId: 'question_1',
+          id: attemptId,
+          userId: userId,
+          questionId: questionId,
           practiceSessionId: null,
           outcome: {
             kind: 'answered',
-            selectedChoiceId: 'choice_1',
+            selectedChoiceId: selectedChoiceId,
           },
           isCorrect: true,
           timeSpentSeconds: 12,
@@ -543,7 +557,7 @@ describe('DrizzleAttemptRepository', () => {
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
       await expect(
-        repo.findByUserId('user_1', { limit: 0, offset: 0 }),
+        repo.findByUserId(userId, { limit: 0, offset: 0 }),
       ).resolves.toEqual([]);
 
       expect(db._mocks.queryFindMany).not.toHaveBeenCalled();
@@ -554,7 +568,7 @@ describe('DrizzleAttemptRepository', () => {
       db._mocks.queryFindMany.mockResolvedValue([]);
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
-      await repo.findByUserId('user_1', { limit: 10, offset: -5 });
+      await repo.findByUserId(userId, { limit: 10, offset: -5 });
 
       expect(db._mocks.queryFindMany).toHaveBeenCalledWith(
         expect.objectContaining({ limit: 10, offset: 0 }),
@@ -565,10 +579,10 @@ describe('DrizzleAttemptRepository', () => {
       const db = createDbMock();
       db._mocks.queryFindMany.mockResolvedValue([
         {
-          id: 'attempt_1',
+          id: attemptId,
           selectedChoiceId: null,
-          userId: 'user_1',
-          questionId: 'question_1',
+          userId: userId,
+          questionId: questionId,
           practiceSessionId: null,
           isCorrect: false,
           timeSpentSeconds: 1,
@@ -578,7 +592,7 @@ describe('DrizzleAttemptRepository', () => {
 
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
-      const promise = repo.findByUserId('user_1', { limit: 10, offset: 0 });
+      const promise = repo.findByUserId(userId, { limit: 10, offset: 0 });
       await expect(promise).rejects.toBeInstanceOf(ApplicationError);
       await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
     });
@@ -590,11 +604,11 @@ describe('DrizzleAttemptRepository', () => {
       const answeredAt = new Date('2026-02-01T00:00:00Z');
       db._mocks.queryFindMany.mockResolvedValue([
         {
-          id: 'attempt_1',
-          userId: 'user_1',
-          questionId: 'question_1',
-          practiceSessionId: 'session_1',
-          selectedChoiceId: 'choice_1',
+          id: attemptId,
+          userId: userId,
+          questionId: questionId,
+          practiceSessionId: sessionId,
+          selectedChoiceId: selectedChoiceId,
           isOmitted: false,
           isCorrect: false,
           timeSpentSeconds: 9,
@@ -604,17 +618,15 @@ describe('DrizzleAttemptRepository', () => {
 
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
-      await expect(
-        repo.findBySessionId('session_1', 'user_1'),
-      ).resolves.toEqual([
+      await expect(repo.findBySessionId(sessionId, userId)).resolves.toEqual([
         {
-          id: 'attempt_1',
-          userId: 'user_1',
-          questionId: 'question_1',
-          practiceSessionId: 'session_1',
+          id: attemptId,
+          userId: userId,
+          questionId: questionId,
+          practiceSessionId: sessionId,
           outcome: {
             kind: 'answered',
-            selectedChoiceId: 'choice_1',
+            selectedChoiceId: selectedChoiceId,
           },
           isCorrect: false,
           timeSpentSeconds: 9,
@@ -643,7 +655,7 @@ describe('DrizzleAttemptRepository', () => {
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
       await expect(
-        repo.findMostRecentAnsweredAtByQuestionIds('user_1', []),
+        repo.findMostRecentAnsweredAtByQuestionIds(userId, []),
       ).resolves.toEqual([]);
 
       expect(db._mocks.select).not.toHaveBeenCalled();
@@ -653,29 +665,32 @@ describe('DrizzleAttemptRepository', () => {
       const db = createDbMock();
       const answeredAt = new Date('2026-02-01T00:00:00Z');
       db._mocks.groupByExecute.mockResolvedValue([
-        { questionId: 'q1', answeredAt },
-        { questionId: 'q2', answeredAt: null },
+        { questionId: firstQuestionId, answeredAt },
+        { questionId: secondQuestionId, answeredAt: null },
       ]);
 
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
       await expect(
-        repo.findMostRecentAnsweredAtByQuestionIds('user_1', ['q1', 'q2']),
-      ).resolves.toEqual([{ questionId: 'q1', answeredAt }]);
+        repo.findMostRecentAnsweredAtByQuestionIds(userId, [
+          firstQuestionId,
+          secondQuestionId,
+        ]),
+      ).resolves.toEqual([{ questionId: firstQuestionId, answeredAt }]);
     });
 
     it('left-joins practice sessions before aggregating latest answeredAt values', async () => {
       const db = createDbMock();
       const answeredAt = new Date('2026-02-01T00:00:00Z');
       db._mocks.groupByExecute.mockResolvedValue([
-        { questionId: 'q1', answeredAt },
+        { questionId: firstQuestionId, answeredAt },
       ]);
 
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
       await expect(
-        repo.findMostRecentAnsweredAtByQuestionIds('user_1', ['q1']),
-      ).resolves.toEqual([{ questionId: 'q1', answeredAt }]);
+        repo.findMostRecentAnsweredAtByQuestionIds(userId, [firstQuestionId]),
+      ).resolves.toEqual([{ questionId: firstQuestionId, answeredAt }]);
 
       expect(db._mocks.leftJoinFindMostRecent).toHaveBeenCalledTimes(1);
       expect(db._mocks.leftJoinFindMostRecent).toHaveBeenCalledWith(
@@ -690,11 +705,11 @@ describe('DrizzleAttemptRepository', () => {
       const db = createDbMock();
       const answeredAt = new Date('2026-02-01T00:00:00Z');
       const attemptRow = {
-        id: 'attempt_1',
-        userId: 'user_1',
-        questionId: 'question_1',
+        id: attemptId,
+        userId: userId,
+        questionId: questionId,
         practiceSessionId: null,
-        selectedChoiceId: 'choice_1',
+        selectedChoiceId: selectedChoiceId,
         isOmitted: false,
         isCorrect: true,
         timeSpentSeconds: 42,
@@ -712,11 +727,11 @@ describe('DrizzleAttemptRepository', () => {
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
       await expect(
-        repo.findLatestByUserAndQuestion('user_1', 'question_1'),
+        repo.findLatestByUserAndQuestion(userId, questionId),
       ).resolves.toMatchObject({
-        id: 'attempt_1',
-        userId: 'user_1',
-        questionId: 'question_1',
+        id: attemptId,
+        userId: userId,
+        questionId: questionId,
         answeredAt,
       });
 
@@ -739,14 +754,14 @@ describe('DrizzleAttemptRepository', () => {
         .mockResolvedValueOnce([{ count: 3 }])
         .mockResolvedValueOnce([{ count: 2 }]);
 
-      await expect(repo.countByUserId('user_1')).resolves.toBe(10);
-      await expect(repo.countCorrectByUserId('user_1')).resolves.toBe(7);
+      await expect(repo.countByUserId(userId)).resolves.toBe(10);
+      await expect(repo.countCorrectByUserId(userId)).resolves.toBe(7);
       await expect(
-        repo.countByUserIdSince('user_1', new Date('2026-02-01T00:00:00Z')),
+        repo.countByUserIdSince(userId, new Date('2026-02-01T00:00:00Z')),
       ).resolves.toBe(3);
       await expect(
         repo.countCorrectByUserIdSince(
-          'user_1',
+          userId,
           new Date('2026-02-01T00:00:00Z'),
         ),
       ).resolves.toBe(2);
@@ -757,7 +772,7 @@ describe('DrizzleAttemptRepository', () => {
       db._mocks.countWhere.mockResolvedValueOnce([{ count: 10 }]);
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
-      await expect(repo.countByUserId('user_1')).resolves.toBe(10);
+      await expect(repo.countByUserId(userId)).resolves.toBe(10);
 
       expect(db._mocks.countLeftJoin).toHaveBeenCalledTimes(1);
       expect(db._mocks.countWhere).toHaveBeenCalledTimes(1);
@@ -770,11 +785,11 @@ describe('DrizzleAttemptRepository', () => {
       const answeredAt = new Date('2026-02-02T00:00:00Z');
       db._mocks.recentQueryExecute.mockResolvedValue([
         {
-          id: 'attempt_1',
-          userId: 'user_1',
-          questionId: 'question_1',
+          id: attemptId,
+          userId: userId,
+          questionId: questionId,
           practiceSessionId: null,
-          selectedChoiceId: 'choice_1',
+          selectedChoiceId: selectedChoiceId,
           isOmitted: false,
           isCorrect: true,
           timeSpentSeconds: 12,
@@ -785,15 +800,15 @@ describe('DrizzleAttemptRepository', () => {
 
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
-      await expect(repo.listRecentByUserId('user_1', 5)).resolves.toEqual([
+      await expect(repo.listRecentByUserId(userId, 5)).resolves.toEqual([
         {
-          id: 'attempt_1',
-          userId: 'user_1',
-          questionId: 'question_1',
+          id: attemptId,
+          userId: userId,
+          questionId: questionId,
           practiceSessionId: null,
           outcome: {
             kind: 'answered',
-            selectedChoiceId: 'choice_1',
+            selectedChoiceId: selectedChoiceId,
           },
           isCorrect: true,
           timeSpentSeconds: 12,
@@ -811,7 +826,7 @@ describe('DrizzleAttemptRepository', () => {
       db._mocks.recentQueryExecute.mockResolvedValue([]);
 
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
-      await repo.listRecentByUserId('user_1', 20);
+      await repo.listRecentByUserId(userId, 20);
 
       expect(db._mocks.recentWhere).toHaveBeenCalledTimes(1);
     });
@@ -827,7 +842,7 @@ describe('DrizzleAttemptRepository', () => {
 
       await expect(
         repo.listAnsweredAtByUserIdSince(
-          'user_1',
+          userId,
           new Date('2026-02-01T00:00:00Z'),
         ),
       ).resolves.toEqual([answeredAt]);
@@ -843,14 +858,14 @@ describe('DrizzleAttemptRepository', () => {
 
       db._mocks.finalQueryExecute.mockResolvedValue([
         {
-          questionId: 'q1',
+          questionId: firstQuestionId,
           answeredAt,
           isCorrect: true,
-          sessionId: 'session-1',
+          sessionId: sessionId,
           sessionMode: 'exam',
         },
         {
-          questionId: 'q2',
+          questionId: secondQuestionId,
           answeredAt: null,
           isCorrect: false,
           sessionId: null,
@@ -861,13 +876,13 @@ describe('DrizzleAttemptRepository', () => {
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
       await expect(
-        repo.listAttemptedQuestionsByUserId('user_1', 10, 0),
+        repo.listAttemptedQuestionsByUserId(userId, 10, 0),
       ).resolves.toEqual([
         {
-          questionId: 'q1',
+          questionId: firstQuestionId,
           answeredAt,
           isCorrect: true,
-          sessionId: 'session-1',
+          sessionId: sessionId,
           sessionMode: 'exam',
         },
       ]);
@@ -879,7 +894,7 @@ describe('DrizzleAttemptRepository', () => {
 
       db._mocks.finalQueryExecute.mockResolvedValue([
         {
-          questionId: 'q_correct',
+          questionId: correctQuestionId,
           answeredAt,
           isCorrect: true,
           sessionId: null,
@@ -890,10 +905,12 @@ describe('DrizzleAttemptRepository', () => {
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
       await expect(
-        repo.listAttemptedQuestionsByUserId('user_1', 10, 0, {
+        repo.listAttemptedQuestionsByUserId(userId, 10, 0, {
           result: 'correct',
         }),
-      ).resolves.toMatchObject([{ questionId: 'q_correct', isCorrect: true }]);
+      ).resolves.toMatchObject([
+        { questionId: correctQuestionId, isCorrect: true },
+      ]);
     });
 
     it('supports result filter (incorrect)', async () => {
@@ -902,7 +919,7 @@ describe('DrizzleAttemptRepository', () => {
 
       db._mocks.finalQueryExecute.mockResolvedValue([
         {
-          questionId: 'q_incorrect',
+          questionId: incorrectQuestionId,
           answeredAt,
           isCorrect: false,
           sessionId: null,
@@ -913,11 +930,11 @@ describe('DrizzleAttemptRepository', () => {
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
       await expect(
-        repo.listAttemptedQuestionsByUserId('user_1', 10, 0, {
+        repo.listAttemptedQuestionsByUserId(userId, 10, 0, {
           result: 'incorrect',
         }),
       ).resolves.toMatchObject([
-        { questionId: 'q_incorrect', isCorrect: false },
+        { questionId: incorrectQuestionId, isCorrect: false },
       ]);
     });
 
@@ -927,7 +944,7 @@ describe('DrizzleAttemptRepository', () => {
 
       db._mocks.finalQueryExecute.mockResolvedValue([
         {
-          questionId: 'q_adhoc',
+          questionId: adhocQuestionId,
           answeredAt,
           isCorrect: true,
           sessionId: null,
@@ -938,10 +955,12 @@ describe('DrizzleAttemptRepository', () => {
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
       await expect(
-        repo.listAttemptedQuestionsByUserId('user_1', 10, 0, {
+        repo.listAttemptedQuestionsByUserId(userId, 10, 0, {
           source: 'adhoc',
         }),
-      ).resolves.toMatchObject([{ questionId: 'q_adhoc', sessionId: null }]);
+      ).resolves.toMatchObject([
+        { questionId: adhocQuestionId, sessionId: null },
+      ]);
     });
 
     it('supports source filter (tutor)', async () => {
@@ -950,10 +969,10 @@ describe('DrizzleAttemptRepository', () => {
 
       db._mocks.finalQueryExecute.mockResolvedValue([
         {
-          questionId: 'q_tutor',
+          questionId: tutorQuestionId,
           answeredAt,
           isCorrect: true,
-          sessionId: 'session-1',
+          sessionId: sessionId,
           sessionMode: 'tutor',
         },
       ]);
@@ -961,11 +980,11 @@ describe('DrizzleAttemptRepository', () => {
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
       await expect(
-        repo.listAttemptedQuestionsByUserId('user_1', 10, 0, {
+        repo.listAttemptedQuestionsByUserId(userId, 10, 0, {
           source: 'tutor',
         }),
       ).resolves.toMatchObject([
-        { questionId: 'q_tutor', sessionMode: 'tutor' },
+        { questionId: tutorQuestionId, sessionMode: 'tutor' },
       ]);
     });
 
@@ -975,10 +994,10 @@ describe('DrizzleAttemptRepository', () => {
 
       db._mocks.finalQueryExecute.mockResolvedValue([
         {
-          questionId: 'q_exam',
+          questionId: examQuestionId,
           answeredAt,
           isCorrect: true,
-          sessionId: 'session-2',
+          sessionId: alternateSessionId,
           sessionMode: 'exam',
         },
       ]);
@@ -986,10 +1005,12 @@ describe('DrizzleAttemptRepository', () => {
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
       await expect(
-        repo.listAttemptedQuestionsByUserId('user_1', 10, 0, {
+        repo.listAttemptedQuestionsByUserId(userId, 10, 0, {
           source: 'exam',
         }),
-      ).resolves.toMatchObject([{ questionId: 'q_exam', sessionMode: 'exam' }]);
+      ).resolves.toMatchObject([
+        { questionId: examQuestionId, sessionMode: 'exam' },
+      ]);
     });
 
     it('applies active-exam secrecy filtering to attempted-question list query', async () => {
@@ -997,7 +1018,7 @@ describe('DrizzleAttemptRepository', () => {
       db._mocks.finalQueryExecute.mockResolvedValue([]);
 
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
-      await repo.listAttemptedQuestionsByUserId('user_1', 20, 0);
+      await repo.listAttemptedQuestionsByUserId(userId, 20, 0);
 
       expect(db._mocks.leftJoinLatestAttemptRows).toHaveBeenCalledTimes(1);
       expect(db._mocks.whereGroupBy).toHaveBeenCalledTimes(1);
@@ -1012,9 +1033,9 @@ describe('DrizzleAttemptRepository', () => {
 
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
-      await expect(
-        repo.countAttemptedQuestionsByUserId('user_1'),
-      ).resolves.toBe(3);
+      await expect(repo.countAttemptedQuestionsByUserId(userId)).resolves.toBe(
+        3,
+      );
       expect(db._mocks.countLeftJoin).toHaveBeenCalledTimes(2);
     });
 
@@ -1025,7 +1046,7 @@ describe('DrizzleAttemptRepository', () => {
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
       await expect(
-        repo.countAttemptedQuestionsByUserId('user_1', { source: 'tutor' }),
+        repo.countAttemptedQuestionsByUserId(userId, { source: 'tutor' }),
       ).resolves.toBe(1);
       expect(db._mocks.countLeftJoin).toHaveBeenCalledTimes(2);
     });
@@ -1037,7 +1058,7 @@ describe('DrizzleAttemptRepository', () => {
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
 
       await expect(
-        repo.countAttemptedQuestionsByUserId('user_1', { source: 'exam' }),
+        repo.countAttemptedQuestionsByUserId(userId, { source: 'exam' }),
       ).resolves.toBe(2);
       expect(db._mocks.countLeftJoin).toHaveBeenCalledTimes(2);
     });
@@ -1047,9 +1068,9 @@ describe('DrizzleAttemptRepository', () => {
       db._mocks.countWhere.mockResolvedValueOnce([{ count: 3 }]);
 
       const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
-      await expect(
-        repo.countAttemptedQuestionsByUserId('user_1'),
-      ).resolves.toBe(3);
+      await expect(repo.countAttemptedQuestionsByUserId(userId)).resolves.toBe(
+        3,
+      );
 
       expect(db._mocks.leftJoinLatestAttemptRows).toHaveBeenCalledTimes(1);
       expect(db._mocks.whereGroupBy).toHaveBeenCalledTimes(1);
