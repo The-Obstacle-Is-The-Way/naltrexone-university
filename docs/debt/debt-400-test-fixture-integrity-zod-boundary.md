@@ -1,8 +1,8 @@
 # DEBT-400: Test Fixture Integrity (Zod Boundary Class)
 
-**Priority:** P2 (latent bug class. The current canonical candidate grep finds 2,447 placeholder-ID assignments across 163 test files. This is a candidate set, not a mandate to replace every string: the execution scope is only IDs that cross `zUuid = z.guid()` controller schemas or model Drizzle `uuid()` columns.)
+**Priority:** P2 (latent bug class. After PR 1, the current canonical candidate grep finds 2,438 placeholder-ID assignments across 162 test files. This is a candidate set, not a mandate to replace every string: the execution scope is only IDs that cross `zUuid = z.guid()` controller schemas or model Drizzle `uuid()` columns.)
 **Created:** 2026-05-26
-**Source:** Deep schema/boundary integrity audit conducted alongside DEBT-394 archival; re-audited on 2026-05-28 from `dev` at `f2dc0793`. Direct precedent is PR #330, which bumped Zod from 3 to 4 and deliberately kept historical UUID/GUID behavior by replacing the shared controller ID schema with Zod 4 `z.guid()`.
+**Source:** Deep schema/boundary integrity audit conducted alongside DEBT-394 archival; re-audited on 2026-05-28 from `dev` at `f2dc0793`, then PR 2 scope re-audited on 2026-05-28 from `dev` at `e7f1029a` after PR 1 merged. Direct precedent is PR #330, which bumped Zod from 3 to 4 and deliberately kept historical UUID/GUID behavior by replacing the shared controller ID schema with Zod 4 `z.guid()`.
 **Related:** [src/adapters/shared/zod-schemas.ts](../../src/adapters/shared/zod-schemas.ts), [db/schema.ts](../../db/schema.ts), [src/domain/test-helpers/](../../src/domain/test-helpers/), [src/application/test-helpers/fakes/](../../src/application/test-helpers/fakes/), [docs/dev/dependency-update-protocol.md](../dev/dependency-update-protocol.md), [DEBT-397](./debt-397-datetime-boundary-type-normalization.md), [DEBT-394 (archived)](../_archive/debt/debt-394-supply-chain-hardening.md), PR #330
 
 **Status:** Active
@@ -89,11 +89,11 @@ rg -n "\b(questionId|sessionId|attemptId|choiceId|selectedChoiceId|correctChoice
   --glob '!**/_archive/**'
 ```
 
-Current result on `f2dc0793`: **2,447 lines across 163 files**.
+Current result on `e7f1029a` after PR 1: **2,438 lines across 162 files**. The pre-PR1 audit result on `f2dc0793` was **2,447 lines across 163 files**.
 
 This replaces the old narrower `604 / 64` count. The old grep only searched `app/ src/ components/`, only camel-case object properties, only five field names, and only underscore-prefixed values. It missed hyphenated placeholders (`session-1`), choice/tag/subscription fields, snake_case SQL-row fixtures (`user_id`), and `tests/**` helper fixtures.
 
-High-count files from the current sweep:
+High-count files from the original `f2dc0793` sweep, kept as directional context:
 
 | File | Hits | Why it matters |
 |---|---:|---|
@@ -121,7 +121,7 @@ The execution agent should regenerate the full line list from the command above 
 
 ### A. Placeholder IDs are broad, but the cleanup boundary is narrower than the raw count
 
-The broad candidate set is now 2,447 lines across 163 files. Many are real boundary-crossing problems, but some are intentionally harmless:
+The broad candidate set is now 2,438 lines across 162 files. Many are real boundary-crossing problems, but some are intentionally harmless:
 
 - a component-only selected-choice token that never leaves the component;
 - a provider-owned external ID such as `cus_123`, `sub_123`, `evt_1`, or a Clerk `user_...` id;
@@ -142,20 +142,15 @@ const sessionId = crypto.randomUUID();
 
 Do not replace a readable placeholder with an opaque hardcoded UUID literal unless the test specifically needs a stable literal for a snapshot or fixture file.
 
-### C. Domain factories and fakes still generate non-UUID IDs
+### C. Domain factories and fakes were fixed by PR 1
 
-Confirmed current drift:
+PR 1 merged as #368 at `e7f1029a`. Current code now has the intended foundation:
 
-- `src/domain/test-helpers/factories.ts:28` returns `id: 'user-1'`.
-- `src/domain/test-helpers/factories.ts:49-55` defaults attempt `id`, `userId`, `questionId`, and selected choice values to non-UUID strings.
-- `src/domain/test-helpers/factories.ts:73-74` defaults bookmark `userId` / `questionId` to non-UUID strings.
-- `src/domain/test-helpers/factories.ts:82`, `92-93`, `106`, `131-132`, `161`, and `187-188` default tag, choice, question, subscription, and practice-session IDs to non-UUID strings.
-- `src/application/test-helpers/fakes/fake-attempt-repository.ts:29, 40-44, 82-83` tracks numeric `nextId` and emits `attempt-${n}`.
-- `src/application/test-helpers/fakes/fake-practice-session-repository.ts:192` emits `session-${this.sessions.length + 1}`.
-- `src/application/test-helpers/fakes/fake-user-repository.ts:13, 98` tracks numeric `nextId` and emits `user-${n}`.
-- `src/application/test-helpers/fakes/fake-subscription-repository.ts:63` emits `subscription-${this.byUserId.size + 1}`.
+- `src/domain/test-helpers/factories.ts` uses `crypto.randomUUID()` for generated app-owned IDs while preserving explicit overrides.
+- `src/application/test-helpers/fakes/fake-attempt-repository.ts`, `fake-practice-session-repository.ts`, `fake-user-repository.ts`, and `fake-subscription-repository.ts` generate UUID-valid app IDs internally.
+- `tests/shared/fixture-uuid-integrity.test.ts` proves those generated factory/fake IDs pass the real `zUuid.safeParse()` contract.
 
-These are high-leverage fixes because many tests receive IDs indirectly from the shared factory/fake layer.
+The remaining DEBT-400 work is explicit fixture overrides and adapter/app DTO rows that still provide placeholder IDs directly.
 
 ### D. Fakes are shape-permissive
 
@@ -246,7 +241,7 @@ No separate DEBT-402 is filed from this audit. A new debt file would be speculat
 
 ## Required Remediation
 
-Ship as split, reviewable PRs. The original four-PR plan is replaced because a 2,447-hit candidate set is too large for one "fixture sweep" PR, and duplicating rule text across `testing.md` and a new rule file would recreate the DEBT-395 documentation drift trap.
+Ship as split, reviewable PRs. The original four-PR plan is replaced because a 2,438-hit candidate set is too large for one "fixture sweep" PR, and duplicating rule text across `testing.md` and a new rule file would recreate the DEBT-395 documentation drift trap.
 
 ### PR 1 — Foundation: factories/fakes plus proof harness
 
@@ -271,6 +266,8 @@ Rules:
 - Do not make all fakes import controller schemas or validate every input in this PR.
 - Capture returned IDs in assertions instead of expecting `attempt-1`, `session-1`, etc.
 
+Status: shipped in PR #368 at `e7f1029a`.
+
 ### PR 2 — Adapter boundary fixture sweep
 
 Branch: `feat/debt-400-pr-2-adapter-boundary-fixtures`
@@ -294,6 +291,98 @@ Proof:
 - Existing controller validation tests still reject invalid UUIDs.
 - Valid-path controller tests pass with generated UUIDs.
 - Repository tests still pass without widening type assertions.
+
+#### PR 2 pre-execution audit: adapter target list
+
+Re-audited on 2026-05-28 from `dev` at `e7f1029a` after PR 1 merged. The `zUuid` controller-field list and Drizzle `uuid()` column list above remain current. The PR 2 file globs resolve to real files:
+
+- `src/adapters/controllers/**/*.test.ts`
+- `src/adapters/repositories/**/*.test.ts`
+- `src/adapters/shared/with-idempotency.test.ts`
+- `src/adapters/jobs/**/*.test.ts`
+- `src/adapters/gateways/**/*.test.ts`
+
+The classification below is the execution target list. Counts are candidate string-literal occurrences from an AST-assisted audit of ID-shaped test literals; final edit count may be lower when one semantic `const userId = crypto.randomUUID()` replaces several repeated literals. Do not treat provider/invalid counts as failures.
+
+| File | FIX app-UUID | LEAVE provider | LEAVE invalid | Execution note |
+|---|---:|---:|---:|---|
+| `src/adapters/controllers/billing-controller.test.ts` | 5 | 2 | 0 | Fix app `user.id` / `userId`; leave `clerkUserId`. |
+| `src/adapters/controllers/bookmark-controller.test.ts` | 4 | 0 | 1 | Fix auth/user fixtures; keep `not-a-uuid` rejection case. |
+| `src/adapters/controllers/clerk-webhook-controller.test.ts` | 0 | 103 | 0 | Provider-only Clerk/Svix/email/customer sentinels; do not churn. |
+| `src/adapters/controllers/create-action.test.ts` | 0 | 0 | 1 | Keep direct invalid schema test. |
+| `src/adapters/controllers/practice-controller-exam-draft.test.ts` | 2 | 0 | 3 | Fix auth `userId`; keep invalid session/question/choice case. |
+| `src/adapters/controllers/practice-controller-mark-and-count.test.ts` | 3 | 0 | 2 | Fix auth `userId`; keep invalid session/question case. |
+| `src/adapters/controllers/practice-controller-session-lifecycle.test.ts` | 6 | 0 | 2 | Fix auth `userId` and valid-path `sessionId` output placeholders; keep invalid `bad` inputs. |
+| `src/adapters/controllers/practice-controller-session-reads.test.ts` | 9 | 0 | 3 | Fix auth `userId` placeholders; keep invalid `sessionId` cases. |
+| `src/adapters/controllers/question-controller-exam-timer.test.ts` | 3 | 0 | 0 | Fix valid-path question/choice/user IDs. |
+| `src/adapters/controllers/question-controller.test.ts` | 14 | 0 | 3 | Fix auth, input, and output UUID placeholders; keep invalid input cases. |
+| `src/adapters/controllers/question-view-controller.test.ts` | 40 | 0 | 1 | Fix question/choice/attempt/user fixtures; keep invalid question-id case. |
+| `src/adapters/controllers/require-entitled-user-id.test.ts` | 2 | 0 | 0 | Fix app `users.id` fixtures. |
+| `src/adapters/controllers/review-controller.test.ts` | 6 | 0 | 0 | Fix app `users.id` / use-case `userId` fixtures. |
+| `src/adapters/controllers/shared/execute-idempotent.test.ts` | 6 | 0 | 0 | Fix `idempotency_keys.userId` fixtures. |
+| `src/adapters/controllers/stats-controller.test.ts` | 3 | 0 | 0 | Fix app `users.id` / use-case `userId` fixtures. |
+| `src/adapters/controllers/stripe-webhook-controller.test.ts` | 10 | 46 | 0 | Fix subscription/customer repo `userId`; leave Stripe event/customer/subscription IDs. |
+| `src/adapters/controllers/tag-controller.test.ts` | 6 | 0 | 0 | Fix app user and tag UUID fixtures. |
+| `src/adapters/gateways/clerk-auth-gateway.test.ts` | 0 | 20 | 0 | Provider-only Clerk/email IDs; PR 1 fake user defaults already cover generated app IDs. |
+| `src/adapters/gateways/stripe-payment-gateway.test.ts` | 23 | 138 | 0 | Fix app `userId` / metadata `user_id`; leave Stripe/Clerk IDs and price IDs. |
+| `src/adapters/gateways/stripe-subscription-canceler.test.ts` | 0 | 17 | 0 | Provider-only Stripe subscription IDs. |
+| `src/adapters/gateways/stripe/stripe-checkout-sessions.test.ts` | 1 | 43 | 0 | Fix app `userId`; leave Stripe checkout/customer/price IDs. |
+| `src/adapters/gateways/stripe/stripe-customers.test.ts` | 7 | 20 | 0 | Fix app `userId`, including malformed valid-path `user_`; leave Stripe/Clerk IDs. |
+| `src/adapters/gateways/stripe/stripe-portal.test.ts` | 0 | 3 | 0 | Provider-only Stripe customer IDs. |
+| `src/adapters/gateways/stripe/stripe-subscription-normalizer.test.ts` | 4 | 29 | 0 | Fix app metadata/user IDs; leave Stripe subscription/customer/price IDs. |
+| `src/adapters/gateways/stripe/stripe-webhook-processor.test.ts` | 5 | 46 | 0 | Fix app metadata/user IDs; leave Stripe event/subscription/customer/price IDs. |
+| `src/adapters/gateways/stripe/stripe-webhook-schemas.test.ts` | 0 | 7 | 0 | Provider-only Stripe webhook schema sentinel IDs. |
+| `src/adapters/jobs/reconcile-stripe-subscriptions.test.ts` | 40 | 118 | 0 | Fix app `userId` values in local subscription/customer mappings; leave Stripe customer/subscription/price IDs. |
+| `src/adapters/repositories/attempt-row-mappers.test.ts` | 4 | 0 | 0 | Fix attempt row UUID fields. |
+| `src/adapters/repositories/drizzle-attempt-repository.test.ts` | 128 | 0 | 0 | Fix all attempt/question/session/choice/user row and query UUID fixtures. |
+| `src/adapters/repositories/drizzle-bookmark-repository.test.ts` | 27 | 0 | 0 | Fix bookmark `userId` / `questionId` fixtures. |
+| `src/adapters/repositories/drizzle-clerk-event-repository.test.ts` | 0 | 12 | 0 | Provider event IDs; do not churn. |
+| `src/adapters/repositories/drizzle-deleted-clerk-user-repository.test.ts` | 0 | 8 | 0 | Clerk user IDs are varchar provider IDs; do not churn. |
+| `src/adapters/repositories/drizzle-pending-stripe-cancellation-repository.test.ts` | 0 | 10 | 0 | Stripe event/customer IDs; do not churn. |
+| `src/adapters/repositories/drizzle-practice-session-repository-question-state.test.ts` | 45 | 0 | 0 | Fix session/user/question/choice state UUID fixtures. |
+| `src/adapters/repositories/drizzle-practice-session-repository-reads.test.ts` | 29 | 0 | 0 | Fix session/user/question UUID fixtures. |
+| `src/adapters/repositories/drizzle-practice-session-repository-session-writes.test.ts` | 23 | 0 | 0 | Fix session/user/question/choice UUID fixtures. |
+| `src/adapters/repositories/drizzle-question-repository.test.ts` | 13 | 0 | 0 | Fix question/choice/tag/user UUID fixtures; slugs remain unchanged. |
+| `src/adapters/repositories/drizzle-stripe-customer-repository.test.ts` | 9 | 12 | 0 | Fix app `userId`; leave Stripe customer IDs. |
+| `src/adapters/repositories/drizzle-stripe-event-repository.test.ts` | 0 | 22 | 0 | Provider event IDs; do not churn. |
+| `src/adapters/repositories/drizzle-subscription-repository.test.ts` | 19 | 35 | 0 | Fix `stripe_subscriptions.id` and `userId`; leave `stripeSubscriptionId` / `priceId`. |
+| `src/adapters/repositories/drizzle-tag-repository.test.ts` | 6 | 0 | 0 | Fix tag UUID fixtures. |
+| `src/adapters/repositories/drizzle-user-repository.test.ts` | 7 | 19 | 0 | Fix app `users.id`; leave `clerkUserId`. |
+| `src/adapters/repositories/practice-session-params.test.ts` | 7 | 0 | 0 | Fix question/choice IDs embedded in practice-session params JSON. |
+| `src/adapters/shared/with-idempotency.test.ts` | 31 | 0 | 0 | Fix `idempotency_keys.userId` fixtures; existing idempotency keys are already UUID-shaped where controller-like. |
+
+Totals from the PR 2 audit table: **547 FIX**, **710 LEAVE-provider**, **16 LEAVE-invalid** candidate literal occurrences.
+
+Controller validation exercise notes:
+
+| Controller test file | Real validation exercised? | Note |
+|---|---|---|
+| `billing-controller.test.ts` | Yes, via `createAction` | Input only validates `plan` / optional `idempotencyKey`; app user placeholders are auth/use-case fixtures. |
+| `bookmark-controller.test.ts` | Yes, via `createAction` | `questionId` negative test proves `zUuid` rejection. |
+| `clerk-webhook-controller.test.ts` | No `zUuid` boundary | Tests provider webhook payload validation; provider IDs stay provider-shaped. |
+| `create-action.test.ts` | Yes, direct schema | Keep invalid UUID test as the shared action validation proof. |
+| `practice-controller-*.test.ts` | Yes, via `createAction` and exported practice schemas | Valid-path UUID placeholders should be UUID-valid; invalid tests stay invalid. |
+| `question-controller*.test.ts` | Yes, via `createAction`; `submitAnswer` also parses idempotent output schema | Fix input/output/user placeholders that model `zUuid` or app UUIDs. |
+| `question-view-controller.test.ts` | Yes for `getPreviousAttempt`; `getQuestionBySlug` has slug input but returns DB UUID-shaped question/choice data | Fix returned question/choice/attempt/user placeholders. |
+| `require-entitled-user-id.test.ts` | Bypasses controller schema | Still fixes app `users.id` fixtures because they model the auth/domain user row. |
+| `review-controller.test.ts`, `stats-controller.test.ts`, `tag-controller.test.ts` | Yes, but no `zUuid` input fields | Fix app auth/user/tag fixtures that model UUID columns. |
+| `stripe-webhook-controller.test.ts` | No `zUuid` input boundary | Fix app `userId` in subscription/customer fake state; leave Stripe event/customer/subscription IDs. |
+
+PR 2 proof method:
+
+- Do not export private controller schemas just to add a standalone `safeParse()` harness. The controller tests already exercise real input schemas through `createAction`; adding exports would widen production/test API surface for little value.
+- Keep existing negative tests (`not-a-uuid`, `bad`, `still-bad`, `also-bad`) invalid and assert `VALIDATION_ERROR` / rejection.
+- Convert valid-path app UUID placeholders to semantic generated IDs, then assert against those variables instead of old literals.
+- Repository tests must keep Drizzle row typing intact; do not use `as any`, widen row types, or relax expectations to hide invalid UUID fixtures.
+- Run the adapter PR 2 slice directly, then the full local gate:
+  ```sh
+  pnpm test --run src/adapters/controllers src/adapters/repositories src/adapters/shared/with-idempotency.test.ts src/adapters/jobs src/adapters/gateways
+  pnpm test --run tests/shared/fixture-uuid-integrity.test.ts
+  pnpm test --run components/theme-token-regression.test.tsx
+  ```
+- Acceptance is not "zero placeholder-looking strings in adapters." Provider and invalid buckets above are expected to remain.
+
+Split recommendation: keep PR 2 as **one adapter-layer PR** on `feat/debt-400-pr-2-adapter-boundary-fixtures`, but execute and review it in sub-area commits (`controllers/shared`, `repositories`, `gateways/jobs`). The change has one reason to change, is test-only, and the table above provides enough do-not-churn guardrails; splitting into more PRs would mostly add coordination overhead unless execution discovers unexpectedly large non-mechanical fallout.
 
 ### PR 3 — App, browser, and application fixture sweep
 
@@ -369,9 +458,12 @@ PR 1 done when:
 
 PR 2 done when:
 
-- Valid-path adapter/controller tests use UUID-valid values for every `zUuid` field.
-- Adapter repository row fixtures use UUID-valid values for every Drizzle `uuid()` column they model.
+- Valid-path adapter/controller tests use UUID-valid values for every `zUuid` field and app `users.id` auth fixture they model.
+- Adapter repository row fixtures use UUID-valid values for every Drizzle `uuid()` column they model, including IDs embedded in practice-session params JSON.
+- Gateway/job tests fix only app UUID fields such as `userId` / metadata `user_id`; provider IDs (`cus_`, `sub_`, `evt_`, `price_`, Clerk IDs) remain provider-shaped.
 - Invalid UUID negative tests remain explicit and intentional.
+- `tests/shared/fixture-uuid-integrity.test.ts` from PR 1 remains green.
+- `pnpm test --run components/theme-token-regression.test.tsx` remains 16/16.
 - Full local gate green.
 
 PR 3 done when:
