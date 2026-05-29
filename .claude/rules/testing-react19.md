@@ -51,4 +51,22 @@ expect(output.someValue).toBe(42);
 
 Limitation: Cannot observe async state transitions (`useEffect`, `setState` after `await`). Use `*.browser.spec.tsx` for those.
 
+### Anchor href assertions:
+
+For exact anchor assertions where the expected `href` contains a query string, `&`, or a generated/interpolated URL value, use `findAnchorByHref()` from `@/tests/shared/dom-helpers`.
+
+```typescript
+import { findAnchorByHref } from '@/tests/shared/dom-helpers';
+
+// Bad: routes the URL through CSS attribute-selector parsing.
+doc.querySelector('a[href="/path?tab=sessions&sort=desc"]');
+
+// Good: compares the rendered href attribute directly.
+findAnchorByHref(doc, '/path?tab=sessions&sort=desc');
+```
+
+PR #328 showed that jsdom 26 -> 29 selector/CSS parsing changes can break URL-bearing CSS attribute selectors while the rendered `href` remains correct. `findAnchorByHref()` compares `anchor.getAttribute('href') === href`, bypassing selector parsing entirely.
+
+Prefer `findAnchorByHref()` for new exact anchor href assertions when it reads clearly. Do not churn existing simple static-href `querySelector('a[href="..."]')` sites only for style consistency.
+
 ### Full details: `docs/dev/react-vitest-testing.md`

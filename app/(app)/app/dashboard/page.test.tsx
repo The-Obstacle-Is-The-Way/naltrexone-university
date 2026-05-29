@@ -2,6 +2,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
+import { findAnchorByHref } from '@/tests/shared/dom-helpers';
 
 let DashboardView: typeof import('./page').DashboardView;
 let DashboardPage: typeof import('./page').default;
@@ -24,17 +25,6 @@ function findStatValue(doc: Document, label: string): string | null {
 
 function getClassTokens(className: string): Set<string> {
   return new Set(className.split(/\s+/).filter(Boolean));
-}
-
-function findAnchorByHref(
-  doc: Document,
-  href: string,
-): HTMLAnchorElement | null {
-  return (
-    Array.from(doc.querySelectorAll('a')).find(
-      (anchor) => anchor.getAttribute('href') === href,
-    ) ?? null
-  );
 }
 
 describe('app/(app)/app/dashboard', () => {
@@ -349,11 +339,15 @@ describe('app/(app)/app/dashboard', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
+    const sessionFallbackLink =
+      Array.from(doc.querySelectorAll('li'))
+        .map((listItem) =>
+          findAnchorByHref(listItem, `${ROUTES.APP_HISTORY}?tab=sessions`),
+        )
+        .find(Boolean) ?? null;
 
     // Scope to `li a` to target the session card link, not the "View all" header link
-    expect(
-      doc.querySelector(`li a[href="${ROUTES.APP_HISTORY}?tab=sessions"]`),
-    ).not.toBeNull();
+    expect(sessionFallbackLink).not.toBeNull();
   });
 
   it('renders tutor session fraction using questionCount denominator', () => {

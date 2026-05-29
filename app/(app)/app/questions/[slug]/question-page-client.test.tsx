@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { toQuestionRoute } from '@/lib/routes';
 import { createChoice, createQuestion } from '@/src/domain/test-helpers';
+import { findAnchorByHref } from '@/tests/shared/dom-helpers';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -217,9 +218,10 @@ describe('QuestionView', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const backLink = doc.querySelector('a[href="/app/history?tab=sessions"]');
+    const backLink = findAnchorByHref(doc, '/app/history?tab=sessions');
 
     expect(backLink?.textContent?.trim()).toBe('Back to History');
+    expect(findAnchorByHref(doc, '/app/history?tab=questions')).toBeNull();
   });
 
   it('renders an origin-aware back link when origin=bookmarks', () => {

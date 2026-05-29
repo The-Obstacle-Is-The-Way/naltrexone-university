@@ -1,200 +1,267 @@
 # DEBT-396: Brittle CSS Selector Remediation
 
-**Priority:** P2 (active bug class — two unfixed query-string href selector sites remain after PR #328 established the fix. They are exposed to the same selector-engine fragility that broke dashboard tests during the jsdom 26→29 bump. Without a documented rule and an enforcement mechanism, the same pattern will keep getting written.)
+**Priority:** P2 (active bug class — PR #328 proved jsdom selector-engine changes can break URL-bearing `a[href="..."]` assertions. Two query-string selector sites remain, and the shared helper + rule are still missing.)
 **Created:** 2026-05-26
-**Source:** Deep adversarial test-suite audit conducted alongside DEBT-394 archival. Direct precedent is PR #328 (jsdom 26→29 bump) where three tests in `app/(app)/app/dashboard/page.test.tsx` failed because `querySelector('a[href="${ROUTES.APP_HISTORY}?tab=sessions"]')` stopped matching under jsdom 29's tightened CSS attribute-selector parser when the value contained URL-encoded `&` characters. PR #328 introduced a `findAnchorByHref()` helper using `getAttribute('href')` comparison. Two additional sites in the codebase still use the unsafe pattern and were not caught by the original sweep.
+**Source:** Deep adversarial test-suite audit conducted alongside DEBT-394 archival. Direct precedent is PR #328 (jsdom 26 -> 29 bump), which migrated generated dashboard question-route href assertions away from CSS attribute selectors after jsdom selector/CSS parsing changed. The broken pattern was a quoted `a[href="..."]` selector whose expected value came from `toQuestionRoute(...)` and contained multi-parameter query strings such as `?from=dashboard&mode=review&attemptId=...`; PR #328 introduced a local `findAnchorByHref()` helper in `app/(app)/app/dashboard/page.test.tsx`.
 **Related:** [.claude/rules/testing-react19.md](../../.claude/rules/testing-react19.md), [docs/dev/dependency-update-protocol.md](../dev/dependency-update-protocol.md), PR #328
 
 **Status:** Active
 
 ---
 
+## Audit Update — 2026-05-28
+
+Pre-execution audit on branch `feat/debt-396-pr-1-css-selector-helper` re-verified the current repo at `ebb0de7d` and locks the execution scope below.
+
+Corrections from the original doc:
+
+- PR #328 did introduce `findAnchorByHref()` and did ship the jsdom 26 -> 29 context, but the migrated dashboard selectors were generated `toQuestionRoute(...)` hrefs with multi-parameter query strings, not the remaining `ROUTES.APP_HISTORY?tab=sessions` selector.
+- `.claude/rules/testing-react19.md` exists and auto-loads for `**/*.test.tsx`, but it no longer has a "Styling Assertions" section. Add the new anchor/href section after "Synchronous hook capture" and before "Full details."
+- `tests/shared/dom-helpers.ts` does not exist today. `tests/shared/README.md` says suite-agnostic shared helpers belong under `tests/shared/`, which is the canonical home for the extracted helper.
+- A broader `[href]` sweep found 42 href-selector hits in tests. Only the two query-string exact href selectors are in scope. Thirty-nine are known-ok do-not-churn sites, and one substring selector is distinct.
+
+## Execution Update — 2026-05-28
+
+Consolidated PR implementation is complete on branch `feat/debt-396-pr-1-css-selector-helper`; PR number to be filled in during stop-and-grade.
+
+Implemented scope:
+
+- Added `tests/shared/dom-helpers.ts` with `findAnchorByHref(root: ParentNode, href: string): HTMLAnchorElement | null`.
+- Removed the local dashboard `findAnchorByHref()` copy and switched existing dashboard consumers to the shared helper.
+- Migrated the two fragile query-string selector sites listed below.
+- Added the "Anchor href assertions" rule to `.claude/rules/testing-react19.md`.
+- Left the 39 known-ok simple-href sites and the one `href*=` substring site untouched.
+
+Archive remains a separate follow-up after this PR merges.
+
+---
+
 ## Problem
 
-`document.querySelector('a[href="..."]')` couples the test to CSS attribute-selector parsing semantics. Those semantics change between jsdom (and Playwright/Chromium) versions. When the URL contains characters that the selector parser treats specially — `?`, `&`, `=`, `#`, encoded entities — the selector silently stops matching, the assertion produces a misleading "element not found" error, and the developer is forced to debug a "broken test" that's actually a "broken selector."
+`document.querySelector('a[href="..."]')` couples a test to CSS attribute-selector parsing. PR #328 showed that jsdom dev-tooling majors can change that parsing enough to break tests even when the rendered anchor behavior is correct.
 
-The right pattern is to query for the tag and filter by attribute value imperatively:
+The stable pattern is to query anchors and compare the actual attribute value imperatively:
 
 ```typescript
-Array.from(doc.querySelectorAll('a')).find(
+Array.from(root.querySelectorAll('a')).find(
   (anchor) => anchor.getAttribute('href') === expectedHref,
 );
 ```
 
-This is identical in intent but routes around the selector parser entirely. It tests the actual behavior (the anchor's `href` attribute matches the expected route) rather than the byproduct (does the CSS engine match this selector string).
+This tests the behavior the user sees — the rendered anchor has the expected `href` — without routing the expected URL through the selector parser.
 
-PR #328 demonstrated this fix and inlined it as `findAnchorByHref()` in `app/(app)/app/dashboard/page.test.tsx`. The fix worked. **Two query-string href sites in the codebase still use the unsafe selector-string pattern.** They should be migrated before the next selector-engine/jsdom churn.
+Current jsdom 29 still matches simple single-parameter selectors such as `a[href="/app/history?tab=sessions"]`, but it does not match the multi-parameter `&` hrefs that PR #328 migrated. The execution boundary is intentionally conservative and mechanical: remove the remaining query-string href selectors, extract the proven helper, and document the rule so future generated/query-string URL assertions do not reintroduce the bug class.
 
 ---
 
 ## Findings
 
-### A. Unfixed CSS attribute selectors with query strings
+### A. FRAGILE / In Scope — Migrate
 
-| File | Line | Pattern | Risk |
-|---|---|---|---|
-| `app/(app)/app/dashboard/page.test.tsx` | 355 | `doc.querySelector(\`li a[href="${ROUTES.APP_HISTORY}?tab=sessions"]\`)` | Same bug class as PR #328 |
-| `app/(app)/app/questions/[slug]/question-page-client.test.tsx` | 220 | `doc.querySelector('a[href="/app/history?tab=sessions"]')` | Same bug class as PR #328 |
+These are the only remaining exact `a[href="..."]` selector assertions whose href value contains a query string. They are the migration target list.
 
-Both selectors contain `?tab=sessions`. Under jsdom 29 the dashboard cases fixed in PR #328 were migrated to `getAttribute()` comparison; the other dashboard occurrence at line 355 and the question-page case were missed because they use different patterns the sweep didn't grep for. Both are exposed to the same failure mode on future selector-engine tightening.
+| File | Line | Pattern | Decision |
+|---|---:|---|---|
+| `app/(app)/app/dashboard/page.test.tsx` | 355 | ``doc.querySelector(`li a[href="${ROUTES.APP_HISTORY}?tab=sessions"]`)`` | Migrate, preserving the current `li a` scope so the assertion still targets a session-card link rather than the header "View all" link. |
+| `app/(app)/app/questions/[slug]/question-page-client.test.tsx` | 220 | `doc.querySelector('a[href="/app/history?tab=sessions"]')` | Migrate to the shared helper. |
 
-Verify the sites with a regex that requires the `?` to appear inside the attribute selector brackets (the looser `querySelector\(.*\[href.*\?` form also matches optional chaining after the selector call and produces false positives):
-
-```sh
-rg -n 'querySelector\([^\n]*\[href[^\]]*[?][^\]]*\]' app/ src/ components/ --glob '*.ts' --glob '*.tsx'
-```
-
-### B. Broader query-string-in-attribute-selector anti-pattern
-
-A wider grep finds additional attribute selectors. Most are safe because the attribute value has no query-string/special-character payload, but the sweep should classify each match before remediation:
+Verification commands:
 
 ```sh
-rg -n "querySelector.*\[(href|src|action|data-\w+)=" app/ src/ components/ --glob '*.ts' --glob '*.tsx' | rg -v "_archive|node_modules"
+rg -n 'querySelector\([^\n]*\[href[^\]]*[?][^\]]*\]' app/ components/ src/ --glob '*.test.ts' --glob '*.test.tsx'
+rg -n '\[href[^]]*[?&]' -g '*.test.ts' -g '*.test.tsx'
 ```
 
-Audit each. Most are safe (the attribute value contains no special characters). The ones with `?`, `&`, `=`, `#`, encoded entities, or interpolated URL values are at risk and should switch to `getAttribute()` comparison.
+Both commands currently identify only the two sites above.
 
-### C. The fix exists but is not extracted as a shared helper
+### B. KNOWN-OK / Out of Scope — Do Not Churn
 
-PR #328 inlined `findAnchorByHref()` in `app/(app)/app/dashboard/page.test.tsx`. It is not exported. Other test files reinventing the same helper will produce inconsistent shapes. The helper belongs in a shared test utility module (e.g., `tests/shared/dom-helpers.ts` or `tests/shared/find-by-attribute.ts`) so every test imports the same battle-tested implementation.
+The full href-selector sweep found these 39 known-ok sites. They are simple static href assertions, href-presence selectors, or static route constants with no query-string payload. They are not part of DEBT-396 remediation.
 
-### D. No documented rule prevents the pattern from being re-introduced
+| File | Lines | Why out of scope |
+|---|---:|---|
+| `components/auth-nav.test.tsx` | 36, 84, 119, 141, 182, 257, 338, 383 | Helper/local assertions use simple `#features`, `/pricing`, `/sign-in`, and `/app/dashboard` values. |
+| `components/app-desktop-nav.test.tsx` | 47, 67, 68, 87, 89 | Presence selector `a[href]` plus simple app routes. |
+| `app/pricing/page.test.tsx` | 133, 780, 810 | Simple `/` and `/sign-in` hrefs. |
+| `components/marketing/marketing-layout.test.tsx` | 89, 90, 112, 126, 196, 199, 215 | Simple auth/pricing/home routes; `/#features` is a static fragment selector and matches under current jsdom 29. |
+| `components/marketing/marketing-home.test.tsx` | 69, 72, 212, 215, 230, 245, 290, 313 | Simple `/sign-in` and `/pricing` hrefs. |
+| `app/(app)/app/questions/[slug]/question-page-client.test.tsx` | 97, 182, 243, 276 | Simple `/app/...` routes; line 220 is the only query-string site in this file. |
+| `app/(app)/app/layout-shell.test.tsx` | 32, 179 | Simple `/app/dashboard` and `/app/billing` hrefs. |
+| `app/(app)/app/practice/[sessionId]/error.test.tsx` | 26 | Simple `/app/practice` href. |
+| `app/(app)/app/practice/quick/error.test.tsx` | 28 | Simple `ROUTES.APP_PRACTICE` href. |
 
-`.claude/rules/testing-react19.md` mentions stable markers ("Prefer stable markers (`role`, visible text, `href`, `data-testid`) for UI tests"), but does not explain WHY CSS attribute selectors with URL-encoded values are dangerous, does not cite PR #328, and does not name the `findAnchorByHref` helper. An agent reading the rule today would not learn to avoid the pattern.
+The execution PR must not rewrite these sites for style consistency. The point is to remove the fragile query-string selector pattern, not churn stable tests.
 
----
+### C. DISTINCT / Explicitly Out of Scope
 
-## Why Existing Docs Were Not Enough
+| File | Line | Pattern | Decision |
+|---|---:|---|---|
+| `app/(app)/app/practice/[sessionId]/components/session-summary-view.test.tsx` | 418 | `doc.querySelector('a[href*="/app/questions/"]')` | Leave unchanged. This is a substring negative assertion ("no review question link exists"), not an exact href assertion. `findAnchorByHref()` cannot replace it 1:1, and a substring helper would broaden the API for one unrelated case. |
 
-`docs/dev/dependency-update-protocol.md` lines 49-54 document the jsdom 26→29 incident as a "Dev-Tooling Majors" precedent — but that doc only loads when an on-call engineer is triaging a Dependabot PR. It does not load when an agent is writing a new test. The rule needed to live in `.claude/rules/testing-react19.md` and explain the WHY, not just the WHAT.
+### D. Existing Helper Location
 
-The "Styling Assertions" section in `.claude/rules/testing-react19.md` lines 43-47 says to prefer stable markers but is silent on selector engine fragility. An agent following the existing rule would write `querySelector('a[href="/some?path"]')` and consider it "stable" because `href` is a stable marker — without realizing the SELECTOR ENGINE is the unstable layer.
+`findAnchorByHref()` currently exists only in `app/(app)/app/dashboard/page.test.tsx:29-38`:
+
+```typescript
+function findAnchorByHref(
+  doc: Document,
+  href: string,
+): HTMLAnchorElement | null {
+  return (
+    Array.from(doc.querySelectorAll('a')).find(
+      (anchor) => anchor.getAttribute('href') === href,
+    ) ?? null
+  );
+}
+```
+
+Current dashboard consumers are at lines 214, 224, 305, 617, and 625. The execution PR should remove the local helper, import the shared helper, and keep those consumers on the shared implementation.
 
 ---
 
 ## Required Remediation
 
-Ship in two single-concern PRs.
+Ship one consolidated PR on branch `feat/debt-396-pr-1-css-selector-helper`.
 
-### PR 1 — Fix the two unfixed sites and extract the shared helper
+Rationale: helper extraction, two migrations, and the React 19 testing rule are small and tightly coupled. Splitting the rule into a second PR would leave the code fix temporarily undocumented and repeat the documentation-drift trap already resolved in DEBT-395.
 
-Branch: `fix/debt-396-css-selector-brittleness`
+### 1. Create the Shared Helper
 
-Steps:
-
-1. **Create `tests/shared/dom-helpers.ts`** exporting `findAnchorByHref(doc: Document, href: string): HTMLAnchorElement | null` (or place it in an existing shared test-utils module if one is the canonical home — verify against repo conventions). Implementation:
-
-   ```typescript
-   export function findAnchorByHref(
-     doc: Document,
-     href: string,
-   ): HTMLAnchorElement | null {
-     return (
-       Array.from(doc.querySelectorAll('a')).find(
-         (anchor) => anchor.getAttribute('href') === href,
-       ) ?? null
-     );
-   }
-   ```
-
-2. **Migrate `app/(app)/app/dashboard/page.test.tsx`** — replace the line 355 occurrence (and any other inline copies of the same pattern within the file from PR #328 if they were not extracted) with imports from the shared helper. Delete the local inline definition.
-
-3. **Migrate `app/(app)/app/questions/[slug]/question-page-client.test.tsx`** — replace line 220 with the shared helper.
-
-4. **Sweep**: run the grep from Finding B and convert every additional site that contains query-string characters in its attribute value to the shared helper. Document the sweep result in the PR body (file:line list).
-
-5. **Full local gate**, including `pnpm test --run` and `pnpm test:browser`.
-
-Verification: a fresh jsdom upgrade should no longer require sweep-the-codebase fixes for this pattern.
-
-### PR 2 — Document the rule and the helper
-
-Branch: `docs/debt-396-css-selector-rule`
-
-Edit `.claude/rules/testing-react19.md` — add a section after "Styling Assertions":
-
-```markdown
-### CSS Selector Brittleness and Dev-Tool Upgrade Risk
-
-Never assert URLs or query parameters inside CSS attribute-selector strings.
-Selector engines tighten between jsdom versions (precedent: PR #328 broke
-three tests when jsdom 26 → 29 stopped matching `?` and `&` inside
-`querySelector('a[href="..."]')`).
-
-**Bad** (will silently fail on the next jsdom major):
+Create `tests/shared/dom-helpers.ts`:
 
 ```typescript
-doc.querySelector('a[href="/path?tab=sessions&sort=desc"]');
+export function findAnchorByHref(
+  root: ParentNode,
+  href: string,
+): HTMLAnchorElement | null {
+  return (
+    Array.from(root.querySelectorAll('a')).find(
+      (anchor) => anchor.getAttribute('href') === href,
+    ) ?? null
+  );
+}
 ```
 
-**Good** (tests behavior, not selector-engine parsing):
+Use `ParentNode`, not `Document`, so tests can preserve scoped assertions by passing a container element when the old selector was scoped (for example `li a`). Do not add `findAnchorByHrefContaining()` for DEBT-396; the single `href*=` site is distinct and out of scope.
 
-```typescript
-import { findAnchorByHref } from '../../tests/shared/dom-helpers';
+### 2. Migrate Dashboard Test
 
-findAnchorByHref(doc, '/path?tab=sessions&sort=desc');
-```
+Edit `app/(app)/app/dashboard/page.test.tsx`:
 
-The helper compares `anchor.getAttribute('href') === href` imperatively,
-which routes around the selector parser entirely. Same intent, no
-selector-engine coupling.
+- Import `findAnchorByHref` from `@/tests/shared/dom-helpers`.
+- Delete the local helper at lines 29-38.
+- Existing helper consumers at lines 214, 224, 305, 617, and 625 should continue to call `findAnchorByHref(...)`, now through the shared import.
+- Replace the fragile line 355 selector with the shared helper while preserving the original `li a` intent. Do not weaken it to "any matching link in the document" if the test is meant to prove a session-card fallback link exists.
 
-**The rule applies to any attribute selector with special characters**,
-not just hrefs. `[data-key="value?with&special"]`, `[action="/route?x=1"]`,
-and similar patterns have the same failure mode. If your selector value
-contains `?`, `&`, `=`, `#`, encoded entities, or any interpolated URL,
-switch to `getAttribute()` comparison.
+### 3. Migrate Question Page Test
 
-See `docs/dev/dependency-update-protocol.md` § "Dev-Tooling Majors" for
-the jsdom isolation strategy that surfaces this class.
-```
+Edit `app/(app)/app/questions/[slug]/question-page-client.test.tsx`:
 
-No code changes in this PR — pure doc.
+- Import `findAnchorByHref` from `@/tests/shared/dom-helpers`.
+- Replace line 220 with `findAnchorByHref(doc, '/app/history?tab=sessions')`.
+- Leave the simple-href selectors at lines 97, 182, 243, and 276 unchanged.
+
+### 4. Document the Rule
+
+Edit `.claude/rules/testing-react19.md` after "Synchronous hook capture" and before "Full details." Add a short section named `### Anchor href assertions` with this content contract:
+
+- For exact anchor assertions where the expected href contains a query string, `&`, or a generated/interpolated URL value, use `findAnchorByHref()` from `@/tests/shared/dom-helpers`.
+- Prefer `findAnchorByHref()` for new exact anchor href assertions when it reads clearly, but do not churn existing simple static selectors.
+- Explain why: PR #328 showed jsdom 26 -> 29 selector/CSS parsing changes can break URL-bearing CSS attribute selectors while the rendered `href` remains correct.
+- Bad example: `doc.querySelector('a[href="/path?tab=sessions&sort=desc"]')`.
+- Good example: `findAnchorByHref(doc, '/path?tab=sessions&sort=desc')`.
+- Mention that the helper compares `anchor.getAttribute('href') === href`, bypassing selector parsing.
+
+Do not add unrelated guidance about module-cache ordering, database isolation, or generic mutable state. DEBT-396 is only about brittle CSS attribute selectors in React 19 render-output tests.
+
+### 5. Update This Debt Doc
+
+After execution, update this file with:
+
+- PR number.
+- Final migrated file list.
+- Verification results.
+- Note that archive is a separate follow-up after merge.
+
+Do not move this doc to `docs/_archive/debt/` in the execution PR.
 
 ---
 
-## Optional Hardening (Defer if Out of Scope)
+## Execution File List
 
-Two enforcement mechanisms worth considering but NOT required for archive:
+The consolidated execution PR changes exactly these files:
 
-1. **Lint rule**: add an ESLint custom rule (or contribute to `eslint-plugin-vitest`) that flags `querySelector` / `querySelectorAll` calls with attribute selectors containing `?`, `&`, `=`, `#`, or template-literal interpolation. Hard mode — write a Biome rule instead, since Biome is the active linter.
+- `tests/shared/dom-helpers.ts` (new)
+- `app/(app)/app/dashboard/page.test.tsx`
+- `app/(app)/app/questions/[slug]/question-page-client.test.tsx`
+- `.claude/rules/testing-react19.md`
+- `docs/debt/debt-396-brittle-css-selector-remediation.md`
 
-2. **Pre-push grep guard**: a shell script in `.husky/pre-push` that greps the staged diff for the pattern and warns. Less robust than a real lint rule but trivial to ship.
+No production files are in scope.
 
-Both are P3 follow-ups that could be filed as a separate small debt entry if the team wants enforcement beyond documentation. Not required for DEBT-396 to archive.
+---
+
+## Verification
+
+Run targeted tests:
+
+```sh
+pnpm test --run app/'(app)'/app/dashboard/page.test.tsx
+pnpm test --run app/'(app)'/app/questions/'[slug]'/question-page-client.test.tsx
+```
+
+Run the scope guard:
+
+```sh
+rg -n 'querySelector\([^\n]*\[href[^\]]*[?][^\]]*\]' app/ components/ src/ --glob '*.test.ts' --glob '*.test.tsx'
+```
+
+Expected after execution: zero hits.
+
+Run the DEBT-398 regression sanity check:
+
+```sh
+pnpm test --run components/theme-token-regression.test.tsx
+```
+
+Expected: 16/16 pass. This PR touches test docs/helpers and render-output tests, not scanned UI implementation surfaces.
+
+Before push, run the full local gate:
+
+```sh
+pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
+```
+
+Run E2E only if the local authenticated billing E2E environment is present per `AGENTS.md`.
 
 ---
 
 ## Acceptance Criteria
 
-PR 1 done when:
+The consolidated PR is done when:
 
-- `tests/shared/dom-helpers.ts` (or chosen location) exists and exports `findAnchorByHref`.
-- `app/(app)/app/dashboard/page.test.tsx:355` no longer uses `querySelector('a[href="..."]')` for query-string URLs.
-- `app/(app)/app/questions/[slug]/question-page-client.test.tsx:220` same.
-- Any other sites discovered by the sweep are converted.
-- No inline copies of `findAnchorByHref` remain (consolidated to the shared helper).
-- Full local gate green.
-
-PR 2 done when:
-
-- `.claude/rules/testing-react19.md` has the "CSS Selector Brittleness" section.
-- The section names the helper path and cites PR #328.
-- A future agent writing a test for a URL-containing href will be reminded by the auto-loaded rule.
+- [x] `tests/shared/dom-helpers.ts` exists and exports `findAnchorByHref(root: ParentNode, href: string): HTMLAnchorElement | null`.
+- [x] No local inline copies of `findAnchorByHref()` remain.
+- [x] `app/(app)/app/dashboard/page.test.tsx:355` no longer uses a query-string CSS attribute selector, and the assertion still targets the session-card fallback link.
+- [x] `app/(app)/app/questions/[slug]/question-page-client.test.tsx:220` no longer uses a query-string CSS attribute selector.
+- [x] The known-ok simple href selectors listed above are not churned.
+- [x] `.claude/rules/testing-react19.md` documents the anchor/href rule, names `@/tests/shared/dom-helpers`, and cites PR #328.
+- [x] The query-string selector guard returns zero hits.
+- [x] Targeted tests, DEBT-398 regression test, and the full local gate are green.
 
 ---
 
-## Risk and Reversibility
+## Optional Hardening (Defer)
 
-- **PR 1 (helper extraction + migrations)** — low risk. Failure mode is "test passes for a different reason," which the full local gate catches. The conversion is mechanical and the helper is trivially correct.
-- **PR 2 (rule doc)** — zero risk. Doc-only.
+Two enforcement mechanisms are worth considering but are not required for DEBT-396:
 
-Both PRs are independently revertable.
+1. A Biome-compatible lint/enforcement path that flags `querySelector` / `querySelectorAll` calls with URL-bearing attribute selector values.
+2. A pre-push grep guard for new query-string href selector assertions.
+
+Both are P3 follow-ups. Do not fold them into the consolidated execution PR unless separately requested.
 
 ---
 
 ## Done When
 
-Both PRs merged to `dev` and synced to `main`. A grep of the codebase for `querySelector\([^\n]*\[(href|src|action|data-[[:alnum:]_-]+)[^\]]*[?&=#][^\]]*\]` returns zero unfixed sites. The shared helper is the single canonical implementation. The rule file documents the WHY. DEBT-396 doc archived to `docs/_archive/debt/` with resolution paragraph.
-
-A future agent or contributor who writes `querySelector('a[href="/path?x=1"]')` will be flagged at code-review time by either the documented rule (in their loaded context) or by the optional lint/grep hardening if it ships later.
+The consolidated PR is merged to `dev` and synced to `main`; the shared helper is the single canonical implementation; the React 19 testing rule documents the WHY; and the DEBT-396 doc is archived in a later follow-up PR with a resolution paragraph.
