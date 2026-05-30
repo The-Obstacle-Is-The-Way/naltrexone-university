@@ -4,6 +4,11 @@ import * as practiceController from '@/src/adapters/controllers/practice-control
 import { ok } from '@/tests/test-helpers/ok';
 import { HistorySessionsTab } from './history-sessions-tab';
 
+const fixtureSession1Id = crypto.randomUUID();
+const fixtureSession2Id = crypto.randomUUID();
+const fixtureQuestion1Id = crypto.randomUUID();
+const fixtureQuestion2Id = crypto.randomUUID();
+
 const { pushMock } = vi.hoisted(() => ({
   pushMock: vi.fn(),
 }));
@@ -41,7 +46,7 @@ describe('HistorySessionsTab (browser)', () => {
         result={ok({
           rows: [
             {
-              sessionId: 'session-1',
+              sessionId: fixtureSession1Id,
               mode: 'exam',
               questionCount: 10,
               firstQuestionSlug: 'q-1',
@@ -75,7 +80,7 @@ describe('HistorySessionsTab (browser)', () => {
         result={ok({
           rows: [
             {
-              sessionId: 'session-1',
+              sessionId: fixtureSession1Id,
               mode: 'exam',
               questionCount: 10,
               firstQuestionSlug: 'q-1',
@@ -102,7 +107,7 @@ describe('HistorySessionsTab (browser)', () => {
       .element(summaryLink)
       .toHaveAttribute(
         'href',
-        '/app/questions/q-1?from=history&mode=review&sessionId=session-1&historyHref=%2Fapp%2Fhistory%3Ftab%3Dsessions%26offset%3D0%26limit%3D20',
+        `/app/questions/q-1?from=history&mode=review&sessionId=${fixtureSession1Id}&historyHref=%2Fapp%2Fhistory%3Ftab%3Dsessions%26offset%3D0%26limit%3D20`,
       );
     await expect.element(summaryLink).not.toHaveAttribute('tabindex');
   });
@@ -110,14 +115,14 @@ describe('HistorySessionsTab (browser)', () => {
   it('clicking the disclosure button loads and renders breakdown rows', async () => {
     getPracticeSessionReview.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQuestion1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -137,7 +142,7 @@ describe('HistorySessionsTab (browser)', () => {
         result={ok({
           rows: [
             {
-              sessionId: 'session-1',
+              sessionId: fixtureSession1Id,
               mode: 'exam',
               questionCount: 10,
               firstQuestionSlug: 'q-1',
@@ -156,7 +161,7 @@ describe('HistorySessionsTab (browser)', () => {
       />,
     );
 
-    const breakdownToggle = getBreakdownToggle('session-1');
+    const breakdownToggle = getBreakdownToggle(fixtureSession1Id);
     await expect
       .element(breakdownToggle)
       .toHaveAttribute('aria-expanded', 'false');
@@ -164,7 +169,7 @@ describe('HistorySessionsTab (browser)', () => {
     await breakdownToggle.click();
 
     expect(getPracticeSessionReview).toHaveBeenCalledWith({
-      sessionId: 'session-1',
+      sessionId: fixtureSession1Id,
     });
 
     await expect.element(screen.getByText('Stem for q1')).toBeVisible();
@@ -173,14 +178,14 @@ describe('HistorySessionsTab (browser)', () => {
   it('does not navigate when clicking blank space inside the expanded breakdown region', async () => {
     getPracticeSessionReview.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQuestion1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -200,7 +205,7 @@ describe('HistorySessionsTab (browser)', () => {
         result={ok({
           rows: [
             {
-              sessionId: 'session-1',
+              sessionId: fixtureSession1Id,
               mode: 'exam',
               questionCount: 10,
               firstQuestionSlug: 'q-1',
@@ -219,7 +224,7 @@ describe('HistorySessionsTab (browser)', () => {
       />,
     );
 
-    await getBreakdownToggle('session-1').click();
+    await getBreakdownToggle(fixtureSession1Id).click();
     await expect
       .element(screen.getByRole('region', { name: 'Question breakdown' }))
       .toBeVisible();
@@ -236,14 +241,14 @@ describe('HistorySessionsTab (browser)', () => {
   it('does not render a redundant Review session action in the expanded breakdown panel', async () => {
     getPracticeSessionReview.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQuestion1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -263,7 +268,7 @@ describe('HistorySessionsTab (browser)', () => {
         result={ok({
           rows: [
             {
-              sessionId: 'session-1',
+              sessionId: fixtureSession1Id,
               mode: 'exam',
               questionCount: 10,
               firstQuestionSlug: 'q-1',
@@ -282,7 +287,7 @@ describe('HistorySessionsTab (browser)', () => {
       />,
     );
 
-    await getBreakdownToggle('session-1').click();
+    await getBreakdownToggle(fixtureSession1Id).click();
 
     await expect
       .element(screen.getByRole('link', { name: /Stem for q1/ }))
@@ -295,14 +300,14 @@ describe('HistorySessionsTab (browser)', () => {
   it('wires disclosure accessibility attributes and region semantics on expand', async () => {
     getPracticeSessionReview.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQuestion1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -322,7 +327,7 @@ describe('HistorySessionsTab (browser)', () => {
         result={ok({
           rows: [
             {
-              sessionId: 'session-1',
+              sessionId: fixtureSession1Id,
               mode: 'exam',
               questionCount: 10,
               firstQuestionSlug: 'q-1',
@@ -341,13 +346,13 @@ describe('HistorySessionsTab (browser)', () => {
       />,
     );
 
-    const collapsedToggle = getBreakdownToggle('session-1');
+    const collapsedToggle = getBreakdownToggle(fixtureSession1Id);
     await expect
       .element(collapsedToggle)
       .toHaveAttribute('aria-expanded', 'false');
     await expect
       .element(collapsedToggle)
-      .toHaveAttribute('aria-controls', 'breakdown-session-1');
+      .toHaveAttribute('aria-controls', `breakdown-${fixtureSession1Id}`);
     await expect
       .element(collapsedToggle)
       .toHaveAttribute(
@@ -357,7 +362,7 @@ describe('HistorySessionsTab (browser)', () => {
 
     await collapsedToggle.click();
 
-    const expandedToggle = getBreakdownToggle('session-1');
+    const expandedToggle = getBreakdownToggle(fixtureSession1Id);
     await expect
       .element(expandedToggle)
       .toHaveAttribute('aria-expanded', 'true');
@@ -370,20 +375,20 @@ describe('HistorySessionsTab (browser)', () => {
 
     await expect
       .element(screen.getByRole('region', { name: 'Question breakdown' }))
-      .toHaveAttribute('id', 'breakdown-session-1');
+      .toHaveAttribute('id', `breakdown-${fixtureSession1Id}`);
   });
 
   it('threads canonical historyHref into breakdown question links', async () => {
     getPracticeSessionReview.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQuestion1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -403,7 +408,7 @@ describe('HistorySessionsTab (browser)', () => {
         result={ok({
           rows: [
             {
-              sessionId: 'session-1',
+              sessionId: fixtureSession1Id,
               mode: 'exam',
               questionCount: 10,
               firstQuestionSlug: 'q-1',
@@ -422,10 +427,9 @@ describe('HistorySessionsTab (browser)', () => {
       />,
     );
 
-    await getBreakdownToggle('session-1').click();
+    await getBreakdownToggle(fixtureSession1Id).click();
 
-    const expectedHref =
-      '/app/questions/q-1?from=history&mode=review&sessionId=session-1&historyHref=%2Fapp%2Fhistory%3Ftab%3Dsessions%26offset%3D0%26limit%3D20';
+    const expectedHref = `/app/questions/q-1?from=history&mode=review&sessionId=${fixtureSession1Id}&historyHref=%2Fapp%2Fhistory%3Ftab%3Dsessions%26offset%3D0%26limit%3D20`;
 
     await expect
       .element(screen.getByRole('link', { name: /Stem for q1/ }))
@@ -435,14 +439,14 @@ describe('HistorySessionsTab (browser)', () => {
   it('clicking the expanded disclosure button collapses the selected session', async () => {
     getPracticeSessionReview.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQuestion1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -462,7 +466,7 @@ describe('HistorySessionsTab (browser)', () => {
         result={ok({
           rows: [
             {
-              sessionId: 'session-1',
+              sessionId: fixtureSession1Id,
               mode: 'exam',
               questionCount: 10,
               firstQuestionSlug: 'q-1',
@@ -481,10 +485,10 @@ describe('HistorySessionsTab (browser)', () => {
       />,
     );
 
-    await getBreakdownToggle('session-1').click();
+    await getBreakdownToggle(fixtureSession1Id).click();
     await expect.element(screen.getByText('Stem for q1')).toBeVisible();
 
-    await getBreakdownToggle('session-1').click();
+    await getBreakdownToggle(fixtureSession1Id).click();
 
     await expect
       .element(screen.getByText('Stem for q1'))
@@ -494,7 +498,7 @@ describe('HistorySessionsTab (browser)', () => {
   it('clicking a different session collapses the previous breakdown', async () => {
     getPracticeSessionReview.mockImplementation(async (input) => {
       const sessionId = (input as { sessionId: string }).sessionId;
-      if (sessionId === 'session-1') {
+      if (sessionId === fixtureSession1Id) {
         return ok({
           sessionId,
           mode: 'exam',
@@ -503,7 +507,7 @@ describe('HistorySessionsTab (browser)', () => {
           markedCount: 0,
           rows: [
             {
-              questionId: 'q1',
+              questionId: fixtureQuestion1Id,
               slug: 'q-1',
               order: 1,
               isAvailable: true,
@@ -526,7 +530,7 @@ describe('HistorySessionsTab (browser)', () => {
         markedCount: 0,
         rows: [
           {
-            questionId: 'q2',
+            questionId: fixtureQuestion2Id,
             slug: 'q-2',
             order: 1,
             isAvailable: true,
@@ -546,7 +550,7 @@ describe('HistorySessionsTab (browser)', () => {
         result={ok({
           rows: [
             {
-              sessionId: 'session-1',
+              sessionId: fixtureSession1Id,
               mode: 'exam',
               questionCount: 10,
               firstQuestionSlug: 'q-1',
@@ -558,7 +562,7 @@ describe('HistorySessionsTab (browser)', () => {
               endedAt: '2026-02-07T00:20:00.000Z',
             },
             {
-              sessionId: 'session-2',
+              sessionId: fixtureSession2Id,
               mode: 'tutor',
               questionCount: 10,
               firstQuestionSlug: 'q-2',
@@ -577,10 +581,10 @@ describe('HistorySessionsTab (browser)', () => {
       />,
     );
 
-    await getBreakdownToggle('session-1').click();
+    await getBreakdownToggle(fixtureSession1Id).click();
     await expect.element(screen.getByText('Stem for session 1')).toBeVisible();
 
-    await getBreakdownToggle('session-2').click();
+    await getBreakdownToggle(fixtureSession2Id).click();
     await expect.element(screen.getByText('Stem for session 2')).toBeVisible();
 
     await expect

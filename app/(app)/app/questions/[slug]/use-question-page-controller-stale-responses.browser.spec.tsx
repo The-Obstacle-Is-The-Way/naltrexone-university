@@ -4,10 +4,18 @@ import { render } from 'vitest-browser-react';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
+
 import {
   getPreviousAttempt,
   getQuestionBySlug,
+  getQuestionPageQuestionIdForSlug,
   Probe,
+  QUESTION_PAGE_ATTEMPT_1_ID,
+  QUESTION_PAGE_ATTEMPT_2_ID,
+  QUESTION_PAGE_CHOICE_1_ID,
+  QUESTION_PAGE_CHOICE_2_ID,
+  QUESTION_PAGE_QUESTION_1_ID,
+  QUESTION_PAGE_QUESTION_2_ID,
   setupQuestionPageControllerBrowserSpec,
   submitAnswer,
 } from './use-question-page-controller-test-helpers';
@@ -68,11 +76,13 @@ describe('useQuestionPageController (browser)', () => {
 
     deferredSecond.resolve(
       ok({
-        questionId: 'question-q-2',
+        questionId: QUESTION_PAGE_QUESTION_2_ID,
         slug: 'q-2',
         stemMd: 'Stem 2',
         difficulty: 'easy',
-        choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
+        choices: [
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+        ],
       }),
     );
     await expect
@@ -81,11 +91,13 @@ describe('useQuestionPageController (browser)', () => {
 
     deferredFirst.resolve(
       ok({
-        questionId: 'question-q-1',
+        questionId: QUESTION_PAGE_QUESTION_1_ID,
         slug: 'q-1',
         stemMd: 'Stem 1',
         difficulty: 'easy',
-        choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
+        choices: [
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+        ],
       }),
     );
     await deferredFirst.promise;
@@ -98,13 +110,13 @@ describe('useQuestionPageController (browser)', () => {
     getQuestionBySlug.mockImplementation(async (input: unknown) => {
       const slug = (input as { slug: string }).slug;
       return ok({
-        questionId: `question-${slug}`,
+        questionId: getQuestionPageQuestionIdForSlug(slug),
         slug,
         stemMd: `Stem ${slug}`,
         difficulty: 'easy',
         choices: [
-          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
-          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+          { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
         ],
       });
     });
@@ -175,11 +187,11 @@ describe('useQuestionPageController (browser)', () => {
       ok({
         kind: 'attempt',
         sessionMode: null,
-        attemptId: 'attempt-q2',
-        selectedChoiceId: 'choice-1',
+        attemptId: QUESTION_PAGE_ATTEMPT_2_ID,
+        selectedChoiceId: QUESTION_PAGE_CHOICE_1_ID,
         isOmitted: false,
         isCorrect: true,
-        correctChoiceId: 'choice-1',
+        correctChoiceId: QUESTION_PAGE_CHOICE_1_ID,
         explanationMd: 'Because q2',
         referenceMd: null,
         choiceExplanations: [],
@@ -188,20 +200,20 @@ describe('useQuestionPageController (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('attempt-id'))
-      .toHaveTextContent('attempt-q2');
+      .toHaveTextContent(QUESTION_PAGE_ATTEMPT_2_ID);
     await expect
       .element(screen.getByTestId('selected-choice'))
-      .toHaveTextContent('choice-1');
+      .toHaveTextContent(QUESTION_PAGE_CHOICE_1_ID);
 
     deferredFirst.resolve(
       ok({
         kind: 'attempt',
         sessionMode: null,
-        attemptId: 'attempt-q1-stale',
-        selectedChoiceId: 'choice-2',
+        attemptId: QUESTION_PAGE_ATTEMPT_1_ID,
+        selectedChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         isOmitted: false,
         isCorrect: false,
-        correctChoiceId: 'choice-1',
+        correctChoiceId: QUESTION_PAGE_CHOICE_1_ID,
         explanationMd: 'Because q1',
         referenceMd: null,
         choiceExplanations: [],
@@ -211,21 +223,23 @@ describe('useQuestionPageController (browser)', () => {
     await deferredFirst.promise;
     await expect
       .element(screen.getByTestId('attempt-id'))
-      .toHaveTextContent('attempt-q2');
+      .toHaveTextContent(QUESTION_PAGE_ATTEMPT_2_ID);
     await expect
       .element(screen.getByTestId('selected-choice'))
-      .toHaveTextContent('choice-1');
+      .toHaveTextContent(QUESTION_PAGE_CHOICE_1_ID);
   });
 
   it('clears previous-attempt loading when stale hydration is invalidated by a failed question reload', async () => {
     getQuestionBySlug
       .mockResolvedValueOnce(
         ok({
-          questionId: 'question-q-1',
+          questionId: QUESTION_PAGE_QUESTION_1_ID,
           slug: 'q-1',
           stemMd: 'Stem 1',
           difficulty: 'easy',
-          choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
+          choices: [
+            { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+          ],
         }),
       )
       .mockResolvedValueOnce({
@@ -286,11 +300,11 @@ describe('useQuestionPageController (browser)', () => {
       ok({
         kind: 'attempt',
         sessionMode: null,
-        attemptId: 'attempt-q1-stale',
-        selectedChoiceId: 'choice-1',
+        attemptId: QUESTION_PAGE_ATTEMPT_1_ID,
+        selectedChoiceId: QUESTION_PAGE_CHOICE_1_ID,
         isOmitted: false,
         isCorrect: true,
-        correctChoiceId: 'choice-1',
+        correctChoiceId: QUESTION_PAGE_CHOICE_1_ID,
         explanationMd: 'Because q1',
         referenceMd: null,
         choiceExplanations: [],
@@ -308,11 +322,13 @@ describe('useQuestionPageController (browser)', () => {
     getQuestionBySlug.mockImplementation(async (input: unknown) => {
       const slug = (input as { slug: string }).slug;
       return ok({
-        questionId: `question-${slug}`,
+        questionId: getQuestionPageQuestionIdForSlug(slug),
         slug,
         stemMd: `Stem ${slug}`,
         difficulty: 'easy',
-        choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
+        choices: [
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+        ],
       });
     });
 
@@ -366,9 +382,9 @@ describe('useQuestionPageController (browser)', () => {
 
     deferredSubmit.resolve(
       ok({
-        attemptId: 'attempt-q1-stale',
+        attemptId: QUESTION_PAGE_ATTEMPT_1_ID,
         isCorrect: true,
-        correctChoiceId: 'choice-1',
+        correctChoiceId: QUESTION_PAGE_CHOICE_1_ID,
         explanationMd: 'Because q1',
         referenceMd: null,
         choiceExplanations: [],

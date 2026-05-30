@@ -4,7 +4,11 @@ import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { createReviewResponse } from './practice-session-page-controller.browser.fixtures';
+
 import {
+  BROWSER_QUESTION_1_ID,
+  BROWSER_QUESTION_2_ID,
+  BROWSER_SESSION_ID,
   CHOICE_1,
   getNextQuestionMock,
   mockBookmarksAndReview,
@@ -22,13 +26,13 @@ describe('usePracticeSessionPageController (browser)', () => {
   it('emits bookmark feedback for repeated identical success messages', async () => {
     getNextQuestionMock.mockResolvedValue(
       ok({
-        questionId: 'question-1',
+        questionId: BROWSER_QUESTION_1_ID,
         slug: 'question-1',
         stemMd: 'Question 1',
         difficulty: 'easy',
         choices: [CHOICE_1],
         session: {
-          sessionId: 'session-1',
+          sessionId: BROWSER_SESSION_ID,
           mode: 'tutor',
 
           deadlineAt: null,
@@ -71,13 +75,13 @@ describe('usePracticeSessionPageController (browser)', () => {
 
     getNextQuestionMock.mockResolvedValue(
       ok({
-        questionId: 'question-1',
+        questionId: BROWSER_QUESTION_1_ID,
         slug: 'question-1',
         stemMd: 'Question 1',
         difficulty: 'easy',
         choices: [CHOICE_1],
         session: {
-          sessionId: 'session-1',
+          sessionId: BROWSER_SESSION_ID,
           mode: 'tutor',
 
           deadlineAt: null,
@@ -127,13 +131,13 @@ describe('usePracticeSessionPageController (browser)', () => {
     getNextQuestionMock
       .mockResolvedValueOnce(
         ok({
-          questionId: 'question-1',
+          questionId: BROWSER_QUESTION_1_ID,
           slug: 'question-1',
           stemMd: 'Question 1',
           difficulty: 'easy',
           choices: [CHOICE_1],
           session: {
-            sessionId: 'session-1',
+            sessionId: BROWSER_SESSION_ID,
             mode: 'exam',
 
             deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -146,13 +150,13 @@ describe('usePracticeSessionPageController (browser)', () => {
       )
       .mockResolvedValueOnce(
         ok({
-          questionId: 'question-2',
+          questionId: BROWSER_QUESTION_2_ID,
           slug: 'question-2',
           stemMd: 'Question 2',
           difficulty: 'easy',
           choices: [CHOICE_1],
           session: {
-            sessionId: 'session-1',
+            sessionId: BROWSER_SESSION_ID,
             mode: 'exam',
 
             deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -184,7 +188,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       .toHaveTextContent('ready');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('question-1');
+      .toHaveTextContent(BROWSER_QUESTION_1_ID);
     await expect
       .element(screen.getByTestId('marked-for-review'))
       .toHaveTextContent('false');
@@ -202,16 +206,18 @@ describe('usePracticeSessionPageController (browser)', () => {
 
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('question-2');
+      .toHaveTextContent(BROWSER_QUESTION_2_ID);
     await expect
       .element(screen.getByTestId('marked-for-review'))
       .toHaveTextContent('false');
 
-    deferred.resolve(ok({ questionId: 'question-1', markedForReview: true }));
+    deferred.resolve(
+      ok({ questionId: BROWSER_QUESTION_1_ID, markedForReview: true }),
+    );
 
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('question-2');
+      .toHaveTextContent(BROWSER_QUESTION_2_ID);
     await expect
       .element(screen.getByTestId('is-marking'))
       .toHaveTextContent('false');
@@ -229,13 +235,13 @@ describe('usePracticeSessionPageController (browser)', () => {
     getNextQuestionMock
       .mockResolvedValueOnce(
         ok({
-          questionId: 'question-1',
+          questionId: BROWSER_QUESTION_1_ID,
           slug: 'question-1',
           stemMd: 'Question 1',
           difficulty: 'easy',
           choices: [CHOICE_1],
           session: {
-            sessionId: 'session-1',
+            sessionId: BROWSER_SESSION_ID,
             mode: 'exam',
 
             deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -248,13 +254,13 @@ describe('usePracticeSessionPageController (browser)', () => {
       )
       .mockResolvedValueOnce(
         ok({
-          questionId: 'question-2',
+          questionId: BROWSER_QUESTION_2_ID,
           slug: 'question-2',
           stemMd: 'Question 2',
           difficulty: 'easy',
           choices: [CHOICE_1],
           session: {
-            sessionId: 'session-1',
+            sessionId: BROWSER_SESSION_ID,
             mode: 'exam',
 
             deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -286,7 +292,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       .toHaveTextContent('ready');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('question-1');
+      .toHaveTextContent(BROWSER_QUESTION_1_ID);
 
     await screen
       .getByRole('button', { name: 'toggle-mark-for-review' })
@@ -298,7 +304,7 @@ describe('usePracticeSessionPageController (browser)', () => {
     await screen.getByRole('button', { name: 'next-question' }).click();
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('question-2');
+      .toHaveTextContent(BROWSER_QUESTION_2_ID);
 
     deferred.reject(new Error('Network timeout'));
 
@@ -310,6 +316,6 @@ describe('usePracticeSessionPageController (browser)', () => {
       .toHaveTextContent('ready');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('question-2');
+      .toHaveTextContent(BROWSER_QUESTION_2_ID);
   });
 });

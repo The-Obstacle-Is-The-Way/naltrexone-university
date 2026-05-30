@@ -695,6 +695,7 @@ PR 3 must not ship as one mega-PR. Ship the code sweep as three execution PRs af
    - Branch: `feat/debt-400-pr-3b-browser-fixtures`
    - Scope: the rows labeled `3b` above plus the browser-only helper/probe/fixture files enumerated in the PR 3b pre-execution audit subsection when they define shared boundary IDs.
    - Proof: run touched browser specs directly and `pnpm test:browser`, plus PR 1 harness, DEBT-398 scan, shuffled unit suite, full local gate, and the no-unnecessary-`vi.hoisted()` proof.
+   - Status: implementation complete on branch; PR number pending. PR 3c, PR 4, and archive follow.
 3. **PR 3c - application use-case/shared fixtures**
    - Branch: `feat/debt-400-pr-3c-application-fixtures`
    - Scope: the rows labeled `3c` above.

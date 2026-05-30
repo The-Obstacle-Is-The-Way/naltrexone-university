@@ -8,20 +8,30 @@ import {
 import { PracticeSessionPageView } from './practice-session-page-view';
 import { noop } from './practice-session-page-view-test-helpers';
 
+const fixtureSession1Id = crypto.randomUUID();
+const fixtureQMissingId = crypto.randomUUID();
+const fixtureAttempt1Id = crypto.randomUUID();
+const fixtureAttempt2Id = crypto.randomUUID();
+const fixtureChoice1Id = crypto.randomUUID();
+const fixtureQ1Id = crypto.randomUUID();
+const fixtureQ2Id = crypto.randomUUID();
+const fixtureQ3Id = crypto.randomUUID();
+const fixtureQ4Id = crypto.randomUUID();
+
 test('renders Previous button in the session answering branch', async () => {
   const screen = await render(
     <PracticeSessionPageView
       summary={null}
       review={null}
       navigator={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
         totalCount: 2,
         answeredCount: 0,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -33,7 +43,7 @@ test('renders Previous button in the session answering branch', async () => {
             markedForReview: false,
           },
           {
-            questionId: 'q2',
+            questionId: fixtureQ2Id,
             slug: 'q-2',
             order: 2,
             isAvailable: true,
@@ -47,7 +57,7 @@ test('renders Previous button in the session answering branch', async () => {
         ],
       }}
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
 
         deadlineAt: null,
@@ -58,7 +68,7 @@ test('renders Previous button in the session answering branch', async () => {
       }}
       loadState={{ status: 'ready' }}
       question={{
-        questionId: 'q2',
+        questionId: fixtureQ2Id,
         slug: 'q-2',
         stemMd: 'Stem 2',
         difficulty: 'medium',
@@ -91,14 +101,14 @@ test('hasPreviousQuestion is false when current question is first in navigator',
       summary={null}
       review={null}
       navigator={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
         totalCount: 2,
         answeredCount: 0,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -110,7 +120,7 @@ test('hasPreviousQuestion is false when current question is first in navigator',
             markedForReview: false,
           },
           {
-            questionId: 'q2',
+            questionId: fixtureQ2Id,
             slug: 'q-2',
             order: 2,
             isAvailable: true,
@@ -124,7 +134,7 @@ test('hasPreviousQuestion is false when current question is first in navigator',
         ],
       }}
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
 
         deadlineAt: null,
@@ -135,7 +145,7 @@ test('hasPreviousQuestion is false when current question is first in navigator',
       }}
       loadState={{ status: 'ready' }}
       question={{
-        questionId: 'q1',
+        questionId: fixtureQ1Id,
         slug: 'q-1',
         stemMd: 'Stem 1',
         difficulty: 'easy',
@@ -169,7 +179,7 @@ test('hasPreviousQuestion is false on the first question when navigator is missi
       review={null}
       navigator={null}
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
 
         deadlineAt: null,
@@ -180,7 +190,7 @@ test('hasPreviousQuestion is false on the first question when navigator is missi
       }}
       loadState={{ status: 'ready' }}
       question={{
-        questionId: 'q-missing',
+        questionId: fixtureQMissingId,
         slug: 'q-missing',
         stemMd: 'Stem missing',
         difficulty: 'easy',
@@ -214,7 +224,7 @@ test('renders Previous when navigator is missing but sessionInfo indicates a pri
       review={null}
       navigator={null}
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
 
         deadlineAt: null,
@@ -225,7 +235,7 @@ test('renders Previous when navigator is missing but sessionInfo indicates a pri
       }}
       loadState={{ status: 'ready' }}
       question={{
-        questionId: 'q2',
+        questionId: fixtureQ2Id,
         slug: 'q-2',
         stemMd: 'Stem 2',
         difficulty: 'medium',
@@ -267,13 +277,13 @@ test('routes the last exam-question footer Review & Submit button through onEndS
         markedCount: 0,
         rows: [
           createReviewRow({
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             order: 1,
             isAnswered: true,
             isCorrect: true,
           }),
           createReviewRow({
-            questionId: 'q2',
+            questionId: fixtureQ2Id,
             order: 2,
             isAnswered: true,
             isCorrect: true,
@@ -281,7 +291,7 @@ test('routes the last exam-question footer Review & Submit button through onEndS
         ],
       })}
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
 
         deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -292,7 +302,7 @@ test('routes the last exam-question footer Review & Submit button through onEndS
       }}
       loadState={{ status: 'ready' }}
       question={createNextQuestion({
-        questionId: 'q2',
+        questionId: fixtureQ2Id,
         slug: 'q-2',
         stemMd: 'Last exam question',
         difficulty: 'medium',
@@ -324,14 +334,14 @@ test('hasPreviousQuestion is true when current question is not first', async () 
       summary={null}
       review={null}
       navigator={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
         totalCount: 2,
         answeredCount: 0,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -343,7 +353,7 @@ test('hasPreviousQuestion is true when current question is not first', async () 
             markedForReview: false,
           },
           {
-            questionId: 'q2',
+            questionId: fixtureQ2Id,
             slug: 'q-2',
             order: 2,
             isAvailable: true,
@@ -357,7 +367,7 @@ test('hasPreviousQuestion is true when current question is not first', async () 
         ],
       }}
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
 
         deadlineAt: null,
@@ -368,7 +378,7 @@ test('hasPreviousQuestion is true when current question is not first', async () 
       }}
       loadState={{ status: 'ready' }}
       question={{
-        questionId: 'q2',
+        questionId: fixtureQ2Id,
         slug: 'q-2',
         stemMd: 'Stem 2',
         difficulty: 'medium',
@@ -404,14 +414,14 @@ test('routes the last tutor-question footer End session button through onEndSess
       summary={null}
       review={null}
       navigator={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
         totalCount: 2,
         answeredCount: 2,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -423,7 +433,7 @@ test('routes the last tutor-question footer End session button through onEndSess
             markedForReview: false,
           },
           {
-            questionId: 'q2',
+            questionId: fixtureQ2Id,
             slug: 'q-2',
             order: 2,
             isAvailable: true,
@@ -437,7 +447,7 @@ test('routes the last tutor-question footer End session button through onEndSess
         ],
       }}
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
 
         deadlineAt: null,
@@ -448,7 +458,7 @@ test('routes the last tutor-question footer End session button through onEndSess
       }}
       loadState={{ status: 'ready' }}
       question={{
-        questionId: 'q2',
+        questionId: fixtureQ2Id,
         slug: 'q-2',
         stemMd: 'Stem 2',
         difficulty: 'medium',
@@ -458,7 +468,7 @@ test('routes the last tutor-question footer End session button through onEndSess
       selectedChoiceId="c1"
       isAnswered={true}
       submitResult={{
-        attemptId: 'attempt-1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
         correctChoiceId: 'c1',
         explanationMd: 'Because',
@@ -505,25 +515,25 @@ test('clicking Next in a completed session navigates to the next available quest
         markedCount: 0,
         rows: [
           createReviewRow({
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             order: 1,
             isAnswered: true,
             isCorrect: true,
           }),
           createReviewRow({
-            questionId: 'q2',
+            questionId: fixtureQ2Id,
             order: 2,
             isAnswered: true,
             isCorrect: true,
           }),
           createReviewRow({
-            questionId: 'q3',
+            questionId: fixtureQ3Id,
             order: 3,
             isAnswered: true,
             isCorrect: true,
           }),
           createReviewRow({
-            questionId: 'q4',
+            questionId: fixtureQ4Id,
             order: 4,
             isAnswered: true,
             isCorrect: true,
@@ -531,7 +541,7 @@ test('clicking Next in a completed session navigates to the next available quest
         ],
       })}
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
 
         deadlineAt: null,
@@ -542,10 +552,10 @@ test('clicking Next in a completed session navigates to the next available quest
       }}
       loadState={{ status: 'ready' }}
       question={createNextQuestion({
-        questionId: 'q2',
+        questionId: fixtureQ2Id,
         stemMd: 'Stem 2',
         session: {
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'tutor',
 
           deadlineAt: null,
@@ -553,16 +563,16 @@ test('clicking Next in a completed session navigates to the next available quest
           index: 1,
           total: 4,
           isMarkedForReview: false,
-          latestSelectedChoiceId: 'choice_1',
+          latestSelectedChoiceId: fixtureChoice1Id,
           latestIsCorrect: true,
         },
       })}
-      selectedChoiceId="choice_1"
+      selectedChoiceId={fixtureChoice1Id}
       isAnswered={true}
       submitResult={{
-        attemptId: 'attempt-2',
+        attemptId: fixtureAttempt2Id,
         isCorrect: true,
-        correctChoiceId: 'choice_1',
+        correctChoiceId: fixtureChoice1Id,
         explanationMd: 'Because.',
         referenceMd: null,
         choiceExplanations: [],
@@ -581,7 +591,7 @@ test('clicking Next in a completed session navigates to the next available quest
 
   await screen.getByRole('button', { name: 'Next' }).click();
 
-  expect(onNavigateQuestion).toHaveBeenCalledWith('q3');
+  expect(onNavigateQuestion).toHaveBeenCalledWith(fixtureQ3Id);
   expect(onNextQuestion).not.toHaveBeenCalled();
 });
 
@@ -599,19 +609,19 @@ test('clicking Next falls back to onNextQuestion when id-based navigation is una
         markedCount: 0,
         rows: [
           createReviewRow({
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             order: 1,
             isAnswered: true,
             isCorrect: true,
           }),
           createReviewRow({
-            questionId: 'q2',
+            questionId: fixtureQ2Id,
             order: 2,
             isAnswered: false,
             isCorrect: null,
           }),
           createReviewRow({
-            questionId: 'q3',
+            questionId: fixtureQ3Id,
             order: 3,
             isAnswered: false,
             isCorrect: null,
@@ -619,7 +629,7 @@ test('clicking Next falls back to onNextQuestion when id-based navigation is una
         ],
       })}
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
 
         deadlineAt: null,
@@ -630,10 +640,10 @@ test('clicking Next falls back to onNextQuestion when id-based navigation is una
       }}
       loadState={{ status: 'ready' }}
       question={createNextQuestion({
-        questionId: 'q1',
+        questionId: fixtureQ1Id,
         stemMd: 'Stem 1',
         session: {
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'tutor',
 
           deadlineAt: null,
@@ -641,16 +651,16 @@ test('clicking Next falls back to onNextQuestion when id-based navigation is una
           index: 0,
           total: 3,
           isMarkedForReview: false,
-          latestSelectedChoiceId: 'choice_1',
+          latestSelectedChoiceId: fixtureChoice1Id,
           latestIsCorrect: true,
         },
       })}
-      selectedChoiceId="choice_1"
+      selectedChoiceId={fixtureChoice1Id}
       isAnswered={true}
       submitResult={{
-        attemptId: 'attempt-1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
-        correctChoiceId: 'choice_1',
+        correctChoiceId: fixtureChoice1Id,
         explanationMd: 'Because.',
         referenceMd: null,
         choiceExplanations: [],
@@ -679,14 +689,14 @@ test("clicking Previous calls onNavigateQuestion with the previous question's ID
       summary={null}
       review={null}
       navigator={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
         totalCount: 2,
         answeredCount: 0,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -698,7 +708,7 @@ test("clicking Previous calls onNavigateQuestion with the previous question's ID
             markedForReview: false,
           },
           {
-            questionId: 'q2',
+            questionId: fixtureQ2Id,
             slug: 'q-2',
             order: 2,
             isAvailable: true,
@@ -712,7 +722,7 @@ test("clicking Previous calls onNavigateQuestion with the previous question's ID
         ],
       }}
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
 
         deadlineAt: null,
@@ -723,7 +733,7 @@ test("clicking Previous calls onNavigateQuestion with the previous question's ID
       }}
       loadState={{ status: 'ready' }}
       question={{
-        questionId: 'q2',
+        questionId: fixtureQ2Id,
         slug: 'q-2',
         stemMd: 'Stem 2',
         difficulty: 'medium',
@@ -746,5 +756,5 @@ test("clicking Previous calls onNavigateQuestion with the previous question's ID
   );
 
   await screen.getByRole('button', { name: 'Previous' }).click();
-  expect(onNavigateQuestion).toHaveBeenCalledWith('q1');
+  expect(onNavigateQuestion).toHaveBeenCalledWith(fixtureQ1Id);
 });

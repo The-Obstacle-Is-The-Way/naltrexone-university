@@ -2,13 +2,15 @@ import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { IncompleteSessionCard } from './incomplete-session-card';
 
+const fixtureSession1Id = crypto.randomUUID();
+
 test('renders resume link and calls abandon handler', async () => {
   const onAbandon = vi.fn();
 
   const screen = await render(
     <IncompleteSessionCard
       session={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         answeredCount: 4,
         totalCount: 10,
@@ -24,7 +26,7 @@ test('renders resume link and calls abandon handler', async () => {
     .toBeVisible();
   await expect
     .element(screen.getByRole('link', { name: 'Resume session' }))
-    .toHaveAttribute('href', '/app/practice/session-1');
+    .toHaveAttribute('href', `/app/practice/${fixtureSession1Id}`);
 
   await screen.getByRole('button', { name: 'Abandon session' }).click();
   await expect
@@ -38,7 +40,7 @@ test('disables abandon button when pending', async () => {
   const screen = await render(
     <IncompleteSessionCard
       session={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
         answeredCount: 1,
         totalCount: 20,

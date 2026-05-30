@@ -34,6 +34,20 @@ export const reportClientErrorSpy = vi.mocked(
 
 installReportClientErrorMocks(reportClientError);
 
+export const QUESTION_PAGE_QUESTION_1_ID = crypto.randomUUID();
+export const QUESTION_PAGE_QUESTION_2_ID = crypto.randomUUID();
+export const QUESTION_PAGE_CHOICE_1_ID = crypto.randomUUID();
+export const QUESTION_PAGE_CHOICE_2_ID = crypto.randomUUID();
+export const QUESTION_PAGE_ATTEMPT_1_ID = crypto.randomUUID();
+export const QUESTION_PAGE_ATTEMPT_2_ID = crypto.randomUUID();
+export const QUESTION_PAGE_ATTEMPT_3_ID = crypto.randomUUID();
+
+export function getQuestionPageQuestionIdForSlug(slug: string) {
+  return slug === 'q-2'
+    ? QUESTION_PAGE_QUESTION_2_ID
+    : QUESTION_PAGE_QUESTION_1_ID;
+}
+
 const emptyBookmarksResult: { ok: true; data: GetBookmarksOutput } = ok({
   rows: [],
 });
@@ -135,7 +149,7 @@ export function Probe({
       <button
         type="button"
         data-testid="select-choice-1"
-        onClick={() => output.onSelectChoice('choice-1')}
+        onClick={() => output.onSelectChoice(QUESTION_PAGE_CHOICE_1_ID)}
       >
         Select choice 1
       </button>

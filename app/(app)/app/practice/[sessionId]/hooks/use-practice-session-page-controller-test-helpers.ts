@@ -6,6 +6,12 @@ import type {
 } from '@/src/adapters/controllers/action-result';
 import { ok } from '@/tests/test-helpers/ok';
 import {
+  BROWSER_CHOICE_1_ID,
+  BROWSER_CHOICE_2_ID,
+  BROWSER_CHOICE_3_ID,
+  BROWSER_QUESTION_1_ID,
+  BROWSER_QUESTION_2_ID,
+  BROWSER_QUESTION_3_ID,
   createChoice,
   createQuestionResponse,
   createReviewResponse,
@@ -41,19 +47,30 @@ export const {
 } = getPracticeSessionPageControllerBrowserMocks();
 
 export const EMPTY_BOOKMARKS_RESULT = ok({ rows: [] });
-export const CHOICE_1 = createChoice({ id: 'choice_1' });
+export const CHOICE_1 = createChoice({ id: BROWSER_CHOICE_1_ID });
 export const CHOICE_2 = createChoice({
-  id: 'choice_2',
+  id: BROWSER_CHOICE_2_ID,
   label: 'B',
   textMd: 'Option B',
   sortOrder: 2,
 });
 export const CHOICE_3 = createChoice({
-  id: 'choice_3',
+  id: BROWSER_CHOICE_3_ID,
   label: 'C',
   textMd: 'Option C',
   sortOrder: 3,
 });
+
+export {
+  BROWSER_ATTEMPT_1_ID,
+  BROWSER_CHOICE_1_ID,
+  BROWSER_CHOICE_2_ID,
+  BROWSER_CHOICE_3_ID,
+  BROWSER_QUESTION_1_ID,
+  BROWSER_QUESTION_2_ID,
+  BROWSER_QUESTION_3_ID,
+  BROWSER_SESSION_ID,
+} from './practice-session-page-controller.browser.fixtures';
 
 export function errorResult(
   code: ActionErrorCode,
@@ -84,17 +101,17 @@ export function mockExamReviewNavigationSession() {
       markedCount: 0,
       rows: [
         createReviewRow({
-          questionId: 'question-1',
+          questionId: BROWSER_QUESTION_1_ID,
           order: 1,
           isAnswered: true,
         }),
         createReviewRow({
-          questionId: 'question-2',
+          questionId: BROWSER_QUESTION_2_ID,
           order: 2,
           isAnswered: true,
         }),
         createReviewRow({
-          questionId: 'question-3',
+          questionId: BROWSER_QUESTION_3_ID,
           order: 3,
           isAnswered: true,
         }),
@@ -110,11 +127,11 @@ export function mockExamReviewNavigationSession() {
     ) {
       const questionId = input.questionId;
       const questionIndex =
-        questionId === 'question-1'
+        questionId === BROWSER_QUESTION_1_ID
           ? 0
-          : questionId === 'question-2'
+          : questionId === BROWSER_QUESTION_2_ID
             ? 1
-            : questionId === 'question-3'
+            : questionId === BROWSER_QUESTION_3_ID
               ? 2
               : null;
 
@@ -149,7 +166,7 @@ export function mockExamReviewNavigationSession() {
 
     return ok(
       createQuestionResponse({
-        questionId: 'question-3',
+        questionId: BROWSER_QUESTION_3_ID,
         stemMd: 'Stem question-3',
         choices: [CHOICE_1, CHOICE_2, CHOICE_3],
         session: {
@@ -171,7 +188,7 @@ export async function openExamReviewQuestion(
 ) {
   await expect
     .element(screen.getByTestId('question-id'))
-    .toHaveTextContent('question-3');
+    .toHaveTextContent(BROWSER_QUESTION_3_ID);
   await screen.getByRole('button', { name: 'Review & Submit' }).click();
   await expect
     .element(screen.getByRole('heading', { name: 'Review & Submit' }))
@@ -183,7 +200,7 @@ export async function openExamReviewQuestion(
     .click();
   await expect
     .element(screen.getByTestId('question-id'))
-    .toHaveTextContent('question-2');
+    .toHaveTextContent(BROWSER_QUESTION_2_ID);
 }
 
 export function setupPracticeSessionPageControllerBrowserSpec() {
@@ -224,7 +241,7 @@ export function setupPracticeSessionPageControllerBrowserSpec() {
           'questionId' in input &&
           typeof input.questionId === 'string'
             ? input.questionId
-            : 'question-1',
+            : BROWSER_QUESTION_1_ID,
         markedForReview: false,
         latestSelectedChoiceId: null,
         latestIsCorrect: null,
@@ -235,7 +252,7 @@ export function setupPracticeSessionPageControllerBrowserSpec() {
           'selectedChoiceId' in input &&
           typeof input.selectedChoiceId === 'string'
             ? input.selectedChoiceId
-            : 'choice_1',
+            : BROWSER_CHOICE_1_ID,
         draftSavedAt: new Date('2026-02-07T00:00:00.000Z'),
         draftCumulativeMs:
           typeof input === 'object' &&

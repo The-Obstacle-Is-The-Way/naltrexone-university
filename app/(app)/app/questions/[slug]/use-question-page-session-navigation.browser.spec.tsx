@@ -8,6 +8,9 @@ import { ok } from '@/tests/test-helpers/ok';
 import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
 import { useQuestionPageSessionNavigation } from './use-question-page-session-navigation';
 
+const fixtureQuestion1Id = crypto.randomUUID();
+const fixtureQuestion2Id = crypto.randomUUID();
+
 vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
 vi.mock('@/lib/report-client-error', { spy: true });
 
@@ -83,7 +86,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
         rows: [
           {
             isAvailable: true,
-            questionId: 'question-1',
+            questionId: fixtureQuestion1Id,
             slug: 'q-1',
             stemMd: 'Stem',
             difficulty: 'easy',
@@ -95,7 +98,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
           },
           {
             isAvailable: true,
-            questionId: 'question-2',
+            questionId: fixtureQuestion2Id,
             slug: 'q-2',
             stemMd: 'Stem 2',
             difficulty: 'easy',
@@ -138,7 +141,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
         rows: [
           {
             isAvailable: true,
-            questionId: 'question-1',
+            questionId: fixtureQuestion1Id,
             slug: 'q-1',
             stemMd: 'Stem',
             difficulty: 'easy',
@@ -150,7 +153,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
           },
           {
             isAvailable: true,
-            questionId: 'question-2',
+            questionId: fixtureQuestion2Id,
             slug: 'q-2',
             stemMd: 'Stem 2',
             difficulty: 'easy',

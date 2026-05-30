@@ -3,6 +3,10 @@ import { render } from 'vitest-browser-react';
 import { PracticeSessionPageView } from './practice-session-page-view';
 import { noop } from './practice-session-page-view-test-helpers';
 
+const fixtureSession1Id = crypto.randomUUID();
+const fixtureQ1Id = crypto.randomUUID();
+const fixtureQ2Id = crypto.randomUUID();
+
 test('renders active question branch with navigator and navigation callback', async () => {
   const onNavigateQuestion = vi.fn();
   const screen = await render(
@@ -10,14 +14,14 @@ test('renders active question branch with navigator and navigation callback', as
       summary={null}
       review={null}
       navigator={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 2,
         answeredCount: 1,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -29,7 +33,7 @@ test('renders active question branch with navigator and navigation callback', as
             markedForReview: false,
           },
           {
-            questionId: 'q2',
+            questionId: fixtureQ2Id,
             slug: 'q-2',
             order: 2,
             isAvailable: true,
@@ -43,7 +47,7 @@ test('renders active question branch with navigator and navigation callback', as
         ],
       }}
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
 
         deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -54,7 +58,7 @@ test('renders active question branch with navigator and navigation callback', as
       }}
       loadState={{ status: 'ready' }}
       question={{
-        questionId: 'q1',
+        questionId: fixtureQ1Id,
         slug: 'q-1',
         stemMd: 'Stem 1',
         difficulty: 'easy',
@@ -87,7 +91,7 @@ test('renders active question branch with navigator and navigation callback', as
     .toBeVisible();
   await expect.element(screen.getByText('Question navigator')).toBeVisible();
   await screen.getByRole('button', { name: 'Question 2: Unanswered' }).click();
-  expect(onNavigateQuestion).toHaveBeenCalledWith('q2');
+  expect(onNavigateQuestion).toHaveBeenCalledWith(fixtureQ2Id);
 });
 
 test('does not render Review & Submit in the active exam-question header', async () => {
@@ -97,7 +101,7 @@ test('does not render Review & Submit in the active exam-question header', async
       review={null}
       navigator={null}
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
 
         deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -108,7 +112,7 @@ test('does not render Review & Submit in the active exam-question header', async
       }}
       loadState={{ status: 'ready' }}
       question={{
-        questionId: 'q1',
+        questionId: fixtureQ1Id,
         slug: 'q-1',
         stemMd: 'Stem 1',
         difficulty: 'easy',
@@ -145,7 +149,7 @@ test('keeps End session in the active tutor-question header', async () => {
       review={null}
       navigator={null}
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
 
         deadlineAt: null,
@@ -156,7 +160,7 @@ test('keeps End session in the active tutor-question header', async () => {
       }}
       loadState={{ status: 'ready' }}
       question={{
-        questionId: 'q1',
+        questionId: fixtureQ1Id,
         slug: 'q-1',
         stemMd: 'Stem 1',
         difficulty: 'easy',
@@ -189,14 +193,14 @@ test('wires navigator aria-controls to an existing question panel id', async () 
       summary={null}
       review={null}
       navigator={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 2,
         answeredCount: 1,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -208,7 +212,7 @@ test('wires navigator aria-controls to an existing question panel id', async () 
             markedForReview: false,
           },
           {
-            questionId: 'q2',
+            questionId: fixtureQ2Id,
             slug: 'q-2',
             order: 2,
             isAvailable: true,
@@ -222,7 +226,7 @@ test('wires navigator aria-controls to an existing question panel id', async () 
         ],
       }}
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
 
         deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -233,7 +237,7 @@ test('wires navigator aria-controls to an existing question panel id', async () 
       }}
       loadState={{ status: 'ready' }}
       question={{
-        questionId: 'q1',
+        questionId: fixtureQ1Id,
         slug: 'q-1',
         stemMd: 'Stem 1',
         difficulty: 'easy',
@@ -284,7 +288,7 @@ test('renders navigator error with retry action', async () => {
         message: 'Navigator unavailable.',
       }}
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
 
         deadlineAt: '2099-05-22T12:02:24.000Z',

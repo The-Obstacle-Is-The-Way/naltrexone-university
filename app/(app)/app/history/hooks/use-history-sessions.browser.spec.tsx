@@ -9,6 +9,7 @@ import { ok } from '@/tests/test-helpers/ok';
 import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
 import { useHistorySessions } from './use-history-sessions';
 
+const fixtureQ1Id = crypto.randomUUID();
 vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
 vi.mock('@/lib/report-client-error', { spy: true });
 
@@ -28,7 +29,7 @@ function makeReviewOutput(sessionId: string): GetPracticeSessionReviewOutput {
     markedCount: 0,
     rows: [
       {
-        questionId: 'q1',
+        questionId: fixtureQ1Id,
         slug: 'q-1',
         order: 1,
         isAvailable: true,

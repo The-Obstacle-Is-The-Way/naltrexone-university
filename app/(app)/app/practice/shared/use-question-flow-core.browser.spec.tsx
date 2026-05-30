@@ -4,6 +4,13 @@ import { render } from 'vitest-browser-react';
 import { useQuestionFlowCore } from '@/app/(app)/app/practice/shared/use-question-flow-core';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 
+const fixtureQ1Id = crypto.randomUUID();
+const fixtureQ2Id = crypto.randomUUID();
+const fixtureChoice1Id = crypto.randomUUID();
+const fixtureChoice2Id = crypto.randomUUID();
+const fixtureSession1Id = crypto.randomUUID();
+const fixtureAttempt1Id = crypto.randomUUID();
+
 function QuestionFlowCoreProbe() {
   const core = useQuestionFlowCore({ isMounted: () => true });
   const [lastSelectResult, setLastSelectResult] = useState<boolean | null>(
@@ -41,7 +48,7 @@ function QuestionFlowCoreProbe() {
       <button
         type="button"
         onClick={() => {
-          core.setQuestion(createNextQuestion({ questionId: 'q_1' }));
+          core.setQuestion(createNextQuestion({ questionId: fixtureQ1Id }));
           core.setLoadState({ status: 'ready' });
         }}
       >
@@ -50,7 +57,7 @@ function QuestionFlowCoreProbe() {
       <button
         type="button"
         onClick={() => {
-          core.setQuestion(createNextQuestion({ questionId: 'q_2' }));
+          core.setQuestion(createNextQuestion({ questionId: fixtureQ2Id }));
           core.setLoadState({ status: 'ready' });
         }}
       >
@@ -61,35 +68,35 @@ function QuestionFlowCoreProbe() {
         onClick={() => {
           core.setQuestion(
             createNextQuestion({
-              questionId: 'q_1',
+              questionId: fixtureQ1Id,
               choices: [
-                { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
-                { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+                { id: fixtureChoice1Id, label: 'A', textMd: 'A', sortOrder: 1 },
+                { id: fixtureChoice2Id, label: 'B', textMd: 'B', sortOrder: 2 },
               ],
               session: {
-                sessionId: 'session_1',
+                sessionId: fixtureSession1Id,
                 mode: 'tutor',
 
                 deadlineAt: null,
 
                 index: 0,
                 total: 1,
-                latestSelectedChoiceId: 'choice_2',
+                latestSelectedChoiceId: fixtureChoice2Id,
                 latestIsCorrect: false,
                 previousSubmission: {
-                  correctChoiceId: 'choice_1',
+                  correctChoiceId: fixtureChoice1Id,
                   explanationMd: 'Explanation',
                   referenceMd: 'Anton RF et al. JAMA. 2006;295(17):2003-2017.',
                   choiceExplanations: [
                     {
-                      choiceId: 'choice_1',
+                      choiceId: fixtureChoice1Id,
                       displayLabel: 'A',
                       textMd: 'A',
                       isCorrect: true,
                       explanationMd: 'Choice 1 explainer',
                     },
                     {
-                      choiceId: 'choice_2',
+                      choiceId: fixtureChoice2Id,
                       displayLabel: 'B',
                       textMd: 'B',
                       isCorrect: false,
@@ -110,20 +117,20 @@ function QuestionFlowCoreProbe() {
         onClick={() => {
           core.setQuestion(
             createNextQuestion({
-              questionId: 'q_1',
+              questionId: fixtureQ1Id,
               choices: [
-                { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
-                { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+                { id: fixtureChoice1Id, label: 'A', textMd: 'A', sortOrder: 1 },
+                { id: fixtureChoice2Id, label: 'B', textMd: 'B', sortOrder: 2 },
               ],
               session: {
-                sessionId: 'session_1',
+                sessionId: fixtureSession1Id,
                 mode: 'exam',
 
                 deadlineAt: '2099-05-22T12:02:24.000Z',
 
                 index: 0,
                 total: 1,
-                draftSelectedChoiceId: 'choice_2',
+                draftSelectedChoiceId: fixtureChoice2Id,
                 draftCumulativeMs: 30_000,
               },
             }),
@@ -138,13 +145,13 @@ function QuestionFlowCoreProbe() {
         onClick={() => {
           core.setQuestion(
             createNextQuestion({
-              questionId: 'q_1',
+              questionId: fixtureQ1Id,
               choices: [
-                { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
-                { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+                { id: fixtureChoice1Id, label: 'A', textMd: 'A', sortOrder: 1 },
+                { id: fixtureChoice2Id, label: 'B', textMd: 'B', sortOrder: 2 },
               ],
               session: {
-                sessionId: 'session_1',
+                sessionId: fixtureSession1Id,
                 mode: 'exam',
 
                 deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -163,7 +170,9 @@ function QuestionFlowCoreProbe() {
       </button>
       <button
         type="button"
-        onClick={() => setLastSelectResult(core.onSelectChoice('choice_1'))}
+        onClick={() =>
+          setLastSelectResult(core.onSelectChoice(fixtureChoice1Id))
+        }
       >
         select-choice-1
       </button>
@@ -174,9 +183,9 @@ function QuestionFlowCoreProbe() {
         type="button"
         onClick={() =>
           core.setSubmitResult({
-            attemptId: 'attempt_1',
+            attemptId: fixtureAttempt1Id,
             isCorrect: false,
-            correctChoiceId: 'choice_1',
+            correctChoiceId: fixtureChoice1Id,
             explanationMd: 'Explanation',
             referenceMd: null,
             choiceExplanations: [],
@@ -190,9 +199,9 @@ function QuestionFlowCoreProbe() {
         onClick={() => {
           // Contrived probe state: isolate the submitResult guard from the isAnswered guard.
           core.setSubmitResult({
-            attemptId: 'attempt_1',
+            attemptId: fixtureAttempt1Id,
             isCorrect: false,
-            correctChoiceId: 'choice_1',
+            correctChoiceId: fixtureChoice1Id,
             explanationMd: 'Explanation',
             referenceMd: null,
             choiceExplanations: [],
@@ -207,14 +216,14 @@ function QuestionFlowCoreProbe() {
         onClick={() => {
           core.setSubmitResult(
             {
-              attemptId: 'attempt_1',
+              attemptId: fixtureAttempt1Id,
               isCorrect: false,
-              correctChoiceId: 'choice_1',
+              correctChoiceId: fixtureChoice1Id,
               explanationMd: 'Explanation',
               referenceMd: null,
               choiceExplanations: [],
             },
-            'q_1',
+            fixtureQ1Id,
           );
         }}
       >
@@ -232,7 +241,7 @@ function QuestionFlowCoreProbe() {
       <button
         type="button"
         onClick={() => {
-          core.onSelectChoice('choice_1');
+          core.onSelectChoice(fixtureChoice1Id);
           core.setLoadState({ status: 'ready' });
         }}
       >
@@ -259,7 +268,7 @@ test('clears derived selection state when the current question becomes null', as
     .click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent('choice_1');
+    .toHaveTextContent(fixtureChoice1Id);
 
   await screen.getByRole('button', { name: 'mark-answered' }).click();
   await expect
@@ -288,7 +297,7 @@ test('returns true from onSelectChoice when selection changes', async () => {
 
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent('choice_1');
+    .toHaveTextContent(fixtureChoice1Id);
   await expect
     .element(screen.getByTestId('last-select-result'))
     .toHaveTextContent('true');
@@ -342,7 +351,7 @@ test('restores exam draft selections without locking the answer', async () => {
     .click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent('choice_1');
+    .toHaveTextContent(fixtureChoice1Id);
   await expect
     .element(screen.getByTestId('is-answered'))
     .toHaveTextContent('false');
@@ -352,7 +361,7 @@ test('restores exam draft selections without locking the answer', async () => {
   await screen.getByRole('button', { name: 'load-with-exam-draft' }).click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent('choice_2');
+    .toHaveTextContent(fixtureChoice2Id);
   await expect
     .element(screen.getByTestId('is-answered'))
     .toHaveTextContent('false');
@@ -374,19 +383,19 @@ test('preserves a newer local exam selection during same-question resync', async
   await screen.getByRole('button', { name: 'load-with-exam-draft' }).click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent('choice_2');
+    .toHaveTextContent(fixtureChoice2Id);
 
   await screen
     .getByRole('button', { name: 'select-choice-1', exact: true })
     .click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent('choice_1');
+    .toHaveTextContent(fixtureChoice1Id);
 
   await screen.getByRole('button', { name: 'load-with-exam-draft' }).click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent('choice_1');
+    .toHaveTextContent(fixtureChoice1Id);
   await expect
     .element(screen.getByTestId('is-answered'))
     .toHaveTextContent('false');
@@ -406,12 +415,12 @@ test('preserves an unsaved exam selection on same-question ready resync', async 
     .click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent('choice_1');
+    .toHaveTextContent(fixtureChoice1Id);
 
   await screen.getByRole('button', { name: 'set-ready' }).click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent('choice_1');
+    .toHaveTextContent(fixtureChoice1Id);
   await expect
     .element(screen.getByTestId('is-answered'))
     .toHaveTextContent('false');
@@ -434,7 +443,7 @@ test('preserves a freshly selected exam choice during same-tick ready resync', a
     .click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent('choice_1');
+    .toHaveTextContent(fixtureChoice1Id);
   await expect
     .element(screen.getByTestId('is-answered'))
     .toHaveTextContent('false');
@@ -472,7 +481,7 @@ test('restores submitResult when previousSubmission exists in session data', asy
     .toHaveTextContent('false');
   await expect
     .element(screen.getByTestId('submit-result-correct-choice-id'))
-    .toHaveTextContent('choice_1');
+    .toHaveTextContent(fixtureChoice1Id);
   await expect
     .element(screen.getByTestId('submit-result-explanation-md'))
     .toHaveTextContent('Explanation');
@@ -540,7 +549,7 @@ test('preserves the selected choice when a local submit result is resynchronized
     .click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent('choice_1');
+    .toHaveTextContent(fixtureChoice1Id);
 
   await screen.getByRole('button', { name: 'set-submit-result' }).click();
   await expect
@@ -550,7 +559,7 @@ test('preserves the selected choice when a local submit result is resynchronized
   await screen.getByRole('button', { name: 'set-ready' }).click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent('choice_1');
+    .toHaveTextContent(fixtureChoice1Id);
   await expect
     .element(screen.getByTestId('has-submit-result'))
     .toHaveTextContent('true');

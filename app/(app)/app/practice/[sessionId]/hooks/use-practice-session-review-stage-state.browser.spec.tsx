@@ -6,10 +6,14 @@ import type { GetPracticeSessionReviewOutput } from '@/src/adapters/controllers/
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
+
 import {
   type UsePracticeSessionReviewStageStateInput,
   usePracticeSessionReviewStageState,
 } from './use-practice-session-review-stage-state';
+
+const fixtureSession1Id = crypto.randomUUID();
+const fixtureQ1Id = crypto.randomUUID();
 
 const getPracticeSessionReviewMock =
   vi.fn<
@@ -31,7 +35,7 @@ function createInput(
   sessionMode: 'tutor' | 'exam' | null,
 ): UsePracticeSessionReviewStageStateInput {
   return {
-    sessionId: 'session-1',
+    sessionId: fixtureSession1Id,
     isMounted: () => true,
     sessionMode,
     setSessionMode: vi.fn(),
@@ -64,7 +68,7 @@ describe('usePracticeSessionReviewStageState (browser)', () => {
   it('loads exam review data when ending an exam session', async () => {
     getPracticeSessionReviewMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 2,
         answeredCount: 1,
@@ -83,7 +87,7 @@ describe('usePracticeSessionReviewStageState (browser)', () => {
     await expect
       .poll(() => harness.result.current.reviewLoadState.status)
       .toBe('ready');
-    expect(harness.result.current.review?.sessionId).toBe('session-1');
+    expect(harness.result.current.review?.sessionId).toBe(fixtureSession1Id);
     expect(harness.result.current.isInReviewStage).toBe(true);
     expect(vi.mocked(input.setSessionMode)).toHaveBeenCalledWith('exam');
     expect(vi.mocked(input.resetQuestionState)).toHaveBeenCalledTimes(1);
@@ -92,7 +96,7 @@ describe('usePracticeSessionReviewStageState (browser)', () => {
   it('finalizes the session when review data reports a non-exam mode', async () => {
     getPracticeSessionReviewMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
         totalCount: 1,
         answeredCount: 1,
@@ -121,7 +125,7 @@ describe('usePracticeSessionReviewStageState (browser)', () => {
   it('sets an error state when finalizeSession rejects after loading non-exam review data', async () => {
     getPracticeSessionReviewMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
         totalCount: 1,
         answeredCount: 1,
@@ -169,7 +173,7 @@ describe('usePracticeSessionReviewStageState (browser)', () => {
 
     deferred.resolve(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
         totalCount: 1,
         answeredCount: 1,
@@ -235,10 +239,12 @@ describe('usePracticeSessionReviewStageState (browser)', () => {
       usePracticeSessionReviewStageState(input),
     );
 
-    harness.result.current.onOpenReviewQuestion('q1');
+    harness.result.current.onOpenReviewQuestion(fixtureQ1Id);
 
     await expect.poll(() => harness.result.current.isInReviewStage).toBe(false);
-    expect(vi.mocked(input.loadSpecificQuestion)).toHaveBeenCalledWith('q1');
+    expect(vi.mocked(input.loadSpecificQuestion)).toHaveBeenCalledWith(
+      fixtureQ1Id,
+    );
   });
 
   it('finalizes review state when requested', async () => {

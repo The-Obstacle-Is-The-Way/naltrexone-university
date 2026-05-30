@@ -4,6 +4,8 @@ import { ok } from '@/tests/test-helpers/ok';
 import { buildHistoryQuestionsHref } from '../history-search-params';
 import { HistoryQuestionsTab } from './history-questions-tab';
 
+const fixtureQ1Id = crypto.randomUUID();
+
 const { pushMock } = vi.hoisted(() => ({
   pushMock: vi.fn(),
 }));
@@ -20,7 +22,7 @@ function createAttemptedQuestionsResult(input?: {
     rows: [
       {
         isAvailable: true as const,
-        questionId: 'q_1',
+        questionId: fixtureQ1Id,
         isCorrect: false,
         sessionId: null,
         sessionMode: null,

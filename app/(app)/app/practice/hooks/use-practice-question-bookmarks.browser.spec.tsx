@@ -6,6 +6,9 @@ import { createNextQuestion } from '@/src/application/test-helpers/create-next-q
 import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeQuestionBookmarks } from './use-practice-question-bookmarks';
 
+const fixtureQuestion1Id = crypto.randomUUID();
+const fixtureQuestion2Id = crypto.randomUUID();
+
 vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
 
 const getBookmarks = vi.mocked(bookmarkController.getBookmarks);
@@ -14,7 +17,7 @@ const toggleBookmark = vi.mocked(bookmarkController.toggleBookmark);
 function PracticeQuestionBookmarksProbe() {
   const [question, setQuestion] = useState(
     createNextQuestion({
-      questionId: 'question-1',
+      questionId: fixtureQuestion1Id,
       slug: 'question-1',
     }),
   );
@@ -35,7 +38,7 @@ function PracticeQuestionBookmarksProbe() {
         onClick={() =>
           setQuestion(
             createNextQuestion({
-              questionId: 'question-2',
+              questionId: fixtureQuestion2Id,
               slug: 'question-2',
             }),
           )
@@ -69,7 +72,7 @@ describe('usePracticeQuestionBookmarks (browser)', () => {
 
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('question-1');
+      .toHaveTextContent(fixtureQuestion1Id);
 
     await screen.getByRole('button', { name: 'toggle-bookmark' }).click();
 
@@ -86,7 +89,7 @@ describe('usePracticeQuestionBookmarks (browser)', () => {
     await screen.getByRole('button', { name: 'set-question-2' }).click();
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('question-2');
+      .toHaveTextContent(fixtureQuestion2Id);
 
     await screen.getByRole('button', { name: 'toggle-bookmark' }).click();
 
@@ -96,8 +99,8 @@ describe('usePracticeQuestionBookmarks (browser)', () => {
       questionId: string;
     };
 
-    expect(firstInput.questionId).toBe('question-1');
-    expect(secondInput.questionId).toBe('question-2');
+    expect(firstInput.questionId).toBe(fixtureQuestion1Id);
+    expect(secondInput.questionId).toBe(fixtureQuestion2Id);
     expect(secondInput.idempotencyKey).not.toBe(firstInput.idempotencyKey);
   });
 });

@@ -1,11 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { ok } from '@/tests/test-helpers/ok';
+
 import {
   getPracticeSessionReview,
   getPreviousAttempt,
   getQuestionBySlug,
   Probe,
+  QUESTION_PAGE_ATTEMPT_1_ID,
+  QUESTION_PAGE_ATTEMPT_2_ID,
+  QUESTION_PAGE_ATTEMPT_3_ID,
+  QUESTION_PAGE_CHOICE_1_ID,
+  QUESTION_PAGE_CHOICE_2_ID,
+  QUESTION_PAGE_QUESTION_1_ID,
   setupQuestionPageControllerBrowserSpec,
   submitAnswer,
 } from './use-question-page-controller-test-helpers';
@@ -18,13 +25,13 @@ describe('useQuestionPageController (browser)', () => {
 
     getQuestionBySlug.mockResolvedValue(
       ok({
-        questionId: 'question-1',
+        questionId: QUESTION_PAGE_QUESTION_1_ID,
         slug: 'q-1',
         stemMd: 'Stem',
         difficulty: 'easy',
         choices: [
-          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
-          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+          { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
         ],
       }),
     );
@@ -39,7 +46,7 @@ describe('useQuestionPageController (browser)', () => {
         rows: [
           {
             isAvailable: true,
-            questionId: 'question-1',
+            questionId: QUESTION_PAGE_QUESTION_1_ID,
             slug: 'q-1',
             stemMd: 'Stem',
             difficulty: 'easy',
@@ -57,11 +64,11 @@ describe('useQuestionPageController (browser)', () => {
       ok({
         kind: 'attempt',
         sessionMode: null,
-        attemptId: 'attempt-1',
-        selectedChoiceId: 'choice-2',
+        attemptId: QUESTION_PAGE_ATTEMPT_1_ID,
+        selectedChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         isOmitted: false,
         isCorrect: true,
-        correctChoiceId: 'choice-2',
+        correctChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         explanationMd: 'Because.',
         referenceMd: null,
         choiceExplanations: [],
@@ -71,9 +78,9 @@ describe('useQuestionPageController (browser)', () => {
 
     submitAnswer.mockResolvedValue(
       ok({
-        attemptId: 'attempt-2',
+        attemptId: QUESTION_PAGE_ATTEMPT_2_ID,
         isCorrect: true,
-        correctChoiceId: 'choice-1',
+        correctChoiceId: QUESTION_PAGE_CHOICE_1_ID,
         explanationMd: 'Because.',
         referenceMd: null,
         choiceExplanations: [],
@@ -84,10 +91,10 @@ describe('useQuestionPageController (browser)', () => {
 
     await expect
       .element(screen.getByTestId('selected-choice'))
-      .toHaveTextContent('choice-2');
+      .toHaveTextContent(QUESTION_PAGE_CHOICE_2_ID);
     await expect
       .element(screen.getByTestId('attempt-id'))
-      .toHaveTextContent('attempt-1');
+      .toHaveTextContent(QUESTION_PAGE_ATTEMPT_1_ID);
     await expect
       .element(screen.getByTestId('session-nav-current-was-retried'))
       .toHaveTextContent('false');
@@ -107,9 +114,9 @@ describe('useQuestionPageController (browser)', () => {
       .poll(() => submitAnswer.mock.calls.length)
       .toBeGreaterThanOrEqual(1);
     expect(submitAnswer.mock.calls[0]?.[0]).toMatchObject({
-      questionId: 'question-1',
-      choiceId: 'choice-1',
-      retryOfAttemptId: 'attempt-1',
+      questionId: QUESTION_PAGE_QUESTION_1_ID,
+      choiceId: QUESTION_PAGE_CHOICE_1_ID,
+      retryOfAttemptId: QUESTION_PAGE_ATTEMPT_1_ID,
       retryOrigin: 'session_review',
       retrySessionId: sessionId,
     });
@@ -123,13 +130,13 @@ describe('useQuestionPageController (browser)', () => {
 
     getQuestionBySlug.mockResolvedValue(
       ok({
-        questionId: 'question-1',
+        questionId: QUESTION_PAGE_QUESTION_1_ID,
         slug: 'q-1',
         stemMd: 'Stem',
         difficulty: 'easy',
         choices: [
-          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
-          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+          { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
         ],
       }),
     );
@@ -144,7 +151,7 @@ describe('useQuestionPageController (browser)', () => {
         rows: [
           {
             isAvailable: true,
-            questionId: 'question-1',
+            questionId: QUESTION_PAGE_QUESTION_1_ID,
             slug: 'q-1',
             stemMd: 'Stem',
             difficulty: 'easy',
@@ -162,7 +169,7 @@ describe('useQuestionPageController (browser)', () => {
       ok({
         kind: 'session_unanswered',
         sessionMode: null,
-        correctChoiceId: 'choice-2',
+        correctChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         explanationMd: null,
         referenceMd: null,
         choiceExplanations: [],
@@ -182,19 +189,19 @@ describe('useQuestionPageController (browser)', () => {
       .toHaveTextContent(/^$/);
     await expect
       .element(screen.getByTestId('unanswered-reveal-correct-choice'))
-      .toHaveTextContent('choice-2');
+      .toHaveTextContent(QUESTION_PAGE_CHOICE_2_ID);
   });
 
   it('requires explicit answer-as-new action after hydration error before submitting', async () => {
     getQuestionBySlug.mockResolvedValue(
       ok({
-        questionId: 'question-1',
+        questionId: QUESTION_PAGE_QUESTION_1_ID,
         slug: 'q-1',
         stemMd: 'Stem',
         difficulty: 'easy',
         choices: [
-          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
-          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+          { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
         ],
       }),
     );
@@ -206,9 +213,9 @@ describe('useQuestionPageController (browser)', () => {
 
     submitAnswer.mockResolvedValue(
       ok({
-        attemptId: 'attempt-3',
+        attemptId: QUESTION_PAGE_ATTEMPT_3_ID,
         isCorrect: true,
-        correctChoiceId: 'choice-1',
+        correctChoiceId: QUESTION_PAGE_CHOICE_1_ID,
         explanationMd: 'Because.',
         referenceMd: null,
         choiceExplanations: [],
@@ -233,8 +240,8 @@ describe('useQuestionPageController (browser)', () => {
       .poll(() => submitAnswer.mock.calls.length)
       .toBeGreaterThanOrEqual(1);
     expect(submitAnswer.mock.calls[0]?.[0]).toMatchObject({
-      questionId: 'question-1',
-      choiceId: 'choice-1',
+      questionId: QUESTION_PAGE_QUESTION_1_ID,
+      choiceId: QUESTION_PAGE_CHOICE_1_ID,
     });
     expect(submitAnswer.mock.calls[0]?.[0]).not.toHaveProperty('retryOrigin');
     expect(submitAnswer.mock.calls[0]?.[0]).not.toHaveProperty(

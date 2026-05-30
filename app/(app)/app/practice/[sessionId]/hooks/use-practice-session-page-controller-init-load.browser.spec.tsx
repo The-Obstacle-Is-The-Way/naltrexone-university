@@ -4,12 +4,15 @@ import { STANDARD_READ_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
+
 import {
   createQuestionResponse,
   createReviewResponse,
   createReviewRow,
 } from './practice-session-page-controller.browser.fixtures';
 import {
+  BROWSER_QUESTION_1_ID,
+  BROWSER_SESSION_ID,
   endPracticeSessionMock,
   errorResult,
   getNextQuestionMock,
@@ -30,7 +33,7 @@ describe('usePracticeSessionPageController (browser)', () => {
     });
     getPracticeSessionSummaryMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: BROWSER_SESSION_ID,
         endedAt: '2026-02-07T00:20:00.000Z',
         mode: 'tutor',
         questionCount: 2,
@@ -49,7 +52,9 @@ describe('usePracticeSessionPageController (browser)', () => {
           totalCount: 2,
           answeredCount: 1,
           markedCount: 0,
-          rows: [createReviewRow({ questionId: 'question-1', order: 1 })],
+          rows: [
+            createReviewRow({ questionId: BROWSER_QUESTION_1_ID, order: 1 }),
+          ],
         }),
       ),
     );
@@ -64,7 +69,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       .toHaveTextContent('tutor');
     await expect
       .element(screen.getByTestId('summary-session-id'))
-      .toHaveTextContent('session-1');
+      .toHaveTextContent(BROWSER_SESSION_ID);
     await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(0);
   });
 
@@ -74,7 +79,7 @@ describe('usePracticeSessionPageController (browser)', () => {
     });
     getPracticeSessionSummaryMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: BROWSER_SESSION_ID,
         endedAt: '2026-02-07T00:20:00.000Z',
         mode: 'exam',
         questionCount: 2,
@@ -93,7 +98,9 @@ describe('usePracticeSessionPageController (browser)', () => {
           totalCount: 2,
           answeredCount: 2,
           markedCount: 0,
-          rows: [createReviewRow({ questionId: 'question-1', order: 1 })],
+          rows: [
+            createReviewRow({ questionId: BROWSER_QUESTION_1_ID, order: 1 }),
+          ],
         }),
       ),
     );
@@ -121,7 +128,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       callOrder.push('question');
       return ok(
         createQuestionResponse({
-          questionId: 'question-1',
+          questionId: BROWSER_QUESTION_1_ID,
           session: {
             mode: 'tutor',
 
@@ -162,7 +169,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       .toHaveTextContent('question');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('question-1');
+      .toHaveTextContent(BROWSER_QUESTION_1_ID);
     expect(callOrder).toEqual(['summary', 'question']);
   });
 
@@ -173,7 +180,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       )
       .mockResolvedValueOnce(
         ok({
-          sessionId: 'session-1',
+          sessionId: BROWSER_SESSION_ID,
           endedAt: '2026-02-07T00:20:00.000Z',
           mode: 'tutor',
           questionCount: 2,
@@ -188,7 +195,7 @@ describe('usePracticeSessionPageController (browser)', () => {
     getNextQuestionMock.mockResolvedValue(
       ok(
         createQuestionResponse({
-          questionId: 'question-1',
+          questionId: BROWSER_QUESTION_1_ID,
           session: {
             mode: 'tutor',
 
@@ -208,7 +215,9 @@ describe('usePracticeSessionPageController (browser)', () => {
           totalCount: 2,
           answeredCount: 1,
           markedCount: 0,
-          rows: [createReviewRow({ questionId: 'question-1', order: 1 })],
+          rows: [
+            createReviewRow({ questionId: BROWSER_QUESTION_1_ID, order: 1 }),
+          ],
         }),
       ),
     );
@@ -229,7 +238,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       .toHaveTextContent('summary');
     await expect
       .element(screen.getByTestId('summary-session-id'))
-      .toHaveTextContent('session-1');
+      .toHaveTextContent(BROWSER_SESSION_ID);
     await expect
       .element(screen.getByTestId('error-message'))
       .toHaveTextContent('');
@@ -246,7 +255,7 @@ describe('usePracticeSessionPageController (browser)', () => {
     getNextQuestionMock.mockResolvedValue(
       ok(
         createQuestionResponse({
-          questionId: 'question-1',
+          questionId: BROWSER_QUESTION_1_ID,
           session: {
             mode: 'tutor',
 
@@ -298,7 +307,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       .toHaveTextContent('ready');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('question-1');
+      .toHaveTextContent(BROWSER_QUESTION_1_ID);
     await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(1);
   });
 
@@ -315,7 +324,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       getNextQuestionMock.mockResolvedValue(
         ok(
           createQuestionResponse({
-            questionId: 'question-1',
+            questionId: BROWSER_QUESTION_1_ID,
             session: {
               mode: 'tutor',
 
@@ -368,7 +377,7 @@ describe('usePracticeSessionPageController (browser)', () => {
         .toHaveTextContent('ready');
       await expect
         .element(screen.getByTestId('question-id'))
-        .toHaveTextContent('question-1');
+        .toHaveTextContent(BROWSER_QUESTION_1_ID);
     } finally {
       vi.useRealTimers();
     }

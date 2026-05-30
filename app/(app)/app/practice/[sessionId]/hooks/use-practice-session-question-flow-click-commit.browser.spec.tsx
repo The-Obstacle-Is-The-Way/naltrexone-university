@@ -9,17 +9,24 @@ import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeSessionQuestionFlow } from './use-practice-session-question-flow';
 
+const fixtureChoice1Id = crypto.randomUUID();
+const fixtureChoice2Id = crypto.randomUUID();
+const fixtureSession1Id = crypto.randomUUID();
+const fixtureAttempt1Id = crypto.randomUUID();
+const fixtureQ1Id = crypto.randomUUID();
+
 function createSessionQuestion(
   mode: 'tutor' | 'exam',
   overrides: Partial<NextQuestion> = {},
 ): NextQuestion {
   return createNextQuestion({
+    questionId: fixtureQ1Id,
     choices: [
-      { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
-      { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+      { id: fixtureChoice1Id, label: 'A', textMd: 'A', sortOrder: 1 },
+      { id: fixtureChoice2Id, label: 'B', textMd: 'B', sortOrder: 2 },
     ],
     session: {
-      sessionId: 'session-1',
+      sessionId: fixtureSession1Id,
       mode,
       deadlineAt: mode === 'exam' ? '2099-05-22T12:02:24.000Z' : null,
       index: 0,
@@ -31,10 +38,10 @@ function createSessionQuestion(
 }
 
 function createSubmitOutput(
-  correctChoiceId: string = 'choice_2',
+  correctChoiceId: string = fixtureChoice2Id,
 ): SubmitAnswerOutput {
   return {
-    attemptId: 'attempt-1',
+    attemptId: fixtureAttempt1Id,
     isCorrect: true,
     correctChoiceId,
     explanationMd: null,
@@ -54,7 +61,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
       .mockResolvedValue(ok(createSessionQuestion('tutor')));
     const submitAnswerFn = vi
       .fn<(input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>>()
-      .mockResolvedValue(ok(createSubmitOutput('choice_2')));
+      .mockResolvedValue(ok(createSubmitOutput(fixtureChoice2Id)));
     const saveExamDraftAnswerFn =
       vi.fn<
         (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
@@ -62,7 +69,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     const harness = await renderHook(() =>
       usePracticeSessionQuestionFlow({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         isMounted: () => true,
         getNextQuestionFn,
         submitAnswerFn,
@@ -72,16 +79,16 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_1');
+      .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice('choice_2');
+    harness.result.current.onSelectChoice(fixtureChoice2Id);
 
     await expect.poll(() => submitAnswerFn.mock.calls.length).toBe(1);
     expect(submitAnswerFn).toHaveBeenCalledWith(
       expect.objectContaining({
-        sessionId: 'session-1',
-        questionId: 'q_1',
-        choiceId: 'choice_2',
+        sessionId: fixtureSession1Id,
+        questionId: fixtureQ1Id,
+        choiceId: fixtureChoice2Id,
       }),
     );
   });
@@ -99,7 +106,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     const harness = await renderHook(() =>
       usePracticeSessionQuestionFlow({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         isMounted: () => true,
         getNextQuestionFn,
         submitAnswerFn,
@@ -109,13 +116,13 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_1');
+      .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice('choice_2');
+    harness.result.current.onSelectChoice(fixtureChoice2Id);
 
     await expect
       .poll(() => harness.result.current.selectedChoiceId)
-      .toBe('choice_2');
+      .toBe(fixtureChoice2Id);
     expect(submitAnswerFn).not.toHaveBeenCalled();
   });
 
@@ -132,7 +139,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     const harness = await renderHook(() =>
       usePracticeSessionQuestionFlow({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         isMounted: () => true,
         getNextQuestionFn,
         submitAnswerFn,
@@ -142,16 +149,16 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_1');
+      .toBe(fixtureQ1Id);
 
     harness.result.current.setSessionMode('tutor');
     await expect.poll(() => harness.result.current.sessionMode).toBe('tutor');
 
-    harness.result.current.onSelectChoice('choice_2');
+    harness.result.current.onSelectChoice(fixtureChoice2Id);
 
     await expect
       .poll(() => harness.result.current.selectedChoiceId)
-      .toBe('choice_2');
+      .toBe(fixtureChoice2Id);
     expect(submitAnswerFn).not.toHaveBeenCalled();
   });
 
@@ -161,7 +168,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
       .mockResolvedValue(ok(createSessionQuestion('exam')));
     const submitAnswerFn = vi
       .fn<(input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>>()
-      .mockResolvedValue(ok(createSubmitOutput('choice_2')));
+      .mockResolvedValue(ok(createSubmitOutput(fixtureChoice2Id)));
     const saveExamDraftAnswerFn =
       vi.fn<
         (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
@@ -169,7 +176,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     const harness = await renderHook(() =>
       usePracticeSessionQuestionFlow({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         isMounted: () => true,
         getNextQuestionFn,
         submitAnswerFn,
@@ -179,13 +186,13 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_1');
+      .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice('choice_2');
+    harness.result.current.onSelectChoice(fixtureChoice2Id);
 
     await expect
       .poll(() => harness.result.current.selectedChoiceId)
-      .toBe('choice_2');
+      .toBe(fixtureChoice2Id);
 
     const result = await harness.result.current.onSubmit();
 
@@ -199,7 +206,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
       .mockResolvedValue(ok(createSessionQuestion('exam')));
     const submitAnswerFn = vi
       .fn<(input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>>()
-      .mockResolvedValue(ok(createSubmitOutput('choice_2')));
+      .mockResolvedValue(ok(createSubmitOutput(fixtureChoice2Id)));
     const saveExamDraftAnswerFn =
       vi.fn<
         (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
@@ -207,7 +214,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     const harness = await renderHook(() =>
       usePracticeSessionQuestionFlow({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         isMounted: () => true,
         getNextQuestionFn,
         submitAnswerFn,
@@ -217,24 +224,24 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_1');
+      .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice('choice_2');
+    harness.result.current.onSelectChoice(fixtureChoice2Id);
     await expect
       .poll(() => harness.result.current.selectedChoiceId)
-      .toBe('choice_2');
+      .toBe(fixtureChoice2Id);
 
     const result = await harness.result.current.onSubmit({
       allowExamCommit: true,
     });
 
-    expect(result).toEqual(createSubmitOutput('choice_2'));
+    expect(result).toEqual(createSubmitOutput(fixtureChoice2Id));
     expect(submitAnswerFn).toHaveBeenCalledTimes(1);
     expect(submitAnswerFn).toHaveBeenCalledWith(
       expect.objectContaining({
-        sessionId: 'session-1',
-        questionId: 'q_1',
-        choiceId: 'choice_2',
+        sessionId: fixtureSession1Id,
+        questionId: fixtureQ1Id,
+        choiceId: fixtureChoice2Id,
       }),
     );
   });
@@ -254,7 +261,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     const harness = await renderHook(() =>
       usePracticeSessionQuestionFlow({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         isMounted: () => true,
         getNextQuestionFn,
         submitAnswerFn,
@@ -264,24 +271,24 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_1');
+      .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice('choice_1');
-    harness.result.current.onSelectChoice('choice_2');
+    harness.result.current.onSelectChoice(fixtureChoice1Id);
+    harness.result.current.onSelectChoice(fixtureChoice2Id);
 
     await expect.poll(() => submitAnswerFn.mock.calls.length).toBe(1);
     await expect
       .poll(() => harness.result.current.selectedChoiceId)
-      .toBe('choice_1');
+      .toBe(fixtureChoice1Id);
     expect(submitAnswerFn).toHaveBeenCalledWith(
       expect.objectContaining({
-        sessionId: 'session-1',
-        questionId: 'q_1',
-        choiceId: 'choice_1',
+        sessionId: fixtureSession1Id,
+        questionId: fixtureQ1Id,
+        choiceId: fixtureChoice1Id,
       }),
     );
 
-    submitDeferred.resolve(ok(createSubmitOutput('choice_1')));
+    submitDeferred.resolve(ok(createSubmitOutput(fixtureChoice1Id)));
     await expect.poll(() => harness.result.current.isPending).toBe(false);
   });
 
@@ -300,7 +307,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     const harness = await renderHook(() =>
       usePracticeSessionQuestionFlow({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         isMounted: () => true,
         getNextQuestionFn,
         submitAnswerFn,
@@ -310,16 +317,16 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_1');
+      .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice('choice_1');
+    harness.result.current.onSelectChoice(fixtureChoice1Id);
 
     await expect.poll(() => submitAnswerFn.mock.calls.length).toBe(1);
     await expect.poll(() => harness.result.current.isPending).toBe(true);
 
-    harness.result.current.onSelectChoice('choice_2');
+    harness.result.current.onSelectChoice(fixtureChoice2Id);
 
-    submitDeferred.resolve(ok(createSubmitOutput('choice_1')));
+    submitDeferred.resolve(ok(createSubmitOutput(fixtureChoice1Id)));
     await expect.poll(() => harness.result.current.isPending).toBe(false);
     expect(submitAnswerFn).toHaveBeenCalledTimes(1);
   });
@@ -339,7 +346,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     const harness = await renderHook(() =>
       usePracticeSessionQuestionFlow({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         isMounted: () => true,
         getNextQuestionFn,
         submitAnswerFn,
@@ -349,9 +356,9 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_1');
+      .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice('choice_1');
+    harness.result.current.onSelectChoice(fixtureChoice1Id);
 
     await harness.result.current.onSubmit();
 
@@ -359,16 +366,16 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
     await expect.poll(() => harness.result.current.isPending).toBe(true);
     expect(submitAnswerFn).toHaveBeenCalledWith(
       expect.objectContaining({
-        sessionId: 'session-1',
-        questionId: 'q_1',
-        choiceId: 'choice_1',
+        sessionId: fixtureSession1Id,
+        questionId: fixtureQ1Id,
+        choiceId: fixtureChoice1Id,
       }),
     );
 
     await harness.result.current.onSubmit();
 
     expect(submitAnswerFn).toHaveBeenCalledTimes(1);
-    submitDeferred.resolve(ok(createSubmitOutput('choice_1')));
+    submitDeferred.resolve(ok(createSubmitOutput(fixtureChoice1Id)));
     await expect.poll(() => harness.result.current.isPending).toBe(false);
     expect(submitAnswerFn).toHaveBeenCalledTimes(1);
   });
@@ -379,7 +386,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
       .mockResolvedValue(ok(createSessionQuestion('tutor')));
     const submitAnswerFn = vi
       .fn<(input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>>()
-      .mockResolvedValue(ok(createSubmitOutput('choice_1')));
+      .mockResolvedValue(ok(createSubmitOutput(fixtureChoice1Id)));
     const saveExamDraftAnswerFn =
       vi.fn<
         (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
@@ -387,7 +394,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     const harness = await renderHook(() =>
       usePracticeSessionQuestionFlow({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         isMounted: () => true,
         getNextQuestionFn,
         submitAnswerFn,
@@ -397,7 +404,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_1');
+      .toBe(fixtureQ1Id);
     await expect.poll(() => harness.result.current.canSubmit).toBe(false);
 
     const result = await harness.result.current.onSubmit();
@@ -412,7 +419,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
       .mockResolvedValue(ok(createSessionQuestion('tutor')));
     const submitAnswerFn = vi
       .fn<(input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>>()
-      .mockResolvedValue(ok(createSubmitOutput('choice_1')));
+      .mockResolvedValue(ok(createSubmitOutput(fixtureChoice1Id)));
     const saveExamDraftAnswerFn =
       vi.fn<
         (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
@@ -420,7 +427,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     const harness = await renderHook(() =>
       usePracticeSessionQuestionFlow({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         isMounted: () => true,
         getNextQuestionFn,
         submitAnswerFn,
@@ -430,15 +437,15 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_1');
+      .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice('choice_1');
+    harness.result.current.onSelectChoice(fixtureChoice1Id);
     await expect.poll(() => submitAnswerFn.mock.calls.length).toBe(1);
     await expect
       .poll(() => harness.result.current.submitResult?.correctChoiceId ?? null)
-      .toBe('choice_1');
+      .toBe(fixtureChoice1Id);
 
-    harness.result.current.onSelectChoice('choice_2');
+    harness.result.current.onSelectChoice(fixtureChoice2Id);
 
     expect(submitAnswerFn).toHaveBeenCalledTimes(1);
   });
@@ -449,7 +456,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
       .mockResolvedValue(ok(createSessionQuestion('tutor')));
     const submitAnswerFn = vi
       .fn<(input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>>()
-      .mockResolvedValue(ok(createSubmitOutput('choice_1')));
+      .mockResolvedValue(ok(createSubmitOutput(fixtureChoice1Id)));
     const saveExamDraftAnswerFn =
       vi.fn<
         (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
@@ -457,7 +464,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     const harness = await renderHook(() =>
       usePracticeSessionQuestionFlow({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         isMounted: () => true,
         getNextQuestionFn,
         submitAnswerFn,
@@ -467,13 +474,13 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_1');
+      .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice('choice_1');
+    harness.result.current.onSelectChoice(fixtureChoice1Id);
     await expect.poll(() => submitAnswerFn.mock.calls.length).toBe(1);
     await expect
       .poll(() => harness.result.current.submitResult?.correctChoiceId ?? null)
-      .toBe('choice_1');
+      .toBe(fixtureChoice1Id);
     await expect.poll(() => harness.result.current.canSubmit).toBe(false);
 
     await harness.result.current.onSubmit();
@@ -489,7 +496,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
     const submitAnswerFn = vi
       .fn<(input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>>()
       .mockRejectedValueOnce(submitError)
-      .mockResolvedValueOnce(ok(createSubmitOutput('choice_2')));
+      .mockResolvedValueOnce(ok(createSubmitOutput(fixtureChoice2Id)));
     const saveExamDraftAnswerFn =
       vi.fn<
         (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
@@ -497,7 +504,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     const harness = await renderHook(() =>
       usePracticeSessionQuestionFlow({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         isMounted: () => true,
         getNextQuestionFn,
         submitAnswerFn,
@@ -507,9 +514,9 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
 
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_1');
+      .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice('choice_1');
+    harness.result.current.onSelectChoice(fixtureChoice1Id);
 
     await expect
       .poll(() => harness.result.current.loadState.status)
@@ -520,13 +527,15 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
     const secondRetry = harness.result.current.onSubmit();
 
     await expect.poll(() => submitAnswerFn.mock.calls.length).toBe(2);
-    await expect(firstRetry).resolves.toEqual(createSubmitOutput('choice_2'));
+    await expect(firstRetry).resolves.toEqual(
+      createSubmitOutput(fixtureChoice2Id),
+    );
     await expect(secondRetry).resolves.toBeNull();
     expect(submitAnswerFn).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        sessionId: 'session-1',
-        questionId: 'q_1',
-        choiceId: 'choice_1',
+        sessionId: fixtureSession1Id,
+        questionId: fixtureQ1Id,
+        choiceId: fixtureChoice1Id,
       }),
     );
   });

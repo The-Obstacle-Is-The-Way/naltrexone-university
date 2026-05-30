@@ -8,6 +8,9 @@ import { ok } from '@/tests/test-helpers/ok';
 import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
 import { useQuestionPageBookmarks } from './use-question-page-bookmarks';
 
+const fixtureQuestion1Id = crypto.randomUUID();
+const fixtureChoice1Id = crypto.randomUUID();
+
 vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
 vi.mock('@/lib/report-client-error', { spy: true });
 
@@ -18,11 +21,11 @@ installReportClientErrorMocks(reportClientError);
 
 function createQuestion(): GetQuestionBySlugOutput {
   return {
-    questionId: 'question-1',
+    questionId: fixtureQuestion1Id,
     slug: 'q-1',
     stemMd: 'Stem',
     difficulty: 'easy',
-    choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
+    choices: [{ id: fixtureChoice1Id, label: 'A', textMd: 'Choice A' }],
   };
 }
 
@@ -81,7 +84,7 @@ describe('useQuestionPageBookmarks (browser)', () => {
         rows: [
           {
             isAvailable: true,
-            questionId: 'question-1',
+            questionId: fixtureQuestion1Id,
             slug: 'q-1',
             stemMd: 'Stem',
             difficulty: 'easy',
@@ -120,7 +123,7 @@ describe('useQuestionPageBookmarks (browser)', () => {
 
     await expect.poll(() => toggleBookmark.mock.calls.length).toBe(1);
     expect(toggleBookmark).toHaveBeenCalledWith({
-      questionId: 'question-1',
+      questionId: fixtureQuestion1Id,
       idempotencyKey: expect.any(String),
     });
     await expect

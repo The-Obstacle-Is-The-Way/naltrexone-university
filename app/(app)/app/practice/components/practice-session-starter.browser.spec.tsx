@@ -1,9 +1,12 @@
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+
 import {
   PracticeSessionStarter,
   type PracticeSessionStarterProps,
 } from '@/app/(app)/app/practice/components/practice-session-starter';
+
+const fixtureTag1Id = crypto.randomUUID();
 
 function starterProps(
   overrides: Partial<PracticeSessionStarterProps> = {},
@@ -17,7 +20,7 @@ function starterProps(
     tagLoadStatus: 'idle',
     availableTags: [
       {
-        id: 'tag_1',
+        id: fixtureTag1Id,
         slug: 'opioids',
         name: 'Opioids',
         kind: 'substance',

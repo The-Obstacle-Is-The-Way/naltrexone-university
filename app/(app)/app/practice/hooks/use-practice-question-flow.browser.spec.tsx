@@ -11,6 +11,9 @@ import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeQuestionFlow } from './use-practice-question-flow';
 
+const fixtureAttempt1Id = crypto.randomUUID();
+const fixtureChoice1Id = crypto.randomUUID();
+
 vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
 vi.mock('@/src/adapters/controllers/question-controller', { spy: true });
 
@@ -72,7 +75,10 @@ function PracticeQuestionFlowSubmitProbe() {
     <>
       <div data-testid="load-status">{output.loadState.status}</div>
       <div data-testid="is-pending">{String(output.isPending)}</div>
-      <button type="button" onClick={() => output.onSelectChoice('choice_1')}>
+      <button
+        type="button"
+        onClick={() => output.onSelectChoice(fixtureChoice1Id)}
+      >
         select-choice-1
       </button>
       <button type="button" onClick={() => void output.onSubmit()}>
@@ -181,9 +187,9 @@ describe('usePracticeQuestionFlow (browser)', () => {
 
     deferred.resolve(
       ok({
-        attemptId: 'attempt-1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
-        correctChoiceId: 'choice_1',
+        correctChoiceId: fixtureChoice1Id,
         explanationMd: 'Because',
         referenceMd: null,
         choiceExplanations: [],
