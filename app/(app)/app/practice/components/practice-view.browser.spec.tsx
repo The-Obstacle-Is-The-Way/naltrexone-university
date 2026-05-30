@@ -156,7 +156,7 @@ test('renders the exam bottom action bar without sticky shell markers', async ()
         stemMd: createTallMarkdown('Exam stem', 36),
         difficulty: 'easy',
         choices: Array.from({ length: 6 }, (_, index) => ({
-          id: `choice_${index + 1}`,
+          id: crypto.randomUUID(),
           label: String.fromCharCode(65 + index),
           textMd: `Option ${index + 1}`,
           sortOrder: index + 1,

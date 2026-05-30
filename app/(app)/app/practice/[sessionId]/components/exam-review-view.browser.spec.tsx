@@ -305,7 +305,7 @@ test('keeps the helper text visible and the first review row above the fold at 3
           answeredCount: 6,
           markedCount: 2,
           rows: Array.from({ length: 10 }, (_, index) => ({
-            questionId: `q${index + 1}`,
+            questionId: crypto.randomUUID(),
             slug: `q-${index + 1}`,
             order: index + 1,
             isAvailable: index < 9,

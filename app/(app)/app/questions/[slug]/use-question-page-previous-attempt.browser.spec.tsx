@@ -12,12 +12,13 @@ import * as questionViewController from '@/src/adapters/controllers/question-vie
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
+import {
+  QUESTION_PAGE_ATTEMPT_1_ID,
+  QUESTION_PAGE_CHOICE_1_ID,
+  QUESTION_PAGE_CHOICE_2_ID,
+  QUESTION_PAGE_QUESTION_1_ID,
+} from './question-page-controller.browser.fixtures';
 import { useQuestionPagePreviousAttempt } from './use-question-page-previous-attempt';
-
-const fixtureQuestion1Id = crypto.randomUUID();
-const fixtureChoice1Id = crypto.randomUUID();
-const fixtureChoice2Id = crypto.randomUUID();
-const fixtureAttempt1Id = crypto.randomUUID();
 
 vi.mock('@/src/adapters/controllers/question-view-controller', { spy: true });
 vi.mock('@/lib/report-client-error', { spy: true });
@@ -26,13 +27,13 @@ const getPreviousAttempt = vi.mocked(questionViewController.getPreviousAttempt);
 const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
 
 const defaultQuestion: GetQuestionBySlugOutput = {
-  questionId: fixtureQuestion1Id,
+  questionId: QUESTION_PAGE_QUESTION_1_ID,
   slug: 'q-1',
   stemMd: 'Stem',
   difficulty: 'easy',
   choices: [
-    { id: fixtureChoice1Id, label: 'A', textMd: 'Choice A' },
-    { id: fixtureChoice2Id, label: 'B', textMd: 'Choice B' },
+    { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+    { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
   ],
 };
 
@@ -123,11 +124,11 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
       ok({
         kind: 'attempt',
         sessionMode: null,
-        attemptId: fixtureAttempt1Id,
-        selectedChoiceId: fixtureChoice2Id,
+        attemptId: QUESTION_PAGE_ATTEMPT_1_ID,
+        selectedChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         isOmitted: false,
         isCorrect: true,
-        correctChoiceId: fixtureChoice2Id,
+        correctChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         explanationMd: 'Because.',
         referenceMd: null,
         choiceExplanations: [],
@@ -139,16 +140,16 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
 
     await expect
       .element(screen.getByTestId('selected-choice'))
-      .toHaveTextContent(fixtureChoice2Id);
+      .toHaveTextContent(QUESTION_PAGE_CHOICE_2_ID);
     await expect
       .element(screen.getByTestId('attempt-id'))
-      .toHaveTextContent(fixtureAttempt1Id);
+      .toHaveTextContent(QUESTION_PAGE_ATTEMPT_1_ID);
     await expect
       .element(screen.getByTestId('review-hydration-state'))
       .toHaveTextContent('attempt');
 
     expect(getPreviousAttempt).toHaveBeenCalledWith({
-      questionId: fixtureQuestion1Id,
+      questionId: QUESTION_PAGE_QUESTION_1_ID,
     });
   });
 
@@ -222,11 +223,11 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
       ok({
         kind: 'attempt',
         sessionMode: null,
-        attemptId: fixtureAttempt1Id,
-        selectedChoiceId: fixtureChoice2Id,
+        attemptId: QUESTION_PAGE_ATTEMPT_1_ID,
+        selectedChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         isOmitted: false,
         isCorrect: true,
-        correctChoiceId: fixtureChoice2Id,
+        correctChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         explanationMd: 'Because.',
         referenceMd: null,
         choiceExplanations: [],
@@ -274,11 +275,11 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
       ok({
         kind: 'attempt',
         sessionMode: null,
-        attemptId: fixtureAttempt1Id,
-        selectedChoiceId: fixtureChoice2Id,
+        attemptId: QUESTION_PAGE_ATTEMPT_1_ID,
+        selectedChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         isOmitted: false,
         isCorrect: true,
-        correctChoiceId: fixtureChoice2Id,
+        correctChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         explanationMd: 'Because.',
         referenceMd: null,
         choiceExplanations: [],

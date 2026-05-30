@@ -6,10 +6,11 @@ import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/questio
 import type { GetBookmarksOutput } from '@/src/application/ports/bookmarks';
 import { ok } from '@/tests/test-helpers/ok';
 import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
+import {
+  QUESTION_PAGE_CHOICE_1_ID,
+  QUESTION_PAGE_QUESTION_1_ID,
+} from './question-page-controller.browser.fixtures';
 import { useQuestionPageBookmarks } from './use-question-page-bookmarks';
-
-const fixtureQuestion1Id = crypto.randomUUID();
-const fixtureChoice1Id = crypto.randomUUID();
 
 vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
 vi.mock('@/lib/report-client-error', { spy: true });
@@ -21,11 +22,13 @@ installReportClientErrorMocks(reportClientError);
 
 function createQuestion(): GetQuestionBySlugOutput {
   return {
-    questionId: fixtureQuestion1Id,
+    questionId: QUESTION_PAGE_QUESTION_1_ID,
     slug: 'q-1',
     stemMd: 'Stem',
     difficulty: 'easy',
-    choices: [{ id: fixtureChoice1Id, label: 'A', textMd: 'Choice A' }],
+    choices: [
+      { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+    ],
   };
 }
 
@@ -84,7 +87,7 @@ describe('useQuestionPageBookmarks (browser)', () => {
         rows: [
           {
             isAvailable: true,
-            questionId: fixtureQuestion1Id,
+            questionId: QUESTION_PAGE_QUESTION_1_ID,
             slug: 'q-1',
             stemMd: 'Stem',
             difficulty: 'easy',
@@ -123,7 +126,7 @@ describe('useQuestionPageBookmarks (browser)', () => {
 
     await expect.poll(() => toggleBookmark.mock.calls.length).toBe(1);
     expect(toggleBookmark).toHaveBeenCalledWith({
-      questionId: fixtureQuestion1Id,
+      questionId: QUESTION_PAGE_QUESTION_1_ID,
       idempotencyKey: expect.any(String),
     });
     await expect
