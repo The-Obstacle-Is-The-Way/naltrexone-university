@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const { fixtureOtherUserId, fixtureUser123Id } = vi.hoisted(() => ({
+  fixtureOtherUserId: crypto.randomUUID(),
+  fixtureUser123Id: crypto.randomUUID(),
+}));
+
 type SeedTestSubscription =
   typeof import('./seed-test-user').seedTestSubscription;
 
@@ -55,7 +60,13 @@ describe('seedTestSubscription', () => {
       vi.stubEnv(key, value);
     }
 
-    const sqlClient = createSqlClient([[{ id: 'user_123' }], [], [], [], []]);
+    const sqlClient = createSqlClient([
+      [{ id: fixtureUser123Id }],
+      [],
+      [],
+      [],
+      [],
+    ]);
     postgresMock = vi.fn(() => sqlClient);
     vi.doMock('postgres', () => ({
       default: postgresMock,
@@ -138,7 +149,7 @@ describe('seedTestSubscription', () => {
     expect(customersCreate).toHaveBeenCalledWith({
       email: 'e2e-test@addictionboards.com',
       metadata: {
-        user_id: 'user_123',
+        user_id: fixtureUser123Id,
         clerk_user_id: 'clerk_user_123',
         e2e_owner: 'local-dev',
       },
@@ -146,7 +157,7 @@ describe('seedTestSubscription', () => {
     expect(subscriptionsCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         metadata: {
-          user_id: 'user_123',
+          user_id: fixtureUser123Id,
           e2e_owner: 'local-dev',
         },
       }),
@@ -159,7 +170,7 @@ describe('seedTestSubscription', () => {
     expect(customersCreate).toHaveBeenCalledWith({
       email: 'e2e-test@addictionboards.com',
       metadata: {
-        user_id: 'user_123',
+        user_id: fixtureUser123Id,
         clerk_user_id: 'clerk_user_123',
         e2e_owner: 'github-ci',
       },
@@ -168,7 +179,7 @@ describe('seedTestSubscription', () => {
       customer: 'cus_123',
       items: [{ price: 'price_monthly' }],
       metadata: {
-        user_id: 'user_123',
+        user_id: fixtureUser123Id,
         e2e_owner: 'github-ci',
       },
     });
@@ -177,7 +188,7 @@ describe('seedTestSubscription', () => {
   it('reuses an owner-scoped DB-mapped customer and returns early when local subscription is still active', async () => {
     postgresMock.mockReturnValueOnce(
       createSqlClient([
-        [{ id: 'user_123' }],
+        [{ id: fixtureUser123Id }],
         [{ stripe_customer_id: 'cus_existing' }],
         [
           {
@@ -191,7 +202,7 @@ describe('seedTestSubscription', () => {
     customersRetrieve.mockResolvedValueOnce({
       id: 'cus_existing',
       metadata: {
-        user_id: 'user_123',
+        user_id: fixtureUser123Id,
         clerk_user_id: 'clerk_user_123',
         e2e_owner: 'github-ci',
       },
@@ -209,7 +220,7 @@ describe('seedTestSubscription', () => {
   it('reconciles Stripe when the DB customer is remapped even if a local subscription row is active', async () => {
     postgresMock.mockReturnValueOnce(
       createSqlClient([
-        [{ id: 'user_123' }],
+        [{ id: fixtureUser123Id }],
         [{ stripe_customer_id: 'cus_other_owner' }],
         [],
         [
@@ -225,7 +236,7 @@ describe('seedTestSubscription', () => {
     customersRetrieve.mockResolvedValueOnce({
       id: 'cus_other_owner',
       metadata: {
-        user_id: 'other_user',
+        user_id: fixtureOtherUserId,
         clerk_user_id: 'other_clerk',
         e2e_owner: 'local-dev',
       },
@@ -234,7 +245,7 @@ describe('seedTestSubscription', () => {
     customersRetrieve.mockResolvedValueOnce({
       id: 'cus_current_owner',
       metadata: {
-        user_id: 'user_123',
+        user_id: fixtureUser123Id,
         clerk_user_id: 'clerk_user_123',
         e2e_owner: 'github-ci',
       },
@@ -245,7 +256,7 @@ describe('seedTestSubscription', () => {
         {
           id: 'cus_current_owner',
           metadata: {
-            user_id: 'user_123',
+            user_id: fixtureUser123Id,
             clerk_user_id: 'clerk_user_123',
             e2e_owner: 'github-ci',
           },
@@ -268,7 +279,7 @@ describe('seedTestSubscription', () => {
       customer: 'cus_current_owner',
       items: [{ price: 'price_monthly' }],
       metadata: {
-        user_id: 'user_123',
+        user_id: fixtureUser123Id,
         e2e_owner: 'github-ci',
       },
     });
@@ -280,7 +291,7 @@ describe('seedTestSubscription', () => {
         {
           id: 'cus_other_owner',
           metadata: {
-            user_id: 'other_user',
+            user_id: fixtureOtherUserId,
             clerk_user_id: 'other_clerk',
             e2e_owner: 'local-dev',
           },
@@ -293,7 +304,7 @@ describe('seedTestSubscription', () => {
     expect(customersCreate).toHaveBeenCalledWith({
       email: 'e2e-test@addictionboards.com',
       metadata: {
-        user_id: 'user_123',
+        user_id: fixtureUser123Id,
         clerk_user_id: 'clerk_user_123',
         e2e_owner: 'github-ci',
       },
@@ -317,7 +328,7 @@ describe('seedTestSubscription', () => {
         {
           id: 'cus_other_owner',
           metadata: {
-            user_id: 'other_user',
+            user_id: fixtureOtherUserId,
             e2e_owner: 'local-dev',
           },
         },
@@ -329,7 +340,7 @@ describe('seedTestSubscription', () => {
     expect(customersCreate).toHaveBeenCalledWith({
       email: 'e2e-test@addictionboards.com',
       metadata: {
-        user_id: 'user_123',
+        user_id: fixtureUser123Id,
         clerk_user_id: 'clerk_user_123',
         e2e_owner: 'github-ci',
       },
@@ -342,7 +353,7 @@ describe('seedTestSubscription', () => {
         {
           id: 'cus_current_owner',
           metadata: {
-            user_id: 'user_123',
+            user_id: fixtureUser123Id,
             clerk_user_id: 'clerk_user_123',
             e2e_owner: 'github-ci',
           },
@@ -355,7 +366,7 @@ describe('seedTestSubscription', () => {
           id: 'sub_canceled_current_owner',
           status: 'canceled',
           metadata: {
-            user_id: 'user_123',
+            user_id: fixtureUser123Id,
             e2e_owner: 'github-ci',
           },
           items: {
@@ -370,7 +381,7 @@ describe('seedTestSubscription', () => {
           id: 'sub_canceled_other_owner',
           status: 'canceled',
           metadata: {
-            user_id: 'other_user',
+            user_id: fixtureOtherUserId,
             e2e_owner: 'local-dev',
           },
           items: {
@@ -403,7 +414,7 @@ describe('seedTestSubscription', () => {
         {
           id: 'cus_current_owner',
           metadata: {
-            user_id: 'user_123',
+            user_id: fixtureUser123Id,
             clerk_user_id: 'clerk_user_123',
             e2e_owner: 'github-ci',
           },
@@ -416,7 +427,7 @@ describe('seedTestSubscription', () => {
           id: 'sub_other_owner',
           status: 'active',
           metadata: {
-            user_id: 'other_user',
+            user_id: fixtureOtherUserId,
             e2e_owner: 'local-dev',
           },
           items: {
@@ -437,7 +448,7 @@ describe('seedTestSubscription', () => {
       customer: 'cus_current_owner',
       items: [{ price: 'price_monthly' }],
       metadata: {
-        user_id: 'user_123',
+        user_id: fixtureUser123Id,
         e2e_owner: 'github-ci',
       },
     });
@@ -481,7 +492,7 @@ describe('seedTestSubscription', () => {
     expect(subscriptionsCreate).not.toHaveBeenCalled();
     expect(subscriptionsUpdate).toHaveBeenCalledWith('sub_existing', {
       metadata: {
-        user_id: 'user_123',
+        user_id: fixtureUser123Id,
         e2e_owner: 'github-ci',
       },
     });
@@ -491,7 +502,7 @@ describe('seedTestSubscription', () => {
     const firstPageCustomer = {
       id: 'cus_other_owner',
       metadata: {
-        user_id: 'other_user',
+        user_id: fixtureOtherUserId,
         clerk_user_id: 'other_clerk',
         e2e_owner: 'local-dev',
       },
@@ -499,7 +510,7 @@ describe('seedTestSubscription', () => {
     const secondPageCustomer = {
       id: 'cus_second_page_current_owner',
       metadata: {
-        user_id: 'user_123',
+        user_id: fixtureUser123Id,
         clerk_user_id: 'clerk_user_123',
         e2e_owner: 'github-ci',
       },
@@ -530,7 +541,7 @@ describe('seedTestSubscription', () => {
       id: 'sub_first_page_other_owner',
       status: 'active',
       metadata: {
-        user_id: 'other_user',
+        user_id: fixtureOtherUserId,
         e2e_owner: 'local-dev',
       },
       items: {
@@ -545,7 +556,7 @@ describe('seedTestSubscription', () => {
       id: 'sub_second_page_current_owner',
       status: 'active',
       metadata: {
-        user_id: 'user_123',
+        user_id: fixtureUser123Id,
         e2e_owner: 'github-ci',
       },
       items: {
@@ -561,7 +572,7 @@ describe('seedTestSubscription', () => {
         {
           id: 'cus_current_owner',
           metadata: {
-            user_id: 'user_123',
+            user_id: fixtureUser123Id,
             clerk_user_id: 'clerk_user_123',
             e2e_owner: 'github-ci',
           },

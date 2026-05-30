@@ -1,6 +1,11 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
+
+const { fixtureChoiceAId, fixtureChoiceBId } = vi.hoisted(() => ({
+  fixtureChoiceAId: crypto.randomUUID(),
+  fixtureChoiceBId: crypto.randomUUID(),
+}));
 
 type QuestionSurfaceBodyModule = typeof import('./question-surface-body');
 
@@ -19,12 +24,12 @@ describe('QuestionSurfaceBody', () => {
         question={{
           stemMd: 'Question stem',
           choices: [
-            { id: 'choice-a', label: 'A', textMd: 'Choice A' },
-            { id: 'choice-b', label: 'B', textMd: 'Choice B' },
+            { id: fixtureChoiceAId, label: 'A', textMd: 'Choice A' },
+            { id: fixtureChoiceBId, label: 'B', textMd: 'Choice B' },
           ],
         }}
-        selectedChoiceId="choice-a"
-        correctChoiceId="choice-b"
+        selectedChoiceId={fixtureChoiceAId}
+        correctChoiceId={fixtureChoiceBId}
         disabled={false}
         onSelectChoice={() => undefined}
         {...overrides}
@@ -63,14 +68,14 @@ describe('QuestionSurfaceBody', () => {
         referenceMd: 'Reference text',
         choiceExplanations: [
           {
-            choiceId: 'choice-a',
+            choiceId: fixtureChoiceAId,
             displayLabel: 'A',
             textMd: 'Choice A',
             isCorrect: false,
             explanationMd: 'Selected choice explanation',
           },
           {
-            choiceId: 'choice-b',
+            choiceId: fixtureChoiceBId,
             displayLabel: 'B',
             textMd: 'Choice B',
             isCorrect: true,
@@ -148,7 +153,7 @@ describe('QuestionSurfaceBody', () => {
       stemMd: 'Question stem',
       choices: [
         {
-          id: 'choice-a',
+          id: fixtureChoiceAId,
           label: 'A',
           textMd: 'Choice A',
           sortOrder: 1,

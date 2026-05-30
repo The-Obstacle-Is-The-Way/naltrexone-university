@@ -4,6 +4,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@/src/application/test-helpers/render-hook';
 import { usePracticeSessionQuestionFlow } from './use-practice-session-question-flow';
 
+const { fixtureAttempt1Id, fixtureChoice1Id, fixtureSession1Id } = vi.hoisted(
+  () => ({
+    fixtureAttempt1Id: crypto.randomUUID(),
+    fixtureChoice1Id: crypto.randomUUID(),
+    fixtureSession1Id: crypto.randomUUID(),
+  }),
+);
+
 describe('usePracticeSessionQuestionFlow', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -12,7 +20,7 @@ describe('usePracticeSessionQuestionFlow', () => {
   it('returns the expected initial state contract', () => {
     const output = renderHook(() =>
       usePracticeSessionQuestionFlow({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         isMounted: () => true,
         getNextQuestionFn: vi.fn(),
         submitAnswerFn: vi.fn(),
@@ -45,9 +53,9 @@ describe('usePracticeSessionQuestionFlow', () => {
     const submitAnswerFn = vi.fn(async () => ({
       ok: true as const,
       data: {
-        attemptId: 'attempt-1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: false,
-        correctChoiceId: 'choice-1',
+        correctChoiceId: fixtureChoice1Id,
         explanationMd: null,
         referenceMd: null,
         choiceExplanations: [],
@@ -56,7 +64,7 @@ describe('usePracticeSessionQuestionFlow', () => {
 
     const output = renderHook(() =>
       usePracticeSessionQuestionFlow({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         autoload: false,
         isMounted: () => true,
         getNextQuestionFn: vi.fn(),

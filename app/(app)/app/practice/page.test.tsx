@@ -2,6 +2,22 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
+const {
+  fixtureAttempt1Id,
+  fixtureChoice1Id,
+  fixtureQuestion1Id,
+  fixtureSession1Id,
+  fixtureTag1Id,
+  fixtureTag2Id,
+} = vi.hoisted(() => ({
+  fixtureAttempt1Id: crypto.randomUUID(),
+  fixtureChoice1Id: crypto.randomUUID(),
+  fixtureQuestion1Id: crypto.randomUUID(),
+  fixtureSession1Id: crypto.randomUUID(),
+  fixtureTag1Id: crypto.randomUUID(),
+  fixtureTag2Id: crypto.randomUUID(),
+}));
+
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
@@ -122,13 +138,13 @@ describe('app/(app)/app/practice', () => {
       <PracticeView
         loadState={{ status: 'ready' }}
         question={{
-          questionId: 'question-1',
+          questionId: fixtureQuestion1Id,
           slug: 'question-1',
           stemMd: 'Stem',
           difficulty: 'easy',
           choices: [
             {
-              id: 'choice-1',
+              id: fixtureChoice1Id,
               label: 'A',
               textMd: 'Choice',
               sortOrder: 1,
@@ -136,12 +152,12 @@ describe('app/(app)/app/practice', () => {
           ],
           session: null,
         }}
-        selectedChoiceId="choice-1"
+        selectedChoiceId={fixtureChoice1Id}
         isAnswered={true}
         submitResult={{
-          attemptId: 'attempt-1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
-          correctChoiceId: 'choice-1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: 'Explanation',
           referenceMd: null,
           choiceExplanations: [],
@@ -163,7 +179,7 @@ describe('app/(app)/app/practice', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         sessionInfo={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -174,13 +190,13 @@ describe('app/(app)/app/practice', () => {
         }}
         loadState={{ status: 'ready' }}
         question={{
-          questionId: 'question-1',
+          questionId: fixtureQuestion1Id,
           slug: 'question-1',
           stemMd: 'Stem',
           difficulty: 'easy',
           choices: [
             {
-              id: 'choice-1',
+              id: fixtureChoice1Id,
               label: 'A',
               textMd: 'Choice',
               sortOrder: 1,
@@ -215,9 +231,9 @@ describe('app/(app)/app/practice', () => {
         selectedChoiceId={null}
         isAnswered={false}
         submitResult={{
-          attemptId: 'attempt-1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: false,
-          correctChoiceId: 'choice-1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: 'Explanation',
           referenceMd: null,
           choiceExplanations: [],
@@ -239,7 +255,7 @@ describe('app/(app)/app/practice', () => {
     const html = renderToStaticMarkup(
       <PracticeView
         sessionInfo={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -252,9 +268,9 @@ describe('app/(app)/app/practice', () => {
         selectedChoiceId={null}
         isAnswered={false}
         submitResult={{
-          attemptId: 'attempt-1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: false,
-          correctChoiceId: 'choice-1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: null,
           referenceMd: null,
           choiceExplanations: [],
@@ -279,13 +295,13 @@ describe('app/(app)/app/practice', () => {
       <PracticeView
         loadState={{ status: 'ready' }}
         question={{
-          questionId: 'question-1',
+          questionId: fixtureQuestion1Id,
           slug: 'question-1',
           stemMd: 'Stem',
           difficulty: 'easy',
           choices: [
             {
-              id: 'choice-1',
+              id: fixtureChoice1Id,
               label: 'A',
               textMd: 'Choice',
               sortOrder: 1,
@@ -443,9 +459,14 @@ describe('app/(app)/app/practice', () => {
         availableCount={null}
         tagLoadStatus="idle"
         availableTags={[
-          { id: 'tag-1', slug: 'topic-1', name: 'Topic 1', kind: 'topic' },
           {
-            id: 'tag-2',
+            id: fixtureTag1Id,
+            slug: 'topic-1',
+            name: 'Topic 1',
+            kind: 'topic',
+          },
+          {
+            id: fixtureTag2Id,
             slug: 'substance-1',
             name: 'Substance 1',
             kind: 'substance',

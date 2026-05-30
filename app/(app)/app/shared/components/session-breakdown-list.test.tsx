@@ -4,13 +4,25 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { type QuestionOrigin, toQuestionRoute } from '@/lib/routes';
 import type { PracticeSessionReviewRow } from '@/src/application/use-cases';
 
+const {
+  fixtureQuestion1Id,
+  fixtureQuestion2Id,
+  fixtureQuestion3Id,
+  fixtureSession123Id,
+} = vi.hoisted(() => ({
+  fixtureQuestion1Id: crypto.randomUUID(),
+  fixtureQuestion2Id: crypto.randomUUID(),
+  fixtureQuestion3Id: crypto.randomUUID(),
+  fixtureSession123Id: crypto.randomUUID(),
+}));
+
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
 
 const availableRow: PracticeSessionReviewRow = {
   isAvailable: true,
-  questionId: 'q1',
+  questionId: fixtureQuestion1Id,
   slug: 'q-1',
   stemMd: 'A short stem',
   difficulty: 'easy',
@@ -23,7 +35,7 @@ const availableRow: PracticeSessionReviewRow = {
 
 const correctRow: PracticeSessionReviewRow = {
   ...availableRow,
-  questionId: 'q3',
+  questionId: fixtureQuestion3Id,
   slug: 'q-3',
   order: 3,
   isCorrect: true,
@@ -31,7 +43,7 @@ const correctRow: PracticeSessionReviewRow = {
 
 const unavailableRow: PracticeSessionReviewRow = {
   isAvailable: false,
-  questionId: 'q2',
+  questionId: fixtureQuestion2Id,
   order: 2,
   isAnswered: false,
   isCorrect: null,
@@ -225,7 +237,7 @@ describe('SessionBreakdownList', () => {
   it('includes summary origin and sessionId in question routes', async () => {
     const html = await renderList([availableRow], {
       from: 'summary',
-      sessionId: 'session_123',
+      sessionId: fixtureSession123Id,
     });
 
     const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -235,7 +247,7 @@ describe('SessionBreakdownList', () => {
       toQuestionRoute('q-1', {
         from: 'summary',
         mode: 'review',
-        sessionId: 'session_123',
+        sessionId: fixtureSession123Id,
       }),
     );
   });

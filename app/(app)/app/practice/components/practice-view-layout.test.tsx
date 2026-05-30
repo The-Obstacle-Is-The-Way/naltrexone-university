@@ -1,9 +1,34 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { ROUTES } from '@/lib/routes';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import './practice-view-test-helpers';
+
+const { fixtureQuestion1Id, fixtureSession1Id, fixtureChoice1Id } = vi.hoisted(
+  () => ({
+    fixtureQuestion1Id: crypto.randomUUID(),
+    fixtureSession1Id: crypto.randomUUID(),
+    fixtureChoice1Id: crypto.randomUUID(),
+  }),
+);
+
+function createFixtureNextQuestion(
+  overrides: Parameters<typeof createNextQuestion>[0] = {},
+) {
+  return createNextQuestion({
+    questionId: fixtureQuestion1Id,
+    choices: [
+      {
+        id: fixtureChoice1Id,
+        label: 'A',
+        textMd: 'Choice A',
+        sortOrder: 1,
+      },
+    ],
+    ...overrides,
+  });
+}
 
 type PracticeViewModule = typeof import('./practice-view');
 
@@ -144,8 +169,8 @@ describe('PracticeView layout', () => {
   });
 
   it('exposes the focused question panel as a labeled region', () => {
-    const question = createNextQuestion({
-      questionId: 'question-1',
+    const question = createFixtureNextQuestion({
+      questionId: fixtureQuestion1Id,
       slug: 'question-1',
       stemMd: 'Stem',
       difficulty: 'easy',
@@ -210,8 +235,8 @@ describe('PracticeView layout', () => {
   });
 
   it('renders a scoped exam header action rail before the question area', () => {
-    const question = createNextQuestion({
-      questionId: 'question-1',
+    const question = createFixtureNextQuestion({
+      questionId: fixtureQuestion1Id,
       slug: 'question-1',
       stemMd: 'Stem',
       difficulty: 'easy',
@@ -222,7 +247,7 @@ describe('PracticeView layout', () => {
         title="Exam Session"
         description="Question 1 of 3 — Explanations shown after you submit the exam."
         sessionInfo={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -274,8 +299,8 @@ describe('PracticeView layout', () => {
   });
 
   it('renders the exam timer only in the exam header action rail', () => {
-    const question = createNextQuestion({
-      questionId: 'question-1',
+    const question = createFixtureNextQuestion({
+      questionId: fixtureQuestion1Id,
       slug: 'question-1',
       stemMd: 'Stem',
       difficulty: 'easy',
@@ -286,7 +311,7 @@ describe('PracticeView layout', () => {
         title="Exam Session"
         description="Question 1 of 3 — Explanations shown after you submit the exam."
         sessionInfo={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           deadlineAt: '2099-05-22T12:02:24.000Z',
           index: 0,
@@ -316,7 +341,7 @@ describe('PracticeView layout', () => {
         title="Tutor Session"
         description="Question 1 of 3 — Explanations shown after each answer."
         sessionInfo={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'tutor',
           deadlineAt: null,
           index: 0,
@@ -351,8 +376,8 @@ describe('PracticeView layout', () => {
   });
 
   it('renders the fallback back link when exam mode has no mark-for-review action', () => {
-    const question = createNextQuestion({
-      questionId: 'question-1',
+    const question = createFixtureNextQuestion({
+      questionId: fixtureQuestion1Id,
       slug: 'question-1',
       stemMd: 'Stem',
       difficulty: 'easy',
@@ -363,7 +388,7 @@ describe('PracticeView layout', () => {
         title="Exam Session"
         description="Question 1 of 3 — Explanations shown after you submit the exam."
         sessionInfo={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',

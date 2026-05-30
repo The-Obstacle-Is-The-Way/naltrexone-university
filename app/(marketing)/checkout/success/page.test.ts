@@ -16,6 +16,11 @@ import {
   syncCheckoutSuccess,
 } from './page';
 
+const { fixtureUser1Id, fixtureUser2Id } = vi.hoisted(() => ({
+  fixtureUser1Id: crypto.randomUUID(),
+  fixtureUser2Id: crypto.randomUUID(),
+}));
+
 class RedirectError extends Error {
   constructor(readonly url: string) {
     super(`REDIRECT:${url}`);
@@ -59,7 +64,7 @@ describe('runCheckoutSuccessPage', () => {
             customer: 'cus_123',
             status: 'active',
             cancel_at_period_end: false,
-            metadata: { user_id: 'user_1' },
+            metadata: { user_id: fixtureUser1Id },
             items: {
               data: [
                 {
@@ -101,7 +106,7 @@ describe('runCheckoutSuccessPage', () => {
     }> = [];
 
     const user = {
-      id: 'user_1',
+      id: fixtureUser1Id,
       email: 'user@example.com',
       createdAt: new Date('2026-02-01T00:00:00Z'),
       updatedAt: new Date('2026-02-01T00:00:00Z'),
@@ -140,7 +145,7 @@ describe('runCheckoutSuccessPage', () => {
             customer: 'cus_123',
             status: 'active',
             cancel_at_period_end: false,
-            metadata: { user_id: 'user_1' },
+            metadata: { user_id: fixtureUser1Id },
             items: {
               data: [
                 {
@@ -194,7 +199,7 @@ describe('runCheckoutSuccessPage', () => {
     }> = [];
 
     const user = {
-      id: 'user_1',
+      id: fixtureUser1Id,
       email: 'user@example.com',
       createdAt: new Date('2026-02-01T00:00:00Z'),
       updatedAt: new Date('2026-02-01T00:00:00Z'),
@@ -233,7 +238,7 @@ describe('runCheckoutSuccessPage', () => {
             customer: 'cus_123',
             status: 'active',
             cancel_at_period_end: false,
-            metadata: { user_id: 'user_1' },
+            metadata: { user_id: fixtureUser1Id },
             items: {
               data: [
                 {
@@ -278,7 +283,7 @@ describe('runCheckoutSuccessPage', () => {
 
   it('renders a semantic fallback shell with main landmark when redirect is intercepted', async () => {
     const user = {
-      id: 'user_1',
+      id: fixtureUser1Id,
       email: 'user@example.com',
       createdAt: new Date('2026-02-01T00:00:00Z'),
       updatedAt: new Date('2026-02-01T00:00:00Z'),
@@ -311,7 +316,7 @@ describe('runCheckoutSuccessPage', () => {
             customer: 'cus_123',
             status: 'active',
             cancel_at_period_end: false,
-            metadata: { user_id: 'user_1' },
+            metadata: { user_id: fixtureUser1Id },
             items: {
               data: [
                 {
@@ -359,7 +364,7 @@ describe('getCheckoutSuccessDeps', () => {
     const stripeCustomers = new FakeStripeCustomerRepository();
     const subscriptions = new FakeSubscriptionRepository();
     const user = {
-      id: 'user_1',
+      id: fixtureUser1Id,
       email: 'user@example.com',
       createdAt: new Date('2026-02-01T00:00:00Z'),
       updatedAt: new Date('2026-02-01T00:00:00Z'),
@@ -437,7 +442,7 @@ describe('syncCheckoutSuccess retry logging', () => {
       const stripeCustomers = new FakeStripeCustomerRepository();
       const subscriptions = new FakeSubscriptionRepository();
       const user = {
-        id: 'user_1',
+        id: fixtureUser1Id,
         email: 'user@example.com',
         createdAt: new Date('2026-02-01T00:00:00Z'),
         updatedAt: new Date('2026-02-01T00:00:00Z'),
@@ -479,7 +484,7 @@ describe('syncCheckoutSuccess retry logging', () => {
                 customer: 'cus_123',
                 status: 'active',
                 cancel_at_period_end: false,
-                metadata: { user_id: 'user_1' },
+                metadata: { user_id: fixtureUser1Id },
                 items: {
                   data: [
                     {
@@ -535,7 +540,7 @@ describe('syncCheckoutSuccess retry logging', () => {
       const stripeCustomers = new FakeStripeCustomerRepository();
       const subscriptions = new FakeSubscriptionRepository();
       const user = {
-        id: 'user_1',
+        id: fixtureUser1Id,
         email: 'user@example.com',
         createdAt: new Date('2026-02-01T00:00:00Z'),
         updatedAt: new Date('2026-02-01T00:00:00Z'),
@@ -572,7 +577,7 @@ describe('syncCheckoutSuccess retry logging', () => {
               customer: 'cus_123',
               status: 'active',
               cancel_at_period_end: false,
-              metadata: { user_id: 'user_1' },
+              metadata: { user_id: fixtureUser1Id },
               items: {
                 data: [
                   {
@@ -662,7 +667,7 @@ describe('syncCheckoutSuccess', () => {
       reason: 'user_id_mismatch',
       input: { sessionId: 'cs_test' },
       session: { customer: 'cus_123', subscription: 'sub_123' },
-      subscription: { metadata: { user_id: 'user_2' } },
+      subscription: { metadata: { user_id: fixtureUser2Id } },
     },
     {
       reason: 'invalid_subscription_status',
@@ -713,7 +718,7 @@ describe('syncCheckoutSuccess', () => {
   }) => {
     const logger = new FakeLogger();
     const authGateway = new FakeAuthGateway({
-      id: 'user_1',
+      id: fixtureUser1Id,
       email: 'user@example.com',
       createdAt: new Date('2026-02-01T00:00:00Z'),
       updatedAt: new Date('2026-02-01T00:00:00Z'),
@@ -746,7 +751,7 @@ describe('syncCheckoutSuccess', () => {
               customer: 'cus_123',
               status: 'active',
               cancel_at_period_end: false,
-              metadata: { user_id: 'user_1' },
+              metadata: { user_id: fixtureUser1Id },
               items: {
                 data: [
                   {
@@ -798,7 +803,7 @@ describe('syncCheckoutSuccess', () => {
     const stripeCustomers = new FakeStripeCustomerRepository();
     const subscriptions = new FakeSubscriptionRepository();
     const user = {
-      id: 'user_1',
+      id: fixtureUser1Id,
       email: 'user@example.com',
       createdAt: new Date('2026-02-01T00:00:00Z'),
       updatedAt: new Date('2026-02-01T00:00:00Z'),
@@ -828,7 +833,7 @@ describe('syncCheckoutSuccess', () => {
             customer: 'cus_123',
             status: 'incomplete',
             cancel_at_period_end: false,
-            metadata: { user_id: 'user_1' },
+            metadata: { user_id: fixtureUser1Id },
             items: {
               data: [
                 {
@@ -861,13 +866,13 @@ describe('syncCheckoutSuccess', () => {
       url: `${ROUTES.PRICING}?reason=payment_processing`,
     });
 
-    expect(await stripeCustomers.findByUserId('user_1')).toEqual({
+    expect(await stripeCustomers.findByUserId(fixtureUser1Id)).toEqual({
       stripeCustomerId: 'cus_123',
     });
     expect(
       await subscriptions.findByExternalSubscriptionId('sub_123'),
     ).toMatchObject({
-      userId: 'user_1',
+      userId: fixtureUser1Id,
       status: 'paymentProcessing',
       plan: 'monthly',
       cancelAtPeriodEnd: false,
@@ -878,7 +883,7 @@ describe('syncCheckoutSuccess', () => {
     const stripeCustomers = new FakeStripeCustomerRepository();
     const subscriptions = new FakeSubscriptionRepository();
     const user = {
-      id: 'user_1',
+      id: fixtureUser1Id,
       email: 'user@example.com',
       createdAt: new Date('2026-02-01T00:00:00Z'),
       updatedAt: new Date('2026-02-01T00:00:00Z'),
@@ -908,7 +913,7 @@ describe('syncCheckoutSuccess', () => {
             customer: 'cus_123',
             status: 'incomplete_expired',
             cancel_at_period_end: false,
-            metadata: { user_id: 'user_1' },
+            metadata: { user_id: fixtureUser1Id },
             items: {
               data: [
                 {
@@ -941,13 +946,13 @@ describe('syncCheckoutSuccess', () => {
       url: `${ROUTES.PRICING}?reason=subscription_required`,
     });
 
-    expect(await stripeCustomers.findByUserId('user_1')).toEqual({
+    expect(await stripeCustomers.findByUserId(fixtureUser1Id)).toEqual({
       stripeCustomerId: 'cus_123',
     });
     expect(
       await subscriptions.findByExternalSubscriptionId('sub_123'),
     ).toMatchObject({
-      userId: 'user_1',
+      userId: fixtureUser1Id,
       status: 'paymentFailed',
       plan: 'monthly',
       cancelAtPeriodEnd: false,
@@ -958,7 +963,7 @@ describe('syncCheckoutSuccess', () => {
     const stripeCustomers = new FakeStripeCustomerRepository();
     const subscriptions = new FakeSubscriptionRepository();
     const user = {
-      id: 'user_1',
+      id: fixtureUser1Id,
       email: 'user@example.com',
       createdAt: new Date('2026-02-01T00:00:00Z'),
       updatedAt: new Date('2026-02-01T00:00:00Z'),
@@ -988,7 +993,7 @@ describe('syncCheckoutSuccess', () => {
             customer: 'cus_123',
             status: 'canceled',
             cancel_at_period_end: false,
-            metadata: { user_id: 'user_1' },
+            metadata: { user_id: fixtureUser1Id },
             items: {
               data: [
                 {
@@ -1026,7 +1031,7 @@ describe('syncCheckoutSuccess', () => {
     const stripeCustomers = new FakeStripeCustomerRepository();
     const subscriptions = new FakeSubscriptionRepository();
     const user = {
-      id: 'user_1',
+      id: fixtureUser1Id,
       email: 'user@example.com',
       createdAt: new Date('2026-02-01T00:00:00Z'),
       updatedAt: new Date('2026-02-01T00:00:00Z'),
@@ -1056,7 +1061,7 @@ describe('syncCheckoutSuccess', () => {
             customer: 'cus_123',
             status: 'past_due',
             cancel_at_period_end: false,
-            metadata: { user_id: 'user_1' },
+            metadata: { user_id: fixtureUser1Id },
             items: {
               data: [
                 {
@@ -1089,13 +1094,13 @@ describe('syncCheckoutSuccess', () => {
       url: ROUTES.APP_DASHBOARD,
     });
 
-    expect(await stripeCustomers.findByUserId('user_1')).toEqual({
+    expect(await stripeCustomers.findByUserId(fixtureUser1Id)).toEqual({
       stripeCustomerId: 'cus_123',
     });
     expect(
       await subscriptions.findByExternalSubscriptionId('sub_123'),
     ).toMatchObject({
-      userId: 'user_1',
+      userId: fixtureUser1Id,
       status: 'pastDue',
       plan: 'monthly',
       cancelAtPeriodEnd: false,
@@ -1106,7 +1111,7 @@ describe('syncCheckoutSuccess', () => {
     const stripeCustomers = new FakeStripeCustomerRepository();
     const subscriptions = new FakeSubscriptionRepository();
     const user = {
-      id: 'user_1',
+      id: fixtureUser1Id,
       email: 'user@example.com',
       createdAt: new Date('2026-02-01T00:00:00Z'),
       updatedAt: new Date('2026-02-01T00:00:00Z'),
@@ -1139,7 +1144,7 @@ describe('syncCheckoutSuccess', () => {
             customer: 'cus_checkout',
             status: 'active',
             cancel_at_period_end: false,
-            metadata: { user_id: 'user_1' },
+            metadata: { user_id: fixtureUser1Id },
             items: {
               data: [
                 {

@@ -3,6 +3,11 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { createChoice, createQuestion } from '@/src/domain/test-helpers';
 
+const { fixtureAttempt1Id, fixtureQuestion1Id } = vi.hoisted(() => ({
+  fixtureAttempt1Id: crypto.randomUUID(),
+  fixtureQuestion1Id: crypto.randomUUID(),
+}));
+
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
@@ -434,12 +439,12 @@ describe('app/(app)/app/questions/[slug]', () => {
   it('renders the question card when question exists', () => {
     const choice = createChoice({
       id: 'c1',
-      questionId: 'q_1',
+      questionId: fixtureQuestion1Id,
       label: 'A',
       textMd: 'Choice A',
     });
     const question = createQuestion({
-      id: 'q_1',
+      id: fixtureQuestion1Id,
       slug: 'q-1',
       stemMd: 'Stem',
       difficulty: 'easy',
@@ -473,7 +478,7 @@ describe('app/(app)/app/questions/[slug]', () => {
         question={null}
         selectedChoiceId={null}
         submitResult={{
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: false,
           correctChoiceId: 'c1',
           explanationMd: 'Explanation',
@@ -499,12 +504,12 @@ describe('app/(app)/app/questions/[slug]', () => {
   it('disables submit while loading to prevent duplicate submissions', () => {
     const choice = createChoice({
       id: 'c1',
-      questionId: 'q_1',
+      questionId: fixtureQuestion1Id,
       label: 'A',
       textMd: 'Choice A',
     });
     const question = createQuestion({
-      id: 'q_1',
+      id: fixtureQuestion1Id,
       slug: 'q-1',
       stemMd: 'Stem',
       difficulty: 'easy',

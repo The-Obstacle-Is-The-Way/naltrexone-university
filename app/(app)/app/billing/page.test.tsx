@@ -8,6 +8,10 @@ import {
 } from '@/src/application/test-helpers/fakes';
 import { createSubscription, createUser } from '@/src/domain/test-helpers';
 
+const { fixtureUser1Id } = vi.hoisted(() => ({
+  fixtureUser1Id: crypto.randomUUID(),
+}));
+
 function createTrackedThenable<T>(value: T) {
   const thenSpy = vi.fn();
   const thenFn = <TResult1 = T, TResult2 = never>(
@@ -46,7 +50,7 @@ function createTrackedThenable<T>(value: T) {
 describe('app/(app)/app/billing/page', () => {
   describe('loadBillingData', () => {
     it('loads the subscription for the current user', async () => {
-      const user = createUser({ id: 'user_1' });
+      const user = createUser({ id: fixtureUser1Id });
 
       const authGateway = new FakeAuthGateway(user);
       const subscriptionRepository = new FakeSubscriptionRepository([
@@ -66,7 +70,7 @@ describe('app/(app)/app/billing/page', () => {
     it('renders the no-subscription view when subscription is null', async () => {
       const BillingPage = (await import('@/app/(app)/app/billing/page'))
         .default;
-      const user = createUser({ id: 'user_1' });
+      const user = createUser({ id: fixtureUser1Id });
 
       const authGateway = new FakeAuthGateway(user);
       const subscriptionRepository = new FakeSubscriptionRepository();
@@ -83,7 +87,7 @@ describe('app/(app)/app/billing/page', () => {
     it('renders an error banner when redirected back with portal_failed', async () => {
       const BillingPage = (await import('@/app/(app)/app/billing/page'))
         .default;
-      const user = createUser({ id: 'user_1' });
+      const user = createUser({ id: fixtureUser1Id });
 
       const authGateway = new FakeAuthGateway(user);
       const subscriptionRepository = new FakeSubscriptionRepository([
@@ -103,7 +107,7 @@ describe('app/(app)/app/billing/page', () => {
     it('starts searchParams before billing data resolves', async () => {
       const BillingPage = (await import('@/app/(app)/app/billing/page'))
         .default;
-      const user = createUser({ id: 'user_1' });
+      const user = createUser({ id: fixtureUser1Id });
       let releaseUser: (() => void) | undefined;
 
       const authGateway = new FakeAuthGateway(user);
@@ -146,7 +150,7 @@ describe('app/(app)/app/billing/page', () => {
     it('supports array-valued errors in async searchParams', async () => {
       const BillingPage = (await import('@/app/(app)/app/billing/page'))
         .default;
-      const user = createUser({ id: 'user_1' });
+      const user = createUser({ id: fixtureUser1Id });
 
       const authGateway = new FakeAuthGateway(user);
       const subscriptionRepository = new FakeSubscriptionRepository([

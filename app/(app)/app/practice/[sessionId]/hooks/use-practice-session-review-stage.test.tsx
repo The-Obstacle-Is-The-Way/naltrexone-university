@@ -14,6 +14,18 @@ import {
   usePracticeSessionReviewStage,
 } from './use-practice-session-review-stage';
 
+const {
+  fixtureQuestion1Id,
+  fixtureQuestion2Id,
+  fixtureQuestion3Id,
+  fixtureSession1Id,
+} = vi.hoisted(() => ({
+  fixtureQuestion1Id: crypto.randomUUID(),
+  fixtureQuestion2Id: crypto.randomUUID(),
+  fixtureQuestion3Id: crypto.randomUUID(),
+  fixtureSession1Id: crypto.randomUUID(),
+}));
+
 function createPostExamReviewRow(input: {
   questionId: string;
   order: number;
@@ -55,7 +67,7 @@ function createPostExamReview(
   ...rows: GetCompletedSessionQuestionsWithFeedbackOutput['rows']
 ): GetCompletedSessionQuestionsWithFeedbackOutput {
   return {
-    sessionId: 'session-1',
+    sessionId: fixtureSession1Id,
     mode: 'exam',
     totalCount: rows.length,
     answeredCount: rows.filter((row) => row.isAnswered).length,
@@ -72,7 +84,7 @@ describe('usePracticeSessionReviewStage', () => {
   it('returns the expected initial state contract', () => {
     const output = renderHook(() =>
       usePracticeSessionReviewStage({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         isMounted: () => true,
         sessionInfo: null,
         questionId: null,
@@ -139,68 +151,68 @@ describe('usePracticeSessionReviewStage', () => {
 
   it('prefers the specifically requested available question over the persisted cursor', () => {
     const review = createPostExamReview(
-      createPostExamReviewRow({ questionId: 'q1', order: 1 }),
-      createPostExamReviewRow({ questionId: 'q2', order: 2 }),
+      createPostExamReviewRow({ questionId: fixtureQuestion1Id, order: 1 }),
+      createPostExamReviewRow({ questionId: fixtureQuestion2Id, order: 2 }),
     );
 
     expect(
       resolvePostExamReviewCurrentQuestionId(review, {
-        requestedQuestionId: 'q2',
-        persistedQuestionId: 'q1',
+        requestedQuestionId: fixtureQuestion2Id,
+        persistedQuestionId: fixtureQuestion1Id,
       }),
-    ).toBe('q2');
+    ).toBe(fixtureQuestion2Id);
   });
 
   it('falls back to the persisted available question when the requested row is unavailable', () => {
     const review = createPostExamReview(
       createPostExamReviewRow({
-        questionId: 'q1',
+        questionId: fixtureQuestion1Id,
         order: 1,
         isAvailable: false,
       }),
-      createPostExamReviewRow({ questionId: 'q2', order: 2 }),
+      createPostExamReviewRow({ questionId: fixtureQuestion2Id, order: 2 }),
     );
 
     expect(
       resolvePostExamReviewCurrentQuestionId(review, {
-        requestedQuestionId: 'q1',
-        persistedQuestionId: 'q2',
+        requestedQuestionId: fixtureQuestion1Id,
+        persistedQuestionId: fixtureQuestion2Id,
       }),
-    ).toBe('q2');
+    ).toBe(fixtureQuestion2Id);
   });
 
   it('falls back to the first available row when the requested and persisted cursors are unavailable', () => {
     const review = createPostExamReview(
       createPostExamReviewRow({
-        questionId: 'q1',
+        questionId: fixtureQuestion1Id,
         order: 1,
         isAvailable: false,
       }),
       createPostExamReviewRow({
-        questionId: 'q2',
+        questionId: fixtureQuestion2Id,
         order: 2,
         isAvailable: false,
       }),
-      createPostExamReviewRow({ questionId: 'q3', order: 3 }),
+      createPostExamReviewRow({ questionId: fixtureQuestion3Id, order: 3 }),
     );
 
     expect(
       resolvePostExamReviewCurrentQuestionId(review, {
-        requestedQuestionId: 'q1',
-        persistedQuestionId: 'q2',
+        requestedQuestionId: fixtureQuestion1Id,
+        persistedQuestionId: fixtureQuestion2Id,
       }),
-    ).toBe('q3');
+    ).toBe(fixtureQuestion3Id);
   });
 
   it('falls back to the first row when no review rows are available', () => {
     const review = createPostExamReview(
       createPostExamReviewRow({
-        questionId: 'q1',
+        questionId: fixtureQuestion1Id,
         order: 1,
         isAvailable: false,
       }),
       createPostExamReviewRow({
-        questionId: 'q2',
+        questionId: fixtureQuestion2Id,
         order: 2,
         isAvailable: false,
       }),
@@ -211,6 +223,6 @@ describe('usePracticeSessionReviewStage', () => {
         requestedQuestionId: 'missing',
         persistedQuestionId: 'also-missing',
       }),
-    ).toBe('q1');
+    ).toBe(fixtureQuestion1Id);
   });
 });

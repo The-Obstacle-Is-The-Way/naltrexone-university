@@ -1,6 +1,18 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
+
+const {
+  fixtureChoiceAId,
+  fixtureChoiceBId,
+  fixtureChoiceCId,
+  fixtureChoiceMissingId,
+} = vi.hoisted(() => ({
+  fixtureChoiceAId: crypto.randomUUID(),
+  fixtureChoiceBId: crypto.randomUUID(),
+  fixtureChoiceCId: crypto.randomUUID(),
+  fixtureChoiceMissingId: crypto.randomUUID(),
+}));
 
 let Feedback: typeof import('@/components/question/feedback').Feedback;
 
@@ -9,7 +21,7 @@ beforeAll(async () => {
 });
 
 const incorrectChoiceA = {
-  choiceId: 'choice-a',
+  choiceId: fixtureChoiceAId,
   displayLabel: 'A',
   textMd: 'First option',
   isCorrect: false,
@@ -17,7 +29,7 @@ const incorrectChoiceA = {
 };
 
 const incorrectChoiceB = {
-  choiceId: 'choice-b',
+  choiceId: fixtureChoiceBId,
   displayLabel: 'B',
   textMd: 'Second option',
   isCorrect: false,
@@ -25,7 +37,7 @@ const incorrectChoiceB = {
 };
 
 const correctChoiceB = {
-  choiceId: 'choice-b',
+  choiceId: fixtureChoiceBId,
   displayLabel: 'B',
   textMd: 'Second option',
   isCorrect: true,
@@ -33,7 +45,7 @@ const correctChoiceB = {
 };
 
 const correctChoiceC = {
-  choiceId: 'choice-c',
+  choiceId: fixtureChoiceCId,
   displayLabel: 'C',
   textMd: 'Third option',
   isCorrect: true,
@@ -390,7 +402,7 @@ describe('Feedback', () => {
       <Feedback
         isCorrect={false}
         explanationMd="General explanation."
-        selectedChoiceId="choice-a"
+        selectedChoiceId={fixtureChoiceAId}
         choiceExplanations={choicesWithCorrectB}
       />,
     );
@@ -438,7 +450,7 @@ describe('Feedback', () => {
       <Feedback
         isCorrect={false}
         explanationMd="General explanation."
-        selectedChoiceId="choice-a"
+        selectedChoiceId={fixtureChoiceAId}
         choiceExplanations={choicesWithCorrectB}
       />,
     );
@@ -486,7 +498,7 @@ describe('Feedback', () => {
       <Feedback
         isCorrect={false}
         explanationMd={null}
-        selectedChoiceId="choice-a"
+        selectedChoiceId={fixtureChoiceAId}
         choiceExplanations={[incorrectChoiceA, incorrectChoiceB]}
       />,
     );
@@ -512,7 +524,7 @@ describe('Feedback', () => {
       <Feedback
         isCorrect={false}
         explanationMd="General explanation."
-        selectedChoiceId="choice-a"
+        selectedChoiceId={fixtureChoiceAId}
         choiceExplanations={choicesWithCorrectC}
       />,
     );
@@ -612,7 +624,7 @@ describe('Feedback', () => {
       <Feedback
         isCorrect={false}
         explanationMd="General explanation."
-        selectedChoiceId="choice-a"
+        selectedChoiceId={fixtureChoiceAId}
         choiceExplanations={choicesWithCorrectC}
       />,
     );
@@ -874,7 +886,7 @@ describe('Feedback', () => {
       <Feedback
         isCorrect={false}
         explanationMd="General explanation."
-        selectedChoiceId="choice-a"
+        selectedChoiceId={fixtureChoiceAId}
         choiceExplanations={choicesWithCorrectBConfirmed}
       />,
     );
@@ -915,7 +927,7 @@ describe('Feedback', () => {
       <Feedback
         isCorrect={false}
         explanationMd="General explanation."
-        selectedChoiceId="choice-a"
+        selectedChoiceId={fixtureChoiceAId}
         choiceExplanations={choicesWithCorrectC}
       />,
     );
@@ -939,7 +951,7 @@ describe('Feedback', () => {
       <Feedback
         isCorrect={false}
         explanationMd="General explanation."
-        selectedChoiceId="choice-a"
+        selectedChoiceId={fixtureChoiceAId}
         choiceExplanations={choicesWithCorrectC}
       />,
     );
@@ -962,7 +974,7 @@ describe('Feedback', () => {
       <Feedback
         isCorrect={true}
         explanationMd="General explanation."
-        selectedChoiceId="choice-c"
+        selectedChoiceId={fixtureChoiceCId}
         choiceExplanations={choicesWithCorrectC}
       />,
     );
@@ -1037,7 +1049,7 @@ describe('Feedback', () => {
       <Feedback
         isCorrect={true}
         explanationMd="General explanation."
-        selectedChoiceId="choice-b"
+        selectedChoiceId={fixtureChoiceBId}
         choiceExplanations={choicesWithCorrectBConfirmed}
       />,
     );
@@ -1060,7 +1072,7 @@ describe('Feedback', () => {
       <Feedback
         isCorrect={false}
         explanationMd="General explanation."
-        selectedChoiceId="choice-a"
+        selectedChoiceId={fixtureChoiceAId}
         choiceExplanations={[
           { ...incorrectChoiceA, explanationMd: null },
           incorrectChoiceB,
@@ -1154,7 +1166,7 @@ describe('Feedback', () => {
       <Feedback
         isCorrect={false}
         explanationMd="General explanation."
-        selectedChoiceId="choice-missing"
+        selectedChoiceId={fixtureChoiceMissingId}
         choiceExplanations={choicesWithCorrectBConfirmed}
       />,
     );
@@ -1176,7 +1188,7 @@ describe('Feedback', () => {
       <Feedback
         isCorrect={false}
         explanationMd="General explanation."
-        selectedChoiceId="choice-b"
+        selectedChoiceId={fixtureChoiceBId}
         choiceExplanations={choicesWithCorrectBConfirmed}
       />,
     );
@@ -1198,7 +1210,7 @@ describe('Feedback', () => {
       <Feedback
         isCorrect={false}
         explanationMd={null}
-        selectedChoiceId="choice-a"
+        selectedChoiceId={fixtureChoiceAId}
         choiceExplanations={choicesWithCorrectBConfirmed}
       />,
     );
@@ -1213,7 +1225,7 @@ describe('Feedback', () => {
       <Feedback
         isCorrect={false}
         explanationMd="General explanation."
-        selectedChoiceId="choice-a"
+        selectedChoiceId={fixtureChoiceAId}
         choiceExplanations={choicesWithCorrectC}
       />,
     );

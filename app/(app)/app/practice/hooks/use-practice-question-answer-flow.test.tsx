@@ -5,6 +5,11 @@ import { usePracticeQuestionAnswerFlow } from '@/app/(app)/app/practice/hooks/us
 import type { PracticeFilters } from '@/app/(app)/app/practice/practice-page-logic';
 import { renderHook } from '@/src/application/test-helpers/render-hook';
 
+const { fixtureAttempt1Id, fixtureChoice1Id } = vi.hoisted(() => ({
+  fixtureAttempt1Id: crypto.randomUUID(),
+  fixtureChoice1Id: crypto.randomUUID(),
+}));
+
 const TEST_FILTERS = {
   tagSlugs: [],
   difficulty: null,
@@ -28,9 +33,9 @@ describe('usePracticeQuestionAnswerFlow', () => {
         submitAnswerFn: vi.fn(async () => ({
           ok: true as const,
           data: {
-            attemptId: 'attempt-1',
+            attemptId: fixtureAttempt1Id,
             isCorrect: false,
-            correctChoiceId: 'choice-1',
+            correctChoiceId: fixtureChoice1Id,
             explanationMd: null,
             referenceMd: null,
             choiceExplanations: [],
@@ -56,9 +61,9 @@ describe('usePracticeQuestionAnswerFlow', () => {
     const submitAnswerFn = vi.fn(async () => ({
       ok: true as const,
       data: {
-        attemptId: 'attempt-1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: false,
-        correctChoiceId: 'choice-1',
+        correctChoiceId: fixtureChoice1Id,
         explanationMd: null,
         referenceMd: null,
         choiceExplanations: [],

@@ -1,5 +1,21 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const {
+  fixtureAttempt1Id,
+  fixtureChoice1Id,
+  fixtureQuestion1Id,
+  fixtureQuestion2Id,
+  fixtureQuestion9Id,
+  fixtureSession1Id,
+} = vi.hoisted(() => ({
+  fixtureAttempt1Id: crypto.randomUUID(),
+  fixtureChoice1Id: crypto.randomUUID(),
+  fixtureQuestion1Id: crypto.randomUUID(),
+  fixtureQuestion2Id: crypto.randomUUID(),
+  fixtureQuestion9Id: crypto.randomUUID(),
+  fixtureSession1Id: crypto.randomUUID(),
+}));
+
 const { reportClientErrorMock } = vi.hoisted(() => ({
   reportClientErrorMock: vi.fn(),
 }));
@@ -26,6 +42,23 @@ import { createNextQuestion } from '@/src/application/test-helpers/create-next-q
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
+
+function createFixtureNextQuestion(
+  overrides: Parameters<typeof createNextQuestion>[0] = {},
+) {
+  return createNextQuestion({
+    questionId: fixtureQuestion1Id,
+    choices: [
+      {
+        id: fixtureChoice1Id,
+        label: 'A',
+        textMd: 'Choice A',
+        sortOrder: 1,
+      },
+    ],
+    ...overrides,
+  });
+}
 
 describe('practice-session-page-logic', () => {
   afterEach(() => {
@@ -60,7 +93,7 @@ describe('practice-session-page-logic', () => {
         requestId === latestRequestId;
 
       const loadFirst = loadNextQuestion({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         getNextQuestionFn,
         createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
@@ -76,7 +109,7 @@ describe('practice-session-page-logic', () => {
       });
 
       const loadSecond = loadNextQuestion({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         getNextQuestionFn,
         createIdempotencyKey: () => 'idem_2',
         nowMs: () => 5678,
@@ -93,11 +126,11 @@ describe('practice-session-page-logic', () => {
 
       second.resolve(
         ok(
-          createNextQuestion({
-            questionId: 'q_2',
+          createFixtureNextQuestion({
+            questionId: fixtureQuestion2Id,
             slug: 'q-2',
             session: {
-              sessionId: 'session-1',
+              sessionId: fixtureSession1Id,
               mode: 'tutor',
 
               deadlineAt: null,
@@ -112,9 +145,9 @@ describe('practice-session-page-logic', () => {
 
       first.resolve(
         ok(
-          createNextQuestion({
+          createFixtureNextQuestion({
             session: {
-              sessionId: 'session-1',
+              sessionId: fixtureSession1Id,
               mode: 'tutor',
 
               deadlineAt: null,
@@ -129,7 +162,7 @@ describe('practice-session-page-logic', () => {
 
       expect(setQuestion).toHaveBeenCalledTimes(1);
       expect(setQuestion).toHaveBeenCalledWith(
-        expect.objectContaining({ questionId: 'q_2' }),
+        expect.objectContaining({ questionId: fixtureQuestion2Id }),
       );
       expect(setSessionInfo.mock.calls.at(-1)?.[0]).toEqual(
         expect.objectContaining({ index: 1 }),
@@ -147,12 +180,12 @@ describe('practice-session-page-logic', () => {
       const setSessionInfo = vi.fn();
 
       await loadNextQuestion({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         getNextQuestionFn: async () =>
           ok(
-            createNextQuestion({
+            createFixtureNextQuestion({
               session: {
-                sessionId: 'session-1',
+                sessionId: fixtureSession1Id,
                 mode: 'tutor',
 
                 deadlineAt: null,
@@ -174,7 +207,7 @@ describe('practice-session-page-logic', () => {
       });
 
       expect(setQuestion).toHaveBeenCalledWith(
-        expect.objectContaining({ questionId: 'q_1' }),
+        expect.objectContaining({ questionId: fixtureQuestion1Id }),
       );
       expect(setQuestionLoadedAt).toHaveBeenCalledWith(1234);
       expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith('idem_1');
@@ -185,11 +218,13 @@ describe('practice-session-page-logic', () => {
     });
 
     it('forwards questionId when loading a specific session question', async () => {
-      const getNextQuestionFn = vi.fn(async () => ok(createNextQuestion()));
+      const getNextQuestionFn = vi.fn(async () =>
+        ok(createFixtureNextQuestion()),
+      );
 
       await loadNextQuestion({
-        sessionId: 'session-1',
-        questionId: 'question-9',
+        sessionId: fixtureSession1Id,
+        questionId: fixtureQuestion9Id,
         getNextQuestionFn,
         createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
@@ -203,16 +238,18 @@ describe('practice-session-page-logic', () => {
       });
 
       expect(getNextQuestionFn).toHaveBeenCalledWith({
-        sessionId: 'session-1',
-        questionId: 'question-9',
+        sessionId: fixtureSession1Id,
+        questionId: fixtureQuestion9Id,
       });
     });
 
     it('forwards fromIndex when advancing sequentially', async () => {
-      const getNextQuestionFn = vi.fn(async () => ok(createNextQuestion()));
+      const getNextQuestionFn = vi.fn(async () =>
+        ok(createFixtureNextQuestion()),
+      );
 
       await loadNextQuestion({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         fromIndex: 4,
         getNextQuestionFn,
         createIdempotencyKey: () => 'idem_1',
@@ -227,7 +264,7 @@ describe('practice-session-page-logic', () => {
       });
 
       expect(getNextQuestionFn).toHaveBeenCalledWith({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         fromIndex: 4,
       });
     });
@@ -239,7 +276,7 @@ describe('practice-session-page-logic', () => {
       const setSessionInfo = vi.fn();
 
       await loadNextQuestion({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         getNextQuestionFn: async () => ok(null),
         createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
@@ -264,7 +301,7 @@ describe('practice-session-page-logic', () => {
       const setSubmitIdempotencyKey = vi.fn();
 
       await loadNextQuestion({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         getNextQuestionFn: async () => err('INTERNAL_ERROR', 'Boom'),
         createIdempotencyKey: () => 'idem_1',
         nowMs: () => 0,
@@ -292,7 +329,7 @@ describe('practice-session-page-logic', () => {
       const setQuestion = vi.fn();
 
       await loadNextQuestion({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         getNextQuestionFn: async () => {
           throw new Error('Boom');
         },
@@ -327,7 +364,7 @@ describe('practice-session-page-logic', () => {
       const setSessionInfo = vi.fn();
 
       const promise = loadNextQuestion({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         getNextQuestionFn: async () => deferred.promise,
         createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
@@ -342,7 +379,7 @@ describe('practice-session-page-logic', () => {
       });
 
       mounted = false;
-      deferred.resolve(ok(createNextQuestion()));
+      deferred.resolve(ok(createFixtureNextQuestion()));
       await promise;
 
       expect(setQuestion).not.toHaveBeenCalled();
@@ -359,9 +396,9 @@ describe('practice-session-page-logic', () => {
       const setLoadState = vi.fn();
 
       const action = createLoadNextQuestionAction({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         startTransition,
-        getNextQuestionFn: async () => ok(createNextQuestion()),
+        getNextQuestionFn: async () => ok(createFixtureNextQuestion()),
         createIdempotencyKey: () => 'idem_1',
         nowMs: () => 0,
         setLoadState,
@@ -384,9 +421,9 @@ describe('practice-session-page-logic', () => {
     it('submits the answer with the sessionId and sets result on success', async () => {
       const submitAnswerFn = vi.fn(async () =>
         ok({
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: 'Because...',
           referenceMd: null,
           choiceExplanations: [],
@@ -396,9 +433,9 @@ describe('practice-session-page-logic', () => {
       const setSubmitResult = vi.fn();
 
       await submitAnswerForQuestion({
-        sessionId: 'session-1',
-        question: createNextQuestion(),
-        selectedChoiceId: 'choice_1',
+        sessionId: fixtureSession1Id,
+        question: createFixtureNextQuestion(),
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 1000,
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn,
@@ -408,15 +445,15 @@ describe('practice-session-page-logic', () => {
       });
 
       expect(submitAnswerFn).toHaveBeenCalledWith({
-        questionId: 'q_1',
-        choiceId: 'choice_1',
-        sessionId: 'session-1',
+        questionId: fixtureQuestion1Id,
+        choiceId: fixtureChoice1Id,
+        sessionId: fixtureSession1Id,
         idempotencyKey: 'idem_1',
         timeSpentSeconds: 4,
       });
       expect(setSubmitResult).toHaveBeenCalledWith(
         expect.objectContaining({ isCorrect: true }),
-        'q_1',
+        fixtureQuestion1Id,
       );
       expect(setLoadState).toHaveBeenCalledWith({ status: 'ready' });
     });
@@ -424,9 +461,9 @@ describe('practice-session-page-logic', () => {
     it('does nothing when question is null', async () => {
       const submitAnswerFn = vi.fn(async () =>
         ok({
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: 'Because...',
           referenceMd: null,
           choiceExplanations: [],
@@ -437,9 +474,9 @@ describe('practice-session-page-logic', () => {
       const setSubmitResult = vi.fn();
 
       await submitAnswerForQuestion({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         question: null,
-        selectedChoiceId: 'choice_1',
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn,
@@ -456,9 +493,9 @@ describe('practice-session-page-logic', () => {
     it('does nothing when selectedChoiceId is null', async () => {
       const submitAnswerFn = vi.fn(async () =>
         ok({
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: 'Because...',
           referenceMd: null,
           choiceExplanations: [],
@@ -469,8 +506,8 @@ describe('practice-session-page-logic', () => {
       const setSubmitResult = vi.fn();
 
       await submitAnswerForQuestion({
-        sessionId: 'session-1',
-        question: createNextQuestion(),
+        sessionId: fixtureSession1Id,
+        question: createFixtureNextQuestion(),
         selectedChoiceId: null,
         questionLoadedAtMs: 0,
         submitIdempotencyKey: 'idem_1',
@@ -489,9 +526,9 @@ describe('practice-session-page-logic', () => {
       const setLoadState = vi.fn();
 
       await submitAnswerForQuestion({
-        sessionId: 'session-1',
-        question: createNextQuestion(),
-        selectedChoiceId: 'choice_1',
+        sessionId: fixtureSession1Id,
+        question: createFixtureNextQuestion(),
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn: async () => err('INTERNAL_ERROR', 'Boom'),
@@ -510,9 +547,9 @@ describe('practice-session-page-logic', () => {
       const setLoadState = vi.fn();
 
       await submitAnswerForQuestion({
-        sessionId: 'session-1',
-        question: createNextQuestion(),
-        selectedChoiceId: 'choice_1',
+        sessionId: fixtureSession1Id,
+        question: createFixtureNextQuestion(),
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn: async () => {
@@ -537,9 +574,9 @@ describe('practice-session-page-logic', () => {
       const setSubmitResult = vi.fn();
 
       const promise = submitAnswerForQuestion({
-        sessionId: 'session-1',
-        question: createNextQuestion(),
-        selectedChoiceId: 'choice_1',
+        sessionId: fixtureSession1Id,
+        question: createFixtureNextQuestion(),
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn: async () => deferred.promise,
@@ -552,9 +589,9 @@ describe('practice-session-page-logic', () => {
       mounted = false;
       deferred.resolve(
         ok({
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: 'Because...',
           referenceMd: null,
           choiceExplanations: [],
@@ -573,9 +610,9 @@ describe('practice-session-page-logic', () => {
       const onSuccess = vi.fn();
 
       const promise = submitAnswerForQuestion({
-        sessionId: 'session-1',
-        question: createNextQuestion(),
-        selectedChoiceId: 'choice_1',
+        sessionId: fixtureSession1Id,
+        question: createFixtureNextQuestion(),
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn: async () => deferred.promise,
@@ -589,9 +626,9 @@ describe('practice-session-page-logic', () => {
 
       deferred.resolve(
         ok({
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: 'Because...',
           referenceMd: null,
           choiceExplanations: [],
@@ -607,7 +644,7 @@ describe('practice-session-page-logic', () => {
 
   describe('endSession', () => {
     const successfulEndSessionOutput: EndPracticeSessionOutput = {
-      sessionId: 'session-1',
+      sessionId: fixtureSession1Id,
       endedAt: '2026-02-01T00:00:00.000Z',
       mode: 'tutor',
       questionCount: 10,
@@ -631,7 +668,7 @@ describe('practice-session-page-logic', () => {
       );
 
       await endSession({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endSessionIdempotencyKey: 'idem_1',
         finalizeSessionFn,
         getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
@@ -641,11 +678,11 @@ describe('practice-session-page-logic', () => {
       });
 
       expect(finalizeSessionFn).toHaveBeenCalledWith({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         idempotencyKey: 'idem_1',
       });
       expect(setSummary).toHaveBeenCalledWith(
-        expect.objectContaining({ sessionId: 'session-1' }),
+        expect.objectContaining({ sessionId: fixtureSession1Id }),
       );
       expect(resetQuestionState).toHaveBeenCalledTimes(1);
     });
@@ -654,7 +691,7 @@ describe('practice-session-page-logic', () => {
       const setLoadState = vi.fn();
 
       await endSession({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endSessionIdempotencyKey: 'idem_1',
         finalizeSessionFn: async () => err('INTERNAL_ERROR', 'Boom'),
         getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
@@ -673,7 +710,7 @@ describe('practice-session-page-logic', () => {
       const rotateIdempotencyKey = vi.fn();
 
       await endSession({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endSessionIdempotencyKey: 'idem_1',
         finalizeSessionFn: async () => err('INTERNAL_ERROR', 'Boom'),
         getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
@@ -695,7 +732,7 @@ describe('practice-session-page-logic', () => {
       );
 
       await endSession({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endSessionIdempotencyKey: 'idem_1',
         finalizeSessionFn: async () =>
           err('CONFLICT', 'Practice session already ended'),
@@ -706,7 +743,7 @@ describe('practice-session-page-logic', () => {
       });
 
       expect(getPracticeSessionSummaryFn).toHaveBeenCalledWith({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
       });
       expect(setSummary).toHaveBeenCalledWith(successfulEndSessionOutput);
       expect(resetQuestionState).toHaveBeenCalledTimes(1);
@@ -718,7 +755,7 @@ describe('practice-session-page-logic', () => {
       const rotateIdempotencyKey = vi.fn();
 
       await endSession({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endSessionIdempotencyKey: 'idem_1',
         finalizeSessionFn: async () =>
           err('CONFLICT', 'Practice session already ended'),
@@ -743,7 +780,7 @@ describe('practice-session-page-logic', () => {
       const error = new Error('Summary fetch failed');
 
       await endSession({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endSessionIdempotencyKey: 'idem_1',
         finalizeSessionFn: async () =>
           err('CONFLICT', 'Practice session already ended'),
@@ -772,7 +809,7 @@ describe('practice-session-page-logic', () => {
       const error = new Error('Boom');
 
       await endSession({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endSessionIdempotencyKey: 'idem_1',
         finalizeSessionFn: async () => {
           throw error;
@@ -797,7 +834,7 @@ describe('practice-session-page-logic', () => {
       const rotateIdempotencyKey = vi.fn();
 
       await endSession({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endSessionIdempotencyKey: 'idem_1',
         finalizeSessionFn: async () => {
           throw new Error('Boom');
@@ -816,7 +853,7 @@ describe('practice-session-page-logic', () => {
       const rotateIdempotencyKey = vi.fn();
 
       await endSession({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endSessionIdempotencyKey: 'idem_1',
         finalizeSessionFn: async () => ok(successfulEndSessionOutput),
         getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
@@ -837,7 +874,7 @@ describe('practice-session-page-logic', () => {
       const setSummary = vi.fn();
 
       const promise = endSession({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endSessionIdempotencyKey: 'idem_1',
         finalizeSessionFn: async () => deferred.promise,
         getPracticeSessionSummaryFn: createUnusedGetPracticeSessionSummaryFn(),
@@ -850,7 +887,7 @@ describe('practice-session-page-logic', () => {
       mounted = false;
       deferred.resolve(
         ok({
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           endedAt: '2026-02-01T00:00:00.000Z',
           mode: 'tutor',
           questionCount: 1,
@@ -879,7 +916,7 @@ describe('practice-session-page-logic effects', () => {
 
       createNavigatorEffect({
         summary: {
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           endedAt: '2026-02-01T00:00:00.000Z',
           mode: 'tutor',
           questionCount: 1,
@@ -887,7 +924,7 @@ describe('practice-session-page-logic effects', () => {
         },
         isInReviewStage: false,
         sessionInfo: null,
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         getPracticeSessionReviewFn,
         setNavigator,
         setNavigatorLoadState,
@@ -907,7 +944,7 @@ describe('practice-session-page-logic effects', () => {
         summary: null,
         isInReviewStage: true,
         sessionInfo: {
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'tutor',
 
           deadlineAt: null,
@@ -915,7 +952,7 @@ describe('practice-session-page-logic effects', () => {
           index: 0,
           total: 2,
         },
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         getPracticeSessionReviewFn,
         setNavigator,
         setNavigatorLoadState,
@@ -940,7 +977,7 @@ describe('practice-session-page-logic effects', () => {
         summary: null,
         isInReviewStage: false,
         sessionInfo: {
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'tutor',
 
           deadlineAt: null,
@@ -948,7 +985,7 @@ describe('practice-session-page-logic effects', () => {
           index: 0,
           total: 2,
         },
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         getPracticeSessionReviewFn,
         setNavigator,
         setNavigatorLoadState,
@@ -977,7 +1014,7 @@ describe('practice-session-page-logic effects', () => {
         summary: null,
         isInReviewStage: false,
         sessionInfo: {
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'tutor',
 
           deadlineAt: null,
@@ -985,7 +1022,7 @@ describe('practice-session-page-logic effects', () => {
           index: 0,
           total: 2,
         },
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         getPracticeSessionReviewFn,
         setNavigator,
         setNavigatorLoadState,
@@ -1012,7 +1049,7 @@ describe('practice-session-page-logic effects', () => {
         summary: null,
         isInReviewStage: false,
         sessionInfo: {
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'tutor',
 
           deadlineAt: null,
@@ -1020,7 +1057,7 @@ describe('practice-session-page-logic effects', () => {
           index: 0,
           total: 2,
         },
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         getPracticeSessionReviewFn,
         setNavigator,
         setNavigatorLoadState,
@@ -1048,7 +1085,7 @@ describe('practice-session-page-logic effects', () => {
 
       createSummaryReviewEffect({
         summary: null,
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         getPracticeSessionReviewFn,
         setSummaryReview,
         setSummaryReviewLoadState,
@@ -1073,13 +1110,13 @@ describe('practice-session-page-logic effects', () => {
 
       createSummaryReviewEffect({
         summary: {
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           endedAt: '2026-02-01T00:00:00.000Z',
           mode: 'tutor',
           questionCount: 1,
           totals: { answered: 1, correct: 1, accuracy: 1, durationSeconds: 1 },
         },
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         getPracticeSessionReviewFn,
         setSummaryReview,
         setSummaryReviewLoadState,
@@ -1109,13 +1146,13 @@ describe('practice-session-page-logic effects', () => {
 
       createSummaryReviewEffect({
         summary: {
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           endedAt: '2026-02-01T00:00:00.000Z',
           mode: 'tutor',
           questionCount: 1,
           totals: { answered: 1, correct: 1, accuracy: 1, durationSeconds: 1 },
         },
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         getPracticeSessionReviewFn,
         setSummaryReview,
         setSummaryReviewLoadState,
@@ -1142,13 +1179,13 @@ describe('practice-session-page-logic effects', () => {
 
       createSummaryReviewEffect({
         summary: {
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           endedAt: '2026-02-01T00:00:00.000Z',
           mode: 'tutor',
           questionCount: 1,
           totals: { answered: 1, correct: 1, accuracy: 1, durationSeconds: 1 },
         },
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         getPracticeSessionReviewFn,
         setSummaryReview,
         setSummaryReviewLoadState,

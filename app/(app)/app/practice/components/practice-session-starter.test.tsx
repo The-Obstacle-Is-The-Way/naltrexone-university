@@ -1,7 +1,23 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { compactControlShellClasses } from '@/components/ui/control-shell-styles';
+
+const {
+  fixtureTag1Id,
+  fixtureTag2Id,
+  fixtureTagDiagnosisId,
+  fixtureTagSubstanceId,
+  fixtureTagTopicId,
+  fixtureTagTreatmentId,
+} = vi.hoisted(() => ({
+  fixtureTag1Id: crypto.randomUUID(),
+  fixtureTag2Id: crypto.randomUUID(),
+  fixtureTagDiagnosisId: crypto.randomUUID(),
+  fixtureTagSubstanceId: crypto.randomUUID(),
+  fixtureTagTopicId: crypto.randomUUID(),
+  fixtureTagTreatmentId: crypto.randomUUID(),
+}));
 
 let PracticeSessionStarter: typeof import('./practice-session-starter')['PracticeSessionStarter'];
 
@@ -334,7 +350,7 @@ describe('PracticeSessionStarter', () => {
         tagLoadStatus="idle"
         availableTags={[
           {
-            id: 'tag-1',
+            id: fixtureTag1Id,
             slug: 'opioids',
             name: 'Opioids',
             kind: 'topic',
@@ -379,13 +395,13 @@ describe('PracticeSessionStarter', () => {
         tagLoadStatus="idle"
         availableTags={[
           {
-            id: 'tag-1',
+            id: fixtureTag1Id,
             slug: 'opioids',
             name: 'Opioids',
             kind: 'substance',
           },
           {
-            id: 'tag-2',
+            id: fixtureTag2Id,
             slug: 'treatment',
             name: 'Treatment',
             kind: 'topic',
@@ -624,25 +640,25 @@ describe('PracticeSessionStarter', () => {
         tagLoadStatus="idle"
         availableTags={[
           {
-            id: 'tag-topic',
+            id: fixtureTagTopicId,
             slug: 'screening-diagnosis',
             name: 'Screening & Diagnosis',
             kind: 'topic',
           },
           {
-            id: 'tag-substance',
+            id: fixtureTagSubstanceId,
             slug: 'opioids',
             name: 'Opioids',
             kind: 'substance',
           },
           {
-            id: 'tag-treatment',
+            id: fixtureTagTreatmentId,
             slug: 'naltrexone',
             name: 'Naltrexone',
             kind: 'treatment',
           },
           {
-            id: 'tag-diagnosis',
+            id: fixtureTagDiagnosisId,
             slug: 'opioid-use-disorder',
             name: 'Opioid Use Disorder',
             kind: 'diagnosis',

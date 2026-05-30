@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const { fixtureAppUser123Id, fixtureQuestion123Id } = vi.hoisted(() => ({
+  fixtureAppUser123Id: crypto.randomUUID(),
+  fixtureQuestion123Id: crypto.randomUUID(),
+}));
+
 type ResetBookmarksForE2EUser =
   typeof import('./reset-bookmarks-for-e2e-user').resetBookmarksForE2EUser;
 
@@ -64,10 +69,10 @@ describe('resetBookmarksForE2EUser default services', () => {
       results: [[{ count: '1' }], []],
     });
     const appUserClient = createSqlClient({
-      results: [[{ id: 'app_user_123' }]],
+      results: [[{ id: fixtureAppUser123Id }]],
     });
     const fixtureClient = createSqlClient({
-      results: [[{ id: 'question_123' }]],
+      results: [[{ id: fixtureQuestion123Id }]],
     });
     const resetClient = createSqlClient({});
     const verifyClient = createSqlClient({
@@ -107,8 +112,8 @@ describe('resetBookmarksForE2EUser default services', () => {
     expect(unsafeCalls[0]?.[0]).toContain('DELETE FROM bookmarks');
     expect(unsafeCalls[1]?.[0]).toContain('INSERT INTO bookmarks');
     expect(unsafeCalls[1]?.[1]).toEqual([
-      'app_user_123',
-      'question_123',
+      fixtureAppUser123Id,
+      fixtureQuestion123Id,
       '2026-01-01T00:05:00.000Z',
     ]);
     expect(verifyClient.end).toHaveBeenCalledWith({ timeout: 5 });
@@ -133,7 +138,7 @@ describe('resetBookmarksForE2EUser default services', () => {
       results: [[{ count: '1' }], []],
     });
     const appUserClient = createSqlClient({
-      results: [[{ id: 'app_user_123' }]],
+      results: [[{ id: fixtureAppUser123Id }]],
     });
     const fixtureClient = createSqlClient({
       results: [[]],
@@ -171,10 +176,10 @@ describe('resetBookmarksForE2EUser default services', () => {
       results: [[{ count: '1' }], []],
     });
     const appUserClient = createSqlClient({
-      results: [[{ id: 'app_user_123' }]],
+      results: [[{ id: fixtureAppUser123Id }]],
     });
     const fixtureClient = createSqlClient({
-      results: [[{ id: 'question_123' }]],
+      results: [[{ id: fixtureQuestion123Id }]],
     });
     const resetClient = createSqlClient({
       beginImplementation: async () => {
@@ -213,10 +218,10 @@ describe('resetBookmarksForE2EUser default services', () => {
       results: [[{ count: '1' }], []],
     });
     const appUserClient = createSqlClient({
-      results: [[{ id: 'app_user_123' }]],
+      results: [[{ id: fixtureAppUser123Id }]],
     });
     const fixtureClient = createSqlClient({
-      results: [[{ id: 'question_123' }]],
+      results: [[{ id: fixtureQuestion123Id }]],
     });
     const resetClient = createSqlClient({});
     const verifyClient = createSqlClient({

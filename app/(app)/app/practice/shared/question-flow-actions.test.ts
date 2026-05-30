@@ -13,6 +13,28 @@ import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answ
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 
+const {
+  fixtureAttempt1Id,
+  fixtureAttempt2Id,
+  fixtureChoice1Id,
+  fixtureChoice2Id,
+  fixtureQuestion1Id,
+  fixtureQuestion2Id,
+  fixtureQuestionNewId,
+  fixtureQuestionOldId,
+  fixtureSession1Id,
+} = vi.hoisted(() => ({
+  fixtureAttempt1Id: crypto.randomUUID(),
+  fixtureAttempt2Id: crypto.randomUUID(),
+  fixtureChoice1Id: crypto.randomUUID(),
+  fixtureChoice2Id: crypto.randomUUID(),
+  fixtureQuestion1Id: crypto.randomUUID(),
+  fixtureQuestion2Id: crypto.randomUUID(),
+  fixtureQuestionNewId: crypto.randomUUID(),
+  fixtureQuestionOldId: crypto.randomUUID(),
+  fixtureSession1Id: crypto.randomUUID(),
+}));
+
 describe('question-flow-actions', () => {
   it('returns zero when questionLoadedAtMs is null', () => {
     expect(buildTimeSpentSeconds(null, 1_000)).toBe(0);
@@ -51,18 +73,18 @@ describe('question-flow-actions', () => {
 
   it('clears selection and submit state when question load returns non-ok after an async state mutation', async () => {
     let loadState: AsyncLoadStateWithIdle = { status: 'idle' };
-    let selectedChoiceId: string | null = 'choice_1';
+    let selectedChoiceId: string | null = fixtureChoice1Id;
     let submitResult: SubmitAnswerOutput | null = {
-      attemptId: 'attempt_1',
+      attemptId: fixtureAttempt1Id,
       isCorrect: false,
-      correctChoiceId: 'choice_1',
+      correctChoiceId: fixtureChoice1Id,
       explanationMd: null,
       referenceMd: null,
       choiceExplanations: [],
     };
     let submitIdempotencyKey: string | null = 'idemp_1';
     let questionLoadedAt: number | null = 1234;
-    let question: unknown = { questionId: 'q_1' };
+    let question: unknown = { questionId: fixtureQuestion1Id };
 
     const setLoadState = (next: AsyncLoadStateWithIdle) => {
       loadState = next;
@@ -88,18 +110,18 @@ describe('question-flow-actions', () => {
       getQuestionFn: async () => {
         // Simulate an async update happening after the initial reset but before the
         // request resolves (e.g., user input or another effect).
-        setSelectedChoiceId('choice_2');
+        setSelectedChoiceId(fixtureChoice2Id);
         setSubmitResult({
-          attemptId: 'attempt_2',
+          attemptId: fixtureAttempt2Id,
           isCorrect: true,
-          correctChoiceId: 'choice_2',
+          correctChoiceId: fixtureChoice2Id,
           explanationMd: null,
           referenceMd: null,
           choiceExplanations: [],
         });
         setSubmitIdempotencyKey('idemp_2');
         setQuestionLoadedAt(5678);
-        setQuestion({ questionId: 'q_2' });
+        setQuestion({ questionId: fixtureQuestion2Id });
 
         return {
           ok: false,
@@ -126,11 +148,11 @@ describe('question-flow-actions', () => {
 
   it('loads question data and commits ready state on success', async () => {
     let loadState: AsyncLoadStateWithIdle = { status: 'idle' };
-    let selectedChoiceId: string | null = 'choice_1';
+    let selectedChoiceId: string | null = fixtureChoice1Id;
     let submitResult: SubmitAnswerOutput | null = {
-      attemptId: 'attempt_1',
+      attemptId: fixtureAttempt1Id,
       isCorrect: false,
-      correctChoiceId: 'choice_1',
+      correctChoiceId: fixtureChoice1Id,
       explanationMd: null,
       referenceMd: null,
       choiceExplanations: [],
@@ -145,7 +167,7 @@ describe('question-flow-actions', () => {
       requestInput: {},
       getQuestionFn: async () => ({
         ok: true,
-        data: { questionId: 'q_1' },
+        data: { questionId: fixtureQuestion1Id },
       }),
       createIdempotencyKey: () => 'idemp_new',
       nowMs: () => 9999,
@@ -171,30 +193,30 @@ describe('question-flow-actions', () => {
     });
 
     expect(loadState).toEqual({ status: 'ready' });
-    expect(question).toEqual({ questionId: 'q_1' });
+    expect(question).toEqual({ questionId: fixtureQuestion1Id });
     expect(questionLoadedAt).toBe(9999);
     expect(submitIdempotencyKey).toBe('idemp_new');
     expect(selectedChoiceId).toBeNull();
     expect(submitResult).toBeNull();
-    expect(onLoaded).toHaveBeenCalledWith({ questionId: 'q_1' });
+    expect(onLoaded).toHaveBeenCalledWith({ questionId: fixtureQuestion1Id });
   });
 
   it('uses the standard read timeout tier when loading questions', async () => {
     vi.useFakeTimers();
     try {
       let loadState: AsyncLoadStateWithIdle = { status: 'idle' };
-      let selectedChoiceId: string | null = 'choice_1';
+      let selectedChoiceId: string | null = fixtureChoice1Id;
       let submitResult: SubmitAnswerOutput | null = {
-        attemptId: 'attempt_1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: false,
-        correctChoiceId: 'choice_1',
+        correctChoiceId: fixtureChoice1Id,
         explanationMd: null,
         referenceMd: null,
         choiceExplanations: [],
       };
       let submitIdempotencyKey: string | null = 'idemp_1';
       let questionLoadedAt: number | null = 1234;
-      let question: unknown = { questionId: 'q_old' };
+      let question: unknown = { questionId: fixtureQuestionOldId };
 
       const promise = runLoadQuestionFlow({
         requestInput: {},
@@ -240,18 +262,18 @@ describe('question-flow-actions', () => {
 
   it('commits error state when question loading throws', async () => {
     let loadState: AsyncLoadStateWithIdle = { status: 'idle' };
-    let selectedChoiceId: string | null = 'choice_1';
+    let selectedChoiceId: string | null = fixtureChoice1Id;
     let submitResult: SubmitAnswerOutput | null = {
-      attemptId: 'attempt_1',
+      attemptId: fixtureAttempt1Id,
       isCorrect: false,
-      correctChoiceId: 'choice_1',
+      correctChoiceId: fixtureChoice1Id,
       explanationMd: null,
       referenceMd: null,
       choiceExplanations: [],
     };
     let submitIdempotencyKey: string | null = 'idemp_1';
     let questionLoadedAt: number | null = 1234;
-    let question: unknown = { questionId: 'q_old' };
+    let question: unknown = { questionId: fixtureQuestionOldId };
 
     const onLoaded = vi.fn();
 
@@ -298,7 +320,7 @@ describe('question-flow-actions', () => {
         requestInput: {},
         getQuestionFn: async () => ({
           ok: true,
-          data: { questionId: 'q_1' },
+          data: { questionId: fixtureQuestion1Id },
         }),
         createIdempotencyKey: () => 'idemp_new',
         nowMs: () => 9999,
@@ -315,18 +337,18 @@ describe('question-flow-actions', () => {
 
   it('does not commit stale request results', async () => {
     let loadState: AsyncLoadStateWithIdle = { status: 'idle' };
-    let selectedChoiceId: string | null = 'choice_1';
+    let selectedChoiceId: string | null = fixtureChoice1Id;
     let submitResult: SubmitAnswerOutput | null = {
-      attemptId: 'attempt_1',
+      attemptId: fixtureAttempt1Id,
       isCorrect: false,
-      correctChoiceId: 'choice_1',
+      correctChoiceId: fixtureChoice1Id,
       explanationMd: null,
       referenceMd: null,
       choiceExplanations: [],
     };
     let submitIdempotencyKey: string | null = 'idemp_1';
     let questionLoadedAt: number | null = 1234;
-    let question: unknown = { questionId: 'q_old' };
+    let question: unknown = { questionId: fixtureQuestionOldId };
 
     const onLoaded = vi.fn();
 
@@ -334,7 +356,7 @@ describe('question-flow-actions', () => {
       requestInput: {},
       getQuestionFn: async () => ({
         ok: true,
-        data: { questionId: 'q_new' },
+        data: { questionId: fixtureQuestionNewId },
       }),
       createIdempotencyKey: () => 'idemp_new',
       nowMs: () => 9999,
@@ -362,7 +384,7 @@ describe('question-flow-actions', () => {
     });
 
     expect(loadState).toEqual({ status: 'loading' });
-    expect(question).toEqual({ questionId: 'q_old' });
+    expect(question).toEqual({ questionId: fixtureQuestionOldId });
     expect(selectedChoiceId).toBeNull();
     expect(submitResult).toBeNull();
     expect(submitIdempotencyKey).toBeNull();
@@ -374,7 +396,7 @@ describe('question-flow-actions', () => {
     const deferred = createDeferred<ActionResult<unknown>>();
     let mounted = true;
     let loadState: AsyncLoadStateWithIdle = { status: 'idle' };
-    let question: unknown = { questionId: 'q_old' };
+    let question: unknown = { questionId: fixtureQuestionOldId };
 
     const promise = runLoadQuestionFlow({
       requestInput: {},
@@ -397,11 +419,11 @@ describe('question-flow-actions', () => {
     });
 
     mounted = false;
-    deferred.resolve({ ok: true, data: { questionId: 'q_new' } });
+    deferred.resolve({ ok: true, data: { questionId: fixtureQuestionNewId } });
     await promise;
 
     expect(loadState).toEqual({ status: 'loading' });
-    expect(question).toEqual({ questionId: 'q_old' });
+    expect(question).toEqual({ questionId: fixtureQuestionOldId });
   });
 
   it('submits answer and commits ready state on success', async () => {
@@ -409,16 +431,16 @@ describe('question-flow-actions', () => {
     let submitResult: SubmitAnswerOutput | null = null;
 
     await runSubmitAnswerFlow({
-      question: { questionId: 'q_1' },
-      selectedChoiceId: 'choice_1',
+      question: { questionId: fixtureQuestion1Id },
+      selectedChoiceId: fixtureChoice1Id,
       questionLoadedAtMs: 1000,
       submitIdempotencyKey: 'idemp_1',
       submitAnswerFn: async () => ({
         ok: true,
         data: {
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: null,
           referenceMd: null,
           choiceExplanations: [],
@@ -437,7 +459,10 @@ describe('question-flow-actions', () => {
     });
 
     expect(submitResult).toEqual(
-      expect.objectContaining({ attemptId: 'attempt_1', isCorrect: true }),
+      expect.objectContaining({
+        attemptId: fixtureAttempt1Id,
+        isCorrect: true,
+      }),
     );
     expect(loadState).toEqual({ status: 'ready' });
   });
@@ -446,9 +471,9 @@ describe('question-flow-actions', () => {
     const submitAnswerFn = vi.fn(async () => ({
       ok: true as const,
       data: {
-        attemptId: 'attempt_1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
-        correctChoiceId: 'choice_1',
+        correctChoiceId: fixtureChoice1Id,
         explanationMd: null,
         referenceMd: null,
         choiceExplanations: [],
@@ -456,8 +481,8 @@ describe('question-flow-actions', () => {
     }));
 
     await runSubmitAnswerFlow({
-      question: { questionId: 'q_1' },
-      selectedChoiceId: 'choice_1',
+      question: { questionId: fixtureQuestion1Id },
+      selectedChoiceId: fixtureChoice1Id,
       questionLoadedAtMs: 1000,
       submitIdempotencyKey: null,
       submitAnswerFn,
@@ -476,8 +501,8 @@ describe('question-flow-actions', () => {
     let loadState: AsyncLoadStateWithIdle = { status: 'ready' };
 
     await runSubmitAnswerFlow({
-      question: { questionId: 'q_1' },
-      selectedChoiceId: 'choice_1',
+      question: { questionId: fixtureQuestion1Id },
+      selectedChoiceId: fixtureChoice1Id,
       questionLoadedAtMs: 1000,
       submitIdempotencyKey: null,
       submitAnswerFn: async () => {
@@ -497,16 +522,16 @@ describe('question-flow-actions', () => {
   it('throws when request sequencing hooks are partially provided for submit flow', async () => {
     await expect(
       runSubmitAnswerFlow({
-        question: { questionId: 'q_1' },
-        selectedChoiceId: 'choice_1',
+        question: { questionId: fixtureQuestion1Id },
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 1000,
         submitIdempotencyKey: null,
         submitAnswerFn: async () => ({
           ok: true,
           data: {
-            attemptId: 'attempt_1',
+            attemptId: fixtureAttempt1Id,
             isCorrect: true,
-            correctChoiceId: 'choice_1',
+            correctChoiceId: fixtureChoice1Id,
             explanationMd: null,
             referenceMd: null,
             choiceExplanations: [],
@@ -525,8 +550,8 @@ describe('question-flow-actions', () => {
     let loadState: AsyncLoadStateWithIdle = { status: 'ready' };
 
     await runSubmitAnswerFlow({
-      question: { questionId: 'q_1' },
-      selectedChoiceId: 'choice_1',
+      question: { questionId: fixtureQuestion1Id },
+      selectedChoiceId: fixtureChoice1Id,
       questionLoadedAtMs: 1000,
       submitIdempotencyKey: null,
       submitAnswerFn: async () => ({
@@ -548,9 +573,9 @@ describe('question-flow-actions', () => {
     const submitAnswerFn = vi.fn(async () => ({
       ok: true as const,
       data: {
-        attemptId: 'attempt_1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
-        correctChoiceId: 'choice_1',
+        correctChoiceId: fixtureChoice1Id,
         explanationMd: null,
         referenceMd: null,
         choiceExplanations: [],
@@ -561,7 +586,7 @@ describe('question-flow-actions', () => {
 
     await runSubmitAnswerFlow({
       question: null,
-      selectedChoiceId: 'choice_1',
+      selectedChoiceId: fixtureChoice1Id,
       questionLoadedAtMs: 1000,
       submitIdempotencyKey: null,
       submitAnswerFn,
@@ -584,8 +609,8 @@ describe('question-flow-actions', () => {
     let submitResult: SubmitAnswerOutput | null = null;
 
     const promise = runSubmitAnswerFlow({
-      question: { questionId: 'q_1' },
-      selectedChoiceId: 'choice_1',
+      question: { questionId: fixtureQuestion1Id },
+      selectedChoiceId: fixtureChoice1Id,
       questionLoadedAtMs: 1000,
       submitIdempotencyKey: null,
       submitAnswerFn: async () => deferred.promise,
@@ -603,9 +628,9 @@ describe('question-flow-actions', () => {
     mounted = false;
     deferred.resolve(
       ok({
-        attemptId: 'attempt_1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
-        correctChoiceId: 'choice_1',
+        correctChoiceId: fixtureChoice1Id,
         explanationMd: null,
         referenceMd: null,
         choiceExplanations: [],
@@ -630,8 +655,8 @@ describe('question-flow-actions', () => {
     const onSuccess = vi.fn();
 
     const input: Parameters<typeof runSubmitAnswerFlow>[0] = {
-      question: { questionId: 'q_1' },
-      selectedChoiceId: 'choice_1',
+      question: { questionId: fixtureQuestion1Id },
+      selectedChoiceId: fixtureChoice1Id,
       questionLoadedAtMs: 1000,
       submitIdempotencyKey: null,
       submitAnswerFn: async () => deferred.promise,
@@ -649,9 +674,9 @@ describe('question-flow-actions', () => {
 
     deferred.resolve(
       ok({
-        attemptId: 'attempt_1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
-        correctChoiceId: 'choice_1',
+        correctChoiceId: fixtureChoice1Id,
         explanationMd: null,
         referenceMd: null,
         choiceExplanations: [],
@@ -673,12 +698,12 @@ describe('question-flow-actions', () => {
       >()
       .mockResolvedValue(
         ok({
-          questionId: 'q_1',
+          questionId: fixtureQuestion1Id,
           markedForReview: false,
           latestSelectedChoiceId: null,
           latestIsCorrect: null,
           latestAnsweredAt: null,
-          draftSelectedChoiceId: 'choice_2',
+          draftSelectedChoiceId: fixtureChoice2Id,
           draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
           draftCumulativeMs: 50_000,
         }),
@@ -686,24 +711,24 @@ describe('question-flow-actions', () => {
     const onSaved = vi.fn();
 
     const shouldNavigate = await maybeSaveDraftBeforeNavigation({
-      sessionId: 'session_1',
+      sessionId: fixtureSession1Id,
       question: {
-        questionId: 'q_1',
+        questionId: fixtureQuestion1Id,
         session: {
-          sessionId: 'session_1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
 
           index: 0,
           total: 2,
-          draftSelectedChoiceId: 'choice_1',
+          draftSelectedChoiceId: fixtureChoice1Id,
           draftCumulativeMs: 30_000,
         },
       },
-      selectedChoiceId: 'choice_2',
+      selectedChoiceId: fixtureChoice2Id,
       currentCumulativeMs: 50_000,
-      lastSavedDraftSelectedChoiceId: 'choice_1',
+      lastSavedDraftSelectedChoiceId: fixtureChoice1Id,
       lastSavedDraftCumulativeMs: 30_000,
       saveExamDraftAnswerFn,
       setLoadState: (state) => {
@@ -714,14 +739,14 @@ describe('question-flow-actions', () => {
 
     expect(shouldNavigate).toBe(true);
     expect(saveExamDraftAnswerFn).toHaveBeenCalledWith({
-      sessionId: 'session_1',
-      questionId: 'q_1',
-      selectedChoiceId: 'choice_2',
+      sessionId: fixtureSession1Id,
+      questionId: fixtureQuestion1Id,
+      selectedChoiceId: fixtureChoice2Id,
       cumulativeMs: 50_000,
     });
     expect(onSaved).toHaveBeenCalledWith({
-      questionId: 'q_1',
-      selectedChoiceId: 'choice_2',
+      questionId: fixtureQuestion1Id,
+      selectedChoiceId: fixtureChoice2Id,
       cumulativeMs: 50_000,
     });
     expect(loadStateTransitions).toEqual([]);
@@ -734,36 +759,36 @@ describe('question-flow-actions', () => {
       >()
       .mockResolvedValue(
         ok({
-          questionId: 'q_1',
+          questionId: fixtureQuestion1Id,
           markedForReview: false,
           latestSelectedChoiceId: null,
           latestIsCorrect: null,
           latestAnsweredAt: null,
-          draftSelectedChoiceId: 'choice_1',
+          draftSelectedChoiceId: fixtureChoice1Id,
           draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
           draftCumulativeMs: 50_000,
         }),
       );
 
     const shouldNavigate = await maybeSaveDraftBeforeNavigation({
-      sessionId: 'session_1',
+      sessionId: fixtureSession1Id,
       question: {
-        questionId: 'q_1',
+        questionId: fixtureQuestion1Id,
         session: {
-          sessionId: 'session_1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
 
           index: 0,
           total: 2,
-          draftSelectedChoiceId: 'choice_1',
+          draftSelectedChoiceId: fixtureChoice1Id,
           draftCumulativeMs: 30_000,
         },
       },
-      selectedChoiceId: 'choice_1',
+      selectedChoiceId: fixtureChoice1Id,
       currentCumulativeMs: 50_000,
-      lastSavedDraftSelectedChoiceId: 'choice_1',
+      lastSavedDraftSelectedChoiceId: fixtureChoice1Id,
       lastSavedDraftCumulativeMs: 30_000,
       saveExamDraftAnswerFn,
       setLoadState: () => {},
@@ -771,9 +796,9 @@ describe('question-flow-actions', () => {
 
     expect(shouldNavigate).toBe(true);
     expect(saveExamDraftAnswerFn).toHaveBeenCalledWith({
-      sessionId: 'session_1',
-      questionId: 'q_1',
-      selectedChoiceId: 'choice_1',
+      sessionId: fixtureSession1Id,
+      questionId: fixtureQuestion1Id,
+      selectedChoiceId: fixtureChoice1Id,
       cumulativeMs: 50_000,
     });
   });
@@ -786,9 +811,9 @@ describe('question-flow-actions', () => {
       >()
       .mockResolvedValue(
         ok({
-          questionId: 'q_1',
+          questionId: fixtureQuestion1Id,
           markedForReview: false,
-          latestSelectedChoiceId: 'choice_2',
+          latestSelectedChoiceId: fixtureChoice2Id,
           latestIsCorrect: true,
           latestAnsweredAt: new Date('2026-02-01T00:00:00.000Z'),
           draftSelectedChoiceId: null,
@@ -798,24 +823,24 @@ describe('question-flow-actions', () => {
       );
 
     const shouldNavigate = await maybeSaveDraftBeforeNavigation({
-      sessionId: 'session_1',
+      sessionId: fixtureSession1Id,
       question: {
-        questionId: 'q_1',
+        questionId: fixtureQuestion1Id,
         session: {
-          sessionId: 'session_1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
 
           index: 0,
           total: 2,
-          draftSelectedChoiceId: 'choice_1',
+          draftSelectedChoiceId: fixtureChoice1Id,
           draftCumulativeMs: 30_000,
         },
       },
-      selectedChoiceId: 'choice_2',
+      selectedChoiceId: fixtureChoice2Id,
       currentCumulativeMs: 50_000,
-      lastSavedDraftSelectedChoiceId: 'choice_1',
+      lastSavedDraftSelectedChoiceId: fixtureChoice1Id,
       lastSavedDraftCumulativeMs: 30_000,
       saveExamDraftAnswerFn,
       setLoadState: () => {},
@@ -824,7 +849,7 @@ describe('question-flow-actions', () => {
 
     expect(shouldNavigate).toBe(true);
     expect(onSaved).toHaveBeenCalledWith({
-      questionId: 'q_1',
+      questionId: fixtureQuestion1Id,
       selectedChoiceId: null,
       cumulativeMs: 50_000,
     });
@@ -838,11 +863,11 @@ describe('question-flow-actions', () => {
     const onSaved = vi.fn();
 
     const shouldNavigate = await maybeSaveDraftBeforeNavigation({
-      sessionId: 'session_1',
+      sessionId: fixtureSession1Id,
       question: {
-        questionId: 'q_1',
+        questionId: fixtureQuestion1Id,
         session: {
-          sessionId: 'session_1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -863,7 +888,7 @@ describe('question-flow-actions', () => {
     expect(shouldNavigate).toBe(true);
     expect(saveExamDraftAnswerFn).not.toHaveBeenCalled();
     expect(onSaved).toHaveBeenCalledWith({
-      questionId: 'q_1',
+      questionId: fixtureQuestion1Id,
       selectedChoiceId: null,
       cumulativeMs: 15_000,
     });
@@ -881,11 +906,11 @@ describe('question-flow-actions', () => {
       });
 
     const shouldNavigate = await maybeSaveDraftBeforeNavigation({
-      sessionId: 'session_1',
+      sessionId: fixtureSession1Id,
       question: {
-        questionId: 'q_1',
+        questionId: fixtureQuestion1Id,
         session: {
-          sessionId: 'session_1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -894,7 +919,7 @@ describe('question-flow-actions', () => {
           total: 2,
         },
       },
-      selectedChoiceId: 'choice_1',
+      selectedChoiceId: fixtureChoice1Id,
       currentCumulativeMs: 50_000,
       lastSavedDraftSelectedChoiceId: null,
       lastSavedDraftCumulativeMs: 0,

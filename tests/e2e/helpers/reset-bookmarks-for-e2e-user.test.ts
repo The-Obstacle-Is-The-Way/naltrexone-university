@@ -5,6 +5,11 @@ import {
   resetBookmarksForE2EUser,
 } from './reset-bookmarks-for-e2e-user';
 
+const { fixtureDbUser123Id, fixtureQuestion01Id } = vi.hoisted(() => ({
+  fixtureDbUser123Id: crypto.randomUUID(),
+  fixtureQuestion01Id: crypto.randomUUID(),
+}));
+
 type RequiredEnvKey =
   | 'DATABASE_URL'
   | 'CLERK_SECRET_KEY'
@@ -27,13 +32,13 @@ function createServices(
   overrides: Partial<ResetBookmarksForE2EUserServices> = {},
 ): ResetBookmarksForE2EUserServices {
   const bookmarkFixture = {
-    placeholder01Id: 'question_01',
+    placeholder01Id: fixtureQuestion01Id,
   };
 
   return {
     ensurePlaceholderQuestionPublished: vi.fn(async () => {}),
     resolveClerkUserIdByEmail: vi.fn(async () => 'user_123'),
-    resolveAppUserIdByClerkUserId: vi.fn(async () => 'db_user_123'),
+    resolveAppUserIdByClerkUserId: vi.fn(async () => fixtureDbUser123Id),
     resolveBookmarkQuestionFixture: vi.fn(async () => bookmarkFixture),
     resetBookmarksToDeterministicBaseline: vi.fn(async () => {}),
     verifyDeterministicBookmarkBaseline: vi.fn(async () => {}),
@@ -70,29 +75,29 @@ describe('resetBookmarksForE2EUser', () => {
     expect(services.resetBookmarksToDeterministicBaseline).toHaveBeenCalledWith(
       {
         databaseUrl: env.DATABASE_URL,
-        userId: 'db_user_123',
+        userId: fixtureDbUser123Id,
         questionFixtures: {
-          placeholder01Id: 'question_01',
+          placeholder01Id: fixtureQuestion01Id,
         },
       },
     );
     expect(services.verifyDeterministicBookmarkBaseline).toHaveBeenCalledWith({
       databaseUrl: env.DATABASE_URL,
-      userId: 'db_user_123',
+      userId: fixtureDbUser123Id,
       questionFixtures: {
-        placeholder01Id: 'question_01',
+        placeholder01Id: fixtureQuestion01Id,
       },
     });
   });
 
   it('accepts Clerk paginated user-list response shape in the default resolver', async () => {
     const env = createEnv();
-    const resolveAppUserIdByClerkUserId = vi.fn(async () => 'db_user_123');
+    const resolveAppUserIdByClerkUserId = vi.fn(async () => fixtureDbUser123Id);
     const services: Partial<ResetBookmarksForE2EUserServices> = {
       ensurePlaceholderQuestionPublished: vi.fn(async () => {}),
       resolveAppUserIdByClerkUserId,
       resolveBookmarkQuestionFixture: vi.fn(async () => ({
-        placeholder01Id: 'question_01',
+        placeholder01Id: fixtureQuestion01Id,
       })),
       resetBookmarksToDeterministicBaseline: vi.fn(async () => {}),
       verifyDeterministicBookmarkBaseline: vi.fn(async () => {}),

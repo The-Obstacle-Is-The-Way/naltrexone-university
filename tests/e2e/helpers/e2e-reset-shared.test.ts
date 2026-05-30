@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const { fixtureAppUser123Id } = vi.hoisted(() => ({
+  fixtureAppUser123Id: crypto.randomUUID(),
+}));
+
 class TestResetError extends Error {
   constructor(
     public readonly code: string,
@@ -193,7 +197,7 @@ describe('createSharedE2EResetSupport', () => {
   });
 
   it('resolves the app user id and closes the SQL client', async () => {
-    const sqlClient = createSqlClient([[{ id: 'app_user_123' }]]);
+    const sqlClient = createSqlClient([[{ id: fixtureAppUser123Id }]]);
     postgresMock.mockReturnValue(sqlClient);
     const support = createSupport(createSharedE2EResetSupport);
 
@@ -202,7 +206,7 @@ describe('createSharedE2EResetSupport', () => {
         databaseUrl: 'postgres://db',
         clerkUserId: 'clerk_user_123',
       }),
-    ).resolves.toBe('app_user_123');
+    ).resolves.toBe(fixtureAppUser123Id);
 
     expect(postgresMock).toHaveBeenCalledWith('postgres://db', { max: 1 });
     expect(sqlClient.end).toHaveBeenCalledWith({ timeout: 5 });

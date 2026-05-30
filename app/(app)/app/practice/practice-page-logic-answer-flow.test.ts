@@ -10,14 +10,39 @@ import { createNextQuestion } from '@/src/application/test-helpers/create-next-q
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
+const { fixtureAttempt1Id, fixtureChoice1Id, fixtureQuestion1Id } = vi.hoisted(
+  () => ({
+    fixtureAttempt1Id: crypto.randomUUID(),
+    fixtureChoice1Id: crypto.randomUUID(),
+    fixtureQuestion1Id: crypto.randomUUID(),
+  }),
+);
+
+function createFixtureNextQuestion(
+  overrides: Parameters<typeof createNextQuestion>[0] = {},
+) {
+  return createNextQuestion({
+    questionId: fixtureQuestion1Id,
+    choices: [
+      {
+        id: fixtureChoice1Id,
+        label: 'A',
+        textMd: 'Choice A',
+        sortOrder: 1,
+      },
+    ],
+    ...overrides,
+  });
+}
+
 describe('practice-page-logic answer flow', () => {
   describe('canSubmitAnswer', () => {
     it('returns true when question is loaded, choice is selected, and not loading', () => {
       expect(
         canSubmitAnswer({
           loadState: { status: 'ready' },
-          question: createNextQuestion(),
-          selectedChoiceId: 'choice_1',
+          question: createFixtureNextQuestion(),
+          selectedChoiceId: fixtureChoice1Id,
           isAnswered: false,
           submitResult: null,
         }),
@@ -28,8 +53,8 @@ describe('practice-page-logic answer flow', () => {
       expect(
         canSubmitAnswer({
           loadState: { status: 'loading' },
-          question: createNextQuestion(),
-          selectedChoiceId: 'choice_1',
+          question: createFixtureNextQuestion(),
+          selectedChoiceId: fixtureChoice1Id,
           isAnswered: false,
           submitResult: null,
         }),
@@ -40,13 +65,13 @@ describe('practice-page-logic answer flow', () => {
       expect(
         canSubmitAnswer({
           loadState: { status: 'ready' },
-          question: createNextQuestion(),
-          selectedChoiceId: 'choice_1',
+          question: createFixtureNextQuestion(),
+          selectedChoiceId: fixtureChoice1Id,
           isAnswered: false,
           submitResult: {
-            attemptId: 'attempt_1',
+            attemptId: fixtureAttempt1Id,
             isCorrect: true,
-            correctChoiceId: 'choice_1',
+            correctChoiceId: fixtureChoice1Id,
             explanationMd: 'Because…',
             referenceMd: null,
             choiceExplanations: [],
@@ -59,8 +84,8 @@ describe('practice-page-logic answer flow', () => {
       expect(
         canSubmitAnswer({
           loadState: { status: 'ready' },
-          question: createNextQuestion(),
-          selectedChoiceId: 'choice_1',
+          question: createFixtureNextQuestion(),
+          selectedChoiceId: fixtureChoice1Id,
           isAnswered: true,
           submitResult: null,
         }),
@@ -72,9 +97,9 @@ describe('practice-page-logic answer flow', () => {
     it('submits answer and sets result on success', async () => {
       const submitAnswerFn = vi.fn(async () =>
         ok({
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: 'Because...',
           referenceMd: null,
           choiceExplanations: [],
@@ -85,8 +110,8 @@ describe('practice-page-logic answer flow', () => {
       const setSubmitResult = vi.fn();
 
       await submitAnswerForQuestion({
-        question: createNextQuestion(),
-        selectedChoiceId: 'choice_1',
+        question: createFixtureNextQuestion(),
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 1000,
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn,
@@ -96,14 +121,14 @@ describe('practice-page-logic answer flow', () => {
       });
 
       expect(submitAnswerFn).toHaveBeenCalledWith({
-        questionId: 'q_1',
-        choiceId: 'choice_1',
+        questionId: fixtureQuestion1Id,
+        choiceId: fixtureChoice1Id,
         idempotencyKey: 'idem_1',
         timeSpentSeconds: 5,
       });
       expect(setSubmitResult).toHaveBeenCalledWith(
         expect.objectContaining({ isCorrect: true }),
-        'q_1',
+        fixtureQuestion1Id,
       );
       expect(setLoadState).not.toHaveBeenCalledWith({ status: 'loading' });
     });
@@ -111,9 +136,9 @@ describe('practice-page-logic answer flow', () => {
     it('defaults timeSpentSeconds to 0 when loadedAt is null', async () => {
       const submitAnswerFn = vi.fn(async () =>
         ok({
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: 'Because...',
           referenceMd: null,
           choiceExplanations: [],
@@ -121,8 +146,8 @@ describe('practice-page-logic answer flow', () => {
       );
 
       await submitAnswerForQuestion({
-        question: createNextQuestion(),
-        selectedChoiceId: 'choice_1',
+        question: createFixtureNextQuestion(),
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: null,
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn,
@@ -139,9 +164,9 @@ describe('practice-page-logic answer flow', () => {
     it('computes timeSpentSeconds when loadedAt is 0', async () => {
       const submitAnswerFn = vi.fn(async () =>
         ok({
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: 'Because...',
           referenceMd: null,
           choiceExplanations: [],
@@ -149,8 +174,8 @@ describe('practice-page-logic answer flow', () => {
       );
 
       await submitAnswerForQuestion({
-        question: createNextQuestion(),
-        selectedChoiceId: 'choice_1',
+        question: createFixtureNextQuestion(),
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn,
@@ -168,8 +193,8 @@ describe('practice-page-logic answer flow', () => {
       const setLoadState = vi.fn();
 
       await submitAnswerForQuestion({
-        question: createNextQuestion(),
-        selectedChoiceId: 'choice_1',
+        question: createFixtureNextQuestion(),
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn: async () => err('INTERNAL_ERROR', 'Boom'),
@@ -188,8 +213,8 @@ describe('practice-page-logic answer flow', () => {
       const setLoadState = vi.fn();
 
       await submitAnswerForQuestion({
-        question: createNextQuestion(),
-        selectedChoiceId: 'choice_1',
+        question: createFixtureNextQuestion(),
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn: async () => {
@@ -214,8 +239,8 @@ describe('practice-page-logic answer flow', () => {
       const setSubmitResult = vi.fn();
 
       const promise = submitAnswerForQuestion({
-        question: createNextQuestion(),
-        selectedChoiceId: 'choice_1',
+        question: createFixtureNextQuestion(),
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn: async () => deferred.promise,
@@ -228,9 +253,9 @@ describe('practice-page-logic answer flow', () => {
       mounted = false;
       deferred.resolve(
         ok({
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: 'Because...',
           referenceMd: null,
           choiceExplanations: [],
@@ -248,8 +273,8 @@ describe('practice-page-logic answer flow', () => {
       const setSubmitResult = vi.fn();
 
       const promise = submitAnswerForQuestion({
-        question: createNextQuestion(),
-        selectedChoiceId: 'choice_1',
+        question: createFixtureNextQuestion(),
+        selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
         submitIdempotencyKey: 'idem_1',
         submitAnswerFn: async () => deferred.promise,
@@ -262,9 +287,9 @@ describe('practice-page-logic answer flow', () => {
 
       deferred.resolve(
         ok({
-          attemptId: 'attempt_1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
-          correctChoiceId: 'choice_1',
+          correctChoiceId: fixtureChoice1Id,
           explanationMd: 'Because...',
           referenceMd: null,
           choiceExplanations: [],
@@ -285,16 +310,16 @@ describe('practice-page-logic answer flow', () => {
         {
           isAnswered: false,
           submitResult: {
-            attemptId: 'attempt_1',
+            attemptId: fixtureAttempt1Id,
             isCorrect: true,
-            correctChoiceId: 'choice_1',
+            correctChoiceId: fixtureChoice1Id,
             explanationMd: 'Because...',
             referenceMd: null,
             choiceExplanations: [],
           },
         },
         setSelectedChoiceId,
-        'choice_1',
+        fixtureChoice1Id,
       );
 
       expect(setSelectedChoiceId).not.toHaveBeenCalled();
@@ -307,10 +332,10 @@ describe('practice-page-logic answer flow', () => {
       const changed = selectChoiceIfAllowed(
         { isAnswered: false, submitResult: null },
         setSelectedChoiceId,
-        'choice_1',
+        fixtureChoice1Id,
       );
 
-      expect(setSelectedChoiceId).toHaveBeenCalledWith('choice_1');
+      expect(setSelectedChoiceId).toHaveBeenCalledWith(fixtureChoice1Id);
       expect(changed).toBe(true);
     });
 
@@ -320,7 +345,7 @@ describe('practice-page-logic answer flow', () => {
       const changed = selectChoiceIfAllowed(
         { isAnswered: true, submitResult: null },
         setSelectedChoiceId,
-        'choice_1',
+        fixtureChoice1Id,
       );
 
       expect(setSelectedChoiceId).not.toHaveBeenCalled();

@@ -3,6 +3,10 @@ import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
+const { fixtureSession1Id } = vi.hoisted(() => ({
+  fixtureSession1Id: crypto.randomUUID(),
+}));
+
 const { reportClientErrorMock } = vi.hoisted(() => ({
   reportClientErrorMock: vi.fn(),
 }));
@@ -29,7 +33,7 @@ describe('practice-page-incomplete-session', () => {
       const setSession = vi.fn();
       const getIncompletePracticeSessionFn = vi.fn(
         async (): Promise<ActionResult<{ sessionId: string } | null>> =>
-          ok({ sessionId: 'session-1' }),
+          ok({ sessionId: fixtureSession1Id }),
       );
 
       createIncompleteSessionEffect({
@@ -45,7 +49,7 @@ describe('practice-page-incomplete-session', () => {
       await new Promise((r) => setTimeout(r, 0));
 
       expect(getIncompletePracticeSessionFn).toHaveBeenCalledWith({});
-      expect(setSession).toHaveBeenCalledWith({ sessionId: 'session-1' });
+      expect(setSession).toHaveBeenCalledWith({ sessionId: fixtureSession1Id });
       expect(setStatus).toHaveBeenLastCalledWith('idle');
     });
 
@@ -118,7 +122,7 @@ describe('practice-page-incomplete-session', () => {
       });
 
       cleanup();
-      deferred.resolve(ok({ sessionId: 'session-1' }));
+      deferred.resolve(ok({ sessionId: fixtureSession1Id }));
 
       await new Promise((r) => setTimeout(r, 0));
 
@@ -138,7 +142,7 @@ describe('practice-page-incomplete-session', () => {
       const endPracticeSessionFn = vi.fn(async () => ok({}));
 
       await abandonIncompleteSession({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endPracticeSessionFn,
         setIncompleteSessionStatus: setStatus,
         setIncompleteSessionError: setError,
@@ -147,8 +151,8 @@ describe('practice-page-incomplete-session', () => {
       });
 
       expect(endPracticeSessionFn).toHaveBeenCalledWith({
-        sessionId: 'session-1',
-        idempotencyKey: 'session-1',
+        sessionId: fixtureSession1Id,
+        idempotencyKey: fixtureSession1Id,
       });
       expect(setSession).toHaveBeenCalledWith(null);
       expect(setStatus).toHaveBeenLastCalledWith('idle');
@@ -164,7 +168,7 @@ describe('practice-page-incomplete-session', () => {
       });
 
       await abandonIncompleteSession({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endPracticeSessionFn,
         setIncompleteSessionStatus: setStatus,
         setIncompleteSessionError: setError,
@@ -190,7 +194,7 @@ describe('practice-page-incomplete-session', () => {
       });
 
       await abandonIncompleteSession({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endPracticeSessionFn,
         setIncompleteSessionStatus: setStatus,
         setIncompleteSessionError: setError,
@@ -213,7 +217,7 @@ describe('practice-page-incomplete-session', () => {
       );
 
       await abandonIncompleteSession({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endPracticeSessionFn,
         setIncompleteSessionStatus: setStatus,
         setIncompleteSessionError: setError,

@@ -4,6 +4,10 @@ import type { AuthGateway } from '@/src/application/ports/gateways';
 import { FakeAuthGateway } from '@/src/application/test-helpers/fakes';
 import { enforceEntitledAppUser } from './layout';
 
+const { fixtureUser1Id } = vi.hoisted(() => ({
+  fixtureUser1Id: crypto.randomUUID(),
+}));
+
 type UserLike = {
   id: string;
   email: string;
@@ -13,7 +17,7 @@ type UserLike = {
 
 function createUser(): UserLike {
   return {
-    id: 'user_1',
+    id: fixtureUser1Id,
     email: 'user@example.com',
     createdAt: new Date('2026-02-01T00:00:00Z'),
     updatedAt: new Date('2026-02-01T00:00:00Z'),
@@ -77,7 +81,7 @@ describe('app/(app)/app/layout', () => {
     });
 
     expect(checkEntitlementUseCase.execute).toHaveBeenCalledWith({
-      userId: 'user_1',
+      userId: fixtureUser1Id,
     });
     expect(redirectFn).toHaveBeenCalledWith(
       '/pricing?reason=subscription_required',
@@ -111,7 +115,7 @@ describe('app/(app)/app/layout', () => {
 
     expect(result).toEqual({ subscriptionStatus: 'active' });
     expect(checkEntitlementUseCase.execute).toHaveBeenCalledWith({
-      userId: 'user_1',
+      userId: fixtureUser1Id,
     });
     expect(redirectFn).not.toHaveBeenCalled();
   });

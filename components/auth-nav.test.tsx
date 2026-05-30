@@ -10,6 +10,10 @@ import {
   snapshotProcessEnv,
 } from '@/tests/shared/process-env';
 
+const { fixtureUser1Id } = vi.hoisted(() => ({
+  fixtureUser1Id: crypto.randomUUID(),
+}));
+
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
@@ -194,7 +198,7 @@ describe('AuthNav', () => {
     const { AuthNav } = await import('./auth-nav');
     const { AppLayoutShell } = await import('@/app/(app)/app/layout');
 
-    const user = createUser({ id: 'user_1' });
+    const user = createUser({ id: fixtureUser1Id });
     const authGateway = new FakeAuthGateway(user);
     const checkEntitlementUseCase = new FakeCheckEntitlementUseCase({
       isEntitled: true,
@@ -229,7 +233,7 @@ describe('AuthNav', () => {
 
     const { AuthNav } = await import('./auth-nav');
 
-    const user = createUser({ id: 'user_1' });
+    const user = createUser({ id: fixtureUser1Id });
     const authGateway = new FakeAuthGateway(user);
     const checkEntitlementUseCase = new FakeCheckEntitlementUseCase({
       isEntitled: true,
@@ -281,7 +285,7 @@ describe('AuthNav', () => {
 
     const { AuthNav } = await import('./auth-nav');
 
-    const user = createUser({ id: 'user_1' });
+    const user = createUser({ id: fixtureUser1Id });
     const authGateway = new FakeAuthGateway(user);
     const checkEntitlementUseCase = new FakeCheckEntitlementUseCase({
       isEntitled: false,
@@ -310,7 +314,7 @@ describe('AuthNav', () => {
 
     const { AuthNav } = await import('./auth-nav');
 
-    const user = createUser({ id: 'user_1' });
+    const user = createUser({ id: fixtureUser1Id });
     const authGateway = new FakeAuthGateway(user);
     const checkEntitlementUseCase = new FakeCheckEntitlementUseCase({
       isEntitled: false,
@@ -347,7 +351,7 @@ describe('AuthNav', () => {
     const { AuthNav } = await import('./auth-nav');
     const PricingPage = (await import('@/app/pricing/page')).default;
 
-    const user = createUser({ id: 'user_1' });
+    const user = createUser({ id: fixtureUser1Id });
     const authGateway = new FakeAuthGateway(user);
     const checkEntitlementUseCase = new FakeCheckEntitlementUseCase({
       isEntitled: false,

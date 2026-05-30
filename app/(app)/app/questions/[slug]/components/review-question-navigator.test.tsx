@@ -4,6 +4,10 @@ import { describe, expect, it, vi } from 'vitest';
 import type { SessionNavigation } from '@/app/(app)/app/questions/[slug]/question-page-logic';
 import { toQuestionRoute } from '@/lib/routes';
 
+const { fixtureSession123Id } = vi.hoisted(() => ({
+  fixtureSession123Id: crypto.randomUUID(),
+}));
+
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
@@ -16,7 +20,7 @@ describe('ReviewQuestionNavigator', () => {
       { slug: 'q3', order: 3, isCorrect: null },
     ],
     currentIndex: 1,
-    sessionId: 'session_123',
+    sessionId: fixtureSession123Id,
     from: 'history',
   } as const satisfies SessionNavigation;
 
