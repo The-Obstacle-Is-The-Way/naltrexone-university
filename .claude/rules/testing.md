@@ -35,6 +35,10 @@ Use existing fakes from `src/application/test-helpers/fakes/`. NEVER use `vi.moc
 
 Tests that mutate `process.env` (module-scope defaults, `vi.stubEnv()`, or direct assignment) MUST snapshot/restore via `tests/shared/process-env.ts`. See **`.claude/rules/test-isolation.md`** for the full rule, cleanup ordering, and examples.
 
+## Fixture Integrity
+
+Tests and test helpers that create boundary-shaped fixtures MUST keep application-owned IDs valid at controller/DB boundaries and MUST leave provider IDs, fake-backed semantic keys, UI tokens, and intentional-invalid fixtures alone. See **`.claude/rules/fixture-integrity.md`** for the full FIX/LEAVE rule, UUID-linkage mechanics, and `vi.hoisted()` guidance.
+
 ## Test Quality
 
 1. Test behavior, not implementation

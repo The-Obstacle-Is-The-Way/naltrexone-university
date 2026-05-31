@@ -1,8 +1,8 @@
 # DEBT-400: Test Fixture Integrity (Zod Boundary Class)
 
-**Priority:** P2 (latent bug class. After PR 3a, the current canonical candidate grep finds 1,330 remaining placeholder-ID assignments across 78 PR 3 app/browser/application files. This is a candidate set, not a mandate to replace every string: the execution scope is only IDs that cross `zUuid = z.guid()` controller schemas or model Drizzle `uuid()` columns.)
+**Priority:** P2 (latent bug class. After PR 3b, the current canonical candidate grep finds 748 remaining placeholder-ID assignments across 42 files repo-wide, with 729 across 38 PR 3 residual app/application files. This is a candidate set, not a mandate to replace every string: the execution scope is only IDs that cross `zUuid = z.guid()` controller schemas or real Drizzle `uuid()` columns.)
 **Created:** 2026-05-26
-**Source:** Deep schema/boundary integrity audit conducted alongside DEBT-394 archival; re-audited on 2026-05-28 from `dev` at `f2dc0793`, PR 2 scope re-audited on 2026-05-28 from `dev` at `e7f1029a` after PR 1 merged, repository-slice PR 2b scope re-audited on 2026-05-29 from `dev` at `a98b5922` after PR 2a merged, app/browser/application PR 3 scope re-audited on 2026-05-29 from `dev` at `3b225505` after PR 2b merged, and browser-slice PR 3b scope re-audited on 2026-05-30 from `dev` at `895d03a5` after PR 3a merged. Direct precedent is PR #330, which bumped Zod from 3 to 4 and deliberately kept historical UUID/GUID behavior by replacing the shared controller ID schema with Zod 4 `z.guid()`.
+**Source:** Deep schema/boundary integrity audit conducted alongside DEBT-394 archival; re-audited on 2026-05-28 from `dev` at `f2dc0793`, PR 2 scope re-audited on 2026-05-28 from `dev` at `e7f1029a` after PR 1 merged, repository-slice PR 2b scope re-audited on 2026-05-29 from `dev` at `a98b5922` after PR 2a merged, app/browser/application PR 3 scope re-audited on 2026-05-29 from `dev` at `3b225505` after PR 2b merged, browser-slice PR 3b scope re-audited on 2026-05-30 from `dev` at `895d03a5` after PR 3a merged, application-slice PR 3c value re-evaluated on 2026-05-30 from `dev` at `f39171f8` after PR 3b merged, and PR 4 guardrail scope audited on 2026-05-30 from the PR 3c audit tip at `d97df8c7`. Direct precedent is PR #330, which bumped Zod from 3 to 4 and deliberately kept historical UUID/GUID behavior by replacing the shared controller ID schema with Zod 4 `z.guid()`.
 **Related:** [src/adapters/shared/zod-schemas.ts](../../src/adapters/shared/zod-schemas.ts), [db/schema.ts](../../db/schema.ts), [src/domain/test-helpers/](../../src/domain/test-helpers/), [src/application/test-helpers/fakes/](../../src/application/test-helpers/fakes/), [docs/dev/dependency-update-protocol.md](../dev/dependency-update-protocol.md), [DEBT-397](./debt-397-datetime-boundary-type-normalization.md), [DEBT-394 (archived)](../_archive/debt/debt-394-supply-chain-hardening.md), PR #330
 
 **Status:** Active
@@ -104,7 +104,7 @@ rg -n "\b(questionId|sessionId|attemptId|choiceId|selectedChoiceId|correctChoice
   --glob '!**/_archive/**'
 ```
 
-Current result on `895d03a5` after PR 3a: **1,349 lines across 82 files** repo-wide. The remaining PR 3 slice (`app/`, `components/`, `src/application/`, `tests/e2e/helpers/`) is **1,330 lines across 78 files**. Historical result on `3b225505` after PR 2b was **2,040 lines across 129 files**, with the PR 3 slice accounting for **2,021 lines across 125 files** before PR 3a shipped. The result on `a98b5922` after PR 2a was **2,244 lines across 140 files** with the earlier command that did not include the `db_user` E2E-helper prefix. The result on `e7f1029a` after PR 1 was **2,438 lines across 162 files**. The pre-PR1 audit result on `f2dc0793` was **2,447 lines across 163 files**.
+Current result on `f39171f8` after PR 3b: **748 lines across 42 files** repo-wide. The remaining PR 3 residual slice (`app/`, `components/`, `src/application/`, `tests/e2e/helpers/`) is **729 lines across 38 files**. The browser-spec canonical count is now **0 lines across 0 files**. The `src/application/use-cases/**` plus `src/application/shared/**` slice is still **579 lines across 27 files**, and `src/application/test-helpers/fakes/*.test.ts` is still **142 lines across 7 files**; the PR 3c value re-evaluation below classifies both as LEAVE. Historical result on `895d03a5` after PR 3a was **1,349 lines across 82 files** repo-wide and **1,330 lines across 78 PR 3 slice files**. Historical result on `3b225505` after PR 2b was **2,040 lines across 129 files**, with the PR 3 slice accounting for **2,021 lines across 125 files** before PR 3a shipped. The result on `a98b5922` after PR 2a was **2,244 lines across 140 files** with the earlier command that did not include the `db_user` E2E-helper prefix. The result on `e7f1029a` after PR 1 was **2,438 lines across 162 files**. The pre-PR1 audit result on `f2dc0793` was **2,447 lines across 163 files**.
 
 This replaces the old narrower `604 / 64` count. The old grep only searched `app/ src/ components/`, only camel-case object properties, only five field names, and only underscore-prefixed values. It missed hyphenated placeholders (`session-1`), choice/tag/subscription fields, snake_case SQL-row fixtures (`user_id`), E2E app-user sentinels such as `db_user_123`, and `tests/**` helper fixtures.
 
@@ -136,7 +136,7 @@ The execution agent should regenerate the full line list from the command above 
 
 ### A. Placeholder IDs are broad, but the cleanup boundary is narrower than the raw count
 
-The broad candidate set is now 2,040 lines across 129 files after PR 2b. The remaining PR 3 slice is 2,021 candidate lines across 125 files. Many are real boundary-crossing problems, but some are intentionally harmless:
+The broad candidate set is now 748 lines across 42 files after PR 3b. The remaining PR 3 residual slice is 729 candidate lines across 38 files. PRs 3a and 3b removed the real app/browser boundary-crossing fixture classes. The remaining hits are intentionally harmless under the boundary definition or are application/fake behavior-test keys that do not cross a real adapter/schema boundary at unit-test time:
 
 - a component-only selected-choice token that never leaves the component;
 - a provider-owned external ID such as `cus_123`, `sub_123`, `evt_1`, or a Clerk `user_...` id;
@@ -165,7 +165,7 @@ PR 1 merged as #368 at `e7f1029a`. Current code now has the intended foundation:
 - `src/application/test-helpers/fakes/fake-attempt-repository.ts`, `fake-practice-session-repository.ts`, `fake-user-repository.ts`, and `fake-subscription-repository.ts` generate UUID-valid app IDs internally.
 - `tests/shared/fixture-uuid-integrity.test.ts` proves those generated factory/fake IDs pass the real `zUuid.safeParse()` contract.
 
-The remaining DEBT-400 work is explicit fixture overrides and adapter/app DTO rows that still provide placeholder IDs directly.
+After PR 1, the remaining code-sweep work was explicit fixture overrides and adapter/app DTO rows that still provided placeholder IDs directly.
 
 ### D. Fakes are shape-permissive
 
@@ -179,9 +179,9 @@ For DEBT-400, the selected approach is:
 
 This avoids reintroducing archived DEBT-007 as incidental scope.
 
-### E. The rule is still undocumented in the right auto-loaded place
+### E. PR 4 documents the rule in the right auto-loaded place
 
-`.claude/rules/testing.md` currently says to use factories and links to the process-env isolation rule, but it does not define fixture integrity for validated boundaries. `.claude/rules/fixture-integrity.md` does not exist. `docs/dev/dependency-update-protocol.md` mentions the jsdom PR #328 precedent but does not yet encode a schema-validation-major fixture-audit step for PR #330-style incidents.
+Before PR 4, `.claude/rules/testing.md` said to use factories and linked to the process-env isolation rule, but it did not define fixture integrity for validated boundaries. PR 4 resolves this with `.claude/rules/fixture-integrity.md` as the SSOT, a pointer-only `testing.md` section, a `CLAUDE.md` path-scoped row, and a schema-validation-major fixture-audit step in `docs/dev/dependency-update-protocol.md`.
 
 This mirrors the SSOT issue already fixed in DEBT-395: the full rule must live in one scoped rule file, and `testing.md` should carry only a pointer.
 
@@ -194,7 +194,7 @@ This mirrors the SSOT issue already fixed in DEBT-395: the full rule must live i
 Fix placeholder IDs when a value is assigned to any of these roles:
 
 1. Any controller input/output field listed in the Shared Controller Boundary table.
-2. Any fixture object, fake repository state, mocked SQL row, or repository row mapper that models a Drizzle UUID column listed in the Database UUID Columns table.
+2. Any adapter repository row fixture, mocked SQL row, or repository row mapper that models a Drizzle UUID column listed in the Database UUID Columns table.
 3. Any shared factory or fake-generated ID for domain entities that map to those UUID columns.
 4. Any E2E helper test that mocks app database rows with `users.id`, `questions.id`, `choices.id`, `bookmarks.user_id`, or similar UUID columns.
 
@@ -205,7 +205,7 @@ Current target areas:
 | Controller tests | `src/adapters/controllers/question-controller.test.ts`, `question-view-controller.test.ts`, `practice-controller-*.test.ts`, `bookmark-controller.test.ts`, `billing-controller.test.ts` | Use `crypto.randomUUID()` for valid-path IDs. Keep explicit invalid UUID strings only in negative validation tests. |
 | Adapter repository tests | `src/adapters/repositories/drizzle-*.test.ts`, row mapper tests, idempotency tests | Replace UUID-column row fixtures with generated UUIDs or named UUID variables. |
 | App/browser tests mocking controller DTOs | `app/(app)/app/practice/**`, `app/(app)/app/questions/**`, `app/(app)/app/dashboard/page.test.tsx`, `app/(app)/app/history/**`, `app/(app)/app/bookmarks/page.test.tsx` | Replace mocked controller DTO fields with generated UUIDs while preserving readable variable names. |
-| Application use-case tests using entity/port fixtures | `src/application/use-cases/**`, `src/application/shared/**` | Fix entity IDs and repository-returned DTOs that model UUID columns. Preserve pure branch sentinels only when they never model a DB/controller ID. |
+| Application use-case tests using fake-backed entity/port fixtures | `src/application/use-cases/**`, `src/application/shared/**` | **LEAVE after PR 3c value re-evaluation.** These unit tests do not import adapter schemas, Drizzle, or `zUuid`; they exercise use cases behind fakes and domain factories. UUID-ifying dense cross-reference keys would buy production-shape consistency only, not active boundary protection. Reclassify only if a specific test starts calling a real adapter/schema boundary. |
 | Shared factories/fakes | `src/domain/test-helpers/factories.ts`, `src/application/test-helpers/fakes/**` | Make generated/default IDs UUID-valid. Update tests that relied on deterministic `attempt-1` / `session-1` sequencing to capture returned IDs instead. |
 | E2E helper tests with mocked DB rows | `tests/e2e/helpers/seed-test-user.test.ts`, `reset-e2e-user-state*.test.ts`, `reset-bookmarks-for-e2e-user*.test.ts` | Treat mocked SQL rows for app UUID columns as boundary-crossing. External Clerk IDs remain strings. |
 
@@ -463,7 +463,7 @@ PR 2b status: shipped in PR #370 at `3b225505`. The repository-slice PR migrated
 
 Root audit branch: `feat/debt-400-pr-3-app-application-fixtures`
 
-Pre-execution audit status: current from `dev` at `895d03a5` after PR 3a merged. PRs 1, 2a, 2b, and 3a are merged. Remaining code sweeps are PR 3b (browser specs and browser-only helper fixtures) and PR 3c (application use-case/shared fixtures), followed by PR 4 docs.
+Execution status: current from `dev` at `f39171f8` after PR 3b merged, plus the PR 3c skip audit at `d97df8c7` and the PR 4 scope audit at `5d53acee`. PRs 1, 2a, 2b, 3a, and 3b are merged. The PR 3c application-slice value re-evaluation below finds no genuine boundary-crossing unit-test fixtures worth fixing. PR 4 ships the durable rule guardrail; after it merges, remaining work is DEBT-402, then the DEBT-400 archive PR.
 
 #### PR 3 candidate count
 
@@ -475,28 +475,30 @@ app/ components/ src/application/ tests/e2e/helpers/
 
 Historical result before PR 3a: **2,021 candidate lines across 125 files**.
 
-Current result on `895d03a5` after PR 3a: **1,330 candidate lines across 78 files**.
+Historical result on `895d03a5` after PR 3a: **1,330 candidate lines across 78 files**.
+
+Current result on `f39171f8` after PR 3b: **729 candidate lines across 38 files**.
 
 Breakdown:
 
 | Slice | Candidate lines | Files | Decision |
 |---|---:|---:|---|
-| App/components non-browser tests plus E2E helper unit tests | 8 | 4 | PR 3a shipped in PR #371 at `895d03a5`. Remaining hits are expected LEAVE cases: DEBT-398 regression fixture strings and provider-shaped Clerk IDs in E2E helper tests. Do not pull these into PR 3b. |
-| App/components browser specs | 601 | 40 | PR 3b, Tier 1 FIX where browser fixtures mock controller DTOs or hook controller responses; component-only/provider hits stay. |
-| `src/application/use-cases/**` and `src/application/shared/**` | 579 | 27 | PR 3c, Tier 2 FIX for entity/port fixtures that model Drizzle UUID columns. |
+| App/components non-browser tests plus E2E helper unit tests | 8 | 4 | PR 3a shipped in PR #371 at `895d03a5`. Remaining hits are expected LEAVE cases: DEBT-398 regression fixture strings and provider-shaped Clerk IDs in E2E helper tests. |
+| App/components browser specs | 0 | 0 | PR 3b shipped in PR #372 at `f39171f8`; browser canonical hits are closed. |
+| `src/application/use-cases/**` and `src/application/shared/**` | 579 | 27 | PR 3c value re-evaluation: **LEAVE**. These are fake-backed application unit-test cross-reference graphs, not active boundary tests. |
 | `src/application/test-helpers/fakes/*.test.ts` | 142 | 7 | Tier 3 LEAVE. These are fake behavior tests with semantic internal keys; PR 1 already fixed fake-generated defaults. |
 
 #### Value-tier decision
 
 **Tier 1 - FIX:** app, component, browser, and E2E helper unit-test fixtures that mock controller DTOs, app-auth users, or app DB rows. These tests usually bypass the real `zUuid` parser through fakes or mocked controller functions; if pointed at real controller outputs/inputs, placeholders like `question-1`, `choice_1`, `session-1`, and `attempt_1` would fail the same boundary contract PRs 1/2 fixed.
 
-**Tier 2 - FIX:** application use-case/shared tests whose entity and port fixtures model Drizzle `uuid()` columns (`User.id`, `Question.id`, `Choice.id`, `PracticeSession.id`, `Attempt.id`, `Bookmark.userId`, etc.). These do not hit adapter schemas today, but they are production-shape entity fixtures and will surface under integration-boundary migration.
+**Tier 2 - LEAVE after value re-evaluation:** application use-case/shared tests whose entity and port fixtures use readable cross-reference keys (`q1`, `c1`, `session-1`, `attempt-parent`, etc.) behind fakes. These do not hit adapter schemas or Drizzle at unit-test time; no current file in this slice imports `zUuid`, `db/schema`, Drizzle, Postgres, or adapter controllers. UUID-ifying them would provide production-shape consistency/future-refactor defense only, while making dense entity graphs harder to read. That does not clear the no-speculative-debt bar. If a specific application unit test later starts calling a real controller schema, repository implementation, or DB boundary, reclassify only that fixture.
 
 **Tier 3 - LEAVE:** fake-repository **test files** under `src/application/test-helpers/fakes/*.test.ts`. These tests assert fake-specific behavior such as active-exam visibility with readable semantic keys (`attempt-active-exam`, `q-ended-exam`, `session-tutor`). They never cross a real controller or database boundary, and PR 1 already proved the fakes' internally generated IDs are UUID-valid. Churning these behavior-test keys would reduce readability with near-zero boundary-risk reduction. If a fake test imports a real controller schema later, reclassify that specific fixture.
 
 **LEAVE:** provider IDs (`cus_`, `sub_`, `evt_`, `price_`, Clerk `user_...`, Svix), slugs, labels, HTML ids, `data-testid`, React-only keys, and intentionally invalid negative-validation fixtures.
 
-Cross-reference-key handling rule: many Tier 2 tests deliberately use linked placeholders (`id: 'q1'` with `questionId: 'q1'`, or `selectedChoiceId: 'c2'` with a `createChoice({ id: 'c2' })`). Do **not** blindly replace each literal independently. Introduce role-bearing variables once (`const questionId = crypto.randomUUID(); const correctChoiceId = crypto.randomUUID();`) and reuse them everywhere the same entity relationship is intended.
+Cross-reference-key handling rule: many application tests deliberately use linked placeholders (`id: 'q1'` with `questionId: 'q1'`, or `selectedChoiceId: 'c2'` with a `createChoice({ id: 'c2' })`). Because PR 3c is now skipped, keep these readable keys. If a future genuine boundary-crossing application test appears, do **not** blindly replace each literal independently. Introduce role-bearing variables once (`const questionId = crypto.randomUUID(); const correctChoiceId = crypto.randomUUID();`) and reuse them everywhere the same entity relationship is intended.
 
 #### PR 3 per-file classification table
 
@@ -596,33 +598,33 @@ Candidate counts are grep hits, not exact edit counts. One semantic UUID variabl
 | 3b | `app/(app)/app/questions/[slug]/use-question-page-previous-attempt.browser.spec.tsx` | 13 | Tier 1 FIX | Previous-attempt browser DTO IDs. |
 | 3b | `app/(app)/app/questions/[slug]/use-question-page-session-navigation.browser.spec.tsx` | 4 | Tier 1 FIX | Browser session-navigation question IDs. |
 | 3b | `components/question/QuestionCard.browser.spec.tsx` | 5 | Tier 1 FIX if DTO-shaped, otherwise LEAVE component-token | QuestionCard browser choice IDs and correct-choice linkage. |
-| 3c | `src/application/shared/enrich-with-question.test.ts` | 15 | Tier 2 FIX | Question entity/row IDs and row-question linkage. |
-| 3c | `src/application/shared/shuffled-choice-views.test.ts` | 31 | Tier 2 FIX | Question/choice/user entity fixtures; preserve choice ordering/linkage. |
-| 3c | `src/application/use-cases/check-entitlement.test.ts` | 15 | Tier 2 FIX | App user/subscription use-case fixtures. |
-| 3c | `src/application/use-cases/count-available-questions.test.ts` | 3 | Tier 2 FIX | Tag/user fixtures; slugs stay. |
-| 3c | `src/application/use-cases/create-checkout-session.test.ts` | 17 | Tier 2 FIX plus LEAVE provider | App `userId` fix; Stripe customer/price/provider IDs stay. |
-| 3c | `src/application/use-cases/create-portal-session.test.ts` | 2 | Tier 2 FIX | App user ID fixtures. |
-| 3c | `src/application/use-cases/end-practice-session.test.ts` | 18 | Tier 2 FIX | Practice session/user fixtures; preserve session lookup. |
-| 3c | `src/application/use-cases/finalize-exam-answers.test.ts` | 27 | Tier 2 FIX | Session/user/question/choice/attempt fixtures; preserve exam answer linkage. |
-| 3c | `src/application/use-cases/get-attempted-questions.test.ts` | 76 | Tier 2 FIX | Attempt/question/session/user entity fixtures. |
-| 3c | `src/application/use-cases/get-bookmarks.test.ts` | 4 | Tier 2 FIX | Bookmark user/question fixtures, except `missing` sentinel stays if it is explicit absent-key behavior and never DB-shaped. |
-| 3c | `src/application/use-cases/get-completed-session-questions-with-feedback.test.ts` | 10 | Tier 2 FIX | Completed-session attempt/question/choice fixtures. |
-| 3c | `src/application/use-cases/get-incomplete-practice-session.test.ts` | 14 | Tier 2 FIX | Practice session/user fixtures. |
-| 3c | `src/application/use-cases/get-next-question-fallback.test.ts` | 12 | Tier 2 FIX | Question/choice/attempt fixtures; preserve old/new question distinction. |
-| 3c | `src/application/use-cases/get-practice-session-review.test.ts` | 18 | Tier 2 FIX | Review session/user/question/choice fixtures. |
-| 3c | `src/application/use-cases/get-practice-session-summary.test.ts` | 8 | Tier 2 FIX | Session/user fixtures and missing-session sentinel if DB-shaped. |
-| 3c | `src/application/use-cases/get-previous-attempt.test.ts` | 110 | Tier 2 FIX | Highest-volume cross-reference graph; use captured UUID variables for q/c/session/attempt/user relationships. |
-| 3c | `src/application/use-cases/get-session-history.test.ts` | 32 | Tier 2 FIX | Session/user history fixtures. |
-| 3c | `src/application/use-cases/get-user-stats.test.ts` | 10 | Tier 2 FIX | App user/attempt count fixtures. |
-| 3c | `src/application/use-cases/practice-session-summary.test.ts` | 11 | Tier 2 FIX | Session/user fixtures. |
-| 3c | `src/application/use-cases/save-exam-draft-answer.test.ts` | 59 | Tier 2 FIX | Session/question/choice/user draft fixtures; preserve draft choice linkage. |
-| 3c | `src/application/use-cases/set-practice-session-question-mark.test.ts` | 13 | Tier 2 FIX | Session/user/question fixtures. |
-| 3c | `src/application/use-cases/start-practice-session.test.ts` | 10 | Tier 2 FIX plus LEAVE slugs | User/tag/question fixtures; tag slugs stay. |
-| 3c | `src/application/use-cases/submit-answer-exam.test.ts` | 6 | Tier 2 FIX | User/session/question/choice submit fixtures. |
-| 3c | `src/application/use-cases/submit-answer-retry.test.ts` | 28 | Tier 2 FIX | Retry attempt/session/question/choice fixtures. |
-| 3c | `src/application/use-cases/submit-answer-standalone.test.ts` | 13 | Tier 2 FIX | Standalone submit user/question/choice/attempt fixtures. |
-| 3c | `src/application/use-cases/submit-answer-tutor.test.ts` | 14 | Tier 2 FIX | Tutor submit user/session/question/choice fixtures. |
-| 3c | `src/application/use-cases/toggle-bookmark.test.ts` | 3 | Tier 2 FIX | Bookmark user/question fixtures; `missing` sentinel stays only if explicitly absent-key behavior. |
+| 3c | `src/application/shared/enrich-with-question.test.ts` | 15 | LEAVE cross-ref-key | Question entity/row IDs and row-question linkage. |
+| 3c | `src/application/shared/shuffled-choice-views.test.ts` | 31 | LEAVE cross-ref-key | Question/choice/user entity fixtures; preserve choice ordering/linkage. |
+| 3c | `src/application/use-cases/check-entitlement.test.ts` | 15 | LEAVE cross-ref-key | App user/subscription use-case fixtures. |
+| 3c | `src/application/use-cases/count-available-questions.test.ts` | 3 | LEAVE cross-ref-key | Tag/user fixtures; slugs stay. |
+| 3c | `src/application/use-cases/create-checkout-session.test.ts` | 17 | LEAVE cross-ref-key plus LEAVE provider | Fake-backed app `userId`/subscription keys stay readable; Stripe customer/price/provider IDs stay provider-shaped. |
+| 3c | `src/application/use-cases/create-portal-session.test.ts` | 2 | LEAVE cross-ref-key | App user ID fixtures. |
+| 3c | `src/application/use-cases/end-practice-session.test.ts` | 18 | LEAVE cross-ref-key | Practice session/user fixtures; preserve session lookup. |
+| 3c | `src/application/use-cases/finalize-exam-answers.test.ts` | 27 | LEAVE cross-ref-key | Session/user/question/choice/attempt fixtures; preserve exam answer linkage. |
+| 3c | `src/application/use-cases/get-attempted-questions.test.ts` | 76 | LEAVE cross-ref-key | Attempt/question/session/user entity fixtures. |
+| 3c | `src/application/use-cases/get-bookmarks.test.ts` | 4 | LEAVE cross-ref-key | Bookmark user/question fixtures, except `missing` sentinel stays if it is explicit absent-key behavior and never DB-shaped. |
+| 3c | `src/application/use-cases/get-completed-session-questions-with-feedback.test.ts` | 10 | LEAVE cross-ref-key | Completed-session attempt/question/choice fixtures. |
+| 3c | `src/application/use-cases/get-incomplete-practice-session.test.ts` | 14 | LEAVE cross-ref-key | Practice session/user fixtures. |
+| 3c | `src/application/use-cases/get-next-question-fallback.test.ts` | 12 | LEAVE cross-ref-key | Question/choice/attempt fixtures; preserve old/new question distinction. |
+| 3c | `src/application/use-cases/get-practice-session-review.test.ts` | 18 | LEAVE cross-ref-key | Review session/user/question/choice fixtures. |
+| 3c | `src/application/use-cases/get-practice-session-summary.test.ts` | 8 | LEAVE cross-ref-key | Session/user fixtures and missing-session sentinel if DB-shaped. |
+| 3c | `src/application/use-cases/get-previous-attempt.test.ts` | 110 | LEAVE cross-ref-key | Highest-volume fake-backed cross-reference graph; keep readable q/c/session/attempt/user relationships. |
+| 3c | `src/application/use-cases/get-session-history.test.ts` | 32 | LEAVE cross-ref-key | Session/user history fixtures. |
+| 3c | `src/application/use-cases/get-user-stats.test.ts` | 10 | LEAVE cross-ref-key | App user/attempt count fixtures. |
+| 3c | `src/application/use-cases/practice-session-summary.test.ts` | 11 | LEAVE cross-ref-key | Session/user fixtures. |
+| 3c | `src/application/use-cases/save-exam-draft-answer.test.ts` | 59 | LEAVE cross-ref-key | Session/question/choice/user draft fixtures; preserve draft choice linkage. |
+| 3c | `src/application/use-cases/set-practice-session-question-mark.test.ts` | 13 | LEAVE cross-ref-key | Session/user/question fixtures. |
+| 3c | `src/application/use-cases/start-practice-session.test.ts` | 10 | LEAVE cross-ref-key plus LEAVE slugs | User/tag/question fixtures; tag slugs stay. |
+| 3c | `src/application/use-cases/submit-answer-exam.test.ts` | 6 | LEAVE cross-ref-key | User/session/question/choice submit fixtures. |
+| 3c | `src/application/use-cases/submit-answer-retry.test.ts` | 28 | LEAVE cross-ref-key | Retry attempt/session/question/choice fixtures. |
+| 3c | `src/application/use-cases/submit-answer-standalone.test.ts` | 13 | LEAVE cross-ref-key | Standalone submit user/question/choice/attempt fixtures. |
+| 3c | `src/application/use-cases/submit-answer-tutor.test.ts` | 14 | LEAVE cross-ref-key | Tutor submit user/session/question/choice fixtures. |
+| 3c | `src/application/use-cases/toggle-bookmark.test.ts` | 3 | LEAVE cross-ref-key | Bookmark user/question fixtures; `missing` sentinel stays only if explicitly absent-key behavior. |
 | LEAVE | `src/application/test-helpers/fakes/fake-attempt-repository.test.ts` | 106 | Tier 3 LEAVE | Fake behavior-test semantic keys; PR 1 fixed generated defaults. |
 | LEAVE | `src/application/test-helpers/fakes/fake-auth-gateway.test.ts` | 2 | Tier 3 LEAVE | Fake auth behavior tests; no real boundary. |
 | LEAVE | `src/application/test-helpers/fakes/fake-idempotency-key-repository.test.ts` | 7 | Tier 3 LEAVE | Fake behavior keys; no adapter schema. |
@@ -642,7 +644,7 @@ rg -n "\b(questionId|sessionId|attemptId|choiceId|selectedChoiceId|correctChoice
   --glob '!**/_archive/**'
 ```
 
-Current result: **601 candidate lines across 40 browser spec files**. The 3b rows in the table above remain the per-file execution target list.
+PR 3b audit result at `895d03a5`: **601 candidate lines across 40 browser spec files**. PR 3b shipped in PR #372 at `f39171f8`; the current browser-spec canonical count is **0 lines across 0 files**. The 3b rows in the table above remain the historical per-file execution target list.
 
 Browser-only helper/probe files also contain shared boundary-ID fixtures consumed by the 3b specs. They are **in PR 3b scope even though the canonical `*.browser.spec.tsx` count excludes them**:
 
@@ -682,26 +684,83 @@ PR 3b proof method:
 
 PR 3b split decision: ship as **one browser PR** on `feat/debt-400-pr-3b-browser-fixtures`, with sub-area commits for reviewability (question-page controller hooks, practice-session controller hooks/helpers, component/render specs, history/misc). The slice is homogeneous and the hoisting rule above removes the main 3a review churn risk. Splitting further would add branch choreography without changing the boundary decision. If execution discovers the helper/probe changes are materially larger than the browser-spec edits, keep them in the same PR because they are shared browser fixture infrastructure for the same tests.
 
+#### PR 3c value re-evaluation: application use-case/shared fixtures
+
+Re-audited on 2026-05-30 from `dev` at `f39171f8` after PR 3b merged. This audit deliberately re-opened the value question instead of treating the old Tier 2 label as automatic execution scope.
+
+Canonical application slice count:
+
+```sh
+rg -n "\b(questionId|sessionId|attemptId|choiceId|selectedChoiceId|correctChoiceId|retryOfAttemptId|retrySessionId|userId|tagId|subscriptionId|idempotencyKey|question_id|session_id|attempt_id|choice_id|selected_choice_id|correct_choice_id|retry_of_attempt_id|retry_session_id|user_id|tag_id|subscription_id|idempotency_key|id)\s*[:=]\s*['\"](q|question|choice|session|attempt|user|db_user|tag|subscription|test|mock|fake|other|correct|incorrect|bookmark)[_-][A-Za-z0-9_-]+['\"]" \
+  src/application/ \
+  --glob '*.test.ts' --glob '*.test.tsx' \
+  --glob '!**/_archive/**'
+```
+
+Current result: **721 candidate lines across 34 files**:
+
+- `src/application/use-cases/**` plus `src/application/shared/**`: **579 lines across 27 files**.
+- `src/application/test-helpers/fakes/*.test.ts`: **142 lines across 7 files**.
+
+Boundary determination:
+
+- The application unit-test slice is fake-backed. `src/application/**/*.test.ts` currently has no imports of `@/src/adapters`, `db/schema`, Drizzle, Postgres, `zUuid`, or adapter controller schemas. A grep for those boundary imports only finds a comment in `get-previous-attempt.test.ts` saying a fake sort order matches the Drizzle implementation.
+- `src/application/use-cases/**` and `src/application/shared/**` production code likewise has no adapter/db/schema validation dependency. This is the intended Clean Architecture direction: application logic depends on ports and domain types; adapter validation lives outside it.
+- The real UUID-column/controller boundary is covered by `tests/integration/**` and adapter tests. Spot checks of `tests/integration/session-attempt-repository.integration.test.ts`, `tests/integration/controllers.integration.test.ts`, and `tests/integration/helpers.ts` show real DB/controller paths create app IDs through database defaults / returned rows and `randomUUID()`-driven helper data. The canonical placeholder grep returns **0** matches in `tests/integration/**`.
+- PR 1 already proves factory/fake-generated defaults with `tests/shared/fixture-uuid-integrity.test.ts`, which calls the real `zUuid.safeParse()` helper.
+
+Honest re-tier:
+
+| Bucket | Count | Files | Decision |
+|---|---:|---:|---|
+| GENUINE-FIX | 0 | 0 | No application unit-test fixture currently crosses a real validator, adapter repository, or DB column at test time. |
+| LEAVE cross-ref-key | 579 | 27 | Use-case/shared tests use readable linked keys behind fakes (`q1` / `questionId: 'q1'`, `c1` / `selectedChoiceId: 'c1'`, `session-1`, `attempt-parent`). Leave them unchanged. |
+| LEAVE Tier-3 fake behavior tests | 142 | 7 | Re-confirmed. These test fake-specific behavior with semantic keys; PR 1 fixed generated fake defaults. |
+| LEAVE provider/external IDs | 143 | 9 | Separate provider grep finds Stripe/Clerk/Svix-shaped IDs in `create-checkout-session.test.ts`, `create-portal-session.test.ts`, and fake provider repository tests. They are not app UUIDs. |
+
+Scope recommendation: **SKIP PR 3c as an execution PR.**
+
+Rationale:
+
+- Fix value would be production-shape consistency and future-refactor defense, not active boundary protection.
+- The churn cost is high: the largest files are dense cross-reference graphs (`get-previous-attempt.test.ts` 110 canonical hits, `get-attempted-questions.test.ts` 76, `save-exam-draft-answer.test.ts` 59). Replacing those with UUID variables would make behavior tests harder to read and review.
+- The same reasoning that left `src/application/test-helpers/fakes/*.test.ts` applies here: these are inner-layer behavior tests behind fakes. They do not exercise adapter validation.
+- The no-speculative-debt bar does not support UUID-ifying hundreds of readable fake-backed keys for "could matter someday." Future real-boundary migrations should add targeted tests or change the specific fixtures that cross that new boundary.
+
+If a future genuine boundary-crossing application test appears, the recipe remains:
+
+- Introduce named UUID variables once and preserve entity-graph linkage (`const questionId = crypto.randomUUID(); const choiceId = crypto.randomUUID();` reused across question, choice, attempt, session, and assertions).
+- Capture generated IDs in assertions and error-message checks.
+- Do not add `as any`, `as unknown as`, `@ts-ignore`, widened DTO types, or fixture `vi.hoisted()`.
+- Do not churn provider IDs, slugs, component/enum tokens, or negative invalid fixtures.
+
+Durable guardrail:
+
+- PR 4 ships the important remaining DEBT-400 guardrail: `.claude/rules/fixture-integrity.md` as SSOT, a short `testing.md` pointer, `CLAUDE.md` path-scoped row, and the schema-validation-major step in `docs/dev/dependency-update-protocol.md`.
+- The rule must explicitly teach that fake-backed inner-layer semantic keys may stay readable unless they cross a real boundary, and it must include the hoisting discipline learned in PR 3b: `vi.hoisted()` only when a value is read inside a `vi.mock(path, () => ...)` factory body.
+- PR 1's proof harness plus adapter/integration suites are the durable protection for the actual boundary. The campaign value is in those guards and the rule, not in churning every fake-backed fixture.
+
 #### PR 3 split plan
 
-PR 3 must not ship as one mega-PR. Ship the code sweep as three execution PRs after this audit:
+PR 3 must not ship as one mega-PR. The code sweep shipped as PR 3a and PR 3b; PR 3c was value re-evaluated and intentionally skipped:
 
 1. **PR 3a - app/component non-browser fixtures + E2E helper unit tests**
    - Branch: `feat/debt-400-pr-3a-app-component-fixtures`
    - Scope: the rows labeled `3a` above.
    - Proof: run the touched files directly, `pnpm test --run app/ components/ tests/e2e/helpers`, PR 1 harness, DEBT-398 scan, shuffled unit suite, full local gate.
-   - Status: shipped in PR #371 at `895d03a5`; PR 3b, PR 3c, PR 4, and archive follow.
+   - Status: shipped in PR #371 at `895d03a5`; PR 3b, PR 4, DEBT-402, and archive follow.
 2. **PR 3b - browser fixture sweep**
    - Branch: `feat/debt-400-pr-3b-browser-fixtures`
    - Scope: the rows labeled `3b` above plus the browser-only helper/probe/fixture files enumerated in the PR 3b pre-execution audit subsection when they define shared boundary IDs.
    - Proof: run touched browser specs directly and `pnpm test:browser`, plus PR 1 harness, DEBT-398 scan, shuffled unit suite, full local gate, and the no-unnecessary-`vi.hoisted()` proof.
-   - Status: implementation in PR #372; docs updated here. PR 3c, PR 4, and archive follow.
+   - Status: shipped in PR #372 at `f39171f8`; docs updated here. PR 4, DEBT-402, and archive follow.
 3. **PR 3c - application use-case/shared fixtures**
    - Branch: `feat/debt-400-pr-3c-application-fixtures`
-   - Scope: the rows labeled `3c` above.
-   - Proof: run `pnpm test --run src/application/use-cases src/application/shared`, PR 1 harness, DEBT-398 scan, shuffled unit suite, full local gate.
+   - Scope: audit-only value re-evaluation.
+   - Status: **skipped as an execution PR**. Current application unit tests are fake-backed inner-layer behavior tests with no real adapter/schema/DB validation at test time. Remaining 579 use-case/shared hits and 142 fake-test hits are documented LEAVE classes.
+   - Proof: no code changes. PR 4 rule docs plus PR 1 harness and integration/adapter tests provide the durable boundary protection.
 
-Tier 3 fake-test files are intentionally not assigned an execution PR. PR 4 remains the fixture-integrity docs SSOT. After PR 4 merges, archive DEBT-400 in a separate doc-only archive PR.
+Tier 3 fake-test files and PR 3c use-case/shared files are intentionally not assigned an execution PR. PR 4 remains the fixture-integrity docs SSOT. After PR 4 merges, archive DEBT-400 in a separate doc-only archive PR.
 
 PR 3 proof method:
 
@@ -718,11 +777,13 @@ Branch: `feat/debt-400-pr-4-fixture-integrity-docs`
 
 Canonical structure: **Option A**.
 
-- Create `.claude/rules/fixture-integrity.md` as the single source of truth.
-- Add only a short pointer section to `.claude/rules/testing.md`; do not duplicate the full rule body.
-- Add the new rule file to the `CLAUDE.md` Path-Scoped Rules table.
-- Update `docs/dev/dependency-update-protocol.md` with a Schema-Validation Majors fixture-audit step citing PR #330.
-- Mark DEBT-400 complete in this doc, but archive it in a separate follow-up archive PR after PR 4 merges.
+- Create `.claude/rules/fixture-integrity.md` as the single source of truth. Confirmed absent during the PR 4 pre-execution audit.
+- Add only a short pointer section to `.claude/rules/testing.md` immediately after "Test Environment Isolation"; do not duplicate the full rule body.
+- Add the new rule file to the `CLAUDE.md` Path-Scoped Rules table near `test-isolation.md`.
+- Update `docs/dev/dependency-update-protocol.md` with a Schema-Validation Majors fixture-audit step citing PR #330. Insert this as its own section after "Dev-Tooling Majors" and before "Red CI on Dependabot PRs"; it parallels the existing jsdom PR #328 precedent.
+- Finalize this DEBT-400 doc with PR 4 complete status, the PR 3c skip rationale carried forward from `d97df8c7`, and the remaining follow-up sequence: DEBT-402, then a separate DEBT-400 archive PR.
+
+Status: implemented by the PR 4 execution branch. This completes the DEBT-400 code/rule campaign when merged; DEBT-402 and the archive PR remain separate follow-ups.
 
 Recommended frontmatter for the new rule file:
 
@@ -739,14 +800,42 @@ paths:
 ---
 ```
 
+The first five paths mirror the `test-isolation.md` convention; the two helper-directory paths are deliberate DEBT-400 additions so factory/fake default-ID edits also load the fixture-integrity rule.
+
 Rule content contract:
 
-1. Fixtures must match production validators at any boundary.
-2. UUID/GUID fields crossing `zUuid` or Drizzle `uuid()` columns must use `crypto.randomUUID()` or UUID-emitting factories.
-3. Provider IDs, slugs, HTML ids, and intentionally invalid validation fixtures are not UUID fixtures.
-4. Factories and fakes must emit production-shaped default IDs.
-5. Schema-validation major upgrades must include a fixture audit before merge; cite PR #330.
-6. Do not churn harmless existing sites for style consistency.
+The rule body must be tight, but it must encode these four lessons explicitly:
+
+1. **Boundary.** Application-owned production IDs are UUID-shaped at the real boundary: controller schemas use `zUuid = z.guid()` in `src/adapters/shared/zod-schemas.ts`, and application-owned database identifiers are Drizzle `uuid()` columns in `db/schema.ts`. Fixtures that cross those boundaries must match the production shape.
+2. **FIX vs LEAVE.** FIX controller input/output DTO mocks, controller valid-path inputs, adapter repository row fixtures, mocked SQL rows, mapper rows, app-auth `userId` fixtures, E2E-helper app DB-row mocks, and shared factory/fake-generated defaults when they model `zUuid` fields or Drizzle `uuid()` columns. LEAVE provider IDs (`cus_`, `sub_`, `evt_`, `price_`, Clerk/Svix IDs), slugs, labels, HTML ids, `data-testid`, React-only keys, and intentionally invalid negative-validation fixtures. LEAVE fake-backed application use-case/shared tests and fake-repository behavior tests when their IDs are readable semantic cross-reference keys behind fakes; PR 3c proved those unit tests do not hit real adapter/schema/DB validation, the real boundary is covered by adapter/integration tests, and UUID-ifying those graphs would reduce readability for production-shape consistency alone.
+3. **Hoisting discipline.** Use `vi.hoisted()` for fixture values only when the value is read inside a `vi.mock(path, () => ...)` factory body. The browser `{ spy: true }` plus `vi.mocked(controllerFn).mockResolvedValue(...)` / `mockImplementation(...)` pattern runs in normal scope and does not need fixture hoisting. Do not consistency-hoist UUID variables.
+4. **Mechanics and proof.** Prefer UUID-emitting factories where available, otherwise use named role-bearing `crypto.randomUUID()` variables. Preserve cross-reference linkage by reusing the same variable for related entities, and capture generated IDs in assertions and error strings. Do not introduce `as any`, `as unknown as`, `@ts-ignore`, widened DTO types, or relaxed expectations to make a fixture fit; DEBT-402 tracks the separate mocked-DTO type-drift class. Cite `tests/shared/fixture-uuid-integrity.test.ts` as the PR 1 proof harness for generated factory/fake defaults.
+
+The rule must also say that schema-validation major upgrades require a fixture audit before merge, citing PR #330, and that harmless existing sites must not be churned for style consistency alone.
+
+`testing.md` pointer shape:
+
+```markdown
+## Fixture Integrity
+
+Tests and test helpers that create boundary-shaped fixtures MUST keep application-owned IDs valid at controller/DB boundaries and MUST leave provider IDs, fake-backed semantic keys, UI tokens, and intentional-invalid fixtures alone. See **`.claude/rules/fixture-integrity.md`** for the full FIX/LEAVE rule, UUID-linkage mechanics, and `vi.hoisted()` guidance.
+```
+
+`CLAUDE.md` table row shape:
+
+```markdown
+| `fixture-integrity.md` | `**/*.test.ts(x)`, `**/*.spec.ts(x)`, `tests/**`, `src/**/test-helpers/**` | UUID fixture boundary discipline, FIX/LEAVE tiers, linkage, hoisting |
+```
+
+`dependency-update-protocol.md` insertion content:
+
+```markdown
+## Schema-Validation Majors
+
+Major updates to Zod or another validation/schema library must include a boundary-fixture audit before merge. PR #330 is the local precedent: Zod 4 changed UUID/GUID validation semantics, so app-owned ID fixtures had to be checked against `zUuid = z.guid()` and Drizzle `uuid()` columns.
+
+Audit controller schemas, repository row fixtures, mocked controller DTOs, shared factories/fakes, and integration fixtures for shape drift. Keep provider IDs and intentional-invalid negative tests provider-shaped/invalid; fix only fixtures that cross the real validation or database boundary.
+```
 
 ---
 
@@ -772,8 +861,10 @@ PR 2 done when:
 
 PR 3 done when:
 
-- PR 3a/3b/3c have shipped in that order, with only their assigned rows from the PR 3 table touched.
-- App/browser/application tests no longer use placeholder IDs for mocked controller DTOs, E2E helper app DB row mocks, or application entity/port fixtures that cross the boundary definition.
+- PR 3a and PR 3b have shipped in that order, with only their assigned rows from the PR 3 table touched.
+- PR 3c has been value re-evaluated and intentionally skipped as a code PR because the application use-case/shared tests are fake-backed inner-layer behavior tests with no real adapter/schema/DB validation at unit-test time.
+- App/browser tests no longer use placeholder IDs for mocked controller DTOs or E2E helper app DB row mocks that cross the boundary definition.
+- Application use-case/shared and Tier 3 fake-test remaining hits are documented LEAVE classes unless a future test crosses a real adapter/schema boundary.
 - Tier 3 fake-test files are either unchanged or have only directly necessary fallout edits, with semantic fake-behavior keys preserved.
 - Remaining canonical-grep hits are harmless/provider IDs, pure UI tokens, slugs, Tier 3 fake-test semantic keys, or intentionally invalid validation fixtures.
 - No new `as any`, `as unknown as`, `@ts-ignore`, widened DTO types, or relaxed expectations are introduced.
@@ -788,6 +879,9 @@ PR 4 done when:
 - `.claude/rules/testing.md` has only a pointer to the rule, not a duplicated body.
 - `CLAUDE.md` lists the new path-scoped rule.
 - `docs/dev/dependency-update-protocol.md` records the schema-validation-major fixture-audit step.
+- The rule captures the PR 3c value decision: fake-backed application behavior-test keys are LEAVE unless they cross a real boundary, and `vi.hoisted()` is not a blanket fixture-consistency tool.
+- `tests/shared/fixture-uuid-integrity.test.ts` remains green.
+- `pnpm test --run components/theme-token-regression.test.tsx` remains 16/16.
 - Full local gate green.
 
 Cross-PR sanity:
@@ -802,7 +896,8 @@ Cross-PR sanity:
 
 - **PR 1:** medium risk because factories/fakes are widely reused and some tests intentionally relied on deterministic `attempt-1` / `session-1` sequences. Failures should be loud and local: capture returned IDs instead of asserting generated literals.
 - **PR 2:** medium risk in adapter tests because repository fixtures often mirror SQL rows. Keep changes mechanical and boundary-scoped.
-- **PR 3a/3b/3c:** medium risk because app/browser/application fixture graphs are broad and many assertions depend on linked IDs. Split by the locked sub-PR plan above, use capture-the-id variables, and rerun affected tests frequently.
+- **PR 3a/3b:** medium risk because app/browser fixture graphs are broad and many assertions depend on linked IDs. Split by the locked sub-PR plan above, use capture-the-id variables, and rerun affected tests frequently.
+- **PR 3c:** audit-only after value re-evaluation; no code risk because fake-backed application unit-test keys are intentionally left readable.
 - **PR 4:** doc-only; low risk.
 
 All PRs are independently revertible.
@@ -811,4 +906,4 @@ All PRs are independently revertible.
 
 ## Done When
 
-All DEBT-400 execution PRs (PR 1, PR 2a, PR 2b, PR 3a, PR 3b, PR 3c, and PR 4) merge to `dev` and sync to `main`; the dedicated fixture-integrity rule is live; `testing.md` points to it without duplicating the body; factories/fakes emit UUID-valid defaults; boundary-crossing fixtures use UUID-valid values; remaining placeholder-ID grep hits are documented harmless classes; full local gate is green; DEBT-400 is archived with a resolution paragraph naming the PRs.
+All DEBT-400 execution PRs (PR 1, PR 2a, PR 2b, PR 3a, PR 3b, and PR 4) merge to `dev` and sync to `main`; PR 3c is recorded as an audit-only skip; the dedicated fixture-integrity rule is live; `testing.md` points to it without duplicating the body; factories/fakes emit UUID-valid defaults; boundary-crossing fixtures use UUID-valid values; remaining placeholder-ID grep hits are documented harmless classes; full local gate is green; DEBT-400 is archived with a resolution paragraph naming the PRs and the PR 3c skip decision.

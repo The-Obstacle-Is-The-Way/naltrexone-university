@@ -53,6 +53,12 @@ Expect lint and test brittleness, and treat it as migration work rather than noi
 
 The rule is not "avoid dev-tooling majors." The rule is "isolate them so their fallout is reviewable."
 
+## Schema-Validation Majors
+
+Major updates to Zod or another validation/schema library must include a boundary-fixture audit before merge. PR #330 is the local precedent: Zod 4 changed UUID/GUID validation semantics, so app-owned ID fixtures had to be checked against `zUuid = z.guid()` and Drizzle `uuid()` columns.
+
+Audit controller schemas, repository row fixtures, mocked controller DTOs, shared factories/fakes, and integration fixtures for shape drift. Keep provider IDs and intentional-invalid negative tests provider-shaped/invalid; fix only fixtures that cross the real validation or database boundary.
+
 ## Red CI on Dependabot PRs
 
 Red CI is a stop sign.
