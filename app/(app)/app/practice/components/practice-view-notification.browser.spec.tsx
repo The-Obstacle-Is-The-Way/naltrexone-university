@@ -5,6 +5,8 @@ import * as notificationProvider from '@/components/ui/notification-provider';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import { PracticeView } from './practice-view';
 
+const fixtureQuestion1Id = crypto.randomUUID();
+
 const notifySpy = vi.fn();
 
 vi.mock('@/components/ui/notification-provider', { spy: true });
@@ -19,7 +21,7 @@ beforeEach(() => {
 
 function createBaseProps() {
   const question = createNextQuestion({
-    questionId: 'question-1',
+    questionId: fixtureQuestion1Id,
     slug: 'question-1',
     stemMd: 'What is the next best step?',
     difficulty: 'easy',

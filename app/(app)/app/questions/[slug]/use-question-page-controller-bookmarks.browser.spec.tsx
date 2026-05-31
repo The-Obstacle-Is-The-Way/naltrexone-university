@@ -5,11 +5,17 @@ import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetBookmarksOutput } from '@/src/application/ports/bookmarks';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
+
 import {
   getBookmarks,
   getPreviousAttempt,
   getQuestionBySlug,
+  getQuestionPageQuestionIdForSlug,
   Probe,
+  QUESTION_PAGE_ATTEMPT_1_ID,
+  QUESTION_PAGE_CHOICE_1_ID,
+  QUESTION_PAGE_QUESTION_1_ID,
+  QUESTION_PAGE_QUESTION_2_ID,
   setupQuestionPageControllerBrowserSpec,
   toggleBookmark,
 } from './use-question-page-controller-test-helpers';
@@ -20,22 +26,24 @@ describe('useQuestionPageController (browser)', () => {
   it('loads bookmark state for the current review question', async () => {
     getQuestionBySlug.mockResolvedValue(
       ok({
-        questionId: 'question-1',
+        questionId: QUESTION_PAGE_QUESTION_1_ID,
         slug: 'q-1',
         stemMd: 'Stem',
         difficulty: 'easy',
-        choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
+        choices: [
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+        ],
       }),
     );
     getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
         sessionMode: null,
-        attemptId: 'attempt-1',
-        selectedChoiceId: 'choice-1',
+        attemptId: QUESTION_PAGE_ATTEMPT_1_ID,
+        selectedChoiceId: QUESTION_PAGE_CHOICE_1_ID,
         isOmitted: false,
         isCorrect: true,
-        correctChoiceId: 'choice-1',
+        correctChoiceId: QUESTION_PAGE_CHOICE_1_ID,
         explanationMd: 'Because.',
         referenceMd: null,
         choiceExplanations: [],
@@ -47,7 +55,7 @@ describe('useQuestionPageController (browser)', () => {
         rows: [
           {
             isAvailable: true,
-            questionId: 'question-1',
+            questionId: QUESTION_PAGE_QUESTION_1_ID,
             slug: 'q-1',
             stemMd: 'Stem',
             difficulty: 'easy',
@@ -74,22 +82,24 @@ describe('useQuestionPageController (browser)', () => {
   it('keeps bookmark state unhydrated until the bookmark lookup resolves', async () => {
     getQuestionBySlug.mockResolvedValue(
       ok({
-        questionId: 'question-1',
+        questionId: QUESTION_PAGE_QUESTION_1_ID,
         slug: 'q-1',
         stemMd: 'Stem',
         difficulty: 'easy',
-        choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
+        choices: [
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+        ],
       }),
     );
     getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
         sessionMode: null,
-        attemptId: 'attempt-1',
-        selectedChoiceId: 'choice-1',
+        attemptId: QUESTION_PAGE_ATTEMPT_1_ID,
+        selectedChoiceId: QUESTION_PAGE_CHOICE_1_ID,
         isOmitted: false,
         isCorrect: true,
-        correctChoiceId: 'choice-1',
+        correctChoiceId: QUESTION_PAGE_CHOICE_1_ID,
         explanationMd: 'Because.',
         referenceMd: null,
         choiceExplanations: [],
@@ -113,7 +123,7 @@ describe('useQuestionPageController (browser)', () => {
         rows: [
           {
             isAvailable: true,
-            questionId: 'question-1',
+            questionId: QUESTION_PAGE_QUESTION_1_ID,
             slug: 'q-1',
             stemMd: 'Stem',
             difficulty: 'easy',
@@ -138,22 +148,24 @@ describe('useQuestionPageController (browser)', () => {
   it('toggles bookmark state for the current review question', async () => {
     getQuestionBySlug.mockResolvedValue(
       ok({
-        questionId: 'question-1',
+        questionId: QUESTION_PAGE_QUESTION_1_ID,
         slug: 'q-1',
         stemMd: 'Stem',
         difficulty: 'easy',
-        choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
+        choices: [
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+        ],
       }),
     );
     getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
         sessionMode: null,
-        attemptId: 'attempt-1',
-        selectedChoiceId: 'choice-1',
+        attemptId: QUESTION_PAGE_ATTEMPT_1_ID,
+        selectedChoiceId: QUESTION_PAGE_CHOICE_1_ID,
         isOmitted: false,
         isCorrect: true,
-        correctChoiceId: 'choice-1',
+        correctChoiceId: QUESTION_PAGE_CHOICE_1_ID,
         explanationMd: 'Because.',
         referenceMd: null,
         choiceExplanations: [],
@@ -175,7 +187,7 @@ describe('useQuestionPageController (browser)', () => {
 
     await expect.poll(() => toggleBookmark.mock.calls.length).toBe(1);
     expect(toggleBookmark).toHaveBeenCalledWith({
-      questionId: 'question-1',
+      questionId: QUESTION_PAGE_QUESTION_1_ID,
       idempotencyKey: expect.any(String),
     });
     await expect
@@ -192,22 +204,24 @@ describe('useQuestionPageController (browser)', () => {
   it('reports saving state while a bookmark toggle is in flight', async () => {
     getQuestionBySlug.mockResolvedValue(
       ok({
-        questionId: 'question-1',
+        questionId: QUESTION_PAGE_QUESTION_1_ID,
         slug: 'q-1',
         stemMd: 'Stem',
         difficulty: 'easy',
-        choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
+        choices: [
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+        ],
       }),
     );
     getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
         sessionMode: null,
-        attemptId: 'attempt-1',
-        selectedChoiceId: 'choice-1',
+        attemptId: QUESTION_PAGE_ATTEMPT_1_ID,
+        selectedChoiceId: QUESTION_PAGE_CHOICE_1_ID,
         isOmitted: false,
         isCorrect: true,
-        correctChoiceId: 'choice-1',
+        correctChoiceId: QUESTION_PAGE_CHOICE_1_ID,
         explanationMd: 'Because.',
         referenceMd: null,
         choiceExplanations: [],
@@ -241,22 +255,24 @@ describe('useQuestionPageController (browser)', () => {
     getQuestionBySlug.mockImplementation(async (input: unknown) => {
       const slug = (input as { slug: string }).slug;
       return ok({
-        questionId: `question-${slug}`,
+        questionId: getQuestionPageQuestionIdForSlug(slug),
         slug,
         stemMd: 'Stem',
         difficulty: 'easy',
-        choices: [{ id: 'choice-1', label: 'A', textMd: 'Choice A' }],
+        choices: [
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+        ],
       });
     });
     getPreviousAttempt.mockResolvedValue(
       ok({
         kind: 'attempt',
         sessionMode: null,
-        attemptId: 'attempt-1',
-        selectedChoiceId: 'choice-1',
+        attemptId: QUESTION_PAGE_ATTEMPT_1_ID,
+        selectedChoiceId: QUESTION_PAGE_CHOICE_1_ID,
         isOmitted: false,
         isCorrect: true,
-        correctChoiceId: 'choice-1',
+        correctChoiceId: QUESTION_PAGE_CHOICE_1_ID,
         explanationMd: 'Because.',
         referenceMd: null,
         choiceExplanations: [],
@@ -324,8 +340,8 @@ describe('useQuestionPageController (browser)', () => {
       questionId: string;
     };
 
-    expect(firstInput.questionId).toBe('question-q-1');
-    expect(secondInput.questionId).toBe('question-q-2');
+    expect(firstInput.questionId).toBe(QUESTION_PAGE_QUESTION_1_ID);
+    expect(secondInput.questionId).toBe(QUESTION_PAGE_QUESTION_2_ID);
     expect(secondInput.idempotencyKey).not.toBe(firstInput.idempotencyKey);
   });
 });

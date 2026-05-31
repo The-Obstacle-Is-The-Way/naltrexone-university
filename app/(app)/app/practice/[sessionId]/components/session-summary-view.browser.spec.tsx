@@ -3,11 +3,15 @@ import { render } from 'vitest-browser-react';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
 import { SessionSummaryView } from './session-summary-view';
 
+const fixtureSession1Id = crypto.randomUUID();
+const fixtureQ1Id = crypto.randomUUID();
+const fixtureQ2Id = crypto.randomUUID();
+
 test('renders summary totals and per-question breakdown', async () => {
   const screen = await render(
     <SessionSummaryView
       summary={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:00:00.000Z',
         mode: 'exam',
         questionCount: 10,
@@ -19,14 +23,14 @@ test('renders summary totals and per-question breakdown', async () => {
         },
       }}
       review={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -38,7 +42,7 @@ test('renders summary totals and per-question breakdown', async () => {
             markedForReview: false,
           },
           {
-            questionId: 'q2',
+            questionId: fixtureQ2Id,
             order: 2,
             isAvailable: false,
             isAnswered: false,
@@ -69,7 +73,7 @@ test('renders summary totals and per-question breakdown', async () => {
       toQuestionRoute('q-1', {
         from: 'summary',
         mode: 'review',
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
       }),
     );
 
@@ -80,7 +84,7 @@ test('renders summary totals and per-question breakdown', async () => {
       toQuestionRoute('q-1', {
         from: 'summary',
         mode: 'review',
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
       }),
     );
 });
@@ -89,7 +93,7 @@ test('omits the removed practice-missed CTA when all exam answers are correct', 
   const screen = await render(
     <SessionSummaryView
       summary={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:00:00.000Z',
         mode: 'exam',
         questionCount: 2,
@@ -101,14 +105,14 @@ test('omits the removed practice-missed CTA when all exam answers are correct', 
         },
       }}
       review={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -134,7 +138,7 @@ test('uses New Session as the primary CTA when no reviewable slug exists', async
   const screen = await render(
     <SessionSummaryView
       summary={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:00:00.000Z',
         mode: 'exam',
         questionCount: 2,
@@ -146,14 +150,14 @@ test('uses New Session as the primary CTA when no reviewable slug exists', async
         },
       }}
       review={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             order: 1,
             isAvailable: false,
             isAnswered: true,
@@ -182,7 +186,7 @@ test('renders loading and error states for summary review', async () => {
   const screen = await render(
     <SessionSummaryView
       summary={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:00:00.000Z',
         mode: 'tutor',
         questionCount: 1,
@@ -205,7 +209,7 @@ test('renders only the New Session action for tutor summaries', async () => {
   const screen = await render(
     <SessionSummaryView
       summary={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:00:00.000Z',
         mode: 'tutor',
         questionCount: 1,
@@ -241,7 +245,7 @@ test('renders callback-driven exam review controls as buttons and disables the C
   const screen = await render(
     <SessionSummaryView
       summary={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:00:00.000Z',
         mode: 'exam',
         questionCount: 2,
@@ -253,14 +257,14 @@ test('renders callback-driven exam review controls as buttons and disables the C
         },
       }}
       review={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -272,7 +276,7 @@ test('renders callback-driven exam review controls as buttons and disables the C
             markedForReview: false,
           },
           {
-            questionId: 'q2',
+            questionId: fixtureQ2Id,
             order: 2,
             isAvailable: false,
             isAnswered: false,
@@ -307,7 +311,7 @@ test('uses in-session callbacks for exam summary review re-entry when provided',
   const screen = await render(
     <SessionSummaryView
       summary={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:00:00.000Z',
         mode: 'exam',
         questionCount: 2,
@@ -319,14 +323,14 @@ test('uses in-session callbacks for exam summary review re-entry when provided',
         },
       }}
       review={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -338,7 +342,7 @@ test('uses in-session callbacks for exam summary review re-entry when provided',
             markedForReview: false,
           },
           {
-            questionId: 'q2',
+            questionId: fixtureQ2Id,
             order: 2,
             isAvailable: false,
             isAnswered: false,
@@ -358,5 +362,5 @@ test('uses in-session callbacks for exam summary review re-entry when provided',
   expect(onReviewAnswers).toHaveBeenCalledTimes(1);
 
   await screen.getByRole('button', { name: /Stem for q1/i }).click();
-  expect(onOpenReviewQuestion).toHaveBeenCalledWith('q1');
+  expect(onOpenReviewQuestion).toHaveBeenCalledWith(fixtureQ1Id);
 });

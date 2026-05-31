@@ -1,8 +1,8 @@
 # DEBT-400: Test Fixture Integrity (Zod Boundary Class)
 
-**Priority:** P2 (latent bug class. After PR 2b, the current canonical candidate grep finds 2,040 placeholder-ID assignments across 129 test files; the remaining PR 3 app/browser/application slice accounts for 2,021 candidate assignments across 125 files. This is a candidate set, not a mandate to replace every string: the execution scope is only IDs that cross `zUuid = z.guid()` controller schemas or model Drizzle `uuid()` columns.)
+**Priority:** P2 (latent bug class. After PR 3a, the current canonical candidate grep finds 1,330 remaining placeholder-ID assignments across 78 PR 3 app/browser/application files. This is a candidate set, not a mandate to replace every string: the execution scope is only IDs that cross `zUuid = z.guid()` controller schemas or model Drizzle `uuid()` columns.)
 **Created:** 2026-05-26
-**Source:** Deep schema/boundary integrity audit conducted alongside DEBT-394 archival; re-audited on 2026-05-28 from `dev` at `f2dc0793`, PR 2 scope re-audited on 2026-05-28 from `dev` at `e7f1029a` after PR 1 merged, repository-slice PR 2b scope re-audited on 2026-05-29 from `dev` at `a98b5922` after PR 2a merged, and app/browser/application PR 3 scope re-audited on 2026-05-29 from `dev` at `3b225505` after PR 2b merged. Direct precedent is PR #330, which bumped Zod from 3 to 4 and deliberately kept historical UUID/GUID behavior by replacing the shared controller ID schema with Zod 4 `z.guid()`.
+**Source:** Deep schema/boundary integrity audit conducted alongside DEBT-394 archival; re-audited on 2026-05-28 from `dev` at `f2dc0793`, PR 2 scope re-audited on 2026-05-28 from `dev` at `e7f1029a` after PR 1 merged, repository-slice PR 2b scope re-audited on 2026-05-29 from `dev` at `a98b5922` after PR 2a merged, app/browser/application PR 3 scope re-audited on 2026-05-29 from `dev` at `3b225505` after PR 2b merged, and browser-slice PR 3b scope re-audited on 2026-05-30 from `dev` at `895d03a5` after PR 3a merged. Direct precedent is PR #330, which bumped Zod from 3 to 4 and deliberately kept historical UUID/GUID behavior by replacing the shared controller ID schema with Zod 4 `z.guid()`.
 **Related:** [src/adapters/shared/zod-schemas.ts](../../src/adapters/shared/zod-schemas.ts), [db/schema.ts](../../db/schema.ts), [src/domain/test-helpers/](../../src/domain/test-helpers/), [src/application/test-helpers/fakes/](../../src/application/test-helpers/fakes/), [docs/dev/dependency-update-protocol.md](../dev/dependency-update-protocol.md), [DEBT-397](./debt-397-datetime-boundary-type-normalization.md), [DEBT-394 (archived)](../_archive/debt/debt-394-supply-chain-hardening.md), PR #330
 
 **Status:** Active
@@ -104,7 +104,7 @@ rg -n "\b(questionId|sessionId|attemptId|choiceId|selectedChoiceId|correctChoice
   --glob '!**/_archive/**'
 ```
 
-Current result on `3b225505` after PR 2b: **2,040 lines across 129 files**. The PR 3 slice (`app/`, `components/`, `src/application/`, `tests/e2e/helpers/`) is **2,021 lines across 125 files**. The result on `a98b5922` after PR 2a was **2,244 lines across 140 files** with the earlier command that did not include the `db_user` E2E-helper prefix. The result on `e7f1029a` after PR 1 was **2,438 lines across 162 files**. The pre-PR1 audit result on `f2dc0793` was **2,447 lines across 163 files**.
+Current result on `895d03a5` after PR 3a: **1,349 lines across 82 files** repo-wide. The remaining PR 3 slice (`app/`, `components/`, `src/application/`, `tests/e2e/helpers/`) is **1,330 lines across 78 files**. Historical result on `3b225505` after PR 2b was **2,040 lines across 129 files**, with the PR 3 slice accounting for **2,021 lines across 125 files** before PR 3a shipped. The result on `a98b5922` after PR 2a was **2,244 lines across 140 files** with the earlier command that did not include the `db_user` E2E-helper prefix. The result on `e7f1029a` after PR 1 was **2,438 lines across 162 files**. The pre-PR1 audit result on `f2dc0793` was **2,447 lines across 163 files**.
 
 This replaces the old narrower `604 / 64` count. The old grep only searched `app/ src/ components/`, only camel-case object properties, only five field names, and only underscore-prefixed values. It missed hyphenated placeholders (`session-1`), choice/tag/subscription fields, snake_case SQL-row fixtures (`user_id`), E2E app-user sentinels such as `db_user_123`, and `tests/**` helper fixtures.
 
@@ -463,7 +463,7 @@ PR 2b status: shipped in PR #370 at `3b225505`. The repository-slice PR migrated
 
 Root audit branch: `feat/debt-400-pr-3-app-application-fixtures`
 
-Pre-execution audit status: current from `dev` at `3b225505` after PR 2b merged. PRs 1, 2a, and 2b are merged, so this is the remaining code sweep.
+Pre-execution audit status: current from `dev` at `895d03a5` after PR 3a merged. PRs 1, 2a, 2b, and 3a are merged. Remaining code sweeps are PR 3b (browser specs and browser-only helper fixtures) and PR 3c (application use-case/shared fixtures), followed by PR 4 docs.
 
 #### PR 3 candidate count
 
@@ -473,13 +473,15 @@ Use the canonical command above. For the PR 3 slice, run it against:
 app/ components/ src/application/ tests/e2e/helpers/
 ```
 
-Current result: **2,021 candidate lines across 125 files**.
+Historical result before PR 3a: **2,021 candidate lines across 125 files**.
+
+Current result on `895d03a5` after PR 3a: **1,330 candidate lines across 78 files**.
 
 Breakdown:
 
 | Slice | Candidate lines | Files | Decision |
 |---|---:|---:|---|
-| App/components non-browser tests plus E2E helper unit tests | 700 | 52 | PR 3a, Tier 1 FIX where the fixture models controller/app UUID shape; provider/component-only hits stay. Includes the execution-discovered `tests/e2e/helpers/e2e-reset-shared.test.ts` app-user SQL row fixture. |
+| App/components non-browser tests plus E2E helper unit tests | 8 | 4 | PR 3a shipped in PR #371 at `895d03a5`. Remaining hits are expected LEAVE cases: DEBT-398 regression fixture strings and provider-shaped Clerk IDs in E2E helper tests. Do not pull these into PR 3b. |
 | App/components browser specs | 601 | 40 | PR 3b, Tier 1 FIX where browser fixtures mock controller DTOs or hook controller responses; component-only/provider hits stay. |
 | `src/application/use-cases/**` and `src/application/shared/**` | 579 | 27 | PR 3c, Tier 2 FIX for entity/port fixtures that model Drizzle UUID columns. |
 | `src/application/test-helpers/fakes/*.test.ts` | 142 | 7 | Tier 3 LEAVE. These are fake behavior tests with semantic internal keys; PR 1 already fixed fake-generated defaults. |
@@ -629,6 +631,57 @@ Candidate counts are grep hits, not exact edit counts. One semantic UUID variabl
 | LEAVE | `src/application/test-helpers/fakes/fake-subscription-repository.test.ts` | 6 | Tier 3 LEAVE | Fake subscription behavior keys; provider IDs remain provider-shaped. |
 | LEAVE | `src/application/test-helpers/fakes/fake-tag-repository.test.ts` | 2 | Tier 3 LEAVE | Fake tag behavior keys/slugs; no boundary. |
 
+#### PR 3b pre-execution audit: browser target list and hoisting rule
+
+Re-audited on 2026-05-30 from `dev` at `895d03a5` after PR 3a merged. The canonical browser-spec grep is:
+
+```sh
+rg -n "\b(questionId|sessionId|attemptId|choiceId|selectedChoiceId|correctChoiceId|retryOfAttemptId|retrySessionId|userId|tagId|subscriptionId|idempotencyKey|question_id|session_id|attempt_id|choice_id|selected_choice_id|correct_choice_id|retry_of_attempt_id|retry_session_id|user_id|tag_id|subscription_id|idempotency_key|id)\s*[:=]\s*['\"](q|question|choice|session|attempt|user|db_user|tag|subscription|test|mock|fake|other|correct|incorrect|bookmark)[_-][A-Za-z0-9_-]+['\"]" \
+  app/ components/ \
+  --glob '*.browser.spec.tsx' \
+  --glob '!**/_archive/**'
+```
+
+Current result: **601 candidate lines across 40 browser spec files**. The 3b rows in the table above remain the per-file execution target list.
+
+Browser-only helper/probe files also contain shared boundary-ID fixtures consumed by the 3b specs. They are **in PR 3b scope even though the canonical `*.browser.spec.tsx` count excludes them**:
+
+| Helper file | Candidate shape | Execution note |
+|---|---|---|
+| `app/(app)/app/questions/[slug]/use-question-page-controller-test-helpers.tsx` | Probe action calls `output.onSelectChoice('choice-1')`; test IDs/slugs are LEAVE. | Keep `data-testid` values and slug defaults readable. Replace only the choice ID value when execution introduces shared question-page choice ID constants/props, so button actions still match mocked choice DTO IDs. |
+| `app/(app)/app/practice/[sessionId]/hooks/practice-session-page-controller.browser.fixtures.ts` | Shared `createQuestionResponse` / `createReviewResponse` defaults for `choice_1` and `session-1`. | Replace boundary defaults with named UUID values or require caller-supplied values where that preserves linkage more clearly. |
+| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller-test-helpers.ts` | `CHOICE_1` / `CHOICE_2` / `CHOICE_3`, question navigation graph (`question-1` / `question-2` / `question-3`), and assertions referencing those IDs. | Use role-bearing constants once and reuse them in row fixtures, branching logic, and assertions. Do not blind-replace linked values independently. |
+| `app/(app)/app/practice/[sessionId]/hooks/practice-session-page-controller.browser.probes.tsx` | Probe calls `usePracticeSessionPageController('session-1')`, `onSelectChoice('choice_1')`, `onNavigateQuestion('question-1')`, and `onOpenReviewQuestion('question-1')`; `data-testid` strings are LEAVE. | Import/reuse the same named ID constants as the shared browser helper fixtures so probe actions continue to target real DTO IDs. |
+
+Browser file classification:
+
+- **Controller-hook specs (Tier 1 FIX):** the `use-question-page-*`, `use-practice-session-page-controller-*`, `use-practice-session-question-flow*`, `use-practice-question-*`, `use-practice-session-start`, `use-practice-session-controls`, and `use-history-sessions` browser specs. These use `.claude/rules/testing-browser.md`'s controller-mocking pattern: `vi.mock(path, { spy: true })`, then `vi.mocked(controllerFn).mockResolvedValue(...)` or `mockImplementation(...)` in normal test scope. Mocked DTO/input IDs are FIX; test IDs, labels, slugs, and negative sentinels are LEAVE.
+- **Component/render specs (Tier 1 FIX where props are controller-shaped):** `practice-view.browser.spec.tsx`, `practice-session-page-view-*.browser.spec.tsx`, `history-*-tab.browser.spec.tsx`, `QuestionCard.browser.spec.tsx`, `session-summary-view.browser.spec.tsx`, `exam-review-view.browser.spec.tsx`, `post-exam-review-view.browser.spec.tsx`, `incomplete-session-card.browser.spec.tsx`, `practice-session-starter.browser.spec.tsx`, and `practice-view-notification.browser.spec.tsx`. Props that model controller DTOs or app UUID columns are FIX; pure DOM/test tokens are LEAVE.
+- **Browser specs with no canonical DEBT-400 target hits:** `theme-toggle.browser.spec.tsx`, `mobile-nav.browser.spec.tsx`, `notification-provider.browser.spec.tsx`, `ChoiceButton.browser.spec.tsx`, `bookmarks-toast.browser.spec.tsx`, `bookmark-row-shell.browser.spec.tsx`, `practice-session-toast.browser.spec.tsx`, `quick-practice-client.browser.spec.tsx`, and `use-exam-timer.browser.spec.tsx` are not migration targets unless execution discovers a concrete boundary-ID fixture while reading. Existing provider/navigation mock IDs remain out of scope.
+
+Hoisting rule for PR 3b:
+
+- `vi.hoisted()` is required only when a value is referenced inside a `vi.mock(path, () => ...)` factory body, because Vitest hoists the factory before ordinary module-scope constants initialize.
+- `vi.hoisted()` is **not** required for UUID values passed to `vi.mocked(controllerFn).mockResolvedValue(...)`, `mockResolvedValueOnce(...)`, or `mockImplementation(...)` in `beforeEach` / `it` bodies after a `{ spy: true }` controller mock. Those values execute in normal scope.
+- Current browser factory-mock exceptions are for external/mock-function setup, not UUID fixture constants: `next/navigation`, `next-themes`, and the practice-session page-controller browser setup hoist mock functions that feed factory mocks. No current browser UUID fixture constant feeds a `vi.mock(...)` factory body.
+- PR 3b must therefore **not** consistency-hoist UUID constants across the slice. Add `vi.hoisted()` only if execution creates a UUID value that is directly read inside a `vi.mock(path, () => ...)` factory body; document that exception in the PR body if it happens.
+
+PR 3b linkage/capture rule:
+
+- Use named UUID variables for linked DTO graphs (`questionId`, choice IDs, `selectedChoiceId`, `correctChoiceId`, `attemptId`, `sessionId`) and reuse the same variable in mocked controller payloads, probe actions, and assertions.
+- Capture and assert the generated ID where the test checks rendered text, calls, error messages, or route/navigation behavior.
+- Do not change `data-testid`, button labels, slugs, provider IDs, or intentional invalid strings just because they resemble IDs.
+
+PR 3b proof method:
+
+- Scope proof: diff contains only `*.browser.spec.tsx`, the explicitly listed browser helper/probe/fixture files above when needed, and this DEBT doc. No PR 3a non-browser tests, no `src/application/**` PR 3c files, no adapters, no factories/fakes.
+- Hoist proof: `git --no-pager diff origin/dev...HEAD | grep -E '^\+.*vi\.hoisted'` should be empty, unless a reviewed exception shows the new hoisted value is read inside a `vi.mock(path, () => ...)` factory body. Do not add `vi.hoisted()` for ordinary `mockResolvedValue` UUID constants.
+- Type proof: no new `as any`, `as unknown as`, `@ts-ignore`, widened DTO types, or relaxed expectations.
+- Linkage proof: call out at least one question/choice/session graph where named UUID variables preserve previous cross-reference semantics.
+- Test proof: run touched browser specs directly where practical, then `pnpm test:browser`, `pnpm test --run tests/shared/fixture-uuid-integrity.test.ts`, `pnpm test --run components/theme-token-regression.test.tsx`, `pnpm test --run --sequence.shuffle`, and the full local gate.
+
+PR 3b split decision: ship as **one browser PR** on `feat/debt-400-pr-3b-browser-fixtures`, with sub-area commits for reviewability (question-page controller hooks, practice-session controller hooks/helpers, component/render specs, history/misc). The slice is homogeneous and the hoisting rule above removes the main 3a review churn risk. Splitting further would add branch choreography without changing the boundary decision. If execution discovers the helper/probe changes are materially larger than the browser-spec edits, keep them in the same PR because they are shared browser fixture infrastructure for the same tests.
+
 #### PR 3 split plan
 
 PR 3 must not ship as one mega-PR. Ship the code sweep as three execution PRs after this audit:
@@ -637,11 +690,12 @@ PR 3 must not ship as one mega-PR. Ship the code sweep as three execution PRs af
    - Branch: `feat/debt-400-pr-3a-app-component-fixtures`
    - Scope: the rows labeled `3a` above.
    - Proof: run the touched files directly, `pnpm test --run app/ components/ tests/e2e/helpers`, PR 1 harness, DEBT-398 scan, shuffled unit suite, full local gate.
-   - Status: implementation complete on the PR 3a branch; PR 3b, PR 3c, PR 4, and archive follow.
+   - Status: shipped in PR #371 at `895d03a5`; PR 3b, PR 3c, PR 4, and archive follow.
 2. **PR 3b - browser fixture sweep**
    - Branch: `feat/debt-400-pr-3b-browser-fixtures`
-   - Scope: the rows labeled `3b` above.
-   - Proof: run touched browser specs directly and `pnpm test:browser`, plus PR 1 harness, DEBT-398 scan, shuffled unit suite, full local gate.
+   - Scope: the rows labeled `3b` above plus the browser-only helper/probe/fixture files enumerated in the PR 3b pre-execution audit subsection when they define shared boundary IDs.
+   - Proof: run touched browser specs directly and `pnpm test:browser`, plus PR 1 harness, DEBT-398 scan, shuffled unit suite, full local gate, and the no-unnecessary-`vi.hoisted()` proof.
+   - Status: implementation in PR #372; docs updated here. PR 3c, PR 4, and archive follow.
 3. **PR 3c - application use-case/shared fixtures**
    - Branch: `feat/debt-400-pr-3c-application-fixtures`
    - Scope: the rows labeled `3c` above.

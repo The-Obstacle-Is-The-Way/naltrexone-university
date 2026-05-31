@@ -4,12 +4,20 @@ import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
+
 import {
   createQuestionResponse,
   createReviewResponse,
   createReviewRow,
 } from './practice-session-page-controller.browser.fixtures';
 import {
+  BROWSER_ATTEMPT_1_ID,
+  BROWSER_CHOICE_1_ID,
+  BROWSER_CHOICE_2_ID,
+  BROWSER_QUESTION_1_ID,
+  BROWSER_QUESTION_2_ID,
+  BROWSER_QUESTION_3_ID,
+  BROWSER_SESSION_ID,
   CHOICE_1,
   CHOICE_2,
   CHOICE_3,
@@ -41,7 +49,7 @@ describe('usePracticeSessionPageController (browser)', () => {
     getNextQuestionMock.mockResolvedValue(
       ok(
         createQuestionResponse({
-          questionId: 'question-1',
+          questionId: BROWSER_QUESTION_1_ID,
           choices: [CHOICE_1, CHOICE_2, CHOICE_3],
           session: {
             mode: 'exam',
@@ -62,13 +70,15 @@ describe('usePracticeSessionPageController (browser)', () => {
           totalCount: 2,
           answeredCount: 1,
           markedCount: 0,
-          rows: [createReviewRow({ questionId: 'question-1', order: 1 })],
+          rows: [
+            createReviewRow({ questionId: BROWSER_QUESTION_1_ID, order: 1 }),
+          ],
         }),
       ),
     );
     finalizeExamAnswersMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: BROWSER_SESSION_ID,
         endedAt: '2026-02-07T00:20:00.000Z',
         mode: 'exam',
         questionCount: 2,
@@ -82,7 +92,7 @@ describe('usePracticeSessionPageController (browser)', () => {
     );
     getCompletedSessionQuestionsWithFeedbackMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: BROWSER_SESSION_ID,
         mode: 'exam',
         totalCount: 2,
         answeredCount: 1,
@@ -90,7 +100,7 @@ describe('usePracticeSessionPageController (browser)', () => {
         rows: [
           {
             isAvailable: true,
-            questionId: 'question-1',
+            questionId: BROWSER_QUESTION_1_ID,
             slug: 'question-1',
             stemMd: 'Question 1',
             difficulty: 'easy',
@@ -99,16 +109,18 @@ describe('usePracticeSessionPageController (browser)', () => {
             isCorrect: true,
             isOmitted: false,
             markedForReview: false,
-            choices: [{ id: 'choice_1', label: 'A', textMd: 'Choice A' }],
-            selectedChoiceId: 'choice_1',
-            correctChoiceId: 'choice_1',
+            choices: [
+              { id: BROWSER_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+            ],
+            selectedChoiceId: BROWSER_CHOICE_1_ID,
+            correctChoiceId: BROWSER_CHOICE_1_ID,
             explanationMd: 'Because A is correct.',
             referenceMd: null,
             choiceExplanations: [],
           },
           {
             isAvailable: true,
-            questionId: 'question-2',
+            questionId: BROWSER_QUESTION_2_ID,
             slug: 'question-2',
             stemMd: 'Question 2',
             difficulty: 'medium',
@@ -117,9 +129,11 @@ describe('usePracticeSessionPageController (browser)', () => {
             isCorrect: false,
             isOmitted: true,
             markedForReview: false,
-            choices: [{ id: 'choice_2', label: 'A', textMd: 'Choice B' }],
+            choices: [
+              { id: BROWSER_CHOICE_2_ID, label: 'A', textMd: 'Choice B' },
+            ],
             selectedChoiceId: null,
-            correctChoiceId: 'choice_2',
+            correctChoiceId: BROWSER_CHOICE_2_ID,
             explanationMd: 'Because B is correct.',
             referenceMd: null,
             choiceExplanations: [],
@@ -147,7 +161,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       .toHaveTextContent('post-exam-review');
     await expect
       .element(screen.getByTestId('post-exam-current-question-id'))
-      .toHaveTextContent('question-1');
+      .toHaveTextContent(BROWSER_QUESTION_1_ID);
     expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(1);
     expect(endPracticeSessionMock).not.toHaveBeenCalled();
 
@@ -158,7 +172,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       .toHaveTextContent('summary');
     await expect
       .element(screen.getByTestId('summary-session-id'))
-      .toHaveTextContent('session-1');
+      .toHaveTextContent(BROWSER_SESSION_ID);
   });
 
   it('restores the navigator when opening an exam question from Review & Submit', async () => {
@@ -196,12 +210,12 @@ describe('usePracticeSessionPageController (browser)', () => {
     await screen.getByRole('button', { name: 'Previous' }).click();
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('question-1');
+      .toHaveTextContent(BROWSER_QUESTION_1_ID);
 
     await screen.getByRole('button', { name: 'Next' }).click();
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('question-2');
+      .toHaveTextContent(BROWSER_QUESTION_2_ID);
   });
 
   it('returns to Review & Submit after navigating back out of a reopened exam question', async () => {
@@ -214,7 +228,7 @@ describe('usePracticeSessionPageController (browser)', () => {
     await screen.getByRole('button', { name: 'Next' }).click();
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('question-3');
+      .toHaveTextContent(BROWSER_QUESTION_3_ID);
 
     await screen.getByRole('button', { name: 'Review & Submit' }).click();
     await expect
@@ -228,13 +242,13 @@ describe('usePracticeSessionPageController (browser)', () => {
   it('refreshes review data after answering a review-opened question', async () => {
     getNextQuestionMock.mockResolvedValue(
       ok({
-        questionId: 'question-1',
+        questionId: BROWSER_QUESTION_1_ID,
         slug: 'question-1',
         stemMd: 'Question 1',
         difficulty: 'easy',
         choices: [CHOICE_1],
         session: {
-          sessionId: 'session-1',
+          sessionId: BROWSER_SESSION_ID,
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -249,11 +263,11 @@ describe('usePracticeSessionPageController (browser)', () => {
     );
     getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
     const unansweredRow = createReviewRow({
-      questionId: 'question-1',
+      questionId: BROWSER_QUESTION_1_ID,
       order: 1,
     });
     const answeredRow = createReviewRow({
-      questionId: 'question-1',
+      questionId: BROWSER_QUESTION_1_ID,
       order: 1,
       isAnswered: true,
       isCorrect: true,
@@ -273,7 +287,7 @@ describe('usePracticeSessionPageController (browser)', () => {
     submitAnswerMock.mockImplementation(async () => {
       hasAnsweredReviewQuestion = true;
       return ok({
-        attemptId: 'attempt-1',
+        attemptId: BROWSER_ATTEMPT_1_ID,
         isCorrect: true,
         correctChoiceId: null,
         explanationMd: null,
@@ -330,13 +344,13 @@ describe('usePracticeSessionPageController (browser)', () => {
     getNextQuestionMock
       .mockResolvedValueOnce(
         ok({
-          questionId: 'question-1',
+          questionId: BROWSER_QUESTION_1_ID,
           slug: 'question-1',
           stemMd: 'Question 1',
           difficulty: 'easy',
           choices: [CHOICE_1],
           session: {
-            sessionId: 'session-1',
+            sessionId: BROWSER_SESSION_ID,
             mode: 'exam',
 
             deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -349,13 +363,13 @@ describe('usePracticeSessionPageController (browser)', () => {
       )
       .mockResolvedValueOnce(
         ok({
-          questionId: 'question-2',
+          questionId: BROWSER_QUESTION_2_ID,
           slug: 'question-2',
           stemMd: 'Question 2',
           difficulty: 'easy',
           choices: [CHOICE_1],
           session: {
-            sessionId: 'session-1',
+            sessionId: BROWSER_SESSION_ID,
             mode: 'exam',
 
             deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -388,7 +402,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       .toHaveTextContent('question');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('question-1');
+      .toHaveTextContent(BROWSER_QUESTION_1_ID);
 
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
     await screen.getByRole('button', { name: 'submit-answer' }).click();
@@ -403,7 +417,7 @@ describe('usePracticeSessionPageController (browser)', () => {
 
     deferred.resolve(
       ok({
-        attemptId: 'attempt-1',
+        attemptId: BROWSER_ATTEMPT_1_ID,
         isCorrect: true,
         correctChoiceId: null,
         explanationMd: null,

@@ -4,11 +4,16 @@ import { render } from 'vitest-browser-react';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
+
 import {
   getPracticeSessionReview,
   getPreviousAttempt,
   getQuestionBySlug,
   Probe,
+  QUESTION_PAGE_ATTEMPT_1_ID,
+  QUESTION_PAGE_CHOICE_1_ID,
+  QUESTION_PAGE_CHOICE_2_ID,
+  QUESTION_PAGE_QUESTION_1_ID,
   setupQuestionPageControllerBrowserSpec,
 } from './use-question-page-controller-test-helpers';
 
@@ -18,13 +23,13 @@ describe('useQuestionPageController (browser)', () => {
   it('loads previous attempt and pre-populates state in review mode', async () => {
     getQuestionBySlug.mockResolvedValue(
       ok({
-        questionId: 'question-1',
+        questionId: QUESTION_PAGE_QUESTION_1_ID,
         slug: 'q-1',
         stemMd: 'Stem',
         difficulty: 'easy',
         choices: [
-          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
-          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+          { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
         ],
       }),
     );
@@ -33,11 +38,11 @@ describe('useQuestionPageController (browser)', () => {
       ok({
         kind: 'attempt',
         sessionMode: null,
-        attemptId: 'attempt-1',
-        selectedChoiceId: 'choice-2',
+        attemptId: QUESTION_PAGE_ATTEMPT_1_ID,
+        selectedChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         isOmitted: false,
         isCorrect: true,
-        correctChoiceId: 'choice-2',
+        correctChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         explanationMd: 'Because.',
         referenceMd: null,
         choiceExplanations: [],
@@ -53,26 +58,26 @@ describe('useQuestionPageController (browser)', () => {
 
     await expect
       .element(screen.getByTestId('selected-choice'))
-      .toHaveTextContent('choice-2');
+      .toHaveTextContent(QUESTION_PAGE_CHOICE_2_ID);
     await expect
       .element(screen.getByTestId('attempt-id'))
-      .toHaveTextContent('attempt-1');
+      .toHaveTextContent(QUESTION_PAGE_ATTEMPT_1_ID);
 
     expect(getPreviousAttempt).toHaveBeenCalledWith({
-      questionId: 'question-1',
+      questionId: QUESTION_PAGE_QUESTION_1_ID,
     });
   });
 
   it('starts in loading-review state and clears it when previous attempt resolves', async () => {
     getQuestionBySlug.mockResolvedValue(
       ok({
-        questionId: 'question-1',
+        questionId: QUESTION_PAGE_QUESTION_1_ID,
         slug: 'q-1',
         stemMd: 'Stem',
         difficulty: 'easy',
         choices: [
-          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
-          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+          { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
         ],
       }),
     );
@@ -108,11 +113,11 @@ describe('useQuestionPageController (browser)', () => {
       ok({
         kind: 'attempt',
         sessionMode: null,
-        attemptId: 'attempt-1',
-        selectedChoiceId: 'choice-2',
+        attemptId: QUESTION_PAGE_ATTEMPT_1_ID,
+        selectedChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         isOmitted: false,
         isCorrect: true,
-        correctChoiceId: 'choice-2',
+        correctChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         explanationMd: 'Because.',
         referenceMd: null,
         choiceExplanations: [],
@@ -129,13 +134,13 @@ describe('useQuestionPageController (browser)', () => {
   it('shows review loading state on the first render after mode changes to review', async () => {
     getQuestionBySlug.mockResolvedValue(
       ok({
-        questionId: 'question-1',
+        questionId: QUESTION_PAGE_QUESTION_1_ID,
         slug: 'q-1',
         stemMd: 'Stem',
         difficulty: 'easy',
         choices: [
-          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
-          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+          { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
         ],
       }),
     );
@@ -212,11 +217,11 @@ describe('useQuestionPageController (browser)', () => {
       ok({
         kind: 'attempt',
         sessionMode: null,
-        attemptId: 'attempt-1',
-        selectedChoiceId: 'choice-2',
+        attemptId: QUESTION_PAGE_ATTEMPT_1_ID,
+        selectedChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         isOmitted: false,
         isCorrect: true,
-        correctChoiceId: 'choice-2',
+        correctChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         explanationMd: 'Because.',
         referenceMd: null,
         choiceExplanations: [],
@@ -232,13 +237,13 @@ describe('useQuestionPageController (browser)', () => {
 
     getQuestionBySlug.mockResolvedValue(
       ok({
-        questionId: 'question-1',
+        questionId: QUESTION_PAGE_QUESTION_1_ID,
         slug: 'q-1',
         stemMd: 'Stem',
         difficulty: 'easy',
         choices: [
-          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
-          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+          { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
         ],
       }),
     );
@@ -253,7 +258,7 @@ describe('useQuestionPageController (browser)', () => {
         rows: [
           {
             isAvailable: true,
-            questionId: 'question-1',
+            questionId: QUESTION_PAGE_QUESTION_1_ID,
             slug: 'q-1',
             stemMd: 'Stem',
             difficulty: 'easy',
@@ -272,10 +277,10 @@ describe('useQuestionPageController (browser)', () => {
         kind: 'attempt',
         sessionMode: null,
         attemptId,
-        selectedChoiceId: 'choice-2',
+        selectedChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         isOmitted: false,
         isCorrect: true,
-        correctChoiceId: 'choice-2',
+        correctChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         explanationMd: 'Because.',
         referenceMd: null,
         choiceExplanations: [],
@@ -292,7 +297,7 @@ describe('useQuestionPageController (browser)', () => {
       .toHaveTextContent('ready');
 
     expect(getPreviousAttempt).toHaveBeenCalledWith({
-      questionId: 'question-1',
+      questionId: QUESTION_PAGE_QUESTION_1_ID,
       sessionId,
     });
   });

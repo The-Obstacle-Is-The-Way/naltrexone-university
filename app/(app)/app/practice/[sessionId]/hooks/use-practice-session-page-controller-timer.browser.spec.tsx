@@ -1,11 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { ok } from '@/tests/test-helpers/ok';
+
 import {
   createQuestionResponse,
   createReviewResponse,
 } from './practice-session-page-controller.browser.fixtures';
 import {
+  BROWSER_QUESTION_1_ID,
+  BROWSER_SESSION_ID,
   CHOICE_1,
   CHOICE_2,
   CHOICE_3,
@@ -28,7 +31,7 @@ function mockActiveTimedExam(deadlineAt: string) {
   getNextQuestionMock.mockResolvedValue(
     ok(
       createQuestionResponse({
-        questionId: 'question-1',
+        questionId: BROWSER_QUESTION_1_ID,
         choices: [CHOICE_1, CHOICE_2, CHOICE_3],
         session: {
           mode: 'exam',
@@ -53,7 +56,7 @@ function mockActiveTimedExam(deadlineAt: string) {
 function mockFinalizeSummary() {
   finalizeExamAnswersMock.mockResolvedValue(
     ok({
-      sessionId: 'session-1',
+      sessionId: BROWSER_SESSION_ID,
       endedAt: '2026-05-22T12:01:12.000Z',
       mode: 'exam',
       questionCount: 1,

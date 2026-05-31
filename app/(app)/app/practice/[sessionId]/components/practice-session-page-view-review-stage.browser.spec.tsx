@@ -3,6 +3,10 @@ import { render } from 'vitest-browser-react';
 import { PracticeSessionPageView } from './practice-session-page-view';
 import { noop } from './practice-session-page-view-test-helpers';
 
+const fixtureSession1Id = crypto.randomUUID();
+const fixtureQ1Id = crypto.randomUUID();
+const fixtureQ2Id = crypto.randomUUID();
+
 test('renders exam review branch and triggers review actions', async () => {
   const onOpenReviewQuestion = vi.fn();
   const onFinalizeReview = vi.fn(async () => undefined);
@@ -11,14 +15,14 @@ test('renders exam review branch and triggers review actions', async () => {
     <PracticeSessionPageView
       summary={null}
       review={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -55,7 +59,7 @@ test('renders exam review branch and triggers review actions', async () => {
     .element(screen.getByRole('heading', { name: 'Review & Submit' }))
     .toBeVisible();
   await screen.getByRole('button', { name: 'Open question' }).click();
-  expect(onOpenReviewQuestion).toHaveBeenCalledWith('q1');
+  expect(onOpenReviewQuestion).toHaveBeenCalledWith(fixtureQ1Id);
 
   await screen.getByRole('button', { name: 'Submit exam' }).click();
   await expect
@@ -72,7 +76,7 @@ test('renders post-exam review with score banner, feedback, and a summary exit',
     <PracticeSessionPageView
       summary={null}
       postExamSummary={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:20:00.000Z',
         mode: 'exam',
         questionCount: 2,
@@ -84,7 +88,7 @@ test('renders post-exam review with score banner, feedback, and a summary exit',
         },
       }}
       postExamReview={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
@@ -92,7 +96,7 @@ test('renders post-exam review with score banner, feedback, and a summary exit',
         rows: [
           {
             isAvailable: true,
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             stemMd: 'Stem 1',
             difficulty: 'easy',
@@ -128,7 +132,7 @@ test('renders post-exam review with score banner, feedback, and a summary exit',
           },
           {
             isAvailable: true,
-            questionId: 'q2',
+            questionId: fixtureQ2Id,
             slug: 'q-2',
             stemMd: 'Stem 2',
             difficulty: 'medium',
@@ -156,7 +160,7 @@ test('renders post-exam review with score banner, feedback, and a summary exit',
       }}
       examResultsSubstage="post_exam_review"
       postExamReviewLoadState={{ status: 'ready' }}
-      postExamReviewCurrentQuestionId="q1"
+      postExamReviewCurrentQuestionId={fixtureQ1Id}
       sessionInfo={null}
       loadState={{ status: 'ready' }}
       question={null}
@@ -213,7 +217,7 @@ test('renders post-exam review with score banner, feedback, and a summary exit',
     .not.toBeInTheDocument();
 
   await screen.getByRole('button', { name: 'Next' }).click();
-  expect(onNavigatePostExamReviewQuestion).toHaveBeenCalledWith('q2');
+  expect(onNavigatePostExamReviewQuestion).toHaveBeenCalledWith(fixtureQ2Id);
 
   const summaryActionBanner = screen
     .getByText('Exam complete')
@@ -236,7 +240,7 @@ test('renders a loading state while post-exam review is hydrating inside the ses
     <PracticeSessionPageView
       summary={null}
       postExamSummary={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:20:00.000Z',
         mode: 'exam',
         questionCount: 2,
@@ -279,7 +283,7 @@ test('renders retry and summary actions when post-exam review hydration fails', 
     <PracticeSessionPageView
       summary={null}
       postExamSummary={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:20:00.000Z',
         mode: 'exam',
         questionCount: 2,
@@ -332,14 +336,14 @@ test('falls back to onEndSession when onFinalizeReview is omitted in the review 
     <PracticeSessionPageView
       summary={null}
       review={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,

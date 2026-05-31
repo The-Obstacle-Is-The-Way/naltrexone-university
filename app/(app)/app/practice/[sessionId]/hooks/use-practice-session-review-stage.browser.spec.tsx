@@ -10,10 +10,15 @@ import type {
 } from '@/src/adapters/controllers/practice-controller';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
+
 import {
   type UsePracticeSessionReviewStageInput,
   usePracticeSessionReviewStage,
 } from './use-practice-session-review-stage';
+
+const fixtureSession1Id = crypto.randomUUID();
+const fixtureQ1Id = crypto.randomUUID();
+const fixtureQ2Id = crypto.randomUUID();
 
 const endPracticeSessionMock =
   vi.fn<(input: unknown) => Promise<ActionResult<EndPracticeSessionOutput>>>();
@@ -37,7 +42,7 @@ const saveCurrentExamDraftMock = vi.fn<() => Promise<boolean>>();
 
 function createInput(sessionMode: 'tutor' | 'exam') {
   return {
-    sessionId: 'session-1',
+    sessionId: fixtureSession1Id,
     isMounted: () => true,
     sessionInfo: null as UsePracticeSessionReviewStageInput['sessionInfo'],
     questionId: null,
@@ -111,10 +116,10 @@ function createPostExamReview(
               })
             : row,
         )
-      : [createPostExamReviewRow({ questionId: 'q1' })];
+      : [createPostExamReviewRow({ questionId: fixtureQ1Id })];
 
   return {
-    sessionId: 'session-1',
+    sessionId: fixtureSession1Id,
     mode: 'exam',
     totalCount: reviewRows.length,
     answeredCount: reviewRows.filter((row) => row.isAnswered).length,
@@ -145,7 +150,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
   it('finalizes tutor sessions and loads summary review data', async () => {
     endPracticeSessionMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:20:00.000Z',
         mode: 'tutor',
         questionCount: 10,
@@ -159,7 +164,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     );
     getPracticeSessionReviewMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
         totalCount: 10,
         answeredCount: 10,
@@ -177,11 +182,13 @@ describe('usePracticeSessionReviewStage (browser)', () => {
 
     await expect
       .poll(() => harness.result.current.summary?.sessionId ?? null)
-      .toBe('session-1');
+      .toBe(fixtureSession1Id);
     await expect
       .poll(() => harness.result.current.summaryReviewLoadState.status)
       .toBe('ready');
-    expect(harness.result.current.summaryReview?.sessionId).toBe('session-1');
+    expect(harness.result.current.summaryReview?.sessionId).toBe(
+      fixtureSession1Id,
+    );
   });
 
   it('sets review load error when exam review loading throws', async () => {
@@ -214,7 +221,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     );
     getPracticeSessionReviewMock.mockResolvedValueOnce(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 2,
         answeredCount: 1,
@@ -222,7 +229,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
         rows: [
           {
             isAvailable: true,
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             stemMd: 'Stem 1',
             difficulty: 'easy',
@@ -234,7 +241,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
           },
           {
             isAvailable: true,
-            questionId: 'q2',
+            questionId: fixtureQ2Id,
             slug: 'q-2',
             stemMd: 'Stem 2',
             difficulty: 'medium',
@@ -250,7 +257,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
 
     const input = createInput('exam');
     input.sessionInfo = {
-      sessionId: 'session-1',
+      sessionId: fixtureSession1Id,
       mode: 'exam',
 
       deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -279,13 +286,13 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     await expect
       .poll(() => harness.result.current.navigatorLoadState.status)
       .toBe('ready');
-    expect(harness.result.current.navigator?.sessionId).toBe('session-1');
+    expect(harness.result.current.navigator?.sessionId).toBe(fixtureSession1Id);
   });
 
   it('finalizes exam review via finalizeExamAnswers instead of endPracticeSession', async () => {
     finalizeExamAnswersMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:20:00.000Z',
         mode: 'exam',
         questionCount: 2,
@@ -299,7 +306,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     );
     getPracticeSessionReviewMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
@@ -309,7 +316,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     );
     getCompletedSessionQuestionsWithFeedbackMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
@@ -336,7 +343,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
   it('enters post-exam review after finalizing an exam instead of showing summary immediately', async () => {
     finalizeExamAnswersMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:20:00.000Z',
         mode: 'exam',
         questionCount: 2,
@@ -350,7 +357,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     );
     getPracticeSessionReviewMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
@@ -360,7 +367,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     );
     getCompletedSessionQuestionsWithFeedbackMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
@@ -368,7 +375,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
         rows: [
           {
             isAvailable: true,
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             stemMd: 'Stem 1',
             difficulty: 'easy',
@@ -389,7 +396,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
           },
           {
             isAvailable: true,
-            questionId: 'q2',
+            questionId: fixtureQ2Id,
             slug: 'q-2',
             stemMd: 'Stem 2',
             difficulty: 'medium',
@@ -420,14 +427,18 @@ describe('usePracticeSessionReviewStage (browser)', () => {
       .poll(() => harness.result.current.postExamReviewLoadState.status)
       .toBe('ready');
     expect(harness.result.current.summary).toBeNull();
-    expect(harness.result.current.postExamReview?.sessionId).toBe('session-1');
-    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe('q1');
+    expect(harness.result.current.postExamReview?.sessionId).toBe(
+      fixtureSession1Id,
+    );
+    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe(
+      fixtureQ1Id,
+    );
   });
 
   it('switches to session summary without clearing completed feedback or the current reviewed question', async () => {
     finalizeExamAnswersMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:20:00.000Z',
         mode: 'exam',
         questionCount: 1,
@@ -441,7 +452,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     );
     getPracticeSessionReviewMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
@@ -452,8 +463,8 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     getCompletedSessionQuestionsWithFeedbackMock.mockResolvedValue(
       ok(
         createPostExamReview(
-          createPostExamReviewRow({ questionId: 'q1', order: 1 }),
-          createPostExamReviewRow({ questionId: 'q2', order: 2 }),
+          createPostExamReviewRow({ questionId: fixtureQ1Id, order: 1 }),
+          createPostExamReviewRow({ questionId: fixtureQ2Id, order: 2 }),
         ),
       ),
     );
@@ -467,25 +478,29 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     await expect
       .poll(() => harness.result.current.postExamReviewLoadState.status)
       .toBe('ready');
-    harness.result.current.onNavigatePostExamReviewQuestion('q2');
+    harness.result.current.onNavigatePostExamReviewQuestion(fixtureQ2Id);
 
     harness.result.current.onViewSummary();
 
     await expect
       .poll(() => harness.result.current.summary?.sessionId ?? null)
-      .toBe('session-1');
+      .toBe(fixtureSession1Id);
     await expect
       .poll(() => harness.result.current.summaryReviewLoadState.status)
       .toBe('ready');
     expect(harness.result.current.examResultsSubstage).toBe('session_summary');
-    expect(harness.result.current.postExamReview?.sessionId).toBe('session-1');
-    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe('q2');
+    expect(harness.result.current.postExamReview?.sessionId).toBe(
+      fixtureSession1Id,
+    );
+    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe(
+      fixtureQ2Id,
+    );
   });
 
   it('re-enters post-exam review without a question id at the first available row instead of the current reviewed question', async () => {
     finalizeExamAnswersMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:20:00.000Z',
         mode: 'exam',
         questionCount: 2,
@@ -499,7 +514,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     );
     getPracticeSessionReviewMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
@@ -510,8 +525,8 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     getCompletedSessionQuestionsWithFeedbackMock.mockResolvedValue(
       ok(
         createPostExamReview(
-          createPostExamReviewRow({ questionId: 'q1', order: 1 }),
-          createPostExamReviewRow({ questionId: 'q2', order: 2 }),
+          createPostExamReviewRow({ questionId: fixtureQ1Id, order: 1 }),
+          createPostExamReviewRow({ questionId: fixtureQ2Id, order: 2 }),
         ),
       ),
     );
@@ -525,7 +540,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     await expect
       .poll(() => harness.result.current.postExamReviewLoadState.status)
       .toBe('ready');
-    harness.result.current.onNavigatePostExamReviewQuestion('q2');
+    harness.result.current.onNavigatePostExamReviewQuestion(fixtureQ2Id);
     harness.result.current.onViewSummary();
 
     await expect
@@ -537,7 +552,9 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     await expect
       .poll(() => harness.result.current.examResultsSubstage)
       .toBe('post_exam_review');
-    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe('q1');
+    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe(
+      fixtureQ1Id,
+    );
     expect(getCompletedSessionQuestionsWithFeedbackMock).toHaveBeenCalledTimes(
       1,
     );
@@ -546,7 +563,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
   it('re-enters post-exam review on the specifically requested summary question', async () => {
     finalizeExamAnswersMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:20:00.000Z',
         mode: 'exam',
         questionCount: 2,
@@ -560,7 +577,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     );
     getPracticeSessionReviewMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
@@ -571,8 +588,8 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     getCompletedSessionQuestionsWithFeedbackMock.mockResolvedValue(
       ok(
         createPostExamReview(
-          createPostExamReviewRow({ questionId: 'q1', order: 1 }),
-          createPostExamReviewRow({ questionId: 'q2', order: 2 }),
+          createPostExamReviewRow({ questionId: fixtureQ1Id, order: 1 }),
+          createPostExamReviewRow({ questionId: fixtureQ2Id, order: 2 }),
         ),
       ),
     );
@@ -592,18 +609,20 @@ describe('usePracticeSessionReviewStage (browser)', () => {
       .poll(() => harness.result.current.examResultsSubstage)
       .toBe('session_summary');
 
-    harness.result.current.onReenterPostExamReview('q2');
+    harness.result.current.onReenterPostExamReview(fixtureQ2Id);
 
     await expect
       .poll(() => harness.result.current.examResultsSubstage)
       .toBe('post_exam_review');
-    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe('q2');
+    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe(
+      fixtureQ2Id,
+    );
   });
 
   it('falls back to the first available reviewed question on untargeted re-entry when the current cursor points at an unavailable row', async () => {
     finalizeExamAnswersMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:20:00.000Z',
         mode: 'exam',
         questionCount: 2,
@@ -617,7 +636,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     );
     getPracticeSessionReviewMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
@@ -629,11 +648,11 @@ describe('usePracticeSessionReviewStage (browser)', () => {
       ok(
         createPostExamReview(
           createPostExamReviewRow({
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             order: 1,
             isAvailable: false,
           }),
-          createPostExamReviewRow({ questionId: 'q2', order: 2 }),
+          createPostExamReviewRow({ questionId: fixtureQ2Id, order: 2 }),
         ),
       ),
     );
@@ -647,7 +666,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     await expect
       .poll(() => harness.result.current.postExamReviewLoadState.status)
       .toBe('ready');
-    harness.result.current.onNavigatePostExamReviewQuestion('q1');
+    harness.result.current.onNavigatePostExamReviewQuestion(fixtureQ1Id);
     harness.result.current.onViewSummary();
 
     await expect
@@ -658,13 +677,13 @@ describe('usePracticeSessionReviewStage (browser)', () => {
 
     await expect
       .poll(() => harness.result.current.postExamReviewCurrentQuestionId)
-      .toBe('q2');
+      .toBe(fixtureQ2Id);
   });
 
   it('lazy-hydrates completed feedback to the first available row when summary re-entry has no preserved post-exam review payload', async () => {
     getPracticeSessionReviewMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
@@ -676,11 +695,11 @@ describe('usePracticeSessionReviewStage (browser)', () => {
       ok(
         createPostExamReview(
           createPostExamReviewRow({
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             order: 1,
             isAvailable: false,
           }),
-          createPostExamReviewRow({ questionId: 'q2', order: 2 }),
+          createPostExamReviewRow({ questionId: fixtureQ2Id, order: 2 }),
         ),
       ),
     );
@@ -691,7 +710,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     );
 
     harness.result.current.setSummary({
-      sessionId: 'session-1',
+      sessionId: fixtureSession1Id,
       endedAt: '2026-02-07T00:20:00.000Z',
       mode: 'exam',
       questionCount: 2,
@@ -715,7 +734,9 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     expect(getCompletedSessionQuestionsWithFeedbackMock).toHaveBeenCalledTimes(
       1,
     );
-    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe('q2');
+    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe(
+      fixtureQ2Id,
+    );
     expect(harness.result.current.examResultsSubstage).toBe('post_exam_review');
   });
 
@@ -726,7 +747,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
       >();
     getPracticeSessionReviewMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
@@ -744,7 +765,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     );
 
     harness.result.current.setSummary({
-      sessionId: 'session-1',
+      sessionId: fixtureSession1Id,
       endedAt: '2026-02-07T00:20:00.000Z',
       mode: 'exam',
       questionCount: 2,
@@ -773,7 +794,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
       1,
     );
 
-    reviewLoad.resolve(ok(createPostExamReview('q2')));
+    reviewLoad.resolve(ok(createPostExamReview(fixtureQ2Id)));
     await expect
       .poll(() => harness.result.current.postExamReviewLoadState.status)
       .toBe('ready');
@@ -782,7 +803,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
   it('preserves the deferred exam summary when post-exam review loading fails so retry and summary recovery still work', async () => {
     finalizeExamAnswersMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:20:00.000Z',
         mode: 'exam',
         questionCount: 1,
@@ -796,7 +817,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     );
     getPracticeSessionReviewMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
@@ -808,7 +829,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
       .mockRejectedValueOnce(new Error('Review fetch failed'))
       .mockResolvedValueOnce(
         ok({
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           totalCount: 1,
           answeredCount: 1,
@@ -816,7 +837,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
           rows: [
             {
               isAvailable: true,
-              questionId: 'q1',
+              questionId: fixtureQ1Id,
               slug: 'q-1',
               stemMd: 'Stem 1',
               difficulty: 'easy',
@@ -846,20 +867,24 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     await expect
       .poll(() => harness.result.current.postExamReviewLoadState.status)
       .toBe('error');
-    expect(harness.result.current.postExamSummary?.sessionId).toBe('session-1');
+    expect(harness.result.current.postExamSummary?.sessionId).toBe(
+      fixtureSession1Id,
+    );
 
     harness.result.current.onRetryPostExamReview();
 
     await expect
       .poll(() => harness.result.current.postExamReviewLoadState.status)
       .toBe('ready');
-    expect(harness.result.current.postExamReview?.sessionId).toBe('session-1');
+    expect(harness.result.current.postExamReview?.sessionId).toBe(
+      fixtureSession1Id,
+    );
 
     harness.result.current.onViewSummary();
 
     await expect
       .poll(() => harness.result.current.summary?.sessionId ?? null)
-      .toBe('session-1');
+      .toBe(fixtureSession1Id);
   });
 
   it("keeps retry request B's success when stale retry request A rejects afterward", async () => {
@@ -873,7 +898,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
       >();
     finalizeExamAnswersMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:20:00.000Z',
         mode: 'exam',
         questionCount: 1,
@@ -887,7 +912,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     );
     getPracticeSessionReviewMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
@@ -956,7 +981,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
       >();
     finalizeExamAnswersMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:20:00.000Z',
         mode: 'exam',
         questionCount: 1,
@@ -970,7 +995,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     );
     getPracticeSessionReviewMock.mockResolvedValue(
       ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
@@ -1030,7 +1055,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     getPracticeSessionReviewMock.mockImplementation(async () => {
       callOrder.push('review');
       return ok({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 2,
         answeredCount: 1,

@@ -5,6 +5,9 @@ import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeSessionMarkForReview } from './use-practice-session-mark-for-review';
 
+const fixtureQuestion1Id = crypto.randomUUID();
+const fixtureSession1Id = crypto.randomUUID();
+
 type ReviewState = {
   sessionId: string;
   mode: 'exam' | 'tutor';
@@ -42,7 +45,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
     const harness = await renderHook(() =>
       usePracticeSessionMarkForReview({
         question: {
-          questionId: 'question-1',
+          questionId: fixtureQuestion1Id,
           slug: 'question-1',
           stemMd: 'Question',
           difficulty: 'easy',
@@ -51,7 +54,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
         },
         sessionMode: 'exam',
         sessionInfo: {
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -60,7 +63,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
           total: 10,
           isMarkedForReview: false,
         },
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         applySessionInfo,
         setLoadState: vi.fn(),
         setReview,
@@ -76,8 +79,8 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
 
     deferred.resolve(
       ok({
-        sessionId: 'session-1',
-        questionId: 'question-1',
+        sessionId: fixtureSession1Id,
+        questionId: fixtureQuestion1Id,
         markedForReview: true,
       }),
     );
@@ -88,8 +91,8 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
       .toBe(false);
 
     expect(setPracticeSessionQuestionMarkFn).toHaveBeenCalledWith({
-      sessionId: 'session-1',
-      questionId: 'question-1',
+      sessionId: fixtureSession1Id,
+      questionId: fixtureQuestion1Id,
       markedForReview: true,
       idempotencyKey: expect.any(String),
     });
@@ -99,7 +102,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
     expect(sessionUpdater).toBeTypeOf('function');
     expect(
       (sessionUpdater as (prev: unknown) => unknown)({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
 
         deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -109,7 +112,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
         isMarkedForReview: false,
       }),
     ).toEqual({
-      sessionId: 'session-1',
+      sessionId: fixtureSession1Id,
       mode: 'exam',
 
       deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -126,20 +129,20 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
     expect(reviewUpdater).toBeDefined();
     expect(
       reviewUpdater?.({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
         markedCount: 0,
-        rows: [{ questionId: 'question-1', markedForReview: false }],
+        rows: [{ questionId: fixtureQuestion1Id, markedForReview: false }],
       }),
     ).toEqual({
-      sessionId: 'session-1',
+      sessionId: fixtureSession1Id,
       mode: 'exam',
       totalCount: 1,
       answeredCount: 1,
       markedCount: 1,
-      rows: [{ questionId: 'question-1', markedForReview: true }],
+      rows: [{ questionId: fixtureQuestion1Id, markedForReview: true }],
     });
   });
 
@@ -153,7 +156,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
     const harness = await renderHook(() =>
       usePracticeSessionMarkForReview({
         question: {
-          questionId: 'question-1',
+          questionId: fixtureQuestion1Id,
           slug: 'question-1',
           stemMd: 'Question',
           difficulty: 'easy',
@@ -162,7 +165,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
         },
         sessionMode: 'exam',
         sessionInfo: {
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -171,7 +174,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
           total: 10,
           isMarkedForReview: false,
         },
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         applySessionInfo: vi.fn(),
         setLoadState,
         setReview: vi.fn(),

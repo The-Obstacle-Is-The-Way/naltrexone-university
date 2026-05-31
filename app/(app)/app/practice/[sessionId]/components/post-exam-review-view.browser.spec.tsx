@@ -2,11 +2,16 @@ import { useState } from 'react';
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { PostExamReviewView } from './post-exam-review-view';
+
 import {
   createReview,
   createReviewRow,
   createSummary,
 } from './post-exam-review-view.fixtures';
+
+const fixtureChoiceAId = crypto.randomUUID();
+const fixtureQuestion2Id = crypto.randomUUID();
+const fixtureChoiceBId = crypto.randomUUID();
 
 const summary = createSummary({
   questionCount: 2,
@@ -17,16 +22,16 @@ const review = createReview([
   createReviewRow({
     isAnswered: true,
     isCorrect: false,
-    selectedChoiceId: 'choice-a',
+    selectedChoiceId: fixtureChoiceAId,
   }),
   createReviewRow({
-    questionId: 'question-2',
+    questionId: fixtureQuestion2Id,
     slug: 'question-2',
     stemMd: 'Second question stem',
     order: 2,
     isAnswered: true,
     isCorrect: true,
-    selectedChoiceId: 'choice-b',
+    selectedChoiceId: fixtureChoiceBId,
     explanationMd: 'Second explanation for review.',
   }),
 ]);
@@ -87,19 +92,19 @@ test('renders the post-exam review bottom action bar without sticky shell marker
       stemMd: createTallMarkdown('Review stem', 18),
       isAnswered: true,
       isCorrect: false,
-      selectedChoiceId: 'choice-a',
+      selectedChoiceId: fixtureChoiceAId,
       explanationMd: createTallMarkdown('Review explanation', 28),
       referenceMd: createTallMarkdown('Review reference', 10),
       choiceExplanations: [
         {
-          choiceId: 'choice-a',
+          choiceId: fixtureChoiceAId,
           displayLabel: 'A',
           textMd: 'Choice A',
           isCorrect: false,
           explanationMd: createTallMarkdown('Choice A explanation', 8),
         },
         {
-          choiceId: 'choice-b',
+          choiceId: fixtureChoiceBId,
           displayLabel: 'B',
           textMd: 'Choice B',
           isCorrect: true,
@@ -108,13 +113,13 @@ test('renders the post-exam review bottom action bar without sticky shell marker
       ],
     }),
     createReviewRow({
-      questionId: 'question-2',
+      questionId: fixtureQuestion2Id,
       slug: 'question-2',
       stemMd: 'Second question stem',
       order: 2,
       isAnswered: true,
       isCorrect: true,
-      selectedChoiceId: 'choice-b',
+      selectedChoiceId: fixtureChoiceBId,
       explanationMd: 'Second explanation for review.',
     }),
   ]);

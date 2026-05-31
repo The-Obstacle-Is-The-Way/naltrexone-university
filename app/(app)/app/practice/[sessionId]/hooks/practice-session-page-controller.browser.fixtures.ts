@@ -1,6 +1,15 @@
 type PracticeMode = 'tutor' | 'exam';
 type QuestionDifficulty = 'easy' | 'medium' | 'hard';
 
+export const BROWSER_SESSION_ID = crypto.randomUUID();
+export const BROWSER_QUESTION_1_ID = crypto.randomUUID();
+export const BROWSER_QUESTION_2_ID = crypto.randomUUID();
+export const BROWSER_QUESTION_3_ID = crypto.randomUUID();
+export const BROWSER_CHOICE_1_ID = crypto.randomUUID();
+export const BROWSER_CHOICE_2_ID = crypto.randomUUID();
+export const BROWSER_CHOICE_3_ID = crypto.randomUUID();
+export const BROWSER_ATTEMPT_1_ID = crypto.randomUUID();
+
 type ChoiceFixture = {
   id: string;
   label: string;
@@ -87,9 +96,9 @@ export function createQuestionResponse(input: QuestionFixtureInput) {
     slug: input.slug ?? input.questionId,
     stemMd: input.stemMd ?? `Question ${input.questionId}`,
     difficulty: input.difficulty ?? 'easy',
-    choices: input.choices ?? [createChoice({ id: 'choice_1' })],
+    choices: input.choices ?? [createChoice({ id: BROWSER_CHOICE_1_ID })],
     session: {
-      sessionId: input.session.sessionId ?? 'session-1',
+      sessionId: input.session.sessionId ?? BROWSER_SESSION_ID,
       mode: input.session.mode,
       deadlineAt:
         input.session.deadlineAt !== undefined
@@ -130,7 +139,7 @@ export function createReviewRow(input: ReviewRowFixtureInput) {
 
 export function createReviewResponse(input: ReviewFixtureInput) {
   return {
-    sessionId: input.sessionId ?? 'session-1',
+    sessionId: input.sessionId ?? BROWSER_SESSION_ID,
     mode: input.mode,
     totalCount: input.totalCount,
     answeredCount: input.answeredCount,

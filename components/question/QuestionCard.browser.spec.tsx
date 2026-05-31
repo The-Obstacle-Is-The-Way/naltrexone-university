@@ -2,14 +2,17 @@ import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { QuestionCard } from './question-card';
 
+const fixtureChoiceAId = crypto.randomUUID();
+const fixtureChoiceBId = crypto.randomUUID();
+
 test('calls onSelectChoice with the clicked choice id', async () => {
   const onSelectChoice = vi.fn();
   const screen = await render(
     <QuestionCard
       stemMd="Stem"
       choices={[
-        { id: 'choice_a', label: 'A', textMd: 'Choice A' },
-        { id: 'choice_b', label: 'B', textMd: 'Choice B' },
+        { id: fixtureChoiceAId, label: 'A', textMd: 'Choice A' },
+        { id: fixtureChoiceBId, label: 'B', textMd: 'Choice B' },
       ]}
       selectedChoiceId={null}
       correctChoiceId={null}
@@ -19,7 +22,7 @@ test('calls onSelectChoice with the clicked choice id', async () => {
 
   await screen.getByRole('radio', { name: /Choice B/i }).click();
 
-  expect(onSelectChoice).toHaveBeenCalledWith('choice_b');
+  expect(onSelectChoice).toHaveBeenCalledWith(fixtureChoiceBId);
 });
 
 test('disables choices when correctChoiceId is present', async () => {
@@ -28,11 +31,11 @@ test('disables choices when correctChoiceId is present', async () => {
     <QuestionCard
       stemMd="Stem"
       choices={[
-        { id: 'choice_a', label: 'A', textMd: 'Choice A' },
-        { id: 'choice_b', label: 'B', textMd: 'Choice B' },
+        { id: fixtureChoiceAId, label: 'A', textMd: 'Choice A' },
+        { id: fixtureChoiceBId, label: 'B', textMd: 'Choice B' },
       ]}
       selectedChoiceId={null}
-      correctChoiceId="choice_a"
+      correctChoiceId={fixtureChoiceAId}
       onSelectChoice={onSelectChoice}
     />,
   );

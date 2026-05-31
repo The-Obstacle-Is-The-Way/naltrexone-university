@@ -12,6 +12,12 @@ import * as questionViewController from '@/src/adapters/controllers/question-vie
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
+import {
+  QUESTION_PAGE_ATTEMPT_1_ID,
+  QUESTION_PAGE_CHOICE_1_ID,
+  QUESTION_PAGE_CHOICE_2_ID,
+  QUESTION_PAGE_QUESTION_1_ID,
+} from './question-page-controller.browser.fixtures';
 import { useQuestionPagePreviousAttempt } from './use-question-page-previous-attempt';
 
 vi.mock('@/src/adapters/controllers/question-view-controller', { spy: true });
@@ -21,13 +27,13 @@ const getPreviousAttempt = vi.mocked(questionViewController.getPreviousAttempt);
 const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
 
 const defaultQuestion: GetQuestionBySlugOutput = {
-  questionId: 'question-1',
+  questionId: QUESTION_PAGE_QUESTION_1_ID,
   slug: 'q-1',
   stemMd: 'Stem',
   difficulty: 'easy',
   choices: [
-    { id: 'choice-1', label: 'A', textMd: 'Choice A' },
-    { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+    { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+    { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
   ],
 };
 
@@ -118,11 +124,11 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
       ok({
         kind: 'attempt',
         sessionMode: null,
-        attemptId: 'attempt-1',
-        selectedChoiceId: 'choice-2',
+        attemptId: QUESTION_PAGE_ATTEMPT_1_ID,
+        selectedChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         isOmitted: false,
         isCorrect: true,
-        correctChoiceId: 'choice-2',
+        correctChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         explanationMd: 'Because.',
         referenceMd: null,
         choiceExplanations: [],
@@ -134,16 +140,16 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
 
     await expect
       .element(screen.getByTestId('selected-choice'))
-      .toHaveTextContent('choice-2');
+      .toHaveTextContent(QUESTION_PAGE_CHOICE_2_ID);
     await expect
       .element(screen.getByTestId('attempt-id'))
-      .toHaveTextContent('attempt-1');
+      .toHaveTextContent(QUESTION_PAGE_ATTEMPT_1_ID);
     await expect
       .element(screen.getByTestId('review-hydration-state'))
       .toHaveTextContent('attempt');
 
     expect(getPreviousAttempt).toHaveBeenCalledWith({
-      questionId: 'question-1',
+      questionId: QUESTION_PAGE_QUESTION_1_ID,
     });
   });
 
@@ -217,11 +223,11 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
       ok({
         kind: 'attempt',
         sessionMode: null,
-        attemptId: 'attempt-1',
-        selectedChoiceId: 'choice-2',
+        attemptId: QUESTION_PAGE_ATTEMPT_1_ID,
+        selectedChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         isOmitted: false,
         isCorrect: true,
-        correctChoiceId: 'choice-2',
+        correctChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         explanationMd: 'Because.',
         referenceMd: null,
         choiceExplanations: [],
@@ -269,11 +275,11 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
       ok({
         kind: 'attempt',
         sessionMode: null,
-        attemptId: 'attempt-1',
-        selectedChoiceId: 'choice-2',
+        attemptId: QUESTION_PAGE_ATTEMPT_1_ID,
+        selectedChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         isOmitted: false,
         isCorrect: true,
-        correctChoiceId: 'choice-2',
+        correctChoiceId: QUESTION_PAGE_CHOICE_2_ID,
         explanationMd: 'Because.',
         referenceMd: null,
         choiceExplanations: [],

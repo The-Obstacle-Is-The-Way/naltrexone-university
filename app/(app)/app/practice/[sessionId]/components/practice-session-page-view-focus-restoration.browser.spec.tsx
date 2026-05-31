@@ -9,6 +9,10 @@ import {
 import { PracticeSessionPageView } from './practice-session-page-view';
 import { noop } from './practice-session-page-view-test-helpers';
 
+const fixtureSession1Id = crypto.randomUUID();
+const fixtureQ1Id = crypto.randomUUID();
+const fixtureQ2Id = crypto.randomUUID();
+
 const examQuestionNavigator = createReviewResponse({
   mode: 'exam',
   totalCount: 2,
@@ -16,14 +20,14 @@ const examQuestionNavigator = createReviewResponse({
   markedCount: 0,
   rows: [
     createReviewRow({
-      questionId: 'q1',
+      questionId: fixtureQ1Id,
       slug: 'q-1',
       order: 1,
       isAnswered: false,
       isCorrect: null,
     }),
     createReviewRow({
-      questionId: 'q2',
+      questionId: fixtureQ2Id,
       slug: 'q-2',
       order: 2,
       isAnswered: false,
@@ -39,12 +43,12 @@ function renderQuestionNavigationHarness() {
       setQuestionIndex((current) => Math.min(current + 1, 1));
     }, []);
     const handleNavigateQuestion = useCallback((nextQuestionId: string) => {
-      if (nextQuestionId === 'q1') {
+      if (nextQuestionId === fixtureQ1Id) {
         setQuestionIndex(0);
         return;
       }
 
-      if (nextQuestionId === 'q2') {
+      if (nextQuestionId === fixtureQ2Id) {
         setQuestionIndex(1);
         return;
       }
@@ -52,7 +56,7 @@ function renderQuestionNavigationHarness() {
       throw new Error(`Unexpected question id: ${nextQuestionId}`);
     }, []);
 
-    const questionId = questionIndex === 0 ? 'q1' : 'q2';
+    const questionId = questionIndex === 0 ? fixtureQ1Id : fixtureQ2Id;
     const stem = questionIndex === 0 ? 'Stem 1' : 'Stem 2';
 
     return (
@@ -61,7 +65,7 @@ function renderQuestionNavigationHarness() {
         review={null}
         navigator={examQuestionNavigator}
         sessionInfo={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           deadlineAt: '2099-05-22T12:02:24.000Z',
           index: questionIndex,
@@ -151,7 +155,7 @@ test('restores the question panel when next-question navigation enters loading b
         typeof createNextQuestion
       > | null>(
         createNextQuestion({
-          questionId: 'q1',
+          questionId: fixtureQ1Id,
           slug: 'q1',
           stemMd: 'Stem 1',
           difficulty: 'easy',
@@ -169,7 +173,7 @@ test('restores the question panel when next-question navigation enters loading b
           review={null}
           navigator={examQuestionNavigator}
           sessionInfo={{
-            sessionId: 'session-1',
+            sessionId: fixtureSession1Id,
             mode: 'exam',
 
             deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -229,7 +233,7 @@ test('restores the question panel when navigation fails before the question id c
         { status: 'ready' } | { status: 'error'; message: string }
       >({ status: 'ready' });
       const question = createNextQuestion({
-        questionId: 'q1',
+        questionId: fixtureQ1Id,
         slug: 'q1',
         stemMd: 'Stem 1',
         difficulty: 'easy',
@@ -248,7 +252,7 @@ test('restores the question panel when navigation fails before the question id c
           review={null}
           navigator={examQuestionNavigator}
           sessionInfo={{
-            sessionId: 'session-1',
+            sessionId: fixtureSession1Id,
             mode: 'exam',
 
             deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -313,7 +317,7 @@ test('restores the question panel when retrying from an in-panel load error', as
         message: 'Failed to reload the question.',
       });
       const question = createNextQuestion({
-        questionId: 'q1',
+        questionId: fixtureQ1Id,
         slug: 'q1',
         stemMd: 'Stem 1',
         difficulty: 'easy',
@@ -329,7 +333,7 @@ test('restores the question panel when retrying from an in-panel load error', as
           review={null}
           navigator={examQuestionNavigator}
           sessionInfo={{
-            sessionId: 'session-1',
+            sessionId: fixtureSession1Id,
             mode: 'exam',
 
             deadlineAt: '2099-05-22T12:02:24.000Z',

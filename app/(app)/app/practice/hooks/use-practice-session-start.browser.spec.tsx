@@ -10,6 +10,8 @@ import { installReportClientErrorMocks } from '@/tests/test-helpers/report-clien
 import * as clientNavigation from '../client-navigation';
 import { usePracticeSessionStart } from './use-practice-session-start';
 
+const fixtureSession1Id = crypto.randomUUID();
+
 vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
 vi.mock('@/lib/report-client-error', { spy: true });
 vi.mock('../client-navigation', { spy: true });
@@ -81,7 +83,7 @@ afterEach(() => {
 test('rotates the session start idempotency key when changing status', async () => {
   startPracticeSession.mockResolvedValue({
     ok: true,
-    data: { sessionId: 'session_1', requestedCount: 20, actualCount: 20 },
+    data: { sessionId: fixtureSession1Id, requestedCount: 20, actualCount: 20 },
   });
 
   const screen = await render(<Probe />);
@@ -134,11 +136,11 @@ test('ignores stale successful session starts after config changes mid-flight', 
     .toHaveTextContent('incorrect');
 
   deferred.resolve(
-    ok({ sessionId: 'session_1', requestedCount: 20, actualCount: 20 }),
+    ok({ sessionId: fixtureSession1Id, requestedCount: 20, actualCount: 20 }),
   );
   await expect(deferred.promise).resolves.toEqual({
     ok: true,
-    data: { sessionId: 'session_1', requestedCount: 20, actualCount: 20 },
+    data: { sessionId: fixtureSession1Id, requestedCount: 20, actualCount: 20 },
   });
   await flushDeferredSettlement();
 

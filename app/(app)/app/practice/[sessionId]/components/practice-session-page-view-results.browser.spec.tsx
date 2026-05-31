@@ -8,9 +8,13 @@ import {
 import { PracticeSessionPageView } from './practice-session-page-view';
 import { noop } from './practice-session-page-view-test-helpers';
 
+const fixtureSession1Id = crypto.randomUUID();
+const fixtureQ1Id = crypto.randomUUID();
+const fixtureQ2Id = crypto.randomUUID();
+
 function renderExamResultsContinuityHarness() {
   const summary = {
-    sessionId: 'session-1',
+    sessionId: fixtureSession1Id,
     endedAt: '2026-02-07T00:20:00.000Z',
     mode: 'exam' as const,
     questionCount: 2,
@@ -28,7 +32,7 @@ function renderExamResultsContinuityHarness() {
     markedCount: 0,
     rows: [
       createReviewRow({
-        questionId: 'q1',
+        questionId: fixtureQ1Id,
         slug: 'q-1',
         stemMd: 'Stem 1',
         order: 1,
@@ -37,7 +41,7 @@ function renderExamResultsContinuityHarness() {
         isOmitted: false,
       }),
       createReviewRow({
-        questionId: 'q2',
+        questionId: fixtureQ2Id,
         slug: 'q-2',
         stemMd: 'Stem 2',
         order: 2,
@@ -48,7 +52,7 @@ function renderExamResultsContinuityHarness() {
     ],
   });
   const postExamReview = {
-    sessionId: 'session-1',
+    sessionId: fixtureSession1Id,
     mode: 'exam' as const,
     totalCount: 2,
     answeredCount: 2,
@@ -56,7 +60,7 @@ function renderExamResultsContinuityHarness() {
     rows: [
       {
         isAvailable: true as const,
-        questionId: 'q1',
+        questionId: fixtureQ1Id,
         slug: 'q-1',
         stemMd: 'Stem 1',
         difficulty: 'easy' as const,
@@ -77,7 +81,7 @@ function renderExamResultsContinuityHarness() {
       },
       {
         isAvailable: true as const,
-        questionId: 'q2',
+        questionId: fixtureQ2Id,
         slug: 'q-2',
         stemMd: 'Stem 2',
         difficulty: 'medium' as const,
@@ -101,7 +105,7 @@ function renderExamResultsContinuityHarness() {
       'session_summary' | 'post_exam_review'
     >('session_summary');
     const [currentQuestionId, setCurrentQuestionId] = useState<string | null>(
-      'q1',
+      fixtureQ1Id,
     );
     const handleViewSummary = useCallback(() => {
       setSubstage('session_summary');
@@ -183,7 +187,7 @@ test('renders session summary branch when summary is present', async () => {
   const screen = await render(
     <PracticeSessionPageView
       summary={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:00:00.000Z',
         mode: 'tutor',
         questionCount: 10,
@@ -232,7 +236,7 @@ test('keeps exam summaries on the in-session review contract when the substage p
   const screen = await render(
     <PracticeSessionPageView
       summary={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:00:00.000Z',
         mode: 'exam',
         questionCount: 2,
@@ -244,7 +248,7 @@ test('keeps exam summaries on the in-session review contract when the substage p
         },
       }}
       postExamSummary={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         endedAt: '2026-02-07T00:00:00.000Z',
         mode: 'exam',
         questionCount: 2,
@@ -262,7 +266,7 @@ test('keeps exam summaries on the in-session review contract when the substage p
         markedCount: 0,
         rows: [
           createReviewRow({
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             stemMd: 'Stem 1',
             order: 1,

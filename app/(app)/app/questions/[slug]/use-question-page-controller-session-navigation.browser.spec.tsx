@@ -5,10 +5,16 @@ import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
+
 import {
   getPracticeSessionReview,
   getQuestionBySlug,
+  getQuestionPageQuestionIdForSlug,
   Probe,
+  QUESTION_PAGE_CHOICE_1_ID,
+  QUESTION_PAGE_CHOICE_2_ID,
+  QUESTION_PAGE_QUESTION_1_ID,
+  QUESTION_PAGE_QUESTION_2_ID,
   reportClientErrorSpy,
   setupQuestionPageControllerBrowserSpec,
 } from './use-question-page-controller-test-helpers';
@@ -21,13 +27,13 @@ describe('useQuestionPageController (browser)', () => {
 
     getQuestionBySlug.mockResolvedValue(
       ok({
-        questionId: 'question-1',
+        questionId: QUESTION_PAGE_QUESTION_1_ID,
         slug: 'q-1',
         stemMd: 'Stem',
         difficulty: 'easy',
         choices: [
-          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
-          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+          { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
         ],
       }),
     );
@@ -42,7 +48,7 @@ describe('useQuestionPageController (browser)', () => {
         rows: [
           {
             isAvailable: true,
-            questionId: 'question-1',
+            questionId: QUESTION_PAGE_QUESTION_1_ID,
             slug: 'q-1',
             stemMd: 'Stem',
             difficulty: 'easy',
@@ -54,7 +60,7 @@ describe('useQuestionPageController (browser)', () => {
           },
           {
             isAvailable: true,
-            questionId: 'question-2',
+            questionId: QUESTION_PAGE_QUESTION_2_ID,
             slug: 'q-2',
             stemMd: 'Stem 2',
             difficulty: 'medium',
@@ -93,13 +99,13 @@ describe('useQuestionPageController (browser)', () => {
   it('builds navigation from history sequence when sessionId is absent', async () => {
     getQuestionBySlug.mockResolvedValue(
       ok({
-        questionId: 'question-2',
+        questionId: QUESTION_PAGE_QUESTION_2_ID,
         slug: 'q-2',
         stemMd: 'Stem',
         difficulty: 'easy',
         choices: [
-          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
-          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+          { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
         ],
       }),
     );
@@ -137,13 +143,13 @@ describe('useQuestionPageController (browser)', () => {
     getQuestionBySlug.mockImplementation(async (input: unknown) => {
       const slug = (input as { slug: string }).slug;
       return ok({
-        questionId: `question-${slug}`,
+        questionId: getQuestionPageQuestionIdForSlug(slug),
         slug,
         stemMd: 'Stem',
         difficulty: 'easy',
         choices: [
-          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
-          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+          { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
         ],
       });
     });
@@ -159,7 +165,7 @@ describe('useQuestionPageController (browser)', () => {
         rows: [
           {
             isAvailable: true,
-            questionId: 'question-q-1',
+            questionId: QUESTION_PAGE_QUESTION_1_ID,
             slug: 'q-1',
             stemMd: 'Stem',
             difficulty: 'easy',
@@ -171,7 +177,7 @@ describe('useQuestionPageController (browser)', () => {
           },
           {
             isAvailable: true,
-            questionId: 'question-q-2',
+            questionId: QUESTION_PAGE_QUESTION_2_ID,
             slug: 'q-2',
             stemMd: 'Stem 2',
             difficulty: 'easy',
@@ -221,13 +227,13 @@ describe('useQuestionPageController (browser)', () => {
     getQuestionBySlug.mockImplementation(async (input: unknown) => {
       const slug = (input as { slug: string }).slug;
       return ok({
-        questionId: `question-${slug}`,
+        questionId: getQuestionPageQuestionIdForSlug(slug),
         slug,
         stemMd: 'Stem',
         difficulty: 'easy',
         choices: [
-          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
-          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+          { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
         ],
       });
     });
@@ -243,7 +249,7 @@ describe('useQuestionPageController (browser)', () => {
         rows: [
           {
             isAvailable: true,
-            questionId: 'question-q-1',
+            questionId: QUESTION_PAGE_QUESTION_1_ID,
             slug: 'q-1',
             stemMd: 'Stem',
             difficulty: 'easy',
@@ -255,7 +261,7 @@ describe('useQuestionPageController (browser)', () => {
           },
           {
             isAvailable: true,
-            questionId: 'question-q-2',
+            questionId: QUESTION_PAGE_QUESTION_2_ID,
             slug: 'q-2',
             stemMd: 'Stem 2',
             difficulty: 'easy',
@@ -308,13 +314,13 @@ describe('useQuestionPageController (browser)', () => {
     getQuestionBySlug.mockImplementation(async (input: unknown) => {
       const slug = (input as { slug: string }).slug;
       return ok({
-        questionId: `question-${slug}`,
+        questionId: getQuestionPageQuestionIdForSlug(slug),
         slug,
         stemMd: 'Stem',
         difficulty: 'easy',
         choices: [
-          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
-          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+          { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
         ],
       });
     });
@@ -333,7 +339,7 @@ describe('useQuestionPageController (browser)', () => {
           rows: [
             {
               isAvailable: true,
-              questionId: 'question-q-1',
+              questionId: QUESTION_PAGE_QUESTION_1_ID,
               slug: 'q-1',
               stemMd: 'Stem',
               difficulty: 'easy',
@@ -345,7 +351,7 @@ describe('useQuestionPageController (browser)', () => {
             },
             {
               isAvailable: true,
-              questionId: 'question-q-2',
+              questionId: QUESTION_PAGE_QUESTION_2_ID,
               slug: 'q-2',
               stemMd: 'Stem 2',
               difficulty: 'easy',
@@ -412,13 +418,13 @@ describe('useQuestionPageController (browser)', () => {
     getQuestionBySlug.mockImplementation(async (input: unknown) => {
       const slug = (input as { slug: string }).slug;
       return ok({
-        questionId: `question-${slug}`,
+        questionId: getQuestionPageQuestionIdForSlug(slug),
         slug,
         stemMd: 'Stem',
         difficulty: 'easy',
         choices: [
-          { id: 'choice-1', label: 'A', textMd: 'Choice A' },
-          { id: 'choice-2', label: 'B', textMd: 'Choice B' },
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+          { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
         ],
       });
     });
@@ -433,7 +439,7 @@ describe('useQuestionPageController (browser)', () => {
       rows: [
         {
           isAvailable: true,
-          questionId: 'question-q-1',
+          questionId: QUESTION_PAGE_QUESTION_1_ID,
           slug: 'q-1',
           stemMd: 'Stem',
           difficulty: 'easy',
@@ -445,7 +451,7 @@ describe('useQuestionPageController (browser)', () => {
         },
         {
           isAvailable: true,
-          questionId: 'question-q-2',
+          questionId: QUESTION_PAGE_QUESTION_2_ID,
           slug: 'q-2',
           stemMd: 'Stem 2',
           difficulty: 'easy',

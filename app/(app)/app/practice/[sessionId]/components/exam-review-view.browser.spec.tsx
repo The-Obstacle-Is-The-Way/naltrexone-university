@@ -4,6 +4,11 @@ import { render } from 'vitest-browser-react';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ExamReviewView, QuestionNavigator } from './exam-review-view';
 
+const fixtureSession1Id = crypto.randomUUID();
+const fixtureQ1Id = crypto.randomUUID();
+const fixtureQ2Id = crypto.randomUUID();
+const fixtureQ3Id = crypto.randomUUID();
+
 const reviewInstructionText =
   'Select a question below to keep reviewing before you submit.';
 
@@ -13,14 +18,14 @@ test('renders navigator states and disables unavailable questions', async () => 
   const screen = await render(
     <QuestionNavigator
       review={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 3,
         answeredCount: 2,
         markedCount: 1,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -32,7 +37,7 @@ test('renders navigator states and disables unavailable questions', async () => 
             markedForReview: false,
           },
           {
-            questionId: 'q2',
+            questionId: fixtureQ2Id,
             slug: 'q-2',
             order: 2,
             isAvailable: true,
@@ -44,7 +49,7 @@ test('renders navigator states and disables unavailable questions', async () => 
             markedForReview: true,
           },
           {
-            questionId: 'q3',
+            questionId: fixtureQ3Id,
             order: 3,
             isAvailable: false,
             isAnswered: false,
@@ -54,7 +59,7 @@ test('renders navigator states and disables unavailable questions', async () => 
           },
         ],
       }}
-      currentQuestionId="q1"
+      currentQuestionId={fixtureQ1Id}
       controlledPanelId="practice-question-panel"
       onNavigateQuestion={onNavigateQuestion}
     />,
@@ -63,7 +68,7 @@ test('renders navigator states and disables unavailable questions', async () => 
   await screen
     .getByRole('button', { name: 'Question 2: Marked for review, Answered' })
     .click();
-  expect(onNavigateQuestion).toHaveBeenCalledWith('q2');
+  expect(onNavigateQuestion).toHaveBeenCalledWith(fixtureQ2Id);
   await expect
     .element(screen.getByRole('button', { name: 'Question 3: Unanswered' }))
     .toBeDisabled();
@@ -75,14 +80,14 @@ test('uses correctness labels only in tutor mode', async () => {
   const screen = await render(
     <QuestionNavigator
       review={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
         totalCount: 2,
         answeredCount: 2,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -94,7 +99,7 @@ test('uses correctness labels only in tutor mode', async () => {
             markedForReview: false,
           },
           {
-            questionId: 'q2',
+            questionId: fixtureQ2Id,
             slug: 'q-2',
             order: 2,
             isAvailable: true,
@@ -107,7 +112,7 @@ test('uses correctness labels only in tutor mode', async () => {
           },
         ],
       }}
-      currentQuestionId="q1"
+      currentQuestionId={fixtureQ1Id}
       controlledPanelId="practice-question-panel"
       onNavigateQuestion={onNavigateQuestion}
     />,
@@ -119,7 +124,7 @@ test('uses correctness labels only in tutor mode', async () => {
     )
     .toBeVisible();
   await screen.getByRole('button', { name: 'Question 2: Incorrect' }).click();
-  expect(onNavigateQuestion).toHaveBeenCalledWith('q2');
+  expect(onNavigateQuestion).toHaveBeenCalledWith(fixtureQ2Id);
 });
 
 test('opens a review question and finalizes the exam', async () => {
@@ -129,14 +134,14 @@ test('opens a review question and finalizes the exam', async () => {
   const screen = await render(
     <ExamReviewView
       review={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 2,
         answeredCount: 1,
         markedCount: 1,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -148,7 +153,7 @@ test('opens a review question and finalizes the exam', async () => {
             markedForReview: true,
           },
           {
-            questionId: 'q2',
+            questionId: fixtureQ2Id,
             order: 2,
             isAvailable: false,
             isAnswered: false,
@@ -175,7 +180,7 @@ test('opens a review question and finalizes the exam', async () => {
       name: /Open question 1\..*A long stem for q1.*Answered.*Marked for review.*Incorrect/i,
     })
     .click();
-  expect(onOpenQuestion).toHaveBeenCalledWith('q1');
+  expect(onOpenQuestion).toHaveBeenCalledWith(fixtureQ1Id);
   await expect
     .element(screen.getByText(reviewInstructionText, { exact: true }))
     .toBeVisible();
@@ -201,7 +206,7 @@ test('guards against double-clicking confirm submit before pending state updates
   const screen = await render(
     <ExamReviewView
       review={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 0,
@@ -229,7 +234,7 @@ test('allows submitting again after finalize resolves even when pending state ne
   const screen = await render(
     <ExamReviewView
       review={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 0,
@@ -268,7 +273,7 @@ test('omits unanswered warning when all exam questions are answered', async () =
   const screen = await render(
     <ExamReviewView
       review={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
@@ -294,13 +299,13 @@ test('keeps the helper text visible and the first review row above the fold at 3
     const screen = await render(
       <ExamReviewView
         review={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
           totalCount: 10,
           answeredCount: 6,
           markedCount: 2,
           rows: Array.from({ length: 10 }, (_, index) => ({
-            questionId: `q${index + 1}`,
+            questionId: crypto.randomUUID(),
             slug: `q-${index + 1}`,
             order: index + 1,
             isAvailable: index < 9,
@@ -358,14 +363,14 @@ test('keeps empty-stem rows discoverable by accessible name', async () => {
   const screen = await render(
     <ExamReviewView
       review={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 1,
         answeredCount: 0,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -387,7 +392,7 @@ test('keeps empty-stem rows discoverable by accessible name', async () => {
   await screen
     .getByRole('button', { name: /Open question 1\..*Unanswered/i })
     .click();
-  expect(onOpenQuestion).toHaveBeenCalledWith('q1');
+  expect(onOpenQuestion).toHaveBeenCalledWith(fixtureQ1Id);
 });
 
 test('supports keyboard activation for available review rows and leaves unavailable rows non-interactive', async () => {
@@ -396,14 +401,14 @@ test('supports keyboard activation for available review rows and leaves unavaila
   const screen = await render(
     <ExamReviewView
       review={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 2,
         answeredCount: 1,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -415,7 +420,7 @@ test('supports keyboard activation for available review rows and leaves unavaila
             markedForReview: false,
           },
           {
-            questionId: 'q2',
+            questionId: fixtureQ2Id,
             order: 2,
             isAvailable: false,
             isAnswered: false,
@@ -442,8 +447,8 @@ test('supports keyboard activation for available review rows and leaves unavaila
   await userEvent.keyboard(' ');
 
   expect(onOpenQuestion).toHaveBeenCalledTimes(2);
-  expect(onOpenQuestion).toHaveBeenNthCalledWith(1, 'q1');
-  expect(onOpenQuestion).toHaveBeenNthCalledWith(2, 'q1');
+  expect(onOpenQuestion).toHaveBeenNthCalledWith(1, fixtureQ1Id);
+  expect(onOpenQuestion).toHaveBeenNthCalledWith(2, fixtureQ1Id);
   await expect
     .element(screen.getByText('[Question no longer available]'))
     .toBeVisible();
@@ -456,14 +461,14 @@ test('renders decorative chevrons only on available review rows', async () => {
   const screen = await render(
     <ExamReviewView
       review={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 3,
         answeredCount: 1,
         markedCount: 1,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -475,7 +480,7 @@ test('renders decorative chevrons only on available review rows', async () => {
             markedForReview: true,
           },
           {
-            questionId: 'q2',
+            questionId: fixtureQ2Id,
             slug: 'q-2',
             order: 2,
             isAvailable: true,
@@ -487,7 +492,7 @@ test('renders decorative chevrons only on available review rows', async () => {
             markedForReview: false,
           },
           {
-            questionId: 'q3',
+            questionId: fixtureQ3Id,
             order: 3,
             isAvailable: false,
             isAnswered: false,
@@ -529,14 +534,14 @@ test('keeps the row-to-submit tab order unchanged with the helper text skipped',
   const screen = await render(
     <ExamReviewView
       review={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
         totalCount: 3,
         answeredCount: 2,
         markedCount: 0,
         rows: [
           {
-            questionId: 'q1',
+            questionId: fixtureQ1Id,
             slug: 'q-1',
             order: 1,
             isAvailable: true,
@@ -548,7 +553,7 @@ test('keeps the row-to-submit tab order unchanged with the helper text skipped',
             markedForReview: false,
           },
           {
-            questionId: 'q2',
+            questionId: fixtureQ2Id,
             slug: 'q-2',
             order: 2,
             isAvailable: true,
@@ -560,7 +565,7 @@ test('keeps the row-to-submit tab order unchanged with the helper text skipped',
             markedForReview: false,
           },
           {
-            questionId: 'q3',
+            questionId: fixtureQ3Id,
             order: 3,
             isAvailable: false,
             isAnswered: false,

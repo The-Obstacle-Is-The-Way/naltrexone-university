@@ -8,6 +8,13 @@ import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answ
 import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeSessionQuestionFlow } from './use-practice-session-question-flow';
 
+const fixtureSession1Id = crypto.randomUUID();
+const fixtureQ2Id = crypto.randomUUID();
+const fixtureQ1Id = crypto.randomUUID();
+const fixtureChoice1Id = crypto.randomUUID();
+const fixtureChoice2Id = crypto.randomUUID();
+const fixtureSession2Id = crypto.randomUUID();
+
 describe('usePracticeSessionQuestionFlow (browser)', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -30,7 +37,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
 
     await renderHook(() =>
       usePracticeSessionQuestionFlow({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         autoload: false,
         isMounted: () => true,
         getNextQuestionFn,
@@ -55,7 +62,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
 
     await renderHook(() =>
       usePracticeSessionQuestionFlow({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         isMounted: () => true,
         getNextQuestionFn,
         submitAnswerFn,
@@ -78,7 +85,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
 
     const harness = await renderHook(() =>
       usePracticeSessionQuestionFlow({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         autoload: false,
         isMounted: () => true,
         getNextQuestionFn,
@@ -88,7 +95,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
     );
 
     harness.result.current.applySessionInfo({
-      sessionId: 'session-1',
+      sessionId: fixtureSession1Id,
       mode: 'tutor',
 
       deadlineAt: null,
@@ -100,7 +107,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
 
     await expect
       .poll(() => harness.result.current.sessionInfo?.sessionId ?? null)
-      .toBe('session-1');
+      .toBe(fixtureSession1Id);
 
     harness.result.current.resetQuestionState();
 
@@ -125,9 +132,9 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
         ) {
           return ok(
             createNextQuestion({
-              questionId: 'q_2',
+              questionId: fixtureQ2Id,
               session: {
-                sessionId: 'session-1',
+                sessionId: fixtureSession1Id,
                 mode: 'exam',
 
                 deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -142,13 +149,13 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
 
         return ok(
           createNextQuestion({
-            questionId: 'q_1',
+            questionId: fixtureQ1Id,
             choices: [
-              { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
-              { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+              { id: fixtureChoice1Id, label: 'A', textMd: 'A', sortOrder: 1 },
+              { id: fixtureChoice2Id, label: 'B', textMd: 'B', sortOrder: 2 },
             ],
             session: {
-              sessionId: 'session-1',
+              sessionId: fixtureSession1Id,
               mode: 'exam',
 
               deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -169,12 +176,12 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
       .mockImplementation(async () => {
         callOrder.push('save');
         return ok({
-          questionId: 'q_1',
+          questionId: fixtureQ1Id,
           markedForReview: false,
           latestSelectedChoiceId: null,
           latestIsCorrect: null,
           latestAnsweredAt: null,
-          draftSelectedChoiceId: 'choice_2',
+          draftSelectedChoiceId: fixtureChoice2Id,
           draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
           draftCumulativeMs: 30_000,
         });
@@ -182,7 +189,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
 
     const harness = await renderHook(() =>
       usePracticeSessionQuestionFlow({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         isMounted: () => true,
         getNextQuestionFn,
         submitAnswerFn,
@@ -192,23 +199,23 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
 
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_1');
+      .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice('choice_2');
+    harness.result.current.onSelectChoice(fixtureChoice2Id);
     await expect
       .poll(() => harness.result.current.selectedChoiceId)
-      .toBe('choice_2');
+      .toBe(fixtureChoice2Id);
     nowMs = 31_000;
     harness.result.current.onNextQuestion();
 
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_2');
+      .toBe(fixtureQ2Id);
     expect(callOrder).toEqual(['load', 'save', 'load']);
     expect(saveExamDraftAnswerFn).toHaveBeenCalledWith({
-      sessionId: 'session-1',
-      questionId: 'q_1',
-      selectedChoiceId: 'choice_2',
+      sessionId: fixtureSession1Id,
+      questionId: fixtureQ1Id,
+      selectedChoiceId: fixtureChoice2Id,
       cumulativeMs: 30_000,
     });
   });
@@ -219,9 +226,9 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
       .mockResolvedValueOnce(
         ok(
           createNextQuestion({
-            questionId: 'q_1',
+            questionId: fixtureQ1Id,
             session: {
-              sessionId: 'session-1',
+              sessionId: fixtureSession1Id,
               mode: 'exam',
 
               deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -236,9 +243,9 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
       .mockResolvedValueOnce(
         ok(
           createNextQuestion({
-            questionId: 'q_2',
+            questionId: fixtureQ2Id,
             session: {
-              sessionId: 'session-1',
+              sessionId: fixtureSession1Id,
               mode: 'exam',
 
               deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -259,7 +266,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
 
     const harness = await renderHook(() =>
       usePracticeSessionQuestionFlow({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         isMounted: () => true,
         getNextQuestionFn,
         submitAnswerFn,
@@ -269,13 +276,13 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
 
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_1');
+      .toBe(fixtureQ1Id);
 
     harness.result.current.onNextQuestion();
 
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_2');
+      .toBe(fixtureQ2Id);
     expect(saveExamDraftAnswerFn).not.toHaveBeenCalled();
   });
 
@@ -290,17 +297,17 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
           typeof request === 'object' &&
           request &&
           'questionId' in request &&
-          request.questionId === 'q_1'
+          request.questionId === fixtureQ1Id
         ) {
           return ok(
             createNextQuestion({
-              questionId: 'q_1',
+              questionId: fixtureQ1Id,
               choices: [
-                { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
-                { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+                { id: fixtureChoice1Id, label: 'A', textMd: 'A', sortOrder: 1 },
+                { id: fixtureChoice2Id, label: 'B', textMd: 'B', sortOrder: 2 },
               ],
               session: {
-                sessionId: 'session-1',
+                sessionId: fixtureSession1Id,
                 mode: 'exam',
 
                 deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -308,7 +315,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
                 index: 0,
                 total: 2,
                 isMarkedForReview: false,
-                draftSelectedChoiceId: 'choice_2',
+                draftSelectedChoiceId: fixtureChoice2Id,
                 draftCumulativeMs: 30_000,
               },
             }),
@@ -323,9 +330,9 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
         ) {
           return ok(
             createNextQuestion({
-              questionId: 'q_2',
+              questionId: fixtureQ2Id,
               session: {
-                sessionId: 'session-1',
+                sessionId: fixtureSession1Id,
                 mode: 'exam',
 
                 deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -340,13 +347,13 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
 
         return ok(
           createNextQuestion({
-            questionId: 'q_1',
+            questionId: fixtureQ1Id,
             choices: [
-              { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
-              { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+              { id: fixtureChoice1Id, label: 'A', textMd: 'A', sortOrder: 1 },
+              { id: fixtureChoice2Id, label: 'B', textMd: 'B', sortOrder: 2 },
             ],
             session: {
-              sessionId: 'session-1',
+              sessionId: fixtureSession1Id,
               mode: 'exam',
 
               deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -372,7 +379,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
             'questionId' in input &&
             typeof input.questionId === 'string'
               ? input.questionId
-              : 'q_1',
+              : fixtureQ1Id,
           markedForReview: false,
           latestSelectedChoiceId: null,
           latestIsCorrect: null,
@@ -383,7 +390,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
             'selectedChoiceId' in input &&
             typeof input.selectedChoiceId === 'string'
               ? input.selectedChoiceId
-              : 'choice_2',
+              : fixtureChoice2Id,
           draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
           draftCumulativeMs:
             typeof input === 'object' &&
@@ -397,7 +404,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
 
     const harness = await renderHook(() =>
       usePracticeSessionQuestionFlow({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         isMounted: () => true,
         getNextQuestionFn,
         submitAnswerFn,
@@ -407,44 +414,44 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
 
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_1');
+      .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice('choice_2');
+    harness.result.current.onSelectChoice(fixtureChoice2Id);
     await expect
       .poll(() => harness.result.current.selectedChoiceId)
-      .toBe('choice_2');
+      .toBe(fixtureChoice2Id);
 
     nowMs = 31_000;
     harness.result.current.onNextQuestion();
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_2');
+      .toBe(fixtureQ2Id);
 
     nowMs = 31_500;
-    harness.result.current.onNavigateQuestion('q_1');
+    harness.result.current.onNavigateQuestion(fixtureQ1Id);
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_1');
+      .toBe(fixtureQ1Id);
     await expect
       .poll(() => harness.result.current.selectedChoiceId)
-      .toBe('choice_2');
+      .toBe(fixtureChoice2Id);
 
     nowMs = 51_500;
     harness.result.current.onNextQuestion();
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_2');
+      .toBe(fixtureQ2Id);
 
     expect(saveExamDraftAnswerFn).toHaveBeenNthCalledWith(1, {
-      sessionId: 'session-1',
-      questionId: 'q_1',
-      selectedChoiceId: 'choice_2',
+      sessionId: fixtureSession1Id,
+      questionId: fixtureQ1Id,
+      selectedChoiceId: fixtureChoice2Id,
       cumulativeMs: 30_000,
     });
     expect(saveExamDraftAnswerFn).toHaveBeenNthCalledWith(2, {
-      sessionId: 'session-1',
-      questionId: 'q_1',
-      selectedChoiceId: 'choice_2',
+      sessionId: fixtureSession1Id,
+      questionId: fixtureQ1Id,
+      selectedChoiceId: fixtureChoice2Id,
       cumulativeMs: 50_000,
     });
   });
@@ -460,17 +467,17 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
           typeof request === 'object' &&
           request &&
           'questionId' in request &&
-          request.questionId === 'q_1'
+          request.questionId === fixtureQ1Id
         ) {
           return ok(
             createNextQuestion({
-              questionId: 'q_1',
+              questionId: fixtureQ1Id,
               choices: [
-                { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
-                { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+                { id: fixtureChoice1Id, label: 'A', textMd: 'A', sortOrder: 1 },
+                { id: fixtureChoice2Id, label: 'B', textMd: 'B', sortOrder: 2 },
               ],
               session: {
-                sessionId: 'session-1',
+                sessionId: fixtureSession1Id,
                 mode: 'exam',
 
                 deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -493,9 +500,9 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
         ) {
           return ok(
             createNextQuestion({
-              questionId: 'q_2',
+              questionId: fixtureQ2Id,
               session: {
-                sessionId: 'session-1',
+                sessionId: fixtureSession1Id,
                 mode: 'exam',
 
                 deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -510,13 +517,13 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
 
         return ok(
           createNextQuestion({
-            questionId: 'q_1',
+            questionId: fixtureQ1Id,
             choices: [
-              { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
-              { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+              { id: fixtureChoice1Id, label: 'A', textMd: 'A', sortOrder: 1 },
+              { id: fixtureChoice2Id, label: 'B', textMd: 'B', sortOrder: 2 },
             ],
             session: {
-              sessionId: 'session-1',
+              sessionId: fixtureSession1Id,
               mode: 'exam',
 
               deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -542,7 +549,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
             'questionId' in input &&
             typeof input.questionId === 'string'
               ? input.questionId
-              : 'q_1',
+              : fixtureQ1Id,
           markedForReview: false,
           latestSelectedChoiceId: null,
           latestIsCorrect: null,
@@ -567,7 +574,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
 
     const harness = await renderHook(() =>
       usePracticeSessionQuestionFlow({
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         isMounted: () => true,
         getNextQuestionFn,
         submitAnswerFn,
@@ -577,37 +584,37 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
 
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_1');
+      .toBe(fixtureQ1Id);
 
     nowMs = 31_000;
     harness.result.current.onNextQuestion();
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_2');
+      .toBe(fixtureQ2Id);
     expect(saveExamDraftAnswerFn).not.toHaveBeenCalled();
 
     nowMs = 31_500;
-    harness.result.current.onNavigateQuestion('q_1');
+    harness.result.current.onNavigateQuestion(fixtureQ1Id);
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_1');
+      .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice('choice_2');
+    harness.result.current.onSelectChoice(fixtureChoice2Id);
     await expect
       .poll(() => harness.result.current.selectedChoiceId)
-      .toBe('choice_2');
+      .toBe(fixtureChoice2Id);
 
     nowMs = 51_500;
     harness.result.current.onNextQuestion();
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_2');
+      .toBe(fixtureQ2Id);
 
     expect(saveExamDraftAnswerFn).toHaveBeenCalledTimes(1);
     expect(saveExamDraftAnswerFn).toHaveBeenCalledWith({
-      sessionId: 'session-1',
-      questionId: 'q_1',
-      selectedChoiceId: 'choice_2',
+      sessionId: fixtureSession1Id,
+      questionId: fixtureQ1Id,
+      selectedChoiceId: fixtureChoice2Id,
       cumulativeMs: 50_000,
     });
   });
@@ -623,17 +630,17 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
           typeof request === 'object' &&
           request &&
           'sessionId' in request &&
-          request.sessionId === 'session-2'
+          request.sessionId === fixtureSession2Id
         ) {
           return ok(
             createNextQuestion({
-              questionId: 'q_1',
+              questionId: fixtureQ1Id,
               choices: [
-                { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
-                { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+                { id: fixtureChoice1Id, label: 'A', textMd: 'A', sortOrder: 1 },
+                { id: fixtureChoice2Id, label: 'B', textMd: 'B', sortOrder: 2 },
               ],
               session: {
-                sessionId: 'session-2',
+                sessionId: fixtureSession2Id,
                 mode: 'exam',
 
                 deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -656,9 +663,9 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
         ) {
           return ok(
             createNextQuestion({
-              questionId: 'q_2',
+              questionId: fixtureQ2Id,
               session: {
-                sessionId: 'session-1',
+                sessionId: fixtureSession1Id,
                 mode: 'exam',
 
                 deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -673,13 +680,13 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
 
         return ok(
           createNextQuestion({
-            questionId: 'q_1',
+            questionId: fixtureQ1Id,
             choices: [
-              { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
-              { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+              { id: fixtureChoice1Id, label: 'A', textMd: 'A', sortOrder: 1 },
+              { id: fixtureChoice2Id, label: 'B', textMd: 'B', sortOrder: 2 },
             ],
             session: {
-              sessionId: 'session-1',
+              sessionId: fixtureSession1Id,
               mode: 'exam',
 
               deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -707,7 +714,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
             'questionId' in input &&
             typeof input.questionId === 'string'
               ? input.questionId
-              : 'q_1',
+              : fixtureQ1Id,
           markedForReview: false,
           latestSelectedChoiceId: null,
           latestIsCorrect: null,
@@ -718,7 +725,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
             'selectedChoiceId' in input &&
             typeof input.selectedChoiceId === 'string'
               ? input.selectedChoiceId
-              : 'choice_2',
+              : fixtureChoice2Id,
           draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
           draftCumulativeMs:
             typeof input === 'object' &&
@@ -733,36 +740,36 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
     const harness = await renderHook(
       (props?: { sessionId: string }) =>
         usePracticeSessionQuestionFlow({
-          sessionId: props?.sessionId ?? 'session-1',
+          sessionId: props?.sessionId ?? fixtureSession1Id,
           isMounted: () => true,
           getNextQuestionFn,
           submitAnswerFn,
           saveExamDraftAnswerFn,
         }),
       {
-        initialProps: { sessionId: 'session-1' },
+        initialProps: { sessionId: fixtureSession1Id },
       },
     );
 
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_1');
+      .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice('choice_2');
+    harness.result.current.onSelectChoice(fixtureChoice2Id);
     await expect
       .poll(() => harness.result.current.selectedChoiceId)
-      .toBe('choice_2');
+      .toBe(fixtureChoice2Id);
 
     nowMs = 31_000;
     harness.result.current.onNextQuestion();
     await expect
       .poll(() => harness.result.current.question?.questionId)
-      .toBe('q_2');
+      .toBe(fixtureQ2Id);
 
-    await harness.rerender({ sessionId: 'session-2' });
+    await harness.rerender({ sessionId: fixtureSession2Id });
     await expect
       .poll(() => harness.result.current.question?.session?.sessionId ?? null)
-      .toBe('session-2');
+      .toBe(fixtureSession2Id);
     await expect.poll(() => harness.result.current.selectedChoiceId).toBeNull();
   });
 });

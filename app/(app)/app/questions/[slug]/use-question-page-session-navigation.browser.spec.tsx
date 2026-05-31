@@ -6,6 +6,10 @@ import type { QuestionOrigin } from '@/lib/routes';
 import * as practiceController from '@/src/adapters/controllers/practice-controller';
 import { ok } from '@/tests/test-helpers/ok';
 import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
+import {
+  QUESTION_PAGE_QUESTION_1_ID,
+  QUESTION_PAGE_QUESTION_2_ID,
+} from './question-page-controller.browser.fixtures';
 import { useQuestionPageSessionNavigation } from './use-question-page-session-navigation';
 
 vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
@@ -83,7 +87,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
         rows: [
           {
             isAvailable: true,
-            questionId: 'question-1',
+            questionId: QUESTION_PAGE_QUESTION_1_ID,
             slug: 'q-1',
             stemMd: 'Stem',
             difficulty: 'easy',
@@ -95,7 +99,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
           },
           {
             isAvailable: true,
-            questionId: 'question-2',
+            questionId: QUESTION_PAGE_QUESTION_2_ID,
             slug: 'q-2',
             stemMd: 'Stem 2',
             difficulty: 'easy',
@@ -138,7 +142,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
         rows: [
           {
             isAvailable: true,
-            questionId: 'question-1',
+            questionId: QUESTION_PAGE_QUESTION_1_ID,
             slug: 'q-1',
             stemMd: 'Stem',
             difficulty: 'easy',
@@ -150,7 +154,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
           },
           {
             isAvailable: true,
-            questionId: 'question-2',
+            questionId: QUESTION_PAGE_QUESTION_2_ID,
             slug: 'q-2',
             stemMd: 'Stem 2',
             difficulty: 'easy',

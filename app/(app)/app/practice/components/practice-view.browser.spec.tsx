@@ -4,6 +4,13 @@ import { render } from 'vitest-browser-react';
 import { NotificationProvider } from '@/components/ui/notification-provider';
 import { PracticeView } from './practice-view';
 
+const fixtureSession1Id = crypto.randomUUID();
+const fixtureQuestion1Id = crypto.randomUUID();
+const fixtureChoiceAId = crypto.randomUUID();
+const fixtureChoiceBId = crypto.randomUUID();
+const fixtureAttempt1Id = crypto.randomUUID();
+const fixtureQuestion2Id = crypto.randomUUID();
+
 function createTallMarkdown(label: string, paragraphCount: number) {
   return Array.from(
     { length: paragraphCount },
@@ -21,7 +28,7 @@ function ExamPracticeViewHarness(input: {
   return (
     <PracticeView
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
 
         deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -32,13 +39,23 @@ function ExamPracticeViewHarness(input: {
       }}
       loadState={{ status: 'ready' }}
       question={{
-        questionId: 'question-1',
+        questionId: fixtureQuestion1Id,
         slug: 'question-1',
         stemMd: 'What is the next best step?',
         difficulty: 'easy',
         choices: [
-          { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
-          { id: 'choice_b', label: 'B', textMd: 'Option B', sortOrder: 2 },
+          {
+            id: fixtureChoiceAId,
+            label: 'A',
+            textMd: 'Option A',
+            sortOrder: 1,
+          },
+          {
+            id: fixtureChoiceBId,
+            label: 'B',
+            textMd: 'Option B',
+            sortOrder: 2,
+          },
         ],
         session: null,
       }}
@@ -123,7 +140,7 @@ test('renders the exam bottom action bar without sticky shell markers', async ()
   const screen = await render(
     <PracticeView
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
 
         deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -134,12 +151,12 @@ test('renders the exam bottom action bar without sticky shell markers', async ()
       }}
       loadState={{ status: 'ready' }}
       question={{
-        questionId: 'question-1',
+        questionId: fixtureQuestion1Id,
         slug: 'question-1',
         stemMd: createTallMarkdown('Exam stem', 36),
         difficulty: 'easy',
         choices: Array.from({ length: 6 }, (_, index) => ({
-          id: `choice_${index + 1}`,
+          id: crypto.randomUUID(),
           label: String.fromCharCode(65 + index),
           textMd: `Option ${index + 1}`,
           sortOrder: index + 1,
@@ -202,34 +219,44 @@ test('renders the tutor feedback bottom action bar without sticky shell markers'
     <PracticeView
       loadState={{ status: 'ready' }}
       question={{
-        questionId: 'question-1',
+        questionId: fixtureQuestion1Id,
         slug: 'question-1',
         stemMd: createTallMarkdown('Tutor stem', 18),
         difficulty: 'easy',
         choices: [
-          { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
-          { id: 'choice_b', label: 'B', textMd: 'Option B', sortOrder: 2 },
+          {
+            id: fixtureChoiceAId,
+            label: 'A',
+            textMd: 'Option A',
+            sortOrder: 1,
+          },
+          {
+            id: fixtureChoiceBId,
+            label: 'B',
+            textMd: 'Option B',
+            sortOrder: 2,
+          },
         ],
         session: null,
       }}
-      selectedChoiceId="choice_a"
+      selectedChoiceId={fixtureChoiceAId}
       isAnswered={true}
       submitResult={{
-        attemptId: 'attempt-1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: false,
-        correctChoiceId: 'choice_b',
+        correctChoiceId: fixtureChoiceBId,
         explanationMd: createTallMarkdown('Tutor explanation', 24),
         referenceMd: createTallMarkdown('Tutor reference', 8),
         choiceExplanations: [
           {
-            choiceId: 'choice_a',
+            choiceId: fixtureChoiceAId,
             displayLabel: 'A',
             textMd: 'Option A',
             isCorrect: false,
             explanationMd: createTallMarkdown('Choice A explanation', 8),
           },
           {
-            choiceId: 'choice_b',
+            choiceId: fixtureChoiceBId,
             displayLabel: 'B',
             textMd: 'Option B',
             isCorrect: true,
@@ -278,13 +305,13 @@ test('disables mutation controls while internal question loading is in progress'
     <PracticeView
       loadState={{ status: 'loading' }}
       question={{
-        questionId: 'question-1',
+        questionId: fixtureQuestion1Id,
         slug: 'question-1',
         stemMd: 'What is the next best step?',
         difficulty: 'easy',
         choices: [
           {
-            id: 'choice_a',
+            id: fixtureChoiceAId,
             label: 'A',
             textMd: 'Tutor Option A',
             sortOrder: 1,
@@ -292,7 +319,7 @@ test('disables mutation controls while internal question loading is in progress'
         ],
         session: null,
       }}
-      selectedChoiceId="choice_a"
+      selectedChoiceId={fixtureChoiceAId}
       isAnswered={false}
       submitResult={null}
       isPending={false}
@@ -318,7 +345,7 @@ test('disables mutation controls while internal question loading is in progress'
   const examScreen = await render(
     <PracticeView
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
 
         deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -329,13 +356,13 @@ test('disables mutation controls while internal question loading is in progress'
       }}
       loadState={{ status: 'loading' }}
       question={{
-        questionId: 'question-1',
+        questionId: fixtureQuestion1Id,
         slug: 'question-1',
         stemMd: 'What is the next best step?',
         difficulty: 'easy',
         choices: [
           {
-            id: 'choice_a',
+            id: fixtureChoiceAId,
             label: 'A',
             textMd: 'Exam Option A',
             sortOrder: 1,
@@ -343,7 +370,7 @@ test('disables mutation controls while internal question loading is in progress'
         ],
         session: null,
       }}
-      selectedChoiceId="choice_a"
+      selectedChoiceId={fixtureChoiceAId}
       isAnswered={false}
       submitResult={null}
       isPending={false}
@@ -375,7 +402,7 @@ test('disables choice selection after a submit in exam mode', async () => {
   const screen = await render(
     <PracticeView
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
 
         deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -386,22 +413,32 @@ test('disables choice selection after a submit in exam mode', async () => {
       }}
       loadState={{ status: 'ready' }}
       question={{
-        questionId: 'question-1',
+        questionId: fixtureQuestion1Id,
         slug: 'question-1',
         stemMd: 'What is the next best step?',
         difficulty: 'easy',
         choices: [
-          { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
-          { id: 'choice_b', label: 'B', textMd: 'Option B', sortOrder: 2 },
+          {
+            id: fixtureChoiceAId,
+            label: 'A',
+            textMd: 'Option A',
+            sortOrder: 1,
+          },
+          {
+            id: fixtureChoiceBId,
+            label: 'B',
+            textMd: 'Option B',
+            sortOrder: 2,
+          },
         ],
         session: null,
       }}
-      selectedChoiceId="choice_a"
+      selectedChoiceId={fixtureChoiceAId}
       isAnswered={false}
       submitResult={{
-        attemptId: 'attempt-1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
-        correctChoiceId: 'choice_a',
+        correctChoiceId: fixtureChoiceAId,
         explanationMd: 'Because',
         referenceMd: null,
         choiceExplanations: [],
@@ -436,21 +473,26 @@ test('scrolls feedback into view when a submit result is present', async () => {
       <PracticeView
         loadState={{ status: 'ready' }}
         question={{
-          questionId: 'question-1',
+          questionId: fixtureQuestion1Id,
           slug: 'question-1',
           stemMd: 'What is the next best step?',
           difficulty: 'easy',
           choices: [
-            { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
+            {
+              id: fixtureChoiceAId,
+              label: 'A',
+              textMd: 'Option A',
+              sortOrder: 1,
+            },
           ],
           session: null,
         }}
-        selectedChoiceId="choice_a"
+        selectedChoiceId={fixtureChoiceAId}
         isAnswered={true}
         submitResult={{
-          attemptId: 'attempt-1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
-          correctChoiceId: 'choice_a',
+          correctChoiceId: fixtureChoiceAId,
           explanationMd: 'Because',
           referenceMd: null,
           choiceExplanations: [],
@@ -485,7 +527,7 @@ test('does not scroll feedback in exam mode', async () => {
     await render(
       <PracticeView
         sessionInfo={{
-          sessionId: 'session-1',
+          sessionId: fixtureSession1Id,
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -496,21 +538,26 @@ test('does not scroll feedback in exam mode', async () => {
         }}
         loadState={{ status: 'ready' }}
         question={{
-          questionId: 'question-1',
+          questionId: fixtureQuestion1Id,
           slug: 'question-1',
           stemMd: 'What is the next best step?',
           difficulty: 'easy',
           choices: [
-            { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
+            {
+              id: fixtureChoiceAId,
+              label: 'A',
+              textMd: 'Option A',
+              sortOrder: 1,
+            },
           ],
           session: null,
         }}
-        selectedChoiceId="choice_a"
+        selectedChoiceId={fixtureChoiceAId}
         isAnswered={true}
         submitResult={{
-          attemptId: 'attempt-1',
+          attemptId: fixtureAttempt1Id,
           isCorrect: true,
-          correctChoiceId: 'choice_a',
+          correctChoiceId: fixtureChoiceAId,
           explanationMd: 'Because',
           referenceMd: null,
           choiceExplanations: [],
@@ -539,12 +586,17 @@ test('renders bookmark feedback in shared toast region', async () => {
       <PracticeView
         loadState={{ status: 'ready' }}
         question={{
-          questionId: 'question-1',
+          questionId: fixtureQuestion1Id,
           slug: 'question-1',
           stemMd: 'What is the next best step?',
           difficulty: 'easy',
           choices: [
-            { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
+            {
+              id: fixtureChoiceAId,
+              label: 'A',
+              textMd: 'Option A',
+              sortOrder: 1,
+            },
           ],
           session: null,
         }}
@@ -577,12 +629,17 @@ test('calls onPreviousQuestion when clicked', async () => {
     <PracticeView
       loadState={{ status: 'ready' }}
       question={{
-        questionId: 'question-1',
+        questionId: fixtureQuestion1Id,
         slug: 'question-1',
         stemMd: 'What is the next best step?',
         difficulty: 'easy',
         choices: [
-          { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
+          {
+            id: fixtureChoiceAId,
+            label: 'A',
+            textMd: 'Option A',
+            sortOrder: 1,
+          },
         ],
         session: null,
       }}
@@ -611,7 +668,7 @@ test('calls onEndSession from the bottom-bar Review & Submit button on the last 
   const screen = await render(
     <PracticeView
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'exam',
 
         deadlineAt: '2099-05-22T12:02:24.000Z',
@@ -622,21 +679,26 @@ test('calls onEndSession from the bottom-bar Review & Submit button on the last 
       }}
       loadState={{ status: 'ready' }}
       question={{
-        questionId: 'question-2',
+        questionId: fixtureQuestion2Id,
         slug: 'question-2',
         stemMd: 'What is the next best step?',
         difficulty: 'easy',
         choices: [
-          { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
+          {
+            id: fixtureChoiceAId,
+            label: 'A',
+            textMd: 'Option A',
+            sortOrder: 1,
+          },
         ],
         session: null,
       }}
-      selectedChoiceId="choice_a"
+      selectedChoiceId={fixtureChoiceAId}
       isAnswered={true}
       submitResult={{
-        attemptId: 'attempt-1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
-        correctChoiceId: 'choice_a',
+        correctChoiceId: fixtureChoiceAId,
         explanationMd: 'Because',
         referenceMd: null,
         choiceExplanations: [],
@@ -670,7 +732,7 @@ test('calls onEndSession from the bottom-bar End session button on the last tuto
   const screen = await render(
     <PracticeView
       sessionInfo={{
-        sessionId: 'session-1',
+        sessionId: fixtureSession1Id,
         mode: 'tutor',
 
         deadlineAt: null,
@@ -681,21 +743,26 @@ test('calls onEndSession from the bottom-bar End session button on the last tuto
       }}
       loadState={{ status: 'ready' }}
       question={{
-        questionId: 'question-2',
+        questionId: fixtureQuestion2Id,
         slug: 'question-2',
         stemMd: 'What is the next best step?',
         difficulty: 'easy',
         choices: [
-          { id: 'choice_a', label: 'A', textMd: 'Option A', sortOrder: 1 },
+          {
+            id: fixtureChoiceAId,
+            label: 'A',
+            textMd: 'Option A',
+            sortOrder: 1,
+          },
         ],
         session: null,
       }}
-      selectedChoiceId="choice_a"
+      selectedChoiceId={fixtureChoiceAId}
       isAnswered={true}
       submitResult={{
-        attemptId: 'attempt-1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
-        correctChoiceId: 'choice_a',
+        correctChoiceId: fixtureChoiceAId,
         explanationMd: 'Because',
         referenceMd: null,
         choiceExplanations: [],

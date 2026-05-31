@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react';
 import { PracticeSessionPageView } from '../components/practice-session-page-view';
+import {
+  BROWSER_CHOICE_1_ID,
+  BROWSER_QUESTION_1_ID,
+  BROWSER_SESSION_ID,
+} from './practice-session-page-controller.browser.fixtures';
 import { usePracticeSessionPageController } from './use-practice-session-page-controller';
 
 type HookStateValue = string | number | boolean | null | undefined;
@@ -50,7 +55,7 @@ function getActiveView(
 }
 
 export function PracticeSessionPageControllerHookProbe() {
-  const output = usePracticeSessionPageController('session-1');
+  const output = usePracticeSessionPageController(BROWSER_SESSION_ID);
   const errorMessage =
     output.loadState.status === 'error' ? output.loadState.message : '';
 
@@ -67,7 +72,7 @@ export function PracticeSessionPageControllerHookProbe() {
       {renderActionButtons([
         {
           label: 'select-choice-1',
-          onClick: () => output.onSelectChoice('choice_1'),
+          onClick: () => output.onSelectChoice(BROWSER_CHOICE_1_ID),
         },
         {
           label: 'submit-answer',
@@ -81,7 +86,7 @@ export function PracticeSessionPageControllerHookProbe() {
 }
 
 export function PracticeSessionPageControllerNavigationProbe() {
-  const output = usePracticeSessionPageController('session-1');
+  const output = usePracticeSessionPageController(BROWSER_SESSION_ID);
 
   return (
     <>
@@ -103,7 +108,7 @@ export function PracticeSessionPageControllerNavigationProbe() {
       {renderActionButtons([
         {
           label: 'select-choice-1',
-          onClick: () => output.onSelectChoice('choice_1'),
+          onClick: () => output.onSelectChoice(BROWSER_CHOICE_1_ID),
         },
         {
           label: 'submit-answer',
@@ -117,7 +122,7 @@ export function PracticeSessionPageControllerNavigationProbe() {
         },
         {
           label: 'navigate-question-1',
-          onClick: () => output.onNavigateQuestion?.('question-1'),
+          onClick: () => output.onNavigateQuestion?.(BROWSER_QUESTION_1_ID),
         },
       ])}
     </>
@@ -125,7 +130,7 @@ export function PracticeSessionPageControllerNavigationProbe() {
 }
 
 export function PracticeSessionPageControllerBookmarkProbe() {
-  const output = usePracticeSessionPageController('session-1');
+  const output = usePracticeSessionPageController(BROWSER_SESSION_ID);
   const [bookmarkFeedbackCount, setBookmarkFeedbackCount] = useState(0);
   const bookmarkMessage = output.bookmarkMessage;
   const bookmarkMessageVersion = output.bookmarkMessageVersion ?? 0;
@@ -155,7 +160,7 @@ export function PracticeSessionPageControllerBookmarkProbe() {
 }
 
 export function PracticeSessionPageControllerBookmarkPendingProbe() {
-  const output = usePracticeSessionPageController('session-1');
+  const output = usePracticeSessionPageController(BROWSER_SESSION_ID);
 
   return (
     <>
@@ -176,7 +181,7 @@ export function PracticeSessionPageControllerBookmarkPendingProbe() {
 }
 
 export function PracticeSessionPageControllerReviewProbe() {
-  const output = usePracticeSessionPageController('session-1');
+  const output = usePracticeSessionPageController(BROWSER_SESSION_ID);
 
   return (
     <>
@@ -216,11 +221,11 @@ export function PracticeSessionPageControllerReviewProbe() {
         },
         {
           label: 'open-review-question-1',
-          onClick: () => output.onOpenReviewQuestion?.('question-1'),
+          onClick: () => output.onOpenReviewQuestion?.(BROWSER_QUESTION_1_ID),
         },
         {
           label: 'select-choice-1',
-          onClick: () => output.onSelectChoice('choice_1'),
+          onClick: () => output.onSelectChoice(BROWSER_CHOICE_1_ID),
         },
         {
           label: 'submit-answer',
@@ -234,7 +239,7 @@ export function PracticeSessionPageControllerReviewProbe() {
 }
 
 export function PracticeSessionPageControllerSubmitDuringReviewProbe() {
-  const output = usePracticeSessionPageController('session-1');
+  const output = usePracticeSessionPageController(BROWSER_SESSION_ID);
 
   return (
     <>
@@ -246,7 +251,7 @@ export function PracticeSessionPageControllerSubmitDuringReviewProbe() {
       {renderActionButtons([
         {
           label: 'select-choice-1',
-          onClick: () => output.onSelectChoice('choice_1'),
+          onClick: () => output.onSelectChoice(BROWSER_CHOICE_1_ID),
         },
         {
           label: 'submit-answer',
@@ -270,7 +275,7 @@ export function PracticeSessionPageControllerSubmitDuringReviewProbe() {
 }
 
 export function PracticeSessionPageControllerMarkForReviewProbe() {
-  const output = usePracticeSessionPageController('session-1');
+  const output = usePracticeSessionPageController(BROWSER_SESSION_ID);
   const isMarkedForReview = output.sessionInfo?.isMarkedForReview ?? null;
 
   return (
@@ -298,7 +303,7 @@ export function PracticeSessionPageControllerMarkForReviewProbe() {
 }
 
 export function PracticeSessionPageControllerSummaryProbe() {
-  const output = usePracticeSessionPageController('session-1');
+  const output = usePracticeSessionPageController(BROWSER_SESSION_ID);
   const errorMessage =
     output.loadState.status === 'error' ? output.loadState.message : '';
 
@@ -327,7 +332,7 @@ export function PracticeSessionPageControllerSummaryProbe() {
 }
 
 export function PracticeSessionPageControllerViewProbe() {
-  const output = usePracticeSessionPageController('session-1');
+  const output = usePracticeSessionPageController(BROWSER_SESSION_ID);
 
   return (
     <>

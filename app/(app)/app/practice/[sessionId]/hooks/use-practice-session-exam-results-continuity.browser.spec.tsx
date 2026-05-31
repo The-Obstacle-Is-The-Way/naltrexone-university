@@ -9,11 +9,17 @@ import type {
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeSessionExamResultsContinuity } from './use-practice-session-exam-results-continuity';
+
 import {
   createPostExamReview,
   createPostExamReviewRow,
   createSummary,
 } from './use-practice-session-exam-results-continuity.fixtures';
+
+const fixtureSession1Id = crypto.randomUUID();
+const fixtureQ1Id = crypto.randomUUID();
+const fixtureQ2Id = crypto.randomUUID();
+const fixtureQ3Id = crypto.randomUUID();
 
 type GetCompletedSessionQuestionsWithFeedbackFn = Parameters<
   typeof usePracticeSessionExamResultsContinuity
@@ -36,7 +42,7 @@ async function renderContinuityHook(input?: {
       summary,
       setSummaryState,
       isMounted,
-      sessionId: 'session-1',
+      sessionId: fixtureSession1Id,
       getCompletedSessionQuestionsWithFeedbackFn,
     });
   });
@@ -50,12 +56,12 @@ describe('usePracticeSessionExamResultsContinuity (browser)', () => {
   it('resets untargeted cached summary re-entry to the first available row instead of the persisted cursor', async () => {
     const review = createPostExamReview(
       createPostExamReviewRow({
-        questionId: 'q1',
+        questionId: fixtureQ1Id,
         order: 1,
         isAvailable: false,
       }),
-      createPostExamReviewRow({ questionId: 'q2', order: 2 }),
-      createPostExamReviewRow({ questionId: 'q3', order: 3 }),
+      createPostExamReviewRow({ questionId: fixtureQ2Id, order: 2 }),
+      createPostExamReviewRow({ questionId: fixtureQ3Id, order: 3 }),
     );
     const getCompletedSessionQuestionsWithFeedbackFn = vi
       .fn<GetCompletedSessionQuestionsWithFeedbackFn>()
@@ -68,12 +74,14 @@ describe('usePracticeSessionExamResultsContinuity (browser)', () => {
     await expect
       .poll(() => harness.result.current.postExamReviewLoadState.status)
       .toBe('ready');
-    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe('q2');
+    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe(
+      fixtureQ2Id,
+    );
 
-    harness.result.current.onNavigatePostExamReviewQuestion('q3');
+    harness.result.current.onNavigatePostExamReviewQuestion(fixtureQ3Id);
     await expect
       .poll(() => harness.result.current.postExamReviewCurrentQuestionId)
-      .toBe('q3');
+      .toBe(fixtureQ3Id);
 
     harness.result.current.onViewSummary();
     await expect
@@ -85,15 +93,17 @@ describe('usePracticeSessionExamResultsContinuity (browser)', () => {
     await expect
       .poll(() => harness.result.current.examResultsSubstage)
       .toBe('post_exam_review');
-    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe('q2');
+    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe(
+      fixtureQ2Id,
+    );
     expect(getCompletedSessionQuestionsWithFeedbackFn).toHaveBeenCalledTimes(1);
   });
 
   it('preserves the requested cached summary re-entry row when a specific question id is provided', async () => {
     const review = createPostExamReview(
-      createPostExamReviewRow({ questionId: 'q1', order: 1 }),
-      createPostExamReviewRow({ questionId: 'q2', order: 2 }),
-      createPostExamReviewRow({ questionId: 'q3', order: 3 }),
+      createPostExamReviewRow({ questionId: fixtureQ1Id, order: 1 }),
+      createPostExamReviewRow({ questionId: fixtureQ2Id, order: 2 }),
+      createPostExamReviewRow({ questionId: fixtureQ3Id, order: 3 }),
     );
     const harness = await renderContinuityHook({
       getCompletedSessionQuestionsWithFeedbackFn: vi
@@ -106,29 +116,31 @@ describe('usePracticeSessionExamResultsContinuity (browser)', () => {
       .poll(() => harness.result.current.postExamReviewLoadState.status)
       .toBe('ready');
 
-    harness.result.current.onNavigatePostExamReviewQuestion('q3');
+    harness.result.current.onNavigatePostExamReviewQuestion(fixtureQ3Id);
     harness.result.current.onViewSummary();
     await expect
       .poll(() => harness.result.current.examResultsSubstage)
       .toBe('session_summary');
 
-    harness.result.current.onReenterPostExamReview('q2');
+    harness.result.current.onReenterPostExamReview(fixtureQ2Id);
 
     await expect
       .poll(() => harness.result.current.examResultsSubstage)
       .toBe('post_exam_review');
-    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe('q2');
+    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe(
+      fixtureQ2Id,
+    );
   });
 
   it('resets untargeted lazy-hydrated summary re-entry to the first available row even when the persisted cursor points later in the review', async () => {
     const review = createPostExamReview(
       createPostExamReviewRow({
-        questionId: 'q1',
+        questionId: fixtureQ1Id,
         order: 1,
         isAvailable: false,
       }),
-      createPostExamReviewRow({ questionId: 'q2', order: 2 }),
-      createPostExamReviewRow({ questionId: 'q3', order: 3 }),
+      createPostExamReviewRow({ questionId: fixtureQ2Id, order: 2 }),
+      createPostExamReviewRow({ questionId: fixtureQ3Id, order: 3 }),
     );
     const reviewLoad =
       createDeferred<
@@ -146,10 +158,10 @@ describe('usePracticeSessionExamResultsContinuity (browser)', () => {
       .poll(() => harness.result.current.examResultsSubstage)
       .toBe('session_summary');
 
-    harness.result.current.onNavigatePostExamReviewQuestion('q3');
+    harness.result.current.onNavigatePostExamReviewQuestion(fixtureQ3Id);
     await expect
       .poll(() => harness.result.current.postExamReviewCurrentQuestionId)
-      .toBe('q3');
+      .toBe(fixtureQ3Id);
 
     harness.result.current.onReenterPostExamReview();
     await expect
@@ -162,15 +174,17 @@ describe('usePracticeSessionExamResultsContinuity (browser)', () => {
     await expect
       .poll(() => harness.result.current.postExamReviewLoadState.status)
       .toBe('ready');
-    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe('q2');
+    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe(
+      fixtureQ2Id,
+    );
     expect(harness.result.current.examResultsSubstage).toBe('post_exam_review');
   });
 
   it('preserves the requested lazy-hydrated summary re-entry row when a specific question id is provided', async () => {
     const review = createPostExamReview(
-      createPostExamReviewRow({ questionId: 'q1', order: 1 }),
-      createPostExamReviewRow({ questionId: 'q2', order: 2 }),
-      createPostExamReviewRow({ questionId: 'q3', order: 3 }),
+      createPostExamReviewRow({ questionId: fixtureQ1Id, order: 1 }),
+      createPostExamReviewRow({ questionId: fixtureQ2Id, order: 2 }),
+      createPostExamReviewRow({ questionId: fixtureQ3Id, order: 3 }),
     );
     const reviewLoad =
       createDeferred<
@@ -183,12 +197,12 @@ describe('usePracticeSessionExamResultsContinuity (browser)', () => {
     });
 
     harness.result.current.setSummary(createSummary());
-    harness.result.current.onNavigatePostExamReviewQuestion('q3');
+    harness.result.current.onNavigatePostExamReviewQuestion(fixtureQ3Id);
     await expect
       .poll(() => harness.result.current.examResultsSubstage)
       .toBe('session_summary');
 
-    harness.result.current.onReenterPostExamReview('q2');
+    harness.result.current.onReenterPostExamReview(fixtureQ2Id);
     await expect
       .poll(() => harness.result.current.postExamReviewLoadState.status)
       .toBe('loading');
@@ -199,7 +213,9 @@ describe('usePracticeSessionExamResultsContinuity (browser)', () => {
     await expect
       .poll(() => harness.result.current.postExamReviewLoadState.status)
       .toBe('ready');
-    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe('q2');
+    expect(harness.result.current.postExamReviewCurrentQuestionId).toBe(
+      fixtureQ2Id,
+    );
     expect(harness.result.current.examResultsSubstage).toBe('post_exam_review');
   });
 });

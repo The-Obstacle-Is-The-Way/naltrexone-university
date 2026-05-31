@@ -10,6 +10,11 @@ import { ok } from '@/tests/test-helpers/ok';
 import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
 import { usePracticeQuestionAnswerFlow } from './use-practice-question-answer-flow';
 
+const fixtureAttempt1Id = crypto.randomUUID();
+const fixtureQ2Id = crypto.randomUUID();
+const fixtureChoice1Id = crypto.randomUUID();
+const fixtureChoice2Id = crypto.randomUUID();
+
 vi.mock('@/lib/report-client-error', { spy: true });
 
 const { getNextQuestionMock, isMountedMock, submitAnswerMock } = vi.hoisted(
@@ -30,10 +35,10 @@ const TEST_FILTERS = {
 } satisfies PracticeFilters;
 
 function createSubmitOutput(
-  correctChoiceId: string = 'choice_1',
+  correctChoiceId: string = fixtureChoice1Id,
 ): SubmitAnswerOutput {
   return {
-    attemptId: 'attempt-1',
+    attemptId: fixtureAttempt1Id,
     isCorrect: true,
     correctChoiceId,
     explanationMd: null,
@@ -63,17 +68,23 @@ function PracticeQuestionAnswerFlowProbe() {
       </div>
       <div data-testid="can-submit">{String(output.canSubmit)}</div>
       <div data-testid="error-message">{errorMessage}</div>
-      <button type="button" onClick={() => output.onSelectChoice('choice_1')}>
+      <button
+        type="button"
+        onClick={() => output.onSelectChoice(fixtureChoice1Id)}
+      >
         select-choice-1
       </button>
-      <button type="button" onClick={() => output.onSelectChoice('choice_2')}>
+      <button
+        type="button"
+        onClick={() => output.onSelectChoice(fixtureChoice2Id)}
+      >
         select-choice-2
       </button>
       <button
         type="button"
         onClick={() => {
-          output.onSelectChoice('choice_1');
-          output.onSelectChoice('choice_2');
+          output.onSelectChoice(fixtureChoice1Id);
+          output.onSelectChoice(fixtureChoice2Id);
         }}
       >
         select-choice-1-then-2
@@ -93,7 +104,7 @@ function PracticeQuestionAnswerFlowProbe() {
       <button
         type="button"
         onClick={() => {
-          output.onSelectChoice('choice_1');
+          output.onSelectChoice(fixtureChoice1Id);
           void output.onSubmit();
         }}
       >
@@ -149,7 +160,9 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
 
     getNextQuestionMock
       .mockResolvedValueOnce(ok(createNextQuestion()))
-      .mockResolvedValueOnce(ok(createNextQuestion({ questionId: 'q_2' })));
+      .mockResolvedValueOnce(
+        ok(createNextQuestion({ questionId: fixtureQ2Id })),
+      );
     submitAnswerMock.mockImplementation(async () => submitDeferred.promise);
 
     const screen = await render(<PracticeQuestionAnswerFlowProbe />);
@@ -163,7 +176,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
       .click();
     await expect
       .element(screen.getByTestId('selected-choice-id'))
-      .toHaveTextContent('choice_1');
+      .toHaveTextContent(fixtureChoice1Id);
     await expect
       .element(screen.getByTestId('is-pending'))
       .toHaveTextContent('true');
@@ -173,9 +186,9 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
 
     submitDeferred.resolve(
       ok({
-        attemptId: 'attempt-1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
-        correctChoiceId: 'choice_1',
+        correctChoiceId: fixtureChoice1Id,
         explanationMd: null,
         referenceMd: null,
         choiceExplanations: [],
@@ -189,7 +202,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     await screen.getByRole('button', { name: 'next-question' }).click();
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('q_2');
+      .toHaveTextContent(fixtureQ2Id);
   });
 
   it('commits the clicked choice without waiting for selectedChoiceId to re-render', async () => {
@@ -197,17 +210,17 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
       ok(
         createNextQuestion({
           choices: [
-            { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
-            { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+            { id: fixtureChoice1Id, label: 'A', textMd: 'A', sortOrder: 1 },
+            { id: fixtureChoice2Id, label: 'B', textMd: 'B', sortOrder: 2 },
           ],
         }),
       ),
     );
     submitAnswerMock.mockResolvedValue(
       ok({
-        attemptId: 'attempt-1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
-        correctChoiceId: 'choice_2',
+        correctChoiceId: fixtureChoice2Id,
         explanationMd: null,
         referenceMd: null,
         choiceExplanations: [],
@@ -224,7 +237,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     await expect.poll(() => submitAnswerMock.mock.calls.length).toBe(1);
     expect(submitAnswerMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        choiceId: 'choice_2',
+        choiceId: fixtureChoice2Id,
       }),
     );
   });
@@ -234,8 +247,8 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
       ok(
         createNextQuestion({
           choices: [
-            { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
-            { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+            { id: fixtureChoice1Id, label: 'A', textMd: 'A', sortOrder: 1 },
+            { id: fixtureChoice2Id, label: 'B', textMd: 'B', sortOrder: 2 },
           ],
         }),
       ),
@@ -255,17 +268,17 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     await expect.poll(() => submitAnswerMock.mock.calls.length).toBe(1);
     await expect
       .element(screen.getByTestId('selected-choice-id'))
-      .toHaveTextContent('choice_1');
+      .toHaveTextContent(fixtureChoice1Id);
     expect(submitAnswerMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        choiceId: 'choice_1',
+        choiceId: fixtureChoice1Id,
       }),
     );
     submitDeferred.resolve(
       ok({
-        attemptId: 'attempt-1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
-        correctChoiceId: 'choice_1',
+        correctChoiceId: fixtureChoice1Id,
         explanationMd: null,
         referenceMd: null,
         choiceExplanations: [],
@@ -283,8 +296,8 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
       ok(
         createNextQuestion({
           choices: [
-            { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
-            { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+            { id: fixtureChoice1Id, label: 'A', textMd: 'A', sortOrder: 1 },
+            { id: fixtureChoice2Id, label: 'B', textMd: 'B', sortOrder: 2 },
           ],
         }),
       ),
@@ -309,9 +322,9 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     expect(submitAnswerMock).toHaveBeenCalledTimes(1);
     submitDeferred.resolve(
       ok({
-        attemptId: 'attempt-1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
-        correctChoiceId: 'choice_1',
+        correctChoiceId: fixtureChoice1Id,
         explanationMd: null,
         referenceMd: null,
         choiceExplanations: [],
@@ -329,8 +342,8 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
       ok(
         createNextQuestion({
           choices: [
-            { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
-            { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+            { id: fixtureChoice1Id, label: 'A', textMd: 'A', sortOrder: 1 },
+            { id: fixtureChoice2Id, label: 'B', textMd: 'B', sortOrder: 2 },
           ],
         }),
       ),
@@ -351,7 +364,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
       .element(screen.getByTestId('is-pending'))
       .toHaveTextContent('true');
     expect(submitAnswerMock).toHaveBeenCalledWith(
-      expect.objectContaining({ choiceId: 'choice_1' }),
+      expect.objectContaining({ choiceId: fixtureChoice1Id }),
     );
 
     await screen
@@ -361,9 +374,9 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     expect(submitAnswerMock).toHaveBeenCalledTimes(1);
     submitDeferred.resolve(
       ok({
-        attemptId: 'attempt-1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
-        correctChoiceId: 'choice_1',
+        correctChoiceId: fixtureChoice1Id,
         explanationMd: null,
         referenceMd: null,
         choiceExplanations: [],
@@ -401,17 +414,17 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
       ok(
         createNextQuestion({
           choices: [
-            { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
-            { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+            { id: fixtureChoice1Id, label: 'A', textMd: 'A', sortOrder: 1 },
+            { id: fixtureChoice2Id, label: 'B', textMd: 'B', sortOrder: 2 },
           ],
         }),
       ),
     );
     submitAnswerMock.mockResolvedValue(
       ok({
-        attemptId: 'attempt-1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
-        correctChoiceId: 'choice_1',
+        correctChoiceId: fixtureChoice1Id,
         explanationMd: null,
         referenceMd: null,
         choiceExplanations: [],
@@ -429,7 +442,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     await expect.poll(() => submitAnswerMock.mock.calls.length).toBe(1);
     await expect
       .element(screen.getByTestId('selected-choice-id'))
-      .toHaveTextContent('choice_1');
+      .toHaveTextContent(fixtureChoice1Id);
     await expect
       .element(screen.getByTestId('is-pending'))
       .toHaveTextContent('false');
@@ -443,9 +456,9 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     getNextQuestionMock.mockResolvedValue(ok(createNextQuestion()));
     submitAnswerMock.mockResolvedValue(
       ok({
-        attemptId: 'attempt-1',
+        attemptId: fixtureAttempt1Id,
         isCorrect: true,
-        correctChoiceId: 'choice_1',
+        correctChoiceId: fixtureChoice1Id,
         explanationMd: null,
         referenceMd: null,
         choiceExplanations: [],
@@ -482,15 +495,15 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
       ok(
         createNextQuestion({
           choices: [
-            { id: 'choice_1', label: 'A', textMd: 'A', sortOrder: 1 },
-            { id: 'choice_2', label: 'B', textMd: 'B', sortOrder: 2 },
+            { id: fixtureChoice1Id, label: 'A', textMd: 'A', sortOrder: 1 },
+            { id: fixtureChoice2Id, label: 'B', textMd: 'B', sortOrder: 2 },
           ],
         }),
       ),
     );
     submitAnswerMock
       .mockRejectedValueOnce(submitError)
-      .mockResolvedValueOnce(ok(createSubmitOutput('choice_2')));
+      .mockResolvedValueOnce(ok(createSubmitOutput(fixtureChoice2Id)));
 
     const screen = await render(<PracticeQuestionAnswerFlowProbe />);
     await expect
@@ -515,7 +528,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
 
     await expect.poll(() => submitAnswerMock.mock.calls.length).toBe(2);
     expect(submitAnswerMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({ choiceId: 'choice_1' }),
+      expect.objectContaining({ choiceId: fixtureChoice1Id }),
     );
   });
 
