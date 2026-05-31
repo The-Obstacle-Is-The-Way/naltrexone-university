@@ -2,7 +2,7 @@
 
 **Priority:** P2 (latent bug class. After PR 3b, the current canonical candidate grep finds 748 remaining placeholder-ID assignments across 42 files repo-wide, with 729 across 38 PR 3 residual app/application files. This is a candidate set, not a mandate to replace every string: the execution scope is only IDs that cross `zUuid = z.guid()` controller schemas or real Drizzle `uuid()` columns.)
 **Created:** 2026-05-26
-**Source:** Deep schema/boundary integrity audit conducted alongside DEBT-394 archival; re-audited on 2026-05-28 from `dev` at `f2dc0793`, PR 2 scope re-audited on 2026-05-28 from `dev` at `e7f1029a` after PR 1 merged, repository-slice PR 2b scope re-audited on 2026-05-29 from `dev` at `a98b5922` after PR 2a merged, app/browser/application PR 3 scope re-audited on 2026-05-29 from `dev` at `3b225505` after PR 2b merged, browser-slice PR 3b scope re-audited on 2026-05-30 from `dev` at `895d03a5` after PR 3a merged, and application-slice PR 3c value re-evaluated on 2026-05-30 from `dev` at `f39171f8` after PR 3b merged. Direct precedent is PR #330, which bumped Zod from 3 to 4 and deliberately kept historical UUID/GUID behavior by replacing the shared controller ID schema with Zod 4 `z.guid()`.
+**Source:** Deep schema/boundary integrity audit conducted alongside DEBT-394 archival; re-audited on 2026-05-28 from `dev` at `f2dc0793`, PR 2 scope re-audited on 2026-05-28 from `dev` at `e7f1029a` after PR 1 merged, repository-slice PR 2b scope re-audited on 2026-05-29 from `dev` at `a98b5922` after PR 2a merged, app/browser/application PR 3 scope re-audited on 2026-05-29 from `dev` at `3b225505` after PR 2b merged, browser-slice PR 3b scope re-audited on 2026-05-30 from `dev` at `895d03a5` after PR 3a merged, application-slice PR 3c value re-evaluated on 2026-05-30 from `dev` at `f39171f8` after PR 3b merged, and PR 4 guardrail scope audited on 2026-05-30 from the PR 3c audit tip at `d97df8c7`. Direct precedent is PR #330, which bumped Zod from 3 to 4 and deliberately kept historical UUID/GUID behavior by replacing the shared controller ID schema with Zod 4 `z.guid()`.
 **Related:** [src/adapters/shared/zod-schemas.ts](../../src/adapters/shared/zod-schemas.ts), [db/schema.ts](../../db/schema.ts), [src/domain/test-helpers/](../../src/domain/test-helpers/), [src/application/test-helpers/fakes/](../../src/application/test-helpers/fakes/), [docs/dev/dependency-update-protocol.md](../dev/dependency-update-protocol.md), [DEBT-397](./debt-397-datetime-boundary-type-normalization.md), [DEBT-394 (archived)](../_archive/debt/debt-394-supply-chain-hardening.md), PR #330
 
 **Status:** Active
@@ -165,7 +165,7 @@ PR 1 merged as #368 at `e7f1029a`. Current code now has the intended foundation:
 - `src/application/test-helpers/fakes/fake-attempt-repository.ts`, `fake-practice-session-repository.ts`, `fake-user-repository.ts`, and `fake-subscription-repository.ts` generate UUID-valid app IDs internally.
 - `tests/shared/fixture-uuid-integrity.test.ts` proves those generated factory/fake IDs pass the real `zUuid.safeParse()` contract.
 
-The remaining DEBT-400 work is explicit fixture overrides and adapter/app DTO rows that still provide placeholder IDs directly.
+After PR 1, the remaining code-sweep work was explicit fixture overrides and adapter/app DTO rows that still provided placeholder IDs directly.
 
 ### D. Fakes are shape-permissive
 
@@ -777,11 +777,11 @@ Branch: `feat/debt-400-pr-4-fixture-integrity-docs`
 
 Canonical structure: **Option A**.
 
-- Create `.claude/rules/fixture-integrity.md` as the single source of truth.
-- Add only a short pointer section to `.claude/rules/testing.md`; do not duplicate the full rule body.
-- Add the new rule file to the `CLAUDE.md` Path-Scoped Rules table.
-- Update `docs/dev/dependency-update-protocol.md` with a Schema-Validation Majors fixture-audit step citing PR #330.
-- Mark DEBT-400 complete in this doc, but archive it in a separate follow-up archive PR after PR 4 merges.
+- Create `.claude/rules/fixture-integrity.md` as the single source of truth. Confirmed absent during the PR 4 pre-execution audit.
+- Add only a short pointer section to `.claude/rules/testing.md` immediately after "Test Environment Isolation"; do not duplicate the full rule body.
+- Add the new rule file to the `CLAUDE.md` Path-Scoped Rules table near `test-isolation.md`.
+- Update `docs/dev/dependency-update-protocol.md` with a Schema-Validation Majors fixture-audit step citing PR #330. Insert this as its own section after "Dev-Tooling Majors" and before "Red CI on Dependabot PRs"; it parallels the existing jsdom PR #328 precedent.
+- Finalize this DEBT-400 doc with PR 4 complete status, the PR 3c skip rationale carried forward from `d97df8c7`, and the remaining follow-up sequence: DEBT-402, then a separate DEBT-400 archive PR.
 
 Recommended frontmatter for the new rule file:
 
@@ -798,16 +798,42 @@ paths:
 ---
 ```
 
+The first five paths mirror the `test-isolation.md` convention; the two helper-directory paths are deliberate DEBT-400 additions so factory/fake default-ID edits also load the fixture-integrity rule.
+
 Rule content contract:
 
-1. Fixtures must match production validators at any boundary.
-2. UUID/GUID fields crossing `zUuid` or Drizzle `uuid()` columns must use `crypto.randomUUID()` or UUID-emitting factories.
-3. Provider IDs, slugs, HTML ids, and intentionally invalid validation fixtures are not UUID fixtures.
-4. Factories and fakes must emit production-shaped default IDs.
-5. Schema-validation major upgrades must include a fixture audit before merge; cite PR #330.
-6. Fake-backed inner-layer behavior tests may keep readable semantic cross-reference keys unless a specific fixture crosses a real adapter/schema/DB boundary.
-7. In Vitest files, use `vi.hoisted()` for fixture values only when a value is read inside a `vi.mock(path, () => ...)` factory body; do not consistency-hoist ordinary UUID variables used in normal `beforeEach` / `it` scope.
-8. Do not churn harmless existing sites for style consistency.
+The rule body must be tight, but it must encode these four lessons explicitly:
+
+1. **Boundary.** Application-owned production IDs are UUID-shaped at the real boundary: controller schemas use `zUuid = z.guid()` in `src/adapters/shared/zod-schemas.ts`, and application-owned database identifiers are Drizzle `uuid()` columns in `db/schema.ts`. Fixtures that cross those boundaries must match the production shape.
+2. **FIX vs LEAVE.** FIX controller input/output DTO mocks, controller valid-path inputs, adapter repository row fixtures, mocked SQL rows, mapper rows, app-auth `userId` fixtures, E2E-helper app DB-row mocks, and shared factory/fake-generated defaults when they model `zUuid` fields or Drizzle `uuid()` columns. LEAVE provider IDs (`cus_`, `sub_`, `evt_`, `price_`, Clerk/Svix IDs), slugs, labels, HTML ids, `data-testid`, React-only keys, and intentionally invalid negative-validation fixtures. LEAVE fake-backed application use-case/shared tests and fake-repository behavior tests when their IDs are readable semantic cross-reference keys behind fakes; PR 3c proved those unit tests do not hit real adapter/schema/DB validation, the real boundary is covered by adapter/integration tests, and UUID-ifying those graphs would reduce readability for production-shape consistency alone.
+3. **Hoisting discipline.** Use `vi.hoisted()` for fixture values only when the value is read inside a `vi.mock(path, () => ...)` factory body. The browser `{ spy: true }` plus `vi.mocked(controllerFn).mockResolvedValue(...)` / `mockImplementation(...)` pattern runs in normal scope and does not need fixture hoisting. Do not consistency-hoist UUID variables.
+4. **Mechanics and proof.** Prefer UUID-emitting factories where available, otherwise use named role-bearing `crypto.randomUUID()` variables. Preserve cross-reference linkage by reusing the same variable for related entities, and capture generated IDs in assertions and error strings. Do not introduce `as any`, `as unknown as`, `@ts-ignore`, widened DTO types, or relaxed expectations to make a fixture fit; DEBT-402 tracks the separate mocked-DTO type-drift class. Cite `tests/shared/fixture-uuid-integrity.test.ts` as the PR 1 proof harness for generated factory/fake defaults.
+
+The rule must also say that schema-validation major upgrades require a fixture audit before merge, citing PR #330, and that harmless existing sites must not be churned for style consistency alone.
+
+`testing.md` pointer shape:
+
+```markdown
+## Fixture Integrity
+
+Tests and test helpers that create boundary-shaped fixtures MUST keep application-owned IDs valid at controller/DB boundaries and MUST leave provider IDs, fake-backed semantic keys, UI tokens, and intentional-invalid fixtures alone. See **`.claude/rules/fixture-integrity.md`** for the full FIX/LEAVE rule, UUID-linkage mechanics, and `vi.hoisted()` guidance.
+```
+
+`CLAUDE.md` table row shape:
+
+```markdown
+| `fixture-integrity.md` | `**/*.test.ts(x)`, `**/*.spec.ts(x)`, `tests/**`, `src/**/test-helpers/**` | UUID fixture boundary discipline, FIX/LEAVE tiers, linkage, hoisting |
+```
+
+`dependency-update-protocol.md` insertion content:
+
+```markdown
+## Schema-Validation Majors
+
+Major updates to Zod or another validation/schema library must include a boundary-fixture audit before merge. PR #330 is the local precedent: Zod 4 changed UUID/GUID validation semantics, so app-owned ID fixtures had to be checked against `zUuid = z.guid()` and Drizzle `uuid()` columns.
+
+Audit controller schemas, repository row fixtures, mocked controller DTOs, shared factories/fakes, and integration fixtures for shape drift. Keep provider IDs and intentional-invalid negative tests provider-shaped/invalid; fix only fixtures that cross the real validation or database boundary.
+```
 
 ---
 
@@ -852,6 +878,8 @@ PR 4 done when:
 - `CLAUDE.md` lists the new path-scoped rule.
 - `docs/dev/dependency-update-protocol.md` records the schema-validation-major fixture-audit step.
 - The rule captures the PR 3c value decision: fake-backed application behavior-test keys are LEAVE unless they cross a real boundary, and `vi.hoisted()` is not a blanket fixture-consistency tool.
+- `tests/shared/fixture-uuid-integrity.test.ts` remains green.
+- `pnpm test --run components/theme-token-regression.test.tsx` remains 16/16.
 - Full local gate green.
 
 Cross-PR sanity:
