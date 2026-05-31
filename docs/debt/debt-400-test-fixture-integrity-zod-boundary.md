@@ -179,9 +179,9 @@ For DEBT-400, the selected approach is:
 
 This avoids reintroducing archived DEBT-007 as incidental scope.
 
-### E. The rule is still undocumented in the right auto-loaded place
+### E. PR 4 documents the rule in the right auto-loaded place
 
-`.claude/rules/testing.md` currently says to use factories and links to the process-env isolation rule, but it does not define fixture integrity for validated boundaries. `.claude/rules/fixture-integrity.md` does not exist. `docs/dev/dependency-update-protocol.md` mentions the jsdom PR #328 precedent but does not yet encode a schema-validation-major fixture-audit step for PR #330-style incidents.
+Before PR 4, `.claude/rules/testing.md` said to use factories and linked to the process-env isolation rule, but it did not define fixture integrity for validated boundaries. PR 4 resolves this with `.claude/rules/fixture-integrity.md` as the SSOT, a pointer-only `testing.md` section, a `CLAUDE.md` path-scoped row, and a schema-validation-major fixture-audit step in `docs/dev/dependency-update-protocol.md`.
 
 This mirrors the SSOT issue already fixed in DEBT-395: the full rule must live in one scoped rule file, and `testing.md` should carry only a pointer.
 
@@ -463,7 +463,7 @@ PR 2b status: shipped in PR #370 at `3b225505`. The repository-slice PR migrated
 
 Root audit branch: `feat/debt-400-pr-3-app-application-fixtures`
 
-Pre-execution audit status: current from `dev` at `f39171f8` after PR 3b merged. PRs 1, 2a, 2b, 3a, and 3b are merged. The PR 3c application-slice value re-evaluation below finds no genuine boundary-crossing unit-test fixtures worth fixing; remaining work is PR 4 docs, DEBT-402, then archive.
+Execution status: current from `dev` at `f39171f8` after PR 3b merged, plus the PR 3c skip audit at `d97df8c7` and the PR 4 scope audit at `5d53acee`. PRs 1, 2a, 2b, 3a, and 3b are merged. The PR 3c application-slice value re-evaluation below finds no genuine boundary-crossing unit-test fixtures worth fixing. PR 4 ships the durable rule guardrail; after it merges, remaining work is DEBT-402, then the DEBT-400 archive PR.
 
 #### PR 3 candidate count
 
@@ -736,7 +736,7 @@ If a future genuine boundary-crossing application test appears, the recipe remai
 
 Durable guardrail:
 
-- PR 4 is now the important remaining DEBT-400 work: `.claude/rules/fixture-integrity.md` as SSOT, a short `testing.md` pointer, `CLAUDE.md` path-scoped row, and the schema-validation-major step in `docs/dev/dependency-update-protocol.md`.
+- PR 4 ships the important remaining DEBT-400 guardrail: `.claude/rules/fixture-integrity.md` as SSOT, a short `testing.md` pointer, `CLAUDE.md` path-scoped row, and the schema-validation-major step in `docs/dev/dependency-update-protocol.md`.
 - The rule must explicitly teach that fake-backed inner-layer semantic keys may stay readable unless they cross a real boundary, and it must include the hoisting discipline learned in PR 3b: `vi.hoisted()` only when a value is read inside a `vi.mock(path, () => ...)` factory body.
 - PR 1's proof harness plus adapter/integration suites are the durable protection for the actual boundary. The campaign value is in those guards and the rule, not in churning every fake-backed fixture.
 
@@ -782,6 +782,8 @@ Canonical structure: **Option A**.
 - Add the new rule file to the `CLAUDE.md` Path-Scoped Rules table near `test-isolation.md`.
 - Update `docs/dev/dependency-update-protocol.md` with a Schema-Validation Majors fixture-audit step citing PR #330. Insert this as its own section after "Dev-Tooling Majors" and before "Red CI on Dependabot PRs"; it parallels the existing jsdom PR #328 precedent.
 - Finalize this DEBT-400 doc with PR 4 complete status, the PR 3c skip rationale carried forward from `d97df8c7`, and the remaining follow-up sequence: DEBT-402, then a separate DEBT-400 archive PR.
+
+Status: implemented by the PR 4 execution branch. This completes the DEBT-400 code/rule campaign when merged; DEBT-402 and the archive PR remain separate follow-ups.
 
 Recommended frontmatter for the new rule file:
 
