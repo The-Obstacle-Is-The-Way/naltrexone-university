@@ -65,7 +65,7 @@ describe('practice-controller', () => {
         markedForReview: false,
         latestSelectedChoiceId: null,
         latestIsCorrect: null,
-        latestAnsweredAt: null,
+        latestAnsweredAt: new Date('2026-02-01T00:00:10.000Z'),
         draftSelectedChoiceId: '33333333-3333-3333-3333-333333333333',
         draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
         draftCumulativeMs: MAX_DRAFT_CUMULATIVE_MS,
@@ -73,6 +73,7 @@ describe('practice-controller', () => {
       const deps = createDeps({ saveDraftOutput });
       const expectedOutput = {
         ...saveDraftOutput,
+        latestAnsweredAt: '2026-02-01T00:00:10.000Z',
         draftSavedAt: '2026-02-01T00:00:00.000Z',
       };
 
@@ -144,7 +145,7 @@ describe('practice-controller', () => {
         markedForReview: false,
         latestSelectedChoiceId: null,
         latestIsCorrect: null,
-        latestAnsweredAt: null,
+        latestAnsweredAt: new Date('2026-02-01T00:00:10.000Z'),
         draftSelectedChoiceId: '33333333-3333-3333-3333-333333333333',
         draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
         draftCumulativeMs: 50_000,
@@ -153,6 +154,7 @@ describe('practice-controller', () => {
       const deps = createDeps({ saveDraftOutput });
       const expectedOutput = {
         ...saveDraftOutput,
+        latestAnsweredAt: '2026-02-01T00:00:10.000Z',
         draftSavedAt: '2026-02-01T00:00:00.000Z',
       };
 
