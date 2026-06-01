@@ -22,7 +22,21 @@ export {
   isValidDifficulty,
   type QuestionDifficulty,
 } from './question-difficulty';
-
+export {
+  AllQuestionFeedbackCategories,
+  isValidQuestionFeedbackCategory,
+  type QuestionFeedbackCategory,
+} from './question-feedback-category';
+export {
+  AllQuestionFeedbackKinds,
+  isValidQuestionFeedbackKind,
+  type QuestionFeedbackKind,
+} from './question-feedback-kind';
+export {
+  AllQuestionFeedbackRatings,
+  isValidQuestionFeedbackRating,
+  type QuestionFeedbackRating,
+} from './question-feedback-rating';
 export {
   AllQuestionProgressStatuses,
   isValidQuestionProgressStatus,

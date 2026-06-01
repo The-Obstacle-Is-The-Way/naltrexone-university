@@ -4,6 +4,8 @@ export {
   createChoice,
   createPracticeSession,
   createQuestion,
+  createQuestionRatingFeedback,
+  createQuestionReportFeedback,
   createSubscription,
   createTag,
   createUser,

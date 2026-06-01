@@ -13,6 +13,7 @@ import {
   DrizzleIdempotencyKeyRepository,
   DrizzlePendingStripeCancellationRepository,
   DrizzlePracticeSessionRepository,
+  DrizzleQuestionFeedbackRepository,
   DrizzleQuestionRepository,
   DrizzleStripeCustomerRepository,
   DrizzleStripeEventRepository,
@@ -35,9 +36,12 @@ import {
   GetNextQuestionUseCase,
   GetPracticeSessionSummaryUseCase,
   GetPreviousAttemptUseCase,
+  GetQuestionRatingUseCase,
   GetUserStatsUseCase,
+  RateQuestionUseCase,
   StartPracticeSessionUseCase,
   SubmitAnswerUseCase,
+  SubmitQuestionReportUseCase,
   ToggleBookmarkUseCase,
 } from '@/src/application/use-cases';
 import {
@@ -104,6 +108,7 @@ describe('container factories', () => {
       'function',
     );
     expect(typeof container.createPracticeSessionRepository).toBe('function');
+    expect(typeof container.createQuestionFeedbackRepository).toBe('function');
     expect(typeof container.createQuestionRepository).toBe('function');
     expect(typeof container.createTagRepository).toBe('function');
     expect(typeof container.createSubscriptionRepository).toBe('function');
@@ -118,6 +123,9 @@ describe('container factories', () => {
     expect(typeof container.createCheckEntitlementUseCase).toBe('function');
     expect(typeof container.createGetNextQuestionUseCase).toBe('function');
     expect(typeof container.createGetPreviousAttemptUseCase).toBe('function');
+    expect(typeof container.createGetQuestionRatingUseCase).toBe('function');
+    expect(typeof container.createRateQuestionUseCase).toBe('function');
+    expect(typeof container.createSubmitQuestionReportUseCase).toBe('function');
     expect(
       typeof container.createGetCompletedSessionQuestionsWithFeedbackUseCase,
     ).toBe('function');
@@ -137,6 +145,9 @@ describe('container factories', () => {
     expect(typeof container.createQuestionViewControllerDeps).toBe('function');
     expect(typeof container.createBillingControllerDeps).toBe('function');
     expect(typeof container.createBookmarkControllerDeps).toBe('function');
+    expect(typeof container.createQuestionFeedbackControllerDeps).toBe(
+      'function',
+    );
     expect(typeof container.createPracticeControllerDeps).toBe('function');
     expect(typeof container.createReviewControllerDeps).toBe('function');
     expect(typeof container.createStatsControllerDeps).toBe('function');
@@ -180,6 +191,9 @@ describe('container factories', () => {
     ).toBeInstanceOf(DrizzlePendingStripeCancellationRepository);
     expect(container.createPracticeSessionRepository()).toBeInstanceOf(
       DrizzlePracticeSessionRepository,
+    );
+    expect(container.createQuestionFeedbackRepository()).toBeInstanceOf(
+      DrizzleQuestionFeedbackRepository,
     );
     expect(container.createQuestionRepository()).toBeInstanceOf(
       DrizzleQuestionRepository,
@@ -226,6 +240,15 @@ describe('container factories', () => {
     );
     expect(container.createGetBookmarksUseCase()).toBeInstanceOf(
       GetBookmarksUseCase,
+    );
+    expect(container.createGetQuestionRatingUseCase()).toBeInstanceOf(
+      GetQuestionRatingUseCase,
+    );
+    expect(container.createRateQuestionUseCase()).toBeInstanceOf(
+      RateQuestionUseCase,
+    );
+    expect(container.createSubmitQuestionReportUseCase()).toBeInstanceOf(
+      SubmitQuestionReportUseCase,
     );
     expect(
       container.createGetIncompletePracticeSessionUseCase(),
@@ -312,6 +335,27 @@ describe('container factories', () => {
     expect(bookmarkDeps.getBookmarksUseCase).toBeInstanceOf(
       GetBookmarksUseCase,
     );
+
+    const questionFeedbackDeps =
+      container.createQuestionFeedbackControllerDeps();
+    expect(questionFeedbackDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);
+    expect(typeof questionFeedbackDeps.rateLimiter.limit).toBe('function');
+    expect(questionFeedbackDeps.idempotencyKeyRepository).toBeInstanceOf(
+      DrizzleIdempotencyKeyRepository,
+    );
+    expect(questionFeedbackDeps.checkEntitlementUseCase).toBeInstanceOf(
+      CheckEntitlementUseCase,
+    );
+    expect(questionFeedbackDeps.rateQuestionUseCase).toBeInstanceOf(
+      RateQuestionUseCase,
+    );
+    expect(questionFeedbackDeps.getQuestionRatingUseCase).toBeInstanceOf(
+      GetQuestionRatingUseCase,
+    );
+    expect(questionFeedbackDeps.submitQuestionReportUseCase).toBeInstanceOf(
+      SubmitQuestionReportUseCase,
+    );
+    expect(typeof questionFeedbackDeps.now).toBe('function');
 
     const practiceDeps = container.createPracticeControllerDeps();
     expect(practiceDeps.authGateway).toBeInstanceOf(ClerkAuthGateway);

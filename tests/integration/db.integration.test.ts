@@ -52,6 +52,7 @@ describe('database migrations', () => {
       'practice_sessions',
       'attempts',
       'bookmarks',
+      'question_feedback',
     ] as const;
 
     for (const table of expectedTables) {

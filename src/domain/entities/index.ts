@@ -12,6 +12,16 @@ export type {
   PracticeSessionQuestionState,
 } from './practice-session';
 export type { Question } from './question';
+export {
+  type NewQuestionFeedback,
+  newQuestionRatingFeedback,
+  newQuestionReportFeedback,
+  type PersistedQuestionFeedback,
+  type QuestionFeedback,
+  type QuestionFeedbackContext,
+  type QuestionRatingFeedback,
+  type QuestionReportFeedback,
+} from './question-feedback';
 export type { Subscription } from './subscription';
 export type { Tag } from './tag';
 export type { User } from './user';

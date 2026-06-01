@@ -76,6 +76,11 @@ export {
   GetPreviousAttemptUseCase,
 } from './get-previous-attempt';
 export {
+  type GetQuestionRatingInput,
+  type GetQuestionRatingOutput,
+  GetQuestionRatingUseCase,
+} from './get-question-rating';
+export {
   type GetSessionHistoryInput,
   type GetSessionHistoryOutput,
   GetSessionHistoryUseCase,
@@ -86,6 +91,11 @@ export {
   GetUserStatsUseCase,
   type UserStatsOutput,
 } from './get-user-stats';
+export {
+  type RateQuestionInput,
+  type RateQuestionOutput,
+  RateQuestionUseCase,
+} from './rate-question';
 export {
   type SaveExamDraftAnswerInput,
   type SaveExamDraftAnswerOutput,
@@ -106,6 +116,11 @@ export {
   type SubmitAnswerOutput,
   SubmitAnswerUseCase,
 } from './submit-answer';
+export {
+  type SubmitQuestionReportInput,
+  type SubmitQuestionReportOutput,
+  SubmitQuestionReportUseCase,
+} from './submit-question-report';
 
 export {
   type ToggleBookmarkInput,

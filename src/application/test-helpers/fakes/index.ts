@@ -11,6 +11,7 @@ export { FakeIdempotencyKeyRepository } from './fake-idempotency-key-repository'
 export { FakeLogger } from './fake-logger';
 export { FakePendingStripeCancellationRepository } from './fake-pending-stripe-cancellation-repository';
 export { FakePracticeSessionRepository } from './fake-practice-session-repository';
+export { FakeQuestionFeedbackRepository } from './fake-question-feedback-repository';
 export { FakeQuestionRepository } from './fake-question-repository';
 export { FakeStripeCustomerRepository } from './fake-stripe-customer-repository';
 export { FakeStripeEventRepository } from './fake-stripe-event-repository';
@@ -30,12 +31,15 @@ export {
   FakeGetNextQuestionUseCase,
   FakeGetPracticeSessionReviewUseCase,
   FakeGetPracticeSessionSummaryUseCase,
+  FakeGetQuestionRatingUseCase,
   FakeGetSessionHistoryUseCase,
   FakeGetUserStatsUseCase,
+  FakeRateQuestionUseCase,
   FakeSaveExamDraftAnswerUseCase,
   FakeSetPracticeSessionQuestionMarkUseCase,
   FakeStartPracticeSessionUseCase,
   FakeSubmitAnswerUseCase,
+  FakeSubmitQuestionReportUseCase,
   FakeToggleBookmarkUseCase,
 } from './fake-use-cases';
 export { FakeUserRepository } from './fake-user-repository';

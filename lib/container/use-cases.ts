@@ -13,12 +13,15 @@ import {
   GetPracticeSessionReviewUseCase,
   GetPracticeSessionSummaryUseCase,
   GetPreviousAttemptUseCase,
+  GetQuestionRatingUseCase,
   GetSessionHistoryUseCase,
   GetUserStatsUseCase,
+  RateQuestionUseCase,
   SaveExamDraftAnswerUseCase,
   SetPracticeSessionQuestionMarkUseCase,
   StartPracticeSessionUseCase,
   SubmitAnswerUseCase,
+  SubmitQuestionReportUseCase,
   ToggleBookmarkUseCase,
 } from '@/src/application/use-cases';
 import type {
@@ -105,6 +108,20 @@ export function createUseCaseFactories(input: {
         repositories.createBookmarkRepository(),
         repositories.createQuestionRepository(),
         primitives.logger,
+      ),
+    createGetQuestionRatingUseCase: () =>
+      new GetQuestionRatingUseCase(
+        repositories.createQuestionFeedbackRepository(),
+      ),
+    createRateQuestionUseCase: () =>
+      new RateQuestionUseCase(
+        repositories.createQuestionFeedbackRepository(),
+        repositories.createQuestionRepository(),
+      ),
+    createSubmitQuestionReportUseCase: () =>
+      new SubmitQuestionReportUseCase(
+        repositories.createQuestionFeedbackRepository(),
+        repositories.createQuestionRepository(),
       ),
     createGetIncompletePracticeSessionUseCase: () =>
       new GetIncompletePracticeSessionUseCase(

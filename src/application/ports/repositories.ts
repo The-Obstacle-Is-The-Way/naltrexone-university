@@ -5,6 +5,7 @@ export * from './deleted-clerk-user-repository';
 export * from './idempotency-key-repository';
 export * from './pending-stripe-cancellation-repository';
 export * from './practice-session-repository';
+export * from './question-feedback-repository';
 export * from './question-repository';
 export * from './stripe-customer-repository';
 export * from './stripe-event-repository';

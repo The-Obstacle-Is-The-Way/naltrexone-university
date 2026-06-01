@@ -6,6 +6,7 @@ import {
   DrizzleIdempotencyKeyRepository,
   DrizzlePendingStripeCancellationRepository,
   DrizzlePracticeSessionRepository,
+  DrizzleQuestionFeedbackRepository,
   DrizzleQuestionRepository,
   DrizzleStripeCustomerRepository,
   DrizzleStripeEventRepository,
@@ -38,6 +39,8 @@ export function createRepositoryFactories(
       new DrizzlePendingStripeCancellationRepository(dbOverride),
     createPracticeSessionRepository: (dbOverride = primitives.db) =>
       new DrizzlePracticeSessionRepository(dbOverride, primitives.now),
+    createQuestionFeedbackRepository: (dbOverride = primitives.db) =>
+      new DrizzleQuestionFeedbackRepository(dbOverride),
     createQuestionRepository: (dbOverride = primitives.db) =>
       new DrizzleQuestionRepository(dbOverride),
     createTagRepository: (dbOverride = primitives.db) =>

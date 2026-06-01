@@ -6,6 +6,10 @@ import type {
   PracticeSessionQuestionState,
 } from '../entities/practice-session';
 import type { Question } from '../entities/question';
+import type {
+  QuestionRatingFeedback,
+  QuestionReportFeedback,
+} from '../entities/question-feedback';
 import type { Subscription } from '../entities/subscription';
 import type { Tag } from '../entities/tag';
 import type { User } from '../entities/user';
@@ -75,6 +79,46 @@ export function createBookmark(overrides: Partial<Bookmark> = {}): Bookmark {
   return {
     userId: createUuid(),
     questionId: createUuid(),
+    createdAt: now,
+    ...overrides,
+  };
+}
+
+export function createQuestionRatingFeedback(
+  overrides: Partial<QuestionRatingFeedback> = {},
+): QuestionRatingFeedback {
+  const now = new Date();
+
+  return {
+    id: createUuid(),
+    userId: createUuid(),
+    questionId: createUuid(),
+    attemptId: null,
+    practiceSessionId: null,
+    kind: 'rating',
+    rating: 'helpful',
+    category: null,
+    comment: null,
+    createdAt: now,
+    ...overrides,
+  };
+}
+
+export function createQuestionReportFeedback(
+  overrides: Partial<QuestionReportFeedback> = {},
+): QuestionReportFeedback {
+  const now = new Date();
+
+  return {
+    id: createUuid(),
+    userId: createUuid(),
+    questionId: createUuid(),
+    attemptId: null,
+    practiceSessionId: null,
+    kind: 'report',
+    rating: null,
+    category: 'other',
+    comment: null,
     createdAt: now,
     ...overrides,
   };

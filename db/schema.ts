@@ -71,6 +71,27 @@ export const attemptRetryOriginEnum = pgEnum('attempt_retry_origin', [
   'other',
 ]);
 
+export const questionFeedbackKindEnum = pgEnum('question_feedback_kind', [
+  'rating',
+  'report',
+]);
+
+export const questionFeedbackRatingEnum = pgEnum('question_feedback_rating', [
+  'helpful',
+  'not_helpful',
+]);
+
+export const questionFeedbackCategoryEnum = pgEnum(
+  'question_feedback_category',
+  [
+    'incorrect_answer',
+    'ambiguous_wording',
+    'typo_formatting',
+    'outdated_reference',
+    'other',
+  ],
+);
+
 /**
  * TYPES (shared)
  */
@@ -83,6 +104,12 @@ export type StripeSubscriptionStatus =
   (typeof stripeSubscriptionStatusEnum.enumValues)[number];
 export type AttemptRetryOrigin =
   (typeof attemptRetryOriginEnum.enumValues)[number];
+export type QuestionFeedbackKind =
+  (typeof questionFeedbackKindEnum.enumValues)[number];
+export type QuestionFeedbackRating =
+  (typeof questionFeedbackRatingEnum.enumValues)[number];
+export type QuestionFeedbackCategory =
+  (typeof questionFeedbackCategoryEnum.enumValues)[number];
 
 export type PracticeSessionParams = {
   count: number; // number of questions in this session
@@ -513,6 +540,59 @@ export const bookmarks = pgTable(
   }),
 );
 
+export const questionFeedback = pgTable(
+  'question_feedback',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    questionId: uuid('question_id')
+      .notNull()
+      .references(() => questions.id, { onDelete: 'cascade' }),
+    attemptId: uuid('attempt_id').references(() => attempts.id, {
+      onDelete: 'set null',
+    }),
+    practiceSessionId: uuid('practice_session_id').references(
+      () => practiceSessions.id,
+      { onDelete: 'set null' },
+    ),
+    kind: questionFeedbackKindEnum('kind').notNull(),
+    rating: questionFeedbackRatingEnum('rating'),
+    category: questionFeedbackCategoryEnum('category'),
+    comment: text('comment'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    questionCreatedAtIdx: index('question_feedback_question_created_at_idx').on(
+      t.questionId,
+      desc(t.createdAt),
+      desc(t.id),
+    ),
+    ratingUserQuestionCreatedAtIdx: index(
+      'question_feedback_rating_user_question_created_at_idx',
+    )
+      .on(t.userId, t.questionId, desc(t.createdAt), desc(t.id))
+      .where(sql`${t.kind} = 'rating'`),
+    kindCreatedAtIdx: index('question_feedback_kind_created_at_idx').on(
+      t.kind,
+      desc(t.createdAt),
+      desc(t.id),
+    ),
+    kindShapeCheck: check(
+      'question_feedback_kind_shape_chk',
+      sql`(${t.kind} = 'rating' AND ${t.category} IS NULL AND ${t.comment} IS NULL)
+          OR (${t.kind} = 'report' AND ${t.category} IS NOT NULL AND ${t.rating} IS NULL)`,
+    ),
+    commentLengthCheck: check(
+      'question_feedback_comment_len_chk',
+      sql`${t.comment} IS NULL OR char_length(${t.comment}) <= 2000`,
+    ),
+  }),
+);
+
 /**
  * RELATIONS
  */
@@ -529,6 +609,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   sessions: many(practiceSessions),
   attempts: many(attempts),
   bookmarks: many(bookmarks),
+  feedback: many(questionFeedback),
 }));
 
 export const questionsRelations = relations(questions, ({ many }) => ({
@@ -536,6 +617,7 @@ export const questionsRelations = relations(questions, ({ many }) => ({
   questionTags: many(questionTags),
   attempts: many(attempts),
   bookmarks: many(bookmarks),
+  feedback: many(questionFeedback),
 }));
 
 export const choicesRelations = relations(choices, ({ one }) => ({
@@ -568,10 +650,11 @@ export const practiceSessionsRelations = relations(
       references: [users.id],
     }),
     attempts: many(attempts),
+    feedback: many(questionFeedback),
   }),
 );
 
-export const attemptsRelations = relations(attempts, ({ one }) => ({
+export const attemptsRelations = relations(attempts, ({ one, many }) => ({
   user: one(users, {
     fields: [attempts.userId],
     references: [users.id],
@@ -588,6 +671,7 @@ export const attemptsRelations = relations(attempts, ({ one }) => ({
     fields: [attempts.selectedChoiceId],
     references: [choices.id],
   }),
+  feedback: many(questionFeedback),
 }));
 
 export const bookmarksRelations = relations(bookmarks, ({ one }) => ({
@@ -600,6 +684,28 @@ export const bookmarksRelations = relations(bookmarks, ({ one }) => ({
     references: [questions.id],
   }),
 }));
+
+export const questionFeedbackRelations = relations(
+  questionFeedback,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [questionFeedback.userId],
+      references: [users.id],
+    }),
+    question: one(questions, {
+      fields: [questionFeedback.questionId],
+      references: [questions.id],
+    }),
+    attempt: one(attempts, {
+      fields: [questionFeedback.attemptId],
+      references: [attempts.id],
+    }),
+    practiceSession: one(practiceSessions, {
+      fields: [questionFeedback.practiceSessionId],
+      references: [practiceSessions.id],
+    }),
+  }),
+);
 
 /**
  * EXPORTED TS TYPES
@@ -647,3 +753,6 @@ export type NewAttempt = typeof attempts.$inferInsert;
 
 export type Bookmark = typeof bookmarks.$inferSelect;
 export type NewBookmark = typeof bookmarks.$inferInsert;
+
+export type QuestionFeedback = typeof questionFeedback.$inferSelect;
+export type NewQuestionFeedback = typeof questionFeedback.$inferInsert;
