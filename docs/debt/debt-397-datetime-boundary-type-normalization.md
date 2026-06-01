@@ -87,6 +87,8 @@ Ship in three single-concern PRs.
 
 Branch: `docs/debt-397-datetime-boundary-decision`
 
+**Status:** Complete in DEBT-397 PR 1. `docs/practice-engine/interaction-contracts.md` now states the canonical controller action-output datetime rule: output datetimes are ISO 8601 strings, schema-backed fields use `z.string().datetime()`, pass-through outputs still return ISO strings, domain/use-case layers may keep `Date`, and controllers serialize to ISO at the boundary. PR 2 and PR 3 remain active.
+
 This is the architectural decision PR. No code changes; produces a written decision that the implementation PR will follow.
 
 Three real options, each defensible:

@@ -4,7 +4,7 @@
 > **Scope:** Click-by-click UI contracts for tutor and exam modes — buttons, persistence, locking, navigation, and post-session flows
 > **Related:** [Practice Modes](./practice-modes.md) (lifecycle/data), [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md) (decisions)
 > **Status:** Current implementation. Historical BS-055 rationale remains, but the contracts below now describe shipped behavior; follow-up deltas are tracked separately in debt docs where noted.
-> **Last Updated:** 2026-04-23
+> **Last Updated:** 2026-06-01
 
 ---
 
@@ -17,6 +17,12 @@ These principles govern both modes. They are derived from BS-055 first-principle
 3. **What you see is what gets saved.** If the UI shows a highlighted selection, that selection must be durable. A visual state that silently disappears on navigation is a contract violation.
 4. **Exam answers are drafts until the exam is submitted.** Like a paper exam — circle, erase, re-circle freely until you hand it in. Nothing is locked until `Submit exam`.
 5. **Tutor answers are locked after feedback.** Once you see the correct answer, your response is permanently recorded. This prevents gaming.
+
+### Datetime representation at the controller boundary
+
+Controller action-output datetimes are ISO 8601 strings. Schema-backed output fields in `src/adapters/controllers/` use `z.string().datetime()` or its nullable equivalent; pass-through output fields without a controller output schema must still be ISO strings produced from `Date.toISOString()`. `z.date()` and date-like epoch `z.number()` fields are not allowed at the controller action-output boundary.
+
+Domain entities and application use cases may keep `Date` objects where date math belongs. The controller adapter is responsible for serializing those `Date` values to ISO strings before returning an action output. This keeps the boundary JSON-native and consistent with persisted practice-session JSON while avoiding per-field exceptions such as the `latestAnsweredAt` / `draftSavedAt` Date drift tracked by DEBT-397.
 
 ---
 
