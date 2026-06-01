@@ -1,3 +1,4 @@
+// biome-ignore lint/nursery/noExcessiveLinesPerFile: Keep the DEBT-397 AST scanner and assertions colocated so the controller-output datetime contract is auditable in one guardrail.
 import { readdirSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import ts from 'typescript';
@@ -28,6 +29,13 @@ type PassThroughTypeScan = {
 
 type ZodSchema = z.ZodType<unknown>;
 
+type TypeScanContext = {
+  activeAliases: Set<string>;
+  aliases: ReadonlyMap<string, ts.TypeNode>;
+  issues: ContractIssue[];
+  sourceFile: SourceFile;
+};
+
 type ZodDef = {
   checks?: readonly unknown[];
   element?: ZodSchema;
@@ -41,6 +49,18 @@ const DATETIME_CONTRACT_REF =
   'docs/practice-engine/interaction-contracts.md#datetime-representation-at-the-controller-boundary';
 const DATE_LIKE_FIELD_PATTERN =
   /(?:At|Date)$|^expires|^period|^created|^updated/i;
+const ZOD_SOURCE_WRAPPER_METHODS = new Set([
+  'brand',
+  'catch',
+  'default',
+  'describe',
+  'nullable',
+  'optional',
+  'readonly',
+  'refine',
+  'strict',
+  'superRefine',
+]);
 
 const EXPECTED_SCHEMALESS_ACTIONS: readonly PassThroughAction[] = [
   {
@@ -109,6 +129,13 @@ const PASS_THROUGH_TYPE_SCANS: readonly PassThroughTypeScan[] = [
     action: 'getBookmarks',
   },
   {
+    filePath:
+      'src/application/use-cases/get-completed-session-questions-with-feedback.ts',
+    typeName: 'GetCompletedSessionQuestionsWithFeedbackOutput',
+    prefix: '',
+    action: 'getCompletedSessionQuestionsWithFeedback',
+  },
+  {
     filePath: 'src/application/use-cases/get-attempted-questions.ts',
     typeName: 'AvailableAttemptedQuestionRow',
     prefix: 'rows[]',
@@ -133,6 +160,18 @@ const PASS_THROUGH_TYPE_SCANS: readonly PassThroughTypeScan[] = [
     action: 'getPreviousAttempt',
   },
   {
+    filePath: 'src/application/use-cases/get-practice-session-review.ts',
+    typeName: 'GetPracticeSessionReviewOutput',
+    prefix: '',
+    action: 'getPracticeSessionReview',
+  },
+  {
+    filePath: 'src/adapters/controllers/question-view-controller.ts',
+    typeName: 'GetQuestionBySlugOutput',
+    prefix: '',
+    action: 'getQuestionBySlug',
+  },
+  {
     filePath: 'src/application/use-cases/get-session-history.ts',
     typeName: 'SessionHistoryRow',
     prefix: 'rows[]',
@@ -143,6 +182,12 @@ const PASS_THROUGH_TYPE_SCANS: readonly PassThroughTypeScan[] = [
     typeName: 'UserStatsOutput',
     prefix: '',
     action: 'getUserStats',
+  },
+  {
+    filePath: 'src/adapters/controllers/tag-controller.ts',
+    typeName: 'GetTagsOutput',
+    prefix: '',
+    action: 'getTags',
   },
 ];
 
@@ -172,10 +217,14 @@ function readControllerSources(dir = CONTROLLER_ROOT): SourceFile[] {
 function parseRepoSource(filePath: string): SourceFile {
   const absolutePath = resolve(process.cwd(), filePath);
   const source = readFileSync(absolutePath, 'utf8');
+  return parseSourceText(filePath, source);
+}
+
+function parseSourceText(filePath: string, source: string): SourceFile {
   return {
     filePath,
     source,
-    ast: ts.createSourceFile(absolutePath, source, ts.ScriptTarget.Latest),
+    ast: ts.createSourceFile(filePath, source, ts.ScriptTarget.Latest),
   };
 }
 
@@ -292,9 +341,13 @@ function unwrapSourceCallChain(expression: ts.Expression): ts.Expression {
     if (
       methodName === 'array' ||
       methodName === 'date' ||
+      methodName === 'literal' ||
+      methodName === 'null' ||
       methodName === 'number' ||
       methodName === 'object' ||
-      methodName === 'string'
+      methodName === 'string' ||
+      methodName === 'undefined' ||
+      methodName === 'union'
     ) {
       return current;
     }
@@ -331,12 +384,56 @@ function getZodArrayElement(expression: ts.Expression): ts.Expression | null {
   return unwrapped.arguments[0] ?? null;
 }
 
+function stripSourceWrappers(expression: ts.Expression): ts.Expression {
+  let current = expression;
+  while (
+    ts.isCallExpression(current) &&
+    ts.isPropertyAccessExpression(current.expression) &&
+    ZOD_SOURCE_WRAPPER_METHODS.has(current.expression.name.text)
+  ) {
+    current = current.expression.expression;
+  }
+  return current;
+}
+
+function getZodUnionOptions(expression: ts.Expression): ts.Expression[] {
+  const stripped = stripSourceWrappers(expression);
+  const unwrapped = unwrapSourceCallChain(stripped);
+
+  if (isZodFactoryCall(unwrapped, 'union')) {
+    const [options] = unwrapped.arguments;
+    if (!options || !ts.isArrayLiteralExpression(options)) return [];
+    return [...options.elements];
+  }
+
+  if (
+    ts.isCallExpression(stripped) &&
+    ts.isPropertyAccessExpression(stripped.expression) &&
+    stripped.expression.name.text === 'or'
+  ) {
+    const [right] = stripped.arguments;
+    return right ? [stripped.expression.expression, right] : [];
+  }
+
+  return [];
+}
+
 function isDirectZodFactoryExpression(
   expression: ts.Expression,
-  methodName: 'date' | 'number',
+  methodName: string,
 ): boolean {
   const unwrapped = unwrapSourceCallChain(expression);
   return isZodFactoryCall(unwrapped, methodName);
+}
+
+function isNullishZodExpression(expression: ts.Expression): boolean {
+  const unwrapped = unwrapSourceCallChain(expression);
+  return (
+    isZodFactoryCall(unwrapped, 'null') ||
+    isZodFactoryCall(unwrapped, 'undefined') ||
+    (isZodFactoryCall(unwrapped, 'literal') &&
+      unwrapped.arguments[0]?.kind === ts.SyntaxKind.NullKeyword)
+  );
 }
 
 function containsZodStringDatetimeCall(
@@ -354,9 +451,13 @@ function containsZodStringDatetimeCall(
     );
   }
 
-  return node
-    .getChildren(sourceFile)
-    .some((child) => containsZodStringDatetimeCall(child, sourceFile));
+  let found = false;
+  ts.forEachChild(node, (child) => {
+    if (!found && containsZodStringDatetimeCall(child, sourceFile)) {
+      found = true;
+    }
+  });
+  return found;
 }
 
 function getPropertyName(name: ts.PropertyName): string | null {
@@ -380,6 +481,16 @@ function scanSchemaExpression(
   const issues: ContractIssue[] = [];
   const fieldName = getLastFieldName(path);
   const displayPath = formatPath(path) || '<root>';
+  const unionOptions = getZodUnionOptions(expression);
+
+  if (unionOptions.length > 0) {
+    for (const option of unionOptions) {
+      issues.push(
+        ...scanSchemaExpression(option, sourceFile, schemaName, path),
+      );
+    }
+    return issues;
+  }
 
   if (isDirectZodFactoryExpression(expression, 'date')) {
     issues.push(
@@ -390,7 +501,10 @@ function scanSchemaExpression(
     );
   }
 
-  if (DATE_LIKE_FIELD_PATTERN.test(fieldName)) {
+  if (
+    DATE_LIKE_FIELD_PATTERN.test(fieldName) &&
+    !isNullishZodExpression(expression)
+  ) {
     if (isDirectZodFactoryExpression(expression, 'number')) {
       issues.push(
         `${sourceFile.filePath}:${getSourcePosition(
@@ -531,23 +645,27 @@ function collectSchemaLessActions(
   );
 }
 
-function getTypeAlias(sourceFile: SourceFile, typeName: string): ts.TypeNode {
-  let typeNode: ts.TypeNode | null = null;
+function collectTypeAliases(sourceFile: SourceFile): Map<string, ts.TypeNode> {
+  const aliases = new Map<string, ts.TypeNode>();
 
   const visit = (node: ts.Node): void => {
-    if (
-      ts.isTypeAliasDeclaration(node) &&
-      node.name.text === typeName &&
-      !typeNode
-    ) {
-      typeNode = node.type;
-      return;
+    if (ts.isTypeAliasDeclaration(node)) {
+      aliases.set(node.name.text, node.type);
     }
 
     ts.forEachChild(node, visit);
   };
 
   visit(sourceFile.ast);
+  return aliases;
+}
+
+function getTypeAlias(
+  sourceFile: SourceFile,
+  aliases: ReadonlyMap<string, ts.TypeNode>,
+  typeName: string,
+): ts.TypeNode {
+  const typeNode = aliases.get(typeName);
 
   if (!typeNode) {
     throw new Error(`Missing type alias ${typeName} in ${sourceFile.filePath}`);
@@ -577,14 +695,43 @@ function isStringNullishType(typeNode: ts.TypeNode): boolean {
 
 function collectDateLikeStringFieldsFromType(
   typeNode: ts.TypeNode,
-  sourceFile: SourceFile,
+  context: TypeScanContext,
   path: string,
-  issues: ContractIssue[],
 ): string[] {
   if (ts.isUnionTypeNode(typeNode)) {
     return typeNode.types.flatMap((type) =>
-      collectDateLikeStringFieldsFromType(type, sourceFile, path, issues),
+      collectDateLikeStringFieldsFromType(type, context, path),
     );
+  }
+
+  if (ts.isArrayTypeNode(typeNode)) {
+    return collectDateLikeStringFieldsFromType(
+      typeNode.elementType,
+      context,
+      `${path}[]`,
+    );
+  }
+
+  if (ts.isTypeReferenceNode(typeNode)) {
+    const typeName = typeNode.typeName.getText(context.sourceFile.ast);
+
+    if (typeName === 'Array' && typeNode.typeArguments?.[0]) {
+      return collectDateLikeStringFieldsFromType(
+        typeNode.typeArguments[0],
+        context,
+        `${path}[]`,
+      );
+    }
+
+    const alias = context.aliases.get(typeName);
+    if (!alias || context.activeAliases.has(typeName)) return [];
+
+    context.activeAliases.add(typeName);
+    try {
+      return collectDateLikeStringFieldsFromType(alias, context, path);
+    } finally {
+      context.activeAliases.delete(typeName);
+    }
   }
 
   if (!ts.isTypeLiteralNode(typeNode)) return [];
@@ -602,9 +749,9 @@ function collectDateLikeStringFieldsFromType(
       if (isStringNullishType(member.type)) {
         fields.push(propertyPath);
       } else {
-        issues.push(
-          `${sourceFile.filePath}:${getSourcePosition(
-            sourceFile.ast,
+        context.issues.push(
+          `${context.sourceFile.filePath}:${getSourcePosition(
+            context.sourceFile.ast,
             member,
           )} ${propertyPath} is date-like but is not typed as string/string|null in a pass-through controller output (${DATETIME_CONTRACT_REF}).`,
         );
@@ -615,9 +762,8 @@ function collectDateLikeStringFieldsFromType(
       fields.push(
         ...collectDateLikeStringFieldsFromType(
           member.type.elementType,
-          sourceFile,
+          context,
           `${propertyPath}[]`,
-          issues,
         ),
       );
       continue;
@@ -625,15 +771,14 @@ function collectDateLikeStringFieldsFromType(
 
     if (
       ts.isTypeReferenceNode(member.type) &&
-      member.type.typeName.getText(sourceFile.ast) === 'Array' &&
+      member.type.typeName.getText(context.sourceFile.ast) === 'Array' &&
       member.type.typeArguments?.[0]
     ) {
       fields.push(
         ...collectDateLikeStringFieldsFromType(
           member.type.typeArguments[0],
-          sourceFile,
+          context,
           `${propertyPath}[]`,
-          issues,
         ),
       );
       continue;
@@ -642,9 +787,8 @@ function collectDateLikeStringFieldsFromType(
     fields.push(
       ...collectDateLikeStringFieldsFromType(
         member.type,
-        sourceFile,
+        context,
         propertyPath,
-        issues,
       ),
     );
   }
@@ -661,12 +805,19 @@ function collectPassThroughDatetimeFields(): {
 
   for (const scan of PASS_THROUGH_TYPE_SCANS) {
     const sourceFile = parseRepoSource(scan.filePath);
-    const typeNode = getTypeAlias(sourceFile, scan.typeName);
+    const aliases = collectTypeAliases(sourceFile);
+    const typeNode = getTypeAlias(sourceFile, aliases, scan.typeName);
+    const context: TypeScanContext = {
+      activeAliases: new Set([scan.typeName]),
+      aliases,
+      sourceFile,
+      issues,
+    };
+
     for (const field of collectDateLikeStringFieldsFromType(
       typeNode,
-      sourceFile,
+      context,
       scan.prefix,
-      issues,
     )) {
       fields.add(`${scan.action}:${field}`);
     }
@@ -693,6 +844,45 @@ describe('controller output datetime contract', () => {
     );
 
     expect(schemaIssues).toEqual([]);
+  });
+
+  it('reports date-like union output schema branches that drift away from ISO strings', () => {
+    const sourceFile = parseSourceText(
+      'src/adapters/controllers/example-controller.ts',
+      `
+import { z } from 'zod';
+
+const ExampleOutputSchema = z
+  .object({
+    answeredAt: z.union([z.string().datetime(), z.number()]),
+    expiresAt: z.string().datetime().or(z.date()),
+    updatedAt: z.union([z.string().datetime(), z.null()]),
+  })
+  .strict();
+`,
+    );
+
+    const schemaIssues = collectOutputSchemaSourceIssues([sourceFile]);
+
+    expect(schemaIssues).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(
+          'ExampleOutputSchema.answeredAt uses date-like z.number()',
+        ),
+        expect.stringContaining(
+          'ExampleOutputSchema.answeredAt is date-like but is not z.string().datetime()',
+        ),
+        expect.stringContaining('ExampleOutputSchema.expiresAt uses z.date()'),
+        expect.stringContaining(
+          'ExampleOutputSchema.expiresAt is date-like but is not z.string().datetime()',
+        ),
+      ]),
+    );
+    expect(
+      schemaIssues.some((issue) =>
+        issue.includes('ExampleOutputSchema.updatedAt'),
+      ),
+    ).toBe(false);
   });
 
   it('keeps pass-through controller datetime outputs explicit and ISO-shaped', () => {

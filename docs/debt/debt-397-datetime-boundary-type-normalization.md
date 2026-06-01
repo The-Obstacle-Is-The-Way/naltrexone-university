@@ -158,12 +158,12 @@ Branch: `tests/debt-397-output-schema-shape-regression`
 
 **Status:** Complete in DEBT-397 PR 3. `src/adapters/controllers/controller-output-datetime-contract.test.ts` now runs in the default unit suite and enforces the controller-output datetime contract: exported output schemas are runtime-walked for `z.string().datetime()`, production controller output schema declarations are source-scanned to reject `z.date()`, date-like `z.number()`, and unvalidated date-like strings, and schema-less pass-through controller outputs keep an explicit datetime inventory. The guard was red-proven by temporarily reverting `SaveExamDraftAnswerOutputSchema.draftSavedAt` to `z.date().nullable()` and confirming the focused test failed, then restoring the ISO schema and confirming it passed. DEBT-397 code work is complete; archival remains a separate follow-up.
 
-Add `tests/integration/output-schema-shape.test.ts` (or extend an existing schema regression test) that:
+`src/adapters/controllers/controller-output-datetime-contract.test.ts` now:
 
-1. Walks every output schema in `src/adapters/controllers/practice-schemas.ts` (and any other controller schema file).
-2. For each schema, introspects the `.shape` and finds fields named with `*At` suffix or with datetime-shaped Zod definitions.
-3. Asserts every datetime field is `z.string().datetime()` (or `z.string().datetime().nullable()`), NOT `z.date()` or `z.date().nullable()`.
-4. Fails loudly if a new field is added with the wrong representation.
+1. Runtime-walks exported controller output schemas and asserts date-like fields use `z.string().datetime()` (or its nullable equivalent), not `z.date()`.
+2. Source-scans production controller `*OutputSchema` declarations and rejects `z.date()`, date-like `z.number()` epoch fields, and unvalidated date-like strings, including union/or branches.
+3. Tracks every schema-less `createAction` output in an explicit pass-through inventory and type-scans those output aliases so pass-through datetimes stay ISO strings.
+4. Runs in the default unit suite, so `pnpm test --run` fails loudly if a new controller output datetime drifts off the contract.
 
 This is the enforcement layer. Without it, future drift is invisible.
 
@@ -187,7 +187,8 @@ PR 2 done when:
 
 PR 3 done when:
 
-- The regression test exists, runs in unit/integration, and fails if a future PR adds a divergent datetime field.
+- The regression test exists in `src/adapters/controllers/controller-output-datetime-contract.test.ts`, runs in the default unit suite, and fails if a future PR adds a divergent datetime field.
+- Exported output schemas are runtime-walked, production controller output schema declarations are source-scanned, and schema-less pass-through output datetime inventories are enforced.
 - Test execution is part of the default `pnpm test --run` gate.
 
 ---
