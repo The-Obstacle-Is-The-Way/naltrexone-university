@@ -53,7 +53,7 @@ confusion this spec uses distinct names everywhere:
   + fake + Drizzle repo + use case + `createAction` server action + DI wiring + optimistic hook.
 - **SPEC-023 / SPEC-034 (Review Mode)** — feedback controls render only where the review panel is
   visible (tutor immediate review + session review). They never appear mid-exam (no explanation yet).
-- **DEBT-337 (Future Feedback & Practice Session Enhancements)** — adjacent but separate; that item
+- **DEBT-337 (Future feedback & practice enhancements)** — adjacent but separate; that item
   covers explanation-panel content/UX tweaks, not user-submitted feedback. No collision.
 - **DEBT-397 (datetime boundary normalization)** — touches `practice-schemas.ts` only. This feature
   introduces a *new* controller (`question-feedback-controller.ts`); to avoid re-introducing the
@@ -92,7 +92,10 @@ confusion this spec uses distinct names everywhere:
    (`docs/frontend/pattern-registry.md` S-4) before use. The "Report a problem" trigger uses
    `<Button variant="outline" className="rounded-full">` to match the Bookmark button.
 5. **Validation:** zod at the boundary, `.strict()`, reusing `zUuid`; comment capped at 2000 chars
-   (enforced in zod **and** a DB `CHECK` constraint, matching the `attempts` table idiom).
+   (enforced in zod **and** a DB `CHECK` constraint). The CHECK reuses the `check('<table>_<desc>_chk',
+   sql\`…\`)` wrapper idiom from `attempts` (`attempts_*_chk`); note the `char_length(...) <= 2000`
+   length test itself is new — `attempts`' CHECKs are boolean column comparisons only, so the
+   precedent is the wrapper, not the length function.
 6. **Privacy:** `user_id` FK is `ON DELETE CASCADE` — deleting a user removes their feedback (GDPR).
    Free-text comments are user input that may contain PII/PHI; never log comment bodies, and make
    the export script local-only with explicit redaction/default-output rules.
@@ -103,12 +106,22 @@ Dependency direction (inward only): `db` ← `adapters` ← `application` ← `d
 
 ### 1. Domain — value objects + entity (`src/domain/`)
 
-Pure types, no imports. Mirror `src/domain/value-objects/` `const AllX = [...] as const` idiom.
+**Zero external imports** (the value objects import nothing; the entity `import type`s its three VO
+unions from `../value-objects`, exactly like `attempt.ts`/`question.ts` — that intra-domain import is
+allowed and is not an impurity). Mirror the `src/domain/value-objects/` `const AllX = [...] as const`
+**plus `isValid<Type>` type-predicate guard** idiom: every existing VO (`practice-mode.ts`,
+`question-status.ts`, `tag-kind.ts`, …) ships an `isValid…` guard, and the "Tests First"
+membership/validator tests call them — so each new VO must define one.
 
 ```typescript
 // src/domain/value-objects/question-feedback-rating.ts
 export const AllQuestionFeedbackRatings = ['helpful', 'not_helpful'] as const;
 export type QuestionFeedbackRating = (typeof AllQuestionFeedbackRatings)[number];
+export function isValidQuestionFeedbackRating(
+  value: string,
+): value is QuestionFeedbackRating {
+  return AllQuestionFeedbackRatings.includes(value as QuestionFeedbackRating);
+}
 
 // src/domain/value-objects/question-feedback-category.ts
 export const AllQuestionFeedbackCategories = [
@@ -120,10 +133,22 @@ export const AllQuestionFeedbackCategories = [
 ] as const;
 export type QuestionFeedbackCategory =
   (typeof AllQuestionFeedbackCategories)[number];
+export function isValidQuestionFeedbackCategory(
+  value: string,
+): value is QuestionFeedbackCategory {
+  return AllQuestionFeedbackCategories.includes(
+    value as QuestionFeedbackCategory,
+  );
+}
 
 // src/domain/value-objects/question-feedback-kind.ts
 export const AllQuestionFeedbackKinds = ['rating', 'report'] as const;
 export type QuestionFeedbackKind = (typeof AllQuestionFeedbackKinds)[number];
+export function isValidQuestionFeedbackKind(
+  value: string,
+): value is QuestionFeedbackKind {
+  return AllQuestionFeedbackKinds.includes(value as QuestionFeedbackKind);
+}
 ```
 
 ```typescript
@@ -143,7 +168,16 @@ export type QuestionFeedback = {
 ```
 
 **Invariant (enforced in use case + DB CHECK):** a `rating` event has `category = null`; a `report`
-event has `category != null` and `rating = null`.
+event has `category != null` and `rating = null`. This is a deliberate divergence from `Attempt`,
+which enforces its invariant inside a domain `createAttempt()` factory that throws `DomainError`;
+`QuestionFeedback` stays a plain data record (like `Bookmark`/`Subscription`, which have no factory)
+and pushes the invariant to the use case + DB CHECK.
+
+**Test-helper factory:** add `createQuestionFeedback(overrides)` to
+`src/domain/test-helpers/factories.ts` and its `index.ts` barrel, mirroring `createBookmark` /
+`createAttempt` — UUID-emitting defaults via the existing `createUuid()` helper, `createdAt: new
+Date()`, nullable FK ids defaulting to `null`. Use-case, repo, and fake tests build events through it
+so fixture UUID shapes stay valid at the Drizzle/zod boundaries.
 
 ### 2. Application — port + use cases (`src/application/`)
 
@@ -254,9 +288,20 @@ export class SubmitQuestionReportUseCase {
 }
 ```
 
-**Fake** (`src/application/test-helpers/fakes/fake-question-feedback-repository.ts`): in-memory array
-of events; `record()` pushes; `findLatestRatingByUser()` filters `kind==='rating'` and returns the
-newest by `createdAt`. Add to the fakes barrel `index.ts`.
+**Fake** (`src/application/test-helpers/fakes/fake-question-feedback-repository.ts`):
+`export class FakeQuestionFeedbackRepository implements QuestionFeedbackRepository`, backed by an
+in-memory array of events. Mirror the bookmark/attempt fake constructor —
+`constructor(seed: readonly QuestionFeedback[] = [], private readonly now: () => Date = () => new Date())`
+— so `findLatestRatingByUser` ordering by `createdAt` is deterministic in hydration tests. `record()`
+pushes (stamping `id`/`createdAt` via the injected `now`); `findLatestRatingByUser()` filters
+`kind === 'rating'`, returns the newest by `createdAt`, else `null`. Register it in `fakes/index.ts`
+as a **named** export in alphabetical position (it sorts before `FakeQuestionRepository`). The fakes
+barrel uses `export { FakeX } from './fake-x'`, not `export *`.
+
+Two enforced contract surfaces must also be updated: add `export * from './question-feedback-repository';`
+to the ports barrel `src/application/ports/repositories.ts`, and add the matching re-export assertion
+to `src/application/ports/repository-port-modules.test.ts` (it asserts every port is re-exported from
+the barrel — adding the port without it leaves the contract test incomplete).
 
 ### 3. Adapters — schema, migration, Drizzle repo, controller (`src/adapters/`, `db/`)
 
@@ -399,9 +444,23 @@ export const QUESTION_FEEDBACK_RATE_LIMIT = {
 
 #### 3d. zod schemas + controller (`src/adapters/controllers/question-feedback-controller.ts`)
 
-`'use server'`. Three actions built with `createAction({ schema, getDeps, execute })`, each calling
-`requireEntitledUserId`, then `rateLimiter.limit({ key: \`question-feedback:<action>:${userId}\`, ...QUESTION_FEEDBACK_RATE_LIMIT })`,
-then the use case; writes wrapped in `executeIdempotent`. Reuse `zUuid`; add enum schemas:
+`'use server'`. Three actions built with `createAction({ schema, getDeps, execute })` — the exact
+bookmark-controller shape. Non-obvious facts the implementation must honor (verified against
+`bookmark-controller.ts`, `create-action.ts`, `execute-idempotent.ts`, `controller-helpers.ts`):
+
+- **`execute` takes three args: `(input, deps, meta)`.** `meta` (`ActionExecutionMeta = { depsSource }`)
+  is load-bearing — forward it: `await requireEntitledUserId(deps, meta)`. Dropping `meta` compiles but
+  silently breaks entitlement deps-resolution in injected-deps controller tests.
+- **`getDeps` is produced by `createDepsResolver`, not hand-written:**
+  `const getDeps = createDepsResolver<QuestionFeedbackControllerDeps, QuestionFeedbackControllerContainer>((c) => c.createQuestionFeedbackControllerDeps(), loadAppContainer);`
+  (import `createDepsResolver` + `loadAppContainer` from `@/lib/controller-helpers`; declare a local
+  `QuestionFeedbackControllerContainer = { createQuestionFeedbackControllerDeps: () => QuestionFeedbackControllerDeps }`).
+- **`QuestionFeedbackControllerDeps` is defined and exported in this controller file** (mirroring
+  `BookmarkControllerDeps`), then imported by `lib/container/types.ts`.
+- Inside `execute`: `requireEntitledUserId(deps, meta)` → `deps.rateLimiter.limit({ key: \`question-feedback:<action>:${userId}\`, ...QUESTION_FEEDBACK_RATE_LIMIT })` → `throw new ApplicationError('RATE_LIMITED', …)` when `!result.success`.
+- **Writes wrap the use case in `executeIdempotent({ d: deps, userId, idempotencyKey, action, outputSchema, execute })`.** Both `action` (a string label, e.g. `'question-feedback:rateQuestion'`) and `outputSchema` (a zod schema for the use-case output, e.g. `RateQuestionOutputSchema`) are **required**; `execute` is a zero-arg thunk; the idempotency repo/logger/clock are read from `d`. It returns the raw use-case output (not an `ActionResult`) — `createAction` wraps it in `ok(...)`. A missing key short-circuits to a plain call. The read action (`getQuestionRating`) is **not** wrapped (matching `getBookmarks`).
+
+Reuse `zUuid`; add enum schemas (and the output schemas the writes pass to `executeIdempotent`):
 
 ```typescript
 const zRating = z.enum(['helpful', 'not_helpful']);
@@ -451,12 +510,21 @@ also allow `undefined`. Let `createAction`/`handleError` map `ApplicationError` 
 
 #### 3e. DI wiring (`lib/container/*`)
 
-- `repositories.ts`: `createQuestionFeedbackRepository: (db = primitives.db) => new DrizzleQuestionFeedbackRepository(db)`
-- `use-cases.ts`: `createRateQuestionUseCase`, `createGetQuestionRatingUseCase`, `createSubmitQuestionReportUseCase`
-- `controllers.ts`: `createQuestionFeedbackControllerDeps` (authGateway, logger, rateLimiter,
-  idempotencyKeyRepository, checkEntitlementUseCase, the three use cases, `now`)
-- `types.ts`: add the new repository, use-case, and controller factory types so DI overrides keep
-  compiling in controller tests.
+There is **no `index.ts` barrel**; each sub-file exports a `createXFactories(...)` map and
+`lib/container.ts` spreads them under a `satisfies <X>Factories` constraint, so the `types.ts` map and
+the factory object must stay in lockstep.
+
+- `repositories.ts`: `createQuestionFeedbackRepository: (dbOverride = primitives.db) => new DrizzleQuestionFeedbackRepository(dbOverride)` — the param is named **`dbOverride`** (all 13 existing
+  factories use this), not `db`. Also add `DrizzleQuestionFeedbackRepository` to the
+  `@/src/adapters/repositories` barrel and to the import block at the top of `repositories.ts`.
+- `use-cases.ts`: `createRateQuestionUseCase: () => new RateQuestionUseCase(repositories.createQuestionFeedbackRepository(), repositories.createQuestionRepository())`,
+  `createSubmitQuestionReportUseCase` (same two deps), and
+  `createGetQuestionRatingUseCase: () => new GetQuestionRatingUseCase(repositories.createQuestionFeedbackRepository())`
+  (feedback repo only). Import the three classes from `@/src/application/use-cases`.
+- `controllers.ts`: `createQuestionFeedbackControllerDeps: () => ({ authGateway: gateways.createAuthGateway(), logger: primitives.logger, rateLimiter: gateways.createRateLimiter(), idempotencyKeyRepository: repositories.createIdempotencyKeyRepository(), checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(), rateQuestionUseCase: useCases.createRateQuestionUseCase(), getQuestionRatingUseCase: useCases.createGetQuestionRatingUseCase(), submitQuestionReportUseCase: useCases.createSubmitQuestionReportUseCase(), now: primitives.now })`.
+- `types.ts`: extend `RepositoryFactories`, `UseCaseFactories`, and `ControllerFactories` **and their
+  import blocks** with the new factory types, so `ContainerOverrides`-based DI overrides keep compiling
+  in controller tests.
 
 ### 4. App / UI (`app/`, `components/`)
 
@@ -479,7 +547,8 @@ toggles (`ThumbsUp` / `ThumbsDown` from `lucide-react`), `aria-pressed`, disable
 
 `Dialog` containing a radio group (the 5 categories via `<Button>`-based or native radio + `label`
 pattern already used by `choice-button.tsx`), an optional `<textarea>` (capped, with live counter),
-Cancel + "Submit feedback". On success show a toast via `useNotification()`. Dialog a11y is part of
+Cancel + "Submit feedback". On success show a toast via `useNotification().notify({ message, tone })`
+(the provider exposes `notify`, not a bare `toast()`). Dialog a11y is part of
 the acceptance criteria: focus trap, labelled title/description, Escape close, keyboard-submit path,
 and labelled category controls. Rating thumbs must expose `aria-pressed` plus descriptive labels.
 
@@ -530,11 +599,14 @@ No admin UI in v1 (there is no role system yet — out of scope). Two extraction
 
 1. **Documented SQL** (add to this spec's appendix + `docs/dev/`): e.g. report counts by category,
    helpful-rate per question (latest-rating-per-user), top-reported questions, recent comments.
-2. **Ops export script** `scripts/export-question-feedback.ts` — run locally with `DATABASE_URL`,
-   dumps `question_feedback` (joined to question slug) to CSV/JSON. No public surface, no new auth.
-   Default output should include question identifiers/slug, event metadata, category/rating, and
-   redacted user identifiers; include raw `user_id` or free-text comments only behind explicit flags
-   with a console warning that comments may contain PII/PHI.
+2. **Ops export script** `scripts/export-question-feedback.ts` — follow the `scripts/seed.ts`
+   convention exactly: add a `package.json` entry (e.g. `"export:feedback": "tsx scripts/export-question-feedback.ts"`,
+   `tsx` not `ts-node`), load env via `dotenv.config({ path: '.env.local', quiet: true })` then
+   `.env`, read `process.env.DATABASE_URL`, and build the client with `postgres(databaseUrl, { max: 1 })`
+   + `drizzle(sql, { schema })`. Dumps `question_feedback` (joined to question slug) to CSV/JSON. No
+   public surface, no new auth. Default output should include question identifiers/slug, event
+   metadata, category/rating, and redacted user identifiers; include raw `user_id` or free-text
+   comments only behind explicit flags with a console warning that comments may contain PII/PHI.
 
 Example "current helpful-rate per question" (latest rating per user wins):
 
@@ -567,8 +639,10 @@ Write in dependency order; each layer red before its implementation.
    `SubmitQuestionReport` (NOT_FOUND; records `report` event; returns id).
 4. **Drizzle repo** — unit (mocked db chain) + **integration** (`tests/integration/*.integration.test.ts`):
    real append, latest-rating query, and the `kind_shape` / `comment_len` CHECK constraints reject
-   bad rows. Update `tests/integration/db.integration.test.ts` table census to include
-   `question_feedback` when the table is added.
+   bad rows (integration tests self-fixture their users/questions — no seed dependency). Add
+   `'question_feedback'` to the `tests/integration/db.integration.test.ts` table census for coverage;
+   note the census asserts `toContain` per table (additive), so omitting it is a coverage gap, not a
+   guaranteed red.
 5. **Controller** (fakes via DI overrides): validation error, unauthenticated, unsubscribed,
    rate-limited, success, `ActionResult` error mapping via `createAction`, idempotency replay (no
    double-write), and separate rate-limit keys for rating vs report actions.
@@ -644,7 +718,7 @@ Vertical slice, layer by layer (each step ends green):
 
 - Archived **SPEC-014** (Review + Bookmarks) — the architectural template this mirrors.
 - **SPEC-017** (Rate Limiting), **SPEC-016** (Observability) — reused infrastructure.
-- **DEBT-337** (Future Feedback & Practice Session Enhancements) — adjacent, separate.
+- **DEBT-337** (Future feedback & practice enhancements) — adjacent, separate.
 - **DEBT-397** (datetime boundary normalization) — new controller adopts ISO-string boundary to avoid
   re-introducing the issue.
 - `docs/frontend/standards.md`, `docs/frontend/pattern-registry.md` — design-system gates for the new
