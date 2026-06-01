@@ -3,9 +3,9 @@
 **Priority:** P3 (test-only type-safety debt. The current concrete surface is small, but it bypasses the exact DTO type checks that should make mocked controller/use-case outputs stay production-shaped.)
 **Created:** 2026-05-29
 **Source:** DEBT-400 PR 3 pre-execution audit from `dev` at `3b225505`. The audit's related-class sweep found mocked DTO fixtures that use `as unknown as ...Output` to force impossible shapes through TypeScript instead of constructing valid typed fixtures.
-**Related:** [DEBT-400](../_archive/debt/debt-400-test-fixture-integrity-zod-boundary.md), [.claude/rules/fixture-integrity.md](../../.claude/rules/fixture-integrity.md), [src/adapters/controllers/practice-controller.ts](../../src/adapters/controllers/practice-controller.ts), [src/adapters/controllers/tag-controller.ts](../../src/adapters/controllers/tag-controller.ts)
+**Related:** [DEBT-400](./debt-400-test-fixture-integrity-zod-boundary.md), [.claude/rules/fixture-integrity.md](../../../.claude/rules/fixture-integrity.md), [src/adapters/controllers/practice-controller.ts](../../../src/adapters/controllers/practice-controller.ts), [src/adapters/controllers/tag-controller.ts](../../../src/adapters/controllers/tag-controller.ts)
 
-**Status:** Active
+**Status:** Resolved 2026-06-01 — shipped in one PR ([#375](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/375)). Removed the four whole-DTO `as unknown as ...Output` casts: the two `GetPracticeSessionReviewOutput` lazy sentinels (`{ ok: true }`) became valid minimal typed DTOs; the `history/page.test.tsx` `GetTagsOutput` fixture dropped the impossible `kind: 'domain'` and kept the genuine hidden-`diagnosis` filtering assertion (invalid-kind rejection stays covered at the `src/domain/value-objects/tag-kind.test.ts` boundary, which already proves `isValidTagKind('domain') === false`); and the `FinalizeExamAnswersOutput` `questionCount: -1` runtime-rejection test now uses `satisfies` (type-valid `number`, runtime schema rejects it) instead of a whole-DTO cast. `typecheck` now constrains every mocked DTO fixture against the exported output type. Aligned with the DEBT-400 [`.claude/rules/fixture-integrity.md`](../../../.claude/rules/fixture-integrity.md) "no type bypasses" rule.
 
 ---
 
