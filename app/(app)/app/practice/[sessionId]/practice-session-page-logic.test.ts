@@ -60,6 +60,20 @@ function createFixtureNextQuestion(
   });
 }
 
+function createFixturePracticeSessionReview(
+  overrides: Partial<GetPracticeSessionReviewOutput> = {},
+): GetPracticeSessionReviewOutput {
+  return {
+    sessionId: fixtureSession1Id,
+    mode: 'tutor',
+    totalCount: 0,
+    answeredCount: 0,
+    markedCount: 0,
+    rows: [],
+    ...overrides,
+  };
+}
+
 describe('practice-session-page-logic', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -969,9 +983,7 @@ describe('practice-session-page-logic effects', () => {
       const getPracticeSessionReviewFn = vi.fn(async () => deferred.promise);
       const setNavigator = vi.fn();
       const setNavigatorLoadState = vi.fn();
-      const navigator = {
-        ok: true,
-      } as unknown as GetPracticeSessionReviewOutput;
+      const navigator = createFixturePracticeSessionReview();
 
       createNavigatorEffect({
         summary: null,
@@ -1104,9 +1116,7 @@ describe('practice-session-page-logic effects', () => {
       const getPracticeSessionReviewFn = vi.fn(async () => deferred.promise);
       const setSummaryReview = vi.fn();
       const setSummaryReviewLoadState = vi.fn();
-      const summaryReview = {
-        ok: true,
-      } as unknown as GetPracticeSessionReviewOutput;
+      const summaryReview = createFixturePracticeSessionReview();
 
       createSummaryReviewEffect({
         summary: {

@@ -21,7 +21,6 @@ const {
   fixtureSession1Id,
   fixtureTag1Id,
   fixtureTagDiagnosisId,
-  fixtureTagDomainId,
   fixtureTagSubstanceId,
   fixtureTagTopicId,
   fixtureTagTreatmentId,
@@ -37,7 +36,6 @@ const {
   fixtureSession1Id: crypto.randomUUID(),
   fixtureTag1Id: crypto.randomUUID(),
   fixtureTagDiagnosisId: crypto.randomUUID(),
-  fixtureTagDomainId: crypto.randomUUID(),
   fixtureTagSubstanceId: crypto.randomUUID(),
   fixtureTagTopicId: crypto.randomUUID(),
   fixtureTagTreatmentId: crypto.randomUUID(),
@@ -302,7 +300,7 @@ describe('app/(app)/app/history/page', () => {
     expect(html).not.toContain('Reattempt');
   });
 
-  it('excludes diagnosis and domain kinds from tag options', async () => {
+  it('excludes diagnosis kind from tag options', async () => {
     const output: GetAttemptedQuestionsOutput = {
       rows: [
         {
@@ -353,14 +351,8 @@ describe('app/(app)/app/history/page', () => {
             name: 'Opioid Use Disorder',
             kind: 'diagnosis',
           },
-          {
-            id: fixtureTagDomainId,
-            slug: 'screening-diagnosis-domain',
-            name: 'Exam Section Domain',
-            kind: 'domain',
-          },
         ],
-      } as unknown as GetTagsOutput),
+      } satisfies GetTagsOutput),
     );
 
     const HistoryPage = createHistoryPage({
@@ -375,7 +367,6 @@ describe('app/(app)/app/history/page', () => {
 
     expect(html).toContain('History');
     expect(html).not.toContain('Opioid Use Disorder');
-    expect(html).not.toContain('Exam Section Domain');
   });
 
   it('passes difficulty and tag filters to attempted questions fetch', async () => {

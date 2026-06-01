@@ -3,7 +3,7 @@
 **Priority:** P3 (test-only type-safety debt. The current concrete surface is small, but it bypasses the exact DTO type checks that should make mocked controller/use-case outputs stay production-shaped.)
 **Created:** 2026-05-29
 **Source:** DEBT-400 PR 3 pre-execution audit from `dev` at `3b225505`. The audit's related-class sweep found mocked DTO fixtures that use `as unknown as ...Output` to force impossible shapes through TypeScript instead of constructing valid typed fixtures.
-**Related:** [DEBT-400](./debt-400-test-fixture-integrity-zod-boundary.md), [src/adapters/controllers/practice-controller.ts](../../src/adapters/controllers/practice-controller.ts), [src/adapters/controllers/tag-controller.ts](../../src/adapters/controllers/tag-controller.ts)
+**Related:** [DEBT-400](../_archive/debt/debt-400-test-fixture-integrity-zod-boundary.md), [.claude/rules/fixture-integrity.md](../../.claude/rules/fixture-integrity.md), [src/adapters/controllers/practice-controller.ts](../../src/adapters/controllers/practice-controller.ts), [src/adapters/controllers/tag-controller.ts](../../src/adapters/controllers/tag-controller.ts)
 
 **Status:** Active
 
@@ -25,47 +25,71 @@ This is separate from DEBT-400's UUID-value class. DEBT-400 fixes invalid identi
 
 ## Findings
 
-Concrete current sites:
-
-| File | Line | Cast | Why it is real debt |
-|---|---:|---|---|
-| `app/(app)/app/practice/[sessionId]/practice-session-page-logic.test.ts` | 937 | `{ ok: true } as unknown as GetPracticeSessionReviewOutput` | The object is not a review output. The test only needs a sentinel object to verify state transition, but the cast hides that the DTO shape is impossible. |
-| `app/(app)/app/practice/[sessionId]/practice-session-page-logic.test.ts` | 1072 | `{ ok: true } as unknown as GetPracticeSessionReviewOutput` | Same impossible-shape pattern for summary-review loading. |
-| `app/(app)/app/history/page.test.tsx` | 324 | object literal `as unknown as GetTagsOutput` | The fixture includes `kind: 'domain'`, which is not part of the tag-kind boundary (`topic`, `substance`, `treatment`, `diagnosis`). The test is trying to verify unsupported kinds are filtered, but the unsafe cast hides the invalid DTO from TypeScript. |
-
-Current sweep:
+Pre-execution audit from `dev` at `c0cca8bb` re-ran the narrow mocked-DTO sweep:
 
 ```sh
-rg -n "as unknown as .*Output|as any.*Output|@ts-(ignore|expect)" \
-  app/ src/application/ components/ tests/e2e/helpers \
-  --glob '*.test.ts' --glob '*.test.tsx' --glob '*.spec.ts' --glob '*.spec.tsx'
+rg -n "as unknown as [A-Za-z]+(Output|Dto|DTO|Result|Response)" \
+  app src components \
+  -g '*.test.ts' -g '*.test.tsx' -g '*.browser.spec.tsx'
 ```
 
-The output contains the three sites above plus intentional negative type tests (`@ts-expect-error`) and non-DTO platform seams. Only these three are mocked DTO shape drift.
+Current surface is **4 sites / 3 files**:
+
+| File | Line | Cast | Classification | Why it is real debt |
+|---|---:|---|---|---|
+| `app/(app)/app/practice/[sessionId]/practice-session-page-logic.test.ts` | 974 | `{ ok: true } as unknown as GetPracticeSessionReviewOutput` | LAZY-SENTINEL | The test only needs identity/state-transition proof, but `{ ok: true }` is not a review output. The cast hides an impossible controller DTO shape. |
+| `app/(app)/app/practice/[sessionId]/practice-session-page-logic.test.ts` | 1109 | `{ ok: true } as unknown as GetPracticeSessionReviewOutput` | LAZY-SENTINEL | Same impossible-shape sentinel for summary-review loading. |
+| `app/(app)/app/history/page.test.tsx` | 363 | object literal `as unknown as GetTagsOutput` with `kind: 'domain'` | INTENTIONAL-INVALID | `domain` is deliberately out of contract. `GetTagsOutput` only allows `topic`, `substance`, `treatment`, and `diagnosis`; the page-level mocked controller DTO should not pretend production can return `domain`. |
+| `src/adapters/controllers/practice-controller-session-lifecycle.test.ts` | 504 | object literal `as unknown as FinalizeExamAnswersOutput` with `questionCount: -1` | INTENTIONAL-INVALID | This is a negative output-validation test. The value is invalid for `FinalizeExamAnswersOutputSchema`, but it is still structurally compatible with the exported TypeScript output type because `questionCount` is `number`. The whole-DTO cast is unnecessary and weakens the test. |
+
+Exported output types are importable at the affected sites:
+
+- `GetPracticeSessionReviewOutput` is exported from `src/adapters/controllers/practice-controller.ts` and already imported in `practice-session-page-logic.test.ts`.
+- `GetTagsOutput` is exported from `src/adapters/controllers/tag-controller.ts` and already imported in `history/page.test.tsx`.
+- `FinalizeExamAnswersOutput` is exported from `src/application/use-cases/index.ts` and already imported in `practice-controller-session-lifecycle.test.ts`.
 
 ---
 
 ## Required Remediation
 
-Ship one small test-only PR after DEBT-400 PR 3, or fold into the affected DEBT-400 sub-PR only if it is already touching the same file and the diff remains obvious.
+Ship one small test-only PR on `feat/debt-402-mocked-dto-type-drift`. Do not expand beyond these 4 sites.
 
-Fix shape:
+Per-site recipe:
 
-1. Replace impossible DTO casts with valid minimal fixture builders.
-2. Prefer `satisfies OutputType` or an explicit return type on the builder so TypeScript checks the DTO shape.
-3. If a test needs a sentinel for state-transition identity and does not care about DTO fields, use a real minimal DTO with semantic values, not `{ ok: true }`.
-4. For the unsupported tag-kind filtering test, do not cast invalid data to `GetTagsOutput`. Either:
-   - model the unsupported row before the controller boundary and test that mapper/filter directly, or
-   - keep the page-level test on valid `GetTagsOutput` rows and move the invalid-kind coverage to the layer that actually accepts untrusted input.
+1. `practice-session-page-logic.test.ts:974` and `:1109`:
+   - Replace each `{ ok: true }` sentinel with a valid minimal `GetPracticeSessionReviewOutput`.
+   - Prefer a shared local helper or `const reviewOutput = { ... } satisfies GetPracticeSessionReviewOutput`.
+   - Minimal valid shape: `sessionId`, `mode`, `totalCount`, `answeredCount`, `markedCount`, `rows`.
+   - Use semantic fixture values already present in the file, e.g. `fixtureSession1Id`, `mode: 'tutor'`, zero counts, and `rows: []`.
+   - Preserve the tests' identity assertions (`toHaveBeenCalledWith(navigator)` / `toHaveBeenLastCalledWith(summaryReview)`).
+2. `history/page.test.tsx:363`:
+   - Do not keep a page-level `GetTagsOutput` fixture containing `kind: 'domain'`.
+   - Keep the page-level mocked controller DTO production-shaped. The valid page behavior here is filtering hidden-but-valid `diagnosis` tags from the visible options.
+   - Preserve invalid `domain` coverage at the real boundary instead. `src/domain/value-objects/tag-kind.test.ts` already proves `isValidTagKind('domain') === false`; add or adjust boundary coverage only if execution finds that proof missing.
+   - Do not replace `domain` with another valid kind and claim the invalid-kind case is still covered. Either remove the invalid row from the page DTO and keep/rename the diagnosis-filter assertion, or move the invalid-kind assertion to the boundary layer.
+3. `practice-controller-session-lifecycle.test.ts:504`:
+   - Preserve the negative test: the controller must return `VALIDATION_ERROR` when the use case returns output rejected by `FinalizeExamAnswersOutputSchema`.
+   - Remove the whole-DTO cast. Use a named fixture constrained by the exported type, e.g. `const invalidFinalizeOutput = { ...questionCount: -1... } satisfies FinalizeExamAnswersOutput;`.
+   - No residual cast is needed here: the TypeScript output type permits `number`, while the controller output schema rejects negative counts at runtime.
 
-Do not add broader runtime validation to tests only to compensate for unsafe casts. The clean fix is to make fixtures satisfy the exported DTO contracts.
+General rule:
+
+- Fixtures must be constrained by the exported controller/use-case output type via `satisfies OutputType`, an explicit variable type, or a typed builder.
+- No blanket `as unknown as ...Output`.
+- A residual narrow cast is acceptable only for a documented intentional-invalid negative test where a single field must be out of contract and the rest of the fixture remains typed. This audit's recommended recipe does not require such a residual cast.
+- Do not add broader runtime validation to tests only to compensate for unsafe casts. The clean fix is to make fixtures satisfy the exported DTO contracts, and to put intentionally invalid cases at the boundary that accepts untrusted input.
 
 ---
 
 ## Acceptance Criteria
 
-- No `as unknown as ...Output` or `as any ...Output` remains in app/application/component/e2e-helper tests.
+- The narrow sweep command above returns zero whole-DTO mocked-output casts in `app`, `src`, and `components`, except any explicitly justified residual single-field intentional-invalid cast.
+- No `as unknown as ...Output` or `as any ...Output` remains at the 4 audited sites.
+- Any residual intentional-invalid cast, if execution discovers one is necessary, is single-field, locally commented, and not a whole-DTO bypass.
+- The `history/page.test.tsx` tag-filtering intent is preserved without pretending `GetTagsOutput` can contain `kind: 'domain'`; invalid `domain` coverage remains at the tag-kind boundary.
+- The finalize-output negative test still proves `FinalizeExamAnswersOutputSchema` rejection.
 - Existing intentional `@ts-expect-error` type-contract tests remain if they are proving compile-time rejection and include a clear rationale.
 - The affected test files pass directly.
+- DEBT-398 scan remains 16/16.
 - Full local gate green.
 - No production code changes unless a test exposes a real production mapper bug.
