@@ -489,20 +489,19 @@ describe('practice-controller', () => {
     });
 
     it('returns VALIDATION_ERROR when finalize output is invalid without idempotency', async () => {
-      const deps = createDeps({
-        finalizeOutput: {
-          sessionId: '22222222-2222-2222-2222-222222222222',
-          endedAt: '2026-02-01T00:00:00.000Z',
-          mode: 'exam',
-          questionCount: -1,
-          totals: {
-            answered: 2,
-            correct: 1,
-            accuracy: 0.5,
-            durationSeconds: 60,
-          },
-        } as unknown as FinalizeExamAnswersOutput,
-      });
+      const invalidFinalizeOutput = {
+        sessionId: '22222222-2222-2222-2222-222222222222',
+        endedAt: '2026-02-01T00:00:00.000Z',
+        mode: 'exam',
+        questionCount: -1,
+        totals: {
+          answered: 2,
+          correct: 1,
+          accuracy: 0.5,
+          durationSeconds: 60,
+        },
+      } satisfies FinalizeExamAnswersOutput;
+      const deps = createDeps({ finalizeOutput: invalidFinalizeOutput });
 
       const result = await finalizeExamAnswers(
         { sessionId: '11111111-1111-1111-1111-111111111111' },
