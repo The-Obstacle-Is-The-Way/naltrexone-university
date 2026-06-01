@@ -138,6 +138,8 @@ See DEBT-397 for migration history.
 
 Branch: `fix/debt-397-output-schema-datetime-normalization`
 
+**Status:** Complete in DEBT-397 PR 2. `SaveExamDraftAnswerOutputSchema.latestAnsweredAt` and `SaveExamDraftAnswerOutputSchema.draftSavedAt` now use `z.string().datetime().nullable()`, the practice controller serializes the use-case `Date` values to ISO strings at the action-output boundary, and typecheck-driven controller-output fixtures now construct those fields as ISO strings. Domain/use-case/persistence Date handling remains unchanged. PR 3 remains active for the regression guard.
+
 Assuming Option A (the recommendation):
 
 1. Change `practice-schemas.ts:162` `latestAnsweredAt: z.date().nullable()` -> `z.string().datetime().nullable()`.

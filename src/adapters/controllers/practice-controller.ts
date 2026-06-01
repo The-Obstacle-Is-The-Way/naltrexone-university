@@ -27,13 +27,14 @@ import type {
   GetSessionHistoryInput,
   GetSessionHistoryOutput,
   SaveExamDraftAnswerInput,
-  SaveExamDraftAnswerOutput,
+  SaveExamDraftAnswerOutput as SaveExamDraftAnswerUseCaseOutput,
   SetPracticeSessionQuestionMarkInput,
   SetPracticeSessionQuestionMarkOutput,
   StartPracticeSessionInput,
   StartPracticeSessionOutput,
 } from '@/src/application/use-cases';
 import { createAction } from './create-action';
+import type { SaveExamDraftAnswerOutput } from './practice-schemas';
 import {
   CountAvailableQuestionsInputSchema,
   CountAvailableQuestionsOutputSchema,
@@ -68,10 +69,10 @@ export type {
   GetPracticeSessionReviewOutput,
   GetPracticeSessionSummaryOutput,
   GetSessionHistoryOutput,
-  SaveExamDraftAnswerOutput,
   SetPracticeSessionQuestionMarkOutput,
   StartPracticeSessionOutput,
 } from '@/src/application/use-cases';
+export type { SaveExamDraftAnswerOutput } from './practice-schemas';
 
 export type PracticeControllerDeps = {
   authGateway: AuthGateway;
@@ -112,7 +113,7 @@ export type PracticeControllerDeps = {
   saveExamDraftAnswerUseCase: {
     execute: (
       input: SaveExamDraftAnswerInput,
-    ) => Promise<SaveExamDraftAnswerOutput>;
+    ) => Promise<SaveExamDraftAnswerUseCaseOutput>;
   };
   getPracticeSessionReviewUseCase: {
     execute: (
@@ -145,6 +146,16 @@ const getDeps = createDepsResolver<
   PracticeControllerDeps,
   PracticeControllerContainer
 >((container) => container.createPracticeControllerDeps(), loadAppContainer);
+
+function serializeSaveExamDraftAnswerOutput(
+  output: SaveExamDraftAnswerUseCaseOutput,
+): SaveExamDraftAnswerOutput {
+  return {
+    ...output,
+    latestAnsweredAt: output.latestAnsweredAt?.toISOString() ?? null,
+    draftSavedAt: output.draftSavedAt?.toISOString() ?? null,
+  };
+}
 
 export const startPracticeSession = createAction({
   schema: StartPracticeSessionInputSchema,
@@ -298,14 +309,16 @@ export const saveExamDraftAnswer = createAction({
   execute: async (input, d, meta) => {
     const userId = await requireEntitledUserId(d, meta);
 
+    const output = await d.saveExamDraftAnswerUseCase.execute({
+      userId,
+      sessionId: input.sessionId,
+      questionId: input.questionId,
+      selectedChoiceId: input.selectedChoiceId,
+      cumulativeMs: input.cumulativeMs,
+    });
+
     return SaveExamDraftAnswerOutputSchema.parse(
-      await d.saveExamDraftAnswerUseCase.execute({
-        userId,
-        sessionId: input.sessionId,
-        questionId: input.questionId,
-        selectedChoiceId: input.selectedChoiceId,
-        cumulativeMs: input.cumulativeMs,
-      }),
+      serializeSaveExamDraftAnswerOutput(output),
     );
   },
 });

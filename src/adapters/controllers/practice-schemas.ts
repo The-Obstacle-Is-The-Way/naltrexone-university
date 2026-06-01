@@ -159,12 +159,16 @@ export const SaveExamDraftAnswerOutputSchema = z
     markedForReview: z.boolean(),
     latestSelectedChoiceId: zUuid.nullable(),
     latestIsCorrect: z.boolean().nullable(),
-    latestAnsweredAt: z.date().nullable(),
+    latestAnsweredAt: z.string().datetime().nullable(),
     draftSelectedChoiceId: zUuid.nullable(),
-    draftSavedAt: z.date().nullable(),
+    draftSavedAt: z.string().datetime().nullable(),
     draftCumulativeMs: z.number().int().min(0),
   })
   .strict();
+
+export type SaveExamDraftAnswerOutput = z.infer<
+  typeof SaveExamDraftAnswerOutputSchema
+>;
 
 export const SetPracticeSessionQuestionMarkOutputSchema = z
   .object({

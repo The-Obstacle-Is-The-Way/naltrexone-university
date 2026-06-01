@@ -65,12 +65,17 @@ describe('practice-controller', () => {
         markedForReview: false,
         latestSelectedChoiceId: null,
         latestIsCorrect: null,
-        latestAnsweredAt: null,
+        latestAnsweredAt: new Date('2026-02-01T00:00:10.000Z'),
         draftSelectedChoiceId: '33333333-3333-3333-3333-333333333333',
         draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
         draftCumulativeMs: MAX_DRAFT_CUMULATIVE_MS,
       } as const;
       const deps = createDeps({ saveDraftOutput });
+      const expectedOutput = {
+        ...saveDraftOutput,
+        latestAnsweredAt: '2026-02-01T00:00:10.000Z',
+        draftSavedAt: '2026-02-01T00:00:00.000Z',
+      };
 
       const result = await saveExamDraftAnswer(
         {
@@ -82,7 +87,7 @@ describe('practice-controller', () => {
         deps,
       );
 
-      expect(result).toEqual({ ok: true, data: saveDraftOutput });
+      expect(result).toEqual({ ok: true, data: expectedOutput });
       expect(deps.saveExamDraftAnswerUseCase.inputs).toEqual([
         {
           userId: deps._fixtures.userId,
@@ -140,13 +145,18 @@ describe('practice-controller', () => {
         markedForReview: false,
         latestSelectedChoiceId: null,
         latestIsCorrect: null,
-        latestAnsweredAt: null,
+        latestAnsweredAt: new Date('2026-02-01T00:00:10.000Z'),
         draftSelectedChoiceId: '33333333-3333-3333-3333-333333333333',
         draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
         draftCumulativeMs: 50_000,
       } as const;
 
       const deps = createDeps({ saveDraftOutput });
+      const expectedOutput = {
+        ...saveDraftOutput,
+        latestAnsweredAt: '2026-02-01T00:00:10.000Z',
+        draftSavedAt: '2026-02-01T00:00:00.000Z',
+      };
 
       const result = await saveExamDraftAnswer(
         {
@@ -158,7 +168,7 @@ describe('practice-controller', () => {
         deps,
       );
 
-      expect(result).toEqual({ ok: true, data: saveDraftOutput });
+      expect(result).toEqual({ ok: true, data: expectedOutput });
       expect(deps.saveExamDraftAnswerUseCase.inputs).toEqual([
         {
           userId: deps._fixtures.userId,
