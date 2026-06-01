@@ -92,10 +92,12 @@ confusion this spec uses distinct names everywhere:
    reports.
 3. **Clean Architecture:** domain stays pure (no vendor IDs, no DB imports); port in `application`,
    Drizzle impl in `adapters`; fakes over mocks in tests.
-4. **Design system:** new `Dialog` primitive follows `docs/frontend/standards.md` (canonical focus
-   ring, semantic tokens) and either reuses or updates the existing modal pattern
-   (`docs/frontend/pattern-registry.md` S-4) before use. The "Give feedback" trigger uses
-   `<Button variant="outline" className="rounded-full">` to match the Bookmark button.
+4. **Design system:** new `Dialog` and `Textarea` primitives follow
+   `docs/frontend/standards.md` (canonical focus ring, semantic tokens, Button mandate, no raw
+   palette colors, no undocumented opacity tokens). `Dialog` either reuses or updates the existing
+   modal pattern (`docs/frontend/pattern-registry.md` S-4) before use. The "Give feedback" trigger
+   uses `<Button variant="outline" className="rounded-full">` to match the Bookmark button; raw
+   `<button>` is forbidden in `components/question/**` and would fail the DEBT-398 source scan.
 5. **Validation:** zod at the boundary, `.strict()`, reusing `zUuid`; comment capped at 2000 chars
    (enforced in zod **and** a DB `CHECK` constraint). The CHECK reuses the `check('<table>_<desc>_chk',
    sql\`…\`)` wrapper idiom from `attempts` (`attempts_*_chk`); note the `char_length(...) <= 2000`
@@ -631,15 +633,29 @@ the factory object must stay in lockstep.
 
 ### 4. App / UI (`app/`, `components/`)
 
-#### 4a. New design-system primitive — `components/ui/dialog.tsx`
+#### 4a. New design-system primitives — `components/ui/dialog.tsx` and `components/ui/textarea.tsx`
 
 Use `Dialog as DialogPrimitive` from the existing `radix-ui` dependency, matching
 `components/ui/alert-dialog.tsx`. Do **not** add `@radix-ui/react-dialog` unless the repo intentionally
 changes its Radix package convention. Model the file on `components/ui/alert-dialog.tsx`: `Dialog`,
 `DialogTrigger`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`,
-`DialogFooter`, `DialogClose`. Use semantic tokens and the canonical focus ring. Reuse the existing
-Pattern Registry S-4 modal-dialog surface, or update/add a registry entry first if the non-alert
-dialog needs different overlay/content classes.
+`DialogFooter`, `DialogClose`. Use semantic tokens and the canonical focus ring (`buttonVariants` /
+`<Button>` for visible action buttons; `.ring-focus` or the literal canonical ring only for non-Button
+focus targets). Reuse the existing Pattern Registry S-4 modal-dialog overlay/content class strings
+verbatim, or update/add a registry entry first if the non-alert dialog needs different overlay,
+content, close-button, or mobile scroll classes. If a scroll-safe mobile variant is needed, document
+that S-4 variant before code (including max-height, `overflow-y-auto`, overscroll behavior, and any
+new opacity allowlist entry); do not ship one-off dialog overlay/content classes.
+
+Also add `components/ui/textarea.tsx` because the repo has an `Input` primitive but no shared
+textarea primitive. Model it on `components/ui/input.tsx`: semantic `border-input` /
+`dark:border-foreground/40`, `bg-transparent` / `dark:bg-input/30`, `text-base md:text-sm`,
+`placeholder:text-muted-foreground`, `selection:bg-primary selection:text-primary-foreground`,
+`disabled:cursor-not-allowed disabled:opacity-50`, the same `focus-visible:border-ring
+focus-visible:ring-ring/50 focus-visible:ring-[3px]`, and the same
+`aria-invalid:border-destructive aria-invalid:ring-destructive/20
+dark:aria-invalid:ring-destructive/40`. `QuestionReportDialog` imports this `Textarea`; it must not
+hand-roll a raw styled `<textarea>` in `components/question/**`.
 
 #### 4b. Tier 1 — rating row `components/question/question-feedback-rating.tsx`
 
@@ -652,27 +668,58 @@ intentionally low-friction. Do expose a compact `aria-live="polite"` status for 
 "Rating saved" / "Couldn't save rating" so screen-reader users get the same state change without
 visual noise.
 
+Visual contract: the row is an unframed `flex flex-wrap items-center gap-3` control row, not a new
+card-like div. The prompt is `text-sm font-medium text-foreground`; the live status is `text-sm
+text-muted-foreground` except failure, which is `text-sm text-destructive`. The inactive thumbs use
+`<Button variant="outline" size="icon" className="rounded-full">`; the active helpful thumb uses the
+existing `success` Button variant and the active not-helpful thumb uses the existing `destructive`
+Button variant, both still `size="icon"` and `className="rounded-full"`. Do not create custom thumb
+background/border opacity classes unless a Pattern Registry entry exists first.
+
 #### 4c. Tier 2 — `components/question/question-report-dialog.tsx`
 
 `Dialog` titled **"Give feedback"** with a one-line description: "Spotted an issue or have a
 suggestion? This goes to our medical editors and won't affect your score." Contains a **required**
-category radio group under the legend **"What's this about?"** (the 5 categories via `<Button>`-based
-or native radio + `label` pattern already used by `choice-button.tsx`), an optional labelled
-`<textarea name="comment" autoComplete="off" maxLength={2000}>` under "Add details (optional)"
-(capped, with live counter), and a footer with **Cancel** + **"Submit feedback"**. Invalid submit
-(no category) shows "Choose a category to send your feedback." On success show a toast via
-`useNotification().notify({ message, tone })` — success copy "Thanks — our editors will take a look.",
-failure copy "Couldn't send your feedback. Check your connection." with a retry affordance (the
-provider exposes `notify`, not a bare `toast()`, and its toast region already uses
-`aria-live="polite"` in `components/ui/notification-provider.tsx:131`). Dialog a11y is part of the
-acceptance criteria:
-focus trap, labelled title/description, Escape close, focus return to trigger, keyboard-submit path,
-first validation error focus on invalid submit, and labelled category controls. If the form needs
-scrolling on small screens, add a scroll-safe S-4 modal variant to `docs/frontend/pattern-registry.md`
-before code (e.g. max-height + `overflow-y-auto` + overscroll containment); do not invent one-off
-dialog overflow classes.
+category radio group under the legend **"What's this about?"**. The 5 category controls reuse the
+`choice-button.tsx` native radio + `<label>` structure (`input type="radio" className="sr-only"` inside
+a clickable label), not a parallel raw-`<button>` group. Use the Pattern Registry I-3 ChoiceButton
+visual tokens by default: base `rounded-xl border border-foreground/50 bg-background/50 p-4 text-left
+shadow-sm transition-colors focus-within:border-ring ring-focus-within dark:border-foreground/40
+dark:bg-background/50`, hover `cursor-pointer hover:border-foreground/55
+hover:bg-foreground/[0.06] dark:hover:border-foreground/50 dark:hover:bg-foreground/[0.05]`, selected
+`border-ring bg-foreground/[0.08] dark:border-foreground/70 dark:bg-foreground/[0.12]`, disabled
+`cursor-not-allowed opacity-50`. If visual review proves the modal needs a denser radio-row variant,
+add that variant to `docs/frontend/pattern-registry.md` with contrast evidence before implementing it.
 
-#### 4d. Client hooks + imperative core
+The optional comment field is `<Textarea name="comment" autoComplete="off" maxLength={2000}>` under
+"Add details (optional)" with a live character counter. The label and legend are `text-sm font-medium
+text-foreground`; the description and normal counter/helper text are `text-sm text-muted-foreground`;
+the near-limit counter (100 chars remaining or fewer) is `text-sm font-medium
+text-warning-foreground`; validation copy is `text-sm text-destructive` with `role="alert"` and the
+field/control wired through `aria-describedby`. Invalid submit (no category) shows "Choose a category
+to send your feedback." and focuses the first invalid radio control; invalid textarea state uses the
+`Textarea` primitive's `aria-invalid` destructive ring. The footer uses Button primitives for
+**Cancel** + **"Submit feedback"**.
+
+On success call `useNotification().notify({ message: 'Thanks — our editors will take a look.', tone:
+'success' })` and close the dialog. On failure keep the dialog open, leave the **Submit feedback**
+Button available as the retry affordance, and call `useNotification().notify({ message: "Couldn't send
+your feedback. Check your connection.", tone: 'error' })`. Do not add a second toast/action system; the
+provider exposes `notify`, not a bare `toast()`, and its toast region already uses `aria-live="polite"`
+in `components/ui/notification-provider.tsx:131`. Dialog a11y is part of the acceptance criteria:
+focus trap, labelled title/description, Escape close, focus return to trigger, keyboard-submit path,
+first validation error focus on invalid submit, and labelled category controls.
+
+#### 4d. UI source-scan and token acceptance criteria
+
+The UI PR must pass the existing DEBT-398 source scans without exemptions: no raw `<button>` outside
+`components/ui/` and the documented app-shell exception, no raw hex/palette classes, and no opacity
+outside the Pattern Registry / `DOCUMENTED_OPACITY_TOKENS` allowlist. If any new visual state needs a
+new opacity, add the Pattern Registry entry and update the allowlist before using the class in TSX.
+Every new hardcoded UI text node must carry explicit typography per `docs/frontend/typography-policy.md`
+instead of relying on inherited defaults.
+
+#### 4e. Client hooks + imperative core
 
 Mirror the bookmark split instead of forcing one hook path:
 
@@ -688,7 +735,7 @@ Each hook hydrates current rating on entering review mode (call `getQuestionRati
 rollback on failed rating writes, mounted-checks, `withTimeout`, idempotency-key rotation, and error
 logging. Error logs must include question/action metadata but **never** the free-text report comment.
 
-#### 4e. Wire into the action bar
+#### 4f. Wire into the action bar
 
 In `app/(app)/app/practice/components/practice-view.tsx`, add a **"Give feedback"** `<Button>` to
 the existing `secondaryGroup` (the `hasBooleanCorrectness(submitResult)` block, right next to
@@ -773,9 +820,10 @@ Write in dependency order; each layer red before its implementation.
    rate-limited, success, `ActionResult` error mapping via `createAction`, idempotency replay (no
    double-write), separate rate-limit keys for rating vs report actions, and the distinct rating/report
    limit constants are passed to `RateLimiter.limit`.
-6. **UI** — `renderToStaticMarkup` component tests (`*.test.tsx`) for the rating row + dialog markup;
-   **browser specs** (`*.browser.spec.tsx`, `pnpm test:browser`) for the hook (hydrate, optimistic
-   rate, rollback on failure, retract) and dialog submit flow. Keep React 19 rules:
+6. **UI** — primitive tests for `Dialog` and `Textarea`, then `renderToStaticMarkup` component tests
+   (`*.test.tsx`) for the rating row + dialog markup; **browser specs** (`*.browser.spec.tsx`,
+   `pnpm test:browser`) for the hook (hydrate, optimistic rate, rollback on failure, retract) and
+   dialog submit flow. Keep React 19 rules:
    `// @vitest-environment jsdom` first line in `*.test.tsx`, dynamic imports in `beforeAll`, no
    `@testing-library/react`, and no per-test timeout overrides. Add a11y assertions for
    `aria-pressed`, icon `aria-label`s, `aria-live` status, labelled textarea/counter, focus return,
@@ -795,7 +843,7 @@ Vertical slice, layer by layer (each step ends green):
 4. Schema + enums + relations → generate & apply migration → Drizzle repo → repo unit + integration tests.
 5. Rate-limit constant + zod schemas + controller + controller tests.
 6. DI wiring in `lib/container/*`, including `types.ts`.
-7. `Dialog` primitive + Pattern Registry S-4 reuse/update + primitive test.
+7. `Dialog` + `Textarea` primitives + Pattern Registry S-4 reuse/update + primitive tests.
 8. UI: rating row + report dialog + hooks + imperative core; wire into `practice-view`, active
    session controller/view, quick-practice client, standalone question client, and post-exam review;
    component tests + browser specs.
@@ -806,8 +854,8 @@ Vertical slice, layer by layer (each step ends green):
 
 - **PR 1 — Backend slice:** domain → port/fake → use cases → schema/migration → repo → controller →
   DI → all backend tests. Fully functional via tests; no UI yet.
-- **PR 2 — `Dialog` primitive:** `components/ui/dialog.tsx` + Pattern Registry S-4 reuse/update +
-  tests.
+- **PR 2 — UI primitives:** `components/ui/dialog.tsx`, `components/ui/textarea.tsx`, Pattern Registry
+  S-4 reuse/update + primitive tests.
 - **PR 3 — UI wiring:** rating row + report dialog + hooks + all active review-surface wiring +
   component & browser tests.
 - **PR 4 — Extraction tooling:** export script + SQL docs.
