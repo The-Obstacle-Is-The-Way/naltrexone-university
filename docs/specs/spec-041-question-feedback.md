@@ -21,13 +21,15 @@ This spec defines a **two-tier, per-question feedback system**, surfaced in **re
 slice (`toggleBookmark` / `getBookmarks`), which is the closest existing analog: a per-question,
 per-user action that persists to the DB with optimistic UI, rate limiting, and idempotency.
 
-**Tier 1 — Rating (one click).** A lightweight `👍 / 👎` ("Was this helpful?") row inside the
+**Tier 1 — Rating (one click).** A lightweight `👍 / 👎` ("Was this a good question?") row inside the
 review panel. Optimistic, instant, no modal. Captures broad sentiment on every question at scale.
 
-**Tier 2 — Report a problem (modal).** A "Report a problem" button in the action bar (next to
+**Tier 2 — Give feedback (modal).** A "Give feedback" button in the action bar (next to
 Bookmark) opens a focused dialog: a required category (Incorrect answer · Ambiguous wording ·
 Typo / formatting · Outdated reference · Other) plus an optional free-text comment. This is the
-rich, actionable signal for content fixes.
+rich, actionable signal for content fixes. The user-facing label is **"Give feedback"**; the internal
+`kind` stays `report` (a structured report) — and the component/use-case keep their `Report` names —
+to distinguish this tier from a `rating`. UI label ≠ internal domain term, by design.
 
 Both tiers write to a single **append-only event-log table** (`question_feedback`), chosen because
 the primary goal is a long-lived analytical substrate ("forever maintain and improve"): history is
@@ -47,7 +49,7 @@ confusion this spec uses distinct names everywhere:
 | New domain/data type | `QuestionFeedback` |
 | New rating UI (👍/👎 row) | `QuestionFeedbackRating` |
 | New report modal | `QuestionReportDialog` |
-| User-facing copy | "Was this helpful?", "Report a problem" |
+| User-facing copy | "Was this a good question?", "Give feedback" |
 
 ## Relationship to Other Specs
 
@@ -68,7 +70,7 @@ confusion this spec uses distinct names everywhere:
 1. In **review mode** (after an answer is committed and the explanation is visible), a learner can:
    1. Rate the question `helpful` / `not_helpful` with a single click (Tier 1).
    2. Re-click the active rating to **retract** it (back to no rating).
-   3. Open a **Report a problem** modal and submit a **category** (required) + **comment** (optional).
+   3. Open a **Give feedback** modal and submit a **category** (required) + **comment** (optional).
 2. On entering review mode, the UI **hydrates** the learner's current rating for that question
    (filled 👍 or 👎 if they rated it before), matching the bookmark hydration pattern.
 3. Each feedback action persists to `question_feedback` with the user, question, and best-effort
@@ -92,7 +94,7 @@ confusion this spec uses distinct names everywhere:
    Drizzle impl in `adapters`; fakes over mocks in tests.
 4. **Design system:** new `Dialog` primitive follows `docs/frontend/standards.md` (canonical focus
    ring, semantic tokens) and either reuses or updates the existing modal pattern
-   (`docs/frontend/pattern-registry.md` S-4) before use. The "Report a problem" trigger uses
+   (`docs/frontend/pattern-registry.md` S-4) before use. The "Give feedback" trigger uses
    `<Button variant="outline" className="rounded-full">` to match the Bookmark button.
 5. **Validation:** zod at the boundary, `.strict()`, reusing `zUuid`; comment capped at 2000 chars
    (enforced in zod **and** a DB `CHECK` constraint). The CHECK reuses the `check('<table>_<desc>_chk',
@@ -641,21 +643,29 @@ dialog needs different overlay/content classes.
 
 #### 4b. Tier 1 — rating row `components/question/question-feedback-rating.tsx`
 
-Renders inside the review panel only (after `Feedback`). "Was this helpful?" + two `<Button>` icon
-toggles (`ThumbsUp` / `ThumbsDown` from `lucide-react`), `aria-pressed`, descriptive `aria-label`s
-("Mark as helpful", "Mark as not helpful"), disabled while saving. Do not toast on successful rating
-clicks; they are intentionally low-friction. Do expose a compact `aria-live="polite"` status for
-"Saving feedback" / "Feedback saved" / "Could not save feedback" so screen-reader users get the same
-state change without visual noise.
+Renders inside the review panel only (after `Feedback`). Prompt copy is **"Was this a good question?"**
+— it rates the **question**, not the explanation (the analytics + report categories are all about
+question quality). Two `<Button>` icon toggles (`ThumbsUp` / `ThumbsDown` from `lucide-react`),
+`aria-pressed`, descriptive `aria-label`s ("Good question" / "Not a good question"), and a group label
+"Rate this question". Disabled while saving. Do not toast on successful rating clicks; they are
+intentionally low-friction. Do expose a compact `aria-live="polite"` status for "Saving rating" /
+"Rating saved" / "Couldn't save rating" so screen-reader users get the same state change without
+visual noise.
 
 #### 4c. Tier 2 — `components/question/question-report-dialog.tsx`
 
-`Dialog` containing a radio group (the 5 categories via `<Button>`-based or native radio + `label`
-pattern already used by `choice-button.tsx`), an optional labelled `<textarea name="comment"
-autoComplete="off" maxLength={2000}>` (capped, with live counter), Cancel + "Submit feedback". On
-success show a toast via `useNotification().notify({ message, tone })` (the provider exposes
-`notify`, not a bare `toast()`, and its toast region already uses `aria-live="polite"` in
-`components/ui/notification-provider.tsx:131`). Dialog a11y is part of the acceptance criteria:
+`Dialog` titled **"Give feedback"** with a one-line description: "Spotted an issue or have a
+suggestion? This goes to our medical editors and won't affect your score." Contains a **required**
+category radio group under the legend **"What's this about?"** (the 5 categories via `<Button>`-based
+or native radio + `label` pattern already used by `choice-button.tsx`), an optional labelled
+`<textarea name="comment" autoComplete="off" maxLength={2000}>` under "Add details (optional)"
+(capped, with live counter), and a footer with **Cancel** + **"Submit feedback"**. Invalid submit
+(no category) shows "Choose a category to send your feedback." On success show a toast via
+`useNotification().notify({ message, tone })` — success copy "Thanks — our editors will take a look.",
+failure copy "Couldn't send your feedback. Check your connection." with a retry affordance (the
+provider exposes `notify`, not a bare `toast()`, and its toast region already uses
+`aria-live="polite"` in `components/ui/notification-provider.tsx:131`). Dialog a11y is part of the
+acceptance criteria:
 focus trap, labelled title/description, Escape close, focus return to trigger, keyboard-submit path,
 first validation error focus on invalid submit, and labelled category controls. If the form needs
 scrolling on small screens, add a scroll-safe S-4 modal variant to `docs/frontend/pattern-registry.md`
@@ -680,7 +690,7 @@ logging. Error logs must include question/action metadata but **never** the free
 
 #### 4e. Wire into the action bar
 
-In `app/(app)/app/practice/components/practice-view.tsx`, add a **"Report a problem"** `<Button>` to
+In `app/(app)/app/practice/components/practice-view.tsx`, add a **"Give feedback"** `<Button>` to
 the existing `secondaryGroup` (the `hasBooleanCorrectness(submitResult)` block, right next to
 Bookmark), and render `<QuestionFeedbackRating>` after the `Feedback` panel in
 `components/question/question-surface-body.tsx`.
