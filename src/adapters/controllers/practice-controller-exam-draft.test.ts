@@ -71,6 +71,10 @@ describe('practice-controller', () => {
         draftCumulativeMs: MAX_DRAFT_CUMULATIVE_MS,
       } as const;
       const deps = createDeps({ saveDraftOutput });
+      const expectedOutput = {
+        ...saveDraftOutput,
+        draftSavedAt: '2026-02-01T00:00:00.000Z',
+      };
 
       const result = await saveExamDraftAnswer(
         {
@@ -82,7 +86,7 @@ describe('practice-controller', () => {
         deps,
       );
 
-      expect(result).toEqual({ ok: true, data: saveDraftOutput });
+      expect(result).toEqual({ ok: true, data: expectedOutput });
       expect(deps.saveExamDraftAnswerUseCase.inputs).toEqual([
         {
           userId: deps._fixtures.userId,
@@ -147,6 +151,10 @@ describe('practice-controller', () => {
       } as const;
 
       const deps = createDeps({ saveDraftOutput });
+      const expectedOutput = {
+        ...saveDraftOutput,
+        draftSavedAt: '2026-02-01T00:00:00.000Z',
+      };
 
       const result = await saveExamDraftAnswer(
         {
@@ -158,7 +166,7 @@ describe('practice-controller', () => {
         deps,
       );
 
-      expect(result).toEqual({ ok: true, data: saveDraftOutput });
+      expect(result).toEqual({ ok: true, data: expectedOutput });
       expect(deps.saveExamDraftAnswerUseCase.inputs).toEqual([
         {
           userId: deps._fixtures.userId,

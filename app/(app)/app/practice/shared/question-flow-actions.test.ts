@@ -704,7 +704,7 @@ describe('question-flow-actions', () => {
           latestIsCorrect: null,
           latestAnsweredAt: null,
           draftSelectedChoiceId: fixtureChoice2Id,
-          draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
+          draftSavedAt: '2026-02-01T00:00:00.000Z',
           draftCumulativeMs: 50_000,
         }),
       );
@@ -765,7 +765,7 @@ describe('question-flow-actions', () => {
           latestIsCorrect: null,
           latestAnsweredAt: null,
           draftSelectedChoiceId: fixtureChoice1Id,
-          draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
+          draftSavedAt: '2026-02-01T00:00:00.000Z',
           draftCumulativeMs: 50_000,
         }),
       );
@@ -815,7 +815,7 @@ describe('question-flow-actions', () => {
           markedForReview: false,
           latestSelectedChoiceId: fixtureChoice2Id,
           latestIsCorrect: true,
-          latestAnsweredAt: new Date('2026-02-01T00:00:00.000Z'),
+          latestAnsweredAt: '2026-02-01T00:00:00.000Z',
           draftSelectedChoiceId: null,
           draftSavedAt: null,
           draftCumulativeMs: 50_000,

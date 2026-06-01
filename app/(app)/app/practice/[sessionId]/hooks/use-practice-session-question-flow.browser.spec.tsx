@@ -182,7 +182,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
           latestIsCorrect: null,
           latestAnsweredAt: null,
           draftSelectedChoiceId: fixtureChoice2Id,
-          draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
+          draftSavedAt: '2026-02-01T00:00:00.000Z',
           draftCumulativeMs: 30_000,
         });
       });
@@ -391,7 +391,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
             typeof input.selectedChoiceId === 'string'
               ? input.selectedChoiceId
               : fixtureChoice2Id,
-          draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
+          draftSavedAt: '2026-02-01T00:00:00.000Z',
           draftCumulativeMs:
             typeof input === 'object' &&
             input &&
@@ -561,7 +561,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
             typeof input.selectedChoiceId === 'string'
               ? input.selectedChoiceId
               : null,
-          draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
+          draftSavedAt: '2026-02-01T00:00:00.000Z',
           draftCumulativeMs:
             typeof input === 'object' &&
             input &&
@@ -726,7 +726,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
             typeof input.selectedChoiceId === 'string'
               ? input.selectedChoiceId
               : fixtureChoice2Id,
-          draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
+          draftSavedAt: '2026-02-01T00:00:00.000Z',
           draftCumulativeMs:
             typeof input === 'object' &&
             input &&
