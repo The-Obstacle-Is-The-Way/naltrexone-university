@@ -138,7 +138,7 @@ See DEBT-397 for migration history.
 
 Branch: `fix/debt-397-output-schema-datetime-normalization`
 
-**Status:** Complete in DEBT-397 PR 2. `SaveExamDraftAnswerOutputSchema.latestAnsweredAt` and `SaveExamDraftAnswerOutputSchema.draftSavedAt` now use `z.string().datetime().nullable()`, the practice controller serializes the use-case `Date` values to ISO strings at the action-output boundary, and typecheck-driven controller-output fixtures now construct those fields as ISO strings. Domain/use-case/persistence Date handling remains unchanged. PR 3 remains active for the regression guard.
+**Status:** Complete in DEBT-397 PR 2. `SaveExamDraftAnswerOutputSchema.latestAnsweredAt` and `SaveExamDraftAnswerOutputSchema.draftSavedAt` now use `z.string().datetime().nullable()`, the practice controller serializes the use-case `Date` values to ISO strings at the action-output boundary, and typecheck-driven controller-output fixtures now construct those fields as ISO strings. Domain/use-case/persistence Date handling remains unchanged. PR 3 adds the final regression guard.
 
 Assuming Option A (the recommendation):
 
@@ -155,6 +155,8 @@ Full local gate. Browser tests must pass — if a React component was depending 
 ### PR 3 — Add a regression guard
 
 Branch: `tests/debt-397-output-schema-shape-regression`
+
+**Status:** Complete in DEBT-397 PR 3. `src/adapters/controllers/controller-output-datetime-contract.test.ts` now runs in the default unit suite and enforces the controller-output datetime contract: exported output schemas are runtime-walked for `z.string().datetime()`, production controller output schema declarations are source-scanned to reject `z.date()`, date-like `z.number()`, and unvalidated date-like strings, and schema-less pass-through controller outputs keep an explicit datetime inventory. The guard was red-proven by temporarily reverting `SaveExamDraftAnswerOutputSchema.draftSavedAt` to `z.date().nullable()` and confirming the focused test failed, then restoring the ISO schema and confirming it passed. DEBT-397 code work is complete; archival remains a separate follow-up.
 
 Add `tests/integration/output-schema-shape.test.ts` (or extend an existing schema regression test) that:
 
