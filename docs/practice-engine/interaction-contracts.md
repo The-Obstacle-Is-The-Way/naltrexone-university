@@ -20,9 +20,13 @@ These principles govern both modes. They are derived from BS-055 first-principle
 
 ### Datetime representation at the controller boundary
 
-Controller action-output datetimes are ISO 8601 strings. Schema-backed output fields in `src/adapters/controllers/` use `z.string().datetime()` or its nullable equivalent; pass-through output fields without a controller output schema must still be ISO strings produced from `Date.toISOString()`. `z.date()` and date-like epoch `z.number()` fields are not allowed at the controller action-output boundary.
+Controller action-output datetimes must be ISO 8601 strings. Schema-backed output fields in `src/adapters/controllers/` must use `z.string().datetime()` or its nullable equivalent; pass-through output fields without a controller output schema must still be ISO strings produced from `Date.toISOString()`. `z.date()` and date-like epoch `z.number()` fields are not allowed at the controller action-output boundary.
+
+Migration status: this is the required target state. [DEBT-397](../debt/debt-397-datetime-boundary-type-normalization.md) tracks the current known violations in `SaveExamDraftAnswerOutputSchema.latestAnsweredAt` and `SaveExamDraftAnswerOutputSchema.draftSavedAt`; PR 2 migrates those fields and their consumers to ISO strings.
 
 Domain entities and application use cases may keep `Date` objects where date math belongs. The controller adapter is responsible for serializing those `Date` values to ISO strings before returning an action output. This keeps the boundary JSON-native and consistent with persisted practice-session JSON while avoiding per-field exceptions such as the `latestAnsweredAt` / `draftSavedAt` Date drift tracked by DEBT-397.
+
+Controller input schemas are separate from this output-boundary rule. Client-supplied datetimes should enter as ISO 8601 strings, preferably with `z.string().datetime()`. Relaxed input parsing or coercion such as `z.coerce.date()` is allowed only inside a controller adapter that immediately converts the input into domain/application `Date` values; those parsed `Date` values and any epoch numbers must not leak into controller action outputs.
 
 ---
 
