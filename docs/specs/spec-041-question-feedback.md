@@ -32,6 +32,8 @@ rich, actionable signal for content fixes.
 Both tiers write to a single **append-only event-log table** (`question_feedback`), chosen because
 the primary goal is a long-lived analytical substrate ("forever maintain and improve"): history is
 signal, storage is trivial relative to attempts, and pure-insert is the simplest persistence shape.
+The **domain/application shape is not a nullable bag**: it is a discriminated event union, with the
+relational table using nullable columns plus a `CHECK` only as the storage representation.
 
 ### ⚠️ Naming collision (read first)
 
@@ -83,8 +85,9 @@ confusion this spec uses distinct names everywhere:
 
 1. **Auth + entitlement:** all actions go through `requireEntitledUserId` (authenticated + subscribed),
    identical to bookmark/practice controllers.
-2. **Rate limited:** per-user limit via the existing `RateLimiter` gateway and a new
-   `QUESTION_FEEDBACK_RATE_LIMIT` constant.
+2. **Rate limited:** per-user limits via the existing `RateLimiter` gateway and two named constants:
+   `QUESTION_RATING_RATE_LIMIT` for one-click ratings and `QUESTION_REPORT_RATE_LIMIT` for free-text
+   reports.
 3. **Clean Architecture:** domain stays pure (no vendor IDs, no DB imports); port in `application`,
    Drizzle impl in `adapters`; fakes over mocks in tests.
 4. **Design system:** new `Dialog` primitive follows `docs/frontend/standards.md` (canonical focus
@@ -104,11 +107,45 @@ confusion this spec uses distinct names everywhere:
 
 Dependency direction (inward only): `db` ← `adapters` ← `application` ← `domain`.
 
+### First-principles design decisions
+
+- **DDD / Simple Design — one domain event stream, not two unrelated aggregates.** Ratings and
+  reports share the same actor, question, attempt/session context, append time, privacy posture, and
+  extraction path. Two physical tables would duplicate those columns and force every analytics query
+  to union them back together. The better split is a discriminated union in domain/application and
+  one relational event table with a shape `CHECK`: type safety at the inner boundary, cohesive
+  extraction at the outer boundary. Repo evidence: the domain already uses discriminated unions for
+  closed shapes (`AnswerOutcome`, `src/domain/value-objects/answer-outcome.ts:1`) and factories for
+  invariants (`createAttempt`, `src/domain/entities/attempt.ts:54`), while plain records like
+  `Bookmark` stay factory-free because they have no cross-field invariant
+  (`src/domain/entities/bookmark.ts:4`).
+- **Data engineering — append-only, no current-state table in v1.** The display read path is a
+  single latest-rating lookup, and the analytics read path needs history. A materialized
+  `question_feedback_current_rating` table would add synchronization and delete/GDPR complexity
+  before scale proves it necessary. Use the partial latest-rating index below first; add a
+  projection table only after observed query plans justify it.
+- **SOLID / YAGNI — no Strategy hierarchy yet.** There are exactly two commands with different UX,
+  validation, and rate-limit keys (`rateQuestion`, `submitQuestionReport`). The use cases remain
+  separate commands; the shared abstraction is only the repository append port and typed domain
+  constructors. Add a Strategy only when a third feedback kind introduces real branching inside one
+  command.
+- **Frontend — feedback belongs to reflection surfaces.** Post-answer timing follows the repo's
+  question-zone model: actions live in Zone 2 after the learner has read the explanation
+  (`docs/frontend/design-principles.md:42`), and the analogous Bookmark policy explicitly keeps
+  curation on reflection surfaces rather than assessment/performance surfaces
+  (`docs/frontend/bookmark-surface-policy.md:16`, `docs/frontend/bookmark-surface-policy.md:67`).
+- **Query determinism — latest means `createdAt DESC, id DESC`.** Existing latest-attempt reads use
+  `orderBy(desc(attempts.answeredAt), desc(attempts.id))`
+  (`src/adapters/repositories/drizzle-attempt-repository.ts:282`) and have an integration test for the
+  UUID tie-breaker (`tests/integration/session-attempt-repository.integration.test.ts:293`). Feedback
+  latest-rating hydration must copy that deterministic ordering and index shape.
+
 ### 1. Domain — value objects + entity (`src/domain/`)
 
-**Zero external imports** (the value objects import nothing; the entity `import type`s its three VO
-unions from `../value-objects`, exactly like `attempt.ts`/`question.ts` — that intra-domain import is
-allowed and is not an impurity). Mirror the `src/domain/value-objects/` `const AllX = [...] as const`
+**Zero external imports** (the value objects import nothing; the entity `import type`s the rating /
+category VO unions from `../value-objects`, exactly like `attempt.ts`/`question.ts` — that intra-
+domain import is allowed and is not an impurity). Mirror the `src/domain/value-objects/`
+`const AllX = [...] as const`
 **plus `isValid<Type>` type-predicate guard** idiom: every existing VO (`practice-mode.ts`,
 `question-status.ts`, `tag-kind.ts`, …) ships an `isValid…` guard, and the "Tests First"
 membership/validator tests call them — so each new VO must define one.
@@ -153,60 +190,108 @@ export function isValidQuestionFeedbackKind(
 
 ```typescript
 // src/domain/entities/question-feedback.ts
-export type QuestionFeedback = {
-  readonly id: string;
+export type QuestionFeedbackContext = {
   readonly userId: string;
   readonly questionId: string;
   readonly attemptId: string | null;
   readonly practiceSessionId: string | null;
-  readonly kind: QuestionFeedbackKind;
-  readonly rating: QuestionFeedbackRating | null;   // set when kind='rating'; null = retraction
-  readonly category: QuestionFeedbackCategory | null; // set when kind='report'
-  readonly comment: string | null;
+};
+
+export type PersistedQuestionFeedback = {
+  readonly id: string;
   readonly createdAt: Date;
 };
+
+export type QuestionRatingFeedback = QuestionFeedbackContext &
+  PersistedQuestionFeedback & {
+    readonly kind: 'rating';
+    readonly rating: QuestionFeedbackRating | null; // null = retraction
+    readonly category: null;
+    readonly comment: null;
+  };
+
+export type QuestionReportFeedback = QuestionFeedbackContext &
+  PersistedQuestionFeedback & {
+    readonly kind: 'report';
+    readonly rating: null;
+    readonly category: QuestionFeedbackCategory;
+    readonly comment: string | null;
+  };
+
+export type QuestionFeedback = QuestionRatingFeedback | QuestionReportFeedback;
+export type NewQuestionFeedback =
+  | Omit<QuestionRatingFeedback, keyof PersistedQuestionFeedback>
+  | Omit<QuestionReportFeedback, keyof PersistedQuestionFeedback>;
+
+export function newQuestionRatingFeedback(
+  input: QuestionFeedbackContext & {
+    readonly rating: QuestionFeedbackRating | null;
+  },
+): NewQuestionFeedback {
+  return {
+    ...input,
+    kind: 'rating',
+    category: null,
+    comment: null,
+  };
+}
+
+export function newQuestionReportFeedback(
+  input: QuestionFeedbackContext & {
+    readonly category: QuestionFeedbackCategory;
+    readonly comment: string | null;
+  },
+): NewQuestionFeedback {
+  return {
+    ...input,
+    kind: 'report',
+    rating: null,
+  };
+}
 ```
 
-**Invariant (enforced in use case + DB CHECK):** a `rating` event has `category = null`; a `report`
-event has `category != null` and `rating = null`. This is a deliberate divergence from `Attempt`,
-which enforces its invariant inside a domain `createAttempt()` factory that throws `DomainError`;
-`QuestionFeedback` stays a plain data record (like `Bookmark`/`Subscription`, which have no factory)
-and pushes the invariant to the use case + DB CHECK.
+**Invariant (encoded in type + constructors + DB CHECK):** a `rating` event has
+`category = null` and `comment = null`; a `report` event has `category != null` and `rating = null`.
+Do not pass a raw object literal with `kind`, `rating`, `category`, and `comment` from a use case.
+Use `newQuestionRatingFeedback(...)` / `newQuestionReportFeedback(...)` so impossible shapes are not
+representable in application code; the DB `CHECK` remains defense-in-depth for adapter bugs/manual SQL.
 
-**Test-helper factory:** add `createQuestionFeedback(overrides)` to
-`src/domain/test-helpers/factories.ts` and its `index.ts` barrel, mirroring `createBookmark` /
-`createAttempt` — UUID-emitting defaults via the existing `createUuid()` helper, `createdAt: new
-Date()`, nullable FK ids defaulting to `null`. Use-case, repo, and fake tests build events through it
-so fixture UUID shapes stay valid at the Drizzle/zod boundaries.
+Export the new entity functions/types from `src/domain/entities/index.ts`; export the three new value
+objects from `src/domain/value-objects/index.ts`.
+
+**Test-helper factories:** add `createQuestionRatingFeedback(overrides)` and
+`createQuestionReportFeedback(overrides)` to `src/domain/test-helpers/factories.ts` and its `index.ts`
+barrel. Use UUID-emitting defaults via the existing `createUuid()` helper, `createdAt: new Date()`,
+nullable FK ids defaulting to `null`, and shape-correct defaults (`comment: null` only for reports,
+with ratings always setting `comment: null`). Avoid one permissive
+`createQuestionFeedback({ kind, ... })` factory, because it would recreate the nullable-bag problem
+in tests.
 
 ### 2. Application — port + use cases (`src/application/`)
 
 ```typescript
 // src/application/ports/question-feedback-repository.ts
-export type RecordQuestionFeedbackParams = {
-  userId: string;
-  questionId: string;
-  attemptId: string | null;
-  practiceSessionId: string | null;
-  kind: QuestionFeedbackKind;
-  rating: QuestionFeedbackRating | null;
-  category: QuestionFeedbackCategory | null;
-  comment: string | null;
-};
+import type {
+  NewQuestionFeedback,
+  QuestionFeedback,
+  QuestionRatingFeedback,
+} from '@/src/domain/entities';
 
 export interface QuestionFeedbackRepository {
-  record(params: RecordQuestionFeedbackParams): Promise<QuestionFeedback>;
+  record(event: NewQuestionFeedback): Promise<QuestionFeedback>;
   /** Latest 'rating'-kind event for (user, question); null if none. Drives 👍/👎 hydration. */
   findLatestRatingByUser(
     userId: string,
     questionId: string,
-  ): Promise<QuestionFeedback | null>;
+  ): Promise<QuestionRatingFeedback | null>;
 }
 ```
 
 Re-export via the `src/application/ports/repositories.ts` barrel (matches bookmark port).
 
-**Three small use cases** (constructor injection, `execute()`, throw `ApplicationError`):
+**Three small use cases** (constructor injection, `execute()`, throw `ApplicationError`). Import
+`newQuestionRatingFeedback` / `newQuestionReportFeedback` from the domain entity barrel rather than
+constructing discriminated-union object literals in use-case bodies:
 
 ```typescript
 // src/application/use-cases/rate-question.ts  (Tier 1)
@@ -227,16 +312,15 @@ export class RateQuestionUseCase {
   async execute(input: RateQuestionInput): Promise<RateQuestionOutput> {
     const question = await this.questions.findPublishedById(input.questionId);
     if (!question) throw new ApplicationError('NOT_FOUND', 'Question not found');
-    await this.feedback.record({
-      userId: input.userId,
-      questionId: input.questionId,
-      attemptId: input.attemptId,
-      practiceSessionId: input.practiceSessionId,
-      kind: 'rating',
-      rating: input.rating,
-      category: null,
-      comment: null,
-    });
+    await this.feedback.record(
+      newQuestionRatingFeedback({
+        userId: input.userId,
+        questionId: input.questionId,
+        attemptId: input.attemptId,
+        practiceSessionId: input.practiceSessionId,
+        rating: input.rating,
+      }),
+    );
     return { rating: input.rating };
   }
 }
@@ -278,11 +362,7 @@ export class SubmitQuestionReportUseCase {
   ): Promise<SubmitQuestionReportOutput> {
     const question = await this.questions.findPublishedById(input.questionId);
     if (!question) throw new ApplicationError('NOT_FOUND', 'Question not found');
-    const saved = await this.feedback.record({
-      ...input,
-      kind: 'report',
-      rating: null,
-    });
+    const saved = await this.feedback.record(newQuestionReportFeedback(input));
     return { feedbackId: saved.id };
   }
 }
@@ -292,11 +372,11 @@ export class SubmitQuestionReportUseCase {
 `export class FakeQuestionFeedbackRepository implements QuestionFeedbackRepository`, backed by an
 in-memory array of events. Mirror the bookmark/attempt fake constructor —
 `constructor(seed: readonly QuestionFeedback[] = [], private readonly now: () => Date = () => new Date())`
-— so `findLatestRatingByUser` ordering by `createdAt` is deterministic in hydration tests. `record()`
-pushes (stamping `id`/`createdAt` via the injected `now`); `findLatestRatingByUser()` filters
-`kind === 'rating'`, returns the newest by `createdAt`, else `null`. Register it in `fakes/index.ts`
-as a **named** export in alphabetical position (it sorts before `FakeQuestionRepository`). The fakes
-barrel uses `export { FakeX } from './fake-x'`, not `export *`.
+— so `record()` can stamp `id`/`createdAt` while tests can inject deterministic clocks. `record()`
+pushes the shape-correct `NewQuestionFeedback` plus generated persisted fields. `findLatestRatingByUser()`
+filters `kind === 'rating'`, returns the newest by `createdAt DESC, id DESC`, else `null`. Register it
+in `fakes/index.ts` as a **named** export in alphabetical position (it sorts before
+`FakeQuestionRepository`). The fakes barrel uses `export { FakeX } from './fake-x'`, not `export *`.
 
 Two enforced contract surfaces must also be updated: add `export * from './question-feedback-repository';`
 to the ports barrel `src/application/ports/repositories.ts`, and add the matching re-export assertion
@@ -362,18 +442,22 @@ export const questionFeedback = pgTable(
     questionCreatedAtIdx: index('question_feedback_question_created_at_idx').on(
       t.questionId,
       desc(t.createdAt),
+      desc(t.id),
     ),
-    userQuestionCreatedAtIdx: index(
-      'question_feedback_user_question_created_at_idx',
-    ).on(t.userId, t.questionId, desc(t.createdAt)),
+    ratingUserQuestionCreatedAtIdx: index(
+      'question_feedback_rating_user_question_created_at_idx',
+    )
+      .on(t.userId, t.questionId, desc(t.createdAt), desc(t.id))
+      .where(sql`${t.kind} = 'rating'`),
     kindCreatedAtIdx: index('question_feedback_kind_created_at_idx').on(
       t.kind,
       desc(t.createdAt),
+      desc(t.id),
     ),
-    // Shape invariant: ratings carry no category; reports carry a category and no rating.
+    // Shape invariant: ratings carry no report payload; reports carry a category and no rating.
     kindShapeCheck: check(
       'question_feedback_kind_shape_chk',
-      sql`(${t.kind} = 'rating' AND ${t.category} IS NULL)
+      sql`(${t.kind} = 'rating' AND ${t.category} IS NULL AND ${t.comment} IS NULL)
           OR (${t.kind} = 'report' AND ${t.category} IS NOT NULL AND ${t.rating} IS NULL)`,
     ),
     commentLengthCheck: check(
@@ -425,22 +509,39 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_tes
 > **Schema file-size note:** `db/schema.ts` is already an intentional DEBT-234/DEBT-224 exception
 > and is exempted by `scripts/check-file-size.sh`. Do not split this table out solely to satisfy the
 > 350-line warning; keep the relational schema as the single source of truth.
+>
+> **Index rationale:** the partial latest-rating index is deliberately `WHERE kind = 'rating'` because
+> the hot UI read path filters to one user's current rating for one question. `kindCreatedAtIdx`
+> supports recent-report/recent-feedback export slices; `questionCreatedAtIdx` supports per-question
+> audit/export slices. Do not add a current-rating projection table in v1 unless real query plans show
+> the partial index is insufficient.
 
 #### 3b. Drizzle repo (`src/adapters/repositories/drizzle-question-feedback-repository.ts`)
 
 Constructor-inject `DrizzleDb`. `record()` is a plain `insert(...).returning()` (no upsert —
 append-only). `findLatestRatingByUser()` is `findFirst` filtered to `kind='rating'`, ordered
-`desc(createdAt)`. Map rows → domain via a small `*-mappers.ts` if non-trivial. Throw
-`ApplicationError('INTERNAL_ERROR', ...)` on a missing `returning()` row (bookmark pattern).
+`desc(createdAt), desc(id)` (copy the attempt latest-read tie-breaker). Map rows → the discriminated
+domain union via a small `*-mappers.ts`; the mapper must fail closed with
+`ApplicationError('INTERNAL_ERROR', 'Invalid question feedback row')` if a row violates the union
+shape despite the DB `CHECK`. Throw `ApplicationError('INTERNAL_ERROR', ...)` on a missing
+`returning()` row (bookmark pattern).
 
-#### 3c. Rate limit (`src/adapters/shared/rate-limits.ts`)
+#### 3c. Rate limits (`src/adapters/shared/rate-limits.ts`)
 
 ```typescript
-export const QUESTION_FEEDBACK_RATE_LIMIT = {
-  limit: 30,
+export const QUESTION_RATING_RATE_LIMIT = {
+  limit: 60,
+  windowMs: ONE_MINUTE_MS,
+} as const;
+
+export const QUESTION_REPORT_RATE_LIMIT = {
+  limit: 10,
   windowMs: ONE_MINUTE_MS,
 } as const;
 ```
+
+The split is intentional: rating is as lightweight as bookmark toggling (`BOOKMARK_MUTATION_RATE_LIMIT`
+is 60/min), while reports carry optional free text and should be harder to spam.
 
 #### 3d. zod schemas + controller (`src/adapters/controllers/question-feedback-controller.ts`)
 
@@ -457,7 +558,7 @@ bookmark-controller shape. Non-obvious facts the implementation must honor (veri
   `QuestionFeedbackControllerContainer = { createQuestionFeedbackControllerDeps: () => QuestionFeedbackControllerDeps }`).
 - **`QuestionFeedbackControllerDeps` is defined and exported in this controller file** (mirroring
   `BookmarkControllerDeps`), then imported by `lib/container/types.ts`.
-- Inside `execute`: `requireEntitledUserId(deps, meta)` → `deps.rateLimiter.limit({ key: \`question-feedback:<action>:${userId}\`, ...QUESTION_FEEDBACK_RATE_LIMIT })` → `throw new ApplicationError('RATE_LIMITED', …)` when `!result.success`.
+- Inside `execute`: `requireEntitledUserId(deps, meta)` → `deps.rateLimiter.limit({ key: \`question-feedback:<action>:${userId}\`, ...QUESTION_RATING_RATE_LIMIT })` for `rateQuestion` and `...QUESTION_REPORT_RATE_LIMIT` for `submitQuestionReport` → `throw new ApplicationError('RATE_LIMITED', …)` when `!result.success`.
 - **Writes wrap the use case in `executeIdempotent({ d: deps, userId, idempotencyKey, action, outputSchema, execute })`.** Both `action` (a string label, e.g. `'question-feedback:rateQuestion'`) and `outputSchema` (a zod schema for the use-case output, e.g. `RateQuestionOutputSchema`) are **required**; `execute` is a zero-arg thunk; the idempotency repo/logger/clock are read from `d`. It returns the raw use-case output (not an `ActionResult`) — `createAction` wraps it in `ok(...)`. A missing key short-circuits to a plain call. The read action (`getQuestionRating`) is **not** wrapped (matching `getBookmarks`).
 
 Reuse `zUuid`; add enum schemas (and the output schemas the writes pass to `executeIdempotent`):
@@ -541,16 +642,25 @@ dialog needs different overlay/content classes.
 #### 4b. Tier 1 — rating row `components/question/question-feedback-rating.tsx`
 
 Renders inside the review panel only (after `Feedback`). "Was this helpful?" + two `<Button>` icon
-toggles (`ThumbsUp` / `ThumbsDown` from `lucide-react`), `aria-pressed`, disabled while saving.
+toggles (`ThumbsUp` / `ThumbsDown` from `lucide-react`), `aria-pressed`, descriptive `aria-label`s
+("Mark as helpful", "Mark as not helpful"), disabled while saving. Do not toast on successful rating
+clicks; they are intentionally low-friction. Do expose a compact `aria-live="polite"` status for
+"Saving feedback" / "Feedback saved" / "Could not save feedback" so screen-reader users get the same
+state change without visual noise.
 
 #### 4c. Tier 2 — `components/question/question-report-dialog.tsx`
 
 `Dialog` containing a radio group (the 5 categories via `<Button>`-based or native radio + `label`
-pattern already used by `choice-button.tsx`), an optional `<textarea>` (capped, with live counter),
-Cancel + "Submit feedback". On success show a toast via `useNotification().notify({ message, tone })`
-(the provider exposes `notify`, not a bare `toast()`). Dialog a11y is part of
-the acceptance criteria: focus trap, labelled title/description, Escape close, keyboard-submit path,
-and labelled category controls. Rating thumbs must expose `aria-pressed` plus descriptive labels.
+pattern already used by `choice-button.tsx`), an optional labelled `<textarea name="comment"
+autoComplete="off" maxLength={2000}>` (capped, with live counter), Cancel + "Submit feedback". On
+success show a toast via `useNotification().notify({ message, tone })` (the provider exposes
+`notify`, not a bare `toast()`, and its toast region already uses `aria-live="polite"` in
+`components/ui/notification-provider.tsx:131`). Dialog a11y is part of the acceptance criteria:
+focus trap, labelled title/description, Escape close, focus return to trigger, keyboard-submit path,
+first validation error focus on invalid submit, and labelled category controls. If the form needs
+scrolling on small screens, add a scroll-safe S-4 modal variant to `docs/frontend/pattern-registry.md`
+before code (e.g. max-height + `overflow-y-auto` + overscroll containment); do not invent one-off
+dialog overflow classes.
 
 #### 4d. Client hooks + imperative core
 
@@ -565,7 +675,8 @@ Mirror the bookmark split instead of forcing one hook path:
 
 Each hook hydrates current rating on entering review mode (call `getQuestionRating`) and exposes
 `{ rating, feedbackStatus, onRate, isReportOpen, openReport, submitReport }` with optimistic updates,
-mounted-checks, `withTimeout`, idempotency-key rotation, and error logging.
+rollback on failed rating writes, mounted-checks, `withTimeout`, idempotency-key rotation, and error
+logging. Error logs must include question/action metadata but **never** the free-text report comment.
 
 #### 4e. Wire into the action bar
 
@@ -616,7 +727,7 @@ WITH latest AS (
          user_id, question_id, rating
   FROM question_feedback
   WHERE kind = 'rating'
-  ORDER BY user_id, question_id, created_at DESC
+  ORDER BY user_id, question_id, created_at DESC, id DESC
 )
 SELECT q.slug,
        COUNT(*) FILTER (WHERE rating = 'helpful')     AS helpful,
@@ -631,27 +742,34 @@ ORDER BY not_helpful DESC;
 
 Write in dependency order; each layer red before its implementation.
 
-1. **Domain** — value-object membership/validators (`*.test.ts`).
-2. **Fake repo** — `record()` appends; `findLatestRatingByUser()` returns newest rating, ignores
-   reports, returns null when none.
+1. **Domain** — value-object membership/validators (`*.test.ts`) plus constructor tests:
+   `newQuestionRatingFeedback` always sets `kind='rating'`, `category=null`, `comment=null`;
+   `newQuestionReportFeedback` always sets `kind='report'`, `rating=null`; type-level tests or
+   `expectTypeOf` cover that report-only fields are not accepted by the rating constructor.
+2. **Fake repo** — `record()` appends a persisted event; `findLatestRatingByUser()` returns newest
+   rating, uses `id DESC` as the deterministic tie-breaker for equal `createdAt`, ignores reports,
+   returns null when none.
 3. **Use cases** (fakes): `RateQuestion` (NOT_FOUND when question absent; records `rating` event;
    retraction records `rating=null`), `GetQuestionRating` (latest wins; null when none),
    `SubmitQuestionReport` (NOT_FOUND; records `report` event; returns id).
 4. **Drizzle repo** — unit (mocked db chain) + **integration** (`tests/integration/*.integration.test.ts`):
-   real append, latest-rating query, and the `kind_shape` / `comment_len` CHECK constraints reject
-   bad rows (integration tests self-fixture their users/questions — no seed dependency). Add
-   `'question_feedback'` to the `tests/integration/db.integration.test.ts` table census for coverage;
-   note the census asserts `toContain` per table (additive), so omitting it is a coverage gap, not a
-   guaranteed red.
+   real append, row→union mapping, latest-rating query including equal-`createdAt` tie-breaker, and
+   the `kind_shape` / `comment_len` CHECK constraints reject bad rows (rating with comment, report
+   with rating, report without category, overlong comment). Integration tests self-fixture their
+   users/questions — no seed dependency. Add `'question_feedback'` to the
+   `tests/integration/db.integration.test.ts` table census for coverage; note the census asserts
+   `toContain` per table (additive), so omitting it is a coverage gap, not a guaranteed red.
 5. **Controller** (fakes via DI overrides): validation error, unauthenticated, unsubscribed,
    rate-limited, success, `ActionResult` error mapping via `createAction`, idempotency replay (no
-   double-write), and separate rate-limit keys for rating vs report actions.
+   double-write), separate rate-limit keys for rating vs report actions, and the distinct rating/report
+   limit constants are passed to `RateLimiter.limit`.
 6. **UI** — `renderToStaticMarkup` component tests (`*.test.tsx`) for the rating row + dialog markup;
    **browser specs** (`*.browser.spec.tsx`, `pnpm test:browser`) for the hook (hydrate, optimistic
-   rate, retract) and dialog submit flow. Keep React 19 rules: `// @vitest-environment jsdom` first
-   line in `*.test.tsx`, dynamic imports in `beforeAll`, no `@testing-library/react`, and no per-test
-   timeout overrides. Add a11y assertions for `aria-pressed`, labels, focus return, Escape close, and
-   validation messaging.
+   rate, rollback on failure, retract) and dialog submit flow. Keep React 19 rules:
+   `// @vitest-environment jsdom` first line in `*.test.tsx`, dynamic imports in `beforeAll`, no
+   `@testing-library/react`, and no per-test timeout overrides. Add a11y assertions for
+   `aria-pressed`, icon `aria-label`s, `aria-live` status, labelled textarea/counter, focus return,
+   Escape close, first-invalid-control focus, keyboard submit, and validation messaging.
 7. **E2E (optional)** — open report dialog in review mode, submit, assert toast + DB row.
 8. **Fixture/isolation checks** — UUID-shaped fixture ids across zod/Drizzle boundaries; controller
    tests use fakes via DI overrides; script tests snapshot/restore `process.env` if they mutate
@@ -692,6 +810,8 @@ Vertical slice, layer by layer (each step ends green):
   review** (post-submit), consistent with "post-answer only."
 - **Rating retraction:** clicking the active thumb records a `rating` event with `rating = null`;
   hydration shows no selection.
+- **Equal timestamps:** latest-rating hydration orders by `createdAt DESC, id DESC`, matching the
+  attempt repository's deterministic tie-breaker pattern.
 - **Double-click / retry:** idempotency key dedupes. Append-only does not make duplicate writes
   harmless; duplicates distort analytics even when latest-rating display still works.
 - **Rating retraction as null:** `rating = null` is a deliberate append-only event, not "missing
@@ -700,6 +820,8 @@ Vertical slice, layer by layer (each step ends green):
   `.trim().min(1).optional()`, because a present whitespace string trims to an empty string and fails
   `.min(1)`.
 - **Comment > 2000 chars:** rejected at zod boundary and by DB CHECK (defense in depth).
+- **Comment logging:** do not pass free-text comments to `reportClientError`, controller logs, or
+  idempotency metadata; comments are persisted only in `question_feedback` and explicit raw exports.
 - **Question later archived/deleted:** archived rows keep their FK (feedback persists); a true hard
   delete cascades (rare by policy).
 - **User deleted (GDPR):** feedback cascades away with the user.
@@ -708,8 +830,10 @@ Vertical slice, layer by layer (each step ends green):
 
 - Admin dashboard / in-app browsing of feedback (no role system yet — future spec).
 - Aggregated quality scores surfaced to learners.
-- **Pre-answer** "this question is broken" reporting (the "always available" timing option). Deferred;
-  the append-only model already supports adding it later with no schema change.
+- **Pre-answer** "this question is broken" reporting (the "always available" timing option).
+  Trade-off: it helps when a stem is visibly broken before answering, but it also adds an assessment-
+  mode distraction and bypasses the richer explanation context that usually makes feedback actionable.
+  Defer for v1; the append-only model already supports adding it later with no schema change.
 - Editing or deleting submitted feedback.
 - Notifications/email on new feedback.
 - DEBT-337 explanation-panel enhancements (separate track).
