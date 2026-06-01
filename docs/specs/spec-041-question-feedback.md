@@ -88,12 +88,14 @@ confusion this spec uses distinct names everywhere:
 3. **Clean Architecture:** domain stays pure (no vendor IDs, no DB imports); port in `application`,
    Drizzle impl in `adapters`; fakes over mocks in tests.
 4. **Design system:** new `Dialog` primitive follows `docs/frontend/standards.md` (canonical focus
-   ring, semantic tokens) and is registered in `docs/frontend/pattern-registry.md` before use. The
-   "Report a problem" trigger uses `<Button variant="outline" className="rounded-full">` to match the
-   Bookmark button.
+   ring, semantic tokens) and either reuses or updates the existing modal pattern
+   (`docs/frontend/pattern-registry.md` S-4) before use. The "Report a problem" trigger uses
+   `<Button variant="outline" className="rounded-full">` to match the Bookmark button.
 5. **Validation:** zod at the boundary, `.strict()`, reusing `zUuid`; comment capped at 2000 chars
    (enforced in zod **and** a DB `CHECK` constraint, matching the `attempts` table idiom).
 6. **Privacy:** `user_id` FK is `ON DELETE CASCADE` — deleting a user removes their feedback (GDPR).
+   Free-text comments are user input that may contain PII/PHI; never log comment bodies, and make
+   the export script local-only with explicit redaction/default-output rules.
 
 ## Design
 
@@ -363,7 +365,8 @@ export const questionFeedbackRelations = relations(
 );
 ```
 
-Generate the migration (never `drizzle-kit push`):
+Generate the migration (never `drizzle-kit push`). `drizzle.config.ts` requires `DATABASE_URL`, so
+prefix `db:generate` and `db:migrate` with the explicit local test database URL:
 
 ```bash
 DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm db:generate
@@ -373,6 +376,10 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_tes
 > **Question lifecycle note:** questions are **archived** (`question_status='archived'`), not hard-
 > deleted, so the `ON DELETE CASCADE` on `question_id` rarely fires in practice and feedback persists.
 > Keep "archive, don't delete" as content-ops policy so the analytical record stays intact.
+>
+> **Schema file-size note:** `db/schema.ts` is already an intentional DEBT-234/DEBT-224 exception
+> and is exempted by `scripts/check-file-size.sh`. Do not split this table out solely to satisfy the
+> 350-line warning; keep the relational schema as the single source of truth.
 
 #### 3b. Drizzle repo (`src/adapters/repositories/drizzle-question-feedback-repository.ts`)
 
@@ -405,6 +412,11 @@ const zCategory = z.enum([
   'outdated_reference',
   'other',
 ]);
+const zOptionalComment = z.preprocess(
+  (value) =>
+    typeof value === 'string' && value.trim().length === 0 ? undefined : value,
+  z.string().trim().min(1).max(2000).optional(),
+);
 
 const RateQuestionInputSchema = z
   .object({
@@ -422,7 +434,7 @@ const SubmitQuestionReportInputSchema = z
     attemptId: zUuid.nullish(),
     practiceSessionId: zUuid.nullish(),
     category: zCategory,
-    comment: z.string().trim().min(1).max(2000).optional(),
+    comment: zOptionalComment,
     idempotencyKey: zUuid.optional(),
   })
   .strict();
@@ -432,22 +444,31 @@ const GetQuestionRatingInputSchema = z.object({ questionId: zUuid }).strict();
 
 Actions: `rateQuestion`, `getQuestionRating`, `submitQuestionReport`.
 
+Normalize `attemptId`, `practiceSessionId`, and `comment` with `?? null` before calling use cases;
+the use-case inputs are explicit `string | null`, while `.nullish()` and the optional comment schema
+also allow `undefined`. Let `createAction`/`handleError` map `ApplicationError` and `ZodError` to
+`ActionResult`; do not add custom controller try/catch blocks.
+
 #### 3e. DI wiring (`lib/container/*`)
 
 - `repositories.ts`: `createQuestionFeedbackRepository: (db = primitives.db) => new DrizzleQuestionFeedbackRepository(db)`
 - `use-cases.ts`: `createRateQuestionUseCase`, `createGetQuestionRatingUseCase`, `createSubmitQuestionReportUseCase`
 - `controllers.ts`: `createQuestionFeedbackControllerDeps` (authGateway, logger, rateLimiter,
   idempotencyKeyRepository, checkEntitlementUseCase, the three use cases, `now`)
+- `types.ts`: add the new repository, use-case, and controller factory types so DI overrides keep
+  compiling in controller tests.
 
 ### 4. App / UI (`app/`, `components/`)
 
 #### 4a. New design-system primitive — `components/ui/dialog.tsx`
 
-Radix `@radix-ui/react-dialog` (already transitively present via `alert-dialog`/`select`). Model
-the file on `components/ui/alert-dialog.tsx`: `Dialog`, `DialogTrigger`, `DialogContent`,
-`DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogFooter`, `DialogClose`. Use semantic
-tokens and the canonical focus ring. **Add a Pattern Registry entry** in
-`docs/frontend/pattern-registry.md` (overlay/dialog pattern) with rationale before merging UI.
+Use `Dialog as DialogPrimitive` from the existing `radix-ui` dependency, matching
+`components/ui/alert-dialog.tsx`. Do **not** add `@radix-ui/react-dialog` unless the repo intentionally
+changes its Radix package convention. Model the file on `components/ui/alert-dialog.tsx`: `Dialog`,
+`DialogTrigger`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`,
+`DialogFooter`, `DialogClose`. Use semantic tokens and the canonical focus ring. Reuse the existing
+Pattern Registry S-4 modal-dialog surface, or update/add a registry entry first if the non-alert
+dialog needs different overlay/content classes.
 
 #### 4b. Tier 1 — rating row `components/question/question-feedback-rating.tsx`
 
@@ -458,26 +479,50 @@ toggles (`ThumbsUp` / `ThumbsDown` from `lucide-react`), `aria-pressed`, disable
 
 `Dialog` containing a radio group (the 5 categories via `<Button>`-based or native radio + `label`
 pattern already used by `choice-button.tsx`), an optional `<textarea>` (capped, with live counter),
-Cancel + "Submit feedback". On success show a toast via `useNotification()`.
+Cancel + "Submit feedback". On success show a toast via `useNotification()`. Dialog a11y is part of
+the acceptance criteria: focus trap, labelled title/description, Escape close, keyboard-submit path,
+and labelled category controls. Rating thumbs must expose `aria-pressed` plus descriptive labels.
 
-#### 4d. Client hook — `app/(app)/app/shared/use-question-feedback.ts`
+#### 4d. Client hooks + imperative core
 
-Mirror `use-question-page-bookmarks.ts`: hydrate current rating on entering review mode (call
-`getQuestionRating`), expose `{ rating, feedbackStatus, onRate, isReportOpen, openReport, submitReport }`
-with optimistic updates, mounted-checks, `withTimeout`, idempotency-key rotation, and error logging.
-Factor the imperative core into `app/(app)/app/shared/question-feedback-actions.ts` (testable, like
-`bookmark-toggle.ts`).
+Mirror the bookmark split instead of forcing one hook path:
+
+- `app/(app)/app/shared/question-feedback-actions.ts`: imperative core, testable like
+  `bookmark-toggle.ts`.
+- `app/(app)/app/questions/[slug]/use-question-page-feedback.ts`: standalone question/review-page
+  hydration and actions, colocated with `use-question-page-bookmarks.ts`.
+- `app/(app)/app/practice/hooks/use-practice-question-feedback.ts`: practice, quick-practice, and
+  post-exam-review hydration/actions, colocated with `use-practice-question-bookmarks.ts`.
+
+Each hook hydrates current rating on entering review mode (call `getQuestionRating`) and exposes
+`{ rating, feedbackStatus, onRate, isReportOpen, openReport, submitReport }` with optimistic updates,
+mounted-checks, `withTimeout`, idempotency-key rotation, and error logging.
 
 #### 4e. Wire into the action bar
 
 In `app/(app)/app/practice/components/practice-view.tsx`, add a **"Report a problem"** `<Button>` to
 the existing `secondaryGroup` (the `hasBooleanCorrectness(submitResult)` block, right next to
 Bookmark), and render `<QuestionFeedbackRating>` after the `Feedback` panel in
-`components/question/question-surface-body.tsx`. Thread new props
-(`rating`, `feedbackStatus`, `onRate`, `onOpenReport`, …) from the client components
-(`quick-practice-client.tsx`, `practice-page-client.tsx`) exactly as bookmark props are threaded,
-using the `fireAndForget` pattern. Pass best-effort `attemptId`/`practiceSessionId` context from
-`submitResult` / session state (null when unavailable, e.g. Quick Practice has no session).
+`components/question/question-surface-body.tsx`.
+
+Do not stop there. Active question/review surfaces are split across multiple consumers:
+
+- Quick Practice: `app/(app)/app/practice/quick/quick-practice-client.tsx` passes props into
+  `PracticeView` and uses `fireAndForget(...)` for bookmark mutations.
+- Session practice: `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts`
+  owns active-session hooks; `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx`
+  passes controller props into `PracticeView`. `practice-page-client.tsx` is only the practice start
+  surface and is not the active-question prop-threading site.
+- Post-exam review: `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx` imports
+  and renders `Feedback` directly and has its own bottom action bar with Bookmark; add rating/report
+  controls there too.
+- Standalone question review: `app/(app)/app/questions/[slug]/question-page-client.tsx` renders
+  `QuestionSurfaceBody` and owns a review-mode Bookmark button; thread feedback props there too.
+
+Pass best-effort `attemptId`/`practiceSessionId` context from the actual sources: `attemptId` is in
+`submitResult`, but `practiceSessionId` is **not** in `submitResult`; derive it from the session route
+/ session state where available, and pass `null` for Quick Practice and other surfaces without a
+session.
 
 ### 5. Extraction (the "forever maintain & improve" requirement)
 
@@ -487,6 +532,9 @@ No admin UI in v1 (there is no role system yet — out of scope). Two extraction
    helpful-rate per question (latest-rating-per-user), top-reported questions, recent comments.
 2. **Ops export script** `scripts/export-question-feedback.ts` — run locally with `DATABASE_URL`,
    dumps `question_feedback` (joined to question slug) to CSV/JSON. No public surface, no new auth.
+   Default output should include question identifiers/slug, event metadata, category/rating, and
+   redacted user identifiers; include raw `user_id` or free-text comments only behind explicit flags
+   with a console warning that comments may contain PII/PHI.
 
 Example "current helpful-rate per question" (latest rating per user wins):
 
@@ -519,13 +567,21 @@ Write in dependency order; each layer red before its implementation.
    `SubmitQuestionReport` (NOT_FOUND; records `report` event; returns id).
 4. **Drizzle repo** — unit (mocked db chain) + **integration** (`tests/integration/*.integration.test.ts`):
    real append, latest-rating query, and the `kind_shape` / `comment_len` CHECK constraints reject
-   bad rows.
+   bad rows. Update `tests/integration/db.integration.test.ts` table census to include
+   `question_feedback` when the table is added.
 5. **Controller** (fakes via DI overrides): validation error, unauthenticated, unsubscribed,
-   rate-limited, success, idempotency replay (no double-write).
+   rate-limited, success, `ActionResult` error mapping via `createAction`, idempotency replay (no
+   double-write), and separate rate-limit keys for rating vs report actions.
 6. **UI** — `renderToStaticMarkup` component tests (`*.test.tsx`) for the rating row + dialog markup;
    **browser specs** (`*.browser.spec.tsx`, `pnpm test:browser`) for the hook (hydrate, optimistic
-   rate, retract) and dialog submit flow.
+   rate, retract) and dialog submit flow. Keep React 19 rules: `// @vitest-environment jsdom` first
+   line in `*.test.tsx`, dynamic imports in `beforeAll`, no `@testing-library/react`, and no per-test
+   timeout overrides. Add a11y assertions for `aria-pressed`, labels, focus return, Escape close, and
+   validation messaging.
 7. **E2E (optional)** — open report dialog in review mode, submit, assert toast + DB row.
+8. **Fixture/isolation checks** — UUID-shaped fixture ids across zod/Drizzle boundaries; controller
+   tests use fakes via DI overrides; script tests snapshot/restore `process.env` if they mutate
+   `DATABASE_URL` or export flags.
 
 ## Implementation Order
 
@@ -536,9 +592,10 @@ Vertical slice, layer by layer (each step ends green):
 3. Use cases + tests.
 4. Schema + enums + relations → generate & apply migration → Drizzle repo → repo unit + integration tests.
 5. Rate-limit constant + zod schemas + controller + controller tests.
-6. DI wiring in `lib/container/*`.
-7. `Dialog` primitive + Pattern Registry entry + primitive test.
-8. UI: rating row + report dialog + hook + imperative core; wire into `practice-view` + clients;
+6. DI wiring in `lib/container/*`, including `types.ts`.
+7. `Dialog` primitive + Pattern Registry S-4 reuse/update + primitive test.
+8. UI: rating row + report dialog + hooks + imperative core; wire into `practice-view`, active
+   session controller/view, quick-practice client, standalone question client, and post-exam review;
    component tests + browser specs.
 9. Extraction: SQL appendix + `scripts/export-question-feedback.ts`.
 10. Full quality gate, PR, CodeRabbit.
@@ -547,9 +604,10 @@ Vertical slice, layer by layer (each step ends green):
 
 - **PR 1 — Backend slice:** domain → port/fake → use cases → schema/migration → repo → controller →
   DI → all backend tests. Fully functional via tests; no UI yet.
-- **PR 2 — `Dialog` primitive:** `components/ui/dialog.tsx` + Pattern Registry entry + tests.
-- **PR 3 — UI wiring:** rating row + report dialog + hook + `practice-view`/client wiring + component
-  & browser tests.
+- **PR 2 — `Dialog` primitive:** `components/ui/dialog.tsx` + Pattern Registry S-4 reuse/update +
+  tests.
+- **PR 3 — UI wiring:** rating row + report dialog + hooks + all active review-surface wiring +
+  component & browser tests.
 - **PR 4 — Extraction tooling:** export script + SQL docs.
 
 ## Edge Cases
@@ -560,8 +618,13 @@ Vertical slice, layer by layer (each step ends green):
   review** (post-submit), consistent with "post-answer only."
 - **Rating retraction:** clicking the active thumb records a `rating` event with `rating = null`;
   hydration shows no selection.
-- **Double-click / retry:** idempotency key dedupes; append-only means even a slip is harmless.
-- **Empty/whitespace comment:** zod `.trim().min(1)` → treated as absent (optional), not an error.
+- **Double-click / retry:** idempotency key dedupes. Append-only does not make duplicate writes
+  harmless; duplicates distort analytics even when latest-rating display still works.
+- **Rating retraction as null:** `rating = null` is a deliberate append-only event, not "missing
+  input"; it needs idempotency just like helpful/not-helpful clicks.
+- **Empty/whitespace comment:** preprocess to `undefined`, then treat as absent; do not rely on
+  `.trim().min(1).optional()`, because a present whitespace string trims to an empty string and fails
+  `.min(1)`.
 - **Comment > 2000 chars:** rejected at zod boundary and by DB CHECK (defense in depth).
 - **Question later archived/deleted:** archived rows keep their FK (feedback persists); a true hard
   delete cascades (rare by policy).
