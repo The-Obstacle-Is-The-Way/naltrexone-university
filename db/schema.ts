@@ -566,11 +566,24 @@ export const questionFeedback = pgTable(
       .defaultNow(),
   },
   (t) => ({
+    userCreatedAtIdx: index('question_feedback_user_created_at_idx').on(
+      t.userId,
+      desc(t.createdAt),
+      desc(t.id),
+    ),
     questionCreatedAtIdx: index('question_feedback_question_created_at_idx').on(
       t.questionId,
       desc(t.createdAt),
       desc(t.id),
     ),
+    attemptCreatedAtIdx: index('question_feedback_attempt_created_at_idx').on(
+      t.attemptId,
+      desc(t.createdAt),
+      desc(t.id),
+    ),
+    practiceSessionCreatedAtIdx: index(
+      'question_feedback_practice_session_created_at_idx',
+    ).on(t.practiceSessionId, desc(t.createdAt), desc(t.id)),
     ratingUserQuestionCreatedAtIdx: index(
       'question_feedback_rating_user_question_created_at_idx',
     )

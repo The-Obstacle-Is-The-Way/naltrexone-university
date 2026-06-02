@@ -380,10 +380,12 @@ export class SubmitQuestionReportUseCase {
 **Fake** (`src/application/test-helpers/fakes/fake-question-feedback-repository.ts`):
 `export class FakeQuestionFeedbackRepository implements QuestionFeedbackRepository`, backed by an
 in-memory array of events. Mirror the bookmark/attempt fake constructor —
-`constructor(seed: readonly QuestionFeedback[] = [], private readonly now: () => Date = () => new Date())`
-— so `record()` can stamp `id`/`createdAt` while tests can inject deterministic clocks. `record()`
-pushes the shape-correct `NewQuestionFeedback` plus generated persisted fields. `findLatestRatingByUser()`
-filters `kind === 'rating'`, returns the newest by `createdAt DESC, id DESC`, else `null`. Register it
+`constructor(seed: readonly QuestionFeedback[] = [], private readonly now: () => Date = () => new Date(),
+private readonly randomUuid: () => string = () => crypto.randomUUID())`
+— so `record()` can stamp `id`/`createdAt` while tests can inject deterministic clocks and ids.
+`record()` pushes the shape-correct `NewQuestionFeedback` plus generated persisted fields.
+`findLatestRatingByUser()` filters `kind === 'rating'`, returns the newest by `createdAt DESC, id DESC`,
+else `null`. Register it
 in `fakes/index.ts` as a **named** export in alphabetical position (it sorts before
 `FakeQuestionRepository`). The fakes barrel uses `export { FakeX } from './fake-x'`, not `export *`.
 
@@ -448,11 +450,24 @@ export const questionFeedback = pgTable(
       .defaultNow(),
   },
   (t) => ({
+    userCreatedAtIdx: index('question_feedback_user_created_at_idx').on(
+      t.userId,
+      desc(t.createdAt),
+      desc(t.id),
+    ),
     questionCreatedAtIdx: index('question_feedback_question_created_at_idx').on(
       t.questionId,
       desc(t.createdAt),
       desc(t.id),
     ),
+    attemptCreatedAtIdx: index('question_feedback_attempt_created_at_idx').on(
+      t.attemptId,
+      desc(t.createdAt),
+      desc(t.id),
+    ),
+    practiceSessionCreatedAtIdx: index(
+      'question_feedback_practice_session_created_at_idx',
+    ).on(t.practiceSessionId, desc(t.createdAt), desc(t.id)),
     ratingUserQuestionCreatedAtIdx: index(
       'question_feedback_rating_user_question_created_at_idx',
     )
@@ -522,8 +537,9 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_tes
 > **Index rationale:** the partial latest-rating index is deliberately `WHERE kind = 'rating'` because
 > the hot UI read path filters to one user's current rating for one question. `kindCreatedAtIdx`
 > supports recent-report/recent-feedback export slices; `questionCreatedAtIdx` supports per-question
-> audit/export slices. Do not add a current-rating projection table in v1 unless real query plans show
-> the partial index is insufficient.
+> audit/export slices. The `user`/`attempt`/`practiceSession` indexes support parent-side FK
+> cascade/set-null maintenance and future audit slices by context. Do not add a current-rating
+> projection table in v1 unless real query plans show the partial index is insufficient.
 
 #### 3b. Drizzle repo (`src/adapters/repositories/drizzle-question-feedback-repository.ts`)
 
@@ -533,7 +549,8 @@ append-only). `findLatestRatingByUser()` is `findFirst` filtered to `kind='ratin
 domain union via a small `*-mappers.ts`; the mapper must fail closed with
 `ApplicationError('INTERNAL_ERROR', 'Invalid question feedback row')` if a row violates the union
 shape despite the DB `CHECK`. Throw `ApplicationError('INTERNAL_ERROR', ...)` on a missing
-`returning()` row (bookmark pattern).
+`returning()` row (bookmark pattern) and wrap unexpected latest-rating read failures as
+`ApplicationError('INTERNAL_ERROR', 'Failed to load latest question rating', undefined, { cause })`.
 
 #### 3c. Rate limits (`src/adapters/shared/rate-limits.ts`)
 
@@ -806,20 +823,21 @@ Write in dependency order; each layer red before its implementation.
    `newQuestionRatingFeedback` always sets `kind='rating'`, `category=null`, `comment=null`;
    `newQuestionReportFeedback` always sets `kind='report'`, `rating=null`; type-level tests or
    `expectTypeOf` cover that report-only fields are not accepted by the rating constructor.
-2. **Fake repo** — `record()` appends a persisted event; `findLatestRatingByUser()` returns newest
-   rating, uses `id DESC` as the deterministic tie-breaker for equal `createdAt`, ignores reports,
-   returns null when none.
+2. **Fake repo** — `record()` appends a persisted event with injectable clock + id generator;
+   `findLatestRatingByUser()` returns newest rating, uses `id DESC` as the deterministic tie-breaker
+   for equal `createdAt`, ignores reports, returns null when none.
 3. **Use cases** (fakes): `RateQuestion` (NOT_FOUND when question absent; records `rating` event;
    retraction records `rating=null`), `GetQuestionRating` (NOT_FOUND when question absent; latest wins;
    null when none),
    `SubmitQuestionReport` (NOT_FOUND; records `report` event; returns id).
 4. **Drizzle repo** — unit (mocked db chain) + **integration** (`tests/integration/*.integration.test.ts`):
-   real append, row→union mapping, latest-rating query including equal-`createdAt` tie-breaker, and
-   the `kind_shape` / `comment_len` CHECK constraints reject bad rows (rating with comment, report
-   with rating, report without category, overlong comment). Integration tests self-fixture their
-   users/questions — no seed dependency. Add `'question_feedback'` to the
-   `tests/integration/db.integration.test.ts` table census for coverage; note the census asserts
-   `toContain` per table (additive), so omitting it is a coverage gap, not a guaranteed red.
+   real append, row→union mapping, latest-rating query including equal-`createdAt` tie-breaker, read
+   failure wrapping, and the `kind_shape` / `comment_len` CHECK constraints reject bad rows (rating
+   with comment, report with rating, report without category, overlong comment). Integration tests
+   self-fixture their users/questions — no seed dependency. Add `'question_feedback'` to the
+   `tests/integration/db.integration.test.ts` table census and assert the feedback FK-support indexes
+   exist for coverage; note the census asserts `toContain` per table (additive), so omitting it is a
+   coverage gap, not a guaranteed red.
 5. **Controller** (fakes via DI overrides): validation error, unauthenticated, unsubscribed,
    rate-limited, success, `ActionResult` error mapping via `createAction`, idempotency replay (no
    double-write), separate rate-limit keys for rating vs report actions, and the distinct rating/report

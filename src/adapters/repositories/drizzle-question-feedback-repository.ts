@@ -53,14 +53,24 @@ export class DrizzleQuestionFeedbackRepository
     userId: string,
     questionId: string,
   ): Promise<QuestionRatingFeedback | null> {
-    const row = await this.db.query.questionFeedback.findFirst({
-      where: and(
-        eq(questionFeedback.userId, userId),
-        eq(questionFeedback.questionId, questionId),
-        eq(questionFeedback.kind, 'rating'),
-      ),
-      orderBy: [desc(questionFeedback.createdAt), desc(questionFeedback.id)],
-    });
+    let row: (typeof questionFeedback)['$inferSelect'] | undefined;
+    try {
+      row = await this.db.query.questionFeedback.findFirst({
+        where: and(
+          eq(questionFeedback.userId, userId),
+          eq(questionFeedback.questionId, questionId),
+          eq(questionFeedback.kind, 'rating'),
+        ),
+        orderBy: [desc(questionFeedback.createdAt), desc(questionFeedback.id)],
+      });
+    } catch (error) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Failed to load latest question rating',
+        undefined,
+        { cause: error },
+      );
+    }
 
     if (!row) return null;
 

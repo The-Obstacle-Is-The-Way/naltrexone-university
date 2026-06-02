@@ -15,6 +15,7 @@ export class FakeQuestionFeedbackRepository
   constructor(
     seed: readonly QuestionFeedback[] = [],
     private readonly now: () => Date = () => new Date(),
+    private readonly randomUuid: () => string = () => crypto.randomUUID(),
   ) {
     this.events = [...seed];
   }
@@ -55,7 +56,7 @@ export class FakeQuestionFeedbackRepository
   ): QuestionRatingFeedback {
     return {
       ...event,
-      id: crypto.randomUUID(),
+      id: this.randomUuid(),
       createdAt: this.now(),
     };
   }
@@ -65,7 +66,7 @@ export class FakeQuestionFeedbackRepository
   ): QuestionReportFeedback {
     return {
       ...event,
-      id: crypto.randomUUID(),
+      id: this.randomUuid(),
       createdAt: this.now(),
     };
   }

@@ -36,6 +36,38 @@ describe('FakeQuestionFeedbackRepository', () => {
       });
     });
 
+    it('uses the injected id generator for persisted events', async () => {
+      const createdAt = new Date('2026-02-10T00:00:00.000Z');
+      const ids = ['feedback-1', 'feedback-2'];
+      const repo = new FakeQuestionFeedbackRepository(
+        [],
+        () => createdAt,
+        () => ids.shift() ?? 'feedback-fallback',
+      );
+
+      const first = await repo.record(
+        newQuestionRatingFeedback({
+          userId: 'user-1',
+          questionId: 'question-1',
+          attemptId: null,
+          practiceSessionId: null,
+          rating: 'helpful',
+        }),
+      );
+      const second = await repo.record(
+        newQuestionRatingFeedback({
+          userId: 'user-1',
+          questionId: 'question-1',
+          attemptId: null,
+          practiceSessionId: null,
+          rating: 'not_helpful',
+        }),
+      );
+
+      expect(first.id).toBe('feedback-1');
+      expect(second.id).toBe('feedback-2');
+    });
+
     it('appends a new event for each call', async () => {
       const times = [
         new Date('2026-02-10T00:00:00.000Z'),

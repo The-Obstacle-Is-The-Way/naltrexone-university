@@ -1,4 +1,10 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
+import {
+  createAttempt,
+  createPracticeSession,
+  createQuestion,
+  createUser,
+} from '../test-helpers';
 import type {
   NewQuestionFeedback,
   QuestionFeedback,
@@ -11,11 +17,18 @@ import {
 } from './question-feedback';
 
 describe('QuestionFeedback entity constructors', () => {
+  const user = createUser();
+  const question = createQuestion();
+  const attempt = createAttempt({ userId: user.id, questionId: question.id });
+  const practiceSession = createPracticeSession({
+    userId: user.id,
+    questionIds: [question.id],
+  });
   const context = {
-    userId: 'user-1',
-    questionId: 'question-1',
-    attemptId: 'attempt-1',
-    practiceSessionId: 'session-1',
+    userId: user.id,
+    questionId: question.id,
+    attemptId: attempt.id,
+    practiceSessionId: practiceSession.id,
   } as const;
 
   it('creates rating feedback with report-only fields cleared', () => {

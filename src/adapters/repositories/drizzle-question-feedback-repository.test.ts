@@ -217,5 +217,23 @@ describe('DrizzleQuestionFeedbackRepository', () => {
       expect(orderSql[0]).toMatch(/"question_feedback"\."created_at"\s+desc/i);
       expect(orderSql[1]).toMatch(/"question_feedback"\."id"\s+desc/i);
     });
+
+    it('throws INTERNAL_ERROR when the latest-rating read fails', async () => {
+      const db = createDbMock();
+      const dbError = new Error('db down');
+      db._mocks.queryFindFirst.mockRejectedValue(dbError);
+      const repo = new DrizzleQuestionFeedbackRepository(
+        db as unknown as RepoDb,
+      );
+
+      const promise = repo.findLatestRatingByUser(userId, questionId);
+
+      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+      await expect(promise).rejects.toMatchObject({
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to load latest question rating',
+        cause: dbError,
+      });
+    });
   });
 });

@@ -60,6 +60,22 @@ describe('database migrations', () => {
     }
   });
 
+  it('creates question feedback foreign-key support indexes', async () => {
+    const rows = await sql<{ indexname: string }[]>`
+      select indexname
+      from pg_indexes
+      where schemaname = 'public'
+        and tablename = 'question_feedback'
+    `;
+    const indexes = new Set(rows.map((row) => row.indexname));
+
+    expect(indexes).toContain('question_feedback_user_created_at_idx');
+    expect(indexes).toContain('question_feedback_attempt_created_at_idx');
+    expect(indexes).toContain(
+      'question_feedback_practice_session_created_at_idx',
+    );
+  });
+
   it('allows attempts.selected_choice_id to be nullable for omitted attempts', async () => {
     const rows = await sql<{ is_nullable: string }[]>`
       select is_nullable
