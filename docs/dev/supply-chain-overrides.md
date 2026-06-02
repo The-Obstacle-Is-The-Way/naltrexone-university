@@ -11,9 +11,8 @@ reviewable exceptions:
 - a dependency needs to be tested against the policy before a real PR;
 - pnpm audit needs a documented advisory exception.
 
-The active debt record is
-`docs/debt/debt-394-supply-chain-hardening.md`. After archival, the same
-record lives at `docs/_archive/debt/debt-394-supply-chain-hardening.md`.
+The DEBT-394 record is archived at
+`docs/_archive/debt/debt-394-supply-chain-hardening.md`.
 
 The policy is intentionally strict:
 
@@ -21,8 +20,6 @@ The policy is intentionally strict:
 minimumReleaseAge: 10080
 minimumReleaseAgeStrict: true
 minimumReleaseAgeIgnoreMissingTime: false
-minimumReleaseAgeExclude:
-  - '<exact already-shipped package@version>' # temporary bootstrap exception; see pnpm-workspace.yaml.
 blockExoticSubdeps: true
 trustPolicy: no-downgrade
 strictDepBuilds: true
@@ -41,6 +38,9 @@ allowBuilds:
 
 Do not weaken these settings casually. Every exception must be small,
 named in the PR body, and removed when it is no longer needed.
+There are no standing `minimumReleaseAgeExclude` entries in the active
+policy; add one only as a dated temporary override through the workflow
+below.
 
 ## Urgent CVE patches before the 7-day cooldown
 
@@ -54,14 +54,14 @@ Package-wide exception:
 
 ```yaml
 minimumReleaseAgeExclude:
-  - '@clerk/nextjs' # urgent advisory GHSA-xxxx-yyyy-zzzz; remove after 2026-06-02.
+  - '<pkg-name>' # urgent advisory GHSA-xxxx-yyyy-zzzz; remove after YYYY-MM-DD.
 ```
 
 Exact-version exception:
 
 ```yaml
 minimumReleaseAgeExclude:
-  - 'some-pkg@1.2.3' # urgent advisory GHSA-xxxx-yyyy-zzzz; remove after 2026-06-02.
+  - '<pkg-name>@<version>' # urgent advisory GHSA-xxxx-yyyy-zzzz; remove after YYYY-MM-DD.
 ```
 
 Prefer exact-version exceptions when the advisory fix is known. A
@@ -86,9 +86,8 @@ active. Scope them to exact versions, give each line a removal date, and
 remove them as soon as the versions are older than the configured 7-day
 window. Do not use package-wide bootstrap exceptions.
 
-The only current package-wide bootstrap exception is `ws`, because the
-rejected `ws@8.21.0` lockfile entry is peer-suffixed in the lockfile. Keep
-that exception temporary and remove it with the other bootstrap entries.
+PR #382 removed the dated DEBT-394 bootstrap exceptions after they aged
+out. There are no current package-wide bootstrap exceptions.
 
 ## Adding a new native-build package to allowBuilds
 
