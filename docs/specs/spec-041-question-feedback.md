@@ -267,12 +267,15 @@ objects from `src/domain/value-objects/index.ts`.
 `createQuestionReportFeedback(overrides)` to `src/domain/test-helpers/factories.ts` and its `index.ts`
 barrel. Use UUID-emitting defaults via the existing `createUuid()` helper, `createdAt: new Date()`,
 nullable FK ids defaulting to `null`, and shape-correct defaults (`comment: null` only for reports,
-with ratings always setting `comment: null`). **Lock the discriminant fields against override:** type
-the param as `Partial<Omit<QuestionRatingFeedback, 'kind' | 'category' | 'comment'>>` (and the report
-analog `Omit<…, 'kind' | 'rating'>`) and hard-set `kind`/`category`/`rating`/`comment` *after* the
-`...overrides` spread, so callers can't produce an invalid-but-typed entity. Avoid one permissive
-`createQuestionFeedback({ kind, ... })` factory, because it would recreate the nullable-bag problem
-in tests.
+with ratings always setting `comment: null`). **Lock persisted and discriminant fields against
+override:** type the rating param as
+`Partial<Omit<QuestionRatingFeedback, keyof PersistedQuestionFeedback | 'kind' | 'category' | 'comment'>>`
+(and the report analog
+`Partial<Omit<QuestionReportFeedback, keyof PersistedQuestionFeedback | 'kind' | 'rating'>>`) and
+hard-set `id`/`createdAt`/`kind`/`category`/`rating`/`comment` *after* the `...overrides` spread, so
+callers can't produce an invalid-but-typed entity or override persisted defaults. Avoid one permissive
+`createQuestionFeedback({ kind, ... })` factory, because it would recreate the nullable-bag problem in
+tests.
 
 ### 2. Application — port + use cases (`src/application/`)
 
