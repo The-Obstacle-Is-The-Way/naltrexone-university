@@ -1,12 +1,33 @@
 import { describe, expect, it } from 'vitest';
-import { FakeQuestionFeedbackRepository } from '@/src/application/test-helpers/fakes';
-import { createQuestionRatingFeedback } from '@/src/domain/test-helpers';
+import { ApplicationError } from '@/src/application/errors';
+import {
+  FakeQuestionFeedbackRepository,
+  FakeQuestionRepository,
+} from '@/src/application/test-helpers/fakes';
+import {
+  createQuestion,
+  createQuestionRatingFeedback,
+} from '@/src/domain/test-helpers';
 import { GetQuestionRatingUseCase } from './get-question-rating';
 
 describe('GetQuestionRatingUseCase', () => {
+  it('returns NOT_FOUND when the question is missing', async () => {
+    const useCase = new GetQuestionRatingUseCase(
+      new FakeQuestionFeedbackRepository(),
+      new FakeQuestionRepository([]),
+    );
+
+    await expect(
+      useCase.execute({ userId: 'user-1', questionId: 'missing' }),
+    ).rejects.toEqual(new ApplicationError('NOT_FOUND', 'Question not found'));
+  });
+
   it('returns null when no rating exists', async () => {
     const useCase = new GetQuestionRatingUseCase(
       new FakeQuestionFeedbackRepository(),
+      new FakeQuestionRepository([
+        createQuestion({ id: 'question-1', status: 'published' }),
+      ]),
     );
 
     await expect(
@@ -30,6 +51,9 @@ describe('GetQuestionRatingUseCase', () => {
           createdAt: new Date('2026-02-11T00:00:00.000Z'),
         }),
       ]),
+      new FakeQuestionRepository([
+        createQuestion({ id: 'question-1', status: 'published' }),
+      ]),
     );
 
     await expect(
@@ -52,6 +76,9 @@ describe('GetQuestionRatingUseCase', () => {
           rating: null,
           createdAt: new Date('2026-02-11T00:00:00.000Z'),
         }),
+      ]),
+      new FakeQuestionRepository([
+        createQuestion({ id: 'question-1', status: 'published' }),
       ]),
     );
 

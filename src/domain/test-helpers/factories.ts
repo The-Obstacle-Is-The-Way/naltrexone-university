@@ -85,9 +85,12 @@ export function createBookmark(overrides: Partial<Bookmark> = {}): Bookmark {
 }
 
 export function createQuestionRatingFeedback(
-  overrides: Partial<QuestionRatingFeedback> = {},
+  overrides: Partial<
+    Omit<QuestionRatingFeedback, 'kind' | 'category' | 'comment'>
+  > = {},
 ): QuestionRatingFeedback {
   const now = new Date();
+  const { rating = 'helpful', ...rest } = overrides;
 
   return {
     id: createUuid(),
@@ -95,19 +98,20 @@ export function createQuestionRatingFeedback(
     questionId: createUuid(),
     attemptId: null,
     practiceSessionId: null,
+    createdAt: now,
+    ...rest,
     kind: 'rating',
-    rating: 'helpful',
+    rating,
     category: null,
     comment: null,
-    createdAt: now,
-    ...overrides,
   };
 }
 
 export function createQuestionReportFeedback(
-  overrides: Partial<QuestionReportFeedback> = {},
+  overrides: Partial<Omit<QuestionReportFeedback, 'kind' | 'rating'>> = {},
 ): QuestionReportFeedback {
   const now = new Date();
+  const { category = 'other', comment = null, ...rest } = overrides;
 
   return {
     id: createUuid(),
@@ -115,12 +119,12 @@ export function createQuestionReportFeedback(
     questionId: createUuid(),
     attemptId: null,
     practiceSessionId: null,
+    createdAt: now,
+    ...rest,
     kind: 'report',
     rating: null,
-    category: 'other',
-    comment: null,
-    createdAt: now,
-    ...overrides,
+    category,
+    comment,
   };
 }
 

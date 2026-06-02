@@ -22,19 +22,17 @@ import type {
   SubmitQuestionReportInput,
   SubmitQuestionReportOutput,
 } from '@/src/application/use-cases';
+import {
+  AllQuestionFeedbackCategories,
+  AllQuestionFeedbackRatings,
+} from '@/src/domain/value-objects';
 import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 import { executeIdempotent } from './shared/execute-idempotent';
 
-const zRating = z.enum(['helpful', 'not_helpful']);
-const zCategory = z.enum([
-  'incorrect_answer',
-  'ambiguous_wording',
-  'typo_formatting',
-  'outdated_reference',
-  'other',
-]);
+const zRating = z.enum(AllQuestionFeedbackRatings);
+const zCategory = z.enum(AllQuestionFeedbackCategories);
 const zOptionalComment = z.preprocess(
   (value) =>
     typeof value === 'string' && value.trim().length === 0 ? undefined : value,

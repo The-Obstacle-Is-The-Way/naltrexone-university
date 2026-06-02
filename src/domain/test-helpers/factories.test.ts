@@ -127,6 +127,29 @@ describe('createQuestionRatingFeedback', () => {
       createdAt,
     });
   });
+
+  it('rejects report-only overrides at compile time', () => {
+    // @ts-expect-error rating feedback fixtures cannot accept report categories
+    createQuestionRatingFeedback({ category: 'other' });
+    // @ts-expect-error rating feedback fixtures cannot accept free-text comments
+    createQuestionRatingFeedback({ comment: 'Question wording is unclear.' });
+    // @ts-expect-error rating feedback fixtures cannot change the discriminant
+    createQuestionRatingFeedback({ kind: 'report' });
+  });
+
+  it('reasserts rating invariants after unsafe overrides', () => {
+    const feedback = createQuestionRatingFeedback({
+      kind: 'report',
+      category: 'other',
+      comment: 'Question wording is unclear.',
+    } as unknown as Parameters<typeof createQuestionRatingFeedback>[0]);
+
+    expect(feedback).toMatchObject({
+      kind: 'rating',
+      category: null,
+      comment: null,
+    });
+  });
 });
 
 describe('createQuestionReportFeedback', () => {
@@ -179,6 +202,25 @@ describe('createQuestionReportFeedback', () => {
       category: 'incorrect_answer',
       comment: 'The keyed answer appears wrong.',
       createdAt,
+    });
+  });
+
+  it('rejects rating-only overrides at compile time', () => {
+    // @ts-expect-error report feedback fixtures cannot accept ratings
+    createQuestionReportFeedback({ rating: 'helpful' });
+    // @ts-expect-error report feedback fixtures cannot change the discriminant
+    createQuestionReportFeedback({ kind: 'rating' });
+  });
+
+  it('reasserts report invariants after unsafe overrides', () => {
+    const feedback = createQuestionReportFeedback({
+      kind: 'rating',
+      rating: 'helpful',
+    } as unknown as Parameters<typeof createQuestionReportFeedback>[0]);
+
+    expect(feedback).toMatchObject({
+      kind: 'report',
+      rating: null,
     });
   });
 });

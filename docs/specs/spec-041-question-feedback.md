@@ -333,8 +333,13 @@ export class RateQuestionUseCase {
 ```typescript
 // src/application/use-cases/get-question-rating.ts  (hydration)
 export class GetQuestionRatingUseCase {
-  constructor(private readonly feedback: QuestionFeedbackRepository) {}
+  constructor(
+    private readonly feedback: QuestionFeedbackRepository,
+    private readonly questions: QuestionRepository,
+  ) {}
   async execute(input: { userId: string; questionId: string }) {
+    const question = await this.questions.findPublishedById(input.questionId);
+    if (!question) throw new ApplicationError('NOT_FOUND', 'Question not found');
     const latest = await this.feedback.findLatestRatingByUser(
       input.userId,
       input.questionId,
@@ -565,17 +570,13 @@ bookmark-controller shape. Non-obvious facts the implementation must honor (veri
 - Inside `execute`: `requireEntitledUserId(deps, meta)` → `deps.rateLimiter.limit({ key: \`question-feedback:<action>:${userId}\`, ...QUESTION_RATING_RATE_LIMIT })` for `rateQuestion` and `...QUESTION_REPORT_RATE_LIMIT` for `submitQuestionReport` → `throw new ApplicationError('RATE_LIMITED', …)` when `!result.success`.
 - **Writes wrap the use case in `executeIdempotent({ d: deps, userId, idempotencyKey, action, outputSchema, execute })`.** Both `action` (a string label, e.g. `'question-feedback:rateQuestion'`) and `outputSchema` (a zod schema for the use-case output, e.g. `RateQuestionOutputSchema`) are **required**; `execute` is a zero-arg thunk; the idempotency repo/logger/clock are read from `d`. It returns the raw use-case output (not an `ActionResult`) — `createAction` wraps it in `ok(...)`. A missing key short-circuits to a plain call. The read action (`getQuestionRating`) is **not** wrapped (matching `getBookmarks`).
 
-Reuse `zUuid`; add enum schemas (and the output schemas the writes pass to `executeIdempotent`):
+Reuse `zUuid` and the domain-owned `AllQuestionFeedbackRatings` /
+`AllQuestionFeedbackCategories` literal arrays; add enum schemas (and the output schemas the writes pass
+to `executeIdempotent`):
 
 ```typescript
-const zRating = z.enum(['helpful', 'not_helpful']);
-const zCategory = z.enum([
-  'incorrect_answer',
-  'ambiguous_wording',
-  'typo_formatting',
-  'outdated_reference',
-  'other',
-]);
+const zRating = z.enum(AllQuestionFeedbackRatings);
+const zCategory = z.enum(AllQuestionFeedbackCategories);
 const zOptionalComment = z.preprocess(
   (value) =>
     typeof value === 'string' && value.trim().length === 0 ? undefined : value,
@@ -624,8 +625,8 @@ the factory object must stay in lockstep.
   `@/src/adapters/repositories` barrel and to the import block at the top of `repositories.ts`.
 - `use-cases.ts`: `createRateQuestionUseCase: () => new RateQuestionUseCase(repositories.createQuestionFeedbackRepository(), repositories.createQuestionRepository())`,
   `createSubmitQuestionReportUseCase` (same two deps), and
-  `createGetQuestionRatingUseCase: () => new GetQuestionRatingUseCase(repositories.createQuestionFeedbackRepository())`
-  (feedback repo only). Import the three classes from `@/src/application/use-cases`.
+  `createGetQuestionRatingUseCase: () => new GetQuestionRatingUseCase(repositories.createQuestionFeedbackRepository(), repositories.createQuestionRepository())`.
+  Import the three classes from `@/src/application/use-cases`.
 - `controllers.ts`: `createQuestionFeedbackControllerDeps: () => ({ authGateway: gateways.createAuthGateway(), logger: primitives.logger, rateLimiter: gateways.createRateLimiter(), idempotencyKeyRepository: repositories.createIdempotencyKeyRepository(), checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(), rateQuestionUseCase: useCases.createRateQuestionUseCase(), getQuestionRatingUseCase: useCases.createGetQuestionRatingUseCase(), submitQuestionReportUseCase: useCases.createSubmitQuestionReportUseCase(), now: primitives.now })`.
 - `types.ts`: extend `RepositoryFactories`, `UseCaseFactories`, and `ControllerFactories` **and their
   import blocks** with the new factory types, so `ContainerOverrides`-based DI overrides keep compiling
@@ -807,7 +808,8 @@ Write in dependency order; each layer red before its implementation.
    rating, uses `id DESC` as the deterministic tie-breaker for equal `createdAt`, ignores reports,
    returns null when none.
 3. **Use cases** (fakes): `RateQuestion` (NOT_FOUND when question absent; records `rating` event;
-   retraction records `rating=null`), `GetQuestionRating` (latest wins; null when none),
+   retraction records `rating=null`), `GetQuestionRating` (NOT_FOUND when question absent; latest wins;
+   null when none),
    `SubmitQuestionReport` (NOT_FOUND; records `report` event; returns id).
 4. **Drizzle repo** — unit (mocked db chain) + **integration** (`tests/integration/*.integration.test.ts`):
    real append, row→union mapping, latest-rating query including equal-`createdAt` tie-breaker, and

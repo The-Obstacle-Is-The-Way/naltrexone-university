@@ -583,6 +583,7 @@ export const questionFeedback = pgTable(
     ),
     kindShapeCheck: check(
       'question_feedback_kind_shape_chk',
+      // Rating NULL is a valid append-only retraction event.
       sql`(${t.kind} = 'rating' AND ${t.category} IS NULL AND ${t.comment} IS NULL)
           OR (${t.kind} = 'report' AND ${t.category} IS NOT NULL AND ${t.rating} IS NULL)`,
     ),

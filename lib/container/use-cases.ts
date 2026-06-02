@@ -112,6 +112,7 @@ export function createUseCaseFactories(input: {
     createGetQuestionRatingUseCase: () =>
       new GetQuestionRatingUseCase(
         repositories.createQuestionFeedbackRepository(),
+        repositories.createQuestionRepository(),
       ),
     createRateQuestionUseCase: () =>
       new RateQuestionUseCase(
