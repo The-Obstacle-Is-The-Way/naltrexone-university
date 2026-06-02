@@ -1,0 +1,3 @@
+CREATE INDEX "question_feedback_user_created_at_idx" ON "question_feedback" USING btree ("user_id","created_at" desc,"id" desc);--> statement-breakpoint
+CREATE INDEX "question_feedback_attempt_created_at_idx" ON "question_feedback" USING btree ("attempt_id","created_at" desc,"id" desc);--> statement-breakpoint
+CREATE INDEX "question_feedback_practice_session_created_at_idx" ON "question_feedback" USING btree ("practice_session_id","created_at" desc,"id" desc);

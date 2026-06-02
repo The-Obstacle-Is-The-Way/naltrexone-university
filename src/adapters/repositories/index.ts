@@ -5,6 +5,7 @@ export { DrizzleDeletedClerkUserRepository } from './drizzle-deleted-clerk-user-
 export { DrizzleIdempotencyKeyRepository } from './drizzle-idempotency-key-repository';
 export { DrizzlePendingStripeCancellationRepository } from './drizzle-pending-stripe-cancellation-repository';
 export { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
+export { DrizzleQuestionFeedbackRepository } from './drizzle-question-feedback-repository';
 export { DrizzleQuestionRepository } from './drizzle-question-repository';
 export { DrizzleStripeCustomerRepository } from './drizzle-stripe-customer-repository';
 export { DrizzleStripeEventRepository } from './drizzle-stripe-event-repository';

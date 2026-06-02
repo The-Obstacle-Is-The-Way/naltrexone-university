@@ -1,0 +1,87 @@
+import { and, desc, eq } from 'drizzle-orm';
+import { questionFeedback } from '@/db/schema';
+import { ApplicationError } from '@/src/application/errors';
+import type { QuestionFeedbackRepository } from '@/src/application/ports/repositories';
+import type {
+  NewQuestionFeedback,
+  QuestionRatingFeedback,
+} from '@/src/domain/entities';
+import type { DrizzleDb } from '../shared/database-types';
+import { toQuestionFeedbackDomain } from './question-feedback-row-mappers';
+
+export class DrizzleQuestionFeedbackRepository
+  implements QuestionFeedbackRepository
+{
+  constructor(private readonly db: DrizzleDb) {}
+
+  async record(event: NewQuestionFeedback) {
+    let row: (typeof questionFeedback)['$inferSelect'] | undefined;
+    try {
+      [row] = await this.db
+        .insert(questionFeedback)
+        .values({
+          userId: event.userId,
+          questionId: event.questionId,
+          attemptId: event.attemptId,
+          practiceSessionId: event.practiceSessionId,
+          kind: event.kind,
+          rating: event.rating,
+          category: event.category,
+          comment: event.comment,
+        })
+        .returning();
+    } catch (error) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Failed to insert question feedback',
+        undefined,
+        { cause: error },
+      );
+    }
+
+    if (!row) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Failed to insert question feedback',
+      );
+    }
+
+    return toQuestionFeedbackDomain(row);
+  }
+
+  async findLatestRatingByUser(
+    userId: string,
+    questionId: string,
+  ): Promise<QuestionRatingFeedback | null> {
+    let row: (typeof questionFeedback)['$inferSelect'] | undefined;
+    try {
+      row = await this.db.query.questionFeedback.findFirst({
+        where: and(
+          eq(questionFeedback.userId, userId),
+          eq(questionFeedback.questionId, questionId),
+          eq(questionFeedback.kind, 'rating'),
+        ),
+        orderBy: [desc(questionFeedback.createdAt), desc(questionFeedback.id)],
+      });
+    } catch (error) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Failed to load latest question rating',
+        undefined,
+        { cause: error },
+      );
+    }
+
+    if (!row) return null;
+
+    const mapped = toQuestionFeedbackDomain(row);
+    if (mapped.kind !== 'rating') {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Invalid question feedback row',
+      );
+    }
+
+    return mapped;
+  }
+}

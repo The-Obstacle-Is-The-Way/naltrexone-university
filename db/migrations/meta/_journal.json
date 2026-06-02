@@ -134,6 +134,20 @@
       "when": 1779498169302,
       "tag": "0018_backfill-omitted-exam-attempts",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1780352345440,
+      "tag": "0019_illegal_warbound",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1780410037334,
+      "tag": "0020_fat_ironclad",
+      "breakpoints": true
     }
   ]
 }

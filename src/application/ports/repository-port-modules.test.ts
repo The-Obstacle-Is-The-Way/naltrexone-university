@@ -6,6 +6,7 @@ import type { DeletedClerkUserRepository } from './deleted-clerk-user-repository
 import type { IdempotencyKeyRepository } from './idempotency-key-repository';
 import type { PendingStripeCancellationRepository } from './pending-stripe-cancellation-repository';
 import type { PracticeSessionRepository } from './practice-session-repository';
+import type { QuestionFeedbackRepository } from './question-feedback-repository';
 import type { QuestionRepository } from './question-repository';
 import type {
   AttemptRepository as AttemptRepositoryFromBarrel,
@@ -15,6 +16,7 @@ import type {
   IdempotencyKeyRepository as IdempotencyKeyRepositoryFromBarrel,
   PendingStripeCancellationRepository as PendingStripeCancellationRepositoryFromBarrel,
   PracticeSessionRepository as PracticeSessionRepositoryFromBarrel,
+  QuestionFeedbackRepository as QuestionFeedbackRepositoryFromBarrel,
   QuestionRepository as QuestionRepositoryFromBarrel,
   StripeCustomerRepository as StripeCustomerRepositoryFromBarrel,
   StripeEventRepository as StripeEventRepositoryFromBarrel,
@@ -38,6 +40,7 @@ describe('repository port modules', () => {
     expectTypeOf<DeletedClerkUserRepositoryFromBarrel>().toEqualTypeOf<DeletedClerkUserRepository>();
     expectTypeOf<PendingStripeCancellationRepositoryFromBarrel>().toEqualTypeOf<PendingStripeCancellationRepository>();
     expectTypeOf<TagRepositoryFromBarrel>().toEqualTypeOf<TagRepository>();
+    expectTypeOf<QuestionFeedbackRepositoryFromBarrel>().toEqualTypeOf<QuestionFeedbackRepository>();
     expectTypeOf<SubscriptionRepositoryFromBarrel>().toEqualTypeOf<SubscriptionRepository>();
     expectTypeOf<StripeCustomerRepositoryFromBarrel>().toEqualTypeOf<StripeCustomerRepository>();
     expectTypeOf<StripeEventRepositoryFromBarrel>().toEqualTypeOf<StripeEventRepository>();

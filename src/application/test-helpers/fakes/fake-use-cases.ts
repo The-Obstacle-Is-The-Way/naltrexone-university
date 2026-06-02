@@ -20,6 +20,18 @@ export class FakeToggleBookmarkUseCase extends FakeUseCase<
   U.ToggleBookmarkInput,
   U.ToggleBookmarkOutput
 > {}
+export class FakeRateQuestionUseCase extends FakeUseCase<
+  U.RateQuestionInput,
+  U.RateQuestionOutput
+> {}
+export class FakeGetQuestionRatingUseCase extends FakeUseCase<
+  U.GetQuestionRatingInput,
+  U.GetQuestionRatingOutput
+> {}
+export class FakeSubmitQuestionReportUseCase extends FakeUseCase<
+  U.SubmitQuestionReportInput,
+  U.SubmitQuestionReportOutput
+> {}
 export class FakeGetBookmarksUseCase extends FakeUseCase<
   U.GetBookmarksInput,
   U.GetBookmarksOutput

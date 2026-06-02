@@ -6,6 +6,10 @@ import type {
   PracticeSessionQuestionState,
 } from '../entities/practice-session';
 import type { Question } from '../entities/question';
+import type {
+  QuestionRatingFeedback,
+  QuestionReportFeedback,
+} from '../entities/question-feedback';
 import type { Subscription } from '../entities/subscription';
 import type { Tag } from '../entities/tag';
 import type { User } from '../entities/user';
@@ -77,6 +81,50 @@ export function createBookmark(overrides: Partial<Bookmark> = {}): Bookmark {
     questionId: createUuid(),
     createdAt: now,
     ...overrides,
+  };
+}
+
+export function createQuestionRatingFeedback(
+  overrides: Partial<
+    Omit<QuestionRatingFeedback, 'kind' | 'category' | 'comment'>
+  > = {},
+): QuestionRatingFeedback {
+  const now = new Date();
+  const { rating = 'helpful', ...rest } = overrides;
+
+  return {
+    id: createUuid(),
+    userId: createUuid(),
+    questionId: createUuid(),
+    attemptId: null,
+    practiceSessionId: null,
+    createdAt: now,
+    ...rest,
+    kind: 'rating',
+    rating,
+    category: null,
+    comment: null,
+  };
+}
+
+export function createQuestionReportFeedback(
+  overrides: Partial<Omit<QuestionReportFeedback, 'kind' | 'rating'>> = {},
+): QuestionReportFeedback {
+  const now = new Date();
+  const { category = 'other', comment = null, ...rest } = overrides;
+
+  return {
+    id: createUuid(),
+    userId: createUuid(),
+    questionId: createUuid(),
+    attemptId: null,
+    practiceSessionId: null,
+    createdAt: now,
+    ...rest,
+    kind: 'report',
+    rating: null,
+    category,
+    comment,
   };
 }
 

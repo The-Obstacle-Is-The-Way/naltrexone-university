@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { DrizzleUserRepository } from '@/src/adapters/repositories';
+import {
+  DrizzleQuestionFeedbackRepository,
+  DrizzleUserRepository,
+} from '@/src/adapters/repositories';
 
 describe('repositories exports', () => {
-  it('exports DrizzleUserRepository from the barrel', () => {
+  it('exports repositories from the barrel', () => {
+    expect(DrizzleQuestionFeedbackRepository).toBeTypeOf('function');
     expect(DrizzleUserRepository).toBeTypeOf('function');
   });
 });

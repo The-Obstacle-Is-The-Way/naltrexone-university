@@ -68,6 +68,17 @@ export function createControllerFactories(input: {
       getBookmarksUseCase: useCases.createGetBookmarksUseCase(),
       now: primitives.now,
     }),
+    createQuestionFeedbackControllerDeps: () => ({
+      authGateway: gateways.createAuthGateway(),
+      logger: primitives.logger,
+      rateLimiter: gateways.createRateLimiter(),
+      idempotencyKeyRepository: repositories.createIdempotencyKeyRepository(),
+      checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
+      rateQuestionUseCase: useCases.createRateQuestionUseCase(),
+      getQuestionRatingUseCase: useCases.createGetQuestionRatingUseCase(),
+      submitQuestionReportUseCase: useCases.createSubmitQuestionReportUseCase(),
+      now: primitives.now,
+    }),
     createPracticeControllerDeps: () => ({
       authGateway: gateways.createAuthGateway(),
       logger: primitives.logger,

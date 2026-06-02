@@ -2,6 +2,7 @@ import type { BillingControllerDeps } from '@/src/adapters/controllers/billing-c
 import type { BookmarkControllerDeps } from '@/src/adapters/controllers/bookmark-controller';
 import type { PracticeControllerDeps } from '@/src/adapters/controllers/practice-controller';
 import type { QuestionControllerDeps } from '@/src/adapters/controllers/question-controller';
+import type { QuestionFeedbackControllerDeps } from '@/src/adapters/controllers/question-feedback-controller';
 import type { QuestionViewControllerDeps } from '@/src/adapters/controllers/question-view-controller';
 import type { ReviewControllerDeps } from '@/src/adapters/controllers/review-controller';
 import type { StatsControllerDeps } from '@/src/adapters/controllers/stats-controller';
@@ -21,6 +22,7 @@ import type {
   IdempotencyKeyRepository,
   PendingStripeCancellationRepository,
   PracticeSessionRepository,
+  QuestionFeedbackRepository,
   QuestionRepository,
   StripeCustomerRepository,
   StripeEventRepository,
@@ -43,12 +45,15 @@ import type {
   GetPracticeSessionReviewUseCase,
   GetPracticeSessionSummaryUseCase,
   GetPreviousAttemptUseCase,
+  GetQuestionRatingUseCase,
   GetSessionHistoryUseCase,
   GetUserStatsUseCase,
+  RateQuestionUseCase,
   SaveExamDraftAnswerUseCase,
   SetPracticeSessionQuestionMarkUseCase,
   StartPracticeSessionUseCase,
   SubmitAnswerUseCase,
+  SubmitQuestionReportUseCase,
   ToggleBookmarkUseCase,
 } from '@/src/application/use-cases';
 import type { env } from '../env';
@@ -84,6 +89,9 @@ export type RepositoryFactories = {
   createPracticeSessionRepository: (
     dbOverride?: DrizzleDb,
   ) => PracticeSessionRepository;
+  createQuestionFeedbackRepository: (
+    dbOverride?: DrizzleDb,
+  ) => QuestionFeedbackRepository;
   createQuestionRepository: (dbOverride?: DrizzleDb) => QuestionRepository;
   createTagRepository: (dbOverride?: DrizzleDb) => TagRepository;
   createSubscriptionRepository: (
@@ -114,6 +122,9 @@ export type UseCaseFactories = {
   createSaveExamDraftAnswerUseCase: () => SaveExamDraftAnswerUseCase;
   createGetNextQuestionUseCase: () => GetNextQuestionUseCase;
   createGetPreviousAttemptUseCase: () => GetPreviousAttemptUseCase;
+  createGetQuestionRatingUseCase: () => GetQuestionRatingUseCase;
+  createRateQuestionUseCase: () => RateQuestionUseCase;
+  createSubmitQuestionReportUseCase: () => SubmitQuestionReportUseCase;
   createGetBookmarksUseCase: () => GetBookmarksUseCase;
   createGetAttemptedQuestionsUseCase: () => GetAttemptedQuestionsUseCase;
   createGetIncompletePracticeSessionUseCase: () => GetIncompletePracticeSessionUseCase;
@@ -134,6 +145,7 @@ export type ControllerFactories = {
   createQuestionViewControllerDeps: () => QuestionViewControllerDeps;
   createBillingControllerDeps: () => BillingControllerDeps;
   createBookmarkControllerDeps: () => BookmarkControllerDeps;
+  createQuestionFeedbackControllerDeps: () => QuestionFeedbackControllerDeps;
   createPracticeControllerDeps: () => PracticeControllerDeps;
   createReviewControllerDeps: () => ReviewControllerDeps;
   createStatsControllerDeps: () => StatsControllerDeps;
