@@ -250,7 +250,11 @@ fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-i
 fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl border border-border bg-card p-6 text-foreground shadow-lg outline-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:w-full
 ```
 
-**Source:** `components/ui/alert-dialog.tsx`
+**Sources:** `components/ui/alert-dialog.tsx`, `components/ui/dialog.tsx`
+
+General-purpose dialogs reuse the same overlay and card class strings as alert dialogs. If a dialog
+needs a scroll-safe mobile variant or any other overlay/card change, document the S-4 variant here
+before adding new production UI classes.
 
 Action buttons inside dialogs use `buttonVariants` from `components/ui/button.tsx` (not ad-hoc dialog button styles).
 
