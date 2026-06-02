@@ -39,5 +39,8 @@ export const MAX_PRACTICE_SESSION_TAG_FILTERS = 50;
 /** Max length for tag slugs (matches db/schema.ts tags.slug varchar length). */
 export const MAX_TAG_SLUG_LENGTH = 255;
 
+/** Max length for question feedback report comments (matches db/schema.ts CHECK). */
+export const MAX_QUESTION_FEEDBACK_COMMENT_LENGTH = 2_000;
+
 /** Max difficulty filters per practice session (easy/medium/hard). */
 export const MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS = 3;

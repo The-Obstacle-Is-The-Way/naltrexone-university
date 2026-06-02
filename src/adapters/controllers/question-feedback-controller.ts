@@ -6,6 +6,7 @@ import {
   QUESTION_RATING_RATE_LIMIT,
   QUESTION_REPORT_RATE_LIMIT,
 } from '@/src/adapters/shared/rate-limits';
+import { MAX_QUESTION_FEEDBACK_COMMENT_LENGTH } from '@/src/adapters/shared/validation-limits';
 import { zUuid } from '@/src/adapters/shared/zod-schemas';
 import { ApplicationError } from '@/src/application/errors';
 import type {
@@ -36,7 +37,7 @@ const zCategory = z.enum(AllQuestionFeedbackCategories);
 const zOptionalComment = z.preprocess(
   (value) =>
     typeof value === 'string' && value.trim().length === 0 ? undefined : value,
-  z.string().trim().min(1).max(2000).optional(),
+  z.string().trim().min(1).max(MAX_QUESTION_FEEDBACK_COMMENT_LENGTH).optional(),
 );
 
 const RateQuestionInputSchema = z

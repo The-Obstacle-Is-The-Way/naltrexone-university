@@ -570,9 +570,10 @@ bookmark-controller shape. Non-obvious facts the implementation must honor (veri
 - Inside `execute`: `requireEntitledUserId(deps, meta)` → `deps.rateLimiter.limit({ key: \`question-feedback:<action>:${userId}\`, ...QUESTION_RATING_RATE_LIMIT })` for `rateQuestion` and `...QUESTION_REPORT_RATE_LIMIT` for `submitQuestionReport` → `throw new ApplicationError('RATE_LIMITED', …)` when `!result.success`.
 - **Writes wrap the use case in `executeIdempotent({ d: deps, userId, idempotencyKey, action, outputSchema, execute })`.** Both `action` (a string label, e.g. `'question-feedback:rateQuestion'`) and `outputSchema` (a zod schema for the use-case output, e.g. `RateQuestionOutputSchema`) are **required**; `execute` is a zero-arg thunk; the idempotency repo/logger/clock are read from `d`. It returns the raw use-case output (not an `ActionResult`) — `createAction` wraps it in `ok(...)`. A missing key short-circuits to a plain call. The read action (`getQuestionRating`) is **not** wrapped (matching `getBookmarks`).
 
-Reuse `zUuid` and the domain-owned `AllQuestionFeedbackRatings` /
-`AllQuestionFeedbackCategories` literal arrays; add enum schemas (and the output schemas the writes pass
-to `executeIdempotent`):
+Reuse `zUuid`, the domain-owned `AllQuestionFeedbackRatings` /
+`AllQuestionFeedbackCategories` literal arrays, and
+`MAX_QUESTION_FEEDBACK_COMMENT_LENGTH` from `src/adapters/shared/validation-limits.ts`; add enum schemas
+(and the output schemas the writes pass to `executeIdempotent`):
 
 ```typescript
 const zRating = z.enum(AllQuestionFeedbackRatings);
@@ -580,7 +581,7 @@ const zCategory = z.enum(AllQuestionFeedbackCategories);
 const zOptionalComment = z.preprocess(
   (value) =>
     typeof value === 'string' && value.trim().length === 0 ? undefined : value,
-  z.string().trim().min(1).max(2000).optional(),
+  z.string().trim().min(1).max(MAX_QUESTION_FEEDBACK_COMMENT_LENGTH).optional(),
 );
 
 const RateQuestionInputSchema = z
@@ -692,12 +693,13 @@ hover:bg-foreground/[0.06] dark:hover:border-foreground/50 dark:hover:bg-foregro
 `cursor-not-allowed opacity-50`. If visual review proves the modal needs a denser radio-row variant,
 add that variant to `docs/frontend/pattern-registry.md` with contrast evidence before implementing it.
 
-The optional comment field is `<Textarea name="comment" autoComplete="off" maxLength={2000}>` under
-"Add details (optional)" with a live character counter. The label and legend are `text-sm font-medium
-text-foreground`; the description and normal counter/helper text are `text-sm text-muted-foreground`;
-the near-limit counter (100 chars remaining or fewer) is `text-sm font-medium
-text-warning-foreground`; validation copy is `text-sm text-destructive` with `role="alert"` and the
-field/control wired through `aria-describedby`. Invalid submit (no category) shows "Choose a category
+The optional comment field is `<Textarea name="comment" autoComplete="off"
+maxLength={MAX_QUESTION_FEEDBACK_COMMENT_LENGTH}>` under "Add details (optional)" with a live character
+counter. The label and legend are `text-sm font-medium text-foreground`; the description and normal
+counter/helper text are `text-sm text-muted-foreground`; the near-limit counter (100 chars remaining or
+fewer) is `text-sm font-medium text-warning-foreground`; validation copy is `text-sm text-destructive`
+with `role="alert"` and the field/control wired through `aria-describedby`. Invalid submit (no category)
+shows "Choose a category
 to send your feedback." and focuses the first invalid radio control; invalid textarea state uses the
 `Textarea` primitive's `aria-invalid` destructive ring. The footer uses Button primitives for
 **Cancel** + **"Submit feedback"**.

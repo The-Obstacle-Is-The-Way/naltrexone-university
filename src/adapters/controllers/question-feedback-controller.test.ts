@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { MAX_QUESTION_FEEDBACK_COMMENT_LENGTH } from '@/src/adapters/shared/validation-limits';
 import { ApplicationError } from '@/src/application/errors';
 import {
   FakeAuthGateway,
@@ -301,6 +302,28 @@ describe('question-feedback-controller', () => {
       expect(result).toMatchObject({
         ok: false,
         error: { code: 'VALIDATION_ERROR' },
+      });
+      expect(deps.submitQuestionReportUseCase.inputs).toEqual([]);
+    });
+
+    it('returns VALIDATION_ERROR when comment exceeds the feedback comment limit', async () => {
+      const deps = createDeps();
+
+      const result = await submitQuestionReport(
+        {
+          questionId,
+          category: 'other',
+          comment: 'a'.repeat(MAX_QUESTION_FEEDBACK_COMMENT_LENGTH + 1),
+        },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          fieldErrors: { comment: expect.any(Array) },
+        },
       });
       expect(deps.submitQuestionReportUseCase.inputs).toEqual([]);
     });
