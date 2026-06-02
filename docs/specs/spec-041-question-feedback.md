@@ -267,7 +267,10 @@ objects from `src/domain/value-objects/index.ts`.
 `createQuestionReportFeedback(overrides)` to `src/domain/test-helpers/factories.ts` and its `index.ts`
 barrel. Use UUID-emitting defaults via the existing `createUuid()` helper, `createdAt: new Date()`,
 nullable FK ids defaulting to `null`, and shape-correct defaults (`comment: null` only for reports,
-with ratings always setting `comment: null`). Avoid one permissive
+with ratings always setting `comment: null`). **Lock the discriminant fields against override:** type
+the param as `Partial<Omit<QuestionRatingFeedback, 'kind' | 'category' | 'comment'>>` (and the report
+analog `Omit<…, 'kind' | 'rating'>`) and hard-set `kind`/`category`/`rating`/`comment` *after* the
+`...overrides` spread, so callers can't produce an invalid-but-typed entity. Avoid one permissive
 `createQuestionFeedback({ kind, ... })` factory, because it would recreate the nullable-bag problem
 in tests.
 
@@ -544,13 +547,16 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_tes
 #### 3b. Drizzle repo (`src/adapters/repositories/drizzle-question-feedback-repository.ts`)
 
 Constructor-inject `DrizzleDb`. `record()` is a plain `insert(...).returning()` (no upsert —
-append-only). `findLatestRatingByUser()` is `findFirst` filtered to `kind='rating'`, ordered
-`desc(createdAt), desc(id)` (copy the attempt latest-read tie-breaker). Map rows → the discriminated
+append-only); wrap the insert call in try/catch and throw `ApplicationError('INTERNAL_ERROR',
+'Failed to insert question feedback', undefined, { cause })` on a driver failure, plus
+`ApplicationError('INTERNAL_ERROR', ...)` on a missing `returning()` row (bookmark pattern).
+`findLatestRatingByUser()` is `findFirst` filtered to `kind='rating'`, ordered `desc(createdAt),
+desc(id)` (copy the attempt latest-read tie-breaker); wrap unexpected read failures as
+`ApplicationError('INTERNAL_ERROR', 'Failed to load latest question rating', undefined, { cause })`,
+and after mapping re-assert `kind === 'rating'` (fail closed otherwise). Map rows → the discriminated
 domain union via a small `*-mappers.ts`; the mapper must fail closed with
 `ApplicationError('INTERNAL_ERROR', 'Invalid question feedback row')` if a row violates the union
-shape despite the DB `CHECK`. Throw `ApplicationError('INTERNAL_ERROR', ...)` on a missing
-`returning()` row (bookmark pattern) and wrap unexpected latest-rating read failures as
-`ApplicationError('INTERNAL_ERROR', 'Failed to load latest question rating', undefined, { cause })`.
+shape despite the DB `CHECK`.
 
 #### 3c. Rate limits (`src/adapters/shared/rate-limits.ts`)
 
