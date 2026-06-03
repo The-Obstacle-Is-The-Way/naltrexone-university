@@ -2,9 +2,9 @@
 
 **Priority:** P3 (blocks Dependabot PR #385 from going green; the fix is small — deterministic autofixes plus one manual key change — but the standalone Biome bump cannot merge until the codebase conforms to the new rule surface.)
 **Created:** 2026-06-03
-**Source:** Dependabot PR #385 (`chore(deps): bump @biomejs/biome from 2.3.13 to 2.4.15 in the biome group`). The standalone `biome` Dependabot group exists precisely because [DEBT-393](../_archive/debt/debt-393-dependabot-triage-and-config-hardening.md) §C split Biome out of `npm-minor-and-patch` so its lint-rule shift could be handled independently. DEBT-393 §C prescribed the resolution for exactly this case: **"accept the lint changes (fix the affected files)."** This doc executes that prescription for the 2.3.13 → 2.4.15 bump.
+**Source:** Dependabot PR #385 (`chore(deps): bump @biomejs/biome from 2.3.13 to 2.4.15 in the biome group`). The standalone `biome` Dependabot group exists precisely because [DEBT-393](../_archive/debt/debt-393-dependabot-triage-and-config-hardening.md) §C split Biome out of `npm-minor-and-patch` so its lint-rule shift could be handled independently. DEBT-393 §C named two complementary remedies for a Biome lint-rule shift — split Biome out of the group (shipped in PR #344) **and** "accept the lint changes (fix the affected files)." With the split already in place, this doc carries out the remaining recommended handling — accepting the lint shift — for the 2.3.13 → 2.4.15 bump.
 **Related:** [DEBT-393](../_archive/debt/debt-393-dependabot-triage-and-config-hardening.md) (Dependabot triage + the Biome group split that anticipated this), PR #385 (the lockfile bump this unblocks), PR #384 (sibling `npm-minor-and-patch` group, independent).
-**Status:** Open — doc written 2026-06-03 and passed an independent internal citation audit (all 13 load-bearing claims confirmed; caller-uniqueness gate resolved SAFE). Pending a second external audit, then the fix on branch `chore/biome-245-lint-conformance`.
+**Status:** Open — doc written 2026-06-03 and passed two independent citation audits (internal + external; all 13 load-bearing claims confirmed, caller-uniqueness gate resolved SAFE, plan judged sufficient: fixes A+B+E remove every Biome 2.4.15 error). Ready to implement on branch `chore/biome-245-lint-conformance`.
 
 ---
 
@@ -108,7 +108,7 @@ This keeps #385 a single-purpose Dependabot PR with **no manual commits on the D
 
 **During fix:** independent-agent review of the manual `noArrayIndexKey` change (Finding B), specifically the caller-uniqueness gate.
 
-**After fix (full gate on PR-A):**
+**After fix (full gate on PR-A)** — run under Node 24 to match CI (Node 22 shells emit a non-blocking `Unsupported engine` warning):
 - `pnpm dlx @biomejs/biome@2.4.15 ci .` → **0 errors** (warnings permitted: the 19 noExcessiveLines, and 0 or 3 useOptionalChain depending on whether C is included).
 - `pnpm lint:ci` (installed biome 2.3.13) → green (proves PR-A passes `dev` CI in the intermediate state).
 - `pnpm typecheck && pnpm test --run && pnpm test:browser && pnpm build` → green. (Integration/E2E unaffected by sort/key/optional-chain changes; run if the local DB/E2E env is available.)
