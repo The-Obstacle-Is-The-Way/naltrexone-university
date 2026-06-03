@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-03 (BUG-240/241 filed — SPEC-041 question feedback dead in dev/prod: migrations 0019/0020 never applied)
+**Last Updated:** 2026-06-03 (BUG-240 remediated + archived; BUG-241 remains open for deploy migration enforcement)
 
 ---
 
@@ -15,9 +15,11 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 **Next Bug ID:** BUG-242
 
-**Manual report (2026-06-03) — SPEC-041 question feedback dead end-to-end (migration rollout gap):**
-- BUG-240 filed (P0): SPEC-041 question feedback ("Was this a good question?" + "Give feedback") fails on every interaction with red "Couldn't save rating". Root cause is operational, not code: migrations `0019_illegal_warbound` (the `question_feedback` table + enums) and `0020_fat_ironclad` (indexes) were committed to git but never applied to the dev DB the running app connects to (read-only introspection: table + all 3 enums absent; last applied migration = `0018`). Production is presumed affected (same pipeline) and must be verified. Fix = apply the committed migrations with `DATABASE_URL=<env> pnpm db:migrate` per environment (never `drizzle-kit push`), after owner sign-off.
-- BUG-241 filed (P2): systemic cause — the deploy pipeline has no migration step. CI migrates only its throwaway DB (`ci.yml:37,106`); the `deploy` job only `echo`s (`ci.yml:206-212`); Vercel build runs `next build` with no `db:migrate`. So every schema-bearing PR can ship code referencing tables that don't exist in dev/prod with fully green CI. BUG-240 is the first outage from this gap.
+**Latest archival (2026-06-03) — SPEC-041 migration rollout incident remediated:**
+- BUG-240 verified fixed and archived: migrations `0019_illegal_warbound` and `0020_fat_ironclad` were applied to the deployed dev/preview and production DBs with `DATABASE_URL=<env> pnpm db:migrate`; read-only verification confirms the `question_feedback` table, all 3 enums, 7 indexes, and migration head `0020`. PR #391 merged with green CI/CodeRabbit, and dev/main are aligned at `704eabbf`.
+
+**Manual report (2026-06-03) — deploy migration enforcement gap remains open:**
+- BUG-241 filed (P2): systemic cause — the deploy pipeline has no migration step. CI migrates only its throwaway DB (`ci.yml:37,106`); the `deploy` job only `echo`s (`ci.yml:206-212`); Vercel build runs `next build` with no `db:migrate`. So every schema-bearing PR can ship code referencing tables that don't exist in dev/prod with fully green CI. BUG-240 was the first outage from this gap.
 
 **Latest archival (2026-04-25) — BUG-238 active-exam draft timing bound:**
 - BUG-238 verified fixed (PR #287, merged dev `ee1f801e`): `saveExamDraftAnswer` now rejects oversized `cumulativeMs` at the controller boundary, clamps non-controller use-case calls, and caps legacy oversized drafts during exam finalization. Archived to `docs/_archive/bugs/`.
@@ -136,7 +138,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | Bug | Family | Priority | Summary |
 |-----|--------|----------|---------|
-| [BUG-240](./bug-240-question-feedback-migrations-not-applied-to-dev-prod.md) | Schema / migrations / deploy rollout | **P0** | SPEC-041 question feedback is 100% non-functional in the running app ("Couldn't save rating") because migrations 0019/0020 (`question_feedback` table + enums + indexes) were never applied to the dev DB (confirmed absent) — prod presumed affected. Code/tests are correct; the migration was never run against the live DB. |
 | [BUG-241](./bug-241-deploy-pipeline-has-no-migration-step.md) | CI/CD / deploy / migrations | P2 | Deploy pipeline has no migration step — schema PRs ship code without applying migrations to dev/prod, with green CI (CI migrates only its throwaway DB). Systemic cause of BUG-240; will recur for every future migration without a gate. |
 
 ## Audit #20 — Post-Archive Active-Exam Follow-Up (2026-04-25)

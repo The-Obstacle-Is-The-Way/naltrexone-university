@@ -4,7 +4,7 @@
 **Priority:** P2 (systemic process/infra gap; latent outage for every schema-bearing PR; high blast radius)
 **Date:** 2026-06-03
 **Family:** CI/CD / deploy / migrations
-**Related:** [BUG-240](./bug-240-question-feedback-migrations-not-applied-to-dev-prod.md) (the first outage this gap produced)
+**Related:** [BUG-240](../_archive/bugs/bug-240-question-feedback-migrations-not-applied-to-dev-prod.md) (the first outage this gap produced; remediated and archived)
 
 ---
 
@@ -16,7 +16,7 @@ Applying migrations to the deployed databases is a **manual, documented-but-unen
 - `docs/dev/deployment-procedure.md` §5 Pre-Deployment Checklist requires *"If schema changed: `pnpm db:migrate` run against the target deployed database immediately after deploy (forgetting this causes silent write failures)."*
 - `docs/dev/deployment-environments.md` documents the symptom under **"Missing Database Migration Causes Silent Write Failures."**
 
-The gap is that this is a **human checklist item with no automated enforcement** — exactly the kind of step that gets skipped under delivery pressure. [BUG-240](./bug-240-question-feedback-migrations-not-applied-to-dev-prod.md) is the first confirmed outage from skipping it (SPEC-041's `question_feedback` table was never applied to dev/prod). Adjacent: [DEBT-391](../debt/debt-391-local-e2e-schema-drift-preflight.md) (local/e2e schema-drift preflight) is related drift-detection momentum that could be extended to deploy.
+The gap is that this is a **human checklist item with no automated enforcement** — exactly the kind of step that gets skipped under delivery pressure. [BUG-240](../_archive/bugs/bug-240-question-feedback-migrations-not-applied-to-dev-prod.md) is the first confirmed outage from skipping it (SPEC-041's `question_feedback` table was never applied to dev/prod). Adjacent: [DEBT-391](../debt/debt-391-local-e2e-schema-drift-preflight.md) (local/e2e schema-drift preflight) is related drift-detection momentum that could be extended to deploy.
 
 ## Root Cause
 
@@ -28,7 +28,7 @@ The gap is that this is a **human checklist item with no automated enforcement**
 ## Impact
 
 - Every PR that adds a migration is a latent dev/prod outage that CI cannot detect.
-- The failure mode is invisible until a user exercises the new schema in the running app (exactly how [BUG-240](./bug-240-question-feedback-migrations-not-applied-to-dev-prod.md) surfaced).
+- The failure mode is invisible until a user exercises the new schema in the running app (exactly how [BUG-240](../_archive/bugs/bug-240-question-feedback-migrations-not-applied-to-dev-prod.md) surfaced).
 - Risk scales with migration cadence and with how decoupled the code deploy is from the schema change.
 
 ## Expected Fix (options — pick per ops constraints; do it safely)
@@ -49,7 +49,7 @@ Whichever is chosen:
 - [ ] A deliberately-added test migration on a throwaway branch is *not* deployable to a target environment without the migration being applied (the gate fails closed), OR the release-phase step applies it automatically and records it.
 - [ ] Re-running the chosen mechanism is idempotent (no error when migrations are already applied).
 - [ ] `docs/dev/` documents the mechanism and the manual fallback (host-verified explicit `DATABASE_URL`, never `push`).
-- [ ] [BUG-240](./bug-240-question-feedback-migrations-not-applied-to-dev-prod.md) remediation (dev + prod migrated) is complete so the live regression is closed independently of this gate.
+- [x] [BUG-240](../_archive/bugs/bug-240-question-feedback-migrations-not-applied-to-dev-prod.md) remediation (dev + prod migrated) is complete so the live regression is closed independently of this gate.
 
 ## Surfaces Confirmed
 
