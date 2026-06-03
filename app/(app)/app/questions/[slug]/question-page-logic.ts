@@ -386,7 +386,7 @@ export async function loadPreviousAttempt(input: {
 
   // Defensive guard: errors (!res.ok) and null results (!res.data, meaning
   // no previous attempt found) are differentiated for explicit fallback UX.
-  if (!res || !res.ok) {
+  if (!res?.ok) {
     setReviewHydrationState('hydration_error');
     return;
   }

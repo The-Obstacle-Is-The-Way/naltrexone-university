@@ -12,8 +12,8 @@ export const metadata: Metadata = {
   title: 'Practice Session - Addiction Boards',
 };
 
-export { isQuestionBookmarked, PracticeSessionPageView, SessionSummaryView };
 export type { PracticeSessionPageViewProps };
+export { isQuestionBookmarked, PracticeSessionPageView, SessionSummaryView };
 
 export default async function PracticeSessionPage({
   params,

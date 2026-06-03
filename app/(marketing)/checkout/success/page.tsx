@@ -16,9 +16,9 @@ export const metadata: Metadata = {
 export const maxDuration = 30;
 
 export {
-  syncCheckoutSuccess,
   type CheckoutSuccessDeps,
   type CheckoutSuccessTransaction,
+  syncCheckoutSuccess,
 };
 
 export type CheckoutSuccessPageProps = {

@@ -12,8 +12,8 @@ export const metadata: Metadata = {
   title: 'Question - Addiction Boards',
 };
 
-export { QuestionView };
 export type { QuestionViewProps };
+export { QuestionView };
 
 export default async function QuestionPage({
   params,
