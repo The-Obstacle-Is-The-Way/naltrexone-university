@@ -8,6 +8,8 @@
 **Layer:** Feature (touches Domain, Application, Adapters, App)
 **Date:** 2026-06-01
 
+> **Deployment note (2026-06-03):** the merged code was inert in every deployed environment until the schema migrations (`0019_illegal_warbound`, `0020_fat_ironclad`) were manually applied to the dev and production databases — the documented post-deploy `pnpm db:migrate` step had been skipped. Both DBs were migrated and verified on 2026-06-03. See [BUG-240](../../bugs/bug-240-question-feedback-migrations-not-applied-to-dev-prod.md) (incident) and [BUG-241](../../bugs/bug-241-deploy-pipeline-has-no-migration-step.md) (unenforced migrate-on-deploy step).
+
 ---
 
 ## Overview
