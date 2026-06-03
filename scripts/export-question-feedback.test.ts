@@ -17,6 +17,10 @@ const ORIGINAL_ENV = snapshotProcessEnv();
 
 afterEach(() => {
   restoreProcessEnv(ORIGINAL_ENV);
+  vi.doUnmock('postgres');
+  vi.doUnmock('drizzle-orm/postgres-js');
+  vi.resetModules();
+  vi.restoreAllMocks();
 });
 
 const BASE_ROW: QuestionFeedbackExportRow = {
@@ -212,44 +216,52 @@ describe('runExportQuestionFeedback', () => {
     );
     expect(sql.end).toHaveBeenCalledWith({ timeout: 5 });
   });
+
+  it('uses the seed-style postgres and drizzle defaults when dependencies are omitted', async () => {
+    vi.resetModules();
+    process.env.DATABASE_URL =
+      'postgresql://postgres:postgres@localhost:5434/addiction_boards_test';
+    const output = createWritableSink();
+    const sql = {
+      end: vi.fn().mockResolvedValue(undefined),
+    };
+    const fakeDb = createQuestionFeedbackSelectDb([BASE_ROW], {
+      assertTableIdentity: false,
+    });
+    const postgresMock = vi.fn(() => sql);
+    const drizzleMock = vi.fn(() => fakeDb);
+
+    vi.doMock('postgres', () => ({ default: postgresMock }));
+    vi.doMock('drizzle-orm/postgres-js', () => ({
+      drizzle: drizzleMock,
+    }));
+    const imported = await import('./export-question-feedback');
+
+    await imported.runExportQuestionFeedback([], output, createWritableSink());
+
+    expect(postgresMock).toHaveBeenCalledWith(process.env.DATABASE_URL, {
+      max: 1,
+    });
+    expect(drizzleMock).toHaveBeenCalledWith(
+      sql,
+      expect.objectContaining({ schema: expect.any(Object) }),
+    );
+    expect(output.text()).toContain('question-slug-1');
+    expect(sql.end).toHaveBeenCalledWith({ timeout: 5 });
+  });
 });
 
 describe('readQuestionFeedbackRows', () => {
   it('selects feedback rows joined to question slugs in newest-first order', async () => {
-    const calls: string[] = [];
     const selectedRows = [BASE_ROW];
-    const fakeDb = {
-      select(selection: Record<string, unknown>) {
-        calls.push(`select:${Object.keys(selection).join(',')}`);
-        return {
-          from(table: unknown) {
-            expect(table).toBe(schema.questionFeedback);
-            calls.push('from:questionFeedback');
-            return {
-              innerJoin(tableToJoin: unknown, condition: unknown) {
-                expect(tableToJoin).toBe(schema.questions);
-                expect(condition).toBeDefined();
-                calls.push('innerJoin:questions');
-                return {
-                  orderBy(...orderings: unknown[]) {
-                    expect(orderings).toHaveLength(2);
-                    calls.push('orderBy:createdAt,id');
-                    return Promise.resolve(selectedRows);
-                  },
-                };
-              },
-            };
-          },
-        };
-      },
-    };
+    const fakeDb = createQuestionFeedbackSelectDb(selectedRows);
 
     const rows = await readQuestionFeedbackRows(
       fakeDb as unknown as Parameters<typeof readQuestionFeedbackRows>[0],
     );
 
     expect(rows).toEqual(selectedRows);
-    expect(calls).toEqual([
+    expect(fakeDb.calls).toEqual([
       'select:id,userId,questionId,questionSlug,attemptId,practiceSessionId,kind,rating,category,comment,createdAt',
       'from:questionFeedback',
       'innerJoin:questions',
@@ -270,4 +282,46 @@ function createWritableSink(): NodeJS.WritableStream & { text(): string } {
       return value;
     },
   } as NodeJS.WritableStream & { text(): string };
+}
+
+function createQuestionFeedbackSelectDb(
+  rows: QuestionFeedbackExportRow[],
+  options = { assertTableIdentity: true },
+) {
+  const calls: string[] = [];
+
+  return {
+    calls,
+    select(selection: Record<string, unknown>) {
+      calls.push(`select:${Object.keys(selection).join(',')}`);
+      return {
+        from(table: unknown) {
+          if (options.assertTableIdentity) {
+            expect(table).toBe(schema.questionFeedback);
+          } else {
+            expect(table).toBeDefined();
+          }
+          calls.push('from:questionFeedback');
+          return {
+            innerJoin(tableToJoin: unknown, condition: unknown) {
+              if (options.assertTableIdentity) {
+                expect(tableToJoin).toBe(schema.questions);
+              } else {
+                expect(tableToJoin).toBeDefined();
+              }
+              expect(condition).toBeDefined();
+              calls.push('innerJoin:questions');
+              return {
+                orderBy(...orderings: unknown[]) {
+                  expect(orderings).toHaveLength(2);
+                  calls.push('orderBy:createdAt,id');
+                  return Promise.resolve(rows);
+                },
+              };
+            },
+          };
+        },
+      };
+    },
+  };
 }
