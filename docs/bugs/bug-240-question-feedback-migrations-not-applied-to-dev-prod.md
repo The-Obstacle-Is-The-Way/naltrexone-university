@@ -1,12 +1,13 @@
 # BUG-240: SPEC-041 Question Feedback Is Dead End-to-End — Migrations 0019/0020 Never Applied to Dev/Prod DB
 
-**Status:** Resolved 2026-06-03 — **dev/preview (Neon `dev` branch) AND production (Neon `main` branch) migrated & verified.** Ready to archive once [BUG-241](./bug-241-deploy-pipeline-has-no-migration-step.md) enforcement is decided.
+**Status:** Open (fix applied to live DBs; doc stays in the active register pending post-merge verification and archival)
 **Priority:** P0 (core new feature was 100% non-functional in every running environment)
 **Date:** 2026-06-03
 **Family:** Schema / migrations / deploy rollout
+**Resolution State:** Root cause remediated 2026-06-03 — schema migrations `0019`/`0020` applied to both deployed databases (dev/preview Neon `dev` branch + production Neon `main` branch) and verified read-only (table + 3 enums + indexes; `drizzle.__drizzle_migrations` head `0020`). Dev confirmed end-to-end (persisted `report`/`"test"` row). Per repo bug-doc lifecycle, this stays `Status: Open` while the documenting PR is on an open branch; flip to `Resolved` and archive to `docs/_archive/bugs/` only after merge + a post-merge prod smoke-test.
 **Related:** [BUG-241](./bug-241-deploy-pipeline-has-no-migration-step.md) (systemic cause — manual, unenforced migrate-on-deploy step), SPEC-041 ([docs/_archive/specs/spec-041-question-feedback.md](../_archive/specs/spec-041-question-feedback.md))
 
-> **Update 2026-06-03 (resolved):** This was a textbook instance of the documented known gotcha [deployment-environments.md → "Missing Database Migration Causes Silent Write Failures"](../dev/deployment-environments.md). Both deployed DBs were migrated with the official migrator and verified:
+> **Update 2026-06-03 (fix applied):** This was a textbook instance of the documented known gotcha [deployment-environments.md → "Missing Database Migration Causes Silent Write Failures"](../dev/deployment-environments.md). Both deployed DBs were migrated with the official migrator and verified:
 > - **dev/preview (Neon `dev` branch, host `ep-still-frog-…`)** — used by local `pnpm dev`, the Vercel Preview deployment, and the `…aqc6vir8n…` deployment URL. Verified end-to-end: 6 `question_feedback` rows persisted post-migration, including a `report` row with comment `"test"`.
 > - **production (Neon `main` branch, host `ep-withered-cell-…`, separate Vercel Production `DATABASE_URL`)** — read-only confirmed absent (head `0018`), migrated, re-verified (table + 3 enums present, head `0020`); pulled prod secrets wiped.
 
