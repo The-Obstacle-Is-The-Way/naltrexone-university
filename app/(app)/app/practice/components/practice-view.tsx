@@ -4,6 +4,11 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { useEffect, useId, useRef } from 'react';
 import { ErrorCard } from '@/components/error-card';
+import type { QuestionFeedbackRatingProps } from '@/components/question/question-feedback-rating';
+import {
+  QuestionReportDialog,
+  type QuestionReportDialogProps,
+} from '@/components/question/question-report-dialog';
 import { QuestionSurfaceBody } from '@/components/question/question-surface-body';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -36,6 +41,13 @@ export type PracticeViewProps = {
   isMarkingForReview?: boolean;
   bookmarkMessage?: string | null;
   bookmarkMessageVersion?: number;
+  questionFeedback?:
+    | (QuestionFeedbackRatingProps & {
+        isReportOpen: boolean;
+        openReport: (open?: boolean) => void;
+        submitReport: QuestionReportDialogProps['submitReport'];
+      })
+    | null;
   endSessionLabel?: string;
   questionPanelId?: string;
   questionAreaRef?: React.RefObject<HTMLElement | null>;
@@ -98,6 +110,7 @@ type TutorActionBarProps = Pick<
   | 'onNextQuestion'
   | 'onPreviousQuestion'
   | 'onToggleBookmark'
+  | 'questionFeedback'
   | 'submitResult'
 >;
 
@@ -181,6 +194,14 @@ function TutorActionBar(props: TutorActionBarProps) {
       >
         {props.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
       </Button>
+      {props.questionFeedback ? (
+        <QuestionReportDialog
+          open={props.questionFeedback.isReportOpen}
+          onOpenChange={props.questionFeedback.openReport}
+          submitReport={props.questionFeedback.submitReport}
+          disabled={isActionBarDisabled}
+        />
+      ) : null}
     </div>
   ) : null;
 
@@ -345,6 +366,7 @@ export function PracticeView(props: PracticeViewProps) {
           onPreviousQuestion={props.onPreviousQuestion}
           onEndSession={props.onEndSession}
           onToggleBookmark={props.onToggleBookmark}
+          questionFeedback={props.questionFeedback ?? null}
           submitResult={props.submitResult}
         />
       )}
@@ -498,6 +520,15 @@ export function PracticeView(props: PracticeViewProps) {
             }
             onSelectChoice={props.onSelectChoice}
             feedback={feedbackResult}
+            questionFeedbackRating={
+              props.questionFeedback
+                ? {
+                    rating: props.questionFeedback.rating,
+                    feedbackStatus: props.questionFeedback.feedbackStatus,
+                    onRate: props.questionFeedback.onRate,
+                  }
+                : null
+            }
             feedbackRef={feedbackRef}
           />
         ) : null}

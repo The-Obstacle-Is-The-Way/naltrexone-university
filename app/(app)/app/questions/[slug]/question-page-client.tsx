@@ -4,6 +4,11 @@ import Link from 'next/link';
 import { useMemo } from 'react';
 import { ReviewQuestionNavigator } from '@/app/(app)/app/questions/[slug]/components/review-question-navigator';
 import { ErrorCard } from '@/components/error-card';
+import type { QuestionFeedbackRatingProps } from '@/components/question/question-feedback-rating';
+import {
+  QuestionReportDialog,
+  type QuestionReportDialogProps,
+} from '@/components/question/question-report-dialog';
 import { QuestionSurfaceBody } from '@/components/question/question-surface-body';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -158,6 +163,13 @@ export type QuestionViewProps = {
   bookmarkStatus?: QuestionPageBookmarkStatus;
   isBookmarkHydrated?: boolean;
   isBookmarked?: boolean;
+  questionFeedback?:
+    | (QuestionFeedbackRatingProps & {
+        isReportOpen: boolean;
+        openReport: (open?: boolean) => void;
+        submitReport: QuestionReportDialogProps['submitReport'];
+      })
+    | null;
   mode?: QuestionMode | null;
   origin?: QuestionOrigin | null;
   sessionId?: string;
@@ -216,6 +228,7 @@ export function QuestionView(props: QuestionViewProps) {
   const isBookmarkHydrated = props.isBookmarkHydrated ?? false;
   const isBookmarked = props.isBookmarked ?? false;
   const onToggleBookmark = props.onToggleBookmark ?? (() => undefined);
+  const questionFeedback = props.questionFeedback ?? null;
   const questionSurfaceQuestion =
     props.question && !props.isLoadingPreviousAttempt && !isReviewHydrationError
       ? props.question
@@ -353,6 +366,15 @@ export function QuestionView(props: QuestionViewProps) {
           }
           onSelectChoice={props.onSelectChoice}
           feedback={questionSurfaceFeedback}
+          questionFeedbackRating={
+            isReviewMode && questionFeedback
+              ? {
+                  rating: questionFeedback.rating,
+                  feedbackStatus: questionFeedback.feedbackStatus,
+                  onRate: questionFeedback.onRate,
+                }
+              : null
+          }
           beforeQuestionCard={
             isSessionReviewUnansweredReveal ? (
               <Card
@@ -432,6 +454,15 @@ export function QuestionView(props: QuestionViewProps) {
             >
               {isBookmarked ? 'Remove bookmark' : 'Bookmark'}
             </Button>
+          ) : null}
+
+          {isReviewMode && props.question && questionFeedback ? (
+            <QuestionReportDialog
+              open={questionFeedback.isReportOpen}
+              onOpenChange={questionFeedback.openReport}
+              submitReport={questionFeedback.submitReport}
+              disabled={props.isPending}
+            />
           ) : null}
 
           {props.sessionNavigation ? (

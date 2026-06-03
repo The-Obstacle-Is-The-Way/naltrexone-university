@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import type { EndPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
 import type { GetCompletedSessionQuestionsWithFeedbackOutput } from '@/src/application/use-cases';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
+import type { PracticeViewProps } from '../../components/practice-view';
 import type { LoadState } from '../../practice-page-logic';
 import type { ExamResultsSubstage } from '../hooks/use-practice-session-review-stage';
 import { PostExamReviewView } from './post-exam-review-view';
@@ -22,6 +23,7 @@ type PracticeSessionExamResultsRendererInput = {
   questionPanelId: string;
   bookmarkStatus: 'idle' | 'loading' | 'error';
   isBookmarked: boolean;
+  questionFeedback?: PracticeViewProps['questionFeedback'];
   onToggleBookmark: () => void;
   onRetryPostExamReview?: () => void;
   onNavigatePostExamReviewQuestion?: (questionId: string) => void;
@@ -117,6 +119,7 @@ export function renderPracticeSessionExamResults(
       controlledPanelId={input.questionPanelId}
       bookmarkStatus={input.bookmarkStatus}
       isBookmarked={input.isBookmarked}
+      questionFeedback={input.questionFeedback ?? null}
       onToggleBookmark={input.onToggleBookmark}
       onNavigateQuestion={
         input.onNavigatePostExamReviewQuestion ?? (() => undefined)

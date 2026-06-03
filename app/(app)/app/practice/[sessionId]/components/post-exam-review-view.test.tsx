@@ -36,6 +36,9 @@ function renderView(input?: {
   row?: GetCompletedSessionQuestionsWithFeedbackOutput['rows'][number];
   currentQuestionId?: string | null;
   isBookmarked?: boolean;
+  questionFeedback?: Parameters<
+    typeof PostExamReviewView
+  >[0]['questionFeedback'];
 }) {
   const rows = input?.rows ?? [input?.row ?? createReviewRow()];
   const answered = rows.filter((row) => row.isAnswered).length;
@@ -60,6 +63,7 @@ function renderView(input?: {
       controlledPanelId="practice-question-panel"
       bookmarkStatus="idle"
       isBookmarked={input?.isBookmarked ?? false}
+      questionFeedback={input?.questionFeedback ?? null}
       onToggleBookmark={() => undefined}
       onNavigateQuestion={() => undefined}
       onViewSummary={() => undefined}
@@ -247,6 +251,50 @@ describe('PostExamReviewView', () => {
     });
 
     expect(getReviewActionLabels(doc)).toEqual(['Next', 'Bookmark']);
+  });
+
+  it('renders Give feedback as a post-exam review action sibling', () => {
+    const doc = renderView({
+      questionFeedback: {
+        rating: null,
+        feedbackStatus: 'idle',
+        onRate: () => undefined,
+        isReportOpen: false,
+        openReport: () => undefined,
+        submitReport: async () => true,
+      },
+    });
+
+    expect(getReviewActionLabels(doc)).toEqual([
+      'View Summary',
+      'Bookmark',
+      'Give feedback',
+    ]);
+  });
+
+  it('renders question feedback rating controls after the explanation', () => {
+    const doc = renderView({
+      row: createReviewRow({
+        isAnswered: true,
+        isCorrect: true,
+        selectedChoiceId: fixtureChoiceBId,
+        explanationMd: 'Post-exam explanation.',
+      }),
+      questionFeedback: {
+        rating: 'helpful',
+        feedbackStatus: 'saved',
+        onRate: () => undefined,
+        isReportOpen: false,
+        openReport: () => undefined,
+        submitReport: async () => true,
+      },
+    });
+    const html = doc.body.innerHTML;
+
+    expect(html).toContain('Was this a good question?');
+    expect(html.indexOf('Post-exam explanation.')).toBeLessThan(
+      html.indexOf('Was this a good question?'),
+    );
   });
 
   it('renders the last-question action bar with view summary before bookmark', () => {

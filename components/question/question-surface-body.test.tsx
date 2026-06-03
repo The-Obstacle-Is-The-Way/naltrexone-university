@@ -101,6 +101,27 @@ describe('QuestionSurfaceBody', () => {
     expect(html).toContain('Reference text');
   });
 
+  it('renders question feedback rating controls after the answer feedback panel', () => {
+    const { html } = renderQuestionSurfaceBody({
+      feedback: {
+        isCorrect: true,
+        explanationMd: 'Overall explanation',
+        referenceMd: null,
+        choiceExplanations: [],
+      },
+      questionFeedbackRating: {
+        rating: null,
+        feedbackStatus: 'idle',
+        onRate: () => undefined,
+      },
+    });
+
+    expect(html).toContain('Was this a good question?');
+    expect(html.indexOf('Overall explanation')).toBeLessThan(
+      html.indexOf('Was this a good question?'),
+    );
+  });
+
   it('does not render feedback when feedback is null', () => {
     const { html, doc } = renderQuestionSurfaceBody({ feedback: null });
 

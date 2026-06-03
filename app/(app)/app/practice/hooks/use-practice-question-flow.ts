@@ -3,6 +3,10 @@ import {
   usePracticeQuestionAnswerFlow,
 } from '@/app/(app)/app/practice/hooks/use-practice-question-answer-flow';
 import { usePracticeQuestionBookmarks } from '@/app/(app)/app/practice/hooks/use-practice-question-bookmarks';
+import {
+  type UsePracticeQuestionFeedbackOutput,
+  usePracticeQuestionFeedback,
+} from '@/app/(app)/app/practice/hooks/use-practice-question-feedback';
 import type { PracticeFilters } from '@/app/(app)/app/practice/practice-page-logic';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import {
@@ -26,6 +30,7 @@ export type UsePracticeQuestionFlowOutput = {
   bookmarkStatus: 'idle' | 'loading' | 'error';
   bookmarkMessage: string | null;
   bookmarkMessageVersion: number;
+  questionFeedback: UsePracticeQuestionFeedbackOutput;
   canSubmit: boolean;
   isBookmarked: boolean;
   questionAreaRef: React.RefObject<HTMLElement | null>;
@@ -55,9 +60,23 @@ export function usePracticeQuestionFlow(
     question: answerFlow.question,
     isMounted,
   });
+  const questionFeedback = usePracticeQuestionFeedback({
+    question: answerFlow.question
+      ? {
+          questionId: answerFlow.question.questionId,
+          attemptId: answerFlow.submitResult?.attemptId ?? null,
+          practiceSessionId: null,
+        }
+      : null,
+    isReviewMode:
+      answerFlow.submitResult !== null &&
+      typeof answerFlow.submitResult.isCorrect === 'boolean',
+    isMounted,
+  });
 
   return {
     ...answerFlow,
     ...bookmarks,
+    questionFeedback,
   };
 }

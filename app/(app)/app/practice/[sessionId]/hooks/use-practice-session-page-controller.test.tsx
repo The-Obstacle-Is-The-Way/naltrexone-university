@@ -25,6 +25,9 @@ describe('usePracticeSessionPageController', () => {
     expect(output.isMarkingForReview).toBe(false);
     expect(output.bookmarkMessage).toBeNull();
     expect(output.bookmarkMessageVersion).toBe(0);
+    expect(output.questionFeedback.rating).toBeNull();
+    expect(output.questionFeedback.feedbackStatus).toBe('idle');
+    expect(output.questionFeedback.isReportOpen).toBe(false);
     expect(output.canSubmit).toBe(false);
     expect(output.summary).toBeNull();
     expect(output.examResultsSubstage).toBeNull();
@@ -38,6 +41,9 @@ describe('usePracticeSessionPageController', () => {
     expect(typeof output.onRetryNavigator).toBe('function');
     expect(typeof output.onTryAgain).toBe('function');
     expect(typeof output.onToggleBookmark).toBe('function');
+    expect(typeof output.questionFeedback.onRate).toBe('function');
+    expect(typeof output.questionFeedback.openReport).toBe('function');
+    expect(typeof output.questionFeedback.submitReport).toBe('function');
     expect(typeof output.onToggleMarkForReview).toBe('function');
     expect(typeof output.onSelectChoice).toBe('function');
     expect(typeof output.onSubmit).toBe('function');
