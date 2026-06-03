@@ -796,6 +796,9 @@ No admin UI in v1 (there is no role system yet — out of scope). Two extraction
 
 1. **Documented SQL** (add to this spec's appendix + `docs/dev/`): e.g. report counts by category,
    helpful-rate per question (latest-rating-per-user), top-reported questions, recent comments.
+   The operational appendix lives in `docs/dev/question-feedback-analytics.md`; it includes the
+   verified current-helpful-rate query, top-reported-question query, category counts, and a
+   privacy-warning recent-comments query.
 2. **Ops export script** `scripts/export-question-feedback.ts` — follow the `scripts/seed.ts`
    convention exactly: add a `package.json` entry (e.g. `"export:feedback": "tsx scripts/export-question-feedback.ts"`,
    `tsx` not `ts-node`), load env via `dotenv.config({ path: '.env.local', quiet: true })` then
