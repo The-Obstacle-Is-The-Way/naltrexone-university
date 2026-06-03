@@ -98,7 +98,7 @@ export function QuestionReportDialogForm({
                 <label
                   key={option}
                   className={cn(
-                    'block w-full rounded-xl border border-foreground/50 bg-background/50 p-4 text-left shadow-sm transition-colors focus-within:border-ring ring-focus-within dark:border-foreground/40 dark:bg-background/50',
+                    'block w-full rounded-xl border border-foreground/50 bg-background/50 p-4 text-left shadow-sm transition-colors focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px] dark:border-foreground/40 dark:bg-background/50',
                     !selected &&
                       !isSubmitting &&
                       'cursor-pointer hover:border-foreground/55 hover:bg-foreground/[0.06] dark:hover:border-foreground/50 dark:hover:bg-foreground/[0.05]',

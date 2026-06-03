@@ -76,6 +76,7 @@ describe('QuestionReportDialog', () => {
     const description = doc.querySelector('[data-slot="dialog-description"]');
     const legend = doc.querySelector('legend');
     const radios = Array.from(doc.querySelectorAll('input[type="radio"]'));
+    const firstCategoryLabel = radios[0]?.closest('label');
     const textarea = doc.querySelector('[data-slot="textarea"]');
     const counter = doc.querySelector(
       '[data-testid="question-report-counter"]',
@@ -95,6 +96,15 @@ describe('QuestionReportDialog', () => {
     ]);
     expect(radios.every((radio) => radio.classList.contains('sr-only'))).toBe(
       true,
+    );
+    expect(firstCategoryLabel?.getAttribute('class')).toContain(
+      'focus-within:ring-ring/50',
+    );
+    expect(firstCategoryLabel?.getAttribute('class')).toContain(
+      'focus-within:ring-[3px]',
+    );
+    expect(firstCategoryLabel?.getAttribute('class')).not.toContain(
+      'ring-focus-within',
     );
     expect(html).toContain('Add details (optional)');
     expect(textarea?.getAttribute('name')).toBe('comment');
