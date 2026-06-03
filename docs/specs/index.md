@@ -1,7 +1,7 @@
 # Implementation Specifications
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-01
+**Last Updated:** 2026-06-03
 
 ---
 
@@ -22,7 +22,7 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Implemented (MVP complete) | Infrastructure |
 | [SPEC-039](./spec-039-exam-mode-timer.md) | Exam Mode Timer (whole-block countdown, auto-submit) | Implemented (PR #319) | Feature |
 | [SPEC-040](./spec-040-omitted-exam-answer-scoring.md) | Omitted Exam Answer Scoring (DEBT-390 fix; prerequisite for SPEC-039) | Implemented (PR #317) | Feature |
-| [SPEC-041](./spec-041-question-feedback.md) | Question Feedback (per-question 👍/👎 ratings + problem reports) | Proposed | Feature |
+| [SPEC-041](./spec-041-question-feedback.md) | Question Feedback (per-question 👍/👎 ratings + problem reports) | Implemented (PRs #380, #388, #389, #390) | Feature |
 
 **Master Spec split parts (readability):**
 
