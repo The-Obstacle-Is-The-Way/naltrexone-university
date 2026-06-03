@@ -28,10 +28,15 @@ import {
   type QuestionPageBookmarkStatus,
   useQuestionPageBookmarks,
 } from './use-question-page-bookmarks';
+import {
+  type UseQuestionPageFeedbackOutput,
+  useQuestionPageFeedback,
+} from './use-question-page-feedback';
 import { useQuestionPagePreviousAttempt } from './use-question-page-previous-attempt';
 import { useQuestionPageSessionNavigation } from './use-question-page-session-navigation';
 
 export type { QuestionPageBookmarkStatus } from './use-question-page-bookmarks';
+export type { QuestionPageFeedbackStatus } from './use-question-page-feedback';
 
 function resolveRetryOrigin(input: {
   mode?: QuestionMode | null;
@@ -70,6 +75,7 @@ export type UseQuestionPageControllerOutput = {
   bookmarkStatus: QuestionPageBookmarkStatus;
   isBookmarkHydrated: boolean;
   isBookmarked: boolean;
+  questionFeedback: UseQuestionPageFeedbackOutput;
   onTryAgain: () => void;
   onToggleBookmark: () => void;
   onSelectChoice: (choiceId: string) => void;
@@ -173,6 +179,13 @@ export function useQuestionPageController(
       question,
       isMounted,
     });
+  const questionFeedback = useQuestionPageFeedback({
+    mode: input.mode,
+    question,
+    attemptId: submitResult?.attemptId ?? normalizedAttemptId ?? null,
+    practiceSessionId: normalizedSessionId ?? null,
+    isMounted,
+  });
   const { sessionNavigation, markCurrentQuestionRetried } =
     useQuestionPageSessionNavigation({
       slug: input.slug,
@@ -348,6 +361,7 @@ export function useQuestionPageController(
     bookmarkStatus,
     isBookmarkHydrated,
     isBookmarked,
+    questionFeedback,
     onTryAgain: loadQuestion,
     onToggleBookmark,
     onSelectChoice,

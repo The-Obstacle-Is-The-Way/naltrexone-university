@@ -29,9 +29,15 @@ describe('usePracticeQuestionFlow', () => {
     expect(output.bookmarkMessageVersion).toBe(0);
     expect(output.canSubmit).toBe(false);
     expect(output.isBookmarked).toBe(false);
+    expect(output.questionFeedback.rating).toBeNull();
+    expect(output.questionFeedback.feedbackStatus).toBe('idle');
+    expect(output.questionFeedback.isReportOpen).toBe(false);
     expect(output.questionAreaRef).toBeDefined();
     expect(typeof output.onTryAgain).toBe('function');
     expect(typeof output.onToggleBookmark).toBe('function');
+    expect(typeof output.questionFeedback.onRate).toBe('function');
+    expect(typeof output.questionFeedback.openReport).toBe('function');
+    expect(typeof output.questionFeedback.submitReport).toBe('function');
     expect(typeof output.onSelectChoice).toBe('function');
     expect(typeof output.onSubmit).toBe('function');
     expect(typeof output.onNextQuestion).toBe('function');

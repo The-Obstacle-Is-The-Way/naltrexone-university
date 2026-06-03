@@ -13,6 +13,7 @@ import { usePracticeSessionQuestionFlow } from '@/app/(app)/app/practice/[sessio
 import { usePracticeSessionReviewStage } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage';
 import { ExamTimer } from '@/app/(app)/app/practice/components/exam-timer';
 import { usePracticeQuestionBookmarks } from '@/app/(app)/app/practice/hooks/use-practice-question-bookmarks';
+import { usePracticeQuestionFeedback } from '@/app/(app)/app/practice/hooks/use-practice-question-feedback';
 import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
@@ -37,7 +38,13 @@ import {
 
 const BOOTSTRAP_SUMMARY_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 
-type PracticeSessionPageControllerOutput = PracticeSessionPageViewProps & {
+type PracticeSessionPageControllerOutput = Omit<
+  PracticeSessionPageViewProps,
+  'questionFeedback'
+> & {
+  questionFeedback: NonNullable<
+    PracticeSessionPageViewProps['questionFeedback']
+  >;
   canSubmit: boolean;
   onSubmit: () => void;
 };
@@ -90,9 +97,56 @@ export function usePracticeSessionPageController(
     if (!currentRow?.isAvailable) return null;
     return { questionId: currentRow.questionId };
   }, [reviewStage.postExamReview, reviewStage.postExamReviewCurrentQuestionId]);
+  const currentPostExamFeedbackQuestion = useMemo(() => {
+    const currentRow =
+      reviewStage.postExamReview?.rows.find(
+        (row) => row.questionId === reviewStage.postExamReviewCurrentQuestionId,
+      ) ??
+      reviewStage.postExamReview?.rows[0] ??
+      null;
+
+    if (!currentRow?.isAvailable) return null;
+    return {
+      questionId: currentRow.questionId,
+      attemptId: null,
+      practiceSessionId: sessionId,
+    };
+  }, [
+    reviewStage.postExamReview,
+    reviewStage.postExamReviewCurrentQuestionId,
+    sessionId,
+  ]);
+  const activeQuestionFeedbackQuestion = useMemo(() => {
+    if (questionFlow.sessionMode === 'exam') return null;
+    if (!questionFlow.question) return null;
+    if (
+      questionFlow.submitResult === null ||
+      typeof questionFlow.submitResult.isCorrect !== 'boolean'
+    ) {
+      return null;
+    }
+
+    return {
+      questionId: questionFlow.question.questionId,
+      attemptId: questionFlow.submitResult.attemptId,
+      practiceSessionId: sessionId,
+    };
+  }, [
+    questionFlow.question,
+    questionFlow.sessionMode,
+    questionFlow.submitResult,
+    sessionId,
+  ]);
 
   const bookmarks = usePracticeQuestionBookmarks({
     question: currentPostExamBookmarkQuestion ?? questionFlow.question,
+    isMounted,
+  });
+  const currentFeedbackQuestion =
+    currentPostExamFeedbackQuestion ?? activeQuestionFeedbackQuestion;
+  const questionFeedback = usePracticeQuestionFeedback({
+    question: currentFeedbackQuestion,
+    isReviewMode: currentFeedbackQuestion !== null,
     isMounted,
   });
 
@@ -256,6 +310,7 @@ export function usePracticeSessionPageController(
     isMarkingForReview,
     bookmarkMessage: bookmarks.bookmarkMessage,
     bookmarkMessageVersion: bookmarks.bookmarkMessageVersion,
+    questionFeedback,
     canSubmit: questionFlow.canSubmit,
     onEndSession: reviewStage.onEndSession,
     onRetryReview: reviewStage.onRetryReview,

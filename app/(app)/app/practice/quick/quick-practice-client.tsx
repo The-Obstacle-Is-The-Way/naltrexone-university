@@ -106,6 +106,7 @@ export default function QuickPracticeClient() {
       isPending={questionFlow.isPending}
       bookmarkStatus={questionFlow.bookmarkStatus}
       isBookmarked={questionFlow.isBookmarked}
+      questionFeedback={questionFlow.questionFeedback}
       // Mark-for-review is session-only; ad-hoc practice doesn't support it yet.
       isMarkingForReview={false}
       bookmarkMessage={questionFlow.bookmarkMessage}

@@ -6,7 +6,10 @@ import {
   useMemo,
   useRef,
 } from 'react';
-import { PracticeView } from '@/app/(app)/app/practice/components/practice-view';
+import {
+  PracticeView,
+  type PracticeViewProps,
+} from '@/app/(app)/app/practice/components/practice-view';
 import {
   fireAndForget,
   logUnhandledAsyncError,
@@ -51,6 +54,7 @@ export type PracticeSessionPageViewProps = {
   isMarkingForReview?: boolean;
   bookmarkMessage?: string | null;
   bookmarkMessageVersion?: number;
+  questionFeedback?: PracticeViewProps['questionFeedback'];
   onEndSession: () => void;
   onRetryReview?: () => void;
   onRetryPostExamReview?: () => void;
@@ -150,6 +154,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
     questionPanelId,
     bookmarkStatus: props.bookmarkStatus,
     isBookmarked: props.isBookmarked,
+    questionFeedback: props.questionFeedback ?? null,
     onToggleBookmark: props.onToggleBookmark,
     onRetryPostExamReview: props.onRetryPostExamReview,
     onNavigatePostExamReviewQuestion: props.onNavigatePostExamReviewQuestion,
@@ -270,6 +275,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       isMarkingForReview={props.isMarkingForReview}
       bookmarkMessage={props.bookmarkMessage}
       bookmarkMessageVersion={props.bookmarkMessageVersion}
+      questionFeedback={props.questionFeedback ?? null}
       endSessionLabel={mode === 'exam' ? 'Review & Submit' : 'End session'}
       onEndSession={props.onEndSession}
       onTryAgain={onTryAgainResolved}

@@ -1,8 +1,11 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import type { PracticeViewProps } from '@/app/(app)/app/practice/components/practice-view';
 import { Feedback } from '@/components/question/feedback';
 import { QuestionCard } from '@/components/question/question-card';
+import { QuestionFeedbackRating } from '@/components/question/question-feedback-rating';
+import { QuestionReportDialog } from '@/components/question/question-report-dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import type {
@@ -19,6 +22,7 @@ type PostExamReviewViewProps = {
   controlledPanelId: string;
   bookmarkStatus: 'idle' | 'loading' | 'error';
   isBookmarked: boolean;
+  questionFeedback?: PracticeViewProps['questionFeedback'];
   onToggleBookmark: () => void;
   onNavigateQuestion: (questionId: string) => void;
   onViewSummary: () => void;
@@ -31,6 +35,7 @@ export function PostExamReviewView({
   controlledPanelId,
   bookmarkStatus,
   isBookmarked,
+  questionFeedback = null,
   onToggleBookmark,
   onNavigateQuestion,
   onViewSummary,
@@ -148,6 +153,13 @@ export function PostExamReviewView({
                 choiceExplanations={currentRow.choiceExplanations}
                 selectedChoiceId={currentRow.selectedChoiceId}
               />
+              {questionFeedback ? (
+                <QuestionFeedbackRating
+                  rating={questionFeedback.rating}
+                  feedbackStatus={questionFeedback.feedbackStatus}
+                  onRate={questionFeedback.onRate}
+                />
+              ) : null}
             </>
           ) : (
             <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
@@ -205,6 +217,13 @@ export function PostExamReviewView({
           >
             {isBookmarked ? 'Remove bookmark' : 'Bookmark'}
           </Button>
+        ) : null}
+        {currentRow?.isAvailable && questionFeedback ? (
+          <QuestionReportDialog
+            open={questionFeedback.isReportOpen}
+            onOpenChange={questionFeedback.openReport}
+            submitReport={questionFeedback.submitReport}
+          />
         ) : null}
       </div>
     </div>

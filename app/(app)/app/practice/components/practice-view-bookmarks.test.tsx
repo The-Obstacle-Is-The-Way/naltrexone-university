@@ -192,6 +192,65 @@ describe('PracticeView bookmarks', () => {
     expect(html).toContain('>Bookmark<');
   });
 
+  it('renders Give feedback as a review action sibling after feedback is visible', () => {
+    const question = createQuestionProps();
+    const selectedChoice = question.choices[0];
+    if (!selectedChoice) {
+      throw new Error('Expected at least one choice');
+    }
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        sessionInfo={{
+          sessionId: fixtureSession1Id,
+          mode: 'tutor',
+
+          deadlineAt: null,
+
+          index: 0,
+          total: 10,
+          isMarkedForReview: false,
+        }}
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={selectedChoice.id}
+        isAnswered={true}
+        submitResult={{
+          attemptId: fixtureAttempt1Id,
+          isCorrect: true,
+          correctChoiceId: selectedChoice.id,
+          explanationMd: 'Because.',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        questionFeedback={{
+          rating: null,
+          feedbackStatus: 'idle',
+          onRate: () => undefined,
+          isReportOpen: false,
+          openReport: () => undefined,
+          submitReport: async () => true,
+        }}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onToggleMarkForReview={() => undefined}
+        onSelectChoice={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
+    const labels = Array.from(actionBar?.querySelectorAll('button') ?? []).map(
+      (button) => button.textContent?.trim(),
+    );
+
+    expect(labels).toContain('Bookmark');
+    expect(labels).toContain('Give feedback');
+  });
+
   it('disables the tutor bookmark button when bookmarks are unavailable', () => {
     const question = createQuestionProps();
     const selectedChoice = question.choices[0];

@@ -3,6 +3,10 @@
 import type { ReactNode, RefObject } from 'react';
 import { Feedback, type FeedbackProps } from './feedback';
 import { QuestionCard, type QuestionCardChoice } from './question-card';
+import {
+  QuestionFeedbackRating,
+  type QuestionFeedbackRatingProps,
+} from './question-feedback-rating';
 
 type QuestionSurfaceBodyQuestion = {
   stemMd: string;
@@ -16,6 +20,7 @@ export type QuestionSurfaceBodyProps = {
   disabled: boolean;
   onSelectChoice: (choiceId: string) => void;
   feedback?: FeedbackProps | null;
+  questionFeedbackRating?: QuestionFeedbackRatingProps | null;
   feedbackRef?: RefObject<HTMLDivElement | null>;
   beforeQuestionCard?: ReactNode;
 };
@@ -27,6 +32,7 @@ export function QuestionSurfaceBody({
   disabled,
   onSelectChoice,
   feedback = null,
+  questionFeedbackRating = null,
   feedbackRef,
   beforeQuestionCard,
 }: QuestionSurfaceBodyProps) {
@@ -46,7 +52,12 @@ export function QuestionSurfaceBody({
   ) : null;
 
   const feedbackCard = feedback ? (
-    <Feedback {...feedback} selectedChoiceId={selectedChoiceId} />
+    <>
+      <Feedback {...feedback} selectedChoiceId={selectedChoiceId} />
+      {questionFeedbackRating ? (
+        <QuestionFeedbackRating {...questionFeedbackRating} />
+      ) : null}
+    </>
   ) : null;
 
   return (

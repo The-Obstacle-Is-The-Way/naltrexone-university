@@ -222,6 +222,51 @@ describe('PracticeView answer feedback', () => {
     expect(nextButton?.getAttribute('data-variant')).toBe('default');
   });
 
+  it('threads question feedback rating controls after the answer feedback panel', () => {
+    const question = createQuestionProps();
+    const selectedChoice = question.choices[0];
+    if (!selectedChoice) {
+      throw new Error('Expected at least one choice');
+    }
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={selectedChoice.id}
+        isAnswered={true}
+        submitResult={{
+          attemptId: fixtureAttempt1Id,
+          isCorrect: true,
+          correctChoiceId: selectedChoice.id,
+          explanationMd: 'Because.',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+        isPending={false}
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        questionFeedback={{
+          rating: 'helpful',
+          feedbackStatus: 'saved',
+          onRate: () => undefined,
+          isReportOpen: false,
+          openReport: () => undefined,
+          submitReport: async () => true,
+        }}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onNextQuestion={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('Was this a good question?');
+    expect(html.indexOf('Because.')).toBeLessThan(
+      html.indexOf('Was this a good question?'),
+    );
+  });
+
   it('does not render Review answers for tutor mode after answer commit', () => {
     const question = createQuestionProps();
     const selectedChoice = question.choices[0];

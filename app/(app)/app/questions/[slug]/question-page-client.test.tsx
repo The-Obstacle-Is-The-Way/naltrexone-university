@@ -61,7 +61,7 @@ describe('QuestionView', () => {
     );
   }
 
-  // Uses shadcn's data-slot="button" to capture both <button> and asChild <a> elements.
+  // Uses shadcn/Radix slots to capture buttons, asChild links, and Dialog triggers.
   // If shadcn removes data-slot, fall back to 'button, a' combined selector.
   function getBottomActionLabels(doc: Document): string[] {
     const bottomBar = getBottomActionBar(doc);
@@ -69,9 +69,11 @@ describe('QuestionView', () => {
       throw new Error('Expected bottom action bar');
     }
 
-    return Array.from(bottomBar.querySelectorAll('[data-slot="button"]')).map(
-      (element) => (element.textContent ?? '').trim(),
-    );
+    return Array.from(
+      bottomBar.querySelectorAll(
+        '[data-slot="button"], [data-slot="dialog-trigger"]',
+      ),
+    ).map((element) => (element.textContent ?? '').trim());
   }
 
   const sharedSessionNavigation = {
@@ -944,6 +946,120 @@ describe('QuestionView', () => {
 
     expect(bookmarkButton).not.toBeNull();
     expect(bookmarkButton?.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('renders Give feedback as a review action sibling', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        {...createBaseProps()}
+        mode="review"
+        origin="history"
+        question={{
+          questionId: fixtureQuestion1Id2,
+          slug: 'q1',
+          stemMd: 'Question stem',
+          difficulty: 'easy',
+          choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
+        }}
+        submitResult={{
+          attemptId: fixtureAttempt1Id,
+          isCorrect: true,
+          correctChoiceId: 'c1',
+          explanationMd: 'Explanation',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+        isBookmarked={false}
+        isBookmarkHydrated={true}
+        bookmarkStatus="idle"
+        questionFeedback={{
+          rating: null,
+          feedbackStatus: 'idle',
+          onRate: () => undefined,
+          isReportOpen: false,
+          openReport: () => undefined,
+          submitReport: async () => true,
+        }}
+        onToggleBookmark={() => undefined}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    expect(getBottomActionLabels(doc)).toContain('Bookmark');
+    expect(getBottomActionLabels(doc)).toContain('Give feedback');
+  });
+
+  it('renders question feedback rating controls after standalone review feedback', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        {...createBaseProps()}
+        mode="review"
+        origin="history"
+        question={{
+          questionId: fixtureQuestion1Id2,
+          slug: 'q1',
+          stemMd: 'Question stem',
+          difficulty: 'easy',
+          choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
+        }}
+        submitResult={{
+          attemptId: fixtureAttempt1Id,
+          isCorrect: true,
+          correctChoiceId: 'c1',
+          explanationMd: 'Standalone explanation',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+        questionFeedback={{
+          rating: 'helpful',
+          feedbackStatus: 'saved',
+          onRate: () => undefined,
+          isReportOpen: false,
+          openReport: () => undefined,
+          submitReport: async () => true,
+        }}
+      />,
+    );
+
+    expect(html).toContain('Was this a good question?');
+    expect(html.indexOf('Standalone explanation')).toBeLessThan(
+      html.indexOf('Was this a good question?'),
+    );
+  });
+
+  it('does not render standalone rating controls outside review mode', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        {...createBaseProps()}
+        question={{
+          questionId: fixtureQuestion1Id2,
+          slug: 'q1',
+          stemMd: 'Question stem',
+          difficulty: 'easy',
+          choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
+        }}
+        submitResult={{
+          attemptId: fixtureAttempt1Id,
+          isCorrect: true,
+          correctChoiceId: 'c1',
+          explanationMd: 'Standalone explanation',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+        questionFeedback={{
+          rating: 'helpful',
+          feedbackStatus: 'saved',
+          onRate: () => undefined,
+          isReportOpen: false,
+          openReport: () => undefined,
+          submitReport: async () => true,
+        }}
+      />,
+    );
+
+    expect(html).toContain('Standalone explanation');
+    expect(html).not.toContain('Was this a good question?');
+    expect(html).not.toContain('Give feedback');
   });
 
   it('hides the bookmark toggle while bookmark state is still hydrating', () => {

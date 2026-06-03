@@ -4,6 +4,7 @@ import type { QuestionOrigin } from '@/lib/routes';
 import * as bookmarkController from '@/src/adapters/controllers/bookmark-controller';
 import * as practiceController from '@/src/adapters/controllers/practice-controller';
 import * as questionController from '@/src/adapters/controllers/question-controller';
+import * as questionFeedbackController from '@/src/adapters/controllers/question-feedback-controller';
 import * as questionViewController from '@/src/adapters/controllers/question-view-controller';
 import type { GetBookmarksOutput } from '@/src/application/ports/bookmarks';
 import { ok } from '@/tests/test-helpers/ok';
@@ -26,6 +27,9 @@ vi.mock('@/src/adapters/controllers/question-view-controller', { spy: true });
 vi.mock('@/src/adapters/controllers/question-controller', { spy: true });
 vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
 vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
+vi.mock('@/src/adapters/controllers/question-feedback-controller', {
+  spy: true,
+});
 vi.mock('@/lib/report-client-error', { spy: true });
 
 export const getQuestionBySlug = vi.mocked(
@@ -40,6 +44,13 @@ export const getPracticeSessionReview = vi.mocked(
 );
 export const getBookmarks = vi.mocked(bookmarkController.getBookmarks);
 export const toggleBookmark = vi.mocked(bookmarkController.toggleBookmark);
+export const getQuestionRating = vi.mocked(
+  questionFeedbackController.getQuestionRating,
+);
+export const rateQuestion = vi.mocked(questionFeedbackController.rateQuestion);
+export const submitQuestionReport = vi.mocked(
+  questionFeedbackController.submitQuestionReport,
+);
 export const reportClientErrorSpy = vi.mocked(
   reportClientError.reportClientError,
 );
@@ -54,6 +65,11 @@ export function setupQuestionPageControllerBrowserSpec() {
   beforeEach(() => {
     getBookmarks.mockResolvedValue(emptyBookmarksResult);
     toggleBookmark.mockResolvedValue(ok({ bookmarked: false }));
+    getQuestionRating.mockResolvedValue(ok({ rating: null }));
+    rateQuestion.mockResolvedValue(ok({ rating: null }));
+    submitQuestionReport.mockResolvedValue(
+      ok({ feedbackId: crypto.randomUUID() }),
+    );
   });
 
   afterEach(() => {
@@ -144,6 +160,15 @@ export function Probe({
       <div data-testid="is-bookmarked">
         {output.isBookmarked ? 'true' : 'false'}
       </div>
+      <div data-testid="feedback-status">
+        {output.questionFeedback.feedbackStatus}
+      </div>
+      <div data-testid="question-rating">
+        {output.questionFeedback.rating ?? 'none'}
+      </div>
+      <div data-testid="is-report-open">
+        {output.questionFeedback.isReportOpen ? 'true' : 'false'}
+      </div>
       <button
         type="button"
         data-testid="select-choice-1"
@@ -178,6 +203,32 @@ export function Probe({
         onClick={() => void output.onToggleBookmark()}
       >
         Trigger toggle bookmark
+      </button>
+      <button
+        type="button"
+        data-testid="trigger-rate-good"
+        onClick={() => void output.questionFeedback.onRate('helpful')}
+      >
+        Trigger rate good
+      </button>
+      <button
+        type="button"
+        data-testid="trigger-open-report"
+        onClick={() => output.questionFeedback.openReport()}
+      >
+        Trigger open report
+      </button>
+      <button
+        type="button"
+        data-testid="trigger-submit-report"
+        onClick={() =>
+          void output.questionFeedback.submitReport({
+            category: 'ambiguous_wording',
+            comment: 'Needs source',
+          })
+        }
+      >
+        Trigger submit report
       </button>
     </>
   );
