@@ -14,7 +14,7 @@
 
 `lint:ci` runs `biome ci .` (see `package.json`). `biome ci` fails on **errors** only; **warnings** do not fail it. Running biome 2.4.15 against `dev` (ephemerally, no install) reports:
 
-```
+```text
 pnpm dlx @biomejs/biome@2.4.15 ci .
 => Found 11 errors, 22 warnings, 1 info   (before any fix)
 ```
@@ -38,7 +38,7 @@ After the safe autofix, `biome ci` reports **1 error** (`noArrayIndexKey`) + 22 
 
 `biome check --write` (safe fixes only) applies the `source.organizeImports` assist: 9 files get export-specifier / exported-name lists reordered alphabetically, and 1 file (`checkout-success-sync.tsx:25`) gets a required blank line inserted before a statement. All same assist category, same autofix, behavior-preserving. Affected files:
 
-```
+```text
 app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts
 app/(app)/app/practice/[sessionId]/page.tsx
 app/(app)/app/practice/[sessionId]/practice-session-page-client.tsx
