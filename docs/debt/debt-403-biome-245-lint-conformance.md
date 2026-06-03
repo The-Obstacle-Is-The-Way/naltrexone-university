@@ -87,7 +87,7 @@ These are test/spec files exceeding the 800-line threshold already configured as
 
 ### E. `$schema` bump — REQUIRED (cosmetic)
 
-`biome.json` line 2 pins `"$schema": "https://biomejs.dev/schemas/2.3.13/schema.json"`. Bump to `.../2.4.15/schema.json` so editor validation matches the binary. Biome ignores `$schema` for linting, so this is non-functional but keeps config honest.
+Before this PR, `biome.json` line 2 pinned `"$schema": "https://biomejs.dev/schemas/2.3.13/schema.json"`. This PR bumps it to `"https://biomejs.dev/schemas/2.4.15/schema.json"` so editor validation matches the binary. Biome ignores `$schema` for linting, so this is non-functional but keeps config honest.
 
 ---
 
