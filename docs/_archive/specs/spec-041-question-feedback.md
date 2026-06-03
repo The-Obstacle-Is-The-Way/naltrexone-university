@@ -4,7 +4,7 @@
 > Write tests FIRST. Red → Green → Refactor. No implementation without a failing test.
 > Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
 
-**Status:** Implemented (PRs #380, #388, #389, #390; shipped to `dev` and `main` in merge `90d002e1`)
+**Status:** Implemented (PRs #380, #388, #389, #390; shipped to `dev` and `main` in merge `90d002e1`; archived 2026-06-03)
 **Layer:** Feature (touches Domain, Application, Adapters, App)
 **Date:** 2026-06-01
 

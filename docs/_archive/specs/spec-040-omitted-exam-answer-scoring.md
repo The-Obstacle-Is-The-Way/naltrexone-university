@@ -4,7 +4,7 @@
 > Write tests FIRST. Red → Green → Refactor. No implementation without a failing test.
 > Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
 
-**Status:** Implemented (PR #317; shipped to `dev` in merge `3d8a292e`)
+**Status:** Implemented (PR #317; shipped to `dev` in merge `3d8a292e`; archived 2026-06-03)
 **Layer:** Feature (touches Domain, Application, Adapters, App)
 **Date:** 2026-05-22
 
@@ -12,7 +12,7 @@
 
 ## Overview
 
-This spec implemented the fix diagnosed in [DEBT-390](../_archive/debt/debt-390-omitted-exam-questions-recorded-as-unattempted-not-incorrect.md): before PR #317, when an exam was finalized, questions with no draft and no latest answer were silently dropped instead of being recorded as incorrect. At diagnosis time, `FinalizeExamAnswersUseCase` only wrote `attempts` rows for drafted states, so omitted questions left no attempt row and stayed terminal `null` in session state. The session accuracy percentage already counted them against the denominator, but every attempt-backed consumer (incorrect-question history, status filters, dashboard stats) was blind to them.
+This spec implemented the fix diagnosed in [DEBT-390](../debt/debt-390-omitted-exam-questions-recorded-as-unattempted-not-incorrect.md): before PR #317, when an exam was finalized, questions with no draft and no latest answer were silently dropped instead of being recorded as incorrect. At diagnosis time, `FinalizeExamAnswersUseCase` only wrote `attempts` rows for drafted states, so omitted questions left no attempt row and stayed terminal `null` in session state. The session accuracy percentage already counted them against the denominator, but every attempt-backed consumer (incorrect-question history, status filters, dashboard stats) was blind to them.
 
 This spec makes the omission a **first-class scored outcome**: a real `attempts` row with no selected choice, marked omitted, scored incorrect. Once such rows exist, the existing `isCorrect`-keyed consumers work unchanged; only choice-rendering code needs updating.
 
@@ -145,7 +145,7 @@ Layered, in dependency order. Each is Red before the corresponding Design item i
 
 ## Related
 
-- [DEBT-390](../_archive/debt/debt-390-omitted-exam-questions-recorded-as-unattempted-not-incorrect.md) — diagnosis & decided direction (source of truth)
+- [DEBT-390](../debt/debt-390-omitted-exam-questions-recorded-as-unattempted-not-incorrect.md) — diagnosis & decided direction (source of truth)
 - [SPEC-039](./spec-039-exam-mode-timer.md) — exam-mode timer (sequenced after this)
-- [SPEC-013](../_archive/specs/spec-013-practice-sessions.md), [SPEC-020](../_archive/specs/spec-020-practice-engine-completion.md), [SPEC-034](../_archive/specs/spec-034-review-mode-readonly-and-try-again-scoping.md)
-- [Practice Engine](../practice-engine/index.md)
+- [SPEC-013](./spec-013-practice-sessions.md), [SPEC-020](./spec-020-practice-engine-completion.md), [SPEC-034](./spec-034-review-mode-readonly-and-try-again-scoping.md)
+- [Practice Engine](../../practice-engine/index.md)

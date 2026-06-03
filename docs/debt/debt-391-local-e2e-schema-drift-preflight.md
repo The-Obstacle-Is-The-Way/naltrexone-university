@@ -3,7 +3,7 @@
 **Priority:** P2
 **Created:** 2026-05-23
 **Source:** Local authenticated E2E failed after SPEC-040 because the Neon `dev` branch behind `.env.local` had not been migrated to migrations `0017`/`0018`.
-**Related:** [Deployment Environments](../dev/deployment-environments.md), [Deployment Procedure](../dev/deployment-procedure.md), [Testing Infrastructure](../dev/testing-infrastructure.md), [SPEC-040](../specs/spec-040-omitted-exam-answer-scoring.md), [DEBT-390](../_archive/debt/debt-390-omitted-exam-questions-recorded-as-unattempted-not-incorrect.md)
+**Related:** [Deployment Environments](../dev/deployment-environments.md), [Deployment Procedure](../dev/deployment-procedure.md), [Testing Infrastructure](../dev/testing-infrastructure.md), [SPEC-040](../_archive/specs/spec-040-omitted-exam-answer-scoring.md), [DEBT-390](../_archive/debt/debt-390-omitted-exam-questions-recorded-as-unattempted-not-incorrect.md)
 
 **Status:** Active
 

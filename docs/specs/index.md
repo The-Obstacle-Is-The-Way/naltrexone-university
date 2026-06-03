@@ -20,9 +20,6 @@ Implementation specifications provide detailed technical guidance for building e
 | [Master Spec](./master_spec.md) | Complete Technical Specification (SSOT) | Living | All |
 | [SPEC-016](./spec-016-observability.md) | Observability (Logging, Error Tracking) | Implemented (DEBT-286 resolved) | Infrastructure |
 | [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Implemented (MVP complete) | Infrastructure |
-| [SPEC-039](./spec-039-exam-mode-timer.md) | Exam Mode Timer (whole-block countdown, auto-submit) | Implemented (PR #319) | Feature |
-| [SPEC-040](./spec-040-omitted-exam-answer-scoring.md) | Omitted Exam Answer Scoring (DEBT-390 fix; prerequisite for SPEC-039) | Implemented (PR #317) | Feature |
-| [SPEC-041](./spec-041-question-feedback.md) | Question Feedback (per-question 👍/👎 ratings + problem reports) | Implemented (PRs #380, #388, #389, #390) | Feature |
 
 **Master Spec split parts (readability):**
 
@@ -74,6 +71,9 @@ Implementation specifications provide detailed technical guidance for building e
 | [SPEC-036](../_archive/specs/spec-036-bookmark-review-mode-alignment.md) | Bookmark Review Mode Alignment | Feature |
 | [SPEC-037](../_archive/specs/spec-037-tab-switch-visual-unification.md) | Tab Switch Visual Unification — Shared Style Constants | Feature |
 | [SPEC-038](../_archive/specs/spec-038-history-ux-remediation.md) | History UX Remediation (BS-028 Re-Validated Findings) | Feature |
+| [SPEC-039](../_archive/specs/spec-039-exam-mode-timer.md) | Exam Mode Timer (whole-block countdown, auto-submit) | Feature |
+| [SPEC-040](../_archive/specs/spec-040-omitted-exam-answer-scoring.md) | Omitted Exam Answer Scoring (DEBT-390 fix; prerequisite for SPEC-039) | Feature |
+| [SPEC-041](../_archive/specs/spec-041-question-feedback.md) | Question Feedback (per-question ratings + problem reports) | Feature |
 
 ## Spec Statuses
 
