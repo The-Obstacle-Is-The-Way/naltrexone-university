@@ -50,6 +50,34 @@ describe('question-feedback-actions', () => {
     expect(setRatingKey).toHaveBeenCalledWith(secondIdempotencyKey);
   });
 
+  it('initializes a rating idempotency key before the first rating write', async () => {
+    const setRatingKey = vi.fn();
+    const rateQuestionFn = vi
+      .fn<(input: unknown) => Promise<ActionResult<RateQuestionOutput>>>()
+      .mockResolvedValue(ok({ rating: 'helpful' }));
+
+    await rateQuestionForQuestion({
+      question: { questionId, attemptId: null, practiceSessionId: null },
+      currentRating: null,
+      nextRating: 'helpful',
+      ratingIdempotencyKey: null,
+      createIdempotencyKey: () => firstIdempotencyKey,
+      setRatingIdempotencyKey: setRatingKey,
+      rateQuestionFn,
+      setRating: vi.fn(),
+      setFeedbackStatus: vi.fn(),
+    });
+
+    expect(setRatingKey).toHaveBeenCalledWith(firstIdempotencyKey);
+    expect(rateQuestionFn).toHaveBeenCalledWith({
+      questionId,
+      attemptId: null,
+      practiceSessionId: null,
+      rating: 'helpful',
+      idempotencyKey: firstIdempotencyKey,
+    });
+  });
+
   it('rolls back the optimistic rating when the write fails', async () => {
     const statuses: string[] = [];
     const ratings: Array<QuestionFeedbackRating | null> = [];
@@ -77,6 +105,46 @@ describe('question-feedback-actions', () => {
       code: 'INTERNAL_ERROR',
       message: 'Nope',
     });
+  });
+
+  it('rolls back thrown rating errors even when the reporter fails', async () => {
+    const statuses: string[] = [];
+    const ratings: Array<QuestionFeedbackRating | null> = [];
+
+    await rateQuestionForQuestion({
+      question: { questionId, attemptId: null, practiceSessionId: null },
+      currentRating: 'not_helpful',
+      nextRating: 'helpful',
+      ratingIdempotencyKey: firstIdempotencyKey,
+      rateQuestionFn: vi.fn().mockRejectedValue(new Error('Network down')),
+      setRating: (rating) => ratings.push(rating),
+      setFeedbackStatus: (status) => statuses.push(status),
+      logError: () => {
+        throw new Error('Reporter down');
+      },
+    });
+
+    expect(ratings).toEqual(['helpful', 'not_helpful']);
+    expect(statuses).toEqual(['saving', 'error']);
+  });
+
+  it('does not roll back a failed rating after unmount', async () => {
+    const statuses: string[] = [];
+    const ratings: Array<QuestionFeedbackRating | null> = [];
+
+    await rateQuestionForQuestion({
+      question: { questionId, attemptId: null, practiceSessionId: null },
+      currentRating: 'not_helpful',
+      nextRating: null,
+      ratingIdempotencyKey: firstIdempotencyKey,
+      rateQuestionFn: vi.fn().mockRejectedValue(new Error('Network down')),
+      setRating: (rating) => ratings.push(rating),
+      setFeedbackStatus: (status) => statuses.push(status),
+      isMounted: () => false,
+    });
+
+    expect(ratings).toEqual([null]);
+    expect(statuses).toEqual(['saving']);
   });
 
   it('submits report context and rotates its idempotency key only after success', async () => {
@@ -109,6 +177,36 @@ describe('question-feedback-actions', () => {
     expect(setReportKey).toHaveBeenCalledWith(secondIdempotencyKey);
   });
 
+  it('initializes a report idempotency key before the first submit', async () => {
+    const setReportKey = vi.fn();
+    const submitQuestionReportFn = vi
+      .fn<
+        (input: unknown) => Promise<ActionResult<SubmitQuestionReportOutput>>
+      >()
+      .mockResolvedValue(ok({ feedbackId: crypto.randomUUID() }));
+
+    const didSubmit = await submitReportForQuestion({
+      question: { questionId, attemptId: null, practiceSessionId: null },
+      category: 'incorrect_answer',
+      comment: null,
+      reportIdempotencyKey: null,
+      createIdempotencyKey: () => firstIdempotencyKey,
+      setReportIdempotencyKey: setReportKey,
+      submitQuestionReportFn,
+    });
+
+    expect(didSubmit).toBe(true);
+    expect(setReportKey).toHaveBeenCalledWith(firstIdempotencyKey);
+    expect(submitQuestionReportFn).toHaveBeenCalledWith({
+      questionId,
+      attemptId: null,
+      practiceSessionId: null,
+      category: 'incorrect_answer',
+      comment: null,
+      idempotencyKey: firstIdempotencyKey,
+    });
+  });
+
   it('does not include free-text report comments in error log context', async () => {
     const logError = vi.fn();
 
@@ -136,5 +234,22 @@ describe('question-feedback-actions', () => {
     expect(JSON.stringify(logError.mock.calls)).not.toContain(
       'Sensitive free text',
     );
+  });
+
+  it('returns false for thrown report errors even when the reporter fails', async () => {
+    const didSubmit = await submitReportForQuestion({
+      question: { questionId, attemptId: null, practiceSessionId: null },
+      category: 'other',
+      comment: 'Sensitive free text',
+      reportIdempotencyKey: firstIdempotencyKey,
+      submitQuestionReportFn: vi
+        .fn()
+        .mockRejectedValue(new Error('Network down')),
+      logError: () => {
+        throw new Error('Reporter down');
+      },
+    });
+
+    expect(didSubmit).toBe(false);
   });
 });

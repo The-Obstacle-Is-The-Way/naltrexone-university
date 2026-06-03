@@ -80,3 +80,43 @@ test('keeps the dialog open on submit failure and closes on Escape with focus re
   await expect.poll(() => document.querySelector('[role="dialog"]')).toBeNull();
   await expect.element(trigger).toHaveFocus();
 });
+
+test('cancels, resets the form, and returns focus to the trigger', async () => {
+  const screen = await render(<DialogProbe />);
+  const trigger = screen.getByRole('button', { name: 'Give feedback' });
+
+  await trigger.click();
+  await screen.getByRole('radio', { name: 'Other' }).click();
+  await screen.getByRole('textbox', { name: 'Add details (optional)' }).click();
+  await userEvent.keyboard('Temporary note');
+  await screen.getByRole('button', { name: 'Cancel' }).click();
+
+  await expect.poll(() => document.querySelector('[role="dialog"]')).toBeNull();
+  await expect.element(trigger).toHaveFocus();
+
+  await trigger.click();
+
+  await expect
+    .element(screen.getByRole('textbox', { name: 'Add details (optional)' }))
+    .toHaveValue('');
+  await expect
+    .element(screen.getByRole('radio', { name: 'Other' }))
+    .not.toBeChecked();
+});
+
+test('keeps the dialog open when submit throws', async () => {
+  const submitReport = vi.fn().mockRejectedValue(new Error('Network down'));
+  const screen = await render(<DialogProbe submitReport={submitReport} />);
+
+  await screen.getByRole('button', { name: 'Give feedback' }).click();
+  await screen.getByRole('radio', { name: 'Other' }).click();
+  await screen.getByRole('button', { name: 'Submit feedback' }).click();
+
+  await expect.poll(() => submitReport.mock.calls.length).toBe(1);
+  await expect
+    .element(
+      screen.getByText("Couldn't send your feedback. Check your connection."),
+    )
+    .toBeVisible();
+  await expect.element(screen.getByRole('dialog')).toBeVisible();
+});

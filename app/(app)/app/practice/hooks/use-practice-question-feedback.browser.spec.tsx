@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import * as clientError from '@/lib/report-client-error';
 import * as questionFeedbackController from '@/src/adapters/controllers/question-feedback-controller';
 import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeQuestionFeedback } from './use-practice-question-feedback';
@@ -17,6 +18,7 @@ const rateQuestion = vi.mocked(questionFeedbackController.rateQuestion);
 const submitQuestionReport = vi.mocked(
   questionFeedbackController.submitQuestionReport,
 );
+const reportClientError = vi.mocked(clientError.reportClientError);
 
 const questionId = '11111111-1111-4111-8111-111111111111';
 const attemptId = '22222222-2222-4222-8222-222222222222';
@@ -30,7 +32,13 @@ function createDeferred<T>() {
   return { promise, resolve };
 }
 
-function Probe({ initialReviewMode = true }: { initialReviewMode?: boolean }) {
+function Probe({
+  initialReviewMode = true,
+  isMounted = () => true,
+}: {
+  initialReviewMode?: boolean;
+  isMounted?: () => boolean;
+}) {
   const [isReviewMode, setIsReviewMode] = useState(initialReviewMode);
   const output = usePracticeQuestionFeedback({
     question: {
@@ -39,7 +47,7 @@ function Probe({ initialReviewMode = true }: { initialReviewMode?: boolean }) {
       practiceSessionId,
     },
     isReviewMode,
-    isMounted: () => true,
+    isMounted,
   });
 
   return (
@@ -104,6 +112,54 @@ describe('usePracticeQuestionFeedback (browser)', () => {
       .element(screen.getByTestId('rating'))
       .toHaveTextContent('helpful');
     expect(getQuestionRating).toHaveBeenCalledWith({ questionId });
+  });
+
+  it('reports hydration action errors and enters an error state', async () => {
+    getQuestionRating.mockResolvedValue({
+      ok: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Nope' },
+    });
+
+    const screen = await render(<Probe />);
+
+    await expect
+      .element(screen.getByTestId('feedback-status'))
+      .toHaveTextContent('error');
+    expect(reportClientError).toHaveBeenCalledWith(
+      { code: 'INTERNAL_ERROR', message: 'Nope' },
+      {
+        component: 'UsePracticeQuestionFeedback',
+        action: 'loadQuestionRating',
+      },
+    );
+  });
+
+  it('reports thrown hydration errors and enters an error state', async () => {
+    const error = new Error('Network down');
+    getQuestionRating.mockRejectedValue(error);
+
+    const screen = await render(<Probe />);
+
+    await expect
+      .element(screen.getByTestId('feedback-status'))
+      .toHaveTextContent('error');
+    expect(reportClientError).toHaveBeenCalledWith(error, {
+      component: 'UsePracticeQuestionFeedback',
+      action: 'loadQuestionRating',
+    });
+  });
+
+  it('ignores hydration results after unmount', async () => {
+    getQuestionRating.mockResolvedValue(ok({ rating: 'helpful' }));
+
+    const screen = await render(<Probe isMounted={() => false} />);
+
+    await expect
+      .element(screen.getByTestId('feedback-status'))
+      .toHaveTextContent('loading');
+    await expect
+      .element(screen.getByTestId('rating'))
+      .toHaveTextContent('none');
   });
 
   it('optimistically applies a rating before the write resolves', async () => {
@@ -194,6 +250,50 @@ describe('usePracticeQuestionFeedback (browser)', () => {
       .toHaveTextContent('false');
   });
 
+  it('reports submit-report failures through the client error reporter', async () => {
+    submitQuestionReport.mockResolvedValue({
+      ok: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Nope' },
+    });
+
+    const screen = await render(<Probe />);
+    await expect
+      .element(screen.getByTestId('feedback-status'))
+      .toHaveTextContent('idle');
+
+    await screen.getByRole('button', { name: 'submit-report' }).click();
+
+    await expect.poll(() => submitQuestionReport.mock.calls.length).toBe(1);
+    expect(reportClientError).toHaveBeenCalledWith(
+      {
+        code: 'INTERNAL_ERROR',
+        message: 'Nope',
+        questionId,
+        category: 'ambiguous_wording',
+      },
+      {
+        component: 'UsePracticeQuestionFeedback',
+        action: 'submitQuestionReport',
+      },
+    );
+  });
+
+  it('ignores rating state updates after unmount', async () => {
+    rateQuestion.mockResolvedValue(ok({ rating: 'helpful' }));
+
+    const screen = await render(<Probe isMounted={() => false} />);
+
+    await screen.getByRole('button', { name: 'rate-helpful' }).click();
+
+    await expect.poll(() => rateQuestion.mock.calls.length).toBe(1);
+    await expect
+      .element(screen.getByTestId('rating'))
+      .toHaveTextContent('none');
+    await expect
+      .element(screen.getByTestId('feedback-status'))
+      .toHaveTextContent('loading');
+  });
+
   it('resets rating state when leaving review mode', async () => {
     getQuestionRating.mockResolvedValue(ok({ rating: 'helpful' }));
 
@@ -210,5 +310,19 @@ describe('usePracticeQuestionFeedback (browser)', () => {
     await expect
       .element(screen.getByTestId('feedback-status'))
       .toHaveTextContent('idle');
+  });
+
+  it('ignores rate and report commands after leaving review mode', async () => {
+    const screen = await render(<Probe />);
+    await expect
+      .element(screen.getByTestId('feedback-status'))
+      .toHaveTextContent('idle');
+
+    await screen.getByRole('button', { name: 'leave-review' }).click();
+    await screen.getByRole('button', { name: 'rate-helpful' }).click();
+    await screen.getByRole('button', { name: 'submit-report' }).click();
+
+    expect(rateQuestion).not.toHaveBeenCalled();
+    expect(submitQuestionReport).not.toHaveBeenCalled();
   });
 });
