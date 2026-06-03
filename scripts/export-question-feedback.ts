@@ -48,11 +48,30 @@ type QuestionFeedbackExportRecord = {
 };
 
 type QuestionFeedbackExportDb = PostgresJsDatabase<typeof schema>;
+type QuestionFeedbackExportSql = Pick<ReturnType<typeof postgres>, 'end'>;
+
+export type QuestionFeedbackExportDeps<
+  TSql extends QuestionFeedbackExportSql,
+  TDb,
+> = {
+  createSql(databaseUrl: string): TSql;
+  createDb(sql: TSql): TDb;
+  readRows(db: TDb): Promise<QuestionFeedbackExportRow[]>;
+};
 
 const DEFAULT_OPTIONS: QuestionFeedbackExportOptions = {
   format: 'csv',
   includeUserId: false,
   includeComments: false,
+};
+
+const DEFAULT_DEPS: QuestionFeedbackExportDeps<
+  ReturnType<typeof postgres>,
+  QuestionFeedbackExportDb
+> = {
+  createSql: (databaseUrl) => postgres(databaseUrl, { max: 1 }),
+  createDb: (sql) => drizzle(sql, { schema }),
+  readRows: (db) => readQuestionFeedbackRows(db),
 };
 
 export function parseQuestionFeedbackExportArgs(
@@ -132,7 +151,7 @@ export function formatQuestionFeedbackExport(
   return formatCsv(records, options);
 }
 
-async function readQuestionFeedbackRows(
+export async function readQuestionFeedbackRows(
   db: QuestionFeedbackExportDb,
 ): Promise<QuestionFeedbackExportRow[]> {
   return db
@@ -164,6 +183,10 @@ export async function runExportQuestionFeedback(
   argv = process.argv.slice(2),
   output: NodeJS.WritableStream = process.stdout,
   errorOutput: NodeJS.WritableStream = process.stderr,
+  deps: QuestionFeedbackExportDeps<
+    QuestionFeedbackExportSql,
+    unknown
+  > = DEFAULT_DEPS,
 ): Promise<void> {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
@@ -177,11 +200,11 @@ export async function runExportQuestionFeedback(
     errorOutput.write(`${warning}\n`);
   }
 
-  const sql = postgres(databaseUrl, { max: 1 });
-  const db = drizzle(sql, { schema });
+  const sql = deps.createSql(databaseUrl);
+  const db = deps.createDb(sql);
 
   try {
-    const rows = await readQuestionFeedbackRows(db);
+    const rows = await deps.readRows(db);
     output.write(formatQuestionFeedbackExport(rows, options));
   } finally {
     await sql.end({ timeout: 5 });
