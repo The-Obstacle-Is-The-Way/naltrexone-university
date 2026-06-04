@@ -22,8 +22,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-349](./debt-349-cross-request-published-content-caching.md) | Optional Tier 2 cross-request caching for immutable published questions and tag lists after DEBT-344 shipped request-scoped dedup | P3 | — |
 | [DEBT-381](./debt-381-question-content-typography-audit-and-preference-path.md) | Question content typography audit — Quick Practice, Tutor, and Exam are already unified at the Typography Policy Medium content tier. Do not globally shrink question text; if needed later, add a user-selectable Markdown/content-size preference while leaving UI chrome unchanged. | P3 | — |
 | [DEBT-391](./debt-391-local-e2e-schema-drift-preflight.md) | Local authenticated E2E can run against a stale `.env.local` Neon branch because the current preflight checks only database connectivity and one historical idempotency schema contract, not the full Drizzle migration journal. Add a full migration-journal/schema-drift preflight so local E2E fails fast with a targeted migration instruction instead of surfacing generic write-path errors mid-suite. | P2 | — |
+| [DEBT-405](./debt-405-question-rating-control-placement.md) | SPEC-041 question rating (👍/👎) ships in the wrong place — rendered as a bare sibling of the explanation card, it collides with the card and sits in the path of the primary `Next` CTA. Decision: move it to a boxless, hairline-separated post-action footer rendered after the action bar so it can't gate or float before `Next`. Fold-into-the-action-bar deferred (mobile bar overload, intent conflation with `Give feedback`, color-only confirmation). Centralized control → applies across practice view, question page, and post-exam review. | P3 | — |
 
-**Next Debt ID:** DEBT-404
+**Next Debt ID:** DEBT-406
 
 ---
 
