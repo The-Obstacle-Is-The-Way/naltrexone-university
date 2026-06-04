@@ -26,6 +26,7 @@ updates:
           - '*'
         exclude-patterns:
           - '@biomejs/biome'
+          - 'stripe'
         update-types:
           - minor
           - patch
@@ -33,6 +34,18 @@ updates:
         applies-to: version-updates
         patterns:
           - '@biomejs/biome'
+        update-types:
+          - minor
+          - patch
+          - major
+      stripe:
+        # Split out per DEBT-393 precedent: a stripe SDK bump couples to a
+        # billing-sensitive STRIPE_API_VERSION (lib/stripe.ts) upgrade that
+        # needs changelog review + webhook/checkout verification, so it must
+        # not block the routine minor/patch group.
+        applies-to: version-updates
+        patterns:
+          - 'stripe'
         update-types:
           - minor
           - patch
