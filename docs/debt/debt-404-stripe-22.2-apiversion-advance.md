@@ -29,8 +29,9 @@ This is **billing-sensitive**: `lib/stripe.ts`'s own policy comment (lines 13–
 
 ### A. The change is non-breaking — confirmed against Stripe's own docs
 
-- **API version (`2026-04-22.dahlia` → `2026-05-27.dahlia`):** Stripe's versioning policy states each monthly Dahlia release is backward-compatible — "you can safely upgrade to a new monthly release without breaking any existing code." `2026-05-27.dahlia` is additive (adds Scalapay, Bizum, recurring Twint, flexible connected-account payout timing, programmatic Financial Account transfers, and subscription billing schedules — **none of which we use**). The only breaking changes in the Dahlia cycle were the *initial* `2026-03-25.dahlia`, which we are already past (we run `2026-04-22.dahlia`). Sources: [Stripe API versioning](https://docs.stripe.com/api/versioning), [Dahlia changelog](https://docs.stripe.com/changelog/dahlia).
-- **SDK (`stripe-node` 22.1.1 → 22.2.0):** No breaking changes — 22.2.0 is additive (bizum/scalapay support, V2 list types, enhancements). The 22.x line's breaking changes were in 22.1.0, which we already shipped (we run 22.1.1). Source: [stripe-node CHANGELOG](https://github.com/stripe/stripe-node/blob/master/CHANGELOG.md).
+- **API version (`2026-04-22.dahlia` → `2026-05-27.dahlia`):** Stripe's versioning policy states each monthly Dahlia release is backward-compatible — "you can safely upgrade to a new monthly release without breaking any existing code." The only breaking changes in the Dahlia cycle were the *initial* `2026-03-25.dahlia`, which we are already past (we run `2026-04-22.dahlia`); every subsequent monthly release, including `2026-05-27.dahlia`, is additive-only. Sources: [Stripe API versioning](https://docs.stripe.com/api/versioning), [Dahlia changelog](https://docs.stripe.com/changelog/dahlia).
+- **SDK (`stripe-node` 22.1.1 → 22.2.0):** No runtime breaking changes vs 22.1.1 (22.1.1 was two bugfixes; the 22.x line's notable changes were in 22.1.0, which we already shipped). 22.2.0's highlights are new payment methods (bizum/scalapay/twint), `V2.Commerce.ProductCatalogImport`, `billed_until` on `SubscriptionItem`, Verifone reader device types, and `azure_event_grid` — none used by us. Its `⚠️`-marked entries are **TypeScript enum-widening** (e.g. twint `setup_future_usage` literal→enum, added `payment_method_types` members), not runtime breaks; a repo scan finds zero references to any of those fields in `src/`/`lib/`/`app/`. Source: [stripe-node CHANGELOG](https://github.com/stripe/stripe-node/blob/master/CHANGELOG.md).
+- **Our consumption is immune to SDK enum widening:** the webhook schema (`stripe-webhook-schemas.ts`) validates subscription `status` as `z.string()` with `.passthrough()`, and the status→domain mapping uses a locally-owned `STRIPE_SUBSCRIPTION_STATUSES` const (`stripe-subscription-status.ts`), not the SDK's status union — so even a widened SDK enum cannot break our typing.
 
 ### B. Blast radius — exact edits (verified file:line)
 
@@ -41,7 +42,9 @@ This is **billing-sensitive**: `lib/stripe.ts`'s own policy comment (lines 13–
 | `lib/stripe.ts:24` | `apiVersion: STRIPE_API_VERSION` | no edit (reads the const) |
 | `lib/stripe.test.ts:74` | asserts `apiVersion: '2026-04-22.dahlia'` | → `'2026-05-27.dahlia'` |
 | `package.json:67` | `"stripe": "^22.1.1"` | → `"^22.2.0"` (+ lockfile resolves 22.2.0) |
-| `docs/vendor-docs/stripe.md:3` | **stale**: `^20.3.0` / `2026-01-28.clover` | → `^22.2.0` / `2026-05-27.dahlia` |
+| `docs/vendor-docs/stripe.md:3` | **stale**: `^20.3.0` | → `^22.2.0` |
+| `docs/vendor-docs/stripe.md:4` | **stale**: `2026-01-28.clover` | → `2026-05-27.dahlia` |
+| `docs/vendor-docs/stripe.md:11-16` (API Version History table) | **stale**: lists `2026-01-28.clover` as "Current"; no dahlia rows | → mark clover historical, add the `2026-03-25.dahlia` (BREAKING — Dahlia cutover), `2026-04-22.dahlia`, and `2026-05-27.dahlia` (Current) rows |
 | `docs/vendor-docs/index.md:25` | **stale**: `^20.3.0` / `2026-01-28.clover` / `2026-03-17` | → `^22.2.0` / `2026-05-27.dahlia` / `2026-06-04` |
 
 > Note: the vendor docs are **already stale** — they were never updated after the v20 → v22 upgrade (DEBT-392). They claim `^20.3.0` / `2026-01-28.clover` while the code runs `^22.1.1` / `2026-04-22.dahlia`. This PR corrects that pre-existing drift while advancing to 22.2.0.
@@ -58,7 +61,7 @@ The fixtures + Stripe client flow through: `lib/stripe.ts` (lazy client), `strip
 
 ## Delivery shape — single coupled PR (deviates from DEBT-392's two-PR split, with cause)
 
-DEBT-392 Tier 4 split the SDK bump (PR A, *preserving* the pin) from the pin advance (PR B). That worked for v20 → v22 because the pin could be preserved across the SDK bump. **It cannot here**: 22.2.0's type forces `2026-05-27.dahlia`, and preserving the old pin would require a banned type cast. Since both the SDK delta and the API-version delta are non-breaking (Finding A), the correct shape is **one manual PR** that bumps the SDK, advances the pin, updates the assertion, and corrects the vendor docs together.
+DEBT-392 Tier 4 split the SDK bump (PR A) from the pin advance (PR B) for v20 → v22. But that bump hit the **same** type narrowing we face now: PR #331 only kept the old pin by adding a type cast (`'2026-01-28.clover' as StripeApiVersion`), which PR #332 then *removed* when it advanced to a clean literal (`2026-04-22.dahlia`). That cast is now **banned** by the no-cast rule (see Problem). So with 22.2.0 again narrowing the `apiVersion` type, there is no compliant way to "preserve" the old pin in a PR A — the only rule-abiding move is to advance the pin. Since both the SDK delta and the API-version delta are non-breaking (Finding A), the correct shape is **one manual PR** that bumps the SDK, advances the pin, updates the assertion, and corrects the vendor docs together.
 
 - **Manual**, off current `dev` — not on a Dependabot branch (DEBT-393). If a Dependabot `stripe` PR opens before this lands, close it as superseded.
 
@@ -73,6 +76,13 @@ DEBT-392 Tier 4 split the SDK bump (PR A, *preserving* the pin) from the pin adv
 - **Full gate** under Node 24: `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build`.
 - **E2E:** checkout + billing flows (`pnpm test:e2e`) if the local authenticated Stripe/Clerk env is present (per CLAUDE.md billing-E2E prereqs); otherwise state explicitly that E2E was skipped and rely on unit + integration coverage.
 - **Billing review** of the diff before implementation (this doc) and again before merge (per the `lib/stripe.ts` policy comment).
+
+---
+
+## Related debt / follow-ups (surfaced while scoping — not fixed here)
+
+- **Live webhook endpoint API-version drift (dashboard-side, out of repo scope).** Per [DEBT-384](../_archive/debt/debt-384-stripe-webhook-error-rate-investigation.md), the *live* Stripe webhook endpoint is pinned in the Dashboard to `2026-01-28.clover` while the SDK client pin (repo code) is `2026-04-22.dahlia` — and this PR advances the client to `2026-05-27.dahlia`, *widening* that gap. Reconciling the live endpoint version is a billing-ops task outside this PR's repo-code scope. DEBT-384 closed its missing-event config but never reconciled the endpoint version; track this as a **separate follow-up** (consider a DEBT-405).
+- **Webhook fixture regeneration (optional, deferred).** The `tests/fixtures/stripe/*.json` remain `2026-04-22.dahlia` captures (correct to LEAVE — Finding C). Regenerating them against `2026-05-27.dahlia` is only warranted if a future Dahlia release changes a field we parse; none currently does.
 
 ---
 
