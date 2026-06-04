@@ -1,4 +1,4 @@
-# DEBT-404: Question Rating Control Placement — Move to a Post-Action Footer
+# DEBT-405: Question Rating Control Placement — Move to a Post-Action Footer
 
 **Priority:** P3
 **Created:** 2026-06-04
@@ -25,10 +25,17 @@ This is live on a shipped feature; the control works, but the placement does not
 
 On the active practice answer-review surface, the action bar (`Next` / `Bookmark` / `Give feedback`) is rendered **after** the `<section>` (`practice-view.tsx:537`). The rating moves to render **after** `{actionBar}`, as a post-action footer:
 
-- **Boxless (variant B1):** separated from the action bar by a full-width `border-t` hairline (documented border token), content centered and de-emphasized (muted). **No fill, no surrounding box, no padding container.** This is the chosen treatment.
+- **Boxless (variant B1):** separated from the action bar by a full-width `border-t border-border` hairline (Pattern Registry M-2 `Standard` content separator), content centered and de-emphasized (`text-sm text-muted-foreground`). **No fill, no surrounding box, no card-like padding container.** This is the chosen treatment.
 - Keep a **minimal muted label** in this position. Unlike the inline placement, the footer sits *after* the action bar and is visually decontextualized from the question, so a short label ("Was this question helpful?", which maps cleanly to the `helpful` / `not_helpful` value object) aids clarity. The label copy is a low-cost, easily-reversible knob — drop it later if real usage shows the thumbs are self-evident here. The `<legend class="sr-only">` stays regardless.
 
 This settles the original complaint outright: the rating **physically follows `Next`, so it cannot gate or compete with the primary CTA**, and it stops floating because a full-width hairline + centered muted content reads unmistakably as a post-action footer rather than a dropped control.
+
+**Design-system prerequisite:** a full-width, post-action rating footer is a **new composition pattern**, not an existing named Pattern Registry entry. Before changing `app/**` or `components/**`, add a registry entry for this pattern (for example, a question-flow footer/chrome entry) that canonically defines:
+
+- wrapper: `border-t border-border` (M-2 `Standard` separator) plus only spacing needed to separate the footer from the action bar;
+- content row: centered, wrapping, `gap-3`, `text-sm text-muted-foreground`;
+- no `bg-*` fill, no `Card`, no bordered inset container, and no undocumented opacity values;
+- interactive targets remain `<Button>` instances, so focus rings stay inherited from the Button primitive.
 
 This is the **minimal, lower-risk** step. It is explicitly an interim placement chosen to fix the current broken state and learn from real usage — not a claim that it is the permanent final form. Fold-in (below) remains a live future option.
 
@@ -47,7 +54,7 @@ The rating control is **centralized**, so relocating it touches every consumer. 
 
 1. **`app/(app)/app/practice/components/practice-view.tsx`** — active practice / tutor answer-review (the flagged surface, has the bottom action bar). **Primary target** of this decision.
 2. **`app/(app)/app/questions/[slug]/question-page-client.tsx:369`** — standalone question-review page; also renders the rating via `QuestionSurfaceBody`'s `questionFeedbackRating` prop. Must receive the same treatment; confirm its bottom layout supports a post-action footer.
-3. **`app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx:157`** — post-exam review renders `<QuestionFeedbackRating>` **directly**, per question, in a **stacked list** of answered questions. A single page-bottom footer does **not** map here; this surface keeps the rating attached per-question but **must still inherit the spacing/boxless fix** (no collision, no inset box) so the control looks the same everywhere.
+3. **`app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx:157`** — post-exam review currently renders `<QuestionFeedbackRating>` **directly** after `<Feedback />`, but the live surface shows one focused `currentRow` at a time with a `data-testid="bottom-action-bar"` after the review section (`post-exam-review-view.tsx:176-228`). It is not a stacked list in the current code. Apply the same post-action footer treatment here as well: render the rating after that action bar when the current row is available and `questionFeedback` exists.
 
 Because two surfaces render the control through `QuestionSurfaceBody` and one renders it directly, decide during implementation between:
 - (a) giving `QuestionSurfaceBody` an explicit, optional **footer slot** the consumer positions, vs
@@ -57,15 +64,17 @@ Prefer the approach that keeps a single source of truth for the control's markup
 
 ## Implementation plan (TDD)
 
-1. **Stop rendering the rating inside the content body.** In `components/question/question-surface-body.tsx:54-61`, remove `<QuestionFeedbackRating />` from `feedbackCard`. Keep `<Feedback />` and the `feedbackRef` wrapper intact — `feedbackRef` exists to `scrollIntoView` the explanation when an answer is submitted (`practice-view.tsx:335-338`) and must continue to target the explanation, not the rating.
-2. **Render the footer after the action bar.** In `practice-view.tsx`, render the rating in a footer **after** `{actionBar}` (currently at `:537`), gated on the same condition that produces feedback today (non-exam, answered — `feedbackResult` / `hasBooleanCorrectness`). Wrap it: full-width, `border-t` hairline (documented border token from `pattern-registry.md`), centered, muted.
-3. **Apply the same relocation to `question-page-client.tsx`** and ensure **`post-exam-review-view.tsx`** inherits the boxless/spacing fix (no inset, no collision) even though it stays per-question.
-4. **Label copy:** update the visible label to "Was this question helpful?" (maps to `helpful`/`not_helpful`); keep it muted. `legend` stays `sr-only` as "Rate this question".
-5. **Tests first / updated:**
+1. **Pattern Registry first.** Add the post-action rating footer pattern to `docs/frontend/pattern-registry.md` before changing source. The governing docs require this for novel UI patterns (`standards.md:29-31`, `.claude/rules/frontend.md:96-108`); today the registry documents the usable tokens (`M-2`, Button conventions), but not this composition.
+2. **Stop rendering the rating inside the content body.** In `components/question/question-surface-body.tsx:54-61`, remove `<QuestionFeedbackRating />` from `feedbackCard`. Keep `<Feedback />` and the `feedbackRef` wrapper intact — `feedbackRef` exists to `scrollIntoView` the explanation when an answer is submitted (`practice-view.tsx:335-338`) and must continue to target the explanation, not the rating.
+3. **Render the footer after the action bar.** In `practice-view.tsx`, render the rating in a footer **after** `{actionBar}` (currently at `:537`), gated on the same condition that produces feedback today (non-exam, answered — `feedbackResult` / `hasBooleanCorrectness`). Wrap it with the registry-approved post-action footer classes: full-width `border-t border-border`, centered, wrapping `gap-3`, muted label/status, no fill.
+4. **Apply the same relocation to `question-page-client.tsx` and `post-exam-review-view.tsx`.** The standalone review page has its action bar at `question-page-client.tsx:391-499`; post-exam review has its action bar at `post-exam-review-view.tsx:176-228`. Both should render the rating footer after those action bars using their existing rating gates (`isReviewMode && questionFeedback` for standalone review; `currentRow?.isAvailable && questionFeedback` for post-exam review).
+5. **Label copy:** update the visible label to "Was this question helpful?" (maps to `helpful`/`not_helpful`); keep it muted. `legend` stays `sr-only` as "Rate this question".
+6. **Tests first / updated:**
    - `components/question/question-surface-body.test.tsx` — assert the rating is **no longer** rendered inside the surface body.
-   - `app/(app)/app/practice/components/practice-view-answer-feedback.test.tsx` (and `practice-view-layout.test.tsx`) — assert the rating renders **after** the `data-testid="bottom-action-bar"` element, in the footer region.
+   - `app/(app)/app/practice/components/practice-view-answer-feedback.test.tsx` (and `practice-view-layout.test.tsx` if the footer wrapper needs a layout-level assertion) — assert the rating renders **after** the `data-testid="bottom-action-bar"` element, in the footer region.
    - `components/question/question-feedback-rating.test.tsx` — updated label copy; control semantics unchanged.
-   - `app/(app)/app/questions/[slug]/question-page-client.test.tsx` and `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.test.tsx` — update any assertions that depend on the rating's old position.
+   - `app/(app)/app/questions/[slug]/question-page-client.test.tsx` and `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.test.tsx` — assert the rating footer follows each surface's `data-testid="bottom-action-bar"`, not merely that it appears after the explanation.
+   - Grep cleanup: the current position-sensitive assertions are in `question-surface-body.test.tsx`, `practice-view-answer-feedback.test.tsx`, `question-page-client.test.tsx`, and `post-exam-review-view.test.tsx`; update all of them so no old "after explanation" contract remains.
 
 ## Accessibility — preserve in all variants
 
@@ -74,12 +83,13 @@ Prefer the approach that keeps a single source of truth for the control's markup
 - The canonical focus ring (inherited from `<Button>`) — never hand-rolled.
 - `<Button>` for every interactive target (no raw `<button>`).
 - An `aria-live="polite"` status region so `saving` / `saved` / `error` are still announced (the existing `<output>`). Visible status text in the footer is acceptable; at minimum keep it `sr-only`.
+- Mobile behavior: the footer row must wrap without overlapping the action bar, and its tab/reading order must follow the action bar. Do not convert the action bar or rating footer into a sticky shell; current review action bars are document-flow siblings.
 
 ## Acceptance criteria
 
 - On the active practice answer-review surface, the rating no longer appears between the explanation card and `Next`; it renders **after** the action bar as a hairline-separated, centered, muted footer (boxless — no inset box, no fill).
 - No bordered inset box and no above-`Next` placement remain.
-- The rating looks consistent across all three surfaces (practice view, question page, post-exam review); the post-exam list keeps per-question placement but with the same boxless/spacing treatment.
+- The rating looks consistent across all three surfaces (practice view, question page, post-exam review); all three render the rating after their respective action bars as the same boxless post-action footer.
 - `fieldset`/`legend`, `aria-pressed`, focus ring, `<Button>`, and the `aria-live` status are all preserved.
 - `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm build` green; design-token regression scan passes (semantic tokens + documented opacity scale only).
 
