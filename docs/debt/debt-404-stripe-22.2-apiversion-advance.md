@@ -4,7 +4,7 @@
 **Created:** 2026-06-04
 **Source:** The `stripe` Dependabot group, split out of `npm-minor-and-patch` in PR #396 per the [DEBT-393](../_archive/debt/debt-393-dependabot-triage-and-config-hardening.md) precedent. The grouped PR #395 originally red-failed on `stripe` 22.1.1 → 22.2.0 with `lib/stripe.ts(24,5): error TS2322: Type '"2026-04-22.dahlia"' is not assignable to type '"2026-05-27.dahlia"'`. No standalone Dependabot `stripe` PR is open yet; this doc plans a proactive, billing-reviewed manual upgrade.
 **Related:** [DEBT-392 Tier 4](../_archive/debt/debt-392-dependency-hygiene-audit.md) (the v20 → v22 stripe split precedent — PR #331 bumped the SDK preserving the pin, PR #332 advanced the pin), [DEBT-393](../_archive/debt/debt-393-dependabot-triage-and-config-hardening.md) (Dependabot triage; the split protocol), PR #396 (stripe split config), PR #398 (the 7 safe `npm-minor-and-patch` updates that excluded stripe).
-**Status:** Open — plan written 2026-06-04; pending independent citation audit + user grade, then implementation on `debt/404-stripe-apiversion-advance`.
+**Status:** Resolved 2026-06-04 — implementation complete and locally verified on `debt/404-stripe-apiversion-advance`; CodeRabbit review, user-grade merge, and `main` fast-forward remain PR closeout steps.
 
 ---
 
@@ -90,9 +90,10 @@ DEBT-392 Tier 4 split the SDK bump (PR A) from the pin advance (PR B) for v20 �
 
 ## Acceptance criteria
 
-- [ ] `stripe` `^22.2.0` in `package.json` + lockfile; `pnpm install --frozen-lockfile` clean.
-- [ ] `STRIPE_API_VERSION = '2026-05-27.dahlia'`; `lib/stripe.ts` review-date comment updated; `lib/stripe.test.ts:74` assertion updated; `pnpm typecheck` green (TS2322 gone).
-- [ ] Vendor docs corrected to `^22.2.0` / `2026-05-27.dahlia` / Last Verified 2026-06-04 (fixes the pre-existing v20 drift).
-- [ ] Webhook fixtures unchanged; full unit + integration stripe suites green.
-- [ ] Full gate green; E2E green or explicitly skipped with reason.
-- [ ] CodeRabbit-clean; billing-reviewed; merged; `main` fast-forwarded to `dev`.
+- [x] `stripe` `^22.2.0` in `package.json` + lockfile; `pnpm install --frozen-lockfile` clean.
+- [x] `STRIPE_API_VERSION = '2026-05-27.dahlia'`; `lib/stripe.ts` review-date comment updated; `lib/stripe.test.ts:74` assertion updated; `pnpm typecheck` green (TS2322 gone).
+- [x] Vendor docs corrected to `^22.2.0` / `2026-05-27.dahlia` / Last Verified 2026-06-04 (fixes the pre-existing v20 drift).
+- [x] Webhook fixtures unchanged; full unit + integration stripe suites green.
+- [x] Full gate green; E2E green or explicitly skipped with reason.
+- [x] Billing-reviewed.
+- [ ] CodeRabbit-clean; merged; `main` fast-forwarded to `dev`.

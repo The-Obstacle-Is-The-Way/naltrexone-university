@@ -4,7 +4,7 @@ import { env } from '@/lib/env';
 
 let stripeInstance: Stripe | null = null;
 
-const STRIPE_API_VERSION = '2026-04-22.dahlia';
+const STRIPE_API_VERSION = '2026-05-27.dahlia';
 
 export function getStripe(): Stripe {
   if (stripeInstance) return stripeInstance;
@@ -19,7 +19,7 @@ export function getStripe(): Stripe {
      * - Verifying webhooks + checkout flows in a staging environment
      *
      * Reference: https://stripe.com/docs/upgrades#api-versions
-     * Last reviewed: 2026-05-24
+     * Last reviewed: 2026-06-04
      */
     apiVersion: STRIPE_API_VERSION,
     typescript: true,

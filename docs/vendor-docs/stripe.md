@@ -1,7 +1,7 @@
 # Stripe Vendor Documentation
 
-**Package:** `stripe` ^20.3.0
-**API Version:** `2026-01-28.clover`
+**Package:** `stripe` ^22.2.0
+**API Version:** `2026-05-27.dahlia`
 **Dashboard:** https://dashboard.stripe.com
 **Docs:** https://docs.stripe.com
 **Changelog:** https://docs.stripe.com/changelog
@@ -12,7 +12,10 @@
 
 | Date | API Version | Impact | Notes |
 |------|-------------|--------|-------|
-| 2026-01-28 | `2026-01-28.clover` | Current | Our pinned version |
+| 2026-05-27 | `2026-05-27.dahlia` | Current | Our pinned version |
+| 2026-04-22 | `2026-04-22.dahlia` | Non-breaking | Previous pinned version |
+| 2026-03-25 | `2026-03-25.dahlia` | **BREAKING** | Dahlia cutover |
+| 2026-01-28 | `2026-01-28.clover` | Historical | Former pinned version |
 | 2025-03-31 | `2025-03-31.basil` | **BREAKING** | `current_period_end` moved to items |
 
 **How to check current version:**
