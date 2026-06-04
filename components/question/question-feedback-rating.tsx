@@ -42,11 +42,9 @@ export function QuestionFeedbackRating({
   }
 
   return (
-    <fieldset className="flex flex-wrap items-center gap-3">
+    <fieldset className="flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground">
       <legend className="sr-only">Rate this question</legend>
-      <p className="text-sm font-medium text-foreground">
-        Was this a good question?
-      </p>
+      <p className="font-medium">Was this question helpful?</p>
       <div className="flex items-center gap-2">
         <Button
           type="button"

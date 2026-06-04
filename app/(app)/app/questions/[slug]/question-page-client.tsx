@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { ReviewQuestionNavigator } from '@/app/(app)/app/questions/[slug]/components/review-question-navigator';
 import { ErrorCard } from '@/components/error-card';
 import type { QuestionFeedbackRatingProps } from '@/components/question/question-feedback-rating';
+import { QuestionRatingFooter } from '@/components/question/question-rating-footer';
 import {
   QuestionReportDialog,
   type QuestionReportDialogProps,
@@ -258,6 +259,8 @@ export function QuestionView(props: QuestionViewProps) {
       : null;
   const shouldRenderQuestionSurface =
     questionSurfaceQuestion !== null || questionSurfaceFeedback !== null;
+  const shouldRenderBottomActionBar =
+    !props.isLoadingPreviousAttempt && !isReviewHydrationError;
 
   return (
     <div className="space-y-6">
@@ -366,15 +369,6 @@ export function QuestionView(props: QuestionViewProps) {
           }
           onSelectChoice={props.onSelectChoice}
           feedback={questionSurfaceFeedback}
-          questionFeedbackRating={
-            isReviewMode && questionFeedback
-              ? {
-                  rating: questionFeedback.rating,
-                  feedbackStatus: questionFeedback.feedbackStatus,
-                  onRate: questionFeedback.onRate,
-                }
-              : null
-          }
           beforeQuestionCard={
             isSessionReviewUnansweredReveal ? (
               <Card
@@ -388,7 +382,7 @@ export function QuestionView(props: QuestionViewProps) {
         />
       ) : null}
 
-      {!props.isLoadingPreviousAttempt && !isReviewHydrationError ? (
+      {shouldRenderBottomActionBar ? (
         <div
           className="flex flex-col gap-3 sm:flex-row"
           data-testid="bottom-action-bar"
@@ -496,6 +490,16 @@ export function QuestionView(props: QuestionViewProps) {
             </Button>
           ) : null}
         </div>
+      ) : null}
+      {shouldRenderBottomActionBar &&
+      isReviewMode &&
+      props.question &&
+      questionFeedback ? (
+        <QuestionRatingFooter
+          rating={questionFeedback.rating}
+          feedbackStatus={questionFeedback.feedbackStatus}
+          onRate={questionFeedback.onRate}
+        />
       ) : null}
     </div>
   );

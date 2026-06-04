@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { useEffect, useId, useRef } from 'react';
 import { ErrorCard } from '@/components/error-card';
 import type { QuestionFeedbackRatingProps } from '@/components/question/question-feedback-rating';
+import { QuestionRatingFooter } from '@/components/question/question-rating-footer';
 import {
   QuestionReportDialog,
   type QuestionReportDialogProps,
@@ -520,21 +521,19 @@ export function PracticeView(props: PracticeViewProps) {
             }
             onSelectChoice={props.onSelectChoice}
             feedback={feedbackResult}
-            questionFeedbackRating={
-              props.questionFeedback
-                ? {
-                    rating: props.questionFeedback.rating,
-                    feedbackStatus: props.questionFeedback.feedbackStatus,
-                    onRate: props.questionFeedback.onRate,
-                  }
-                : null
-            }
             feedbackRef={feedbackRef}
           />
         ) : null}
       </section>
 
       {actionBar}
+      {feedbackResult && props.questionFeedback ? (
+        <QuestionRatingFooter
+          rating={props.questionFeedback.rating}
+          feedbackStatus={props.questionFeedback.feedbackStatus}
+          onRate={props.questionFeedback.onRate}
+        />
+      ) : null}
     </div>
   );
 }
