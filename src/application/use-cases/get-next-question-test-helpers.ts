@@ -217,13 +217,13 @@ export function findUserForShuffledFirst(
 
 export {
   ApplicationError,
-  FakeAttemptRepository,
-  FakePracticeSessionRepository,
-  FakeQuestionRepository,
-  GetNextQuestionUseCase,
   createChoice,
   createQuestion,
   createQuestionSeed,
   createTag,
+  FakeAttemptRepository,
+  FakePracticeSessionRepository,
+  FakeQuestionRepository,
+  GetNextQuestionUseCase,
   shuffleWithSeed,
 };

@@ -32,8 +32,8 @@ type FinalizeExamAnswersActionInput = SessionIdInput & {
   idempotencyKey?: string;
 };
 
-export { resolvePostExamReviewCurrentQuestionId };
 export type { ExamResultsSubstage };
+export { resolvePostExamReviewCurrentQuestionId };
 
 export type UsePracticeSessionReviewStageInput = {
   sessionId: string;

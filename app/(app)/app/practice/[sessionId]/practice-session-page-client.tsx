@@ -9,8 +9,8 @@ import { usePracticeSessionPageController } from './hooks/use-practice-session-p
 import { isQuestionBookmarked } from './practice-session-page-utils';
 import { PracticeSessionToast } from './practice-session-toast';
 
-export { isQuestionBookmarked, PracticeSessionPageView, SessionSummaryView };
 export type { PracticeSessionPageViewProps };
+export { isQuestionBookmarked, PracticeSessionPageView, SessionSummaryView };
 
 export default function PracticeSessionPageClient({
   sessionId,

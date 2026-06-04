@@ -22,6 +22,7 @@ import type {
   CheckoutSuccessTransaction,
   SyncCheckoutSuccessInput,
 } from './checkout-success-types';
+
 export type { CheckoutSuccessDeps, CheckoutSuccessTransaction };
 export { getCheckoutSuccessDeps };
 

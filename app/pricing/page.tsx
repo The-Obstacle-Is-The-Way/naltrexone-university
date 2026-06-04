@@ -25,9 +25,9 @@ export const maxDuration = 30;
 
 export type { PricingViewProps } from '@/app/pricing/pricing-view';
 export { runSubscribeAction } from '@/app/pricing/subscribe-action';
-export { PricingView };
 // Re-export for tests
 export type { PricingBanner } from '@/app/pricing/types';
+export { PricingView };
 
 export type PricingPageDeps = {
   authGateway: AuthGateway;

@@ -143,7 +143,7 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
       explanationMd: 'Overall explanation for q1',
       referenceMd: 'Reference for q1',
     });
-    if (!output.rows[0] || !output.rows[0].isAvailable) {
+    if (!output.rows[0]?.isAvailable) {
       throw new Error('Expected first row to be available');
     }
     expect(output.rows[0].choices).toHaveLength(2);
@@ -170,7 +170,7 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
       explanationMd: 'Overall explanation for q2',
       referenceMd: 'Reference for q2',
     });
-    if (!output.rows[1] || !output.rows[1].isAvailable) {
+    if (!output.rows[1]?.isAvailable) {
       throw new Error('Expected second row to be available');
     }
     expect(output.rows[1].choices).toHaveLength(2);
