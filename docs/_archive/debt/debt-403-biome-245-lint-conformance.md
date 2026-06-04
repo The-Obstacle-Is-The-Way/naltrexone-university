@@ -2,9 +2,9 @@
 
 **Priority:** P3 (blocks Dependabot PR #385 from going green; the fix is small — deterministic autofixes plus one manual key change — but the standalone Biome bump cannot merge until the codebase conforms to the new rule surface.)
 **Created:** 2026-06-03
-**Source:** Dependabot PR #385 (`chore(deps): bump @biomejs/biome from 2.3.13 to 2.4.15 in the biome group`). The standalone `biome` Dependabot group exists precisely because [DEBT-393](../_archive/debt/debt-393-dependabot-triage-and-config-hardening.md) §C split Biome out of `npm-minor-and-patch` so its lint-rule shift could be handled independently. DEBT-393 §C named two complementary remedies for a Biome lint-rule shift — split Biome out of the group (shipped in PR #344) **and** "accept the lint changes (fix the affected files)." With the split already in place, this doc carries out the remaining recommended handling — accepting the lint shift — for the 2.3.13 → 2.4.15 bump.
-**Related:** [DEBT-393](../_archive/debt/debt-393-dependabot-triage-and-config-hardening.md) (Dependabot triage + the Biome group split that anticipated this), PR #385 (the lockfile bump this unblocks), PR #384 (sibling `npm-minor-and-patch` group, independent).
-**Status:** Open — doc written 2026-06-03 and passed two independent citation audits (internal + external; all 13 load-bearing claims confirmed, caller-uniqueness gate resolved SAFE, plan judged sufficient: fixes A+B+E remove every Biome 2.4.15 error). Ready to implement on branch `chore/biome-245-lint-conformance`.
+**Source:** Dependabot PR #385 (`chore(deps): bump @biomejs/biome from 2.3.13 to 2.4.15 in the biome group`). The standalone `biome` Dependabot group exists precisely because [DEBT-393](./debt-393-dependabot-triage-and-config-hardening.md) §C split Biome out of `npm-minor-and-patch` so its lint-rule shift could be handled independently. DEBT-393 §C named two complementary remedies for a Biome lint-rule shift — split Biome out of the group (shipped in PR #344) **and** "accept the lint changes (fix the affected files)." With the split already in place, this doc carries out the remaining recommended handling — accepting the lint shift — for the 2.3.13 → 2.4.15 bump.
+**Related:** [DEBT-393](./debt-393-dependabot-triage-and-config-hardening.md) (Dependabot triage + the Biome group split that anticipated this), PR #392 (the conformance fixes), PR #393 (the biome 2.4.15 bump that superseded the stuck Dependabot #385), PR #384 (sibling `npm-minor-and-patch` group, independent).
+**Status:** **Resolved 2026-06-04.** Shipped in two PRs after the doc passed two independent citation audits (internal + external; all 13 load-bearing claims confirmed, caller-uniqueness gate resolved SAFE). **PR #392** landed the source conformance (A: 10 `organizeImports` autofixes + B: the `noArrayIndexKey` fix + C: 3 `useOptionalChain` cleanups + E: `$schema` bump), graded green under both biome 2.3.13 and 2.4.15. The Dependabot lockfile bump (#385) could not be rebased — Dependabot was unresponsive to `rebase`/`recreate` (outage) and its branch was stuck behind the conformed `dev` — so it was superseded by **PR #393**, a manual `@biomejs/biome` `^2.3.13`→`^2.4.15` bump (manifest + lockfile) off the conformed `dev`: `pnpm install --frozen-lockfile` clean and `pnpm lint:ci` under biome 2.4.15 reports 0 errors (19 expected warnings). #385 closed as superseded.
 
 ---
 
@@ -51,7 +51,7 @@ src/application/use-cases/get-next-question-test-helpers.ts
 src/application/use-cases/submit-answer-test-helpers.ts
 ```
 
-These were generated, verified, then **stashed** (`git stash@{0}` on this branch) so the doc-first workflow runs on a pristine tree; they are 100% reproducible via `biome check --write`.
+These were applied via `biome check --write` (deterministic, behavior-preserving) and committed in PR #392.
 
 ### B. `noArrayIndexKey` (1 error) — REQUIRED, manual
 
@@ -100,6 +100,8 @@ Because `package.json` already allows 2.4.15 via caret and #385 is lockfile-only
 
 This keeps #385 a single-purpose Dependabot PR with **no manual commits on the Dependabot branch** — the exact discipline DEBT-393 (and CodeRabbit's recorded learning) require. The alternative (couple bump + fixes in one manual PR and close #385) is viable but contaminates Dependabot's single-purpose model, so it is the fallback only if PR-A cannot be made green under 2.3.13.
 
+**Actual outcome:** PR-A shipped as **PR #392** exactly as planned (source-only, green under both biome versions). Step 2 could not use #385: Dependabot was unresponsive to `rebase` and `recreate` (outage), so its stale branch stayed behind the conformed `dev` and kept failing on the pre-conformance lint errors. Rather than hand-commit to the Dependabot branch (DEBT-393 forbids it), the bump was delivered as **PR #393** — a manual `@biomejs/biome` `^2.3.13`→`^2.4.15` bump off the conformed `dev`, which also never touches the Dependabot branch. #385 was closed as superseded.
+
 ---
 
 ## Verification plan
@@ -115,7 +117,7 @@ This keeps #385 a single-purpose Dependabot PR with **no manual commits on the D
 
 ## Acceptance criteria
 
-- [ ] PR-A green under both biome 2.3.13 and 2.4.15; CodeRabbit-clean; merged; `main` FF'd.
-- [ ] PR #385 rebased, `biome ci` green, CodeRabbit-clean; merged; `main` FF'd.
-- [ ] No CI warnings introduced beyond the pre-existing `noExcessiveLinesPerFile` set (and the 3 `useOptionalChain` resolved if Finding C is included).
-- [ ] `biome.json` `$schema` reflects 2.4.15.
+- [x] PR-A (#392) green under both biome 2.3.13 and 2.4.15; CodeRabbit-clean; merged; `main` FF'd.
+- [x] Lockfile bump merged, `biome ci` green, CodeRabbit-clean; `main` FF'd — delivered as #393 (manual; #385 superseded and closed because Dependabot was unresponsive).
+- [x] No CI warnings introduced beyond the pre-existing `noExcessiveLinesPerFile` set; the 3 `useOptionalChain` were resolved (Finding C included), leaving 19 warnings.
+- [x] `biome.json` `$schema` reflects 2.4.15.
