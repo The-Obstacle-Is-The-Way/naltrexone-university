@@ -56,11 +56,10 @@ The rating control is **centralized**, so relocating it touches every consumer. 
 2. **`app/(app)/app/questions/[slug]/question-page-client.tsx:369`** — standalone question-review page; also renders the rating via `QuestionSurfaceBody`'s `questionFeedbackRating` prop. Must receive the same treatment; confirm its bottom layout supports a post-action footer.
 3. **`app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx:157`** — post-exam review currently renders `<QuestionFeedbackRating>` **directly** after `<Feedback />`, but the live surface shows one focused `currentRow` at a time with a `data-testid="bottom-action-bar"` after the review section (`post-exam-review-view.tsx:176-228`). It is not a stacked list in the current code. Apply the same post-action footer treatment here as well: render the rating after that action bar when the current row is available and `questionFeedback` exists.
 
-Because two surfaces render the control through `QuestionSurfaceBody` and one renders it directly, decide during implementation between:
-- (a) giving `QuestionSurfaceBody` an explicit, optional **footer slot** the consumer positions, vs
-- (b) lifting the rating out of `QuestionSurfaceBody` entirely and letting each surface place it.
+The footer renders **after each surface's action bar**, and that action bar lives in the parent component (`practice-view.tsx`, `question-page-client.tsx`, `post-exam-review-view.tsx`), **not inside `QuestionSurfaceBody`**. A "footer slot inside `QuestionSurfaceBody`" therefore cannot express this placement. The implementation is:
 
-Prefer the approach that keeps a single source of truth for the control's markup and avoids duplicating the footer chrome across surfaces.
+- **Lift the rating out of `QuestionSurfaceBody`** — remove the `questionFeedbackRating` prop + render at `question-surface-body.tsx:54-61` and its two call sites (`practice-view.tsx:523`, `question-page-client.tsx:369`); `post-exam-review-view.tsx` already renders the control directly, so just relocate it there.
+- **Extract one shared footer component** (e.g. `components/question/question-rating-footer.tsx`) that wraps `QuestionFeedbackRating` in the registry-approved post-action footer chrome, and render it after the `data-testid="bottom-action-bar"` in all three parents. Single source of truth for both the control and the footer chrome — no duplicated chrome.
 
 ## Implementation plan (TDD)
 
