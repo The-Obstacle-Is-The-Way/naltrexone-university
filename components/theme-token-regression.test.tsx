@@ -40,6 +40,7 @@ let SessionSummaryView: typeof import('@/app/(app)/app/practice/[sessionId]/comp
 let MarketingHomeShell: typeof import('@/components/marketing/marketing-home').MarketingHomeShell;
 let ChoiceButton: typeof import('@/components/question/choice-button').ChoiceButton;
 let Feedback: typeof import('@/components/question/feedback').Feedback;
+let QuestionRatingFooter: typeof import('@/components/question/question-rating-footer').QuestionRatingFooter;
 let BillingContent: typeof import('@/app/(app)/app/billing/page').BillingContent;
 
 function extractBlock(source: string, selector: ':root' | '.dark'): string {
@@ -160,6 +161,9 @@ describe('theme token regression', () => {
     ));
     ({ ChoiceButton } = await import('@/components/question/choice-button'));
     ({ Feedback } = await import('@/components/question/feedback'));
+    ({ QuestionRatingFooter } = await import(
+      '@/components/question/question-rating-footer'
+    ));
     ({ BillingContent } = await import('@/app/(app)/app/billing/page'));
   });
 
@@ -466,6 +470,30 @@ describe('theme token regression', () => {
     expect(feedbackHtml).toContain('bg-destructive');
     expect(feedbackHtml).not.toContain('emerald-');
     expect(feedbackHtml).not.toContain('red-');
+  });
+
+  it('uses the registered post-action footer tokens for question rating footer', async () => {
+    const html = renderToStaticMarkup(
+      <QuestionRatingFooter
+        rating={null}
+        feedbackStatus="idle"
+        onRate={() => undefined}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const footer = doc.querySelector('[data-testid="question-rating-footer"]');
+    const content = doc.querySelector(
+      '[data-testid="question-rating-footer-content"]',
+    );
+    const footerTokens = footer?.getAttribute('class')?.split(/\s+/) ?? [];
+    const contentTokens = content?.getAttribute('class')?.split(/\s+/) ?? [];
+
+    expect(footerTokens).toContain('border-t');
+    expect(footerTokens).toContain('border-border');
+    expect(footerTokens).not.toContain('bg-card');
+    expect(footerTokens).not.toContain('bg-muted/20');
+    expect(contentTokens).toContain('text-muted-foreground');
+    expect(contentTokens).toContain('justify-center');
   });
 
   it('uses semantic warning tokens in billing cancellation banner', async () => {
