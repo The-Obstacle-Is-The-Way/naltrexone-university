@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for all external dependencies — API versions, breaking changes we've hit, fields we depend on, and migration paths.
 
-**Last Updated:** 2026-03-28
+**Last Updated:** 2026-06-04
 
 ---
 
@@ -22,12 +22,12 @@ BUG-045 taught us a painful lesson: Stripe deprecated `subscription.current_peri
 
 | Vendor | Package | Our Version | API Version | Last Verified |
 |--------|---------|-------------|-------------|---------------|
-| Stripe | `stripe` | ^20.3.0 | `2026-01-28.clover` | 2026-03-17 |
+| Stripe | `stripe` | ^22.2.0 | `2026-05-27.dahlia` | 2026-06-04 |
 | Clerk | `@clerk/nextjs` | ^7.0.7 | `2024-10-01` | 2026-03-28 |
 | Postgres | `postgres` | ^3.4.8 | N/A (driver) | 2026-03-17 |
 | Drizzle | `drizzle-orm` | ^0.45.1 | N/A | 2026-03-17 |
 
-Package versions above were reconciled against `package.json` on 2026-03-28.
+Package versions above were reconciled against `package.json` on 2026-06-04.
 Stripe's API version is pinned in `lib/stripe.ts`. Clerk's API version remains a
 tracked vendor setting rather than a local code constant.
 
