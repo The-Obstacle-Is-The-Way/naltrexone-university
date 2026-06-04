@@ -101,25 +101,25 @@ describe('QuestionSurfaceBody', () => {
     expect(html).toContain('Reference text');
   });
 
-  it('renders question feedback rating controls after the answer feedback panel', () => {
-    const { html } = renderQuestionSurfaceBody({
+  it('does not render question feedback rating controls inside the surface body', () => {
+    const { doc, html } = renderQuestionSurfaceBody({
       feedback: {
         isCorrect: true,
         explanationMd: 'Overall explanation',
         referenceMd: null,
         choiceExplanations: [],
       },
+      // Legacy callers should lift rating controls to a post-action footer.
       questionFeedbackRating: {
         rating: null,
         feedbackStatus: 'idle',
         onRate: () => undefined,
       },
-    });
+    } as Partial<Parameters<typeof QuestionSurfaceBody>[0]>);
 
-    expect(html).toContain('Was this a good question?');
-    expect(html.indexOf('Overall explanation')).toBeLessThan(
-      html.indexOf('Was this a good question?'),
-    );
+    expect(html).toContain('Overall explanation');
+    expect(doc.querySelector('button[aria-label="Good question"]')).toBeNull();
+    expect(html).not.toContain('Rate this question');
   });
 
   it('does not render feedback when feedback is null', () => {

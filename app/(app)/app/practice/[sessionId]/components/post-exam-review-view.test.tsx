@@ -272,7 +272,7 @@ describe('PostExamReviewView', () => {
     ]);
   });
 
-  it('renders question feedback rating controls after the explanation', () => {
+  it('renders question feedback rating controls after the bottom action bar', () => {
     const doc = renderView({
       row: createReviewRow({
         isAnswered: true,
@@ -291,9 +291,9 @@ describe('PostExamReviewView', () => {
     });
     const html = doc.body.innerHTML;
 
-    expect(html).toContain('Was this a good question?');
-    expect(html.indexOf('Post-exam explanation.')).toBeLessThan(
-      html.indexOf('Was this a good question?'),
+    expect(html).toContain('Was this question helpful?');
+    expect(html.indexOf('data-testid="bottom-action-bar"')).toBeLessThan(
+      html.indexOf('Was this question helpful?'),
     );
   });
 

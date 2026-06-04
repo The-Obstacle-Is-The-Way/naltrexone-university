@@ -222,7 +222,7 @@ describe('PracticeView answer feedback', () => {
     expect(nextButton?.getAttribute('data-variant')).toBe('default');
   });
 
-  it('threads question feedback rating controls after the answer feedback panel', () => {
+  it('threads question feedback rating controls after the bottom action bar', () => {
     const question = createQuestionProps();
     const selectedChoice = question.choices[0];
     if (!selectedChoice) {
@@ -261,9 +261,9 @@ describe('PracticeView answer feedback', () => {
       />,
     );
 
-    expect(html).toContain('Was this a good question?');
-    expect(html.indexOf('Because.')).toBeLessThan(
-      html.indexOf('Was this a good question?'),
+    expect(html).toContain('Was this question helpful?');
+    expect(html.indexOf('data-testid="bottom-action-bar"')).toBeLessThan(
+      html.indexOf('Was this question helpful?'),
     );
   });
 

@@ -38,7 +38,7 @@ describe('QuestionFeedbackRating', () => {
       'button[aria-label="Not a good question"]',
     );
 
-    expect(html).toContain('Was this a good question?');
+    expect(html).toContain('Was this question helpful?');
     expect(legend?.textContent?.trim()).toBe('Rate this question');
     expect(legend?.getAttribute('class')).toContain('sr-only');
     expect(goodButton?.getAttribute('data-slot')).toBe('button');

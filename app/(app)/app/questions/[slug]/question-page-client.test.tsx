@@ -989,7 +989,7 @@ describe('QuestionView', () => {
     expect(getBottomActionLabels(doc)).toContain('Give feedback');
   });
 
-  it('renders question feedback rating controls after standalone review feedback', () => {
+  it('renders question feedback rating controls after the bottom action bar in review mode', () => {
     const html = renderToStaticMarkup(
       <QuestionView
         {...createBaseProps()}
@@ -1021,9 +1021,9 @@ describe('QuestionView', () => {
       />,
     );
 
-    expect(html).toContain('Was this a good question?');
-    expect(html.indexOf('Standalone explanation')).toBeLessThan(
-      html.indexOf('Was this a good question?'),
+    expect(html).toContain('Was this question helpful?');
+    expect(html.indexOf('data-testid="bottom-action-bar"')).toBeLessThan(
+      html.indexOf('Was this question helpful?'),
     );
   });
 
@@ -1058,7 +1058,7 @@ describe('QuestionView', () => {
     );
 
     expect(html).toContain('Standalone explanation');
-    expect(html).not.toContain('Was this a good question?');
+    expect(html).not.toContain('Was this question helpful?');
     expect(html).not.toContain('Give feedback');
   });
 
