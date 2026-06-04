@@ -1,4 +1,4 @@
-# DEBT-405: Stripe live webhook endpoint API-version reconciliation
+# DEBT-406: Stripe live webhook endpoint API-version reconciliation
 
 **Priority:** P3 (latent billing drift, not a live defect — the events we parse are version-stable, but the Dashboard webhook endpoint's pinned API version has drifted further from the code client pin and should be reconciled or consciously accepted.)
 **Created:** 2026-06-04
