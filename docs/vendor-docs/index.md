@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for all external dependencies — API versions, breaking changes we've hit, fields we depend on, and migration paths.
 
-**Last Updated:** 2026-03-28
+**Last Updated:** 2026-06-04
 
 ---
 
@@ -27,7 +27,7 @@ BUG-045 taught us a painful lesson: Stripe deprecated `subscription.current_peri
 | Postgres | `postgres` | ^3.4.8 | N/A (driver) | 2026-03-17 |
 | Drizzle | `drizzle-orm` | ^0.45.1 | N/A | 2026-03-17 |
 
-Package versions above were reconciled against `package.json` on 2026-03-28.
+Package versions above were reconciled against `package.json` on 2026-06-04.
 Stripe's API version is pinned in `lib/stripe.ts`. Clerk's API version remains a
 tracked vendor setting rather than a local code constant.
 

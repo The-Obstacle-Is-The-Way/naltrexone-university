@@ -12,7 +12,7 @@
 
 The split-out `stripe` group will bump `stripe` 22.1.1 → 22.2.0. `stripe-node` 22.2.0 (released 2026-05-27) **"changes the pinned API version to `2026-05-27.dahlia`"** and types the SDK's `apiVersion` config option to that exact string literal. Our client pins `STRIPE_API_VERSION = '2026-04-22.dahlia'` (`lib/stripe.ts:7`), so 22.2.0 + the old pin fails typecheck:
 
-```
+```text
 lib/stripe.ts(24,5): error TS2322:
 Type '"2026-04-22.dahlia"' is not assignable to type '"2026-05-27.dahlia"'.
 ```
