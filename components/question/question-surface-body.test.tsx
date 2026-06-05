@@ -118,7 +118,13 @@ describe('QuestionSurfaceBody', () => {
     } as Partial<Parameters<typeof QuestionSurfaceBody>[0]>);
 
     expect(html).toContain('Overall explanation');
-    expect(doc.querySelector('button[aria-label="Good question"]')).toBeNull();
+    expect(
+      doc.querySelector('button[aria-label="Mark as helpful"]'),
+    ).toBeNull();
+    expect(
+      doc.querySelector('button[aria-label="Mark as not helpful"]'),
+    ).toBeNull();
+    expect(html).not.toContain('Was this question helpful?');
     expect(html).not.toContain('Rate this question');
   });
 
