@@ -42,18 +42,16 @@ export function QuestionFeedbackRating({
   }
 
   return (
-    <fieldset className="flex flex-wrap items-center gap-3">
+    <fieldset className="flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground">
       <legend className="sr-only">Rate this question</legend>
-      <p className="text-sm font-medium text-foreground">
-        Was this a good question?
-      </p>
+      <p className="font-medium">Was this question helpful?</p>
       <div className="flex items-center gap-2">
         <Button
           type="button"
           variant={rating === 'helpful' ? 'success' : 'outline'}
           size="icon"
           className="rounded-full"
-          aria-label="Good question"
+          aria-label="Mark as helpful"
           aria-pressed={rating === 'helpful'}
           disabled={isSaving}
           onClick={() => selectRating('helpful')}
@@ -65,7 +63,7 @@ export function QuestionFeedbackRating({
           variant={rating === 'not_helpful' ? 'destructive' : 'outline'}
           size="icon"
           className="rounded-full"
-          aria-label="Not a good question"
+          aria-label="Mark as not helpful"
           aria-pressed={rating === 'not_helpful'}
           disabled={isSaving}
           onClick={() => selectRating('not_helpful')}

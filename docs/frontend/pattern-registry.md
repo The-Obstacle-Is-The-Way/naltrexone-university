@@ -1,6 +1,6 @@
 # Pattern Registry
 
-**Last Updated:** 2026-05-06
+**Last Updated:** 2026-06-04
 **Status:** Canonical — all UI changes MUST conform to this registry
 
 Single source of truth for every visual pattern in the app. If a pattern isn't here, don't invent one — add it here first, get approval, then implement.
@@ -795,6 +795,30 @@ inline-flex rounded-full bg-muted px-3 py-1 text-sm font-semibold text-foregroun
 **Source:** `components/question/feedback.tsx`
 
 **Rule:** The semantic `Correct Answer` chip intentionally borrows the F-1 success-pill palette so the correct-answer section is visually distinct from the preceding incorrect-answer block. Neutral section chips are structural labels, not metadata chrome: keep them title case, `text-sm`, and full `text-foreground` rather than the older uppercase/tracking-wide micro-label treatment. In correct flow, `CorrectAnswerSection` passes `showLabel={false}`, so no section chip renders above the correct-answer card. Do not replace the verdict pill, the Reference label, or the Markdown-driven clinical pearl label with this pattern.
+
+### F-9: Post-Action Rating Footer
+
+Quiet, optional per-question rating chrome rendered after a question review action bar. This pattern is for the SPEC-041 thumbs rating only; it is not a general action-bar extension.
+
+**Wrapper:**
+
+```text
+border-t border-border pt-4
+```
+
+**Content row:**
+
+```text
+flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground
+```
+
+**Rules:**
+- Reuse M-2 `Standard` (`border-t border-border`) for the full-width hairline separator.
+- Keep the footer boxless: no `bg-*` fill, no `Card`, no bordered inset container, and no undocumented opacity values.
+- Render interactive targets as `<Button>` instances so the canonical focus ring remains inherited from the Button primitive.
+- Preserve `<fieldset>` + `<legend className="sr-only">Rate this question</legend>`, `aria-pressed`, and the `aria-live` status region from the rating control.
+
+**Source:** `components/question/question-rating-footer.tsx`
 
 ---
 

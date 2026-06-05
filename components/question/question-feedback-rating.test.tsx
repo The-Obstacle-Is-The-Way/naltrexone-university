@@ -33,20 +33,22 @@ describe('QuestionFeedbackRating', () => {
     const { html, doc } = renderRating();
     const group = doc.querySelector('fieldset');
     const legend = group?.querySelector('legend');
-    const goodButton = doc.querySelector('button[aria-label="Good question"]');
-    const notGoodButton = doc.querySelector(
-      'button[aria-label="Not a good question"]',
+    const helpfulButton = doc.querySelector(
+      'button[aria-label="Mark as helpful"]',
+    );
+    const notHelpfulButton = doc.querySelector(
+      'button[aria-label="Mark as not helpful"]',
     );
 
-    expect(html).toContain('Was this a good question?');
+    expect(html).toContain('Was this question helpful?');
     expect(legend?.textContent?.trim()).toBe('Rate this question');
     expect(legend?.getAttribute('class')).toContain('sr-only');
-    expect(goodButton?.getAttribute('data-slot')).toBe('button');
-    expect(notGoodButton?.getAttribute('data-slot')).toBe('button');
-    expect(goodButton?.getAttribute('aria-pressed')).toBe('false');
-    expect(notGoodButton?.getAttribute('aria-pressed')).toBe('false');
-    expect(goodButton?.getAttribute('data-variant')).toBe('outline');
-    expect(notGoodButton?.getAttribute('data-variant')).toBe('outline');
+    expect(helpfulButton?.getAttribute('data-slot')).toBe('button');
+    expect(notHelpfulButton?.getAttribute('data-slot')).toBe('button');
+    expect(helpfulButton?.getAttribute('aria-pressed')).toBe('false');
+    expect(notHelpfulButton?.getAttribute('aria-pressed')).toBe('false');
+    expect(helpfulButton?.getAttribute('data-variant')).toBe('outline');
+    expect(notHelpfulButton?.getAttribute('data-variant')).toBe('outline');
   });
 
   it('marks the active helpful rating and exposes polite save status text', () => {
@@ -54,11 +56,13 @@ describe('QuestionFeedbackRating', () => {
       rating: 'helpful',
       feedbackStatus: 'saved',
     });
-    const goodButton = doc.querySelector('button[aria-label="Good question"]');
+    const helpfulButton = doc.querySelector(
+      'button[aria-label="Mark as helpful"]',
+    );
     const status = doc.querySelector('[aria-live="polite"]');
 
-    expect(goodButton?.getAttribute('aria-pressed')).toBe('true');
-    expect(goodButton?.getAttribute('data-variant')).toBe('success');
+    expect(helpfulButton?.getAttribute('aria-pressed')).toBe('true');
+    expect(helpfulButton?.getAttribute('data-variant')).toBe('success');
     expect(status?.textContent?.trim()).toBe('Rating saved');
     expect(status?.getAttribute('class')).toContain('text-muted-foreground');
   });
@@ -68,13 +72,13 @@ describe('QuestionFeedbackRating', () => {
       rating: 'not_helpful',
       feedbackStatus: 'error',
     });
-    const notGoodButton = doc.querySelector(
-      'button[aria-label="Not a good question"]',
+    const notHelpfulButton = doc.querySelector(
+      'button[aria-label="Mark as not helpful"]',
     );
     const status = doc.querySelector('[aria-live="polite"]');
 
-    expect(notGoodButton?.getAttribute('aria-pressed')).toBe('true');
-    expect(notGoodButton?.getAttribute('data-variant')).toBe('destructive');
+    expect(notHelpfulButton?.getAttribute('aria-pressed')).toBe('true');
+    expect(notHelpfulButton?.getAttribute('data-variant')).toBe('destructive');
     expect(status?.textContent?.trim()).toBe("Couldn't save rating");
     expect(status?.getAttribute('class')).toContain('text-destructive');
   });
