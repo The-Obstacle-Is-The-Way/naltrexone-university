@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import type { PracticeViewProps } from '@/app/(app)/app/practice/components/practice-view';
 import { Feedback } from '@/components/question/feedback';
 import { QuestionCard } from '@/components/question/question-card';
-import { QuestionFeedbackRating } from '@/components/question/question-feedback-rating';
+import { QuestionRatingFooter } from '@/components/question/question-rating-footer';
 import { QuestionReportDialog } from '@/components/question/question-report-dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -153,13 +153,6 @@ export function PostExamReviewView({
                 choiceExplanations={currentRow.choiceExplanations}
                 selectedChoiceId={currentRow.selectedChoiceId}
               />
-              {questionFeedback ? (
-                <QuestionFeedbackRating
-                  rating={questionFeedback.rating}
-                  feedbackStatus={questionFeedback.feedbackStatus}
-                  onRate={questionFeedback.onRate}
-                />
-              ) : null}
             </>
           ) : (
             <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
@@ -226,6 +219,13 @@ export function PostExamReviewView({
           />
         ) : null}
       </div>
+      {currentRow?.isAvailable && questionFeedback ? (
+        <QuestionRatingFooter
+          rating={questionFeedback.rating}
+          feedbackStatus={questionFeedback.feedbackStatus}
+          onRate={questionFeedback.onRate}
+        />
+      ) : null}
     </div>
   );
 }

@@ -222,7 +222,7 @@ describe('PracticeView answer feedback', () => {
     expect(nextButton?.getAttribute('data-variant')).toBe('default');
   });
 
-  it('threads question feedback rating controls after the answer feedback panel', () => {
+  it('threads question feedback rating controls after the bottom action bar', () => {
     const question = createQuestionProps();
     const selectedChoice = question.choices[0];
     if (!selectedChoice) {
@@ -261,10 +261,12 @@ describe('PracticeView answer feedback', () => {
       />,
     );
 
-    expect(html).toContain('Was this a good question?');
-    expect(html.indexOf('Because.')).toBeLessThan(
-      html.indexOf('Was this a good question?'),
-    );
+    const actionBarIndex = html.indexOf('data-testid="bottom-action-bar"');
+    const ratingIndex = html.indexOf('Was this question helpful?');
+
+    expect(actionBarIndex).toBeGreaterThan(-1);
+    expect(ratingIndex).toBeGreaterThan(-1);
+    expect(actionBarIndex).toBeLessThan(ratingIndex);
   });
 
   it('does not render Review answers for tutor mode after answer commit', () => {
