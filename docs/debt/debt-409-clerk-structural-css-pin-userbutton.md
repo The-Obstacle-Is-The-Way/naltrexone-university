@@ -140,7 +140,7 @@ That is not the right first-line fix here. Passing `ui` would suppress/pin the w
 - [x] Source-token sweep confirms no production `app/`, `components/`, `src/`, or `lib/` file contains the Clerk arbitrary selector tokens.
 - [x] Tailwind docs-source pollution is addressed at the source-detection layer, not by editing one snippet.
 - [x] Generated selector diff is quantified and contains only removals from docs-source pollution.
-- [x] Full local gate green before push: `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build`; authenticated E2E also passed because the local billing E2E prerequisites were present.
+- [x] Full local gate green before push: `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build`. Evidence from the final-tree run under Node 24: lint completed with 0 errors / 19 known warnings, unit tests `331 passed (331)` / `2637 passed (2637)`, Browser Mode `56 passed (56)` / `295 passed (295)`, integration `19 passed (19)` / `108 passed (108)`, and `next build` completed successfully. Authenticated E2E also ran because the local billing E2E prerequisites were present: `35 passed (4.8m)`.
 - [ ] Fresh CodeRabbit review clean on the latest PR #404 head before merge.
 
 ## Rollback
