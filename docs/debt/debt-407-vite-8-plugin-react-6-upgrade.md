@@ -13,7 +13,7 @@
 
 Dependabot split a hard-coupled test-infrastructure upgrade into two independent PRs:
 
-- [PR #386](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/386) bumps `vite` 7.3.3 -> 8.0.14. It is green and mergeable on its own because `@vitejs/plugin-react` 5.2.0 already allows Vite 8.
+- [PR #386](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/386) bumps `vite` 7.3.3 -> 8.0.14. Its `test` CI check passed on its own because `@vitejs/plugin-react` 5.2.0 already allows Vite 8.
 - [PR #387](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/387) bumps `@vitejs/plugin-react` ^5.2.0 -> ^6.0.2. It is red on the current tree because plugin-react 6.0.2 peers on `vite: ^8.0.0`.
 
 The correct delivery shape is one manual PR that lands both package changes together. Keeping the split Dependabot PRs open creates avoidable CI churn: #387 cannot pass without the #386 upgrade, while #386 alone would leave the coupled plugin major behind.
@@ -31,7 +31,7 @@ Current package state:
 
 Dependabot PR state checked on 2026-06-04:
 
-- #386 (`dependabot/npm_and_yarn/dev/vite-8.0.14`) is `CLEAN`; the `test` CI check succeeded.
+- #386 (`dependabot/npm_and_yarn/dev/vite-8.0.14`) has a successful `test` CI check. That CI job uses Node 24 (`.github/workflows/ci.yml:76-80`) and runs typecheck, Biome CI, database migrate/seed, `pnpm test:coverage`, `pnpm test:integration:coverage`, `pnpm test:browser:coverage`, and `pnpm build` (`.github/workflows/ci.yml:85-135`); same-repo E2E is intentionally skipped for Dependabot PRs because repository secrets are unavailable (`.github/workflows/ci.yml:137-140`).
 - #387 (`dependabot/npm_and_yarn/dev/vitejs/plugin-react-6.0.2`) is `UNSTABLE`; the `test` CI check failed.
 
 Package metadata spot-check:
@@ -41,6 +41,7 @@ Package metadata spot-check:
 - `@vitejs/plugin-react@5.2.0` allows `vite: ^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0`, explaining why the Vite-only PR can pass.
 - `vitest@4.1.7` allows `vite: ^6.0.0 || ^7.0.0 || ^8.0.0` and supports the repo's Node 24 baseline.
 - `vite@8.0.14` supports Node `^20.19.0 || >=22.12.0`; no Node/Vitest bump is required.
+- The supply-chain maturity gate should not block Phase 1: `pnpm-workspace.yaml:1-2` enforces `minimumReleaseAge: 10080` with `minimumReleaseAgeStrict: true`; registry metadata shows `@vitejs/plugin-react@6.0.2` was published on 2026-05-14 and `vite@8.0.14` was published on 2026-05-21, both more than seven days before this doc's 2026-06-04 creation date.
 
 ---
 
@@ -68,7 +69,8 @@ No application code imports Vite or plugin-react. The high-risk runtime surfaces
 The audited Vite 8 and plugin-react 6 breaking surfaces do not map to this repository's current usage:
 
 - Rolldown configuration: no `rolldownOptions` usage in Vitest configs.
-- Esbuild/OXC customization: no custom Vite transform or compiler options in the Vitest configs.
+- Dependency optimizer: the [Vite 8 migration guide](https://vite.dev/guide/migration.html#dependency-optimizer-now-uses-rolldown) says the dependency optimizer now uses Rolldown instead of esbuild. This is a live surface because `vitest.browser.config.ts:15-27` has an `optimizeDeps.include` list for Clerk, Sentry, Drizzle, Pino, Postgres, `server-only`, Stripe, and Zod. #386 already ran Vite 8.0.14 through CI's browser coverage and build steps (`.github/workflows/ci.yml:123-135`) with that same include list and plugin-react 5; the remaining coupled-PR delta is plugin-react 5 -> 6, validated by `pnpm test:browser`.
+- Esbuild/OXC customization: no custom Vite transform or compiler options in the Vitest configs. The local risk is the optimizer surface above, not custom esbuild/OXC options.
 - Lightning CSS: no Vite CSS pipeline customization; production CSS is still handled through Next/Tailwind.
 - CJS interop: no custom Vite dependency interop configuration.
 - `import.meta.hot` URL behavior: no HMR-specific application code under the test configs.
@@ -100,7 +102,7 @@ Land one manual source-of-truth PR that supersedes Dependabot #386 and #387:
    - `@vitejs/plugin-react@6.0.2`
    - `vitest@4.1.7`
    - no unmet peer warnings
-5. Run the full local gate under Node 24 with the integration database prepared:
+5. Run the full local gate under Node 24 with the integration database prepared. Node 22.22.1 satisfies Vite 8's engine floor (`>=22.12`), but CI explicitly uses Node 24, so switch to Node 24 before trusting a green local gate as CI-parity evidence:
 
 ```bash
 pnpm db:test:up
@@ -112,6 +114,7 @@ pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test
 6. Open a PR to `dev` titled `DEBT-407 — vite 8 + @vitejs/plugin-react 6 (coupled test-infra majors)`.
 7. Close #386 and #387 as superseded by the coupled PR.
 8. Require fresh CodeRabbit review on the latest head before merge.
+9. Stop after CodeRabbit is clean and wait for the owner's explicit grade/GO before merging.
 
 ---
 
@@ -127,6 +130,8 @@ If the coupled PR exposes a real regression:
 
 No source-code rollback should be needed because the intended implementation is dependency metadata plus lockfile only.
 
+If a regression is isolated to plugin-react 6's Browser Mode path rather than Vite 8 itself, first confirm whether a small plugin-react/Vite configuration adjustment is the correct remediation. For example, plugin-react 6's `@rolldown/plugin-babel` peer is optional and should remain uninstalled unless a concrete Browser Mode regression proves a Babel-backed transform is required.
+
 ---
 
 ## Acceptance Criteria
@@ -140,3 +145,4 @@ No source-code rollback should be needed because the intended implementation is 
 - `pnpm typecheck`, `pnpm lint`, `pnpm test:integration`, and `pnpm build` pass.
 - Dependabot PRs #386 and #387 are closed as superseded.
 - CodeRabbit has reviewed the latest head before merge.
+- The owner has explicitly graded the PR ready before merge.
