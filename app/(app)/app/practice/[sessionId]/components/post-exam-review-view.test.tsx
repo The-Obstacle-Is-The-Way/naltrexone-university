@@ -291,10 +291,12 @@ describe('PostExamReviewView', () => {
     });
     const html = doc.body.innerHTML;
 
-    expect(html).toContain('Was this question helpful?');
-    expect(html.indexOf('data-testid="bottom-action-bar"')).toBeLessThan(
-      html.indexOf('Was this question helpful?'),
-    );
+    const actionBarIndex = html.indexOf('data-testid="bottom-action-bar"');
+    const ratingIndex = html.indexOf('Was this question helpful?');
+
+    expect(actionBarIndex).toBeGreaterThan(-1);
+    expect(ratingIndex).toBeGreaterThan(-1);
+    expect(actionBarIndex).toBeLessThan(ratingIndex);
   });
 
   it('renders the last-question action bar with view summary before bookmark', () => {

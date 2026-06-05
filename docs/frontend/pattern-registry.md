@@ -801,11 +801,13 @@ inline-flex rounded-full bg-muted px-3 py-1 text-sm font-semibold text-foregroun
 Quiet, optional per-question rating chrome rendered after a question review action bar. This pattern is for the SPEC-041 thumbs rating only; it is not a general action-bar extension.
 
 **Wrapper:**
+
 ```text
 border-t border-border pt-4
 ```
 
 **Content row:**
+
 ```text
 flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground
 ```

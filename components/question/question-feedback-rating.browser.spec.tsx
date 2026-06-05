@@ -31,32 +31,38 @@ function RatingProbe({
 test('selects and retracts the helpful rating', async () => {
   const onRate = vi.fn();
   const screen = await render(<RatingProbe onRate={onRate} />);
-  const goodButton = screen.getByRole('button', { name: /^Good question$/ });
+  const helpfulButton = screen.getByRole('button', {
+    name: /^Mark as helpful$/,
+  });
 
-  await goodButton.click();
+  await helpfulButton.click();
 
   expect(onRate).toHaveBeenCalledWith('helpful');
-  await expect.element(goodButton).toHaveAttribute('aria-pressed', 'true');
+  await expect.element(helpfulButton).toHaveAttribute('aria-pressed', 'true');
 
-  await goodButton.click();
+  await helpfulButton.click();
 
   expect(onRate).toHaveBeenLastCalledWith(null);
-  await expect.element(goodButton).toHaveAttribute('aria-pressed', 'false');
+  await expect.element(helpfulButton).toHaveAttribute('aria-pressed', 'false');
 });
 
-test('selects and retracts the not-good rating', async () => {
+test('selects and retracts the not-helpful rating', async () => {
   const onRate = vi.fn();
   const screen = await render(
     <RatingProbe initialRating="not_helpful" onRate={onRate} />,
   );
-  const notGoodButton = screen.getByRole('button', {
-    name: /^Not a good question$/,
+  const notHelpfulButton = screen.getByRole('button', {
+    name: /^Mark as not helpful$/,
   });
 
-  await expect.element(notGoodButton).toHaveAttribute('aria-pressed', 'true');
+  await expect
+    .element(notHelpfulButton)
+    .toHaveAttribute('aria-pressed', 'true');
 
-  await notGoodButton.click();
+  await notHelpfulButton.click();
 
   expect(onRate).toHaveBeenCalledWith(null);
-  await expect.element(notGoodButton).toHaveAttribute('aria-pressed', 'false');
+  await expect
+    .element(notHelpfulButton)
+    .toHaveAttribute('aria-pressed', 'false');
 });

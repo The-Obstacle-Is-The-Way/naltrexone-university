@@ -51,7 +51,7 @@ export function QuestionFeedbackRating({
           variant={rating === 'helpful' ? 'success' : 'outline'}
           size="icon"
           className="rounded-full"
-          aria-label="Good question"
+          aria-label="Mark as helpful"
           aria-pressed={rating === 'helpful'}
           disabled={isSaving}
           onClick={() => selectRating('helpful')}
@@ -63,7 +63,7 @@ export function QuestionFeedbackRating({
           variant={rating === 'not_helpful' ? 'destructive' : 'outline'}
           size="icon"
           className="rounded-full"
-          aria-label="Not a good question"
+          aria-label="Mark as not helpful"
           aria-pressed={rating === 'not_helpful'}
           disabled={isSaving}
           onClick={() => selectRating('not_helpful')}
