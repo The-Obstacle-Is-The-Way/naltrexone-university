@@ -122,7 +122,7 @@ This means the simple swap is visibly safe for the currently exercised Clerk sur
 
 **7. Related concrete Clerk warning discovered during visual verification:**
 
-Both baseline and spiked runs emitted Clerk's `structural_css_pin_clerk_ui` warning because `components/auth-nav.tsx:60` passes `appearance.elements.userButtonTrigger: "min-h-[44px] min-w-[44px]"` to `<UserButton>`, which causes generated CSS targeting `.cl-userButtonBox` / `.cl-userButtonTrigger`. Clerk's browser warning says these selectors depend on internal DOM structure and recommends:
+Both baseline and spiked runs emitted Clerk's `structural_css_pin_clerk_ui` warning. The original DEBT-408 audit associated it with `components/auth-nav.tsx:60`, but the PR #404 follow-up audit reproduced the warning and corrected the root cause: the warning reported generated CSS selectors for `.cl-userButtonBox` / `.cl-userButtonTrigger`, and the exact Tailwind arbitrary-selector tokens were found in an archived DEBT-250 Markdown snippet, not in active production code. Clerk's browser warning says these selectors depend on internal DOM structure and recommends:
 
 ```ts
 import { ui } from '@clerk/ui';
@@ -130,7 +130,7 @@ import { ui } from '@clerk/ui';
 <ClerkProvider ui={ui}>
 ```
 
-This is separate from the Solana/RN peer warning, but it directly affects the support analysis: the fully Clerk-supported way to pin structural CSS currently keeps `@clerk/ui` installed and passed to `ClerkProvider`, which conflicts with removing `@clerk/ui` for dependency minimization.
+This is separate from the Solana/RN peer warning. It still affects the support analysis because Clerk's fully supported structural-CSS pinning path keeps `@clerk/ui` installed and passed to `ClerkProvider`, which conflicts with removing `@clerk/ui` for dependency minimization. The source-cleanup work is tracked separately in DEBT-409.
 
 ## Blast Radius
 
@@ -199,9 +199,9 @@ If the Option A spike reveals a hard `@clerk/shared` incompatibility or that `@c
 
 Option B is strictly inferior on the real cost (bloat + supply-chain surface) and is only a fallback if A is blocked.
 
-### Option D — Keep `@clerk/ui` and wire Clerk's `ui` prop (support-alignment follow-up, not bloat removal)
+### Option D — Keep `@clerk/ui` and wire Clerk's `ui` prop (support-alignment fallback, not bloat removal)
 
-Because the app has `appearance.elements.userButtonTrigger` styling, Clerk emits a concrete `structural_css_pin_clerk_ui` warning and recommends passing `ui` from `@clerk/ui` to `<ClerkProvider>`. This is the supported way to pin Clerk's internal component DOM/CSS contract, but it keeps the Solana/RN subtree installed and therefore does **not** pay down DEBT-408's footprint goal. Track this as a related Clerk-versioning/support concern if the owner decides to keep `@clerk/ui`.
+Clerk recommends passing `ui` from `@clerk/ui` to `<ClerkProvider>` when structural CSS is present. This is the supported way to pin Clerk's internal component DOM/CSS contract, but it keeps the Solana/RN subtree installed and therefore does **not** pay down DEBT-408's footprint goal. DEBT-409 tracks the narrower warning cleanup and should remove/neutralize the stale archived selector source before falling back to `ui` prop wiring.
 
 ### Option C — Accept and document (no change)
 
