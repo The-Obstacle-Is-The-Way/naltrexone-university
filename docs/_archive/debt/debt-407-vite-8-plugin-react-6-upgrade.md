@@ -3,9 +3,22 @@
 **Priority:** P2
 **Created:** 2026-06-04
 **Source:** Dependabot opened separate major-upgrade PRs for `vite` 7.3.3 -> 8.0.14 (#386) and `@vitejs/plugin-react` ^5.2.0 -> ^6.0.2 (#387). The plugin-react PR is red by itself because plugin-react 6 peers on Vite 8.
-**Related:** [DEBT-403](../_archive/debt/debt-403-biome-245-lint-conformance.md), [DEBT-393](../_archive/debt/debt-393-dependabot-triage-and-config-hardening.md), [Testing Infrastructure](../dev/testing-infrastructure.md)
+**Related:** [DEBT-403](./debt-403-biome-245-lint-conformance.md), [DEBT-393](./debt-393-dependabot-triage-and-config-hardening.md), [Testing Infrastructure](../../dev/testing-infrastructure.md)
 
-**Status:** Active
+**Status:** **Resolved 2026-06-05.** Shipped as PR #403 (squash-merged to `dev` as `60b3975a`); Dependabot #386/#387 closed as superseded. See Resolution below.
+
+---
+
+## Resolution (2026-06-05)
+
+Shipped as PR #403, squash-merged to `dev` as `60b3975a`, superseding Dependabot #386 and #387 (both closed as superseded).
+
+- `package.json`: `vite` `7.3.3` -> `8.0.14` (exact pin retained); `@vitejs/plugin-react` `^5.2.0` -> `^6.0.2` (caret retained); `vitest` unchanged at `^4.1.7`.
+- No source or Vitest-config changes were required. `vitest.browser.config.ts`'s `react()` call and `optimizeDeps.include` list worked unchanged under Vite 8's Rolldown/OXC optimizer and plugin-react 6's Babel-free transform.
+- `pnpm-lock.yaml` churn matched the prediction: the `@babel/plugin-transform-react-jsx-*` chain that plugin-react 5 pulled was removed (plugin-react 6 moves React Refresh to OXC), the Rolldown/OXC native runtime (`@napi-rs/wasm-runtime`, `@emnapi/*`, `@tybys/wasm-util`) was added, and esbuild advanced transitively `0.27.2` -> `0.28.0`. No first-party dependency versions changed.
+- Full CI gate on Node 24 was green — typecheck, lint, unit, Browser Mode, integration, and `next build` — with `codecov/patch` green. CodeRabbit approved at head `6d781b54` with no actionable comments.
+
+The Acceptance Criteria below were all met.
 
 ---
 
