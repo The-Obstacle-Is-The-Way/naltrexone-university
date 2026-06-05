@@ -3,8 +3,28 @@
 **Priority:** P3 (install hygiene + supply-chain surface; see [Severity & Priority](#severity--priority) for the P2 argument)
 **Created:** 2026-06-05
 **Source:** A pnpm peer-dependency report flags a pre-existing `ws@7.5.11` ↔ `utf-8-validate@6.0.6` mismatch on `origin/dev` (it was already present before PR #403 / DEBT-407 and was *not* introduced by it). Investigation traced the warning to `@clerk/ui`, a direct dependency used only for two Clerk appearance-theme objects, which transitively pulls the entire Solana wallet-adapter + React Native stack.
-**Related:** [Debt Index](./index.md), DEBT-393 (Dependabot triage / config hardening), DEBT-394 (`minimumReleaseAge` supply-chain maturity gate), DEBT-407 (the Vite 8 upgrade whose peer-check surfaced this), [`.claude/rules/frontend.md`](../../.claude/rules/frontend.md)
-**Status:** Active — adversarial audit + reversible spike complete (2026-06-05). The simple `@clerk/ui/themes` -> `@clerk/themes` swap is mechanically green and visibly identical on the current sign-in/dashboard surfaces, but it is **not** a strict supported/object-identical Clerk-theme replacement: current Clerk Core 3 docs now document `@clerk/ui/themes`, the `@clerk/themes` prebuilt `dark`/`shadcn` objects differ from `@clerk/ui@1.14.0`, and `@clerk/themes` still carries `@clerk/shared@3.x` while `@clerk/nextjs@7` uses `@clerk/shared@4.x`. Docs-before-code: no dependency change has been committed.
+**Related:** [Debt Index](../../debt/index.md), DEBT-393 (Dependabot triage / config hardening), DEBT-394 (`minimumReleaseAge` supply-chain maturity gate), DEBT-407 (the Vite 8 upgrade whose peer-check surfaced this), [DEBT-409](../../debt/debt-409-clerk-structural-css-pin-userbutton.md) (the separate Clerk structural-CSS warning spun off from this audit), [`.claude/rules/frontend.md`](../../../.claude/rules/frontend.md)
+**Status:** **Resolved — Accepted (no code change) 2026-06-05.** Owner decision: keep `@clerk/ui` and accept the inert Solana/React-Native subtree; do **not** swap to `@clerk/themes`. See [Decision](#decision-2026-06-05) below. The adversarial audit + reversible spike were completed; the simple `@clerk/ui/themes` -> `@clerk/themes` swap is mechanically green and visibly identical on the current sign-in/dashboard surfaces, but it is **not** a strict supported/object-identical Clerk-theme replacement: current Clerk Core 3 docs document `@clerk/ui/themes`, the `@clerk/themes` prebuilt `dark`/`shadcn` objects differ from `@clerk/ui@1.14.0`, and `@clerk/themes` still carries `@clerk/shared@3.x` while `@clerk/nextjs@7` uses `@clerk/shared@4.x`. No dependency change was committed.
+
+---
+
+## Decision (2026-06-05)
+
+**Accepted. Keep `@clerk/ui`. Do not swap to `@clerk/themes`. No dependency change.**
+
+The audit reversed the original premise. The "lighter" `@clerk/themes` is the **older** path, not the newer one: Clerk's current Core 3 docs canonicalize `@clerk/ui/themes` (the package we already have). Swapping would have traded **inert** bloat on the supported path for a measurably worse position on the axes that matter:
+
+- It introduces a **second `@clerk/shared` major** (`3.x` from `@clerk/themes` alongside `4.x` from `@clerk/nextjs@7`).
+- Its prebuilt `dark`/`shadcn` theme objects are **not** byte-identical to `@clerk/ui@1.14.0` (different `colorRing`/`colorModalBackdrop`/`cardBox` + provider-icon rules — see [Evidence](#evidence) §6).
+- It moves off the canonical, currently-documented Clerk path.
+
+The Solana/React-Native subtree is real install/audit weight but it is **inert**: the native addons are not built (`allowBuilds: false`), the React-Native/Metro/wallet code is never executed by the app or tests, and every transitive package is already gated by this repo's `minimumReleaseAge` supply-chain policy. Removing it is **not** in our hands — it is regular-dependency weight inside `@clerk/ui` with no upstream slim-install flag or planned split (verified, [Evidence](#evidence) §5). Accepting it keeps us on the latest supported Clerk path, which is the stated goal.
+
+This doc is retained (archived) as the durable record of **why not to re-attempt the `@clerk/themes` swap**, so the trade-off is not rediscovered or "tidied" into a regression later.
+
+**Spun off, not bundled:** the separate `structural_css_pin_clerk_ui` warning found during this audit (see [Evidence](#evidence) §7) is tracked as its own verified follow-up in **[DEBT-409](../../debt/debt-409-clerk-structural-css-pin-userbutton.md)** — it was deliberately not folded into this acceptance because it requires a code change with its own spike.
+
+**Optional / non-blocking future triggers** (no owner action required now): file an upstream `clerk/javascript` issue requesting an optional/slim Solana split; revisit this decision if Clerk ships a slim `@clerk/ui` themes entry or aligns `@clerk/themes` to `@clerk/shared@4`.
 
 ---
 
