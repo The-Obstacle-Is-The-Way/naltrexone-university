@@ -3,9 +3,23 @@
 **Priority:** P3
 **Created:** 2026-06-04
 **Source:** SPEC-041 question-feedback rating (shipped). Placement flagged in use; iterated twice via Claude in Design (round 1: inset box vs fold-in; round 2: fold-in vs post-action footer).
-**Related:** [DEBT-337](./debt-337-future-feedback-enhancements.md) (sibling feedback/practice polish), [DEBT-381](./debt-381-question-content-typography-audit-and-preference-path.md), [SPEC-041](../_archive/specs/spec-041-question-feedback.md), design docs `docs/frontend/standards.md` / `docs/frontend/pattern-registry.md` / `docs/frontend/design-principles.md`.
+**Related:** [DEBT-337](../debt/debt-337-future-feedback-enhancements.md) (sibling feedback/practice polish), [DEBT-381](../debt/debt-381-question-content-typography-audit-and-preference-path.md), [SPEC-041](../specs/spec-041-question-feedback.md), design docs `docs/frontend/standards.md` / `docs/frontend/pattern-registry.md` / `docs/frontend/design-principles.md`.
 
-**Status:** Active
+**Status:** **Resolved 2026-06-05.** Shipped as PR #402 (squash-merged to `dev` as `045240c4`, then `main` fast-forwarded to dev). See Resolution below.
+
+---
+
+## Resolution (2026-06-05)
+
+Shipped as PR #402, squash-merged to `dev` as `045240c4`, then `main` fast-forwarded to dev (all refs synced). The rating control was relocated exactly as decided:
+
+- **Pattern Registry F-9** ("Post-Action Rating Footer") was added to `docs/frontend/pattern-registry.md` before any component change, reusing the M-2 `Standard` separator (`border-t border-border`).
+- New shared `components/question/question-rating-footer.tsx` is the single source of truth for the boxless footer chrome.
+- The rating was lifted out of `QuestionSurfaceBody` and rendered after each surface's `data-testid="bottom-action-bar"` on all three surfaces (practice view, standalone question review, post-exam review), each behind its existing rating gate. `feedbackRef` still targets the explanation for the submit-scroll.
+- Visible copy → "Was this question helpful?"; thumb `aria-label`s → "Mark as helpful" / "Mark as not helpful"; the `<fieldset>` + `sr-only` legend, `aria-pressed`, `aria-live` status, and the canonical focus ring were all preserved.
+- TDD throughout: position tests assert the rating renders after the action bar (hardened against `indexOf` false positives), the surface-body test asserts absence, and `theme-token-regression.test.tsx` gained footer coverage. Full gate green under Node 24 (typecheck, lint, unit 2637, browser 295, build); CodeRabbit reviewed and approved with no actionable comments.
+
+The footer is the chosen **interim** placement; folding the rating into the action bar remains a documented future option (see "Notes / future" below) to be re-evaluated after real usage — it is out of scope for this debt. The Acceptance Criteria below were all met.
 
 ---
 
