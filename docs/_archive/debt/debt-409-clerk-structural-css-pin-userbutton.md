@@ -5,7 +5,7 @@
 **Source:** Discovered during the DEBT-408 audit, then settled by PR #404 build/browser experiments.
 **Related:** [Debt Index](../../debt/index.md), [DEBT-408](./debt-408-clerk-ui-solana-react-native-subtree.md) (accepted - keep `@clerk/ui`), [DEBT-250 archived snippet](./debt-250-frontend-visual-divergence-compliance-plan.md), [Clerk component versioning](https://clerk.com/docs/reference/components/versioning), [Tailwind source detection](https://tailwindcss.com/docs/detecting-classes-in-source-files)
 
-**Status:** Resolved 2026-06-05. Shipped in PR #404 (squash `fc3d3a44`) by excluding `docs/` from Tailwind v4 automatic source detection with `app/globals.css` `@source not "../docs";`. The close-out hardening added a fast unit guard in `app/globals.test.ts` that fails if the docs-source exclusion is removed.
+**Status:** Resolved 2026-06-05. Shipped in PR #404 (squash `fc3d3a44`) by excluding `docs/` from Tailwind v4 automatic source detection with `app/globals.css` `@source not "../docs";`. Close-out PR #405 added a fast unit guard in `app/globals.test.ts` that fails if the docs-source exclusion is removed.
 
 ---
 
@@ -17,7 +17,7 @@ Fix: `app/globals.css` keeps Tailwind's automatic source detection for the app w
 
 Proof: clean production builds with the exclusion contain no `cl-userButton` selectors; scratch-removing the exclusion and rebuilding brings the exact `.cl-userButtonBox` / `.cl-userButtonTrigger` CSS rule back. Browser console verification on `/pricing` went from `structural_css_pin_clerk_ui` count `1` before the fix to `0` after the fix in both dark and light. The remaining Clerk selector tokens in archived docs are now inert because Tailwind no longer scans `docs/`.
 
-Close-out hardening: the vestigial `tailwind.config.js` was removed after a production-build experiment proved generated CSS is byte-identical with that file present versus absent. Keeping the legacy config would falsely imply its `content` array constrains Tailwind v4 source detection.
+Close-out hardening in PR #405: the vestigial `tailwind.config.js` was removed after a production-build experiment proved generated CSS is byte-identical with that file present versus absent. Keeping the legacy config would falsely imply its `content` array constrains Tailwind v4 source detection.
 
 ## Problem
 
