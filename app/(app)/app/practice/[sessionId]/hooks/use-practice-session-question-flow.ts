@@ -211,7 +211,9 @@ export function usePracticeSessionQuestionFlow(
   }, [setQuestion, setSelectedChoiceId, setSubmitResult]);
 
   const saveCurrentExamDraft = useCallback(async (): Promise<boolean> => {
-    if (!question || question.session?.mode !== 'exam') return true;
+    // `=== 'exam'` on the optional chain narrows both `question` and
+    // `question.session` to non-null for the body below (drops the `?.`).
+    if (question?.session?.mode !== 'exam') return true;
 
     const nowMs = Date.now();
     const enteredAtMs = currentExamDraftEnteredAtRef.current;
