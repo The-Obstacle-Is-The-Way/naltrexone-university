@@ -2,6 +2,7 @@
 
 **Priority:** P1 (acquisition-blocking pre-launch feature; the bundled banner-copy item is P3)
 **Created:** 2026-06-06
+**Audit corrected:** 2026-06-06 (adversarial docs-only audit against Stripe primary sources + repo citations)
 **Status:** **DECIDED specification — no open options.** Docs-first; no code written yet. Ready for an implementation audit, then phased TDD implementation.
 **Author:** Paydown campaign (web research + primary-source Stripe verification + codebase audit).
 **Source:** Owner request to (a) repair the "Subscription required to access the app." pricing copy and (b) add a free-trial pathway before dogfooding and first-user acquisition. Owner confirmed the **no-card** model ("try it free; enter a card only to keep going") and asked for a single decided spec with rationale — explicitly *no optionality*.
@@ -17,7 +18,7 @@ Every decision below is committed. Rationale follows in the body; rejected alter
 |---|----------|-------------------|
 | D1 | **Trial length: 7 days** | Instant-value product + deadline-driven exam buyers; benchmarks show ~no trial→paid loss vs 14 while 7 manufactures urgency and kills procrastination. |
 | D2 | **No-card (opt-in) trial; hard wall at expiry** | Pre-launch, the scarce asset is *trial starts* (a card wall cuts them ~70%). Owner-confirmed model: try free, enter a card only to continue. |
-| D3 | **Trial mechanism: Stripe Checkout `subscription_data.trial_period_days`** (NOT Trial Offers) | This is Stripe's **only** supported and **currently recommended** way to trial on hosted Checkout. Trial Offers are explicitly incompatible with Checkout and are preview-only. See §B.2 — quote-backed. |
+| D3 | **Trial mechanism: Stripe Checkout `subscription_data.trial_period_days`** (NOT Trial Offers) | This is Stripe's **only documented Checkout-compatible** way to trial on hosted Checkout. Trial Offers are explicitly incompatible with Checkout and are preview-only. See §B.2 — quote-backed. |
 | D4 | **No-card end behavior: `missing_payment_method: 'cancel'`** | The value Stripe **demonstrates in code** for Checkout; cleanest fit — reuses our existing `customer.subscription.deleted` handling and "subscribe again" flow. |
 | D5 | **Default plan: Annual ($199/yr) visually primary; both plans trial-able** | Exam need has a fixed end date → annual matches the study horizon; ~51% lower churn, ~2× LTV. |
 | D6 | **Architecture: Stripe is the single source of truth (Stripe-level trial)** | `inTrial` is already an entitled domain status; reuses all existing entitlement + webhook code. No parallel app-level trial clock. |
@@ -69,15 +70,15 @@ The original billing design anticipated trials. Confirmed by reading the code:
 | Stripe↔domain status map incl. `trialing→inTrial`, `paused→paused` | `src/adapters/gateways/stripe/stripe-subscription-status.ts:7-27` | ✅ |
 | DB enum includes `trialing` + `paused` | `db/schema.ts:52-62`; table `:177-192` | ✅ no migration needed |
 | `customer.subscription.trial_will_end` already routes through the generic path and re-syncs state | schemas `…/stripe-webhook-schemas.ts:74-83`; processor `…/stripe-webhook-processor.ts:114-146`; test `src/adapters/gateways/stripe-payment-gateway.test.ts:593-618` | ✅ already handled (returns a `subscriptionUpdate`) |
-| **Normalizer reads period end from `items.data[0].current_period_end`** (the modern location) | `src/adapters/gateways/stripe/stripe-subscription-normalizer.ts:79-80,98` | ✅ no latent bug; **during a trial this equals `trial_end`** → countdown needs no new field |
+| **Normalizer reads period end from `items.data[0].current_period_end`** (the modern location) | `src/adapters/gateways/stripe/stripe-subscription-normalizer.ts:79-80,98` | ✅ no latent bug; Stripe docs confirm **during a trial this equals `trial_end`** → countdown needs no new field |
 | **Eligibility gate already present**: the checkout use case looks up `findByUserId` | `src/application/use-cases/create-checkout-session.ts:111` | ✅ `subscription === null` ⇒ first-timer ⇒ grant trial |
 | Stripe API pinned `2026-05-27.dahlia` (GA channel), last reviewed 2026-06-04 | `lib/stripe.ts:7,22` | ✅ trial fields valid; not on the preview channel Trial Offers require |
 
-**What is actually missing** (the whole job): we never pass a trial parameter when creating the Checkout Session (`subscription_data` carries only `metadata.user_id`, `stripe-checkout-sessions.ts:307-311`); the pricing/checkout/in-app UI is not trial-aware; and there are no trial-reminder emails (no email infra). That's it. **No schema, webhook, or entitlement changes.**
+**What is actually missing** (the whole job): we never pass a trial parameter when creating the Checkout Session (`subscription_data` carries only `metadata.user_id`, `src/adapters/gateways/stripe/stripe-checkout-sessions.ts:307-311`; the shared adapter type currently allows only `subscription_data.metadata`, `src/adapters/shared/stripe-types.ts:28-30`); the pricing/checkout/in-app UI is not trial-aware; and there are no trial-reminder emails (no email infra). That's it. **No schema, webhook, or entitlement changes.**
 
 ## B.2 The "legacy" question — settled with primary sources
 
-The owner's question is exactly right to ask: *if Stripe has a newer "gold-standard" trial system, why build on the one Stripe calls "legacy"?* The answer, verified against Stripe's own current docs (and independently re-fetched by me), is decisive: **for a hosted-Checkout product, `subscription_data.trial_period_days` is the current, recommended, and only supported path. The "new" Trial Offer system literally cannot be used with Checkout.** "Legacy" here is a naming label, not a deprecation.
+The owner's question is exactly right to ask: *if Stripe has a newer "gold-standard" trial system, why build on the one Stripe calls "legacy"?* The answer, verified against Stripe's own current docs (and independently re-fetched by me), is decisive: **for a hosted-Checkout product, `subscription_data.trial_period_days` is the current documented path and the Trial Offer system literally cannot be used with Checkout.** "Legacy" here is a naming label on the direct Subscriptions-API free-trials page, not a Checkout deprecation.
 
 **Evidence (verbatim quotes):**
 
@@ -95,9 +96,9 @@ The owner's question is exactly right to ask: *if Stripe has a newer "gold-stand
 
 4. **The Checkout free-trials doc carries zero deprecation and demonstrates `trial_period_days` as the method** — I independently fetched [docs.stripe.com/payments/checkout/free-trials](https://docs.stripe.com/payments/checkout/free-trials) (stripe-hosted variant) and confirmed: the example uses `subscription_data[trial_period_days]`; there is **no** "Legacy" banner, deprecation notice, or "no longer recommended" warning anywhere on that page; and it makes no mention of Trial Offers.
 
-5. **The pinned version does not change this** — the only trial-related changelog entries on/after `2026-05-27.dahlia` are *additive* Trial-Offer (preview) features, all non-breaking; none deprecate `trial_period_days` or Checkout trials ([changelog 2026-05-27](https://docs.stripe.com/changelog/dahlia/2026-05-27/trial-offer-prices-expansion.md), [2026-03-25](https://docs.stripe.com/changelog/dahlia/2026-03-25/trial-offers-on-subscription-items.md)).
+5. **The pinned version does not change this** — Dahlia introduced breaking changes at `2026-03-25.dahlia`; Stripe says subsequent Dahlia versions are additive. The `2026-05-27.dahlia` GA summary contains no Checkout-trial deprecation; the Trial Offer entries are preview/additive and do not deprecate `subscription_data.trial_period_days` or Checkout trials ([Dahlia changelog](https://docs.stripe.com/changelog/dahlia), [Trial Offer price expansion](https://docs.stripe.com/changelog/dahlia/2026-05-27/trial-offer-prices-expansion.md), [Trial Offers on subscription items](https://docs.stripe.com/changelog/dahlia/2026-03-25/trial-offers-on-subscription-items.md)).
 
-**Conclusion (D3):** Adopting the "new" Trial Offer system would mean **abandoning hosted Stripe Checkout** for a custom Subscriptions-API integration, **switching to a preview API version**, and **migrating to flexible billing mode** — a large regression in scope, PCI surface, and stability, to gain advanced-billing features we do not need. We use `subscription_data.trial_period_days`. It *is* the gold standard for our architecture. (When we would ever revisit: only if we independently move off hosted Checkout for unrelated reasons — see §B.17.)
+**Conclusion (D3):** Adopting the "new" Trial Offer system would mean **abandoning hosted Stripe Checkout** for a custom Subscriptions-API integration, **switching to a preview API version**, and **migrating to flexible billing mode** — a large regression in scope, PCI surface, and stability, to gain advanced-billing features we do not need. We use `subscription_data.trial_period_days`, the documented Checkout path for our architecture. (When we would ever revisit: only if we independently move off hosted Checkout for unrelated reasons — see §B.17.)
 
 ## B.3 The decision, with rationale (D1, D2, D4, D5)
 
@@ -119,13 +120,13 @@ Verbatim from the Checkout free-trials doc (independently fetched), no-card exam
 -d "subscription_data[trial_settings][end_behavior][missing_payment_method]=cancel" \
 -d payment_method_collection=if_required
 ```
-`missing_payment_method` shown **in code: `cancel` only**; **in prose: `cancel` + `pause`**; `create_invoice` **not present** on the Checkout doc → we use `cancel`. ([docs.stripe.com/payments/checkout/free-trials](https://docs.stripe.com/payments/checkout/free-trials).)
+`missing_payment_method` shown **in code: `cancel` only**; **in prose: `cancel` + `pause`**; `create_invoice` is a documented value of the underlying subscription `trial_settings.end_behavior.missing_payment_method` enum but is **not demonstrated or recommended in the hosted Checkout free-trials guide** → we use `cancel`. ([docs.stripe.com/payments/checkout/free-trials](https://docs.stripe.com/payments/checkout/free-trials); [Subscription object — `trial_settings`](https://docs.stripe.com/api/subscriptions/object).)
 
 **Constraints:** `trial_period_days` ≤ 730; mutually exclusive with `trial_end`. ([Billing free-trials](https://docs.stripe.com/billing/subscriptions/trials/free-trials).)
 
 **Webhook flow (all DB-state events already handled — §B.1):**
 - No-card start → `checkout.session.completed` → `customer.subscription.created` (trialing → `inTrial` → entitled).
-- 3 days before end (day 4 of a 7-day trial) → `customer.subscription.trial_will_end` (re-syncs; Stripe-native email fires).
+- 3 days before end (day 4 of an unmodified 7-day trial) → `customer.subscription.trial_will_end` (re-syncs; Stripe-native email fires). Stripe can fire this immediately if a trial is ended early or shortened below the 3-day threshold; our 7-day no-card start path does not do that.
 - Day 7, no card → `customer.subscription.deleted` (canceled → not entitled → access revoked).
 - Convert (card added) → `invoice.payment_succeeded` → `customer.subscription.updated` (trialing → active).
 
@@ -139,7 +140,7 @@ We implement the trial as a real Stripe subscription in `trialing` status, not a
 
 Our checkout use case blocks a *new* Checkout while `inTrial` (`subscription-status.ts:40-41`), so the two paths are distinct and intentional:
 
-1. **During the trial — add a card early (keep access without interruption).** The in-app trial countdown (§B.8) links to the Stripe Customer Portal via the existing `manageBillingAction` → `createPortalSession` (`app/pricing/manage-billing-actions.ts`, `PaymentGateway.createPortalSession` `src/application/ports/gateways.ts:85-88`). With a card on file at trial end, `missing_payment_method: 'cancel'` does **not** fire (it only triggers when *no* card exists), so the subscription converts to `active` normally. **Requires** the Stripe Dashboard Customer Portal to allow payment-method updates (Dashboard config; verify in test mode).
+1. **During the trial — add a card early (keep access without interruption).** The in-app trial countdown (§B.8) links to the Stripe Customer Portal via the existing `manageBillingAction` → `createPortalSession` (`app/pricing/manage-billing-actions.ts:22-45`, `PaymentGateway.createPortalSession` `src/application/ports/gateways.ts:85-88`). With a card on file at trial end, `missing_payment_method: 'cancel'` does **not** fire (Stripe checks subscription/customer default payment sources to decide whether a payment method is missing), so the subscription converts to `active` normally. **Requires** the Stripe Dashboard Customer Portal to allow payment-method updates (Dashboard config; verify in test mode).
 2. **After expiry — re-subscribe (owner's stated model: "enter their card to keep it going").** A lapsed trial is `canceled` (not blocking), so the user goes to `/pricing` and runs the **existing** Checkout flow — now **without** a trial param (they are no longer first-time, §B.9) — enters a card, and becomes `active`. Reuses everything already built.
 
 ## B.7 The trial-eligibility gate (D9)
@@ -149,11 +150,11 @@ Trial-eligible **iff `subscriptions.findByUserId(userId) === null`** — i.e., t
 - A former paid subscriber has a row → not eligible.
 - Only a genuinely new user (no row) gets the trial param.
 
-This needs **no new column**. (Note: for our no-card flow, abandoned checkouts do not create subscription rows — a row appears only after `customer.subscription.created` — so "no row = first-timer" is reliable. The card-payment `incomplete` edge does not apply to a no-card trial.)
+This needs **no new column**. (Note: for our no-card trial flow, abandoned Checkout Sessions do not create subscription rows — a row appears only after a completed Checkout creates a Stripe subscription and our existing webhooks upsert it — so "no row = first-timer" is reliable for the new flow. Existing paid-flow `paymentProcessing`/`paymentFailed` rows may represent users who attempted payment before this trial launch; those users are intentionally **not** trial-eligible under the conservative "any prior subscription record = no trial" rule, but they can still run the normal paid Checkout when the status is non-blocking.)
 
 ## B.8 UI / UX (design-system compliant — `docs/frontend/standards.md`, `.claude/rules/frontend.md`)
 
-All interactive targets use `<Button>`; semantic tokens only; canonical focus ring; any new visual pattern (e.g., a countdown chip) is added to `pattern-registry.md` first.
+All interactive targets use `<Button>`; semantic tokens only; canonical focus ring; any new visual pattern (especially the countdown chip) is added to `pattern-registry.md` first with light/dark token choices, contrast rationale, and allowed opacity values before implementation.
 
 1. **Pricing CTAs (`app/pricing/pricing-view.tsx`).** When `FREE_TRIAL_ENABLED`, both cards' primary CTA becomes **"Start 7-day free trial"** with subtext "then $29/mo" / "then $199/yr · no card required". Annual stays visually primary. Add `trialCta`/`postTrialNote` fields to `lib/pricing-data.ts:12-26` (copy lives there, not in the view).
 2. **Banner (Part A).** Anonymous → no banner; `subscription_required` reworded to "Start your free trial to access the app — no card required."
@@ -174,6 +175,7 @@ v1 enables Stripe's native "trial ending" / "upcoming renewal" customer emails (
 4. **Webhook ordering / at-least-once** → handlers already idempotent (event-claim + transactional upsert in `stripe-webhook-controller.ts`). Unchanged.
 5. **CSP `form-action`** → coordinate any new billing form-posts with DEBT-332 so the trial CTA isn't blocked under strict CSP.
 6. **Customer Portal must allow payment-method updates** (Dashboard config) for §B.6 path 1; verify in test mode.
+7. **Eligibility depends on the completed-trial row existing locally** → the first-time gate is intentionally local (`findByUserId === null`). Existing webhook + checkout-success sync must create that row for every completed trial; if both were lost before a no-card trial later canceled, the local gate could not see the prior Stripe history. Regression-test the sync paths and monitor webhook failures; no schema change is required.
 
 ## B.12 Kill-switch (D10)
 `FREE_TRIAL_ENABLED` in `lib/env.ts` following the existing `NEXT_PUBLIC_SKIP_CLERK: z.enum(['true','false']).optional()` pattern (`lib/env.ts:46`). When off (default in prod until verified): no trial param is passed and CTAs render today's "Subscribe" copy — behavior is byte-identical to current. This is an operational kill-switch, not a product option.
@@ -181,10 +183,10 @@ v1 enables Stripe's native "trial ending" / "upcoming renewal" customer emails (
 ## B.13 Phased implementation plan (small, TDD, CR-clean PRs)
 Each PR: tests first (red→green); full local gate before push (`pnpm typecheck && lint && test --run && test:browser && test:integration && build`, plus E2E when the billing env is present); fresh CodeRabbit review; **pause for owner grade before merge** (per workflow). Squash-merge to `dev`, fast-forward `main`.
 
-- **PR-1 — Part A (copy):** anonymous visitors no longer see "Subscription required…"; reason-gated banners preserved. Pure logic/copy + tests. Independent of Stripe.
-- **PR-2 — Checkout wiring:** add `trialPeriodDays?: number` to `CheckoutSessionInput`; in `create-checkout-session.ts` pass `7` only when `subscription === null` and `FREE_TRIAL_ENABLED`; add the three no-card params to the gateway `params` object + extend `CheckoutSessionCreateParams`. Unit (use case + gateway) + integration; **Stripe test-clock** tests for trialing→canceled and trialing→active.
-- **PR-3 — UI/UX:** trial CTAs + `pricing-data` fields, trial-aware checkout-success, in-app countdown (register pattern) + portal "add a card" affordance, expired-state copy. Component/browser tests; visual verify light+dark.
-- **PR-4 — Config + rollout:** `FREE_TRIAL_ENABLED`; enable Stripe-native trial emails; configure Customer Portal payment-method updates; E2E for the no-card trial start. Then archive this doc.
+- **PR-1 — Part A (copy):** anonymous visitors no longer see "Subscription required…"; reason-gated banners preserved. Red tests first in `app/pricing/page.test.tsx` for anonymous `loadPricingData()`, `getPricingBanner()`, and injected render output; then implementation. Independent of Stripe.
+- **PR-2 — Checkout wiring:** add `trialPeriodDays?: number` to `CheckoutSessionInput`; in `create-checkout-session.ts` pass `7` only when `subscription === null` and `FREE_TRIAL_ENABLED`; add the three no-card params to the gateway `params` object + extend `CheckoutSessionCreateParams`. Red tests first in `src/application/use-cases/create-checkout-session.test.ts` (using `FakeSubscriptionRepository`, `FakeStripeCustomerRepository`, `FakePaymentGateway`, `FakeLogger`), `src/adapters/gateways/stripe-payment-gateway.test.ts` or `src/adapters/gateways/stripe/stripe-checkout-sessions.test.ts` (Stripe SDK seam via `vi.fn()`), and `lib/env.test.ts` with `tests/shared/process-env.ts`. Add a gated Stripe test-clock smoke for trialing→canceled and trialing→active; do not pretend it is a pure unit test.
+- **PR-3 — UI/UX:** trial CTAs + `pricing-data` fields, trial-aware checkout-success, in-app countdown (register pattern first) + portal "add a card" affordance, expired-state copy. Red tests first in `app/pricing/page.test.tsx`, `app/pricing/pricing-view.test.tsx`, `app/(marketing)/checkout/success/checkout-success-assertions.test.ts`, `app/(marketing)/checkout/success/page.test.ts`, and `app/(app)/app/layout-shell.test.tsx`; add `*.browser.spec.tsx` only for client-side interactivity that static markup cannot verify. Visual verify light+dark.
+- **PR-4 — Config + rollout:** `FREE_TRIAL_ENABLED`; enable Stripe-native trial emails; configure Customer Portal payment-method updates; E2E for the no-card trial start in `tests/e2e/pricing-*`. Then archive this doc.
 
 ## B.14 Acceptance criteria
 - [ ] Anonymous `/pricing` visitors see no "Subscription required…" banner; reason-gated banners still work (Part A).
@@ -201,10 +203,11 @@ Each PR: tests first (red→green); full local gate before push (`pnpm typecheck
 - [ ] Full local gate green before every push; fresh CodeRabbit clean; owner graded before each merge.
 
 ## B.15 Testing plan
-- **Unit:** use-case trial gating (fakes; eligible vs ineligible); gateway no-card param construction; status-map regression.
-- **Integration (test DB):** webhook upsert for trialing/canceled/active; full trial→cancel→resubscribe cycle; eligibility after a prior record exists.
-- **Stripe test clocks:** trialing → trial_will_end → canceled (no card); trialing → active (card added). ([Stripe testing](https://docs.stripe.com/billing/testing).)
-- **Browser/component:** pricing CTAs + countdown + expired state (light/dark).
+- **Unit:** use-case trial gating with existing fakes (`FakeSubscriptionRepository`, `FakeStripeCustomerRepository`, `FakePaymentGateway`, `FakeLogger`); gateway no-card param construction; status-map regression; `FREE_TRIAL_ENABLED` parsing/defaults in `lib/env.test.ts` using `tests/shared/process-env.ts`.
+- **Integration (test DB):** webhook upsert for trialing/canceled/active; eligibility after a prior record exists; controller/action wiring where persistence is involved.
+- **Stripe test clocks (gated external Stripe smoke):** trialing → trial_will_end → canceled (no card); trialing → active (card added). ([Stripe testing](https://docs.stripe.com/billing/testing).)
+- **Component/render:** pricing CTAs + banner copy + checkout-success copy + app-shell countdown/expired state using React 19 `renderToStaticMarkup` rules.
+- **Browser:** only for async hooks or interactive UI that cannot be verified with static render tests.
 - **E2E:** no-card trial start happy path (extend `tests/e2e/pricing-*`).
 
 ## B.16 Rollback
