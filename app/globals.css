@@ -1,5 +1,5 @@
 @import "tailwindcss";
-/* Tailwind v4 auto-detects source files; documentation snippets must not ship CSS. */
+/* DEBT-409: Tailwind v4 auto-detects sources; docs snippets must not ship CSS. */
 @source not "../docs";
 /*
   ---break---

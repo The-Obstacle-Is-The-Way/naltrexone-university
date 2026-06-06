@@ -3,11 +3,21 @@
 **Priority:** P3 (console-warning hygiene + forward-compatibility; no current user harm)
 **Created:** 2026-06-05
 **Source:** Discovered during the DEBT-408 audit, then settled by PR #404 build/browser experiments.
-**Related:** [Debt Index](./index.md), [DEBT-408](../_archive/debt/debt-408-clerk-ui-solana-react-native-subtree.md) (accepted - keep `@clerk/ui`), [DEBT-250 archived snippet](../_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md), [Clerk component versioning](https://clerk.com/docs/reference/components/versioning), [Tailwind source detection](https://tailwindcss.com/docs/detecting-classes-in-source-files)
+**Related:** [Debt Index](../../debt/index.md), [DEBT-408](./debt-408-clerk-ui-solana-react-native-subtree.md) (accepted - keep `@clerk/ui`), [DEBT-250 archived snippet](./debt-250-frontend-visual-divergence-compliance-plan.md), [Clerk component versioning](https://clerk.com/docs/reference/components/versioning), [Tailwind source detection](https://tailwindcss.com/docs/detecting-classes-in-source-files)
 
-**Status:** Implemented in PR #404; pending review/merge. The fix is `app/globals.css` excluding `docs/` from Tailwind v4 automatic source detection with `@source not "../docs";`.
+**Status:** Resolved 2026-06-05. Shipped in PR #404 (squash `fc3d3a44`) by excluding `docs/` from Tailwind v4 automatic source detection with `app/globals.css` `@source not "../docs";`. Close-out PR #405 added a fast unit guard in `app/globals.test.ts` that fails if the docs-source exclusion is removed.
 
 ---
+
+## Resolution
+
+Root cause: Tailwind v4 automatic source detection scanned repository Markdown under `docs/`, so historical debt-doc snippets containing valid arbitrary Tailwind selectors were emitted into production CSS.
+
+Fix: `app/globals.css` keeps Tailwind's automatic source detection for the app while excluding documentation with `@source not "../docs";`.
+
+Proof: clean production builds with the exclusion contain no `cl-userButton` selectors; scratch-removing the exclusion and rebuilding brings the exact `.cl-userButtonBox` / `.cl-userButtonTrigger` CSS rule back. Browser console verification on `/pricing` went from `structural_css_pin_clerk_ui` count `1` before the fix to `0` after the fix in both dark and light. The remaining Clerk selector tokens in archived docs are now inert because Tailwind no longer scans `docs/`.
+
+Close-out hardening in PR #405: the vestigial `tailwind.config.js` was removed after a production-build experiment proved generated CSS is byte-identical with that file present versus absent. Keeping the legacy config would falsely imply its `content` array constrains Tailwind v4 source detection.
 
 ## Problem
 
@@ -47,7 +57,7 @@ The minimal convergent fix is to keep automatic detection for the rest of the re
 
 ```css
 @import "tailwindcss";
-/* Tailwind v4 auto-detects source files; documentation snippets must not ship CSS. */
+/* DEBT-409: Tailwind v4 auto-detects sources; docs snippets must not ship CSS. */
 @source not "../docs";
 ```
 
@@ -141,7 +151,9 @@ That is not the right first-line fix here. Passing `ui` would suppress/pin the w
 - [x] Tailwind docs-source pollution is addressed at the source-detection layer, not by editing one snippet.
 - [x] Generated selector diff is quantified and contains only removals from docs-source pollution.
 - [x] Full local gate green before push: `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build`. Evidence from the final-tree run under Node 24: lint completed with 0 errors / 19 known warnings, unit tests `331 passed (331)` / `2637 passed (2637)`, Browser Mode `56 passed (56)` / `295 passed (295)`, integration `19 passed (19)` / `108 passed (108)`, and `next build` completed successfully. Authenticated E2E also ran because the local billing E2E prerequisites were present: `35 passed (4.8m)`.
-- [ ] Fresh CodeRabbit review clean on the latest PR #404 head before merge.
+- [x] Fresh CodeRabbit review was clean on the latest PR #404 head before merge.
+- [x] Regression guard added in `app/globals.test.ts`; scratch-removing the docs-source exclusion makes the guard fail, restoring it makes the guard pass.
+- [x] Vestigial `tailwind.config.js` removed after a present-vs-absent build comparison proved generated CSS was byte-identical.
 
 ## Rollback
 

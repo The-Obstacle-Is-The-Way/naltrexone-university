@@ -113,6 +113,13 @@ describe('hslToRgb hue normalization', () => {
   });
 });
 
+describe('Tailwind source detection (DEBT-409)', () => {
+  it('excludes documentation snippets from generated production CSS sources', () => {
+    expect(css).toContain('DEBT-409');
+    expect(css).toMatch(/@source\s+not\s+["']\.\.\/docs["'];/);
+  });
+});
+
 function getRequiredTokenValue(block: string, tokenName: string): string {
   const value = extractToken(block, tokenName);
   if (!value) {
