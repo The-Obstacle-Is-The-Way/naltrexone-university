@@ -41,14 +41,18 @@ All repo citations re-verified mechanically on branch `chore/debt-408-clerk-ui-s
 **1. The single, sole consumer of `@clerk/ui`:**
 
 `components/providers.tsx:3`
+
 ```ts
 import { dark, shadcn } from '@clerk/ui/themes';
 ```
+
 Used only as Clerk `baseTheme` values:
+
 - `components/providers.tsx:16` — `CLERK_APPEARANCE_DARK = { baseTheme: dark, ... }`
 - `components/providers.tsx:27` — `CLERK_APPEARANCE_LIGHT = { baseTheme: shadcn, ... }`
 
 A repo-wide source grep finds **no other `@clerk/ui` import** (no other subpath, no CSS asset):
+
 - `rg -n "@clerk/ui" app components src lib` -> only `components/providers.tsx:3`.
 - `rg -n "@clerk/(ui|themes).*\\.css|shadcn\\.css|@import.*clerk" app components src lib --glob "*.css" --glob "*.tsx" --glob "*.ts"` -> no hits.
 - `find app components src lib -maxdepth 3 \( -name "*.css" -o -name "*.scss" \)` -> only `app/globals.css`.
@@ -58,16 +62,18 @@ A repo-wide source grep finds **no other `@clerk/ui` import** (no other subpath,
 `package.json:45` → `"@clerk/ui": "^1.13.1"` (resolves to `1.14.0`).
 
 `@clerk/ui@1.14.0` regular dependencies (from the npm registry manifest) include:
-```
+
+```text
 @solana/wallet-adapter-react  0.15.39
 @solana/wallet-adapter-base   0.9.27
 @solana/wallet-standard       1.1.4
 ```
+
 These are *regular* dependencies (Clerk ships Web3 / crypto-wallet sign-in support inside its UI components), so pnpm installs them regardless of which `@clerk/ui` subpath we import. Importing only `@clerk/ui/themes` cannot tree-shake them out at install time.
 
 **3. The full chain to the mismatch (verified via `pnpm why react-native` and `pnpm why ws`):**
 
-```
+```text
 root project (dependencies)
 └─ @clerk/ui@1.14.0
    └─ @solana/wallet-adapter-react@0.15.39
@@ -78,11 +84,13 @@ root project (dependencies)
                ├─ metro@0.83.7        → ws@7.5.11
                └─ react-devtools-core → ws@7.5.11
 ```
+
 (`@solana/web3.js@1.98.4` and `jayson@4.3.0` / `isomorphic-ws@4.0.1` are also in this subtree and also consume `ws@7.5.11`.)
 
 **4. The peer ranges that produce the warning (`pnpm-lock.yaml`):**
 
 `ws@7.5.11` (`pnpm-lock.yaml:5639-5650`):
+
 ```yaml
 peerDependencies:
   bufferutil: ^4.0.1
@@ -91,11 +99,14 @@ peerDependenciesMeta:
   bufferutil:     { optional: true }
   utf-8-validate: { optional: true }   # ← optional, so it is only a warning
 ```
+
 `ws@8.21.0` (`pnpm-lock.yaml:5652-5662`) — the other `ws` copy:
+
 ```yaml
 peerDependencies:
   utf-8-validate: '>=5.0.2'     # 6.0.6 SATISFIES this → no warning for ws@8
 ```
+
 So only `ws@7.x`'s narrower `^5.0.2` is violated; `ws@8.x` is fine. Correction from the first draft: before pruning, `ws@8.21.0` is used by both `@vitest/browser` and `rpc-websockets@9.3.9` inside the Solana subtree. After the `@clerk/ui` spike removal, `pnpm why ws` shows one remaining `ws@8.21.0` owner: `@vitest/browser@4.1.7`.
 
 **5. Current Clerk support/canonical-path evidence (resolved 2026-06-05):**
@@ -145,10 +156,12 @@ The mismatch is cosmetic, not a defect:
 
 1. `utf-8-validate` and `bufferutil` are **optional** peers of `ws` (`peerDependenciesMeta.*.optional: true`, `pnpm-lock.yaml:5645-5650`). A non-matching optional peer is a warning, never an install failure.
 2. `pnpm-workspace.yaml` `allowBuilds` **intentionally disables building both native addons**, with comments stating `ws` falls back to pure JS:
+
    ```yaml
    bufferutil: false      # optional ws peer/native performance addon built by node-gyp-build; ws can fall back.
    utf-8-validate: false  # optional ws peer/legacy UTF-8 native addon built by node-gyp-build; Node 24/ws can fall back.
    ```
+
    So `ws` never loads `utf-8-validate@6.0.6` at all — the version that "mismatches" is never executed.
 3. The `ws@7` consumers are never run by the app or the test suites.
 
@@ -161,21 +174,26 @@ Net: nothing is broken today. This is **install hygiene and supply-chain surface
 `@clerk/themes@2.4.57` (the `latest` dist-tag) is the lightweight Clerk appearance-themes package and exports the two theme names we use:
 
 - Verified from the package's own type declarations (`@clerk/themes@2.4.57/dist/index.d.ts`):
+
   ```ts
   export { dark } from './themes/dark.js';
   export { shadcn } from './themes/shadcn.js';
   ```
+
 - Its declared dependencies are **Solana/React-Native-free**: `{ tslib: 2.8.1, "@clerk/shared": "^3.47.2" }`.
 
 The change is one import line plus one `package.json` removal:
+
 ```diff
 - import { dark, shadcn } from '@clerk/ui/themes';
 + import { dark, shadcn } from '@clerk/themes';
 ```
+
 ```diff
 - "@clerk/ui": "^1.13.1",
 + "@clerk/themes": "^2.4.57",
 ```
+
 The reversible spike proved this deletes the entire `@clerk/ui -> @solana/* -> react-native -> ws@7.5.11` subtree from the lockfile, eliminating both the bloat **and** the peer warning at the root:
 
 - `pnpm install`: `Packages: +12 -365`; dependencies changed from `@clerk/ui 1.14.0` to `@clerk/themes 2.4.57`.
@@ -225,6 +243,7 @@ A **P2 argument** exists and the owner may elect it: this repo has invested heav
 ## Acceptance Criteria
 
 Option A is done only after the owner explicitly accepts the visible-surface parity bar:
+
 - [ ] `components/providers.tsx` imports `dark` and `shadcn` from `@clerk/themes`; `@clerk/ui` is removed from `package.json`.
 - [ ] `pnpm-lock.yaml` no longer contains `@clerk/ui`, `@solana/*`, `react-native`, `metro`, `react-devtools-core`, or `ws@7.5.11`. `ws@8.21.0` (vitest) remains and its peer range stays satisfied.
 - [ ] The PR body explicitly discloses that `@clerk/themes` adds `@clerk/shared@3.47.7` alongside Clerk shared v4, and that full gates/E2E prove no observed dual-instance break.
