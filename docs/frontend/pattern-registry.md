@@ -1416,7 +1416,7 @@ Additionally, `html { scroll-behavior: smooth; }` (`globals.css:178-180`) enable
 
 ### 19.1 Tailwind Version
 
-The project uses **Tailwind CSS v4** with CSS-first configuration (`@theme` block in `globals.css`). A legacy **Tailwind v3** `tailwind.config.js` coexists with duplicated color and radius definitions. The CSS `@theme` is the authoritative source.
+The project uses **Tailwind CSS v4** with CSS-first configuration (`@theme` block in `globals.css`). There is no `tailwind.config.js`; source detection is controlled from `app/globals.css`, including the DEBT-409 `@source not "../docs"` exclusion that prevents documentation examples from entering generated production CSS. The CSS `@theme` is the authoritative source for theme tokens.
 
 ### 19.2 Unused Tokens
 
