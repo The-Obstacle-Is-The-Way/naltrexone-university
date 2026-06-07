@@ -4,6 +4,16 @@ const { fixtureAppUser123Id } = vi.hoisted(() => ({
   fixtureAppUser123Id: crypto.randomUUID(),
 }));
 
+const NON_SECRET_ERROR = 'connection terminated unexpectedly';
+const SENSITIVE_ERROR_PARTS = [
+  'postgresql://e2e_user:super-secret-password@ep-hidden-river-123456.us-east-1.aws.neon.tech/addiction_boards?sslmode=require',
+  'ep-hidden-river-123456.us-east-1.aws.neon.tech',
+  'super-secret-password',
+  'sk_live_clerk_secret_123',
+  'sk_live_stripe_secret_456',
+  'ep-hidden-river-123456',
+] as const;
+
 class TestResetError extends Error {
   constructor(
     public readonly code: string,
@@ -47,6 +57,28 @@ function createError(
   options?: ErrorOptions,
 ) {
   return new TestResetError(code, message, fix, options);
+}
+
+function createSensitiveError(message = NON_SECRET_ERROR) {
+  return new Error(
+    `${message}; diagnostics=${SENSITIVE_ERROR_PARTS.join(' ')}`,
+  );
+}
+
+function expectNoSensitiveParts(value: string) {
+  for (const sensitivePart of SENSITIVE_ERROR_PARTS) {
+    expect(value).not.toContain(sensitivePart);
+  }
+}
+
+async function captureRejectedError(action: () => Promise<unknown>) {
+  try {
+    await action();
+  } catch (error) {
+    return error as TestResetError;
+  }
+
+  throw new Error('Expected action to reject.');
 }
 
 function createSupport(factory: SharedSupportFactory) {
@@ -226,6 +258,54 @@ describe('createSharedE2EResetSupport', () => {
     ).rejects.toMatchObject({
       code: 'TEST:APP_USER_LOOKUP_FAILED',
     });
+    expect(sqlClient.end).toHaveBeenCalledWith({ timeout: 5 });
+  });
+
+  it('propagates Clerk transport failures with sanitized diagnostic context', async () => {
+    const support = createSupport(createSharedE2EResetSupport);
+    const sourceError = createSensitiveError();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    fetchSpy.mockRejectedValueOnce(sourceError);
+
+    try {
+      const error = await captureRejectedError(() =>
+        support.resolveClerkUserIdByEmail({
+          clerkSecretKey: 'sk_test',
+          email: 'e2e@example.com',
+        }),
+      );
+
+      expect(error).toMatchObject({
+        code: 'TEST:CLERK_API_UNAVAILABLE',
+      });
+      expect(error.cause).toBe(sourceError);
+      expect(error.message).toContain(NON_SECRET_ERROR);
+      expectNoSensitiveParts(error.message);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it('propagates app-user lookup failures with sanitized diagnostic context', async () => {
+    const sourceError = createSensitiveError();
+    const sqlClient = createSqlClient();
+    sqlClient.mockRejectedValueOnce(sourceError);
+    postgresMock.mockReturnValue(sqlClient);
+    const support = createSupport(createSharedE2EResetSupport);
+
+    const error = await captureRejectedError(() =>
+      support.resolveAppUserIdByClerkUserId({
+        databaseUrl: 'postgres://db',
+        clerkUserId: 'clerk_user_123',
+      }),
+    );
+
+    expect(error).toMatchObject({
+      code: 'TEST:APP_USER_LOOKUP_FAILED',
+    });
+    expect(error.cause).toBe(sourceError);
+    expect(error.message).toContain(NON_SECRET_ERROR);
+    expectNoSensitiveParts(error.message);
     expect(sqlClient.end).toHaveBeenCalledWith({ timeout: 5 });
   });
 });
