@@ -3,9 +3,21 @@
 **Priority:** P2
 **Created:** 2026-05-23
 **Source:** Local authenticated E2E failed after SPEC-040 because the Neon `dev` branch behind `.env.local` had not been migrated to migrations `0017`/`0018`.
-**Related:** [Deployment Environments](../dev/deployment-environments.md), [Deployment Procedure](../dev/deployment-procedure.md), [Testing Infrastructure](../dev/testing-infrastructure.md), [SPEC-040](../_archive/specs/spec-040-omitted-exam-answer-scoring.md), [DEBT-390](../_archive/debt/debt-390-omitted-exam-questions-recorded-as-unattempted-not-incorrect.md)
+**Related:** [Deployment Environments](../../dev/deployment-environments.md), [Deployment Procedure](../../dev/deployment-procedure.md), [Testing Infrastructure](../../dev/testing-infrastructure.md), [SPEC-040](../specs/spec-040-omitted-exam-answer-scoring.md), [DEBT-390](./debt-390-omitted-exam-questions-recorded-as-unattempted-not-incorrect.md)
 
-**Status:** Active
+**Status:** **Resolved 2026-06-07.** Shipped as PR #408 (squash-merged to `main` as `6c2f9791`, then `dev` fast-forwarded). See Resolution below.
+
+---
+
+## Resolution (2026-06-07)
+
+Shipped as **PR #408**, squash-merged to `main` as `6c2f9791` and fast-forwarded onto `dev`. CodeRabbit approved the exact head with zero unresolved threads.
+
+- `tests/e2e/helpers/credential-health-check.ts`: added `verifyMigrationLedger(sql)` to `CredentialHealthCheckServices` + `defaultServices`, wired into the `database` validator **between** `checkDatabaseConnectivity(sql)` and `verifyIdempotencySchema(sql)` so a single Postgres connection covers connectivity → ledger drift → idempotency. It reads `db/migrations/meta/_journal.json` as the source of truth and compares journal `entries[].when` against `drizzle.__drizzle_migrations.created_at` (the same value Drizzle's migrator records). Pure helpers `computeMissingMigrations()` and `formatSchemaDriftMessage()` are separately unit-tested. A missing `drizzle` schema (`3F000`) or missing `__drizzle_migrations` table (`42P01`) is treated as drift (all journal tags missing), not an unhandled crash. Failures throw `E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATIONS`, naming the missing migration tags with no `DATABASE_URL`, hostnames, passwords, or Drizzle `hash`.
+- `tests/e2e/helpers/credential-health-check.test.ts`: added coverage for every acceptance criterion below — no missing migrations, missing ledger rows, absent schema, absent table, secret-free message formatting, and the connectivity → ledger → idempotency ordering on one shared connection.
+- Gate green on Node 24: typecheck, lint, `pnpm test --run` (331 files / 2651 tests), and `pnpm build`. The change is test-helper-only — no production app code touched.
+
+All Acceptance Criteria below were met.
 
 ---
 
