@@ -42,7 +42,8 @@ export async function loadPricingData(deps?: PricingPageDeps): Promise<{
   if (!authState.user) {
     return {
       isEntitled: false,
-      reason: 'subscription_required',
+      // Anonymous pricing visits should not show a banner; trial-forward copy ships with PR-3.
+      reason: null,
     };
   }
 

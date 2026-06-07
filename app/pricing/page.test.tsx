@@ -22,6 +22,8 @@ vi.mock('next/link', () => ({
 
 type PricingPageModule = typeof import('@/app/pricing/page');
 type PricingClientModule = typeof import('@/app/pricing/pricing-client');
+type PricingPageInput = Parameters<PricingPageModule['default']>[0];
+type PricingSearchParamsForTest = Awaited<PricingPageInput['searchParams']>;
 
 let PricingView: PricingPageModule['PricingView'];
 let getPricingBanner: PricingPageModule['getPricingBanner'];
@@ -116,6 +118,31 @@ async function renderPricingPageWithEntitlementReason(
   });
 
   return renderToStaticMarkup(element);
+}
+
+async function renderAnonymousPricingPage(
+  searchParams: PricingSearchParamsForTest = {},
+) {
+  const checkEntitlementUseCase = new FakeUseCase<
+    CheckEntitlementInput,
+    CheckEntitlementOutput
+  >({
+    isEntitled: false,
+    reason: null,
+  });
+  const element = await PricingPage({
+    searchParams: Promise.resolve(searchParams),
+    authNavFn: () => <div>AuthNav</div>,
+    deps: {
+      authGateway: new FakeAuthGateway(null),
+      checkEntitlementUseCase,
+    },
+  });
+
+  return {
+    html: renderToStaticMarkup(element),
+    checkEntitlementUseCase,
+  };
 }
 
 describe('app/pricing', () => {
@@ -455,25 +482,25 @@ describe('app/pricing', () => {
     expect(getPricingBanner({})).toBe(null);
   });
 
-  it('loadPricingData returns isEntitled=false when unauthenticated', async () => {
-    const authGateway: AuthGateway = {
-      getCurrentUser: vi.fn(async () => null),
-      requireUser: vi.fn(async () => {
-        throw new Error('not used');
-      }),
-    };
-
-    const checkEntitlementUseCase = {
-      execute: vi.fn(async () => ({ isEntitled: true, reason: null })),
-    };
+  it('loadPricingData returns no banner reason when unauthenticated', async () => {
+    const checkEntitlementUseCase = new FakeUseCase<
+      CheckEntitlementInput,
+      CheckEntitlementOutput
+    >({
+      isEntitled: true,
+      reason: null,
+    });
 
     await expect(
-      loadPricingData({ authGateway, checkEntitlementUseCase }),
+      loadPricingData({
+        authGateway: new FakeAuthGateway(null),
+        checkEntitlementUseCase,
+      }),
     ).resolves.toEqual({
       isEntitled: false,
-      reason: 'subscription_required',
+      reason: null,
     });
-    expect(checkEntitlementUseCase.execute).not.toHaveBeenCalled();
+    expect(checkEntitlementUseCase.inputs).toHaveLength(0);
   });
 
   it('loadPricingData returns isEntitled=true when entitled', async () => {
@@ -759,6 +786,16 @@ describe('app/pricing', () => {
     expect(html).toContain('Subscribe Monthly');
   });
 
+  it('does not render subscription-required copy for anonymous pricing visitors without search params', async () => {
+    const { html, checkEntitlementUseCase } =
+      await renderAnonymousPricingPage();
+
+    expect(html).toContain('Pricing');
+    expect(html).toContain('Subscribe Monthly');
+    expect(html).not.toContain('Subscription required to access the app.');
+    expect(checkEntitlementUseCase.inputs).toHaveLength(0);
+  });
+
   it('renders injected pricing state with the static auth fallback when authNavFn is omitted', async () => {
     const element = await PricingPage({
       searchParams: Promise.resolve({}),
@@ -867,6 +904,56 @@ describe('app/pricing', () => {
 
     expect(html).toContain('Manage Billing');
     expect(html).not.toContain('Subscribe Monthly');
+  });
+
+  it('still renders subscription-required copy for logged-in non-entitled redirects', async () => {
+    const html = await renderPricingPageWithEntitlementReason(
+      'subscription_required',
+    );
+
+    expect(html).toContain('Subscription required to access the app.');
+    expect(html).toContain('Subscribe Monthly');
+    expect(html).toContain('Subscribe Annual');
+  });
+
+  it.each([
+    [
+      { reason: 'manage_billing' },
+      'Subscription found. Manage billing to resolve payment issues.',
+      'Manage Billing',
+    ],
+    [
+      { reason: 'subscription_canceled' },
+      'Your subscription is inactive. Choose a plan to restart access.',
+      'Subscribe Monthly',
+    ],
+    [
+      { reason: 'payment_processing' },
+      'Payment processing. It may take a moment for access to activate.',
+      'Manage Billing',
+    ],
+    [{ checkout: 'cancel' }, 'Checkout canceled.', 'Subscribe Monthly'],
+    [
+      { checkout: 'error' },
+      'Checkout failed. Please try again.',
+      'Subscribe Monthly',
+    ],
+    [
+      { checkout: 'rate_limited' },
+      'Too many checkout attempts. Please wait and try again.',
+      'Subscribe Monthly',
+    ],
+  ] satisfies Array<
+    [
+      PricingSearchParamsForTest,
+      expectedMessage: string,
+      expectedAction: string,
+    ]
+  >)('preserves banner rendering for pricing query params %#', async (searchParams, expectedMessage, expectedAction) => {
+    const { html } = await renderAnonymousPricingPage(searchParams);
+
+    expect(html).toContain(expectedMessage);
+    expect(html).toContain(expectedAction);
   });
 
   it('renders the manage billing action when reason is a repeated query param', async () => {
