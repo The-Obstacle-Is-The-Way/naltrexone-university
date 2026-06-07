@@ -79,6 +79,14 @@ function createRoutingSqlClient(
     queryFailure?: Error;
     beginFailures?: Array<Error | undefined>;
     staleOwnerRows?: unknown[];
+    placeholderQuestionCount?: string;
+    includeRequiredQuestionFixture?: boolean;
+    includeRequiredChoiceFixture?: boolean;
+    baselineRows?: Array<{
+      completedSessions: number;
+      attemptCount: number;
+      bookmarkCount: number;
+    }>;
   } = {},
 ) {
   const beginFailures = [...(options.beginFailures ?? [])];
@@ -94,7 +102,7 @@ function createRoutingSqlClient(
     }
 
     if (queryText.includes('COUNT(*)::text')) {
-      return [{ count: '2' }];
+      return [{ count: options.placeholderQuestionCount ?? '2' }];
     }
 
     if (queryText.includes('FROM users')) {
@@ -102,7 +110,7 @@ function createRoutingSqlClient(
     }
 
     if (queryText.includes('SELECT id, slug')) {
-      return [
+      const rows = [
         {
           id: fixtureQuestion01Id,
           slug: 'placeholder-01-naltrexone-mechanism',
@@ -112,10 +120,14 @@ function createRoutingSqlClient(
           slug: 'placeholder-02-buprenorphine-induction-timing',
         },
       ];
+      if (options.includeRequiredQuestionFixture === false) {
+        return rows.slice(0, 1);
+      }
+      return rows;
     }
 
     if (queryText.includes('is_correct AS "isCorrect"')) {
-      return [
+      const rows = [
         {
           id: fixtureChoice01CorrectId,
           questionId: fixtureQuestion01Id,
@@ -127,6 +139,10 @@ function createRoutingSqlClient(
           isCorrect: false,
         },
       ];
+      if (options.includeRequiredChoiceFixture === false) {
+        return rows.filter((row) => row.isCorrect);
+      }
+      return rows;
     }
 
     if (
@@ -138,7 +154,11 @@ function createRoutingSqlClient(
     }
 
     if (queryText.includes('completedSessions')) {
-      return [{ completedSessions: 1, attemptCount: 2, bookmarkCount: 1 }];
+      return (
+        options.baselineRows ?? [
+          { completedSessions: 1, attemptCount: 2, bookmarkCount: 1 },
+        ]
+      );
     }
 
     return [];
@@ -633,6 +653,86 @@ describe('runE2EUserStateReset default service diagnostics', () => {
       );
       expectNoSensitiveParts(error.message);
       expect(sqlClient.begin).toHaveBeenCalledTimes(1);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it('surfaces missing placeholder questions without wrapping the explicit reset error', async () => {
+    await importResetWithPostgresMock();
+    const sqlClient = createRoutingSqlClient({ placeholderQuestionCount: '1' });
+    postgresMock.mockReturnValue(sqlClient);
+
+    const error = await captureRejectedError(() =>
+      dynamicRunE2EUserStateReset({ env: createEnv() }),
+    );
+
+    expect(error.message).toContain('[E2E_RESET:PLACEHOLDER_FIXTURES_MISSING]');
+    expect(error.message).not.toContain(
+      '[E2E_RESET:PLACEHOLDER_FIXTURE_SYNC_FAILED]',
+    );
+    expect(sqlClient.end).toHaveBeenCalledWith({ timeout: 5 });
+  });
+
+  it('surfaces missing choice fixtures without wrapping the explicit reset error', async () => {
+    await importResetWithPostgresMock();
+    const sqlClient = createRoutingSqlClient({
+      includeRequiredChoiceFixture: false,
+    });
+    postgresMock.mockReturnValue(sqlClient);
+    const fetchSpy = mockClerkUserFetch();
+
+    try {
+      const error = await captureRejectedError(() =>
+        dynamicRunE2EUserStateReset({ env: createEnv() }),
+      );
+
+      expect(error.message).toContain('[E2E_RESET:CHOICE_FIXTURE_MISSING]');
+      expect(error.message).not.toContain('[E2E_RESET:DATABASE_QUERY_FAILED]');
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it('surfaces missing published question fixtures without wrapping the explicit reset error', async () => {
+    await importResetWithPostgresMock();
+    const sqlClient = createRoutingSqlClient({
+      includeRequiredQuestionFixture: false,
+    });
+    postgresMock.mockReturnValue(sqlClient);
+    const fetchSpy = mockClerkUserFetch();
+
+    try {
+      const error = await captureRejectedError(() =>
+        dynamicRunE2EUserStateReset({ env: createEnv() }),
+      );
+
+      expect(error.message).toContain(
+        '[E2E_RESET:REQUIRED_QUESTION_FIXTURE_MISSING]',
+      );
+      expect(error.message).not.toContain('[E2E_RESET:DATABASE_QUERY_FAILED]');
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it('surfaces incomplete baseline verification without wrapping the explicit reset error', async () => {
+    await importResetWithPostgresMock();
+    const sqlClient = createRoutingSqlClient({
+      baselineRows: [
+        { completedSessions: 0, attemptCount: 0, bookmarkCount: 0 },
+      ],
+    });
+    postgresMock.mockReturnValue(sqlClient);
+    const fetchSpy = mockClerkUserFetch();
+
+    try {
+      const error = await captureRejectedError(() =>
+        dynamicRunE2EUserStateReset({ env: createEnv() }),
+      );
+
+      expect(error.message).toContain('[E2E_RESET:BASELINE_STATE_INCOMPLETE]');
+      expect(error.message).not.toContain('[E2E_RESET:DATABASE_QUERY_FAILED]');
     } finally {
       fetchSpy.mockRestore();
     }
