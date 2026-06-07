@@ -33,6 +33,7 @@ export type CheckoutSessionInput = {
   plan: SubscriptionPlan; // domain plan (monthly/annual)
   successUrl: string;
   cancelUrl: string;
+  trialPeriodDays?: number;
 };
 
 export type CheckoutSessionOutput = { url: string };

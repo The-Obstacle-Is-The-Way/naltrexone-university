@@ -22,7 +22,12 @@ import {
 } from '@/src/adapters/repositories';
 import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
-import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import {
+  FakeLogger,
+  FakePaymentGateway,
+  FakeStripeCustomerRepository,
+  FakeSubscriptionRepository,
+} from '@/src/application/test-helpers/fakes';
 import {
   CheckEntitlementUseCase,
   CountAvailableQuestionsUseCase,
@@ -465,6 +470,61 @@ describe('container factories', () => {
     expect(
       (paymentGateway as unknown as { deps: { stripe: unknown } }).deps.stripe,
     ).toBe(stripeClient);
+  });
+
+  it('wires FREE_TRIAL_ENABLED=true into the checkout use case at the composition root', async () => {
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_should_not_be_used',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
+    });
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    await stripeCustomers.insert('user-1', 'cus_existing');
+
+    const container = createContainer({
+      primitives: {
+        db: {} as unknown as DrizzleDb,
+        env: {
+          NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
+          NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
+          STRIPE_WEBHOOK_SECRET: 'whsec',
+          NEXT_PUBLIC_APP_URL: 'https://app.example.com',
+          FREE_TRIAL_ENABLED: 'true',
+        } as unknown as typeof import('./env').env,
+        logger: new FakeLogger() as unknown as typeof import('./logger').logger,
+        getStripe: () =>
+          ({}) as unknown as ReturnType<typeof import('./stripe').getStripe>,
+        now: () => new Date('2026-02-01T00:00:00Z'),
+      },
+      repositories: {
+        createStripeCustomerRepository: () => stripeCustomers,
+        createSubscriptionRepository: () => new FakeSubscriptionRepository(),
+      },
+      gateways: {
+        createPaymentGateway: () => paymentGateway,
+      },
+    });
+
+    await expect(
+      container.createCheckoutSessionUseCase().execute({
+        userId: 'user-1',
+        clerkUserId: 'clerk-1',
+        email: 'user@example.com',
+        plan: 'monthly',
+        successUrl:
+          'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
+        cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/checkout' });
+
+    expect(paymentGateway.checkoutInputs).toEqual([
+      expect.objectContaining({
+        userId: 'user-1',
+        externalCustomerId: 'cus_existing',
+        trialPeriodDays: 7,
+      }),
+    ]);
   });
 
   it('uses repository factories inside createStripeWebhookDeps transactions', async () => {

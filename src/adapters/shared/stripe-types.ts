@@ -25,8 +25,15 @@ export type CheckoutSessionCreateParams = {
   success_url: string;
   cancel_url: string;
   client_reference_id?: string;
+  payment_method_collection?: 'always' | 'if_required';
   subscription_data?: {
     metadata?: Record<string, string>;
+    trial_period_days?: number;
+    trial_settings?: {
+      end_behavior: {
+        missing_payment_method: 'cancel' | 'pause' | 'create_invoice';
+      };
+    };
   };
 };
 

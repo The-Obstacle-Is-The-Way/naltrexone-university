@@ -295,7 +295,7 @@ export async function createStripeCheckoutSession({
     }
   }
 
-  const params = {
+  const baseParams = {
     mode: 'subscription',
     customer: input.externalCustomerId,
     line_items: [{ price: priceId, quantity: 1 }],
@@ -310,6 +310,22 @@ export async function createStripeCheckoutSession({
       },
     },
   } satisfies CheckoutSessionCreateParams;
+  const params =
+    input.trialPeriodDays === undefined
+      ? baseParams
+      : ({
+          ...baseParams,
+          payment_method_collection: 'if_required',
+          subscription_data: {
+            ...baseParams.subscription_data,
+            trial_period_days: input.trialPeriodDays,
+            trial_settings: {
+              end_behavior: {
+                missing_payment_method: 'cancel',
+              },
+            },
+          },
+        } satisfies CheckoutSessionCreateParams);
 
   async function createSession(
     idempotencyKey: string,

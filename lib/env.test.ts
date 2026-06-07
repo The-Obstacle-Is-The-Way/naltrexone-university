@@ -117,6 +117,75 @@ describe('env', () => {
     await expect(import('@/lib/env')).resolves.toHaveProperty('env');
   });
 
+  it('parses FREE_TRIAL_ENABLED=true', async () => {
+    process.env.DATABASE_URL =
+      'postgresql://postgres:postgres@localhost:5432/db';
+    process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+
+    process.env.STRIPE_SECRET_KEY = 'sk_test_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = 'pk_test_dummy';
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY = 'price_dummy_monthly';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL = 'price_dummy_annual';
+
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
+    process.env.FREE_TRIAL_ENABLED = 'true';
+    delete process.env.CLERK_SECRET_KEY;
+    delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+    delete process.env.VERCEL_ENV;
+
+    vi.resetModules();
+
+    const { env } = await import('@/lib/env');
+    expect(env.FREE_TRIAL_ENABLED).toBe('true');
+  });
+
+  it('parses FREE_TRIAL_ENABLED=false', async () => {
+    process.env.DATABASE_URL =
+      'postgresql://postgres:postgres@localhost:5432/db';
+    process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+
+    process.env.STRIPE_SECRET_KEY = 'sk_test_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = 'pk_test_dummy';
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY = 'price_dummy_monthly';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL = 'price_dummy_annual';
+
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
+    process.env.FREE_TRIAL_ENABLED = 'false';
+    delete process.env.CLERK_SECRET_KEY;
+    delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+    delete process.env.VERCEL_ENV;
+
+    vi.resetModules();
+
+    const { env } = await import('@/lib/env');
+    expect(env.FREE_TRIAL_ENABLED).toBe('false');
+  });
+
+  it('leaves FREE_TRIAL_ENABLED undefined when unset', async () => {
+    process.env.DATABASE_URL =
+      'postgresql://postgres:postgres@localhost:5432/db';
+    process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+
+    process.env.STRIPE_SECRET_KEY = 'sk_test_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = 'pk_test_dummy';
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY = 'price_dummy_monthly';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL = 'price_dummy_annual';
+
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
+    delete process.env.FREE_TRIAL_ENABLED;
+    delete process.env.CLERK_SECRET_KEY;
+    delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+    delete process.env.VERCEL_ENV;
+
+    vi.resetModules();
+
+    const { env } = await import('@/lib/env');
+    expect(env.FREE_TRIAL_ENABLED).toBeUndefined();
+  });
+
   it('allows missing CLERK_WEBHOOK_SIGNING_SECRET when not on Vercel production deploys', async () => {
     process.env.DATABASE_URL =
       'postgresql://postgres:postgres@localhost:5432/db';
