@@ -203,47 +203,68 @@ describe('runE2EUserStateReset', () => {
       }),
     ).resolves.toBeUndefined();
 
-    expect(services.ensurePlaceholderQuestionsPublished).toHaveBeenCalledWith({
-      databaseUrl: env.DATABASE_URL,
-    });
+    expect(services.ensurePlaceholderQuestionsPublished).toHaveBeenCalledWith(
+      expect.objectContaining({
+        databaseUrl: env.DATABASE_URL,
+        sql: expect.any(Function),
+      }),
+    );
     expect(services.resolveClerkUserIdByEmail).toHaveBeenCalledWith({
       clerkSecretKey: env.CLERK_SECRET_KEY,
       email: env.E2E_CLERK_USER_USERNAME,
     });
-    expect(services.resolveAppUserIdByClerkUserId).toHaveBeenCalledWith({
-      databaseUrl: env.DATABASE_URL,
-      clerkUserId: 'user_123',
-    });
-    expect(services.clearUserState).toHaveBeenCalledWith({
-      databaseUrl: env.DATABASE_URL,
-      userId: fixtureDbUser123Id,
-    });
-    expect(services.resolveRequiredQuestionFixtures).toHaveBeenCalledWith({
-      databaseUrl: env.DATABASE_URL,
-    });
-    expect(services.resolveRequiredChoiceFixtures).toHaveBeenCalledWith({
-      databaseUrl: env.DATABASE_URL,
-      questionIds: {
-        placeholder01Id: fixtureQuestion01Id,
-        placeholder02Id: fixtureQuestion02Id,
-      },
-    });
-    expect(services.seedDeterministicBaseline).toHaveBeenCalledWith({
-      databaseUrl: env.DATABASE_URL,
-      userId: fixtureDbUser123Id,
-      questionFixtures: {
-        placeholder01Id: fixtureQuestion01Id,
-        placeholder02Id: fixtureQuestion02Id,
-      },
-      choiceFixtures: {
-        placeholder01CorrectChoiceId: fixtureChoice01CorrectId,
-        placeholder02IncorrectChoiceId: fixtureChoice02IncorrectId,
-      },
-    });
-    expect(services.verifyDeterministicBaseline).toHaveBeenCalledWith({
-      databaseUrl: env.DATABASE_URL,
-      userId: fixtureDbUser123Id,
-    });
+    expect(services.resolveAppUserIdByClerkUserId).toHaveBeenCalledWith(
+      expect.objectContaining({
+        databaseUrl: env.DATABASE_URL,
+        sql: expect.any(Function),
+        clerkUserId: 'user_123',
+      }),
+    );
+    expect(services.clearUserState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        databaseUrl: env.DATABASE_URL,
+        sql: expect.any(Function),
+        userId: fixtureDbUser123Id,
+      }),
+    );
+    expect(services.resolveRequiredQuestionFixtures).toHaveBeenCalledWith(
+      expect.objectContaining({
+        databaseUrl: env.DATABASE_URL,
+        sql: expect.any(Function),
+      }),
+    );
+    expect(services.resolveRequiredChoiceFixtures).toHaveBeenCalledWith(
+      expect.objectContaining({
+        databaseUrl: env.DATABASE_URL,
+        sql: expect.any(Function),
+        questionIds: {
+          placeholder01Id: fixtureQuestion01Id,
+          placeholder02Id: fixtureQuestion02Id,
+        },
+      }),
+    );
+    expect(services.seedDeterministicBaseline).toHaveBeenCalledWith(
+      expect.objectContaining({
+        databaseUrl: env.DATABASE_URL,
+        sql: expect.any(Function),
+        userId: fixtureDbUser123Id,
+        questionFixtures: {
+          placeholder01Id: fixtureQuestion01Id,
+          placeholder02Id: fixtureQuestion02Id,
+        },
+        choiceFixtures: {
+          placeholder01CorrectChoiceId: fixtureChoice01CorrectId,
+          placeholder02IncorrectChoiceId: fixtureChoice02IncorrectId,
+        },
+      }),
+    );
+    expect(services.verifyDeterministicBaseline).toHaveBeenCalledWith(
+      expect.objectContaining({
+        databaseUrl: env.DATABASE_URL,
+        sql: expect.any(Function),
+        userId: fixtureDbUser123Id,
+      }),
+    );
   });
 
   it('can be called repeatedly and restores the exact deterministic baseline each time', async () => {
@@ -359,10 +380,13 @@ describe('runE2EUserStateReset', () => {
         }),
       ).resolves.toBeUndefined();
 
-      expect(resolveAppUserIdByClerkUserId).toHaveBeenCalledWith({
-        databaseUrl: env.DATABASE_URL,
-        clerkUserId: 'user_123',
-      });
+      expect(resolveAppUserIdByClerkUserId).toHaveBeenCalledWith(
+        expect.objectContaining({
+          databaseUrl: env.DATABASE_URL,
+          sql: expect.any(Function),
+          clerkUserId: 'user_123',
+        }),
+      );
     } finally {
       fetchSpy.mockRestore();
     }
@@ -381,9 +405,12 @@ describe('runE2EUserStateReset', () => {
       }),
     ).rejects.toThrow('[E2E_RESET:CLERK_USER_NOT_FOUND]');
 
-    expect(services.ensurePlaceholderQuestionsPublished).toHaveBeenCalledWith({
-      databaseUrl: env.DATABASE_URL,
-    });
+    expect(services.ensurePlaceholderQuestionsPublished).toHaveBeenCalledWith(
+      expect.objectContaining({
+        databaseUrl: env.DATABASE_URL,
+        sql: expect.any(Function),
+      }),
+    );
     expect(services.resolveAppUserIdByClerkUserId).not.toHaveBeenCalled();
     expect(services.clearUserState).not.toHaveBeenCalled();
     expect(services.resolveRequiredQuestionFixtures).not.toHaveBeenCalled();
@@ -405,9 +432,12 @@ describe('runE2EUserStateReset', () => {
       }),
     ).rejects.toThrow('[E2E_RESET:APP_USER_NOT_FOUND]');
 
-    expect(services.ensurePlaceholderQuestionsPublished).toHaveBeenCalledWith({
-      databaseUrl: env.DATABASE_URL,
-    });
+    expect(services.ensurePlaceholderQuestionsPublished).toHaveBeenCalledWith(
+      expect.objectContaining({
+        databaseUrl: env.DATABASE_URL,
+        sql: expect.any(Function),
+      }),
+    );
     expect(services.clearUserState).not.toHaveBeenCalled();
     expect(services.resolveRequiredQuestionFixtures).not.toHaveBeenCalled();
     expect(services.resolveRequiredChoiceFixtures).not.toHaveBeenCalled();

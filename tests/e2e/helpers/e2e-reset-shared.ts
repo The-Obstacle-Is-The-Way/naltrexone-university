@@ -35,6 +35,8 @@ type SharedErrorLike = Error & {
   fix: string;
 };
 
+type SharedResetSql = ReturnType<typeof postgres>;
+
 type SharedErrorFactory<E extends SharedErrorLike> = (
   code: string,
   message: string,
@@ -228,10 +230,20 @@ export function createSharedE2EResetSupport<E extends SharedErrorLike>({
   }
 
   async function resolveAppUserIdByClerkUserId(input: {
-    databaseUrl: string;
+    databaseUrl?: string;
+    sql?: SharedResetSql;
     clerkUserId: string;
   }): Promise<string | null> {
-    const sql = postgres(input.databaseUrl, { max: 1 });
+    const shouldCloseSql = !input.sql;
+    if (!input.sql && !input.databaseUrl) {
+      throw createError(
+        appUserLookupFailedError.code,
+        'Database URL or SQL client is required to resolve the E2E app user row.',
+        appUserLookupFailedError.fix,
+      );
+    }
+
+    const sql = input.sql ?? postgres(input.databaseUrl ?? '', { max: 1 });
     try {
       const rows = await sql<{ id: string }[]>`
         SELECT id
@@ -248,10 +260,12 @@ export function createSharedE2EResetSupport<E extends SharedErrorLike>({
         { cause: error },
       );
     } finally {
-      try {
-        await sql.end({ timeout: 5 });
-      } catch {
-        // Ignore shutdown errors in helper teardown.
+      if (shouldCloseSql) {
+        try {
+          await sql.end({ timeout: 5 });
+        } catch {
+          // Ignore shutdown errors in helper teardown.
+        }
       }
     }
   }
