@@ -3,7 +3,8 @@
 **Priority:** P2 (developer-experience + signal integrity; no product/user impact)
 **Created:** 2026-06-07
 **Audit-verified:** 2026-06-06 (America/New_York) — corrected after adversarial re-run; see §2.
-**Status:** Investigation complete; definitive remediation documented (§6 + §6.5 blast-radius). Committed docs-only to `dev`/`main` (owner-waived CodeRabbit, per the DEBT-410 doc precedent). The code fix ships as a follow-up test-infra PR.
+**Audit-corrected:** 2026-06-06 (America/New_York) — PR #406 audit corrected current git-reality statements; DEBT-391's implementation is not on current `dev`/`main`.
+**Status:** Investigation complete; definitive remediation documented (§6 + §6.5 blast-radius). This dossier currently rides PR #406 with DEBT-410 PR-1; it is not on `dev`/`main` until that PR merges. The code fix ships as a follow-up test-infra PR.
 **Source:** During DEBT-410 PR-1, a delegated agent's local `pnpm test:e2e` retry failed 5 practice-flow tests, including masked `E2E_RESET:DATABASE_MUTATION_FAILED` reset failures and downstream stale practice-state symptoms (first run additionally had its Playwright web server killed). The same PR passed full CI E2E (7m42s) and merged-quality checks. Owner asked for a complete root-cause dossier.
 **Related:** [Debt Index](./index.md) · [DEBT-391](./debt-391-local-e2e-schema-drift-preflight.md) (a **distinct** failure mode — schema drift — that shares the same reset helper) · [DEBT-410](./debt-410-free-trial-pathway-and-pricing-access-copy.md) (the PR that surfaced this) · `tests/e2e/helpers/reset-e2e-user-state.ts` · `playwright.config.ts` · `.github/workflows/ci.yml`
 
@@ -22,9 +23,9 @@ What is verified:
 
 Corrected root cause statement: **local E2E failed through the shared reset/harness surface, not PR-1 or current schema drift; the exact DB failure is unknowable until reset errors attach `cause`.** The most likely class is intermittent local harness/state contamination around per-test resets against a remote `.env.local` database, but connection exhaustion was not reproduced.
 
-> **Correction recorded for honesty:** the first-pass triage during PR-1 (including in the PR #406 description) attributed these failures to DEBT-391 local schema drift. The direct DB inspection here **falsifies that** — the local DB is fully migrated and seeded. PR #406's conclusion (PR-1 is unaffected; CI is authoritative for product behavior) still holds; only the *reason the local E2E was red* was misattributed.
+**Correction recorded for honesty:** the first-pass triage during PR-1 (including in the PR #406 description) attributed these failures to DEBT-391 local schema drift. The direct DB inspection here **falsifies that** — the local DB is fully migrated and seeded. PR #406's conclusion (PR-1 is unaffected; CI is authoritative for product behavior) still holds; only the *reason the local E2E was red* was misattributed.
 
-> **Second correction:** this audit also narrows the dossier's own claim. "Transient Neon connection blip" remains plausible, but it is not proven. The only definitive defect is that the reset helper masked the underlying error and made the incident non-diagnosable.
+**Second correction:** this audit also narrows the dossier's own claim. "Transient Neon connection blip" remains plausible, but it is not proven. The only definitive defect is that the reset helper masked the underlying error and made the incident non-diagnosable.
 
 ---
 
@@ -54,7 +55,7 @@ From the PR-1 implementation run (`feat/debt-410-pricing-access-copy`, change = 
 - Run 2 (clean retry): **5 practice-flow tests failed, 30 passed.** Failures were all in `tests/e2e/practice.spec.ts`. `pricing-unauthenticated.spec.ts` and `smoke.spec.ts` **passed**.
 - The other six gate stages (typecheck, lint, unit, browser, integration, build) all passed locally; full CI (incl. E2E) passed.
 
-The saved artifacts show two direct reset failures plus three later practice-flow state failures:
+The prior local run's generated Playwright artifacts (not committed repo files) showed two direct reset failures plus three later practice-flow state failures:
 
 | Artifact class | Evidence |
 |---|---|
@@ -70,9 +71,10 @@ The partial failure pattern rules out a simple deterministic migration/schema br
 ## 2. Evidence (each claim is independently verifiable)
 
 ### 2.1 The local DB is fully migrated and seeded (read-only inspection)
+
 Querying the `.env.local` `DATABASE_URL` (a remote Neon pooled branch; host masked per §7):
 
-```
+```text
 APPLIED migrations (drizzle ledger): 21   | repo journal entries: 21
 attempts cols: is_omitted (NOT NULL), selected_choice_id (nullable)   ← migrations 0017/0018 applied
 tables present: practice_sessions, attempts, bookmarks, idempotency_keys, questions, choices, stripe_subscriptions
@@ -81,11 +83,14 @@ placeholder choices present: 4 choices each; placeholder-01 has 1 correct, place
 Neon pooler endpoint: yes
 connection ceiling observed via pg_settings: max_connections=112, active_connections=1 during inspection
 ```
+
 → No drift. The exact conditions DEBT-391 warns about are **absent** here.
 
 ### 2.2 The reset succeeds on demand (live reproduction)
+
 `runE2EUserStateReset()` run 5× back-to-back against the current DB:
-```
+
+```text
 run 1: OK (1963ms)
 run 2: OK (1588ms)
 run 3: OK (1560ms)
@@ -96,23 +101,30 @@ RESULT: 5/5 succeeded, 0/5 failed
 
 Stress probes:
 
-```
+```text
 sequential reset loop: 20/20 OK, min/avg/max 1511/1591/1783ms
 read-only connection churn: 100/100 OK, concurrency=20, elapsed=894ms
 focused practice spec: 10/10 OK, 1.8m
 ```
 
+PR #406 recheck on 2026-06-06 (America/New_York): `runE2EUserStateReset()` succeeded 3/3 against the same masked `.env.local` target after loading dotenv.
+
 → The DB writes, fixtures, Clerk resolution, and verification all work now. The earlier failure was not reproducible on demand. That supports a local intermittent/harness diagnosis, but does **not** prove the exact Postgres cause.
 
 ### 2.3 Local has zero retries; CI retries twice
+
 `playwright.config.ts:15`: `retries: process.env.CI ? 2 : 0`. `:18` `workers: 1`, `:13` `fullyParallel: false` (so the configured suite is not intentionally concurrent; it shares one test user). `:38` local `webServer.command` is `pnpm build && pnpm start` (fresh build+start each run).
+
 → Locally a single transient failure is terminal. CI gets two retries.
 
 ### 2.4 Every authenticated spec resets per-test, against remote Neon
+
 `tests/e2e/practice.spec.ts:106-107`:
+
 ```ts
 test.beforeEach(async () => { await runE2EUserStateReset(); });
 ```
+
 Same `beforeEach(runE2EUserStateReset)` pattern in `core-app-pages.spec.ts:22`, `bookmarks.spec.ts:15`, `cross-page-navigation.spec.ts:22`, `history.spec.ts:21`, `subscribe-and-practice.spec.ts:19`, `session-continuation.spec.ts:15`, `session-review-navigation.spec.ts:33`, and `review-mode-audit.spec.ts:63`.
 
 Each `runE2EUserStateReset()` (`reset-e2e-user-state.ts:530-622`) opens a **new `postgres(url, { max: 1 })` per service method** — `ensurePlaceholderQuestionsPublished` (`:143`), `clearUserState` (`:199`), `resolveRequiredQuestionFixtures` (`:227`), `resolveRequiredChoiceFixtures` (`:279`), `seedDeterministicBaseline` (`:339`), `verifyDeterministicBaseline` (`:470`), plus the shared app-user lookup (`tests/e2e/helpers/e2e-reset-shared.ts:194`) — i.e. **7 short-lived DB client lifecycles + 1 Clerk API call per reset**.
@@ -122,11 +134,15 @@ Each `runE2EUserStateReset()` (`reset-e2e-user-state.ts:530-622`) opens a **new 
 → This is real churn, but this audit did **not** reproduce connection exhaustion: the configured `.env.local` URL uses a Neon pooler endpoint, and 100 short-lived read-only connections at concurrency 20 succeeded.
 
 ### 2.5 The reset masks the real Postgres error
+
 `reset-e2e-user-state.ts:211` and `:454` are bare `} catch {` blocks that throw a generic `E2E_RESET:DATABASE_MUTATION_FAILED` **without capturing or attaching the underlying error as `cause`**. The query-path catches (`:259-268`, `:314-323`, `:510-519`) likewise collapse to `DATABASE_QUERY_FAILED` without the real message. The shared app-user lookup catch in `tests/e2e/helpers/e2e-reset-shared.ts:203-208` also omits `cause`.
+
 → Connectivity blips, constraint violations, missing columns, and genuine bugs **all surface identically**. This is why the failure looked deterministic/scary and could not be triaged from the report.
 
 ### 2.6 CI provisions a fresh local Postgres, migrates, seeds, and retries
+
 `.github/workflows/ci.yml`: `:20-22` `services: postgres: image: postgres:16`; `:37` sets `DATABASE_URL` to the local CI Postgres service; `:106` `pnpm db:migrate`; `:109/111` `pnpm db:seed` with `SEED_INCLUDE_PLACEHOLDERS: 'true'`; `:193` `pnpm test:e2e` (with `retries: 2` from the config).
+
 → CI's E2E DB is local-to-the-runner, always freshly migrated+seeded, and retried. That makes CI the stronger product-signal check for PR-1. It does not remove the local harness debt, because local `.env.local` runs exercise a different remote-DB path.
 
 ---
@@ -182,7 +198,7 @@ Prioritized by leverage. Item 1 is mandatory because it is the single change tha
 5. **Web-server startup hygiene (LOW).** The "web server killed" on run 1 suggests port/process contention. Honor the documented `lsof -ti:3000 | xargs kill -9` pre-step (CLAUDE.md) and/or add a health-gated startup guard so a stale/failed server doesn't cascade.
 6. **Reconsider per-test reset frequency (OPTIONAL).** Evaluate whether each spec truly needs a full `beforeEach` reset, or whether a per-describe reset + lighter per-test cleanup would cut churn substantially.
 
-DEBT-391's schema-drift preflight remains **independently valuable** (it catches a *different* failure mode that was not this incident) and **has now landed on `dev` (`f2d51d74`, the migration-ledger preflight in `credential-health-check.ts`)**; this dossier and DEBT-391 are complementary, and both touch the same reset/setup surface, so implementing them together is sensible. Note that the §6 structural fix (local E2E → Docker) largely *neutralizes* DEBT-391's local trigger — a fresh Docker DB is always migrated by the E2E setup, so local drift can't occur — though DEBT-391's preflight still guards the deploy-target (Neon) migration workflow.
+DEBT-391's schema-drift preflight remains **independently valuable** (it catches a *different* failure mode that was not this incident), but it is **not landed on current `dev`/`main`**. Current remote `dev`/`main` are both `90be0ef5`; the migration-ledger preflight commit `f2d51d74` exists only on the separate `origin/debt/391-local-e2e-schema-drift-preflight` line after the earlier merge was pulled back pending review. This dossier and DEBT-391 are complementary, and both touch the same reset/setup surface, so implementing or sequencing them together is sensible. Note that the §6 structural fix (local E2E → Docker) largely *neutralizes* DEBT-391's local trigger — a fresh Docker DB is always migrated by the E2E setup, so local drift can't occur — though DEBT-391's preflight still guards any workflow that intentionally validates a deploy-target Neon database.
 
 ---
 
@@ -191,9 +207,11 @@ DEBT-391's schema-drift preflight remains **independently valuable** (it catches
 The remediation is entirely **test-infrastructure**. Confirming the boundary because the owner asked directly:
 
 **Changes (local testing only):**
+
 - Local E2E obtains its database from a local Docker Postgres instead of remote Neon, and the reset helper surfaces real errors. Result: local E2E becomes fast, deterministic, and diagnosable — matching CI.
 
 **Does NOT change (verified by architecture):**
+
 - **Production** (still Neon prod) and **preview/dev deploys** (still Neon dev) — untouched. The app's runtime DB config lives in Vercel env vars, not in test config.
 - **The official migration workflow** — you still run `pnpm db:migrate` against the Neon prod/dev URL deliberately for real schema changes, exactly as today. Vercel deploys code only; it never migrated databases, and that is unchanged.
 - **main ↔ dev syncing** — that is git/code (`git push origin dev:main`), not databases — untouched.
@@ -218,13 +236,13 @@ Do not commit: the `.env.local` `DATABASE_URL`, the Neon endpoint hostname, DB p
 - [ ] Local `pnpm test:e2e` retry policy is decided only after cause propagation ships.
 - [ ] Full CI E2E stays green; local E2E is materially more stable across repeated runs.
 - [ ] DEBT-391 preflight is either shipped alongside or explicitly sequenced; cross-references updated.
-- [ ] This doc is committed and indexed only after reconciliation with the parallel investigation (see note below).
+- [ ] This doc and the debt index stay synchronized; no duplicate DEBT-411 id remains after reconciliation with the parallel investigation (see note below).
 
 ---
 
 ## 9. Coordination note
 
-A second investigation ran in a different clone in parallel and independently corrected this dossier (see the §0 corrections and §2 evidence). Per the owner's direction, **this doc is the committed source of truth.** If the parallel investigation surfaced additional evidence, fold it in as a follow-up edit; confirm no duplicate DEBT-411 id remains. **Update:** that clone has since implemented **DEBT-391's schema-drift preflight on `dev`** (`f2d51d74`), complementary to this dossier's fixes (DEBT-391 = drift detection; DEBT-411 = flakiness + masking).
+A second investigation ran in a different clone in parallel and independently corrected this dossier (see the §0 corrections and §2 evidence). Per the owner's direction, **this doc rides PR #406 as the DEBT-411 source of truth**; it is not on `dev`/`main` until that PR merges. If the parallel investigation surfaced additional evidence, fold it in as a follow-up edit; confirm no duplicate DEBT-411 id remains. **Update:** that clone produced a separate **DEBT-391 schema-drift preflight** commit (`f2d51d74`), complementary to this dossier's fixes (DEBT-391 = drift detection; DEBT-411 = flakiness + masking), but that implementation is not on current `dev`/`main`.
 
 ---
 
