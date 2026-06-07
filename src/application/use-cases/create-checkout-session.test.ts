@@ -266,11 +266,24 @@ describe('CreateCheckoutSessionUseCase', () => {
   });
 
   it('does not pass a trial to the gateway for a user with an existing subscription row when free trials are enabled', async () => {
-    const { paymentGateway, useCase } = await createUseCaseWithExistingCustomer(
-      {
+    const paymentGateway = createPaymentGateway();
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    await stripeCustomers.insert('user-1', 'cus_existing');
+    const subscriptions = new FakeSubscriptionRepository([
+      createSubscription({
+        userId: 'user-1',
         status: 'canceled',
         currentPeriodEnd: new Date('2026-01-01T00:00:00Z'),
-      },
+      }),
+    ]);
+
+    const useCase = new CreateCheckoutSessionUseCase(
+      stripeCustomers,
+      subscriptions,
+      paymentGateway,
+      new FakeLogger(),
+      () => new Date('2026-02-01T00:00:00Z'),
+      true,
     );
 
     await expect(useCase.execute(defaultCheckoutInput)).resolves.toEqual({
