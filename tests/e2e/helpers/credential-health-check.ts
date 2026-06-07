@@ -1,5 +1,6 @@
 import postgres from 'postgres';
 import Stripe from 'stripe';
+import migrationJournal from '../../../db/migrations/meta/_journal.json';
 
 export const CLERK_API_BASE = 'https://api.clerk.com/v1';
 export const CLERK_API_TIMEOUT_MS = 15_000;
@@ -36,6 +37,7 @@ export class CredentialValidationError extends Error {
 
 export type CredentialHealthCheckServices = {
   checkDatabaseConnectivity: (sql: postgres.Sql) => Promise<void>;
+  verifyMigrationLedger: (sql: postgres.Sql) => Promise<void>;
   verifyIdempotencySchema: (sql: postgres.Sql) => Promise<void>;
   resolveClerkUserId: (input: {
     clerkSecretKey: string;
@@ -66,6 +68,25 @@ type ResolvedEnv = {
   stripeSecretKey?: string;
   stripeMonthlyPriceId?: string;
 };
+
+export type MigrationJournalEntry = {
+  idx: number;
+  tag: string;
+  when: number;
+};
+
+type MigrationLedgerCreatedAt = number | string | bigint | null | undefined;
+
+const SCHEMA_DRIFT_MIGRATIONS_CODE = 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATIONS';
+const SCHEMA_DRIFT_MIGRATIONS_FIX =
+  'For local runs, confirm .env.local points at the intended non-production database, then run: DATABASE_URL="<verified target>" pnpm db:migrate';
+
+const MIGRATION_JOURNAL_ENTRIES: readonly MigrationJournalEntry[] =
+  migrationJournal.entries.map(({ idx, tag, when }) => ({
+    idx,
+    tag,
+    when,
+  }));
 
 const REQUIRED_ENV_VARS: readonly RequiredEnvVar[] = [
   {
@@ -137,6 +158,85 @@ export async function fetchWithTimeout(
   }
 }
 
+export function computeMissingMigrations(
+  journalEntries: readonly MigrationJournalEntry[],
+  appliedCreatedAt: readonly MigrationLedgerCreatedAt[],
+): string[] {
+  const appliedMigrationTimes = new Set(
+    appliedCreatedAt
+      .map((createdAt) => Number(createdAt))
+      .filter((createdAt) => Number.isFinite(createdAt)),
+  );
+
+  return journalEntries
+    .filter((entry) => !appliedMigrationTimes.has(entry.when))
+    .map((entry) => entry.tag);
+}
+
+export function formatSchemaDriftMessage(
+  missingMigrationTags: readonly string[],
+): string {
+  return `The database used by E2E is behind the repo migration journal. Missing migrations: ${missingMigrationTags.join(', ')}.`;
+}
+
+function createSchemaDriftMigrationsError(
+  missingMigrationTags: readonly string[],
+  options?: ErrorOptions,
+): CredentialValidationError {
+  return new CredentialValidationError(
+    SCHEMA_DRIFT_MIGRATIONS_CODE,
+    formatSchemaDriftMessage(missingMigrationTags),
+    SCHEMA_DRIFT_MIGRATIONS_FIX,
+    options,
+  );
+}
+
+function isMissingMigrationLedgerError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const code = (error as { code?: unknown }).code;
+  return code === '3F000' || code === '42P01';
+}
+
+export async function verifyMigrationLedger(
+  sql: postgres.Sql,
+  journalEntries: readonly MigrationJournalEntry[] = MIGRATION_JOURNAL_ENTRIES,
+): Promise<void> {
+  try {
+    const appliedMigrations = await sql<
+      { createdAt: number | string | bigint }[]
+    >`
+      SELECT created_at AS "createdAt"
+      FROM drizzle.__drizzle_migrations
+    `;
+    const missingMigrationTags = computeMissingMigrations(
+      journalEntries,
+      appliedMigrations.map((migration) => migration.createdAt),
+    );
+
+    if (missingMigrationTags.length > 0) {
+      throw createSchemaDriftMigrationsError(missingMigrationTags);
+    }
+  } catch (error) {
+    if (error instanceof CredentialValidationError) {
+      throw error;
+    }
+
+    if (isMissingMigrationLedgerError(error)) {
+      throw createSchemaDriftMigrationsError(
+        journalEntries.map((entry) => entry.tag),
+        { cause: error instanceof Error ? error : undefined },
+      );
+    }
+
+    throw new CredentialValidationError(
+      SCHEMA_DRIFT_MIGRATIONS_CODE,
+      'Unable to verify the Drizzle migration ledger.',
+      SCHEMA_DRIFT_MIGRATIONS_FIX,
+      { cause: error instanceof Error ? error : undefined },
+    );
+  }
+}
+
 const defaultServices: CredentialHealthCheckServices = {
   checkDatabaseConnectivity: async (sql) => {
     try {
@@ -149,6 +249,7 @@ const defaultServices: CredentialHealthCheckServices = {
       );
     }
   },
+  verifyMigrationLedger,
   verifyIdempotencySchema: async (sql) => {
     try {
       const rows = await sql<{ hasCompletedAt: boolean }[]>`
@@ -382,6 +483,7 @@ function buildValidators(
         const sql = postgres(databaseUrl, { max: 1 });
         try {
           await services.checkDatabaseConnectivity(sql);
+          await services.verifyMigrationLedger(sql);
           await services.verifyIdempotencySchema(sql);
         } finally {
           try {
