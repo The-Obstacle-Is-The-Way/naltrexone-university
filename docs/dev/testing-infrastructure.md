@@ -1,6 +1,6 @@
 # Testing Infrastructure
 
-**Last Updated:** 2026-03-17
+**Last Updated:** 2026-06-08
 
 This document covers our E2E testing tools: Playwright and Vercel's agent-browser.
 
@@ -25,7 +25,7 @@ This document covers our E2E testing tools: Playwright and Vercel's agent-browse
 ```ts
 testDir: './tests/e2e',
 fullyParallel: false,
-retries: process.env.CI ? 2 : 0,
+retries: process.env.CI ? 2 : 1,
 workers: 1,
 projects: [{ name: 'setup' }, { name: 'chromium', dependencies: ['setup'] }],
 webServer: {
@@ -41,6 +41,7 @@ webServer: {
 - Starts a production server for E2E runs (`pnpm build && pnpm start` locally, `pnpm start` in CI)
 - Waits on `/api/health`, not just the root URL, so Playwright startup includes a DB-aware readiness check
 - Runs with **1 worker** because authenticated E2E flows share one Clerk user; mutating specs still reset that user to a deterministic baseline in `beforeEach`
+- Local `pnpm test:e2e` runs through `scripts/run-local-e2e.ts`, which mirrors CI by preparing a local Docker Postgres first and then invoking Playwright with the Docker `DATABASE_URL`
 
 ### Playwright Timeout Policy
 
@@ -87,20 +88,22 @@ Current repo posture:
 ### Running E2E Tests
 
 ```bash
-# Clean up stale local servers first
-lsof -ti:3000 | xargs kill -9 2>/dev/null
-
-# Run all E2E tests
+# Run all E2E tests against local Docker Postgres.
+# This starts the Docker test DB, migrates, seeds placeholder content,
+# kills stale port-3000 servers, and then runs Playwright.
 pnpm test:e2e
 
+# Run a specific test file through the same hermetic local flow
+pnpm test:e2e -- tests/e2e/smoke.spec.ts
+
 # Run with UI (interactive)
-pnpm playwright test --ui
+pnpm test:e2e -- --ui
 
 # Run specific test file
-pnpm playwright test smoke.spec.ts
+pnpm test:e2e -- smoke.spec.ts
 
 # Debug mode
-pnpm playwright test --debug
+pnpm test:e2e -- --debug
 ```
 
 These commands still execute the setup project by default. If your goal is to run an unauthenticated spec without the authenticated preflight, you must opt out of project dependencies explicitly.
@@ -110,7 +113,6 @@ These commands still execute the setup project by default. If your goal is to ru
 The full Playwright suite currently assumes authenticated E2E infrastructure because `tests/e2e/global.setup.ts` always runs first. For a normal `pnpm test:e2e` run, these must be present:
 
 ```bash
-DATABASE_URL=postgresql://...
 CLERK_SECRET_KEY=sk_test_...
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 E2E_CLERK_USER_USERNAME=test@example.com
@@ -120,23 +122,21 @@ STRIPE_SECRET_KEY=sk_test_...
 NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY=price_...
 ```
 
-These can be provided via `.env.local` (loaded by `playwright.config.ts`) or CI secrets.
+Locally, these can be provided via `.env.local` (loaded by `playwright.config.ts`). The local `DATABASE_URL` is supplied by `scripts/run-local-e2e.ts`, not `.env.local`: it uses the non-secret Docker URL `postgresql://postgres:postgres@127.0.0.1:${DB_TEST_PORT:-5434}/addiction_boards_test`, runs `pnpm db:test:up`, migrates, and seeds with `SEED_INCLUDE_PLACEHOLDERS=true` before Playwright starts. CI still supplies its own Docker-service `DATABASE_URL` through `.github/workflows/ci.yml`.
 
 Individual spec files still use `test.skip(!hasClerkCredentials, ...)`, but that guard does **not** replace suite setup: `global.setup.ts` runs a preflight and seed/reset pass before the Chromium project starts. Missing or invalid credentials therefore fail the suite fast instead of silently skipping it.
 
-Local E2E uses the database in `.env.local`, not the Docker database used by `pnpm test:integration`. After pulling code with new Drizzle migrations, migrate the `.env.local` target before running E2E:
+To intentionally validate a real deploy-target database instead of the local Docker database, opt out explicitly and prefix the target URL. This is not the default local flow:
 
 ```bash
-LOCAL_E2E_DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env.local', quiet: true }); const url = process.env.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
-node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$LOCAL_E2E_DATABASE_URL"
-DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm db:migrate
-lsof -ti:3000 | xargs kill -9 2>/dev/null
-pnpm test:e2e
+DEPLOY_TARGET_DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env.local', quiet: true }); const url = process.env.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
+node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$DEPLOY_TARGET_DATABASE_URL"
+E2E_USE_EXISTING_DATABASE=true DATABASE_URL="$DEPLOY_TARGET_DATABASE_URL" pnpm test:e2e
 ```
 
-Do not rely on implicit `.env.local` resolution for migration commands. Verify the host, then prefix `pnpm db:migrate` with the exact `DATABASE_URL` you intend to mutate.
+Do not rely on implicit `.env.local` resolution for deploy-target checks or migrations. Verify the host, then prefix the command with the exact `DATABASE_URL` you intend to use. Never run `db:migrate` against a remote target unless you intentionally mean to mutate that target.
 
-The current preflight checks connectivity and selected schema contracts, but it does not compare the target database against the full Drizzle migration journal. See [DEBT-391](../debt/debt-391-local-e2e-schema-drift-preflight.md).
+The E2E credential preflight includes DEBT-391's migration-ledger check: it compares the active database against `db/migrations/meta/_journal.json` before seed/reset. The default local Docker flow also migrates first, so the check should pass by construction; it remains useful for explicit deploy-target runs.
 
 ### Test Data Seeding
 
@@ -362,7 +362,7 @@ E2E runs in CI via Playwright (see `.github/workflows/ci.yml`):
 | `E2E_STRIPE_OWNER` | Stripe test customer/subscription owner namespace (`github-ci` in CI; `local-dev` or a developer-specific value locally) |
 | `CLERK_SECRET_KEY` | Clerk API key (used to resolve Clerk user ID during seeding) |
 | `STRIPE_SECRET_KEY` | Stripe API key (used to create test subscriptions during seeding) |
-| `DATABASE_URL` | Postgres connection string (used for direct DB writes during seeding) |
+| `DATABASE_URL` | CI Postgres connection string for direct DB writes during seeding; local `pnpm test:e2e` supplies the Docker URL automatically |
 | `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` | Stripe monthly price ID (used during subscription seeding) |
 
 ---
@@ -433,7 +433,7 @@ See [DEBT-293](../_archive/debt/debt-293-e2e-shared-state-structural-flakiness.m
 
 **Most likely causes (in order):**
 
-1. **Neon Postgres cold start:** Free tier suspends compute after 5 minutes of inactivity. Cold starts take ~400-750ms. The postgres driver has a 30-second `connect_timeout` and automatic reconnection with exponential backoff, so this usually resolves itself. If tests still fail, verify the database is reachable:
+1. **Database availability:** normal local `pnpm test:e2e` targets Docker Postgres and should not hit Neon cold starts. If you intentionally opted into a deploy-target database with `E2E_USE_EXISTING_DATABASE=true`, Neon free-tier cold starts can take ~400-750ms. The postgres driver has a 30-second `connect_timeout` and automatic reconnection with exponential backoff, so this usually resolves itself. If tests still fail, verify the selected database is reachable:
 
    ```bash
    psql "$DATABASE_URL" -c "SELECT 1"
@@ -447,7 +447,7 @@ See [DEBT-293](../_archive/debt/debt-293-e2e-shared-state-structural-flakiness.m
 
 3. **Connection pool exhaustion:** The postgres driver defaults to `max: 10` connections. In dev, the singleton pattern (`globalForDb`) prevents accumulation across HMR reloads. If you suspect exhaustion, restart the dev server.
 
-4. **Network partition / Neon outage:** Check [Neon status page](https://neonstatus.com/). The `connect_timeout: 30` will fire and return an error within 30 seconds, but client-side server action calls are wrapped with `withTimeout` (SPEC-029), so the UI should fail fast (~10–15s) instead of hanging indefinitely.
+4. **Network partition / Neon outage:** This applies only to intentional deploy-target runs (`E2E_USE_EXISTING_DATABASE=true`) or app development against Neon. Check [Neon status page](https://neonstatus.com/). The `connect_timeout: 30` will fire and return an error within 30 seconds, but client-side server action calls are wrapped with `withTimeout` (SPEC-029), so the UI should fail fast (~10–15s) instead of hanging indefinitely.
 
 **What the codebase already handles:**
 - `connect_timeout: 30s` (postgres driver default) — connections time out
