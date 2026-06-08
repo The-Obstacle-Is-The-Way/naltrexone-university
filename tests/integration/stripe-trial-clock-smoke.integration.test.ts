@@ -1,7 +1,10 @@
 import Stripe from 'stripe';
 import { afterEach, describe, expect, it } from 'vitest';
+import { STRIPE_API_VERSION } from '@/lib/stripe-api-version';
 
-const STRIPE_API_VERSION = '2026-05-27.dahlia';
+const STRIPE_SMOKE_WAIT_BUDGET_MS = 8_500;
+const INITIAL_POLL_DELAY_MS = 150;
+const MAX_POLL_DELAY_MS = 500;
 const RUN_STRIPE_TRIAL_CLOCK_SMOKE =
   process.env.RUN_STRIPE_TRIAL_CLOCK_SMOKE === 'true';
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY ?? '';
@@ -48,30 +51,76 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function waitForTestClockReady(stripe: Stripe, testClockId: string) {
-  for (let attempt = 0; attempt < 20; attempt++) {
-    const clock = await stripe.testHelpers.testClocks.retrieve(testClockId);
-    if (clock.status === 'ready') return clock;
-    await sleep(250);
+type PollDeadline = {
+  readonly startedAtMs: number;
+  readonly expiresAtMs: number;
+};
+
+type PollInput<T> = {
+  readonly description: string;
+  readonly deadline: PollDeadline;
+  readonly fetch: () => Promise<T>;
+  readonly isDone: (value: T) => boolean;
+  readonly describeValue: (value: T) => string;
+};
+
+function createPollDeadline(): PollDeadline {
+  const startedAtMs = Date.now();
+  return {
+    startedAtMs,
+    expiresAtMs: startedAtMs + STRIPE_SMOKE_WAIT_BUDGET_MS,
+  };
+}
+
+async function pollUntil<T>(input: PollInput<T>): Promise<T> {
+  let delayMs = INITIAL_POLL_DELAY_MS;
+  let lastValueDescription = 'no value returned';
+
+  while (Date.now() < input.deadline.expiresAtMs) {
+    const value = await input.fetch();
+    lastValueDescription = input.describeValue(value);
+    if (input.isDone(value)) return value;
+
+    const remainingMs = input.deadline.expiresAtMs - Date.now();
+    if (remainingMs <= 0) break;
+    await sleep(Math.min(delayMs, remainingMs));
+    delayMs = Math.min(MAX_POLL_DELAY_MS, Math.ceil(delayMs * 1.5));
   }
 
-  throw new Error(`Stripe test clock ${testClockId} did not become ready`);
+  const elapsedMs = Date.now() - input.deadline.startedAtMs;
+  throw new Error(
+    `${input.description} timed out after ${elapsedMs}ms (budget ${STRIPE_SMOKE_WAIT_BUDGET_MS}ms); last observed ${lastValueDescription}`,
+  );
+}
+
+async function waitForTestClockReady(
+  stripe: Stripe,
+  testClockId: string,
+  deadline: PollDeadline,
+) {
+  return pollUntil({
+    description: `Stripe test clock ${testClockId} did not become ready`,
+    deadline,
+    fetch: () => stripe.testHelpers.testClocks.retrieve(testClockId),
+    isDone: (clock) => clock.status === 'ready',
+    describeValue: (clock) => `clock status ${clock.status}`,
+  });
 }
 
 async function waitForSubscriptionStatus(
   stripe: Stripe,
   subscriptionId: string,
   expectedStatus: Stripe.Subscription.Status,
+  deadline: PollDeadline,
 ) {
-  for (let attempt = 0; attempt < 20; attempt++) {
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-    if (subscription.status === expectedStatus) return subscription;
-    await sleep(250);
-  }
-
-  throw new Error(
-    `Stripe subscription ${subscriptionId} did not become ${expectedStatus}`,
-  );
+  return pollUntil({
+    description: `Stripe subscription ${subscriptionId} did not become ${expectedStatus}`,
+    deadline,
+    fetch: () => stripe.subscriptions.retrieve(subscriptionId),
+    isDone: (subscription) => subscription.status === expectedStatus,
+    describeValue: (subscription) =>
+      `subscription status ${subscription.status}`,
+  });
 }
 
 async function createTrialingSubscription(input: {
@@ -113,16 +162,40 @@ afterEach(async () => {
   if (skipReason) return;
 
   const stripe = getStripe();
+  const cleanupErrors: Error[] = [];
   while (createdCustomerIds.length > 0) {
     const customerId = createdCustomerIds.pop();
     if (!customerId) continue;
-    await stripe.customers.del(customerId);
+    try {
+      await stripe.customers.del(customerId);
+    } catch (error) {
+      cleanupErrors.push(
+        new Error(`Failed to delete Stripe customer ${customerId}`, {
+          cause: error,
+        }),
+      );
+    }
   }
 
   while (createdTestClockIds.length > 0) {
     const testClockId = createdTestClockIds.pop();
     if (!testClockId) continue;
-    await stripe.testHelpers.testClocks.del(testClockId);
+    try {
+      await stripe.testHelpers.testClocks.del(testClockId);
+    } catch (error) {
+      cleanupErrors.push(
+        new Error(`Failed to delete Stripe test clock ${testClockId}`, {
+          cause: error,
+        }),
+      );
+    }
+  }
+
+  if (cleanupErrors.length > 0) {
+    throw new AggregateError(
+      cleanupErrors,
+      'Failed to clean up Stripe trial clock smoke resources',
+    );
   }
 });
 
@@ -148,10 +221,16 @@ describeStripeSmoke(
       await stripe.testHelpers.testClocks.advance(clock.id, {
         frozen_time: (subscription.trial_end ?? clock.frozen_time) + 60,
       });
-      await waitForTestClockReady(stripe, clock.id);
+      const deadline = createPollDeadline();
+      await waitForTestClockReady(stripe, clock.id, deadline);
 
       await expect(
-        waitForSubscriptionStatus(stripe, subscription.id, 'canceled'),
+        waitForSubscriptionStatus(
+          stripe,
+          subscription.id,
+          'canceled',
+          deadline,
+        ),
       ).resolves.toMatchObject({ status: 'canceled' });
     });
 
@@ -182,10 +261,11 @@ describeStripeSmoke(
       await stripe.testHelpers.testClocks.advance(clock.id, {
         frozen_time: (subscription.trial_end ?? clock.frozen_time) + 60,
       });
-      await waitForTestClockReady(stripe, clock.id);
+      const deadline = createPollDeadline();
+      await waitForTestClockReady(stripe, clock.id, deadline);
 
       await expect(
-        waitForSubscriptionStatus(stripe, subscription.id, 'active'),
+        waitForSubscriptionStatus(stripe, subscription.id, 'active', deadline),
       ).resolves.toMatchObject({ status: 'active' });
     });
   },

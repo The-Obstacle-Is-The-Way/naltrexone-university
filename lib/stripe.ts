@@ -1,10 +1,9 @@
 import 'server-only';
 import Stripe from 'stripe';
 import { env } from '@/lib/env';
+import { STRIPE_API_VERSION } from '@/lib/stripe-api-version';
 
 let stripeInstance: Stripe | null = null;
-
-const STRIPE_API_VERSION = '2026-05-27.dahlia';
 
 export function getStripe(): Stripe {
   if (stripeInstance) return stripeInstance;

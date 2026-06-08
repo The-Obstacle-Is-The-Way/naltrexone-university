@@ -117,6 +117,7 @@ export async function createStripeCheckoutSession({
   nowMs?: () => number;
 }): Promise<{ url: string }> {
   const priceId = getStripePriceId(input.plan, priceIds);
+  const trialRequested = input.trialPeriodDays !== undefined;
   const subscriptionsList = stripe.subscriptions?.list?.bind(
     stripe.subscriptions,
   );
@@ -172,6 +173,7 @@ export async function createStripeCheckoutSession({
 
   const existingSession = existing.data[0];
   const existingUrl = existingSession?.url;
+  let replacementIdempotencyKey: string | null = null;
   if (existingSession && existingUrl) {
     let existingPriceId: string | undefined;
     let retrievedSession: StripeCheckoutSession | null = null;
@@ -191,6 +193,12 @@ export async function createStripeCheckoutSession({
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
+      if (trialRequested) {
+        replacementIdempotencyKey = recoveryCheckoutSessionIdempotencyKey(
+          input,
+          existingSession.id,
+        );
+      }
       logger.warn(
         {
           sessionId: existingSession.id,
@@ -202,21 +210,51 @@ export async function createStripeCheckoutSession({
     }
 
     if (existingPriceId === priceId) {
-      if (!retrievedSession || !isSessionInactive(retrievedSession, nowMs)) {
+      if (trialRequested) {
+        replacementIdempotencyKey = recoveryCheckoutSessionIdempotencyKey(
+          input,
+          existingSession.id,
+        );
+      }
+
+      if (
+        !trialRequested &&
+        (!retrievedSession || !isSessionInactive(retrievedSession, nowMs))
+      ) {
         return { url: existingUrl };
       }
 
-      logger.info(
-        {
-          sessionId: existingSession.id,
-          existingPriceId,
-          requestedPriceId: priceId,
-          status: retrievedSession.status ?? null,
-          expiresAt: retrievedSession.expires_at ?? null,
-        },
-        'Existing checkout session matched price but was already inactive; creating a fresh checkout session',
-      );
+      if (retrievedSession && !isSessionInactive(retrievedSession, nowMs)) {
+        shouldExpireExistingSession = true;
+        expireFailureIsFatal = true;
+        logger.warn(
+          {
+            sessionId: existingSession.id,
+            existingPriceId,
+            requestedPriceId: priceId,
+            trialRequested,
+          },
+          'Expiring existing checkout session to enforce requested checkout terms',
+        );
+      } else {
+        logger.info(
+          {
+            sessionId: existingSession.id,
+            existingPriceId,
+            requestedPriceId: priceId,
+            status: retrievedSession?.status ?? null,
+            expiresAt: retrievedSession?.expires_at ?? null,
+          },
+          'Existing checkout session matched price but was already inactive; creating a fresh checkout session',
+        );
+      }
     } else if (existingPriceId) {
+      if (trialRequested) {
+        replacementIdempotencyKey = recoveryCheckoutSessionIdempotencyKey(
+          input,
+          existingSession.id,
+        );
+      }
       shouldExpireExistingSession = true;
       expireFailureIsFatal = true;
       // Avoid reusing a checkout session for a different plan. If the user
@@ -227,10 +265,17 @@ export async function createStripeCheckoutSession({
           sessionId: existingSession.id,
           existingPriceId,
           requestedPriceId: priceId,
+          trialRequested,
         },
         'Expiring mismatched checkout session',
       );
     } else {
+      if (trialRequested) {
+        replacementIdempotencyKey = recoveryCheckoutSessionIdempotencyKey(
+          input,
+          existingSession.id,
+        );
+      }
       shouldExpireExistingSession = true;
       expireFailureIsFatal = false;
       logger.warn(
@@ -293,6 +338,16 @@ export async function createStripeCheckoutSession({
         }
       }
     }
+    if (replacementIdempotencyKey) {
+      logger.info(
+        {
+          sessionId: existingSession.id,
+          replacementIdempotencyKey,
+          trialRequested,
+        },
+        'Using replacement idempotency key for fresh checkout session',
+      );
+    }
   }
 
   const baseParams = {
@@ -341,7 +396,9 @@ export async function createStripeCheckoutSession({
   }
 
   const primaryIdempotencyKey =
-    options?.idempotencyKey ?? fallbackCheckoutSessionIdempotencyKey(input);
+    replacementIdempotencyKey ??
+    options?.idempotencyKey ??
+    fallbackCheckoutSessionIdempotencyKey(input);
   const session = await createSession(primaryIdempotencyKey);
 
   if (!session.url) {
@@ -355,7 +412,7 @@ export async function createStripeCheckoutSession({
     return { url: session.url };
   }
 
-  if (options?.idempotencyKey) {
+  if (options?.idempotencyKey && !replacementIdempotencyKey) {
     throw new ApplicationError(
       'STRIPE_ERROR',
       'Stripe Checkout Session is expired or inactive',

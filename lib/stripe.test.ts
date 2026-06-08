@@ -3,6 +3,7 @@ import {
   restoreProcessEnv,
   snapshotProcessEnv,
 } from '@/tests/shared/process-env';
+import { STRIPE_API_VERSION } from './stripe-api-version';
 
 const ORIGINAL_ENV = snapshotProcessEnv();
 
@@ -71,7 +72,7 @@ describe('getStripe', () => {
     expect(first).toMatchObject({
       apiKey: 'sk_test_dummy',
       options: {
-        apiVersion: '2026-05-27.dahlia',
+        apiVersion: STRIPE_API_VERSION,
         typescript: true,
       },
     });
