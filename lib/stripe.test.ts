@@ -3,6 +3,7 @@ import {
   restoreProcessEnv,
   snapshotProcessEnv,
 } from '@/tests/shared/process-env';
+import { STRIPE_API_VERSION } from './stripe-api-version';
 
 const ORIGINAL_ENV = snapshotProcessEnv();
 
@@ -36,6 +37,15 @@ function createStripeConstructorMock() {
     this.options = options;
   });
 }
+
+describe('STRIPE_API_VERSION', () => {
+  it('is a non-empty string with a dated Stripe API version format', () => {
+    expect(typeof STRIPE_API_VERSION).toBe('string');
+    expect(STRIPE_API_VERSION.length).toBeGreaterThan(0);
+    // Stripe GA channel API versions follow the YYYY-MM-DD.channel format
+    expect(STRIPE_API_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}\./);
+  });
+});
 
 describe('getStripe', () => {
   let getStripe: typeof import('./stripe').getStripe;
@@ -71,7 +81,7 @@ describe('getStripe', () => {
     expect(first).toMatchObject({
       apiKey: 'sk_test_dummy',
       options: {
-        apiVersion: '2026-05-27.dahlia',
+        apiVersion: STRIPE_API_VERSION,
         typescript: true,
       },
     });
