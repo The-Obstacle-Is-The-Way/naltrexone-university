@@ -302,4 +302,67 @@ describe('createStripeCheckoutSession trial params', () => {
       }),
     );
   });
+
+  it('adds no-card trial params for annual plan with correct price and idempotency key', async () => {
+    const { stripe, sessionsCreate } = createStripeMock();
+    const annualInput = {
+      ...input,
+      plan: 'annual' as const,
+      trialPeriodDays: 7,
+    };
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input: annualInput,
+        priceIds,
+        logger,
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
+
+    expect(sessionsCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        line_items: [{ price: 'price_a', quantity: 1 }],
+        payment_method_collection: 'if_required',
+        metadata: { checkout_variant: 'trial:7' },
+        subscription_data: expect.objectContaining({
+          trial_period_days: 7,
+          trial_settings: {
+            end_behavior: {
+              missing_payment_method: 'cancel',
+            },
+          },
+        }),
+      }),
+      expect.objectContaining({
+        idempotencyKey: `checkout_session:${appUserId}:annual:trial:7`,
+      }),
+    );
+  });
+
+  it('reuses an existing same-price standard checkout session when no trial is requested', async () => {
+    const { stripe, sessionsCreate, sessionsExpire, sessionsRetrieve } =
+      createStripeMock({
+        openSessionsData: [
+          { id: 'cs_existing', url: 'https://stripe/checkout/standard' },
+        ],
+        // Default: no metadata, no if_required → standard variant inferred
+      });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input, // no trialPeriodDays
+        priceIds,
+        logger,
+        nowMs: () => 1_700_000_000_000,
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/checkout/standard' });
+
+    expect(sessionsRetrieve).toHaveBeenCalledWith('cs_existing', {
+      expand: ['line_items'],
+    });
+    expect(sessionsExpire).not.toHaveBeenCalled();
+    expect(sessionsCreate).not.toHaveBeenCalled();
+  });
 });
