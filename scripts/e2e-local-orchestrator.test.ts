@@ -6,6 +6,7 @@ import {
   runCommandPlan,
   shouldUseHermeticLocalE2E,
 } from './e2e-local-orchestrator';
+import { runLocalE2E } from './run-local-e2e';
 
 describe('resolveLocalE2EDatabaseUrl', () => {
   it('returns the non-secret Docker Postgres URL by default', () => {
@@ -168,6 +169,70 @@ describe('runCommandPlan', () => {
       command: 'pnpm',
       args: ['exec', 'playwright', 'test'],
       env: baseEnv,
+    });
+  });
+
+  it('uses the default child-process runner when no command runner is injected', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await expect(
+      runCommandPlan([
+        {
+          label: 'node success',
+          command: process.execPath,
+          args: ['-e', 'process.exit(0)'],
+        },
+      ]),
+    ).resolves.toBeUndefined();
+
+    expect(log).toHaveBeenCalledWith('[local-e2e] node success');
+    log.mockRestore();
+  });
+
+  it('reports the failing step when the default child-process runner exits nonzero', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await expect(
+      runCommandPlan([
+        {
+          label: 'node failure',
+          command: process.execPath,
+          args: ['-e', 'process.exit(7)'],
+        },
+      ]),
+    ).rejects.toThrow(
+      `Command failed during "node failure": ${process.execPath} -e process.exit(7) (exit code 7).`,
+    );
+
+    log.mockRestore();
+  });
+});
+
+describe('runLocalE2E', () => {
+  it('builds the command plan from process-like inputs and executes it', async () => {
+    const createPlan = vi.fn(() => [
+      {
+        label: 'run',
+        command: 'pnpm',
+        args: ['exec', 'playwright', 'test'],
+      },
+    ]);
+    const runPlan = vi.fn(async () => {});
+    const env = { CI: 'true' };
+
+    await runLocalE2E({
+      argv: ['node', 'scripts/run-local-e2e.ts', '--project=chromium'],
+      env,
+      createPlan,
+      runPlan,
+    });
+
+    expect(createPlan).toHaveBeenCalledWith({
+      env,
+      playwrightArgs: ['--project=chromium'],
+    });
+    expect(runPlan).toHaveBeenCalledWith(createPlan.mock.results[0]?.value, {
+      env,
     });
   });
 });

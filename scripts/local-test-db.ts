@@ -26,7 +26,7 @@ type EnsureLocalTestDatabaseInput = {
 type EnsureLocalTestDatabaseResult = 'created' | 'reused';
 
 export async function ensureLocalTestDatabase({
-  runCommand = execFileCommand,
+  runCommand = runTestDbCommand,
   sleep = sleepFor,
 }: EnsureLocalTestDatabaseInput = {}): Promise<EnsureLocalTestDatabaseResult> {
   const existingContainer = await runCommand('docker', [
@@ -84,7 +84,7 @@ async function runRequiredCommand(
   );
 }
 
-async function execFileCommand(
+export async function runTestDbCommand(
   command: string,
   args: string[],
 ): Promise<TestDbCommandResult> {
