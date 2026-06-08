@@ -28,18 +28,28 @@ function createCommandRunner(
 
 describe('ensureLocalTestDatabase', () => {
   it('starts docker compose when the named test DB container does not exist', async () => {
-    const runCommand = createCommandRunner([{ exitCode: 1 }, { exitCode: 0 }]);
+    const runCommand = createCommandRunner([
+      { exitCode: 1 },
+      { exitCode: 0 },
+      { exitCode: 0, stdout: 'healthy\n' },
+    ]);
 
     await expect(ensureLocalTestDatabase({ runCommand })).resolves.toBe(
       'created',
     );
 
-    expect(runCommand).toHaveBeenCalledTimes(2);
+    expect(runCommand).toHaveBeenCalledTimes(3);
     expect(runCommand).toHaveBeenNthCalledWith(1, 'docker', [
       'inspect',
       TEST_DB_CONTAINER_NAME,
     ]);
     expect(runCommand).toHaveBeenNthCalledWith(2, 'pnpm', ['db:test:up']);
+    expect(runCommand).toHaveBeenNthCalledWith(3, 'docker', [
+      'inspect',
+      '--format',
+      '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}',
+      TEST_DB_CONTAINER_NAME,
+    ]);
   });
 
   it('reuses an existing healthy test DB container instead of running docker compose', async () => {

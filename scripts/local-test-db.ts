@@ -36,6 +36,7 @@ export async function ensureLocalTestDatabase({
 
   if (existingContainer.exitCode !== 0) {
     await runRequiredCommand(runCommand, 'pnpm', ['db:test:up']);
+    await waitForHealthyTestDatabase({ runCommand, sleep });
     return 'created';
   }
 

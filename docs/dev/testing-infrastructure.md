@@ -99,9 +99,6 @@ pnpm test:e2e -- tests/e2e/smoke.spec.ts
 # Run with UI (interactive)
 pnpm test:e2e -- --ui
 
-# Run specific test file
-pnpm test:e2e -- smoke.spec.ts
-
 # Debug mode
 pnpm test:e2e -- --debug
 ```
