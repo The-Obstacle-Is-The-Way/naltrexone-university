@@ -435,7 +435,7 @@ describe('createStripeCheckoutSession', () => {
         }),
       }),
       expect.objectContaining({
-        idempotencyKey: `checkout_session_recovery:${appUserId}:monthly:cs_open`,
+        idempotencyKey: `checkout_session_recovery:${appUserId}:monthly:cs_open:trial:7`,
       }),
     );
     expect(logger.warnCalls).toEqual(

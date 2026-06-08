@@ -34,6 +34,8 @@ const ALREADY_TERMINAL_CHECKOUT_SESSION_MESSAGE_PATTERNS = [
   'already expired',
   'cannot be expired',
 ] as const;
+const CHECKOUT_SESSION_VARIANT_METADATA_KEY = 'checkout_variant';
+const STANDARD_CHECKOUT_SESSION_VARIANT = 'standard';
 
 function getBlockingSubscriptionStatus(
   subscription: StripeListedSubscription | undefined,
@@ -88,17 +90,44 @@ function isAlreadyTerminalSessionError(error: unknown): boolean {
   );
 }
 
+function getRequestedCheckoutSessionVariant(
+  input: CheckoutSessionInput,
+): string {
+  return input.trialPeriodDays === undefined
+    ? STANDARD_CHECKOUT_SESSION_VARIANT
+    : `trial:${input.trialPeriodDays}`;
+}
+
+function getRetrievedCheckoutSessionVariant(
+  session: StripeCheckoutSession,
+): string {
+  const persistedVariant =
+    session.metadata?.[CHECKOUT_SESSION_VARIANT_METADATA_KEY];
+  if (persistedVariant) return persistedVariant;
+
+  if (session.payment_method_collection === 'if_required') {
+    return 'trial:unknown';
+  }
+
+  return STANDARD_CHECKOUT_SESSION_VARIANT;
+}
+
+function trialIdempotencyKeySuffix(input: CheckoutSessionInput): string {
+  const variant = getRequestedCheckoutSessionVariant(input);
+  return variant === STANDARD_CHECKOUT_SESSION_VARIANT ? '' : `:${variant}`;
+}
+
 function fallbackCheckoutSessionIdempotencyKey(
   input: CheckoutSessionInput,
 ): string {
-  return `checkout_session:${input.userId}:${input.plan}`;
+  return `checkout_session:${input.userId}:${input.plan}${trialIdempotencyKeySuffix(input)}`;
 }
 
 function recoveryCheckoutSessionIdempotencyKey(
   input: CheckoutSessionInput,
   sessionId: string,
 ): string {
-  return `checkout_session_recovery:${input.userId}:${input.plan}:${sessionId}`;
+  return `checkout_session_recovery:${input.userId}:${input.plan}:${sessionId}${trialIdempotencyKeySuffix(input)}`;
 }
 
 export async function createStripeCheckoutSession({
@@ -118,6 +147,7 @@ export async function createStripeCheckoutSession({
 }): Promise<{ url: string }> {
   const priceId = getStripePriceId(input.plan, priceIds);
   const trialRequested = input.trialPeriodDays !== undefined;
+  const requestedCheckoutVariant = getRequestedCheckoutSessionVariant(input);
   const subscriptionsList = stripe.subscriptions?.list?.bind(
     stripe.subscriptions,
   );
@@ -176,6 +206,7 @@ export async function createStripeCheckoutSession({
   let replacementIdempotencyKey: string | null = null;
   if (existingSession && existingUrl) {
     let existingPriceId: string | undefined;
+    let existingCheckoutVariant: string | null = null;
     let retrievedSession: StripeCheckoutSession | null = null;
     let shouldExpireExistingSession = false;
     let expireFailureIsFatal = false;
@@ -190,6 +221,7 @@ export async function createStripeCheckoutSession({
       });
       retrievedSession = session;
       existingPriceId = session.line_items?.data?.[0]?.price?.id;
+      existingCheckoutVariant = getRetrievedCheckoutSessionVariant(session);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
@@ -210,21 +242,23 @@ export async function createStripeCheckoutSession({
     }
 
     if (existingPriceId === priceId) {
-      if (trialRequested) {
-        replacementIdempotencyKey = recoveryCheckoutSessionIdempotencyKey(
-          input,
-          existingSession.id,
-        );
-      }
+      const checkoutVariantMatches =
+        existingCheckoutVariant === requestedCheckoutVariant;
 
       if (
-        !trialRequested &&
+        checkoutVariantMatches &&
         (!retrievedSession || !isSessionInactive(retrievedSession, nowMs))
       ) {
         return { url: existingUrl };
       }
 
       if (retrievedSession && !isSessionInactive(retrievedSession, nowMs)) {
+        if (trialRequested) {
+          replacementIdempotencyKey = recoveryCheckoutSessionIdempotencyKey(
+            input,
+            existingSession.id,
+          );
+        }
         shouldExpireExistingSession = true;
         expireFailureIsFatal = true;
         logger.warn(
@@ -232,6 +266,8 @@ export async function createStripeCheckoutSession({
             sessionId: existingSession.id,
             existingPriceId,
             requestedPriceId: priceId,
+            existingCheckoutVariant,
+            requestedCheckoutVariant,
             trialRequested,
           },
           'Expiring existing checkout session to enforce requested checkout terms',
@@ -242,6 +278,8 @@ export async function createStripeCheckoutSession({
             sessionId: existingSession.id,
             existingPriceId,
             requestedPriceId: priceId,
+            existingCheckoutVariant,
+            requestedCheckoutVariant,
             status: retrievedSession?.status ?? null,
             expiresAt: retrievedSession?.expires_at ?? null,
           },
@@ -370,6 +408,9 @@ export async function createStripeCheckoutSession({
       ? baseParams
       : ({
           ...baseParams,
+          metadata: {
+            [CHECKOUT_SESSION_VARIANT_METADATA_KEY]: requestedCheckoutVariant,
+          },
           payment_method_collection: 'if_required',
           subscription_data: {
             ...baseParams.subscription_data,

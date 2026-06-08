@@ -6,6 +6,8 @@ import { createStripeCheckoutSession } from './stripe-checkout-sessions';
 function createStripeMock(overrides?: {
   openSessionsData?: Array<{ id: string; url: string | null }>;
   retrievedSessionPriceId?: string | null;
+  retrievedSessionMetadata?: Record<string, string>;
+  retrievedSessionPaymentMethodCollection?: 'always' | 'if_required';
   shouldThrowOnRetrieve?: boolean;
 }) {
   const sessionsCreate = vi.fn(async () => ({
@@ -33,6 +35,9 @@ function createStripeMock(overrides?: {
       url: 'https://stripe/checkout/existing',
       status: 'open' as const,
       expires_at: 1_700_000_001,
+      metadata: overrides?.retrievedSessionMetadata,
+      payment_method_collection:
+        overrides?.retrievedSessionPaymentMethodCollection,
       line_items: {
         data: lineItemsData,
       },
@@ -99,6 +104,9 @@ describe('createStripeCheckoutSession trial params', () => {
         success_url: 'https://app/success',
         cancel_url: 'https://app/cancel',
         client_reference_id: appUserId,
+        metadata: {
+          checkout_variant: 'trial:7',
+        },
         payment_method_collection: 'if_required',
         subscription_data: {
           metadata: {
@@ -113,7 +121,7 @@ describe('createStripeCheckoutSession trial params', () => {
         },
       },
       expect.objectContaining({
-        idempotencyKey: `checkout_session:${appUserId}:monthly`,
+        idempotencyKey: `checkout_session:${appUserId}:monthly:trial:7`,
       }),
     );
   });
@@ -163,6 +171,90 @@ describe('createStripeCheckoutSession trial params', () => {
     expect(subscriptionData).not.toHaveProperty('trial_settings');
   });
 
+  it('expires an existing same-price trial checkout session when standard checkout is requested', async () => {
+    const { stripe, sessionsCreate, sessionsExpire } = createStripeMock({
+      openSessionsData: [
+        { id: 'cs_existing', url: 'https://stripe/checkout/trial' },
+      ],
+      retrievedSessionMetadata: { checkout_variant: 'trial:7' },
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger,
+        nowMs: () => 1_700_000_000_000,
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
+
+    expect(sessionsExpire).toHaveBeenCalledWith('cs_existing', undefined, {
+      idempotencyKey: 'expire_checkout_session:cs_existing',
+    });
+    expect(sessionsCreate).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        idempotencyKey: `checkout_session:${appUserId}:monthly`,
+      }),
+    );
+  });
+
+  it('expires a legacy no-card checkout session without variant metadata when standard checkout is requested', async () => {
+    const { stripe, sessionsCreate, sessionsExpire } = createStripeMock({
+      openSessionsData: [
+        { id: 'cs_existing', url: 'https://stripe/checkout/legacy-trial' },
+      ],
+      retrievedSessionPaymentMethodCollection: 'if_required',
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger,
+        nowMs: () => 1_700_000_000_000,
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
+
+    expect(sessionsExpire).toHaveBeenCalledWith('cs_existing', undefined, {
+      idempotencyKey: 'expire_checkout_session:cs_existing',
+    });
+    expect(sessionsCreate).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        idempotencyKey: `checkout_session:${appUserId}:monthly`,
+      }),
+    );
+  });
+
+  it('reuses an existing same-price trial checkout session when checkout variant matches', async () => {
+    const { stripe, sessionsCreate, sessionsExpire, sessionsRetrieve } =
+      createStripeMock({
+        openSessionsData: [
+          { id: 'cs_existing', url: 'https://stripe/checkout/trial' },
+        ],
+        retrievedSessionMetadata: { checkout_variant: 'trial:7' },
+      });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input: { ...input, trialPeriodDays: 7 },
+        priceIds,
+        logger,
+        nowMs: () => 1_700_000_000_000,
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/checkout/trial' });
+
+    expect(sessionsRetrieve).toHaveBeenCalledWith('cs_existing', {
+      expand: ['line_items'],
+    });
+    expect(sessionsExpire).not.toHaveBeenCalled();
+    expect(sessionsCreate).not.toHaveBeenCalled();
+  });
+
   it.each([
     {
       name: 'the existing session cannot be retrieved',
@@ -206,7 +298,7 @@ describe('createStripeCheckoutSession trial params', () => {
         }),
       }),
       expect.objectContaining({
-        idempotencyKey: `checkout_session_recovery:${appUserId}:monthly:cs_existing`,
+        idempotencyKey: `checkout_session_recovery:${appUserId}:monthly:cs_existing:trial:7`,
       }),
     );
   });

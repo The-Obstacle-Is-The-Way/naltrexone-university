@@ -25,6 +25,7 @@ export type CheckoutSessionCreateParams = {
   success_url: string;
   cancel_url: string;
   client_reference_id?: string;
+  metadata?: Record<string, string>;
   payment_method_collection?: 'always' | 'if_required';
   subscription_data?: {
     metadata?: Record<string, string>;
@@ -44,6 +45,8 @@ export type StripeCheckoutSession = {
   url: string | null;
   status?: StripeCheckoutSessionStatus | null;
   expires_at?: number;
+  metadata?: Record<string, string> | null;
+  payment_method_collection?: 'always' | 'if_required' | null;
 };
 
 export type StripeCheckoutSessionList = { data: StripeCheckoutSession[] };
