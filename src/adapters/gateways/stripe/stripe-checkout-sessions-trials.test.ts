@@ -3,19 +3,50 @@ import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { createStripeCheckoutSession } from './stripe-checkout-sessions';
 
-function createStripeMock() {
+function createStripeMock(overrides?: {
+  openSessionsData?: Array<{ id: string; url: string | null }>;
+  retrievedSessionPriceId?: string | null;
+  shouldThrowOnRetrieve?: boolean;
+}) {
   const sessionsCreate = vi.fn(async () => ({
     id: 'cs_new',
     url: 'https://stripe/checkout/new',
   }));
+  const sessionsRetrieve = vi.fn(async () => {
+    if (overrides?.shouldThrowOnRetrieve) {
+      throw new Error('retrieve failed');
+    }
+
+    const lineItemsData =
+      overrides?.retrievedSessionPriceId === null
+        ? []
+        : [
+            {
+              price: {
+                id: overrides?.retrievedSessionPriceId ?? 'price_m',
+              },
+            },
+          ];
+
+    return {
+      id: 'cs_existing',
+      url: 'https://stripe/checkout/existing',
+      status: 'open' as const,
+      expires_at: 1_700_000_001,
+      line_items: {
+        data: lineItemsData,
+      },
+    };
+  });
+  const sessionsExpire = vi.fn(async () => ({ id: 'cs_existing', url: null }));
 
   const stripe = {
     customers: { create: vi.fn(async () => ({ id: 'cus_1' })) },
     checkout: {
       sessions: {
-        list: vi.fn(async () => ({ data: [] })),
-        retrieve: vi.fn(async () => ({ id: 'cs_1', url: null })),
-        expire: vi.fn(async () => ({ id: 'cs_1', url: null })),
+        list: vi.fn(async () => ({ data: overrides?.openSessionsData ?? [] })),
+        retrieve: sessionsRetrieve,
+        expire: sessionsExpire,
         create: sessionsCreate,
       },
     },
@@ -31,7 +62,7 @@ function createStripeMock() {
     webhooks: { constructEvent: vi.fn() },
   } as unknown as StripeClient;
 
-  return { stripe, sessionsCreate };
+  return { stripe, sessionsCreate, sessionsExpire, sessionsRetrieve };
 }
 
 describe('createStripeCheckoutSession trial params', () => {
@@ -130,5 +161,53 @@ describe('createStripeCheckoutSession trial params', () => {
     expect(params).not.toHaveProperty('payment_method_collection');
     expect(subscriptionData).not.toHaveProperty('trial_period_days');
     expect(subscriptionData).not.toHaveProperty('trial_settings');
+  });
+
+  it.each([
+    {
+      name: 'the existing session cannot be retrieved',
+      overrides: { shouldThrowOnRetrieve: true },
+    },
+    {
+      name: 'the existing session has a different price',
+      overrides: { retrievedSessionPriceId: 'price_a' },
+    },
+    {
+      name: 'the existing session price cannot be determined',
+      overrides: { retrievedSessionPriceId: null },
+    },
+  ])('creates trial checkout with a replacement idempotency key when $name', async ({
+    overrides,
+  }) => {
+    const { stripe, sessionsCreate, sessionsExpire } = createStripeMock({
+      openSessionsData: [
+        { id: 'cs_existing', url: 'https://stripe/checkout/existing' },
+      ],
+      ...overrides,
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input: { ...input, trialPeriodDays: 7 },
+        priceIds,
+        logger,
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
+
+    expect(sessionsExpire).toHaveBeenCalledWith('cs_existing', undefined, {
+      idempotencyKey: 'expire_checkout_session:cs_existing',
+    });
+    expect(sessionsCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payment_method_collection: 'if_required',
+        subscription_data: expect.objectContaining({
+          trial_period_days: 7,
+        }),
+      }),
+      expect.objectContaining({
+        idempotencyKey: `checkout_session_recovery:${appUserId}:monthly:cs_existing`,
+      }),
+    );
   });
 });
