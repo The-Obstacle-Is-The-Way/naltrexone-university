@@ -1,6 +1,8 @@
 import postgres from 'postgres';
 import {
+  appendNonSecretCause,
   createSharedE2EResetSupport,
+  formatNonSecretResetCause,
   type SharedRequiredEnvVar,
 } from './e2e-reset-shared';
 
@@ -63,9 +65,12 @@ export type RequiredChoiceFixtures = {
   placeholder02IncorrectChoiceId: string;
 };
 
+type E2EResetSql = ReturnType<typeof postgres>;
+
 export type E2EUserStateResetServices = {
   ensurePlaceholderQuestionsPublished: (input: {
     databaseUrl: string;
+    sql: E2EResetSql;
   }) => Promise<void>;
   resolveClerkUserIdByEmail: (input: {
     clerkSecretKey: string;
@@ -73,17 +78,21 @@ export type E2EUserStateResetServices = {
   }) => Promise<string | null>;
   resolveAppUserIdByClerkUserId: (input: {
     databaseUrl: string;
+    sql: E2EResetSql;
     clerkUserId: string;
   }) => Promise<string | null>;
   clearUserState: (input: {
     databaseUrl: string;
+    sql: E2EResetSql;
     userId: string;
   }) => Promise<void>;
   resolveRequiredQuestionFixtures: (input: {
     databaseUrl: string;
+    sql: E2EResetSql;
   }) => Promise<RequiredQuestionFixtures>;
   resolveRequiredChoiceFixtures: (input: {
     databaseUrl: string;
+    sql: E2EResetSql;
     questionIds: {
       placeholder01Id: string;
       placeholder02Id: string;
@@ -91,12 +100,14 @@ export type E2EUserStateResetServices = {
   }) => Promise<RequiredChoiceFixtures>;
   seedDeterministicBaseline: (input: {
     databaseUrl: string;
+    sql: E2EResetSql;
     userId: string;
     questionFixtures: RequiredQuestionFixtures;
     choiceFixtures: RequiredChoiceFixtures;
   }) => Promise<void>;
   verifyDeterministicBaseline: (input: {
     databaseUrl: string;
+    sql: E2EResetSql;
     userId: string;
   }) => Promise<void>;
 };
@@ -112,6 +123,16 @@ const createUserStateResetError = (
   fix: string,
   options?: ErrorOptions,
 ) => new E2EUserStateResetError(code, message, fix, options);
+
+const createCausedUserStateResetError = (
+  code: string,
+  message: string,
+  fix: string,
+  cause: unknown,
+) =>
+  createUserStateResetError(code, appendNonSecretCause(message, cause), fix, {
+    cause,
+  });
 
 const sharedResetSupport = createSharedE2EResetSupport({
   createError: createUserStateResetError,
@@ -138,9 +159,42 @@ const sharedResetSupport = createSharedE2EResetSupport({
   },
 });
 
+async function assertNoStaleDeterministicBaselineOwner(input: {
+  sql: E2EResetSql;
+  userId: string;
+}) {
+  const rows = await input.sql<{ baselineType: string }[]>`
+    SELECT baseline_type AS "baselineType"
+    FROM (
+      SELECT 'practice_session' AS baseline_type
+      FROM practice_sessions
+      WHERE id = ${DETERMINISTIC_BASELINE.sessionId}
+        AND user_id <> ${input.userId}
+      UNION ALL
+      SELECT 'attempt_in_session' AS baseline_type
+      FROM attempts
+      WHERE id = ${DETERMINISTIC_BASELINE.attemptInSessionId}
+        AND user_id <> ${input.userId}
+      UNION ALL
+      SELECT 'adhoc_attempt' AS baseline_type
+      FROM attempts
+      WHERE id = ${DETERMINISTIC_BASELINE.adhocAttemptId}
+        AND user_id <> ${input.userId}
+    ) stale_baseline_owner
+    LIMIT 1
+  `;
+
+  if (rows.length === 0) return;
+
+  throw new E2EUserStateResetError(
+    'E2E_RESET:STALE_BASELINE_OWNER',
+    'Deterministic E2E baseline rows already exist for a different app user.',
+    'Reset the disposable/local E2E database or intentionally clear stale deterministic baseline rows for the previous E2E user.',
+  );
+}
+
 const defaultServices: E2EUserStateResetServices = {
-  ensurePlaceholderQuestionsPublished: async ({ databaseUrl }) => {
-    const sql = postgres(databaseUrl, { max: 1 });
+  ensurePlaceholderQuestionsPublished: async ({ sql }) => {
     try {
       const counts = await sql<{ count: string }[]>`
         SELECT COUNT(*)::text AS "count"
@@ -177,17 +231,12 @@ const defaultServices: E2EUserStateResetServices = {
         throw error;
       }
 
-      throw new E2EUserStateResetError(
+      throw createCausedUserStateResetError(
         'E2E_RESET:PLACEHOLDER_FIXTURE_SYNC_FAILED',
         'Failed to ensure placeholder question fixtures are published.',
         'Verify DATABASE_URL connectivity and schema, then rerun E2E setup.',
+        error,
       );
-    } finally {
-      try {
-        await sql.end({ timeout: 5 });
-      } catch {
-        // Ignore shutdown errors in reset teardown.
-      }
     }
   },
 
@@ -195,8 +244,7 @@ const defaultServices: E2EUserStateResetServices = {
   resolveAppUserIdByClerkUserId:
     sharedResetSupport.resolveAppUserIdByClerkUserId,
 
-  clearUserState: async ({ databaseUrl, userId }) => {
-    const sql = postgres(databaseUrl, { max: 1 });
+  clearUserState: async ({ sql, userId }) => {
     try {
       await sql.begin(async (tx) => {
         await tx.unsafe('DELETE FROM idempotency_keys WHERE user_id = $1', [
@@ -208,23 +256,17 @@ const defaultServices: E2EUserStateResetServices = {
           userId,
         ]);
       });
-    } catch {
-      throw new E2EUserStateResetError(
+    } catch (error) {
+      throw createCausedUserStateResetError(
         'E2E_RESET:DATABASE_MUTATION_FAILED',
         'Failed to reset mutable E2E user state.',
         'Verify DATABASE_URL connectivity, schema, and table permissions.',
+        error,
       );
-    } finally {
-      try {
-        await sql.end({ timeout: 5 });
-      } catch {
-        // Ignore shutdown errors in reset teardown.
-      }
     }
   },
 
-  resolveRequiredQuestionFixtures: async ({ databaseUrl }) => {
-    const sql = postgres(databaseUrl, { max: 1 });
+  resolveRequiredQuestionFixtures: async ({ sql }) => {
     try {
       const rows = await sql<{ id: string; slug: string }[]>`
         SELECT id, slug
@@ -261,22 +303,16 @@ const defaultServices: E2EUserStateResetServices = {
         throw error;
       }
 
-      throw new E2EUserStateResetError(
+      throw createCausedUserStateResetError(
         'E2E_RESET:DATABASE_QUERY_FAILED',
         'Failed to resolve required E2E question fixtures.',
         'Verify DATABASE_URL connectivity and run pnpm db:migrate.',
+        error,
       );
-    } finally {
-      try {
-        await sql.end({ timeout: 5 });
-      } catch {
-        // Ignore shutdown errors in reset teardown.
-      }
     }
   },
 
-  resolveRequiredChoiceFixtures: async ({ databaseUrl, questionIds }) => {
-    const sql = postgres(databaseUrl, { max: 1 });
+  resolveRequiredChoiceFixtures: async ({ sql, questionIds }) => {
     try {
       const rows = await sql<
         { id: string; questionId: string; isCorrect: boolean }[]
@@ -316,27 +352,21 @@ const defaultServices: E2EUserStateResetServices = {
         throw error;
       }
 
-      throw new E2EUserStateResetError(
+      throw createCausedUserStateResetError(
         'E2E_RESET:DATABASE_QUERY_FAILED',
         'Failed to resolve required E2E choice fixtures.',
         'Verify DATABASE_URL connectivity and run pnpm db:migrate.',
+        error,
       );
-    } finally {
-      try {
-        await sql.end({ timeout: 5 });
-      } catch {
-        // Ignore shutdown errors in reset teardown.
-      }
     }
   },
 
   seedDeterministicBaseline: async ({
-    databaseUrl,
+    sql,
     userId,
     questionFixtures,
     choiceFixtures,
   }) => {
-    const sql = postgres(databaseUrl, { max: 1 });
     const questionStates = [
       {
         questionId: questionFixtures.placeholder01Id,
@@ -366,6 +396,8 @@ const defaultServices: E2EUserStateResetServices = {
     };
 
     try {
+      await assertNoStaleDeterministicBaselineOwner({ sql, userId });
+
       await sql.begin(async (tx) => {
         await tx.unsafe(
           `
@@ -451,23 +483,21 @@ const defaultServices: E2EUserStateResetServices = {
           ],
         );
       });
-    } catch {
-      throw new E2EUserStateResetError(
+    } catch (error) {
+      if (error instanceof E2EUserStateResetError) {
+        throw error;
+      }
+
+      throw createCausedUserStateResetError(
         'E2E_RESET:DATABASE_MUTATION_FAILED',
         'Failed to seed deterministic E2E baseline state.',
         'Verify DATABASE_URL connectivity, schema, and table permissions.',
+        error,
       );
-    } finally {
-      try {
-        await sql.end({ timeout: 5 });
-      } catch {
-        // Ignore shutdown errors in reset teardown.
-      }
     }
   },
 
-  verifyDeterministicBaseline: async ({ databaseUrl, userId }) => {
-    const sql = postgres(databaseUrl, { max: 1 });
+  verifyDeterministicBaseline: async ({ sql, userId }) => {
     try {
       const rows = await sql<
         {
@@ -512,17 +542,12 @@ const defaultServices: E2EUserStateResetServices = {
         throw error;
       }
 
-      throw new E2EUserStateResetError(
+      throw createCausedUserStateResetError(
         'E2E_RESET:DATABASE_QUERY_FAILED',
         'Failed to verify deterministic E2E baseline state.',
         'Verify DATABASE_URL connectivity and run pnpm db:migrate.',
+        error,
       );
-    } finally {
-      try {
-        await sql.end({ timeout: 5 });
-      } catch {
-        // Ignore shutdown errors in reset teardown.
-      }
     }
   },
 };
@@ -545,9 +570,10 @@ export async function runE2EUserStateReset(
 
   const { databaseUrl, clerkSecretKey, clerkEmail } =
     sharedResetSupport.requireResolvedEnvOrThrow(resolvedEnv);
+  const sql = postgres(databaseUrl, { max: 1 });
 
   try {
-    await services.ensurePlaceholderQuestionsPublished({ databaseUrl });
+    await services.ensurePlaceholderQuestionsPublished({ databaseUrl, sql });
 
     const clerkUserId = await services.resolveClerkUserIdByEmail({
       clerkSecretKey,
@@ -564,6 +590,7 @@ export async function runE2EUserStateReset(
 
     const appUserId = await services.resolveAppUserIdByClerkUserId({
       databaseUrl,
+      sql,
       clerkUserId,
     });
 
@@ -577,14 +604,17 @@ export async function runE2EUserStateReset(
 
     await services.clearUserState({
       databaseUrl,
+      sql,
       userId: appUserId,
     });
 
     const questionFixtures = await services.resolveRequiredQuestionFixtures({
       databaseUrl,
+      sql,
     });
     const choiceFixtures = await services.resolveRequiredChoiceFixtures({
       databaseUrl,
+      sql,
       questionIds: {
         placeholder01Id: questionFixtures.placeholder01Id,
         placeholder02Id: questionFixtures.placeholder02Id,
@@ -593,12 +623,14 @@ export async function runE2EUserStateReset(
 
     await services.seedDeterministicBaseline({
       databaseUrl,
+      sql,
       userId: appUserId,
       questionFixtures,
       choiceFixtures,
     });
     await services.verifyDeterministicBaseline({
       databaseUrl,
+      sql,
       userId: appUserId,
     });
   } catch (error) {
@@ -610,13 +642,20 @@ export async function runE2EUserStateReset(
 
     throw new Error(
       sharedResetSupport.formatFailureReport([
-        createUserStateResetError(
+        createCausedUserStateResetError(
           'E2E_RESET:UNEXPECTED',
-          `Unexpected reset error: ${String(error)}`,
+          `Unexpected reset error: ${formatNonSecretResetCause(error)}`,
           'Inspect stack trace and fix the reset helper or external dependency.',
+          error,
         ),
       ]),
       { cause: error },
     );
+  } finally {
+    try {
+      await sql.end({ timeout: 5 });
+    } catch {
+      // Ignore shutdown errors in reset teardown.
+    }
   }
 }

@@ -35,6 +35,8 @@ type SharedErrorLike = Error & {
   fix: string;
 };
 
+type SharedResetSql = ReturnType<typeof postgres>;
+
 type SharedErrorFactory<E extends SharedErrorLike> = (
   code: string,
   message: string,
@@ -47,6 +49,45 @@ type SharedErrorDefinition = {
   message: string;
   fix: string;
 };
+
+const MAX_CAUSE_EXCERPT_LENGTH = 180;
+
+function truncateCauseExcerpt(value: string): string {
+  if (value.length <= MAX_CAUSE_EXCERPT_LENGTH) return value;
+  return `${value.slice(0, MAX_CAUSE_EXCERPT_LENGTH - 1)}…`;
+}
+
+export function formatNonSecretResetCause(error: unknown): string {
+  const rawMessage =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : String(error);
+  const redacted = rawMessage
+    .replace(/postgres(?:ql)?:\/\/\S+/gi, '[redacted database url]')
+    .replace(
+      /\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:app|aws|cloud|com|dev|io|net|org|tech)\b/gi,
+      '[redacted host]',
+    )
+    .replace(/\bep-[a-z0-9-]+-\d+\b/gi, '[redacted neon id]')
+    .replace(
+      /\b(?:sk|pk|rk)_(?:live|test)_[A-Za-z0-9_=-]+\b/g,
+      '[redacted secret]',
+    )
+    .replace(/\bwhsec_[A-Za-z0-9_=-]+\b/g, '[redacted secret]')
+    .replace(
+      /\b\S*(?:secret|password|token|apikey|api_key)\S*\b/gi,
+      '[redacted secret]',
+    )
+    .replace(/\b(?:password|pass|pwd)=\S+/gi, '[redacted credential]');
+
+  return truncateCauseExcerpt(redacted);
+}
+
+export function appendNonSecretCause(message: string, error: unknown): string {
+  return `${message} Cause: ${formatNonSecretResetCause(error)}`;
+}
 
 type CreateSharedE2EResetSupportInput<E extends SharedErrorLike> = {
   createError: SharedErrorFactory<E>;
@@ -156,11 +197,12 @@ export function createSharedE2EResetSupport<E extends SharedErrorLike>({
         { headers: { Authorization: `Bearer ${input.clerkSecretKey}` } },
         CLERK_API_TIMEOUT_MS,
       );
-    } catch {
+    } catch (error) {
       throw createError(
         clerkApiUnavailableError.code,
-        clerkApiUnavailableError.message,
+        appendNonSecretCause(clerkApiUnavailableError.message, error),
         clerkApiUnavailableError.fix,
+        { cause: error },
       );
     }
 
@@ -188,10 +230,20 @@ export function createSharedE2EResetSupport<E extends SharedErrorLike>({
   }
 
   async function resolveAppUserIdByClerkUserId(input: {
-    databaseUrl: string;
+    databaseUrl?: string;
+    sql?: SharedResetSql;
     clerkUserId: string;
   }): Promise<string | null> {
-    const sql = postgres(input.databaseUrl, { max: 1 });
+    const shouldCloseSql = !input.sql;
+    if (!input.sql && !input.databaseUrl) {
+      throw createError(
+        appUserLookupFailedError.code,
+        'Database URL or SQL client is required to resolve the E2E app user row.',
+        appUserLookupFailedError.fix,
+      );
+    }
+
+    const sql = input.sql ?? postgres(input.databaseUrl ?? '', { max: 1 });
     try {
       const rows = await sql<{ id: string }[]>`
         SELECT id
@@ -200,17 +252,20 @@ export function createSharedE2EResetSupport<E extends SharedErrorLike>({
         LIMIT 1
       `;
       return rows[0]?.id ?? null;
-    } catch {
+    } catch (error) {
       throw createError(
         appUserLookupFailedError.code,
-        appUserLookupFailedError.message,
+        appendNonSecretCause(appUserLookupFailedError.message, error),
         appUserLookupFailedError.fix,
+        { cause: error },
       );
     } finally {
-      try {
-        await sql.end({ timeout: 5 });
-      } catch {
-        // Ignore shutdown errors in helper teardown.
+      if (shouldCloseSql) {
+        try {
+          await sql.end({ timeout: 5 });
+        } catch {
+          // Ignore shutdown errors in helper teardown.
+        }
       }
     }
   }

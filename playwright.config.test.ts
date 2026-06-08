@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import config from './playwright.config';
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.resetModules();
+});
 
 describe('playwright config', () => {
   it('uses production server mode for e2e webServer', () => {
@@ -17,5 +22,14 @@ describe('playwright config', () => {
     expect(webServer.command).toBe(expectedCommand);
     expect(webServer.reuseExistingServer).toBe(false);
     expect(webServer.url).toContain('/api/health');
+  });
+
+  it('keeps one local retry as an ergonomics buffer after reset errors are diagnosable', async () => {
+    vi.stubEnv('CI', '');
+    vi.resetModules();
+
+    const localConfig = (await import('./playwright.config')).default;
+
+    expect(localConfig.retries).toBe(1);
   });
 });
