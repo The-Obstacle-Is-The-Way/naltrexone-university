@@ -56,7 +56,9 @@ export class CheckEntitlementUseCase {
       subscriptionStatus: subscription.status,
       hasActiveSubscriptionPeriod,
       trialEndsAt:
-        subscription.status === 'inTrial' ? subscription.currentPeriodEnd : null,
+        subscription.status === 'inTrial'
+          ? subscription.currentPeriodEnd
+          : null,
     };
   }
 }
