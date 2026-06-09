@@ -4,6 +4,7 @@ import type {
   StripeCustomerRepository,
   SubscriptionRepository,
 } from '@/src/application/ports/repositories';
+import type { SubscriptionStatus } from '@/src/domain/value-objects';
 
 export type StripeCheckoutSessionLike = {
   customer?: unknown;
@@ -68,6 +69,15 @@ export type CheckoutSuccessDeps = {
 
 export type SyncCheckoutSuccessInput = {
   sessionId: string | null;
+};
+
+/**
+ * Resolved sync state for the (normally unreachable) post-redirect render.
+ * In production every sync path redirects; the result only surfaces when the
+ * redirect is intercepted (tests, redirect-fallback rendering).
+ */
+export type CheckoutSuccessSyncResult = {
+  status: SubscriptionStatus;
 };
 
 export type CheckoutSuccessSearchParams = {

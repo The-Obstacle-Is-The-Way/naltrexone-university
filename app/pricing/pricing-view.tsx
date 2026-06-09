@@ -10,6 +10,8 @@ import { ROUTES } from '@/lib/routes';
 export type PricingViewProps = {
   isEntitled: boolean;
   banner: PricingBanner | null;
+  /** DEBT-410: render trial CTAs (FREE_TRIAL_ENABLED + trial-eligible visitor). */
+  showTrialCtas?: boolean;
   manageBillingAction?: (formData: FormData) => Promise<void>;
   subscribeMonthlyAction: (formData: FormData) => Promise<void>;
   subscribeAnnualAction: (formData: FormData) => Promise<void>;
@@ -27,6 +29,7 @@ function DefaultButton({ children }: { children: ReactNode }) {
 export function PricingView({
   isEntitled,
   banner,
+  showTrialCtas = false,
   manageBillingAction,
   subscribeMonthlyAction,
   subscribeAnnualAction,
@@ -144,8 +147,15 @@ export function PricingView({
                 >
                   <IdempotencyKeyField />
                   <SubscribeButtonComponent>
-                    Subscribe Monthly
+                    {showTrialCtas
+                      ? PRICING_DATA.monthly.trialCta
+                      : 'Subscribe Monthly'}
                   </SubscribeButtonComponent>
+                  {showTrialCtas ? (
+                    <p className="mt-3 text-center text-sm text-muted-foreground">
+                      {PRICING_DATA.monthly.postTrialNote}
+                    </p>
+                  ) : null}
                 </form>
               </Card>
               <Card className="border-2 border-primary p-8">
@@ -172,8 +182,15 @@ export function PricingView({
                 >
                   <IdempotencyKeyField />
                   <SubscribeButtonComponent>
-                    Subscribe Annual
+                    {showTrialCtas
+                      ? PRICING_DATA.annual.trialCta
+                      : 'Subscribe Annual'}
                   </SubscribeButtonComponent>
+                  {showTrialCtas ? (
+                    <p className="mt-3 text-center text-sm text-muted-foreground">
+                      {PRICING_DATA.annual.postTrialNote}
+                    </p>
+                  ) : null}
                 </form>
               </Card>
             </div>

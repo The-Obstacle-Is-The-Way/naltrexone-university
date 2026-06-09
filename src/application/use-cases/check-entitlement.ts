@@ -14,6 +14,12 @@ export type CheckEntitlementOutput = {
   reason?: NonEntitledReason | null;
   subscriptionStatus?: SubscriptionStatus | null;
   hasActiveSubscriptionPeriod?: boolean;
+  /**
+   * Trial end timestamp while the subscription is `inTrial`, sourced from the
+   * persisted `currentPeriodEnd` (Stripe sets period end to trial end during a
+   * trial); null for every other status.
+   */
+  trialEndsAt?: Date | null;
 };
 
 export class CheckEntitlementUseCase {
@@ -30,6 +36,7 @@ export class CheckEntitlementUseCase {
         reason: 'subscription_required',
         subscriptionStatus: null,
         hasActiveSubscriptionPeriod: false,
+        trialEndsAt: null,
       };
     }
 
@@ -48,6 +55,10 @@ export class CheckEntitlementUseCase {
       reason,
       subscriptionStatus: subscription.status,
       hasActiveSubscriptionPeriod,
+      trialEndsAt:
+        subscription.status === 'inTrial'
+          ? subscription.currentPeriodEnd
+          : null,
     };
   }
 }

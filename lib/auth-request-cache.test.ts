@@ -140,6 +140,35 @@ console.log('not json');
     ).toThrowError(/not json/);
   });
 
+  it('preserves the entitlement output, including trialEndsAt, for in-trial users', async () => {
+    const user = createUser({ id: 'user_1' });
+    const trialEnd = new Date('2026-02-08T00:00:00Z');
+    const deps = {
+      authGateway: new FakeAuthGateway(user),
+      checkEntitlementUseCase: new CheckEntitlementUseCase(
+        new FakeSubscriptionRepository([
+          createSubscription({
+            userId: user.id,
+            status: 'inTrial',
+            currentPeriodEnd: trialEnd,
+          }),
+        ]),
+        () => new Date('2026-02-01T00:00:00Z'),
+      ),
+    };
+
+    const authState = await getRequestAuthState({ deps });
+
+    expect(authState.user).toEqual(user);
+    expect(authState.entitlement).toEqual({
+      isEntitled: true,
+      reason: null,
+      subscriptionStatus: 'inTrial',
+      hasActiveSubscriptionPeriod: true,
+      trialEndsAt: trialEnd,
+    });
+  });
+
   it('bypasses the cache when deps are injected directly', async () => {
     const deps = createCountingAuthDeps();
 

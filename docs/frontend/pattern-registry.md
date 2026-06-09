@@ -605,6 +605,23 @@ The marketing landing page CTA strategy was standardized in DEBT-258:
 | Monthly "Get Started" | `variant="outline"` | Previously `variant="secondary"` — 4% lightness difference from card surface (invisible). Outline gives a real border. |
 | Annual "Get Started" | `variant="default"` (primary) | Replaced custom `bg-foreground text-background`. In dark mode `--primary` = `--foreground` (zero visual regression). Highest affordance for the promoted plan. |
 
+### Trial CTA Subtext (DEBT-410)
+
+When `FREE_TRIAL_ENABLED` is on, the pricing-card primary CTAs read "Start 7-day free trial" and carry a one-line post-trial price note directly under the button:
+
+```text
+mt-3 text-center text-sm text-muted-foreground
+```
+
+**Copy source:** `lib/pricing-data.ts` (`trialCta` / `postTrialNote` fields) — copy lives in data, not in the view.
+
+**Rules:**
+- Uses the 12.3 "Card body / dense helper copy" role (`text-sm text-muted-foreground`); no new type role.
+- The note is non-interactive metadata for the CTA above it — never a link or button.
+- With the flag off, the CTA renders the standard "Subscribe Monthly" / "Subscribe Annual" labels and no subtext (byte-identical to the pre-trial pricing card).
+
+**Source:** `app/pricing/pricing-view.tsx`
+
 ### MetallicCtaButton (Marketing Only — D-15 Exception)
 
 Custom animated-border CTA used at the bottom of the landing page.
@@ -820,6 +837,35 @@ flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground
 
 **Source:** `components/question/question-rating-footer.tsx`
 
+### F-10: Trial Countdown Banner (layout-level info banner)
+
+Persistent app-shell banner shown while a subscription is `inTrial` (DEBT-410 PR-3). Informational — not a warning — so it deliberately avoids the F-2 warning palette that the past-due banner uses; a 7-day-persistent surface must stay calm.
+
+**Wrapper:**
+
+```text
+block border-b border-border bg-card px-4 py-3 text-sm text-muted-foreground
+```
+
+**Content row:**
+
+```text
+mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-3
+```
+
+**Countdown phrase:** `font-medium text-foreground` (e.g. "7 days left in trial") — emphasized against the muted wrapper so the number reads at a glance.
+
+**Action:** `<Button type="submit" variant="outline" size="sm" className="rounded-full">` ("Add a card to keep access") inside a `<form>` posting the protected app billing portal action. Button primitive supplies the canonical focus ring; pill shape follows the Pill Shape Convention (Part 5).
+
+**Rules:**
+- Semantic tokens only; no opacity-scale values at all (`bg-card` is a solid surface fill), so the banner adds nothing to the source-scan allowlist.
+- Light/dark handled entirely by `border-border` / `bg-card` / `text-muted-foreground` / `text-foreground`; no component `dark:` overrides.
+- Contrast: reuses the 12.3 "Card body / dense helper copy" pairing (`text-sm text-muted-foreground` on card surface) and full `text-foreground` for the countdown phrase — both established app-wide pairings; no new color pair is introduced, so no new `contrast-policy.md` ledger entry is required.
+- Renders in the same `AppLayoutShell` `banner` slot as the past-due banner (banner → header → main ordering); the two are mutually exclusive because `pastDue` and `inTrial` are distinct subscription statuses.
+- Server-rendered at page load; no live-region role needed (matches past-due banner precedent).
+
+**Source:** `app/(app)/app/layout.tsx` (trial countdown banner)
+
 ---
 
 ## Part 7: Metadata & Decoration
@@ -989,6 +1035,7 @@ Is it transient feedback?
     └── NO → Is it a status indicator?
         ├── Result badge → F-1 (/15 background)
         ├── Warning/alert → F-2 (pick tier: /5 hint, /10 standard, /15 emphasized)
+        ├── Informational layout-level banner → F-10 (neutral border/card tokens, no status tint)
         └── Full-page error → ErrorBoundaryPage component
 ```
 

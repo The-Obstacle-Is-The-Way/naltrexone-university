@@ -23,6 +23,19 @@ const ORIGINAL_ENV = snapshotProcessEnv();
 const MARKETING_LAYOUT_PRICING_LINK_COUNT = 2;
 const MARKETING_LAYOUT_FEATURES_LINK_COUNT = 2;
 
+function setPricingPageEnvDefaults() {
+  process.env.DATABASE_URL ??=
+    'postgresql://postgres:postgres@localhost:5432/addiction_boards_test';
+  process.env.NEXT_PUBLIC_APP_URL ??= 'http://localhost:3000';
+  process.env.CLERK_SECRET_KEY ??= 'sk_test_dummy';
+  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ??= 'pk_test_dummy';
+  process.env.STRIPE_SECRET_KEY ??= 'sk_test_dummy';
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ??= 'pk_test_dummy';
+  process.env.STRIPE_WEBHOOK_SECRET ??= 'whsec_dummy';
+  process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY ??= 'price_dummy_monthly';
+  process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL ??= 'price_dummy_annual';
+}
+
 function getHeader(html: string): HTMLElement {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const header = doc.querySelector('header');
@@ -151,6 +164,7 @@ describe('AuthNav', () => {
   });
 
   it('scenario 2: unauthenticated pricing page renders only one Pricing link per breakpoint', async () => {
+    setPricingPageEnvDefaults();
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
 
     const authGateway = new FakeAuthGateway(null);
@@ -343,6 +357,7 @@ describe('AuthNav', () => {
   });
 
   it('scenario 6: authenticated non-entitled pricing page does not duplicate the Pricing link', async () => {
+    setPricingPageEnvDefaults();
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     vi.doMock('./auth-user-button', () => ({
       AuthUserButton: () => <div data-testid="user-button" />,

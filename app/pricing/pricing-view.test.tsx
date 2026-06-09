@@ -32,6 +32,42 @@ describe('app/pricing/pricing-view', () => {
     expect(html).not.toContain('Manage Billing');
   });
 
+  it('renders trial CTAs with post-trial notes when showTrialCtas is set', () => {
+    const html = renderToStaticMarkup(
+      <PricingView
+        isEntitled={false}
+        banner={null}
+        showTrialCtas
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+    const trialCtaCount = html.match(/Start 7-day free trial/g)?.length ?? 0;
+
+    expect(trialCtaCount).toBe(2);
+    expect(html).toContain('then $29/mo');
+    expect(html).toContain('then $199/yr · no card required');
+    expect(html).not.toContain('Subscribe Monthly');
+    expect(html).not.toContain('Subscribe Annual');
+  });
+
+  it('renders standard subscribe CTAs without trial copy by default', () => {
+    const html = renderToStaticMarkup(
+      <PricingView
+        isEntitled={false}
+        banner={null}
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+
+    expect(html).toContain('Subscribe Monthly');
+    expect(html).toContain('Subscribe Annual');
+    expect(html).not.toContain('Start 7-day free trial');
+    expect(html).not.toContain('then $29/mo');
+    expect(html).not.toContain('no card required');
+  });
+
   it('renders idempotency fields for manage billing forms', () => {
     const banner: PricingBanner = {
       tone: 'error',

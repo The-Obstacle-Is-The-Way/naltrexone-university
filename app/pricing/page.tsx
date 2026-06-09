@@ -11,11 +11,13 @@ import {
 import type { PricingBanner } from '@/app/pricing/types';
 import { MarketingLayout } from '@/components/marketing/marketing-layout';
 import { getRequestAuthState } from '@/lib/auth-request-cache';
+import { env } from '@/lib/env';
 import { ROUTES } from '@/lib/routes';
 import { normalizeSearchParam } from '@/lib/search-params';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
 import type { NonEntitledReason } from '@/src/application/use-cases/check-entitlement';
+import type { SubscriptionStatus } from '@/src/domain/value-objects';
 
 export const metadata: Metadata = {
   title: 'Pricing - Addiction Boards',
@@ -34,22 +36,40 @@ export type PricingPageDeps = {
   checkEntitlementUseCase: CheckEntitlementUseCase;
 };
 
-export async function loadPricingData(deps?: PricingPageDeps): Promise<{
+export type PricingFeatureFlags = {
+  freeTrialEnabled: boolean;
+};
+
+function getPricingFeatureFlags(): PricingFeatureFlags {
+  return {
+    freeTrialEnabled: env.FREE_TRIAL_ENABLED === 'true',
+  };
+}
+
+export type PricingData = {
   isEntitled: boolean;
   reason: NonEntitledReason | null;
-}> {
+  /** null means no subscription record exists (trial-eligible per DEBT-410 D9). */
+  subscriptionStatus: SubscriptionStatus | null;
+};
+
+export async function loadPricingData(
+  deps?: PricingPageDeps,
+): Promise<PricingData> {
   const authState = await getRequestAuthState({ deps });
   if (!authState.user) {
     return {
+      // Anonymous pricing visits should not show a banner (DEBT-410 PR-1).
       isEntitled: false,
-      // Anonymous pricing visits should not show a banner; trial-forward copy ships with PR-3.
       reason: null,
+      subscriptionStatus: null,
     };
   }
 
   return {
     isEntitled: authState.entitlement.isEntitled,
     reason: authState.entitlement.reason ?? null,
+    subscriptionStatus: authState.entitlement.subscriptionStatus ?? null,
   };
 }
 
@@ -59,8 +79,14 @@ type PricingSearchParams = {
   plan?: string;
 };
 
+export type PricingTrialContext = {
+  freeTrialEnabled: boolean;
+  subscriptionStatus: SubscriptionStatus | null;
+};
+
 export function getPricingBanner(
   searchParams: PricingSearchParams,
+  trialContext?: PricingTrialContext,
 ): PricingBanner | null {
   const checkout = normalizeSearchParam(searchParams.checkout);
   const reason = normalizeSearchParam(searchParams.reason);
@@ -87,6 +113,25 @@ export function getPricingBanner(
   }
 
   if (reason === 'subscription_required') {
+    if (trialContext?.freeTrialEnabled) {
+      // No subscription record at all = trial-eligible (DEBT-410 D9).
+      if (trialContext.subscriptionStatus === null) {
+        return {
+          tone: 'info',
+          message:
+            'Start your free trial to access the app — no card required.',
+        };
+      }
+      // A lapsed trial cancels with its period already over, so it arrives
+      // here (not as subscription_canceled). Because prior paid cancellations
+      // have the same persisted shape, keep this copy trial-neutral.
+      if (trialContext.subscriptionStatus === 'canceled') {
+        return {
+          tone: 'info',
+          message: 'Your access ended — choose a plan to continue.',
+        };
+      }
+    }
     return {
       tone: 'info',
       message: 'Subscription required to access the app.',
@@ -119,32 +164,62 @@ export function getPricingBanner(
   return null;
 }
 
+// Shared by both render paths so banner/CTA decisions cannot drift apart.
+function buildPricingPresentation(
+  pricingData: PricingData,
+  resolvedSearchParams: PricingSearchParams,
+  featureFlags: PricingFeatureFlags,
+): {
+  banner: PricingBanner | null;
+  showManageBillingAction: boolean;
+  showTrialCtas: boolean;
+} {
+  const reason = normalizeSearchParam(resolvedSearchParams.reason);
+  const effectiveReason = reason ?? pricingData.reason ?? undefined;
+  const banner = getPricingBanner(
+    {
+      ...resolvedSearchParams,
+      reason: effectiveReason,
+    },
+    {
+      freeTrialEnabled: featureFlags.freeTrialEnabled,
+      subscriptionStatus: pricingData.subscriptionStatus,
+    },
+  );
+
+  return {
+    banner,
+    showManageBillingAction:
+      effectiveReason === 'manage_billing' ||
+      effectiveReason === 'payment_processing',
+    showTrialCtas:
+      featureFlags.freeTrialEnabled &&
+      !pricingData.isEntitled &&
+      pricingData.subscriptionStatus === null,
+  };
+}
+
 async function DeferredPricingView({
   searchParams,
   deps,
+  featureFlags = getPricingFeatureFlags(),
 }: {
   searchParams: Promise<PricingSearchParams>;
   deps?: PricingPageDeps;
+  featureFlags?: PricingFeatureFlags;
 }) {
   const [pricingData, resolvedSearchParams] = await Promise.all([
     loadPricingData(deps),
     searchParams,
   ]);
-  const reason = normalizeSearchParam(resolvedSearchParams.reason);
-  const effectiveReason = reason ?? pricingData.reason ?? undefined;
-  const banner = getPricingBanner({
-    ...resolvedSearchParams,
-    reason: effectiveReason,
-  });
-
-  const showManageBillingAction =
-    effectiveReason === 'manage_billing' ||
-    effectiveReason === 'payment_processing';
+  const { banner, showManageBillingAction, showTrialCtas } =
+    buildPricingPresentation(pricingData, resolvedSearchParams, featureFlags);
 
   return (
     <PricingView
       isEntitled={pricingData.isEntitled}
       banner={banner}
+      showTrialCtas={showTrialCtas}
       manageBillingAction={
         showManageBillingAction ? manageBillingAction : undefined
       }
@@ -159,6 +234,7 @@ async function renderInjectedPricingPage(input: {
   searchParams: Promise<PricingSearchParams>;
   deps?: PricingPageDeps;
   authNavFn?: () => ReactNode | Promise<ReactNode>;
+  featureFlags?: PricingFeatureFlags;
 }) {
   const resolvedAuthNavFn =
     input.authNavFn ??
@@ -173,16 +249,9 @@ async function renderInjectedPricingPage(input: {
     input.searchParams,
     resolvedAuthNavFn(),
   ]);
-  const reason = normalizeSearchParam(resolvedSearchParams.reason);
-  const effectiveReason = reason ?? pricingData.reason ?? undefined;
-  const banner = getPricingBanner({
-    ...resolvedSearchParams,
-    reason: effectiveReason,
-  });
-
-  const showManageBillingAction =
-    effectiveReason === 'manage_billing' ||
-    effectiveReason === 'payment_processing';
+  const featureFlags = input.featureFlags ?? getPricingFeatureFlags();
+  const { banner, showManageBillingAction, showTrialCtas } =
+    buildPricingPresentation(pricingData, resolvedSearchParams, featureFlags);
 
   return MarketingLayout({
     authNavSlot,
@@ -191,6 +260,7 @@ async function renderInjectedPricingPage(input: {
       <PricingView
         isEntitled={pricingData.isEntitled}
         banner={banner}
+        showTrialCtas={showTrialCtas}
         manageBillingAction={
           showManageBillingAction ? manageBillingAction : undefined
         }
@@ -206,13 +276,20 @@ export default async function PricingPage({
   searchParams,
   deps,
   authNavFn,
+  featureFlags,
 }: {
   searchParams: Promise<PricingSearchParams>;
   deps?: PricingPageDeps;
   authNavFn?: () => ReactNode | Promise<ReactNode>;
+  featureFlags?: PricingFeatureFlags;
 }) {
   if (deps || authNavFn) {
-    return renderInjectedPricingPage({ searchParams, deps, authNavFn });
+    return renderInjectedPricingPage({
+      searchParams,
+      deps,
+      authNavFn,
+      featureFlags,
+    });
   }
 
   const pricingFallback = await PricingViewSkeleton();
@@ -221,7 +298,10 @@ export default async function PricingPage({
     featuresHref: `${ROUTES.HOME}#features`,
     children: (
       <Suspense fallback={pricingFallback}>
-        <DeferredPricingView searchParams={searchParams} />
+        <DeferredPricingView
+          searchParams={searchParams}
+          featureFlags={featureFlags}
+        />
       </Suspense>
     ),
   });

@@ -19,11 +19,16 @@ import {
 import { getCheckoutSuccessDeps } from './checkout-success-deps';
 import type {
   CheckoutSuccessDeps,
+  CheckoutSuccessSyncResult,
   CheckoutSuccessTransaction,
   SyncCheckoutSuccessInput,
 } from './checkout-success-types';
 
-export type { CheckoutSuccessDeps, CheckoutSuccessTransaction };
+export type {
+  CheckoutSuccessDeps,
+  CheckoutSuccessSyncResult,
+  CheckoutSuccessTransaction,
+};
 export { getCheckoutSuccessDeps };
 
 const CHECKOUT_ERROR_ROUTE = `${ROUTES.PRICING}?checkout=error`;
@@ -82,7 +87,7 @@ export async function syncCheckoutSuccess(
   input: SyncCheckoutSuccessInput,
   deps?: CheckoutSuccessDeps,
   redirectFn: (url: string) => never = redirect,
-): Promise<void> {
+): Promise<CheckoutSuccessSyncResult | undefined> {
   const d = await getCheckoutSuccessDeps(deps);
 
   const fail = (
@@ -252,8 +257,10 @@ export async function syncCheckoutSuccess(
       hasActiveSubscriptionPeriod,
     );
 
-    return redirectFn(`${ROUTES.PRICING}?reason=${reason}`);
+    redirectFn(`${ROUTES.PRICING}?reason=${reason}`);
+    return { status };
   }
 
-  return redirectFn(ROUTES.APP_DASHBOARD);
+  redirectFn(ROUTES.APP_DASHBOARD);
+  return { status };
 }

@@ -1,10 +1,13 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
+import { manageBillingAction } from '@/app/(app)/app/billing/manage-billing-actions';
 import { AppDesktopNav } from '@/components/app-desktop-nav';
 import { AuthNav } from '@/components/auth-nav';
+import { IdempotencyKeyField } from '@/components/idempotency-key-field';
 import { MobileNav } from '@/components/mobile-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { Button } from '@/components/ui/button';
 import { getRequestAuthState } from '@/lib/auth-request-cache';
 import { ROUTES } from '@/lib/routes';
 import { ApplicationError } from '@/src/application/errors';
@@ -24,6 +27,7 @@ export type AppLayoutDeps = {
 
 export type EntitledAppUser = {
   subscriptionStatus: SubscriptionStatus | null;
+  trialEndsAt: Date | null;
 };
 
 export async function enforceEntitledAppUser(
@@ -43,7 +47,23 @@ export async function enforceEntitledAppUser(
 
   return {
     subscriptionStatus: authState.entitlement.subscriptionStatus ?? null,
+    trialEndsAt: authState.entitlement.trialEndsAt ?? null,
   };
+}
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * Whole days remaining before the trial ends; any partial day counts as a
+ * full day so a trial that ends tomorrow morning still reads "1 day left".
+ * Clamped to 1: render-time `now` can drift past `trialEndsAt` after the
+ * entitlement check, and "0 days left" is never valid banner copy.
+ */
+export function getTrialDaysLeft(trialEndsAt: Date, now: Date): number {
+  return Math.max(
+    1,
+    Math.ceil((trialEndsAt.getTime() - now.getTime()) / MS_PER_DAY),
+  );
 }
 
 export type AppLayoutShellProps = {
@@ -102,6 +122,37 @@ export function AppLayoutShell({
   );
 }
 
+// Pattern Registry F-10: layout-level informational banner (DEBT-410).
+export function TrialCountdownBanner({
+  daysLeft,
+  manageBillingActionFn,
+}: {
+  daysLeft: number;
+  manageBillingActionFn: (formData: FormData) => Promise<void>;
+}) {
+  const countdown =
+    daysLeft === 1 ? '1 day left in trial' : `${daysLeft} days left in trial`;
+  return (
+    // Server-rendered at page load; no live-region role needed.
+    <div className="block border-b border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-3">
+        <span className="font-medium text-foreground">{countdown}</span>
+        <form action={manageBillingActionFn}>
+          <IdempotencyKeyField />
+          <Button
+            type="submit"
+            variant="outline"
+            size="sm"
+            className="rounded-full"
+          >
+            Add a card to keep access
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export function PastDueBanner() {
   return (
     // Server-rendered at page load; no live-region role needed.
@@ -123,19 +174,31 @@ export async function renderAppLayout(input: {
   enforceEntitledAppUserFn?: () => Promise<EntitledAppUser>;
   authNavFn?: () => Promise<React.ReactNode>;
   mobileNav?: React.ReactNode;
+  manageBillingActionFn?: (formData: FormData) => Promise<void>;
+  nowFn?: () => Date;
 }): Promise<React.ReactElement> {
   const enforceEntitledAppUserFn =
     input.enforceEntitledAppUserFn ?? enforceEntitledAppUser;
   const authNavFn =
     input.authNavFn ?? (() => AuthNav({ showPrimaryLink: false }));
   const mobileNav = input.mobileNav ?? <MobileNav />;
+  const manageBillingActionFn =
+    input.manageBillingActionFn ?? manageBillingAction;
+  const nowFn = input.nowFn ?? (() => new Date());
 
-  const [{ subscriptionStatus }, authNav] = await Promise.all([
+  const [{ subscriptionStatus, trialEndsAt }, authNav] = await Promise.all([
     enforceEntitledAppUserFn(),
     authNavFn(),
   ]);
   const banner =
-    subscriptionStatus === 'pastDue' ? <PastDueBanner /> : undefined;
+    subscriptionStatus === 'pastDue' ? (
+      <PastDueBanner />
+    ) : subscriptionStatus === 'inTrial' && trialEndsAt ? (
+      <TrialCountdownBanner
+        daysLeft={getTrialDaysLeft(trialEndsAt, nowFn())}
+        manageBillingActionFn={manageBillingActionFn}
+      />
+    ) : undefined;
 
   return (
     <AppLayoutShell authNav={authNav} mobileNav={mobileNav} banner={banner}>

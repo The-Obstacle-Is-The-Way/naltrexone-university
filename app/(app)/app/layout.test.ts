@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import { FakeAuthGateway } from '@/src/application/test-helpers/fakes';
-import { enforceEntitledAppUser } from './layout';
+import { enforceEntitledAppUser, getTrialDaysLeft } from './layout';
 
 const { fixtureUser1Id } = vi.hoisted(() => ({
   fixtureUser1Id: crypto.randomUUID(),
@@ -113,10 +113,41 @@ describe('app/(app)/app/layout', () => {
       redirectFn as never,
     );
 
-    expect(result).toEqual({ subscriptionStatus: 'active' });
+    expect(result).toEqual({ subscriptionStatus: 'active', trialEndsAt: null });
     expect(checkEntitlementUseCase.execute).toHaveBeenCalledWith({
       userId: fixtureUser1Id,
     });
+    expect(redirectFn).not.toHaveBeenCalled();
+  });
+
+  it('returns trialEndsAt for entitled inTrial users', async () => {
+    const user = createUser();
+    const trialEndsAt = new Date('2026-02-08T00:00:00Z');
+
+    const authGateway: AuthGateway = {
+      getCurrentUser: async () => user as never,
+      requireUser: async () => user as never,
+    };
+
+    const checkEntitlementUseCase = {
+      execute: vi.fn(async () => ({
+        isEntitled: true,
+        reason: null,
+        subscriptionStatus: 'inTrial' as const,
+        trialEndsAt,
+      })),
+    };
+
+    const redirectFn = vi.fn(() => {
+      throw new Error('unexpected redirect');
+    });
+
+    const result = await enforceEntitledAppUser(
+      { authGateway, checkEntitlementUseCase },
+      redirectFn as never,
+    );
+
+    expect(result).toEqual({ subscriptionStatus: 'inTrial', trialEndsAt });
     expect(redirectFn).not.toHaveBeenCalled();
   });
 
@@ -145,8 +176,53 @@ describe('app/(app)/app/layout', () => {
       redirectFn as never,
     );
 
-    expect(result).toEqual({ subscriptionStatus: 'pastDue' });
+    expect(result).toEqual({
+      subscriptionStatus: 'pastDue',
+      trialEndsAt: null,
+    });
     expect(redirectFn).not.toHaveBeenCalled();
+  });
+
+  it('getTrialDaysLeft rounds partial days up', () => {
+    expect(
+      getTrialDaysLeft(
+        new Date('2026-02-08T00:00:00Z'),
+        new Date('2026-02-04T12:00:00Z'),
+      ),
+    ).toBe(4);
+  });
+
+  it('getTrialDaysLeft returns 7 at the start of a 7-day trial', () => {
+    expect(
+      getTrialDaysLeft(
+        new Date('2026-02-08T00:00:00Z'),
+        new Date('2026-02-01T00:00:00Z'),
+      ),
+    ).toBe(7);
+  });
+
+  it('getTrialDaysLeft returns 1 within the final partial day', () => {
+    expect(
+      getTrialDaysLeft(
+        new Date('2026-02-08T00:00:00Z'),
+        new Date('2026-02-07T21:00:00Z'),
+      ),
+    ).toBe(1);
+  });
+
+  it('getTrialDaysLeft never drops below 1 when render time passes the boundary', () => {
+    expect(
+      getTrialDaysLeft(
+        new Date('2026-02-08T00:00:00Z'),
+        new Date('2026-02-08T00:00:00Z'),
+      ),
+    ).toBe(1);
+    expect(
+      getTrialDaysLeft(
+        new Date('2026-02-08T00:00:00Z'),
+        new Date('2026-02-08T00:00:05Z'),
+      ),
+    ).toBe(1);
   });
 
   it('redirects paymentProcessing users to payment_processing reason', async () => {
