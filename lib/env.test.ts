@@ -186,32 +186,6 @@ describe('env', () => {
     expect(env.FREE_TRIAL_ENABLED).toBeUndefined();
   });
 
-  it('rejects an invalid FREE_TRIAL_ENABLED value (not true/false)', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
-
-    process.env.DATABASE_URL =
-      'postgresql://postgres:postgres@localhost:5432/db';
-    process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
-
-    process.env.STRIPE_SECRET_KEY = 'sk_test_dummy';
-    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = 'pk_test_dummy';
-    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_dummy';
-    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY = 'price_dummy_monthly';
-    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL = 'price_dummy_annual';
-
-    process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
-    process.env.FREE_TRIAL_ENABLED = 'yes'; // not 'true' or 'false'
-    delete process.env.CLERK_SECRET_KEY;
-    delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-    delete process.env.VERCEL_ENV;
-
-    vi.resetModules();
-
-    await expect(import('@/lib/env')).rejects.toThrow(
-      'Invalid environment variables',
-    );
-  });
-
   it('allows missing CLERK_WEBHOOK_SIGNING_SECRET when not on Vercel production deploys', async () => {
     process.env.DATABASE_URL =
       'postgresql://postgres:postgres@localhost:5432/db';

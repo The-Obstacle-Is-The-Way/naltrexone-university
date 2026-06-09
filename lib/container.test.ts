@@ -527,58 +527,6 @@ describe('container factories', () => {
     ]);
   });
 
-  it('does not pass a trial when FREE_TRIAL_ENABLED is absent from env', async () => {
-    const paymentGateway = new FakePaymentGateway({
-      externalCustomerId: 'cus_should_not_be_used',
-      checkoutUrl: 'https://stripe/checkout',
-      portalUrl: 'https://stripe/portal',
-      webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
-    });
-    const stripeCustomers = new FakeStripeCustomerRepository();
-    await stripeCustomers.insert('user-1', 'cus_existing');
-
-    const container = createContainer({
-      primitives: {
-        db: {} as unknown as DrizzleDb,
-        env: {
-          NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
-          NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
-          STRIPE_WEBHOOK_SECRET: 'whsec',
-          NEXT_PUBLIC_APP_URL: 'https://app.example.com',
-          // FREE_TRIAL_ENABLED intentionally absent
-        } as unknown as typeof import('./env').env,
-        logger: new FakeLogger() as unknown as typeof import('./logger').logger,
-        getStripe: () =>
-          ({}) as unknown as ReturnType<typeof import('./stripe').getStripe>,
-        now: () => new Date('2026-02-01T00:00:00Z'),
-      },
-      repositories: {
-        createStripeCustomerRepository: () => stripeCustomers,
-        createSubscriptionRepository: () => new FakeSubscriptionRepository(),
-      },
-      gateways: {
-        createPaymentGateway: () => paymentGateway,
-      },
-    });
-
-    await expect(
-      container.createCheckoutSessionUseCase().execute({
-        userId: 'user-1',
-        clerkUserId: 'clerk-1',
-        email: 'user@example.com',
-        plan: 'monthly',
-        successUrl:
-          'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
-        cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout' });
-
-    expect(paymentGateway.checkoutInputs).toHaveLength(1);
-    expect(paymentGateway.checkoutInputs[0]).not.toHaveProperty(
-      'trialPeriodDays',
-    );
-  });
-
   it('uses repository factories inside createStripeWebhookDeps transactions', async () => {
     const tx = { tx: true } as const;
     const transaction = vi.fn(

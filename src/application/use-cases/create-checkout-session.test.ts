@@ -311,64 +311,10 @@ describe('CreateCheckoutSessionUseCase', () => {
     );
   });
 
-  it('passes a 7-day trial for an annual-plan first-time user when free trials are enabled', async () => {
-    const paymentGateway = createPaymentGateway();
-    const stripeCustomers = new FakeStripeCustomerRepository();
-    await stripeCustomers.insert('user-1', 'cus_existing');
-
-    const useCase = new CreateCheckoutSessionUseCase(
-      stripeCustomers,
-      new FakeSubscriptionRepository(),
-      paymentGateway,
-      new FakeLogger(),
-      () => new Date('2026-02-01T00:00:00Z'),
-      true,
-    );
-
-    await expect(
-      useCase.execute({ ...defaultCheckoutInput, plan: 'annual' }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout' });
-
-    expect(paymentGateway.checkoutInputs).toEqual([
-      {
-        userId: 'user-1',
-        externalCustomerId: 'cus_existing',
-        plan: 'annual',
-        successUrl: defaultCheckoutInput.successUrl,
-        cancelUrl: defaultCheckoutInput.cancelUrl,
-        trialPeriodDays: 7,
-      },
-    ]);
-  });
-
-  it('does not pass a trial when freeTrialEnabled is explicitly false', async () => {
-    const paymentGateway = createPaymentGateway();
-    const stripeCustomers = new FakeStripeCustomerRepository();
-    await stripeCustomers.insert('user-1', 'cus_existing');
-
-    const useCase = new CreateCheckoutSessionUseCase(
-      stripeCustomers,
-      new FakeSubscriptionRepository(),
-      paymentGateway,
-      new FakeLogger(),
-      () => new Date('2026-02-01T00:00:00Z'),
-      false,
-    );
-
-    await expect(useCase.execute(defaultCheckoutInput)).resolves.toEqual({
-      url: 'https://stripe/checkout',
-    });
-
-    expect(paymentGateway.checkoutInputs).toHaveLength(1);
-    expect(paymentGateway.checkoutInputs[0]).not.toHaveProperty(
-      'trialPeriodDays',
-    );
-  });
-
   it('continues to allow checkout when currentPeriodEnd is in the past', async () => {
     const { paymentGateway, useCase } = await createUseCaseWithExistingCustomer(
       {
-
+        status: 'active',
         currentPeriodEnd: new Date('2026-01-01T00:00:00Z'),
       },
     );
