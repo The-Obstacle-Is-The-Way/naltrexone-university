@@ -1,0 +1,272 @@
+import Stripe from 'stripe';
+import { afterEach, describe, expect, it } from 'vitest';
+import { STRIPE_API_VERSION } from '@/lib/stripe-api-version';
+
+const STRIPE_SMOKE_WAIT_BUDGET_MS = 8_500;
+const INITIAL_POLL_DELAY_MS = 150;
+const MAX_POLL_DELAY_MS = 500;
+const RUN_STRIPE_TRIAL_CLOCK_SMOKE =
+  process.env.RUN_STRIPE_TRIAL_CLOCK_SMOKE === 'true';
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY ?? '';
+const stripePriceId =
+  process.env.STRIPE_TRIAL_CLOCK_PRICE_ID ??
+  process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY ??
+  '';
+
+function isUsableStripeTestKey(value: string): boolean {
+  return value.startsWith('sk_test_') && !value.includes('dummy');
+}
+
+function isUsableStripePriceId(value: string): boolean {
+  return value.startsWith('price_') && !value.includes('dummy');
+}
+
+const skipReason = !RUN_STRIPE_TRIAL_CLOCK_SMOKE
+  ? 'set RUN_STRIPE_TRIAL_CLOCK_SMOKE=true to run the external Stripe smoke'
+  : !isUsableStripeTestKey(stripeSecretKey)
+    ? 'provide a real Stripe test secret key'
+    : !isUsableStripePriceId(stripePriceId)
+      ? 'provide STRIPE_TRIAL_CLOCK_PRICE_ID or NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY'
+      : null;
+
+const describeStripeSmoke = skipReason ? describe.skip : describe;
+const createdCustomerIds: string[] = [];
+const createdTestClockIds: string[] = [];
+
+function getStripe(): Stripe {
+  if (skipReason) {
+    throw new Error(`Stripe trial clock smoke skipped: ${skipReason}`);
+  }
+
+  return new Stripe(stripeSecretKey, {
+    apiVersion: STRIPE_API_VERSION,
+  });
+}
+
+function secondsFromIso(value: string): number {
+  return Math.floor(new Date(value).getTime() / 1000);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+type PollDeadline = {
+  readonly startedAtMs: number;
+  readonly expiresAtMs: number;
+};
+
+type PollInput<T> = {
+  readonly description: string;
+  readonly deadline: PollDeadline;
+  readonly fetch: () => Promise<T>;
+  readonly isDone: (value: T) => boolean;
+  readonly describeValue: (value: T) => string;
+};
+
+function createPollDeadline(): PollDeadline {
+  const startedAtMs = Date.now();
+  return {
+    startedAtMs,
+    expiresAtMs: startedAtMs + STRIPE_SMOKE_WAIT_BUDGET_MS,
+  };
+}
+
+async function pollUntil<T>(input: PollInput<T>): Promise<T> {
+  let delayMs = INITIAL_POLL_DELAY_MS;
+  let lastValueDescription = 'no value returned';
+
+  while (Date.now() < input.deadline.expiresAtMs) {
+    const value = await input.fetch();
+    lastValueDescription = input.describeValue(value);
+    if (input.isDone(value)) return value;
+
+    const remainingMs = input.deadline.expiresAtMs - Date.now();
+    if (remainingMs <= 0) break;
+    await sleep(Math.min(delayMs, remainingMs));
+    delayMs = Math.min(MAX_POLL_DELAY_MS, Math.ceil(delayMs * 1.5));
+  }
+
+  const elapsedMs = Date.now() - input.deadline.startedAtMs;
+  throw new Error(
+    `${input.description} timed out after ${elapsedMs}ms (budget ${STRIPE_SMOKE_WAIT_BUDGET_MS}ms); last observed ${lastValueDescription}`,
+  );
+}
+
+async function waitForTestClockReady(
+  stripe: Stripe,
+  testClockId: string,
+  deadline: PollDeadline,
+) {
+  return pollUntil({
+    description: `Stripe test clock ${testClockId} did not become ready`,
+    deadline,
+    fetch: () => stripe.testHelpers.testClocks.retrieve(testClockId),
+    isDone: (clock) => clock.status === 'ready',
+    describeValue: (clock) => `clock status ${clock.status}`,
+  });
+}
+
+async function waitForSubscriptionStatus(
+  stripe: Stripe,
+  subscriptionId: string,
+  expectedStatus: Stripe.Subscription.Status,
+  deadline: PollDeadline,
+) {
+  return pollUntil({
+    description: `Stripe subscription ${subscriptionId} did not become ${expectedStatus}`,
+    deadline,
+    fetch: () => stripe.subscriptions.retrieve(subscriptionId),
+    isDone: (subscription) => subscription.status === expectedStatus,
+    describeValue: (subscription) =>
+      `subscription status ${subscription.status}`,
+  });
+}
+
+async function createTrialingSubscription(input: {
+  stripe: Stripe;
+  customerId: string;
+}) {
+  return input.stripe.subscriptions.create({
+    customer: input.customerId,
+    items: [{ price: stripePriceId }],
+    trial_period_days: 7,
+    trial_settings: {
+      end_behavior: {
+        missing_payment_method: 'cancel',
+      },
+    },
+  });
+}
+
+async function createTestClockCustomer(input: {
+  stripe: Stripe;
+  label: string;
+}) {
+  const clock = await input.stripe.testHelpers.testClocks.create({
+    frozen_time: secondsFromIso('2026-06-01T00:00:00Z'),
+    name: `DEBT-410 ${input.label}`,
+  });
+  createdTestClockIds.push(clock.id);
+
+  const customer = await input.stripe.customers.create({
+    email: `debt-410-${input.label}@example.com`,
+    test_clock: clock.id,
+  });
+  createdCustomerIds.push(customer.id);
+
+  return { clock, customer };
+}
+
+afterEach(async () => {
+  if (skipReason) return;
+
+  const stripe = getStripe();
+  const cleanupErrors: Error[] = [];
+  while (createdCustomerIds.length > 0) {
+    const customerId = createdCustomerIds.pop();
+    if (!customerId) continue;
+    try {
+      await stripe.customers.del(customerId);
+    } catch (error) {
+      cleanupErrors.push(
+        new Error(`Failed to delete Stripe customer ${customerId}`, {
+          cause: error,
+        }),
+      );
+    }
+  }
+
+  while (createdTestClockIds.length > 0) {
+    const testClockId = createdTestClockIds.pop();
+    if (!testClockId) continue;
+    try {
+      await stripe.testHelpers.testClocks.del(testClockId);
+    } catch (error) {
+      cleanupErrors.push(
+        new Error(`Failed to delete Stripe test clock ${testClockId}`, {
+          cause: error,
+        }),
+      );
+    }
+  }
+
+  if (cleanupErrors.length > 0) {
+    throw new AggregateError(
+      cleanupErrors,
+      'Failed to clean up Stripe trial clock smoke resources',
+    );
+  }
+});
+
+describeStripeSmoke(
+  `Stripe no-card trial clock smoke${
+    skipReason ? ` (skipped: ${skipReason})` : ''
+  }`,
+  () => {
+    it('cancels a trialing subscription at trial end when no card is present', async () => {
+      const stripe = getStripe();
+      const { clock, customer } = await createTestClockCustomer({
+        stripe,
+        label: 'no-card-cancel',
+      });
+      const subscription = await createTrialingSubscription({
+        stripe,
+        customerId: customer.id,
+      });
+
+      expect(subscription.status).toBe('trialing');
+      expect(subscription.trial_end).toBeTypeOf('number');
+
+      await stripe.testHelpers.testClocks.advance(clock.id, {
+        frozen_time: (subscription.trial_end ?? clock.frozen_time) + 60,
+      });
+      const deadline = createPollDeadline();
+      await waitForTestClockReady(stripe, clock.id, deadline);
+
+      await expect(
+        waitForSubscriptionStatus(
+          stripe,
+          subscription.id,
+          'canceled',
+          deadline,
+        ),
+      ).resolves.toMatchObject({ status: 'canceled' });
+    });
+
+    it('activates a trialing subscription at trial end when a card is present', async () => {
+      const stripe = getStripe();
+      const { clock, customer } = await createTestClockCustomer({
+        stripe,
+        label: 'card-active',
+      });
+
+      const paymentMethod = await stripe.paymentMethods.attach('pm_card_visa', {
+        customer: customer.id,
+      });
+      await stripe.customers.update(customer.id, {
+        invoice_settings: {
+          default_payment_method: paymentMethod.id,
+        },
+      });
+
+      const subscription = await createTrialingSubscription({
+        stripe,
+        customerId: customer.id,
+      });
+
+      expect(subscription.status).toBe('trialing');
+      expect(subscription.trial_end).toBeTypeOf('number');
+
+      await stripe.testHelpers.testClocks.advance(clock.id, {
+        frozen_time: (subscription.trial_end ?? clock.frozen_time) + 60,
+      });
+      const deadline = createPollDeadline();
+      await waitForTestClockReady(stripe, clock.id, deadline);
+
+      await expect(
+        waitForSubscriptionStatus(stripe, subscription.id, 'active', deadline),
+      ).resolves.toMatchObject({ status: 'active' });
+    });
+  },
+);

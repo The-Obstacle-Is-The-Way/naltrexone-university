@@ -19,6 +19,7 @@ export type CreateCheckoutSessionInput = {
 
 export type CreateCheckoutSessionOutput = { url: string };
 
+const FREE_TRIAL_DAYS = 7;
 const STRIPE_CUSTOMER_IDEMPOTENCY_KEY_PREFIX = 'create_stripe_customer';
 
 function toStripeCustomerIdempotencyKey(userId: string): string {
@@ -32,6 +33,7 @@ export class CreateCheckoutSessionUseCase {
     private readonly payments: PaymentGateway,
     private readonly logger: Logger,
     private readonly now: () => Date = () => new Date(),
+    private readonly freeTrialEnabled = false,
   ) {}
 
   private warnOrphanedStripeCustomer(input: {
@@ -126,13 +128,22 @@ export class CreateCheckoutSessionUseCase {
       email: input.email,
     });
 
-    const checkoutSessionInput = {
+    const trialPeriodDays =
+      this.freeTrialEnabled && subscription === null
+        ? FREE_TRIAL_DAYS
+        : undefined;
+
+    const baseCheckoutSessionInput = {
       userId: input.userId,
       externalCustomerId: stripeCustomerId,
       plan: input.plan,
       successUrl: input.successUrl,
       cancelUrl: input.cancelUrl,
     };
+    const checkoutSessionInput =
+      trialPeriodDays === undefined
+        ? baseCheckoutSessionInput
+        : { ...baseCheckoutSessionInput, trialPeriodDays };
 
     if (input.idempotencyKey) {
       return this.payments.createCheckoutSession(checkoutSessionInput, {

@@ -403,6 +403,50 @@ describe('createStripeCheckoutSession', () => {
     expect(sessionsCreate).not.toHaveBeenCalled();
   });
 
+  it('expires an existing same-price checkout session when trial terms are requested', async () => {
+    const { stripe, sessionsCreate, sessionsExpire } = createStripeMock({
+      openSessionsData: [
+        { id: 'cs_open', url: 'https://stripe/checkout/open' },
+      ],
+      retrievedSessionPriceId: 'price_m',
+      retrievedSessionStatus: 'open',
+      retrievedSessionExpiresAtUnix: fixedNowUnix + 1,
+      createdSessionUrl: 'https://stripe/checkout/trial',
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input: { ...input, trialPeriodDays: 7 },
+        priceIds,
+        logger,
+        nowMs: () => fixedNowMs,
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/checkout/trial' });
+
+    expect(sessionsExpire).toHaveBeenCalledWith('cs_open', undefined, {
+      idempotencyKey: 'expire_checkout_session:cs_open',
+    });
+    expect(sessionsCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payment_method_collection: 'if_required',
+        subscription_data: expect.objectContaining({
+          trial_period_days: 7,
+        }),
+      }),
+      expect.objectContaining({
+        idempotencyKey: `checkout_session_recovery:${appUserId}:monthly:cs_open:trial:7`,
+      }),
+    );
+    expect(logger.warnCalls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          msg: 'Expiring existing checkout session to enforce requested checkout terms',
+        }),
+      ]),
+    );
+  });
+
   it('does not return stale URL when same-price session is already inactive', async () => {
     const { stripe, sessionsCreate, sessionsExpire } = createStripeMock({
       openSessionsData: [
