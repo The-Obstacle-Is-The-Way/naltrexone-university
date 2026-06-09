@@ -120,6 +120,25 @@ async function renderPricingPageWithEntitlementReason(
   return renderToStaticMarkup(element);
 }
 
+async function renderPricingPageWithEntitlement(
+  output: CheckEntitlementOutput,
+) {
+  const checkEntitlementUseCase = new FakeUseCase<
+    CheckEntitlementInput,
+    CheckEntitlementOutput
+  >(output);
+  const element = await PricingPage({
+    searchParams: Promise.resolve({}),
+    authNavFn: () => <div>AuthNav</div>,
+    deps: {
+      authGateway: new FakeAuthGateway(pricingTestUser),
+      checkEntitlementUseCase,
+    },
+  });
+
+  return renderToStaticMarkup(element);
+}
+
 async function renderAnonymousPricingPage(
   searchParams: PricingSearchParamsForTest = {},
 ) {
@@ -482,6 +501,63 @@ describe('app/pricing', () => {
     expect(getPricingBanner({})).toBe(null);
   });
 
+  it('builds the trial-forward banner for first-timers when the trial is enabled', async () => {
+    expect(
+      getPricingBanner(
+        { reason: 'subscription_required' },
+        { freeTrialEnabled: true, subscriptionStatus: null },
+      ),
+    ).toMatchObject({
+      tone: 'info',
+      message: 'Start your free trial to access the app — no card required.',
+    });
+  });
+
+  it('builds the expired-trial banner for lapsed canceled subscriptions when the trial is enabled', async () => {
+    expect(
+      getPricingBanner(
+        { reason: 'subscription_required' },
+        { freeTrialEnabled: true, subscriptionStatus: 'canceled' },
+      ),
+    ).toMatchObject({
+      tone: 'info',
+      message: 'Your free trial ended — choose a plan to continue.',
+    });
+  });
+
+  it('keeps the subscription-required banner for other prior statuses when the trial is enabled', async () => {
+    expect(
+      getPricingBanner(
+        { reason: 'subscription_required' },
+        { freeTrialEnabled: true, subscriptionStatus: 'paymentFailed' },
+      ),
+    ).toMatchObject({
+      tone: 'info',
+      message: 'Subscription required to access the app.',
+    });
+  });
+
+  it('keeps the subscription-required banner when the trial is disabled', async () => {
+    expect(
+      getPricingBanner(
+        { reason: 'subscription_required' },
+        { freeTrialEnabled: false, subscriptionStatus: null },
+      ),
+    ).toMatchObject({
+      tone: 'info',
+      message: 'Subscription required to access the app.',
+    });
+  });
+
+  it('keeps the subscription-required banner when no trial context is provided', async () => {
+    expect(getPricingBanner({ reason: 'subscription_required' })).toMatchObject(
+      {
+        tone: 'info',
+        message: 'Subscription required to access the app.',
+      },
+    );
+  });
+
   it('loadPricingData returns no banner reason when unauthenticated', async () => {
     const checkEntitlementUseCase = new FakeUseCase<
       CheckEntitlementInput,
@@ -499,6 +575,7 @@ describe('app/pricing', () => {
     ).resolves.toEqual({
       isEntitled: false,
       reason: null,
+      subscriptionStatus: null,
     });
     expect(checkEntitlementUseCase.inputs).toHaveLength(0);
   });
@@ -522,7 +599,11 @@ describe('app/pricing', () => {
 
     await expect(
       loadPricingData({ authGateway, checkEntitlementUseCase }),
-    ).resolves.toEqual({ isEntitled: true, reason: null });
+    ).resolves.toEqual({
+      isEntitled: true,
+      reason: null,
+      subscriptionStatus: null,
+    });
   });
 
   it('loadPricingData returns reason from entitlement check for non-entitled users', async () => {
@@ -550,6 +631,34 @@ describe('app/pricing', () => {
     ).resolves.toEqual({
       isEntitled: false,
       reason: 'manage_billing',
+      subscriptionStatus: null,
+    });
+  });
+
+  it('loadPricingData surfaces the subscription status for prior subscribers', async () => {
+    const authGateway: AuthGateway = {
+      getCurrentUser: vi.fn(async () => pricingTestUser),
+      requireUser: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+    };
+
+    const checkEntitlementUseCase = {
+      execute: vi.fn(async () => ({
+        isEntitled: false,
+        reason: 'subscription_required' as const,
+        subscriptionStatus: 'canceled' as const,
+        hasActiveSubscriptionPeriod: false,
+        trialEndsAt: null,
+      })),
+    };
+
+    await expect(
+      loadPricingData({ authGateway, checkEntitlementUseCase }),
+    ).resolves.toEqual({
+      isEntitled: false,
+      reason: 'subscription_required',
+      subscriptionStatus: 'canceled',
     });
   });
 
@@ -914,6 +1023,93 @@ describe('app/pricing', () => {
     expect(html).toContain('Subscription required to access the app.');
     expect(html).toContain('Subscribe Monthly');
     expect(html).toContain('Subscribe Annual');
+  });
+
+  it('renders trial CTAs and trial-forward copy for anonymous visitors when FREE_TRIAL_ENABLED', async () => {
+    vi.stubEnv('FREE_TRIAL_ENABLED', 'true');
+
+    const { html } = await renderAnonymousPricingPage({
+      reason: 'subscription_required',
+    });
+
+    expect(html).toContain(
+      'Start your free trial to access the app — no card required.',
+    );
+    expect(html).toContain('Start 7-day free trial');
+    expect(html).toContain('then $29/mo');
+    expect(html).toContain('then $199/yr · no card required');
+    expect(html).not.toContain('Subscription required to access the app.');
+    expect(html).not.toContain('Subscribe Monthly');
+    expect(html).not.toContain('Subscribe Annual');
+  });
+
+  it('renders trial CTAs for signed-in first-time users when FREE_TRIAL_ENABLED', async () => {
+    vi.stubEnv('FREE_TRIAL_ENABLED', 'true');
+
+    const html = await renderPricingPageWithEntitlement({
+      isEntitled: false,
+      reason: 'subscription_required',
+      subscriptionStatus: null,
+      hasActiveSubscriptionPeriod: false,
+      trialEndsAt: null,
+    });
+
+    expect(html).toContain(
+      'Start your free trial to access the app — no card required.',
+    );
+    expect(html).toContain('Start 7-day free trial');
+    expect(html).not.toContain('Subscribe Monthly');
+  });
+
+  it('renders expired-trial copy and standard CTAs for lapsed subscriptions when FREE_TRIAL_ENABLED', async () => {
+    vi.stubEnv('FREE_TRIAL_ENABLED', 'true');
+
+    const html = await renderPricingPageWithEntitlement({
+      isEntitled: false,
+      reason: 'subscription_required',
+      subscriptionStatus: 'canceled',
+      hasActiveSubscriptionPeriod: false,
+      trialEndsAt: null,
+    });
+
+    expect(html).toContain(
+      'Your free trial ended — choose a plan to continue.',
+    );
+    expect(html).toContain('Subscribe Monthly');
+    expect(html).toContain('Subscribe Annual');
+    expect(html).not.toContain('Start 7-day free trial');
+  });
+
+  it('keeps the pay-first pricing page unchanged when FREE_TRIAL_ENABLED is false', async () => {
+    vi.stubEnv('FREE_TRIAL_ENABLED', 'false');
+
+    const html = await renderPricingPageWithEntitlement({
+      isEntitled: false,
+      reason: 'subscription_required',
+      subscriptionStatus: null,
+      hasActiveSubscriptionPeriod: false,
+      trialEndsAt: null,
+    });
+
+    expect(html).toContain('Subscription required to access the app.');
+    expect(html).toContain('Subscribe Monthly');
+    expect(html).toContain('Subscribe Annual');
+    expect(html).not.toContain('Start 7-day free trial');
+    expect(html).not.toContain('free trial');
+    expect(html).not.toContain('no card required');
+  });
+
+  it('keeps the pay-first pricing page unchanged when FREE_TRIAL_ENABLED is unset', async () => {
+    vi.stubEnv('FREE_TRIAL_ENABLED', undefined);
+
+    const html = await renderPricingPageWithEntitlementReason(
+      'subscription_required',
+    );
+
+    expect(html).toContain('Subscription required to access the app.');
+    expect(html).toContain('Subscribe Monthly');
+    expect(html).not.toContain('Start 7-day free trial');
+    expect(html).not.toContain('free trial');
   });
 
   it.each([
