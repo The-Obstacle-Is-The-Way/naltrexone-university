@@ -351,9 +351,86 @@ describe('runCheckoutSuccessPage', () => {
     expect(redirectFn).toHaveBeenCalledWith(ROUTES.APP_DASHBOARD);
     expect(html).toContain('<main id="main-content"');
     expect(html).toContain('Finalizing your subscription…');
+    expect(html).not.toContain('free trial');
     expect(html).toContain(
       '<h1 class="text-xl font-semibold font-heading tracking-tight text-foreground">',
     );
+  });
+
+  it('renders trial-start copy when the synced subscription is trialing', async () => {
+    const user = {
+      id: fixtureUser1Id,
+      email: 'user@example.com',
+      createdAt: new Date('2026-02-01T00:00:00Z'),
+      updatedAt: new Date('2026-02-01T00:00:00Z'),
+    };
+
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+
+    const deps = {
+      authGateway: new FakeAuthGateway(user),
+      getClerkAuth: async () => ({
+        userId: 'clerk_user_1',
+        redirectToSignIn: () => {
+          throw new Error('should not redirect to sign-in');
+        },
+      }),
+      logger: new FakeLogger(),
+      stripe: {
+        checkout: {
+          sessions: {
+            retrieve: async () => ({
+              customer: 'cus_123',
+              subscription: { id: 'sub_123' },
+            }),
+          },
+        },
+        subscriptions: {
+          retrieve: async () => ({
+            id: 'sub_123',
+            customer: 'cus_123',
+            status: 'trialing',
+            cancel_at_period_end: false,
+            metadata: { user_id: fixtureUser1Id },
+            items: {
+              data: [
+                {
+                  current_period_end: 2_000_000_000,
+                  price: { id: 'price_monthly' },
+                },
+              ],
+            },
+          }),
+        },
+      },
+      priceIds: { monthly: 'price_monthly', annual: 'price_annual' },
+      appUrl: 'https://example.com',
+      transaction: async <T>(
+        fn: (tx: CheckoutSuccessTransaction) => Promise<T>,
+      ): Promise<T> =>
+        fn({
+          stripeCustomers,
+          subscriptions,
+        }),
+    } satisfies CheckoutSuccessDeps;
+
+    const redirectFn = vi.fn((_: string): never => undefined as never);
+
+    const element = await runCheckoutSuccessPage(
+      { searchParams: Promise.resolve({ session_id: 'cs_test' }) },
+      deps,
+      redirectFn,
+    );
+
+    const html = renderToStaticMarkup(element);
+    expect(redirectFn).toHaveBeenCalledWith(ROUTES.APP_DASHBOARD);
+    expect(redirectFn).toHaveBeenCalledTimes(1);
+    expect(html).toContain(
+      'Your 7-day free trial has started — no charge today',
+    );
+    expect(html).not.toContain('Finalizing your subscription…');
+    expect(html).toContain('You’ll be redirected to your dashboard shortly.');
   });
 });
 
@@ -1104,6 +1181,80 @@ describe('syncCheckoutSuccess', () => {
       status: 'pastDue',
       plan: 'monthly',
       cancelAtPeriodEnd: false,
+    });
+  });
+
+  it('resolves with the synced subscription status when the redirect is intercepted', async () => {
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const user = {
+      id: fixtureUser1Id,
+      email: 'user@example.com',
+      createdAt: new Date('2026-02-01T00:00:00Z'),
+      updatedAt: new Date('2026-02-01T00:00:00Z'),
+    };
+
+    const deps = {
+      authGateway: new FakeAuthGateway(user),
+      getClerkAuth: async () => ({
+        userId: 'clerk_user_1',
+        redirectToSignIn: () => {
+          throw new Error('should not redirect to sign-in');
+        },
+      }),
+      logger: new FakeLogger(),
+      stripe: {
+        checkout: {
+          sessions: {
+            retrieve: async () => ({
+              customer: 'cus_123',
+              subscription: 'sub_123',
+            }),
+          },
+        },
+        subscriptions: {
+          retrieve: async () => ({
+            id: 'sub_123',
+            customer: 'cus_123',
+            status: 'trialing',
+            cancel_at_period_end: false,
+            metadata: { user_id: fixtureUser1Id },
+            items: {
+              data: [
+                {
+                  current_period_end: 2_000_000_000,
+                  price: { id: 'price_monthly' },
+                },
+              ],
+            },
+          }),
+        },
+      },
+      priceIds: { monthly: 'price_monthly', annual: 'price_annual' },
+      appUrl: 'https://example.com',
+      transaction: async <T>(
+        fn: (tx: CheckoutSuccessTransaction) => Promise<T>,
+      ): Promise<T> =>
+        fn({
+          stripeCustomers,
+          subscriptions,
+        }),
+    };
+
+    const redirectFn = vi.fn((_: string): never => undefined as never);
+
+    await expect(
+      syncCheckoutSuccess({ sessionId: 'cs_test' }, deps as never, redirectFn),
+    ).resolves.toEqual({ status: 'inTrial' });
+
+    expect(redirectFn).toHaveBeenCalledTimes(1);
+    expect(redirectFn).toHaveBeenCalledWith(ROUTES.APP_DASHBOARD);
+    expect(
+      await subscriptions.findByExternalSubscriptionId('sub_123'),
+    ).toMatchObject({
+      userId: fixtureUser1Id,
+      status: 'inTrial',
+      plan: 'monthly',
     });
   });
 

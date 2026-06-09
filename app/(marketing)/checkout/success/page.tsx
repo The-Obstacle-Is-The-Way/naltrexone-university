@@ -34,7 +34,9 @@ export async function runCheckoutSuccessPage(
   const sessionId =
     normalizeSearchParam(resolvedSearchParams.session_id) ?? null;
 
-  await syncCheckoutSuccess({ sessionId }, deps, redirectFn);
+  const syncResult = await syncCheckoutSuccess({ sessionId }, deps, redirectFn);
+  // DEBT-410: a no-card trial checkout lands here as a trialing subscription.
+  const trialStarted = syncResult?.status === 'inTrial';
 
   return (
     <main
@@ -44,7 +46,9 @@ export async function runCheckoutSuccessPage(
     >
       <div className="text-center">
         <h1 className="text-xl font-semibold font-heading tracking-tight text-foreground">
-          Finalizing your subscription…
+          {trialStarted
+            ? 'Your 7-day free trial has started — no charge today'
+            : 'Finalizing your subscription…'}
         </h1>
         <p className="mt-2 text-base text-muted-foreground">
           You’ll be redirected to your dashboard shortly.
