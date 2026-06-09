@@ -2,7 +2,8 @@
 
 **Priority:** P3 (trial UX polish; not blocking access or billing correctness)
 **Created:** 2026-06-09
-**Status:** Active — file after PR #415 consistency audit.
+**Audit verified:** 2026-06-09 (post-PR-3 merge debt-register audit)
+**Status:** Active — filed by DEBT-410 PR-3 (`3ba5576a`); pending owner product decision.
 **Owner:** Trial UX / billing flow.
 **Related:** [DEBT-410](./debt-410-free-trial-pathway-and-pricing-access-copy.md), [Debt Index](./index.md)
 
@@ -28,7 +29,7 @@ A no-card trial can still start correctly, sync entitlement, and redirect to the
 
 Choose one explicit product path:
 
-1. **Keep immediate server redirect and accept checkout-success copy as fallback-only.** Then update DEBT-410 language to stop treating checkout-success copy as user-facing.
+1. **Keep immediate server redirect and accept checkout-success copy as fallback-only.** DEBT-410 now treats the checkout-success copy as fallback/intercepted-render copy, with the app-shell countdown as the reliable user-facing trial confirmation.
 2. **Make checkout success a real interstitial.** Sync server-side, render trial/paid confirmation copy, and perform a controlled client-side redirect to the dashboard after a short delay.
 
 No implementation should happen until this decision is made, because changing checkout-success redirect semantics affects the established billing handoff.
@@ -44,12 +45,12 @@ No implementation should happen until this decision is made, because changing ch
 
 - **Pretend the current PR-3 copy is fully user-facing.** Rejected: current code and type comments prove it is normally post-redirect fallback.
 - **Remove the copy.** Rejected: it is still useful for intercepted/fallback rendering and keeps the status-derived copy path covered.
-- **Change redirect behavior inside PR #415.** Rejected: not trivial or risk-free; it changes a billing return-flow contract beyond the current consistency fixes.
+- **Retrofit redirect behavior into the already-merged DEBT-410 PR-3.** Rejected: not trivial or risk-free; it changes a billing return-flow contract beyond the PR-3 consistency fixes.
 
 ## Acceptance Criteria
 
 - Product explicitly chooses fallback-only or real interstitial.
-- If fallback-only, DEBT-410 wording is corrected and tests continue to pin fallback behavior.
+- If fallback-only, DEBT-410 wording remains explicit that checkout-success copy is fallback-only and tests continue to pin fallback behavior.
 - If interstitial, the user sees "Your 7-day free trial has started — no charge today" after no-card trial checkout before dashboard navigation.
 - Eager sync still runs before dashboard access.
 - Full gate and billing E2E pass.
