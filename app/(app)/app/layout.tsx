@@ -56,9 +56,14 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 /**
  * Whole days remaining before the trial ends; any partial day counts as a
  * full day so a trial that ends tomorrow morning still reads "1 day left".
+ * Clamped to 1: render-time `now` can drift past `trialEndsAt` after the
+ * entitlement check, and "0 days left" is never valid banner copy.
  */
 export function getTrialDaysLeft(trialEndsAt: Date, now: Date): number {
-  return Math.ceil((trialEndsAt.getTime() - now.getTime()) / MS_PER_DAY);
+  return Math.max(
+    1,
+    Math.ceil((trialEndsAt.getTime() - now.getTime()) / MS_PER_DAY),
+  );
 }
 
 export type AppLayoutShellProps = {

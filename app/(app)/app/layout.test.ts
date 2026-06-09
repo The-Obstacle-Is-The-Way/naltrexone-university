@@ -210,6 +210,21 @@ describe('app/(app)/app/layout', () => {
     ).toBe(1);
   });
 
+  it('getTrialDaysLeft never drops below 1 when render time passes the boundary', () => {
+    expect(
+      getTrialDaysLeft(
+        new Date('2026-02-08T00:00:00Z'),
+        new Date('2026-02-08T00:00:00Z'),
+      ),
+    ).toBe(1);
+    expect(
+      getTrialDaysLeft(
+        new Date('2026-02-08T00:00:00Z'),
+        new Date('2026-02-08T00:00:05Z'),
+      ),
+    ).toBe(1);
+  });
+
   it('redirects paymentProcessing users to payment_processing reason', async () => {
     const user = createUser();
 
