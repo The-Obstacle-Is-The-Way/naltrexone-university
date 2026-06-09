@@ -110,6 +110,7 @@ describe('app/(app)/app/layout (shell)', () => {
   it('renders AppLayout via renderAppLayout with injected deps', async () => {
     const enforceEntitledAppUserFn = vi.fn(async () => ({
       subscriptionStatus: 'active' as const,
+      trialEndsAt: null,
     }));
     const authNavFn = vi.fn(async () => <div>AuthNav</div>);
 
@@ -131,12 +132,16 @@ describe('app/(app)/app/layout (shell)', () => {
   });
 
   it('starts auth nav before entitlement resolves', async () => {
+    type EntitledActiveUser = {
+      subscriptionStatus: 'active';
+      trialEndsAt: null;
+    };
     let resolveEntitledAppUser:
-      | ((value: { subscriptionStatus: 'active' }) => void)
+      | ((value: EntitledActiveUser) => void)
       | undefined;
     const enforceEntitledAppUserFn = vi.fn(
       () =>
-        new Promise<{ subscriptionStatus: 'active' }>((resolve) => {
+        new Promise<EntitledActiveUser>((resolve) => {
           resolveEntitledAppUser = resolve;
         }),
     );
@@ -152,7 +157,10 @@ describe('app/(app)/app/layout (shell)', () => {
     expect(enforceEntitledAppUserFn).toHaveBeenCalledTimes(1);
     expect(authNavFn).toHaveBeenCalledTimes(1);
 
-    resolveEntitledAppUser?.({ subscriptionStatus: 'active' });
+    resolveEntitledAppUser?.({
+      subscriptionStatus: 'active',
+      trialEndsAt: null,
+    });
 
     const element = await renderPromise;
     const html = renderToStaticMarkup(element);
@@ -164,6 +172,7 @@ describe('app/(app)/app/layout (shell)', () => {
   it('renders payment-failed banner for pastDue subscribers', async () => {
     const enforceEntitledAppUserFn = vi.fn(async () => ({
       subscriptionStatus: 'pastDue' as const,
+      trialEndsAt: null,
     }));
     const authNavFn = vi.fn(async () => <div>AuthNav</div>);
 
@@ -188,6 +197,96 @@ describe('app/(app)/app/layout (shell)', () => {
     expect(billingLink.getAttribute('href')).toBe('/app/billing');
     expect(banner?.tagName).toBe('DIV');
     expect(html).toContain('Child content');
+  });
+
+  it('renders the trial countdown banner for inTrial subscribers', async () => {
+    const enforceEntitledAppUserFn = vi.fn(async () => ({
+      subscriptionStatus: 'inTrial' as const,
+      trialEndsAt: new Date('2026-02-08T00:00:00Z'),
+    }));
+    const manageBillingActionFn = vi.fn(async () => undefined);
+
+    const element = await renderAppLayout({
+      children: <div>Child content</div>,
+      enforceEntitledAppUserFn,
+      authNavFn: vi.fn(async () => <div>AuthNav</div>),
+      mobileNav: <div>MobileNav</div>,
+      manageBillingActionFn,
+      nowFn: () => new Date('2026-02-04T12:00:00Z'),
+    });
+
+    const html = renderToStaticMarkup(element);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const shell = doc.body.firstElementChild;
+    const banner = shell?.children[0];
+    const actionButton = banner?.querySelector('form button[type="submit"]');
+
+    expect(html).toContain('4 days left in trial');
+    expect(html).toContain('Add a card to keep access');
+    expect(banner?.textContent).toContain('days left in trial');
+    expect(shell?.children[1]?.tagName).toBe('HEADER');
+    expect(banner?.querySelector('input[name="idempotencyKey"]')).not.toBe(
+      null,
+    );
+    expect(actionButton?.textContent).toContain('Add a card to keep access');
+    expect(html).not.toContain('Your payment failed');
+    expect(html).toContain('Child content');
+  });
+
+  it('renders singular trial countdown copy within the final day', async () => {
+    const element = await renderAppLayout({
+      children: <div>Child content</div>,
+      enforceEntitledAppUserFn: vi.fn(async () => ({
+        subscriptionStatus: 'inTrial' as const,
+        trialEndsAt: new Date('2026-02-08T00:00:00Z'),
+      })),
+      authNavFn: vi.fn(async () => <div>AuthNav</div>),
+      mobileNav: <div>MobileNav</div>,
+      manageBillingActionFn: vi.fn(async () => undefined),
+      nowFn: () => new Date('2026-02-07T21:00:00Z'),
+    });
+
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain('1 day left in trial');
+    expect(html).not.toContain('1 days left in trial');
+  });
+
+  it('renders no trial banner for active subscribers', async () => {
+    const element = await renderAppLayout({
+      children: <div>Child content</div>,
+      enforceEntitledAppUserFn: vi.fn(async () => ({
+        subscriptionStatus: 'active' as const,
+        trialEndsAt: null,
+      })),
+      authNavFn: vi.fn(async () => <div>AuthNav</div>),
+      mobileNav: <div>MobileNav</div>,
+    });
+
+    const html = renderToStaticMarkup(element);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const shell = doc.body.firstElementChild;
+
+    expect(html).not.toContain('left in trial');
+    expect(html).not.toContain('Add a card to keep access');
+    expect(shell?.children[0]?.tagName).toBe('HEADER');
+  });
+
+  it('renders no trial banner when inTrial has no trialEndsAt', async () => {
+    const element = await renderAppLayout({
+      children: <div>Child content</div>,
+      enforceEntitledAppUserFn: vi.fn(async () => ({
+        subscriptionStatus: 'inTrial' as const,
+        trialEndsAt: null,
+      })),
+      authNavFn: vi.fn(async () => <div>AuthNav</div>),
+      mobileNav: <div>MobileNav</div>,
+    });
+
+    const html = renderToStaticMarkup(element);
+
+    expect(html).not.toContain('left in trial');
+    expect(html).not.toContain('Add a card to keep access');
   });
 
   it('renders a suspense fallback when child content suspends', async () => {
