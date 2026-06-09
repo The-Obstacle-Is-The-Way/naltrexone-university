@@ -14,6 +14,7 @@ describe('CheckEntitlementUseCase', () => {
       reason: 'subscription_required',
       subscriptionStatus: null,
       hasActiveSubscriptionPeriod: false,
+      trialEndsAt: null,
     });
   });
 
@@ -34,6 +35,7 @@ describe('CheckEntitlementUseCase', () => {
       reason: null,
       subscriptionStatus: 'active',
       hasActiveSubscriptionPeriod: true,
+      trialEndsAt: null,
     });
   });
 
@@ -54,6 +56,45 @@ describe('CheckEntitlementUseCase', () => {
       reason: null,
       subscriptionStatus: 'inTrial',
       hasActiveSubscriptionPeriod: true,
+      trialEndsAt: new Date('2026-03-01T00:00:00Z'),
+    });
+  });
+
+  it('surfaces trialEndsAt from currentPeriodEnd only while status is inTrial', async () => {
+    const trialEnd = new Date('2026-02-07T00:00:00Z');
+    const sub = createSubscription({
+      userId: 'user-1',
+      status: 'inTrial',
+      currentPeriodEnd: trialEnd,
+    });
+    const useCase = new CheckEntitlementUseCase(
+      new FakeSubscriptionRepository([sub]),
+      () => new Date('2026-02-01T00:00:00Z'),
+    );
+
+    const result = await useCase.execute({ userId: 'user-1' });
+    expect(result.trialEndsAt).toEqual(trialEnd);
+  });
+
+  it('keeps surfacing trialEndsAt for an inTrial subscription whose period has lapsed', async () => {
+    const trialEnd = new Date('2026-02-07T00:00:00Z');
+    const sub = createSubscription({
+      userId: 'user-1',
+      status: 'inTrial',
+      currentPeriodEnd: trialEnd,
+    });
+    const useCase = new CheckEntitlementUseCase(
+      new FakeSubscriptionRepository([sub]),
+      () => new Date('2026-02-08T00:00:00Z'),
+    );
+
+    const result = await useCase.execute({ userId: 'user-1' });
+    expect(result).toEqual({
+      isEntitled: false,
+      reason: 'subscription_required',
+      subscriptionStatus: 'inTrial',
+      hasActiveSubscriptionPeriod: false,
+      trialEndsAt: trialEnd,
     });
   });
 
@@ -74,6 +115,7 @@ describe('CheckEntitlementUseCase', () => {
       reason: null,
       subscriptionStatus: 'pastDue',
       hasActiveSubscriptionPeriod: true,
+      trialEndsAt: null,
     });
   });
 
@@ -94,6 +136,7 @@ describe('CheckEntitlementUseCase', () => {
       reason: 'subscription_canceled',
       subscriptionStatus: 'canceled',
       hasActiveSubscriptionPeriod: true,
+      trialEndsAt: null,
     });
   });
 
@@ -114,6 +157,7 @@ describe('CheckEntitlementUseCase', () => {
       reason: 'payment_processing',
       subscriptionStatus: 'paymentProcessing',
       hasActiveSubscriptionPeriod: true,
+      trialEndsAt: null,
     });
   });
 
@@ -134,6 +178,7 @@ describe('CheckEntitlementUseCase', () => {
       reason: 'subscription_required',
       subscriptionStatus: 'paymentFailed',
       hasActiveSubscriptionPeriod: true,
+      trialEndsAt: null,
     });
   });
 
@@ -154,6 +199,7 @@ describe('CheckEntitlementUseCase', () => {
       reason: 'subscription_required',
       subscriptionStatus: 'active',
       hasActiveSubscriptionPeriod: false,
+      trialEndsAt: null,
     });
   });
 });
