@@ -21,6 +21,15 @@ const { fixtureUser1Id, fixtureUser2Id } = vi.hoisted(() => ({
   fixtureUser2Id: crypto.randomUUID(),
 }));
 
+// The page embeds the client redirect component, whose useRouter() call needs
+// an app-router context that static rendering does not provide.
+vi.mock('next/navigation', () => ({
+  redirect: vi.fn((url: string): never => {
+    throw new Error(`NEXT_REDIRECT:${url}`);
+  }),
+  useRouter: () => ({ replace: vi.fn() }),
+}));
+
 class RedirectError extends Error {
   constructor(readonly url: string) {
     super(`REDIRECT:${url}`);
@@ -185,7 +194,7 @@ describe('runCheckoutSuccessPage', () => {
     };
 
     const promise = runCheckoutSuccessPage({ searchParams }, deps, redirectFn);
-    await expect(promise).rejects.toMatchObject({ url: ROUTES.APP_DASHBOARD });
+    await expect(promise).resolves.toBeTruthy();
 
     expect(stripeRetrieveCalls).toEqual([
       { sessionId: 'cs_test', params: { expand: ['subscription'] } },
@@ -274,14 +283,14 @@ describe('runCheckoutSuccessPage', () => {
       deps,
       redirectFn,
     );
-    await expect(promise).rejects.toMatchObject({ url: ROUTES.APP_DASHBOARD });
+    await expect(promise).resolves.toBeTruthy();
 
     expect(stripeRetrieveCalls).toEqual([
       { sessionId: 'cs_a', params: { expand: ['subscription'] } },
     ]);
   });
 
-  it('renders a semantic fallback shell with main landmark when redirect is intercepted', async () => {
+  it('renders the paid confirmation interstitial when the synced subscription is active', async () => {
     const user = {
       id: fixtureUser1Id,
       email: 'user@example.com',
@@ -348,13 +357,16 @@ describe('runCheckoutSuccessPage', () => {
     );
 
     const html = renderToStaticMarkup(element);
-    expect(redirectFn).toHaveBeenCalledWith(ROUTES.APP_DASHBOARD);
+    expect(redirectFn).not.toHaveBeenCalled();
     expect(html).toContain('<main id="main-content"');
-    expect(html).toContain('Finalizing your subscription…');
+    expect(html).toContain('You’re all set — your subscription is active');
     expect(html).not.toContain('free trial');
     expect(html).toContain(
       '<h1 class="text-xl font-semibold font-heading tracking-tight text-foreground">',
     );
+    expect(html).toContain('aria-live="polite"');
+    expect(html).toContain(`href="${ROUTES.APP_DASHBOARD}"`);
+    expect(html).toContain('Go to your dashboard');
   });
 
   it('renders trial-start copy when the synced subscription is trialing', async () => {
@@ -424,13 +436,15 @@ describe('runCheckoutSuccessPage', () => {
     );
 
     const html = renderToStaticMarkup(element);
-    expect(redirectFn).toHaveBeenCalledWith(ROUTES.APP_DASHBOARD);
-    expect(redirectFn).toHaveBeenCalledTimes(1);
+    expect(redirectFn).not.toHaveBeenCalled();
     expect(html).toContain(
       'Your 7-day free trial has started — no charge today',
     );
-    expect(html).not.toContain('Finalizing your subscription…');
+    expect(html).toContain('Your full access starts now.');
+    expect(html).not.toContain('You’re all set');
     expect(html).toContain('You’ll be redirected to your dashboard shortly.');
+    expect(html).toContain(`href="${ROUTES.APP_DASHBOARD}"`);
+    expect(html).toContain('Go to your dashboard');
   });
 });
 
@@ -593,17 +607,11 @@ describe('syncCheckoutSuccess retry logging', () => {
         { sessionId: 'cs_test' },
         deps as never,
         redirectFn,
-      ).then(
-        () => {
-          throw new Error('Expected syncCheckoutSuccess to redirect');
-        },
-        (error) => error,
       );
 
       await vi.runAllTimersAsync();
 
-      const error = await promise;
-      expect(error).toMatchObject({ url: ROUTES.APP_DASHBOARD });
+      await expect(promise).resolves.toEqual({ status: 'active' });
       expect(logger.warnCalls.length).toBeGreaterThanOrEqual(2);
     } finally {
       vi.useRealTimers();
@@ -685,17 +693,11 @@ describe('syncCheckoutSuccess retry logging', () => {
         { sessionId: 'cs_test' },
         deps as never,
         redirectFn,
-      ).then(
-        () => {
-          throw new Error('Expected syncCheckoutSuccess to redirect');
-        },
-        (thrown) => thrown,
       );
 
       await vi.runAllTimersAsync();
 
-      const thrown = await promise;
-      expect(thrown).toMatchObject({ url: ROUTES.APP_DASHBOARD });
+      await expect(promise).resolves.toEqual({ status: 'active' });
       expect(error).toHaveBeenCalledWith(
         expect.objectContaining({
           sessionId: 'cs_test',
@@ -1104,7 +1106,7 @@ describe('syncCheckoutSuccess', () => {
     });
   });
 
-  it('returns redirect to dashboard when subscription is pastDue with active period (dunning grace)', async () => {
+  it('resolves with pastDue when the period is active (dunning grace) without redirecting', async () => {
     const stripeCustomers = new FakeStripeCustomerRepository();
     const subscriptions = new FakeSubscriptionRepository();
     const user = {
@@ -1161,16 +1163,15 @@ describe('syncCheckoutSuccess', () => {
         }),
     };
 
-    const redirectFn = (url: string): never => {
+    const redirectFn = vi.fn((url: string): never => {
       throw new RedirectError(url);
-    };
+    });
 
     await expect(
       syncCheckoutSuccess({ sessionId: 'cs_test' }, deps as never, redirectFn),
-    ).rejects.toMatchObject({
-      url: ROUTES.APP_DASHBOARD,
-    });
+    ).resolves.toEqual({ status: 'pastDue' });
 
+    expect(redirectFn).not.toHaveBeenCalled();
     expect(await stripeCustomers.findByUserId(fixtureUser1Id)).toEqual({
       stripeCustomerId: 'cus_123',
     });
@@ -1184,7 +1185,7 @@ describe('syncCheckoutSuccess', () => {
     });
   });
 
-  it('resolves with the synced subscription status when the redirect is intercepted', async () => {
+  it('resolves with the synced subscription status for an entitled user without redirecting', async () => {
     const stripeCustomers = new FakeStripeCustomerRepository();
     const subscriptions = new FakeSubscriptionRepository();
     const user = {
@@ -1241,14 +1242,15 @@ describe('syncCheckoutSuccess', () => {
         }),
     };
 
-    const redirectFn = vi.fn((_: string): never => undefined as never);
+    const redirectFn = vi.fn((url: string): never => {
+      throw new RedirectError(url);
+    });
 
     await expect(
       syncCheckoutSuccess({ sessionId: 'cs_test' }, deps as never, redirectFn),
     ).resolves.toEqual({ status: 'inTrial' });
 
-    expect(redirectFn).toHaveBeenCalledTimes(1);
-    expect(redirectFn).toHaveBeenCalledWith(ROUTES.APP_DASHBOARD);
+    expect(redirectFn).not.toHaveBeenCalled();
     expect(
       await subscriptions.findByExternalSubscriptionId('sub_123'),
     ).toMatchObject({
@@ -1258,7 +1260,7 @@ describe('syncCheckoutSuccess', () => {
     });
   });
 
-  it('treats existing webhook customer mapping as idempotent and still redirects to dashboard', async () => {
+  it('treats existing webhook customer mapping as idempotent and resolves to the entitled state', async () => {
     const stripeCustomers = new FakeStripeCustomerRepository();
     const subscriptions = new FakeSubscriptionRepository();
     const user = {
@@ -1318,14 +1320,15 @@ describe('syncCheckoutSuccess', () => {
         }),
     };
 
-    const redirectFn = (url: string): never => {
+    const redirectFn = vi.fn((url: string): never => {
       throw new RedirectError(url);
-    };
+    });
 
     await expect(
       syncCheckoutSuccess({ sessionId: 'cs_test' }, deps as never, redirectFn),
-    ).rejects.toMatchObject({ url: ROUTES.APP_DASHBOARD });
+    ).resolves.toEqual({ status: 'active' });
 
+    expect(redirectFn).not.toHaveBeenCalled();
     expect(await stripeCustomers.findByUserId(user.id)).toEqual({
       stripeCustomerId: 'cus_checkout',
     });
