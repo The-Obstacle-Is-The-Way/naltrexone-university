@@ -69,4 +69,4 @@ Implementation:
 
 - Unit/static render: `app/(marketing)/checkout/success/page.test.ts` covers entitled return-with-status, active vs `inTrial` copy, aria-live, and dashboard escape hatch.
 - Browser: `app/(marketing)/checkout/success/checkout-success-redirect.browser.spec.tsx` covers the 3.5s `router.replace(ROUTES.APP_DASHBOARD)` timer and unmount cleanup.
-- CI: PR #416 passed typecheck, lint, unit, Browser Mode, integration, build, and authenticated E2E (35/35); CodeRabbit approved with zero review threads before this archive follow-up.
+- CI: PR #416 passed typecheck, lint, unit, Browser Mode, integration, build, and authenticated E2E (35/35). This archive follow-up also re-ran the full local gate before push.
