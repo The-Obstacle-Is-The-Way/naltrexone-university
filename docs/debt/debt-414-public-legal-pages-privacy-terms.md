@@ -55,6 +55,7 @@ The free trial launched (DEBT-410): the app now takes real signups into a **paid
 - [ ] Lawyer-reviewed before publishing.
 - [ ] Published on-site at stable routes, design-system compliant, linked from footer + the checkout/signup entry (disclosure before billing).
 - [ ] Stripe Account settings: Privacy Policy URL + Terms of Service URL set; existing shortened statement descriptor verified as 2-10 characters and compatible with Stripe's trial-ending descriptor suffix.
+- [ ] Stripe-native trial-ending customer emails manually rechecked in the Dashboard (Dashboard-owned; not API-verifiable).
 - [ ] Trial/auto-renewal material terms (price, frequency, trial end, cancel method) clearly disclosed before billing info is collected.
 
 ## Dependencies

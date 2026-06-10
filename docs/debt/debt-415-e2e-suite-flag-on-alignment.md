@@ -21,7 +21,7 @@ The free trial is live in production (`FREE_TRIAL_ENABLED=true`), but the E2E su
 
 1. **Run E2E with the flag on (mirror prod).** Set `FREE_TRIAL_ENABLED=true` in the E2E environment — the CI workflow **and** the local hermetic runner (`scripts/run-local-e2e.ts`, which already threads an `env` object) — so the suite exercises what production actually serves. This also pre-aligns the suite with DEBT-413, after which trial-on is unconditional.
 2. **Fix the stale assertion.** Update `tests/e2e/pricing-unauthenticated.spec.ts` to assert the **trial-forward CTA** ("Start 7-day free trial") for the flag-on / eligible visitor, instead of "Subscribe Monthly."
-3. **Add the trial-start E2E** (new `tests/e2e/trial-*.spec.ts` or extend `pricing-*`): a first-time, no-card user goes pricing → trial CTA → hosted Checkout (Stripe **test mode**) → returns to the checkout-success interstitial ("Your 7-day free trial has started — no charge today", per `app/(marketing)/checkout/success/page.tsx:56`) → reaches `/app/*` with the app-shell countdown ("N days left") + the "Add a card to keep access" affordance. Assert entitlement is granted **without** a card on file.
+3. **Add the trial-start E2E** at `tests/e2e/trial-start.spec.ts`: a first-time, no-card user goes pricing → trial CTA → hosted Checkout (Stripe **test mode**) → returns to the checkout-success interstitial ("Your 7-day free trial has started — no charge today", per `app/(marketing)/checkout/success/page.tsx:56`) → reaches `/app/*` with the app-shell countdown ("N days left") + the "Add a card to keep access" affordance. Assert entitlement is granted **without** a card on file.
 4. **Decide the flag-off regression's fate.** With the suite flag-on by default, the flag-off "Subscribe Monthly" path is exercised by the colocated unit/component tests (`app/pricing/pricing-view.test.tsx`, `app/pricing/page.test.tsx`), which already cover both branches. Do **not** duplicate that at the E2E layer; the E2E suite mirrors prod (flag-on). When DEBT-413 lands, delete the flag-off unit branches too.
 
 ## Constraints
@@ -41,7 +41,7 @@ The free trial is live in production (`FREE_TRIAL_ENABLED=true`), but the E2E su
 
 - [ ] E2E runs with `FREE_TRIAL_ENABLED=true` (CI workflow + `scripts/run-local-e2e.ts`) — mirroring prod.
 - [ ] `tests/e2e/pricing-unauthenticated.spec.ts` asserts the trial-forward CTA ("Start 7-day free trial"), not "Subscribe Monthly."
-- [ ] A trial-start E2E covers: pricing trial CTA → hosted Checkout (test mode) → trialing subscription → checkout-success interstitial → `/app/*` with countdown + add-card affordance; entitlement granted with **no** card.
+- [ ] `tests/e2e/trial-start.spec.ts` covers: pricing trial CTA → hosted Checkout (test mode) → trialing subscription → checkout-success interstitial → `/app/*` with countdown + add-card affordance; entitlement granted with **no** card.
 - [ ] Full gate + E2E green; CodeRabbit clean; owner-graded before merge.
 
 ## Dependencies
