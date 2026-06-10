@@ -2,8 +2,8 @@
 
 **Priority:** P3 (flag-lifecycle hygiene; no user impact — removal happens only after the trial is verified on)
 **Created:** 2026-06-09
-**Audit verified:** 2026-06-09 (post-PR-3 merge site inventory)
-**Status:** **Decided spec — no optionality.** Blocked on DEBT-410 PR-4 (trial must be launched + verified on first).
+**Audit verified:** 2026-06-09 (post-PR-3 merge site inventory); 2026-06-10 (post-PR-4 launch-state consistency audit)
+**Status:** **Decided spec — no optionality.** Blocked on post-launch GA verification/bake (DEBT-410 PR-4 launch/config is complete; the trial must stay verified-on and stable first).
 **Owner:** Billing / trial rollout.
 **Related:** [DEBT-410](./debt-410-free-trial-pathway-and-pricing-access-copy.md) (introduced the flag — decision D10), [Debt Index](./index.md)
 
@@ -21,7 +21,7 @@ The free trial is the **permanent acquisition strategy**, not an experiment to t
 
 ## Decision (final)
 
-After DEBT-410 **PR-4** sets `FREE_TRIAL_ENABLED=true` in production **and** the trial is verified working end-to-end (a short bake window — at least one real no-card trial observed starting → syncing to `inTrial` → converting or cancelling correctly, with no billing incidents), a **single small cleanup PR removes the flag entirely** and makes the trial unconditionally on for eligible (first-time) users:
+After the now-launched DEBT-410 trial has been verified working end-to-end through a short GA bake window — at least one real no-card trial observed starting → syncing to `inTrial` → converting or cancelling correctly, with no billing incidents — a **single small cleanup PR removes the flag entirely** and makes the trial unconditionally on for eligible (first-time) users:
 
 - Delete `FREE_TRIAL_ENABLED` from the `lib/env.ts` Zod schema (and its `.env.example` entry).
 - Remove the flag read at the composition root (`lib/container/use-cases.ts:61-69`).
@@ -57,14 +57,14 @@ Eligibility (one-trial-per-user, first-timer-only via `findByUserId === null`) i
 
 ## Constraints
 
-- Do **not** remove the flag before PR-4 launch + verification — it earns its keep as instant-off insurance during the exact window (billing rollout) when a bug is most likely and most costly.
+- Do **not** remove the flag before post-launch GA verification/bake — it earns its keep as instant-off insurance during the exact window (billing rollout) when a bug is most likely and most costly.
 - Removal must keep flag-**on** behavior byte-identical: the trial that was verified on is what ships permanently.
 - Full local gate + billing E2E green; fresh CodeRabbit; owner grade before merge (per workflow).
 
 ## Rejected Alternatives
 
 - **Keep the flag permanently.** Rejected: no ongoing operational or product need (trial is the permanent strategy; pre-revenue; no abuse surface yet); it is permanent branch complexity and textbook stale-flag debt.
-- **Remove the flag now, before PR-4 verification.** Rejected: forfeits the no-redeploy off-switch during launch, the riskiest moment for billing code.
+- **Remove the flag before GA verification/bake.** Rejected: forfeits the no-redeploy off-switch during the launch-stabilization window, the riskiest moment for billing code.
 - **Convert it to a permanent product toggle (e.g. A/B trial vs no-trial).** Rejected: not a current need. If A/B-testing trials ever becomes a goal, that is a new, deliberately-designed experiment flag — not this rollout kill-switch carried forward by inertia.
 
 ## Acceptance Criteria
@@ -77,4 +77,4 @@ Eligibility (one-trial-per-user, first-timer-only via `findByUserId === null`) i
 
 ## Dependencies
 
-- **Blocked on DEBT-410 PR-4** (production enablement + verification). This document is the standing reminder so the flag does not silently become permanent.
+- **Blocked on post-launch GA verification/bake.** DEBT-410 PR-4 production enablement is complete; this document is the standing reminder so the flag does not silently become permanent after the verified-on window.

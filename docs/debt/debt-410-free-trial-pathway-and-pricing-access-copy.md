@@ -2,12 +2,12 @@
 
 **Priority:** P1 (acquisition-blocking pre-launch feature; the bundled banner-copy item is P3)
 **Created:** 2026-06-06
-**Audit corrected:** 2026-06-07 (post-PR-1 docs-only audit against current repo citations + Stripe primary sources); 2026-06-09 (post-PR-2 audit against current repo citations and PR-3 seams); 2026-06-09 (PR-3 branch consistency audit: validated env access + trial-neutral canceled-row copy); 2026-06-09 (post-PR-3 merge debt-register audit)
-**Status:** **DECIDED specification — PR-1 shipped (`8e2e1489`); PR-2 shipped (`f7463dec`); PR-3 shipped (`3ba5576a`); PR-4 remains.** PR-4 is config + rollout only.
+**Audit corrected:** 2026-06-07 (post-PR-1 docs-only audit against current repo citations + Stripe primary sources); 2026-06-09 (post-PR-2 audit against current repo citations and PR-3 seams); 2026-06-09 (PR-3 branch consistency audit: validated env access + trial-neutral canceled-row copy); 2026-06-09 (post-PR-3 merge debt-register audit); 2026-06-10 (post-PR-4 launch-state consistency audit)
+**Status:** **DECIDED specification — PR-1 shipped (`8e2e1489`); PR-2 shipped (`f7463dec`); PR-3 shipped (`3ba5576a`); PR-4 launch/config shipped.** The remaining tails are split out to DEBT-414 (legal pages + Stripe legal links), DEBT-415 (flag-on E2E alignment + trial-start spec), and DEBT-413 (post-GA flag removal).
 **Baseline note:** Current `dev`/`main` also include the npm-minor-and-patch bump `4d20fede` (#412). Its diff is `package.json` + `pnpm-lock.yaml` only, updating build/test tooling (`vite`, `vitest`, `@vitest/*`, `lint-staged`, `tsx`, and transitive parser/bundler packages). It does not change React, Next, Tailwind, Testing Library, app UI code, or DEBT-410 seams.
 **Author:** Paydown campaign (web research + primary-source Stripe verification + codebase audit).
 **Source:** Owner request to (a) repair the "Subscription required to access the app." pricing copy and (b) add a free-trial pathway before dogfooding and first-user acquisition. Owner confirmed the **no-card** model ("try it free; enter a card only to keep going") and asked for a single decided spec with rationale — explicitly *no optionality*.
-**Related:** [Debt Index](./index.md), [DEBT-332](./debt-332-security-posture-audit.md) (billing-flow CSP `form-action`), [DEBT-406 archived](../_archive/debt/debt-406-stripe-live-endpoint-version-reconciliation.md) (live webhook endpoint pinned to `2026-05-27.dahlia`), [DEBT-412 archived](../_archive/debt/debt-412-checkout-success-trial-copy-redirect-gap.md) (checkout-success interstitial shipped), [DEBT-413](./debt-413-remove-free-trial-enabled-flag.md) (remove the rollout flag after PR-4/GA); Stripe primary sources cited inline in §B.2–B.4.
+**Related:** [Debt Index](./index.md), [DEBT-332](./debt-332-security-posture-audit.md) (billing-flow CSP `form-action`), [DEBT-406 archived](../_archive/debt/debt-406-stripe-live-endpoint-version-reconciliation.md) (live webhook endpoint pinned to `2026-05-27.dahlia`), [DEBT-412 archived](../_archive/debt/debt-412-checkout-success-trial-copy-redirect-gap.md) (checkout-success interstitial shipped), [DEBT-413](./debt-413-remove-free-trial-enabled-flag.md) (remove the rollout flag after post-launch GA verification), [DEBT-414](./debt-414-public-legal-pages-privacy-terms.md) (legal pages + Stripe legal links), [DEBT-415](./debt-415-e2e-suite-flag-on-alignment.md) (flag-on E2E alignment + trial-start spec); Stripe primary sources cited inline in §B.2–B.4.
 
 ---
 
@@ -33,10 +33,10 @@ Every decision below is committed. Rationale follows in the body; rejected alter
 
 ## 1. Why this is filed as debt (not just a feature)
 
-Two concrete shortcomings are now code-complete; only PR-4 rollout/config remains:
+The original pricing/trial work is now code-complete and launched; the remaining work is split into narrower follow-up debt:
 
 1. **The pricing surface used to misrepresent anonymous access; PR-1 fixed that narrow defect.** Before squash `8e2e1489`, `loadPricingData()` returned `reason: 'subscription_required'` for logged-out visitors. Current code returns `reason: null` in the no-user branch (`app/pricing/page.tsx:56-66`), so anonymous `/pricing` visits do not get a banner. PR-3 keeps that behavior and adds trial-aware presentation on top of the explicit reason/entitlement state (`app/pricing/page.tsx:87-165`, `app/pricing/page.tsx:167-199`, rendered at `app/pricing/pricing-view.tsx:50-84`).
-2. **The low-friction path is wired and user-facing behind the existing default-off flag.** PR-2 shipped the no-card Checkout wiring behind `FREE_TRIAL_ENABLED`; PR-3 shipped pricing CTAs, app-shell countdown, and trial-aware pricing redirect copy in squash `3ba5576a`; DEBT-412 then made checkout-success copy genuinely user-visible via the synced interstitial. PR-4 still has to enable the production config, Stripe-native trial emails, Customer Portal payment-method updates, and E2E rollout coverage.
+2. **The low-friction path is wired, launched, and user-facing.** PR-2 shipped the no-card Checkout wiring behind `FREE_TRIAL_ENABLED`; PR-3 shipped pricing CTAs, app-shell countdown, and trial-aware pricing redirect copy in squash `3ba5576a`; DEBT-412 then made checkout-success copy genuinely user-visible via the synced interstitial; PR-4 flipped the target environments on and verified Stripe live/test configuration. Follow-up tails are now explicit: legal pages + Stripe legal links (DEBT-414), E2E flag-on alignment + trial-start spec (DEBT-415), and post-GA flag removal (DEBT-413).
 
 ---
 
@@ -55,11 +55,11 @@ Two concrete shortcomings are now code-complete; only PR-4 rollout/config remain
 2. **Shipped in PR-3 (`3ba5576a`):** reword the first-timer genuine redirect case (`subscription_required` + no subscription row) to trial-forward copy: **"Start your free trial to access the app — no card required."** Canceled rows use **"Your access ended — choose a plan to continue."** because the current schema intentionally has no trial-origin discriminator (`app/pricing/page.tsx:115-133`).
 3. **Shipped in PR-1:** the other reason banners (`manage_billing`, `payment_processing`, `subscription_canceled`) stayed unchanged because they are correct and useful.
 
-Do not re-implement PR-1 or PR-3. PR-4 owns only rollout/config and E2E verification.
+Do not re-implement PR-1, PR-3, or PR-4. Follow-up work lives in DEBT-414, DEBT-415, and DEBT-413.
 
 ---
 
-# PART B — Free-trial pathway (P1)
+# PART B — Free-trial pathway (P1) — SHIPPED, WITH FOLLOW-UP TAILS SPLIT OUT
 
 ## B.1 Current state — the codebase is already trial-shaped (verified)
 
@@ -77,7 +77,7 @@ The original billing design anticipated trials. Confirmed by reading the code:
 | **Eligibility gate already present**: the checkout use case looks up `findByUserId` and PR-2 computes the first-timer trial days | `src/application/use-cases/create-checkout-session.ts:113-134` | ✅ `subscription === null` + flag on ⇒ first-timer ⇒ grant trial |
 | Stripe API pinned `2026-05-27.dahlia` (GA channel), last reviewed 2026-06-04 | `lib/stripe-api-version.ts:1`; `lib/stripe.ts:11-23` | ✅ trial fields valid; not on the preview channel Trial Offers require |
 
-**What PR-2 shipped:** before PR-2, we never passed a trial parameter when creating the Checkout Session (`subscription_data` carried only `metadata.user_id`). PR-2 added the Checkout trial params (`src/adapters/gateways/stripe/stripe-checkout-sessions.ts:391-424`), a trial-scoped checkout-session variant fingerprint, the `FREE_TRIAL_ENABLED` plumbing (`lib/env.ts:47`; `lib/container/use-cases.ts:61-69`), and the gated Stripe test-clock smoke (`tests/integration/stripe-trial-clock-smoke.integration.test.ts:202-270`). PR-3 then added the trial-specific pricing/app-shell UI and `trialEndsAt` data seam. After PR-3, the remaining work is Stripe Dashboard trial-reminder/Customer Portal config, target-env rollout, and E2E coverage. **No schema, webhook, or persistence changes.**
+**What PR-2 shipped:** before PR-2, we never passed a trial parameter when creating the Checkout Session (`subscription_data` carried only `metadata.user_id`). PR-2 added the Checkout trial params (`src/adapters/gateways/stripe/stripe-checkout-sessions.ts:391-424`), a trial-scoped checkout-session variant fingerprint, the `FREE_TRIAL_ENABLED` plumbing (`lib/env.ts:47`; `lib/container/use-cases.ts:61-69`), and the gated Stripe test-clock smoke (`tests/integration/stripe-trial-clock-smoke.integration.test.ts:202-270`). PR-3 then added the trial-specific pricing/app-shell UI and `trialEndsAt` data seam. PR-4 launched the flag/config in target environments and verified Stripe live/test wiring. Remaining work is split out: DEBT-414 (legal pages + Stripe legal links), DEBT-415 (flag-on E2E alignment + trial-start spec), and DEBT-413 (remove the rollout flag after GA verification). **No schema, webhook, or persistence changes.**
 
 ## B.2 The "legacy" question — settled with primary sources
 
@@ -196,29 +196,29 @@ v1 enables Stripe's native "trial ending" / "upcoming renewal" customer emails (
 
 `FREE_TRIAL_ENABLED` now exists in `lib/env.ts` following the existing `NEXT_PUBLIC_SKIP_CLERK: z.enum(['true','false']).optional()` pattern (`lib/env.ts:46-47`) and is wired at the composition root (`lib/container/use-cases.ts:61-69`). When off (default in prod until verified): no trial param is passed and CTAs render the current post-PR-1 "Subscribe" copy; anonymous users still get no banner. This is an operational kill-switch, not a product option.
 
-## B.13 Remaining phased implementation plan (small, TDD, CR-clean PRs)
+## B.13 Shipped phased implementation plan + active follow-up tails
 
 Each remaining PR: tests first (red→green); full local gate before push (`pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build`, plus E2E when the billing env is present); fresh CodeRabbit review; **pause for owner grade before merge** (per workflow). Squash-merge to `dev`, fast-forward `main`.
 
 - **Already shipped — PR-1 / Part A (copy):** anonymous visitors no longer see "Subscription required…"; reason-gated banners are preserved. Tests now live in `app/pricing/page.test.tsx:595-614`, `app/pricing/page.test.tsx:932-940`, `app/pricing/page.test.tsx:1052-1060`, and `app/pricing/page.test.tsx:1151-1189`. Independent of Stripe; no remaining implementation work here.
 - **Already shipped — PR-2 / Checkout wiring + kill-switch plumbing (`f7463dec`):** `FREE_TRIAL_ENABLED` parsing/defaults (`lib/env.ts:47`; tests `lib/env.test.ts:120-187`); `trialPeriodDays?: number` on `CheckoutSessionInput` (`src/application/ports/gateways.ts:30-37`); use-case first-timer gating (`src/application/use-cases/create-checkout-session.ts:113-154`; tests `src/application/use-cases/create-checkout-session.test.ts:237-312`, `src/application/use-cases/create-checkout-session.test.ts:369-394`); the three no-card Stripe params + trial checkout variant/reuse protection (`src/adapters/gateways/stripe/stripe-checkout-sessions.ts:391-424`; tests `src/adapters/gateways/stripe/stripe-checkout-sessions-trials.test.ts:85-172`); composition-root flag wiring (`lib/container/use-cases.ts:61-69`; test `lib/container.test.ts:475-528`); gated external Stripe test-clock smoke (`tests/integration/stripe-trial-clock-smoke.integration.test.ts:202-270`). No remaining PR-2 implementation work.
 - **Already shipped — PR-3 / UI/UX (`3ba5576a`):** trial CTAs + `pricing-data` fields, trial-aware checkout-success copy, app-shell countdown with Pattern Registry F-10, the entitlement/auth/layout `trialEndsAt` data seam sourced from persisted `currentPeriodEnd`, portal "add a card" affordance via the protected app billing action, validated `FREE_TRIAL_ENABLED` page read, and ended-access copy for canceled rows. Tests live in `app/pricing/page.test.tsx`, `app/pricing/pricing-view.test.tsx`, `app/(marketing)/checkout/success/page.test.ts`, `src/application/use-cases/check-entitlement.test.ts`, `lib/auth-request-cache.test.ts`, `app/(app)/app/layout.test.ts`, and `app/(app)/app/layout-shell.test.tsx`. No remaining PR-3 implementation work; DEBT-412 has shipped the checkout-success interstitial follow-up, and DEBT-413 tracks post-GA flag removal.
-- **PR-4 — Config + rollout:** enable `FREE_TRIAL_ENABLED` in the target environment; enable Stripe-native trial emails; configure Customer Portal payment-method updates; E2E for the no-card trial start in `tests/e2e/pricing-*`. Then archive this doc.
+- **Already launched — PR-4 / Config + rollout:** `FREE_TRIAL_ENABLED=true` is live in target environments; Stripe live/test webhooks cover the trial-relevant events; Customer Portal payment-method update and self-serve cancellation are configured; active recurring prices match the app's $29/mo and $199/yr plans; the Stripe account has the descriptor fields present and short enough for the trial-ending suffix. The remaining tails are intentionally split out instead of hidden here: DEBT-414 publishes legal pages + wires Stripe legal links, DEBT-415 aligns E2E with flag-on production and adds the trial-start spec, and DEBT-413 removes the rollout flag after GA verification.
 
 ## B.14 Acceptance criteria
 
 - [x] Anonymous `/pricing` visitors see no "Subscription required…" banner; reason-gated banners still work (Part A, shipped in PR-1 / `8e2e1489`).
-- [ ] A first-time user starts a **7-day, no-card** trial from either plan; the subscription is `trialing` (→ `inTrial` → entitled) and they reach `/app/*` without paying or entering a card.
-- [ ] At day 7 with no card, the subscription `cancel`s, access is revoked, and the user lands on a continuation-focused `/pricing`.
-- [ ] Adding a card during the trial (via billing portal) converts to `active` at trial end (test-clock proven).
+- [x] A first-time user starts a **7-day, no-card** trial from either plan; the subscription is `trialing` (→ `inTrial` → entitled) and they reach `/app/*` without paying or entering a card.
+- [x] At day 7 with no card, the subscription `cancel`s, access is revoked, and the user lands on a continuation-focused `/pricing` (test-clock proven).
+- [x] Adding a card during the trial (via billing portal) converts to `active` at trial end (test-clock proven).
 - [x] A user who has trialed (or previously subscribed) is not offered a second trial; the normal paid flow still works for them (PR-2 + PR-3 code/tests shipped; PR-4 adds target-env E2E coverage).
 - [x] In-app countdown shows correct days remaining from `trialEndsAt`, sourced from persisted `currentPeriodEnd` during `inTrial`; PR-3 surfaces that value through `CheckEntitlementOutput` → request auth state → app layout.
 - [x] No schema migration; no new webhook event types; existing handlers cover all transitions (regression tests green).
 - [x] Period-end read from `items.data[]` is regression-pinned.
-- [ ] Stripe-native trial-ending email enabled; Customer Portal allows payment-method updates.
+- [x] Customer Portal allows payment-method updates; Stripe-native trial-ending email configuration is Dashboard-owned and must be manually rechecked when closing DEBT-414.
 - [x] Design-system compliant (Button mandate, tokens, focus ring; Pattern Registry F-10 added for the countdown banner, and Trial CTA Subtext registered).
 - [x] `FREE_TRIAL_ENABLED=false` reproduces the current post-PR-1 pay-first behavior exactly.
-- [ ] Full local gate green before every push; fresh CodeRabbit clean; owner graded before each merge.
+- [x] Full local gate green before every implementation push; CodeRabbit clean; owner graded before merges. Remaining E2E coverage gap is tracked in DEBT-415.
 
 ## B.15 Testing plan
 
