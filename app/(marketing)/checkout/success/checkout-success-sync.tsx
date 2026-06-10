@@ -76,7 +76,11 @@ function getStripeId(value: unknown): string | null {
  * Stripe webhooks are eventually consistent; users often reach the success page
  * before the webhook updates our database. This function fetches the checkout
  * session/subscription from Stripe and upserts the minimal subscription state
- * before redirecting so entitlement is correct immediately.
+ * first, so entitlement is correct before the user can reach the app.
+ *
+ * Entitled outcomes resolve with the synced status so the page renders the
+ * confirmation interstitial (DEBT-412). Invalid, signed-out, and non-entitled
+ * outcomes still redirect away before the page body renders.
  *
  * Webhooks remain necessary for lifecycle events when the user is not present
  * (renewals, payment failures, admin actions).
@@ -87,7 +91,7 @@ export async function syncCheckoutSuccess(
   input: SyncCheckoutSuccessInput,
   deps?: CheckoutSuccessDeps,
   redirectFn: (url: string) => never = redirect,
-): Promise<CheckoutSuccessSyncResult | undefined> {
+): Promise<CheckoutSuccessSyncResult> {
   const d = await getCheckoutSuccessDeps(deps);
 
   const fail = (
@@ -261,6 +265,5 @@ export async function syncCheckoutSuccess(
     return { status };
   }
 
-  redirectFn(ROUTES.APP_DASHBOARD);
   return { status };
 }

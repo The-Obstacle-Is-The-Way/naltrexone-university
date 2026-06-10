@@ -72,9 +72,11 @@ export type SyncCheckoutSuccessInput = {
 };
 
 /**
- * Resolved sync state for the (normally unreachable) post-redirect render.
- * In production every sync path redirects; the result only surfaces when the
- * redirect is intercepted (tests, redirect-fallback rendering).
+ * Synced subscription state consumed by the checkout-success interstitial.
+ * Entitled outcomes resolve with the synced status so the page can render
+ * status-driven confirmation copy. Invalid, signed-out, and non-entitled
+ * outcomes redirect before returning; their post-redirect return only
+ * surfaces when the redirect is intercepted in tests.
  */
 export type CheckoutSuccessSyncResult = {
   status: SubscriptionStatus;
