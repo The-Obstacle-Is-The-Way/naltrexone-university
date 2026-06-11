@@ -160,6 +160,9 @@ describe('CreateCheckoutSessionUseCase', () => {
         cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
       },
     ]);
+    expect(paymentGateway.checkoutInputs[0]).not.toHaveProperty(
+      'trialPeriodDays',
+    );
   });
 
   it('allows checkout when local row is paymentFailed even with future currentPeriodEnd', async () => {
@@ -175,6 +178,9 @@ describe('CreateCheckoutSessionUseCase', () => {
     });
 
     expect(paymentGateway.checkoutInputs).toHaveLength(1);
+    expect(paymentGateway.checkoutInputs[0]).not.toHaveProperty(
+      'trialPeriodDays',
+    );
   });
 
   it('continues to block checkout when local row is active with future currentPeriodEnd', async () => {
@@ -231,10 +237,20 @@ describe('CreateCheckoutSessionUseCase', () => {
       url: 'https://stripe/checkout',
     });
 
-    expect(paymentGateway.checkoutInputs).toHaveLength(1);
+    expect(paymentGateway.checkoutInputs).toEqual([
+      {
+        userId: 'user-1',
+        externalCustomerId: 'cus_existing',
+        plan: 'monthly',
+        successUrl:
+          'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
+        cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
+        trialPeriodDays: 7,
+      },
+    ]);
   });
 
-  it('passes a 7-day trial to the gateway for a first-time user when free trials are enabled', async () => {
+  it('passes a 7-day trial to the gateway for a first-time user', async () => {
     const paymentGateway = createPaymentGateway();
     const stripeCustomers = new FakeStripeCustomerRepository();
     await stripeCustomers.insert('user-1', 'cus_existing');
@@ -245,7 +261,6 @@ describe('CreateCheckoutSessionUseCase', () => {
       paymentGateway,
       new FakeLogger(),
       () => new Date('2026-02-01T00:00:00Z'),
-      true,
     );
 
     await expect(useCase.execute(defaultCheckoutInput)).resolves.toEqual({
@@ -265,7 +280,7 @@ describe('CreateCheckoutSessionUseCase', () => {
     ]);
   });
 
-  it('does not pass a trial to the gateway for a user with an existing subscription row when free trials are enabled', async () => {
+  it('does not pass a trial to the gateway for a user with an existing subscription row', async () => {
     const paymentGateway = createPaymentGateway();
     const stripeCustomers = new FakeStripeCustomerRepository();
     await stripeCustomers.insert('user-1', 'cus_existing');
@@ -283,22 +298,6 @@ describe('CreateCheckoutSessionUseCase', () => {
       paymentGateway,
       new FakeLogger(),
       () => new Date('2026-02-01T00:00:00Z'),
-      true,
-    );
-
-    await expect(useCase.execute(defaultCheckoutInput)).resolves.toEqual({
-      url: 'https://stripe/checkout',
-    });
-
-    expect(paymentGateway.checkoutInputs).toHaveLength(1);
-    expect(paymentGateway.checkoutInputs[0]).not.toHaveProperty(
-      'trialPeriodDays',
-    );
-  });
-
-  it('does not pass a trial to the gateway for a first-time user by default', async () => {
-    const { paymentGateway, useCase } = await createUseCaseWithExistingCustomer(
-      {},
     );
 
     await expect(useCase.execute(defaultCheckoutInput)).resolves.toEqual({
@@ -324,6 +323,9 @@ describe('CreateCheckoutSessionUseCase', () => {
     });
 
     expect(paymentGateway.checkoutInputs).toHaveLength(1);
+    expect(paymentGateway.checkoutInputs[0]).not.toHaveProperty(
+      'trialPeriodDays',
+    );
   });
 
   it('returns ALREADY_SUBSCRIBED when a subscription is still current', async () => {
@@ -366,7 +368,7 @@ describe('CreateCheckoutSessionUseCase', () => {
     expect(paymentGateway.checkoutInputs).toEqual([]);
   });
 
-  it('keeps blocking current subscriptions when free trials are enabled', async () => {
+  it('keeps blocking current subscriptions from starting another checkout', async () => {
     const paymentGateway = createPaymentGateway();
     const subscriptions = new FakeSubscriptionRepository([
       createSubscription({
@@ -382,7 +384,6 @@ describe('CreateCheckoutSessionUseCase', () => {
       paymentGateway,
       new FakeLogger(),
       () => new Date('2026-02-01T00:00:00Z'),
-      true,
     );
 
     await expect(useCase.execute(defaultCheckoutInput)).rejects.toMatchObject({
@@ -433,6 +434,7 @@ describe('CreateCheckoutSessionUseCase', () => {
         successUrl:
           'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
         cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
+        trialPeriodDays: 7,
       },
     ]);
   });
@@ -489,6 +491,7 @@ describe('CreateCheckoutSessionUseCase', () => {
         successUrl:
           'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
         cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
+        trialPeriodDays: 7,
       },
     ]);
   });
@@ -542,6 +545,7 @@ describe('CreateCheckoutSessionUseCase', () => {
         successUrl:
           'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
         cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
+        trialPeriodDays: 7,
       },
       {
         userId: 'user-1',
@@ -550,6 +554,7 @@ describe('CreateCheckoutSessionUseCase', () => {
         successUrl:
           'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
         cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
+        trialPeriodDays: 7,
       },
     ]);
   });

@@ -32,7 +32,7 @@ describe('app/pricing/pricing-view', () => {
     expect(html).not.toContain('Manage Billing');
   });
 
-  it('renders trial CTAs with post-trial notes when showTrialCtas is set', () => {
+  it('renders trial CTAs with post-trial notes for trial-eligible visitors', () => {
     const html = renderToStaticMarkup(
       <PricingView
         isEntitled={false}
@@ -51,7 +51,7 @@ describe('app/pricing/pricing-view', () => {
     expect(html).not.toContain('Subscribe Annual');
   });
 
-  it('renders standard subscribe CTAs without trial copy by default', () => {
+  it('renders standard subscribe CTAs for non-trial-eligible visitors by default', () => {
     const html = renderToStaticMarkup(
       <PricingView
         isEntitled={false}

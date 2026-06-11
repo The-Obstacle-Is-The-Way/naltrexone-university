@@ -32,9 +32,6 @@ const LOCAL_E2E_DB_USER = 'postgres';
 const LOCAL_E2E_DB_PASSWORD = 'postgres';
 const LOCAL_E2E_DB_NAME = 'addiction_boards_test';
 const TRUTHY_ENV_VALUES = new Set(['1', 'true', 'yes']);
-const FLAG_ON_E2E_ENV = {
-  FREE_TRIAL_ENABLED: 'true',
-} as const;
 
 function isTruthyEnvFlag(value: string | undefined): boolean {
   if (!value) return false;
@@ -66,7 +63,6 @@ export function createE2ECommandPlan({
         label: 'Run Playwright E2E',
         command: 'pnpm',
         args: ['exec', 'playwright', 'test', ...playwrightArgs],
-        env: { ...FLAG_ON_E2E_ENV },
       },
     ];
   }
@@ -106,7 +102,6 @@ export function createE2ECommandPlan({
       args: ['exec', 'playwright', 'test', ...playwrightArgs],
       env: {
         DATABASE_URL: databaseUrl,
-        ...FLAG_ON_E2E_ENV,
       },
     },
   ];

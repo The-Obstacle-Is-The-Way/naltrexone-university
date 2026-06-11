@@ -11,7 +11,6 @@ import {
 import type { PricingBanner } from '@/app/pricing/types';
 import { MarketingLayout } from '@/components/marketing/marketing-layout';
 import { getRequestAuthState } from '@/lib/auth-request-cache';
-import { env } from '@/lib/env';
 import { ROUTES } from '@/lib/routes';
 import { normalizeSearchParam } from '@/lib/search-params';
 import type { AuthGateway } from '@/src/application/ports/gateways';
@@ -35,16 +34,6 @@ export type PricingPageDeps = {
   authGateway: AuthGateway;
   checkEntitlementUseCase: CheckEntitlementUseCase;
 };
-
-export type PricingFeatureFlags = {
-  freeTrialEnabled: boolean;
-};
-
-function getPricingFeatureFlags(): PricingFeatureFlags {
-  return {
-    freeTrialEnabled: env.FREE_TRIAL_ENABLED === 'true',
-  };
-}
 
 export type PricingData = {
   isEntitled: boolean;
@@ -80,7 +69,6 @@ type PricingSearchParams = {
 };
 
 export type PricingTrialContext = {
-  freeTrialEnabled: boolean;
   subscriptionStatus: SubscriptionStatus | null;
 };
 
@@ -113,24 +101,21 @@ export function getPricingBanner(
   }
 
   if (reason === 'subscription_required') {
-    if (trialContext?.freeTrialEnabled) {
-      // No subscription record at all = trial-eligible (DEBT-410 D9).
-      if (trialContext.subscriptionStatus === null) {
-        return {
-          tone: 'info',
-          message:
-            'Start your free trial to access the app — no card required.',
-        };
-      }
-      // A lapsed trial cancels with its period already over, so it arrives
-      // here (not as subscription_canceled). Because prior paid cancellations
-      // have the same persisted shape, keep this copy trial-neutral.
-      if (trialContext.subscriptionStatus === 'canceled') {
-        return {
-          tone: 'info',
-          message: 'Your access ended — choose a plan to continue.',
-        };
-      }
+    // No subscription record at all = trial-eligible (DEBT-410 D9).
+    if (trialContext && trialContext.subscriptionStatus === null) {
+      return {
+        tone: 'info',
+        message: 'Start your free trial to access the app — no card required.',
+      };
+    }
+    // A lapsed trial cancels with its period already over, so it arrives
+    // here (not as subscription_canceled). Because prior paid cancellations
+    // have the same persisted shape, keep this copy trial-neutral.
+    if (trialContext?.subscriptionStatus === 'canceled') {
+      return {
+        tone: 'info',
+        message: 'Your access ended — choose a plan to continue.',
+      };
     }
     return {
       tone: 'info',
@@ -168,7 +153,6 @@ export function getPricingBanner(
 function buildPricingPresentation(
   pricingData: PricingData,
   resolvedSearchParams: PricingSearchParams,
-  featureFlags: PricingFeatureFlags,
 ): {
   banner: PricingBanner | null;
   showManageBillingAction: boolean;
@@ -182,7 +166,6 @@ function buildPricingPresentation(
       reason: effectiveReason,
     },
     {
-      freeTrialEnabled: featureFlags.freeTrialEnabled,
       subscriptionStatus: pricingData.subscriptionStatus,
     },
   );
@@ -193,27 +176,23 @@ function buildPricingPresentation(
       effectiveReason === 'manage_billing' ||
       effectiveReason === 'payment_processing',
     showTrialCtas:
-      featureFlags.freeTrialEnabled &&
-      !pricingData.isEntitled &&
-      pricingData.subscriptionStatus === null,
+      !pricingData.isEntitled && pricingData.subscriptionStatus === null,
   };
 }
 
-async function DeferredPricingView({
+export async function DeferredPricingView({
   searchParams,
   deps,
-  featureFlags = getPricingFeatureFlags(),
 }: {
   searchParams: Promise<PricingSearchParams>;
   deps?: PricingPageDeps;
-  featureFlags?: PricingFeatureFlags;
 }) {
   const [pricingData, resolvedSearchParams] = await Promise.all([
     loadPricingData(deps),
     searchParams,
   ]);
   const { banner, showManageBillingAction, showTrialCtas } =
-    buildPricingPresentation(pricingData, resolvedSearchParams, featureFlags);
+    buildPricingPresentation(pricingData, resolvedSearchParams);
 
   return (
     <PricingView
@@ -234,7 +213,6 @@ async function renderInjectedPricingPage(input: {
   searchParams: Promise<PricingSearchParams>;
   deps?: PricingPageDeps;
   authNavFn?: () => ReactNode | Promise<ReactNode>;
-  featureFlags?: PricingFeatureFlags;
 }) {
   const resolvedAuthNavFn =
     input.authNavFn ??
@@ -249,9 +227,8 @@ async function renderInjectedPricingPage(input: {
     input.searchParams,
     resolvedAuthNavFn(),
   ]);
-  const featureFlags = input.featureFlags ?? getPricingFeatureFlags();
   const { banner, showManageBillingAction, showTrialCtas } =
-    buildPricingPresentation(pricingData, resolvedSearchParams, featureFlags);
+    buildPricingPresentation(pricingData, resolvedSearchParams);
 
   return MarketingLayout({
     authNavSlot,
@@ -276,19 +253,16 @@ export default async function PricingPage({
   searchParams,
   deps,
   authNavFn,
-  featureFlags,
 }: {
   searchParams: Promise<PricingSearchParams>;
   deps?: PricingPageDeps;
   authNavFn?: () => ReactNode | Promise<ReactNode>;
-  featureFlags?: PricingFeatureFlags;
 }) {
   if (deps || authNavFn) {
     return renderInjectedPricingPage({
       searchParams,
       deps,
       authNavFn,
-      featureFlags,
     });
   }
 
@@ -298,10 +272,7 @@ export default async function PricingPage({
     featuresHref: `${ROUTES.HOME}#features`,
     children: (
       <Suspense fallback={pricingFallback}>
-        <DeferredPricingView
-          searchParams={searchParams}
-          featureFlags={featureFlags}
-        />
+        <DeferredPricingView searchParams={searchParams} />
       </Suspense>
     ),
   });

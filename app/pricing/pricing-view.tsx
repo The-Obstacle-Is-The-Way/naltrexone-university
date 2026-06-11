@@ -10,7 +10,7 @@ import { ROUTES } from '@/lib/routes';
 export type PricingViewProps = {
   isEntitled: boolean;
   banner: PricingBanner | null;
-  /** DEBT-410: render trial CTAs (FREE_TRIAL_ENABLED + trial-eligible visitor). */
+  /** Render trial CTAs for trial-eligible visitors (no subscription row, not entitled). */
   showTrialCtas?: boolean;
   manageBillingAction?: (formData: FormData) => Promise<void>;
   subscribeMonthlyAction: (formData: FormData) => Promise<void>;
