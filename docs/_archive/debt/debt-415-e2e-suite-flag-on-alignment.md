@@ -2,9 +2,9 @@
 
 **Priority:** P3 (test hygiene + missing coverage; the live trial works — this is suite-vs-prod drift, not a product bug)
 **Created:** 2026-06-10
-**Status:** **Decided spec — no optionality.** Citations mechanically verified against the tree at authoring.
+**Status:** **Resolved 2026-06-10 — [PR #417](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/417).** Shipped: E2E runs flag-on (scoped to the E2E step only — `ci.yml`; unit/build stay default-off), the stale `pricing-unauthenticated` assertion now expects the trial CTA, and `tests/e2e/trial-start.spec.ts` proves the no-card trial happy path with entitlement asserted at the DB **and** Stripe layers (a first-timer reset cancels subscriptions + detaches cards while preserving the one-customer-per-user mapping). CodeRabbit full review on the exact head `12665b22` (range `42d3b819…12665b22`, 0 actionable); full local gate + E2E 36/36 green; owner-graded before merge.
 **Owner:** Engineering.
-**Related:** [DEBT-410](./debt-410-free-trial-pathway-and-pricing-access-copy.md) (the trial these tests should cover; this is its remaining PR-4 code tail), [DEBT-413](./debt-413-remove-free-trial-enabled-flag.md) (flag removal — will make trial-on unconditional, so the suite must assert trial-on anyway), [Debt Index](./index.md).
+**Related:** [DEBT-410](../../debt/debt-410-free-trial-pathway-and-pricing-access-copy.md) (the trial these tests cover; this was its remaining PR-4 code tail), [DEBT-413](../../debt/debt-413-remove-free-trial-enabled-flag.md) (flag removal — will make trial-on unconditional, so the suite must assert trial-on anyway), [Debt Index](../../debt/index.md).
 
 ---
 
@@ -39,10 +39,10 @@ The free trial is live in production (`FREE_TRIAL_ENABLED=true`), but the E2E su
 
 ## Acceptance criteria
 
-- [ ] E2E runs with `FREE_TRIAL_ENABLED=true` (CI workflow + `scripts/run-local-e2e.ts`) — mirroring prod.
-- [ ] `tests/e2e/pricing-unauthenticated.spec.ts` asserts the trial-forward CTA ("Start 7-day free trial"), not "Subscribe Monthly."
-- [ ] `tests/e2e/trial-start.spec.ts` covers: pricing trial CTA → hosted Checkout (test mode) → trialing subscription → checkout-success interstitial → `/app/*` with countdown + add-card affordance; entitlement granted with **no** card.
-- [ ] Full gate + E2E green; CodeRabbit clean; owner-graded before merge.
+- [x] E2E runs with `FREE_TRIAL_ENABLED=true` (CI E2E step + `scripts/run-local-e2e.ts`) — mirroring prod; unit/build stay default-off.
+- [x] `tests/e2e/pricing-unauthenticated.spec.ts` asserts the trial-forward CTA ("Start 7-day free trial"), not "Subscribe Monthly."
+- [x] `tests/e2e/trial-start.spec.ts` covers: pricing trial CTA → hosted Checkout (test mode) → trialing subscription → checkout-success interstitial → `/app/*` with countdown + add-card affordance; entitlement granted with **no** card.
+- [x] Full gate + E2E green; CodeRabbit clean; owner-graded before merge.
 
 ## Dependencies
 
