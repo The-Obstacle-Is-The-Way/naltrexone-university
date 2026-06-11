@@ -3,9 +3,9 @@
 **Priority:** P3 (flag-lifecycle hygiene; no user impact — removal preserves the verified flag-on behavior)
 **Created:** 2026-06-09
 **Audit verified:** 2026-06-09 (post-PR-3 merge site inventory); 2026-06-10 (post-PR-4 launch-state consistency audit); 2026-06-10 (post-DEBT-415 E2E flag-on site inventory + first-principles flag-lifecycle correction)
-**Status:** **Decided spec — no optionality. Ready to implement now.** The flag is behavior-neutral rollout scaffolding; removing it changes nothing for users (the trial is already on). Implement as a normal cleanup PR and merge after the standard local gate + billing E2E + CodeRabbit + **owner grade** of the PR. Live-path verification is **not** a merge gate — owner decision: remove the flag first, then run the live payment smoke + Fable billing bug-hunt **after**, on the flag-free code.
+**Status:** ✅ **RESOLVED 2026-06-11 — [PR #418](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/418) (squash `5b6dda87`).** The `FREE_TRIAL_ENABLED` flag is removed everywhere; the trial is now unconditionally on for eligible (first-timer) users. Behavior-neutral: `trialPeriodDays: 7` is granted solely by `subscription === null`; `showTrialCtas` is kept as an eligibility-only prop so canceled / prior-subscriber rows still get standard paid CTAs (the Fable-audit BLOCKING-1 fix); E2E stays trial-on via product behavior, not flag injection; `rg FREE_TRIAL_ENABLED` is zero outside this register. CodeRabbit full review 0-actionable on the exact head `cdd21ec4`; full gate + E2E green; owner-graded. **Owner follow-up:** delete the now-dead `FREE_TRIAL_ENABLED=true` from Vercel envs + local untracked env files (harmless leftover — Zod ignores unknown keys).
 **Owner:** Billing / trial rollout.
-**Related:** [DEBT-410](./debt-410-free-trial-pathway-and-pricing-access-copy.md) (introduced the flag — decision D10), [Debt Index](./index.md)
+**Related:** [DEBT-410](./debt-410-free-trial-pathway-and-pricing-access-copy.md) (introduced the flag — decision D10), [Debt Index](../../debt/index.md)
 
 ---
 

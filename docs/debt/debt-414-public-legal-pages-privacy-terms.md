@@ -5,7 +5,7 @@
 **Status:** **Decided spec — no optionality.** Research-backed (Stripe DPA/SSA + Stripe docs + 2026 legal/regulatory sources). Docs-first; legal copy to be drafted and lawyer-reviewed before publishing.
 **Owner:** Founder / legal (engineering owns the on-site pages + Stripe wiring).
 **Deferred:** 2026-06-10 — **tabled by owner as a known, accepted obligation, not a launch blocker.** The trial functions without it and current real-world exposure is low (pre-revenue, negligible live user base) — **but this must be completed before active user acquisition / marketing.** Gated on owner-supplied business facts (no dedicated legal entity exists yet — sole proprietor with a clinical PLLC; the entity decision comes first) plus generated + lawyer-reviewed copy. Everything needed to resume cold is in the **Owner copy-prep checklist** below.
-**Related:** [DEBT-410](./debt-410-free-trial-pathway-and-pricing-access-copy.md) (the live free trial this serves), [Debt Index](./index.md). The Stripe Account-settings legal-link gap and descriptor-verification item surfaced during the DEBT-410 trial launch.
+**Related:** [DEBT-410](../_archive/debt/debt-410-free-trial-pathway-and-pricing-access-copy.md) (the live free trial this serves), [Debt Index](./index.md). The Stripe Account-settings legal-link gap and descriptor-verification item surfaced during the DEBT-410 trial launch.
 
 ---
 

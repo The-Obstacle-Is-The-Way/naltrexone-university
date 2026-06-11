@@ -5,7 +5,7 @@
 **Audit verified:** 2026-06-09 (post-PR-3 merge debt-register audit)
 **Status:** Resolved 2026-06-10 — PR #416 (`feat/debt-412-checkout-interstitial`) shipped Option 2, a real checkout-success interstitial.
 **Owner:** Trial UX / billing flow.
-**Related:** [DEBT-410](../../debt/debt-410-free-trial-pathway-and-pricing-access-copy.md), [Debt Index](../../debt/index.md)
+**Related:** [DEBT-410](./debt-410-free-trial-pathway-and-pricing-access-copy.md), [Debt Index](../../debt/index.md)
 
 ---
 

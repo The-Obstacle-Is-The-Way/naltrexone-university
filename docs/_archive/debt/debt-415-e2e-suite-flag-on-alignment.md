@@ -4,7 +4,7 @@
 **Created:** 2026-06-10
 **Status:** **Resolved 2026-06-10 — [PR #417](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/417).** Shipped: E2E runs flag-on (scoped to the E2E step only — `ci.yml`; unit/build stay default-off), the stale `pricing-unauthenticated` assertion now expects the trial CTA, and `tests/e2e/trial-start.spec.ts` proves the no-card trial happy path with entitlement asserted at the DB **and** Stripe layers (a first-timer reset cancels subscriptions + detaches cards while preserving the one-customer-per-user mapping). CodeRabbit full review on the exact head `12665b22` (range `42d3b819…12665b22`, 0 actionable); full local gate + E2E 36/36 green; owner-graded before merge.
 **Owner:** Engineering.
-**Related:** [DEBT-410](../../debt/debt-410-free-trial-pathway-and-pricing-access-copy.md) (the trial these tests cover; this was its remaining PR-4 code tail), [DEBT-413](../../debt/debt-413-remove-free-trial-enabled-flag.md) (flag removal — will make trial-on unconditional, so the suite must assert trial-on anyway), [Debt Index](../../debt/index.md).
+**Related:** [DEBT-410](./debt-410-free-trial-pathway-and-pricing-access-copy.md) (the trial these tests cover; this was its remaining PR-4 code tail), [DEBT-413](./debt-413-remove-free-trial-enabled-flag.md) (flag removal — will make trial-on unconditional, so the suite must assert trial-on anyway), [Debt Index](../../debt/index.md).
 
 ---
 
