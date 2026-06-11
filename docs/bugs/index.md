@@ -13,7 +13,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-242
+**Next Bug ID:** BUG-248
+
+**Audit #21 (2026-06-11) — Stripe/Billing Deep Sweep:** 6 confirmed bugs filed (BUG-242..247). Two paired P1/P2 read-model corruptions (a late webhook from a superseded subscription, and a stale `/checkout/success` URL replay) share one root cause — the userId-keyed last-write-wins `subscriptions.upsert` has no subscription-identity/recency guard. Two ops-infra gaps: the reconciliation safety net is never scheduled (BUG-244) and the deleted-account Stripe-cancellation queue has no drain past Svix retries (BUG-246). One concurrent two-tab checkout race creates duplicate live subscriptions (BUG-245). One P3 copy bug (pricing portal failures show checkout-failure copy, BUG-247). See the Audit #21 section below for methodology, the clean-surface list, and uncertain candidates deliberately not filed.
 
 **Latest archival (2026-06-03) — SPEC-041 migration rollout incident remediated:**
 - BUG-240 verified fixed and archived: migrations `0019_illegal_warbound` and `0020_fat_ironclad` were applied to the deployed dev/preview and production DBs with `DATABASE_URL=<env> pnpm db:migrate`; read-only verification confirms the `question_feedback` table, all 3 enums, 7 indexes, and migration head `0020`. PR #391 merged with green CI/CodeRabbit, and dev/main are aligned at `704eabbf`.
@@ -138,7 +140,51 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | Bug | Family | Priority | Summary |
 |-----|--------|----------|---------|
+| [BUG-242](./bug-242-stale-subscription-webhook-overwrites-active-row.md) | Billing / webhook / subscription state machine | P1 | Late webhook from a superseded subscription overwrites the active subscription row (userId-keyed last-write-wins upsert, no identity/recency guard) → paying user locked out of `/app/*`, no self-service recovery, heals only on the next current-sub webhook (up to a billing cycle). |
+| [BUG-243](./bug-243-checkout-success-replay-overwrites-active-subscription.md) | Billing / checkout-success eager sync | P2 | Revisiting a stale `/checkout/success` URL from history re-syncs an old canceled subscription over the newer active row (write happens before the entitlement check) → user-deterministic lockout; same missing guard as BUG-242 but reproducible on demand. |
+| [BUG-244](./bug-244-reconciliation-cron-never-scheduled.md) | Billing / reconciliation / deploy-infra | P2 | The Stripe reconciliation safety net never runs — no Vercel cron / scheduled Action invokes the POST-only route, and it defaults to `dryRun=true`. Duplicate subscriptions and drifted rows are never auto-healed; BUG-120/205/DEBT-155 fixes are inert in production. |
+| [BUG-245](./bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md) | Billing / checkout race / idempotency | P2 | Concurrent two-tab subscribe defeats every duplicate guard (all key on a not-yet-existing subscription) and per-tab random UUIDs bypass the BUG-148 deterministic-key collapse → two live subscriptions on one customer; masked in-app by the single local row. |
+| [BUG-246](./bug-246-deleted-account-stripe-cancellation-no-drain.md) | Billing / Clerk deletion / money tail-risk | P2 | Deleted-account Stripe cancellation has no drain beyond Svix retries; cascade-deleted local rows hide the orphan from reconciliation → Stripe keeps billing a deleted account with no monitoring or recovery path. |
+| [BUG-247](./bug-247-pricing-portal-failure-shows-checkout-error-copy.md) | Billing / pricing copy | P3 | Pricing-page "Manage Billing" portal failures redirect to `?checkout=error` and show "Checkout failed. Please try again." for an action that was never a checkout; the app-billing sibling already has correct portal-failure copy. |
 | [BUG-241](./bug-241-deploy-pipeline-has-no-migration-step.md) | CI/CD / deploy / migrations | P2 | Deploy pipeline has no migration step — schema PRs ship code without applying migrations to dev/prod, with green CI (CI migrates only its throwaway DB). Systemic cause of BUG-240; will recur for every future migration without a gate. |
+
+## Audit #21 — Stripe/Billing Deep Sweep (2026-06-11)
+
+Adversarial walk of the **entire Stripe surface** after the DEBT-410…415 free-trial campaign and the DEBT-413 `FREE_TRIAL_ENABLED` flag removal, focused on the owner's hypothesis that **state transitions** hide the bugs: trial→paid, trial→canceled (no card), cancel, payment lapse (past_due/unpaid), start/stop/resubscribe, monthly⇄annual, paused/resumed. Every confirmed finding has a line-level tracer-bullet trace from a real entry point (server action / webhook route / cron / page render) and was rechecked for trace validity, reachability + Stripe semantics, and prior-art/registry collisions. 8 candidate findings were generated; 6 survived, 2 were refuted as duplicate refiles of already-known candidates.
+
+**Methodology:**
+- Read the false-positive registry (`index.md` "Findings Confirmed as NOT Bugs" sections) and grepped `docs/_archive/bugs/` + `docs/_archive/debt/` before filing, honoring the do-not-refile list (BUG-077 paymentProcessing, BUG-137 boundary, BUG-148/149/198 idempotency, BUG-205 reconciliation winner, DEBT-383/384/385/386, Audit #4/#7/#13 rejections).
+- Read the representative tests for each surface to learn intended behavior before judging.
+- Rechecked the transition matrix + cross-cutting seams (webhook auth ordering, cron auth, entitlement gates, URL construction, env validation, `trialEndsAt` consistency, idempotency), producing a structured finding set + a clean-surface list.
+- Per candidate, revalidated the trace, reachability + Stripe semantics, and prior-art/registry status. Every cited `file:line` was re-opened against the live tree.
+
+**6 new bugs filed (BUG-242..247):**
+
+| Bug | Family | Priority | Summary |
+|-----|--------|----------|---------|
+| [BUG-242](./bug-242-stale-subscription-webhook-overwrites-active-row.md) | Billing / webhook state machine | P1 | Late webhook from a superseded subscription overwrites the active row (no identity/recency guard on the userId-keyed upsert) |
+| [BUG-243](./bug-243-checkout-success-replay-overwrites-active-subscription.md) | Billing / checkout-success eager sync | P2 | Stale `/checkout/success` URL replay overwrites the newer active subscription (writes before the entitlement check) |
+| [BUG-244](./bug-244-reconciliation-cron-never-scheduled.md) | Billing / reconciliation / infra | P2 | Reconciliation safety net never runs — no scheduler invokes the POST-only, `dryRun`-default route |
+| [BUG-245](./bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md) | Billing / checkout race | P2 | Concurrent two-tab checkout creates duplicate live subscriptions; per-tab UUIDs bypass the deterministic-key collapse |
+| [BUG-246](./bug-246-deleted-account-stripe-cancellation-no-drain.md) | Billing / Clerk deletion | P2 | Deleted-account Stripe cancellation has no drain past Svix retries; cascade-deleted rows hide the orphan |
+| [BUG-247](./bug-247-pricing-portal-failure-shows-checkout-error-copy.md) | Billing / pricing copy | P3 | Pricing portal failures show checkout-failure copy for a non-checkout action |
+
+**Two refuted (duplicate refiles, not factually wrong):** a finder independently re-derived the unscheduled-reconciliation gap and the deleted-account drain gap; both are real and now filed once as BUG-244 and BUG-246 respectively (not double-counted).
+
+**Surfaces confirmed clean (with evidence):**
+- **Trial lifecycle (rows 1–6, 20):** trial_period_days=7 reaches Stripe for both monthly and annual with `payment_method_collection: 'if_required'` + `missing_payment_method: 'cancel'`; `metadata.user_id` preserved; `trialEndsAt` derived only while `inTrial` from `currentPeriodEnd`, single source across check-entitlement and the app-shell countdown; price↔plan mapping inverse-consistent both directions; trial-end revocation is exact because `isEntitled` requires `currentPeriodEnd > now`. All trial events (`created/updated/deleted/paused/resumed/trial_will_end/pending_update_*` + checkout/invoice refs) are handled and converge on retrieve-current-state.
+- **Payment failure (rows 7–9, 18):** `pastDue` grace is bounded by `currentPeriodEnd` and ends at Stripe's dunning verdict; `pastDue→active` recovery is event-complete; no `unpaid`/`paused` lockout state exists (every shape converges on the portal, which needs only the customer mapping, not entitled status); `getTrialDaysLeft` clamp/ceil is correct at clock edges. (The renewal-seam eventual-consistency window — a paid `active` user briefly redirected if `subscription.updated` is delayed — is the architecture-wide BUG-137 boundary, pre-adjudicated, not refiled.)
+- **Plan switch / rare states (rows 12–15):** monthly⇄annual portal switch syncs correctly via priceId→plan; fresh-checkout plan switch is correctly blocked and no UI offers it; `paused` is unreachable in this product (no `pause_collection`, trial end_behavior is `cancel`) and harmless if forced; `pending_update_*` handled and untriggerable; refunds/disputes correctly no-op locally (mirrors Stripe; owner cancel+refund still syncs via `deleted`); `invoice.payment_action_required` cannot regress status (always re-fetches live).
+- **Cross-cutting seams:** webhook signature-presence 400 precedes the limiter; `x-vercel-forwarded-for`-only IP trust (DEBT-135) prevents source-IP 429 starvation on Vercel; cron auth before any state change (BUG-207 not regressed) with timing-safe compare; every app-data controller calls `requireEntitledUserId`; success/cancel/return URLs built only from env + ROUTES (no open redirect, `{CHECKOUT_SESSION_ID}` template intact); `STRIPE_WEBHOOK_E2E_OWNER` inert for real prod subscriptions; API version pin matches the SDK bundled version (no drift beyond archived DEBT-404/406); `executeIdempotent` re-validates replayed results against strict output schemas; auth precedes rate-limit precedes idempotency.
+- **UI/CTA truth table:** every reachable `SubscriptionStatus × entitlement` combination maps to a banner/CTA whose click can deliver what it promises; `?checkout=`/`?reason=` precedence and reason-param spoofing fail safe; the checkout-success interstitial copy matches synced status; marketing-home pricing does not drift from the pricing page.
+
+**Uncertain candidates deliberately NOT filed (with why):**
+- Pre-claim deterministic processor failures (e.g. a price id not in the configured plan) throw *before* `stripeEvents.claim`, so they burn Stripe's ~3-day retry window with no `stripe_events` row for observability — but the trigger is ops misconfiguration, not a user flow, and it is adjacent to archived DEBT-384. Noted only.
+- `SUBSCRIPTION_LIST_LIMIT=10` in the gateway pre-check vs 100 in reconcile: a customer with >10 subscriptions could in theory hide a blocking sub past page 1, but no realistic breaking input could be constructed (Stripe lists newest-first; >10 subs needs extreme duplicate history). Noted only.
+- Stripe `409 idempotency_key_in_use` is not classified transient, so an exactly-concurrent duplicate sharing a deterministic key fails one side with a generic `checkout=error` instead of returning the winner's result — one-click recovery, P4 polish; becomes more relevant if BUG-245's fix adopts deterministic Stripe keys. Noted only.
+- Billing page renders raw camelCase domain enums (`monthly · inTrial`) to users — cosmetic P4, no concrete harm evidence (no-speculative-debt rule). Not filed.
+- Non-Vercel-host `getClientIp → 'unknown'` collapses the webhook limit to one shared bucket — deployment-dependent class the registry already rejects (Audit #13), and DEBT-135 documents `'unknown'` keying as the chosen fail-safe. Not filed.
+- Price-env rotation making `toDomain` throw `INTERNAL_ERROR` for existing subscribers, and `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` having only `min(1)` (vs the price-id `price_` regex) — both deployment/config-dependent, registry precedent rejects them. Not filed.
 
 ## Audit #20 — Post-Archive Active-Exam Follow-Up (2026-04-25)
 
