@@ -33,7 +33,6 @@ export class CreateCheckoutSessionUseCase {
     private readonly payments: PaymentGateway,
     private readonly logger: Logger,
     private readonly now: () => Date = () => new Date(),
-    private readonly freeTrialEnabled = false,
   ) {}
 
   private warnOrphanedStripeCustomer(input: {
@@ -128,10 +127,7 @@ export class CreateCheckoutSessionUseCase {
       email: input.email,
     });
 
-    const trialPeriodDays =
-      this.freeTrialEnabled && subscription === null
-        ? FREE_TRIAL_DAYS
-        : undefined;
+    const trialPeriodDays = subscription === null ? FREE_TRIAL_DAYS : undefined;
 
     const baseCheckoutSessionInput = {
       userId: input.userId,

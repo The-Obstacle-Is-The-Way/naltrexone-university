@@ -47,12 +47,12 @@ type PricingPageModule = typeof import('@/app/pricing/page');
 type PricingClientModule = typeof import('@/app/pricing/pricing-client');
 type PricingPageInput = Parameters<PricingPageModule['default']>[0];
 type PricingSearchParamsForTest = Awaited<PricingPageInput['searchParams']>;
-type PricingFeatureFlagsForTest = NonNullable<PricingPageInput['featureFlags']>;
 
 let PricingView: PricingPageModule['PricingView'];
 let getPricingBanner: PricingPageModule['getPricingBanner'];
 let loadPricingData: PricingPageModule['loadPricingData'];
 let runSubscribeAction: PricingPageModule['runSubscribeAction'];
+let DeferredPricingView: PricingPageModule['DeferredPricingView'];
 let PricingPage: PricingPageModule['default'];
 let SubscribeButton: PricingClientModule['SubscribeButton'];
 
@@ -69,6 +69,7 @@ beforeAll(async () => {
   getPricingBanner = pageModule.getPricingBanner;
   loadPricingData = pageModule.loadPricingData;
   runSubscribeAction = pageModule.runSubscribeAction;
+  DeferredPricingView = pageModule.DeferredPricingView;
   PricingPage = pageModule.default;
   SubscribeButton = pricingClientModule.SubscribeButton;
 });
@@ -124,7 +125,6 @@ const pricingTestUser = {
 
 async function renderPricingPageWithEntitlementReason(
   reason: Exclude<CheckEntitlementOutput['reason'], null | undefined>,
-  featureFlags?: PricingFeatureFlagsForTest,
 ) {
   const checkEntitlementUseCase = new FakeUseCase<
     CheckEntitlementInput,
@@ -136,7 +136,6 @@ async function renderPricingPageWithEntitlementReason(
   const element = await PricingPage({
     searchParams: Promise.resolve({}),
     authNavFn: () => <div>AuthNav</div>,
-    featureFlags,
     deps: {
       authGateway: new FakeAuthGateway(pricingTestUser),
       checkEntitlementUseCase,
@@ -148,7 +147,6 @@ async function renderPricingPageWithEntitlementReason(
 
 async function renderPricingPageWithEntitlement(
   output: CheckEntitlementOutput,
-  featureFlags?: PricingFeatureFlagsForTest,
 ) {
   const checkEntitlementUseCase = new FakeUseCase<
     CheckEntitlementInput,
@@ -157,7 +155,6 @@ async function renderPricingPageWithEntitlement(
   const element = await PricingPage({
     searchParams: Promise.resolve({}),
     authNavFn: () => <div>AuthNav</div>,
-    featureFlags,
     deps: {
       authGateway: new FakeAuthGateway(pricingTestUser),
       checkEntitlementUseCase,
@@ -169,7 +166,6 @@ async function renderPricingPageWithEntitlement(
 
 async function renderAnonymousPricingPage(
   searchParams: PricingSearchParamsForTest = {},
-  featureFlags?: PricingFeatureFlagsForTest,
 ) {
   const checkEntitlementUseCase = new FakeUseCase<
     CheckEntitlementInput,
@@ -181,7 +177,6 @@ async function renderAnonymousPricingPage(
   const element = await PricingPage({
     searchParams: Promise.resolve(searchParams),
     authNavFn: () => <div>AuthNav</div>,
-    featureFlags,
     deps: {
       authGateway: new FakeAuthGateway(null),
       checkEntitlementUseCase,
@@ -535,11 +530,11 @@ describe('app/pricing', () => {
     expect(getPricingBanner({})).toBe(null);
   });
 
-  it('builds the trial-forward banner for first-timers when the trial is enabled', async () => {
+  it('builds the trial-forward banner for first-timers', async () => {
     expect(
       getPricingBanner(
         { reason: 'subscription_required' },
-        { freeTrialEnabled: true, subscriptionStatus: null },
+        { subscriptionStatus: null },
       ),
     ).toMatchObject({
       tone: 'info',
@@ -547,11 +542,11 @@ describe('app/pricing', () => {
     });
   });
 
-  it('builds an ended-access banner for lapsed canceled subscriptions when the trial is enabled', async () => {
+  it('builds an ended-access banner for lapsed canceled subscriptions', async () => {
     expect(
       getPricingBanner(
         { reason: 'subscription_required' },
-        { freeTrialEnabled: true, subscriptionStatus: 'canceled' },
+        { subscriptionStatus: 'canceled' },
       ),
     ).toMatchObject({
       tone: 'info',
@@ -559,23 +554,11 @@ describe('app/pricing', () => {
     });
   });
 
-  it('keeps the subscription-required banner for other prior statuses when the trial is enabled', async () => {
+  it('keeps the subscription-required banner for other prior statuses', async () => {
     expect(
       getPricingBanner(
         { reason: 'subscription_required' },
-        { freeTrialEnabled: true, subscriptionStatus: 'paymentFailed' },
-      ),
-    ).toMatchObject({
-      tone: 'info',
-      message: 'Subscription required to access the app.',
-    });
-  });
-
-  it('keeps the subscription-required banner when the trial is disabled', async () => {
-    expect(
-      getPricingBanner(
-        { reason: 'subscription_required' },
-        { freeTrialEnabled: false, subscriptionStatus: null },
+        { subscriptionStatus: 'paymentFailed' },
       ),
     ).toMatchObject({
       tone: 'info',
@@ -926,7 +909,7 @@ describe('app/pricing', () => {
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('Pricing');
-    expect(html).toContain('Subscribe Monthly');
+    expect(html).toContain('Start 7-day free trial');
   });
 
   it('does not render subscription-required copy for anonymous pricing visitors without search params', async () => {
@@ -934,7 +917,7 @@ describe('app/pricing', () => {
       await renderAnonymousPricingPage();
 
     expect(html).toContain('Pricing');
-    expect(html).toContain('Subscribe Monthly');
+    expect(html).toContain('Start 7-day free trial');
     expect(html).not.toContain('Subscription required to access the app.');
     expect(checkEntitlementUseCase.inputs).toHaveLength(0);
   });
@@ -959,10 +942,36 @@ describe('app/pricing', () => {
     const header = doc.querySelector('header');
 
     expect(html).toContain('Pricing');
-    expect(html).toContain('Subscribe Monthly');
+    expect(html).toContain('Start 7-day free trial');
     expect(
       header?.querySelector('a[href="/sign-in"]')?.textContent?.trim(),
     ).toBe('Sign in');
+  });
+
+  it('renders trial CTAs through the deferred pricing path for anonymous visitors', async () => {
+    const checkEntitlementUseCase = new FakeUseCase<
+      CheckEntitlementInput,
+      CheckEntitlementOutput
+    >({
+      isEntitled: false,
+      reason: null,
+    });
+
+    const element = await DeferredPricingView({
+      searchParams: Promise.resolve({ reason: 'subscription_required' }),
+      deps: {
+        authGateway: new FakeAuthGateway(null),
+        checkEntitlementUseCase,
+      },
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain(
+      'Start your free trial to access the app — no card required.',
+    );
+    expect(html).toContain('Start 7-day free trial');
+    expect(html).not.toContain('Subscription required to access the app.');
+    expect(checkEntitlementUseCase.inputs).toHaveLength(0);
   });
 
   it('renders a neutral pricing skeleton fallback without awaiting search params', async () => {
@@ -1021,9 +1030,16 @@ describe('app/pricing', () => {
   });
 
   it('does NOT pass manageBillingAction when reason=subscription_canceled', async () => {
-    const html = await renderPricingPageWithEntitlementReason(
-      'subscription_canceled',
-    );
+    // subscription_canceled only arises for a canceled row whose period is
+    // still active (determineNonEntitledReason); lapsed rows surface as
+    // subscription_required instead.
+    const html = await renderPricingPageWithEntitlement({
+      isEntitled: false,
+      reason: 'subscription_canceled',
+      subscriptionStatus: 'canceled',
+      hasActiveSubscriptionPeriod: true,
+      trialEndsAt: null,
+    });
 
     expect(html).toContain(
       'Your subscription is inactive. Choose a plan to restart access.',
@@ -1049,23 +1065,24 @@ describe('app/pricing', () => {
     expect(html).not.toContain('Subscribe Monthly');
   });
 
-  it('still renders subscription-required copy for logged-in non-entitled redirects', async () => {
+  it('renders trial-forward copy for logged-in first-timer redirects', async () => {
     const html = await renderPricingPageWithEntitlementReason(
       'subscription_required',
     );
 
-    expect(html).toContain('Subscription required to access the app.');
-    expect(html).toContain('Subscribe Monthly');
-    expect(html).toContain('Subscribe Annual');
+    expect(html).toContain(
+      'Start your free trial to access the app — no card required.',
+    );
+    expect(html).toContain('Start 7-day free trial');
+    expect(html).not.toContain('Subscription required to access the app.');
+    expect(html).not.toContain('Subscribe Monthly');
+    expect(html).not.toContain('Subscribe Annual');
   });
 
-  it('renders trial CTAs and trial-forward copy for anonymous visitors when FREE_TRIAL_ENABLED', async () => {
-    const { html } = await renderAnonymousPricingPage(
-      {
-        reason: 'subscription_required',
-      },
-      { freeTrialEnabled: true },
-    );
+  it('renders trial CTAs and trial-forward copy for anonymous visitors', async () => {
+    const { html } = await renderAnonymousPricingPage({
+      reason: 'subscription_required',
+    });
 
     expect(html).toContain(
       'Start your free trial to access the app — no card required.',
@@ -1078,17 +1095,14 @@ describe('app/pricing', () => {
     expect(html).not.toContain('Subscribe Annual');
   });
 
-  it('renders trial CTAs for signed-in first-time users when FREE_TRIAL_ENABLED', async () => {
-    const html = await renderPricingPageWithEntitlement(
-      {
-        isEntitled: false,
-        reason: 'subscription_required',
-        subscriptionStatus: null,
-        hasActiveSubscriptionPeriod: false,
-        trialEndsAt: null,
-      },
-      { freeTrialEnabled: true },
-    );
+  it('renders trial CTAs for signed-in first-time users', async () => {
+    const html = await renderPricingPageWithEntitlement({
+      isEntitled: false,
+      reason: 'subscription_required',
+      subscriptionStatus: null,
+      hasActiveSubscriptionPeriod: false,
+      trialEndsAt: null,
+    });
 
     expect(html).toContain(
       'Start your free trial to access the app — no card required.',
@@ -1097,55 +1111,20 @@ describe('app/pricing', () => {
     expect(html).not.toContain('Subscribe Monthly');
   });
 
-  it('renders ended-access copy and standard CTAs for lapsed subscriptions when FREE_TRIAL_ENABLED', async () => {
-    const html = await renderPricingPageWithEntitlement(
-      {
-        isEntitled: false,
-        reason: 'subscription_required',
-        subscriptionStatus: 'canceled',
-        hasActiveSubscriptionPeriod: false,
-        trialEndsAt: null,
-      },
-      { freeTrialEnabled: true },
-    );
+  it('renders ended-access copy and standard CTAs for lapsed subscriptions', async () => {
+    const html = await renderPricingPageWithEntitlement({
+      isEntitled: false,
+      reason: 'subscription_required',
+      subscriptionStatus: 'canceled',
+      hasActiveSubscriptionPeriod: false,
+      trialEndsAt: null,
+    });
 
     expect(html).toContain('Your access ended — choose a plan to continue.');
     expect(html).toContain('Subscribe Monthly');
     expect(html).toContain('Subscribe Annual');
     expect(html).not.toContain('Start 7-day free trial');
     expect(html).not.toContain('Your free trial ended');
-  });
-
-  it('keeps the pay-first pricing page unchanged when FREE_TRIAL_ENABLED is false', async () => {
-    const html = await renderPricingPageWithEntitlement(
-      {
-        isEntitled: false,
-        reason: 'subscription_required',
-        subscriptionStatus: null,
-        hasActiveSubscriptionPeriod: false,
-        trialEndsAt: null,
-      },
-      { freeTrialEnabled: false },
-    );
-
-    expect(html).toContain('Subscription required to access the app.');
-    expect(html).toContain('Subscribe Monthly');
-    expect(html).toContain('Subscribe Annual');
-    expect(html).not.toContain('Start 7-day free trial');
-    expect(html).not.toContain('free trial');
-    expect(html).not.toContain('no card required');
-  });
-
-  it('keeps the pay-first pricing page unchanged when FREE_TRIAL_ENABLED is unset', async () => {
-    const html = await renderPricingPageWithEntitlementReason(
-      'subscription_required',
-      { freeTrialEnabled: false },
-    );
-
-    expect(html).toContain('Subscription required to access the app.');
-    expect(html).toContain('Subscribe Monthly');
-    expect(html).not.toContain('Start 7-day free trial');
-    expect(html).not.toContain('free trial');
   });
 
   it.each([
@@ -1157,23 +1136,23 @@ describe('app/pricing', () => {
     [
       { reason: 'subscription_canceled' },
       'Your subscription is inactive. Choose a plan to restart access.',
-      'Subscribe Monthly',
+      'Start 7-day free trial',
     ],
     [
       { reason: 'payment_processing' },
       'Payment processing. It may take a moment for access to activate.',
       'Manage Billing',
     ],
-    [{ checkout: 'cancel' }, 'Checkout canceled.', 'Subscribe Monthly'],
+    [{ checkout: 'cancel' }, 'Checkout canceled.', 'Start 7-day free trial'],
     [
       { checkout: 'error' },
       'Checkout failed. Please try again.',
-      'Subscribe Monthly',
+      'Start 7-day free trial',
     ],
     [
       { checkout: 'rate_limited' },
       'Too many checkout attempts. Please wait and try again.',
-      'Subscribe Monthly',
+      'Start 7-day free trial',
     ],
   ] satisfies Array<
     [

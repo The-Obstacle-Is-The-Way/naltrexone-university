@@ -65,7 +65,6 @@ export function createUseCaseFactories(input: {
         gateways.createPaymentGateway(),
         primitives.logger,
         primitives.now,
-        primitives.env.FREE_TRIAL_ENABLED === 'true',
       ),
     createPortalSessionUseCase: () =>
       new CreatePortalSessionUseCase(

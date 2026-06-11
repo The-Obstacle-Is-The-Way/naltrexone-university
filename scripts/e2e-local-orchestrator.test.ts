@@ -86,7 +86,6 @@ describe('createE2ECommandPlan', () => {
       ],
       env: {
         DATABASE_URL: dockerUrl,
-        FREE_TRIAL_ENABLED: 'true',
       },
     });
   });
@@ -106,7 +105,6 @@ describe('createE2ECommandPlan', () => {
         label: 'Run Playwright E2E',
         command: 'pnpm',
         args: ['exec', 'playwright', 'test', 'tests/e2e/practice.spec.ts'],
-        env: { FREE_TRIAL_ENABLED: 'true' },
       },
     ]);
   });
@@ -125,7 +123,6 @@ describe('createE2ECommandPlan', () => {
         label: 'Run Playwright E2E',
         command: 'pnpm',
         args: ['exec', 'playwright', 'test'],
-        env: { FREE_TRIAL_ENABLED: 'true' },
       },
     ]);
   });

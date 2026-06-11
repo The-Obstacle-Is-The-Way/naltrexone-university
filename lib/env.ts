@@ -44,7 +44,6 @@ const envSchema = z.object({
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1).optional(),
   CLERK_WEBHOOK_SIGNING_SECRET: z.string().min(1).optional(),
   NEXT_PUBLIC_SKIP_CLERK: z.enum(['true', 'false']).optional(),
-  FREE_TRIAL_ENABLED: z.enum(['true', 'false']).optional(),
 
   // Stripe
   STRIPE_SECRET_KEY: z.string().min(1),

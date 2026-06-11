@@ -607,7 +607,7 @@ The marketing landing page CTA strategy was standardized in DEBT-258:
 
 ### Trial CTA Subtext (DEBT-410)
 
-When `FREE_TRIAL_ENABLED` is on, the pricing-card primary CTAs read "Start 7-day free trial" and carry a one-line post-trial price note directly under the button:
+For trial-eligible visitors (not entitled, no subscription row — anonymous visitors included), the pricing-card primary CTAs read "Start 7-day free trial" and carry a one-line post-trial price note directly under the button:
 
 ```text
 mt-3 text-center text-sm text-muted-foreground
@@ -618,7 +618,7 @@ mt-3 text-center text-sm text-muted-foreground
 **Rules:**
 - Uses the 12.3 "Card body / dense helper copy" role (`text-sm text-muted-foreground`); no new type role.
 - The note is non-interactive metadata for the CTA above it — never a link or button.
-- With the flag off, the CTA renders the standard "Subscribe Monthly" / "Subscribe Annual" labels and no subtext (byte-identical to the pre-trial pricing card).
+- For non-eligible visitors (any prior or current subscription row, e.g. canceled ex-subscribers), the CTA renders the standard "Subscribe Monthly" / "Subscribe Annual" labels and no subtext.
 
 **Source:** `app/pricing/pricing-view.tsx`
 

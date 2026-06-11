@@ -472,7 +472,7 @@ describe('container factories', () => {
     ).toBe(stripeClient);
   });
 
-  it('wires FREE_TRIAL_ENABLED=true into the checkout use case at the composition root', async () => {
+  it('gives a first-time user a 7-day trial checkout at the composition root without an env flag', async () => {
     const paymentGateway = new FakePaymentGateway({
       externalCustomerId: 'cus_should_not_be_used',
       checkoutUrl: 'https://stripe/checkout',
@@ -490,7 +490,6 @@ describe('container factories', () => {
           NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
           STRIPE_WEBHOOK_SECRET: 'whsec',
           NEXT_PUBLIC_APP_URL: 'https://app.example.com',
-          FREE_TRIAL_ENABLED: 'true',
         } as unknown as typeof import('./env').env,
         logger: new FakeLogger() as unknown as typeof import('./logger').logger,
         getStripe: () =>
