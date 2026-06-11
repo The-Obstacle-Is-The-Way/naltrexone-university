@@ -4,6 +4,7 @@
 **Created:** 2026-06-10
 **Status:** **Decided spec — no optionality.** Research-backed (Stripe DPA/SSA + Stripe docs + 2026 legal/regulatory sources). Docs-first; legal copy to be drafted and lawyer-reviewed before publishing.
 **Owner:** Founder / legal (engineering owns the on-site pages + Stripe wiring).
+**Deferred:** 2026-06-10 — **tabled by owner as a known, accepted obligation, not a launch blocker.** The trial functions without it and current real-world exposure is low (pre-revenue, negligible live user base) — **but this must be completed before active user acquisition / marketing.** Gated on owner-supplied business facts (no dedicated legal entity exists yet — sole proprietor with a clinical PLLC; the entity decision comes first) plus generated + lawyer-reviewed copy. Everything needed to resume cold is in the **Owner copy-prep checklist** below.
 **Related:** [DEBT-410](./debt-410-free-trial-pathway-and-pricing-access-copy.md) (the live free trial this serves), [Debt Index](./index.md). The Stripe Account-settings legal-link gap and descriptor-verification item surfaced during the DEBT-410 trial launch.
 
 ---
@@ -61,6 +62,24 @@ The free trial launched (DEBT-410): the app now takes real signups into a **paid
 ## Dependencies
 
 - The free trial is already live (DEBT-410); this closes its legal/compliance tail. Pairs with the DEBT-410 Stripe self-serve cancel path and Stripe-native trial-ending email configuration.
+
+## Owner copy-prep checklist (the gating work — owner-driven)
+
+*A framework to drive the copy. **Not legal advice**; the Step 3 lawyer review is the gate. This is the cold-start resume point — when you have clear time, work top to bottom.*
+
+**Step 0 — Business facts (owner-supplied):** legal entity name (no dedicated entity exists yet — sole proprietor with a clinical PLLC; **decide the entity first**: use the PLLC, form a new LLC, or operate as sole proprietor), public product name (Addiction Boards @ `addictionboards.com`), contact email for privacy/legal requests, mailing/contact address, governing-law state.
+
+**Step 1 — Generate (Termly):** Privacy Policy + Terms of Service + Cookie Policy. Answer: paid SaaS subscription; collects email/account + usage data; payments via a third-party processor; cookies yes (auth/session; Sentry only); does **not** sell data; **paid subscription + auto-renewal + free trial = YES** (this triggers the trial clauses — the critical part); US audience, no under-13. Prefer Termly's **embed** on our own `/privacy` + `/terms` so the pages are on-site **and** auto-update.
+
+**Step 2 — Three mandatory customizations** (generic generator output won't have these):
+
+- **A. Trial/auto-renewal disclosure (ROSCA / state ARL):** 7-day free trial, no card to start; auto-renews after the trial to **$29/mo or $199/yr**, charged each period until cancelled; no card ⇒ trial ends, no charge; cancel anytime in the billing portal, effective at period end, access retained until then; reminder emails before trial-end/renewal. Material terms must be clear/conspicuous **before** billing info is collected.
+- **B. Medical-education disclaimer (prominent):** "[Product] provides educational content for medical board-exam preparation only. NOT medical or healthcare advice; not a substitute for professional clinical judgment; not for diagnosis, treatment, or patient-care decisions. Verify against current guidelines; use at your own risk; consult a qualified clinician for medical concerns."
+- **C. Subprocessors (in the Privacy Policy):** Clerk (auth) · Stripe (payments/billing — Stripe stores card data, we don't) · Vercel (hosting) · Neon (database) · Sentry (error monitoring). Data collected: account email/identity, billing identifiers (not card numbers), and product-usage (sessions, answers, bookmarks, feedback).
+
+**Step 3 — Lawyer review (before publishing):** focus on (1) auto-renewal/trial compliance — ROSCA + state ARL (disclosure adequacy/placement, consent, cancellation); (2) the medical-education disclaimer's liability adequacy; (3) data-practice accuracy + user-rights language (CCPA/CPRA + state laws); (4) governing law, limitation of liability, dispute resolution.
+
+**Step 4 — Hand to engineering (the buildable part, ~half a day):** provide the lawyer-approved text (or Termly embeds) + the Step-0 facts. Engineering then builds `/privacy` + `/terms` under `app/(marketing)/`, adds `ROUTES.PRIVACY`/`ROUTES.TERMS`, links them from the footer + checkout/signup entry (disclosure before billing), and sets the Stripe Account-settings URLs. The shortened Stripe descriptor is already present + compliant.
 
 ## Sources
 
