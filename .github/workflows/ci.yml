@@ -191,6 +191,8 @@ jobs:
         # lives in this repository. Keep E2E on for pushes and human same-repo PRs.
         if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
         run: pnpm test:e2e
+        env:
+          FREE_TRIAL_ENABLED: 'true'
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}

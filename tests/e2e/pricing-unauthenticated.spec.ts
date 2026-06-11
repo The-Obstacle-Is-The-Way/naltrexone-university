@@ -6,12 +6,12 @@ test('unauthenticated user is redirected to sign-up when starting checkout', asy
   await page.goto('/pricing');
   await expect(page.getByRole('heading', { name: 'Pricing' })).toBeVisible();
 
-  const subscribeMonthly = page.getByRole('button', {
-    name: 'Subscribe Monthly',
+  const startTrial = page.getByRole('button', {
+    name: 'Start 7-day free trial',
   });
-  await expect(subscribeMonthly).toBeVisible();
+  await expect(startTrial.first()).toBeVisible();
 
-  await subscribeMonthly.click();
+  await startTrial.first().click();
 
   await expect(page).toHaveURL(/\/sign-up/, { timeout: 15_000 });
 });
