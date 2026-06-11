@@ -194,7 +194,7 @@ v1 enables Stripe's native "trial ending" / "upcoming renewal" customer emails (
 
 ## B.12 Kill-switch (D10)
 
-`FREE_TRIAL_ENABLED` now exists in `lib/env.ts` following the existing `NEXT_PUBLIC_SKIP_CLERK: z.enum(['true','false']).optional()` pattern (`lib/env.ts:46-47`) and is wired at the composition root (`lib/container/use-cases.ts:61-69`). It is currently on in target environments after PR-4 launch; when off, it restores the post-PR-1 pay-first behavior (no trial param, Subscribe CTAs, anonymous pricing visitors still see no banner). This is an operational rollout flag, not a product option, and DEBT-413 removes it once the owner grades the live path.
+`FREE_TRIAL_ENABLED` now exists in `lib/env.ts` following the existing `NEXT_PUBLIC_SKIP_CLERK: z.enum(['true','false']).optional()` pattern (`lib/env.ts:46-47`) and is wired at the composition root (`lib/container/use-cases.ts:61-69`). It is currently on in target environments after PR-4 launch; when off, it restores the post-PR-1 pay-first behavior (no trial param, Subscribe CTAs, anonymous pricing visitors still see no banner). This is an operational rollout flag, not a product option, and DEBT-413 removes it as an owner-graded cleanup PR; the live smoke + Fable billing bug-hunt run afterward on the flag-free code.
 
 ## B.13 Shipped phased implementation plan + active follow-up tails
 
