@@ -20,7 +20,7 @@ class FailingStripeEventRepository extends FakeStripeEventRepository {
 }
 
 class FailingSubscriptionRepository extends FakeSubscriptionRepository {
-  async upsert(): Promise<void> {
+  async upsert(): Promise<never> {
     throw new Error('boom');
   }
 }
@@ -256,6 +256,63 @@ describe('processStripeWebhook', () => {
     await processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' });
 
     expect(insertSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not let a superseded terminal subscription webhook overwrite a current active row', async () => {
+    const userId = crypto.randomUUID();
+    const subscriptions = new FakeSubscriptionRepository();
+    await subscriptions.upsert({
+      userId,
+      externalSubscriptionId: 'sub_current',
+      plan: 'monthly',
+      status: 'active',
+      currentPeriodEnd: new Date('2026-08-01T00:00:00.000Z'),
+      cancelAtPeriodEnd: false,
+    });
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_test',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_superseded_canceled',
+        type: 'customer.subscription.deleted',
+        subscriptionUpdate: {
+          userId,
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_superseded',
+          plan: 'monthly',
+          status: 'canceled',
+          currentPeriodEnd: new Date('2026-06-01T00:00:00.000Z'),
+          cancelAtPeriodEnd: false,
+        },
+      },
+    });
+
+    const { deps, stripeEvents } = createDeps({
+      paymentGateway,
+      subscriptions,
+    });
+
+    await expect(
+      processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
+    ).resolves.toBeUndefined();
+
+    await expect(
+      subscriptions.findByExternalSubscriptionId('sub_current'),
+    ).resolves.toMatchObject({
+      userId,
+      status: 'active',
+      currentPeriodEnd: new Date('2026-08-01T00:00:00.000Z'),
+    });
+    await expect(
+      subscriptions.findByExternalSubscriptionId('sub_superseded'),
+    ).resolves.toBeNull();
+    await expect(
+      stripeEvents.lock('evt_superseded_canceled'),
+    ).resolves.toMatchObject({
+      processedAt: expect.any(Date),
+      error: null,
+    });
   });
 
   it('marks non-subscription events as processed (no subscription update)', async () => {

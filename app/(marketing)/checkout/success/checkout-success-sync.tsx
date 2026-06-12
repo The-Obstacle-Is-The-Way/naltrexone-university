@@ -238,32 +238,45 @@ export async function syncCheckoutSuccess(
 
   const currentPeriodEnd = new Date(currentPeriodEndSeconds * MS_PER_SECOND);
 
-  await d.transaction(async ({ stripeCustomers, subscriptions }) => {
-    await stripeCustomers.insert(user.id, stripeCustomerId, {
-      conflictStrategy: 'authoritative',
-    });
-    await subscriptions.upsert({
-      userId: user.id,
-      externalSubscriptionId: subscriptionId,
-      plan,
-      status,
-      currentPeriodEnd,
-      cancelAtPeriodEnd,
-    });
-  });
+  const write = await d.transaction(
+    async ({ stripeCustomers, subscriptions }) => {
+      const result = await subscriptions.upsert({
+        userId: user.id,
+        externalSubscriptionId: subscriptionId,
+        plan,
+        status,
+        currentPeriodEnd,
+        cancelAtPeriodEnd,
+      });
 
-  const hasActiveSubscriptionPeriod = currentPeriodEnd.getTime() > Date.now();
-  const isEntitled = isEntitledStatus(status) && hasActiveSubscriptionPeriod;
+      if (result.persisted) {
+        await stripeCustomers.insert(user.id, stripeCustomerId, {
+          conflictStrategy: 'authoritative',
+        });
+      }
+
+      return result;
+    },
+  );
+
+  const effectiveStatus = write.persisted ? status : write.current.status;
+  const effectiveCurrentPeriodEnd = write.persisted
+    ? currentPeriodEnd
+    : write.current.currentPeriodEnd;
+  const hasActiveSubscriptionPeriod =
+    effectiveCurrentPeriodEnd.getTime() > Date.now();
+  const isEntitled =
+    isEntitledStatus(effectiveStatus) && hasActiveSubscriptionPeriod;
 
   if (!isEntitled) {
     const reason = determineNonEntitledReason(
-      status,
+      effectiveStatus,
       hasActiveSubscriptionPeriod,
     );
 
     redirectFn(`${ROUTES.PRICING}?reason=${reason}`);
-    return { status };
+    return { status: effectiveStatus };
   }
 
-  return { status };
+  return { status: effectiveStatus };
 }

@@ -543,7 +543,7 @@ describe('container factories', () => {
     const createSubscriptionRepository = vi.fn(() => ({
       findByUserId: async () => null,
       findByExternalSubscriptionId: async () => null,
-      upsert: async () => undefined,
+      upsert: async () => ({ persisted: true }) as const,
     }));
     const createStripeCustomerRepository = vi.fn(() => ({
       findByUserId: async () => null,

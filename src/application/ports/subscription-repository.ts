@@ -13,6 +13,10 @@ export type SubscriptionUpsertInput = {
   cancelAtPeriodEnd: boolean;
 };
 
+export type SubscriptionUpsertResult =
+  | { persisted: true }
+  | { persisted: false; current: Subscription };
+
 export interface SubscriptionRepository {
   findByUserId(userId: string): Promise<Subscription | null>;
 
@@ -20,5 +24,5 @@ export interface SubscriptionRepository {
     externalSubscriptionId: string,
   ): Promise<Subscription | null>;
 
-  upsert(input: SubscriptionUpsertInput): Promise<void>;
+  upsert(input: SubscriptionUpsertInput): Promise<SubscriptionUpsertResult>;
 }

@@ -1076,6 +1076,55 @@ describe('reconcileStripeSubscriptions', () => {
     expect(stripe.subscriptions.cancel).not.toHaveBeenCalled();
   });
 
+  it('keeps persisting a different canonical winner over a current entitled row', async () => {
+    const local = createUserSubscriptionFixture('sub_local', {
+      status: 'active',
+      currentPeriodEnd: 1_700_000_000,
+    });
+    const canonical = createUserSubscriptionFixture('sub_canonical', {
+      status: 'past_due',
+      currentPeriodEnd: 1_800_000_000,
+    });
+
+    const stripe = createStripeFromFixtures({
+      fixtures: [{ fixture: local }, { fixture: canonical }],
+    });
+    const subscriptions = new FakeSubscriptionRepository();
+    await subscriptions.upsert({
+      userId: primaryUserId,
+      externalSubscriptionId: local.id,
+      plan: 'monthly',
+      status: 'active',
+      currentPeriodEnd: new Date(1_700_000_000 * 1000),
+      cancelAtPeriodEnd: false,
+    });
+
+    const scenario = createReconciliationTestScenario({
+      stripe,
+      subscriptions,
+      localSubscriptions: [row(primaryUserId, local.id)],
+    });
+
+    const result = await scenario.run({ dryRun: true });
+
+    expect(result).toEqual({
+      scanned: 1,
+      updated: 1,
+      failed: 0,
+      failures: [],
+    });
+    await expect(
+      scenario.subscriptions.findByExternalSubscriptionId('sub_canonical'),
+    ).resolves.toMatchObject({
+      userId: primaryUserId,
+      status: 'pastDue',
+      currentPeriodEnd: new Date(1_800_000_000 * 1000),
+    });
+    await expect(
+      scenario.subscriptions.findByExternalSubscriptionId('sub_local'),
+    ).resolves.toBeNull();
+  });
+
   it('selects canonical by highest currentPeriodEnd even when local row is blocking', async () => {
     const local = createUserSubscriptionFixture('sub_local', {
       status: 'active',

@@ -123,13 +123,7 @@ export async function processStripeWebhook(
 
       try {
         if (event.subscriptionUpdate) {
-          await stripeCustomers.insert(
-            event.subscriptionUpdate.userId,
-            event.subscriptionUpdate.externalCustomerId,
-            { conflictStrategy: 'authoritative' },
-          );
-
-          await subscriptions.upsert({
+          const write = await subscriptions.upsert({
             userId: event.subscriptionUpdate.userId,
             externalSubscriptionId:
               event.subscriptionUpdate.externalSubscriptionId,
@@ -138,6 +132,14 @@ export async function processStripeWebhook(
             currentPeriodEnd: event.subscriptionUpdate.currentPeriodEnd,
             cancelAtPeriodEnd: event.subscriptionUpdate.cancelAtPeriodEnd,
           });
+
+          if (write.persisted) {
+            await stripeCustomers.insert(
+              event.subscriptionUpdate.userId,
+              event.subscriptionUpdate.externalCustomerId,
+              { conflictStrategy: 'authoritative' },
+            );
+          }
         }
 
         await stripeEvents.markProcessed(event.eventId);

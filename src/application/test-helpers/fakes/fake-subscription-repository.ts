@@ -2,8 +2,10 @@ import { ApplicationError } from '@/src/application/errors';
 import type {
   SubscriptionRepository,
   SubscriptionUpsertInput,
+  SubscriptionUpsertResult,
 } from '@/src/application/ports/repositories';
 import type { Subscription } from '@/src/domain/entities';
+import { shouldPersistSubscriptionWrite } from '@/src/domain/services';
 
 type SubscriptionSnapshot = {
   byUserId: ReadonlyArray<readonly [string, Subscription]>;
@@ -45,7 +47,9 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
     return this.byUserId.get(userId) ?? null;
   }
 
-  async upsert(input: SubscriptionUpsertInput): Promise<void> {
+  async upsert(
+    input: SubscriptionUpsertInput,
+  ): Promise<SubscriptionUpsertResult> {
     const mappedUserId = this.userIdByExternalSubscriptionId.get(
       input.externalSubscriptionId,
     );
@@ -59,6 +63,28 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
 
     const now = new Date();
     const existing = this.byUserId.get(input.userId);
+    const existingExternalSubscriptionId =
+      this.externalSubscriptionIdByUserId.get(input.userId);
+    if (
+      existing &&
+      existingExternalSubscriptionId &&
+      !shouldPersistSubscriptionWrite({
+        stored: {
+          subscriptionIdentity: existingExternalSubscriptionId,
+          status: existing.status,
+          currentPeriodEnd: existing.currentPeriodEnd,
+        },
+        incoming: {
+          subscriptionIdentity: input.externalSubscriptionId,
+          status: input.status,
+          currentPeriodEnd: input.currentPeriodEnd,
+        },
+        now,
+      })
+    ) {
+      return { persisted: false, current: cloneSubscription(existing) };
+    }
+
     const subscription: Subscription = {
       id: existing?.id ?? crypto.randomUUID(),
       userId: input.userId,
@@ -90,6 +116,7 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
       input.externalSubscriptionId,
       input.userId,
     );
+    return { persisted: true };
   }
 
   snapshot(): SubscriptionSnapshot {

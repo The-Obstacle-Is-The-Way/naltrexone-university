@@ -1,6 +1,6 @@
 # BUG-243: Revisiting a Stale `/checkout/success` URL Overwrites the Newer Active Subscription With the Old Canceled One (Eager Sync Writes Before It Checks)
 
-**Status:** Open
+**Status:** In Progress — fix implemented in `fix/bug-242-243-subscription-identity-recency-guard` (pending owner grade / merge)
 **Priority:** P2 (user-deterministic lockout of a paying user; borderline P1 — every trial-converted user permanently carries the trigger URL in browser history)
 **Date:** 2026-06-11
 **Family:** Billing / checkout-success eager sync
@@ -41,18 +41,23 @@ Coverage gap that let this ship: every test in `app/(marketing)/checkout/success
 - The trigger artifact is permanent and universal: every trial-converted user's history contains a superseded success URL forever. Tab-restore and URL-bar autocomplete make accidental revisits realistic, not adversarial.
 - Scope note: the replay persists whatever sub A's *current* live state is, so the canceled-A case above is the real trigger. A still inside its cancel-at-period-end window (status `active`) only matters here if a newer active sub B already coexists with the still-active A — which itself requires the concurrent-duplicate path ([BUG-245](./bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md)), since an otherwise-active A would block B's creation (`src/application/use-cases/create-checkout-session.ts:113-122`). It is a compounding edge, not an independent trigger.
 
-## Expected Fix (options — shares its durable layer with BUG-242)
+## Implemented Fix
 
-1. **Guard the sync write (entry-point fix).** Before the transaction at `checkout-success-sync.tsx:241`, load the existing row (`subscriptions.findByUserId`); if it points at a **different** `externalSubscriptionId` and the retrieved subscription is terminal (`canceled`/`incomplete_expired`) — or strictly older by Stripe `created` — skip the upsert and compute the render/redirect from the existing row (an entitled user should land on the dashboard, not get downgraded).
-2. **Repository-level identity/recency guard** (BUG-242 option 1) — fixes this page, the webhook, and the reconciler in one place; preferred as the durable layer.
-3. Optional hardening: also require session freshness (`session.status === 'complete'` plus a created-within-N-hours bound) before treating a success render as authoritative.
+The durable layer is the same shared domain write policy as BUG-242: `shouldPersistSubscriptionWrite` (`src/domain/services/subscription-write-guard.ts:25-42`) is called by both the Drizzle repository (`src/adapters/repositories/drizzle-subscription-repository.ts:81-128`) and `FakeSubscriptionRepository` (`src/application/test-helpers/fakes/fake-subscription-repository.ts:64-86`). That prevents the stale success render from corrupting the one-row subscription projection.
+
+Checkout-success also consumes the new `SubscriptionRepository.upsert` result (`src/application/ports/subscription-repository.ts:16-27`). If a stale terminal write is skipped, `syncCheckoutSuccess` computes entitlement and the interstitial/redirect outcome from the protected current row instead of the stale retrieved subscription (`app/(marketing)/checkout/success/checkout-success-sync.tsx:241-281`). That is the BUG-243-specific piece: the row stays current *and* the user is not redirected to pricing.
+
+Rejected alternatives:
+- Entry-point-only guard: rejected because it would leave webhook and reconcile/fake parity dependent on duplicate local policy.
+- Stripe `created` timestamp freshness: rejected for this fix because the confirmed replay regression is a terminal superseded-subscription overwrite, which the shared identity + terminal-state guard blocks without broadening Stripe DTOs.
+- Session age cap: rejected as optional hardening; it would not be the durable fix for webhook-originated stale writes.
 
 ## Verification
 
-- [ ] Unit test in `page.test.ts`: pre-seed (B, `active`, future period) in the fake repo, sync an old session whose subscription is canceled A → row still (B, `active`), user redirected to dashboard/billing, not pricing.
-- [ ] Unit test: fresh-checkout sync (empty repo) still persists and renders the DEBT-412 interstitial unchanged.
-- [ ] Manual tracer-bullet repro (steps above) passes after fix.
-- [ ] `pnpm test --run` + `pnpm test:e2e` green (trial-start spec unchanged).
+- [x] Unit test in `page.test.ts`: pre-seed (B, `active`, future period), sync an old session whose subscription is canceled A → row still B, `syncCheckoutSuccess` resolves entitled, and pricing redirect is not called (`app/(marketing)/checkout/success/page.test.ts:1109-1194`).
+- [x] Fresh-checkout sync/interstitial tests remain covered in the same page test file (`app/(marketing)/checkout/success/page.test.ts:270-363,1196-1291`).
+- [x] Shared fake and Drizzle guard tests prove the skipped write keeps B and same-subscription active→canceled still persists (`src/application/test-helpers/fakes/fake-subscription-repository.test.ts:70-122`; `tests/integration/stripe-repositories.integration.test.ts:189-272`).
+- [x] Focused verification green: `pnpm test --run src/domain/services/subscription-write-guard.test.ts src/application/test-helpers/fakes/fake-subscription-repository.test.ts src/adapters/controllers/stripe-webhook-controller.test.ts app/(marketing)/checkout/success/page.test.ts src/adapters/jobs/reconcile-stripe-subscriptions.test.ts src/adapters/repositories/drizzle-subscription-repository.test.ts` and `pnpm test:integration --run tests/integration/stripe-repositories.integration.test.ts`.
 
 ## Surfaces Confirmed
 

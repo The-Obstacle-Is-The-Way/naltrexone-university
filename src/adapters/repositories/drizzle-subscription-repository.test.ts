@@ -165,7 +165,7 @@ describe('DrizzleSubscriptionRepository', () => {
         currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
         cancelAtPeriodEnd: false,
       }),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ persisted: true });
     expect(nowFn).toHaveBeenCalledTimes(1);
   });
 

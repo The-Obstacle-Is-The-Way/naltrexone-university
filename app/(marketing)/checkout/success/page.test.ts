@@ -1106,6 +1106,93 @@ describe('syncCheckoutSuccess', () => {
     });
   });
 
+  it('does not let a stale success URL downgrade a newer active subscription', async () => {
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const user = {
+      id: fixtureUser1Id,
+      email: 'user@example.com',
+      createdAt: new Date('2026-02-01T00:00:00Z'),
+      updatedAt: new Date('2026-02-01T00:00:00Z'),
+    };
+    await subscriptions.upsert({
+      userId: user.id,
+      externalSubscriptionId: 'sub_current',
+      plan: 'annual',
+      status: 'active',
+      currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
+      cancelAtPeriodEnd: false,
+    });
+
+    const deps = {
+      authGateway: new FakeAuthGateway(user),
+      getClerkAuth: async () => ({
+        userId: 'clerk_user_1',
+        redirectToSignIn: () => {
+          throw new Error('should not redirect to sign-in');
+        },
+      }),
+      logger: new FakeLogger(),
+      stripe: {
+        checkout: {
+          sessions: {
+            retrieve: async () => ({
+              customer: 'cus_123',
+              subscription: 'sub_superseded',
+            }),
+          },
+        },
+        subscriptions: {
+          retrieve: async () => ({
+            id: 'sub_superseded',
+            customer: 'cus_123',
+            status: 'canceled',
+            cancel_at_period_end: false,
+            metadata: { user_id: fixtureUser1Id },
+            items: {
+              data: [
+                {
+                  current_period_end: 1_000_000_000,
+                  price: { id: 'price_monthly' },
+                },
+              ],
+            },
+          }),
+        },
+      },
+      priceIds: { monthly: 'price_monthly', annual: 'price_annual' },
+      appUrl: 'https://example.com',
+      transaction: async <T>(
+        fn: (tx: CheckoutSuccessTransaction) => Promise<T>,
+      ): Promise<T> =>
+        fn({
+          stripeCustomers,
+          subscriptions,
+        }),
+    };
+
+    const redirectFn = vi.fn((url: string): never => {
+      throw new RedirectError(url);
+    });
+
+    await expect(
+      syncCheckoutSuccess({ sessionId: 'cs_old' }, deps as never, redirectFn),
+    ).resolves.toEqual({ status: 'active' });
+
+    expect(redirectFn).not.toHaveBeenCalled();
+    await expect(
+      subscriptions.findByExternalSubscriptionId('sub_current'),
+    ).resolves.toMatchObject({
+      userId: user.id,
+      status: 'active',
+      plan: 'annual',
+      currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
+    });
+    await expect(
+      subscriptions.findByExternalSubscriptionId('sub_superseded'),
+    ).resolves.toBeNull();
+  });
+
   it('resolves with pastDue when the period is active (dunning grace) without redirecting', async () => {
     const stripeCustomers = new FakeStripeCustomerRepository();
     const subscriptions = new FakeSubscriptionRepository();

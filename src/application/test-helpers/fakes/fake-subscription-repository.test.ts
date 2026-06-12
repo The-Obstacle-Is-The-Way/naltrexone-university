@@ -50,7 +50,7 @@ describe('FakeSubscriptionRepository', () => {
         makeUpsertInput({
           externalSubscriptionId: 'sub_456',
           plan: 'annual',
-          status: 'canceled',
+          status: 'active',
           currentPeriodEnd: new Date('2027-01-31T00:00:00.000Z'),
           cancelAtPeriodEnd: true,
         }),
@@ -63,6 +63,61 @@ describe('FakeSubscriptionRepository', () => {
         repo.findByExternalSubscriptionId('sub_456'),
       ).resolves.toMatchObject({
         userId: 'user_1',
+      });
+    });
+
+    it('does not replace a current entitled row with a superseded terminal subscription', async () => {
+      const repo = new FakeSubscriptionRepository();
+
+      await repo.upsert(
+        makeUpsertInput({
+          externalSubscriptionId: 'sub_current',
+          status: 'active',
+          currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
+        }),
+      );
+      await repo.upsert(
+        makeUpsertInput({
+          externalSubscriptionId: 'sub_superseded',
+          status: 'canceled',
+          currentPeriodEnd: new Date('2026-01-31T00:00:00.000Z'),
+        }),
+      );
+
+      await expect(
+        repo.findByExternalSubscriptionId('sub_current'),
+      ).resolves.toMatchObject({
+        userId: 'user_1',
+        status: 'active',
+      });
+      await expect(
+        repo.findByExternalSubscriptionId('sub_superseded'),
+      ).resolves.toBeNull();
+    });
+
+    it('keeps legitimate same-subscription terminal transitions', async () => {
+      const repo = new FakeSubscriptionRepository();
+
+      await repo.upsert(
+        makeUpsertInput({
+          externalSubscriptionId: 'sub_current',
+          status: 'active',
+          currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
+        }),
+      );
+      await repo.upsert(
+        makeUpsertInput({
+          externalSubscriptionId: 'sub_current',
+          status: 'canceled',
+          currentPeriodEnd: new Date('2026-01-31T00:00:00.000Z'),
+        }),
+      );
+
+      await expect(
+        repo.findByExternalSubscriptionId('sub_current'),
+      ).resolves.toMatchObject({
+        userId: 'user_1',
+        status: 'canceled',
       });
     });
   });

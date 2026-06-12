@@ -46,7 +46,7 @@ function createTestDeps() {
     subscriptions: {
       findByUserId: async () => null,
       findByExternalSubscriptionId: async () => null,
-      upsert: async () => undefined,
+      upsert: async () => ({ persisted: true }) as const,
     },
     stripeCustomers: {
       findByUserId: async () => null,

@@ -4,8 +4,10 @@ import { ApplicationError } from '@/src/application/errors';
 import type {
   SubscriptionRepository,
   SubscriptionUpsertInput,
+  SubscriptionUpsertResult,
 } from '@/src/application/ports/repositories';
 import type { Subscription } from '@/src/domain/entities';
+import { shouldPersistSubscriptionWrite } from '@/src/domain/services';
 import {
   getStripePriceId,
   getSubscriptionPlanFromPriceId,
@@ -67,7 +69,9 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
     return row ? this.toDomain(row) : null;
   }
 
-  async upsert(input: SubscriptionUpsertInput): Promise<void> {
+  async upsert(
+    input: SubscriptionUpsertInput,
+  ): Promise<SubscriptionUpsertResult> {
     const priceId = getStripePriceId(input.plan, this.priceIds);
     const stripeStatus = subscriptionStatusToStripeSubscriptionStatus(
       input.status,
@@ -75,6 +79,30 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
     const updatedAt = this.now();
 
     try {
+      const existingRow = await this.db.query.stripeSubscriptions.findFirst({
+        where: eq(stripeSubscriptions.userId, input.userId),
+      });
+      if (
+        existingRow &&
+        !shouldPersistSubscriptionWrite({
+          stored: {
+            subscriptionIdentity: existingRow.stripeSubscriptionId,
+            status: stripeSubscriptionStatusToSubscriptionStatus(
+              existingRow.status,
+            ),
+            currentPeriodEnd: existingRow.currentPeriodEnd,
+          },
+          incoming: {
+            subscriptionIdentity: input.externalSubscriptionId,
+            status: input.status,
+            currentPeriodEnd: input.currentPeriodEnd,
+          },
+          now: updatedAt,
+        })
+      ) {
+        return { persisted: false, current: this.toDomain(existingRow) };
+      }
+
       await this.db
         .insert(stripeSubscriptions)
         .values({
@@ -97,6 +125,7 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
             updatedAt,
           },
         });
+      return { persisted: true };
     } catch (error) {
       if (isPostgresUniqueViolation(error)) {
         throw new ApplicationError(
