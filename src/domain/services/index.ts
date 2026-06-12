@@ -33,6 +33,10 @@ export {
   filterAttemptsInWindow,
 } from './statistics';
 export {
+  type SubscriptionWriteCandidate,
+  shouldPersistSubscriptionWrite,
+} from './subscription-write-guard';
+export {
   DAY_MS,
   EXAM_SECONDS_PER_QUESTION,
   MS_PER_SECOND,

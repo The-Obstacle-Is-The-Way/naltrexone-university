@@ -1,6 +1,7 @@
 # BUG-242: Late Webhook From a Superseded Subscription Overwrites the Active Subscription Row (userId-Keyed Last-Write-Wins Upsert Has No Identity/Recency Guard)
 
 **Status:** Open
+**Resolution State:** Fix implemented in `fix/bug-242-243-subscription-identity-recency-guard`; pending owner grade, merge verification, and archival.
 **Priority:** P1 (paying user fully locked out of `/app/*` with no self-service recovery; can persist up to a full billing cycle)
 **Date:** 2026-06-11
 **Family:** Billing / Stripe webhook / subscription state machine
@@ -42,20 +43,26 @@ The corrupted row heals only when some sub-B webhook fires (next renewal invoice
 - The trigger population is broad: *every* trial-converted user (DEBT-410 lineage) and every churn-and-return user has a superseded subscription whose late events can do this. The probability per event is low (requires a failed-then-retried delivery overlapping the resubscribe), but the webhook 429/500 paths make it real, and the blast radius per occurrence is a full lockout for up to a billing cycle.
 - Scope note (not an extra trigger): the *cancel-at-period-end* path does **not** add an independent, retry-free vector. While sub A sits in that window it is still `active` — a blocking-checkout status (`src/domain/value-objects/subscription-status.ts:41`) — so the create-checkout guard (`src/application/use-cases/create-checkout-session.ts:113-122`) refuses sub B until A has actually flipped to `canceled`. By then A's `deleted` event has normally already been delivered, so re-clobbering still requires the failed-then-retried or out-of-order delivery of the primary scenario above.
 
-## Expected Fix (options — shared root with BUG-243; pick one durable layer)
+## Implemented Fix
 
-1. **Repository-level identity/recency guard (preferred, fixes all writers at once).** In `DrizzleSubscriptionRepository.upsert`, refuse to replace a row whose `stripeSubscriptionId` differs from the incoming one when the incoming status is terminal (`canceled`/`incomplete_expired`) — or, stronger, when the incoming subscription's Stripe `created` timestamp is older than the stored subscription's. Webhook, reconcile, and checkout-success writers all inherit the guard.
-2. **Webhook-controller guard.** Before upserting, load the stored row; if `externalSubscriptionId` differs and the incoming status is non-blocking while the stored row is blocking with a future period end, list the customer's subscriptions and persist the canonical winner (reuse the reconciliation phase 2–3 selection) instead of the event's subscription.
-3. **Heal-at-the-point-of-pain (complement, not substitute).** When the gateway throws `ALREADY_SUBSCRIBED` but the local row is non-entitled, trigger an inline re-sync of the blocking Stripe subscription (the `retrieveAndNormalize` + upsert machinery already exists) so the exact moment of user impact self-heals.
+Chosen placement: a pure domain policy, `shouldPersistSubscriptionWrite`, owns the business rule (`src/domain/services/subscription-write-guard.ts:25-42`). The Drizzle adapter serializes writes per user with a transaction-scoped advisory lock, locks the current row, then calls that predicate before the upsert (`src/adapters/repositories/drizzle-subscription-repository.ts:82-135`). The fake repository accepts an injected clock and explicit external-subscription seed identity, then calls the same predicate (`src/application/test-helpers/fakes/fake-subscription-repository.ts:43-113`). Webhook, checkout-success, and reconciliation writers inherit identical semantics through `SubscriptionRepository.upsert`, which now reports whether the write persisted or was skipped (`src/application/ports/subscription-repository.ts:16-27`).
 
-Whichever is chosen, add a regression test that seeds (B, `active`, future period) and processes a late event for superseded sub A, asserting the row still points at B.
+Rule: reject only a different-subscription write when the stored row is still entitled (`active`, `inTrial`, or `pastDue` with future `currentPeriodEnd`) and the incoming write is terminal (`canceled` or `paymentFailed` / Stripe `incomplete_expired`). Allow same-subscription lifecycle changes, fresh first-checkout writes, churned resubscribe over a terminal row, and reconciliation's different blocking canonical winner.
+
+Rejected alternatives:
+- Drizzle-only guard: rejected because it would put current-subscription policy in infrastructure and make `FakeSubscriptionRepository` diverge from production.
+- Stripe `created` timestamp threading: rejected for this fix because the confirmed BUG-242/243 regression is terminal superseded-state overwrite, and the existing identity + status + current-period data is sufficient to block that path without widening Stripe DTOs.
+- Point-of-pain re-sync on `ALREADY_SUBSCRIBED`: rejected as a recovery complement, not a durable prevention layer.
 
 ## Verification
 
-- [ ] Unit test: webhook event for superseded canceled sub A does not downgrade an active sub-B row (currently no test covers two-subscription history; all webhook-controller tests use a single subscription id).
-- [ ] Unit test: legitimate transitions for the *current* subscription (active→pastDue→canceled) still persist.
-- [ ] Tracer-bullet repro re-run after fix: steps 1–4 above end with row = (B, `active`).
-- [ ] `pnpm test --run` + integration suite green.
+- [x] Domain truth table covers first row, same-subscription terminal transition, active/inTrial/pastDue protection, expired/current terminal cases, churned resubscribe, unpaid/paused recoverable states, and reconciliation's different canonical winner (`src/domain/services/subscription-write-guard.test.ts:23-148`).
+- [x] Unit test: webhook event for superseded canceled sub A does not downgrade an active sub-B row (`src/adapters/controllers/stripe-webhook-controller.test.ts:261-316`).
+- [x] Unit test: legitimate same-subscription terminal transitions still persist in the fake, and constructor-seeded fake rows can carry external subscription identity for guard parity (`src/application/test-helpers/fakes/fake-subscription-repository.test.ts:98-187`).
+- [x] Unit test: Drizzle upsert serializes per user before reading the current row (`src/adapters/repositories/drizzle-subscription-repository.test.ts:180-226`).
+- [x] Reconcile regression test: a different canonical blocking winner still persists over a current entitled row (`src/adapters/jobs/reconcile-stripe-subscriptions.test.ts:1079-1126`).
+- [x] Real Drizzle integration test: seed (B, `active`, future period), upsert superseded terminal A, row stays B; same-id active→canceled still persists (`tests/integration/stripe-repositories.integration.test.ts:189-272`).
+- [x] Focused verification green: `pnpm test --run src/domain/services/subscription-write-guard.test.ts src/application/test-helpers/fakes/fake-subscription-repository.test.ts src/adapters/controllers/stripe-webhook-controller.test.ts "app/(marketing)/checkout/success/page.test.ts" src/adapters/jobs/reconcile-stripe-subscriptions.test.ts src/adapters/repositories/drizzle-subscription-repository.test.ts` and `pnpm test:integration --run tests/integration/stripe-repositories.integration.test.ts`.
 
 ## Surfaces Confirmed
 

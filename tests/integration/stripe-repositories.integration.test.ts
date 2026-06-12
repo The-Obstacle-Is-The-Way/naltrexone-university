@@ -153,7 +153,7 @@ describe('Stripe repositories', () => {
     await repo.upsert({
       userId: user.id,
       externalSubscriptionId: stripeSubscriptionId2,
-      status: 'canceled',
+      status: 'active',
       plan: 'annual',
       currentPeriodEnd: periodEnd2,
       cancelAtPeriodEnd: true,
@@ -163,7 +163,7 @@ describe('Stripe repositories', () => {
     expect(byUser2).toMatchObject({
       userId: user.id,
       plan: 'annual',
-      status: 'canceled',
+      status: 'active',
       currentPeriodEnd: periodEnd2,
       cancelAtPeriodEnd: true,
     });
@@ -175,6 +175,99 @@ describe('Stripe repositories', () => {
       repo.findByExternalSubscriptionId(stripeSubscriptionId2),
     ).resolves.toMatchObject({
       userId: user.id,
+    });
+  });
+
+  it('does not replace a current entitled row with a superseded terminal subscription', async () => {
+    const user = await createUser(db, cleanup);
+
+    const priceIds = {
+      monthly: 'price_test_monthly',
+      annual: 'price_test_annual',
+    } as const;
+
+    const repo = new DrizzleSubscriptionRepository(
+      db,
+      priceIds,
+      () => new Date('2026-06-12T12:00:00.000Z'),
+    );
+    const currentSubscriptionId = `sub_${randomUUID().replaceAll('-', '')}`;
+    const supersededSubscriptionId = `sub_${randomUUID().replaceAll('-', '')}`;
+
+    await repo.upsert({
+      userId: user.id,
+      externalSubscriptionId: currentSubscriptionId,
+      status: 'active',
+      plan: 'annual',
+      currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
+      cancelAtPeriodEnd: false,
+    });
+
+    await repo.upsert({
+      userId: user.id,
+      externalSubscriptionId: supersededSubscriptionId,
+      status: 'canceled',
+      plan: 'monthly',
+      currentPeriodEnd: new Date('2026-05-31T00:00:00.000Z'),
+      cancelAtPeriodEnd: false,
+    });
+
+    await expect(repo.findByUserId(user.id)).resolves.toMatchObject({
+      userId: user.id,
+      plan: 'annual',
+      status: 'active',
+      currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
+    });
+    await expect(
+      repo.findByExternalSubscriptionId(currentSubscriptionId),
+    ).resolves.toMatchObject({
+      userId: user.id,
+      status: 'active',
+    });
+    await expect(
+      repo.findByExternalSubscriptionId(supersededSubscriptionId),
+    ).resolves.toBeNull();
+  });
+
+  it('keeps legitimate same-subscription terminal transitions', async () => {
+    const user = await createUser(db, cleanup);
+
+    const priceIds = {
+      monthly: 'price_test_monthly',
+      annual: 'price_test_annual',
+    } as const;
+
+    const repo = new DrizzleSubscriptionRepository(
+      db,
+      priceIds,
+      () => new Date('2026-06-12T12:00:00.000Z'),
+    );
+    const stripeSubscriptionId = `sub_${randomUUID().replaceAll('-', '')}`;
+
+    await repo.upsert({
+      userId: user.id,
+      externalSubscriptionId: stripeSubscriptionId,
+      status: 'active',
+      plan: 'monthly',
+      currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
+      cancelAtPeriodEnd: false,
+    });
+
+    await repo.upsert({
+      userId: user.id,
+      externalSubscriptionId: stripeSubscriptionId,
+      status: 'canceled',
+      plan: 'monthly',
+      currentPeriodEnd: new Date('2026-05-31T00:00:00.000Z'),
+      cancelAtPeriodEnd: false,
+    });
+
+    await expect(
+      repo.findByExternalSubscriptionId(stripeSubscriptionId),
+    ).resolves.toMatchObject({
+      userId: user.id,
+      status: 'canceled',
+      currentPeriodEnd: new Date('2026-05-31T00:00:00.000Z'),
     });
   });
 

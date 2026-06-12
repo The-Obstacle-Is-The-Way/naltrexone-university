@@ -140,14 +140,22 @@ describe('DrizzleSubscriptionRepository', () => {
       },
     });
 
-    const db = {
+    const tx = {
+      execute: async () => undefined,
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            for: async () => [],
+          }),
+        }),
+      }),
       insert: () => ({ values }),
-      query: {
-        stripeSubscriptions: {
-          findFirst: async () => null,
-        },
+    };
+    const db = {
+      transaction: async (callback: (txArg: unknown) => Promise<unknown>) => {
+        return callback(tx);
       },
-    } as const;
+    };
 
     const priceIds = {
       monthly: 'price_monthly',
@@ -165,12 +173,78 @@ describe('DrizzleSubscriptionRepository', () => {
         currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
         cancelAtPeriodEnd: false,
       }),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ persisted: true });
     expect(nowFn).toHaveBeenCalledTimes(1);
   });
 
-  it('throws CONFLICT when the DB reports a unique-constraint violation during upsert', async () => {
+  it('serializes upserts per user before reading the current subscription row', async () => {
+    const operations: string[] = [];
+    const now = new Date('2026-02-01T02:03:04.000Z');
+    const nowFn = vi.fn(() => {
+      operations.push('timestamp');
+      return now;
+    });
+    const forUpdate = vi.fn(async () => {
+      operations.push('row-lock');
+      return [];
+    });
+    const where = vi.fn(() => ({ for: forUpdate }));
+    const from = vi.fn(() => ({ where }));
+    const select = vi.fn(() => ({ from }));
+    const onConflictDoUpdate = vi.fn(async () => {
+      operations.push('write');
+    });
+    const values = vi.fn(() => ({ onConflictDoUpdate }));
+    const insert = vi.fn(() => ({ values }));
+    const tx = {
+      execute: vi.fn(async () => {
+        operations.push('user-lock');
+      }),
+      select,
+      insert,
+    };
     const db = {
+      transaction: vi.fn(async (callback) => callback(tx)),
+    } as const;
+
+    const repo = createRepo(
+      db,
+      {
+        monthly: 'price_monthly',
+        annual: 'price_annual',
+      },
+      nowFn,
+    );
+
+    await expect(
+      repo.upsert({
+        userId: userId,
+        externalSubscriptionId: 'sub_123',
+        plan: 'monthly',
+        status: 'active',
+        currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
+        cancelAtPeriodEnd: false,
+      }),
+    ).resolves.toEqual({ persisted: true });
+
+    expect(db.transaction).toHaveBeenCalledTimes(1);
+    expect(tx.execute).toHaveBeenCalledTimes(1);
+    expect(nowFn).toHaveBeenCalledTimes(1);
+    expect(select).toHaveBeenCalledTimes(1);
+    expect(forUpdate).toHaveBeenCalledWith('update');
+    expect(operations).toEqual(['user-lock', 'timestamp', 'row-lock', 'write']);
+  });
+
+  it('throws CONFLICT when the DB reports a unique-constraint violation during upsert', async () => {
+    const tx = {
+      execute: async () => undefined,
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            for: async () => [],
+          }),
+        }),
+      }),
       insert: () => ({
         values: () => ({
           onConflictDoUpdate: async () => {
@@ -178,12 +252,12 @@ describe('DrizzleSubscriptionRepository', () => {
           },
         }),
       }),
-      query: {
-        stripeSubscriptions: {
-          findFirst: async () => null,
-        },
+    };
+    const db = {
+      transaction: async (callback: (txArg: unknown) => Promise<unknown>) => {
+        return callback(tx);
       },
-    } as const;
+    };
 
     const priceIds = {
       monthly: 'price_monthly',
@@ -206,7 +280,15 @@ describe('DrizzleSubscriptionRepository', () => {
 
   it('throws INTERNAL_ERROR on unexpected database failures during upsert', async () => {
     const dbError = new Error('db down');
-    const db = {
+    const tx = {
+      execute: async () => undefined,
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            for: async () => [],
+          }),
+        }),
+      }),
       insert: () => ({
         values: () => ({
           onConflictDoUpdate: async () => {
@@ -214,12 +296,12 @@ describe('DrizzleSubscriptionRepository', () => {
           },
         }),
       }),
-      query: {
-        stripeSubscriptions: {
-          findFirst: async () => null,
-        },
+    };
+    const db = {
+      transaction: async (callback: (txArg: unknown) => Promise<unknown>) => {
+        return callback(tx);
       },
-    } as const;
+    };
 
     const priceIds = {
       monthly: 'price_monthly',
