@@ -1,11 +1,11 @@
 # BUG-242: Late Webhook From a Superseded Subscription Overwrites the Active Subscription Row (userId-Keyed Last-Write-Wins Upsert Has No Identity/Recency Guard)
 
-**Status:** Open
-**Resolution State:** Fix implemented in `fix/bug-242-243-subscription-identity-recency-guard`; pending owner grade, merge verification, and archival.
+**Status:** ✅ Resolved
+**Resolution State:** Resolved in PR #419 (squash `6decfb70`, merged 2026-06-12) — shared pure-domain write-guard `shouldPersistSubscriptionWrite` called by the Drizzle repo (advisory-locked) and `FakeSubscriptionRepository`; owner-graded, full gate + E2E green, CodeRabbit approved on the exact head. Archived to `docs/_archive/bugs/`.
 **Priority:** P1 (paying user fully locked out of `/app/*` with no self-service recovery; can persist up to a full billing cycle)
 **Date:** 2026-06-11
 **Family:** Billing / Stripe webhook / subscription state machine
-**Related:** [BUG-243](./bug-243-checkout-success-replay-overwrites-active-subscription.md) (same missing guard, user-triggerable entry point), [BUG-244](./bug-244-reconciliation-cron-never-scheduled.md) (the heal that would bound this never runs), [BUG-205](../_archive/bugs/bug-205-reconciliation-prefers-stale-local-subscription-over-canonical-stripe-state.md) (reconciliation winner selection — different layer), [BUG-183](../_archive/bugs/bug-183-stripe-webhook-failure-state-rolled-back.md) (webhook failure persistence — adjacent, fixed), [DEBT-383](../_archive/debt/debt-383-canceled-subscription-recovery-trap.md) (recovery-path UX for a *correctly* canceled row — here the row is *wrongly* canceled)
+**Related:** [BUG-243](./bug-243-checkout-success-replay-overwrites-active-subscription.md) (same missing guard, user-triggerable entry point), [BUG-244](../../bugs/bug-244-reconciliation-cron-never-scheduled.md) (the heal that would bound this never runs), [BUG-205](./bug-205-reconciliation-prefers-stale-local-subscription-over-canonical-stripe-state.md) (reconciliation winner selection — different layer), [BUG-183](./bug-183-stripe-webhook-failure-state-rolled-back.md) (webhook failure persistence — adjacent, fixed), [DEBT-383](../debt/debt-383-canceled-subscription-recovery-trap.md) (recovery-path UX for a *correctly* canceled row — here the row is *wrongly* canceled)
 
 ---
 
@@ -35,7 +35,7 @@ Tracer bullet from entry point to fault:
 5. Every `/app/*` request bounces the paying user: `app/(app)/app/layout.tsx:33-52` redirects to `/pricing?reason=subscription_required` ("Your access ended — choose a plan to continue.", `app/pricing/page.tsx:103-119`).
 6. Self-service recovery is impossible: Subscribe passes the local guard (`src/application/use-cases/create-checkout-session.ts:112-122` — canceled row, past period) but the gateway's live-Stripe pre-check finds ACTIVE sub B and throws `ALREADY_SUBSCRIBED` (`src/adapters/gateways/stripe/stripe-checkout-sessions.ts:151-191`) → redirect to `/pricing?reason=manage_billing` (`app/pricing/subscribe-action.ts:35-37`) → "Subscription found. Manage billing…" → the portal shows a perfectly healthy active subscription. The user loops between "choose a plan" and "manage billing" while Stripe keeps billing sub B.
 
-The corrupted row heals only when some sub-B webhook fires (next renewal invoice — up to ~30 days monthly, ~1 year annual — or a portal mutation that emits a subscription event), or a manual reconciliation run ([BUG-244](./bug-244-reconciliation-cron-never-scheduled.md): nothing scheduled invokes it).
+The corrupted row heals only when some sub-B webhook fires (next renewal invoice — up to ~30 days monthly, ~1 year annual — or a portal mutation that emits a subscription event), or a manual reconciliation run ([BUG-244](../../bugs/bug-244-reconciliation-cron-never-scheduled.md): nothing scheduled invokes it).
 
 ## Impact
 

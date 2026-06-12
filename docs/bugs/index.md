@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-03 (BUG-240 remediated + archived; BUG-241 remains open for deploy migration enforcement)
+**Last Updated:** 2026-06-12 (BUG-242/243 resolved + archived via PR #419 — shared subscription write-guard; BUG-244–247 remain open from the Audit #21 Stripe sweep; BUG-241 remains open for deploy migration enforcement)
 
 ---
 
@@ -14,6 +14,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 3. **Knowledge Base** — Help future developers understand past issues
 
 **Next Bug ID:** BUG-248
+
+**Latest archival (2026-06-12) — Audit #21 BUG-242/243 resolved:**
+- BUG-242 (P1) and BUG-243 (P2) verified fixed and archived to `docs/_archive/bugs/`. PR #419 (squash `6decfb70`, `main` synced) added the shared pure-domain `shouldPersistSubscriptionWrite` guard — called by the advisory-locked Drizzle repo and `FakeSubscriptionRepository` — so a superseded-subscription terminal write can no longer clobber the current entitled row; checkout-success now computes its outcome from the protected row on a skipped write. Owner-graded, full gate + E2E green, CodeRabbit approved on the exact head. BUG-244–247 from the same Audit #21 sweep remain open.
 
 **Audit #21 (2026-06-11) — Stripe/Billing Deep Sweep:** 6 confirmed bugs filed (BUG-242..247). Two paired P1/P2 read-model corruptions (a late webhook from a superseded subscription, and a stale `/checkout/success` URL replay) share one root cause — the userId-keyed last-write-wins `subscriptions.upsert` has no subscription-identity/recency guard. Two ops-infra gaps: the reconciliation safety net is never scheduled (BUG-244) and the deleted-account Stripe-cancellation queue has no drain past Svix retries (BUG-246). One concurrent two-tab checkout race creates duplicate live subscriptions (BUG-245). One P3 copy bug (pricing portal failures show checkout-failure copy, BUG-247). See the Audit #21 section below for methodology, the clean-surface list, and uncertain candidates deliberately not filed.
 
@@ -140,8 +143,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | Bug | Family | Priority | Summary |
 |-----|--------|----------|---------|
-| [BUG-242](./bug-242-stale-subscription-webhook-overwrites-active-row.md) | Billing / webhook / subscription state machine | P1 | Late webhook from a superseded subscription overwrites the active subscription row (userId-keyed last-write-wins upsert, no identity/recency guard) → paying user locked out of `/app/*`, no self-service recovery, heals only on the next current-sub webhook (up to a billing cycle). |
-| [BUG-243](./bug-243-checkout-success-replay-overwrites-active-subscription.md) | Billing / checkout-success eager sync | P2 | Revisiting a stale `/checkout/success` URL from history re-syncs an old canceled subscription over the newer active row (write happens before the entitlement check) → user-deterministic lockout; same missing guard as BUG-242 but reproducible on demand. |
 | [BUG-244](./bug-244-reconciliation-cron-never-scheduled.md) | Billing / reconciliation / deploy-infra | P2 | The Stripe reconciliation safety net never runs — no Vercel cron / scheduled Action invokes the POST-only route, and it defaults to `dryRun=true`. Duplicate subscriptions and drifted rows are never auto-healed; BUG-120/205/DEBT-155 fixes are inert in production. |
 | [BUG-245](./bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md) | Billing / checkout race / idempotency | P2 | Concurrent two-tab subscribe defeats every duplicate guard (all key on a not-yet-existing subscription) and per-tab random UUIDs bypass the BUG-148 deterministic-key collapse → two live subscriptions on one customer; masked in-app by the single local row. |
 | [BUG-246](./bug-246-deleted-account-stripe-cancellation-no-drain.md) | Billing / Clerk deletion / money tail-risk | P2 | Deleted-account Stripe cancellation has no drain beyond Svix retries; cascade-deleted local rows hide the orphan from reconciliation → Stripe keeps billing a deleted account with no monitoring or recovery path. |
@@ -162,8 +163,8 @@ Adversarial walk of the **entire Stripe surface** after the DEBT-410…415 free-
 
 | Bug | Family | Priority | Summary |
 |-----|--------|----------|---------|
-| [BUG-242](./bug-242-stale-subscription-webhook-overwrites-active-row.md) | Billing / webhook state machine | P1 | Late webhook from a superseded subscription overwrites the active row (no identity/recency guard on the userId-keyed upsert) |
-| [BUG-243](./bug-243-checkout-success-replay-overwrites-active-subscription.md) | Billing / checkout-success eager sync | P2 | Stale `/checkout/success` URL replay overwrites the newer active subscription (writes before the entitlement check) |
+| [BUG-242](../_archive/bugs/bug-242-stale-subscription-webhook-overwrites-active-row.md) | Billing / webhook state machine | P1 | Late webhook from a superseded subscription overwrites the active row (no identity/recency guard on the userId-keyed upsert) |
+| [BUG-243](../_archive/bugs/bug-243-checkout-success-replay-overwrites-active-subscription.md) | Billing / checkout-success eager sync | P2 | Stale `/checkout/success` URL replay overwrites the newer active subscription (writes before the entitlement check) |
 | [BUG-244](./bug-244-reconciliation-cron-never-scheduled.md) | Billing / reconciliation / infra | P2 | Reconciliation safety net never runs — no scheduler invokes the POST-only, `dryRun`-default route |
 | [BUG-245](./bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md) | Billing / checkout race | P2 | Concurrent two-tab checkout creates duplicate live subscriptions; per-tab UUIDs bypass the deterministic-key collapse |
 | [BUG-246](./bug-246-deleted-account-stripe-cancellation-no-drain.md) | Billing / Clerk deletion | P2 | Deleted-account Stripe cancellation has no drain past Svix retries; cascade-deleted rows hide the orphan |

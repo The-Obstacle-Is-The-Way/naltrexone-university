@@ -1,11 +1,11 @@
 # BUG-243: Revisiting a Stale `/checkout/success` URL Overwrites the Newer Active Subscription With the Old Canceled One (Eager Sync Writes Before It Checks)
 
-**Status:** Open
-**Resolution State:** Fix implemented in `fix/bug-242-243-subscription-identity-recency-guard`; pending owner grade, merge verification, and archival.
+**Status:** ✅ Resolved
+**Resolution State:** Resolved in PR #419 (squash `6decfb70`, merged 2026-06-12) — same shared domain write-guard as BUG-242, plus checkout-success computing entitlement/redirect from the protected row on a skipped write; owner-graded, full gate + E2E green, CodeRabbit approved on the exact head. Archived to `docs/_archive/bugs/`.
 **Priority:** P2 (user-deterministic lockout of a paying user; borderline P1 — every trial-converted user permanently carries the trigger URL in browser history)
 **Date:** 2026-06-11
 **Family:** Billing / checkout-success eager sync
-**Related:** [BUG-242](./bug-242-stale-subscription-webhook-overwrites-active-row.md) (same missing identity/recency guard, webhook entry point), [BUG-053](../_archive/bugs/bug-053-checkout-success-missing-user-id-metadata.md) (cross-*account* guard — passes here because it is the same user), [BUG-099](../_archive/bugs/bug-099-checkout-success-race-concurrent-webhook-conflict.md) (same-checkout webhook race — different mode), [BUG-221](../_archive/bugs/bug-221-checkout-success-repeated-session-id-breaks-sync.md) (param shape, not staleness), ADR-014 (eager sync pattern — "idempotent" only for the fresh-checkout shape)
+**Related:** [BUG-242](./bug-242-stale-subscription-webhook-overwrites-active-row.md) (same missing identity/recency guard, webhook entry point), [BUG-053](./bug-053-checkout-success-missing-user-id-metadata.md) (cross-*account* guard — passes here because it is the same user), [BUG-099](./bug-099-checkout-success-race-concurrent-webhook-conflict.md) (same-checkout webhook race — different mode), [BUG-221](./bug-221-checkout-success-repeated-session-id-breaks-sync.md) (param shape, not staleness), ADR-014 (eager sync pattern — "idempotent" only for the fresh-checkout shape)
 
 ---
 
@@ -40,7 +40,7 @@ Coverage gap that let this ship: every test in `app/(marketing)/checkout/success
 
 - A paying user can lock **themselves** out instantly and reproducibly, with the same no-self-service-recovery loop as BUG-242 (heals only on the next sub-B webhook — up to ~30 days monthly / ~1 year annual — or manual intervention).
 - The trigger artifact is permanent and universal: every trial-converted user's history contains a superseded success URL forever. Tab-restore and URL-bar autocomplete make accidental revisits realistic, not adversarial.
-- Scope note: the replay persists whatever sub A's *current* live state is, so the canceled-A case above is the real trigger. A still inside its cancel-at-period-end window (status `active`) only matters here if a newer active sub B already coexists with the still-active A — which itself requires the concurrent-duplicate path ([BUG-245](./bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md)), since an otherwise-active A would block B's creation (`src/application/use-cases/create-checkout-session.ts:113-122`). It is a compounding edge, not an independent trigger.
+- Scope note: the replay persists whatever sub A's *current* live state is, so the canceled-A case above is the real trigger. A still inside its cancel-at-period-end window (status `active`) only matters here if a newer active sub B already coexists with the still-active A — which itself requires the concurrent-duplicate path ([BUG-245](../../bugs/bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md)), since an otherwise-active A would block B's creation (`src/application/use-cases/create-checkout-session.ts:113-122`). It is a compounding edge, not an independent trigger.
 
 ## Implemented Fix
 
