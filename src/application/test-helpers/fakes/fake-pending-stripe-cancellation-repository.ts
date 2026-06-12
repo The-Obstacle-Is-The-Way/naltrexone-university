@@ -1,28 +1,50 @@
-import type { PendingStripeCancellationRepository } from '@/src/application/ports/repositories';
+import type {
+  PendingStripeCancellation,
+  PendingStripeCancellationRepository,
+} from '@/src/application/ports/repositories';
 
 type PendingStripeCancellationSnapshot = ReadonlyArray<
-  readonly [string, string]
+  readonly [string, { stripeCustomerId: string; createdAt: Date }]
 >;
 
 export class FakePendingStripeCancellationRepository
   implements PendingStripeCancellationRepository
 {
-  private readonly pendingByEventId = new Map<string, string>();
+  private readonly pendingByEventId = new Map<
+    string,
+    { stripeCustomerId: string; createdAt: Date }
+  >();
+
+  constructor(private readonly now: () => Date = () => new Date()) {}
 
   async findByEventId(
     eventId: string,
   ): Promise<{ stripeCustomerId: string } | null> {
-    const stripeCustomerId = this.pendingByEventId.get(eventId);
-    if (!stripeCustomerId) return null;
-    return { stripeCustomerId };
+    const pending = this.pendingByEventId.get(eventId);
+    if (!pending) return null;
+    return { stripeCustomerId: pending.stripeCustomerId };
   }
 
   async schedule(eventId: string, stripeCustomerId: string): Promise<void> {
-    this.pendingByEventId.set(eventId, stripeCustomerId);
+    this.pendingByEventId.set(eventId, {
+      stripeCustomerId,
+      createdAt: this.now(),
+    });
   }
 
   async deleteByEventId(eventId: string): Promise<void> {
     this.pendingByEventId.delete(eventId);
+  }
+
+  async listStale(olderThan: Date): Promise<PendingStripeCancellation[]> {
+    return [...this.pendingByEventId.entries()]
+      .filter(([, pending]) => pending.createdAt < olderThan)
+      .sort(([, a], [, b]) => a.createdAt.getTime() - b.createdAt.getTime())
+      .map(([eventId, pending]) => ({
+        eventId,
+        stripeCustomerId: pending.stripeCustomerId,
+        createdAt: pending.createdAt,
+      }));
   }
 
   snapshot(): PendingStripeCancellationSnapshot {
@@ -31,8 +53,8 @@ export class FakePendingStripeCancellationRepository
 
   restore(snapshot: PendingStripeCancellationSnapshot): void {
     this.pendingByEventId.clear();
-    for (const [eventId, stripeCustomerId] of snapshot) {
-      this.pendingByEventId.set(eventId, stripeCustomerId);
+    for (const [eventId, pending] of snapshot) {
+      this.pendingByEventId.set(eventId, pending);
     }
   }
 }

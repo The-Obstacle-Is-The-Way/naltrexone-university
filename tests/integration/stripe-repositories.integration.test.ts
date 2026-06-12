@@ -1,11 +1,14 @@
 import { randomUUID } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
+import { drainPendingStripeCancellations } from '@/src/adapters/jobs/drain-pending-stripe-cancellations';
+import { DrizzlePendingStripeCancellationRepository } from '@/src/adapters/repositories/drizzle-pending-stripe-cancellation-repository';
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzle-stripe-event-repository';
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
 import { ApplicationError } from '@/src/application/errors';
+import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import {
   cleanupAfterEach,
   closeConnection,
@@ -51,6 +54,73 @@ describe('Stripe repositories', () => {
       processedAt: null,
       error: 'boom',
     });
+  });
+
+  it('drains stale pending Stripe cancellations and leaves fresh rows untouched', async () => {
+    const staleEventId = `evt_${randomUUID().replaceAll('-', '')}`;
+    const freshEventId = `evt_${randomUUID().replaceAll('-', '')}`;
+    const repo = new DrizzlePendingStripeCancellationRepository(db);
+    const logger = new FakeLogger();
+    const canceledCustomerIds: string[] = [];
+
+    try {
+      await db.insert(schema.clerkEvents).values([
+        {
+          id: staleEventId,
+          type: 'user.deleted',
+          createdAt: new Date('2026-06-12T12:00:00.000Z'),
+        },
+        {
+          id: freshEventId,
+          type: 'user.deleted',
+          createdAt: new Date('2026-06-12T12:20:00.000Z'),
+        },
+      ]);
+
+      await db.insert(schema.pendingStripeCancellations).values([
+        {
+          eventId: staleEventId,
+          stripeCustomerId: 'cus_stale',
+          createdAt: new Date('2026-06-12T12:00:00.000Z'),
+        },
+        {
+          eventId: freshEventId,
+          stripeCustomerId: 'cus_fresh',
+          createdAt: new Date('2026-06-12T12:20:00.000Z'),
+        },
+      ]);
+
+      const result = await drainPendingStripeCancellations(
+        {
+          olderThan: new Date('2026-06-12T12:15:00.000Z'),
+          dryRun: false,
+        },
+        {
+          pendingStripeCancellations: repo,
+          cancelStripeCustomerSubscriptions: async (stripeCustomerId) => {
+            canceledCustomerIds.push(stripeCustomerId);
+          },
+          logger,
+        },
+      );
+
+      expect(result).toEqual({
+        scanned: 1,
+        drained: 1,
+        failed: 0,
+        failures: [],
+        dryRun: false,
+      });
+      expect(canceledCustomerIds).toEqual(['cus_stale']);
+      await expect(repo.findByEventId(staleEventId)).resolves.toBeNull();
+      await expect(repo.findByEventId(freshEventId)).resolves.toEqual({
+        stripeCustomerId: 'cus_fresh',
+      });
+    } finally {
+      await db
+        .delete(schema.clerkEvents)
+        .where(inArray(schema.clerkEvents.id, [staleEventId, freshEventId]));
+    }
   });
 
   it('upserts Stripe customers per user', async () => {

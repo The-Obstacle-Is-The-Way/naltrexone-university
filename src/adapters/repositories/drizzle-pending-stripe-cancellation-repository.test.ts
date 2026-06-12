@@ -88,4 +88,35 @@ describe('DrizzlePendingStripeCancellationRepository', () => {
     expect(deleteFn).toHaveBeenCalledWith(pendingStripeCancellations);
     expect(where).toHaveBeenCalledTimes(1);
   });
+
+  it('lists stale pending cancellations ordered by creation time', async () => {
+    const rows = [
+      {
+        eventId: 'evt_old',
+        stripeCustomerId: 'cus_old',
+        createdAt: new Date('2026-06-12T12:00:00.000Z'),
+      },
+    ];
+    const orderBy = vi.fn(async () => rows);
+    const where = vi.fn(() => ({ orderBy }));
+    const from = vi.fn(() => ({ where }));
+    const select = vi.fn(() => ({ from }));
+
+    const db = { select } as const;
+    const repo = new DrizzlePendingStripeCancellationRepository(
+      db as unknown as RepoDb,
+    );
+
+    await expect(
+      repo.listStale(new Date('2026-06-12T12:15:00.000Z')),
+    ).resolves.toEqual(rows);
+    expect(select).toHaveBeenCalledWith({
+      eventId: pendingStripeCancellations.eventId,
+      stripeCustomerId: pendingStripeCancellations.stripeCustomerId,
+      createdAt: pendingStripeCancellations.createdAt,
+    });
+    expect(from).toHaveBeenCalledWith(pendingStripeCancellations);
+    expect(where).toHaveBeenCalledTimes(1);
+    expect(orderBy).toHaveBeenCalledTimes(1);
+  });
 });

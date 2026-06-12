@@ -1,6 +1,11 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { createContainer } from '@/lib/container';
+import { cancelStripeCustomerSubscriptions } from '@/src/adapters/gateways/stripe-subscription-canceler';
+import {
+  drainPendingStripeCancellations,
+  PENDING_STRIPE_CANCELLATION_STALE_AFTER_MINUTES,
+} from '@/src/adapters/jobs/drain-pending-stripe-cancellations';
 import {
   RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_CONCURRENCY,
   RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_LIMIT,
@@ -62,7 +67,7 @@ function parseBoolean(value: string | null, fallback: boolean): boolean {
   return fallback;
 }
 
-export async function POST(req: Request) {
+async function handleCronRequest(req: Request): Promise<NextResponse> {
   const container = createContainer();
 
   const tokenResult = getAuthorizationToken(req);
@@ -146,6 +151,13 @@ export async function POST(req: Request) {
   );
   const offset = parseNonNegativeInt(url.searchParams.get('offset'), 0);
   const dryRun = parseBoolean(url.searchParams.get('dryRun'), true);
+  const pendingCancellationStaleMinutes = parseNonNegativeInt(
+    url.searchParams.get('pendingCancellationStaleMinutes'),
+    PENDING_STRIPE_CANCELLATION_STALE_AFTER_MINUTES,
+  );
+  const pendingCancellationOlderThan = new Date(
+    Date.now() - pendingCancellationStaleMinutes * 60 * 1000,
+  );
   const concurrencyParam = url.searchParams.get('concurrency');
   const concurrency =
     concurrencyParam !== null
@@ -158,7 +170,10 @@ export async function POST(req: Request) {
         )
       : null;
 
-  let result: unknown;
+  let result: Awaited<ReturnType<typeof reconcileStripeSubscriptions>>;
+  let pendingStripeCancellations: Awaited<
+    ReturnType<typeof drainPendingStripeCancellations>
+  >;
   try {
     result = await reconcileStripeSubscriptions(
       concurrency === null
@@ -197,13 +212,30 @@ export async function POST(req: Request) {
           ),
       },
     );
+    pendingStripeCancellations = await drainPendingStripeCancellations(
+      {
+        olderThan: pendingCancellationOlderThan,
+        dryRun,
+      },
+      {
+        pendingStripeCancellations:
+          container.createPendingStripeCancellationRepository(),
+        cancelStripeCustomerSubscriptions: (stripeCustomerId) =>
+          cancelStripeCustomerSubscriptions(
+            container.stripe,
+            container.logger,
+            stripeCustomerId,
+          ),
+        logger: container.logger,
+      },
+    );
   } catch (error) {
     container.logger.error(
       {
         route: ROUTE,
         error: error instanceof Error ? error.message : String(error),
       },
-      'Failed to reconcile Stripe subscriptions',
+      'Failed to run Stripe billing maintenance',
     );
     return NextResponse.json(
       { error: 'Internal error' },
@@ -211,5 +243,16 @@ export async function POST(req: Request) {
     );
   }
 
-  return NextResponse.json(result, { status: HTTP_OK });
+  return NextResponse.json(
+    { ...result, pendingStripeCancellations },
+    { status: HTTP_OK },
+  );
+}
+
+export async function GET(req: Request) {
+  return handleCronRequest(req);
+}
+
+export async function POST(req: Request) {
+  return handleCronRequest(req);
 }
