@@ -1,6 +1,9 @@
-import { eq } from 'drizzle-orm';
+import { asc, eq, lt } from 'drizzle-orm';
 import { pendingStripeCancellations } from '@/db/schema';
-import type { PendingStripeCancellationRepository } from '@/src/application/ports/repositories';
+import type {
+  PendingStripeCancellation,
+  PendingStripeCancellationRepository,
+} from '@/src/application/ports/repositories';
 import type { DrizzleDb } from '../shared/database-types';
 
 export class DrizzlePendingStripeCancellationRepository
@@ -37,5 +40,17 @@ export class DrizzlePendingStripeCancellationRepository
     await this.db
       .delete(pendingStripeCancellations)
       .where(eq(pendingStripeCancellations.eventId, eventId));
+  }
+
+  async listStale(olderThan: Date): Promise<PendingStripeCancellation[]> {
+    return this.db
+      .select({
+        eventId: pendingStripeCancellations.eventId,
+        stripeCustomerId: pendingStripeCancellations.stripeCustomerId,
+        createdAt: pendingStripeCancellations.createdAt,
+      })
+      .from(pendingStripeCancellations)
+      .where(lt(pendingStripeCancellations.createdAt, olderThan))
+      .orderBy(asc(pendingStripeCancellations.createdAt));
   }
 }

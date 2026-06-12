@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-12 (BUG-242/243 resolved + archived via PR #419 — shared subscription write-guard; BUG-244–247 remain open from the Audit #21 Stripe sweep; BUG-241 remains open for deploy migration enforcement)
+**Last Updated:** 2026-06-12 (BUG-242/243 resolved + archived via PR #419 — shared subscription write-guard; BUG-244/246 implemented on fix branch pending owner grade; BUG-245/247 remain open from the Audit #21 Stripe sweep; BUG-241 remains open for deploy migration enforcement)
 
 ---
 
@@ -143,9 +143,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | Bug | Family | Priority | Summary |
 |-----|--------|----------|---------|
-| [BUG-244](./bug-244-reconciliation-cron-never-scheduled.md) | Billing / reconciliation / deploy-infra | P2 | The Stripe reconciliation safety net never runs — no Vercel cron / scheduled Action invokes the POST-only route, and it defaults to `dryRun=true`. Duplicate subscriptions and drifted rows are never auto-healed; BUG-120/205/DEBT-155 fixes are inert in production. |
+| [BUG-244](./bug-244-reconciliation-cron-never-scheduled.md) | Billing / reconciliation / deploy-infra | P2 | Implemented on fix branch: a Vercel cron invokes the reconciliation route via authenticated `GET`, starts in `dryRun=true`, preserves `POST`, and leaves scheduled firing + dryRun=false flip as the owner post-deploy observation step. |
 | [BUG-245](./bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md) | Billing / checkout race / idempotency | P2 | Concurrent two-tab subscribe defeats every duplicate guard (all key on a not-yet-existing subscription) and per-tab random UUIDs bypass the BUG-148 deterministic-key collapse → two live subscriptions on one customer; masked in-app by the single local row. |
-| [BUG-246](./bug-246-deleted-account-stripe-cancellation-no-drain.md) | Billing / Clerk deletion / money tail-risk | P2 | Deleted-account Stripe cancellation has no drain beyond Svix retries; cascade-deleted local rows hide the orphan from reconciliation → Stripe keeps billing a deleted account with no monitoring or recovery path. |
+| [BUG-246](./bug-246-deleted-account-stripe-cancellation-no-drain.md) | Billing / Clerk deletion / money tail-risk | P2 | Implemented on fix branch: the billing-maintenance cron drains stale `pending_stripe_cancellations` from their stored `stripeCustomerId`, logs stale rows, deletes on success/already-canceled, and preserves failed rows for retry. |
 | [BUG-247](./bug-247-pricing-portal-failure-shows-checkout-error-copy.md) | Billing / pricing copy | P3 | Pricing-page "Manage Billing" portal failures redirect to `?checkout=error` and show "Checkout failed. Please try again." for an action that was never a checkout; the app-billing sibling already has correct portal-failure copy. |
 | [BUG-241](./bug-241-deploy-pipeline-has-no-migration-step.md) | CI/CD / deploy / migrations | P2 | Deploy pipeline has no migration step — schema PRs ship code without applying migrations to dev/prod, with green CI (CI migrates only its throwaway DB). Systemic cause of BUG-240; will recur for every future migration without a gate. |
 

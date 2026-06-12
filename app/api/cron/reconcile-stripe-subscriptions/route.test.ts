@@ -2,8 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RateLimiter } from '@/src/application/ports/gateways';
 import { FakeRateLimiter } from '@/src/application/test-helpers/fakes';
 
-const { reconcileStripeSubscriptions, createContainer } = vi.hoisted(() => ({
+const {
+  reconcileStripeSubscriptions,
+  drainPendingStripeCancellations,
+  createContainer,
+} = vi.hoisted(() => ({
   reconcileStripeSubscriptions: vi.fn(),
+  drainPendingStripeCancellations: vi.fn(),
   createContainer: vi.fn(),
 }));
 
@@ -26,11 +31,16 @@ vi.mock('@/lib/container', () => ({
   createContainer,
 }));
 
+vi.mock('@/src/adapters/jobs/drain-pending-stripe-cancellations', () => ({
+  drainPendingStripeCancellations,
+  PENDING_STRIPE_CANCELLATION_STALE_AFTER_MINUTES: 15,
+}));
+
 import {
   RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_CONCURRENCY,
   RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT,
 } from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
-import { POST } from './route';
+import { GET, POST } from './route';
 
 type CronContainer = {
   env: {
@@ -54,10 +64,12 @@ type CronContainer = {
   };
   createStripeCustomerRepository: ReturnType<typeof vi.fn>;
   createSubscriptionRepository: ReturnType<typeof vi.fn>;
+  createPendingStripeCancellationRepository: ReturnType<typeof vi.fn>;
 };
 
 function createMockContainer(): CronContainer {
   const rateLimiter = new FakeRateLimiter();
+  const pendingStripeCancellationRepository = {};
 
   return {
     env: {
@@ -83,6 +95,9 @@ function createMockContainer(): CronContainer {
     },
     createStripeCustomerRepository: vi.fn(),
     createSubscriptionRepository: vi.fn(),
+    createPendingStripeCancellationRepository: vi.fn(
+      () => pendingStripeCancellationRepository,
+    ),
   };
 }
 
@@ -97,6 +112,13 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
       updated: 0,
       failed: 0,
       failures: [],
+    });
+    drainPendingStripeCancellations.mockResolvedValue({
+      scanned: 0,
+      drained: 0,
+      failed: 0,
+      failures: [],
+      dryRun: true,
     });
 
     container = createMockContainer();
@@ -436,5 +458,111 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({ error: 'Internal error' });
     expect(container.logger.error).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('GET /api/cron/reconcile-stripe-subscriptions', () => {
+  let container: CronContainer;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    reconcileStripeSubscriptions.mockResolvedValue({
+      scanned: 0,
+      updated: 0,
+      failed: 0,
+      failures: [],
+    });
+    drainPendingStripeCancellations.mockResolvedValue({
+      scanned: 0,
+      drained: 0,
+      failed: 0,
+      failures: [],
+      dryRun: true,
+    });
+
+    container = createMockContainer();
+    createContainer.mockReturnValue(container);
+  });
+
+  it('returns 401 before container work when authorization header is missing', async () => {
+    const response = await GET(
+      new Request('http://localhost/api/cron/reconcile-stripe-subscriptions', {
+        method: 'GET',
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    expect(container.createRateLimiter).toBeDefined();
+    expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+    expect(
+      container.db.query.stripeSubscriptions.findMany,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('returns 401 before reconciliation when bearer token is invalid', async () => {
+    const response = await GET(
+      new Request('http://localhost/api/cron/reconcile-stripe-subscriptions', {
+        method: 'GET',
+        headers: {
+          authorization: 'Bearer wrong-secret',
+        },
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+    expect(
+      container.db.query.stripeSubscriptions.findMany,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('runs the same reconciliation path as POST when the bearer token is valid', async () => {
+    const response = await GET(
+      new Request(
+        'http://localhost/api/cron/reconcile-stripe-subscriptions?limit=12&offset=7&dryRun=true',
+        {
+          method: 'GET',
+          headers: {
+            authorization: 'Bearer test-secret',
+          },
+        },
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(reconcileStripeSubscriptions).toHaveBeenCalledWith(
+      {
+        limit: 12,
+        offset: 7,
+        dryRun: true,
+      },
+      expect.any(Object),
+    );
+  });
+
+  it('drains pending Stripe cancellations through the same authenticated GET run', async () => {
+    const response = await GET(
+      new Request(
+        'http://localhost/api/cron/reconcile-stripe-subscriptions?dryRun=false',
+        {
+          method: 'GET',
+          headers: {
+            authorization: 'Bearer test-secret',
+          },
+        },
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(drainPendingStripeCancellations).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dryRun: false,
+      }),
+      expect.objectContaining({
+        pendingStripeCancellations: expect.any(Object),
+        logger: container.logger,
+      }),
+    );
   });
 });

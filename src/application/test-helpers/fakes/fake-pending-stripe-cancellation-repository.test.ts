@@ -23,6 +23,25 @@ describe('FakePendingStripeCancellationRepository', () => {
     await expect(repo.findByEventId('evt_1')).resolves.toBeNull();
   });
 
+  it('lists only stale pending cancellations before the cutoff', async () => {
+    let now = new Date('2026-06-12T12:00:00.000Z');
+    const repo = new FakePendingStripeCancellationRepository(() => now);
+
+    await repo.schedule('evt_stale', 'cus_stale');
+    now = new Date('2026-06-12T12:20:00.000Z');
+    await repo.schedule('evt_fresh', 'cus_fresh');
+
+    await expect(
+      repo.listStale(new Date('2026-06-12T12:15:00.000Z')),
+    ).resolves.toEqual([
+      {
+        eventId: 'evt_stale',
+        stripeCustomerId: 'cus_stale',
+        createdAt: new Date('2026-06-12T12:00:00.000Z'),
+      },
+    ]);
+  });
+
   it('restores snapshots', async () => {
     const repo = new FakePendingStripeCancellationRepository();
     await repo.schedule('evt_1', 'cus_123');
