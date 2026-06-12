@@ -62,7 +62,7 @@ Rejected alternatives:
 - [x] Unit test: Drizzle upsert serializes per user before reading the current row (`src/adapters/repositories/drizzle-subscription-repository.test.ts:180-226`).
 - [x] Reconcile regression test: a different canonical blocking winner still persists over a current entitled row (`src/adapters/jobs/reconcile-stripe-subscriptions.test.ts:1079-1126`).
 - [x] Real Drizzle integration test: seed (B, `active`, future period), upsert superseded terminal A, row stays B; same-id active→canceled still persists (`tests/integration/stripe-repositories.integration.test.ts:189-272`).
-- [x] Focused verification green: `pnpm test --run src/domain/services/subscription-write-guard.test.ts src/application/test-helpers/fakes/fake-subscription-repository.test.ts src/adapters/controllers/stripe-webhook-controller.test.ts app/(marketing)/checkout/success/page.test.ts src/adapters/jobs/reconcile-stripe-subscriptions.test.ts src/adapters/repositories/drizzle-subscription-repository.test.ts` and `pnpm test:integration --run tests/integration/stripe-repositories.integration.test.ts`.
+- [x] Focused verification green: `pnpm test --run src/domain/services/subscription-write-guard.test.ts src/application/test-helpers/fakes/fake-subscription-repository.test.ts src/adapters/controllers/stripe-webhook-controller.test.ts "app/(marketing)/checkout/success/page.test.ts" src/adapters/jobs/reconcile-stripe-subscriptions.test.ts src/adapters/repositories/drizzle-subscription-repository.test.ts` and `pnpm test:integration --run tests/integration/stripe-repositories.integration.test.ts`.
 
 ## Surfaces Confirmed
 
