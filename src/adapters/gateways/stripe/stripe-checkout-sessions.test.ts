@@ -12,6 +12,12 @@ function createStripeMock(overrides?: {
   retrievedSessionPriceId?: string;
   retrievedSessionStatus?: 'open' | 'complete' | 'expired';
   retrievedSessionExpiresAtUnix?: number;
+  retrievedSessionResponses?: Array<{
+    id?: string;
+    url?: string | null;
+    status?: 'open' | 'complete' | 'expired';
+    expiresAtUnix?: number;
+  }>;
   shouldThrowOnRetrieve?: boolean;
   shouldThrowOnExpire?: boolean;
   expireError?: unknown;
@@ -29,14 +35,23 @@ function createStripeMock(overrides?: {
   const sessionsList = vi.fn(async () => ({
     data: overrides?.openSessionsData ?? [],
   }));
-  const sessionsRetrieve = vi.fn(async () => {
-    if (overrides?.shouldThrowOnRetrieve) {
+  let retrieveCallIndex = 0;
+  const sessionsRetrieve = vi.fn(async (sessionId: string) => {
+    const response = overrides?.retrievedSessionResponses?.[retrieveCallIndex];
+    const shouldThrow =
+      overrides?.shouldThrowOnRetrieve && retrieveCallIndex === 0;
+    retrieveCallIndex += 1;
+
+    if (shouldThrow) {
       throw new Error('retrieve failed');
     }
 
     return {
-      status: overrides?.retrievedSessionStatus,
-      expires_at: overrides?.retrievedSessionExpiresAtUnix,
+      id: response?.id ?? sessionId,
+      url: response?.url,
+      status: response?.status ?? overrides?.retrievedSessionStatus,
+      expires_at:
+        response?.expiresAtUnix ?? overrides?.retrievedSessionExpiresAtUnix,
       line_items: {
         data: [
           {
@@ -151,7 +166,7 @@ describe('createStripeCheckoutSession', () => {
     );
   });
 
-  it('uses the caller-provided idempotency key when present', async () => {
+  it('uses the deterministic checkout idempotency key when caller key is present', async () => {
     const { stripe, sessionsCreate } = createStripeMock({
       openSessionsData: [],
       createdSessionUrl: 'https://stripe/checkout/new',
@@ -170,7 +185,7 @@ describe('createStripeCheckoutSession', () => {
     expect(sessionsCreate).toHaveBeenCalledWith(
       expect.any(Object),
       expect.objectContaining({
-        idempotencyKey: 'checkout_idem_custom_1',
+        idempotencyKey: `checkout_session:${appUserId}:monthly`,
       }),
     );
   });
@@ -221,7 +236,7 @@ describe('createStripeCheckoutSession', () => {
     );
   });
 
-  it('throws STRIPE_ERROR when caller-provided key returns a session expiring at the injected nowMs boundary', async () => {
+  it('recovers when the deterministic checkout key replays an expired session even with a caller key', async () => {
     const { stripe, sessionsCreate } = createStripeMock({
       openSessionsData: [],
       createdSessionResponses: [
@@ -230,6 +245,12 @@ describe('createStripeCheckoutSession', () => {
           url: 'https://stripe/checkout/expired',
           status: 'open',
           expiresAtUnix: fixedNowUnix,
+        },
+        {
+          id: 'cs_fresh',
+          url: 'https://stripe/checkout/fresh',
+          status: 'open',
+          expiresAtUnix: fixedNowUnix + 3600,
         },
       ],
     });
@@ -243,12 +264,23 @@ describe('createStripeCheckoutSession', () => {
         logger,
         nowMs: () => fixedNowMs,
       }),
-    ).rejects.toMatchObject({
-      code: 'STRIPE_ERROR',
-      message: 'Stripe Checkout Session is expired or inactive',
-    });
+    ).resolves.toEqual({ url: 'https://stripe/checkout/fresh' });
 
-    expect(sessionsCreate).toHaveBeenCalledTimes(1);
+    expect(sessionsCreate).toHaveBeenCalledTimes(2);
+    expect(sessionsCreate).toHaveBeenNthCalledWith(
+      1,
+      expect.any(Object),
+      expect.objectContaining({
+        idempotencyKey: `checkout_session:${appUserId}:monthly`,
+      }),
+    );
+    expect(sessionsCreate).toHaveBeenNthCalledWith(
+      2,
+      expect.any(Object),
+      expect.objectContaining({
+        idempotencyKey: `checkout_session_recovery:${appUserId}:monthly:cs_expired`,
+      }),
+    );
   });
 
   it('throws STRIPE_ERROR when recovered session is missing URL', async () => {
@@ -281,41 +313,6 @@ describe('createStripeCheckoutSession', () => {
     ).rejects.toMatchObject({
       code: 'STRIPE_ERROR',
       message: 'Stripe Checkout Session URL is missing',
-    });
-
-    expect(sessionsCreate).toHaveBeenCalledTimes(2);
-  });
-
-  it('throws STRIPE_ERROR when recovered session is expired or inactive', async () => {
-    const { stripe, sessionsCreate } = createStripeMock({
-      openSessionsData: [],
-      createdSessionResponses: [
-        {
-          id: 'cs_expired',
-          url: 'https://stripe/checkout/expired',
-          status: 'open',
-          expiresAtUnix: fixedNowUnix,
-        },
-        {
-          id: 'cs_recovered',
-          url: 'https://stripe/checkout/recovered',
-          status: 'expired',
-          expiresAtUnix: fixedNowUnix + 3600,
-        },
-      ],
-    });
-
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-        nowMs: () => fixedNowMs,
-      }),
-    ).rejects.toMatchObject({
-      code: 'STRIPE_ERROR',
-      message: 'Stripe Checkout Session is expired or inactive',
     });
 
     expect(sessionsCreate).toHaveBeenCalledTimes(2);
@@ -453,7 +450,10 @@ describe('createStripeCheckoutSession', () => {
         { id: 'cs_open', url: 'https://stripe/checkout/open' },
       ],
       retrievedSessionPriceId: 'price_m',
-      retrievedSessionStatus: 'complete',
+      retrievedSessionResponses: [
+        { status: 'complete' },
+        { status: 'open', url: 'https://stripe/checkout/new' },
+      ],
       createdSessionUrl: 'https://stripe/checkout/new',
     });
 
@@ -476,8 +476,14 @@ describe('createStripeCheckoutSession', () => {
         { id: 'cs_open', url: 'https://stripe/checkout/open' },
       ],
       retrievedSessionPriceId: 'price_m',
-      retrievedSessionStatus: 'open',
-      retrievedSessionExpiresAtUnix: fixedNowUnix,
+      retrievedSessionResponses: [
+        { status: 'open', expiresAtUnix: fixedNowUnix },
+        {
+          status: 'open',
+          url: 'https://stripe/checkout/new',
+          expiresAtUnix: fixedNowUnix + 3600,
+        },
+      ],
       createdSessionUrl: 'https://stripe/checkout/new',
     });
 
@@ -691,7 +697,7 @@ describe('createStripeCheckoutSession', () => {
       }),
     ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
 
-    expect(sessionsRetrieve).toHaveBeenCalledTimes(1);
+    expect(sessionsRetrieve).toHaveBeenCalledTimes(2);
     expect(sessionsExpire).toHaveBeenCalledWith('cs_open', undefined, {
       idempotencyKey: 'expire_checkout_session:cs_open',
     });
@@ -718,7 +724,7 @@ describe('createStripeCheckoutSession', () => {
       }),
     ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
 
-    expect(sessionsRetrieve).toHaveBeenCalledTimes(1);
+    expect(sessionsRetrieve).toHaveBeenCalledTimes(2);
     expect(sessionsExpire).toHaveBeenCalledWith('cs_open', undefined, {
       idempotencyKey: 'expire_checkout_session:cs_open',
     });

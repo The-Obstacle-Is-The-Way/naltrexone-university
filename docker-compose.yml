@@ -5,7 +5,6 @@
 services:
   db:
     image: postgres:16
-    container_name: naltrexone-test-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres

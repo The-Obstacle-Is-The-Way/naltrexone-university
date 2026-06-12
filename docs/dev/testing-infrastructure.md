@@ -89,8 +89,9 @@ Current repo posture:
 
 ```bash
 # Run all E2E tests against local Docker Postgres.
-# This starts the Docker test DB, migrates, seeds placeholder content,
-# kills stale port-3000 servers, and then runs Playwright.
+# This starts the isolated per-clone Docker test DB, migrates, seeds
+# placeholder content, and then runs Playwright against the resolved
+# local app/database target.
 pnpm test:e2e
 
 # Run a specific test file through the same hermetic local flow
@@ -119,7 +120,7 @@ STRIPE_SECRET_KEY=sk_test_...
 NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY=price_...
 ```
 
-Locally, these can be provided via `.env.local` (loaded by `playwright.config.ts`). The local `DATABASE_URL` is supplied by `scripts/run-local-e2e.ts`, not `.env.local`: it uses the non-secret Docker URL `postgresql://postgres:postgres@127.0.0.1:${DB_TEST_PORT:-5434}/addiction_boards_test`, runs `pnpm db:test:up`, migrates, and seeds with `SEED_INCLUDE_PLACEHOLDERS=true` before Playwright starts. CI still supplies its own Docker-service `DATABASE_URL` through `.github/workflows/ci.yml`.
+Locally, these can be provided via `.env.local` (loaded by `playwright.config.ts`). The local `DATABASE_URL` is supplied by `scripts/run-local-e2e.ts`, not `.env.local`: it resolves the current clone's local test target through `scripts/resolve-local-test-target.ts`, starts that target's Docker Compose project, migrates, and seeds with `SEED_INCLUDE_PLACEHOLDERS=true` before Playwright starts. The same target also supplies `PORT` and `NEXT_PUBLIC_APP_URL`, so concurrent clones do not share the app server port. CI still supplies its own Docker-service `DATABASE_URL` through `.github/workflows/ci.yml`.
 
 Individual spec files still use `test.skip(!hasClerkCredentials, ...)`, but that guard does **not** replace suite setup: `global.setup.ts` runs a preflight and seed/reset pass before the Chromium project starts. Missing or invalid credentials therefore fail the suite fast instead of silently skipping it.
 
@@ -382,12 +383,14 @@ For feature-level acceptance criteria and planned routes (e.g., Quick Practice a
 ### Playwright won't start server
 
 ```bash
-# Kill any zombie processes
-lsof -ti:3000 | xargs kill -9 2>/dev/null
+# Inspect this clone's resolved local target
+pnpm exec tsx scripts/resolve-local-test-target.ts env
 
 # Clear Next.js cache
 rm -rf .next
 ```
+
+Do not blanket-kill `:3000`. Local E2E uses a per-clone resolved `PORT`; if that port is already held, identify the holder and stop only the process you own.
 
 ### Agent-browser can't connect
 
@@ -436,11 +439,13 @@ See [DEBT-293](../_archive/debt/debt-293-e2e-shared-state-structural-flakiness.m
    psql "$DATABASE_URL" -c "SELECT 1"
    ```
 
-2. **Port 3000 zombie process:** A previous dev server is still running but in a bad state.
+2. **Local app port conflict:** A previous dev server is still running but in a bad state, or `PORT` was overridden to collide with another process.
 
    ```bash
-   lsof -ti:3000 | xargs kill -9
+   pnpm exec tsx scripts/resolve-local-test-target.ts env
    ```
+
+   Stop only the process you own. Do not use blanket `kill -9` on a shared port.
 
 3. **Connection pool exhaustion:** The postgres driver defaults to `max: 10` connections. In dev, the singleton pattern (`globalForDb`) prevents accumulation across HMR reloads. If you suspect exhaustion, restart the dev server.
 

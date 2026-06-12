@@ -23,12 +23,13 @@ For local integration testing, prefer recreating the database state:
 
 ```bash
 pnpm db:test:reset
-DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:migrate
-DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:seed
+TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
+DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
+DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
 ```
 
 Notes:
 
-- `pnpm db:test:reset` only restarts the Docker Postgres container. It does **not** read `DATABASE_URL`.
+- `pnpm db:test:reset` restarts the resolved Docker Compose Postgres service. It does **not** read `DATABASE_URL`.
 - Drizzle commands such as `pnpm db:migrate` and `pnpm db:seed` **do** read `DATABASE_URL`, so prefix them explicitly when targeting the local test database.
 - After a reset, rerun both migrations and seed data before running `pnpm test:integration`.

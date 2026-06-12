@@ -74,7 +74,7 @@ DATABASE_URL="<target>" pnpm db:seed
 | **Local app / local E2E** | Direct (already in `.env.local`) | `.env.local`, expected to match Vercel Development and the Neon `dev` branch |
 | **Preview / shared non-production** | Use your provider CLI/dashboard to fetch the non-production connection string | Vercel Preview/Development env vars, currently the Neon `dev` branch |
 | **Production** | Use your provider CLI/dashboard to fetch the production connection string | Vercel Production env vars, currently the Neon `main` branch |
-| **Local integration tests** | Docker Postgres on `localhost:5434` | `.env.test` or explicit `DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test` |
+| **Local integration tests** | Resolver-scoped Docker Postgres | `scripts/resolve-local-test-target.ts` supplies the explicit local `DATABASE_URL` |
 
 Example for preview/production:
 
@@ -89,14 +89,13 @@ If you are using Neon, fetch the connection string for the intended branch first
 
 **Optional helper:** `pnpm db:seed:all -- --plan` pulls Vercel Development, Preview, and Production env files into a temp directory, compares them with local `.env.local`, and shows the unique seed targets without writing data. `pnpm db:seed:all` then imports drafts as published and seeds each unique `DATABASE_URL` once. It does **not** run migrations; keep using `pnpm db:migrate` separately when schema changes are involved.
 
-For local authenticated E2E after pulling code with new migrations, migrate the `.env.local` target before running the suite. Confirm the host without printing credentials, then run Drizzle against `.env.local` deliberately:
+Normal local authenticated E2E uses the resolver-scoped Docker database and runs migrations automatically through `pnpm test:e2e`. For an intentional deploy-target E2E check, confirm the host without printing credentials, migrate that target deliberately, then run the suite with `E2E_USE_EXISTING_DATABASE=true`:
 
 ```bash
 LOCAL_E2E_DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env.local', quiet: true }); const url = process.env.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
 node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$LOCAL_E2E_DATABASE_URL"
 DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm db:migrate
-lsof -ti:3000 | xargs kill -9 2>/dev/null
-pnpm test:e2e
+E2E_USE_EXISTING_DATABASE=true DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm test:e2e
 ```
 
 Do not rely on implicit `.env.local` resolution for migration commands. Verify the host, then prefix `pnpm db:migrate` with the exact `DATABASE_URL` you intend to mutate.

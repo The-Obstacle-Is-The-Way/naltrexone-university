@@ -134,7 +134,6 @@ pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test
 If the local authenticated billing E2E environment is present, also run:
 
 ```sh
-lsof -ti:3000 | xargs kill -9 2>/dev/null
 pnpm test:e2e
 ```
 

@@ -3,9 +3,9 @@ import { runEnsureLocalTestDatabase } from './ensure-local-test-db';
 import {
   ensureLocalTestDatabase,
   runTestDbCommand,
-  TEST_DB_CONTAINER_NAME,
   type TestDbCommandRunner,
 } from './local-test-db';
+import { resolveLocalTestTarget } from './resolve-local-test-target';
 
 function createCommandRunner(
   results: Array<{ exitCode: number; stdout?: string; stderr?: string }>,
@@ -27,90 +27,125 @@ function createCommandRunner(
 }
 
 describe('ensureLocalTestDatabase', () => {
-  it('starts docker compose when the named test DB container does not exist', async () => {
+  const target = resolveLocalTestTarget({
+    cwd: '/repo/app',
+    env: {
+      LOCAL_TEST_INSTANCE: 'dbtest',
+      DB_TEST_PORT: '55437',
+    },
+  });
+
+  it('starts docker compose when the resolved Compose service does not exist', async () => {
     const runCommand = createCommandRunner([
-      { exitCode: 1 },
+      { exitCode: 0, stdout: '\n' },
       { exitCode: 0 },
+      { exitCode: 0, stdout: 'container_id\n' },
       { exitCode: 0, stdout: 'healthy\n' },
     ]);
 
-    await expect(ensureLocalTestDatabase({ runCommand })).resolves.toBe(
+    await expect(ensureLocalTestDatabase({ runCommand, target })).resolves.toBe(
       'created',
     );
 
-    expect(runCommand).toHaveBeenCalledTimes(3);
+    expect(runCommand).toHaveBeenCalledTimes(4);
     expect(runCommand).toHaveBeenNthCalledWith(1, 'docker', [
-      'inspect',
-      TEST_DB_CONTAINER_NAME,
+      'compose',
+      '-p',
+      'naltrexone-test-dbtest',
+      'ps',
+      '-aq',
+      'db',
     ]);
     expect(runCommand).toHaveBeenNthCalledWith(2, 'pnpm', ['db:test:up']);
     expect(runCommand).toHaveBeenNthCalledWith(3, 'docker', [
+      'compose',
+      '-p',
+      'naltrexone-test-dbtest',
+      'ps',
+      '-q',
+      'db',
+    ]);
+    expect(runCommand).toHaveBeenNthCalledWith(4, 'docker', [
       'inspect',
       '--format',
       '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}',
-      TEST_DB_CONTAINER_NAME,
+      'container_id',
     ]);
   });
 
-  it('reuses an existing healthy test DB container instead of running docker compose', async () => {
+  it('reuses an existing resolved Compose service instead of inspecting a global container name', async () => {
     const runCommand = createCommandRunner([
-      { exitCode: 0 },
+      { exitCode: 0, stdout: 'container_id\n' },
       { exitCode: 0 },
       { exitCode: 0, stdout: 'healthy\n' },
     ]);
 
-    await expect(ensureLocalTestDatabase({ runCommand })).resolves.toBe(
+    await expect(ensureLocalTestDatabase({ runCommand, target })).resolves.toBe(
       'reused',
     );
 
     expect(runCommand).toHaveBeenNthCalledWith(1, 'docker', [
-      'inspect',
-      TEST_DB_CONTAINER_NAME,
+      'compose',
+      '-p',
+      'naltrexone-test-dbtest',
+      'ps',
+      '-aq',
+      'db',
     ]);
     expect(runCommand).toHaveBeenNthCalledWith(2, 'docker', [
-      'start',
-      TEST_DB_CONTAINER_NAME,
+      'compose',
+      '-p',
+      'naltrexone-test-dbtest',
+      'up',
+      '-d',
+      '--wait',
+      'db',
     ]);
     expect(runCommand).toHaveBeenNthCalledWith(3, 'docker', [
       'inspect',
       '--format',
       '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}',
-      TEST_DB_CONTAINER_NAME,
+      'container_id',
     ]);
     expect(runCommand).not.toHaveBeenCalledWith('pnpm', ['db:test:up']);
+    expect(JSON.stringify(vi.mocked(runCommand).mock.calls)).not.toContain(
+      'naltrexone-test-db"',
+    );
   });
 
   it('waits until an existing test DB container becomes healthy', async () => {
     const sleep = vi.fn(async () => {});
     const runCommand = createCommandRunner([
-      { exitCode: 0 },
+      { exitCode: 0, stdout: 'container_id\n' },
       { exitCode: 0 },
       { exitCode: 0, stdout: 'starting\n' },
       { exitCode: 0, stdout: 'healthy\n' },
     ]);
 
-    await expect(ensureLocalTestDatabase({ runCommand, sleep })).resolves.toBe(
-      'reused',
-    );
+    await expect(
+      ensureLocalTestDatabase({ runCommand, sleep, target }),
+    ).resolves.toBe('reused');
 
     expect(sleep).toHaveBeenCalledTimes(1);
   });
 
   it('throws the underlying command stderr when startup fails', async () => {
     const runCommand = createCommandRunner([
-      { exitCode: 0 },
-      { exitCode: 2, stderr: 'docker start failed' },
+      { exitCode: 0, stdout: 'container_id\n' },
+      { exitCode: 2, stderr: 'docker compose up failed' },
     ]);
 
-    await expect(ensureLocalTestDatabase({ runCommand })).rejects.toThrow(
-      `Command failed: docker start ${TEST_DB_CONTAINER_NAME}\ndocker start failed`,
+    await expect(
+      ensureLocalTestDatabase({ runCommand, target }),
+    ).rejects.toThrow(
+      'Command failed: docker compose -p naltrexone-test-dbtest up -d --wait db\ndocker compose up failed',
     );
   });
 
   it('fails when an existing test DB container never becomes healthy', async () => {
     const sleep = vi.fn(async () => {});
     const runCommand = createCommandRunner([
-      { exitCode: 0 },
+      { exitCode: 0, stdout: 'container_id\n' },
       { exitCode: 0 },
       ...Array.from({ length: 60 }, () => ({
         exitCode: 0,
@@ -119,9 +154,9 @@ describe('ensureLocalTestDatabase', () => {
     ]);
 
     await expect(
-      ensureLocalTestDatabase({ runCommand, sleep }),
+      ensureLocalTestDatabase({ runCommand, sleep, target }),
     ).rejects.toThrow(
-      `Local test database container "${TEST_DB_CONTAINER_NAME}" did not become healthy.`,
+      'Local test database service "db" in Compose project "naltrexone-test-dbtest" did not become healthy.',
     );
     expect(sleep).toHaveBeenCalledTimes(59);
   });

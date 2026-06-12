@@ -15,7 +15,7 @@ It intentionally avoids hard-coding private dashboard values that the repo canno
 | Production | `https://addictionboards.com` | `main` | Clerk live + Stripe live | Isolated production database | Vercel Production deployment |
 | Preview | `https://*.vercel.app` on non-`main` branches | Any non-`main` branch | Clerk test/dev + Stripe test | Isolated non-production database | Public URL required for webhook testing |
 | Local app runtime | `http://localhost:3000` or `http://127.0.0.1:3000` | Local checkout | Clerk test/dev + Stripe test | Whatever `DATABASE_URL` in `.env.local` points to | Should mirror Preview semantics, not Production |
-| Local integration tests | n/a | Local checkout | Clerk skipped (`NEXT_PUBLIC_SKIP_CLERK=true`) | Docker Postgres on `localhost:5434` via `.env.test` | Uses `pnpm db:test:*` scripts |
+| Local integration tests | n/a | Local checkout | Clerk skipped (`NEXT_PUBLIC_SKIP_CLERK=true`) | Resolver-scoped Docker Postgres via `scripts/resolve-local-test-target.ts` | Uses `pnpm db:test:*` scripts |
 
 ### Core isolation rule
 

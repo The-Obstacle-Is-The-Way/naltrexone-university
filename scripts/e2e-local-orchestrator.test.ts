@@ -9,14 +9,29 @@ import {
 import { runLocalE2E } from './run-local-e2e';
 
 describe('resolveLocalE2EDatabaseUrl', () => {
-  it('returns the non-secret Docker Postgres URL by default', () => {
-    expect(resolveLocalE2EDatabaseUrl({})).toBe(
+  it('returns the non-secret resolved Docker Postgres URL by default', () => {
+    const first = resolveLocalE2EDatabaseUrl(
+      {},
+      '/Users/ray/Desktop/github/naltrexone-university',
+    );
+    const again = resolveLocalE2EDatabaseUrl(
+      {},
+      '/Users/ray/Desktop/github/naltrexone-university',
+    );
+
+    expect(again).toBe(first);
+    expect(first).toMatch(
+      /^postgresql:\/\/postgres:postgres@127\.0\.0\.1:\d+\/addiction_boards_test$/,
+    );
+    expect(first).not.toBe(
       'postgresql://postgres:postgres@127.0.0.1:5434/addiction_boards_test',
     );
   });
 
-  it('honors DB_TEST_PORT so the URL matches docker-compose.yml port mapping', () => {
-    expect(resolveLocalE2EDatabaseUrl({ DB_TEST_PORT: '5544' })).toBe(
+  it('honors DB_TEST_PORT so the URL matches the isolated Compose port mapping', () => {
+    expect(
+      resolveLocalE2EDatabaseUrl({ DB_TEST_PORT: '5544' }, '/repo/a'),
+    ).toBe(
       'postgresql://postgres:postgres@127.0.0.1:5544/addiction_boards_test',
     );
   });
@@ -39,43 +54,52 @@ describe('shouldUseHermeticLocalE2E', () => {
 });
 
 describe('createE2ECommandPlan', () => {
-  it('builds the local Docker migrate seed Playwright sequence', () => {
+  it('builds the isolated local Docker migrate seed Playwright sequence', () => {
     const plan = createE2ECommandPlan({
-      env: { DB_TEST_PORT: '5544' },
+      cwd: '/repo/a',
+      env: {
+        LOCAL_TEST_INSTANCE: 'bug245',
+        DB_TEST_PORT: '5544',
+        LOCAL_TEST_APP_PORT: '3301',
+      },
       playwrightArgs: ['tests/e2e/smoke.spec.ts', '--project=chromium'],
     });
     const dockerUrl =
       'postgresql://postgres:postgres@127.0.0.1:5544/addiction_boards_test';
+    const targetEnv = {
+      COMPOSE_PROJECT_NAME: 'naltrexone-test-bug245',
+      DATABASE_URL: dockerUrl,
+      DB_TEST_PORT: '5544',
+      LOCAL_TEST_INSTANCE: 'bug245',
+      NEXT_PUBLIC_APP_URL: 'http://127.0.0.1:3301',
+      PORT: '3301',
+    };
 
     expect(plan.map((step) => step.label)).toEqual([
-      'Stop stale local Next.js server on :3000',
-      'Start local Docker test database',
-      'Migrate local Docker test database',
-      'Seed local Docker test database',
-      'Run Playwright E2E against local Docker test database',
+      'Start isolated local Docker test database',
+      'Migrate isolated local Docker test database',
+      'Seed isolated local Docker test database',
+      'Run Playwright E2E against isolated local test target',
     ]);
     expect(plan[0]).toMatchObject({
-      command: 'sh',
-      args: ['-c', 'lsof -ti:3000 | xargs kill -9 2>/dev/null || true'],
+      command: 'pnpm',
+      args: ['exec', 'tsx', 'scripts/ensure-local-test-db.ts'],
+      env: targetEnv,
     });
     expect(plan[1]).toMatchObject({
       command: 'pnpm',
-      args: ['exec', 'tsx', 'scripts/ensure-local-test-db.ts'],
+      args: ['db:migrate'],
+      env: targetEnv,
     });
     expect(plan[2]).toMatchObject({
       command: 'pnpm',
-      args: ['db:migrate'],
-      env: { DATABASE_URL: dockerUrl },
-    });
-    expect(plan[3]).toMatchObject({
-      command: 'pnpm',
       args: ['db:seed'],
       env: {
-        DATABASE_URL: dockerUrl,
+        ...targetEnv,
         SEED_INCLUDE_PLACEHOLDERS: 'true',
       },
     });
-    expect(plan[4]).toMatchObject({
+    expect(plan[3]).toMatchObject({
       command: 'pnpm',
       args: [
         'exec',
@@ -84,10 +108,10 @@ describe('createE2ECommandPlan', () => {
         'tests/e2e/smoke.spec.ts',
         '--project=chromium',
       ],
-      env: {
-        DATABASE_URL: dockerUrl,
-      },
+      env: targetEnv,
     });
+    expect(JSON.stringify(plan)).not.toContain('kill -9');
+    expect(JSON.stringify(plan)).not.toContain('lsof -ti:3000');
   });
 
   it('does not start Docker or override DATABASE_URL in CI', () => {
@@ -243,6 +267,27 @@ describe('package scripts', () => {
   it('routes pnpm test:e2e through the local hermetic orchestrator', () => {
     expect(packageJson.scripts['test:e2e']).toBe(
       'tsx scripts/run-local-e2e.ts',
+    );
+  });
+
+  it('routes local integration and DB lifecycle scripts through the local target resolver', () => {
+    expect(packageJson.scripts['test:integration']).toBe(
+      'tsx scripts/run-local-integration.ts',
+    );
+    expect(packageJson.scripts['test:integration:coverage']).toBe(
+      'tsx scripts/run-local-integration.ts --coverage',
+    );
+    expect(packageJson.scripts['db:test:up']).toBe(
+      'tsx scripts/run-local-test-db.ts up',
+    );
+    expect(packageJson.scripts['db:test:down']).toBe(
+      'tsx scripts/run-local-test-db.ts down',
+    );
+    expect(packageJson.scripts['db:test:reset']).toBe(
+      'tsx scripts/run-local-test-db.ts reset',
+    );
+    expect(packageJson.scripts['local:test:target']).toBe(
+      'tsx scripts/resolve-local-test-target.ts',
     );
   });
 });

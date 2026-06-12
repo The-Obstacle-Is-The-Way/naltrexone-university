@@ -1,6 +1,8 @@
 import { execFile } from 'node:child_process';
-
-export const TEST_DB_CONTAINER_NAME = 'naltrexone-test-db';
+import {
+  type LocalTestTarget,
+  resolveLocalTestTarget,
+} from './resolve-local-test-target';
 
 const HEALTH_STATUS_FORMAT =
   '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}';
@@ -21,6 +23,7 @@ export type TestDbCommandRunner = (
 type EnsureLocalTestDatabaseInput = {
   runCommand?: TestDbCommandRunner;
   sleep?: (ms: number) => Promise<void>;
+  target?: LocalTestTarget;
 };
 
 type EnsureLocalTestDatabaseResult = 'created' | 'reused';
@@ -28,36 +31,65 @@ type EnsureLocalTestDatabaseResult = 'created' | 'reused';
 export async function ensureLocalTestDatabase({
   runCommand = runTestDbCommand,
   sleep = sleepFor,
+  target = resolveLocalTestTarget(),
 }: EnsureLocalTestDatabaseInput = {}): Promise<EnsureLocalTestDatabaseResult> {
-  const existingContainer = await runCommand('docker', [
-    'inspect',
-    TEST_DB_CONTAINER_NAME,
-  ]);
+  const existingContainerId = await findTestDbContainerId({
+    runCommand,
+    target,
+    all: true,
+  });
 
-  if (existingContainer.exitCode !== 0) {
+  if (!existingContainerId) {
     await runRequiredCommand(runCommand, 'pnpm', ['db:test:up']);
-    await waitForHealthyTestDatabase({ runCommand, sleep });
+    await waitForHealthyTestDatabase({ runCommand, sleep, target });
     return 'created';
   }
 
   await runRequiredCommand(runCommand, 'docker', [
-    'start',
-    TEST_DB_CONTAINER_NAME,
+    'compose',
+    '-p',
+    target.composeProjectName,
+    'up',
+    '-d',
+    '--wait',
+    'db',
   ]);
-  await waitForHealthyTestDatabase({ runCommand, sleep });
+  await waitForHealthyTestDatabase({
+    runCommand,
+    sleep,
+    target,
+    containerId: existingContainerId,
+  });
   return 'reused';
 }
 
 async function waitForHealthyTestDatabase({
   runCommand,
   sleep,
-}: Required<EnsureLocalTestDatabaseInput>): Promise<void> {
+  target,
+  containerId,
+}: Required<
+  Pick<EnsureLocalTestDatabaseInput, 'runCommand' | 'sleep' | 'target'>
+> & {
+  containerId?: string;
+}): Promise<void> {
   for (let attempt = 1; attempt <= MAX_HEALTH_CHECK_ATTEMPTS; attempt += 1) {
+    const activeContainerId =
+      containerId ??
+      (await findTestDbContainerId({ runCommand, target, all: false }));
+
+    if (!activeContainerId) {
+      if (attempt < MAX_HEALTH_CHECK_ATTEMPTS) {
+        await sleep(HEALTH_CHECK_INTERVAL_MS);
+      }
+      continue;
+    }
+
     const status = await runRequiredCommand(runCommand, 'docker', [
       'inspect',
       '--format',
       HEALTH_STATUS_FORMAT,
-      TEST_DB_CONTAINER_NAME,
+      activeContainerId,
     ]);
 
     if (status.stdout.trim() === 'healthy') return;
@@ -68,8 +100,32 @@ async function waitForHealthyTestDatabase({
   }
 
   throw new Error(
-    `Local test database container "${TEST_DB_CONTAINER_NAME}" did not become healthy.`,
+    `Local test database service "db" in Compose project "${target.composeProjectName}" did not become healthy.`,
   );
+}
+
+async function findTestDbContainerId({
+  runCommand,
+  target,
+  all,
+}: {
+  runCommand: TestDbCommandRunner;
+  target: LocalTestTarget;
+  all: boolean;
+}): Promise<string | null> {
+  const result = await runCommand('docker', [
+    'compose',
+    '-p',
+    target.composeProjectName,
+    'ps',
+    all ? '-aq' : '-q',
+    'db',
+  ]);
+
+  if (result.exitCode !== 0) return null;
+
+  const [containerId] = result.stdout.trim().split(/\s+/);
+  return containerId || null;
 }
 
 async function runRequiredCommand(
