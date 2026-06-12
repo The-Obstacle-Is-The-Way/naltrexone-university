@@ -3,8 +3,8 @@
 **Priority:** P2 (agent-guidance quality + context supply-chain hygiene; see [Severity & Priority](#severity--priority))
 **Created:** 2026-06-12
 **Source:** Owner asked how the vendored agent skills are kept current: where each came from, whether any have newer upstream versions, and whether `.claude` / `.codex` / `.agents` are aligned for all agents. An adversarial audit found cross-agent alignment is already structurally guaranteed, but the skill set has no manifest, no repeatable refresh process, and multiple material upstream drifts.
-**Related:** [Debt Index](./index.md), [`AGENTS.md`](../../AGENTS.md), [`CLAUDE.md`](../../CLAUDE.md), [`.claude/rules/`](../../.claude/rules), DEBT-393/394 (npm supply-chain maturity gate), DEBT-409 (stale vendored content leaking into product CSS)
-**Status:** **Open - refresh executed; owner closure pending.** Skill content, the provenance manifest, `AGENTS.md`, and this log were updated on 2026-06-12. `.claude/skills/*`, `.codex/skills/*`, `.claude/rules/*`, package files, and runtime app/source files were not changed.
+**Related:** [Debt Index](../../debt/index.md), [`AGENTS.md`](../../../AGENTS.md), [`CLAUDE.md`](../../../CLAUDE.md), [`.claude/rules/`](../../../.claude/rules), DEBT-393/394 (npm supply-chain maturity gate), DEBT-409 (stale vendored content leaking into product CSS)
+**Status:** **Resolved 2026-06-12 — refresh executed and merged to `dev` + `main` (fast-forward to `b98f8d0d`); doc archived.** Skill content, the provenance manifest (`.agents/skills/skills.manifest.json` + schema), the `AGENTS.md` refresh workflow, and this log were updated and merged. `.claude/skills/*`, `.codex/skills/*`, `.claude/rules/*`, package files, and runtime app/source files were not changed. Closed as a direct merge (no PR/CodeRabbit) per owner waiver for docs/skills-only register hygiene; the full local gate including `pnpm build` was green before each fast-forward.
 
 ---
 
