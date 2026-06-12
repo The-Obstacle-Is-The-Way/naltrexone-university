@@ -40,7 +40,7 @@ The corrupted row heals only when some sub-B webhook fires (next renewal invoice
 
 - A paying user is locked out of the entire app while being billed, with no path they can fix themselves; support burden lands on the owner.
 - The trigger population is broad: *every* trial-converted user (DEBT-410 lineage) and every churn-and-return user has a superseded subscription whose late events can do this. The probability per event is low (requires a failed-then-retried delivery overlapping the resubscribe), but the webhook 429/500 paths make it real, and the blast radius per occurrence is a full lockout for up to a billing cycle.
-- Variant: if the user *resubscribes while sub A is still in its cancel-at-period-end window*, A's eventual `deleted` event at period end is processed normally (no retry needed at all) and overwrites the B row — same lockout, higher likelihood.
+- Scope note (not an extra trigger): the *cancel-at-period-end* path does **not** add an independent, retry-free vector. While sub A sits in that window it is still `active` — a blocking-checkout status (`src/domain/value-objects/subscription-status.ts:41`) — so the create-checkout guard (`src/application/use-cases/create-checkout-session.ts:113-122`) refuses sub B until A has actually flipped to `canceled`. By then A's `deleted` event has normally already been delivered, so re-clobbering still requires the failed-then-retried or out-of-order delivery of the primary scenario above.
 
 ## Expected Fix (options — shared root with BUG-243; pick one durable layer)
 

@@ -25,8 +25,8 @@ Worse, the local user row (and its cascade-linked `stripe_subscriptions` row) is
 1. `src/adapters/controllers/clerk-webhook-controller.ts:344-348` — inside the transaction, the cancellation is scheduled in `pending_stripe_cancellations` (keyed by `eventId`).
 2. `clerk-webhook-controller.ts:360-376` — **post-commit**, `cancelStripeCustomerSubscriptions(stripeCustomerId)` runs; on success it deletes the pending row and marks the event processed. On failure it calls `persistFailure` and rethrows → route returns 500 → Svix retries (bounded).
 3. The pending row is the **only** durable record of the obligation, and `rg` confirms `findByEventId` / `schedule` / `deleteByEventId` are referenced **only** in this controller (`src/adapters/repositories/drizzle-pending-stripe-cancellation-repository.ts`) — no cron, job, or startup task drains it.
-4. `db/schema.ts:161-162, 182-183` — `users` and `stripe_subscriptions` both `onDelete: 'cascade'` from the user; deleting the user in step 2 (`clerk-webhook-controller.ts:334`) removes the local subscription row, so `reconcileStripeSubscriptions` (which iterates `stripe_subscriptions`, `route.ts:175-190`) can never re-discover the orphaned Stripe subscription — and per BUG-244 it never runs anyway.
-5. `pending_stripe_cancellations.eventId` is itself `onDelete: 'cascade'` from `clerk_events` (`db/schema.ts:262-267`); if the clerk event is ever pruned the pending row vanishes with it, erasing the last trace of the obligation.
+4. `db/schema.ts:181-183` — `stripe_subscriptions.userId` is `onDelete: 'cascade'` from `users.id` (as is `stripe_customers.userId`, `:160-162`); deleting the user in step 2 (`clerk-webhook-controller.ts:334`) removes the local subscription row, so `reconcileStripeSubscriptions` (which iterates `stripe_subscriptions`, `route.ts:175-190`) can never re-discover the orphaned Stripe subscription — and per BUG-244 it never runs anyway.
+5. `pending_stripe_cancellations.eventId` is itself `onDelete: 'cascade'` from `clerk_events` (`db/schema.ts:266-268`); if the clerk event is ever pruned the pending row vanishes with it, erasing the last trace of the obligation.
 
 ## Impact
 
