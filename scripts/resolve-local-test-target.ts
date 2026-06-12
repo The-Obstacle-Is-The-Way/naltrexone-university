@@ -139,7 +139,7 @@ function sanitizeInstanceId(value: string): string {
   return sanitized || 'local';
 }
 
-function parseOutputFormat(
+export function parseOutputFormat(
   value: string | undefined,
 ): LocalTestTargetOutputFormat {
   if (

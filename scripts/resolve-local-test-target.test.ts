@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   createLocalTestTargetEnv,
   formatLocalTestTargetOutput,
+  isTruthyEnvFlag,
+  parseOutputFormat,
   resolveLocalTestTarget,
 } from './resolve-local-test-target';
 
@@ -67,6 +69,28 @@ describe('resolveLocalTestTarget', () => {
     expect(target.appPort).toBe('3318');
     expect(target.dbPort).toBe('55435');
   });
+
+  it('falls back to a safe instance id when an explicit instance sanitizes empty', () => {
+    const target = resolveLocalTestTarget({
+      cwd: '/repo/ignored-when-instance-is-explicit',
+      env: {
+        LOCAL_TEST_INSTANCE: '!!!',
+      },
+    });
+
+    expect(target.instanceId).toBe('local');
+    expect(target.composeProjectName).toBe('naltrexone-test-local');
+  });
+});
+
+describe('isTruthyEnvFlag', () => {
+  it('recognizes accepted truthy values and rejects absent or falsey values', () => {
+    expect(isTruthyEnvFlag('true')).toBe(true);
+    expect(isTruthyEnvFlag(' YES ')).toBe(true);
+    expect(isTruthyEnvFlag('1')).toBe(true);
+    expect(isTruthyEnvFlag(undefined)).toBe(false);
+    expect(isTruthyEnvFlag('false')).toBe(false);
+  });
 });
 
 describe('createLocalTestTargetEnv', () => {
@@ -118,6 +142,28 @@ describe('formatLocalTestTargetOutput', () => {
         'NEXT_PUBLIC_APP_URL=http://127.0.0.1:3319',
         'PORT=3319',
       ].join('\n'),
+    );
+  });
+
+  it('prints json by default', () => {
+    expect(formatLocalTestTargetOutput(target)).toBe(
+      JSON.stringify(target, null, 2),
+    );
+  });
+});
+
+describe('parseOutputFormat', () => {
+  it('accepts known formats and defaults to json', () => {
+    expect(parseOutputFormat(undefined)).toBe('json');
+    expect(parseOutputFormat('json')).toBe('json');
+    expect(parseOutputFormat('database-url')).toBe('database-url');
+    expect(parseOutputFormat('app-url')).toBe('app-url');
+    expect(parseOutputFormat('env')).toBe('env');
+  });
+
+  it('rejects unknown formats', () => {
+    expect(() => parseOutputFormat('yaml')).toThrow(
+      'Unknown local test target output format "yaml".',
     );
   });
 });

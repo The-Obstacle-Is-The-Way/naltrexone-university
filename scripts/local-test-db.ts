@@ -157,5 +157,6 @@ export async function runTestDbCommand(
 }
 
 async function sleepFor(ms: number): Promise<void> {
+  /* v8 ignore next -- real timer wrapper; callers inject sleep in tests. */
   await new Promise((resolve) => setTimeout(resolve, ms));
 }

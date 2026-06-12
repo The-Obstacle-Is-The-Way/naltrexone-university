@@ -129,6 +129,39 @@ describe('ensureLocalTestDatabase', () => {
     expect(sleep).toHaveBeenCalledTimes(1);
   });
 
+  it('waits until the resolved Compose service reports a container id', async () => {
+    const sleep = vi.fn(async () => {});
+    const runCommand = createCommandRunner([
+      { exitCode: 0, stdout: '\n' },
+      { exitCode: 0 },
+      { exitCode: 0, stdout: '\n' },
+      { exitCode: 0, stdout: 'container_id\n' },
+      { exitCode: 0, stdout: 'healthy\n' },
+    ]);
+
+    await expect(
+      ensureLocalTestDatabase({ runCommand, sleep, target }),
+    ).resolves.toBe('created');
+
+    expect(sleep).toHaveBeenCalledTimes(1);
+    expect(runCommand).toHaveBeenNthCalledWith(3, 'docker', [
+      'compose',
+      '-p',
+      'naltrexone-test-dbtest',
+      'ps',
+      '-q',
+      'db',
+    ]);
+    expect(runCommand).toHaveBeenNthCalledWith(4, 'docker', [
+      'compose',
+      '-p',
+      'naltrexone-test-dbtest',
+      'ps',
+      '-q',
+      'db',
+    ]);
+  });
+
   it('throws the underlying command stderr when startup fails', async () => {
     const runCommand = createCommandRunner([
       { exitCode: 0, stdout: 'container_id\n' },

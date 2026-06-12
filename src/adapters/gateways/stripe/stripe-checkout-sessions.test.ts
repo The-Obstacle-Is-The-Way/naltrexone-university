@@ -9,7 +9,7 @@ import {
 function createStripeMock(overrides?: {
   subscriptionsListData?: Array<{ id?: string; status?: string }>;
   openSessionsData?: Array<{ id: string; url: string | null }>;
-  retrievedSessionPriceId?: string;
+  retrievedSessionPriceId?: string | null;
   retrievedSessionStatus?: 'open' | 'complete' | 'expired';
   retrievedSessionExpiresAtUnix?: number;
   retrievedSessionResponses?: Array<{
@@ -52,15 +52,18 @@ function createStripeMock(overrides?: {
       status: response?.status ?? overrides?.retrievedSessionStatus,
       expires_at:
         response?.expiresAtUnix ?? overrides?.retrievedSessionExpiresAtUnix,
-      line_items: {
-        data: [
-          {
-            price: {
-              id: overrides?.retrievedSessionPriceId ?? 'price_m',
+      line_items:
+        overrides?.retrievedSessionPriceId === null
+          ? { data: [] }
+          : {
+              data: [
+                {
+                  price: {
+                    id: overrides?.retrievedSessionPriceId ?? 'price_m',
+                  },
+                },
+              ],
             },
-          },
-        ],
-      },
     };
   });
   const sessionsExpire = vi.fn(async () => {
