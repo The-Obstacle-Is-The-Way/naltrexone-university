@@ -120,6 +120,71 @@ describe('FakeSubscriptionRepository', () => {
         status: 'canceled',
       });
     });
+
+    it('uses the injected clock when deciding whether the stored row is current', async () => {
+      const now = new Date('2026-06-12T00:00:00.000Z');
+      const repo = new FakeSubscriptionRepository([], () => now);
+
+      await repo.upsert(
+        makeUpsertInput({
+          externalSubscriptionId: 'sub_current',
+          status: 'active',
+          currentPeriodEnd: new Date('2026-06-13T00:00:00.000Z'),
+        }),
+      );
+      await repo.upsert(
+        makeUpsertInput({
+          externalSubscriptionId: 'sub_superseded',
+          status: 'canceled',
+          currentPeriodEnd: new Date('2026-06-01T00:00:00.000Z'),
+        }),
+      );
+
+      await expect(repo.findByUserId('user_1')).resolves.toMatchObject({
+        status: 'active',
+        currentPeriodEnd: new Date('2026-06-13T00:00:00.000Z'),
+      });
+    });
+
+    it('applies the guard to constructor-seeded rows with external subscription ids', async () => {
+      const now = new Date('2026-06-12T00:00:00.000Z');
+      const repo = new FakeSubscriptionRepository(
+        [
+          {
+            subscription: {
+              id: 'sub-row-1',
+              userId: 'user_1',
+              plan: 'monthly',
+              status: 'active',
+              currentPeriodEnd: new Date('2026-06-13T00:00:00.000Z'),
+              cancelAtPeriodEnd: false,
+              createdAt: now,
+              updatedAt: now,
+            },
+            externalSubscriptionId: 'sub_current',
+          },
+        ],
+        () => now,
+      );
+
+      await repo.upsert(
+        makeUpsertInput({
+          externalSubscriptionId: 'sub_superseded',
+          status: 'canceled',
+          currentPeriodEnd: new Date('2026-06-01T00:00:00.000Z'),
+        }),
+      );
+
+      await expect(
+        repo.findByExternalSubscriptionId('sub_current'),
+      ).resolves.toMatchObject({
+        userId: 'user_1',
+        status: 'active',
+      });
+      await expect(
+        repo.findByExternalSubscriptionId('sub_superseded'),
+      ).resolves.toBeNull();
+    });
   });
 
   it('throws CONFLICT when an externalSubscriptionId is reused for a different user', async () => {

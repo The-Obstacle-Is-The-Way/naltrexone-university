@@ -1,6 +1,7 @@
 # BUG-243: Revisiting a Stale `/checkout/success` URL Overwrites the Newer Active Subscription With the Old Canceled One (Eager Sync Writes Before It Checks)
 
-**Status:** In Progress — fix implemented in `fix/bug-242-243-subscription-identity-recency-guard` (pending owner grade / merge)
+**Status:** Open
+**Resolution State:** Fix implemented in `fix/bug-242-243-subscription-identity-recency-guard`; pending owner grade, merge verification, and archival.
 **Priority:** P2 (user-deterministic lockout of a paying user; borderline P1 — every trial-converted user permanently carries the trigger URL in browser history)
 **Date:** 2026-06-11
 **Family:** Billing / checkout-success eager sync
@@ -43,7 +44,7 @@ Coverage gap that let this ship: every test in `app/(marketing)/checkout/success
 
 ## Implemented Fix
 
-The durable layer is the same shared domain write policy as BUG-242: `shouldPersistSubscriptionWrite` (`src/domain/services/subscription-write-guard.ts:25-42`) is called by both the Drizzle repository (`src/adapters/repositories/drizzle-subscription-repository.ts:81-128`) and `FakeSubscriptionRepository` (`src/application/test-helpers/fakes/fake-subscription-repository.ts:64-86`). That prevents the stale success render from corrupting the one-row subscription projection.
+The durable layer is the same shared domain write policy as BUG-242: `shouldPersistSubscriptionWrite` (`src/domain/services/subscription-write-guard.ts:25-42`) is called by both the transaction-serialized Drizzle repository (`src/adapters/repositories/drizzle-subscription-repository.ts:82-135`) and `FakeSubscriptionRepository` (`src/application/test-helpers/fakes/fake-subscription-repository.ts:43-113`). That prevents the stale success render from corrupting the one-row subscription projection.
 
 Checkout-success also consumes the new `SubscriptionRepository.upsert` result (`src/application/ports/subscription-repository.ts:16-27`). If a stale terminal write is skipped, `syncCheckoutSuccess` computes entitlement and the interstitial/redirect outcome from the protected current row instead of the stale retrieved subscription (`app/(marketing)/checkout/success/checkout-success-sync.tsx:241-281`). That is the BUG-243-specific piece: the row stays current *and* the user is not redirected to pricing.
 
@@ -54,9 +55,9 @@ Rejected alternatives:
 
 ## Verification
 
-- [x] Unit test in `page.test.ts`: pre-seed (B, `active`, future period), sync an old session whose subscription is canceled A → row still B, `syncCheckoutSuccess` resolves entitled, and pricing redirect is not called (`app/(marketing)/checkout/success/page.test.ts:1109-1194`).
+- [x] Unit test in `page.test.ts`: pre-seed (B, `active`, future period), sync an old session whose subscription is canceled A → row still B, `syncCheckoutSuccess` resolves entitled, and pricing redirect is not called (`app/(marketing)/checkout/success/page.test.ts:1110-1195`).
 - [x] Fresh-checkout sync/interstitial tests remain covered in the same page test file (`app/(marketing)/checkout/success/page.test.ts:270-363,1196-1291`).
-- [x] Shared fake and Drizzle guard tests prove the skipped write keeps B and same-subscription active→canceled still persists (`src/application/test-helpers/fakes/fake-subscription-repository.test.ts:70-122`; `tests/integration/stripe-repositories.integration.test.ts:189-272`).
+- [x] Shared fake and Drizzle guard tests prove the skipped write keeps B, seeded fake rows can carry external identity, same-subscription active→canceled still persists, and Drizzle serializes per user before the guard read (`src/application/test-helpers/fakes/fake-subscription-repository.test.ts:69-187`; `src/adapters/repositories/drizzle-subscription-repository.test.ts:180-226`; `tests/integration/stripe-repositories.integration.test.ts:189-272`).
 - [x] Focused verification green: `pnpm test --run src/domain/services/subscription-write-guard.test.ts src/application/test-helpers/fakes/fake-subscription-repository.test.ts src/adapters/controllers/stripe-webhook-controller.test.ts app/(marketing)/checkout/success/page.test.ts src/adapters/jobs/reconcile-stripe-subscriptions.test.ts src/adapters/repositories/drizzle-subscription-repository.test.ts` and `pnpm test:integration --run tests/integration/stripe-repositories.integration.test.ts`.
 
 ## Surfaces Confirmed

@@ -260,13 +260,14 @@ describe('processStripeWebhook', () => {
 
   it('does not let a superseded terminal subscription webhook overwrite a current active row', async () => {
     const userId = crypto.randomUUID();
-    const subscriptions = new FakeSubscriptionRepository();
+    const now = new Date('2026-06-12T00:00:00.000Z');
+    const subscriptions = new FakeSubscriptionRepository([], () => now);
     await subscriptions.upsert({
       userId,
       externalSubscriptionId: 'sub_current',
       plan: 'monthly',
       status: 'active',
-      currentPeriodEnd: new Date('2026-08-01T00:00:00.000Z'),
+      currentPeriodEnd: new Date('2026-06-13T00:00:00.000Z'),
       cancelAtPeriodEnd: false,
     });
     const paymentGateway = new FakePaymentGateway({
@@ -302,7 +303,7 @@ describe('processStripeWebhook', () => {
     ).resolves.toMatchObject({
       userId,
       status: 'active',
-      currentPeriodEnd: new Date('2026-08-01T00:00:00.000Z'),
+      currentPeriodEnd: new Date('2026-06-13T00:00:00.000Z'),
     });
     await expect(
       subscriptions.findByExternalSubscriptionId('sub_superseded'),

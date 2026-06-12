@@ -1,6 +1,7 @@
 # BUG-242: Late Webhook From a Superseded Subscription Overwrites the Active Subscription Row (userId-Keyed Last-Write-Wins Upsert Has No Identity/Recency Guard)
 
-**Status:** In Progress — fix implemented in `fix/bug-242-243-subscription-identity-recency-guard` (pending owner grade / merge)
+**Status:** Open
+**Resolution State:** Fix implemented in `fix/bug-242-243-subscription-identity-recency-guard`; pending owner grade, merge verification, and archival.
 **Priority:** P1 (paying user fully locked out of `/app/*` with no self-service recovery; can persist up to a full billing cycle)
 **Date:** 2026-06-11
 **Family:** Billing / Stripe webhook / subscription state machine
@@ -44,7 +45,7 @@ The corrupted row heals only when some sub-B webhook fires (next renewal invoice
 
 ## Implemented Fix
 
-Chosen placement: a pure domain policy, `shouldPersistSubscriptionWrite`, owns the business rule (`src/domain/services/subscription-write-guard.ts:25-42`). The Drizzle adapter (`src/adapters/repositories/drizzle-subscription-repository.ts:81-128`) and fake repository (`src/application/test-helpers/fakes/fake-subscription-repository.ts:64-86`) both call that same predicate through the `SubscriptionRepository.upsert` path, so webhook, checkout-success, and reconciliation writers inherit identical semantics. `SubscriptionRepository.upsert` now reports whether the write persisted or was skipped (`src/application/ports/subscription-repository.ts:16-27`).
+Chosen placement: a pure domain policy, `shouldPersistSubscriptionWrite`, owns the business rule (`src/domain/services/subscription-write-guard.ts:25-42`). The Drizzle adapter serializes writes per user with a transaction-scoped advisory lock, locks the current row, then calls that predicate before the upsert (`src/adapters/repositories/drizzle-subscription-repository.ts:82-135`). The fake repository accepts an injected clock and explicit external-subscription seed identity, then calls the same predicate (`src/application/test-helpers/fakes/fake-subscription-repository.ts:43-113`). Webhook, checkout-success, and reconciliation writers inherit identical semantics through `SubscriptionRepository.upsert`, which now reports whether the write persisted or was skipped (`src/application/ports/subscription-repository.ts:16-27`).
 
 Rule: reject only a different-subscription write when the stored row is still entitled (`active`, `inTrial`, or `pastDue` with future `currentPeriodEnd`) and the incoming write is terminal (`canceled` or `paymentFailed` / Stripe `incomplete_expired`). Allow same-subscription lifecycle changes, fresh first-checkout writes, churned resubscribe over a terminal row, and reconciliation's different blocking canonical winner.
 
@@ -57,7 +58,8 @@ Rejected alternatives:
 
 - [x] Domain truth table covers first row, same-subscription terminal transition, active/inTrial/pastDue protection, expired/current terminal cases, churned resubscribe, unpaid/paused recoverable states, and reconciliation's different canonical winner (`src/domain/services/subscription-write-guard.test.ts:23-148`).
 - [x] Unit test: webhook event for superseded canceled sub A does not downgrade an active sub-B row (`src/adapters/controllers/stripe-webhook-controller.test.ts:261-316`).
-- [x] Unit test: legitimate same-subscription terminal transitions still persist in the fake (`src/application/test-helpers/fakes/fake-subscription-repository.test.ts:98-122`).
+- [x] Unit test: legitimate same-subscription terminal transitions still persist in the fake, and constructor-seeded fake rows can carry external subscription identity for guard parity (`src/application/test-helpers/fakes/fake-subscription-repository.test.ts:98-187`).
+- [x] Unit test: Drizzle upsert serializes per user before reading the current row (`src/adapters/repositories/drizzle-subscription-repository.test.ts:180-226`).
 - [x] Reconcile regression test: a different canonical blocking winner still persists over a current entitled row (`src/adapters/jobs/reconcile-stripe-subscriptions.test.ts:1079-1126`).
 - [x] Real Drizzle integration test: seed (B, `active`, future period), upsert superseded terminal A, row stays B; same-id active→canceled still persists (`tests/integration/stripe-repositories.integration.test.ts:189-272`).
 - [x] Focused verification green: `pnpm test --run src/domain/services/subscription-write-guard.test.ts src/application/test-helpers/fakes/fake-subscription-repository.test.ts src/adapters/controllers/stripe-webhook-controller.test.ts app/(marketing)/checkout/success/page.test.ts src/adapters/jobs/reconcile-stripe-subscriptions.test.ts src/adapters/repositories/drizzle-subscription-repository.test.ts` and `pnpm test:integration --run tests/integration/stripe-repositories.integration.test.ts`.

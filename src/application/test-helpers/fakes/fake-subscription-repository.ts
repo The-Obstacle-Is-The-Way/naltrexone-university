@@ -13,6 +13,13 @@ type SubscriptionSnapshot = {
   userIdByExternalSubscriptionId: ReadonlyArray<readonly [string, string]>;
 };
 
+type FakeSubscriptionSeed =
+  | Subscription
+  | {
+      subscription: Subscription;
+      externalSubscriptionId: string;
+    };
+
 function cloneSubscription(subscription: Subscription): Subscription {
   return {
     ...subscription,
@@ -22,14 +29,35 @@ function cloneSubscription(subscription: Subscription): Subscription {
   };
 }
 
+function isMappedSeed(
+  seed: FakeSubscriptionSeed,
+): seed is { subscription: Subscription; externalSubscriptionId: string } {
+  return 'subscription' in seed;
+}
+
 export class FakeSubscriptionRepository implements SubscriptionRepository {
   private readonly byUserId = new Map<string, Subscription>();
   private readonly externalSubscriptionIdByUserId = new Map<string, string>();
   private readonly userIdByExternalSubscriptionId = new Map<string, string>();
 
-  constructor(subscriptions: readonly Subscription[] = []) {
-    for (const sub of subscriptions) {
-      this.byUserId.set(sub.userId, sub);
+  constructor(
+    subscriptions: readonly FakeSubscriptionSeed[] = [],
+    private readonly now: () => Date = () => new Date(),
+  ) {
+    for (const seed of subscriptions) {
+      const subscription = isMappedSeed(seed) ? seed.subscription : seed;
+      this.byUserId.set(subscription.userId, cloneSubscription(subscription));
+
+      if (isMappedSeed(seed)) {
+        this.externalSubscriptionIdByUserId.set(
+          subscription.userId,
+          seed.externalSubscriptionId,
+        );
+        this.userIdByExternalSubscriptionId.set(
+          seed.externalSubscriptionId,
+          subscription.userId,
+        );
+      }
     }
   }
 
@@ -61,7 +89,7 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
       );
     }
 
-    const now = new Date();
+    const now = this.now();
     const existing = this.byUserId.get(input.userId);
     const existingExternalSubscriptionId =
       this.externalSubscriptionIdByUserId.get(input.userId);

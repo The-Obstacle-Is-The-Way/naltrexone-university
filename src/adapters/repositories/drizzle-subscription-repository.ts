@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { stripeSubscriptions } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type {
@@ -79,53 +79,60 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
     const updatedAt = this.now();
 
     try {
-      const existingRow = await this.db.query.stripeSubscriptions.findFirst({
-        where: eq(stripeSubscriptions.userId, input.userId),
-      });
-      if (
-        existingRow &&
-        !shouldPersistSubscriptionWrite({
-          stored: {
-            subscriptionIdentity: existingRow.stripeSubscriptionId,
-            status: stripeSubscriptionStatusToSubscriptionStatus(
-              existingRow.status,
-            ),
-            currentPeriodEnd: existingRow.currentPeriodEnd,
-          },
-          incoming: {
-            subscriptionIdentity: input.externalSubscriptionId,
-            status: input.status,
-            currentPeriodEnd: input.currentPeriodEnd,
-          },
-          now: updatedAt,
-        })
-      ) {
-        return { persisted: false, current: this.toDomain(existingRow) };
-      }
+      return await this.db.transaction(async (tx) => {
+        await tx.execute(
+          sql`select pg_advisory_xact_lock(hashtext(${input.userId}))`,
+        );
+        const [existingRow] = await tx
+          .select()
+          .from(stripeSubscriptions)
+          .where(eq(stripeSubscriptions.userId, input.userId))
+          .for('update');
+        if (
+          existingRow &&
+          !shouldPersistSubscriptionWrite({
+            stored: {
+              subscriptionIdentity: existingRow.stripeSubscriptionId,
+              status: stripeSubscriptionStatusToSubscriptionStatus(
+                existingRow.status,
+              ),
+              currentPeriodEnd: existingRow.currentPeriodEnd,
+            },
+            incoming: {
+              subscriptionIdentity: input.externalSubscriptionId,
+              status: input.status,
+              currentPeriodEnd: input.currentPeriodEnd,
+            },
+            now: updatedAt,
+          })
+        ) {
+          return { persisted: false, current: this.toDomain(existingRow) };
+        }
 
-      await this.db
-        .insert(stripeSubscriptions)
-        .values({
-          userId: input.userId,
-          stripeSubscriptionId: input.externalSubscriptionId,
-          status: stripeStatus,
-          priceId,
-          currentPeriodEnd: input.currentPeriodEnd,
-          cancelAtPeriodEnd: input.cancelAtPeriodEnd,
-          updatedAt,
-        })
-        .onConflictDoUpdate({
-          target: stripeSubscriptions.userId,
-          set: {
+        await tx
+          .insert(stripeSubscriptions)
+          .values({
+            userId: input.userId,
             stripeSubscriptionId: input.externalSubscriptionId,
             status: stripeStatus,
             priceId,
             currentPeriodEnd: input.currentPeriodEnd,
             cancelAtPeriodEnd: input.cancelAtPeriodEnd,
             updatedAt,
-          },
-        });
-      return { persisted: true };
+          })
+          .onConflictDoUpdate({
+            target: stripeSubscriptions.userId,
+            set: {
+              stripeSubscriptionId: input.externalSubscriptionId,
+              status: stripeStatus,
+              priceId,
+              currentPeriodEnd: input.currentPeriodEnd,
+              cancelAtPeriodEnd: input.cancelAtPeriodEnd,
+              updatedAt,
+            },
+          });
+        return { persisted: true };
+      });
     } catch (error) {
       if (isPostgresUniqueViolation(error)) {
         throw new ApplicationError(
