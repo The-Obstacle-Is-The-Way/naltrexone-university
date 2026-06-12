@@ -67,7 +67,8 @@ describe('FakeSubscriptionRepository', () => {
     });
 
     it('does not replace a current entitled row with a superseded terminal subscription', async () => {
-      const repo = new FakeSubscriptionRepository();
+      const now = new Date('2026-06-12T00:00:00.000Z');
+      const repo = new FakeSubscriptionRepository([], () => now);
 
       await repo.upsert(
         makeUpsertInput({
@@ -103,7 +104,8 @@ describe('FakeSubscriptionRepository', () => {
     });
 
     it('keeps legitimate same-subscription terminal transitions', async () => {
-      const repo = new FakeSubscriptionRepository();
+      const now = new Date('2026-06-12T00:00:00.000Z');
+      const repo = new FakeSubscriptionRepository([], () => now);
 
       await repo.upsert(
         makeUpsertInput({
