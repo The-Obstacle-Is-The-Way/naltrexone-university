@@ -289,7 +289,7 @@ describe('processStripeWebhook', () => {
       },
     });
 
-    const { deps, stripeEvents } = createDeps({
+    const { deps, stripeEvents, stripeCustomers } = createDeps({
       paymentGateway,
       subscriptions,
     });
@@ -314,6 +314,7 @@ describe('processStripeWebhook', () => {
       processedAt: expect.any(Date),
       error: null,
     });
+    await expect(stripeCustomers.findByUserId(userId)).resolves.toBeNull();
   });
 
   it('marks non-subscription events as processed (no subscription update)', async () => {

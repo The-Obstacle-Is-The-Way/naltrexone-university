@@ -1110,7 +1110,7 @@ describe('syncCheckoutSuccess', () => {
   it('does not let a stale success URL downgrade a newer active subscription', async () => {
     const stripeCustomers = new FakeStripeCustomerRepository();
     const now = new Date('2026-06-12T00:00:00.000Z');
-    const protectedPeriodEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const protectedPeriodEnd = new Date('2099-01-01T00:00:00.000Z');
     const subscriptions = new FakeSubscriptionRepository([], () => now);
     const user = {
       id: fixtureUser1Id,
